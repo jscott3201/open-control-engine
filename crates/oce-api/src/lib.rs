@@ -22,15 +22,16 @@
 //! The public surface is split across internal modules and re-exported **flat** here, so every path
 //! stays `oce_api::Foo` (R-PUB-1/4; the `cargo public-api` baseline): `engine` (the
 //! [`Engine`] handle + load/tick core), `error` ([`OcError`]), `loading` ([`LoadReport`],
-//! [`TemplateRef`], deferred loaders), `params` (the live parameter table), `sim` (execution modes
+//! the successful ingest report), `params` (the live parameter table), `sim` (execution modes
 //! + [`Outputs`]), `io` (the typed IO inventory), `watch` (key-selected output reads).
 //!
 //! The full load → tick → simulate loop works; [`Engine::load_cxf`] runs the end-to-end CXF ingest
 //! pipeline (resolve → flatten → validate → BUILD). The frozen public surface (`08` §11.1 R-PUB-5/6)
 //! includes `simulate` / `step_realtime`, `set_input` / `get_output` / `watch`, the live parameter table
 //! (`get_param` / `set_param` / `halt` / `resume` / `mode`), and the typed IO inventory (`io` /
-//! `io_summary` / `point_list`) with final signatures and non-panicking bodies. Semantic/modelica
-//! loaders and device-filtered point lists remain deferred behind typed errors.
+//! `io_summary` / `point_list`). Executable ingest is CXF only; there is no source Modelica or
+//! semantic-template loader. Only `point_list(None)` is supported: device filtering is outside the
+//! supported profile and is refused directly with [`OcError::Load`], even with a custom store.
 
 mod engine;
 mod error;
@@ -62,7 +63,7 @@ pub use io::{
     IoClass, IoInventory, IoSummary, PhysicalKind, PointDirection, PointInfo, PointValueType,
     TrendCfg, TrendInterval,
 };
-pub use loading::{LoadReport, TemplateRef};
+pub use loading::LoadReport;
 pub use params::{ParamAttrs, ParamTable, RunMode};
 pub use sim::{
     AssertEvent, AssertLevel, CollectSpec, InputSource, OutputTrace, Outputs, SimMetrics, SimSpec,
@@ -82,8 +83,6 @@ pub use oce_model::{ConnectorId, Value, ValueType};
 /// Re-export of the store seam DTOs/traits (`08` §11 R-PUB-1). No store-backend-specific type is
 /// ever re-exported here.
 pub use oce_store;
-/// The Ch.13 reverse-flow query type, re-exported from the store seam (R-PUB-1).
-pub use oce_store::SemanticQuery;
 
 // Keep a reference to a DomainKey-using path so the re-exported store types are linked even when no
 // caller names one (documents that oce-api re-exports the oce-store seam, never store-backend types).

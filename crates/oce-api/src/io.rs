@@ -431,11 +431,11 @@ impl<S: Store> Engine<S> {
     }
 
     /// The effective point list (CDL §7.7.5). `None` returns the full in-memory inventory mirror
-    /// (R-IO-3); a `controlled_device` filter requires the §7.7.5 equipment traversal
-    /// (`oce-semantics` + `SemanticStore::point_list`), which is deferred.
+    /// (R-IO-3). Device filtering (`Some`) is outside the supported profile. It is refused directly,
+    /// even when a custom store supports equipment queries; this method never delegates to the store.
     ///
     /// # Errors
-    /// [`OcError::Load`] for a `controlled_device` query (deferred); `point_list(None)` is
+    /// [`OcError::Load`] for any unsupported `controlled_device` query; `point_list(None)` is
     /// infallible. Never panics (R-ERR-1).
     pub fn point_list(&self, controlled_device: Option<&str>) -> Result<Vec<PointInfo>, OcError> {
         match controlled_device {

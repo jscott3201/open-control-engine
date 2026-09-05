@@ -1,5 +1,8 @@
 //! Mechanical checks for the tracked public-surface classification authority.
 
+#[path = "support/surface_absence.rs"]
+mod surface_absence;
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -502,6 +505,12 @@ fn status_for(ledger: &str, baseline: Baseline<'_>, item: &str) -> String {
 }
 
 #[test]
+fn retired_facade_symbols_are_absent() {
+    surface_absence::validate(API_BASELINE)
+        .expect("retired items cannot be re-blessed into support");
+}
+
+#[test]
 fn tracked_authority_covers_exact_baselines_and_supported_docs() {
     assert_eq!(
         sha256_hex(b"abc"),
@@ -539,8 +548,8 @@ fn ratified_surface_items_keep_their_reviewed_classifications() {
         ),
         (
             api,
-            "pub fn oce_api::Engine<S>::load_modelica(&mut self, &std::path::Path) -> core::result::Result<oce_api::LoadReport, oce_api::OcError>",
-            "unstable/deferred",
+            "pub fn oce_api::Engine<S>::point_list(&self, core::option::Option<&str>) -> core::result::Result<alloc::vec::Vec<oce_api::PointInfo>, oce_api::OcError>",
+            "stable-candidate",
         ),
         (
             api,
@@ -595,13 +604,13 @@ fn an_out_of_baseline_row_is_rejected() {
         value["entries"][0]["ranges"]
             .as_array_mut()
             .expect("ranges")
-            .push(Value::String("1409".to_owned()));
+            .push(Value::String("1358".to_owned()));
     });
     assert_eq!(
         validate_ledger(&ledger, &baselines()),
         Err(LedgerError::Extra {
             baseline: "oce-api".to_owned(),
-            line: 1409,
+            line: 1358,
         })
     );
 }

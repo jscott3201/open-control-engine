@@ -7,7 +7,6 @@
 #[non_exhaustive] pub struct oce_api::ExportReport
 #[non_exhaustive] pub struct oce_api::LoadReport
 #[non_exhaustive] pub struct oce_api::PassThroughPair
-#[non_exhaustive] pub struct oce_api::TemplateRef
 #[non_exhaustive] pub struct oce_api::Topology
 #[non_exhaustive] pub struct oce_api::TopologyBlock
 #[non_exhaustive] pub struct oce_api::TopologyConnection
@@ -39,7 +38,6 @@ impl core::clone::Clone for oce_api::PointInfo
 impl core::clone::Clone for oce_api::RunMode
 impl core::clone::Clone for oce_api::SimMetrics
 impl core::clone::Clone for oce_api::StepReport
-impl core::clone::Clone for oce_api::TemplateRef
 impl core::clone::Clone for oce_api::Topology
 impl core::clone::Clone for oce_api::TopologyBlock
 impl core::clone::Clone for oce_api::TopologyConnection
@@ -50,7 +48,6 @@ impl core::cmp::Eq for oce_api::IoClass
 impl core::cmp::Eq for oce_api::IoSummary
 impl core::cmp::Eq for oce_api::PhysicalKind
 impl core::cmp::Eq for oce_api::RunMode
-impl core::cmp::Eq for oce_api::TemplateRef
 impl core::cmp::Eq for oce_api::TrendCfg
 impl core::cmp::PartialEq for oce_api::AssertLevel
 impl core::cmp::PartialEq for oce_api::ContentIdError
@@ -62,7 +59,6 @@ impl core::cmp::PartialEq for oce_api::PassThroughPair
 impl core::cmp::PartialEq for oce_api::PhysicalKind
 impl core::cmp::PartialEq for oce_api::PointInfo
 impl core::cmp::PartialEq for oce_api::RunMode
-impl core::cmp::PartialEq for oce_api::TemplateRef
 impl core::cmp::PartialEq for oce_api::Topology
 impl core::cmp::PartialEq for oce_api::TopologyBlock
 impl core::cmp::PartialEq for oce_api::TopologyConnection
@@ -115,7 +111,6 @@ impl core::fmt::Debug for oce_api::RunMode
 impl core::fmt::Debug for oce_api::SimMetrics
 impl core::fmt::Debug for oce_api::SimSpec
 impl core::fmt::Debug for oce_api::StepReport
-impl core::fmt::Debug for oce_api::TemplateRef
 impl core::fmt::Debug for oce_api::Topology
 impl core::fmt::Debug for oce_api::TopologyBlock
 impl core::fmt::Debug for oce_api::TopologyConnection
@@ -124,7 +119,6 @@ impl core::fmt::Display for oce_api::ContentIdError
 impl core::fmt::Display for oce_api::EngineStateError
 impl core::fmt::Display for oce_api::LoadErrorContext
 impl core::fmt::Display for oce_api::OcError
-impl core::hash::Hash for oce_api::TemplateRef
 impl core::marker::Copy for oce_api::AssertLevel
 impl core::marker::Copy for oce_api::IoClass
 impl core::marker::Copy for oce_api::IoSummary
@@ -158,7 +152,6 @@ impl core::marker::Freeze for oce_api::RunMode
 impl core::marker::Freeze for oce_api::SimMetrics
 impl core::marker::Freeze for oce_api::SimSpec
 impl core::marker::Freeze for oce_api::StepReport
-impl core::marker::Freeze for oce_api::TemplateRef
 impl core::marker::Freeze for oce_api::Topology
 impl core::marker::Freeze for oce_api::TopologyBlock
 impl core::marker::Freeze for oce_api::TopologyConnection
@@ -190,7 +183,6 @@ impl core::marker::Send for oce_api::RunMode
 impl core::marker::Send for oce_api::SimMetrics
 impl core::marker::Send for oce_api::SimSpec
 impl core::marker::Send for oce_api::StepReport
-impl core::marker::Send for oce_api::TemplateRef
 impl core::marker::Send for oce_api::Topology
 impl core::marker::Send for oce_api::TopologyBlock
 impl core::marker::Send for oce_api::TopologyConnection
@@ -205,7 +197,6 @@ impl core::marker::StructuralPartialEq for oce_api::PassThroughPair
 impl core::marker::StructuralPartialEq for oce_api::PhysicalKind
 impl core::marker::StructuralPartialEq for oce_api::PointInfo
 impl core::marker::StructuralPartialEq for oce_api::RunMode
-impl core::marker::StructuralPartialEq for oce_api::TemplateRef
 impl core::marker::StructuralPartialEq for oce_api::TopologyConnection
 impl core::marker::StructuralPartialEq for oce_api::TrendCfg
 impl core::marker::Sync for oce_api::AssertEvent
@@ -235,7 +226,6 @@ impl core::marker::Sync for oce_api::RunMode
 impl core::marker::Sync for oce_api::SimMetrics
 impl core::marker::Sync for oce_api::SimSpec
 impl core::marker::Sync for oce_api::StepReport
-impl core::marker::Sync for oce_api::TemplateRef
 impl core::marker::Sync for oce_api::Topology
 impl core::marker::Sync for oce_api::TopologyBlock
 impl core::marker::Sync for oce_api::TopologyConnection
@@ -267,7 +257,6 @@ impl core::marker::Unpin for oce_api::RunMode
 impl core::marker::Unpin for oce_api::SimMetrics
 impl core::marker::Unpin for oce_api::SimSpec
 impl core::marker::Unpin for oce_api::StepReport
-impl core::marker::Unpin for oce_api::TemplateRef
 impl core::marker::Unpin for oce_api::Topology
 impl core::marker::Unpin for oce_api::TopologyBlock
 impl core::marker::Unpin for oce_api::TopologyConnection
@@ -299,7 +288,6 @@ impl core::marker::UnsafeUnpin for oce_api::RunMode
 impl core::marker::UnsafeUnpin for oce_api::SimMetrics
 impl core::marker::UnsafeUnpin for oce_api::SimSpec
 impl core::marker::UnsafeUnpin for oce_api::StepReport
-impl core::marker::UnsafeUnpin for oce_api::TemplateRef
 impl core::marker::UnsafeUnpin for oce_api::Topology
 impl core::marker::UnsafeUnpin for oce_api::TopologyBlock
 impl core::marker::UnsafeUnpin for oce_api::TopologyConnection
@@ -327,7 +315,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for oce_api::PointInfo
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::RunMode
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::SimMetrics
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::StepReport
-impl core::panic::unwind_safe::RefUnwindSafe for oce_api::TemplateRef
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::Topology
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::TopologyBlock
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::TopologyConnection
@@ -355,7 +342,6 @@ impl core::panic::unwind_safe::UnwindSafe for oce_api::PointInfo
 impl core::panic::unwind_safe::UnwindSafe for oce_api::RunMode
 impl core::panic::unwind_safe::UnwindSafe for oce_api::SimMetrics
 impl core::panic::unwind_safe::UnwindSafe for oce_api::StepReport
-impl core::panic::unwind_safe::UnwindSafe for oce_api::TemplateRef
 impl core::panic::unwind_safe::UnwindSafe for oce_api::Topology
 impl core::panic::unwind_safe::UnwindSafe for oce_api::TopologyBlock
 impl core::panic::unwind_safe::UnwindSafe for oce_api::TopologyConnection
@@ -368,8 +354,6 @@ impl oce_api::OcError
 impl oce_api::OutputTrace
 impl oce_api::Outputs
 impl oce_api::ParamTable
-impl oce_api::TemplateRef
-impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
@@ -413,7 +397,6 @@ impl<T, U> core::convert::Into<U> for oce_api::RunMode where U: core::convert::F
 impl<T, U> core::convert::Into<U> for oce_api::SimMetrics where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::SimSpec where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::StepReport where U: core::convert::From<T>
-impl<T, U> core::convert::Into<U> for oce_api::TemplateRef where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::Topology where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::TopologyBlock where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::TopologyConnection where U: core::convert::From<T>
@@ -446,7 +429,6 @@ impl<T, U> core::convert::TryFrom<U> for oce_api::RunMode where U: core::convert
 impl<T, U> core::convert::TryFrom<U> for oce_api::SimMetrics where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::SimSpec where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::StepReport where U: core::convert::Into<T>
-impl<T, U> core::convert::TryFrom<U> for oce_api::TemplateRef where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::Topology where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::TopologyBlock where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::TopologyConnection where U: core::convert::Into<T>
@@ -479,7 +461,6 @@ impl<T, U> core::convert::TryInto<U> for oce_api::RunMode where U: core::convert
 impl<T, U> core::convert::TryInto<U> for oce_api::SimMetrics where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::SimSpec where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::StepReport where U: core::convert::TryFrom<T>
-impl<T, U> core::convert::TryInto<U> for oce_api::TemplateRef where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::Topology where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::TopologyBlock where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::TopologyConnection where U: core::convert::TryFrom<T>
@@ -504,7 +485,6 @@ impl<T> alloc::borrow::ToOwned for oce_api::PointInfo where T: core::clone::Clon
 impl<T> alloc::borrow::ToOwned for oce_api::RunMode where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::SimMetrics where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::StepReport where T: core::clone::Clone
-impl<T> alloc::borrow::ToOwned for oce_api::TemplateRef where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::Topology where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::TopologyBlock where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::TopologyConnection where T: core::clone::Clone
@@ -541,7 +521,6 @@ impl<T> core::any::Any for oce_api::RunMode where T: 'static + ?core::marker::Si
 impl<T> core::any::Any for oce_api::SimMetrics where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::SimSpec where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::StepReport where T: 'static + ?core::marker::Sized
-impl<T> core::any::Any for oce_api::TemplateRef where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::Topology where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::TopologyBlock where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::TopologyConnection where T: 'static + ?core::marker::Sized
@@ -574,7 +553,6 @@ impl<T> core::borrow::Borrow<T> for oce_api::RunMode where T: ?core::marker::Siz
 impl<T> core::borrow::Borrow<T> for oce_api::SimMetrics where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::SimSpec where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::StepReport where T: ?core::marker::Sized
-impl<T> core::borrow::Borrow<T> for oce_api::TemplateRef where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::Topology where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::TopologyBlock where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::TopologyConnection where T: ?core::marker::Sized
@@ -607,7 +585,6 @@ impl<T> core::borrow::BorrowMut<T> for oce_api::RunMode where T: ?core::marker::
 impl<T> core::borrow::BorrowMut<T> for oce_api::SimMetrics where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::SimSpec where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::StepReport where T: ?core::marker::Sized
-impl<T> core::borrow::BorrowMut<T> for oce_api::TemplateRef where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::Topology where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::TopologyBlock where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::TopologyConnection where T: ?core::marker::Sized
@@ -632,7 +609,6 @@ impl<T> core::clone::CloneToUninit for oce_api::PointInfo where T: core::clone::
 impl<T> core::clone::CloneToUninit for oce_api::RunMode where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::SimMetrics where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::StepReport where T: core::clone::Clone
-impl<T> core::clone::CloneToUninit for oce_api::TemplateRef where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::Topology where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::TopologyBlock where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::TopologyConnection where T: core::clone::Clone
@@ -665,7 +641,6 @@ impl<T> core::convert::From<T> for oce_api::RunMode
 impl<T> core::convert::From<T> for oce_api::SimMetrics
 impl<T> core::convert::From<T> for oce_api::SimSpec
 impl<T> core::convert::From<T> for oce_api::StepReport
-impl<T> core::convert::From<T> for oce_api::TemplateRef
 impl<T> core::convert::From<T> for oce_api::Topology
 impl<T> core::convert::From<T> for oce_api::TopologyBlock
 impl<T> core::convert::From<T> for oce_api::TopologyConnection
@@ -745,8 +720,6 @@ pub fn oce_api::Engine<S>::into(self) -> U
 pub fn oce_api::Engine<S>::io(&self) -> &oce_api::IoInventory
 pub fn oce_api::Engine<S>::io_summary(&self) -> oce_api::IoSummary
 pub fn oce_api::Engine<S>::load_cxf(&mut self, &[u8]) -> core::result::Result<oce_api::LoadReport, oce_api::OcError>
-pub fn oce_api::Engine<S>::load_from_semantic(&mut self, &oce_api::TemplateRef, &oce_store::SemanticQuery) -> core::result::Result<oce_api::LoadReport, oce_api::OcError>
-pub fn oce_api::Engine<S>::load_modelica(&mut self, &std::path::Path) -> core::result::Result<oce_api::LoadReport, oce_api::OcError>
 pub fn oce_api::Engine<S>::mode(&self) -> oce_api::RunMode
 pub fn oce_api::Engine<S>::outputs(&self) -> &oce_api::Outputs
 pub fn oce_api::Engine<S>::params(&self) -> &oce_api::ParamTable
@@ -1051,21 +1024,6 @@ pub fn oce_api::StepReport::to_owned(&self) -> T
 pub fn oce_api::StepReport::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::StepReport::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::StepReport::type_id(&self) -> core::any::TypeId
-pub fn oce_api::TemplateRef::borrow(&self) -> &T
-pub fn oce_api::TemplateRef::borrow_mut(&mut self) -> &mut T
-pub fn oce_api::TemplateRef::clone(&self) -> oce_api::TemplateRef
-pub fn oce_api::TemplateRef::clone_into(&self, &mut T)
-pub fn oce_api::TemplateRef::eq(&self, &oce_api::TemplateRef) -> bool
-pub fn oce_api::TemplateRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn oce_api::TemplateRef::from(T) -> T
-pub fn oce_api::TemplateRef::hash<__H: core::hash::Hasher>(&self, &mut __H)
-pub fn oce_api::TemplateRef::into(self) -> U
-pub fn oce_api::TemplateRef::iri(&self) -> &str
-pub fn oce_api::TemplateRef::new(impl core::convert::Into<alloc::sync::Arc<str>>) -> Self
-pub fn oce_api::TemplateRef::to_owned(&self) -> T
-pub fn oce_api::TemplateRef::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-pub fn oce_api::TemplateRef::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-pub fn oce_api::TemplateRef::type_id(&self) -> core::any::TypeId
 pub fn oce_api::Topology::borrow(&self) -> &T
 pub fn oce_api::Topology::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::Topology::clone(&self) -> oce_api::Topology
@@ -1119,7 +1077,6 @@ pub oce_api::AssertEvent::block: alloc::string::String
 pub oce_api::AssertEvent::level: oce_api::AssertLevel
 pub oce_api::AssertEvent::message: alloc::string::String
 pub oce_api::AssertEvent::t: f64
-pub oce_api::AssertLevel::Error
 pub oce_api::AssertLevel::Warning
 pub oce_api::CollectSpec::All
 pub oce_api::CollectSpec::All::stride: usize
@@ -1163,9 +1120,6 @@ pub oce_api::ExportReport::bytes: alloc::vec::Vec<u8>
 pub oce_api::ExportReport::warnings: alloc::vec::Vec<oce_diag::Diagnostic>
 pub oce_api::InputSource::Closure(alloc::boxed::Box<(dyn core::ops::function::Fn(f64) -> alloc::vec::Vec<(alloc::string::String, oce_model::Value)> + core::marker::Send + core::marker::Sync)>)
 pub oce_api::InputSource::Constant(alloc::vec::Vec<(alloc::string::String, oce_model::Value)>)
-pub oce_api::InputSource::Csv
-pub oce_api::InputSource::Csv::bindings: alloc::vec::Vec<(alloc::string::String, usize)>
-pub oce_api::InputSource::Csv::path: std::path::PathBuf
 pub oce_api::InputSource::None
 pub oce_api::IoClass::AnalogInput
 pub oce_api::IoClass::AnalogOutput
@@ -1357,9 +1311,6 @@ pub type oce_api::SimSpec::Error = core::convert::Infallible
 pub type oce_api::StepReport::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::StepReport::Error = core::convert::Infallible
 pub type oce_api::StepReport::Owned = T
-pub type oce_api::TemplateRef::Error = <U as core::convert::TryFrom<T>>::Error
-pub type oce_api::TemplateRef::Error = core::convert::Infallible
-pub type oce_api::TemplateRef::Owned = T
 pub type oce_api::Topology::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::Topology::Error = core::convert::Infallible
 pub type oce_api::Topology::Owned = T
@@ -1392,7 +1343,6 @@ pub unsafe fn oce_api::PointInfo::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::RunMode::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::SimMetrics::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::StepReport::clone_to_uninit(&self, *mut u8)
-pub unsafe fn oce_api::TemplateRef::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::Topology::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::TopologyBlock::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::TopologyConnection::clone_to_uninit(&self, *mut u8)
@@ -1401,7 +1351,6 @@ pub use oce_api::ConnectorId
 pub use oce_api::Diagnostic
 pub use oce_api::PointDirection
 pub use oce_api::PointValueType
-pub use oce_api::SemanticQuery
 pub use oce_api::TrendInterval
 pub use oce_api::Value
 pub use oce_api::ValueType

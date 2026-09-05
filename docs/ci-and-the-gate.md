@@ -129,7 +129,7 @@ thread reservations remain available when measurement identifies a shared resour
 none is known today.
 
 The public-api baselines are the strongest stability evidence in this repo. They are checked-in
-text files — `crates/oce-api/tests/public-api.txt` (1408 lines) and
+text files — `crates/oce-api/tests/public-api.txt` (1357 lines) and
 `crates/oce-store/tests/public-api.txt` (1230 lines) — and the tests at
 `crates/oce-api/tests/public_api.rs` and `crates/oce-store/tests/public_api.rs` diff the crate's
 real surface against them, so any unintended addition, removal or signature change fails the gate

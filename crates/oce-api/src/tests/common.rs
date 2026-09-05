@@ -16,11 +16,11 @@ pub(super) use oce_model::{
     BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, ModelGraph, ParamTable, Value,
     ValueType,
 };
-pub(super) use oce_store::{DomainKey, Durable, ModelStore, ResolvedModel};
+pub(super) use oce_store::{DomainKey, Durable, ModelStore, ResolvedModel, SemanticQuery};
 
 pub(super) use crate::{
     CollectSpec, Engine, InputSource, IoClass, OcError, PhysicalKind, PointDirection, RunMode,
-    SemanticQuery, SimSpec, TemplateRef,
+    SimSpec,
 };
 pub(super) use oce_store_mem::MemStore;
 

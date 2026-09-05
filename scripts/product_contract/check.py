@@ -2,7 +2,7 @@
 """Check one prescribed Markdown traceability grammar, not product semantics.
 
 Read-only, standard-library only. Existing evidence is tracked and regular; only
-the three explicitly pending product-contract files may be untracked before commit.
+explicitly enumerated contract/transition evidence may be untracked before commit.
 No rendering, generation, blessing, compilation or external URL fetch is performed.
 """
 
@@ -23,7 +23,8 @@ from urllib.parse import urlsplit
 
 DOCUMENT = "docs/product-contract.md"
 PENDING = frozenset((DOCUMENT, "scripts/product_contract/check.py",
-                     "scripts/product_contract/test_check.py"))
+                      "scripts/product_contract/test_check.py",
+                      "docs/facade-migration.md", "crates/oce-api/tests/sim_assertions.rs"))
 POINTERS = ("README.md", "AGENTS.md", "TESTING.md", "docs/architecture.md",
             "docs/host-responsibilities.md", "docs/README.md")
 HEADER = "| ID | Status | Actor | Owner | Requirement | Limitation | Grounding | Evidence |"

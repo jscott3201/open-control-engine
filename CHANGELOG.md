@@ -29,6 +29,19 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
+### Facade contraction
+
+- **Intentional pre-release source break:** removed `Engine::load_modelica`,
+  `Engine::load_from_semantic`, `TemplateRef`, the flat `oce_api::SemanticQuery` alias and
+  `InputSource::Csv`, all tied to never-working facade paths. Conditional storage query types and
+  working CXF/Constant/Closure behavior remain. The private conformance driver drops only its facade
+  CSV placeholder selection; reference CSV/table replay stays.
+- **Warning-only assertions:** removed the never-emitted `AssertLevel::Error` variant and changed
+  `Default` from Error to Warning deliberately. Existing Warning collection, execution and state
+  bytes are unchanged; this adds no escalation or safety policy. `point_list(None)` keeps its
+  signature/behavior; device filtering remains outside support with the same `OcError::Load`
+  refusal. See [migration notes](docs/facade-migration.md) and product-contract revision 2.
+
 ### CXF import and export
 
 - **Export exists.** Flat, ground, scalar model graphs serialize back to CXF at the RT-2

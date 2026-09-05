@@ -357,6 +357,10 @@ jobs:
         with:
           tool: nextest@0.9.143,cargo-deny,cargo-machete
       # No `--` arguments: `light` is the default mode and the one this job exists to cover.
+      - name: Supported facade compiler contract
+        run: python3 scripts/facade_contract/check.py
+      - name: Facade compiler diagnostic controls
+        run: python3 scripts/facade_contract/test_check.py
       - run: bash .agents/gate.sh
       - name: Quickstart executes successfully
         run: bash .github/scripts/check-quickstart-runs.sh

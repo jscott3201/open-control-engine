@@ -1,39 +1,5 @@
-//! Loading entry points beyond the primary `load_cxf` (which lives in `engine.rs`): the [`LoadReport`]
-//! returned by every `load_*` call, the [`TemplateRef`] handle, and the two **deferred** load paths
-//! (`load_from_semantic`, `load_modelica`). The deferred paths carry their **final frozen
-//! signatures** now (R-PUB-5) but return a typed [`OcError::Load`] until the corresponding ingest
-//! paths are wired — never a panic.
-
-use oce_store::{SemanticQuery, Store};
-
-use crate::engine::Engine;
-use crate::error::OcError;
+//! The [`LoadReport`] returned by the supported CXF ingest path, [`crate::Engine::load_cxf`].
 use crate::io::IoSummary;
-
-/// A reference to a compiled CDL template for the Ch.13 reverse [`Engine::load_from_semantic`] flow
-/// (`08` §3). doc-08 names this type but `oce-store` has none — it is an `oce-api`-level loader
-/// concern. It is an opaque, owned by-IRI handle carrying **no** store-backend type / `DomainKey` /
-/// `PointHandle` (R-API-8). `#[non_exhaustive]` so version pins, param overrides, and other template
-/// metadata can be added without breaking callers.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[non_exhaustive]
-pub struct TemplateRef {
-    iri: std::sync::Arc<str>,
-}
-
-impl TemplateRef {
-    /// Construct a template reference from any string-like template IRI.
-    #[must_use]
-    pub fn new(iri: impl Into<std::sync::Arc<str>>) -> Self {
-        Self { iri: iri.into() }
-    }
-
-    /// Borrow the compiled-template class IRI.
-    #[must_use]
-    pub fn iri(&self) -> &str {
-        &self.iri
-    }
-}
 
 /// The result of a successful load (`08` §3 R-PUB-5 / R-LOAD-1/2). Carries the `should`-level
 /// diagnostics (the load succeeded; these are advisory), the model identity, the IO summary the host
@@ -54,44 +20,4 @@ pub struct LoadReport {
     pub block_count: usize,
     /// Number of stateful `[S]` block instances — a state-footprint signal (`08` §3 / §5).
     pub stateful_blocks: usize,
-}
-
-impl<S: Store> Engine<S> {
-    /// Ch.13 reverse flow (`08` §3): instantiate a compiled CDL template against equipment whose
-    /// point signature matches a `SemanticStore` query. Deferred until the
-    /// `SemanticStore::match_template` binding is wired; the frozen signature is surfaced now for
-    /// stability.
-    ///
-    /// # Errors
-    /// Always [`OcError::Load`] while deferred. Never panics (R-ERR-1).
-    pub fn load_from_semantic(
-        &mut self,
-        template: &TemplateRef,
-        query: &SemanticQuery,
-    ) -> Result<LoadReport, OcError> {
-        let _ = query; // the frozen signature is exercised; the semantic binding is deferred.
-        Err(OcError::Load {
-            detail: format!(
-                "load_from_semantic (Ch.13 reverse flow, 08 §3) is deferred to M2: template \
-                 '{}' / SemanticStore::match_template binding not yet wired",
-                template.iri()
-            ),
-        })
-    }
-
-    /// Deferred `.mo` path (FRAME §7 non-goal): in v1 this would delegate to upstream modelica-json
-    /// to produce CXF, then call [`Engine::load_cxf`]. Surfaced now so the signature is stable.
-    ///
-    /// # Errors
-    /// Always [`OcError::Load`] while deferred. `Path::display` allocates only — no filesystem
-    /// access — so this never panics (R-ERR-1).
-    pub fn load_modelica(&mut self, path: &std::path::Path) -> Result<LoadReport, OcError> {
-        Err(OcError::Load {
-            detail: format!(
-                "load_modelica (.mo path, 08 §3 / FRAME §7) is deferred to M2: upstream \
-                 modelica-json -> CXF lowering not yet wired (path: {})",
-                path.display()
-            ),
-        })
-    }
 }

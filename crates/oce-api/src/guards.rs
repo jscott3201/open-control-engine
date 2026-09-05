@@ -16,7 +16,6 @@
 
 #![allow(dead_code)]
 
-use std::path::Path;
 use std::sync::Arc;
 
 use oce_store_mem::MemStore;
@@ -25,9 +24,9 @@ use crate::{
     AssertEvent, AssertLevel, ConnectorId, DeclaredOutput, Diagnostic, Engine, EngineCheckpoint,
     EngineStateError, EngineStateSnapshot, IoClass, IoInventory, IoSummary, LoadErrorContext,
     LoadReport, OcError, OutputTrace, Outputs, ParamAttrs, ParamTable, PassThroughPair,
-    PhysicalKind, PointDirection, PointInfo, PointValueType, RunMode, SemanticQuery, SimMetrics,
-    SimSpec, StepReport, TemplateRef, Topology, TopologyBlock, TopologyConnection, TrendCfg,
-    TrendInterval, Value, ValueType,
+    PhysicalKind, PointDirection, PointInfo, PointValueType, RunMode, SimMetrics, SimSpec,
+    StepReport, Topology, TopologyBlock, TopologyConnection, TrendCfg, TrendInterval, Value,
+    ValueType,
 };
 
 /// `T: Send + Sync` (used for the concrete thread-safety guards).
@@ -134,18 +133,13 @@ fn _assert_enumeration_item_types(o: &Outputs, i: &IoInventory, p: &ParamTable) 
 /// R-API-PY-5/6: the frozen method set, each pinned to its exact signature via a fn-pointer. A
 /// fn-pointer is monomorphic, lifetime-erased, and concrete-typed, so a leaked generic parameter, an
 /// `impl Trait` tied to `&self`, a `Cow<'_, _>`, or a `&dyn Store` in any of these would fail to
-/// coerce — a unit-build error, not a runtime surprise. (`load_from_semantic` / `load_modelica` are
-/// Rust-frozen here but deferred from the Python-wrapped subset until those loaders are wired.)
+/// coerce — a unit-build error, not a runtime surprise.
 #[allow(clippy::type_complexity)]
 fn _assert_frozen_signatures() {
     let _: fn() -> Engine<MemStore> = Engine::<MemStore>::in_memory;
     let _: fn(Arc<MemStore>) -> Engine<MemStore> = Engine::<MemStore>::with_store;
     let _: fn(&mut Engine<MemStore>, &[u8]) -> Result<LoadReport, OcError> =
         Engine::<MemStore>::load_cxf;
-    let _: fn(&mut Engine<MemStore>, &TemplateRef, &SemanticQuery) -> Result<LoadReport, OcError> =
-        Engine::<MemStore>::load_from_semantic;
-    let _: fn(&mut Engine<MemStore>, &Path) -> Result<LoadReport, OcError> =
-        Engine::<MemStore>::load_modelica;
     let _: fn(&mut Engine<MemStore>, f64) -> Result<&Outputs, OcError> = Engine::<MemStore>::tick;
     let _: fn(&Engine<MemStore>) -> Result<EngineCheckpoint, OcError> =
         Engine::<MemStore>::checkpoint;
@@ -206,13 +200,9 @@ fn _assert_frozen_signatures() {
 /// `development`, so a drift landed mid-cycle would go unseen until release. This module is a
 /// non-test module, so the per-PR `cargo build` catches it instead.
 ///
-/// Two pins are narrower than the method they cover, stated so neither is overclaimed:
+/// One pin is narrower than the method it covers, stated so it is not overclaimed:
 /// `Engine::store` is pinned at `MemStore` like its neighbours, so it would not catch a newly added
-/// `where` bound on `S`; and `TemplateRef::new` is pinned at `&'static str`, one of the concrete
-/// types its `impl Into<Arc<str>>` parameter accepts, so it would not catch a narrowing of that
-/// parameter to `&'static str` itself. The generic form cannot take the neighbouring idiom at all —
-/// a late-bound lifetime cannot be inferred through `impl Into<_>`, so `fn(&str) -> TemplateRef`
-/// fails to coerce with `E0308: one type is more general than the other`.
+/// `where` bound on `S`.
 ///
 /// `ExportReport::content_id` is **deliberately not pinned**, and its absence is a decision rather
 /// than an oversight. It is `#[deprecated]`, and this is a non-test module compiled under the gate's
@@ -238,8 +228,6 @@ fn _assert_accessor_signatures() {
     let _: fn(&OutputTrace) -> usize = OutputTrace::rows;
     let _: fn(&crate::ExportReport) -> Result<String, crate::ContentIdError> =
         crate::ExportReport::content_id_complete;
-    let _: fn(&TemplateRef) -> &str = TemplateRef::iri;
-    let _: fn(&'static str) -> TemplateRef = TemplateRef::new;
 }
 
 // ---- R-API-PY-7 — `OcError` is `Error + Send + Sync + 'static` (mappable to a PyErr) ----
