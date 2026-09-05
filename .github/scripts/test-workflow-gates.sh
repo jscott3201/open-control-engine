@@ -37,6 +37,10 @@ jobs:
   golden-gen-firewall:
     steps:
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
+  package-publication-contract:
+    steps:
+      - run: python3 scripts/package_policy/test_validate.py
+      - run: python3 scripts/package_policy/validate.py
   determinism-matrix:
     strategy:
       matrix:
@@ -344,6 +348,13 @@ remove_golden_gen_firewall() {
   mv "$dir/ci.yml.tmp" "$dir/ci.yml"
 }
 
+remove_package_publication_contract() {
+  dir="$1"
+  _deny="$2"
+  grep -v 'scripts/package_policy' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
 remove_root_unsafe_forbid() {
   _dir="$1"
   _deny="$2"
@@ -502,6 +513,8 @@ run_case missing-store-surface-gate fail remove_store_surface_gate \
   "oce-store public-api surface gate package selector"
 run_case missing-golden-gen-firewall fail remove_golden_gen_firewall \
   "run golden-gen firewall fixture tests"
+run_case missing-package-publication-contract fail remove_package_publication_contract \
+  "run package publication hostile controls"
 run_case missing-root-unsafe-forbid fail remove_root_unsafe_forbid \
   "workspace.lints.rust unsafe_code = \"forbid\""
 run_case missing-crate-lints-workspace fail remove_crate_lints_workspace \

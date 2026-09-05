@@ -5,9 +5,10 @@
 #
 # This per-PR gate is the LIGHT gate: the near-instant checks plus the compile-requiring lints
 # (clippy -D warnings), a workspace build, cargo-machete unused-dependency detection, and gate-script
-# behavior fixtures, stale crate-status header lint, and a targeted cross-arch determinism subset
-# for oce-api/oce-blocks/oce-expr. It does NOT run the full workspace test suite — keeping PRs into
-# `development` fast. The heavy test suite (cargo nextest run for unit + integration tests, cargo
+# behavior fixtures, the package/feature/publication contract, stale crate-status header lint, and a
+# targeted cross-arch determinism subset for oce-api/oce-blocks/oce-expr. It does NOT run the full
+# workspace test suite — keeping PRs into `development` fast. The heavy test suite (cargo nextest
+# run for unit + integration tests, cargo
 # nextest run with release codegen for panic-freedom regressions, and cargo test --doc for doctests
 # — nextest cannot run doctests) lives in the development -> main release gate at
 # .github/workflows/release-gate.yml.
@@ -16,10 +17,10 @@
 # unconditionally, since a `development` -> `main` PR matches no other workflow.
 #
 # Gates that always run: rustfmt, file-size cap (700 LOC), no-secret scan, rustdoc (-D warnings),
-# clippy -D warnings, a workspace build, cargo-machete, gate-script fixtures, stale crate-status
-# header lint, the targeted two-arch determinism matrix, and the default-no-db gate (the default —
-# and only — build links no database / tokio / async-std anywhere in the workspace). When dependency
-# manifests change, cargo-deny runs too.
+# clippy -D warnings, a workspace build, cargo-machete, gate-script fixtures, the closed package and
+# feature publication contract, stale crate-status header lint, the targeted two-arch determinism
+# matrix, and the default-no-db gate (the default — and only — build links no database / tokio /
+# async-std anywhere in the workspace). When dependency manifests change, cargo-deny runs too.
 #
 # Deferred until first publish: the cargo-about THIRDPARTY.md attribution-currency gate (plus
 # about.toml/about.hbs) is intentionally NOT wired yet — attribution hygiene is most valuable near
@@ -113,6 +114,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.97.1
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
+
+  package-publication-contract:
+    name: package, feature, and publication contract
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - name: hostile package-contract controls
+        run: python3 scripts/package_policy/test_validate.py
+      - name: metadata-driven package-contract validation
+        run: python3 scripts/package_policy/validate.py
 
   gate-fixtures:
     name: gate behavior fixtures
