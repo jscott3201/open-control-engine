@@ -204,3 +204,72 @@ fn utilities_assert_warns_on_first_tick_false_and_is_deterministic() {
     let inputs = [(0.0, false), (0.25, true), (0.5, false), (1.0, false)];
     assert_eq!(assert_trace(&inputs), assert_trace(&inputs));
 }
+
+#[test]
+fn mixed_native_block_and_assert_warnings_repeat_without_escalation() {
+    fn run() -> Vec<(String, u64, AssertLevel)> {
+        let mut model = assert_model("false remains advisory");
+        let block = BlockId(1);
+        for (id, direction) in [(1, Dir::In), (2, Dir::In), (3, Dir::Out)] {
+            model.connectors.push(Connector::new(
+                ConnectorId(id),
+                block,
+                direction,
+                ValueType::Real,
+                if id == 2 { 1 } else { 0 },
+            ));
+        }
+        model
+            .external_inputs
+            .extend([ConnectorId(1), ConnectorId(2)]);
+        model.blocks.push(BlockInstance {
+            id: block,
+            class_iri: Arc::from("CDL.Reals.Atan2"),
+            inputs: vec![ConnectorId(1), ConnectorId(2)],
+            outputs: vec![ConnectorId(3)],
+            params: ParamTable::default(),
+            decl_order: 1,
+            instance_iri: None,
+        });
+        let mut engine = Engine::in_memory();
+        engine.build_model_in_memory(model, None).unwrap();
+        engine.set_realtime_epoch_unix_nanos(0);
+        let mut events = Vec::new();
+        for time in [0.0, 0.0, 1.0] {
+            engine.set_input("conn#0", Value::Boolean(false)).unwrap();
+            engine.set_input("conn#1", Value::Real(0.0)).unwrap();
+            engine.set_input("conn#2", Value::Real(0.0)).unwrap();
+            let report = engine.step_realtime(time).unwrap();
+            assert_eq!(report.written, 1);
+            assert_eq!(report.asserts.len(), 2);
+            assert_eq!(report.asserts[0].message, "false remains advisory");
+            assert!(
+                report.asserts[1]
+                    .message
+                    .starts_with("Atan2: inputs u1 and u2")
+            );
+            events.extend(
+                report
+                    .asserts
+                    .into_iter()
+                    .map(|event| (event.block, event.t.to_bits(), event.level)),
+            );
+        }
+        assert!(
+            engine
+                .get_output("conn#3")
+                .unwrap()
+                .bit_eq(&Value::Real(0.0))
+        );
+        events
+    }
+    let expected: Vec<_> = [0.0_f64, 0.0, 1.0]
+        .into_iter()
+        .flat_map(|time| {
+            ["CDL.Utilities.Assert", "CDL.Reals.Atan2"]
+                .map(|class| (class.to_owned(), time.to_bits(), AssertLevel::Warning))
+        })
+        .collect();
+    assert_eq!(run(), expected);
+    assert_eq!(run(), expected);
+}

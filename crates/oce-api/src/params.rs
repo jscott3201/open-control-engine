@@ -42,9 +42,9 @@ pub enum RunMode {
 pub struct ParamAttrs {
     /// Structural type of the parameter.
     pub value_type: ValueType,
-    /// Lower validation bound; `None` ⇒ unbounded below.
+    /// Available static lower bound; absence does not exclude cross-parameter constraints.
     pub min: Option<f64>,
-    /// Upper validation bound; `None` ⇒ unbounded above.
+    /// Available static upper bound; absence does not exclude cross-parameter constraints.
     pub max: Option<f64>,
     /// SI computation unit; metadata only.
     pub unit: Option<String>,

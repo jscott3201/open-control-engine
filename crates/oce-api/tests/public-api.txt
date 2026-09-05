@@ -13,20 +13,39 @@
 impl !core::panic::unwind_safe::RefUnwindSafe for oce_api::InputSource
 impl !core::panic::unwind_safe::RefUnwindSafe for oce_api::LoadErrorContext
 impl !core::panic::unwind_safe::RefUnwindSafe for oce_api::OcError
+impl !core::panic::unwind_safe::RefUnwindSafe for oce_api::OperationFailure
 impl !core::panic::unwind_safe::RefUnwindSafe for oce_api::SimSpec
 impl !core::panic::unwind_safe::UnwindSafe for oce_api::InputSource
 impl !core::panic::unwind_safe::UnwindSafe for oce_api::LoadErrorContext
 impl !core::panic::unwind_safe::UnwindSafe for oce_api::OcError
+impl !core::panic::unwind_safe::UnwindSafe for oce_api::OperationFailure
 impl !core::panic::unwind_safe::UnwindSafe for oce_api::SimSpec
 impl core::clone::Clone for oce_api::AssertEvent
 impl core::clone::Clone for oce_api::AssertLevel
+impl core::clone::Clone for oce_api::CatalogDefault
+impl core::clone::Clone for oce_api::CatalogEntry
+impl core::clone::Clone for oce_api::CatalogParamDefault
+impl core::clone::Clone for oce_api::CatalogPort
+impl core::clone::Clone for oce_api::CatalogPortKind
+impl core::clone::Clone for oce_api::CatalogPortNaming
+impl core::clone::Clone for oce_api::CatalogRule
+impl core::clone::Clone for oce_api::CatalogValueKind
 impl core::clone::Clone for oce_api::CollectSpec
+impl core::clone::Clone for oce_api::ContractDescriptor
+impl core::clone::Clone for oce_api::ContractDomain
 impl core::clone::Clone for oce_api::DeclaredOutput
+impl core::clone::Clone for oce_api::DiagnosticKey
+impl core::clone::Clone for oce_api::DiagnosticReceipt
+impl core::clone::Clone for oce_api::DiagnosticRecord
+impl core::clone::Clone for oce_api::DiagnosticSeverity
+impl core::clone::Clone for oce_api::DiagnosticStage
+impl core::clone::Clone for oce_api::DiagnosticSubject
 impl core::clone::Clone for oce_api::EngineCheckpoint
 impl core::clone::Clone for oce_api::EngineStateSnapshot
 impl core::clone::Clone for oce_api::IoClass
 impl core::clone::Clone for oce_api::IoInventory
 impl core::clone::Clone for oce_api::IoSummary
+impl core::clone::Clone for oce_api::LoadReceipt
 impl core::clone::Clone for oce_api::LoadReport
 impl core::clone::Clone for oce_api::OutputTrace
 impl core::clone::Clone for oce_api::Outputs
@@ -43,15 +62,41 @@ impl core::clone::Clone for oce_api::TopologyBlock
 impl core::clone::Clone for oce_api::TopologyConnection
 impl core::clone::Clone for oce_api::TrendCfg
 impl core::cmp::Eq for oce_api::AssertLevel
+impl core::cmp::Eq for oce_api::CatalogPort
+impl core::cmp::Eq for oce_api::CatalogPortKind
+impl core::cmp::Eq for oce_api::CatalogPortNaming
+impl core::cmp::Eq for oce_api::CatalogValueKind
 impl core::cmp::Eq for oce_api::ContentIdError
+impl core::cmp::Eq for oce_api::ContractDescriptor
+impl core::cmp::Eq for oce_api::ContractDomain
+impl core::cmp::Eq for oce_api::DiagnosticKey
+impl core::cmp::Eq for oce_api::DiagnosticSeverity
+impl core::cmp::Eq for oce_api::DiagnosticStage
+impl core::cmp::Eq for oce_api::DiagnosticSubject
 impl core::cmp::Eq for oce_api::IoClass
 impl core::cmp::Eq for oce_api::IoSummary
 impl core::cmp::Eq for oce_api::PhysicalKind
 impl core::cmp::Eq for oce_api::RunMode
 impl core::cmp::Eq for oce_api::TrendCfg
+impl core::cmp::Ord for oce_api::DiagnosticKey
+impl core::cmp::Ord for oce_api::DiagnosticSubject
 impl core::cmp::PartialEq for oce_api::AssertLevel
+impl core::cmp::PartialEq for oce_api::CatalogDefault
+impl core::cmp::PartialEq for oce_api::CatalogEntry
+impl core::cmp::PartialEq for oce_api::CatalogParamDefault
+impl core::cmp::PartialEq for oce_api::CatalogPort
+impl core::cmp::PartialEq for oce_api::CatalogPortKind
+impl core::cmp::PartialEq for oce_api::CatalogPortNaming
+impl core::cmp::PartialEq for oce_api::CatalogRule
+impl core::cmp::PartialEq for oce_api::CatalogValueKind
 impl core::cmp::PartialEq for oce_api::ContentIdError
+impl core::cmp::PartialEq for oce_api::ContractDescriptor
+impl core::cmp::PartialEq for oce_api::ContractDomain
 impl core::cmp::PartialEq for oce_api::DeclaredOutput
+impl core::cmp::PartialEq for oce_api::DiagnosticKey
+impl core::cmp::PartialEq for oce_api::DiagnosticSeverity
+impl core::cmp::PartialEq for oce_api::DiagnosticStage
+impl core::cmp::PartialEq for oce_api::DiagnosticSubject
 impl core::cmp::PartialEq for oce_api::IoClass
 impl core::cmp::PartialEq for oce_api::IoSummary
 impl core::cmp::PartialEq for oce_api::ParamAttrs
@@ -63,6 +108,8 @@ impl core::cmp::PartialEq for oce_api::Topology
 impl core::cmp::PartialEq for oce_api::TopologyBlock
 impl core::cmp::PartialEq for oce_api::TopologyConnection
 impl core::cmp::PartialEq for oce_api::TrendCfg
+impl core::cmp::PartialOrd for oce_api::DiagnosticKey
+impl core::cmp::PartialOrd for oce_api::DiagnosticSubject
 impl core::convert::From<oce_api::EngineStateError> for oce_api::OcError
 impl core::convert::From<oce_api::EngineStateError> for oce_api::OcError
 impl core::convert::From<oce_cxf::CxfError> for oce_api::OcError
@@ -84,22 +131,42 @@ impl core::error::Error for oce_api::ContentIdError
 impl core::error::Error for oce_api::EngineStateError
 impl core::error::Error for oce_api::LoadErrorContext
 impl core::error::Error for oce_api::OcError
+impl core::error::Error for oce_api::OperationFailure
 impl core::fmt::Debug for oce_api::AssertEvent
 impl core::fmt::Debug for oce_api::AssertLevel
+impl core::fmt::Debug for oce_api::CatalogDefault
+impl core::fmt::Debug for oce_api::CatalogEntry
+impl core::fmt::Debug for oce_api::CatalogParamDefault
+impl core::fmt::Debug for oce_api::CatalogPort
+impl core::fmt::Debug for oce_api::CatalogPortKind
+impl core::fmt::Debug for oce_api::CatalogPortNaming
+impl core::fmt::Debug for oce_api::CatalogRule
+impl core::fmt::Debug for oce_api::CatalogValueKind
 impl core::fmt::Debug for oce_api::CollectSpec
 impl core::fmt::Debug for oce_api::ContentIdError
+impl core::fmt::Debug for oce_api::ContractDescriptor
+impl core::fmt::Debug for oce_api::ContractDomain
 impl core::fmt::Debug for oce_api::DeclaredOutput
+impl core::fmt::Debug for oce_api::DiagnosticKey
+impl core::fmt::Debug for oce_api::DiagnosticReceipt
+impl core::fmt::Debug for oce_api::DiagnosticRecord
+impl core::fmt::Debug for oce_api::DiagnosticSeverity
+impl core::fmt::Debug for oce_api::DiagnosticStage
+impl core::fmt::Debug for oce_api::DiagnosticSubject
 impl core::fmt::Debug for oce_api::EngineCheckpoint
 impl core::fmt::Debug for oce_api::EngineStateError
 impl core::fmt::Debug for oce_api::EngineStateSnapshot
+impl core::fmt::Debug for oce_api::ExportReceipt
 impl core::fmt::Debug for oce_api::ExportReport
 impl core::fmt::Debug for oce_api::InputSource
 impl core::fmt::Debug for oce_api::IoClass
 impl core::fmt::Debug for oce_api::IoInventory
 impl core::fmt::Debug for oce_api::IoSummary
 impl core::fmt::Debug for oce_api::LoadErrorContext
+impl core::fmt::Debug for oce_api::LoadReceipt
 impl core::fmt::Debug for oce_api::LoadReport
 impl core::fmt::Debug for oce_api::OcError
+impl core::fmt::Debug for oce_api::OperationFailure
 impl core::fmt::Debug for oce_api::OutputTrace
 impl core::fmt::Debug for oce_api::Outputs
 impl core::fmt::Debug for oce_api::ParamAttrs
@@ -119,7 +186,18 @@ impl core::fmt::Display for oce_api::ContentIdError
 impl core::fmt::Display for oce_api::EngineStateError
 impl core::fmt::Display for oce_api::LoadErrorContext
 impl core::fmt::Display for oce_api::OcError
+impl core::fmt::Display for oce_api::OperationFailure
+impl core::hash::Hash for oce_api::DiagnosticKey
+impl core::hash::Hash for oce_api::DiagnosticSeverity
+impl core::hash::Hash for oce_api::DiagnosticStage
+impl core::hash::Hash for oce_api::DiagnosticSubject
 impl core::marker::Copy for oce_api::AssertLevel
+impl core::marker::Copy for oce_api::CatalogPortKind
+impl core::marker::Copy for oce_api::CatalogPortNaming
+impl core::marker::Copy for oce_api::ContractDescriptor
+impl core::marker::Copy for oce_api::ContractDomain
+impl core::marker::Copy for oce_api::DiagnosticSeverity
+impl core::marker::Copy for oce_api::DiagnosticStage
 impl core::marker::Copy for oce_api::IoClass
 impl core::marker::Copy for oce_api::IoSummary
 impl core::marker::Copy for oce_api::PhysicalKind
@@ -127,20 +205,39 @@ impl core::marker::Copy for oce_api::RunMode
 impl core::marker::Copy for oce_api::TrendCfg
 impl core::marker::Freeze for oce_api::AssertEvent
 impl core::marker::Freeze for oce_api::AssertLevel
+impl core::marker::Freeze for oce_api::CatalogDefault
+impl core::marker::Freeze for oce_api::CatalogEntry
+impl core::marker::Freeze for oce_api::CatalogParamDefault
+impl core::marker::Freeze for oce_api::CatalogPort
+impl core::marker::Freeze for oce_api::CatalogPortKind
+impl core::marker::Freeze for oce_api::CatalogPortNaming
+impl core::marker::Freeze for oce_api::CatalogRule
+impl core::marker::Freeze for oce_api::CatalogValueKind
 impl core::marker::Freeze for oce_api::CollectSpec
 impl core::marker::Freeze for oce_api::ContentIdError
+impl core::marker::Freeze for oce_api::ContractDescriptor
+impl core::marker::Freeze for oce_api::ContractDomain
 impl core::marker::Freeze for oce_api::DeclaredOutput
+impl core::marker::Freeze for oce_api::DiagnosticKey
+impl core::marker::Freeze for oce_api::DiagnosticReceipt
+impl core::marker::Freeze for oce_api::DiagnosticRecord
+impl core::marker::Freeze for oce_api::DiagnosticSeverity
+impl core::marker::Freeze for oce_api::DiagnosticStage
+impl core::marker::Freeze for oce_api::DiagnosticSubject
 impl core::marker::Freeze for oce_api::EngineCheckpoint
 impl core::marker::Freeze for oce_api::EngineStateError
 impl core::marker::Freeze for oce_api::EngineStateSnapshot
+impl core::marker::Freeze for oce_api::ExportReceipt
 impl core::marker::Freeze for oce_api::ExportReport
 impl core::marker::Freeze for oce_api::InputSource
 impl core::marker::Freeze for oce_api::IoClass
 impl core::marker::Freeze for oce_api::IoInventory
 impl core::marker::Freeze for oce_api::IoSummary
 impl core::marker::Freeze for oce_api::LoadErrorContext
+impl core::marker::Freeze for oce_api::LoadReceipt
 impl core::marker::Freeze for oce_api::LoadReport
 impl core::marker::Freeze for oce_api::OcError
+impl core::marker::Freeze for oce_api::OperationFailure
 impl core::marker::Freeze for oce_api::OutputTrace
 impl core::marker::Freeze for oce_api::Outputs
 impl core::marker::Freeze for oce_api::ParamAttrs
@@ -158,20 +255,39 @@ impl core::marker::Freeze for oce_api::TopologyConnection
 impl core::marker::Freeze for oce_api::TrendCfg
 impl core::marker::Send for oce_api::AssertEvent
 impl core::marker::Send for oce_api::AssertLevel
+impl core::marker::Send for oce_api::CatalogDefault
+impl core::marker::Send for oce_api::CatalogEntry
+impl core::marker::Send for oce_api::CatalogParamDefault
+impl core::marker::Send for oce_api::CatalogPort
+impl core::marker::Send for oce_api::CatalogPortKind
+impl core::marker::Send for oce_api::CatalogPortNaming
+impl core::marker::Send for oce_api::CatalogRule
+impl core::marker::Send for oce_api::CatalogValueKind
 impl core::marker::Send for oce_api::CollectSpec
 impl core::marker::Send for oce_api::ContentIdError
+impl core::marker::Send for oce_api::ContractDescriptor
+impl core::marker::Send for oce_api::ContractDomain
 impl core::marker::Send for oce_api::DeclaredOutput
+impl core::marker::Send for oce_api::DiagnosticKey
+impl core::marker::Send for oce_api::DiagnosticReceipt
+impl core::marker::Send for oce_api::DiagnosticRecord
+impl core::marker::Send for oce_api::DiagnosticSeverity
+impl core::marker::Send for oce_api::DiagnosticStage
+impl core::marker::Send for oce_api::DiagnosticSubject
 impl core::marker::Send for oce_api::EngineCheckpoint
 impl core::marker::Send for oce_api::EngineStateError
 impl core::marker::Send for oce_api::EngineStateSnapshot
+impl core::marker::Send for oce_api::ExportReceipt
 impl core::marker::Send for oce_api::ExportReport
 impl core::marker::Send for oce_api::InputSource
 impl core::marker::Send for oce_api::IoClass
 impl core::marker::Send for oce_api::IoInventory
 impl core::marker::Send for oce_api::IoSummary
 impl core::marker::Send for oce_api::LoadErrorContext
+impl core::marker::Send for oce_api::LoadReceipt
 impl core::marker::Send for oce_api::LoadReport
 impl core::marker::Send for oce_api::OcError
+impl core::marker::Send for oce_api::OperationFailure
 impl core::marker::Send for oce_api::OutputTrace
 impl core::marker::Send for oce_api::Outputs
 impl core::marker::Send for oce_api::ParamAttrs
@@ -188,8 +304,22 @@ impl core::marker::Send for oce_api::TopologyBlock
 impl core::marker::Send for oce_api::TopologyConnection
 impl core::marker::Send for oce_api::TrendCfg
 impl core::marker::StructuralPartialEq for oce_api::AssertLevel
+impl core::marker::StructuralPartialEq for oce_api::CatalogDefault
+impl core::marker::StructuralPartialEq for oce_api::CatalogEntry
+impl core::marker::StructuralPartialEq for oce_api::CatalogParamDefault
+impl core::marker::StructuralPartialEq for oce_api::CatalogPort
+impl core::marker::StructuralPartialEq for oce_api::CatalogPortKind
+impl core::marker::StructuralPartialEq for oce_api::CatalogPortNaming
+impl core::marker::StructuralPartialEq for oce_api::CatalogRule
+impl core::marker::StructuralPartialEq for oce_api::CatalogValueKind
 impl core::marker::StructuralPartialEq for oce_api::ContentIdError
+impl core::marker::StructuralPartialEq for oce_api::ContractDescriptor
+impl core::marker::StructuralPartialEq for oce_api::ContractDomain
 impl core::marker::StructuralPartialEq for oce_api::DeclaredOutput
+impl core::marker::StructuralPartialEq for oce_api::DiagnosticKey
+impl core::marker::StructuralPartialEq for oce_api::DiagnosticSeverity
+impl core::marker::StructuralPartialEq for oce_api::DiagnosticStage
+impl core::marker::StructuralPartialEq for oce_api::DiagnosticSubject
 impl core::marker::StructuralPartialEq for oce_api::IoClass
 impl core::marker::StructuralPartialEq for oce_api::IoSummary
 impl core::marker::StructuralPartialEq for oce_api::ParamAttrs
@@ -201,20 +331,39 @@ impl core::marker::StructuralPartialEq for oce_api::TopologyConnection
 impl core::marker::StructuralPartialEq for oce_api::TrendCfg
 impl core::marker::Sync for oce_api::AssertEvent
 impl core::marker::Sync for oce_api::AssertLevel
+impl core::marker::Sync for oce_api::CatalogDefault
+impl core::marker::Sync for oce_api::CatalogEntry
+impl core::marker::Sync for oce_api::CatalogParamDefault
+impl core::marker::Sync for oce_api::CatalogPort
+impl core::marker::Sync for oce_api::CatalogPortKind
+impl core::marker::Sync for oce_api::CatalogPortNaming
+impl core::marker::Sync for oce_api::CatalogRule
+impl core::marker::Sync for oce_api::CatalogValueKind
 impl core::marker::Sync for oce_api::CollectSpec
 impl core::marker::Sync for oce_api::ContentIdError
+impl core::marker::Sync for oce_api::ContractDescriptor
+impl core::marker::Sync for oce_api::ContractDomain
 impl core::marker::Sync for oce_api::DeclaredOutput
+impl core::marker::Sync for oce_api::DiagnosticKey
+impl core::marker::Sync for oce_api::DiagnosticReceipt
+impl core::marker::Sync for oce_api::DiagnosticRecord
+impl core::marker::Sync for oce_api::DiagnosticSeverity
+impl core::marker::Sync for oce_api::DiagnosticStage
+impl core::marker::Sync for oce_api::DiagnosticSubject
 impl core::marker::Sync for oce_api::EngineCheckpoint
 impl core::marker::Sync for oce_api::EngineStateError
 impl core::marker::Sync for oce_api::EngineStateSnapshot
+impl core::marker::Sync for oce_api::ExportReceipt
 impl core::marker::Sync for oce_api::ExportReport
 impl core::marker::Sync for oce_api::InputSource
 impl core::marker::Sync for oce_api::IoClass
 impl core::marker::Sync for oce_api::IoInventory
 impl core::marker::Sync for oce_api::IoSummary
 impl core::marker::Sync for oce_api::LoadErrorContext
+impl core::marker::Sync for oce_api::LoadReceipt
 impl core::marker::Sync for oce_api::LoadReport
 impl core::marker::Sync for oce_api::OcError
+impl core::marker::Sync for oce_api::OperationFailure
 impl core::marker::Sync for oce_api::OutputTrace
 impl core::marker::Sync for oce_api::Outputs
 impl core::marker::Sync for oce_api::ParamAttrs
@@ -232,20 +381,39 @@ impl core::marker::Sync for oce_api::TopologyConnection
 impl core::marker::Sync for oce_api::TrendCfg
 impl core::marker::Unpin for oce_api::AssertEvent
 impl core::marker::Unpin for oce_api::AssertLevel
+impl core::marker::Unpin for oce_api::CatalogDefault
+impl core::marker::Unpin for oce_api::CatalogEntry
+impl core::marker::Unpin for oce_api::CatalogParamDefault
+impl core::marker::Unpin for oce_api::CatalogPort
+impl core::marker::Unpin for oce_api::CatalogPortKind
+impl core::marker::Unpin for oce_api::CatalogPortNaming
+impl core::marker::Unpin for oce_api::CatalogRule
+impl core::marker::Unpin for oce_api::CatalogValueKind
 impl core::marker::Unpin for oce_api::CollectSpec
 impl core::marker::Unpin for oce_api::ContentIdError
+impl core::marker::Unpin for oce_api::ContractDescriptor
+impl core::marker::Unpin for oce_api::ContractDomain
 impl core::marker::Unpin for oce_api::DeclaredOutput
+impl core::marker::Unpin for oce_api::DiagnosticKey
+impl core::marker::Unpin for oce_api::DiagnosticReceipt
+impl core::marker::Unpin for oce_api::DiagnosticRecord
+impl core::marker::Unpin for oce_api::DiagnosticSeverity
+impl core::marker::Unpin for oce_api::DiagnosticStage
+impl core::marker::Unpin for oce_api::DiagnosticSubject
 impl core::marker::Unpin for oce_api::EngineCheckpoint
 impl core::marker::Unpin for oce_api::EngineStateError
 impl core::marker::Unpin for oce_api::EngineStateSnapshot
+impl core::marker::Unpin for oce_api::ExportReceipt
 impl core::marker::Unpin for oce_api::ExportReport
 impl core::marker::Unpin for oce_api::InputSource
 impl core::marker::Unpin for oce_api::IoClass
 impl core::marker::Unpin for oce_api::IoInventory
 impl core::marker::Unpin for oce_api::IoSummary
 impl core::marker::Unpin for oce_api::LoadErrorContext
+impl core::marker::Unpin for oce_api::LoadReceipt
 impl core::marker::Unpin for oce_api::LoadReport
 impl core::marker::Unpin for oce_api::OcError
+impl core::marker::Unpin for oce_api::OperationFailure
 impl core::marker::Unpin for oce_api::OutputTrace
 impl core::marker::Unpin for oce_api::Outputs
 impl core::marker::Unpin for oce_api::ParamAttrs
@@ -263,20 +431,39 @@ impl core::marker::Unpin for oce_api::TopologyConnection
 impl core::marker::Unpin for oce_api::TrendCfg
 impl core::marker::UnsafeUnpin for oce_api::AssertEvent
 impl core::marker::UnsafeUnpin for oce_api::AssertLevel
+impl core::marker::UnsafeUnpin for oce_api::CatalogDefault
+impl core::marker::UnsafeUnpin for oce_api::CatalogEntry
+impl core::marker::UnsafeUnpin for oce_api::CatalogParamDefault
+impl core::marker::UnsafeUnpin for oce_api::CatalogPort
+impl core::marker::UnsafeUnpin for oce_api::CatalogPortKind
+impl core::marker::UnsafeUnpin for oce_api::CatalogPortNaming
+impl core::marker::UnsafeUnpin for oce_api::CatalogRule
+impl core::marker::UnsafeUnpin for oce_api::CatalogValueKind
 impl core::marker::UnsafeUnpin for oce_api::CollectSpec
 impl core::marker::UnsafeUnpin for oce_api::ContentIdError
+impl core::marker::UnsafeUnpin for oce_api::ContractDescriptor
+impl core::marker::UnsafeUnpin for oce_api::ContractDomain
 impl core::marker::UnsafeUnpin for oce_api::DeclaredOutput
+impl core::marker::UnsafeUnpin for oce_api::DiagnosticKey
+impl core::marker::UnsafeUnpin for oce_api::DiagnosticReceipt
+impl core::marker::UnsafeUnpin for oce_api::DiagnosticRecord
+impl core::marker::UnsafeUnpin for oce_api::DiagnosticSeverity
+impl core::marker::UnsafeUnpin for oce_api::DiagnosticStage
+impl core::marker::UnsafeUnpin for oce_api::DiagnosticSubject
 impl core::marker::UnsafeUnpin for oce_api::EngineCheckpoint
 impl core::marker::UnsafeUnpin for oce_api::EngineStateError
 impl core::marker::UnsafeUnpin for oce_api::EngineStateSnapshot
+impl core::marker::UnsafeUnpin for oce_api::ExportReceipt
 impl core::marker::UnsafeUnpin for oce_api::ExportReport
 impl core::marker::UnsafeUnpin for oce_api::InputSource
 impl core::marker::UnsafeUnpin for oce_api::IoClass
 impl core::marker::UnsafeUnpin for oce_api::IoInventory
 impl core::marker::UnsafeUnpin for oce_api::IoSummary
 impl core::marker::UnsafeUnpin for oce_api::LoadErrorContext
+impl core::marker::UnsafeUnpin for oce_api::LoadReceipt
 impl core::marker::UnsafeUnpin for oce_api::LoadReport
 impl core::marker::UnsafeUnpin for oce_api::OcError
+impl core::marker::UnsafeUnpin for oce_api::OperationFailure
 impl core::marker::UnsafeUnpin for oce_api::OutputTrace
 impl core::marker::UnsafeUnpin for oce_api::Outputs
 impl core::marker::UnsafeUnpin for oce_api::ParamAttrs
@@ -294,16 +481,34 @@ impl core::marker::UnsafeUnpin for oce_api::TopologyConnection
 impl core::marker::UnsafeUnpin for oce_api::TrendCfg
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::AssertEvent
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::AssertLevel
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogDefault
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogEntry
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogParamDefault
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogPort
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogPortKind
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogPortNaming
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogRule
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogValueKind
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CollectSpec
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ContentIdError
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ContractDescriptor
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ContractDomain
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::DeclaredOutput
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::DiagnosticKey
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::DiagnosticReceipt
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::DiagnosticRecord
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::DiagnosticSeverity
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::DiagnosticStage
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::DiagnosticSubject
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::EngineCheckpoint
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::EngineStateError
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::EngineStateSnapshot
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ExportReceipt
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ExportReport
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::IoClass
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::IoInventory
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::IoSummary
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::LoadReceipt
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::LoadReport
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::OutputTrace
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::Outputs
@@ -321,16 +526,34 @@ impl core::panic::unwind_safe::RefUnwindSafe for oce_api::TopologyConnection
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::TrendCfg
 impl core::panic::unwind_safe::UnwindSafe for oce_api::AssertEvent
 impl core::panic::unwind_safe::UnwindSafe for oce_api::AssertLevel
+impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogDefault
+impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogEntry
+impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogParamDefault
+impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogPort
+impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogPortKind
+impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogPortNaming
+impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogRule
+impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogValueKind
 impl core::panic::unwind_safe::UnwindSafe for oce_api::CollectSpec
 impl core::panic::unwind_safe::UnwindSafe for oce_api::ContentIdError
+impl core::panic::unwind_safe::UnwindSafe for oce_api::ContractDescriptor
+impl core::panic::unwind_safe::UnwindSafe for oce_api::ContractDomain
 impl core::panic::unwind_safe::UnwindSafe for oce_api::DeclaredOutput
+impl core::panic::unwind_safe::UnwindSafe for oce_api::DiagnosticKey
+impl core::panic::unwind_safe::UnwindSafe for oce_api::DiagnosticReceipt
+impl core::panic::unwind_safe::UnwindSafe for oce_api::DiagnosticRecord
+impl core::panic::unwind_safe::UnwindSafe for oce_api::DiagnosticSeverity
+impl core::panic::unwind_safe::UnwindSafe for oce_api::DiagnosticStage
+impl core::panic::unwind_safe::UnwindSafe for oce_api::DiagnosticSubject
 impl core::panic::unwind_safe::UnwindSafe for oce_api::EngineCheckpoint
 impl core::panic::unwind_safe::UnwindSafe for oce_api::EngineStateError
 impl core::panic::unwind_safe::UnwindSafe for oce_api::EngineStateSnapshot
+impl core::panic::unwind_safe::UnwindSafe for oce_api::ExportReceipt
 impl core::panic::unwind_safe::UnwindSafe for oce_api::ExportReport
 impl core::panic::unwind_safe::UnwindSafe for oce_api::IoClass
 impl core::panic::unwind_safe::UnwindSafe for oce_api::IoInventory
 impl core::panic::unwind_safe::UnwindSafe for oce_api::IoSummary
+impl core::panic::unwind_safe::UnwindSafe for oce_api::LoadReceipt
 impl core::panic::unwind_safe::UnwindSafe for oce_api::LoadReport
 impl core::panic::unwind_safe::UnwindSafe for oce_api::OutputTrace
 impl core::panic::unwind_safe::UnwindSafe for oce_api::Outputs
@@ -346,11 +569,19 @@ impl core::panic::unwind_safe::UnwindSafe for oce_api::Topology
 impl core::panic::unwind_safe::UnwindSafe for oce_api::TopologyBlock
 impl core::panic::unwind_safe::UnwindSafe for oce_api::TopologyConnection
 impl core::panic::unwind_safe::UnwindSafe for oce_api::TrendCfg
+impl oce_api::DiagnosticKey
+impl oce_api::DiagnosticReceipt
+impl oce_api::DiagnosticRecord
+impl oce_api::DiagnosticSeverity
+impl oce_api::DiagnosticStage
 impl oce_api::Engine<oce_store_mem::MemStore>
 impl oce_api::EngineStateSnapshot
+impl oce_api::ExportReceipt
 impl oce_api::ExportReport
 impl oce_api::IoInventory
+impl oce_api::LoadReceipt
 impl oce_api::OcError
+impl oce_api::OperationFailure
 impl oce_api::OutputTrace
 impl oce_api::Outputs
 impl oce_api::ParamTable
@@ -371,21 +602,40 @@ impl<S> core::marker::Unpin for oce_api::Engine<S>
 impl<S> core::marker::UnsafeUnpin for oce_api::Engine<S>
 impl<T, U> core::convert::Into<U> for oce_api::AssertEvent where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::AssertLevel where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::CatalogDefault where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::CatalogEntry where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::CatalogParamDefault where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::CatalogPort where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::CatalogPortKind where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::CatalogPortNaming where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::CatalogRule where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::CatalogValueKind where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::CollectSpec where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::ContentIdError where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::ContractDescriptor where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::ContractDomain where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::DeclaredOutput where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::DiagnosticKey where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::DiagnosticReceipt where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::DiagnosticRecord where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::DiagnosticSeverity where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::DiagnosticStage where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::DiagnosticSubject where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::Engine<S> where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::EngineCheckpoint where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::EngineStateError where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::EngineStateSnapshot where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::ExportReceipt where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::ExportReport where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::InputSource where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::IoClass where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::IoInventory where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::IoSummary where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::LoadErrorContext where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::LoadReceipt where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::LoadReport where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::OcError where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::OperationFailure where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::OutputTrace where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::Outputs where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::ParamAttrs where U: core::convert::From<T>
@@ -403,21 +653,40 @@ impl<T, U> core::convert::Into<U> for oce_api::TopologyConnection where U: core:
 impl<T, U> core::convert::Into<U> for oce_api::TrendCfg where U: core::convert::From<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::AssertEvent where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::AssertLevel where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogDefault where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogEntry where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogParamDefault where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogPort where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogPortKind where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogPortNaming where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogRule where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogValueKind where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::CollectSpec where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::ContentIdError where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::ContractDescriptor where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::ContractDomain where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::DeclaredOutput where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::DiagnosticKey where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::DiagnosticReceipt where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::DiagnosticRecord where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::DiagnosticSeverity where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::DiagnosticStage where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::DiagnosticSubject where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::Engine<S> where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::EngineCheckpoint where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::EngineStateError where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::EngineStateSnapshot where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::ExportReceipt where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::ExportReport where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::InputSource where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::IoClass where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::IoInventory where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::IoSummary where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::LoadErrorContext where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::LoadReceipt where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::LoadReport where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::OcError where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::OperationFailure where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::OutputTrace where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::Outputs where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::ParamAttrs where U: core::convert::Into<T>
@@ -435,21 +704,40 @@ impl<T, U> core::convert::TryFrom<U> for oce_api::TopologyConnection where U: co
 impl<T, U> core::convert::TryFrom<U> for oce_api::TrendCfg where U: core::convert::Into<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::AssertEvent where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::AssertLevel where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::CatalogDefault where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::CatalogEntry where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::CatalogParamDefault where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::CatalogPort where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::CatalogPortKind where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::CatalogPortNaming where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::CatalogRule where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::CatalogValueKind where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::CollectSpec where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::ContentIdError where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::ContractDescriptor where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::ContractDomain where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::DeclaredOutput where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::DiagnosticKey where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::DiagnosticReceipt where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::DiagnosticRecord where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::DiagnosticSeverity where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::DiagnosticStage where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::DiagnosticSubject where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::Engine<S> where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::EngineCheckpoint where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::EngineStateError where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::EngineStateSnapshot where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::ExportReceipt where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::ExportReport where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::InputSource where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::IoClass where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::IoInventory where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::IoSummary where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::LoadErrorContext where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::LoadReceipt where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::LoadReport where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::OcError where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::OperationFailure where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::OutputTrace where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::Outputs where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::ParamAttrs where U: core::convert::TryFrom<T>
@@ -467,13 +755,30 @@ impl<T, U> core::convert::TryInto<U> for oce_api::TopologyConnection where U: co
 impl<T, U> core::convert::TryInto<U> for oce_api::TrendCfg where U: core::convert::TryFrom<T>
 impl<T> alloc::borrow::ToOwned for oce_api::AssertEvent where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::AssertLevel where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::CatalogDefault where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::CatalogEntry where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::CatalogParamDefault where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::CatalogPort where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::CatalogPortKind where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::CatalogPortNaming where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::CatalogRule where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::CatalogValueKind where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::CollectSpec where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::ContractDescriptor where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::ContractDomain where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::DeclaredOutput where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::DiagnosticKey where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::DiagnosticReceipt where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::DiagnosticRecord where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::DiagnosticSeverity where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::DiagnosticStage where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::DiagnosticSubject where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::EngineCheckpoint where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::EngineStateSnapshot where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::IoClass where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::IoInventory where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::IoSummary where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::LoadReceipt where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::LoadReport where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::OutputTrace where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::Outputs where T: core::clone::Clone
@@ -493,23 +798,43 @@ impl<T> alloc::string::ToString for oce_api::ContentIdError where T: core::fmt::
 impl<T> alloc::string::ToString for oce_api::EngineStateError where T: core::fmt::Display + ?core::marker::Sized
 impl<T> alloc::string::ToString for oce_api::LoadErrorContext where T: core::fmt::Display + ?core::marker::Sized
 impl<T> alloc::string::ToString for oce_api::OcError where T: core::fmt::Display + ?core::marker::Sized
+impl<T> alloc::string::ToString for oce_api::OperationFailure where T: core::fmt::Display + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::AssertEvent where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::AssertLevel where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::CatalogDefault where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::CatalogEntry where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::CatalogParamDefault where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::CatalogPort where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::CatalogPortKind where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::CatalogPortNaming where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::CatalogRule where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::CatalogValueKind where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::CollectSpec where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::ContentIdError where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::ContractDescriptor where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::ContractDomain where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::DeclaredOutput where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::DiagnosticKey where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::DiagnosticReceipt where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::DiagnosticRecord where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::DiagnosticSeverity where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::DiagnosticStage where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::DiagnosticSubject where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::Engine<S> where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::EngineCheckpoint where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::EngineStateError where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::EngineStateSnapshot where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::ExportReceipt where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::ExportReport where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::InputSource where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::IoClass where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::IoInventory where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::IoSummary where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::LoadErrorContext where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::LoadReceipt where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::LoadReport where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::OcError where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::OperationFailure where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::OutputTrace where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::Outputs where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::ParamAttrs where T: 'static + ?core::marker::Sized
@@ -527,21 +852,40 @@ impl<T> core::any::Any for oce_api::TopologyConnection where T: 'static + ?core:
 impl<T> core::any::Any for oce_api::TrendCfg where T: 'static + ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::AssertEvent where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::AssertLevel where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::CatalogDefault where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::CatalogEntry where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::CatalogParamDefault where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::CatalogPort where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::CatalogPortKind where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::CatalogPortNaming where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::CatalogRule where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::CatalogValueKind where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::CollectSpec where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::ContentIdError where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::ContractDescriptor where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::ContractDomain where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::DeclaredOutput where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::DiagnosticKey where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::DiagnosticReceipt where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::DiagnosticRecord where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::DiagnosticSeverity where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::DiagnosticStage where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::DiagnosticSubject where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::Engine<S> where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::EngineCheckpoint where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::EngineStateError where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::EngineStateSnapshot where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::ExportReceipt where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::ExportReport where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::InputSource where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::IoClass where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::IoInventory where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::IoSummary where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::LoadErrorContext where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::LoadReceipt where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::LoadReport where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::OcError where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::OperationFailure where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::OutputTrace where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::Outputs where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::ParamAttrs where T: ?core::marker::Sized
@@ -559,21 +903,40 @@ impl<T> core::borrow::Borrow<T> for oce_api::TopologyConnection where T: ?core::
 impl<T> core::borrow::Borrow<T> for oce_api::TrendCfg where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::AssertEvent where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::AssertLevel where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogDefault where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogEntry where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogParamDefault where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogPort where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogPortKind where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogPortNaming where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogRule where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogValueKind where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::CollectSpec where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::ContentIdError where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::ContractDescriptor where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::ContractDomain where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::DeclaredOutput where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::DiagnosticKey where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::DiagnosticReceipt where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::DiagnosticRecord where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::DiagnosticSeverity where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::DiagnosticStage where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::DiagnosticSubject where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::Engine<S> where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::EngineCheckpoint where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::EngineStateError where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::EngineStateSnapshot where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::ExportReceipt where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::ExportReport where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::InputSource where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::IoClass where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::IoInventory where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::IoSummary where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::LoadErrorContext where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::LoadReceipt where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::LoadReport where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::OcError where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::OperationFailure where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::OutputTrace where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::Outputs where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::ParamAttrs where T: ?core::marker::Sized
@@ -591,13 +954,30 @@ impl<T> core::borrow::BorrowMut<T> for oce_api::TopologyConnection where T: ?cor
 impl<T> core::borrow::BorrowMut<T> for oce_api::TrendCfg where T: ?core::marker::Sized
 impl<T> core::clone::CloneToUninit for oce_api::AssertEvent where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::AssertLevel where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::CatalogDefault where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::CatalogEntry where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::CatalogParamDefault where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::CatalogPort where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::CatalogPortKind where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::CatalogPortNaming where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::CatalogRule where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::CatalogValueKind where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::CollectSpec where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::ContractDescriptor where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::ContractDomain where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::DeclaredOutput where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::DiagnosticKey where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::DiagnosticReceipt where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::DiagnosticRecord where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::DiagnosticSeverity where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::DiagnosticStage where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::DiagnosticSubject where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::EngineCheckpoint where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::EngineStateSnapshot where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::IoClass where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::IoInventory where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::IoSummary where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::LoadReceipt where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::LoadReport where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::OutputTrace where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::Outputs where T: core::clone::Clone
@@ -615,21 +995,40 @@ impl<T> core::clone::CloneToUninit for oce_api::TopologyConnection where T: core
 impl<T> core::clone::CloneToUninit for oce_api::TrendCfg where T: core::clone::Clone
 impl<T> core::convert::From<T> for oce_api::AssertEvent
 impl<T> core::convert::From<T> for oce_api::AssertLevel
+impl<T> core::convert::From<T> for oce_api::CatalogDefault
+impl<T> core::convert::From<T> for oce_api::CatalogEntry
+impl<T> core::convert::From<T> for oce_api::CatalogParamDefault
+impl<T> core::convert::From<T> for oce_api::CatalogPort
+impl<T> core::convert::From<T> for oce_api::CatalogPortKind
+impl<T> core::convert::From<T> for oce_api::CatalogPortNaming
+impl<T> core::convert::From<T> for oce_api::CatalogRule
+impl<T> core::convert::From<T> for oce_api::CatalogValueKind
 impl<T> core::convert::From<T> for oce_api::CollectSpec
 impl<T> core::convert::From<T> for oce_api::ContentIdError
+impl<T> core::convert::From<T> for oce_api::ContractDescriptor
+impl<T> core::convert::From<T> for oce_api::ContractDomain
 impl<T> core::convert::From<T> for oce_api::DeclaredOutput
+impl<T> core::convert::From<T> for oce_api::DiagnosticKey
+impl<T> core::convert::From<T> for oce_api::DiagnosticReceipt
+impl<T> core::convert::From<T> for oce_api::DiagnosticRecord
+impl<T> core::convert::From<T> for oce_api::DiagnosticSeverity
+impl<T> core::convert::From<T> for oce_api::DiagnosticStage
+impl<T> core::convert::From<T> for oce_api::DiagnosticSubject
 impl<T> core::convert::From<T> for oce_api::Engine<S>
 impl<T> core::convert::From<T> for oce_api::EngineCheckpoint
 impl<T> core::convert::From<T> for oce_api::EngineStateError
 impl<T> core::convert::From<T> for oce_api::EngineStateSnapshot
+impl<T> core::convert::From<T> for oce_api::ExportReceipt
 impl<T> core::convert::From<T> for oce_api::ExportReport
 impl<T> core::convert::From<T> for oce_api::InputSource
 impl<T> core::convert::From<T> for oce_api::IoClass
 impl<T> core::convert::From<T> for oce_api::IoInventory
 impl<T> core::convert::From<T> for oce_api::IoSummary
 impl<T> core::convert::From<T> for oce_api::LoadErrorContext
+impl<T> core::convert::From<T> for oce_api::LoadReceipt
 impl<T> core::convert::From<T> for oce_api::LoadReport
 impl<T> core::convert::From<T> for oce_api::OcError
+impl<T> core::convert::From<T> for oce_api::OperationFailure
 impl<T> core::convert::From<T> for oce_api::OutputTrace
 impl<T> core::convert::From<T> for oce_api::Outputs
 impl<T> core::convert::From<T> for oce_api::ParamAttrs
@@ -645,8 +1044,22 @@ impl<T> core::convert::From<T> for oce_api::Topology
 impl<T> core::convert::From<T> for oce_api::TopologyBlock
 impl<T> core::convert::From<T> for oce_api::TopologyConnection
 impl<T> core::convert::From<T> for oce_api::TrendCfg
+pub const fn oce_api::DiagnosticSeverity::rank(self) -> u8
+pub const fn oce_api::DiagnosticStage::rank(self) -> u8
+pub const oce_api::CATALOG_JSON: &str
+pub const oce_api::CATALOG_SCHEMA_REVISION: u32
+pub const oce_api::DIAGNOSTIC_SCHEMA_REVISION: u32
 pub enum oce_api::AssertLevel
+pub enum oce_api::CatalogDefault
+pub enum oce_api::CatalogPortKind
+pub enum oce_api::CatalogPortNaming
+pub enum oce_api::CatalogRule
+pub enum oce_api::CatalogValueKind
 pub enum oce_api::CollectSpec
+pub enum oce_api::ContractDomain
+pub enum oce_api::DiagnosticSeverity
+pub enum oce_api::DiagnosticStage
+pub enum oce_api::DiagnosticSubject
 pub enum oce_api::IoClass
 pub enum oce_api::PhysicalKind
 pub enum oce_api::RunMode
@@ -674,6 +1087,102 @@ pub fn oce_api::AssertLevel::to_owned(&self) -> T
 pub fn oce_api::AssertLevel::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::AssertLevel::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::AssertLevel::type_id(&self) -> core::any::TypeId
+pub fn oce_api::CatalogDefault::borrow(&self) -> &T
+pub fn oce_api::CatalogDefault::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::CatalogDefault::clone(&self) -> oce_api::CatalogDefault
+pub fn oce_api::CatalogDefault::clone_into(&self, &mut T)
+pub fn oce_api::CatalogDefault::eq(&self, &oce_api::CatalogDefault) -> bool
+pub fn oce_api::CatalogDefault::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CatalogDefault::from(T) -> T
+pub fn oce_api::CatalogDefault::into(self) -> U
+pub fn oce_api::CatalogDefault::to_owned(&self) -> T
+pub fn oce_api::CatalogDefault::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::CatalogDefault::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::CatalogDefault::type_id(&self) -> core::any::TypeId
+pub fn oce_api::CatalogEntry::borrow(&self) -> &T
+pub fn oce_api::CatalogEntry::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::CatalogEntry::clone(&self) -> oce_api::CatalogEntry
+pub fn oce_api::CatalogEntry::clone_into(&self, &mut T)
+pub fn oce_api::CatalogEntry::eq(&self, &oce_api::CatalogEntry) -> bool
+pub fn oce_api::CatalogEntry::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CatalogEntry::from(T) -> T
+pub fn oce_api::CatalogEntry::into(self) -> U
+pub fn oce_api::CatalogEntry::to_owned(&self) -> T
+pub fn oce_api::CatalogEntry::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::CatalogEntry::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::CatalogEntry::type_id(&self) -> core::any::TypeId
+pub fn oce_api::CatalogParamDefault::borrow(&self) -> &T
+pub fn oce_api::CatalogParamDefault::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::CatalogParamDefault::clone(&self) -> oce_api::CatalogParamDefault
+pub fn oce_api::CatalogParamDefault::clone_into(&self, &mut T)
+pub fn oce_api::CatalogParamDefault::eq(&self, &oce_api::CatalogParamDefault) -> bool
+pub fn oce_api::CatalogParamDefault::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CatalogParamDefault::from(T) -> T
+pub fn oce_api::CatalogParamDefault::into(self) -> U
+pub fn oce_api::CatalogParamDefault::to_owned(&self) -> T
+pub fn oce_api::CatalogParamDefault::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::CatalogParamDefault::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::CatalogParamDefault::type_id(&self) -> core::any::TypeId
+pub fn oce_api::CatalogPort::borrow(&self) -> &T
+pub fn oce_api::CatalogPort::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::CatalogPort::clone(&self) -> oce_api::CatalogPort
+pub fn oce_api::CatalogPort::clone_into(&self, &mut T)
+pub fn oce_api::CatalogPort::eq(&self, &oce_api::CatalogPort) -> bool
+pub fn oce_api::CatalogPort::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CatalogPort::from(T) -> T
+pub fn oce_api::CatalogPort::into(self) -> U
+pub fn oce_api::CatalogPort::to_owned(&self) -> T
+pub fn oce_api::CatalogPort::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::CatalogPort::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::CatalogPort::type_id(&self) -> core::any::TypeId
+pub fn oce_api::CatalogPortKind::borrow(&self) -> &T
+pub fn oce_api::CatalogPortKind::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::CatalogPortKind::clone(&self) -> oce_api::CatalogPortKind
+pub fn oce_api::CatalogPortKind::clone_into(&self, &mut T)
+pub fn oce_api::CatalogPortKind::eq(&self, &oce_api::CatalogPortKind) -> bool
+pub fn oce_api::CatalogPortKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CatalogPortKind::from(T) -> T
+pub fn oce_api::CatalogPortKind::into(self) -> U
+pub fn oce_api::CatalogPortKind::to_owned(&self) -> T
+pub fn oce_api::CatalogPortKind::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::CatalogPortKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::CatalogPortKind::type_id(&self) -> core::any::TypeId
+pub fn oce_api::CatalogPortNaming::borrow(&self) -> &T
+pub fn oce_api::CatalogPortNaming::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::CatalogPortNaming::clone(&self) -> oce_api::CatalogPortNaming
+pub fn oce_api::CatalogPortNaming::clone_into(&self, &mut T)
+pub fn oce_api::CatalogPortNaming::eq(&self, &oce_api::CatalogPortNaming) -> bool
+pub fn oce_api::CatalogPortNaming::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CatalogPortNaming::from(T) -> T
+pub fn oce_api::CatalogPortNaming::into(self) -> U
+pub fn oce_api::CatalogPortNaming::to_owned(&self) -> T
+pub fn oce_api::CatalogPortNaming::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::CatalogPortNaming::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::CatalogPortNaming::type_id(&self) -> core::any::TypeId
+pub fn oce_api::CatalogRule::borrow(&self) -> &T
+pub fn oce_api::CatalogRule::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::CatalogRule::clone(&self) -> oce_api::CatalogRule
+pub fn oce_api::CatalogRule::clone_into(&self, &mut T)
+pub fn oce_api::CatalogRule::eq(&self, &oce_api::CatalogRule) -> bool
+pub fn oce_api::CatalogRule::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CatalogRule::from(T) -> T
+pub fn oce_api::CatalogRule::into(self) -> U
+pub fn oce_api::CatalogRule::to_owned(&self) -> T
+pub fn oce_api::CatalogRule::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::CatalogRule::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::CatalogRule::type_id(&self) -> core::any::TypeId
+pub fn oce_api::CatalogValueKind::borrow(&self) -> &T
+pub fn oce_api::CatalogValueKind::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::CatalogValueKind::clone(&self) -> oce_api::CatalogValueKind
+pub fn oce_api::CatalogValueKind::clone_into(&self, &mut T)
+pub fn oce_api::CatalogValueKind::eq(&self, &oce_api::CatalogValueKind) -> bool
+pub fn oce_api::CatalogValueKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CatalogValueKind::from(T) -> T
+pub fn oce_api::CatalogValueKind::into(self) -> U
+pub fn oce_api::CatalogValueKind::to_owned(&self) -> T
+pub fn oce_api::CatalogValueKind::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::CatalogValueKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::CatalogValueKind::type_id(&self) -> core::any::TypeId
 pub fn oce_api::CollectSpec::borrow(&self) -> &T
 pub fn oce_api::CollectSpec::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::CollectSpec::clone(&self) -> oce_api::CollectSpec
@@ -696,6 +1205,30 @@ pub fn oce_api::ContentIdError::to_string(&self) -> alloc::string::String
 pub fn oce_api::ContentIdError::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::ContentIdError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::ContentIdError::type_id(&self) -> core::any::TypeId
+pub fn oce_api::ContractDescriptor::borrow(&self) -> &T
+pub fn oce_api::ContractDescriptor::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::ContractDescriptor::clone(&self) -> oce_api::ContractDescriptor
+pub fn oce_api::ContractDescriptor::clone_into(&self, &mut T)
+pub fn oce_api::ContractDescriptor::eq(&self, &oce_api::ContractDescriptor) -> bool
+pub fn oce_api::ContractDescriptor::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::ContractDescriptor::from(T) -> T
+pub fn oce_api::ContractDescriptor::into(self) -> U
+pub fn oce_api::ContractDescriptor::to_owned(&self) -> T
+pub fn oce_api::ContractDescriptor::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::ContractDescriptor::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::ContractDescriptor::type_id(&self) -> core::any::TypeId
+pub fn oce_api::ContractDomain::borrow(&self) -> &T
+pub fn oce_api::ContractDomain::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::ContractDomain::clone(&self) -> oce_api::ContractDomain
+pub fn oce_api::ContractDomain::clone_into(&self, &mut T)
+pub fn oce_api::ContractDomain::eq(&self, &oce_api::ContractDomain) -> bool
+pub fn oce_api::ContractDomain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::ContractDomain::from(T) -> T
+pub fn oce_api::ContractDomain::into(self) -> U
+pub fn oce_api::ContractDomain::to_owned(&self) -> T
+pub fn oce_api::ContractDomain::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::ContractDomain::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::ContractDomain::type_id(&self) -> core::any::TypeId
 pub fn oce_api::DeclaredOutput::borrow(&self) -> &T
 pub fn oce_api::DeclaredOutput::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::DeclaredOutput::clone(&self) -> oce_api::DeclaredOutput
@@ -708,10 +1241,96 @@ pub fn oce_api::DeclaredOutput::to_owned(&self) -> T
 pub fn oce_api::DeclaredOutput::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::DeclaredOutput::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::DeclaredOutput::type_id(&self) -> core::any::TypeId
+pub fn oce_api::DiagnosticKey::borrow(&self) -> &T
+pub fn oce_api::DiagnosticKey::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::DiagnosticKey::clone(&self) -> oce_api::DiagnosticKey
+pub fn oce_api::DiagnosticKey::clone_into(&self, &mut T)
+pub fn oce_api::DiagnosticKey::cmp(&self, &Self) -> core::cmp::Ordering
+pub fn oce_api::DiagnosticKey::code(&self) -> &str
+pub fn oce_api::DiagnosticKey::eq(&self, &oce_api::DiagnosticKey) -> bool
+pub fn oce_api::DiagnosticKey::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::DiagnosticKey::from(T) -> T
+pub fn oce_api::DiagnosticKey::hash<__H: core::hash::Hasher>(&self, &mut __H)
+pub fn oce_api::DiagnosticKey::into(self) -> U
+pub fn oce_api::DiagnosticKey::partial_cmp(&self, &Self) -> core::option::Option<core::cmp::Ordering>
+pub fn oce_api::DiagnosticKey::severity(&self) -> oce_api::DiagnosticSeverity
+pub fn oce_api::DiagnosticKey::stage(&self) -> oce_api::DiagnosticStage
+pub fn oce_api::DiagnosticKey::subject(&self) -> &oce_api::DiagnosticSubject
+pub fn oce_api::DiagnosticKey::to_owned(&self) -> T
+pub fn oce_api::DiagnosticKey::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::DiagnosticKey::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::DiagnosticKey::type_id(&self) -> core::any::TypeId
+pub fn oce_api::DiagnosticReceipt::borrow(&self) -> &T
+pub fn oce_api::DiagnosticReceipt::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::DiagnosticReceipt::clone(&self) -> oce_api::DiagnosticReceipt
+pub fn oce_api::DiagnosticReceipt::clone_into(&self, &mut T)
+pub fn oce_api::DiagnosticReceipt::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::DiagnosticReceipt::from(T) -> T
+pub fn oce_api::DiagnosticReceipt::into(self) -> U
+pub fn oce_api::DiagnosticReceipt::records(&self) -> &[oce_api::DiagnosticRecord]
+pub fn oce_api::DiagnosticReceipt::to_owned(&self) -> T
+pub fn oce_api::DiagnosticReceipt::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::DiagnosticReceipt::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::DiagnosticReceipt::type_id(&self) -> core::any::TypeId
+pub fn oce_api::DiagnosticRecord::borrow(&self) -> &T
+pub fn oce_api::DiagnosticRecord::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::DiagnosticRecord::clone(&self) -> oce_api::DiagnosticRecord
+pub fn oce_api::DiagnosticRecord::clone_into(&self, &mut T)
+pub fn oce_api::DiagnosticRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::DiagnosticRecord::from(T) -> T
+pub fn oce_api::DiagnosticRecord::into(self) -> U
+pub fn oce_api::DiagnosticRecord::key(&self) -> &oce_api::DiagnosticKey
+pub fn oce_api::DiagnosticRecord::message(&self) -> &str
+pub fn oce_api::DiagnosticRecord::to_owned(&self) -> T
+pub fn oce_api::DiagnosticRecord::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::DiagnosticRecord::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::DiagnosticRecord::type_id(&self) -> core::any::TypeId
+pub fn oce_api::DiagnosticSeverity::borrow(&self) -> &T
+pub fn oce_api::DiagnosticSeverity::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::DiagnosticSeverity::clone(&self) -> oce_api::DiagnosticSeverity
+pub fn oce_api::DiagnosticSeverity::clone_into(&self, &mut T)
+pub fn oce_api::DiagnosticSeverity::eq(&self, &oce_api::DiagnosticSeverity) -> bool
+pub fn oce_api::DiagnosticSeverity::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::DiagnosticSeverity::from(T) -> T
+pub fn oce_api::DiagnosticSeverity::hash<__H: core::hash::Hasher>(&self, &mut __H)
+pub fn oce_api::DiagnosticSeverity::into(self) -> U
+pub fn oce_api::DiagnosticSeverity::to_owned(&self) -> T
+pub fn oce_api::DiagnosticSeverity::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::DiagnosticSeverity::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::DiagnosticSeverity::type_id(&self) -> core::any::TypeId
+pub fn oce_api::DiagnosticStage::borrow(&self) -> &T
+pub fn oce_api::DiagnosticStage::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::DiagnosticStage::clone(&self) -> oce_api::DiagnosticStage
+pub fn oce_api::DiagnosticStage::clone_into(&self, &mut T)
+pub fn oce_api::DiagnosticStage::eq(&self, &oce_api::DiagnosticStage) -> bool
+pub fn oce_api::DiagnosticStage::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::DiagnosticStage::from(T) -> T
+pub fn oce_api::DiagnosticStage::hash<__H: core::hash::Hasher>(&self, &mut __H)
+pub fn oce_api::DiagnosticStage::into(self) -> U
+pub fn oce_api::DiagnosticStage::to_owned(&self) -> T
+pub fn oce_api::DiagnosticStage::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::DiagnosticStage::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::DiagnosticStage::type_id(&self) -> core::any::TypeId
+pub fn oce_api::DiagnosticSubject::borrow(&self) -> &T
+pub fn oce_api::DiagnosticSubject::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::DiagnosticSubject::clone(&self) -> oce_api::DiagnosticSubject
+pub fn oce_api::DiagnosticSubject::clone_into(&self, &mut T)
+pub fn oce_api::DiagnosticSubject::cmp(&self, &oce_api::DiagnosticSubject) -> core::cmp::Ordering
+pub fn oce_api::DiagnosticSubject::eq(&self, &oce_api::DiagnosticSubject) -> bool
+pub fn oce_api::DiagnosticSubject::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::DiagnosticSubject::from(T) -> T
+pub fn oce_api::DiagnosticSubject::hash<__H: core::hash::Hasher>(&self, &mut __H)
+pub fn oce_api::DiagnosticSubject::into(self) -> U
+pub fn oce_api::DiagnosticSubject::partial_cmp(&self, &oce_api::DiagnosticSubject) -> core::option::Option<core::cmp::Ordering>
+pub fn oce_api::DiagnosticSubject::to_owned(&self) -> T
+pub fn oce_api::DiagnosticSubject::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::DiagnosticSubject::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::DiagnosticSubject::type_id(&self) -> core::any::TypeId
 pub fn oce_api::Engine<S>::borrow(&self) -> &T
 pub fn oce_api::Engine<S>::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::Engine<S>::checkpoint(&self) -> core::result::Result<oce_api::EngineCheckpoint, oce_api::OcError>
 pub fn oce_api::Engine<S>::export_cxf(&self) -> core::result::Result<oce_api::ExportReport, oce_api::OcError>
+pub fn oce_api::Engine<S>::export_cxf_with_receipt(&self) -> core::result::Result<oce_api::ExportReceipt, oce_api::OperationFailure>
 pub fn oce_api::Engine<S>::from(T) -> T
 pub fn oce_api::Engine<S>::get_output(&self, &str) -> core::result::Result<oce_model::Value, oce_api::OcError>
 pub fn oce_api::Engine<S>::get_param(&self, &str) -> core::result::Result<oce_model::Value, oce_api::OcError>
@@ -720,6 +1339,7 @@ pub fn oce_api::Engine<S>::into(self) -> U
 pub fn oce_api::Engine<S>::io(&self) -> &oce_api::IoInventory
 pub fn oce_api::Engine<S>::io_summary(&self) -> oce_api::IoSummary
 pub fn oce_api::Engine<S>::load_cxf(&mut self, &[u8]) -> core::result::Result<oce_api::LoadReport, oce_api::OcError>
+pub fn oce_api::Engine<S>::load_cxf_with_receipt(&mut self, &[u8]) -> core::result::Result<oce_api::LoadReceipt, oce_api::OperationFailure>
 pub fn oce_api::Engine<S>::mode(&self) -> oce_api::RunMode
 pub fn oce_api::Engine<S>::outputs(&self) -> &oce_api::Outputs
 pub fn oce_api::Engine<S>::params(&self) -> &oce_api::ParamTable
@@ -779,6 +1399,17 @@ pub fn oce_api::EngineStateSnapshot::to_owned(&self) -> T
 pub fn oce_api::EngineStateSnapshot::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::EngineStateSnapshot::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::EngineStateSnapshot::type_id(&self) -> core::any::TypeId
+pub fn oce_api::ExportReceipt::borrow(&self) -> &T
+pub fn oce_api::ExportReceipt::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::ExportReceipt::diagnostics(&self) -> &oce_api::DiagnosticReceipt
+pub fn oce_api::ExportReceipt::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::ExportReceipt::from(T) -> T
+pub fn oce_api::ExportReceipt::into(self) -> U
+pub fn oce_api::ExportReceipt::into_parts(self) -> (oce_api::ExportReport, oce_api::DiagnosticReceipt)
+pub fn oce_api::ExportReceipt::report(&self) -> &oce_api::ExportReport
+pub fn oce_api::ExportReceipt::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::ExportReceipt::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::ExportReceipt::type_id(&self) -> core::any::TypeId
 pub fn oce_api::ExportReport::borrow(&self) -> &T
 pub fn oce_api::ExportReport::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::ExportReport::content_id(&self) -> alloc::string::String
@@ -850,6 +1481,20 @@ pub fn oce_api::LoadErrorContext::to_string(&self) -> alloc::string::String
 pub fn oce_api::LoadErrorContext::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::LoadErrorContext::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::LoadErrorContext::type_id(&self) -> core::any::TypeId
+pub fn oce_api::LoadReceipt::borrow(&self) -> &T
+pub fn oce_api::LoadReceipt::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::LoadReceipt::clone(&self) -> oce_api::LoadReceipt
+pub fn oce_api::LoadReceipt::clone_into(&self, &mut T)
+pub fn oce_api::LoadReceipt::diagnostics(&self) -> &oce_api::DiagnosticReceipt
+pub fn oce_api::LoadReceipt::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::LoadReceipt::from(T) -> T
+pub fn oce_api::LoadReceipt::into(self) -> U
+pub fn oce_api::LoadReceipt::into_parts(self) -> (oce_api::LoadReport, oce_api::DiagnosticReceipt)
+pub fn oce_api::LoadReceipt::report(&self) -> &oce_api::LoadReport
+pub fn oce_api::LoadReceipt::to_owned(&self) -> T
+pub fn oce_api::LoadReceipt::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::LoadReceipt::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::LoadReceipt::type_id(&self) -> core::any::TypeId
 pub fn oce_api::LoadReport::borrow(&self) -> &T
 pub fn oce_api::LoadReport::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::LoadReport::clone(&self) -> oce_api::LoadReport
@@ -882,6 +1527,21 @@ pub fn oce_api::OcError::to_string(&self) -> alloc::string::String
 pub fn oce_api::OcError::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::OcError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::OcError::type_id(&self) -> core::any::TypeId
+pub fn oce_api::OperationFailure::borrow(&self) -> &T
+pub fn oce_api::OperationFailure::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::OperationFailure::diagnostics(&self) -> &oce_api::DiagnosticReceipt
+pub fn oce_api::OperationFailure::error(&self) -> &oce_api::OcError
+pub fn oce_api::OperationFailure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::OperationFailure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::OperationFailure::from(T) -> T
+pub fn oce_api::OperationFailure::into(self) -> U
+pub fn oce_api::OperationFailure::into_error(self) -> oce_api::OcError
+pub fn oce_api::OperationFailure::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+pub fn oce_api::OperationFailure::stage(&self) -> oce_api::DiagnosticStage
+pub fn oce_api::OperationFailure::to_string(&self) -> alloc::string::String
+pub fn oce_api::OperationFailure::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::OperationFailure::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::OperationFailure::type_id(&self) -> core::any::TypeId
 pub fn oce_api::OutputTrace::borrow(&self) -> &T
 pub fn oce_api::OutputTrace::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::OutputTrace::clone(&self) -> oce_api::OutputTrace
@@ -1072,12 +1732,142 @@ pub fn oce_api::TrendCfg::to_owned(&self) -> T
 pub fn oce_api::TrendCfg::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::TrendCfg::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::TrendCfg::type_id(&self) -> core::any::TypeId
+pub fn oce_api::catalog() -> &'static [oce_api::CatalogEntry]
+pub fn oce_api::catalog_content_id(&[oce_api::CatalogEntry]) -> alloc::string::String
+pub fn oce_api::catalog_to_json(&[oce_api::CatalogEntry]) -> alloc::string::String
+pub fn oce_api::contract_descriptors() -> &'static [oce_api::ContractDescriptor]
 pub mod oce_api
 pub oce_api::AssertEvent::block: alloc::string::String
 pub oce_api::AssertEvent::level: oce_api::AssertLevel
 pub oce_api::AssertEvent::message: alloc::string::String
 pub oce_api::AssertEvent::t: f64
 pub oce_api::AssertLevel::Warning
+pub oce_api::CatalogDefault::Boolean(bool)
+pub oce_api::CatalogDefault::Derived(&'static str)
+pub oce_api::CatalogDefault::EnumMember(&'static str)
+pub oce_api::CatalogDefault::Integer(i64)
+pub oce_api::CatalogDefault::Real(f64)
+pub oce_api::CatalogDefault::Required
+pub oce_api::CatalogDefault::String(&'static str)
+pub oce_api::CatalogEntry::class_path: &'static str
+pub oce_api::CatalogEntry::inputs: alloc::vec::Vec<oce_api::CatalogPort>
+pub oce_api::CatalogEntry::naming: oce_api::CatalogPortNaming
+pub oce_api::CatalogEntry::outputs: alloc::vec::Vec<oce_api::CatalogPort>
+pub oce_api::CatalogEntry::param_defaults: alloc::vec::Vec<oce_api::CatalogParamDefault>
+pub oce_api::CatalogEntry::param_rules: alloc::vec::Vec<oce_api::CatalogRule>
+pub oce_api::CatalogEntry::reserved: bool
+pub oce_api::CatalogEntry::stateful: bool
+pub oce_api::CatalogEntry::width_driven: bool
+pub oce_api::CatalogParamDefault::default: oce_api::CatalogDefault
+pub oce_api::CatalogParamDefault::name: &'static str
+pub oce_api::CatalogPort::kind: oce_api::CatalogPortKind
+pub oce_api::CatalogPort::name: core::option::Option<&'static str>
+pub oce_api::CatalogPortKind::Boolean
+pub oce_api::CatalogPortKind::Integer
+pub oce_api::CatalogPortKind::Real
+pub oce_api::CatalogPortNaming::Named
+pub oce_api::CatalogPortNaming::Positional
+pub oce_api::CatalogPortNaming::WidthDriven
+pub oce_api::CatalogRule::Boolean
+pub oce_api::CatalogRule::Boolean::name: &'static str
+pub oce_api::CatalogRule::BooleanArrayElements
+pub oce_api::CatalogRule::BooleanArrayElements::base: &'static str
+pub oce_api::CatalogRule::BooleanArrayElements::len: &'static str
+pub oce_api::CatalogRule::BooleanArrayTrueCountEquals
+pub oce_api::CatalogRule::BooleanArrayTrueCountEquals::base: &'static str
+pub oce_api::CatalogRule::BooleanArrayTrueCountEquals::count: &'static str
+pub oce_api::CatalogRule::BooleanArrayTrueCountEquals::default: bool
+pub oce_api::CatalogRule::BooleanArrayTrueCountEquals::len: &'static str
+pub oce_api::CatalogRule::EnumMembers
+pub oce_api::CatalogRule::EnumMembers::members: &'static [&'static str]
+pub oce_api::CatalogRule::EnumMembers::name: &'static str
+pub oce_api::CatalogRule::IntegerArrayElements
+pub oce_api::CatalogRule::IntegerArrayElements::base: &'static str
+pub oce_api::CatalogRule::IntegerArrayElements::len: &'static str
+pub oce_api::CatalogRule::IntegerArrayElementsInRange
+pub oce_api::CatalogRule::IntegerArrayElementsInRange::base: &'static str
+pub oce_api::CatalogRule::IntegerArrayElementsInRange::default_to_index: bool
+pub oce_api::CatalogRule::IntegerArrayElementsInRange::len: &'static str
+pub oce_api::CatalogRule::IntegerArrayElementsInRange::len_default: i64
+pub oce_api::CatalogRule::IntegerArrayElementsInRange::max: &'static str
+pub oce_api::CatalogRule::IntegerArrayElementsInRange::max_default: i64
+pub oce_api::CatalogRule::IntegerArrayElementsInRange::min: i64
+pub oce_api::CatalogRule::IntegerGreaterOrEqual
+pub oce_api::CatalogRule::IntegerGreaterOrEqual::min: i64
+pub oce_api::CatalogRule::IntegerGreaterOrEqual::name: &'static str
+pub oce_api::CatalogRule::IntegerLessOrEqualConstant
+pub oce_api::CatalogRule::IntegerLessOrEqualConstant::max: i64
+pub oce_api::CatalogRule::IntegerLessOrEqualConstant::name: &'static str
+pub oce_api::CatalogRule::IntegerProductLessOrEqualConstant
+pub oce_api::CatalogRule::IntegerProductLessOrEqualConstant::left: &'static str
+pub oce_api::CatalogRule::IntegerProductLessOrEqualConstant::max: i64
+pub oce_api::CatalogRule::IntegerProductLessOrEqualConstant::right: &'static str
+pub oce_api::CatalogRule::Real
+pub oce_api::CatalogRule::Real::name: &'static str
+pub oce_api::CatalogRule::RealArrayElements
+pub oce_api::CatalogRule::RealArrayElements::base: &'static str
+pub oce_api::CatalogRule::RealArrayElements::len: &'static str
+pub oce_api::CatalogRule::RealEqualWarning
+pub oce_api::CatalogRule::RealEqualWarning::left: &'static str
+pub oce_api::CatalogRule::RealEqualWarning::right: &'static str
+pub oce_api::CatalogRule::RealFinite
+pub oce_api::CatalogRule::RealFinite::name: &'static str
+pub oce_api::CatalogRule::RealFiniteGreaterThan
+pub oce_api::CatalogRule::RealFiniteGreaterThan::min: f64
+pub oce_api::CatalogRule::RealFiniteGreaterThan::name: &'static str
+pub oce_api::CatalogRule::RealGreaterOrEqual
+pub oce_api::CatalogRule::RealGreaterOrEqual::min: f64
+pub oce_api::CatalogRule::RealGreaterOrEqual::name: &'static str
+pub oce_api::CatalogRule::RealGreaterOrEqualScaledWarning
+pub oce_api::CatalogRule::RealGreaterOrEqualScaledWarning::factor: f64
+pub oce_api::CatalogRule::RealGreaterOrEqualScaledWarning::left: &'static str
+pub oce_api::CatalogRule::RealGreaterOrEqualScaledWarning::right: &'static str
+pub oce_api::CatalogRule::RealGreaterThan
+pub oce_api::CatalogRule::RealGreaterThan::min: f64
+pub oce_api::CatalogRule::RealGreaterThan::name: &'static str
+pub oce_api::CatalogRule::RealLessOrEqual
+pub oce_api::CatalogRule::RealLessOrEqual::lower: &'static str
+pub oce_api::CatalogRule::RealLessOrEqual::upper: &'static str
+pub oce_api::CatalogRule::RealLessOrEqualConstant
+pub oce_api::CatalogRule::RealLessOrEqualConstant::max: f64
+pub oce_api::CatalogRule::RealLessOrEqualConstant::name: &'static str
+pub oce_api::CatalogRule::RealLessOrEqualWarning
+pub oce_api::CatalogRule::RealLessOrEqualWarning::lower: &'static str
+pub oce_api::CatalogRule::RealLessOrEqualWarning::upper: &'static str
+pub oce_api::CatalogRule::RealMatrixElements
+pub oce_api::CatalogRule::RealMatrixElements::base: &'static str
+pub oce_api::CatalogRule::RealMatrixElements::cols: &'static str
+pub oce_api::CatalogRule::RealMatrixElements::default_cols: i64
+pub oce_api::CatalogRule::RealMatrixElements::default_rows: i64
+pub oce_api::CatalogRule::RealMatrixElements::rows: &'static str
+pub oce_api::CatalogRule::RealTimesIntegerInclusiveRange
+pub oce_api::CatalogRule::RealTimesIntegerInclusiveRange::integer: &'static str
+pub oce_api::CatalogRule::RealTimesIntegerInclusiveRange::max: f64
+pub oce_api::CatalogRule::RealTimesIntegerInclusiveRange::min: f64
+pub oce_api::CatalogRule::RealTimesIntegerInclusiveRange::real: &'static str
+pub oce_api::CatalogRule::Required
+pub oce_api::CatalogRule::Required::kind: oce_api::CatalogValueKind
+pub oce_api::CatalogRule::Required::name: &'static str
+pub oce_api::CatalogRule::Structural
+pub oce_api::CatalogRule::Structural::name: &'static str
+pub oce_api::CatalogRule::StructuralArrayElements
+pub oce_api::CatalogRule::StructuralArrayElements::base: &'static str
+pub oce_api::CatalogRule::TimeTableMatrix
+pub oce_api::CatalogRule::TimeTableMatrix::base: &'static str
+pub oce_api::CatalogRule::TimeTableMatrix::extrapolation: core::option::Option<&'static str>
+pub oce_api::CatalogRule::TimeTableMatrix::period: core::option::Option<&'static str>
+pub oce_api::CatalogRule::TimeTableMatrix::time_scale: &'static str
+pub oce_api::CatalogRule::TimeTableMatrix::values: oce_api::CatalogPortKind
+pub oce_api::CatalogRule::TimeTableOffset
+pub oce_api::CatalogRule::TimeTableOffset::base: &'static str
+pub oce_api::CatalogRule::TimeTableOffset::table: &'static str
+pub oce_api::CatalogValueKind::Boolean
+pub oce_api::CatalogValueKind::Enum
+pub oce_api::CatalogValueKind::Enum::class_path: &'static str
+pub oce_api::CatalogValueKind::Enum::members: &'static [&'static str]
+pub oce_api::CatalogValueKind::Integer
+pub oce_api::CatalogValueKind::Real
+pub oce_api::CatalogValueKind::String
 pub oce_api::CollectSpec::All
 pub oce_api::CollectSpec::All::stride: usize
 pub oce_api::CollectSpec::Named
@@ -1085,8 +1875,35 @@ pub oce_api::CollectSpec::Named::points: alloc::vec::Vec<alloc::string::String>
 pub oce_api::CollectSpec::Named::stride: usize
 pub oce_api::CollectSpec::None
 pub oce_api::ContentIdError::Incomplete::warning_count: usize
+pub oce_api::ContractDescriptor::domain: oce_api::ContractDomain
+pub oce_api::ContractDescriptor::revision: u32
+pub oce_api::ContractDescriptor::schema: &'static str
+pub oce_api::ContractDomain::Assertions
+pub oce_api::ContractDomain::Catalog
+pub oce_api::ContractDomain::Diagnostics
+pub oce_api::ContractDomain::ExecutionProfile
+pub oce_api::ContractDomain::Io
+pub oce_api::ContractDomain::Parameters
+pub oce_api::ContractDomain::Values
 pub oce_api::DeclaredOutput::driver_path: alloc::string::String
 pub oce_api::DeclaredOutput::path: alloc::string::String
+pub oce_api::DiagnosticSeverity::Error
+pub oce_api::DiagnosticSeverity::Info
+pub oce_api::DiagnosticSeverity::Warning
+pub oce_api::DiagnosticStage::AttributeUnification
+pub oce_api::DiagnosticStage::Export
+pub oce_api::DiagnosticStage::Flatten
+pub oce_api::DiagnosticStage::Import
+pub oce_api::DiagnosticStage::Instantiation
+pub oce_api::DiagnosticStage::Projection
+pub oce_api::DiagnosticStage::Schedule
+pub oce_api::DiagnosticStage::Semantics
+pub oce_api::DiagnosticStage::StoreInputs
+pub oce_api::DiagnosticStage::StoreRecovery
+pub oce_api::DiagnosticStage::StoreSave
+pub oce_api::DiagnosticStage::Validation
+pub oce_api::DiagnosticSubject::Absent
+pub oce_api::DiagnosticSubject::Opaque(alloc::string::String)
 pub oce_api::EngineStateError::DurableTargetAdvanced
 pub oce_api::EngineStateError::IncompatibleExecution
 pub oce_api::EngineStateError::IncompatibleExecution::snapshot: alloc::string::String
@@ -1219,12 +2036,22 @@ pub oce_api::TopologyConnection::to: alloc::string::String
 pub oce_api::TrendCfg::enabled: bool
 pub oce_api::TrendCfg::interval: oce_store::TrendInterval
 pub struct oce_api::AssertEvent
+pub struct oce_api::CatalogEntry
+pub struct oce_api::CatalogParamDefault
+pub struct oce_api::CatalogPort
+pub struct oce_api::ContractDescriptor
+pub struct oce_api::DiagnosticKey
+pub struct oce_api::DiagnosticReceipt
+pub struct oce_api::DiagnosticRecord
 pub struct oce_api::Engine<S: oce_store::Store>
 pub struct oce_api::EngineCheckpoint
 pub struct oce_api::EngineStateSnapshot
+pub struct oce_api::ExportReceipt
 pub struct oce_api::IoInventory
 pub struct oce_api::IoSummary
 pub struct oce_api::LoadErrorContext
+pub struct oce_api::LoadReceipt
+pub struct oce_api::OperationFailure
 pub struct oce_api::OutputTrace
 pub struct oce_api::Outputs
 pub struct oce_api::ParamAttrs
@@ -1240,14 +2067,62 @@ pub type oce_api::AssertEvent::Owned = T
 pub type oce_api::AssertLevel::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::AssertLevel::Error = core::convert::Infallible
 pub type oce_api::AssertLevel::Owned = T
+pub type oce_api::CatalogDefault::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::CatalogDefault::Error = core::convert::Infallible
+pub type oce_api::CatalogDefault::Owned = T
+pub type oce_api::CatalogEntry::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::CatalogEntry::Error = core::convert::Infallible
+pub type oce_api::CatalogEntry::Owned = T
+pub type oce_api::CatalogParamDefault::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::CatalogParamDefault::Error = core::convert::Infallible
+pub type oce_api::CatalogParamDefault::Owned = T
+pub type oce_api::CatalogPort::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::CatalogPort::Error = core::convert::Infallible
+pub type oce_api::CatalogPort::Owned = T
+pub type oce_api::CatalogPortKind::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::CatalogPortKind::Error = core::convert::Infallible
+pub type oce_api::CatalogPortKind::Owned = T
+pub type oce_api::CatalogPortNaming::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::CatalogPortNaming::Error = core::convert::Infallible
+pub type oce_api::CatalogPortNaming::Owned = T
+pub type oce_api::CatalogRule::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::CatalogRule::Error = core::convert::Infallible
+pub type oce_api::CatalogRule::Owned = T
+pub type oce_api::CatalogValueKind::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::CatalogValueKind::Error = core::convert::Infallible
+pub type oce_api::CatalogValueKind::Owned = T
 pub type oce_api::CollectSpec::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::CollectSpec::Error = core::convert::Infallible
 pub type oce_api::CollectSpec::Owned = T
 pub type oce_api::ContentIdError::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::ContentIdError::Error = core::convert::Infallible
+pub type oce_api::ContractDescriptor::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::ContractDescriptor::Error = core::convert::Infallible
+pub type oce_api::ContractDescriptor::Owned = T
+pub type oce_api::ContractDomain::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::ContractDomain::Error = core::convert::Infallible
+pub type oce_api::ContractDomain::Owned = T
 pub type oce_api::DeclaredOutput::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::DeclaredOutput::Error = core::convert::Infallible
 pub type oce_api::DeclaredOutput::Owned = T
+pub type oce_api::DiagnosticKey::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::DiagnosticKey::Error = core::convert::Infallible
+pub type oce_api::DiagnosticKey::Owned = T
+pub type oce_api::DiagnosticReceipt::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::DiagnosticReceipt::Error = core::convert::Infallible
+pub type oce_api::DiagnosticReceipt::Owned = T
+pub type oce_api::DiagnosticRecord::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::DiagnosticRecord::Error = core::convert::Infallible
+pub type oce_api::DiagnosticRecord::Owned = T
+pub type oce_api::DiagnosticSeverity::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::DiagnosticSeverity::Error = core::convert::Infallible
+pub type oce_api::DiagnosticSeverity::Owned = T
+pub type oce_api::DiagnosticStage::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::DiagnosticStage::Error = core::convert::Infallible
+pub type oce_api::DiagnosticStage::Owned = T
+pub type oce_api::DiagnosticSubject::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::DiagnosticSubject::Error = core::convert::Infallible
+pub type oce_api::DiagnosticSubject::Owned = T
 pub type oce_api::Engine<S>::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::Engine<S>::Error = core::convert::Infallible
 pub type oce_api::EngineCheckpoint::Error = <U as core::convert::TryFrom<T>>::Error
@@ -1258,6 +2133,8 @@ pub type oce_api::EngineStateError::Error = core::convert::Infallible
 pub type oce_api::EngineStateSnapshot::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::EngineStateSnapshot::Error = core::convert::Infallible
 pub type oce_api::EngineStateSnapshot::Owned = T
+pub type oce_api::ExportReceipt::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::ExportReceipt::Error = core::convert::Infallible
 pub type oce_api::ExportReport::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::ExportReport::Error = core::convert::Infallible
 pub type oce_api::InputSource::Error = <U as core::convert::TryFrom<T>>::Error
@@ -1273,12 +2150,17 @@ pub type oce_api::IoSummary::Error = core::convert::Infallible
 pub type oce_api::IoSummary::Owned = T
 pub type oce_api::LoadErrorContext::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::LoadErrorContext::Error = core::convert::Infallible
+pub type oce_api::LoadReceipt::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::LoadReceipt::Error = core::convert::Infallible
+pub type oce_api::LoadReceipt::Owned = T
 pub type oce_api::LoadReport::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::LoadReport::Error = core::convert::Infallible
 pub type oce_api::LoadReport::Owned = T
 pub type oce_api::OcError::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::OcError::Error = core::convert::Infallible
 pub type oce_api::OcResult<T> = core::result::Result<T, oce_api::OcError>
+pub type oce_api::OperationFailure::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::OperationFailure::Error = core::convert::Infallible
 pub type oce_api::OutputTrace::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::OutputTrace::Error = core::convert::Infallible
 pub type oce_api::OutputTrace::Owned = T
@@ -1325,13 +2207,30 @@ pub type oce_api::TrendCfg::Error = core::convert::Infallible
 pub type oce_api::TrendCfg::Owned = T
 pub unsafe fn oce_api::AssertEvent::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::AssertLevel::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::CatalogDefault::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::CatalogEntry::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::CatalogParamDefault::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::CatalogPort::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::CatalogPortKind::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::CatalogPortNaming::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::CatalogRule::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::CatalogValueKind::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::CollectSpec::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::ContractDescriptor::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::ContractDomain::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::DeclaredOutput::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::DiagnosticKey::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::DiagnosticReceipt::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::DiagnosticRecord::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::DiagnosticSeverity::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::DiagnosticStage::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::DiagnosticSubject::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::EngineCheckpoint::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::EngineStateSnapshot::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::IoClass::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::IoInventory::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::IoSummary::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::LoadReceipt::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::LoadReport::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::OutputTrace::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::Outputs::clone_to_uninit(&self, *mut u8)

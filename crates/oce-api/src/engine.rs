@@ -12,6 +12,7 @@ use oce_model::{ConnectorId, Dir, ModelGraph, Value, ValueType};
 use oce_store::{DomainKey, OcValue, PointHandle, PointSample, PointSnapshot, Store, StoreError};
 use oce_store_mem::MemStore;
 
+use crate::diagnostics::{DiagnosticCapture, DiagnosticStage, LoadReceipt, OperationFailure};
 use crate::error::OcError;
 use crate::io::IoInventory;
 use crate::loading::LoadReport;
@@ -147,8 +148,13 @@ impl<S: Store> Engine<S> {
         // Defense in depth for every in-crate caller: `oce-graph` assumes a validated graph and keeps
         // the tick/build arenas lean, so malformed hand-built graphs stop here as typed diagnostics.
         let validate_warnings = oce_validate::validate(&model)?;
-        self.build_validated_model_in_memory(model, model_iri, validate_warnings)
-            .map(|_| ())
+        self.build_validated_model_in_memory(
+            model,
+            model_iri,
+            validate_warnings,
+            &mut DiagnosticCapture::new(false, DiagnosticStage::Validation),
+        )
+        .map(|_| ())
     }
 
     /// Build a graph that has already passed the structural gate, preserving prior diagnostics if a
@@ -158,12 +164,15 @@ impl<S: Store> Engine<S> {
         model: ModelGraph,
         model_iri: Option<&str>,
         mut diagnostics: Vec<oce_diag::Diagnostic>,
+        capture: &mut DiagnosticCapture,
     ) -> Result<Vec<oce_diag::Diagnostic>, OcError> {
         let result: Result<(), OcError> = (|| {
             // Resolve every block instance to its native impl up front — an unknown class is a typed
             // load error, never a panic (R-IMPL-2 / R-ERR-1).
+            capture.enter(DiagnosticStage::Instantiation);
             let blocks = instantiate_blocks(&model)?;
             // BUILD (off the tick): schedule + state. `?` on `compile` maps `BuildError` → `OcError`.
+            capture.enter(DiagnosticStage::Schedule);
             let schedule = compile(&model, &blocks)?;
             let state = allocate_state(&model, &blocks);
             let outputs = Outputs::build(&model, &state);
@@ -172,15 +181,21 @@ impl<S: Store> Engine<S> {
             // structural (a new `io` always ships a new batch), never remembered.
             let durable_batch = DurableOutputBatch::build_at_load(&io);
             let params = ParamTable::build_at_load(&model);
+            capture.enter(DiagnosticStage::Semantics);
             let semantics = oce_semantics::resolve(&model).map_err(|err| OcError::Load {
                 detail: format!("semantic resolution failed: {err}"),
             })?;
+            capture.record(&semantics.diagnostics);
             diagnostics.extend(semantics.diagnostics.iter().cloned());
+            capture.enter(DiagnosticStage::Projection);
             let resolved_model = project_resolved_model(&model, &semantics, model_iri)?;
             let semantic_warnings = semantics.diagnostics;
             // Open the store's durability lifecycle before the first tick (no-op for `MemStore`).
+            capture.enter(DiagnosticStage::StoreRecovery);
             self.store.recover()?;
+            capture.enter(DiagnosticStage::StoreSave);
             self.store.save_model(&resolved_model)?;
+            capture.enter(DiagnosticStage::StoreInputs);
             let store_inputs = resolve_store_inputs(self.store.as_ref(), &io)?;
             self.model = Arc::new(model);
             self.blocks = blocks;
@@ -219,10 +234,41 @@ impl<S: Store> Engine<S> {
     /// later failure, [`OcError::LoadContext`] retains them and exposes the terminal variant through
     /// [`std::error::Error::source`].
     pub fn load_cxf(&mut self, bytes: &[u8]) -> Result<LoadReport, OcError> {
+        self.load_cxf_pipeline(
+            bytes,
+            &mut DiagnosticCapture::new(false, DiagnosticStage::Import),
+        )
+    }
+
+    /// Load CXF through the same pipeline as [`Self::load_cxf`], with immutable producer evidence.
+    ///
+    /// Captures every returned diagnostic at its actual producer boundary, independently of the
+    /// legacy report. The receipt has its own revisioned machine order. Engine/store side effects,
+    /// numerical behavior, error variants and legacy warning order remain unchanged. Allocates
+    /// evidence only on this opt-in path; no runtime warning collection is enabled.
+    ///
+    /// # Errors
+    /// Returns [`OperationFailure`] with prior evidence, terminal stage and original error context
+    /// on any load failure, including failures without structured diagnostics.
+    pub fn load_cxf_with_receipt(&mut self, bytes: &[u8]) -> Result<LoadReceipt, OperationFailure> {
+        let mut capture = DiagnosticCapture::new(true, DiagnosticStage::Import);
+        match self.load_cxf_pipeline(bytes, &mut capture) {
+            Ok(report) => Ok(LoadReceipt::new(report, capture)),
+            Err(error) => Err(OperationFailure::new(error, capture)),
+        }
+    }
+
+    fn load_cxf_pipeline(
+        &mut self,
+        bytes: &[u8],
+        capture: &mut DiagnosticCapture,
+    ) -> Result<LoadReport, OcError> {
         // 1. Resolve CXF → flat, ground ModelGraph (+ warning-only report; errors are Err here).
         let (model, report) = oce_cxf::import_cxf(bytes, &oce_cxf::ResolveOptions::default())?;
         let model_iri = report.model_iri.clone();
+        capture.record(&report.diagnostics);
         let mut diagnostics = report.diagnostics;
+        capture.enter(DiagnosticStage::Flatten);
         // 2. Flatten (scalar identity; array-parameter normalization is resolver-owned).
         let mut model = match oce_flatten::flatten(model) {
             Ok(model) => model,
@@ -230,18 +276,30 @@ impl<S: Store> Engine<S> {
         };
         // 3. Deep gate: §7.10 unification (mutates the graph to propagate one-sided units), then
         //    the structural/type rules. A shall-violation propagates as OcError::Validate.
+        capture.enter(DiagnosticStage::AttributeUnification);
         match oce_validate::unify_attributes(&mut model) {
-            Ok(warnings) => diagnostics.extend(warnings),
+            Ok(warnings) => {
+                capture.record(&warnings);
+                diagnostics.extend(warnings);
+            }
             Err(error) => return Err(OcError::from(error).with_load_context(diagnostics)),
         }
+        capture.enter(DiagnosticStage::Validation);
         match oce_validate::validate(&model) {
-            Ok(warnings) => diagnostics.extend(warnings),
+            Ok(warnings) => {
+                capture.record(&warnings);
+                diagnostics.extend(warnings);
+            }
             Err(error) => return Err(OcError::from(error).with_load_context(diagnostics)),
         }
         // 4. The explicit gate above authorizes the validated tail. Hand-built callers still use
         //    `build_model_in_memory`, which validates defensively before entering this helper.
-        let warnings =
-            self.build_validated_model_in_memory(model, model_iri.as_deref(), diagnostics)?;
+        let warnings = self.build_validated_model_in_memory(
+            model,
+            model_iri.as_deref(),
+            diagnostics,
+            capture,
+        )?;
         let stateful_blocks = self
             .blocks
             .iter()

@@ -1,0 +1,17 @@
+{
+  "domain": "execution-profile",
+  "profile": "HostTick v1",
+  "representation": "Rust facade contract description; not a general JSON codec",
+  "revision": 1,
+  "semantics": [
+    "No Modelica same-time event iteration or solver selection. Host owns cadence.",
+    "This descriptor is descriptive, not a runtime/profile selector or a snapshot-format revision.",
+    "Existing state wire revision, execution ABI, catalog fingerprint and executable compatibility checks are unchanged.",
+    "Store-input preflight and realtime write failure behavior remain operation-specific; no new failure atomicity."
+  ],
+  "types": {
+    "Pre": "call-entry memory output, then latch current input for next successful call",
+    "tick": "finite nondecreasing f64 absolute model seconds",
+    "transition": "one state advance for every successful call, including equal timestamps"
+  }
+}

@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 //! `oce-api` — the primary embeddable host facade for the Open Control Engine
-//! (`08-embeddable-api-and-performance.md`). The actively supported `oce-blocks::catalog()` metadata
-//! API is a separate companion surface. The `open-control-engine` umbrella name is reserved for a
+//! (`08-embeddable-api-and-performance.md`). [`catalog()`] and [`contract_descriptors`] expose
+//! independent host metadata. The supported `oce-blocks::catalog()` remains a companion surface. The `open-control-engine` umbrella name is reserved for a
 //! future release; nothing is published to crates.io yet.
 //!
 //! # Posture (binding, FRAME §6)
@@ -33,6 +33,12 @@
 //! semantic-template loader. Only `point_list(None)` is supported: device filtering is outside the
 //! supported profile and is refused directly with [`OcError::Load`], even with a custom store.
 
+mod catalog;
+mod catalog_adapter;
+mod catalog_json;
+mod catalog_rules;
+mod contracts;
+mod diagnostics;
 mod engine;
 mod error;
 mod export;
@@ -56,6 +62,18 @@ mod state_wire;
 mod topology;
 mod watch;
 
+pub use catalog::{
+    CATALOG_JSON, CATALOG_SCHEMA_REVISION, CatalogDefault, CatalogEntry, CatalogParamDefault,
+    CatalogPort, CatalogPortKind, CatalogPortNaming, CatalogValueKind, catalog, catalog_content_id,
+    catalog_to_json,
+};
+pub use catalog_rules::CatalogRule;
+pub use contracts::{ContractDescriptor, ContractDomain, contract_descriptors};
+pub use diagnostics::{
+    DIAGNOSTIC_SCHEMA_REVISION, DiagnosticKey, DiagnosticReceipt, DiagnosticRecord,
+    DiagnosticSeverity, DiagnosticStage, DiagnosticSubject, ExportReceipt, LoadReceipt,
+    OperationFailure,
+};
 pub use engine::Engine;
 pub use error::{LoadErrorContext, OcError, OcResult};
 pub use export::{ContentIdError, ExportReport};

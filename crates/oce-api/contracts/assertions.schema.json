@@ -1,0 +1,24 @@
+{
+  "domain": "assertions",
+  "representation": "Rust facade contract description; not a general JSON codec",
+  "revision": 1,
+  "semantics": [
+    "False CDL.Utilities.Assert input emits Warning on every evaluation, including repeated false and equal-time calls; true is silent.",
+    "Other block classes may warn; sources are not guaranteed instance identities. No latch, warn-once, escalation, scheduler or safety policy.",
+    "Only step_realtime collects; ordinary tick and simulate use no-op warning sinks.",
+    "Realtime writes follow tick; store failure can prevent report delivery after state advances. Timing measurements are not deterministic golden fields."
+  ],
+  "types": {
+    "AssertEvent": {
+      "block": "String producer source, currently class-level",
+      "level": "AssertLevel::Warning",
+      "message": "String display text",
+      "t": "f64 model seconds"
+    },
+    "StepReport": {
+      "asserts": "Vec<AssertEvent> all collected block warnings",
+      "tick_nanos": "u64 measured latency",
+      "written": "usize committed point count"
+    }
+  }
+}

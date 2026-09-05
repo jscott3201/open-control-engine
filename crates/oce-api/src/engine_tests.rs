@@ -302,3 +302,33 @@ impl Durable for LoadFailureStore {
         self.inner.recover()
     }
 }
+
+#[test]
+fn receipt_preserves_prior_evidence_at_each_store_boundary() {
+    use crate::DiagnosticStage;
+    for (failure, stage) in [
+        (StoreFailure::Recover, DiagnosticStage::StoreRecovery),
+        (StoreFailure::SaveModel, DiagnosticStage::StoreSave),
+        (StoreFailure::ResolvePoints, DiagnosticStage::StoreInputs),
+        (StoreFailure::HandleCount, DiagnosticStage::StoreInputs),
+    ] {
+        let mut engine = Engine::with_store(Arc::new(LoadFailureStore::new(failure)));
+        let failure = engine
+            .load_cxf_with_receipt(ANALOG_WARNING.as_bytes())
+            .unwrap_err();
+        assert_eq!(failure.stage(), stage);
+        assert!(matches!(failure.error(), OcError::LoadContext(_)));
+        let terminal = std::error::Error::source(failure.error())
+            .unwrap()
+            .downcast_ref::<OcError>()
+            .unwrap();
+        assert!(matches!(terminal, OcError::Store(_)));
+        assert!(failure.error().diagnostics().is_empty());
+        let records = failure.diagnostics().records();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].key().stage(), DiagnosticStage::Import);
+        assert_eq!(records[0].key().code(), "analog-coerced-to-real");
+        assert!(!engine.loaded);
+        assert!(engine.model.blocks.is_empty());
+    }
+}

@@ -1,0 +1,31 @@
+{
+  "domain": "values",
+  "representation": "Rust facade contract description; not a general JSON codec",
+  "revision": 1,
+  "semantics": [
+    "Value::bit_eq compares exact f64 bits, distinguishing signed zero and preserving NaN payload identity.",
+    "Nonfinite Real values are representable; operation-specific parameter/time/domain validation still applies.",
+    "Value::Enum can carry an invalid class/ordinal; operation boundaries validate against registered descriptors. No universal validity guarantee from construction.",
+    "No new generic JSON/wire value codec. Catalog enum kinds instead include canonical class path and ordered member names."
+  ],
+  "types": {
+    "ConnectorId": "u32 dense model-local index, not durable or host identity",
+    "Value": {
+      "Boolean": "bool",
+      "Enum": {
+        "class": "model-local EnumClassId retained in Value and ValueType",
+        "ordinal": "u32, one-based in registered class declaration order"
+      },
+      "Integer": "i64 signed carrier; CDL requires at least the 32-bit domain",
+      "Real": "f64 IEEE-754 binary64",
+      "String": "Arc<str> metadata; not tick signal"
+    },
+    "ValueType": [
+      "Real",
+      "Integer",
+      "Boolean",
+      "String",
+      "Enum(class)"
+    ]
+  }
+}

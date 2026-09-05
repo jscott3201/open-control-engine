@@ -196,6 +196,7 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 - [Authority claims and supersession](docs/authority-claims.md)
 - [Public surface contract](docs/public-surface-contract.md)
 - [Facade migration](docs/facade-migration.md)
+- [Versioned facade contracts](docs/facade-contracts.md)
 - [Package, feature, and publication policy](docs/package-publication-policy.md)
 - [Architecture](docs/architecture.md)
 - [Execution profile](docs/execution-profile.md)
