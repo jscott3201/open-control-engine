@@ -192,6 +192,7 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 # Reference
 
 - [Documentation map](docs/README.md)
+- [Product contract](docs/product-contract.md)
 - [Authority claims and supersession](docs/authority-claims.md)
 - [Public surface contract](docs/public-surface-contract.md)
 - [Package, feature, and publication policy](docs/package-publication-policy.md)

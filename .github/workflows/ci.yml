@@ -130,6 +130,10 @@ jobs:
         run: python3 scripts/authority_claims/check.py --check
       - name: authority claim hostile controls
         run: python3 scripts/authority_claims/test_check.py
+      - name: product contract traceability
+        run: python3 scripts/product_contract/check.py
+      - name: product contract hostile controls
+        run: python3 scripts/product_contract/test_check.py
 
   gate-fixtures:
     name: gate behavior fixtures
