@@ -1,5 +1,8 @@
 # Execution profile
 
+The [generated authority summary](authority-claims.md) distinguishes compiled state revisions from
+the review-only profile name and semantics; it does not define a new profile identity.
+
 Open Control Engine currently has one execution profile: **HostTick v1**. It is fixed, not selected
 through an API option. A future profile with different state-transition semantics would require a
 separate compatibility and snapshot contract.

@@ -126,6 +126,10 @@ jobs:
         run: python3 scripts/package_policy/test_validate.py
       - name: metadata-driven package-contract validation
         run: python3 scripts/package_policy/validate.py
+      - name: authority claim consistency
+        run: python3 scripts/authority_claims/check.py --check
+      - name: authority claim hostile controls
+        run: python3 scripts/authority_claims/test_check.py
 
   gate-fixtures:
     name: gate behavior fixtures

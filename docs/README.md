@@ -7,6 +7,7 @@ front door; these pages are the detail behind it.
 
 | Page | Read it when you want to know |
 | --- | --- |
+| [Authority claims and supersession](authority-claims.md) | The generated cross-domain summary, checked versus review-only boundaries, source-owner update procedure, and non-exhaustive supersession map, from the [index](authority-claims.json) |
 | [Architecture](architecture.md) | How the engine is layered, where the CDL §7.17 seam sits, what each of the 17 crates owns, and the platform and MSRV policy |
 | [Execution profile](execution-profile.md) | Why each host tick is one state transition, and where `CDL.Logical.Pre` differs from Modelica same-time event iteration |
 | [Verification and evidence](verification-evidence.md) | What has actually been proven about this engine, what has not, and which checks are deliberately not running |
@@ -47,5 +48,6 @@ Claims here cite `file:line` wherever they are checkable, so you can verify rath
 trust. Where something is unverified, these pages say so rather than rounding up — several
 of them were written specifically to correct claims that had drifted out of date.
 
-Nothing here describes a working directory that is not in the repository. If a page cites a
-path, you have that path in your clone.
+Current source links resolve in a clone. Explicit historical locators in the
+[supersession map](authority-claims.md#representative-supersession-map--non-exhaustive) are inert
+text, not clone prerequisites or current authority.

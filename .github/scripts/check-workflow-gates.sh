@@ -123,6 +123,10 @@ require_pattern "$ci" 'scripts/package_policy/test_validate\.py' \
   'run package publication hostile controls'
 require_pattern "$ci" 'scripts/package_policy/validate\.py' \
   'run metadata-driven package publication contract'
+require_pattern "$ci" '^[[:space:]]*run: python3 scripts/authority_claims/check\.py --check$' \
+  'run authority claim consistency check'
+require_pattern "$ci" '^[[:space:]]*run: python3 scripts/authority_claims/test_check\.py$' \
+  'run authority claim hostile controls'
 require_pattern "$ci" 'test-check-stale-crate-status\.sh' 'run stale crate-status fixture tests'
 require_pattern "$ci" 'check-stale-crate-status\.sh' 'run stale crate-status smoke'
 require_pattern "$ci" 'check-workflow-gates\.sh' 'run workflow gate smoke'

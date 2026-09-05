@@ -1,5 +1,6 @@
 //! In-crate facade tests grouped by scenario.
 
+mod authority_claims_tests;
 mod boundary_alias_tests;
 mod common;
 mod diagnostics_access;

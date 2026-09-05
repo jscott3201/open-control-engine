@@ -718,6 +718,9 @@ mod tests;
 mod catalog_tests;
 
 #[cfg(test)]
+mod authority_claims_tests;
+
+#[cfg(test)]
 mod param_rules_tests;
 
 #[cfg(test)]

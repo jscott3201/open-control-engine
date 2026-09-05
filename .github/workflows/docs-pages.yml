@@ -11,6 +11,7 @@ on:
       - "docs/**"
       - "README.md"
       - "scripts/docs/**"
+      - "scripts/authority_claims/**"
       - "site/**"
   push:
     branches: [main]
@@ -19,6 +20,7 @@ on:
       - "docs/**"
       - "README.md"
       - "scripts/docs/**"
+      - "scripts/authority_claims/**"
       - "site/**"
   workflow_dispatch:
 
@@ -43,6 +45,12 @@ jobs:
 
       - name: Test documentation checker contracts
         run: python3 scripts/docs/test_check_links.py
+
+      - name: Test authority literals through staging and mdBook
+        run: python3 scripts/docs/test_authority_literals.py --mdbook target/mdbook-bin/mdbook
+
+      - name: Check generated authority projection
+        run: python3 scripts/authority_claims/check.py --check
 
       - name: Stage documentation without source writes
         env:

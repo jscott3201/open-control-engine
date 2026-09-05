@@ -1,5 +1,8 @@
 # Verification and evidence
 
+The [generated authority summary](authority-claims.md) mechanically inventories raw provenance
+records only. Evidence independence and semantic coverage remain review-only, not inferred counts.
+
 This page is for someone deciding whether to trust this engine near real equipment. It answers one
 question: what has actually been proven about the Open Control Engine, and what has not.
 

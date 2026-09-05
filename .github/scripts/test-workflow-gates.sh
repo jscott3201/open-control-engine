@@ -41,6 +41,10 @@ jobs:
     steps:
       - run: python3 scripts/package_policy/test_validate.py
       - run: python3 scripts/package_policy/validate.py
+      - name: authority claim consistency
+        run: python3 scripts/authority_claims/check.py --check
+      - name: authority claim hostile controls
+        run: python3 scripts/authority_claims/test_check.py
   determinism-matrix:
     strategy:
       matrix:
@@ -355,6 +359,19 @@ remove_package_publication_contract() {
   mv "$dir/ci.yml.tmp" "$dir/ci.yml"
 }
 
+comment_authority_claim_check() {
+  dir="$1"
+  sed 's@run: python3 scripts/authority_claims/check.py --check@run: true # python3 scripts/authority_claims/check.py --check@' \
+    "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
+remove_authority_claim_controls() {
+  dir="$1"
+  grep -v 'scripts/authority_claims/test_check.py' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
 remove_root_unsafe_forbid() {
   _dir="$1"
   _deny="$2"
@@ -515,6 +532,10 @@ run_case missing-golden-gen-firewall fail remove_golden_gen_firewall \
   "run golden-gen firewall fixture tests"
 run_case missing-package-publication-contract fail remove_package_publication_contract \
   "run package publication hostile controls"
+run_case no-op-authority-claim-check fail comment_authority_claim_check \
+  "run authority claim consistency check"
+run_case missing-authority-claim-controls fail remove_authority_claim_controls \
+  "run authority claim hostile controls"
 run_case missing-root-unsafe-forbid fail remove_root_unsafe_forbid \
   "workspace.lints.rust unsafe_code = \"forbid\""
 run_case missing-crate-lints-workspace fail remove_crate_lints_workspace \
