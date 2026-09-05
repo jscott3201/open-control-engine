@@ -25,6 +25,9 @@ Read [`.agents/project-facts.md`](.agents/project-facts.md) before your first ch
 covers the gate, what CI does and does not run, and the conventions this repo enforces
 mechanically.
 
+Use the [product contract](docs/product-contract.md) for versioned product requirements and their
+evidence map; its domain delegations and current/host/future distinctions govern aggregate claims.
+
 If you are an agent working on this project, `.agents/` also holds local operating notes
 kept out of the published tree — the memory protocol and identity handling in
 `memory-bootstrap.md`, and delegation and review process in `lane-facts.md`. They are

@@ -10,6 +10,9 @@ This document is the contract every change is held to. It is enforced socially i
 mechanically in CI (the `development -> main` release gate runs the full suite — see
 [CI: where tests run](#ci-where-tests-run)).
 
+The [product contract](docs/product-contract.md) maps product requirements to bounded evidence and
+future acceptance outcomes; its traceability checks do not replace behavioral tests or host qualification.
+
 ---
 
 ## The four pillars

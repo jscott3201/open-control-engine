@@ -84,6 +84,7 @@ step 'default build links no database' bash .github/scripts/check-default-no-db.
 step 'golden-gen anti-tautology firewall' bash .github/scripts/check-golden-gen-anti-tautology.sh
 step 'package, feature, and publication contract' python3 scripts/package_policy/validate.py
 step 'authority claim consistency' python3 scripts/authority_claims/check.py --check
+step 'product contract traceability' python3 scripts/product_contract/check.py
 
 # ── Gate behavior fixtures ───────────────────────────────────────────────────
 # The gates are themselves tested. A gate that cannot fail is not a gate, and
@@ -92,6 +93,7 @@ step 'no-db gate fixtures' bash .github/scripts/test-check-default-no-db.sh
 step 'golden-gen firewall fixtures' bash .github/scripts/test-check-golden-gen-anti-tautology.sh
 step 'package-contract hostile controls' python3 scripts/package_policy/test_validate.py
 step 'authority claim hostile controls' python3 scripts/authority_claims/test_check.py
+step 'product contract hostile controls' python3 scripts/product_contract/test_check.py
 step 'stale crate-status fixtures' bash .github/scripts/test-check-stale-crate-status.sh
 step 'stale crate-status smoke' bash .github/scripts/check-stale-crate-status.sh
 step 'gate-script coverage' bash .github/scripts/check-gate-script-coverage.sh

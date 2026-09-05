@@ -7,6 +7,9 @@ This engine executes a control sequence. It does not supervise the equipment tha
 and it does not judge the quality of the data it is fed. Those are your job, and the engine will not
 warn you if you skip them.
 
+See the [product contract](product-contract.md) for numbered host obligations and the bounded
+requirement-to-evidence map; engine boundary tests are not host-compliance evidence.
+
 ## Staging is status-agnostic
 
 A sample is converted from its value regardless of `PointStatus`. `Fault`, `Stale`, `Uninitialized`

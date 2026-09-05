@@ -23,6 +23,9 @@ which states that such metadata does not affect the computation of a control sig
 Today it loads and simulates **46 ASHRAE Guideline 36 sequence fixtures** against a registry of
 **133 CDL block classes**. It is **pre-1.0 and not published to crates.io**.
 
+Read the [product contract](docs/product-contract.md) for the versioned executable-CXF/HostTick
+boundary, current limitations, host obligations and future acceptance outcomes.
+
 ---
 
 ## Who this is for

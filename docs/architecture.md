@@ -4,6 +4,9 @@ This page is for an engineer deciding whether to embed the Open Control Engine i
 answers four questions: what the layers are, where the seam between them falls, what each of the 17
 crates owns, and what this engine will never do for you.
 
+The [product contract](product-contract.md) owns the aggregate requirement/evidence map and delegates
+domain semantics without turning future acceptance outcomes into current behavior.
+
 ## The organising idea: the CDL §7.17 non-computational seam
 
 CDL §7.17 states that point lists, trends, display units, tags, and all Brick / Haystack / ASHRAE
