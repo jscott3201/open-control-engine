@@ -161,11 +161,7 @@
   "release_contract": {
     "workflow": ".github/workflows/release.yml",
     "publishable_count": 12,
-    "private_count": 5,
-    "validator_command": "python3 scripts/package_policy/validate.py",
-    "dry_run_command": "cargo publish --workspace --locked --dry-run",
-    "publish_command": "cargo publish --workspace --locked",
-    "publish_event": "workflow_dispatch"
+    "private_count": 5
   },
   "downstream_constraints": [
     {

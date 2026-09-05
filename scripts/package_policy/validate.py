@@ -215,28 +215,16 @@ def validate_ledger(ledger: dict[str, Any]) -> dict[str, Any]:
         raise PolicyError("release_contract must be an object")
     exact_keys(
         release,
-        {
-            "workflow",
-            "publishable_count",
-            "private_count",
-            "validator_command",
-            "dry_run_command",
-            "publish_command",
-            "publish_event",
-        },
+        {"workflow", "publishable_count", "private_count"},
         "release_contract",
     )
     expected_release = {
         "workflow": ".github/workflows/release.yml",
         "publishable_count": 12,
         "private_count": 5,
-        "validator_command": "python3 scripts/package_policy/validate.py",
-        "dry_run_command": "cargo publish --workspace --locked --dry-run",
-        "publish_command": "cargo publish --workspace --locked",
-        "publish_event": "workflow_dispatch",
     }
     if release != expected_release:
-        raise PolicyError("release command, event, or count contract drifted")
+        raise PolicyError("release workflow path or count contract drifted")
     publish_count = sum(item["publish"] for item in packages)
     if publish_count != release["publishable_count"]:
         raise PolicyError("publishable package count disagrees with package classifications")
@@ -496,18 +484,11 @@ def validate_unknown_feature_refusal() -> None:
         raise PolicyError("Cargo did not specifically refuse the unknown oce-api feature control")
 
 
-def validate_release_workflow(ledger: dict[str, Any], workflow: str) -> None:
-    """Validate exact workspace selection and manual publication guards."""
+def validate_release_workflow(workflow: bytes) -> None:
+    """Require the approved workflow bytes without interpreting execution syntax."""
 
-    release = ledger["release_contract"]
     try:
-        release_workflow.validate(
-            workflow,
-            validator_command=release["validator_command"],
-            dry_run_command=release["dry_run_command"],
-            publish_command=release["publish_command"],
-            publish_event=release["publish_event"],
-        )
+        release_workflow.validate(workflow)
     except release_workflow.WorkflowError as error:
         raise PolicyError(str(error)) from error
 
@@ -529,7 +510,7 @@ def main() -> int:
         validate_feature_observations(ledger, observations, private)
         validate_unknown_feature_refusal()
         workflow_path = ROOT / ledger["release_contract"]["workflow"]
-        validate_release_workflow(ledger, workflow_path.read_text(encoding="utf-8"))
+        validate_release_workflow(workflow_path.read_bytes())
     except (OSError, PolicyError) as error:
         print(f"package publication contract: FAIL: {error}", file=sys.stderr)
         return 1

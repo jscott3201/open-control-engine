@@ -110,6 +110,39 @@ publication remains a manual dispatch behind the `release` environment and remai
 M06 plus an explicit owner decision. Before that decision, package and publish commands are dry-run
 evidence only. A dry-run never uploads.
 
+### Immutable workflow approval
+
+`.github/workflows/release.yml` is the readable execution definition. The literal SHA-256 in
+`scripts/package_policy/release_workflow.py` is its approval witness, not a second execution grammar.
+It approves the raw workflow at commit `2bab88acbc96862f1808b34d305b795f521b3614`: tag pushes run
+verification only; publication is declared only in the manual-dispatch job with `needs: verify` and
+`environment: release`. Only the publish step explicitly maps the registry token. A failed verify
+job skips its dependent publish job under GitHub's
+[job dependency rules](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idneeds).
+The declared environment follows GitHub's
+[deployment environment semantics](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/control-deployments),
+and Cargo's [publish dry-run](https://doc.rust-lang.org/cargo/commands/cargo-publish.html) does not upload.
+
+**All bytes are closed.** The validator reads bytes and compares their SHA-256 to the fixed literal:
+no YAML parsing, shell inference, decoding, or semantic normalization. Even comments, whitespace,
+trailing bytes, CRLF conversion, and malformed encoding are rejected. The ledger retains only the
+fixed workflow path and the 12/5 selection counts; it does not duplicate command or event grammar.
+There is no configurable workflow/digest location and no runtime self-blessing or auto-bless mode.
+
+An intentional future workflow change requires a reviewed workflow diff, a manual update to the
+expected digest with a rationale for the newly approved execution, and updated independent byte
+golden evidence. Demonstrate that the old approval rejects the new reference and that the new
+approval rejects the old reference while accepting the new reference, repeatedly. Do not compute
+the expected digest from whichever candidate the validator is currently checking.
+
+This is a **drift guard preserving approved declared direct execution**, not a sandbox or a security
+defense against coordinated edits to the workflow and checker. It does not verify the behavior of
+invoked actions/scripts, GitHub environment protection configuration, required reviewers, or actual
+secret placement. The workflow's environment comments describe intended setup, not evidence that
+repository settings implement it. The checker and hostile controls run independently in CI and in
+the local gate; they are not an externally protected checker. See [`.agents/gate.sh`](../.agents/gate.sh)
+for the authoritative runnable gate, rather than a duplicate command inventory here.
+
 ## Downstream constraints and migration
 
 Current consumer evidence sets a compatibility floor:

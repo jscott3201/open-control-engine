@@ -4,8 +4,15 @@
 from __future__ import annotations
 
 import copy
+import hashlib
+import io
+import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
+from unittest.mock import patch
 
+import release_workflow
 import validate
 
 
@@ -32,6 +39,107 @@ EXPECTED_PRIVATE = {
 }
 
 
+# Independent raw-byte golden from release.yml at
+# 2bab88acbc96862f1808b34d305b795f521b3614, not read from the candidate or checker.
+# Non-ASCII bytes are escaped explicitly; line endings and the final LF are pinned.
+APPROVED_WORKFLOW = b"""# release \xe2\x80\x94 the crates.io publish gate.
+#
+# Two deliberately-decoupled triggers, because the `v*` tag doubles as an
+# external git-pin ref (verdant-runtime pins `tag = "v0.1.0"`): cutting or
+# moving that tag must NEVER auto-publish.
+#
+#   * tag push (`v*`)        \xe2\x86\x92 VERIFY only: tag\xe2\x86\x94version match, fmt/clippy/
+#                              tests, and a full `cargo publish --dry-run`.
+#                              No token, no publish. Safe to re-cut the tag.
+#   * workflow_dispatch      \xe2\x86\x92 VERIFY then PUBLISH. Publishing is an explicit
+#                              manual act: run the workflow (pick the tag ref
+#                              in the "Run workflow" dialog) to release.
+#
+# The publish job runs in the `release` GitHub Environment, which scopes
+# CARGO_REGISTRY_TOKEN to this workflow (repo Settings \xe2\x86\x92 Environments \xe2\x86\x92
+# release). Enabling "Required reviewers" there adds a second human gate.
+#
+# All 12 publishable members ship in one dependency-ordered
+# `cargo publish --workspace` (Rust 1.90+). Five private members are skipped by
+# their own `publish = false`: `oce-bless`, `oce-conformance`, `oce-docs`,
+# `oce-extension`, and `oce-reference-wal-adapter`. crates.io rejects
+# re-publishing an existing version, so a repeat dispatch is a no-op-or-fail,
+# never a clobber.
+#
+# Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
+# No crate is published yet; actual publication remains deferred until explicit
+# owner authorization for the release milestone.
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  verify:
+    name: verify (tag \xe2\x86\x94 version, gate, publish dry-run)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@1.97.1
+        with:
+          components: rustfmt, clippy
+
+      - name: tag matches workspace version
+        if: github.event_name == 'push'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
+          if [ "v${VERSION}" != "${TAG}" ]; then
+            echo "::error::tag ${TAG} != v${VERSION} (workspace version) \xe2\x80\x94 bump Cargo.toml before tagging"
+            exit 1
+          fi
+          echo "tag ${TAG} matches workspace version ${VERSION}"
+
+      - name: fmt
+        run: cargo fmt --all --check
+
+      - name: clippy (-D warnings)
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: tests
+        run: cargo test --workspace --locked
+
+      - name: package, feature, and publication contract (12 publishable, 5 private)
+        run: python3 scripts/package_policy/validate.py
+
+      - name: publish dry-run (workspace, dependency-ordered)
+        run: cargo publish --workspace --locked --dry-run
+
+  publish:
+    name: publish to crates.io
+    needs: verify
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@1.97.1
+
+      - name: cargo publish --workspace
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --workspace --locked
+"""
+DRIFT_MESSAGE = "release workflow bytes differ from the approved SHA-256"
+
+
 class PackagePolicyControls(unittest.TestCase):
     """Prove every required drift class turns the validator red."""
 
@@ -43,9 +151,6 @@ class PackagePolicyControls(unittest.TestCase):
         cls.metadata = validate.cargo_json(
             ["metadata", "--format-version", "1", "--locked", "--no-deps"]
         )
-        cls.workflow = (
-            validate.ROOT / cls.ledger["release_contract"]["workflow"]
-        ).read_text(encoding="utf-8")
 
     def observations(self) -> dict[str, dict[str, list[str]]]:
         """Return feature observations matching the checked-in contract."""
@@ -61,25 +166,6 @@ class PackagePolicyControls(unittest.TestCase):
             for selection in feature["selections"]
         }
 
-    def with_job_decoy(self, workflow: str, style: str) -> str:
-        """Prepend a top-level scalar containing structurally inert release-job text."""
-
-        release = self.ledger["release_contract"]
-        return (
-            f"decoy: {style}\n"
-            "  jobs:\n"
-            "  verify:\n"
-            f"    run: {release['validator_command']}\n"
-            f"    run: {release['dry_run_command']}\n"
-            "  publish:\n"
-            "    needs: verify\n"
-            f"    if: github.event_name == '{release['publish_event']}'\n"
-            "    environment: release\n"
-            f"    run: {release['publish_command']}\n"
-            "\n"
-            f"{workflow}"
-        )
-
     def test_checked_in_contract_reaches_every_pure_validator(self) -> None:
         """The positive fixture traverses schema, Cargo, feature, and workflow checks."""
 
@@ -87,7 +173,7 @@ class PackagePolicyControls(unittest.TestCase):
         packages, order = validate.validate_workspace(ledger, copy.deepcopy(self.metadata))
         private = set(packages) - EXPECTED_PUBLISHABLE
         validate.validate_feature_observations(ledger, self.observations(), private)
-        validate.validate_release_workflow(ledger, self.workflow)
+        validate.validate_release_workflow(APPROVED_WORKFLOW)
 
         self.assertEqual(set(order), EXPECTED_PUBLISHABLE)
         self.assertEqual(private, EXPECTED_PRIVATE)
@@ -216,224 +302,233 @@ class PackagePolicyControls(unittest.TestCase):
         with self.assertRaisesRegex(validate.PolicyError, "forbidden normal dependency"):
             validate.validate_feature_observations(self.ledger, changed, EXPECTED_PRIVATE)
 
-    def test_release_selection_count_and_manual_guard_drift_are_rejected(self) -> None:
-        """The release workflow cannot widen selection or weaken manual authorization."""
+    def test_release_path_and_counts_cannot_be_reconfigured(self) -> None:
+        """The minimal release ledger still fixes its path and both selection counts."""
 
-        count = copy.deepcopy(self.ledger)
-        count["release_contract"]["publishable_count"] = 13
-        with self.assertRaisesRegex(validate.PolicyError, "release command, event, or count"):
-            validate.validate_ledger(count)
+        for key, value in {"workflow": "candidate.yml", "publishable_count": 13, "private_count": 4}.items():
+            with self.subTest(key=key):
+                changed = copy.deepcopy(self.ledger)
+                changed["release_contract"][key] = value
+                self.assertNotEqual(changed, self.ledger)
+                with self.assertRaisesRegex(validate.PolicyError, "release workflow path or count"):
+                    validate.validate_ledger(changed)
 
-        selection = self.workflow.replace(
-            "cargo publish --workspace --locked --dry-run",
-            "cargo publish -p oce-api --locked --dry-run",
-            1,
-        )
-        with self.assertRaisesRegex(validate.PolicyError, "exact workspace selection"):
-            validate.validate_release_workflow(self.ledger, selection)
+    def test_release_schema_rejects_missing_fields_and_alternate_authorities(self) -> None:
+        """No command grammar, configurable digest, or arbitrary field can enter the ledger."""
 
-        guard = self.workflow.replace(
-            "if: github.event_name == 'workflow_dispatch'",
-            "if: github.event_name == 'push'",
-            1,
-        )
-        with self.assertRaisesRegex(validate.PolicyError, "manual dispatch"):
-            validate.validate_release_workflow(self.ledger, guard)
+        for key in ("validator_command", "dry_run_command", "publish_command", "publish_event",
+                    "expected_sha256", "digest_path", "extra"):
+            with self.subTest(extra=key):
+                changed = copy.deepcopy(self.ledger)
+                changed["release_contract"][key] = "unapproved"
+                with self.assertRaisesRegex(validate.PolicyError, "release_contract fields differ"):
+                    validate.validate_ledger(changed)
+        for key in self.ledger["release_contract"]:
+            with self.subTest(missing=key):
+                changed = copy.deepcopy(self.ledger)
+                del changed["release_contract"][key]
+                with self.assertRaisesRegex(validate.PolicyError, "release_contract fields differ"):
+                    validate.validate_ledger(changed)
+        with self.assertRaisesRegex(validate.PolicyError, "duplicate JSON key: workflow"):
+            validate.reject_duplicate_keys([("workflow", "approved"), ("workflow", "candidate")])
 
-    def test_release_environment_boundary_is_required(self) -> None:
-        """Manual dispatch cannot bypass the tracked release environment boundary."""
 
-        changed = self.workflow.replace("    environment: release\n", "", 1)
-        self.assertNotEqual(changed, self.workflow)
-        with self.assertRaisesRegex(validate.PolicyError, "environment: release"):
-            validate.validate_release_workflow(self.ledger, changed)
+class WorkflowApprovalControls(unittest.TestCase):
+    """Exercise byte approval and the real policy entry point; shell samples are data only."""
 
-    def test_checked_in_release_workflow_is_the_positive_control(self) -> None:
-        """The unchanged live workflow satisfies every release guard at job scope."""
+    def run_policy(self, candidate: bytes | None) -> tuple[int, str, str]:
+        """Read a real candidate file through main; isolate only unrelated Cargo observations."""
 
-        validate.validate_release_workflow(self.ledger, self.workflow)
+        ledger = validate.read_ledger()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workflow = root / ledger["release_contract"]["workflow"]
+            workflow.parent.mkdir(parents=True)
+            if candidate is not None:
+                workflow.write_bytes(candidate)
+            stdout, stderr = io.StringIO(), io.StringIO()
+            with (
+                patch.object(validate, "ROOT", root),
+                patch.object(validate, "read_ledger", return_value=ledger),
+                patch.object(validate, "cargo_json", return_value={}),
+                patch.object(validate, "validate_workspace", return_value=(EXPECTED_PUBLISHABLE | EXPECTED_PRIVATE, [])),
+                patch.object(validate, "cargo_tree_observation", return_value={}),
+                patch.object(validate, "validate_feature_observations"),
+                patch.object(validate, "validate_unknown_feature_refusal"),
+                redirect_stdout(stdout), redirect_stderr(stderr),
+            ):
+                result = validate.main()
+            return result, stdout.getvalue(), stderr.getvalue()
 
-    def test_harmless_run_block_styles_remain_accepted(self) -> None:
-        """Supported block styles retain complete but non-publishing script bodies."""
+    def assert_policy_drift(self, candidate: bytes) -> None:
+        """A changed file must fail through the entry point, not just the hash utility."""
 
-        for style in ("|", "|-", "|+", ">", ">-", ">+"):
-            with self.subTest(style=style):
-                changed = self.workflow.replace(
-                    "        run: |\n          VERSION=",
-                    f"        run: {style}\n          VERSION=",
-                    1,
-                )
-                if style != "|":
-                    self.assertNotEqual(changed, self.workflow)
-                validate.validate_release_workflow(self.ledger, changed)
+        self.assertNotEqual(candidate, APPROVED_WORKFLOW)
+        result, stdout, stderr = self.run_policy(candidate)
+        self.assertEqual(result, 1)
+        self.assertEqual(stdout, "")
+        self.assertEqual(stderr, f"package publication contract: FAIL: {DRIFT_MESSAGE}\n")
 
-    def test_top_level_scalar_job_decoys_cannot_supply_real_jobs(self) -> None:
-        """Literal and folded text cannot replace a missing job in the real jobs mapping."""
+    def assert_byte_drift(self, candidate: bytes) -> None:
+        """Check the focused exception, policy translation, and file-reading integration."""
 
-        real_publish_renamed = self.workflow.replace(
-            "  publish:\n", "  deployment:\n", 1
-        )
-        self.assertNotEqual(real_publish_renamed, self.workflow)
-        for style in ("|", ">-"):
-            with self.subTest(style=style):
-                decoyed_live = self.with_job_decoy(self.workflow, style)
-                validate.validate_release_workflow(self.ledger, decoyed_live)
+        self.assertNotEqual(candidate, APPROVED_WORKFLOW)
+        with self.assertRaises(release_workflow.WorkflowError) as caught:
+            release_workflow.validate(candidate)
+        self.assertEqual(str(caught.exception), DRIFT_MESSAGE)
+        with self.assertRaises(validate.PolicyError) as translated:
+            validate.validate_release_workflow(candidate)
+        self.assertEqual(str(translated.exception), DRIFT_MESSAGE)
+        self.assertIsInstance(translated.exception.__cause__, release_workflow.WorkflowError)
+        self.assert_policy_drift(candidate)
 
-                attack = self.with_job_decoy(real_publish_renamed, style)
-                with self.assertRaisesRegex(validate.PolicyError, "missing real job publish"):
-                    validate.validate_release_workflow(self.ledger, attack)
+    def test_frozen_reference_and_live_candidate_agree_and_repeat(self) -> None:
+        """Approval is independent of the candidate and repeated acceptance is deterministic."""
 
-    def test_hidden_real_job_keys_cannot_be_satisfied_by_scalar_decoys(self) -> None:
-        """Quoted and aliased semantic job IDs are rejected instead of matched through text."""
+        ledger = validate.read_ledger()
+        candidate = (validate.ROOT / ledger["release_contract"]["workflow"]).read_bytes()
+        self.assertEqual(candidate, APPROVED_WORKFLOW)
+        self.assertEqual(hashlib.sha256(APPROVED_WORKFLOW).hexdigest(), release_workflow.EXPECTED_SHA256)
+        reports = []
+        for workflow in (APPROVED_WORKFLOW, candidate, APPROVED_WORKFLOW):
+            self.assertIsNone(release_workflow.validate(workflow))
+            self.assertIsNone(validate.validate_release_workflow(workflow))
+            report = self.run_policy(workflow)
+            self.assertEqual(report[0], 0)
+            self.assertEqual(report[2], "")
+            self.assertIn("PASS (17 members; 12 publishable; 5 private)", report[1])
+            reports.append(report)
+        self.assertEqual(reports, [reports[0]] * 3)
 
-        quoted = self.workflow.replace("  verify:\n", '  "verify":\n', 1)
-        quoted = quoted.replace("  publish:\n", "  'publish':\n", 1)
-        aliased = self.workflow.replace("  verify:\n", "  verify_source:\n", 1)
-        aliased = aliased.replace(
-            "  publish:\n", "  verify: *verify_job\n\n  publish:\n", 1
-        )
-        aliased = "verify_job: &verify_job {}\n\n" + aliased
-        for shape, hidden in {"quoted": quoted, "aliased": aliased}.items():
-            with self.subTest(shape=shape):
-                self.assertNotEqual(hidden, self.workflow)
-                attack = self.with_job_decoy(hidden, "|")
-                with self.assertRaisesRegex(validate.PolicyError, "unsupported job"):
-                    validate.validate_release_workflow(self.ledger, attack)
-
-    def test_duplicate_real_job_keys_are_rejected(self) -> None:
-        """A duplicate semantic job ID never inherits YAML-loader-dependent meaning."""
-
-        changed = self.workflow.replace(
-            "  verify:\n",
-            "  verify:\n"
-            "    name: duplicate verify\n"
-            "\n"
-            "  verify:\n",
-            1,
-        )
-        self.assertNotEqual(changed, self.workflow)
-        with self.assertRaisesRegex(validate.PolicyError, "duplicate job verify"):
-            validate.validate_release_workflow(self.ledger, changed)
-
-    def test_tag_triggered_multiline_publish_runs_are_rejected(self) -> None:
-        """A block run in verify cannot gain a publishing path with or without a token."""
+    def test_all_byte_boundaries_are_closed(self) -> None:
+        """Even inert edits and malformed encodings must get the same focused drift error."""
 
         controls = {
-            "literal-without-token": (
-                "",
-                "|",
-                "          cargo publish --workspace --locked\n",
-            ),
-            "folded-with-token": (
-                "        env:\n"
-                "          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}\n",
-                ">-",
-                "          cargo publish --workspace --locked\n",
-            ),
+            "one-byte": b"!" + APPROVED_WORKFLOW[1:],
+            "comment": b"# harmless comment\n" + APPROVED_WORKFLOW,
+            "trailing-byte": APPROVED_WORKFLOW + b" ",
+            "extra-newline": APPROVED_WORKFLOW + b"\n",
+            "missing-newline": APPROVED_WORKFLOW[:-1],
+            "crlf": APPROVED_WORKFLOW.replace(b"\n", b"\r\n"),
+            "bare-cr": APPROVED_WORKFLOW.replace(b"\n", b"\r"),
+            "invalid-utf8": b"\xff" + APPROVED_WORKFLOW,
+            "utf8-bom": b"\xef\xbb\xbf" + APPROVED_WORKFLOW,
+            "empty": b"",
+            "truncated": APPROVED_WORKFLOW[:len(APPROVED_WORKFLOW) // 2],
         }
-        for name, (environment, style, body) in controls.items():
-            with self.subTest(name=name):
+        for name, candidate in controls.items():
+            with self.subTest(drift=name):
+                self.assert_byte_drift(candidate)
+
+    def test_crlf_candidate_fails_without_text_normalization(self) -> None:
+        """The real read path must preserve CRLF bytes rather than re-create the LF golden."""
+
+        self.assert_policy_drift(APPROVED_WORKFLOW.replace(b"\n", b"\r\n"))
+
+    def test_environment_split_publish_counterexamples_are_rejected(self) -> None:
+        """Retaining every old literal guard cannot authorize an env-split tag publication."""
+
+        controls = {
+            "split-command-and-verb": (b"          C: cargo\n          P: publish\n", b"$C $P"),
+            "split-command": (b"          PUBLISHER: cargo\n", b"$PUBLISHER publish"),
+        }
+        for name, (environment, command) in controls.items():
+            with self.subTest(attack=name):
+                candidate = APPROVED_WORKFLOW.replace(
+                    b"    runs-on: ubuntu-latest\n",
+                    b"    runs-on: ubuntu-latest\n    environment: release\n", 1,
+                )
                 step = (
-                    "      - name: forbidden tag publication\n"
-                    f"{environment}"
-                    f"        run: {style}\n"
-                    f"{body}"
-                    "\n"
+                    b"      - name: unapproved tag publication\n"
+                    b"        env:\n"
+                    b"          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}\n"
+                    + environment + b"        run: " + command + b" --workspace --locked\n\n"
                 )
-                changed = self.workflow.replace(
-                    "      - name: fmt\n", step + "      - name: fmt\n", 1
-                )
-                self.assertNotEqual(changed, self.workflow)
-                with self.assertRaisesRegex(validate.PolicyError, "unapproved cargo publish"):
-                    validate.validate_release_workflow(self.ledger, changed)
+                candidate = candidate.replace(b"      - name: fmt\n", step + b"      - name: fmt\n", 1)
+                self.assertEqual(candidate.split(b"\n  publish:\n")[1], APPROVED_WORKFLOW.split(b"\n  publish:\n")[1])
+                self.assertIn(b"        run: cargo publish --workspace --locked --dry-run\n", candidate)
+                self.assertIn(b"    environment: release\n", candidate.split(b"\n  publish:\n")[0])
+                self.assertIn(step, candidate)
+                self.assert_byte_drift(candidate)
 
-    def test_split_publish_invocations_cannot_evade_run_inspection(self) -> None:
-        """Folded, continued, and plain multiline commands all fail closed."""
+    def test_extra_execution_and_credentials_are_rejected(self) -> None:
+        """Added actions, run bodies, jobs, and token mappings are all unapproved bytes."""
 
-        controls = {
-            "folded-words": (
-                "        run: >-\n"
-                "          cargo\n"
-                "          publish --workspace --locked\n",
-                "unapproved cargo publish",
-            ),
-            "shell-continuations": (
-                "        run: |\n"
-                "          car\\\n"
-                "          go pub\\\n"
-                "          lish --workspace --locked\n",
-                "unapproved cargo publish",
-            ),
-            "plain-multiline": (
-                "        run: cargo\n"
-                "          publish --workspace --locked\n",
-                "unsupported multiline scalar",
-            ),
+        additions = (
+            b"      - uses: unapproved/action@v1\n",
+            b"      - run: ./unapproved-script.sh\n",
+            b"      - run: cargo publish --workspace --locked\n",
+            b"      - run: >-\n          cargo\n          publish --workspace --locked\n",
+            b"      - run: |\n          car\\\n          go pub\\\n          lish --workspace --locked\n",
+            b"      - run: cargo\n          publish --workspace --locked\n",
+        )
+        for addition in additions:
+            with self.subTest(addition=addition):
+                self.assert_byte_drift(APPROVED_WORKFLOW.replace(b"      - name: fmt\n", addition + b"      - name: fmt\n", 1))
+        self.assert_byte_drift(APPROVED_WORKFLOW + b"\n  unapproved:\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n")
+        self.assert_byte_drift(APPROVED_WORKFLOW.replace(
+            b"  CARGO_TERM_COLOR: always\n",
+            b"  CARGO_TERM_COLOR: always\n  CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}\n", 1,
+        ))
+
+    def test_selection_and_protected_job_drift_are_rejected(self) -> None:
+        """Selection, authorization, and structural decoys cannot change the approved bytes."""
+
+        for old, new in (
+            (b"cargo publish --workspace --locked --dry-run", b"cargo publish -p oce-api --locked --dry-run"),
+            (b"    environment: release\n", b""),
+            (b"    environment: release\n", b"    env:\n      environment: release\n"),
+            (b"    needs: verify\n", b"    env:\n      needs: verify\n"),
+            (b"    if: github.event_name == 'workflow_dispatch'\n", b"    if: github.event_name == 'push'\n"),
+            (b"  verify:\n", b"  verify: {}\n  verify:\n"),
+            (b"  publish:\n", b"  deployment:\n"),
+            (b"  publish:\n", b"  'publish':\n"),
+        ):
+            with self.subTest(replacement=new):
+                self.assert_byte_drift(APPROVED_WORKFLOW.replace(old, new, 1))
+        for line in (b"    needs: verify\n", b"    environment: release\n",
+                     b"    if: github.event_name == 'workflow_dispatch'\n"):
+            with self.subTest(duplicate=line):
+                self.assert_byte_drift(APPROVED_WORKFLOW.replace(line, line * 2, 1))
+        self.assert_byte_drift(b"decoy: |\n  jobs:\n  publish:\n    needs: verify\n\n" + APPROVED_WORKFLOW)
+
+    def test_missing_workflow_has_a_file_diagnostic(self) -> None:
+        """Missing input fails at main without a traceback or a misleading byte-drift error."""
+
+        result, stdout, stderr = self.run_policy(None)
+        self.assertEqual(result, 1)
+        self.assertEqual(stdout, "")
+        self.assertIn("package publication contract: FAIL: [Errno 2]", stderr)
+        self.assertIn(".github/workflows/release.yml", stderr)
+        self.assertNotIn(DRIFT_MESSAGE, stderr)
+
+    def test_crlf_control_detects_allow_all_self_blessing_and_text_read_regressions(self) -> None:
+        """Mutation controls fail by assertion, not tooling errors; patches cannot escape scope."""
+
+        def candidate_as_expected(workflow: bytes) -> None:
+            candidate = (validate.ROOT / ".github/workflows/release.yml").read_bytes()
+            if hashlib.sha256(workflow).digest() != hashlib.sha256(candidate).digest():
+                raise release_workflow.WorkflowError(DRIFT_MESSAGE)
+
+        def normalized_read(path: Path) -> bytes:
+            return path.read_text(encoding="utf-8").encode("utf-8")
+
+        mutations = {
+            "allow-all": patch.object(release_workflow, "validate", return_value=None),
+            "candidate-as-expected": patch.object(release_workflow, "validate", candidate_as_expected),
+            "read-text-regression": patch.object(Path, "read_bytes", normalized_read),
         }
-        for name, (run, message) in controls.items():
-            with self.subTest(name=name):
-                step = "      - name: split publication\n" + run + "\n"
-                changed = self.workflow.replace(
-                    "      - name: fmt\n", step + "      - name: fmt\n", 1
-                )
-                self.assertNotEqual(changed, self.workflow)
-                with self.assertRaisesRegex(validate.PolicyError, message):
-                    validate.validate_release_workflow(self.ledger, changed)
-
-    def test_release_environment_cannot_move_under_job_env(self) -> None:
-        """A same-value environment token under job env is not an authorization boundary."""
-
-        changed = self.workflow.replace(
-            "    environment: release\n    steps:\n",
-            "    env:\n      environment: release\n    steps:\n",
-            1,
-        )
-        self.assertNotEqual(changed, self.workflow)
-        with self.assertRaisesRegex(validate.PolicyError, "environment: release"):
-            validate.validate_release_workflow(self.ledger, changed)
-
-    def test_manual_guard_cannot_move_under_publish_step(self) -> None:
-        """A step-level manual condition cannot authorize the publish job itself."""
-
-        changed = self.workflow.replace(
-            "    if: github.event_name == 'workflow_dispatch'\n", "", 1
-        )
-        changed = changed.replace(
-            "      - name: cargo publish --workspace\n",
-            "      - name: cargo publish --workspace\n"
-            "        if: github.event_name == 'workflow_dispatch'\n",
-            1,
-        )
-        self.assertNotEqual(changed, self.workflow)
-        with self.assertRaisesRegex(validate.PolicyError, "manual dispatch"):
-            validate.validate_release_workflow(self.ledger, changed)
-
-    def test_verify_dependency_cannot_move_under_job_env(self) -> None:
-        """A nested needs token cannot establish the publish job dependency."""
-
-        changed = self.workflow.replace(
-            "    needs: verify\n",
-            "    env:\n      needs: verify\n",
-            1,
-        )
-        self.assertNotEqual(changed, self.workflow)
-        with self.assertRaisesRegex(validate.PolicyError, "guarded by verify"):
-            validate.validate_release_workflow(self.ledger, changed)
-
-    def test_duplicate_publish_job_guards_are_rejected(self) -> None:
-        """Duplicate protected keys fail instead of inheriting parser-dependent meaning."""
-
-        controls = {
-            "    needs: verify\n": "guarded by verify",
-            "    environment: release\n": "environment: release",
-            "    if: github.event_name == 'workflow_dispatch'\n": "manual dispatch",
-        }
-        for line, message in controls.items():
-            with self.subTest(key=line.strip().partition(":")[0]):
-                changed = self.workflow.replace(line, line * 2, 1)
-                self.assertNotEqual(changed, self.workflow)
-                with self.assertRaisesRegex(validate.PolicyError, message):
-                    validate.validate_release_workflow(self.ledger, changed)
+        for name, mutation in mutations.items():
+            with self.subTest(regression=name), mutation:
+                result = unittest.TestResult()
+                WorkflowApprovalControls("test_crlf_candidate_fails_without_text_normalization").run(result)
+                self.assertEqual(result.testsRun, 1)
+                self.assertEqual(result.errors, [])
+                self.assertEqual(len(result.failures), 1)
+                self.assertIn("AssertionError: 0 != 1", result.failures[0][1])
+        # Explicit unmutated control after every patch has restored the real implementation.
+        self.test_crlf_candidate_fails_without_text_normalization()
+        self.assertEqual(self.run_policy(APPROVED_WORKFLOW)[0], 0)
 
 
 if __name__ == "__main__":
