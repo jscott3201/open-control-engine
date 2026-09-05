@@ -1,5 +1,7 @@
 # Public surface contract
 
+The [generated authority summary](authority-claims.md) indexes this owner without replacing it.
+
 This document and [`public-surface-ledger.json`](public-surface-ledger.json) are the normative
 classification contract for the public items captured by the `oce-api` and `oce-store` blessed
 baselines. It classifies the surface that exists; it does not change a Rust signature, runtime

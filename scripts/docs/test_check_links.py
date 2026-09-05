@@ -20,6 +20,21 @@ CHECKER = Path(__file__).with_name("check_links.py")
 class GeneratedNavigationTests(unittest.TestCase):
     """Exercise the generated mdBook navigation."""
 
+    def test_authority_projection_navigation_and_inert_history(self):
+        """Stage the index byte-exactly; history locators must not become links."""
+        with tempfile.TemporaryDirectory() as temporary:
+            staged, _, revision = docs_stage.stage_book(Path(temporary) / "book", "a" * 40)
+            source = staged / "src" / "docs"
+            summary = (staged / "src" / "SUMMARY.md").read_text()
+            self.assertEqual(summary.splitlines().count(
+                "- [Authority claims and supersession](docs/authority-claims.md)"), 1)
+            self.assertEqual((source / "authority-claims.json").read_bytes(),
+                             (docs_stage.repository_root() / "docs/authority-claims.json").read_bytes())
+            projection = (source / "authority-claims.md").read_text()
+            self.assertIn(f"/blob/{revision}/scripts/authority_claims/check.py", projection)
+            self.assertNotRegex(projection, r"\]\([^)]*(?:_spec/|_research/)")
+            self.assertIn("<code>_spec/", projection)
+
     def test_staged_navigation_includes_tracked_stability_baseline(self) -> None:
         """The dated stability snapshot is both staged and included as a chapter."""
 

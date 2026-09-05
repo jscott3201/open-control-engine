@@ -82,6 +82,10 @@ session). Hook skipping follows the repository truthiness policy: empty, `0`, an
 
 ## Before you open a PR
 
+For indexed claims, follow the [source-owner update procedure](docs/authority-claims.md#updating-a-legitimate-claim).
+The generated summary is not a replacement policy; native and delegated verifiers remain separate
+from its fast schema/projection check. Regeneration is always explicit, never part of the gate.
+
 ```bash
 bash .agents/gate.sh
 ```

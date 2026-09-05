@@ -1,5 +1,7 @@
 # Package, feature, and publication policy
 
+The [generated authority summary](authority-claims.md) indexes this owner without replacing it.
+
 This document and
 [`package-publication-ledger.json`](package-publication-ledger.json) are the normative contract for
 workspace package support, `oce-api` feature selections, and release selection. The ledger is the

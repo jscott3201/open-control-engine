@@ -9,7 +9,7 @@ to misread in the dangerous direction.
 [`.agents/gate.sh`](../.agents/gate.sh) is the only place the gate's command list is written down.
 Every other document in this repo — including this page — points at it rather than restating it,
 because nine divergent prose copies existed before the script was written and two of them were
-materially weaker than CI (`.agents/gate.sh:3-7`). There are two invocations:
+materially weaker than CI (see the script's header). There are two invocations:
 
 ```
 bash .agents/gate.sh        # light — mirrors the per-PR gate
@@ -17,15 +17,15 @@ bash .agents/gate.sh full   # full  — adds the workspace suite and doctests
 ```
 
 CI does not merely mirror that script, it **executes** it: the `gate (light)` job at
-`.github/workflows/ci.yml:293-338` and `gate (full)` at
-`.github/workflows/release-gate.yml:334-349`.
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) and `gate (full)` at
+[`.github/workflows/release-gate.yml`](../.github/workflows/release-gate.yml).
 So every command in the script gates a pull request whether or not `ci.yml` also runs it as its own
 job. Read that as coverage, not as parity, and note that the implication does not run the other way:
 `gate (light)` is `bash .agents/gate.sh` **plus** any steps of its own. The Quickstart-executes step
 was exactly that for a while — a required check no local run of the script performed — and an
-earlier revision of this paragraph cited the job as `ci.yml:256-270`, stopping one line short of it.
+earlier revision of this paragraph used a numeric citation that stopped one line short of it.
 Nothing verifies mechanically that the two files still list the same commands. That check was
-attempted and withdrawn, and `ci.yml:293-321` records why —
+attempted and withdrawn, and the `gate` job's header in `ci.yml` records why —
 every design either compared argv strings that `RUSTFLAGS=--cap-lints=allow` leaves byte-identical
 while neutering clippy, or reimplemented enough of GitHub's `if:`/`needs:`/matrix semantics to
 become its own untested gate.
@@ -36,7 +36,12 @@ own output as the oracle; package, feature, and publication selection is closed)
 for those gates, because a gate that cannot fail is not a gate; build, clippy and rustdoc under
 `-D warnings`; supply-chain checks; the determinism subset; and two fixture input-hygiene audits. A
 failing step never aborts the run, so one round trip reports every problem instead of the first
-(`.agents/gate.sh:41-56`).
+(see the script's `step` function).
+
+The [authority index and generated projection](authority-claims.md) add a fast, bounded consistency
+check and hostile controls. Native numeric observers run inside the existing `oce-api`/`oce-blocks`
+subset; package/public/catalog validators retain ownership. The full gate also executes those owners.
+This does not check arbitrary Markdown claims or workflow parity, and regeneration is never gated in.
 
 ## Dev-light, release-heavy
 
@@ -45,8 +50,8 @@ failing step never aborts the run, so one round trip reports every problem inste
 The per-PR gate into `development` runs engine tests for **`oce-api`, `oce-blocks`, and `oce-expr`
 only**. That
 is the `determinism-matrix` job: two runners, `ubuntu-latest` and `ubuntu-24.04-arm`
-(`ci.yml:148-156`), each running that three-crate subset twice — once under debug codegen, once under
-release codegen (`ci.yml:167-176`). No other crate's test suite runs. Each architecture emits
+(see `ci.yml`'s `determinism-matrix` job), each running that three-crate subset twice — once under
+debug codegen, once under release codegen. No other crate's test suite runs. Each architecture emits
 populated revision-1 portable and target-bound state vectors. The matrix compares both across
 codegen profiles; a dependent job requires the portable files to match and the target-bound files
 to differ across architectures, then parses and refuses the arm64 target-bound bytes on x86_64.
@@ -55,7 +60,7 @@ The gate script runs the test commands locally and adds two named
 engine coverage: the port-order audit sweeps 47 CXF documents, of which 46 are Guideline 36 catalog
 fixtures and one is a resolver contract; the structural oracle compares the catalog fixtures it can
 pair with vendored modelica-json translations
-(`.agents/gate.sh:126-154`). That oracle compares document structure — instances and undirected
+(see the gate script's fixture input-hygiene section). That oracle compares document structure — instances and undirected
 edges — not simulated behavior.
 
 Everything else waits for the release gate. A change confined to `oce-cxf`, `oce-store`,
@@ -64,38 +69,38 @@ Before claiming tests pass, run `bash .agents/gate.sh full` first-hand and read 
 
 ## Draft pull requests run nothing
 
-Not a reduced subset — nothing. All sixteen jobs in `ci.yml` are conditioned on
-`github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'`, from
-`ci.yml:55` through `ci.yml:324`. A draft PR with no checks looks a lot like a PR with no failing
+Not a reduced subset — nothing. Jobs in `ci.yml` are conditioned on
+`github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'`.
+A draft PR with no checks looks a lot like a PR with no failing
 checks. Confirm the checks actually ran.
 
 ## cargo-deny is not skippable, but advisories do not gate a PR
 
-The standalone `cargo-deny` job in `ci.yml:281-291` is conditional on a manifest change, computed by
-the paths filter at `ci.yml:64-69`. That conditional does not make the check skippable: the gate
+The standalone `cargo-deny` job in `ci.yml` is conditional on a manifest change, computed by
+the `changes` job's paths filter. That conditional does not make the check skippable: the gate
 script runs cargo-deny's bans, licenses and sources checks unconditionally
-(`.agents/gate.sh:110-114`), and CI runs the script. Leaving manifests alone does not dodge it.
+(see the script's cargo-deny step), and CI runs the script. Leaving manifests alone does not dodge it.
 
 `advisories` is a different story, and the carve-out belongs next to the claim. It is deliberately
 excluded from the script — it needs network access and a writable advisory database, neither of
-which a sandboxed lane has. It runs daily in `advisories.yml` (`advisories.yml:11-14, 38`) and on
-release PRs (`release-gate.yml:310-322`). `advisories.yml` has no `pull_request` trigger at all, so
+which a sandboxed lane has. It runs daily in [advisories.yml](../.github/workflows/advisories.yml) and on
+release PRs (the `release-gate.yml` cargo-deny job). `advisories.yml` has no `pull_request` trigger at all, so
 a PR into `development` that introduces a dependency with a known RustSec advisory merges green and
 is caught by the next scheduled run, not by its own gate.
 
 ## What the release gate adds
 
 `release-gate.yml` fires on `development` → `main` PRs, on manual dispatch, and on a daily cron
-against the `development` tip (`release-gate.yml:46-54`). It is disjoint from `ci.yml` by base
+against the `development` tip (see its trigger block). It is disjoint from `ci.yml` by base
 branch, so the two never both fire on one PR. It re-runs the light correctness gates against the
 release tip and adds four things:
 
 | Step | What it covers | Where |
 | --- | --- | --- |
-| workspace nextest | every unit and integration test in all 17 crates | `release-gate.yml:109-110` |
-| workspace nextest, release codegen | release panic-freedom, `debug_assert` paths stripped; inherited `ci-release` runner policy | `release-gate.yml:114-115` |
-| `cargo test --doc` | doctests — nextest cannot run them, so this is a separate step | `release-gate.yml:117-118` |
-| two `cargo public-api` surface gates | exact public API text for `oce-api` and `oce-store` | `release-gate.yml:136-153` |
+| workspace nextest | every unit and integration test in the workspace | `release-gate.yml`, `test-suite` job, unit + integration step |
+| workspace nextest, release codegen | release panic-freedom, `debug_assert` paths stripped; inherited `ci-release` runner policy | `release-gate.yml`, `test-suite` job, release step |
+| `cargo test --doc` | doctests — nextest cannot run them, so this is a separate step | `release-gate.yml`, `test-suite` job, doctest step |
+| two `cargo public-api` surface gates | exact public API text for `oce-api` and `oce-store` | `release-gate.yml`, `test-suite` job, per-crate surface steps |
 
 `--no-tests=fail` is explicit on the nextest steps: a run that discovers zero tests hard-fails
 rather than passing, which catches tests that silently stop compiling or being found.
@@ -131,7 +136,7 @@ real surface against them, so any unintended addition, removal or signature chan
 rather than shipping. Two env vars interlock to keep the gate honest: `OCE_PUBLIC_API_NIGHTLY` arms
 it and names the pinned nightly to shell out to, and `OCE_REQUIRE_SURFACE_CHECK=1` turns a missing
 nightly into a hard panic instead of a silent skip, so disarming the gate turns it red, never green
-(`release-gate.yml:127-153`). The two crates run as separate steps on purpose: merging the package
+(see the surface steps' arming environment). The two crates run as separate steps on purpose: merging the package
 selectors would let one surviving crate hide the other's vanished test.
 
 The exact rows are classified without replacing these signature baselines by the
@@ -142,7 +147,7 @@ The exact rows are classified without replacing these signature baselines by the
 
 - **Operating systems other than Linux.** Every `runs-on:` in all five workflows — `ci.yml`,
   `release-gate.yml`, `advisories.yml`, `release.yml`, and `docs-pages.yml` (per-PR on `docs/**`,
-  `README.md`, `scripts/docs/**`, and `site/**`) — is `ubuntu-latest` or `ubuntu-24.04-arm`.
+   `README.md`, `scripts/docs/**`, `scripts/authority_claims/**`, and `site/**`) — is `ubuntu-latest` or `ubuntu-24.04-arm`.
   Cross-*architecture* is covered — x86_64 and arm64, debug and release. macOS and Windows are not
   built or tested anywhere.
 - **Anything derived from git history.** No workflow sets `fetch-depth`, so `actions/checkout@v4`
@@ -155,7 +160,7 @@ The exact rows are classified without replacing these signature baselines by the
   exercised by no test. Goldens here are compared bit-exactly, which is precisely where a stray
   `\r` would show up.
 
-The script says the rest itself, in its closing report (`.agents/gate.sh:180-207`): a green local run
+The script says the rest itself, in its closing report: a green local run
 does **not** prove the cross-arch determinism matrix passes (one machine cannot reproduce it), does
 not prove the two `cargo public-api` surface gates pass (they need the gate-only nightly), does not
 prove `cargo deny check advisories` passes, and does not prove that the script and `ci.yml` still
@@ -167,7 +172,7 @@ per-PR gate does not run them.
 `release.yml` is decoupled from both gates and from each other's triggers. Pushing a `v*` tag runs
 verify only — tag/version match, fmt, clippy, a workspace `cargo test`, and a full
 `cargo publish --dry-run` — with no token and no publish, so a tag can be re-cut safely
-(`release.yml:39-71`). Publishing is a separate manual `workflow_dispatch` into the `release` GitHub
+(see [release.yml](../.github/workflows/release.yml), `verify` job). Publishing is a separate manual `workflow_dispatch` into the `release` GitHub
 Environment. Cargo's workspace selection includes the 12 publishable members and skips the five
 members with `publish = false`; the exact split and feature closure are guarded by the
 [package, feature, and publication policy](package-publication-policy.md). No crate is on crates.io
