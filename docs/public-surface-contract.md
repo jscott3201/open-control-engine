@@ -60,6 +60,14 @@ provide adapters, but adapter lifecycle and identity conditions remain part of t
 `Engine::with_store` and `Engine::store` share that classification. The default in-memory facade
 remains supported through `Engine::in_memory`.
 
+Complete-frame **preparation** (`Engine::input_definitions`, `Engine::prepare_frame`, owned
+`InputDefinition`, opaque `PreparedInputFrame`, and the explicit `OcError` causes) is additive
+stable-candidate facade surface, not complete-frame execution or a stable release. The artifact
+has no serialization or exposed resolved/generation internals. Its compatibility preflight stays
+crate-private for the future commit path. The [frame contract](complete-frame-contract.md#current-preparation-api)
+owns ordering, domains, bounded errors and load/dirty-resume invalidation; the
+[adoption guide](facade-contracts.md#complete-frame-preparation-adoption) preserves legacy behavior.
+
 `Engine::schedule` is implementation leakage. It stays source- and binary-shape unchanged for now;
 removal requires a later coordinated change with consumers and tests.
 
@@ -108,6 +116,9 @@ Python-facing.
 
 String host IO (`set_input`, `get_output`, and `watch`) looks up model-local `ConnectorId` values in
 the IO inventory. `PointHandle` is confined to the store-backed point-read route.
+Preparation shares input identity and exact-type resolution with legacy string staging, but filters
+to executable boundary inputs and adds completeness/domain checks. The private incarnation fence
+is distinct from authored model identity and is neither portable nor serialized into state bytes.
 
 ## Repeatability and durable state
 

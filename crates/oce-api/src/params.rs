@@ -248,6 +248,8 @@ impl<S: Store> Engine<S> {
     /// already-loaded model). Never panics (R-ERR-1).
     pub fn resume(&mut self) -> Result<(), OcError> {
         if self.params_dirty {
+            // Fence before effective model mutation; even a failed rebuild cannot reuse old plans.
+            self.frame_generation = std::sync::Arc::new(());
             // CoW the model at rest (off-tick; refcount is 1, so `make_mut` does not clone). Re-fold
             // edits, then rebuild blocks/state/outputs via the shared helpers.
             let (blocks, state, outputs) = {

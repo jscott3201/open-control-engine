@@ -14,6 +14,7 @@ use oce_store::Store;
 
 use crate::engine::Engine;
 use crate::error::OcError;
+use crate::frame_inputs::{InputBinding, InputDefinition, build_inputs};
 
 // Re-export the store-seam point DTOs (R-PUB-1) so a host names one type space. These are the
 // canonical direction/value-type/trend-interval enums; `oce-api` owns only the IO-class +
@@ -35,6 +36,43 @@ pub enum IoClass {
     DigitalOutput,
     /// A logical / inter-controller (network) point.
     Network,
+}
+
+#[cfg(test)]
+mod frame_alias_tests {
+    use super::*;
+
+    #[test]
+    fn two_resolver_spellings_cannot_satisfy_one_logical_input_twice() {
+        // Public ingest has no input aliases. Inject an alias at the shared identity seam to
+        // ensure uniqueness is by logical input, never submitted spelling, if one is added later.
+        let mut engine = Engine::in_memory();
+        engine
+            .load_cxf(include_bytes!("../tests/fixtures/legacy_frame_add.jsonld"))
+            .unwrap();
+        let canonical = "urn:legacy-frame:a";
+        let binding = engine.io.input_by_path[canonical].clone();
+        engine.io.input_by_path.insert("alias".to_owned(), binding);
+        let before = engine.state_snapshot().unwrap();
+        for entries in [
+            [
+                (canonical, oce_model::Value::Real(0.0)),
+                ("alias", oce_model::Value::Real(0.0)),
+            ],
+            [
+                ("alias", oce_model::Value::Real(0.0)),
+                (canonical, oce_model::Value::Real(0.0)),
+            ],
+        ] {
+            assert!(
+                matches!(engine.prepare_frame(0.0, &entries), Err(OcError::FrameDuplicateInput(path)) if path == canonical)
+            );
+            assert_eq!(
+                engine.state_snapshot().unwrap().as_bytes(),
+                before.as_bytes()
+            );
+        }
+    }
 }
 
 /// Sensor | Actuator | SoftwarePoint (CDL req 5.2.7/5.2.8). `oce-api`-owned. The current default is
@@ -126,7 +164,8 @@ pub struct IoSummary {
 pub struct IoInventory {
     points: Vec<PointInfo>,
     conn_id: Vec<ConnectorId>,
-    input_by_path: HashMap<String, Vec<ConnectorId>>,
+    input_by_path: HashMap<String, InputBinding>,
+    pub(crate) frame_definitions: Vec<InputDefinition>,
     output_by_path: HashMap<String, ConnectorId>,
     /// Declared boundary-output alias keys (`_spec/18` R18-2): the authored root `hasOutput`
     /// IRI of each elided boundary output, resolving to its driving connector's slot. Read-only
@@ -242,15 +281,15 @@ impl IoInventory {
     pub(crate) fn build_at_load(model: &ModelGraph) -> IoInventory {
         let mut points = Vec::with_capacity(model.connectors.len());
         let mut conn_id = Vec::with_capacity(model.connectors.len());
-        let mut input_by_path: HashMap<String, Vec<ConnectorId>> =
-            HashMap::with_capacity(model.external_inputs.len());
+        let (input_by_path, frame_definitions) = build_inputs(model);
+        let mut seen_inputs = std::collections::HashSet::new();
         let mut output_by_path = HashMap::with_capacity(model.connectors.len());
         for row in point_rows_at_load(model) {
             let path = row.info.path.clone();
             if row.info.direction == PointDirection::In {
-                let connector_ids = input_by_path.entry(path.clone()).or_default();
-                connector_ids.push(row.connector_id);
-                if connector_ids.len() > 1 && model.external_inputs.contains(&row.connector_id) {
+                if !seen_inputs.insert(path.clone())
+                    && model.external_inputs.contains(&row.connector_id)
+                {
                     continue;
                 }
             } else {
@@ -286,6 +325,7 @@ impl IoInventory {
             points,
             conn_id,
             input_by_path,
+            frame_definitions,
             output_by_path,
             output_alias_by_path,
         }
@@ -294,7 +334,31 @@ impl IoInventory {
     /// Resolve a point path to every [`ConnectorId`] it stages when it is an input. A composite
     /// boundary input may map one host point to multiple internal connectors after CXF import.
     pub(crate) fn resolve_inputs(&self, path: &str) -> Option<&[ConnectorId]> {
-        self.input_by_path.get(path).map(Vec::as_slice)
+        self.input_binding(path)
+            .filter(|binding| binding.value_type != ValueType::String)
+            .map(|binding| binding.targets.as_slice())
+    }
+
+    /// Shared identity resolver; legacy point staging separately excludes String metadata.
+    pub(crate) fn input_binding(&self, path: &str) -> Option<&InputBinding> {
+        self.input_by_path.get(path)
+    }
+
+    /// Legacy sparse resolution shares identities and exact type checks with complete frames.
+    pub(crate) fn resolve_typed_inputs(
+        &self,
+        model: &ModelGraph,
+        path: &str,
+        value: &oce_model::Value,
+    ) -> Result<&[ConnectorId], OcError> {
+        let targets = self
+            .resolve_inputs(path)
+            .ok_or_else(|| OcError::UnknownPoint(path.to_owned()))?;
+        let binding = self.input_binding(path).expect("resolved input binding");
+        if !binding.accepts_type(model, value) {
+            return Err(OcError::InputType(path.to_owned()));
+        }
+        Ok(targets)
     }
 
     /// Resolve a point path to its [`ConnectorId`] **only if it is an output** — the shared
@@ -356,7 +420,11 @@ impl IoInventory {
             .filter(|p| p.direction == PointDirection::In)
             .map(|p| InputPointBinding {
                 path: p.path.clone(),
-                connector_ids: self.input_by_path.get(&p.path).cloned().unwrap_or_default(),
+                connector_ids: self
+                    .input_by_path
+                    .get(&p.path)
+                    .map(|binding| binding.targets.clone())
+                    .unwrap_or_default(),
             })
             .collect()
     }

@@ -7,9 +7,9 @@ Open Control Engine currently has one execution profile: **HostTick v1**. It is 
 through an API option. A future profile with different state-transition semantics would require a
 separate compatibility and snapshot contract.
 
-The [complete-frame contract](complete-frame-contract.md) ratifies a future prevalidation and
-immutable input/output boundary around this same profile, not a second evaluator or profile
-selector. Its contract-only acceptance does not implement the API. Current sparse setters,
+The [complete-frame contract](complete-frame-contract.md) implements read-only preparation and
+ratifies a future immutable input/output transition boundary around this same profile, not a second
+evaluator or profile selector. Preparation does not execute; PC-033 remains future. Current sparse setters,
 Store-backed ticks, simulation and realtime remain the distinct weaker/convenience paths described
 there and in [host responsibilities](host-responsibilities.md).
 

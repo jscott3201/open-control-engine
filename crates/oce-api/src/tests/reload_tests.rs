@@ -41,9 +41,11 @@ fn image<S: Store>(engine: &Engine<S>) -> Vec<String> {
         realtime_epoch_unix_nanos,
         loaded,
         durable_restore_ready,
+        frame_generation,
     } = engine;
     vec![
         format!("{:p} {cxf_byte_limit}", Arc::as_ptr(store)),
+        format!("{:p}", Arc::as_ptr(frame_generation)),
         format!("{:p} {model:?} {model_id:?}", Arc::as_ptr(model)),
         format!("{schedule:?}"),
         format!(

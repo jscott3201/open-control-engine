@@ -2,14 +2,14 @@
 
 ## Status and authority
 
-This is the normative detail of PC-031 in [product contract revision 5](product-contract.md).
-**The contract is ratified; the complete-frame runtime API is not implemented.** Acceptance of
-PC-031 is contract-and-evidence delivery only. PC-032 through PC-035 remain future implementation
-and migration outcomes. No new public types, methods, selectors, wire formats or stable-product
-claims follow from this document. Execution maintainers own these semantics; host policy remains
-with the host integrator.
+This is the normative detail of PC-031 in [product contract revision 6](product-contract.md).
+**Preparation is implemented (PC-032); complete-frame execution is not.** PC-033 through PC-035
+remain future transition and migration outcomes. The additive preparation API below supplies no
+commit, output-frame, selector, wire format or stable-product guarantee. Execution maintainers own
+these semantics; host policy remains with the host integrator.
 
-The requirements below describe the future native complete-frame path, not a reinterpretation of
+The requirements below describe the native complete-frame path, whose transition remains future,
+not a reinterpretation of
 `set_input`, `tick`, `simulate` or `step_realtime`. “Atomic” means an engine-owned transition under
 the ordinary returned-refusal boundary below, not a distributed, persistent or actuator transaction.
 The fixed [HostTick v1 profile](execution-profile.md#hosttick-v1) remains unchanged.
@@ -68,10 +68,10 @@ the engine check, and a passing engine check cannot replace host admission. Auth
 exported-document and catalog identities retain their distinct roles. Current snapshot executable
 compatibility is not proof that a reference belongs to the current successful load incarnation.
 
-M02-PR02 owns the concrete preparation/reference representation and typed refusal surface;
+M02-PR02 supplies the concrete preparation/reference representation and typed refusal surface;
 M02-PR03 owns accepted-result correlation. M03 owns typed identity/compatibility layers and canonical
-state/replay representation, including continuation/rewind correlation. Representation choices
-remain open, but cannot weaken these reload and correlation semantics. No snapshot fields, catalog
+state/replay representation, including continuation/rewind correlation. Future representation choices
+cannot weaken these reload and correlation semantics. No snapshot fields, catalog
 identities or state revisions change here, and hosts are not asked to parse private snapshot bytes
 or build another replay format to fill this gap.
 
@@ -79,8 +79,8 @@ or build another replay format to fill this gap.
 
 All ordinary refusal conditions MUST be validated before any execution/replay mutation. The whole
 candidate is resolved and checked before any input prefix is staged. There is no evaluation to
-discover an ordinary input error. Typed error names and deterministic precedence when several
-conditions fail are for M02-PR02 to specify and test; no concrete enum variants are prescribed here.
+discover an ordinary input error. Typed error names and deterministic precedence for preparation
+are specified below; the future transition path retains this prevalidation boundary.
 
 | Condition | Required outcome before mutation |
 | --- | --- |
@@ -148,7 +148,7 @@ Current `tick` and simulation use a no-op execution diagnostic sink; realtime co
 reports. Existing snapshots/checkpoints, output views and facade metadata remain valid within their
 own documented limits, but none proves availability of complete native frames.
 
-M02-PR02/03 implement preparation and transition; M02-PR04/05 separately address shared convenience
+M02-PR02 implements preparation only; M02-PR03 owns transition. M02-PR04/05 address shared convenience
 semantics and legacy classification/guards. This document does not remove, retrofit or strengthen the
 current APIs. Future migration requires explicit acceptance evidence and compatibility accounting
 for any changed sparse, hold-last, duplicate, restart or post-tick-write behavior. Whole-horizon
@@ -186,9 +186,79 @@ Existing [Store tests](../crates/oce-api/src/tests/store_backed_inputs.rs),
 current-behavior evidence. The product requirement table links the existing restart, Warning and
 post-tick write-failure tests. The traceability checker checks links/statuses, not semantic compliance.
 
-Future implementation acceptance needs the complete refusal matrix on fresh and advanced stateful
-runs, fan-out/domain and explicit-omission cases, Store noninterference, same-byte and changed-IO reload
-rejection, equal-time sequence correlation, retained immutable outputs/diagnostics, and unchanged
-execution/replay image on every ordinary refusal. This remains PC-032/033 work, not passing evidence
-supplied by this slice. No external Modelica oracle exists for this OCE-specific frame boundary;
-the existing HostTick conformance limits and later cross-platform/replay qualification still apply.
+Preparation evidence below fulfills PC-032 only. Future PC-033 acceptance still needs equal-time
+sequence correlation, retained immutable completed outputs/diagnostics, and unchanged execution/replay
+image on every ordinary commit refusal. Explicit omission semantics would require a future executable
+schema change; none is invented here. The existing HostTick conformance limits and later
+cross-platform/replay qualification still apply.
+
+## Current preparation API
+
+`Engine::input_definitions()` returns an owned `Vec<InputDefinition>` in lexical UTF-8 canonical
+path order. Each row has `path`, exact native `value_type`, and inclusive `min`/`max` as optional
+native `Value`s. This is the represented executable boundary (`external_inputs`), not the point
+inventory or discarded source declarations with no executable consumer. Every row is required;
+the current schema has no optionality/default declaration. Fan-out yields one row, with the
+intersection of the boundary declaration's and all targets' bounds. Empty intersections accept no
+value. Real zero-bound ties have deterministic bits; a NaN bound never disappears in intersection.
+Integer bounds remain exact i64 values; absent Integer bounds use the documented i32 defaults,
+while explicit bounds are retained. Enum bounds carry the class and legal ordinal endpoints.
+No Store carrier, handle or public connector index is involved.
+
+Keys are the expanded identities retained by ingest. The current resolver admits **no input
+aliases**: compact names are expanded at ingest, not at submission, and elided child names are not
+alternate setters. Output aliases are read-only. An injected-resolver-alias control checks that two
+spellings mapped to one logical input cannot defeat duplicate detection. It does not establish a
+public alias namespace. String/enum schema handling is total, but no current registry block offers
+those signal ports; private detached probes do not claim broader CXF support.
+
+`Engine::prepare_frame(time, &[(&str, Value)])` returns `PreparedInputFrame`. The plan owns exact
+values and every resolved target; keys are borrowed only during the call. It is opaque and has no
+serialization, public constructor or commit method. Editing a copied definition does not alter
+validation. Neither success nor refusal stages a value, evaluates, calls Store, replaces diagnostics,
+changes watches/outputs/time, or closes durable-restore readiness. There is no new replay image.
+
+First-cause refusal precedence is:
+
+1. `State(NoLoadedModel)`, then `State(PendingParameterEdits)`.
+2. `NonFiniteTime`, `TimeRegression`, then `ModelTimeUnrepresentable`, in that order.
+3. The lexically first invalid submitted key: `FrameUnknownInput` or `FrameNotInput` (outputs and
+   internally driven input points). These errors keep at most 64 UTF-8 bytes, cut at a character
+   boundary, and the original key byte count. They do not clone an arbitrary-size submitted key.
+4. `FrameDuplicateInput`, then `FrameMissingInput`, each naming the lowest canonical input path.
+5. The first canonical input with a bad value: `InputType` before `InputDomain` for that input.
+
+This precedence is independent of entry order. Refusals do not accumulate a report. Unbounded Real
+values retain NaN payloads/infinities; a declared comparison bound has to hold, so any bound rejects
+NaN and finite bounds reject the respective infinity. No blanket finite-signal or equipment policy
+is introduced. Finite equal time is valid.
+
+The internal `check_prepared_frame` seam checks readiness, incarnation, and current time eligibility
+before the future commit path can use resolved targets. It returns `StalePreparedFrame` for a
+different engine or superseded load/rebuild, without rebinding names. Successful identical-byte
+reload also invalidates. Failed load preserves the previous incarnation. Dirty resume fences before
+effective model mutation, even for same-value edits; clean resume and compatible checkpoint/durable
+restore alone retain the incarnation. Advancing the clock can still make a retained plan's time
+ineligible. The fence is a retained process-local allocation identity, not a serialized counter,
+model name, Store handle, deployment generation or authentication token.
+
+### Preparation costs and evidence limits
+
+For N logical inputs and T total fan-out targets, successful preparation allocates N+2 buffers for
+nonempty N: one temporary N-slot reference array, one N-entry plan, and one target array per input.
+Values clone without copying String bytes. Retained capacity is N plan entries plus T targets;
+zero-input preparation allocates no buffers. Input lookup scans submitted key bytes; value checks
+and target copies are proportional to N+T. The load-time schema sorts canonical keys once.
+The cooling-only-controller census repeats preparation 128 times, checks exact allocation/byte
+formulas and capacities, requires no retained allocation after drop, and has a counter positive
+control. This is a synchronous allocation census, not a latency, throughput or general peak-memory
+claim. Definition snapshots separately allocate owned metadata.
+
+The [public refusal matrix](../crates/oce-api/tests/prepare_frame_preservation.rs) compares fresh and
+advanced stateful snapshots, output/watch values, restore readiness and Store call counts. The
+[public ordering tests](../crates/oce-api/tests/prepare_frame.rs) and
+[private plan/lifecycle/domain/census tests](../crates/oce-api/src/frame_tests.rs) pin independently
+authored expected values and checked-in bit/diagnostic goldens. The nonserialization compile-fail
+example and exact facade baseline cover opacity. Removing duplicate detection, dropping a fan-out
+tail, coercing integers via f64, changing signed-zero bits or omitting invalidation is detected by
+the corresponding assertions. No external Modelica oracle exists for this OCE-specific policy.

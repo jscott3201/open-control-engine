@@ -10,17 +10,16 @@ warn you if you skip them.
 See the [product contract](product-contract.md) for numbered host obligations and the bounded
 requirement-to-evidence map; engine boundary tests are not host-compliance evidence.
 
-## Complete frames are a ratified contract, not a current API
+## Complete-frame preparation is available; execution remains future
 
-The [complete-frame contract](complete-frame-contract.md) defines future complete typed inputs,
-prevalidation, an engine-local loaded-executable/IO reload fence, one HostTick transition, and an
-immutable correlated output/diagnostic frame. PC-031 acceptance is contract-only; PC-032 through
-PC-035 implementation and migration remain future. None of the staging or convenience paths below
-silently acquires those guarantees.
+The [complete-frame contract](complete-frame-contract.md) supplies current typed, read-only
+preparation and an engine-local load/rebuild fence (PC-032). One atomic HostTick transition and an
+immutable correlated output/diagnostic frame remain future, along with PC-034/035 migration.
+Neither preparation nor the staging/convenience paths below silently acquires those guarantees.
 
 Completeness means every executable boundary input exactly once, except omission explicitly
 defined by the executable schema. It does not establish sensor coherence, quality, freshness or
-plausibility. The native path will neither fill gaps from Store samples nor infer host defaults.
+plausibility. Preparation neither fills gaps from Store samples nor infers host defaults.
 Its reload fence does not authorize deployments or commands. Persistence, authentication,
 authorization, deployment fencing, scheduling/wall-clock mapping, NO_EVAL, safe states, equipment
 interlocks and actuation stay host-owned even after that path exists. NO_EVAL means not executing.

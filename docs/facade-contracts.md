@@ -120,3 +120,32 @@ The [migration record](facade-migration.md#additive-contract-adoption) distingui
 contract from the earlier facade contraction. Full local tests, exact public baselines and external
 compiler fixtures establish bounded implementation evidence; hosted cross-architecture checks and
 actual downstream qualification remain separate evidence.
+
+## Complete-frame preparation adoption
+
+`Engine::input_definitions` and `Engine::prepare_frame` add the preparation part of the
+[complete-frame contract](complete-frame-contract.md#current-preparation-api). Discover inputs from
+the owned exact-type definitions, not `io().iter().filter(In)`: that point projection includes
+internal driven points, omits strings and projects enums to Int. Supply every canonical definition
+once with a real host observation. The definition's exact inclusive bounds are schema domains, not
+input values or defaults. Missing values are refused rather than seeded or read from the Store.
+
+Replace prevalidation implemented as a loop of `set_input` calls with one borrowed-key list passed
+to `prepare_frame(time, entries)`. Preparation returns an owned opaque `PreparedInputFrame` without
+staging the loop's valid prefix. The plan carries all fan-out targets and exact native values, but
+no Store handles or public connector indices. There is no serializable plan or reusable schema/cache
+object. Refresh discovery after successful load/reconfiguration; old plans are invalid after reload
+or dirty resume, including same-byte reload and same-value edits. Clean resume and compatible restore
+alone preserve the context, while an advanced clock can make the submitted time ineligible.
+
+**Do not replace execution with preparation.** This implementation slice adds no commit API. Continuing
+with `set_input`/`tick` after preparation still uses the legacy sparse/Store-backed behavior and is
+not an atomic frame transition. The old methods keep their signatures, last-wins/hold-last policy,
+type-only staging checks and failure boundaries. Frame domain/completeness checks are additive and
+are not retrofitted to them. Hosts still own quality, freshness, scheduling, persistence and actuation.
+
+The [public tests](../crates/oce-api/tests/prepare_frame.rs),
+[stateful preservation matrix](../crates/oce-api/tests/prepare_frame_preservation.rs), and
+[private plan/lifecycle census](../crates/oce-api/src/frame_tests.rs) establish the bounded current
+preparation evidence. PC-033 through PC-035 remain future; this changes no packaged descriptor,
+catalog identity, snapshot/replay format, stable-release status or downstream pin.
