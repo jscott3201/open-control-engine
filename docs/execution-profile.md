@@ -7,6 +7,12 @@ Open Control Engine currently has one execution profile: **HostTick v1**. It is 
 through an API option. A future profile with different state-transition semantics would require a
 separate compatibility and snapshot contract.
 
+The [complete-frame contract](complete-frame-contract.md) ratifies a future prevalidation and
+immutable input/output boundary around this same profile, not a second evaluator or profile
+selector. Its contract-only acceptance does not implement the API. Current sparse setters,
+Store-backed ticks, simulation and realtime remain the distinct weaker/convenience paths described
+there and in [host responsibilities](host-responsibilities.md).
+
 ## HostTick v1
 
 Each successful `Engine::tick(t_now)` call is one state transition:
@@ -23,6 +29,12 @@ Repeating a timestamp does not repeat an observation of the same transition. Eve
 advances state again. Time-dependent blocks see zero elapsed time, but call-based state still
 changes. The engine performs no hidden same-time evaluation, event queue processing, rollback, or
 fixed-point search.
+
+One successful future complete frame likewise means exactly one such transition, including equal
+finite timestamps. Its ordinary refusal will preserve the full execution/replay image, including
+connector staging and completed diagnostics. That is a stronger submission boundary than today's
+`tick`: a Store type refusal can retain a staged prefix, and a tick refusal never undoes prior
+successful setters. HostTick's emit/update law alone does not imply complete-frame atomicity.
 
 ## `CDL.Logical.Pre`
 

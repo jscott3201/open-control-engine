@@ -10,6 +10,25 @@ warn you if you skip them.
 See the [product contract](product-contract.md) for numbered host obligations and the bounded
 requirement-to-evidence map; engine boundary tests are not host-compliance evidence.
 
+## Complete frames are a ratified contract, not a current API
+
+The [complete-frame contract](complete-frame-contract.md) defines future complete typed inputs,
+prevalidation, an engine-local loaded-executable/IO reload fence, one HostTick transition, and an
+immutable correlated output/diagnostic frame. PC-031 acceptance is contract-only; PC-032 through
+PC-035 implementation and migration remain future. None of the staging or convenience paths below
+silently acquires those guarantees.
+
+Completeness means every executable boundary input exactly once, except omission explicitly
+defined by the executable schema. It does not establish sensor coherence, quality, freshness or
+plausibility. The native path will neither fill gaps from Store samples nor infer host defaults.
+Its reload fence does not authorize deployments or commands. Persistence, authentication,
+authorization, deployment fencing, scheduling/wall-clock mapping, NO_EVAL, safe states, equipment
+interlocks and actuation stay host-owned even after that path exists. NO_EVAL means not executing.
+
+Library, Studio, Edge and Sim retain their roles; Runtime is only an additive future M05-PR03
+consumer/host qualification candidate. BOPTEST is Runtime host evidence, not OCE equivalence.
+No host services or second evaluator/snapshot/replay stack move into OCE.
+
 ## Staging is status-agnostic
 
 A sample is converted from its value regardless of `PointStatus`. `Fault`, `Stale`, `Uninitialized`

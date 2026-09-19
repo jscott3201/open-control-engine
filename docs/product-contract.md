@@ -1,7 +1,7 @@
 # Executable CXF and HostTick product contract
 
-Document revision: 4
-Grounding SHA: dd8ae14c94e7ae393b889f9f0d643e5c30b0c7b8
+Document revision: 5
+Grounding SHA: 6ccfa1366f0e267f4a3b90f32629e1a580f02ffd
 
 This is the aggregate product boundary and requirement-to-evidence map for the work toward a
 stable embeddable kernel. It records current observations, host obligations, and future acceptance
@@ -19,7 +19,7 @@ Domain authorities retain their scope; this aggregate does not supersede them:
 | Facade maintainers | [Public surface contract](public-surface-contract.md#surface-ruling), exact [facade baseline](../crates/oce-api/tests/public-api.txt) and [storage baseline](../crates/oce-store/tests/public-api.txt). |
 | Release maintainers | [Package and publication policy](package-publication-policy.md#closed-package-matrix), including its separate [feature matrix](package-publication-policy.md#closed-oce-api-feature-matrix). |
 | CXF maintainers | [Composite subset](cxf-composite-subset.md#active-nodes) and [round-trip contract](cxf-round-trip.md#the-rt-2-contract). |
-| Execution maintainers | [Execution profile](execution-profile.md#hosttick-v1), load/execute/state implementation and focused tests below. |
+| Execution maintainers | [Execution profile](execution-profile.md#hosttick-v1), [complete-frame contract](complete-frame-contract.md#status-and-authority), load/execute/state implementation and focused tests below. |
 | Block semantics maintainers | Local block behavior and bounded [conformance boundary](execution-profile.md#conformance-boundary); upstream provenance is a separate evidence question. |
 | Host integrator | [Host responsibilities](host-responsibilities.md); qualification of the actual consuming application, adapter and equipment. |
 
@@ -37,6 +37,7 @@ assignment. IDs are allocated in ascending order without reuse; withdrawn obliga
 visible pending an explicit revision rather than disappearing silently.
 
 - **CURRENT**: observed behavior or present claim boundary, not a published stability promise.
+  PC-031 is accepted normative contract/evidence delivery, not a runtime frame implementation.
 - **HOST-OBLIGATION**: required host policy now. Engine boundary tests show why responsibility is
   outside the engine; they do **not** prove that any host complies.
 - **FUTURE**: acceptance outcome only, explicitly **not implemented by this contract**. Existing
@@ -45,7 +46,8 @@ visible pending an explicit revision rather than disappearing silently.
 Grounding links identify source or delegated policy. `test` links name an existing test declaration;
 the line fragment includes that declaration. `future` links name a later work item and point to its
 clone-visible outcome here. Multiple test links use semicolons. Limitations are part of each row,
-not optional caveats. All product obligations are confined to this table.
+not optional caveats. All product obligations are indexed in this table; linked domain contracts
+define their detail without changing the current/future acceptance boundary.
 
 ## Requirements
 
@@ -81,7 +83,7 @@ not optional caveats. All product obligations are confined to this table.
 | PC-028 | CURRENT | Facade delivery | Facade maintainers | MUST remove or quarantine deferred and panic-only supported surfaces with coordinated compatibility evidence. | Selected facade names are removed; private quarantines and package boundaries are unchanged. Compiler controls and bounded source inspection are not downstream acceptance or universal panic freedom; exact-candidate consumer qualification remains separate. | [Current ruling](public-surface-contract.md#surface-ruling); [Migration and inventory](facade-migration.md#package-and-panic-inventory-boundary) | test [retired_facade_symbols_are_absent](../crates/oce-api/tests/public_surface_contract.rs#L507-L512); [filtered_inventory_refuses_without_store_calls_or_engine_mutation](../crates/oce-api/tests/public_storage_adapter.rs#L175-L227) |
 | PC-029 | CURRENT | Facade delivery | Facade maintainers | MUST expose versioned facade catalog, diagnostics, IO, values, parameters, assertions and execution-profile contracts with compatibility tests. | Additive typed metadata and immutable producer receipts; opaque subjects, Warning-only runtime, no generic value codec, build stamp, admission bounds, rollback or new snapshot/profile selector. | [Versioned contracts](facade-contracts.md); [Adoption](facade-migration.md#additive-contract-adoption) | test [canonical_catalog_matches_packaged_bytes_and_repeats_exactly](../crates/oce-api/tests/catalog_contract.rs#L16-L34); [unification_evidence_survives_structural_refusal_at_its_actual_producer](../crates/oce-api/src/tests/diagnostic_receipts.rs#L201-L219); [descriptors_cover_every_domain_with_explicit_shapes_and_semantic_limits](../crates/oce-api/src/tests/contract_schemas.rs#L10-L28) |
 | PC-030 | CURRENT | Admission delivery | CXF maintainers | MUST reject serialized inputs above the effective per-engine cap before parsing, Store calls or engine mutation and replace model-bound state/caches only on successful load. | Default and maximum are exactly 8 MiB. Configuration above the maximum refuses through a typed error. Receipt refusal stays Import; errors contain counts only. External persistence is not atomic; replacement coverage has the documented stage limitations. | [Admission](../crates/oce-api/src/admission.rs#L1-L41); [Replacement](#bounded-admission-and-replacement) | test [oversized_valid_document_refuses_without_parser_allocation_or_store_calls](../crates/oce-api/tests/cxf_admission.rs#L16-L32); [oversize_receipts_allocate_only_the_error_box_and_are_deterministic](../crates/oce-api/tests/cxf_admission.rs#L104-L138); [invalid_configuration_is_typed_and_never_silently_widens](../crates/oce-api/tests/cxf_admission.rs#L83-L101); [successful_reload_replaces_model_bound_caches_but_not_host_policy](../crates/oce-api/src/tests/reload_tests.rs#L299-L380) |
-| PC-031 | FUTURE | Frame delivery | Execution maintainers | MUST define the complete generation-atomic typed input/output frame contract. | Not the present sparse API and not an actuator transaction. | [Current staging](../crates/oce-api/src/sim.rs#L603-L628) | future [M02-PR01](#complete-frame-contract) |
+| PC-031 | CURRENT | Frame delivery | Execution maintainers | MUST retain the normative complete generation-atomic typed input/output frame contract, including completeness, prevalidation, reload fencing, one HostTick transition, refusal preservation and immutable correlated outputs/diagnostics. | Implementation acceptance is contract/evidence only; the runtime and migration outcomes remain future. Passing legacy gap tests do not implement the frame API or qualify a host, persistence or actuators. | [Frame contract](complete-frame-contract.md#status-and-authority); [Refusal matrix](complete-frame-contract.md#prevalidation-and-refusal-matrix); [Outcome](complete-frame-contract.md#accepted-transition-and-immutable-outcome) | test [setter_refusal_keeps_the_already_staged_prefix](../crates/oce-api/tests/legacy_frame_boundary.rs#L54-L86); [store_type_refusal_keeps_a_prefix_without_advancing_execution](../crates/oce-api/tests/legacy_frame_boundary.rs#L88-L123); [test_report_is_an_independent_byte_golden](../scripts/product_contract/test_check.py#L94-L100) |
 | PC-032 | FUTURE | Frame delivery | Execution maintainers | MUST resolve and prevalidate complete typed frames, refusing unknown, duplicate, missing, stale-generation and unloaded submissions before mutation. | Stale generation is distinct from host-owned sensor freshness; no current complete-frame implementation is claimed. | [Current staging](../crates/oce-api/src/engine.rs#L408-L443) | future [M02-PR02](#complete-frame-prevalidation) |
 | PC-033 | FUTURE | Frame delivery | Execution maintainers | MUST commit one HostTick transition and one immutable output/diagnostic frame per accepted frame, preserving time, state, connector values, output generation and replay identity on ordinary refusal. | Atomic engine transition only; no persistence or actuator-delivery atomicity, panic recovery or cancellation guarantee. | [Current tick](../crates/oce-api/src/engine.rs#L279-L312) | future [M02-PR03](#atomic-transition-and-frame) |
 | PC-034 | FUTURE | Convenience delivery | Execution maintainers | MUST route simulation and realtime execution through shared transition semantics or explicitly document the weaker convenience profile. | No silent retrofit of whole-horizon rollback or store-write rollback. | [Current simulation](../crates/oce-api/src/sim.rs#L438-L479) | future [M02-PR04](#shared-convenience-core) |
@@ -119,16 +121,19 @@ The host owns compensation and external-handle validity. Successful replacement 
 caches, while host epoch/admission policy persist. Bounded parser allocation observation is supporting
 evidence, not a general hostile-input safety or peak-memory bound.
 
+## Complete frame contract
+
+Revision 5 fulfills M02-PR01 as the [normative frame/output contract](complete-frame-contract.md)
+and passing contract-to-current-code gap evidence. The owner approved PC-031 promotion on that
+contract-only implementation acceptance; PC-032 through PC-035 remain FUTURE. The loaded-executable
+and IO fence is engine-local, distinct from host deployment fencing. No public frame representation,
+runtime path, diagnostic severity, catalog, state/snapshot bytes, dependency or package changes here.
+
 ## Future outcomes
 
 These named work items are planning assignments with clone-visible acceptance descriptions, not
 links into ignored specifications or declarations that the work has shipped. Order is admission/replacement, frames, then identity/state/replay qualification.
 Execution of any later work still requires its own accepted prerequisite and owner authorization.
-
-### Complete frame contract
-
-M02-PR01: Define complete typed generation-bound frame acceptance, determinant set, time semantics,
-and immutable output/diagnostic boundaries. Keep host quality policy and actuation outside OCE.
 
 ### Complete frame prevalidation
 
@@ -197,6 +202,11 @@ verifier used IO/tick/export with its own tolerance; sibling-path verification i
 of this engine revision. Sim had no active OCE dependency and only a bridge scaffold; cxf-json had
 no OCE dependency. No downstream pin, compatibility claim or adapter policy changes here.
 
+Library, Studio, Edge and Sim retain their downstream roles. Runtime is an additive future
+M05-PR03 consumer/host qualification candidate only; BOPTEST is Runtime host evidence, not OCE
+equivalence. This adds no second evaluator, snapshot or replay stack, and no runtime, database,
+network, driver, quality/staleness, lease, command or fallback policy to OCE.
+
 Broad conformance qualification remains later work (M05), and platform/release qualification remains
 later work (M06). No general flattening, direct Modelica loader, Python binding, FMI runtime,
 database, scheduler, driver, universal panic freedom or equipment safety certification is added.
@@ -250,3 +260,12 @@ written expected output and deterministic repetitions; the runnable gate remains
   Pending-path enumeration adds the new admission source/tests only. No parser or transaction
   oracle is claimed; boundary expectations are hand-derived and existing determinism goldens
   remain. Exact-candidate review, hosted target checks and host qualification are separate steps.
+- Revision 5, 2026-09-19: owner approved the normative complete-frame contract and PC-031 CURRENT
+  promotion as contract-only implementation acceptance. Execution-maintainer requirements now have
+  clone-visible determinant, refusal, identity, immutable-output and migration detail, plus passing
+  legacy gap evidence. PC-032 through PC-035 remain future implementation/migration; no accepted
+  M01 semantics change. Hand-derived bit goldens and snapshot comparisons expose retained staging,
+  not future atomicity. Pending-path enumeration adds only the new contract and gap-test evidence;
+  checker status/visibility rules stay intact. Runtime is additive future M05-PR03 host evidence,
+  not a qualified consumer or OCE/BOPTEST equivalence claim. API, profile, state, snapshot, catalog,
+  dependencies, publication and downstream pins are unchanged; review and hosted checks remain separate.
