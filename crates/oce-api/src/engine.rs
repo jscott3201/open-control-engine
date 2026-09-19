@@ -78,6 +78,8 @@ pub struct Engine<S: Store = MemStore> {
     pub(crate) durable_restore_ready: bool,
     /// Process-local incarnation fence; retained artifacts keep old allocations alive (no ABA).
     pub(crate) frame_generation: Arc<()>,
+    /// Lifetime-local complete-frame correlation, deliberately outside run state and its codecs.
+    pub(crate) accepted_frame_sequence: u64,
 }
 
 impl Engine<MemStore> {
@@ -115,6 +117,7 @@ impl<S: Store> Engine<S> {
             loaded: false,
             durable_restore_ready: false,
             frame_generation: Arc::new(()),
+            accepted_frame_sequence: 0,
         }
     }
 

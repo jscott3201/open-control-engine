@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
-use oce_api::oce_store::{
+use oce_store::{
     DomainKey, Durable, EquipmentDto, ModelStore, PointHandle, PointListRow, PointSample,
     PointSnapshot, PointStore, PointWrite, RelationDto, ResolvedModel, RetrievalHit,
     SemanticPayloadDto, SemanticQuery, SemanticStore, StoreResult, TemplatePointReq,

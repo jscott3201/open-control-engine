@@ -148,6 +148,9 @@ pub enum OcError {
     /// A prepared frame belongs to another engine or a superseded executable incarnation.
     #[error("prepared input frame is stale for this executable context")]
     StalePreparedFrame,
+    /// The lifetime-local accepted-frame sequence has no next position; nothing was mutated.
+    #[error("accepted frame sequence is exhausted")]
+    FrameSequenceExhausted,
     /// Complete-frame key is unknown; payload is bounded and does not retain the supplied key.
     #[error("unknown frame input '{prefix}' ({bytes} UTF-8 bytes)")]
     FrameUnknownInput {

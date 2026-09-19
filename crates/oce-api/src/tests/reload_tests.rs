@@ -42,10 +42,12 @@ fn image<S: Store>(engine: &Engine<S>) -> Vec<String> {
         loaded,
         durable_restore_ready,
         frame_generation,
+        accepted_frame_sequence,
     } = engine;
     vec![
         format!("{:p} {cxf_byte_limit}", Arc::as_ptr(store)),
         format!("{:p}", Arc::as_ptr(frame_generation)),
+        format!("{accepted_frame_sequence}"),
         format!("{:p} {model:?} {model_id:?}", Arc::as_ptr(model)),
         format!("{schedule:?}"),
         format!(

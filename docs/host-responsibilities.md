@@ -10,19 +10,27 @@ warn you if you skip them.
 See the [product contract](product-contract.md) for numbered host obligations and the bounded
 requirement-to-evidence map; engine boundary tests are not host-compliance evidence.
 
-## Complete-frame preparation is available; execution remains future
+## Native complete frames and the host delivery boundary
 
 The [complete-frame contract](complete-frame-contract.md) supplies current typed, read-only
-preparation and an engine-local load/rebuild fence (PC-032). One atomic HostTick transition and an
-immutable correlated output/diagnostic frame remain future, along with PC-034/035 migration.
-Neither preparation nor the staging/convenience paths below silently acquires those guarantees.
+preparation and an engine-local load/rebuild fence (PC-032). `execute_frame` consumes a prepared
+submission and returns one immutable `CompletedFrame` after one atomic HostTick transition (PC-033).
+PC-034/035 migration remains future. The staging/convenience paths below do not acquire this guarantee.
 
 Completeness means every executable boundary input exactly once, except omission explicitly
 defined by the executable schema. It does not establish sensor coherence, quality, freshness or
 plausibility. Preparation neither fills gaps from Store samples nor infers host defaults.
 Its reload fence does not authorize deployments or commands. Persistence, authentication,
 authorization, deployment fencing, scheduling/wall-clock mapping, NO_EVAL, safe states, equipment
-interlocks and actuation stay host-owned even after that path exists. NO_EVAL means not executing.
+interlocks and actuation stay host-owned. NO_EVAL means not executing.
+
+Native execution calls no Store method or host callback. Persisting or delivering a retained result
+is a separate host operation; a later delivery failure does not turn the accepted frame into a refusal.
+Do not blindly resubmit at the same time: that produces another state transition and sequence.
+The accepted-frame sequence correlates only within one Engine lifetime; reload, resume and restore
+do not reset it. It is deliberately absent from snapshot bytes and supplies no durable replay position,
+lease, authentication or equipment authority. Retained results remain unchanged across those operations.
+The result owns Warning-only diagnostics; it adds no escalation, interlock or safe-state decision.
 
 Library, Studio, Edge and Sim retain their roles; Runtime is only an additive future M05-PR03
 consumer/host qualification candidate. BOPTEST is Runtime host evidence, not OCE equivalence.

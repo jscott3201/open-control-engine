@@ -101,8 +101,8 @@ they do not promise new JSON wire codecs or schema-driven runtime validation.
 | [Assertions](../crates/oce-api/contracts/assertions.schema.json) | `StepReport.asserts` collects all block warnings, including Assert and other classes. Sources are currently class-level, not guaranteed instances. Repeated false Assert inputs warn each evaluation; true is silent. |
 | [Execution profile](../crates/oce-api/contracts/execution-profile.schema.json) | Fixed HostTick v1: one advance per successful call, including equal timestamps; no Modelica same-time event iteration. Descriptive, not a runtime selector or snapshot revision. |
 
-Warning collection remains confined to `step_realtime`; ordinary tick and simulation keep no-op
-sinks. Realtime writes follow the tick and may fail before a collected report is delivered.
+Warning collection is available in `step_realtime` and native `execute_frame`; ordinary tick and
+simulation keep no-op sinks. Realtime writes follow the tick and may fail before a collected report is delivered.
 Load/store side effects and commit ordering are unchanged. These descriptors add no rollback,
 warn-once, escalation, scheduler, equipment policy or safety guarantee. The separately documented
 [serialized admission and replacement policy](facade-migration.md#bounded-serialized-load-adoption)
@@ -138,7 +138,8 @@ object. Refresh discovery after successful load/reconfiguration; old plans are i
 or dirty resume, including same-byte reload and same-value edits. Clean resume and compatible restore
 alone preserve the context, while an advanced clock can make the submitted time ineligible.
 
-**Do not replace execution with preparation.** This implementation slice adds no commit API. Continuing
+**Do not replace execution with preparation.** Pass the owned plan to `engine.execute_frame(plan)`
+for one complete transition and an owned `CompletedFrame`. Continuing
 with `set_input`/`tick` after preparation still uses the legacy sparse/Store-backed behavior and is
 not an atomic frame transition. The old methods keep their signatures, last-wins/hold-last policy,
 type-only staging checks and failure boundaries. Frame domain/completeness checks are additive and
@@ -147,5 +148,27 @@ are not retrofitted to them. Hosts still own quality, freshness, scheduling, per
 The [public tests](../crates/oce-api/tests/prepare_frame.rs),
 [stateful preservation matrix](../crates/oce-api/tests/prepare_frame_preservation.rs), and
 [private plan/lifecycle census](../crates/oce-api/src/frame_tests.rs) establish the bounded current
-preparation evidence. PC-033 through PC-035 remain future; this changes no packaged descriptor,
+preparation evidence. Native execution evidence promotes PC-033 only; PC-034/035 remain future.
+This changes no packaged descriptor,
 catalog identity, snapshot/replay format, stable-release status or downstream pin.
+
+## Complete-frame execution adoption
+
+Collect host observations, call `prepare_frame`, then move the plan into `execute_frame`. The latter
+rechecks readiness, incarnation, model time and sequence capacity before staging anything. Any
+ordinary returned error preserves the full engine image and consumes no accepted position, although
+the Rust plan is moved. On success, retain or clone the returned result rather than borrowing latest
+`Outputs`. Read `time()`, `sequence()`, `outputs()` and `diagnostics()`; there is no serialization API.
+
+The result contains lexical root boundary identities and native typed values, not every internal
+output connector or durable column. Distinct declared outputs may share a driver; pass-throughs
+occur once. Warning records retain emission order and producer source semantics. No pointer, Store
+handle, schedule, deployment token or durable replay identity is exposed. Sequence starts at one,
+counts successful native frames only and never resets during this Engine's lifetime, even on reload
+or checkpoint rewind. Equal-time success is another transition, never an idempotent retry.
+
+Hosts decide whether to execute and what to do with completed values; Store/actuation follow outside
+this API. Legacy tick/simulation/realtime signatures, weaker failure boundaries, restart behavior
+and no-op tick/simulation diagnostic sinks remain unchanged. The bounded Library verifier remains a
+legacy consumer; no sibling source or pin is migrated or qualified by this change. See the
+[execution contract and evidence](complete-frame-contract.md#current-execution-api).

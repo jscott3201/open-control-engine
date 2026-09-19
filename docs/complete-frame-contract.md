@@ -2,14 +2,13 @@
 
 ## Status and authority
 
-This is the normative detail of PC-031 in [product contract revision 6](product-contract.md).
-**Preparation is implemented (PC-032); complete-frame execution is not.** PC-033 through PC-035
-remain future transition and migration outcomes. The additive preparation API below supplies no
-commit, output-frame, selector, wire format or stable-product guarantee. Execution maintainers own
+This is the normative detail of PC-031 in [product contract revision 7](product-contract.md).
+**Preparation (PC-032) and native complete-frame execution (PC-033) are implemented.** PC-034/035
+remain future convenience migration/classification outcomes. The additive APIs below supply no
+profile selector, wire format or stable-product guarantee. Execution maintainers own
 these semantics; host policy remains with the host integrator.
 
-The requirements below describe the native complete-frame path, whose transition remains future,
-not a reinterpretation of
+The requirements below describe the native complete-frame path, not a reinterpretation of
 `set_input`, `tick`, `simulate` or `step_realtime`. “Atomic” means an engine-owned transition under
 the ordinary returned-refusal boundary below, not a distributed, persistent or actuator transaction.
 The fixed [HostTick v1 profile](execution-profile.md#hosttick-v1) remains unchanged.
@@ -68,8 +67,8 @@ the engine check, and a passing engine check cannot replace host admission. Auth
 exported-document and catalog identities retain their distinct roles. Current snapshot executable
 compatibility is not proof that a reference belongs to the current successful load incarnation.
 
-M02-PR02 supplies the concrete preparation/reference representation and typed refusal surface;
-M02-PR03 owns accepted-result correlation. M03 owns typed identity/compatibility layers and canonical
+Preparation supplies the concrete reference representation and typed refusal surface;
+native execution supplies accepted-result correlation. M03 owns typed identity/compatibility layers and canonical
 state/replay representation, including continuation/rewind correlation. Future representation choices
 cannot weaken these reload and correlation semantics. No snapshot fields, catalog
 identities or state revisions change here, and hosts are not asked to parse private snapshot bytes
@@ -80,11 +79,12 @@ or build another replay format to fill this gap.
 All ordinary refusal conditions MUST be validated before any execution/replay mutation. The whole
 candidate is resolved and checked before any input prefix is staged. There is no evaluation to
 discover an ordinary input error. Typed error names and deterministic precedence for preparation
-are specified below; the future transition path retains this prevalidation boundary.
+are specified below; execution retains this prevalidation boundary.
 
 | Condition | Required outcome before mutation |
 | --- | --- |
 | No successfully loaded executable | Refuse; an empty engine is not an executable with zero inputs. |
+| Pending parameter edits | Refuse until resume; halted alone does not prohibit execution. |
 | Unknown or non-input identity | Refuse; do not ignore extra values or treat output aliases/internal driven points as boundary inputs. |
 | Duplicate boundary input | Refuse even if both values are bit-identical; do not use first-wins or last-wins. Fan-out is not a duplicate. |
 | Missing required input | Refuse; no hold-last, zero/false seed or Store fill-in. Apply only explicit executable omission semantics. |
@@ -93,6 +93,7 @@ are specified below; the future transition path retains this prevalidation bound
 | Finite time below the preceding accepted model time | Refuse. |
 | Time outside loaded-block representability | Refuse under the existing model-time limits, not by executing first. |
 | Stale loaded-executable or IO compatibility context | Refuse frames and references from a superseded successful load; no implicit rebinding. |
+| Accepted-frame sequence exhausted | Refuse before staging; never wrap or reset the sequence. |
 | All checks pass, including equal finite time | Accept exactly one HostTick v1 transition. |
 
 For **every ordinary refused frame**, the entire observable engine execution/replay image MUST
@@ -146,9 +147,9 @@ The following are **current weaker/convenience paths**, not implementations of t
 
 Current `tick` and simulation use a no-op execution diagnostic sink; realtime collects Warning
 reports. Existing snapshots/checkpoints, output views and facade metadata remain valid within their
-own documented limits, but none proves availability of complete native frames.
+own documented limits; they are not completed frames.
 
-M02-PR02 implements preparation only; M02-PR03 owns transition. M02-PR04/05 address shared convenience
+The native preparation/execution APIs are additive. M02-PR04/05 address shared convenience
 semantics and legacy classification/guards. This document does not remove, retrofit or strengthen the
 current APIs. Future migration requires explicit acceptance evidence and compatibility accounting
 for any changed sparse, hold-last, duplicate, restart or post-tick-write behavior. Whole-horizon
@@ -186,9 +187,9 @@ Existing [Store tests](../crates/oce-api/src/tests/store_backed_inputs.rs),
 current-behavior evidence. The product requirement table links the existing restart, Warning and
 post-tick write-failure tests. The traceability checker checks links/statuses, not semantic compliance.
 
-Preparation evidence below fulfills PC-032 only. Future PC-033 acceptance still needs equal-time
-sequence correlation, retained immutable completed outputs/diagnostics, and unchanged execution/replay
-image on every ordinary commit refusal. Explicit omission semantics would require a future executable
+Preparation evidence below fulfills PC-032; the execution evidence below fulfills PC-033 with
+equal-time correlation, retained immutable results and unchanged images on ordinary refusal.
+Explicit omission semantics would require a future executable
 schema change; none is invented here. The existing HostTick conformance limits and later
 cross-platform/replay qualification still apply.
 
@@ -214,8 +215,9 @@ those signal ports; private detached probes do not claim broader CXF support.
 
 `Engine::prepare_frame(time, &[(&str, Value)])` returns `PreparedInputFrame`. The plan owns exact
 values and every resolved target; keys are borrowed only during the call. It is opaque and has no
-serialization, public constructor or commit method. Editing a copied definition does not alter
-validation. Neither success nor refusal stages a value, evaluates, calls Store, replaces diagnostics,
+serialization or public constructor. `Engine::execute_frame` consumes it. Editing a copied definition
+does not alter validation. Neither preparation success nor preparation refusal stages a value,
+evaluates, calls Store, replaces diagnostics,
 changes watches/outputs/time, or closes durable-restore readiness. There is no new replay image.
 
 First-cause refusal precedence is:
@@ -234,7 +236,7 @@ NaN and finite bounds reject the respective infinity. No blanket finite-signal o
 is introduced. Finite equal time is valid.
 
 The internal `check_prepared_frame` seam checks readiness, incarnation, and current time eligibility
-before the future commit path can use resolved targets. It returns `StalePreparedFrame` for a
+before execution can use resolved targets. It returns `StalePreparedFrame` for a
 different engine or superseded load/rebuild, without rebinding names. Successful identical-byte
 reload also invalidates. Failed load preserves the previous incarnation. Dirty resume fences before
 effective model mutation, even for same-value edits; clean resume and compatible checkpoint/durable
@@ -262,3 +264,69 @@ authored expected values and checked-in bit/diagnostic goldens. The nonserializa
 example and exact facade baseline cover opacity. Removing duplicate detection, dropping a fan-out
 tail, coercing integers via f64, changing signed-zero bits or omitting invalidation is detected by
 the corresponding assertions. No external Modelica oracle exists for this OCE-specific policy.
+
+## Current execution API
+
+`Engine::execute_frame(PreparedInputFrame) -> Result<CompletedFrame, OcError>` consumes one plan
+by value, even on refusal. The plan cannot be cloned, serialized or submitted twice. Preflight
+precedence is unloaded, pending edits, stale incarnation, nonfinite time, regression, block-time
+representability, then `FrameSequenceExhausted`. Preparation has already resolved and validated
+every input and fan-out target. Execution rechecks the mutable conditions, without name rebinding.
+
+After preflight, the implementation stages the entire plan, closes durable restore, calls the
+existing infallible evaluator once with the Warning collector, updates `prev_t` and latest `Outputs`
+once, increments the accepted-frame sequence and captures the result. All ordinary returned errors
+are before this boundary. No Store operation, host callback, shadow RunState, undo log or rollback
+is involved. Allocation failure remains excluded, including during result capture.
+
+`CompletedFrame` is owned, Clone + Debug + Send + Sync, with private fields and read-only
+`time()`, `sequence()`, `outputs()` and `diagnostics()` accessors. Outputs are `(String, Value)`
+pairs; cloning a result gives an independent owned result. Real bits are copied, not normalized by
+capture (individual block arithmetic retains its existing numerical policy). No public connector
+indices, Store handles, mutable latest-view, schedule or serialized identity are returned.
+
+The output set is the same disjoint union as `Topology.boundary_outputs`: represented elided
+root declarations plus lowered pass-through outputs. It is sorted by canonical lexical UTF-8
+identity, not source order. Distinct declarations sharing a driver stay distinct; internal driver
+paths and the pass-through listing are not appended as duplicate aliases. Undriven source-only
+declarations are absent under the existing ingest warning contract. Zero boundary outputs is valid,
+including an Assert-only boundary with internal outputs. Inventory, trace and durable columns are
+not the authority for this set.
+
+Sequence starts at one and advances only on a successful native complete-frame commit. It never
+decreases or resets in one Engine lifetime, including successful reload, dirty/clean resume,
+simulation restart, checkpoint rewind and durable restore. Legacy tick/sim/realtime and refusals
+consume no position. Thus equal-time commits remain distinct. The private retained `Arc<()>`
+incarnation binds each result to its loaded executable/IO and fixed build/profile context without
+exposing pointer identity. Sequence is correlation only: not replay position, snapshot generation,
+durability, cross-process identity, deployment authority, lease, authentication or freshness.
+Neither it nor the result is serialized into existing state/checkpoint bytes. No last-result cache
+is added to Engine; the caller owns retained outcomes, which remain unchanged by later operations.
+
+### Execution evidence and cost boundary
+
+- [Public success goldens](../crates/oce-api/tests/execute_frame.rs): hand-derived Add, sampled
+  delay and equal-time Pre feedback; fan-out, native pass-through bits, lexical/many-to-one
+  boundaries and ordered Warning diagnostics. These OCE-specific scenarios are not a Modelica
+  event-iteration oracle.
+- [Public preservation matrix](../crates/oce-api/tests/execute_frame_preservation.rs) and
+  [private preflight controls](../crates/oce-api/src/frame_commit_tests.rs): fresh/advanced
+  connector/word/time/output/scratch images, snapshot and checkpoint bytes, watches, restore
+  readiness, sequence and Store counts. Private injection exercises nonfinite/unrepresentable
+  time and sequence exhaustion; opaque public plans cannot be forged. The instrumented block
+  boundary detects even idempotent double updates. No postcommit ordinary failure is invented.
+- [G36 controller](../crates/oce-api/tests/g36_cooling_only_controller.rs): two complete 1,441-row,
+  ten-boundary-output runs against the existing independent Tier-A HostTick reference, not
+  engine self-output or unrestricted Modelica equivalence.
+- [Allocation and latency harness](../crates/oce-api/tests/frame_observations.rs): exact counters
+  and positive control, 128 repetitions each of five fixtures. For B nonempty boundary outputs,
+  result capture allocates B path buffers plus one pair vector; empty B allocates none. Warnings
+  add their owned source/message buffers and a geometrically growing event vector. Staging clones
+  only the prepared fan-out values; preparation's separate N/T formula remains above. Existing
+  evaluator allocation exceptions remain, and latest Outputs still refreshes exactly as on tick.
+  No whole-engine/state copy is charged as result capture. See [measured observations](benchmarks.md#complete-frame-observations)
+  for debug/release timing scope; no universal speed or latency-ratio guarantee follows.
+
+Compile-fail rustdoc pins nonserialization and single-use preparation. Exact public baselines and
+shape guards cover the additive API. Hosted architecture qualification and actual downstream host
+adoption remain separate; PC-034/035, stable release, persistence and equipment claims are not promoted.

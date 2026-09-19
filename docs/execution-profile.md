@@ -8,8 +8,8 @@ through an API option. A future profile with different state-transition semantic
 separate compatibility and snapshot contract.
 
 The [complete-frame contract](complete-frame-contract.md) implements read-only preparation and
-ratifies a future immutable input/output transition boundary around this same profile, not a second
-evaluator or profile selector. Preparation does not execute; PC-033 remains future. Current sparse setters,
+one native atomic transition with an immutable output/diagnostic result around this same profile,
+not a second evaluator or profile selector. Preparation does not execute; `execute_frame` does. Current sparse setters,
 Store-backed ticks, simulation and realtime remain the distinct weaker/convenience paths described
 there and in [host responsibilities](host-responsibilities.md).
 
@@ -30,8 +30,8 @@ advances state again. Time-dependent blocks see zero elapsed time, but call-base
 changes. The engine performs no hidden same-time evaluation, event queue processing, rollback, or
 fixed-point search.
 
-One successful future complete frame likewise means exactly one such transition, including equal
-finite timestamps. Its ordinary refusal will preserve the full execution/replay image, including
+One successful `execute_frame` likewise means exactly one such transition, including equal
+finite timestamps. Its ordinary refusal preserves the full execution/replay image, including
 connector staging and completed diagnostics. That is a stronger submission boundary than today's
 `tick`: a Store type refusal can retain a staged prefix, and a tick refusal never undoes prior
 successful setters. HostTick's emit/update law alone does not imply complete-frame atomicity.
@@ -62,6 +62,12 @@ only the completed tick call. There are no intermediate event-iteration rows. A 
 same timestamp replaces the visible output snapshot. `step_realtime` likewise evaluates one
 HostTick transition before attempting its output write; a write failure does not roll that
 transition back. It publishes no internal iterations because none occur.
+
+`CompletedFrame` retains only the executable root boundary outputs in lexical identity order and
+the Warning diagnostics emitted by that native transition. It is independent of the mutable latest
+view. Its engine-lifetime sequence increases only on accepted native frames, never on legacy
+execution or refusal, and survives reload/resume/restore without rewinding. The private context fence
+is not serialized and is not host deployment authority. See the frame contract for preflight precedence.
 
 Do not drive event iteration by repeatedly calling `tick` with the same timestamp unless repeated
 HostTick state transitions are the intended behavior. Those calls also update every other stateful

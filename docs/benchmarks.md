@@ -5,7 +5,7 @@ method that produced it.
 
 ## Read this first
 
-**These numbers are not gated.** Nothing in CI or in `.agents/gate.sh` re-measures them, so they
+**Historical throughput numbers are not gated.** Nothing in CI or in `.agents/gate.sh` re-measures those runs, so they
 are a record of what was observed, not a promise about `HEAD`. A performance figure that no test
 enforces drifts silently — the same failure mode that got a git SHA deleted from every provenance
 record in [PR #204](https://github.com/jscott3201/open-control-engine/pull/204), and the reason
@@ -15,7 +15,67 @@ Treat a run below as evidence about **that commit on that host**. To make a clai
 different commit, re-run it — the method is fully specified, and the harness is reproduced in this
 file so anyone can.
 
-A gated harness is tracked work. Until it lands, this file is updated by hand.
+The complete-frame harness below now runs structural allocation assertions and emits non-gating
+latency observations. Historical throughput runs retain their original method and limits.
+
+## Complete-frame observations
+
+2026-09-19, implementation working tree based on `64e7ba83ff78a6d07750502d0f3f037b8b39f519`.
+Apple M5, aarch64-apple-darwin, macOS 27.0 (26A5425a), Rust 1.97.1. Default features, locked
+dependencies; dev/debug and release (workspace thin LTO, one codegen unit). These are local
+observations, not hosted x86_64/arm64 qualification, equipment cadence or universal speed claims.
+
+[`frame_observations.rs`](../crates/oce-api/tests/frame_observations.rs) uses five representative
+fixtures. Load is excluded. Constant schema-valid synthetic inputs are staged once for legacy tick;
+native frames supply the same complete values each time. Equal model time 0.0 deliberately tests
+repeat transitions. After 64 warmup calls, five 2,048-call batch means are measured, alternating
+commit/tick order. Commit timing excludes preparation and outer plan-batch allocation but includes
+plan and result destruction. End-to-end preparation+commit is also reported. Legacy tick includes
+its MemStore snapshot where inputs are bound, uses no-op diagnostics and produces no retained frame,
+so this is a cost comparison between different contracts, not an equivalent-work speedup.
+Only this test was scheduled during explicit measurements; other machine activity was not controlled.
+
+Median of five batch means, nanoseconds per call:
+
+| Case | Debug tick | Debug commit | Debug prepare+commit | Release tick | Release commit | Release prepare+commit |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Add arithmetic | 211 | 390 | 1,357 | 34 | 76 | 171 |
+| Sampled delay | 345 | 518 | 1,473 | 42 | 79 | 158 |
+| Zero-input Pre feedback | 282 | 471 | 533 | 35 | 68 | 69 |
+| 213-block G36 controller | 18,631 | 17,714 | 26,550 | 2,578 | 2,557 | 3,246 |
+| Assert, zero boundary outputs | 214 | 466 | 993 | 28 | 79 | 126 |
+
+Commit batch-mean ranges (debug / release ns): arithmetic 388–399 / 63–78;
+delay 488–526 / 78–86; feedback 419–473 / 63–69; controller 17,625–17,951 / 2,538–2,637;
+assertion 453–475 / 72–91. These short samples expose host drift, not tail latency or confidence
+intervals. No timing value or ratio is an assertion; the functional determinism tests are separate.
+
+The same debug/release harness asserts the exact allocation formula over 128 preparation+commit
+repetitions per fixture and zero outstanding allocations after drop, with a 1,024-byte positive
+control. It counts the synchronous thread only. N is logical inputs, T fan-out targets, B boundary
+outputs and D emitted warnings (these cases have at most one):
+
+| Case | N / T / B / D | Preparation allocations / bytes | Commit allocations / bytes |
+| --- | --- | --- | --- |
+| Add | 2 / 2 / 1 / 0 | 4 / 120 | 2 / 66 |
+| Delay | 2 / 2 / 1 / 0 | 4 / 120 | 2 / 59 |
+| Pre | 0 / 0 / 2 / 0 | 0 / 0 | 3 / 114 |
+| Controller | 14 / 43 / 10 / 0 | 16 / 956 | 11 / 1,136 |
+| Assert | 1 / 2 / 0 / 1 | 3 / 64 | 3 / 262 |
+
+Preparation uses N+2 buffers for nonempty N. Commit capture uses B+1 buffers for nonempty B, with
+`B * size_of::<(String, Value)>() + sum(path_bytes)` bytes; zero B allocates none. Each warning
+copies its source/message and grows a Vec geometrically (one warning uses four event slots).
+Value cloning preserves bits and shares immutable String payloads. This budget is structural:
+no shadow RunState, whole-engine copy or rollback. Existing evaluator allocations, notably wide
+Sort, remain a separate baseline cost; this fixture census does not erase them.
+
+Run observations explicitly with `--success-output immediate --test-threads 1` on the focused
+`frame_observations` nextest binary. It is also included in the existing oce-api matrix test set;
+normal success-output suppression hides passing timing logs, but allocation checks still execute.
+Use `--locked --profile ci --no-tests=fail` for debug and
+`--locked --profile ci-release --cargo-profile release --no-tests=fail` for release. The full
+repository gate remains [`.agents/gate.sh`](../.agents/gate.sh), not this measurement selection.
 
 ## What is measured
 

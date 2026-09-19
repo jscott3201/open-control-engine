@@ -166,6 +166,8 @@ pub struct IoInventory {
     conn_id: Vec<ConnectorId>,
     input_by_path: HashMap<String, InputBinding>,
     pub(crate) frame_definitions: Vec<InputDefinition>,
+    /// The executable root boundary, lexical by authored identity; not the point projection.
+    pub(crate) frame_outputs: Vec<(String, ConnectorId)>,
     output_by_path: HashMap<String, ConnectorId>,
     /// Declared boundary-output alias keys (`_spec/18` R18-2): the authored root `hasOutput`
     /// IRI of each elided boundary output, resolving to its driving connector's slot. Read-only
@@ -326,6 +328,7 @@ impl IoInventory {
             conn_id,
             input_by_path,
             frame_definitions,
+            frame_outputs: executable_boundary_outputs(model),
             output_by_path,
             output_alias_by_path,
         }
@@ -483,6 +486,32 @@ impl IoInventory {
             .cloned()
             .collect()
     }
+}
+
+/// Same disjoint union as `Topology::boundary_outputs`: elided root declarations and lowered
+/// pass-through outputs. One driver may serve multiple declarations; never deduplicate by driver
+/// or append internal connector aliases. Ingest guarantees distinct declared identities.
+fn executable_boundary_outputs(model: &ModelGraph) -> Vec<(String, ConnectorId)> {
+    let mut columns: Vec<_> = model
+        .boundary_outputs
+        .iter()
+        .map(|output| (output.iri.to_string(), output.source))
+        .chain(
+            model
+                .blocks
+                .iter()
+                .filter(|block| block.class_iri.starts_with("urn:oce:lowering#"))
+                .filter_map(|block| block.outputs.first())
+                .map(|id| {
+                    (
+                        connector_path(model.connectors[id.0 as usize].iri.as_deref(), *id),
+                        *id,
+                    )
+                }),
+        )
+        .collect();
+    columns.sort_unstable_by(|left, right| left.0.cmp(&right.0));
+    columns
 }
 
 impl<S: Store> Engine<S> {
