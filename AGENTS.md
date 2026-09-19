@@ -29,10 +29,12 @@ Use the [product contract](docs/product-contract.md) for versioned product requi
 evidence map; its domain delegations and current/host/future distinctions govern aggregate claims.
 
 If you are an agent working on this project, `.agents/` also holds local operating notes
-kept out of the published tree — the memory protocol and identity handling in
-`memory-bootstrap.md`, and delegation and review process in `lane-facts.md`. They are
-gitignored, so they exist only in a working checkout. If you cloned this repo and they are
-absent, you are a contributor and `project-facts.md` is what you need.
+kept out of the published tree — capability-aware memory and identity handling in
+`memory-bootstrap.md`, and checkout-local delegation and review notes in `lane-facts.md`.
+Use the active client's tools and follow its current guidance; historical handoffs record prior
+decisions and evidence, not current tool availability or continuing merge authority.
+The local notes are gitignored, so they exist only in a working checkout. If you cloned
+this repo and they are absent, you are a contributor and `project-facts.md` is what you need.
 
 That arrangement governs what is published **from here on**. Earlier revisions of this
 file, and a since-deleted `.claude/skills/codex-handoff/SKILL.md`, carried some of the same
