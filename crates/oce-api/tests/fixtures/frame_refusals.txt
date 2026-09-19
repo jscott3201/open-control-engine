@@ -1,0 +1,5 @@
+unknown frame input 'a-unknown' (9 UTF-8 bytes)
+frame key is not a boundary input 'urn:legacy-frame:y' (18 UTF-8 bytes)
+duplicate frame input 'urn:legacy-frame:a'
+missing frame input 'urn:legacy-frame:a'
+input type mismatch for 'urn:legacy-frame:a'

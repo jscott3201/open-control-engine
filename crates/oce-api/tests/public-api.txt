@@ -42,6 +42,7 @@ impl core::clone::Clone for oce_api::DiagnosticStage
 impl core::clone::Clone for oce_api::DiagnosticSubject
 impl core::clone::Clone for oce_api::EngineCheckpoint
 impl core::clone::Clone for oce_api::EngineStateSnapshot
+impl core::clone::Clone for oce_api::InputDefinition
 impl core::clone::Clone for oce_api::IoClass
 impl core::clone::Clone for oce_api::IoInventory
 impl core::clone::Clone for oce_api::IoSummary
@@ -158,6 +159,7 @@ impl core::fmt::Debug for oce_api::EngineStateError
 impl core::fmt::Debug for oce_api::EngineStateSnapshot
 impl core::fmt::Debug for oce_api::ExportReceipt
 impl core::fmt::Debug for oce_api::ExportReport
+impl core::fmt::Debug for oce_api::InputDefinition
 impl core::fmt::Debug for oce_api::InputSource
 impl core::fmt::Debug for oce_api::IoClass
 impl core::fmt::Debug for oce_api::IoInventory
@@ -174,6 +176,7 @@ impl core::fmt::Debug for oce_api::ParamTable
 impl core::fmt::Debug for oce_api::PassThroughPair
 impl core::fmt::Debug for oce_api::PhysicalKind
 impl core::fmt::Debug for oce_api::PointInfo
+impl core::fmt::Debug for oce_api::PreparedInputFrame
 impl core::fmt::Debug for oce_api::RunMode
 impl core::fmt::Debug for oce_api::SimMetrics
 impl core::fmt::Debug for oce_api::SimSpec
@@ -229,6 +232,7 @@ impl core::marker::Freeze for oce_api::EngineStateError
 impl core::marker::Freeze for oce_api::EngineStateSnapshot
 impl core::marker::Freeze for oce_api::ExportReceipt
 impl core::marker::Freeze for oce_api::ExportReport
+impl core::marker::Freeze for oce_api::InputDefinition
 impl core::marker::Freeze for oce_api::InputSource
 impl core::marker::Freeze for oce_api::IoClass
 impl core::marker::Freeze for oce_api::IoInventory
@@ -245,6 +249,7 @@ impl core::marker::Freeze for oce_api::ParamTable
 impl core::marker::Freeze for oce_api::PassThroughPair
 impl core::marker::Freeze for oce_api::PhysicalKind
 impl core::marker::Freeze for oce_api::PointInfo
+impl core::marker::Freeze for oce_api::PreparedInputFrame
 impl core::marker::Freeze for oce_api::RunMode
 impl core::marker::Freeze for oce_api::SimMetrics
 impl core::marker::Freeze for oce_api::SimSpec
@@ -279,6 +284,7 @@ impl core::marker::Send for oce_api::EngineStateError
 impl core::marker::Send for oce_api::EngineStateSnapshot
 impl core::marker::Send for oce_api::ExportReceipt
 impl core::marker::Send for oce_api::ExportReport
+impl core::marker::Send for oce_api::InputDefinition
 impl core::marker::Send for oce_api::InputSource
 impl core::marker::Send for oce_api::IoClass
 impl core::marker::Send for oce_api::IoInventory
@@ -295,6 +301,7 @@ impl core::marker::Send for oce_api::ParamTable
 impl core::marker::Send for oce_api::PassThroughPair
 impl core::marker::Send for oce_api::PhysicalKind
 impl core::marker::Send for oce_api::PointInfo
+impl core::marker::Send for oce_api::PreparedInputFrame
 impl core::marker::Send for oce_api::RunMode
 impl core::marker::Send for oce_api::SimMetrics
 impl core::marker::Send for oce_api::SimSpec
@@ -355,6 +362,7 @@ impl core::marker::Sync for oce_api::EngineStateError
 impl core::marker::Sync for oce_api::EngineStateSnapshot
 impl core::marker::Sync for oce_api::ExportReceipt
 impl core::marker::Sync for oce_api::ExportReport
+impl core::marker::Sync for oce_api::InputDefinition
 impl core::marker::Sync for oce_api::InputSource
 impl core::marker::Sync for oce_api::IoClass
 impl core::marker::Sync for oce_api::IoInventory
@@ -371,6 +379,7 @@ impl core::marker::Sync for oce_api::ParamTable
 impl core::marker::Sync for oce_api::PassThroughPair
 impl core::marker::Sync for oce_api::PhysicalKind
 impl core::marker::Sync for oce_api::PointInfo
+impl core::marker::Sync for oce_api::PreparedInputFrame
 impl core::marker::Sync for oce_api::RunMode
 impl core::marker::Sync for oce_api::SimMetrics
 impl core::marker::Sync for oce_api::SimSpec
@@ -405,6 +414,7 @@ impl core::marker::Unpin for oce_api::EngineStateError
 impl core::marker::Unpin for oce_api::EngineStateSnapshot
 impl core::marker::Unpin for oce_api::ExportReceipt
 impl core::marker::Unpin for oce_api::ExportReport
+impl core::marker::Unpin for oce_api::InputDefinition
 impl core::marker::Unpin for oce_api::InputSource
 impl core::marker::Unpin for oce_api::IoClass
 impl core::marker::Unpin for oce_api::IoInventory
@@ -421,6 +431,7 @@ impl core::marker::Unpin for oce_api::ParamTable
 impl core::marker::Unpin for oce_api::PassThroughPair
 impl core::marker::Unpin for oce_api::PhysicalKind
 impl core::marker::Unpin for oce_api::PointInfo
+impl core::marker::Unpin for oce_api::PreparedInputFrame
 impl core::marker::Unpin for oce_api::RunMode
 impl core::marker::Unpin for oce_api::SimMetrics
 impl core::marker::Unpin for oce_api::SimSpec
@@ -455,6 +466,7 @@ impl core::marker::UnsafeUnpin for oce_api::EngineStateError
 impl core::marker::UnsafeUnpin for oce_api::EngineStateSnapshot
 impl core::marker::UnsafeUnpin for oce_api::ExportReceipt
 impl core::marker::UnsafeUnpin for oce_api::ExportReport
+impl core::marker::UnsafeUnpin for oce_api::InputDefinition
 impl core::marker::UnsafeUnpin for oce_api::InputSource
 impl core::marker::UnsafeUnpin for oce_api::IoClass
 impl core::marker::UnsafeUnpin for oce_api::IoInventory
@@ -471,6 +483,7 @@ impl core::marker::UnsafeUnpin for oce_api::ParamTable
 impl core::marker::UnsafeUnpin for oce_api::PassThroughPair
 impl core::marker::UnsafeUnpin for oce_api::PhysicalKind
 impl core::marker::UnsafeUnpin for oce_api::PointInfo
+impl core::marker::UnsafeUnpin for oce_api::PreparedInputFrame
 impl core::marker::UnsafeUnpin for oce_api::RunMode
 impl core::marker::UnsafeUnpin for oce_api::SimMetrics
 impl core::marker::UnsafeUnpin for oce_api::SimSpec
@@ -505,6 +518,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for oce_api::EngineStateError
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::EngineStateSnapshot
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ExportReceipt
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ExportReport
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::InputDefinition
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::IoClass
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::IoInventory
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::IoSummary
@@ -517,6 +531,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ParamTable
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::PassThroughPair
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::PhysicalKind
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::PointInfo
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::PreparedInputFrame
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::RunMode
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::SimMetrics
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::StepReport
@@ -550,6 +565,7 @@ impl core::panic::unwind_safe::UnwindSafe for oce_api::EngineStateError
 impl core::panic::unwind_safe::UnwindSafe for oce_api::EngineStateSnapshot
 impl core::panic::unwind_safe::UnwindSafe for oce_api::ExportReceipt
 impl core::panic::unwind_safe::UnwindSafe for oce_api::ExportReport
+impl core::panic::unwind_safe::UnwindSafe for oce_api::InputDefinition
 impl core::panic::unwind_safe::UnwindSafe for oce_api::IoClass
 impl core::panic::unwind_safe::UnwindSafe for oce_api::IoInventory
 impl core::panic::unwind_safe::UnwindSafe for oce_api::IoSummary
@@ -562,6 +578,7 @@ impl core::panic::unwind_safe::UnwindSafe for oce_api::ParamTable
 impl core::panic::unwind_safe::UnwindSafe for oce_api::PassThroughPair
 impl core::panic::unwind_safe::UnwindSafe for oce_api::PhysicalKind
 impl core::panic::unwind_safe::UnwindSafe for oce_api::PointInfo
+impl core::panic::unwind_safe::UnwindSafe for oce_api::PreparedInputFrame
 impl core::panic::unwind_safe::UnwindSafe for oce_api::RunMode
 impl core::panic::unwind_safe::UnwindSafe for oce_api::SimMetrics
 impl core::panic::unwind_safe::UnwindSafe for oce_api::StepReport
@@ -585,6 +602,7 @@ impl oce_api::OperationFailure
 impl oce_api::OutputTrace
 impl oce_api::Outputs
 impl oce_api::ParamTable
+impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
@@ -628,6 +646,7 @@ impl<T, U> core::convert::Into<U> for oce_api::EngineStateError where U: core::c
 impl<T, U> core::convert::Into<U> for oce_api::EngineStateSnapshot where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::ExportReceipt where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::ExportReport where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::InputDefinition where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::InputSource where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::IoClass where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::IoInventory where U: core::convert::From<T>
@@ -644,6 +663,7 @@ impl<T, U> core::convert::Into<U> for oce_api::ParamTable where U: core::convert
 impl<T, U> core::convert::Into<U> for oce_api::PassThroughPair where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::PhysicalKind where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::PointInfo where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::PreparedInputFrame where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::RunMode where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::SimMetrics where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::SimSpec where U: core::convert::From<T>
@@ -679,6 +699,7 @@ impl<T, U> core::convert::TryFrom<U> for oce_api::EngineStateError where U: core
 impl<T, U> core::convert::TryFrom<U> for oce_api::EngineStateSnapshot where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::ExportReceipt where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::ExportReport where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::InputDefinition where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::InputSource where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::IoClass where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::IoInventory where U: core::convert::Into<T>
@@ -695,6 +716,7 @@ impl<T, U> core::convert::TryFrom<U> for oce_api::ParamTable where U: core::conv
 impl<T, U> core::convert::TryFrom<U> for oce_api::PassThroughPair where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::PhysicalKind where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::PointInfo where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::PreparedInputFrame where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::RunMode where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::SimMetrics where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::SimSpec where U: core::convert::Into<T>
@@ -730,6 +752,7 @@ impl<T, U> core::convert::TryInto<U> for oce_api::EngineStateError where U: core
 impl<T, U> core::convert::TryInto<U> for oce_api::EngineStateSnapshot where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::ExportReceipt where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::ExportReport where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::InputDefinition where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::InputSource where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::IoClass where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::IoInventory where U: core::convert::TryFrom<T>
@@ -746,6 +769,7 @@ impl<T, U> core::convert::TryInto<U> for oce_api::ParamTable where U: core::conv
 impl<T, U> core::convert::TryInto<U> for oce_api::PassThroughPair where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::PhysicalKind where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::PointInfo where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::PreparedInputFrame where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::RunMode where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::SimMetrics where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::SimSpec where U: core::convert::TryFrom<T>
@@ -776,6 +800,7 @@ impl<T> alloc::borrow::ToOwned for oce_api::DiagnosticStage where T: core::clone
 impl<T> alloc::borrow::ToOwned for oce_api::DiagnosticSubject where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::EngineCheckpoint where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::EngineStateSnapshot where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::InputDefinition where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::IoClass where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::IoInventory where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::IoSummary where T: core::clone::Clone
@@ -827,6 +852,7 @@ impl<T> core::any::Any for oce_api::EngineStateError where T: 'static + ?core::m
 impl<T> core::any::Any for oce_api::EngineStateSnapshot where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::ExportReceipt where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::ExportReport where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::InputDefinition where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::InputSource where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::IoClass where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::IoInventory where T: 'static + ?core::marker::Sized
@@ -843,6 +869,7 @@ impl<T> core::any::Any for oce_api::ParamTable where T: 'static + ?core::marker:
 impl<T> core::any::Any for oce_api::PassThroughPair where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::PhysicalKind where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::PointInfo where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::PreparedInputFrame where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::RunMode where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::SimMetrics where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::SimSpec where T: 'static + ?core::marker::Sized
@@ -878,6 +905,7 @@ impl<T> core::borrow::Borrow<T> for oce_api::EngineStateError where T: ?core::ma
 impl<T> core::borrow::Borrow<T> for oce_api::EngineStateSnapshot where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::ExportReceipt where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::ExportReport where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::InputDefinition where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::InputSource where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::IoClass where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::IoInventory where T: ?core::marker::Sized
@@ -894,6 +922,7 @@ impl<T> core::borrow::Borrow<T> for oce_api::ParamTable where T: ?core::marker::
 impl<T> core::borrow::Borrow<T> for oce_api::PassThroughPair where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::PhysicalKind where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::PointInfo where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::PreparedInputFrame where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::RunMode where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::SimMetrics where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::SimSpec where T: ?core::marker::Sized
@@ -929,6 +958,7 @@ impl<T> core::borrow::BorrowMut<T> for oce_api::EngineStateError where T: ?core:
 impl<T> core::borrow::BorrowMut<T> for oce_api::EngineStateSnapshot where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::ExportReceipt where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::ExportReport where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::InputDefinition where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::InputSource where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::IoClass where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::IoInventory where T: ?core::marker::Sized
@@ -945,6 +975,7 @@ impl<T> core::borrow::BorrowMut<T> for oce_api::ParamTable where T: ?core::marke
 impl<T> core::borrow::BorrowMut<T> for oce_api::PassThroughPair where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::PhysicalKind where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::PointInfo where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::PreparedInputFrame where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::RunMode where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::SimMetrics where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::SimSpec where T: ?core::marker::Sized
@@ -975,6 +1006,7 @@ impl<T> core::clone::CloneToUninit for oce_api::DiagnosticStage where T: core::c
 impl<T> core::clone::CloneToUninit for oce_api::DiagnosticSubject where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::EngineCheckpoint where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::EngineStateSnapshot where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::InputDefinition where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::IoClass where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::IoInventory where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::IoSummary where T: core::clone::Clone
@@ -1021,6 +1053,7 @@ impl<T> core::convert::From<T> for oce_api::EngineStateError
 impl<T> core::convert::From<T> for oce_api::EngineStateSnapshot
 impl<T> core::convert::From<T> for oce_api::ExportReceipt
 impl<T> core::convert::From<T> for oce_api::ExportReport
+impl<T> core::convert::From<T> for oce_api::InputDefinition
 impl<T> core::convert::From<T> for oce_api::InputSource
 impl<T> core::convert::From<T> for oce_api::IoClass
 impl<T> core::convert::From<T> for oce_api::IoInventory
@@ -1037,6 +1070,7 @@ impl<T> core::convert::From<T> for oce_api::ParamTable
 impl<T> core::convert::From<T> for oce_api::PassThroughPair
 impl<T> core::convert::From<T> for oce_api::PhysicalKind
 impl<T> core::convert::From<T> for oce_api::PointInfo
+impl<T> core::convert::From<T> for oce_api::PreparedInputFrame
 impl<T> core::convert::From<T> for oce_api::RunMode
 impl<T> core::convert::From<T> for oce_api::SimMetrics
 impl<T> core::convert::From<T> for oce_api::SimSpec
@@ -1338,6 +1372,7 @@ pub fn oce_api::Engine<S>::from(T) -> T
 pub fn oce_api::Engine<S>::get_output(&self, &str) -> core::result::Result<oce_model::Value, oce_api::OcError>
 pub fn oce_api::Engine<S>::get_param(&self, &str) -> core::result::Result<oce_model::Value, oce_api::OcError>
 pub fn oce_api::Engine<S>::halt(&mut self) -> core::result::Result<(), oce_api::OcError>
+pub fn oce_api::Engine<S>::input_definitions(&self) -> core::result::Result<alloc::vec::Vec<oce_api::InputDefinition>, oce_api::OcError>
 pub fn oce_api::Engine<S>::into(self) -> U
 pub fn oce_api::Engine<S>::io(&self) -> &oce_api::IoInventory
 pub fn oce_api::Engine<S>::io_summary(&self) -> oce_api::IoSummary
@@ -1347,6 +1382,7 @@ pub fn oce_api::Engine<S>::mode(&self) -> oce_api::RunMode
 pub fn oce_api::Engine<S>::outputs(&self) -> &oce_api::Outputs
 pub fn oce_api::Engine<S>::params(&self) -> &oce_api::ParamTable
 pub fn oce_api::Engine<S>::point_list(&self, core::option::Option<&str>) -> core::result::Result<alloc::vec::Vec<oce_api::PointInfo>, oce_api::OcError>
+pub fn oce_api::Engine<S>::prepare_frame(&self, f64, &[(&str, oce_model::Value)]) -> core::result::Result<oce_api::PreparedInputFrame, oce_api::OcError>
 pub fn oce_api::Engine<S>::realtime_epoch_unix_nanos(&self) -> core::option::Option<u64>
 pub fn oce_api::Engine<S>::restore_checkpoint(&mut self, &oce_api::EngineCheckpoint) -> core::result::Result<(), oce_api::OcError>
 pub fn oce_api::Engine<S>::restore_state(&mut self, &oce_api::EngineStateSnapshot) -> core::result::Result<(), oce_api::OcError>
@@ -1424,6 +1460,17 @@ pub fn oce_api::ExportReport::into(self) -> U
 pub fn oce_api::ExportReport::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::ExportReport::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::ExportReport::type_id(&self) -> core::any::TypeId
+pub fn oce_api::InputDefinition::borrow(&self) -> &T
+pub fn oce_api::InputDefinition::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::InputDefinition::clone(&self) -> oce_api::InputDefinition
+pub fn oce_api::InputDefinition::clone_into(&self, &mut T)
+pub fn oce_api::InputDefinition::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::InputDefinition::from(T) -> T
+pub fn oce_api::InputDefinition::into(self) -> U
+pub fn oce_api::InputDefinition::to_owned(&self) -> T
+pub fn oce_api::InputDefinition::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::InputDefinition::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::InputDefinition::type_id(&self) -> core::any::TypeId
 pub fn oce_api::InputSource::borrow(&self) -> &T
 pub fn oce_api::InputSource::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::InputSource::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1643,6 +1690,14 @@ pub fn oce_api::PointInfo::to_owned(&self) -> T
 pub fn oce_api::PointInfo::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::PointInfo::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::PointInfo::type_id(&self) -> core::any::TypeId
+pub fn oce_api::PreparedInputFrame::borrow(&self) -> &T
+pub fn oce_api::PreparedInputFrame::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::PreparedInputFrame::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::PreparedInputFrame::from(T) -> T
+pub fn oce_api::PreparedInputFrame::into(self) -> U
+pub fn oce_api::PreparedInputFrame::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::PreparedInputFrame::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::PreparedInputFrame::type_id(&self) -> core::any::TypeId
 pub fn oce_api::RunMode::borrow(&self) -> &T
 pub fn oce_api::RunMode::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::RunMode::clone(&self) -> oce_api::RunMode
@@ -1939,6 +1994,10 @@ pub oce_api::EngineStateError::UnsupportedFormat
 pub oce_api::EngineStateError::UnsupportedFormat::revision: u32
 pub oce_api::ExportReport::bytes: alloc::vec::Vec<u8>
 pub oce_api::ExportReport::warnings: alloc::vec::Vec<oce_diag::Diagnostic>
+pub oce_api::InputDefinition::max: core::option::Option<oce_model::Value>
+pub oce_api::InputDefinition::min: core::option::Option<oce_model::Value>
+pub oce_api::InputDefinition::path: alloc::string::String
+pub oce_api::InputDefinition::value_type: oce_model::ValueType
 pub oce_api::InputSource::Closure(alloc::boxed::Box<(dyn core::ops::function::Fn(f64) -> alloc::vec::Vec<(alloc::string::String, oce_model::Value)> + core::marker::Send + core::marker::Sync)>)
 pub oce_api::InputSource::Constant(alloc::vec::Vec<(alloc::string::String, oce_model::Value)>)
 pub oce_api::InputSource::None
@@ -1967,6 +2026,15 @@ pub oce_api::OcError::CxfTooLarge
 pub oce_api::OcError::CxfTooLarge::actual_bytes: usize
 pub oce_api::OcError::CxfTooLarge::limit_bytes: usize
 pub oce_api::OcError::Flatten(oce_flatten::FlattenError)
+pub oce_api::OcError::FrameDuplicateInput(alloc::string::String)
+pub oce_api::OcError::FrameMissingInput(alloc::string::String)
+pub oce_api::OcError::FrameNotInput
+pub oce_api::OcError::FrameNotInput::bytes: usize
+pub oce_api::OcError::FrameNotInput::prefix: alloc::string::String
+pub oce_api::OcError::FrameUnknownInput
+pub oce_api::OcError::FrameUnknownInput::bytes: usize
+pub oce_api::OcError::FrameUnknownInput::prefix: alloc::string::String
+pub oce_api::OcError::InputDomain(alloc::string::String)
 pub oce_api::OcError::InputType(alloc::string::String)
 pub oce_api::OcError::Load
 pub oce_api::OcError::Load::detail: alloc::string::String
@@ -1987,6 +2055,7 @@ pub oce_api::OcError::RealtimeEpochUnset
 pub oce_api::OcError::RealtimeInstantUnrepresentable
 pub oce_api::OcError::RealtimeInstantUnrepresentable::epoch_unix_nanos: u64
 pub oce_api::OcError::RealtimeInstantUnrepresentable::t_now: f64
+pub oce_api::OcError::StalePreparedFrame
 pub oce_api::OcError::State(oce_api::EngineStateError)
 pub oce_api::OcError::Store(oce_store::StoreError)
 pub oce_api::OcError::TimeRegression
@@ -2057,6 +2126,7 @@ pub struct oce_api::Engine<S: oce_store::Store>
 pub struct oce_api::EngineCheckpoint
 pub struct oce_api::EngineStateSnapshot
 pub struct oce_api::ExportReceipt
+pub struct oce_api::InputDefinition
 pub struct oce_api::IoInventory
 pub struct oce_api::IoSummary
 pub struct oce_api::LoadErrorContext
@@ -2067,6 +2137,7 @@ pub struct oce_api::Outputs
 pub struct oce_api::ParamAttrs
 pub struct oce_api::ParamTable
 pub struct oce_api::PointInfo
+pub struct oce_api::PreparedInputFrame
 pub struct oce_api::SimMetrics
 pub struct oce_api::SimSpec
 pub struct oce_api::StepReport
@@ -2147,6 +2218,9 @@ pub type oce_api::ExportReceipt::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::ExportReceipt::Error = core::convert::Infallible
 pub type oce_api::ExportReport::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::ExportReport::Error = core::convert::Infallible
+pub type oce_api::InputDefinition::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::InputDefinition::Error = core::convert::Infallible
+pub type oce_api::InputDefinition::Owned = T
 pub type oce_api::InputSource::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::InputSource::Error = core::convert::Infallible
 pub type oce_api::IoClass::Error = <U as core::convert::TryFrom<T>>::Error
@@ -2192,6 +2266,8 @@ pub type oce_api::PhysicalKind::Owned = T
 pub type oce_api::PointInfo::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::PointInfo::Error = core::convert::Infallible
 pub type oce_api::PointInfo::Owned = T
+pub type oce_api::PreparedInputFrame::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::PreparedInputFrame::Error = core::convert::Infallible
 pub type oce_api::RunMode::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::RunMode::Error = core::convert::Infallible
 pub type oce_api::RunMode::Owned = T
@@ -2237,6 +2313,7 @@ pub unsafe fn oce_api::DiagnosticStage::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::DiagnosticSubject::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::EngineCheckpoint::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::EngineStateSnapshot::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::InputDefinition::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::IoClass::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::IoInventory::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::IoSummary::clone_to_uninit(&self, *mut u8)

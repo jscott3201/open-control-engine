@@ -1,7 +1,7 @@
 # Executable CXF and HostTick product contract
 
-Document revision: 5
-Grounding SHA: 6ccfa1366f0e267f4a3b90f32629e1a580f02ffd
+Document revision: 6
+Grounding SHA: b738a603265e8d61c7f7e94205722373cf00da84
 
 This is the aggregate product boundary and requirement-to-evidence map for the work toward a
 stable embeddable kernel. It records current observations, host obligations, and future acceptance
@@ -83,8 +83,8 @@ define their detail without changing the current/future acceptance boundary.
 | PC-028 | CURRENT | Facade delivery | Facade maintainers | MUST remove or quarantine deferred and panic-only supported surfaces with coordinated compatibility evidence. | Selected facade names are removed; private quarantines and package boundaries are unchanged. Compiler controls and bounded source inspection are not downstream acceptance or universal panic freedom; exact-candidate consumer qualification remains separate. | [Current ruling](public-surface-contract.md#surface-ruling); [Migration and inventory](facade-migration.md#package-and-panic-inventory-boundary) | test [retired_facade_symbols_are_absent](../crates/oce-api/tests/public_surface_contract.rs#L507-L512); [filtered_inventory_refuses_without_store_calls_or_engine_mutation](../crates/oce-api/tests/public_storage_adapter.rs#L175-L227) |
 | PC-029 | CURRENT | Facade delivery | Facade maintainers | MUST expose versioned facade catalog, diagnostics, IO, values, parameters, assertions and execution-profile contracts with compatibility tests. | Additive typed metadata and immutable producer receipts; opaque subjects, Warning-only runtime, no generic value codec, build stamp, admission bounds, rollback or new snapshot/profile selector. | [Versioned contracts](facade-contracts.md); [Adoption](facade-migration.md#additive-contract-adoption) | test [canonical_catalog_matches_packaged_bytes_and_repeats_exactly](../crates/oce-api/tests/catalog_contract.rs#L16-L34); [unification_evidence_survives_structural_refusal_at_its_actual_producer](../crates/oce-api/src/tests/diagnostic_receipts.rs#L201-L219); [descriptors_cover_every_domain_with_explicit_shapes_and_semantic_limits](../crates/oce-api/src/tests/contract_schemas.rs#L10-L28) |
 | PC-030 | CURRENT | Admission delivery | CXF maintainers | MUST reject serialized inputs above the effective per-engine cap before parsing, Store calls or engine mutation and replace model-bound state/caches only on successful load. | Default and maximum are exactly 8 MiB. Configuration above the maximum refuses through a typed error. Receipt refusal stays Import; errors contain counts only. External persistence is not atomic; replacement coverage has the documented stage limitations. | [Admission](../crates/oce-api/src/admission.rs#L1-L41); [Replacement](#bounded-admission-and-replacement) | test [oversized_valid_document_refuses_without_parser_allocation_or_store_calls](../crates/oce-api/tests/cxf_admission.rs#L16-L32); [oversize_receipts_allocate_only_the_error_box_and_are_deterministic](../crates/oce-api/tests/cxf_admission.rs#L104-L138); [invalid_configuration_is_typed_and_never_silently_widens](../crates/oce-api/tests/cxf_admission.rs#L83-L101); [successful_reload_replaces_model_bound_caches_but_not_host_policy](../crates/oce-api/src/tests/reload_tests.rs#L299-L380) |
-| PC-031 | CURRENT | Frame delivery | Execution maintainers | MUST retain the normative complete generation-atomic typed input/output frame contract, including completeness, prevalidation, reload fencing, one HostTick transition, refusal preservation and immutable correlated outputs/diagnostics. | Implementation acceptance is contract/evidence only; the runtime and migration outcomes remain future. Passing legacy gap tests do not implement the frame API or qualify a host, persistence or actuators. | [Frame contract](complete-frame-contract.md#status-and-authority); [Refusal matrix](complete-frame-contract.md#prevalidation-and-refusal-matrix); [Outcome](complete-frame-contract.md#accepted-transition-and-immutable-outcome) | test [setter_refusal_keeps_the_already_staged_prefix](../crates/oce-api/tests/legacy_frame_boundary.rs#L54-L86); [store_type_refusal_keeps_a_prefix_without_advancing_execution](../crates/oce-api/tests/legacy_frame_boundary.rs#L88-L123); [test_report_is_an_independent_byte_golden](../scripts/product_contract/test_check.py#L94-L100) |
-| PC-032 | FUTURE | Frame delivery | Execution maintainers | MUST resolve and prevalidate complete typed frames, refusing unknown, duplicate, missing, stale-generation and unloaded submissions before mutation. | Stale generation is distinct from host-owned sensor freshness; no current complete-frame implementation is claimed. | [Current staging](../crates/oce-api/src/engine.rs#L408-L443) | future [M02-PR02](#complete-frame-prevalidation) |
+| PC-031 | CURRENT | Frame delivery | Execution maintainers | MUST retain the normative complete generation-atomic typed input/output frame contract, including completeness, prevalidation, reload fencing, one HostTick transition, refusal preservation and immutable correlated outputs/diagnostics. | This row ratifies contract/evidence; preparation has separate implementation evidence, while transition and migration remain future. Legacy gap tests alone do not implement frames or qualify hosts, persistence or actuators. | [Frame contract](complete-frame-contract.md#status-and-authority); [Refusal matrix](complete-frame-contract.md#prevalidation-and-refusal-matrix); [Outcome](complete-frame-contract.md#accepted-transition-and-immutable-outcome) | test [setter_refusal_keeps_the_already_staged_prefix](../crates/oce-api/tests/legacy_frame_boundary.rs#L54-L86); [store_type_refusal_keeps_a_prefix_without_advancing_execution](../crates/oce-api/tests/legacy_frame_boundary.rs#L88-L123); [test_report_is_an_independent_byte_golden](../scripts/product_contract/test_check.py#L94-L100) |
+| PC-032 | CURRENT | Frame delivery | Execution maintainers | MUST resolve and prevalidate complete typed frames, refusing unknown, duplicate, missing, stale-generation and unloaded submissions before mutation. | Preparation only; no commit or output frame. Internal incarnation preflight is not host freshness or authorization. No public input aliases exist; injected alias coverage tests logical uniqueness only. | [Preparation](../crates/oce-api/src/frame.rs); [Contract](complete-frame-contract.md#current-preparation-api) | test [every_refusal_preserves_fresh_and_advanced_stateful_images_and_store](../crates/oce-api/tests/prepare_frame_preservation.rs#L22-L155); [reload_and_cross_engine_identity_refuse_even_identical_model_bytes](../crates/oce-api/src/frame_tests.rs#L103-L125); [dirty_resume_invalidates_but_clean_resume_and_compatible_restore_retain_context](../crates/oce-api/src/frame_tests.rs#L128-L170); [canonical_plan_owns_values_and_repeats_bit_exactly_under_entry_permutations](../crates/oce-api/src/frame_tests.rs#L52-L79); [repeated_large_fixture_preparation_has_a_linear_capacity_and_allocation_census](../crates/oce-api/src/frame_tests.rs#L340) |
 | PC-033 | FUTURE | Frame delivery | Execution maintainers | MUST commit one HostTick transition and one immutable output/diagnostic frame per accepted frame, preserving time, state, connector values, output generation and replay identity on ordinary refusal. | Atomic engine transition only; no persistence or actuator-delivery atomicity, panic recovery or cancellation guarantee. | [Current tick](../crates/oce-api/src/engine.rs#L279-L312) | future [M02-PR03](#atomic-transition-and-frame) |
 | PC-034 | FUTURE | Convenience delivery | Execution maintainers | MUST route simulation and realtime execution through shared transition semantics or explicitly document the weaker convenience profile. | No silent retrofit of whole-horizon rollback or store-write rollback. | [Current simulation](../crates/oce-api/src/sim.rs#L438-L479) | future [M02-PR04](#shared-convenience-core) |
 | PC-035 | FUTURE | Convenience delivery | Execution maintainers | MUST classify and guard legacy sparse and store-backed profiles separately from complete atomic frames. | Existing hold-last, status-agnostic and partial-staging behavior remains visible until an accepted migration changes it. | [Current store staging](../crates/oce-api/src/engine.rs#L408-L443) | future [M02-PR05](#legacy-profile-boundaries) |
@@ -129,16 +129,24 @@ contract-only implementation acceptance; PC-032 through PC-035 remain FUTURE. Th
 and IO fence is engine-local, distinct from host deployment fencing. No public frame representation,
 runtime path, diagnostic severity, catalog, state/snapshot bytes, dependency or package changes here.
 
+## Complete frame prevalidation
+
+Revision 6 implements M02-PR02: owned input definitions and opaque, nonserializable prepared
+frames, with canonical first-cause typed refusals, exact domain checks, Store noninterference and
+engine-local load/rebuild fencing. PC-032 evidence includes stateful before/after images, fan-out,
+same-byte reload and clean/dirty-resume controls, exact goldens and a repeated allocation census.
+The internal compatibility seam is exercised directly for future commit reuse; no otherwise-unused
+public validator or reusable schema/cache API is added. Current input aliases do not exist, and
+enum/String detached-probe coverage does not broaden the executable CXF profile.
+PC-033 through PC-035 remain FUTURE. Legacy sparse, hold-last and last-wins behavior, snapshots,
+profile, diagnostics, dependencies and downstream pins are unchanged. See the
+[migration guidance](facade-contracts.md#complete-frame-preparation-adoption).
+
 ## Future outcomes
 
 These named work items are planning assignments with clone-visible acceptance descriptions, not
 links into ignored specifications or declarations that the work has shipped. Order is admission/replacement, frames, then identity/state/replay qualification.
 Execution of any later work still requires its own accepted prerequisite and owner authorization.
-
-### Complete frame prevalidation
-
-M02-PR02: Resolve every input and type before mutation, rejecting unknown, duplicate, missing,
-stale-generation and unloaded frames with typed evidence. Input freshness remains host-owned.
 
 ### Atomic transition and frame
 
@@ -269,3 +277,13 @@ written expected output and deterministic repetitions; the runnable gate remains
   checker status/visibility rules stay intact. Runtime is additive future M05-PR03 host evidence,
   not a qualified consumer or OCE/BOPTEST equivalence claim. API, profile, state, snapshot, catalog,
   dependencies, publication and downstream pins are unchanged; review and hosted checks remain separate.
+- Revision 6, 2026-09-19: owner approved the opaque prepared-frame plus minimal owned-definition
+  shape, engine-local successful-load/dirty-rebuild invalidation with clean-resume retention, and
+  deterministic first typed cause. Bounded implementation and behavioral evidence promote PC-032;
+  the additive public baseline and its classification ledger are updated together. Preparation
+  changes no run state, Store samples, wire formats or legacy acceptance. Boundary and target
+  bounds are intersected without Integer-to-Real coercion. Input alias and enum/String limitations
+  follow live source rather than a new identity vocabulary or executable profile. Pending-path
+  enumeration adds only preparation source/test evidence; checker rules are unchanged. No commit,
+  output-frame, release, publication, downstream adoption, host qualification or equipment-safety
+  claim follows. PC-033 through PC-035 and hosted architecture evidence remain separate work.

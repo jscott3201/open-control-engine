@@ -43,6 +43,8 @@ mod diagnostics;
 mod engine;
 mod error;
 mod export;
+mod frame;
+mod frame_inputs;
 /// Compile-time PyO3 binding-shape guards (R-API-PY-1..8). A non-test module so a frozen surface
 /// drift fails the normal `cargo build`, not only the release-gate test run.
 mod guards;
@@ -79,6 +81,8 @@ pub use diagnostics::{
 pub use engine::Engine;
 pub use error::{LoadErrorContext, OcError, OcResult};
 pub use export::{ContentIdError, ExportReport};
+pub use frame::PreparedInputFrame;
+pub use frame_inputs::InputDefinition;
 pub use io::{
     IoClass, IoInventory, IoSummary, PhysicalKind, PointDirection, PointInfo, PointValueType,
     TrendCfg, TrendInterval,

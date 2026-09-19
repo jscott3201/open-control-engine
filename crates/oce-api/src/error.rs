@@ -145,6 +145,34 @@ pub enum OcError {
     /// A staged input value whose type does not match the target connector (no coercion; `01` §5).
     #[error("input type mismatch for '{0}'")]
     InputType(String),
+    /// A prepared frame belongs to another engine or a superseded executable incarnation.
+    #[error("prepared input frame is stale for this executable context")]
+    StalePreparedFrame,
+    /// Complete-frame key is unknown; payload is bounded and does not retain the supplied key.
+    #[error("unknown frame input '{prefix}' ({bytes} UTF-8 bytes)")]
+    FrameUnknownInput {
+        /// At most the first 64 UTF-8 bytes, cut at a character boundary.
+        prefix: String,
+        /// Full submitted key length in bytes, not characters.
+        bytes: usize,
+    },
+    /// Complete-frame key names an output or an internal driven input, not a boundary input.
+    #[error("frame key is not a boundary input '{prefix}' ({bytes} UTF-8 bytes)")]
+    FrameNotInput {
+        /// At most the first 64 UTF-8 bytes, cut at a character boundary.
+        prefix: String,
+        /// Full submitted key length in bytes, not characters.
+        bytes: usize,
+    },
+    /// One canonical boundary input was supplied more than once, even with identical values.
+    #[error("duplicate frame input '{0}'")]
+    FrameDuplicateInput(String),
+    /// One required canonical boundary input was omitted; no hold-last or seed substitution.
+    #[error("missing frame input '{0}'")]
+    FrameMissingInput(String),
+    /// Exact type matched but the value violates the canonical input's declared domain.
+    #[error("input value outside declared domain for '{0}'")]
+    InputDomain(String),
     /// A checkpoint, snapshot, or restore failure.
     #[error(transparent)]
     State(#[from] crate::state::EngineStateError),

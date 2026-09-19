@@ -610,17 +610,7 @@ impl<S: Store> Engine<S> {
     /// [`OcError::UnknownPoint`] if `point` is not an input in the inventory; [`OcError::InputType`]
     /// if `value`'s type does not match the connector. Never panics (R-ERR-1).
     pub fn set_input(&mut self, point: &str, value: Value) -> Result<(), OcError> {
-        let connectors = self
-            .io
-            .resolve_inputs(point)
-            .ok_or_else(|| OcError::UnknownPoint(point.to_string()))?;
-        for &cid in connectors {
-            // `cid` is inventory-sourced (an in-range model connector) — never a host integer.
-            let want = self.model.connectors[cid.0 as usize].value_type;
-            if value.value_type() != want {
-                return Err(OcError::InputType(point.to_string()));
-            }
-        }
+        let connectors = self.io.resolve_typed_inputs(&self.model, point, &value)?;
         for &cid in connectors {
             self.durable_restore_ready = false;
             self.state.values[cid.0 as usize] = value.clone();
@@ -680,15 +670,8 @@ impl<S: Store> Engine<S> {
     ) -> Result<Vec<(ConnectorId, Value)>, OcError> {
         let mut staged = Vec::with_capacity(pairs.len());
         for (name, value) in pairs {
-            let connectors = self
-                .io
-                .resolve_inputs(name)
-                .ok_or_else(|| OcError::UnknownPoint(name.to_string()))?;
+            let connectors = self.io.resolve_typed_inputs(&self.model, name, value)?;
             for &cid in connectors {
-                // `cid` is inventory-sourced (an in-range model connector) — never a host integer.
-                if value.value_type() != self.model.connectors[cid.0 as usize].value_type {
-                    return Err(OcError::InputType(name.to_string()));
-                }
                 staged.push((cid, value.clone()));
             }
         }

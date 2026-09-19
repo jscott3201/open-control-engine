@@ -76,6 +76,8 @@ pub struct Engine<S: Store = MemStore> {
     pub(crate) loaded: bool,
     /// Durable restore is a startup operation and closes at the first mutation boundary.
     pub(crate) durable_restore_ready: bool,
+    /// Process-local incarnation fence; retained artifacts keep old allocations alive (no ABA).
+    pub(crate) frame_generation: Arc<()>,
 }
 
 impl Engine<MemStore> {
@@ -112,6 +114,7 @@ impl<S: Store> Engine<S> {
             realtime_epoch_unix_nanos: None,
             loaded: false,
             durable_restore_ready: false,
+            frame_generation: Arc::new(()),
         }
     }
 
@@ -217,6 +220,7 @@ impl<S: Store> Engine<S> {
             self.semantic_warnings = semantic_warnings;
             self.store_inputs = store_inputs;
             self.loaded = true;
+            self.frame_generation = Arc::new(());
             self.durable_restore_ready = true;
             Ok(())
         })();
