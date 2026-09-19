@@ -1,0 +1,27 @@
+{
+  "@context": {"S231": "http://data.ashrae.org/S231P#"},
+  "@graph": [
+    {"@id": "urn:legacy-frame:model", "@type": "S231:Block",
+     "S231:containsBlock": {"@id": "urn:legacy-frame:add"},
+     "S231:hasInput": [{"@id": "urn:legacy-frame:a"}, {"@id": "urn:legacy-frame:b"}],
+     "S231:hasOutput": {"@id": "urn:legacy-frame:y"}},
+    {"@id": "urn:legacy-frame:add", "@type": "CDL.Reals.Add",
+     "S231:hasInput": [{"@id": "urn:legacy-frame:add.u1"}, {"@id": "urn:legacy-frame:add.u2"}],
+     "S231:hasOutput": {"@id": "urn:legacy-frame:add.y"}},
+    {"@id": "urn:legacy-frame:add.u1", "@type": "S231:RealInput",
+     "S231:isOfDataType": {"@id": "S231:Real"}},
+    {"@id": "urn:legacy-frame:add.u2", "@type": "S231:RealInput",
+     "S231:isOfDataType": {"@id": "S231:Real"}},
+    {"@id": "urn:legacy-frame:add.y", "@type": "S231:RealOutput",
+     "S231:isOfDataType": {"@id": "S231:Real"},
+     "S231:isConnectedTo": {"@id": "urn:legacy-frame:y"}},
+    {"@id": "urn:legacy-frame:a", "@type": "S231:RealInput",
+     "S231:isOfDataType": {"@id": "S231:Real"},
+     "S231:isConnectedTo": {"@id": "urn:legacy-frame:add.u1"}},
+    {"@id": "urn:legacy-frame:b", "@type": "S231:RealInput",
+     "S231:isOfDataType": {"@id": "S231:Real"},
+     "S231:isConnectedTo": {"@id": "urn:legacy-frame:add.u2"}},
+    {"@id": "urn:legacy-frame:y", "@type": "S231:RealOutput",
+     "S231:isOfDataType": {"@id": "S231:Real"}}
+  ]
+}

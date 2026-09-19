@@ -27,7 +27,9 @@ PENDING = frozenset((DOCUMENT, "scripts/product_contract/check.py",
                        "docs/facade-migration.md", "crates/oce-api/tests/sim_assertions.rs",
                        "crates/oce-api/src/admission.rs",
                        "crates/oce-api/src/tests/reload_tests.rs",
-                       "crates/oce-api/tests/cxf_admission.rs"))
+                       "crates/oce-api/tests/cxf_admission.rs",
+                       "docs/complete-frame-contract.md",
+                       "crates/oce-api/tests/legacy_frame_boundary.rs"))
 POINTERS = ("README.md", "AGENTS.md", "TESTING.md", "docs/architecture.md",
             "docs/host-responsibilities.md", "docs/README.md")
 HEADER = "| ID | Status | Actor | Owner | Requirement | Limitation | Grounding | Evidence |"
