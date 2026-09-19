@@ -52,6 +52,13 @@ fn supported(bytes: &[u8]) -> Result<(), oce_api::OcError> {
     send_sync::<Engine>();
     send_sync::<SimSpec>();
     let mut engine = Engine::in_memory();
+    let _: usize = engine.cxf_byte_limit();
+    engine.set_cxf_byte_limit(oce_api::MAX_CXF_BYTES / 2)?;
+    let bounded = oce_api::OcError::CxfTooLarge { actual_bytes: 2, limit_bytes: 1 };
+    let invalid = oce_api::OcError::CxfByteLimitTooLarge {
+        actual_bytes: usize::MAX, limit_bytes: oce_api::MAX_CXF_BYTES,
+    };
+    let _ = (bounded, invalid);
     let _ = engine.load_cxf(bytes)?;
     let _ = engine.point_list(None)?;
     let query = oce_api::oce_store::SemanticQuery::FuzzyText { query: "x".into(), k: 1 };

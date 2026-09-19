@@ -48,6 +48,13 @@ otherwise. `oce_api::catalog()` supplies independent typed facade metadata and v
 consumed companion surface for block metadata. It remains a separate dependency and is outside these two baselines; that separation is
 not evidence that the catalog is implementation leakage.
 
+Serialized admission (`MAX_CXF_BYTES`, `Engine::cxf_byte_limit`, `set_cxf_byte_limit`, and the
+bounded `OcError` variants) is stable-candidate facade policy. The maximum is 8 MiB; hosts may
+only select a limit at or below it. Existing load signatures remain, while oversized acceptance
+intentionally narrows. The [migration note](facade-migration.md#bounded-serialized-load-adoption)
+and [host compensation boundary](host-responsibilities.md#load-replacement-and-the-store-compensation-boundary)
+separate in-memory replacement from non-rollback Store effects and external-handle validity.
+
 The database-free `oce-store` traits and DTOs are conditional storage-port surface. Hosts may
 provide adapters, but adapter lifecycle and identity conditions remain part of the contract.
 `Engine::with_store` and `Engine::store` share that classification. The default in-memory facade

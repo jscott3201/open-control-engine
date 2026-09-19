@@ -24,7 +24,10 @@ from urllib.parse import urlsplit
 DOCUMENT = "docs/product-contract.md"
 PENDING = frozenset((DOCUMENT, "scripts/product_contract/check.py",
                       "scripts/product_contract/test_check.py",
-                      "docs/facade-migration.md", "crates/oce-api/tests/sim_assertions.rs"))
+                       "docs/facade-migration.md", "crates/oce-api/tests/sim_assertions.rs",
+                       "crates/oce-api/src/admission.rs",
+                       "crates/oce-api/src/tests/reload_tests.rs",
+                       "crates/oce-api/tests/cxf_admission.rs"))
 POINTERS = ("README.md", "AGENTS.md", "TESTING.md", "docs/architecture.md",
             "docs/host-responsibilities.md", "docs/README.md")
 HEADER = "| ID | Status | Actor | Owner | Requirement | Limitation | Grounding | Evidence |"

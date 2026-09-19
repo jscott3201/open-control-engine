@@ -187,6 +187,7 @@ fn warning_context_survives_each_later_store_failure() {
 
 #[derive(Clone, Copy, Default)]
 enum StoreFailure {
+    None,
     Recover,
     SaveModel,
     ResolvePoints,
@@ -197,21 +198,24 @@ enum StoreFailure {
 #[derive(Default)]
 struct LoadFailureStore {
     inner: MemStore,
-    failure: StoreFailure,
+    failure: std::sync::Mutex<StoreFailure>,
+    calls: std::sync::Mutex<Vec<&'static str>>,
+    resolved: std::sync::Mutex<Vec<PointHandle>>,
 }
 
 impl LoadFailureStore {
     fn new(failure: StoreFailure) -> Self {
         Self {
-            inner: MemStore::default(),
-            failure,
+            failure: std::sync::Mutex::new(failure),
+            ..Self::default()
         }
     }
 }
 
 impl ModelStore for LoadFailureStore {
     fn save_model(&self, model: &ResolvedModel) -> StoreResult<()> {
-        if matches!(self.failure, StoreFailure::SaveModel) {
+        self.calls.lock().unwrap().push("save_model");
+        if matches!(*self.failure.lock().unwrap(), StoreFailure::SaveModel) {
             return Err(StoreError::Backend(
                 "injected save_model failure".to_owned(),
             ));
@@ -234,13 +238,15 @@ impl ModelStore for LoadFailureStore {
 
 impl PointStore for LoadFailureStore {
     fn resolve_points(&self, keys: &[DomainKey]) -> StoreResult<Vec<PointHandle>> {
-        if matches!(self.failure, StoreFailure::ResolvePoints) {
+        self.calls.lock().unwrap().push("resolve_points");
+        if matches!(*self.failure.lock().unwrap(), StoreFailure::ResolvePoints) {
             return Err(StoreError::Backend(
                 "injected resolve_points failure".to_owned(),
             ));
         }
         let handles = self.inner.resolve_points(keys)?;
-        if matches!(self.failure, StoreFailure::HandleCount) {
+        *self.resolved.lock().unwrap() = handles.clone();
+        if matches!(*self.failure.lock().unwrap(), StoreFailure::HandleCount) {
             Ok(Vec::new())
         } else {
             Ok(handles)
@@ -296,12 +302,16 @@ impl Durable for LoadFailureStore {
     }
 
     fn recover(&self) -> StoreResult<()> {
-        if matches!(self.failure, StoreFailure::Recover) {
+        self.calls.lock().unwrap().push("recover");
+        if matches!(*self.failure.lock().unwrap(), StoreFailure::Recover) {
             return Err(StoreError::Backend("injected recover failure".to_owned()));
         }
         self.inner.recover()
     }
 }
+
+#[path = "tests/reload_tests.rs"]
+mod reload;
 
 #[test]
 fn receipt_preserves_prior_evidence_at_each_store_boundary() {

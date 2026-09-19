@@ -261,6 +261,7 @@ changes.
 
 | Bound | Limit | Defined at | Behavior when exceeded |
 | --- | --- | --- | --- |
+| Serialized CXF at both facade load entry points | 8 MiB (8,388,608 bytes) by default; hosts may configure a smaller limit | `crates/oce-api/src/admission.rs` | `OcError::CxfTooLarge { actual_bytes, limit_bytes }` before JSON deserialization or Store calls |
 | Expression parse and AST nesting | 64 | `crates/oce-expr/src/lib.rs` | typed `NestingTooDeep` error |
 | Expression size | 4096 nodes | `crates/oce-expr/src/lib.rs` | typed `ExpressionTooLarge` error |
 | Composite **nesting** (`containsBlock` lowering) | 64 | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
@@ -278,10 +279,42 @@ duplicate paths intact for single-assignment validation.
 A CXF document is a program. Loading one from a source you do not control is running code you did
 not write. If you must:
 
-- Bound document size before handing bytes to the loader; JSON deserialization has no engine-level
-  byte cap.
+- Bound transport/buffering before handing bytes to the loader. Both `load_cxf` and
+  `load_cxf_with_receipt` enforce `Engine::cxf_byte_limit()` before deserialization, defaulting to
+  `MAX_CXF_BYTES` (8 MiB). `set_cxf_byte_limit` accepts `0..=MAX_CXF_BYTES`; a larger request
+  returns `CxfByteLimitTooLarge` without changing configuration. Zero refuses nonempty input;
+  empty input still fails normal JSON parsing. Policy persists across reload and is not snapshot state.
 - Load in a process or thread whose loss you can absorb when your threat model requires isolation.
 - Never load an untrusted document in the same process that is actively commanding equipment.
+
+The byte cap does not bound peak memory, CPU time, expansion, or total graph complexity. It is not
+a sandbox, cancellation/deadline guarantee, or evidence that every below-cap document is safe.
+Receipt admission refusals use the existing `Import` stage, with byte counts only and no input
+content, source error or structured diagnostics in the `OcError`; `OperationFailure` still exposes
+that original error through its normal source chain. Legacy malformed-input errors remain unchanged.
+
+## Load replacement and the Store compensation boundary
+
+Ordinary returned load failures preserve the prior **in-memory executable/run image**: model and
+identity, blocks/schedule, state words and connector/output values, IO/parameters/durable batch,
+mode/dirty flags, prior time, semantic warnings, engine-held store-input handles, loaded state and
+durable-restore readiness. Successful reload replaces model-bound caches and state, resets time and
+parameter lifecycle, and opens the fresh durable-restore window. Refresh all model-local/ephemeral
+references after success; host epoch and admission policy persist.
+
+This is not a Store transaction. `recover`, `save_model`, and `resolve_points` execute before the
+in-memory commit and can have effects even when a later operation (or that call itself) fails.
+The port has no abort/compensation hook. A saved candidate model and allocated point handles can
+remain after refusal. The host/adapter owns compensation, isolation and re-establishing a usable
+backend; **old external handle validity is not promised**, even though engine-held tokens are
+unchanged. Do not blindly resume equipment control after a backend refusal. Panic, process death,
+allocation failure, and concurrent host effects are outside the ordinary returned-error guarantee.
+
+`reload_tests` compares the complete owned image for fresh, advanced and halted/dirty runs across
+real import, unification, validation, schedule and injected Store refusals; the private build tail
+covers instantiation and projection. Flatten is currently an infallible identity shim and semantics
+currently returns metadata without a refusal path; no injected failures are claimed for those stages.
+The separate residual-effects test demonstrates the MemStore compensation boundary.
 
 The structural ingest paths above are bounded and return typed diagnostics rather than panicking.
 `../TESTING.md` requires new ingest code to assert the specific `DiagCode` or error variant rather

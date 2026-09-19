@@ -33,6 +33,7 @@
 //! semantic-template loader. Only `point_list(None)` is supported: device filtering is outside the
 //! supported profile and is refused directly with [`OcError::Load`], even with a custom store.
 
+mod admission;
 mod catalog;
 mod catalog_adapter;
 mod catalog_json;
@@ -62,6 +63,7 @@ mod state_wire;
 mod topology;
 mod watch;
 
+pub use admission::MAX_CXF_BYTES;
 pub use catalog::{
     CATALOG_JSON, CATALOG_SCHEMA_REVISION, CatalogDefault, CatalogEntry, CatalogParamDefault,
     CatalogPort, CatalogPortKind, CatalogPortNaming, CatalogValueKind, catalog, catalog_content_id,
