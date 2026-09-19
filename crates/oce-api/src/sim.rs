@@ -1,6 +1,7 @@
 //! Execution modes (`08` §5) and the post-tick [`Outputs`] snapshot. Both modes drive the *same*
-//! loaded model and frozen schedule (`01` §6); they differ only in who owns the time axis and what
-//! is collected. [`Engine::simulate`] is an offline horizon loop with a per-timestep trace + timing
+//! loaded model, frozen schedule and private HostTick evaluation core (`01` §6), but preserve
+//! distinct staging, restart, diagnostics and Store failure boundaries. [`Engine::simulate`] is
+//! an offline horizon loop with a per-timestep trace + timing
 //! metrics; [`Engine::step_realtime`] is one host-driven step with a verification report.
 //!
 //! Timing uses [`std::time::Instant`] (a monotonic timer, never a wall clock — no `Date`/`SystemTime`
@@ -581,7 +582,9 @@ impl<S: Store> Engine<S> {
     /// non-finite or when adding its nearest-nanosecond offset to the epoch falls outside the `u64`
     /// UNIX-nanosecond range.
     /// A failed store write leaves the completed tick in effect: model time and outputs have already
-    /// advanced and are not rolled back. Never panics.
+    /// advanced and are not rolled back. That `Err(Store)` carries no `StepReport`, collected
+    /// warnings, generation or receipt. Reconcile through latest outputs/watch and captured state;
+    /// retrying the same model time executes another transition. Never panics.
     pub fn step_realtime(&mut self, t_now: f64) -> Result<StepReport, OcError> {
         let epoch_unix_nanos = self
             .realtime_epoch_unix_nanos

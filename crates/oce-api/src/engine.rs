@@ -379,6 +379,20 @@ impl<S: Store> Engine<S> {
             return Err(OcError::ModelTimeUnrepresentable { now: t_now });
         }
         self.stage_store_inputs()?;
+        self.transition_host_tick(t_now, diag);
+        Ok(&self.outputs)
+    }
+
+    /// Infallible HostTick core after caller-specific preflight and input staging.
+    ///
+    /// Closes startup restore, evaluates once, and refreshes time/latest outputs. The caller
+    /// owns diagnostics; no sink, Store access, sequence or output projection is selected here.
+    /// Validated BUILD arenas and caller-checked representable time are required. No ordinary
+    /// recoverable failure remains in this seam; panic/allocation failure is not rollback.
+    pub(crate) fn transition_host_tick(&mut self, t_now: f64, diag: &dyn oce_blocks::Diagnostics) {
+        #[cfg(test)]
+        transition_tests::TRANSITIONS.with(|count| count.set(count.get() + 1));
+
         self.durable_restore_ready = false;
         {
             let mut ctx = EvalContext {
@@ -392,7 +406,6 @@ impl<S: Store> Engine<S> {
         }
         self.prev_t = Some(t_now);
         self.outputs.refresh_from(&self.state);
-        Ok(&self.outputs)
     }
 
     fn stage_store_inputs(&mut self) -> Result<(), OcError> {
@@ -576,3 +589,7 @@ pub(crate) fn out_connector_paths(model: &ModelGraph) -> Vec<String> {
 #[cfg(test)]
 #[path = "engine_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "shared_transition_tests.rs"]
+mod transition_tests;

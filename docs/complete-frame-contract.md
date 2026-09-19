@@ -2,9 +2,10 @@
 
 ## Status and authority
 
-This is the normative detail of PC-031 in [product contract revision 7](product-contract.md).
-**Preparation (PC-032) and native complete-frame execution (PC-033) are implemented.** PC-034/035
-remain future convenience migration/classification outcomes. The additive APIs below supply no
+This is the normative detail of PC-031 in [product contract revision 8](product-contract.md).
+**Preparation (PC-032), native complete-frame execution (PC-033), and shared evaluation-core reuse
+with explicit weaker convenience profiles (PC-034) are implemented.** PC-035 remains future for full
+legacy classification/guards. The additive APIs below supply no
 profile selector, wire format or stable-product guarantee. Execution maintainers own
 these semantics; host policy remains with the host integrator.
 
@@ -131,8 +132,14 @@ Diagnostic source semantics are preserved; no new instance-identity promise is i
 latency measurements are not deterministic replay identity.
 
 Producing or retaining an output frame means computation completed, not that an adapter persisted it
-or equipment received it. A future convenience write failure after commit is a delivery failure,
+or equipment received it. A realtime convenience write failure after commit is a delivery failure,
 not an ordinary refused native frame. It cannot retroactively roll back or relabel the transition.
+`step_realtime` preserves its compatible `Err(OcError::Store)` result: the error does **not** report
+a committed generation or carry a receipt, `StepReport`, or collected execution warnings. Hosts
+reconcile committed state through existing time guards, latest outputs, alias-aware `get_output` /
+`watch`, and checkpoint/snapshot surfaces, plus their own delivery records. Equal-time retry is
+another transition, not a safe retry of the external write. This replaces the planning acceptance
+phrase “write failure reports committed generation”; it does not introduce a public receipt API.
 
 ## Legacy paths and migration
 
@@ -149,11 +156,30 @@ Current `tick` and simulation use a no-op execution diagnostic sink; realtime co
 reports. Existing snapshots/checkpoints, output views and facade metadata remain valid within their
 own documented limits; they are not completed frames.
 
-The native preparation/execution APIs are additive. M02-PR04/05 address shared convenience
-semantics and legacy classification/guards. This document does not remove, retrofit or strengthen the
-current APIs. Future migration requires explicit acceptance evidence and compatibility accounting
+One private `transition_host_tick` now closes durable-restore readiness, calls `oce_graph::eval_tick`
+exactly once, updates `prev_t`, and refreshes mutable latest `Outputs`. Native `execute_frame` and
+legacy `tick_with` call it directly; simulation still calls `tick`, and realtime still calls
+`tick_with`. The caller supplies its existing diagnostic sink. No Store call, name resolution,
+sequence update, restart, fallible post-mutation stage, or result/trace/durable projection enters
+this seam. **This is evaluation-core reuse, not complete-frame preparation reuse.**
+
+The native preparation/execution APIs are additive. PC-034 covers only that shared core and this
+weaker-profile classification; PC-035 still addresses full legacy classification/guards. This
+document does not remove, retrofit or strengthen the current APIs. Future migration requires
+explicit acceptance evidence and compatibility accounting
 for any changed sparse, hold-last, duplicate, restart or post-tick-write behavior. Whole-horizon
 rollback and Store transactionality are not implied by reusing a native transition core.
+
+The [shared-core suite](../crates/oce-api/src/shared_transition_tests.rs) compares bit-exact state
+and values for fully driven Add and sampled UnitDelay prefixes started from equivalent seeds, and
+a rounded equal-time Pre grid. Expectations are hand-derived arithmetic/HostTick recurrences, not
+engine-blessed output or Modelica event-iteration oracles. Private seam-entry and instrumented block
+counters detect bypass and double evaluation/update; separate projection assertions retain lexical
+boundary outputs versus trace/durable connector order. Warning tests retain no-op tick/simulation
+and collected realtime/native behavior. Existing restart, first-closure and mid-run refusal tests
+remain required; the [write-failure controls](../crates/oce-api/src/tests/realtime_write_back_tests.rs)
+pin committed memory, reconciliation views and lost error-path reports. These subsets do not imply
+universal mode parity or whole-horizon atomicity.
 
 ## Host and downstream boundaries
 
@@ -329,4 +355,5 @@ is added to Engine; the caller owns retained outcomes, which remain unchanged by
 
 Compile-fail rustdoc pins nonserialization and single-use preparation. Exact public baselines and
 shape guards cover the additive API. Hosted architecture qualification and actual downstream host
-adoption remain separate; PC-034/035, stable release, persistence and equipment claims are not promoted.
+adoption remain separate. PC-034's bounded shared-core evidence is described above; PC-035, stable
+release, persistence and equipment claims are not promoted.

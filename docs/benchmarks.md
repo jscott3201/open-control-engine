@@ -70,6 +70,13 @@ Value cloning preserves bits and shares immutable String payloads. This budget i
 no shadow RunState, whole-engine copy or rollback. Existing evaluator allocations, notably wide
 Sort, remain a separate baseline cost; this fixture census does not erase them.
 
+The shared evaluation-core extraction based on `8ea3e8f38d580868179bfa985b443b71ca3b86c1`
+re-ran this exact census in debug and release on aarch64-apple-darwin/Rust 1.97.1: all five
+preparation/commit counts and byte budgets above remain unchanged. The latency test also ran,
+but these observations are not a speed gate or a before/after performance claim. The historical
+timing table above is not re-blessed. A private mode test additionally compares silent versus
+warning-producing tick/simulation allocation totals to detect accidental diagnostic collection.
+
 Run observations explicitly with `--success-output immediate --test-threads 1` on the focused
 `frame_observations` nextest binary. It is also included in the existing oce-api matrix test set;
 normal success-output suppression hides passing timing logs, but allocation checks still execute.
