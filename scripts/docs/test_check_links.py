@@ -21,6 +21,19 @@ CHECKER = Path(__file__).with_name("check_links.py")
 class GeneratedNavigationTests(unittest.TestCase):
     """Exercise the generated mdBook navigation."""
 
+    def test_staged_navigation_includes_complete_frame_contract_exactly_once(self) -> None:
+        """The linked frame contract is staged and has one navigation entry."""
+
+        with tempfile.TemporaryDirectory() as temporary:
+            staged, _, _ = docs_stage.stage_book(Path(temporary) / "book", "a" * 40)
+
+            summary = (staged / "src" / "SUMMARY.md").read_text(encoding="utf-8")
+            chapter = "- [Complete-frame contract](docs/complete-frame-contract.md)"
+            self.assertIn(chapter, summary.splitlines())
+            # Count the destination too: a duplicate under a different title is still a duplicate.
+            self.assertEqual(summary.count("(docs/complete-frame-contract.md)"), 1)
+            self.assertTrue((staged / "src" / "docs" / "complete-frame-contract.md").is_file())
+
     def test_authority_projection_navigation_and_inert_history(self):
         """Stage the index byte-exactly; history locators must not become links."""
         with tempfile.TemporaryDirectory() as temporary:

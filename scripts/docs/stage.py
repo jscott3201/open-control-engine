@@ -193,6 +193,7 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 
 - [Documentation map](docs/README.md)
 - [Product contract](docs/product-contract.md)
+- [Complete-frame contract](docs/complete-frame-contract.md)
 - [Authority claims and supersession](docs/authority-claims.md)
 - [Public surface contract](docs/public-surface-contract.md)
 - [Facade migration](docs/facade-migration.md)
