@@ -22,13 +22,13 @@ import check
 ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = (
     "product contract: OK\n"
-    "Document revision: 3\n"
-    "Grounding SHA: 97156fddc15e6f12650a060623c9cde84b98ecc9\n"
+    "Document revision: 4\n"
+    "Grounding SHA: dd8ae14c94e7ae393b889f9f0d643e5c30b0c7b8\n"
     "Requirements: 40\n"
-    "CURRENT: 24\n"
+    "CURRENT: 25\n"
     "HOST-OBLIGATION: 5\n"
-    "FUTURE: 11\n"
-    "Future outcomes: 11\n"
+    "FUTURE: 10\n"
+    "Future outcomes: 10\n"
     "Integration pointers: 6\n"
     "Scope: traceability only; semantics and host compliance are not proven.\n"
 )
@@ -40,7 +40,7 @@ class TraceabilityTests(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
         self.document = (ROOT / check.DOCUMENT).read_text()
-        paths: set[str] = set(check.POINTERS) | set(check.PENDING)
+        paths: set[str] = set(check.POINTERS) | set(check.PENDING) | {"crates/oce-cxf/src/lib.rs"}
         for match in check.LINK.finditer(self.document):
             parsed = check.urlsplit(match[2])
             if not parsed.scheme and parsed.path:
@@ -203,10 +203,10 @@ class TraceabilityTests(unittest.TestCase):
 
     def test_revision_grounding_and_change_record_are_required(self):
         for old, new, message in (
-            ("Document revision: 3", "Document revision: 0", "metadata:"),
-            ("Document revision: 3", "Document revision: 4", "current revision change record"),
-            ("Document revision: 3", "Document revision: 3\nDocument revision: 3", "metadata:"),
-            ("Grounding SHA: 97156fddc15e6f12650a060623c9cde84b98ecc9", "Grounding SHA: d2111be", "metadata:"),
+            ("Document revision: 4", "Document revision: 0", "metadata:"),
+            ("Document revision: 4", "Document revision: 5", "current revision change record"),
+            ("Document revision: 4", "Document revision: 4\nDocument revision: 4", "metadata:"),
+            ("Grounding SHA: dd8ae14c94e7ae393b889f9f0d643e5c30b0c7b8", "Grounding SHA: d2111be", "metadata:"),
             ("## Change record", "## History", "change record required"),
         ):
             with self.subTest(new=new):
@@ -255,7 +255,7 @@ class TraceabilityTests(unittest.TestCase):
         self.rejects("test not in range")
 
     def test_future_rows_require_assignments_not_existing_test_promises(self):
-        self.change_cell("PC-030", 7,
+        self.change_cell("PC-031", 7,
                          "test [retired_facade_symbols_are_absent]"
                          "(../crates/oce-api/tests/public_surface_contract.rs#L507-L512)")
         self.rejects("future outcome assignment required")
@@ -264,22 +264,22 @@ class TraceabilityTests(unittest.TestCase):
 
     def test_future_assignment_requires_named_local_outcome_and_description(self):
         for value, message in (
-            ("future [later](#bounded-admission-and-replacement)", "one named future assignment"),
-            ("future [M01-PR04](#complete-frame-contract)", "missing future description"),
-            ("future [M01-PR04](public-surface-contract.md)", "future outcome must be in this document"),
-            ("future [M01-PR04](#absent)", "missing heading"),
+            ("future [later](#complete-frame-contract)", "one named future assignment"),
+            ("future [M02-PR01](#complete-frame-prevalidation)", "missing future description"),
+            ("future [M02-PR01](public-surface-contract.md)", "future outcome must be in this document"),
+            ("future [M02-PR01](#absent)", "missing heading"),
         ):
             with self.subTest(value=value):
-                self.change_cell("PC-030", 7, value)
+                self.change_cell("PC-031", 7, value)
                 self.rejects(message)
-        self.write_document(self.document.replace("M01-PR04:", "M01-PR09:"))
+        self.write_document(self.document.replace("M02-PR01:", "M02-PR09:"))
         self.rejects("missing future description")
-        section = check.headings(self.document)["bounded-admission-and-replacement"]
-        self.write_document(self.document.replace(section, "M01-PR04: Later."))
+        section = check.headings(self.document)["complete-frame-contract"]
+        self.write_document(self.document.replace(section, "M02-PR01: Later."))
         self.rejects("missing future description")
 
     def test_duplicate_and_orphan_future_outcomes_refuse(self):
-        for suffix in ("M01-PR04: Duplicated outcome.", "M09-PR99: Orphan outcome."):
+        for suffix in ("M02-PR01: Duplicated outcome.", "M09-PR99: Orphan outcome."):
             self.write_document(self.document + "\n" + suffix + "\n")
             self.rejects("duplicate or orphan future outcome")
 
@@ -397,8 +397,12 @@ class TraceabilityTests(unittest.TestCase):
             "docs/product-contract.md", "scripts/product_contract/check.py",
             "scripts/product_contract/test_check.py", "docs/facade-migration.md",
             "crates/oce-api/tests/sim_assertions.rs",
+            "crates/oce-api/src/admission.rs", "crates/oce-api/src/tests/reload_tests.rs",
+            "crates/oce-api/tests/cxf_admission.rs",
         )))
-        for path in ("docs/facade-migration.md", "crates/oce-api/tests/sim_assertions.rs"):
+        for path in ("docs/facade-migration.md", "crates/oce-api/tests/sim_assertions.rs",
+                     "crates/oce-api/src/admission.rs", "crates/oce-api/src/tests/reload_tests.rs",
+                     "crates/oce-api/tests/cxf_admission.rs"):
             with self.subTest(path=path):
                 self.ignored = {path}
                 self.rejects("ignored or unverifiable")

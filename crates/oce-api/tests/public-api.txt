@@ -593,6 +593,7 @@ impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
+impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S> !core::panic::unwind_safe::RefUnwindSafe for oce_api::Engine<S>
 impl<S> !core::panic::unwind_safe::UnwindSafe for oce_api::Engine<S>
 impl<S> core::marker::Freeze for oce_api::Engine<S>
@@ -1049,6 +1050,7 @@ pub const fn oce_api::DiagnosticStage::rank(self) -> u8
 pub const oce_api::CATALOG_JSON: &str
 pub const oce_api::CATALOG_SCHEMA_REVISION: u32
 pub const oce_api::DIAGNOSTIC_SCHEMA_REVISION: u32
+pub const oce_api::MAX_CXF_BYTES: usize
 pub enum oce_api::AssertLevel
 pub enum oce_api::CatalogDefault
 pub enum oce_api::CatalogPortKind
@@ -1329,6 +1331,7 @@ pub fn oce_api::DiagnosticSubject::type_id(&self) -> core::any::TypeId
 pub fn oce_api::Engine<S>::borrow(&self) -> &T
 pub fn oce_api::Engine<S>::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::Engine<S>::checkpoint(&self) -> core::result::Result<oce_api::EngineCheckpoint, oce_api::OcError>
+pub fn oce_api::Engine<S>::cxf_byte_limit(&self) -> usize
 pub fn oce_api::Engine<S>::export_cxf(&self) -> core::result::Result<oce_api::ExportReport, oce_api::OcError>
 pub fn oce_api::Engine<S>::export_cxf_with_receipt(&self) -> core::result::Result<oce_api::ExportReceipt, oce_api::OperationFailure>
 pub fn oce_api::Engine<S>::from(T) -> T
@@ -1349,6 +1352,7 @@ pub fn oce_api::Engine<S>::restore_checkpoint(&mut self, &oce_api::EngineCheckpo
 pub fn oce_api::Engine<S>::restore_state(&mut self, &oce_api::EngineStateSnapshot) -> core::result::Result<(), oce_api::OcError>
 pub fn oce_api::Engine<S>::resume(&mut self) -> core::result::Result<(), oce_api::OcError>
 pub fn oce_api::Engine<S>::schedule(&self) -> &oce_graph::Schedule
+pub fn oce_api::Engine<S>::set_cxf_byte_limit(&mut self, usize) -> core::result::Result<(), oce_api::OcError>
 pub fn oce_api::Engine<S>::set_input(&mut self, &str, oce_model::Value) -> core::result::Result<(), oce_api::OcError>
 pub fn oce_api::Engine<S>::set_param(&mut self, &str, oce_model::Value) -> core::result::Result<(), oce_api::OcError>
 pub fn oce_api::Engine<S>::set_realtime_epoch_unix_nanos(&mut self, u64)
@@ -1956,6 +1960,12 @@ pub oce_api::LoadReport::stateful_blocks: usize
 pub oce_api::LoadReport::warnings: alloc::vec::Vec<oce_diag::Diagnostic>
 pub oce_api::OcError::Build(oce_graph::BuildError)
 pub oce_api::OcError::Cxf(oce_cxf::CxfError)
+pub oce_api::OcError::CxfByteLimitTooLarge
+pub oce_api::OcError::CxfByteLimitTooLarge::actual_bytes: usize
+pub oce_api::OcError::CxfByteLimitTooLarge::limit_bytes: usize
+pub oce_api::OcError::CxfTooLarge
+pub oce_api::OcError::CxfTooLarge::actual_bytes: usize
+pub oce_api::OcError::CxfTooLarge::limit_bytes: usize
 pub oce_api::OcError::Flatten(oce_flatten::FlattenError)
 pub oce_api::OcError::InputType(alloc::string::String)
 pub oce_api::OcError::Load

@@ -38,6 +38,8 @@ pub(crate) struct StoreInputHandle {
 /// in-crate test harness read engine state directly, but nothing escapes the crate.
 pub struct Engine<S: Store = MemStore> {
     pub(crate) store: Arc<S>,
+    /// Host admission policy, independent of the loaded model and continuation state.
+    pub(crate) cxf_byte_limit: usize,
     /// The flat executable truth (D1), frozen at load.
     pub(crate) model: Arc<ModelGraph>,
     /// The frozen Kahn schedule (D6; store-free).
@@ -92,6 +94,7 @@ impl<S: Store> Engine<S> {
     pub fn with_store(store: Arc<S>) -> Self {
         Self {
             store,
+            cxf_byte_limit: crate::MAX_CXF_BYTES,
             model: Arc::new(ModelGraph::new()),
             schedule: Schedule::default(),
             blocks: Vec::new(),
@@ -197,6 +200,8 @@ impl<S: Store> Engine<S> {
             self.store.save_model(&resolved_model)?;
             capture.enter(DiagnosticStage::StoreInputs);
             let store_inputs = resolve_store_inputs(self.store.as_ref(), &io)?;
+            // In-memory commit boundary: every ordinary fallible stage is complete. Store
+            // effects above are NOT rolled back, even if one of those calls returned an error.
             self.model = Arc::new(model);
             self.blocks = blocks;
             self.schedule = schedule;
@@ -227,9 +232,17 @@ impl<S: Store> Engine<S> {
     /// top-composite `@id` carried by the resolver side-channel. Replaces all per-run state, so
     /// calling it again reloads a fresh model.
     ///
+    /// The serialized length is checked against [`Self::cxf_byte_limit`] before parsing,
+    /// Store calls or engine mutation. On any returned error the prior in-memory executable
+    /// and run image remain unchanged. Store recovery, model saves and handle resolution
+    /// may already have external effects: the host owns compensation, and old external
+    /// handle validity is not promised. This is not a distributed transaction or a panic/
+    /// allocation-failure recovery guarantee. Successful reload replaces model-bound state
+    /// and caches; prior ephemeral model references are invalid under their existing contract.
+    ///
     /// # Errors
     /// Returns [`OcError`] on any ingest/validation/build/store failure (never panics; R-ERR-1):
-    /// [`OcError::Cxf`], [`OcError::Flatten`], [`OcError::Validate`], [`OcError::Build`],
+    /// [`OcError::CxfTooLarge`], [`OcError::Cxf`], [`OcError::Flatten`], [`OcError::Validate`], [`OcError::Build`],
     /// [`OcError::Load`], or [`OcError::Store`]. If a completed stage returned diagnostics before a
     /// later failure, [`OcError::LoadContext`] retains them and exposes the terminal variant through
     /// [`std::error::Error::source`].
@@ -263,6 +276,12 @@ impl<S: Store> Engine<S> {
         bytes: &[u8],
         capture: &mut DiagnosticCapture,
     ) -> Result<LoadReport, OcError> {
+        if bytes.len() > self.cxf_byte_limit {
+            return Err(OcError::CxfTooLarge {
+                actual_bytes: bytes.len(),
+                limit_bytes: self.cxf_byte_limit,
+            });
+        }
         // 1. Resolve CXF → flat, ground ModelGraph (+ warning-only report; errors are Err here).
         let (model, report) = oce_cxf::import_cxf(bytes, &oce_cxf::ResolveOptions::default())?;
         let model_iri = report.model_iri.clone();

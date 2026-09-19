@@ -34,6 +34,23 @@ impl std::error::Error for LoadErrorContext {
 #[derive(thiserror::Error, Debug)]
 #[non_exhaustive]
 pub enum OcError {
+    /// Serialized CXF exceeded the engine's byte limit, before parsing or Store calls.
+    /// Carries counts only, never input content; has no source or structured diagnostics.
+    #[error("serialized CXF size {actual_bytes} bytes exceeds limit {limit_bytes} bytes")]
+    CxfTooLarge {
+        /// Length of the supplied serialized byte slice.
+        actual_bytes: usize,
+        /// Effective per-engine admission limit in bytes.
+        limit_bytes: usize,
+    },
+    /// A requested admission limit exceeded the supported maximum; configuration is unchanged.
+    #[error("CXF byte limit {actual_bytes} exceeds supported maximum {limit_bytes}")]
+    CxfByteLimitTooLarge {
+        /// Requested configuration value in bytes.
+        actual_bytes: usize,
+        /// Maximum supported configuration value in bytes.
+        limit_bytes: usize,
+    },
     /// A CXF ingest failure.
     #[error("CXF ingest error: {0}")]
     Cxf(#[from] oce_cxf::CxfError),

@@ -33,7 +33,8 @@ query is delegated, even with a capable adapter. This is not an experimental sup
 The custom-adapter regression checks the None result, specific refusal, no store calls and no engine
 mutation. Existing error detail text is retained for compatibility, not promoted into an API schema.
 
-Load/store side effects still precede engine-field commit; replacement is not transactional.
+Load/store side effects still precede engine-field commit; only the in-memory executable/run image
+has the [replacement guarantee](host-responsibilities.md#load-replacement-and-the-store-compensation-boundary).
 Simulation still preflights collection/constant/first-closure lists before restart, preserves the
 entry connector image, and can leave prior ticks and prefix staging after later failures. Realtime
 still validates epoch before tick and writes afterward without rollback. State-wire bytes, behavioral
@@ -91,3 +92,22 @@ No source/pin is advanced in a real consuming repository. Ordinary tick/sim warn
 realtime failure delivery, existing load/export signatures and constructible legacy reports remain.
 `StepReport.asserts` accurately documents warnings from all native classes, including Assert;
 its Warning-only semantics and repeated-false behavior do not change.
+
+## Bounded serialized load adoption
+
+Existing load signatures remain. Both raw `load_cxf` and `load_cxf_with_receipt` now refuse byte
+slices above 8 MiB before deserialization, with the additive `OcError::CxfTooLarge` containing
+`actual_bytes` and `limit_bytes` only. The receipt stage is `Import`; diagnostic order and sources
+below the cap remain unchanged. Inputs formerly accepted above the cap are deliberately no longer
+supported; widening is not an escape hatch. Hosts retain transport caps and trust isolation.
+
+Read the effective policy with `Engine::cxf_byte_limit()` and optionally set a smaller value with
+`set_cxf_byte_limit(bytes)`. The inclusive allowed range is `0..=MAX_CXF_BYTES`; values above it
+return the typed `OcError::CxfByteLimitTooLarge`, leaving the engine unchanged. Configuration is
+per-engine, may be changed within that range, persists across reload and is not encoded in snapshots.
+
+Failed ordinary reloads preserve the old in-memory run image, but Store effects are not rolled back
+and old external handles may no longer be valid. Plan adapter compensation before continuing control.
+Successful reload requires refreshing model-local IDs, IO views and other ephemeral references as
+before. No Store trait, catalog/descriptor identity, state bytes, HostTick, package or dependency
+changes accompany admission. No downstream source or pin migration is performed here.

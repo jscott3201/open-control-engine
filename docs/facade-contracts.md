@@ -62,7 +62,7 @@ Producer stages are explicit boundary labels, not inferred from codes. Revision-
 
 | Rank | Stage |
 | --- | --- |
-| 0 | Import: parse/resolution, including the CXF resolver's internal passes |
+| 0 | Import: serialized admission, parse/resolution, including the CXF resolver's internal passes |
 | 1 | Flatten |
 | 2 | AttributeUnification |
 | 3 | Validation |
@@ -103,8 +103,10 @@ they do not promise new JSON wire codecs or schema-driven runtime validation.
 
 Warning collection remains confined to `step_realtime`; ordinary tick and simulation keep no-op
 sinks. Realtime writes follow the tick and may fail before a collected report is delivered.
-Load/store side effects and commit ordering are unchanged. This adds no rollback, admission bounds,
-warn-once, escalation, scheduler, equipment policy or safety guarantee.
+Load/store side effects and commit ordering are unchanged. These descriptors add no rollback,
+warn-once, escalation, scheduler, equipment policy or safety guarantee. The separately documented
+[serialized admission and replacement policy](facade-migration.md#bounded-serialized-load-adoption)
+uses `Import` for byte refusals without adding/reordering stages or changing descriptor bytes.
 
 ## Consumer migration boundary
 
