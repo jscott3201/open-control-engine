@@ -81,7 +81,7 @@ pub use diagnostics::{
 pub use engine::Engine;
 pub use error::{LoadErrorContext, OcError, OcResult};
 pub use export::{ContentIdError, ExportReport};
-pub use frame::PreparedInputFrame;
+pub use frame::{CompletedFrame, PreparedInputFrame};
 pub use frame_inputs::InputDefinition;
 pub use io::{
     IoClass, IoInventory, IoSummary, PhysicalKind, PointDirection, PointInfo, PointValueType,

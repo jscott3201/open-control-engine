@@ -32,7 +32,11 @@ PENDING = frozenset((DOCUMENT, "scripts/product_contract/check.py",
                         "crates/oce-api/tests/legacy_frame_boundary.rs",
                         "crates/oce-api/src/frame.rs",
                         "crates/oce-api/src/frame_tests.rs",
-                        "crates/oce-api/tests/prepare_frame_preservation.rs"))
+                        "crates/oce-api/tests/prepare_frame_preservation.rs",
+                        "crates/oce-api/src/frame_commit_tests.rs",
+                        "crates/oce-api/tests/execute_frame.rs",
+                        "crates/oce-api/tests/execute_frame_preservation.rs",
+                        "crates/oce-api/tests/frame_observations.rs"))
 POINTERS = ("README.md", "AGENTS.md", "TESTING.md", "docs/architecture.md",
             "docs/host-responsibilities.md", "docs/README.md")
 HEADER = "| ID | Status | Actor | Owner | Requirement | Limitation | Grounding | Evidence |"

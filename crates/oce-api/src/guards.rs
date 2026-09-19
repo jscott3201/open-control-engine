@@ -35,6 +35,23 @@ fn needs_send_sync<T: Send + Sync + ?Sized>() {}
 /// `T: Clone` (R-API-PY-3: every type that crosses to Python is owned-convertible).
 fn needs_clone<T: Clone>() {}
 
+/// Opaque preparations are moved, while completed results are independently owned and immutable.
+#[allow(clippy::type_complexity)]
+fn _assert_complete_frame_shapes() {
+    needs_send_sync::<crate::PreparedInputFrame>();
+    needs_send_sync::<crate::CompletedFrame>();
+    needs_clone::<crate::CompletedFrame>();
+    let _: fn(&Engine) -> Result<Vec<crate::InputDefinition>, OcError> = Engine::input_definitions;
+    let _: fn(&Engine, f64, &[(&str, Value)]) -> Result<crate::PreparedInputFrame, OcError> =
+        Engine::prepare_frame;
+    let _: fn(&mut Engine, crate::PreparedInputFrame) -> Result<crate::CompletedFrame, OcError> =
+        Engine::execute_frame;
+    let _: fn(&crate::CompletedFrame) -> u64 = crate::CompletedFrame::sequence;
+    let _: fn(&crate::CompletedFrame) -> f64 = crate::CompletedFrame::time;
+    let _: fn(&crate::CompletedFrame) -> &[(String, Value)] = crate::CompletedFrame::outputs;
+    let _: fn(&crate::CompletedFrame) -> &[AssertEvent] = crate::CompletedFrame::diagnostics;
+}
+
 // ---- R-API-PY-1 — no generic `#[pyclass]`: the binding wraps the concrete `Engine<MemStore>` ----
 
 /// R-API-PY-1: the PyO3 binding wraps a single concrete `PyEngine(Engine<MemStore>)`, never

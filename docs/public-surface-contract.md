@@ -62,11 +62,19 @@ remains supported through `Engine::in_memory`.
 
 Complete-frame **preparation** (`Engine::input_definitions`, `Engine::prepare_frame`, owned
 `InputDefinition`, opaque `PreparedInputFrame`, and the explicit `OcError` causes) is additive
-stable-candidate facade surface, not complete-frame execution or a stable release. The artifact
+stable-candidate facade surface, not a stable release. The artifact
 has no serialization or exposed resolved/generation internals. Its compatibility preflight stays
-crate-private for the future commit path. The [frame contract](complete-frame-contract.md#current-preparation-api)
+crate-private and is reused by execution. The [frame contract](complete-frame-contract.md#current-preparation-api)
 owns ordering, domains, bounded errors and load/dirty-resume invalidation; the
 [adoption guide](facade-contracts.md#complete-frame-preparation-adoption) preserves legacy behavior.
+
+`Engine::execute_frame`, immutable owned `CompletedFrame` and `OcError::FrameSequenceExhausted`
+are likewise additive stable-candidate surface. The plan is consumed; the result exposes only model
+time, engine-lifetime accepted sequence, lexical boundary `(String, Value)` pairs and Warning
+diagnostics through read-only accessors. No mutable Outputs, internal connector indices or public
+context token escapes. Neither frame type is serializable. Reload/resume/restore never reset the
+sequence, which is correlation, not replay or deployment authority. See the
+[execution contract](complete-frame-contract.md#current-execution-api). Legacy surfaces are unchanged.
 
 `Engine::schedule` is implementation leakage. It stays source- and binary-shape unchanged for now;
 removal requires a later coordinated change with consumers and tests.

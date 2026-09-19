@@ -406,8 +406,8 @@ pub enum AssertLevel {
 }
 
 #[derive(Default)]
-struct AssertCollector {
-    events: RefCell<Vec<AssertEvent>>,
+pub(crate) struct AssertCollector {
+    pub(crate) events: RefCell<Vec<AssertEvent>>,
 }
 
 impl Diagnostics for AssertCollector {

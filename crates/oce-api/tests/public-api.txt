@@ -31,6 +31,7 @@ impl core::clone::Clone for oce_api::CatalogPortNaming
 impl core::clone::Clone for oce_api::CatalogRule
 impl core::clone::Clone for oce_api::CatalogValueKind
 impl core::clone::Clone for oce_api::CollectSpec
+impl core::clone::Clone for oce_api::CompletedFrame
 impl core::clone::Clone for oce_api::ContractDescriptor
 impl core::clone::Clone for oce_api::ContractDomain
 impl core::clone::Clone for oce_api::DeclaredOutput
@@ -144,6 +145,7 @@ impl core::fmt::Debug for oce_api::CatalogPortNaming
 impl core::fmt::Debug for oce_api::CatalogRule
 impl core::fmt::Debug for oce_api::CatalogValueKind
 impl core::fmt::Debug for oce_api::CollectSpec
+impl core::fmt::Debug for oce_api::CompletedFrame
 impl core::fmt::Debug for oce_api::ContentIdError
 impl core::fmt::Debug for oce_api::ContractDescriptor
 impl core::fmt::Debug for oce_api::ContractDomain
@@ -217,6 +219,7 @@ impl core::marker::Freeze for oce_api::CatalogPortNaming
 impl core::marker::Freeze for oce_api::CatalogRule
 impl core::marker::Freeze for oce_api::CatalogValueKind
 impl core::marker::Freeze for oce_api::CollectSpec
+impl core::marker::Freeze for oce_api::CompletedFrame
 impl core::marker::Freeze for oce_api::ContentIdError
 impl core::marker::Freeze for oce_api::ContractDescriptor
 impl core::marker::Freeze for oce_api::ContractDomain
@@ -269,6 +272,7 @@ impl core::marker::Send for oce_api::CatalogPortNaming
 impl core::marker::Send for oce_api::CatalogRule
 impl core::marker::Send for oce_api::CatalogValueKind
 impl core::marker::Send for oce_api::CollectSpec
+impl core::marker::Send for oce_api::CompletedFrame
 impl core::marker::Send for oce_api::ContentIdError
 impl core::marker::Send for oce_api::ContractDescriptor
 impl core::marker::Send for oce_api::ContractDomain
@@ -347,6 +351,7 @@ impl core::marker::Sync for oce_api::CatalogPortNaming
 impl core::marker::Sync for oce_api::CatalogRule
 impl core::marker::Sync for oce_api::CatalogValueKind
 impl core::marker::Sync for oce_api::CollectSpec
+impl core::marker::Sync for oce_api::CompletedFrame
 impl core::marker::Sync for oce_api::ContentIdError
 impl core::marker::Sync for oce_api::ContractDescriptor
 impl core::marker::Sync for oce_api::ContractDomain
@@ -399,6 +404,7 @@ impl core::marker::Unpin for oce_api::CatalogPortNaming
 impl core::marker::Unpin for oce_api::CatalogRule
 impl core::marker::Unpin for oce_api::CatalogValueKind
 impl core::marker::Unpin for oce_api::CollectSpec
+impl core::marker::Unpin for oce_api::CompletedFrame
 impl core::marker::Unpin for oce_api::ContentIdError
 impl core::marker::Unpin for oce_api::ContractDescriptor
 impl core::marker::Unpin for oce_api::ContractDomain
@@ -451,6 +457,7 @@ impl core::marker::UnsafeUnpin for oce_api::CatalogPortNaming
 impl core::marker::UnsafeUnpin for oce_api::CatalogRule
 impl core::marker::UnsafeUnpin for oce_api::CatalogValueKind
 impl core::marker::UnsafeUnpin for oce_api::CollectSpec
+impl core::marker::UnsafeUnpin for oce_api::CompletedFrame
 impl core::marker::UnsafeUnpin for oce_api::ContentIdError
 impl core::marker::UnsafeUnpin for oce_api::ContractDescriptor
 impl core::marker::UnsafeUnpin for oce_api::ContractDomain
@@ -503,6 +510,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogPortNaming
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogRule
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogValueKind
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CollectSpec
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CompletedFrame
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ContentIdError
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ContractDescriptor
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ContractDomain
@@ -550,6 +558,7 @@ impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogPortNaming
 impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogRule
 impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogValueKind
 impl core::panic::unwind_safe::UnwindSafe for oce_api::CollectSpec
+impl core::panic::unwind_safe::UnwindSafe for oce_api::CompletedFrame
 impl core::panic::unwind_safe::UnwindSafe for oce_api::ContentIdError
 impl core::panic::unwind_safe::UnwindSafe for oce_api::ContractDescriptor
 impl core::panic::unwind_safe::UnwindSafe for oce_api::ContractDomain
@@ -586,6 +595,7 @@ impl core::panic::unwind_safe::UnwindSafe for oce_api::Topology
 impl core::panic::unwind_safe::UnwindSafe for oce_api::TopologyBlock
 impl core::panic::unwind_safe::UnwindSafe for oce_api::TopologyConnection
 impl core::panic::unwind_safe::UnwindSafe for oce_api::TrendCfg
+impl oce_api::CompletedFrame
 impl oce_api::DiagnosticKey
 impl oce_api::DiagnosticReceipt
 impl oce_api::DiagnosticRecord
@@ -630,6 +640,7 @@ impl<T, U> core::convert::Into<U> for oce_api::CatalogPortNaming where U: core::
 impl<T, U> core::convert::Into<U> for oce_api::CatalogRule where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::CatalogValueKind where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::CollectSpec where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::CompletedFrame where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::ContentIdError where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::ContractDescriptor where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::ContractDomain where U: core::convert::From<T>
@@ -683,6 +694,7 @@ impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogPortNaming where U: cor
 impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogRule where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogValueKind where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::CollectSpec where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::CompletedFrame where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::ContentIdError where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::ContractDescriptor where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::ContractDomain where U: core::convert::Into<T>
@@ -736,6 +748,7 @@ impl<T, U> core::convert::TryInto<U> for oce_api::CatalogPortNaming where U: cor
 impl<T, U> core::convert::TryInto<U> for oce_api::CatalogRule where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::CatalogValueKind where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::CollectSpec where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::CompletedFrame where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::ContentIdError where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::ContractDescriptor where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::ContractDomain where U: core::convert::TryFrom<T>
@@ -789,6 +802,7 @@ impl<T> alloc::borrow::ToOwned for oce_api::CatalogPortNaming where T: core::clo
 impl<T> alloc::borrow::ToOwned for oce_api::CatalogRule where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::CatalogValueKind where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::CollectSpec where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::CompletedFrame where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::ContractDescriptor where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::ContractDomain where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::DeclaredOutput where T: core::clone::Clone
@@ -836,6 +850,7 @@ impl<T> core::any::Any for oce_api::CatalogPortNaming where T: 'static + ?core::
 impl<T> core::any::Any for oce_api::CatalogRule where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::CatalogValueKind where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::CollectSpec where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::CompletedFrame where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::ContentIdError where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::ContractDescriptor where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::ContractDomain where T: 'static + ?core::marker::Sized
@@ -889,6 +904,7 @@ impl<T> core::borrow::Borrow<T> for oce_api::CatalogPortNaming where T: ?core::m
 impl<T> core::borrow::Borrow<T> for oce_api::CatalogRule where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::CatalogValueKind where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::CollectSpec where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::CompletedFrame where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::ContentIdError where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::ContractDescriptor where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::ContractDomain where T: ?core::marker::Sized
@@ -942,6 +958,7 @@ impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogPortNaming where T: ?core
 impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogRule where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogValueKind where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::CollectSpec where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::CompletedFrame where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::ContentIdError where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::ContractDescriptor where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::ContractDomain where T: ?core::marker::Sized
@@ -995,6 +1012,7 @@ impl<T> core::clone::CloneToUninit for oce_api::CatalogPortNaming where T: core:
 impl<T> core::clone::CloneToUninit for oce_api::CatalogRule where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::CatalogValueKind where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::CollectSpec where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::CompletedFrame where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::ContractDescriptor where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::ContractDomain where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::DeclaredOutput where T: core::clone::Clone
@@ -1037,6 +1055,7 @@ impl<T> core::convert::From<T> for oce_api::CatalogPortNaming
 impl<T> core::convert::From<T> for oce_api::CatalogRule
 impl<T> core::convert::From<T> for oce_api::CatalogValueKind
 impl<T> core::convert::From<T> for oce_api::CollectSpec
+impl<T> core::convert::From<T> for oce_api::CompletedFrame
 impl<T> core::convert::From<T> for oce_api::ContentIdError
 impl<T> core::convert::From<T> for oce_api::ContractDescriptor
 impl<T> core::convert::From<T> for oce_api::ContractDomain
@@ -1230,6 +1249,21 @@ pub fn oce_api::CollectSpec::to_owned(&self) -> T
 pub fn oce_api::CollectSpec::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::CollectSpec::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::CollectSpec::type_id(&self) -> core::any::TypeId
+pub fn oce_api::CompletedFrame::borrow(&self) -> &T
+pub fn oce_api::CompletedFrame::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::CompletedFrame::clone(&self) -> oce_api::CompletedFrame
+pub fn oce_api::CompletedFrame::clone_into(&self, &mut T)
+pub fn oce_api::CompletedFrame::diagnostics(&self) -> &[oce_api::AssertEvent]
+pub fn oce_api::CompletedFrame::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CompletedFrame::from(T) -> T
+pub fn oce_api::CompletedFrame::into(self) -> U
+pub fn oce_api::CompletedFrame::outputs(&self) -> &[(alloc::string::String, oce_model::Value)]
+pub fn oce_api::CompletedFrame::sequence(&self) -> u64
+pub fn oce_api::CompletedFrame::time(&self) -> f64
+pub fn oce_api::CompletedFrame::to_owned(&self) -> T
+pub fn oce_api::CompletedFrame::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::CompletedFrame::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::CompletedFrame::type_id(&self) -> core::any::TypeId
 pub fn oce_api::ContentIdError::borrow(&self) -> &T
 pub fn oce_api::ContentIdError::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::ContentIdError::eq(&self, &oce_api::ContentIdError) -> bool
@@ -1366,6 +1400,7 @@ pub fn oce_api::Engine<S>::borrow(&self) -> &T
 pub fn oce_api::Engine<S>::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::Engine<S>::checkpoint(&self) -> core::result::Result<oce_api::EngineCheckpoint, oce_api::OcError>
 pub fn oce_api::Engine<S>::cxf_byte_limit(&self) -> usize
+pub fn oce_api::Engine<S>::execute_frame(&mut self, oce_api::PreparedInputFrame) -> core::result::Result<oce_api::CompletedFrame, oce_api::OcError>
 pub fn oce_api::Engine<S>::export_cxf(&self) -> core::result::Result<oce_api::ExportReport, oce_api::OcError>
 pub fn oce_api::Engine<S>::export_cxf_with_receipt(&self) -> core::result::Result<oce_api::ExportReceipt, oce_api::OperationFailure>
 pub fn oce_api::Engine<S>::from(T) -> T
@@ -2031,6 +2066,7 @@ pub oce_api::OcError::FrameMissingInput(alloc::string::String)
 pub oce_api::OcError::FrameNotInput
 pub oce_api::OcError::FrameNotInput::bytes: usize
 pub oce_api::OcError::FrameNotInput::prefix: alloc::string::String
+pub oce_api::OcError::FrameSequenceExhausted
 pub oce_api::OcError::FrameUnknownInput
 pub oce_api::OcError::FrameUnknownInput::bytes: usize
 pub oce_api::OcError::FrameUnknownInput::prefix: alloc::string::String
@@ -2118,6 +2154,7 @@ pub struct oce_api::AssertEvent
 pub struct oce_api::CatalogEntry
 pub struct oce_api::CatalogParamDefault
 pub struct oce_api::CatalogPort
+pub struct oce_api::CompletedFrame
 pub struct oce_api::ContractDescriptor
 pub struct oce_api::DiagnosticKey
 pub struct oce_api::DiagnosticReceipt
@@ -2175,6 +2212,9 @@ pub type oce_api::CatalogValueKind::Owned = T
 pub type oce_api::CollectSpec::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::CollectSpec::Error = core::convert::Infallible
 pub type oce_api::CollectSpec::Owned = T
+pub type oce_api::CompletedFrame::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::CompletedFrame::Error = core::convert::Infallible
+pub type oce_api::CompletedFrame::Owned = T
 pub type oce_api::ContentIdError::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::ContentIdError::Error = core::convert::Infallible
 pub type oce_api::ContractDescriptor::Error = <U as core::convert::TryFrom<T>>::Error
@@ -2302,6 +2342,7 @@ pub unsafe fn oce_api::CatalogPortNaming::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::CatalogRule::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::CatalogValueKind::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::CollectSpec::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::CompletedFrame::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::ContractDescriptor::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::ContractDomain::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::DeclaredOutput::clone_to_uninit(&self, *mut u8)
