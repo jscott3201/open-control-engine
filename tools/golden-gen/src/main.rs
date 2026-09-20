@@ -13,6 +13,8 @@
 mod csv;
 mod discrete_sources;
 mod integers_conversions;
+#[cfg(test)]
+mod integer_domain_tests;
 mod integers_stage;
 mod logical;
 mod logical_proof;
@@ -486,11 +488,6 @@ fn uses_aligned_tolerance_math(g: &Golden) -> bool {
 
 fn assert_integer_csv_cells_are_exact(goldens: &[Golden]) {
     for golden in goldens {
-        // This conversion intentionally probes i64 -> f64 rounding beyond 2^53; its provenance
-        // documents the CSV input loss and the unit tier pins the exact integer source behavior.
-        if golden.class_path == "CDL.Conversions.IntegerToReal" {
-            continue;
-        }
         for (idx, sample) in golden.samples.iter().enumerate() {
             assert_integer_sample_is_csv_safe(sample, golden, golden.signal, idx);
         }
@@ -512,6 +509,17 @@ fn assert_integer_sample_is_csv_safe(
         return;
     };
     const MAX_EXACT_CSV_INTEGER: i64 = 9_007_199_254_740_992;
+    // Portable CDL evidence uses the common signed-32-bit domain, not the engine's wider
+    // implementation carrier. Check before encoding: f64 CSV would erase e.g. 2^53+1.
+    // The recommendation is a minimum implementation range, not a ban on wider internal types.
+    if golden.class_path.starts_with("CDL.") {
+        assert!(
+            i32::try_from(*value).is_ok(),
+            "{} {} sample {sample_idx} integer {value} is outside the portable CDL i32 range",
+            golden.class_path,
+            signal
+        );
+    }
     assert!(
         *value >= -MAX_EXACT_CSV_INTEGER && *value <= MAX_EXACT_CSV_INTEGER,
         "{} {} sample {sample_idx} integer {value} is outside the exact f64 CSV range",

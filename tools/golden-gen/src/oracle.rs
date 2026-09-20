@@ -8,7 +8,7 @@
 pub enum ValueKind {
     /// Real-valued signal, f64 payload, banded/bit-exact compare.
     Real,
-    /// Integer-valued signal (i64), encoded exactly as f64 within +/-2^53, exact compare.
+    /// Integer-valued signal held in i64. CDL fixtures stay in i32; CSV must encode it exactly.
     Integer,
     /// Boolean-valued signal, encoded 0.0 / 1.0, exact compare.
     Boolean,
@@ -46,8 +46,8 @@ impl Sample {
     pub fn encode(self) -> f64 {
         match self {
             Sample::Real(x) => x,
-            // Exactness within +/-2^53 is guaranteed by the chosen oracle traces; the one
-            // intentional 2^53+1 IntegerToReal probe is emitted as a Real sample, not Integer.
+            // The pre-serialization guard checks every Integer, including conversion inputs.
+            // CDL fixtures stay in i32; other references must fit the exact +/-2^53 CSV range.
             Sample::Integer(i) => i as f64,
             Sample::Boolean(b) => {
                 if b {

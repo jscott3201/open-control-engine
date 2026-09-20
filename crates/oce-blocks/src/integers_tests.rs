@@ -1,5 +1,7 @@
 //! Exact algebraic tests for `CDL.Integers` blocks.
 //! Expected values are derived directly from `_spec/03` §4.2–§4.4 and compared bit-exactly.
+//! Values outside i32 and wrapping cases exercise the implementation's i64 carrier, not
+//! portable CDL/Modelica Integer conformance.
 
 use std::sync::Arc;
 
@@ -91,6 +93,26 @@ fn integer_arithmetic_hand_derived_goldens_and_wrap_edges() {
     assert_one_out(&IntegerAddParameter { p: 1 }, &[i(i64::MAX)], i(i64::MIN));
     assert_one_out(&IntegerMax, &[i(i64::MIN), i(0)], i(0));
     assert_one_out(&IntegerMin, &[i(i64::MIN), i(0)], i(i64::MIN));
+}
+
+#[test]
+fn implementation_abs_and_arithmetic_retain_wide_integer_stress_without_csv() {
+    for (input, expected) in [
+        (-9_007_199_254_740_993, 9_007_199_254_740_993),
+        (-9_007_199_254_740_992, 9_007_199_254_740_992),
+        (-4_503_599_627_370_496, 4_503_599_627_370_496),
+        (i64::MIN + 1, i64::MAX),
+        (i64::MIN, i64::MIN),
+    ] {
+        assert_one_out(&IntegerAbs, &[i(input)], i(expected));
+    }
+    // These exceed the portable result domain despite having i32 operands.
+    assert_one_out(&IntegerMultiply, &[i(46_341), i(46_341)], i(2_147_488_281));
+    assert_one_out(
+        &IntegerSubtract,
+        &[i(2_147_483_647), i(-1)],
+        i(2_147_483_648),
+    );
 }
 
 #[test]
