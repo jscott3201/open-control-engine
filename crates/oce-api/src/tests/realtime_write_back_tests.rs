@@ -333,3 +333,89 @@ fn failed_store_write_returns_typed_error_after_tick_remains_applied() {
         })
     ));
 }
+
+#[test]
+fn failed_writes_preserve_committed_pre_memory_and_reconcilable_output_views() {
+    let store = Arc::new(ProbeStore::new(WriteBehavior::Fail));
+    let mut engine = Engine::with_store(store);
+    let bytes = include_bytes!("../../tests/fixtures/frame_pre.jsonld");
+    engine.load_cxf(bytes).unwrap();
+    engine.set_realtime_epoch_unix_nanos(EPOCH);
+    let startup = engine.state_snapshot().unwrap();
+    for expected in [false, true] {
+        let error = engine.step_realtime(2.0).unwrap_err();
+        assert!(
+            matches!(error, OcError::Store(StoreError::Durability(ref detail))
+            if detail == "injected write failure")
+        );
+        assert_eq!(engine.prev_t.map(f64::to_bits), Some(2.0_f64.to_bits()));
+        assert_eq!(engine.state.t.to_bits(), 2.0_f64.to_bits());
+        assert_eq!(engine.accepted_frame_sequence, 0);
+        assert!(!engine.durable_restore_ready);
+        let value = Value::Boolean(expected);
+        assert!(engine.get_output("urn:pre:a").unwrap().bit_eq(&value));
+        assert!(engine.watch(&["urn:pre:z"]).unwrap()[0].1.bit_eq(&value));
+        assert!(
+            engine
+                .outputs()
+                .to_map()
+                .iter()
+                .any(|(key, v)| key == "urn:pre:memory.y" && v.bit_eq(&value))
+        );
+        let snapshot = engine.state_snapshot().unwrap();
+        assert_ne!(snapshot.as_bytes(), startup.as_bytes());
+        let mut restored = Engine::in_memory();
+        restored.load_cxf(bytes).unwrap();
+        restored.restore_state(&snapshot).unwrap();
+        restored.tick(2.0).unwrap();
+        assert!(
+            restored
+                .get_output("urn:pre:a")
+                .unwrap()
+                .bit_eq(&Value::Boolean(!expected)),
+            "the next Pre memory was committed too, not only visible outputs"
+        );
+    }
+}
+
+#[test]
+fn write_error_drops_the_collected_warning_report_without_a_generation_receipt() {
+    let bytes = include_bytes!("../../tests/fixtures/assertion_model.jsonld");
+    let mut engine = Engine::with_store(Arc::new(ProbeStore::new(WriteBehavior::Fail)));
+    engine.load_cxf(bytes).unwrap();
+    engine.set_realtime_epoch_unix_nanos(EPOCH);
+    engine
+        .set_input("urn:assert#u", Value::Boolean(false))
+        .unwrap();
+    let error = engine.step_realtime(0.0).unwrap_err();
+    assert!(
+        matches!(error, OcError::Store(StoreError::Durability(ref detail))
+        if detail == "injected write failure")
+    );
+    assert!(
+        error.diagnostics().is_empty(),
+        "no StepReport or execution warning receipt on Err"
+    );
+    assert!(
+        engine
+            .get_output("urn:assert#invert.y")
+            .unwrap()
+            .bit_eq(&Value::Boolean(true))
+    );
+    assert_eq!(engine.store().writes.lock().unwrap().len(), 1);
+    let mut successful = Engine::in_memory();
+    successful.load_cxf(bytes).unwrap();
+    successful.set_realtime_epoch_unix_nanos(EPOCH);
+    successful
+        .set_input("urn:assert#u", Value::Boolean(false))
+        .unwrap();
+    assert_eq!(
+        successful.step_realtime(0.0).unwrap().asserts.len(),
+        1,
+        "positive control: the successful transition would return the warning"
+    );
+    assert_eq!(
+        engine.state_snapshot().unwrap().as_bytes(),
+        successful.state_snapshot().unwrap().as_bytes()
+    );
+}

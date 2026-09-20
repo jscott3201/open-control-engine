@@ -131,7 +131,8 @@ impl<S: Store> Engine<S> {
     /// Stages all resolved fan-out targets, closes durable-restore readiness, evaluates once,
     /// refreshes latest [`crate::Outputs`] and returns an independent [`CompletedFrame`]. Equal
     /// finite time advances again; there is no event iteration. No Store method or host callback
-    /// is invoked. Legacy execution methods remain separate and consume no frame sequence.
+    /// is invoked. Legacy methods share only the private evaluation/refresh core, retain their
+    /// own staging and lifecycle, and consume no frame sequence.
     ///
     /// Allocation/copy costs beyond normal evaluation scale with boundary outputs and emitted
     /// warnings; staging scales with prepared fan-out. There is no run-state clone or rollback.
@@ -174,20 +175,8 @@ impl<S: Store> Engine<S> {
                 self.state.values[target.0 as usize] = value.clone();
             }
         }
-        self.durable_restore_ready = false;
         let collector = crate::sim::AssertCollector::default();
-        oce_graph::eval_tick(
-            &mut oce_graph::EvalContext {
-                model: &self.model,
-                schedule: &self.schedule,
-                blocks: &self.blocks,
-                diagnostics: &collector,
-                state: &mut self.state,
-            },
-            frame.time,
-        );
-        self.prev_t = Some(frame.time);
-        self.outputs.refresh_from(&self.state);
+        self.transition_host_tick(frame.time, &collector);
         self.accepted_frame_sequence = sequence;
         Ok(CompletedFrame {
             _generation: frame.generation,

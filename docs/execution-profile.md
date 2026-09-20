@@ -13,6 +13,13 @@ not a second evaluator or profile selector. Preparation does not execute; `execu
 Store-backed ticks, simulation and realtime remain the distinct weaker/convenience paths described
 there and in [host responsibilities](host-responsibilities.md).
 
+All four routes share one private infallible evaluation/refresh core: native `execute_frame` and
+legacy `tick_with` enter it after their own preflight/staging; simulation and realtime retain their
+existing legacy orchestration. The core closes durable-restore readiness, evaluates once, updates
+the previous time and refreshes latest outputs. It selects no diagnostic policy and performs no
+Store IO, restart, frame-sequence update or projection. Shared evaluation does not give legacy
+callers complete-frame preparation, refusal atomicity or identical lifecycle/output sets.
+
 ## HostTick v1
 
 Each successful `Engine::tick(t_now)` call is one state transition:
@@ -61,7 +68,10 @@ The `Outputs` returned by `tick`, and later reads through `outputs`, `get_output
 only the completed tick call. There are no intermediate event-iteration rows. A later call at the
 same timestamp replaces the visible output snapshot. `step_realtime` likewise evaluates one
 HostTick transition before attempting its output write; a write failure does not roll that
-transition back. It publishes no internal iterations because none occur.
+transition back. The compatible `Err(Store)` carries no generation, receipt, `StepReport` or
+collected warnings. Hosts reconcile through time guards, latest outputs/watch, captured state and
+their own delivery records, not an error-path generation field. It publishes no internal iterations
+because none occur.
 
 `CompletedFrame` retains only the executable root boundary outputs in lexical identity order and
 the Warning diagnostics emitted by that native transition. It is independent of the mutable latest

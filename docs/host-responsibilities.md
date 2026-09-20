@@ -15,7 +15,9 @@ requirement-to-evidence map; engine boundary tests are not host-compliance evide
 The [complete-frame contract](complete-frame-contract.md) supplies current typed, read-only
 preparation and an engine-local load/rebuild fence (PC-032). `execute_frame` consumes a prepared
 submission and returns one immutable `CompletedFrame` after one atomic HostTick transition (PC-033).
-PC-034/035 migration remains future. The staging/convenience paths below do not acquire this guarantee.
+PC-034 shares only the private evaluation/refresh core and explicitly retains weaker convenience
+profiles. PC-035's full legacy classification/guards remain future. The staging/convenience paths
+below do not acquire complete-frame guarantees.
 
 Completeness means every executable boundary input exactly once, except omission explicitly
 defined by the executable schema. It does not establish sensor coherence, quality, freshness or
@@ -31,6 +33,14 @@ The accepted-frame sequence correlates only within one Engine lifetime; reload, 
 do not reset it. It is deliberately absent from snapshot bytes and supplies no durable replay position,
 lease, authentication or equipment authority. Retained results remain unchanged across those operations.
 The result owns Warning-only diagnostics; it adds no escalation, interlock or safe-state decision.
+
+Realtime convenience writes occur after the committed transition. A failed write still returns
+`Err(OcError::Store)`, with no `StepReport`, collected warnings, generation or receipt. Reconcile
+the engine's time guard, latest `Outputs`, alias-aware `get_output`/`watch`, checkpoint/snapshot
+state and your external delivery records. Do not infer rollback or repeat the transition merely to
+retry persistence: even equal model time advances state again. Simulation likewise retains its
+words-only restart and nontransactional mid-run failures. Shared evaluation is not shared frame
+preparation, whole-horizon rollback, Store atomicity or an equipment-delivery guarantee.
 
 Library, Studio, Edge and Sim retain their roles; Runtime is only an additive future M05-PR03
 consumer/host qualification candidate. BOPTEST is Runtime host evidence, not OCE equivalence.

@@ -148,7 +148,9 @@ are not retrofitted to them. Hosts still own quality, freshness, scheduling, per
 The [public tests](../crates/oce-api/tests/prepare_frame.rs),
 [stateful preservation matrix](../crates/oce-api/tests/prepare_frame_preservation.rs), and
 [private plan/lifecycle census](../crates/oce-api/src/frame_tests.rs) establish the bounded current
-preparation evidence. Native execution evidence promotes PC-033 only; PC-034/035 remain future.
+preparation evidence. Native execution evidence promotes PC-033; shared evaluation-core reuse with
+explicit weaker convenience profiles promotes PC-034. PC-035's full legacy classification/guards
+remain future.
 This changes no packaged descriptor,
 catalog identity, snapshot/replay format, stable-release status or downstream pin.
 
@@ -172,3 +174,11 @@ this API. Legacy tick/simulation/realtime signatures, weaker failure boundaries,
 and no-op tick/simulation diagnostic sinks remain unchanged. The bounded Library verifier remains a
 legacy consumer; no sibling source or pin is migrated or qualified by this change. See the
 [execution contract and evidence](complete-frame-contract.md#current-execution-api).
+
+All four execution routes now share one private HostTick evaluation/refresh implementation, not
+complete-frame preparation. Native-only accepted sequence updates and each caller's preflight,
+staging, restart, sink and projection remain outside that core. In particular, realtime still
+returns `Err(OcError::Store)` after a failed post-transition write, losing the `StepReport` and its
+warnings. The error reports no generation or receipt; reconcile committed state through time
+guards, outputs/watch, checkpoints/snapshots and host delivery records. Mode parity evidence is
+limited to lifecycle-equivalent, fully driven subsets, not arbitrary convenience workflows.
