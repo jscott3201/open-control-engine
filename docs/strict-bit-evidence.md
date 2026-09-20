@@ -5,19 +5,45 @@
 The [machine-readable corpus](../crates/oce-conformance/tests/fixtures/strict_bits/corpus.json)
 is the authoritative inventory of the **21 existing aligned-tolerance Real signal paths**.
 It contains 161 samples: 101 finite (including 18 signed-zero samples), 52 NaNs and 8 signed
-infinities. Its checked-in observation is **macOS aarch64 debug**, not Linux evidence. All 21
-observed paths agree with their unchanged Tier-A reference under the existing exact comparator.
-The local debug/release tests compare against that observation; this is a regression observation,
-**not macOS qualification**. macOS-arm64 remains explicitly conservative/unqualified until
-M06-PR02, using the existing aligned band in the four suites.
+infinities. `corpus.json` retains the original **macOS aarch64 debug** observation. Separately,
+the [eight native Linux captures](../crates/oce-conformance/tests/fixtures/strict_bits/linux/)
+are accepted permanent evidence for **Linux x86_64/aarch64 × debug/release**, two independent
+process runs per cell. Every run contains all 21 signals and 161 samples, with **zero mismatches**
+against the unchanged Tier-A references and across cells under the exact comparator. Every
+first/repeat pair is byte-identical, including NaN payloads. PC-037 is CURRENT only for this
+bounded result. The four suites use exact comparison for these 21 Linux Real signal cases.
 
-Linux x86_64 and aarch64 debug/release are **exact candidates pending the hosted matrix**.
-The four suites enforce the candidate exact comparator on those Linux targets, per inventoried
-Real output, and the cross-cell job refuses qualification unless all eight captures agree.
-This branch's local results do not establish that those hosted checks passed. PC-037 remains
-FUTURE until the native evidence has run, been retained and received implementation acceptance.
-Do not close issue #250 or describe a Linux promotion as empirically accepted based only on the
-checked-in local capture. A green matrix is necessary, not permission to infer broader claims.
+The local macOS debug/release tests still compare against the original observation. This is a
+regression observation, **not macOS qualification**. macOS-arm64 remains explicitly
+conservative/unqualified until M06-PR02; macOS and all other unqualified targets keep
+`atoly=rtoly=ltoly=1e-12` in the four suites, with exact time/discrete comparison.
+
+## Accepted native receipt
+
+- [GitHub Actions run 35492290613](https://github.com/jscott3201/open-control-engine/actions/runs/35492290613)
+  passed all four strict-bit cells and the cross-architecture/codegen job.
+- The provisional PR head was `dbce73fb20ada4a3a91653bb7ad9b48fae7ee87d`. All eight captures
+  honestly record GitHub's synthetic PR merge checkout
+  `8a63d4a042e1ca91d5dfe7bd3fc33d194f5102bb`, not that PR head or a later delivery commit.
+- rustc: `1.97.1 (8bab26f4f 2026-07-14)`; libm: `0.2.16`; baseline repository codegen,
+  without custom `RUSTFLAGS` or `CARGO_ENCODED_RUSTFLAGS`.
+- Uploaded assembled artifact digest:
+  `sha256:d5b21ca70517c793f46a99d5402d236e2c78494466367fa583ccef27431c31c4`.
+- Downloaded `matrix.json` SHA-256:
+  `12a2fbdd28c9718c0145c5055240f0b7eab3d7898bc5d1f05ed0ee09db2978ad`;
+  its comparison is `{"Ok":[]}`. The retained test reconstructs this exact aggregate from
+  the eight canonical capture files and verifies that digest, avoiding a ninth duplicate of
+  the raw data. The upload archive digest is a provenance locator, not a locally rebuilt archive.
+
+The active retained test runs on every platform and checks all four cells, two runs per cell,
+21 signals and 161 samples per run, zero mismatches, byte-exact repeats, capture identity and
+aggregate integrity. It also checks current source, reference, provenance, input/CXF and time
+digests against the retained contract. The synthetic checkout SHA is **not required to equal a
+later HEAD** or exist in local history. No source-digest exception is needed: the 17 bound
+source files, comparator selector and Tier-A goldens remain byte-for-byte unchanged at admission.
+Capture-time `candidate` status/regime strings and the selector's `exact_candidate` name remain
+historical inventory terminology, not a pending acceptance decision. The accepted receipt and
+PC-037 supply the current qualification; captures are never relabeled to reflect later decisions.
 
 **libm 0.2.16 does NOT promise cross-architecture correctly rounded transcendentals; strict
 identity is an empirical pinned observation only. std 1.97.1 likewise does not promise
@@ -44,8 +70,8 @@ by the source digests and generated CXF digest, not falsely described as committ
 
 Each signal names its class, output and unique case path; reference CSV, original provenance and
 generated CXF digests; original operation/recurrence rule and math-library provenance; proposed
-Linux and conservative other-platform regimes; every time, oracle value and engine value; and
-every exact mismatch index. Input/parameter provenance is available through the bound reference
+Linux (at capture time) and conservative other-platform regimes; every time, oracle value and
+engine value; and every exact mismatch index. Input/parameter provenance is available through the bound reference
 CSV and generated CXF. Cases in the four existing suites are a checked projection of this inventory,
 not a second manually maintained list. No oracle output is generated from engine output.
 
@@ -59,8 +85,8 @@ No digest-only result substitutes for raw samples.
 Unknown fields, wrong pins, missing/duplicate/unordered signals, changed provenance, incomplete
 sample arrays, wrong labels and hidden mismatches refuse. Source, lock, toolchain or inventory
 changes invalidate the retained contract and need deliberate evidence review/refresh. CI cannot
-refresh the checked-in observation. The explicit local capture refresh facility writes only this
-audit observation when opted in; it cannot refresh an oracle through that facility. Ordinary capture
+refresh or admit checked-in observations. The explicit local capture refresh facility writes only the
+original corpus audit observation when opted in; it cannot refresh an oracle through that facility. Ordinary capture
 refuses to overwrite an existing artifact. Review every observation diff rather than blessing a
 changed engine result as correctness.
 
@@ -87,14 +113,15 @@ class/sign controls run through the facade driver. On Linux they also run throug
 four-suite policy selector and assert the exact signal/sample failure; comparator-only unit tests
 are not the sole evidence. Unmodified neighboring outputs stay green.
 
-Before acceptance, admit the successful native artifacts to the checked-in delivery evidence and
-review the per-signal result; the 90-day CI upload alone is not permanent evidence retention.
-If any candidate diverges, the gate stays red and retains exact mismatch
-bits. Adjudicate that path before promotion: retain its existing `atoly=rtoly=ltoly=1e-12` band
-with the specific native mismatch/limitation, leaving time/discrete comparison exact. Do not widen
-the band, silently accept a new bit pattern, rewrite a formula, or regenerate Tier-A output.
-The initial inventory authorizes no divergent exception. Such an exception needs an explicit
-reviewed evidence update, not an environment bypass.
+The successful native artifacts above are now checked in, rather than relying on a 90-day upload.
+The explicit, ignored admission test verifies the downloaded aggregate digest, every canonical
+capture, the zero-mismatch result and current source applicability before creating the retained
+directory; it refuses replacement and cannot run in CI. It copies native evidence, never local
+engine output. Ordinary retained validation is read-only and needs no environment opt-in.
+Future divergence leaves the gate red with exact mismatch bits. Adjudicate the path before any
+claim or regime change; no automatic downgrade, tolerance widening, bit-pattern acceptance,
+formula rewrite or Tier-A regeneration is authorized. A changed source, pin or corpus needs a
+new reviewed native receipt, not a rewritten historical observation or environment bypass.
 
 The gate script runs the scoped tests in both codegen profiles locally, but cannot reproduce a
 native cross-architecture result on one machine. The hosted matrix is separate from the existing
@@ -104,6 +131,10 @@ fails or skips, so the native check is not merely an optional status. GitHub del
 to branch protection remain the orchestrator's responsibility.
 
 ## Downstream notice
+
+Whole-executable exactness inherits the least-qualified contributing path, target and input
+domain. These 21 finite-corpus results do not qualify arbitrary compositions, arbitrary inputs or
+a whole executable; unqualified paths/platforms still prevent such an inherited exactness claim.
 
 This schema is compact, inspectable input for later Open Control Sim consumption, not a Sim policy
 change or qualification. The supplied downstream inventory says Sim has no active oce-api dependency;

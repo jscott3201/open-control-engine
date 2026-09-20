@@ -68,8 +68,10 @@ comparison that fails if even one bit differs.
   comparison would mask exactly the drift a golden test exists to catch. One named exception: the
   21 transcendental, psychrometric, and solar Real signal goldens retain their existing
   aligned-tolerance band on unqualified platforms. Their [strict-bit inventory and matrix](docs/strict-bit-evidence.md)
-  enforce Linux x86_64/aarch64 exact candidates, pending successful native debug/release evidence
-  and acceptance. macOS remains conservative/unqualified. This is empirical pinned corpus evidence,
+  enforce accepted Linux x86_64/aarch64 exact comparisons: four native debug/release cells,
+  two byte-identical captures per cell, 21 signals each and zero mismatches, retained from run
+  35492290613. macOS remains conservative/unqualified until M06-PR02; other targets also retain
+  the unchanged 1e-12 aligned band. This is empirical pinned corpus evidence,
   not a libm guarantee or a license for epsilon elsewhere — every other golden stays bit-exact.
 - **No snapshot magic.** Goldens are explicit files compared by explicit code — reviewable and
   obvious. If a golden needs regenerating, do it deliberately and explain the diff in the PR.
@@ -204,8 +206,10 @@ case" is itself a finding to resolve, not a pass.
 - **Float comparison:** `Value::bit_eq` (or `f64::to_bits`) — **never** `==` or `(a-b).abs() < ε`
   in an engine assertion. Sole exception: the 21 transcendental, psychrometric, and solar Real
   signal goldens, whose libm-dependent outputs retain the existing aligned-tolerance band on
-  unqualified platforms and have [matrix-gated Linux exact candidates](docs/strict-bit-evidence.md).
-  The machine-readable inventory, not duplicated prose lists, owns the paths and regimes.
+  unqualified platforms and have [retained native Linux exact evidence](docs/strict-bit-evidence.md).
+  The machine-readable inventory owns the paths; its capture-time candidate labels are historical,
+  while the accepted receipt establishes the bounded Linux regime. Tests bind raw artifacts and
+  current source/oracle/CXF digests, not the final HEAD to the captured synthetic merge SHA.
 - **Error assertions:** match the exact variant (`assert!(matches!(err, CxfError::Json(_)))`),
   not `is_err()`.
 - **No time/randomness in tests:** deterministic inputs only; no wall-clock, no RNG.

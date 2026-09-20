@@ -192,3 +192,86 @@ fn bit_labels_and_schema_are_closed_and_lossless() {
     json["unexpected"] = true.into();
     assert!(serde_json::from_value::<evidence::Corpus>(json).is_err());
 }
+
+#[test]
+fn qualified_linux_signals_are_exact_and_other_targets_keep_the_aligned_band() {
+    let qualified = cfg!(all(
+        target_os = "linux",
+        any(target_arch = "x86_64", target_arch = "aarch64")
+    ));
+    let mut signals = 0;
+    for (case, family, sequence) in evidence::cases() {
+        let reference = block_harness::read_reference(case, family);
+        let run = block_harness::drive_case_with_corpus_reference(case, sequence, &reference);
+        for (output, comparison) in case.outputs.iter().zip(&run.comparisons) {
+            if output.kind != block_harness::SignalKind::Real {
+                continue;
+            }
+            signals += 1;
+            assert!(!comparison.masked);
+            assert!(comparison.result.passed());
+            assert_eq!(comparison.result.compared_points(), reference.n_rows);
+            assert_eq!(
+                matches!(comparison.result, ComparisonResult::Exact(_)),
+                qualified
+            );
+            assert_eq!(
+                matches!(comparison.result, ComparisonResult::AlignedTolerance(_)),
+                !qualified
+            );
+            let t = comparison.tolerance;
+            assert_eq!([t.atolx, t.rtolx, t.ltolx], [0.0; 3]);
+            assert_eq!(
+                [t.atoly, t.rtoly, t.ltoly],
+                [if qualified { 0.0 } else { 1e-12 }; 3]
+            );
+        }
+    }
+    assert_eq!(signals, 21);
+}
+
+#[test]
+fn source_oracle_and_input_drift_refuse_but_later_checkout_identity_is_allowed() {
+    let retained = evidence::read_retained();
+    let mut later = retained.clone();
+    later.git_revision = "0".repeat(40);
+    assert_eq!(evidence::same_contract(&retained, &later), Ok(()));
+    for path in retained.source_sha256.keys() {
+        let mut changed = later.clone();
+        changed.source_sha256.insert(path.clone(), "0".repeat(64));
+        assert_eq!(
+            evidence::same_contract(&retained, &changed).unwrap_err(),
+            "corpus provenance/inventory changed: explicit refresh required"
+        );
+    }
+    for index in 0..21 {
+        for field in [
+            "provenance_sha256",
+            "reference_sha256",
+            "cxf_sha256",
+            "oracle",
+            "times",
+        ] {
+            let mut changed = serde_json::to_value(&later).unwrap();
+            if field == "oracle" || field == "times" {
+                changed["signals"][index][field][0] = evidence::word(42.0).into();
+            } else {
+                changed["signals"][index][field] = "0".repeat(64).into();
+            }
+            let mut changed: evidence::Corpus = serde_json::from_value(changed).unwrap();
+            // An attacker can recompute a truthful mismatch list, but cannot change the oracle.
+            let signal = &mut changed.signals[index];
+            signal.mismatches = signal
+                .oracle
+                .iter()
+                .zip(&signal.actual)
+                .enumerate()
+                .filter_map(|(i, (a, b))| (!evidence::equal(a, b)).then_some(i))
+                .collect();
+            assert_eq!(
+                evidence::same_contract(&retained, &changed).unwrap_err(),
+                "corpus provenance/inventory changed: explicit refresh required"
+            );
+        }
+    }
+}

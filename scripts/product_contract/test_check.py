@@ -22,13 +22,13 @@ import check
 ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = (
     "product contract: OK\n"
-    "Document revision: 11\n"
-    "Grounding SHA: b118a93f6500ce35ef06ab604c58a7a24841861a\n"
+    "Document revision: 12\n"
+    "Grounding SHA: dbce73fb20ada4a3a91653bb7ad9b48fae7ee87d\n"
     "Requirements: 40\n"
-    "CURRENT: 31\n"
+    "CURRENT: 32\n"
     "HOST-OBLIGATION: 5\n"
-    "FUTURE: 4\n"
-    "Future outcomes: 4\n"
+    "FUTURE: 3\n"
+    "Future outcomes: 3\n"
     "Integration pointers: 6\n"
     "Scope: traceability only; semantics and host compliance are not proven.\n"
 )
@@ -203,10 +203,10 @@ class TraceabilityTests(unittest.TestCase):
 
     def test_revision_grounding_and_change_record_are_required(self):
         for old, new, message in (
-            ("Document revision: 11", "Document revision: 0", "metadata:"),
-            ("Document revision: 11", "Document revision: 12", "current revision change record"),
-            ("Document revision: 11", "Document revision: 11\nDocument revision: 11", "metadata:"),
-            ("Grounding SHA: b118a93f6500ce35ef06ab604c58a7a24841861a", "Grounding SHA: d2111be", "metadata:"),
+            ("Document revision: 12", "Document revision: 0", "metadata:"),
+            ("Document revision: 12", "Document revision: 13", "current revision change record"),
+            ("Document revision: 12", "Document revision: 12\nDocument revision: 12", "metadata:"),
+            ("Grounding SHA: dbce73fb20ada4a3a91653bb7ad9b48fae7ee87d", "Grounding SHA: d2111be", "metadata:"),
             ("## Change record", "## History", "change record required"),
         ):
             with self.subTest(new=new):
@@ -255,7 +255,7 @@ class TraceabilityTests(unittest.TestCase):
         self.rejects("test not in range")
 
     def test_future_rows_require_assignments_not_existing_test_promises(self):
-        self.change_cell("PC-037", 7,
+        self.change_cell("PC-038", 7,
                          "test [retired_facade_symbols_are_absent]"
                          "(../crates/oce-api/tests/public_surface_contract.rs#L507-L512)")
         self.rejects("future outcome assignment required")
@@ -265,21 +265,21 @@ class TraceabilityTests(unittest.TestCase):
     def test_future_assignment_requires_named_local_outcome_and_description(self):
         for value, message in (
             ("future [later](#strict-bit-evidence)", "one named future assignment"),
-             ("future [M03-PR02](#same-build-state)", "missing future description"),
-             ("future [M03-PR02](public-surface-contract.md)", "future outcome must be in this document"),
-             ("future [M03-PR02](#absent)", "missing heading"),
+             ("future [M03-PR03](#canonical-replay)", "missing future description"),
+             ("future [M03-PR03](public-surface-contract.md)", "future outcome must be in this document"),
+             ("future [M03-PR03](#absent)", "missing heading"),
         ):
             with self.subTest(value=value):
-                self.change_cell("PC-037", 7, value)
+                self.change_cell("PC-038", 7, value)
                 self.rejects(message)
-        self.write_document(self.document.replace("M03-PR02:", "M03-PR09:"))
+        self.write_document(self.document.replace("M03-PR03:", "M03-PR09:"))
         self.rejects("missing future description")
-        section = check.headings(self.document)["strict-bit-evidence"]
-        self.write_document(self.document.replace(section, "M03-PR02: Later."))
+        section = check.headings(self.document)["same-build-state"]
+        self.write_document(self.document.replace(section, "M03-PR03: Later."))
         self.rejects("missing future description")
 
     def test_duplicate_and_orphan_future_outcomes_refuse(self):
-        for suffix in ("M03-PR02: Duplicated outcome.", "M09-PR99: Orphan outcome."):
+        for suffix in ("M03-PR03: Duplicated outcome.", "M09-PR99: Orphan outcome."):
             self.write_document(self.document + "\n" + suffix + "\n")
             self.rejects("duplicate or orphan future outcome")
 
@@ -389,7 +389,7 @@ class TraceabilityTests(unittest.TestCase):
                              "product contract: FAIL: table: unknown status: PC-006\n")
 
     def test_fulfilled_outcome_cannot_be_reintroduced_as_an_orphan_assignment(self):
-        for assignment in ("M01-PR02", "M02-PR01", "M02-PR02", "M02-PR03", "M02-PR04", "M02-PR05", "M03-PR01"):
+        for assignment in ("M01-PR02", "M02-PR01", "M02-PR02", "M02-PR03", "M02-PR04", "M02-PR05", "M03-PR01", "M03-PR02"):
             self.write_document(self.document + f"\n{assignment}: Retired assignment reintroduced.\n")
             self.rejects("duplicate or orphan future outcome")
 
@@ -515,7 +515,7 @@ class TraceabilityTests(unittest.TestCase):
     def test_contraction_is_current_at_the_accepted_document_revision(self):
         self.change_cell("PC-035", 1, "HOST-OBLIGATION")
         self.rejects("frame-only: contraction is current")
-        self.write_document(self.document.replace("Document revision: 11", "Document revision: 10"))
+        self.write_document(self.document.replace("Document revision: 12", "Document revision: 11"))
         self.rejects("frame-only: document revision")
 
     def test_retired_current_claims_are_not_hidden_by_valid_evidence_links(self):
@@ -523,6 +523,18 @@ class TraceabilityTests(unittest.TestCase):
                       "MUST attempt store write-back after execution."):
             self.change_cell("PC-007", 4, claim)
             self.rejects("frame-only: retired current claim")
+
+    def test_native_exactness_is_current_with_retained_mutation_and_platform_evidence(self):
+        _, _, rows = check.parse_document(self.document)
+        row = next(row for row in rows if row.identifier == "PC-037")
+        self.assertEqual(row.status, "CURRENT")
+        self.assertEqual({name for name, _ in check.link_list(row.evidence[5:])}, {
+            "retained_native_linux_evidence_is_complete_exact_and_source_bound",
+            "every_corpus_sample_uses_exact_facade_comparison_and_rejects_mutations",
+            "qualified_linux_signals_are_exact_and_other_targets_keep_the_aligned_band",
+        })
+        for boundary in ("macOS", "unqualified", "1e-12", "arbitrary-input", "Sim"):
+            self.assertIn(boundary, row.limitation)
 
 
 if __name__ == "__main__":

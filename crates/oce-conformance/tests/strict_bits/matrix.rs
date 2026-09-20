@@ -4,6 +4,11 @@ use super::evidence::{self, CELLS, Corpus};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+const NATIVE_MATRIX_SHA256: &str =
+    "12a2fbdd28c9718c0145c5055240f0b7eab3d7898bc5d1f05ed0ee09db2978ad";
+const NATIVE_REVISION: &str = "8a63d4a042e1ca91d5dfe7bd3fc33d194f5102bb";
+const NATIVE_DIRECTORY: &str = "crates/oce-conformance/tests/fixtures/strict_bits/linux";
+
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct Mismatch {
@@ -237,4 +242,116 @@ fn nan_payload_is_not_a_cross_architecture_identity_claim() {
         signal.actual[sample] = evidence::word(f64::from_bits(0xfff8_0000_0000_0123));
     }
     assert_eq!(compare(&retained, &runs), Ok(vec![]));
+}
+
+#[test]
+fn retained_native_linux_evidence_is_complete_exact_and_source_bound() {
+    let runs = read_native_runs(&evidence::root().join(NATIVE_DIRECTORY));
+    // Applicability is established by source/oracle/CXF digests, not final HEAD equality.
+    evidence::same_contract(&evidence::read_retained(), &evidence::collect()).unwrap();
+    accepted_report(&runs).expect("accepted native Linux evidence");
+}
+
+fn read_native_runs(directory: &std::path::Path) -> BTreeMap<String, Corpus> {
+    let mut runs = BTreeMap::new();
+    for cell in CELLS {
+        let first = directory.join(format!("{cell}-first.json"));
+        let repeat = directory.join(format!("{cell}-repeat.json"));
+        for (label, path) in [("first", first), ("repeat", repeat)] {
+            let run = evidence::read(&path);
+            runs.insert(format!("{cell}-{label}"), run);
+        }
+        // read() bounds the input and verifies that its bytes equal this canonical encoding.
+        assert_eq!(
+            evidence::encode(&runs[&format!("{cell}-first")]),
+            evidence::encode(&runs[&format!("{cell}-repeat")])
+        );
+    }
+    runs
+}
+
+fn accepted_report(runs: &BTreeMap<String, Corpus>) -> Result<Vec<u8>, String> {
+    let comparison = compare(&evidence::read_retained(), runs);
+    if !comparison.as_ref()?.is_empty() {
+        return Err("accepted native matrix has numerical mismatches".into());
+    }
+    for run in runs.values() {
+        if run.git_revision != NATIVE_REVISION {
+            return Err("accepted native checkout provenance changed".into());
+        }
+        if run.signals.iter().map(|s| s.actual.len()).sum::<usize>() != 161 {
+            return Err("accepted native sample coverage changed".into());
+        }
+    }
+    let report = serde_json::json!({
+        "schema": 1,
+        "claim": "pinned-corpus-only-not-mathematical-correctness",
+        "macos_status": "unqualified-until-M06-PR02",
+        "runs": runs,
+        "comparison": comparison,
+    });
+    let bytes = serde_json::to_vec(&report).unwrap();
+    if evidence::digest(&bytes) != NATIVE_MATRIX_SHA256 {
+        return Err("accepted native matrix digest changed".into());
+    }
+    Ok(bytes)
+}
+
+#[test]
+fn native_receipt_refuses_relabeling_and_raw_payload_reblessing() {
+    let runs = read_native_runs(&evidence::root().join(NATIVE_DIRECTORY));
+    let mut relabeled = runs.clone();
+    for run in relabeled.values_mut() {
+        run.git_revision = "0".repeat(40);
+    }
+    assert_eq!(
+        accepted_report(&relabeled).unwrap_err(),
+        "accepted native checkout provenance changed"
+    );
+    let mut changed = runs;
+    for run in changed.values_mut() {
+        let signal = &mut run.signals[0];
+        let sample = signal
+            .actual
+            .iter()
+            .position(|w| w.starts_with("nan:"))
+            .unwrap();
+        signal.actual[sample] = evidence::word(f64::from_bits(0x7ff8_0000_0000_0123));
+    }
+    // This preserves the comparator's NaN-class agreement and every first/repeat pair.
+    // It still cannot rewrite the historical raw payloads under the accepted receipt.
+    assert_eq!(
+        accepted_report(&changed).unwrap_err(),
+        "accepted native matrix digest changed"
+    );
+}
+
+#[test]
+#[ignore = "explicit local admission of the digest-pinned downloaded native artifact only"]
+fn admit_downloaded_native_matrix_without_rewriting_provenance() {
+    use std::io::Write;
+
+    assert!(std::env::var_os("CI").is_none(), "CI cannot admit evidence");
+    let source = std::env::var_os("OCE_STRICT_MATRIX_DIR").expect("download directory required");
+    let source = evidence::root().join(source);
+    let matrix = source.join("matrix.json");
+    assert!(std::fs::metadata(&matrix).unwrap().len() <= 1024 * 1024);
+    let downloaded = std::fs::read(matrix).unwrap();
+    assert_eq!(evidence::digest(&downloaded), NATIVE_MATRIX_SHA256);
+    let runs = read_native_runs(&source);
+    assert_eq!(accepted_report(&runs).unwrap(), downloaded);
+    evidence::same_contract(&evidence::read_retained(), &evidence::collect()).unwrap();
+
+    // Admission copies validated native bytes, never engine output. Refuse replacement and
+    // keep the same one-object-per-signal encoding; the aggregate is exactly reconstructible.
+    let destination = evidence::root().join(NATIVE_DIRECTORY);
+    std::fs::create_dir(&destination).expect("never replace admitted native evidence");
+    for (key, run) in runs {
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(destination.join(format!("{key}.json")))
+            .unwrap();
+        file.write_all(&evidence::encode(&run)).unwrap();
+    }
 }

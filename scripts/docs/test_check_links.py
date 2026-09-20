@@ -21,6 +21,17 @@ CHECKER = Path(__file__).with_name("check_links.py")
 class GeneratedNavigationTests(unittest.TestCase):
     """Exercise the generated mdBook navigation."""
 
+    def test_staged_navigation_includes_strict_bit_evidence_exactly_once(self) -> None:
+        """A copied Markdown file alone does not produce the linked HTML chapter."""
+        with tempfile.TemporaryDirectory() as temporary:
+            staged, _, revision = docs_stage.stage_book(Path(temporary) / "book", "a" * 40)
+            summary = (staged / "src" / "SUMMARY.md").read_text()
+            self.assertEqual(summary.splitlines().count(
+                "- [Pinned strict-bit signal evidence](docs/strict-bit-evidence.md)"), 1)
+            self.assertEqual(summary.count("(docs/strict-bit-evidence.md)"), 1)
+            chapter = (staged / "src" / "docs" / "strict-bit-evidence.md").read_text()
+            self.assertIn(f"/blob/{revision}/crates/oce-conformance/tests/fixtures/strict_bits/", chapter)
+
     def test_staged_navigation_includes_complete_frame_contract_exactly_once(self) -> None:
         """The linked frame contract is staged and has one navigation entry."""
 

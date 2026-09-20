@@ -85,29 +85,34 @@ The layer contains **412 Tier-A provenance records**, every one of them recordin
 - **132 G36 sequence signal goldens**, spanning all 46 fixtures.
 
 **410 of those are signal goldens — 389 with existing exact comparisons and 21 inventoried
-Linux exact candidates, still aligned-tolerance on unqualified platforms.** See the
-[raw-bit evidence and qualification boundary](strict-bit-evidence.md): the checked-in observation
-is local macOS, not successful hosted Linux evidence; PC-037 remains pending native acceptance.
+accepted Linux exact cases, still aligned-tolerance on unqualified platforms.** The
+[retained native receipt](strict-bit-evidence.md#accepted-native-receipt) records run 35492290613:
+Linux x86_64/aarch64 × debug/release, two byte-identical runs per cell, 21 signals and 161 samples
+per run, zero exact mismatches against Tier-A and across cells. Raw bits, synthetic merge checkout
+provenance and source/oracle/CXF integrity are checked permanently, without requiring a later HEAD
+to equal the captured SHA. PC-037 is CURRENT only for this pinned corpus. macOS-arm64 remains
+unqualified until M06-PR02; neither libm mathematical correctness nor arbitrary-input or whole-engine
+exactness follows. No Sim policy changes.
 The 278 CDL signals are compared by the 15
 `crates/oce-conformance/tests/per_block_*.rs` suites through a shared harness that drives each
 block through the frozen facade, asserts the comparison is unmasked, and asserts
 `compared_points == reference.n_rows` so a zero-row comparison cannot pass vacuously. Twelve of
 the 15 suites run `ComparisonMode::Exact` with zero tolerances
 (`crates/oce-conformance/tests/block_harness/mod.rs`), and four select each of their 21
-libm-dependent Real goldens through the inventory: exact candidates on the two Linux targets,
+libm-dependent Real goldens through the inventory: exact on the two qualified Linux targets,
 `ComparisonMode::AlignedTolerance` at the unchanged 1e-12 band elsewhere:
 `per_block_reals_transcendental.rs`, `per_block_reals_sources_transcendental.rs`,
 `per_block_psychrometrics.rs`, and `per_block_utilities.rs` — with
 `per_block_reals_sources_transcendental.rs` counted in both, because its two `CalendarTime`
 cases compare exactly while its single `Sin` case is inventoried. Boolean outputs in the aligned
 suites still compare by bits even in that mode (`crates/oce-conformance/src/aligned.rs:214`), so
-257 of the 278 CDL goldens are bit-exact. The 132 G36
-signals are compared by 23 `*_funnel.rs` and four `*_oracle.rs` per-fixture suites in the same
+all 278 CDL goldens are exact on qualified Linux targets, versus 257 exact and 21 aligned elsewhere.
+The 132 G36 signals are compared by 23 `*_funnel.rs` and four `*_oracle.rs` per-fixture suites in the same
 directory. Their recorded comparison regimes tally exactly: 102 `Value::bit_eq` f64, 18 exact
 encoded integer, 12 exact 0.0/1.0.
 
 The semantic claim is narrower than the 410-comparison count. **390 signal goldens check CDL /
-Buildings source semantics**: 369 existing exact and 21 matrix-gated candidates (conservative
+Buildings source semantics**: 369 existing exact and 21 native-matrix-qualified Linux cases (conservative
 aligned-tolerance on unqualified platforms). The remaining **20 exact G36
 signals** belong to `Generic.TimeSuppression`, `CoolingOnly.Controller`, and `ReliefFanGroup`.
 Those references are independent of `oce-blocks`, but their `CDL.Logical.Pre` recurrences implement
