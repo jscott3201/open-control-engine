@@ -105,41 +105,59 @@ whole-horizon transaction.
 
 `Engine::state_snapshot` returns the engine-owned canonical bytes needed to continue a run. It does
 not write them anywhere. `Engine::checkpoint`, `state_snapshot`, `restore_checkpoint`, and
-`restore_state` call no `Store` method (`crates/oce-api/src/state.rs:367-421`). The host owns durable
-storage, authentication, generation fencing, and the decision that a restored process may command
-equipment.
+`restore_state` call no `Store` method. The [state contract](state-compatibility.md) defines the
+same-loaded-executable guarantee, typed refusals and portability limits. The host owns durable
+storage and an authenticated sealed envelope binding **exact snapshot bytes** to its approved
+compiled-build/deployment qualifier, freshness and generation. Verify that envelope **before**
+`EngineStateSnapshot::from_bytes`, then pass only the OCE bytes. OCE emits, accepts, stores and
+enforces no build token; equal ABI/manifest, package or catalog facts do not authenticate a build.
 
 Capture only after a model has loaded successfully and while no parameter edits are pending. A
 durable capture also requires authored stable identities and registered state contracts for every
 stateful block. The decoder enforces a 64 MiB limit, validates canonical ordering and manifest
-self-consistency, and checks an integrity trailer (`crates/oce-api/src/state.rs:13-15,42-53`;
-`crates/oce-api/src/state_codec.rs:101-239`).
+self-consistency, and checks an integrity trailer. Capture runs this same bounded decoder before
+returning a successful artifact. Format and execution ABI are now revision 2; revision-1 bytes
+refuse without migration because their manifest omitted executable input-domain/unit facts.
 Class-specific block-state invariants are checked during restore, when a target engine is available.
 The trailer detects accidental corruption; it is not an authenticity or freshness proof. Protect
 snapshot bytes according to the trust boundary of the host that consumes them.
 
 Durable continuation has a narrow restore window:
 
-1. Load the model into a fresh engine.
-2. Parse persisted bytes with `EngineStateSnapshot::from_bytes`.
-3. Call `restore_state` before any accepted frame, dirty-parameter resume, or earlier
-   restore.
-4. Re-establish host-owned wall-clock mapping, actuator ownership, and generation fencing before
-   resuming equipment writes.
+1. Stop command delivery and fence the old process/actuator owner. An OCE halt is not this fence.
+2. Read bounded host-envelope bytes using the host's durable-publication/recovery policy. Reject
+   partial writes; authenticate the exact payload and build/deployment qualifier, freshness,
+   rollback/replay policy and deployment generation before decoding. Package version or an FNV tag
+   is insufficient. Refuse a mismatched build/deployment here, outside OCE.
+3. Parse only approved OCE bytes with `EngineStateSnapshot::from_bytes`. Inspect `portability()`
+   for placement, without treating it as build or numerical qualification.
+4. Load the exact compatible executable/parameters into a fresh target. Load can have Store
+   effects even if it fails; apply the separate compensation policy below.
+5. Call `restore_state` before any accepted frame, dirty-parameter resume or either earlier restore.
+   On refusal do not patch bytes, retry on an advanced target or bypass admission. Select a
+   qualified target, approved cold start or rollback under host policy.
+6. Reconcile external point values, quality, timestamps, histories and backend transaction state.
+   Re-establish model-time/wall-clock mapping and choose the first complete, quality-approved
+   observation set. An equal-time retry executes again; OCE has no durable delivery/replay receipt.
+7. Acquire the new generation's exclusive actuator authority/lease and verify fencing at the
+   delivery boundary before resuming writes. Record snapshot/command acknowledgments externally;
+   successful restore alone authorizes nothing.
 
 The target model must have the same executable manifest: block classes and parameters, port
 bindings, connector types, schedule, state-slot layout, enum descriptors, external inputs, and
-boundary outputs. The diagnostic model id may differ; executable compatibility may not. A refusal
+boundary outputs, computation units/quantities and effective complete-frame acceptance bounds.
+The diagnostic model id may differ; executable compatibility may not. A refusal
 is atomic and leaves engine and store state unchanged. Durable restore also refuses after the target
 crosses a mutation boundary, even if that mutation was otherwise harmless
-(`crates/oce-api/src/state.rs:412-438`).
+as defined by the state contract.
 
-Snapshots for models that use the revision-1 libm-dependent class set are target-bound. They restore
+Snapshots for models that use the unchanged 15-class libm-dependent set are target-bound. They restore
 only on the same architecture and operating system; `restore_state` returns
-`EngineStateError::TargetDomainMismatch` before commit on another target. Other revision-1 models
-are portable. If restart scheduling may cross machine types, retain the capture target alongside the
-opaque bytes and treat a target-domain refusal as a placement failure, not as recoverable model
-state.
+`EngineStateError::TargetDomainMismatch` before commit on another target. Other models carry
+`StatePortability::Portable`, meaning no target restriction in that policy, not universal exactness.
+The finite 21-signal Linux receipt does not widen it to arbitrary inputs, full closure or macOS.
+Treat a target-domain refusal as a placement failure, not corrupt state; bind placement metadata
+to the authenticated envelope rather than rewriting the OCE bytes.
 
 Snapshots restore absolute model time and the prior-tick monotonicity guard. They do not carry the
 real-time UNIX epoch, backend point history, point status or timestamps, backend transaction state,

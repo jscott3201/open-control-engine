@@ -34,6 +34,13 @@ fn needs_send_sync<T: Send + Sync + ?Sized>() {}
 /// `T: Clone` (R-API-PY-3: every type that crosses to Python is owned-convertible).
 fn needs_clone<T: Clone>() {}
 
+/// Snapshot inspection stays read-only, owned-convertible and thread-safe; not build authority.
+fn _assert_state_portability_shape() {
+    needs_clone::<crate::StatePortability>();
+    needs_send_sync::<crate::StatePortability>();
+    let _: fn(&EngineStateSnapshot) -> &crate::StatePortability = EngineStateSnapshot::portability;
+}
+
 /// Opaque preparations are moved, while completed results are independently owned and immutable.
 #[allow(clippy::type_complexity)]
 fn _assert_complete_frame_shapes() {

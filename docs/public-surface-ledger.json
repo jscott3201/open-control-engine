@@ -13,8 +13,8 @@
     {
       "id": "oce-api",
       "path": "crates/oce-api/tests/public-api.txt",
-      "sha256": "34006178fdc1ab5f33b173a347da73b472f6875c2e43111e97c6e0f9566e0330",
-      "item_count": 2304
+      "sha256": "1dcb576792c9ca30b45d48df91f16f8860e62710c3d1bb9324f2fdfbe8fd5ee3",
+      "item_count": 2347
     },
     {
       "id": "oce-store",
@@ -26,7 +26,7 @@
   "groups": {
     "facade-stable": {
       "status": "stable-candidate",
-      "surface": "Working oce-api facade operations, owned DTOs, typed errors, model-local value identities, state images, and the closed public-fact compatibility descriptor with distinct catalog/complete-export tags.",
+      "surface": "Working oce-api facade operations, owned DTOs, typed errors, model-local value identities, state images and read-only portability inspection, and the closed public-fact compatibility descriptor with distinct catalog/complete-export tags.",
       "provenance": "crates/oce-api/tests/public-api.txt plus public definitions re-exported by crates/oce-api/src/lib.rs",
       "rationale": "This is the intended long-lived embeddable host contract; exact signatures remain baseline-owned. Descriptor equality is not executable, unique-build, generation, state-wire or security authority."
     },
@@ -59,22 +59,22 @@
     {
       "baseline": "oce-api",
       "group": "facade-stable",
-      "ranges": ["1-1447", "1449-1451", "1453-1457", "1459-1507", "1509-2303"]
+      "ranges": ["1-1469", "1471-1473", "1475-1479", "1481-1530", "1532-2346"]
     },
     {
       "baseline": "oce-api",
       "group": "schedule-leakage",
-      "ranges": ["1448"]
+      "ranges": ["1470"]
     },
     {
       "baseline": "oce-api",
       "group": "storage-port-conditional",
-      "ranges": ["1452", "1458", "2304"]
+      "ranges": ["1474", "1480", "2347"]
     },
     {
       "baseline": "oce-api",
       "group": "deprecated-compatibility",
-      "ranges": ["1508"]
+      "ranges": ["1531"]
     },
     {
       "baseline": "oce-store",

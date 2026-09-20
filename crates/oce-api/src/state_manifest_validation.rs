@@ -235,6 +235,7 @@ pub(crate) fn validate_manifest(
             ));
         }
     }
+    crate::state_io::validate_inputs(manifest, &malformed)?;
     if validate_current_portability {
         let target_bound = manifest
             .blocks
