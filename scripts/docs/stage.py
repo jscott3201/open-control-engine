@@ -195,6 +195,7 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 - [Product contract](docs/product-contract.md)
 - [Complete-frame contract](docs/complete-frame-contract.md)
 - [State continuation and portability](docs/state-compatibility.md)
+- [Canonical replay record](docs/replay-record.md)
 - [Authority claims and supersession](docs/authority-claims.md)
 - [Public surface contract](docs/public-surface-contract.md)
 - [Facade migration](docs/facade-migration.md)
