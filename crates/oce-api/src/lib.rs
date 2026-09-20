@@ -39,6 +39,7 @@ mod catalog;
 mod catalog_adapter;
 mod catalog_json;
 mod catalog_rules;
+mod compatibility;
 mod contracts;
 mod diagnostics;
 mod engine;
@@ -73,6 +74,9 @@ pub use catalog::{
     catalog_to_json,
 };
 pub use catalog_rules::CatalogRule;
+pub use compatibility::{
+    CatalogContentId, CompatibilityDescriptor, CompatibilityMismatch, CompleteExportContentId,
+};
 pub use contracts::{ContractDescriptor, ContractDomain, contract_descriptors};
 pub use diagnostics::{
     DIAGNOSTIC_SCHEMA_REVISION, DiagnosticKey, DiagnosticReceipt, DiagnosticRecord,

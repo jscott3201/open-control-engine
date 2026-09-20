@@ -98,6 +98,14 @@ method and preserve the engine; `public_storage_adapter` exercises this boundary
 `ExportReport::content_id_complete`. Exact members are recorded by the ledger rather than by a prose
 method list.
 
+`CompatibilityDescriptor`, `CatalogContentId`, `CompleteExportContentId` and `CompatibilityMismatch`
+are additive stable-candidate facade surface. The [closed revision-1 host contract](facade-contracts.md#closed-host-compatibility-descriptor)
+owns canonical text, per-field first-cause comparison, completeness refusal and evidence limits.
+Only already-public catalog/shape/profile facts, the OCE Cargo package version and optional complete
+export identity are covered. Private executable/generation/state-wire identities remain private.
+No parser, build fingerprint, signing authority or restore/replay eligibility is added. The existing
+seven domain artifacts and all package/feature/publication classifications remain unchanged.
+
 Future Python bindings wrap a selected subset of the Rust facade. The compile guards constrain that
 subset and selected owned/thread-safe shapes; they do not assert that every Rust facade signature is
 Python-facing.
@@ -121,7 +129,12 @@ Python-facing.
 - **Contract descriptor revision** versions one facade domain's shapes/semantics. HostTick's
   descriptor remains descriptive; it is not a new state-wire or execution-profile selector.
 - **Host build identity** remains consumer-owned and includes the host's source/build/features
-  qualifications; catalog metadata alone cannot establish it.
+  qualifications; catalog metadata alone cannot establish it. The compatibility descriptor's OCE
+  package version is only a public build fact, not a unique build identity.
+- **Complete export content identity** is captured as `CompleteExportContentId`, distinct from
+  `CatalogContentId` and authored `DomainKey`. Existing string APIs retain their bytes and algorithms.
+- **Compatibility descriptor** versions the closed public-fact receipt itself. Equality does not
+  establish executable identity, model-specific IO equality, generation, state compatibility or trust.
 
 Frame preparation and latest-state inspection resolve model-local connector identities in the IO
 inventory, not Store handles. Load still validates adapter handle cardinality, but retains no runtime

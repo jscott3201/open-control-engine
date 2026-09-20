@@ -17,6 +17,7 @@ impl !core::panic::unwind_safe::UnwindSafe for oce_api::OcError
 impl !core::panic::unwind_safe::UnwindSafe for oce_api::OperationFailure
 impl core::clone::Clone for oce_api::AssertEvent
 impl core::clone::Clone for oce_api::AssertLevel
+impl core::clone::Clone for oce_api::CatalogContentId
 impl core::clone::Clone for oce_api::CatalogDefault
 impl core::clone::Clone for oce_api::CatalogEntry
 impl core::clone::Clone for oce_api::CatalogParamDefault
@@ -25,6 +26,9 @@ impl core::clone::Clone for oce_api::CatalogPortKind
 impl core::clone::Clone for oce_api::CatalogPortNaming
 impl core::clone::Clone for oce_api::CatalogRule
 impl core::clone::Clone for oce_api::CatalogValueKind
+impl core::clone::Clone for oce_api::CompatibilityDescriptor
+impl core::clone::Clone for oce_api::CompatibilityMismatch
+impl core::clone::Clone for oce_api::CompleteExportContentId
 impl core::clone::Clone for oce_api::CompletedFrame
 impl core::clone::Clone for oce_api::ContractDescriptor
 impl core::clone::Clone for oce_api::ContractDomain
@@ -54,10 +58,13 @@ impl core::clone::Clone for oce_api::TopologyBlock
 impl core::clone::Clone for oce_api::TopologyConnection
 impl core::clone::Clone for oce_api::TrendCfg
 impl core::cmp::Eq for oce_api::AssertLevel
+impl core::cmp::Eq for oce_api::CatalogContentId
 impl core::cmp::Eq for oce_api::CatalogPort
 impl core::cmp::Eq for oce_api::CatalogPortKind
 impl core::cmp::Eq for oce_api::CatalogPortNaming
 impl core::cmp::Eq for oce_api::CatalogValueKind
+impl core::cmp::Eq for oce_api::CompatibilityMismatch
+impl core::cmp::Eq for oce_api::CompleteExportContentId
 impl core::cmp::Eq for oce_api::ContentIdError
 impl core::cmp::Eq for oce_api::ContractDescriptor
 impl core::cmp::Eq for oce_api::ContractDomain
@@ -73,6 +80,7 @@ impl core::cmp::Eq for oce_api::TrendCfg
 impl core::cmp::Ord for oce_api::DiagnosticKey
 impl core::cmp::Ord for oce_api::DiagnosticSubject
 impl core::cmp::PartialEq for oce_api::AssertLevel
+impl core::cmp::PartialEq for oce_api::CatalogContentId
 impl core::cmp::PartialEq for oce_api::CatalogDefault
 impl core::cmp::PartialEq for oce_api::CatalogEntry
 impl core::cmp::PartialEq for oce_api::CatalogParamDefault
@@ -81,6 +89,8 @@ impl core::cmp::PartialEq for oce_api::CatalogPortKind
 impl core::cmp::PartialEq for oce_api::CatalogPortNaming
 impl core::cmp::PartialEq for oce_api::CatalogRule
 impl core::cmp::PartialEq for oce_api::CatalogValueKind
+impl core::cmp::PartialEq for oce_api::CompatibilityMismatch
+impl core::cmp::PartialEq for oce_api::CompleteExportContentId
 impl core::cmp::PartialEq for oce_api::ContentIdError
 impl core::cmp::PartialEq for oce_api::ContractDescriptor
 impl core::cmp::PartialEq for oce_api::ContractDomain
@@ -115,6 +125,7 @@ impl core::default::Default for oce_api::IoSummary
 impl core::default::Default for oce_api::LoadReport
 impl core::default::Default for oce_api::ParamTable
 impl core::default::Default for oce_api::RunMode
+impl core::error::Error for oce_api::CompatibilityMismatch
 impl core::error::Error for oce_api::ContentIdError
 impl core::error::Error for oce_api::EngineStateError
 impl core::error::Error for oce_api::LoadErrorContext
@@ -122,6 +133,7 @@ impl core::error::Error for oce_api::OcError
 impl core::error::Error for oce_api::OperationFailure
 impl core::fmt::Debug for oce_api::AssertEvent
 impl core::fmt::Debug for oce_api::AssertLevel
+impl core::fmt::Debug for oce_api::CatalogContentId
 impl core::fmt::Debug for oce_api::CatalogDefault
 impl core::fmt::Debug for oce_api::CatalogEntry
 impl core::fmt::Debug for oce_api::CatalogParamDefault
@@ -130,6 +142,9 @@ impl core::fmt::Debug for oce_api::CatalogPortKind
 impl core::fmt::Debug for oce_api::CatalogPortNaming
 impl core::fmt::Debug for oce_api::CatalogRule
 impl core::fmt::Debug for oce_api::CatalogValueKind
+impl core::fmt::Debug for oce_api::CompatibilityDescriptor
+impl core::fmt::Debug for oce_api::CompatibilityMismatch
+impl core::fmt::Debug for oce_api::CompleteExportContentId
 impl core::fmt::Debug for oce_api::CompletedFrame
 impl core::fmt::Debug for oce_api::ContentIdError
 impl core::fmt::Debug for oce_api::ContractDescriptor
@@ -166,6 +181,10 @@ impl core::fmt::Debug for oce_api::Topology
 impl core::fmt::Debug for oce_api::TopologyBlock
 impl core::fmt::Debug for oce_api::TopologyConnection
 impl core::fmt::Debug for oce_api::TrendCfg
+impl core::fmt::Display for oce_api::CatalogContentId
+impl core::fmt::Display for oce_api::CompatibilityDescriptor
+impl core::fmt::Display for oce_api::CompatibilityMismatch
+impl core::fmt::Display for oce_api::CompleteExportContentId
 impl core::fmt::Display for oce_api::ContentIdError
 impl core::fmt::Display for oce_api::EngineStateError
 impl core::fmt::Display for oce_api::LoadErrorContext
@@ -178,6 +197,7 @@ impl core::hash::Hash for oce_api::DiagnosticSubject
 impl core::marker::Copy for oce_api::AssertLevel
 impl core::marker::Copy for oce_api::CatalogPortKind
 impl core::marker::Copy for oce_api::CatalogPortNaming
+impl core::marker::Copy for oce_api::CompatibilityMismatch
 impl core::marker::Copy for oce_api::ContractDescriptor
 impl core::marker::Copy for oce_api::ContractDomain
 impl core::marker::Copy for oce_api::DiagnosticSeverity
@@ -189,6 +209,7 @@ impl core::marker::Copy for oce_api::RunMode
 impl core::marker::Copy for oce_api::TrendCfg
 impl core::marker::Freeze for oce_api::AssertEvent
 impl core::marker::Freeze for oce_api::AssertLevel
+impl core::marker::Freeze for oce_api::CatalogContentId
 impl core::marker::Freeze for oce_api::CatalogDefault
 impl core::marker::Freeze for oce_api::CatalogEntry
 impl core::marker::Freeze for oce_api::CatalogParamDefault
@@ -197,6 +218,9 @@ impl core::marker::Freeze for oce_api::CatalogPortKind
 impl core::marker::Freeze for oce_api::CatalogPortNaming
 impl core::marker::Freeze for oce_api::CatalogRule
 impl core::marker::Freeze for oce_api::CatalogValueKind
+impl core::marker::Freeze for oce_api::CompatibilityDescriptor
+impl core::marker::Freeze for oce_api::CompatibilityMismatch
+impl core::marker::Freeze for oce_api::CompleteExportContentId
 impl core::marker::Freeze for oce_api::CompletedFrame
 impl core::marker::Freeze for oce_api::ContentIdError
 impl core::marker::Freeze for oce_api::ContractDescriptor
@@ -235,6 +259,7 @@ impl core::marker::Freeze for oce_api::TopologyConnection
 impl core::marker::Freeze for oce_api::TrendCfg
 impl core::marker::Send for oce_api::AssertEvent
 impl core::marker::Send for oce_api::AssertLevel
+impl core::marker::Send for oce_api::CatalogContentId
 impl core::marker::Send for oce_api::CatalogDefault
 impl core::marker::Send for oce_api::CatalogEntry
 impl core::marker::Send for oce_api::CatalogParamDefault
@@ -243,6 +268,9 @@ impl core::marker::Send for oce_api::CatalogPortKind
 impl core::marker::Send for oce_api::CatalogPortNaming
 impl core::marker::Send for oce_api::CatalogRule
 impl core::marker::Send for oce_api::CatalogValueKind
+impl core::marker::Send for oce_api::CompatibilityDescriptor
+impl core::marker::Send for oce_api::CompatibilityMismatch
+impl core::marker::Send for oce_api::CompleteExportContentId
 impl core::marker::Send for oce_api::CompletedFrame
 impl core::marker::Send for oce_api::ContentIdError
 impl core::marker::Send for oce_api::ContractDescriptor
@@ -280,6 +308,7 @@ impl core::marker::Send for oce_api::TopologyBlock
 impl core::marker::Send for oce_api::TopologyConnection
 impl core::marker::Send for oce_api::TrendCfg
 impl core::marker::StructuralPartialEq for oce_api::AssertLevel
+impl core::marker::StructuralPartialEq for oce_api::CatalogContentId
 impl core::marker::StructuralPartialEq for oce_api::CatalogDefault
 impl core::marker::StructuralPartialEq for oce_api::CatalogEntry
 impl core::marker::StructuralPartialEq for oce_api::CatalogParamDefault
@@ -288,6 +317,8 @@ impl core::marker::StructuralPartialEq for oce_api::CatalogPortKind
 impl core::marker::StructuralPartialEq for oce_api::CatalogPortNaming
 impl core::marker::StructuralPartialEq for oce_api::CatalogRule
 impl core::marker::StructuralPartialEq for oce_api::CatalogValueKind
+impl core::marker::StructuralPartialEq for oce_api::CompatibilityMismatch
+impl core::marker::StructuralPartialEq for oce_api::CompleteExportContentId
 impl core::marker::StructuralPartialEq for oce_api::ContentIdError
 impl core::marker::StructuralPartialEq for oce_api::ContractDescriptor
 impl core::marker::StructuralPartialEq for oce_api::ContractDomain
@@ -307,6 +338,7 @@ impl core::marker::StructuralPartialEq for oce_api::TopologyConnection
 impl core::marker::StructuralPartialEq for oce_api::TrendCfg
 impl core::marker::Sync for oce_api::AssertEvent
 impl core::marker::Sync for oce_api::AssertLevel
+impl core::marker::Sync for oce_api::CatalogContentId
 impl core::marker::Sync for oce_api::CatalogDefault
 impl core::marker::Sync for oce_api::CatalogEntry
 impl core::marker::Sync for oce_api::CatalogParamDefault
@@ -315,6 +347,9 @@ impl core::marker::Sync for oce_api::CatalogPortKind
 impl core::marker::Sync for oce_api::CatalogPortNaming
 impl core::marker::Sync for oce_api::CatalogRule
 impl core::marker::Sync for oce_api::CatalogValueKind
+impl core::marker::Sync for oce_api::CompatibilityDescriptor
+impl core::marker::Sync for oce_api::CompatibilityMismatch
+impl core::marker::Sync for oce_api::CompleteExportContentId
 impl core::marker::Sync for oce_api::CompletedFrame
 impl core::marker::Sync for oce_api::ContentIdError
 impl core::marker::Sync for oce_api::ContractDescriptor
@@ -353,6 +388,7 @@ impl core::marker::Sync for oce_api::TopologyConnection
 impl core::marker::Sync for oce_api::TrendCfg
 impl core::marker::Unpin for oce_api::AssertEvent
 impl core::marker::Unpin for oce_api::AssertLevel
+impl core::marker::Unpin for oce_api::CatalogContentId
 impl core::marker::Unpin for oce_api::CatalogDefault
 impl core::marker::Unpin for oce_api::CatalogEntry
 impl core::marker::Unpin for oce_api::CatalogParamDefault
@@ -361,6 +397,9 @@ impl core::marker::Unpin for oce_api::CatalogPortKind
 impl core::marker::Unpin for oce_api::CatalogPortNaming
 impl core::marker::Unpin for oce_api::CatalogRule
 impl core::marker::Unpin for oce_api::CatalogValueKind
+impl core::marker::Unpin for oce_api::CompatibilityDescriptor
+impl core::marker::Unpin for oce_api::CompatibilityMismatch
+impl core::marker::Unpin for oce_api::CompleteExportContentId
 impl core::marker::Unpin for oce_api::CompletedFrame
 impl core::marker::Unpin for oce_api::ContentIdError
 impl core::marker::Unpin for oce_api::ContractDescriptor
@@ -399,6 +438,7 @@ impl core::marker::Unpin for oce_api::TopologyConnection
 impl core::marker::Unpin for oce_api::TrendCfg
 impl core::marker::UnsafeUnpin for oce_api::AssertEvent
 impl core::marker::UnsafeUnpin for oce_api::AssertLevel
+impl core::marker::UnsafeUnpin for oce_api::CatalogContentId
 impl core::marker::UnsafeUnpin for oce_api::CatalogDefault
 impl core::marker::UnsafeUnpin for oce_api::CatalogEntry
 impl core::marker::UnsafeUnpin for oce_api::CatalogParamDefault
@@ -407,6 +447,9 @@ impl core::marker::UnsafeUnpin for oce_api::CatalogPortKind
 impl core::marker::UnsafeUnpin for oce_api::CatalogPortNaming
 impl core::marker::UnsafeUnpin for oce_api::CatalogRule
 impl core::marker::UnsafeUnpin for oce_api::CatalogValueKind
+impl core::marker::UnsafeUnpin for oce_api::CompatibilityDescriptor
+impl core::marker::UnsafeUnpin for oce_api::CompatibilityMismatch
+impl core::marker::UnsafeUnpin for oce_api::CompleteExportContentId
 impl core::marker::UnsafeUnpin for oce_api::CompletedFrame
 impl core::marker::UnsafeUnpin for oce_api::ContentIdError
 impl core::marker::UnsafeUnpin for oce_api::ContractDescriptor
@@ -445,6 +488,7 @@ impl core::marker::UnsafeUnpin for oce_api::TopologyConnection
 impl core::marker::UnsafeUnpin for oce_api::TrendCfg
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::AssertEvent
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::AssertLevel
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogContentId
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogDefault
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogEntry
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogParamDefault
@@ -453,6 +497,9 @@ impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogPortKind
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogPortNaming
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogRule
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CatalogValueKind
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CompatibilityDescriptor
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CompatibilityMismatch
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CompleteExportContentId
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CompletedFrame
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ContentIdError
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ContractDescriptor
@@ -488,6 +535,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for oce_api::TopologyConnection
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::TrendCfg
 impl core::panic::unwind_safe::UnwindSafe for oce_api::AssertEvent
 impl core::panic::unwind_safe::UnwindSafe for oce_api::AssertLevel
+impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogContentId
 impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogDefault
 impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogEntry
 impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogParamDefault
@@ -496,6 +544,9 @@ impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogPortKind
 impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogPortNaming
 impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogRule
 impl core::panic::unwind_safe::UnwindSafe for oce_api::CatalogValueKind
+impl core::panic::unwind_safe::UnwindSafe for oce_api::CompatibilityDescriptor
+impl core::panic::unwind_safe::UnwindSafe for oce_api::CompatibilityMismatch
+impl core::panic::unwind_safe::UnwindSafe for oce_api::CompleteExportContentId
 impl core::panic::unwind_safe::UnwindSafe for oce_api::CompletedFrame
 impl core::panic::unwind_safe::UnwindSafe for oce_api::ContentIdError
 impl core::panic::unwind_safe::UnwindSafe for oce_api::ContractDescriptor
@@ -529,6 +580,9 @@ impl core::panic::unwind_safe::UnwindSafe for oce_api::Topology
 impl core::panic::unwind_safe::UnwindSafe for oce_api::TopologyBlock
 impl core::panic::unwind_safe::UnwindSafe for oce_api::TopologyConnection
 impl core::panic::unwind_safe::UnwindSafe for oce_api::TrendCfg
+impl oce_api::CatalogContentId
+impl oce_api::CompatibilityDescriptor
+impl oce_api::CompleteExportContentId
 impl oce_api::CompletedFrame
 impl oce_api::DiagnosticKey
 impl oce_api::DiagnosticReceipt
@@ -563,6 +617,7 @@ impl<S> core::marker::Unpin for oce_api::Engine<S>
 impl<S> core::marker::UnsafeUnpin for oce_api::Engine<S>
 impl<T, U> core::convert::Into<U> for oce_api::AssertEvent where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::AssertLevel where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::CatalogContentId where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::CatalogDefault where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::CatalogEntry where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::CatalogParamDefault where U: core::convert::From<T>
@@ -571,6 +626,9 @@ impl<T, U> core::convert::Into<U> for oce_api::CatalogPortKind where U: core::co
 impl<T, U> core::convert::Into<U> for oce_api::CatalogPortNaming where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::CatalogRule where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::CatalogValueKind where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::CompatibilityDescriptor where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::CompatibilityMismatch where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::CompleteExportContentId where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::CompletedFrame where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::ContentIdError where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::ContractDescriptor where U: core::convert::From<T>
@@ -610,6 +668,7 @@ impl<T, U> core::convert::Into<U> for oce_api::TopologyConnection where U: core:
 impl<T, U> core::convert::Into<U> for oce_api::TrendCfg where U: core::convert::From<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::AssertEvent where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::AssertLevel where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogContentId where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogDefault where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogEntry where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogParamDefault where U: core::convert::Into<T>
@@ -618,6 +677,9 @@ impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogPortKind where U: core:
 impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogPortNaming where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogRule where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::CatalogValueKind where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::CompatibilityDescriptor where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::CompatibilityMismatch where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::CompleteExportContentId where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::CompletedFrame where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::ContentIdError where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::ContractDescriptor where U: core::convert::Into<T>
@@ -657,6 +719,7 @@ impl<T, U> core::convert::TryFrom<U> for oce_api::TopologyConnection where U: co
 impl<T, U> core::convert::TryFrom<U> for oce_api::TrendCfg where U: core::convert::Into<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::AssertEvent where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::AssertLevel where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::CatalogContentId where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::CatalogDefault where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::CatalogEntry where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::CatalogParamDefault where U: core::convert::TryFrom<T>
@@ -665,6 +728,9 @@ impl<T, U> core::convert::TryInto<U> for oce_api::CatalogPortKind where U: core:
 impl<T, U> core::convert::TryInto<U> for oce_api::CatalogPortNaming where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::CatalogRule where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::CatalogValueKind where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::CompatibilityDescriptor where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::CompatibilityMismatch where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::CompleteExportContentId where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::CompletedFrame where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::ContentIdError where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::ContractDescriptor where U: core::convert::TryFrom<T>
@@ -704,6 +770,7 @@ impl<T, U> core::convert::TryInto<U> for oce_api::TopologyConnection where U: co
 impl<T, U> core::convert::TryInto<U> for oce_api::TrendCfg where U: core::convert::TryFrom<T>
 impl<T> alloc::borrow::ToOwned for oce_api::AssertEvent where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::AssertLevel where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::CatalogContentId where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::CatalogDefault where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::CatalogEntry where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::CatalogParamDefault where T: core::clone::Clone
@@ -712,6 +779,9 @@ impl<T> alloc::borrow::ToOwned for oce_api::CatalogPortKind where T: core::clone
 impl<T> alloc::borrow::ToOwned for oce_api::CatalogPortNaming where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::CatalogRule where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::CatalogValueKind where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::CompatibilityDescriptor where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::CompatibilityMismatch where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::CompleteExportContentId where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::CompletedFrame where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::ContractDescriptor where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::ContractDomain where T: core::clone::Clone
@@ -740,6 +810,10 @@ impl<T> alloc::borrow::ToOwned for oce_api::Topology where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::TopologyBlock where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::TopologyConnection where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::TrendCfg where T: core::clone::Clone
+impl<T> alloc::string::ToString for oce_api::CatalogContentId where T: core::fmt::Display + ?core::marker::Sized
+impl<T> alloc::string::ToString for oce_api::CompatibilityDescriptor where T: core::fmt::Display + ?core::marker::Sized
+impl<T> alloc::string::ToString for oce_api::CompatibilityMismatch where T: core::fmt::Display + ?core::marker::Sized
+impl<T> alloc::string::ToString for oce_api::CompleteExportContentId where T: core::fmt::Display + ?core::marker::Sized
 impl<T> alloc::string::ToString for oce_api::ContentIdError where T: core::fmt::Display + ?core::marker::Sized
 impl<T> alloc::string::ToString for oce_api::EngineStateError where T: core::fmt::Display + ?core::marker::Sized
 impl<T> alloc::string::ToString for oce_api::LoadErrorContext where T: core::fmt::Display + ?core::marker::Sized
@@ -747,6 +821,7 @@ impl<T> alloc::string::ToString for oce_api::OcError where T: core::fmt::Display
 impl<T> alloc::string::ToString for oce_api::OperationFailure where T: core::fmt::Display + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::AssertEvent where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::AssertLevel where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::CatalogContentId where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::CatalogDefault where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::CatalogEntry where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::CatalogParamDefault where T: 'static + ?core::marker::Sized
@@ -755,6 +830,9 @@ impl<T> core::any::Any for oce_api::CatalogPortKind where T: 'static + ?core::ma
 impl<T> core::any::Any for oce_api::CatalogPortNaming where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::CatalogRule where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::CatalogValueKind where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::CompatibilityDescriptor where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::CompatibilityMismatch where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::CompleteExportContentId where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::CompletedFrame where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::ContentIdError where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::ContractDescriptor where T: 'static + ?core::marker::Sized
@@ -794,6 +872,7 @@ impl<T> core::any::Any for oce_api::TopologyConnection where T: 'static + ?core:
 impl<T> core::any::Any for oce_api::TrendCfg where T: 'static + ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::AssertEvent where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::AssertLevel where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::CatalogContentId where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::CatalogDefault where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::CatalogEntry where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::CatalogParamDefault where T: ?core::marker::Sized
@@ -802,6 +881,9 @@ impl<T> core::borrow::Borrow<T> for oce_api::CatalogPortKind where T: ?core::mar
 impl<T> core::borrow::Borrow<T> for oce_api::CatalogPortNaming where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::CatalogRule where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::CatalogValueKind where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::CompatibilityDescriptor where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::CompatibilityMismatch where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::CompleteExportContentId where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::CompletedFrame where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::ContentIdError where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::ContractDescriptor where T: ?core::marker::Sized
@@ -841,6 +923,7 @@ impl<T> core::borrow::Borrow<T> for oce_api::TopologyConnection where T: ?core::
 impl<T> core::borrow::Borrow<T> for oce_api::TrendCfg where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::AssertEvent where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::AssertLevel where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogContentId where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogDefault where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogEntry where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogParamDefault where T: ?core::marker::Sized
@@ -849,6 +932,9 @@ impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogPortKind where T: ?core::
 impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogPortNaming where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogRule where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::CatalogValueKind where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::CompatibilityDescriptor where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::CompatibilityMismatch where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::CompleteExportContentId where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::CompletedFrame where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::ContentIdError where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::ContractDescriptor where T: ?core::marker::Sized
@@ -888,6 +974,7 @@ impl<T> core::borrow::BorrowMut<T> for oce_api::TopologyConnection where T: ?cor
 impl<T> core::borrow::BorrowMut<T> for oce_api::TrendCfg where T: ?core::marker::Sized
 impl<T> core::clone::CloneToUninit for oce_api::AssertEvent where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::AssertLevel where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::CatalogContentId where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::CatalogDefault where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::CatalogEntry where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::CatalogParamDefault where T: core::clone::Clone
@@ -896,6 +983,9 @@ impl<T> core::clone::CloneToUninit for oce_api::CatalogPortKind where T: core::c
 impl<T> core::clone::CloneToUninit for oce_api::CatalogPortNaming where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::CatalogRule where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::CatalogValueKind where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::CompatibilityDescriptor where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::CompatibilityMismatch where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::CompleteExportContentId where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::CompletedFrame where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::ContractDescriptor where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::ContractDomain where T: core::clone::Clone
@@ -926,6 +1016,7 @@ impl<T> core::clone::CloneToUninit for oce_api::TopologyConnection where T: core
 impl<T> core::clone::CloneToUninit for oce_api::TrendCfg where T: core::clone::Clone
 impl<T> core::convert::From<T> for oce_api::AssertEvent
 impl<T> core::convert::From<T> for oce_api::AssertLevel
+impl<T> core::convert::From<T> for oce_api::CatalogContentId
 impl<T> core::convert::From<T> for oce_api::CatalogDefault
 impl<T> core::convert::From<T> for oce_api::CatalogEntry
 impl<T> core::convert::From<T> for oce_api::CatalogParamDefault
@@ -934,6 +1025,9 @@ impl<T> core::convert::From<T> for oce_api::CatalogPortKind
 impl<T> core::convert::From<T> for oce_api::CatalogPortNaming
 impl<T> core::convert::From<T> for oce_api::CatalogRule
 impl<T> core::convert::From<T> for oce_api::CatalogValueKind
+impl<T> core::convert::From<T> for oce_api::CompatibilityDescriptor
+impl<T> core::convert::From<T> for oce_api::CompatibilityMismatch
+impl<T> core::convert::From<T> for oce_api::CompleteExportContentId
 impl<T> core::convert::From<T> for oce_api::CompletedFrame
 impl<T> core::convert::From<T> for oce_api::ContentIdError
 impl<T> core::convert::From<T> for oce_api::ContractDescriptor
@@ -983,6 +1077,7 @@ pub enum oce_api::CatalogPortKind
 pub enum oce_api::CatalogPortNaming
 pub enum oce_api::CatalogRule
 pub enum oce_api::CatalogValueKind
+pub enum oce_api::CompatibilityMismatch
 pub enum oce_api::ContractDomain
 pub enum oce_api::DiagnosticSeverity
 pub enum oce_api::DiagnosticStage
@@ -1014,6 +1109,21 @@ pub fn oce_api::AssertLevel::to_owned(&self) -> T
 pub fn oce_api::AssertLevel::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::AssertLevel::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::AssertLevel::type_id(&self) -> core::any::TypeId
+pub fn oce_api::CatalogContentId::as_str(&self) -> &str
+pub fn oce_api::CatalogContentId::borrow(&self) -> &T
+pub fn oce_api::CatalogContentId::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::CatalogContentId::clone(&self) -> oce_api::CatalogContentId
+pub fn oce_api::CatalogContentId::clone_into(&self, &mut T)
+pub fn oce_api::CatalogContentId::eq(&self, &oce_api::CatalogContentId) -> bool
+pub fn oce_api::CatalogContentId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CatalogContentId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CatalogContentId::from(T) -> T
+pub fn oce_api::CatalogContentId::into(self) -> U
+pub fn oce_api::CatalogContentId::to_owned(&self) -> T
+pub fn oce_api::CatalogContentId::to_string(&self) -> alloc::string::String
+pub fn oce_api::CatalogContentId::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::CatalogContentId::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::CatalogContentId::type_id(&self) -> core::any::TypeId
 pub fn oce_api::CatalogDefault::borrow(&self) -> &T
 pub fn oce_api::CatalogDefault::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::CatalogDefault::clone(&self) -> oce_api::CatalogDefault
@@ -1110,6 +1220,60 @@ pub fn oce_api::CatalogValueKind::to_owned(&self) -> T
 pub fn oce_api::CatalogValueKind::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::CatalogValueKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::CatalogValueKind::type_id(&self) -> core::any::TypeId
+pub fn oce_api::CompatibilityDescriptor::borrow(&self) -> &T
+pub fn oce_api::CompatibilityDescriptor::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::CompatibilityDescriptor::catalog_content_id(&self) -> &oce_api::CatalogContentId
+pub fn oce_api::CompatibilityDescriptor::catalog_schema_revision(&self) -> u32
+pub fn oce_api::CompatibilityDescriptor::check_compatible(&self, &Self) -> core::result::Result<(), oce_api::CompatibilityMismatch>
+pub fn oce_api::CompatibilityDescriptor::clone(&self) -> oce_api::CompatibilityDescriptor
+pub fn oce_api::CompatibilityDescriptor::clone_into(&self, &mut T)
+pub fn oce_api::CompatibilityDescriptor::current(core::option::Option<&oce_api::ExportReport>) -> core::result::Result<Self, oce_api::ContentIdError>
+pub fn oce_api::CompatibilityDescriptor::execution_profile(&self) -> &'static str
+pub fn oce_api::CompatibilityDescriptor::execution_profile_schema_revision(&self) -> u32
+pub fn oce_api::CompatibilityDescriptor::export_content_id(&self) -> core::option::Option<&oce_api::CompleteExportContentId>
+pub fn oce_api::CompatibilityDescriptor::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CompatibilityDescriptor::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CompatibilityDescriptor::from(T) -> T
+pub fn oce_api::CompatibilityDescriptor::into(self) -> U
+pub fn oce_api::CompatibilityDescriptor::io_schema_revision(&self) -> u32
+pub fn oce_api::CompatibilityDescriptor::oce_api_version(&self) -> &'static str
+pub fn oce_api::CompatibilityDescriptor::parameter_schema_revision(&self) -> u32
+pub fn oce_api::CompatibilityDescriptor::revision(&self) -> u32
+pub fn oce_api::CompatibilityDescriptor::to_owned(&self) -> T
+pub fn oce_api::CompatibilityDescriptor::to_string(&self) -> alloc::string::String
+pub fn oce_api::CompatibilityDescriptor::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::CompatibilityDescriptor::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::CompatibilityDescriptor::type_id(&self) -> core::any::TypeId
+pub fn oce_api::CompatibilityDescriptor::value_schema_revision(&self) -> u32
+pub fn oce_api::CompatibilityMismatch::borrow(&self) -> &T
+pub fn oce_api::CompatibilityMismatch::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::CompatibilityMismatch::clone(&self) -> oce_api::CompatibilityMismatch
+pub fn oce_api::CompatibilityMismatch::clone_into(&self, &mut T)
+pub fn oce_api::CompatibilityMismatch::eq(&self, &oce_api::CompatibilityMismatch) -> bool
+pub fn oce_api::CompatibilityMismatch::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CompatibilityMismatch::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CompatibilityMismatch::from(T) -> T
+pub fn oce_api::CompatibilityMismatch::into(self) -> U
+pub fn oce_api::CompatibilityMismatch::to_owned(&self) -> T
+pub fn oce_api::CompatibilityMismatch::to_string(&self) -> alloc::string::String
+pub fn oce_api::CompatibilityMismatch::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::CompatibilityMismatch::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::CompatibilityMismatch::type_id(&self) -> core::any::TypeId
+pub fn oce_api::CompleteExportContentId::as_str(&self) -> &str
+pub fn oce_api::CompleteExportContentId::borrow(&self) -> &T
+pub fn oce_api::CompleteExportContentId::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::CompleteExportContentId::clone(&self) -> oce_api::CompleteExportContentId
+pub fn oce_api::CompleteExportContentId::clone_into(&self, &mut T)
+pub fn oce_api::CompleteExportContentId::eq(&self, &oce_api::CompleteExportContentId) -> bool
+pub fn oce_api::CompleteExportContentId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CompleteExportContentId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CompleteExportContentId::from(T) -> T
+pub fn oce_api::CompleteExportContentId::into(self) -> U
+pub fn oce_api::CompleteExportContentId::to_owned(&self) -> T
+pub fn oce_api::CompleteExportContentId::to_string(&self) -> alloc::string::String
+pub fn oce_api::CompleteExportContentId::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::CompleteExportContentId::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::CompleteExportContentId::type_id(&self) -> core::any::TypeId
 pub fn oce_api::CompletedFrame::borrow(&self) -> &T
 pub fn oce_api::CompletedFrame::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::CompletedFrame::clone(&self) -> oce_api::CompletedFrame
@@ -1743,6 +1907,16 @@ pub oce_api::CatalogValueKind::Enum::members: &'static [&'static str]
 pub oce_api::CatalogValueKind::Integer
 pub oce_api::CatalogValueKind::Real
 pub oce_api::CatalogValueKind::String
+pub oce_api::CompatibilityMismatch::Build
+pub oce_api::CompatibilityMismatch::CatalogContent
+pub oce_api::CompatibilityMismatch::CatalogSchema
+pub oce_api::CompatibilityMismatch::DescriptorRevision
+pub oce_api::CompatibilityMismatch::ExecutionProfile
+pub oce_api::CompatibilityMismatch::ExportContent
+pub oce_api::CompatibilityMismatch::ExportPresence
+pub oce_api::CompatibilityMismatch::IoSchema
+pub oce_api::CompatibilityMismatch::ParameterSchema
+pub oce_api::CompatibilityMismatch::ValueSchema
 pub oce_api::ContentIdError::Incomplete::warning_count: usize
 pub oce_api::ContractDescriptor::domain: oce_api::ContractDomain
 pub oce_api::ContractDescriptor::revision: u32
@@ -1907,9 +2081,12 @@ pub oce_api::TopologyConnection::to: alloc::string::String
 pub oce_api::TrendCfg::enabled: bool
 pub oce_api::TrendCfg::interval: oce_store::TrendInterval
 pub struct oce_api::AssertEvent
+pub struct oce_api::CatalogContentId(_)
 pub struct oce_api::CatalogEntry
 pub struct oce_api::CatalogParamDefault
 pub struct oce_api::CatalogPort
+pub struct oce_api::CompatibilityDescriptor
+pub struct oce_api::CompleteExportContentId(_)
 pub struct oce_api::CompletedFrame
 pub struct oce_api::ContractDescriptor
 pub struct oce_api::DiagnosticKey
@@ -1936,6 +2113,9 @@ pub type oce_api::AssertEvent::Owned = T
 pub type oce_api::AssertLevel::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::AssertLevel::Error = core::convert::Infallible
 pub type oce_api::AssertLevel::Owned = T
+pub type oce_api::CatalogContentId::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::CatalogContentId::Error = core::convert::Infallible
+pub type oce_api::CatalogContentId::Owned = T
 pub type oce_api::CatalogDefault::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::CatalogDefault::Error = core::convert::Infallible
 pub type oce_api::CatalogDefault::Owned = T
@@ -1960,6 +2140,15 @@ pub type oce_api::CatalogRule::Owned = T
 pub type oce_api::CatalogValueKind::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::CatalogValueKind::Error = core::convert::Infallible
 pub type oce_api::CatalogValueKind::Owned = T
+pub type oce_api::CompatibilityDescriptor::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::CompatibilityDescriptor::Error = core::convert::Infallible
+pub type oce_api::CompatibilityDescriptor::Owned = T
+pub type oce_api::CompatibilityMismatch::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::CompatibilityMismatch::Error = core::convert::Infallible
+pub type oce_api::CompatibilityMismatch::Owned = T
+pub type oce_api::CompleteExportContentId::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::CompleteExportContentId::Error = core::convert::Infallible
+pub type oce_api::CompleteExportContentId::Owned = T
 pub type oce_api::CompletedFrame::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::CompletedFrame::Error = core::convert::Infallible
 pub type oce_api::CompletedFrame::Owned = T
@@ -2065,6 +2254,7 @@ pub type oce_api::TrendCfg::Error = core::convert::Infallible
 pub type oce_api::TrendCfg::Owned = T
 pub unsafe fn oce_api::AssertEvent::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::AssertLevel::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::CatalogContentId::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::CatalogDefault::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::CatalogEntry::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::CatalogParamDefault::clone_to_uninit(&self, *mut u8)
@@ -2073,6 +2263,9 @@ pub unsafe fn oce_api::CatalogPortKind::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::CatalogPortNaming::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::CatalogRule::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::CatalogValueKind::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::CompatibilityDescriptor::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::CompatibilityMismatch::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::CompleteExportContentId::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::CompletedFrame::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::ContractDescriptor::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::ContractDomain::clone_to_uninit(&self, *mut u8)
