@@ -72,7 +72,7 @@ owns ordering, domains, bounded errors and load/dirty-resume invalidation; the
 are likewise additive stable-candidate surface. The plan is consumed; the result exposes only model
 time, engine-lifetime accepted sequence, lexical boundary `(String, Value)` pairs and Warning
 diagnostics through read-only accessors. No mutable Outputs, internal connector indices or public
-context token escapes. Neither frame type is serializable. Reload/resume/restore never reset the
+context token escapes. Neither frame type has a serde representation. Reload/resume/restore never reset the
 sequence, which is correlation, not replay or deployment authority. See the
 [execution contract](complete-frame-contract.md#current-execution-api). Legacy execution surfaces
 and raw output access are removed, without aliases. Latest-state `get_output`/`watch` remain non-receipt inspection.
@@ -105,6 +105,13 @@ Only already-public catalog/shape/profile facts, the OCE Cargo package version a
 export identity are covered. Private executable/generation/state-wire identities remain private.
 No parser, build fingerprint, signing authority or restore/replay eligibility is added. The existing
 seven domain artifacts and all package/feature/publication classifications remain unchanged.
+
+`CompletedFrame::inputs` and `replay_record`, `ReplayRecord`, `ReplayExactness`, `ReplayError`,
+`ReplayContentId` and `MAX_REPLAY_BYTES` are additive stable-candidate facade surface. The
+[revision-1 per-frame format](replay-record.md) owns canonical bytes, bounded independent decoding,
+exact comparison and target eligibility. It is not an Engine replay method or sequence container.
+Hosts authenticate exact bytes, ordered position and optional state sidecars, and qualify build,
+executable and prior state. Noncryptographic record identity is not deployment or build authority.
 
 Future Python bindings wrap a selected subset of the Rust facade. The compile guards constrain that
 subset and selected owned/thread-safe shapes; they do not assert that every Rust facade signature is

@@ -72,6 +72,8 @@ fn allocation_cost_is_only_prepared_targets_boundary_results_and_emitted_warning
         assert_eq!(sample.diagnostics().len(), warning_count);
         let output_bytes = output_count * size_of::<(String, Value)>()
             + sample.outputs().iter().map(|(p, _)| p.len()).sum::<usize>();
+        let input_bytes = inputs * size_of::<(String, Value)>()
+            + sample.inputs().iter().map(|(p, _)| p.len()).sum::<usize>();
         // Current fixtures emit at most one warning: Vec's initial non-ZST capacity is four.
         let diagnostic_bytes = if warning_count == 0 {
             0
@@ -82,7 +84,11 @@ fn allocation_cost_is_only_prepared_targets_boundary_results_and_emitted_warning
         let preparation_bytes = inputs
             * (size_of::<Option<&Value>>() + size_of::<(Vec<ConnectorId>, Value)>())
             + targets * size_of::<ConnectorId>();
-        let commit_count = output_count + usize::from(output_count != 0) + 3 * warning_count;
+        let commit_count = inputs
+            + usize::from(inputs != 0)
+            + output_count
+            + usize::from(output_count != 0)
+            + 3 * warning_count;
         let repetitions = 128;
         let census = measure(|| {
             for _ in 0..repetitions {
@@ -97,7 +103,8 @@ fn allocation_cost_is_only_prepared_targets_boundary_results_and_emitted_warning
         );
         assert_eq!(
             census.bytes_total,
-            (preparation_bytes + output_bytes + diagnostic_bytes) as u64 * repetitions,
+            (preparation_bytes + input_bytes + output_bytes + diagnostic_bytes) as u64
+                * repetitions,
             "{name}"
         );
         assert_eq!(
@@ -110,7 +117,7 @@ fn allocation_cost_is_only_prepared_targets_boundary_results_and_emitted_warning
         );
         println!(
             "frame allocation {name}: N={inputs} T={targets} B={output_count} D={warning_count} prepare={preparation_count}/{preparation_bytes}B commit={commit_count}/{}B repetitions={repetitions}",
-            output_bytes + diagnostic_bytes
+            input_bytes + output_bytes + diagnostic_bytes
         );
     }
 }

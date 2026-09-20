@@ -33,7 +33,8 @@ pub struct PreparedInputFrame {
 
 /// An independently owned, immutable result of one accepted complete-frame HostTick transition.
 ///
-/// Contains only executable root boundary outputs, in lexical UTF-8 identity order, with exact
+/// Retains accepted boundary inputs and executable root boundary outputs in lexical UTF-8
+/// identity order, with exact
 /// native [`Value`] types/bits, plus warnings in evaluator emission order. Internal driver aliases
 /// are not extra outputs; distinct declared outputs sharing one driver remain distinct. Undriven
 /// declarations absent from the executable are not fabricated. An empty output set is valid.
@@ -41,7 +42,8 @@ pub struct PreparedInputFrame {
 /// Retaining or cloning this result does not retain mutable engine state. Later frames,
 /// restore, reload and parameter resume cannot change it. A private load/rebuild fence
 /// binds it to its executable/IO/build/profile context; it exposes no portable identity or authority.
-/// This is computation evidence, not a persistence, replay, freshness or equipment-delivery receipt.
+/// This is computation evidence, not persistence, freshness or equipment-delivery authority.
+/// [`Self::replay_record`] captures a separate canonical record without executing again.
 /// No serialization or public constructor is provided. Accessors do not allocate or panic.
 ///
 /// ```compile_fail
@@ -55,6 +57,8 @@ pub struct CompletedFrame {
     _generation: Arc<()>,
     time: f64,
     sequence: u64,
+    inputs: Vec<(String, Value)>,
+    pub(crate) target_bound: bool,
     outputs: Vec<(String, Value)>,
     diagnostics: Vec<AssertEvent>,
 }
@@ -71,6 +75,13 @@ impl fmt::Debug for CompletedFrame {
 }
 
 impl CompletedFrame {
+    /// Accepted boundary inputs in canonical lexical UTF-8 path order, with exact native bits.
+    /// Borrowing does not allocate or consult the engine; later execution cannot change them.
+    #[must_use]
+    pub fn inputs(&self) -> &[(String, Value)] {
+        &self.inputs
+    }
+
     /// Model time in seconds, preserving the supplied finite binary64 bits (including signed zero).
     #[must_use]
     pub fn time(&self) -> f64 {
@@ -111,6 +122,10 @@ mod tests;
 #[path = "frame_commit_tests.rs"]
 mod commit_tests;
 
+#[cfg(test)]
+#[path = "replay_capture_tests.rs"]
+mod replay_tests;
+
 impl fmt::Debug for PreparedInputFrame {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PreparedInputFrame")
@@ -134,8 +149,9 @@ impl<S: Store> Engine<S> {
     /// is invoked. This is the only public state-advancing execution surface; cadence and
     /// persistence orchestration are host responsibilities, not alternative execution profiles.
     ///
-    /// Allocation/copy costs beyond normal evaluation scale with boundary outputs and emitted
+    /// Allocation/copy costs beyond normal evaluation scale with boundary inputs/outputs and emitted
     /// warnings; staging scales with prepared fan-out. There is no run-state clone or rollback.
+    /// Placement capture scans block classes using the state portability policy.
     ///
     /// ```
     /// use oce_api::{CompletedFrame, Engine, OcError, Value};
@@ -182,6 +198,17 @@ impl<S: Store> Engine<S> {
             _generation: frame.generation,
             time: frame.time,
             sequence,
+            inputs: self
+                .io
+                .frame_definitions
+                .iter()
+                .zip(frame.inputs)
+                .map(|(definition, (_, value))| (definition.path.clone(), value))
+                .collect(),
+            target_bound: self
+                .blocks
+                .iter()
+                .any(|block| crate::state_manifest::requires_target(block.signature().class_path)),
             outputs: self
                 .io
                 .frame_outputs

@@ -53,6 +53,10 @@ impl core::clone::Clone for oce_api::ParamTable
 impl core::clone::Clone for oce_api::PassThroughPair
 impl core::clone::Clone for oce_api::PhysicalKind
 impl core::clone::Clone for oce_api::PointInfo
+impl core::clone::Clone for oce_api::ReplayContentId
+impl core::clone::Clone for oce_api::ReplayError
+impl core::clone::Clone for oce_api::ReplayExactness
+impl core::clone::Clone for oce_api::ReplayRecord
 impl core::clone::Clone for oce_api::RunMode
 impl core::clone::Clone for oce_api::StatePortability
 impl core::clone::Clone for oce_api::Topology
@@ -77,6 +81,9 @@ impl core::cmp::Eq for oce_api::DiagnosticSubject
 impl core::cmp::Eq for oce_api::IoClass
 impl core::cmp::Eq for oce_api::IoSummary
 impl core::cmp::Eq for oce_api::PhysicalKind
+impl core::cmp::Eq for oce_api::ReplayContentId
+impl core::cmp::Eq for oce_api::ReplayError
+impl core::cmp::Eq for oce_api::ReplayExactness
 impl core::cmp::Eq for oce_api::RunMode
 impl core::cmp::Eq for oce_api::StatePortability
 impl core::cmp::Eq for oce_api::TrendCfg
@@ -108,6 +115,9 @@ impl core::cmp::PartialEq for oce_api::ParamAttrs
 impl core::cmp::PartialEq for oce_api::PassThroughPair
 impl core::cmp::PartialEq for oce_api::PhysicalKind
 impl core::cmp::PartialEq for oce_api::PointInfo
+impl core::cmp::PartialEq for oce_api::ReplayContentId
+impl core::cmp::PartialEq for oce_api::ReplayError
+impl core::cmp::PartialEq for oce_api::ReplayExactness
 impl core::cmp::PartialEq for oce_api::RunMode
 impl core::cmp::PartialEq for oce_api::StatePortability
 impl core::cmp::PartialEq for oce_api::Topology
@@ -135,6 +145,7 @@ impl core::error::Error for oce_api::EngineStateError
 impl core::error::Error for oce_api::LoadErrorContext
 impl core::error::Error for oce_api::OcError
 impl core::error::Error for oce_api::OperationFailure
+impl core::error::Error for oce_api::ReplayError
 impl core::fmt::Debug for oce_api::AssertEvent
 impl core::fmt::Debug for oce_api::AssertLevel
 impl core::fmt::Debug for oce_api::CatalogContentId
@@ -180,6 +191,10 @@ impl core::fmt::Debug for oce_api::PassThroughPair
 impl core::fmt::Debug for oce_api::PhysicalKind
 impl core::fmt::Debug for oce_api::PointInfo
 impl core::fmt::Debug for oce_api::PreparedInputFrame
+impl core::fmt::Debug for oce_api::ReplayContentId
+impl core::fmt::Debug for oce_api::ReplayError
+impl core::fmt::Debug for oce_api::ReplayExactness
+impl core::fmt::Debug for oce_api::ReplayRecord
 impl core::fmt::Debug for oce_api::RunMode
 impl core::fmt::Debug for oce_api::StatePortability
 impl core::fmt::Debug for oce_api::Topology
@@ -195,6 +210,8 @@ impl core::fmt::Display for oce_api::EngineStateError
 impl core::fmt::Display for oce_api::LoadErrorContext
 impl core::fmt::Display for oce_api::OcError
 impl core::fmt::Display for oce_api::OperationFailure
+impl core::fmt::Display for oce_api::ReplayContentId
+impl core::fmt::Display for oce_api::ReplayError
 impl core::hash::Hash for oce_api::DiagnosticKey
 impl core::hash::Hash for oce_api::DiagnosticSeverity
 impl core::hash::Hash for oce_api::DiagnosticStage
@@ -210,6 +227,8 @@ impl core::marker::Copy for oce_api::DiagnosticStage
 impl core::marker::Copy for oce_api::IoClass
 impl core::marker::Copy for oce_api::IoSummary
 impl core::marker::Copy for oce_api::PhysicalKind
+impl core::marker::Copy for oce_api::ReplayContentId
+impl core::marker::Copy for oce_api::ReplayExactness
 impl core::marker::Copy for oce_api::RunMode
 impl core::marker::Copy for oce_api::TrendCfg
 impl core::marker::Freeze for oce_api::AssertEvent
@@ -257,6 +276,10 @@ impl core::marker::Freeze for oce_api::PassThroughPair
 impl core::marker::Freeze for oce_api::PhysicalKind
 impl core::marker::Freeze for oce_api::PointInfo
 impl core::marker::Freeze for oce_api::PreparedInputFrame
+impl core::marker::Freeze for oce_api::ReplayContentId
+impl core::marker::Freeze for oce_api::ReplayError
+impl core::marker::Freeze for oce_api::ReplayExactness
+impl core::marker::Freeze for oce_api::ReplayRecord
 impl core::marker::Freeze for oce_api::RunMode
 impl core::marker::Freeze for oce_api::StatePortability
 impl core::marker::Freeze for oce_api::Topology
@@ -308,6 +331,10 @@ impl core::marker::Send for oce_api::PassThroughPair
 impl core::marker::Send for oce_api::PhysicalKind
 impl core::marker::Send for oce_api::PointInfo
 impl core::marker::Send for oce_api::PreparedInputFrame
+impl core::marker::Send for oce_api::ReplayContentId
+impl core::marker::Send for oce_api::ReplayError
+impl core::marker::Send for oce_api::ReplayExactness
+impl core::marker::Send for oce_api::ReplayRecord
 impl core::marker::Send for oce_api::RunMode
 impl core::marker::Send for oce_api::StatePortability
 impl core::marker::Send for oce_api::Topology
@@ -340,6 +367,9 @@ impl core::marker::StructuralPartialEq for oce_api::ParamAttrs
 impl core::marker::StructuralPartialEq for oce_api::PassThroughPair
 impl core::marker::StructuralPartialEq for oce_api::PhysicalKind
 impl core::marker::StructuralPartialEq for oce_api::PointInfo
+impl core::marker::StructuralPartialEq for oce_api::ReplayContentId
+impl core::marker::StructuralPartialEq for oce_api::ReplayError
+impl core::marker::StructuralPartialEq for oce_api::ReplayExactness
 impl core::marker::StructuralPartialEq for oce_api::RunMode
 impl core::marker::StructuralPartialEq for oce_api::StatePortability
 impl core::marker::StructuralPartialEq for oce_api::TopologyConnection
@@ -389,6 +419,10 @@ impl core::marker::Sync for oce_api::PassThroughPair
 impl core::marker::Sync for oce_api::PhysicalKind
 impl core::marker::Sync for oce_api::PointInfo
 impl core::marker::Sync for oce_api::PreparedInputFrame
+impl core::marker::Sync for oce_api::ReplayContentId
+impl core::marker::Sync for oce_api::ReplayError
+impl core::marker::Sync for oce_api::ReplayExactness
+impl core::marker::Sync for oce_api::ReplayRecord
 impl core::marker::Sync for oce_api::RunMode
 impl core::marker::Sync for oce_api::StatePortability
 impl core::marker::Sync for oce_api::Topology
@@ -440,6 +474,10 @@ impl core::marker::Unpin for oce_api::PassThroughPair
 impl core::marker::Unpin for oce_api::PhysicalKind
 impl core::marker::Unpin for oce_api::PointInfo
 impl core::marker::Unpin for oce_api::PreparedInputFrame
+impl core::marker::Unpin for oce_api::ReplayContentId
+impl core::marker::Unpin for oce_api::ReplayError
+impl core::marker::Unpin for oce_api::ReplayExactness
+impl core::marker::Unpin for oce_api::ReplayRecord
 impl core::marker::Unpin for oce_api::RunMode
 impl core::marker::Unpin for oce_api::StatePortability
 impl core::marker::Unpin for oce_api::Topology
@@ -491,6 +529,10 @@ impl core::marker::UnsafeUnpin for oce_api::PassThroughPair
 impl core::marker::UnsafeUnpin for oce_api::PhysicalKind
 impl core::marker::UnsafeUnpin for oce_api::PointInfo
 impl core::marker::UnsafeUnpin for oce_api::PreparedInputFrame
+impl core::marker::UnsafeUnpin for oce_api::ReplayContentId
+impl core::marker::UnsafeUnpin for oce_api::ReplayError
+impl core::marker::UnsafeUnpin for oce_api::ReplayExactness
+impl core::marker::UnsafeUnpin for oce_api::ReplayRecord
 impl core::marker::UnsafeUnpin for oce_api::RunMode
 impl core::marker::UnsafeUnpin for oce_api::StatePortability
 impl core::marker::UnsafeUnpin for oce_api::Topology
@@ -539,6 +581,10 @@ impl core::panic::unwind_safe::RefUnwindSafe for oce_api::PassThroughPair
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::PhysicalKind
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::PointInfo
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::PreparedInputFrame
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ReplayContentId
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ReplayError
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ReplayExactness
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ReplayRecord
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::RunMode
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::StatePortability
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::Topology
@@ -587,6 +633,10 @@ impl core::panic::unwind_safe::UnwindSafe for oce_api::PassThroughPair
 impl core::panic::unwind_safe::UnwindSafe for oce_api::PhysicalKind
 impl core::panic::unwind_safe::UnwindSafe for oce_api::PointInfo
 impl core::panic::unwind_safe::UnwindSafe for oce_api::PreparedInputFrame
+impl core::panic::unwind_safe::UnwindSafe for oce_api::ReplayContentId
+impl core::panic::unwind_safe::UnwindSafe for oce_api::ReplayError
+impl core::panic::unwind_safe::UnwindSafe for oce_api::ReplayExactness
+impl core::panic::unwind_safe::UnwindSafe for oce_api::ReplayRecord
 impl core::panic::unwind_safe::UnwindSafe for oce_api::RunMode
 impl core::panic::unwind_safe::UnwindSafe for oce_api::StatePortability
 impl core::panic::unwind_safe::UnwindSafe for oce_api::Topology
@@ -596,6 +646,7 @@ impl core::panic::unwind_safe::UnwindSafe for oce_api::TrendCfg
 impl oce_api::CatalogContentId
 impl oce_api::CompatibilityDescriptor
 impl oce_api::CompleteExportContentId
+impl oce_api::CompletedFrame
 impl oce_api::CompletedFrame
 impl oce_api::DiagnosticKey
 impl oce_api::DiagnosticReceipt
@@ -611,6 +662,7 @@ impl oce_api::LoadReceipt
 impl oce_api::OcError
 impl oce_api::OperationFailure
 impl oce_api::ParamTable
+impl oce_api::ReplayRecord
 impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
@@ -674,6 +726,10 @@ impl<T, U> core::convert::Into<U> for oce_api::PassThroughPair where U: core::co
 impl<T, U> core::convert::Into<U> for oce_api::PhysicalKind where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::PointInfo where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::PreparedInputFrame where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::ReplayContentId where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::ReplayError where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::ReplayExactness where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::ReplayRecord where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::RunMode where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::StatePortability where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::Topology where U: core::convert::From<T>
@@ -726,6 +782,10 @@ impl<T, U> core::convert::TryFrom<U> for oce_api::PassThroughPair where U: core:
 impl<T, U> core::convert::TryFrom<U> for oce_api::PhysicalKind where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::PointInfo where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::PreparedInputFrame where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::ReplayContentId where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::ReplayError where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::ReplayExactness where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::ReplayRecord where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::RunMode where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::StatePortability where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::Topology where U: core::convert::Into<T>
@@ -778,6 +838,10 @@ impl<T, U> core::convert::TryInto<U> for oce_api::PassThroughPair where U: core:
 impl<T, U> core::convert::TryInto<U> for oce_api::PhysicalKind where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::PointInfo where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::PreparedInputFrame where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::ReplayContentId where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::ReplayError where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::ReplayExactness where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::ReplayRecord where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::RunMode where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::StatePortability where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::Topology where U: core::convert::TryFrom<T>
@@ -821,6 +885,10 @@ impl<T> alloc::borrow::ToOwned for oce_api::ParamTable where T: core::clone::Clo
 impl<T> alloc::borrow::ToOwned for oce_api::PassThroughPair where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::PhysicalKind where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::PointInfo where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::ReplayContentId where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::ReplayError where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::ReplayExactness where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::ReplayRecord where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::RunMode where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::StatePortability where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::Topology where T: core::clone::Clone
@@ -836,6 +904,8 @@ impl<T> alloc::string::ToString for oce_api::EngineStateError where T: core::fmt
 impl<T> alloc::string::ToString for oce_api::LoadErrorContext where T: core::fmt::Display + ?core::marker::Sized
 impl<T> alloc::string::ToString for oce_api::OcError where T: core::fmt::Display + ?core::marker::Sized
 impl<T> alloc::string::ToString for oce_api::OperationFailure where T: core::fmt::Display + ?core::marker::Sized
+impl<T> alloc::string::ToString for oce_api::ReplayContentId where T: core::fmt::Display + ?core::marker::Sized
+impl<T> alloc::string::ToString for oce_api::ReplayError where T: core::fmt::Display + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::AssertEvent where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::AssertLevel where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::CatalogContentId where T: 'static + ?core::marker::Sized
@@ -882,6 +952,10 @@ impl<T> core::any::Any for oce_api::PassThroughPair where T: 'static + ?core::ma
 impl<T> core::any::Any for oce_api::PhysicalKind where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::PointInfo where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::PreparedInputFrame where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::ReplayContentId where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::ReplayError where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::ReplayExactness where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::ReplayRecord where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::RunMode where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::StatePortability where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::Topology where T: 'static + ?core::marker::Sized
@@ -934,6 +1008,10 @@ impl<T> core::borrow::Borrow<T> for oce_api::PassThroughPair where T: ?core::mar
 impl<T> core::borrow::Borrow<T> for oce_api::PhysicalKind where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::PointInfo where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::PreparedInputFrame where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::ReplayContentId where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::ReplayError where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::ReplayExactness where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::ReplayRecord where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::RunMode where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::StatePortability where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::Topology where T: ?core::marker::Sized
@@ -986,6 +1064,10 @@ impl<T> core::borrow::BorrowMut<T> for oce_api::PassThroughPair where T: ?core::
 impl<T> core::borrow::BorrowMut<T> for oce_api::PhysicalKind where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::PointInfo where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::PreparedInputFrame where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::ReplayContentId where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::ReplayError where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::ReplayExactness where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::ReplayRecord where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::RunMode where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::StatePortability where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::Topology where T: ?core::marker::Sized
@@ -1029,6 +1111,10 @@ impl<T> core::clone::CloneToUninit for oce_api::ParamTable where T: core::clone:
 impl<T> core::clone::CloneToUninit for oce_api::PassThroughPair where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::PhysicalKind where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::PointInfo where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::ReplayContentId where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::ReplayError where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::ReplayExactness where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::ReplayRecord where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::RunMode where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::StatePortability where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::Topology where T: core::clone::Clone
@@ -1081,6 +1167,10 @@ impl<T> core::convert::From<T> for oce_api::PassThroughPair
 impl<T> core::convert::From<T> for oce_api::PhysicalKind
 impl<T> core::convert::From<T> for oce_api::PointInfo
 impl<T> core::convert::From<T> for oce_api::PreparedInputFrame
+impl<T> core::convert::From<T> for oce_api::ReplayContentId
+impl<T> core::convert::From<T> for oce_api::ReplayError
+impl<T> core::convert::From<T> for oce_api::ReplayExactness
+impl<T> core::convert::From<T> for oce_api::ReplayRecord
 impl<T> core::convert::From<T> for oce_api::RunMode
 impl<T> core::convert::From<T> for oce_api::StatePortability
 impl<T> core::convert::From<T> for oce_api::Topology
@@ -1093,6 +1183,7 @@ pub const oce_api::CATALOG_JSON: &str
 pub const oce_api::CATALOG_SCHEMA_REVISION: u32
 pub const oce_api::DIAGNOSTIC_SCHEMA_REVISION: u32
 pub const oce_api::MAX_CXF_BYTES: usize
+pub const oce_api::MAX_REPLAY_BYTES: usize
 pub enum oce_api::AssertLevel
 pub enum oce_api::CatalogDefault
 pub enum oce_api::CatalogPortKind
@@ -1106,6 +1197,8 @@ pub enum oce_api::DiagnosticStage
 pub enum oce_api::DiagnosticSubject
 pub enum oce_api::IoClass
 pub enum oce_api::PhysicalKind
+pub enum oce_api::ReplayError
+pub enum oce_api::ReplayExactness
 pub enum oce_api::RunMode
 pub fn oce_api::AssertEvent::borrow(&self) -> &T
 pub fn oce_api::AssertEvent::borrow_mut(&mut self) -> &mut T
@@ -1303,8 +1396,10 @@ pub fn oce_api::CompletedFrame::clone_into(&self, &mut T)
 pub fn oce_api::CompletedFrame::diagnostics(&self) -> &[oce_api::AssertEvent]
 pub fn oce_api::CompletedFrame::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn oce_api::CompletedFrame::from(T) -> T
+pub fn oce_api::CompletedFrame::inputs(&self) -> &[(alloc::string::String, oce_model::Value)]
 pub fn oce_api::CompletedFrame::into(self) -> U
 pub fn oce_api::CompletedFrame::outputs(&self) -> &[(alloc::string::String, oce_model::Value)]
+pub fn oce_api::CompletedFrame::replay_record(&self) -> core::result::Result<oce_api::ReplayRecord, oce_api::ReplayError>
 pub fn oce_api::CompletedFrame::sequence(&self) -> u64
 pub fn oce_api::CompletedFrame::time(&self) -> f64
 pub fn oce_api::CompletedFrame::to_owned(&self) -> T
@@ -1733,6 +1828,70 @@ pub fn oce_api::PreparedInputFrame::into(self) -> U
 pub fn oce_api::PreparedInputFrame::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::PreparedInputFrame::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::PreparedInputFrame::type_id(&self) -> core::any::TypeId
+pub fn oce_api::ReplayContentId::borrow(&self) -> &T
+pub fn oce_api::ReplayContentId::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::ReplayContentId::clone(&self) -> oce_api::ReplayContentId
+pub fn oce_api::ReplayContentId::clone_into(&self, &mut T)
+pub fn oce_api::ReplayContentId::eq(&self, &oce_api::ReplayContentId) -> bool
+pub fn oce_api::ReplayContentId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::ReplayContentId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::ReplayContentId::from(T) -> T
+pub fn oce_api::ReplayContentId::into(self) -> U
+pub fn oce_api::ReplayContentId::to_owned(&self) -> T
+pub fn oce_api::ReplayContentId::to_string(&self) -> alloc::string::String
+pub fn oce_api::ReplayContentId::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::ReplayContentId::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::ReplayContentId::type_id(&self) -> core::any::TypeId
+pub fn oce_api::ReplayError::borrow(&self) -> &T
+pub fn oce_api::ReplayError::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::ReplayError::clone(&self) -> oce_api::ReplayError
+pub fn oce_api::ReplayError::clone_into(&self, &mut T)
+pub fn oce_api::ReplayError::eq(&self, &oce_api::ReplayError) -> bool
+pub fn oce_api::ReplayError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::ReplayError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::ReplayError::from(T) -> T
+pub fn oce_api::ReplayError::into(self) -> U
+pub fn oce_api::ReplayError::to_owned(&self) -> T
+pub fn oce_api::ReplayError::to_string(&self) -> alloc::string::String
+pub fn oce_api::ReplayError::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::ReplayError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::ReplayError::type_id(&self) -> core::any::TypeId
+pub fn oce_api::ReplayExactness::borrow(&self) -> &T
+pub fn oce_api::ReplayExactness::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::ReplayExactness::clone(&self) -> oce_api::ReplayExactness
+pub fn oce_api::ReplayExactness::clone_into(&self, &mut T)
+pub fn oce_api::ReplayExactness::eq(&self, &oce_api::ReplayExactness) -> bool
+pub fn oce_api::ReplayExactness::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::ReplayExactness::from(T) -> T
+pub fn oce_api::ReplayExactness::into(self) -> U
+pub fn oce_api::ReplayExactness::to_owned(&self) -> T
+pub fn oce_api::ReplayExactness::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::ReplayExactness::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::ReplayExactness::type_id(&self) -> core::any::TypeId
+pub fn oce_api::ReplayRecord::as_bytes(&self) -> &[u8]
+pub fn oce_api::ReplayRecord::borrow(&self) -> &T
+pub fn oce_api::ReplayRecord::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::ReplayRecord::check_compatible(&self, &oce_api::CompatibilityDescriptor) -> core::result::Result<(), oce_api::ReplayError>
+pub fn oce_api::ReplayRecord::clone(&self) -> oce_api::ReplayRecord
+pub fn oce_api::ReplayRecord::clone_into(&self, &mut T)
+pub fn oce_api::ReplayRecord::content_id(&self) -> oce_api::ReplayContentId
+pub fn oce_api::ReplayRecord::descriptor(&self) -> &str
+pub fn oce_api::ReplayRecord::diagnostics(&self) -> &[oce_api::AssertEvent]
+pub fn oce_api::ReplayRecord::exactness(&self) -> oce_api::ReplayExactness
+pub fn oce_api::ReplayRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::ReplayRecord::format_revision(&self) -> u32
+pub fn oce_api::ReplayRecord::from(T) -> T
+pub fn oce_api::ReplayRecord::from_bytes(&[u8]) -> core::result::Result<Self, oce_api::ReplayError>
+pub fn oce_api::ReplayRecord::inputs(&self) -> &[(alloc::string::String, oce_model::Value)]
+pub fn oce_api::ReplayRecord::into(self) -> U
+pub fn oce_api::ReplayRecord::outputs(&self) -> &[(alloc::string::String, oce_model::Value)]
+pub fn oce_api::ReplayRecord::portability(&self) -> &oce_api::StatePortability
+pub fn oce_api::ReplayRecord::time(&self) -> f64
+pub fn oce_api::ReplayRecord::to_owned(&self) -> T
+pub fn oce_api::ReplayRecord::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::ReplayRecord::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::ReplayRecord::type_id(&self) -> core::any::TypeId
+pub fn oce_api::ReplayRecord::verify(&self, &oce_api::CompletedFrame) -> core::result::Result<(), oce_api::ReplayError>
 pub fn oce_api::RunMode::borrow(&self) -> &T
 pub fn oce_api::RunMode::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::RunMode::clone(&self) -> oce_api::RunMode
@@ -2099,6 +2258,42 @@ pub oce_api::PointInfo::quantity: core::option::Option<alloc::string::String>
 pub oce_api::PointInfo::trend: core::option::Option<oce_api::TrendCfg>
 pub oce_api::PointInfo::unit: core::option::Option<alloc::string::String>
 pub oce_api::PointInfo::value_type: oce_store::PointValueType
+pub oce_api::ReplayError::DescriptorMismatch(oce_api::CompatibilityMismatch)
+pub oce_api::ReplayError::DiagnosticMismatch
+pub oce_api::ReplayError::DiagnosticMismatch::index: usize
+pub oce_api::ReplayError::EnumDomain
+pub oce_api::ReplayError::EnumDomain::offset: usize
+pub oce_api::ReplayError::Header
+pub oce_api::ReplayError::InputMismatch
+pub oce_api::ReplayError::InputMismatch::index: usize
+pub oce_api::ReplayError::Integrity
+pub oce_api::ReplayError::Length
+pub oce_api::ReplayError::Length::offset: usize
+pub oce_api::ReplayError::MalformedDescriptor
+pub oce_api::ReplayError::NonFiniteTime
+pub oce_api::ReplayError::Noncanonical
+pub oce_api::ReplayError::Noncanonical::offset: usize
+pub oce_api::ReplayError::OutputMismatch
+pub oce_api::ReplayError::OutputMismatch::index: usize
+pub oce_api::ReplayError::TargetMismatch
+pub oce_api::ReplayError::TimeMismatch
+pub oce_api::ReplayError::TooLarge
+pub oce_api::ReplayError::TooLarge::actual_bytes: usize
+pub oce_api::ReplayError::TooLarge::limit_bytes: usize
+pub oce_api::ReplayError::UnknownPlacement
+pub oce_api::ReplayError::UnknownPlacement::tag: u8
+pub oce_api::ReplayError::UnknownSeverity
+pub oce_api::ReplayError::UnknownSeverity::tag: u8
+pub oce_api::ReplayError::UnknownValue
+pub oce_api::ReplayError::UnknownValue::tag: u8
+pub oce_api::ReplayError::UnsupportedExactness
+pub oce_api::ReplayError::UnsupportedExactness::tag: u8
+pub oce_api::ReplayError::UnsupportedFormat
+pub oce_api::ReplayError::UnsupportedFormat::revision: u32
+pub oce_api::ReplayError::Utf8
+pub oce_api::ReplayError::Utf8::offset: usize
+pub oce_api::ReplayError::WorkspaceLimit
+pub oce_api::ReplayExactness::ExactBits
 pub oce_api::RunMode::Halted
 pub oce_api::RunMode::Running
 pub oce_api::StatePortability::Portable
@@ -2145,6 +2340,8 @@ pub struct oce_api::ParamAttrs
 pub struct oce_api::ParamTable
 pub struct oce_api::PointInfo
 pub struct oce_api::PreparedInputFrame
+pub struct oce_api::ReplayContentId(_)
+pub struct oce_api::ReplayRecord
 pub struct oce_api::TrendCfg
 pub type oce_api::AssertEvent::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::AssertEvent::Error = core::convert::Infallible
@@ -2276,6 +2473,18 @@ pub type oce_api::PointInfo::Error = core::convert::Infallible
 pub type oce_api::PointInfo::Owned = T
 pub type oce_api::PreparedInputFrame::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::PreparedInputFrame::Error = core::convert::Infallible
+pub type oce_api::ReplayContentId::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::ReplayContentId::Error = core::convert::Infallible
+pub type oce_api::ReplayContentId::Owned = T
+pub type oce_api::ReplayError::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::ReplayError::Error = core::convert::Infallible
+pub type oce_api::ReplayError::Owned = T
+pub type oce_api::ReplayExactness::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::ReplayExactness::Error = core::convert::Infallible
+pub type oce_api::ReplayExactness::Owned = T
+pub type oce_api::ReplayRecord::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::ReplayRecord::Error = core::convert::Infallible
+pub type oce_api::ReplayRecord::Owned = T
 pub type oce_api::RunMode::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::RunMode::Error = core::convert::Infallible
 pub type oce_api::RunMode::Owned = T
@@ -2331,6 +2540,10 @@ pub unsafe fn oce_api::ParamTable::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::PassThroughPair::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::PhysicalKind::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::PointInfo::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::ReplayContentId::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::ReplayError::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::ReplayExactness::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::ReplayRecord::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::RunMode::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::StatePortability::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::Topology::clone_to_uninit(&self, *mut u8)

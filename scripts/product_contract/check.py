@@ -46,7 +46,10 @@ PENDING = frozenset((DOCUMENT, "scripts/product_contract/check.py",
                            "docs/strict-bit-evidence.md",
                            "docs/state-compatibility.md",
                            "crates/oce-api/src/tests/state_manifest_refusal_tests.rs",
-                           "crates/oce-api/tests/state_contract.rs"))
+                            "crates/oce-api/tests/state_contract.rs",
+                            "docs/replay-record.md", "crates/oce-api/src/replay.rs",
+                            "crates/oce-api/tests/replay.rs", "crates/oce-api/tests/replay_codec.rs",
+                            "crates/oce-api/src/replay_capture_tests.rs"))
 POINTERS = ("README.md", "AGENTS.md", "TESTING.md", "docs/architecture.md",
             "docs/host-responsibilities.md", "docs/README.md")
 HEADER = "| ID | Status | Actor | Owner | Requirement | Limitation | Grounding | Evidence |"
@@ -343,7 +346,7 @@ def validate(repository: Repository) -> str:
 
 def validate_frame_boundary(repository: Repository, revision: str, rows: list[Requirement]) -> None:
     """Bounded contraction sentinels, not a compiler or proof of behavioral test relevance."""
-    require(revision == "13", "frame-only: document revision must be 13")
+    require(revision == "14", "frame-only: document revision must be 14")
     contraction = next((row for row in rows if row.identifier == "PC-035"), None)
     require(contraction is not None and contraction.status == "CURRENT",
             "frame-only: contraction is current")

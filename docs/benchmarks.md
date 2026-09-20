@@ -50,7 +50,7 @@ delay 488–526 / 78–86; feedback 419–473 / 63–69; controller 17,625–17,
 assertion 453–475 / 72–91. These short samples expose host drift, not tail latency or confidence
 intervals. No timing value or ratio is an assertion; the functional determinism tests are separate.
 
-The same debug/release harness asserts the exact allocation formula over 128 preparation+commit
+The historical debug/release harness asserted the exact allocation formula over 128 preparation+commit
 repetitions per fixture and zero outstanding allocations after drop, with a 1,024-byte positive
 control. It counts the synchronous thread only. N is logical inputs, T fan-out targets, B boundary
 outputs and D emitted warnings (these cases have at most one):
@@ -63,7 +63,7 @@ outputs and D emitted warnings (these cases have at most one):
 | Controller | 14 / 43 / 10 / 0 | 16 / 956 | 11 / 1,136 |
 | Assert | 1 / 2 / 0 / 1 | 3 / 64 | 3 / 262 |
 
-Preparation uses N+2 buffers for nonempty N. Commit capture uses B+1 buffers for nonempty B, with
+Preparation uses N+2 buffers for nonempty N. Historical commit capture used B+1 buffers for nonempty B, with
 `B * size_of::<(String, Value)>() + sum(path_bytes)` bytes; zero B allocates none. Each warning
 copies its source/message and grows a Vec geometrically (one warning uses four event slots).
 Value cloning preserves bits and shares immutable String payloads. This budget is structural:
@@ -78,6 +78,15 @@ timing table above is not re-blessed. The frame-only contraction removes the leg
 the current harness measures commit and preparation-plus-commit only, retaining the allocation
 formula checks. All accepted frames now retain warnings. No current latency claim is inferred from
 the historical tick columns.
+
+Canonical replay delivery additionally retains the accepted inputs in every completed receipt:
+N canonical path buffers plus one N-pair vector for nonempty N, costing
+`N * size_of::<(String, Value)>() + sum(input_path_bytes)`. Prepared Values move into this vector;
+there is no second value-byte copy. Placement capture scans block classes under the state policy.
+The current harness asserts these added counts/bytes over the same 128 repetitions with zero retained
+allocations after drop. The historical table above is not a current total or latency prediction.
+Record encoding/decoding is separate opt-in work; the [replay contract](replay-record.md) documents
+its caps and streamed-host allocation evidence, not a speed claim.
 
 Run observations explicitly with `--success-output immediate --test-threads 1` on the focused
 `frame_observations` nextest binary. It is also included in the existing oce-api matrix test set;
