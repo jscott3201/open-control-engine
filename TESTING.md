@@ -73,6 +73,9 @@ comparison that fails if even one bit differs.
   35492290613. macOS remains conservative/unqualified until M06-PR02; other targets also retain
   the unchanged 1e-12 aligned band. This is empirical pinned corpus evidence,
   not a libm guarantee or a license for epsilon elsewhere — every other golden stays bit-exact.
+  During the checker-complete evidence repair, that historical receipt is not current-source
+  qualification: the new 35-source native receipt is pending and the ordinary retained test
+  deliberately refuses until admission. See the linked staging notice; this is not a green gate.
 - **No snapshot magic.** Goldens are explicit files compared by explicit code — reviewable and
   obvious. If a golden needs regenerating, do it deliberately and explain the diff in the PR.
 

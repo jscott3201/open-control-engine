@@ -149,6 +149,48 @@ class ContractEvidenceTests(unittest.TestCase):
         self.assertEqual(len(ledger["packages"]), 17)
 
 
+class VerificationSummaryTests(unittest.TestCase):
+    """Narrow sentinels for the strict-bit comparison and PR-coverage summaries."""
+
+    def assert_numeric_boundary(self, text):
+        text = " ".join(text.lower().split())
+        for fact in ("qualified linux", "unqualified", "21", "1e-12", "strict-bit-evidence.md"):
+            self.assertIn(fact, text)
+
+    def assert_ci_boundary(self, text):
+        text = " ".join(text.lower().split())
+        for fact in ("scoped", "strict-bit", "per-pr", "remainder", "release"):
+            self.assertIn(fact, text)
+
+    def test_public_numeric_and_ci_summaries_distinguish_the_scoped_subset(self):
+        root = docs_stage.repository_root()
+        readme = (root / "README.md").read_text().split("## How it is verified\n", 1)[1].split("\n---", 1)[0]
+        evidence = (root / "docs/verification-evidence.md").read_text()
+        summary = evidence.split("## What this adds up to\n", 1)[1]
+        for text in (readme, summary):
+            self.assert_numeric_boundary(text)
+            self.assert_ci_boundary(text)
+        row = next(line for line in evidence.splitlines() if line.startswith("| Tier-1 per-block"))
+        for fact in ("278", "257", "21", "qualified Linux", "unqualified"):
+            self.assertIn(fact, row)
+        ci = evidence.split("### The CI split, read in the dangerous direction\n", 1)[1].split("\n###", 1)[0]
+        self.assert_ci_boundary(ci)
+        ci_page = (root / "docs/ci-and-the-gate.md").read_text().split("## Dev-light, release-heavy\n", 1)[1].split("\n##", 1)[0]
+        self.assert_ci_boundary(ci_page)
+
+    def test_historical_tolerance_only_and_no_conformance_pr_claims_are_not_accepted(self):
+        for stale in (
+            "389 are compared bit-exactly and the 21 transcendental, psychrometric, and solar "
+            "Real goldens use a documented 1e-12 aligned-tolerance band.",
+            "390 oracle comparisons (369 bit-exact, 21 under the documented 1e-12 aligned-tolerance band)",
+        ):
+            with self.assertRaises(AssertionError):
+                self.assert_numeric_boundary(stale)
+        with self.assertRaises(AssertionError):
+            self.assert_ci_boundary("The oce-api comparison tests run per PR, but oce-conformance/tests/ "
+                                    "does not; the complete set runs only on release PRs.")
+
+
 class SitePrefixAgreementTests(unittest.TestCase):
     """Exercise agreement between the CLI and staged mdBook configuration."""
 

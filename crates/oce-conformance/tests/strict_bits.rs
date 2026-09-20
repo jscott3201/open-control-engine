@@ -13,7 +13,7 @@ mod matrix;
 fn retained_inventory_covers_every_real_signal_once() {
     let retained = evidence::read_retained();
     let actual = evidence::collect();
-    evidence::same_contract(&retained, &actual).unwrap();
+    evidence::same_reference_inventory(&retained, &actual).unwrap();
     let local = format!("{}-{}-", std::env::consts::OS, std::env::consts::ARCH);
     if retained.cell.starts_with(&local) {
         for (expected, actual) in retained.signals.iter().zip(&actual.signals) {
@@ -33,21 +33,10 @@ fn capture_raw_bits_without_reblessing_the_oracle() {
     assert_eq!(first, second, "same-process repeat drift");
     if let Some(path) = std::env::var_os("OCE_STRICT_BITS_OUT") {
         let path = evidence::root().join(path);
-        let refresh = std::env::var("OCE_STRICT_BITS_REFRESH").as_deref() == Ok("1");
-        if refresh {
-            assert!(
-                std::env::var_os("CI").is_none(),
-                "CI cannot refresh retained evidence"
-            );
-            assert_eq!(
-                path,
-                evidence::root()
-                    .join("crates/oce-conformance/tests/fixtures/strict_bits/corpus.json"),
-                "only the local observation can be explicitly refreshed"
-            );
-        } else {
-            assert!(!path.exists(), "never overwrite evidence implicitly");
-        }
+        assert!(
+            !path.exists(),
+            "never overwrite historical or candidate evidence"
+        );
         std::fs::write(path, evidence::encode(&first)).unwrap();
     }
 }

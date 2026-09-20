@@ -47,11 +47,10 @@ This does not check arbitrary Markdown claims or workflow parity, and regenerati
 
 **A green PR is not evidence that the change's own tests pass.**
 
-The per-PR gate into `development` runs engine tests for **`oce-api`, `oce-blocks`, and `oce-expr`
-only**. That
-is the `determinism-matrix` job: two runners, `ubuntu-latest` and `ubuntu-24.04-arm`
+The per-PR gate into `development` runs the state-determinism subset for **`oce-api`, `oce-blocks`,
+and `oce-expr`**. That is the `determinism-matrix` job: two runners, `ubuntu-latest` and `ubuntu-24.04-arm`
 (see `ci.yml`'s `determinism-matrix` job), each running that three-crate subset twice — once under
-debug codegen, once under release codegen. No other crate's test suite runs. Each architecture emits
+debug codegen, once under release codegen. Each architecture emits
 populated revision-1 portable and target-bound state vectors. The matrix compares both across
 codegen profiles; a dependent job requires the portable files to match and the target-bound files
 to differ across architectures, then parses and refuses the arm64 target-bound bytes on x86_64.
@@ -63,8 +62,14 @@ pair with vendored modelica-json translations
 (see the gate script's fixture input-hygiene section). That oracle compares document structure — instances and undirected
 edges — not simulated behavior.
 
-Everything else waits for the release gate. A change confined to `oce-cxf`, `oce-store`,
-`oce-conformance`, or `oce-diag` can show a fully green PR having executed none of its own tests.
+The scoped `oce-conformance` **strict-bit subset also runs per-PR**: `strict_bits` plus the four
+affected per-block suite binaries, in Linux x86_64/aarch64 × debug/release, with two native captures
+per cell and a fail-closed cross-cell comparison. The [retained evidence](strict-bit-evidence.md)
+covers exact comparison of 21 pinned Real cases on qualified Linux; unqualified targets retain
+the unchanged 1e-12 aligned band. This is not the whole conformance suite or a libm accuracy claim.
+
+The remainder waits for the release/full gate. A change outside the named test subsets can show
+a fully green PR having executed none of its own tests.
 Before claiming tests pass, run `bash .agents/gate.sh full` first-hand and read the tail.
 
 ## Draft pull requests run nothing

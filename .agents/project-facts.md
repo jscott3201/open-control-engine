@@ -25,7 +25,7 @@ The per-PR gate into `development` runs fmt, clippy, build, rustdoc, the file-si
 cap, the no-secret scan, the database-free check, the golden-gen firewall, the closed
 package/feature/publication contract and its hostile controls, the gate fixtures,
 the [authority index/projection and its hostile controls](../docs/authority-claims.md),
-`cargo machete` — and engine tests for **`oce-api`, `oce-blocks`, and `oce-expr` only**, via the
+`cargo machete` — and the state-determinism tests for **`oce-api`, `oce-blocks`, and `oce-expr`**, via the
 determinism matrix on x86_64 and arm64 in debug and release codegen.
 The matrix compares a populated portable engine-state snapshot byte-for-byte across architectures,
 checks portable and target-bound bytes across debug/release codegen, and requires target-bound bytes
@@ -37,7 +37,9 @@ the `gate (light)` job, so the check is not actually skippable by leaving manife
 `advisories` is excluded from the script deliberately: it needs network and a writable
 advisory-db, neither of which a sandboxed lane has, so it runs in `advisories.yml`.
 
-Every other crate's tests run **only** on the `development` → `main` release gate. A
+The scoped `oce-conformance` strict-bit subset and four affected per-block suites also run per PR
+in four native Linux architecture/codegen cells, with repeat captures and cross-cell comparison
+([bounded evidence](../docs/strict-bit-evidence.md)). The remainder needs the release/full gate. A
 change confined to `oce-cxf`, `oce-store`, or `oce-diag` can show a fully
 green PR having executed none of its own tests. Before claiming your tests pass, run
 `bash .agents/gate.sh full` and read the tail.

@@ -2,6 +2,13 @@
 
 ## Status and claim boundary
 
+**Native-evidence staging:** the historical Linux result below remains immutable, but is not a
+qualification of the strengthened checker. [Receipt data](../crates/oce-conformance/tests/fixtures/strict_bits/receipts.json)
+currently has `current: null`. The ordinary retained-qualification test deliberately fails with
+`PENDING_NATIVE_EVIDENCE` until a new native matrix binds the complete checker sources. This is
+not a green delivery head. The exact Linux comparison policy and conservative other-target band
+remain active; no tolerance fallback is enabled while admission is pending.
+
 The [machine-readable corpus](../crates/oce-conformance/tests/fixtures/strict_bits/corpus.json)
 is the authoritative inventory of the **21 existing aligned-tolerance Real signal paths**.
 It contains 161 samples: 101 finite (including 18 signed-zero samples), 52 NaNs and 8 signed
@@ -10,8 +17,9 @@ the [eight native Linux captures](../crates/oce-conformance/tests/fixtures/stric
 are accepted permanent evidence for **Linux x86_64/aarch64 × debug/release**, two independent
 process runs per cell. Every run contains all 21 signals and 161 samples, with **zero mismatches**
 against the unchanged Tier-A references and across cells under the exact comparator. Every
-first/repeat pair is byte-identical, including NaN payloads. PC-037 is CURRENT only for this
-bounded result. The four suites use exact comparison for these 21 Linux Real signal cases.
+first/repeat pair is byte-identical, including NaN payloads. PC-037 records this bounded historical
+result; current-source qualification is pending as stated above. The four suites use exact
+comparison for these 21 Linux Real signal cases.
 
 The local macOS debug/release tests still compare against the original observation. This is a
 regression observation, **not macOS qualification**. macOS-arm64 remains explicitly
@@ -35,15 +43,18 @@ conservative/unqualified until M06-PR02; macOS and all other unqualified targets
   the eight canonical capture files and verifies that digest, avoiding a ninth duplicate of
   the raw data. The upload archive digest is a provenance locator, not a locally rebuilt archive.
 
-The active retained test runs on every platform and checks all four cells, two runs per cell,
-21 signals and 161 samples per run, zero mismatches, byte-exact repeats, capture identity and
-aggregate integrity. It also checks current source, reference, provenance, input/CXF and time
-digests against the retained contract. The synthetic checkout SHA is **not required to equal a
-later HEAD** or exist in local history. No source-digest exception is needed: the 17 bound
-source files, comparator selector and Tier-A goldens remain byte-for-byte unchanged at admission.
-Capture-time `candidate` status/regime strings and the selector's `exact_candidate` name remain
-historical inventory terminology, not a pending acceptance decision. The accepted receipt and
-PC-037 supply the current qualification; captures are never relabeled to reflect later decisions.
+The historical receipt test reconstructs that aggregate verbatim. Its 17-source map omitted
+semantic capture/comparison/admission code, so it cannot satisfy the current 35-source admission
+contract. The otherwise successful exact-head run 35493024355 used the same incomplete source-map
+implementation; it is not a substitute for new checker-complete captures. No old raw file, Git
+revision, source map or candidate label is rewritten to imply those sources were captured then.
+
+The active current-qualification test requires a separately admitted receipt and all four cells,
+two runs per cell, 21 signals and 161 samples per run, zero mismatches, byte-exact repeats, capture
+identity and aggregate integrity. It compares the complete source map and current reference,
+provenance, input/CXF and time inventory. The synthetic checkout SHA is **not required to equal a
+later HEAD** or exist in local history. A historical receipt cannot bypass a missing or changed
+current source; source equality, not Git equality or matching raw outputs alone, governs applicability.
 
 **libm 0.2.16 does NOT promise cross-architecture correctly rounded transcendentals; strict
 identity is an empirical pinned observation only. std 1.97.1 likewise does not promise
@@ -85,10 +96,43 @@ No digest-only result substitutes for raw samples.
 Unknown fields, wrong pins, missing/duplicate/unordered signals, changed provenance, incomplete
 sample arrays, wrong labels and hidden mismatches refuse. Source, lock, toolchain or inventory
 changes invalidate the retained contract and need deliberate evidence review/refresh. CI cannot
-refresh or admit checked-in observations. The explicit local capture refresh facility writes only the
-original corpus audit observation when opted in; it cannot refresh an oracle through that facility. Ordinary capture
-refuses to overwrite an existing artifact. Review every observation diff rather than blessing a
-changed engine result as correctness.
+admit checked-in observations. Capture always refuses to overwrite an existing artifact; the
+historical-corpus refresh switch has been removed. Reference inventory validation is intentionally
+separate from qualification: matching the old reference/input inventory does not admit an old
+source map. Review every new observation rather than blessing changed engine output as correctness.
+
+## Non-circular source binding and admission
+
+`evidence::source_digests` enumerates 35 bound files: the original locks/toolchain/build inputs,
+four math implementations, four suites and three harness modules; plus `strict_bits.rs`,
+`strict_bits/{evidence,matrix,controls}.rs`, the facade driver and its comparison module, exact and
+aligned comparators, CSV/config/series/masking support and conformance module wiring, model value
+encoding, the conformance manifest, CI workflow, nextest configuration and gate script.
+The inventory/control tests require the complete set and prove that changing every bound file
+refuses admission even with unchanged raw samples. Specific mutations disable non-finite equality
+and matrix topology checking; their source changes still refuse before receipt acceptance.
+
+The dependency order is **source bytes → captures → assembled matrix → receipt data**.
+The checker hashes its own source bytes, which contain no expected source or matrix digest.
+`receipts.json` is a closed, terminal data schema containing historical and optional current
+Git/matrix identities; it contains no executable policy and is not hashed back into captures.
+Current admission checks those reviewed identity values against actual raw data and current source
+digests. Final admission changes only receipt/fixture data and documentation, not bound checker
+code. This avoids both a self-hash fixed point and a matrix-digest cycle; it is not a migration bypass.
+
+For this staging head, CI captures still run first and upload both processes per cell. The normal
+cell test step is deliberately red only at the pending current-receipt test (other failures still
+require repair). The cross-cell comparison can assemble `matrix.json` with `{"Ok":[]}` using the
+complete current source map, independently of receipt admission. Its subsequent cell-success step
+and dependent `gate (light)` remain red until admission. Upload-on-failure retains the candidate
+matrix and eight inputs. Do not weaken or skip these checks to make the staging head green.
+
+After the stable checker stage is committed and run natively, review all eight captures and the
+aggregate SHA-256, set `receipts.json.current` to the honest captured Git revision and matrix hash,
+and run the explicit admission test with `OCE_STRICT_MATRIX_DIR` naming the download. It validates
+current sources and reference/input data before creating `qualified-linux/`; it refuses CI and
+replacement of an existing directory. Keep `linux/` and `corpus.json` as unchanged history. A code
+change after that native run needs another native run; a receipt-only admission does not.
 
 ## CI data flow and adjudication
 

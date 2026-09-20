@@ -4,10 +4,34 @@ use super::evidence::{self, CELLS, Corpus};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-const NATIVE_MATRIX_SHA256: &str =
-    "12a2fbdd28c9718c0145c5055240f0b7eab3d7898bc5d1f05ed0ee09db2978ad";
-const NATIVE_REVISION: &str = "8a63d4a042e1ca91d5dfe7bd3fc33d194f5102bb";
-const NATIVE_DIRECTORY: &str = "crates/oce-conformance/tests/fixtures/strict_bits/linux";
+const HISTORICAL_DIRECTORY: &str = "crates/oce-conformance/tests/fixtures/strict_bits/linux";
+const NATIVE_DIRECTORY: &str = "crates/oce-conformance/tests/fixtures/strict_bits/qualified-linux";
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Receipt {
+    git_revision: String,
+    matrix_sha256: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Receipts {
+    historical: Receipt,
+    current: Option<Receipt>,
+}
+
+fn receipts() -> Receipts {
+    // Terminal review data, not executable checker semantics. No receipt values are hashed into
+    // their own captures. Final admission changes this JSON and raw fixtures, never checker code.
+    serde_json::from_str(include_str!("../fixtures/strict_bits/receipts.json")).unwrap()
+}
+
+fn current_receipt(receipts: Receipts) -> Result<Receipt, String> {
+    receipts.current.ok_or_else(|| {
+        "PENDING_NATIVE_EVIDENCE: checker-complete Linux receipt has not been admitted".into()
+    })
+}
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -105,8 +129,10 @@ fn native_linux_matrix_is_complete_and_exact() {
             .all(|run| run.git_revision == current.git_revision),
         "matrix must describe this checkout revision"
     );
-    evidence::same_contract(&evidence::read_retained(), &current).unwrap();
-    let result = compare(&evidence::read_retained(), &runs);
+    evidence::same_reference_inventory(&evidence::read_retained(), &current).unwrap();
+    // Candidate assembly is independent of receipt admission. Compare every captured source
+    // digest to this checkout, including this checker; never substitute the historical map.
+    let result = compare(&current, &runs);
     // Retain all raw bits even on a numerical disagreement. No oracle is rewritten, and a
     // disagreement cannot silently downgrade a comparator or produce a passing gate.
     let report = serde_json::json!({
@@ -246,10 +272,21 @@ fn nan_payload_is_not_a_cross_architecture_identity_claim() {
 
 #[test]
 fn retained_native_linux_evidence_is_complete_exact_and_source_bound() {
+    let receipt = current_receipt(receipts()).expect("current native qualification required");
     let runs = read_native_runs(&evidence::root().join(NATIVE_DIRECTORY));
-    // Applicability is established by source/oracle/CXF digests, not final HEAD equality.
-    evidence::same_contract(&evidence::read_retained(), &evidence::collect()).unwrap();
-    accepted_report(&runs).expect("accepted native Linux evidence");
+    qualified_report(&runs, &receipt, &evidence::collect())
+        .expect("accepted checker-complete native Linux evidence");
+}
+
+#[test]
+fn historical_native_receipt_remains_verbatim_but_cannot_qualify_current_sources() {
+    let runs = read_native_runs(&evidence::root().join(HISTORICAL_DIRECTORY));
+    let receipt = receipts().historical;
+    pinned_report(&evidence::read_retained(), &runs, &receipt).unwrap();
+    assert_eq!(
+        qualified_report(&runs, &receipt, &evidence::collect()).unwrap_err(),
+        "source inventory changed: new native evidence required"
+    );
 }
 
 fn read_native_runs(directory: &std::path::Path) -> BTreeMap<String, Corpus> {
@@ -270,13 +307,33 @@ fn read_native_runs(directory: &std::path::Path) -> BTreeMap<String, Corpus> {
     runs
 }
 
-fn accepted_report(runs: &BTreeMap<String, Corpus>) -> Result<Vec<u8>, String> {
-    let comparison = compare(&evidence::read_retained(), runs);
+fn qualified_report(
+    runs: &BTreeMap<String, Corpus>,
+    receipt: &Receipt,
+    current: &Corpus,
+) -> Result<Vec<u8>, String> {
+    evidence::same_reference_inventory(&evidence::read_retained(), current)?;
+    for run in runs.values() {
+        evidence::require_sources(run, &current.source_sha256)?;
+        evidence::same_reference_inventory(current, run)?;
+    }
+    let baseline = runs
+        .get("linux-x86_64-debug-first")
+        .ok_or("missing native baseline")?;
+    pinned_report(baseline, runs, receipt)
+}
+
+fn pinned_report(
+    baseline: &Corpus,
+    runs: &BTreeMap<String, Corpus>,
+    receipt: &Receipt,
+) -> Result<Vec<u8>, String> {
+    let comparison = compare(baseline, runs);
     if !comparison.as_ref()?.is_empty() {
         return Err("accepted native matrix has numerical mismatches".into());
     }
     for run in runs.values() {
-        if run.git_revision != NATIVE_REVISION {
+        if run.git_revision != receipt.git_revision {
             return Err("accepted native checkout provenance changed".into());
         }
         if run.signals.iter().map(|s| s.actual.len()).sum::<usize>() != 161 {
@@ -291,7 +348,7 @@ fn accepted_report(runs: &BTreeMap<String, Corpus>) -> Result<Vec<u8>, String> {
         "comparison": comparison,
     });
     let bytes = serde_json::to_vec(&report).unwrap();
-    if evidence::digest(&bytes) != NATIVE_MATRIX_SHA256 {
+    if evidence::digest(&bytes) != receipt.matrix_sha256 {
         return Err("accepted native matrix digest changed".into());
     }
     Ok(bytes)
@@ -299,13 +356,15 @@ fn accepted_report(runs: &BTreeMap<String, Corpus>) -> Result<Vec<u8>, String> {
 
 #[test]
 fn native_receipt_refuses_relabeling_and_raw_payload_reblessing() {
-    let runs = read_native_runs(&evidence::root().join(NATIVE_DIRECTORY));
+    let runs = read_native_runs(&evidence::root().join(HISTORICAL_DIRECTORY));
+    let baseline = evidence::read_retained();
+    let receipt = receipts().historical;
     let mut relabeled = runs.clone();
     for run in relabeled.values_mut() {
         run.git_revision = "0".repeat(40);
     }
     assert_eq!(
-        accepted_report(&relabeled).unwrap_err(),
+        pinned_report(&baseline, &relabeled, &receipt).unwrap_err(),
         "accepted native checkout provenance changed"
     );
     let mut changed = runs;
@@ -321,9 +380,79 @@ fn native_receipt_refuses_relabeling_and_raw_payload_reblessing() {
     // This preserves the comparator's NaN-class agreement and every first/repeat pair.
     // It still cannot rewrite the historical raw payloads under the accepted receipt.
     assert_eq!(
-        accepted_report(&changed).unwrap_err(),
+        pinned_report(&baseline, &changed, &receipt).unwrap_err(),
         "accepted native matrix digest changed"
     );
+}
+
+#[test]
+fn pending_receipt_is_an_explicit_refusal_not_historical_acceptance() {
+    let pending = Receipts {
+        historical: receipts().historical,
+        current: None,
+    };
+    assert_eq!(
+        current_receipt(pending).unwrap_err(),
+        "PENDING_NATIVE_EVIDENCE: checker-complete Linux receipt has not been admitted"
+    );
+    let invalid =
+        r#"{"historical":{"git_revision":"x","matrix_sha256":"y","bypass":true},"current":null}"#;
+    assert!(serde_json::from_str::<Receipts>(invalid).is_err());
+}
+
+#[test]
+fn every_bound_source_change_refuses_admission_even_when_raw_bits_still_match() {
+    // Synthetic positive control only: no files are written and no native claim is made.
+    let (_, mut runs) = synthetic_runs();
+    let current = evidence::collect();
+    let sources = &current.source_sha256;
+    for run in runs.values_mut() {
+        run.source_sha256.clone_from(sources);
+    }
+    let baseline = &runs["linux-x86_64-debug-first"];
+    let report = serde_json::json!({
+        "schema": 1,
+        "claim": "pinned-corpus-only-not-mathematical-correctness",
+        "macos_status": "unqualified-until-M06-PR02",
+        "runs": runs,
+        "comparison": {"Ok": []},
+    });
+    let receipt = Receipt {
+        git_revision: baseline.git_revision.clone(),
+        matrix_sha256: evidence::digest(&serde_json::to_vec(&report).unwrap()),
+    };
+    qualified_report(&runs, &receipt, &current).unwrap();
+    for path in sources.keys() {
+        let mut changed = current.clone();
+        let original = std::fs::read_to_string(evidence::root().join(path)).unwrap();
+        let mutated = match path.as_str() {
+            "crates/oce-conformance/tests/strict_bits/evidence.rs" => original.replace(
+                "(left.is_nan() && right.is_nan()) || left.to_bits() == right.to_bits()",
+                "true",
+            ),
+            "crates/oce-conformance/tests/strict_bits/matrix.rs" => original.replace(
+                "runs.len() != 8 || expected_keys.iter().any(|key| !runs.contains_key(key))",
+                "false",
+            ),
+            _ => format!("{original}\n"),
+        };
+        assert_ne!(mutated, original, "source mutation must apply: {path}");
+        changed
+            .source_sha256
+            .insert(path.clone(), evidence::digest(mutated.as_bytes()));
+        assert_eq!(
+            qualified_report(&runs, &receipt, &changed).unwrap_err(),
+            format!("source digest changed: {path}: new native evidence required")
+        );
+        let mut missing = runs.clone();
+        for run in missing.values_mut() {
+            run.source_sha256.remove(path);
+        }
+        assert_eq!(
+            qualified_report(&missing, &receipt, &current).unwrap_err(),
+            "source inventory changed: new native evidence required"
+        );
+    }
 }
 
 #[test]
@@ -332,15 +461,19 @@ fn admit_downloaded_native_matrix_without_rewriting_provenance() {
     use std::io::Write;
 
     assert!(std::env::var_os("CI").is_none(), "CI cannot admit evidence");
+    let receipt =
+        current_receipt(receipts()).expect("review the new native receipt before admission");
     let source = std::env::var_os("OCE_STRICT_MATRIX_DIR").expect("download directory required");
     let source = evidence::root().join(source);
     let matrix = source.join("matrix.json");
     assert!(std::fs::metadata(&matrix).unwrap().len() <= 1024 * 1024);
     let downloaded = std::fs::read(matrix).unwrap();
-    assert_eq!(evidence::digest(&downloaded), NATIVE_MATRIX_SHA256);
+    assert_eq!(evidence::digest(&downloaded), receipt.matrix_sha256);
     let runs = read_native_runs(&source);
-    assert_eq!(accepted_report(&runs).unwrap(), downloaded);
-    evidence::same_contract(&evidence::read_retained(), &evidence::collect()).unwrap();
+    assert_eq!(
+        qualified_report(&runs, &receipt, &evidence::collect()).unwrap(),
+        downloaded
+    );
 
     // Admission copies validated native bytes, never engine output. Refuse replacement and
     // keep the same one-object-per-signal encoding; the aggregate is exactly reconstructible.

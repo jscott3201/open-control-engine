@@ -154,6 +154,75 @@ pub(super) fn equal(left: &str, right: &str) -> bool {
     (left.is_nan() && right.is_nan()) || left.to_bits() == right.to_bits()
 }
 
+pub(super) fn source_digests() -> BTreeMap<String, String> {
+    // Executable semantics are upstream of captures. Receipt data is downstream of the assembled
+    // matrix and deliberately not in this map: admitting it must not change its own inputs.
+    // Self-binding is safe: these source files contain no expected source or matrix digest.
+    let paths = [
+        "Cargo.lock",
+        "rust-toolchain.toml",
+        "Cargo.toml",
+        ".cargo/config.toml",
+        "tools/golden-gen/Cargo.lock",
+        "tools/golden-gen/Cargo.toml",
+        "crates/oce-blocks/src/reals_transcendental.rs",
+        "crates/oce-blocks/src/reals_sources.rs",
+        "crates/oce-blocks/src/psychrometrics.rs",
+        "crates/oce-blocks/src/utilities.rs",
+        "crates/oce-conformance/tests/per_block_reals_transcendental.rs",
+        "crates/oce-conformance/tests/per_block_reals_sources_transcendental.rs",
+        "crates/oce-conformance/tests/per_block_psychrometrics.rs",
+        "crates/oce-conformance/tests/per_block_utilities.rs",
+        "crates/oce-conformance/tests/block_harness/mod.rs",
+        "crates/oce-conformance/tests/block_harness/strict_policy.rs",
+        "crates/oce-conformance/tests/block_harness/aligned_cases.rs",
+        "crates/oce-conformance/tests/strict_bits.rs",
+        "crates/oce-conformance/tests/strict_bits/evidence.rs",
+        "crates/oce-conformance/tests/strict_bits/matrix.rs",
+        "crates/oce-conformance/tests/strict_bits/controls.rs",
+        "crates/oce-conformance/src/lib.rs",
+        "crates/oce-conformance/src/driver.rs",
+        "crates/oce-conformance/src/driver/compare.rs",
+        "crates/oce-conformance/src/exact.rs",
+        "crates/oce-conformance/src/aligned.rs",
+        "crates/oce-conformance/src/csv.rs",
+        "crates/oce-conformance/src/config.rs",
+        "crates/oce-conformance/src/funnel.rs",
+        "crates/oce-conformance/src/mask.rs",
+        "crates/oce-model/src/lib.rs",
+        "crates/oce-conformance/Cargo.toml",
+        ".github/workflows/ci.yml",
+        ".config/nextest.toml",
+        ".agents/gate.sh",
+    ];
+    paths
+        .into_iter()
+        .map(|path| {
+            (
+                path.to_owned(),
+                digest(&std::fs::read(root().join(path)).unwrap()),
+            )
+        })
+        .collect()
+}
+
+pub(super) fn require_sources(
+    corpus: &Corpus,
+    current: &BTreeMap<String, String>,
+) -> Result<(), String> {
+    if corpus.source_sha256.keys().ne(current.keys()) {
+        return Err("source inventory changed: new native evidence required".into());
+    }
+    for (path, digest) in current {
+        if corpus.source_sha256[path] != *digest {
+            return Err(format!(
+                "source digest changed: {path}: new native evidence required"
+            ));
+        }
+    }
+    Ok(())
+}
+
 pub(super) fn collect() -> Corpus {
     for key in ["RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS"] {
         assert!(
@@ -173,36 +242,7 @@ pub(super) fn collect() -> Corpus {
         .expect("rustc provenance");
     assert!(version.status.success());
     assert_eq!(String::from_utf8(version.stdout).unwrap().trim(), RUSTC);
-    // Bind locks, toolchain, actual fixture definitions and execution/math sources. Every change
-    // forces explicit evidence refresh; these are provenance guards, not a correctness oracle.
-    let paths = [
-        "Cargo.lock",
-        "rust-toolchain.toml",
-        "Cargo.toml",
-        ".cargo/config.toml",
-        "tools/golden-gen/Cargo.lock",
-        "tools/golden-gen/Cargo.toml",
-        "crates/oce-blocks/src/reals_transcendental.rs",
-        "crates/oce-blocks/src/reals_sources.rs",
-        "crates/oce-blocks/src/psychrometrics.rs",
-        "crates/oce-blocks/src/utilities.rs",
-        "crates/oce-conformance/tests/per_block_reals_transcendental.rs",
-        "crates/oce-conformance/tests/per_block_reals_sources_transcendental.rs",
-        "crates/oce-conformance/tests/per_block_psychrometrics.rs",
-        "crates/oce-conformance/tests/per_block_utilities.rs",
-        "crates/oce-conformance/tests/block_harness/mod.rs",
-        "crates/oce-conformance/tests/block_harness/strict_policy.rs",
-        "crates/oce-conformance/tests/block_harness/aligned_cases.rs",
-    ];
-    let source_sha256 = paths
-        .into_iter()
-        .map(|path| {
-            (
-                path.to_owned(),
-                digest(&std::fs::read(root().join(path)).unwrap()),
-            )
-        })
-        .collect();
+    let source_sha256 = source_digests();
     for lock in ["Cargo.lock", "tools/golden-gen/Cargo.lock"] {
         assert!(
             std::fs::read_to_string(root().join(lock))
@@ -308,7 +348,7 @@ pub(super) fn validate(corpus: &Corpus) -> Result<(), String> {
     {
         return Err("invalid Git provenance".into());
     }
-    if corpus.signals.len() != 21 || corpus.source_sha256.len() != 17 {
+    if corpus.signals.len() != 21 || !(1..=128).contains(&corpus.source_sha256.len()) {
         return Err("inventory coverage mismatch".into());
     }
     let mut previous = "";
@@ -347,6 +387,22 @@ pub(super) fn validate(corpus: &Corpus) -> Result<(), String> {
         {
             return Err(format!("{}: unreviewed regime", signal.id));
         }
+    }
+    Ok(())
+}
+
+// The historical corpus owns the unchanged reference/input inventory, not current qualification.
+// Native admission separately requires the COMPLETE current source map; this function cannot do so.
+pub(super) fn same_reference_inventory(expected: &Corpus, actual: &Corpus) -> Result<(), String> {
+    validate(expected)?;
+    validate(actual)?;
+    let mut signals = actual.signals.clone();
+    for (a, e) in signals.iter_mut().zip(&expected.signals) {
+        a.actual.clone_from(&e.actual);
+        a.mismatches.clone_from(&e.mismatches);
+    }
+    if signals != expected.signals {
+        return Err("reference/input inventory changed: explicit review required".into());
     }
     Ok(())
 }

@@ -275,3 +275,37 @@ fn source_oracle_and_input_drift_refuse_but_later_checkout_identity_is_allowed()
         }
     }
 }
+
+#[test]
+fn captured_provenance_binds_the_semantic_checker_and_facade_comparison_path() {
+    let captured = evidence::collect();
+    assert_eq!(captured.source_sha256.len(), 35);
+    for path in [
+        "crates/oce-conformance/tests/strict_bits.rs",
+        "crates/oce-conformance/tests/strict_bits/evidence.rs",
+        "crates/oce-conformance/tests/strict_bits/matrix.rs",
+        "crates/oce-conformance/tests/strict_bits/controls.rs",
+        "crates/oce-conformance/src/lib.rs",
+        "crates/oce-conformance/src/driver.rs",
+        "crates/oce-conformance/src/driver/compare.rs",
+        "crates/oce-conformance/src/exact.rs",
+        "crates/oce-conformance/src/aligned.rs",
+        "crates/oce-conformance/src/csv.rs",
+        "crates/oce-conformance/src/config.rs",
+        "crates/oce-conformance/src/funnel.rs",
+        "crates/oce-conformance/src/mask.rs",
+        "crates/oce-model/src/lib.rs",
+        "crates/oce-conformance/Cargo.toml",
+        ".github/workflows/ci.yml",
+        ".config/nextest.toml",
+        ".agents/gate.sh",
+    ] {
+        assert_eq!(
+            captured.source_sha256.get(path),
+            Some(&evidence::digest(
+                &std::fs::read(evidence::root().join(path)).unwrap()
+            )),
+            "unbound capture/comparison/admission source: {path}"
+        );
+    }
+}
