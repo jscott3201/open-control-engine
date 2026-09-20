@@ -1,7 +1,7 @@
 # Executable CXF and HostTick product contract
 
-Document revision: 10
-Grounding SHA: dc733e87b94d383cd50da06613692c6f306c37ca
+Document revision: 12
+Grounding SHA: dbce73fb20ada4a3a91653bb7ad9b48fae7ee87d
 
 This is the aggregate product boundary and requirement-to-evidence map for the work toward a
 stable embeddable kernel. It records current observations, host obligations, and future acceptance
@@ -89,7 +89,7 @@ define their detail without changing the current/future acceptance boundary.
 | PC-034 | CURRENT | Frame delivery | Execution maintainers | MUST retain one shared infallible evaluation core, entered exactly once after complete-frame preflight and staging. | Host loops are not a second evaluator or whole-horizon transaction. Parity is limited to equivalent complete-frame schedules. | [Shared core](../crates/oce-api/src/engine.rs); [Migration](complete-frame-contract.md#legacy-paths-and-migration); [Acceptance](#shared-convenience-core) | test [accepted_frames_enter_the_shared_core_once_and_refusals_never_enter](../crates/oce-api/src/shared_transition_tests.rs#L55) |
 | PC-035 | CURRENT | Frame delivery | Execution maintainers | MUST expose only preparation followed by consuming complete-frame execution, removing legacy execution profiles, raw output access and their types without aliases or compatibility bridges. | get_output and watch are latest-state non-receipt inspections. No Store write helper, realtime orchestration, durable receipt or downstream qualification is supplied. | [Frame-only contraction](#frame-only-facade); [Compiler controls](../scripts/facade_contract/check.py); [Facade](../crates/oce-api/src/lib.rs) | test [retired_facade_symbols_are_absent](../crates/oce-api/tests/public_surface_contract.rs#L508); [incomplete_reference_inputs_refuse_in_both_cadences](../crates/oce-conformance/tests/driver.rs#L217); [store_samples_neither_supply_missing_determinants_nor_overwrite_complete_values](../crates/oce-api/tests/frame_purity.rs#L64) |
 | PC-036 | CURRENT | Identity delivery | Facade maintainers | MUST expose distinct catalog and complete-export identity types plus a closed, versioned compact descriptor of public catalog, IO/value/parameter revisions, fixed HostTick profile and OCE package version, with optional complete export identity. | Public-fact equality is not executable identity, unique-build qualification, generation, state-wire compatibility or authentication. No private execution/state identity is exposed. | [Typed identities](#typed-identities); [Descriptor](../crates/oce-api/src/compatibility.rs); [Contract](facade-contracts.md#closed-host-compatibility-descriptor) | test [canonical_public_facts_match_the_hand_assembled_golden_and_repeat](../crates/oce-api/tests/compatibility.rs#L14); [partial_exports_refuse_instead_of_becoming_absent_or_complete_content](../crates/oce-api/tests/compatibility.rs#L27); [every_field_changes_canonical_bytes_and_has_an_exact_symmetric_refusal](../crates/oce-api/src/compatibility_tests.rs#L6); [descriptor_capture_preserves_state_and_survives_report_and_engine_lifetimes](../crates/oce-api/tests/compatibility.rs#L147) |
-| PC-037 | FUTURE | Evidence delivery | Block semantics maintainers | MUST retain a strict-bit cross-platform exactness matrix or explicit reasons for paths remaining tolerance-qualified. | No automatic widening of tolerances or promotion of self-output into an independent oracle. | [Testing standard](../TESTING.md#the-four-pillars) | future [M03-PR02](#strict-bit-evidence) |
+| PC-037 | CURRENT | Evidence delivery | Block semantics maintainers | MUST retain and enforce exact comparison for the pinned 21-signal corpus on Linux x86_64/aarch64 in debug/release, with two native runs per cell and zero mismatches. | Pinned rustc 1.97.1/libm 0.2.16 only; macOS and other targets remain unqualified at the existing 1e-12 aligned band. The 35-file selected source guard is not a compiled dependency closure. No mathematical correctness, arbitrary-input, whole-executable or Sim qualification follows. | [Accepted native receipt](strict-bit-evidence.md#accepted-native-receipt); [Testing standard](../TESTING.md#the-four-pillars) | test [retained_native_linux_evidence_is_complete_exact_and_source_bound](../crates/oce-conformance/tests/strict_bits/matrix.rs#L273-L279); [every_corpus_sample_uses_exact_facade_comparison_and_rejects_mutations](../crates/oce-conformance/tests/strict_bits/controls.rs#L59-L112); [qualified_linux_signals_are_exact_and_other_targets_keep_the_aligned_band](../crates/oce-conformance/tests/strict_bits/controls.rs#L196-L235) |
 | PC-038 | FUTURE | State delivery | Execution maintainers | MUST stabilize same-build durable continuation and explicit portability domains with refusal evidence. | No general cross-build restore, host authentication or actuator ownership inferred. | [Current restore](../crates/oce-api/src/state.rs#L411-L438) | future [M03-PR03](#same-build-state) |
 | PC-039 | FUTURE | Replay delivery | Execution maintainers | MUST define canonical execution-frame and replay records that reproduce or refuse deterministically. | Current snapshots and simulation traces are not the complete future replay contract. | [Current state image](../crates/oce-api/src/state.rs#L355-L365) | future [M03-PR04](#canonical-replay) |
 | PC-040 | FUTURE | Release delivery | Release maintainers | MUST establish release-to-release compatibility and refusal tests before making those support claims. | No release compatibility or actual publication is authorized by this document. | [Publication authority](package-publication-policy.md#reversal-before-release-freeze) | future [M03-PR05](#release-compatibility) |
@@ -197,17 +197,34 @@ compatibility follows. Existing APIs/bytes, package closure and state/restore be
 The [receipt mapping](facade-migration.md#compatibility-receipt-adoption) preserves current consumers;
 actual downstream pins and qualification are unchanged.
 
+## Strict-bit evidence
+
+The [accepted native receipt](strict-bit-evidence.md#accepted-native-receipt) from run 35494403523
+supports PC-037's observed-output claim with a reviewed 35-file selected source boundary, only
+for the 21 inventoried Linux signal cases: four architecture/codegen cells, two native runs per
+cell, 161 samples per run and zero mismatches. The checked-in qualified captures reconstruct the
+accepted matrix digest and pass ordinary retained validation. Their recorded synthetic merge
+checkout is preserved; exactly the selected paths/digests and current oracle/CXF inventory are
+checked without requiring a later delivery HEAD to equal that capture SHA. The selected boundary
+covers checker/admission/comparison/workflow/direct formula/harness and supporting sources, not
+the full compiled transitive facade closure. Exact-head hosted native cells rerun the actual
+`oce_api::Engine` path per non-draft PR and catch changes under the pinned corpus's comparison
+rules. An unbound transitive source change preserving all pinned outputs does not invalidate the
+historical raw result. Source digests alone do not prove current whole execution semantics.
+The original macOS observation is not platform qualification. macOS-arm64 stays conservative until
+M06-PR02, and all other unqualified targets retain the existing aligned band. Whole-executable
+exactness inherits the least-qualified contributing path, target and input domain; these finite
+cases alone do not establish it. Mathematical correctness, arbitrary-input and downstream policy
+claims remain outside this evidence. Sim adoption remains M05-PR07. The original 17-source Linux
+receipt from run 35492290613 remains unchanged historical evidence and cannot substitute for the
+current qualification. The evidence-collection run is not a final hosted-gate result.
+
 ## Future outcomes
 
 These named work items are planning assignments with clone-visible acceptance descriptions, not
 links into ignored specifications or declarations that the work has shipped. Execution identity/state/replay
 qualification remains later work. Execution of any later work still requires
 its own accepted prerequisite and owner authorization.
-
-### Strict-bit evidence
-
-M03-PR02: Resolve issue #250 with retained strict-bit evidence for the currently tolerance-qualified
-paths or explicit limitations retaining tolerance qualification, across the claimed target matrix.
 
 ### Same-build state
 
@@ -360,3 +377,22 @@ written expected output and deterministic repetitions; the runnable gate remains
   snapshot/restore, frame/admission semantics, dependencies, features and downstream pins are
   unchanged. Independent delivery review, hosted architecture checks and host qualification remain
   separate; no stable release, signing authority, replay or state-wire support is claimed.
+- Revision 11, 2026-09-20: owner authorized the bounded 21-signal Linux strict-bit matrix and raw
+  provenance delivery. The checked-in observation was local macOS only; native Linux acceptance
+  was still pending, so PC-037 was not promoted in that revision. Existing aligned bands remained
+  the conservative platform policy; Linux candidates failed closed on disagreement. Runtime formulas, public APIs,
+  state/restore, dependencies, toolchain and downstream policies are unchanged. The checker revision
+  and pending documentation path advance mechanically without weakening earlier sentinels.
+- Revision 12, 2026-09-20: accepted native run 35492290613 supplies the retained four-cell,
+  two-run, 21-signal zero-mismatch Linux corpus result. PC-037 is CURRENT only in that bounded
+  scope. Raw bits and synthetic merge provenance remain unchanged and digest-checked; no final-HEAD
+  equality or source-digest exception is introduced. Existing Linux exact wiring and all Tier-A
+  goldens remain unchanged. macOS/other targets retain the 1e-12 aligned band, with macOS-arm64
+  unqualified until M06-PR02. No arbitrary-input, mathematical, whole-executable or Sim qualification,
+  runtime/API/state change, dependency change or publication follows.
+  Admission with the reviewed selected source boundary uses run 35494403523, preserving its synthetic
+  merge identity and eight capture files verbatim, with exactly all 35 enumerated paths/digests
+  verified and no bound-source changes. This boundary is not the full compiled dependency closure;
+  PC-037 remains an observed-output claim over the pinned corpus, targets and toolchain.
+  The earlier receipt remains historical; the ordinary current-qualification test validates the
+  newly admitted receipt without a final-HEAD identity requirement or source-map bypass.

@@ -202,6 +202,7 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 - [Architecture](docs/architecture.md)
 - [Execution profile](docs/execution-profile.md)
 - [Verification and evidence](docs/verification-evidence.md)
+- [Pinned strict-bit signal evidence](docs/strict-bit-evidence.md)
 - [CDL coverage](docs/cdl-coverage.md)
 - [CXF round trip](docs/cxf-round-trip.md)
 - [CXF composite subset](docs/cxf-composite-subset.md)

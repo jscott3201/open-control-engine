@@ -37,7 +37,7 @@ visible of them proves nothing about correctness at all.
 | Tier-A source references | `tools/golden-gen/goldens/` | 392 provenance records, 390 signal goldens | Yes — CI-enforced code-dependency firewall |
 | Tier-A HostTick profile references | `tools/golden-gen/goldens/G36/` | 20 signal goldens | Independent implementation of the engine profile; not a Modelica oracle |
 | Structural oracle | `third_party/modelica-buildings-cdl/cxf/` | 44 vendored translations; 31 comparable fixtures | Yes — an independent translation of the same upstream source |
-| Tier-1 per-block oracle comparisons | `crates/oce-conformance/tests/per_block_*.rs` | 15 suites; 278 CDL signal goldens (257 bit-exact, 21 aligned-tolerance) | Yes — Tier-A generator is outside the engine workspace |
+| Tier-1 per-block oracle comparisons | `crates/oce-conformance/tests/per_block_*.rs` | 15 suites; 278 CDL signal goldens: 257 existing exact plus 21 exact on qualified Linux, unchanged 1e-12 aligned band on unqualified targets; [bounded receipt](strict-bit-evidence.md) | Yes — Tier-A generator is outside the engine workspace |
 | Scoped Tier-3 cross-implementation differentials | `crates/oce-conformance/tests/fixtures/open_modelica/` | 4 named cases: 2 Boolean, 1 finite Real matrix, and 1 composed G36 leaf; global report skipped | Yes — pinned OpenModelica and Buildings execution |
 
 ### Tier-2 determinism goldens — they catch drift, not wrongness
@@ -84,27 +84,45 @@ The layer contains **412 Tier-A provenance records**, every one of them recordin
   `goldens/CDL/Constants/constants.prov.json`).
 - **132 G36 sequence signal goldens**, spanning all 46 fixtures.
 
-**410 of those are signal goldens — 389 compared bit-exactly, 21 under a documented
-aligned-tolerance band.** The 278 CDL signals are compared by the 15
+**410 of those are signal goldens — 389 with existing exact comparisons and 21 inventoried
+accepted Linux exact cases, still aligned-tolerance on unqualified platforms.** The
+[retained native receipt](strict-bit-evidence.md#accepted-native-receipt) records run 35494403523:
+Linux x86_64/aarch64 × debug/release, two byte-identical runs per cell, 21 signals and 161 samples
+per run, zero exact mismatches against Tier-A and across cells. Raw bits, synthetic merge checkout
+provenance, exactly the 35 selected source paths/digests and oracle/input/CXF integrity are checked
+permanently, without requiring a later HEAD to equal the captured SHA. PC-037 is CURRENT only for
+this pinned corpus. macOS-arm64 remains
+unqualified until M06-PR02; neither libm mathematical correctness nor arbitrary-input or whole-engine
+exactness follows. No Sim policy changes. The selected-boundary receipt is admitted and the ordinary
+current-qualification test validates it. The original 17-source receipt from run 35492290613 remains
+immutable history, not current qualification. The current collection run's successful numerical
+comparison is not evidence of final green hosted gates; the linked receipt distinguishes those outcomes.
+The reviewed 35-file map covers checker/admission/comparison/workflow/direct formula/harness and
+supporting sources, not the full compiled transitive facade closure. Exact-head hosted native cells
+rerun `oce_api::Engine` per non-draft PR and catch changes under the pinned corpus's comparison
+rules. An unbound transitive source change preserving all pinned outputs does not invalidate the
+historical raw result. Source digests alone do not prove current whole execution semantics.
+The 278 CDL signals are compared by the 15
 `crates/oce-conformance/tests/per_block_*.rs` suites through a shared harness that drives each
 block through the frozen facade, asserts the comparison is unmasked, and asserts
 `compared_points == reference.n_rows` so a zero-row comparison cannot pass vacuously. Twelve of
 the 15 suites run `ComparisonMode::Exact` with zero tolerances
-(`crates/oce-conformance/tests/block_harness/mod.rs:106-140`), and four run their 21
-libm-dependent Real goldens through `ComparisonMode::AlignedTolerance` at 1e-12
-(`block_harness/mod.rs:142-158`, tolerances pinned at `:323-332`):
+(`crates/oce-conformance/tests/block_harness/mod.rs`), and four select each of their 21
+libm-dependent Real goldens through the inventory: exact on the two qualified Linux targets,
+`ComparisonMode::AlignedTolerance` at the unchanged 1e-12 band elsewhere:
 `per_block_reals_transcendental.rs`, `per_block_reals_sources_transcendental.rs`,
 `per_block_psychrometrics.rs`, and `per_block_utilities.rs` — with
 `per_block_reals_sources_transcendental.rs` counted in both, because its two `CalendarTime`
-cases compare exactly while its single `Sin` case is banded. Boolean outputs in the aligned
+cases compare exactly while its single `Sin` case is inventoried. Boolean outputs in the aligned
 suites still compare by bits even in that mode (`crates/oce-conformance/src/aligned.rs:214`), so
-257 of the 278 CDL goldens are bit-exact. The 132 G36
-signals are compared by 23 `*_funnel.rs` and four `*_oracle.rs` per-fixture suites in the same
+all 278 CDL goldens are exact on qualified Linux targets, versus 257 exact and 21 aligned elsewhere.
+The 132 G36 signals are compared by 23 `*_funnel.rs` and four `*_oracle.rs` per-fixture suites in the same
 directory. Their recorded comparison regimes tally exactly: 102 `Value::bit_eq` f64, 18 exact
 encoded integer, 12 exact 0.0/1.0.
 
 The semantic claim is narrower than the 410-comparison count. **390 signal goldens check CDL /
-Buildings source semantics**: 369 exact and 21 aligned-tolerance. The remaining **20 exact G36
+Buildings source semantics**: 369 existing exact and 21 native-matrix-qualified Linux cases (conservative
+aligned-tolerance on unqualified platforms). The remaining **20 exact G36
 signals** belong to `Generic.TimeSuppression`, `CoolingOnly.Controller`, and `ReliefFanGroup`.
 Those references are independent of `oce-blocks`, but their `CDL.Logical.Pre` recurrences implement
 HostTick v1 and are labeled as profile checks rather than Modelica event-iteration oracles.
@@ -306,28 +324,27 @@ the per-PR gate does not run them either.
 
 ### The CI split, read in the dangerous direction
 
-CI is dev-light and release-heavy. The per-PR gate into `development` runs engine tests for
-**`oce-api`, `oce-blocks`, and `oce-expr` only** — the `determinism-matrix` job
-(`.github/workflows/ci.yml:148-168`) and the identical step inside the gate script
-(`.agents/gate.sh:120-124`), on two architectures in debug and release codegen. The matrix emits
+CI is dev-light and release-heavy. The per-PR gate into `development` runs the state-determinism
+subset for **`oce-api`, `oce-blocks`, and `oce-expr`** — the `determinism-matrix` job
+and the corresponding steps inside the gate script, on two architectures in debug and release
+codegen. The matrix emits
 populated portable and target-bound engine-state vectors. It requires both to match across codegen
 profiles, the portable bytes to match across architectures, and the target-bound bytes to differ.
 The x86_64 comparison job also parses the arm64 target-bound snapshot and requires
 `restore_state` to return the target-domain refusal.
 
-Read that in the direction that costs you something. **A change confined to `oce-cxf`,
-`oce-store`, `oce-conformance`, or `oce-diag` can show every check green having run none of its own
-tests.**
-A green PR is not evidence that a change's own tests pass.
+Separately, the scoped **`oce-conformance` strict-bit subset runs per-PR**: `strict_bits` and the
+four affected per-block suite binaries, Linux x86_64/aarch64 × debug/release, two native process
+captures per cell and fail-closed cross-cell comparison. The [retained receipt](strict-bit-evidence.md)
+covers the 21 formerly banded Real cases; Linux exact comparison is not a macOS qualification.
 
-That has a direct consequence for everything on this page. The `oce-api` comparison tests now run
-per PR, but `crates/oce-conformance/tests/` does not, so the complete set of 410 reference comparisons
-— 389 bit-exact, 21 aligned-tolerance — still runs only on `development → main` release PRs, on a
-daily cron
-against the `development` tip, and on manual dispatch (`.github/workflows/release-gate.yml`). Two
-input-hygiene audits *do* run per PR, because `.agents/gate.sh` invokes them directly: the fixture
-port-order audit and the structural oracle, the latter also carrying the vendored-tree hash manifest
-and the Tier-2 provenance digest guard.
+The remainder of `oce-conformance` still follows release/full-gate coverage. The complete set of
+410 reference comparisons — 389 existing exact plus 21 exact on qualified Linux, unchanged 1e-12
+aligned elsewhere — runs in the full local gate and release workflow (release PRs, daily cron
+against `development`, and manual dispatch). Two `oce-cxf` input-hygiene audits also run per-PR:
+fixture port order and the structural oracle, including the vendored-tree and Tier-2 digest guards.
+**A change outside these named subsets can show every check green without running its own tests.**
+A green PR is not evidence that the rest of a changed crate passed.
 
 One more disclosure worth knowing before you read a PR's checks: every job in `ci.yml` is
 conditioned on `github.event.pull_request.draft == false`. **A draft PR runs no gates at all** — not
@@ -366,10 +383,11 @@ Which classes exist and what "supported" means for sequences is in
 If you are evaluating this engine, the defensible summary is:
 
 - Determinism is **tested**, on two architectures, per PR, against committed goldens.
-- Agreement with CDL / Buildings **source semantics** is bounded by 390 oracle comparisons (369
-  bit-exact, 21 under the documented 1e-12 aligned-tolerance band)
-  against references generated behind a mechanically enforced code-dependency firewall — covering
-  128 of 133 classes, and running on the release gate rather than per PR.
+- Agreement with CDL / Buildings **source semantics** is bounded by 390 oracle comparisons: 369
+  existing exact plus 21 exact on qualified Linux and at the unchanged 1e-12 aligned band on
+  unqualified targets. The [retained strict-bit evidence](strict-bit-evidence.md) applies only to
+  the pinned corpus/toolchain. References behind the code-dependency firewall cover 128 of 133
+  classes; the scoped strict-bit subset runs per-PR, while the remainder needs the release/full gate.
 - HostTick v1 agreement is checked separately by 20 exact G36 signals across the three
   `Pre`-dependent fixtures. Those are profile checks, not Modelica event-iteration evidence.
 - Fixture fidelity is bounded structurally against an independent LBL translation of upstream

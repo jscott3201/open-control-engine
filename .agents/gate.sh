@@ -122,13 +122,26 @@ step_env 'rustdoc — bins' RUSTDOCFLAGS '-D warnings' \
 step 'cargo-deny (bans licenses sources)' cargo deny check bans licenses sources
 
 # ── Determinism subset ───────────────────────────────────────────────────────
-# These three crates are the ONLY engine test packages the per-PR gate runs. Everything else in
-# the workspace is untested until the release gate — which is why `full` exists
+# These three crates form the state-determinism subset. The scoped conformance strict-bit
+# tests below are additional; the rest of the workspace waits for the release gate — why `full` exists
 # and why a green PR is not evidence that the suite passes.
 step 'determinism subset' \
   cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
 step 'determinism subset (release codegen)' \
   cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release \
+    --cargo-profile release --no-tests=fail
+
+# The strict-bit binary shares the four suites' fixtures and runs inventory/provenance, facade
+# mutation and synthetic matrix controls. These local observations do NOT qualify Linux or macOS;
+# CI independently captures two processes in each native Linux architecture/codegen cell.
+step 'strict-bit corpus and controls' \
+  cargo nextest run -p oce-conformance --test strict_bits --locked \
+    --test per_block_reals_transcendental --test per_block_reals_sources_transcendental \
+    --test per_block_psychrometrics --test per_block_utilities --profile ci --no-tests=fail
+step 'strict-bit corpus and controls (release codegen)' \
+  cargo nextest run -p oce-conformance --test strict_bits --locked \
+    --test per_block_reals_transcendental --test per_block_reals_sources_transcendental \
+    --test per_block_psychrometrics --test per_block_utilities --profile ci-release \
     --cargo-profile release --no-tests=fail
 
 # ── Fixture input hygiene ────────────────────────────────────────────────────
@@ -191,6 +204,9 @@ cat <<'COVERAGE'
 NOT COVERED BY THIS SCRIPT — a green run here does not prove these pass:
   · cross-arch determinism matrix (ubuntu-latest AND ubuntu-24.04-arm).
     One machine cannot reproduce it. CI is the only place it runs.
+  · strict-bit raw-output matrix over the 21 inventoried signals, with two native
+    processes per Linux architecture/codegen cell and cross-cell comparison.
+    Local synthetic controls and macOS observations are NOT native Linux evidence.
   · cargo public-api surface gates for oce-api / oce-store. They need the
     gate-only nightly toolchain and run in release-gate.yml.
   · cargo deny check advisories. Needs network and a writable advisory-db;

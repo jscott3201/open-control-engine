@@ -83,10 +83,11 @@ you cloned this repo, you will not find them, and that is expected.
   `gate (light)` step the script did not have, so the required check existed but no local run
   performed it. When they disagree, check which one is behind before assuming it is the script.
 - **CI is dev-light / release-heavy.** The per-PR gate into `development` runs engine tests for
-  **`oce-api`, `oce-blocks`, and `oce-expr` only** (the `determinism-matrix` job, x86_64 and
+  **`oce-api`, `oce-blocks`, and `oce-expr`** (the `determinism-matrix` job, x86_64 and
   arm64, debug and release codegen, with a byte-for-byte cross-architecture portable-state vector
-  comparison). Every other crate's tests run only on `development` -> `main` release PRs via
-  `release-gate.yml`. **A green PR is therefore not evidence that a change's own tests pass** —
+  comparison), plus the scoped `oce-conformance` strict-bit subset and four per-block suites
+  ([bounded evidence](docs/strict-bit-evidence.md)). The remainder of the workspace needs the
+  release/full gate. **A green PR is therefore not evidence that a change's own tests pass** —
   run `bash .agents/gate.sh full` first-hand before claiming they do. cargo-nextest is the runner
   (`.config/nextest.toml`: `default` = fast local fail-fast, `ci` = automated debug runs,
   `ci-release` = inherited release-codegen policy); it cannot run doctests, which is why they are a

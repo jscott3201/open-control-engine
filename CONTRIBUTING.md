@@ -9,7 +9,9 @@ the architecture and invariants are the design of record.
 - Development PRs run the CI gates in [`.github/workflows/ci.yml`](.github/workflows/ci.yml);
   `bash .agents/gate.sh` reproduces them locally in CI's exact command form, so the list lives
   in one place rather than being restated here. Only `oce-api`, `oce-blocks`, and `oce-expr` tests
-  run per-PR — every other crate's tests run on the `development` → `main` release gate. Releases
+  form the state-determinism subset; the scoped `oce-conformance` strict-bit subset and four
+  per-block suites also run per-PR ([bounded evidence](docs/strict-bit-evidence.md)). The remainder
+  needs the release/full gate. Releases
   batch `development` → `main`. **Publishing is manual:** a `v*` tag push runs the verify job
   only; the publish job is guarded by `github.event_name == 'workflow_dispatch'`, so a tag alone
   never publishes. The 12-publishable/five-private selection and supported `oce-api` feature matrix
@@ -94,14 +96,14 @@ That runs the per-PR gate in CI's exact command form — formatting, the file-si
 scan, the database-free and golden-gen invariant checks, the closed package/feature/publication
 contract and its hostile controls, the gate fixtures, `cargo machete`, clippy, build, rustdoc,
 cargo-deny, and the `oce-api`/`oce-blocks`/`oce-expr` determinism subset in debug and release
-codegen.
+codegen, plus the scoped strict-bit conformance subset in both codegen profiles.
 
 CI also runs this script directly, as the `gate (light)` job in `ci.yml` and `gate (full)` in
 `release-gate.yml`. So the commands here gate your PR whether or not each is separately wired as
 its own job — but that is coverage, not proof that the script and the workflows still agree.
 Nothing verifies that mechanically; change a command in CI first, then here.
 
-If your change touches a crate outside that three-crate subset, its tests did not run. Add `full`:
+If your change falls outside those named subsets, a green PR need not have run its tests. Add `full`:
 
 ```bash
 bash .agents/gate.sh full

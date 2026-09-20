@@ -66,11 +66,21 @@ comparison that fails if even one bit differs.
 - **Compare floats by bits, never with `==` or an epsilon.** Use `Value::bit_eq` (which compares
   `f64` via `to_bits`, so `NaN == NaN` and `+0.0 != -0.0` as determinism demands). An epsilon
   comparison would mask exactly the drift a golden test exists to catch. One named exception: the
-  21 transcendental, psychrometric, and solar Real signal goldens are compared under the documented
-  aligned-tolerance band (`crates/oce-conformance/src/aligned.rs:218-245`, tolerances pinned at
-  `crates/oce-conformance/tests/block_harness/mod.rs:323-332`). That exception is a property of
-  their libm-dependent outputs, not a license for epsilon anywhere else — every other golden stays
-  bit-exact.
+  21 transcendental, psychrometric, and solar Real signal goldens retain their existing
+  aligned-tolerance band on unqualified platforms. Their [strict-bit inventory and matrix](docs/strict-bit-evidence.md)
+  enforce accepted Linux x86_64/aarch64 exact comparisons: four native debug/release cells,
+  two byte-identical captures per cell, 21 signals each and zero mismatches, retained from run
+  35494403523 with a reviewed 35-file selected source boundary. macOS remains conservative/unqualified
+  until M06-PR02; other targets also retain the unchanged 1e-12 aligned band. This is empirical pinned
+  corpus evidence,
+  not a libm guarantee or a license for epsilon elsewhere — every other golden stays bit-exact.
+  The ordinary retained test requires exactly all 35 enumerated paths and digests, not the full
+  compiled facade dependency closure. Checker/admission/comparison source mutations refuse even
+  when recorded outputs agree. Exact-head hosted native cells rerun `oce_api::Engine` per non-draft
+  PR and catch changes under the pinned corpus's comparison rules; an unbound transitive source
+  change preserving those outputs does not invalidate the historical raw result. These digests
+  alone do not prove current whole execution semantics. The original 17-source receipt remains
+  immutable history, not a substitute for the selected 35-file guard.
 - **No snapshot magic.** Goldens are explicit files compared by explicit code — reviewable and
   obvious. If a golden needs regenerating, do it deliberately and explain the diff in the PR.
 
@@ -203,10 +213,12 @@ case" is itself a finding to resolve, not a pass.
   integration tests; `crates/<crate>/tests/fixtures/` for input + golden files.
 - **Float comparison:** `Value::bit_eq` (or `f64::to_bits`) — **never** `==` or `(a-b).abs() < ε`
   in an engine assertion. Sole exception: the 21 transcendental, psychrometric, and solar Real
-  signal goldens, whose libm-dependent outputs use the documented aligned-tolerance band
-  (`crates/oce-conformance/src/aligned.rs:218-245`,
-  `crates/oce-conformance/tests/block_harness/mod.rs:323-332`) — not a license for epsilon
-  anywhere else.
+  signal goldens, whose libm-dependent outputs retain the existing aligned-tolerance band on
+  unqualified platforms and have [retained native Linux exact evidence](docs/strict-bit-evidence.md).
+  The machine-readable inventory owns the paths; its capture-time candidate labels are historical,
+  while the accepted receipt establishes the bounded Linux regime. Tests bind raw artifacts,
+  exactly the selected source digests and oracle/CXF digests, not the full compiled dependency
+  closure or the final HEAD to the captured synthetic merge SHA.
 - **Error assertions:** match the exact variant (`assert!(matches!(err, CxfError::Json(_)))`),
   not `is_err()`.
 - **No time/randomness in tests:** deterministic inputs only; no wall-clock, no RNG.
@@ -221,13 +233,13 @@ CI is **dev-light / release-heavy** (keep per-change PRs fast; save the heavy su
 
 | Gate | Trigger | Runs tests? |
 | --- | --- | --- |
-| `ci.yml` (light) | PRs into `development` | **`oce-api`, `oce-blocks`, and `oce-expr` only** — the `determinism-matrix` job runs those three crates on x86_64 and arm64, in debug and release codegen. It requires portable snapshots to match across architectures and both portable and target-bound snapshots to match across codegen profiles; target-bound snapshots must differ across architectures, and the x86_64 job parses and refuses the arm64 bytes through `restore_state`. No other crate's tests run. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, the package/feature/publication contract and hostile controls, cargo-machete, stale crate-status header lint, golden-gen anti-tautology firewall, gate-fixture smoke, a `gate (light)` job that runs `.agents/gate.sh` itself — which includes an **unconditional** `cargo deny check bans licenses sources`, stricter than the standalone cargo-deny job that triggers only on a manifest change. |
+| `ci.yml` (light) | PRs into `development` | The `determinism-matrix` job runs **`oce-api`, `oce-blocks`, and `oce-expr`** on x86_64 and arm64 in debug/release. Portable snapshots match across architectures; portable and target-bound snapshots match across codegen; target-bound snapshots differ across architectures and foreign restore refuses. Separately, scoped **`oce-conformance::strict_bits` controls and the four aligned suite binaries** run in a native Linux architecture/codegen matrix, with repeat captures and fail-closed cross-cell comparison. This is not the full conformance suite. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, package/feature/publication and authority checks, cargo-machete, stale-status lint, golden-gen firewall, fixture smoke, and `gate (light)` executing `.agents/gate.sh`, including unconditional cargo-deny bans/licenses/sources. |
 | `release-gate.yml` (heavy) | **Any** non-draft PR targeting `main` (it filters on the base branch only — there is no `head_ref == development` condition), daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, two armed per-crate public-api surface snapshots (`oce-api` and `oce-store`), plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
 | `advisories.yml` | Daily cron, manual dispatch | **No** — advisory/yanked scan only (`cargo deny check advisories`, `yanked = "deny"`, `ignore = []`). |
 
 Read the first row in the dangerous direction and you will trust a green PR you
-should not. A change confined to `oce-cxf`, `oce-store`, `oce-conformance`, or `oce-diag`
-can show every check green having run none of its own tests. Before claiming tests
+should not. A change outside the listed test subsets can show every check green having run
+none of its own tests. Before claiming tests
 pass on such a change, run the suite yourself:
 
 ```bash
