@@ -70,12 +70,17 @@ comparison that fails if even one bit differs.
   aligned-tolerance band on unqualified platforms. Their [strict-bit inventory and matrix](docs/strict-bit-evidence.md)
   enforce accepted Linux x86_64/aarch64 exact comparisons: four native debug/release cells,
   two byte-identical captures per cell, 21 signals each and zero mismatches, retained from run
-  35494403523 with the complete 35-source binding. macOS remains conservative/unqualified until
-  M06-PR02; other targets also retain the unchanged 1e-12 aligned band. This is empirical pinned
+  35494403523 with a reviewed 35-file selected source boundary. macOS remains conservative/unqualified
+  until M06-PR02; other targets also retain the unchanged 1e-12 aligned band. This is empirical pinned
   corpus evidence,
   not a libm guarantee or a license for epsilon elsewhere — every other golden stays bit-exact.
-  The ordinary retained test validates the admitted checker-complete receipt. The original
-  17-source receipt remains immutable history, not a substitute for current-source qualification.
+  The ordinary retained test requires exactly all 35 enumerated paths and digests, not the full
+  compiled facade dependency closure. Checker/admission/comparison source mutations refuse even
+  when recorded outputs agree. Exact-head hosted native cells rerun `oce_api::Engine` per non-draft
+  PR and catch changes under the pinned corpus's comparison rules; an unbound transitive source
+  change preserving those outputs does not invalidate the historical raw result. These digests
+  alone do not prove current whole execution semantics. The original 17-source receipt remains
+  immutable history, not a substitute for the selected 35-file guard.
 - **No snapshot magic.** Goldens are explicit files compared by explicit code — reviewable and
   obvious. If a golden needs regenerating, do it deliberately and explain the diff in the PR.
 
@@ -211,8 +216,9 @@ case" is itself a finding to resolve, not a pass.
   signal goldens, whose libm-dependent outputs retain the existing aligned-tolerance band on
   unqualified platforms and have [retained native Linux exact evidence](docs/strict-bit-evidence.md).
   The machine-readable inventory owns the paths; its capture-time candidate labels are historical,
-  while the accepted receipt establishes the bounded Linux regime. Tests bind raw artifacts and
-  current source/oracle/CXF digests, not the final HEAD to the captured synthetic merge SHA.
+  while the accepted receipt establishes the bounded Linux regime. Tests bind raw artifacts,
+  exactly the selected source digests and oracle/CXF digests, not the full compiled dependency
+  closure or the final HEAD to the captured synthetic merge SHA.
 - **Error assertions:** match the exact variant (`assert!(matches!(err, CxfError::Json(_)))`),
   not `is_err()`.
 - **No time/randomness in tests:** deterministic inputs only; no wall-clock, no RNG.

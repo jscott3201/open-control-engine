@@ -89,13 +89,19 @@ accepted Linux exact cases, still aligned-tolerance on unqualified platforms.** 
 [retained native receipt](strict-bit-evidence.md#accepted-native-receipt) records run 35494403523:
 Linux x86_64/aarch64 × debug/release, two byte-identical runs per cell, 21 signals and 161 samples
 per run, zero exact mismatches against Tier-A and across cells. Raw bits, synthetic merge checkout
-provenance, all 35 bound source digests and oracle/input/CXF integrity are checked permanently,
-without requiring a later HEAD to equal the captured SHA. PC-037 is CURRENT only for this pinned corpus. macOS-arm64 remains
+provenance, exactly the 35 selected source paths/digests and oracle/input/CXF integrity are checked
+permanently, without requiring a later HEAD to equal the captured SHA. PC-037 is CURRENT only for
+this pinned corpus. macOS-arm64 remains
 unqualified until M06-PR02; neither libm mathematical correctness nor arbitrary-input or whole-engine
-exactness follows. No Sim policy changes. The checker-complete receipt is admitted and the ordinary
+exactness follows. No Sim policy changes. The selected-boundary receipt is admitted and the ordinary
 current-qualification test validates it. The original 17-source receipt from run 35492290613 remains
 immutable history, not current qualification. The current collection run's successful numerical
 comparison is not evidence of final green hosted gates; the linked receipt distinguishes those outcomes.
+The reviewed 35-file map covers checker/admission/comparison/workflow/direct formula/harness and
+supporting sources, not the full compiled transitive facade closure. Exact-head hosted native cells
+rerun `oce_api::Engine` per non-draft PR and catch changes under the pinned corpus's comparison
+rules. An unbound transitive source change preserving all pinned outputs does not invalidate the
+historical raw result. Source digests alone do not prove current whole execution semantics.
 The 278 CDL signals are compared by the 15
 `crates/oce-conformance/tests/per_block_*.rs` suites through a shared harness that drives each
 block through the frozen facade, asserts the comparison is unmasked, and asserts
