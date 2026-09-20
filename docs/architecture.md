@@ -32,13 +32,12 @@ persistence is reached only through the `oce-store` port traits
 (`crates/oce-store/src/lib.rs:580`). The library ships **no first-party database**. Durable or
 queryable backends are app-side adapters behind the port, with an in-memory default
 (`oce-store-mem`) so that a downstream project can embed the engine for *load → flatten → validate →
-schedule → tick → simulate* with no database at all.
+schedule → prepare frame → execute frame* with no database at all.
 
-The seam also fixes where responsibility for input quality lives, and it is not here. Staging is
-deliberately status-agnostic: a sample is converted from its value regardless of `PointStatus`, so
-`Fault`, `Stale`, and `Uninitialized` all stage exactly like `Ok`. A missing sample is not an error
-either — the connector holds its previous value indefinitely, and before the first sample it holds
-the type's `zero_value()`. The engine therefore implements **no fail-safe policy of its own**.
+The seam also fixes where responsibility for input quality lives: the host supplies every typed
+boundary input exactly once. Missing values refuse; Store samples and prior values cannot fill gaps.
+Typed completeness does not establish sensor quality or freshness, so the engine still implements
+**no fail-safe policy of its own**.
 Staleness limits, fault reactions, and safe-state fallback belong to the host layer above it; see
 [host-responsibilities.md](host-responsibilities.md).
 
@@ -46,17 +45,16 @@ Staleness limits, fault reactions, and safe-state fallback belong to the host la
 
 ![Pipeline diagram. A build phase runs once per load and off the hot path: load ingests CXF, flatten
 elaborates, validate applies the conformance gate, and schedule performs a Kahn topological sort.
-The frozen schedule then feeds a tick phase on the hot path, where tick advances one step and
-simulate runs to t_stop, performing no I/O over preallocated schedule and
-state.](diagrams/pipeline.svg)
+The host prepares complete typed observations, then consumes them in one HostTick transition with
+an owned completed result and no Store I/O.](diagrams/pipeline.svg)
 
-Everything expensive and everything fallible happens in BUILD. Parsing, elaboration, conformance
+Parsing, elaboration, conformance
 rejection, algebraic-loop rejection, and topological sorting all run once per load. What survives is
 a frozen schedule over flat arrays, and TICK walks it: no graph traversal, no hashing, no store
 access in the graph evaluator.
 
 The current runtime is the fixed [HostTick v1 execution profile](execution-profile.md): every
-successful facade tick evaluates this schedule once and advances state once, including at a repeated
+successful frame execution evaluates this schedule once and advances state once, including at a repeated
 timestamp. It does not implement Modelica same-time event iteration for `CDL.Logical.Pre`.
 
 ## Embeddability posture
@@ -103,20 +101,19 @@ preallocated and the gather scratch is reused, so most blocks tick without alloc
 `crates/oce-blocks/src/reals_matrix.rs:340`), then falls back to two heap-allocated vectors for
 wider inputs. `CDL.Reals.Log` and `CDL.Reals.Log10` use static warning messages, so warning emission
 allocates nothing block-side — but a diagnostic sink may still allocate when it records an event,
-including the `step_realtime` collector. Size a real-time loop against the blocks and the diagnostic
+including the completed-frame warning collector. Size a host loop against the blocks and the diagnostic
 sink your sequence actually uses, not against a blanket guarantee.
 
-**`Engine::tick` is store-free only when the model declares no store-backed inputs.** When it
-declares none, the staging path returns immediately (`crates/oce-api/src/engine.rs:258`). Otherwise
-the tick takes one `store.snapshot()` plus one read per staged input. With the default `MemStore`
-that snapshot is exactly one boxed allocation (`crates/oce-store-mem/src/lib.rs:131` returns
-`Box<dyn PointSnapshot>` over an `Arc` clone); the `PointStore` trait places **no** allocation bound
-on a third-party backend's `snapshot()`.
+**Frame execution is Store-free.** Preparation owns the complete typed observations and resolved
+targets; execution consumes the plan and produces an owned receipt. Their structural allocation
+budget scales with inputs, fan-out, boundary outputs and emitted warnings. It is not zero allocation
+or a whole-state clone. Load-time Store recovery, save and handle-cardinality validation remain.
 
 Whether a block tick allocates on the evaluator thread is gated per-PR, registry-wide and with a
 positive control, by `crates/oce-blocks/tests/tick_allocation_census.rs`. No current block delegates
 work to a worker thread; such an implementation would need a companion guard for worker allocation.
-The facade has a narrower guard in `crates/oce-api/tests/tick_purity_tests.rs`. Throughput figures
+The facade's corpus-wide Store guard is `crates/oce-api/tests/frame_purity.rs`; frame allocation
+formulas are checked by `frame_observations.rs`. Throughput figures
 live in [`docs/benchmarks.md`](benchmarks.md), recorded per run with the commit and host that produced
 them, because nothing re-measures them in CI.
 
@@ -157,7 +154,7 @@ separates host support from registry dependency closure.
 | `oce-bless` | **Test-support only, `publish = false`.** The single definition of the repo's environment-variable truthiness policy, so golden-regeneration switches cannot drift apart across crates. |
 | `oce-extension` | **Experimental/reserved, `publish = false`; nothing consumes it.** The intended role is the FMI / extension-block boundary. No crate depends on it, the CXF resolver has no extension-block branch (an unknown class is a hard `ClassNotFound`), and `DiagCode::MissingFmuPath` (`crates/oce-diag/src/lib.rs:167`) is declared but never constructed. **Do not plan FMI integration against this crate.** |
 | `oce-docs` | **Reserved panic-only seam, `publish = false`.** The sequence-spec and point-list export surface is declared; `point_list_html` panics with `unimplemented!` (`crates/oce-docs/src/lib.rs:17`). Nothing depends on it. |
-| `oce-api` | The primary embeddable host facade: `Engine<S: Store = MemStore>` (`crates/oce-api/src/engine.rs:38`), spanning load, tick, simulate, parameters, IO inventory, key-selected output reads (`watch`), CXF export with content id, and a read-only topology view. The actively supported `oce-blocks::catalog()` metadata API is a separate companion surface; see the [public surface contract](public-surface-contract.md). |
+| `oce-api` | The primary embeddable host facade: `Engine<S: Store = MemStore>`, spanning load, complete-frame preparation/execution, parameters, IO inventory, latest-state non-receipt reads (`get_output`/`watch`), CXF export with content id, and a read-only topology view. The actively supported `oce-blocks::catalog()` metadata API is a separate companion surface; see the [public surface contract](public-surface-contract.md). |
 
 Four of those — `oce-flatten`, `oce-semantics`, `oce-extension`, `oce-docs` — are reserved seams
 rather than working components. They are named here so that nobody plans a feature against a crate

@@ -1,20 +1,16 @@
 //! Golden-trace driver bound through the frozen `oce-api` facade.
 //!
-//! The driver loads CXF bytes through [`oce_api::Engine::load_cxf`], stages reference inputs through
-//! [`oce_api::Engine::simulate`] or a driver-owned
-//! [`oce_api::Engine::set_input`] / [`oce_api::Engine::step_realtime`] /
-//! [`oce_api::Engine::get_output`] loop, and returns an encoded trace ready for configured
-//! comparison.
+//! The driver loads CXF bytes through [`oce_api::Engine::load_cxf`] and submits a complete
+//! [`oce_api::Engine::prepare_frame`] / [`oce_api::Engine::execute_frame`] pair at each instant.
+//! Host-side trace capture reads configured points after each accepted transition. Internal-point
+//! inspections are not complete boundary receipts; the trace is comparison evidence only.
 //! It never depends on `oce-graph` or `oce-blocks`.
 
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
 
-use oce_api::{
-    CollectSpec, Engine, InputSource, OcError, OutputTrace, PointDirection, PointInfo,
-    PointValueType, SimSpec, Value,
-};
+use oce_api::{Engine, OcError, PointDirection, PointInfo, PointValueType, Value};
 
 use crate::{CombiTimeTable, ConfigError, CsvError, Series, Tolerances, ValueKind, VerifyConfig};
 
@@ -28,7 +24,7 @@ pub enum DriveCadence {
     /// Choose [`DriveMode::Uniform`] only when the reference time column is an exact fixed grid;
     /// otherwise tick the sorted, de-duplicated reference instants.
     Auto,
-    /// Force the uniform [`Engine::simulate`] path.
+    /// Force a uniform complete-frame loop with a fresh multiply for each model time.
     Uniform {
         /// First model time evaluated.
         t_start: f64,
@@ -37,7 +33,7 @@ pub enum DriveCadence {
         /// Fixed simulation step.
         step: f64,
     },
-    /// Force the event-aligned realtime loop, preserving the supplied instant order.
+    /// Force the event-aligned complete-frame loop, preserving the supplied instant order.
     EventAligned {
         /// Model times at which the engine is ticked.
         instants: Vec<f64>,
@@ -75,7 +71,7 @@ impl Default for DriverOptions {
 /// Drive mode actually used for a run.
 #[derive(Clone, Debug, PartialEq)]
 pub enum DriveMode {
-    /// The uniform [`Engine::simulate`] path.
+    /// The uniform complete-frame loop.
     Uniform {
         /// First model time evaluated.
         t_start: f64,
@@ -84,7 +80,7 @@ pub enum DriveMode {
         /// Fixed simulation step.
         step: f64,
     },
-    /// The driver-owned event-aligned realtime loop.
+    /// The driver-owned event-aligned complete-frame loop.
     EventAligned {
         /// Tick instants used by the loop.
         instants: Vec<f64>,
@@ -330,9 +326,6 @@ pub fn drive_trace_with_options(
 
     let mut engine = Engine::in_memory();
     let load_report = engine.load_cxf(cxf).map_err(DriverError::Load)?;
-    // Fixed verification origin keeps negative model-time fixtures representable without a clock.
-    engine.set_realtime_epoch_unix_nanos(1_700_000_000_000_000_000);
-
     let plan = Plan::new(&engine, config, reference)?;
     let (trace, drive_mode) = match &options.cadence {
         DriveCadence::Auto => {
@@ -434,6 +427,14 @@ impl Plan {
             return Err(DriverError::NoOutputs);
         }
 
+        // Completeness is a property of the submitted reference mapping, even if an explicit
+        // cadence is empty. Never let a missing determinant reach a vacuous comparison.
+        for required in engine.input_definitions()? {
+            if !inputs.iter().any(|input| input.point == required.path) {
+                return Err(OcError::FrameMissingInput(required.path).into());
+            }
+        }
+
         let mut capture = Vec::new();
         for output in &outputs {
             push_capture(&mut capture, &point_info, &output.point, output.kind)?;
@@ -491,41 +492,35 @@ struct CaptureColumn {
 }
 
 fn run_uniform(
-    mut engine: Engine,
+    engine: Engine,
     plan: &Plan,
     t_start: f64,
     t_stop: f64,
     step: f64,
     input_replay: &DriverInputReplay,
 ) -> Result<(CapturedTrace, DriveMode), DriverError> {
-    let collect_points = plan
-        .capture
-        .iter()
-        .map(|column| column.point.clone())
-        .collect::<Vec<_>>();
-    let inputs = match input_replay {
-        DriverInputReplay::ReferenceTable => {
-            let times = plan.times.clone();
-            let columns = plan.inputs.clone();
-            InputSource::Closure(Box::new(move |t| {
-                columns
-                    .iter()
-                    .map(|column| (column.point.clone(), column.value_at(&times, t)))
-                    .collect()
-            }))
+    let DriverInputReplay::ReferenceTable = input_replay;
+    if !step.is_finite() || step <= 0.0 {
+        return Err(OcError::Load {
+            detail: format!("uniform step must be finite and > 0 (got {step})"),
         }
-    };
-    let metrics = engine.simulate(&SimSpec {
-        t_start,
-        t_stop,
-        step,
-        inputs,
-        collect: CollectSpec::Named {
-            points: collect_points,
-            stride: 1,
-        },
-    })?;
-    let trace = trace_from_output_trace(&metrics.trace, &plan.capture)?;
+        .into());
+    }
+    if !t_start.is_finite() || !t_stop.is_finite() {
+        return Err(OcError::NonFiniteTime {
+            now: if t_start.is_finite() { t_stop } else { t_start },
+        }
+        .into());
+    }
+    if t_stop < t_start {
+        return Err(OcError::TimeRegression {
+            now: t_stop,
+            prev: t_start,
+        }
+        .into());
+    }
+    let n = (((t_stop - t_start) / step).floor() as i64).max(0) as u64;
+    let trace = capture_instants(engine, plan, (0..=n).map(|k| t_start + (k as f64) * step))?;
     Ok((
         trace,
         DriveMode::Uniform {
@@ -537,64 +532,49 @@ fn run_uniform(
 }
 
 fn run_event_aligned(
-    mut engine: Engine,
+    engine: Engine,
     plan: &Plan,
     instants: Vec<f64>,
 ) -> Result<(CapturedTrace, DriveMode), DriverError> {
+    let trace = capture_instants(engine, plan, instants.iter().copied())?;
+    Ok((trace, DriveMode::EventAligned { instants }))
+}
+
+fn capture_instants(
+    mut engine: Engine,
+    plan: &Plan,
+    instants: impl Iterator<Item = f64>,
+) -> Result<CapturedTrace, DriverError> {
+    // Resolve output validity before advancing. Internal oracle points intentionally remain
+    // latest-state inspections; they are not added to CompletedFrame's root-boundary output set.
+    for capture in &plan.capture {
+        engine.get_output(&capture.point)?;
+    }
     let mut columns = plan
         .capture
         .iter()
         .map(|column| CapturedColumn {
             name: column.point.clone(),
             kind: column.kind,
-            values: Vec::with_capacity(instants.len()),
+            values: Vec::new(),
         })
         .collect::<Vec<_>>();
-    for &t in &instants {
-        for input in &plan.inputs {
-            engine.set_input(&input.point, input.value_at(&plan.times, t))?;
-        }
-        engine.step_realtime(t)?;
+    let mut times = Vec::new();
+    for t in instants {
+        let entries = plan
+            .inputs
+            .iter()
+            .map(|input| (input.point.as_str(), input.value_at(&plan.times, t)))
+            .collect::<Vec<_>>();
+        let prepared = engine.prepare_frame(t, &entries)?;
+        let completed = engine.execute_frame(prepared)?;
+        times.push(completed.time());
         for (idx, capture) in plan.capture.iter().enumerate() {
             let value = engine.get_output(&capture.point)?;
             columns[idx].values.push(capture.kind.encode_value(&value)?);
         }
     }
-    Ok((
-        CapturedTrace {
-            times: instants.clone(),
-            columns,
-        },
-        DriveMode::EventAligned { instants },
-    ))
-}
-
-fn trace_from_output_trace(
-    trace: &OutputTrace,
-    capture: &[CaptureColumn],
-) -> Result<CapturedTrace, DriverError> {
-    let mut columns = Vec::with_capacity(capture.len());
-    for (idx, capture_column) in capture.iter().enumerate() {
-        let values = trace
-            .column(idx)
-            .ok_or_else(|| DriverError::MissingCapturedColumn(capture_column.point.clone()))?
-            .iter()
-            .map(|value| capture_column.kind.encode_value(value))
-            .collect::<Result<Vec<_>, _>>()?;
-        columns.push(CapturedColumn {
-            name: trace
-                .columns()
-                .get(idx)
-                .cloned()
-                .unwrap_or_else(|| capture_column.point.clone()),
-            kind: capture_column.kind,
-            values,
-        });
-    }
-    Ok(CapturedTrace {
-        times: trace.times().to_vec(),
-        columns,
-    })
+    Ok(CapturedTrace { times, columns })
 }
 
 fn validate_reference_shape(table: &CombiTimeTable) -> Result<(), DriverError> {

@@ -26,15 +26,17 @@ fn every_refusal_preserves_fresh_and_advanced_stateful_images_and_store() {
         assert_eq!(report.stateful_blocks, 1);
         assert!(report.warnings.is_empty());
         if advanced {
-            engine.set_input(A, Value::Real(0.5)).unwrap();
-            engine.set_input(B, Value::Real(2.0)).unwrap();
-            engine.tick(0.0).unwrap();
-            engine.tick(4.0).unwrap();
+            for time in [0.0, 4.0] {
+                let plan = engine
+                    .prepare_frame(time, &[(A, Value::Real(0.5)), (B, Value::Real(2.0))])
+                    .unwrap();
+                engine.execute_frame(plan).unwrap();
+            }
         }
         let snapshot = engine.state_snapshot().unwrap();
         let checkpoint = engine.checkpoint().unwrap();
         let checkpoint_before = checkpoint_image(&checkpoint);
-        let outputs: Vec<_> = engine.outputs().iter().collect();
+        let output = engine.get_output(Y).unwrap();
         let watched = engine.watch(&[Y, "urn:frame:delay.y"]).unwrap();
         engine.store().reset_calls();
         engine.store().arm_hot_path_guard();
@@ -118,10 +120,7 @@ fn every_refusal_preserves_fresh_and_advanced_stateful_images_and_store() {
                 snapshot.as_bytes(),
                 "{kind}"
             );
-            for ((id, before), (after_id, after)) in outputs.iter().zip(engine.outputs().iter()) {
-                assert_eq!(*id, after_id);
-                assert!(before.bit_eq(after));
-            }
+            assert!(engine.get_output(Y).unwrap().bit_eq(&output));
             for ((key, before), (after_key, after)) in watched
                 .iter()
                 .zip(engine.watch(&[Y, "urn:frame:delay.y"]).unwrap())

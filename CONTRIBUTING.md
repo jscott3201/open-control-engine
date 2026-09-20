@@ -126,16 +126,16 @@ and the determinism matrix — while claiming to mirror it. Change a command in
   The evaluator performs no hashing, I/O, or store access — keep it that way. Allocation is
   **not** unconditionally zero across the block library, so do not add to the exceptions:
   `Reals.Sort` is stack-backed through `SORT_STACK_WIDTH` (64) inputs and falls back to two
-  heap `Vec`s only above that (`reals_matrix.rs:388`, `:399-403`), and `Engine::tick` takes one
-  `store.snapshot()` when the model declares store-backed inputs.
+  heap `Vec`s only above that (`reals_matrix.rs:388`, `:399-403`). Complete-frame preparation and
+  result capture have explicit structural allocation budgets; neither calls the Store.
 
   A new block allocation on the evaluator thread **is** caught per-PR.
   `crates/oce-blocks/tests/tick_allocation_census.rs` sweeps the whole registry via `catalog()` and
   carries a permanent positive control (`CDL.Reals.Sort`), and `oce-blocks` is one of the three
   crates the per-PR gate runs (`.agents/gate.sh`). Current blocks do not delegate work to worker threads; a
   block that introduces worker execution also needs an allocation guard for that work. The
-  facade-level guard in `oce-api/tests/tick_purity_tests.rs` is narrower — three fixtures — and runs
-  per-PR as part of the `oce-api` subset.
+  facade guards in `oce-api/tests/frame_purity.rs` and `frame_observations.rs` check Store freedom
+  and frame allocation budgets per-PR as part of the `oce-api` subset.
 
 ## Commits
 

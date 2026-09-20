@@ -233,7 +233,22 @@ fn shared_driver_serves_two_declared_outputs_with_bit_equal_values() {
         .expect("cooling_only_active_air_flow fixture present");
     let bytes = fs::read(&fixture).expect("read fixture");
     let mut engine = load_engine(&bytes);
-    engine.tick(0.0).expect("tick");
+    // Synthetic complete observations for alias identity only, not a physical-control oracle.
+    let inputs: Vec<_> = engine
+        .input_definitions()
+        .unwrap()
+        .into_iter()
+        .map(|d| {
+            let value = d.min.unwrap_or_else(|| d.value_type.zero_value());
+            (d.path, value)
+        })
+        .collect();
+    let entries: Vec<_> = inputs
+        .iter()
+        .map(|(p, v)| (p.as_str(), v.clone()))
+        .collect();
+    let prepared = engine.prepare_frame(0.0, &entries).unwrap();
+    engine.execute_frame(prepared).unwrap();
 
     let topology = engine.topology();
     let entries: Vec<&DeclaredOutput> = topology

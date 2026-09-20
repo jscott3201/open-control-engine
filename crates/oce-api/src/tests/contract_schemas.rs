@@ -25,12 +25,20 @@ fn descriptors_cover_every_domain_with_explicit_shapes_and_semantic_limits() {
         ]
     );
     for descriptor in descriptors {
-        assert_eq!(descriptor.revision, 1);
+        let revision = if matches!(
+            descriptor.domain,
+            ContractDomain::Assertions | ContractDomain::ExecutionProfile
+        ) {
+            2
+        } else {
+            1
+        };
+        assert_eq!(descriptor.revision, revision);
         let json: serde_json::Value = serde_json::from_str(descriptor.schema).unwrap();
         if descriptor.domain == ContractDomain::Catalog {
             assert_eq!(json["properties"]["schema_revision"]["const"], 1);
         } else {
-            assert_eq!(json["revision"], 1);
+            assert_eq!(json["revision"], revision);
             assert!(json["types"].is_object());
             assert!(!json["semantics"].as_array().unwrap().is_empty());
         }

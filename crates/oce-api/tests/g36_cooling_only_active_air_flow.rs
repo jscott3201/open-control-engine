@@ -3,7 +3,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use oce_api::{CollectSpec, Engine, InputSource, SimMetrics, SimSpec, Value};
+use oce_api::{Engine, Value};
+#[path = "support/frame_trace.rs"]
+mod frame_trace;
+use frame_trace::FrameRun;
 
 const ACTIVE_AIR_FLOW: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/cooling_only_active_air_flow.jsonld");
@@ -162,24 +165,21 @@ fn schedule_signature(engine: &Engine) -> ScheduleSignature {
     )
 }
 
-fn simulate(mut engine: Engine, reference: Arc<ReferenceTable>) -> (ScheduleSignature, SimMetrics) {
+fn simulate(mut engine: Engine, reference: Arc<ReferenceTable>) -> (ScheduleSignature, FrameRun) {
     let schedule = schedule_signature(&engine);
     let input_reference = Arc::clone(&reference);
-    let metrics = engine
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop: T_STOP,
-            step: SAMPLE_STEP,
-            inputs: InputSource::Closure(Box::new(move |t| reference_inputs(&input_reference, t))),
-            collect: CollectSpec::Named {
-                points: vec![
-                    ACTIVE_COOLING_MAXIMUM_AIRFLOW.to_string(),
-                    ACTIVE_MINIMUM_AIRFLOW.to_string(),
-                ],
-                stride: 1,
-            },
-        })
-        .expect("G36 CoolingOnly ActiveAirFlow simulates");
+    let metrics = FrameRun::record(
+        &mut engine,
+        0.0,
+        T_STOP,
+        SAMPLE_STEP,
+        move |t| reference_inputs(&input_reference, t),
+        vec![
+            ACTIVE_COOLING_MAXIMUM_AIRFLOW.to_string(),
+            ACTIVE_MINIMUM_AIRFLOW.to_string(),
+        ],
+    )
+    .expect("G36 CoolingOnly ActiveAirFlow simulates");
     assert_eq!(metrics.ticks, ROWS as u64);
     assert_eq!(
         metrics
@@ -198,7 +198,7 @@ fn simulate(mut engine: Engine, reference: Arc<ReferenceTable>) -> (ScheduleSign
 }
 
 fn assert_output_matches_reference(
-    metrics: &SimMetrics,
+    metrics: &FrameRun,
     reference: &ReferenceTable,
     output: OutputPoint,
 ) {
@@ -227,7 +227,7 @@ fn assert_output_matches_reference(
     }
 }
 
-fn assert_trace_bit_eq(left: &SimMetrics, right: &SimMetrics) {
+fn assert_trace_bit_eq(left: &FrameRun, right: &FrameRun) {
     assert_eq!(left.trace.columns(), right.trace.columns());
     assert_eq!(
         left.trace

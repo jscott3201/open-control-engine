@@ -45,7 +45,7 @@ fn image<S: Store>(engine: &Engine<S>) -> String {
         .map(|s| s.into_bytes())
         .map_err(|e| e.to_string());
     format!(
-        "{:?}|{:?}|{:?}|{:?}|{:?}|{}|{:?}|{}|{}|{}|{:?}|{:?}|{:?}",
+        "{:?}|{:?}|{:?}|{:?}|{:?}|{}|{:?}|{}|{}|{}|{:?}|{:?}",
         bits(engine.state.values.iter().cloned()),
         engine.state.words,
         bits(engine.state.scratch.iter().cloned()),
@@ -56,7 +56,6 @@ fn image<S: Store>(engine: &Engine<S>) -> String {
         engine.durable_restore_ready,
         engine.accepted_frame_sequence,
         engine.params_dirty,
-        bits(engine.outputs.iter().map(|(_, value)| value.clone())),
         checkpoint,
         snapshot
     )

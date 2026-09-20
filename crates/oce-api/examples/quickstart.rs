@@ -1,59 +1,38 @@
-//! The README Quickstart, compiled.
-//!
-//! `clippy --workspace --all-targets` builds this on every PR, so the snippet the README shows
-//! cannot drift out of step with the facade without failing the gate.
-//! `readme_quickstart.rs` asserts the two copies stay identical.
-//!
-//! The `allow` below is an artifact of THIS workspace, not of the example: the library lints set
-//! `print_stdout = "warn"` and the gate runs clippy with `-D warnings`. A user pasting this into
-//! their own project needs no such attribute, which is why it is not in the README.
+//! The README Quickstart, compiled and executed by the repository gate.
+//! The integration test pins these example bytes to the README snippet.
 #![allow(clippy::print_stdout)]
 
-use oce_api::{CollectSpec, Engine, InputSource, SimSpec, Value};
+use oce_api::{Engine, Value};
 
 const ECONOMIZER: &str = "http://example.org#g36.ahu_economizer";
-const ECONOMIZER_ENABLED: &str = "http://example.org#g36.ahu_economizer.enableLatch.y";
-const DAMPER_COMMAND: &str = "http://example.org#g36.ahu_economizer.damperSwitch.y";
-const OA_TEMPERATURE_DELTA: &str = "http://example.org#g36.ahu_economizer.returnMinusOutdoor.y";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // An engine with the default in-memory store — no database.
-    let mut engine = Engine::in_memory();
-
-    // Parse, validate, and freeze the schedule.
+    let mut engine = Engine::in_memory(); // Default in-memory store, no database.
     let cxf_bytes = std::fs::read("crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld")?;
     engine.load_cxf(&cxf_bytes)?;
 
-    // Simulate: feed inputs per tick, collect named outputs.
-    let metrics = engine.simulate(&SimSpec {
-        t_start: 0.0,
-        t_stop: 4.0,
-        step: 1.0,
-        inputs: InputSource::Closure(Box::new(|t| {
-            vec![
-                (format!("{ECONOMIZER}.return_air_temp"), Value::Real(24.0)),
-                (
-                    format!("{ECONOMIZER}.outdoor_air_temp"),
-                    Value::Real(18.0 + t),
-                ),
-                (format!("{ECONOMIZER}.operating_mode"), Value::Integer(1)),
-            ]
-        })),
-        collect: CollectSpec::Named {
-            points: vec![
-                ECONOMIZER_ENABLED.to_string(),
-                DAMPER_COMMAND.to_string(),
-                OA_TEMPERATURE_DELTA.to_string(),
-            ],
-            stride: 1,
-        },
-    })?;
-
-    println!("times: {:?}", metrics.trace.times());
-    for (index, name) in metrics.trace.columns().iter().enumerate() {
+    // The host owns cadence and supplies every required observation on each frame.
+    for index in 0..=4 {
+        let time = f64::from(index);
+        let observations = [
+            (format!("{ECONOMIZER}.return_air_temp"), Value::Real(24.0)),
+            (
+                format!("{ECONOMIZER}.outdoor_air_temp"),
+                Value::Real(18.0 + time),
+            ),
+            (format!("{ECONOMIZER}.operating_mode"), Value::Integer(1)),
+        ];
+        let entries: Vec<_> = observations
+            .iter()
+            .map(|(p, v)| (p.as_str(), v.clone()))
+            .collect();
+        let prepared = engine.prepare_frame(time, &entries)?;
+        let completed = engine.execute_frame(prepared)?;
         println!(
-            "{name}: {:?}",
-            metrics.trace.column(index).unwrap_or_default()
+            "frame {} at {}: {:?}",
+            completed.sequence(),
+            completed.time(),
+            completed.outputs()
         );
     }
     Ok(())

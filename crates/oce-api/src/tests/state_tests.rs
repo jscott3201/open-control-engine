@@ -8,6 +8,7 @@ use oce_store::{
 };
 
 const MINIMAL_LOOP: &[u8] = include_bytes!("../../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
+const LOOP_INPUTS: [(&str, Value); 1] = [("http://example.org#MinLoop.uSet", Value::Real(0.0))];
 
 pub(super) fn sampled_model(class_path: &str, period: f64) -> ModelGraph {
     let mut model = ModelGraph::new();
@@ -74,14 +75,16 @@ fn checkpoint_rewinds_and_replays_a_hand_built_stateful_model() {
     let (model, add_output, _, _) = build_accumulator_model();
     let mut engine = Engine::in_memory();
     engine.build_model_in_memory(model, None).unwrap();
-    engine.tick(0.0).unwrap();
-    engine.tick(1.0).unwrap();
+    advance(&mut engine, 0.0, &[]).unwrap();
+    advance(&mut engine, 1.0, &[]).unwrap();
     let checkpoint = engine.checkpoint().unwrap();
 
-    let expected = engine.tick(2.0).unwrap().get(add_output).unwrap().clone();
-    engine.tick(3.0).unwrap();
+    advance(&mut engine, 2.0, &[]).unwrap();
+    let expected = engine.state.values[add_output.0 as usize].clone();
+    advance(&mut engine, 3.0, &[]).unwrap();
     engine.restore_checkpoint(&checkpoint).unwrap();
-    let replayed = engine.tick(2.0).unwrap().get(add_output).unwrap().clone();
+    advance(&mut engine, 2.0, &[]).unwrap();
+    let replayed = engine.state.values[add_output.0 as usize].clone();
 
     assert!(replayed.bit_eq(&expected));
     assert_eq!(engine.state.t.to_bits(), 2.0f64.to_bits());
@@ -110,17 +113,26 @@ fn one_checkpoint_branches_into_independently_loaded_engines() {
     left.restore_checkpoint(&checkpoint).unwrap();
     right.restore_checkpoint(&checkpoint).unwrap();
 
-    left.set_input("conn#0", Value::Real(1.0)).unwrap();
-    right.set_input("conn#0", Value::Real(2.0)).unwrap();
-    let left_initial = left.tick(0.0).unwrap().get(outputs[0]).unwrap().clone();
-    let right_initial = right.tick(0.0).unwrap().get(outputs[0]).unwrap().clone();
+    let inputs = |value| {
+        [
+            ("conn#0", Value::Real(value)),
+            ("conn#1", Value::Real(0.0)),
+            ("conn#2", Value::Boolean(false)),
+        ]
+    };
+    advance(&mut left, 0.0, &inputs(1.0)).unwrap();
+    advance(&mut right, 0.0, &inputs(2.0)).unwrap();
+    let left_initial = left.state.values[outputs[0].0 as usize].clone();
+    let right_initial = right.state.values[outputs[0].0 as usize].clone();
     assert!(left_initial.bit_eq(&right_initial));
-    left.tick(1.0).unwrap();
-    right.tick(1.0).unwrap();
-    let left_value = left.tick(2.0).unwrap().get(outputs[0]).unwrap().clone();
-    let right_value = right.tick(2.0).unwrap().get(outputs[0]).unwrap().clone();
+    advance(&mut left, 1.0, &inputs(1.0)).unwrap();
+    advance(&mut right, 1.0, &inputs(2.0)).unwrap();
+    advance(&mut left, 2.0, &inputs(1.0)).unwrap();
+    advance(&mut right, 2.0, &inputs(2.0)).unwrap();
+    let left_value = left.state.values[outputs[0].0 as usize].clone();
+    let right_value = right.state.values[outputs[0].0 as usize].clone();
     assert!(!left_value.bit_eq(&right_value));
-    left.tick(3.0).unwrap();
+    advance(&mut left, 3.0, &inputs(1.0)).unwrap();
     assert_eq!(right.state.t.to_bits(), 2.0f64.to_bits());
 }
 
@@ -144,7 +156,7 @@ fn durable_restore_refuses_an_advanced_target() {
 
     let mut target = Engine::in_memory();
     target.load_cxf(MINIMAL_LOOP).unwrap();
-    target.tick(0.0).unwrap();
+    advance(&mut target, 0.0, &LOOP_INPUTS).unwrap();
     assert!(matches!(
         target.restore_state(&snapshot),
         Err(OcError::State(EngineStateError::DurableTargetAdvanced))
@@ -192,8 +204,7 @@ fn every_g36_fixture_captures_before_and_after_its_first_tick() {
             .unwrap_or_else(|error| panic!("{} initial: {error}", fixture.display()));
         EngineStateSnapshot::from_bytes(initial.as_bytes())
             .unwrap_or_else(|error| panic!("{} initial decode: {error}", fixture.display()));
-        engine
-            .tick(0.0)
+        advance_synthetic(&mut engine, 0.0)
             .unwrap_or_else(|error| panic!("{} tick: {error}", fixture.display()));
         let advanced = engine
             .state_snapshot()
@@ -218,7 +229,7 @@ fn sampled_clocks_refuse_unrepresentable_time_before_mutation() {
             .unwrap();
         let words = engine.state.words.clone();
         let values = engine.state.values.clone();
-        let error = engine.tick(f64::MAX).unwrap_err();
+        let error = engine.prepare_frame(f64::MAX, &[]).unwrap_err();
         assert!(
             matches!(error, OcError::ModelTimeUnrepresentable { now } if now == f64::MAX),
             "{class_path}: {error:?}"
@@ -251,9 +262,13 @@ fn initialized_max_period_clocks_accept_maximum_finite_time() {
         engine
             .build_model_in_memory(sampled_model(class_path, f64::MAX), None)
             .unwrap();
-        engine.tick(0.0).unwrap();
-        engine
-            .tick(f64::MAX)
+        let inputs = if class_path == "CDL.Logical.Sources.SampleTrigger" {
+            vec![]
+        } else {
+            vec![("conn#0", Value::Real(0.0))]
+        };
+        advance(&mut engine, 0.0, &inputs).unwrap();
+        advance(&mut engine, f64::MAX, &inputs)
             .unwrap_or_else(|error| panic!("{class_path}: {error}"));
         assert_eq!(engine.prev_t.map(f64::to_bits), Some(f64::MAX.to_bits()));
         engine
@@ -263,24 +278,17 @@ fn initialized_max_period_clocks_accept_maximum_finite_time() {
 }
 
 #[test]
-fn simulation_time_preflight_preserves_the_prior_run() {
+fn unrepresentable_preparation_time_preserves_the_prior_run() {
     let mut engine = Engine::in_memory();
     engine
         .build_model_in_memory(sampled_model("CDL.Discrete.Sampler", 1.0), None)
         .unwrap();
-    engine.tick(1.0).unwrap();
+    advance(&mut engine, 1.0, &[("conn#0", Value::Real(0.0))]).unwrap();
     let words = engine.state.words.clone();
     let state_t = engine.state.t.to_bits();
     let prev_t = engine.prev_t.map(f64::to_bits);
-    let spec = SimSpec {
-        t_start: f64::MAX,
-        t_stop: f64::MAX,
-        step: 1.0,
-        inputs: InputSource::None,
-        collect: CollectSpec::None,
-    };
     assert!(matches!(
-        engine.simulate(&spec),
+        engine.prepare_frame(f64::MAX, &[("conn#0", Value::Real(0.0))]),
         Err(OcError::ModelTimeUnrepresentable { .. })
     ));
     assert_eq!(engine.state.words, words);
@@ -291,7 +299,7 @@ fn simulation_time_preflight_preserves_the_prior_run() {
 fn minimal_loop_snapshot() -> EngineStateSnapshot {
     let mut source = Engine::in_memory();
     source.load_cxf(MINIMAL_LOOP).unwrap();
-    source.tick(0.0).unwrap();
+    advance(&mut source, 0.0, &LOOP_INPUTS).unwrap();
     source.state_snapshot().unwrap()
 }
 
@@ -311,11 +319,9 @@ fn read_only_lifecycle_calls_keep_the_durable_restore_window_open() {
     target.state_snapshot().unwrap();
     target.checkpoint().unwrap();
     target.halt().unwrap();
-    target.set_realtime_epoch_unix_nanos(42);
     target.resume().unwrap();
     target.halt().unwrap();
     target.restore_state(&snapshot).unwrap();
-    assert_eq!(target.realtime_epoch_unix_nanos(), Some(42));
     assert_eq!(target.mode(), RunMode::Halted);
 }
 
@@ -325,15 +331,18 @@ fn refused_inputs_and_time_keep_the_durable_restore_window_open() {
     let mut target = Engine::in_memory();
     target.load_cxf(MINIMAL_LOOP).unwrap();
     assert!(matches!(
-        target.set_input("missing", Value::Real(1.0)),
-        Err(OcError::UnknownPoint(_))
+        target.prepare_frame(0.0, &[("missing", Value::Real(1.0))]),
+        Err(OcError::FrameUnknownInput { .. })
     ));
     assert!(matches!(
-        target.set_input("http://example.org#MinLoop.uSet", Value::Boolean(true)),
+        target.prepare_frame(
+            0.0,
+            &[("http://example.org#MinLoop.uSet", Value::Boolean(true))]
+        ),
         Err(OcError::InputType(_))
     ));
     assert!(matches!(
-        target.tick(f64::NAN),
+        target.prepare_frame(f64::NAN, &LOOP_INPUTS),
         Err(OcError::NonFiniteTime { .. })
     ));
     target.restore_state(&snapshot).unwrap();
@@ -345,27 +354,14 @@ fn mutation_boundaries_close_the_durable_restore_window() {
 
     let mut input_target = Engine::in_memory();
     input_target.load_cxf(MINIMAL_LOOP).unwrap();
-    input_target
-        .set_input("http://example.org#MinLoop.uSet", Value::Real(1.0))
-        .unwrap();
+    let prepared = input_target.prepare_frame(0.0, &LOOP_INPUTS).unwrap();
+    assert!(
+        input_target.durable_restore_ready,
+        "preparation is not a mutation"
+    );
+    input_target.execute_frame(prepared).unwrap();
     assert!(matches!(
         input_target.restore_state(&snapshot),
-        Err(OcError::State(EngineStateError::DurableTargetAdvanced))
-    ));
-
-    let mut simulation_target = Engine::in_memory();
-    simulation_target.load_cxf(MINIMAL_LOOP).unwrap();
-    simulation_target
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop: 0.0,
-            step: 1.0,
-            inputs: InputSource::None,
-            collect: CollectSpec::None,
-        })
-        .unwrap();
-    assert!(matches!(
-        simulation_target.restore_state(&snapshot),
         Err(OcError::State(EngineStateError::DurableTargetAdvanced))
     ));
 
@@ -451,8 +447,7 @@ fn checkpoint_refusal_is_bit_atomic() {
     engine
         .build_model_in_memory(sampled_model("CDL.Discrete.UnitDelay", 1.0), None)
         .unwrap();
-    engine.tick(0.0).unwrap();
-    engine.set_realtime_epoch_unix_nanos(77);
+    advance(&mut engine, 0.0, &[("conn#0", Value::Real(0.0))]).unwrap();
     engine.halt().unwrap();
     let checkpoint = engine.checkpoint().unwrap();
     let mut image = (*checkpoint.image).clone();
@@ -464,7 +459,7 @@ fn checkpoint_refusal_is_bit_atomic() {
     let values = engine.state.values.clone();
     let state_t = engine.state.t.to_bits();
     let prev_t = engine.prev_t.map(f64::to_bits);
-    let outputs = engine.outputs().to_map();
+    let outputs = output_image(&engine);
     let ready = engine.durable_restore_ready;
 
     assert!(matches!(
@@ -482,12 +477,11 @@ fn checkpoint_refusal_is_bit_atomic() {
     );
     assert_eq!(engine.state.t.to_bits(), state_t);
     assert_eq!(engine.prev_t.map(f64::to_bits), prev_t);
-    assert_eq!(engine.outputs().to_map().len(), outputs.len());
-    assert!(engine.outputs().to_map().iter().zip(&outputs).all(
+    assert_eq!(output_image(&engine).len(), outputs.len());
+    assert!(output_image(&engine).iter().zip(&outputs).all(
         |((left_path, left), (right_path, right))| left_path == right_path && left.bit_eq(right)
     ));
     assert_eq!(engine.mode(), RunMode::Halted);
-    assert_eq!(engine.realtime_epoch_unix_nanos(), Some(77));
     assert_eq!(engine.durable_restore_ready, ready);
 }
 

@@ -2,9 +2,10 @@
 //! CXF ingest -> validation -> schedule -> simulate. E1 is a smoke/sanity gate for real multi-block
 //! sequences; bit-exact oracle comparison against reference traces is deferred to the E2 oracle.
 
-use oce_api::{
-    CollectSpec, Engine, InputSource, LoadReport, PointDirection, SimMetrics, SimSpec, Value,
-};
+use oce_api::{Engine, LoadReport, PointDirection, Value};
+#[path = "support/frame_trace.rs"]
+mod frame_trace;
+use frame_trace::FrameRun;
 
 const AHU_SAT_RESET: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld");
@@ -107,23 +108,13 @@ fn output_paths(engine: &Engine, refs: &[OutputRef]) -> Vec<String> {
 
 fn simulate(
     mut engine: Engine,
-    inputs: InputSource,
+    inputs: impl Fn(f64) -> Vec<(String, Value)>,
     outputs: &[OutputRef],
     t_stop: f64,
-) -> (ScheduleSignature, Vec<String>, SimMetrics) {
+) -> (ScheduleSignature, Vec<String>, FrameRun) {
     let schedule = schedule_signature(&engine);
     let paths = output_paths(&engine, outputs);
-    let metrics = engine
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop,
-            step: 1.0,
-            inputs,
-            collect: CollectSpec::Named {
-                points: paths.clone(),
-                stride: 1,
-            },
-        })
+    let metrics = FrameRun::record(&mut engine, 0.0, t_stop, 1.0, inputs, paths.clone())
         .expect("G36 fixture simulates");
     assert_eq!(metrics.ticks, t_stop as u64 + 1);
     assert_eq!(metrics.trace.columns(), paths.as_slice());
@@ -132,7 +123,7 @@ fn simulate(
     (schedule, paths, metrics)
 }
 
-fn assert_all_finite(metrics: &SimMetrics) {
+fn assert_all_finite(metrics: &FrameRun) {
     for (j, path) in metrics.trace.columns().iter().enumerate() {
         for (i, value) in metrics.trace.column(j).unwrap().iter().enumerate() {
             if let Value::Real(x) = value {
@@ -142,7 +133,7 @@ fn assert_all_finite(metrics: &SimMetrics) {
     }
 }
 
-fn column<'a>(metrics: &'a SimMetrics, path: &str) -> &'a [Value] {
+fn column<'a>(metrics: &'a FrameRun, path: &str) -> &'a [Value] {
     let j = metrics
         .trace
         .columns()
@@ -152,21 +143,21 @@ fn column<'a>(metrics: &'a SimMetrics, path: &str) -> &'a [Value] {
     metrics.trace.column(j).expect("column index is in range")
 }
 
-fn real_at(metrics: &SimMetrics, path: &str, row: usize) -> f64 {
+fn real_at(metrics: &FrameRun, path: &str, row: usize) -> f64 {
     match &column(metrics, path)[row] {
         Value::Real(x) => *x,
         other => panic!("{path}[{row}] must be Real, got {other:?}"),
     }
 }
 
-fn bool_at(metrics: &SimMetrics, path: &str, row: usize) -> bool {
+fn bool_at(metrics: &FrameRun, path: &str, row: usize) -> bool {
     match &column(metrics, path)[row] {
         Value::Boolean(x) => *x,
         other => panic!("{path}[{row}] must be Boolean, got {other:?}"),
     }
 }
 
-fn assert_real_bounds(metrics: &SimMetrics, path: &str, min: f64, max: f64) {
+fn assert_real_bounds(metrics: &FrameRun, path: &str, min: f64, max: f64) {
     for (row, value) in column(metrics, path).iter().enumerate() {
         match value {
             Value::Real(x) => assert!(
@@ -185,7 +176,7 @@ fn assert_close(actual: f64, expected: f64, tolerance: f64) {
     );
 }
 
-fn assert_trace_bit_eq(left: &SimMetrics, right: &SimMetrics) {
+fn assert_trace_bit_eq(left: &FrameRun, right: &FrameRun) {
     assert_eq!(left.trace.columns(), right.trace.columns());
     assert_eq!(
         left.trace
@@ -322,20 +313,10 @@ fn ahu_supply_air_temp_reset_loads_simulates_and_is_deterministic() {
             ordinal: 1,
         },
     ];
-    let (schedule_a, paths, metrics_a) = simulate(
-        engine,
-        InputSource::Closure(Box::new(sat_inputs)),
-        &outputs,
-        4.0,
-    );
+    let (schedule_a, paths, metrics_a) = simulate(engine, sat_inputs, &outputs, 4.0);
 
     let (engine, _) = load(AHU_SAT_RESET, 7, 0);
-    let (schedule_b, paths_b, metrics_b) = simulate(
-        engine,
-        InputSource::Closure(Box::new(sat_inputs)),
-        &outputs,
-        4.0,
-    );
+    let (schedule_b, paths_b, metrics_b) = simulate(engine, sat_inputs, &outputs, 4.0);
 
     assert_eq!(paths, paths_b);
     assert_eq!(
@@ -373,20 +354,12 @@ fn multizone_vav_supply_temperature_loads_simulates_and_is_deterministic() {
         label: "supply_air_temperature_setpoint",
         ordinal: 50,
     }];
-    let (schedule_a, paths, metrics_a) = simulate(
-        engine,
-        InputSource::Closure(Box::new(supply_temperature_inputs)),
-        &outputs,
-        900.0,
-    );
+    let (schedule_a, paths, metrics_a) =
+        simulate(engine, supply_temperature_inputs, &outputs, 900.0);
 
     let (engine, _) = load(SUPPLY_TEMPERATURE, 62, 5);
-    let (schedule_b, paths_b, metrics_b) = simulate(
-        engine,
-        InputSource::Closure(Box::new(supply_temperature_inputs)),
-        &outputs,
-        900.0,
-    );
+    let (schedule_b, paths_b, metrics_b) =
+        simulate(engine, supply_temperature_inputs, &outputs, 900.0);
 
     assert_eq!(paths, paths_b);
     assert_eq!(
@@ -420,20 +393,10 @@ fn multizone_vav_supply_fan_loads_simulates_and_is_deterministic() {
             ordinal: 45,
         },
     ];
-    let (schedule_a, paths, metrics_a) = simulate(
-        engine,
-        InputSource::Closure(Box::new(supply_fan_inputs)),
-        &outputs,
-        900.0,
-    );
+    let (schedule_a, paths, metrics_a) = simulate(engine, supply_fan_inputs, &outputs, 900.0);
 
     let (engine, _) = load(SUPPLY_FAN, 65, 7);
-    let (schedule_b, paths_b, metrics_b) = simulate(
-        engine,
-        InputSource::Closure(Box::new(supply_fan_inputs)),
-        &outputs,
-        900.0,
-    );
+    let (schedule_b, paths_b, metrics_b) = simulate(engine, supply_fan_inputs, &outputs, 900.0);
 
     assert_eq!(paths, paths_b);
     assert_eq!(
@@ -478,20 +441,10 @@ fn multizone_vav_supply_signals_loads_simulates_and_is_deterministic() {
             ordinal: 8,
         },
     ];
-    let (schedule_a, paths, metrics_a) = simulate(
-        engine,
-        InputSource::Closure(Box::new(supply_signals_inputs)),
-        &outputs,
-        9.0,
-    );
+    let (schedule_a, paths, metrics_a) = simulate(engine, supply_signals_inputs, &outputs, 9.0);
 
     let (engine, _) = load(SUPPLY_SIGNALS, 9, 1);
-    let (schedule_b, paths_b, metrics_b) = simulate(
-        engine,
-        InputSource::Closure(Box::new(supply_signals_inputs)),
-        &outputs,
-        9.0,
-    );
+    let (schedule_b, paths_b, metrics_b) = simulate(engine, supply_signals_inputs, &outputs, 9.0);
 
     assert_eq!(paths, paths_b);
     assert_eq!(
@@ -547,20 +500,10 @@ fn ahu_economizer_loads_simulates_and_is_deterministic() {
             ordinal: 0,
         },
     ];
-    let (schedule_a, paths, metrics_a) = simulate(
-        engine,
-        InputSource::Closure(Box::new(economizer_inputs)),
-        &outputs,
-        5.0,
-    );
+    let (schedule_a, paths, metrics_a) = simulate(engine, economizer_inputs, &outputs, 5.0);
 
     let (engine, _) = load(AHU_ECONOMIZER, 12, 3);
-    let (schedule_b, paths_b, metrics_b) = simulate(
-        engine,
-        InputSource::Closure(Box::new(economizer_inputs)),
-        &outputs,
-        5.0,
-    );
+    let (schedule_b, paths_b, metrics_b) = simulate(engine, economizer_inputs, &outputs, 5.0);
 
     assert_eq!(paths, paths_b);
     assert_eq!(
@@ -624,20 +567,10 @@ fn vav_single_zone_loads_simulates_and_is_deterministic() {
             ordinal: 4,
         },
     ];
-    let (schedule_a, paths, metrics_a) = simulate(
-        engine,
-        InputSource::Closure(Box::new(vav_inputs)),
-        &outputs,
-        5.0,
-    );
+    let (schedule_a, paths, metrics_a) = simulate(engine, vav_inputs, &outputs, 5.0);
 
     let (engine, _) = load(VAV_SINGLE_ZONE, 8, 2);
-    let (schedule_b, paths_b, metrics_b) = simulate(
-        engine,
-        InputSource::Closure(Box::new(vav_inputs)),
-        &outputs,
-        5.0,
-    );
+    let (schedule_b, paths_b, metrics_b) = simulate(engine, vav_inputs, &outputs, 5.0);
 
     assert_eq!(paths, paths_b);
     assert_eq!(schedule_a, schedule_b, "VAV schedule is deterministic");

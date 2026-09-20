@@ -9,39 +9,35 @@ separate compatibility and snapshot contract.
 
 The [complete-frame contract](complete-frame-contract.md) implements read-only preparation and
 one native atomic transition with an immutable output/diagnostic result around this same profile,
-not a second evaluator or profile selector. Preparation does not execute; `execute_frame` does. Current sparse setters,
-Store-backed ticks, simulation and realtime remain the distinct weaker/convenience paths described
-there and in [host responsibilities](host-responsibilities.md).
+not a second evaluator or profile selector. Preparation does not execute; consuming `execute_frame`
+is the only public state-advancing execution surface. Legacy execution profiles were removed.
 
-All four routes share one private infallible evaluation/refresh core: native `execute_frame` and
-legacy `tick_with` enter it after their own preflight/staging; simulation and realtime retain their
-existing legacy orchestration. The core closes durable-restore readiness, evaluates once, updates
+The frame path enters one private infallible evaluation/refresh core after preflight and staging.
+The core closes durable-restore readiness, evaluates once, updates
 the previous time and refreshes latest outputs. It selects no diagnostic policy and performs no
-Store IO, restart, frame-sequence update or projection. Shared evaluation does not give legacy
-callers complete-frame preparation, refusal atomicity or identical lifecycle/output sets.
+Store IO, restart, frame-sequence update or projection. Host loops select cadence and capture traces
+from completed receipts or explicitly labelled latest-state inspections.
 
 ## HostTick v1
 
-Each successful `Engine::tick(t_now)` call is one state transition:
+Each successful `Engine::execute_frame(prepared)` call is one state transition:
 
-1. The caller supplies a finite, monotonic non-decreasing `t_now` in seconds. Any explicit or
-   store-backed inputs for the call are staged before block evaluation.
+1. Preparation snapshots every required typed boundary input and finite nondecreasing model time
+   in seconds. Execution rechecks readiness, incarnation, time and sequence capacity before staging.
 2. The engine evaluates the frozen schedule once. Algebraic blocks compute from current inputs;
    stateful blocks compute from call-entry state and any feedthrough inputs their contracts use.
 3. After all emissions, every stateful block updates once from current-call inputs.
-4. The engine refreshes the output snapshot returned by `tick` and read by `outputs`, `get_output`,
-   and `watch`.
+4. The engine refreshes latest-state inspection and returns immutable `CompletedFrame` boundary
+   outputs and warnings, correlated by an engine-lifetime accepted-frame sequence.
 
 Repeating a timestamp does not repeat an observation of the same transition. Every successful call
 advances state again. Time-dependent blocks see zero elapsed time, but call-based state still
 changes. The engine performs no hidden same-time evaluation, event queue processing, rollback, or
 fixed-point search.
 
-One successful `execute_frame` likewise means exactly one such transition, including equal
-finite timestamps. Its ordinary refusal preserves the full execution/replay image, including
-connector staging and completed diagnostics. That is a stronger submission boundary than today's
-`tick`: a Store type refusal can retain a staged prefix, and a tick refusal never undoes prior
-successful setters. HostTick's emit/update law alone does not imply complete-frame atomicity.
+Ordinary refusal preserves the full execution image, including connector values, clocks, words,
+restore readiness and sequence. Previously retained completed diagnostics are unchanged. There
+is no sparse staging prefix, Store determinant or post-write error path.
 
 ## `CDL.Logical.Pre`
 
@@ -64,22 +60,17 @@ Boolean fixed point, but HostTick v1 neither rejects it nor emits a non-converge
 
 ## Host observation
 
-The `Outputs` returned by `tick`, and later reads through `outputs`, `get_output`, or `watch`, expose
-only the completed tick call. There are no intermediate event-iteration rows. A later call at the
-same timestamp replaces the visible output snapshot. `step_realtime` likewise evaluates one
-HostTick transition before attempting its output write; a write failure does not roll that
-transition back. The compatible `Err(Store)` carries no generation, receipt, `StepReport` or
-collected warnings. Hosts reconcile through time guards, latest outputs/watch, captured state and
-their own delivery records, not an error-path generation field. It publishes no internal iterations
-because none occur.
+`get_output` and `watch` are latest-state, non-receipt inspections. Load, restore and parameter
+resume can replace their state without a frame. They may read internal connector points that are
+not boundary outputs. There are no intermediate event-iteration rows or raw output-arena accessor.
 
 `CompletedFrame` retains only the executable root boundary outputs in lexical identity order and
 the Warning diagnostics emitted by that native transition. It is independent of the mutable latest
-view. Its engine-lifetime sequence increases only on accepted native frames, never on legacy
-execution or refusal, and survives reload/resume/restore without rewinding. The private context fence
+view. Its engine-lifetime sequence increases only on accepted frames, never on refusal,
+and survives reload/resume/restore without rewinding. The private context fence
 is not serialized and is not host deployment authority. See the frame contract for preflight precedence.
 
-Do not drive event iteration by repeatedly calling `tick` with the same timestamp unless repeated
+Do not drive event iteration by repeatedly executing frames with the same timestamp unless repeated
 HostTick state transitions are the intended behavior. Those calls also update every other stateful
 block, not only `Pre`.
 

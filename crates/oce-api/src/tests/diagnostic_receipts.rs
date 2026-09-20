@@ -323,8 +323,11 @@ fn legacy_and_receipt_loads_keep_identical_state_and_legacy_diagnostic_order() {
         signature(&old_report.warnings),
         signature(&new_report.report().warnings)
     );
-    old.tick(0.0).unwrap();
-    new.tick(0.0).unwrap();
+    let inputs = [("http://example.org#U.uIn", crate::Value::Real(0.0))];
+    let prepared = old.prepare_frame(0.0, &inputs).unwrap();
+    old.execute_frame(prepared).unwrap();
+    let prepared = new.prepare_frame(0.0, &inputs).unwrap();
+    new.execute_frame(prepared).unwrap();
     assert_eq!(
         old.state_snapshot().unwrap().into_bytes(),
         new.state_snapshot().unwrap().into_bytes()

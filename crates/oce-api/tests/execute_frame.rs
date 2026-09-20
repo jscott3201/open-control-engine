@@ -70,12 +70,18 @@ fn arithmetic_commits_complete_values_without_store_and_retains_independent_resu
                     .unwrap()
                     .bit_eq(&Value::Real(expected))
             );
-            assert!(
-                engine
-                    .outputs()
-                    .iter()
-                    .all(|(_, value)| value.bit_eq(&Value::Real(expected)))
-            );
+            for point in engine
+                .io()
+                .iter()
+                .filter(|p| p.direction == oce_api::PointDirection::Out)
+            {
+                assert!(
+                    engine
+                        .get_output(&point.path)
+                        .unwrap()
+                        .bit_eq(&Value::Real(expected))
+                );
+            }
             assert!(completed.diagnostics().is_empty());
             results.push(completed);
         }
@@ -156,7 +162,16 @@ fn sampled_delay_matches_hand_recurrence_and_retained_frames_survive_lifecycle_c
         include_bytes!("fixtures/completed_delay.txt")
     );
     let checkpoint = engine.checkpoint().unwrap();
-    engine.tick(8.0).unwrap();
+    let plan = engine
+        .prepare_frame(
+            8.0,
+            &[
+                ("urn:frame:a", Value::Real(0.0)),
+                ("urn:frame:b", Value::Real(5.0)),
+            ],
+        )
+        .unwrap();
+    assert_eq!(engine.execute_frame(plan).unwrap().sequence(), 5);
     engine.restore_checkpoint(&checkpoint).unwrap();
     engine.halt().unwrap();
     engine.resume().unwrap();
@@ -169,7 +184,7 @@ fn sampled_delay_matches_hand_recurrence_and_retained_frames_survive_lifecycle_c
             ],
         )
         .unwrap();
-    assert_eq!(engine.execute_frame(plan).unwrap().sequence(), 5);
+    assert_eq!(engine.execute_frame(plan).unwrap().sequence(), 6);
     engine.halt().unwrap();
     engine
         .set_param("urn:frame:delay.samplePeriod", Value::Real(1.0))
@@ -184,7 +199,7 @@ fn sampled_delay_matches_hand_recurrence_and_retained_frames_survive_lifecycle_c
             ],
         )
         .unwrap();
-    assert_eq!(engine.execute_frame(plan).unwrap().sequence(), 6);
+    assert_eq!(engine.execute_frame(plan).unwrap().sequence(), 7);
     engine.load_cxf(DELAY).unwrap();
     engine.restore_state(&startup).unwrap();
     let plan = engine
@@ -196,10 +211,10 @@ fn sampled_delay_matches_hand_recurrence_and_retained_frames_survive_lifecycle_c
             ],
         )
         .unwrap();
-    assert_eq!(engine.execute_frame(plan).unwrap().sequence(), 7);
+    assert_eq!(engine.execute_frame(plan).unwrap().sequence(), 8);
     engine.load_cxf(PRE).unwrap();
     let plan = engine.prepare_frame(0.0, &[]).unwrap();
-    assert_eq!(engine.execute_frame(plan).unwrap().sequence(), 8);
+    assert_eq!(engine.execute_frame(plan).unwrap().sequence(), 9);
     assert_eq!(retained.iter().map(render).collect::<String>(), image);
     assert_eq!(render(&retained[0].clone()), render(&retained[0]));
 }
@@ -325,7 +340,10 @@ fn warning_only_empty_output_frames_retain_exact_deterministic_diagnostics() {
         assert_eq!(engine.store().calls(), StoreCallSnapshot::default());
         let retained = frames.iter().map(render).collect::<String>();
         let checkpoint = engine.checkpoint().unwrap();
-        engine.tick(1.0).unwrap();
+        let plan = engine
+            .prepare_frame(1.0, &[("urn:assert#u", Value::Boolean(false))])
+            .unwrap();
+        engine.execute_frame(plan).unwrap();
         engine.restore_checkpoint(&checkpoint).unwrap();
         engine.halt().unwrap();
         engine.resume().unwrap();

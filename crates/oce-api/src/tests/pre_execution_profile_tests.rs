@@ -7,6 +7,7 @@ use oce_model::{
     ValueType,
 };
 
+use super::common::advance;
 use crate::{Engine, EngineStateSnapshot};
 
 const INPUT_PATH: &str = "urn:test:pre-profile:u";
@@ -90,7 +91,7 @@ fn oscillating_feedback_model() -> (ModelGraph, ConnectorId, ConnectorId) {
 
 fn assert_visible_output(engine: &Engine, output: ConnectorId, expected: bool) {
     let expected = Value::Boolean(expected);
-    assert!(engine.outputs().get(output).unwrap().bit_eq(&expected));
+    assert!(engine.state.values[output.0 as usize].bit_eq(&expected));
     assert!(engine.get_output(OUTPUT_PATH).unwrap().bit_eq(&expected));
     let watched = engine.watch(&[OUTPUT_PATH]).unwrap();
     assert_eq!(watched.len(), 1);
@@ -106,24 +107,24 @@ fn parameter_seed_is_first_call_output_and_equal_time_calls_advance_memory() {
     // Allocation seeds connector values independently of block state. The parameter is not visible
     // until the block's first HostTick call.
     assert_visible_output(&engine, output, false);
-    engine.set_input(INPUT_PATH, Value::Boolean(true)).unwrap();
-    let first = engine.tick(4.0).unwrap().get(output).unwrap().clone();
+    advance(&mut engine, 4.0, &[(INPUT_PATH, Value::Boolean(true))]).unwrap();
+    let first = engine.get_output(OUTPUT_PATH).unwrap();
     assert!(first.bit_eq(&Value::Boolean(false)));
     assert_visible_output(&engine, output, false);
 
-    engine.set_input(INPUT_PATH, Value::Boolean(false)).unwrap();
-    let second = engine.tick(4.0).unwrap().get(output).unwrap().clone();
+    advance(&mut engine, 4.0, &[(INPUT_PATH, Value::Boolean(false))]).unwrap();
+    let second = engine.get_output(OUTPUT_PATH).unwrap();
     assert!(second.bit_eq(&Value::Boolean(true)));
     assert_visible_output(&engine, output, true);
 
-    engine.tick(4.0).unwrap();
+    advance(&mut engine, 4.0, &[(INPUT_PATH, Value::Boolean(false))]).unwrap();
     assert_visible_output(&engine, output, false);
 
     let (seeded_model, seeded_output) = pre_model(true);
     let mut seeded = Engine::in_memory();
     seeded.build_model_in_memory(seeded_model, None).unwrap();
     assert_visible_output(&seeded, seeded_output, false);
-    seeded.tick(0.0).unwrap();
+    advance(&mut seeded, 0.0, &[(INPUT_PATH, Value::Boolean(false))]).unwrap();
     assert_visible_output(&seeded, seeded_output, true);
 }
 
@@ -137,19 +138,21 @@ fn nonconvergent_boolean_feedback_is_accepted_and_advances_per_call() {
     assert_eq!(engine.schedule().order.len(), 2);
 
     for (index, expected_pre) in [false, true, false, true].into_iter().enumerate() {
-        engine.tick(2.0).unwrap();
+        advance(&mut engine, 2.0, &[]).unwrap();
         assert!(
             engine
-                .outputs()
-                .get(pre_output)
+                .state
+                .values
+                .get(pre_output.0 as usize)
                 .unwrap()
                 .bit_eq(&Value::Boolean(expected_pre)),
             "Pre output on call {index}"
         );
         assert!(
             engine
-                .outputs()
-                .get(not_output)
+                .state
+                .values
+                .get(not_output.0 as usize)
                 .unwrap()
                 .bit_eq(&Value::Boolean(!expected_pre)),
             "Not output on call {index}"
@@ -164,10 +167,12 @@ fn snapshot_restores_next_pre_output_at_same_timestamp() {
     uninterrupted
         .build_model_in_memory(model.clone(), Some("urn:test:pre-profile:model"))
         .unwrap();
-    uninterrupted
-        .set_input(INPUT_PATH, Value::Boolean(true))
-        .unwrap();
-    uninterrupted.tick(9.0).unwrap();
+    advance(
+        &mut uninterrupted,
+        9.0,
+        &[(INPUT_PATH, Value::Boolean(true))],
+    )
+    .unwrap();
     assert_visible_output(&uninterrupted, output, false);
 
     let snapshot = uninterrupted.state_snapshot().unwrap();
@@ -180,8 +185,7 @@ fn snapshot_restores_next_pre_output_at_same_timestamp() {
     assert_visible_output(&restored, output, false);
 
     for engine in [&mut uninterrupted, &mut restored] {
-        engine.set_input(INPUT_PATH, Value::Boolean(false)).unwrap();
-        engine.tick(9.0).unwrap();
+        advance(engine, 9.0, &[(INPUT_PATH, Value::Boolean(false))]).unwrap();
         assert_visible_output(engine, output, true);
     }
 

@@ -6,6 +6,7 @@ use oce_model::{
     BlockId, BlockInstance, Connector, ConnectorId, Dir, ModelGraph, ParamTable, Value, ValueType,
 };
 
+use super::common::advance;
 use crate::state::Portability;
 use crate::{Engine, EngineStateError, EngineStateSnapshot, OcError};
 
@@ -131,7 +132,7 @@ fn target_bound_capture_carries_the_compile_target() {
     engine
         .build_model_in_memory(target_bound_model(), Some("urn:test:sun-model"))
         .unwrap();
-    engine.tick(0.0).unwrap();
+    advance(&mut engine, 0.0, &[]).unwrap();
     let snapshot = engine.state_snapshot().unwrap();
     assert!(matches!(
         &snapshot.image.manifest.portability,
@@ -148,17 +149,13 @@ fn portable_engine_snapshot_continues_and_emits_matrix_artifact() {
     source
         .build_model_in_memory(model.clone(), Some("urn:test:portable-model"))
         .unwrap();
-    source
-        .set_input("urn:test:portable-integrator.c0", Value::Real(2.0))
-        .unwrap();
-    source
-        .set_input("urn:test:portable-integrator.c1", Value::Real(7.0))
-        .unwrap();
-    source
-        .set_input("urn:test:portable-integrator.c2", Value::Boolean(false))
-        .unwrap();
-    source.tick(0.0).unwrap();
-    source.tick(0.25).unwrap();
+    let inputs = [
+        ("urn:test:portable-integrator.c0", Value::Real(2.0)),
+        ("urn:test:portable-integrator.c1", Value::Real(7.0)),
+        ("urn:test:portable-integrator.c2", Value::Boolean(false)),
+    ];
+    advance(&mut source, 0.0, &inputs).unwrap();
+    advance(&mut source, 0.25, &inputs).unwrap();
 
     let snapshot = source.state_snapshot().unwrap();
     assert!(matches!(
@@ -173,8 +170,8 @@ fn portable_engine_snapshot_continues_and_emits_matrix_artifact() {
         .build_model_in_memory(model, Some("urn:test:portable-model"))
         .unwrap();
     restored.restore_state(&decoded).unwrap();
-    source.tick(0.5).unwrap();
-    restored.tick(0.5).unwrap();
+    advance(&mut source, 0.5, &inputs).unwrap();
+    advance(&mut restored, 0.5, &inputs).unwrap();
     assert_eq!(restored.state.words, source.state.words);
     assert!(
         restored

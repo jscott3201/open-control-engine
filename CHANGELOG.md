@@ -31,11 +31,21 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Facade contraction
 
-- **Intentional pre-release source break:** removed `Engine::load_modelica`,
+- **Frame-only execution, product-contract revision 9:** preparation followed by consuming
+  `execute_frame` is the sole public state-advancing execution path. Removed sparse staging,
+  Store-backed ticks, built-in simulation/realtime profiles, epoch configuration, raw `Outputs`
+  access and associated source/spec/trace/report types without aliases. `CompletedFrame` retains
+  immutable boundary outputs and warnings; `get_output` and `watch` remain latest-state non-receipt
+  inspections. Frame execution performs no Store reads or writes. First-party consumers and both
+  conformance cadences now submit complete frames; omitted determinants refuse before comparison.
+  HostTick v1, input domains, independent numerical references, catalog and state bytes are unchanged.
+  Assertion/execution descriptors advance to revision 2; public-surface and product-contract hostile
+  controls guard the contraction. Sibling migration and external delivery orchestration remain host work.
+- **Earlier intentional pre-release source break:** removed `Engine::load_modelica`,
   `Engine::load_from_semantic`, `TemplateRef`, the flat `oce_api::SemanticQuery` alias and
   `InputSource::Csv`, all tied to never-working facade paths. Conditional storage query types and
-  working CXF/Constant/Closure behavior remain. The private conformance driver drops only its facade
-  CSV placeholder selection; reference CSV/table replay stays.
+  working CXF/Constant/Closure behavior were retained at that revision; the frame-only contraction
+  above supersedes those execution conveniences. Reference CSV/table replay stays host-side.
 - **Warning-only assertions:** removed the never-emitted `AssertLevel::Error` variant and changed
   `Default` from Error to Warning deliberately. Existing Warning collection, execution and state
   bytes are unchanged; this adds no escalation or safety policy. `point_list(None)` keeps its

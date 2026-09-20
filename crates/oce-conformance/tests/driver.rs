@@ -214,6 +214,39 @@ fn assert_trace_bit_eq(left: &oce_conformance::DriverRun, right: &oce_conformanc
 }
 
 #[test]
+fn incomplete_reference_inputs_refuse_in_both_cadences() {
+    let mut config = config();
+    config.references[0]
+        .point_name_mapping
+        .retain(|mapping| mapping.cdl.name != U2);
+    for cadence in [
+        DriveCadence::Uniform {
+            t_start: 0.0,
+            t_stop: 3.0,
+            step: 1.0,
+        },
+        DriveCadence::EventAligned {
+            instants: vec![0.0, 1.0, 2.0, 3.0],
+        },
+        DriveCadence::EventAligned { instants: vec![] },
+    ] {
+        let result = drive_trace_with_options(
+            FREE_ADD.as_bytes(),
+            &config,
+            &uniform_reference(),
+            &DriverOptions {
+                cadence,
+                ..DriverOptions::default()
+            },
+        );
+        assert!(
+            matches!(result, Err(DriverError::Engine(OcError::FrameMissingInput(ref path))) if path == U2),
+            "missing determinants must refuse before comparison: {result:?}"
+        );
+    }
+}
+
+#[test]
 fn uniform_fast_path_and_event_aligned_path_agree_bit_exactly() {
     let reference = uniform_reference();
     let config = config();

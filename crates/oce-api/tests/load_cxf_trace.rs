@@ -10,7 +10,7 @@
 
 // Reach the value/IO types through the facade re-export (R-PUB-1: `oce-api` is the single public
 // surface) — an external binder names `oce_api::Value`/`ConnectorId`, never a direct oce-model dep.
-use oce_api::{ConnectorId, Engine, OcError, Value};
+use oce_api::{Engine, OcError, Value};
 
 // One source of truth for the canonical fixture shared across resolver and facade tests.
 const MINIMAL_LOOP: &str = include_str!("../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
@@ -18,11 +18,8 @@ const AHU_SUPPLY_AIR_TEMP_RESET: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld");
 const AHU_SUPPLY_AIR_TEMP_RESET_ID: &str = "http://example.org#g36.ahu_supply_air_temp_reset";
 
-/// Resolve the `add.y` (feedback sum) output connector id **structurally** from the model — the
-/// output of the `CDL.Reals.Add` block — rather than hardcoding `ConnectorId(3)`. This stays
-/// correct if array normalization renumbers connectors (the resolver is deterministic, so
-/// the id matches the one `load_cxf` builds).
-fn add_y_id() -> ConnectorId {
+/// Resolve the authored output identity structurally, without exposing a raw arena index.
+fn add_y_path() -> String {
     let (model, _report) =
         oce_cxf::import_cxf(MINIMAL_LOOP.as_bytes(), &oce_cxf::ResolveOptions::default())
             .expect("minimal_loop must resolve");
@@ -31,14 +28,29 @@ fn add_y_id() -> ConnectorId {
         .iter()
         .find(|b| b.class_iri.as_ref() == "CDL.Reals.Add")
         .expect("an Add block");
-    *add.outputs.first().expect("Add has one output")
+    let id = add.outputs.first().expect("Add has one output");
+    model.connectors[id.0 as usize]
+        .iri
+        .as_deref()
+        .unwrap()
+        .to_owned()
 }
 
-fn add_y(eng: &Engine, id: ConnectorId) -> f64 {
-    match eng.outputs().get(id) {
-        Some(Value::Real(r)) => *r,
+fn add_y(eng: &Engine, path: &str) -> f64 {
+    match eng.get_output(path).unwrap() {
+        Value::Real(r) => r,
         other => panic!("add.y must be a Real output, got {other:?}"),
     }
+}
+
+fn advance_loop(engine: &mut Engine, time: f64) {
+    let prepared = engine
+        .prepare_frame(
+            time,
+            &[("http://example.org#MinLoop.uSet", Value::Real(0.0))],
+        )
+        .unwrap();
+    engine.execute_frame(prepared).unwrap();
 }
 
 #[test]
@@ -72,18 +84,15 @@ fn load_cxf_uses_top_composite_id_as_model_id() {
 
 #[test]
 fn minimal_loop_converges_to_four_bit_exact() {
-    let id = add_y_id();
+    let path = add_y_path();
     let mut eng = Engine::in_memory();
     eng.load_cxf(MINIMAL_LOOP.as_bytes()).expect("load");
 
     // First ticks are dyadic-exact: 2, 3, 3.5, 3.75, 3.875, 3.9375, 3.96875.
     let expected_prefix = [2.0_f64, 3.0, 3.5, 3.75, 3.875, 3.9375, 3.96875];
     for (k, &want) in expected_prefix.iter().enumerate() {
-        let outs = eng.tick(k as f64).expect("tick must succeed");
-        let got = match outs.get(id) {
-            Some(Value::Real(r)) => *r,
-            o => panic!("add.y must be a Real, got {o:?}"),
-        };
+        advance_loop(&mut eng, k as f64);
+        let got = add_y(&eng, &path);
         assert_eq!(
             got.to_bits(),
             want.to_bits(),
@@ -94,10 +103,10 @@ fn minimal_loop_converges_to_four_bit_exact() {
     // After enough ticks the dyadic error underflows the ULP of 4.0 → add.y is EXACTLY 4.0
     // (reached at tick index 53; the loop below runs well past it).
     for k in 7..80 {
-        eng.tick(k as f64).expect("tick");
+        advance_loop(&mut eng, k as f64);
     }
     assert_eq!(
-        add_y(&eng, id).to_bits(),
+        add_y(&eng, &path).to_bits(),
         4.0_f64.to_bits(),
         "add.y must converge to exactly 4.0"
     );
@@ -106,14 +115,14 @@ fn minimal_loop_converges_to_four_bit_exact() {
 #[test]
 fn load_cxf_trace_is_deterministic() {
     // Two independent loads + identical tick sequences → bit-identical add.y traces.
-    let id = add_y_id();
+    let path = add_y_path();
     let run = || {
         let mut eng = Engine::in_memory();
         eng.load_cxf(MINIMAL_LOOP.as_bytes()).expect("load");
         (0..32)
             .map(|k| {
-                eng.tick(k as f64).expect("tick");
-                add_y(&eng, id).to_bits()
+                advance_loop(&mut eng, k as f64);
+                add_y(&eng, &path).to_bits()
             })
             .collect::<Vec<u64>>()
     };

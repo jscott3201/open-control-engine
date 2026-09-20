@@ -72,7 +72,7 @@ pub(super) fn check_declared_interface(
 ///
 /// Such a name would answer as two different points: the connector's own slot on the
 /// connector-path surfaces and a different driver through the declared-output alias — and in the
-/// hasInput∩hasOutput form the "declared output" is an INPUT path `set_input` accepts, breaking
+/// hasInput∩hasOutput form the "declared output" is also an input determinant, breaking
 /// the output-only alias contract by construction. The refusal is the identity-level analogue of
 /// the `SingleAssignment` value-level refusal. Checked in `hasOutput` array order; the returned
 /// set lets [`warn_undriven`] skip refused IRIs — the refusal owns the class.

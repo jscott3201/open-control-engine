@@ -28,17 +28,13 @@ fn image<S: Store>(engine: &Engine<S>) -> Vec<String> {
         schedule,
         blocks,
         state,
-        outputs,
         prev_t,
-        store_inputs,
         model_id,
         semantic_warnings,
         params,
         mode,
         params_dirty,
         io,
-        durable_batch,
-        realtime_epoch_unix_nanos,
         loaded,
         durable_restore_ready,
         frame_generation,
@@ -61,15 +57,7 @@ fn image<S: Store>(engine: &Engine<S>) -> Vec<String> {
         format!("{:?} {:?} {:?}", state.words, state.slots, state.slot_of),
         format!("{:?}", state.scratch.iter().map(bits).collect::<Vec<_>>()),
         format!("{} {:?}", state.t.to_bits(), prev_t.map(f64::to_bits)),
-        format!("{outputs:?}"),
-        format!(
-            "{:?}",
-            outputs
-                .iter()
-                .map(|(id, v)| (id, bits(v)))
-                .collect::<Vec<_>>()
-        ),
-        format!("{store_inputs:?} {semantic_warnings:?}"),
+        format!("{semantic_warnings:?}"),
         format!("{params:?} {mode:?} {params_dirty}"),
         format!(
             "{:?}",
@@ -79,32 +67,23 @@ fn image<S: Store>(engine: &Engine<S>) -> Vec<String> {
                 .collect::<Vec<_>>()
         ),
         format!("{io:?}"),
-        format!("{durable_batch:?}"),
-        format!(
-            "{:?}",
-            durable_batch
-                .writes()
-                .iter()
-                .map(|w| match w.sample.value {
-                    OcValue::Real(v) => Some(v.to_bits()),
-                    _ => None,
-                })
-                .collect::<Vec<_>>()
-        ),
-        format!("{realtime_epoch_unix_nanos:?} {loaded} {durable_restore_ready}"),
+        format!("{loaded} {durable_restore_ready}"),
     ]
 }
 
 fn prepared(state: u8) -> Engine<LoadFailureStore> {
     let mut engine = Engine::with_store(Arc::new(LoadFailureStore::new(StoreFailure::None)));
     engine.load_cxf(MODEL).unwrap();
-    engine.set_realtime_epoch_unix_nanos(1_700_000_000_000_000_000);
     if state > 0 {
-        engine
-            .set_input("http://example.org#MinLoop.uSet", Value::Real(-0.0))
-            .unwrap();
-        engine.step_realtime(0.0).unwrap();
-        engine.step_realtime(2.0).unwrap();
+        for time in [0.0, 2.0] {
+            let plan = engine
+                .prepare_frame(
+                    time,
+                    &[("http://example.org#MinLoop.uSet", Value::Real(-0.0))],
+                )
+                .unwrap();
+            engine.execute_frame(plan).unwrap();
+        }
         assert!(!engine.state.words.is_empty());
         assert!(!engine.durable_restore_ready);
     }
@@ -251,11 +230,7 @@ fn failed_handle_resolution_leaves_saved_model_and_allocated_store_handles() {
         engine.store.load_model(&candidate_id).unwrap().model_id,
         candidate_id
     );
-    let keys: Vec<_> = IoInventory::build_at_load(&candidate)
-        .input_bindings()
-        .iter()
-        .map(|input| DomainKey::new(input.path.clone()))
-        .collect();
+    let keys = IoInventory::build_at_load(&candidate).input_keys();
     let residual_handles = engine.store.resolved.lock().unwrap().clone();
     assert!(!residual_handles.is_empty());
     // MemStore reuses the already allocated candidate handles; there is no engine rollback.
@@ -323,20 +298,6 @@ fn successful_reload_replaces_model_bound_caches_but_not_host_policy() {
         engine.state_snapshot().unwrap().as_bytes(),
         fresh.state_snapshot().unwrap().as_bytes()
     );
-    assert_eq!(
-        engine
-            .outputs
-            .to_map()
-            .iter()
-            .map(|(p, v)| (p, bits(v)))
-            .collect::<Vec<_>>(),
-        fresh
-            .outputs
-            .to_map()
-            .iter()
-            .map(|(p, v)| (p, bits(v)))
-            .collect::<Vec<_>>()
-    );
     assert_eq!(engine.io.to_vec(), fresh.io.to_vec());
     assert_eq!(engine.params.len(), fresh.params.len());
     assert_eq!(
@@ -351,32 +312,34 @@ fn successful_reload_replaces_model_bound_caches_but_not_host_policy() {
             .map(|(p, v, _)| (p, bits(&v)))
             .collect::<Vec<_>>()
     );
-    assert_eq!(
-        format!("{:?}", engine.durable_batch),
-        format!("{:?}", fresh.durable_batch)
-    );
     assert_eq!(engine.semantic_warnings, fresh.semantic_warnings);
     assert_eq!(engine.mode, RunMode::Running);
     assert!(!engine.params_dirty);
     assert_eq!(engine.prev_t, None);
     assert!(engine.loaded && engine.durable_restore_ready);
     assert_eq!(engine.cxf_byte_limit(), 64 * 1024);
-    assert_eq!(
-        engine.realtime_epoch_unix_nanos(),
-        Some(1_700_000_000_000_000_000)
-    );
     assert!(matches!(
         engine.get_output("http://example.org#MinLoop.yAlarm"),
         Err(OcError::UnknownPoint(_))
     ));
-    for input in &engine.store_inputs {
+    let definitions = engine.input_definitions().unwrap();
+    assert_eq!(definitions.len(), 1);
+    for input in &definitions {
         assert!(!input.path.contains("MinLoop"));
     }
-    // Exercise rebuilt batch/index mappings; old model outputs must not leak into writes.
-    engine.step_realtime(0.0).unwrap();
-    for write in engine.durable_batch.writes() {
-        assert!(!write.key.as_str().contains("MinLoop"));
-    }
+    // Exercise rebuilt frame bindings without calling the Store.
+    engine.store.calls.lock().unwrap().clear();
+    let plan = engine
+        .prepare_frame(0.0, &[(definitions[0].path.as_str(), Value::Real(4.0))])
+        .unwrap();
+    let frame = engine.execute_frame(plan).unwrap();
+    assert!(
+        frame
+            .outputs()
+            .iter()
+            .all(|(path, _)| !path.contains("MinLoop"))
+    );
+    assert!(engine.store.calls.lock().unwrap().is_empty());
 }
 
 #[test]

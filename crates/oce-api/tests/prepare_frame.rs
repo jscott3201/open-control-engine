@@ -155,7 +155,10 @@ fn unbounded_real_bits_are_accepted_but_time_is_finite_and_nondecreasing() {
             .prepare_frame(-1.0, &[(A, Value::Real(real)), (B, Value::Real(0.0))])
             .unwrap();
     }
-    engine.tick(4.0).unwrap();
+    let plan = engine
+        .prepare_frame(4.0, &[(A, Value::Real(0.0)), (B, Value::Real(0.0))])
+        .unwrap();
+    engine.execute_frame(plan).unwrap();
     engine
         .prepare_frame(4.0, &[(B, Value::Real(0.0)), (A, Value::Real(0.0))])
         .unwrap();
@@ -171,9 +174,6 @@ fn submitted_keys_are_not_reexpanded_or_rebound_to_elided_child_names() {
     for key in ["urn:legacy-frame:add.u1", "a", "base:a"] {
         assert!(
             matches!(engine.prepare_frame(0.0, &[(key, Value::Real(0.0)), (B, Value::Real(0.0))]), Err(OcError::FrameUnknownInput { prefix, .. }) if prefix == key)
-        );
-        assert!(
-            matches!(engine.set_input(key, Value::Real(0.0)), Err(OcError::UnknownPoint(p)) if p == key)
         );
     }
     // Context expansion occurs once, at ingest; the same canonical snapshot results.

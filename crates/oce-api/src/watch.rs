@@ -10,10 +10,11 @@ use crate::{Engine, OcError};
 impl<S: Store> Engine<S> {
     /// Reads selected output point values in caller order.
     ///
-    /// Reads are post-tick: after `tick(t)` returns, this method returns that completed HostTick v1
-    /// call's values. A later successful call at the same `t` is a new state transition and replaces
-    /// the visible output snapshot. Torn reads are impossible because `tick` takes `&mut self` and
-    /// [`Engine`] is not `Clone`, so there is a single writer.
+    /// This is latest-state, non-receipt inspection, not an immutable execution result. Load,
+    /// restore and parameter resume can replace the observed state without executing a frame.
+    /// A later accepted frame at the same model time is another transition. Use
+    /// [`crate::CompletedFrame`] for correlated boundary outputs and warnings. Exclusive mutable
+    /// execution and immutable inspection borrows prevent torn reads.
     ///
     /// Keys name either of two identity spaces: every **output connector path** (the authored
     /// `@id` of the connector's host-visible identity node), and every **driven root-declared
@@ -28,8 +29,7 @@ impl<S: Store> Engine<S> {
     ///
     /// Returned pairs echo the supplied keys, including duplicates; an empty `points` slice
     /// returns `Ok` with an empty vector. If duplicate output paths exist in the model, the
-    /// first connector wins, matching [`Engine::get_output`]. This deliberately differs from
-    /// [`crate::Outputs::to_map`], which returns one row per connector. Callers with owned
+    /// first connector wins, matching [`Engine::get_output`]. Callers with owned
     /// `String` paths can create a key slice with
     /// `paths.iter().map(String::as_str).collect::<Vec<_>>()`.
     ///
@@ -111,7 +111,8 @@ impl<S: Store> Engine<S> {
     /// // reading it before and after pins that watch returns exactly tick t's values.
     /// let before = engine.watch(&["http://example.org#Example.gain.y"])?;
     /// assert!(before[0].1.bit_eq(&Value::Real(0.0)));
-    /// engine.tick(0.0)?;
+    /// let prepared = engine.prepare_frame(0.0, &[])?;
+    /// let _completed = engine.execute_frame(prepared)?;
     /// let after = engine.watch(&["http://example.org#Example.gain.y"])?;
     /// assert!(after[0].1.bit_eq(&Value::Real(6.0)));
     /// # Ok::<(), oce_api::OcError>(())

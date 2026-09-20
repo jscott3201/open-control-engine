@@ -2,15 +2,14 @@
 
 ## Status and authority
 
-This is the normative detail of PC-031 in [product contract revision 8](product-contract.md).
-**Preparation (PC-032), native complete-frame execution (PC-033), and shared evaluation-core reuse
-with explicit weaker convenience profiles (PC-034) are implemented.** PC-035 remains future for full
-legacy classification/guards. The additive APIs below supply no
+This is the normative detail of PC-031 in [product contract revision 9](product-contract.md).
+**Preparation (PC-032), complete-frame execution (PC-033), shared evaluation core (PC-034), and
+frame-only facade contraction (PC-035) are implemented.** The APIs below supply no
 profile selector, wire format or stable-product guarantee. Execution maintainers own
 these semantics; host policy remains with the host integrator.
 
-The requirements below describe the native complete-frame path, not a reinterpretation of
-`set_input`, `tick`, `simulate` or `step_realtime`. “Atomic” means an engine-owned transition under
+The requirements below describe the sole public execution path. Legacy execution methods have
+been removed, not reinterpreted or aliased. “Atomic” means an engine-owned transition under
 the ordinary returned-refusal boundary below, not a distributed, persistent or actuator transaction.
 The fixed [HostTick v1 profile](execution-profile.md#hosttick-v1) remains unchanged.
 
@@ -132,54 +131,31 @@ Diagnostic source semantics are preserved; no new instance-identity promise is i
 latency measurements are not deterministic replay identity.
 
 Producing or retaining an output frame means computation completed, not that an adapter persisted it
-or equipment received it. A realtime convenience write failure after commit is a delivery failure,
-not an ordinary refused native frame. It cannot retroactively roll back or relabel the transition.
-`step_realtime` preserves its compatible `Err(OcError::Store)` result: the error does **not** report
-a committed generation or carry a receipt, `StepReport`, or collected execution warnings. Hosts
-reconcile committed state through existing time guards, latest outputs, alias-aware `get_output` /
-`watch`, and checkpoint/snapshot surfaces, plus their own delivery records. Equal-time retry is
-another transition, not a safe retry of the external write. This replaces the planning acceptance
-phrase “write failure reports committed generation”; it does not introduce a public receipt API.
+or equipment received it. Execution performs no Store write and has no post-write error path.
+External delivery failure remains the host's responsibility and does not relabel a completed frame.
+Equal-time resubmission is another transition, not a retry of external delivery.
 
 ## Legacy paths and migration
 
-The following are **current weaker/convenience paths**, not implementations of this contract:
+Revision 9 removes `tick`/`tick_with`, `set_input`, `simulate`, `step_realtime`, realtime epoch
+configuration, `Outputs`/`Engine::outputs`, and the simulation/source/trace/report types. There
+are no aliases, deprecation bridges or profile tags. Sibling consumers migrate to complete frames.
 
-| Path | Current acceptance and failure boundary |
-| --- | --- |
-| `set_input` followed by `tick` | Sparse named typed writes mutate immediately. Repeated writes are last-wins; omitted inputs retain entry values. A later setter or tick refusal does not undo earlier successful setters. |
-| Store-backed `tick` | Available samples overwrite bound slots regardless of status/timestamp; missing samples hold the connector value. Snapshot acquisition failure stages no sample. A later type refusal can leave a valid prefix staged and close durable-restore readiness, while no block evaluates and model time/outputs do not advance. |
-| `simulate` | Collection, constants and the first closure list preflight before restart, but these lists are not completeness/duplicate validation. Restart re-seeds words and clears the prior time guard, retaining connector values. Later closure refusal keeps earlier ticks and valid prefix staging. First-tick Store refusal can leave the restart applied before any evaluation. |
-| `step_realtime` | Host epoch mapping validates first; then the tick applies before Store write-back. Write failure leaves the transition applied and can prevent collected assertions from being returned. Written count is an adapter receipt, not durability or actuation. |
+Collect every required observation, call `prepare_frame`, then consume the plan with `execute_frame`.
+Missing and duplicate inputs refuse; there is no sparse, last-wins, hold-last or Store-backed
+fallback. A host simulation loop supplies each complete frame and owns trace capture. Repeated
+loops continue the current engine; use a fresh load or explicit compatible checkpoint restore when
+a restart or rewind is intended. A loop is not a whole-horizon transaction.
 
-Current `tick` and simulation use a no-op execution diagnostic sink; realtime collects Warning
-reports. Existing snapshots/checkpoints, output views and facade metadata remain valid within their
-own documented limits; they are not completed frames.
+`get_output` and `watch` are explicitly latest-state, non-receipt inspection. They can read internal
+points, and load/restore/resume may replace their state without a frame. Only `CompletedFrame`
+retains committed boundary results and diagnostics. There is no engine Store-write helper.
 
-One private `transition_host_tick` now closes durable-restore readiness, calls `oce_graph::eval_tick`
-exactly once, updates `prev_t`, and refreshes mutable latest `Outputs`. Native `execute_frame` and
-legacy `tick_with` call it directly; simulation still calls `tick`, and realtime still calls
-`tick_with`. The caller supplies its existing diagnostic sink. No Store call, name resolution,
-sequence update, restart, fallible post-mutation stage, or result/trace/durable projection enters
-this seam. **This is evaluation-core reuse, not complete-frame preparation reuse.**
-
-The native preparation/execution APIs are additive. PC-034 covers only that shared core and this
-weaker-profile classification; PC-035 still addresses full legacy classification/guards. This
-document does not remove, retrofit or strengthen the current APIs. Future migration requires
-explicit acceptance evidence and compatibility accounting
-for any changed sparse, hold-last, duplicate, restart or post-tick-write behavior. Whole-horizon
-rollback and Store transactionality are not implied by reusing a native transition core.
-
-The [shared-core suite](../crates/oce-api/src/shared_transition_tests.rs) compares bit-exact state
-and values for fully driven Add and sampled UnitDelay prefixes started from equivalent seeds, and
-a rounded equal-time Pre grid. Expectations are hand-derived arithmetic/HostTick recurrences, not
-engine-blessed output or Modelica event-iteration oracles. Private seam-entry and instrumented block
-counters detect bypass and double evaluation/update; separate projection assertions retain lexical
-boundary outputs versus trace/durable connector order. Warning tests retain no-op tick/simulation
-and collected realtime/native behavior. Existing restart, first-closure and mid-run refusal tests
-remain required; the [write-failure controls](../crates/oce-api/src/tests/realtime_write_back_tests.rs)
-pin committed memory, reconciliation views and lost error-path reports. These subsets do not imply
-universal mode parity or whole-horizon atomicity.
+The private `transition_host_tick` remains the sole infallible evaluation/refresh core after frame
+preflight. The [instrumented core test](../crates/oce-api/src/shared_transition_tests.rs) detects
+bypass, double emit/update and entry on refusal. The conformance driver uses complete frames in both
+uniform and event-aligned modes; equivalent complete schedules retain bit-exact traces. This does
+not claim Modelica event iteration, whole-horizon rollback, durability or host qualification.
 
 ## Host and downstream boundaries
 
@@ -200,18 +176,14 @@ contracts; this work does not create a second evaluator, snapshot or replay stac
 
 ## Evidence and remaining acceptance work
 
-The passing [legacy boundary tests](../crates/oce-api/tests/legacy_frame_boundary.rs) deliberately
-characterize the gaps, not a future API. A hand-authored two-input Add fixture and bit-exact output
-golden expose omission/last-wins behavior. Typed refusals, before/after snapshot bytes, continuation
-outputs and fresh-restore refusal distinguish unchanged execution from retained input mutation.
-Independent arithmetic expectations and repeat runs guard against merely blessing engine output.
-These stateless cases do not prove preservation of stateful words or any future frame identity.
-
-Existing [Store tests](../crates/oce-api/src/tests/store_backed_inputs.rs),
-[simulation staging tests](../crates/oce-api/src/tests/input_staging_tests.rs), and
-[Pre profile tests](../crates/oce-api/src/tests/pre_execution_profile_tests.rs) provide complementary
-current-behavior evidence. The product requirement table links the existing restart, Warning and
-post-tick write-failure tests. The traceability checker checks links/statuses, not semantic compliance.
+The [frame refusal controls](../crates/oce-api/tests/frame_refusals.rs) replace historical gap tests:
+omission, duplicates and wrong types preserve the prior image without staging a prefix. The
+[Store noninterference suite](../crates/oce-api/tests/frame_purity.rs) proves that even supplied Store
+samples cannot fill missing determinants or overwrite complete values. The
+[Pre profile tests](../crates/oce-api/src/tests/pre_execution_profile_tests.rs) retain the fixed
+HostTick recurrence and snapshot continuation evidence. Compiler absence controls cover all supported
+feature selections; they do not qualify downstream consumers. The product checker is still a bounded
+traceability/claim-sentinel tool, not proof of semantic compliance.
 
 Preparation evidence below fulfills PC-032; the execution evidence below fulfills PC-033 with
 equal-time correlation, retained immutable results and unchanged images on ordinary refusal.
@@ -300,7 +272,7 @@ representability, then `FrameSequenceExhausted`. Preparation has already resolve
 every input and fan-out target. Execution rechecks the mutable conditions, without name rebinding.
 
 After preflight, the implementation stages the entire plan, closes durable restore, calls the
-existing infallible evaluator once with the Warning collector, updates `prev_t` and latest `Outputs`
+existing infallible evaluator once with the Warning collector, updates `prev_t` and latest-state inspection
 once, increments the accepted-frame sequence and captures the result. All ordinary returned errors
 are before this boundary. No Store operation, host callback, shadow RunState, undo log or rollback
 is involved. Allocation failure remains excluded, including during result capture.
@@ -316,13 +288,13 @@ root declarations plus lowered pass-through outputs. It is sorted by canonical l
 identity, not source order. Distinct declarations sharing a driver stay distinct; internal driver
 paths and the pass-through listing are not appended as duplicate aliases. Undriven source-only
 declarations are absent under the existing ingest warning contract. Zero boundary outputs is valid,
-including an Assert-only boundary with internal outputs. Inventory, trace and durable columns are
+including an Assert-only boundary with internal outputs. Inventory and host-selected trace columns are
 not the authority for this set.
 
 Sequence starts at one and advances only on a successful native complete-frame commit. It never
 decreases or resets in one Engine lifetime, including successful reload, dirty/clean resume,
-simulation restart, checkpoint rewind and durable restore. Legacy tick/sim/realtime and refusals
-consume no position. Thus equal-time commits remain distinct. The private retained `Arc<()>`
+checkpoint rewind and durable restore. Refusals consume no position. Thus equal-time commits remain
+distinct. The private retained `Arc<()>`
 incarnation binds each result to its loaded executable/IO and fixed build/profile context without
 exposing pointer identity. Sequence is correlation only: not replay position, snapshot generation,
 durability, cross-process identity, deployment authority, lease, authentication or freshness.
@@ -349,11 +321,11 @@ is added to Engine; the caller owns retained outcomes, which remain unchanged by
   result capture allocates B path buffers plus one pair vector; empty B allocates none. Warnings
   add their owned source/message buffers and a geometrically growing event vector. Staging clones
   only the prepared fan-out values; preparation's separate N/T formula remains above. Existing
-  evaluator allocation exceptions remain, and latest Outputs still refreshes exactly as on tick.
+   evaluator allocation exceptions remain, and latest-state inspection refreshes after each commit.
   No whole-engine/state copy is charged as result capture. See [measured observations](benchmarks.md#complete-frame-observations)
   for debug/release timing scope; no universal speed or latency-ratio guarantee follows.
 
 Compile-fail rustdoc pins nonserialization and single-use preparation. Exact public baselines and
-shape guards cover the additive API. Hosted architecture qualification and actual downstream host
-adoption remain separate. PC-034's bounded shared-core evidence is described above; PC-035, stable
-release, persistence and equipment claims are not promoted.
+shape guards cover the frame-only API. Hosted architecture qualification and actual downstream host
+adoption remain separate. PC-035 promotes this contraction only, not stable release, persistence or
+equipment claims.

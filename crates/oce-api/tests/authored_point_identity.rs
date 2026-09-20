@@ -149,8 +149,8 @@ fn facade_surface_paths<S: Store>(engine: &Engine<S>) -> Vec<(&'static str, Stri
         paths.push(("boundary_output path", output.path.clone()));
         paths.push(("boundary_output driver", output.driver_path.clone()));
     }
-    for (key, _) in engine.outputs().to_map() {
-        paths.push(("to_map key", key));
+    for definition in engine.input_definitions().unwrap() {
+        paths.push(("frame input", definition.path));
     }
     paths
 }
@@ -214,22 +214,21 @@ fn external_inputs_are_a_subset_of_point_list_input_paths() {
 }
 
 #[test]
-fn to_map_keys_and_point_list_output_paths_are_the_same_set() {
+fn every_inventory_output_is_available_for_latest_state_inspection() {
     for fixture in corpus_fixtures() {
         let (fixture_name, _bytes, engine) = load_fixture(&fixture);
         let out_paths = point_list_paths(&engine, PointDirection::Out);
-        let to_map_keys: BTreeSet<String> = engine
-            .outputs()
-            .to_map()
+        let names: Vec<_> = out_paths.iter().map(String::as_str).collect();
+        let watched_keys: BTreeSet<String> = engine
+            .watch(&names)
+            .unwrap()
             .into_iter()
             .map(|(key, _)| key)
             .collect();
-        // Only `point_list Out ⊆ to_map` holds by construction: to_map includes String-typed
-        // output connectors while point_list excludes them (CDL §7.8 metadata-only). No G36
-        // fixture declares a String output connector, so equality holds over this corpus.
+        // These selected latest-state reads are not committed boundary-output receipts.
         assert_eq!(
-            to_map_keys, out_paths,
-            "{fixture_name}: to_map keys diverge from point_list Out paths"
+            watched_keys, out_paths,
+            "{fixture_name}: inspected keys diverge from point_list Out paths"
         );
     }
 }
@@ -289,7 +288,7 @@ fn expected_paths(prefix: &str, names: &[&str]) -> BTreeSet<String> {
 // nowhere. The remaining twelve block-level inputs keep their own `@id`s. Every block-level
 // output keeps its own `@id`; the root's four `S231:hasOutput` declarations (economizer_enabled,
 // damper_command, operating_mode_real, oa_temperature_delta) — addressable on `get_output`/
-// `watch`/`CollectSpec::Named` as read aliases and enumerated in `Topology.boundary_outputs` —
+// `watch` as read aliases and enumerated in `Topology.boundary_outputs` —
 // are deliberately absent from point rows (the _spec/18 D2 fence) and must NOT appear here.
 #[test]
 fn economizer_point_sets_match_the_hand_derived_document_reading() {

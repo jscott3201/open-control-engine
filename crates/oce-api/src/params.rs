@@ -18,7 +18,6 @@ use oce_store::Store;
 
 use crate::engine::{Engine, instantiate_blocks};
 use crate::error::OcError;
-use crate::sim::Outputs;
 
 mod class_rules;
 
@@ -252,7 +251,7 @@ impl<S: Store> Engine<S> {
             self.frame_generation = std::sync::Arc::new(());
             // CoW the model at rest (off-tick; refcount is 1, so `make_mut` does not clone). Re-fold
             // edits, then rebuild blocks/state/outputs via the shared helpers.
-            let (blocks, state, outputs) = {
+            let (blocks, state) = {
                 let model = std::sync::Arc::make_mut(&mut self.model);
                 for e in &self.params.entries {
                     if let Some(slot) = model.blocks[e.block.0 as usize]
@@ -266,12 +265,10 @@ impl<S: Store> Engine<S> {
                 }
                 let blocks = instantiate_blocks(model)?;
                 let state = allocate_state(model, &blocks);
-                let outputs = Outputs::build(model, &state);
-                (blocks, state, outputs)
+                (blocks, state)
             };
             self.blocks = blocks;
             self.state = state;
-            self.outputs = outputs;
             self.prev_t = None;
             self.params_dirty = false;
             self.durable_restore_ready = false;

@@ -41,16 +41,25 @@ CASES = (
          "TemplateRef"),
     Case("flat_query_absent", "let _: Option<oce_api::SemanticQuery> = None;", "E0425",
          "SemanticQuery"),
-    Case("csv_input_absent", 'let _ = oce_api::InputSource::Csv { path: "".into(), '
-         'bindings: vec![] };', "E0599", "Csv"),
     Case("error_severity_absent", "let _ = oce_api::AssertLevel::Error;", "E0599", "Error"),
 )
 
-POSITIVE = """use oce_api::{AssertLevel, CollectSpec, Engine, InputSource, SimSpec, Value};
+FRAME_CASES = tuple(
+    Case(f"{name}_absent", f"let _ = Host::{name};", "E0599", name)
+    for name in ("tick", "tick_with", "set_input", "simulate", "step_realtime", "outputs",
+                 "set_realtime_epoch_unix_nanos", "realtime_epoch_unix_nanos")
+) + tuple(
+    Case(f"{name.lower()}_type_absent", f"let _: Option<oce_api::{name}> = None;", "E0425", name)
+    for name in ("Outputs", "SimSpec", "SimMetrics", "StepReport", "InputSource", "OutputTrace",
+                 "CollectSpec")
+)
+
+POSITIVE = """use oce_api::{AssertLevel, CompletedFrame, Engine, PreparedInputFrame, Value};
 fn send_sync<T: Send + Sync>() {}
 fn supported(bytes: &[u8]) -> Result<(), oce_api::OcError> {
     send_sync::<Engine>();
-    send_sync::<SimSpec>();
+    send_sync::<PreparedInputFrame>();
+    send_sync::<CompletedFrame>();
     let mut engine = Engine::in_memory();
     let _: usize = engine.cxf_byte_limit();
     engine.set_cxf_byte_limit(oce_api::MAX_CXF_BYTES / 2)?;
@@ -64,12 +73,11 @@ fn supported(bytes: &[u8]) -> Result<(), oce_api::OcError> {
     let query = oce_api::oce_store::SemanticQuery::FuzzyText { query: "x".into(), k: 1 };
     let _: oce_store::SemanticQuery = query;
     let _ = AssertLevel::Warning;
-    for inputs in [InputSource::None, InputSource::Constant(vec![("u".into(), Value::Real(1.0))]),
-                   InputSource::Closure(Box::new(|t| vec![("u".into(), Value::Real(t))]))] {
-        let _ = engine.simulate(&SimSpec {
-            t_start: 0.0, t_stop: 1.0, step: 1.0, inputs, collect: CollectSpec::None,
-        })?;
-    }
+    let prepared = engine.prepare_frame(0.0, &[("u", Value::Real(1.0))])?;
+    let completed = engine.execute_frame(prepared)?;
+    let _ = (completed.time(), completed.sequence(), completed.outputs(), completed.diagnostics());
+    let _ = engine.get_output("y")?;
+    let _ = engine.watch(&["y"])?;
     Ok(())
 }
 """
@@ -163,10 +171,11 @@ def check_selection(selection: str, cases: tuple[Case, ...]) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--group", choices=("all", "deferred", "assertion"), default="all",
+    parser.add_argument("--group", choices=("all", "deferred", "assertion", "frame"), default="all",
                         help="focused test-first group; the gate always runs all")
     args = parser.parse_args()
-    cases = CASES if args.group == "all" else CASES[:5] if args.group == "deferred" else CASES[5:]
+    cases = {"all": CASES + FRAME_CASES, "deferred": CASES[:4],
+             "assertion": CASES[4:], "frame": FRAME_CASES}[args.group]
     try:
         failures = [failure for selection in SELECTIONS
                     for failure in check_selection(selection, cases)]

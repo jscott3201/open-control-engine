@@ -1,3 +1,5 @@
+//! Warning records from complete-frame transitions, including mixed native producers.
+
 use std::sync::Arc;
 
 use oce_blocks::{Block, BlockKind, BlockSignature, Ctx};
@@ -7,7 +9,7 @@ use oce_model::{
 };
 use oce_store_mem::MemStore;
 
-use super::{AssertLevel, CollectSpec, Engine, InputSource, Outputs, SimSpec};
+use super::{AssertLevel, Engine};
 
 struct WarningBlock;
 
@@ -54,50 +56,28 @@ fn loaded_warning_engine() -> Engine<MemStore> {
     let blocks: Vec<Box<dyn Block>> = vec![Box::new(WarningBlock)];
     let schedule = compile(&model, &blocks).expect("warning source schedule");
     let state = allocate_state(&model, &blocks);
-    let outputs = Outputs::build(&model, &state);
 
     let mut eng = Engine::in_memory();
     eng.model = Arc::new(model);
     eng.schedule = schedule;
     eng.blocks = blocks;
     eng.state = state;
-    eng.outputs = outputs;
+    eng.loaded = true;
     eng
 }
 
-fn sim_spec(t_start: f64, t_stop: f64, step: f64, collect: CollectSpec) -> SimSpec {
-    SimSpec {
-        t_start,
-        t_stop,
-        step,
-        inputs: InputSource::None,
-        collect,
-    }
-}
-
 #[test]
-fn step_realtime_delivers_assert_diagnostics_and_simulate_drops_them() {
+fn completed_frame_delivers_the_producer_warning_without_output_points() {
     let mut eng = loaded_warning_engine();
-    // Verification-only model time is anchored explicitly at the UNIX epoch.
-    eng.set_realtime_epoch_unix_nanos(0);
-    let report = eng.step_realtime(3.0).unwrap();
-    assert_eq!(report.asserts.len(), 1);
-    let event = &report.asserts[0];
+    let plan = eng.prepare_frame(3.0, &[]).unwrap();
+    let report = eng.execute_frame(plan).unwrap();
+    assert_eq!(report.diagnostics().len(), 1);
+    let event = &report.diagnostics()[0];
     assert_eq!(event.block, "test.WarningBlock");
     assert_eq!(event.message, "assertion tripped");
     assert_eq!(event.t.to_bits(), 3.0f64.to_bits());
     assert_eq!(event.level, AssertLevel::Warning);
-    assert_eq!(report.written, 0);
-
-    let mut sim_engine = loaded_warning_engine();
-    let metrics = sim_engine
-        .simulate(&sim_spec(3.0, 3.0, 1.0, CollectSpec::None))
-        .expect("simulate keeps warning sink no-op");
-    assert_eq!(metrics.ticks, 1);
-    assert!(
-        metrics.trace.rows() == 0,
-        "simulate remains timing/trace-only and exposes no assert stream"
-    );
+    assert!(report.outputs().is_empty());
 }
 
 fn assert_model(message: &str) -> ModelGraph {
@@ -131,22 +111,18 @@ fn loaded_assert_engine(message: &str) -> Engine<MemStore> {
 
 fn assert_trace(steps: &[(f64, bool)]) -> Vec<(String, String, u64, AssertLevel)> {
     let mut eng = loaded_assert_engine("freezestat tripped");
-    // Determinism harness: choose the UNIX epoch explicitly; no production clock is implied.
-    eng.set_realtime_epoch_unix_nanos(0);
-    assert!(
-        eng.outputs().is_empty(),
-        "Assert declares no output connectors"
-    );
     let mut events = Vec::new();
     for (t, u) in steps {
-        eng.set_input("conn#0", Value::Boolean(*u))
-            .expect("boundary input is stageable");
-        let report = eng.step_realtime(*t).expect("assert tick succeeds");
-        assert_eq!(report.written, 0);
+        let plan = eng
+            .prepare_frame(*t, &[("conn#0", Value::Boolean(*u))])
+            .unwrap();
+        let report = eng.execute_frame(plan).unwrap();
+        assert!(report.outputs().is_empty());
         events.extend(
             report
-                .asserts
-                .into_iter()
+                .diagnostics()
+                .iter()
+                .cloned()
                 .map(|e| (e.block, e.message, e.t.to_bits(), e.level)),
         );
     }
@@ -154,7 +130,7 @@ fn assert_trace(steps: &[(f64, bool)]) -> Vec<(String, String, u64, AssertLevel)
 }
 
 #[test]
-fn utilities_assert_delivers_warning_events_through_step_realtime() {
+fn false_inputs_emit_on_each_frame_and_true_inputs_are_silent() {
     let events = assert_trace(&[
         (0.0, true),
         (1.0, false),
@@ -233,25 +209,31 @@ fn mixed_native_block_and_assert_warnings_repeat_without_escalation() {
         });
         let mut engine = Engine::in_memory();
         engine.build_model_in_memory(model, None).unwrap();
-        engine.set_realtime_epoch_unix_nanos(0);
         let mut events = Vec::new();
         for time in [0.0, 0.0, 1.0] {
-            engine.set_input("conn#0", Value::Boolean(false)).unwrap();
-            engine.set_input("conn#1", Value::Real(0.0)).unwrap();
-            engine.set_input("conn#2", Value::Real(0.0)).unwrap();
-            let report = engine.step_realtime(time).unwrap();
-            assert_eq!(report.written, 1);
-            assert_eq!(report.asserts.len(), 2);
-            assert_eq!(report.asserts[0].message, "false remains advisory");
+            let plan = engine
+                .prepare_frame(
+                    time,
+                    &[
+                        ("conn#0", Value::Boolean(false)),
+                        ("conn#1", Value::Real(0.0)),
+                        ("conn#2", Value::Real(0.0)),
+                    ],
+                )
+                .unwrap();
+            let report = engine.execute_frame(plan).unwrap();
+            assert_eq!(report.diagnostics().len(), 2);
+            assert_eq!(report.diagnostics()[0].message, "false remains advisory");
             assert!(
-                report.asserts[1]
+                report.diagnostics()[1]
                     .message
                     .starts_with("Atan2: inputs u1 and u2")
             );
             events.extend(
                 report
-                    .asserts
-                    .into_iter()
+                    .diagnostics()
+                    .iter()
+                    .cloned()
                     .map(|event| (event.block, event.t.to_bits(), event.level)),
             );
         }

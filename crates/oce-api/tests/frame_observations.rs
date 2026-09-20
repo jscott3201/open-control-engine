@@ -116,31 +116,24 @@ fn allocation_cost_is_only_prepared_targets_boundary_results_and_emitted_warning
 }
 
 #[test]
-fn report_latency_against_legacy_tick_without_a_flaky_ratio_threshold() {
+fn report_frame_latency_without_a_flaky_ratio_threshold() {
     const BATCH: usize = 2048;
     const SAMPLES: usize = 5;
     for &(name, bytes, _, _) in CASES {
         let (mut native, observations) = setup(bytes);
-        let (mut legacy, _) = setup(bytes);
         let pairs: Vec<_> = observations
             .iter()
             .map(|(p, v)| (p.as_str(), v.clone()))
             .collect();
-        for (path, value) in &observations {
-            legacy.set_input(path, value.clone()).unwrap();
-        }
         for _ in 0..64 {
             let frame = native.prepare_frame(0.0, &pairs).unwrap();
             black_box(native.execute_frame(frame).unwrap());
-            black_box(legacy.tick(0.0).unwrap());
         }
         let mut commit_samples = Vec::new();
-        let mut tick_samples = Vec::new();
         let mut complete_samples = Vec::new();
-        for sample in 0..SAMPLES {
+        for _ in 0..SAMPLES {
             // Preparation and outer batch allocation excluded from commit-only; moved plans and
-            // result destruction included. Legacy holds identical inputs and reads MemStore's
-            // empty snapshots; it uses a no-op warning sink and retains no immutable result.
+            // result destruction included. No comparison with removed execution profiles.
             let plans: Vec<_> = (0..BATCH)
                 .map(|_| native.prepare_frame(0.0, &pairs).unwrap())
                 .collect();
@@ -151,20 +144,7 @@ fn report_latency_against_legacy_tick_without_a_flaky_ratio_threshold() {
                 }
                 start.elapsed().as_nanos() / BATCH as u128
             };
-            let tick = |legacy: &mut Engine| {
-                let start = Instant::now();
-                for _ in 0..BATCH {
-                    black_box(legacy.tick(0.0).unwrap());
-                }
-                start.elapsed().as_nanos() / BATCH as u128
-            };
-            if sample % 2 == 0 {
-                commit_samples.push(commit(&mut native));
-                tick_samples.push(tick(&mut legacy));
-            } else {
-                tick_samples.push(tick(&mut legacy));
-                commit_samples.push(commit(&mut native));
-            }
+            commit_samples.push(commit(&mut native));
             let start = Instant::now();
             for _ in 0..BATCH {
                 let plan = native.prepare_frame(0.0, &pairs).unwrap();
@@ -173,7 +153,7 @@ fn report_latency_against_legacy_tick_without_a_flaky_ratio_threshold() {
             complete_samples.push(start.elapsed().as_nanos() / BATCH as u128);
         }
         println!(
-            "frame latency {name} {}/{} debug_assertions={} warmup=64 batch={BATCH} samples={SAMPLES} ns/op tick={tick_samples:?} commit={commit_samples:?} prepare+commit={complete_samples:?}",
+            "frame latency {name} {}/{} debug_assertions={} warmup=64 batch={BATCH} samples={SAMPLES} ns/op commit={commit_samples:?} prepare+commit={complete_samples:?}",
             std::env::consts::ARCH,
             std::env::consts::OS,
             cfg!(debug_assertions)

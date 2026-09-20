@@ -53,62 +53,49 @@ revision appropriate to your release process rather than following a moving bran
 oce-api = { git = "https://github.com/jscott3201/open-control-engine", rev = "<commit-sha>" }
 ```
 
-Load a CDL sequence from CXF and simulate it:
+Load a CDL sequence from CXF and execute complete typed frames:
 
 Every point is named by an authored `@id` from the CXF document, expanded against the document's
 `@context` to canonical absolute form at ingest — the declared boundary input's `@id` for a
 boundary-driven point, the connector's own otherwise — so the same key names the same point
 across loads of the same document, including a document re-serialized between compact and
 expanded spellings. The document's declared boundary-output names (root `S231:hasOutput`) read
-as aliases for their driving connectors on `get_output`, `watch`, and `CollectSpec::Named`;
-internal connector paths, like the three below, remain valid output identities alongside them.
+as aliases for their driving connectors on `get_output` and `watch`. These are latest-state,
+non-receipt inspection surfaces. `CompletedFrame` retains the committed executable boundary
+outputs in lexical identity order, independently of later engine changes.
 
 ```rust
-use oce_api::{CollectSpec, Engine, InputSource, SimSpec, Value};
+use oce_api::{Engine, Value};
 
 const ECONOMIZER: &str = "http://example.org#g36.ahu_economizer";
-const ECONOMIZER_ENABLED: &str = "http://example.org#g36.ahu_economizer.enableLatch.y";
-const DAMPER_COMMAND: &str = "http://example.org#g36.ahu_economizer.damperSwitch.y";
-const OA_TEMPERATURE_DELTA: &str = "http://example.org#g36.ahu_economizer.returnMinusOutdoor.y";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // An engine with the default in-memory store — no database.
-    let mut engine = Engine::in_memory();
-
-    // Parse, validate, and freeze the schedule.
+    let mut engine = Engine::in_memory(); // Default in-memory store, no database.
     let cxf_bytes = std::fs::read("crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld")?;
     engine.load_cxf(&cxf_bytes)?;
 
-    // Simulate: feed inputs per tick, collect named outputs.
-    let metrics = engine.simulate(&SimSpec {
-        t_start: 0.0,
-        t_stop: 4.0,
-        step: 1.0,
-        inputs: InputSource::Closure(Box::new(|t| {
-            vec![
-                (format!("{ECONOMIZER}.return_air_temp"), Value::Real(24.0)),
-                (
-                    format!("{ECONOMIZER}.outdoor_air_temp"),
-                    Value::Real(18.0 + t),
-                ),
-                (format!("{ECONOMIZER}.operating_mode"), Value::Integer(1)),
-            ]
-        })),
-        collect: CollectSpec::Named {
-            points: vec![
-                ECONOMIZER_ENABLED.to_string(),
-                DAMPER_COMMAND.to_string(),
-                OA_TEMPERATURE_DELTA.to_string(),
-            ],
-            stride: 1,
-        },
-    })?;
-
-    println!("times: {:?}", metrics.trace.times());
-    for (index, name) in metrics.trace.columns().iter().enumerate() {
+    // The host owns cadence and supplies every required observation on each frame.
+    for index in 0..=4 {
+        let time = f64::from(index);
+        let observations = [
+            (format!("{ECONOMIZER}.return_air_temp"), Value::Real(24.0)),
+            (
+                format!("{ECONOMIZER}.outdoor_air_temp"),
+                Value::Real(18.0 + time),
+            ),
+            (format!("{ECONOMIZER}.operating_mode"), Value::Integer(1)),
+        ];
+        let entries: Vec<_> = observations
+            .iter()
+            .map(|(p, v)| (p.as_str(), v.clone()))
+            .collect();
+        let prepared = engine.prepare_frame(time, &entries)?;
+        let completed = engine.execute_frame(prepared)?;
         println!(
-            "{name}: {:?}",
-            metrics.trace.column(index).unwrap_or_default()
+            "frame {} at {}: {:?}",
+            completed.sequence(),
+            completed.time(),
+            completed.outputs()
         );
     }
     Ok(())
@@ -137,8 +124,8 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   and honest parameter defaults. See [CDL coverage](docs/cdl-coverage.md).
 - Runs **46 G36 conformance fixtures** end to end through the frozen facade, each with a committed
   whole-sequence golden trace.
-- Commits computed outputs through the storage port after a real-time step, with host-supplied
-  timestamps — the seam never invents time.
+- Executes exclusively through `prepare_frame` followed by consuming `execute_frame`, with no
+  Store reads or writes. Hosts own cadence, persistence and equipment delivery.
 
 ## What it does not do
 
@@ -157,12 +144,12 @@ Stating this plainly is more useful than a feature list.
   global Tier-3 report remains skipped —
   [read the full accounting](docs/verification-evidence.md).
 - **`CDL.Logical.Pre` is a host-tick delay, not Modelica event iteration.** Under the fixed
-  [HostTick v1 profile](docs/execution-profile.md), every successful `Engine::tick` call advances
+  [HostTick v1 profile](docs/execution-profile.md), every successful `Engine::execute_frame` call advances
   `Pre` once, including repeated calls at the same timestamp. Exact Modelica/OpenModelica `Pre`
   equivalence is outside the conformance claim.
 - **It has no Python bindings**, no daemon, no scheduler, and no database.
 - **`halt()` does not stop execution.** It only opens the tune-at-rest window in which
-  `set_param` is accepted; ticks, real-time steps, and simulations continue if the host calls them.
+  `set_param` is accepted; complete-frame execution can continue while halted with no pending edits.
 - **Deferred loader signatures have been removed.** `load_from_semantic` and `load_modelica`
   are no longer callable; prepare supported CXF externally and use `load_cxf`.
   See [facade migration](docs/facade-migration.md) for the pre-release source break.
@@ -177,10 +164,10 @@ Stating this plainly is more useful than a feature list.
 The engine deliberately implements **no fail-safe policy of its own**, and that is a decision your
 host layer has to answer for:
 
-- **Staging is status-agnostic.** A sample is converted from its value regardless of `PointStatus`
-  — `Fault`, `Stale`, and `Uninitialized` all stage exactly like `Ok`.
-- **A missing sample is not an error.** The connector holds its previous value indefinitely. A dead
-  sensor is indistinguishable from a steady one, for as long as it stays dead.
+- **Every boundary input is required exactly once.** Missing values refuse before mutation;
+  there is no sparse staging, implicit zero, or hold-last execution profile.
+- **Typed values are not sensor-quality evidence.** Frame preparation checks types and declared
+  domains, not host freshness, plausibility or permission to command. Store samples are not consulted.
 
 Staleness limits, fault reactions, and safe-state fallback belong in the host above the engine.
 **[Host responsibilities](docs/host-responsibilities.md)** is the checklist; read it before wiring

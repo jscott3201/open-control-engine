@@ -28,20 +28,6 @@ point_list: 27
   http://example.org#g36.ahu_economizer.damperSwitch.u2 In Bool DigitalInput
   http://example.org#g36.ahu_economizer.damperSwitch.u3 In Real AnalogInput
   http://example.org#g36.ahu_economizer.damperSwitch.y Out Real AnalogOutput
-to_map: 12
-  http://example.org#g36.ahu_economizer.returnMinusOutdoor.y
-  http://example.org#g36.ahu_economizer.favorable.y
-  http://example.org#g36.ahu_economizer.modeIdentity.y
-  http://example.org#g36.ahu_economizer.modeAllowed.y
-  http://example.org#g36.ahu_economizer.modeToReal.y
-  http://example.org#g36.ahu_economizer.candidate.y
-  http://example.org#g36.ahu_economizer.delay.y
-  http://example.org#g36.ahu_economizer.notCandidate.y
-  http://example.org#g36.ahu_economizer.enableLatch.y
-  http://example.org#g36.ahu_economizer.damperOpen.y
-  http://example.org#g36.ahu_economizer.damperMinimum.y
-  http://example.org#g36.ahu_economizer.damperSwitch.y
-step_realtime_written: 12
 fixture: ahu_supply_air_temp_reset
 io_summary: ai=8 ao=7 di=0 do=0 network=0 total=15
 point_list: 15
@@ -60,15 +46,6 @@ point_list: 15
   http://example.org#g36.ahu_supply_air_temp_reset.satLine.f2 In Real AnalogInput
   http://example.org#g36.ahu_supply_air_temp_reset.satLine.u In Real AnalogInput
   http://example.org#g36.ahu_supply_air_temp_reset.satLine.y Out Real AnalogOutput
-to_map: 7
-  http://example.org#g36.ahu_supply_air_temp_reset.zoneMinusSet.y
-  http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter.y
-  http://example.org#g36.ahu_supply_air_temp_reset.x1.y
-  http://example.org#g36.ahu_supply_air_temp_reset.f1.y
-  http://example.org#g36.ahu_supply_air_temp_reset.x2.y
-  http://example.org#g36.ahu_supply_air_temp_reset.f2.y
-  http://example.org#g36.ahu_supply_air_temp_reset.satLine.y
-step_realtime_written: 7
 fixture: cooling_only_active_air_flow
 io_summary: ai=6 ao=6 di=6 do=5 network=0 total=23
 point_list: 23
@@ -95,19 +72,6 @@ point_list: 23
   http://example.org#g36.source.cooling_only_active_air_flow.or2.u1 In Bool DigitalInput
   http://example.org#g36.source.cooling_only_active_air_flow.or2.u2 In Bool DigitalInput
   http://example.org#g36.source.cooling_only_active_air_flow.or2.y Out Bool DigitalOutput
-to_map: 11
-  http://example.org#g36.source.cooling_only_active_air_flow.actCooMax.y
-  http://example.org#g36.source.cooling_only_active_air_flow.or3.y
-  http://example.org#g36.source.cooling_only_active_air_flow.booToRea.y
-  http://example.org#g36.source.cooling_only_active_air_flow.actMin.y
-  http://example.org#g36.source.cooling_only_active_air_flow.occMod.y
-  http://example.org#g36.source.cooling_only_active_air_flow.intEqu.y
-  http://example.org#g36.source.cooling_only_active_air_flow.cooDowMod.y
-  http://example.org#g36.source.cooling_only_active_air_flow.setUpMod.y
-  http://example.org#g36.source.cooling_only_active_air_flow.intEqu2.y
-  http://example.org#g36.source.cooling_only_active_air_flow.intEqu1.y
-  http://example.org#g36.source.cooling_only_active_air_flow.or2.y
-step_realtime_written: 11
 fixture: cooling_only_alarms
 io_summary: ai=14 ao=13 di=42 do=30 network=0 total=99
 point_list: 99
@@ -210,51 +174,6 @@ point_list: 99
   http://example.org#g36.source.cooling_only_alarms.and3.u1 In Bool DigitalInput
   http://example.org#g36.source.cooling_only_alarms.and3.u2 In Bool DigitalInput
   http://example.org#g36.source.cooling_only_alarms.and3.y Out Bool DigitalOutput
-to_map: 43
-  http://example.org#g36.source.cooling_only_alarms.gai.y
-  http://example.org#g36.source.cooling_only_alarms.les.y
-  http://example.org#g36.source.cooling_only_alarms.truDel.y
-  http://example.org#g36.source.cooling_only_alarms.greThr.y
-  http://example.org#g36.source.cooling_only_alarms.gre.y
-  http://example.org#g36.source.cooling_only_alarms.gai1.y
-  http://example.org#g36.source.cooling_only_alarms.truDel1.y
-  http://example.org#g36.source.cooling_only_alarms.and2.y
-  http://example.org#g36.source.cooling_only_alarms.and1.y
-  http://example.org#g36.source.cooling_only_alarms.lowFloAla.y
-  http://example.org#g36.source.cooling_only_alarms.conInt.y
-  http://example.org#g36.source.cooling_only_alarms.booToInt.y
-  http://example.org#g36.source.cooling_only_alarms.conInt1.y
-  http://example.org#g36.source.cooling_only_alarms.greThr1.y
-  http://example.org#g36.source.cooling_only_alarms.booToInt1.y
-  http://example.org#g36.source.cooling_only_alarms.proInt.y
-  http://example.org#g36.source.cooling_only_alarms.and8.y
-  http://example.org#g36.source.cooling_only_alarms.not1.y
-  http://example.org#g36.source.cooling_only_alarms.and4.y
-  http://example.org#g36.source.cooling_only_alarms.not2.y
-  http://example.org#g36.source.cooling_only_alarms.cooMaxFlo.y
-  http://example.org#g36.source.cooling_only_alarms.gai2.y
-  http://example.org#g36.source.cooling_only_alarms.not3.y
-  http://example.org#g36.source.cooling_only_alarms.truDel2.y
-  http://example.org#g36.source.cooling_only_alarms.gre1.y
-  http://example.org#g36.source.cooling_only_alarms.and5.y
-  http://example.org#g36.source.cooling_only_alarms.not4.y
-  http://example.org#g36.source.cooling_only_alarms.booToInt2.y
-  http://example.org#g36.source.cooling_only_alarms.truDel3.y
-  http://example.org#g36.source.cooling_only_alarms.cloDam.y
-  http://example.org#g36.source.cooling_only_alarms.leaDamAla1.y
-  http://example.org#g36.source.cooling_only_alarms.leaDamAla2.y
-  http://example.org#g36.source.cooling_only_alarms.not5.y
-  http://example.org#g36.source.cooling_only_alarms.booToInt3.y
-  http://example.org#g36.source.cooling_only_alarms.truDel4.y
-  http://example.org#g36.source.cooling_only_alarms.and11.y
-  http://example.org#g36.source.cooling_only_alarms.and10.y
-  http://example.org#g36.source.cooling_only_alarms.fanIni.y
-  http://example.org#g36.source.cooling_only_alarms.occMod.y
-  http://example.org#g36.source.cooling_only_alarms.isOcc.y
-  http://example.org#g36.source.cooling_only_alarms.and6.y
-  http://example.org#g36.source.cooling_only_alarms.and7.y
-  http://example.org#g36.source.cooling_only_alarms.and3.y
-step_realtime_written: 43
 fixture: cooling_only_controller
 io_summary: ai=150 ao=115 di=132 do=95 network=0 total=492
 point_list: 492
@@ -750,218 +669,6 @@ point_list: 492
   http://example.org#g36.source.cooling_only_controller.zonSta.addInt1.u1 In Int AnalogInput
   http://example.org#g36.source.cooling_only_controller.zonSta.addInt1.u2 In Int AnalogInput
   http://example.org#g36.source.cooling_only_controller.zonSta.addInt1.y Out Int AnalogOutput
-to_map: 210
-  http://example.org#g36.source.cooling_only_controller.actAirSet.actCooMax.y
-  http://example.org#g36.source.cooling_only_controller.actAirSet.or3.y
-  http://example.org#g36.source.cooling_only_controller.actAirSet.booToRea.y
-  http://example.org#g36.source.cooling_only_controller.actAirSet.actMin.y
-  http://example.org#g36.source.cooling_only_controller.actAirSet.occMod.y
-  http://example.org#g36.source.cooling_only_controller.actAirSet.intEqu.y
-  http://example.org#g36.source.cooling_only_controller.actAirSet.cooDowMod.y
-  http://example.org#g36.source.cooling_only_controller.actAirSet.setUpMod.y
-  http://example.org#g36.source.cooling_only_controller.actAirSet.intEqu2.y
-  http://example.org#g36.source.cooling_only_controller.actAirSet.intEqu1.y
-  http://example.org#g36.source.cooling_only_controller.actAirSet.or2.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.greThr1.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.greThr2.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.greThr3.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.greThr.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.greThr4.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.booToInt.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.booToInt1.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.gai1.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.gai2.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.sub2.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.sub3.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.and1.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.and2.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.and3.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.and4.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.thrCooResReq.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.twoCooResReq.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.thrPreResReq.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.twoPreResReq.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.intSwi.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.intSwi1.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.swi4.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.swi5.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.tim1.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.tim2.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.tim3.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.greEqu.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.greEqu1.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.and5.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.sampler.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.sampler1.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.sampler2.y
-  http://example.org#g36.source.cooling_only_controller.sysReq.sampler3.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.conCoo.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.conHea.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.enaHeaLoo.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.enaCooLoo.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.disCoo.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.colZon.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.zerCoo.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.cooConSig.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.holZon.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.disHea.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.zerHea.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.heaConSig.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.zerCon.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.zerCon1.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.disCooCon.y
-  http://example.org#g36.source.cooling_only_controller.conLoo.disHeaCon.y
-  http://example.org#g36.source.cooling_only_controller.ala.gai.y
-  http://example.org#g36.source.cooling_only_controller.ala.les.y
-  http://example.org#g36.source.cooling_only_controller.ala.truDel.y
-  http://example.org#g36.source.cooling_only_controller.ala.greThr.y
-  http://example.org#g36.source.cooling_only_controller.ala.gre.y
-  http://example.org#g36.source.cooling_only_controller.ala.gai1.y
-  http://example.org#g36.source.cooling_only_controller.ala.truDel1.y
-  http://example.org#g36.source.cooling_only_controller.ala.and2.y
-  http://example.org#g36.source.cooling_only_controller.ala.and1.y
-  http://example.org#g36.source.cooling_only_controller.ala.lowFloAla.y
-  http://example.org#g36.source.cooling_only_controller.ala.conInt.y
-  http://example.org#g36.source.cooling_only_controller.ala.booToInt.y
-  http://example.org#g36.source.cooling_only_controller.ala.conInt1.y
-  http://example.org#g36.source.cooling_only_controller.ala.greThr1.y
-  http://example.org#g36.source.cooling_only_controller.ala.booToInt1.y
-  http://example.org#g36.source.cooling_only_controller.ala.proInt.y
-  http://example.org#g36.source.cooling_only_controller.ala.and8.y
-  http://example.org#g36.source.cooling_only_controller.ala.not1.y
-  http://example.org#g36.source.cooling_only_controller.ala.and4.y
-  http://example.org#g36.source.cooling_only_controller.ala.not2.y
-  http://example.org#g36.source.cooling_only_controller.ala.cooMaxFlo.y
-  http://example.org#g36.source.cooling_only_controller.ala.gai2.y
-  http://example.org#g36.source.cooling_only_controller.ala.not3.y
-  http://example.org#g36.source.cooling_only_controller.ala.truDel2.y
-  http://example.org#g36.source.cooling_only_controller.ala.gre1.y
-  http://example.org#g36.source.cooling_only_controller.ala.and5.y
-  http://example.org#g36.source.cooling_only_controller.ala.not4.y
-  http://example.org#g36.source.cooling_only_controller.ala.booToInt2.y
-  http://example.org#g36.source.cooling_only_controller.ala.truDel3.y
-  http://example.org#g36.source.cooling_only_controller.ala.cloDam.y
-  http://example.org#g36.source.cooling_only_controller.ala.leaDamAla1.y
-  http://example.org#g36.source.cooling_only_controller.ala.leaDamAla2.y
-  http://example.org#g36.source.cooling_only_controller.ala.not5.y
-  http://example.org#g36.source.cooling_only_controller.ala.booToInt3.y
-  http://example.org#g36.source.cooling_only_controller.ala.truDel4.y
-  http://example.org#g36.source.cooling_only_controller.ala.and11.y
-  http://example.org#g36.source.cooling_only_controller.ala.and10.y
-  http://example.org#g36.source.cooling_only_controller.ala.fanIni.y
-  http://example.org#g36.source.cooling_only_controller.ala.occMod.y
-  http://example.org#g36.source.cooling_only_controller.ala.isOcc.y
-  http://example.org#g36.source.cooling_only_controller.ala.and6.y
-  http://example.org#g36.source.cooling_only_controller.ala.and7.y
-  http://example.org#g36.source.cooling_only_controller.ala.and3.y
-  http://example.org#g36.source.cooling_only_controller.timSup.supTim.y
-  http://example.org#g36.source.cooling_only_controller.timSup.samSet.y
-  http://example.org#g36.source.cooling_only_controller.timSup.uniDel.y
-  http://example.org#g36.source.cooling_only_controller.timSup.abs1.y
-  http://example.org#g36.source.cooling_only_controller.timSup.triSam.y
-  http://example.org#g36.source.cooling_only_controller.timSup.edg.y
-  http://example.org#g36.source.cooling_only_controller.timSup.lat.y
-  http://example.org#g36.source.cooling_only_controller.timSup.lat1.y
-  http://example.org#g36.source.cooling_only_controller.timSup.tim.y
-  http://example.org#g36.source.cooling_only_controller.timSup.tim.passed
-  http://example.org#g36.source.cooling_only_controller.timSup.greThr.y
-  http://example.org#g36.source.cooling_only_controller.timSup.gai.y
-  http://example.org#g36.source.cooling_only_controller.timSup.sub1.y
-  http://example.org#g36.source.cooling_only_controller.timSup.conZer.y
-  http://example.org#g36.source.cooling_only_controller.timSup.maxSupTim.y
-  http://example.org#g36.source.cooling_only_controller.timSup.con5.y
-  http://example.org#g36.source.cooling_only_controller.timSup.swi.y
-  http://example.org#g36.source.cooling_only_controller.timSup.pre1.y
-  http://example.org#g36.source.cooling_only_controller.timSup.pasSupTim.y
-  http://example.org#g36.source.cooling_only_controller.timSup.pasSup.y
-  http://example.org#g36.source.cooling_only_controller.timSup.temDif.y
-  http://example.org#g36.source.cooling_only_controller.timSup.triSam1.y
-  http://example.org#g36.source.cooling_only_controller.timSup.abs2.y
-  http://example.org#g36.source.cooling_only_controller.timSup.truDel.y
-  http://example.org#g36.source.cooling_only_controller.timSup.con1.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.airDisEff.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.lin.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.zer.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.one.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.addPar.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.inOccMod.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.booToRea.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.co2Con.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.occMinAirSet.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.zonMinFlo.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.zonCooMaxFlo.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.popBreOutAir.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.or2.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.notOccMod.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.perOccSta.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.zer1.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.modPopBreAir.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.modAreBreAir.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.occMinAir.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.notOcc.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.unpPopBreAir.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.booToRea1.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.unPopAreBreAir.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.unpMinZonFlo.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.unpAreBreAir.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.unpMinZonAir.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.reqBreAir.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.minOA.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.occMod.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.cooSup.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.gai2.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.desAreAir.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.desPopAir.y
-  http://example.org#g36.source.cooling_only_controller.setPoi.winOpe.y
-  http://example.org#g36.source.cooling_only_controller.dam.con.y
-  http://example.org#g36.source.cooling_only_controller.dam.con1.y
-  http://example.org#g36.source.cooling_only_controller.dam.lin.y
-  http://example.org#g36.source.cooling_only_controller.dam.gre.y
-  http://example.org#g36.source.cooling_only_controller.dam.swi.y
-  http://example.org#g36.source.cooling_only_controller.dam.actFlo.y
-  http://example.org#g36.source.cooling_only_controller.dam.conPID.y
-  http://example.org#g36.source.cooling_only_controller.dam.conInt.y
-  http://example.org#g36.source.cooling_only_controller.dam.cooSta.y
-  http://example.org#g36.source.cooling_only_controller.dam.nomFlow.y
-  http://example.org#g36.source.cooling_only_controller.dam.VDisSet_flowNor.y
-  http://example.org#g36.source.cooling_only_controller.dam.VDis_flowNor.y
-  http://example.org#g36.source.cooling_only_controller.dam.conInt1.y
-  http://example.org#g36.source.cooling_only_controller.dam.forZerFlo.y
-  http://example.org#g36.source.cooling_only_controller.dam.forCooMax.y
-  http://example.org#g36.source.cooling_only_controller.dam.conInt2.y
-  http://example.org#g36.source.cooling_only_controller.dam.forMinFlo.y
-  http://example.org#g36.source.cooling_only_controller.dam.conInt3.y
-  http://example.org#g36.source.cooling_only_controller.dam.zerFlo.y
-  http://example.org#g36.source.cooling_only_controller.dam.cooMax.y
-  http://example.org#g36.source.cooling_only_controller.dam.minFlo.y
-  http://example.org#g36.source.cooling_only_controller.dam.add2.y
-  http://example.org#g36.source.cooling_only_controller.dam.add1.y
-  http://example.org#g36.source.cooling_only_controller.dam.swi1.y
-  http://example.org#g36.source.cooling_only_controller.dam.or3.y
-  http://example.org#g36.source.cooling_only_controller.dam.conInt4.y
-  http://example.org#g36.source.cooling_only_controller.dam.intEqu3.y
-  http://example.org#g36.source.cooling_only_controller.dam.intEqu4.y
-  http://example.org#g36.source.cooling_only_controller.dam.conInt5.y
-  http://example.org#g36.source.cooling_only_controller.dam.cloDam.y
-  http://example.org#g36.source.cooling_only_controller.dam.opeDam.y
-  http://example.org#g36.source.cooling_only_controller.dam.add3.y
-  http://example.org#g36.source.cooling_only_controller.dam.or2.y
-  http://example.org#g36.source.cooling_only_controller.dam.swi2.y
-  http://example.org#g36.source.cooling_only_controller.dam.or1.y
-  http://example.org#g36.source.cooling_only_controller.zonSta.booToIntHea.y
-  http://example.org#g36.source.cooling_only_controller.zonSta.booToIntCoo.y
-  http://example.org#g36.source.cooling_only_controller.zonSta.isDea.y
-  http://example.org#g36.source.cooling_only_controller.zonSta.booToIntDea.y
-  http://example.org#g36.source.cooling_only_controller.zonSta.isHea.y
-  http://example.org#g36.source.cooling_only_controller.zonSta.hysUHea.y
-  http://example.org#g36.source.cooling_only_controller.zonSta.hysUCoo.y
-  http://example.org#g36.source.cooling_only_controller.zonSta.uHeaMinUCoo.y
-  http://example.org#g36.source.cooling_only_controller.zonSta.isCoo.y
-  http://example.org#g36.source.cooling_only_controller.zonSta.hysU.y
-  http://example.org#g36.source.cooling_only_controller.zonSta.notHea.y
-  http://example.org#g36.source.cooling_only_controller.zonSta.addInt.y
-  http://example.org#g36.source.cooling_only_controller.zonSta.addInt1.y
-step_realtime_written: 210
 fixture: cooling_only_dampers
 io_summary: ai=34 ao=25 di=16 do=10 network=0 total=85
 point_list: 85
@@ -1050,43 +757,6 @@ point_list: 85
   http://example.org#g36.source.cooling_only_dampers.or1.u1 In Bool DigitalInput
   http://example.org#g36.source.cooling_only_dampers.or1.u2 In Bool DigitalInput
   http://example.org#g36.source.cooling_only_dampers.or1.y Out Bool DigitalOutput
-to_map: 35
-  http://example.org#g36.source.cooling_only_dampers.con.y
-  http://example.org#g36.source.cooling_only_dampers.con1.y
-  http://example.org#g36.source.cooling_only_dampers.lin.y
-  http://example.org#g36.source.cooling_only_dampers.gre.y
-  http://example.org#g36.source.cooling_only_dampers.swi.y
-  http://example.org#g36.source.cooling_only_dampers.actFlo.y
-  http://example.org#g36.source.cooling_only_dampers.conPID.y
-  http://example.org#g36.source.cooling_only_dampers.conInt.y
-  http://example.org#g36.source.cooling_only_dampers.cooSta.y
-  http://example.org#g36.source.cooling_only_dampers.nomFlow.y
-  http://example.org#g36.source.cooling_only_dampers.VDisSet_flowNor.y
-  http://example.org#g36.source.cooling_only_dampers.VDis_flowNor.y
-  http://example.org#g36.source.cooling_only_dampers.conInt1.y
-  http://example.org#g36.source.cooling_only_dampers.forZerFlo.y
-  http://example.org#g36.source.cooling_only_dampers.forCooMax.y
-  http://example.org#g36.source.cooling_only_dampers.conInt2.y
-  http://example.org#g36.source.cooling_only_dampers.forMinFlo.y
-  http://example.org#g36.source.cooling_only_dampers.conInt3.y
-  http://example.org#g36.source.cooling_only_dampers.zerFlo.y
-  http://example.org#g36.source.cooling_only_dampers.cooMax.y
-  http://example.org#g36.source.cooling_only_dampers.minFlo.y
-  http://example.org#g36.source.cooling_only_dampers.add2.y
-  http://example.org#g36.source.cooling_only_dampers.add1.y
-  http://example.org#g36.source.cooling_only_dampers.swi1.y
-  http://example.org#g36.source.cooling_only_dampers.or3.y
-  http://example.org#g36.source.cooling_only_dampers.conInt4.y
-  http://example.org#g36.source.cooling_only_dampers.intEqu3.y
-  http://example.org#g36.source.cooling_only_dampers.intEqu4.y
-  http://example.org#g36.source.cooling_only_dampers.conInt5.y
-  http://example.org#g36.source.cooling_only_dampers.cloDam.y
-  http://example.org#g36.source.cooling_only_dampers.opeDam.y
-  http://example.org#g36.source.cooling_only_dampers.add3.y
-  http://example.org#g36.source.cooling_only_dampers.or2.y
-  http://example.org#g36.source.cooling_only_dampers.swi2.y
-  http://example.org#g36.source.cooling_only_dampers.or1.y
-step_realtime_written: 35
 fixture: cooling_only_system_requests
 io_summary: ai=25 ao=18 di=18 do=15 network=0 total=76
 point_list: 76
@@ -1166,130 +836,59 @@ point_list: 76
   http://example.org#g36.source.cooling_only_system_requests.sampler2.y Out Real AnalogOutput
   http://example.org#g36.source.cooling_only_system_requests.VSet_flow In Real AnalogInput
   http://example.org#g36.source.cooling_only_system_requests.sampler3.y Out Real AnalogOutput
-to_map: 33
-  http://example.org#g36.source.cooling_only_system_requests.greThr1.y
-  http://example.org#g36.source.cooling_only_system_requests.greThr2.y
-  http://example.org#g36.source.cooling_only_system_requests.greThr3.y
-  http://example.org#g36.source.cooling_only_system_requests.greThr.y
-  http://example.org#g36.source.cooling_only_system_requests.greThr4.y
-  http://example.org#g36.source.cooling_only_system_requests.booToInt.y
-  http://example.org#g36.source.cooling_only_system_requests.booToInt1.y
-  http://example.org#g36.source.cooling_only_system_requests.gai1.y
-  http://example.org#g36.source.cooling_only_system_requests.gai2.y
-  http://example.org#g36.source.cooling_only_system_requests.sub2.y
-  http://example.org#g36.source.cooling_only_system_requests.sub3.y
-  http://example.org#g36.source.cooling_only_system_requests.and1.y
-  http://example.org#g36.source.cooling_only_system_requests.and2.y
-  http://example.org#g36.source.cooling_only_system_requests.and3.y
-  http://example.org#g36.source.cooling_only_system_requests.and4.y
-  http://example.org#g36.source.cooling_only_system_requests.thrCooResReq.y
-  http://example.org#g36.source.cooling_only_system_requests.twoCooResReq.y
-  http://example.org#g36.source.cooling_only_system_requests.thrPreResReq.y
-  http://example.org#g36.source.cooling_only_system_requests.twoPreResReq.y
-  http://example.org#g36.source.cooling_only_system_requests.intSwi.y
-  http://example.org#g36.source.cooling_only_system_requests.intSwi1.y
-  http://example.org#g36.source.cooling_only_system_requests.swi4.y
-  http://example.org#g36.source.cooling_only_system_requests.swi5.y
-  http://example.org#g36.source.cooling_only_system_requests.tim1.y
-  http://example.org#g36.source.cooling_only_system_requests.tim2.y
-  http://example.org#g36.source.cooling_only_system_requests.tim3.y
-  http://example.org#g36.source.cooling_only_system_requests.greEqu.y
-  http://example.org#g36.source.cooling_only_system_requests.greEqu1.y
-  http://example.org#g36.source.cooling_only_system_requests.and5.y
-  http://example.org#g36.source.cooling_only_system_requests.sampler.y
-  http://example.org#g36.source.cooling_only_system_requests.sampler1.y
-  http://example.org#g36.source.cooling_only_system_requests.sampler2.y
-  http://example.org#g36.source.cooling_only_system_requests.sampler3.y
-step_realtime_written: 33
 fixture: generic_air_economizer_high_limits_ashrae_differential
 io_summary: ai=1 ao=1 di=0 do=0 network=0 total=2
 point_list: 2
   http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.TRet In Real AnalogInput
   http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.retAirIdentity.y Out Real AnalogOutput
-to_map: 1
-  http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.retAirIdentity.y
-step_realtime_written: 1
 fixture: generic_air_economizer_high_limits_ashrae_fixed_18
 io_summary: ai=0 ao=1 di=0 do=0 network=0 total=1
 point_list: 1
   http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_18.con2.y Out Real AnalogOutput
-to_map: 1
-  http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_18.con2.y
-step_realtime_written: 1
 fixture: generic_air_economizer_high_limits_ashrae_fixed_21
 io_summary: ai=0 ao=1 di=0 do=0 network=0 total=1
 point_list: 1
   http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_21.con1.y Out Real AnalogOutput
-to_map: 1
-  http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_21.con1.y
-step_realtime_written: 1
 fixture: generic_air_economizer_high_limits_ashrae_fixed_24
 io_summary: ai=0 ao=1 di=0 do=0 network=0 total=1
 point_list: 1
   http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_24.con.y Out Real AnalogOutput
-to_map: 1
-  http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_24.con.y
-step_realtime_written: 1
 fixture: generic_air_economizer_high_limits_title24_differential_offset_0
 io_summary: ai=1 ao=1 di=0 do=0 network=0 total=2
 point_list: 2
   http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_0.TRet In Real AnalogInput
   http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_0.retAirIdentity.y Out Real AnalogOutput
-to_map: 1
-  http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_0.retAirIdentity.y
-step_realtime_written: 1
 fixture: generic_air_economizer_high_limits_title24_differential_offset_1
 io_summary: ai=1 ao=1 di=0 do=0 network=0 total=2
 point_list: 2
   http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.TRet In Real AnalogInput
   http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.addPar.y Out Real AnalogOutput
-to_map: 1
-  http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.addPar.y
-step_realtime_written: 1
 fixture: generic_air_economizer_high_limits_title24_differential_offset_2
 io_summary: ai=1 ao=1 di=0 do=0 network=0 total=2
 point_list: 2
   http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_2.TRet In Real AnalogInput
   http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_2.addPar1.y Out Real AnalogOutput
-to_map: 1
-  http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_2.addPar1.y
-step_realtime_written: 1
 fixture: generic_air_economizer_high_limits_title24_differential_offset_3
 io_summary: ai=1 ao=1 di=0 do=0 network=0 total=2
 point_list: 2
   http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.TRet In Real AnalogInput
   http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.addPar2.y Out Real AnalogOutput
-to_map: 1
-  http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.addPar2.y
-step_realtime_written: 1
 fixture: generic_air_economizer_high_limits_title24_fixed_21
 io_summary: ai=0 ao=1 di=0 do=0 network=0 total=1
 point_list: 1
   http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.con8.y Out Real AnalogOutput
-to_map: 1
-  http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.con8.y
-step_realtime_written: 1
 fixture: generic_air_economizer_high_limits_title24_fixed_22
 io_summary: ai=0 ao=1 di=0 do=0 network=0 total=1
 point_list: 1
   http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_22.con7.y Out Real AnalogOutput
-to_map: 1
-  http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_22.con7.y
-step_realtime_written: 1
 fixture: generic_air_economizer_high_limits_title24_fixed_23
 io_summary: ai=0 ao=1 di=0 do=0 network=0 total=1
 point_list: 1
   http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_23.con6.y Out Real AnalogOutput
-to_map: 1
-  http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_23.con6.y
-step_realtime_written: 1
 fixture: generic_air_economizer_high_limits_title24_fixed_24
 io_summary: ai=0 ao=1 di=0 do=0 network=0 total=1
 point_list: 1
   http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_24.con5.y Out Real AnalogOutput
-to_map: 1
-  http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_24.con5.y
-step_realtime_written: 1
 fixture: generic_time_suppression
 io_summary: ai=17 ao=14 di=14 do=11 network=0 total=56
 point_list: 56
@@ -1349,33 +948,6 @@ point_list: 56
   http://example.org#g36.source.generic_time_suppression.truDel.u In Bool DigitalInput
   http://example.org#g36.source.generic_time_suppression.truDel.y Out Bool DigitalOutput
   http://example.org#g36.source.generic_time_suppression.con1.y Out Bool DigitalOutput
-to_map: 25
-  http://example.org#g36.source.generic_time_suppression.supTim.y
-  http://example.org#g36.source.generic_time_suppression.samSet.y
-  http://example.org#g36.source.generic_time_suppression.uniDel.y
-  http://example.org#g36.source.generic_time_suppression.abs1.y
-  http://example.org#g36.source.generic_time_suppression.triSam.y
-  http://example.org#g36.source.generic_time_suppression.edg.y
-  http://example.org#g36.source.generic_time_suppression.lat.y
-  http://example.org#g36.source.generic_time_suppression.lat1.y
-  http://example.org#g36.source.generic_time_suppression.tim.y
-  http://example.org#g36.source.generic_time_suppression.tim.passed
-  http://example.org#g36.source.generic_time_suppression.greThr.y
-  http://example.org#g36.source.generic_time_suppression.gai.y
-  http://example.org#g36.source.generic_time_suppression.sub1.y
-  http://example.org#g36.source.generic_time_suppression.conZer.y
-  http://example.org#g36.source.generic_time_suppression.maxSupTim.y
-  http://example.org#g36.source.generic_time_suppression.con5.y
-  http://example.org#g36.source.generic_time_suppression.swi.y
-  http://example.org#g36.source.generic_time_suppression.pre1.y
-  http://example.org#g36.source.generic_time_suppression.pasSupTim.y
-  http://example.org#g36.source.generic_time_suppression.pasSup.y
-  http://example.org#g36.source.generic_time_suppression.temDif.y
-  http://example.org#g36.source.generic_time_suppression.triSam1.y
-  http://example.org#g36.source.generic_time_suppression.abs2.y
-  http://example.org#g36.source.generic_time_suppression.truDel.y
-  http://example.org#g36.source.generic_time_suppression.con1.y
-step_realtime_written: 25
 fixture: member_list_interface
 io_summary: ai=0 ao=0 di=3 do=2 network=0 total=5
 point_list: 5
@@ -1384,10 +956,6 @@ point_list: 5
   http://example.org#g36.member_list_interface.and2.u1 In Bool DigitalInput
   http://example.org#g36.member_list_interface.and2.u2 In Bool DigitalInput
   http://example.org#g36.member_list_interface.and2.y Out Bool DigitalOutput
-to_map: 2
-  http://example.org#g36.member_list_interface.pre.y
-  http://example.org#g36.member_list_interface.and2.y
-step_realtime_written: 2
 fixture: multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21
 io_summary: ai=44 ao=28 di=23 do=16 network=0 total=111
 point_list: 111
@@ -1502,52 +1070,6 @@ point_list: 111
   http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.max.u2 In Real AnalogInput
   http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.max.y Out Real AnalogOutput
   http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.con1.y Out Real AnalogOutput
-to_map: 44
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhyPosMinSig.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhyPosMaxSig.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhyPosMinSig.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhyPosMaxSig.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minSigLim.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.maxSigLim.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.sigFraForOutDam.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPosMinSwitch.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPosMaxSwitch.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.not1.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.conInt1.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.intEqu.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.and3.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.truFalHol.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.andEnaDis.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.sub1.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.hysOutTem.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.outDamSwitch.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamSwitch.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.maxRetDamSwitch.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.minRetDamSwitch.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not2.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and2.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and1.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and3.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.intEqu.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delOutDamOsc.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delRetDam.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not1.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.conInt.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.entSubst1.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.or2.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamMinLimSig.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamMaxLimSig.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamConMinLimSig.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamMaxLimSig.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.min.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.max.y
-  http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.con1.y
-step_realtime_written: 44
 fixture: multizone_vav_economizer_enable
 io_summary: ai=11 ao=6 di=19 do=13 network=0 total=49
 point_list: 49
@@ -1600,27 +1122,6 @@ point_list: 49
   http://example.org#g36.source.multizone_vav_economizer_enable.or2.u1 In Bool DigitalInput
   http://example.org#g36.source.multizone_vav_economizer_enable.or2.u2 In Bool DigitalInput
   http://example.org#g36.source.multizone_vav_economizer_enable.or2.y Out Bool DigitalOutput
-to_map: 19
-  http://example.org#g36.source.multizone_vav_economizer_enable.truFalHol.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.andEnaDis.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.sub1.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.hysOutTem.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.not2.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.and2.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.and1.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.and3.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.intEqu.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.delOutDamOsc.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.delRetDam.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.not1.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.conInt.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.entSubst1.y
-  http://example.org#g36.source.multizone_vav_economizer_enable.or2.y
-step_realtime_written: 19
 fixture: multizone_vav_economizer_limits_common
 io_summary: ai=18 ao=13 di=5 do=3 network=0 total=39
 point_list: 39
@@ -1663,24 +1164,6 @@ point_list: 39
   http://example.org#g36.source.multizone_vav_economizer_limits_common.intEqu.y Out Bool DigitalOutput
   http://example.org#g36.source.multizone_vav_economizer_limits_common.and3.u2 In Bool DigitalInput
   http://example.org#g36.source.multizone_vav_economizer_limits_common.and3.y Out Bool DigitalOutput
-to_map: 16
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.damLimCon.y
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.outDamPhyPosMinSig.y
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.outDamPhyPosMaxSig.y
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.retDamPhyPosMinSig.y
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.retDamPhyPosMaxSig.y
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.minSigLim.y
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.maxSigLim.y
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.sigFraForOutDam.y
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.minOutDam.y
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.minRetDam.y
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.retDamPosMinSwitch.y
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.outDamPosMaxSwitch.y
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.not1.y
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.conInt1.y
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.intEqu.y
-  http://example.org#g36.source.multizone_vav_economizer_limits_common.and3.y
-step_realtime_written: 16
 fixture: multizone_vav_economizer_modulations_reliefs
 io_summary: ai=11 ao=8 di=0 do=0 network=0 total=19
 point_list: 19
@@ -1703,16 +1186,6 @@ point_list: 19
   http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.min.y Out Real AnalogOutput
   http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max.u1 In Real AnalogInput
   http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max.y Out Real AnalogOutput
-to_map: 8
-  http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMinLimSig.y
-  http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMaxLimSig.y
-  http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamConMinLimSig.y
-  http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamMaxLimSig.y
-  http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.y
-  http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.y
-  http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.min.y
-  http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max.y
-step_realtime_written: 8
 fixture: multizone_vav_economizer_modulations_return_fan
 io_summary: ai=5 ao=4 di=0 do=0 network=0 total=9
 point_list: 9
@@ -1725,12 +1198,6 @@ point_list: 9
   http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.uTSup In Real AnalogInput
   http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.retDamPos.y Out Real AnalogOutput
   http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.one.y Out Real AnalogOutput
-to_map: 4
-  http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.damMinLimSig.y
-  http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.damMaxLimSig.y
-  http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.retDamPos.y
-  http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.one.y
-step_realtime_written: 4
 fixture: multizone_vav_economizer_modulations_return_fan_relief_damper
 io_summary: ai=9 ao=6 di=0 do=0 network=0 total=15
 point_list: 15
@@ -1749,14 +1216,6 @@ point_list: 15
   http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.y Out Real AnalogOutput
   http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.zer.y Out Real AnalogOutput
   http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.one.y Out Real AnalogOutput
-to_map: 6
-  http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMinLimSig.y
-  http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMaxLimSig.y
-  http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.y
-  http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.y
-  http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.zer.y
-  http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.one.y
-step_realtime_written: 6
 fixture: multizone_vav_freeze_protection
 io_summary: ai=41 ao=41 di=46 do=24 network=0 total=152
 point_list: 152
@@ -1912,73 +1371,6 @@ point_list: 152
   http://example.org#g36.source.multizone_vav_freeze_protection.or7.u1 In Bool DigitalInput
   http://example.org#g36.source.multizone_vav_freeze_protection.or7.u2 In Bool DigitalInput
   http://example.org#g36.source.multizone_vav_freeze_protection.or7.y Out Bool DigitalOutput
-to_map: 65
-  http://example.org#g36.source.multizone_vav_freeze_protection.lesThr.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.tim.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.tim.passed
-  http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.conInt.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.minVen.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi1.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.greThr.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.lat.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.tim1.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.tim1.passed
-  http://example.org#g36.source.multizone_vav_freeze_protection.endStaOne.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.lesThr1.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.tim2.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.tim2.passed
-  http://example.org#g36.source.multizone_vav_freeze_protection.holSta2.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.outDam2.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.con.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam2.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.retDam2.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.con1.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.intSwi1.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.conInt1.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.conInt2.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.tim3.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.tim3.passed
-  http://example.org#g36.source.multizone_vav_freeze_protection.lesThr2.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.tim4.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.tim4.passed
-  http://example.org#g36.source.multizone_vav_freeze_protection.or8.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.con2.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.lat1.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.supFan.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.con3.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.outDam.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.conInt3.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.max1.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.con4.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.conInt4.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.not1.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.not2.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.tim5.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.tim5.passed
-  http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.conInt5.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.lat2.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.endStaTwo.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.or2.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.retDam.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.supTemSet.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.intSwi4.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.conInt6.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.intSwi5.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.conInt7.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.conInt8.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.norSta1.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.and2.y
-  http://example.org#g36.source.multizone_vav_freeze_protection.or7.y
-step_realtime_written: 65
 fixture: multizone_vav_outdoor_airflow_ahu
 io_summary: ai=22 ao=15 di=0 do=0 network=0 total=37
 point_list: 37
@@ -2019,23 +1411,6 @@ point_list: 37
   http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.max2.u1 In Real AnalogInput
   http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.max2.u2 In Real AnalogInput
   http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.max2.y Out Real AnalogOutput
-to_map: 15
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.uncDesOutAir.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.add2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.min1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.div1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.addPar.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.sysVenEff.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.max1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.desOutAir.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.div2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.min2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.gaiDivZer.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.norVOutMin.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.norVOut.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.neaZer.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.max2.y
-step_realtime_written: 15
 fixture: multizone_vav_outdoor_airflow_sumzone
 io_summary: ai=54 ao=38 di=2 do=2 network=0 total=96
 point_list: 96
@@ -2135,48 +1510,6 @@ point_list: 96
   http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_2.y Out Real AnalogOutput
   http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VMinOA_flow_3 In Real AnalogInput
   http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_3.y Out Real AnalogOutput
-to_map: 40
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.y1
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.y2
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.y1
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.y2
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.y1
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.y2
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.y1
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.y2
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.y3
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_3.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_3.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_3.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_3.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_3.y
-step_realtime_written: 40
 fixture: multizone_vav_outdoor_airflow_title24_ahu
 io_summary: ai=21 ao=14 di=0 do=0 network=0 total=35
 point_list: 35
@@ -2215,22 +1548,6 @@ point_list: 35
   http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.max1.u1 In Real AnalogInput
   http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.max1.u2 In Real AnalogInput
   http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.max1.y Out Real AnalogOutput
-to_map: 14
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.absOutAir.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.min1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.desOutAir.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.min2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.norVOutMin.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.norVOutMin1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.con.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.con1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.effOutAir.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.norVOutMin2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.norVOut.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.neaZer.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.max2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.max1.y
-step_realtime_written: 14
 fixture: multizone_vav_outdoor_airflow_title24_sumzone
 io_summary: ai=25 ao=15 di=2 do=2 network=0 total=44
 point_list: 44
@@ -2278,25 +1595,6 @@ point_list: 44
   http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.uCO2_2 In Real AnalogInput
   http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.uCO2_3 In Real AnalogInput
   http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.mulMax.y Out Real AnalogOutput
-to_map: 17
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo.y1
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo.y2
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo1.y1
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo1.y2
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.booToRea_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.booToRea_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.mul_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.mul_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.mul1_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.mul1_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.mulSum.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.mulSum1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.occMod_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.occMod_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.intEqu1_1.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.intEqu1_2.y
-  http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.mulMax.y
-step_realtime_written: 17
 fixture: multizone_vav_plant_requests
 io_summary: ai=24 ao=14 di=20 do=18 network=0 total=76
 point_list: 76
@@ -2376,40 +1674,6 @@ point_list: 76
   http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.u2 In Bool DigitalInput
   http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.u3 In Int AnalogInput
   http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.y Out Int AnalogOutput
-to_map: 32
-  http://example.org#g36.source.multizone_vav_plant_requests.cooSupTemDif.y
-  http://example.org#g36.source.multizone_vav_plant_requests.greThr.y
-  http://example.org#g36.source.multizone_vav_plant_requests.greThr1.y
-  http://example.org#g36.source.multizone_vav_plant_requests.truDel.y
-  http://example.org#g36.source.multizone_vav_plant_requests.truDel1.y
-  http://example.org#g36.source.multizone_vav_plant_requests.greThr2.y
-  http://example.org#g36.source.multizone_vav_plant_requests.thr.y
-  http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3.y
-  http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes2.y
-  http://example.org#g36.source.multizone_vav_plant_requests.two.y
-  http://example.org#g36.source.multizone_vav_plant_requests.lesThr.y
-  http://example.org#g36.source.multizone_vav_plant_requests.lat.y
-  http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes1.y
-  http://example.org#g36.source.multizone_vav_plant_requests.one.y
-  http://example.org#g36.source.multizone_vav_plant_requests.zer.y
-  http://example.org#g36.source.multizone_vav_plant_requests.lat1.y
-  http://example.org#g36.source.multizone_vav_plant_requests.lesThr1.y
-  http://example.org#g36.source.multizone_vav_plant_requests.intSwi3.y
-  http://example.org#g36.source.multizone_vav_plant_requests.heaSupTemDif.y
-  http://example.org#g36.source.multizone_vav_plant_requests.greThr3.y
-  http://example.org#g36.source.multizone_vav_plant_requests.greThr4.y
-  http://example.org#g36.source.multizone_vav_plant_requests.truDel2.y
-  http://example.org#g36.source.multizone_vav_plant_requests.truDel3.y
-  http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3.y
-  http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes2.y
-  http://example.org#g36.source.multizone_vav_plant_requests.lesThr2.y
-  http://example.org#g36.source.multizone_vav_plant_requests.greThr5.y
-  http://example.org#g36.source.multizone_vav_plant_requests.lat2.y
-  http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes1.y
-  http://example.org#g36.source.multizone_vav_plant_requests.lesThr3.y
-  http://example.org#g36.source.multizone_vav_plant_requests.lat3.y
-  http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.y
-step_realtime_written: 32
 fixture: multizone_vav_relief_damper
 io_summary: ai=6 ao=6 di=1 do=0 network=0 total=13
 point_list: 13
@@ -2426,14 +1690,6 @@ point_list: 13
   http://example.org#g36.source.multizone_vav_relief_damper.zerDam.y Out Real AnalogOutput
   http://example.org#g36.source.multizone_vav_relief_damper.dpBuiSetPoi.y Out Real AnalogOutput
   http://example.org#g36.source.multizone_vav_relief_damper.zer.y Out Real AnalogOutput
-to_map: 6
-  http://example.org#g36.source.multizone_vav_relief_damper.swi.y
-  http://example.org#g36.source.multizone_vav_relief_damper.conErr.y
-  http://example.org#g36.source.multizone_vav_relief_damper.conP.y
-  http://example.org#g36.source.multizone_vav_relief_damper.zerDam.y
-  http://example.org#g36.source.multizone_vav_relief_damper.dpBuiSetPoi.y
-  http://example.org#g36.source.multizone_vav_relief_damper.zer.y
-step_realtime_written: 6
 fixture: multizone_vav_relief_fan
 io_summary: ai=11 ao=10 di=13 do=12 network=0 total=46
 point_list: 46
@@ -2483,30 +1739,6 @@ point_list: 46
   http://example.org#g36.source.multizone_vav_relief_fan.pro1.u1 In Real AnalogInput
   http://example.org#g36.source.multizone_vav_relief_fan.pro1.u2 In Real AnalogInput
   http://example.org#g36.source.multizone_vav_relief_fan.pro1.y Out Real AnalogOutput
-to_map: 22
-  http://example.org#g36.source.multizone_vav_relief_fan.movMea.y
-  http://example.org#g36.source.multizone_vav_relief_fan.dpBuiSetPoi.y
-  http://example.org#g36.source.multizone_vav_relief_fan.div1.y
-  http://example.org#g36.source.multizone_vav_relief_fan.conOne.y
-  http://example.org#g36.source.multizone_vav_relief_fan.conP.y
-  http://example.org#g36.source.multizone_vav_relief_fan.greThr.y
-  http://example.org#g36.source.multizone_vav_relief_fan.lesThr.y
-  http://example.org#g36.source.multizone_vav_relief_fan.tim.y
-  http://example.org#g36.source.multizone_vav_relief_fan.tim.passed
-  http://example.org#g36.source.multizone_vav_relief_fan.and2.y
-  http://example.org#g36.source.multizone_vav_relief_fan.lat.y
-  http://example.org#g36.source.multizone_vav_relief_fan.greThr2.y
-  http://example.org#g36.source.multizone_vav_relief_fan.upTim.y
-  http://example.org#g36.source.multizone_vav_relief_fan.upTim.passed
-  http://example.org#g36.source.multizone_vav_relief_fan.lesThr3.y
-  http://example.org#g36.source.multizone_vav_relief_fan.dowTim.y
-  http://example.org#g36.source.multizone_vav_relief_fan.dowTim.passed
-  http://example.org#g36.source.multizone_vav_relief_fan.lat1.y
-  http://example.org#g36.source.multizone_vav_relief_fan.relDam.y
-  http://example.org#g36.source.multizone_vav_relief_fan.relFan.y
-  http://example.org#g36.source.multizone_vav_relief_fan.booToRea2.y
-  http://example.org#g36.source.multizone_vav_relief_fan.pro1.y
-step_realtime_written: 22
 fixture: multizone_vav_relief_fan_group
 io_summary: ai=175 ao=125 di=164 do=131 network=0 total=595
 point_list: 595
@@ -3105,264 +2337,6 @@ point_list: 595
   http://example.org#g36.source.multizone_vav_relief_fan_group.truDel1_3.y Out Bool DigitalOutput
   http://example.org#g36.source.multizone_vav_relief_fan_group.truDel1_4.u In Bool DigitalInput
   http://example.org#g36.source.multizone_vav_relief_fan_group.truDel1_4.y Out Bool DigitalOutput
-to_map: 256
-  http://example.org#g36.source.multizone_vav_relief_fan_group.enaRel.y1
-  http://example.org#g36.source.multizone_vav_relief_fan_group.enaRel.y2
-  http://example.org#g36.source.multizone_vav_relief_fan_group.enaRel.y3
-  http://example.org#g36.source.multizone_vav_relief_fan_group.enaRel.y4
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.gai_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.gai_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.gai_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.gai_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.movMea.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.div1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.conP.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.enaRelGro.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.pro.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.greThr.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.and2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lat.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.tim.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.tim.passed
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep.y1
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep.y2
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep.y3
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep.y4
-  http://example.org#g36.source.multizone_vav_relief_fan_group.greThr1_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.greThr1_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.greThr1_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.greThr1_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.enaDam_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.enaDam_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.enaDam_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.enaDam_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.greThr2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.upTim.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.upTim.passed
-  http://example.org#g36.source.multizone_vav_relief_fan_group.pre.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea2_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea2_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea2_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea2_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.sub2_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.sub2_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.sub2_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.sub2_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.pro1_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.pro1_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.pro1_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.pro1_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.mulMin.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.reaRep.y1
-  http://example.org#g36.source.multizone_vav_relief_fan_group.reaRep.y2
-  http://example.org#g36.source.multizone_vav_relief_fan_group.reaRep.y3
-  http://example.org#g36.source.multizone_vav_relief_fan_group.reaRep.y4
-  http://example.org#g36.source.multizone_vav_relief_fan_group.sub1_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.sub1_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.sub1_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.sub1_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr1_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr1_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr1_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr1_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.addPar_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.addPar_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.addPar_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.addPar_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.swi_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.swi_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.swi_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.swi_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.abs1_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.abs1_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.abs1_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.abs1_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr2_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr2_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr2_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr2_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.or2_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.or2_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.or2_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.or2_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lat2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.dowTim.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.dowTim.passed
-  http://example.org#g36.source.multizone_vav_relief_fan_group.pre1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.pro2_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.pro2_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.pro2_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.pro2_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.addPar1_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.addPar1_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.addPar1_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.addPar1_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr4_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr4_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr4_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr4_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.swi1_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.swi1_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.swi1_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.swi1_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.mulMin1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.sub3_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.sub3_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.sub3_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.sub3_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.abs2_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.abs2_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.abs2_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.abs2_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr5_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr5_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr5_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr5_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.reaRep1.y1
-  http://example.org#g36.source.multizone_vav_relief_fan_group.reaRep1.y2
-  http://example.org#g36.source.multizone_vav_relief_fan_group.reaRep1.y3
-  http://example.org#g36.source.multizone_vav_relief_fan_group.reaRep1.y4
-  http://example.org#g36.source.multizone_vav_relief_fan_group.xor_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.xor_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.xor_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.xor_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt1_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt1_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt1_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt1_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt2_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt2_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt2_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt2_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.mulAnd.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu1_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu1_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu1_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu1_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.mulAnd2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lat1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep1.y1
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep1.y2
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep1.y3
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep1.y4
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi1_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi1_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi1_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi1_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep2.y1
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep2.y2
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep2.y3
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep2.y4
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea3_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea3_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea3_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea3_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.lim.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.reaRep2.y1
-  http://example.org#g36.source.multizone_vav_relief_fan_group.reaRep2.y2
-  http://example.org#g36.source.multizone_vav_relief_fan_group.reaRep2.y3
-  http://example.org#g36.source.multizone_vav_relief_fan_group.reaRep2.y4
-  http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi2_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi2_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi2_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi2_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.dpBuiSetPoi.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.conOne.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.con.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.swi2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.mulOr.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea4_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea4_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea4_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea4_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.not1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.and1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.and3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.not2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu2_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu2_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu2_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu2_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.conInt_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.conInt_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.conInt_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.conInt_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.not3_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.not3_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.not3_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.not3_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.and4_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.and4_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.and4_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.and4_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea5_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea5_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea5_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea5_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.mul_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.mul_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.mul_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.mul_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.greThr3_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.greThr3_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.greThr3_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.greThr3_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.mulAnd1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.swi3_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.swi3_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.swi3_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.swi3_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep4.y1
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep4.y2
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep4.y3
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep4.y4
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi3_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi3_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi3_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi3_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.truDel_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.truDel_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.truDel_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.truDel_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.mulOr1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep5.y1
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep5.y2
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep5.y3
-  http://example.org#g36.source.multizone_vav_relief_fan_group.booRep5.y4
-  http://example.org#g36.source.multizone_vav_relief_fan_group.not5_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.not5_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.not5_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.not5_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.not6_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.not6_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.not6_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.not6_4.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.truDel1_1.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.truDel1_2.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.truDel1_3.y
-  http://example.org#g36.source.multizone_vav_relief_fan_group.truDel1_4.y
-step_realtime_written: 256
 fixture: multizone_vav_return_fan_airflow_tracking
 io_summary: ai=6 ao=5 di=1 do=1 network=0 total=13
 point_list: 13
@@ -3379,14 +2353,6 @@ point_list: 13
   http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.zerSpe.y Out Real AnalogOutput
   http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.difFlo.y Out Real AnalogOutput
   http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan Out Bool DigitalOutput
-to_map: 6
-  http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.conP.y
-  http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.swi.y
-  http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.conErr.y
-  http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.zerSpe.y
-  http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.difFlo.y
-  http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan
-step_realtime_written: 6
 fixture: multizone_vav_return_fan_direct_pressure
 io_summary: ai=26 ao=20 di=3 do=2 network=0 total=51
 point_list: 51
@@ -3441,30 +2407,6 @@ point_list: 51
   http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanSpeMax.y Out Real AnalogOutput
   http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer2.y Out Real AnalogOutput
   http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFan Out Bool DigitalOutput
-to_map: 22
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.movMea.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi1.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.div.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi2.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpBuiSetPoi.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanDisPreMin.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanDisPreMax.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer1.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.con.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.one.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conOne.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.enaDam.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanSpeMin.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanSpeMax.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer2.y
-  http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFan
-step_realtime_written: 22
 fixture: multizone_vav_supply_fan
 io_summary: ai=55 ao=42 di=25 do=21 network=0 total=143
 point_list: 143
@@ -3611,71 +2553,6 @@ point_list: 143
   http://example.org#g36.source.multizone_vav_supply_fan.or4.u1 In Bool DigitalInput
   http://example.org#g36.source.multizone_vav_supply_fan.or4.u2 In Bool DigitalInput
   http://example.org#g36.source.multizone_vav_supply_fan.or4.y Out Bool DigitalOutput
-to_map: 63
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.tim.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.greThr.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.netRes.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.resAmoCon.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.pro.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.pro1.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.pro2.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.uniDel.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.swi.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.swi1.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.swi2.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.swi3.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.sampler.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.lesThr1.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.greThr2.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.greThr1.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.gai.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.iniSetCon.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.numIgnReqCon.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.triAmoCon.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.maxResCon.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.maxSetCon.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.zerTri.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.intToRea.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.difReqIgnReq.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.add1.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.add2.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.minInp.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.min1.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.and2.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.not1.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.minSetCon.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.maxInp.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.abs.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.abs1.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.zer.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.fal.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.swiHol.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.notHol.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.lat.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.notHolAndTic.y
-  http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.samTri.y
-  http://example.org#g36.source.multizone_vav_supply_fan.conSpe.y
-  http://example.org#g36.source.multizone_vav_supply_fan.zerSpe.y
-  http://example.org#g36.source.multizone_vav_supply_fan.swi.y
-  http://example.org#g36.source.multizone_vav_supply_fan.or1.y
-  http://example.org#g36.source.multizone_vav_supply_fan.or3.y
-  http://example.org#g36.source.multizone_vav_supply_fan.con.y
-  http://example.org#g36.source.multizone_vav_supply_fan.conInt.y
-  http://example.org#g36.source.multizone_vav_supply_fan.conInt4.y
-  http://example.org#g36.source.multizone_vav_supply_fan.conInt1.y
-  http://example.org#g36.source.multizone_vav_supply_fan.conInt2.y
-  http://example.org#g36.source.multizone_vav_supply_fan.conInt3.y
-  http://example.org#g36.source.multizone_vav_supply_fan.intEqu.y
-  http://example.org#g36.source.multizone_vav_supply_fan.intEqu1.y
-  http://example.org#g36.source.multizone_vav_supply_fan.intEqu2.y
-  http://example.org#g36.source.multizone_vav_supply_fan.intEqu3.y
-  http://example.org#g36.source.multizone_vav_supply_fan.intEqu4.y
-  http://example.org#g36.source.multizone_vav_supply_fan.gaiNor.y
-  http://example.org#g36.source.multizone_vav_supply_fan.norPSet.y
-  http://example.org#g36.source.multizone_vav_supply_fan.norPMea.y
-  http://example.org#g36.source.multizone_vav_supply_fan.firOrdHol.y
-  http://example.org#g36.source.multizone_vav_supply_fan.or4.y
-step_realtime_written: 63
 fixture: multizone_vav_supply_signals
 io_summary: ai=14 ao=9 di=1 do=0 network=0 total=24
 point_list: 24
@@ -3703,17 +2580,6 @@ point_list: 24
   http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.f2 In Real AnalogInput
   http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.u In Real AnalogInput
   http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.y Out Real AnalogOutput
-to_map: 9
-  http://example.org#g36.source.multizone_vav_supply_signals.conTSup.y
-  http://example.org#g36.source.multizone_vav_supply_signals.swi.y
-  http://example.org#g36.source.multizone_vav_supply_signals.uHeaMaxCon.y
-  http://example.org#g36.source.multizone_vav_supply_signals.negOne.y
-  http://example.org#g36.source.multizone_vav_supply_signals.uCooMinCon.y
-  http://example.org#g36.source.multizone_vav_supply_signals.zer.y
-  http://example.org#g36.source.multizone_vav_supply_signals.one.y
-  http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.y
-  http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.y
-step_realtime_written: 9
 fixture: multizone_vav_supply_temperature
 io_summary: ai=55 ao=41 di=23 do=19 network=0 total=138
 point_list: 138
@@ -3855,68 +2721,6 @@ point_list: 138
   http://example.org#g36.source.multizone_vav_supply_temperature.intEqu.u2 In Int AnalogInput
   http://example.org#g36.source.multizone_vav_supply_temperature.intEqu.y Out Bool DigitalOutput
   http://example.org#g36.source.multizone_vav_supply_temperature.TDea.y Out Real AnalogOutput
-to_map: 60
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.tim.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.greThr.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.netRes.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.resAmoCon.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.pro.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.pro1.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.pro2.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.uniDel.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.swi.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.swi1.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.swi2.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.swi3.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.sampler.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.lesThr1.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.greThr2.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.greThr1.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.gai.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.iniSetCon.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.numIgnReqCon.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.triAmoCon.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.maxResCon.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.maxSetCon.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.zerTri.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.intToRea.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.difReqIgnReq.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.add1.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.add2.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.minInp.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.min1.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.and2.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.not1.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.minSetCon.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.maxInp.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.abs.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.abs1.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.zer.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.fal.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.swiHol.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.notHol.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.lat.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.notHolAndTic.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.samTri.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.lin.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.minOutTem.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.maxOutTem.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.minSupTem.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.and1.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.supTemWarUpSetBac.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.swi1.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.swi2.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.swi3.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.cooDowMod.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.intLesThr1.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.intGreThr1.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.intLesThr2.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.intGreThr2.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.and2.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.swi4.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.intEqu.y
-  http://example.org#g36.source.multizone_vav_supply_temperature.TDea.y
-step_realtime_written: 60
 fixture: reheat_overrides
 io_summary: ai=9 ao=8 di=6 do=3 network=0 total=26
 point_list: 26
@@ -3946,19 +2750,6 @@ point_list: 26
   http://example.org#g36.source.reheat_overrides.pro.y Out Real AnalogOutput
   http://example.org#g36.source.reheat_overrides.uHeaOff In Bool DigitalInput
   http://example.org#g36.source.reheat_overrides.booToRea.y Out Real AnalogOutput
-to_map: 11
-  http://example.org#g36.source.reheat_overrides.conInt3.y
-  http://example.org#g36.source.reheat_overrides.intEqu3.y
-  http://example.org#g36.source.reheat_overrides.intEqu4.y
-  http://example.org#g36.source.reheat_overrides.conInt4.y
-  http://example.org#g36.source.reheat_overrides.cloDam.y
-  http://example.org#g36.source.reheat_overrides.opeDam.y
-  http://example.org#g36.source.reheat_overrides.add3.y
-  http://example.org#g36.source.reheat_overrides.or2.y
-  http://example.org#g36.source.reheat_overrides.swi1.y
-  http://example.org#g36.source.reheat_overrides.pro.y
-  http://example.org#g36.source.reheat_overrides.booToRea.y
-step_realtime_written: 11
 fixture: thermal_zones_control_loops
 io_summary: ai=9 ao=6 di=12 do=10 network=0 total=37
 point_list: 37
@@ -3999,24 +2790,6 @@ point_list: 37
   http://example.org#g36.source.thermal_zones_control_loops.disHeaCon.u1 In Bool DigitalInput
   http://example.org#g36.source.thermal_zones_control_loops.disHeaCon.u2 In Bool DigitalInput
   http://example.org#g36.source.thermal_zones_control_loops.disHeaCon.y Out Bool DigitalOutput
-to_map: 16
-  http://example.org#g36.source.thermal_zones_control_loops.conCoo.y
-  http://example.org#g36.source.thermal_zones_control_loops.conHea.y
-  http://example.org#g36.source.thermal_zones_control_loops.enaHeaLoo.y
-  http://example.org#g36.source.thermal_zones_control_loops.enaCooLoo.y
-  http://example.org#g36.source.thermal_zones_control_loops.disCoo.y
-  http://example.org#g36.source.thermal_zones_control_loops.colZon.y
-  http://example.org#g36.source.thermal_zones_control_loops.zerCoo.y
-  http://example.org#g36.source.thermal_zones_control_loops.cooConSig.y
-  http://example.org#g36.source.thermal_zones_control_loops.holZon.y
-  http://example.org#g36.source.thermal_zones_control_loops.disHea.y
-  http://example.org#g36.source.thermal_zones_control_loops.zerHea.y
-  http://example.org#g36.source.thermal_zones_control_loops.heaConSig.y
-  http://example.org#g36.source.thermal_zones_control_loops.zerCon.y
-  http://example.org#g36.source.thermal_zones_control_loops.zerCon1.y
-  http://example.org#g36.source.thermal_zones_control_loops.disCooCon.y
-  http://example.org#g36.source.thermal_zones_control_loops.disHeaCon.y
-step_realtime_written: 16
 fixture: thermal_zones_zone_states
 io_summary: ai=7 ao=6 di=10 do=7 network=0 total=30
 point_list: 30
@@ -4050,21 +2823,6 @@ point_list: 30
   http://example.org#g36.source.thermal_zones_zone_states.addInt1.u1 In Int AnalogInput
   http://example.org#g36.source.thermal_zones_zone_states.addInt1.u2 In Int AnalogInput
   http://example.org#g36.source.thermal_zones_zone_states.addInt1.y Out Int AnalogOutput
-to_map: 13
-  http://example.org#g36.source.thermal_zones_zone_states.booToIntHea.y
-  http://example.org#g36.source.thermal_zones_zone_states.booToIntCoo.y
-  http://example.org#g36.source.thermal_zones_zone_states.isDea.y
-  http://example.org#g36.source.thermal_zones_zone_states.booToIntDea.y
-  http://example.org#g36.source.thermal_zones_zone_states.isHea.y
-  http://example.org#g36.source.thermal_zones_zone_states.hysUHea.y
-  http://example.org#g36.source.thermal_zones_zone_states.hysUCoo.y
-  http://example.org#g36.source.thermal_zones_zone_states.uHeaMinUCoo.y
-  http://example.org#g36.source.thermal_zones_zone_states.isCoo.y
-  http://example.org#g36.source.thermal_zones_zone_states.hysU.y
-  http://example.org#g36.source.thermal_zones_zone_states.notHea.y
-  http://example.org#g36.source.thermal_zones_zone_states.addInt.y
-  http://example.org#g36.source.thermal_zones_zone_states.addInt1.y
-step_realtime_written: 13
 fixture: trim_and_respond_have_hol_false
 io_summary: ai=40 ao=30 di=16 do=12 network=0 total=98
 point_list: 98
@@ -4166,50 +2924,6 @@ point_list: 98
   http://example.org#g36.source.trim_and_respond_have_hol_false.notHolAndTic.u2 In Bool DigitalInput
   http://example.org#g36.source.trim_and_respond_have_hol_false.notHolAndTic.y Out Bool DigitalOutput
   http://example.org#g36.source.trim_and_respond_have_hol_false.samTri.y Out Bool DigitalOutput
-to_map: 42
-  http://example.org#g36.source.trim_and_respond_have_hol_false.tim.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.greThr.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.netRes.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.resAmoCon.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.pro.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.pro1.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.pro2.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.uniDel.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.swi.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.swi1.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.swi2.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.swi3.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.sampler.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.lesThr1.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.greThr2.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.greThr1.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.gai.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.iniSetCon.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.numIgnReqCon.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.triAmoCon.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.maxResCon.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.maxSetCon.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.zerTri.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.intToRea.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.difReqIgnReq.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.add1.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.add2.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.minInp.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.min1.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.and2.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.not1.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.minSetCon.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.maxInp.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.abs.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.abs1.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.zer.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.fal.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.swiHol.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.notHol.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.lat.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.notHolAndTic.y
-  http://example.org#g36.source.trim_and_respond_have_hol_false.samTri.y
-step_realtime_written: 42
 fixture: vav_single_zone
 io_summary: ai=10 ao=7 di=1 do=1 network=0 total=19
 point_list: 19
@@ -4232,16 +2946,6 @@ point_list: 19
   http://example.org#g36.vav_single_zone.airflowSwitch.y Out Real AnalogOutput
   http://example.org#g36.vav_single_zone.damperLimiter.u In Real AnalogInput
   http://example.org#g36.vav_single_zone.damperLimiter.y Out Real AnalogOutput
-to_map: 8
-  http://example.org#g36.vav_single_zone.zoneSignal.y
-  http://example.org#g36.vav_single_zone.coolingPid.y
-  http://example.org#g36.vav_single_zone.minimumFlow.y
-  http://example.org#g36.vav_single_zone.coolingFlow.y
-  http://example.org#g36.vav_single_zone.heatingNeed.y
-  http://example.org#g36.vav_single_zone.heatingFlow.y
-  http://example.org#g36.vav_single_zone.airflowSwitch.y
-  http://example.org#g36.vav_single_zone.damperLimiter.y
-step_realtime_written: 8
 fixture: ventilation_zones_ashrae62_1_setpoints
 io_summary: ai=42 ao=27 di=14 do=7 network=0 total=90
 point_list: 90
@@ -4335,39 +3039,3 @@ point_list: 90
   http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.desPopAir.y Out Real AnalogOutput
   http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.u1Win In Bool DigitalInput
   http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.winOpe.y Out Bool DigitalOutput
-to_map: 34
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.airDisEff.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.lin.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.zer.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.one.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.addPar.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.inOccMod.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.booToRea.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.co2Con.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAirSet.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.zonMinFlo.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.zonCooMaxFlo.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.popBreOutAir.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.or2.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.notOccMod.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.perOccSta.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.zer1.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.modPopBreAir.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.modAreBreAir.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAir.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.notOcc.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unpPopBreAir.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.booToRea1.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unPopAreBreAir.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unpMinZonFlo.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unpAreBreAir.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unpMinZonAir.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.reqBreAir.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.minOA.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMod.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.cooSup.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.gai2.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.desAreAir.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.desPopAir.y
-  http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.winOpe.y
-step_realtime_written: 34
