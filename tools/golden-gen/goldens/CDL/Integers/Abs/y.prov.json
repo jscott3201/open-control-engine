@@ -10,10 +10,10 @@
   "reference_csv": "reference.csv",
   "reference_columns": ["time", "u", "y"],
   "inputs": [
-    { "name": "u", "value_kind": "Integer", "values": [-9007199254740992.0, -4503599627370496.0, -2.0, -1.0, 0.0, 1.0, 2.0, 4503599627370496.0, 9007199254740992.0] }
+    { "name": "u", "value_kind": "Integer", "values": [-2147483647.0, -2147483646.0, -2.0, -1.0, 0.0, 1.0, 2.0, 2147483646.0, 2147483647.0] }
   ],
-  "input": "u=[-2^53,-2^52,-2,-1,0,1,2,2^52,2^53]; negatives, zero, positives, ±2^53 boundary",
-  "reference_rule": "y = abs(u) (wrapping at i64::MIN, but MIN is outside conformance range ±2^53); _spec/03 §4.2 Abs",
+  "input": "u=[-2147483647,-2147483646,-2,-1,0,1,2,2147483646,2147483647]; signs, zero, and representable magnitude boundaries",
+  "reference_rule": "y = abs(u); exclude i32::MIN because its positive magnitude is outside portable i32; CDL.Integers.Abs",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false
