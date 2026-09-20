@@ -1,7 +1,7 @@
 # Executable CXF and HostTick product contract
 
-Document revision: 10
-Grounding SHA: dc733e87b94d383cd50da06613692c6f306c37ca
+Document revision: 11
+Grounding SHA: b118a93f6500ce35ef06ab604c58a7a24841861a
 
 This is the aggregate product boundary and requirement-to-evidence map for the work toward a
 stable embeddable kernel. It records current observations, host obligations, and future acceptance
@@ -209,6 +209,13 @@ its own accepted prerequisite and owner authorization.
 M03-PR02: Resolve issue #250 with retained strict-bit evidence for the currently tolerance-qualified
 paths or explicit limitations retaining tolerance qualification, across the claimed target matrix.
 
+The [strict-bit evidence delivery](strict-bit-evidence.md) adds the 21-signal raw-bit inventory,
+local observations, facade mutation controls, and Linux x86_64/aarch64 debug/release candidate
+matrix with two processes per cell. PC-037 stays FUTURE pending hosted execution, retention and
+acceptance; local macOS evidence is not Linux qualification. macOS-arm64 remains explicitly
+conservative/unqualified until M06-PR02. No mathematical correctness, arbitrary-input, whole-engine
+exactness or downstream policy claim follows. Sim adoption remains M05-PR07.
+
 ### Same-build state
 
 M03-PR03: Qualify same-build state capture/restore and explicit portable versus target-bound domains,
@@ -360,3 +367,9 @@ written expected output and deterministic repetitions; the runnable gate remains
   snapshot/restore, frame/admission semantics, dependencies, features and downstream pins are
   unchanged. Independent delivery review, hosted architecture checks and host qualification remain
   separate; no stable release, signing authority, replay or state-wire support is claimed.
+- Revision 11, 2026-09-20: owner authorized the bounded 21-signal Linux strict-bit matrix and raw
+  provenance delivery. The checked-in observation is local macOS only; native Linux acceptance
+  remains pending, so PC-037 is not promoted. Existing aligned bands remain the conservative
+  platform policy; Linux candidates fail closed on disagreement. Runtime formulas, public APIs,
+  state/restore, dependencies, toolchain and downstream policies are unchanged. The checker revision
+  and pending documentation path advance mechanically without weakening earlier sentinels.

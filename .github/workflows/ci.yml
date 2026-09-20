@@ -255,6 +255,102 @@ jobs:
           cargo nextest run -p oce-api --lib --locked --profile ci --no-tests=fail
           -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
 
+  strict-bit-matrix:
+    name: strict bits (${{ matrix.runner }}, ${{ matrix.codegen }})
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+        codegen: [debug, release]
+        include:
+          - codegen: debug
+            cargo-profile: dev
+            nextest-profile: ci
+          - codegen: release
+            cargo-profile: release
+            nextest-profile: ci-release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.143
+      - name: Clear cached strict-bit evidence
+        run: rm -rf target/strict-bits && mkdir -p target/strict-bits
+      - name: Capture independent processes and check repeat bytes
+        env:
+          CODEGEN: ${{ matrix.codegen }}
+          CARGO_PROFILE: ${{ matrix.cargo-profile }}
+          NEXTEST_PROFILE: ${{ matrix.nextest-profile }}
+        run: |
+          set -euo pipefail
+          arch="$(uname -m)"
+          case "$arch" in x86_64|aarch64) ;; *) exit 1 ;; esac
+          for repeat in first repeat; do
+            OCE_STRICT_BITS_OUT="target/strict-bits/linux-$arch-$CODEGEN-$repeat.json" \
+              cargo nextest run -p oce-conformance --test strict_bits --locked \
+              --profile "$NEXTEST_PROFILE" --cargo-profile "$CARGO_PROFILE" --no-tests=fail \
+              -E 'test(=capture_raw_bits_without_reblessing_the_oracle)'
+          done
+          cmp "target/strict-bits/linux-$arch-$CODEGEN-first.json" \
+              "target/strict-bits/linux-$arch-$CODEGEN-repeat.json"
+      - name: Exact signal wiring, corpus firewall and mutation controls
+        env:
+          CARGO_PROFILE: ${{ matrix.cargo-profile }}
+          NEXTEST_PROFILE: ${{ matrix.nextest-profile }}
+        run: >-
+          cargo nextest run -p oce-conformance --test strict_bits --locked
+          --test per_block_reals_transcendental --test per_block_reals_sources_transcendental
+          --test per_block_psychrometrics --test per_block_utilities
+          --profile "$NEXTEST_PROFILE" --cargo-profile "$CARGO_PROFILE" --no-tests=fail
+      - name: Retain raw bits even when a strict candidate disagrees
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: strict-bits-${{ matrix.runner }}-${{ matrix.codegen }}
+          path: target/strict-bits/*.json
+          if-no-files-found: error
+          retention-days: 90
+
+  strict-bit-cross-arch:
+    name: strict bits cross-arch and codegen
+    if: ${{ !cancelled() && (github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch') }}
+    needs: strict-bit-matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.143
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          pattern: strict-bits-*
+          merge-multiple: true
+          path: target/strict-matrix
+      - name: Compare every signal and sample in all eight native captures
+        env:
+          OCE_STRICT_MATRIX_DIR: target/strict-matrix
+        run: >-
+          cargo nextest run -p oce-conformance --test strict_bits --locked --profile ci
+          --no-tests=fail --run-ignored only
+          -E 'test(=matrix::native_linux_matrix_is_complete_and_exact)'
+      - name: Require every native cell's wiring and mutation controls to pass
+        env:
+          MATRIX_RESULT: ${{ needs.strict-bit-matrix.result }}
+        run: test "$MATRIX_RESULT" = success
+      - name: Retain assembled raw-bit matrix and per-sample discrepancies
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: strict-bits-matrix
+          path: target/strict-matrix/*.json
+          if-no-files-found: error
+          retention-days: 90
+
   clippy:
     name: clippy (-D warnings)
     if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
@@ -345,10 +441,17 @@ jobs:
   # reason the display name below must not change casually.
   gate:
     name: gate (light)
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    needs: strict-bit-cross-arch
+    if: ${{ !cancelled() && (github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Keep the new qualification behind the existing required status context. A failed or
+      # skipped matrix cannot disappear as an optional job or make this job silently skip.
+      - name: Require successful native strict-bit qualification
+        env:
+          STRICT_BIT_RESULT: ${{ needs.strict-bit-cross-arch.result }}
+        run: test "$STRICT_BIT_RESULT" = success
       - uses: dtolnay/rust-toolchain@1.97.1
         with:
           components: clippy, rustfmt

@@ -22,8 +22,8 @@ import check
 ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = (
     "product contract: OK\n"
-    "Document revision: 10\n"
-    "Grounding SHA: dc733e87b94d383cd50da06613692c6f306c37ca\n"
+    "Document revision: 11\n"
+    "Grounding SHA: b118a93f6500ce35ef06ab604c58a7a24841861a\n"
     "Requirements: 40\n"
     "CURRENT: 31\n"
     "HOST-OBLIGATION: 5\n"
@@ -203,10 +203,10 @@ class TraceabilityTests(unittest.TestCase):
 
     def test_revision_grounding_and_change_record_are_required(self):
         for old, new, message in (
-            ("Document revision: 10", "Document revision: 0", "metadata:"),
-            ("Document revision: 10", "Document revision: 11", "current revision change record"),
-            ("Document revision: 10", "Document revision: 10\nDocument revision: 10", "metadata:"),
-            ("Grounding SHA: dc733e87b94d383cd50da06613692c6f306c37ca", "Grounding SHA: d2111be", "metadata:"),
+            ("Document revision: 11", "Document revision: 0", "metadata:"),
+            ("Document revision: 11", "Document revision: 12", "current revision change record"),
+            ("Document revision: 11", "Document revision: 11\nDocument revision: 11", "metadata:"),
+            ("Grounding SHA: b118a93f6500ce35ef06ab604c58a7a24841861a", "Grounding SHA: d2111be", "metadata:"),
             ("## Change record", "## History", "change record required"),
         ):
             with self.subTest(new=new):
@@ -412,6 +412,7 @@ class TraceabilityTests(unittest.TestCase):
             "crates/oce-api/src/compatibility.rs",
             "crates/oce-api/src/compatibility_tests.rs",
             "crates/oce-api/tests/compatibility.rs",
+            "docs/strict-bit-evidence.md",
         )))
         for path in ("docs/facade-migration.md", "crates/oce-api/tests/frame_assertions.rs",
                      "crates/oce-api/src/admission.rs", "crates/oce-api/src/tests/reload_tests.rs",
@@ -422,7 +423,7 @@ class TraceabilityTests(unittest.TestCase):
                      "crates/oce-api/src/shared_transition_tests.rs",
                      "crates/oce-api/src/compatibility.rs",
                      "crates/oce-api/src/compatibility_tests.rs",
-                     "crates/oce-api/tests/compatibility.rs"):
+                     "crates/oce-api/tests/compatibility.rs", "docs/strict-bit-evidence.md"):
             with self.subTest(path=path):
                 self.ignored = {path}
                 self.rejects("ignored or unverifiable")
@@ -514,7 +515,7 @@ class TraceabilityTests(unittest.TestCase):
     def test_contraction_is_current_at_the_accepted_document_revision(self):
         self.change_cell("PC-035", 1, "HOST-OBLIGATION")
         self.rejects("frame-only: contraction is current")
-        self.write_document(self.document.replace("Document revision: 10", "Document revision: 9"))
+        self.write_document(self.document.replace("Document revision: 11", "Document revision: 10"))
         self.rejects("frame-only: document revision")
 
     def test_retired_current_claims_are_not_hidden_by_valid_evidence_links(self):

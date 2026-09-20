@@ -84,19 +84,22 @@ The layer contains **412 Tier-A provenance records**, every one of them recordin
   `goldens/CDL/Constants/constants.prov.json`).
 - **132 G36 sequence signal goldens**, spanning all 46 fixtures.
 
-**410 of those are signal goldens — 389 compared bit-exactly, 21 under a documented
-aligned-tolerance band.** The 278 CDL signals are compared by the 15
+**410 of those are signal goldens — 389 with existing exact comparisons and 21 inventoried
+Linux exact candidates, still aligned-tolerance on unqualified platforms.** See the
+[raw-bit evidence and qualification boundary](strict-bit-evidence.md): the checked-in observation
+is local macOS, not successful hosted Linux evidence; PC-037 remains pending native acceptance.
+The 278 CDL signals are compared by the 15
 `crates/oce-conformance/tests/per_block_*.rs` suites through a shared harness that drives each
 block through the frozen facade, asserts the comparison is unmasked, and asserts
 `compared_points == reference.n_rows` so a zero-row comparison cannot pass vacuously. Twelve of
 the 15 suites run `ComparisonMode::Exact` with zero tolerances
-(`crates/oce-conformance/tests/block_harness/mod.rs:106-140`), and four run their 21
-libm-dependent Real goldens through `ComparisonMode::AlignedTolerance` at 1e-12
-(`block_harness/mod.rs:142-158`, tolerances pinned at `:323-332`):
+(`crates/oce-conformance/tests/block_harness/mod.rs`), and four select each of their 21
+libm-dependent Real goldens through the inventory: exact candidates on the two Linux targets,
+`ComparisonMode::AlignedTolerance` at the unchanged 1e-12 band elsewhere:
 `per_block_reals_transcendental.rs`, `per_block_reals_sources_transcendental.rs`,
 `per_block_psychrometrics.rs`, and `per_block_utilities.rs` — with
 `per_block_reals_sources_transcendental.rs` counted in both, because its two `CalendarTime`
-cases compare exactly while its single `Sin` case is banded. Boolean outputs in the aligned
+cases compare exactly while its single `Sin` case is inventoried. Boolean outputs in the aligned
 suites still compare by bits even in that mode (`crates/oce-conformance/src/aligned.rs:214`), so
 257 of the 278 CDL goldens are bit-exact. The 132 G36
 signals are compared by 23 `*_funnel.rs` and four `*_oracle.rs` per-fixture suites in the same
@@ -104,7 +107,8 @@ directory. Their recorded comparison regimes tally exactly: 102 `Value::bit_eq` 
 encoded integer, 12 exact 0.0/1.0.
 
 The semantic claim is narrower than the 410-comparison count. **390 signal goldens check CDL /
-Buildings source semantics**: 369 exact and 21 aligned-tolerance. The remaining **20 exact G36
+Buildings source semantics**: 369 existing exact and 21 matrix-gated candidates (conservative
+aligned-tolerance on unqualified platforms). The remaining **20 exact G36
 signals** belong to `Generic.TimeSuppression`, `CoolingOnly.Controller`, and `ReliefFanGroup`.
 Those references are independent of `oce-blocks`, but their `CDL.Logical.Pre` recurrences implement
 HostTick v1 and are labeled as profile checks rather than Modelica event-iteration oracles.
