@@ -3,5 +3,8 @@
     "git_revision": "8a63d4a042e1ca91d5dfe7bd3fc33d194f5102bb",
     "matrix_sha256": "12a2fbdd28c9718c0145c5055240f0b7eab3d7898bc5d1f05ed0ee09db2978ad"
   },
-  "current": null
+  "current": {
+    "git_revision": "d16d69a49857ea9abd35a12643e83139ca5c6a6f",
+    "matrix_sha256": "3f6f9efe8e4f9980a790c1a0d8eba1143111a6ae9138f0d486cca841aa19b7fc"
+  }
 }

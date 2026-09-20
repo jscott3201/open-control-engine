@@ -199,21 +199,20 @@ actual downstream pins and qualification are unchanged.
 
 ## Strict-bit evidence
 
-Native-evidence staging: the strengthened capture/comparison/admission checker is awaiting a
-new 35-source native receipt. The ordinary current-qualification test fails explicitly while it
-is pending. The historical result below is not a qualification of changed checker code, and this
-staging head is not ready for delivery. No tolerance downgrade or historical relabeling follows.
-
-The [accepted native receipt](strict-bit-evidence.md#accepted-native-receipt) promotes PC-037 only
+The [accepted native receipt](strict-bit-evidence.md#accepted-native-receipt) from run 35494403523
+supports PC-037 with the complete 35-source capture/comparison/admission binding, only
 for the 21 inventoried Linux signal cases: four architecture/codegen cells, two native runs per
-cell, 161 samples per run and zero mismatches. The checked-in raw captures reconstruct the accepted
-matrix digest. Their recorded synthetic merge checkout is preserved; current source/oracle/CXF
-digests establish applicability without requiring a later delivery HEAD to equal that capture SHA.
+cell, 161 samples per run and zero mismatches. The checked-in qualified captures reconstruct the
+accepted matrix digest and pass ordinary retained validation. Their recorded synthetic merge
+checkout is preserved; current source/oracle/CXF digests establish applicability without requiring
+a later delivery HEAD to equal that capture SHA.
 The original macOS observation is not platform qualification. macOS-arm64 stays conservative until
 M06-PR02, and all other unqualified targets retain the existing aligned band. Whole-executable
 exactness inherits the least-qualified contributing path, target and input domain; these finite
 cases alone do not establish it. Mathematical correctness, arbitrary-input and downstream policy
-claims remain outside this evidence. Sim adoption remains M05-PR07.
+claims remain outside this evidence. Sim adoption remains M05-PR07. The original 17-source Linux
+receipt from run 35492290613 remains unchanged historical evidence and cannot substitute for the
+current qualification. The evidence-collection run is not a final hosted-gate result.
 
 ## Future outcomes
 
@@ -374,9 +373,9 @@ written expected output and deterministic repetitions; the runnable gate remains
   unchanged. Independent delivery review, hosted architecture checks and host qualification remain
   separate; no stable release, signing authority, replay or state-wire support is claimed.
 - Revision 11, 2026-09-20: owner authorized the bounded 21-signal Linux strict-bit matrix and raw
-  provenance delivery. The checked-in observation is local macOS only; native Linux acceptance
-  remains pending, so PC-037 is not promoted. Existing aligned bands remain the conservative
-  platform policy; Linux candidates fail closed on disagreement. Runtime formulas, public APIs,
+  provenance delivery. The checked-in observation was local macOS only; native Linux acceptance
+  was still pending, so PC-037 was not promoted in that revision. Existing aligned bands remained
+  the conservative platform policy; Linux candidates failed closed on disagreement. Runtime formulas, public APIs,
   state/restore, dependencies, toolchain and downstream policies are unchanged. The checker revision
   and pending documentation path advance mechanically without weakening earlier sentinels.
 - Revision 12, 2026-09-20: accepted native run 35492290613 supplies the retained four-cell,
@@ -386,3 +385,7 @@ written expected output and deterministic repetitions; the runnable gate remains
   goldens remain unchanged. macOS/other targets retain the 1e-12 aligned band, with macOS-arm64
   unqualified until M06-PR02. No arbitrary-input, mathematical, whole-executable or Sim qualification,
   runtime/API/state change, dependency change or publication follows.
+  Checker-complete admission now uses run 35494403523, preserving its synthetic merge identity and
+  eight capture files verbatim, with all 35 source digests verified and no bound-source changes.
+  The earlier receipt remains historical; the ordinary current-qualification test validates the
+  newly admitted receipt without a final-HEAD identity requirement or source-map bypass.

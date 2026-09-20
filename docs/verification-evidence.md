@@ -86,16 +86,16 @@ The layer contains **412 Tier-A provenance records**, every one of them recordin
 
 **410 of those are signal goldens — 389 with existing exact comparisons and 21 inventoried
 accepted Linux exact cases, still aligned-tolerance on unqualified platforms.** The
-[retained native receipt](strict-bit-evidence.md#accepted-native-receipt) records run 35492290613:
+[retained native receipt](strict-bit-evidence.md#accepted-native-receipt) records run 35494403523:
 Linux x86_64/aarch64 × debug/release, two byte-identical runs per cell, 21 signals and 161 samples
 per run, zero exact mismatches against Tier-A and across cells. Raw bits, synthetic merge checkout
-provenance and source/oracle/CXF integrity are checked permanently, without requiring a later HEAD
-to equal the captured SHA. PC-037 is CURRENT only for this pinned corpus. macOS-arm64 remains
+provenance, all 35 bound source digests and oracle/input/CXF integrity are checked permanently,
+without requiring a later HEAD to equal the captured SHA. PC-037 is CURRENT only for this pinned corpus. macOS-arm64 remains
 unqualified until M06-PR02; neither libm mathematical correctness nor arbitrary-input or whole-engine
-exactness follows. No Sim policy changes. The checker-complete receipt is currently pending;
-the historical 17-source receipt does not qualify the changed 35-source checker, and the ordinary
-current-qualification test explicitly refuses until native admission. See the evidence page's
-staging notice rather than treating this intermediate head as a green delivery.
+exactness follows. No Sim policy changes. The checker-complete receipt is admitted and the ordinary
+current-qualification test validates it. The original 17-source receipt from run 35492290613 remains
+immutable history, not current qualification. The current collection run's successful numerical
+comparison is not evidence of final green hosted gates; the linked receipt distinguishes those outcomes.
 The 278 CDL signals are compared by the 15
 `crates/oce-conformance/tests/per_block_*.rs` suites through a shared harness that drives each
 block through the frozen facade, asserts the comparison is unmasked, and asserts
