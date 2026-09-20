@@ -55,6 +55,10 @@ mod loading;
 mod observations;
 mod params;
 mod projection;
+mod replay;
+mod replay_codec;
+mod replay_descriptor;
+mod replay_wire;
 mod stable_hash;
 mod state;
 mod state_codec;
@@ -97,6 +101,7 @@ pub use io::{
 pub use loading::LoadReport;
 pub use observations::{AssertEvent, AssertLevel};
 pub use params::{ParamAttrs, ParamTable, RunMode};
+pub use replay::{MAX_REPLAY_BYTES, ReplayContentId, ReplayError, ReplayExactness, ReplayRecord};
 pub use state::{EngineCheckpoint, EngineStateError, EngineStateSnapshot};
 pub use state_snapshot::StatePortability;
 pub use topology::{DeclaredOutput, PassThroughPair, Topology, TopologyBlock, TopologyConnection};

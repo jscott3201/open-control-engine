@@ -7,6 +7,11 @@ the [product contract](product-contract.md)). It is a pre-release supported boun
 cross-release migration promise. OCE is synchronous, in-process and database-free. It captures
 bytes, not durable storage, a replay log or permission to command equipment.
 
+The separate [canonical replay record](replay-record.md) describes one accepted frame. Optional
+start/end snapshot bytes remain sidecars in the host's authenticated ordered envelope; they are not
+embedded in a record. Replay reuses this placement policy without exposing or relabeling the private
+execution fingerprint as build authority. Neither snapshot format nor execution ABI changes for replay.
+
 “Same-build” is a **mandatory host-envelope precondition**, not an OCE comparison. Before calling
 `EngineStateSnapshot::from_bytes`, the host authenticates a sealed envelope binding the exact
 snapshot bytes to its approved compiled-build/deployment qualifier and checks freshness and

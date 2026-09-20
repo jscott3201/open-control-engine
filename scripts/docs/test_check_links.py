@@ -57,6 +57,18 @@ class GeneratedNavigationTests(unittest.TestCase):
             self.assertEqual(summary.count("(docs/state-compatibility.md)"), 1)
             self.assertTrue((staged / "src" / "docs" / "state-compatibility.md").is_file())
 
+    def test_staged_navigation_includes_replay_record_exactly_once(self) -> None:
+        """The replay contract is staged and reachable through one generated chapter."""
+
+        with tempfile.TemporaryDirectory() as temporary:
+            staged, _, _ = docs_stage.stage_book(Path(temporary) / "book", "a" * 40)
+
+            summary = (staged / "src" / "SUMMARY.md").read_text(encoding="utf-8")
+            chapter = "- [Canonical replay record](docs/replay-record.md)"
+            self.assertEqual(summary.splitlines().count(chapter), 1)
+            self.assertEqual(summary.count("(docs/replay-record.md)"), 1)
+            self.assertTrue((staged / "src" / "docs" / "replay-record.md").is_file())
+
     def test_authority_projection_navigation_and_inert_history(self):
         """Stage the index byte-exactly; history locators must not become links."""
         with tempfile.TemporaryDirectory() as temporary:

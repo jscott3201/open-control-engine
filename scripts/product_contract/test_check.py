@@ -22,13 +22,13 @@ import check
 ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = (
     "product contract: OK\n"
-    "Document revision: 13\n"
-    "Grounding SHA: d19a11e57935da2f10fb83047a3f9495e5aa4257\n"
+    "Document revision: 14\n"
+    "Grounding SHA: 0e38737af21250f23ffae099c9a65181e5a9105b\n"
     "Requirements: 40\n"
-    "CURRENT: 33\n"
+    "CURRENT: 34\n"
     "HOST-OBLIGATION: 5\n"
-    "FUTURE: 2\n"
-    "Future outcomes: 2\n"
+    "FUTURE: 1\n"
+    "Future outcomes: 1\n"
     "Integration pointers: 6\n"
     "Scope: traceability only; semantics and host compliance are not proven.\n"
 )
@@ -203,10 +203,10 @@ class TraceabilityTests(unittest.TestCase):
 
     def test_revision_grounding_and_change_record_are_required(self):
         for old, new, message in (
-            ("Document revision: 13", "Document revision: 0", "metadata:"),
-            ("Document revision: 13", "Document revision: 14", "current revision change record"),
-            ("Document revision: 13", "Document revision: 13\nDocument revision: 13", "metadata:"),
-            ("Grounding SHA: d19a11e57935da2f10fb83047a3f9495e5aa4257", "Grounding SHA: d2111be", "metadata:"),
+            ("Document revision: 14", "Document revision: 0", "metadata:"),
+            ("Document revision: 14", "Document revision: 15", "current revision change record"),
+            ("Document revision: 14", "Document revision: 14\nDocument revision: 14", "metadata:"),
+            ("Grounding SHA: 0e38737af21250f23ffae099c9a65181e5a9105b", "Grounding SHA: d2111be", "metadata:"),
             ("## Change record", "## History", "change record required"),
         ):
             with self.subTest(new=new):
@@ -255,7 +255,7 @@ class TraceabilityTests(unittest.TestCase):
         self.rejects("test not in range")
 
     def test_future_rows_require_assignments_not_existing_test_promises(self):
-        self.change_cell("PC-039", 7,
+        self.change_cell("PC-040", 7,
                          "test [retired_facade_symbols_are_absent]"
                          "(../crates/oce-api/tests/public_surface_contract.rs#L507-L512)")
         self.rejects("future outcome assignment required")
@@ -265,21 +265,21 @@ class TraceabilityTests(unittest.TestCase):
     def test_future_assignment_requires_named_local_outcome_and_description(self):
         for value, message in (
             ("future [later](#strict-bit-evidence)", "one named future assignment"),
-              ("future [M03-PR04](#release-compatibility)", "missing future description"),
-              ("future [M03-PR04](public-surface-contract.md)", "future outcome must be in this document"),
-              ("future [M03-PR04](#absent)", "missing heading"),
+              ("future [M03-PR05](#canonical-replay)", "missing future description"),
+              ("future [M03-PR05](public-surface-contract.md)", "future outcome must be in this document"),
+              ("future [M03-PR05](#absent)", "missing heading"),
         ):
             with self.subTest(value=value):
-                self.change_cell("PC-039", 7, value)
+                self.change_cell("PC-040", 7, value)
                 self.rejects(message)
-        self.write_document(self.document.replace("M03-PR04:", "M03-PR09:"))
+        self.write_document(self.document.replace("M03-PR05:", "M03-PR09:"))
         self.rejects("missing future description")
-        section = check.headings(self.document)["canonical-replay"]
-        self.write_document(self.document.replace(section, "M03-PR04: Later."))
+        section = check.headings(self.document)["release-compatibility"]
+        self.write_document(self.document.replace(section, "M03-PR05: Later."))
         self.rejects("missing future description")
 
     def test_duplicate_and_orphan_future_outcomes_refuse(self):
-        for suffix in ("M03-PR04: Duplicated outcome.", "M09-PR99: Orphan outcome."):
+        for suffix in ("M03-PR05: Duplicated outcome.", "M09-PR99: Orphan outcome."):
             self.write_document(self.document + "\n" + suffix + "\n")
             self.rejects("duplicate or orphan future outcome")
 
@@ -416,6 +416,9 @@ class TraceabilityTests(unittest.TestCase):
             "docs/state-compatibility.md",
             "crates/oce-api/src/tests/state_manifest_refusal_tests.rs",
             "crates/oce-api/tests/state_contract.rs",
+            "docs/replay-record.md", "crates/oce-api/src/replay.rs",
+            "crates/oce-api/tests/replay.rs", "crates/oce-api/tests/replay_codec.rs",
+            "crates/oce-api/src/replay_capture_tests.rs",
         )))
         for path in ("docs/facade-migration.md", "crates/oce-api/tests/frame_assertions.rs",
                      "crates/oce-api/src/admission.rs", "crates/oce-api/src/tests/reload_tests.rs",
@@ -428,7 +431,9 @@ class TraceabilityTests(unittest.TestCase):
                      "crates/oce-api/src/compatibility_tests.rs",
                      "crates/oce-api/tests/compatibility.rs", "docs/strict-bit-evidence.md",
                      "docs/state-compatibility.md", "crates/oce-api/src/tests/state_manifest_refusal_tests.rs",
-                     "crates/oce-api/tests/state_contract.rs"):
+                     "crates/oce-api/tests/state_contract.rs", "docs/replay-record.md",
+                     "crates/oce-api/src/replay.rs", "crates/oce-api/tests/replay.rs",
+                     "crates/oce-api/tests/replay_codec.rs", "crates/oce-api/src/replay_capture_tests.rs"):
             with self.subTest(path=path):
                 self.ignored = {path}
                 self.rejects("ignored or unverifiable")
@@ -520,7 +525,7 @@ class TraceabilityTests(unittest.TestCase):
     def test_contraction_is_current_at_the_accepted_document_revision(self):
         self.change_cell("PC-035", 1, "HOST-OBLIGATION")
         self.rejects("frame-only: contraction is current")
-        self.write_document(self.document.replace("Document revision: 13", "Document revision: 12"))
+        self.write_document(self.document.replace("Document revision: 14", "Document revision: 13"))
         self.rejects("frame-only: document revision")
 
     def test_retired_current_claims_are_not_hidden_by_valid_evidence_links(self):

@@ -42,6 +42,26 @@ Library, Studio, Edge and Sim retain their roles; Runtime is only an additive fu
 consumer/host qualification candidate. BOPTEST is Runtime host evidence, not OCE equivalence.
 No host services or second evaluator/snapshot/replay stack move into OCE.
 
+## Canonical per-frame replay
+
+`CompletedFrame::replay_record()` captures accepted inputs, exact completed outputs/warnings,
+model-time bits, public compatibility facts and placement without a second execution. The
+[v1 record contract](replay-record.md) defines independent decoding and read-only eligibility and
+comparison. Capture can refuse its 64 MiB bound after successful execution; that does not undo the
+frame or permit blind resubmission. No bytes are persisted by OCE.
+
+Authenticate exact bytes and qualify the same build/deployment, executable/parameters and prior
+state outside OCE **before decoding**. Then check `ReplayRecord::check_compatible`, prepare its
+canonical inputs, execute once on an isolated compatible engine and verify the completed result.
+A post-execution mismatch is not rollback or an equipment interlock. The content tag and public
+descriptor are non-authoritative; no OCE build token is created or enforced.
+
+The host owns the ordered sequence envelope, missing/duplicate policy and optional start/end
+`EngineStateSnapshot` sidecars. The engine-lifetime sequence is not durable position and is absent
+from records. Drop/process one record at a time for bounded retention. State continuation and
+placement still obey the existing manifest/restore-window rules; portable does not mean universally
+qualified mathematics, and conformance tolerances are not replay acceptance policy.
+
 ## Complete values are not sensor-quality evidence
 
 Every executable boundary input is required exactly once. A missing determinant returns
@@ -138,7 +158,8 @@ Durable continuation has a narrow restore window:
    qualified target, approved cold start or rollback under host policy.
 6. Reconcile external point values, quality, timestamps, histories and backend transaction state.
    Re-establish model-time/wall-clock mapping and choose the first complete, quality-approved
-   observation set. An equal-time retry executes again; OCE has no durable delivery/replay receipt.
+   observation set. An equal-time retry executes again; OCE has no durable delivery acknowledgment
+   or engine-owned replay sequence position.
 7. Acquire the new generation's exclusive actuator authority/lease and verify fencing at the
    delivery boundary before resuming writes. Record snapshot/command acknowledgments externally;
    successful restore alone authorizes nothing.

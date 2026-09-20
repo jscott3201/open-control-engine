@@ -13,8 +13,8 @@
     {
       "id": "oce-api",
       "path": "crates/oce-api/tests/public-api.txt",
-      "sha256": "1dcb576792c9ca30b45d48df91f16f8860e62710c3d1bb9324f2fdfbe8fd5ee3",
-      "item_count": 2347
+      "sha256": "db804469b3d16c4d7388a6540204c3304ecacdb5ba55172f07d7016e8a3fb948",
+      "item_count": 2560
     },
     {
       "id": "oce-store",
@@ -26,7 +26,7 @@
   "groups": {
     "facade-stable": {
       "status": "stable-candidate",
-      "surface": "Working oce-api facade operations, owned DTOs, typed errors, model-local value identities, state images and read-only portability inspection, and the closed public-fact compatibility descriptor with distinct catalog/complete-export tags.",
+      "surface": "Working oce-api facade operations, owned DTOs, typed errors, model-local value identities, state images and read-only portability inspection, the closed public-fact compatibility descriptor with distinct catalog/complete-export tags, and bounded canonical exact per-frame replay records with accepted-input retention and distinct noncryptographic content identity.",
       "provenance": "crates/oce-api/tests/public-api.txt plus public definitions re-exported by crates/oce-api/src/lib.rs",
       "rationale": "This is the intended long-lived embeddable host contract; exact signatures remain baseline-owned. Descriptor equality is not executable, unique-build, generation, state-wire or security authority."
     },
@@ -59,22 +59,22 @@
     {
       "baseline": "oce-api",
       "group": "facade-stable",
-      "ranges": ["1-1469", "1471-1473", "1475-1479", "1481-1530", "1532-2346"]
+      "ranges": ["1-1564", "1566-1568", "1570-1574", "1576-1625", "1627-2559"]
     },
     {
       "baseline": "oce-api",
       "group": "schedule-leakage",
-      "ranges": ["1470"]
+      "ranges": ["1565"]
     },
     {
       "baseline": "oce-api",
       "group": "storage-port-conditional",
-      "ranges": ["1474", "1480", "2347"]
+      "ranges": ["1569", "1575", "2560"]
     },
     {
       "baseline": "oce-api",
       "group": "deprecated-compatibility",
-      "ranges": ["1531"]
+      "ranges": ["1626"]
     },
     {
       "baseline": "oce-store",

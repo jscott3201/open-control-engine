@@ -2,10 +2,11 @@
 
 ## Status and authority
 
-This is the normative detail of PC-031 in [product contract revision 9](product-contract.md).
+This is the normative detail of PC-031 in the [product contract](product-contract.md).
 **Preparation (PC-032), complete-frame execution (PC-033), shared evaluation core (PC-034), and
 frame-only facade contraction (PC-035) are implemented.** The APIs below supply no
-profile selector, wire format or stable-product guarantee. Execution maintainers own
+profile selector or stable-product guarantee. The separate [replay record](replay-record.md) defines
+the canonical per-accepted-frame encoding. Execution maintainers own
 these semantics; host policy remains with the host integrator.
 
 The requirements below describe the sole public execution path. Legacy execution methods have
@@ -52,7 +53,7 @@ These are semantic roles, not proposed public field or type names:
 | Loaded-executable context | The engine-local successful load incarnation and the executable it installed. Successful reload invalidates prior prepared frames and resolved references, even when reloading identical bytes or reusing the same point names. |
 | Executable IO compatibility | Canonical boundary identities, direction, types/domains, fan-out and explicit omission semantics used to interpret inputs and outputs. Equality of authored model names or point counts is insufficient. |
 | Accepted-transition correlation | An unambiguous association among an accepted input, its one transition, and its completed output/diagnostics within the compatible run. Equal timestamps identify different transitions; refused submissions consume no accepted-transition position. |
-| Replay compatibility and position | The deterministic execution context and accepted transition ordering needed for reproduction or explicit refusal. This is not yet a canonical record encoding or a promise that an ephemeral load token is portable. |
+| Replay compatibility and position | The canonical per-frame record carries exact public facts and placement; the host authenticates executable/build/prior-state context and ordered sequence position. Ephemeral load tokens and Engine-lifetime sequence are not serialized. |
 
 A frame or resolved reference MUST be checked against the current loaded-executable and IO context
 before mutation; a stale context refuses rather than silently rebinding names. Preparation alone
@@ -171,7 +172,7 @@ qualification candidate**. BOPTEST results would be Runtime host evidence, not O
 reassignment of Sim. No downstream qualification is claimed here.
 
 Tokio, Axum, SQL, HTTP/MCP, drivers, quality/staleness policy, leases, commands and fallback services
-stay outside OCE. Consumers use the engine-owned evaluator, snapshot and eventual canonical replay
+stay outside OCE. Consumers use the engine-owned evaluator, snapshot and canonical per-frame replay
 contracts; this work does not create a second evaluator, snapshot or replay stack.
 
 ## Evidence and remaining acceptance work
@@ -278,7 +279,7 @@ are before this boundary. No Store operation, host callback, shadow RunState, un
 is involved. Allocation failure remains excluded, including during result capture.
 
 `CompletedFrame` is owned, Clone + Debug + Send + Sync, with private fields and read-only
-`time()`, `sequence()`, `outputs()` and `diagnostics()` accessors. Outputs are `(String, Value)`
+`time()`, `sequence()`, `inputs()`, `outputs()` and `diagnostics()` accessors. Inputs and outputs are `(String, Value)`
 pairs; cloning a result gives an independent owned result. Real bits are copied, not normalized by
 capture (individual block arithmetic retains its existing numerical policy). No public connector
 indices, Store handles, mutable latest-view, schedule or serialized identity are returned.
@@ -301,6 +302,11 @@ durability, cross-process identity, deployment authority, lease, authentication 
 Neither it nor the result is serialized into existing state/checkpoint bytes. No last-result cache
 is added to Engine; the caller owns retained outcomes, which remain unchanged by later operations.
 
+The receipt also retains every accepted canonical boundary input, moving the exact prepared value
+and copying the canonical schema path. `replay_record()` captures a separate bounded canonical
+record, not a second transition; oversized record capture can refuse after successful execution.
+Its [v1 contract](replay-record.md) leaves authenticated order and snapshot sidecars with the host.
+
 ### Execution evidence and cost boundary
 
 - [Public success goldens](../crates/oce-api/tests/execute_frame.rs): hand-derived Add, sampled
@@ -318,7 +324,9 @@ is added to Engine; the caller owns retained outcomes, which remain unchanged by
   engine self-output or unrestricted Modelica equivalence.
 - [Allocation and latency harness](../crates/oce-api/tests/frame_observations.rs): exact counters
   and positive control, 128 repetitions each of five fixtures. For B nonempty boundary outputs,
-  result capture allocates B path buffers plus one pair vector; empty B allocates none. Warnings
+  output capture allocates B path buffers plus one pair vector; empty B allocates none. Accepted-input
+  retention adds N path buffers plus one N-pair vector for nonempty N, and moves prepared Values.
+  Placement capture scans the loaded class set with the state portability predicate. Warnings
   add their owned source/message buffers and a geometrically growing event vector. Staging clones
   only the prepared fan-out values; preparation's separate N/T formula remains above. Existing
    evaluator allocation exceptions remain, and latest-state inspection refreshes after each commit.

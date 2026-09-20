@@ -64,11 +64,16 @@ Boolean fixed point, but HostTick v1 neither rejects it nor emits a non-converge
 resume can replace their state without a frame. They may read internal connector points that are
 not boundary outputs. There are no intermediate event-iteration rows or raw output-arena accessor.
 
-`CompletedFrame` retains only the executable root boundary outputs in lexical identity order and
-the Warning diagnostics emitted by that native transition. It is independent of the mutable latest
+`CompletedFrame` retains accepted inputs and executable root boundary outputs in lexical identity
+order, plus the Warning diagnostics emitted by that native transition. It is independent of the mutable latest
 view. Its engine-lifetime sequence increases only on accepted frames, never on refusal,
 and survives reload/resume/restore without rewinding. The private context fence
 is not serialized and is not host deployment authority. See the frame contract for preflight precedence.
+
+The separate [canonical replay record](replay-record.md) captures this receipt without reevaluation.
+Exact replay compares raw values and diagnostic fields, not tolerances. Hosts authenticate order,
+build/executable context and optional state sidecars, then drive the same prepare/execute surface.
+No sequence container, embedded snapshot, profile selector or second evaluator is introduced.
 
 Do not drive event iteration by repeatedly executing frames with the same timestamp unless repeated
 HostTick state transitions are the intended behavior. Those calls also update every other stateful
