@@ -13,8 +13,8 @@
     {
       "id": "oce-api",
       "path": "crates/oce-api/tests/public-api.txt",
-      "sha256": "674afde99581e1be21c6b32e99eeefd2f3218444c0ca572ce699e2ed096b9045",
-      "item_count": 2111
+      "sha256": "34006178fdc1ab5f33b173a347da73b472f6875c2e43111e97c6e0f9566e0330",
+      "item_count": 2304
     },
     {
       "id": "oce-store",
@@ -26,9 +26,9 @@
   "groups": {
     "facade-stable": {
       "status": "stable-candidate",
-      "surface": "Working oce-api facade operations, owned DTOs, typed errors, model-local value identities, and state images.",
+      "surface": "Working oce-api facade operations, owned DTOs, typed errors, model-local value identities, state images, and the closed public-fact compatibility descriptor with distinct catalog/complete-export tags.",
       "provenance": "crates/oce-api/tests/public-api.txt plus public definitions re-exported by crates/oce-api/src/lib.rs",
-      "rationale": "This is the intended long-lived embeddable host contract; exact signatures remain baseline-owned."
+      "rationale": "This is the intended long-lived embeddable host contract; exact signatures remain baseline-owned. Descriptor equality is not executable, unique-build, generation, state-wire or security authority."
     },
     "domain-key-stable": {
       "status": "stable-candidate",
@@ -59,22 +59,22 @@
     {
       "baseline": "oce-api",
       "group": "facade-stable",
-      "ranges": ["1-1283", "1285-1287", "1289-1293", "1295-1343", "1345-2110"]
+      "ranges": ["1-1447", "1449-1451", "1453-1457", "1459-1507", "1509-2303"]
     },
     {
       "baseline": "oce-api",
       "group": "schedule-leakage",
-      "ranges": ["1284"]
+      "ranges": ["1448"]
     },
     {
       "baseline": "oce-api",
       "group": "storage-port-conditional",
-      "ranges": ["1288", "1294", "2111"]
+      "ranges": ["1452", "1458", "2304"]
     },
     {
       "baseline": "oce-api",
       "group": "deprecated-compatibility",
-      "ranges": ["1344"]
+      "ranges": ["1508"]
     },
     {
       "baseline": "oce-store",

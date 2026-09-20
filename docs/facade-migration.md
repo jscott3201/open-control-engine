@@ -112,3 +112,27 @@ and old external handles may no longer be valid. Plan adapter compensation befor
 Successful reload requires refreshing model-local IDs, IO views and other ephemeral references as
 before. No Store trait, catalog/descriptor identity, state bytes, HostTick, package or dependency
 changes accompany admission. No downstream source or pin migration is performed here.
+
+## Compatibility receipt adoption
+
+The additive [closed descriptor](facade-contracts.md#closed-host-compatibility-descriptor) does not
+replace existing receipts or alter their bytes. Migrate only the public-fact comparison portion:
+
+| Current receipt field/use | Mapping |
+| --- | --- |
+| `LoadReport.model_id` / load receipt report | Keep for authored/synthetic diagnostic correlation. Never pass it as export, executable or compatibility identity. |
+| `catalog_content_id(catalog())` | Same text at `descriptor.catalog_content_id().as_str()`, now category-typed. Caller-edited catalog DTOs are not the current engine catalog descriptor. |
+| IO/value/parameter `contract_descriptors()` revisions | Same revisions through the descriptor's named schema accessors. Still metadata contracts, not model input-definition identity. |
+| Fixed HostTick profile and descriptor | `execution_profile()` is `HostTick-v1`; `execution_profile_schema_revision()` remains the existing revision 2. |
+| Host source/build/features stamp | Retain it. `oce_api_version()` adds only the exact OCE Cargo package version, not a unique build fingerprint. |
+| `ExportReport::content_id_complete()` / export receipt report | Pass `Some(report)` to `CompatibilityDescriptor::current`; its completeness check remains the sole minting path. Preserve typed refusal on warnings. |
+| No export available | Pass `None`; the canonical receipt records `export:none`, which never matches present content. |
+| Checkpoint/snapshot or frame receipt | No replacement. Existing restore checks and frame lifecycle remain authoritative; descriptor agreement authorizes neither replay nor restore. |
+
+Retain the owned descriptor or its canonical `to_string()` bytes. Compare in-memory descriptors
+with `check_compatible`; store canonical bytes and compare exactly when using persisted receipts.
+No OCE parser, source normalizer, external attestation or signature authority is introduced. Legacy
+export reports are host-mutable, so capture before edits if producer-returned content is intended.
+Capture again after re-export to describe parameter edits. Same-byte reload may keep the descriptor
+equal while invalidating prepared plans: this is deliberately not a generation fence. No actual
+downstream pin or source is changed or qualified here.
