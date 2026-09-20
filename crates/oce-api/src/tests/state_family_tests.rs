@@ -1,24 +1,15 @@
 //! End-to-end durable continuation across the state-layout families.
 
-use std::cell::Cell;
 use std::sync::Arc;
 
-use oce_blocks::{Diagnostics, PortKind};
+use super::common::advance;
+use oce_blocks::PortKind;
 use oce_model::{
     BlockId, BlockInstance, Connector, ConnectorId, Dir, EnumClassId, ModelGraph, ParamTable,
     Value, ValueType,
 };
 
 use crate::{Engine, EngineCheckpoint, EngineStateSnapshot};
-
-#[derive(Default)]
-struct WarningCount(Cell<usize>);
-
-impl Diagnostics for WarningCount {
-    fn warn(&self, _source: &str, _message: &str, _t: f64) {
-        self.0.set(self.0.get() + 1);
-    }
-}
 
 fn model(class_path: &str, params: ParamTable) -> ModelGraph {
     let block = (oce_blocks::lookup(class_path).unwrap().make)(&params);
@@ -72,7 +63,8 @@ fn params(values: &[(&str, Value)]) -> ParamTable {
     }
 }
 
-fn stage_inputs(engine: &mut Engine, graph: &ModelGraph, boolean: bool) {
+fn inputs(graph: &ModelGraph, boolean: bool) -> Vec<(&str, Value)> {
+    let mut entries = Vec::new();
     for connector in &graph.connectors {
         if connector.dir != Dir::In {
             continue;
@@ -84,10 +76,9 @@ fn stage_inputs(engine: &mut Engine, graph: &ModelGraph, boolean: bool) {
             ValueType::String => Value::String(Arc::from("value")),
             ValueType::Enum(class) => Value::Enum { class, ordinal: 1 },
         };
-        engine
-            .set_input(connector.iri.as_deref().unwrap(), value)
-            .unwrap();
+        entries.push((connector.iri.as_deref().unwrap(), value));
     }
+    entries
 }
 
 fn assert_same_state(left: &Engine, right: &Engine, class_path: &str) {
@@ -120,8 +111,12 @@ fn assert_family_round_trip(class_path: &str, parameters: ParamTable, capture_ti
         .build_model_in_memory(graph.clone(), Some("urn:test:family-model"))
         .unwrap();
     for tick in 0..=capture_tick {
-        stage_inputs(&mut uninterrupted, &graph, tick % 2 == 1);
-        uninterrupted.tick(tick as f64 * 0.1).unwrap();
+        advance(
+            &mut uninterrupted,
+            tick as f64 * 0.1,
+            &inputs(&graph, tick % 2 == 1),
+        )
+        .unwrap();
     }
     if class_path == "CDL.Integers.Stage" {
         assert!(f64::from_bits(uninterrupted.state.words[1]) > uninterrupted.state.t);
@@ -144,10 +139,8 @@ fn assert_family_round_trip(class_path: &str, parameters: ParamTable, capture_ti
     assert_same_state(&uninterrupted, &restored, class_path);
 
     let next = (capture_tick + 1) as f64 * 0.1;
-    stage_inputs(&mut uninterrupted, &graph, true);
-    stage_inputs(&mut restored, &graph, true);
-    uninterrupted.tick(next).unwrap();
-    restored.tick(next).unwrap();
+    advance(&mut uninterrupted, next, &inputs(&graph, true)).unwrap();
+    advance(&mut restored, next, &inputs(&graph, true)).unwrap();
     assert_same_state(&uninterrupted, &restored, class_path);
 }
 
@@ -244,8 +237,7 @@ fn moving_average_warn_once_state_survives_restore() {
     let mut source = Engine::in_memory();
     source.build_model_in_memory(graph.clone(), None).unwrap();
     for tick in 0..=70 {
-        stage_inputs(&mut source, &graph, false);
-        source.tick(tick as f64 * 0.1).unwrap();
+        advance(&mut source, tick as f64 * 0.1, &inputs(&graph, false)).unwrap();
     }
     assert_eq!(source.state.words[5], 1);
     let checkpoint = source.checkpoint().unwrap();
@@ -265,14 +257,10 @@ fn moving_average_warn_once_state_survives_restore() {
         })
         .unwrap();
 
-    stage_inputs(&mut preserved, &graph, false);
-    stage_inputs(&mut cleared, &graph, false);
-    let preserved_warnings = WarningCount::default();
-    let cleared_warnings = WarningCount::default();
-    preserved.tick_with(7.1, &preserved_warnings).unwrap();
-    cleared.tick_with(7.1, &cleared_warnings).unwrap();
-    assert_eq!(preserved_warnings.0.get(), 0);
-    assert_eq!(cleared_warnings.0.get(), 1);
+    let preserved_frame = advance(&mut preserved, 7.1, &inputs(&graph, false)).unwrap();
+    let cleared_frame = advance(&mut cleared, 7.1, &inputs(&graph, false)).unwrap();
+    assert_eq!(preserved_frame.diagnostics().len(), 0);
+    assert_eq!(cleared_frame.diagnostics().len(), 1);
 }
 
 #[test]

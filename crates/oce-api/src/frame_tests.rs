@@ -138,7 +138,8 @@ fn dirty_resume_invalidates_but_clean_resume_and_compatible_restore_retain_conte
     engine.resume().unwrap();
     engine.check_prepared_frame(&plan).unwrap();
     let checkpoint = engine.checkpoint().unwrap();
-    engine.tick(5.0).unwrap();
+    let advance = engine.prepare_frame(5.0, &values).unwrap();
+    engine.execute_frame(advance).unwrap();
     let before = engine.state_snapshot().unwrap();
     assert!(matches!(
         engine.check_prepared_frame(&plan),
@@ -288,10 +289,7 @@ fn enum_class_and_ordinal_are_not_integer_carriers_and_strings_remain_owned() {
     );
     // Detached probes deliberately have no state-manifest port identity. Compare the actual
     // run image here; public executable schemas use snapshot comparisons in the integration suite.
-    let before = format!(
-        "{:?} {:?} {:?}",
-        engine.state, engine.outputs, engine.prev_t
-    );
+    let before = format!("{:?} {:?}", engine.state, engine.prev_t);
     for ordinal in 1..=4 {
         engine
             .prepare_frame(0.0, &[("urn:domain:u", Value::Enum { class, ordinal })])
@@ -315,24 +313,15 @@ fn enum_class_and_ordinal_are_not_integer_carriers_and_strings_remain_owned() {
             Err(OcError::InputType(_))
         ));
     }
-    assert_eq!(
-        format!(
-            "{:?} {:?} {:?}",
-            engine.state, engine.outputs, engine.prev_t
-        ),
-        before
-    );
-    let mut engine = domain_engine(ValueType::String, Attrs::default_for(ValueType::String));
+    assert_eq!(format!("{:?} {:?}", engine.state, engine.prev_t), before);
+    let engine = domain_engine(ValueType::String, Attrs::default_for(ValueType::String));
     let plan = engine
         .prepare_frame(0.0, &[("urn:domain:u", Value::String(Arc::from("owned")))])
         .unwrap();
     assert!(plan.inputs[0].1.bit_eq(&Value::String(Arc::from("owned"))));
     assert!(
-        matches!(
-            engine.set_input("urn:domain:u", Value::String(Arc::from("legacy"))),
-            Err(OcError::UnknownPoint(_))
-        ),
-        "legacy point inventory still excludes strings"
+        engine.io().iter().all(|point| point.path != "urn:domain:u"),
+        "point inventory excludes metadata-only strings"
     );
 }
 

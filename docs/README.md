@@ -17,10 +17,10 @@ front door; these pages are the detail behind it.
 | [CXF composite subset](cxf-composite-subset.md) | The normative contract, if you are writing a tool that emits CXF for this engine |
 | [Host responsibilities](host-responsibilities.md) | What safety behavior you must implement yourself, before wiring the engine to equipment |
 | [CI and the gate](ci-and-the-gate.md) | What runs when, and what a green check does and does not prove |
-| [Benchmarks](benchmarks.md) | Measured `Engine::tick()` throughput, recorded per run with the commit and host that produced it |
+| [Benchmarks](benchmarks.md) | Current complete-frame allocation/latency harness and historical throughput, qualified by the commit and host that produced it |
 | [Stability baseline](stability-baseline.md) | The dated OCE/downstream ref and pin evidence snapshot, its authority limits, and deterministic verifier |
 | [Public surface contract](public-surface-contract.md) | Which `oce-api` and `oce-store` items are stable candidates, conditional, deferred, deprecated, or scheduled for removal, with the [machine-checked ledger](public-surface-ledger.json) |
-| [Facade migration](facade-migration.md) | Removed pre-release placeholder names, the intentional Warning default change, and preserved working host boundaries |
+| [Facade migration](facade-migration.md) | Frame-only execution migration, removed pre-release names, Warning-only diagnostics and preserved host boundaries |
 | [Package, feature, and publication policy](package-publication-policy.md) | Which of all 17 workspace packages are supported or private, which `oce-api` feature selections are supported, and which 12 packages are eligible for a future release, with the [machine-checked ledger](package-publication-ledger.json) |
 
 ## Elsewhere in the repository

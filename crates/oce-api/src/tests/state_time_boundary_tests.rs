@@ -1,5 +1,6 @@
 //! Sample-clock acceptance and refusal at the exact signed-index boundaries.
 
+use super::common::advance;
 use super::state_tests::sampled_model;
 use crate::{Engine, OcError};
 
@@ -15,7 +16,7 @@ fn assert_refusal_is_unchanged(engine: &mut Engine, t_now: f64, class_path: &str
     let prev_t = engine.prev_t.map(f64::to_bits);
     let ready = engine.durable_restore_ready;
     assert!(
-        matches!(engine.tick(t_now), Err(OcError::ModelTimeUnrepresentable { now }) if now == t_now),
+        matches!(engine.prepare_frame(t_now, &[]), Err(OcError::ModelTimeUnrepresentable { now }) if now.to_bits() == t_now.to_bits()),
         "{class_path}"
     );
     assert_eq!(engine.state.words, words, "{class_path}");
@@ -46,9 +47,13 @@ fn initialized_clocks_accept_the_last_upper_index_then_refuse_two_to_the_sixty_t
         engine
             .build_model_in_memory(sampled_model(class_path, 1.0), None)
             .unwrap();
-        engine.tick(0.0).unwrap();
-        engine
-            .tick(UPPER_ACCEPTED)
+        let entries = if class_path == "CDL.Logical.Sources.SampleTrigger" {
+            vec![]
+        } else {
+            vec![("conn#0", crate::Value::Real(0.0))]
+        };
+        advance(&mut engine, 0.0, &entries).unwrap();
+        advance(&mut engine, UPPER_ACCEPTED, &entries)
             .unwrap_or_else(|error| panic!("{class_path}: {error}"));
         assert_refusal_is_unchanged(&mut engine, UPPER_REFUSED, class_path);
     }
@@ -61,7 +66,7 @@ fn sample_trigger_accepts_the_lower_bound_and_refuses_the_adjacent_float_below_i
     accepted
         .build_model_in_memory(sampled_model(class_path, 1.0), None)
         .unwrap();
-    accepted.tick(LOWER_ACCEPTED).unwrap();
+    advance(&mut accepted, LOWER_ACCEPTED, &[]).unwrap();
     assert_eq!(accepted.state.words[0].cast_signed(), -1);
 
     let mut refused = Engine::in_memory();

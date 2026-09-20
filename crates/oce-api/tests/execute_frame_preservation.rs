@@ -3,7 +3,7 @@
 
 mod support;
 
-use oce_api::{CollectSpec, Engine, EngineStateError, InputSource, OcError, SimSpec, Value};
+use oce_api::{Engine, EngineStateError, OcError, Value};
 use std::sync::Arc;
 use support::recording_store::{RecordingStore, StoreCallSnapshot};
 
@@ -57,7 +57,8 @@ fn context_readiness_and_time_refusals_preserve_public_images_and_store_calls() 
                     }
                 }
                 "time" => {
-                    engine.tick(1.0).unwrap();
+                    let advance = engine.prepare_frame(1.0, &entries()).unwrap();
+                    engine.execute_frame(advance).unwrap();
                 }
                 _ => unreachable!(),
             }
@@ -66,7 +67,7 @@ fn context_readiness_and_time_refusals_preserve_public_images_and_store_calls() 
                 .map(|s| s.into_bytes())
                 .map_err(|e| e.to_string());
             let checkpoint = engine.checkpoint();
-            let outputs = engine.outputs().to_map();
+            let output = engine.get_output(Y).unwrap();
             let watch = engine.watch(&[Y, "urn:frame:delay.y"]).unwrap();
             let retained_image = format!("{retained:?}");
             engine.store().reset_calls();
@@ -87,7 +88,7 @@ fn context_readiness_and_time_refusals_preserve_public_images_and_store_calls() 
                     .map_err(|e| e.to_string()),
                 snapshot
             );
-            values_equal(&engine.outputs().to_map(), &outputs);
+            assert!(engine.get_output(Y).unwrap().bit_eq(&output));
             values_equal(&engine.watch(&[Y, "urn:frame:delay.y"]).unwrap(), &watch);
             assert_eq!(format!("{retained:?}"), retained_image);
             assert_eq!(engine.store().calls(), StoreCallSnapshot::default());
@@ -115,7 +116,7 @@ fn context_readiness_and_time_refusals_preserve_public_images_and_store_calls() 
             let next = engine.prepare_frame(1.0, &entries()).unwrap();
             assert_eq!(
                 engine.execute_frame(next).unwrap().sequence(),
-                if advanced { 2 } else { 1 }
+                1 + u64::from(advanced) + u64::from(cause == "time")
             );
             assert_eq!(engine.store().calls(), StoreCallSnapshot::default());
         }
@@ -132,7 +133,7 @@ fn unloaded_target_refuses_a_moved_plan_and_failed_load_preserves_a_usable_plan(
         target.execute_frame(plan),
         Err(OcError::State(EngineStateError::NoLoadedModel))
     ));
-    assert!(target.outputs().is_empty());
+    assert!(target.watch(&[]).unwrap().is_empty());
     assert_eq!(target.store().calls(), StoreCallSnapshot::default());
     let plan = source.prepare_frame(0.0, &entries()).unwrap();
     assert!(matches!(source.load_cxf(b"{"), Err(OcError::Cxf(_))));
@@ -140,25 +141,17 @@ fn unloaded_target_refuses_a_moved_plan_and_failed_load_preserves_a_usable_plan(
 }
 
 #[test]
-fn legacy_execution_and_restart_never_consume_complete_frame_positions() {
+fn latest_state_inspections_never_consume_positions_or_change_retained_receipts() {
     let mut engine = Engine::in_memory();
     engine.load_cxf(MODEL).unwrap();
     let plan = engine.prepare_frame(0.0, &entries()).unwrap();
     let retained = engine.execute_frame(plan).unwrap();
     let retained_image = format!("{retained:?}");
-    engine.set_input("urn:frame:b", Value::Real(8.0)).unwrap();
-    engine.tick(0.0).unwrap();
-    engine.set_realtime_epoch_unix_nanos(0);
-    engine.step_realtime(1.0).unwrap();
-    engine
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop: 2.0,
-            step: 1.0,
-            inputs: InputSource::None,
-            collect: CollectSpec::None,
-        })
-        .unwrap();
+    for _ in 0..3 {
+        let output = engine.get_output(Y).unwrap();
+        let watched = engine.watch(&[Y, Y]).unwrap();
+        assert!(watched.iter().all(|(_, value)| value.bit_eq(&output)));
+    }
     let plan = engine.prepare_frame(2.0, &entries()).unwrap();
     assert_eq!(engine.execute_frame(plan).unwrap().sequence(), 2);
     assert_eq!(format!("{retained:?}"), retained_image);

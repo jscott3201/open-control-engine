@@ -1,4 +1,4 @@
-//! Recording `Store` test double for tick-purity assertions.
+//! Recording `Store` test double for complete-frame noninterference assertions.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -46,10 +46,6 @@ impl RecordingState {
             !self.panic_on_forbidden.load(Ordering::SeqCst),
             "forbidden store method reached the guarded tick path: {method}"
         );
-    }
-
-    fn count_allowed(&self, counter: &AtomicUsize) {
-        counter.fetch_add(1, Ordering::SeqCst);
     }
 }
 
@@ -206,7 +202,8 @@ impl PointStore for RecordingStore {
     }
 
     fn snapshot(&self) -> StoreResult<Box<dyn PointSnapshot>> {
-        self.state.count_allowed(&self.state.calls.snapshot);
+        self.state
+            .count_forbidden(&self.state.calls.snapshot, "snapshot");
         let points = Arc::clone(&*self.state.points.read().expect("recording points lock"));
         Ok(Box::new(RecordingSnapshot {
             state: Arc::clone(&self.state),
@@ -234,7 +231,8 @@ struct RecordingSnapshot {
 
 impl PointSnapshot for RecordingSnapshot {
     fn read_resolved(&self, handle: PointHandle) -> Option<PointSample> {
-        self.state.count_allowed(&self.state.calls.read_resolved);
+        self.state
+            .count_forbidden(&self.state.calls.read_resolved, "read_resolved");
         self.points
             .by_handle
             .get(handle.0 as usize)

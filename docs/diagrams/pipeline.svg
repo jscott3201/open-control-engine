@@ -33,12 +33,12 @@
   <!-- TICK stages (green) -->
   <g>
     <rect x="582" y="64" width="118" height="66" rx="8" fill="#e6f4ea" stroke="#137333" stroke-width="1.8"/>
-    <text x="641" y="92"  text-anchor="middle" font-size="13.5" font-weight="700" fill="#0d652d" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">tick</text>
-    <text x="641" y="112" text-anchor="middle" font-size="11" fill="#5f6368">one step</text>
+    <text x="641" y="92"  text-anchor="middle" font-size="13.5" font-weight="700" fill="#0d652d" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">prepare</text>
+    <text x="641" y="112" text-anchor="middle" font-size="11" fill="#5f6368">complete inputs</text>
 
     <rect x="720" y="64" width="118" height="66" rx="8" fill="#e6f4ea" stroke="#137333" stroke-width="1.8"/>
-    <text x="779" y="92"  text-anchor="middle" font-size="13.5" font-weight="700" fill="#0d652d" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">simulate</text>
-    <text x="779" y="112" text-anchor="middle" font-size="11" fill="#5f6368">run to t_stop</text>
+    <text x="779" y="92"  text-anchor="middle" font-size="13.5" font-weight="700" fill="#0d652d" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">execute</text>
+    <text x="779" y="112" text-anchor="middle" font-size="11" fill="#5f6368">owned result</text>
   </g>
 
   <!-- arrows -->

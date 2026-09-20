@@ -1,6 +1,9 @@
 //! Source-verified ASHRAE G36 PlantRequests through the frozen facade.
 
-use oce_api::{CollectSpec, Engine, InputSource, PointDirection, SimMetrics, SimSpec, Value};
+use oce_api::{Engine, PointDirection, Value};
+#[path = "support/frame_trace.rs"]
+mod frame_trace;
+use frame_trace::FrameRun;
 
 const PLANT_REQUESTS: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_plant_requests.jsonld");
@@ -90,25 +93,22 @@ fn plant_requests_inputs(t: f64) -> Vec<(String, Value)> {
     ]
 }
 
-fn simulate(mut engine: Engine) -> (ScheduleSignature, SimMetrics) {
+fn simulate(mut engine: Engine) -> (ScheduleSignature, FrameRun) {
     let schedule = schedule_signature(&engine);
-    let metrics = engine
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop: 1140.0,
-            step: 60.0,
-            inputs: InputSource::Closure(Box::new(plant_requests_inputs)),
-            collect: CollectSpec::Named {
-                points: vec![
-                    CHILLED_WATER_RESET.to_string(),
-                    CHILLER_PLANT.to_string(),
-                    HOT_WATER_RESET.to_string(),
-                    HOT_WATER_PLANT.to_string(),
-                ],
-                stride: 1,
-            },
-        })
-        .expect("G36 PlantRequests simulates");
+    let metrics = FrameRun::record(
+        &mut engine,
+        0.0,
+        1140.0,
+        60.0,
+        plant_requests_inputs,
+        vec![
+            CHILLED_WATER_RESET.to_string(),
+            CHILLER_PLANT.to_string(),
+            HOT_WATER_RESET.to_string(),
+            HOT_WATER_PLANT.to_string(),
+        ],
+    )
+    .expect("G36 PlantRequests simulates");
     assert_eq!(metrics.ticks, 20);
     assert_eq!(
         metrics
@@ -125,7 +125,7 @@ fn simulate(mut engine: Engine) -> (ScheduleSignature, SimMetrics) {
     (schedule, metrics)
 }
 
-fn int_column(metrics: &SimMetrics, path: &str) -> Vec<i64> {
+fn int_column(metrics: &FrameRun, path: &str) -> Vec<i64> {
     let index = metrics
         .trace
         .columns()
@@ -142,7 +142,7 @@ fn int_column(metrics: &SimMetrics, path: &str) -> Vec<i64> {
         .collect()
 }
 
-fn assert_trace_bit_eq(left: &SimMetrics, right: &SimMetrics) {
+fn assert_trace_bit_eq(left: &FrameRun, right: &FrameRun) {
     assert_eq!(left.trace.columns(), right.trace.columns());
     assert_eq!(
         left.trace

@@ -21,13 +21,14 @@
 //!
 //! The public surface is split across internal modules and re-exported **flat** here, so every path
 //! stays `oce_api::Foo` (R-PUB-1/4; the `cargo public-api` baseline): `engine` (the
-//! [`Engine`] handle + load/tick core), `error` ([`OcError`]), `loading` ([`LoadReport`],
-//! the successful ingest report), `params` (the live parameter table), `sim` (execution modes
-//! + [`Outputs`]), `io` (the typed IO inventory), `watch` (key-selected output reads).
+//! [`Engine`] handle + load/core), `error` ([`OcError`]), `loading` ([`LoadReport`]),
+//! `params` (the live parameter table), `frame` (complete typed execution), `io` (the typed IO
+//! inventory), and `observations` / `watch` (latest-state, non-receipt output inspection).
 //!
-//! The full load → tick → simulate loop works; [`Engine::load_cxf`] runs the end-to-end CXF ingest
-//! pipeline (resolve → flatten → validate → BUILD). The frozen public surface (`08` §11.1 R-PUB-5/6)
-//! includes `simulate` / `step_realtime`, `set_input` / `get_output` / `watch`, the live parameter table
+//! [`Engine::load_cxf`] runs the end-to-end CXF ingest pipeline (resolve → flatten → validate →
+//! BUILD). Execution is exclusively [`Engine::prepare_frame`] followed by consuming
+//! [`Engine::execute_frame`]. [`CompletedFrame`] is the immutable committed boundary-output
+//! receipt. The facade also provides latest-state `get_output` / `watch`, the live parameter table
 //! (`get_param` / `set_param` / `halt` / `resume` / `mode`), and the typed IO inventory (`io` /
 //! `io_summary` / `point_list`). Executable ingest is CXF only; there is no source Modelica or
 //! semantic-template loader. Only `point_list(None)` is supported: device filtering is outside the
@@ -50,9 +51,9 @@ mod frame_inputs;
 mod guards;
 mod io;
 mod loading;
+mod observations;
 mod params;
 mod projection;
-mod sim;
 mod stable_hash;
 mod state;
 mod state_codec;
@@ -88,11 +89,8 @@ pub use io::{
     TrendCfg, TrendInterval,
 };
 pub use loading::LoadReport;
+pub use observations::{AssertEvent, AssertLevel};
 pub use params::{ParamAttrs, ParamTable, RunMode};
-pub use sim::{
-    AssertEvent, AssertLevel, CollectSpec, InputSource, OutputTrace, Outputs, SimMetrics, SimSpec,
-    StepReport,
-};
 pub use state::{EngineCheckpoint, EngineStateError, EngineStateSnapshot};
 pub use topology::{DeclaredOutput, PassThroughPair, Topology, TopologyBlock, TopologyConnection};
 

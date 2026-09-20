@@ -23,10 +23,9 @@ use oce_store_mem::MemStore;
 use crate::{
     AssertEvent, AssertLevel, ConnectorId, DeclaredOutput, Diagnostic, Engine, EngineCheckpoint,
     EngineStateError, EngineStateSnapshot, IoClass, IoInventory, IoSummary, LoadErrorContext,
-    LoadReport, OcError, OutputTrace, Outputs, ParamAttrs, ParamTable, PassThroughPair,
-    PhysicalKind, PointDirection, PointInfo, PointValueType, RunMode, SimMetrics, SimSpec,
-    StepReport, Topology, TopologyBlock, TopologyConnection, TrendCfg, TrendInterval, Value,
-    ValueType,
+    LoadReport, OcError, ParamAttrs, ParamTable, PassThroughPair, PhysicalKind, PointDirection,
+    PointInfo, PointValueType, RunMode, Topology, TopologyBlock, TopologyConnection, TrendCfg,
+    TrendInterval, Value, ValueType,
 };
 
 /// `T: Send + Sync` (used for the concrete thread-safety guards).
@@ -94,11 +93,7 @@ fn _assert_python_facing_types_are_clone() {
     needs_clone::<LoadReport>();
     needs_clone::<IoSummary>();
     needs_clone::<PointInfo>();
-    needs_clone::<OutputTrace>();
-    needs_clone::<StepReport>();
     needs_clone::<AssertEvent>();
-    needs_clone::<SimMetrics>();
-    needs_clone::<Outputs>();
     needs_clone::<IoInventory>();
     needs_clone::<ParamTable>();
     needs_clone::<ParamAttrs>();
@@ -131,16 +126,13 @@ fn _assert_python_facing_types_are_clone() {
 /// load-bearing conversion the binding performs). Pin their concrete owned return types via
 /// fn-pointers; a drift to a borrowed/`impl Trait`/`Cow` return fails to coerce.
 fn _assert_outputs_enumerable() {
-    let _: fn(&Outputs) -> Vec<(String, Value)> = Outputs::to_map;
     let _: fn(&IoInventory) -> Vec<PointInfo> = IoInventory::to_vec;
     let _: fn(&ParamTable) -> Vec<(String, Value, ParamAttrs)> = ParamTable::to_vec;
 }
 
 /// The borrowing `iter()` companions return `impl Iterator` (uncoercible to a fn-pointer), so pin
-/// their **item** types at a use-site instead. The owned key + borrowed value of `Outputs::iter`
-/// (`(ConnectorId, &Value)`) is exactly the owned-snapshot counterpart `to_map` clones.
-fn _assert_enumeration_item_types(o: &Outputs, i: &IoInventory, p: &ParamTable) {
-    let _: Option<(ConnectorId, &Value)> = o.iter().next();
+/// their **item** types at a use-site instead.
+fn _assert_enumeration_item_types(i: &IoInventory, p: &ParamTable) {
     let _: Option<PointInfo> = i.iter().next();
     let _: Option<(String, Value, ParamAttrs)> = p.iter().next();
 }
@@ -157,7 +149,6 @@ fn _assert_frozen_signatures() {
     let _: fn(Arc<MemStore>) -> Engine<MemStore> = Engine::<MemStore>::with_store;
     let _: fn(&mut Engine<MemStore>, &[u8]) -> Result<LoadReport, OcError> =
         Engine::<MemStore>::load_cxf;
-    let _: fn(&mut Engine<MemStore>, f64) -> Result<&Outputs, OcError> = Engine::<MemStore>::tick;
     let _: fn(&Engine<MemStore>) -> Result<EngineCheckpoint, OcError> =
         Engine::<MemStore>::checkpoint;
     let _: fn(&mut Engine<MemStore>, &EngineCheckpoint) -> Result<(), OcError> =
@@ -166,17 +157,9 @@ fn _assert_frozen_signatures() {
         Engine::<MemStore>::state_snapshot;
     let _: fn(&mut Engine<MemStore>, &EngineStateSnapshot) -> Result<(), OcError> =
         Engine::<MemStore>::restore_state;
-    let _: fn(&mut Engine<MemStore>, &str, Value) -> Result<(), OcError> =
-        Engine::<MemStore>::set_input;
     let _: fn(&Engine<MemStore>, &str) -> Result<Value, OcError> = Engine::<MemStore>::get_output;
     let _: fn(&Engine<MemStore>, &[&str]) -> Result<Vec<(String, Value)>, OcError> =
         Engine::<MemStore>::watch;
-    let _: fn(&mut Engine<MemStore>, &SimSpec) -> Result<SimMetrics, OcError> =
-        Engine::<MemStore>::simulate;
-    let _: fn(&mut Engine<MemStore>, f64) -> Result<StepReport, OcError> =
-        Engine::<MemStore>::step_realtime;
-    let _: fn(&mut Engine<MemStore>, u64) = Engine::<MemStore>::set_realtime_epoch_unix_nanos;
-    let _: fn(&Engine<MemStore>) -> Option<u64> = Engine::<MemStore>::realtime_epoch_unix_nanos;
     let _: fn(&Engine<MemStore>, &str) -> Result<Value, OcError> = Engine::<MemStore>::get_param;
     let _: fn(&Engine<MemStore>) -> &ParamTable = Engine::<MemStore>::params;
     let _: fn(&mut Engine<MemStore>, &str, Value) -> Result<(), OcError> =
@@ -192,7 +175,6 @@ fn _assert_frozen_signatures() {
         Engine::<MemStore>::export_cxf;
     let _: fn(&Engine<MemStore>) -> crate::Topology = Engine::<MemStore>::topology;
     // R-PUB-6 owned-snapshot accessors (also asserted by `_assert_outputs_enumerable`).
-    let _: fn(&Outputs) -> Vec<(String, Value)> = Outputs::to_map;
     let _: fn(&IoInventory) -> Vec<PointInfo> = IoInventory::to_vec;
     let _: fn(&ParamTable) -> Vec<(String, Value, ParamAttrs)> = ParamTable::to_vec;
     // R-PUB-1: the oce-model value/IO types + the diagnostic type are nameable through the facade.
@@ -228,21 +210,13 @@ fn _assert_frozen_signatures() {
 /// method is deleting it, and a deletion is public-surface removal, which the release-gate baseline
 /// is the right review to adjudicate. A per-PR pin would make this gate fight that removal.
 fn _assert_accessor_signatures() {
-    let _: fn(&Engine<MemStore>) -> &Outputs = Engine::<MemStore>::outputs;
     let _: fn(&Engine<MemStore>) -> &oce_graph::Schedule = Engine::<MemStore>::schedule;
     let _: fn(&Engine<MemStore>) -> &MemStore = Engine::<MemStore>::store;
-    let _: fn(&Outputs, ConnectorId) -> Option<&Value> = Outputs::get;
-    let _: fn(&Outputs) -> usize = Outputs::len;
-    let _: fn(&Outputs) -> bool = Outputs::is_empty;
     let _: fn(&IoInventory, usize) -> Option<&PointInfo> = IoInventory::get;
     let _: fn(&IoInventory) -> usize = IoInventory::len;
     let _: fn(&IoInventory) -> bool = IoInventory::is_empty;
     let _: fn(&ParamTable) -> usize = ParamTable::len;
     let _: fn(&ParamTable) -> bool = ParamTable::is_empty;
-    let _: fn(&OutputTrace) -> &[String] = OutputTrace::columns;
-    let _: fn(&OutputTrace) -> &[f64] = OutputTrace::times;
-    let _: fn(&OutputTrace, usize) -> Option<&[Value]> = OutputTrace::column;
-    let _: fn(&OutputTrace) -> usize = OutputTrace::rows;
     let _: fn(&crate::ExportReport) -> Result<String, crate::ContentIdError> =
         crate::ExportReport::content_id_complete;
 }

@@ -38,8 +38,8 @@ pub struct PreparedInputFrame {
 /// are not extra outputs; distinct declared outputs sharing one driver remain distinct. Undriven
 /// declarations absent from the executable are not fabricated. An empty output set is valid.
 ///
-/// Retaining or cloning this result does not retain mutable engine state. Later frames, legacy
-/// execution, restore, reload and parameter resume cannot change it. A private load/rebuild fence
+/// Retaining or cloning this result does not retain mutable engine state. Later frames,
+/// restore, reload and parameter resume cannot change it. A private load/rebuild fence
 /// binds it to its executable/IO/build/profile context; it exposes no portable identity or authority.
 /// This is computation evidence, not a persistence, replay, freshness or equipment-delivery receipt.
 /// No serialization or public constructor is provided. Accessors do not allocate or panic.
@@ -79,8 +79,8 @@ impl CompletedFrame {
 
     /// Accepted-frame position within one [`Engine`] lifetime, starting at one and never wrapping.
     ///
-    /// Only successful complete-frame execution increments it. Refusals and legacy execution do
-    /// not; reload, clean/dirty resume and restore never reset or rewind it. It is not a persisted
+    /// Only successful complete-frame execution increments it. Refusals do not;
+    /// reload, clean/dirty resume and restore never reset or rewind it. It is not a persisted
     /// replay position, deployment generation, lease, authentication or cross-engine identity.
     #[must_use]
     pub fn sequence(&self) -> u64 {
@@ -129,10 +129,10 @@ impl<S: Store> Engine<S> {
     ///
     /// Rechecks readiness, incarnation and time, then sequence capacity, before any mutation.
     /// Stages all resolved fan-out targets, closes durable-restore readiness, evaluates once,
-    /// refreshes latest [`crate::Outputs`] and returns an independent [`CompletedFrame`]. Equal
+    /// refreshes latest-state inspection and returns an independent [`CompletedFrame`]. Equal
     /// finite time advances again; there is no event iteration. No Store method or host callback
-    /// is invoked. Legacy methods share only the private evaluation/refresh core, retain their
-    /// own staging and lifecycle, and consume no frame sequence.
+    /// is invoked. This is the only public state-advancing execution surface; cadence and
+    /// persistence orchestration are host responsibilities, not alternative execution profiles.
     ///
     /// Allocation/copy costs beyond normal evaluation scale with boundary outputs and emitted
     /// warnings; staging scales with prepared fan-out. There is no run-state clone or rollback.
@@ -169,13 +169,13 @@ impl<S: Store> Engine<S> {
             .checked_add(1)
             .ok_or(OcError::FrameSequenceExhausted)?;
 
-        // COMMIT: only infallible operations remain. Never route through Store-backed tick_with.
+        // COMMIT: only infallible operations remain. No Store calls occur.
         for (targets, value) in &frame.inputs {
             for target in targets {
                 self.state.values[target.0 as usize] = value.clone();
             }
         }
-        let collector = crate::sim::AssertCollector::default();
+        let collector = crate::observations::AssertCollector::default();
         self.transition_host_tick(frame.time, &collector);
         self.accepted_frame_sequence = sequence;
         Ok(CompletedFrame {
@@ -211,15 +211,15 @@ impl<S: Store> Engine<S> {
     /// Resolve an entire typed input frame without changing any engine or Store state.
     ///
     /// `time` is finite nondecreasing model seconds; equal time is allowed. Keys use the same
-    /// canonical identity resolver as string staging, but only executable boundary inputs are
+    /// canonical identity resolver as the input definitions; only executable boundary inputs are
     /// accepted here. All values are required exactly once, with exact types and declared domains.
     /// Unbounded Real signals admit nonfinite values; a declared bound requires its comparison
     /// to hold (thus rejects NaN). Values are never coerced through Store carriers.
     ///
     /// Returns an owned opaque plan, not a completed transition. Borrowed keys are not retained.
     /// Allocates in proportion to schema inputs and resolved fan-out targets, not key length.
-    /// Migrate validation loops by collecting observations first rather than calling `set_input`
-    /// on each pair; do not treat subsequent legacy setters/ticks as an atomic commit of this plan.
+    /// Collect all observations before preparation, then consume the plan with
+    /// [`Self::execute_frame`]. No sparse staging or seed/hold-last substitution is available.
     ///
     /// ```
     /// use oce_api::{Engine, OcError, PreparedInputFrame, Value};

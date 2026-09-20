@@ -1,6 +1,9 @@
 //! Source-verified ASHRAE G36 ReliefDamper through the frozen facade.
 
-use oce_api::{CollectSpec, Engine, InputSource, PointDirection, SimMetrics, SimSpec, Value};
+use oce_api::{Engine, PointDirection, Value};
+#[path = "support/frame_trace.rs"]
+mod frame_trace;
+use frame_trace::FrameRun;
 
 const RELIEF_DAMPER: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_relief_damper.jsonld");
@@ -73,20 +76,17 @@ fn schedule_signature(engine: &Engine) -> ScheduleSignature {
     )
 }
 
-fn simulate(mut engine: Engine) -> (ScheduleSignature, SimMetrics) {
+fn simulate(mut engine: Engine) -> (ScheduleSignature, FrameRun) {
     let schedule = schedule_signature(&engine);
-    let metrics = engine
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop: 5.0,
-            step: 1.0,
-            inputs: InputSource::Closure(Box::new(relief_damper_inputs)),
-            collect: CollectSpec::Named {
-                points: vec![RELIEF_DAMPER_COMMAND.to_string()],
-                stride: 1,
-            },
-        })
-        .expect("G36 ReliefDamper simulates");
+    let metrics = FrameRun::record(
+        &mut engine,
+        0.0,
+        5.0,
+        1.0,
+        relief_damper_inputs,
+        vec![RELIEF_DAMPER_COMMAND.to_string()],
+    )
+    .expect("G36 ReliefDamper simulates");
     assert_eq!(metrics.ticks, 6);
     assert_eq!(
         metrics
@@ -103,7 +103,7 @@ fn simulate(mut engine: Engine) -> (ScheduleSignature, SimMetrics) {
     (schedule, metrics)
 }
 
-fn real_column(metrics: &SimMetrics, path: &str) -> Vec<f64> {
+fn real_column(metrics: &FrameRun, path: &str) -> Vec<f64> {
     let index = metrics
         .trace
         .columns()
@@ -132,7 +132,7 @@ fn assert_real_bits(actual: &[f64], expected: &[f64], label: &str) {
     );
 }
 
-fn assert_trace_bit_eq(left: &SimMetrics, right: &SimMetrics) {
+fn assert_trace_bit_eq(left: &FrameRun, right: &FrameRun) {
     assert_eq!(left.trace.columns(), right.trace.columns());
     assert_eq!(
         left.trace

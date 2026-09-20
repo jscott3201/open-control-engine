@@ -185,12 +185,12 @@ fn filtered_inventory_refuses_without_store_calls_or_engine_mutation() {
     engine
         .load_cxf(include_bytes!("fixtures/assertion_model.jsonld"))
         .unwrap();
-    engine
-        .set_input("urn:assert#u", Value::Boolean(true))
+    let prepared = engine
+        .prepare_frame(2.0, &[("urn:assert#u", Value::Boolean(true))])
         .unwrap();
-    engine.tick(2.0).unwrap();
+    engine.execute_frame(prepared).unwrap();
     let before = engine.state_snapshot().unwrap();
-    let outputs = engine.outputs().to_map();
+    let output = engine.get_output("urn:assert#invert.y").unwrap();
     adapter.calls.store(0, Ordering::SeqCst);
     for _ in 0..3 {
         for device in ["AHU-1", "", "unknown", "\0\n设备"] {
@@ -209,11 +209,12 @@ fn filtered_inventory_refuses_without_store_calls_or_engine_mutation() {
             engine.state_snapshot().unwrap().as_bytes(),
             before.as_bytes()
         );
-        for ((path, value), (old_path, old_value)) in engine.outputs().to_map().iter().zip(&outputs)
-        {
-            assert_eq!(path, old_path);
-            assert!(value.bit_eq(old_value));
-        }
+        assert!(
+            engine
+                .get_output("urn:assert#invert.y")
+                .unwrap()
+                .bit_eq(&output)
+        );
         assert_eq!(
             adapter.calls.load(Ordering::SeqCst),
             0,
@@ -221,7 +222,7 @@ fn filtered_inventory_refuses_without_store_calls_or_engine_mutation() {
         );
     }
     assert!(
-        matches!(engine.tick(1.0), Err(OcError::TimeRegression { now, prev })
+        matches!(engine.prepare_frame(1.0, &[]), Err(OcError::TimeRegression { now, prev })
         if now.to_bits() == 1.0_f64.to_bits() && prev.to_bits() == 2.0_f64.to_bits())
     );
 }

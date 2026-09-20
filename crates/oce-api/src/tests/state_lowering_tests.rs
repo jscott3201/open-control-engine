@@ -14,7 +14,28 @@ fn duplicate_host_paths_and_lowered_block_keys_round_trip_without_slot_loss() {
     for (name, fixture) in [("fanout", FANOUT), ("pass-through", PASS_THROUGH)] {
         let mut source = Engine::in_memory();
         source.load_cxf(fixture).unwrap();
-        source.tick(0.0).unwrap();
+        let inputs = if name == "fanout" {
+            vec![(
+                "http://example.org#g36.profile.boundary_fanout.u",
+                crate::Value::Real(0.0),
+            )]
+        } else {
+            vec![
+                (
+                    "http://example.org#PassThroughMiniature.realIn",
+                    crate::Value::Real(0.0),
+                ),
+                (
+                    "http://example.org#PassThroughMiniature.integerIn",
+                    crate::Value::Integer(0),
+                ),
+                (
+                    "http://example.org#PassThroughMiniature.booleanIn",
+                    crate::Value::Boolean(false),
+                ),
+            ]
+        };
+        super::common::advance(&mut source, 0.0, &inputs).unwrap();
         let snapshot = source.state_snapshot().unwrap();
         assert_eq!(
             snapshot.image.values.len(),

@@ -24,12 +24,14 @@ from urllib.parse import urlsplit
 DOCUMENT = "docs/product-contract.md"
 PENDING = frozenset((DOCUMENT, "scripts/product_contract/check.py",
                       "scripts/product_contract/test_check.py",
-                       "docs/facade-migration.md", "crates/oce-api/tests/sim_assertions.rs",
+                       "docs/facade-migration.md", "crates/oce-api/tests/frame_assertions.rs",
                        "crates/oce-api/src/admission.rs",
                        "crates/oce-api/src/tests/reload_tests.rs",
                        "crates/oce-api/tests/cxf_admission.rs",
                        "docs/complete-frame-contract.md",
-                        "crates/oce-api/tests/legacy_frame_boundary.rs",
+                         "crates/oce-api/tests/frame_refusals.rs",
+                         "crates/oce-api/tests/frame_purity.rs",
+                         "crates/oce-api/src/observations.rs",
                         "crates/oce-api/src/frame.rs",
                         "crates/oce-api/src/frame_tests.rs",
                         "crates/oce-api/tests/prepare_frame_preservation.rs",
@@ -48,6 +50,16 @@ IDENTIFIER = re.compile(r"\bPC-[0-9]+\b")
 OBLIGATION = re.compile(r"\bmust\b", re.IGNORECASE)
 ASSIGNMENT = re.compile(r"M[0-9]{2}-PR[0-9]{2}")
 LINE_ANCHOR = re.compile(r"L([1-9][0-9]*)(?:-L([1-9][0-9]*))?")
+RETIRED_METHODS = ("tick", "tick_with", "set_input", "simulate", "step_realtime", "outputs",
+                   "set_realtime_epoch_unix_nanos", "realtime_epoch_unix_nanos")
+RETIRED_TYPES = ("Outputs", "InputSource", "CollectSpec", "SimSpec", "SimMetrics", "StepReport",
+                 "OutputTrace")
+FRAME_EVIDENCE = frozenset((
+    ("retired_facade_symbols_are_absent", "crates/oce-api/tests/public_surface_contract.rs"),
+    ("incomplete_reference_inputs_refuse_in_both_cadences", "crates/oce-conformance/tests/driver.rs"),
+    ("store_samples_neither_supply_missing_determinants_nor_overwrite_complete_values",
+     "crates/oce-api/tests/frame_purity.rs"),
+))
 
 
 class ContractError(ValueError):
@@ -174,7 +186,8 @@ def test_locator(repository: Repository, name: str, destination: str) -> None:
     text = repository.read(path)
     if path.endswith(".rs"):
         declaration = rf"(?m)^\s*fn {re.escape(name)}\(\)"
-        require(re.search(declaration, selected) is not None, "evidence: test not in range")
+        require(re.search(declaration, selected) is not None,
+                f"evidence: test not in range: {name} at {path}#{fragment}")
         # Intentionally lexical and narrow: current cited tests use this exact form.
         active = rf"(?m)^\s*#\[test\]\s*\n\s*fn {re.escape(name)}\(\)"
         require(len(re.findall(active, text)) == 1, "evidence: unique test declaration required")
@@ -304,6 +317,7 @@ def validate(repository: Repository) -> str:
     outcomes = re.findall(r"(?m)^(M[0-9]{2}-PR[0-9]{2}): ", text)
     require(len(outcomes) == len(set(outcomes)) and set(outcomes) == assignments,
             "evidence: duplicate or orphan future outcome")
+    validate_frame_boundary(repository, revision, rows)
     for source in POINTERS:
         pointer_text = repository.read(source)
         destinations = [match[2] for match in LINK.finditer(pointer_text)]
@@ -320,12 +334,44 @@ def validate(repository: Repository) -> str:
             "Scope: traceability only; semantics and host compliance are not proven.\n")
 
 
+def validate_frame_boundary(repository: Repository, revision: str, rows: list[Requirement]) -> None:
+    """Bounded contraction sentinels, not a compiler or proof of behavioral test relevance."""
+    require(revision == "9", "frame-only: document revision must be 9")
+    contraction = next((row for row in rows if row.identifier == "PC-035"), None)
+    require(contraction is not None and contraction.status == "CURRENT",
+            "frame-only: contraction is current")
+    assert contraction is not None
+    require(contraction.evidence.startswith("test "), "frame-only: contraction evidence")
+    evidence = [(name, local_path(DOCUMENT, urlsplit(destination).path))
+                for name, destination in link_list(contraction.evidence[5:])]
+    require(len(evidence) == len(FRAME_EVIDENCE) and set(evidence) == FRAME_EVIDENCE,
+            "frame-only: contraction evidence requires absence, driver refusal and Store controls")
+    baseline = repository.read("crates/oce-api/tests/public-api.txt")
+    forbidden = [f"oce_api::Engine<S>::{name}(" for name in RETIRED_METHODS]
+    forbidden += [f"oce_api::{name}" for name in RETIRED_TYPES]
+    forbidden += ["oce_api::OcError::RealtimeEpochUnset", "oce_api::OcError::RealtimeInstantUnrepresentable"]
+    for symbol in forbidden:
+        require(symbol not in baseline, f"frame-only: retired baseline item: {symbol}")
+    for row in rows:
+        if row.status != "FUTURE":
+            statement = re.sub(r"[`*_]", "", row.statement).casefold()
+            require(not any(claim in statement for claim in (
+                "retain sparse input staging", "hold a bound input's current connector value",
+                "attempt store write-back")), f"frame-only: retired current claim: {row.identifier}")
+
+
 def validate_readme_facade(text: str) -> None:
     """Reject known obsolete current-claim bullets, not historical API mentions.
 
     These are narrow lexical sentinels over public guidance, not a semantic proof
     or a ban on spelling removed names in migration/history accounts.
     """
+    methods = "|".join(name for name in RETIRED_METHODS if name != "outputs")
+    types = "|".join(RETIRED_TYPES)
+    for block in re.findall(r"```rust\n(.*?)```", text, re.DOTALL):
+        require(re.search(rf"(?:\.|::)\s*(?:{methods})\s*\(|\b(?:{types})\b|"
+                          r"\b(?:engine\s*\.|Engine\s*::)\s*outputs\s*\(", block) is None,
+                "facade: retired execution in README Rust example")
     for bullet in re.findall(r"(?m)^- .+(?:\n[ \t]+.+)*", text):
         normalized = " ".join(re.sub(r"[`*]", "", bullet).split()).casefold()
         require(not normalized.startswith("- two stable loader signatures are placeholders."),

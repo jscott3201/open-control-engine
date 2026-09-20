@@ -98,19 +98,18 @@ they do not promise new JSON wire codecs or schema-driven runtime validation.
 | [Values](../crates/oce-api/contracts/values.schema.json) | Existing `Value`, `ValueType` and `ConnectorId` aliases remain. Real values use bit-preserving binary64; enums retain class and ordinal. Constructor representability does not establish operation-specific validity. Connector IDs are model-local indices. |
 | [IO](../crates/oce-api/contracts/io.schema.json) | Existing point fields and declared static attributes; enums project to `Int`, strings are omitted. Current inventory classification/defaults are explicit. |
 | [Parameters](../crates/oce-api/contracts/parameters.schema.json) | Existing tune-at-rest rows and available static bounds. Absent bounds do not establish freedom from cross-parameter rules. Unit/quantity provenance is currently absent. |
-| [Assertions](../crates/oce-api/contracts/assertions.schema.json) | `StepReport.asserts` collects all block warnings, including Assert and other classes. Sources are currently class-level, not guaranteed instances. Repeated false Assert inputs warn each evaluation; true is silent. |
-| [Execution profile](../crates/oce-api/contracts/execution-profile.schema.json) | Fixed HostTick v1: one advance per successful call, including equal timestamps; no Modelica same-time event iteration. Descriptive, not a runtime selector or snapshot revision. |
+| [Assertions](../crates/oce-api/contracts/assertions.schema.json) | Revision 2: `CompletedFrame::diagnostics` retains all block warnings, including Assert and other classes. Sources are currently class-level, not guaranteed instances. Repeated false Assert inputs warn each evaluation; true is silent. |
+| [Execution profile](../crates/oce-api/contracts/execution-profile.schema.json) | Descriptor revision 2, still fixed HostTick v1: one advance per accepted complete frame, including equal timestamps; no Modelica same-time event iteration. Descriptive, not a runtime selector or snapshot revision. |
 
-Warning collection is available in `step_realtime` and native `execute_frame`; ordinary tick and
-simulation keep no-op sinks. Realtime writes follow the tick and may fail before a collected report is delivered.
-Load/store side effects and commit ordering are unchanged. These descriptors add no rollback,
+Every completed frame retains warnings. There is no public no-op-sink execution profile or engine
+write-back route. Load/Store side effects and commit ordering are unchanged. These descriptors add no rollback,
 warn-once, escalation, scheduler, equipment policy or safety guarantee. The separately documented
 [serialized admission and replacement policy](facade-migration.md#bounded-serialized-load-adoption)
 uses `Import` for byte refusals without adding/reordering stages or changing descriptor bytes.
 
 ## Consumer migration boundary
 
-Existing consumers can continue using their current APIs. New adapters can depend on `oce-api`
+Consumers of removed execution profiles need source migration. New adapters can depend on `oce-api`
 alone for the typed catalog and receipts. Studio retains its full source/build/features identity,
 catalog policy, diagnostic truncation and authored-target mapping. These are separate from the
 facade catalog content tag. No future OCE commit is embedded in the artifact, and this change
@@ -130,7 +129,7 @@ internal driven points, omits strings and projects enums to Int. Supply every ca
 once with a real host observation. The definition's exact inclusive bounds are schema domains, not
 input values or defaults. Missing values are refused rather than seeded or read from the Store.
 
-Replace prevalidation implemented as a loop of `set_input` calls with one borrowed-key list passed
+Replace old per-value staging with one complete borrowed-key list passed
 to `prepare_frame(time, entries)`. Preparation returns an owned opaque `PreparedInputFrame` without
 staging the loop's valid prefix. The plan carries all fan-out targets and exact native values, but
 no Store handles or public connector indices. There is no serializable plan or reusable schema/cache
@@ -139,28 +138,24 @@ or dirty resume, including same-byte reload and same-value edits. Clean resume a
 alone preserve the context, while an advanced clock can make the submitted time ineligible.
 
 **Do not replace execution with preparation.** Pass the owned plan to `engine.execute_frame(plan)`
-for one complete transition and an owned `CompletedFrame`. Continuing
-with `set_input`/`tick` after preparation still uses the legacy sparse/Store-backed behavior and is
-not an atomic frame transition. The old methods keep their signatures, last-wins/hold-last policy,
-type-only staging checks and failure boundaries. Frame domain/completeness checks are additive and
-are not retrofitted to them. Hosts still own quality, freshness, scheduling, persistence and actuation.
+for one complete transition and an owned `CompletedFrame`. The old execution methods and supporting
+types have been removed, without aliases. Hosts own quality, freshness, scheduling, persistence
+and actuation; neither missing observations nor duplicate names are silently accepted.
 
 The [public tests](../crates/oce-api/tests/prepare_frame.rs),
 [stateful preservation matrix](../crates/oce-api/tests/prepare_frame_preservation.rs), and
 [private plan/lifecycle census](../crates/oce-api/src/frame_tests.rs) establish the bounded current
-preparation evidence. Native execution evidence promotes PC-033; shared evaluation-core reuse with
-explicit weaker convenience profiles promotes PC-034. PC-035's full legacy classification/guards
-remain future.
-This changes no packaged descriptor,
-catalog identity, snapshot/replay format, stable-release status or downstream pin.
+preparation evidence. Execution, shared-core and frame-only contraction evidence make PC-033 through
+PC-035 current. The assertion and execution descriptors are now revision 2; other descriptors,
+catalog identity, state formats, HostTick v1, stable-release status and downstream pins are unchanged.
 
 ## Complete-frame execution adoption
 
 Collect host observations, call `prepare_frame`, then move the plan into `execute_frame`. The latter
 rechecks readiness, incarnation, model time and sequence capacity before staging anything. Any
 ordinary returned error preserves the full engine image and consumes no accepted position, although
-the Rust plan is moved. On success, retain or clone the returned result rather than borrowing latest
-`Outputs`. Read `time()`, `sequence()`, `outputs()` and `diagnostics()`; there is no serialization API.
+the Rust plan is moved. On success, retain or clone the returned result rather than relying on
+latest-state inspection. Read `time()`, `sequence()`, `outputs()` and `diagnostics()`; there is no serialization API.
 
 The result contains lexical root boundary identities and native typed values, not every internal
 output connector or durable column. Distinct declared outputs may share a driver; pass-throughs
@@ -170,15 +165,10 @@ counts successful native frames only and never resets during this Engine's lifet
 or checkpoint rewind. Equal-time success is another transition, never an idempotent retry.
 
 Hosts decide whether to execute and what to do with completed values; Store/actuation follow outside
-this API. Legacy tick/simulation/realtime signatures, weaker failure boundaries, restart behavior
-and no-op tick/simulation diagnostic sinks remain unchanged. The bounded Library verifier remains a
-legacy consumer; no sibling source or pin is migrated or qualified by this change. See the
+this API. Sibling consumers need to migrate; no sibling source or pin is changed or qualified here. See the
 [execution contract and evidence](complete-frame-contract.md#current-execution-api).
 
-All four execution routes now share one private HostTick evaluation/refresh implementation, not
-complete-frame preparation. Native-only accepted sequence updates and each caller's preflight,
-staging, restart, sink and projection remain outside that core. In particular, realtime still
-returns `Err(OcError::Store)` after a failed post-transition write, losing the `StepReport` and its
-warnings. The error reports no generation or receipt; reconcile committed state through time
-guards, outputs/watch, checkpoints/snapshots and host delivery records. Mode parity evidence is
-limited to lifecycle-equivalent, fully driven subsets, not arbitrary convenience workflows.
+The single frame path retains the private HostTick evaluation/refresh implementation. Host loops
+submit complete frames and own cadence and trace capture. `get_output` and `watch` are latest-state,
+non-receipt views, including internal points. There is no raw output view or Store write helper.
+Parity evidence is limited to equivalent complete schedules, not arbitrary legacy workflows.

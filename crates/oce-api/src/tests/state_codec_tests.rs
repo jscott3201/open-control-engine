@@ -8,7 +8,12 @@ const MINIMAL_LOOP: &[u8] = include_bytes!("../../../oce-cxf/tests/fixtures/mini
 fn snapshot_bytes() -> Vec<u8> {
     let mut engine = Engine::in_memory();
     engine.load_cxf(MINIMAL_LOOP).unwrap();
-    engine.tick(0.0).unwrap();
+    super::common::advance(
+        &mut engine,
+        0.0,
+        &[("http://example.org#MinLoop.uSet", crate::Value::Real(0.0))],
+    )
+    .unwrap();
     engine.state_snapshot().unwrap().into_bytes()
 }
 

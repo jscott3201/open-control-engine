@@ -557,7 +557,6 @@ impl<S: Store> Engine<S> {
         self.state.words = prepared.words;
         self.state.t = prepared.state_t;
         self.prev_t = prepared.prev_t;
-        self.outputs.refresh_from(&self.state);
         self.durable_restore_ready = false;
     }
 }

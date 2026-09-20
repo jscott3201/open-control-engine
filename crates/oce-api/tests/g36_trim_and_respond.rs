@@ -1,6 +1,9 @@
 //! G36 Generic.TrimAndRespond `have_hol=false` facade simulation evidence.
 
-use oce_api::{CollectSpec, Engine, InputSource, PointDirection, SimMetrics, SimSpec, Value};
+use oce_api::{Engine, PointDirection, Value};
+#[path = "support/frame_trace.rs"]
+mod frame_trace;
+use frame_trace::FrameRun;
 
 const TRIM_AND_RESPOND: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld");
@@ -80,27 +83,24 @@ fn schedule_signature(engine: &Engine) -> ScheduleSignature {
     )
 }
 
-fn simulate(mut engine: Engine) -> (ScheduleSignature, SimMetrics) {
+fn simulate(mut engine: Engine) -> (ScheduleSignature, FrameRun) {
     let schedule = schedule_signature(&engine);
-    let metrics = engine
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop: 1320.0,
-            step: 60.0,
-            inputs: InputSource::Closure(Box::new(inputs)),
-            collect: CollectSpec::Named {
-                points: vec![SETPOINT_PATH.to_string()],
-                stride: 1,
-            },
-        })
-        .expect("G36 TrimAndRespond simulates");
+    let metrics = FrameRun::record(
+        &mut engine,
+        0.0,
+        1320.0,
+        60.0,
+        inputs,
+        vec![SETPOINT_PATH.to_string()],
+    )
+    .expect("G36 TrimAndRespond simulates");
     assert_eq!(metrics.ticks, 23);
     assert_eq!(metrics.trace.columns(), &[SETPOINT_PATH.to_string()]);
     assert_all_finite(&metrics);
     (schedule, metrics)
 }
 
-fn assert_all_finite(metrics: &SimMetrics) {
+fn assert_all_finite(metrics: &FrameRun) {
     for (row, value) in column(metrics).iter().enumerate() {
         match value {
             Value::Real(x) => assert!(x.is_finite(), "setpoint[{row}] must stay finite, got {x}"),
@@ -109,14 +109,14 @@ fn assert_all_finite(metrics: &SimMetrics) {
     }
 }
 
-fn column(metrics: &SimMetrics) -> &[Value] {
+fn column(metrics: &FrameRun) -> &[Value] {
     metrics
         .trace
         .column(0)
         .expect("setpoint trace column should exist")
 }
 
-fn real_at(metrics: &SimMetrics, row: usize) -> f64 {
+fn real_at(metrics: &FrameRun, row: usize) -> f64 {
     match &column(metrics)[row] {
         Value::Real(x) => *x,
         other => panic!("setpoint[{row}] must be Real, got {other:?}"),
@@ -130,7 +130,7 @@ fn assert_close(actual: f64, expected: f64) {
     );
 }
 
-fn assert_trace_bit_eq(left: &SimMetrics, right: &SimMetrics) {
+fn assert_trace_bit_eq(left: &FrameRun, right: &FrameRun) {
     assert_eq!(left.trace.columns(), right.trace.columns());
     assert_eq!(
         left.trace

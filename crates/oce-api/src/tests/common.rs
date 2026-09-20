@@ -18,11 +18,60 @@ pub(super) use oce_model::{
 };
 pub(super) use oce_store::{DomainKey, Durable, ModelStore, ResolvedModel, SemanticQuery};
 
-pub(super) use crate::{
-    CollectSpec, Engine, InputSource, IoClass, OcError, PhysicalKind, PointDirection, RunMode,
-    SimSpec,
-};
+pub(super) use crate::{Engine, IoClass, OcError, PhysicalKind, PointDirection, RunMode};
 pub(super) use oce_store_mem::MemStore;
+
+/// Owned inspection image for lifecycle tests, not a public receipt or raw-output API.
+pub(super) fn output_image<S: oce_store::Store>(engine: &Engine<S>) -> Vec<(String, Value)> {
+    engine
+        .io()
+        .iter()
+        .filter(|point| point.direction == PointDirection::Out)
+        .map(|point| {
+            let value = engine.get_output(&point.path).unwrap();
+            (point.path, value)
+        })
+        .collect()
+}
+
+/// Submit explicitly supplied complete observations through the sole execution boundary.
+pub(super) fn advance<S: oce_store::Store>(
+    engine: &mut Engine<S>,
+    time: f64,
+    entries: &[(&str, Value)],
+) -> Result<crate::CompletedFrame, OcError> {
+    let prepared = engine.prepare_frame(time, entries)?;
+    engine.execute_frame(prepared)
+}
+
+/// Synthetic complete observations for inventory/snapshot tests, not numeric oracles or host policy.
+/// Choose zero when in-domain, otherwise a declared bound. Never read prior connector values.
+pub(super) fn advance_synthetic(
+    engine: &mut Engine,
+    time: f64,
+) -> Result<crate::CompletedFrame, OcError> {
+    let inputs: Vec<_> = engine
+        .input_definitions()?
+        .into_iter()
+        .map(|definition| {
+            let zero = definition.value_type.zero_value();
+            let value = if definition.accepts_domain(&zero) {
+                zero
+            } else {
+                definition
+                    .min
+                    .or(definition.max)
+                    .expect("bounded synthetic fixture input")
+            };
+            (definition.path, value)
+        })
+        .collect();
+    let entries: Vec<_> = inputs
+        .iter()
+        .map(|(p, v)| (p.as_str(), v.clone()))
+        .collect();
+    advance(engine, time, &entries)
+}
 
 /// Tiny hand-builder for a flattened [`ModelGraph`]: dense block/connector ids are assigned in
 /// declaration order (so `decl_order == id`), which is exactly what the deterministic scheduler
@@ -137,54 +186,6 @@ pub(super) fn build_accumulator_model() -> (ModelGraph, ConnectorId, ConnectorId
     mb.connect(add_out[0], lim_in[0]); // Add → Limiter
 
     (mb.finish(), add_out[0], gt_out[0], lim_out[0])
-}
-
-/// Accumulator fixture extended with Integer, Enum, and metadata-only String outputs.
-///
-/// The Integer source has honest registry arity. The registry has no executable Enum or String
-/// source block, so the final two probe connectors are owned by block zero but intentionally sit
-/// outside its declared output list. The current validator accepts these detached output probes;
-/// they exercise allocation/projection only and are never evaluated by the owning block.
-pub(super) fn build_realtime_output_model() -> ModelGraph {
-    let (mut model, _, _, _) = build_accumulator_model();
-    let integer_block = BlockId(model.blocks.len() as u32);
-    let integer_output = ConnectorId(model.connectors.len() as u32);
-    model.connectors.push(Connector::new(
-        integer_output,
-        integer_block,
-        Dir::Out,
-        ValueType::Integer,
-        0,
-    ));
-    model.blocks.push(BlockInstance {
-        id: integer_block,
-        class_iri: Arc::from("CDL.Integers.Sources.Constant"),
-        inputs: Vec::new(),
-        outputs: vec![integer_output],
-        params: ParamTable {
-            values: vec![(Arc::from("k"), Value::Integer(7))],
-        },
-        decl_order: integer_block.0,
-        instance_iri: None,
-    });
-
-    let enum_output = ConnectorId(model.connectors.len() as u32);
-    model.connectors.push(Connector::new(
-        enum_output,
-        BlockId(0),
-        Dir::Out,
-        ValueType::Enum(oce_model::EnumClassId(17)),
-        1,
-    ));
-    let string_output = ConnectorId(model.connectors.len() as u32);
-    model.connectors.push(Connector::new(
-        string_output,
-        BlockId(0),
-        Dir::Out,
-        ValueType::String,
-        2,
-    ));
-    model
 }
 
 /// Two `Add` blocks driving each other: a feedthrough cycle with **no** state-holding loop-breaker

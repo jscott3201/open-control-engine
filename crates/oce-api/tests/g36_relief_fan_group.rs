@@ -1,6 +1,9 @@
 //! ASHRAE G36 ReliefFanGroup HostTick v1 replay through the frozen facade.
 
-use oce_api::{CollectSpec, Engine, InputSource, SimMetrics, SimSpec, Value};
+use oce_api::{Engine, Value};
+#[path = "support/frame_trace.rs"]
+mod frame_trace;
+use frame_trace::FrameRun;
 
 const RELIEF_FAN_GROUP: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_relief_fan_group.jsonld");
@@ -120,21 +123,21 @@ fn schedule_signature(engine: &Engine) -> ScheduleSignature {
     )
 }
 
-fn simulate(mut engine: Engine) -> (ScheduleSignature, SimMetrics) {
+fn simulate(mut engine: Engine) -> (ScheduleSignature, FrameRun) {
     let schedule = schedule_signature(&engine);
     let mut points = Vec::with_capacity(9);
     points.push(AVERAGED_PRESSURE.to_string());
     points.extend(RELIEF_FAN_SPEEDS.iter().map(|point| (*point).to_string()));
     points.extend(RELIEF_DAMPERS.iter().map(|point| (*point).to_string()));
-    let metrics = engine
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop: f64::from(T_STOP),
-            step: SAMPLE_STEP,
-            inputs: InputSource::Closure(Box::new(relief_fan_group_inputs)),
-            collect: CollectSpec::Named { points, stride: 1 },
-        })
-        .expect("G36 ReliefFanGroup simulates");
+    let metrics = FrameRun::record(
+        &mut engine,
+        0.0,
+        f64::from(T_STOP),
+        SAMPLE_STEP,
+        relief_fan_group_inputs,
+        points,
+    )
+    .expect("G36 ReliefFanGroup simulates");
     assert_eq!(metrics.ticks, ROWS as u64);
     assert_eq!(
         metrics
@@ -157,7 +160,7 @@ fn expected_times() -> Vec<f64> {
         .collect()
 }
 
-fn real_column(metrics: &SimMetrics, path: &str) -> Vec<f64> {
+fn real_column(metrics: &FrameRun, path: &str) -> Vec<f64> {
     let index = metrics
         .trace
         .columns()
@@ -185,7 +188,7 @@ fn assert_real_bits(actual: &[f64], expected: &[f64], label: &str) {
     }
 }
 
-fn assert_trace_bit_eq(left: &SimMetrics, right: &SimMetrics) {
+fn assert_trace_bit_eq(left: &FrameRun, right: &FrameRun) {
     assert_eq!(left.trace.columns(), right.trace.columns());
     assert_eq!(
         left.trace

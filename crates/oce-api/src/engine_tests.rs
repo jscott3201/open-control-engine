@@ -1,10 +1,10 @@
-//! Unit tests for the engine load helpers and store-input conversion seam.
+//! Unit tests for engine load helpers and preserved load-time Store refusal boundaries.
 
-use oce_model::{BlockId, Connector, EnumClassId};
+use oce_model::{BlockId, Connector, ConnectorId, Dir, Value, ValueType};
 use oce_store::{
-    Durable, EquipmentDto, ModelStore, PointListRow, PointStatus, PointStore, PointWrite,
-    RelationDto, ResolvedModel, RetrievalHit, SemanticPayloadDto, SemanticQuery, SemanticStore,
-    StoreResult, TemplatePointReq,
+    Durable, EquipmentDto, ModelStore, PointHandle, PointListRow, PointSnapshot, PointStore,
+    PointWrite, RelationDto, ResolvedModel, RetrievalHit, SemanticPayloadDto, SemanticQuery,
+    SemanticStore, StoreResult, TemplatePointReq,
 };
 
 use super::*;
@@ -14,129 +14,8 @@ const ANALOG_WARNING: &str = include_str!(
     "../../oce-cxf/tests/fixtures/composite_contract/warned/analog_coerced_member.jsonld"
 );
 
-fn sample(value: OcValue) -> PointSample {
-    PointSample {
-        value,
-        status: PointStatus::Fault,
-        at_unix_nanos: 42,
-    }
-}
-
-fn assert_input_type(result: Result<Value, OcError>) {
-    match result {
-        Err(OcError::InputType(path)) => assert_eq!(path, PATH),
-        other => panic!("expected InputType for {PATH}, got {other:?}"),
-    }
-}
-
 #[test]
-fn sample_to_value_accepts_native_signal_carriers_and_string_helper_path() {
-    match sample_to_value(sample(OcValue::Real(1.25)), ValueType::Real, PATH).unwrap() {
-        Value::Real(v) => assert_eq!(v.to_bits(), 1.25f64.to_bits()),
-        other => panic!("expected real value, got {other:?}"),
-    }
-    match sample_to_value(sample(OcValue::Int(7)), ValueType::Integer, PATH).unwrap() {
-        Value::Integer(v) => assert_eq!(v, 7),
-        other => panic!("expected integer value, got {other:?}"),
-    }
-    match sample_to_value(sample(OcValue::Bool(true)), ValueType::Boolean, PATH).unwrap() {
-        Value::Boolean(v) => assert!(v),
-        other => panic!("expected boolean value, got {other:?}"),
-    }
-    match sample_to_value(
-        sample(OcValue::String("metadata".to_owned())),
-        ValueType::String,
-        PATH,
-    )
-    .unwrap()
-    {
-        Value::String(v) => assert_eq!(&*v, "metadata"),
-        other => panic!("expected string value, got {other:?}"),
-    }
-}
-
-#[test]
-fn sample_to_value_accepts_positive_integer_enum_ordinals() {
-    let class = EnumClassId(9);
-    match sample_to_value(sample(OcValue::Int(3)), ValueType::Enum(class), PATH).unwrap() {
-        Value::Enum {
-            class: actual_class,
-            ordinal,
-        } => {
-            assert_eq!(actual_class, class);
-            assert_eq!(ordinal, 3);
-        }
-        other => panic!("expected enum value, got {other:?}"),
-    }
-}
-
-#[test]
-fn sample_to_value_rejects_invalid_integer_enum_ordinals() {
-    let class = EnumClassId(9);
-    for ordinal in [0, -1, i64::from(u32::MAX) + 1] {
-        assert_input_type(sample_to_value(
-            sample(OcValue::Int(ordinal)),
-            ValueType::Enum(class),
-            PATH,
-        ));
-    }
-}
-
-#[test]
-fn sample_to_value_rejects_type_mismatch_pairs() {
-    let class = EnumClassId(4);
-    let cases = [
-        (OcValue::Real(1.0), ValueType::Integer),
-        (OcValue::Real(1.0), ValueType::Boolean),
-        (OcValue::Real(1.0), ValueType::String),
-        (OcValue::Real(1.0), ValueType::Enum(class)),
-        (OcValue::Int(1), ValueType::Real),
-        (OcValue::Int(1), ValueType::Boolean),
-        (OcValue::Int(1), ValueType::String),
-        (OcValue::Bool(true), ValueType::Real),
-        (OcValue::Bool(true), ValueType::Integer),
-        (OcValue::Bool(true), ValueType::String),
-        (OcValue::Bool(true), ValueType::Enum(class)),
-        (OcValue::String("value".to_owned()), ValueType::Real),
-        (OcValue::String("value".to_owned()), ValueType::Integer),
-        (OcValue::String("value".to_owned()), ValueType::Boolean),
-        (OcValue::String("value".to_owned()), ValueType::Enum(class)),
-    ];
-
-    for (value, want) in cases {
-        assert_input_type(sample_to_value(sample(value), want, PATH));
-    }
-}
-
-#[test]
-fn sample_to_value_rejects_native_enum_and_decimal_store_carriers() {
-    let class = EnumClassId(4);
-    let wants = [
-        ValueType::Real,
-        ValueType::Integer,
-        ValueType::Boolean,
-        ValueType::String,
-        ValueType::Enum(class),
-    ];
-    for want in wants {
-        assert_input_type(sample_to_value(
-            sample(OcValue::Enum {
-                type_iri: "CDL.Types.SimpleController".to_owned(),
-                literal: "PI".to_owned(),
-            }),
-            want,
-            PATH,
-        ));
-        assert_input_type(sample_to_value(
-            sample(OcValue::Decimal("1.25".to_owned())),
-            want,
-            PATH,
-        ));
-    }
-}
-
-#[test]
-fn resolve_store_inputs_rejects_mismatched_handle_count() {
+fn load_validation_rejects_mismatched_handle_count() {
     let store = LoadFailureStore::default();
     let mut model = ModelGraph::new();
     model.connectors.push(
@@ -144,7 +23,7 @@ fn resolve_store_inputs_rejects_mismatched_handle_count() {
     );
     let io = IoInventory::build_at_load(&model);
 
-    let err = resolve_store_inputs(&store, &io).unwrap_err();
+    let err = validate_store_inputs(&store, &io).unwrap_err();
     match err {
         OcError::Store(StoreError::Validation(detail)) => {
             assert!(detail.contains("0 handles for 1 input points"));

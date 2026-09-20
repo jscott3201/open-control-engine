@@ -1,6 +1,6 @@
 //! The typed IO / point inventory (`08` §6). Built once at load from the flat model connectors;
 //! **the tick never reads it** (CDL §7.17). It is the host's metadata surface for point-schedule
-//! export (use case 4.2.1) and the `set_input`/`get_output` name→connector resolver (R-IO-4).
+//! export (use case 4.2.1), complete-frame bindings and latest-state output name resolution.
 //!
 //! The inventory derives every field that is structurally available from `oce-model` connectors
 //! (path, direction, value type, min/max/unit/quantity). Semantic classifications that require
@@ -156,14 +156,13 @@ pub struct IoSummary {
 }
 
 /// The typed IO surface, built at load from the model connectors. Dense arena keyed by point path;
-/// store-free, owned by `Engine`. A private parallel `conn_id` lets the engine stage `set_input` /
-/// read `get_output` by [`ConnectorId`] **without leaking it** (R-API-8). Composite boundary inputs
+/// store-free, owned by `Engine`. Private bindings resolve frames and latest-state reads by
+/// [`ConnectorId`] without leaking the mutable arena. Composite boundary inputs
 /// may fan out to multiple internal input connectors; the host still sees one logical point path,
 /// while `input_by_path` preserves every staging target at load time.
 #[derive(Clone, Debug, Default)]
 pub struct IoInventory {
     points: Vec<PointInfo>,
-    conn_id: Vec<ConnectorId>,
     input_by_path: HashMap<String, InputBinding>,
     pub(crate) frame_definitions: Vec<InputDefinition>,
     /// The executable root boundary, lexical by authored identity; not the point projection.
@@ -171,17 +170,10 @@ pub struct IoInventory {
     output_by_path: HashMap<String, ConnectorId>,
     /// Declared boundary-output alias keys (`_spec/18` R18-2): the authored root `hasOutput`
     /// IRI of each elided boundary output, resolving to its driving connector's slot. Read-only
-    /// aliases — they never enter `points`/`conn_id`, so rows, `to_map`, summaries, and the
-    /// durable batch are untouched. A pass-through declared output needs no entry here: its
+    /// aliases — they never enter `points`, so inventory rows and summaries are untouched.
+    /// A pass-through declared output needs no entry here: its
     /// lowered output connector already carries the declared IRI in `output_by_path`.
     output_alias_by_path: HashMap<String, ConnectorId>,
-}
-
-/// Load-time binding from a store point key to an input connector arena slot.
-#[derive(Clone, Debug)]
-pub(crate) struct InputPointBinding {
-    pub(crate) path: String,
-    pub(crate) connector_ids: Vec<ConnectorId>,
 }
 
 #[derive(Clone, Debug)]
@@ -282,7 +274,6 @@ impl IoInventory {
     /// feeds a position (connectors are walked in arena order).
     pub(crate) fn build_at_load(model: &ModelGraph) -> IoInventory {
         let mut points = Vec::with_capacity(model.connectors.len());
-        let mut conn_id = Vec::with_capacity(model.connectors.len());
         let (input_by_path, frame_definitions) = build_inputs(model);
         let mut seen_inputs = std::collections::HashSet::new();
         let mut output_by_path = HashMap::with_capacity(model.connectors.len());
@@ -300,7 +291,6 @@ impl IoInventory {
                     .or_insert(row.connector_id);
             }
             points.push(row.info);
-            conn_id.push(row.connector_id);
         }
         // Declared boundary-output aliases (R18-2). Keyed only when the driving connector is an
         // inventory output point (a non-String `Out`), so an alias can never resolve to a slot
@@ -325,7 +315,6 @@ impl IoInventory {
         }
         IoInventory {
             points,
-            conn_id,
             input_by_path,
             frame_definitions,
             frame_outputs: executable_boundary_outputs(model),
@@ -334,38 +323,13 @@ impl IoInventory {
         }
     }
 
-    /// Resolve a point path to every [`ConnectorId`] it stages when it is an input. A composite
-    /// boundary input may map one host point to multiple internal connectors after CXF import.
-    pub(crate) fn resolve_inputs(&self, path: &str) -> Option<&[ConnectorId]> {
-        self.input_binding(path)
-            .filter(|binding| binding.value_type != ValueType::String)
-            .map(|binding| binding.targets.as_slice())
-    }
-
-    /// Shared identity resolver; legacy point staging separately excludes String metadata.
+    /// Identity resolver for complete-frame preparation.
     pub(crate) fn input_binding(&self, path: &str) -> Option<&InputBinding> {
         self.input_by_path.get(path)
     }
 
-    /// Legacy sparse resolution shares identities and exact type checks with complete frames.
-    pub(crate) fn resolve_typed_inputs(
-        &self,
-        model: &ModelGraph,
-        path: &str,
-        value: &oce_model::Value,
-    ) -> Result<&[ConnectorId], OcError> {
-        let targets = self
-            .resolve_inputs(path)
-            .ok_or_else(|| OcError::UnknownPoint(path.to_owned()))?;
-        let binding = self.input_binding(path).expect("resolved input binding");
-        if !binding.accepts_type(model, value) {
-            return Err(OcError::InputType(path.to_owned()));
-        }
-        Ok(targets)
-    }
-
     /// Resolve a point path to its [`ConnectorId`] **only if it is an output** — the shared
-    /// resolver behind `get_output`, `watch`, and `CollectSpec::Named`.
+    /// resolver behind latest-state `get_output` and `watch` inspection.
     ///
     /// Two key spaces resolve here, connector paths first, then declared boundary-output
     /// aliases (`_spec/18` R18-2). The order is defensive: ingest refuses a declared IRI that
@@ -380,55 +344,12 @@ impl IoInventory {
             .copied()
     }
 
-    /// The `(path, ConnectorId)` columns for every **output** point, in inventory order — the
-    /// `CollectSpec::All` recording set for `simulate` (the host-facing trace surface).
-    ///
-    /// Deliberately a separate method from [`IoInventory::durable_columns`] even though the two
-    /// bodies are identical today: the trace surface and the durable store batch are distinct
-    /// contracts (`_spec/18` D2/D3), and splitting the readers means a future decision to admit
-    /// declared boundary-output aliases into one of them is a visible edit to exactly one method
-    /// — and a red `trace_and_durable_output_columns_agree` assertion — instead of a silent
-    /// change to both.
-    pub(crate) fn trace_columns(&self) -> Vec<(String, ConnectorId)> {
-        self.points
-            .iter()
-            .zip(&self.conn_id)
-            .filter(|(p, _)| p.direction == PointDirection::Out)
-            .map(|(p, &cid)| (p.path.clone(), cid))
-            .collect()
-    }
-
-    /// The `(path, ConnectorId)` columns for every **output** point, in inventory order — the
-    /// key set the load-time `sim::DurableOutputBatch` is minted from.
-    ///
-    /// Must contain connector-identity keys only, never declared boundary-output aliases: every
-    /// existing host trend history is keyed by these paths, and an alias here would double-write
-    /// each aliased sample (`_spec/18` D3). See [`IoInventory::trace_columns`] for why the two
-    /// readers are separate methods.
-    pub(crate) fn durable_columns(&self) -> Vec<(String, ConnectorId)> {
-        self.points
-            .iter()
-            .zip(&self.conn_id)
-            .filter(|(p, _)| p.direction == PointDirection::Out)
-            .map(|(p, &cid)| (p.path.clone(), cid))
-            .collect()
-    }
-
-    /// The store point keys for every logical input point, in inventory order. This is resolved once
-    /// at load; the tick keeps only opaque handles and connector slots. A boundary-input fanout has
-    /// one store key and multiple connector slots.
-    pub(crate) fn input_bindings(&self) -> Vec<InputPointBinding> {
+    /// Load-time Store validation keys, in inventory order. No handle is used during execution.
+    pub(crate) fn input_keys(&self) -> Vec<oce_store::DomainKey> {
         self.points
             .iter()
             .filter(|p| p.direction == PointDirection::In)
-            .map(|p| InputPointBinding {
-                path: p.path.clone(),
-                connector_ids: self
-                    .input_by_path
-                    .get(&p.path)
-                    .map(|binding| binding.targets.clone())
-                    .unwrap_or_default(),
-            })
+            .map(|p| oce_store::DomainKey::new(p.path.clone()))
             .collect()
     }
 

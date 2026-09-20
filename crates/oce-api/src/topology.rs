@@ -84,7 +84,7 @@ pub struct PassThroughPair {
 /// One root-declared boundary output: the authored declared identity and the internal driver
 /// whose value it exposes (`_spec/18` R18-3).
 ///
-/// Both paths are valid, distinct `get_output`/`watch`/`CollectSpec::Named` keys resolving to
+/// Both paths are valid, distinct latest-state `get_output`/`watch` keys resolving to
 /// the same value slot — neither name replaces the other. Driving is many-to-one: one driver
 /// may serve several declared outputs, so `driver_path` values may repeat across entries. For a
 /// pass-through declared output the two fields are equal.

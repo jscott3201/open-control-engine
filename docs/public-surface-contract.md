@@ -66,7 +66,7 @@ stable-candidate facade surface, not a stable release. The artifact
 has no serialization or exposed resolved/generation internals. Its compatibility preflight stays
 crate-private and is reused by execution. The [frame contract](complete-frame-contract.md#current-preparation-api)
 owns ordering, domains, bounded errors and load/dirty-resume invalidation; the
-[adoption guide](facade-contracts.md#complete-frame-preparation-adoption) preserves legacy behavior.
+[adoption guide](facade-contracts.md#complete-frame-preparation-adoption) describes frame-only migration.
 
 `Engine::execute_frame`, immutable owned `CompletedFrame` and `OcError::FrameSequenceExhausted`
 are likewise additive stable-candidate surface. The plan is consumed; the result exposes only model
@@ -74,7 +74,8 @@ time, engine-lifetime accepted sequence, lexical boundary `(String, Value)` pair
 diagnostics through read-only accessors. No mutable Outputs, internal connector indices or public
 context token escapes. Neither frame type is serializable. Reload/resume/restore never reset the
 sequence, which is correlation, not replay or deployment authority. See the
-[execution contract](complete-frame-contract.md#current-execution-api). Legacy surfaces are unchanged.
+[execution contract](complete-frame-contract.md#current-execution-api). Legacy execution surfaces
+and raw output access are removed, without aliases. Latest-state `get_output`/`watch` remain non-receipt inspection.
 
 `Engine::schedule` is implementation leakage. It stays source- and binary-shape unchanged for now;
 removal requires a later coordinated change with consumers and tests.
@@ -122,20 +123,18 @@ Python-facing.
 - **Host build identity** remains consumer-owned and includes the host's source/build/features
   qualifications; catalog metadata alone cannot establish it.
 
-String host IO (`set_input`, `get_output`, and `watch`) looks up model-local `ConnectorId` values in
-the IO inventory. `PointHandle` is confined to the store-backed point-read route.
-Preparation shares input identity and exact-type resolution with legacy string staging, but filters
-to executable boundary inputs and adds completeness/domain checks. The private incarnation fence
+Frame preparation and latest-state inspection resolve model-local connector identities in the IO
+inventory, not Store handles. Load still validates adapter handle cardinality, but retains no runtime
+Store-input handles. Preparation admits only complete executable boundary inputs with exact types
+and declared domains. The private incarnation fence
 is distinct from authored model identity and is neither portable nor serialized into state bytes.
 
 ## Repeatability and durable state
 
-Simulation output depends on `SimSpec`, parameters, and the entry connector-value image. Store-bound
-inputs additionally depend on samples staged by the adapter at each tick. The shorter two-input
-formulation is valid only when the supplied input source covers every relevant external input, so no
-unwritten entry value can influence the horizon. The executable control is
-`sim_tests::an_undriven_input_inherits_whatever_the_entry_image_holds`, which checks both the
-undriven entry-image dependency and fully driven fresh-engine equality.
+A frame transition depends on the loaded executable and parameters, compatible prior state, model
+time, complete typed observations and fixed HostTick profile. Missing inputs refuse rather than
+inheriting connector seeds, prior values or Store samples. Host simulation loops use that same
+contract; no implicit horizon restart or whole-horizon transaction is supplied.
 
 `Engine::state_snapshot` produces engine-owned continuation bytes. The host persists and protects
 those bytes; they do not travel through the typed `PointStore` port. That port carries typed point
@@ -143,9 +142,9 @@ samples keyed by `DomainKey`. `state_tests::capture_and_restore_call_no_store_me
 capture and restore do not call any store method.
 
 Existing controls remain the behavioral authority for adjacent cases rather than being duplicated
-here: `g36_tick_path_stays_store_pure_and_alloc_free` exercises invalid handles,
+here: `frame_purity` exercises Store noninterference across the corpus,
 `projection_tests::source_model_iri_becomes_projection_model_id` pins model-id projection, and
-`engine_tests::resolve_store_inputs_rejects_mismatched_handle_count` pins adapter cardinality.
+`engine_tests::load_validation_rejects_mismatched_handle_count` pins adapter cardinality.
 
 ## Downstream compatibility
 
@@ -165,10 +164,10 @@ compilation, downstream acceptance or general compatibility certification.
 | --- | --- |
 | `PointHandle` described as private or unreadable | Public construction/readback is required for external adapters. See `PointHandle` and `public_storage_adapter::external_adapter_uses_only_supported_public_paths`. “Opaque” means no backend type is embedded. |
 | A trait-boundary prohibition was asserted for handles | Handles cross the port deliberately: `PointStore::resolve_points` returns one and `PointSnapshot::read_resolved` accepts one. The external adapter fixture exercises both sides. |
-| String IO described as handle-based | `IoInventory::resolve_inputs` and `IoInventory::resolve_output` produce model connector identities; `engine::resolve_store_inputs` is the distinct point-handle route. |
+| String IO described as handle-based | Frame bindings and `IoInventory::resolve_output` produce model connector identities; Store handles remain adapter tokens and are not frame determinants. |
 | A prose list claimed to exhaust the public facade | The two blessed baselines exhaust exact signatures, and the ledger classifies every row. `public_surface_contract` supplies missing/extra/overlap and baseline-drift negative controls. Guards pin selected shapes only. |
 | Python constraints described every Rust signature | `guards.rs` now states its selected-subset scope. Store and schedule signatures remain Rust-visible without becoming Python-wrapped promises. |
-| Repeatability omitted the entry connector image | `Engine::simulate` rustdoc and the named `sim_tests` control establish the complete non-store determinant rule and the fully supplied-input special case. |
+| Repeatability omitted determinants | Complete-frame preparation refuses omissions; the frame contract explicitly retains compatible prior state as a determinant. Historical sparse simulation is no longer a public profile. |
 | Durable engine bytes were routed through `PointStore` | `Engine::state_snapshot`/`restore_state` own the byte channel; `PointStore` owns typed point samples. `capture_and_restore_call_no_store_method` is the negative behavioral control. |
 
 The contract validator also injects each of these historical claims into an in-memory supported-doc
