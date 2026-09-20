@@ -135,11 +135,74 @@ fn target_bound_capture_carries_the_compile_target() {
     advance(&mut engine, 0.0, &[]).unwrap();
     let snapshot = engine.state_snapshot().unwrap();
     assert!(matches!(
-        &snapshot.image.manifest.portability,
+        snapshot.portability(),
         Portability::TargetBound { arch, os }
             if arch == std::env::consts::ARCH && os == std::env::consts::OS
     ));
     write_matrix_artifact("OCE_TARGET_STATE_OUT", snapshot.as_bytes());
+}
+
+#[test]
+fn every_target_bound_class_round_trips_policy_and_refuses_each_foreign_target_component() {
+    for class in crate::state_manifest::TARGET_BOUND_CLASSES {
+        let params = match *class {
+            "CDL.Reals.Sources.Sin" => vec![(Arc::from("freqHz"), Value::Real(1.0))],
+            "CDL.Utilities.SunRiseSet" => vec![
+                (Arc::from("lat"), Value::Real(0.0)),
+                (Arc::from("lon"), Value::Real(0.0)),
+                (Arc::from("timZon"), Value::Real(0.0)),
+            ],
+            _ => Vec::new(),
+        };
+        let graph = super::state_family_tests::model(class, ParamTable { values: params });
+        let mut engine = Engine::in_memory();
+        engine
+            .build_model_in_memory(graph, Some("urn:test:placement"))
+            .unwrap();
+        let captured = engine.state_snapshot().unwrap();
+        assert_eq!(
+            captured.portability(),
+            &crate::StatePortability::TargetBound {
+                arch: std::env::consts::ARCH.into(),
+                os: std::env::consts::OS.into(),
+            },
+            "{class}"
+        );
+        for foreign_arch in [false, true] {
+            let mut image = (*captured.image).clone();
+            let Portability::TargetBound { arch, os } = &mut image.manifest.portability else {
+                unreachable!()
+            };
+            if foreign_arch {
+                *arch = "foreign-arch".into();
+            } else {
+                *os = "foreign-os".into();
+            }
+            let expected_arch = arch.clone();
+            let expected_os = os.clone();
+            let manifest =
+                crate::state_manifest_codec::encode_manifest(&image.manifest, false).unwrap();
+            image.fingerprint =
+                crate::state_manifest::fingerprint(image.execution_revision, &manifest);
+            let bytes = crate::state_codec::encode_snapshot(&image, false).unwrap();
+            let parsed = EngineStateSnapshot::from_bytes(&bytes).unwrap();
+            assert_eq!(parsed.portability(), &image.manifest.portability);
+            assert!(
+                matches!(engine.restore_state(&parsed), Err(OcError::State(
+                EngineStateError::TargetDomainMismatch { snapshot_arch, snapshot_os, target_arch, target_os }
+            )) if snapshot_arch == expected_arch && snapshot_os == expected_os
+                && target_arch == std::env::consts::ARCH && target_os == std::env::consts::OS),
+                "{class}"
+            );
+            assert_eq!(
+                engine.state_snapshot().unwrap().as_bytes(),
+                captured.as_bytes(),
+                "{class}"
+            );
+            assert!(engine.durable_restore_ready);
+        }
+        engine.restore_state(&captured).unwrap();
+    }
 }
 
 #[test]
@@ -160,7 +223,7 @@ fn portable_engine_snapshot_continues_and_emits_matrix_artifact() {
     let snapshot = source.state_snapshot().unwrap();
     assert!(matches!(
         snapshot.image.manifest.portability,
-        Portability::CrossPlatform
+        Portability::Portable
     ));
     let decoded = EngineStateSnapshot::from_bytes(snapshot.as_bytes()).unwrap();
     write_matrix_artifact("OCE_PORTABLE_STATE_OUT", snapshot.as_bytes());

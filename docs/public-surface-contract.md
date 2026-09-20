@@ -110,6 +110,13 @@ Future Python bindings wrap a selected subset of the Rust facade. The compile gu
 subset and selected owned/thread-safe shapes; they do not assert that every Rust facade signature is
 Python-facing.
 
+`StatePortability` and read-only `EngineStateSnapshot::portability` are additive stable-candidate
+inspection surface. Their [state contract](state-compatibility.md) separates encoded placement
+policy from numerical qualification and restore authority. Format/ABI revision 2 closes missing
+executable IO compatibility; it deliberately refuses revision-1 bytes without migration.
+The host authenticates exact snapshot bytes and build/deployment qualification before decoding.
+No build token, security service, public executable fingerprint or replay format is introduced.
+
 ## Identity glossary
 
 - **`DomainKey`** is a database-free semantic key DTO. In `LoadReport.model_id` it is a

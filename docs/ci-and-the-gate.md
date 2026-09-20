@@ -51,7 +51,7 @@ The per-PR gate into `development` runs the state-determinism subset for **`oce-
 and `oce-expr`**. That is the `determinism-matrix` job: two runners, `ubuntu-latest` and `ubuntu-24.04-arm`
 (see `ci.yml`'s `determinism-matrix` job), each running that three-crate subset twice — once under
 debug codegen, once under release codegen. Each architecture emits
-populated revision-1 portable and target-bound state vectors. The matrix compares both across
+populated revision-2 portable and target-bound state vectors. The matrix compares both across
 codegen profiles; a dependent job requires the portable files to match and the target-bound files
 to differ across architectures, then parses and refuses the arm64 target-bound bytes on x86_64.
 The gate script runs the test commands locally and adds two named

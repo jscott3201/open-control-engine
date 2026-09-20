@@ -11,7 +11,7 @@ use oce_model::{
 
 use crate::{Engine, EngineCheckpoint, EngineStateSnapshot};
 
-fn model(class_path: &str, params: ParamTable) -> ModelGraph {
+pub(super) fn model(class_path: &str, params: ParamTable) -> ModelGraph {
     let block = (oce_blocks::lookup(class_path).unwrap().make)(&params);
     let signature = block.resolved_signature();
     let mut graph = ModelGraph::new();

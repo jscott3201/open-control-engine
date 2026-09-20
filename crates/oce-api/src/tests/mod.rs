@@ -18,6 +18,7 @@ mod state_family_tests;
 mod state_format_golden_tests;
 mod state_lifecycle_tests;
 mod state_lowering_tests;
+mod state_manifest_refusal_tests;
 mod state_portability_tests;
 mod state_resource_tests;
 mod state_restore_validation_tests;

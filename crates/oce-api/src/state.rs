@@ -10,9 +10,11 @@ use oce_store::Store;
 use crate::engine::Engine;
 use crate::error::OcError;
 
-pub(crate) const FORMAT_REVISION: u32 = 1;
-pub(crate) const EXECUTION_ABI_REVISION: u32 = 1;
+pub(crate) const FORMAT_REVISION: u32 = 2;
+pub(crate) const EXECUTION_ABI_REVISION: u32 = 2;
 pub(crate) const MAX_SNAPSHOT_BYTES: u64 = 64 * 1024 * 1024;
+
+pub(crate) use crate::state_snapshot::StatePortability as Portability;
 
 /// A process-local, codec-free engine-state image for deterministic branching.
 #[derive(Clone)]
@@ -32,38 +34,15 @@ impl fmt::Debug for EngineCheckpoint {
     }
 }
 
-/// Canonical durable bytes for continuing a loaded model in another engine process.
+/// Canonical durable bytes for same-loaded-executable continuation in another engine process.
+///
+/// The host first authenticates an envelope binding these exact bytes to an approved build and
+/// deployment, freshness and generation. OCE carries no build token and cannot authenticate that
+/// precondition. Compatibility and the corruption checksum are not permission to actuate.
 #[derive(Clone)]
 pub struct EngineStateSnapshot {
     pub(crate) bytes: Arc<[u8]>,
     pub(crate) image: Arc<StateImage>,
-}
-
-impl EngineStateSnapshot {
-    /// Parse and fully validate one canonical state-snapshot byte stream.
-    ///
-    /// This validates the 64 MiB cap, header, format revision, integrity trailer, canonical
-    /// ordering, manifest self-consistency, and execution fingerprint. Engine compatibility is
-    /// checked later by [`Engine::restore_state`].
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, EngineStateError> {
-        let image = crate::state_codec::decode_snapshot(bytes)?;
-        Ok(Self {
-            bytes: Arc::from(bytes),
-            image: Arc::new(image),
-        })
-    }
-
-    /// Borrow the canonical byte stream.
-    #[must_use]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-
-    /// Return the canonical byte stream as an owned vector.
-    #[must_use]
-    pub fn into_bytes(self) -> Vec<u8> {
-        self.bytes.as_ref().to_vec()
-    }
 }
 
 impl fmt::Debug for EngineStateSnapshot {
@@ -329,12 +308,8 @@ pub(crate) struct ConnectorManifestEntry {
     pub(crate) path: String,
     pub(crate) declaration_order: u32,
     pub(crate) value_type: WireValueType,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum Portability {
-    CrossPlatform,
-    TargetBound { arch: String, os: String },
+    pub(crate) unit: Option<String>,
+    pub(crate) quantity: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -350,6 +325,7 @@ pub(crate) struct ExecutionManifest {
     pub(crate) state_slots: Vec<(BlockKey, u64, u64)>,
     pub(crate) external_inputs: Vec<ConnectorKey>,
     pub(crate) boundary_outputs: Vec<(String, ConnectorKey)>,
+    pub(crate) input_definitions: Vec<crate::state_io::InputManifestEntry>,
 }
 
 #[derive(Clone, Debug)]
@@ -394,24 +370,25 @@ impl<S: Store> Engine<S> {
 
     /// Capture canonical durable continuation bytes for the loaded executable model.
     ///
-    /// Persistence, authentication, generation fencing, and actuator ownership remain host-owned;
-    /// this method performs no store call.
+    /// Persistence, build qualification, authentication, freshness, generation fencing and actuator
+    /// ownership remain host-owned; this method performs no store call or evaluation. Every success
+    /// is accepted by the bounded canonical decoder; capture never returns an unparseable artifact.
     pub fn state_snapshot(&self) -> Result<EngineStateSnapshot, OcError> {
         self.capture_preconditions()?;
         let built = crate::state_manifest::build_manifest(self, true)?;
         let image = self.capture_image(built)?;
         let bytes = crate::state_codec::encode_snapshot(&image, false)?;
         enforce_size(bytes.len())?;
-        Ok(EngineStateSnapshot {
-            bytes: Arc::from(bytes),
-            image: Arc::new(image),
-        })
+        Ok(EngineStateSnapshot::from_bytes(&bytes)?)
     }
 
     /// Continue a durable snapshot in a freshly loaded compatible engine.
     ///
-    /// The target must not have crossed an input, tick, simulation, resume, or restore mutation
-    /// boundary since its successful load. Validation is atomic and calls no store method.
+    /// The host verifies its authenticated build/deployment envelope before decoding the bytes.
+    /// The target must not have accepted a frame, dirty-parameter resume, or either restore since
+    /// successful load. Preparation, refusal and clean resume leave this window open. Full
+    /// validation precedes commit; every returned error preserves the engine and Store. No
+    /// evaluation or Store call occurs. Panic/allocation failure and external effects are excluded.
     pub fn restore_state(&mut self, snapshot: &EngineStateSnapshot) -> Result<(), OcError> {
         self.restore_preconditions(true)?;
         let prepared = self.prepare_restore(&snapshot.image, true)?;

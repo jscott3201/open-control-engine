@@ -1,4 +1,4 @@
-//! Independent revision-1 byte and fingerprint vector.
+//! Independent revision-2 byte and fingerprint vector. No numerical oracle applies to this codec.
 
 use crate::state::{
     BlockKey, BlockManifestEntry, ConnectorKey, ConnectorManifestEntry, EnumManifestEntry,
@@ -29,6 +29,13 @@ impl ExpectedWriter {
     fn string(&mut self, value: &str) {
         self.u32(value.len() as u32);
         self.0.extend_from_slice(value.as_bytes());
+    }
+
+    fn optional_text(&mut self, value: &Option<String>) {
+        self.byte(u8::from(value.is_some()));
+        if let Some(value) = value {
+            self.string(value);
+        }
     }
 
     fn block_key(&mut self, key: &BlockKey) {
@@ -125,6 +132,8 @@ fn vector_image() -> StateImage {
         path: "urn:test:input".into(),
         declaration_order: 9,
         value_type: WireValueType::Real,
+        unit: Some("K".into()),
+        quantity: Some("ThermodynamicTemperature".into()),
     }];
     for (index, value_type) in [
         WireValueType::Real,
@@ -141,6 +150,8 @@ fn vector_image() -> StateImage {
             path: format!("urn:test:output:{index}"),
             declaration_order: index as u32,
             value_type,
+            unit: None,
+            quantity: None,
         });
     }
     let mut driver_of = vec![(input.clone(), outputs[0].clone())];
@@ -161,7 +172,7 @@ fn vector_image() -> StateImage {
         ),
     ]);
     StateImage {
-        execution_revision: 1,
+        execution_revision: 2,
         fingerprint: 0,
         model_id: "urn:test:model:Δ".into(),
         state_t: 3.5f64.to_bits(),
@@ -217,6 +228,12 @@ fn vector_image() -> StateImage {
             state_slots: vec![(block_key, 0, 1)],
             external_inputs: vec![input],
             boundary_outputs: vec![("urn:test:boundary".into(), outputs[0].clone())],
+            input_definitions: vec![crate::state_io::InputManifestEntry {
+                path: "urn:test:input".into(),
+                value_type: WireValueType::Real,
+                min: Some(WireValue::Real((-0.0f64).to_bits())),
+                max: None,
+            }],
         },
         values,
         words: vec![0x0123_4567_89ab_cdef],
@@ -226,7 +243,7 @@ fn vector_image() -> StateImage {
 fn expected_manifest(manifest: &ExecutionManifest) -> Vec<u8> {
     let mut out = ExpectedWriter(Vec::new());
     match &manifest.portability {
-        Portability::CrossPlatform => out.byte(0),
+        Portability::Portable => out.byte(0),
         Portability::TargetBound { arch, os } => {
             out.byte(1);
             out.string(arch);
@@ -271,6 +288,8 @@ fn expected_manifest(manifest: &ExecutionManifest) -> Vec<u8> {
         out.string(&connector.path);
         out.u32(connector.declaration_order);
         out.value_type(&connector.value_type);
+        out.optional_text(&connector.unit);
+        out.optional_text(&connector.quantity);
     }
     out.u32(manifest.connections.len() as u32);
     for (from, to) in &manifest.connections {
@@ -305,6 +324,17 @@ fn expected_manifest(manifest: &ExecutionManifest) -> Vec<u8> {
         out.string(name);
         out.connector_key(source);
     }
+    out.u32(manifest.input_definitions.len() as u32);
+    for entry in &manifest.input_definitions {
+        out.string(&entry.path);
+        out.value_type(&entry.value_type);
+        for bound in [&entry.min, &entry.max] {
+            out.byte(u8::from(bound.is_some()));
+            if let Some(value) = bound {
+                out.value(value);
+            }
+        }
+    }
     out.0
 }
 
@@ -338,8 +368,8 @@ fn expected_snapshot(image: &StateImage, manifest: &[u8], fingerprint: u128) -> 
 
     let mut bytes = ExpectedWriter(Vec::new());
     bytes.0.extend_from_slice(b"OCESTAT\0");
-    bytes.u32(1);
-    bytes.u32(1);
+    bytes.u32(2);
+    bytes.u32(2);
     bytes.u64(body.0.len() as u64);
     bytes.0.extend_from_slice(&body.0);
     let checksum = fnv(&bytes.0);
@@ -351,7 +381,7 @@ fn expected_snapshot(image: &StateImage, manifest: &[u8], fingerprint: u128) -> 
 fn production_codec_matches_the_independent_complete_vector() {
     let mut image = vector_image();
     let manifest = expected_manifest(&image.manifest);
-    let mut fingerprint_preimage = 1u32.to_le_bytes().to_vec();
+    let mut fingerprint_preimage = 2u32.to_le_bytes().to_vec();
     fingerprint_preimage.extend_from_slice(&manifest);
     image.fingerprint = fnv(&fingerprint_preimage);
     let expected = expected_snapshot(&image, &manifest, image.fingerprint);
@@ -364,10 +394,10 @@ fn production_codec_matches_the_independent_complete_vector() {
 #[test]
 fn populated_portable_vector_is_target_independent() {
     let mut image = vector_image();
-    image.manifest.portability = Portability::CrossPlatform;
+    image.manifest.portability = Portability::Portable;
     image.manifest.blocks[0].class_path = "CDL.Reals.Add".into();
     let manifest = expected_manifest(&image.manifest);
-    let mut fingerprint_preimage = 1u32.to_le_bytes().to_vec();
+    let mut fingerprint_preimage = 2u32.to_le_bytes().to_vec();
     fingerprint_preimage.extend_from_slice(&manifest);
     image.fingerprint = fnv(&fingerprint_preimage);
     let expected = expected_snapshot(&image, &manifest, image.fingerprint);
@@ -375,14 +405,14 @@ fn populated_portable_vector_is_target_independent() {
     assert_eq!(actual, expected);
     assert_eq!(
         fnv(&actual),
-        30_166_327_748_914_738_958_954_550_944_390_124_402
+        145_450_162_107_920_511_159_976_950_771_821_137_540
     );
     EngineStateSnapshot::from_bytes(&actual).unwrap();
 }
 
 fn encoded_vector(mut image: StateImage) -> Vec<u8> {
     let manifest = expected_manifest(&image.manifest);
-    let mut fingerprint_preimage = 1u32.to_le_bytes().to_vec();
+    let mut fingerprint_preimage = 2u32.to_le_bytes().to_vec();
     fingerprint_preimage.extend_from_slice(&manifest);
     image.fingerprint = fnv(&fingerprint_preimage);
     expected_snapshot(&image, &manifest, image.fingerprint)
@@ -416,8 +446,8 @@ fn current_revision_enum_compatibility_is_deferred_until_restore() {
 #[test]
 fn unknown_execution_revision_retains_future_catalog_descriptors_for_restore() {
     let mut image = vector_image();
-    image.execution_revision = 2;
-    image.manifest.portability = Portability::CrossPlatform;
+    image.execution_revision = 3;
+    image.manifest.portability = Portability::Portable;
     image.manifest.enums[0].members.swap(0, 1);
     let manifest = crate::state_manifest_codec::encode_manifest(&image.manifest, false).unwrap();
     image.fingerprint = crate::state_manifest::fingerprint(image.execution_revision, &manifest);
@@ -442,8 +472,8 @@ fn unknown_execution_revision_retains_future_catalog_descriptors_for_restore() {
 #[test]
 fn large_unique_future_enum_descriptor_decodes_without_quadratic_duplicate_scanning() {
     let mut image = vector_image();
-    image.execution_revision = 2;
-    image.manifest.portability = Portability::CrossPlatform;
+    image.execution_revision = 3;
+    image.manifest.portability = Portability::Portable;
     image.manifest.enums[0].members = (0..20_000)
         .map(|ordinal| std::sync::Arc::from(format!("member-{ordinal:05}")))
         .collect();

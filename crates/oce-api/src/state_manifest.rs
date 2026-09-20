@@ -183,11 +183,17 @@ pub(crate) fn build_manifest<S: Store>(
             }
             None => crate::io::connector_path(None, connector.id),
         };
+        let (unit, quantity) = match &connector.attrs {
+            oce_model::Attrs::Real(attrs) => (attrs.unit.clone(), attrs.quantity.clone()),
+            _ => (None, None),
+        };
         connectors.push(ConnectorManifestEntry {
             key: connector_keys_by_dense[dense].clone(),
             path,
             declaration_order: connector.decl_order,
             value_type,
+            unit: unit.map(|value| value.to_string()),
+            quantity: quantity.map(|value| value.to_string()),
         });
     }
     connectors.sort_by(|left, right| left.key.cmp(&right.key));
@@ -276,7 +282,7 @@ pub(crate) fn build_manifest<S: Store>(
             os: std::env::consts::OS.into(),
         }
     } else {
-        Portability::CrossPlatform
+        Portability::Portable
     };
     let manifest = ExecutionManifest {
         portability,
@@ -290,6 +296,7 @@ pub(crate) fn build_manifest<S: Store>(
         state_slots,
         external_inputs,
         boundary_outputs,
+        input_definitions: crate::state_io::build_inputs(&engine.io.frame_definitions)?,
     };
     let manifest_bytes = crate::state_manifest_codec::encode_manifest(&manifest, !durable)?;
     let fingerprint = fingerprint(crate::state::EXECUTION_ABI_REVISION, &manifest_bytes);
@@ -358,10 +365,18 @@ pub(crate) fn compare_manifests(
             &target.external_inputs,
         );
     }
-    incompatible(
-        "boundary outputs",
-        &snapshot.boundary_outputs,
-        &target.boundary_outputs,
+    if snapshot.boundary_outputs != target.boundary_outputs {
+        return incompatible(
+            "boundary outputs",
+            &snapshot.boundary_outputs,
+            &target.boundary_outputs,
+        );
+    }
+    compare_named(
+        "input definition",
+        &snapshot.input_definitions,
+        &target.input_definitions,
+        |entry| entry.path.clone(),
     )
 }
 

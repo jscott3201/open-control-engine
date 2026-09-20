@@ -15,7 +15,7 @@ pub(crate) fn encode_manifest(
 ) -> Result<Vec<u8>, EngineStateError> {
     let mut writer = Writer::new();
     match &manifest.portability {
-        Portability::CrossPlatform => writer.u8(0),
+        Portability::Portable => writer.u8(0),
         Portability::TargetBound { arch, os } => {
             writer.u8(1);
             writer.string(arch)?;
@@ -54,6 +54,8 @@ pub(crate) fn encode_manifest(
         writer.string(&entry.path)?;
         writer.u32(entry.declaration_order);
         write_value_type(&mut writer, &entry.value_type)?;
+        crate::state_io::write_optional_text(&mut writer, &entry.unit)?;
+        crate::state_io::write_optional_text(&mut writer, &entry.quantity)?;
     }
     write_count(&mut writer, manifest.connections.len())?;
     for (from, to) in &manifest.connections {
@@ -79,6 +81,7 @@ pub(crate) fn encode_manifest(
         writer.string(iri)?;
         write_connector_key(&mut writer, source, allow_dense)?;
     }
+    crate::state_io::write_inputs(&mut writer, &manifest.input_definitions)?;
     writer.finish()
 }
 
@@ -90,7 +93,7 @@ pub(crate) fn decode_manifest(
 ) -> Result<ExecutionManifest, EngineStateError> {
     let mut reader = Reader::new(bytes, base_offset, budget);
     let portability = match reader.u8()? {
-        0 => Portability::CrossPlatform,
+        0 => Portability::Portable,
         1 => Portability::TargetBound {
             arch: reader.string()?,
             os: reader.string()?,
@@ -190,6 +193,8 @@ pub(crate) fn decode_manifest(
         let path = reader.string()?;
         let declaration_order = reader.u32()?;
         let value_type = read_value_type(&mut reader)?;
+        let unit = crate::state_io::read_optional_text(&mut reader)?;
+        let quantity = crate::state_io::read_optional_text(&mut reader)?;
         push_strict(
             &mut connectors,
             ConnectorManifestEntry {
@@ -197,6 +202,8 @@ pub(crate) fn decode_manifest(
                 path,
                 declaration_order,
                 value_type,
+                unit,
+                quantity,
             },
             |entry| &entry.key,
             &reader,
@@ -254,6 +261,7 @@ pub(crate) fn decode_manifest(
         let output = (reader.string()?, read_connector_key(&mut reader)?);
         reader.push(&mut boundary_outputs, output, "boundary outputs")?;
     }
+    let input_definitions = crate::state_io::read_inputs(&mut reader)?;
     if !reader.is_empty() {
         return reader.malformed("trailing bytes in execution manifest");
     }
@@ -269,6 +277,7 @@ pub(crate) fn decode_manifest(
         state_slots,
         external_inputs,
         boundary_outputs,
+        input_definitions,
     };
     let validation_entries = manifest
         .enums
@@ -291,6 +300,7 @@ pub(crate) fn decode_manifest(
         .and_then(|count| count.checked_add(manifest.state_slots.len()))
         .and_then(|count| count.checked_add(manifest.external_inputs.len()))
         .and_then(|count| count.checked_add(manifest.boundary_outputs.len()))
+        .and_then(|count| count.checked_add(manifest.input_definitions.len()))
         .ok_or_else(|| EngineStateError::MalformedSnapshot {
             offset: reader.offset(),
             detail: "manifest validation workspace size overflows".into(),
@@ -434,7 +444,7 @@ pub(crate) fn read_value(reader: &mut Reader<'_>) -> Result<WireValue, EngineSta
     })
 }
 
-fn write_value_type(
+pub(crate) fn write_value_type(
     writer: &mut Writer,
     value_type: &WireValueType,
 ) -> Result<(), EngineStateError> {
@@ -451,7 +461,7 @@ fn write_value_type(
     Ok(())
 }
 
-fn read_value_type(reader: &mut Reader<'_>) -> Result<WireValueType, EngineStateError> {
+pub(crate) fn read_value_type(reader: &mut Reader<'_>) -> Result<WireValueType, EngineStateError> {
     Ok(match reader.u8()? {
         0 => WireValueType::Real,
         1 => WireValueType::Integer,

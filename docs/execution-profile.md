@@ -81,10 +81,15 @@ visible `Pre` output, and the block's Boolean state word contains the value to e
 successful call. Capture and restore do not evaluate the model. After restore, a call at the restored
 timestamp is a new HostTick transition.
 
-HostTick v1 is part of execution-state ABI revision 1 even though the profile name is not a separate
+HostTick v1 is part of execution-state ABI revision 2 even though the profile name is not a separate
 wire field. A future same-time event-iteration profile must use a distinct execution-state ABI
 revision or a newly revised manifest and codec with profile identity. It must not consume HostTick v1
 snapshots as semantically equivalent state.
+
+ABI revision 2 preserves HostTick v1 and adds the exact executable IO acceptance domain to the
+state manifest, alongside format revision 2. See the [state compatibility contract](state-compatibility.md).
+Build/deployment authentication is a mandatory host-envelope precondition before byte decoding;
+OCE carries no build token. State compatibility does not authenticate a build or authorize actuation.
 
 ## Conformance boundary
 

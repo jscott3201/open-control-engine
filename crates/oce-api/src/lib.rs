@@ -59,10 +59,12 @@ mod stable_hash;
 mod state;
 mod state_codec;
 mod state_diagnostics;
+mod state_io;
 mod state_key_order;
 mod state_manifest;
 mod state_manifest_codec;
 mod state_manifest_validation;
+mod state_snapshot;
 mod state_wire;
 mod topology;
 mod watch;
@@ -96,6 +98,7 @@ pub use loading::LoadReport;
 pub use observations::{AssertEvent, AssertLevel};
 pub use params::{ParamAttrs, ParamTable, RunMode};
 pub use state::{EngineCheckpoint, EngineStateError, EngineStateSnapshot};
+pub use state_snapshot::StatePortability;
 pub use topology::{DeclaredOutput, PassThroughPair, Topology, TopologyBlock, TopologyConnection};
 
 /// Re-export of the shared diagnostic type: the element type of [`LoadReport::warnings`], so a
