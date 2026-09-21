@@ -54,6 +54,8 @@
     {"path": "crates/oce-api/tests/replay.rs", "sha256": "5364c5aab1981a1076c38b24ebf2f5b1e8c32602a4aae448f9a0b3127522a3c3"},
     {"path": "crates/oce-api/tests/replay_codec.rs", "sha256": "a5fb0a442082368856f645d29c896b2ca3865af996c58f12c2001739b1021961"},
     {"path": "crates/oce-api/tests/release_fallback.rs", "sha256": "85fb1436bf199f650437786b7b33f2235a8be45f46c80683f6230d071df74e4b"},
+    {"path": "scripts/release_compatibility/test_check.py", "sha256": "8a8a6081b123cbb9dd5cf7178971f538c617f0daa5c2fc4d10cc44eea8ef244d"},
+    {"path": "crates/oce-api/tests/release_compatibility.rs", "sha256": "03d7ec40212d2bab1fcfca9548ba099d77ede9b30cc3483c64150528781f7815"},
     {"path": "crates/oce-conformance/tests/strict_bits/matrix.rs", "sha256": "b393a049a95ae3659f4ee7ccb0cb71413220bf9229795640947fcc50a2a4fc72"},
     {"path": "crates/oce-conformance/tests/fixtures/strict_bits/receipts.json", "sha256": "38ce7dd96d098b30b8a35dbe6f66b9718a39bc200813150ea4a3984d3ac4bf00"}
   ]

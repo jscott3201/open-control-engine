@@ -36,6 +36,8 @@ UNAVAILABLE = frozenset(("facade-catalog-schema", "public-descriptor", "diagnost
                          "executable-frame", "snapshot", "replay", "strict-bit-qualification"))
 DIRECTIONS = (("current", "current"), ("historical", "current"),
               ("current", "historical"), ("historical", "historical"))
+# Enforcement-source digests live only in MATRIX. Neither bound source embeds its own digest
+# or the matrix digest; the tests' runtime fixture read does not make source hashing recursive.
 EVIDENCE = (
     "crates/oce-api/tests/public-api.txt",
     "crates/oce-store/tests/public-api.txt",
@@ -47,6 +49,8 @@ EVIDENCE = (
     "crates/oce-api/tests/replay.rs",
     "crates/oce-api/tests/replay_codec.rs",
     "crates/oce-api/tests/release_fallback.rs",
+    "scripts/release_compatibility/test_check.py",
+    "crates/oce-api/tests/release_compatibility.rs",
     "crates/oce-conformance/tests/strict_bits/matrix.rs",
     "crates/oce-conformance/tests/fixtures/strict_bits/receipts.json",
 )

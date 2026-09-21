@@ -146,8 +146,13 @@ class EvidenceTests(unittest.TestCase):
 
     def test_missing_and_changed_physical_evidence_is_not_a_locator_only_check(self):
         original = check.read
-        for path in (check.HISTORY, *check.EVIDENCE):
-            with self.subTest(path=path):
+        # Name the enforcement sources independently: deriving every case from EVIDENCE would
+        # silently lose these controls if either source were omitted from that boundary again.
+        paths = dict.fromkeys((check.HISTORY, *check.EVIDENCE,
+                               "scripts/release_compatibility/test_check.py",
+                               "crates/oce-api/tests/release_compatibility.rs"))
+        for path in paths:
+            with self.subTest(path=path, mutation="removal"):
                 def missing(root, name):
                     if name == path:
                         raise check.Refusal("source: missing or unreadable")
@@ -155,6 +160,7 @@ class EvidenceTests(unittest.TestCase):
                 with patch.object(check, "read", side_effect=missing):
                     with self.assertRaisesRegex(check.Refusal, "source: missing"):
                         check.validate(check.ROOT)
+            with self.subTest(path=path, mutation="byte change"):
                 with patch.object(check, "read", side_effect=lambda root, name:
                                   original(root, name) + (b"\n" if name == path else b"")):
                     with self.assertRaisesRegex(check.Refusal, "history: retained receipt changed|matrix: evidence differs|facts: descriptor grammar"):
