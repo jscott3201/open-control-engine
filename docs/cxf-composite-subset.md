@@ -120,31 +120,62 @@ rejects with subject `…#M` and a message ending
 ## Rule 3 — Nesting traversal order (non-rejecting)
 
 > Active composite children lower depth-first in `S231:containsBlock` **array order**; inactive
-> children are skipped along with their entire subtrees. The flat leaf order — and with it every
-> dense block id, connector id, and declaration order in the imported model — derives from that
-> traversal. Non-rejecting; no DiagCode.
-
-Array order is significant: reordering a `containsBlock` array reorders the imported model's
-block and connector ids, which changes goldens, point ids, and any consumer keyed on dense ids.
-An emitter must produce `containsBlock` arrays in a deterministic order of its own choosing and
-keep that order stable across exports of the same source.
-
-The full order contract: array order is load-bearing wherever the resolver reads an array —
-`@graph` node position, `containsBlock` order, each instance's port and parameter lists,
-`isConnectedTo` order. Two carve-outs: the boundary-input elision vector (`external_inputs`)
-and the pass-through pair list are re-keyed on the boundary port's own `@graph` node position
-instead of inheriting the order of that port's `isConnectedTo` array
-(`crates/oce-cxf/src/resolve/mod.rs`, Step 9); and a `S231:hasInstance` member array's order is
-load-bearing for **nothing** — derived ports bind by name against the class signature,
-synthesized connectors order by `(owner @graph position, class-signature position)`, and
-classified parameter members append in class-signature order, so permuting the array moves no
-`ConnectorId`, no `decl_order`, and no `param` row. Neither array order nor node position is a
-stable identity: key by authored name, never by position.
+> children are skipped along with their entire subtrees. This flat leaf order assigns `BlockId`
+> and block `decl_order`, **not authored connector IDs**. Authored connectors are numbered by
+> their own `@graph` positions. Non-rejecting; no DiagCode.
 
 ```json
 "S231:containsBlock": [ { "@id": "…#M.sub" }, { "@id": "…#M.post" } ]
 ```
 lowers `…#M.sub`'s leaves (depth-first) before `…#M.post`.
+
+### Ordering and identity contract
+
+This table is the OCE executable profile, not a general JSON-LD ordering guarantee.
+[OBC CXF §8.2](https://obc.lbl.gov/specification/cxf.html#classes-and-properties) defines
+`containsBlock` as a relation between blocks; it does not define the executable array-order
+semantics below. The [OBC code-generation example (§11.3)](https://obc.lbl.gov/specification/codeGeneration.html#translation-of-a-control-sequence-using-a-intermediate-cxf-json-ld-format)
+shows authored arrays and describes modelica-json recursively flattening composites to elementary
+blocks. Neither that example nor its displayed order establishes a general producer-order guarantee.
+
+**Order-bearing** means a permutation can change the resolved vectors, port meaning, diagnostics,
+export bytes or executable compatibility; it need not change numerical outputs. **Normalized**
+means the stated permutation does not change the specified result. **Derived storage** is a dense
+position inside one resolved executable, not a durable external identity. **Authored identity** is
+an expanded IRI/name maintained by the producer and used by the host, not an array offset.
+
+| Surface | Classification | Executable rule and identity consequence |
+| --- | --- | --- |
+| JSON objects and context spelling | Normalized | Object-key/map iteration order carries no executable meaning. Equivalent supported compact/expanded identity and typing tokens, singleton relation spellings, and equivalent context maps resolve alike. Context **redefinition order** and unsupported JSON-LD features are not covered by this equivalence. Structural property names must still use the supported spelling; this is not arbitrary JSON-LD canonicalization. |
+| `@graph` node array | Order-bearing | Authored instance connector nodes receive `ConnectorId` and connector `decl_order` in surviving node order. Boundary definitions follow boundary node order; synthesized connector groups use owner node position. Moving only a leaf's node does not replace `containsBlock` as the source of block order. Root-count candidates also follow node order. |
+| `containsBlock` | Order-bearing | Active leaves lower depth-first in child array order, assigning `BlockId` and block `decl_order`. Permuting siblings can change schedule tie-breaks, export, state compatibility and replay content. Authored connector node positions do not move merely because containment order changes, but their block owners can receive different IDs. |
+| Named leaf `hasInput` / `hasOutput` | Normalized | When all ports on a side name the class's declared ports, they bind in **class-signature order**, regardless of member-array order. Dense connector IDs still follow `@graph`. Partial name matches refuse rather than guessing. |
+| Positional/unnamed leaf ports | Order-bearing | When no declared names match, ports bind positionally; classes without declared names also bind positionally. A same-kind swap can change meaning without changing arity or types. |
+| Composite own `hasParameter` + `hasConstant` | Normalized for accepted scopes | One mutual dependency-ordered scope, including forward references across the two lists. Permutations preserve the accepted graph and guard decisions. Rejected cycles/duplicates retain rule IDs and participant sets, not necessarily subjects or message order; see Rule 5. |
+| Leaf values and dimensions | Order-bearing where Rule 5 specifies | Leaf declaration chains are not composite mutual scopes. Values use enclosing-first lookup, earlier sibling fallback and no forward sibling grounding; dimensions use nearest-wins lookup. Do not generalize composite declaration-order independence to leaf chains. |
+| `isConnectedTo` | Order-bearing, with orientation normalization | Authored connection sources follow `@graph`; targets follow each source's array. Re-anchored relations follow the orientation rules in Rule 6; node-less derived sources follow authored sources in derived connector order. Direct target permutations can alter export content while leaving executable compatibility unchanged because the state manifest canonicalizes the edge set. |
+| Boundary lowering | Normalized fanout; order-bearing node positions | `external_inputs` re-key by `(boundary input node position, ConnectorId)`; fanout target-array permutation does not reorder them. Pass-through pairs re-key by `(input boundary node position, output boundary node position)`. Declared input/output definitions follow boundary `@graph` order. Boundary hops and composite nodes disappear, while declared boundary IRIs retain their public IO role. |
+| `hasInstance` member array | Normalized | Array order is load-bearing for nothing: derived ports use names/class signature, classified parameters append in class-signature order, and synthesized connectors append after authored connectors ordered by `(owner @graph position, class-signature position)`. This does not make owner node order or authored connector node order inert. |
+| Inactive conditionals | Pruned | Inactive children and entire subtrees contribute no leaf or connector positions. Moving an inactive child among active siblings does not move the active order. Active connections referencing inactive nodes still refuse; pruning is not permission to leave dangling wiring. See Active nodes for declaration/guard exceptions. |
+| Resolver diagnostics | Deterministically finalized | Sort by numeric connector dense ID first (including recognized `connector#N` subjects), then subject, code string and message. Non-connector subjects use the final ID bucket: no subject before named subjects, then lexical subject/code/message order. Early failures with no connector index use that non-connector handling. Severity is not a sort key. Export warnings retain their separate block/cascade order, not this resolver sort. |
+| Export | Derived from `ModelGraph` vectors | Emit the synthetic root, surviving blocks and their parameters, surviving connectors, then boundary nodes in their vector-derived order. Deferral filters the survivor cone without lexically sorting it. Export is flat, not source recovery; a partial export tag is not whole-model identity. See the [round-trip contract](cxf-round-trip.md#the-deferral-trap). |
+| Dense IDs versus authored identity | Derived storage versus stable authored identity | `BlockId`, `ConnectorId`, `decl_order`, schedule/vector positions and synthetic positional port names are **never stable external identities**. Hosts key by authored expanded IRI/name, preserving that identity across producer revisions deliberately. Authored identity does not imply executable compatibility: unchanged names can accompany incompatible storage/order. Export content identity, state compatibility and replay identity remain distinct. |
+
+#### Emitter guidance and qualification limits
+
+Emit deterministic `@graph`, `containsBlock`, positional ports, leaf declaration chains and
+connection arrays; preserve those orders across exports of the same source. Do not run a generic
+RDF/set sort over them and assume it is executable-neutral. Prefer declared port names over
+positional binding. Compare both authored-name inventories and the order-sensitive executable
+contract; identical names alone do not qualify a state restore or replay. Boundary fanout and
+named-port normalization are specific rules, not permission to reorder every array.
+
+The executable oracle here is **OCE-only**. Studio producer order is **unqualified**: no Studio
+source or producer run is accepted as evidence by these tests. The OCL routine compiler does not
+emit CXF and is not a qualified producer for this contract. Downstream qualification must run the
+actual producer against these cases; neither is a prerequisite for freezing the OCE contract.
+For issue #249 accounting, this establishes ordering/identity evidence only. It introduces no
+parameter-shadowing policy, option or diagnostic, and does not close that separate policy question.
 
 ## Rule 4 — Acyclicity (rejects: `composite/contains-cycle`)
 
@@ -214,8 +245,9 @@ rejects with subject `…#A` and message tail `…#A -> …#B -> …#C -> …#A`
 > a leaf member's forward reference to a sibling member still fails grounding. A leaf
 > **dimension** reference (`S231:sizeOfDimensions`) still resolves **nearest-wins** over the
 > undivided scope, so there a sibling binding shadows a same-named enclosing one — when the
-> sibling is grounded earlier; member array order still decides the dimension reading (values
-> are order-invariant under member order, dimensions are not). When the two readings of one
+> sibling is grounded earlier; member array order still decides the dimension reading (for an
+> enclosing-bound name, values are order-invariant under member order, dimensions are not).
+> When the two readings of one
 > name disagree on an array's shape, the element-count divergence refuses with
 > `grounding-failed` (both counts in the message); a value divergence with a matching count is
 > silent, exactly like the scalar path.
@@ -482,6 +514,20 @@ the same files and drivers.
   `cargo nextest run -p oce-api --test conformance composite_contract`
 - Doc/catalog drift guard:
   `cargo nextest run -p oce-cxf --test composite_contract_doc`
+- Ordering oracle: [`resolve_ordering.rs`](../crates/oce-cxf/tests/resolve_ordering.rs), with
+  independently authored compact/expanded documents, hand-listed block/connector/edge and export
+  survivor orders, object-key reversal, declaration/member permutations, and exact ordered
+  diagnostic vectors. These are OCE profile expectations, not an external numerical oracle.
+- Public identity: [`composition_identity.rs`](../crates/oce-api/tests/composition_identity.rs)
+  checks complete export content tags and public state-restore compatibility. It distinguishes
+  normalized permutations, incompatible containment/connector/positional-port changes, and direct
+  fanout permutations that change content but preserve executable compatibility. It neither exposes
+  private fingerprints nor changes format revisions.
+- Complementary contract evidence: `resolve_external_input_order`, `resolve_declaration_scope`,
+  `resolve_param_precedence`, and `resolve_composite_orientation` retain boundary, leaf-scope and
+  orientation cases. `fixture_structural_oracle` independently checks the vendored corpus's
+  structure, **not** these OCE array-order semantics; `fixture_port_order` and
+  `vendored_corpus_delta` retain their input-hygiene and diagnostic-delta roles.
 
 To check a document your tool produced:
 
