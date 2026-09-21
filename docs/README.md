@@ -12,6 +12,7 @@ front door; these pages are the detail behind it.
 | [Architecture](architecture.md) | How the engine is layered, where the CDL §7.17 seam sits, what each of the 17 crates owns, and the platform and MSRV policy |
 | [Execution profile](execution-profile.md) | Why each host tick is one state transition, and where `CDL.Logical.Pre` differs from Modelica same-time event iteration |
 | [Canonical replay record](replay-record.md) | Bounded per-accepted-frame exact bytes, typed refusals and host-owned ordered replay with separate snapshot sidecars |
+| [Release-candidate compatibility](release-compatibility.md) | Retained directed matrix, no-N-1 refusal policy, cold-start/rollback checklist and future RC note template |
 | [Verification and evidence](verification-evidence.md) | What has actually been proven about this engine, what has not, and which checks are deliberately not running |
 | [CDL coverage](cdl-coverage.md) | Whether *your* sequence runs — which classes and G36 sequences are supported, and what "supported" is defined to mean |
 | [CXF round trip](cxf-round-trip.md) | What export guarantees, and the conditions under which it silently drops part of your model |

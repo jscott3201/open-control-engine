@@ -190,6 +190,11 @@ For `CDL.Logical.Pre`, a snapshot preserves both the currently visible output co
 Boolean memory that will be emitted on the next HostTick call. Restore does not evaluate the block.
 A call at the restored timestamp advances it again.
 
+For candidate changes, use the [release compatibility and host fallback checklist](release-compatibility.md#host-fallback-checklist).
+Current/current is the only supported pairing; equal 0.1.0 package strings are not build authority.
+No N-1 state/replay migration is supplied. Cold requalification starts fresh; external rollback uses
+the prior qualified binary with its own authenticated state, never a current-engine transplant.
+
 ## Lifecycle names are not equipment controls
 
 `Engine::halt()` does not stop complete-frame execution or host-owned output writes. It changes

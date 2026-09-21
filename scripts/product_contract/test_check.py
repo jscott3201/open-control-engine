@@ -22,13 +22,13 @@ import check
 ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = (
     "product contract: OK\n"
-    "Document revision: 14\n"
-    "Grounding SHA: 0e38737af21250f23ffae099c9a65181e5a9105b\n"
+    "Document revision: 15\n"
+    "Grounding SHA: e81480b02271456719d55cbe1e5090b0dea6d63c\n"
     "Requirements: 40\n"
-    "CURRENT: 34\n"
+    "CURRENT: 35\n"
     "HOST-OBLIGATION: 5\n"
-    "FUTURE: 1\n"
-    "Future outcomes: 1\n"
+    "FUTURE: 0\n"
+    "Future outcomes: 0\n"
     "Integration pointers: 6\n"
     "Scope: traceability only; semantics and host compliance are not proven.\n"
 )
@@ -199,14 +199,14 @@ class TraceabilityTests(unittest.TestCase):
                                           if not line.startswith(omitted)) + "\n")
             self.rejects(message)
         self.write_document(self.document.replace("| HOST-OBLIGATION |", "| CURRENT |"))
-        self.rejects("all statuses required")
+        self.rejects("current and host statuses required")
 
     def test_revision_grounding_and_change_record_are_required(self):
         for old, new, message in (
-            ("Document revision: 14", "Document revision: 0", "metadata:"),
-            ("Document revision: 14", "Document revision: 15", "current revision change record"),
-            ("Document revision: 14", "Document revision: 14\nDocument revision: 14", "metadata:"),
-            ("Grounding SHA: 0e38737af21250f23ffae099c9a65181e5a9105b", "Grounding SHA: d2111be", "metadata:"),
+            ("Document revision: 15", "Document revision: 0", "metadata:"),
+            ("Document revision: 15", "Document revision: 16", "current revision change record"),
+            ("Document revision: 15", "Document revision: 15\nDocument revision: 15", "metadata:"),
+            ("Grounding SHA: e81480b02271456719d55cbe1e5090b0dea6d63c", "Grounding SHA: d2111be", "metadata:"),
             ("## Change record", "## History", "change record required"),
         ):
             with self.subTest(new=new):
@@ -255,6 +255,7 @@ class TraceabilityTests(unittest.TestCase):
         self.rejects("test not in range")
 
     def test_future_rows_require_assignments_not_existing_test_promises(self):
+        self.document = self.future_probe()
         self.change_cell("PC-040", 7,
                          "test [retired_facade_symbols_are_absent]"
                          "(../crates/oce-api/tests/public_surface_contract.rs#L507-L512)")
@@ -263,6 +264,7 @@ class TraceabilityTests(unittest.TestCase):
         self.rejects("test or future assignment required")
 
     def test_future_assignment_requires_named_local_outcome_and_description(self):
+        self.document = self.future_probe()
         for value, message in (
             ("future [later](#strict-bit-evidence)", "one named future assignment"),
               ("future [M03-PR05](#canonical-replay)", "missing future description"),
@@ -274,7 +276,7 @@ class TraceabilityTests(unittest.TestCase):
                 self.rejects(message)
         self.write_document(self.document.replace("M03-PR05:", "M03-PR09:"))
         self.rejects("missing future description")
-        section = check.headings(self.document)["release-compatibility"]
+        section = check.headings(self.document)["future-probe"]
         self.write_document(self.document.replace(section, "M03-PR05: Later."))
         self.rejects("missing future description")
 
@@ -282,6 +284,18 @@ class TraceabilityTests(unittest.TestCase):
         for suffix in ("M03-PR05: Duplicated outcome.", "M09-PR99: Orphan outcome."):
             self.write_document(self.document + "\n" + suffix + "\n")
             self.rejects("duplicate or orphan future outcome")
+
+    def future_probe(self):
+        # No live FUTURE rows remain. Keep the future grammar hostile controls using a synthetic
+        # pending assignment rather than inventing an unimplemented product requirement.
+        lines = self.document.splitlines()
+        for index, line in enumerate(lines):
+            if line.startswith("| PC-040 |"):
+                cells = line.split("|")
+                cells[2] = " FUTURE "
+                cells[8] = " future [M03-PR05](#future-probe) "
+                lines[index] = "|".join(cells)
+        return "\n".join(lines) + "\n\n## Future probe\n\nM03-PR05: A synthetic future outcome with enough words to exercise the prescribed traceability grammar only.\n"
 
     def test_grounding_is_required_to_be_a_local_link_list(self):
         for value, message in (("some source", "expected link list"),
@@ -389,7 +403,7 @@ class TraceabilityTests(unittest.TestCase):
                              "product contract: FAIL: table: unknown status: PC-006\n")
 
     def test_fulfilled_outcome_cannot_be_reintroduced_as_an_orphan_assignment(self):
-        for assignment in ("M01-PR02", "M02-PR01", "M02-PR02", "M02-PR03", "M02-PR04", "M02-PR05", "M03-PR01", "M03-PR02", "M03-PR03"):
+        for assignment in ("M01-PR02", "M02-PR01", "M02-PR02", "M02-PR03", "M02-PR04", "M02-PR05", "M03-PR01", "M03-PR02", "M03-PR03", "M03-PR04", "M03-PR05"):
             self.write_document(self.document + f"\n{assignment}: Retired assignment reintroduced.\n")
             self.rejects("duplicate or orphan future outcome")
 
@@ -419,6 +433,8 @@ class TraceabilityTests(unittest.TestCase):
             "docs/replay-record.md", "crates/oce-api/src/replay.rs",
             "crates/oce-api/tests/replay.rs", "crates/oce-api/tests/replay_codec.rs",
             "crates/oce-api/src/replay_capture_tests.rs",
+            "docs/release-compatibility.md", "scripts/release_compatibility/test_check.py",
+            "crates/oce-api/tests/release_compatibility.rs", "crates/oce-api/tests/release_fallback.rs",
         )))
         for path in ("docs/facade-migration.md", "crates/oce-api/tests/frame_assertions.rs",
                      "crates/oce-api/src/admission.rs", "crates/oce-api/src/tests/reload_tests.rs",
@@ -525,7 +541,7 @@ class TraceabilityTests(unittest.TestCase):
     def test_contraction_is_current_at_the_accepted_document_revision(self):
         self.change_cell("PC-035", 1, "HOST-OBLIGATION")
         self.rejects("frame-only: contraction is current")
-        self.write_document(self.document.replace("Document revision: 14", "Document revision: 13"))
+        self.write_document(self.document.replace("Document revision: 15", "Document revision: 14"))
         self.rejects("frame-only: document revision")
 
     def test_retired_current_claims_are_not_hidden_by_valid_evidence_links(self):
@@ -533,6 +549,15 @@ class TraceabilityTests(unittest.TestCase):
                       "MUST attempt store write-back after execution."):
             self.change_cell("PC-007", 4, claim)
             self.rejects("frame-only: retired current claim")
+
+    def test_release_promotion_cannot_drop_limitations_or_substitute_unrelated_evidence(self):
+        self.change_cell("PC-040", 1, "HOST-OBLIGATION")
+        self.rejects("release: fail-closed policy is current")
+        self.change_cell("PC-040", 5, "No limitations.")
+        self.rejects("release: no-N-1 and host-owned limitations")
+        self.change_cell("PC-040", 7, "test [test_report_is_an_independent_byte_golden]"
+                         "(../scripts/product_contract/test_check.py#L94-L100)")
+        self.rejects("release: directed matrix")
 
     def test_native_exactness_is_current_with_retained_mutation_and_platform_evidence(self):
         _, _, rows = check.parse_document(self.document)

@@ -2,10 +2,13 @@
 
 ## Scope and authority
 
-This is the execution-maintainer detail of PC-039 in [product contract revision 14](product-contract.md).
+This is the execution-maintainer detail of PC-039 in the [product contract](product-contract.md).
 It defines **one accepted-frame record**, not a sequence, historian, state snapshot, deployment
 receipt, network protocol or second evaluator. OCE remains synchronous, in-process, database-free
 and file-I/O-free. Nothing is published or qualified for cross-release migration by this format.
+The [release-candidate matrix and fallback guide](release-compatibility.md) retain current/current
+evidence only; the historical v0.1.0 source pin has no replay producer. Cross-build envelopes refuse
+outside OCE before decoding, not through an invented historical replay decoder.
 
 `CompletedFrame::inputs()` retains the canonical accepted boundary inputs independently of caller
 buffers and later engine mutation. `CompletedFrame::replay_record()` encodes those inputs, that
