@@ -1,7 +1,7 @@
 # Executable CXF and HostTick product contract
 
-Document revision: 14
-Grounding SHA: 0e38737af21250f23ffae099c9a65181e5a9105b
+Document revision: 15
+Grounding SHA: e81480b02271456719d55cbe1e5090b0dea6d63c
 
 This is the aggregate product boundary and requirement-to-evidence map for the work toward a
 stable embeddable kernel. It records current observations, host obligations, and future acceptance
@@ -92,7 +92,7 @@ define their detail without changing the current/future acceptance boundary.
 | PC-037 | CURRENT | Evidence delivery | Block semantics maintainers | MUST retain and enforce exact comparison for the pinned 21-signal corpus on Linux x86_64/aarch64 in debug/release, with two native runs per cell and zero mismatches. | Pinned rustc 1.97.1/libm 0.2.16 only; macOS and other targets remain unqualified at the existing 1e-12 aligned band. The 35-file selected source guard is not a compiled dependency closure. No mathematical correctness, arbitrary-input, whole-executable or Sim qualification follows. | [Accepted native receipt](strict-bit-evidence.md#accepted-native-receipt); [Testing standard](../TESTING.md#the-four-pillars) | test [retained_native_linux_evidence_is_complete_exact_and_source_bound](../crates/oce-conformance/tests/strict_bits/matrix.rs#L273-L279); [every_corpus_sample_uses_exact_facade_comparison_and_rejects_mutations](../crates/oce-conformance/tests/strict_bits/controls.rs#L59-L112); [qualified_linux_signals_are_exact_and_other_targets_keep_the_aligned_band](../crates/oce-conformance/tests/strict_bits/controls.rs#L196-L235) |
 | PC-038 | CURRENT | State delivery | Execution maintainers | MUST support same-loaded-executable durable continuation and explicit portability domains, refusing incompatible execution ABI, referenced catalog, executable, IO, state and target facts before mutation with typed state errors. | Host-envelope build/deployment approval precedes decoding; OCE refusal does not authenticate builds or freshness or authorize actuation. Format/ABI 2 refuses format 1 without migration. Portable policy and the finite Linux corpus do not imply arbitrary-input, full-closure or macOS qualification. | [State contract](state-compatibility.md); [Prepare and commit](../crates/oce-api/src/state.rs); [Host envelope](host-responsibilities.md#persist-engine-state-outside-the-store-port) | test [every_manifest_field_refuses_deterministically_without_mutating_engine_or_store](../crates/oce-api/src/tests/state_manifest_refusal_tests.rs#L248); [changed_input_acceptance_domain_refuses_before_mutation](../crates/oce-api/tests/state_contract.rs#L54); [parsed_snapshot_continuation_preserves_signed_zero_and_retained_results](../crates/oce-api/tests/state_contract.rs#L103); [every_target_bound_class_round_trips_policy_and_refuses_each_foreign_target_component](../crates/oce-api/src/tests/state_portability_tests.rs#L146); [every_truncation_boundary_is_a_typed_refusal](../crates/oce-api/src/tests/state_codec_tests.rs#L94) |
 | PC-039 | CURRENT | Replay delivery | Execution maintainers | MUST provide one bounded canonical accepted-frame replay record with exact public facts, placement, time, complete inputs/outputs and ordered Warning diagnostics, independently decodable with typed deterministic refusal and exact comparison. | Hosts authenticate order, build/executable/prior-state qualification and optional snapshot sidecars; no sequence container, build token, tolerance, second evaluator or rollback on comparison mismatch. Hosted cross-architecture replay-byte comparison remains pending. | [Replay contract](replay-record.md); [Facade](../crates/oce-api/src/replay.rs) | test [canonical_receipt_matches_independent_bytes_and_repeats_without_reexecution](../crates/oce-api/tests/replay.rs#L49); [host_stream_continues_from_separate_snapshot_with_equal_times_and_exact_end_state](../crates/oce-api/tests/replay.rs#L92); [host_eligibility_refusals_preserve_fresh_and_advanced_state_store_and_restore_window](../crates/oce-api/tests/replay.rs#L280); [header_version_lengths_integrity_and_every_truncation_refuse_repeatedly](../crates/oce-api/tests/replay_codec.rs#L61); [inclusive_record_cap_accepts_a_full_string_and_one_past_allocates_nothing](../crates/oce-api/tests/replay_codec.rs#L362); [small_wire_entries_cannot_amplify_decode_workspace_past_the_charged_budget](../crates/oce-api/tests/replay_codec.rs#L394); [independently_authored_full_domain_bytes_are_the_capture_encoding_too](../crates/oce-api/src/replay_capture_tests.rs#L23) |
-| PC-040 | FUTURE | Release delivery | Release maintainers | MUST establish release-to-release compatibility and refusal tests before making those support claims. | No release compatibility or actual publication is authorized by this document. | [Publication authority](package-publication-policy.md#reversal-before-release-freeze) | future [M03-PR05](#release-compatibility) |
+| PC-040 | CURRENT | Release delivery | Release maintainers | MUST retain a fail-closed directed artifact matrix supporting only current/current and refusing cross-candidate use under host policy before decoding or execution, with exact historical-source identity and current implementation evidence. | No N-1 support, migration, release, publication or downstream qualification follows. Producer absence is not decoder refusal; host cold requalification or prior-qualified-binary/own-state rollback stays external. | [Release compatibility](release-compatibility.md#current-policy); [Publication authority](package-publication-policy.md#reversal-before-release-freeze) | test [test_retained_matrix_has_the_independent_closed_direction_table](../scripts/release_compatibility/test_check.py#L42); [retained_release_matrix_and_hostile_controls_are_enforced](../crates/oce-api/tests/release_compatibility.rs#L7); [cross_candidate_envelopes_refuse_before_decode_or_engine_mutation](../crates/oce-api/tests/release_fallback.rs#L66) |
 
 ## Fulfilled facade contraction
 
@@ -244,17 +244,23 @@ envelope. Snapshots are separate sidecars; the private execution fingerprint is 
 Hosted replay artifact comparison is pending: changing the existing workflow would cross the accepted
 strict-bit source guard. Local vectors are retained without reblessing that separate evidence.
 
-## Future outcomes
+## Release compatibility
 
-These named work items are planning assignments with clone-visible acceptance descriptions, not
-links into ignored specifications or declarations that the work has shipped. Release-pair
-qualification remain later work. Execution of any later work still requires
-its own accepted prerequisite and owner authorization.
+Revision 15 implements the owner-selected fail-closed policy: current/current is the only supported
+candidate pairing. The retained matrix distinguishes acceptance within delegated contracts, typed
+mutation refusal, host-envelope refusal, producer absence and unsupported/unqualified directions.
+The historical annotated v0.1.0 git pin builds and passes its bounded facade suite under its own
+toolchain, but is not a published release or supported N-1. Its absent snapshot/replay producers
+are not decoder refusals. Both candidates still report package 0.1.0, demonstrating why that string
+is not build authority. Exact baseline implementation bytes avoid self-referential delivery hashes.
 
-### Release compatibility
-
-M03-PR05: Retain release-pair compatibility and refusal evidence, including migration decisions for
-identity, profile and state revisions, before claiming release-to-release support.
+PC-040 is CURRENT only for the retained policy/evidence, not general release-to-release support.
+The host fixture refuses cross-candidate envelopes before decoding, preserves engine and Store
+state, and contrasts same-current continuation with fresh cold requalification. External rollback
+dispatch is bounded fixture evidence, not an executed prior qualified binary or field qualification.
+The [migration/refusal guide and RC template](release-compatibility.md) retain those limits.
+All listed outcomes now have bounded current evidence; broader release/platform qualification and
+any new support pairing still require separate owner authorization and acceptance.
 
 ## Evidence context
 
@@ -429,3 +435,9 @@ written expected output and deterministic repetitions; the runnable gate remains
   No Engine replay method, second evaluator, sequence container, tolerance, embedded snapshot, build
   token, dependencies or state/profile revision changes. Cross-architecture replay-byte artifacts
   and real downstream qualification remain pending; the existing strict-bit evidence is not rewritten.
+- Revision 15, 2026-09-20: owner froze fail-closed, no-N-1 candidate compatibility. Retained directed
+  evidence, source/history identities, hostile checker controls and isolated host fallback fixtures
+  promote PC-040 only to that policy. The historical source build is reproducible but unqualified;
+  absent producers are not labeled decoder refusals. Current runtime/API, package version, formats,
+  dependencies, workflows, strict-bit guard and downstream pins remain unchanged. No publication,
+  migration, cross-build restore, M06 ratification or downstream equipment qualification follows.

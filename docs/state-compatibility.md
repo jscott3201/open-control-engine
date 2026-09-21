@@ -12,6 +12,10 @@ start/end snapshot bytes remain sidecars in the host's authenticated ordered env
 embedded in a record. Replay reuses this placement policy without exposing or relabeling the private
 execution fingerprint as build authority. Neither snapshot format nor execution ABI changes for replay.
 
+The [release-candidate matrix and fallback guide](release-compatibility.md) support current/current
+only, with no N-1 support or cross-build state migration. The historical v0.1.0 source pin has no
+snapshot API; its absence is not the revision-1 wire refusal described below.
+
 “Same-build” is a **mandatory host-envelope precondition**, not an OCE comparison. Before calling
 `EngineStateSnapshot::from_bytes`, the host authenticates a sealed envelope binding the exact
 snapshot bytes to its approved compiled-build/deployment qualifier and checks freshness and

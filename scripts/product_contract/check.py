@@ -49,7 +49,11 @@ PENDING = frozenset((DOCUMENT, "scripts/product_contract/check.py",
                             "crates/oce-api/tests/state_contract.rs",
                             "docs/replay-record.md", "crates/oce-api/src/replay.rs",
                             "crates/oce-api/tests/replay.rs", "crates/oce-api/tests/replay_codec.rs",
-                            "crates/oce-api/src/replay_capture_tests.rs"))
+                             "crates/oce-api/src/replay_capture_tests.rs",
+                             "docs/release-compatibility.md",
+                             "scripts/release_compatibility/test_check.py",
+                             "crates/oce-api/tests/release_compatibility.rs",
+                             "crates/oce-api/tests/release_fallback.rs"))
 POINTERS = ("README.md", "AGENTS.md", "TESTING.md", "docs/architecture.md",
             "docs/host-responsibilities.md", "docs/README.md")
 HEADER = "| ID | Status | Actor | Owner | Requirement | Limitation | Grounding | Evidence |"
@@ -276,7 +280,8 @@ def parse_document(text: str) -> tuple[str, str, list[Requirement]]:
     require(not OBLIGATION.search(unformatted), "table: obligation outside Requirement cell")
     outside_ids = IDENTIFIER.findall(outside)
     require(all(identifier in ids for identifier in outside_ids), "table: orphan ID")
-    require(set(row.status for row in rows) == set(STATUSES), "table: all statuses required")
+    require({"CURRENT", "HOST-OBLIGATION"} <= set(row.status for row in rows),
+            "table: current and host statuses required")
     owner_section = text.split("## Authority and owners\n", 1)
     require(len(owner_section) == 2, "table: owner delegation required")
     owner_text = owner_section[1].split("\n## ", 1)[0]
@@ -311,6 +316,7 @@ def validate(repository: Repository) -> str:
             for name, destination in link_list(row.evidence[5:]):
                 test_locator(repository, name, destination)
         elif row.evidence.startswith("future "):
+            require(row.status == "FUTURE", "evidence: current obligations require tests")
             links = link_list(row.evidence[7:])
             require(len(links) == 1 and ASSIGNMENT.fullmatch(links[0][0]) is not None,
                     "evidence: one named future assignment required")
@@ -328,6 +334,7 @@ def validate(repository: Repository) -> str:
     require(len(outcomes) == len(set(outcomes)) and set(outcomes) == assignments,
             "evidence: duplicate or orphan future outcome")
     validate_frame_boundary(repository, revision, rows)
+    validate_release_boundary(rows)
     for source in POINTERS:
         pointer_text = repository.read(source)
         destinations = [match[2] for match in LINK.finditer(pointer_text)]
@@ -346,7 +353,7 @@ def validate(repository: Repository) -> str:
 
 def validate_frame_boundary(repository: Repository, revision: str, rows: list[Requirement]) -> None:
     """Bounded contraction sentinels, not a compiler or proof of behavioral test relevance."""
-    require(revision == "14", "frame-only: document revision must be 14")
+    require(revision == "15", "frame-only: document revision must be 15")
     contraction = next((row for row in rows if row.identifier == "PC-035"), None)
     require(contraction is not None and contraction.status == "CURRENT",
             "frame-only: contraction is current")
@@ -368,6 +375,24 @@ def validate_frame_boundary(repository: Repository, revision: str, rows: list[Re
             require(not any(claim in statement for claim in (
                 "retain sparse input staging", "hold a bound input's current connector value",
                 "attempt store write-back")), f"frame-only: retired current claim: {row.identifier}")
+
+
+def validate_release_boundary(rows: list[Requirement]) -> None:
+    """Keep PC-040's promotion bounded to retained refusal evidence, not new support."""
+    release = next((row for row in rows if row.identifier == "PC-040"), None)
+    require(release is not None and release.status == "CURRENT", "release: fail-closed policy is current")
+    assert release is not None
+    evidence = {(name, local_path(DOCUMENT, urlsplit(destination).path))
+                for name, destination in link_list(release.evidence[5:])}
+    require(evidence == {
+        ("test_retained_matrix_has_the_independent_closed_direction_table", "scripts/release_compatibility/test_check.py"),
+        ("retained_release_matrix_and_hostile_controls_are_enforced", "crates/oce-api/tests/release_compatibility.rs"),
+        ("cross_candidate_envelopes_refuse_before_decode_or_engine_mutation", "crates/oce-api/tests/release_fallback.rs"),
+    }, "release: directed matrix, enforced hostility and host refusal evidence required")
+    require(all(text in release.limitation for text in (
+        "No N-1 support, migration, release, publication or downstream qualification",
+        "Producer absence is not decoder refusal", "rollback stays external",
+    )), "release: no-N-1 and host-owned limitations required")
 
 
 def validate_readme_facade(text: str) -> None:
