@@ -207,8 +207,8 @@ accepted matrix digest and pass ordinary retained validation. Their recorded syn
 checkout is preserved; exactly the selected paths/digests and current oracle/CXF inventory are
 checked without requiring a later delivery HEAD to equal that capture SHA. The selected boundary
 covers checker/admission/comparison/workflow/direct formula/harness and supporting sources, not
-the full compiled transitive facade closure. Exact-head hosted native cells rerun the actual
-`oce_api::Engine` path per non-draft PR and catch changes under the pinned corpus's comparison
+the full compiled transitive facade closure. Exact-head hosted cells (x86_64 native, aarch64 QEMU-emulated) rerun the actual
+`oce_api::Engine` path per PR and catch changes under the pinned corpus's comparison
 rules. An unbound transitive source change preserving all pinned outputs does not invalidate the
 historical raw result. Source digests alone do not prove current whole execution semantics.
 The original macOS observation is not platform qualification. macOS-arm64 stays conservative until

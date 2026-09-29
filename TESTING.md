@@ -76,7 +76,7 @@ comparison that fails if even one bit differs.
   not a libm guarantee or a license for epsilon elsewhere — every other golden stays bit-exact.
   The ordinary retained test requires exactly all 35 enumerated paths and digests, not the full
   compiled facade dependency closure. Checker/admission/comparison source mutations refuse even
-  when recorded outputs agree. Exact-head hosted native cells rerun `oce_api::Engine` per non-draft
+  when recorded outputs agree. Exact-head hosted cells (x86_64 native, aarch64 QEMU-emulated) rerun `oce_api::Engine` per
   PR and catch changes under the pinned corpus's comparison rules; an unbound transitive source
   change preserving those outputs does not invalidate the historical raw result. These digests
   alone do not prove current whole execution semantics. The original 17-source receipt remains

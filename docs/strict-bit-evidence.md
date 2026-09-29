@@ -153,7 +153,7 @@ This selected boundary is **not the full compiled transitive facade closure**. T
 through `oce_api::Engine`, but the map does not hash all `oce-api`, `oce-cxf`, registry/lowering or
 other transitive implementation sources. Exact equality of its 35 digests establishes equality
 only for those selected bytes, not current whole execution semantics or whole-executable identity.
-Exact-head hosted native cells rerun the actual facade execution path per non-draft PR and catch
+Exact-head hosted cells (x86_64 native, aarch64 QEMU-emulated) rerun the actual facade execution path per PR and catch
 changes under the pinned corpus's stated exact-comparison rules. An unbound transitive source
 change preserving all pinned outputs does not invalidate the historical raw result; neither the
 receipt nor those reruns prove behavior on arbitrary inputs.
@@ -184,15 +184,15 @@ cross-cell comparison running per PR but cannot produce admissible native aarch6
 cell clears cached evidence, makes two independent nextest process captures at that PR's
 checked-out revision (each also repeats the actual facade drive internally), compares their bytes,
 and runs the four suites plus inventory, strict wiring and hostile controls. Every cell runs even
-after an earlier one fails, and the job makes a best-effort upload of all raw captures, retained 90
-days.
+after an earlier one fails. CI does not retain the raw captures: they exist only in the job's
+workspace and its log output.
 
 The same job then runs the otherwise-ignored matrix test over all eight files.
-The checker requires exactly the four native cells with first/repeat captures, matching Git and
+The checker requires exactly the four cells with first/repeat captures, matching Git and
 selected-source provenance, the complete signal/sample inventory, and exact oracle **and** cross-cell
 agreement. Missing data is failure, not a skipped signal. It emits `matrix.json`, containing all
-eight raw captures and signal/sample/expected/actual mismatches, and retains it alongside the input
-files even on a numerical disagreement. Success also requires every native cell's wiring and
+eight raw captures and signal/sample/expected/actual mismatches, alongside the input files even on
+a numerical disagreement; like the captures, it is not retained by CI. Success also requires every cell's wiring and
 mutation controls to pass; matching output files cannot mask a failed cell test. Synthetic matrix tests exercise each signal in every cell,
 missing/extra/mislabeled cells, repeat drift, pin/provenance drift, signed zero and NaN class rules;
 synthetic fixtures are never native evidence.

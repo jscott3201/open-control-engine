@@ -14,8 +14,19 @@ native-arm64 OpenModelica evidence workflows) and a dormant `ci.yml` that stays 
 because it is a bound source of the [retained strict-bit evidence](strict-bit-evidence.md).
 
 Each gating workflow ends in a `CI OK` job that needs every other job and fails unless each one
-succeeded or was skipped. Branch protection requires exactly that one status:
-`ci / CI OK (pull_request)` on `development`, `release-gate / CI OK (pull_request)` on `main`.
+succeeded; `check-workflow-gates.sh` asserts that its `needs:` lists every other job in the file
+and that no gating job carries a job-level `if:`. Branch protection requires exactly that one
+status: `ci / CI OK (pull_request)` on `development`, `release-gate / CI OK (pull_request)` on
+`main`.
+
+Forgejo PR runs check out and test the PR's head commit, not a synthetic merge with the base
+branch as GitHub did. Branch protection therefore also requires a PR branch to be up to date with
+its base before merging, so the tested head is what lands.
+
+Docs-site validation (`.forgejo/workflows/docs-pages.yml`) is path-filtered to `docs/**`,
+`README.md`, `scripts/docs/**`, `scripts/authority_claims/**`, `site/**` and its own workflow
+file. It reports its own `docs-pages / build docs (pull_request)` status and is **not** part of
+`CI OK`, so a PR that does not touch those paths shows no docs check at all.
 
 ## One command, one source of truth
 

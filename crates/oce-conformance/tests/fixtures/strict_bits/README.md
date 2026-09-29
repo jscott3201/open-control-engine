@@ -29,7 +29,7 @@ The selected boundary covers checker/admission/comparison/workflow/direct formul
 supporting sources. It is **not the full compiled transitive facade closure**: `oce-api`,
 `oce-cxf`, registry/lowering and other transitive sources are not all hashed. Exactly all 35
 enumerated entries are required, and checker-source mutation controls refuse even when raw outputs
-still match. Exact-head hosted native cells rerun the actual `oce_api::Engine` path per non-draft
+still match. Exact-head hosted cells (x86_64 native, aarch64 QEMU-emulated) rerun the actual `oce_api::Engine` path per
 PR to catch changes under the pinned corpus's comparison rules. An unbound transitive source
 change preserving all pinned outputs does not invalidate the historical raw result. Source
 digests alone do not establish current whole execution semantics.

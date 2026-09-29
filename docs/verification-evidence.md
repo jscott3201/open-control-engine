@@ -98,8 +98,8 @@ current-qualification test validates it. The original 17-source receipt from run
 immutable history, not current qualification. The current collection run's successful numerical
 comparison is not evidence of final green hosted gates; the linked receipt distinguishes those outcomes.
 The reviewed 35-file map covers checker/admission/comparison/workflow/direct formula/harness and
-supporting sources, not the full compiled transitive facade closure. Exact-head hosted native cells
-rerun `oce_api::Engine` per non-draft PR and catch changes under the pinned corpus's comparison
+supporting sources, not the full compiled transitive facade closure. Exact-head hosted cells (x86_64 native, aarch64 QEMU-emulated)
+rerun `oce_api::Engine` per PR and catch changes under the pinned corpus's comparison
 rules. An unbound transitive source change preserving all pinned outputs does not invalidate the
 historical raw result. Source digests alone do not prove current whole execution semantics.
 The 278 CDL signals are compared by the 15
