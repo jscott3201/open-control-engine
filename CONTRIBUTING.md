@@ -3,22 +3,35 @@
 Thanks for helping build an embeddable control engine for CDL. This guide is the human onramp;
 the architecture and invariants are the design of record.
 
+## Where the project lives
+
+- **Forgejo is the primary host.** Clone from, push branches to, and open pull requests on the
+  Forgejo `origin`. CI runs there on Forgejo Actions (`.forgejo/workflows/`, Linux only).
+- **GitHub is a public, read-only push mirror.** Never push to it directly and do not open pull
+  requests there; anything pushed to the mirror is overwritten by the next sync. GitHub Actions is
+  disabled on the mirror.
+- **Public issues are tracked on GitHub** and synced with Forgejo, so external reporters can keep
+  using the GitHub issue tracker.
+
 ## How changes land
 
-- Every logical change opens a pull request into the **`development`** branch.
-- Development PRs run the CI gates in [`.github/workflows/ci.yml`](.github/workflows/ci.yml);
+- Every logical change opens a pull request into the **`development`** branch on Forgejo.
+- Development PRs run the CI gates in [`.forgejo/workflows/ci.yml`](.forgejo/workflows/ci.yml),
+  summarized by the single required status `ci / CI OK (pull_request)`;
   `bash .agents/gate.sh` reproduces them locally in CI's exact command form, so the list lives
   in one place rather than being restated here. Only `oce-api`, `oce-blocks`, and `oce-expr` tests
   form the state-determinism subset; the scoped `oce-conformance` strict-bit subset and four
   per-block suites also run per-PR ([bounded evidence](docs/strict-bit-evidence.md)). The remainder
   needs the release/full gate. Releases
-  batch `development` → `main`. **Publishing is manual:** a `v*` tag push runs the verify job
-  only; the publish job is guarded by `github.event_name == 'workflow_dispatch'`, so a tag alone
-  never publishes. The 12-publishable/five-private selection and supported `oce-api` feature matrix
+  batch `development` → `main`. **Publishing is manual:** `.github/workflows/release.yml` stays
+  on the GitHub mirror (it needs crates.io credentials held there) and is dormant while Actions is
+  disabled. When enabled, a `v*` tag push runs its verify job only (including a workspace
+  `cargo test`); the publish job is guarded by `github.event_name == 'workflow_dispatch'`, so a tag
+  alone never publishes. The 12-publishable/five-private selection and supported `oce-api` feature matrix
   are governed by the [package publication policy](docs/package-publication-policy.md). No crate is
   published yet; actual publication remains separately owner-authorized.
-- **Open your PR non-draft.** Every `ci.yml` job is conditioned on
-  `github.event.pull_request.draft == false`, so a draft PR runs no gates at all.
+- **Every PR runs the full per-PR gate**, including work-in-progress PRs. Confirm the checks
+  actually ran and that `CI OK` is green before asking for review.
 - Keep changes scoped to the crate or subsystem that owns the behavior, and add or update tests
   when you change behavior.
 
@@ -28,15 +41,16 @@ Promotions into `main` are infrequent enough that every step gets forgotten by s
 order (a checklist by convention, not a CI gate):
 
 1. **Bring `CHANGELOG.md` current first.** Check by comparison, not by whether the file was
-   touched: list the PRs merged into `development` since the last release with
-   `gh pr list --state merged --base development`, and confirm each number appears in
-   `CHANGELOG.md`. Any that do not are the entries to recover before opening the PR.
+   touched: list the PRs merged into `development` since the last release — every squash-merge
+   subject ends in `(#N)`, so `git log --oneline origin/main..origin/development` lists them, as
+   does Forgejo's closed-PR view filtered to base `development` — and confirm each number appears
+   in `CHANGELOG.md`. Any that do not are the entries to recover before opening the PR.
 
    This step used to be `git log origin/main..development -- CHANGELOG.md`, read as "empty means
    undocumented". The converse does not follow and the converse is how it was used: run against a
    ten-PR gap it returned three commits and passed, because three earlier PRs had each added an
    entry. It answers whether the file was touched in a range, never whether it is current.
-2. Open the promotion PR `development` → `main`.
+2. Open the promotion PR `development` → `main` on Forgejo.
 3. Merge with a **merge commit**, never squash — both prior promotions (`a57d860`, `cf70c80`)
    are true merges, and squashing would rewrite the history `development` continues from.
 4. The release gate and manual publishing then apply as described under
@@ -98,8 +112,8 @@ contract and its hostile controls, the gate fixtures, `cargo machete`, clippy, b
 cargo-deny, and the `oce-api`/`oce-blocks`/`oce-expr` determinism subset in debug and release
 codegen, plus the scoped strict-bit conformance subset in both codegen profiles.
 
-CI also runs this script directly, as the `gate (light)` job in `ci.yml` and `gate (full)` in
-`release-gate.yml`. So the commands here gate your PR whether or not each is separately wired as
+CI also runs this script directly, as the `gate (light)` job in `.forgejo/workflows/ci.yml` and
+`gate (full)` in `.forgejo/workflows/release-gate.yml`. So the commands here gate your PR whether or not each is separately wired as
 its own job — but that is coverage, not proof that the script and the workflows still agree.
 Nothing verifies that mechanically; change a command in CI first, then here.
 
@@ -113,7 +127,16 @@ bash .agents/gate.sh full
 prints what it cannot cover locally. Earlier revisions of this file listed the commands inline
 and drifted from CI — omitting `cargo machete`, the gate-fixture job, the `--bins` rustdoc pass,
 and the determinism matrix — while claiming to mirror it. Change a command in
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) first, then in the script.
+[`.forgejo/workflows/ci.yml`](.forgejo/workflows/ci.yml) first, then in the script.
+
+`.agents/gate.sh`, `.config/nextest.toml` and the dormant `.github/workflows/ci.yml` are bound
+sources of the retained native strict-bit evidence
+([strict-bit evidence](docs/strict-bit-evidence.md)): changing any byte of them turns the
+retained-evidence test red until a new native receipt is admitted. Plan such a change as an
+evidence refresh, not as a drive-by edit.
+
+CI is Linux-only. There is no macOS or Windows CI leg, and there never was one; macOS observations
+are local and are not qualification evidence.
 
 ## Invariants a change must not violate
 

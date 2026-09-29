@@ -23,7 +23,8 @@ range", never "is it current". Reading currency off it is what let the gap reach
 
 What actually establishes currency is a comparison, run at promotion: list the PRs merged into
 `development` since the last release, and check that each number appears below.
-`gh pr list --state merged --base development` against a grep of this file is enough.
+Every squash-merge subject on `development` ends in `(#N)`, so
+`git log --oneline origin/main..origin/development` against a grep of this file is enough.
 Deliberately not a CI gate — judging whether a change was notable is the part no check can do,
 and a gate that accepted any text would restore exactly the false assurance described above.
 
@@ -609,6 +610,15 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Documentation and tooling
 
+- **CI moved to Forgejo Actions** (#TBD). Forgejo is now the primary host and the GitHub repository
+  a public push mirror with Actions disabled. The per-PR gate, release gate, advisories scan and
+  docs-site PR validation run from `.forgejo/workflows/` on one Linux x86_64 runner, each gating
+  workflow summarized by a single `CI OK` status. The aarch64 legs of the determinism and
+  strict-bit matrices now run under QEMU user-mode emulation, which keeps the cross-architecture
+  comparisons per PR but is not native aarch64 evidence; the retained native receipt is still
+  verified. `.github/workflows/` keeps the crates.io release, a manual-only Pages publish, the
+  native-arm64 OpenModelica evidence workflows and a byte-frozen `ci.yml` (a bound strict-bit
+  source), all dormant on the mirror.
 - **Release records and contributor gate prose were reconciled before promotion** (#287). State
   snapshot, known-divergence, and scoped OpenModelica entries now cite their implementing PRs, and
   the contributor guide and gate comment name the three test packages that run per PR.

@@ -175,14 +175,19 @@ does not. No environment switch or historical-source exception bypasses current 
 
 ## CI data flow and adjudication
 
-The scoped `strict-bit-matrix` job runs on every non-draft development PR (and manual dispatch):
-`ubuntu-latest` and `ubuntu-24.04-arm`, each in debug and release. It clears cached evidence, makes
-two independent nextest process captures per cell at that PR's checked-out revision (each also
-repeats the actual facade drive internally), compares their bytes, and runs the four suites plus
-inventory, strict wiring and hostile controls.
-Each cell uploads both complete raw captures even when a later strict test fails, retained 90 days.
+The native receipt above was produced on GitHub Actions, on `ubuntu-latest` and
+`ubuntu-24.04-arm`. CI now runs on Forgejo Actions with a single Linux x86_64 runner, and the
+scoped `strict-bit-matrix` job in `.forgejo/workflows/ci.yml` runs on every development PR (and
+manual dispatch) in four cells: x86_64 natively and aarch64 cross-compiled under QEMU user-mode
+emulation, each in debug and release. **The aarch64 cells are emulated, not native**: they keep the
+cross-cell comparison running per PR but cannot produce admissible native aarch64 evidence. Each
+cell clears cached evidence, makes two independent nextest process captures at that PR's
+checked-out revision (each also repeats the actual facade drive internally), compares their bytes,
+and runs the four suites plus inventory, strict wiring and hostile controls. Every cell runs even
+after an earlier one fails, and the job makes a best-effort upload of all raw captures, retained 90
+days.
 
-`strict-bit-cross-arch` downloads all eight files and runs the otherwise-ignored native-only test.
+The same job then runs the otherwise-ignored matrix test over all eight files.
 The checker requires exactly the four native cells with first/repeat captures, matching Git and
 selected-source provenance, the complete signal/sample inventory, and exact oracle **and** cross-cell
 agreement. Missing data is failure, not a skipped signal. It emits `matrix.json`, containing all
@@ -208,11 +213,11 @@ formula rewrite or Tier-A regeneration is authorized. A changed selected source,
 new reviewed native receipt, not a rewritten historical observation or environment bypass.
 
 The gate script runs the scoped tests in both codegen profiles locally, but cannot reproduce a
-native cross-architecture result on one machine. The hosted matrix is separate from the existing
-state-artifact determinism matrix; neither substitutes for the other. The existing required
-`gate (light)` explicitly checks the new cross-cell job's success, including when that dependency
-fails or skips, so the native check is not merely an optional status. GitHub delivery and changes
-to branch protection remain the orchestrator's responsibility.
+cross-architecture result on one machine. The hosted matrix is separate from the existing
+state-artifact determinism matrix; neither substitutes for the other. The required `CI OK` status
+needs the strict-bit job's success, so the check is not merely an optional status. A future native
+evidence refresh needs a native arm64 runner; changes to branch protection remain the
+orchestrator's responsibility.
 
 ## Downstream notice
 

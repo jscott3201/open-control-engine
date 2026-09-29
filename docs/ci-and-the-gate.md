@@ -4,6 +4,19 @@ For contributors, and for anyone looking at a green check mark on a pull request
 it proves. The short answer is: less than you would assume. The split is deliberate, and it is easy
 to misread in the dangerous direction.
 
+## Where CI runs
+
+CI runs on Forgejo Actions, the project's primary host, from the workflows in
+[`.forgejo/workflows/`](../.forgejo/workflows/) on a self-hosted Linux x86_64 runner. The public
+GitHub repository is a push mirror with GitHub Actions disabled; `.github/workflows/` keeps only
+GitHub-bound, manually or tag-triggered work (crates.io release, GitHub Pages publish, the
+native-arm64 OpenModelica evidence workflows) and a dormant `ci.yml` that stays byte-identical
+because it is a bound source of the [retained strict-bit evidence](strict-bit-evidence.md).
+
+Each gating workflow ends in a `CI OK` job that needs every other job and fails unless each one
+succeeded or was skipped. Branch protection requires exactly that one status:
+`ci / CI OK (pull_request)` on `development`, `release-gate / CI OK (pull_request)` on `main`.
+
 ## One command, one source of truth
 
 [`.agents/gate.sh`](../.agents/gate.sh) is the only place the gate's command list is written down.
@@ -17,17 +30,18 @@ bash .agents/gate.sh full   # full  — adds the workspace suite and doctests
 ```
 
 CI does not merely mirror that script, it **executes** it: the `gate (light)` job at
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) and `gate (full)` at
-[`.github/workflows/release-gate.yml`](../.github/workflows/release-gate.yml).
+[`.forgejo/workflows/ci.yml`](../.forgejo/workflows/ci.yml) and `gate (full)` at
+[`.forgejo/workflows/release-gate.yml`](../.forgejo/workflows/release-gate.yml).
 So every command in the script gates a pull request whether or not `ci.yml` also runs it as its own
 job. Read that as coverage, not as parity, and note that the implication does not run the other way:
 `gate (light)` is `bash .agents/gate.sh` **plus** any steps of its own. The Quickstart-executes step
 was exactly that for a while — a required check no local run of the script performed — and an
 earlier revision of this paragraph used a numeric citation that stopped one line short of it.
 Nothing verifies mechanically that the two files still list the same commands. That check was
-attempted and withdrawn, and the `gate` job's header in `ci.yml` records why —
+attempted and withdrawn, and the `gate` job's header in the dormant `.github/workflows/ci.yml`
+records why —
 every design either compared argv strings that `RUSTFLAGS=--cap-lints=allow` leaves byte-identical
-while neutering clippy, or reimplemented enough of GitHub's `if:`/`needs:`/matrix semantics to
+while neutering clippy, or reimplemented enough of the workflow `if:`/`needs:`/matrix semantics to
 become its own untested gate.
 
 The script's steps group into: formatting, file-size and secret hygiene; the repository-invariant
@@ -48,12 +62,15 @@ This does not check arbitrary Markdown claims or workflow parity, and regenerati
 **A green PR is not evidence that the change's own tests pass.**
 
 The per-PR gate into `development` runs the state-determinism subset for **`oce-api`, `oce-blocks`,
-and `oce-expr`**. That is the `determinism-matrix` job: two runners, `ubuntu-latest` and `ubuntu-24.04-arm`
-(see `ci.yml`'s `determinism-matrix` job), each running that three-crate subset twice — once under
-debug codegen, once under release codegen. Each architecture emits
-populated revision-2 portable and target-bound state vectors. The matrix compares both across
-codegen profiles; a dependent job requires the portable files to match and the target-bound files
-to differ across architectures, then parses and refuses the arm64 target-bound bytes on x86_64.
+and `oce-expr`**. That is the `determinism-matrix` job in `.forgejo/workflows/ci.yml`: it runs
+that three-crate subset natively on x86_64 and, cross-compiled, on aarch64 under QEMU user-mode
+emulation, each twice — once under debug codegen, once under release codegen. Each architecture
+emits populated revision-2 portable and target-bound state vectors. The job compares both across
+codegen profiles, requires the portable files to match and the target-bound files to differ across
+architectures, then parses and refuses the aarch64 target-bound bytes on x86_64. The emulated leg
+excludes one test that re-executes its own binary (an `OCE_BLESS` truthiness probe, not a
+determinism test), which the native leg still runs. Emulation keeps the cross-architecture
+comparison on every PR with a single x86_64 runner; it is CI signal, not native aarch64 evidence.
 The gate script runs the test commands locally and adds two named
 `oce-cxf` test binaries, which are input hygiene rather than
 engine coverage: the port-order audit sweeps 47 CXF documents, of which 46 are Guideline 36 catalog
@@ -63,8 +80,8 @@ pair with vendored modelica-json translations
 edges — not simulated behavior.
 
 The scoped `oce-conformance` **strict-bit subset also runs per-PR**: `strict_bits` plus the four
-affected per-block suite binaries, in Linux x86_64/aarch64 × debug/release, with two native captures
-per cell and a fail-closed cross-cell comparison. The [retained evidence](strict-bit-evidence.md)
+affected per-block suite binaries, in Linux x86_64 (native) / aarch64 (emulated) × debug/release,
+with two independent captures per cell and a fail-closed cross-cell comparison. The [retained evidence](strict-bit-evidence.md)
 covers exact comparison of 21 pinned Real cases on qualified Linux; unqualified targets retain
 the unchanged 1e-12 aligned band. This is not the whole conformance suite or a libm accuracy claim.
 
@@ -72,23 +89,20 @@ The remainder waits for the release/full gate. A change outside the named test s
 a fully green PR having executed none of its own tests.
 Before claiming tests pass, run `bash .agents/gate.sh full` first-hand and read the tail.
 
-## Draft pull requests run nothing
+## Every pull request runs the gate
 
-Not a reduced subset — nothing. Jobs in `ci.yml` are conditioned on
-`github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'`.
-A draft PR with no checks looks a lot like a PR with no failing
-checks. Confirm the checks actually ran.
+Forgejo has no GitHub-style draft flag, so the per-PR gate runs on every PR, work-in-progress
+included; there is no draft carve-out. A PR with no checks still looks a lot like a PR with no
+failing checks — confirm `CI OK` actually reported.
 
 ## cargo-deny is not skippable, but advisories do not gate a PR
 
-The standalone `cargo-deny` job in `ci.yml` is conditional on a manifest change, computed by
-the `changes` job's paths filter. That conditional does not make the check skippable: the gate
-script runs cargo-deny's bans, licenses and sources checks unconditionally
-(see the script's cargo-deny step), and CI runs the script. Leaving manifests alone does not dodge it.
+The standalone `cargo-deny` job in `ci.yml` runs cargo-deny's bans, licenses and sources checks on
+every PR, and the gate script runs them too (see the script's cargo-deny step).
 
 `advisories` is a different story, and the carve-out belongs next to the claim. It is deliberately
 excluded from the script — it needs network access and a writable advisory database, neither of
-which a sandboxed lane has. It runs daily in [advisories.yml](../.github/workflows/advisories.yml) and on
+which a sandboxed lane has. It runs daily in [advisories.yml](../.forgejo/workflows/advisories.yml) and on
 release PRs (the `release-gate.yml` cargo-deny job). `advisories.yml` has no `pull_request` trigger at all, so
 a PR into `development` that introduces a dependency with a known RustSec advisory merges green and
 is caught by the next scheduled run, not by its own gate.
@@ -123,11 +137,13 @@ Retries are zero and a flaky pass is still a failure. Ordinary tests terminate a
 the public-API surface tests allow 10 minutes for their nested nightly rustdoc builds. A run stops
 after 15 minutes, and a child process retaining inherited output handles for more than two seconds
 fails as a leak. CI writes Jenkins-compatible JUnit XML to `target/nextest/<profile>/junit.xml` and
-uploads the determinism-matrix and release-suite reports for 14 days, including failure output and
-ignored tests.
+requires every expected report to exist and be non-empty; the reports are no longer uploaded as
+artifacts. The emulated aarch64 legs use `scripts/ci/nextest-emulated.toml` instead of
+`.config/nextest.toml`: the same no-retry, flaky-is-failure policy, with wider time limits because
+QEMU runs test binaries several times slower.
 
 Partitioning and build archives are deliberately off: the full test execution takes seconds while
-compilation dominates, and each determinism runner must execute the complete selected set under its
+compilation dominates, and each determinism leg must execute the complete selected set under its
 own architecture and codegen mode. Experimental record/replay is also off in CI; enabling a feature
 that nextest still marks unstable would make the gate depend on a non-stable format. Test groups and
 thread reservations remain available when measurement identifies a shared resource or heavy test;
@@ -150,11 +166,14 @@ The exact rows are classified without replacing these signature baselines by the
 
 ## What CI cannot observe
 
-- **Operating systems other than Linux.** Every `runs-on:` in all five workflows — `ci.yml`,
-  `release-gate.yml`, `advisories.yml`, `release.yml`, and `docs-pages.yml` (per-PR on `docs/**`,
-   `README.md`, `scripts/docs/**`, `scripts/authority_claims/**`, and `site/**`) — is `ubuntu-latest` or `ubuntu-24.04-arm`.
-  Cross-*architecture* is covered — x86_64 and arm64, debug and release. macOS and Windows are not
-  built or tested anywhere.
+- **Operating systems other than Linux.** Every Forgejo workflow — `ci.yml`, `release-gate.yml`,
+  `advisories.yml`, and `docs-pages.yml` (per-PR on `docs/**`, `README.md`, `scripts/docs/**`,
+  `scripts/authority_claims/**`, and `site/**`) — runs on `ubuntu-latest`, a Linux x86_64 runner.
+  Cross-*architecture* is covered for the determinism and strict-bit subsets — x86_64 native and
+  aarch64 emulated, debug and release. macOS and Windows are not built or tested anywhere.
+- **Native aarch64 execution.** There is no arm64 runner, so per-PR aarch64 results come from QEMU
+  user-mode emulation. The retained native qualification in `qualified-linux/` is still verified on
+  every PR, but a new native aarch64 capture needs a native arm64 runner.
 - **Anything derived from git history.** No workflow sets `fetch-depth`, so `actions/checkout@v4`
   takes its default of a single commit. A check that needs history cannot run in CI. The visible
   consequence: golden provenance records bind to a content digest of the checked-in bytes rather
@@ -169,12 +188,16 @@ The script says the rest itself, in its closing report: a green local run
 does **not** prove the cross-arch determinism matrix passes (one machine cannot reproduce it), does
 not prove the two `cargo public-api` surface gates pass (they need the gate-only nightly), does not
 prove `cargo deny check advisories` passes, and does not prove that the script and `ci.yml` still
-agree. A `light` run additionally does not prove the workspace suite or doctests pass, because the
+agree. (The script's own closing report still names `ubuntu-24.04-arm` and `ci.yml`; the script
+is a bound source of the retained strict-bit evidence, so its text changes only with an evidence
+refresh.) A `light` run additionally does not prove the workspace suite or doctests pass, because the
 per-PR gate does not run them.
 
 ## Publishing
 
-`release.yml` is decoupled from both gates and from each other's triggers. Pushing a `v*` tag runs
+`release.yml` stays on the GitHub mirror, because publishing needs the crates.io credentials held
+there; it is dormant while GitHub Actions is disabled. It is decoupled from both gates and from
+each other's triggers. Pushing a `v*` tag runs
 verify only — tag/version match, fmt, clippy, a workspace `cargo test`, and a full
 `cargo publish --dry-run` — with no token and no publish, so a tag can be re-cut safely
 (see [release.yml](../.github/workflows/release.yml), `verify` job). Publishing is a separate manual `workflow_dispatch` into the `release` GitHub
