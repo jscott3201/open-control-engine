@@ -23,7 +23,7 @@ BINDINGS = {
     "tier-a-records": ("corpus", "tools/golden-gen/goldens", "scripts/authority_claims/observe.py"),
     "tier-two-records": ("corpus", "crates/oce-conformance/tests/fixtures/golden/g36_traces", "scripts/authority_claims/observe.py"),
     "host-tick": ("review-only", "docs/execution-profile.md", "crates/oce-api/src/tests/pre_execution_profile_tests.rs"),
-    "platforms": ("review-only", "docs/architecture.md", ".github/workflows/ci.yml"),
+    "platforms": ("review-only", "docs/architecture.md", ".forgejo/workflows/ci.yml"),
     "deferred-capabilities": ("review-only", "docs/public-surface-contract.md", "docs/cdl-coverage.md"),
     "evidence-quality": ("review-only", "docs/verification-evidence.md", "TESTING.md"),
     "true-hold-extension": ("review-only", "crates/oce-blocks/src/logical_timing.rs", "crates/oce-blocks/src/port_names.rs"),
