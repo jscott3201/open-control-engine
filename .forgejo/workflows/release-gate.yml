@@ -1,8 +1,8 @@
-# Release gate for open-control (the Open Control Engine) — runs on `development` -> `main`
-# release PRs (base branch: main), manual dispatch, and a daily scheduled run against the
-# `development` tip.
+# Release gate for open-control (the Open Control Engine) — runs on Forgejo Actions for
+# `development` -> `main` release PRs (base branch: main), manual dispatch, and a daily scheduled
+# run against the `development` tip.
 #
-# DISJOINT from ci.yml by base branch. GitHub keys `pull_request: branches:` on the PR's BASE
+# DISJOINT from ci.yml by base branch. Forgejo keys `pull_request: branches:` on the PR's BASE
 # (target) branch, so:
 #   * a feature -> `development` PR matches ci.yml ONLY (the light per-change gate), and
 #   * a `development` -> `main` release PR matches THIS workflow ONLY.
@@ -10,8 +10,12 @@
 #
 # Until the first `main` release PR exists, `workflow_dispatch` and the daily cron exercise this gate.
 # Scheduled and manually-dispatched runs explicitly checkout `development`, so they continue to test
-# the integration tip even after `main` becomes the default branch. The explicit `|| github.event_name
-# == ...` clauses in each `if:` document the non-PR paths and avoid relying on GitHub's null coercion.
+# the integration tip even after `main` becomes the default branch.
+#
+# Port notes (GitHub Actions -> Forgejo Actions): Linux x86_64 only; no `permissions:` block
+# (unsupported); no draft guard (Forgejo has no GitHub-style draft flag); nextest JUnit reports are
+# still required to exist but are no longer uploaded as artifacts; `CI OK` at the bottom is the
+# single required status for branch protection on `main`.
 #
 # WHAT RUNS HERE vs. ci.yml:
 #   * NEW value — the FULL test suite. ci.yml runs only the targeted `oce-api`/`oce-blocks`/`oce-expr`
@@ -32,10 +36,10 @@
 #     not wasteful: fmt, file-size cap, no-secret scan, default-no-db, clippy -D warnings,
 #     workspace build, rustdoc -D warnings, cargo-machete, the package/feature/publication contract,
 #     stale crate-status header lint, and gate-script behavior fixtures.
-#   * cargo-deny runs UNCONDITIONALLY here (no paths-filter gating, unlike ci.yml) and adds
-#     `advisories` — a release warrants a full advisories/bans/licenses/sources sweep.
+#   * cargo-deny here adds `advisories` to the bans/licenses/sources checks ci.yml runs — a
+#     release warrants a full advisories/bans/licenses/sources sweep.
 #
-# Deferred until first publish (matches ci.yml header): the cargo-about THIRDPARTY.md
+# Deferred until first publish: the cargo-about THIRDPARTY.md
 # attribution-currency gate — its natural home is this release gate; restore it before the
 # first crates.io publish.
 #
@@ -46,21 +50,24 @@ name: release-gate
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
   schedule:
-    # Daily development-tip heavy gate. GitHub schedules run on the default branch, so checkout below
+    # Daily development-tip heavy gate. Schedules run on the default branch, so checkout below
     # pins scheduled jobs back to `development`.
     - cron: "17 8 * * *"
   workflow_dispatch:
 
 concurrency:
-  group: release-gate-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: short
   CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+  # Build-cost trims for a shared self-hosted runner; neither changes generated code.
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
   # SINGLE SOURCE OF TRUTH for the gate-only nightly (one leg of the COMPAT TRIPLE pinned in
   # crates/oce-api/Cargo.toml and crates/oce-store/Cargo.toml). Consumed below by the install step
   # (as `$NIGHTLY`) and by each surface-gate step (as the `OCE_PUBLIC_API_NIGHTLY` arming value) so
@@ -75,13 +82,13 @@ env:
   NIGHTLY: nightly-2026-05-01
   CHECKOUT_REF: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'development' || github.ref }}
 
-permissions:
-  contents: read
+defaults:
+  run:
+    shell: bash
 
 jobs:
   test-suite:
     name: full test suite (nextest + doctests)
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -97,6 +104,8 @@ jobs:
       - name: install gate-only nightly (cargo public-api)
         run: rustup toolchain install "$NIGHTLY" --profile minimal --no-self-update
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
       - uses: taiki-e/install-action@v2
         with:
           tool: nextest@0.9.143
@@ -156,22 +165,9 @@ jobs:
           for profile in ci ci-release public-api-oce-api public-api-oce-store;
           do test -s "target/nextest/$profile/junit.xml";
           done
-      - name: Upload nextest JUnit reports
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: nextest-release-suite
-          path: |
-            target/nextest/ci/junit.xml
-            target/nextest/ci-release/junit.xml
-            target/nextest/public-api-oce-api/junit.xml
-            target/nextest/public-api-oce-store/junit.xml
-          if-no-files-found: error
-          retention-days: 14
 
   fmt:
     name: fmt
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -184,7 +180,6 @@ jobs:
 
   file-size-cap:
     name: file-size cap (700 LOC)
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -194,7 +189,6 @@ jobs:
 
   no-secret-scan:
     name: no-secret scan
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -204,7 +198,6 @@ jobs:
 
   gate-fixtures:
     name: gate behavior fixtures
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -225,7 +218,6 @@ jobs:
 
   unused-deps:
     name: unused dependency gate (cargo-machete)
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -239,7 +231,6 @@ jobs:
 
   default-no-db:
     name: default build links no database / async runtime
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -247,11 +238,12 @@ jobs:
           ref: ${{ env.CHECKOUT_REF }}
       - uses: dtolnay/rust-toolchain@1.97.1
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
       - run: bash .github/scripts/check-default-no-db.sh
 
   golden-gen-firewall:
     name: golden-gen anti-tautology firewall
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -262,7 +254,6 @@ jobs:
 
   clippy:
     name: clippy (-D warnings)
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -272,12 +263,13 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
       - name: clippy (default — no DB)
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
   build:
     name: build
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -285,12 +277,13 @@ jobs:
           ref: ${{ env.CHECKOUT_REF }}
       - uses: dtolnay/rust-toolchain@1.97.1
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
       - name: cargo build (default — no DB)
         run: cargo build --workspace --locked
 
   rustdoc:
     name: rustdoc (-D warnings)
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -298,6 +291,8 @@ jobs:
           ref: ${{ env.CHECKOUT_REF }}
       - uses: dtolnay/rust-toolchain@1.97.1
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
       - name: cargo doc — libs (deny warnings)
         env:
           RUSTDOCFLAGS: "-D warnings"
@@ -309,7 +304,6 @@ jobs:
 
   deny:
     name: cargo-deny (full)
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -334,7 +328,6 @@ jobs:
   # it, so it finishes well inside the time that job already takes.
   gate:
     name: gate (full)
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -344,7 +337,49 @@ jobs:
         with:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
       - uses: taiki-e/install-action@v2
         with:
           tool: nextest@0.9.143,cargo-deny,cargo-machete
       - run: bash .agents/gate.sh full
+
+  # The single required status for branch protection on `main`. It reports on every run
+  # (`always()`) and fails unless every gating job succeeded. No gating job has an `if:`, so a
+  # skipped job is never legitimate here. check-workflow-gates.sh asserts that `needs:` lists
+  # every other job in this file.
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs:
+      - test-suite
+      - fmt
+      - file-size-cap
+      - no-secret-scan
+      - gate-fixtures
+      - unused-deps
+      - default-no-db
+      - golden-gen-firewall
+      - clippy
+      - build
+      - rustdoc
+      - deny
+      - gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every gating job to succeed
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          needs = json.loads(os.environ["NEEDS_JSON"])
+          for job, data in sorted(needs.items()):
+              print(f"{job}: {data.get('result')}")
+          bad = {job: data.get("result") for job, data in needs.items()
+                 if data.get("result") != "success"}
+          if not needs:
+              sys.exit("no gating job results reported")
+          if bad:
+              sys.exit(f"gating jobs not green: {bad}")
+          PY

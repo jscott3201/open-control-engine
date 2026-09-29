@@ -98,8 +98,8 @@ current-qualification test validates it. The original 17-source receipt from run
 immutable history, not current qualification. The current collection run's successful numerical
 comparison is not evidence of final green hosted gates; the linked receipt distinguishes those outcomes.
 The reviewed 35-file map covers checker/admission/comparison/workflow/direct formula/harness and
-supporting sources, not the full compiled transitive facade closure. Exact-head hosted native cells
-rerun `oce_api::Engine` per non-draft PR and catch changes under the pinned corpus's comparison
+supporting sources, not the full compiled transitive facade closure. Exact-head hosted cells (x86_64 native, aarch64 QEMU-emulated)
+rerun `oce_api::Engine` per PR and catch changes under the pinned corpus's comparison
 rules. An unbound transitive source change preserving all pinned outputs does not invalidate the
 historical raw result. Source digests alone do not prove current whole execution semantics.
 The 278 CDL signals are compared by the 15
@@ -306,14 +306,15 @@ Yes, and it does so in the place where it is hardest to ignore — the end of ev
 `.agents/gate.sh` finishes by printing a literal block headed `NOT COVERED BY THIS SCRIPT — a green
 run here does not prove these pass`, listing:
 
-- **The cross-architecture determinism matrix** (`ubuntu-latest` and `ubuntu-24.04-arm`). One
+- **The cross-architecture determinism matrix** (the script's report still names `ubuntu-latest`
+  and `ubuntu-24.04-arm`; CI now runs x86_64 natively and aarch64 under QEMU emulation). One
   machine cannot reproduce it; CI is the only place it runs.
 - **The `cargo public-api` surface gates** for `oce-api` and `oce-store`. They need a gate-only
   nightly toolchain and run in `release-gate.yml`.
 - **`cargo deny check advisories`.** It needs network access and a writable advisory database, so it
   runs in `advisories.yml` and in the release gate's cargo-deny job instead.
 - **That these commands still match `ci.yml`.** Nothing verifies that mechanically. An attempt was
-  made and withdrawn; `.github/workflows/ci.yml:293-321` records why — every design either compared
+  made and withdrawn; the dormant `.github/workflows/ci.yml:293-321` records why — every design either compared
   argv strings, which `RUSTFLAGS=--cap-lints=allow` leaves byte-identical while neutering clippy, or
   reimplemented enough of `if:` / `needs:` / matrix semantics to become its own untested gate. CI
   does *execute* the script (`gate (light)`), so every command in it gates a PR; the script says
@@ -326,16 +327,16 @@ the per-PR gate does not run them either.
 
 CI is dev-light and release-heavy. The per-PR gate into `development` runs the state-determinism
 subset for **`oce-api`, `oce-blocks`, and `oce-expr`** — the `determinism-matrix` job
-and the corresponding steps inside the gate script, on two architectures in debug and release
-codegen. The matrix emits
+and the corresponding steps inside the gate script, on two architectures (x86_64 native, aarch64
+under QEMU emulation) in debug and release codegen. The matrix emits
 populated portable and target-bound engine-state vectors. It requires both to match across codegen
 profiles, the portable bytes to match across architectures, and the target-bound bytes to differ.
-The x86_64 comparison job also parses the arm64 target-bound snapshot and requires
+The job also parses the aarch64 target-bound snapshot on x86_64 and requires
 `restore_state` to return the target-domain refusal.
 
 Separately, the scoped **`oce-conformance` strict-bit subset runs per-PR**: `strict_bits` and the
-four affected per-block suite binaries, Linux x86_64/aarch64 × debug/release, two native process
-captures per cell and fail-closed cross-cell comparison. The [retained receipt](strict-bit-evidence.md)
+four affected per-block suite binaries, Linux x86_64 (native) / aarch64 (emulated) ×
+debug/release, two independent process captures per cell and fail-closed cross-cell comparison. The [retained receipt](strict-bit-evidence.md)
 covers the 21 formerly banded Real cases; Linux exact comparison is not a macOS qualification.
 
 The remainder of `oce-conformance` still follows release/full-gate coverage. The complete set of
@@ -346,9 +347,8 @@ fixture port order and the structural oracle, including the vendored-tree and Ti
 **A change outside these named subsets can show every check green without running its own tests.**
 A green PR is not evidence that the rest of a changed crate passed.
 
-One more disclosure worth knowing before you read a PR's checks: every job in `ci.yml` is
-conditioned on `github.event.pull_request.draft == false`. **A draft PR runs no gates at all** — not
-a reduced set, none.
+One more disclosure worth knowing before you read a PR's checks: `CI OK` is the single status
+that summarizes the per-PR gate. Confirm it reported, not merely that nothing is red.
 
 Full detail is in [CI and the gate](ci-and-the-gate.md).
 
