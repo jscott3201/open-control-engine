@@ -610,7 +610,7 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Documentation and tooling
 
-- **CI moved to Forgejo Actions** (#TBD). Forgejo is now the primary host and the GitHub repository
+- **CI moved to Forgejo Actions** (#332). Forgejo is now the primary host and the GitHub repository
   a public push mirror with Actions disabled. The per-PR gate, release gate, advisories scan and
   docs-site PR validation run from `.forgejo/workflows/` on one Linux x86_64 runner, each gating
   workflow summarized by a single `CI OK` status. The aarch64 legs of the determinism and
