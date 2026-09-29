@@ -244,7 +244,8 @@ jobs:
 
   # Four cells (x86_64 native, aarch64 emulated) x (debug, release), each with two independent
   # capture processes, then the eight-capture comparison — one job, no artifact hand-off. Every
-  # cell step runs even after an earlier cell fails so the retained captures stay complete.
+  # cell step runs even after an earlier cell fails, so one run reports every failing cell. The
+  # raw captures are not retained by CI.
   strict-bit-matrix:
     name: strict bits (x86_64 native, aarch64 emulated)
     runs-on: ubuntu-latest
@@ -290,17 +291,6 @@ jobs:
           cargo nextest run -p oce-conformance --test strict_bits --locked --profile ci
           --no-tests=fail --run-ignored only
           -E 'test(=matrix::native_linux_matrix_is_complete_and_exact)'
-      # Best-effort retention of the raw captures for review. Artifact upload support on the
-      # Forgejo runner is not load-bearing for the gate, so a failed upload never fails the job.
-      - name: Retain raw bits even when a strict candidate disagrees
-        if: ${{ !cancelled() }}
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: strict-bits-matrix
-          path: target/strict-bits/*.json
-          if-no-files-found: error
-          retention-days: 90
 
   clippy:
     name: clippy (-D warnings)
@@ -385,8 +375,9 @@ jobs:
         run: bash .github/scripts/check-quickstart-runs.sh
 
   # The single required status for branch protection on `development`. It reports on every run
-  # (`always()`) and fails unless every gating job succeeded or was deliberately skipped, so a
-  # failed, cancelled, or vanished job can never read as green.
+  # (`always()`) and fails unless every gating job succeeded. No gating job has an `if:`, so a
+  # skipped job is never legitimate here. check-workflow-gates.sh asserts that `needs:` lists
+  # every other job in this file, so a new job cannot silently escape the aggregate.
   ci-ok:
     name: CI OK
     if: always()
@@ -408,20 +399,19 @@ jobs:
       - gate
     runs-on: ubuntu-latest
     steps:
-      - name: Require every gating job to succeed or be skipped
+      - name: Require every gating job to succeed
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
           python3 - <<'PY'
           import json, os, sys
           needs = json.loads(os.environ["NEEDS_JSON"])
-          expected = 15
-          bad = {job: data.get("result") for job, data in needs.items()
-                 if data.get("result") not in ("success", "skipped")}
           for job, data in sorted(needs.items()):
               print(f"{job}: {data.get('result')}")
-          if len(needs) != expected:
-              sys.exit(f"expected {expected} gating jobs, saw {len(needs)}")
+          bad = {job: data.get("result") for job, data in needs.items()
+                 if data.get("result") != "success"}
+          if not needs:
+              sys.exit("no gating job results reported")
           if bad:
               sys.exit(f"gating jobs not green: {bad}")
           PY

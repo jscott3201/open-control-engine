@@ -50,6 +50,8 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: nextest@0.9.143
+      - run: bash scripts/ci/strict-bits-cell.sh aarch64 debug
+      - run: bash scripts/ci/strict-bits-cell.sh aarch64 release
   determinism-matrix:
     runs-on: ubuntu-latest
     steps:
@@ -84,6 +86,15 @@ jobs:
           cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked
           --target aarch64-unknown-linux-gnu --config-file "$PWD/scripts/ci/nextest-emulated.toml"
           --profile ci --no-tests=fail
+      - env:
+          OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-release.bin
+          OCE_TARGET_STATE_OUT: target/state-arm/target-state-release.bin
+        run: >-
+          cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked
+          --target aarch64-unknown-linux-gnu --config-file "$PWD/scripts/ci/nextest-emulated.toml"
+          --profile ci-release --cargo-profile release --no-tests=fail
+      - run: >-
+          cmp target/state-arm/portable-state-debug.bin target/state-arm/portable-state-release.bin
       - run: >-
           cmp target/state-x86/portable-state-debug.bin target/state-arm/portable-state-debug.bin &&
           ! cmp -s target/state-x86/target-state-debug.bin target/state-arm/target-state-debug.bin
@@ -95,7 +106,14 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [determinism-matrix]
+    needs:
+      - default-no-db
+      - unused-deps
+      - gate-fixtures
+      - golden-gen-firewall
+      - package-publication-contract
+      - strict-bit-matrix
+      - determinism-matrix
     steps:
       - env:
           NEEDS_JSON: ${{ toJSON(needs) }}
@@ -152,7 +170,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [test-suite]
+    needs: [test-suite, default-no-db, unused-deps, gate-fixtures, golden-gen-firewall]
     steps:
       - env:
           NEEDS_JSON: ${{ toJSON(needs) }}
@@ -458,6 +476,38 @@ blind_release_ci_ok() {
   mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
 }
 
+omit_ci_ok_need() {
+  dir="$1"
+  _deny="$2"
+  grep -v '^      - golden-gen-firewall$' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
+omit_release_ci_ok_need() {
+  dir="$1"
+  _deny="$2"
+  sed 's/^    needs: \[test-suite, default-no-db, /    needs: [test-suite, /' \
+    "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+}
+
+conditional_gating_job() {
+  dir="$1"
+  _deny="$2"
+  awk '
+    { print }
+    /^  unused-deps:$/ { print "    if: github.event_name == '"'"'schedule'"'"'" }
+  ' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
+remove_emulated_strict_cell() {
+  dir="$1"
+  _deny="$2"
+  grep -v 'strict-bits-cell.sh aarch64 release' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
 remove_nextest_report_cleanup() {
   dir="$1"
   _deny="$2"
@@ -556,6 +606,14 @@ run_case conditional-ci-ok fail conditional_ci_ok \
   "CI OK aggregate reports on every run"
 run_case blind-release-ci-ok fail blind_release_ci_ok \
   "release gate CI OK aggregate inspects every needed result"
+run_case omitted-ci-ok-need fail omit_ci_ok_need \
+  "ci.yml CI OK needs does not match the workflow's jobs"
+run_case omitted-release-ci-ok-need fail omit_release_ci_ok_need \
+  "release-gate.yml CI OK needs does not match the workflow's jobs"
+run_case conditional-gating-job fail conditional_gating_job \
+  "gating job has a job-level if: that CI OK would read as failure: unused-deps"
+run_case missing-emulated-strict-cell fail remove_emulated_strict_cell \
+  "emulated aarch64 release strict-bit cell"
 run_case missing-nextest-report-cleanup fail remove_nextest_report_cleanup \
   "clear cached nextest JUnit reports"
 run_case missing-nextest-report-requirements fail remove_nextest_report_requirements \

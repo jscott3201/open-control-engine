@@ -48,6 +48,71 @@ require_job_pattern() {
   fi
 }
 
+# Top-level job ids of a workflow, one per line, sorted.
+workflow_jobs() {
+  awk '
+    /^jobs:[[:space:]]*$/ { in_jobs = 1; next }
+    in_jobs && /^[^[:space:]#]/ { in_jobs = 0 }
+    in_jobs && /^  [A-Za-z0-9_-]+:[[:space:]]*$/ {
+      job = $0
+      sub(/^  /, "", job)
+      sub(/:.*/, "", job)
+      print job
+    }
+  ' "$1" | sort
+}
+
+# The `needs:` of one job (flow `[a, b]` or block `- a` form), one per line, sorted.
+job_needs() {
+  awk -v header="  $2:" '
+    $0 == header { found = 1; next }
+    found && /^  [^ ]/ { exit }
+    !found { next }
+    in_list && /^      - / {
+      value = $0
+      sub(/^      - /, "", value)
+      sub(/[[:space:]]*(#.*)?$/, "", value)
+      print value
+      next
+    }
+    in_list { in_list = 0 }
+    /^    needs:[[:space:]]*$/ { in_list = 1; next }
+    /^    needs:[[:space:]]*\[/ {
+      value = $0
+      sub(/^[^[]*\[/, "", value)
+      sub(/\].*/, "", value)
+      gsub(/[[:space:]]/, "", value)
+      count = split(value, items, ",")
+      for (i = 1; i <= count; i++) if (items[i] != "") print items[i]
+    }
+  ' "$1" | sort
+}
+
+# The aggregate job must need every other job, and no other job may carry a job-level `if:` —
+# the aggregate accepts only `success`, so a conditionally skipped gate would read as a failure,
+# and one missing from `needs:` would not be gated at all.
+require_ci_ok_covers_every_job() {
+  path="$1"
+  local expected actual gated
+  expected="$(workflow_jobs "$path" | grep -vx 'ci-ok' || true)"
+  actual="$(job_needs "$path" ci-ok)"
+  if [ -z "$expected" ] || [ "$expected" != "$actual" ]; then
+    echo "FAIL: $path CI OK needs does not match the workflow's jobs"
+    diff <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") | sed 's/^/  /' || true
+    exit 1
+  fi
+  gated="$(awk '
+    /^jobs:[[:space:]]*$/ { in_jobs = 1; next }
+    in_jobs && /^[^[:space:]#]/ { in_jobs = 0 }
+    in_jobs && /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { job = $0; sub(/^  /, "", job); sub(/:.*/, "", job) }
+    in_jobs && job != "ci-ok" && /^    if:/ { print job }
+  ' "$path")"
+  if [ -n "$gated" ]; then
+    echo "FAIL: $path gating job has a job-level if: that CI OK would read as failure: $gated"
+    exit 1
+  fi
+}
+
 require_lints_workspace() {
   path="$1"
   if ! awk '
@@ -181,6 +246,15 @@ require_pattern "$ci" 'test -s "target/nextest/\$profile/junit\.xml"' \
 require_job_pattern "$ci" 'ci-ok' '^[[:space:]]*if:[[:space:]]*always\(\)' \
   'CI OK aggregate reports on every run'
 require_job_pattern "$ci" 'ci-ok' 'toJSON\(needs\)' 'CI OK aggregate inspects every needed result'
+require_ci_ok_covers_every_job "$ci"
+require_pattern "$ci" 'OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-release\.bin' \
+  'emit the aarch64 release-codegen portable state vector'
+require_pattern "$ci" 'cmp target/state-arm/portable-state-debug\.bin target/state-arm/portable-state-release\.bin' \
+  'compare aarch64 portable state bytes across codegen profiles'
+require_pattern "$ci" '^[[:space:]]*(- )?run: bash scripts/ci/strict-bits-cell\.sh aarch64 debug$' \
+  'emulated aarch64 debug strict-bit cell'
+require_pattern "$ci" '^[[:space:]]*(- )?run: bash scripts/ci/strict-bits-cell\.sh aarch64 release$' \
+  'emulated aarch64 release strict-bit cell'
 
 # Heavy gate runs on release PRs, manual dispatch, and scheduled development-tip checks.
 require_pattern "$release" 'schedule:' 'scheduled heavy gate'
@@ -222,6 +296,7 @@ require_job_pattern "$release" 'ci-ok' '^[[:space:]]*if:[[:space:]]*always\(\)' 
   'release gate CI OK aggregate reports on every run'
 require_job_pattern "$release" 'ci-ok' 'toJSON\(needs\)' \
   'release gate CI OK aggregate inspects every needed result'
+require_ci_ok_covers_every_job "$release"
 
 # Daily advisory/yanked gate and deny.toml discipline.
 require_pattern "$advisories" 'schedule:' 'scheduled advisory gate'

@@ -36,8 +36,8 @@
 #     not wasteful: fmt, file-size cap, no-secret scan, default-no-db, clippy -D warnings,
 #     workspace build, rustdoc -D warnings, cargo-machete, the package/feature/publication contract,
 #     stale crate-status header lint, and gate-script behavior fixtures.
-#   * cargo-deny runs UNCONDITIONALLY here (no paths-filter gating, unlike ci.yml) and adds
-#     `advisories` — a release warrants a full advisories/bans/licenses/sources sweep.
+#   * cargo-deny here adds `advisories` to the bans/licenses/sources checks ci.yml runs — a
+#     release warrants a full advisories/bans/licenses/sources sweep.
 #
 # Deferred until first publish: the cargo-about THIRDPARTY.md
 # attribution-currency gate — its natural home is this release gate; restore it before the
@@ -345,7 +345,9 @@ jobs:
       - run: bash .agents/gate.sh full
 
   # The single required status for branch protection on `main`. It reports on every run
-  # (`always()`) and fails unless every gating job succeeded or was deliberately skipped.
+  # (`always()`) and fails unless every gating job succeeded. No gating job has an `if:`, so a
+  # skipped job is never legitimate here. check-workflow-gates.sh asserts that `needs:` lists
+  # every other job in this file.
   ci-ok:
     name: CI OK
     if: always()
@@ -365,20 +367,19 @@ jobs:
       - gate
     runs-on: ubuntu-latest
     steps:
-      - name: Require every gating job to succeed or be skipped
+      - name: Require every gating job to succeed
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
           python3 - <<'PY'
           import json, os, sys
           needs = json.loads(os.environ["NEEDS_JSON"])
-          expected = 13
-          bad = {job: data.get("result") for job, data in needs.items()
-                 if data.get("result") not in ("success", "skipped")}
           for job, data in sorted(needs.items()):
               print(f"{job}: {data.get('result')}")
-          if len(needs) != expected:
-              sys.exit(f"expected {expected} gating jobs, saw {len(needs)}")
+          bad = {job: data.get("result") for job, data in needs.items()
+                 if data.get("result") != "success"}
+          if not needs:
+              sys.exit("no gating job results reported")
           if bad:
               sys.exit(f"gating jobs not green: {bad}")
           PY
