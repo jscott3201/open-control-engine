@@ -1,0 +1,43 @@
+# cargo-nextest configuration for the QEMU-emulated aarch64 legs of the Forgejo per-PR gate.
+#
+# Passed explicitly with `--config-file` by .forgejo/workflows/ci.yml, and ONLY for runs built with
+# `--target aarch64-unknown-linux-gnu`; it replaces .config/nextest.toml for those runs and for
+# nothing else. .config/nextest.toml is itself a bound source of the retained strict-bit evidence
+# (crates/oce-conformance/tests/strict_bits/evidence.rs), so the emulated legs get their own file
+# rather than an edit there.
+#
+# Policy is identical to the `ci` / `ci-release` profiles in .config/nextest.toml — no retries,
+# flaky = fail, no fail-fast, the same JUnit report paths — except for the time limits. QEMU user
+# mode runs test binaries several times slower than native, so the per-test and whole-run limits
+# are widened. A longer limit is not flake tolerance: a test still gets exactly one attempt.
+
+nextest-version = { required = "0.9.143", recommended = "0.9.143" }
+
+[profile.default]
+fail-fast = true
+retries = 0
+flaky-result = "fail"
+slow-timeout = { period = "300s", terminate-after = 4, on-timeout = "fail" }
+leak-timeout = { period = "2s", result = "fail" }
+global-timeout = "90m"
+
+[profile.ci]
+fail-fast = false
+failure-output = "immediate-final"
+success-output = "never"
+status-level = "fail"
+final-status-level = "slow"
+
+[profile.ci.junit]
+path = "junit.xml"
+report-name = "open-control-ci-emulated"
+store-success-output = false
+store-failure-output = true
+report-skipped = "ignored"
+flaky-fail-status = "failure"
+
+[profile.ci-release]
+inherits = "ci"
+
+[profile.ci-release.junit]
+report-name = "open-control-ci-release-emulated"

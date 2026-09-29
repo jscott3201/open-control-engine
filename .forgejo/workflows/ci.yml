@@ -1,0 +1,427 @@
+# CI for open-control (the Open Control Engine) — runs on Forgejo Actions for PRs into `development`.
+#
+# Workflow model: every logical change opens a PR into `development` behind this gate; releases
+# batch `development` -> `main`, where .forgejo/workflows/release-gate.yml runs the heavy gate.
+#
+# This per-PR gate is the LIGHT gate: the near-instant checks plus the compile-requiring lints
+# (clippy -D warnings), a workspace build, rustdoc, cargo-machete, cargo-deny, gate-script behavior
+# fixtures, the package/feature/publication contract, stale crate-status header lint, the targeted
+# cross-arch determinism subset for oce-api/oce-blocks/oce-expr, the scoped strict-bit matrix, and
+# `bash .agents/gate.sh` executed as a coverage backstop. It does NOT run the full workspace test
+# suite — that lives in release-gate.yml.
+#
+# Port notes (GitHub Actions -> Forgejo Actions):
+#   * One self-hosted x86_64 Linux runner serves every job. The aarch64 legs of the determinism and
+#     strict-bit matrices are cross-compiled and run under QEMU user-mode emulation inside the
+#     x86_64 job, so the byte-for-byte cross-architecture comparisons still run on every PR without
+#     artifact transfer between jobs. Emulated aarch64 results are CI signal, NOT native aarch64
+#     evidence; the retained native qualification (crates/oce-conformance/tests/fixtures/
+#     strict_bits/qualified-linux) is still verified by the strict-bit test binary in every cell.
+#   * Every job runs on every non-closed PR. Forgejo has no GitHub-style draft flag or
+#     `ready_for_review` event, so the old `draft == false` guard is gone rather than left to
+#     coerce a missing field into a silent no-gate run.
+#   * cargo-deny `bans licenses sources` runs unconditionally (it already did via gate (light));
+#     the GitHub-only dorny/paths-filter job that gated it on manifest changes is gone.
+#   * `CI OK` at the bottom is the single required status for branch protection.
+#
+# .github/workflows/ci.yml is intentionally left byte-identical: it is a bound source of the
+# retained native strict-bit evidence, and GitHub Actions is disabled on the public mirror.
+#
+# Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
+
+name: ci
+
+on:
+  pull_request:
+    branches: [development]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: short
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+  # Build-cost trims for a shared self-hosted runner. Neither changes generated code: CI builds are
+  # never incremental, and debuginfo does not affect codegen of the values under test.
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+
+defaults:
+  run:
+    # Brace expansion and arrays below need bash; do not rely on the runner's default shell.
+    shell: bash
+
+jobs:
+  fmt:
+    name: fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  file-size-cap:
+    name: file-size cap (700 LOC)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/check-file-size.sh
+
+  no-secret-scan:
+    name: no-secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/check-no-secrets.sh
+
+  default-no-db:
+    name: default build links no database / async runtime
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
+      - run: bash .github/scripts/check-default-no-db.sh
+
+  golden-gen-firewall:
+    name: golden-gen anti-tautology firewall
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
+
+  package-publication-contract:
+    name: package, feature, and publication contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - name: hostile package-contract controls
+        run: python3 scripts/package_policy/test_validate.py
+      - name: metadata-driven package-contract validation
+        run: python3 scripts/package_policy/validate.py
+      - name: authority claim consistency
+        run: python3 scripts/authority_claims/check.py --check
+      - name: authority claim hostile controls
+        run: python3 scripts/authority_claims/test_check.py
+      - name: product contract traceability
+        run: python3 scripts/product_contract/check.py
+      - name: product contract hostile controls
+        run: python3 scripts/product_contract/test_check.py
+
+  gate-fixtures:
+    name: gate behavior fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: no-db gate fixtures
+        run: bash .github/scripts/test-check-default-no-db.sh
+      - name: golden-gen firewall fixtures
+        run: bash .github/scripts/test-check-golden-gen-anti-tautology.sh
+      - name: stale crate-status fixtures
+        run: bash .github/scripts/test-check-stale-crate-status.sh
+      - name: stale crate-status smoke
+        run: bash .github/scripts/check-stale-crate-status.sh
+      - name: workflow gate fixtures
+        run: bash .github/scripts/test-workflow-gates.sh
+      - name: real workflow smoke
+        run: bash .github/scripts/check-workflow-gates.sh
+
+  unused-deps:
+    name: unused dependency gate (cargo-machete)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-machete
+      - run: cargo machete
+
+  # x86_64 native legs, then the aarch64 legs under QEMU user-mode emulation, then the
+  # cross-architecture comparison — one job, so the state vectors never leave the workspace.
+  determinism-matrix:
+    name: determinism-matrix (x86_64 native, aarch64 emulated)
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER: qemu-aarch64 -L /usr/aarch64-linux-gnu
+      QEMU_LD_PREFIX: /usr/aarch64-linux-gnu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+        with:
+          targets: aarch64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.143
+      - name: Install aarch64 cross linker and QEMU user-mode emulator
+        run: >-
+          apt-get update -qq &&
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends
+          gcc-aarch64-linux-gnu libc6-dev-arm64-cross qemu-user
+      - name: Clear cached reports and state vectors
+        run: >-
+          rm -rf target/nextest/{ci,ci-release}/junit.xml
+          target/{portable,target}-state-{debug,release}.bin
+          target/state-x86 target/state-arm &&
+          mkdir -p target/state-x86 target/state-arm
+      - name: cargo nextest determinism subset (x86_64)
+        env:
+          OCE_PORTABLE_STATE_OUT: target/portable-state-debug.bin
+          OCE_TARGET_STATE_OUT: target/target-state-debug.bin
+        run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
+      - name: cargo nextest determinism subset --release (x86_64)
+        env:
+          OCE_PORTABLE_STATE_OUT: target/portable-state-release.bin
+          OCE_TARGET_STATE_OUT: target/target-state-release.bin
+        run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
+      - name: Compare x86_64 snapshot bytes across codegen profiles
+        run: >-
+          cmp target/portable-state-debug.bin target/portable-state-release.bin &&
+          cmp target/target-state-debug.bin target/target-state-release.bin
+      - name: Require complete nextest JUnit report set (x86_64)
+        run: >-
+          for profile in ci ci-release;
+          do test -s "target/nextest/$profile/junit.xml";
+          done
+      - name: Stage x86_64 state vectors
+        run: cp target/portable-state-debug.bin target/target-state-debug.bin target/state-x86/
+      - name: Clear x86_64 nextest reports before the emulated legs
+        run: rm -f target/nextest/{ci,ci-release}/junit.xml
+      # The one excluded test re-executes its own test binary as a child process, which QEMU user
+      # mode cannot do without host binfmt registration. It probes OCE_BLESS environment
+      # truthiness, not state determinism, and runs in the x86_64 legs above.
+      - name: cargo nextest determinism subset (aarch64, emulated)
+        env:
+          OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-debug.bin
+          OCE_TARGET_STATE_OUT: target/state-arm/target-state-debug.bin
+        run: >-
+          cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked
+          --target aarch64-unknown-linux-gnu --config-file "$PWD/scripts/ci/nextest-emulated.toml"
+          --profile ci --no-tests=fail
+          -E 'not test(=registry::manifest_tests::enabled_composition_is_covered_with_a_disabled_value)'
+      - name: cargo nextest determinism subset --release (aarch64, emulated)
+        env:
+          OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-release.bin
+          OCE_TARGET_STATE_OUT: target/state-arm/target-state-release.bin
+        run: >-
+          cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked
+          --target aarch64-unknown-linux-gnu --config-file "$PWD/scripts/ci/nextest-emulated.toml"
+          --profile ci-release --cargo-profile release --no-tests=fail
+          -E 'not test(=registry::manifest_tests::enabled_composition_is_covered_with_a_disabled_value)'
+      - name: Compare aarch64 snapshot bytes across codegen profiles
+        run: >-
+          cmp target/state-arm/portable-state-debug.bin target/state-arm/portable-state-release.bin &&
+          cmp target/state-arm/target-state-debug.bin target/state-arm/target-state-release.bin
+      - name: Require complete nextest JUnit report set (aarch64)
+        run: >-
+          for profile in ci ci-release;
+          do test -s "target/nextest/$profile/junit.xml";
+          done
+      - name: Compare portable snapshot bytes across architectures
+        run: >-
+          cmp target/state-x86/portable-state-debug.bin target/state-arm/portable-state-debug.bin &&
+          ! cmp -s target/state-x86/target-state-debug.bin target/state-arm/target-state-debug.bin
+      - name: Refuse a target-bound snapshot from the other architecture
+        env:
+          OCE_FOREIGN_TARGET_STATE_IN: target/state-arm/target-state-debug.bin
+        run: >-
+          cargo nextest run -p oce-api --lib --locked --profile ci --no-tests=fail
+          -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
+
+  # Four cells (x86_64 native, aarch64 emulated) x (debug, release), each with two independent
+  # capture processes, then the eight-capture comparison — one job, no artifact hand-off. Every
+  # cell step runs even after an earlier cell fails so the retained captures stay complete.
+  strict-bit-matrix:
+    name: strict bits (x86_64 native, aarch64 emulated)
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER: qemu-aarch64 -L /usr/aarch64-linux-gnu
+      QEMU_LD_PREFIX: /usr/aarch64-linux-gnu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+        with:
+          targets: aarch64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.143
+      - name: Install aarch64 cross linker and QEMU user-mode emulator
+        run: >-
+          apt-get update -qq &&
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends
+          gcc-aarch64-linux-gnu libc6-dev-arm64-cross qemu-user
+      - name: Clear cached strict-bit evidence
+        run: rm -rf target/strict-bits && mkdir -p target/strict-bits
+      - name: Cell linux-x86_64-debug (native)
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci/strict-bits-cell.sh x86_64 debug
+      - name: Cell linux-x86_64-release (native)
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci/strict-bits-cell.sh x86_64 release
+      - name: Cell linux-aarch64-debug (emulated)
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci/strict-bits-cell.sh aarch64 debug
+      - name: Cell linux-aarch64-release (emulated)
+        if: ${{ !cancelled() }}
+        run: bash scripts/ci/strict-bits-cell.sh aarch64 release
+      - name: Compare every signal and sample in all eight captures
+        if: ${{ !cancelled() }}
+        env:
+          OCE_STRICT_MATRIX_DIR: target/strict-bits
+        run: >-
+          cargo nextest run -p oce-conformance --test strict_bits --locked --profile ci
+          --no-tests=fail --run-ignored only
+          -E 'test(=matrix::native_linux_matrix_is_complete_and_exact)'
+      # Best-effort retention of the raw captures for review. Artifact upload support on the
+      # Forgejo runner is not load-bearing for the gate, so a failed upload never fails the job.
+      - name: Retain raw bits even when a strict candidate disagrees
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: strict-bits-matrix
+          path: target/strict-bits/*.json
+          if-no-files-found: error
+          retention-days: 90
+
+  clippy:
+    name: clippy (-D warnings)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
+      - name: clippy (default — no DB)
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
+      - name: cargo build (default — no DB)
+        run: cargo build --workspace --locked
+
+  rustdoc:
+    name: rustdoc (-D warnings)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
+      - name: cargo doc — libs (deny warnings)
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: cargo doc --no-deps --workspace --lib --document-private-items --locked
+      - name: cargo doc — bins (deny warnings)
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: cargo doc --no-deps --workspace --bins --document-private-items --locked
+
+  deny:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - run: cargo deny check bans licenses sources
+
+  # The gate script, EXECUTED rather than parsed: a coverage backstop, not a parity check. If a
+  # job above is ever weakened or deleted, the command still runs here on the same PR. Nothing
+  # verifies mechanically that .agents/gate.sh and this file list the same commands; see the
+  # longer rationale in .github/workflows/ci.yml, which this job was ported from.
+  gate:
+    name: gate (light)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.143,cargo-deny,cargo-machete
+      - name: Supported facade compiler contract
+        run: python3 scripts/facade_contract/check.py
+      - name: Facade compiler diagnostic controls
+        run: python3 scripts/facade_contract/test_check.py
+      # No `--` arguments: `light` is the default mode and the one this job exists to cover.
+      - run: bash .agents/gate.sh
+      - name: Quickstart executes successfully
+        run: bash .github/scripts/check-quickstart-runs.sh
+
+  # The single required status for branch protection on `development`. It reports on every run
+  # (`always()`) and fails unless every gating job succeeded or was deliberately skipped, so a
+  # failed, cancelled, or vanished job can never read as green.
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs:
+      - fmt
+      - file-size-cap
+      - no-secret-scan
+      - default-no-db
+      - golden-gen-firewall
+      - package-publication-contract
+      - gate-fixtures
+      - unused-deps
+      - determinism-matrix
+      - strict-bit-matrix
+      - clippy
+      - build
+      - rustdoc
+      - deny
+      - gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every gating job to succeed or be skipped
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          needs = json.loads(os.environ["NEEDS_JSON"])
+          expected = 15
+          bad = {job: data.get("result") for job, data in needs.items()
+                 if data.get("result") not in ("success", "skipped")}
+          for job, data in sorted(needs.items()):
+              print(f"{job}: {data.get('result')}")
+          if len(needs) != expected:
+              sys.exit(f"expected {expected} gating jobs, saw {len(needs)}")
+          if bad:
+              sys.exit(f"gating jobs not green: {bad}")
+          PY

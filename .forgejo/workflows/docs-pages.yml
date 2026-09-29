@@ -1,27 +1,38 @@
-# Publish released documentation truth from main to GitHub Pages. Manual dispatch only.
+# Validate the documentation site for development PRs on Forgejo Actions.
+#
+# This is the PR half of the old GitHub docs-pages workflow: the same staging, mdBook build and
+# link checks, without the Pages artifact. Publishing released docs to GitHub Pages stays in
+# .github/workflows/docs-pages.yml as a manual-only workflow on the public mirror.
 
 name: docs-pages
 
 on:
-  # Manual only. The public GitHub repository is a push mirror with Actions disabled; PR validation
-  # of the docs site runs on Forgejo (.forgejo/workflows/docs-pages.yml). Dispatch this on `main`
-  # to publish released docs once Actions is enabled for that purpose.
+  pull_request:
+    branches: [development]
+    paths:
+      - ".forgejo/workflows/docs-pages.yml"
+      - "docs/**"
+      - "README.md"
+      - "scripts/docs/**"
+      - "scripts/authority_claims/**"
+      - "site/**"
   workflow_dispatch:
 
 concurrency:
-  group: docs-pages-${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
+defaults:
+  run:
+    shell: bash
 
 jobs:
   build:
-    name: build docs artifact
+    name: build docs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Install checksum-pinned mdBook
         run: bash scripts/docs/install-mdbook.sh target/mdbook-bin
@@ -51,27 +62,3 @@ jobs:
           python3 scripts/docs/check_links.py
           target/docs-book/book
           --site-prefix /open-control-engine/
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: target/docs-book/book
-
-  deploy:
-    name: deploy released docs
-    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Deploy GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4

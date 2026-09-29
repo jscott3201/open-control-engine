@@ -45,19 +45,22 @@ jobs:
         run: python3 scripts/authority_claims/check.py --check
       - name: authority claim hostile controls
         run: python3 scripts/authority_claims/test_check.py
+  strict-bit-matrix:
+    steps:
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.143
   determinism-matrix:
-    strategy:
-      matrix:
-        runner: [ubuntu-latest, ubuntu-24.04-arm]
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/install-action@v2
         with:
           tool: nextest@0.9.143
       - name: Clear cached reports and state vectors
         run: >-
-          rm -f target/nextest/{ci,ci-release}/junit.xml
+          rm -rf target/nextest/{ci,ci-release}/junit.xml
           target/{portable,target}-state-{debug,release}.bin
+          target/state-x86 target/state-arm
       - run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
         env:
           OCE_PORTABLE_STATE_OUT: target/portable-state-debug.bin
@@ -73,38 +76,14 @@ jobs:
           for profile in ci ci-release;
           do test -s "target/nextest/$profile/junit.xml";
           done
-      - uses: actions/upload-artifact@v7.0.1
-        if: ${{ !cancelled() }}
-        with:
-          path: |
-            target/nextest/ci/junit.xml
-            target/nextest/ci-release/junit.xml
-          if-no-files-found: error
-          retention-days: 14
-      - uses: actions/upload-artifact@v7.0.1
-        with:
-          name: portable-state-${{ matrix.runner }}
-          path: |
-            target/portable-state-debug.bin
-            target/target-state-debug.bin
-          if-no-files-found: error
-          retention-days: 14
-  portable-state-cross-arch:
-    needs: determinism-matrix
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: nextest@0.9.143
-      - uses: actions/download-artifact@v7.0.0
-        with:
-          name: portable-state-ubuntu-latest
-          path: target/state-x86
-      - uses: actions/download-artifact@v7.0.0
-        with:
-          name: portable-state-ubuntu-24.04-arm
-          path: target/state-arm
+      - run: cp target/portable-state-debug.bin target/target-state-debug.bin target/state-x86/
+      - env:
+          OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-debug.bin
+          OCE_TARGET_STATE_OUT: target/state-arm/target-state-debug.bin
+        run: >-
+          cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked
+          --target aarch64-unknown-linux-gnu --config-file "$PWD/scripts/ci/nextest-emulated.toml"
+          --profile ci --no-tests=fail
       - run: >-
           cmp target/state-x86/portable-state-debug.bin target/state-arm/portable-state-debug.bin &&
           ! cmp -s target/state-x86/target-state-debug.bin target/state-arm/target-state-debug.bin
@@ -113,6 +92,14 @@ jobs:
         run: >-
           cargo nextest run -p oce-api --lib --locked --profile ci --no-tests=fail
           -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [determinism-matrix]
+    steps:
+      - env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: python3 check.py
 EOF
   cat > "$dir/release-gate.yml" <<'EOF'
 on:
@@ -144,16 +131,6 @@ jobs:
           for profile in ci ci-release public-api-oce-api public-api-oce-store;
           do test -s "target/nextest/$profile/junit.xml";
           done
-      - uses: actions/upload-artifact@v7.0.1
-        if: ${{ !cancelled() }}
-        with:
-          path: |
-            target/nextest/ci/junit.xml
-            target/nextest/ci-release/junit.xml
-            target/nextest/public-api-oce-api/junit.xml
-            target/nextest/public-api-oce-store/junit.xml
-          if-no-files-found: error
-          retention-days: 14
   default-no-db:
     steps:
       - run: bash .github/scripts/check-default-no-db.sh
@@ -172,6 +149,14 @@ jobs:
   golden-gen-firewall:
     steps:
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [test-suite]
+    steps:
+      - env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: python3 check.py
 EOF
   cat > "$dir/advisories.yml" <<'EOF'
 on:
@@ -437,29 +422,40 @@ remove_foreign_restore_nextest_install() {
   dir="$1"
   _deny="$2"
   awk '
-    /portable-state-cross-arch:/ { in_job = 1 }
+    /^  determinism-matrix:/ { in_job = 1 }
+    /^  ci-ok:/ { in_job = 0 }
     in_job && /tool: nextest@0.9.143/ { next }
     { print }
   ' "$dir/ci.yml" > "$dir/ci.yml.tmp"
   mv "$dir/ci.yml.tmp" "$dir/ci.yml"
 }
 
-remove_nextest_junit_artifacts() {
+remove_aarch64_leg() {
   dir="$1"
   _deny="$2"
-  for workflow in "$dir/ci.yml" "$dir/release-gate.yml"; do
-    grep -v -E 'upload-artifact|^[[:space:]]*target/nextest/(ci|ci-release|public-api-oce-api|public-api-oce-store)/junit\.xml' \
-      "$workflow" > "$workflow.tmp"
-    mv "$workflow.tmp" "$workflow"
-  done
+  grep -v -- '--target aarch64-unknown-linux-gnu' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
 }
 
-remove_one_nextest_junit_artifact() {
+remove_arm_state_vector() {
   dir="$1"
   _deny="$2"
-  grep -v '^[[:space:]]*target/nextest/ci-release/junit\.xml' \
-    "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  grep -v 'OCE_PORTABLE_STATE_OUT: target/state-arm/' "$dir/ci.yml" > "$dir/ci.yml.tmp"
   mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
+conditional_ci_ok() {
+  dir="$1"
+  _deny="$2"
+  sed 's/^    if: always()$/    if: success()/' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
+blind_release_ci_ok() {
+  dir="$1"
+  _deny="$2"
+  grep -v 'toJSON(needs)' "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
 }
 
 remove_nextest_report_cleanup() {
@@ -552,10 +548,14 @@ run_case vacuous-foreign-restore fail allow_absent_foreign_restore_test \
   "foreign target-bound restore hard-fails when its test is absent"
 run_case missing-foreign-nextest-install fail remove_foreign_restore_nextest_install \
   "pinned cargo-nextest install for foreign restore"
-run_case missing-nextest-junit-artifacts fail remove_nextest_junit_artifacts \
-  "upload nextest JUnit report artifacts"
-run_case partial-nextest-junit-artifacts fail remove_one_nextest_junit_artifact \
-  "collect nextest release JUnit report"
+run_case missing-aarch64-leg fail remove_aarch64_leg \
+  "aarch64 determinism leg"
+run_case missing-arm-state-vector fail remove_arm_state_vector \
+  "emit the aarch64 portable state vector"
+run_case conditional-ci-ok fail conditional_ci_ok \
+  "CI OK aggregate reports on every run"
+run_case blind-release-ci-ok fail blind_release_ci_ok \
+  "release gate CI OK aggregate inspects every needed result"
 run_case missing-nextest-report-cleanup fail remove_nextest_report_cleanup \
   "clear cached nextest JUnit reports"
 run_case missing-nextest-report-requirements fail remove_nextest_report_requirements \
