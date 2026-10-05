@@ -176,9 +176,10 @@ does not. No environment switch or historical-source exception bypasses current 
 ## CI data flow and adjudication
 
 The native receipt above was produced on GitHub Actions, on `ubuntu-latest` and
-`ubuntu-24.04-arm`. CI now runs on Forgejo Actions with a single Linux x86_64 runner, and the
-scoped `strict-bit-matrix` job in `.forgejo/workflows/ci.yml` runs on every development PR (and
-manual dispatch) in four cells: x86_64 natively and aarch64 cross-compiled under QEMU user-mode
+`ubuntu-24.04-arm`, by the now-disabled `.github/workflows/ci.yml`. The per-PR gate is now
+`.github/workflows/pr-gate.yml` on GitHub-hosted x86_64 runners, and its scoped `strict-bit-matrix`
+job runs on every development PR and every push to `development` (and on manual dispatch) in four
+cells: x86_64 natively and aarch64 cross-compiled under QEMU user-mode
 emulation, each in debug and release. **The aarch64 cells are emulated, not native**: they keep the
 cross-cell comparison running per PR but cannot produce admissible native aarch64 evidence. Each
 cell clears cached evidence, makes two independent nextest process captures at that PR's

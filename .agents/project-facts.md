@@ -13,17 +13,23 @@ That script is the single source of truth for gate commands. Every other documen
 points at it. Run it in the form above and read the real output — a summary of a
 gate is a claim about a gate, and this engine controls physical equipment.
 
-Change a command by changing [`.forgejo/workflows/ci.yml`](../.forgejo/workflows/ci.yml)
+Change a command by changing [`.github/workflows/pr-gate.yml`](../.github/workflows/pr-gate.yml)
 first, then the script.
 
 ## Hosting and CI
 
-Forgejo is the primary host: `origin` is the Forgejo instance, and branches, PRs, reviews and CI
-live there. GitHub is a public push mirror — never push to it directly, never open PRs there — and
-public issues are tracked on GitHub and synced with Forgejo. CI is Forgejo Actions in
-`.forgejo/workflows/` (one self-hosted Linux x86_64 runner); `.github/workflows/` keeps only
-GitHub-bound work (release publishing, Pages publishing, native-arm64 OpenModelica evidence) plus
-a byte-frozen, dormant `ci.yml`, and none of it runs while Actions is disabled on the mirror.
+GitHub is the primary host: `origin` is `github.com/jscott3201/open-control-engine`, and branches,
+PRs, reviews, issues and CI live there. The self-hosted Forgejo instance that was primary until
+October 2026 is retired. CI is GitHub Actions in `.github/workflows/` on GitHub-hosted Linux
+runners: `pr-gate.yml` (per-PR, light), `release-gate.yml` (release PRs into `main`, daily against
+`development`, heavy), `advisories.yml` (daily), `docs-pages.yml` (docs validation and the Pages
+publish from `main`), `release.yml` (tag verify / manual crates.io publish) and the two manual
+native-arm64 OpenModelica evidence workflows. `ci.yml` there is byte-frozen and disabled in the
+repository's Actions settings — it is not the CI.
+
+GitHub PR numbers collide with the retired Forgejo numbering: Forgejo #332 (the Forgejo CI port)
+and GitHub #332 are different changes. Bare `(#N)` citations predate the move; cite every PR merged
+on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
 
 Three tracked files are bound sources of the retained native strict-bit evidence and must not
 change casually: `.github/workflows/ci.yml`, `.config/nextest.toml`, and `.agents/gate.sh`. Editing
@@ -62,7 +68,7 @@ Pin-advance PRs — any change under `third_party/**` or to the pin constants �
 `bash .agents/gate.sh full` first-hand; see the vendored README's
 `## Pin-advance policy` section.
 
-**Confirm the checks ran.** Forgejo runs the whole per-PR gate on every PR, work-in-progress
+**Confirm the checks ran.** GitHub Actions runs the whole per-PR gate on every PR, drafts
 included, and `CI OK` is the one status that summarizes it. A PR with no checks is easy to
 mistake for a PR with no failing checks; confirm `CI OK` actually reported, not merely that
 nothing is red.
@@ -117,7 +123,7 @@ Two things make this safe to do and easy to get wrong:
 
 ## Branches
 
-Base branch is `development`. Branch protection on Forgejo blocks direct pushes to it
-and requires `ci / CI OK (pull_request)`; everything lands by squash-merge through a
-Forgejo PR. A fix round pushes to the **same** branch — never a second PR for the same
-work. Push branches to `origin` (Forgejo) only, never to the GitHub mirror.
+Base branch is `development`. Branch protection on GitHub blocks direct pushes to it
+and requires the `CI OK` status from `pr-gate.yml`; everything lands by squash-merge through a
+GitHub PR. A fix round pushes to the **same** branch — never a second PR for the same
+work.

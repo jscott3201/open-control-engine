@@ -1,4 +1,4 @@
-# Advisory/yanked dependency gate for open-control (the Open Control Engine), on Forgejo Actions.
+# Advisory/yanked dependency gate for open-control (the Open Control Engine), on GitHub Actions.
 #
 # The light per-PR gate runs cargo-deny bans/licenses/sources, and the release gate runs the full
 # cargo-deny suite. This workflow closes advisory dormancy: RustSec/yanked checks run daily against
@@ -12,6 +12,9 @@ on:
   schedule:
     - cron: "43 8 * * *"
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
@@ -27,9 +30,11 @@ jobs:
     name: cargo-deny advisories
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
-      - uses: taiki-e/install-action@v2
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: cargo-deny
       - run: cargo deny check advisories

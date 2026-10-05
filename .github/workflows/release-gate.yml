@@ -1,24 +1,24 @@
-# Release gate for open-control (the Open Control Engine) — runs on Forgejo Actions for
-# `development` -> `main` release PRs (base branch: main), manual dispatch, and a daily scheduled
-# run against the `development` tip.
+# Release gate for open-control (the Open Control Engine) — runs on GitHub Actions for
+# `development` -> `main` release PRs (base branch: main), pushes to `main`, manual dispatch, and a
+# daily scheduled run against the `development` tip.
 #
-# DISJOINT from ci.yml by base branch. Forgejo keys `pull_request: branches:` on the PR's BASE
+# DISJOINT from pr-gate.yml by base branch. GitHub keys `pull_request: branches:` on the PR's BASE
 # (target) branch, so:
-#   * a feature -> `development` PR matches ci.yml ONLY (the light per-change gate), and
+#   * a feature -> `development` PR matches pr-gate.yml ONLY (the light per-change gate), and
 #   * a `development` -> `main` release PR matches THIS workflow ONLY.
-# The two never both fire on one PR; there is no double-run.
+# The two never both fire on one PR; there is no double-run. A push to `main` (the merged release)
+# re-runs this gate against the shipped commit.
 #
 # Until the first `main` release PR exists, `workflow_dispatch` and the daily cron exercise this gate.
 # Scheduled and manually-dispatched runs explicitly checkout `development`, so they continue to test
 # the integration tip even after `main` becomes the default branch.
 #
-# Port notes (GitHub Actions -> Forgejo Actions): Linux x86_64 only; no `permissions:` block
-# (unsupported); no draft guard (Forgejo has no GitHub-style draft flag); nextest JUnit reports are
-# still required to exist but are no longer uploaded as artifacts; `CI OK` at the bottom is the
-# single required status for branch protection on `main`.
+# Linux x86_64 only. Every job runs on every trigger, drafts included; no gating job carries a
+# job-level `if:`. nextest JUnit reports are required to exist but are not uploaded as artifacts.
+# `CI OK` at the bottom is the single required status for branch protection on `main`.
 #
-# WHAT RUNS HERE vs. ci.yml:
-#   * NEW value — the FULL test suite. ci.yml runs only the targeted `oce-api`/`oce-blocks`/`oce-expr`
+# WHAT RUNS HERE vs. pr-gate.yml:
+#   * NEW value — the FULL test suite. pr-gate.yml runs only the targeted `oce-api`/`oce-blocks`/`oce-expr`
 #     determinism subset, so this gate is the first place every OTHER crate's tests execute:
 #       - `cargo nextest run` for every unit + integration test in the workspace,
 #       - `cargo nextest run --cargo-profile release` for release-codegen panic-freedom regressions,
@@ -36,7 +36,7 @@
 #     not wasteful: fmt, file-size cap, no-secret scan, default-no-db, clippy -D warnings,
 #     workspace build, rustdoc -D warnings, cargo-machete, the package/feature/publication contract,
 #     stale crate-status header lint, and gate-script behavior fixtures.
-#   * cargo-deny here adds `advisories` to the bans/licenses/sources checks ci.yml runs — a
+#   * cargo-deny here adds `advisories` to the bans/licenses/sources checks pr-gate.yml runs — a
 #     release warrants a full advisories/bans/licenses/sources sweep.
 #
 # Deferred until first publish: the cargo-about THIRDPARTY.md
@@ -50,21 +50,26 @@ name: release-gate
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
   schedule:
     # Daily development-tip heavy gate. Schedules run on the default branch, so checkout below
     # pins scheduled jobs back to `development`.
     - cron: "17 8 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: short
   CARGO_NET_GIT_FETCH_WITH_CLI: "true"
-  # Build-cost trims for a shared self-hosted runner; neither changes generated code.
+  # Build-cost trims for hosted runners (disk and time); neither changes generated code.
   CARGO_INCREMENTAL: "0"
   CARGO_PROFILE_DEV_DEBUG: "0"
   CARGO_PROFILE_TEST_DEBUG: "0"
@@ -91,10 +96,11 @@ jobs:
     name: full test suite (nextest + doctests)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.97.1
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       # Gate-only nightly for the `cargo public-api` surface snapshots (crates/oce-api/tests/
       # public_api.rs and crates/oce-store/tests/public_api.rs, exit #7). Installed but NOT made the
       # default — the workspace still builds on 1.97.1 above; each test shells out to THIS exact
@@ -103,10 +109,10 @@ jobs:
       # parse); bump `$NIGHTLY` (above) + all three together and re-bless the baselines.
       - name: install gate-only nightly (cargo public-api)
         run: rustup toolchain install "$NIGHTLY" --profile minimal --no-self-update
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: false
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143
       - name: Clear cached nextest reports
@@ -170,10 +176,11 @@ jobs:
     name: fmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.97.1
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
         with:
           components: rustfmt
       - run: cargo fmt --all --check
@@ -182,27 +189,30 @@ jobs:
     name: file-size cap (700 LOC)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ env.CHECKOUT_REF }}
+          persist-credentials: false
       - run: bash .github/scripts/check-file-size.sh
 
   no-secret-scan:
     name: no-secret scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ env.CHECKOUT_REF }}
+          persist-credentials: false
       - run: bash .github/scripts/check-no-secrets.sh
 
   gate-fixtures:
     name: gate behavior fixtures
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ env.CHECKOUT_REF }}
+          persist-credentials: false
       - name: no-db gate fixtures
         run: bash .github/scripts/test-check-default-no-db.sh
       - name: golden-gen firewall fixtures
@@ -220,11 +230,12 @@ jobs:
     name: unused dependency gate (cargo-machete)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.97.1
-      - uses: taiki-e/install-action@v2
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: cargo-machete
       - run: cargo machete
@@ -233,11 +244,12 @@ jobs:
     name: default build links no database / async runtime
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.97.1
-      - uses: Swatinem/rust-cache@v2
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: false
       - run: bash .github/scripts/check-default-no-db.sh
@@ -246,23 +258,25 @@ jobs:
     name: golden-gen anti-tautology firewall
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.97.1
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
 
   clippy:
     name: clippy (-D warnings)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.97.1
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
         with:
           components: clippy
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: false
       - name: clippy (default — no DB)
@@ -272,11 +286,12 @@ jobs:
     name: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.97.1
-      - uses: Swatinem/rust-cache@v2
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: false
       - name: cargo build (default — no DB)
@@ -286,11 +301,12 @@ jobs:
     name: rustdoc (-D warnings)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.97.1
-      - uses: Swatinem/rust-cache@v2
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: false
       - name: cargo doc — libs (deny warnings)
@@ -306,16 +322,17 @@ jobs:
     name: cargo-deny (full)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.97.1
-      - uses: taiki-e/install-action@v2
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: cargo-deny
       - run: cargo deny check bans licenses sources advisories
 
-  # The gate script in `full` mode, EXECUTED rather than parsed. See the twin job in ci.yml for
+  # The gate script in `full` mode, EXECUTED rather than parsed. See the twin job in pr-gate.yml for
   # why this is a coverage backstop and explicitly NOT a parity check.
   #
   # `full` is the higher-stakes half. AGENTS.md instructs every agent to run `bash .agents/gate.sh
@@ -330,16 +347,17 @@ jobs:
     name: gate (full)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.97.1
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
         with:
           components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: false
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143,cargo-deny,cargo-machete
       - run: bash .agents/gate.sh full
