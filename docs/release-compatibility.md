@@ -11,14 +11,18 @@ executable, prior-state, placement and safety qualification. No downstream pin c
 The retained [machine-readable matrix](release-compatibility.json) has exactly 36 ordered rows:
 nine artifact classes times four producer/consumer directions. The selected identities are:
 
-- **Current implementation:** `e81480b02271456719d55cbe1e5090b0dea6d63c`.
-  Delivery adds tests/evidence/docs only; it does not pretend its future commit can hash itself.
+- **Current implementation:** `3a7bdf023062d5dc3f433c7e28be4cde033224bf`, the 0.2.0 release-preparation
+  version bump. Its implementation boundary differs from the previous `e81480b` baseline only in the
+  package version strings of the root manifest, lockfile and descriptor-carrying sources. Delivery
+  adds tests/evidence/docs only; it does not pretend its future commit can hash itself.
 - **Historical source candidate:** annotated `v0.1.0`, tag object
   `7f3b614dc0e466d54cab4677ce4bb08a5bfaf033`, peeled source
-  `909a8ba699e6a2fccf3de6ac0616a9e83a04060f`, 178 commits behind that baseline.
+  `909a8ba699e6a2fccf3de6ac0616a9e83a04060f`, 178 commits behind the previous `e81480b` baseline
+  recorded in the historical receipt.
   This is a historical git pin, **never a published release or supported N-1**.
-- Both package strings are **0.1.0**. Equal package strings do not identify the source, lockfile,
-  compiler, features, target, codegen, binary or deployment. Neither descriptor nor FNV identity
+- The current package string is **0.2.0** and the historical one is **0.1.0**. Package strings
+  never identified a candidate: before the 0.2.0 bump both read 0.1.0, and equal package strings do
+  not identify the source, lockfile, compiler, features, target, codegen, binary or deployment. Neither descriptor nor FNV identity
   is build authority. OCE still has no build token.
 
 The [historical receipt](release-compatibility-history.json) records an isolated exact-source
@@ -147,6 +151,23 @@ An integration sentinel in `oce-api` runs the checker and all 16 hostile tests i
 no CI/release workflow or strict-bit guard changes are needed. Run the actual repository gate via
 [the gate script](../.agents/gate.sh); source/digest equality never substitutes for behavioral runs.
 Coordinated edits to checker and evidence are a review boundary, not a cryptographic security defense.
+
+## Published compatibility manifest
+
+[`compatibility-manifest.json`](compatibility-manifest.json) is the artifact attached to a tagged
+release. It lists, for the tagged source: the canonical public descriptor and its fields; each
+contract domain's schema revision with an FNV-1a-128 tag over the packaged schema bytes; the CXF
+import contract, document byte limit, vendored CDL source commits and composite rule ids; the
+`cxf:fnv1a128` content-id scheme and the catalog content id; the content id (or, for an export
+with deferral warnings, the byte tag and warning count) of every document in the swept G36 CXF
+corpus; the state and replay format revisions; and the selected release-compatibility baseline.
+
+The [owner test](../crates/oce-api/tests/compatibility_manifest.rs) derives every value from the
+facade and repository data, cross-checks the matrix descriptor against the live one, and compares
+the file byte-for-byte. Regenerate it with `OCE_BLESS=1` only together with the change that moved
+a fact. A moved corpus content id means exported CXF bytes changed, which churns every downstream
+record of an exported content id. The manifest describes one candidate; it grants no compatibility
+beyond the policy above, and its FNV tags are integrity tags, not signatures.
 
 ## Future RC release-note template
 

@@ -86,7 +86,7 @@ The layer contains **412 Tier-A provenance records**, every one of them recordin
 
 **410 of those are signal goldens — 389 with existing exact comparisons and 21 inventoried
 accepted Linux exact cases, still aligned-tolerance on unqualified platforms.** The
-[retained native receipt](strict-bit-evidence.md#accepted-native-receipt) records run 35494403523:
+[retained native receipt](strict-bit-evidence.md#accepted-native-receipt) records run 37382761120:
 Linux x86_64/aarch64 × debug/release, two byte-identical runs per cell, 21 signals and 161 samples
 per run, zero exact mismatches against Tier-A and across cells. Raw bits, synthetic merge checkout
 provenance, exactly the 35 selected source paths/digests and oracle/input/CXF integrity are checked

@@ -59,7 +59,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(rows, [(artifact, p, c, status) for artifact, statuses in expected
                                 for (p, c), status in zip(directions, statuses, strict=True)])
         self.assertEqual(len(rows), 36)
-        self.assertEqual(self.matrix["current_facts"]["package"], "0.1.0")
+        self.assertEqual(self.matrix["current_facts"]["package"], "0.2.0")
         self.assertEqual(self.matrix["candidates"]["historical"]["package"], "0.1.0")
         self.assertEqual(self.matrix["typed_controls"]["status"], "typed-refusal")
         self.assertEqual(self.matrix["current_facts"]["state_format"], 2)

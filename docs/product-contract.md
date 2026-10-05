@@ -199,7 +199,7 @@ actual downstream pins and qualification are unchanged.
 
 ## Strict-bit evidence
 
-The [accepted native receipt](strict-bit-evidence.md#accepted-native-receipt) from run 35494403523
+The [accepted native receipt](strict-bit-evidence.md#accepted-native-receipt) from run 37382761120
 supports PC-037's observed-output claim with a reviewed 35-file selected source boundary, only
 for the 21 inventoried Linux signal cases: four architecture/codegen cells, two native runs per
 cell, 161 samples per run and zero mismatches. The checked-in qualified captures reconstruct the
@@ -411,7 +411,7 @@ written expected output and deterministic repetitions; the runnable gate remains
   goldens remain unchanged. macOS/other targets retain the 1e-12 aligned band, with macOS-arm64
   unqualified until M06-PR02. No arbitrary-input, mathematical, whole-executable or Sim qualification,
   runtime/API/state change, dependency change or publication follows.
-  Admission with the reviewed selected source boundary uses run 35494403523, preserving its synthetic
+  Admission with the reviewed selected source boundary uses run 37382761120, preserving its synthetic
   merge identity and eight capture files verbatim, with exactly all 35 enumerated paths/digests
   verified and no bound-source changes. This boundary is not the full compiled dependency closure;
   PC-037 remains an observed-output claim over the pinned corpus, targets and toolchain.

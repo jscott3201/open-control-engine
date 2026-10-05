@@ -6,5 +6,5 @@ value-schema:1
 parameter-schema:1
 execution-profile:HostTick-v1
 execution-profile-schema:2
-oce-api-version:0.1.0
+oce-api-version:0.2.0
 export:cxf:fnv1a128:de3ae3208d304eb9b8300520e730fed7

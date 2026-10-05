@@ -24,7 +24,7 @@ resolver = "3"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 # MSRV. MUST NOT EXCEED the gate-only nightly pinned as `NIGHTLY` in
 # .github/workflows/release-gate.yml — today nightly-2026-05-01, which identifies as
@@ -71,26 +71,26 @@ rustix = { version = "1.1.4", features = ["fs"] }
 # may also retain a version here, but `publish = false` in their own manifests controls selection. ---
 # EXCEPTION to the version-alongside-path convention documented two lines above. `oce-bless` is
 # `publish = false` and consumed ONLY as a dev-dependency. Cargo strips a dev-dependency from the
-# packaged manifest only when it carries no `version`; with `version = "0.1.0"` present,
+# packaged manifest only when it carries no `version`; with `version = "0.2.0"` present,
 # `cargo publish --workspace --locked --dry-run` (release.yml:71) fails with
 #   no matching package named `oce-bless` found … location searched: crates.io index
 # because the crate is never published. Verified by execution at b811229.
 oce-bless = { path = "crates/oce-bless" }
-oce-model = { path = "crates/oce-model", version = "0.1.0" }
-oce-expr = { path = "crates/oce-expr", version = "0.1.0" }
-oce-diag = { path = "crates/oce-diag", version = "0.1.0" }
-oce-blocks = { path = "crates/oce-blocks", version = "0.1.0" }
-oce-flatten = { path = "crates/oce-flatten", version = "0.1.0" }
-oce-validate = { path = "crates/oce-validate", version = "0.1.0" }
-oce-graph = { path = "crates/oce-graph", version = "0.1.0" }
-oce-cxf = { path = "crates/oce-cxf", version = "0.1.0" }
-oce-semantics = { path = "crates/oce-semantics", version = "0.1.0" }
-oce-store = { path = "crates/oce-store", version = "0.1.0" }
-oce-store-mem = { path = "crates/oce-store-mem", version = "0.1.0" }
-oce-conformance = { path = "crates/oce-conformance", version = "0.1.0" }
-oce-extension = { path = "crates/oce-extension", version = "0.1.0" }
-oce-docs = { path = "crates/oce-docs", version = "0.1.0" }
-oce-api = { path = "crates/oce-api", version = "0.1.0" }
+oce-model = { path = "crates/oce-model", version = "0.2.0" }
+oce-expr = { path = "crates/oce-expr", version = "0.2.0" }
+oce-diag = { path = "crates/oce-diag", version = "0.2.0" }
+oce-blocks = { path = "crates/oce-blocks", version = "0.2.0" }
+oce-flatten = { path = "crates/oce-flatten", version = "0.2.0" }
+oce-validate = { path = "crates/oce-validate", version = "0.2.0" }
+oce-graph = { path = "crates/oce-graph", version = "0.2.0" }
+oce-cxf = { path = "crates/oce-cxf", version = "0.2.0" }
+oce-semantics = { path = "crates/oce-semantics", version = "0.2.0" }
+oce-store = { path = "crates/oce-store", version = "0.2.0" }
+oce-store-mem = { path = "crates/oce-store-mem", version = "0.2.0" }
+oce-conformance = { path = "crates/oce-conformance", version = "0.2.0" }
+oce-extension = { path = "crates/oce-extension", version = "0.2.0" }
+oce-docs = { path = "crates/oce-docs", version = "0.2.0" }
+oce-api = { path = "crates/oce-api", version = "0.2.0" }
 
 [profile.release]
 opt-level = 3

@@ -219,9 +219,9 @@ fn malformed_descriptor_fields_refuse_instead_of_becoming_ignored_extensions() {
         DESCRIPTOR.replace("io-schema:1", "io-schema:4294967296"),
         DESCRIPTOR.replace("96724061", "9672406A"),
         DESCRIPTOR.replace("HostTick-v1", "arbitrary"),
-        DESCRIPTOR.replace("0.1.0", "01.1.0"),
-        DESCRIPTOR.replace("0.1.0", "0.1.0-01"),
-        DESCRIPTOR.replace("0.1.0", "0.1.0+"),
+        DESCRIPTOR.replace("0.2.0", "02.2.0"),
+        DESCRIPTOR.replace("0.2.0", "0.2.0-01"),
+        DESCRIPTOR.replace("0.2.0", "0.2.0+"),
         DESCRIPTOR.replace("export:none", "export:"),
         DESCRIPTOR.replace("value-schema:1\n", ""),
         DESCRIPTOR.replace("\n", "\r\n"),
@@ -283,8 +283,8 @@ fn every_public_fact_has_an_ordered_typed_eligibility_refusal() {
             CompatibilityMismatch::ExecutionProfile,
         ),
         (
-            "0.1.0",
-            "0.1.0-next.1+build.01",
+            "0.2.0",
+            "0.2.0-next.1+build.01",
             CompatibilityMismatch::Build,
         ),
         (

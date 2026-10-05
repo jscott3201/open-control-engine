@@ -17,8 +17,8 @@ fn every_field_changes_canonical_bytes_and_has_an_exact_symmetric_refusal() {
         (|d| d.parameter_schema += 1, M::ParameterSchema),
         (|d| d.execution_profile = "HostTick-v2", M::ExecutionProfile),
         (|d| d.execution_profile_schema += 1, M::ExecutionProfile),
-        (|d| d.oce_api_version = "0.1.1", M::Build),
-        (|d| d.oce_api_version = "0.1.0+other", M::Build),
+        (|d| d.oce_api_version = "0.2.1", M::Build),
+        (|d| d.oce_api_version = "0.2.0+other", M::Build),
         (
             |d| d.export = Some(CompleteExportContentId("cxf:fnv1a128:0".into())),
             M::ExportPresence,
@@ -50,7 +50,7 @@ fn refusal_precedence_is_canonical_and_unknown_equal_revisions_still_refuse() {
     changed.value_schema += 1;
     changed.parameter_schema += 1;
     changed.execution_profile_schema += 1;
-    changed.oce_api_version = "0.2.0";
+    changed.oce_api_version = "0.3.0";
     changed.export = Some(CompleteExportContentId("different".into()));
     for (cause, field) in [
         (M::DescriptorRevision, 0),

@@ -1,7 +1,9 @@
 # Changelog
 
-Notable changes to the Open Control Engine. Nothing has been released yet, so every entry
-sits under `Unreleased`: the package is not on crates.io and there is no semver promise.
+Notable changes to the Open Control Engine. Releases are git tags; nothing is on crates.io yet
+and there is no semver promise. `v0.1.0` was a git pin cut for one external consumer before this
+file tracked releases, so it has no section of its own: every entry from the start of the project
+through 0.2.0 sits under [0.2.0](#020).
 
 Entries are grouped by area rather than by date, and each names the PR so the change can be
 read in full.
@@ -9,10 +11,11 @@ read in full.
 An entry is expected from every PR that changes behaviour, the public surface, or a published
 claim — added in that PR, not batched later. Nothing enforces this: an entry is a judgement about
 what mattered, so no check can derive one, and a check that merely required *some* text would pass
-on a placeholder. It has therefore fallen behind seven times: #215 recovered 64 commits, #228
+on a placeholder. It has therefore fallen behind eight times: #215 recovered 64 commits, #228
 recovered seven PRs, #259 recovered ten, #264 recovered one PR and one missing citation, #287
-recovered one missing record and two missing citations, #288 recovered #287, and #302 recovered
-#288, #296, #300, and #301 before the next promotion.
+recovered one missing record and two missing citations, #288 recovered #287, #302 recovered
+#288, #296, #300, and #301 before the next promotion, and the 0.2.0 release preparation recovered
+the 22 PRs #308 through #331 (#308 had added its entry under its issue number, #307).
 
 The third recovery discredits the check the second one wrote down here. That check was
 `git log main..development -- CHANGELOG.md`, on the reading that returning nothing means the
@@ -34,9 +37,38 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.2.0
+
+Prepared 2026-10-05 on `development`; the release date is the date the `v0.2.0` tag is cut from
+`main`. Every workspace member is 0.2.0. Nothing is published to crates.io.
+
+### Release
+
+- **Workspace version 0.2.0.** All 17 members and the internal path+version table move from 0.1.0;
+  `CompatibilityDescriptor` reports `oce-api-version:0.2.0`, so persisted descriptor receipts and
+  replay records from 0.1.0-labelled builds now refuse with a `Build` mismatch — which
+  the fail-closed policy already required, since equal package strings were never build authority.
+  No catalog, contract-schema, state-format, execution-ABI or replay-format revision changes.
+- **A compatibility manifest is published with the release**
+  ([`docs/compatibility-manifest.json`](docs/compatibility-manifest.json)): the canonical descriptor,
+  each contract domain's schema revision and schema-bytes tag, the CXF import contract and vendored
+  CDL source commits, the composite rule ids, the catalog content id, the content id of every
+  complete export in the 47-document G36 CXF corpus (34; the other 13 carry their byte tag and
+  deferral-warning count), and the state and replay format revisions. It is generated and held
+  current by `crates/oce-api/tests/compatibility_manifest.rs`.
+- **The release-compatibility candidate is re-selected at the version bump.** The retained matrix
+  now names that commit as the current implementation baseline and 0.2.0 as the current package
+  against the historical 0.1.0 pin; its 36 directed rows and the no-N-1 policy are unchanged.
+- **The retained native strict-bit receipt is refreshed for 0.2.0.** The receipt binds
+  `Cargo.toml` and `Cargo.lock` bytes, so the version bump took a new native Linux
+  x86_64/aarch64 capture (run 37382761120, zero mismatches, byte-identical repeats) admitted
+  data-only per [strict-bit evidence](docs/strict-bit-evidence.md); no bound source changed.
+
 ### Facade contraction
 
-- **Frame-only execution, product-contract revision 9:** preparation followed by consuming
+- **Frame-only execution, product-contract revision 9** (#325): preparation followed by consuming
   `execute_frame` is the sole public state-advancing execution path. Removed sparse staging,
   Store-backed ticks, built-in simulation/realtime profiles, epoch configuration, raw `Outputs`
   access and associated source/spec/trace/report types without aliases. `CompletedFrame` retains
@@ -46,12 +78,12 @@ and a gate that accepted any text would restore exactly the false assurance desc
   HostTick v1, input domains, independent numerical references, catalog and state bytes are unchanged.
   Assertion/execution descriptors advance to revision 2; public-surface and product-contract hostile
   controls guard the contraction. Sibling migration and external delivery orchestration remain host work.
-- **Earlier intentional pre-release source break:** removed `Engine::load_modelica`,
+- **Earlier intentional pre-release source break** (#316): removed `Engine::load_modelica`,
   `Engine::load_from_semantic`, `TemplateRef`, the flat `oce_api::SemanticQuery` alias and
   `InputSource::Csv`, all tied to never-working facade paths. Conditional storage query types and
   working CXF/Constant/Closure behavior were retained at that revision; the frame-only contraction
   above supersedes those execution conveniences. Reference CSV/table replay stays host-side.
-- **Warning-only assertions:** removed the never-emitted `AssertLevel::Error` variant and changed
+- **Warning-only assertions** (#316): removed the never-emitted `AssertLevel::Error` variant and changed
   `Default` from Error to Warning deliberately. Existing Warning collection, execution and state
   bytes are unchanged; this adds no escalation or safety policy. `point_list(None)` keeps its
   signature/behavior; device filtering remains outside support with the same `OcError::Load`
@@ -257,6 +289,36 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Host facade
 
+- **Complete input frames** (#321, #322, #323). `prepare_frame` builds an owned, generation-bound
+  input frame and refuses unloaded, stale, unknown, wrong-direction, duplicate, missing, type,
+  domain and time failures before any mutation; consuming `execute_frame` then runs one in-place
+  HostTick transition and returns an immutable `CompletedFrame` with lexical boundary outputs,
+  warnings and a lifetime-local sequence. Frame execution makes no Store or host callback. Native
+  frames and the then-remaining legacy ticks shared one private HostTick evaluation core (#323)
+  until #325 made frames the only execution surface.
+- **Versioned catalog and diagnostic receipt contracts** (#317). The facade exposes a typed
+  catalog projection with canonical JSON, a packaged JSON Schema and a deterministic
+  `catalog:1:fnv1a128:` content id, plus immutable load/export diagnostic receipts with
+  stage-aware machine keys; failures keep the original error and the diagnostics of completed
+  stages. IO, value, parameter, assertion and execution-profile contracts are documented and
+  packaged as versioned descriptors.
+- **Bounded CXF admission** (#318). Serialized CXF above 8 MiB (`MAX_CXF_BYTES`) is refused before
+  parsing or any Store call, with a per-engine tighten-only limit and typed count-only refusals. A
+  failed reload preserves the complete in-memory run image; Store effects of a failed load are not
+  rolled back and are documented as host compensation.
+- **Closed host compatibility descriptor** (#326). `CompatibilityDescriptor` records public
+  catalog, schema-revision, HostTick-profile, package-version and optional complete-export facts in
+  ten canonical lines, with distinct `CatalogContentId` and `CompleteExportContentId` wrappers and
+  an exact first-cause `CompatibilityMismatch`. It is not a build, executable or state identity.
+- **State continuation and portability contracts** (#328). Same-loaded-executable continuation is
+  the supported contract, under a mandatory host build/deployment envelope; snapshot portability
+  (`Portable` or `TargetBound`) is readable. State format and execution ABI advance to revision 2 so
+  effective input bounds and computation units participate in compatibility. **Revision-1
+  snapshots refuse; there is no migration.**
+- **Canonical exact replay records** (#329). A bounded revision-1 `ReplayRecord` captures one
+  accepted complete-frame transition — descriptor, placement, inputs, outputs and diagnostics, with
+  exact Real bits — without a second execution path. Ordering, authentication, storage and snapshot
+  sidecars stay host-owned; hosted cross-architecture replay comparison remains pending.
 - **HostTick v1 names and pins the engine's existing transition profile** (#301). Every successful
   `Engine::tick` call advances state exactly once, including repeated timestamps; the evaluator
   performs no hidden same-time event iteration or convergence search. `CDL.Logical.Pre` emits its
@@ -459,6 +521,22 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Verification
 
+- **Strict-bit evidence for the 21 aligned-tolerance Real signals** (#327). Canonical raw-bit
+  captures from native Linux x86_64/aarch64 × debug/release runs are retained under a 35-source
+  receipt, and those cells now compare exactly; macOS and other targets keep the 1e-12 aligned
+  band. Closes #250. See [strict-bit evidence](docs/strict-bit-evidence.md).
+- **Fail-closed release-compatibility evidence** (#330). A machine-checked 36-row directed matrix
+  covers the current candidate and the historical `v0.1.0` pin under the owner-selected policy:
+  current/current only, no N-1 support or migration. Host-boundary cold-start and external-rollback
+  fixtures and a migration/fallback guide accompany it. See
+  [release compatibility](docs/release-compatibility.md).
+- **CXF composition ordering identity is pinned** (#331). The existing executable ordering profile
+  is frozen with hand-derived permutation, serialization, diagnostic and export-survivor evidence:
+  `containsBlock` traversal stays depth-first array order, and dense ids remain internal storage,
+  never durable host identity. No resolver behaviour changed.
+- **CDL Integer conformance goldens stay in the portable 32-bit domain** (#324). Generator and
+  corpus guards reject out-of-domain integer fixtures and unsafe integer-to-real serialization;
+  wide-i64 stress coverage stays in `oce-blocks` unit tests.
 - **Durable state continuation is proven over two published Library fault rules** (GitHub #332). A new
   `oce-api` test loads AHU-0016 (TrueDelay) and AHU-0004 (MovingAverage plus TrueDelay) from
   byte-copied Library fixtures, snapshots after every tick (single and chained restarts), restores
@@ -504,7 +582,7 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   Raw repeat identity is per architecture; only canonical output is compared across architectures.
   The result covers only this finite matrix: global Tier 3 stays skipped, with no arbitrary Real,
   sequence, solver, general tolerance, or cross-architecture raw-byte claim.
-- **One composed G36 leaf now has scoped OpenModelica evidence** (#307). The pinned Buildings
+- **One composed G36 leaf now has scoped OpenModelica evidence** (#307, #308). The pinned Buildings
   `Reliefs` class runs one seven-state dyadic input schedule with source-default parameters on native
   arm64 and amd64 hosts. Repeat raw runs are identical within each architecture, and strict
   keep-last canonical bytes match across architectures. The public facade compares all 14
@@ -622,6 +700,19 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Documentation and tooling
 
+- **Executable-CXF/HostTick product contract** (#315), with a traceability checker over its 40
+  requirements; the complete generation-atomic frame contract was ratified ahead of its
+  implementation (#320). Later API PRs advanced the contract revision as they promoted
+  requirements.
+- **Public surface, package and authority policies are machine-checked.** A public-surface contract
+  and exhaustive ledger classify `oce-api` and `oce-store` (#310, closes #254); a package,
+  feature and publication policy fixes 12 publishable and 5 private members and pins the approved
+  release workflow by raw-byte SHA-256 (#313); and a closed authority-claim index with a supersession
+  map keeps cross-document claims consistent (#314).
+- **A dated stability baseline and downstream pin ledger** (#309) records the 2026-08-26 branch
+  topology and downstream pins as historical evidence, with a standard-library verifier.
+- Agent workflow guidance now defers to the active client and treats historical handoffs as evidence,
+  not current authority (#319).
 - **CI moved back to GitHub Actions; Forgejo retired** (GitHub #334). GitHub is the primary host
   again for code, PRs, issues and CI. The per-PR gate is `.github/workflows/pr-gate.yml` (PRs into
   and pushes to `development`), alongside `release-gate.yml` (release PRs into and pushes to
