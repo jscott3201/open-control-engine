@@ -455,6 +455,14 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Verification
 
+- **Durable state continuation is proven over two published Library fault rules** (#PR). A new
+  `oce-api` test loads AHU-0016 (TrueDelay) and AHU-0004 (MovingAverage plus TrueDelay) from
+  byte-copied Library fixtures, snapshots after every tick (single and chained restarts), restores
+  into a freshly loaded engine through `EngineStateSnapshot::from_bytes` and `restore_state`, and
+  shows boundary outputs, internal outputs and canonical state bytes identical to an uninterrupted
+  run. Restore guards refuse an advanced target and a foreign execution. Restore continues model
+  time, so the meaning of an outage gap is host policy, not engine state; this is documented in
+  `docs/state-compatibility.md`. Test and docs only; no public surface changes.
 - **Human-adjudicated conformance discrepancies have a bounded evidence register** (#285). The
   register is test-only and initially empty; a separate nonempty synthetic record exercises its
   closed schema, lifecycle, repository containment, and evidence digests on every PR. Register
