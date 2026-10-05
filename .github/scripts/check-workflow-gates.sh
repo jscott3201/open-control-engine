@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Static smoke checks for CI gate topology. This catches false-green workflow edits before Forgejo
+# Static smoke checks for CI gate topology. This catches false-green workflow edits before GitHub
 # Actions gets a chance to silently skip the heavy test suite or dependency gates.
 #
-# The live CI workflows are under .forgejo/workflows. .github/workflows/ci.yml is a dormant,
-# byte-frozen copy (a bound source of the retained strict-bit evidence) and is not checked here.
+# The live per-PR gate is .github/workflows/pr-gate.yml. .github/workflows/ci.yml is a dormant,
+# byte-frozen copy (a bound source of the retained strict-bit evidence), disabled in the
+# repository's Actions settings, and is not checked here.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-WORKFLOW_DIR="${OCE_WORKFLOW_DIR:-.forgejo/workflows}"
+WORKFLOW_DIR="${OCE_WORKFLOW_DIR:-.github/workflows}"
 DENY_TOML="${OCE_DENY_TOML:-deny.toml}"
 ROOT_CARGO_TOML="${OCE_ROOT_CARGO_TOML:-Cargo.toml}"
 CRATES_DIR="${OCE_CRATES_DIR:-crates}"
@@ -113,6 +114,22 @@ require_ci_ok_covers_every_job() {
   fi
 }
 
+# Every `uses:` of a remote action must name a full 40-hex commit SHA, never a movable tag or
+# branch. Local (`./`) and `docker://` references are exempt.
+require_pinned_actions() {
+  path="$1"
+  local unpinned
+  unpinned="$(grep -Ev '^[[:space:]]*#' "$path" \
+    | grep -E '^[[:space:]]*(- )?uses:' \
+    | grep -Ev 'uses:[[:space:]]*(\./|docker://)' \
+    | grep -Ev 'uses:[[:space:]]*[^[:space:]@]+@[0-9a-f]{40}([[:space:]]|$)' || true)"
+  if [ -n "$unpinned" ]; then
+    echo "FAIL: $path uses an action not pinned to a full commit SHA:"
+    printf '%s\n' "$unpinned" | sed 's/^/  /'
+    exit 1
+  fi
+}
+
 require_lints_workspace() {
   path="$1"
   if ! awk '
@@ -169,7 +186,7 @@ require_unsafe_forbid_layers() {
   fi
 }
 
-ci="$WORKFLOW_DIR/ci.yml"
+ci="$WORKFLOW_DIR/pr-gate.yml"
 release="$WORKFLOW_DIR/release-gate.yml"
 advisories="$WORKFLOW_DIR/advisories.yml"
 
@@ -178,6 +195,9 @@ require_file "$release"
 require_file "$advisories"
 require_file "$DENY_TOML"
 require_unsafe_forbid_layers
+require_pinned_actions "$ci"
+require_pinned_actions "$release"
+require_pinned_actions "$advisories"
 
 # Light per-PR dependency drift gate.
 require_pattern "$ci" 'cargo-machete' 'install cargo-machete'

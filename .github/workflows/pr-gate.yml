@@ -1,7 +1,8 @@
-# CI for open-control (the Open Control Engine) — runs on Forgejo Actions for PRs into `development`.
+# Per-PR gate for open-control (the Open Control Engine) — runs on GitHub Actions for PRs into
+# `development` and for every push to `development`.
 #
 # Workflow model: every logical change opens a PR into `development` behind this gate; releases
-# batch `development` -> `main`, where .forgejo/workflows/release-gate.yml runs the heavy gate.
+# batch `development` -> `main`, where .github/workflows/release-gate.yml runs the heavy gate.
 #
 # This per-PR gate is the LIGHT gate: the near-instant checks plus the compile-requiring lints
 # (clippy -D warnings), a workspace build, rustdoc, cargo-machete, cargo-deny, gate-script behavior
@@ -10,42 +11,50 @@
 # `bash .agents/gate.sh` executed as a coverage backstop. It does NOT run the full workspace test
 # suite — that lives in release-gate.yml.
 #
-# Port notes (GitHub Actions -> Forgejo Actions):
-#   * One self-hosted x86_64 Linux runner serves every job. The aarch64 legs of the determinism and
+# Topology:
+#   * Every job runs on a GitHub-hosted x86_64 runner. The aarch64 legs of the determinism and
 #     strict-bit matrices are cross-compiled and run under QEMU user-mode emulation inside the
-#     x86_64 job, so the byte-for-byte cross-architecture comparisons still run on every PR without
+#     x86_64 job, so the byte-for-byte cross-architecture comparisons run on every PR without
 #     artifact transfer between jobs. Emulated aarch64 results are CI signal, NOT native aarch64
 #     evidence; the retained native qualification (crates/oce-conformance/tests/fixtures/
 #     strict_bits/qualified-linux) is still verified by the strict-bit test binary in every cell.
-#   * Every job runs on every non-closed PR. Forgejo has no GitHub-style draft flag or
-#     `ready_for_review` event, so the old `draft == false` guard is gone rather than left to
-#     coerce a missing field into a silent no-gate run.
-#   * cargo-deny `bans licenses sources` runs unconditionally (it already did via gate (light));
-#     the GitHub-only dorny/paths-filter job that gated it on manifest changes is gone.
-#   * `CI OK` at the bottom is the single required status for branch protection.
+#   * Every job runs on every PR, drafts included, and no gating job carries a job-level `if:`:
+#     `CI OK` accepts only `success`, so a skipped gate would read as a failure.
+#   * cargo-deny `bans licenses sources` runs unconditionally; there is no paths-filter job.
+#   * `CI OK` at the bottom is the single required status for branch protection on `development`.
+#   * Third-party actions are pinned to full commit SHAs (the trailing comment names the tag), and
+#     checkouts do not persist the job token.
 #
-# .github/workflows/ci.yml is intentionally left byte-identical: it is a bound source of the
-# retained native strict-bit evidence, and GitHub Actions is disabled on the public mirror.
+# .github/workflows/ci.yml is NOT this workflow. It is the GitHub-era gate that produced the
+# retained native strict-bit captures and stays byte-identical as a bound source of that evidence
+# (crates/oce-conformance/tests/strict_bits/evidence.rs); it is disabled in the repository's
+# Actions settings rather than edited or deleted.
 #
 # Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
 
-name: ci
+name: pr-gate
 
 on:
   pull_request:
     branches: [development]
+  push:
+    branches: [development]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseded PR pushes are cancelled; post-merge runs on `development` each finish.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: short
   CARGO_NET_GIT_FETCH_WITH_CLI: "true"
-  # Build-cost trims for a shared self-hosted runner. Neither changes generated code: CI builds are
-  # never incremental, and debuginfo does not affect codegen of the values under test.
+  # Build-cost trims for hosted runners (disk and time). Neither changes generated code: CI builds
+  # are never incremental, and debuginfo does not affect codegen of the values under test.
   CARGO_INCREMENTAL: "0"
   CARGO_PROFILE_DEV_DEBUG: "0"
   CARGO_PROFILE_TEST_DEBUG: "0"
@@ -60,8 +69,10 @@ jobs:
     name: fmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
         with:
           components: rustfmt
       - run: cargo fmt --all --check
@@ -70,23 +81,29 @@ jobs:
     name: file-size cap (700 LOC)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
       - run: bash .github/scripts/check-file-size.sh
 
   no-secret-scan:
     name: no-secret scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
       - run: bash .github/scripts/check-no-secrets.sh
 
   default-no-db:
     name: default build links no database / async runtime
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: false
       - run: bash .github/scripts/check-default-no-db.sh
@@ -95,16 +112,20 @@ jobs:
     name: golden-gen anti-tautology firewall
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
 
   package-publication-contract:
     name: package, feature, and publication contract
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - name: hostile package-contract controls
         run: python3 scripts/package_policy/test_validate.py
       - name: metadata-driven package-contract validation
@@ -122,7 +143,9 @@ jobs:
     name: gate behavior fixtures
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
       - name: no-db gate fixtures
         run: bash .github/scripts/test-check-default-no-db.sh
       - name: golden-gen firewall fixtures
@@ -140,9 +163,11 @@ jobs:
     name: unused dependency gate (cargo-machete)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
-      - uses: taiki-e/install-action@v2
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: cargo-machete
       - run: cargo machete
@@ -157,20 +182,22 @@ jobs:
       CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER: qemu-aarch64 -L /usr/aarch64-linux-gnu
       QEMU_LD_PREFIX: /usr/aarch64-linux-gnu
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
         with:
           targets: aarch64-unknown-linux-gnu
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: false
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143
       - name: Install aarch64 cross linker and QEMU user-mode emulator
         run: >-
-          apt-get update -qq &&
-          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends
+          sudo apt-get update -qq &&
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends
           gcc-aarch64-linux-gnu libc6-dev-arm64-cross qemu-user
       - name: Clear cached reports and state vectors
         run: >-
@@ -254,20 +281,22 @@ jobs:
       CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER: qemu-aarch64 -L /usr/aarch64-linux-gnu
       QEMU_LD_PREFIX: /usr/aarch64-linux-gnu
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
         with:
           targets: aarch64-unknown-linux-gnu
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: false
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143
       - name: Install aarch64 cross linker and QEMU user-mode emulator
         run: >-
-          apt-get update -qq &&
-          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends
+          sudo apt-get update -qq &&
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends
           gcc-aarch64-linux-gnu libc6-dev-arm64-cross qemu-user
       - name: Clear cached strict-bit evidence
         run: rm -rf target/strict-bits && mkdir -p target/strict-bits
@@ -296,11 +325,13 @@ jobs:
     name: clippy (-D warnings)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
         with:
           components: clippy
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: false
       - name: clippy (default — no DB)
@@ -310,9 +341,11 @@ jobs:
     name: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: false
       - name: cargo build (default — no DB)
@@ -322,9 +355,11 @@ jobs:
     name: rustdoc (-D warnings)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: false
       - name: cargo doc — libs (deny warnings)
@@ -340,9 +375,11 @@ jobs:
     name: cargo-deny
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
-      - uses: taiki-e/install-action@v2
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: cargo-deny
       - run: cargo deny check bans licenses sources
@@ -350,19 +387,21 @@ jobs:
   # The gate script, EXECUTED rather than parsed: a coverage backstop, not a parity check. If a
   # job above is ever weakened or deleted, the command still runs here on the same PR. Nothing
   # verifies mechanically that .agents/gate.sh and this file list the same commands; see the
-  # longer rationale in .github/workflows/ci.yml, which this job was ported from.
+  # longer rationale on the `gate` job in the frozen .github/workflows/ci.yml.
   gate:
     name: gate (light)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
         with:
           components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-bin: false
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143,cargo-deny,cargo-machete
       - name: Supported facade compiler contract

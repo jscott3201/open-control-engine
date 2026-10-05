@@ -402,8 +402,8 @@ class SourceTests(unittest.TestCase):
 
 class WiringTests(unittest.TestCase):
     def test_docs_script_changes_cannot_bypass_the_site_trigger(self):
-        workflow = (ROOT / ".forgejo/workflows/docs-pages.yml").read_text()
-        self.assertEqual(workflow.splitlines().count('      - "scripts/authority_claims/**"'), 1)
+        workflow = (ROOT / ".github/workflows/docs-pages.yml").read_text()
+        self.assertEqual(workflow.splitlines().count('      - "scripts/authority_claims/**"'), 2)
         self.assertIn("run: python3 scripts/authority_claims/check.py --check", workflow)
 
     def test_cli_requires_one_mode_and_rejects_paths(self):

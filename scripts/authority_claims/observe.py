@@ -36,7 +36,7 @@ class Repository:
         require(not name.startswith("/") and "\\" not in name and
                 all(p not in (".", "..") for p in parts) and
                 "/".join(parts) == name, "path: repository relative, normalized")
-        require(parts[0] in {"docs", "crates", "tools", "scripts", ".github", ".forgejo", "TESTING.md"}, "path: root")
+        require(parts[0] in {"docs", "crates", "tools", "scripts", ".github", "TESTING.md"}, "path: root")
         path = self.root
         for part in parts:
             path = path / part
