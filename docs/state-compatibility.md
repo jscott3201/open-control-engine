@@ -148,6 +148,33 @@ It is not a full compiled dependency closure, arbitrary-input guarantee, mathema
 macOS qualification. It therefore does **not** relax this state-placement policy. Local macOS
 passing tests do not supply the hosted Linux evidence or broaden either variant's claim.
 
+## Continuation of published Library rules
+
+`tests/library_rule_state_continuation.rs` runs two fault rules from open-control-library through
+the durable path exactly as a host would: `state_snapshot`, a host-envelope approval stand-in,
+`EngineStateSnapshot::from_bytes`, a freshly loaded engine and `restore_state` inside the startup
+window. The CXF graphs and vectors are unedited copies (`tests/fixtures/library_rules/`):
+
+- **AHU-0016** (simultaneous heating and cooling): a `Logical.TrueDelay` persistence timer of 900 s.
+- **AHU-0004** (excessive operating-state changes): `Integers.Change`, a 3600 s
+  `Reals.MovingAverage` window and a 3600 s `Logical.TrueDelay`.
+
+For all 16 scenarios, a restart after load and after every tick, and a chained restart after every
+tick, reproduce the uninterrupted run bit for bit: every boundary and internal output, and the full
+canonical state bytes. Named restarts land mid-dwell (AHU-0016 at 480 s, half way through the
+delay) and inside partly filled or draining windows (AHU-0004 at 900, 1800, 7800 and 11400 s); a
+cold start at the same point diverges in every case, so the restored state is load-bearing. The
+uninterrupted run also meets every Library expectation window. No block in either rule loses
+state across a restart.
+
+Restore continues **model time**; it does not decide what a gap in that time means. If the first
+frame after a restart arrives later than one tick after the snapshot, the restored blocks treat the
+gap as elapsed time: a satisfied `TrueDelay` counts the outage toward its delay, and
+`MovingAverage` integrates the first post-restart input over the whole gap (with AHU-0004, one
+state change seen across a one-hour gap reads as twelve). The same frames would do the same in an
+engine that never restarted. Choosing the resume time, and whether an outage is a gap, a cold start
+or a host `NO_EVAL` window, is host frame policy.
+
 ## Evidence map
 
 - `tests/state_contract.rs`: public inspection, changed bounds/units/quantities, historical wire
@@ -162,5 +189,9 @@ passing tests do not supply the hosted Linux evidence or broaden either variant'
   refusals and decode/capture resource checks.
 - `src/tests/state_portability_tests.rs`: all 15 actual target-bound class captures, independent
   arch/OS refusals, and artifacts consumed by the unchanged hosted state matrix.
+- `tests/library_rule_state_continuation.rs`: durable restart of two unedited Library fault rules
+  (persistence timer, moving window) at every tick, chained and mid-dwell, against an
+  uninterrupted run, with cold-start divergence controls and typed refusals on advanced or foreign
+  targets.
 - Existing continuation, family, lifecycle and Pre suites retain complete-frame continuation and
   current warning/state semantics. These tests qualify OCE boundaries, never host compliance.
