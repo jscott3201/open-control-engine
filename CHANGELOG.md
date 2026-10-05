@@ -614,7 +614,7 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Documentation and tooling
 
-- **CI moved back to GitHub Actions; Forgejo retired** (GitHub #PR). GitHub is the primary host
+- **CI moved back to GitHub Actions; Forgejo retired** (GitHub #334). GitHub is the primary host
   again for code, PRs, issues and CI. The per-PR gate is `.github/workflows/pr-gate.yml` (PRs into
   and pushes to `development`), alongside `release-gate.yml` (release PRs into and pushes to
   `main`, plus the daily `development`-tip run), `advisories.yml` and `docs-pages.yml`, which again
