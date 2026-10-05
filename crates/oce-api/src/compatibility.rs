@@ -92,7 +92,7 @@ impl fmt::Display for CompleteExportContentId {
 /// let receipt = oce_api::CompatibilityDescriptor::current(None)?;
 /// let bytes = receipt.to_string();
 /// assert!(bytes.starts_with("oce-compatibility:1\ncatalog-schema:1\n"));
-/// assert!(bytes.ends_with("oce-api-version:0.1.0\nexport:none\n"));
+/// assert!(bytes.ends_with("oce-api-version:0.2.0\nexport:none\n"));
 /// receipt.check_compatible(&receipt)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
