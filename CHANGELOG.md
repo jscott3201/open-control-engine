@@ -46,7 +46,7 @@ Prepared 2026-10-05 on `development`; the release date is the date the `v0.2.0` 
 
 ### Release
 
-- **Workspace version 0.2.0.** All 17 members and the internal path+version table move from 0.1.0;
+- **Workspace version 0.2.0** (GitHub #333). All 17 members and the internal path+version table move from 0.1.0;
   `CompatibilityDescriptor` reports `oce-api-version:0.2.0`, so persisted descriptor receipts and
   replay records from 0.1.0-labelled builds now refuse with a `Build` mismatch — which
   the fail-closed policy already required, since equal package strings were never build authority.
