@@ -1,0 +1,150 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "urn:cxf-library:ahu-fc-050#"
+  },
+  "@graph": [
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050",
+      "@type": "S231:Block",
+      "S231:label": "ahu_fc_050",
+      "S231:containsBlock": [
+        { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.htgThr" },
+        { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.clgThr" },
+        { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.bothOpen" },
+        { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.persist" }
+      ],
+      "S231:hasInput": [
+        { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.htg_vlv_cmd" },
+        { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.clg_vlv_cmd" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.yFault" }
+      ]
+    },
+
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.htgThr",
+      "@type": "urn:cxf-library:ahu-fc-050#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "htgThr",
+      "S231:hasParameter": { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.htgThr.t" },
+      "S231:hasInput": { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.htgThr.u" },
+      "S231:hasOutput": { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.htgThr.y" }
+    },
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.htgThr.t",
+      "S231:value": { "@value": "5.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.htgThr.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.htgThr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.bothOpen.u1" }
+    },
+
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.clgThr",
+      "@type": "urn:cxf-library:ahu-fc-050#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "clgThr",
+      "S231:hasParameter": { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.clgThr.t" },
+      "S231:hasInput": { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.clgThr.u" },
+      "S231:hasOutput": { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.clgThr.y" }
+    },
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.clgThr.t",
+      "S231:value": { "@value": "5.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.clgThr.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.clgThr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.bothOpen.u2" }
+    },
+
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.bothOpen",
+      "@type": "urn:cxf-library:ahu-fc-050#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "bothOpen",
+      "S231:hasInput": [
+        { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.bothOpen.u1" },
+        { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.bothOpen.u2" }
+      ],
+      "S231:hasOutput": { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.bothOpen.y" }
+    },
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.bothOpen.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.bothOpen.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.bothOpen.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.persist.u" }
+    },
+
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.persist",
+      "@type": "urn:cxf-library:ahu-fc-050#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "persist",
+      "S231:hasParameter": [
+        { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.persist.delayTime" },
+        { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.persist.delayOnInit" }
+      ],
+      "S231:hasInput": { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.persist.u" },
+      "S231:hasOutput": { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.persist.y" }
+    },
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.persist.delayTime",
+      "S231:value": { "@value": "900.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.persist.delayOnInit",
+      "S231:value": { "@value": "true", "@type": "http://www.w3.org/2001/XMLSchema#boolean" }
+    },
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.persist.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.persist.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.yFault" }
+    },
+
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.htg_vlv_cmd",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.htgThr.u" }
+    },
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.clg_vlv_cmd",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.clgThr.u" }
+    },
+    {
+      "@id": "urn:cxf-library:ahu-fc-050#ahu_fc_050.yFault",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    }
+  ]
+}
