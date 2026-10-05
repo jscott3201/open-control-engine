@@ -1,7 +1,7 @@
-# cargo-nextest configuration for the QEMU-emulated aarch64 legs of the Forgejo per-PR gate.
+# cargo-nextest configuration for the QEMU-emulated aarch64 legs of the per-PR gate.
 #
-# Passed explicitly with `--config-file` by .forgejo/workflows/ci.yml, and ONLY for runs built with
-# `--target aarch64-unknown-linux-gnu`; it replaces .config/nextest.toml for those runs and for
+# Passed explicitly with `--config-file` by .github/workflows/pr-gate.yml, and ONLY for runs built
+# with `--target aarch64-unknown-linux-gnu`; it replaces .config/nextest.toml for those runs and for
 # nothing else. .config/nextest.toml is itself a bound source of the retained strict-bit evidence
 # (crates/oce-conformance/tests/strict_bits/evidence.rs), so the emulated legs get their own file
 # rather than an edit there.

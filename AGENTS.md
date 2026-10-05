@@ -48,23 +48,22 @@ unpublish it.
 
 ## 🌐 Hosting, CI, and issues
 
-- **Forgejo is the primary host.** The git remote `origin` is the self-hosted Forgejo instance:
-  branches, pull requests, reviews, merges and CI all happen there.
-- **GitHub (`github.com/jscott3201/open-control-engine`) is a public push mirror.** Forgejo pushes
-  to it; never push branches or tags to GitHub directly, and do not open pull requests there.
-  GitHub Actions is disabled on the mirror.
-- **Public issues are tracked on GitHub** and synced with Forgejo. Public-facing links (README,
-  docs site, security reporting, crate metadata) keep pointing at github.com.
-- **CI is Forgejo Actions**, defined in `.forgejo/workflows/` (Linux only). Forgejo ignores
-  `.github/workflows/` whenever `.forgejo/workflows/` exists. The single required status is
-  `ci / CI OK (pull_request)` on `development` and `release-gate / CI OK (pull_request)` on `main`.
-- What stays in `.github/workflows/`: `release.yml` (crates.io publish; tag verify / manual
-  publish), `docs-pages.yml` (manual GitHub Pages publish), the two manual OpenModelica evidence
-  workflows (they need a native arm64 runner and are hash-bound by their evidence manifests), and a
-  dormant `ci.yml` that must stay byte-identical because it is a bound source of the retained
-  strict-bit evidence. None of them run while Actions is disabled on the mirror.
-- Use the Forgejo web UI or API (or `tea`) for PR operations; `gh pr ...` talks to the mirror and
-  is the wrong tool for branches and PRs.
+- **GitHub is the primary host.** `github.com/jscott3201/open-control-engine` is `origin`:
+  branches, pull requests, reviews, merges, issues and CI all happen there. The self-hosted Forgejo
+  instance that was primary until October 2026 is retired; nothing pushes to or from it.
+- **CI is GitHub Actions**, defined in `.github/workflows/` (Linux only). The single required
+  status is `CI OK` — from `pr-gate.yml` on `development` and from `release-gate.yml` on `main`.
+  `advisories.yml` runs daily, `docs-pages.yml` validates docs PRs and publishes `main` to GitHub
+  Pages, `release.yml` keeps its tag-verify / manual-publish split, and the two manual OpenModelica
+  evidence workflows run on native arm64 runners.
+- **`.github/workflows/ci.yml` is not the CI.** It is the GitHub-era gate that produced the
+  retained native strict-bit captures and must stay byte-identical because it is a bound source of
+  that evidence. It is disabled in the repository's Actions settings; do not edit, re-enable or
+  delete it outside a deliberate native-evidence refresh.
+- **PR numbers:** GitHub PR numbers overlap the retired Forgejo numbering: Forgejo #332 (the
+  Forgejo CI port) and GitHub #332 are different changes. Bare `(#N)` citations predate the move;
+  cite every PR merged on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
+- Use `gh` (or the GitHub web UI / API) for PR operations.
 
 ---
 
@@ -100,10 +99,10 @@ you cloned this repo, you will not find them, and that is expected.
   advisories), and
   a green local run is not a green CI. That script is the single source of truth for gate commands —
   do not restate them here or anywhere else, and change one only by changing
-  `.forgejo/workflows/ci.yml` first. Nine
+  `.github/workflows/pr-gate.yml` first. Nine
   divergent copies of the command list existed before it was written, two of them materially
-  weaker than CI. A tenth divergence appeared later and in the other direction: `ci.yml` grew a
-  `gate (light)` step the script did not have, so the required check existed but no local run
+  weaker than CI. A tenth divergence appeared later and in the other direction: the CI workflow
+  grew a `gate (light)` step the script did not have, so the required check existed but no local run
   performed it. When they disagree, check which one is behind before assuming it is the script.
 - **CI is dev-light / release-heavy.** The per-PR gate into `development` runs engine tests for
   **`oce-api`, `oce-blocks`, and `oce-expr`** (the `determinism-matrix` job, x86_64 native and
