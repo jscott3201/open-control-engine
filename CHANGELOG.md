@@ -25,6 +25,10 @@ What actually establishes currency is a comparison, run at promotion: list the P
 `development` since the last release, and check that each number appears below.
 Every squash-merge subject on `development` ends in `(#N)`, so
 `git log --oneline origin/main..origin/development` against a grep of this file is enough.
+
+GitHub PR numbers collide with the retired Forgejo numbering, so PRs merged on GitHub are cited
+as `(GitHub #N)`; bare `(#N)` citations predate the move, and the Forgejo CI port is cited as
+`(Forgejo #332)` to keep it apart from GitHub #332.
 Deliberately not a CI gate — judging whether a change was notable is the part no check can do,
 and a gate that accepted any text would restore exactly the false assurance described above.
 
@@ -610,9 +614,18 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Documentation and tooling
 
-- **CI moved to Forgejo Actions** (#332). Forgejo is now the primary host and the GitHub repository
-  a public push mirror with Actions disabled. The per-PR gate, release gate, advisories scan and
-  docs-site PR validation run from `.forgejo/workflows/` on one Linux x86_64 runner, each gating
+- **CI moved back to GitHub Actions; Forgejo retired** (GitHub #334). GitHub is the primary host
+  again for code, PRs, issues and CI. The per-PR gate is `.github/workflows/pr-gate.yml` (PRs into
+  and pushes to `development`), alongside `release-gate.yml` (release PRs into and pushes to
+  `main`, plus the daily `development`-tip run), `advisories.yml` and `docs-pages.yml`, which again
+  validates docs PRs and publishes `main` to Pages. Each gating workflow keeps its single `CI OK`
+  status and the emulated aarch64 legs; actions in those workflows are pinned to commit SHAs with
+  read-only token permissions, and `check-workflow-gates.sh` now refuses a tag-referenced action.
+  `.github/workflows/ci.yml` stays byte-frozen as a bound strict-bit source and is disabled in the
+  Actions settings; `.forgejo/workflows/` is removed.
+- **CI moved to Forgejo Actions** (Forgejo #332). Forgejo became the primary host and the GitHub
+  repository a public push mirror with Actions disabled. The per-PR gate, release gate, advisories
+  scan and docs-site PR validation run from `.forgejo/workflows/` on one Linux x86_64 runner, each gating
   workflow summarized by a single `CI OK` status. The aarch64 legs of the determinism and
   strict-bit matrices now run under QEMU user-mode emulation, which keeps the cross-architecture
   comparisons per PR but is not native aarch64 evidence; the retained native receipt is still

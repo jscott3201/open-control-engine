@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# One Linux strict-bit cell of the Forgejo per-PR gate: two independent capture processes, a
+# One Linux strict-bit cell of the per-PR gate (pr-gate.yml): two independent capture processes, a
 # byte-for-byte repeat comparison, then the exact signal wiring, corpus firewall and mutation
 # controls — the same commands the GitHub-era `strict-bit-matrix` job ran per native runner.
 #
 #   bash scripts/ci/strict-bits-cell.sh <x86_64|aarch64> <debug|release>
 #
 # x86_64 runs natively on the runner. aarch64 is cross-compiled and executed under QEMU user-mode
-# emulation (see .forgejo/workflows/ci.yml for the toolchain setup): it exercises the aarch64
+# emulation (see .github/workflows/pr-gate.yml for the toolchain setup): it exercises the aarch64
 # codegen and the byte-exact cross-cell comparison on every PR, but it is emulated evidence, not a
 # native aarch64 capture, and is never admitted as native qualification.
 #
