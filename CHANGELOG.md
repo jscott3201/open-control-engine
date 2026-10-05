@@ -455,7 +455,7 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Verification
 
-- **Durable state continuation is proven over two published Library fault rules** (#PR). A new
+- **Durable state continuation is proven over two published Library fault rules** (GitHub #332). A new
   `oce-api` test loads AHU-0016 (TrueDelay) and AHU-0004 (MovingAverage plus TrueDelay) from
   byte-copied Library fixtures, snapshots after every tick (single and chained restarts), restores
   into a freshly loaded engine through `EngineStateSnapshot::from_bytes` and `restore_state`, and
