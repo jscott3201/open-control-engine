@@ -61,9 +61,10 @@ Prepared 2026-10-05 on `development`; the release date is the date the `v0.2.0` 
 - **The release-compatibility candidate is re-selected at the version bump.** The retained matrix
   now names that commit as the current implementation baseline and 0.2.0 as the current package
   against the historical 0.1.0 pin; its 36 directed rows and the no-N-1 policy are unchanged.
-- **The retained native strict-bit receipt must be refreshed before release.** The receipt binds
-  `Cargo.toml` and `Cargo.lock` bytes, so the version bump requires a new native Linux
-  x86_64/aarch64 capture and admission per [strict-bit evidence](docs/strict-bit-evidence.md).
+- **The retained native strict-bit receipt is refreshed for 0.2.0.** The receipt binds
+  `Cargo.toml` and `Cargo.lock` bytes, so the version bump took a new native Linux
+  x86_64/aarch64 capture (run 37382761120, zero mismatches, byte-identical repeats) admitted
+  data-only per [strict-bit evidence](docs/strict-bit-evidence.md); no bound source changed.
 
 ### Facade contraction
 

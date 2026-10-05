@@ -57,6 +57,6 @@
     {"path": "scripts/release_compatibility/test_check.py", "sha256": "8da906453654ad9cff33a5985a9ad060153a9f37d849c26144d4a4ad054e5374"},
     {"path": "crates/oce-api/tests/release_compatibility.rs", "sha256": "03d7ec40212d2bab1fcfca9548ba099d77ede9b30cc3483c64150528781f7815"},
     {"path": "crates/oce-conformance/tests/strict_bits/matrix.rs", "sha256": "b393a049a95ae3659f4ee7ccb0cb71413220bf9229795640947fcc50a2a4fc72"},
-    {"path": "crates/oce-conformance/tests/fixtures/strict_bits/receipts.json", "sha256": "38ce7dd96d098b30b8a35dbe6f66b9718a39bc200813150ea4a3984d3ac4bf00"}
+    {"path": "crates/oce-conformance/tests/fixtures/strict_bits/receipts.json", "sha256": "56ca2a8a989cd240f688e556bcb29f9aa5e5f4f934250f607af4ecbd52e62f4d"}
   ]
 }

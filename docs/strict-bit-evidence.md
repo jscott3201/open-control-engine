@@ -3,7 +3,7 @@
 ## Status and claim boundary
 
 **Accepted native Linux corpus evidence:** [receipt data](../crates/oce-conformance/tests/fixtures/strict_bits/receipts.json)
-identifies the native matrix from run **35494403523**, with an exact, reviewed **35-file selected
+identifies the native matrix from run **37382761120**, with an exact, reviewed **35-file selected
 source boundary** covering checker/admission/comparison/workflow/direct formula/harness and
 supporting sources. The ordinary retained-qualification test requires every enumerated path and
 digest alongside the eight raw captures and reference/input inventory. This is not a complete
@@ -28,36 +28,50 @@ conservative/unqualified until M06-PR02; macOS and all other unqualified targets
 
 ## Accepted native receipt
 
-- [GitHub Actions run 35494403523](https://github.com/jscott3201/open-control-engine/actions/runs/35494403523)
+- [GitHub Actions run 37382761120](https://github.com/jscott3201/open-control-engine/actions/runs/37382761120)
   produced all eight native captures with the selected 35-file map and a successful cross-cell comparison.
-- The run head was `d57e946126af76ed58ff10cef1e35ffbb627832f`. All captures preserve GitHub's
-  actual synthetic PR merge checkout `d16d69a49857ea9abd35a12643e83139ca5c6a6f`, not the run head
+  It was collected for the workspace 0.2.0 version bump (GitHub #333), whose `Cargo.toml` and
+  `Cargo.lock` bytes are bound sources; no checker, workflow, math or harness source changed.
+- The run head was `f8dcaeb861fa18ef4c720b6fa2963b026f3a8300`. All captures preserve GitHub's
+  actual synthetic PR merge checkout `fbae3b96b053836b916f603a0d86c53d30bce628`, not the run head
   or a later delivery commit. Each capture binds **35 source digests, 21 signals and 161 samples**.
 - rustc: `1.97.1 (8bab26f4f 2026-07-14)`; libm: `0.2.16`; baseline repository codegen,
   without custom `RUSTFLAGS` or `CARGO_ENCODED_RUSTFLAGS`.
 - Uploaded assembled artifact archive digest:
-  `sha256:fc1a658c71f1b372767aa576bc5100b74c1dd697b4f63f3394fa8bc70d18e426`.
+  `sha256:0c94225cc2499e577cb597d0c36cbee138fc88bb65791872f1deb5c38e6b6576`.
 - Downloaded `matrix.json` SHA-256:
-  `3f6f9efe8e4f9980a790c1a0d8eba1143111a6ae9138f0d486cca841aa19b7fc`;
+  `78c5efaf4881977d306fc1f7a09c51f37cf897be338558d14aee9c2313d035d9`;
   its comparison is `{"Ok":[]}`. The retained test reconstructs this exact aggregate from the
   eight canonical capture files and verifies the digest, without storing a redundant ninth copy.
+  Each per-cell upload (`strict-bits-<runner>-<codegen>`) is byte-identical to its two files in the
+  assembled artifact.
 
 | Native cell | SHA-256 of both first and repeat capture |
 | --- | --- |
-| Linux aarch64 debug | `e3769fb07630f2f1ea43101090b26416738c9b7c47e2519baa94d1f4ad2f7f5e` |
-| Linux aarch64 release | `efcd3e1b7d88f2fff87abd9aa9adad24cc27e09c84f1112c552e4c1d8f42b747` |
-| Linux x86_64 debug | `303654001e84d3dc4153cb38632a19fda0b0724e92ddcaf1c966387bbcf3dc9a` |
-| Linux x86_64 release | `2f2703e20d5a119f2ff9df8f7fa013c6f6cf520571d64a1a74a928968eca6485` |
+| Linux aarch64 debug | `6ed52dfdeaeb04d8c270943ec8bd594c7383aa5fc37cd8beff9446d675a78751` |
+| Linux aarch64 release | `f97c6d8c257ab632a1685268a6a350bc46b55ebc5bd4c685b0d8b51ec9588442` |
+| Linux x86_64 debug | `84d66c267e71f7f5e7ac02e7050fee99cf33ffca9b18bd81389fd7144e9368b2` |
+| Linux x86_64 release | `81087ece58ea985d0d11cf79df78fefe7163b0180f2b8aa05d07902a5d6772d4` |
 
 The collection run was intentionally **not a final green CI run**: at collection time the new
 receipt had not been admitted. Each normal cell suite failed only its required receipt-admission
-check, the cross-cell job failed only its subsequent cell-success check, and `gate (light)` failed
-the strict-qualification prerequisite. Capture and cross-cell numerical comparison succeeded;
-their artifacts are evidence of that bounded result, not evidence that every hosted gate passed.
-Data-only admission now satisfies the ordinary retained check without changing any bound source.
-Final hosted gate status remains a separate delivery check.
+check (`source digest changed: Cargo.lock`), the cross-cell job failed only its subsequent
+cell-success check, and `gate (light)` failed the strict-qualification prerequisite. Capture and
+cross-cell numerical comparison succeeded; their artifacts are evidence of that bounded result, not
+evidence that every hosted gate passed. Data-only admission now satisfies the ordinary retained
+check without changing any bound source. Admission also updates the `receipts.json` evidence digest
+in the [release-compatibility matrix](release-compatibility.json), which binds receipt bytes but is
+not itself a strict-bit bound source. Final hosted gate status remains a separate delivery check.
 
 ### Historical receipts
+
+Run [35494403523](https://github.com/jscott3201/open-control-engine/actions/runs/35494403523)
+(head `d57e946126af76ed58ff10cef1e35ffbb627832f`, synthetic merge
+`d16d69a49857ea9abd35a12643e83139ca5c6a6f`, `matrix.json` SHA-256
+`3f6f9efe8e4f9980a790c1a0d8eba1143111a6ae9138f0d486cca841aa19b7fc`) was the previous current
+receipt over the same 35-file boundary. Its eight captures were replaced in `qualified-linux/` by
+the run above and remain readable in Git history; the receipt schema keeps one historical and one
+current entry, so it is not separately pinned.
 
 The [original Linux captures](../crates/oce-conformance/tests/fixtures/strict_bits/linux/) remain
 unchanged historical evidence, separately pinned by `receipts.json.historical`:
@@ -80,7 +94,7 @@ unchanged historical evidence, separately pinned by `receipts.json.historical`:
 The historical receipt test reconstructs that aggregate verbatim. Its 17-source map omitted
 semantic capture/comparison/admission code now required by the selected 35-file admission boundary.
 The otherwise successful exact-head run 35493024355 used the same smaller source map;
-neither replaces the current selected-boundary receipt from run 35494403523. No old
+neither replaces the current selected-boundary receipt from run 37382761120. No old
 raw file, Git revision, source map or candidate label is rewritten to imply those sources were captured then.
 
 The active current-qualification test validates the admitted selected-boundary receipt and all four
@@ -169,7 +183,8 @@ code. This avoids both a self-hash fixed point and a matrix-digest cycle; it is 
 The current receipt was admitted through the explicit admission test with `OCE_STRICT_MATRIX_DIR`
 naming the download. It validated the selected source entries, reference/input data and the exact aggregate
 before creating `qualified-linux/`; all eight retained files equal the downloaded bytes. The test
-refuses CI and replacement of an existing directory. `linux/` and `corpus.json` remain unchanged
+refuses CI and replacement of an existing directory, so a refresh first removes the previous
+`qualified-linux/` (preserved in Git history) and then admits the new download. `linux/` and `corpus.json` remain unchanged
 history. A bound-source change after the native run needs another native run; receipt-only admission
 does not. No environment switch or historical-source exception bypasses current qualification.
 

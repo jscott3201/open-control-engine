@@ -7,16 +7,18 @@ Tier-A goldens and all original captures remain unchanged.
 
 ## Current qualification
 
-`qualified-linux/` retains the eight canonical native captures from Actions run **35494403523**:
+`qualified-linux/` retains the eight canonical native captures from Actions run **37382761120**:
 Linux x86_64/aarch64 × debug/release × first/repeat. Each contains all 21 signals and 161
 samples, plus the reviewed **35-file selected source map**; there are zero mismatches and every
 first/repeat pair is byte-identical. rustc is 1.97.1 and libm is 0.2.16. All files preserve the observed
-synthetic PR merge checkout `d16d69a49857ea9abd35a12643e83139ca5c6a6f` for run head
-`d57e946126af76ed58ff10cef1e35ffbb627832f`. `receipts.json.current` pins that revision and
+synthetic PR merge checkout `fbae3b96b053836b916f603a0d86c53d30bce628` for run head
+`f8dcaeb861fa18ef4c720b6fa2963b026f3a8300`. `receipts.json.current` pins that revision and
 the reconstructed `matrix.json` SHA-256
-`3f6f9efe8e4f9980a790c1a0d8eba1143111a6ae9138f0d486cca841aa19b7fc`.
+`78c5efaf4881977d306fc1f7a09c51f37cf897be338558d14aee9c2313d035d9`.
 The uploaded assembled artifact archive digest is
-`sha256:fc1a658c71f1b372767aa576bc5100b74c1dd697b4f63f3394fa8bc70d18e426`.
+`sha256:0c94225cc2499e577cb597d0c36cbee138fc88bb65791872f1deb5c38e6b6576`.
+It replaced the run 35494403523 captures (Git history) after the 0.2.0 version bump changed the
+bound `Cargo.toml`/`Cargo.lock` bytes.
 
 The ordinary retained-qualification test now validates the admitted receipt, all raw samples,
 native topology, repeats, all 35 selected paths/digests and oracle/input/CXF integrity. No bound
