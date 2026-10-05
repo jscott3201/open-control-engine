@@ -152,6 +152,23 @@ no CI/release workflow or strict-bit guard changes are needed. Run the actual re
 [the gate script](../.agents/gate.sh); source/digest equality never substitutes for behavioral runs.
 Coordinated edits to checker and evidence are a review boundary, not a cryptographic security defense.
 
+## Published compatibility manifest
+
+[`compatibility-manifest.json`](compatibility-manifest.json) is the artifact attached to a tagged
+release. It lists, for the tagged source: the canonical public descriptor and its fields; each
+contract domain's schema revision with an FNV-1a-128 tag over the packaged schema bytes; the CXF
+import contract, document byte limit, vendored CDL source commits and composite rule ids; the
+`cxf:fnv1a128` content-id scheme and the catalog content id; the content id (or, for an export
+with deferral warnings, the byte tag and warning count) of every document in the swept G36 CXF
+corpus; the state and replay format revisions; and the selected release-compatibility baseline.
+
+The [owner test](../crates/oce-api/tests/compatibility_manifest.rs) derives every value from the
+facade and repository data, cross-checks the matrix descriptor against the live one, and compares
+the file byte-for-byte. Regenerate it with `OCE_BLESS=1` only together with the change that moved
+a fact. A moved corpus content id means exported CXF bytes changed, which churns every downstream
+record of an exported content id. The manifest describes one candidate; it grants no compatibility
+beyond the policy above, and its FNV tags are integrity tags, not signatures.
+
 ## Future RC release-note template
 
 Copy this section as a checklist for a separately authorized RC, not as a release announcement:
