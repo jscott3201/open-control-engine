@@ -1,4 +1,4 @@
-//! Source-verified G36 ReliefFanGroup composite import tests.
+//! Source-transcribed G36 ReliefFanGroup composite import tests.
 
 mod bless;
 
@@ -112,7 +112,7 @@ fn block_param<'a>(graph: &'a ModelGraph, instance_suffix: &str, name: &str) -> 
 }
 
 #[test]
-fn source_verified_g36_multizone_vav_relief_fan_group_imports_source_default_variant() {
+fn source_transcribed_g36_multizone_vav_relief_fan_group_imports_source_default_variant() {
     let parsed: JsonValue = serde_json::from_str(G36_RELIEF_FAN_GROUP).expect("G36 fixture JSON");
     let top = parsed["@graph"]
         .as_array()
@@ -246,6 +246,6 @@ fn golden_g36_multizone_vav_relief_fan_group_modelgraph() {
         .expect("golden snapshot missing; regenerate with OCE_BLESS=1");
     assert_eq!(
         actual, expected,
-        "source-verified G36 ReliefFanGroup ModelGraph diverged from golden"
+        "source-transcribed G36 ReliefFanGroup ModelGraph diverged from golden"
     );
 }

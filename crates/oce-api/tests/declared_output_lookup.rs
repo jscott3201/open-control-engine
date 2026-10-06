@@ -1,21 +1,17 @@
-//! Characterization of the declared boundary-output identity space on the facade lookup
-//! surfaces, plus a no-drift capture of the surfaces that must NOT move with it.
+//! Declared boundary-output identity across latest-state inspection and completed receipts.
 //!
 //! A CXF root `S231:hasOutput` declares a composite's output contract. This suite derives that
 //! declared-IRI set per fixture with a plain `serde_json` walk that shares no helper with
-//! `oce-cxf`, then records, for every declared IRI, the outcome on all three lookup surfaces —
-//! `get_output`, `watch`, and `simulate(CollectSpec::Named)` — and the `set_input` refusal.
+//! `oce-cxf`, then checks `get_output`, `watch`, completed boundary membership, and input refusal.
 //!
-//! The no-drift capture pins the surfaces the boundary-output facade slice must leave
-//! byte-identical: `point_list(None)` rows, `Outputs::to_map` keys, `io_summary()`, and one
-//! `step_realtime` `StepReport.written` count per fixture. Those unchanged bytes are the
-//! falsifiable proof that the D2 (rows) and D3 (durable keys) fences held.
+//! The inventory capture is regression evidence for point rows and summaries, not a Store-write
+//! receipt or numerical oracle. There is no engine write-back surface.
 
 use std::fs;
 use std::path::PathBuf;
 
 use oce_api::oce_store::Store;
-use oce_api::{CollectSpec, Engine, InputSource, OcError, SimSpec, Value};
+use oce_api::{Engine, OcError, Value};
 
 /// Every declared boundary output resolves on the lookup surfaces: the pass-through class owns
 /// a real connector carrying the declared IRI, and the elided class resolves through the
@@ -136,22 +132,29 @@ fn declared_outputs(bytes: &[u8]) -> Vec<DeclaredOutputExpectation> {
         .collect()
 }
 
-/// The `simulate(CollectSpec::Named)` outcome for one key: `Ok` iff the key resolves. Runs a
-/// one-tick horizon on a fresh load so the probe cannot leak state into any other probe.
-fn named_collect_resolves(path: &PathBuf, key: &str) -> Result<(), OcError> {
+/// Completed boundary membership under synthetic complete in-domain observations.
+fn completed_output_resolves(path: &PathBuf, key: &str) -> bool {
     let (_, _, mut engine) = load_fixture(path);
-    engine
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop: 0.0,
-            step: 1.0,
-            inputs: InputSource::None,
-            collect: CollectSpec::Named {
-                points: vec![key.to_owned()],
-                stride: 1,
-            },
+    let inputs: Vec<_> = engine
+        .input_definitions()
+        .unwrap()
+        .into_iter()
+        .map(|d| {
+            let value = d.min.unwrap_or_else(|| d.value_type.zero_value());
+            (d.path, value)
         })
-        .map(|_| ())
+        .collect();
+    let entries: Vec<_> = inputs
+        .iter()
+        .map(|(p, v)| (p.as_str(), v.clone()))
+        .collect();
+    let prepared = engine.prepare_frame(0.0, &entries).unwrap();
+    engine
+        .execute_frame(prepared)
+        .unwrap()
+        .outputs()
+        .iter()
+        .any(|(path, _)| path == key)
 }
 
 #[test]
@@ -166,12 +169,12 @@ fn declared_output_lookup_outcome_is_uniform_across_the_three_surfaces() {
 
             let get_output_ok = engine.get_output(iri).is_ok();
             let watch_ok = engine.watch(&[iri]).is_ok();
-            let named_ok = named_collect_resolves(&fixture, iri).is_ok();
+            let named_ok = completed_output_resolves(&fixture, iri);
             assert_eq!(
                 (get_output_ok, watch_ok, named_ok),
                 (expect_ok, expect_ok, expect_ok),
                 "{fixture_name}: declared output {iri} must be {} on ALL THREE lookup surfaces \
-                 (get_output, watch, CollectSpec::Named)",
+                 (get_output, watch, CompletedFrame)",
                 if expect_ok { "Ok" } else { "UnknownPoint" }
             );
             if !expect_ok {
@@ -201,12 +204,12 @@ fn declared_output_lookup_outcome_is_uniform_across_the_three_surfaces() {
 }
 
 #[test]
-fn set_input_refuses_every_declared_output_name() {
+fn boundary_output_names_are_never_input_determinants() {
     // The alias space is output-only (R18-2): a declared output name must never stage an input.
     // This holds before and after the boundary-output facade slice.
     let mut probed = 0usize;
     for fixture in corpus_fixtures() {
-        let (fixture_name, bytes, mut engine) = load_fixture(&fixture);
+        let (fixture_name, bytes, engine) = load_fixture(&fixture);
         for expectation in declared_outputs(&bytes) {
             let iri = expectation.iri.as_str();
             // Assert the error CLASS and subject, not merely `is_err()`: an implementation that
@@ -214,11 +217,10 @@ fn set_input_refuses_every_declared_output_name() {
             // `InputType` — still an error, but the output-only contract would be gone.
             assert!(
                 matches!(
-                    engine.set_input(iri, Value::Real(1.0)),
-                    Err(OcError::UnknownPoint(ref p)) if p == iri
+                    engine.prepare_frame(0.0, &[(iri, Value::Real(1.0))]),
+                    Err(OcError::FrameNotInput { prefix, bytes }) if iri.starts_with(&prefix) && bytes == iri.len()
                 ),
-                "{fixture_name}: set_input({iri}) must refuse a declared output name as \
-                 UnknownPoint naming the key"
+                "{fixture_name}: preparation must refuse output {iri} before completeness/type checks"
             );
             probed += 1;
         }
@@ -226,17 +228,16 @@ fn set_input_refuses_every_declared_output_name() {
     assert_eq!(
         probed,
         RESOLVABLE_DECLARED_OUTPUTS + UNRESOLVABLE_DECLARED_OUTPUTS,
-        "set_input negative probe count moved"
+        "output-as-input negative probe count moved"
     );
 }
 
-/// Deterministic render of the surfaces the slice must not move: `point_list(None)` rows,
-/// `to_map` keys, `io_summary()`, and one `step_realtime` written count.
+/// Deterministic render of unchanged point inventory and summaries, without execution or write-back.
 fn no_drift_render() -> String {
     use std::fmt::Write as _;
     let mut out = String::new();
     for fixture in corpus_fixtures() {
-        let (fixture_name, _bytes, mut engine) = load_fixture(&fixture);
+        let (fixture_name, _bytes, engine) = load_fixture(&fixture);
         let _ = writeln!(out, "fixture: {fixture_name}");
         let io = engine.io_summary();
         let _ = writeln!(
@@ -258,22 +259,14 @@ fn no_drift_render() -> String {
                 row.path, row.direction, row.value_type, row.io_class
             );
         }
-        let keys = engine.outputs().to_map();
-        let _ = writeln!(out, "to_map: {}", keys.len());
-        for (key, _) in &keys {
-            let _ = writeln!(out, "  {key}");
-        }
-        engine.set_realtime_epoch_unix_nanos(1_700_000_000_000_000_000);
-        let report = engine.step_realtime(0.0).expect("one realtime step");
-        let _ = writeln!(out, "step_realtime_written: {}", report.written);
     }
     out
 }
 
 #[test]
-fn control_surfaces_match_the_no_drift_capture_byte_exactly() {
-    let capture_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/fixtures/declared_output_no_drift.txt");
+fn inventory_matches_the_capture_byte_exactly() {
+    let capture_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/point_inventory.txt");
     let actual = no_drift_render();
     if oce_bless::enabled("OCE_BLESS") {
         fs::write(&capture_path, &actual).expect("write no-drift capture");
@@ -283,7 +276,6 @@ fn control_surfaces_match_the_no_drift_capture_byte_exactly() {
         .expect("no-drift capture missing; regenerate deliberately with OCE_BLESS=1");
     assert_eq!(
         actual, expected,
-        "a control surface moved: point_list rows, to_map keys, io_summary, or \
-         step_realtime written drifted from the base capture — the D2/D3 fence did not hold"
+        "point_list rows or io_summary drifted from the inventory capture"
     );
 }

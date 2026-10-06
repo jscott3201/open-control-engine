@@ -1,9 +1,9 @@
-//! CDL.Integers (exact i64 arithmetic / comparators / counters) + CDL.Conversions
-//! (`_spec/03` §4.2, §4.4; `_spec/02` §2.1 Integer=i64; CDL §7.x).
+//! CDL.Integers (arithmetic / comparators / counters) + CDL.Conversions.
 //!
-//! Integer math is exact two's-complement i64 (no IEEE rounding); the only rounding-bearing paths
-//! are the Real conversions (IntegerToReal at 2^53+1, BooleanToReal selecting non-dyadic
-//! constants). Derived solely from the spec — never from `oce-blocks`.
+//! Integer inputs and results stay in the portable signed-32-bit domain recommended by OBC CDL
+//! §7.4.1.2 / Modelica 3.6 §4.8.2. The oracle calculates in i64; implementation-only wide/wrap
+//! probes belong in block unit tests, not these CSV conformance vectors. IntegerToReal is exact
+//! throughout this domain. Derived solely from the spec — never from `oce-blocks`.
 
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
@@ -75,7 +75,7 @@ fn integer_arithmetic() -> Vec<Golden> {
     }
     // Subtract.
     {
-        let u1 = [5_i64, -2147483648, 0, 2147483647];
+        let u1 = [5_i64, -2147483648, 0, 2147483646];
         let u2 = [12_i64, -2147483647, -7, -1];
         let y: Vec<Sample> = u1.iter().zip(u2).map(|(&a, c)| i(a - c)).collect();
         out.push(
@@ -85,16 +85,16 @@ fn integer_arithmetic() -> Vec<Golden> {
                 ValueKind::Integer,
                 ticks(4),
                 y,
-                "u1=[5,-2147483648,0,2147483647], u2=[12,-2147483647,-7,-1]",
-                "y = u1 - u2 (exact i64 sub); _spec/03 §4.2 Subtract",
+                "u1=[5,-2147483648,0,2147483646], u2=[12,-2147483647,-7,-1]; final result is i32::MAX",
+                "y = u1 - u2; operands and results stay in the portable i32 domain; CDL.Integers.Subtract",
             )
             .with_inputs(vec![input_i("u1", u1), input_i("u2", u2)]),
         );
     }
     // Multiply.
     {
-        let u1 = [7_i64, -6, 46341, 0];
-        let u2 = [-8_i64, -9, 46341, 2147483647];
+        let u1 = [7_i64, -6, 46340, 0];
+        let u2 = [-8_i64, -9, 46340, 2147483647];
         let y: Vec<Sample> = u1.iter().zip(u2).map(|(&a, c)| i(a * c)).collect();
         out.push(
             Golden::new(
@@ -103,8 +103,8 @@ fn integer_arithmetic() -> Vec<Golden> {
                 ValueKind::Integer,
                 ticks(4),
                 y,
-                "u1=[7,-6,46341,0], u2=[-8,-9,46341,2147483647]; 46341^2 exceeds i32, exact in i64",
-                "y = u1 * u2 (exact i64 mul); _spec/03 §4.2 Multiply",
+                "u1=[7,-6,46340,0], u2=[-8,-9,46340,2147483647]; 46340 is the largest integer whose square fits i32",
+                "y = u1 * u2; operands and results stay in the portable i32 domain; CDL.Integers.Multiply",
             )
             .with_inputs(vec![input_i("u1", u1), input_i("u2", u2)]),
         );
@@ -130,15 +130,15 @@ fn integer_arithmetic() -> Vec<Golden> {
     // Abs.
     {
         let u = [
-            -9007199254740992_i64,
-            -4503599627370496,
+            -2147483647_i64,
+            -2147483646,
             -2,
             -1,
             0,
             1,
             2,
-            4503599627370496,
-            9007199254740992,
+            2147483646,
+            2147483647,
         ];
         let y: Vec<Sample> = u.iter().map(|&x| i(x.abs())).collect();
         out.push(
@@ -148,8 +148,8 @@ fn integer_arithmetic() -> Vec<Golden> {
                 ValueKind::Integer,
                 ticks(9),
                 y,
-                "u=[-2^53,-2^52,-2,-1,0,1,2,2^52,2^53]; negatives, zero, positives, ±2^53 boundary",
-                "y = abs(u) (wrapping at i64::MIN, but MIN is outside conformance range ±2^53); _spec/03 §4.2 Abs",
+                "u=[-2147483647,-2147483646,-2,-1,0,1,2,2147483646,2147483647]; signs, zero, and representable magnitude boundaries",
+                "y = abs(u); exclude i32::MIN because its positive magnitude is outside portable i32; CDL.Integers.Abs",
             )
             .with_inputs(vec![input_i("u", u)]),
         );
@@ -286,10 +286,10 @@ fn integer_comparators() -> Vec<Golden> {
             2_147_483_647,
             -2_147_483_648,
             2_147_483_647,
-            9_007_199_254_740_992,
-            9_007_199_254_740_992,
-            -9_007_199_254_740_992,
-            -9_007_199_254_740_992,
+            2_147_483_646,
+            2_147_483_646,
+            -2_147_483_647,
+            -2_147_483_647,
         ];
         let u2 = [
             0_i64,
@@ -298,10 +298,10 @@ fn integer_comparators() -> Vec<Golden> {
             2_147_483_647,
             -2_147_483_648,
             -2_147_483_648,
-            9_007_199_254_740_992,
-            9_007_199_254_740_991,
-            -9_007_199_254_740_992,
-            -9_007_199_254_740_991,
+            2_147_483_646,
+            2_147_483_645,
+            -2_147_483_647,
+            -2_147_483_646,
         ];
         let y: Vec<Sample> = u1.iter().zip(u2).map(|(&a, c)| b(a == c)).collect();
         out.push(
@@ -311,7 +311,7 @@ fn integer_comparators() -> Vec<Golden> {
                 ValueKind::Boolean,
                 ticks(10),
                 y,
-                "u1=[0,-42,-42,2147483647,-2147483648,2147483647,9007199254740992,9007199254740992,-9007199254740992,-9007199254740992], u2=[0,-42,42,2147483647,-2147483648,-2147483648,9007199254740992,9007199254740991,-9007199254740992,-9007199254740991]",
+                "u1=[0,-42,-42,2147483647,-2147483648,2147483647,2147483646,2147483646,-2147483647,-2147483647], u2=[0,-42,42,2147483647,-2147483648,-2147483648,2147483646,2147483645,-2147483647,-2147483646]; i32 endpoints and unequal neighbors",
                 "y = (u1 == u2) exact integer equality; Buildings Controls/OBC/CDL/Integers/Equal.mo",
             )
             .with_inputs(vec![input_i("u1", u1), input_i("u2", u2)]),
@@ -654,10 +654,9 @@ fn conversions() -> Vec<Golden> {
             .with_inputs(vec![input_b("u", u)]),
         );
     }
-    // IntegerToReal: y = (Real) u. 2^53+1 rounds to nearest-even = 2^53.
+    // IntegerToReal: y = (Real) u. Every portable i32 input is exactly representable in binary64.
     {
-        // Emit as Real samples (the conversion result), including the rounding probe.
-        let u = [0_i64, -7, 2147483647, 9007199254740993];
+        let u = [0_i64, -7, 2147483647, -2147483648];
         let y: Vec<Sample> = u.iter().map(|&x| r(x as f64)).collect();
         out.push(Golden::new(
             "CDL.Conversions.IntegerToReal",
@@ -665,8 +664,8 @@ fn conversions() -> Vec<Golden> {
             ValueKind::Real,
             ticks(4),
             y,
-            "u=[0,-7,2147483647,9007199254740993]; last=2^53+1 rounds-to-even to 2^53",
-            "y = (Real) u (i64->f64 widen, round-to-nearest-even beyond 2^53); _spec/03 §4.4 IntegerToReal",
+            "u=[0,-7,2147483647,-2147483648]; zero, negative, and both portable i32 endpoints",
+            "y = (Real) u; exact binary64 conversion over portable i32 inputs; CDL.Conversions.IntegerToReal",
         )
         .with_inputs(vec![input_i("u", u)]));
     }

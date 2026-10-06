@@ -14,7 +14,7 @@ pub enum ComparisonMode {
     Funnel,
     /// Aligned finite-Real tolerance comparison with exact time samples and non-finite class checks.
     AlignedTolerance,
-    /// Tier-1 exact comparison for closed-form block goldens.
+    /// Exact comparison for reference goldens.
     Exact,
 }
 
@@ -25,7 +25,7 @@ pub enum ComparisonResult {
     Funnel(FunnelResult),
     /// Aligned tolerant verdict.
     AlignedTolerance(AlignedToleranceResult),
-    /// Tier-1 exact verdict.
+    /// Exact-comparison verdict.
     Exact(ExactResult),
 }
 

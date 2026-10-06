@@ -1,0 +1,69 @@
+{
+  "schema": "cxf-library/vectors/v1",
+  "clock": { "step_s": 60, "horizon_s": 1800 },
+  "scenarios": [
+    {
+      "name": "normal_heating",
+      "description": "Reference vector: heating only, no fault",
+      "inputs": { "htg_vlv_cmd": 45.0, "clg_vlv_cmd": 0.0 },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 1800, "equals": false }
+      ]
+    },
+    {
+      "name": "normal_cooling",
+      "description": "Reference vector: cooling only, no fault",
+      "inputs": { "htg_vlv_cmd": 0.0, "clg_vlv_cmd": 60.0 },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 1800, "equals": false }
+      ]
+    },
+    {
+      "name": "both_open",
+      "description": "Reference vector: both valves open; fault asserts after alarm_delay (900 s)",
+      "inputs": { "htg_vlv_cmd": 20.0, "clg_vlv_cmd": 30.0 },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 840, "equals": false },
+        { "output": "yFault", "from_s": 960, "to_s": 1800, "equals": true }
+      ]
+    },
+    {
+      "name": "both_below_threshold",
+      "description": "Reference vector: both valves cracked but under threshold",
+      "inputs": { "htg_vlv_cmd": 3.0, "clg_vlv_cmd": 4.0 },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 1800, "equals": false }
+      ]
+    },
+    {
+      "name": "deadband",
+      "description": "Reference vector: both valves closed",
+      "inputs": { "htg_vlv_cmd": 0.0, "clg_vlv_cmd": 0.0 },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 1800, "equals": false }
+      ]
+    },
+    {
+      "name": "threshold_edge",
+      "description": "Exactly at threshold is not open (strict > comparison)",
+      "inputs": { "htg_vlv_cmd": 5.0, "clg_vlv_cmd": 5.0 },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 1800, "equals": false }
+      ]
+    },
+    {
+      "name": "transient_overlap",
+      "description": "Overlap shorter than alarm_delay never alarms; TrueDelay resets on release",
+      "inputs": {
+        "htg_vlv_cmd": 20.0,
+        "clg_vlv_cmd": [
+          { "t": 0, "value": 30.0 },
+          { "t": 600, "value": 0.0 }
+        ]
+      },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 1800, "equals": false }
+      ]
+    }
+  ]
+}

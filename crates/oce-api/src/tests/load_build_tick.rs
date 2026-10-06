@@ -54,39 +54,37 @@ fn hand_built_graph_builds_advances_and_is_byte_identical() {
     let expected_gt = [false, false, true, true];
     let expected_lim = [1.0, 2.0, 3.0, 3.0];
     for (k, t) in [0.0_f64, 1.0, 2.0, 3.0].into_iter().enumerate() {
-        let out = eng.tick(t).expect("monotonic tick must not regress");
+        advance(&mut eng, t, &[]).expect("monotonic frame must not regress");
+        let out = &eng.state.values;
         assert!(
-            out.get(add_out)
+            out.get(add_out.0 as usize)
                 .unwrap()
                 .bit_eq(&Value::Real(expected_acc[k])),
             "accumulator at tick {k}: {:?}",
-            out.get(add_out)
+            out.get(add_out.0 as usize)
         );
         assert!(
-            out.get(gt_out)
+            out.get(gt_out.0 as usize)
                 .unwrap()
                 .bit_eq(&Value::Boolean(expected_gt[k])),
             "greater at tick {k}: {:?}",
-            out.get(gt_out)
+            out.get(gt_out.0 as usize)
         );
         assert!(
-            out.get(lim_out)
+            out.get(lim_out.0 as usize)
                 .unwrap()
                 .bit_eq(&Value::Real(expected_lim[k])),
             "limiter at tick {k}: {:?}",
-            out.get(lim_out)
+            out.get(lim_out.0 as usize)
         );
     }
 
-    // `outputs()` mirrors the snapshot returned by the last `tick`.
-    assert!(
-        eng.outputs()
-            .get(add_out)
-            .unwrap()
-            .bit_eq(&Value::Real(4.0))
-    );
+    assert!(eng.state.values[add_out.0 as usize].bit_eq(&Value::Real(4.0)));
     assert_eq!(
-        eng.outputs().len(),
+        eng.io()
+            .iter()
+            .filter(|point| point.direction == PointDirection::Out)
+            .count(),
         6,
         "six output connectors (4 sources/derived + Greater + Limiter)"
     );
@@ -124,12 +122,14 @@ fn tick_time_must_be_monotonic() {
     let mut eng = Engine::in_memory();
     eng.build_model_in_memory(m, None).unwrap();
 
-    eng.tick(0.0).unwrap();
-    eng.tick(5.0).unwrap();
-    eng.tick(5.0).unwrap(); // equal time is allowed (non-decreasing)
+    advance(&mut eng, 0.0, &[]).unwrap();
+    advance(&mut eng, 5.0, &[]).unwrap();
+    advance(&mut eng, 5.0, &[]).unwrap(); // equal time advances again
 
     // A decrease is a typed host error — and must not advance the model.
-    let err = eng.tick(4.0).expect_err("time regression must be rejected");
+    let err = eng
+        .prepare_frame(4.0, &[])
+        .expect_err("time regression must be rejected");
     assert!(
         matches!(err, OcError::TimeRegression { .. }),
         "expected TimeRegression, got {err:?}"
@@ -145,15 +145,17 @@ fn non_finite_tick_time_is_rejected() {
     // NaN/∞ are rejected up front: a NaN would otherwise slip past `t_now < prev` and silently
     // disable the monotonic guard. The rejected tick must not advance the model time.
     for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
-        let err = eng.tick(bad).expect_err("non-finite time must be rejected");
+        let err = eng
+            .prepare_frame(bad, &[])
+            .expect_err("non-finite time must be rejected");
         assert!(
             matches!(err, OcError::NonFiniteTime { .. }),
             "expected NonFiniteTime for {bad}, got {err:?}"
         );
     }
     // A finite tick still works afterwards (state was never corrupted by the rejected ticks).
-    eng.tick(0.0).unwrap();
-    eng.tick(1.0).unwrap();
+    advance(&mut eng, 0.0, &[]).unwrap();
+    advance(&mut eng, 1.0, &[]).unwrap();
 }
 
 #[test]

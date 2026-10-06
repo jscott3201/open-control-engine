@@ -17,8 +17,8 @@
 
 use serde::{Deserialize, Serialize};
 
-/// A stable, content-addressable domain key for any storable element — the IRI/dotted-path
-/// identity from CDL/CXF (FRAME §2). It **never** carries an adapter handle (Part 1 §1).
+/// A stable semantic domain key for any storable element — the IRI/dotted-path identity from
+/// CDL/CXF (FRAME §2). It is database-free and **never** carries an adapter handle (Part 1 §1).
 #[derive(Clone, Default, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 pub struct DomainKey(pub Box<str>);
 
@@ -76,7 +76,8 @@ pub enum OcValue {
     String(String),
 }
 
-/// Quality/status flags travelling with a runtime point value (D4: the store owns runtime state).
+/// Quality/status flags travelling with a runtime point value. This is adapter-owned point state,
+/// not the engine-owned continuation bytes returned by `Engine::state_snapshot`.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum PointStatus {
     /// Value is current and valid.
@@ -396,6 +397,10 @@ pub enum SemanticQuery {
 }
 
 /// An opaque, adapter-defined fast handle for a pre-resolved point. Carries no DB type inside.
+///
+/// The public scalar lets an out-of-crate adapter mint and consume its own handles. Validity is
+/// limited to that adapter's mapping from resolution through compatible snapshot reads; no durable,
+/// global, cross-adapter, cross-reload, or host-control identity is implied.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct PointHandle(pub u64);
 
@@ -458,8 +463,9 @@ pub trait ModelStore: Send + Sync {
     fn delete_model(&self, model_id: &DomainKey) -> StoreResult<()>;
 }
 
-/// Reads/writes RUNTIME point values + status (D4: the store owns runtime state). Writes are
-/// batched and off-tick; reads are point-keyed and cheap. **Never** called from the control tick.
+/// Reads/writes runtime point values + status. Resolution and writes are off-tick; a store-backed
+/// control tick calls [`PointStore::snapshot`] once and then [`PointSnapshot::read_resolved`] for
+/// its resolved inputs. This typed point channel does not carry engine continuation snapshot bytes.
 pub trait PointStore: Send + Sync {
     /// Pre-resolve a set of domain keys into opaque fast handles for the hot read path. Called
     /// once at model load.

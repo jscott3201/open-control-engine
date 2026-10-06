@@ -1,0 +1,36 @@
+{
+  "revision": 1,
+  "observed_date": "2026-09-20",
+  "tag": "v0.1.0",
+  "tag_object": "7f3b614dc0e466d54cab4677ce4bb08a5bfaf033",
+  "source": "909a8ba699e6a2fccf3de6ac0616a9e83a04060f",
+  "tree": "5c680ec057c169d3129c5b70566304fea201065f",
+  "current_baseline": "e81480b02271456719d55cbe1e5090b0dea6d63c",
+  "commits_to_baseline": 178,
+  "kind": "historical-git-pin-not-published-not-supported-n-minus-one",
+  "package_version": "0.1.0",
+  "isolation": "git archive of exact peeled source; own disposable package and target; no source edits",
+  "toolchain": "rustc 1.95.0 (59807616e 2026-04-14)",
+  "target": "aarch64-apple-darwin",
+  "runner": "cargo-nextest 0.9.143 (60fa45f63 2026-08-04)",
+  "source_sha256": {
+    "Cargo.lock": "5999b87c5de50dd36db775609c0ca139cb1740570b670c5d08170752e276a456",
+    "crates/oce-api/tests/public-api.txt": "9fa7fa8a1a0656e767e0687e55f1186661262632c1771a718d9f2f97dfcf2df7",
+    "rust-toolchain.toml": "074a94b37372914cd2a309bd19e3f58803f9806ed79bcc7b7b9a12f8f85010f5"
+  },
+  "attempts": [
+    {"command": "cargo build -p oce-api --locked --offline", "exit": 101, "result": "no matching package named stats_alloc found in local crates.io index; no compilation"},
+    {"command": "CARGO_NET_RETRY=0 CARGO_HTTP_TIMEOUT=30 cargo build -p oce-api --locked", "exit": 0, "result": "Finished dev profile; pinned source and toolchain"},
+    {"command": "CARGO_NET_RETRY=0 CARGO_HTTP_TIMEOUT=30 cargo nextest run -p oce-api --locked --no-tests=fail --status-level fail --final-status-level slow", "exit": 0, "tests": 127, "passed": 127, "skipped": 0, "binaries": 26},
+    {"command": "cargo test -p oce-api --doc --locked --offline", "exit": 0, "tests": 0, "result": "no facade doctests in this source; not positive doctest coverage"}
+  ],
+  "limitations": [
+    "Historical source reproducibility only; not N-1 support or host qualification.",
+    "Default features, debug codegen, one local native target; not full historical workspace or release gates.",
+    "Historical public-api test ran unarmed; this is not an armed historical surface extraction.",
+    "Versioned facade catalog/descriptor/diagnostic receipts, complete frames, snapshots and replay are absent from the historical public baseline and module tree.",
+    "No historical snapshot/replay bytes exist at this pin; no decoder refusal is claimed for absent artifacts.",
+    "The historical implementation has tick/simulate/step_realtime and AssertLevel::Error, intentionally removed from current.",
+    "Rollback requires a separately qualified prior binary and its own authenticated state externally; this pin has no OCE durable snapshot API."
+  ]
+}

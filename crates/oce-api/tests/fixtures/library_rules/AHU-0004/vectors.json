@@ -1,0 +1,255 @@
+{
+  "schema": "cxf-library/vectors/v1",
+  "clock": { "step_s": 300, "horizon_s": 14400 },
+  "scenarios": [
+    {
+      "name": "stable_state",
+      "description": "The unit holds one operating state for the whole run. operating_state equals chg.pre_u_start, so Integers.Change never pulses and the rolling count sits at zero — the baseline every other scenario departs from",
+      "inputs": { "operating_state": 0 },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 14400, "equals": false }
+      ]
+    },
+    {
+      "name": "startup_pulse_is_inert",
+      "description": "Startup artifact (a): operating_state is a constant 3, which differs from chg.pre_u_start (0), so Integers.Change emits a spurious pulse on tick 0. It costs nothing — MovingAverage integrates u·dt and dt is zero on the first tick, so the pulse encloses no area and count stays at 0.0 for the whole run",
+      "inputs": { "operating_state": 3 },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 14400, "equals": false }
+      ]
+    },
+    {
+      "name": "four_transitions_per_hour",
+      "description": "The sequence walks OS 1→2→3→4→5→1 every 900 s: four transitions an hour, ordinary for a unit tracking load across a day. count holds at 4.0, and the warm-up window agrees rather than overshooting — one change in the first 900 s extrapolates to the same 4/hr pace",
+      "inputs": {
+        "operating_state": [
+          { "t": 0, "value": 1 },
+          { "t": 900, "value": 2 },
+          { "t": 1800, "value": 3 },
+          { "t": 2700, "value": 4 },
+          { "t": 3600, "value": 5 },
+          { "t": 4500, "value": 1 },
+          { "t": 5400, "value": 2 },
+          { "t": 6300, "value": 3 },
+          { "t": 7200, "value": 4 },
+          { "t": 8100, "value": 5 },
+          { "t": 9000, "value": 1 },
+          { "t": 9900, "value": 2 },
+          { "t": 10800, "value": 3 },
+          { "t": 11700, "value": 4 },
+          { "t": 12600, "value": 5 },
+          { "t": 13500, "value": 1 },
+          { "t": 14400, "value": 2 }
+        ]
+      },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 14400, "equals": false }
+      ]
+    },
+    {
+      "name": "sustained_thrash",
+      "description": "operating_state alternates every tick — 12 transitions an hour, the signature of a changeover threshold with no deadband. count reads 12 from the first pulse (during the first hour that is an extrapolated pace, and here the pace is the truth), cntHigh latches at t=300, and yFault follows one alarm_delay later at t=3900, the earliest instant this rule can assert",
+      "inputs": {
+        "operating_state": [
+          { "t": 0, "value": 1 },
+          { "t": 300, "value": 2 },
+          { "t": 600, "value": 1 },
+          { "t": 900, "value": 2 },
+          { "t": 1200, "value": 1 },
+          { "t": 1500, "value": 2 },
+          { "t": 1800, "value": 1 },
+          { "t": 2100, "value": 2 },
+          { "t": 2400, "value": 1 },
+          { "t": 2700, "value": 2 },
+          { "t": 3000, "value": 1 },
+          { "t": 3300, "value": 2 },
+          { "t": 3600, "value": 1 },
+          { "t": 3900, "value": 2 },
+          { "t": 4200, "value": 1 },
+          { "t": 4500, "value": 2 },
+          { "t": 4800, "value": 1 },
+          { "t": 5100, "value": 2 },
+          { "t": 5400, "value": 1 },
+          { "t": 5700, "value": 2 },
+          { "t": 6000, "value": 1 },
+          { "t": 6300, "value": 2 },
+          { "t": 6600, "value": 1 },
+          { "t": 6900, "value": 2 },
+          { "t": 7200, "value": 1 },
+          { "t": 7500, "value": 2 },
+          { "t": 7800, "value": 1 },
+          { "t": 8100, "value": 2 },
+          { "t": 8400, "value": 1 },
+          { "t": 8700, "value": 2 },
+          { "t": 9000, "value": 1 },
+          { "t": 9300, "value": 2 },
+          { "t": 9600, "value": 1 },
+          { "t": 9900, "value": 2 },
+          { "t": 10200, "value": 1 },
+          { "t": 10500, "value": 2 },
+          { "t": 10800, "value": 1 },
+          { "t": 11100, "value": 2 },
+          { "t": 11400, "value": 1 },
+          { "t": 11700, "value": 2 },
+          { "t": 12000, "value": 1 },
+          { "t": 12300, "value": 2 },
+          { "t": 12600, "value": 1 },
+          { "t": 12900, "value": 2 },
+          { "t": 13200, "value": 1 },
+          { "t": 13500, "value": 2 },
+          { "t": 13800, "value": 1 },
+          { "t": 14100, "value": 2 },
+          { "t": 14400, "value": 1 }
+        ]
+      },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 3600, "equals": false },
+        { "output": "yFault", "from_s": 4200, "to_s": 14400, "equals": true }
+      ]
+    },
+    {
+      "name": "seven_per_hour_stays_clear",
+      "description": "Boundary, low side. The unit is quiet for the first hour, then transitions seven times an hour indefinitely — seven changes per twelve ticks, so every trailing-hour window holds exactly seven. count lands on exactly 7.0 (12.0 × 7 × 300 / 3600 is exact in IEEE-754) and os_max is a strict `>`, so seven transitions an hour stays clear",
+      "inputs": {
+        "operating_state": [
+          { "t": 0, "value": 1 },
+          { "t": 3900, "value": 2 },
+          { "t": 4200, "value": 1 },
+          { "t": 4500, "value": 2 },
+          { "t": 4800, "value": 1 },
+          { "t": 5100, "value": 2 },
+          { "t": 5400, "value": 1 },
+          { "t": 5700, "value": 2 },
+          { "t": 7500, "value": 1 },
+          { "t": 7800, "value": 2 },
+          { "t": 8100, "value": 1 },
+          { "t": 8400, "value": 2 },
+          { "t": 8700, "value": 1 },
+          { "t": 9000, "value": 2 },
+          { "t": 9300, "value": 1 },
+          { "t": 11100, "value": 2 },
+          { "t": 11400, "value": 1 },
+          { "t": 11700, "value": 2 },
+          { "t": 12000, "value": 1 },
+          { "t": 12300, "value": 2 },
+          { "t": 12600, "value": 1 },
+          { "t": 12900, "value": 2 }
+        ]
+      },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 14400, "equals": false }
+      ]
+    },
+    {
+      "name": "eight_per_hour_trips",
+      "description": "Boundary, high side. The same shape with eight transitions an hour. The eighth pulse enters the trailing window at t=6000, count steps to 8.0, and yFault asserts one alarm_delay later at t=9600",
+      "inputs": {
+        "operating_state": [
+          { "t": 0, "value": 1 },
+          { "t": 3900, "value": 2 },
+          { "t": 4200, "value": 1 },
+          { "t": 4500, "value": 2 },
+          { "t": 4800, "value": 1 },
+          { "t": 5100, "value": 2 },
+          { "t": 5400, "value": 1 },
+          { "t": 5700, "value": 2 },
+          { "t": 6000, "value": 1 },
+          { "t": 7500, "value": 2 },
+          { "t": 7800, "value": 1 },
+          { "t": 8100, "value": 2 },
+          { "t": 8400, "value": 1 },
+          { "t": 8700, "value": 2 },
+          { "t": 9000, "value": 1 },
+          { "t": 9300, "value": 2 },
+          { "t": 9600, "value": 1 },
+          { "t": 11100, "value": 2 },
+          { "t": 11400, "value": 1 },
+          { "t": 11700, "value": 2 },
+          { "t": 12000, "value": 1 },
+          { "t": 12300, "value": 2 },
+          { "t": 12600, "value": 1 },
+          { "t": 12900, "value": 2 },
+          { "t": 13200, "value": 1 }
+        ]
+      },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 9300, "equals": false },
+        { "output": "yFault", "from_s": 9900, "to_s": 14400, "equals": true }
+      ]
+    },
+    {
+      "name": "thrash_stops_before_delay",
+      "description": "Transient: ten transitions between t=3900 and t=6600, then the sequence settles. count crosses 7 at t=6000, but the burst is already over and the count decays as pulses age out, reaching 7.0 at t=8100. cntHigh held for 1800 s — half the alarm_delay — so nothing asserts",
+      "inputs": {
+        "operating_state": [
+          { "t": 0, "value": 1 },
+          { "t": 3900, "value": 2 },
+          { "t": 4200, "value": 1 },
+          { "t": 4500, "value": 2 },
+          { "t": 4800, "value": 1 },
+          { "t": 5100, "value": 2 },
+          { "t": 5400, "value": 1 },
+          { "t": 5700, "value": 2 },
+          { "t": 6000, "value": 1 },
+          { "t": 6300, "value": 2 },
+          { "t": 6600, "value": 1 }
+        ]
+      },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 14400, "equals": false }
+      ]
+    },
+    {
+      "name": "burst_ages_out_of_window",
+      "description": "A two-hour thrash (t=3900 to t=10800) is long enough: count crosses at t=6000 and yFault asserts at t=9600. When the thrash stops the count does not drop at once — it decays as pulses leave the trailing hour, reaching 7.0 at t=12300, and the alarm clears on that tick because TrueDelay has no off-delay",
+      "inputs": {
+        "operating_state": [
+          { "t": 0, "value": 1 },
+          { "t": 3900, "value": 2 },
+          { "t": 4200, "value": 1 },
+          { "t": 4500, "value": 2 },
+          { "t": 4800, "value": 1 },
+          { "t": 5100, "value": 2 },
+          { "t": 5400, "value": 1 },
+          { "t": 5700, "value": 2 },
+          { "t": 6000, "value": 1 },
+          { "t": 6300, "value": 2 },
+          { "t": 6600, "value": 1 },
+          { "t": 6900, "value": 2 },
+          { "t": 7200, "value": 1 },
+          { "t": 7500, "value": 2 },
+          { "t": 7800, "value": 1 },
+          { "t": 8100, "value": 2 },
+          { "t": 8400, "value": 1 },
+          { "t": 8700, "value": 2 },
+          { "t": 9000, "value": 1 },
+          { "t": 9300, "value": 2 },
+          { "t": 9600, "value": 1 },
+          { "t": 9900, "value": 2 },
+          { "t": 10200, "value": 1 },
+          { "t": 10500, "value": 2 },
+          { "t": 10800, "value": 1 }
+        ]
+      },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 9300, "equals": false },
+        { "output": "yFault", "from_s": 9900, "to_s": 11700, "equals": true },
+        { "output": "yFault", "from_s": 12600, "to_s": 14400, "equals": false }
+      ]
+    },
+    {
+      "name": "warmup_rate_never_asserts",
+      "description": "Startup artifact (b): two transitions inside the first 10 minutes read as a 12/hr pace, because the growing-window divisor is elapsed time rather than count_window. cntHigh is true from t=300 to t=900, then the pace collapses as the window fills — count is 6.0 at t=1200 and 2.0 by the end of the hour. delayOnInit keeps yFault false throughout, which is the reason the frontmatter puts the first count_window under host NO_EVAL",
+      "inputs": {
+        "operating_state": [
+          { "t": 0, "value": 1 },
+          { "t": 300, "value": 2 },
+          { "t": 600, "value": 1 }
+        ]
+      },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 14400, "equals": false }
+      ]
+    }
+  ]
+}

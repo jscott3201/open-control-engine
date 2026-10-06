@@ -23,6 +23,9 @@ which states that such metadata does not affect the computation of a control sig
 Today it loads and simulates **46 ASHRAE Guideline 36 sequence fixtures** against a registry of
 **133 CDL block classes**. It is **pre-1.0 and not published to crates.io**.
 
+Read the [product contract](docs/product-contract.md) for the versioned executable-CXF/HostTick
+boundary, current limitations, host obligations and future acceptance outcomes.
+
 ---
 
 ## Who this is for
@@ -50,62 +53,49 @@ revision appropriate to your release process rather than following a moving bran
 oce-api = { git = "https://github.com/jscott3201/open-control-engine", rev = "<commit-sha>" }
 ```
 
-Load a CDL sequence from CXF and simulate it:
+Load a CDL sequence from CXF and execute complete typed frames:
 
 Every point is named by an authored `@id` from the CXF document, expanded against the document's
 `@context` to canonical absolute form at ingest — the declared boundary input's `@id` for a
 boundary-driven point, the connector's own otherwise — so the same key names the same point
 across loads of the same document, including a document re-serialized between compact and
 expanded spellings. The document's declared boundary-output names (root `S231:hasOutput`) read
-as aliases for their driving connectors on `get_output`, `watch`, and `CollectSpec::Named`;
-internal connector paths, like the three below, remain valid output identities alongside them.
+as aliases for their driving connectors on `get_output` and `watch`. These are latest-state,
+non-receipt inspection surfaces. `CompletedFrame` retains the committed executable boundary
+outputs in lexical identity order, independently of later engine changes.
 
 ```rust
-use oce_api::{CollectSpec, Engine, InputSource, SimSpec, Value};
+use oce_api::{Engine, Value};
 
 const ECONOMIZER: &str = "http://example.org#g36.ahu_economizer";
-const ECONOMIZER_ENABLED: &str = "http://example.org#g36.ahu_economizer.enableLatch.y";
-const DAMPER_COMMAND: &str = "http://example.org#g36.ahu_economizer.damperSwitch.y";
-const OA_TEMPERATURE_DELTA: &str = "http://example.org#g36.ahu_economizer.returnMinusOutdoor.y";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // An engine with the default in-memory store — no database.
-    let mut engine = Engine::in_memory();
-
-    // Parse, validate, and freeze the schedule.
+    let mut engine = Engine::in_memory(); // Default in-memory store, no database.
     let cxf_bytes = std::fs::read("crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld")?;
     engine.load_cxf(&cxf_bytes)?;
 
-    // Simulate: feed inputs per tick, collect named outputs.
-    let metrics = engine.simulate(&SimSpec {
-        t_start: 0.0,
-        t_stop: 4.0,
-        step: 1.0,
-        inputs: InputSource::Closure(Box::new(|t| {
-            vec![
-                (format!("{ECONOMIZER}.return_air_temp"), Value::Real(24.0)),
-                (
-                    format!("{ECONOMIZER}.outdoor_air_temp"),
-                    Value::Real(18.0 + t),
-                ),
-                (format!("{ECONOMIZER}.operating_mode"), Value::Integer(1)),
-            ]
-        })),
-        collect: CollectSpec::Named {
-            points: vec![
-                ECONOMIZER_ENABLED.to_string(),
-                DAMPER_COMMAND.to_string(),
-                OA_TEMPERATURE_DELTA.to_string(),
-            ],
-            stride: 1,
-        },
-    })?;
-
-    println!("times: {:?}", metrics.trace.times());
-    for (index, name) in metrics.trace.columns().iter().enumerate() {
+    // The host owns cadence and supplies every required observation on each frame.
+    for index in 0..=4 {
+        let time = f64::from(index);
+        let observations = [
+            (format!("{ECONOMIZER}.return_air_temp"), Value::Real(24.0)),
+            (
+                format!("{ECONOMIZER}.outdoor_air_temp"),
+                Value::Real(18.0 + time),
+            ),
+            (format!("{ECONOMIZER}.operating_mode"), Value::Integer(1)),
+        ];
+        let entries: Vec<_> = observations
+            .iter()
+            .map(|(p, v)| (p.as_str(), v.clone()))
+            .collect();
+        let prepared = engine.prepare_frame(time, &entries)?;
+        let completed = engine.execute_frame(prepared)?;
         println!(
-            "{name}: {:?}",
-            metrics.trace.column(index).unwrap_or_default()
+            "frame {} at {}: {:?}",
+            completed.sequence(),
+            completed.time(),
+            completed.outputs()
         );
     }
     Ok(())
@@ -117,7 +107,7 @@ To run the engine's own tests from a clone:
 ```bash
 git clone https://github.com/jscott3201/open-control-engine
 cd open-control-engine
-cargo nextest run -p oce-api -p oce-blocks -p oce-expr # the per-PR engine subset
+cargo nextest run -p oce-api -p oce-blocks -p oce-expr # the state-determinism subset
 bash .agents/gate.sh                            # the gate script CI runs; see its closing report
                                                 # for the per-PR checks it cannot cover locally
 ```
@@ -134,8 +124,8 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   and honest parameter defaults. See [CDL coverage](docs/cdl-coverage.md).
 - Runs **46 G36 conformance fixtures** end to end through the frozen facade, each with a committed
   whole-sequence golden trace.
-- Commits computed outputs through the storage port after a real-time step, with host-supplied
-  timestamps — the seam never invents time.
+- Executes exclusively through `prepare_frame` followed by consuming `execute_frame`, with no
+  Store reads or writes. Hosts own cadence, persistence and equipment delivery.
 
 ## What it does not do
 
@@ -145,19 +135,27 @@ Stating this plainly is more useful than a feature list.
   document hands it. `oce-flatten` is a reserved seam that returns the model unchanged.
 - **It is not general ASHRAE G36 support.** The supported set is explicitly
   *selected-explicit-cxf-variants-supported*: pre-flattened CXF at specific parameterizations, not
-  arbitrary G36 composites. [What "supported" means](docs/cdl-coverage.md).
-- **Its external-reference evidence is two Boolean cases, not broad engine coverage.**
-  `CDL.Logical.Nand` has one exhaustive case, and `CDL.Logical.Toggle` has one stateful event-schedule
-  case. No sequence or numeric tolerance has been checked that way, and the global Tier-3 report
-  remains skipped —
+  other G36 composites. [What "supported" means](docs/cdl-coverage.md).
+- **Its external-reference evidence is four cases, not broad engine coverage.**
+  `CDL.Logical.Nand` has one exhaustive Boolean case, `CDL.Logical.Toggle` has one stateful Boolean
+  event schedule, and `CDL.Reals.Line` has one finite matrix covering four limit modes and five
+  input regions. One composed G36 Reliefs leaf has a seven-state exact-bit case at its declared
+  outputs. No complete G36 sequence or general numeric tolerance has been checked that way, and the
+  global Tier-3 report remains skipped —
   [read the full accounting](docs/verification-evidence.md).
+- **`CDL.Logical.Pre` is a host-tick delay, not Modelica event iteration.** Under the fixed
+  [HostTick v1 profile](docs/execution-profile.md), every successful `Engine::execute_frame` call advances
+  `Pre` once, including repeated calls at the same timestamp. Exact Modelica/OpenModelica `Pre`
+  equivalence is outside the conformance claim.
 - **It has no Python bindings**, no daemon, no scheduler, and no database.
 - **`halt()` does not stop execution.** It only opens the tune-at-rest window in which
-  `set_param` is accepted; ticks, real-time steps, and simulations continue if the host calls them.
-- **Two stable loader signatures are placeholders.** `load_from_semantic` and `load_modelica`
-  always return `OcError::Load`; use `load_cxf` for working ingest today.
-- **Assertion events are warning-only today.** Although `AssertLevel::Error` is public for surface
-  stability, the engine never produces it; hosts must not build escalation logic on that variant.
+  `set_param` is accepted; complete-frame execution can continue while halted with no pending edits.
+- **Deferred loader signatures have been removed.** `load_from_semantic` and `load_modelica`
+  are no longer callable; prepare supported CXF externally and use `load_cxf`.
+  See [facade migration](docs/facade-migration.md) for the pre-release source break.
+- **Assertion events and `AssertLevel` are Warning-only.** `AssertLevel::default()` is now
+  `Warning`; the never-emitted `AssertLevel::Error` variant was removed. This adds no escalation
+  or safety policy. See [facade migration](docs/facade-migration.md).
 
 ---
 
@@ -166,10 +164,10 @@ Stating this plainly is more useful than a feature list.
 The engine deliberately implements **no fail-safe policy of its own**, and that is a decision your
 host layer has to answer for:
 
-- **Staging is status-agnostic.** A sample is converted from its value regardless of `PointStatus`
-  — `Fault`, `Stale`, and `Uninitialized` all stage exactly like `Ok`.
-- **A missing sample is not an error.** The connector holds its previous value indefinitely. A dead
-  sensor is indistinguishable from a steady one, for as long as it stays dead.
+- **Every boundary input is required exactly once.** Missing values refuse before mutation;
+  there is no sparse staging, implicit zero, or hold-last execution profile.
+- **Typed values are not sensor-quality evidence.** Frame preparation checks types and declared
+  domains, not host freshness, plausibility or permission to command. Store samples are not consulted.
 
 Staleness limits, fault reactions, and safe-state fallback belong in the host above the engine.
 **[Host responsibilities](docs/host-responsibilities.md)** is the checklist; read it before wiring
@@ -193,19 +191,26 @@ Full layer-by-layer detail, the crate map, and the platform and MSRV policy are 
 
 ## How it is verified
 
-Five different things in this repository are called "tests", and they prove different things.
+Six evidence layers in this repository are called "tests", and they prove different things.
 One of them proves nothing about correctness at all — the 46 fixture goldens are **engine
 self-output**, a determinism snapshot that catches drift, not wrongness.
 
 Correctness is bounded separately by 412 provenance records generated by a tool held off the
 workspace and **forbidden from depending on the block library**, with CI enforcing that
-code-dependency firewall. Of the 410 signal goldens, 389 are compared bit-exactly — all 132 G36
-sequence goldens among them — and the 21 transcendental, psychrometric, and solar Real goldens
-are compared under a documented 1e-12 aligned-tolerance band.
+code-dependency firewall. Of the 410 signal goldens, 390 check CDL / Buildings source semantics and
+20 G36 signals across three `Pre`-dependent fixtures check the HostTick v1 profile instead.
+389 retain their existing exact comparisons, including all 132 G36 sequence goldens. The other
+21 transcendental, psychrometric, and solar Real goldens compare exactly on qualified Linux
+x86_64/aarch64 debug/release and retain the unchanged 1e-12 aligned band on unqualified targets.
+The [retained strict-bit evidence](docs/strict-bit-evidence.md) bounds that Linux result to the
+pinned corpus, rustc and libm; it is not mathematical correctness or arbitrary-input proof.
+The scoped strict-bit subset and its four suite binaries now run per-PR in four native Linux
+cells with repeat captures; the remainder of `oce-conformance` still needs the release/full gate.
 
-Two global report tiers are **not wired**, and no sequence here has been executed against an external
-Modelica / Buildings toolchain. The separate OpenModelica evidence covers exhaustive Boolean Nand
-and one stateful Boolean Toggle schedule.
+Two global report tiers are **not wired**, and no complete G36 sequence here has been executed against an
+external Modelica / Buildings toolchain. The separate OpenModelica evidence covers exhaustive
+Boolean Nand, one stateful Boolean Toggle schedule, one finite exact-bit Line matrix, and one
+seven-state exact-bit case for a composed G36 Reliefs leaf.
 
 **[Verification and evidence](docs/verification-evidence.md)** sets out what each layer proves, what
 it cannot, and which checks are not running.
@@ -223,6 +228,7 @@ repository is the newer copy.
 | Page | For |
 | --- | --- |
 | [Architecture](docs/architecture.md) | Layers, the §7.17 seam, the crate map, platform and MSRV |
+| [Execution profile](docs/execution-profile.md) | HostTick semantics and the `CDL.Logical.Pre` conformance boundary |
 | [Verification and evidence](docs/verification-evidence.md) | What has been proven, and what has not |
 | [CDL coverage](docs/cdl-coverage.md) | Which classes and sequences run, and what "supported" means |
 | [CXF round trip](docs/cxf-round-trip.md) | Export guarantees, and where it silently drops things |
@@ -244,9 +250,10 @@ script is the single source of truth for what CI runs.
 Read **[CONTRIBUTING.md](CONTRIBUTING.md)** first, and **[TESTING.md](TESTING.md)** before writing a
 test. Notable changes are in **[CHANGELOG.md](CHANGELOG.md)**.
 
-One thing worth knowing up front: the per-PR gate runs engine tests for `oce-api`, `oce-blocks`, and
-`oce-expr` only. A change confined to another crate can show every check green having run none of
-its own tests. [CI and the gate](docs/ci-and-the-gate.md) explains the split.
+One thing worth knowing up front: the per-PR gate runs the `oce-api`, `oce-blocks`, and `oce-expr`
+state-determinism subset plus the scoped `oce-conformance` strict-bit subset. Changes outside
+those and the named input-hygiene audits can show every check green without running their own
+tests. [CI and the gate](docs/ci-and-the-gate.md) explains the split.
 
 ---
 

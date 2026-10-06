@@ -18,7 +18,6 @@ use oce_store::Store;
 
 use crate::engine::{Engine, instantiate_blocks};
 use crate::error::OcError;
-use crate::sim::Outputs;
 
 mod class_rules;
 
@@ -42,9 +41,9 @@ pub enum RunMode {
 pub struct ParamAttrs {
     /// Structural type of the parameter.
     pub value_type: ValueType,
-    /// Lower validation bound; `None` ⇒ unbounded below.
+    /// Available static lower bound; absence does not exclude cross-parameter constraints.
     pub min: Option<f64>,
-    /// Upper validation bound; `None` ⇒ unbounded above.
+    /// Available static upper bound; absence does not exclude cross-parameter constraints.
     pub max: Option<f64>,
     /// SI computation unit; metadata only.
     pub unit: Option<String>,
@@ -248,9 +247,11 @@ impl<S: Store> Engine<S> {
     /// already-loaded model). Never panics (R-ERR-1).
     pub fn resume(&mut self) -> Result<(), OcError> {
         if self.params_dirty {
+            // Fence before effective model mutation; even a failed rebuild cannot reuse old plans.
+            self.frame_generation = std::sync::Arc::new(());
             // CoW the model at rest (off-tick; refcount is 1, so `make_mut` does not clone). Re-fold
             // edits, then rebuild blocks/state/outputs via the shared helpers.
-            let (blocks, state, outputs) = {
+            let (blocks, state) = {
                 let model = std::sync::Arc::make_mut(&mut self.model);
                 for e in &self.params.entries {
                     if let Some(slot) = model.blocks[e.block.0 as usize]
@@ -264,12 +265,10 @@ impl<S: Store> Engine<S> {
                 }
                 let blocks = instantiate_blocks(model)?;
                 let state = allocate_state(model, &blocks);
-                let outputs = Outputs::build(model, &state);
-                (blocks, state, outputs)
+                (blocks, state)
             };
             self.blocks = blocks;
             self.state = state;
-            self.outputs = outputs;
             self.prev_t = None;
             self.params_dirty = false;
             self.durable_restore_ready = false;

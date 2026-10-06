@@ -15,7 +15,12 @@ fn successful_reload_opens_a_new_restore_window() {
     let snapshot = snapshot();
     let mut target = Engine::in_memory();
     target.load_cxf(MINIMAL_LOOP).unwrap();
-    target.tick(0.0).unwrap();
+    super::common::advance(
+        &mut target,
+        0.0,
+        &[("http://example.org#MinLoop.uSet", crate::Value::Real(0.0))],
+    )
+    .unwrap();
     target.load_cxf(MINIMAL_LOOP).unwrap();
     target.restore_state(&snapshot).unwrap();
 }

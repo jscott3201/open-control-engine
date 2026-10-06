@@ -328,10 +328,14 @@ impl Block for LogicalSwitch {
     }
 }
 
-/// `CDL.Logical.Pre` — `y = pre(u)`, the canonical one-evaluation Boolean delay and **the** CDL
-/// algebraic-loop breaker (`03` §4.3): stateful, with `feeds_through == false` so it cuts the
-/// direct-feedthrough DAG. Per the arena model the one-tick Boolean memory lives in one `[S]` state
-/// word (`0`/`1`), not in the struct; it is seeded from the `pre` parameter (CDL has no `start`).
+/// `CDL.Logical.Pre` under the fixed HostTick v1 execution profile: one-transition Boolean memory.
+/// The first transition emits `pre_u_start`; later transitions emit the input latched by the
+/// preceding successful transition. It is stateful and reports `feeds_through == false`, so it cuts
+/// the direct-feedthrough DAG. The scheduler performs no Modelica same-time event iteration or
+/// convergence check.
+///
+/// The memory lives in one `[S]` state word (`0`/`1`), not in the struct. Methods do not panic when
+/// the scheduler supplies the signature-defined input and state slices.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Pre {
     pub(crate) y_start: bool,
@@ -351,10 +355,10 @@ impl Block for Pre {
         BlockKind::Stateful
     }
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
-        false // THE loop cut: output is the prior input, not the current one
+        false // HostTick output is call-entry state, independent of the current input.
     }
     fn state_len(&self) -> usize {
-        1 // one word holds the one-tick-delayed boolean
+        1 // One word carries the input to emit on the next HostTick transition.
     }
     fn init_state(&self, region: &mut [u64], _params: &ParamTable) {
         region[0] = u64::from(self.y_start);
@@ -366,10 +370,10 @@ impl Block for Pre {
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        emit(0, Value::Boolean(region[0] != 0)); // the prior input, held since last tick
+        emit(0, Value::Boolean(region[0] != 0));
     }
     fn update_state(&self, _ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
-        region[0] = u64::from(read_bool(inputs, 0)); // latch the current input for next tick
+        region[0] = u64::from(read_bool(inputs, 0));
     }
 }
 

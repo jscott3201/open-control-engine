@@ -1,7 +1,8 @@
 //! G36 whole-sequence Tier-A references for the derivable sequence outputs.
 //!
 //! These references are hand-derived from the G36 fixture topology plus CDL / Buildings block
-//! semantics. They intentionally do not depend on, import, or inspect any `oce-*` crate.
+//! semantics or an explicitly named execution profile. They intentionally do not depend on,
+//! import, or inspect any `oce-*` crate.
 
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
@@ -112,6 +113,14 @@ const COOLING_ONLY_CONTROLLER: &str = "cooling_only_controller";
 const COOLING_ONLY_DAMPERS: &str = "cooling_only_dampers";
 const COOLING_ONLY_SYSTEM_REQUESTS: &str = "cooling_only_system_requests";
 const REHEAT_OVERRIDES: &str = "reheat_overrides";
+
+/// Whether a G36 reference uses the HostTick v1 projection of `CDL.Logical.Pre`.
+pub(crate) fn uses_host_tick_pre_profile(sequence: &str) -> bool {
+    matches!(
+        sequence,
+        TIME_SUPPRESSION | COOLING_ONLY_CONTROLLER | RELIEF_FAN_GROUP
+    )
+}
 
 /// A generated provenance-only marker for deferred correctness-oracle coverage.
 pub struct DeferredProvenance {
@@ -335,12 +344,17 @@ fn sequence_golden(
     rule_desc: &'static str,
     inputs: Vec<InputSeries>,
 ) -> Golden {
-    Golden::new("G36", signal, kind, time, samples, input_desc, rule_desc)
+    let golden = Golden::new("G36", signal, kind, time, samples, input_desc, rule_desc)
         .with_scenario(sequence)
         .with_inputs(inputs)
         .with_provenance("source_commit", SOURCE_COMMIT)
         .with_provenance("source_files", source_files(sequence))
-        .with_provenance("fixture_status", fixture_status(sequence))
+        .with_provenance("fixture_status", fixture_status(sequence));
+    if uses_host_tick_pre_profile(sequence) {
+        golden.with_provenance("execution_profile", "HostTick v1")
+    } else {
+        golden
+    }
 }
 
 fn unit_ticks(n: usize) -> Vec<f64> {

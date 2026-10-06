@@ -1,0 +1,4 @@
+comparison=canonical bytes
+arm64_sha256=e1112f10ffe14a967cb73f81cd7ceb89edcc2b010627458497855663bdf54b2c
+amd64_sha256=e1112f10ffe14a967cb73f81cd7ceb89edcc2b010627458497855663bdf54b2c
+result=PASS

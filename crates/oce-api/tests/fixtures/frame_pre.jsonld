@@ -1,0 +1,14 @@
+{
+  "@context": {"S231": "http://data.ashrae.org/S231P#"},
+  "@graph": [
+    {"@id":"urn:pre:model","@type":"S231:Block","S231:containsBlock":[{"@id":"urn:pre:memory"},{"@id":"urn:pre:not"}],"S231:hasOutput":[{"@id":"urn:pre:z"},{"@id":"urn:pre:a"}]},
+    {"@id":"urn:pre:memory","@type":"CDL.Logical.Pre","S231:hasInput":{"@id":"urn:pre:memory.u"},"S231:hasOutput":{"@id":"urn:pre:memory.y"}},
+    {"@id":"urn:pre:not","@type":"CDL.Logical.Not","S231:hasInput":{"@id":"urn:pre:not.u"},"S231:hasOutput":{"@id":"urn:pre:not.y"}},
+    {"@id":"urn:pre:memory.u","@type":"S231:BooleanInput","S231:isOfDataType":{"@id":"S231:Boolean"}},
+    {"@id":"urn:pre:memory.y","@type":"S231:BooleanOutput","S231:isOfDataType":{"@id":"S231:Boolean"},"S231:isConnectedTo":[{"@id":"urn:pre:not.u"},{"@id":"urn:pre:z"},{"@id":"urn:pre:a"}]},
+    {"@id":"urn:pre:not.u","@type":"S231:BooleanInput","S231:isOfDataType":{"@id":"S231:Boolean"}},
+    {"@id":"urn:pre:not.y","@type":"S231:BooleanOutput","S231:isOfDataType":{"@id":"S231:Boolean"},"S231:isConnectedTo":{"@id":"urn:pre:memory.u"}},
+    {"@id":"urn:pre:z","@type":"S231:BooleanOutput","S231:isOfDataType":{"@id":"S231:Boolean"}},
+    {"@id":"urn:pre:a","@type":"S231:BooleanOutput","S231:isOfDataType":{"@id":"S231:Boolean"}}
+  ]
+}

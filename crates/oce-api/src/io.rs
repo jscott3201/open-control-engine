@@ -1,6 +1,6 @@
 //! The typed IO / point inventory (`08` §6). Built once at load from the flat model connectors;
 //! **the tick never reads it** (CDL §7.17). It is the host's metadata surface for point-schedule
-//! export (use case 4.2.1) and the `set_input`/`get_output` name→connector resolver (R-IO-4).
+//! export (use case 4.2.1), complete-frame bindings and latest-state output name resolution.
 //!
 //! The inventory derives every field that is structurally available from `oce-model` connectors
 //! (path, direction, value type, min/max/unit/quantity). Semantic classifications that require
@@ -14,6 +14,7 @@ use oce_store::Store;
 
 use crate::engine::Engine;
 use crate::error::OcError;
+use crate::frame_inputs::{InputBinding, InputDefinition, build_inputs};
 
 // Re-export the store-seam point DTOs (R-PUB-1) so a host names one type space. These are the
 // canonical direction/value-type/trend-interval enums; `oce-api` owns only the IO-class +
@@ -35,6 +36,43 @@ pub enum IoClass {
     DigitalOutput,
     /// A logical / inter-controller (network) point.
     Network,
+}
+
+#[cfg(test)]
+mod frame_alias_tests {
+    use super::*;
+
+    #[test]
+    fn two_resolver_spellings_cannot_satisfy_one_logical_input_twice() {
+        // Public ingest has no input aliases. Inject an alias at the shared identity seam to
+        // ensure uniqueness is by logical input, never submitted spelling, if one is added later.
+        let mut engine = Engine::in_memory();
+        engine
+            .load_cxf(include_bytes!("../tests/fixtures/legacy_frame_add.jsonld"))
+            .unwrap();
+        let canonical = "urn:legacy-frame:a";
+        let binding = engine.io.input_by_path[canonical].clone();
+        engine.io.input_by_path.insert("alias".to_owned(), binding);
+        let before = engine.state_snapshot().unwrap();
+        for entries in [
+            [
+                (canonical, oce_model::Value::Real(0.0)),
+                ("alias", oce_model::Value::Real(0.0)),
+            ],
+            [
+                ("alias", oce_model::Value::Real(0.0)),
+                (canonical, oce_model::Value::Real(0.0)),
+            ],
+        ] {
+            assert!(
+                matches!(engine.prepare_frame(0.0, &entries), Err(OcError::FrameDuplicateInput(path)) if path == canonical)
+            );
+            assert_eq!(
+                engine.state_snapshot().unwrap().as_bytes(),
+                before.as_bytes()
+            );
+        }
+    }
 }
 
 /// Sensor | Actuator | SoftwarePoint (CDL req 5.2.7/5.2.8). `oce-api`-owned. The current default is
@@ -118,29 +156,24 @@ pub struct IoSummary {
 }
 
 /// The typed IO surface, built at load from the model connectors. Dense arena keyed by point path;
-/// store-free, owned by `Engine`. A private parallel `conn_id` lets the engine stage `set_input` /
-/// read `get_output` by [`ConnectorId`] **without leaking it** (R-API-8). Composite boundary inputs
+/// store-free, owned by `Engine`. Private bindings resolve frames and latest-state reads by
+/// [`ConnectorId`] without leaking the mutable arena. Composite boundary inputs
 /// may fan out to multiple internal input connectors; the host still sees one logical point path,
 /// while `input_by_path` preserves every staging target at load time.
 #[derive(Clone, Debug, Default)]
 pub struct IoInventory {
     points: Vec<PointInfo>,
-    conn_id: Vec<ConnectorId>,
-    input_by_path: HashMap<String, Vec<ConnectorId>>,
+    input_by_path: HashMap<String, InputBinding>,
+    pub(crate) frame_definitions: Vec<InputDefinition>,
+    /// The executable root boundary, lexical by authored identity; not the point projection.
+    pub(crate) frame_outputs: Vec<(String, ConnectorId)>,
     output_by_path: HashMap<String, ConnectorId>,
     /// Declared boundary-output alias keys (`_spec/18` R18-2): the authored root `hasOutput`
     /// IRI of each elided boundary output, resolving to its driving connector's slot. Read-only
-    /// aliases — they never enter `points`/`conn_id`, so rows, `to_map`, summaries, and the
-    /// durable batch are untouched. A pass-through declared output needs no entry here: its
+    /// aliases — they never enter `points`, so inventory rows and summaries are untouched.
+    /// A pass-through declared output needs no entry here: its
     /// lowered output connector already carries the declared IRI in `output_by_path`.
     output_alias_by_path: HashMap<String, ConnectorId>,
-}
-
-/// Load-time binding from a store point key to an input connector arena slot.
-#[derive(Clone, Debug)]
-pub(crate) struct InputPointBinding {
-    pub(crate) path: String,
-    pub(crate) connector_ids: Vec<ConnectorId>,
 }
 
 #[derive(Clone, Debug)]
@@ -241,16 +274,15 @@ impl IoInventory {
     /// feeds a position (connectors are walked in arena order).
     pub(crate) fn build_at_load(model: &ModelGraph) -> IoInventory {
         let mut points = Vec::with_capacity(model.connectors.len());
-        let mut conn_id = Vec::with_capacity(model.connectors.len());
-        let mut input_by_path: HashMap<String, Vec<ConnectorId>> =
-            HashMap::with_capacity(model.external_inputs.len());
+        let (input_by_path, frame_definitions) = build_inputs(model);
+        let mut seen_inputs = std::collections::HashSet::new();
         let mut output_by_path = HashMap::with_capacity(model.connectors.len());
         for row in point_rows_at_load(model) {
             let path = row.info.path.clone();
             if row.info.direction == PointDirection::In {
-                let connector_ids = input_by_path.entry(path.clone()).or_default();
-                connector_ids.push(row.connector_id);
-                if connector_ids.len() > 1 && model.external_inputs.contains(&row.connector_id) {
+                if !seen_inputs.insert(path.clone())
+                    && model.external_inputs.contains(&row.connector_id)
+                {
                     continue;
                 }
             } else {
@@ -259,7 +291,6 @@ impl IoInventory {
                     .or_insert(row.connector_id);
             }
             points.push(row.info);
-            conn_id.push(row.connector_id);
         }
         // Declared boundary-output aliases (R18-2). Keyed only when the driving connector is an
         // inventory output point (a non-String `Out`), so an alias can never resolve to a slot
@@ -284,21 +315,21 @@ impl IoInventory {
         }
         IoInventory {
             points,
-            conn_id,
             input_by_path,
+            frame_definitions,
+            frame_outputs: executable_boundary_outputs(model),
             output_by_path,
             output_alias_by_path,
         }
     }
 
-    /// Resolve a point path to every [`ConnectorId`] it stages when it is an input. A composite
-    /// boundary input may map one host point to multiple internal connectors after CXF import.
-    pub(crate) fn resolve_inputs(&self, path: &str) -> Option<&[ConnectorId]> {
-        self.input_by_path.get(path).map(Vec::as_slice)
+    /// Identity resolver for complete-frame preparation.
+    pub(crate) fn input_binding(&self, path: &str) -> Option<&InputBinding> {
+        self.input_by_path.get(path)
     }
 
     /// Resolve a point path to its [`ConnectorId`] **only if it is an output** — the shared
-    /// resolver behind `get_output`, `watch`, and `CollectSpec::Named`.
+    /// resolver behind latest-state `get_output` and `watch` inspection.
     ///
     /// Two key spaces resolve here, connector paths first, then declared boundary-output
     /// aliases (`_spec/18` R18-2). The order is defensive: ingest refuses a declared IRI that
@@ -313,51 +344,12 @@ impl IoInventory {
             .copied()
     }
 
-    /// The `(path, ConnectorId)` columns for every **output** point, in inventory order — the
-    /// `CollectSpec::All` recording set for `simulate` (the host-facing trace surface).
-    ///
-    /// Deliberately a separate method from [`IoInventory::durable_columns`] even though the two
-    /// bodies are identical today: the trace surface and the durable store batch are distinct
-    /// contracts (`_spec/18` D2/D3), and splitting the readers means a future decision to admit
-    /// declared boundary-output aliases into one of them is a visible edit to exactly one method
-    /// — and a red `trace_and_durable_output_columns_agree` assertion — instead of a silent
-    /// change to both.
-    pub(crate) fn trace_columns(&self) -> Vec<(String, ConnectorId)> {
-        self.points
-            .iter()
-            .zip(&self.conn_id)
-            .filter(|(p, _)| p.direction == PointDirection::Out)
-            .map(|(p, &cid)| (p.path.clone(), cid))
-            .collect()
-    }
-
-    /// The `(path, ConnectorId)` columns for every **output** point, in inventory order — the
-    /// key set the load-time `sim::DurableOutputBatch` is minted from.
-    ///
-    /// Must contain connector-identity keys only, never declared boundary-output aliases: every
-    /// existing host trend history is keyed by these paths, and an alias here would double-write
-    /// each aliased sample (`_spec/18` D3). See [`IoInventory::trace_columns`] for why the two
-    /// readers are separate methods.
-    pub(crate) fn durable_columns(&self) -> Vec<(String, ConnectorId)> {
-        self.points
-            .iter()
-            .zip(&self.conn_id)
-            .filter(|(p, _)| p.direction == PointDirection::Out)
-            .map(|(p, &cid)| (p.path.clone(), cid))
-            .collect()
-    }
-
-    /// The store point keys for every logical input point, in inventory order. This is resolved once
-    /// at load; the tick keeps only opaque handles and connector slots. A boundary-input fanout has
-    /// one store key and multiple connector slots.
-    pub(crate) fn input_bindings(&self) -> Vec<InputPointBinding> {
+    /// Load-time Store validation keys, in inventory order. No handle is used during execution.
+    pub(crate) fn input_keys(&self) -> Vec<oce_store::DomainKey> {
         self.points
             .iter()
             .filter(|p| p.direction == PointDirection::In)
-            .map(|p| InputPointBinding {
-                path: p.path.clone(),
-                connector_ids: self.input_by_path.get(&p.path).cloned().unwrap_or_default(),
-            })
+            .map(|p| oce_store::DomainKey::new(p.path.clone()))
             .collect()
     }
 
@@ -417,6 +409,32 @@ impl IoInventory {
     }
 }
 
+/// Same disjoint union as `Topology::boundary_outputs`: elided root declarations and lowered
+/// pass-through outputs. One driver may serve multiple declarations; never deduplicate by driver
+/// or append internal connector aliases. Ingest guarantees distinct declared identities.
+fn executable_boundary_outputs(model: &ModelGraph) -> Vec<(String, ConnectorId)> {
+    let mut columns: Vec<_> = model
+        .boundary_outputs
+        .iter()
+        .map(|output| (output.iri.to_string(), output.source))
+        .chain(
+            model
+                .blocks
+                .iter()
+                .filter(|block| block.class_iri.starts_with("urn:oce:lowering#"))
+                .filter_map(|block| block.outputs.first())
+                .map(|id| {
+                    (
+                        connector_path(model.connectors[id.0 as usize].iri.as_deref(), *id),
+                        *id,
+                    )
+                }),
+        )
+        .collect();
+    columns.sort_unstable_by(|left, right| left.0.cmp(&right.0));
+    columns
+}
+
 impl<S: Store> Engine<S> {
     /// The full typed IO inventory (host GUI / point-schedule export, use case 4.2.1).
     #[must_use]
@@ -431,11 +449,11 @@ impl<S: Store> Engine<S> {
     }
 
     /// The effective point list (CDL §7.7.5). `None` returns the full in-memory inventory mirror
-    /// (R-IO-3); a `controlled_device` filter requires the §7.7.5 equipment traversal
-    /// (`oce-semantics` + `SemanticStore::point_list`), which is deferred.
+    /// (R-IO-3). Device filtering (`Some`) is outside the supported profile. It is refused directly,
+    /// even when a custom store supports equipment queries; this method never delegates to the store.
     ///
     /// # Errors
-    /// [`OcError::Load`] for a `controlled_device` query (deferred); `point_list(None)` is
+    /// [`OcError::Load`] for any unsupported `controlled_device` query; `point_list(None)` is
     /// infallible. Never panics (R-ERR-1).
     pub fn point_list(&self, controlled_device: Option<&str>) -> Result<Vec<PointInfo>, OcError> {
         match controlled_device {

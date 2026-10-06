@@ -5,21 +5,99 @@ method that produced it.
 
 ## Read this first
 
-**These numbers are not gated.** Nothing in CI or in `.agents/gate.sh` re-measures them, so they
+**Historical throughput numbers are not gated.** Nothing in CI or in `.agents/gate.sh` re-measures those runs, so they
 are a record of what was observed, not a promise about `HEAD`. A performance figure that no test
 enforces drifts silently — the same failure mode that got a git SHA deleted from every provenance
 record in [PR #204](https://github.com/jscott3201/open-control-engine/pull/204), and the reason
 the numbers live here rather than in `README.md`, where they would be read as a standing claim.
 
 Treat a run below as evidence about **that commit on that host**. To make a claim about a
-different commit, re-run it — the method is fully specified, and the harness is reproduced in this
-file so anyone can.
+different commit, measure the current contract with the compiled harness described below. The
+retired execution profiles are not interchangeable with complete-frame work.
 
-A gated harness is tracked work. Until it lands, this file is updated by hand.
+The complete-frame harness below now runs structural allocation assertions and emits non-gating
+latency observations. Historical throughput runs retain their original method and limits.
 
-## What is measured
+## Complete-frame observations
 
-Steady-state cost of `Engine::tick()` on real G36 fixtures, through the public facade only:
+2026-09-19, implementation working tree based on `64e7ba83ff78a6d07750502d0f3f037b8b39f519`.
+Apple M5, aarch64-apple-darwin, macOS 27.0 (26A5425a), Rust 1.97.1. Default features, locked
+dependencies; dev/debug and release (workspace thin LTO, one codegen unit). These are local
+observations, not hosted x86_64/arm64 qualification, equipment cadence or universal speed claims.
+
+The historical version of [`frame_observations.rs`](../crates/oce-api/tests/frame_observations.rs)
+used five representative fixtures. Load was excluded. Constant schema-valid synthetic inputs were staged once for legacy tick;
+native frames supply the same complete values each time. Equal model time 0.0 deliberately tests
+repeat transitions. After 64 warmup calls, five 2,048-call batch means are measured, alternating
+commit/tick order. Commit timing excludes preparation and outer plan-batch allocation but includes
+plan and result destruction. End-to-end preparation+commit is also reported. Legacy tick includes
+its MemStore snapshot where inputs are bound, uses no-op diagnostics and produces no retained frame,
+so this is a cost comparison between different contracts, not an equivalent-work speedup.
+Only this test was scheduled during explicit measurements; other machine activity was not controlled.
+
+Median of five batch means, nanoseconds per call:
+
+| Case | Debug tick | Debug commit | Debug prepare+commit | Release tick | Release commit | Release prepare+commit |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Add arithmetic | 211 | 390 | 1,357 | 34 | 76 | 171 |
+| Sampled delay | 345 | 518 | 1,473 | 42 | 79 | 158 |
+| Zero-input Pre feedback | 282 | 471 | 533 | 35 | 68 | 69 |
+| 213-block G36 controller | 18,631 | 17,714 | 26,550 | 2,578 | 2,557 | 3,246 |
+| Assert, zero boundary outputs | 214 | 466 | 993 | 28 | 79 | 126 |
+
+Commit batch-mean ranges (debug / release ns): arithmetic 388–399 / 63–78;
+delay 488–526 / 78–86; feedback 419–473 / 63–69; controller 17,625–17,951 / 2,538–2,637;
+assertion 453–475 / 72–91. These short samples expose host drift, not tail latency or confidence
+intervals. No timing value or ratio is an assertion; the functional determinism tests are separate.
+
+The historical debug/release harness asserted the exact allocation formula over 128 preparation+commit
+repetitions per fixture and zero outstanding allocations after drop, with a 1,024-byte positive
+control. It counts the synchronous thread only. N is logical inputs, T fan-out targets, B boundary
+outputs and D emitted warnings (these cases have at most one):
+
+| Case | N / T / B / D | Preparation allocations / bytes | Commit allocations / bytes |
+| --- | --- | --- | --- |
+| Add | 2 / 2 / 1 / 0 | 4 / 120 | 2 / 66 |
+| Delay | 2 / 2 / 1 / 0 | 4 / 120 | 2 / 59 |
+| Pre | 0 / 0 / 2 / 0 | 0 / 0 | 3 / 114 |
+| Controller | 14 / 43 / 10 / 0 | 16 / 956 | 11 / 1,136 |
+| Assert | 1 / 2 / 0 / 1 | 3 / 64 | 3 / 262 |
+
+Preparation uses N+2 buffers for nonempty N. Historical commit capture used B+1 buffers for nonempty B, with
+`B * size_of::<(String, Value)>() + sum(path_bytes)` bytes; zero B allocates none. Each warning
+copies its source/message and grows a Vec geometrically (one warning uses four event slots).
+Value cloning preserves bits and shares immutable String payloads. This budget is structural:
+no shadow RunState, whole-engine copy or rollback. Existing evaluator allocations, notably wide
+Sort, remain a separate baseline cost; this fixture census does not erase them.
+
+The shared evaluation-core extraction based on `8ea3e8f38d580868179bfa985b443b71ca3b86c1`
+re-ran this exact census in debug and release on aarch64-apple-darwin/Rust 1.97.1: all five
+preparation/commit counts and byte budgets above remain unchanged. The latency test also ran,
+but these observations are not a speed gate or a before/after performance claim. The historical
+timing table above is not re-blessed. The frame-only contraction removes the legacy comparison;
+the current harness measures commit and preparation-plus-commit only, retaining the allocation
+formula checks. All accepted frames now retain warnings. No current latency claim is inferred from
+the historical tick columns.
+
+Canonical replay delivery additionally retains the accepted inputs in every completed receipt:
+N canonical path buffers plus one N-pair vector for nonempty N, costing
+`N * size_of::<(String, Value)>() + sum(input_path_bytes)`. Prepared Values move into this vector;
+there is no second value-byte copy. Placement capture scans block classes under the state policy.
+The current harness asserts these added counts/bytes over the same 128 repetitions with zero retained
+allocations after drop. The historical table above is not a current total or latency prediction.
+Record encoding/decoding is separate opt-in work; the [replay contract](replay-record.md) documents
+its caps and streamed-host allocation evidence, not a speed claim.
+
+Run observations explicitly with `--success-output immediate --test-threads 1` on the focused
+`frame_observations` nextest binary. It is also included in the existing oce-api matrix test set;
+normal success-output suppression hides passing timing logs, but allocation checks still execute.
+Use `--locked --profile ci --no-tests=fail` for debug and
+`--locked --profile ci-release --cargo-profile release --no-tests=fail` for release. The full
+repository gate remains [`.agents/gate.sh`](../.agents/gate.sh), not this measurement selection.
+
+## What the historical throughput runs measured
+
+The now-retired steady-state `Engine::tick()` on real G36 fixtures, through the then-public facade:
 `Engine::in_memory()` → `load_cxf()` → `tick()`.
 
 - **Load is excluded from the tick figure** and reported separately. Loading happens once;
@@ -40,8 +118,8 @@ conclusion would come from.
   usually matters more than the mean, and one property that governs it — whether the evaluator
   thread allocates during a block tick — is gated separately and much more strictly, by
   `crates/oce-blocks/tests/tick_allocation_census.rs` (registry-wide, with a positive control),
-  which runs per-PR. The narrower facade guard in `crates/oce-api/tests/tick_purity_tests.rs`
-  runs on the release gate, as every `oce-api` test does. This file is not gated at all.
+   which runs per-PR. Current facade frame allocation and Store-noninterference checks also run
+   per-PR in `frame_observations.rs` and `frame_purity.rs`. Historical throughput is not gated.
 - **Multi-core or concurrent engines.** Single engine, single thread.
 - **Any architecture other than the one in the run header.** CI runs a determinism matrix across
   x86_64 and arm64 precisely because one machine does not speak for both.
@@ -124,88 +202,11 @@ sequences run at a 1 Hz cadence or slower.
 
 ## Reproducing a run
 
-The harness deliberately lives **outside** the repository, in a scratch directory. It is not a
-crate target, so it ships nothing, adds no dependency to the workspace, and cannot perturb the
-nextest test count or `cargo package`. Where a permanent harness should live is the open design
-question in the tracked follow-up.
-
-```bash
-mkdir -p /tmp/tickbench/src && cd /tmp/tickbench
-cat > Cargo.toml <<'EOF'
-[workspace]
-
-[package]
-name = "tickbench"
-version = "0.0.0"
-edition = "2024"
-
-[dependencies]
-oce-api = { path = "/ABSOLUTE/PATH/TO/open-control/crates/oce-api" }
-
-[profile.release]
-debug = true
-EOF
-```
-
-`src/main.rs` — adjust the `include_str!` paths to your checkout:
-
-```rust
-use std::time::Instant;
-
-use oce_api::Engine;
-
-const FIXTURES: &[(&str, &str)] = &[(
-    "cooling_only_controller",
-    include_str!("/ABSOLUTE/PATH/TO/open-control/crates/oce-cxf/tests/fixtures/g36/cooling_only_controller.jsonld"),
-)];
-
-const MEASURE_SECS: f64 = 2.0;
-const WARMUP_TICKS: u64 = 20_000;
-const DT: f64 = 1.0;
-
-fn main() {
-    for (name, cxf) in FIXTURES {
-        let load_start = Instant::now();
-        let mut engine = Engine::in_memory();
-        if let Err(e) = engine.load_cxf(cxf.as_bytes()) {
-            println!("{name}: load failed: {e:?}");
-            continue;
-        }
-        let load_ms = load_start.elapsed().as_secs_f64() * 1e3;
-
-        let mut t = 0.0_f64;
-        for _ in 0..WARMUP_TICKS {
-            t += DT;
-            if engine.tick(t).is_err() {
-                break;
-            }
-        }
-
-        let start = Instant::now();
-        let mut ticks: u64 = 0;
-        loop {
-            t += DT;
-            if engine.tick(t).is_err() {
-                break;
-            }
-            ticks += 1;
-            if ticks % 4096 == 0 && start.elapsed().as_secs_f64() >= MEASURE_SECS {
-                break;
-            }
-        }
-        let secs = start.elapsed().as_secs_f64();
-        println!(
-            "{name}: load {load_ms:.1} ms · {:.0} ns/tick · {:.0} ticks/sec",
-            secs * 1e9 / ticks as f64,
-            ticks as f64 / secs
-        );
-    }
-}
-```
-
-```bash
-cargo build --release && ./target/release/tickbench
-```
+Use the repository's compiled `frame_observations` nextest binary for current measurements, with
+the focused settings above. It submits a complete frame on every iteration and separately reports
+commit-only and preparation-plus-commit cost. There is no sparse staging or implicit hold-last
+benchmark profile. Historical tables retain the method and limits of their recorded revisions;
+they are not predictions for the frame-only facade. No older timing table has been regenerated.
 
 Run it on an **idle** machine, and run it at least twice — a figure that does not reproduce is not
 a measurement.

@@ -1,0 +1,26 @@
+{
+  "@context": {"S231": "http://data.ashrae.org/S231P#"},
+  "@graph": [
+    {"@id": "urn:assert#model", "@type": "S231:Block",
+     "S231:containsBlock": [{"@id": "urn:assert#check"}, {"@id": "urn:assert#invert"}],
+     "S231:hasInput": {"@id": "urn:assert#u"}},
+    {"@id": "urn:assert#check", "@type": "CDL.Utilities.Assert",
+     "S231:hasInput": {"@id": "urn:assert#check.u"},
+     "S231:hasParameter": {"@id": "urn:assert#check.message"}},
+    {"@id": "urn:assert#check.message", "@type": "S231:Parameter",
+     "S231:isOfDataType": {"@id": "S231:String"},
+     "S231:value": "\"freezestat tripped\""},
+    {"@id": "urn:assert#check.u", "@type": "S231:BooleanInput",
+     "S231:isOfDataType": {"@id": "S231:Boolean"}},
+    {"@id": "urn:assert#invert", "@type": "CDL.Logical.Not",
+     "S231:hasInput": {"@id": "urn:assert#invert.u"},
+     "S231:hasOutput": {"@id": "urn:assert#invert.y"}},
+    {"@id": "urn:assert#invert.u", "@type": "S231:BooleanInput",
+     "S231:isOfDataType": {"@id": "S231:Boolean"}},
+    {"@id": "urn:assert#invert.y", "@type": "S231:BooleanOutput",
+     "S231:isOfDataType": {"@id": "S231:Boolean"}},
+    {"@id": "urn:assert#u", "@type": "S231:BooleanInput",
+     "S231:isOfDataType": {"@id": "S231:Boolean"},
+     "S231:isConnectedTo": [{"@id": "urn:assert#check.u"}, {"@id": "urn:assert#invert.u"}]}
+  ]
+}

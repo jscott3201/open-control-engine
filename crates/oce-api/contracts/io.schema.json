@@ -1,0 +1,32 @@
+{
+  "domain": "io",
+  "representation": "Rust facade contract description; not a general JSON codec",
+  "revision": 1,
+  "semantics": [
+    "Built at load; IO enum projection is Int and strings are omitted. Value retains enum identity even though PointValueType does not.",
+    "Available connector attributes provide static bounds and units; physical classification defaults to SoftwarePoint, in_pointlist=true, hardwired=false, trend=None in this inventory.",
+    "Model-local ConnectorId mapping supports declared input fan-out and output aliases. PointHandle belongs to the separate conditional storage port."
+  ],
+  "types": {
+    "IoSummary": "usize counts analog_inputs, analog_outputs, digital_inputs, digital_outputs, network, total",
+    "PointInfo": {
+      "direction": "In | Out",
+      "display_unit": "Option<String> display only",
+      "hardwired": "bool",
+      "in_pointlist": "bool",
+      "io_class": "AnalogInput | AnalogOutput | DigitalInput | DigitalOutput | Network",
+      "max": "Option<f64>",
+      "min": "Option<f64>",
+      "path": "String canonical host-visible point identity",
+      "physical": "Sensor | Actuator | SoftwarePoint",
+      "quantity": "Option<String>",
+      "trend": "Option<TrendCfg>",
+      "unit": "Option<String> computation unit",
+      "value_type": "Real | Int | Bool"
+    },
+    "TrendCfg": {
+      "enabled": "bool",
+      "interval": "OnChange | EverySeconds(u32)"
+    }
+  }
+}

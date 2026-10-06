@@ -1,4 +1,4 @@
-//! Tier-1 exact-comparison coverage for closed-form block goldens.
+//! Exact-comparison coverage for reference goldens.
 
 use oce_conformance::{Series, ValueKind, compare_exact};
 

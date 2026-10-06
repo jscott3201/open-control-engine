@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Stage the documentation corpus without modifying source-file contents.
 
-The tracked files under ``docs/`` are copied into an owned, disposable build
-tree. Repository-relative links are rewritten only in those staged copies so
-source and test paths resolve to the exact repository revision being built.
+Version-controlled files and pending, non-ignored additions under ``docs/`` are
+copied into an owned, disposable build tree. Including pending additions lets
+the pre-commit documentation gate exercise a new chapter before Git records it.
+Repository-relative links are rewritten only in those staged copies so source
+and test paths resolve to the exact repository revision being built.
 """
 
 from __future__ import annotations
@@ -81,20 +83,29 @@ def prepare_stage(root: Path, requested: Path) -> Path:
     return stage
 
 
-def tracked_docs(root: Path) -> list[PurePosixPath]:
-    """Return every tracked docs path in deterministic order."""
+def documentation_paths(root: Path) -> list[PurePosixPath]:
+    """Return every tracked or pending non-ignored docs path deterministically."""
 
-    raw_paths = git_output(root, "ls-files", "-z", "--", "docs").split(b"\0")
+    raw_paths = git_output(
+        root,
+        "ls-files",
+        "-z",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+        "--",
+        "docs",
+    ).split(b"\0")
     paths = [PurePosixPath(raw.decode("utf-8")) for raw in raw_paths if raw]
     paths.sort(key=str)
     if not paths:
-        raise ValueError("the tracked docs corpus is empty")
+        raise ValueError("the documentation corpus is empty")
     for path in paths:
         if path.parts[0] != "docs" or ".." in path.parts:
-            raise ValueError(f"unsafe tracked docs path: {path}")
+            raise ValueError(f"unsafe documentation path: {path}")
         source = root.joinpath(*path.parts)
         if source.is_symlink() or not source.is_file():
-            raise ValueError(f"tracked docs source must be a regular file: {path}")
+            raise ValueError(f"documentation source must be a regular file: {path}")
     return paths
 
 
@@ -181,14 +192,27 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 # Reference
 
 - [Documentation map](docs/README.md)
+- [Product contract](docs/product-contract.md)
+- [Complete-frame contract](docs/complete-frame-contract.md)
+- [State continuation and portability](docs/state-compatibility.md)
+- [Canonical replay record](docs/replay-record.md)
+- [Release-candidate compatibility](docs/release-compatibility.md)
+- [Authority claims and supersession](docs/authority-claims.md)
+- [Public surface contract](docs/public-surface-contract.md)
+- [Facade migration](docs/facade-migration.md)
+- [Versioned facade contracts](docs/facade-contracts.md)
+- [Package, feature, and publication policy](docs/package-publication-policy.md)
 - [Architecture](docs/architecture.md)
+- [Execution profile](docs/execution-profile.md)
 - [Verification and evidence](docs/verification-evidence.md)
+- [Pinned strict-bit signal evidence](docs/strict-bit-evidence.md)
 - [CDL coverage](docs/cdl-coverage.md)
 - [CXF round trip](docs/cxf-round-trip.md)
 - [CXF composite subset](docs/cxf-composite-subset.md)
 - [Host responsibilities](docs/host-responsibilities.md)
 - [CI and the gate](docs/ci-and-the-gate.md)
 - [Benchmarks](docs/benchmarks.md)
+- [Stability baseline](docs/stability-baseline.md)
 """
     (source / "SUMMARY.md").write_text(summary, encoding="utf-8")
 
@@ -202,7 +226,7 @@ def stage_book(output: Path, requested_revision: str | None) -> tuple[Path, int,
     source_root = stage / "src"
     source_root.mkdir()
 
-    paths = tracked_docs(root)
+    paths = documentation_paths(root)
     for source_path in paths:
         source = root.joinpath(*source_path.parts)
         destination = source_root.joinpath(*source_path.parts)
@@ -235,7 +259,7 @@ def main() -> int:
         print(f"docs staging: FAIL: {error}", file=sys.stderr)
         return 1
 
-    print(f"docs staging: PASS ({count} tracked corpus files, revision {revision}, output {stage})")
+    print(f"docs staging: PASS ({count} corpus files, revision {revision}, output {stage})")
     return 0
 
 

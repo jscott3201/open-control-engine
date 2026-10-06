@@ -1,0 +1,7 @@
+{
+  "kind": "metadata regression and independent hash calculation",
+  "baseline": "97156fddc15e6f12650a060623c9cde84b98ecc9",
+  "catalog": "generated from facade projection of unchanged registry, not a numerical oracle",
+  "content_tag": "Python integer modular FNV-1a-128 calculation over ASCII oce:catalog:1 + NUL + catalog.json; checked independently by Rust schoolbook byte multiplication",
+  "schema": "reviewed authored descriptors; not generated from rustdoc"
+}

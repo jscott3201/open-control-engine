@@ -1,4 +1,4 @@
-//! CDL.Routing Real-family goldens.
+//! CDL.Routing Real, Boolean, and portable signed-32-bit Integer goldens.
 //!
 //! The reference formulas are re-derived from the CDL source equations: selector routing,
 //! warning-free in-range extraction, scalar/vector fill, mask filtering, and row-major matrix
@@ -332,8 +332,8 @@ pub fn goldens() -> Vec<Golden> {
     // IntegerExtractSignal: y[i] = u[extract[i]], preserving duplicate selectors and order.
     {
         let time = ticks(4);
-        let u1 = [1, -1, 0, 9_007_199_254_740_992];
-        let u2 = [2, -2, 20, -9_007_199_254_740_992];
+        let u1 = [1, -1, 0, i64::from(i32::MAX)];
+        let u2 = [2, -2, 20, i64::from(i32::MIN)];
         let u3 = [3, -3, 30, 1024];
         let u4 = [4, -4, 40, -1024];
         let u5 = [5, -5, 50, 0];
@@ -352,7 +352,7 @@ pub fn goldens() -> Vec<Golden> {
                 time.clone(),
                 values.into_iter().map(i).collect(),
                 inputs.clone(),
-                "params nin=5,nout=4,extract=[5,2,2,1]; Integer inputs include signed and exact 2^53 boundary values",
+                "params nin=5,nout=4,extract=[5,2,2,1]; Integer inputs include signs, zero, and portable i32::MIN/MAX endpoints",
                 "y[i] = u[extract[i]] with source-validated 1-based selectors",
             ));
         }
@@ -365,8 +365,8 @@ pub fn goldens() -> Vec<Golden> {
         let u1 = [10, 11, 12, 13, 14];
         let u2 = [-20, -21, -22, -23, -24];
         let u3 = [
-            9_007_199_254_740_992,
-            -9_007_199_254_740_992,
+            i64::from(i32::MAX),
+            i64::from(i32::MIN),
             30,
             31,
             32,
@@ -392,7 +392,7 @@ pub fn goldens() -> Vec<Golden> {
     // IntegerScalarReplicator: y = fill(u, nout).
     {
         let time = ticks(4);
-        let u = [1, -1, 9_007_199_254_740_992, -9_007_199_254_740_992];
+        let u = [1, -1, i64::from(i32::MAX), i64::from(i32::MIN)];
         let inputs = vec![input_i("u", u)];
         for signal in ["y1", "y2", "y3"] {
             out.push(typed_golden(
@@ -402,7 +402,7 @@ pub fn goldens() -> Vec<Golden> {
                 time.clone(),
                 u.into_iter().map(i).collect(),
                 inputs.clone(),
-                "param nout=3; scalar Integer input includes exact 2^53 boundary values",
+                "param nout=3; scalar Integer input includes both portable i32 endpoints",
                 "y = fill(u, nout)",
             ));
         }
@@ -413,7 +413,7 @@ pub fn goldens() -> Vec<Golden> {
         let time = ticks(4);
         let u1 = [1, 10, -1, -10];
         let u2 = [2, 20, -2, -20];
-        let u3 = [9_007_199_254_740_992, -9_007_199_254_740_992, 3, 30];
+        let u3 = [i64::from(i32::MAX), i64::from(i32::MIN), 3, 30];
         let u4 = [4, 40, -4, -40];
         let inputs = vec![
             input_i("u1", u1),
@@ -438,8 +438,8 @@ pub fn goldens() -> Vec<Golden> {
     // IntegerVectorReplicator: y[nout,nin] = fill(u, nout), lowered row-major.
     {
         let time = ticks(4);
-        let u1 = [7, -7, 9_007_199_254_740_992, 0];
-        let u2 = [8, -8, -9_007_199_254_740_992, 1];
+        let u1 = [7, -7, i64::from(i32::MAX), 0];
+        let u2 = [8, -8, i64::from(i32::MIN), 1];
         let inputs = vec![input_i("u1", u1), input_i("u2", u2)];
         let signals = [
             ("y1", u1),

@@ -3,18 +3,37 @@
 Thanks for helping build an embeddable control engine for CDL. This guide is the human onramp;
 the architecture and invariants are the design of record.
 
+## Where the project lives
+
+- **GitHub is the primary host:** `github.com/jscott3201/open-control-engine`. Clone from, push
+  branches to, open pull requests and file issues there. CI runs on GitHub Actions
+  (`.github/workflows/`, Linux only).
+- The self-hosted Forgejo instance that was primary until October 2026 is retired and no longer
+  mirrors anything.
+- **PR numbers overlap.** GitHub PR numbers collide with the retired Forgejo numbering: Forgejo
+  #332 (the Forgejo CI port) and GitHub #332 are different changes. Bare `(#N)` citations predate
+  the move; cite every PR merged on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
+
 ## How changes land
 
-- Every logical change opens a pull request into the **`development`** branch.
-- Development PRs run the CI gates in [`.github/workflows/ci.yml`](.github/workflows/ci.yml);
+- Every logical change opens a pull request into the **`development`** branch on GitHub.
+- Development PRs run the CI gates in
+  [`.github/workflows/pr-gate.yml`](.github/workflows/pr-gate.yml), summarized by the single
+  required status `CI OK`;
   `bash .agents/gate.sh` reproduces them locally in CI's exact command form, so the list lives
   in one place rather than being restated here. Only `oce-api`, `oce-blocks`, and `oce-expr` tests
-  run per-PR — every other crate's tests run on the `development` → `main` release gate. Releases
-  batch `development` → `main`. **Publishing is manual:** a `v*` tag push runs the verify job
-  only; the publish job is guarded by `github.event_name == 'workflow_dispatch'`, so a tag alone
-  never publishes.
-- **Open your PR non-draft.** Every `ci.yml` job is conditioned on
-  `github.event.pull_request.draft == false`, so a draft PR runs no gates at all.
+  form the state-determinism subset; the scoped `oce-conformance` strict-bit subset and four
+  per-block suites also run per-PR ([bounded evidence](docs/strict-bit-evidence.md)). The remainder
+  needs the release/full gate. Releases
+  batch `development` → `main`. **Publishing is manual:** in `.github/workflows/release.yml`
+  (crates.io credentials live in its `release` environment), a `v*` tag push runs its verify job
+  only (including a workspace
+  `cargo test`); the publish job is guarded by `github.event_name == 'workflow_dispatch'`, so a tag
+  alone never publishes. The 12-publishable/five-private selection and supported `oce-api` feature matrix
+  are governed by the [package publication policy](docs/package-publication-policy.md). No crate is
+  published yet; actual publication remains separately owner-authorized.
+- **Every PR runs the full per-PR gate**, including work-in-progress PRs. Confirm the checks
+  actually ran and that `CI OK` is green before asking for review.
 - Keep changes scoped to the crate or subsystem that owns the behavior, and add or update tests
   when you change behavior.
 
@@ -24,15 +43,18 @@ Promotions into `main` are infrequent enough that every step gets forgotten by s
 order (a checklist by convention, not a CI gate):
 
 1. **Bring `CHANGELOG.md` current first.** Check by comparison, not by whether the file was
-   touched: list the PRs merged into `development` since the last release with
-   `gh pr list --state merged --base development`, and confirm each number appears in
-   `CHANGELOG.md`. Any that do not are the entries to recover before opening the PR.
+   touched: list the PRs merged into `development` since the last release — every squash-merge
+   subject ends in `(#N)`, so `git log --oneline origin/main..origin/development` lists them, as
+   does GitHub's closed-PR view filtered to base `development` — and confirm each number appears
+   in `CHANGELOG.md`, cited as `(GitHub #N)`
+   (see [Where the project lives](#where-the-project-lives)).
+   Any that do not are the entries to recover before opening the PR.
 
    This step used to be `git log origin/main..development -- CHANGELOG.md`, read as "empty means
    undocumented". The converse does not follow and the converse is how it was used: run against a
    ten-PR gap it returned three commits and passed, because three earlier PRs had each added an
    entry. It answers whether the file was touched in a range, never whether it is current.
-2. Open the promotion PR `development` → `main`.
+2. Open the promotion PR `development` → `main` on GitHub.
 3. Merge with a **merge commit**, never squash — both prior promotions (`a57d860`, `cf70c80`)
    are true merges, and squashing would rewrite the history `development` continues from.
 4. The release gate and manual publishing then apply as described under
@@ -80,21 +102,26 @@ session). Hook skipping follows the repository truthiness policy: empty, `0`, an
 
 ## Before you open a PR
 
+For indexed claims, follow the [source-owner update procedure](docs/authority-claims.md#updating-a-legitimate-claim).
+The generated summary is not a replacement policy; native and delegated verifiers remain separate
+from its fast schema/projection check. Regeneration is always explicit, never part of the gate.
+
 ```bash
 bash .agents/gate.sh
 ```
 
-That runs the per-PR gate in CI's exact command form — formatting, the file-size cap, the
-no-secret scan, the database-free and golden-gen invariant checks, the gate fixtures,
-`cargo machete`, clippy, build, rustdoc, cargo-deny, and the `oce-api`/`oce-blocks`/`oce-expr`
-determinism subset in debug and release codegen.
+That runs the per-PR gate in CI's exact command form — formatting, the file-size cap, the no-secret
+scan, the database-free and golden-gen invariant checks, the closed package/feature/publication
+contract and its hostile controls, the gate fixtures, `cargo machete`, clippy, build, rustdoc,
+cargo-deny, and the `oce-api`/`oce-blocks`/`oce-expr` determinism subset in debug and release
+codegen, plus the scoped strict-bit conformance subset in both codegen profiles.
 
-CI also runs this script directly, as the `gate (light)` job in `ci.yml` and `gate (full)` in
-`release-gate.yml`. So the commands here gate your PR whether or not each is separately wired as
+CI also runs this script directly, as the `gate (light)` job in `.github/workflows/pr-gate.yml` and
+`gate (full)` in `.github/workflows/release-gate.yml`. So the commands here gate your PR whether or not each is separately wired as
 its own job — but that is coverage, not proof that the script and the workflows still agree.
 Nothing verifies that mechanically; change a command in CI first, then here.
 
-If your change touches a crate outside that three-crate subset, its tests did not run. Add `full`:
+If your change falls outside those named subsets, a green PR need not have run its tests. Add `full`:
 
 ```bash
 bash .agents/gate.sh full
@@ -104,7 +131,16 @@ bash .agents/gate.sh full
 prints what it cannot cover locally. Earlier revisions of this file listed the commands inline
 and drifted from CI — omitting `cargo machete`, the gate-fixture job, the `--bins` rustdoc pass,
 and the determinism matrix — while claiming to mirror it. Change a command in
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) first, then in the script.
+[`.github/workflows/pr-gate.yml`](.github/workflows/pr-gate.yml) first, then in the script.
+
+`.agents/gate.sh`, `.config/nextest.toml` and the dormant, disabled `.github/workflows/ci.yml` are
+bound sources of the retained native strict-bit evidence
+([strict-bit evidence](docs/strict-bit-evidence.md)): changing any byte of them turns the
+retained-evidence test red until a new native receipt is admitted. Plan such a change as an
+evidence refresh, not as a drive-by edit.
+
+CI is Linux-only. There is no macOS or Windows CI leg, and there never was one; macOS observations
+are local and are not qualification evidence.
 
 ## Invariants a change must not violate
 
@@ -119,16 +155,16 @@ and the determinism matrix — while claiming to mirror it. Change a command in
   The evaluator performs no hashing, I/O, or store access — keep it that way. Allocation is
   **not** unconditionally zero across the block library, so do not add to the exceptions:
   `Reals.Sort` is stack-backed through `SORT_STACK_WIDTH` (64) inputs and falls back to two
-  heap `Vec`s only above that (`reals_matrix.rs:388`, `:399-403`), and `Engine::tick` takes one
-  `store.snapshot()` when the model declares store-backed inputs.
+  heap `Vec`s only above that (`reals_matrix.rs:388`, `:399-403`). Complete-frame preparation and
+  result capture have explicit structural allocation budgets; neither calls the Store.
 
   A new block allocation on the evaluator thread **is** caught per-PR.
   `crates/oce-blocks/tests/tick_allocation_census.rs` sweeps the whole registry via `catalog()` and
   carries a permanent positive control (`CDL.Reals.Sort`), and `oce-blocks` is one of the three
   crates the per-PR gate runs (`.agents/gate.sh`). Current blocks do not delegate work to worker threads; a
   block that introduces worker execution also needs an allocation guard for that work. The
-  facade-level guard in `oce-api/tests/tick_purity_tests.rs` is narrower — three fixtures — and runs
-  per-PR as part of the `oce-api` subset.
+  facade guards in `oce-api/tests/frame_purity.rs` and `frame_observations.rs` check Store freedom
+  and frame allocation budgets per-PR as part of the `oce-api` subset.
 
 ## Commits
 

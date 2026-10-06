@@ -1,10 +1,11 @@
 //! Compile-time PyO3 binding-shape guards (`10` §3 "Testability of §3").
 //!
-//! The future `oce-py` PyO3 binding wraps this `oce-api` surface, and `10` §3 makes the R-API-PY-1..8
-//! binding-shape constraints normative on the facade. Any drift that would make the surface
-//! un-bindable (a generic that cannot be a `#[pyclass]`, a non-`Clone` type that cannot cross to
-//! Python, a borrowed/lifetime/`&dyn Store` return, a non-`Send` engine) must fail the build here,
-//! with **no PyO3 dependency**. Every item below is a never-called `fn` whose mere compilation IS the
+//! The future `oce-py` PyO3 binding wraps a selected `oce-api` subset. The R-API-PY-1..8
+//! binding-shape constraints apply to that wrapped subset and to the selected owned/thread-safe
+//! shapes pinned below; they do not describe every Rust facade signature. Drift in a pinned shape
+//! (a generic that cannot be a `#[pyclass]`, a non-`Clone` type that cannot cross to Python, a
+//! borrowed/lifetime/`&dyn Store` return, or a non-`Send` engine) must fail the build here, with **no
+//! PyO3 dependency**. Every item below is a never-called `fn` whose mere compilation IS the
 //! assertion; `#[allow(dead_code)]` keeps them off the dead-code lint.
 //!
 //! This is a **non-test** module (not `#[cfg(test)]`) on purpose: the per-PR `ci.yml` gate runs
@@ -15,7 +16,6 @@
 
 #![allow(dead_code)]
 
-use std::path::Path;
 use std::sync::Arc;
 
 use oce_store_mem::MemStore;
@@ -23,9 +23,8 @@ use oce_store_mem::MemStore;
 use crate::{
     AssertEvent, AssertLevel, ConnectorId, DeclaredOutput, Diagnostic, Engine, EngineCheckpoint,
     EngineStateError, EngineStateSnapshot, IoClass, IoInventory, IoSummary, LoadErrorContext,
-    LoadReport, OcError, OutputTrace, Outputs, ParamAttrs, ParamTable, PassThroughPair,
-    PhysicalKind, PointDirection, PointInfo, PointValueType, RunMode, SemanticQuery, SimMetrics,
-    SimSpec, StepReport, TemplateRef, Topology, TopologyBlock, TopologyConnection, TrendCfg,
+    LoadReport, OcError, ParamAttrs, ParamTable, PassThroughPair, PhysicalKind, PointDirection,
+    PointInfo, PointValueType, RunMode, Topology, TopologyBlock, TopologyConnection, TrendCfg,
     TrendInterval, Value, ValueType,
 };
 
@@ -34,6 +33,30 @@ fn needs_send_sync<T: Send + Sync + ?Sized>() {}
 
 /// `T: Clone` (R-API-PY-3: every type that crosses to Python is owned-convertible).
 fn needs_clone<T: Clone>() {}
+
+/// Snapshot inspection stays read-only, owned-convertible and thread-safe; not build authority.
+fn _assert_state_portability_shape() {
+    needs_clone::<crate::StatePortability>();
+    needs_send_sync::<crate::StatePortability>();
+    let _: fn(&EngineStateSnapshot) -> &crate::StatePortability = EngineStateSnapshot::portability;
+}
+
+/// Opaque preparations are moved, while completed results are independently owned and immutable.
+#[allow(clippy::type_complexity)]
+fn _assert_complete_frame_shapes() {
+    needs_send_sync::<crate::PreparedInputFrame>();
+    needs_send_sync::<crate::CompletedFrame>();
+    needs_clone::<crate::CompletedFrame>();
+    let _: fn(&Engine) -> Result<Vec<crate::InputDefinition>, OcError> = Engine::input_definitions;
+    let _: fn(&Engine, f64, &[(&str, Value)]) -> Result<crate::PreparedInputFrame, OcError> =
+        Engine::prepare_frame;
+    let _: fn(&mut Engine, crate::PreparedInputFrame) -> Result<crate::CompletedFrame, OcError> =
+        Engine::execute_frame;
+    let _: fn(&crate::CompletedFrame) -> u64 = crate::CompletedFrame::sequence;
+    let _: fn(&crate::CompletedFrame) -> f64 = crate::CompletedFrame::time;
+    let _: fn(&crate::CompletedFrame) -> &[(String, Value)] = crate::CompletedFrame::outputs;
+    let _: fn(&crate::CompletedFrame) -> &[AssertEvent] = crate::CompletedFrame::diagnostics;
+}
 
 // ---- R-API-PY-1 — no generic `#[pyclass]`: the binding wraps the concrete `Engine<MemStore>` ----
 
@@ -77,11 +100,7 @@ fn _assert_python_facing_types_are_clone() {
     needs_clone::<LoadReport>();
     needs_clone::<IoSummary>();
     needs_clone::<PointInfo>();
-    needs_clone::<OutputTrace>();
-    needs_clone::<StepReport>();
     needs_clone::<AssertEvent>();
-    needs_clone::<SimMetrics>();
-    needs_clone::<Outputs>();
     needs_clone::<IoInventory>();
     needs_clone::<ParamTable>();
     needs_clone::<ParamAttrs>();
@@ -114,16 +133,13 @@ fn _assert_python_facing_types_are_clone() {
 /// load-bearing conversion the binding performs). Pin their concrete owned return types via
 /// fn-pointers; a drift to a borrowed/`impl Trait`/`Cow` return fails to coerce.
 fn _assert_outputs_enumerable() {
-    let _: fn(&Outputs) -> Vec<(String, Value)> = Outputs::to_map;
     let _: fn(&IoInventory) -> Vec<PointInfo> = IoInventory::to_vec;
     let _: fn(&ParamTable) -> Vec<(String, Value, ParamAttrs)> = ParamTable::to_vec;
 }
 
 /// The borrowing `iter()` companions return `impl Iterator` (uncoercible to a fn-pointer), so pin
-/// their **item** types at a use-site instead. The owned key + borrowed value of `Outputs::iter`
-/// (`(ConnectorId, &Value)`) is exactly the owned-snapshot counterpart `to_map` clones.
-fn _assert_enumeration_item_types(o: &Outputs, i: &IoInventory, p: &ParamTable) {
-    let _: Option<(ConnectorId, &Value)> = o.iter().next();
+/// their **item** types at a use-site instead.
+fn _assert_enumeration_item_types(i: &IoInventory, p: &ParamTable) {
     let _: Option<PointInfo> = i.iter().next();
     let _: Option<(String, Value, ParamAttrs)> = p.iter().next();
 }
@@ -133,19 +149,13 @@ fn _assert_enumeration_item_types(o: &Outputs, i: &IoInventory, p: &ParamTable) 
 /// R-API-PY-5/6: the frozen method set, each pinned to its exact signature via a fn-pointer. A
 /// fn-pointer is monomorphic, lifetime-erased, and concrete-typed, so a leaked generic parameter, an
 /// `impl Trait` tied to `&self`, a `Cow<'_, _>`, or a `&dyn Store` in any of these would fail to
-/// coerce — a unit-build error, not a runtime surprise. (`load_from_semantic` / `load_modelica` are
-/// Rust-frozen here but deferred from the Python-wrapped subset until those loaders are wired.)
+/// coerce — a unit-build error, not a runtime surprise.
 #[allow(clippy::type_complexity)]
 fn _assert_frozen_signatures() {
     let _: fn() -> Engine<MemStore> = Engine::<MemStore>::in_memory;
     let _: fn(Arc<MemStore>) -> Engine<MemStore> = Engine::<MemStore>::with_store;
     let _: fn(&mut Engine<MemStore>, &[u8]) -> Result<LoadReport, OcError> =
         Engine::<MemStore>::load_cxf;
-    let _: fn(&mut Engine<MemStore>, &TemplateRef, &SemanticQuery) -> Result<LoadReport, OcError> =
-        Engine::<MemStore>::load_from_semantic;
-    let _: fn(&mut Engine<MemStore>, &Path) -> Result<LoadReport, OcError> =
-        Engine::<MemStore>::load_modelica;
-    let _: fn(&mut Engine<MemStore>, f64) -> Result<&Outputs, OcError> = Engine::<MemStore>::tick;
     let _: fn(&Engine<MemStore>) -> Result<EngineCheckpoint, OcError> =
         Engine::<MemStore>::checkpoint;
     let _: fn(&mut Engine<MemStore>, &EngineCheckpoint) -> Result<(), OcError> =
@@ -154,17 +164,9 @@ fn _assert_frozen_signatures() {
         Engine::<MemStore>::state_snapshot;
     let _: fn(&mut Engine<MemStore>, &EngineStateSnapshot) -> Result<(), OcError> =
         Engine::<MemStore>::restore_state;
-    let _: fn(&mut Engine<MemStore>, &str, Value) -> Result<(), OcError> =
-        Engine::<MemStore>::set_input;
     let _: fn(&Engine<MemStore>, &str) -> Result<Value, OcError> = Engine::<MemStore>::get_output;
     let _: fn(&Engine<MemStore>, &[&str]) -> Result<Vec<(String, Value)>, OcError> =
         Engine::<MemStore>::watch;
-    let _: fn(&mut Engine<MemStore>, &SimSpec) -> Result<SimMetrics, OcError> =
-        Engine::<MemStore>::simulate;
-    let _: fn(&mut Engine<MemStore>, f64) -> Result<StepReport, OcError> =
-        Engine::<MemStore>::step_realtime;
-    let _: fn(&mut Engine<MemStore>, u64) = Engine::<MemStore>::set_realtime_epoch_unix_nanos;
-    let _: fn(&Engine<MemStore>) -> Option<u64> = Engine::<MemStore>::realtime_epoch_unix_nanos;
     let _: fn(&Engine<MemStore>, &str) -> Result<Value, OcError> = Engine::<MemStore>::get_param;
     let _: fn(&Engine<MemStore>) -> &ParamTable = Engine::<MemStore>::params;
     let _: fn(&mut Engine<MemStore>, &str, Value) -> Result<(), OcError> =
@@ -180,7 +182,6 @@ fn _assert_frozen_signatures() {
         Engine::<MemStore>::export_cxf;
     let _: fn(&Engine<MemStore>) -> crate::Topology = Engine::<MemStore>::topology;
     // R-PUB-6 owned-snapshot accessors (also asserted by `_assert_outputs_enumerable`).
-    let _: fn(&Outputs) -> Vec<(String, Value)> = Outputs::to_map;
     let _: fn(&IoInventory) -> Vec<PointInfo> = IoInventory::to_vec;
     let _: fn(&ParamTable) -> Vec<(String, Value, ParamAttrs)> = ParamTable::to_vec;
     // R-PUB-1: the oce-model value/IO types + the diagnostic type are nameable through the facade.
@@ -205,13 +206,9 @@ fn _assert_frozen_signatures() {
 /// `development`, so a drift landed mid-cycle would go unseen until release. This module is a
 /// non-test module, so the per-PR `cargo build` catches it instead.
 ///
-/// Two pins are narrower than the method they cover, stated so neither is overclaimed:
+/// One pin is narrower than the method it covers, stated so it is not overclaimed:
 /// `Engine::store` is pinned at `MemStore` like its neighbours, so it would not catch a newly added
-/// `where` bound on `S`; and `TemplateRef::new` is pinned at `&'static str`, one of the concrete
-/// types its `impl Into<Arc<str>>` parameter accepts, so it would not catch a narrowing of that
-/// parameter to `&'static str` itself. The generic form cannot take the neighbouring idiom at all —
-/// a late-bound lifetime cannot be inferred through `impl Into<_>`, so `fn(&str) -> TemplateRef`
-/// fails to coerce with `E0308: one type is more general than the other`.
+/// `where` bound on `S`.
 ///
 /// `ExportReport::content_id` is **deliberately not pinned**, and its absence is a decision rather
 /// than an oversight. It is `#[deprecated]`, and this is a non-test module compiled under the gate's
@@ -220,25 +217,15 @@ fn _assert_frozen_signatures() {
 /// method is deleting it, and a deletion is public-surface removal, which the release-gate baseline
 /// is the right review to adjudicate. A per-PR pin would make this gate fight that removal.
 fn _assert_accessor_signatures() {
-    let _: fn(&Engine<MemStore>) -> &Outputs = Engine::<MemStore>::outputs;
     let _: fn(&Engine<MemStore>) -> &oce_graph::Schedule = Engine::<MemStore>::schedule;
     let _: fn(&Engine<MemStore>) -> &MemStore = Engine::<MemStore>::store;
-    let _: fn(&Outputs, ConnectorId) -> Option<&Value> = Outputs::get;
-    let _: fn(&Outputs) -> usize = Outputs::len;
-    let _: fn(&Outputs) -> bool = Outputs::is_empty;
     let _: fn(&IoInventory, usize) -> Option<&PointInfo> = IoInventory::get;
     let _: fn(&IoInventory) -> usize = IoInventory::len;
     let _: fn(&IoInventory) -> bool = IoInventory::is_empty;
     let _: fn(&ParamTable) -> usize = ParamTable::len;
     let _: fn(&ParamTable) -> bool = ParamTable::is_empty;
-    let _: fn(&OutputTrace) -> &[String] = OutputTrace::columns;
-    let _: fn(&OutputTrace) -> &[f64] = OutputTrace::times;
-    let _: fn(&OutputTrace, usize) -> Option<&[Value]> = OutputTrace::column;
-    let _: fn(&OutputTrace) -> usize = OutputTrace::rows;
     let _: fn(&crate::ExportReport) -> Result<String, crate::ContentIdError> =
         crate::ExportReport::content_id_complete;
-    let _: fn(&TemplateRef) -> &str = TemplateRef::iri;
-    let _: fn(&'static str) -> TemplateRef = TemplateRef::new;
 }
 
 // ---- R-API-PY-7 — `OcError` is `Error + Send + Sync + 'static` (mappable to a PyErr) ----

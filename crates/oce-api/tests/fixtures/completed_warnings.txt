@@ -1,0 +1,7 @@
+1|0000000000000000
+CDL.Utilities.Assert|freezestat tripped|0000000000000000|Warning
+CDL.Utilities.Assert|second warning|0000000000000000|Warning
+2|0000000000000000
+3|0000000000000000
+CDL.Utilities.Assert|freezestat tripped|0000000000000000|Warning
+CDL.Utilities.Assert|second warning|0000000000000000|Warning

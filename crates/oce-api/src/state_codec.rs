@@ -1,4 +1,4 @@
-//! Revision-1 canonical state-snapshot encoder and bounded decoder.
+//! Revision-2 canonical state-snapshot encoder and bounded decoder.
 
 use std::collections::{BTreeMap, BTreeSet};
 

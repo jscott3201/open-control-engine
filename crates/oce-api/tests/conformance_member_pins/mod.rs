@@ -26,9 +26,9 @@ pub(crate) const MEMBER_REJECTIONS: [CompositeRejection; 22] = [
         Some("unsupported-instance-member"),
         &[(
             DiagCode::NonSubsetConstruct,
-            Some("http://example.org#M.ramp.zzz"),
+            Some("http://example.org#M.sin.zzz"),
             "composite/unsupported-instance-member: `zzz` is neither a declared port nor a \
-             declared parameter of `CDL.Reals.Sources.Ramp`",
+             declared parameter of `CDL.Reals.Sources.Sin`",
         )],
     ),
     (

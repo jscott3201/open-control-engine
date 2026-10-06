@@ -1,8 +1,7 @@
-//! Tier-1 exact trace comparison for closed-form block goldens.
+//! Exact trace comparison for reference goldens.
 //!
-//! This comparator is deliberately separate from the funnel band. Tier-1 block traces are exact
-//! scalar math or discrete logic, so they compare encoded sample values directly, including IEEE
-//! non-finite classes for Real outputs.
+//! This comparator is deliberately separate from the funnel band. Exact references compare encoded
+//! sample values directly, including IEEE non-finite classes for Real outputs.
 
 use crate::{Series, ValueKind};
 

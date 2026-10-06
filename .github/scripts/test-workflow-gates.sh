@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Gate-behavior fixtures for check-workflow-gates.sh. The negative fixtures prove missing nextest,
-# seeded advisory ignores, and garbled workflow input fail closed.
+# seeded advisory ignores, garbled workflow input, and actions referenced by a movable tag fail
+# closed.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -16,14 +17,14 @@ write_positive() {
   root_cargo="$3"
   crates_dir="$4"
   mkdir -p "$dir"
-  cat > "$dir/ci.yml" <<'EOF'
+  cat > "$dir/pr-gate.yml" <<'EOF'
 jobs:
   default-no-db:
     steps:
       - run: bash .github/scripts/check-default-no-db.sh
   unused-deps:
     steps:
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
         with:
           tool: cargo-machete
       - run: cargo machete
@@ -37,19 +38,32 @@ jobs:
   golden-gen-firewall:
     steps:
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
-  determinism-matrix:
-    strategy:
-      matrix:
-        runner: [ubuntu-latest, ubuntu-24.04-arm]
-    runs-on: ${{ matrix.runner }}
+  package-publication-contract:
     steps:
-      - uses: taiki-e/install-action@v2
+      - run: python3 scripts/package_policy/test_validate.py
+      - run: python3 scripts/package_policy/validate.py
+      - name: authority claim consistency
+        run: python3 scripts/authority_claims/check.py --check
+      - name: authority claim hostile controls
+        run: python3 scripts/authority_claims/test_check.py
+  strict-bit-matrix:
+    steps:
+      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
+        with:
+          tool: nextest@0.9.143
+      - run: bash scripts/ci/strict-bits-cell.sh aarch64 debug
+      - run: bash scripts/ci/strict-bits-cell.sh aarch64 release
+  determinism-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
         with:
           tool: nextest@0.9.143
       - name: Clear cached reports and state vectors
         run: >-
-          rm -f target/nextest/{ci,ci-release}/junit.xml
+          rm -rf target/nextest/{ci,ci-release}/junit.xml
           target/{portable,target}-state-{debug,release}.bin
+          target/state-x86 target/state-arm
       - run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
         env:
           OCE_PORTABLE_STATE_OUT: target/portable-state-debug.bin
@@ -65,38 +79,23 @@ jobs:
           for profile in ci ci-release;
           do test -s "target/nextest/$profile/junit.xml";
           done
-      - uses: actions/upload-artifact@v7.0.1
-        if: ${{ !cancelled() }}
-        with:
-          path: |
-            target/nextest/ci/junit.xml
-            target/nextest/ci-release/junit.xml
-          if-no-files-found: error
-          retention-days: 14
-      - uses: actions/upload-artifact@v7.0.1
-        with:
-          name: portable-state-${{ matrix.runner }}
-          path: |
-            target/portable-state-debug.bin
-            target/target-state-debug.bin
-          if-no-files-found: error
-          retention-days: 14
-  portable-state-cross-arch:
-    needs: determinism-matrix
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: nextest@0.9.143
-      - uses: actions/download-artifact@v7.0.0
-        with:
-          name: portable-state-ubuntu-latest
-          path: target/state-x86
-      - uses: actions/download-artifact@v7.0.0
-        with:
-          name: portable-state-ubuntu-24.04-arm
-          path: target/state-arm
+      - run: cp target/portable-state-debug.bin target/target-state-debug.bin target/state-x86/
+      - env:
+          OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-debug.bin
+          OCE_TARGET_STATE_OUT: target/state-arm/target-state-debug.bin
+        run: >-
+          cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked
+          --target aarch64-unknown-linux-gnu --config-file "$PWD/scripts/ci/nextest-emulated.toml"
+          --profile ci --no-tests=fail
+      - env:
+          OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-release.bin
+          OCE_TARGET_STATE_OUT: target/state-arm/target-state-release.bin
+        run: >-
+          cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked
+          --target aarch64-unknown-linux-gnu --config-file "$PWD/scripts/ci/nextest-emulated.toml"
+          --profile ci-release --cargo-profile release --no-tests=fail
+      - run: >-
+          cmp target/state-arm/portable-state-debug.bin target/state-arm/portable-state-release.bin
       - run: >-
           cmp target/state-x86/portable-state-debug.bin target/state-arm/portable-state-debug.bin &&
           ! cmp -s target/state-x86/target-state-debug.bin target/state-arm/target-state-debug.bin
@@ -105,6 +104,21 @@ jobs:
         run: >-
           cargo nextest run -p oce-api --lib --locked --profile ci --no-tests=fail
           -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs:
+      - default-no-db
+      - unused-deps
+      - gate-fixtures
+      - golden-gen-firewall
+      - package-publication-contract
+      - strict-bit-matrix
+      - determinism-matrix
+    steps:
+      - env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: python3 check.py
 EOF
   cat > "$dir/release-gate.yml" <<'EOF'
 on:
@@ -114,10 +128,10 @@ on:
 jobs:
   test-suite:
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@89abcdef0123456789abcdef0123456789abcdef # v4
         with:
           ref: ${{ github.event_name == 'schedule' && 'development' || github.ref }}
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
         with:
           tool: nextest@0.9.143
       - name: Clear cached nextest reports
@@ -136,22 +150,12 @@ jobs:
           for profile in ci ci-release public-api-oce-api public-api-oce-store;
           do test -s "target/nextest/$profile/junit.xml";
           done
-      - uses: actions/upload-artifact@v7.0.1
-        if: ${{ !cancelled() }}
-        with:
-          path: |
-            target/nextest/ci/junit.xml
-            target/nextest/ci-release/junit.xml
-            target/nextest/public-api-oce-api/junit.xml
-            target/nextest/public-api-oce-store/junit.xml
-          if-no-files-found: error
-          retention-days: 14
   default-no-db:
     steps:
       - run: bash .github/scripts/check-default-no-db.sh
   unused-deps:
     steps:
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
         with:
           tool: cargo-machete
       - run: cargo machete
@@ -164,6 +168,14 @@ jobs:
   golden-gen-firewall:
     steps:
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [test-suite, default-no-db, unused-deps, gate-fixtures, golden-gen-firewall]
+    steps:
+      - env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: python3 check.py
 EOF
   cat > "$dir/advisories.yml" <<'EOF'
 on:
@@ -326,8 +338,8 @@ garble_release_workflow() {
 remove_stale_status_gate() {
   dir="$1"
   _deny="$2"
-  grep -v 'check-stale-crate-status' "$dir/ci.yml" > "$dir/ci.yml.tmp"
-  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+  grep -v 'check-stale-crate-status' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
 remove_store_surface_gate() {
@@ -340,8 +352,28 @@ remove_store_surface_gate() {
 remove_golden_gen_firewall() {
   dir="$1"
   _deny="$2"
-  grep -v 'check-golden-gen-anti-tautology' "$dir/ci.yml" > "$dir/ci.yml.tmp"
-  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+  grep -v 'check-golden-gen-anti-tautology' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+remove_package_publication_contract() {
+  dir="$1"
+  _deny="$2"
+  grep -v 'scripts/package_policy' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+comment_authority_claim_check() {
+  dir="$1"
+  sed 's@run: python3 scripts/authority_claims/check.py --check@run: true # python3 scripts/authority_claims/check.py --check@' \
+    "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+remove_authority_claim_controls() {
+  dir="$1"
+  grep -v 'scripts/authority_claims/test_check.py' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
 remove_root_unsafe_forbid() {
@@ -378,66 +410,109 @@ EOF
 remove_no_db_gate() {
   dir="$1"
   _deny="$2"
-  grep -v 'check-default-no-db' "$dir/ci.yml" > "$dir/ci.yml.tmp"
-  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+  grep -v 'check-default-no-db' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
 remove_determinism_matrix() {
   dir="$1"
   _deny="$2"
-  grep -v 'oce-api -p oce-blocks -p oce-expr' "$dir/ci.yml" > "$dir/ci.yml.tmp"
-  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+  grep -v 'oce-api -p oce-blocks -p oce-expr' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
 comment_foreign_restore_command() {
   dir="$1"
   _deny="$2"
   grep -v 'foreign_matrix_target_snapshot_refuses_restore_when_supplied' \
-    "$dir/ci.yml" > "$dir/ci.yml.tmp"
-  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+    "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
 allow_absent_foreign_restore_test() {
   dir="$1"
   _deny="$2"
   sed '/cargo nextest run -p oce-api --lib/ s/ --no-tests=fail//' \
-    "$dir/ci.yml" > "$dir/ci.yml.tmp"
-  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+    "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
 remove_foreign_restore_nextest_install() {
   dir="$1"
   _deny="$2"
   awk '
-    /portable-state-cross-arch:/ { in_job = 1 }
+    /^  determinism-matrix:/ { in_job = 1 }
+    /^  ci-ok:/ { in_job = 0 }
     in_job && /tool: nextest@0.9.143/ { next }
     { print }
-  ' "$dir/ci.yml" > "$dir/ci.yml.tmp"
-  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+  ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
-remove_nextest_junit_artifacts() {
+remove_aarch64_leg() {
   dir="$1"
   _deny="$2"
-  for workflow in "$dir/ci.yml" "$dir/release-gate.yml"; do
-    grep -v -E 'upload-artifact|^[[:space:]]*target/nextest/(ci|ci-release|public-api-oce-api|public-api-oce-store)/junit\.xml' \
-      "$workflow" > "$workflow.tmp"
-    mv "$workflow.tmp" "$workflow"
-  done
+  grep -v -- '--target aarch64-unknown-linux-gnu' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
-remove_one_nextest_junit_artifact() {
+remove_arm_state_vector() {
   dir="$1"
   _deny="$2"
-  grep -v '^[[:space:]]*target/nextest/ci-release/junit\.xml' \
-    "$dir/ci.yml" > "$dir/ci.yml.tmp"
-  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+  grep -v 'OCE_PORTABLE_STATE_OUT: target/state-arm/' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+conditional_ci_ok() {
+  dir="$1"
+  _deny="$2"
+  sed 's/^    if: always()$/    if: success()/' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+blind_release_ci_ok() {
+  dir="$1"
+  _deny="$2"
+  grep -v 'toJSON(needs)' "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+}
+
+omit_ci_ok_need() {
+  dir="$1"
+  _deny="$2"
+  grep -v '^      - golden-gen-firewall$' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+omit_release_ci_ok_need() {
+  dir="$1"
+  _deny="$2"
+  sed 's/^    needs: \[test-suite, default-no-db, /    needs: [test-suite, /' \
+    "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+}
+
+conditional_gating_job() {
+  dir="$1"
+  _deny="$2"
+  awk '
+    { print }
+    /^  unused-deps:$/ { print "    if: github.event_name == '"'"'schedule'"'"'" }
+  ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+remove_emulated_strict_cell() {
+  dir="$1"
+  _deny="$2"
+  grep -v 'strict-bits-cell.sh aarch64 release' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
 remove_nextest_report_cleanup() {
   dir="$1"
   _deny="$2"
-  for workflow in "$dir/ci.yml" "$dir/release-gate.yml"; do
+  for workflow in "$dir/pr-gate.yml" "$dir/release-gate.yml"; do
     grep -v 'target/nextest/{' "$workflow" > "$workflow.tmp"
     mv "$workflow.tmp" "$workflow"
   done
@@ -446,7 +521,7 @@ remove_nextest_report_cleanup() {
 remove_nextest_report_requirements() {
   dir="$1"
   _deny="$2"
-  for workflow in "$dir/ci.yml" "$dir/release-gate.yml"; do
+  for workflow in "$dir/pr-gate.yml" "$dir/release-gate.yml"; do
     grep -v -E 'for profile in|test -s.*\$profile|^[[:space:]]*done[[:space:]]*$' \
       "$workflow" > "$workflow.tmp"
     mv "$workflow.tmp" "$workflow"
@@ -456,10 +531,18 @@ remove_nextest_report_requirements() {
 downgrade_nextest_pin() {
   dir="$1"
   _deny="$2"
-  for workflow in "$dir/ci.yml" "$dir/release-gate.yml"; do
+  for workflow in "$dir/pr-gate.yml" "$dir/release-gate.yml"; do
     sed 's/nextest@0\.9\.143/nextest@0.9.142/g' "$workflow" > "$workflow.tmp"
     mv "$workflow.tmp" "$workflow"
   done
+}
+
+unpin_action() {
+  dir="$1"
+  _deny="$2"
+  sed 's#taiki-e/install-action@[0-9a-f]\{40\} \# v2#taiki-e/install-action@v2#' \
+    "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
 }
 
 empty_crate_dir_only() {
@@ -502,6 +585,12 @@ run_case missing-store-surface-gate fail remove_store_surface_gate \
   "oce-store public-api surface gate package selector"
 run_case missing-golden-gen-firewall fail remove_golden_gen_firewall \
   "run golden-gen firewall fixture tests"
+run_case missing-package-publication-contract fail remove_package_publication_contract \
+  "run package publication hostile controls"
+run_case no-op-authority-claim-check fail comment_authority_claim_check \
+  "run authority claim consistency check"
+run_case missing-authority-claim-controls fail remove_authority_claim_controls \
+  "run authority claim hostile controls"
 run_case missing-root-unsafe-forbid fail remove_root_unsafe_forbid \
   "workspace.lints.rust unsafe_code = \"forbid\""
 run_case missing-crate-lints-workspace fail remove_crate_lints_workspace \
@@ -518,16 +607,30 @@ run_case vacuous-foreign-restore fail allow_absent_foreign_restore_test \
   "foreign target-bound restore hard-fails when its test is absent"
 run_case missing-foreign-nextest-install fail remove_foreign_restore_nextest_install \
   "pinned cargo-nextest install for foreign restore"
-run_case missing-nextest-junit-artifacts fail remove_nextest_junit_artifacts \
-  "upload nextest JUnit report artifacts"
-run_case partial-nextest-junit-artifacts fail remove_one_nextest_junit_artifact \
-  "collect nextest release JUnit report"
+run_case missing-aarch64-leg fail remove_aarch64_leg \
+  "aarch64 determinism leg"
+run_case missing-arm-state-vector fail remove_arm_state_vector \
+  "emit the aarch64 portable state vector"
+run_case conditional-ci-ok fail conditional_ci_ok \
+  "CI OK aggregate reports on every run"
+run_case blind-release-ci-ok fail blind_release_ci_ok \
+  "release gate CI OK aggregate inspects every needed result"
+run_case omitted-ci-ok-need fail omit_ci_ok_need \
+  "pr-gate.yml CI OK needs does not match the workflow's jobs"
+run_case omitted-release-ci-ok-need fail omit_release_ci_ok_need \
+  "release-gate.yml CI OK needs does not match the workflow's jobs"
+run_case conditional-gating-job fail conditional_gating_job \
+  "gating job has a job-level if: that CI OK would read as failure: unused-deps"
+run_case missing-emulated-strict-cell fail remove_emulated_strict_cell \
+  "emulated aarch64 release strict-bit cell"
 run_case missing-nextest-report-cleanup fail remove_nextest_report_cleanup \
   "clear cached nextest JUnit reports"
 run_case missing-nextest-report-requirements fail remove_nextest_report_requirements \
   "require the complete nextest determinism report set"
 run_case stale-nextest-pin fail downgrade_nextest_pin \
   "pinned cargo-nextest 0.9.143 install"
+run_case tag-referenced-action fail unpin_action \
+  "uses an action not pinned to a full commit SHA"
 run_case empty-crate-dir-only fail empty_crate_dir_only \
   "no crate Cargo.toml files found under"
 run_case missing-crate-lib-files fail remove_crate_lib_files \

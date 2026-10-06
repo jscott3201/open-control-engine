@@ -350,8 +350,9 @@ impl Attrs {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 pub struct BlockId(pub u32);
 
-/// Stable, dense, 0-based index of a connector instance (one per block, connector,
-/// array element). Purely in-memory (not a store/DB id).
+/// Dense, 0-based index of a connector instance within one loaded flattened model (one per block,
+/// connector, array element). Purely in-memory: not a durable/store id and not stable across model
+/// reloads.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 pub struct ConnectorId(pub u32);
 

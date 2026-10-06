@@ -6,7 +6,9 @@ use oce_model::{
     BlockId, BlockInstance, Connector, ConnectorId, Dir, ModelGraph, ParamTable, Value, ValueType,
 };
 
+use super::common::{advance, output_image};
 use super::state_tests::CountingStore;
+const INPUTS: [(&str, Value); 1] = [("urn:test:sampled.u", Value::Real(0.0))];
 use crate::{Engine, EngineCheckpoint, EngineStateError, EngineStateSnapshot, OcError, RunMode};
 
 fn sampled_model(class_path: &str, period: f64) -> ModelGraph {
@@ -39,7 +41,7 @@ fn assert_atomic_refusal(engine: &mut Engine, checkpoint: EngineCheckpoint) {
     let words = engine.state.words.clone();
     let state_t = engine.state.t.to_bits();
     let prev_t = engine.prev_t.map(f64::to_bits);
-    let outputs = engine.outputs().to_map();
+    let outputs = output_image(engine);
     assert!(matches!(
         engine.restore_checkpoint(&checkpoint),
         Err(OcError::State(EngineStateError::InvalidBlockState { .. }))
@@ -55,7 +57,7 @@ fn assert_atomic_refusal(engine: &mut Engine, checkpoint: EngineCheckpoint) {
     assert_eq!(engine.state.words, words);
     assert_eq!(engine.state.t.to_bits(), state_t);
     assert_eq!(engine.prev_t.map(f64::to_bits), prev_t);
-    let restored_outputs = engine.outputs().to_map();
+    let restored_outputs = output_image(engine);
     assert_eq!(restored_outputs.len(), outputs.len());
     assert!(
         restored_outputs
@@ -79,7 +81,7 @@ fn upward_rounded_sample_origins_remain_capturable_and_restorable() {
             let graph = sampled_model(class_path, period);
             let mut source = Engine::in_memory();
             source.build_model_in_memory(graph.clone(), None).unwrap();
-            source.tick(period).unwrap();
+            advance(&mut source, period, &INPUTS).unwrap();
             assert!(f64::from_bits(source.state.words[t0_word]) > source.state.t);
             let checkpoint = source.checkpoint().unwrap();
             let mut target = Engine::in_memory();
@@ -98,7 +100,7 @@ fn downward_rounded_late_first_order_sample_remains_capturable_and_restorable() 
     let graph = sampled_model("CDL.Discrete.FirstOrderHold", period);
     let mut source = Engine::in_memory();
     source.build_model_in_memory(graph.clone(), None).unwrap();
-    source.tick(first_tick).unwrap();
+    advance(&mut source, first_tick, &INPUTS).unwrap();
     assert_eq!(
         f64::from_bits(source.state.words[1]).to_bits(),
         1.0f64.to_bits()
@@ -117,7 +119,7 @@ fn sample_origin_quotient_outside_i64_remains_capturable() {
     let graph = sampled_model("CDL.Discrete.Sampler", 1.0);
     let mut engine = Engine::in_memory();
     engine.build_model_in_memory(graph, None).unwrap();
-    engine.tick(1.0e20).unwrap();
+    advance(&mut engine, 1.0e20, &INPUTS).unwrap();
     engine.checkpoint().unwrap();
 }
 
@@ -129,9 +131,9 @@ fn epsilon_early_first_order_sample_remains_capturable_and_restorable() {
     source
         .build_model_in_memory(graph.clone(), Some("urn:test:sampled-model"))
         .unwrap();
-    source.tick(period).unwrap();
+    advance(&mut source, period, &INPUTS).unwrap();
     let t0 = f64::from_bits(source.state.words[1]);
-    source.tick(t0 - period * 0.5e-9).unwrap();
+    advance(&mut source, t0 - period * 0.5e-9, &INPUTS).unwrap();
     assert!(f64::from_bits(source.state.words[3]) < t0);
 
     let checkpoint = source.checkpoint().unwrap();
@@ -157,7 +159,7 @@ fn removing_previous_time_from_an_advanced_image_refuses_atomically() {
     engine
         .build_model_in_memory(sampled_model("CDL.Discrete.UnitDelay", 1.0), None)
         .unwrap();
-    engine.tick(0.0).unwrap();
+    advance(&mut engine, 0.0, &INPUTS).unwrap();
     let mut image = (*engine.checkpoint().unwrap().image).clone();
     image.prev_t = None;
     assert_atomic_refusal(
@@ -174,7 +176,7 @@ fn invalid_state_errors_bound_hostile_block_identity() {
     graph.blocks[0].instance_iri = Some(Arc::from("x".repeat(1024 * 1024)));
     let mut engine = Engine::in_memory();
     engine.build_model_in_memory(graph, None).unwrap();
-    engine.tick(0.0).unwrap();
+    advance(&mut engine, 0.0, &INPUTS).unwrap();
     let mut image = (*engine.checkpoint().unwrap().image).clone();
     image.words[4] = 2;
     let error = engine
@@ -195,7 +197,7 @@ fn off_grid_sample_origin_refuses_atomically() {
         .build_model_in_memory(sampled_model("CDL.Discrete.Sampler", 1.0), None)
         .unwrap();
     for time in [0.0, 1.0, 2.0] {
-        engine.tick(time).unwrap();
+        advance(&mut engine, time, &INPUTS).unwrap();
     }
     let mut image = (*engine.checkpoint().unwrap().image).clone();
     image.words[1] = 0.5f64.to_bits();
@@ -215,7 +217,7 @@ fn resigned_future_first_order_history_refuses_durable_restore_atomically() {
     source
         .build_model_in_memory(graph.clone(), Some("urn:test:sampled-model"))
         .unwrap();
-    source.tick(0.0).unwrap();
+    advance(&mut source, 0.0, &INPUTS).unwrap();
     let mut image = (*source.state_snapshot().unwrap().image).clone();
     image.words[3] = f64::MAX.to_bits();
     let bytes = crate::state_codec::encode_snapshot(&image, false).unwrap();
@@ -227,19 +229,16 @@ fn resigned_future_first_order_history_refuses_durable_restore_atomically() {
         .build_model_in_memory(graph, Some("urn:test:sampled-model"))
         .unwrap();
     target.halt().unwrap();
-    target.set_realtime_epoch_unix_nanos(77);
     let model = Arc::clone(&target.model);
     let schedule = format!("{:?}", target.schedule);
     let params = format!("{:?}", target.params);
     let io = format!("{:?}", target.io);
-    let store_inputs = format!("{:?}", target.store_inputs);
-    let durable_batch = format!("{:?}", target.durable_batch);
     let warnings = format!("{:?}", target.semantic_warnings);
     let values = target.state.values.clone();
     let words = target.state.words.clone();
     let state_t = target.state.t.to_bits();
     let prev_t = target.prev_t.map(f64::to_bits);
-    let outputs = target.outputs().to_map();
+    let outputs = output_image(&target);
     let calls = store.calls();
 
     assert!(matches!(
@@ -250,8 +249,6 @@ fn resigned_future_first_order_history_refuses_durable_restore_atomically() {
     assert_eq!(format!("{:?}", target.schedule), schedule);
     assert_eq!(format!("{:?}", target.params), params);
     assert_eq!(format!("{:?}", target.io), io);
-    assert_eq!(format!("{:?}", target.store_inputs), store_inputs);
-    assert_eq!(format!("{:?}", target.durable_batch), durable_batch);
     assert_eq!(format!("{:?}", target.semantic_warnings), warnings);
     assert!(
         target
@@ -264,13 +261,12 @@ fn resigned_future_first_order_history_refuses_durable_restore_atomically() {
     assert_eq!(target.state.words, words);
     assert_eq!(target.state.t.to_bits(), state_t);
     assert_eq!(target.prev_t.map(f64::to_bits), prev_t);
-    let restored_outputs = target.outputs().to_map();
+    let restored_outputs = output_image(&target);
     assert_eq!(restored_outputs.len(), outputs.len());
     assert!(restored_outputs.iter().zip(&outputs).all(
         |((left_path, left), (right_path, right))| left_path == right_path && left.bit_eq(right)
     ));
     assert_eq!(target.mode(), RunMode::Halted);
-    assert_eq!(target.realtime_epoch_unix_nanos(), Some(77));
     assert!(target.durable_restore_ready);
     assert_eq!(store.calls(), calls);
 }

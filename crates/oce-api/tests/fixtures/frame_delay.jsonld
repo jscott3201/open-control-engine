@@ -1,0 +1,24 @@
+{
+  "@context": {"S231": "http://data.ashrae.org/S231P#"},
+  "@graph": [
+    {"@id":"urn:frame:model","@type":"S231:Block",
+     "S231:containsBlock":[{"@id":"urn:frame:add"},{"@id":"urn:frame:delay"}],
+     "S231:hasInput":[{"@id":"urn:frame:a"},{"@id":"urn:frame:b"}],
+     "S231:hasOutput":{"@id":"urn:frame:y"}},
+    {"@id":"urn:frame:add","@type":"CDL.Reals.Add",
+     "S231:hasInput":[{"@id":"urn:frame:add.u1"},{"@id":"urn:frame:add.u2"}],
+     "S231:hasOutput":{"@id":"urn:frame:add.y"}},
+    {"@id":"urn:frame:delay","@type":"CDL.Discrete.UnitDelay",
+     "S231:hasParameter":{"@id":"urn:frame:delay.samplePeriod"},
+     "S231:hasInput":{"@id":"urn:frame:delay.u"},"S231:hasOutput":{"@id":"urn:frame:delay.y"}},
+    {"@id":"urn:frame:delay.samplePeriod","S231:value":{"@value":"1.0","@type":"http://www.w3.org/2001/XMLSchema#double"}},
+    {"@id":"urn:frame:add.u1","@type":"S231:RealInput","S231:isOfDataType":{"@id":"S231:Real"}},
+    {"@id":"urn:frame:add.u2","@type":"S231:RealInput","S231:isOfDataType":{"@id":"S231:Real"}},
+    {"@id":"urn:frame:add.y","@type":"S231:RealOutput","S231:isOfDataType":{"@id":"S231:Real"},"S231:isConnectedTo":{"@id":"urn:frame:delay.u"}},
+    {"@id":"urn:frame:delay.u","@type":"S231:RealInput","S231:isOfDataType":{"@id":"S231:Real"}},
+    {"@id":"urn:frame:delay.y","@type":"S231:RealOutput","S231:isOfDataType":{"@id":"S231:Real"},"S231:isConnectedTo":{"@id":"urn:frame:y"}},
+    {"@id":"urn:frame:a","@type":"S231:RealInput","S231:isOfDataType":{"@id":"S231:Real"},"S231:min":-1.0,"S231:max":1.0,"S231:isConnectedTo":{"@id":"urn:frame:add.u1"}},
+    {"@id":"urn:frame:b","@type":"S231:RealInput","S231:isOfDataType":{"@id":"S231:Real"},"S231:isConnectedTo":{"@id":"urn:frame:add.u2"}},
+    {"@id":"urn:frame:y","@type":"S231:RealOutput","S231:isOfDataType":{"@id":"S231:Real"}}
+  ]
+}

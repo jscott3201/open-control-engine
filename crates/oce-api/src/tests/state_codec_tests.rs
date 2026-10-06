@@ -8,7 +8,12 @@ const MINIMAL_LOOP: &[u8] = include_bytes!("../../../oce-cxf/tests/fixtures/mini
 fn snapshot_bytes() -> Vec<u8> {
     let mut engine = Engine::in_memory();
     engine.load_cxf(MINIMAL_LOOP).unwrap();
-    engine.tick(0.0).unwrap();
+    super::common::advance(
+        &mut engine,
+        0.0,
+        &[("http://example.org#MinLoop.uSet", crate::Value::Real(0.0))],
+    )
+    .unwrap();
     engine.state_snapshot().unwrap().into_bytes()
 }
 
@@ -89,9 +94,12 @@ fn skip_connector_key(bytes: &[u8], offset: usize) -> usize {
 fn every_truncation_boundary_is_a_typed_refusal() {
     let bytes = snapshot_bytes();
     for length in 0..bytes.len() {
+        // Host-owned partial durable write / power-loss model: no filesystem durability claim.
+        let error = EngineStateSnapshot::from_bytes(&bytes[..length]).unwrap_err();
         assert!(
-            EngineStateSnapshot::from_bytes(&bytes[..length]).is_err(),
-            "truncation at {length} was accepted"
+            matches!(error, EngineStateError::MalformedSnapshot { offset, .. }
+            if offset == if length < 40 { 0 } else { 16 }),
+            "length {length}: {error:?}"
         );
     }
 }
@@ -108,10 +116,10 @@ fn fixed_header_refusals_follow_the_pinned_precedence() {
     ));
 
     let mut unsupported = bytes.clone();
-    unsupported[8..12].copy_from_slice(&2u32.to_le_bytes());
+    unsupported[8..12].copy_from_slice(&1u32.to_le_bytes());
     assert!(matches!(
         EngineStateSnapshot::from_bytes(&unsupported),
-        Err(EngineStateError::UnsupportedFormat { revision: 2 })
+        Err(EngineStateError::UnsupportedFormat { revision: 1 })
     ));
 
     let mut trailing = bytes.clone();

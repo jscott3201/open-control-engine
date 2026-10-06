@@ -1,6 +1,9 @@
 //! Source-verified ASHRAE G36 Economizers.Subsequences.Modulations.ReturnFan through the frozen facade.
 
-use oce_api::{CollectSpec, Engine, InputSource, SimMetrics, SimSpec, Value};
+use oce_api::{Engine, Value};
+#[path = "support/frame_trace.rs"]
+mod frame_trace;
+use frame_trace::FrameRun;
 
 const ECONOMIZER_MODULATIONS_RETURN_FAN: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_return_fan.jsonld"
@@ -73,23 +76,20 @@ fn schedule_signature(engine: &Engine) -> ScheduleSignature {
     )
 }
 
-fn simulate(mut engine: Engine) -> (ScheduleSignature, SimMetrics) {
+fn simulate(mut engine: Engine) -> (ScheduleSignature, FrameRun) {
     let schedule = schedule_signature(&engine);
-    let metrics = engine
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop: 6.0,
-            step: 1.0,
-            inputs: InputSource::Closure(Box::new(economizer_modulations_return_fan_inputs)),
-            collect: CollectSpec::Named {
-                points: vec![
-                    RETURN_DAMPER_COMMAND.to_string(),
-                    OUTDOOR_DAMPER_COMMAND.to_string(),
-                ],
-                stride: 1,
-            },
-        })
-        .expect("G36 Economizers.Subsequences.Modulations.ReturnFan simulates");
+    let metrics = FrameRun::record(
+        &mut engine,
+        0.0,
+        6.0,
+        1.0,
+        economizer_modulations_return_fan_inputs,
+        vec![
+            RETURN_DAMPER_COMMAND.to_string(),
+            OUTDOOR_DAMPER_COMMAND.to_string(),
+        ],
+    )
+    .expect("G36 Economizers.Subsequences.Modulations.ReturnFan simulates");
     assert_eq!(metrics.ticks, EXPECTED_TIMES.len() as u64);
     assert_eq!(
         metrics
@@ -106,7 +106,7 @@ fn simulate(mut engine: Engine) -> (ScheduleSignature, SimMetrics) {
     (schedule, metrics)
 }
 
-fn real_column(metrics: &SimMetrics, path: &str) -> Vec<f64> {
+fn real_column(metrics: &FrameRun, path: &str) -> Vec<f64> {
     let index = metrics
         .trace
         .columns()
@@ -131,7 +131,7 @@ fn assert_real_bits(actual: &[f64], expected: &[f64], label: &str) {
     );
 }
 
-fn assert_trace_bit_eq(left: &SimMetrics, right: &SimMetrics) {
+fn assert_trace_bit_eq(left: &FrameRun, right: &FrameRun) {
     assert_eq!(left.trace.columns(), right.trace.columns());
     assert_eq!(
         left.trace

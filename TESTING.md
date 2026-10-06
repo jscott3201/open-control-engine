@@ -10,6 +10,9 @@ This document is the contract every change is held to. It is enforced socially i
 mechanically in CI (the `development -> main` release gate runs the full suite — see
 [CI: where tests run](#ci-where-tests-run)).
 
+The [product contract](docs/product-contract.md) maps product requirements to bounded evidence and
+future acceptance outcomes; its traceability checks do not replace behavioral tests or host qualification.
+
 ---
 
 ## The four pillars
@@ -63,11 +66,21 @@ comparison that fails if even one bit differs.
 - **Compare floats by bits, never with `==` or an epsilon.** Use `Value::bit_eq` (which compares
   `f64` via `to_bits`, so `NaN == NaN` and `+0.0 != -0.0` as determinism demands). An epsilon
   comparison would mask exactly the drift a golden test exists to catch. One named exception: the
-  21 transcendental, psychrometric, and solar Real signal goldens are compared under the documented
-  aligned-tolerance band (`crates/oce-conformance/src/aligned.rs:218-245`, tolerances pinned at
-  `crates/oce-conformance/tests/block_harness/mod.rs:323-332`). That exception is a property of
-  their libm-dependent outputs, not a license for epsilon anywhere else — every other golden stays
-  bit-exact.
+  21 transcendental, psychrometric, and solar Real signal goldens retain their existing
+  aligned-tolerance band on unqualified platforms. Their [strict-bit inventory and matrix](docs/strict-bit-evidence.md)
+  enforce accepted Linux x86_64/aarch64 exact comparisons: four native debug/release cells,
+  two byte-identical captures per cell, 21 signals each and zero mismatches, retained from run
+  37382761120 with a reviewed 35-file selected source boundary. macOS remains conservative/unqualified
+  until M06-PR02; other targets also retain the unchanged 1e-12 aligned band. This is empirical pinned
+  corpus evidence,
+  not a libm guarantee or a license for epsilon elsewhere — every other golden stays bit-exact.
+  The ordinary retained test requires exactly all 35 enumerated paths and digests, not the full
+  compiled facade dependency closure. Checker/admission/comparison source mutations refuse even
+  when recorded outputs agree. Exact-head hosted cells (x86_64 native, aarch64 QEMU-emulated) rerun `oce_api::Engine` per
+  PR and catch changes under the pinned corpus's comparison rules; an unbound transitive source
+  change preserving those outputs does not invalidate the historical raw result. These digests
+  alone do not prove current whole execution semantics. The original 17-source receipt remains
+  immutable history, not a substitute for the selected 35-file guard.
 - **No snapshot magic.** Goldens are explicit files compared by explicit code — reviewable and
   obvious. If a golden needs regenerating, do it deliberately and explain the diff in the PR.
 
@@ -107,9 +120,11 @@ OpenModelica. A mismatch never widens a tolerance or re-blesses a golden.
   f64, 18 exact encoded integer, 12 exact 0.0/1.0). The funnel band is an *additive* Real-only
   layer, never the primary comparison — Boolean and Integer outputs are deliberately kept off it
   because the funnel is type-blind (`g36_funnel_band/policy.rs`).
-  Most references are closed-form derivations from CDL / Buildings source semantics; some, like
-  `TimeSuppression`, are explicit per-tick recurrences. The generator is deliberately kept **off
-  the workspace** and **forbidden from depending on `oce-blocks`**; CI enforces that
+  Of the 410 signal goldens, 390 check CDL / Buildings source semantics. The other 20 are exact
+  HostTick v1 profile references for `Generic.TimeSuppression`, `CoolingOnly.Controller`, and
+  `ReliefFanGroup`, whose fixtures contain `CDL.Logical.Pre`; they do not claim Modelica
+  event-iteration equivalence. The generator is deliberately kept **off the workspace** and
+  **forbidden from depending on `oce-blocks`**; CI enforces that
   code-dependency firewall. For classes whose oracle shares a pinned math kernel or restates the
   same documented recurrence, a Tier-A pass is evidence about plumbing and transcription of the
   shared formula, not an independent check of the formula; a mechanical shared-kernel detector
@@ -129,14 +144,36 @@ The register is evidence only: membership does not change discrepancies, compari
 tier status, goldens, or test results. Its initial revision is empty because no current clean-room
 Nand discrepancy reproduces. A private test reader validates the closed schema and local evidence
 digests; the existing `oce-cxf` `fixture_structural_oracle` binary runs the bounded per-PR sentinel.
-The separate OpenModelica evidence profiles execute two exact Boolean cases against OMC 1.25.1 and
-the pinned Buildings and MSL sources: exhaustive
-`CDL.Logical.Nand/all_boolean_input_pairs_evented`, and the stateful
-`CDL.Logical.Toggle/repeated_rises_initial_true_and_clear_priority` schedule. The light-gated
-sentinel validates committed raw output, keep-last projection, schedules, repeat-run records, OCI
-identities, and mutation controls; Docker does not run in CI. These are scoped Tier-3 results for
-the two named cases only. The global Tier-3 report remains `Skipped`; no numeric, sequence-wide, or
-cross-architecture OMC claim follows from them.
+The separate OpenModelica evidence profiles execute four cases against OMC 1.25.1 and the pinned
+Buildings and MSL sources: exhaustive `CDL.Logical.Nand/all_boolean_input_pairs_evented`, the
+stateful `CDL.Logical.Toggle/repeated_rises_initial_true_and_clear_priority` schedule, and
+`CDL.Reals.Line/four_limit_modes_five_dyadic_regions`, plus the composed G36
+`Reliefs/source_default_dyadic_regions` leaf. The Line claim is one finite matrix whose operations
+are exact in binary64. Reliefs covers seven complete five-input tuples and its two declared root
+outputs at the emitted event timestamp bits. Neither is an arbitrary Real or tolerance result. The
+light-gated sentinel validates committed raw output, keep-last projection, schedules, repeat-run
+records, OCI identities, pinned host artifact-tool identities, committed/materialized source
+records, cross-architecture canonical equality for Line and Reliefs, and mutation controls. Both
+two-architecture cases retain keep-first output and metadata per architecture and reproduce them
+independently from raw input; Docker does not run in normal CI. These are scoped Tier-3 results for
+the four named cases only. The global Tier-3 report remains `Skipped`; no full-sequence, solver, or
+cross-architecture raw-byte claim follows.
+
+The Reliefs contract records the exact checkout observed while the native candidates ran. That SHA
+does not need to remain an ancestor of the retained head or exist in local Git history. Both
+validators bind the native records to the fixed observation, the complete generator-input digest
+map, the current exact input bytes, and the retained contract artifact. Generation additionally
+checks the observation against checkout `HEAD`. The manual workflow verifies each native artifact,
+runs the documented two-architecture assembler in a separate job, and uploads the assembled
+candidate. Final retained validation is still required before fixture admission. The Python
+validator is POSIX-only. The Rust validator supplies the Windows path boundary and rejects reparse
+points, hardlinks, identity changes, and oversized files.
+
+`CDL.Logical.Pre` is not an expected-green OpenModelica case. Its upstream same-time event iteration
+differs from the fixed HostTick v1 projection, which advances once per HostTick transition.
+`crates/oce-api/src/tests/pre_execution_profile_tests.rs` pins that engine contract, including equal
+timestamps, non-convergent feedback, host observations, and snapshot continuation. Those tests are
+not an independent Modelica oracle.
 
 ### 4. Determinism goldens — same input, bit-identical output, every time
 
@@ -176,10 +213,12 @@ case" is itself a finding to resolve, not a pass.
   integration tests; `crates/<crate>/tests/fixtures/` for input + golden files.
 - **Float comparison:** `Value::bit_eq` (or `f64::to_bits`) — **never** `==` or `(a-b).abs() < ε`
   in an engine assertion. Sole exception: the 21 transcendental, psychrometric, and solar Real
-  signal goldens, whose libm-dependent outputs use the documented aligned-tolerance band
-  (`crates/oce-conformance/src/aligned.rs:218-245`,
-  `crates/oce-conformance/tests/block_harness/mod.rs:323-332`) — not a license for epsilon
-  anywhere else.
+  signal goldens, whose libm-dependent outputs retain the existing aligned-tolerance band on
+  unqualified platforms and have [retained native Linux exact evidence](docs/strict-bit-evidence.md).
+  The machine-readable inventory owns the paths; its capture-time candidate labels are historical,
+  while the accepted receipt establishes the bounded Linux regime. Tests bind raw artifacts,
+  exactly the selected source digests and oracle/CXF digests, not the full compiled dependency
+  closure or the final HEAD to the captured synthetic merge SHA.
 - **Error assertions:** match the exact variant (`assert!(matches!(err, CxfError::Json(_)))`),
   not `is_err()`.
 - **No time/randomness in tests:** deterministic inputs only; no wall-clock, no RNG.
@@ -194,13 +233,13 @@ CI is **dev-light / release-heavy** (keep per-change PRs fast; save the heavy su
 
 | Gate | Trigger | Runs tests? |
 | --- | --- | --- |
-| `ci.yml` (light) | PRs into `development` | **`oce-api`, `oce-blocks`, and `oce-expr` only** — the `determinism-matrix` job runs those three crates on x86_64 and arm64, in debug and release codegen. It requires portable snapshots to match across architectures and both portable and target-bound snapshots to match across codegen profiles; target-bound snapshots must differ across architectures, and the x86_64 job parses and refuses the arm64 bytes through `restore_state`. No other crate's tests run. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, cargo-machete, stale crate-status header lint, golden-gen anti-tautology firewall, gate-fixture smoke, a `gate (light)` job that runs `.agents/gate.sh` itself — which includes an **unconditional** `cargo deny check bans licenses sources`, stricter than the standalone cargo-deny job that triggers only on a manifest change. |
-| `release-gate.yml` (heavy) | **Any** non-draft PR targeting `main` (it filters on the base branch only — there is no `head_ref == development` condition), daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, two armed per-crate public-api surface snapshots (`oce-api` and `oce-store`), plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
-| `advisories.yml` | Daily cron, manual dispatch | **No** — advisory/yanked scan only (`cargo deny check advisories`, `yanked = "deny"`, `ignore = []`). |
+| `.github/workflows/pr-gate.yml` (light) | PRs into `development`, pushes to `development` | The `determinism-matrix` job runs **`oce-api`, `oce-blocks`, and `oce-expr`** on x86_64 (native) and aarch64 (QEMU user-mode emulation) in debug/release. Portable snapshots match across architectures; portable and target-bound snapshots match across codegen; target-bound snapshots differ across architectures and foreign restore refuses. Separately, scoped **`oce-conformance::strict_bits` controls and the four aligned suite binaries** run in a Linux architecture/codegen matrix (x86_64 native, aarch64 emulated), with repeat captures and fail-closed cross-cell comparison. This is not the full conformance suite. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, package/feature/publication and authority checks, cargo-machete, stale-status lint, golden-gen firewall, fixture smoke, and `gate (light)` executing `.agents/gate.sh`, including unconditional cargo-deny bans/licenses/sources. |
+| `.github/workflows/release-gate.yml` (heavy) | **Any** PR targeting `main` (it filters on the base branch only — there is no `head_ref == development` condition), pushes to `main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, two armed per-crate public-api surface snapshots (`oce-api` and `oce-store`), plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
+| `.github/workflows/advisories.yml` | Daily cron, manual dispatch | **No** — advisory/yanked scan only (`cargo deny check advisories`, `yanked = "deny"`, `ignore = []`). |
 
 Read the first row in the dangerous direction and you will trust a green PR you
-should not. A change confined to `oce-cxf`, `oce-store`, `oce-conformance`, or `oce-diag`
-can show every check green having run none of its own tests. Before claiming tests
+should not. A change outside the listed test subsets can show every check green having run
+none of its own tests. Before claiming tests
 pass on such a change, run the suite yourself:
 
 ```bash
@@ -263,7 +302,7 @@ rather than data a reviewer spot-checks.
 
 By the four pillars above this is not coverage of anything. It matters one level up: **the
 46 catalog fixtures are the inputs to every conformance test in the workspace.** Tier-2 goldens and
-Tier-A oracles are all derived from them, so a transposed catalog fixture fails nothing — it makes
+Tier-A references are all derived from them, so a transposed catalog fixture fails nothing — it makes
 the entire suite validate the wrong sequence, silently and permanently.
 
 Nothing else can see it. The resolver assigns port positions from document array order; the arity

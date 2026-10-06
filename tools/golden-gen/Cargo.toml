@@ -1,11 +1,12 @@
-# golden-gen — Tier-A oracle generator (standalone, OFF the workspace test path).
+# golden-gen — Tier-A reference generator (standalone, OFF the workspace test path).
 #
 # This crate is intentionally placed under `tools/` rather than `crates/` so it is NOT a member
 # of the workspace (`members = ["crates/*"]`) and therefore never runs on the cargo-test gate.
 #
-# ANTI-TAUTOLOGY: this generator derives reference outputs from CDL/spec semantics without an
-# `oce-blocks` dependency. Some exact oracles share a pinned math kernel or restate the engine's
-# documented recurrence. It is fully self-contained and ships a byte-stable CombiTimeTable writer
+# ANTI-TAUTOLOGY: this generator derives outputs from CDL / Buildings source semantics or a named
+# execution profile without an `oce-blocks` dependency. Some exact references share a pinned math
+# kernel or restate the engine's documented recurrence. It is fully self-contained and ships a
+# byte-stable CombiTimeTable writer
 # (mirroring `_spec/07` §9 and the `ryu` shortest-round-trip formatting that `oce-conformance`
 # uses) so the goldens are byte-identical for finite values. A self-contained writer is required
 # because the `oce-conformance` writer rejects non-finite cells, yet the IEEE Divide oracle must
@@ -17,7 +18,7 @@
 
 [package]
 name = "golden-gen"
-description = "Tier-A oracle generator: closed-form CDL reference goldens (CombiTimeTable CSV)."
+description = "Tier-A source and execution-profile golden generator (CombiTimeTable CSV)."
 version = "0.0.0"
 edition = "2024"
 rust-version = "1.97.1"

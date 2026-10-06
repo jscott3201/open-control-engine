@@ -58,13 +58,15 @@ fn selected_g36_outputs_match_the_independent_outputs_snapshot_path() {
 
     let mut per_step_snapshots: Vec<Vec<Value>> = Vec::new();
     for step in 0..=2 {
-        for (path, value) in sat_reset_inputs(step as f64) {
-            engine
-                .set_input(path, value)
-                .expect("boundary input stages");
-        }
-        engine.tick(step as f64).expect("G36 fixture ticks");
-        let all_outputs = engine.outputs().to_map();
+        advance(&mut engine, step as f64, &sat_reset_inputs(step as f64)).unwrap();
+        let all_outputs: Vec<_> = engine
+            .model
+            .connectors
+            .iter()
+            .filter(|c| c.dir == Dir::Out)
+            .zip(&paths)
+            .map(|(c, path)| (path.clone(), engine.state.values[c.id.0 as usize].clone()))
+            .collect();
         let distinct_paths: HashSet<&str> =
             all_outputs.iter().map(|(path, _)| path.as_str()).collect();
         assert_eq!(
@@ -155,7 +157,7 @@ fn chained_outputs_match_hand_computed_exact_literals() {
         .build_model_in_memory(model, None)
         .expect("three-block chain builds");
     for step in 0..=2 {
-        engine.tick(step as f64).expect("chain ticks");
+        advance(&mut engine, step as f64, &[]).unwrap();
         let watched = engine
             .watch(&["conn#0", "conn#2", "conn#4"])
             .expect("chain outputs resolve");
@@ -179,7 +181,7 @@ fn chained_outputs_match_hand_computed_exact_literals() {
 #[test]
 fn caller_order_duplicates_and_first_error_are_preserved() {
     let mut engine = loaded_chain();
-    engine.tick(0.0).expect("chain ticks");
+    advance(&mut engine, 0.0, &[]).unwrap();
 
     let duplicated = engine
         .watch(&["conn#4", "conn#0", "conn#4"])
@@ -231,46 +233,18 @@ fn caller_order_duplicates_and_first_error_are_preserved() {
 }
 
 #[test]
-fn named_simulation_trace_matches_manual_watch_loop() {
-    let mut simulated = loaded_chain();
-    let metrics = simulated
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop: 3.0,
-            step: 1.0,
-            inputs: InputSource::None,
-            collect: CollectSpec::Named {
-                points: vec!["conn#2".to_owned()],
-                stride: 1,
-            },
-        })
-        .expect("chain simulates");
-    assert_eq!(metrics.trace.columns(), ["conn#2"]);
-    assert_eq!(metrics.trace.times(), [0.0, 1.0, 2.0, 3.0]);
-
-    let mut manual = loaded_chain();
-    let mut watched = Vec::new();
+fn internal_inspection_does_not_expand_committed_boundary_receipts() {
+    let mut engine = loaded_chain();
     for step in 0..=3 {
-        manual.tick(step as f64).expect("manual chain ticks");
-        watched.push(
-            manual.watch(&["conn#2"]).expect("internal output resolves")[0]
-                .1
-                .clone(),
+        let frame = advance(&mut engine, step as f64, &[]).unwrap();
+        assert!(
+            frame.outputs().is_empty(),
+            "hand-built graph declares no root boundary"
         );
+        let watched = engine.watch(&["conn#2"]).unwrap();
+        assert!(watched[0].1.bit_eq(&Value::Real(6.0)));
+        assert_eq!(frame.sequence(), step + 1);
     }
-    let recorded = metrics.trace.column(0).expect("named trace has one column");
-    assert_eq!(recorded.len(), watched.len());
-    assert!(
-        recorded
-            .iter()
-            .zip(&watched)
-            .all(|(left, right)| left.bit_eq(right))
-    );
-
-    let post_simulate = simulated
-        .watch(&["conn#2"])
-        .expect("watch remains available after simulate");
-    assert!(post_simulate[0].1.bit_eq(&Value::Real(6.0)));
 }
 
 #[test]
@@ -285,13 +259,8 @@ fn identical_engines_produce_bit_identical_selected_snapshots() {
     let paths = crate::engine::out_connector_paths(&left.model);
     let points: Vec<&str> = paths.iter().map(String::as_str).collect();
     for step in 0..=4 {
-        for (path, value) in sat_reset_inputs(step as f64) {
-            left.set_input(path, value.clone())
-                .expect("left input stages");
-            right.set_input(path, value).expect("right input stages");
-        }
-        left.tick(step as f64).expect("left engine ticks");
-        right.tick(step as f64).expect("right engine ticks");
+        advance(&mut left, step as f64, &sat_reset_inputs(step as f64)).unwrap();
+        advance(&mut right, step as f64, &sat_reset_inputs(step as f64)).unwrap();
         let left_values = left.watch(&points).expect("left snapshot resolves");
         let right_values = right.watch(&points).expect("right snapshot resolves");
         assert_eq!(left_values.len(), points.len());
@@ -305,16 +274,12 @@ fn identical_engines_produce_bit_identical_selected_snapshots() {
 }
 
 #[test]
-fn selected_reads_are_available_after_realtime_step() {
+fn selected_reads_are_available_after_a_completed_frame() {
     let mut engine = loaded_chain();
-    // This deterministic facade test explicitly maps model zero to the UNIX epoch.
-    engine.set_realtime_epoch_unix_nanos(0);
-    engine
-        .step_realtime(0.0)
-        .expect("realtime chain step succeeds");
+    advance(&mut engine, 0.0, &[]).unwrap();
     let watched = engine
         .watch(&["conn#4"])
-        .expect("watch remains available after realtime step");
+        .expect("watch remains available after frame execution");
     assert!(watched[0].1.bit_eq(&Value::Real(30.0)));
 }
 
@@ -340,7 +305,7 @@ fn boolean_and_integer_outputs_are_watchable_with_exact_literals() {
     engine
         .build_model_in_memory(model, None)
         .expect("typed source pair builds");
-    engine.tick(0.0).expect("typed source pair ticks");
+    advance(&mut engine, 0.0, &[]).unwrap();
     let watched = engine
         .watch(&["conn#0", "conn#1"])
         .expect("non-Real outputs are addressable");

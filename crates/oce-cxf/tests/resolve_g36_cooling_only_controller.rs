@@ -1,4 +1,4 @@
-//! Source-verified G36 CoolingOnly.Controller nested-composite import tests.
+//! Source-transcribed G36 CoolingOnly.Controller nested-composite import tests.
 //!
 //! The configured ASHRAE 62.1 controller contains eight inlined sub-controller graphs. The
 //! Title 24 branch is pruned before import, so only the 213 active leaf blocks participate in
@@ -546,6 +546,6 @@ fn cooling_only_controller_modelgraph_is_stable() {
         .expect("golden snapshot missing; regenerate with OCE_BLESS=1");
     assert_eq!(
         actual, expected,
-        "source-verified G36 CoolingOnly.Controller ModelGraph diverged from golden"
+        "source-transcribed G36 CoolingOnly.Controller ModelGraph diverged from golden"
     );
 }

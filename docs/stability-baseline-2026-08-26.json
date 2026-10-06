@@ -1,0 +1,305 @@
+{
+  "schema": "oce-stability-baseline-v1",
+  "captured_on": "2026-08-26",
+  "classification": "dated_historical_evidence",
+  "authority": {
+    "precedence": "Live repository source and repository policy remain authoritative.",
+    "purpose": "This artifact records evidence; it does not create product or program authority.",
+    "supersession_rule": "Never rewrite this capture silently; add a new dated capture that names what it supersedes.",
+    "dated_input": {
+      "location": "_spec/open-control-engine-2026-08-25/CURRENT-BASELINE.md",
+      "availability": "local_only_not_present_in_clean_checkout",
+      "treatment": "superseded_as_baseline_input_by_this_2026-08-26_capture",
+      "quoted_differences": [
+        "Studio product main moved from c756d320aa495ddd66630f0987202c6d852f27f5 to e0caf54c47d6b15f5d89fd7c2f05d82ba8fed326.",
+        "Studio's selected program locator moved from 5bc001ff9dbf980e5fb7f106e2d5eb9329e842c3 to 5dd50c97472020142503ec8fdb79823fc0e56c78.",
+        "The program repository head moved from 5dd50c97472020142503ec8fdb79823fc0e56c78 to e54e7c3e63e3b5a78abd38402b6d12b6d561758f."
+      ]
+    }
+  },
+  "open_control_engine": {
+    "repository": "jscott3201/open-control-engine",
+    "refs": {
+      "development": {
+        "branch": "development",
+        "role": "default_integration",
+        "commit": "41e997fd130c5e454446b40bcc3ba576429876b4",
+        "tree": "f0a3162736c2a2d51120b671cdaa65d7ad197a2e",
+        "captured_on": "2026-08-26"
+      },
+      "main": {
+        "branch": "main",
+        "role": "release",
+        "commit": "63f3f2ab3ec478c5b0a023848c4f8da0dba48796",
+        "tree": "61ba7a25e42ecf70ee114539402dbbd099db3e69",
+        "captured_on": "2026-08-26"
+      }
+    },
+    "relationship": {
+      "classification": "diverged",
+      "merge_base": "c3377250b55bf5f3d2018f20035daba698877999",
+      "development_ahead": 6,
+      "development_behind": 5,
+      "captured_on": "2026-08-26",
+      "source": {
+        "kind": "github_api_observation",
+        "repository": "jscott3201/open-control-engine",
+        "endpoint": "compare/63f3f2ab3ec478c5b0a023848c4f8da0dba48796...41e997fd130c5e454446b40bcc3ba576429876b4",
+        "captured_on": "2026-08-26"
+      }
+    },
+    "package": {
+      "workspace_version": "0.1.0",
+      "declared_msrv": "1.97.0",
+      "pinned_toolchain": "1.97.1",
+      "facade_package": "oce-api",
+      "source": {
+        "kind": "git_paths_at_exact_revision",
+        "repository": "jscott3201/open-control-engine",
+        "revision": "41e997fd130c5e454446b40bcc3ba576429876b4",
+        "paths": [
+          "Cargo.toml",
+          "rust-toolchain.toml",
+          "crates/oce-api/Cargo.toml"
+        ],
+        "captured_on": "2026-08-26"
+      }
+    },
+    "publication": {
+      "tag": {
+        "name": "v0.1.0",
+        "target_commit": "909a8ba699e6a2fccf3de6ac0616a9e83a04060f",
+        "captured_on": "2026-08-26",
+        "source": {
+          "kind": "github_api_observation",
+          "repository": "jscott3201/open-control-engine",
+          "endpoint": "git/ref/tags/v0.1.0",
+          "captured_on": "2026-08-26"
+        }
+      },
+      "github_releases": {
+        "state": "none_at_capture",
+        "captured_on": "2026-08-26",
+        "source": {
+          "kind": "github_api_observation",
+          "repository": "jscott3201/open-control-engine",
+          "endpoint": "releases",
+          "captured_on": "2026-08-26"
+        }
+      },
+      "tag_release_distinction": "A Git tag exists; the GitHub Releases list was empty."
+    },
+    "repository_state": {
+      "open_pull_requests": {
+        "state": "known",
+        "numbers": [],
+        "captured_on": "2026-08-26",
+        "source": {
+          "kind": "github_api_observation",
+          "repository": "jscott3201/open-control-engine",
+          "endpoint": "pulls?state=open",
+          "captured_on": "2026-08-26"
+        }
+      },
+      "open_issues": {
+        "state": "known",
+        "issues": [
+          {
+            "number": 242,
+            "state": "open",
+            "assignees": [],
+            "program_owner": "UNKNOWN"
+          },
+          {
+            "number": 249,
+            "state": "open",
+            "assignees": [],
+            "program_owner": "UNKNOWN"
+          },
+          {
+            "number": 250,
+            "state": "open",
+            "assignees": [],
+            "program_owner": "UNKNOWN"
+          },
+          {
+            "number": 254,
+            "state": "open",
+            "assignees": [],
+            "program_owner": "UNKNOWN"
+          }
+        ],
+        "captured_on": "2026-08-26",
+        "source": {
+          "kind": "github_api_observation",
+          "repository": "jscott3201/open-control-engine",
+          "endpoint": "issues?state=open",
+          "captured_on": "2026-08-26"
+        }
+      },
+      "branch_protection_and_rulesets": {
+        "state": "UNKNOWN",
+        "reason": "Available API evidence was authorization-limited; no absence of protection is inferred.",
+        "admin_verification": "A repository administrator must inspect Settings > Rules > Rulesets and Settings > Branches, then record every active rule applying to development and main.",
+        "captured_on": "2026-08-26"
+      }
+    }
+  },
+  "downstream_and_adjacent": {
+    "studio": {
+      "product": {
+        "repository": "jscott3201/open-control-studio",
+        "branch": "main",
+        "commit": "e0caf54c47d6b15f5d89fd7c2f05d82ba8fed326",
+        "captured_on": "2026-08-26",
+        "semantics": "The product revision that defines reviewed Studio behavior."
+      },
+      "selected_program_locator": {
+        "repository": "jscott3201/open-control-studio-program",
+        "commit": "5dd50c97472020142503ec8fdb79823fc0e56c78",
+        "captured_on": "2026-08-26",
+        "semantics": "The immutable program revision selected by product source.",
+        "source": {
+          "kind": "git_paths_at_exact_revision",
+          "repository": "jscott3201/open-control-studio",
+          "revision": "e0caf54c47d6b15f5d89fd7c2f05d82ba8fed326",
+          "paths": [
+            "docs/roadmap/README.md"
+          ],
+          "captured_on": "2026-08-26"
+        }
+      },
+      "program_repository_head": {
+        "repository": "jscott3201/open-control-studio-program",
+        "branch": "main",
+        "commit": "e54e7c3e63e3b5a78abd38402b6d12b6d561758f",
+        "captured_on": "2026-08-26",
+        "semantics": "Newer program work; it does not define product behavior without a reviewed locator change."
+      },
+      "oce_dependencies": {
+        "state": "pinned",
+        "dependencies": [
+          {
+            "package": "oce-api",
+            "commit": "41e997fd130c5e454446b40bcc3ba576429876b4",
+            "tree": "f0a3162736c2a2d51120b671cdaa65d7ad197a2e",
+            "captured_on": "2026-08-26"
+          },
+          {
+            "package": "oce-blocks",
+            "commit": "41e997fd130c5e454446b40bcc3ba576429876b4",
+            "tree": "f0a3162736c2a2d51120b671cdaa65d7ad197a2e",
+            "captured_on": "2026-08-26"
+          }
+        ],
+        "source": {
+          "kind": "git_paths_at_exact_revision",
+          "repository": "jscott3201/open-control-studio",
+          "revision": "e0caf54c47d6b15f5d89fd7c2f05d82ba8fed326",
+          "paths": [
+            "Cargo.toml"
+          ],
+          "captured_on": "2026-08-26"
+        }
+      },
+      "open_pull_requests": {
+        "scope": "downstream_not_oce",
+        "pull_requests": [
+          {
+            "number": 28,
+            "state": "open",
+            "head_branch": "deliver/m00-pr04-reconciled",
+            "head_commit": "00dc45a22fe7a906c0eba4e7c85db37bb9e8d000",
+            "base_branch": "main",
+            "base_commit": "e0caf54c47d6b15f5d89fd7c2f05d82ba8fed326"
+          }
+        ],
+        "captured_on": "2026-08-26",
+        "source": {
+          "kind": "github_api_observation",
+          "repository": "jscott3201/open-control-studio",
+          "endpoint": "pulls/28",
+          "captured_on": "2026-08-26"
+        }
+      }
+    },
+    "library": {
+      "repository": "jscott3201/open-control-library",
+      "ref": {
+        "branch": "main",
+        "role": "default",
+        "commit": "f8f82ce5dcf613e22c25798125aa45654b2050e8",
+        "tree": "f7fdb344141926588ce1aed3fcb2117691d35ed1",
+        "captured_on": "2026-08-26"
+      },
+      "oce_dependency": {
+        "state": "pinned",
+        "declaration": "ENGINE_PIN",
+        "commit": "e2ff2f84577d9be65a49e6cb5440c223f6126817",
+        "tree": "f0a3162736c2a2d51120b671cdaa65d7ad197a2e",
+        "captured_on": "2026-08-26",
+        "source": {
+          "kind": "git_paths_at_exact_revision",
+          "repository": "jscott3201/open-control-library",
+          "revision": "f8f82ce5dcf613e22c25798125aa45654b2050e8",
+          "paths": [
+            "ENGINE_PIN"
+          ],
+          "captured_on": "2026-08-26"
+        },
+        "identity_note": "The declared commit differs from OCE development even though their tree identities are equal."
+      }
+    },
+    "sim": {
+      "repository": "jscott3201/open-control-sim",
+      "ref": {
+        "branch": "development",
+        "role": "default",
+        "commit": "1df1c32d2740a6736bb69c0f6c3a01289f3c10f5",
+        "tree": "ed2a3b25f6c52e9df1d9aa3b9caa6c838bb01075",
+        "captured_on": "2026-08-26"
+      },
+      "oce_dependency": {
+        "state": "none_at_revision",
+        "captured_on": "2026-08-26",
+        "evidence": "No active OCE dependency; ocs-bridge is an empty scaffold and its future dependency is commented out.",
+        "source": {
+          "kind": "git_paths_at_exact_revision",
+          "repository": "jscott3201/open-control-sim",
+          "revision": "1df1c32d2740a6736bb69c0f6c3a01289f3c10f5",
+          "paths": [
+            "Cargo.toml",
+            "crates/ocs-bridge/Cargo.toml",
+            "crates/ocs-bridge/src/lib.rs"
+          ],
+          "captured_on": "2026-08-26"
+        }
+      }
+    },
+    "cxf_json": {
+      "repository": "jscott3201/cxf-json",
+      "ref": {
+        "branch": "main",
+        "role": "default",
+        "commit": "6edbddea17c2f57456c2d431db6449eb90ec20d8",
+        "tree": "c9e304bc375a436cff7ae513ebb0469c3ee252a3",
+        "captured_on": "2026-08-26"
+      },
+      "oce_dependency": {
+        "state": "none_at_revision",
+        "captured_on": "2026-08-26",
+        "evidence": "No OCE dependency; this is adjacent CXF contract groundwork, not a supported OCE parser or adapter.",
+        "source": {
+          "kind": "git_paths_at_exact_revision",
+          "repository": "jscott3201/cxf-json",
+          "revision": "6edbddea17c2f57456c2d431db6449eb90ec20d8",
+          "paths": [
+            "Cargo.toml",
+            "crates/*/Cargo.toml"
+          ],
+          "captured_on": "2026-08-26"
+        }
+      }
+    }
+  }
+}

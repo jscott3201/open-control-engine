@@ -3,7 +3,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use oce_api::{CollectSpec, Engine, InputSource, SimMetrics, SimSpec, Value};
+use oce_api::{Engine, Value};
+#[path = "support/frame_trace.rs"]
+mod frame_trace;
+use frame_trace::FrameRun;
 
 const FIXTURE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/cooling_only_controller.jsonld");
@@ -248,7 +251,7 @@ fn load_controller() -> Engine {
     let mut engine = Engine::in_memory();
     let report = engine
         .load_cxf(FIXTURE.as_bytes())
-        .expect("source-verified G36 CoolingOnly.Controller fixture loads");
+        .expect("source-transcribed G36 CoolingOnly.Controller fixture loads");
     assert_eq!(report.block_count, 213);
     assert!(
         report.warnings.is_empty(),
@@ -267,24 +270,21 @@ fn schedule_signature(engine: &Engine) -> ScheduleSignature {
     )
 }
 
-fn simulate(mut engine: Engine, reference: Arc<ReferenceTable>) -> (ScheduleSignature, SimMetrics) {
+fn simulate(mut engine: Engine, reference: Arc<ReferenceTable>) -> (ScheduleSignature, FrameRun) {
     let schedule = schedule_signature(&engine);
     let input_reference = Arc::clone(&reference);
-    let metrics = engine
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop: T_STOP,
-            step: SAMPLE_STEP,
-            inputs: InputSource::Closure(Box::new(move |t| reference_inputs(&input_reference, t))),
-            collect: CollectSpec::Named {
-                points: OUTPUTS
-                    .iter()
-                    .map(|output| output.runtime_name.to_string())
-                    .collect(),
-                stride: 1,
-            },
-        })
-        .expect("G36 CoolingOnly.Controller simulates");
+    let metrics = FrameRun::record(
+        &mut engine,
+        0.0,
+        T_STOP,
+        SAMPLE_STEP,
+        move |t| reference_inputs(&input_reference, t),
+        OUTPUTS
+            .iter()
+            .map(|output| output.runtime_name.to_string())
+            .collect(),
+    )
+    .expect("G36 CoolingOnly.Controller simulates");
     assert_eq!(metrics.ticks, ROWS as u64);
     assert_eq!(
         metrics
@@ -303,7 +303,7 @@ fn simulate(mut engine: Engine, reference: Arc<ReferenceTable>) -> (ScheduleSign
 }
 
 fn assert_output_matches_reference(
-    metrics: &SimMetrics,
+    metrics: &FrameRun,
     reference: &ReferenceTable,
     output: OutputPoint,
 ) {
@@ -337,7 +337,7 @@ fn assert_output_matches_reference(
     }
 }
 
-fn assert_trace_bit_eq(left: &SimMetrics, right: &SimMetrics) {
+fn assert_trace_bit_eq(left: &FrameRun, right: &FrameRun) {
     assert_eq!(left.trace.columns(), right.trace.columns());
     assert_eq!(
         left.trace
@@ -411,4 +411,62 @@ fn whole_controller_replays_all_outputs_bit_exactly_and_repeats_deterministicall
     let (schedule_b, metrics_b) = simulate(load_controller(), Arc::clone(&reference));
     assert_eq!(schedule_a, schedule_b);
     assert_trace_bit_eq(&metrics_a, &metrics_b);
+}
+
+#[test]
+fn complete_frames_match_the_independent_hosttick_reference_and_repeat_bit_exactly() {
+    // Existing Tier-A source-transcribed reference (not engine self-output); the same bounded
+    // HostTick profile/Pre caveat as the legacy oracle above. New API, unchanged fixture/inputs.
+    let reference = ReferenceTable::parse(REFERENCE_CSV);
+    let mut prior = Vec::<oce_api::CompletedFrame>::new();
+    for repeat in 0..2 {
+        let mut engine = load_controller();
+        let boundary = engine.topology().boundary_outputs;
+        assert_eq!(boundary.len(), 10);
+        for row in 0..ROWS {
+            let time = reference.value(row, "time");
+            let inputs = reference_inputs(&reference, time);
+            let pairs: Vec<_> = inputs
+                .iter()
+                .map(|(p, v)| (p.as_str(), v.clone()))
+                .collect();
+            let plan = engine.prepare_frame(time, &pairs).unwrap();
+            let frame = engine.execute_frame(plan).unwrap();
+            assert_eq!(frame.sequence(), row as u64 + 1);
+            assert_eq!(frame.time().to_bits(), time.to_bits());
+            assert_eq!(frame.outputs().len(), 10);
+            assert!(frame.outputs().windows(2).all(|w| w[0].0 < w[1].0));
+            for output in OUTPUTS {
+                let path = &boundary
+                    .iter()
+                    .find(|b| b.driver_path == output.runtime_name)
+                    .unwrap()
+                    .path;
+                let actual = &frame.outputs().iter().find(|(p, _)| p == path).unwrap().1;
+                let expected = reference.value(row, output.reference_name);
+                let expected = match output.kind {
+                    OutputKind::Real => Value::Real(expected),
+                    OutputKind::Integer => Value::Integer(expected as i64),
+                };
+                assert!(
+                    actual.bit_eq(&expected),
+                    "{} row {row}",
+                    output.reference_name
+                );
+            }
+            if repeat == 0 {
+                prior.push(frame);
+            } else {
+                assert_eq!(frame.outputs().len(), prior[row].outputs().len());
+                for (actual, expected) in frame.outputs().iter().zip(prior[row].outputs()) {
+                    assert_eq!(actual.0, expected.0);
+                    assert!(actual.1.bit_eq(&expected.1));
+                }
+                assert_eq!(
+                    format!("{:?}", frame.diagnostics()),
+                    format!("{:?}", prior[row].diagnostics())
+                );
+            }
+        }
+    }
 }

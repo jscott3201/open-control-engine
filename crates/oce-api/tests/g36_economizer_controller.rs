@@ -1,6 +1,9 @@
 //! Source-verified ASHRAE G36 Economizers.Controller restricted variant through the frozen facade.
 
-use oce_api::{CollectSpec, Engine, InputSource, SimMetrics, SimSpec, Value};
+use oce_api::{Engine, Value};
+#[path = "support/frame_trace.rs"]
+mod frame_trace;
+use frame_trace::FrameRun;
 
 const ECONOMIZER_CONTROLLER: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.jsonld"
@@ -132,25 +135,22 @@ fn schedule_signature(engine: &Engine) -> ScheduleSignature {
     )
 }
 
-fn simulate(mut engine: Engine) -> (ScheduleSignature, SimMetrics) {
+fn simulate(mut engine: Engine) -> (ScheduleSignature, FrameRun) {
     let schedule = schedule_signature(&engine);
-    let metrics = engine
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop: 1380.0,
-            step: 60.0,
-            inputs: InputSource::Closure(Box::new(economizer_controller_inputs)),
-            collect: CollectSpec::Named {
-                points: vec![
-                    OUTDOOR_DAMPER_MIN_LIMIT.to_string(),
-                    MINIMUM_OUTDOOR_AIR_LOOP_ENABLED.to_string(),
-                    OUTDOOR_DAMPER_COMMAND.to_string(),
-                    RETURN_DAMPER_COMMAND.to_string(),
-                ],
-                stride: 1,
-            },
-        })
-        .expect("G36 Economizers.Controller simulates");
+    let metrics = FrameRun::record(
+        &mut engine,
+        0.0,
+        1380.0,
+        60.0,
+        economizer_controller_inputs,
+        vec![
+            OUTDOOR_DAMPER_MIN_LIMIT.to_string(),
+            MINIMUM_OUTDOOR_AIR_LOOP_ENABLED.to_string(),
+            OUTDOOR_DAMPER_COMMAND.to_string(),
+            RETURN_DAMPER_COMMAND.to_string(),
+        ],
+    )
+    .expect("G36 Economizers.Controller simulates");
     assert_eq!(metrics.ticks, EXPECTED_TIMES.len() as u64);
     assert_eq!(
         metrics
@@ -167,7 +167,7 @@ fn simulate(mut engine: Engine) -> (ScheduleSignature, SimMetrics) {
     (schedule, metrics)
 }
 
-fn real_column(metrics: &SimMetrics, path: &str) -> Vec<f64> {
+fn real_column(metrics: &FrameRun, path: &str) -> Vec<f64> {
     let index = metrics
         .trace
         .columns()
@@ -184,7 +184,7 @@ fn real_column(metrics: &SimMetrics, path: &str) -> Vec<f64> {
         .collect()
 }
 
-fn bool_column(metrics: &SimMetrics, path: &str) -> Vec<bool> {
+fn bool_column(metrics: &FrameRun, path: &str) -> Vec<bool> {
     let index = metrics
         .trace
         .columns()
@@ -209,7 +209,7 @@ fn assert_real_bits(actual: &[f64], expected: &[f64], label: &str) {
     );
 }
 
-fn assert_trace_bit_eq(left: &SimMetrics, right: &SimMetrics) {
+fn assert_trace_bit_eq(left: &FrameRun, right: &FrameRun) {
     assert_eq!(left.trace.columns(), right.trace.columns());
     assert_eq!(
         left.trace

@@ -1,3 +1,5 @@
+//! Exact routing tests, including implementation-only i64 stress outside portable CDL's i32 range.
+
 use std::cell::RefCell;
 
 use oce_model::Value;
@@ -59,6 +61,42 @@ fn integer_extract_signal_preserves_selector_order_and_duplicates() {
 
     let out = outs(&block, &[i(10), i(20), i(30), i(40), i(50)]);
     assert_values(&out, &[i(50), i(20), i(20), i(10)]);
+}
+
+#[test]
+fn implementation_routing_preserves_wide_i64_values_without_real_coercion() {
+    for _ in 0..2 {
+        let a = 9_007_199_254_740_993;
+        let b = -9_007_199_254_740_993;
+        assert_values(
+            &outs(
+                &IntegerExtractSignal::new(5, 4, vec![5, 2, 2, 1]),
+                &[i(i64::MIN), i(a), i(0), i(b), i(i64::MAX)],
+            ),
+            &[i(i64::MAX), i(a), i(a), i(i64::MIN)],
+        );
+        for value in [i64::MIN, b, a, i64::MAX] {
+            assert_values(
+                &outs(&IntegerScalarReplicator::new(3), &[i(value)]),
+                &[i(value), i(value), i(value)],
+            );
+            assert_values(
+                &outs(&IntegerExtractor::new(2), &[i(2), i(0), i(value)]),
+                &[i(value)],
+            );
+        }
+        assert_values(
+            &outs(
+                &IntegerVectorFilter::new(4, 2, vec![false, true, true, false]),
+                &[i(0), i(a), i(b), i(1)],
+            ),
+            &[i(a), i(b)],
+        );
+        assert_values(
+            &outs(&IntegerVectorReplicator::new(2, 3), &[i(a), i(b)]),
+            &[i(a), i(b), i(a), i(b), i(a), i(b)],
+        );
+    }
 }
 
 #[test]

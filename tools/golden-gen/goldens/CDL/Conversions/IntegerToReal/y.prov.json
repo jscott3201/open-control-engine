@@ -10,10 +10,10 @@
   "reference_csv": "reference.csv",
   "reference_columns": ["time", "u", "y"],
   "inputs": [
-    { "name": "u", "value_kind": "Integer", "values": [0.0, -7.0, 2147483647.0, 9007199254740992.0] }
+    { "name": "u", "value_kind": "Integer", "values": [0.0, -7.0, 2147483647.0, -2147483648.0] }
   ],
-  "input": "u=[0,-7,2147483647,9007199254740993]; last=2^53+1 rounds-to-even to 2^53",
-  "reference_rule": "y = (Real) u (i64->f64 widen, round-to-nearest-even beyond 2^53); _spec/03 §4.4 IntegerToReal",
+  "input": "u=[0,-7,2147483647,-2147483648]; zero, negative, and both portable i32 endpoints",
+  "reference_rule": "y = (Real) u; exact binary64 conversion over portable i32 inputs; CDL.Conversions.IntegerToReal",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false

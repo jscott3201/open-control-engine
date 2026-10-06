@@ -2,6 +2,9 @@
 
 #![allow(dead_code)]
 
+pub(crate) mod aligned_cases;
+mod strict_policy;
+
 use std::path::PathBuf;
 
 use oce_conformance::{
@@ -148,14 +151,7 @@ pub(crate) fn assert_cases_match_aligned_tolerance_oracle(
     for case in cases {
         let reference = read_reference(case, family_dir);
         let cxf = build_cxf(case);
-        let run = drive_case_with_mode(
-            case,
-            sequence,
-            &cxf,
-            &reference,
-            ComparisonMode::AlignedTolerance,
-            tolerances,
-        );
+        let run = drive_case_with_corpus_policy(case, sequence, &cxf, &reference);
 
         assert_eq!(run.comparisons.len(), case.outputs.len(), "{}", case.slug);
         for (idx, (comparison, output)) in
@@ -167,27 +163,69 @@ pub(crate) fn assert_cases_match_aligned_tolerance_oracle(
                 !comparison.masked,
                 "aligned per-block comparison is unmasked"
             );
-            assert_eq!(comparison.tolerance, tolerances);
-
-            let ComparisonResult::AlignedTolerance(result) = &comparison.result else {
-                panic!(
-                    "{} {} did not use aligned tolerance comparison",
-                    case.slug, output.name
-                );
-            };
+            if strict_policy::exact_candidate(case, output) {
+                let ComparisonResult::Exact(result) = &comparison.result else {
+                    panic!("{} {} lost strict candidate wiring", case.slug, output.name);
+                };
+                assert_eq!(comparison.tolerance, zero_tolerances());
+                assert_eq!(result.first_mismatch, None, "{} {}", case.slug, output.name);
+            } else {
+                let ComparisonResult::AlignedTolerance(result) = &comparison.result else {
+                    panic!("{} {} lost conservative comparison", case.slug, output.name);
+                };
+                assert_eq!(comparison.tolerance, tolerances);
+                assert_eq!(result.first_mismatch, None, "{} {}", case.slug, output.name);
+            }
             assert!(
-                result.passed,
+                comparison.result.passed(),
                 "{} {} mismatch: {:?}",
-                case.slug, output.name, result
+                case.slug,
+                output.name,
+                comparison.result
             );
-            assert_eq!(
-                result.compared_points, reference.n_rows,
-                "{} {}",
-                case.slug, output.name
-            );
-            assert_eq!(result.first_mismatch, None, "{} {}", case.slug, output.name);
+            assert_eq!(comparison.result.compared_points(), reference.n_rows);
         }
     }
+}
+
+// Keep mode selection at the existing facade seam. Separate fresh drives preserve stateful
+// sequence semantics; replacing only the selected comparisons permits per-signal adjudication.
+fn drive_case_with_corpus_policy(
+    case: &BlockCase,
+    sequence: &str,
+    cxf: &str,
+    reference: &CombiTimeTable,
+) -> oce_conformance::DriverRun {
+    let mut run = drive_case_with_mode(
+        case,
+        sequence,
+        cxf,
+        reference,
+        ComparisonMode::AlignedTolerance,
+        aligned_real_tolerances(),
+    );
+    if case
+        .outputs
+        .iter()
+        .any(|output| strict_policy::exact_candidate(case, output))
+    {
+        let strict = drive_case(case, sequence, cxf, reference);
+        assert_trace_bit_eq(&run, &strict);
+        for (index, comparison) in strict.comparisons.into_iter().enumerate() {
+            if strict_policy::exact_candidate(case, &case.outputs[index]) {
+                run.comparisons[index] = comparison;
+            }
+        }
+    }
+    run
+}
+
+pub(crate) fn drive_case_with_corpus_reference(
+    case: &BlockCase,
+    sequence: &str,
+    reference: &CombiTimeTable,
+) -> oce_conformance::DriverRun {
+    drive_case_with_corpus_policy(case, sequence, &build_cxf(case), reference)
 }
 
 pub(crate) fn assert_cases_are_deterministic(
@@ -211,13 +249,13 @@ pub(crate) fn assert_cases_are_deterministic(
     }
 }
 
-fn read_reference(case: &BlockCase, family_dir: &str) -> CombiTimeTable {
+pub(crate) fn read_reference(case: &BlockCase, family_dir: &str) -> CombiTimeTable {
     let path = reference_path(case, family_dir);
     CombiTimeTable::read(&path)
         .unwrap_or_else(|err| panic!("{} reference should parse: {err:?}", case.slug))
 }
 
-fn reference_path(case: &BlockCase, family_dir: &str) -> PathBuf {
+pub(crate) fn reference_path(case: &BlockCase, family_dir: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../tools/golden-gen/goldens")
         .join(family_dir)
@@ -389,7 +427,7 @@ pub(crate) fn output_point(case: &BlockCase, output_idx: usize) -> String {
     )
 }
 
-fn build_cxf(case: &BlockCase) -> String {
+pub(crate) fn build_cxf(case: &BlockCase) -> String {
     let model_id = format!("http://example.org#{}", case.slug);
     let block_id = format!("{model_id}.block");
     let output_ids: Vec<String> = case

@@ -10,9 +10,9 @@
   "reference_csv": "reference.csv",
   "reference_columns": ["time", "u", "y1", "y2", "y3"],
   "inputs": [
-    { "name": "u", "value_kind": "Integer", "values": [1.0, -1.0, 9007199254740992.0, -9007199254740992.0] }
+    { "name": "u", "value_kind": "Integer", "values": [1.0, -1.0, 2147483647.0, -2147483648.0] }
   ],
-  "input": "param nout=3; scalar Integer input includes exact 2^53 boundary values",
+  "input": "param nout=3; scalar Integer input includes both portable i32 endpoints",
   "reference_rule": "y = fill(u, nout)",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",

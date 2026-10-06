@@ -3,7 +3,12 @@
 use std::collections::BTreeSet;
 use std::fs;
 
-use oce_api::{CollectSpec, Engine, InputSource, PointDirection, SimSpec, Value};
+use oce_api::{Engine, PointDirection, Value};
+
+fn advance(engine: &mut Engine, time: f64, inputs: &[(&str, Value)]) {
+    let prepared = engine.prepare_frame(time, inputs).unwrap();
+    engine.execute_frame(prepared).unwrap();
+}
 use oce_store::ModelStore;
 
 const FANOUT: &str = include_str!("../../oce-cxf/tests/fixtures/boundary_fanout.jsonld");
@@ -116,27 +121,9 @@ fn nested_composite_loads_builds_and_ticks_through_frozen_facade() {
         .path
         .clone();
 
-    let metrics = engine
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop: 2.0,
-            step: 1.0,
-            inputs: InputSource::Closure(Box::new(|_| vec![(INPUT.to_owned(), Value::Real(8.0))])),
-            collect: CollectSpec::Named {
-                points: vec![output.clone()],
-                stride: 1,
-            },
-        })
-        .expect("nested CXF composite simulates");
-
-    assert_eq!(metrics.trace.columns(), &[output]);
-    for (row, value) in metrics
-        .trace
-        .column(0)
-        .expect("output column")
-        .iter()
-        .enumerate()
-    {
+    for row in 0..3 {
+        advance(&mut engine, row as f64, &[(INPUT, Value::Real(8.0))]);
+        let value = engine.get_output(&output).unwrap();
         assert!(
             value.bit_eq(&Value::Real(8.0)),
             "row {row} should carry top input through 0.5 then 2.0 gains, got {value:?}"
@@ -189,10 +176,7 @@ fn boundary_input_fanout_loads_as_one_point_and_stages_every_target() {
         .path
         .clone();
 
-    engine
-        .set_input(FANOUT_INPUT, Value::Real(4.0))
-        .expect("fanout input stages");
-    engine.tick(0.0).expect("fanout model ticks");
+    advance(&mut engine, 0.0, &[(FANOUT_INPUT, Value::Real(4.0))]);
     assert!(
         engine
             .get_output(&output)
@@ -262,19 +246,15 @@ fn source_verified_g36_supply_temperature_fixture_loads_through_frozen_facade() 
         "SupplyTemperature output {output} should be visible"
     );
 
-    engine
-        .set_input(&outdoor_temp, Value::Real(289.15))
-        .expect("outdoor temp stages");
-    engine
-        .set_input(&fan_status, Value::Boolean(true))
-        .expect("fan status stages");
-    engine
-        .set_input(&operating_mode, Value::Integer(1))
-        .expect("operating mode stages");
-    engine
-        .set_input(&requests, Value::Integer(0))
-        .expect("zone request stages");
-    engine.tick(0.0).expect("SupplyTemperature model ticks");
+    let inputs = |fan| {
+        [
+            (outdoor_temp.as_str(), Value::Real(289.15)),
+            (fan_status.as_str(), Value::Boolean(fan)),
+            (operating_mode.as_str(), Value::Integer(1)),
+            (requests.as_str(), Value::Integer(0)),
+        ]
+    };
+    advance(&mut engine, 0.0, &inputs(true));
     let occupied_output = engine
         .get_output(output)
         .expect("SupplyTemperature output exists");
@@ -286,10 +266,7 @@ fn source_verified_g36_supply_temperature_fixture_loads_through_frozen_facade() 
         other => panic!("SupplyTemperature output must be Real, got {other:?}"),
     }
 
-    engine
-        .set_input(&fan_status, Value::Boolean(false))
-        .expect("fan status stages");
-    engine.tick(1.0).expect("SupplyTemperature model ticks");
+    advance(&mut engine, 1.0, &inputs(false));
     assert!(
         engine
             .get_output(output)
@@ -335,16 +312,14 @@ fn source_verified_g36_supply_fan_fixture_loads_through_frozen_facade() {
         );
     }
 
-    engine
-        .set_input(&operating_mode, Value::Integer(1))
-        .expect("operating mode stages");
-    engine
-        .set_input(&duct_pressure, Value::Real(120.0))
-        .expect("duct pressure stages");
-    engine
-        .set_input(&pressure_requests, Value::Integer(0))
-        .expect("pressure reset requests stage");
-    engine.tick(0.0).expect("SupplyFan model ticks");
+    let inputs = |mode| {
+        [
+            (operating_mode.as_str(), Value::Integer(mode)),
+            (duct_pressure.as_str(), Value::Real(120.0)),
+            (pressure_requests.as_str(), Value::Integer(0)),
+        ]
+    };
+    advance(&mut engine, 0.0, &inputs(1));
     assert!(
         engine
             .get_output(fan_status)
@@ -363,10 +338,7 @@ fn source_verified_g36_supply_fan_fixture_loads_through_frozen_facade() {
         other => panic!("SupplyFan speed output must be Real, got {other:?}"),
     }
 
-    engine
-        .set_input(&operating_mode, Value::Integer(4))
-        .expect("operating mode stages");
-    engine.tick(1.0).expect("SupplyFan model ticks");
+    advance(&mut engine, 1.0, &inputs(4));
     assert!(
         engine
             .get_output(fan_status)
@@ -415,16 +387,14 @@ fn source_verified_g36_supply_signals_fixture_loads_through_frozen_facade() {
         );
     }
 
-    engine
-        .set_input(&setpoint, Value::Real(295.0))
-        .expect("setpoint stages");
-    engine
-        .set_input(&measured_temp, Value::Real(300.0))
-        .expect("measured temperature stages");
-    engine
-        .set_input(&fan_status, Value::Boolean(false))
-        .expect("fan status stages");
-    engine.tick(0.0).expect("SupplySignals model ticks");
+    let inputs = |set, measured, fan| {
+        [
+            (setpoint.as_str(), Value::Real(set)),
+            (measured_temp.as_str(), Value::Real(measured)),
+            (fan_status.as_str(), Value::Boolean(fan)),
+        ]
+    };
+    advance(&mut engine, 0.0, &inputs(295.0, 300.0, false));
     assert!(
         engine
             .get_output(u_t_sup)
@@ -433,10 +403,7 @@ fn source_verified_g36_supply_signals_fixture_loads_through_frozen_facade() {
         "fan-off branch should force zero supply-temperature loop signal"
     );
 
-    engine
-        .set_input(&fan_status, Value::Boolean(true))
-        .expect("fan status stages");
-    engine.tick(1.0).expect("SupplySignals model ticks");
+    advance(&mut engine, 1.0, &inputs(295.0, 300.0, true));
     assert!(
         engine
             .get_output(u_t_sup)
@@ -445,7 +412,7 @@ fn source_verified_g36_supply_signals_fixture_loads_through_frozen_facade() {
         "rising fan trigger resets after emit, so the first enabled tick sees the current P term"
     );
 
-    engine.tick(2.0).expect("SupplySignals model ticks");
+    advance(&mut engine, 2.0, &inputs(295.0, 300.0, true));
     assert!(
         engine
             .get_output(u_t_sup)
@@ -454,13 +421,7 @@ fn source_verified_g36_supply_signals_fixture_loads_through_frozen_facade() {
         "PIDWithReset reset target should be visible on the next tick"
     );
 
-    engine
-        .set_input(&setpoint, Value::Real(320.0))
-        .expect("setpoint stages");
-    engine
-        .set_input(&measured_temp, Value::Real(295.0))
-        .expect("measured temperature stages");
-    engine.tick(3.0).expect("SupplySignals model ticks");
+    advance(&mut engine, 3.0, &inputs(320.0, 295.0, true));
     assert!(
         engine
             .get_output(heating)

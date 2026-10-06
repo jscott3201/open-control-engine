@@ -1,4 +1,4 @@
-//! G36 Generic.TimeSuppression Tier-A exact oracle check.
+//! G36 Generic.TimeSuppression Tier-A HostTick v1 profile check.
 //!
 //! There is intentionally no funnel-band test. The policy header states:
 //! “Boolean/Integer G36 outputs are compared exactly (`_spec/07 §9.3`) and are kept on
@@ -41,7 +41,7 @@ const REFERENCE_COLUMNS: &[&str] = &[
 ];
 
 #[test]
-fn g36_generic_time_suppression_tier_a_oracle_matches_engine_output() {
+fn g36_generic_time_suppression_host_tick_profile_matches_engine_output() {
     let reference = CombiTimeTable::read(&reference_path())
         .unwrap_or_else(|err| panic!("Generic TimeSuppression reference read failed: {err}"));
     assert_eq!(reference.name, "G36_generic_time_suppression_reference");
@@ -164,10 +164,11 @@ fn assert_signal_provenance(reference: &CombiTimeTable) {
     assert_eq!(prov["signal"], "after_suppression");
     assert_eq!(prov["tier"], "A");
     assert_eq!(prov["depends_on_oce_blocks"], false);
+    assert_eq!(prov["execution_profile"], "HostTick v1");
     assert!(
         prov["source"]
             .as_str()
-            .is_some_and(|source| source.contains("Buildings"))
+            .is_some_and(|source| source.contains("not a Modelica event-iteration oracle"))
     );
     assert_eq!(
         json_string_array(&prov["reference_columns"]),

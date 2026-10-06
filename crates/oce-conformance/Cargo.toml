@@ -1,6 +1,7 @@
 [package]
 name = "oce-conformance"
 description = "Funnel-style tolerance-band / golden-trace conformance harness for the Open Control Engine."
+publish = false
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

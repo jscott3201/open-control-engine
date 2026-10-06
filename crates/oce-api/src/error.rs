@@ -34,6 +34,23 @@ impl std::error::Error for LoadErrorContext {
 #[derive(thiserror::Error, Debug)]
 #[non_exhaustive]
 pub enum OcError {
+    /// Serialized CXF exceeded the engine's byte limit, before parsing or Store calls.
+    /// Carries counts only, never input content; has no source or structured diagnostics.
+    #[error("serialized CXF size {actual_bytes} bytes exceeds limit {limit_bytes} bytes")]
+    CxfTooLarge {
+        /// Length of the supplied serialized byte slice.
+        actual_bytes: usize,
+        /// Effective per-engine admission limit in bytes.
+        limit_bytes: usize,
+    },
+    /// A requested admission limit exceeded the supported maximum; configuration is unchanged.
+    #[error("CXF byte limit {actual_bytes} exceeds supported maximum {limit_bytes}")]
+    CxfByteLimitTooLarge {
+        /// Requested configuration value in bytes.
+        actual_bytes: usize,
+        /// Maximum supported configuration value in bytes.
+        limit_bytes: usize,
+    },
     /// A CXF ingest failure.
     #[error("CXF ingest error: {0}")]
     Cxf(#[from] oce_cxf::CxfError),
@@ -106,28 +123,46 @@ pub enum OcError {
         /// Finite time refused before any engine or store mutation.
         now: f64,
     },
-    /// A real-time step was requested before the host supplied its wall-clock origin.
-    #[error("real-time epoch is not configured; call set_realtime_epoch_unix_nanos first")]
-    RealtimeEpochUnset,
-    /// The host-supplied epoch and model time do not map exactly into the UNIX-nanosecond range.
-    #[error(
-        "real-time instant is not exactly representable: epoch_unix_nanos={epoch_unix_nanos}, t_now={t_now}"
-    )]
-    RealtimeInstantUnrepresentable {
-        /// Host-supplied UNIX timestamp corresponding to model time `t = 0`.
-        epoch_unix_nanos: u64,
-        /// Host-supplied model time in seconds.
-        t_now: f64,
-    },
     /// A point/connector name that does not resolve for the requested operation: either not
     /// present in the loaded model's IO inventory, or present with the wrong direction
-    /// (e.g. `get_output` on an input point, `set_input` on an output point). Also returned by
+    /// (e.g. `get_output` on an input point). Also returned by
     /// the parameter surface for a path that is not a parameter.
     #[error("unknown point/connector '{0}'")]
     UnknownPoint(String),
     /// A staged input value whose type does not match the target connector (no coercion; `01` §5).
     #[error("input type mismatch for '{0}'")]
     InputType(String),
+    /// A prepared frame belongs to another engine or a superseded executable incarnation.
+    #[error("prepared input frame is stale for this executable context")]
+    StalePreparedFrame,
+    /// The lifetime-local accepted-frame sequence has no next position; nothing was mutated.
+    #[error("accepted frame sequence is exhausted")]
+    FrameSequenceExhausted,
+    /// Complete-frame key is unknown; payload is bounded and does not retain the supplied key.
+    #[error("unknown frame input '{prefix}' ({bytes} UTF-8 bytes)")]
+    FrameUnknownInput {
+        /// At most the first 64 UTF-8 bytes, cut at a character boundary.
+        prefix: String,
+        /// Full submitted key length in bytes, not characters.
+        bytes: usize,
+    },
+    /// Complete-frame key names an output or an internal driven input, not a boundary input.
+    #[error("frame key is not a boundary input '{prefix}' ({bytes} UTF-8 bytes)")]
+    FrameNotInput {
+        /// At most the first 64 UTF-8 bytes, cut at a character boundary.
+        prefix: String,
+        /// Full submitted key length in bytes, not characters.
+        bytes: usize,
+    },
+    /// One canonical boundary input was supplied more than once, even with identical values.
+    #[error("duplicate frame input '{0}'")]
+    FrameDuplicateInput(String),
+    /// One required canonical boundary input was omitted; no hold-last or seed substitution.
+    #[error("missing frame input '{0}'")]
+    FrameMissingInput(String),
+    /// Exact type matched but the value violates the canonical input's declared domain.
+    #[error("input value outside declared domain for '{0}'")]
+    InputDomain(String),
     /// A checkpoint, snapshot, or restore failure.
     #[error(transparent)]
     State(#[from] crate::state::EngineStateError),

@@ -25,11 +25,16 @@ Read [`.agents/project-facts.md`](.agents/project-facts.md) before your first ch
 covers the gate, what CI does and does not run, and the conventions this repo enforces
 mechanically.
 
+Use the [product contract](docs/product-contract.md) for versioned product requirements and their
+evidence map; its domain delegations and current/host/future distinctions govern aggregate claims.
+
 If you are an agent working on this project, `.agents/` also holds local operating notes
-kept out of the published tree — the memory protocol and identity handling in
-`memory-bootstrap.md`, and delegation and review process in `lane-facts.md`. They are
-gitignored, so they exist only in a working checkout. If you cloned this repo and they are
-absent, you are a contributor and `project-facts.md` is what you need.
+kept out of the published tree — capability-aware memory and identity handling in
+`memory-bootstrap.md`, and checkout-local delegation and review notes in `lane-facts.md`.
+Use the active client's tools and follow its current guidance; historical handoffs record prior
+decisions and evidence, not current tool availability or continuing merge authority.
+The local notes are gitignored, so they exist only in a working checkout. If you cloned
+this repo and they are absent, you are a contributor and `project-facts.md` is what you need.
 
 That arrangement governs what is published **from here on**. Earlier revisions of this
 file, and a since-deleted `.claude/skills/codex-handoff/SKILL.md`, carried some of the same
@@ -38,6 +43,27 @@ four `_spec/oce_g36_gap_specs_v1/reference/` files that were force-added until 2
 and are now local-only. Nothing there is a credential or an identity value, so it is
 accepted rather than remediated — deleting a file stops publishing it, it does not
 unpublish it.
+
+---
+
+## 🌐 Hosting, CI, and issues
+
+- **GitHub is the primary host.** `github.com/jscott3201/open-control-engine` is `origin`:
+  branches, pull requests, reviews, merges, issues and CI all happen there. The self-hosted Forgejo
+  instance that was primary until October 2026 is retired; nothing pushes to or from it.
+- **CI is GitHub Actions**, defined in `.github/workflows/` (Linux only). The single required
+  status is `CI OK` — from `pr-gate.yml` on `development` and from `release-gate.yml` on `main`.
+  `advisories.yml` runs daily, `docs-pages.yml` validates docs PRs and publishes `main` to GitHub
+  Pages, `release.yml` keeps its tag-verify / manual-publish split, and the two manual OpenModelica
+  evidence workflows run on native arm64 runners.
+- **`.github/workflows/ci.yml` is not the CI.** It is the GitHub-era gate that produced the
+  retained native strict-bit captures and must stay byte-identical because it is a bound source of
+  that evidence. It is disabled in the repository's Actions settings; do not edit, re-enable or
+  delete it outside a deliberate native-evidence refresh.
+- **PR numbers:** GitHub PR numbers overlap the retired Forgejo numbering: Forgejo #332 (the
+  Forgejo CI port) and GitHub #332 are different changes. Bare `(#N)` citations predate the move;
+  cite every PR merged on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
+- Use `gh` (or the GitHub web UI / API) for PR operations.
 
 ---
 
@@ -72,16 +98,18 @@ you cloned this repo, you will not find them, and that is expected.
   report names what it cannot cover locally (cross-arch matrix, public-api surface, cargo-deny
   advisories), and
   a green local run is not a green CI. That script is the single source of truth for gate commands —
-  do not restate them here or anywhere else, and change one only by changing `ci.yml` first. Nine
+  do not restate them here or anywhere else, and change one only by changing
+  `.github/workflows/pr-gate.yml` first. Nine
   divergent copies of the command list existed before it was written, two of them materially
-  weaker than CI. A tenth divergence appeared later and in the other direction: `ci.yml` grew a
-  `gate (light)` step the script did not have, so the required check existed but no local run
+  weaker than CI. A tenth divergence appeared later and in the other direction: the CI workflow
+  grew a `gate (light)` step the script did not have, so the required check existed but no local run
   performed it. When they disagree, check which one is behind before assuming it is the script.
 - **CI is dev-light / release-heavy.** The per-PR gate into `development` runs engine tests for
-  **`oce-api`, `oce-blocks`, and `oce-expr` only** (the `determinism-matrix` job, x86_64 and
-  arm64, debug and release codegen, with a byte-for-byte cross-architecture portable-state vector
-  comparison). Every other crate's tests run only on `development` -> `main` release PRs via
-  `release-gate.yml`. **A green PR is therefore not evidence that a change's own tests pass** —
+  **`oce-api`, `oce-blocks`, and `oce-expr`** (the `determinism-matrix` job, x86_64 native and
+  aarch64 under QEMU user-mode emulation, debug and release codegen, with a byte-for-byte
+  cross-architecture portable-state vector comparison), plus the scoped `oce-conformance` strict-bit subset and four per-block suites
+  ([bounded evidence](docs/strict-bit-evidence.md)). The remainder of the workspace needs the
+  release/full gate. **A green PR is therefore not evidence that a change's own tests pass** —
   run `bash .agents/gate.sh full` first-hand before claiming they do. cargo-nextest is the runner
   (`.config/nextest.toml`: `default` = fast local fail-fast, `ci` = automated debug runs,
   `ci-release` = inherited release-codegen policy); it cannot run doctests, which is why they are a

@@ -191,7 +191,7 @@ checksum = "88904434abc2901f197fe8cc55f0445e7ded921dba5911dad2e2b39b48e663c4"
 
 [[package]]
 name = "oce-api"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "allocation-counter",
  "oce-bless",
@@ -213,11 +213,11 @@ dependencies = [
 
 [[package]]
 name = "oce-bless"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "oce-blocks"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "allocation-counter",
  "libm",
@@ -228,7 +228,7 @@ dependencies = [
 
 [[package]]
 name = "oce-conformance"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oce-api",
  "oce-bless",
@@ -243,7 +243,7 @@ dependencies = [
 
 [[package]]
 name = "oce-cxf"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oce-bless",
  "oce-blocks",
@@ -256,22 +256,23 @@ dependencies = [
  "sha1",
  "sha2",
  "thiserror",
+ "winapi-util",
 ]
 
 [[package]]
 name = "oce-diag"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "oce-docs"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oce-store",
 ]
 
 [[package]]
 name = "oce-expr"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oce-model",
  "thiserror",
@@ -279,11 +280,11 @@ dependencies = [
 
 [[package]]
 name = "oce-extension"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "oce-flatten"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oce-model",
  "thiserror",
@@ -291,7 +292,7 @@ dependencies = [
 
 [[package]]
 name = "oce-graph"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oce-blocks",
  "oce-model",
@@ -300,11 +301,11 @@ dependencies = [
 
 [[package]]
 name = "oce-model"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "oce-reference-wal-adapter"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oce-store",
  "serde",
@@ -313,7 +314,7 @@ dependencies = [
 
 [[package]]
 name = "oce-semantics"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oce-diag",
  "oce-model",
@@ -322,7 +323,7 @@ dependencies = [
 
 [[package]]
 name = "oce-store"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oce-bless",
  "public-api",
@@ -333,14 +334,14 @@ dependencies = [
 
 [[package]]
 name = "oce-store-mem"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oce-store",
 ]
 
 [[package]]
 name = "oce-validate"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "oce-blocks",
  "oce-diag",
@@ -709,6 +710,15 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "winapi-util"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
+dependencies = [
+ "windows-sys",
+]
 
 [[package]]
 name = "windows-link"

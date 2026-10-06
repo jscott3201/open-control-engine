@@ -1,6 +1,7 @@
 [package]
 name = "oce-extension"
 description = "FMI / extension-block boundary for the Open Control Engine (v1 surfaces extension blocks as unresolved externals)."
+publish = false
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

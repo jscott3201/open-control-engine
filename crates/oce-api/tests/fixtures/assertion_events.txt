@@ -1,0 +1,9 @@
+bfe0000000000000|events=0|output=false
+0000000000000000|events=1|output=true
+CDL.Utilities.Assert|freezestat tripped|0000000000000000|Warning
+0000000000000000|events=1|output=true
+CDL.Utilities.Assert|freezestat tripped|0000000000000000|Warning
+3fd0000000000000|events=0|output=false
+3fe0000000000000|events=1|output=true
+CDL.Utilities.Assert|freezestat tripped|3fe0000000000000|Warning
+3ff0000000000000|events=0|output=false

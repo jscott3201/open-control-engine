@@ -1,4 +1,4 @@
-//! G36 ReliefFanGroup Tier-A independent-oracle check through the B3 facade driver.
+//! G36 ReliefFanGroup Tier-A HostTick v1 profile check through the B3 facade driver.
 
 use std::path::{Path, PathBuf};
 
@@ -103,7 +103,7 @@ const REFERENCE_COLUMNS: &[&str] = &[
 ];
 
 #[test]
-fn g36_relief_fan_group_tier_a_oracle_matches_engine_output() {
+fn g36_relief_fan_group_host_tick_profile_matches_engine_output() {
     let reference = CombiTimeTable::read(&reference_path())
         .unwrap_or_else(|err| panic!("ReliefFanGroup reference read failed: {err}"));
     assert_eq!(
@@ -277,10 +277,11 @@ fn assert_signal_provenance(reference: &CombiTimeTable) {
         assert_eq!(prov["signal"], output.reference_name);
         assert_eq!(prov["tier"], "A");
         assert_eq!(prov["depends_on_oce_blocks"], false);
+        assert_eq!(prov["execution_profile"], "HostTick v1");
         assert!(
             prov["source"]
                 .as_str()
-                .is_some_and(|source| source.contains("Buildings"))
+                .is_some_and(|source| source.contains("not a Modelica event-iteration oracle"))
         );
         assert_eq!(
             json_string_array(&prov["reference_columns"]),

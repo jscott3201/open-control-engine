@@ -624,8 +624,13 @@ fn full_pipeline_trace_is_bit_deterministic() {
         eng.load_cxf(MINIMAL_LOOP.as_bytes()).expect("loads");
         let mut frames = Vec::new();
         for k in 0..6 {
-            eng.tick(k as f64).expect("monotonic ticks");
-            frames.push(eng.outputs().to_map());
+            let prepared = eng
+                .prepare_frame(
+                    k as f64,
+                    &[("http://example.org#MinLoop.uSet", oce_api::Value::Real(0.0))],
+                )
+                .unwrap();
+            frames.push(eng.execute_frame(prepared).unwrap().outputs().to_vec());
         }
         frames
     };

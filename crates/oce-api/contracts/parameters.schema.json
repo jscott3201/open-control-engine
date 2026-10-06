@@ -1,0 +1,28 @@
+{
+  "domain": "parameters",
+  "representation": "Rust facade contract description; not a general JSON codec",
+  "revision": 1,
+  "semantics": [
+    "Tune only at rest through halt, set_param, resume; structural edits require reload.",
+    "min/max are a partial metadata projection, not the full rule set or a proof of unboundedness when absent. CatalogRule carries cross-parameter, type, array and warning constraints.",
+    "No unit/quantity provenance currently carried on parameter table. No new validation policy or runtime tuning semantics."
+  ],
+  "types": {
+    "ParamAttrs": {
+      "max": "Option<f64> available static single-parameter upper bound",
+      "min": "Option<f64> available static single-parameter lower bound",
+      "quantity": "Option<String>, currently None",
+      "unit": "Option<String>, currently None",
+      "value_type": "ValueType"
+    },
+    "ParamTable row": {
+      "attributes": "ParamAttrs",
+      "path": "String <instance>.<parameter>; synthetic b<id> for private hand-built models",
+      "value": "Value"
+    },
+    "RunMode": [
+      "Halted",
+      "Running"
+    ]
+  }
+}

@@ -3,6 +3,7 @@
 use oce_cxf::ExportReport as CxfExportReport;
 use oce_store::Store;
 
+use crate::diagnostics::{DiagnosticCapture, DiagnosticStage, ExportReceipt, OperationFailure};
 use crate::engine::Engine;
 use crate::error::OcError;
 use crate::stable_hash::StableHash;
@@ -96,7 +97,31 @@ impl<S: Store> Engine<S> {
     /// Returns [`OcError::Cxf`] when the model cannot be exported, including an unloaded engine.
     /// Never panics for an unloaded engine.
     pub fn export_cxf(&self) -> Result<ExportReport, OcError> {
+        self.export_cxf_pipeline(&mut DiagnosticCapture::new(false, DiagnosticStage::Export))
+    }
+
+    /// Export through the existing pipeline with immutable, machine-ordered producer evidence.
+    ///
+    /// Partial exports remain successful with warnings. Inspect the legacy report's completeness
+    /// check before using its emitted-document content identity. No engine or store mutation occurs.
+    ///
+    /// # Errors
+    /// Returns [`OperationFailure`] with the export stage and original error chain, even when the
+    /// failure carries no diagnostics. An unloaded engine retains its export-unsupported evidence.
+    pub fn export_cxf_with_receipt(&self) -> Result<ExportReceipt, OperationFailure> {
+        let mut capture = DiagnosticCapture::new(true, DiagnosticStage::Export);
+        match self.export_cxf_pipeline(&mut capture) {
+            Ok(report) => Ok(ExportReceipt::new(report, capture)),
+            Err(error) => Err(OperationFailure::new(error, capture)),
+        }
+    }
+
+    fn export_cxf_pipeline(
+        &self,
+        capture: &mut DiagnosticCapture,
+    ) -> Result<ExportReport, OcError> {
         let report: CxfExportReport = oce_cxf::export_with_report(&self.model)?;
+        capture.record(&report.warnings);
         Ok(ExportReport {
             bytes: report.bytes,
             warnings: report.warnings,

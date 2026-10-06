@@ -9,43 +9,36 @@
       "@type": "S231:Block",
       "S231:label": "M",
       "S231:containsBlock": {
-        "@id": "http://example.org#M.ramp"
+        "@id": "http://example.org#M.sin"
       }
     },
     {
-      "@id": "http://example.org#M.ramp",
-      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Ramp",
-      "S231:label": "ramp",
+      "@id": "http://example.org#M.sin",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Sin",
+      "S231:label": "sin",
       "S231:hasInstance": [
         {
-          "@id": "http://example.org#M.ramp.y"
+          "@id": "http://example.org#M.sin.amplitude"
         },
         {
-          "@id": "http://example.org#M.ramp.height"
+          "@id": "http://example.org#M.sin.freqHz"
         },
         {
-          "@id": "http://example.org#M.ramp.duration"
+          "@id": "http://example.org#M.sin.phase"
         },
         {
-          "@id": "http://example.org#M.ramp.offset"
+          "@id": "http://example.org#M.sin.offset"
         },
         {
-          "@id": "http://example.org#M.ramp.startTime"
+          "@id": "http://example.org#M.sin.startTime"
         },
         {
-          "@id": "http://example.org#M.ramp.zzz"
+          "@id": "http://example.org#M.sin.zzz"
         }
       ]
     },
     {
-      "@id": "http://example.org#M.ramp.y",
-      "@type": "S231:RealOutput",
-      "S231:isOfDataType": {
-        "@id": "S231:Real"
-      }
-    },
-    {
-      "@id": "http://example.org#M.ramp.height",
+      "@id": "http://example.org#M.sin.amplitude",
       "@type": "S231:Parameter",
       "S231:isOfDataType": {
         "@id": "S231:Real"
@@ -56,7 +49,7 @@
       }
     },
     {
-      "@id": "http://example.org#M.ramp.duration",
+      "@id": "http://example.org#M.sin.freqHz",
       "@type": "S231:Parameter",
       "S231:isOfDataType": {
         "@id": "S231:Real"
@@ -67,7 +60,7 @@
       }
     },
     {
-      "@id": "http://example.org#M.ramp.offset",
+      "@id": "http://example.org#M.sin.phase",
       "@type": "S231:Parameter",
       "S231:isOfDataType": {
         "@id": "S231:Real"
@@ -78,7 +71,18 @@
       }
     },
     {
-      "@id": "http://example.org#M.ramp.startTime",
+      "@id": "http://example.org#M.sin.offset",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#M.sin.startTime",
       "@type": "S231:Parameter",
       "S231:isOfDataType": {
         "@id": "S231:Real"

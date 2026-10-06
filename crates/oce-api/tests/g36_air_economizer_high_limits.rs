@@ -1,6 +1,9 @@
 //! Source-verified ASHRAE G36 Generic.AirEconomizerHighLimits through the frozen facade.
 
-use oce_api::{CollectSpec, Engine, InputSource, PointDirection, SimMetrics, SimSpec, Value};
+use oce_api::{Engine, PointDirection, Value};
+#[path = "support/frame_trace.rs"]
+mod frame_trace;
+use frame_trace::FrameRun;
 
 const HIGH_LIMIT_FIXED_24: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_24.jsonld"
@@ -186,26 +189,23 @@ fn schedule_signature(engine: &Engine) -> ScheduleSignature {
     )
 }
 
-fn simulate(case: Case, mut engine: Engine) -> (ScheduleSignature, SimMetrics) {
+fn simulate(case: Case, mut engine: Engine) -> (ScheduleSignature, FrameRun) {
     let schedule = schedule_signature(&engine);
-    let metrics = engine
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop: match case.expected_cutoff {
-                ExpectedCutoff::Fixed(_) => 0.0,
-                ExpectedCutoff::ReturnAirOffset(_) => 3.0,
-            },
-            step: 1.0,
-            inputs: match case.input_path {
-                Some(path) => InputSource::Closure(Box::new(move |t| return_air_inputs(path, t))),
-                None => InputSource::None,
-            },
-            collect: CollectSpec::Named {
-                points: vec![case.output_path.to_string()],
-                stride: 1,
-            },
-        })
-        .unwrap_or_else(|err| panic!("{} simulates: {err}", case.name));
+    let metrics = FrameRun::record(
+        &mut engine,
+        0.0,
+        match case.expected_cutoff {
+            ExpectedCutoff::Fixed(_) => 0.0,
+            ExpectedCutoff::ReturnAirOffset(_) => 3.0,
+        },
+        1.0,
+        move |t| {
+            case.input_path
+                .map_or_else(Vec::new, |path| return_air_inputs(path, t))
+        },
+        vec![case.output_path.to_string()],
+    )
+    .unwrap_or_else(|err| panic!("{} simulates: {err}", case.name));
     let expected_times = expected_times(case);
     assert_eq!(
         metrics.ticks,
@@ -254,7 +254,7 @@ fn expected_cutoffs(case: Case) -> Vec<f64> {
     }
 }
 
-fn real_column(metrics: &SimMetrics, path: &str) -> Vec<f64> {
+fn real_column(metrics: &FrameRun, path: &str) -> Vec<f64> {
     let index = metrics
         .trace
         .columns()
@@ -271,7 +271,7 @@ fn real_column(metrics: &SimMetrics, path: &str) -> Vec<f64> {
         .collect()
 }
 
-fn assert_trace_bit_eq(left: &SimMetrics, right: &SimMetrics) {
+fn assert_trace_bit_eq(left: &FrameRun, right: &FrameRun) {
     assert_eq!(left.trace.columns(), right.trace.columns());
     assert_eq!(
         left.trace

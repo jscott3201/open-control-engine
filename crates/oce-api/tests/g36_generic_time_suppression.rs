@@ -1,13 +1,15 @@
-//! Source-verified ASHRAE G36 Generic.TimeSuppression through the frozen facade.
+//! ASHRAE G36 Generic.TimeSuppression HostTick v1 replay through the frozen facade.
 //!
-//! The replay uses the independent 60-second Tier-A schedule and collects the single Boolean
-//! `yAftSup` output exactly. Two fresh engines must produce identical schedules and bit-equal
-//! traces.
+//! The replay uses the implementation-independent 60-second HostTick profile schedule and collects
+//! the single Boolean `yAftSup` output exactly. It does not check Modelica `Pre` event iteration.
 
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use oce_api::{CollectSpec, Engine, InputSource, SimMetrics, SimSpec, Value};
+use oce_api::{Engine, Value};
+#[path = "support/frame_trace.rs"]
+mod frame_trace;
+use frame_trace::FrameRun;
 
 const TIME_SUPPRESSION: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/generic_time_suppression.jsonld");
@@ -119,7 +121,7 @@ fn load_time_suppression() -> Engine {
     let mut engine = Engine::in_memory();
     let report = engine
         .load_cxf(TIME_SUPPRESSION.as_bytes())
-        .expect("source-verified G36 Generic TimeSuppression fixture loads");
+        .expect("source-transcribed G36 Generic TimeSuppression fixture loads");
     assert_eq!(report.block_count, 24);
     assert!(
         report.warnings.is_empty(),
@@ -138,21 +140,18 @@ fn schedule_signature(engine: &Engine) -> ScheduleSignature {
     )
 }
 
-fn simulate(mut engine: Engine, reference: Arc<ReferenceTable>) -> (ScheduleSignature, SimMetrics) {
+fn simulate(mut engine: Engine, reference: Arc<ReferenceTable>) -> (ScheduleSignature, FrameRun) {
     let schedule = schedule_signature(&engine);
     let input_reference = Arc::clone(&reference);
-    let metrics = engine
-        .simulate(&SimSpec {
-            t_start: 0.0,
-            t_stop: T_STOP,
-            step: SAMPLE_STEP,
-            inputs: InputSource::Closure(Box::new(move |t| reference_inputs(&input_reference, t))),
-            collect: CollectSpec::Named {
-                points: vec![AFTER_SUPPRESSION.to_string()],
-                stride: 1,
-            },
-        })
-        .expect("G36 Generic TimeSuppression simulates");
+    let metrics = FrameRun::record(
+        &mut engine,
+        0.0,
+        T_STOP,
+        SAMPLE_STEP,
+        move |t| reference_inputs(&input_reference, t),
+        vec![AFTER_SUPPRESSION.to_string()],
+    )
+    .expect("G36 Generic TimeSuppression simulates");
     assert_eq!(metrics.ticks, ROWS as u64);
     assert_eq!(
         metrics
@@ -170,7 +169,7 @@ fn simulate(mut engine: Engine, reference: Arc<ReferenceTable>) -> (ScheduleSign
     (schedule, metrics)
 }
 
-fn assert_output_matches_reference(metrics: &SimMetrics, reference: &ReferenceTable) {
+fn assert_output_matches_reference(metrics: &FrameRun, reference: &ReferenceTable) {
     let index = metrics
         .trace
         .columns()
@@ -190,7 +189,7 @@ fn assert_output_matches_reference(metrics: &SimMetrics, reference: &ReferenceTa
     }
 }
 
-fn assert_trace_bit_eq(left: &SimMetrics, right: &SimMetrics) {
+fn assert_trace_bit_eq(left: &FrameRun, right: &FrameRun) {
     assert_eq!(left.trace.columns(), right.trace.columns());
     assert_eq!(
         left.trace

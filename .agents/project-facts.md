@@ -13,8 +13,28 @@ That script is the single source of truth for gate commands. Every other documen
 points at it. Run it in the form above and read the real output — a summary of a
 gate is a claim about a gate, and this engine controls physical equipment.
 
-Change a command by changing [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
+Change a command by changing [`.github/workflows/pr-gate.yml`](../.github/workflows/pr-gate.yml)
 first, then the script.
+
+## Hosting and CI
+
+GitHub is the primary host: `origin` is `github.com/jscott3201/open-control-engine`, and branches,
+PRs, reviews, issues and CI live there. The self-hosted Forgejo instance that was primary until
+October 2026 is retired. CI is GitHub Actions in `.github/workflows/` on GitHub-hosted Linux
+runners: `pr-gate.yml` (per-PR, light), `release-gate.yml` (release PRs into `main`, daily against
+`development`, heavy), `advisories.yml` (daily), `docs-pages.yml` (docs validation and the Pages
+publish from `main`), `release.yml` (tag verify / manual crates.io publish) and the two manual
+native-arm64 OpenModelica evidence workflows. `ci.yml` there is byte-frozen and disabled in the
+repository's Actions settings — it is not the CI.
+
+GitHub PR numbers collide with the retired Forgejo numbering: Forgejo #332 (the Forgejo CI port)
+and GitHub #332 are different changes. Bare `(#N)` citations predate the move; cite every PR merged
+on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
+
+Three tracked files are bound sources of the retained native strict-bit evidence and must not
+change casually: `.github/workflows/ci.yml`, `.config/nextest.toml`, and `.agents/gate.sh`. Editing
+any of them makes `retained_native_linux_evidence_is_complete_exact_and_source_bound` fail until a
+new native receipt is admitted.
 
 ## A green PR does not mean the tests passed
 
@@ -22,20 +42,24 @@ CI is dev-light and release-heavy, and the split is easy to misread in the
 dangerous direction.
 
 The per-PR gate into `development` runs fmt, clippy, build, rustdoc, the file-size
-cap, the no-secret scan, the database-free check, the golden-gen firewall, the gate
-fixtures, `cargo machete` — and engine tests for **`oce-api`, `oce-blocks`, and `oce-expr`
-only**, via the determinism matrix on x86_64 and arm64 in debug and release codegen.
+cap, the no-secret scan, the database-free check, the golden-gen firewall, the closed
+package/feature/publication contract and its hostile controls, the gate fixtures,
+the [authority index/projection and its hostile controls](../docs/authority-claims.md),
+`cargo machete` — and the state-determinism tests for **`oce-api`, `oce-blocks`, and `oce-expr`**, via the
+determinism matrix on x86_64 (native) and aarch64 (QEMU user-mode emulation) in debug and release
+codegen.
 The matrix compares a populated portable engine-state snapshot byte-for-byte across architectures,
 checks portable and target-bound bytes across debug/release codegen, and requires target-bound bytes
-to differ across architectures. The x86_64 job also parses and refuses the arm64 target-bound bytes
-through the public restore path.
-The standalone `cargo-deny` CI job runs only when a manifest changed — but `.agents/gate.sh`
-runs `cargo deny check bans licenses sources` **unconditionally**, and CI runs that script in
-the `gate (light)` job, so the check is not actually skippable by leaving manifests alone.
+to differ across architectures. The same job then parses and refuses the aarch64 target-bound bytes
+through the public restore path on x86_64.
+The standalone `cargo-deny` CI job runs `cargo deny check bans licenses sources` on every PR, and
+`.agents/gate.sh` runs it too.
 `advisories` is excluded from the script deliberately: it needs network and a writable
 advisory-db, neither of which a sandboxed lane has, so it runs in `advisories.yml`.
 
-Every other crate's tests run **only** on the `development` → `main` release gate. A
+The scoped `oce-conformance` strict-bit subset and four affected per-block suites also run per PR
+in four Linux architecture/codegen cells (x86_64 native, aarch64 emulated), with repeat captures
+and cross-cell comparison ([bounded evidence](../docs/strict-bit-evidence.md)). The remainder needs the release/full gate. A
 change confined to `oce-cxf`, `oce-store`, or `oce-diag` can show a fully
 green PR having executed none of its own tests. Before claiming your tests pass, run
 `bash .agents/gate.sh full` and read the tail.
@@ -44,10 +68,10 @@ Pin-advance PRs — any change under `third_party/**` or to the pin constants �
 `bash .agents/gate.sh full` first-hand; see the vendored README's
 `## Pin-advance policy` section.
 
-**Open the PR non-draft.** Every job in `ci.yml` is conditioned on
-`github.event.pull_request.draft == false`, so a draft PR runs *no* gates at all — and
-a PR with no checks is easy to mistake for a PR with no failing checks. Confirm the
-checks actually ran, not merely that none are red.
+**Confirm the checks ran.** GitHub Actions runs the whole per-PR gate on every PR, drafts
+included, and `CI OK` is the one status that summarizes it. A PR with no checks is easy to
+mistake for a PR with no failing checks; confirm `CI OK` actually reported, not merely that
+nothing is red.
 
 ## Clippy lints the default feature set
 
@@ -99,6 +123,7 @@ Two things make this safe to do and easy to get wrong:
 
 ## Branches
 
-Base branch is `development`. Branch protection blocks direct pushes to it;
-everything lands by squash-merge through a PR. A fix round pushes to the **same**
-branch — never a second PR for the same work.
+Base branch is `development`. Branch protection on GitHub blocks direct pushes to it
+and requires the `CI OK` status from `pr-gate.yml`; everything lands by squash-merge through a
+GitHub PR. A fix round pushes to the **same** branch — never a second PR for the same
+work.

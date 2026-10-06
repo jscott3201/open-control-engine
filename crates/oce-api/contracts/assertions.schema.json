@@ -1,0 +1,23 @@
+{
+  "domain": "assertions",
+  "representation": "Rust facade contract description; not a general JSON codec",
+  "revision": 2,
+  "semantics": [
+    "False CDL.Utilities.Assert input emits Warning on every evaluation, including repeated false and equal-time calls; true is silent.",
+    "Other block classes may warn; sources are not guaranteed instance identities. No latch, warn-once, escalation, scheduler or safety policy.",
+    "Every accepted complete frame retains emitted warnings in evaluator emission order, without sorting or deduplication.",
+    "Frame execution calls no Store method. A completed result is not a durability or equipment-delivery receipt."
+  ],
+  "types": {
+    "AssertEvent": {
+      "block": "String producer source, currently class-level",
+      "level": "AssertLevel::Warning",
+      "message": "String display text",
+      "t": "f64 model seconds"
+    },
+    "CompletedFrame.diagnostics": {
+      "accessor": "borrowed &[AssertEvent] of independently owned immutable warnings",
+      "lifetime": "later execution, reload, resume or restore cannot change a retained result"
+    }
+  }
+}

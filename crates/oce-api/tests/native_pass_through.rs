@@ -27,23 +27,25 @@ fn staged_scalar_values_are_visible_at_boundary_outputs_on_the_same_tick() {
         );
     }
 
-    for (suffix, value) in [
+    let inputs = [
         ("realIn", Value::Real(f64::from_bits(0x4009_21fb_5444_2d18))),
-        ("integerIn", Value::Integer(i64::MIN)),
+        ("integerIn", Value::Integer(i64::from(i32::MIN))),
         ("booleanIn", Value::Boolean(true)),
-    ] {
-        engine
-            .set_input(&format!("{ROOT}{suffix}"), value)
-            .expect("pass-through input stages");
-    }
-    engine.tick(0.0).expect("pass-through model ticks");
+    ]
+    .map(|(suffix, value)| (format!("{ROOT}{suffix}"), value));
+    let entries: Vec<_> = inputs
+        .iter()
+        .map(|(p, v)| (p.as_str(), v.clone()))
+        .collect();
+    let prepared = engine.prepare_frame(0.0, &entries).unwrap();
+    engine.execute_frame(prepared).unwrap();
 
     for (suffix, expected) in [
         (
             "realOut",
             Value::Real(f64::from_bits(0x4009_21fb_5444_2d18)),
         ),
-        ("integerOut", Value::Integer(i64::MIN)),
+        ("integerOut", Value::Integer(i64::from(i32::MIN))),
         ("booleanOut", Value::Boolean(true)),
     ] {
         assert!(
