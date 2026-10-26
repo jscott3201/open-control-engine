@@ -7,8 +7,17 @@ use super::{
     sequence_golden, true_delay_output, unit_ticks, SUPPLY_FAN,
 };
 
+/// Ticks in the scenario: 0..=1920 s at 1 s.
+///
+/// The fan restarts at 360 s, so with the source-default `delTim = 600 s` and
+/// `samplePeriod = 120 s` the TrueDelay (`delTim + samplePeriod = 720 s`) releases the reset at
+/// 1080 s. The run then covers eight active sample instants (1080..1920 s), enough for a capped
+/// respond, a smaller respond, a trim at exactly `numIgnReq` requests, two trims with no
+/// requests, and three uncapped responds.
+const SCENARIO_TICKS: usize = 1921;
+
 pub(super) fn goldens() -> Vec<Golden> {
-    let time = unit_ticks(901);
+    let time = unit_ticks(SCENARIO_TICKS);
     let operating_mode: Vec<i64> = time
         .iter()
         .map(|&t| match t as u32 {
@@ -18,21 +27,29 @@ pub(super) fn goldens() -> Vec<Golden> {
         .collect();
     let duct_static_pressure = time
         .iter()
-        .map(|&t| if t >= 720.0 { 80.0 } else { 120.0 })
+        .map(|&t| {
+            if t >= 1500.0 {
+                140.0
+            } else if t >= 720.0 {
+                80.0
+            } else {
+                120.0
+            }
+        })
         .collect::<Vec<_>>();
     let zone_pressure_reset_requests: Vec<i64> = time
         .iter()
-        .map(|&t| {
-            if t >= 840.0 {
-                5
-            } else if t >= 720.0 {
-                3
-            } else {
-                0
-            }
+        .map(|&t| match t as u32 {
+            0..=719 => 0,
+            720..=839 => 3,
+            840..=1139 => 5,
+            1140..=1259 => 3,
+            1260..=1379 => 2,
+            1380..=1619 => 0,
+            _ => 4,
         })
         .collect();
-    let (supply_fan_status, supply_fan_speed) = supply_fan_trace(
+    let trace = supply_fan_trace(
         &time,
         &operating_mode,
         &duct_static_pressure,
@@ -50,7 +67,7 @@ pub(super) fn goldens() -> Vec<Golden> {
             "supply_fan_status",
             ValueKind::Boolean,
             time.clone(),
-            supply_fan_status.iter().copied().map(b).collect(),
+            trace.fan_status.iter().copied().map(b).collect(),
             "SupplyFan: default have_perZonRehBox=false; operating_mode=1 except warm-up mode 4 at t=300..359",
             "Pinned SupplyFan.mo default no-perimeter branch: y1SupFan is true only for operation modes 1, 2, or 3; mode 4 forces false",
             inputs.clone(),
@@ -59,13 +76,34 @@ pub(super) fn goldens() -> Vec<Golden> {
             SUPPLY_FAN,
             "supply_fan_speed",
             ValueKind::Real,
-            time,
-            supply_fan_speed.into_iter().map(r).collect(),
-            "SupplyFan: duct_static_pressure=120 Pa until 720s then 80 Pa; pressure requests step 0 -> 3 at 720s -> 5 at 840s",
+            time.clone(),
+            trace.fan_speed.into_iter().map(r).collect(),
+            "SupplyFan over 0..1920s: duct_static_pressure=120 Pa until 720s, 80 Pa until 1500s, then 140 Pa; pressure requests 0 -> 3 at 720s -> 5 at 840s -> 3 at 1140s -> 2 at 1260s -> 0 at 1380s -> 4 at 1620s",
             "Pinned SupplyFan.mo default variant: nested TrimAndRespond pressure reset -> FirstOrderHold(samplePeriod=120s) -> PI PIDWithReset(k=0.1,Ti=60,yMin=0.1,yMax=1,y_reset=0.1); Reals.Switch emits zero when y1SupFan=false",
+            inputs.clone(),
+        ),
+        sequence_golden(
+            SUPPLY_FAN,
+            "duct_static_pressure_setpoint",
+            ValueKind::Real,
+            time,
+            trace.setpoint.into_iter().map(r).collect(),
+            "SupplyFan pressure reset with source-default delTim=600s, samplePeriod=120s: the 360s fan restart releases the TrueDelay at 1080s; requests sampled at 1080..1920s are 5, 3, 2, 0, 0, 4, 4, 4, so the setpoint responds +20 (maxRes-capped) to 140 Pa, +3 to 143, trims at exactly numIgnReq to 131, trims to 119 and 107, then responds +18 to 125, 143 and 161",
+            "Pinned SupplyFan.mo default variant, nested Generic/TrimAndRespond.mo have_hol=false staPreSetRes.y: iniSet=120 Pa until TrueDelay(delTim+samplePeriod) elapses, then UnitDelay(y_start=iniSet) + net reset (triAmo=-12, resAmo=15, maxRes=32, numIgnReq=2) clamped to minSet=25..maxSet=410 Pa every samplePeriod; a disabled fan reinitializes the chain to iniSet",
             inputs,
         ),
     ]
+}
+
+/// Per-tick outputs of the SupplyFan oracle.
+struct SupplyFanTrace {
+    /// `y1SupFan`: supply fan commanded on.
+    fan_status: Vec<bool>,
+    /// `ySupFan`: commanded speed, normalized 0..1.
+    fan_speed: Vec<f64>,
+    /// `staPreSetRes.y`: trim-and-respond duct static pressure setpoint, Pa, before the
+    /// FirstOrderHold.
+    setpoint: Vec<f64>,
 }
 
 fn supply_fan_trace(
@@ -73,7 +111,7 @@ fn supply_fan_trace(
     operating_mode: &[i64],
     duct_static_pressure: &[f64],
     zone_pressure_reset_requests: &[i64],
-) -> (Vec<bool>, Vec<f64>) {
+) -> SupplyFanTrace {
     const INI_SET: f64 = 120.0;
     const MIN_SET: f64 = 25.0;
     const MAX_SET: f64 = 410.0;
@@ -122,6 +160,7 @@ fn supply_fan_trace(
 
     let mut fan_status = Vec::with_capacity(time.len());
     let mut fan_speed = Vec::with_capacity(time.len());
+    let mut setpoint = Vec::with_capacity(time.len());
 
     for (((&t, &mode), &pressure), &requests) in time
         .iter()
@@ -170,7 +209,12 @@ fn supply_fan_trace(
             if due { unit_delay_u_internal } else { unit_delay_y }
         };
         let candidate = clamp(unit_delay_out + net_reset, MIN_SET, MAX_SET);
-        let trim_respond = if fan_on { candidate } else { MAX_SET };
+        // `swi2`: a proven-off device reinitializes the reset chain to iniSet; this is also the
+        // value the UnitDelay samples.
+        let reset_chain = if fan_on { candidate } else { INI_SET };
+        // `swi`: before the TrueDelay elapses the published setpoint is iniSet.
+        let trim_respond = if tim { reset_chain } else { INI_SET };
+        setpoint.push(trim_respond);
         let held_setpoint = first_order_hold_output(
             t,
             trim_respond,
@@ -229,14 +273,14 @@ fn supply_fan_trace(
             unit_delay_t0 = initial_sample_time(t, SAMPLE_PERIOD);
             unit_delay_last_index = sample_index(t, unit_delay_t0, SAMPLE_PERIOD);
             // First instant: `y = pre(u_internal)` keeps y_start; the current input is staged.
-            unit_delay_u_internal = trim_respond;
+            unit_delay_u_internal = reset_chain;
             unit_delay_initialized = true;
         } else {
             let (due, index) = sample_due(t, unit_delay_t0, SAMPLE_PERIOD, unit_delay_last_index);
             if due {
                 unit_delay_last_index = index;
                 unit_delay_y = unit_delay_u_internal; // y = pre(u_internal)
-                unit_delay_u_internal = trim_respond; // u_internal = u
+                unit_delay_u_internal = reset_chain; // u_internal = u
             }
         }
 
@@ -279,7 +323,11 @@ fn supply_fan_trace(
         pid_prev_trigger = fan_on;
     }
 
-    (fan_status, fan_speed)
+    SupplyFanTrace {
+        fan_status,
+        fan_speed,
+        setpoint,
+    }
 }
 
 #[derive(Clone, Copy)]

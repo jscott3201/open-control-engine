@@ -618,6 +618,7 @@ G36/multizone_vav_return_fan_direct_pressure reference -> goldens/G36/multizone_
 G36/multizone_vav_return_fan_direct_pressure relief_damper_command -> goldens/G36/multizone_vav_return_fan_direct_pressure/relief_damper_command.csv
 G36/multizone_vav_return_fan_direct_pressure return_fan_speed -> goldens/G36/multizone_vav_return_fan_direct_pressure/return_fan_speed.csv
 G36/multizone_vav_return_fan_direct_pressure return_fan_status -> goldens/G36/multizone_vav_return_fan_direct_pressure/return_fan_status.csv
+G36/multizone_vav_supply_fan duct_static_pressure_setpoint -> goldens/G36/multizone_vav_supply_fan/duct_static_pressure_setpoint.csv
 G36/multizone_vav_supply_fan reference -> goldens/G36/multizone_vav_supply_fan/reference.csv
 G36/multizone_vav_supply_fan supply_fan_speed -> goldens/G36/multizone_vav_supply_fan/supply_fan_speed.csv
 G36/multizone_vav_supply_fan supply_fan_status -> goldens/G36/multizone_vav_supply_fan/supply_fan_status.csv
