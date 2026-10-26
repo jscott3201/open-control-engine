@@ -37,7 +37,16 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
-Nothing yet.
+### Documentation
+
+- **The complete export content id is documented as order-bearing, not a model identity**
+  (GitHub #341, issue #338). `content_id_complete()` hashes the emitted document, which follows the
+  authored `@graph` node order and `containsBlock` order that the composite-subset ordering
+  contract already declares order-bearing, so two sources differing only in that order can load
+  cleanly and receive different ids. The round-trip contract, the identity glossary and PC-018
+  now say so, and no order-independent model identity is provided. A new test pins the
+  issue's two documents (`9308541e…` versus `8bb1a1f9…`) and that reloading identical bytes
+  reproduces each id. No behaviour, export bytes, state or replay identity changes.
 
 ## 0.2.0
 

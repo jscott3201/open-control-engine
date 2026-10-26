@@ -147,6 +147,9 @@ No build token, security service, public executable fingerprint or replay format
   package version is only a public build fact, not a unique build identity.
 - **Complete export content identity** is captured as `CompleteExportContentId`, distinct from
   `CatalogContentId` and authored `DomainKey`. Existing string APIs retain their bytes and algorithms.
+  It identifies the emitted document, which follows authored `@graph` and `containsBlock` order, so
+  sources differing only in [that order](cxf-composite-subset.md#ordering-and-identity-contract)
+  can receive different ids. No order-independent model identity is provided.
 - **Compatibility descriptor** versions the closed public-fact receipt itself. Equality does not
   establish executable identity, model-specific IO equality, generation, state compatibility or trust.
 
