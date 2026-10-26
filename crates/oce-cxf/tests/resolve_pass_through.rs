@@ -517,8 +517,28 @@ fn nested_pass_through_splices_in_both_spellings() {
     );
 }
 
+/// Import that must succeed carrying exactly the root input `.u`'s `unused-boundary-input`
+/// advisory: the nested pass-through `sub.u → sub.y` it feeds reaches no block and no boundary
+/// output, so nothing reads it.
+fn import_with_unread_root_input(document: &Value) -> ModelGraph {
+    let bytes = serde_json::to_vec(document).expect("serialize document");
+    let (graph, report) =
+        import_cxf(&bytes, &ResolveOptions::default()).expect("unconsumed pass-through imports");
+    assert_eq!(
+        report.diagnostics,
+        vec![
+            Diagnostic::warning(
+                DiagCode::UnusedBoundaryInput,
+                "declared boundary input is read by no connection",
+            )
+            .with_subject("http://example.org#g36.profile.nested_composite.u".to_owned())
+        ]
+    );
+    graph
+}
+
 #[test]
-fn unconsumed_nested_pass_through_is_symmetric_and_clean() {
+fn unconsumed_nested_pass_through_is_symmetric_and_reports_only_the_unread_root_input() {
     let mut forward: Value = serde_json::from_str(NESTED_FIXTURE).expect("nested fixture JSON");
     node_mut(&mut forward, "nested_composite")["S231:hasInput"] = json!([
         { "@id": "http://example.org#g36.profile.nested_composite.u" },
@@ -543,7 +563,7 @@ fn unconsumed_nested_pass_through_is_symmetric_and_clean() {
         .as_object_mut()
         .expect("sub output node")
         .remove("S231:isConnectedTo");
-    let forward_graph = import(&forward).expect("forward unconsumed pass-through imports");
+    let forward_graph = import_with_unread_root_input(&forward);
 
     let mut reverse = forward.clone();
     node_mut(&mut reverse, ".sub.u")
@@ -552,7 +572,7 @@ fn unconsumed_nested_pass_through_is_symmetric_and_clean() {
         .remove("S231:isConnectedTo");
     node_mut(&mut reverse, ".sub.y")["S231:isConnectedTo"] =
         json!({ "@id": "http://example.org#g36.profile.nested_composite.sub.u" });
-    let reverse_graph = import(&reverse).expect("reverse unconsumed pass-through imports");
+    let reverse_graph = import_with_unread_root_input(&reverse);
     for graph in [&forward_graph, &reverse_graph] {
         assert_eq!(graph.external_inputs.len(), 1);
         let external = &graph.connectors[graph.external_inputs[0].0 as usize];

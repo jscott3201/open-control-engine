@@ -46,9 +46,11 @@ the offending block, connector owner, or declared boundary node. Never a panic
 (`crates/oce-cxf/src/export.rs:61-64`).
 
 Of the §7.4.1 connector attributes, five survive, each emitted as a bare JSON scalar on minted child
-ports and represented root boundary-input and boundary-output nodes. A boundary input keeps its
-declaration attrs separate from every child target, including fan-out; export never infers one from
-the other. `Engine::load_cxf` joins a declared output and its source in the same §7.10 cluster:
+ports and represented root boundary-input and boundary-output nodes. A root boundary input that no
+connection reads is not represented, so export omits it; its load-time `unused-boundary-input`
+warning is its only record. A boundary input keeps its declaration attrs separate from every child
+target, including fan-out; export never infers one from the other. `Engine::load_cxf` joins a
+declared output and its source in the same §7.10 cluster:
 conflicting values refuse the load, while a value declared on only one side propagates to the unset
 peer before export. Boundary-input declaration unification is a separate acceptance change and is
 not implemented. Low-level callers that compose `oce_cxf::import_cxf` and `export` directly must run

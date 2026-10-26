@@ -11,10 +11,12 @@ executable, prior-state, placement and safety qualification. No downstream pin c
 The retained [machine-readable matrix](release-compatibility.json) has exactly 36 ordered rows:
 nine artifact classes times four producer/consumer directions. The selected identities are:
 
-- **Current implementation:** `3a7bdf023062d5dc3f433c7e28be4cde033224bf`, the 0.2.0 release-preparation
-  version bump. Its implementation boundary differs from the previous `e81480b` baseline only in the
-  package version strings of the root manifest, lockfile and descriptor-carrying sources. Delivery
-  adds tests/evidence/docs only; it does not pretend its future commit can hash itself.
+- **Current implementation:** `e57ff4324b0f4c544093bbca41f189534b692c5e`, the
+  `unused-boundary-input` resolver warning (GitHub #346, issue #339). Its implementation boundary
+  differs from the previous `3a7bdf0` 0.2.0 baseline only by that warning: one `DiagCode` variant,
+  the resolver check and the `input_definitions()` rustdoc. The candidate policy, rows and package
+  version are unchanged. The baseline commit is merged with a merge commit so it stays reachable;
+  the selection commit adds evidence/docs only and does not pretend it can hash itself.
 - **Historical source candidate:** annotated `v0.1.0`, tag object
   `7f3b614dc0e466d54cab4677ce4bb08a5bfaf033`, peeled source
   `909a8ba699e6a2fccf3de6ac0616a9e83a04060f`, 178 commits behind the previous `e81480b` baseline

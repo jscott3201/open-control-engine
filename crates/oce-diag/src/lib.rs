@@ -182,6 +182,11 @@ pub enum DiagCode {
     /// otherwise invisible — it enters no point surface and vanishes from re-export — so the
     /// warning is its only representation.
     UndrivenBoundaryOutput,
+    /// A root-declared boundary input's node exists but no connection reads it (subject = the
+    /// declared IRI). Advisory: CDL does not require a top composite's declared input to be
+    /// read, but the unread declaration is otherwise invisible — it enters neither the frame
+    /// contract nor any point surface — so the warning is its only representation.
+    UnusedBoundaryInput,
 
     // --- Export-time `shall`-errors (oce-cxf exporter) ---
     /// CXF export was requested but the exporter has not landed; the whole operation is rejected,
@@ -235,6 +240,7 @@ impl DiagCode {
             DiagCode::MissingFmuPath => "missing-fmu-path",
             DiagCode::UnknownProperty => "unknown-property",
             DiagCode::UndrivenBoundaryOutput => "undriven-boundary-output",
+            DiagCode::UnusedBoundaryInput => "unused-boundary-input",
             DiagCode::ExportUnsupported => "export-unsupported",
             DiagCode::ExportDeferred => "export-deferred",
         }
@@ -392,6 +398,7 @@ mod tests {
         MissingFmuPath => "missing-fmu-path",
         UnknownProperty => "unknown-property",
         UndrivenBoundaryOutput => "undriven-boundary-output",
+        UnusedBoundaryInput => "unused-boundary-input",
         ExportUnsupported => "export-unsupported",
         ExportDeferred => "export-deferred",
     }

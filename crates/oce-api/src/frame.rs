@@ -227,6 +227,10 @@ impl<S: Store> Engine<S> {
     /// schema or capability: refresh after load or reconfiguration. Allocates owned paths and
     /// definitions proportional to the schema. No Store calls or engine mutation occur.
     ///
+    /// A declared root input that no connection reads is not listed — nothing would consume its
+    /// value — and is reported instead by the `unused-boundary-input` load warning, whose subject
+    /// is its expanded identity.
+    ///
     /// # Errors
     /// Returns `State(NoLoadedModel)` before a successful load, or `State(PendingParameterEdits)`
     /// while edits await resume. Does not panic on caller input.

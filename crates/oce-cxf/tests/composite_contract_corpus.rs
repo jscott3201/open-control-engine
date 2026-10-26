@@ -14,6 +14,7 @@
 //! ```
 
 mod bless;
+mod composite_contract_boundary_pins;
 mod composite_contract_member_pins;
 
 use std::fmt::Write as _;
@@ -396,16 +397,7 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
 /// The published pin per warned fixture file: the exact, complete warning vector its import
 /// returns alongside a successful load.
 fn expected_warnings() -> Vec<(&'static str, Vec<Diagnostic>)> {
-    let mut rows = vec![(
-        "warned/undriven_boundary_output.jsonld",
-        vec![
-            Diagnostic::warning(
-                DiagCode::UndrivenBoundaryOutput,
-                "declared boundary output has no internal driver",
-            )
-            .with_subject("http://example.org#M.y".to_owned()),
-        ],
-    )];
+    let mut rows = composite_contract_boundary_pins::warnings();
     rows.extend(composite_contract_member_pins::warnings());
     rows
 }

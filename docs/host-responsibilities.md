@@ -252,7 +252,13 @@ alias can supply a previously unset driver unit, quantity, or bound. That change
 quantity also reach the durable `PointDto`. `IoSummary` remains a count-only surface and does not
 change when metadata propagates. Hosts that retain point metadata outside the store port must
 refresh it after loading with this rule. An undriven declared output resolves nowhere; its load-time
-`undriven-boundary-output` warning is its only representation.
+`undriven-boundary-output` warning is its only representation. The input side mirrors it: a root
+`hasInput` declaration that no connection reads is absent from `input_definitions()` (every listed
+input must be supplied, and nothing would read this one), resolves nowhere, and is reported only by
+an `unused-boundary-input` load warning whose subject is the declared IRI. A host that drives frames
+from its own point list should check the load receipt for that code and reject or reconcile the
+model before preparing frames. The check covers the root interface only; an unread input of a
+nested composite's own interface is internal wiring and does not warn.
 
 A related contract for emitters and durable stores: array order is load-bearing wherever the
 resolver reads an array — `@graph` node position, `containsBlock` order, each instance's port and

@@ -15,6 +15,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use oce_cxf::{CxfDocument, ResolveOptions, export, import_cxf, parse_document, write_document};
+use oce_diag::{DiagCode, Diagnostic};
 use oce_model::Attrs;
 use serde_json::Value as JsonValue;
 
@@ -385,7 +386,20 @@ fn represented_attribute_free_inputs_get_sidecars_but_undriven_inputs_do_not() {
         }));
 
     let source = serde_json::to_vec(&document).expect("document serializes");
-    let graph = import_ok("attribute-free and undriven boundaries", &source);
+    let (graph, report) = import_cxf(&source, &ResolveOptions::default())
+        .expect("attribute-free and undriven boundaries import");
+    // `uExt` lost its only connection, so it is read by nothing: the advisory is its only
+    // representation, and it is absent from `boundary_inputs` (and therefore from export).
+    assert_eq!(
+        report.diagnostics,
+        vec![
+            Diagnostic::warning(
+                DiagCode::UnusedBoundaryInput,
+                "declared boundary input is read by no connection",
+            )
+            .with_subject("http://example.org#AttrInput.uExt".to_owned())
+        ]
+    );
     assert_eq!(
         graph
             .boundary_inputs
