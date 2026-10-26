@@ -128,6 +128,77 @@ The Tier-A references for `Generic.TimeSuppression`, `CoolingOnly.Controller`, a
 `ReliefFanGroup` therefore classify their 20 output signals as HostTick v1 profile checks, not
 Modelica source-semantics oracles.
 
+## Atomic block firing refuses some CDL-legal feedback
+
+This is a coverage limit: the engine refuses some models that CDL allows. It is tracked as
+GitHub issue #347.
+
+**What triggers it.** The engine fires each block atomically: one call produces all of the block's
+outputs (`crates/oce-graph/src/topo.rs`). Blocks are then ordered so that a block fires after
+every block that drives an input it reads at that call. An algebraic block reads all of its inputs
+when it fires. A stateful block reads every input that feeds through to any of its outputs. The
+refusal happens when a path leaves one output of a block and comes back into an input that the
+block reads when it fires, but that the output does not depend on under CDL. The connector graph
+then has no cycle, so CDL §7.16 is satisfied, but there is no single point at which the block can
+fire all its outputs.
+
+The reproduction is `CDL.Routing.RealExtractSignal` with `nin = nout = 2`, so `y1 = u1` and
+`y2 = u2`, where `y1` reaches the block's own `u2` through a gain:
+
+```text
+u -> sel.u1;  sel.y1 -> gai.u;  gai.y -> sel.u2;  sel.y2 -> y
+```
+
+The load fails at stage `Schedule` with `BuildError::BlockAlgebraicLoop`. The load receipt holds one
+`block-algebraic-loop` error for each block in the cycle (`sel` and `gai`); see the
+[facade contract](facade-contracts.md). The error text and every receipt message say that the
+model may be CDL-legal, and they name the remedy.
+
+**It fails closed.** The model is refused at load. It is never scheduled in an order that would read
+a value from the wrong tick. A refused reload leaves the previously loaded model serving unchanged.
+
+**Which block classes can trigger it.** A block can trigger the refusal only if some input it reads
+when it fires does not feed through to at least one of its outputs. The feedthrough of every
+registered class was checked, across default and multi-element parameterizations. Today only nine
+`CDL.Routing` classes qualify, and only when their routing parameters give them more than one
+element:
+
+| Classes | Feedthrough | Shape that can trigger it |
+| --- | --- | --- |
+| `RealExtractSignal`, `IntegerExtractSignal`, `BooleanExtractSignal` | `y[i]` depends only on `u[extract[i]]` | `nin ≥ 2`. This includes a single-output extract (`nout = 1`), because an input it does not select is still read when the block fires. |
+| `RealVectorFilter`, `IntegerVectorFilter`, `BooleanVectorFilter` | each output depends only on the one input that `msk` selects for it | `nin ≥ 2` |
+| `RealVectorReplicator`, `IntegerVectorReplicator`, `BooleanVectorReplicator` | `y[i, j]` depends only on `u[j]` | `nin ≥ 2` |
+
+Every other registered class has outputs that all depend on every input the class reads. That set
+includes `MatrixGain`, `Sort`, the scalar replicators, `Extractor` and the multi-output stateful
+blocks `Logical.Timer`, `Logical.TimerAccumulating`, `Logical.Proof` and `Integers.Change`. Feedback
+through any of them is either a genuine connector-level loop (`algebraic-loop`) or is cut by
+a state-holding block. The scheduler also handles a stateful block that has a state-only output
+next to a feedthrough output, but no registered class has that shape today. The scheduler's own
+tests cover that case with synthetic blocks.
+
+**Remedies.** Restructure the model so that the output on the loop and the input fed back to it are
+not on the same block:
+
+- **Split the routing block.** Replace it with separate blocks whose input vectors hold only the
+  elements each output uses. In the reproduction, a `RealExtractSignal` with `nin = 1` would read
+  `u1` and produce `y1`, and a second block would carry `u2` to `y2`. When the selection is fixed,
+  you can also connect the selected element directly.
+- **Insert a delay,** for example `CDL.Discrete.UnitDelay` or `CDL.Logical.Pre`, on the feedback
+  path, but only where a one-step delay is acceptable for the sequence. This changes the model's
+  behaviour, so it is not equivalent to the original.
+
+Firing a block's outputs separately, using the per-output feedthrough map, would schedule these
+models without restructuring. That change to scheduling semantics is tracked in GitHub issue #347.
+It would have to leave the determinism goldens and strict-bit evidence unchanged for every model
+accepted today.
+
+**Corpus status.** No checked-in G36 fixture, Library rule fixture, composite-contract fixture,
+conformance fixture or vendored modelica-json translation uses an affected routing class. The same
+is true of the vendored `.mo` sources, apart from the routing class definitions themselves. The
+only tracked document refused with `block-algebraic-loop` is the reproduction fixture,
+`crates/oce-api/src/tests/fixtures/extract_signal_block_loop.jsonld`.
+
 ## 47 fixture documents is not 47 sequences
 
 `crates/oce-conformance/tests/fixtures/golden/g36_traces/` holds 46 `.csv` traces and 46 matching

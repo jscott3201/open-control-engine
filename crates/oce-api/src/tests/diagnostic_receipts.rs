@@ -373,10 +373,11 @@ fn block_granularity_cycle_yields_one_bounded_record_per_member_block() {
             )
         })
         .collect();
-    let cause = "The blocks form an emit-before cycle that single-pass atomic block firing cannot \
-                 schedule, although no connector-level cycle exists. CDL §7.16 forbids algebraic \
-                 loops. Remedy: insert a delay block (CDL.Logical.Pre, CDL.Discrete.UnitDelay) or \
-                 an integrator into the loop.";
+    // A block-granularity cycle is not a CDL §7.16 violation, so the text must not claim one: it
+    // says the model may be CDL-legal and leads with splitting the block (GitHub issue #347).
+    let cause = "The model may be CDL-legal: no connector-level cycle exists; a block fires all its \
+                 outputs at once. Remedy: split that block so the looping output and the fed-back \
+                 input are on separate blocks, or insert a delay where acceptable.";
     assert_eq!(
         observed,
         [
@@ -418,6 +419,40 @@ fn one_member_cycle_names_itself_as_the_next_member() {
         "{}",
         receipt.records()[0].message()
     );
+}
+
+#[test]
+fn only_connector_cycles_are_reported_as_cdl_violations() {
+    // A connector-level cycle breaks CDL §7.16; a block-granularity cycle exists only because the
+    // engine fires each block atomically, so its record must not send the author hunting for a
+    // §7.16 loop. Both stay bounded: the cause text is fixed, whatever the counts and next member.
+    let connector = cycle_member_message(DiagCode::AlgebraicLoop, 1, 2, "urn:m#a.y");
+    let block = cycle_member_message(DiagCode::BlockAlgebraicLoop, 1, 2, "urn:m#p");
+    assert!(
+        connector.contains("CDL §7.16 forbids algebraic loops"),
+        "{connector}"
+    );
+    assert!(!connector.contains("CDL-legal"), "{connector}");
+    assert!(!block.contains("§7.16"), "{block}");
+    assert!(!block.contains("forbids"), "{block}");
+    for needle in [
+        "may be CDL-legal",
+        "no connector-level cycle exists",
+        "fires all its outputs at once",
+        "split that block",
+        "insert a delay",
+    ] {
+        assert!(block.contains(needle), "missing {needle:?}: {block}");
+    }
+    let wide = cycle_member_message(DiagCode::BlockAlgebraicLoop, 999_999, 1_000_000, "");
+    let narrow = cycle_member_message(DiagCode::BlockAlgebraicLoop, 1, 1, "");
+    assert_eq!(
+        wide.len() - narrow.len(),
+        "999999".len() - 1 + "1000000".len() - 1
+    );
+    // 290 fixed bytes plus the two one-digit counts; the receipt tests' per-record overhead bound
+    // (`MESSAGE_OVERHEAD_BYTES` in `algebraic_loop_diagnostics.rs`) is sized from this length.
+    assert_eq!(narrow.len(), 290 + 2, "{narrow}");
 }
 
 #[test]

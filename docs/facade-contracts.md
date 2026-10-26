@@ -58,8 +58,13 @@ diagnostics; terminal stage and error context still explain failure. No engine c
 An algebraic-loop refusal records one `Error` per member of one concrete cycle at stage `Schedule`:
 `algebraic-loop` for a connector-level feedthrough cycle (subjects are member connector identities)
 and `block-algebraic-loop` for a block-granularity cycle that atomic firing cannot order (subjects
-are member block identities). CXF loads use authored IRIs. Exactly one cycle is reported even when
-several exist: a depth-first search over the connectors (or blocks) left unscheduled, visiting roots
+are member block identities). A `block-algebraic-loop` refusal does not mean the model breaks CDL
+§7.16. No connector-level cycle exists, so the model may be CDL-legal, and the refusal is a
+fail-closed engine coverage limit. The message says so and suggests splitting the block. The block
+shapes that can trigger it and the remedies are listed under
+[Atomic block firing refuses some CDL-legal feedback](cdl-coverage.md#atomic-block-firing-refuses-some-cdl-legal-feedback),
+and scheduling such models is tracked in GitHub issue #347. CXF loads use authored IRIs. Exactly
+one cycle is reported even when several exist: a depth-first search over the connectors (or blocks) left unscheduled, visiting roots
 and successors in declaration order, reports the first cycle it closes. Like every receipt, the
 records are in **subject order, not loop order**. Each message is bounded independently of the loop
 length and has the form `<kind> member <k> of <n>; next member: <identity>. <cause and remedy>`,
