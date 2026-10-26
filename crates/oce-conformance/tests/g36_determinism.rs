@@ -337,7 +337,7 @@ const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
         name: "multizone_vav_supply_fan",
         cxf: SUPPLY_FAN,
-        t_stop: 900,
+        t_stop: 1920,
         sample_step: 1.0,
         inputs: SUPPLY_FAN_INPUTS,
         outputs: SUPPLY_FAN_OUTPUTS,

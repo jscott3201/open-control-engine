@@ -108,19 +108,19 @@ OpenModelica. A mismatch never widens a tolerance or re-blesses a golden.
   §7.7.2 expression-semantics vectors (R10.x). `compare()` is implemented
   (`crates/oce-conformance/src/funnel.rs`), and the crate carries golden traces and tolerance
   fixtures under `tests/fixtures/golden/`.
-- **The Tier-A layer is `tools/golden-gen`.** It emits **412 Tier-A provenance records — 280 CDL
-  records (278 signal goldens plus two fold-time provenance-only records), plus 132 G36 sequence
+- **The Tier-A layer is `tools/golden-gen`.** It emits **413 Tier-A provenance records — 280 CDL
+  records (278 signal goldens plus two fold-time provenance-only records), plus 133 G36 sequence
   signal goldens spanning all 46 catalog fixtures.** The
   sequence side is compared by per-fixture suites in `crates/oce-conformance/tests/`: a shared
-  table in `g36_funnel_band/sequences.rs` (25 outputs), per-fixture `*_funnel.rs` suites, and four
+  table in `g36_funnel_band/sequences.rs` (26 outputs), per-fixture `*_funnel.rs` suites, and four
   `*_oracle.rs` suites whose headers state outright that there is intentionally no funnel-band
   test. **Count from the suites, not from the shared table** — reading only `sequences.rs`
   understates coverage by a factor of five, which is a mistake that has been made twice.
-  All 132 are compared **bit-exactly** (`compare_regime` on every golden: 102 `Value::bit_eq`
+  All 133 are compared **bit-exactly** (`compare_regime` on every golden: 103 `Value::bit_eq`
   f64, 18 exact encoded integer, 12 exact 0.0/1.0). The funnel band is an *additive* Real-only
   layer, never the primary comparison — Boolean and Integer outputs are deliberately kept off it
   because the funnel is type-blind (`g36_funnel_band/policy.rs`).
-  Of the 410 signal goldens, 390 check CDL / Buildings source semantics. The other 20 are exact
+  Of the 411 signal goldens, 391 check CDL / Buildings source semantics. The other 20 are exact
   HostTick v1 profile references for `Generic.TimeSuppression`, `CoolingOnly.Controller`, and
   `ReliefFanGroup`, whose fixtures contain `CDL.Logical.Pre`; they do not claim Modelica
   event-iteration equivalence. The generator is deliberately kept **off the workspace** and

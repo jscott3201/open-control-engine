@@ -45,6 +45,71 @@ fn g36_tier_a_sequence_oracles_match_engine_outputs() {
     }
 }
 
+/// The SupplyFan reference must drive its duct static pressure reset through both branches.
+///
+/// With the source-default `delTim = 600 s` and `samplePeriod = 120 s`, a run that ends before
+/// the reset's TrueDelay elapses leaves the setpoint at `iniSet` and covers only the fan PI while
+/// still passing the bit-exact comparison above. This guard fails if the scenario regresses to
+/// that shape: it requires a respond (rise), a trim (fall) after a respond, a respond after a
+/// trim, and two different respond magnitudes from different request levels.
+#[test]
+fn supply_fan_reference_exercises_pressure_trim_and_respond() {
+    let spec = SEQUENCES
+        .iter()
+        .find(|spec| spec.name == "multizone_vav_supply_fan")
+        .expect("SupplyFan sequence is registered");
+    let reference = read_reference(spec);
+    let column = reference
+        .col_names
+        .as_ref()
+        .and_then(|names| {
+            names
+                .iter()
+                .position(|name| name == "duct_static_pressure_setpoint")
+        })
+        .expect("SupplyFan reference carries the pressure setpoint column");
+    let setpoint = reference
+        .column_owned(column)
+        .expect("pressure setpoint column reads");
+
+    assert_eq!(
+        setpoint.y[0].to_bits(),
+        120.0f64.to_bits(),
+        "setpoint starts at iniSet"
+    );
+    let steps: Vec<(f64, f64)> = setpoint
+        .y
+        .windows(2)
+        .zip(&setpoint.x[1..])
+        .filter(|(pair, _)| pair[1].to_bits() != pair[0].to_bits())
+        .map(|(pair, &time)| (time, pair[1] - pair[0]))
+        .collect();
+    let first_respond = steps.iter().position(|&(_, delta)| delta > 0.0);
+    let trim_after_respond = first_respond.and_then(|i| {
+        steps[i..]
+            .iter()
+            .position(|&(_, delta)| delta < 0.0)
+            .map(|j| i + j)
+    });
+    let respond_after_trim =
+        trim_after_respond.and_then(|i| steps[i..].iter().position(|&(_, delta)| delta > 0.0));
+    assert!(
+        first_respond.is_some() && trim_after_respond.is_some() && respond_after_trim.is_some(),
+        "setpoint must respond, trim, then respond again; steps: {steps:?}"
+    );
+    let mut respond_sizes: Vec<u64> = steps
+        .iter()
+        .filter(|&&(_, delta)| delta > 0.0)
+        .map(|&(_, delta)| delta.to_bits())
+        .collect();
+    respond_sizes.sort_unstable();
+    respond_sizes.dedup();
+    assert!(
+        respond_sizes.len() >= 2,
+        "different request levels must produce different respond magnitudes; steps: {steps:?}"
+    );
+}
+
 fn read_reference(spec: &SequenceSpec) -> CombiTimeTable {
     CombiTimeTable::read(&reference_path(spec))
         .unwrap_or_else(|err| panic!("{} reference read failed: {err}", spec.name))

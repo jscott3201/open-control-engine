@@ -269,14 +269,22 @@ fn supply_fan_inputs(t: f64) -> Vec<(String, Value)> {
         300..=359 => 4,
         _ => 1,
     };
-    let requests = if t >= 840.0 {
-        5
-    } else if t >= 720.0 {
-        3
-    } else {
-        0
+    let requests = match t as u32 {
+        0..=719 => 0,
+        720..=839 => 3,
+        840..=1139 => 5,
+        1140..=1259 => 3,
+        1260..=1379 => 2,
+        1380..=1619 => 0,
+        _ => 4,
     };
-    let duct_pressure = if t >= 720.0 { 80.0 } else { 120.0 };
+    let duct_pressure = if t >= 1500.0 {
+        140.0
+    } else if t >= 720.0 {
+        80.0
+    } else {
+        120.0
+    };
     vec![
         pair(SUPPLY_FAN_OPERATING_MODE, Value::Integer(operating_mode)),
         pair(SUPPLY_FAN_DUCT_PRESSURE, Value::Real(duct_pressure)),
@@ -392,11 +400,15 @@ fn multizone_vav_supply_fan_loads_simulates_and_is_deterministic() {
             label: "supply_fan_status",
             ordinal: 45,
         },
+        OutputRef {
+            label: "duct_static_pressure_setpoint",
+            ordinal: 8,
+        },
     ];
-    let (schedule_a, paths, metrics_a) = simulate(engine, supply_fan_inputs, &outputs, 900.0);
+    let (schedule_a, paths, metrics_a) = simulate(engine, supply_fan_inputs, &outputs, 1920.0);
 
     let (engine, _) = load(SUPPLY_FAN, 65, 7);
-    let (schedule_b, paths_b, metrics_b) = simulate(engine, supply_fan_inputs, &outputs, 900.0);
+    let (schedule_b, paths_b, metrics_b) = simulate(engine, supply_fan_inputs, &outputs, 1920.0);
 
     assert_eq!(paths, paths_b);
     assert_eq!(
@@ -422,6 +434,42 @@ fn multizone_vav_supply_fan_loads_simulates_and_is_deterministic() {
         real_at(&metrics_a, fan_speed, 840) > real_at(&metrics_a, fan_speed, 719),
         "larger pressure reset requests and lower duct pressure should increase fan speed"
     );
+    assert_supply_fan_pressure_reset(&metrics_a, &paths[2]);
+}
+
+/// Pin the SupplyFan duct static pressure trim-and-respond (`staPreSetRes.y`, Pa).
+///
+/// The fan restarts at 360 s, so the default TrueDelay (`delTim + samplePeriod = 720 s`) holds
+/// the setpoint at `iniSet = 120 Pa` until 1080 s. From then on each 120 s sample applies
+/// `triAmo = -12 Pa` plus, above `numIgnReq = 2` requests, `min(15 * (R - 2), 32)` Pa, so the
+/// sampled request counts 5, 3, 2, 0, 0, 4, 4, 4 give the exact steps below. Every value is an
+/// integer in Pa, so the sums are exact in `f64`.
+fn assert_supply_fan_pressure_reset(metrics: &FrameRun, setpoint: &str) {
+    assert_eq!(
+        setpoint,
+        "http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.swi.y"
+    );
+    // (first row, last row, setpoint) of each hold interval.
+    let holds: [(usize, usize, f64); 9] = [
+        (0, 1079, 120.0),    // TrueDelay not yet elapsed: iniSet
+        (1080, 1199, 140.0), // 5 requests: respond capped at maxRes, -12 + 32
+        (1200, 1319, 143.0), // 3 requests: smaller respond, -12 + 15
+        (1320, 1439, 131.0), // exactly numIgnReq requests: trim only
+        (1440, 1559, 119.0), // no requests: trim
+        (1560, 1679, 107.0), // no requests: trim
+        (1680, 1799, 125.0), // 4 requests: respond, -12 + 30
+        (1800, 1919, 143.0),
+        (1920, 1920, 161.0),
+    ];
+    for (first, last, expected) in holds {
+        for row in first..=last {
+            assert_eq!(
+                real_at(metrics, setpoint, row).to_bits(),
+                expected.to_bits(),
+                "pressure setpoint at {row} s"
+            );
+        }
+    }
 }
 
 #[test]
