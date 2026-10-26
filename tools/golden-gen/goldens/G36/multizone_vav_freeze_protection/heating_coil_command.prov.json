@@ -3,7 +3,7 @@
   "scenario": "multizone_vav_freeze_protection",
   "signal": "heating_coil_command",
   "tier": "A",
-  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics, independent of oce-blocks; this signal follows a fixed-step discretization shared with the engine and is frame-rate dependent (see frame_rate_dependence), not an independent continuous-time re-derivation",
   "value_kind": "Real",
   "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
   "n_samples": 111,
@@ -28,6 +28,9 @@
   "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
   "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/FreezeProtection.mo",
   "fixture_status": "supported-runtime-sequence source-verified composite",
+  "sequence_derivation": "g36-source-rederivation",
+  "diverges_from_g36_intent": null,
+  "frame_rate_dependence": "frame-rate dependent: the FreezeProtection.mo heating-coil PI controllers (k=1, Ti=0.5 s) are integrated by forward Euler at the 60 s frame step, applied after each frame's output: xI += (k/Ti)*(e-(yU-y)/(k*Ni))*dt with dt=60 s. Because k*dt/Ti=120 the integrator saturates every frame and the stage-1 and stage-3 outputs alternate between yMax=1 and yMin=0. The engine uses the same forward-Euler recurrence, so this column checks that shared discretization, not an independent continuous-time derivation of FreezeProtection.mo",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false

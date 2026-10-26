@@ -75,6 +75,50 @@ and a gate that accepted any text would restore exactly the false assurance desc
   difference could show in the old scenario, and its first 900 s regenerate byte-identically.
   The engine determinism snapshot is re-blessed for the longer run.
 
+- **G36 Tier-A references now say which ones are not G36 answer keys** (GitHub #353,
+  issues #342, #345, #344). Every `tools/golden-gen/goldens/G36/**/*.prov.json` carries three new fields from the
+  generator: `sequence_derivation`, `diverges_from_g36_intent` and `frame_rate_dependence`. The
+  last two are a note or `null`.
+  - `ahu_supply_air_temp_reset` claimed to be an independent re-derivation of
+    `SupplyTemperature.mo`, but its inputs (`zone_temp`, `cooling_setpoint`) and its clamped-ramp
+    rule are not in that file. It, and the other two fixture-only sequences (`ahu_economizer`,
+    `vav_single_zone`), which had the same false claim, are now labelled
+    `fixture-local-composition`. They cite only the CDL block `.mo` files whose semantics they
+    apply.
+  - `multizone_vav_economizer_enable` and the economizer controller reference faithfully
+    reproduce pinned `Enable.mo`, which joins the high-limit hysteresis outputs with `Or` and so
+    enables the economizer only *above* the cutoff. `multizone_vav_supply_temperature` reproduces
+    `SupplyTemperature.mo`'s `cooDowMod k=3` and `0<m<3` mode mapping, which swaps cool-down and
+    setup (`coolDown=2`, `setUp=3`). All three now carry `diverges_from_g36_intent` notes. The
+    supply-temperature note also says that its golden drives mode 1 only, so the trace never
+    exercises the swap. Separately from the `.mo`, its CXF fixture writes the nested
+    trim-and-respond parameters as literals where the `.mo` binds them; the literals equal the
+    outer values today.
+  - `multizone_vav_freeze_protection/heating_coil_command` alternates between 1 and 0 on every
+    frame. That comes from forward-Euler integration of a `Ti = 0.5 s` PI at the 60 s frame step,
+    which is the same recurrence the engine uses. The column is now marked frame-rate dependent,
+    and its `source` no longer claims an independent re-derivation. Seven more signals driven by a
+    `Ti = 0.5 s` PI get the same label:
+    - three signals of the economizer controller reference, which also flip between limits every
+      60 s frame (`k·dt/Ti = 120`);
+    - four return-fan signals, at a 1 s frame (`k·dt/Ti = 2`).
+
+    The criterion is `k·dt/Ti ≥ 2`, where forward Euler stops tracking the integrator. PI
+    references below it (largest ratio 0.2) are listed as frame-step-insensitive.
+
+  No trace values, CSVs or engine code change. Two new `oce-conformance` suites guard the labels:
+  - `g36_reference_provenance_labels` checks:
+    - the fields are present and well formed;
+    - the fixture-local set equals the catalog's fixture-only sequences;
+    - the divergence set matches the reviewed list;
+    - each note still holds against the vendored `.mo` or fixture it describes.
+  - `g36_reference_frame_rate_labels` checks the frame-rate labels:
+    - it recomputes `k·dt/Ti` from each fixture's resolved PI parameters and its golden's time
+      grid;
+    - it follows the fixture's connections to the outputs each PI reaches;
+    - it requires the labels to be exactly the signals an at-threshold PI reaches;
+    - it fails on any integrating-PI scenario that has not been reviewed.
+
 ### Documentation
 
 - **Atomic block firing's refusal of some CDL-legal feedback is documented as a coverage limit,

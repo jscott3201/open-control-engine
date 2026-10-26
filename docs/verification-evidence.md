@@ -127,6 +127,67 @@ signals** belong to `Generic.TimeSuppression`, `CoolingOnly.Controller`, and `Re
 Those references are independent of `oce-blocks`, but their `CDL.Logical.Pre` recurrences implement
 HostTick v1 and are labeled as profile checks rather than Modelica event-iteration oracles.
 
+Three provenance fields narrow what a G36 signal golden is evidence of. A script can read all three
+from every G36 record:
+
+- **`sequence_derivation`.** The 10 signals of the three fixture-only sequences
+  (`ahu_supply_air_temp_reset`, `ahu_economizer`, `vav_single_zone`) are labelled
+  `fixture-local-composition`. These fixtures borrow a pattern from a G36 sequence but use
+  fixture-local inputs that the G36 `.mo` files do not have. Their goldens check CDL block semantics
+  over the fixture topology, and they cite only those CDL block sources. They are not answer keys
+  for any G36 sequence.
+- **`diverges_from_g36_intent`.** Eight signals come from fixtures that faithfully copy pinned
+  Buildings behaviour contradicting the stated G36 intent:
+  - `multizone_vav_economizer_enable` and the single-damper economizer controller reference follow
+    `Enable.mo`'s `Or` high-limit wiring, which enables the economizer only above the cutoff;
+  - `multizone_vav_supply_temperature` follows `SupplyTemperature.mo`'s cool-down/setup mode swap.
+    Its golden drives mode 1 only, so it never exercises the swapped modes: it is labelled
+    because its fixture carries the swap, not because its trace shows it. Separately from the
+    `.mo`, its CXF fixture writes the nested trim-and-respond parameters as literals where the
+    `.mo` binds them to the outer parameters. The literals equal the outer values today.
+
+  The economizer goldens agree with the pinned `.mo`, not with Guideline 36.
+- **`frame_rate_dependence`.** Eight signals are driven by a `Ti = 0.5 s` PI loop. The generator
+  integrates that loop with the forward-Euler recurrence the engine also uses, so their values
+  change with the frame step:
+  - at a 60 s frame (`k·dt/Ti = 120`, saturating every frame):
+    `multizone_vav_freeze_protection/heating_coil_command`, plus `outdoor_damper_min_limit`,
+    `outdoor_damper_command` and `return_damper_command` of the single-damper economizer
+    controller reference;
+  - at a 1 s frame (`k·dt/Ti = 2`): `return_fan_speed` of
+    `multizone_vav_return_fan_airflow_tracking`, and `relief_damper_command`,
+    `discharge_pressure_setpoint` and `return_fan_speed` of
+    `multizone_vav_return_fan_direct_pressure`.
+
+  They check that shared discretization, not continuous-time `.mo` behaviour.
+
+  The criterion is `k·dt/Ti ≥ 2`. At that ratio forward Euler applied to the integrator's own
+  time constant has an amplification factor of −1 or below, so the discrete recurrence no longer
+  tracks the continuous PI.
+
+  PI references below the threshold use the same recurrence, but at their golden's step they are
+  treated as frame-step-insensitive:
+
+  | Reference | `k·dt/Ti` |
+  | --- | --- |
+  | `cooling_only_dampers` | 0.2 |
+  | `cooling_only_controller` | 0.1 |
+  | `vav_single_zone` | 0.0125 |
+  | `thermal_zones_control_loops` | ≈0.0067 |
+  | `multizone_vav_supply_fan` | ≈0.0017 |
+  | `multizone_vav_economizer_limits_common` | ≈4.2e-4 |
+  | `multizone_vav_supply_signals` | ≈8.3e-5 |
+
+  No fixture falls in `[0.2, 2)`.
+
+  `crates/oce-conformance/tests/g36_reference_frame_rate_labels.rs` recomputes each ratio from the
+  fixture's resolved PI parameters and the golden's time grid. It traces which outputs each
+  at-threshold PI reaches and requires the labels to match exactly. A new integrating PI
+  scenario fails that suite until someone reviews it.
+
+`crates/oce-conformance/tests/g36_reference_provenance_labels.rs` pins the derivation and
+divergence labels. It also checks each note against the vendored source or fixture it describes.
+
 "Bit-exact" here has a precise definition, in `crates/oce-conformance/src/exact.rs`: finite Reals
 compare by IEEE-754 bits, NaN compares equal to any NaN payload, and each signed infinity compares
 only to itself. Integer and Boolean cells compare their encoded values exactly.
