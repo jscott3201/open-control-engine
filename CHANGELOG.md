@@ -70,9 +70,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Diagnostics
 
 - **Algebraic-loop load refusals carry coded receipt records** (GitHub #348, issue #340).
-  `load_cxf_with_receipt` now records one `Error` per member of the reported cycle at stage `Schedule`: `algebraic-loop` for a
-  connector-level feedthrough cycle and `block-algebraic-loop` for a block-granularity cycle, with
-  each member's identity as the subject. Hosts and repair tools can branch on the code instead of
+  `load_cxf_with_receipt` now records one `Error` per member of the reported cycle at stage
+  `Schedule`: `algebraic-loop` for a connector-level feedthrough cycle and `block-algebraic-loop`
+  for a block-granularity cycle, with each member's identity as the subject. Hosts and repair tools can branch on the code instead of
   the message. Each message is bounded independently of the loop length (member position, member
   count and next member, then the cause and remedy), so receipt size grows linearly with the loop;
   records stay in subject order and the stated positions reconstruct loop order. Cycle members in
@@ -81,6 +81,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   block-granularity error text no longer claims the cause is always a stateful block's state-only
   output. New `DiagCode` variants `AlgebraicLoop` and `BlockAlgebraicLoop`. The `OcError` chain is
   unchanged, and the legacy `load_cxf` error still carries no records for this refusal.
+  The release-compatibility checker re-selects its current implementation baseline at the
+  change's source commit; policy and rows are unchanged. A CDL-legal model that atomic block
+  firing still refuses as a block-granularity loop is tracked in GitHub issue #347.
 
 ## 0.2.0
 
