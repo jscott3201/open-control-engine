@@ -220,7 +220,11 @@ impl OcError {
     /// identifies the other failures — malformed JSON, a build failure without prior warnings, a
     /// host misuse — for which the [`Display`](std::fmt::Display) message is the whole description.
     /// A build or store failure after a warning can therefore return an empty slice here even though
-    /// [`OcError::all_diagnostics`] yields its prior warnings.
+    /// [`OcError::all_diagnostics`] yields its prior warnings. An algebraic-loop build refusal's
+    /// coded `algebraic-loop`/`block-algebraic-loop` records (one per cycle member) are captured
+    /// only on the receipt path, [`Engine::load_cxf_with_receipt`](crate::Engine::load_cxf_with_receipt),
+    /// where [`OperationFailure::diagnostics`](crate::OperationFailure::diagnostics) carries them at
+    /// stage `Schedule`.
     ///
     /// Codes are compared as strings via [`DiagCode::as_str`](oce_diag::DiagCode::as_str), which
     /// resolves without naming the type. The enum is deliberately not re-exported: it is

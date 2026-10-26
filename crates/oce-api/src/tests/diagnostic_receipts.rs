@@ -190,11 +190,11 @@ fn diagnostic_free_refusals_retain_stage_and_original_error_source() {
 }
 
 #[test]
-fn build_refusal_retains_prior_import_evidence_without_an_invented_code() {
+fn prior_import_warning_precedes_loop_records_in_a_refused_load() {
     let failure = Engine::in_memory().load_cxf_with_receipt(LOOP).unwrap_err();
     assert_eq!(failure.stage(), DiagnosticStage::Schedule);
     let records = failure.diagnostics().records();
-    assert_eq!(records.len(), 1);
+    assert_eq!(records.len(), 5);
     assert_eq!(records[0].key().stage(), DiagnosticStage::Import);
     assert_eq!(records[0].key().code(), "analog-coerced-to-real");
     assert!(failure.error().diagnostics().is_empty());
@@ -331,5 +331,132 @@ fn legacy_and_receipt_loads_keep_identical_state_and_legacy_diagnostic_order() {
     assert_eq!(
         old.state_snapshot().unwrap().into_bytes(),
         new.state_snapshot().unwrap().into_bytes()
+    );
+}
+
+fn members(paths: &[&str]) -> Vec<oce_graph::ConnectorPath> {
+    paths
+        .iter()
+        .map(|path| oce_graph::ConnectorPath((*path).to_owned()))
+        .collect()
+}
+
+#[test]
+fn algebraic_loop_code_strings_never_change() {
+    // Hosts compare these strings; renaming either is a contract change, not a refactor.
+    assert_eq!(DiagCode::AlgebraicLoop.as_str(), "algebraic-loop");
+    assert_eq!(
+        DiagCode::BlockAlgebraicLoop.as_str(),
+        "block-algebraic-loop"
+    );
+}
+
+#[test]
+fn block_granularity_cycle_yields_one_bounded_record_per_member_block() {
+    let error = oce_graph::BuildError::BlockAlgebraicLoop {
+        members: members(&["urn:m#x", "urn:m#p"]),
+    };
+    let mut capture = DiagnosticCapture::new(true, DiagnosticStage::Schedule);
+    let refused = capture.build_refusal(error.clone());
+    assert!(matches!(refused, OcError::Build(_)));
+    let receipt = capture.finish();
+    let observed: Vec<_> = receipt
+        .records()
+        .iter()
+        .map(|record| {
+            (
+                record.key().stage(),
+                record.key().subject().clone(),
+                record.key().code().to_owned(),
+                record.key().severity(),
+                record.message().to_owned(),
+            )
+        })
+        .collect();
+    let cause = "The blocks form an emit-before cycle that single-pass atomic block firing cannot \
+                 schedule, although no connector-level cycle exists. CDL §7.16 forbids algebraic \
+                 loops. Remedy: insert a delay block (CDL.Logical.Pre, CDL.Discrete.UnitDelay) or \
+                 an integrator into the loop.";
+    assert_eq!(
+        observed,
+        [
+            (
+                DiagnosticStage::Schedule,
+                DiagnosticSubject::Opaque("urn:m#p".into()),
+                "block-algebraic-loop".to_owned(),
+                DiagnosticSeverity::Error,
+                format!(
+                    "block-granularity algebraic loop member 2 of 2; next member: urn:m#x. {cause}"
+                ),
+            ),
+            (
+                DiagnosticStage::Schedule,
+                DiagnosticSubject::Opaque("urn:m#x".into()),
+                "block-algebraic-loop".to_owned(),
+                DiagnosticSeverity::Error,
+                format!(
+                    "block-granularity algebraic loop member 1 of 2; next member: urn:m#p. {cause}"
+                ),
+            ),
+        ]
+    );
+}
+
+#[test]
+fn one_member_cycle_names_itself_as_the_next_member() {
+    let error = oce_graph::BuildError::BlockAlgebraicLoop {
+        members: members(&["urn:m#solo"]),
+    };
+    let mut capture = DiagnosticCapture::new(true, DiagnosticStage::Schedule);
+    let _ = capture.build_refusal(error);
+    let receipt = capture.finish();
+    assert_eq!(receipt.records().len(), 1);
+    assert!(
+        receipt.records()[0].message().starts_with(
+            "block-granularity algebraic loop member 1 of 1; next member: urn:m#solo. "
+        ),
+        "{}",
+        receipt.records()[0].message()
+    );
+}
+
+#[test]
+fn loop_refusal_without_receipt_capture_keeps_no_evidence() {
+    let error = oce_graph::BuildError::AlgebraicLoop {
+        members: members(&["urn:m#a.y", "urn:m#a.u2"]),
+    };
+    let mut capture = DiagnosticCapture::new(false, DiagnosticStage::Schedule);
+    let refused = capture.build_refusal(error.clone());
+    assert!(matches!(refused, OcError::Build(_)));
+    assert!(capture.records.is_none());
+    assert!(capture.finish().records().is_empty());
+}
+
+#[test]
+fn connector_loop_records_sort_by_subject_not_by_cycle_order() {
+    let error = oce_graph::BuildError::AlgebraicLoop {
+        members: members(&["urn:m#a.y", "urn:m#a.u2"]),
+    };
+    let mut capture = DiagnosticCapture::new(true, DiagnosticStage::Schedule);
+    let refused = capture.build_refusal(error.clone());
+    assert!(matches!(refused, OcError::Build(_)));
+    let receipt = capture.finish();
+    let subjects: Vec<_> = receipt
+        .records()
+        .iter()
+        .map(|record| (record.key().stage(), record.key().subject().clone()))
+        .collect();
+    assert_eq!(
+        subjects,
+        [
+            (
+                DiagnosticStage::Schedule,
+                DiagnosticSubject::Opaque("urn:m#a.u2".into())
+            ),
+            (
+                DiagnosticStage::Schedule,
+                DiagnosticSubject::Opaque("urn:m#a.y".into())
+            ),
+        ]
     );
 }

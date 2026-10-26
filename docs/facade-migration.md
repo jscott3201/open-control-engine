@@ -87,6 +87,8 @@ stage, complete returned diagnostics and original `OcError`/standard source cont
 `DiagnosticKey` values for the new machine ordering; retain the old methods when legacy ordering
 is required. Messages are display-only, code strings extensible, subjects opaque or absent, and
 multiplicity preserved. Diagnostic-free failures remain failures without fabricated codes.
+Algebraic-loop refusals now carry `algebraic-loop` / `block-algebraic-loop` records at `Schedule`,
+one per cycle member; branch on those codes instead of parsing the build error's text.
 
 Studio continues to own full build/source/features compatibility stamps, catalog display policy,
 truncation and authored-target mapping. OCE's metadata content tag supplies none of those policies.

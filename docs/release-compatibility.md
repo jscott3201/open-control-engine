@@ -11,12 +11,13 @@ executable, prior-state, placement and safety qualification. No downstream pin c
 The retained [machine-readable matrix](release-compatibility.json) has exactly 36 ordered rows:
 nine artifact classes times four producer/consumer directions. The selected identities are:
 
-- **Current implementation:** `e57ff4324b0f4c544093bbca41f189534b692c5e`, the
-  `unused-boundary-input` resolver warning (GitHub #346, issue #339). Its implementation boundary
-  differs from the previous `3a7bdf0` 0.2.0 baseline only by that warning: one `DiagCode` variant,
-  the resolver check and the `input_definitions()` rustdoc. The candidate policy, rows and package
-  version are unchanged. The baseline commit is merged with a merge commit so it stays reachable;
-  the selection commit adds evidence/docs only and does not pretend it can hash itself.
+- **Current implementation:** `18577889544383b70d5373a413d3ad228747fa45`, the coded
+  algebraic-loop receipt records (GitHub #348, issue #340). Its implementation boundary differs
+  from the previous `e57ff43` baseline (GitHub #346) only by that change: two `DiagCode` variants,
+  the receipt capture, authored-identity loop member rendering in `oce-graph` and rustdoc. The
+  candidate policy, rows and package version are unchanged. The baseline commit is merged with a
+  merge commit so it stays reachable; the selection commit adds evidence/docs only and does not
+  pretend it can hash itself.
 - **Historical source candidate:** annotated `v0.1.0`, tag object
   `7f3b614dc0e466d54cab4677ce4bb08a5bfaf033`, peeled source
   `909a8ba699e6a2fccf3de6ac0616a9e83a04060f`, 178 commits behind the previous `e81480b` baseline

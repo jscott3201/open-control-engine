@@ -254,3 +254,51 @@ fn decl_key_collision_is_broken_by_connector_id() {
     );
     assert_eq!(first.order, second.order, "deterministic");
 }
+
+#[test]
+fn connector_loop_members_use_authored_identities_and_fall_back_to_positions() {
+    // A two-block ring where only one block's connectors carry an authored IRI: authored members
+    // print that IRI verbatim, the others keep the positional hand-built form.
+    let mut b = ModelBuilder::default();
+    let (_x, x_in, x_out) = b.block("CDL.Reals.Add", 1, 1, true, false);
+    let (_z, z_in, z_out) = b.block("test.Passthrough", 1, 1, true, false);
+    b.connect(x_out[0], z_in[0]);
+    b.connect(z_out[0], x_in[0]);
+    for (connector, iri) in [(x_in[0], "urn:m#x.u"), (x_out[0], "urn:m#x.y")] {
+        b.model.connectors[connector.0 as usize].iri = Some(Arc::from(iri));
+    }
+
+    let err = compile(&b.model, &b.blocks).expect_err("feedthrough ring is an algebraic loop");
+    let BuildError::AlgebraicLoop { members } = err else {
+        panic!("expected connector-level AlgebraicLoop, got {err:?}")
+    };
+    let rendered: Vec<String> = members.iter().map(ToString::to_string).collect();
+    assert_eq!(
+        rendered,
+        [
+            "urn:m#x.u",
+            "urn:m#x.y",
+            "test.Passthrough#b1.in#c2",
+            "test.Passthrough#b1.out#c3",
+        ]
+    );
+}
+
+#[test]
+fn block_loop_members_use_authored_instance_identities() {
+    // Same block-granularity topology as `mixed_feedthrough_block_cycle_is_rejected`, with only P
+    // carrying an authored instance IRI.
+    let mut b = ModelBuilder::default();
+    let (p, p_in, p_out) = b.block_mixed("test.MixedPre", 1, 2, true, &[(0, 1)]);
+    let (_x, x_in, x_out) = b.block_mixed("test.Pass", 1, 1, false, &[(0, 0)]);
+    b.connect(p_out[0], x_in[0]);
+    b.connect(x_out[0], p_in[0]);
+    b.model.blocks[p.0 as usize].instance_iri = Some(Arc::from("urn:m#p"));
+
+    let err = compile(&b.model, &b.blocks).expect_err("atomic firing cannot schedule this");
+    let BuildError::BlockAlgebraicLoop { members } = err else {
+        panic!("expected BlockAlgebraicLoop, got {err:?}")
+    };
+    let rendered: Vec<String> = members.iter().map(ToString::to_string).collect();
+    assert_eq!(rendered, ["urn:m#p", "test.Pass#b1"]);
+}
