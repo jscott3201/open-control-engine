@@ -163,7 +163,7 @@ Every graph the resolver produces is correct by construction on both axes.
 **exactly** the emitted bytes when the export is complete. If any content was deferred, it returns
 the typed `ContentIdError::Incomplete { warning_count, .. }` instead of minting an identity. Its
 rustdoc carries a runnable reproduction of the tag computation so a host can verify a returned tag
-independently. Three properties worth internalizing:
+independently. Four properties worth internalizing:
 
 - It is explicitly **non-cryptographic** and not a security boundary. A host needing a cryptographic
   digest must hash the same bytes itself.
@@ -174,6 +174,14 @@ independently. Three properties worth internalizing:
   `content_id_complete()` refuses that case and reports the exact warning count. The older
   `content_id()` method remains only as deprecated compatibility behavior and should not be used to
   mint version identities. The checked behavior is pinned by `crates/oce-api/tests/export_cxf.rs`.
+- It identifies the **emitted document, not an order-independent model**. `@graph` node order and
+  `containsBlock` order are [order-bearing](cxf-composite-subset.md#ordering-and-identity-contract):
+  they assign `ConnectorId`/`BlockId` and `decl_order`, and export follows those vectors. Two
+  sources with the same nodes and edges that differ only in that order can both load cleanly and
+  receive different tags; reloading identical bytes always reproduces the same tag. The engine
+  provides no "same model regardless of serialization order" identity today; a host that needs one
+  must define it itself and must not substitute this tag for it. Pinned by
+  `content_id_identifies_authored_graph_order_not_an_order_independent_model`.
 
 ## The import side
 

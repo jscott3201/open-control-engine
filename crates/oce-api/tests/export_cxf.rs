@@ -146,6 +146,72 @@ fn warning_bearing_content_id_identifies_the_partial_document() {
     assert_eq!(legacy_id, independent_content_id(&exported.bytes));
 }
 
+/// Issue #338 document A: one `Reals.Abs` between boundary `u` and `y`, with the `m.abs.u` port
+/// node before the `m.abs.y` port node. Document B swaps exactly those two `@graph` entries; every
+/// node body and edge is unchanged.
+fn abs_document(abs_output_node_first: bool) -> String {
+    const HEAD: &str = r#"{"@context":{"S231":"http://data.ashrae.org/S231P#","base":"urn:example:m#"},"@graph":[
+{"@id":"urn:example:m#m","@type":"S231:Block","S231:label":"m",
+ "S231:containsBlock":[{"@id":"urn:example:m#m.abs"}],
+ "S231:hasInput":[{"@id":"urn:example:m#m.u"}],"S231:hasOutput":[{"@id":"urn:example:m#m.y"}]},
+{"@id":"urn:example:m#m.abs","@type":"urn:example:m#Buildings.Controls.OBC.CDL.Reals.Abs",
+ "S231:label":"abs","S231:hasInput":{"@id":"urn:example:m#m.abs.u"},
+ "S231:hasOutput":{"@id":"urn:example:m#m.abs.y"}},
+"#;
+    const ABS_INPUT: &str = r#"{"@id":"urn:example:m#m.abs.u","@type":"S231:RealInput",
+ "S231:isOfDataType":{"@id":"S231:Real"}}"#;
+    const ABS_OUTPUT: &str = r#"{"@id":"urn:example:m#m.abs.y","@type":"S231:RealOutput",
+ "S231:isOfDataType":{"@id":"S231:Real"},"S231:isConnectedTo":{"@id":"urn:example:m#m.y"}}"#;
+    const TAIL: &str = r#",
+{"@id":"urn:example:m#m.u","@type":"S231:RealInput","S231:isOfDataType":{"@id":"S231:Real"},
+ "S231:isConnectedTo":{"@id":"urn:example:m#m.abs.u"}},
+{"@id":"urn:example:m#m.y","@type":"S231:RealOutput","S231:isOfDataType":{"@id":"S231:Real"}}
+]}"#;
+    let (first, second) = if abs_output_node_first {
+        (ABS_OUTPUT, ABS_INPUT)
+    } else {
+        (ABS_INPUT, ABS_OUTPUT)
+    };
+    format!("{HEAD}{first},\n{second}{TAIL}")
+}
+
+fn clean_complete_content_id(source: &[u8]) -> String {
+    let mut engine = Engine::in_memory();
+    let receipt = engine
+        .load_cxf_with_receipt(source)
+        .expect("order variant loads");
+    assert!(receipt.diagnostics().records().is_empty());
+    // Both orderings carry the same authored model identity; only the emitted document differs.
+    assert_eq!(receipt.report().model_id.as_str(), "urn:example:m#m");
+    let exported = engine.export_cxf().expect("order variant exports");
+    assert!(exported.warnings.is_empty());
+    let id = exported
+        .content_id_complete()
+        .expect("order variant export is complete");
+    assert_eq!(id, independent_content_id(&exported.bytes));
+    id
+}
+
+#[test]
+fn content_id_identifies_authored_graph_order_not_an_order_independent_model() {
+    let document_a = abs_document(false);
+    let document_b = abs_document(true);
+    assert_ne!(document_a, document_b);
+    assert_eq!(document_a.len(), document_b.len());
+
+    let id_a = clean_complete_content_id(document_a.as_bytes());
+    let id_b = clean_complete_content_id(document_b.as_bytes());
+    // `@graph` node order is order-bearing (docs/cxf-composite-subset.md): the swapped port nodes
+    // receive different connector ids, so the emitted documents and their tags legitimately differ.
+    assert_eq!(id_a, "cxf:fnv1a128:9308541e7a1b11b67c0110d1238b23bf");
+    assert_eq!(id_b, "cxf:fnv1a128:8bb1a1f9d6236207e65aa9c3fd7b9577");
+    assert_ne!(id_a, id_b);
+
+    // Control: the difference comes from authored order, not from load-to-load nondeterminism.
+    assert_eq!(clean_complete_content_id(document_a.as_bytes()), id_a);
+    assert_eq!(clean_complete_content_id(document_b.as_bytes()), id_b);
+}
+
 #[test]
 fn unloaded_engine_returns_an_error_without_panicking() {
     assert!(Engine::in_memory().export_cxf().is_err());
