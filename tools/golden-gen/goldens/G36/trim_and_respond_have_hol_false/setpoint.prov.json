@@ -6,16 +6,16 @@
   "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
   "value_kind": "Real",
   "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
-  "n_samples": 23,
+  "n_samples": 41,
   "n_reference_columns": 4,
   "reference_csv": "reference.csv",
   "reference_columns": ["time", "request_count", "device_status", "setpoint"],
   "inputs": [
-    { "name": "request_count", "value_kind": "Integer", "values": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 3.0, 6.0, 6.0, 6.0, 6.0, 0.0, 0.0, 0.0, 0.0, 0.0] },
-    { "name": "device_status", "value_kind": "Boolean", "values": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0] }
+    { "name": "request_count", "value_kind": "Integer", "values": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 3.0, 6.0, 6.0, 6.0, 6.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 5.0, 5.0, 0.0, 0.0, 0.0] },
+    { "name": "device_status", "value_kind": "Boolean", "values": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] }
   ],
-  "input": "TrimAndRespond have_hol=false: device proven on until 1080s, off 1080..1200s, on again at 1260s; requests step 0 -> 3 at 720s -> 6 at 840s -> 0 at 1080s",
-  "reference_rule": "Pinned TrimAndRespond.mo have_hol=false variant: TrueDelay(delTim+samplePeriod=720s), Sampler(samplePeriod=120s), UnitDelay(y_start=iniSet=10), triAmo=0.1, resAmo=-0.2, maxRes=-0.6, clamp 0..20; inactive hold path is specialized away",
+  "input": "TrimAndRespond have_hol=false over 0..2400s at 60s ticks: device proven on except 1260..1379s (one sample instant, 1320s, inside the off window; restart at 1380s between instants); requests 0 -> 3 at 720s -> 6 at 840s -> 0 at 1080s -> 5 at 2160s -> 0 at 2280s",
+  "reference_rule": "Pinned TrimAndRespond.mo have_hol=false variant: TrueDelay(delTim+samplePeriod=720s, delayOnInit) on uDevSta selects swi between iniSet=10 and the reset chain; swi2 feeds iniSet into UnitDelay(samplePeriod=120s, y_start=iniSet) while the device is off; net reset from Sampler(numOfReq) with triAmo=0.1, resAmo=-0.2, maxRes=-0.6, numIgnReq=2, clamp 0..20; inactive hold path is specialized away. Setpoint: 9.9 at 720s, 9.4 at 840s, 8.9 at 960s, trims to 9.0 and 9.1, iniSet 10 while off and through the re-armed delay (held 9.1 at the 1380s restart), then 10.1 at 2100s, 9.5 at 2160s, 9.6 at 2280s, 9.7 at 2400s",
   "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
   "source_files": "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
   "fixture_status": "supported-runtime-sequence source-verified composite",
