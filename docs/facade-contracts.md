@@ -53,8 +53,22 @@ pipelines. Their success receipts contain the legacy report and independently ca
 the receipt's provenance. Legacy entrypoints avoid this additional evidence allocation.
 
 Failures return `OperationFailure`: terminal stage, completed-stage and terminal diagnostics, and
-the original `OcError`/standard error source chain. JSON, build and store errors can carry no
+the original `OcError`/standard error source chain. JSON and store errors can carry no
 diagnostics; terminal stage and error context still explain failure. No engine code is invented.
+An algebraic-loop refusal records one `Error` per member of one concrete cycle at stage `Schedule`:
+`algebraic-loop` for a connector-level feedthrough cycle (subjects are member connector identities)
+and `block-algebraic-loop` for a block-granularity cycle that atomic firing cannot order (subjects
+are member block identities). CXF loads use authored IRIs. Exactly one cycle is reported even when
+several exist: a depth-first search over the connectors (or blocks) left unscheduled, visiting roots
+and successors in declaration order, reports the first cycle it closes. Like every receipt, the
+records are in **subject order, not loop order**. Each message is bounded independently of the loop
+length and has the form `<kind> member <k> of <n>; next member: <identity>. <cause and remedy>`,
+where `<k>` is the member's 1-based loop position; ordering records by `<k>`, or following each
+subject to its next member, reconstructs the loop. The message is still display text, not a
+machine field: the `DiagnosticKey` has no position field, so this is the only carrier. The
+`OperationFailure::error` chain is unchanged (`OcError::Build`, or `OcError::LoadContext` after a
+prior warning) and its display still lists every member in loop order; the legacy `load_cxf`
+error carries no such records.
 An unloaded export retains its existing `export-unsupported` diagnostic. A partial export still
 succeeds with warnings; use the legacy report's completeness check for emitted-document identity.
 

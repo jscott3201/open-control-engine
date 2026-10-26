@@ -158,7 +158,7 @@ impl<S: Store> Engine<S> {
             let blocks = instantiate_blocks(&model)?;
             // BUILD (off the tick): schedule + state. `?` on `compile` maps `BuildError` → `OcError`.
             capture.enter(DiagnosticStage::Schedule);
-            let schedule = compile(&model, &blocks)?;
+            let schedule = compile(&model, &blocks).map_err(|err| capture.build_refusal(err))?;
             let state = allocate_state(&model, &blocks);
             let io = IoInventory::build_at_load(&model);
             let params = ParamTable::build_at_load(&model);

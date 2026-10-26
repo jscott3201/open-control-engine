@@ -83,10 +83,12 @@ pub struct RunState {
     pub t: f64,
 }
 
-/// A human-readable dotted instance/connector path used in BUILD diagnostics (e.g. the members of
-/// a [`BuildError::AlgebraicLoop`]). For hand-built unnamed graphs it is rendered from the block
-/// class IRI and the dense block/connector ids (`<class-iri>#b<block>.<dir>#c<conn>`); CXF-resolved
-/// graphs carry source instance names when available.
+/// A human-readable identity for a connector or block named in BUILD diagnostics (e.g. the members
+/// of a [`BuildError::AlgebraicLoop`]). CXF-resolved graphs carry the authored identity: the
+/// connector's [`iri`](oce_model::Connector::iri) or the block's
+/// [`instance_iri`](oce_model::BlockInstance::instance_iri). Hand-built graphs without one are
+/// rendered from the block class IRI and the dense block/connector ids
+/// (`<class-iri>#b<block>.<dir>#c<conn>` or `<class-iri>#b<block>`).
 #[derive(Clone, PartialEq, Eq)]
 pub struct ConnectorPath(pub String);
 
@@ -125,14 +127,17 @@ pub enum BuildError {
 
     /// The connector feedthrough graph is acyclic, but **atomic block firing** (one `emit` call
     /// produces all of a block's outputs, `01` §9) still cannot schedule the model: the block-level
-    /// *emit-before* graph has a cycle. This arises when a stateful multi-output block's state-only
-    /// (cut) output feeds a path that returns to one of its own feedthrough inputs — there is no
-    /// single position at which the block can emit all its outputs consistently. Same remedy as a
+    /// *emit-before* graph has a cycle. This arises when one of a multi-output block's outputs feeds
+    /// a path back to an input the block reads when it fires but that output does not depend on —
+    /// a stateful block's state-only (cut) output, or an algebraic routing block such as
+    /// `CDL.Routing.RealExtractSignal` with partial feedthrough. There is no single position at
+    /// which the block can emit all its outputs consistently. Same remedy as a
     /// connector-level loop. Carries the dotted block paths of one concrete cycle.
     #[error(
         "block-granularity algebraic loop: {} block(s) form a feedthrough cycle that single-pass \
-         atomic block firing cannot schedule (a stateful multi-output block whose state-only \
-         output feeds back into one of its feedthrough inputs). CDL §7.16 forbids algebraic loops. \
+         atomic block firing cannot schedule (a multi-output block's output feeds back into an \
+         input the block reads when it fires, although that output does not depend on that \
+         input). CDL §7.16 forbids algebraic loops. \
          Remedy: insert a delay block (CDL.Logical.Pre, CDL.Discrete.UnitDelay) or an integrator \
          into the loop. Cycle members: {members:?}",
         .members.len()

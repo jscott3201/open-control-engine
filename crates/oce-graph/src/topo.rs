@@ -272,11 +272,14 @@ fn first_cycle<K: Ord>(
     roots
 }
 
-/// Render a connector as a dotted path for diagnostics. Hand-built unnamed graphs are rendered from
-/// the block class IRI and dense ids:
-/// `<class-iri>#b<block>.<dir>#c<conn>`.
+/// Render a connector for diagnostics: its authored identity ([`oce_model::Connector::iri`]) when
+/// the graph carries one, otherwise — hand-built unnamed graphs — the block class IRI and dense
+/// ids: `<class-iri>#b<block>.<dir>#c<conn>`.
 fn connector_path(model: &Model, c: ConnectorId) -> ConnectorPath {
     let conn = &model.connectors[c.0 as usize];
+    if let Some(iri) = &conn.iri {
+        return ConnectorPath(iri.to_string());
+    }
     let class = &model.blocks[conn.block.0 as usize].class_iri;
     let dir = if matches!(conn.dir, oce_model::Dir::In) {
         "in"
@@ -288,9 +291,15 @@ fn connector_path(model: &Model, c: ConnectorId) -> ConnectorPath {
     ConnectorPath(format!("{class}#b{block}.{dir}#c{cid}"))
 }
 
-/// Render a block as a dotted path for block-granularity diagnostics: `<class-iri>#b<block>`.
+/// Render a block for block-granularity diagnostics: its authored identity
+/// ([`oce_model::BlockInstance::instance_iri`]) when the graph carries one, otherwise
+/// `<class-iri>#b<block>`.
 fn block_path(model: &Model, b: BlockId) -> ConnectorPath {
-    let class = &model.blocks[b.0 as usize].class_iri;
+    let block = &model.blocks[b.0 as usize];
+    if let Some(iri) = &block.instance_iri {
+        return ConnectorPath(iri.to_string());
+    }
+    let class = &block.class_iri;
     let id = b.0;
     ConnectorPath(format!("{class}#b{id}"))
 }

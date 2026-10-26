@@ -1,8 +1,9 @@
 #![forbid(unsafe_code)]
 //! `oce-diag` — the **shared diagnostic vocabulary** for the Open Control Engine's ingest path.
 //!
-//! Both `oce-cxf` (the CXF Layer-A→B resolver, which raises resolve-time structural diagnostics)
-//! and `oce-validate` (the authoritative deep load-conformance gate) report problems as
+//! `oce-cxf` (the CXF Layer-A→B resolver, which raises resolve-time structural diagnostics),
+//! `oce-validate` (the authoritative deep load-conformance gate) and `oce-graph` (whose schedule
+//! construction refuses algebraic loops) report problems as
 //! [`Diagnostic`]s drawn from one [`Severity`]/[`DiagCode`] vocabulary. Sharing the vocabulary is
 //! deliberate: `oce-api`'s `LoadReport.warnings` and the resolver's report are then the **same**
 //! shape, so a host never juggles two diagnostic
@@ -166,6 +167,19 @@ pub enum DiagCode {
     /// A block parameter violates a class-level range or ordering rule.
     ParameterOutOfRange,
 
+    // --- Build-time `shall`-errors (oce-graph schedule construction) ---
+    /// Connections form a direct-feedthrough cycle that no state-holding block breaks — an
+    /// algebraic loop, forbidden by CDL §7.16. One diagnostic per member connector of one
+    /// concrete cycle (subject = the connector's authored identity when it has one).
+    AlgebraicLoop,
+    /// The connector graph is acyclic, but single-pass atomic block firing still cannot order the
+    /// blocks: a stateful multi-output block's state-only output feeds back into one of its own
+    /// feedthrough inputs. One diagnostic per member block of one concrete block cycle (subject =
+    /// the block instance's authored identity when it has one). Distinct from
+    /// [`DiagCode::AlgebraicLoop`] because the members are blocks, not connectors, and the cause is
+    /// the engine's firing granularity rather than a connector-level cycle.
+    BlockAlgebraicLoop,
+
     // --- Advisory `should`-warnings (doc 04 §9) ---
     /// Connected cluster members declared divergent `displayUnit`s — non-computational, warning only
     /// (§7.17).
@@ -235,6 +249,8 @@ impl DiagCode {
             DiagCode::ParameterKindMismatch => "parameter-kind-mismatch",
             DiagCode::DuplicateParameter => "duplicate-parameter",
             DiagCode::ParameterOutOfRange => "parameter-out-of-range",
+            DiagCode::AlgebraicLoop => "algebraic-loop",
+            DiagCode::BlockAlgebraicLoop => "block-algebraic-loop",
             DiagCode::DisplayUnitDivergence => "display-unit-divergence",
             DiagCode::AnalogCoercedToReal => "analog-coerced-to-real",
             DiagCode::MissingFmuPath => "missing-fmu-path",
@@ -393,6 +409,8 @@ mod tests {
         ParameterKindMismatch => "parameter-kind-mismatch",
         DuplicateParameter => "duplicate-parameter",
         ParameterOutOfRange => "parameter-out-of-range",
+        AlgebraicLoop => "algebraic-loop",
+        BlockAlgebraicLoop => "block-algebraic-loop",
         DisplayUnitDivergence => "display-unit-divergence",
         AnalogCoercedToReal => "analog-coerced-to-real",
         MissingFmuPath => "missing-fmu-path",

@@ -256,7 +256,13 @@ impl ExportReceipt {
 
 /// A failed load/export with completed-stage evidence, terminal stage, and original error chain.
 ///
-/// This never fabricates a diagnostic code for JSON/build/store errors without diagnostics.
+/// This never fabricates a diagnostic code for JSON/store errors without diagnostics. An
+/// algebraic-loop schedule refusal is recorded at [`DiagnosticStage::Schedule`] as one
+/// `algebraic-loop` (or `block-algebraic-loop`) error per cycle member, subject = that member's
+/// identity; its [`OperationFailure::error`] stays the legacy `OcError::Build` chain. Like every
+/// receipt, those records are in subject order, not loop order: each message names its member's
+/// position, the member count and the next member, so the loop is recovered by following
+/// `subject → next member`.
 /// Display retains the legacy terminal context; [`std::error::Error::source`] exposes the original
 /// facade error and its sources. Failure atomicity and store side effects are unchanged.
 #[derive(Debug)]
@@ -350,11 +356,85 @@ impl DiagnosticCapture {
             }
         }));
     }
+    /// Record a schedule refusal as coded evidence and return it as the unchanged terminal
+    /// [`OcError::Build`] error.
+    ///
+    /// Records one [`DiagnosticSeverity::Error`] per member of the one reported cycle: code
+    /// `algebraic-loop` (connector-level cycle) or `block-algebraic-loop` (block-granularity
+    /// cycle), subject = the member's identity (the authored IRI for CXF graphs). Each message is
+    /// bounded independently of the cycle length — it names the member's 1-based position, the
+    /// member count and the **next** member's identity, never the whole member list — so total
+    /// record bytes grow linearly with the cycle. See [`cycle_member_message`] for the exact form.
+    ///
+    /// Receipts sort records by subject, not by loop position; the loop is the chain
+    /// `subject → next member`, starting anywhere. Nothing is recorded or allocated when capture is
+    /// disabled, and a future refusal kind without a reviewed code records nothing rather than an
+    /// invented code.
+    pub(crate) fn build_refusal(&mut self, error: oce_graph::BuildError) -> OcError {
+        if let Some(records) = &mut self.records {
+            let coded = match &error {
+                oce_graph::BuildError::AlgebraicLoop { members } => {
+                    Some((oce_diag::DiagCode::AlgebraicLoop, members))
+                }
+                oce_graph::BuildError::BlockAlgebraicLoop { members } => {
+                    Some((oce_diag::DiagCode::BlockAlgebraicLoop, members))
+                }
+                _ => None,
+            };
+            if let Some((code, members)) = coded {
+                records.reserve(members.len());
+                for (index, member) in members.iter().enumerate() {
+                    let next = &members[(index + 1) % members.len()];
+                    records.push(DiagnosticRecord {
+                        key: DiagnosticKey {
+                            stage: self.stage,
+                            subject: DiagnosticSubject::Opaque(member.0.clone()),
+                            code: code.as_str().to_owned(),
+                            severity: DiagnosticSeverity::Error,
+                        },
+                        message: cycle_member_message(code, index + 1, members.len(), &next.0),
+                    });
+                }
+            }
+        }
+        OcError::Build(error)
+    }
     fn finish(self) -> DiagnosticReceipt {
         let mut records = self.records.unwrap_or_default();
         records.sort_by(|left, right| left.key.cmp(&right.key));
         DiagnosticReceipt { records }
     }
+}
+
+/// The bounded per-member message of an algebraic-loop record.
+///
+/// Form: `<kind> member <k> of <n>; next member: <next>. <cause and remedy>` where `<k>` is the
+/// 1-based position in the reported cycle, `<n>` the member count and `<next>` the identity of the
+/// member this one feeds (the first member for `k == n`; itself for a one-member cycle). Its length
+/// is a fixed text plus the two counts plus `<next>`, so it never grows with the cycle. Display
+/// text only: the stable machine fields remain the code, subject and stage.
+fn cycle_member_message(
+    code: oce_diag::DiagCode,
+    position: usize,
+    count: usize,
+    next: &str,
+) -> String {
+    let (kind, cause) = match code {
+        oce_diag::DiagCode::BlockAlgebraicLoop => (
+            "block-granularity algebraic loop",
+            "The blocks form an emit-before cycle that single-pass atomic block firing cannot \
+             schedule, although no connector-level cycle exists.",
+        ),
+        _ => (
+            "algebraic loop",
+            "The connectors form a direct-feedthrough cycle not broken by a state-holding block.",
+        ),
+    };
+    format!(
+        "{kind} member {position} of {count}; next member: {next}. {cause} CDL §7.16 forbids \
+         algebraic loops. Remedy: insert a delay block (CDL.Logical.Pre, CDL.Discrete.UnitDelay) \
+         or an integrator into the loop."
+    )
 }
 
 #[cfg(test)]

@@ -67,6 +67,21 @@ and a gate that accepted any text would restore exactly the false assurance desc
   issue's two documents (`9308541e…` versus `8bb1a1f9…`) and that reloading identical bytes
   reproduces each id. No behaviour, export bytes, state or replay identity changes.
 
+### Diagnostics
+
+- **Algebraic-loop load refusals carry coded receipt records** (GitHub #348, issue #340).
+  `load_cxf_with_receipt` now records one `Error` per member of the reported cycle at stage `Schedule`: `algebraic-loop` for a
+  connector-level feedthrough cycle and `block-algebraic-loop` for a block-granularity cycle, with
+  each member's identity as the subject. Hosts and repair tools can branch on the code instead of
+  the message. Each message is bounded independently of the loop length (member position, member
+  count and next member, then the cause and remedy), so receipt size grows linearly with the loop;
+  records stay in subject order and the stated positions reconstruct loop order. Cycle members in
+  the build error and its display are now the authored connector/instance IRIs for CXF loads (the
+  positional `<class>#b<n>…` form remains only for hand-built graphs without one), and the
+  block-granularity error text no longer claims the cause is always a stateful block's state-only
+  output. New `DiagCode` variants `AlgebraicLoop` and `BlockAlgebraicLoop`. The `OcError` chain is
+  unchanged, and the legacy `load_cxf` error still carries no records for this refusal.
+
 ## 0.2.0
 
 Prepared 2026-10-05 on `development`; the release date is the date the `v0.2.0` tag is cut from
