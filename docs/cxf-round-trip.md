@@ -49,7 +49,8 @@ Of the §7.4.1 connector attributes, five survive, each emitted as a bare JSON s
 ports and represented root boundary-input and boundary-output nodes. A root boundary input that no
 connection reads is not represented, so export omits it; its load-time `unused-boundary-input`
 warning is its only record. A boundary input keeps its declaration attrs separate from every child
-target, including fan-out; export never infers one from the other. `Engine::load_cxf` joins a declared output and its source in the same §7.10 cluster:
+target, including fan-out; export never infers one from the other. `Engine::load_cxf` joins a
+declared output and its source in the same §7.10 cluster:
 conflicting values refuse the load, while a value declared on only one side propagates to the unset
 peer before export. Boundary-input declaration unification is a separate acceptance change and is
 not implemented. Low-level callers that compose `oce_cxf::import_cxf` and `export` directly must run
@@ -164,7 +165,7 @@ Every graph the resolver produces is correct by construction on both axes.
 **exactly** the emitted bytes when the export is complete. If any content was deferred, it returns
 the typed `ContentIdError::Incomplete { warning_count, .. }` instead of minting an identity. Its
 rustdoc carries a runnable reproduction of the tag computation so a host can verify a returned tag
-independently. Three properties worth internalizing:
+independently. Four properties worth internalizing:
 
 - It is explicitly **non-cryptographic** and not a security boundary. A host needing a cryptographic
   digest must hash the same bytes itself.
@@ -175,6 +176,14 @@ independently. Three properties worth internalizing:
   `content_id_complete()` refuses that case and reports the exact warning count. The older
   `content_id()` method remains only as deprecated compatibility behavior and should not be used to
   mint version identities. The checked behavior is pinned by `crates/oce-api/tests/export_cxf.rs`.
+- It identifies the **emitted document, not an order-independent model**. `@graph` node order and
+  `containsBlock` order are [order-bearing](cxf-composite-subset.md#ordering-and-identity-contract):
+  they assign `ConnectorId`/`BlockId` and `decl_order`, and export follows those vectors. Two
+  sources with the same nodes and edges that differ only in that order can both load cleanly and
+  receive different tags; reloading identical bytes always reproduces the same tag. The engine
+  provides no "same model regardless of serialization order" identity today; a host that needs one
+  must define it itself and must not substitute this tag for it. Pinned by
+  `content_id_identifies_authored_graph_order_not_an_order_independent_model`.
 
 ## The import side
 

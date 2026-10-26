@@ -39,8 +39,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### CXF import and export
 
-- **A declared but unread root boundary input now warns at load** (GitHub #346, issue #339). A root `S231:hasInput`
-  declaration whose node exists but that no connection reads was left out of
+- **A declared but unread root boundary input now warns at load** (GitHub #346, issue #339).
+  A root `S231:hasInput` declaration whose node exists but that no connection reads was left out of
   `input_definitions()` with an empty load receipt, so a host driving frames from its own point
   list learned of it only from a later unknown-input refusal. Resolution now emits a
   `DiagCode::UnusedBoundaryInput` warning (`unused-boundary-input`, subject = the input's expanded
@@ -55,6 +55,17 @@ and a gate that accepted any text would restore exactly the false assurance desc
   an input's only connection now pin the warning. The release-compatibility checker re-selects
   its current implementation baseline at the change's source commit; policy and rows are
   unchanged.
+
+### Documentation
+
+- **The complete export content id is documented as order-bearing, not a model identity**
+  (GitHub #341, issue #338). `content_id_complete()` hashes the emitted document, which follows the
+  authored `@graph` node order and `containsBlock` order that the composite-subset ordering
+  contract already declares order-bearing, so two sources differing only in that order can load
+  cleanly and receive different ids. The round-trip contract, the identity glossary and PC-018
+  now say so, and no order-independent model identity is provided. A new test pins the
+  issue's two documents (`9308541e…` versus `8bb1a1f9…`) and that reloading identical bytes
+  reproduces each id. No behaviour, export bytes, state or replay identity changes.
 
 ## 0.2.0
 
