@@ -197,10 +197,13 @@ cross-platform/replay qualification still apply.
 `Engine::input_definitions()` returns an owned `Vec<InputDefinition>` in lexical UTF-8 canonical
 path order. Each row has `path`, exact native `value_type`, and inclusive `min`/`max` as optional
 native `Value`s. This is the represented executable boundary (`external_inputs`), not the point
-inventory or discarded source declarations with no executable consumer. Every row is required;
-the current schema has no optionality/default declaration. Fan-out yields one row, with the
-intersection of the boundary declaration's and all targets' bounds. Empty intersections accept no
-value. Real zero-bound ties have deterministic bits; a NaN bound never disappears in intersection.
+inventory or discarded source declarations with no executable consumer. A root `hasInput`
+declaration that no connection reads is such a discarded declaration: it has no row, a frame naming
+it is refused as an unknown input, and the load receipt carries an `unused-boundary-input` warning
+whose subject is its expanded `@id`, so a host can detect the omission before preparing a frame.
+Every row is required; the current schema has no optionality/default declaration. Fan-out yields
+one row, with the intersection of the boundary declaration's and all targets' bounds. Empty
+intersections accept no value. Real zero-bound ties have deterministic bits; a NaN bound never disappears in intersection.
 Integer bounds remain exact i64 values; absent Integer bounds use the documented i32 defaults,
 while explicit bounds are retained. Enum bounds carry the class and legal ordinal endpoints.
 No Store carrier, handle or public connector index is involved.

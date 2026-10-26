@@ -809,6 +809,15 @@ pub(crate) fn resolve(
     let boundary_inputs =
         boundary_inputs::materialize(doc, &graph, &role_aliases, &boundary_types, &mut diags);
     graph.boundary_inputs = boundary_inputs;
+    boundary_inputs::warn_unread(
+        top,
+        &boundary_in,
+        &boundary_out,
+        &by_id,
+        &role_aliases,
+        lowered.connection_edges(),
+        &mut diags,
+    );
     // `ConnectorId` is not a tie-break here, it is the whole discriminator, and calling it a
     // tie-break would misdescribe what changed: every entry belonging to ONE boundary port shares
     // that port's node position, so the first key component only orders port GROUPS relative to

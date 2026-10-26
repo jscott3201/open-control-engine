@@ -192,8 +192,9 @@ fn both_spellings_of_nested_input_collapse_to_one_relation() {
 /// `containsBlock`; (ii) remove the root input's `isConnectedTo`; (iii) leave
 /// `sub.enumCarrier.y` with no outgoing edge; (iv) author
 /// `sub.u isConnectedTo [sub.gain.u, pre.y]`. Base rejected with `SingleAssignment` on the
-/// undriven `sub.gain.u` because the reverse arm vanished. Head imports clean and contains the
-/// re-anchored `pre.y→sub.gain.u` connection.
+/// undriven `sub.gain.u` because the reverse arm vanished. Head imports and contains the
+/// re-anchored `pre.y→sub.gain.u` connection; step (ii) leaves the root input `.u` read by
+/// nothing, so its `unused-boundary-input` advisory is the only diagnostic.
 #[test]
 fn reverse_spelled_external_leaf_reanchors_through_nested_input() {
     let mut probe = document();
@@ -222,7 +223,19 @@ fn reverse_spelled_external_leaf_reanchors_through_nested_input() {
             "S231:isOfDataType": { "@id": "S231:Real" }
         }),
     ]);
-    let graph = import(&probe).expect("re-anchored probe imports");
+    let bytes = serde_json::to_vec(&probe).expect("serialize");
+    let (graph, report) =
+        import_cxf(&bytes, &ResolveOptions::default()).expect("re-anchored probe imports");
+    assert_eq!(
+        report.diagnostics,
+        vec![
+            Diagnostic::warning(
+                DiagCode::UnusedBoundaryInput,
+                "declared boundary input is read by no connection",
+            )
+            .with_subject(iri(".u"))
+        ]
+    );
     assert!(
         rendered_edges(&graph)
             .iter()
@@ -336,9 +349,10 @@ fn entered_boundary_ring_names_the_revisited_input() {
 /// must not invent an entry, so this control imports cleanly.
 #[test]
 fn entryless_boundary_ring_is_not_walked() {
-    // Without the entry edge the root's declared output `#boundary_ring.y` has no internal
-    // driver, so the import succeeds carrying exactly the R18-5 advisory — the ring itself is
-    // still not walked, which is this test's subject.
+    // Without the entry edge the root's declared input `#boundary_ring.u` is read by nothing and
+    // its declared output `#boundary_ring.y` has no internal driver, so the import succeeds
+    // carrying exactly those two advisories — the ring itself is still not walked, which is this
+    // test's subject.
     let bytes = serde_json::to_vec(&boundary_ring(false)).expect("serialize");
     let (_, report) =
         import_cxf(&bytes, &ResolveOptions::default()).expect("entryless ring imports");
@@ -346,12 +360,17 @@ fn entryless_boundary_ring_is_not_walked() {
         report.diagnostics,
         vec![
             Diagnostic::warning(
+                DiagCode::UnusedBoundaryInput,
+                "declared boundary input is read by no connection",
+            )
+            .with_subject("http://example.org#boundary_ring.u".to_owned()),
+            Diagnostic::warning(
                 DiagCode::UndrivenBoundaryOutput,
                 "declared boundary output has no internal driver",
             )
-            .with_subject("http://example.org#boundary_ring.y".to_owned())
+            .with_subject("http://example.org#boundary_ring.y".to_owned()),
         ],
-        "the undriven declared output is the only diagnostic"
+        "the unread declared input and the undriven declared output are the only diagnostics"
     );
 }
 

@@ -479,14 +479,24 @@ fn composite_rejections() -> Vec<CompositeRejection> {
 /// Every warned corpus fixture with its exact ordered warning triples — the generalized
 /// end-to-end warned driver's table, keyed by file the way `COMPOSITE_REJECTIONS` is.
 fn composite_warnings() -> Vec<CompositeWarning> {
-    let mut rows: Vec<CompositeWarning> = vec![(
-        "undriven_boundary_output.jsonld",
-        &[(
-            DiagCode::UndrivenBoundaryOutput,
-            Some("http://example.org#M.y"),
-            "declared boundary output has no internal driver",
-        )],
-    )];
+    let mut rows: Vec<CompositeWarning> = vec![
+        (
+            "undriven_boundary_output.jsonld",
+            &[(
+                DiagCode::UndrivenBoundaryOutput,
+                Some("http://example.org#M.y"),
+                "declared boundary output has no internal driver",
+            )],
+        ),
+        (
+            "unused_boundary_input.jsonld",
+            &[(
+                DiagCode::UnusedBoundaryInput,
+                Some("http://example.org#M.v"),
+                "declared boundary input is read by no connection",
+            )],
+        ),
+    ];
     rows.extend(conformance_member_pins::MEMBER_WARNINGS);
     rows
 }
