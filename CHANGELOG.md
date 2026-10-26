@@ -56,6 +56,25 @@ and a gate that accepted any text would restore exactly the false assurance desc
   its current implementation baseline at the change's source commit; policy and rows are
   unchanged.
 
+### Verification
+
+- **The G36 SupplyFan golden now exercises its duct static pressure trim-and-respond**
+  (GitHub #351, issue #343). The `multizone_vav_supply_fan` scenario ended at 900 s, but after
+  the 360 s fan restart
+  the source-default `delTim = 600 s` and `samplePeriod = 120 s` hold the reset until 1080 s, so
+  the request steps never moved the setpoint and only the fan PI was covered. The scenario keeps
+  the source defaults and its first 900 s unchanged, runs to 1920 s, and adds request and
+  duct-pressure steps: the setpoint responds to 140 Pa (capped at `maxRes`) and 143 Pa, trims at
+  exactly `numIgnReq` requests to 131 Pa, trims to 119 and 107 Pa, then responds to 125, 143 and
+  161 Pa. The independent golden-gen reference adds a `duct_static_pressure_setpoint` column
+  (`staPreSetRes.y`), which the engine matches bit-exactly with fan status and speed. A new
+  check fails if the reference stops showing a respond, a trim after it, a respond after that,
+  and two respond sizes. The oce-api sequence test pins every setpoint hold interval. The
+  generator's reset chain now follows `TrimAndRespond.mo`: it publishes `iniSet` until the
+  TrueDelay elapses and resets to `iniSet` rather than `maxSet` while the fan is off. Neither
+  difference could show in the old scenario, and its first 900 s regenerate byte-identically.
+  The engine determinism snapshot is re-blessed for the longer run.
+
 ### Documentation
 
 - **The complete export content id is documented as order-bearing, not a model identity**

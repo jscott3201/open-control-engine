@@ -77,6 +77,8 @@ const SUPPLY_FAN_PRESSURE_REQUESTS: &str =
     "http://example.org#g36.source.multizone_vav_supply_fan.uZonPreResReq";
 const SUPPLY_FAN_STATUS_PATH: &str = "http://example.org#g36.source.multizone_vav_supply_fan.or1.y";
 const SUPPLY_FAN_SPEED_PATH: &str = "http://example.org#g36.source.multizone_vav_supply_fan.swi.y";
+const SUPPLY_FAN_PRESSURE_SETPOINT_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.swi.y";
 const SUPPLY_SIGNALS_MEASURED_TEMP: &str =
     "http://example.org#g36.source.multizone_vav_supply_signals.TAirSup";
 const SUPPLY_SIGNALS_SETPOINT: &str =
@@ -183,6 +185,10 @@ const SUPPLY_FAN_INPUTS: &[PointSpec] = &[
 const SUPPLY_FAN_EXACT_OUTPUTS: &[PointSpec] = &[
     PointSpec::boolean("supply_fan_status", SUPPLY_FAN_STATUS_PATH),
     PointSpec::real("supply_fan_speed", SUPPLY_FAN_SPEED_PATH),
+    PointSpec::real(
+        "duct_static_pressure_setpoint",
+        SUPPLY_FAN_PRESSURE_SETPOINT_PATH,
+    ),
 ];
 const SUPPLY_SIGNALS_INPUTS: &[PointSpec] = &[
     PointSpec::real("supply_air_temperature", SUPPLY_SIGNALS_MEASURED_TEMP),
@@ -281,7 +287,7 @@ pub const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
         name: "multizone_vav_supply_fan",
         cxf: SUPPLY_FAN,
-        t_stop: 900,
+        t_stop: 1920,
         sample_step: 1.0,
         inputs: SUPPLY_FAN_INPUTS,
         exact_outputs: SUPPLY_FAN_EXACT_OUTPUTS,
