@@ -3,7 +3,7 @@
   "scenario": "multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21",
   "signal": "return_damper_command",
   "tier": "A",
-  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics, independent of oce-blocks; this signal follows a fixed-step discretization shared with the engine and is frame-rate dependent (see frame_rate_dependence), not an independent continuous-time re-derivation",
   "value_kind": "Real",
   "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
   "n_samples": 24,
@@ -24,6 +24,9 @@
   "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
   "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
   "fixture_status": "supported-runtime-sequence source-verified composite",
+  "sequence_derivation": "g36-source-rederivation",
+  "diverges_from_g36_intent": "embeds pinned Enable.mo (enaDis), whose Logical.Or high-limit wiring enables the economizer only while outdoor air is above the cutoff, the reverse of the block documentation and G36 section 5.16.7; outputs that depend on the enable state follow the pinned wiring, not G36 intent",
+  "frame_rate_dependence": "frame-rate dependent: this signal is driven by the Controller.mo damLim minimum-OA PI loop (k=1, Ti=TiMinOA=0.5 s), integrated by forward Euler at the 60 s frame step, applied after each frame's output: xI += (k/Ti)*(e-(yU-y)/(k*Ni))*dt with dt=60 s, reset to y_reset-k*e (y_reset=0) on a rising supply-fan status. Because k*dt/Ti=120 the integrator saturates every frame and the loop output alternates between its limits, which outdoor_damper_min_limit carries into the outdoor and return damper commands. The engine uses the same forward-Euler recurrence, so this column checks that shared discretization, not an independent continuous-time derivation of Controller.mo",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false

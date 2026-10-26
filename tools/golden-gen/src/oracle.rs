@@ -103,8 +103,11 @@ pub struct Golden {
     pub input_desc: String,
     /// Short statement of the source or profile rule used for provenance.
     pub rule_desc: String,
-    /// Extra provenance fields for scenario-specific audit notes.
-    pub extra_provenance: Vec<(&'static str, String)>,
+    /// Extra provenance fields for scenario-specific audit notes, in emission order.
+    ///
+    /// `None` is emitted as JSON `null`: the field is part of the record's schema but carries no
+    /// note for this golden.
+    pub extra_provenance: Vec<(&'static str, Option<String>)>,
 }
 
 impl Golden {
@@ -167,13 +170,33 @@ impl Golden {
     }
 
     /// Attach an extra provenance JSON string field.
+    ///
+    /// # Panics
+    /// Panics if `key` is empty or not an ASCII identifier fragment.
     #[must_use]
-    pub fn with_provenance(mut self, key: &'static str, value: impl Into<String>) -> Self {
+    pub fn with_provenance(self, key: &'static str, value: impl Into<String>) -> Self {
+        self.with_nullable_provenance(key, Some(value.into()))
+    }
+
+    /// Attach an extra provenance field that is either a JSON string or JSON `null`.
+    ///
+    /// Use this for fields every record of a family carries, where `null` means "no note recorded
+    /// for this golden" rather than leaving the key absent.
+    ///
+    /// # Panics
+    /// Panics if `key` is empty or not an ASCII identifier fragment, or if `value` is an empty
+    /// string (an empty note is ambiguous; pass `None` instead).
+    #[must_use]
+    pub fn with_nullable_provenance(mut self, key: &'static str, value: Option<String>) -> Self {
         assert!(
             !key.is_empty() && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'),
             "provenance key must be a non-empty JSON identifier fragment"
         );
-        self.extra_provenance.push((key, value.into()));
+        assert!(
+            value.as_deref().is_none_or(|text| !text.trim().is_empty()),
+            "provenance field {key} must be null rather than an empty string"
+        );
+        self.extra_provenance.push((key, value));
         self
     }
 }
