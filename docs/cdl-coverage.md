@@ -78,7 +78,10 @@ Concretely, what exists today is:
   Each carries `canonical_g36_class_path_status:
   "fragment-of-canonical-source-not-runtime-sequence"` — they are pre-flattened CXF graphs built
   from supported CDL elementary blocks, with `source-reviewed-fragment` evidence, and they make no
-  canonical runtime-sequence claim.
+  canonical runtime-sequence claim. Their Tier-A goldens are labelled
+  `sequence_derivation: "fixture-local-composition"`, because they use fixture-local inputs in
+  place of the G36 sequence's own inputs. They are not answer keys for the G36 sequences they
+  borrow from.
 
 All of them are **pre-flattened CXF at specific parameterizations**. A variant is a fixture at a
 fixed set of parameter values, not a general instantiation of the class.

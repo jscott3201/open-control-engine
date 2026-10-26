@@ -49,7 +49,12 @@ pub(crate) use cdl_recurrences::{
     initial_sample_time, latch, less_hysteretic, pre, sample_due, sample_index, sampler_output,
     timer, triggered_sampler, true_delay, true_delay_on_init, true_delay_output, unit_delay,
 };
-use provenance::{SOURCE_COMMIT, fixture_status, source_files};
+use provenance::{
+    SOURCE_COMMIT, fixture_status, frame_rate_dependence, g36_intent_divergence,
+    sequence_derivation, source_files,
+};
+
+pub(crate) use provenance::DERIVATION_FIXTURE_LOCAL;
 
 const SAT: &str = "ahu_supply_air_temp_reset";
 const ECON: &str = "ahu_economizer";
@@ -349,7 +354,16 @@ fn sequence_golden(
         .with_inputs(inputs)
         .with_provenance("source_commit", SOURCE_COMMIT)
         .with_provenance("source_files", source_files(sequence))
-        .with_provenance("fixture_status", fixture_status(sequence));
+        .with_provenance("fixture_status", fixture_status(sequence))
+        .with_provenance("sequence_derivation", sequence_derivation(sequence))
+        .with_nullable_provenance(
+            "diverges_from_g36_intent",
+            g36_intent_divergence(sequence).map(str::to_string),
+        )
+        .with_nullable_provenance(
+            "frame_rate_dependence",
+            frame_rate_dependence(sequence, signal).map(str::to_string),
+        );
     if uses_host_tick_pre_profile(sequence) {
         golden.with_provenance("execution_profile", "HostTick v1")
     } else {

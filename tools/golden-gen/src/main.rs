@@ -397,8 +397,15 @@ fn reference_columns(group: &[&Golden]) -> Vec<String> {
 
 fn provenance_source(g: &Golden) -> &'static str {
     const SHARED_KERNEL: &str = "closed-form from Buildings CDL sources; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine";
-    if uses_host_tick_pre_profile(g) {
+    // Frame-rate dependence is checked first so no later branch can drop its disclaimer.
+    if g.class_path == "G36" && provenance_field(g, "frame_rate_dependence").is_some() {
+        "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics, independent of oce-blocks; this signal follows a fixed-step discretization shared with the engine and is frame-rate dependent (see frame_rate_dependence), not an independent continuous-time re-derivation"
+    } else if uses_host_tick_pre_profile(g) {
         "HostTick v1 profile recurrence derived from fixture topology and pinned Buildings sources except CDL.Logical.Pre, which uses the documented one-transition projection; independent of oce-blocks, not a Modelica event-iteration oracle"
+    } else if g.class_path == "G36"
+        && provenance_field(g, "sequence_derivation") == Some(sequences::DERIVATION_FIXTURE_LOCAL)
+    {
+        "fixture-local composition: hand-derived from Buildings CDL elementary-block semantics over the fixture topology; not derived from, and not a reference for, any G36 sequence .mo; independent of oce-blocks"
     } else if g.class_path == "G36" {
         "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation"
     } else if matches!(g.class_path, "CDL.Reals.PID" | "CDL.Reals.PIDWithReset") {
@@ -447,6 +454,14 @@ fn provenance_source(g: &Golden) -> &'static str {
     }
 }
 
+/// Return the string value of an extra provenance field, or `None` when absent or `null`.
+fn provenance_field<'a>(g: &'a Golden, key: &str) -> Option<&'a str> {
+    g.extra_provenance
+        .iter()
+        .find(|(name, _)| *name == key)
+        .and_then(|(_, value)| value.as_deref())
+}
+
 fn uses_host_tick_pre_profile(g: &Golden) -> bool {
     g.class_path == "G36"
         && g.scenario
@@ -456,11 +471,11 @@ fn uses_host_tick_pre_profile(g: &Golden) -> bool {
 fn extra_provenance_json(g: &Golden) -> String {
     let mut out = String::new();
     for (key, value) in &g.extra_provenance {
-        out.push_str(&format!(
-            "  \"{key}\": \"{value}\",\n",
-            key = json_escape(key),
-            value = json_escape(value),
-        ));
+        let value = value.as_deref().map_or_else(
+            || "null".to_string(),
+            |text| format!("\"{}\"", json_escape(text)),
+        );
+        out.push_str(&format!("  \"{}\": {value},\n", json_escape(key)));
     }
     out
 }
