@@ -59,7 +59,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Documentation
 
 - **Atomic block firing's refusal of some CDL-legal feedback is documented as a coverage limit,
-  and the refusal now says so** (issue #347). The engine fires each block's outputs together, so
+  and the refusal now says so** (GitHub #352, issue #347). The engine fires each block's outputs together, so
   a feedback path from one output back into an input that output does not depend on is refused
   as a `block-algebraic-loop`, even though CDL §7.16 is satisfied. The refusal fails closed and
   is never mis-ordered. `docs/cdl-coverage.md` now describes the trigger and lists the classes
@@ -77,6 +77,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
   rule, composite-contract, conformance or vendored document uses an affected class. The
   reproduction fixture is the only tracked document refused this way. Scheduling such models
   remains open in issue #347.
+  The release-compatibility checker re-selects its current implementation baseline at the
+  change's source commit; policy and rows are unchanged.
 
 - **The complete export content id is documented as order-bearing, not a model identity**
   (GitHub #341, issue #338). `content_id_complete()` hashes the emitted document, which follows the
