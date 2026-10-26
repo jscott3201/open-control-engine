@@ -39,7 +39,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### CXF import and export
 
-- **A declared but unread root boundary input now warns at load.** A root `S231:hasInput`
+- **A declared but unread root boundary input now warns at load** (GitHub #346, issue #339). A root `S231:hasInput`
   declaration whose node exists but that no connection reads was left out of
   `input_definitions()` with an empty load receipt, so a host driving frames from its own point
   list learned of it only from a later unknown-input refusal. Resolution now emits a
@@ -49,9 +49,12 @@ and a gate that accepted any text would restore exactly the false assurance desc
   it does not re-export. Inputs read through a pass-through, a nested-composite boundary hop or a
   reverse-authored edge stay silent; a root input whose only route ends at a nested input nothing
   reads warns; nested composites' own interfaces, missing nodes, dual-listed input/output IRIs,
-  role aliases (already refused as `malformed-document`) and inactive conditional inputs do not. Under `deny_warnings` the warning refuses the load. No
-  checked-in G36, conformance, composite-contract or vendored fixture emits it; four synthetic test
-  documents that had dropped an input's only connection now pin the warning.
+  role aliases (already refused as `malformed-document`) and inactive conditional inputs do not.
+  Under `deny_warnings` the warning refuses the load. No checked-in G36, conformance,
+  composite-contract or vendored fixture emits it; four synthetic test documents that had dropped
+  an input's only connection now pin the warning. The release-compatibility checker re-selects
+  its current implementation baseline at the change's source commit; policy and rows are
+  unchanged.
 
 ## 0.2.0
 
