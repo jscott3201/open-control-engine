@@ -127,19 +127,29 @@ pub enum BuildError {
 
     /// The connector feedthrough graph is acyclic, but **atomic block firing** (one `emit` call
     /// produces all of a block's outputs, `01` §9) still cannot schedule the model: the block-level
-    /// *emit-before* graph has a cycle. This arises when one of a multi-output block's outputs feeds
-    /// a path back to an input the block reads when it fires but that output does not depend on —
-    /// a stateful block's state-only (cut) output, or an algebraic routing block such as
-    /// `CDL.Routing.RealExtractSignal` with partial feedthrough. There is no single position at
-    /// which the block can emit all its outputs consistently. Same remedy as a
-    /// connector-level loop. Carries the dotted block paths of one concrete cycle.
+    /// *emit-before* graph has a cycle. This arises when one of a block's outputs feeds a path back
+    /// to an input the block reads when it fires but that output does not depend on — a stateful
+    /// block's state-only (cut) output, or an algebraic routing block with partial feedthrough
+    /// (`CDL.Routing.*ExtractSignal`, `*VectorFilter`, `*VectorReplicator` with more than one
+    /// element). There is no single position at which the block can emit all its outputs
+    /// consistently.
+    ///
+    /// The model may be **CDL-legal**: CDL §7.16 is satisfied, because no connector-level
+    /// feedthrough cycle exists. This is an engine coverage limit (GitHub issue #347), refused
+    /// fail-closed rather than mis-ordered. Remedy: split the block so the fed-back signal does not
+    /// enter the block that produces the loop's output (or connect the element directly), or insert
+    /// a delay where that is semantically acceptable. Carries the dotted block paths of one
+    /// concrete cycle.
     #[error(
-        "block-granularity algebraic loop: {} block(s) form a feedthrough cycle that single-pass \
-         atomic block firing cannot schedule (a multi-output block's output feeds back into an \
-         input the block reads when it fires, although that output does not depend on that \
-         input). CDL §7.16 forbids algebraic loops. \
-         Remedy: insert a delay block (CDL.Logical.Pre, CDL.Discrete.UnitDelay) or an integrator \
-         into the loop. Cycle members: {members:?}",
+        "block-granularity algebraic loop: {} block(s) form an emit-before cycle that single-pass \
+         atomic block firing cannot schedule, although no connector-level feedthrough cycle \
+         exists. The model may be CDL-legal: the cycle arises only because each block fires all \
+         of its outputs together, so a block whose output feeds back into one of its own inputs \
+         cannot be ordered even when that output does not depend on that input. \
+         Remedy: split the block so the fed-back signal does not enter the block that produces \
+         the loop's output (e.g. a separate routing block per output, or a direct connection), \
+         or insert a delay block (CDL.Logical.Pre, CDL.Discrete.UnitDelay) into the loop where \
+         that is semantically acceptable. Cycle members: {members:?}",
         .members.len()
     )]
     BlockAlgebraicLoop {

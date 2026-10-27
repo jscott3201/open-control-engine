@@ -121,6 +121,28 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
+- **Atomic block firing's refusal of some CDL-legal feedback is documented as a coverage limit,
+  and the refusal now says so** (GitHub #352, issue #347). The engine fires each block's outputs together, so
+  a feedback path from one output back into an input that output does not depend on is refused
+  as a `block-algebraic-loop`, even though CDL §7.16 is satisfied. The refusal fails closed and
+  is never mis-ordered. `docs/cdl-coverage.md` now describes the trigger and lists the classes
+  that can hit it. From a feedthrough check of every registered class, those are the nine
+  `CDL.Routing` `*ExtractSignal`, `*VectorFilter` and `*VectorReplicator` classes with more than
+  one element; no registered stateful class has mixed feedthrough. The page also gives the
+  remedies: split the block, or insert a delay where that is acceptable. `execution-profile.md`
+  and `facade-contracts.md` link to it. The `BuildError::BlockAlgebraicLoop` display and the
+  bounded `block-algebraic-loop` receipt message no longer cite CDL §7.16. They now say that the
+  model may be CDL-legal, that the cycle exists only because a block fires all its outputs at
+  once, and that the block can be split. Codes, subjects, stages and record order are unchanged,
+  and so is the connector-level `algebraic-loop` text. The receipt's per-record bound is restated
+  as 290 fixed bytes plus two counts. A new golden pins the reproduction's receipt, and a
+  500-block extract ring pins the bound for block-granularity records. No tracked G36, Library
+  rule, composite-contract, conformance or vendored document uses an affected class. The
+  reproduction fixture is the only tracked document refused this way. Scheduling such models
+  remains open in issue #347.
+  The release-compatibility checker re-selects its current implementation baseline at the
+  change's source commit; policy and rows are unchanged.
+
 - **The complete export content id is documented as order-bearing, not a model identity**
   (GitHub #341, issue #338). `content_id_complete()` hashes the emitted document, which follows the
   authored `@graph` node order and `containsBlock` order that the composite-subset ordering
