@@ -180,6 +180,18 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
+- **Open Control Sim is no longer treated as a current or future consumer** (GitHub #361, issue
+  #359). The project is discontinued. The stability-baseline tool no longer accepts or looks for a
+  Sim checkout: `--source open-control-sim=PATH` is refused as an unsupported name, and its
+  documented command drops that line. The dated `stability-baseline-2026-08-26.json` is unchanged
+  and `--check` still reproduces it byte for byte, because the tool keeps that capture's Sim row as
+  frozen historical evidence; the doc says a later capture should not carry it. The strict-bit
+  evidence page, the strict-bits fixture README, the product contract, the complete-frame contract
+  and the host-responsibilities page no longer promise a Sim consumer, Sim adoption under M05-PR07
+  or a Sim downstream role; the product contract records this as editorial revision 16, and its
+  traceability checker accepts that revision. Historical statements of what the Sim inventory
+  showed are kept. None of the edited files is a bound strict-bit evidence source, so no native
+  re-capture is needed.
 - **Twelve classes, not nine, can trigger the atomic-firing refusal of CDL-legal feedback**
   (GitHub #358, issue #347). The coverage table from GitHub #352 listed only the nine
   `CDL.Routing` `*ExtractSignal`, `*VectorFilter` and `*VectorReplicator` classes. Three more have
