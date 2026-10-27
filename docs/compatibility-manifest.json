@@ -90,5 +90,5 @@
   ],
   "state": {"execution_abi_revision":2,"format_revision":2,"placements":["Portable","TargetBound(arch,os)"]},
   "replay": {"exactness":"ExactBits","format_revision":1},
-  "release_compatibility": {"implementation_baseline":"c9387710e3233cb38f116a73668afe5c68663719","implementation_sha256":"0288f47e56fefcbc0d64ea9158fd23b7faefbc905247a2945bd928ea1652f91a","matrix":"docs/release-compatibility.json","policy":"fail-closed-no-n-minus-one","strict_bit_class":"retained-21-signal-linux-x86_64-aarch64-debug-release-only"}
+  "release_compatibility": {"implementation_baseline":"e2b2923074faed8c8b1723814561ee6fc0a4bb42","implementation_sha256":"998badded3399ce9af442527196f5d93ed44c0f0b84106a9f9ac8c0916b3026e","matrix":"docs/release-compatibility.json","policy":"fail-closed-no-n-minus-one","strict_bit_class":"retained-21-signal-linux-x86_64-aarch64-debug-release-only"}
 }

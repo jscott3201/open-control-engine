@@ -248,7 +248,11 @@ refused separately, whatever the policy: at load (`non-finite-parameter`) and by
 still propagates. The policy is host configuration outside run state: it is in no snapshot,
 checkpoint or replay record, and it never changes how an accepted frame evolves state. No
 equipment policy is introduced for input values. A NaN or infinite `min`, `max` or `nominal` is
-refused at load (`non-finite-bound`), so a NaN bound can no longer silently empty a domain. Finite
+refused at load (`non-finite-bound`), so a NaN bound can no longer silently empty a domain. So is a
+crossed range, `min > max` (`crossed-bounds`, issue #378), whether declared on one node or formed by
+a boundary input's declaration together with the child inputs it drives, or by §7.10 propagation;
+`min == max` stays legal and admits exactly that value (IEEE-equal signed zeros included). An
+undeclared Integer bound counts as the CDL Integer limit, which the frame also applies. Finite
 equal time is valid. Time magnitude is bounded by `MAX_FRAME_TIME_MAGNITUDE`: any single
 difference of two accepted times is at most `f64::MAX / 2`, and a running sum of rounded steps (an
 elapsed-time accumulator or unit-slope integrator) stays finite for fewer than about 3e15

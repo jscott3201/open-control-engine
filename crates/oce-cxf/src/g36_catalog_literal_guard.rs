@@ -28,6 +28,9 @@ pub(super) fn validate_g36_literals_in_fixture(
         if let Some(value) = &node.max {
             validate_value(value, fixture, enum_literals, constant_packages, errors);
         }
+        if let Some(value) = &node.nominal {
+            validate_value(value, fixture, enum_literals, constant_packages, errors);
+        }
     }
 }
 

@@ -295,7 +295,18 @@ state snapshot cannot reintroduce a non-finite value: snapshots are compared bit
 loaded, already-checked parameters and never restore parameter values.
 
 No registered class takes a non-finite parameter, so there is no opt-out. The retained
-`Modelica.Constants.inf` alias is `f64::MAX`, which is finite and accepted. Finite extremes, signed
+`Modelica.Constants.inf` alias is `f64::MAX`, which is finite and accepted. Arithmetic on it is
+ordinary finite arithmetic, not Modelica's IEEE infinity (issue #374): `inf/inf` is `1`, `inf-inf`
+is `0`, `inf+1` is `f64::MAX`, and only an overflow such as `inf*2` produces a non-finite value that
+the load refuses. Use the alias for comparison or pass-through, not as an arithmetic operand.
+
+`integer(x)` refuses a Real whose floor lies outside the Integer range `[-2^63, 2^63)` (issue #374)
+instead of saturating: `integer(1e300)` used to load as `i64::MAX` with no diagnostic. The load
+fails with `grounding-failed` on the binding's node, for parameters and connector bounds alike;
+`integer(-9223372036854775808.0)` is still exactly `i64::MIN`. The runtime
+`CDL.Conversions.RealToInteger` block deliberately keeps its saturating conversion (NaN → 0, ±inf →
+`i64::MAX`/`i64::MIN`): a running control loop must emit an output every tick, whereas a load can
+refuse. A host that cannot tolerate saturation at run time keeps the block's Real input in range. Finite extremes, signed
 zero and subnormals are accepted unless a class rule bounds them. The gate covers parameters only:
 a non-finite input *signal* is still the host's to keep out, and it propagates through the blocks
 under their documented IEEE behavior.

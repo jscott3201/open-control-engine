@@ -84,6 +84,43 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### CXF import and export
 
+- **Out-of-range `integer()` bindings, crossed bounds and `S231:nominal` no longer load
+  silently** (GitHub #384, issues #374, #378, #379). Three load-time values that were wrong but
+  plausible are now refused or carried through:
+  - `integer(x)` for a Real whose floor lies outside `[-2^63, 2^63)` — `NaN` and `±inf` included —
+    refuses with `ExprError::DomainError` in every evaluation mode instead of saturating
+    (`integer(1e300)` loaded as `i64::MAX`, `integer(NaN)` as `0`). At load that is
+    `grounding-failed` on the binding's node, for parameters and connector bounds alike.
+    `integer(-9223372036854775808.0)` is still exactly `i64::MIN`; `2^63` itself refuses. The
+    runtime `CDL.Conversions.RealToInteger` block keeps its pinned saturating conversion on
+    purpose: a tick must emit an output. No other float-to-Integer conversion in `oce-expr`
+    saturates (`fill`, `size`, `cat` and subscripts take Integer operands only; range counts are
+    capped before conversion). The `Modelica.Constants.inf` alias stays `f64::MAX`, now documented
+    and pinned as ordinary finite arithmetic (`inf/inf` = 1, `inf-inf` = 0, `inf+1` = `f64::MAX`);
+    overflowing it is still refused at load.
+  - A bound pair with `min > max` on a connector, a boundary input or a boundary output
+    declaration — which loaded and then refused every frame with `InputDomain` — is refused with
+    the new `DiagCode::CrossedBounds` (`crossed-bounds`) error at the attribute-unification stage,
+    beside `non-finite-bound`. So is a boundary input whose declaration and driven child inputs
+    combine to an empty range, and a range that §7.10 propagation would cross (the propagation is
+    rolled back) and is reported once per cluster, on its source output. This tightens acceptance:
+    internal connectors whose one-sided bounds propagate into an empty range (one member's
+    `min = 5`, another's `max = 3`) used to load and run, because the frame enforces bounds only on
+    boundary inputs; they are now refused. `min == max` stays legal and admits exactly that value;
+    IEEE-equal signed zeros are equal, not crossed; a non-finite pair reports only
+    `non-finite-bound`. An undeclared
+    Integer bound counts as the CDL Integer limit, so a declared Integer `min` above
+    `2_147_483_647` alone is crossed.
+  - `S231:nominal` is parsed onto `RealAttrs::nominal` (a modeled `oce_cxf::Node::nominal` field)
+    instead of sitting unread in the pass-through map, so the deep gate refuses a non-finite one
+    (`non-finite-bound`) and export emits a finite one as a bare number, round-tripping it; before,
+    import ignored it with no diagnostic and export dropped it. It is still not unified (R13.4),
+    never bounds input values, and is a `malformed-document` error on a non-Real connector.
+
+  No tracked fixture carries crossed bounds, an `integer()` call or `S231:nominal`, and no
+  fixture's Integer bound exceeds the i32 range, so no fixture changes acceptance; the import
+  corpus is unchanged. The release-compatibility checker re-selects its current implementation
+  baseline at the change's source commit.
 - **Five hostile CXF load amplifications are now bounded with typed refusals, and an over-large
   state window refuses instead of panicking** (GitHub #381, issue #365). Bounded per load:
   `containsBlock` lowering work (each instance once), inherited-scope memory (linear), array

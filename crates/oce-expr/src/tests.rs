@@ -504,12 +504,105 @@ fn mod_on_extreme_operands_does_not_spuriously_overflow() {
     assert!(r.bit_eq(&Value::Integer(i64::MIN % 3)), "got {r:?}");
 }
 
+/// The refusal every out-of-range `integer()` argument reports (issue #374).
+const INTEGER_RANGE_REFUSAL: ExprError =
+    ExprError::DomainError("integer() argument is outside the Integer range [-2^63, 2^63)");
+
 #[test]
-fn integer_cast_saturates_without_panic() {
-    let hi = run_in("integer(x)", &[("x", Value::Real(1e300))]);
-    assert!(hi.bit_eq(&Value::Integer(i64::MAX)), "got {hi:?}");
-    let lo = run_in("integer(x)", &[("x", Value::Real(-1e300))]);
-    assert!(lo.bit_eq(&Value::Integer(i64::MIN)), "got {lo:?}");
+fn integer_accepts_every_argument_whose_floor_is_in_the_integer_range() {
+    let scope = &[
+        ("lowest", Value::Real(-9_223_372_036_854_775_808.0)),
+        ("highest", Value::Real(9_223_372_036_854_774_784.0)),
+        ("tinyNeg", Value::Real(-f64::from_bits(1))),
+        ("negZero", Value::Real(-0.0)),
+        ("maxInt", Value::Integer(i64::MAX)),
+        ("minInt", Value::Integer(i64::MIN)),
+    ];
+    for (text, expected) in [
+        // -2^63 is exactly i64::MIN: the inclusive lower boundary.
+        ("integer(lowest)", i64::MIN),
+        ("integer(-9223372036854775808.0)", i64::MIN),
+        ("integer(-9.2233720368547758e18)", i64::MIN),
+        // 2^63 - 1024 is the largest f64 below 2^63: the last representable in-range Real.
+        ("integer(highest)", 9_223_372_036_854_774_784),
+        ("integer(9223372036854774784.0)", 9_223_372_036_854_774_784),
+        // floor, not truncation: the sign decides the direction.
+        ("integer(2.5)", 2),
+        ("integer(-2.5)", -3),
+        ("integer(tinyNeg)", -1),
+        ("integer(5e-324)", 0),
+        ("integer(negZero)", 0),
+        // An Integer argument passes through exactly, at both extremes.
+        ("integer(maxInt)", i64::MAX),
+        ("integer(minInt)", i64::MIN),
+    ] {
+        let got = run_in(text, scope);
+        assert!(got.bit_eq(&Value::Integer(expected)), "`{text}`: {got:?}");
+    }
+}
+
+#[test]
+fn integer_refuses_every_argument_outside_the_integer_range() {
+    let scope = TestScope::new(&[
+        ("pastTop", Value::Real(9_223_372_036_854_775_808.0)),
+        ("pastBottom", Value::Real(-9_223_372_036_854_777_856.0)),
+        ("huge", Value::Real(1e300)),
+        ("nanK", Value::Real(f64::NAN)),
+        ("infK", Value::Real(f64::INFINITY)),
+        ("negInfK", Value::Real(f64::NEG_INFINITY)),
+    ]);
+    for text in [
+        // 2^63 itself — every spelling of it — is the first Real past i64::MAX.
+        "integer(pastTop)",
+        "integer(9.2233720368547758e18)",
+        "integer(9223372036854775807.0)",
+        "integer(9223372036854775808.0)",
+        // The first f64 below -2^63 (spacing there is 2048).
+        "integer(pastBottom)",
+        "integer(-9223372036854777856.0)",
+        // The reported repros and their mirror images.
+        "integer(1e300)",
+        "integer(-1e300)",
+        "integer(9.3e18)",
+        "integer(-9.3e18)",
+        "integer(huge)",
+        "integer(1e18 * 10)",
+        // The Modelica.Constants.inf alias is f64::MAX, far outside the Integer range.
+        "integer(inf)",
+        "integer(-Modelica.Constants.inf)",
+        // Non-finite arguments under the default (non-strict) evaluator no longer saturate or
+        // map NaN to 0.
+        "integer(nanK)",
+        "integer(infK)",
+        "integer(negInfK)",
+        "integer(1/0)",
+        "integer(0/0)",
+        // The refusal propagates out of every enclosing construct.
+        "{1, integer(1e300)}",
+        "{integer(x) for x in {1.0, 1e300}}",
+        "fill(0, integer(1e300))",
+        "1 + integer(-1e300)",
+    ] {
+        let error = eval_str(text, &scope).expect_err(&format!("`{text}` must refuse"));
+        assert_eq!(error, INTEGER_RANGE_REFUSAL, "`{text}`");
+        // The strict load-time evaluator reports the same refusal for finite arguments, and
+        // refuses a non-finite one at the producing node first.
+        let strict = crate::eval_str_finite(text, &scope).expect_err(&format!("`{text}`"));
+        assert!(
+            strict == INTEGER_RANGE_REFUSAL || matches!(strict, ExprError::NonFinite { .. }),
+            "`{text}` strict: {strict:?}"
+        );
+    }
+}
+
+#[test]
+fn integer_range_refusal_is_deterministic() {
+    for text in ["integer(9.2233720368547758e18)", "integer(-1e300)"] {
+        let first = run(text).unwrap_err();
+        let second = run(text).unwrap_err();
+        assert_eq!(first, second, "`{text}`");
+        assert_eq!(first.to_string(), second.to_string(), "`{text}`");
+    }
 }
 
 #[test]

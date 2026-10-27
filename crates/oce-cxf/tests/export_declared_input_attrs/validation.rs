@@ -488,15 +488,16 @@ fn host_sidecar_attrs_obey_the_existing_canonical_export_subset() {
     let Attrs::Real(attrs) = &mut declaration_mut(&mut unsupported, "uExt").attrs else {
         panic!("uExt has Real attrs");
     };
-    attrs.nominal = Some(1.0);
+    // A finite nominal is in the export subset since issue #379; a non-finite one is not.
+    attrs.nominal = Some(f64::INFINITY);
     attrs.unbounded = Some(true);
     assert_eq!(
         export_diagnostics(&unsupported),
         vec![
             Diagnostic::error(
                 DiagCode::ExportUnsupported,
-                "export subset: connector carries a non-default §7.4.1 nominal attribute, which \
-                 is outside the canonical (bare-scalar) export subset",
+                "export subset: connector carries a non-finite §7.4.1 nominal, which is outside \
+                 the canonical (bare-scalar) export subset",
             )
             .with_subject("http://example.org#DeclaredInputAttrs.uExt".to_owned()),
             Diagnostic::error(

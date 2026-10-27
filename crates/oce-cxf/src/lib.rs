@@ -204,7 +204,7 @@ pub fn import_cxf(
 ///   (subject identifies the offending block, connector owner, or declared boundary node) for
 ///   anything outside the subset that is not an ordinary enum deferral: non-finite parameters,
 ///   connectors or boundary-input sidecars
-///   carrying `nominal`/`unbounded` or non-finite `min`/`max` bounds (outside the canonical
+///   carrying `unbounded` or a non-finite `min`/`max`/`nominal` (outside the canonical
 ///   subset), String-typed connectors, blocks without an `instance_iri`, external inputs
 ///   without a recorded boundary IRI, the same connector listed more than once in
 ///   `external_inputs` (re-import deduplicates the repeat, so it cannot round-trip), an input

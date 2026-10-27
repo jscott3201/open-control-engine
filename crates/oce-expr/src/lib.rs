@@ -219,6 +219,14 @@ pub enum ExprAst {
 /// Engine retains it as a closed-world `Modelica.Constants.inf` alias for compatibility with
 /// existing expression bindings, and pins it to the largest finite `f64`.
 ///
+/// Arithmetic on the alias is therefore ordinary **finite** arithmetic on `f64::MAX`, not
+/// Modelica's IEEE-infinity arithmetic (issue #374): `inf/inf` is `1.0`, `inf-inf` is `0.0`,
+/// `inf+1` is `f64::MAX` (the `1` is below half an ulp), `-inf` is `f64::MIN`, `inf > x` holds for
+/// every other finite `x`, and `integer(inf)` is outside the Integer range and refuses. Only a
+/// result that overflows `f64` (`inf*2`, `inf+inf`) becomes IEEE `+∞`, which the load-time
+/// strict-finite evaluator ([`eval_finite`]) refuses. A binding that needs "unbounded" should
+/// use the alias for comparison or pass-through, not as an arithmetic operand.
+///
 /// Note: this `inf` is distinct from an IEEE `±∞` literal. The spelled-out `-Inf`/`+Inf` Real
 /// literals of §6.1 are a CXF typed-value serialization concern parsed by `oce-cxf`, not part of
 /// this expression grammar.

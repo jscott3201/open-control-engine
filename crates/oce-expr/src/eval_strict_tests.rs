@@ -130,10 +130,11 @@ fn default_evaluation_keeps_ieee_propagation_unchanged() {
         };
         assert!(check(v), "`{text}`: {v}");
     }
-    assert!(matches!(
-        eval_str("integer(1/0)", &nan_scope()),
-        Ok(EvalResult::Scalar(Value::Integer(_)))
-    ));
+    // `integer()` of a non-finite argument is outside the Integer range in every mode (#374).
+    assert_eq!(
+        eval_str("integer(1/0)", &nan_scope()).unwrap_err(),
+        ExprError::DomainError("integer() argument is outside the Integer range [-2^63, 2^63)")
+    );
     assert!(matches!(
         eval_str("nanK > 0", &nan_scope()),
         Ok(EvalResult::Scalar(Value::Boolean(false)))
@@ -144,5 +145,74 @@ fn default_evaluation_keeps_ieee_propagation_unchanged() {
 fn strict_refusal_is_deterministic() {
     for text in ["integer(1/0)", "sum({1e308, 1e308})", "nanK > 0"] {
         assert_eq!(refused(text), refused(text), "`{text}`");
+    }
+}
+
+#[test]
+fn inf_alias_arithmetic_is_ordinary_finite_arithmetic() {
+    // Issue #374: the alias is f64::MAX, so these are finite results, not Modelica's IEEE NaN/inf.
+    // Both entry points agree, and every spelling of the alias behaves the same.
+    for alias in ["inf", "Modelica.Constants.inf"] {
+        for (template, expected) in [
+            ("A/A", 1.0),
+            ("A-A", 0.0),
+            ("A+1", f64::MAX),
+            ("A-1", f64::MAX),
+            ("A*1", f64::MAX),
+            ("A*0.5", f64::MAX * 0.5),
+            ("A/2", f64::MAX / 2.0),
+            ("-A", f64::MIN),
+            ("-A + A", 0.0),
+            ("A*0", 0.0),
+            ("max(A, 1e308)", f64::MAX),
+            ("min(-A, -1e308)", f64::MIN),
+            ("abs(-A)", f64::MAX),
+        ] {
+            let text = template.replace('A', alias);
+            for (mode, result) in [
+                ("strict", eval_str_finite(&text, &nan_scope())),
+                ("default", eval_str(&text, &nan_scope())),
+            ] {
+                let Ok(EvalResult::Scalar(value)) = result else {
+                    panic!("`{text}` ({mode}) must evaluate: {result:?}")
+                };
+                assert!(
+                    value.bit_eq(&Value::Real(expected)),
+                    "`{text}` ({mode}): {value:?}"
+                );
+            }
+        }
+        // Comparison and pass-through behave as "largest Real".
+        for (template, expected) in [
+            ("A > 1e308", true),
+            ("A == A", true),
+            ("-A < -1e308", true),
+            ("A >= 1.7976931348623157e308", true),
+        ] {
+            let text = template.replace('A', alias);
+            assert!(
+                matches!(
+                    eval_str_finite(&text, &nan_scope()),
+                    Ok(EvalResult::Scalar(Value::Boolean(b))) if b == expected
+                ),
+                "`{text}`"
+            );
+        }
+        // Overflowing it is refused at load; truncating it to an Integer is refused everywhere.
+        for (template, expected) in [
+            ("A*2", ExprError::NonFinite { value: "inf" }),
+            ("A+A", ExprError::NonFinite { value: "inf" }),
+            ("-A-A", ExprError::NonFinite { value: "-inf" }),
+            ("A/1e-300", ExprError::NonFinite { value: "inf" }),
+            (
+                "integer(A)",
+                ExprError::DomainError(
+                    "integer() argument is outside the Integer range [-2^63, 2^63)",
+                ),
+            ),
+        ] {
+            let text = template.replace('A', alias);
+            assert_eq!(refused(&text), expected, "`{text}`");
+        }
     }
 }

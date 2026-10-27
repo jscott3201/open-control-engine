@@ -33,7 +33,10 @@
 //!    `should`-warning (R13.3); `nominal`/`unbounded` are the only attributes not unified (R13.4).
 //! 7. **Finite numeric attributes**: every Real connector and boundary declaration `min`, `max`
 //!    and `nominal` is finite ([`oce_diag::DiagCode::NonFiniteBound`]); checked before
-//!    unification, which would otherwise compare and propagate a `NaN` bound.
+//!    unification, which would otherwise compare and propagate a `NaN` bound. In the same pass,
+//!    every bound pair must be uncrossed (`min <= max`, [`oce_diag::DiagCode::CrossedBounds`]),
+//!    on each connector and declaration and across a boundary input and the child inputs it
+//!    drives; a crossing created by propagation is refused after unification (issue #378).
 //! 8. **Parameter finiteness** (issue #362): every Real parameter value on every block, including
 //!    each flattened element of a Real array parameter, must be finite — `NaN`/`±inf` is a
 //!    [`oce_diag::DiagCode::NonFiniteParameter`] error regardless of class. It suppresses **all**
@@ -104,6 +107,7 @@ pub fn validate(model: &ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> 
     rules::check_arena_ids(model, &mut diags);
     rules::check_boundary_outputs(model, &mut diags);
     rules::check_finite_bounds(model, &mut diags);
+    rules::check_crossed_bounds(model, &mut diags);
     rules::check_single_assignment(model, &mut diags);
     rules::check_connections(model, &mut diags);
     rules::check_port_types(model, &mut diags);
@@ -115,7 +119,10 @@ pub fn validate(model: &ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> 
 /// one-sided unit, quantity, or bound to its unset connector and boundary-output peers (R13.2).
 ///
 /// A non-finite `min`, `max` or `nominal` is refused first, as
-/// [`oce_diag::DiagCode::NonFiniteBound`], and nothing is unified or propagated.
+/// [`oce_diag::DiagCode::NonFiniteBound`], and so is a crossed `min > max`, as
+/// [`oce_diag::DiagCode::CrossedBounds`]; then nothing is unified or propagated. A crossing that
+/// propagation itself creates (one member's `min` meeting another's `max`) is refused after
+/// propagation, and the propagation is rolled back.
 ///
 /// Returns the `should`-level warnings (e.g. divergent `displayUnit`, R13.3) on success, or a
 /// [`ValidationError`] of unit, quantity, or bound conflicts (R13.1) on failure. Order-independent (a
@@ -123,13 +130,15 @@ pub fn validate(model: &ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> 
 /// connector or boundary-output attribute propagation remains applied.
 ///
 /// # Errors
-/// Returns [`ValidationError`] if any Real attribute is non-finite, or if any cluster declares
+/// Returns [`ValidationError`] if any Real attribute is non-finite, if any bound pair is crossed,
+/// or if any cluster declares
 /// conflicting unit, quantity, or bound values (R13.1).
 pub fn unify_attributes(model: &mut ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> {
     let mut diags = Vec::new();
     // Unification compares and propagates bounds, so a non-finite one is refused first: it is
     // the root cause, and a NaN bound would otherwise also surface as a bound mismatch.
     rules::check_finite_bounds(model, &mut diags);
+    rules::check_crossed_bounds(model, &mut diags);
     if diags.is_empty() {
         rules::unify_clusters(model, &mut diags);
     }

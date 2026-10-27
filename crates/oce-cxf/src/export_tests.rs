@@ -1,7 +1,7 @@
 //! Tests for the minimal exporter's acceptance and rejection surfaces: an imported
-//! `minimal_loop` and `connector_attrs` fixture both export cleanly (the five in-subset §7.4.1
+//! `minimal_loop` and `connector_attrs` fixture both export cleanly (the in-subset §7.4.1
 //! attrs emitted under the Bare-Scalar Canonical shape), while everything outside the subset —
-//! an empty graph, `nominal`/`unbounded`/non-finite bounds, enum parameters, IRI-less blocks,
+//! an empty graph, `unbounded`/non-finite bounds and nominals, enum parameters, IRI-less blocks,
 //! non-finite Real parameters — is a typed `ExportUnsupported` rejection (subject = the owning
 //! block's `instance_iri`), never a panic, and identical across repeated calls.
 
@@ -102,7 +102,7 @@ fn empty_model_graph_is_rejected_without_a_subject() {
 
 #[test]
 fn declared_connector_attrs_export_cleanly_under_the_bare_scalar_canonical_shape() {
-    // R6: the five in-subset §7.4.1 attrs on authored output `A.con.y` are EMITTED, not
+    // R6: the in-subset §7.4.1 attrs on authored output `A.con.y` are EMITTED, not
     // rejected. The full RT-2 render fixpoint (`render(import(export(G))) == render(G)`, all five
     // BSC `RealAttrs` fields) lives in `tests/export_roundtrip.rs` — `render()` is not reachable
     // from this `src/` unit-test module. Here we assert the unit-level acceptance: the export is
@@ -400,27 +400,25 @@ fn hand_built_attr_bearing_connector_exports_under_the_bare_scalar_canonical_sha
 const HAND_CON_SUBJECT: &str = "http://example.org#Hand.con";
 
 #[test]
-fn nominal_attr_on_real_connector_is_rejected_with_the_owning_block_subject() {
-    // Removal-mutation pin: delete the `a.nominal.is_some()` check in `classify_attrs` → the
-    // graph is accepted (nominal is silently dropped) → `rejection()` panics on `Ok`. The
-    // importer hardcodes `nominal: None`, so any `Some` is outside the canonical subset. A Real
-    // OUTPUT connector so the subject is the OWNING BLOCK's `instance_iri`.
-    let mut graph = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
-    graph.connectors[0] = Connector::new(ConnectorId(0), BlockId(0), Dir::Out, ValueType::Real, 0)
-        .with_attrs(Attrs::Real(RealAttrs {
-            nominal: Some(1.0),
+fn non_finite_nominal_is_rejected_with_the_owning_block_subject() {
+    // Since issue #379 a finite nominal is in the export subset (its emission is pinned in
+    // `tests/resolve_nominal_attribute.rs`); a non-finite one would emit JSON `null`. A Real
+    // OUTPUT connector, so the subject is the owning block.
+    for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        let mut graph = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
+        graph.connectors[0].attrs = Attrs::Real(RealAttrs {
+            nominal: Some(bad),
             ..RealAttrs::default()
-        }))
-        .expect("Real attrs on a Real connector");
-    let diags = rejection(&graph);
-    assert_eq!(diags.len(), 1, "exactly one offender: {diags:?}");
-    assert_eq!(diags[0].code, DiagCode::ExportUnsupported);
-    assert_eq!(diags[0].subject.as_deref(), Some(HAND_CON_SUBJECT));
-    assert_eq!(
-        diags[0].message,
-        "export subset: connector carries a non-default §7.4.1 nominal attribute, \
-         which is outside the canonical (bare-scalar) export subset"
-    );
+        });
+        let diags = rejection(&graph);
+        assert_eq!(diags.len(), 1, "exactly one offender: {diags:?}");
+        assert_eq!(diags[0].subject.as_deref(), Some(HAND_CON_SUBJECT));
+        assert_eq!(
+            diags[0].message,
+            "export subset: connector carries a non-finite §7.4.1 nominal, \
+             which is outside the canonical (bare-scalar) export subset"
+        );
+    }
 }
 
 #[test]

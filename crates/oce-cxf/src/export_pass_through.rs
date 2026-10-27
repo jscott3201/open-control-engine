@@ -123,6 +123,7 @@ fn has_elided_input_attrs(input: &Connector) -> bool {
                 || attrs.display_unit.is_some()
                 || attrs.min.is_some_and(f64::is_finite)
                 || attrs.max.is_some_and(f64::is_finite)
+                || attrs.nominal.is_some_and(f64::is_finite)
         }
         Attrs::Integer(attrs) => attrs.min.is_some() || attrs.max.is_some(),
         Attrs::Boolean(_) | Attrs::String(_) | Attrs::Enum(_) => false,
