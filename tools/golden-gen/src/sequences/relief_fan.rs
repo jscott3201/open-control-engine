@@ -98,7 +98,8 @@ fn relief_fan_trace(
     let mut fan_status = Vec::with_capacity(time.len());
     let mut fan_speed = Vec::with_capacity(time.len());
 
-    for ((&t, &pressure), &supply_fan_on) in time.iter().zip(building_pressure).zip(supply_fan_status)
+    for ((&t, &pressure), &supply_fan_on) in
+        time.iter().zip(building_pressure).zip(supply_fan_status)
     {
         let average = moving_average.output(t, pressure);
         let controller = (average / DP_BUI_SET - 1.0).clamp(0.0, 1.0);

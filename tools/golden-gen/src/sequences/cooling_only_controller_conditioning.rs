@@ -1,10 +1,8 @@
 //! Conditioning, ventilation, and zone-state behavior for CoolingOnly.Controller.
 
-use super::{
-    buildings_line, clamp, greater_hysteretic, hysteresis, less_hysteretic,
-};
-use super::cooling_only_controller_timing::{TimerState, TrueDelayState, UnitDelayState};
 use super::cooling_only_controller_timing::SamplerState;
+use super::cooling_only_controller_timing::{TimerState, TrueDelayState, UnitDelayState};
+use super::{buildings_line, clamp, greater_hysteretic, hysteresis, less_hysteretic};
 
 const SAMPLE_PERIOD: f64 = 120.0;
 const TEMPERATURE_HYSTERESIS: f64 = 0.25;
@@ -60,12 +58,12 @@ impl TimeSuppressionState {
         setpoint_temperature: f64,
         zone_temperature: f64,
     ) -> bool {
-        let sampled_setpoint =
-            self.setpoint_sampler
-                .sample(t, setpoint_temperature, SAMPLE_PERIOD);
-        let prior_sample =
-            self.previous_sample
-                .sample(t, sampled_setpoint, SAMPLE_PERIOD);
+        let sampled_setpoint = self
+            .setpoint_sampler
+            .sample(t, setpoint_temperature, SAMPLE_PERIOD);
+        let prior_sample = self
+            .previous_sample
+            .sample(t, sampled_setpoint, SAMPLE_PERIOD);
         let startup_complete = self.startup_delay.output(t, true, SAMPLE_PERIOD, true);
         let change_magnitude = if startup_complete {
             (sampled_setpoint - prior_sample).abs()
@@ -119,10 +117,8 @@ impl LoopPiState {
         self.integrator = if trigger && !self.previous_trigger {
             -proportional
         } else {
-            let anti_windup =
-                (unlimited - limited) / (CONTROL_GAIN * ANTI_WINDUP_NI);
-            self.integrator
-                + (CONTROL_GAIN / CONTROL_INTEGRAL_TIME) * (error - anti_windup) * dt
+            let anti_windup = (unlimited - limited) / (CONTROL_GAIN * ANTI_WINDUP_NI);
+            self.integrator + (CONTROL_GAIN / CONTROL_INTEGRAL_TIME) * (error - anti_windup) * dt
         };
         self.previous_time = Some(t);
         self.previous_trigger = trigger;
@@ -195,12 +191,12 @@ impl ControlLoopsState {
         )[0];
         self.cooling_near_zero = cooling_near_zero;
         self.heating_near_zero = heating_near_zero;
-        let cooling_delayed =
-            self.cooling_delay
-                .output(t, cooling_near_zero, CONTROL_DELAY, false);
-        let heating_delayed =
-            self.heating_delay
-                .output(t, heating_near_zero, CONTROL_DELAY, false);
+        let cooling_delayed = self
+            .cooling_delay
+            .output(t, cooling_near_zero, CONTROL_DELAY, false);
+        let heating_delayed = self
+            .heating_delay
+            .output(t, heating_near_zero, CONTROL_DELAY, false);
 
         ControlLoopOutput {
             cooling: cooling_raw
@@ -272,13 +268,7 @@ impl SetpointsState {
             DESIGN_COOLING_MAXIMUM_FLOW,
             corrected_co2,
         );
-        let population = buildings_line(
-            0.0,
-            0.0,
-            1.0,
-            POPULATION_BREATHING_FLOW,
-            corrected_co2,
-        );
+        let population = buildings_line(0.0, 0.0, 1.0, POPULATION_BREATHING_FLOW, corrected_co2);
 
         // permit_occStandby=true makes the unoccupied multiplier exactly zero.
         let not_occupied = !input.occupancy_status;
@@ -288,11 +278,7 @@ impl SetpointsState {
         } else {
             AREA_BREATHING_FLOW
         };
-        let occupied_minimum = if not_occupied {
-            0.0
-        } else {
-            occupied_minimum
-        };
+        let occupied_minimum = if not_occupied { 0.0 } else { occupied_minimum };
         let population = if override_to_zero { 0.0 } else { population };
         let area = if override_to_zero { 0.0 } else { area };
         let occupied_minimum = if override_to_zero {
@@ -322,10 +308,7 @@ pub(super) struct ActiveAirflowOutput {
 }
 
 /// Apply the occupied/cooldown/setup gates from ActiveAirFlow.
-pub(super) fn active_airflow(
-    operating_mode: i64,
-    occupied_minimum: f64,
-) -> ActiveAirflowOutput {
+pub(super) fn active_airflow(operating_mode: i64, occupied_minimum: f64) -> ActiveAirflowOutput {
     ActiveAirflowOutput {
         cooling_maximum: if matches!(operating_mode, 1..=3) {
             DESIGN_COOLING_MAXIMUM_FLOW

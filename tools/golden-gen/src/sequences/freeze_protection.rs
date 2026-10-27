@@ -162,10 +162,7 @@ fn freeze_protection_inputs(rows: &[Inputs]) -> Vec<InputSeries> {
             "supply_air_temperature",
             rows.iter().map(|row| row.supply_air_temperature),
         ),
-        input_b(
-            "software_reset",
-            rows.iter().map(|row| row.software_reset),
-        ),
+        input_b("software_reset", rows.iter().map(|row| row.software_reset)),
         input_b(
             "supply_fan_status_input",
             rows.iter().map(|row| row.supply_fan_status),
@@ -265,11 +262,7 @@ fn freeze_protection_trace(time: &[f64], input_row: fn(f64) -> Inputs) -> Trace 
             heating_stage_1
         };
         let alarm_level = if lat1_y { 2 } else { alarm_stage_2 };
-        let minimum_outdoor_damper = if lat1_y {
-            0.0
-        } else {
-            minimum_outdoor_stage_2
-        };
+        let minimum_outdoor_damper = if lat1_y { 0.0 } else { minimum_outdoor_stage_2 };
         let return_damper = if lat1_y { 0.0 } else { return_stage_2 };
         let supply_fan_status = row.supply_fan_status && !lat1_y;
         let freeze_stage = if lat1_y {
@@ -333,12 +326,7 @@ fn samples(signal: &str, trace: &Trace) -> Vec<crate::oracle::Sample> {
             .copied()
             .map(b)
             .collect(),
-        "return_damper_command" => trace
-            .return_damper_command
-            .iter()
-            .copied()
-            .map(r)
-            .collect(),
+        "return_damper_command" => trace.return_damper_command.iter().copied().map(r).collect(),
         "outdoor_damper_command" => trace
             .outdoor_damper_command
             .iter()

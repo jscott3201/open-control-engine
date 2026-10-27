@@ -43,7 +43,7 @@ struct LatchState {
     prev_set: bool,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 struct ProofState {
     measured_true: DelayState,
     measured_false: DelayState,
@@ -53,21 +53,6 @@ struct ProofState {
     prev_valid_equal: bool,
     loc_fal: LatchState,
     loc_tru: LatchState,
-}
-
-impl Default for ProofState {
-    fn default() -> Self {
-        Self {
-            measured_true: DelayState::default(),
-            measured_false: DelayState::default(),
-            setpoint_true: DelayState::default(),
-            setpoint_false: DelayState::default(),
-            invalid_timer: TimerState::default(),
-            prev_valid_equal: false,
-            loc_fal: LatchState::default(),
-            loc_tru: LatchState::default(),
-        }
-    }
 }
 
 /// Build all `CDL.Logical.Proof` goldens.
@@ -278,9 +263,7 @@ fn true_delay_output_and_timer(
 }
 
 fn timer_elapsed(state: &TimerState, t: f64, u: bool) -> f64 {
-    if !u {
-        0.0
-    } else if state.prev_t.is_none() || !state.prev_u {
+    if !u || state.prev_t.is_none() || !state.prev_u {
         0.0
     } else {
         t - state.entry_time

@@ -136,14 +136,7 @@ pub fn goldens() -> Vec<Golden> {
     out
 }
 
-fn real_pulse_y(
-    t: f64,
-    amplitude: f64,
-    width: f64,
-    period: f64,
-    shift: f64,
-    offset: f64,
-) -> f64 {
+fn real_pulse_y(t: f64, amplitude: f64, width: f64, period: f64, shift: f64, offset: f64) -> f64 {
     if logical_pulse_y(t, width, period, shift) {
         offset + amplitude
     } else {

@@ -31,9 +31,7 @@ const OCCUPIED_MINIMUM_FLOW: [f64; 14] = [
 /// minimum flow in occupied and non-occupied modes so the occupied gate is falsifiable.
 pub(super) fn goldens() -> Vec<Golden> {
     assert_falsifiable_schedule();
-    let time: Vec<f64> = (0..OPERATING_MODES.len())
-        .map(|tick| tick as f64)
-        .collect();
+    let time: Vec<f64> = (0..OPERATING_MODES.len()).map(|tick| tick as f64).collect();
     let active_cooling_maximum: Vec<f64> = OPERATING_MODES
         .iter()
         .map(|&mode| {
@@ -99,12 +97,16 @@ fn assert_falsifiable_schedule() {
             "OperationModes value {mode} must appear at least twice"
         );
     }
-    assert!(OPERATING_MODES
-        .iter()
-        .zip(OCCUPIED_MINIMUM_FLOW)
-        .any(|(&mode, minimum)| mode == 1 && minimum == OCCUPIED_MINIMUM_DESIGN_FLOW));
-    assert!(OPERATING_MODES
-        .iter()
-        .zip(OCCUPIED_MINIMUM_FLOW)
-        .any(|(&mode, minimum)| mode != 1 && minimum == OCCUPIED_MINIMUM_DESIGN_FLOW));
+    assert!(
+        OPERATING_MODES
+            .iter()
+            .zip(OCCUPIED_MINIMUM_FLOW)
+            .any(|(&mode, minimum)| mode == 1 && minimum == OCCUPIED_MINIMUM_DESIGN_FLOW)
+    );
+    assert!(
+        OPERATING_MODES
+            .iter()
+            .zip(OCCUPIED_MINIMUM_FLOW)
+            .any(|(&mode, minimum)| mode != 1 && minimum == OCCUPIED_MINIMUM_DESIGN_FLOW)
+    );
 }
