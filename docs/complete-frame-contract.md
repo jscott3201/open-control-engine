@@ -166,10 +166,9 @@ interlocks and actuation remain [host responsibilities](host-responsibilities.md
 not executing, not submitting a fabricated zero frame or calling `halt` as an equipment stop.
 
 Library keeps artifact verification; Studio keeps authoring/translation and simulation integration;
-Edge keeps deployment, observation admission, NO_EVAL and command boundaries; Sim keeps closed-loop
-simulation and replay integration. Runtime is only an **additive future M05-PR03 consumer/host
-qualification candidate**. BOPTEST results would be Runtime host evidence, not OCE equivalence or
-reassignment of Sim. No downstream qualification is claimed here.
+Edge keeps deployment, observation admission, NO_EVAL and command boundaries. Runtime is only an
+**additive future M05-PR03 consumer/host qualification candidate**. BOPTEST results would be Runtime
+host evidence, not OCE equivalence. No downstream qualification is claimed here.
 
 Tokio, Axum, SQL, HTTP/MCP, drivers, quality/staleness policy, leases, commands and fallback services
 stay outside OCE. Consumers use the engine-owned evaluator, snapshot and canonical per-frame replay

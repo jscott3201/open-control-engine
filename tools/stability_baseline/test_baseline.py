@@ -140,6 +140,27 @@ class BaselineTests(unittest.TestCase):
     def test_local_oce_history_verifies_exact_objects_not_moving_heads(self):
         baseline.verify_oce_source(ROOT)
 
+    def test_discontinued_sim_checkout_is_refused_without_reading_the_path(self):
+        missing = ROOT / "nonexistent-discontinued-sim-checkout"
+        with self.assertRaisesRegex(baseline.BaselineError, "unsupported source checkout name"):
+            baseline.verify_downstream_source("open-control-sim", missing)
+        diagnostic = io.StringIO()
+        with contextlib.redirect_stderr(diagnostic), contextlib.redirect_stdout(io.StringIO()):
+            status = baseline.main(["--check", "--source", f"open-control-sim={missing}"])
+        self.assertEqual(status, 1)
+        self.assertIn("unsupported source checkout name 'open-control-sim'", diagnostic.getvalue())
+        self.assertNotIn("Git source query", diagnostic.getvalue())
+
+    def test_dated_capture_keeps_its_historical_sim_row(self):
+        sim = baseline.snapshot()["downstream_and_adjacent"]["sim"]
+        self.assertEqual(sim["repository"], "jscott3201/open-control-sim")
+        self.assertEqual(sim["oce_dependency"]["state"], "none_at_revision")
+        artifact = json.loads(baseline.ARTIFACT.read_bytes())
+        self.assertEqual(artifact["downstream_and_adjacent"]["sim"], sim)
+        removed = baseline.snapshot()
+        del removed["downstream_and_adjacent"]["sim"]
+        self.assert_rejected(removed, "closed schema")
+
     def test_dependency_scanner_sees_active_declarations_but_not_comments(self):
         manifest = {
             "dependencies": {"serde": "1"},

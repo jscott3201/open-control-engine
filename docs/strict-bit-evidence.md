@@ -241,7 +241,6 @@ Whole-executable exactness inherits the least-qualified contributing path, targe
 domain. These 21 finite-corpus results do not qualify arbitrary compositions, arbitrary inputs or
 a whole executable; unqualified paths/platforms still prevent such an inherited exactness claim.
 
-This schema is compact, inspectable input for later Open Control Sim consumption, not a Sim policy
-change or qualification. The supplied downstream inventory says Sim has no active oce-api dependency;
-its matching libm pin is context only. Sim policy adoption remains M05-PR07. No Sim checkout, source,
-dependency, tolerance policy or platform claim is changed here.
+This schema is compact, inspectable input for downstream consumers, not a downstream policy change
+or qualification. No downstream checkout, source, dependency, tolerance policy or platform claim is
+changed here.

@@ -38,7 +38,7 @@ any subsequent persistence or actuation attempt. Do not repeat execution merely 
 even equal model time advances state again. `get_output` and `watch` inspect latest state, not a
 retained receipt; load, restore and resume can replace that state without executing a frame.
 
-Library, Studio, Edge and Sim retain their roles; Runtime is only an additive future M05-PR03
+Library, Studio and Edge retain their roles; Runtime is only an additive future M05-PR03
 consumer/host qualification candidate. BOPTEST is Runtime host evidence, not OCE equivalence.
 No host services or second evaluator/snapshot/replay stack move into OCE.
 

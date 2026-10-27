@@ -1,6 +1,6 @@
 # Executable CXF and HostTick product contract
 
-Document revision: 15
+Document revision: 16
 Grounding SHA: e81480b02271456719d55cbe1e5090b0dea6d63c
 
 This is the aggregate product boundary and requirement-to-evidence map for the work toward a
@@ -215,7 +215,7 @@ The original macOS observation is not platform qualification. macOS-arm64 stays 
 M06-PR02, and all other unqualified targets retain the existing aligned band. Whole-executable
 exactness inherits the least-qualified contributing path, target and input domain; these finite
 cases alone do not establish it. Mathematical correctness, arbitrary-input and downstream policy
-claims remain outside this evidence. Sim adoption remains M05-PR07. The original 17-source Linux
+claims remain outside this evidence. The original 17-source Linux
 receipt from run 35492290613 remains unchanged historical evidence and cannot substitute for the
 current qualification. The evidence-collection run is not a final hosted-gate result.
 
@@ -283,7 +283,7 @@ verifier used IO/tick/export with its own tolerance; sibling-path verification i
 of this engine revision. Sim had no active OCE dependency and only a bridge scaffold; cxf-json had
 no OCE dependency. No downstream pin, compatibility claim or adapter policy changes here.
 
-Library, Studio, Edge and Sim retain their downstream roles. Runtime is an additive future
+Library, Studio and Edge retain their downstream roles. Runtime is an additive future
 M05-PR03 consumer/host qualification candidate only; BOPTEST is Runtime host evidence, not OCE
 equivalence. This adds no second evaluator, snapshot or replay stack, and no runtime, database,
 network, driver, quality/staleness, lease, command or fallback policy to OCE.
@@ -441,3 +441,8 @@ written expected output and deterministic repetitions; the runnable gate remains
   absent producers are not labeled decoder refusals. Current runtime/API, package version, formats,
   dependencies, workflows, strict-bit guard and downstream pins remain unchanged. No publication,
   migration, cross-build restore, M06 ratification or downstream equipment qualification follows.
+- Revision 16, 2026-10-26: editorial only (issue #359). Open Control Sim was discontinued, so the
+  Sim downstream role and the M05-PR07 Sim adoption note are removed; Library, Studio and Edge keep
+  their roles. Historical Sim inventory statements and the PC-037 limitation stay. No requirement,
+  status, owner, grounding, evidence link, runtime, API or downstream pin changes. The traceability
+  checker advances its accepted revision only.
