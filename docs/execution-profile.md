@@ -30,6 +30,14 @@ Each successful `Engine::execute_frame(prepared)` call is one state transition:
 4. The engine refreshes latest-state inspection and returns immutable `CompletedFrame` boundary
    outputs and warnings, correlated by an engine-lifetime accepted-frame sequence.
 
+Step 2 fires each block atomically, so one emission produces all of a block's outputs. The
+schedule is therefore an order of whole blocks. A model whose feedback leaves one output of a block
+and comes back into an input that output does not depend on is CDL-legal, yet it has no such order.
+The engine refuses it at load with `block-algebraic-loop`. It never runs such a model in a wrong
+order. See
+[Atomic block firing refuses some CDL-legal feedback](cdl-coverage.md#atomic-block-firing-refuses-some-cdl-legal-feedback)
+for which classes can trigger it and the remedies.
+
 Repeating a timestamp does not repeat an observation of the same transition. Every successful call
 advances state again. Time-dependent blocks see zero elapsed time, but call-based state still
 changes. The engine performs no hidden same-time evaluation, event queue processing, rollback, or

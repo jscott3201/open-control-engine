@@ -170,7 +170,8 @@ fn mixed_feedthrough_block_cycle_is_rejected() {
     // P is a stateful 2-output block: out0 is state-only (cut), out1 feeds through from in0.
     // X feeds through. Wiring P.out0 → X.in0 and X.out0 → P.in0 is acyclic at the CONNECTOR level
     // (P.out0 doesn't depend on P.in0), but atomic block firing cannot schedule it: X needs P's
-    // output, and P (to emit out1) needs X's output. BUILD must reject it loudly.
+    // output, and P (to emit out1) needs X's output. BUILD must reject it loudly, and the text must
+    // not send the author hunting for a CDL §7.16 loop that does not exist (GitHub issue #347).
     let mut b = ModelBuilder::default();
     let (_p, p_in, p_out) = b.block_mixed("test.MixedPre", 1, 2, true, &[(0, 1)]); // in0→out1 only
     let (_x, x_in, x_out) = b.block_mixed("test.Pass", 1, 1, false, &[(0, 0)]);
@@ -195,8 +196,14 @@ fn mixed_feedthrough_block_cycle_is_rejected() {
         "block cycle needs ≥2 blocks, got {members:?}"
     );
     assert!(
-        msg.contains("block-granularity") && msg.contains("CDL §7.16"),
-        "diagnostic must explain the block-granularity cause + remedy: {msg}"
+        msg.contains("block-granularity")
+            && msg.contains("no connector-level feedthrough cycle exists")
+            && msg.contains("may be CDL-legal")
+            && msg.contains("fires all of its outputs together")
+            && msg.contains("split the block")
+            && msg.contains("CDL.Discrete.UnitDelay"),
+        "diagnostic must explain the block-granularity cause, that the model may be CDL-legal, \
+         and the split/delay remedy: {msg}"
     );
 }
 

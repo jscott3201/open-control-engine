@@ -25,9 +25,13 @@ const LOOP_AFTER_WARNING_GOLDEN: &str =
 /// acyclic at connector level, cyclic for atomic block firing.
 const EXTRACT_SIGNAL_BLOCK_LOOP: &[u8] =
     include_bytes!("fixtures/extract_signal_block_loop.jsonld");
+const EXTRACT_SIGNAL_BLOCK_LOOP_GOLDEN: &str =
+    include_str!("fixtures/golden/extract_signal_block_loop.receipt.txt");
 /// Upper bound on one record's message bytes beyond the next member's identity: the fixed cause and
-/// remedy text plus two decimal counts. Independent of the cycle length by construction.
-const MESSAGE_OVERHEAD_BYTES: usize = 300;
+/// remedy text plus two decimal counts. Independent of the cycle length by construction. Sized for
+/// the longer kind: the block-granularity text is 290 fixed bytes (the connector-level text 265),
+/// plus two counts of at most 20 decimal digits each (`usize::MAX`), so it holds for any cycle.
+const MESSAGE_OVERHEAD_BYTES: usize = 290 + 2 * 20;
 
 const PREFIX: &str = "http://example.org#m.";
 
@@ -125,6 +129,104 @@ fn add_ring(count: usize) -> Vec<u8> {
     }
     wires.push((format!("r{}.y", count - 1), "y".into()));
     add_network(&adds, &wires)
+}
+
+/// `count` `RealExtractSignal` blocks `e0 … e<count-1>` (`nin = nout = 2`, so `y1 = u1` and
+/// `y2 = u2`) in one ring: each `y1` feeds the next block's `u2`, every `u1` reads the boundary input.
+/// No output depends on the input its ring predecessor drives, so the connector graph is acyclic and
+/// the whole ring is one block-granularity cycle of `count` members.
+fn extract_ring(count: usize) -> Vec<u8> {
+    let local = |index: usize, port: &str| format!("e{index}.{port}");
+    let connector = |id: String, kind: &str, data: &str, to: Option<String>| -> Value {
+        let mut node = Map::new();
+        node.insert("@id".into(), json!(iri(&id)));
+        node.insert("@type".into(), json!(kind));
+        node.insert("S231:isOfDataType".into(), json!({ "@id": data }));
+        if let Some(to) = to {
+            node.insert("S231:isConnectedTo".into(), json!({ "@id": iri(&to) }));
+        }
+        Value::Object(node)
+    };
+    let mut boundary_input = Map::new();
+    boundary_input.insert("@id".into(), json!(iri("u")));
+    boundary_input.insert("@type".into(), json!("S231:RealInput"));
+    boundary_input.insert("S231:isOfDataType".into(), json!({ "@id": "S231:Real" }));
+    boundary_input.insert(
+        "S231:isConnectedTo".into(),
+        Value::Array(
+            (0..count)
+                .map(|i| json!({ "@id": iri(&local(i, "u1")) }))
+                .collect(),
+        ),
+    );
+    let mut graph = vec![
+        json!({
+            "@id": "http://example.org#m",
+            "@type": "S231:Block",
+            "S231:containsBlock": (0..count).map(|i| json!({ "@id": iri(&format!("e{i}")) })).collect::<Vec<_>>(),
+            "S231:hasInput": { "@id": iri("u") },
+            "S231:hasOutput": { "@id": iri("y") },
+        }),
+        Value::Object(boundary_input),
+        connector("y".into(), "S231:RealOutput", "S231:Real", None),
+    ];
+    for index in 0..count {
+        let block = format!("e{index}");
+        graph.push(json!({
+            "@id": iri(&block),
+            "@type": "http://example.org#Buildings.Controls.OBC.CDL.Routing.RealExtractSignal",
+            "S231:hasParameter": [
+                { "@id": iri(&local(index, "nin")) },
+                { "@id": iri(&local(index, "nout")) },
+            ],
+            "S231:hasInput": [
+                { "@id": iri(&local(index, "u1")) },
+                { "@id": iri(&local(index, "u2")) },
+            ],
+            "S231:hasOutput": [
+                { "@id": iri(&local(index, "y1")) },
+                { "@id": iri(&local(index, "y2")) },
+            ],
+        }));
+        for name in ["nin", "nout"] {
+            graph.push(json!({
+                "@id": iri(&local(index, name)),
+                "@type": "S231:Parameter",
+                "S231:isOfDataType": { "@id": "S231:Integer" },
+                "S231:value": 2,
+            }));
+        }
+        graph.push(connector(
+            local(index, "u1"),
+            "S231:RealInput",
+            "S231:Real",
+            None,
+        ));
+        graph.push(connector(
+            local(index, "u2"),
+            "S231:RealInput",
+            "S231:Real",
+            None,
+        ));
+        graph.push(connector(
+            local(index, "y1"),
+            "S231:RealOutput",
+            "S231:Real",
+            Some(local((index + 1) % count, "u2")),
+        ));
+        let y2_target = (index == count - 1).then(|| "y".to_owned());
+        graph.push(connector(
+            local(index, "y2"),
+            "S231:RealOutput",
+            "S231:Real",
+            y2_target,
+        ));
+    }
+    serde_json::to_vec(&json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": graph,
+    }))
+    .expect("serialize document")
 }
 
 /// Two independent self-loops, `p` and `q`, declared in `order`.
@@ -434,6 +536,65 @@ fn large_ring_receipt_grows_linearly_with_the_loop() {
     assert_eq!(order.len(), 2000);
     assert_eq!(order[0], iri("r0.u2"));
     assert_eq!(order[1], iri("r0.y"));
+}
+
+#[test]
+fn large_block_ring_receipt_stays_bounded_per_member() {
+    // 500 extract blocks, one block-granularity cycle of 500 members: the longer
+    // "may be CDL-legal" cause text keeps every record within the same fixed overhead.
+    let bytes = extract_ring(500);
+    let failure = refuse(&bytes);
+    assert_eq!(failure.stage(), DiagnosticStage::Schedule);
+    let records = failure.diagnostics().records();
+    assert_eq!(records.len(), 500);
+    for record in records {
+        assert_eq!(record.key().code(), "block-algebraic-loop");
+        let (_, tail) = record
+            .message()
+            .split_once("; next member: ")
+            .expect("message states the next member");
+        let (next, _) = tail
+            .split_once(". The ")
+            .expect("next member ends the clause");
+        assert!(
+            record.message().len() <= MESSAGE_OVERHEAD_BYTES + next.len(),
+            "{} bytes: {}",
+            record.message().len(),
+            record.message()
+        );
+    }
+    let order = loop_order(failure.diagnostics(), "block-algebraic-loop");
+    assert_eq!(order.len(), 500);
+    assert_eq!(order[0], iri("e0"));
+    assert_eq!(order[1], iri("e1"));
+    assert_eq!(order[499], iri("e499"));
+}
+
+#[test]
+fn block_granularity_loop_receipt_and_error_say_the_model_may_be_cdl_legal() {
+    let failure = refuse(EXTRACT_SIGNAL_BLOCK_LOOP);
+    assert_eq!(
+        render(failure.diagnostics()),
+        EXTRACT_SIGNAL_BLOCK_LOOP_GOLDEN
+    );
+    let message = build_message(&failure);
+    for needle in [
+        "block-granularity algebraic loop: 2 block(s)",
+        "no connector-level feedthrough cycle exists",
+        "The model may be CDL-legal",
+        "fires all of its outputs together",
+        "split the block",
+        "CDL.Discrete.UnitDelay",
+    ] {
+        assert!(message.contains(needle), "missing {needle:?}: {message}");
+    }
+    assert!(!message.contains("§7.16 forbids"), "{message}");
+    assert!(
+        message.ends_with(
+            r#"Cycle members: ["http://example.org#ext.sel", "http://example.org#ext.gai"]"#
+        ),
+        "{message}"
+    );
 }
 
 #[test]

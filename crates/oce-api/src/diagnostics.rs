@@ -413,28 +413,32 @@ impl DiagnosticCapture {
 /// member this one feeds (the first member for `k == n`; itself for a one-member cycle). Its length
 /// is a fixed text plus the two counts plus `<next>`, so it never grows with the cycle. Display
 /// text only: the stable machine fields remain the code, subject and stage.
+///
+/// A connector-level cycle is a CDL §7.16 violation and its remedy is a delay. A block-granularity
+/// cycle is not: no connector-level cycle exists, so the model may be CDL-legal and the refusal is
+/// an engine coverage limit of atomic block firing (GitHub issue #347). Its text says so, and leads
+/// with splitting the block before the delay remedy.
 fn cycle_member_message(
     code: oce_diag::DiagCode,
     position: usize,
     count: usize,
     next: &str,
 ) -> String {
-    let (kind, cause) = match code {
+    let (kind, cause_and_remedy) = match code {
         oce_diag::DiagCode::BlockAlgebraicLoop => (
             "block-granularity algebraic loop",
-            "The blocks form an emit-before cycle that single-pass atomic block firing cannot \
-             schedule, although no connector-level cycle exists.",
+            "The model may be CDL-legal: no connector-level cycle exists; a block fires all its \
+             outputs at once. Remedy: split that block so the looping output and the fed-back \
+             input are on separate blocks, or insert a delay where acceptable.",
         ),
         _ => (
             "algebraic loop",
-            "The connectors form a direct-feedthrough cycle not broken by a state-holding block.",
+            "The connectors form a direct-feedthrough cycle not broken by a state-holding block. \
+             CDL §7.16 forbids algebraic loops. Remedy: insert a delay block (CDL.Logical.Pre, \
+             CDL.Discrete.UnitDelay) or an integrator into the loop.",
         ),
     };
-    format!(
-        "{kind} member {position} of {count}; next member: {next}. {cause} CDL §7.16 forbids \
-         algebraic loops. Remedy: insert a delay block (CDL.Logical.Pre, CDL.Discrete.UnitDelay) \
-         or an integrator into the loop."
-    )
+    format!("{kind} member {position} of {count}; next member: {next}. {cause_and_remedy}")
 }
 
 #[cfg(test)]
