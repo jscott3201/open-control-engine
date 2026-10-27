@@ -1,0 +1,10 @@
+#1
+# columns: time warning
+double CDL_Utilities_Assert_warning(7,2)
+0.0 1.0
+60.0 1.0
+120.0 0.0
+180.0 1.0
+240.0 0.0
+300.0 0.0
+360.0 1.0

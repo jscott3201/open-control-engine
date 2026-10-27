@@ -87,8 +87,10 @@
           "MultiAnd",
           "MultiOr",
           "Nand",
+          "Nor",
           "Not",
           "Or",
+          "Pre",
           "Proof",
           "Switch",
           "Timer",
@@ -98,10 +100,6 @@
           "TrueFalseHold",
           "VariablePulse",
           "Xor"
-        ],
-        "legacy_evidence_exemption": [
-          "Nor",
-          "Pre"
         ]
       },
       "missing": []
@@ -232,10 +230,8 @@
       "package_order": "Buildings/Controls/OBC/CDL/Utilities/package.order",
       "implemented": {
         "golden_manifest": [
+          "Assert",
           "SunRiseSet"
-        ],
-        "legacy_evidence_exemption": [
-          "Assert"
         ]
       },
       "missing": []

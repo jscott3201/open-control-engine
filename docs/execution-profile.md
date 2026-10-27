@@ -118,4 +118,10 @@ continuation.
 
 The Tier-A references for `Generic.TimeSuppression`, `CoolingOnly.Controller`, and
 `ReliefFanGroup` likewise check HostTick v1. Their 20 signal records are independent of
-`oce-blocks`, but they do not claim Modelica `Pre` event-iteration equivalence.
+`oce-blocks`, but they do not claim Modelica `Pre` event-iteration equivalence. Two standalone
+Tier-A goldens under `tools/golden-gen/goldens/CDL/Logical/Pre/` pin the block alone under the same
+profile: a default `pre_u_start=false` trace whose input is already true on the first tick, and a
+`pre_u_start=true` trace whose input is false on the first tick, each followed by holds and
+single-tick toggles. `crates/oce-conformance/tests/per_block_logical.rs` compares the engine with
+both exactly. They carry `execution_profile: "HostTick v1"` and are not Modelica event-iteration
+oracles either.

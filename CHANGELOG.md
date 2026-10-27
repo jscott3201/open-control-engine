@@ -268,6 +268,31 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Verification
 
+- **`CDL.Logical.Nor`, `CDL.Logical.Pre` and `CDL.Utilities.Assert` now have standalone Tier-A
+  goldens** (GitHub #385, issue #371). Before this, the three relied on unit tests, facade contract
+  tests and indirect G36-sequence evidence. `tools/golden-gen` now derives four new signal goldens
+  from the vendored Buildings sources, citing the `.mo` file and pinned commit in each provenance
+  record. `Nor` gets the exhaustive two-input truth table, with `(F,F)` revisited, from `Nor.mo`
+  line 15. `Pre` gets two HostTick v1 traces: in the default one `pre_u_start` is `false` and `u` is
+  already true on the first tick; in `pre_u_start_true` `u` is false on the first tick. Each first
+  tick must emit `pre_u_start`, and later ticks emit the previous tick's input through holds and
+  single-tick toggles. Both records carry `execution_profile: "HostTick v1"` and a
+  `diverges_from_modelica_event_iteration` note, because a converged Modelica event iteration would
+  report `y == u` instead. `Assert` has no output connector, so its golden is a `warning`
+  observation column read from `Assert.mo` line 11. A `1.0` means exactly one Warning record per
+  evaluation with `u` false, including the first tick; repeats are not suppressed. A new suite,
+  `per_block_utilities_assert.rs`, compares that column with each completed frame's diagnostics:
+  count, source, message and time bits. It is a separate file because `per_block_utilities.rs` is
+  a bound strict-bit source. `per_block_logical.rs` compares `Nor` and both `Pre` traces exactly,
+  and the engine matches all four goldens bit-exactly. Per-block Tier-A coverage rises to 132 of
+  133 CDL classes; only `CDL.Logical.Sources.Constant` remains on indirect evidence. The CDL
+  catalog moves the three classes from `legacy_evidence_exemption` to `golden_manifest`, which
+  changes the catalog fingerprint. Tier-A totals rise to 422 provenance records and 420 signal
+  goldens; 22 of those signals now check HostTick v1. The summary in
+  `docs/verification-evidence.md` had trailed its body by two comparisons since GitHub #356 added two G36
+  signals; recounted from the tree, both now say 398 source-semantics comparisons (377 existing
+  exact plus 21 qualified-Linux exact).
+
 - **The scheduler, validator, model, CXF and WAL adapter suites, and the docs checks, now gate
   every PR** (GitHub #380, issues #370, #377). Per-PR CI ran nextest only for `oce-api`,
   `oce-blocks` and `oce-expr`, so a regression in `oce-graph`, `oce-validate`, `oce-model`,
