@@ -83,7 +83,9 @@ pub enum OcError {
         /// The dotted instance path of the parameter.
         path: String,
     },
-    /// A `set_param` value outside the parameter's declared `[min, max]` (CDL §7.4.1).
+    /// A `set_param` value outside the parameter's admissible domain: a non-finite Real (`NaN`,
+    /// `+inf`, `-inf` — refused for every Real parameter, issue #362), a value outside the declared
+    /// `[min, max]` (CDL §7.4.1), or a value rejected by the class's registry parameter rules.
     #[error("parameter '{path}' value out of declared [min,max] (CDL §7.4.1)")]
     ParamRange {
         /// The dotted instance path of the parameter.

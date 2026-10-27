@@ -11,6 +11,7 @@ mod boundary_outputs;
 mod common;
 mod determinism;
 mod params;
+mod params_finite;
 mod params_required;
 mod params_sources;
 mod reals_matrix;

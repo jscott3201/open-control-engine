@@ -3,7 +3,8 @@
 //! Reals comparators use the Buildings asymmetric hysteresis band: set at the bare comparison point
 //! and reset at `point - h` for `Greater*` or `point + h` for `Less*` (not a ±h/2 band).
 //! Comparator comparisons with NaN are false, so a held hysteretic latch resets to false.
-//! Centralized non-finite validation/diagnostics is deferred to the future seam.
+//! Runtime non-finite *signal* diagnostics remain deferred; non-finite *parameters* (`t`, `h`,
+//! `uLow`, `uHigh`) are refused engine-wide at load and at `set_param` (issue #362).
 
 use oce_model::{ParamTable, Value};
 
