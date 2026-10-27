@@ -142,7 +142,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Documentation
 
 - **Twelve classes, not nine, can trigger the atomic-firing refusal of CDL-legal feedback**
-  (GitHub #TBD, issue #347). The coverage table from GitHub #352 listed only the nine
+  (GitHub #358, issue #347). The coverage table from GitHub #352 listed only the nine
   `CDL.Routing` `*ExtractSignal`, `*VectorFilter` and `*VectorReplicator` classes. Three more have
   mixed feedthrough and are refused as a `block-algebraic-loop` in the same way:
   - `CDL.Reals.MatrixMax` and `CDL.Reals.MatrixMin` with two or more outputs (`nRow ≥ 2` when
