@@ -85,7 +85,11 @@ pub fn goldens() -> Vec<Golden> {
         let samples = time
             .iter()
             .copied()
-            .map(|t| r(source_sin_y(t, amplitude, freq_hz, phase, offset, start_time)))
+            .map(|t| {
+                r(source_sin_y(
+                    t, amplitude, freq_hz, phase, offset, start_time,
+                ))
+            })
             .collect();
         out.push(
             Golden::new(
@@ -145,7 +149,10 @@ fn push_calendar_time_goldens(
         (
             "year",
             ValueKind::Integer,
-            fields.iter().map(|field| i(i64::from(field.year))).collect(),
+            fields
+                .iter()
+                .map(|field| i(i64::from(field.year)))
+                .collect(),
         ),
         (
             "month",
@@ -163,7 +170,10 @@ fn push_calendar_time_goldens(
         (
             "hour",
             ValueKind::Integer,
-            fields.iter().map(|field| i(i64::from(field.hour))).collect(),
+            fields
+                .iter()
+                .map(|field| i(i64::from(field.hour)))
+                .collect(),
         ),
         (
             "minute",
@@ -297,9 +307,7 @@ struct CalendarFields {
 fn calendar_time_fields(time: &[f64], reference_year: i32, offset: f64) -> Vec<CalendarFields> {
     let tim_off = NEW_YEAR_TIMESTAMPS[source_year_index(reference_year)];
     time.iter()
-        .map(|t| {
-            calendar_fields(t + offset + tim_off).expect("oracle times stay in helper range")
-        })
+        .map(|t| calendar_fields(t + offset + tim_off).expect("oracle times stay in helper range"))
         .collect()
 }
 

@@ -154,9 +154,17 @@ fn scenario(
     ]
     .into_iter()
     .map(|(signal, kind, samples)| {
-        let mut golden = Golden::new(CLASS_PATH, signal, kind, time.clone(), samples, input_desc, rule_desc)
-            .with_provenance("parameters", param_desc.clone())
-            .with_provenance("math_library", math);
+        let mut golden = Golden::new(
+            CLASS_PATH,
+            signal,
+            kind,
+            time.clone(),
+            samples,
+            input_desc,
+            rule_desc,
+        )
+        .with_provenance("parameters", param_desc.clone())
+        .with_provenance("math_library", math);
         if let Some(name) = name {
             golden = golden.with_scenario(name);
         }
@@ -186,8 +194,10 @@ fn simulate(params: SolarParams, times: &[f64]) -> Vec<SolarOutput> {
 fn initial_state(params: SolarParams, t: f64) -> Option<SolarState> {
     let sta_tim = t;
     let tim_dif_loc_civ = time_difference_local_civil(params);
-    let next_sun_rise = compute_sun_rise(t - SECONDS_PER_DAY, sta_tim, tim_dif_loc_civ, params.lat)?;
-    let mut next_sun_set = compute_sun_set(t - SECONDS_PER_DAY, sta_tim, tim_dif_loc_civ, params.lat)?;
+    let next_sun_rise =
+        compute_sun_rise(t - SECONDS_PER_DAY, sta_tim, tim_dif_loc_civ, params.lat)?;
+    let mut next_sun_set =
+        compute_sun_set(t - SECONDS_PER_DAY, sta_tim, tim_dif_loc_civ, params.lat)?;
     if current_cos_hour(t, params.lat).is_some_and(|cos_hou| cos_hou < -1.0) {
         next_sun_set -= SECONDS_PER_DAY;
     }
@@ -222,8 +232,8 @@ fn time_difference_local_civil(params: SolarParams) -> f64 {
 fn next_hour_angle(t: f64, tim_dif_loc_civ: f64, lat: f64) -> Option<HourAngle> {
     for i_day in 1..=MAX_POLAR_SEARCH_DAYS {
         let t_next = t + f64::from(i_day) * SECONDS_PER_DAY;
-        let bt = std::f64::consts::PI * ((t_next + SECONDS_PER_DAY) / SECONDS_PER_DAY - 81.0)
-            / 182.0;
+        let bt =
+            std::f64::consts::PI * ((t_next + SECONDS_PER_DAY) / SECONDS_PER_DAY - 81.0) / 182.0;
         let eqn_tim = equation_of_time(bt);
         let tim_cor = eqn_tim + tim_dif_loc_civ;
         let dec_ang = declination_angle(t_next);
@@ -241,10 +251,10 @@ fn next_hour_angle(t: f64, tim_dif_loc_civ: f64, lat: f64) -> Option<HourAngle> 
 
 fn compute_sun_rise(t: f64, sta_tim: f64, tim_dif_loc_civ: f64, lat: f64) -> Option<f64> {
     let hour = next_hour_angle(t, tim_dif_loc_civ, lat)?;
-    let sun_rise = (12.0 - hour.hou_ang * 24.0 / (2.0 * std::f64::consts::PI)
-        - hour.tim_cor / 3600.0)
-        * 3600.0
-        + libm::floor(hour.t_next / SECONDS_PER_DAY) * SECONDS_PER_DAY;
+    let sun_rise =
+        (12.0 - hour.hou_ang * 24.0 / (2.0 * std::f64::consts::PI) - hour.tim_cor / 3600.0)
+            * 3600.0
+            + libm::floor(hour.t_next / SECONDS_PER_DAY) * SECONDS_PER_DAY;
     Some(if sta_tim > sun_rise {
         sun_rise + SECONDS_PER_DAY
     } else {

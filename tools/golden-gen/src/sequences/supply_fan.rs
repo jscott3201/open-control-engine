@@ -4,8 +4,8 @@ use crate::oracle::{Golden, InputSeries, ValueKind};
 
 use super::trim_and_respond::{TrimAndRespondChain, TrimAndRespondParameters};
 use super::{
-    b, clamp, initial_sample_time, input_i, input_r, r, sample_due, sample_index, sequence_golden,
-    unit_ticks, SUPPLY_FAN,
+    SUPPLY_FAN, b, clamp, initial_sample_time, input_i, input_r, r, sample_due, sample_index,
+    sequence_golden, unit_ticks,
 };
 
 /// Ticks in the scenario: 0..=3000 s at 1 s.
@@ -256,12 +256,7 @@ struct FirstOrderHoldState {
     slope: f64,
 }
 
-fn first_order_hold_output(
-    t: f64,
-    input: f64,
-    period: f64,
-    state: FirstOrderHoldState,
-) -> f64 {
+fn first_order_hold_output(t: f64, input: f64, period: f64, state: FirstOrderHoldState) -> f64 {
     if !state.initialized {
         return input;
     }
