@@ -143,24 +143,25 @@ fn catalog_guard_mutations_cover_required_failures() {
     );
 
     let mut stale_manifest = catalog.clone();
-    let package = runtime_package_mut(&mut stale_manifest, "CDL.Logical");
+    // `Logical.Sources.Constant` is the one remaining exempt class without a golden.
+    let package = runtime_package_mut(&mut stale_manifest, "CDL.Logical.Sources");
     let removed = remove_string(
         package["implemented"]["legacy_evidence_exemption"]
             .as_array_mut()
             .unwrap(),
-        "Nor",
+        "Constant",
     );
     assert!(removed);
     package["implemented"]["golden_manifest"]
         .as_array_mut()
         .unwrap()
-        .push(Value::String("Nor".to_owned()));
+        .push(Value::String("Constant".to_owned()));
     assert_validation_error(
         &stale_manifest,
         &prov,
         GOLDEN_MANIFEST,
         &registry,
-        "stale-generated-manifest: CDL.Logical.Nor",
+        "stale-generated-manifest: CDL.Logical.Sources.Constant",
     );
 
     let mut golden_marked_exempt = catalog.clone();
