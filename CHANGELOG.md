@@ -222,6 +222,20 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
+- **Docs drift fixed, and two host-visible limits stated** (GitHub #375, issues #368, #369).
+  - The runtime-introspection section of the CDL coverage page now describes `oce_api::catalog()`
+    and its companions `catalog_to_json`, `catalog_content_id` and `CATALOG_JSON`. It no longer
+    says `oce-api` lacks a catalog re-export, and the README points at `oce_api::catalog()`.
+  - The CDL coverage page and the README now carry a note that `TrueHoldWithReset`, counted among
+    the 133 CDL classes, has a local two-input interface, so a conforming single-input document is
+    refused by the arity guard. The page links the authority claims index and PC-022.
+  - The CDL coverage page states that the 44 vendored upstream modelica-json CXF translations do
+    not load today, why (no cross-document class library; array connectors and instances refused
+    by Rule 7 of the composite subset), and that a host must pre-flatten. The cross-document
+    class library stays tracked in GitHub #369.
+  - Stale line-number citations to `oce-store`, `oce-diag`, `oce-docs` and `oce-cxf` items in the
+    architecture and CXF round-trip pages are now symbol citations.
+
 - **Open Control Sim is no longer treated as a current or future consumer** (GitHub #361, issue
   #359). The project is discontinued. The stability-baseline tool no longer accepts or looks for a
   Sim checkout: `--source open-control-sim=PATH` is refused as an unsupported name, and its
