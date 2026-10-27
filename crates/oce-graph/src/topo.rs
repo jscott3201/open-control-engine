@@ -296,7 +296,7 @@ fn connector_path(model: &Model, c: ConnectorId) -> ConnectorPath {
 /// Render a block for block-granularity diagnostics: its authored identity
 /// ([`oce_model::BlockInstance::instance_iri`]) when the graph carries one, otherwise
 /// `<class-iri>#b<block>`.
-fn block_path(model: &Model, b: BlockId) -> ConnectorPath {
+pub(crate) fn block_path(model: &Model, b: BlockId) -> ConnectorPath {
     let block = &model.blocks[b.0 as usize];
     if let Some(iri) = &block.instance_iri {
         return ConnectorPath(iri.to_string());

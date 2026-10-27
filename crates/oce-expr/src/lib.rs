@@ -8,7 +8,9 @@
 //! `oce-expr` parses
 //! opaque CDL binding text into an [`ExprAst`] and evaluates it against a [`Scope`] to a ground
 //! value. It is **Group A** (no store, no database), pure, total through typed depth/size
-//! rejections, and never reads the clock, connectors, or computation-affecting attributes (R11).
+//! rejections and a deterministic per-evaluation work budget ([`MAX_EVAL_FUEL`], counted in
+//! operations through a thread-local meter, never time), and never reads the clock, connectors,
+//! or computation-affecting attributes (R11).
 //!
 //! # Scalar subset
 //!
@@ -110,12 +112,17 @@ mod eval_comprehension_tests;
 mod eval_strict;
 #[cfg(test)]
 mod eval_strict_tests;
+mod fuel;
+#[cfg(test)]
+mod fuel_tests;
 mod lex;
 mod parse;
 #[cfg(test)]
 mod parse_tests;
 #[cfg(test)]
 mod tests;
+
+pub use fuel::{MAX_EVAL_FUEL, with_eval_budget};
 
 /// Maximum supported parser-entry and AST nesting depth.
 ///
@@ -494,6 +501,19 @@ pub enum ExprError {
         /// The operand type actually supplied.
         found: &'static str,
     },
+    /// Evaluation would spend more than [`MAX_EVAL_FUEL`] deterministic work units (one per AST
+    /// node evaluated, one per array element constructed, read or reduced) — a resource-limit
+    /// rejection for expressions that are small but quadratically expensive, such as nested
+    /// comprehensions over large ranges. Counted in operations, never time, so the refusal is
+    /// identical on every host.
+    #[error(
+        "expression too expensive: evaluation exceeds the supported work budget ({limit} units)"
+    )]
+    ExpressionTooExpensive {
+        /// The budget that ran out: [`MAX_EVAL_FUEL`] for one evaluation, or the shared budget
+        /// of an enclosing [`with_eval_budget`] call when that is what was exhausted.
+        limit: u64,
+    },
     /// An array construct would produce more elements than the engine will allocate — a
     /// resource-limit rejection, distinct from [`ExprError::DomainError`]. The count is checked
     /// before any allocation; `count` reports the requested element count (saturated at
@@ -568,14 +588,16 @@ pub fn parse(text: &str) -> Result<ExprAst, ExprError> {
 /// Returns a typed [`ExprError`] on any evaluation failure (unknown identifier, type mismatch,
 /// domain violation, or division by zero), including [`ExprError::NestingTooDeep`] when a
 /// hand-built AST exceeds [`MAX_NESTING_DEPTH`]. Parse-produced ASTs are already within both
-/// expression caps.
+/// expression caps. Returns [`ExprError::ExpressionTooExpensive`] when evaluation would exceed
+/// [`MAX_EVAL_FUEL`] work units; an evaluation nested inside another (a [`Scope`] that itself
+/// evaluates) draws on the enclosing budget.
 pub fn eval(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
     if nesting_depth(ast) > MAX_NESTING_DEPTH {
         return Err(ExprError::NestingTooDeep {
             limit: MAX_NESTING_DEPTH,
         });
     }
-    eval::eval(ast, scope)
+    fuel::metered(|| eval::eval(ast, scope))
 }
 
 /// Convenience for the flattener: [`parse()`] then [`eval()`] in one shot.

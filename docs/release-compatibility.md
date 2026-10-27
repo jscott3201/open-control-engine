@@ -11,14 +11,15 @@ executable, prior-state, placement and safety qualification. No downstream pin c
 The retained [machine-readable matrix](release-compatibility.json) has exactly 36 ordered rows:
 nine artifact classes times four producer/consumer directions. The selected identities are:
 
-- **Current implementation:** `492fcfcf8d584ab8215046afbd50746f06b18018`, the non-finite Real parameter refusal
-  (GitHub #376, issue #362) merged with `development`. Its implementation boundary differs from the
-  previous `83f962d` baseline (GitHub #373) only by that change: strict load-time expression
-  evaluation in `oce-expr`, parameter grounding in `oce-cxf`, the finiteness gate in
-  `oce-validate`, the `set_param` check in `oce-api`, the `non-finite-parameter` diagnostic code
-  in `oce-diag`, and in-crate tests. The candidate policy, rows and package version are unchanged.
-  The baseline commit is merged with a merge commit so it stays reachable; the selection commit
-  adds evidence/docs only and does not pretend it can hash itself.
+- **Current implementation:** `83b459e77d90c413b3573a470c6617e75cdc75e8`, the hostile-CXF load bounds (GitHub #381,
+  issue #365) merged with `development`. Its implementation boundary differs from the previous
+  `492fcfc` baseline (GitHub #376) only by that change: the model state budget in `oce-graph`, the
+  shared-instance refusal, document array budget and shared scope frames in `oce-cxf`, expression
+  fuel in `oce-expr`, the `Integers.Stage` binary search and TriggeredMovingMean saturation in
+  `oce-blocks`, the new diagnostic codes in `oce-diag`, and in-crate tests. The candidate policy,
+  rows and package version are unchanged. The baseline commit is merged with a merge commit so
+  it stays reachable; the selection commit adds evidence/docs only and does not pretend it can
+  hash itself.
 - **Historical source candidate:** annotated `v0.1.0`, tag object
   `7f3b614dc0e466d54cab4677ce4bb08a5bfaf033`, peeled source
   `909a8ba699e6a2fccf3de6ac0616a9e83a04060f`, 178 commits behind the previous `e81480b` baseline

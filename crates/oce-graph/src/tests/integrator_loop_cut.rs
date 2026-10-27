@@ -45,7 +45,7 @@ fn integrator_with_reset_cuts_feedback_loop_and_accumulates_in_two_pass_tick() {
         "the loop-cut output must be emitted before its feedback producer"
     );
 
-    let mut state = allocate_state(&b.model, &b.blocks);
+    let mut state = allocate_state(&b.model, &b.blocks).expect("state within budget");
     let mut integrator_trace = Vec::new();
     let mut add_trace = Vec::new();
     for k in 0..5u32 {
@@ -66,7 +66,7 @@ fn integrator_with_reset_cuts_feedback_loop_and_accumulates_in_two_pass_tick() {
     }
 
     let repeat = {
-        let mut state = allocate_state(&b.model, &b.blocks);
+        let mut state = allocate_state(&b.model, &b.blocks).expect("state within budget");
         (0..5u32)
             .map(|k| {
                 tick_once(&b.model, &sched, &b.blocks, &mut state, f64::from(k));
@@ -88,7 +88,7 @@ fn integrator_emit_ignores_current_tick_input_until_next_tick() {
             &[("y_start", Value::Real(5.0))],
         ));
         let sched = compile(&b.model, &b.blocks).unwrap();
-        let mut state = allocate_state(&b.model, &b.blocks);
+        let mut state = allocate_state(&b.model, &b.blocks).expect("state within budget");
         set(&mut state, integrator_in[1], Value::Real(0.0));
         set(&mut state, integrator_in[2], Value::Boolean(false));
 

@@ -12,6 +12,7 @@ use oce_expr::EvalResult;
 use oce_model::Value;
 
 use crate::dto::Node;
+use crate::scope_chain::ScopeFrame;
 
 use super::declaration_scope::{Pass, evaluate_declarations, identifier_heads};
 use super::specialize::Specialization;
@@ -75,7 +76,7 @@ fn evaluate_root(
     let evaluation = evaluate_declarations(
         &root,
         &[],
-        Vec::new(),
+        &ScopeFrame::root(),
         &map,
         Pass::Lowering {
             specialization: &Specialization::default(),
@@ -86,7 +87,7 @@ fn evaluate_root(
         evaluation.withheld.is_empty(),
         "the lowering invocation emits directly and withholds nothing"
     );
-    (evaluation.entries, diags)
+    (evaluation.scope.flattened(), diags)
 }
 
 #[test]
@@ -157,7 +158,7 @@ fn own_name_masks_enclosing_binding_even_when_the_own_declaration_cannot_ground(
     let evaluation = evaluate_declarations(
         &root,
         &[],
-        enclosing,
+        &ScopeFrame::extend(&ScopeFrame::root(), enclosing.into_iter().collect()),
         &map,
         Pass::Lowering {
             specialization: &Specialization::default(),
@@ -166,7 +167,8 @@ fn own_name_masks_enclosing_binding_even_when_the_own_declaration_cannot_ground(
     );
     assert!(
         !evaluation
-            .entries
+            .scope
+            .flattened()
             .iter()
             .any(|(name, _)| name.as_ref() == "g"),
         "g must not ground through the masked enclosing k"
@@ -248,7 +250,7 @@ fn self_reference_refuses_as_a_length_one_cycle_never_reading_the_enclosing_bind
     let evaluation = evaluate_declarations(
         &root,
         &[],
-        enclosing,
+        &ScopeFrame::extend(&ScopeFrame::root(), enclosing.into_iter().collect()),
         &map,
         Pass::Lowering {
             specialization: &Specialization::default(),
@@ -262,9 +264,9 @@ fn self_reference_refuses_as_a_length_one_cycle_never_reading_the_enclosing_bind
          ex:M.x -> ex:M.x"
     );
     // The enclosing prefix is preserved; the refused own x adds nothing.
-    assert_eq!(evaluation.entries.len(), 1);
+    assert_eq!(evaluation.scope.flattened().len(), 1);
     assert!(
-        scalar(&evaluation.entries, "x")
+        scalar(&evaluation.scope.flattened(), "x")
             .unwrap()
             .bit_eq(&Value::Real(1.0))
     );
@@ -307,7 +309,7 @@ fn specialize_invocation_withholds_tagged_findings_and_silences_generic_machiner
     let evaluation = evaluate_declarations(
         &root,
         &[],
-        Vec::new(),
+        &ScopeFrame::root(),
         &map,
         Pass::Specialize {
             composite_chain: true,
@@ -326,7 +328,7 @@ fn specialize_invocation_withholds_tagged_findings_and_silences_generic_machiner
             .starts_with("composite/declaration-cycle: "),
     );
     assert!(
-        scalar(&evaluation.entries, "ok")
+        scalar(&evaluation.scope.flattened(), "ok")
             .unwrap()
             .bit_eq(&Value::Real(4.0))
     );
@@ -356,7 +358,7 @@ fn leaf_chain_cycle_and_duplicate_refuse_silently_at_the_specialize_invocation()
     let evaluation = evaluate_declarations(
         &leaf,
         &[],
-        Vec::new(),
+        &ScopeFrame::root(),
         &map,
         Pass::Specialize {
             composite_chain: false,
@@ -368,17 +370,18 @@ fn leaf_chain_cycle_and_duplicate_refuse_silently_at_the_specialize_invocation()
         evaluation.withheld
     );
     assert!(
-        scalar(&evaluation.entries, "a").is_none() && scalar(&evaluation.entries, "b").is_none(),
+        scalar(&evaluation.scope.flattened(), "a").is_none()
+            && scalar(&evaluation.scope.flattened(), "b").is_none(),
         "the cycle participants still fail to ground"
     );
     assert!(
-        scalar(&evaluation.entries, "k")
+        scalar(&evaluation.scope.flattened(), "k")
             .unwrap()
             .bit_eq(&Value::Real(1.0)),
         "the first duplicate occurrence still grounds; the later one is refused silently"
     );
     assert!(
-        scalar(&evaluation.entries, "have_hol")
+        scalar(&evaluation.scope.flattened(), "have_hol")
             .unwrap()
             .bit_eq(&Value::Boolean(false)),
         "guard parameters still ground so guard evaluation can proceed"

@@ -514,3 +514,46 @@ fn triggered_moving_mean_non_finite_samples_follow_ordered_sum_policy() {
         canonical_nan,
     );
 }
+
+#[test]
+fn moving_mean_state_length_saturates_for_hostile_windows() {
+    // `4 + n` must never overflow: an unvalidated window reports a saturated length that the
+    // checked BUILD allocation then refuses as over budget (issue #365).
+    assert_eq!(
+        TriggeredMovingMean { n: usize::MAX }.state_len(),
+        usize::MAX
+    );
+    assert_eq!(
+        TriggeredMovingMean { n: usize::MAX - 3 }.state_len(),
+        usize::MAX
+    );
+    assert_eq!(
+        TriggeredMovingMean { n: usize::MAX - 4 }.state_len(),
+        usize::MAX
+    );
+    assert_eq!(TriggeredMovingMean { n: 5 }.state_len(), 9);
+}
+
+#[test]
+fn registry_moving_mean_window_converts_without_truncation() {
+    // Authored windows reach the block exactly (or saturate on a narrow `usize`), never
+    // truncated into a different window; non-positive windows keep the `n = 1` floor.
+    for (authored, expected_len) in [
+        (1_i64, 5_usize),
+        (0, 5),
+        (-7, 5),
+        (1 << 40, (1 << 40) + 4),
+        (
+            i64::MAX,
+            usize::try_from(i64::MAX).map_or(usize::MAX, |n| n.saturating_add(4)),
+        ),
+    ] {
+        let params = ParamTable {
+            values: vec![(std::sync::Arc::from("n"), Value::Integer(authored))],
+        };
+        let block = (crate::lookup("CDL.Discrete.TriggeredMovingMean")
+            .unwrap()
+            .make)(&params);
+        assert_eq!(block.state_len(), expected_len, "n = {authored}");
+    }
+}

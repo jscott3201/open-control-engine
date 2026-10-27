@@ -379,6 +379,27 @@ impl DiagnosticCapture {
                 oce_graph::BuildError::BlockAlgebraicLoop { members } => {
                     Some((oce_diag::DiagCode::BlockAlgebraicLoop, members))
                 }
+                oce_graph::BuildError::StateTooLarge {
+                    block,
+                    requested,
+                    limit,
+                } => {
+                    let code = oce_diag::DiagCode::ResourceLimitExceeded;
+                    records.push(DiagnosticRecord {
+                        key: DiagnosticKey {
+                            stage: self.stage,
+                            subject: DiagnosticSubject::Opaque(block.0.clone()),
+                            code: code.as_str().to_owned(),
+                            severity: DiagnosticSeverity::Error,
+                        },
+                        message: format!(
+                            "run state too large: {requested} state word(s) requested through \
+                             this block exceed the supported maximum ({limit} words). Remedy: \
+                             reduce state-sizing parameters such as window lengths."
+                        ),
+                    });
+                    None
+                }
                 _ => None,
             };
             if let Some((code, members)) = coded {

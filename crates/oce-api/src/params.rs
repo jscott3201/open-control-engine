@@ -256,7 +256,10 @@ impl<S: Store> Engine<S> {
     ///
     /// # Errors
     /// [`OcError::Load`] only if a block class somehow fails to re-instantiate (unreachable on an
-    /// already-loaded model). Never panics (R-ERR-1).
+    /// already-loaded model); [`OcError::Build`] carrying [`oce_graph::BuildError::StateTooLarge`]
+    /// if the edited state-sizing parameters push the re-seeded `[S]` state past
+    /// [`oce_graph::MAX_STATE_WORDS`]. Either failure leaves the engine halted with its edits
+    /// pending. Never panics (R-ERR-1).
     pub fn resume(&mut self) -> Result<(), OcError> {
         if self.params_dirty {
             // Fence before effective model mutation; even a failed rebuild cannot reuse old plans.
@@ -276,7 +279,7 @@ impl<S: Store> Engine<S> {
                     }
                 }
                 let blocks = instantiate_blocks(model)?;
-                let state = allocate_state(model, &blocks);
+                let state = allocate_state(model, &blocks)?;
                 (blocks, state)
             };
             self.blocks = blocks;

@@ -39,6 +39,57 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### CXF import and export
 
+- **Five hostile CXF load amplifications are now bounded with typed refusals, and an over-large
+  state window refuses instead of panicking** (GitHub #381, issue #365). Bounded per load:
+  `containsBlock` lowering work (each instance once), inherited-scope memory (linear), array
+  parameter elements (2^20 per document), `[S]` state words (2^22 per model) and binding
+  evaluation work (2^24 units per evaluation, 2^26 per document). Not bounded: the total memory
+  and time of an arbitrary below-cap document — isolation stays a host obligation (PC-004).
+  - **State budget.** `oce_graph::allocate_state` now returns `Result` and sizes the `[S]` state
+    buffer with checked arithmetic and `try_reserve_exact` against the new
+    `oce_graph::MAX_STATE_WORDS` (`1 << 22` words, 32 MiB). `CDL.Discrete.TriggeredMovingMean`
+    with `n = 2^62` panicked the load with "capacity overflow"; it is now
+    `BuildError::StateTooLarge` (`resource-limit-exceeded`, subject = the block, stage
+    `Schedule`), refused before any allocation. The window conversion saturates rather than
+    truncating on a narrow `usize`. `Engine::resume` returns the same error when edited windows
+    cross the budget, leaving the engine halted with its edits pending.
+  - **`CDL.Integers.Stage`** answers its stage search with an exact `O(log n)` binary search
+    instead of the source's `O(n)` loop per stage event, so `n = i64::MAX` cannot stall a tick.
+    Results are identical to the loop on every input; tests cross-check against the literal loop
+    on every threshold, ±1 ulp, signed zeros, infinities and NaN.
+  - **Shared children.** A `containsBlock` child reached twice — listed twice by one composite,
+    or by two composites — is refused with the new `DiagCode::SharedInstance`
+    (`shared-instance`, untagged, subject = the child): a CDL instance has exactly one parent.
+    Composite `C_i` listing `[C_{i+1}, C_{i+1}]` previously quadrupled the load every two levels
+    (depth 23: about 8.5 s and 3.1 GB). The `rejected/diamond_cycle.jsonld` corpus fixture now
+    reports its cycle once, plus one `shared-instance` for the second path, instead of two
+    `contains-cycle` diagnostics; `docs/cxf-composite-subset.md` is updated. The published
+    composite rule catalog is unchanged.
+  - **Array budget.** All preserved array parameters of one document share
+    `MAX_DOCUMENT_ARRAY_ELEMENTS` (`1 << 20`, equal to the existing per-parameter cap, so every
+    document whose arrays fit one maximal parameter still loads). Four broadcast `p[1048576]`
+    parameters in a 1.5 KB document loaded at about 1 GB; the second now refuses with the new
+    `DiagCode::ResourceLimitExceeded` (`resource-limit-exceeded`) before allocating.
+  - **Scopes and expressions.** Each composite's grounded declarations are one `Arc`-shared,
+    hash-indexed frame instead of a copy per leaf, so inherited-scope memory is linear in
+    parameters plus leaves (a 1.5 MB document once peaked at 6.8 GB); own-declaration chains sort
+    with a heap-driven Kahn order. `oce-expr` charges deterministic work units (one per AST node,
+    one per array element built, read or reduced) against `oce_expr::MAX_EVAL_FUEL` (`1 << 24`)
+    per evaluation, and the new `oce_expr::with_eval_budget` shares one budget across many
+    evaluations; `oce_cxf::import_cxf` runs every binding of a document on
+    `oce_cxf::MAX_DOCUMENT_EVAL_FUEL` (`1 << 26`). Exhaustion is the new
+    `ExprError::ExpressionTooExpensive`, naming the budget that ran out and surfaced as
+    `grounding-failed`. `sum({sum(1:1048576) for i in 1:1048576})`, once extrapolated to about
+    23 minutes, refuses in tens of milliseconds; a leaf with 200 bindings of
+    `sum({sum(1:2800) for i in 1:2800})` took about 10 s in a release build with only the
+    per-evaluation cap (scaling with the binding count) and now refuses in about 50 ms at any count. The most expensive
+    single evaluation in the tracked test suites costs 77 units, and the largest non-hostile
+    per-document total 101,101.
+
+  No class parameter rule, catalog entry or compatibility fact changes; every tracked fixture and
+  golden loads byte-identically. The release-compatibility checker re-selects its current
+  implementation baseline at the change's source commit.
+
 - **A declared but unread root boundary input now warns at load** (GitHub #346, issue #339).
   A root `S231:hasInput` declaration whose node exists but that no connection reads was left out of
   `input_definitions()` with an empty load receipt, so a host driving frames from its own point
