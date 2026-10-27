@@ -304,6 +304,12 @@ not write. If you must:
 
 The byte cap does not bound peak memory, CPU time, expansion, or total graph complexity. It is not
 a sandbox, cancellation/deadline guarantee, or evidence that every below-cap document is safe.
+Below the cap the pipeline refuses the known amplification shapes with typed diagnostics (issue
+#365): a `containsBlock` child reached twice (`shared-instance`), array parameters past a
+1,048,576-element per-document budget and run state past 4,194,304 words
+(`resource-limit-exceeded`), and binding evaluation past 2^24 deterministic work units per
+expression or 2^26 per document (`grounding-failed`). Those limits bound growth, not absolute footprint — a maximal admissible
+document can still need hundreds of MiB — so isolation stays your obligation.
 Receipt admission refusals use the existing `Import` stage, with byte counts only and no input
 content, source error or structured diagnostics in the `OcError`; `OperationFailure` still exposes
 that original error through its normal source chain. Legacy malformed-input errors remain unchanged.

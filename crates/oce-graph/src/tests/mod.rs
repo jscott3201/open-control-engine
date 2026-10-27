@@ -6,6 +6,7 @@ mod edge_counter_feedthrough;
 mod feedthrough_stateful;
 mod integrator_loop_cut;
 mod pid_feedthrough;
+mod state_budget;
 mod tick_eval;
 mod topo_oracle;
 

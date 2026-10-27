@@ -55,7 +55,7 @@ fn loaded_warning_engine() -> Engine<MemStore> {
     });
     let blocks: Vec<Box<dyn Block>> = vec![Box::new(WarningBlock)];
     let schedule = compile(&model, &blocks).expect("warning source schedule");
-    let state = allocate_state(&model, &blocks);
+    let state = allocate_state(&model, &blocks).expect("warning source state");
 
     let mut eng = Engine::in_memory();
     eng.model = Arc::new(model);

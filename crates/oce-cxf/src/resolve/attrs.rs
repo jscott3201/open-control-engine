@@ -6,7 +6,8 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{Attrs, IntAttrs, RealAttrs, Value, ValueType};
 
 use crate::dto::{CxfValue, Node};
-use crate::ground::{ParamScope, ground_value};
+use crate::ground::ground_value;
+use crate::scope_chain::ParamScope;
 
 /// Parse a connector node's declared §7.4.1 attributes (`unit`/`quantity`/`displayUnit`/`min`/`max`)
 /// into the `Attrs` variant matching its [`ValueType`] (doc 02 §3.3). `Real` carries unit/quantity/
@@ -84,7 +85,7 @@ fn real_connector_bound(
     diags: &mut Vec<Diagnostic>,
 ) -> Option<f64> {
     let v = v?;
-    match ground_value(v, &ParamScope::new(&[])) {
+    match ground_value(v, &ParamScope::empty()) {
         Ok(Value::Real(r)) => Some(r),
         Ok(Value::Integer(i)) => Some(i as f64),
         Ok(_) => {
@@ -117,7 +118,7 @@ fn int_connector_bound(
     diags: &mut Vec<Diagnostic>,
 ) -> Option<i64> {
     let v = v?;
-    match ground_value(v, &ParamScope::new(&[])) {
+    match ground_value(v, &ParamScope::empty()) {
         Ok(Value::Integer(i)) => Some(i),
         Ok(_) => {
             diags.push(

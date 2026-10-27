@@ -16,7 +16,7 @@ fn tick_feedforward_add_and_source_seed() {
     b.connect(o1[0], add_in[1]);
 
     let sched = compile(&b.model, &b.blocks).unwrap();
-    let mut state = allocate_state(&b.model, &b.blocks);
+    let mut state = allocate_state(&b.model, &b.blocks).expect("state within budget");
     // Constant outputs are seeded before the first tick (§7 req 3).
     assert!(state.values[o0[0].0 as usize].bit_eq(&Value::Real(2.0)));
 
@@ -31,7 +31,7 @@ fn init_warning_source_uses_noop_diagnostics_and_tick_delivers_to_sink() {
     let sched = compile(&b.model, &b.blocks).unwrap();
     let diag = CapturingDiagnostics::default();
 
-    let mut state = allocate_state(&b.model, &b.blocks);
+    let mut state = allocate_state(&b.model, &b.blocks).expect("state within budget");
     assert!(
         diag.events.borrow().is_empty(),
         "init_values must use NoopDiagnostics and drop source warnings"
@@ -86,7 +86,7 @@ fn run_stateful_blocks_for(times: &[f64]) -> RunState {
     ));
 
     let sched = compile(&b.model, &b.blocks).unwrap();
-    let mut state = allocate_state(&b.model, &b.blocks);
+    let mut state = allocate_state(&b.model, &b.blocks).expect("state within budget");
     for &t in times {
         tick_once(&b.model, &sched, &b.blocks, &mut state, t);
     }
@@ -123,7 +123,7 @@ fn unit_delay_loop_sequence(n: usize) -> Vec<Value> {
     b.connect(add_out[0], ud_in[0]);
 
     let sched = compile(&b.model, &b.blocks).unwrap();
-    let mut state = allocate_state(&b.model, &b.blocks);
+    let mut state = allocate_state(&b.model, &b.blocks).expect("state within budget");
     (0..n)
         .map(|k| {
             tick_once(&b.model, &sched, &b.blocks, &mut state, k as f64);
@@ -178,7 +178,7 @@ fn tick_loop_breaker_scheduled_before_its_producer() {
         "the loop-breaker is scheduled before its producer"
     );
 
-    let mut state = allocate_state(&b.model, &b.blocks);
+    let mut state = allocate_state(&b.model, &b.blocks).expect("state within budget");
     for k in 0..4u32 {
         tick_once(&b.model, &sched, &b.blocks, &mut state, f64::from(k));
         let want = Value::Real(f64::from(k + 1));
@@ -201,7 +201,7 @@ fn pre_cut_feedback_advances_without_event_iteration() {
     b.connect(not_out[0], pre_in[0]);
 
     let sched = compile(&b.model, &b.blocks).unwrap();
-    let mut state = allocate_state(&b.model, &b.blocks);
+    let mut state = allocate_state(&b.model, &b.blocks).expect("state within budget");
     let expected = [false, true, false, true];
     for (k, exp) in expected.iter().enumerate() {
         tick_once(&b.model, &sched, &b.blocks, &mut state, 0.0);

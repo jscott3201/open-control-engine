@@ -14,6 +14,14 @@ pub(crate) const FORMAT_REVISION: u32 = 2;
 pub(crate) const EXECUTION_ABI_REVISION: u32 = 2;
 pub(crate) const MAX_SNAPSHOT_BYTES: u64 = 64 * 1024 * 1024;
 
+/// Every model `oce-graph` admits fits a snapshot: its state words (at most
+/// [`oce_graph::MAX_STATE_WORDS`], 8 bytes each = 32 MiB) leave at least 32 MiB of
+/// [`MAX_SNAPSHOT_BYTES`] for connector values, the manifest and framing.
+const _: () = assert!(
+    (oce_graph::MAX_STATE_WORDS as u64) * 8 + 32 * 1024 * 1024 <= MAX_SNAPSHOT_BYTES,
+    "MAX_STATE_WORDS must leave 32 MiB of snapshot headroom"
+);
+
 pub(crate) use crate::state_snapshot::StatePortability as Portability;
 
 /// A process-local, codec-free engine-state image for deterministic branching.

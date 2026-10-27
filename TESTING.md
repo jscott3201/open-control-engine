@@ -42,9 +42,16 @@ Enumerate the input domain and hit every boundary and degenerate case:
   nested parenthesis/brace/call levels or 62 unary signs), expressions deeper than 64 AST nodes or
   larger than 4096 AST nodes, composites deeper than 64, boundary paths beyond 64 non-top hops,
   and boundary walks beyond 65,536 target examinations or 8 MiB of aggregate target-IRI bytes are
-  rejected even if a smaller input of the same shape is accepted. Assert the *specific* `DiagCode`
-  / error variant, not merely "an error occurred." Fuzz-grade hostility is the expectation within
-  the bounded ingest paths.
+  rejected even if a smaller input of the same shape is accepted. Hostile *amplification* is
+  bounded the same way (issue #365): a `containsBlock` child reached twice is `SharedInstance`,
+  array parameters beyond 1,048,576 elements per document and run state beyond
+  `oce_graph::MAX_STATE_WORDS` are `ResourceLimitExceeded`, and an evaluation beyond
+  `oce_expr::MAX_EVAL_FUEL` work units (or a document's bindings beyond
+  `oce_cxf::MAX_DOCUMENT_EVAL_FUEL` together) is `ExpressionTooExpensive`. Pin each such limit
+  at its boundary (the limit accepted, one past it refused) and assert cost with deterministic
+  measures — allocation counts and peak bytes, fuel units — never wall-clock time. Assert the
+  *specific* `DiagCode` / error variant, not merely "an error occurred." Fuzz-grade hostility is
+  the expectation within the bounded ingest paths.
 
 > **Why this is non-negotiable — the C1 lesson.** In M1-PR-1 the expression evaluator passed 22
 > tests and all CI gates while silently corrupting integer comparisons above 2^53 (relational

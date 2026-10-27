@@ -249,7 +249,8 @@ fn sorted_composite_listing(subdir: &str) -> Vec<String> {
 /// shared import machinery, whose messages carry no `composite/` tag) plus the exact ordered
 /// (code, subject, message) triples `Engine::load_cxf` must surface. Subjects appear only where
 /// the contract defines one — the pure-cycle zero-root rejection carries `None`. Most fixtures
-/// pin one triple; `diamond_cycle` pins two (one per cycle re-entry).
+/// pin one triple; `diamond_cycle` pins two (its cycle, then the untagged single-parent refusal
+/// of the second path's reach).
 type CompositeRejection = (
     &'static str,
     Option<&'static str>,
@@ -309,9 +310,9 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 18] = [
         )],
     ),
     (
-        // ONE structural cycle {A, C} reachable via TWO containsBlock paths: the k-re-entry
-        // contract end-to-end — one truthful path-ordered diagnostic per re-entry, in
-        // post-finalize_diags subject order.
+        // ONE structural cycle {A, C} reachable via TWO containsBlock paths, end-to-end: the
+        // first path reports the cycle, and the second path's reach of C is refused as the
+        // untagged `shared-instance` single-parent machinery (issue #365).
         "diamond_cycle.jsonld",
         Some("contains-cycle"),
         &[
@@ -322,10 +323,11 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 18] = [
                  http://example.org#A -> http://example.org#C -> http://example.org#A",
             ),
             (
-                DiagCode::MalformedDocument,
+                DiagCode::SharedInstance,
                 Some("http://example.org#C"),
-                "composite/contains-cycle: cycle in nested composite containsBlock graph: \
-                 http://example.org#C -> http://example.org#A -> http://example.org#C",
+                "containsBlock child http://example.org#C is reached a second time (listed \
+                 again by http://example.org#B); a CDL component instance has exactly one \
+                 parent, so the second reach is refused rather than expanded again",
             ),
         ],
     ),
@@ -507,7 +509,8 @@ fn composite_contract_rejections_carry_their_pinned_tagged_triples_end_to_end() 
     // surfaces exactly its ordered (code, subject, message) triples, and every tagged rule's
     // message begins with the `composite/<rule-id>: ` tag the catalog publishes for it. An
     // untagged (`None`) entry is shared import machinery: its message must NOT wear a contract
-    // tag it has no catalog row for.
+    // tag it has no catalog row for. The untagged `shared-instance` single-parent refusal may
+    // accompany a tagged rule (the diamond fixture); it never wears a tag either way.
     for (file, rule_id, expected) in composite_rejections() {
         let err = load_composite_fixture(&format!("rejected/{file}"))
             .expect_err("every rejected corpus fixture must fail to load");
@@ -526,7 +529,13 @@ fn composite_contract_rejections_carry_their_pinned_tagged_triples_end_to_end() 
             Some(rule_id) => {
                 let prefix = format!("composite/{rule_id}: ");
                 assert!(
-                    signature.iter().all(|(_, _, msg)| msg.starts_with(&prefix)),
+                    signature.iter().all(|(code, _, msg)| {
+                        if *code == DiagCode::SharedInstance {
+                            !msg.starts_with("composite/")
+                        } else {
+                            msg.starts_with(&prefix)
+                        }
+                    }),
                     "rejected/{file}: every contract rejection must start with {prefix:?}"
                 );
             }

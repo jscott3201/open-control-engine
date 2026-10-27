@@ -40,7 +40,7 @@ fn greater_h_to_not_trace(inputs: &[f64]) -> (Vec<Value>, Vec<Value>) {
     b.connect(greater_out[0], not_in[0]);
 
     let sched = compile(&b.model, &b.blocks).unwrap();
-    let mut state = allocate_state(&b.model, &b.blocks);
+    let mut state = allocate_state(&b.model, &b.blocks).expect("state within budget");
     let mut greater_trace = Vec::with_capacity(inputs.len());
     let mut not_trace = Vec::with_capacity(inputs.len());
     for (k, &u) in inputs.iter().enumerate() {
@@ -69,7 +69,7 @@ fn hysteresis_to_not_trace(inputs: &[f64]) -> (Vec<Value>, Vec<Value>) {
     b.connect(hyst_out[0], not_in[0]);
 
     let sched = compile(&b.model, &b.blocks).unwrap();
-    let mut state = allocate_state(&b.model, &b.blocks);
+    let mut state = allocate_state(&b.model, &b.blocks).expect("state within budget");
     let mut hyst_trace = Vec::with_capacity(inputs.len());
     let mut not_trace = Vec::with_capacity(inputs.len());
     for (k, &u) in inputs.iter().enumerate() {
@@ -131,7 +131,7 @@ fn ramp_active_and_output_feedthrough_schedule_current_tick_inputs() {
         "Ramp output must schedule before downstream Add because y feeds through current u/active"
     );
 
-    let mut state = allocate_state(&b.model, &b.blocks);
+    let mut state = allocate_state(&b.model, &b.blocks).expect("state within budget");
     let mut ramp_trace = Vec::new();
     let mut add_trace = Vec::new();
     for (t, u) in [(0.0, 0.0), (1.0, 10.0), (2.0, -10.0)] {
@@ -248,7 +248,7 @@ fn h0_comparator_allocates_no_state_through_real_graph_build() {
     let mut b = ModelBuilder::default();
     let (greater, _, _) = b.block_real(make("CDL.Reals.Greater", &[]));
     let sched = compile(&b.model, &b.blocks).unwrap();
-    let state = allocate_state(&b.model, &b.blocks);
+    let state = allocate_state(&b.model, &b.blocks).expect("state within budget");
     let block = b.blocks[greater.0 as usize].as_ref();
     assert!(
         block.signature().stateful,
