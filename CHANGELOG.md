@@ -59,7 +59,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Block library
 
 - **`CDL.Reals.MovingAverage` now averages over the whole of `delta` however many ticks fall inside
-  it** (GitHub #TBD, issue #364). The block kept at most 64 checkpoints and dropped the oldest when
+  it** (GitHub #373, issue #364). The block kept at most 64 checkpoints and dropped the oldest when
   more arrived. With more than 64 ticks per window it averaged over only about the last 64 samples
   and warned once. At 1 s ticks the G36 `ReliefFanGroup` and `ReturnFanDirectPressure` sequences,
   which use `delta = 300`, were therefore averaging over about 64 s. A 600 s window with a 0 → 100

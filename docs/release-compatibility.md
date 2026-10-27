@@ -11,13 +11,13 @@ executable, prior-state, placement and safety qualification. No downstream pin c
 The retained [machine-readable matrix](release-compatibility.json) has exactly 36 ordered rows:
 nine artifact classes times four producer/consumer directions. The selected identities are:
 
-- **Current implementation:** `29641851d2dbb75c18f5ac0700de77cecdddbd7d`, the twelve-class
-  block-firing coverage correction (GitHub #358, issue #347). Its implementation boundary differs
-  from the previous `cfcad40` baseline (GitHub #352) only by that change: the
-  `BlockAlgebraicLoop` rustdoc in `oce-diag` and `oce-graph`, and in-crate tests/fixtures. The
-  candidate policy, rows and package version are unchanged. The baseline commit is merged with a
-  merge commit so it stays reachable; the selection commit adds evidence/docs only and does not
-  pretend it can hash itself.
+- **Current implementation:** `83f962d9deb425dd7d04afea8f2ce9970ee61437`, the MovingAverage
+  full-window fix (GitHub #373, issue #364) merged with `development`. Its implementation boundary
+  differs from the previous `2964185` baseline (GitHub #358) only by that change: the
+  `MovingAverage` block and its delta-sized state region in `oce-blocks`, its state-contract
+  validation, and in-crate tests. The candidate policy, rows and package version are unchanged.
+  The baseline commit is merged with a merge commit so it stays reachable; the selection commit
+  adds evidence/docs only and does not pretend it can hash itself.
 - **Historical source candidate:** annotated `v0.1.0`, tag object
   `7f3b614dc0e466d54cab4677ce4bb08a5bfaf033`, peeled source
   `909a8ba699e6a2fccf3de6ac0616a9e83a04060f`, 178 commits behind the previous `e81480b` baseline
