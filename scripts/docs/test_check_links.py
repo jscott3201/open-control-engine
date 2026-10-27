@@ -195,7 +195,7 @@ class VerificationSummaryTests(unittest.TestCase):
             self.assert_numeric_boundary(text)
             self.assert_ci_boundary(text)
         row = next(line for line in evidence.splitlines() if line.startswith("| Tier-1 per-block"))
-        for fact in ("281", "260", "21", "qualified Linux", "unqualified"):
+        for fact in ("285", "264", "21", "qualified Linux", "unqualified"):
             self.assertIn(fact, row)
         ci = evidence.split("### The CI split, read in the dangerous direction\n", 1)[1].split("\n###", 1)[0]
         self.assert_ci_boundary(ci)

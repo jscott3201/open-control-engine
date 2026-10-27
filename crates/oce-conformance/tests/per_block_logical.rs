@@ -91,6 +91,10 @@ const PROOF_OUTPUTS: &[Port] = &[
     },
 ];
 
+const PRE_U_START_TRUE: &[Param] = &[Param {
+    name: "pre_u_start",
+    value: ParamValue::Boolean("true"),
+}];
 const TIMER_PARAMS: &[Param] = &[Param {
     name: "t",
     value: ParamValue::Real("0.25"),
@@ -284,6 +288,7 @@ const CASES: &[BlockCase] = &[
         &[],
         BOOL_Y,
     ),
+    case("logical_nor", "CDL.Logical.Nor", "Nor", U1_U2, &[], BOOL_Y),
     case("logical_or", "CDL.Logical.Or", "Or", U1_U2, &[], BOOL_Y),
     case(
         "logical_multi_and",
@@ -309,6 +314,17 @@ const CASES: &[BlockCase] = &[
         "Switch",
         SWITCH_INPUTS,
         &[],
+        BOOL_Y,
+    ),
+    // HostTick v1 profile references: the first tick emits `pre_u_start`, later ticks the
+    // previous tick's input. Not a Modelica event-iteration oracle (`docs/execution-profile.md`).
+    case("logical_pre", "CDL.Logical.Pre", "Pre", U, &[], BOOL_Y),
+    case(
+        "logical_pre_start_true",
+        "CDL.Logical.Pre",
+        "Pre/pre_u_start_true",
+        U,
+        PRE_U_START_TRUE,
         BOOL_Y,
     ),
     case("logical_edge", "CDL.Logical.Edge", "Edge", U, &[], BOOL_Y),
@@ -542,6 +558,8 @@ const CASES: &[BlockCase] = &[
 ];
 
 const STATEFUL_LOGICAL_SLUGS: &[&str] = &[
+    "logical_pre",
+    "logical_pre_start_true",
     "logical_edge",
     "logical_falling_edge",
     "logical_change",

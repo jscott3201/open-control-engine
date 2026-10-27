@@ -117,10 +117,16 @@ CDL.Logical.MultiOr reference -> goldens/CDL/Logical/MultiOr/reference.csv
 CDL.Logical.MultiOr y -> goldens/CDL/Logical/MultiOr/y.csv
 CDL.Logical.Nand reference -> goldens/CDL/Logical/Nand/reference.csv
 CDL.Logical.Nand y -> goldens/CDL/Logical/Nand/y.csv
+CDL.Logical.Nor reference -> goldens/CDL/Logical/Nor/reference.csv
+CDL.Logical.Nor y -> goldens/CDL/Logical/Nor/y.csv
 CDL.Logical.Not reference -> goldens/CDL/Logical/Not/reference.csv
 CDL.Logical.Not y -> goldens/CDL/Logical/Not/y.csv
 CDL.Logical.Or reference -> goldens/CDL/Logical/Or/reference.csv
 CDL.Logical.Or y -> goldens/CDL/Logical/Or/y.csv
+CDL.Logical.Pre reference -> goldens/CDL/Logical/Pre/reference.csv
+CDL.Logical.Pre y -> goldens/CDL/Logical/Pre/y.csv
+CDL.Logical.Pre/pre_u_start_true reference -> goldens/CDL/Logical/Pre/pre_u_start_true/reference.csv
+CDL.Logical.Pre/pre_u_start_true y -> goldens/CDL/Logical/Pre/pre_u_start_true/y.csv
 CDL.Logical.Proof/debounce_before_feedback reference -> goldens/CDL/Logical/Proof/debounce_before_feedback/reference.csv
 CDL.Logical.Proof/debounce_before_feedback yLocFal -> goldens/CDL/Logical/Proof/debounce_before_feedback/yLocFal.csv
 CDL.Logical.Proof/debounce_before_feedback yLocTru -> goldens/CDL/Logical/Proof/debounce_before_feedback/yLocTru.csv
@@ -463,6 +469,8 @@ CDL.Routing.RealVectorReplicator y4 -> goldens/CDL/Routing/RealVectorReplicator/
 CDL.Routing.RealVectorReplicator y5 -> goldens/CDL/Routing/RealVectorReplicator/y5.csv
 CDL.Routing.RealVectorReplicator y6 -> goldens/CDL/Routing/RealVectorReplicator/y6.csv
 CDL.Types (fold-time, no CSV) -> goldens/CDL/Types/types.prov.json
+CDL.Utilities.Assert reference -> goldens/CDL/Utilities/Assert/reference.csv
+CDL.Utilities.Assert warning -> goldens/CDL/Utilities/Assert/warning.csv
 CDL.Utilities.SunRiseSet nextSunRise -> goldens/CDL/Utilities/SunRiseSet/nextSunRise.csv
 CDL.Utilities.SunRiseSet nextSunSet -> goldens/CDL/Utilities/SunRiseSet/nextSunSet.csv
 CDL.Utilities.SunRiseSet reference -> goldens/CDL/Utilities/SunRiseSet/reference.csv

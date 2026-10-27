@@ -115,8 +115,8 @@ OpenModelica. A mismatch never widens a tolerance or re-blesses a golden.
   §7.7.2 expression-semantics vectors (R10.x). `compare()` is implemented
   (`crates/oce-conformance/src/funnel.rs`), and the crate carries golden traces and tolerance
   fixtures under `tests/fixtures/golden/`.
-- **The Tier-A layer is `tools/golden-gen`.** It emits **418 Tier-A provenance records — 283 CDL
-  records (281 signal goldens plus two fold-time provenance-only records), plus 135 G36 sequence
+- **The Tier-A layer is `tools/golden-gen`.** It emits **422 Tier-A provenance records — 287 CDL
+  records (285 signal goldens plus two fold-time provenance-only records), plus 135 G36 sequence
   signal goldens spanning all 46 catalog fixtures** (two of them in a 1/16 s FreezeProtection
   scenario that reuses its fixture). The
   sequence side is compared by per-fixture suites in `crates/oce-conformance/tests/`: a shared
@@ -128,19 +128,21 @@ OpenModelica. A mismatch never widens a tolerance or re-blesses a golden.
   f64, 19 exact encoded integer, 12 exact 0.0/1.0). The funnel band is an *additive* Real-only
   layer, never the primary comparison — Boolean and Integer outputs are deliberately kept off it
   because the funnel is type-blind (`g36_funnel_band/policy.rs`).
-  Of the 416 signal goldens, 396 check CDL / Buildings source semantics. The other 20 are exact
-  HostTick v1 profile references for `Generic.TimeSuppression`, `CoolingOnly.Controller`, and
-  `ReliefFanGroup`, whose fixtures contain `CDL.Logical.Pre`; they do not claim Modelica
-  event-iteration equivalence. The generator is deliberately kept **off the workspace** and
+  Of the 420 signal goldens, 398 check CDL / Buildings source semantics. The other 22 are exact
+  HostTick v1 profile references: 20 for `Generic.TimeSuppression`, `CoolingOnly.Controller`, and
+  `ReliefFanGroup`, whose fixtures contain `CDL.Logical.Pre`, and the two standalone
+  `CDL.Logical.Pre` goldens; they do not claim Modelica event-iteration equivalence. The generator is deliberately kept **off the workspace** and
   **forbidden from depending on `oce-blocks`**; CI enforces that
   code-dependency firewall. For classes whose oracle shares a pinned math kernel or restates the
   same documented recurrence, a Tier-A pass is evidence about plumbing and transcription of the
   shared formula, not an independent check of the formula; a mechanical shared-kernel detector
   is filed as follow-up. Extending Tier-A coverage means adding to that generator, never blessing
-  engine output. Per-block Tier-A goldens cover **129 of 133 CDL classes**:
-  `CDL.Logical.Nor`, `CDL.Logical.Pre`, and `CDL.Logical.Sources.Constant` carry indirect
-  G36-sequence evidence only; `CDL.Utilities.Assert` has
-  no output port, and its diagnostics-channel golden is filed.
+  engine output. Per-block Tier-A goldens cover **132 of 133 CDL classes**:
+  only `CDL.Logical.Sources.Constant` carries indirect G36-sequence evidence alone.
+  `CDL.Logical.Pre`'s standalone goldens pin the HostTick v1 profile, not Modelica event
+  iteration. `CDL.Utilities.Assert` has no output port, so its golden is a `warning` observation
+  column compared against each completed frame's Warning diagnostics
+  (`per_block_utilities_assert.rs`), not an output point.
 - Record the oracle's provenance (which tool, which version) alongside the vector so a future
   mismatch is debuggable.
 - When no oracle exists for a construct, say so in the test and fall back to a hand-derived

@@ -17,6 +17,7 @@ mod integer_domain_tests;
 mod integers_conversions;
 mod integers_stage;
 mod logical;
+mod logical_pre;
 mod logical_proof;
 mod logical_variable_pulse;
 mod oracle;
@@ -37,6 +38,7 @@ mod sequences;
 mod source_pulse;
 mod source_timetable;
 mod utilities;
+mod utilities_assert;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -77,7 +79,9 @@ fn main() {
     goldens.extend(reals_moving_average::goldens());
     goldens.extend(psychrometrics::goldens());
     goldens.extend(utilities::goldens());
+    goldens.extend(utilities_assert::goldens());
     goldens.extend(logical::goldens());
+    goldens.extend(logical_pre::goldens());
     goldens.extend(logical_proof::goldens());
     goldens.extend(logical_variable_pulse::goldens());
     goldens.extend(integers_conversions::goldens());
@@ -404,6 +408,12 @@ fn provenance_source(g: &Golden) -> &'static str {
         "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics, independent of oce-blocks; this signal follows a fixed-step discretization shared with the engine and is frame-rate dependent (see frame_rate_dependence), not an independent continuous-time re-derivation"
     } else if uses_host_tick_pre_profile(g) {
         "HostTick v1 profile recurrence derived from fixture topology and pinned Buildings sources except CDL.Logical.Pre, which uses the documented one-transition projection; independent of oce-blocks, not a Modelica event-iteration oracle"
+    } else if g.class_path == "CDL.Logical.Pre" {
+        "HostTick v1 one-transition projection of Buildings CDL.Logical.Pre.mo (initial equation pre(u)=pre_u_start; y=pre(u)) per docs/execution-profile.md; independent of oce-blocks, not a Modelica event-iteration oracle"
+    } else if g.class_path == "CDL.Logical.Nor" {
+        "closed-form from Buildings CDL.Logical.Nor.mo equation y=not (u1 or u2); independent re-derivation"
+    } else if g.class_path == "CDL.Utilities.Assert" {
+        "closed-form from Buildings CDL.Utilities.Assert.mo equation assert(u, message, AssertionLevel.warning), read as one warning record per evaluation with u false; an engine-observation reference for the warning channel, not an output connector; independent re-derivation"
     } else if g.class_path == "G36"
         && provenance_field(g, "sequence_derivation") == Some(sequences::DERIVATION_FIXTURE_LOCAL)
     {
@@ -560,6 +570,10 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
             ValueKind::Integer => "exact G36 HostTick v1 profile encoded integer",
             ValueKind::Boolean => "exact G36 HostTick v1 profile 0.0/1.0",
         }
+    } else if g.class_path == "CDL.Logical.Pre" {
+        "exact HostTick v1 profile 0.0/1.0 (atoly=0)"
+    } else if g.class_path == "CDL.Utilities.Assert" {
+        "exact per-frame warning-record count 0.0/1.0 with bit-exact record time and verbatim message (atoly=0)"
     } else if g.class_path == "G36" {
         match g.kind {
             ValueKind::Real => "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
