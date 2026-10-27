@@ -40,7 +40,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### CXF import and export
 
 - **Five hostile CXF load amplifications are now bounded with typed refusals, and an over-large
-  state window refuses instead of panicking** (GitHub #TBD, issue #365). Bounded per load:
+  state window refuses instead of panicking** (GitHub #381, issue #365). Bounded per load:
   `containsBlock` lowering work (each instance once), inherited-scope memory (linear), array
   parameter elements (2^20 per document), `[S]` state words (2^22 per model) and binding
   evaluation work (2^24 units per evaluation, 2^26 per document). Not bounded: the total memory
