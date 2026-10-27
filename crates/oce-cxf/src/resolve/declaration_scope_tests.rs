@@ -536,3 +536,24 @@ fn unterminated_self_named_literal_reports_the_expression_error_not_a_cycle() {
         "expression binding did not ground: expression parse error: unterminated string literal"
     );
 }
+
+#[test]
+fn a_long_operator_chain_yields_its_identifiers_in_source_order_on_a_small_stack() {
+    // 2048 operands is the longest chain the expression node cap admits (issue #371); the
+    // walker visits a left-associative spine iteratively.
+    let names: Vec<String> = (0..2048).map(|index| format!("p{index}")).collect();
+    let sum = names.join(" + ");
+    let mixed = names
+        .chunks(2)
+        .map(|pair| pair.join(" * "))
+        .collect::<Vec<_>>()
+        .join(" - ");
+    let (from_sum, from_mixed) = std::thread::Builder::new()
+        .stack_size(2 * 1024 * 1024)
+        .spawn(move || (identifier_heads(&sum), identifier_heads(&mixed)))
+        .unwrap()
+        .join()
+        .unwrap();
+    assert_eq!(from_sum, names);
+    assert_eq!(from_mixed, names);
+}

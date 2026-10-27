@@ -634,9 +634,10 @@ fn public_signatures_are_stable() {
 
 #[test]
 fn hand_built_deep_ast_is_rejected_before_evaluation() {
+    // Right-nested, so every level is real nesting (a left-deep chain is not; issue #371).
     let mut ast = ExprAst::Int(1);
     for _ in 0..100 {
-        ast = ExprAst::Binary(BinOp::Add, Box::new(ast), Box::new(ExprAst::Int(1)));
+        ast = ExprAst::Binary(BinOp::Add, Box::new(ExprAst::Int(1)), Box::new(ast));
     }
     assert_eq!(
         eval(&ast, &TestScope::new(&[])).unwrap_err(),

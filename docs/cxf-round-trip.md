@@ -64,7 +64,10 @@ the graph through `oce_validate` to apply the current output-side load contract
 | `nominal` | bare number, **finite only** | Real connectors |
 
 Attributes are emitted only when `Some`; an all-default connector emits zero attribute keys, which
-is byte-identical to an attribute-free port node.
+is byte-identical to an attribute-free port node. Export always writes the compact `S231:` key. An
+imported attribute keyed by its full IRI, another prefix bound to the S231 namespace, or a declared
+`@context` term is read as that same attribute (issue #383), so it exports in the compact spelling
+and a compact and an expanded source document export byte-identically.
 
 Some attributes are rejected rather than dropped — and the distinction between *rejected* and
 *dropped* is the point. On a **surviving** block, a connector carrying `unbounded` fails the export

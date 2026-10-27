@@ -84,6 +84,33 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### CXF import and export
 
+- **Modeled `S231:` properties are read in every JSON-LD key spelling** (GitHub #TBD, issue
+  #383). The importer matched `S231:min`, `S231:max`, `S231:nominal`, `S231:unit` and the other
+  21 modeled properties only under the compact key. The same property keyed by its full IRI
+  (`"http://data.ashrae.org/S231P#min"`), by another prefix bound to the S231 namespace, or by a
+  declared `@context` term fell into the opaque pass-through map, so a bound loaded with no
+  diagnostic, was never validated or enforced on frames, and vanished from export. On the
+  resolver's working clone, every pass-through key is now expanded against the document
+  `@context` (the same expansion identity tokens use) and, when it names a modeled term in the
+  document's own `S231` namespace (the S231P namespace when the document binds none), moves into
+  the typed field before any other stage reads the node. All 25 modeled terms are covered, structural edges
+  included. Compact and expanded spellings give the same model, diagnostics and export bytes;
+  export always writes the compact key. A modeled term in any other known S231 namespace — S231P,
+  the `…/S231#` namespace upstream modelica-json emits, or either `https:` spelling — is refused as
+  `non-subset-construct` in both directions, naming the namespace the document reads modeled keys
+  in. Writing one property twice on a node — compact (including an explicit `null` or `[]`) and
+  expanded, or two expanded spellings — is refused as `malformed-document` naming both spellings
+  rather than picking one, as is a key that names a modeled property only after trimming
+  surrounding whitespace, any key written more than once on one `@graph` node (JSON parsing kept
+  one value silently; no tracked fixture or vendored translation repeats a key), and an expanded
+  value that does not fit the field (the resolver-side
+  twin of the parse error the compact key raises). Unmodeled terms and other vocabularies still
+  pass through, and the Layer-A DTO
+  (`parse_document`/`write_document`) is unchanged and still lossless. New tests re-key every
+  modeled property of every tracked fixture to its full IRI and require an identical import
+  outcome and export, and check enforcement at the facade (`crossed-bounds`,
+  `non-finite-bound`, `InputDomain`).
+
 - **Out-of-range `integer()` bindings, crossed bounds and `S231:nominal` no longer load
   silently** (GitHub #384, issues #374, #378, #379). Three load-time values that were wrong but
   plausible are now refused or carried through:
@@ -188,6 +215,25 @@ and a gate that accepted any text would restore exactly the false assurance desc
   an input's only connection now pin the warning. The release-compatibility checker re-selects
   its current implementation baseline at the change's source commit; policy and rows are
   unchanged.
+
+### Binding expressions
+
+- **Long operator chains are no longer refused as too deep, and `-9223372036854775808` is a
+  literal** (GitHub #TBD, issue #371). The AST depth check counted the length of a
+  left-associative chain as nesting, so `a+b+…` with more than 64 terms (and the same for `*`,
+  `/`, `-`, `and`, `or`) failed with `NestingTooDeep`. `nesting_depth` now leaves the left operand
+  of a `Binary` that is itself a `Binary` at its parent's level, so only real nesting (right
+  operands, parentheses, signs, calls, arrays, ranges, subscripts, comprehensions) counts, and a
+  chain is bounded by `MAX_EXPR_NODES` (2048 terms) at parse and by the fuel budget at evaluation.
+  The evaluator walks a chain's left spine with an explicit stack in exactly the recursive order —
+  same fuel charges, same strict-finite checks at every inner node, same first error — so stack
+  use stays bounded by the depth limit: a hand-built 100,000-term chain evaluates on a 2 MiB
+  thread. The CXF resolver's two expression walkers (declaration ordering and G36 guard
+  validation) walk chains the same way. A 2000-operand guard chain that used to be refused at
+  parse is now validated operand by operand. Separately, `9223372036854775808` (2^63) was refused
+  by the lexer, so `i64::MIN` could not be written; a unary minus applied directly to that literal
+  now folds to `i64::MIN`, and only that form — the literal anywhere else, including
+  `-9223372036854775808[1]`, is still out of range.
 
 ### Block library
 

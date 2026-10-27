@@ -129,7 +129,7 @@ separates host support from registry dependency closure.
 | Crate | Responsibility |
 | --- | --- |
 | `oce-model` | Pure value/connector/instance/connection types; the `Value` enum (Real/Integer/Boolean/String/Enum) and the flattened model graph — the shared executable truth. |
-| `oce-expr` | The CDL §7.7.2 binding-expression parser and evaluator (closed-world, pure). Bounded on structure: input deeper than `MAX_NESTING_DEPTH` (64) or wider than `MAX_EXPR_NODES` (4096) is a typed error, not a stack overflow (`crates/oce-expr/src/lib.rs`). |
+| `oce-expr` | The CDL §7.7.2 binding-expression parser and evaluator (closed-world, pure). Bounded on structure: input deeper than `MAX_NESTING_DEPTH` (64) or wider than `MAX_EXPR_NODES` (4096) is a typed error, not a stack overflow (`crates/oce-expr/src/lib.rs`). Depth counts real nesting only; a left-associative chain such as `a+b+…` is bounded by the node cap and evaluated iteratively. |
 | `oce-blocks` | The `Block` trait and the native CDL elementary-block library, publicly enumerable at runtime via `catalog()` (`crates/oce-blocks/src/catalog.rs`) with ports, parameter rules, and honest parameter defaults per class. |
 | `oce-flatten` | **Reserved seam; an identity passthrough today.** `oce-cxf` owns lowering because CXF arrives pre-flattened, so `flatten()` returns the model unchanged (`crates/oce-flatten/src/lib.rs`). Full `.mo` flattening is deferred. It is a publishable implementation dependency on the `oce-api` path, not an independently supported package. |
 | `oce-validate` | Loader conformance: subset rejection, single-assignment, type and attribute unification, parameter rules. |

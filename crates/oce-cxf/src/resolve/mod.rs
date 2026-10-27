@@ -131,13 +131,14 @@ fn port_views<'a>(
 /// determinism and boundary-elision contracts.
 pub(crate) fn resolve(
     doc: &CxfDocument,
+    raw: &[u8],
     opts: &ResolveOptions,
 ) -> Result<(ModelGraph, ValidationReport), CxfError> {
     // --- Step 0: expand identity and typing tokens against `@context` on a working clone
     // (doc 04 R-3), BEFORE any `@id` index exists — expansion must precede the by_id build or
     // `ex:A` and its absolute spelling become two nodes instead of a `DuplicateId`. A document
     // whose identity tokens cannot be canonicalized is refused here with typed diagnostics.
-    let expanded = match crate::expand::expand_document(doc) {
+    let expanded = match crate::expand::expand_document(doc, Some(raw)) {
         Ok(expanded) => expanded,
         Err(diags) => return Err(CxfError::Validation(finalize_diags(diags, &HashMap::new()))),
     };

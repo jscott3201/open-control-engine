@@ -190,9 +190,7 @@ fn eval_scalar_unchecked(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, Expr
         ExprAst::Const(c) => Ok(real(const_value(*c))),
         ExprAst::EnumRef(name) => eval_enum_ref(name, scope),
         ExprAst::Unary(op, e) => eval_unary(*op, &eval_scalar(e, scope)?),
-        ExprAst::Binary(op, a, b) => {
-            eval_binary(*op, &eval_scalar(a, scope)?, &eval_scalar(b, scope)?)
-        }
+        ExprAst::Binary(op, a, b) => eval_binary_chain(*op, a, b, scope),
         ExprAst::Call(..)
         | ExprAst::Ident(_)
         | ExprAst::ArrayLit(_)
@@ -226,6 +224,41 @@ fn eval_unary(op: UnOp, v: &Value) -> Result<Value, ExprError> {
         },
         UnOp::Not => Ok(Value::Boolean(!bool_of(v)?)),
     }
+}
+
+/// Evaluate `a op b` where `a` may head a left-deep chain (`x+y+z+…`) of any length.
+///
+/// The left spine is walked with an explicit stack instead of recursion, so stack use is bounded
+/// by [`crate::nesting_depth`] (which does not count chain length) rather than by the chain's
+/// term count. The order of every observable step is exactly the recursive order: each spine node
+/// is charged one fuel unit on the way down (root first, charged by the caller), the leftmost
+/// operand is evaluated, then each right operand in source order is evaluated, applied, and — for
+/// every spine node below the root — checked by the strict-finite policy. The root's result is
+/// checked by the calling [`eval_scalar`], as for every node.
+fn eval_binary_chain(
+    op: BinOp,
+    a: &ExprAst,
+    b: &ExprAst,
+    scope: &dyn Scope,
+) -> Result<Value, ExprError> {
+    let ExprAst::Binary(..) = a else {
+        return eval_binary(op, &eval_scalar(a, scope)?, &eval_scalar(b, scope)?);
+    };
+    let mut spine = vec![(op, b)];
+    let mut leftmost = a;
+    while let ExprAst::Binary(op, left, right) = leftmost {
+        crate::fuel::charge(1)?;
+        spine.push((*op, right.as_ref()));
+        leftmost = left;
+    }
+    let mut acc = eval_scalar(leftmost, scope)?;
+    while let Some((op, right)) = spine.pop() {
+        acc = eval_binary(op, &acc, &eval_scalar(right, scope)?)?;
+        if !spine.is_empty() {
+            acc = crate::eval_strict::check_scalar(acc, scope)?;
+        }
+    }
+    Ok(acc)
 }
 
 fn eval_binary(op: BinOp, a: &Value, b: &Value) -> Result<Value, ExprError> {
