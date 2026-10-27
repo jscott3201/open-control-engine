@@ -263,6 +263,31 @@ require_pattern "$ci" 'for profile in ci ci-release;' \
   'require the complete nextest determinism report set'
 require_pattern "$ci" 'test -s "target/nextest/\$profile/junit\.xml"' \
   'refuse an absent or empty nextest determinism report'
+# Per-PR crate suites outside the determinism subset (issue #370).
+require_job_pattern "$ci" 'crate-tests' 'tool:[[:space:]]*nextest@0\.9\.143' \
+  'pinned cargo-nextest install for the crate suites'
+require_job_pattern "$ci" 'crate-tests' \
+  '^[[:space:]]*cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf$' \
+  'run the oce-graph, oce-validate, oce-model and oce-cxf suites per PR'
+require_job_pattern "$ci" 'crate-tests' \
+  '^[[:space:]]*-p oce-reference-wal-adapter --locked --profile ci --no-tests=fail$' \
+  'crate suites include the WAL adapter and hard-fail on zero tests'
+require_job_pattern "$ci" 'crate-tests' '^[[:space:]]*(- )?run: test -s target/nextest/ci/junit\.xml$' \
+  'refuse an absent or empty crate-suite report'
+# Documentation checks under CI OK (issue #377); docs-pages.yml is path-filtered and not required.
+require_job_pattern "$ci" 'docs' '^[[:space:]]*(- )?run: bash scripts/docs/install-mdbook\.sh target/mdbook-bin$' \
+  'install the checksum-pinned mdBook'
+require_job_pattern "$ci" 'docs' '^[[:space:]]*(- )?run: python3 scripts/docs/test_check_links\.py$' \
+  'run the documentation checker contracts'
+require_job_pattern "$ci" 'docs' \
+  '^[[:space:]]*(- )?run: python3 scripts/docs/test_authority_literals\.py --mdbook target/mdbook-bin/mdbook$' \
+  'run the authority literal suite through mdBook'
+require_job_pattern "$ci" 'docs' '^[[:space:]]*python3 scripts/docs/check_integrity\.py$' \
+  'stage the documentation'
+require_job_pattern "$ci" 'docs' '^[[:space:]]*(- )?run: target/mdbook-bin/mdbook build target/docs-book$' \
+  'build the mdBook'
+require_job_pattern "$ci" 'docs' '^[[:space:]]*python3 scripts/docs/check_links\.py$' \
+  'check generated internal links and anchors'
 require_job_pattern "$ci" 'ci-ok' '^[[:space:]]*if:[[:space:]]*always\(\)' \
   'CI OK aggregate reports on every run'
 require_job_pattern "$ci" 'ci-ok' 'toJSON\(needs\)' 'CI OK aggregate inspects every needed result'

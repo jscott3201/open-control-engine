@@ -89,6 +89,19 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Verification
 
+- **The scheduler, validator, model, CXF and WAL adapter suites, and the docs checks, now gate
+  every PR** (GitHub #380, issues #370, #377). Per-PR CI ran nextest only for `oce-api`,
+  `oce-blocks` and `oce-expr`, so a regression in `oce-graph`, `oce-validate`, `oce-model`,
+  `oce-cxf` or `oce-reference-wal-adapter` surfaced only in the daily release gate. A new
+  `crate-tests` job in `pr-gate.yml` runs those five suites in x86_64 debug, beside the determinism
+  matrix rather than inside its QEMU-emulated legs; their release-codegen runs stay in the release
+  gate. The docs checks in `docs-pages.yml` are path-filtered and not required, and GitHub #373
+  merged with them failing. A new `docs` job runs the same sequence on every PR: checker contracts,
+  authority literals through mdBook, staging, the mdBook build and the link check.
+  `docs-pages.yml` keeps the Pages publish from `main`. `CI OK` needs both jobs, and
+  `check-workflow-gates.sh` and its fixtures now require their commands. `.agents/gate.sh` does not
+  run them yet because it is a bound source of the retained native strict-bit evidence;
+  `.agents/project-facts.md` gives the local commands.
 - **golden-gen's own hygiene and its goldens' freshness now gate every PR** (GitHub #360, issue
   #350). `tools/golden-gen` is a standalone cargo workspace, so no workspace command linted or
   tested it, and nothing checked that the checked-in Tier-A goldens are what it emits. The new

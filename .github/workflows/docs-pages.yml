@@ -3,7 +3,9 @@
 # PRs into `development` (and pushes to it) stage the docs, build mdBook and check links and
 # anchors without publishing. A push to `main` that touches the docs, or a manual dispatch on
 # `main`, also deploys the built site to GitHub Pages. Path-filtered, so this is not a required
-# status; the per-PR gate (pr-gate.yml) already runs the authority projection check on every PR.
+# status. The per-PR gate (pr-gate.yml) runs the same checks on every PR under `CI OK`: its `docs`
+# job mirrors the build job below minus the Pages upload, and package-publication-contract runs the
+# authority projection check. Change a check here and there together.
 
 name: docs-pages
 
