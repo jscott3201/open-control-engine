@@ -161,32 +161,56 @@ model may be CDL-legal, and they name the remedy.
 a value from the wrong tick. A refused reload leaves the previously loaded model serving unchanged.
 
 **Which block classes can trigger it.** A block can trigger the refusal only if some input it reads
-when it fires does not feed through to at least one of its outputs. The feedthrough of every
-registered class was checked, across default and multi-element parameterizations. Today only nine
-`CDL.Routing` classes qualify, and only when their routing parameters give them more than one
-element:
+when it fires does not feed through to at least one of its outputs. Today twelve registered classes
+qualify, each only under the parameters given below: nine `CDL.Routing` classes, the two
+`CDL.Reals` matrix reductions, and `CDL.Reals.PIDWithReset` in proportional-only mode. Every one of
+them is stateless under those parameters, with mixed feedthrough: some output depends on only some
+of the inputs the block reads.
 
 | Classes | Feedthrough | Shape that can trigger it |
 | --- | --- | --- |
-| `RealExtractSignal`, `IntegerExtractSignal`, `BooleanExtractSignal` | `y[i]` depends only on `u[extract[i]]` | `nin ≥ 2`. This includes a single-output extract (`nout = 1`), because an input it does not select is still read when the block fires. |
-| `RealVectorFilter`, `IntegerVectorFilter`, `BooleanVectorFilter` | each output depends only on the one input that `msk` selects for it | `nin ≥ 2` |
-| `RealVectorReplicator`, `IntegerVectorReplicator`, `BooleanVectorReplicator` | `y[i, j]` depends only on `u[j]` | `nin ≥ 2` |
+| `CDL.Routing.RealExtractSignal`, `IntegerExtractSignal`, `BooleanExtractSignal` | `y[i]` depends only on `u[extract[i]]` | `nin ≥ 2` and `nout ≥ 1`. This includes a single-output extract (`nout = 1`), because an input it does not select is still read when the block fires. |
+| `CDL.Routing.RealVectorFilter`, `IntegerVectorFilter`, `BooleanVectorFilter` | each output depends only on the one input that `msk` selects for it | `nin ≥ 2` and `nout ≥ 1` (at least one `msk` element true) |
+| `CDL.Routing.RealVectorReplicator`, `IntegerVectorReplicator`, `BooleanVectorReplicator` | `y[i, j]` depends only on `u[j]` | `nin ≥ 2` and `nout ≥ 1` |
+| `CDL.Reals.MatrixMax`, `CDL.Reals.MatrixMin` | with `rowMax` / `rowMin = true` (the default), `y[i]` depends only on row `i`, `u[i, 1..nCol]`; with `false`, `y[j]` depends only on column `j`, `u[1..nRow, j]` | two or more outputs: `nRow ≥ 2` when reducing rows, `nCol ≥ 2` when reducing columns. For example, `MatrixMin` with `nRow = 2, nCol = 1, rowMin = true` and feedback `y[1] → u[2, 1]` is refused. |
+| `CDL.Reals.PIDWithReset` | `y` depends only on `u_s` and `u_m`, never on `trigger` | `controllerType = P`. With no integrator the controller holds no state, so it reads `trigger` when it fires even though `trigger` affects nothing. For example, `y → GreaterThreshold → trigger` is refused. In the `PI`, `PD` and `PID` modes the controller is stateful, `trigger` is read only by the state update, and the same feedback loads. |
 
-Every other registered class has outputs that all depend on every input the class reads. That set
-includes `MatrixGain`, `Sort`, the scalar replicators, `Extractor` and the multi-output stateful
-blocks `Logical.Timer`, `Logical.TimerAccumulating`, `Logical.Proof` and `Integers.Change`. Feedback
-through any of them is either a genuine connector-level loop (`algebraic-loop`) or is cut by
-a state-holding block. The scheduler also handles a stateful block that has a state-only output
-next to a feedthrough output, but no registered class has that shape today. The scheduler's own
-tests cover that case with synthetic blocks.
+The list is pinned by a census test in `oce-blocks` (`src/tests/mixed_feedthrough_census.rs`,
+with its grid in `mixed_feedthrough_grid.rs`). It builds every registered class with its registry
+defaults and at every point of a grid derived from the class's parameter rules and defaults. The
+grid sweeps each structural width over `0..=3`, each Boolean and enumeration parameter over every
+value, and each selector or mask array over every valid value for those widths. Every other
+scalar parameter with a default is probed: at each grid point it is set alone to a few sample
+values, and the census checks that no probe changes the mixed pairs. The parameters whose probes
+change whether a block is stateful are a pinned, reviewed list; today that is only comparator
+hysteresis `h`. The test then checks that the set of classes with mixed feedthrough is exactly
+these twelve, and that the shape condition in the table matches every grid point. String
+parameters, non-structural arrays and widths above 3 are not varied, so the census is exhaustive
+over its grid and sampled beyond it, not a proof. A class added later with mixed feedthrough
+over that grid fails the test until this table names it. `oce-graph` and `oce-api` tests show
+each listed class refusing feedback of this shape.
+
+Every other registered class, and every listed class outside its trigger condition, has outputs
+that all depend on every input it reads when it fires. That set includes `MatrixGain`, `Sort`, the
+scalar replicators, `Extractor`, a single-output `MatrixMax` or `MatrixMin`, `CDL.Reals.PID` in
+every mode, `PIDWithReset` in its stateful modes, and the multi-output stateful blocks
+`Logical.Timer`, `Logical.TimerAccumulating`, `Logical.Proof` and `Integers.Change`. Feedback
+through any of them is either a genuine connector-level loop (`algebraic-loop`) or is cut by a
+state-holding block. The scheduler also handles a stateful block that has a state-only output next
+to a feedthrough output, but no registered class has that shape today. The scheduler's own tests
+cover that case with synthetic blocks.
 
 **Remedies.** Restructure the model so that the output on the loop and the input fed back to it are
 not on the same block:
 
-- **Split the routing block.** Replace it with separate blocks whose input vectors hold only the
-  elements each output uses. In the reproduction, a `RealExtractSignal` with `nin = 1` would read
-  `u1` and produce `y1`, and a second block would carry `u2` to `y2`. When the selection is fixed,
-  you can also connect the selected element directly.
+- **Split the routing block or matrix reduction.** Replace it with separate blocks whose input
+  vectors hold only the elements each output uses. For a matrix reduction, that means one
+  single-output reduction per row or column on the loop. In the reproduction, a
+  `RealExtractSignal` with `nin = 1` would read `u1` and produce `y1`, and a second block would
+  carry `u2` to `y2`. When the selection is fixed, you can also connect the selected element
+  directly.
+- **Drop the reset input of a proportional-only reset PID.** In P mode `trigger` has no effect,
+  so `CDL.Reals.PID` with `controllerType = P` computes the same output without it.
 - **Insert a delay,** for example `CDL.Discrete.UnitDelay` or `CDL.Logical.Pre`, on the feedback
   path, but only where a one-step delay is acceptable for the sequence. This changes the model's
   behaviour, so it is not equivalent to the original.
@@ -197,10 +221,13 @@ It would have to leave the determinism goldens and strict-bit evidence unchanged
 accepted today.
 
 **Corpus status.** No checked-in G36 fixture, Library rule fixture, composite-contract fixture,
-conformance fixture or vendored modelica-json translation uses an affected routing class. The same
-is true of the vendored `.mo` sources, apart from the routing class definitions themselves. The
-only tracked document refused with `block-algebraic-loop` is the reproduction fixture,
-`crates/oce-api/src/tests/fixtures/extract_signal_block_loop.jsonld`.
+conformance fixture or vendored modelica-json translation uses an affected routing class, or a
+multi-output `MatrixMax` or `MatrixMin` in feedback. The same is true of the vendored `.mo` sources,
+apart from the class definitions themselves. Every tracked CXF document that instantiates
+`PIDWithReset` sets `controllerType = PI` or leaves the `PI` default. Some vendored `.mo` sequences
+pass `controllerType` through from their own parameters, and those were not checked for feedback
+into `trigger`. The only tracked document refused with `block-algebraic-loop` is the reproduction
+fixture, `crates/oce-api/src/tests/fixtures/extract_signal_block_loop.jsonld`.
 
 ## 47 fixture documents is not 47 sequences
 
