@@ -31,7 +31,7 @@ const OUTPUTS: &[PointSpec] = &[PointSpec::real(SETPOINT_SOURCE)];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "trim_and_respond_have_hol_false",
     cxf: TRIM_AND_RESPOND,
-    t_stop: 22,
+    t_stop: 40,
     sample_step: 60.0,
     inputs: INPUTS,
     outputs: OUTPUTS,
@@ -66,14 +66,16 @@ fn g36_trim_and_respond_outputs_match_determinism_golden() {
 }
 
 fn trim_and_respond_inputs(t: f64) -> Vec<(String, Value)> {
-    let requests = if (840.0..1080.0).contains(&t) {
-        6
-    } else if (720.0..840.0).contains(&t) {
+    let requests = if (720.0..840.0).contains(&t) {
         3
+    } else if (840.0..1080.0).contains(&t) {
+        6
+    } else if (2160.0..2280.0).contains(&t) {
+        5
     } else {
         0
     };
-    let device_status = !(1080.0..1260.0).contains(&t);
+    let device_status = !(1260.0..1380.0).contains(&t);
     vec![
         pair(REQUEST_COUNT, Value::Integer(requests)),
         pair(DEVICE_STATUS, Value::Boolean(device_status)),
