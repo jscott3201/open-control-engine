@@ -261,6 +261,9 @@ def snapshot() -> dict[str, Any]:
                     "identity_note": "The declared commit differs from OCE development even though their tree identities are equal.",
                 },
             },
+            # Frozen record of the 2026-08-26 capture. Open Control Sim has since been
+            # discontinued: this row stays only so the dated artifact remains byte-reproducible,
+            # and no source checkout of it is accepted or looked for.
             "sim": {
                 "repository": sim_repository,
                 "ref": captured_ref("development", sim_commit, "ed2a3b25f6c52e9df1d9aa3b9caa6c838bb01075", "default"),
@@ -561,7 +564,11 @@ def require_no_oce_dependencies(repository: pathlib.Path, revision: str) -> None
 
 
 def verify_downstream_source(name: str, repository: pathlib.Path) -> None:
-    """Verify one downstream claim from an explicit exact-object checkout."""
+    """Verify one downstream claim from an explicit exact-object checkout.
+
+    The captured Sim row is historical only; ``open-control-sim`` is refused as an unsupported
+    name rather than looked for, because that repository is discontinued.
+    """
     downstream = snapshot()["downstream_and_adjacent"]
     if name == "open-control-studio":
         record = downstream["studio"]
@@ -593,15 +600,6 @@ def verify_downstream_source(name: str, repository: pathlib.Path) -> None:
         pin = show(repository, revision, "ENGINE_PIN").strip()
         if pin != record["oce_dependency"]["commit"]:
             fail("Library ENGINE_PIN differs at the captured revision")
-        return
-    if name == "open-control-sim":
-        record = downstream["sim"]
-        revision = record["ref"]["commit"]
-        require_tree(repository, revision, record["ref"]["tree"])
-        require_no_oce_dependencies(repository, revision)
-        bridge = show(repository, revision, "crates/ocs-bridge/src/lib.rs")
-        if "Scaffold status: empty" not in bridge:
-            fail("Sim ocs-bridge is not the captured empty scaffold")
         return
     if name == "cxf-json":
         record = downstream["cxf_json"]

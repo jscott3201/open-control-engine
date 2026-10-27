@@ -29,7 +29,7 @@ Primary Git source is named in each artifact entry by repository, exact revision
 package claims come from `Cargo.toml`, `rust-toolchain.toml`, and
 `crates/oce-api/Cargo.toml` at the captured development commit. Studio pins come from `Cargo.toml`
 and its selected locator from `docs/roadmap/README.md` at the captured product commit. Library uses
-`ENGINE_PIN`; Sim uses its Cargo manifests and `ocs-bridge` source; cxf-json uses all Cargo
+`ENGINE_PIN`; Sim used its Cargo manifests and `ocs-bridge` source; cxf-json uses all Cargo
 manifests. Dated GitHub observations name the API endpoint used for compare, tag, release,
 issue, and pull-request evidence.
 
@@ -74,9 +74,15 @@ python3 tools/stability_baseline/baseline.py --check \
   --source open-control-studio=PATH \
   --source open-control-studio-program=PATH \
   --source open-control-library=PATH \
-  --source open-control-sim=PATH \
   --source cxf-json=PATH
 ```
+
+Open Control Sim (`jscott3201/open-control-sim`) has since been discontinued and is not a current
+or planned consumer. The 2026-08-26 capture keeps its recorded Sim row unchanged as historical
+evidence, so `--check` still reproduces the dated artifact byte for byte, but the tool no longer
+accepts or looks for a Sim checkout: `--source open-control-sim=PATH` is refused as an unsupported
+name. That row was source-verified by the tool revision that produced the capture; a later capture
+should not carry it.
 
 Regeneration is deterministic and review-only:
 

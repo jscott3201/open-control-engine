@@ -25,7 +25,7 @@ native topology, repeats, all 35 selected paths/digests and oracle/input/CXF int
 source changed for admission. The collection run's required admission checks were red before the receipt was
 present; its successful capture/cross-cell comparison is not a claim of final green hosted gates.
 The exact Linux result remains limited to this pinned corpus, not macOS, arbitrary inputs,
-mathematical correctness, whole executables or Open Control Sim.
+mathematical correctness, whole executables or any downstream consumer.
 
 The selected boundary covers checker/admission/comparison/workflow/direct formula/harness and
 supporting sources. It is **not the full compiled transitive facade closure**: `oce-api`,
