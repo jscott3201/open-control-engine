@@ -453,7 +453,7 @@ fn declared_attr_on_a_boolean_output_is_refused() {
     }
 }
 
-/// The Real bound grounding-failure arm (`resolve/attrs.rs`, `real_connector_bound`'s `Err`
+/// The Real bound grounding-failure arm (`resolve/attrs.rs`, `real_connector_number`'s `Err`
 /// arm): an expression bound on a declared Real output imported with zero diagnostics before
 /// #233 and is REFUSED now — the same refusal an instance-port connector's expression bound
 /// already gets (bounds ground against the empty scope), so this is consistency, not new
@@ -500,7 +500,7 @@ fn numeric_attr_literal_on_a_declared_output_is_refused() {
     }
 }
 
-/// The Real grounded-to-a-non-number arm (`resolve/attrs.rs`, `real_connector_bound`'s
+/// The Real grounded-to-a-non-number arm (`resolve/attrs.rs`, `real_connector_number`'s
 /// `Ok(non-number)` arm): a boolean literal in a declared Real output's `S231:min` grounds
 /// successfully — to a Boolean, not a number — and is REFUSED, exactly as on an instance-port
 /// connector. 0 engine-G36-corpus occurrences.
@@ -528,7 +528,7 @@ fn non_numeric_bound_on_a_declared_real_output_is_refused() {
 /// The Integer bound grounding-failure arm (`resolve/attrs.rs`, `int_connector_bound`'s `Err`
 /// arm): an expression bound on a declared Integer output is REFUSED. The message coincides
 /// byte for byte with the Real arm's (one shared format), so the fixture's Integer typing is
-/// what pins the PATH — `int_connector_bound`, not `real_connector_bound`. 0 engine-G36-corpus
+/// what pins the PATH — `int_connector_bound`, not `real_connector_number`. 0 engine-G36-corpus
 /// occurrences.
 #[test]
 fn expression_bound_on_a_declared_integer_output_is_refused() {

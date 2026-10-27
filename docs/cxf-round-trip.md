@@ -61,16 +61,25 @@ the graph through `oce_validate` to apply the current output-side load contract
 | --- | --- | --- |
 | `unit`, `quantity`, `displayUnit` | bare string | Real connectors |
 | `min`, `max` | bare number, **finite only** | Real (float) and Integer (int) connectors |
+| `nominal` | bare number, **finite only** | Real connectors |
 
 Attributes are emitted only when `Some`; an all-default connector emits zero attribute keys, which
 is byte-identical to an attribute-free port node.
 
-Two attributes are rejected rather than dropped — and the distinction between *rejected* and
-*dropped* is the point. On a **surviving** block, a connector carrying `nominal` or `unbounded`
-fails the export (`crates/oce-cxf/src/export_attrs.rs`), because the importer hardcodes both to
-`None` and the value would vanish silently. A non-finite Real `min`/`max` bound is rejected for the
-same reason: `serde_json` writes it as JSON `null`, which re-imports as `None`
+Some attributes are rejected rather than dropped — and the distinction between *rejected* and
+*dropped* is the point. On a **surviving** block, a connector carrying `unbounded` fails the export
+(`crates/oce-cxf/src/export_attrs.rs`), because the importer hardcodes it to `None` and the value
+would vanish silently. A non-finite Real `min`/`max` bound or `nominal` is rejected for the same
+reason: `serde_json` writes it as JSON `null`, which re-imports as `None`
 (`crates/oce-cxf/src/export_attrs.rs`).
+
+`S231:nominal` is imported (issue #379). Before, the importer left it in the opaque pass-through
+map: a document carrying it loaded with no diagnostic, the value never reached the model, and
+export silently dropped it. It now grounds like a bound onto Real connectors and boundary
+declarations, so the deep gate refuses a non-finite one (`non-finite-bound`) and a finite one
+round-trips as a bare number. It is still excluded from §7.10 unification (R13.4) and is never read
+while executing a frame; it does not bound input values. A `nominal` on an Integer, Boolean, String
+or Enumeration connector is a `malformed-document` error, since only Real declares one.
 
 On a **deferred ordinary** block, none of that runs. The block is omitted from the document and
 therefore contributes no error diagnostic of its own — not from its connector attributes, not from

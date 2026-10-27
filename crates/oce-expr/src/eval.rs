@@ -362,7 +362,7 @@ fn eval_scalar_call(b: Builtin, vals: &[Value]) -> Result<Value, ExprError> {
         (Builtin::Sqrt, [v]) => builtin_sqrt(num_of(v)?),
         (Builtin::Floor, [v]) => Ok(real(num_of(v)?.as_f64().floor())),
         (Builtin::Ceil, [v]) => Ok(real(num_of(v)?.as_f64().ceil())),
-        (Builtin::Integer, [v]) => Ok(Value::Integer(builtin_integer(num_of(v)?))),
+        (Builtin::Integer, [v]) => builtin_integer(num_of(v)?).map(Value::Integer),
         (Builtin::Div, [x, y]) => builtin_div(num_of(x)?, num_of(y)?),
         (Builtin::Mod, [x, y]) => builtin_mod(num_of(x)?, num_of(y)?),
         (Builtin::Rem, [x, y]) => builtin_rem(num_of(x)?, num_of(y)?),
@@ -406,12 +406,35 @@ fn builtin_sqrt(n: Num) -> Result<Value, ExprError> {
     }
 }
 
-/// `integer(x)` = `floor(x)` cast to Integer (R10.1). `as i64` saturates (never panics) on
-/// out-of-range or NaN.
-fn builtin_integer(n: Num) -> i64 {
+/// The smallest Real whose floor is an Integer: `-2^63`, exactly `i64::MIN`.
+const INTEGER_RANGE_START: f64 = -9_223_372_036_854_775_808.0;
+/// The first Real past the Integer range: `2^63`, one more than `i64::MAX` (which `f64` cannot
+/// represent; the largest `f64` below `2^63` is `2^63 - 1024`).
+const INTEGER_RANGE_END: f64 = 9_223_372_036_854_775_808.0;
+
+/// `integer(x)` = `floor(x)` as Integer (R10.1). An Integer argument passes through unchanged.
+///
+/// A Real whose floor lies outside `[-2^63, 2^63)` — including `NaN` and `±inf` — has no Integer
+/// value and refuses with [`ExprError::DomainError`] (issue #374), in every evaluation mode. An
+/// `as i64` cast would instead saturate (`integer(1e300)` would become `i64::MAX`) or map `NaN` to
+/// `0`, turning a mistyped binding into a plausible-looking count. The runtime
+/// `CDL.Conversions.RealToInteger` block keeps its saturating cast deliberately: a running control
+/// loop must emit an output every tick, while a load can refuse.
+fn builtin_integer(n: Num) -> Result<i64, ExprError> {
     match n {
-        Num::I(i) => i,
-        Num::R(r) => r.floor() as i64,
+        Num::I(i) => Ok(i),
+        Num::R(r) => {
+            let floored = r.floor();
+            // `NaN` fails both comparisons, so it refuses here too.
+            if (INTEGER_RANGE_START..INTEGER_RANGE_END).contains(&floored) {
+                // In range and integral, so the cast is exact.
+                Ok(floored as i64)
+            } else {
+                Err(ExprError::DomainError(
+                    "integer() argument is outside the Integer range [-2^63, 2^63)",
+                ))
+            }
+        }
     }
 }
 

@@ -7,19 +7,17 @@ use oce_model::Attrs;
 
 use crate::dto::{CxfValue, Node, TermAttr};
 
-/// The connector carries a non-default `nominal` attribute (the importer hardcodes
-/// `nominal: None`, so any `Some` is outside the canonical export subset and would be silently
-/// dropped rather than round-tripped).
-const MSG_ATTR_NOMINAL: &str = "export subset: connector carries a non-default §7.4.1 nominal attribute, \
-     which is outside the canonical (bare-scalar) export subset";
 /// The connector carries a non-default `unbounded` attribute (the importer hardcodes
 /// `unbounded: None`, so any `Some` is outside the canonical export subset).
 const MSG_ATTR_UNBOUNDED: &str = "export subset: connector carries a non-default §7.4.1 unbounded attribute, \
      which is outside the canonical (bare-scalar) export subset";
-/// A Real `min`/`max` bound is non-finite (`NaN`/`INFINITY`/`NEG_INFINITY`). `serde_json`
-/// serializes a non-finite `f64` as JSON `null`, which re-imports as `None`, silently breaking
-/// the RT-2 render fixpoint.
+/// A Real `min`/`max` bound is non-finite (`NaN`/`INFINITY`/`NEG_INFINITY`).
+/// `serde_json` serializes a non-finite `f64` as JSON `null`, which re-imports as `None`, silently
+/// breaking the RT-2 render fixpoint.
 const MSG_ATTR_NONFINITE_BOUND: &str = "export subset: connector carries a non-finite §7.4.1 min/max bound, \
+     which is outside the canonical (bare-scalar) export subset";
+/// A Real `nominal` is non-finite; refused for the same reason as [`MSG_ATTR_NONFINITE_BOUND`].
+const MSG_ATTR_NONFINITE_NOMINAL: &str = "export subset: connector carries a non-finite §7.4.1 nominal, \
      which is outside the canonical (bare-scalar) export subset";
 
 /// The classified §7.4.1 attributes for one emitted port.
@@ -32,6 +30,7 @@ pub(super) enum PortAttrs {
         display_unit: Option<Arc<str>>,
         min: Option<f64>,
         max: Option<f64>,
+        nominal: Option<f64>,
     },
     /// Integer connector bounds.
     Integer { min: Option<i64>, max: Option<i64> },
@@ -47,9 +46,14 @@ pub(super) fn classify_attrs(
 ) -> PortAttrs {
     match attrs {
         Attrs::Real(attrs) => {
-            if attrs.nominal.is_some() {
-                diags.push(reject(MSG_ATTR_NOMINAL, subject));
-            }
+            // Imported since issue #379, so a finite nominal round-trips like a bound.
+            let nominal = match attrs.nominal {
+                Some(nominal) if !nominal.is_finite() => {
+                    diags.push(reject(MSG_ATTR_NONFINITE_NOMINAL, subject));
+                    None
+                }
+                other => other,
+            };
             if attrs.unbounded.is_some() {
                 diags.push(reject(MSG_ATTR_UNBOUNDED, subject));
             }
@@ -61,6 +65,7 @@ pub(super) fn classify_attrs(
                 display_unit: attrs.display_unit.clone(),
                 min,
                 max,
+                nominal,
             }
         }
         Attrs::Integer(attrs) => PortAttrs::Integer {
@@ -100,6 +105,7 @@ pub(super) fn emit_port_attrs(node: &mut Node, attrs: &PortAttrs) {
             display_unit,
             min,
             max,
+            nominal,
         } => {
             if let Some(u) = unit {
                 node.unit = Some(TermAttr::Bare(u.as_ref().to_owned()));
@@ -115,6 +121,9 @@ pub(super) fn emit_port_attrs(node: &mut Node, attrs: &PortAttrs) {
             }
             if let Some(m) = max {
                 node.max = Some(CxfValue::Float(*m));
+            }
+            if let Some(n) = nominal {
+                node.nominal = Some(CxfValue::Float(*n));
             }
         }
         PortAttrs::Integer { min, max } => {

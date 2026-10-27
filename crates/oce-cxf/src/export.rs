@@ -30,20 +30,21 @@
 //!   `@id` between the root's and a child's port list re-imports as a rejection.
 //!
 //! ## §7.4.1 connector attributes (Bare-Scalar Canonical)
-//! The five in-subset §7.4.1 attrs live on the **child port node** and, per the #233 owner
+//! The six in-subset §7.4.1 attrs live on the **child port node** and, per the #233 owner
 //! ruling (2026-08-05), on each **declared boundary-output node**. The exporter emits each node's
 //! stored attrs. Declared boundary inputs keep their declaration attrs separate from every driven
 //! child connector, so direct import/export preserves both authored sets independently. In an
 //! engine-loaded graph, §7.10 unification may have filled an unset child or boundary-output value
 //! from its peer; boundary-input unification is a separately reviewed acceptance change. Each attr
 //! is emitted as a **bare JSON scalar/string** — `S231:unit`/`quantity`/
-//! `displayUnit` as bare strings ([`crate::dto::TermAttr::Bare`], Real only) and `S231:min`/`max` as bare
-//! numbers ([`CxfValue::Float`] for Real, [`CxfValue::Int`] for Integer). Bare is the unique
+//! `displayUnit` as bare strings ([`crate::dto::TermAttr::Bare`], Real only), `S231:min`/`max` as bare
+//! numbers ([`CxfValue::Float`] for Real, [`CxfValue::Int`] for Integer), and `S231:nominal` as a
+//! bare [`CxfValue::Float`] (Real only; imported since issue #379). Bare is the unique
 //! shape that survives the importer's `as_term()` collapse and reproduces itself, so the RT-2
 //! render fixpoint holds on an imported `G`. Attributes are emitted iff `Some` (the stored
 //! field default is `None`); `None` fields are omitted, so an all-default connector emits zero
-//! attr keys — byte-identical to an attr-free port node. `nominal`/`unbounded` (the importer
-//! hardcodes `None`) and non-finite Real `min`/`max` (which serialize as JSON `null`) are
+//! attr keys — byte-identical to an attr-free port node. `unbounded` (the importer hardcodes
+//! `None`) and a non-finite Real `min`/`max`/`nominal` (which serialize as JSON `null`) are
 //! rejected, not emitted — see [`classify_attrs`].
 //!
 //! ## Determinism
@@ -521,7 +522,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         });
         // The attr scan obeys the same deferral rule as the datatype scan above: a deferred
         // block's connectors contribute NO error diagnostics. The block is omitted from the
-        // document, so a tag mismatch or an out-of-subset `nominal`/`unbounded`/non-finite bound
+        // document, so a tag mismatch or an out-of-subset `unbounded`/non-finite bound or nominal
         // on it can never reach the wire — letting it abort the export would sink the whole
         // document over a defect in bytes nobody emits. The slot is STILL pushed (`plan.ports`
         // indexes `classified` positionally by connector position; shrinking it would shift a
@@ -1041,6 +1042,7 @@ fn blank_node(id: String) -> Node {
         value: None,
         min: None,
         max: None,
+        nominal: None,
         unit: None,
         quantity: None,
         display_unit: None,

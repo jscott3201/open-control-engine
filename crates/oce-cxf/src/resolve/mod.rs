@@ -425,9 +425,9 @@ pub(crate) fn resolve(
 
     // --- Step 6: build connectors in ConnectorId order (value_type from isOfDataType, falling back
     // to the @type port term; dir/owner from Step 5b). The resolver PARSES each connector's declared
-    // §7.4.1 attributes (unit/quantity/displayUnit/min/max) onto `Connector.attrs` so the §7.10 deep
-    // gate (oce-validate) has something to *unify* — unification is oce-validate's job (AD-8), but the
-    // declared attrs must flow from CXF first or the gate is dead on real input.
+    // §7.4.1 attributes (unit/quantity/displayUnit/min/max/nominal) onto `Connector.attrs` so the
+    // §7.10 deep gate (oce-validate) has something to *unify* — unification is oce-validate's job
+    // (AD-8), but the declared attrs must flow from CXF first or the gate is dead on real input.
     let mut connectors: Vec<Connector> =
         Vec::with_capacity(conn_nodes.len() + derivation.synthesized.len());
     for (i, &node) in conn_nodes.iter().enumerate() {

@@ -1,5 +1,6 @@
-//! A boundary input whose `S231:min`/`S231:max` grounds to NaN or an infinity is refused at load
-//! with `non-finite-bound`, instead of loading and then refusing every frame.
+//! A boundary input whose `S231:min`/`S231:max`/`S231:nominal` grounds to NaN or an infinity is
+//! refused at load with `non-finite-bound`, instead of loading and then refusing every frame (or,
+//! for a nominal, loading with the attribute silently dropped).
 //!
 //! The CXF documents are the authored `legacy_frame_add` fixture with one attribute added; the
 //! expected refusals are stated here, not taken from the engine.
@@ -134,23 +135,45 @@ fn finite_extreme_bounds_still_load_and_bound_the_frame() {
 }
 
 #[test]
-fn a_non_finite_nominal_in_cxf_is_not_read_so_it_cannot_reach_the_engine() {
-    // CXF import does not parse `S231:nominal` (it is excluded from §7.10 unification), so the
-    // attribute never reaches the model and cannot be refused there: the document loads without
-    // any diagnostic (the key is known, merely unread), and frames are bounded only by min/max.
-    // A non-finite nominal that does reach a model graph is refused as `non-finite-bound`
-    // (pinned in oce-validate's `finite_bounds` tests).
-    for lexical in ["NaN", "inf", "-inf"] {
+fn a_non_finite_nominal_is_refused_at_load_like_a_bound() {
+    // Since issue #379 CXF import parses `S231:nominal`, so a non-finite one reaches the deep gate
+    // and is refused as `non-finite-bound` instead of loading silently with no diagnostic.
+    for lexical in ["NaN", "-NaN", "INF", "inf", "-inf", "infinity"] {
         for node in [A, "urn:legacy-frame:add.u1"] {
             let bytes = with_attribute(node, "S231:nominal", typed(lexical));
-            let mut engine = Engine::in_memory();
-            let report = engine
+            let error = Engine::in_memory()
                 .load_cxf(&bytes)
-                .unwrap_or_else(|error| panic!("{node} nominal={lexical}: {error}"));
-            assert!(report.warnings.is_empty(), "{node} nominal={lexical}");
-            engine
-                .prepare_frame(0.0, &[(A, Value::Real(1.0)), (B, Value::Real(2.0))])
-                .unwrap();
+                .expect_err("non-finite nominal");
+            assert_eq!(
+                codes_and_subjects(&error),
+                [("non-finite-bound".to_owned(), Some(A.to_owned()))],
+                "{node} nominal={lexical}"
+            );
         }
+    }
+}
+
+#[test]
+fn a_finite_nominal_loads_without_diagnostics_does_not_bound_the_frame_and_exports() {
+    for (lexical, wire) in [
+        ("300.0", "300.0"),
+        ("-0.0", "-0.0"),
+        ("1.7976931348623157e308", "1.7976931348623157e+308"),
+    ] {
+        let mut engine = Engine::in_memory();
+        let report = engine
+            .load_cxf(&with_attribute(A, "S231:nominal", typed(lexical)))
+            .unwrap_or_else(|error| panic!("nominal={lexical}: {error}"));
+        assert!(report.warnings.is_empty(), "nominal={lexical}");
+        // A nominal is scaling metadata, never a bound: any finite value is still admitted.
+        engine
+            .prepare_frame(0.0, &[(A, Value::Real(-1e300)), (B, Value::Real(1e300))])
+            .unwrap();
+        let exported = engine.export_cxf().expect("finite nominal exports");
+        let text = String::from_utf8(exported.bytes).unwrap();
+        assert!(
+            text.contains(&format!("\"S231:nominal\":{wire}")),
+            "nominal={lexical}: {text}"
+        );
     }
 }

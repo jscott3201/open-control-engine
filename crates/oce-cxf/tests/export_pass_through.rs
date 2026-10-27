@@ -18,7 +18,7 @@ const CONNECTION_ENDPOINT_NOT_EMITTED: &str = "export subset: connection endpoin
      child-port node";
 const TOTAL_DEFERRAL: &str = "CXF export requires at least one emitted runtime block: all blocks \
      were deferred or reserved lowering-only, leaving no runtime composite to emit";
-const ATTR_NOMINAL: &str = "export subset: connector carries a non-default §7.4.1 nominal attribute, \
+const ATTR_NONFINITE_NOMINAL: &str = "export subset: connector carries a non-finite §7.4.1 nominal, \
      which is outside the canonical (bare-scalar) export subset";
 const ATTR_UNBOUNDED: &str = "export subset: connector carries a non-default §7.4.1 unbounded attribute, \
      which is outside the canonical (bare-scalar) export subset";
@@ -545,6 +545,14 @@ fn representable_attributes_on_reserved_input_reject_instead_of_disappearing() {
             }),
         ),
         (
+            "urn:oce:lowering#PassThrough.Real",
+            ValueType::Real,
+            Attrs::Real(RealAttrs {
+                nominal: Some(1.0),
+                ..RealAttrs::default()
+            }),
+        ),
+        (
             "urn:oce:lowering#PassThrough.Integer",
             ValueType::Integer,
             Attrs::Integer(IntAttrs {
@@ -596,12 +604,14 @@ fn representable_attributes_on_reserved_input_reject_instead_of_disappearing() {
 #[test]
 fn out_of_subset_attributes_on_reserved_input_reject_instead_of_disappearing() {
     let cases = [
+        // A finite nominal is an in-subset attribute since issue #379 (pinned with the hidden
+        // input attributes above); a non-finite one cannot be emitted at all.
         (
             Attrs::Real(RealAttrs {
-                nominal: Some(1.0),
+                nominal: Some(f64::NAN),
                 ..RealAttrs::default()
             }),
-            ATTR_NOMINAL,
+            ATTR_NONFINITE_NOMINAL,
         ),
         (
             Attrs::Real(RealAttrs {
