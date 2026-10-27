@@ -160,7 +160,44 @@ pub enum BuildError {
         /// The dotted block paths participating in one concrete block-level feedthrough cycle.
         members: Vec<ConnectorPath>,
     },
+
+    /// The model's `[S]` state regions would exceed [`MAX_STATE_WORDS`] words, or the allocator
+    /// refused the (in-budget) state buffer. State size is input-derived — a block parameter such
+    /// as `CDL.Discrete.TriggeredMovingMean.n` sizes its region — so allocation is checked and
+    /// fallible rather than an uncatchable capacity-overflow panic or OOM abort. `block` is the
+    /// first block (declaration order) whose region crosses the budget, or the last stateful block
+    /// when the allocator itself refused. Remedy: reduce the state-sizing parameters (window
+    /// lengths) or split the model.
+    #[error(
+        "run state too large: {requested} state word(s) requested through block {block} exceed \
+         the supported maximum ({limit} words) or could not be allocated"
+    )]
+    StateTooLarge {
+        /// Authored identity of the block at which the budget was crossed.
+        block: ConnectorPath,
+        /// Words requested up to and including `block`, saturated at `u64::MAX`.
+        requested: u64,
+        /// The enforced budget, [`MAX_STATE_WORDS`].
+        limit: usize,
+    },
 }
+
+/// Maximum total `[S]` state words one model may allocate (`1 << 22` words = 32 MiB).
+///
+/// Every [`RunState::words`] word is input-derived through [`Block::state_len`], and some block
+/// parameters size their regions with no class-level ceiling: `CDL.Discrete.TriggeredMovingMean`
+/// owns `4 + n` words for an unbounded authored `n`, and `CDL.Reals.MovingAverage` (GitHub #373)
+/// owns `6 + 2·(slots + 4)` words with `slots = clamp(2·ceil(delta), 2048, 131072)`. This budget
+/// is the bound for all of them: crossing it is the typed [`BuildError::StateTooLarge`], never a
+/// panic or allocation abort. It admits a moving mean with `n` up to about four million, about 15
+/// maximum-window moving averages (`delta >= 65536 s`) or about 290 at `delta = 3600 s`, while
+/// realistic equipment models use a few thousand words.
+///
+/// Relation to snapshots: the facade's durable snapshot cap (`MAX_SNAPSHOT_BYTES`, 64 MiB in
+/// `oce-api`) is twice the budget's 32 MiB of state words, so any model that loads can always be
+/// snapshotted with about 32 MiB left for connector values and the manifest. `oce-api` keeps that
+/// relation with a compile-time assertion.
+pub const MAX_STATE_WORDS: usize = 1 << 22;
 
 /// BUILD: compile a flattened, validated [`Model`] into a frozen [`Schedule`] — build the
 /// direct-feedthrough DAG ([`build_feedthrough_dag`]), then run the deterministic own Kahn sort

@@ -167,7 +167,7 @@ fn loaded_sample_clocks_require_finite_periods_and_shift() {
             connectors: vec![raw_conn(0, 0, Dir::Out, ValueType::Boolean)],
             ..ModelGraph::new()
         };
-        assert_build_validate_codes(model, &[DiagCode::ParameterOutOfRange]);
+        assert_build_validate_codes(model, &[DiagCode::NonFiniteParameter]);
     }
 
     let sampled = ModelGraph {
@@ -185,7 +185,7 @@ fn loaded_sample_clocks_require_finite_periods_and_shift() {
         external_inputs: vec![ConnectorId(0)],
         ..ModelGraph::new()
     };
-    assert_build_validate_codes(sampled, &[DiagCode::ParameterOutOfRange]);
+    assert_build_validate_codes(sampled, &[DiagCode::NonFiniteParameter]);
 }
 
 #[test]

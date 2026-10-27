@@ -104,6 +104,30 @@ jobs:
         run: >-
           cargo nextest run -p oce-api --lib --locked --profile ci --no-tests=fail
           -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
+  crate-tests:
+    steps:
+      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
+        with:
+          tool: nextest@0.9.143
+      - run: rm -f target/nextest/ci/junit.xml
+      - run: >-
+          cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf
+          -p oce-reference-wal-adapter --locked --profile ci --no-tests=fail
+      - run: test -s target/nextest/ci/junit.xml
+  docs:
+    steps:
+      - run: bash scripts/docs/install-mdbook.sh target/mdbook-bin
+      - run: python3 scripts/docs/test_check_links.py
+      - run: python3 scripts/docs/test_authority_literals.py --mdbook target/mdbook-bin/mdbook
+      - run: >-
+          python3 scripts/docs/check_integrity.py
+          --output target/docs-book
+          --revision "$DOCS_REPOSITORY_REVISION"
+      - run: target/mdbook-bin/mdbook build target/docs-book
+      - run: >-
+          python3 scripts/docs/check_links.py
+          target/docs-book/book
+          --site-prefix /open-control-engine/
   ci-ok:
     name: CI OK
     if: always()
@@ -115,6 +139,8 @@ jobs:
       - package-publication-contract
       - strict-bit-matrix
       - determinism-matrix
+      - crate-tests
+      - docs
     steps:
       - env:
           NEEDS_JSON: ${{ toJSON(needs) }}
@@ -545,6 +571,27 @@ unpin_action() {
   mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
 }
 
+remove_crate_suite() {
+  dir="$1"
+  _deny="$2"
+  sed 's/ -p oce-model -p oce-cxf$/ -p oce-model/' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+remove_docs_link_check() {
+  dir="$1"
+  _deny="$2"
+  grep -v 'scripts/docs/check_links.py' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+remove_docs_checker_contracts() {
+  dir="$1"
+  _deny="$2"
+  grep -v 'scripts/docs/test_check_links.py' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
 empty_crate_dir_only() {
   _dir="$1"
   _deny="$2"
@@ -631,6 +678,12 @@ run_case stale-nextest-pin fail downgrade_nextest_pin \
   "pinned cargo-nextest 0.9.143 install"
 run_case tag-referenced-action fail unpin_action \
   "uses an action not pinned to a full commit SHA"
+run_case missing-cxf-crate-suite fail remove_crate_suite \
+  "run the oce-graph, oce-validate, oce-model and oce-cxf suites per PR"
+run_case missing-docs-link-check fail remove_docs_link_check \
+  "check generated internal links and anchors"
+run_case missing-docs-checker-contracts fail remove_docs_checker_contracts \
+  "run the documentation checker contracts"
 run_case empty-crate-dir-only fail empty_crate_dir_only \
   "no crate Cargo.toml files found under"
 run_case missing-crate-lib-files fail remove_crate_lib_files \

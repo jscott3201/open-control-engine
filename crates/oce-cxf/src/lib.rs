@@ -47,6 +47,9 @@ mod g36_catalog_package_guard;
 mod g36_catalog_tests;
 mod ground;
 mod resolve;
+mod scope_chain;
+#[cfg(test)]
+mod scope_chain_tests;
 #[cfg(test)]
 mod tests;
 
@@ -91,6 +94,24 @@ pub fn write_document(doc: &CxfDocument) -> Result<Vec<u8>, CxfError> {
     Ok(serde_json::to_vec(doc)?)
 }
 
+/// Deterministic expression-evaluation work units one [`import_cxf`] call may spend across ALL of
+/// its binding evaluations — parameter values, array dimensions and values, and conditional
+/// guards (issue #365).
+///
+/// [`oce_expr::MAX_EVAL_FUEL`] (2^24) caps one evaluation, not a document: a document of `N`
+/// costly bindings once spent `N × 2^24` units, about 48 ms each, so a 43 KB document loaded for
+/// 10 s and an 8 MiB one would have run for about half an hour. This budget is shared by every
+/// evaluation of one import through [`oce_expr::with_eval_budget`]; once it is spent, every
+/// later binding refuses at its first unit as `grounding-failed` naming the budget, so one
+/// import spends at most this many units, plus per refused binding only its parse and the
+/// work before its first charge (bounded by `MAX_EXPR_NODES`). `1 << 26` (67,108,864
+/// units, four maximal single evaluations, a fraction of a second of release-build work) is
+/// measured headroom: over 5,958 imports in the `oce-cxf`, `oce-api`, `oce-conformance` and
+/// `oce-flatten` suites the largest non-hostile per-document total was 101,101 units (a
+/// synthetic stress document; checked-in fixtures stay in the low thousands), so the budget is
+/// over 600× that.
+pub const MAX_DOCUMENT_EVAL_FUEL: u64 = 1 << 26;
+
 /// Import a CXF JSON-LD document into the flat [`ModelGraph`] (D1's executable truth), lowering the
 /// lossless Layer-A DTO directly via the §7.1 resolver. Ground mode evaluates every parameter
 /// binding to a ground literal.
@@ -109,7 +130,7 @@ pub fn import_cxf(
     opts: &ResolveOptions,
 ) -> Result<(ModelGraph, ValidationReport), CxfError> {
     let doc = parse_document(bytes)?;
-    resolve::resolve(&doc, opts)
+    oce_expr::with_eval_budget(MAX_DOCUMENT_EVAL_FUEL, || resolve::resolve(&doc, opts))
 }
 
 /// Export a [`ModelGraph`] back to a CXF JSON-LD document — the RT-2 partner of [`import_cxf`].

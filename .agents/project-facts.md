@@ -42,7 +42,9 @@ CI is dev-light and release-heavy, and the split is easy to misread in the
 dangerous direction.
 
 The per-PR gate into `development` runs fmt, clippy, build, rustdoc, the file-size
-cap, the no-secret scan, the database-free check, the golden-gen firewall, the closed
+cap, the no-secret scan, the database-free check, the golden-gen firewall and
+[hygiene job](#golden-gen-hygiene-is-ci-only-for-now), the
+[docs and crate-suite jobs](#the-docs-and-crate-suite-jobs-are-ci-only-for-now), the closed
 package/feature/publication contract and its hostile controls, the gate fixtures,
 the [authority index/projection and its hostile controls](../docs/authority-claims.md),
 `cargo machete` — and the state-determinism tests for **`oce-api`, `oce-blocks`, and `oce-expr`**, via the
@@ -59,8 +61,10 @@ advisory-db, neither of which a sandboxed lane has, so it runs in `advisories.ym
 
 The scoped `oce-conformance` strict-bit subset and four affected per-block suites also run per PR
 in four Linux architecture/codegen cells (x86_64 native, aarch64 emulated), with repeat captures
-and cross-cell comparison ([bounded evidence](../docs/strict-bit-evidence.md)). The remainder needs the release/full gate. A
-change confined to `oce-cxf`, `oce-store`, or `oce-diag` can show a fully
+and cross-cell comparison ([bounded evidence](../docs/strict-bit-evidence.md)). The
+`oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and `oce-reference-wal-adapter` suites run per
+PR too, x86_64 debug only. The remainder — and the release-codegen runs of those five — needs the
+release/full gate. A change confined to `oce-store`, `oce-diag` or `oce-flatten` can show a fully
 green PR having executed none of its own tests. Before claiming your tests pass, run
 `bash .agents/gate.sh full` and read the tail.
 
@@ -72,6 +76,52 @@ Pin-advance PRs — any change under `third_party/**` or to the pin constants �
 included, and `CI OK` is the one status that summarizes it. A PR with no checks is easy to
 mistake for a PR with no failing checks; confirm `CI OK` actually reported, not merely that
 nothing is red.
+
+## golden-gen hygiene is CI-only for now
+
+`tools/golden-gen` is its own cargo workspace, so the workspace fmt, clippy and test commands
+never reach it. The `golden-gen-hygiene` job in `pr-gate.yml` covers it: fmt, clippy
+`-D warnings`, its tests, and a release regeneration that must leave `tools/golden-gen/goldens`
+byte-identical with no untracked files. `.agents/gate.sh` does not run these yet: it is a bound
+source of the retained native strict-bit evidence, and wiring them in waits for the next native
+re-capture. Until then, run them by hand after touching the generator or its goldens:
+
+```bash
+cd tools/golden-gen
+cargo fmt --check
+cargo clippy --all-targets --locked -- -D warnings
+cargo test --locked
+cargo run --release --locked
+git status --porcelain -- goldens    # must print nothing
+```
+
+## The docs and crate-suite jobs are CI-only for now
+
+Two `pr-gate.yml` jobs that `CI OK` needs run commands `.agents/gate.sh` does not, for the same
+reason as the golden-gen hygiene job: the script is a bound source of the retained native
+strict-bit evidence, and wiring them in waits for the next native re-capture.
+
+- `crate-tests` runs the `oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and
+  `oce-reference-wal-adapter` suites in x86_64 debug. It is a separate job, not a determinism-matrix
+  leg, so it runs beside the QEMU-emulated aarch64 legs instead of lengthening them.
+- `docs` runs the documentation checks that `docs-pages.yml` also runs. That workflow is
+  path-filtered and not required, so before this job a PR could merge green with it failing.
+  `docs-pages.yml` still builds and publishes the site from `main`.
+
+Run them by hand after touching those crates or the docs:
+
+```bash
+cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf \
+  -p oce-reference-wal-adapter --locked --profile ci --no-tests=fail
+
+bash scripts/docs/install-mdbook.sh target/mdbook-bin
+python3 scripts/docs/test_check_links.py
+python3 scripts/docs/test_authority_literals.py --mdbook target/mdbook-bin/mdbook
+python3 scripts/docs/check_integrity.py --output target/docs-book --revision "$(git rev-parse HEAD)"
+target/mdbook-bin/mdbook build target/docs-book
+python3 scripts/docs/check_links.py target/docs-book/book --site-prefix /open-control-engine/
+rm -rf target/docs-book
+```
 
 ## Clippy lints the default feature set
 

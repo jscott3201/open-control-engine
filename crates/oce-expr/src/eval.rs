@@ -109,6 +109,14 @@ pub(crate) fn eval(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprE
 /// holds (arrays are cloned and re-canonicalized, like the scalar read); everything else is
 /// scalar.
 pub(crate) fn eval_node(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
+    if !is_scalar_form(ast) {
+        crate::fuel::charge(1)?;
+    }
+    // Strict-finite grounding checks every node result as it is produced (identity otherwise).
+    crate::eval_strict::check_result(eval_node_unchecked(ast, scope)?, scope)
+}
+
+fn eval_node_unchecked(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
     match ast {
         ExprAst::ArrayLit(elems) => crate::eval_array::eval_array_literal(elems, scope),
         ExprAst::Range { start, step, stop } => {
@@ -123,11 +131,31 @@ pub(crate) fn eval_node(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, 
         ExprAst::Call(b, args) => eval_call(*b, args, scope),
         ExprAst::Ident(name) => match scope.lookup(name) {
             Some(EvalResult::Scalar(v)) => Ok(EvalResult::Scalar(canonicalize_value(v))),
-            Some(EvalResult::Array(a)) => Ok(EvalResult::Array(a.canonicalized_clone())),
+            Some(EvalResult::Array(a)) => {
+                crate::fuel::charge(a.len())?;
+                Ok(EvalResult::Array(a.canonicalized_clone()))
+            }
             None => Err(ExprError::UnknownIdent(name.to_string())),
         },
         other => Ok(EvalResult::Scalar(eval_scalar(other, scope)?)),
     }
+}
+
+/// Whether `ast` is evaluated by [`eval_scalar`]'s own arms (literals, constants, enum
+/// references, operators) rather than delegated to [`eval_node`]. Each AST node is charged one
+/// fuel unit exactly once: by `eval_scalar` for these forms, by `eval_node` for the rest.
+fn is_scalar_form(ast: &ExprAst) -> bool {
+    matches!(
+        ast,
+        ExprAst::Real(_)
+            | ExprAst::Int(_)
+            | ExprAst::Bool(_)
+            | ExprAst::Str(_)
+            | ExprAst::Const(_)
+            | ExprAst::EnumRef(_)
+            | ExprAst::Unary(..)
+            | ExprAst::Binary(..)
+    )
 }
 
 /// Unwrap a scalar result; an array in scalar position is a typed error (element-wise
@@ -146,6 +174,14 @@ fn expect_scalar(r: EvalResult) -> Result<Value, ExprError> {
 /// produce arrays (identifier, literal, range, built-in call) go through [`eval_node`] and
 /// reject an array result with a typed error.
 pub(crate) fn eval_scalar(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, ExprError> {
+    if is_scalar_form(ast) {
+        crate::fuel::charge(1)?;
+    }
+    // Strict-finite grounding checks every node result as it is produced (identity otherwise).
+    crate::eval_strict::check_scalar(eval_scalar_unchecked(ast, scope)?, scope)
+}
+
+fn eval_scalar_unchecked(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, ExprError> {
     match ast {
         ExprAst::Real(r) => Ok(real(*r)),
         ExprAst::Int(i) => Ok(Value::Integer(*i)),

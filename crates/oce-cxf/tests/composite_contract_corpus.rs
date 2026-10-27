@@ -245,9 +245,10 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
             )],
         ),
         (
-            // ONE structural cycle {A, C} reachable via TWO paths (root→A and root→B→C):
-            // the k-re-entry contract — one truthful path-ordered diagnostic per re-entry,
-            // post-finalize_diags subject order.
+            // ONE structural cycle {A, C} reachable via TWO paths (root→A and root→B→C).
+            // The first path reports the cycle; the second reaches C a second time, and a
+            // CDL instance has exactly one parent, so that reach is refused as untagged
+            // `shared-instance` machinery instead of re-walking the cycle (issue #365).
             "rejected/diamond_cycle.jsonld",
             vec![
                 error_with_subject(
@@ -257,10 +258,11 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
                      http://example.org#A -> http://example.org#C -> http://example.org#A",
                 ),
                 error_with_subject(
-                    DiagCode::MalformedDocument,
+                    DiagCode::SharedInstance,
                     "http://example.org#C",
-                    "composite/contains-cycle: cycle in nested composite containsBlock graph: \
-                     http://example.org#C -> http://example.org#A -> http://example.org#C",
+                    "containsBlock child http://example.org#C is reached a second time (listed \
+                     again by http://example.org#B); a CDL component instance has exactly one \
+                     parent, so the second reach is refused rather than expanded again",
                 ),
             ],
         ),

@@ -17,6 +17,7 @@ use oce_model::{BlockInstance, Connector, ConnectorId, ModelGraph};
 
 mod finite_bounds;
 mod params;
+mod params_finite;
 mod params_flattened;
 mod structural;
 mod unify;

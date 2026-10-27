@@ -42,9 +42,16 @@ Enumerate the input domain and hit every boundary and degenerate case:
   nested parenthesis/brace/call levels or 62 unary signs), expressions deeper than 64 AST nodes or
   larger than 4096 AST nodes, composites deeper than 64, boundary paths beyond 64 non-top hops,
   and boundary walks beyond 65,536 target examinations or 8 MiB of aggregate target-IRI bytes are
-  rejected even if a smaller input of the same shape is accepted. Assert the *specific* `DiagCode`
-  / error variant, not merely "an error occurred." Fuzz-grade hostility is the expectation within
-  the bounded ingest paths.
+  rejected even if a smaller input of the same shape is accepted. Hostile *amplification* is
+  bounded the same way (issue #365): a `containsBlock` child reached twice is `SharedInstance`,
+  array parameters beyond 1,048,576 elements per document and run state beyond
+  `oce_graph::MAX_STATE_WORDS` are `ResourceLimitExceeded`, and an evaluation beyond
+  `oce_expr::MAX_EVAL_FUEL` work units (or a document's bindings beyond
+  `oce_cxf::MAX_DOCUMENT_EVAL_FUEL` together) is `ExpressionTooExpensive`. Pin each such limit
+  at its boundary (the limit accepted, one past it refused) and assert cost with deterministic
+  measures — allocation counts and peak bytes, fuel units — never wall-clock time. Assert the
+  *specific* `DiagCode` / error variant, not merely "an error occurred." Fuzz-grade hostility is
+  the expectation within the bounded ingest paths.
 
 > **Why this is non-negotiable — the C1 lesson.** In M1-PR-1 the expression evaluator passed 22
 > tests and all CI gates while silently corrupting integer comparisons above 2^53 (relational
@@ -108,8 +115,8 @@ OpenModelica. A mismatch never widens a tolerance or re-blesses a golden.
   §7.7.2 expression-semantics vectors (R10.x). `compare()` is implemented
   (`crates/oce-conformance/src/funnel.rs`), and the crate carries golden traces and tolerance
   fixtures under `tests/fixtures/golden/`.
-- **The Tier-A layer is `tools/golden-gen`.** It emits **415 Tier-A provenance records — 280 CDL
-  records (278 signal goldens plus two fold-time provenance-only records), plus 135 G36 sequence
+- **The Tier-A layer is `tools/golden-gen`.** It emits **418 Tier-A provenance records — 283 CDL
+  records (281 signal goldens plus two fold-time provenance-only records), plus 135 G36 sequence
   signal goldens spanning all 46 catalog fixtures** (two of them in a 1/16 s FreezeProtection
   scenario that reuses its fixture). The
   sequence side is compared by per-fixture suites in `crates/oce-conformance/tests/`: a shared
@@ -121,7 +128,7 @@ OpenModelica. A mismatch never widens a tolerance or re-blesses a golden.
   f64, 19 exact encoded integer, 12 exact 0.0/1.0). The funnel band is an *additive* Real-only
   layer, never the primary comparison — Boolean and Integer outputs are deliberately kept off it
   because the funnel is type-blind (`g36_funnel_band/policy.rs`).
-  Of the 413 signal goldens, 393 check CDL / Buildings source semantics. The other 20 are exact
+  Of the 416 signal goldens, 396 check CDL / Buildings source semantics. The other 20 are exact
   HostTick v1 profile references for `Generic.TimeSuppression`, `CoolingOnly.Controller`, and
   `ReliefFanGroup`, whose fixtures contain `CDL.Logical.Pre`; they do not claim Modelica
   event-iteration equivalence. The generator is deliberately kept **off the workspace** and
@@ -130,9 +137,9 @@ OpenModelica. A mismatch never widens a tolerance or re-blesses a golden.
   same documented recurrence, a Tier-A pass is evidence about plumbing and transcription of the
   shared formula, not an independent check of the formula; a mechanical shared-kernel detector
   is filed as follow-up. Extending Tier-A coverage means adding to that generator, never blessing
-  engine output. Per-block Tier-A goldens cover **128 of 133 CDL classes**:
-  `CDL.Logical.Nor`, `CDL.Logical.Pre`, `CDL.Logical.Sources.Constant`, and
-  `CDL.Reals.MovingAverage` carry indirect G36-sequence evidence only; `CDL.Utilities.Assert` has
+  engine output. Per-block Tier-A goldens cover **129 of 133 CDL classes**:
+  `CDL.Logical.Nor`, `CDL.Logical.Pre`, and `CDL.Logical.Sources.Constant` carry indirect
+  G36-sequence evidence only; `CDL.Utilities.Assert` has
   no output port, and its diagnostics-channel golden is filed.
 - Record the oracle's provenance (which tool, which version) alongside the vector so a future
   mismatch is debuggable.

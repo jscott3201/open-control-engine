@@ -1,8 +1,8 @@
-//! Tests for the `CDL.Reals` slew and moving-average blocks. Expected traces are hand-derived
+//! Tests for the `CDL.Reals` slew block plus the dynamic-block contracts shared with
+//! `MovingAverage` (whose own suite is `reals_moving_average_tests`). Expected traces are hand-derived
 //! from the documented discrete recurrences. The `Derivative` suite lives in
 //! `reals_filters_derivative_tests` (split along the behavioral sub-topic).
 
-use std::cell::RefCell;
 use std::sync::Arc;
 
 use oce_model::{ParamTable, Value};
@@ -10,19 +10,6 @@ use oce_model::{ParamTable, Value};
 use super::{
     Block, BlockKind, Ctx, Diagnostics, LimitSlewRate, MovingAverage, NoopDiagnostics, lookup,
 };
-
-#[derive(Default)]
-struct CapturingDiagnostics {
-    events: RefCell<Vec<(String, String, f64)>>,
-}
-
-impl Diagnostics for CapturingDiagnostics {
-    fn warn(&self, source: &str, message: &str, t: f64) {
-        self.events
-            .borrow_mut()
-            .push((source.to_string(), message.to_string(), t));
-    }
-}
 
 fn input(u: f64) -> [Value; 1] {
     [Value::Real(u)]
@@ -154,7 +141,7 @@ fn dynamic_reals_contracts_are_stateful_feedthrough_not_loop_cuts() {
         assert!(block.feeds_through(0, 0));
     }
     assert_eq!(LimitSlewRate::default().state_len(), 2);
-    assert_eq!(MovingAverage::default().state_len(), 134);
+    assert_eq!(MovingAverage::default().state_len(), 6 + 2 * 2052);
 }
 
 #[test]
@@ -335,176 +322,4 @@ fn limit_slew_rate_bound_holds_over_seeded_dt_input_sweep() {
         falling_clamp_hit,
         "seeded sweep must exercise the falling clamp"
     );
-}
-
-#[test]
-fn moving_average_startup_steady_and_variable_dt_window_are_pinned() {
-    let block = MovingAverage { delta: 1.0 };
-    let steps = [(0.0, 2.0), (0.5, 2.0), (1.0, 4.0), (1.5, 4.0), (2.25, 1.0)];
-    let (trace, region) = drive(&block, &steps);
-    assert_trace_bits(
-        &trace,
-        &[
-            0x0000_0000_0000_0000,
-            0x3fff_efa6_115f_8d8a,
-            0x4008_0000_0000_0000,
-            0x4010_0000_0000_0000,
-            0x3ffc_0000_0000_0000,
-        ],
-    );
-    assert_eq!(region[0], 5.75f64.to_bits());
-}
-
-#[test]
-fn moving_average_non_dyadic_residue_feedthrough_and_determinism_are_pinned() {
-    let block = MovingAverage { delta: 0.3 };
-    let steps = [
-        (0.0, 0.2),
-        (0.1, 0.2),
-        (0.2, 0.2),
-        (0.3, 0.2),
-        (0.4, 0.2),
-        (0.5, 0.2),
-    ];
-    let (trace, region) = drive(&block, &steps);
-    assert_trace_bits(
-        &trace,
-        &[
-            0x0000_0000_0000_0000,
-            0x3fc9_58b6_7ebb_907b,
-            0x3fc9_78fe_b9f3_4382,
-            0x3fc9_9999_9999_999a,
-            0x3fc9_9999_9999_999a,
-            0x3fc9_9999_9999_999a,
-        ],
-    );
-    assert_eq!(region[0], 0x3fb9_9999_9999_999a);
-
-    let mut one_tick = init_region(&block);
-    tick(&block, &mut one_tick, 0.0, 1.0);
-    let low = emit_real(&block, &one_tick, 0.1, 1.0);
-    let high = emit_real(&block, &one_tick, 0.1, 3.0);
-    assert!(
-        !low.bit_eq(&high),
-        "MovingAverage output must depend on current u in the same tick"
-    );
-
-    let (trace_a, region_a) = drive(&block, &steps);
-    let (trace_b, region_b) = drive(&block, &steps);
-    for (idx, (a, b)) in trace_a.iter().zip(&trace_b).enumerate() {
-        assert!(a.bit_eq(b), "trace[{idx}] {a:?} vs {b:?}");
-    }
-    assert_eq!(region_a, region_b);
-}
-
-#[test]
-fn moving_average_sub_millisecond_delta_uses_true_full_window_denominator() {
-    let block = MovingAverage { delta: 5.0e-4 };
-    let dt = 1.0e-4;
-    let steps = [
-        (0.0, 0.0),
-        (dt, 1.0),
-        (2.0 * dt, 2.0),
-        (3.0 * dt, 3.0),
-        (4.0 * dt, 4.0),
-        (5.0 * dt, 5.0),
-    ];
-    let (trace, _region) = drive(&block, &steps);
-    // Full-window tick: numerator=(1+2+3+4+5)*0.0001=0.0015, denom=0.0005,
-    // so the legal sub-1e-3 horizon reports 3.0. A literal 1e-3 floor reports 1.5.
-    assert_trace_bits(
-        &trace,
-        &[
-            0x0000_0000_0000_0000,
-            0x3fb7_45d1_745d_1746,
-            0x3fd0_0000_0000_0000,
-            0x3fdd_89d8_9d89_d89f,
-            0x3fe6_db6d_b6db_6db7,
-            0x4008_0000_0000_0000,
-        ],
-    );
-}
-
-#[test]
-fn moving_average_ring_overflow_warns_instead_of_panicking() {
-    let block = MovingAverage { delta: 100.0 };
-    let mut region = init_region(&block);
-    let diag = CapturingDiagnostics::default();
-    for k in 0..=64 {
-        tick_with_diag(&block, &mut region, f64::from(k), 1.0, &diag);
-    }
-    let events = diag.events.borrow();
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0].0, "CDL.Reals.MovingAverage");
-    assert_eq!(
-        events[0].1,
-        "MovingAverage: checkpoint ring capacity exceeded; oldest in-window sample dropped"
-    );
-    assert_eq!(events[0].2.to_bits(), 64.0f64.to_bits());
-}
-
-#[test]
-fn moving_average_overflow_divides_by_actual_retained_span() {
-    let block = MovingAverage { delta: 0.5 };
-    let mut region = init_region(&block);
-    let diag = CapturingDiagnostics::default();
-    let mut y = None;
-    for k in 0..=100 {
-        let t = f64::from(k) * 0.005;
-        let out = tick_with_diag(&block, &mut region, t, 1.0 + t, &diag);
-        if k == 100 {
-            y = Some(out);
-        }
-    }
-
-    let y = y.expect("k=100 emits the overflow golden tick");
-    // dt=0.005, delta=0.5, cap=64. At t=0.5 the retained ring spans t=0.18..0.5.
-    // The numerator is mu(0.5)-mu(0.18)=0.4296000000000002, so the degraded mean is
-    // 0.4296000000000002 / 0.32 = 1.3425000000000007. The old denominator delta=0.5
-    // would under-scale this to 0.8592000000000004.
-    assert_trace_bits(&[y], &[0x3ff5_7ae1_47ae_147e]);
-
-    let events = diag.events.borrow();
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0].0, "CDL.Reals.MovingAverage");
-    assert_eq!(
-        events[0].1,
-        "MovingAverage: checkpoint ring capacity exceeded; oldest in-window sample dropped"
-    );
-    assert_eq!(events[0].2.to_bits(), (64.0f64 * 0.005).to_bits());
-}
-
-#[test]
-fn moving_average_sustained_overflow_warns_once_and_keeps_degrading_correctly() {
-    let block = MovingAverage { delta: 0.5 };
-    let mut region = init_region(&block);
-    let diag = CapturingDiagnostics::default();
-    let mut overflow_trace = Vec::new();
-    for k in 0..=102 {
-        let t = f64::from(k) * 0.005;
-        let y = tick_with_diag(&block, &mut region, t, 1.0 + t, &diag);
-        if k >= 100 {
-            overflow_trace.push(y);
-        }
-    }
-
-    // Consecutive overflow ticks at t=0.500, 0.505, 0.510. Each numerator spans the retained
-    // 0.32 s window after drop-oldest, so the degraded means are 1.3425, 1.3475, 1.3525.
-    assert_trace_bits(
-        &overflow_trace,
-        &[
-            0x3ff5_7ae1_47ae_147e,
-            0x3ff5_8f5c_28f5_c292,
-            0x3ff5_a3d7_0a3d_70a7,
-        ],
-    );
-
-    let events = diag.events.borrow();
-    assert_eq!(events.len(), 1);
-    assert_eq!(events[0].0, "CDL.Reals.MovingAverage");
-    assert_eq!(
-        events[0].1,
-        "MovingAverage: checkpoint ring capacity exceeded; oldest in-window sample dropped"
-    );
-    assert_eq!(events[0].2.to_bits(), (64.0f64 * 0.005).to_bits());
 }

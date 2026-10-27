@@ -84,6 +84,57 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### CXF import and export
 
+- **Five hostile CXF load amplifications are now bounded with typed refusals, and an over-large
+  state window refuses instead of panicking** (GitHub #381, issue #365). Bounded per load:
+  `containsBlock` lowering work (each instance once), inherited-scope memory (linear), array
+  parameter elements (2^20 per document), `[S]` state words (2^22 per model) and binding
+  evaluation work (2^24 units per evaluation, 2^26 per document). Not bounded: the total memory
+  and time of an arbitrary below-cap document — isolation stays a host obligation (PC-004).
+  - **State budget.** `oce_graph::allocate_state` now returns `Result` and sizes the `[S]` state
+    buffer with checked arithmetic and `try_reserve_exact` against the new
+    `oce_graph::MAX_STATE_WORDS` (`1 << 22` words, 32 MiB). `CDL.Discrete.TriggeredMovingMean`
+    with `n = 2^62` panicked the load with "capacity overflow"; it is now
+    `BuildError::StateTooLarge` (`resource-limit-exceeded`, subject = the block, stage
+    `Schedule`), refused before any allocation. The window conversion saturates rather than
+    truncating on a narrow `usize`. `Engine::resume` returns the same error when edited windows
+    cross the budget, leaving the engine halted with its edits pending.
+  - **`CDL.Integers.Stage`** answers its stage search with an exact `O(log n)` binary search
+    instead of the source's `O(n)` loop per stage event, so `n = i64::MAX` cannot stall a tick.
+    Results are identical to the loop on every input; tests cross-check against the literal loop
+    on every threshold, ±1 ulp, signed zeros, infinities and NaN.
+  - **Shared children.** A `containsBlock` child reached twice — listed twice by one composite,
+    or by two composites — is refused with the new `DiagCode::SharedInstance`
+    (`shared-instance`, untagged, subject = the child): a CDL instance has exactly one parent.
+    Composite `C_i` listing `[C_{i+1}, C_{i+1}]` previously quadrupled the load every two levels
+    (depth 23: about 8.5 s and 3.1 GB). The `rejected/diamond_cycle.jsonld` corpus fixture now
+    reports its cycle once, plus one `shared-instance` for the second path, instead of two
+    `contains-cycle` diagnostics; `docs/cxf-composite-subset.md` is updated. The published
+    composite rule catalog is unchanged.
+  - **Array budget.** All preserved array parameters of one document share
+    `MAX_DOCUMENT_ARRAY_ELEMENTS` (`1 << 20`, equal to the existing per-parameter cap, so every
+    document whose arrays fit one maximal parameter still loads). Four broadcast `p[1048576]`
+    parameters in a 1.5 KB document loaded at about 1 GB; the second now refuses with the new
+    `DiagCode::ResourceLimitExceeded` (`resource-limit-exceeded`) before allocating.
+  - **Scopes and expressions.** Each composite's grounded declarations are one `Arc`-shared,
+    hash-indexed frame instead of a copy per leaf, so inherited-scope memory is linear in
+    parameters plus leaves (a 1.5 MB document once peaked at 6.8 GB); own-declaration chains sort
+    with a heap-driven Kahn order. `oce-expr` charges deterministic work units (one per AST node,
+    one per array element built, read or reduced) against `oce_expr::MAX_EVAL_FUEL` (`1 << 24`)
+    per evaluation, and the new `oce_expr::with_eval_budget` shares one budget across many
+    evaluations; `oce_cxf::import_cxf` runs every binding of a document on
+    `oce_cxf::MAX_DOCUMENT_EVAL_FUEL` (`1 << 26`). Exhaustion is the new
+    `ExprError::ExpressionTooExpensive`, naming the budget that ran out and surfaced as
+    `grounding-failed`. `sum({sum(1:1048576) for i in 1:1048576})`, once extrapolated to about
+    23 minutes, refuses in tens of milliseconds; a leaf with 200 bindings of
+    `sum({sum(1:2800) for i in 1:2800})` took about 10 s in a release build with only the
+    per-evaluation cap (scaling with the binding count) and now refuses in about 50 ms at any count. The most expensive
+    single evaluation in the tracked test suites costs 77 units, and the largest non-hostile
+    per-document total 101,101.
+
+  No class parameter rule, catalog entry or compatibility fact changes; every tracked fixture and
+  golden loads byte-identically. The release-compatibility checker re-selects its current
+  implementation baseline at the change's source commit.
+
 - **A declared but unread root boundary input now warns at load** (GitHub #346, issue #339).
   A root `S231:hasInput` declaration whose node exists but that no connection reads was left out of
   `input_definitions()` with an empty load receipt, so a host driving frames from its own point
@@ -101,8 +152,63 @@ and a gate that accepted any text would restore exactly the false assurance desc
   its current implementation baseline at the change's source commit; policy and rows are
   unchanged.
 
+### Block library
+
+- **`CDL.Reals.MovingAverage` now averages over the whole of `delta` however many ticks fall inside
+  it** (GitHub #373, issue #364). The block kept at most 64 checkpoints and dropped the oldest when
+  more arrived. With more than 64 ticks per window it averaged over only about the last 64 samples
+  and warned once. At 1 s ticks the G36 `ReliefFanGroup` and `ReturnFanDirectPressure` sequences,
+  which use `delta = 300`, were therefore averaging over about 64 s. A 600 s window with a 0 → 100
+  step at t = 640 reported 95.3125 at t = 700. It now reports 6100/600 = 10.1666…, because each
+  tick's input covers the gap that ends at that tick. The checkpoint ring is now sized from `delta`
+  at build time: `clamp(2·ceil(delta), 2048, 131072)` slots plus 4, which sets a history resolution
+  `r = delta/slots`. That gives `r ≤ 0.5 s` for every window up to 65536 s. The full-window divisor
+  is now exactly `delta`; it used to be `t - fl(t - delta)`, so other traces can move by a sub-ulp
+  amount. The oldest checkpoint is never later than the window start. The output is
+  bit-identical to an unbounded history as long as every pair of consecutive tick gaps sums to at
+  least `2r`. For a nominal 1 s host with `delta ≤ 65536 s` that holds while each tick stays
+  within ±0.5 s of its nominal time. Denser ticks are merged into the newest checkpoint: the
+  window still spans `delta`, interpolation inside a merged gap moves `y` by at most
+  `r·range/(2·delta)`, and the first merge warns once per instance. A window longer than 65536 s
+  keeps its full span at resolution `delta/131072`. **State layout changes:** the region grows
+  from 134 words to `6 + 2·(slots + 4)` words: 4110 (about 33 KB) for any `delta ≤ 1024 s`,
+  14414 for `delta = 3600`, and at most 262158 (about 2.1 MB). Snapshots stay capped at 64 MiB,
+  so a model with a few dozen maximum-size windows runs but cannot be captured; nothing checks
+  this at load. The validator now checks the region against the instance's own `delta`. It
+  refuses a ring that no longer covers the window start. A snapshot from an earlier build refuses
+  at restore on the manifest's state-length comparison, consistent with
+  current/current-only continuation. Three new standalone Tier-A goldens (`MovingAverage/*`, 200 to
+  600 ticks per window, including the 600 s step) integrate the input piece by piece without
+  interpolating `mu`. The engine matches them bit-exactly in `per_block_reals_dynamics.rs`. Per-block
+  Tier-A coverage rises to 129 of 133 CDL classes. The release-compatibility checker re-selects its
+  current implementation baseline at the change's source commit.
+
 ### Verification
 
+- **The scheduler, validator, model, CXF and WAL adapter suites, and the docs checks, now gate
+  every PR** (GitHub #380, issues #370, #377). Per-PR CI ran nextest only for `oce-api`,
+  `oce-blocks` and `oce-expr`, so a regression in `oce-graph`, `oce-validate`, `oce-model`,
+  `oce-cxf` or `oce-reference-wal-adapter` surfaced only in the daily release gate. A new
+  `crate-tests` job in `pr-gate.yml` runs those five suites in x86_64 debug, beside the determinism
+  matrix rather than inside its QEMU-emulated legs; their release-codegen runs stay in the release
+  gate. The docs checks in `docs-pages.yml` are path-filtered and not required, and GitHub #373
+  merged with them failing. A new `docs` job runs the same sequence on every PR: checker contracts,
+  authority literals through mdBook, staging, the mdBook build and the link check.
+  `docs-pages.yml` keeps the Pages publish from `main`. `CI OK` needs both jobs, and
+  `check-workflow-gates.sh` and its fixtures now require their commands. `.agents/gate.sh` does not
+  run them yet because it is a bound source of the retained native strict-bit evidence;
+  `.agents/project-facts.md` gives the local commands.
+- **golden-gen's own hygiene and its goldens' freshness now gate every PR** (GitHub #360, issue
+  #350). `tools/golden-gen` is a standalone cargo workspace, so no workspace command linted or
+  tested it, and nothing checked that the checked-in Tier-A goldens are what it emits. The new
+  `golden-gen-hygiene` job in `pr-gate.yml`, which `CI OK` needs, runs its `cargo fmt --check`,
+  `cargo clippy --all-targets -D warnings` and `cargo test`, then regenerates every golden in
+  release and fails on any modified, deleted or untracked file under `tools/golden-gen/goldens`.
+  The generator source is reformatted and its clippy findings fixed (a derived `Default`, a
+  merged identical branch, iterator loops in place of index loops); two eight-argument golden
+  builders carry a scoped `too_many_arguments` allow. Regeneration leaves every golden
+  byte-identical. `.agents/gate.sh` does not run the job yet because it is a bound source of the
+  retained native strict-bit evidence; `.agents/project-facts.md` gives the local commands.
 - **The G36 FreezeProtection heating-coil command now has a continuous-time reference** (GitHub #357, issue
   #344). The 60 s column stays as it is. Its `Ti = 0.5 s` PI controllers run there at
   `k·dt/Ti = 120`, so it only checks the forward-Euler discretization the engine shares, and it
@@ -225,6 +331,20 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
+- **Docs drift fixed, and two host-visible limits stated** (GitHub #375, issues #368, #369).
+  - The runtime-introspection section of the CDL coverage page now describes `oce_api::catalog()`
+    and its companions `catalog_to_json`, `catalog_content_id` and `CATALOG_JSON`. It no longer
+    says `oce-api` lacks a catalog re-export, and the README points at `oce_api::catalog()`.
+  - The CDL coverage page and the README now carry a note that `TrueHoldWithReset`, counted among
+    the 133 CDL classes, has a local two-input interface, so a conforming single-input document is
+    refused by the arity guard. The page links the authority claims index and PC-022.
+  - The CDL coverage page states that the 44 vendored upstream modelica-json CXF translations do
+    not load today, why (no cross-document class library; array connectors and instances refused
+    by Rule 7 of the composite subset), and that a host must pre-flatten. The cross-document
+    class library stays tracked in GitHub #369.
+  - Stale line-number citations to `oce-store`, `oce-diag`, `oce-docs` and `oce-cxf` items in the
+    architecture and CXF round-trip pages are now symbol citations.
+
 - **Open Control Sim is no longer treated as a current or future consumer** (GitHub #361, issue
   #359). The project is discontinued. The stability-baseline tool no longer accepts or looks for a
   Sim checkout: `--source open-control-sim=PATH` is refused as an unsupported name, and its
@@ -322,6 +442,41 @@ and a gate that accepted any text would restore exactly the false assurance desc
   The release-compatibility checker re-selects its current implementation baseline at the
   change's source commit; policy and rows are unchanged. A CDL-legal model that atomic block
   firing still refuses as a block-granularity loop is tracked in GitHub issue #347.
+- **Non-finite Real parameters are refused at load and at rest** (GitHub #376, issue #362).
+  `NaN`, `+inf` and `-inf` were accepted silently for every class whose rules did not declare
+  finiteness — `MultiplyByParameter.k`, `AddParameter.p`, `Timer.t`, `IntegratorWithReset.k` and
+  `y_start` among them. CXF literals such as `"NaN"`/`"INF"` and expressions that evaluate to
+  infinity (`1/0`, `1e400`) loaded with no warning. `set_param` accepted them because
+  `v < lo || v > hi` is false for NaN, so the value reached actuator outputs as NaN; a `Timer`
+  with `t = NaN` never completed. Composite-level parameters were worse, because a function could
+  absorb the value: a NaN root `topK` read as `integer(topK)` grounded the gain to 0, and
+  `max(topK, 2.0)` to 2.0.
+  - **At load**, parameter grounding is now strict at every level: root, nested-composite and leaf
+    declarations, and each array element. A non-finite literal or any non-finite expression
+    intermediate is refused with a new `DiagCode::NonFiniteParameter` (`non-finite-parameter`)
+    error. Its subject is the declaring instance and its message names the parameter.
+  - **The strict evaluation lives in `oce-expr`**, as new `eval_finite`/`eval_str_finite` entry
+    points, a new `ExprError::NonFinite` and a defaulted `Scope::requires_finite`. Every node is
+    checked as it is produced, so `integer`, `sign`, `min`/`max`, `abs` and comparisons cannot
+    hide one. `Modelica.Constants.inf` stays the finite `f64::MAX`; `inf * 2` refuses. Plain
+    `eval`/`eval_str` keep their IEEE propagation, and `oce-expr` runs only at load, never per
+    tick. Conditional-component guards use the strict evaluator too.
+  - **On the flattened graph**, an `oce-validate` backstop applies the same code to every block
+    parameter. For that block it suppresses all class-rule diagnostics, including
+    `missing-required-parameter` and array-shape ones, which surface once the value is fixed.
+  - **At rest**, `set_param` returns the existing `OcError::ParamRange`, using the new shared
+    predicate `oce_validate::parameter_value_is_finite`.
+  - **Existing tests:** NaN cases on classes that carried finiteness rules now report
+    `non-finite-parameter` instead of `parameter-out-of-range`.
+  - **No opt-out.** No registered class takes a non-finite parameter.
+  - **State snapshots** were already safe: they compare parameters bit-exactly and never restore
+    them.
+  - **Tests:** a census over all 103 Real parameters of the 136 registered classes pins both the
+    load and the edit refusal. A corpus golden, generated from the pre-change resolver, proves all
+    213 tracked `.jsonld` fixtures import byte-identically. Non-finite input *signals* are
+    unchanged.
+  - The release-compatibility checker re-selects its current implementation baseline at the
+    change's source commit; policy and rows are unchanged.
 
 ## 0.2.0
 

@@ -8,7 +8,9 @@
 //! `oce-expr` parses
 //! opaque CDL binding text into an [`ExprAst`] and evaluates it against a [`Scope`] to a ground
 //! value. It is **Group A** (no store, no database), pure, total through typed depth/size
-//! rejections, and never reads the clock, connectors, or computation-affecting attributes (R11).
+//! rejections and a deterministic per-evaluation work budget ([`MAX_EVAL_FUEL`], counted in
+//! operations through a thread-local meter, never time), and never reads the clock, connectors,
+//! or computation-affecting attributes (R11).
 //!
 //! # Scalar subset
 //!
@@ -107,12 +109,20 @@ mod eval_array_tests;
 mod eval_comprehension;
 #[cfg(test)]
 mod eval_comprehension_tests;
+mod eval_strict;
+#[cfg(test)]
+mod eval_strict_tests;
+mod fuel;
+#[cfg(test)]
+mod fuel_tests;
 mod lex;
 mod parse;
 #[cfg(test)]
 mod parse_tests;
 #[cfg(test)]
 mod tests;
+
+pub use fuel::{MAX_EVAL_FUEL, with_eval_budget};
 
 /// Maximum supported parser-entry and AST nesting depth.
 ///
@@ -439,6 +449,16 @@ pub trait Scope {
     fn enum_ordinal(&self, _class: EnumClassId, _literal: &str) -> Option<u32> {
         None
     }
+
+    /// Whether evaluation under this scope must refuse every non-finite Real it produces.
+    ///
+    /// `false` (the default) keeps the IEEE propagation semantics [`eval()`] documents. The strict
+    /// entry points [`eval_finite`] / [`eval_str_finite`] wrap the caller's scope so this answers
+    /// `true`; a scope that layers over another (a comprehension iteration) forwards it. Callers
+    /// never need to override it themselves.
+    fn requires_finite(&self) -> bool {
+        false
+    }
 }
 
 /// A typed expression error (never a panic; R10/R11). `#[non_exhaustive]` keeps room for the
@@ -480,6 +500,19 @@ pub enum ExprError {
         expected: &'static str,
         /// The operand type actually supplied.
         found: &'static str,
+    },
+    /// Evaluation would spend more than [`MAX_EVAL_FUEL`] deterministic work units (one per AST
+    /// node evaluated, one per array element constructed, read or reduced) — a resource-limit
+    /// rejection for expressions that are small but quadratically expensive, such as nested
+    /// comprehensions over large ranges. Counted in operations, never time, so the refusal is
+    /// identical on every host.
+    #[error(
+        "expression too expensive: evaluation exceeds the supported work budget ({limit} units)"
+    )]
+    ExpressionTooExpensive {
+        /// The budget that ran out: [`MAX_EVAL_FUEL`] for one evaluation, or the shared budget
+        /// of an enclosing [`with_eval_budget`] call when that is what was exhausted.
+        limit: u64,
     },
     /// An array construct would produce more elements than the engine will allocate — a
     /// resource-limit rejection, distinct from [`ExprError::DomainError`]. The count is checked
@@ -525,6 +558,15 @@ pub enum ExprError {
         /// The type of the value actually supplied as the subscript.
         found: &'static str,
     },
+    /// Strict evaluation ([`eval_finite`]) produced a non-finite Real (`NaN`, `+inf` or `-inf`) at
+    /// some node — a literal beyond `f64` range, an overflowing or zero-dividing operation, or a
+    /// non-finite value read from scope. Raised at the producing node, so no later function
+    /// (`integer`, `sign`, `min`/`max`, a comparison, …) can absorb it into a finite result.
+    #[error("expression produced a non-finite Real ({value}); load-time values must be finite")]
+    NonFinite {
+        /// The offending value, rendered (`NaN`, `inf` or `-inf`).
+        value: &'static str,
+    },
 }
 
 /// Parse opaque CDL binding text into an [`ExprAst`], rejecting out-of-subset constructs (R9).
@@ -546,14 +588,16 @@ pub fn parse(text: &str) -> Result<ExprAst, ExprError> {
 /// Returns a typed [`ExprError`] on any evaluation failure (unknown identifier, type mismatch,
 /// domain violation, or division by zero), including [`ExprError::NestingTooDeep`] when a
 /// hand-built AST exceeds [`MAX_NESTING_DEPTH`]. Parse-produced ASTs are already within both
-/// expression caps.
+/// expression caps. Returns [`ExprError::ExpressionTooExpensive`] when evaluation would exceed
+/// [`MAX_EVAL_FUEL`] work units; an evaluation nested inside another (a [`Scope`] that itself
+/// evaluates) draws on the enclosing budget.
 pub fn eval(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
     if nesting_depth(ast) > MAX_NESTING_DEPTH {
         return Err(ExprError::NestingTooDeep {
             limit: MAX_NESTING_DEPTH,
         });
     }
-    eval::eval(ast, scope)
+    fuel::metered(|| eval::eval(ast, scope))
 }
 
 /// Convenience for the flattener: [`parse()`] then [`eval()`] in one shot.
@@ -563,6 +607,29 @@ pub fn eval(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
 /// limits documented by [`parse()`] and [`eval()`].
 pub fn eval_str(text: &str, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
     eval(&parse(text)?, scope)
+}
+
+/// Strict-finite [`eval()`] for load-time grounding: identical semantics, except that any node
+/// whose result is, or contains, a non-finite Real refuses with [`ExprError::NonFinite`].
+///
+/// Every node — literals, scope reads, operators, built-in calls, array constructs and each
+/// comprehension body evaluation — is checked as it is produced, so a non-finite intermediate can
+/// never be absorbed into a finite result (`integer(1/0)`, `sign(0/0)`, `min(1/0, 3)`,
+/// `x > 0` with `x = NaN`). `Modelica.Constants.inf` is `f64::MAX` and stays legal; arithmetic
+/// that overflows it (`inf*2`) refuses. [`eval()`] itself is unchanged.
+///
+/// # Errors
+/// Every error [`eval()`] returns, plus [`ExprError::NonFinite`].
+pub fn eval_finite(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
+    eval(ast, &eval_strict::FiniteScope { inner: scope })
+}
+
+/// [`parse()`] then [`eval_finite()`] in one shot.
+///
+/// # Errors
+/// Every error [`parse()`] and [`eval_finite()`] return.
+pub fn eval_str_finite(text: &str, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
+    eval_finite(&parse(text)?, scope)
 }
 
 /// Return the maximum node depth of an expression tree, with a leaf at depth one.

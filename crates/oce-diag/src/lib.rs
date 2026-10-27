@@ -170,6 +170,13 @@ pub enum DiagCode {
     DuplicateParameter,
     /// A block parameter violates a class-level range or ordering rule.
     ParameterOutOfRange,
+    /// A parameter holds, or its binding expression produced, a non-finite Real value (`NaN`,
+    /// `+inf` or `-inf`). Engine-wide: every Real parameter at every level — root, composite and
+    /// leaf declarations, each element of a Real array parameter — must be finite regardless of
+    /// class, and load-time grounding refuses any non-finite expression intermediate. Raised by
+    /// the `oce-cxf` resolver while grounding (subject = the declaring instance) and by the
+    /// `oce-validate` backstop on the flattened graph (subject = the block instance).
+    NonFiniteParameter,
 
     // --- Build-time `shall`-errors (oce-graph schedule construction) ---
     /// Connections form a direct-feedthrough cycle that no state-holding block breaks — an
@@ -187,6 +194,19 @@ pub enum DiagCode {
     /// members are blocks, not connectors, and the cause is the engine's firing granularity rather
     /// than a connector-level cycle.
     BlockAlgebraicLoop,
+
+    // --- Hostile-input resource budgets (any ingest stage) ---
+    /// A document or model crossed a documented, deterministic resource budget that bounds
+    /// input-derived memory: the per-document array-parameter element budget (`oce-cxf`) or the
+    /// per-model `[S]` state-word budget (`oce-graph`). The refusal is typed and happens before
+    /// the over-budget allocation; the message names the budget and the requested amount.
+    ResourceLimitExceeded,
+    /// One `S231:containsBlock` child — a composite or a leaf block — is listed by more than one
+    /// active composite, or more than once by one composite. A CDL component instance has exactly
+    /// one parent, so the document is malformed; the lowering refuses the second reach instead of
+    /// expanding the shared subtree again (which would duplicate it and, nested, grow the load
+    /// exponentially). Subject = the shared child.
+    SharedInstance,
 
     // --- Advisory `should`-warnings (doc 04 §9) ---
     /// Connected cluster members declared divergent `displayUnit`s — non-computational, warning only
@@ -258,8 +278,11 @@ impl DiagCode {
             DiagCode::ParameterKindMismatch => "parameter-kind-mismatch",
             DiagCode::DuplicateParameter => "duplicate-parameter",
             DiagCode::ParameterOutOfRange => "parameter-out-of-range",
+            DiagCode::NonFiniteParameter => "non-finite-parameter",
             DiagCode::AlgebraicLoop => "algebraic-loop",
             DiagCode::BlockAlgebraicLoop => "block-algebraic-loop",
+            DiagCode::ResourceLimitExceeded => "resource-limit-exceeded",
+            DiagCode::SharedInstance => "shared-instance",
             DiagCode::DisplayUnitDivergence => "display-unit-divergence",
             DiagCode::AnalogCoercedToReal => "analog-coerced-to-real",
             DiagCode::MissingFmuPath => "missing-fmu-path",
@@ -419,8 +442,11 @@ mod tests {
         ParameterKindMismatch => "parameter-kind-mismatch",
         DuplicateParameter => "duplicate-parameter",
         ParameterOutOfRange => "parameter-out-of-range",
+        NonFiniteParameter => "non-finite-parameter",
         AlgebraicLoop => "algebraic-loop",
         BlockAlgebraicLoop => "block-algebraic-loop",
+        ResourceLimitExceeded => "resource-limit-exceeded",
+        SharedInstance => "shared-instance",
         DisplayUnitDivergence => "display-unit-divergence",
         AnalogCoercedToReal => "analog-coerced-to-real",
         MissingFmuPath => "missing-fmu-path",

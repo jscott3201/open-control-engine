@@ -242,8 +242,9 @@ declared comparison bound has to hold, so any bound rejects NaN and finite bound
 respective infinity. Under the host-selected `NonFiniteInputPolicy::Refuse` — recommended for
 production hosts, and the default from the next native-evidence refresh (GitHub issue #363) — every
 non-finite Real value, bounded or not, is refused with `InputNonFinite`, so none reaches a block
-through a frame input. The policy covers frame inputs only, not other host paths such as
-`set_param`. Block maths is unchanged either way, and a non-finite value a block computes itself
+through a frame input. The policy covers frame inputs only; non-finite Real parameters are
+refused separately, whatever the policy: at load (`non-finite-parameter`) and by `set_param`
+(`ParamRange`). Block maths is unchanged either way, and a non-finite value a block computes itself
 still propagates. The policy is host configuration outside run state: it is in no snapshot,
 checkpoint or replay record, and it never changes how an accepted frame evolves state. No
 equipment policy is introduced for input values. A NaN or infinite `min`, `max` or `nominal` is

@@ -47,6 +47,8 @@ impl ArrayValue {
                 max: MAX_ARRAY_ELEMENTS,
             });
         }
+        // Every constructed array passes here: one work unit per element (`crate::fuel`).
+        crate::fuel::charge(data.len())?;
         for v in &mut data {
             if let Value::Real(r) = v {
                 *r = canonicalize_real(*r);

@@ -75,13 +75,13 @@ Exact row assignments remain in the public ledger; statuses below are displayed,
 | <code>schedule&#45;leakage</code> | <code>implementation&#45;leakage&#45;to&#45;remove</code> |
 | <code>storage&#45;port&#45;conditional</code> | <code>conditional</code> |
 
-CDL source revision: <code>a131864e4c4df22ebcd52bb8da439de0087ac365</code>; catalog fingerprint: <code>9edead4415592f28</code>.
+CDL source revision: <code>a131864e4c4df22ebcd52bb8da439de0087ac365</code>; catalog fingerprint: <code>a4dc78489febccf3</code>.
 This is the existing pinned source identity, not a new numeric catalog revision.
 
 | Delegated source | SHA-256 (exact input bytes) |
 | --- | --- |
 | catalog-registry | <code>c52b1c5807e78aaf930f09402717ab7b5f1d98d173452d0cd22bbd6cb0b16336</code> |
-| catalog-source | <code>a8109009c6ffebba52522c2d6f96ac898c926b420a6baec369328c55b40d2702</code> |
+| catalog-source | <code>57bed53dbfcbe204aa9eaa227d5a56e89759ec727f813cbef7c2ae07c3a57231</code> |
 | packages | <code>901e3ad38af0c0d223aeb0624b5bac55398cf4370155a0541301dbb2ebffb74d</code> |
 | public-surface | <code>f1b4d7197e586cd77a5387de6f7e9fd5bb940abcdd32c86f8d5ac6ab3814d0f5</code> |
 
@@ -106,7 +106,7 @@ Thus added/removed/renamed or byte-changed evidence cannot leave the projection 
 
 | Corpus | Provenance records | All members | Tier | depends_on_oce_blocks | Inventory SHA-256 |
 | --- | --- | --- | --- | --- | --- |
-| tier-a-records | 415 | 1066 | A | false | <code>c7be9956cfee3982c3f260b16a2103e1bcbd6540983ed75af16f8a019074e4f7</code> |
+| tier-a-records | 418 | 1075 | A | false | <code>f54a13c982224643d51adaa1e7ce58673158f0306e6e74bbfd48a45de0165aad</code> |
 | tier-two-records | 46 | 92 | 2 | true | <code>590097b7bae2144e3cb92ed2a2ca88510a032c2a2c3fdcefbae62df170dc53bc</code> |
 
 ## Review-only claims

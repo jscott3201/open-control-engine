@@ -26,7 +26,7 @@ fn integer_on_counter_cuts_feedback_loop_without_separate_delay() {
         "compiled schedule must contain the counter"
     );
 
-    let state = allocate_state(&b.model, &b.blocks);
+    let state = allocate_state(&b.model, &b.blocks).expect("state within budget");
     let slot = state.slot_of[counter.0 as usize];
     assert_ne!(slot, usize::MAX);
     assert_eq!(state.slots[slot].len, 4);

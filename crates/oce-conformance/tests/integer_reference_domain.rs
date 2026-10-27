@@ -61,7 +61,7 @@ fn every_cdl_integer_reference_cell_is_portable_and_matches_provenance() {
     let mut paths = Vec::new();
     provenance_paths(&root, &mut paths);
     paths.sort();
-    assert_eq!(paths.len(), 280, "CDL provenance census must not go silent");
+    assert_eq!(paths.len(), 283, "CDL provenance census must not go silent");
     let mut errors = BTreeSet::new();
     let mut signals = 0;
     let mut integer_inputs = BTreeSet::new();
@@ -147,7 +147,7 @@ fn every_cdl_integer_reference_cell_is_portable_and_matches_provenance() {
             }
         }
     }
-    assert_eq!(signals, 278);
+    assert_eq!(signals, 281);
     assert_eq!(
         integer_inputs.len(),
         51,

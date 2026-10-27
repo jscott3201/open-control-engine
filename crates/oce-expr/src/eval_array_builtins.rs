@@ -83,6 +83,7 @@ fn elem_type_name(t: ValueType) -> &'static str {
 ///   CDL spec does not pin the empty-sum value; revisit if R10.6 hardens.
 /// - **Boolean** (or any non-numeric element type) is a typed [`ExprError::TypeError`].
 fn sum_array(a: &ArrayValue) -> Result<Value, ExprError> {
+    crate::fuel::charge(a.len())?;
     match a.elem_type() {
         ValueType::Integer => {
             let mut acc: i128 = 0;
@@ -119,6 +120,7 @@ fn sum_array(a: &ArrayValue) -> Result<Value, ExprError> {
 /// element type is a typed [`ExprError::TypeError`] (checked first, so an empty Boolean array
 /// reports its type problem).
 fn fold_extremum(a: &ArrayValue, want_min: bool) -> Result<Value, ExprError> {
+    crate::fuel::charge(a.len())?;
     match a.elem_type() {
         ValueType::Integer => {
             let mut acc: Option<i64> = None;

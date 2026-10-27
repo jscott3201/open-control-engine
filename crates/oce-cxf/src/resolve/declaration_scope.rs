@@ -12,10 +12,10 @@
 //!
 //! Two refusal classes are contract rules ([`super::composite_rules`]):
 //! - `composite/declaration-cycle` — a reference cycle among siblings, self-loops included; one
-//!   diagnostic per distinct cycle **per chain evaluation**. A composite reachable via more
-//!   than one `containsBlock` path is evaluated once per path (enclosing scopes can differ per
-//!   path), so the same cycle can surface once per visit, exactly like `contains-cycle` — never
-//!   assume one diagnostic per structural cycle document-wide. Subject = the participant
+//!   diagnostic per distinct cycle **per chain evaluation**. The lowering walk evaluates each
+//!   composite's chain at most once (a second `containsBlock` reach is refused as
+//!   `shared-instance`, issue #365), so at the lowering invocation that is one diagnostic per
+//!   cycle per composite. Subject = the participant
 //!   earliest in chained order; the message's arrow list is the participant *ring* in chained
 //!   declaration order closing on the first — not the discovered edge path. Cycle members are
 //!   excluded from validation and grounding and absent from the produced scope; declarations
@@ -40,8 +40,13 @@
 //! [`identifier_heads`]); non-`Expr` values contribute no edges. Everything here is deterministic:
 //! iteration is always in chained declaration order, topological ties break toward the smallest
 //! chained index, and no map iteration order feeds an output.
+//!
+//! Cost is bounded for hostile chains: the topological order is a heap-driven Kahn sort
+//! (`O(d log d + edges)` for `d` declarations), own-name lookups are hash-indexed, and the
+//! enclosing scope is a shared [`ScopeFrame`] chain rather than a copied entry list.
 
-use std::collections::{HashMap, HashSet};
+use std::cmp::Reverse;
+use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
@@ -49,7 +54,8 @@ use oce_expr::{EvalResult, ExprAst, Scope};
 use oce_model::{EnumClassId, enum_class_id, enum_member_ordinal};
 
 use crate::dto::{CxfValue, Node};
-use crate::ground::ground_value;
+use crate::ground::{ground_failure, ground_param_value};
+use crate::scope_chain::{IndexedEntries, ScopeFrame};
 
 use super::composite_rules::{ARRAY_PARAMETER, DECLARATION_CYCLE, DUPLICATE_DECLARATION};
 use super::local_name;
@@ -87,11 +93,11 @@ pub(super) enum Pass<'a> {
 
 /// The outcome of one own-declaration chain evaluation.
 pub(super) struct Evaluation {
-    /// The enclosing entries followed by the chain's grounded own entries **in chained
-    /// declaration order** (not evaluation order) — the positional layout every downstream
-    /// scope consumer reads. Own names are unique (duplicates refuse), so the own region's
-    /// internal order can never change a name-lookup result.
-    pub(super) entries: Vec<(Arc<str>, EvalResult)>,
+    /// The enclosing frame extended by the chain's grounded own entries **in chained
+    /// declaration order** (not evaluation order). Own names are unique (duplicates refuse), so
+    /// the own region's internal order can never change a name-lookup result. Shared by `Arc`
+    /// with every consumer (child composites and leaves).
+    pub(super) scope: Arc<ScopeFrame>,
     /// Tagged contract findings withheld for reconciliation. Always empty for
     /// [`Pass::Lowering`] (it emits directly); for [`Pass::Specialize`] it carries the
     /// `declaration-cycle` / `duplicate-declaration` diagnostics of this chain.
@@ -158,7 +164,7 @@ struct Declaration<'a> {
 pub(super) fn evaluate_declarations(
     node: &Node,
     appended: &[&str],
-    enclosing: Vec<(Arc<str>, EvalResult)>,
+    enclosing: &Arc<ScopeFrame>,
     by_id: &HashMap<&str, &Node>,
     mut pass: Pass<'_>,
 ) -> Evaluation {
@@ -266,48 +272,82 @@ pub(super) fn evaluate_declarations(
     }
 
     // 5. Evaluate the surviving declarations topologically, ties broken toward the smallest
-    // chained index. Every own name — grounded, pending, failed, or refused (a cycle member or
-    // duplicate) — masks a same-named enclosing binding for sibling RHS resolution; grounded
-    // entries are keyed by chained index so the final scope region lies in chained declaration
-    // order.
+    // chained index: a Kahn sort whose ready set is a min-heap of chained indices. Every own
+    // name — grounded, pending, failed, or refused (a cycle member or duplicate) — masks a
+    // same-named enclosing binding for sibling RHS resolution; grounded entries are keyed by
+    // chained index so the final scope region lies in chained declaration order. A reference to
+    // a refused declaration is already satisfied (it will never ground); every cycle was refused
+    // above, so the sort drains every surviving declaration.
     let own_names: HashSet<&str> = chain.iter().map(|d| d.name).collect();
-    let mut grounded: Vec<(usize, Arc<str>, EvalResult)> = Vec::new();
-    let mut remaining: Vec<usize> = Vec::new();
-    let mut pending = vec![false; chain.len()];
+    let mut grounded = OwnGrounded::default();
+    let mut unmet = vec![0usize; chain.len()];
+    let mut dependents: Vec<Vec<usize>> = vec![Vec::new(); chain.len()];
+    let mut ready: BinaryHeap<Reverse<usize>> = BinaryHeap::new();
     for (index, declaration) in chain.iter().enumerate() {
-        if !declaration.refused {
-            remaining.push(index);
-            pending[index] = true;
+        if declaration.refused {
+            continue;
+        }
+        for &reference in &declaration.references {
+            if !chain[reference].refused {
+                unmet[index] += 1;
+                dependents[reference].push(index);
+            }
+        }
+        if unmet[index] == 0 {
+            ready.push(Reverse(index));
         }
     }
-    while !remaining.is_empty() {
-        // The smallest-index declaration whose surviving references are all evaluated; every
-        // cycle was refused above, so one always exists and the loop terminates.
-        let position = remaining
-            .iter()
-            .position(|&candidate| {
-                chain[candidate]
-                    .references
-                    .iter()
-                    .all(|&reference| chain[reference].refused || !pending[reference])
-            })
-            .unwrap_or(0);
-        let index = remaining.remove(position);
-        pending[index] = false;
+    while let Some(Reverse(index)) = ready.pop() {
         evaluate_one(
             &chain[index],
+            &node.id,
             index,
-            &enclosing,
+            enclosing,
             &own_names,
             &mut grounded,
             &mut pass,
         );
+        for &dependent in &dependents[index] {
+            unmet[dependent] -= 1;
+            if unmet[dependent] == 0 {
+                ready.push(Reverse(dependent));
+            }
+        }
     }
-    grounded.sort_unstable_by_key(|&(index, ..)| index);
+    let mut own = grounded.entries;
+    own.sort_unstable_by_key(|&(index, ..)| index);
+    let own: IndexedEntries = own
+        .into_iter()
+        .map(|(_, name, value)| (name, value))
+        .collect();
+    Evaluation {
+        scope: ScopeFrame::extend(enclosing, own),
+        withheld,
+    }
+}
 
-    let mut entries = enclosing;
-    entries.extend(grounded.into_iter().map(|(_, name, value)| (name, value)));
-    Evaluation { entries, withheld }
+/// The chain's grounded own entries in evaluation order, keyed by chained index, with a name
+/// index for own-first lookups (own names are unique after the duplicate refusal).
+#[derive(Default)]
+struct OwnGrounded {
+    entries: Vec<(usize, Arc<str>, EvalResult)>,
+    by_name: HashMap<Arc<str>, usize>,
+}
+
+impl OwnGrounded {
+    fn push(&mut self, index: usize, name: Arc<str>, value: EvalResult) {
+        self.by_name
+            .entry(Arc::clone(&name))
+            .or_insert(self.entries.len());
+        self.entries.push((index, name, value));
+    }
+
+    fn lookup(&self, name: &str) -> Option<&EvalResult> {
+        self.by_name
+            .get(name)
+            .and_then(|&position| self.entries.get(position))
+            .map(|(_, _, value)| value)
+    }
 }
 
 /// Record one tagged contract finding per the pass's emission policy: the lowering invocation
@@ -338,10 +378,11 @@ fn emit_generic(pass: &mut Pass<'_>, diag: Diagnostic) {
 /// the grounded entry or reporting the failure per the pass's emission policy.
 fn evaluate_one(
     declaration: &Declaration<'_>,
+    owner: &str,
     index: usize,
-    enclosing: &[(Arc<str>, EvalResult)],
+    enclosing: &ScopeFrame,
     own_names: &HashSet<&str>,
-    grounded: &mut Vec<(usize, Arc<str>, EvalResult)>,
+    grounded: &mut OwnGrounded,
     pass: &mut Pass<'_>,
 ) {
     let Some(pnode) = declaration.node else {
@@ -386,19 +427,15 @@ fn evaluate_one(
         if let Pass::Lowering { diags, .. } = pass {
             validate_g36_parameter_value(pnode, cxf_val, &scope, diags);
         }
-        ground_value(cxf_val, &scope)
+        ground_param_value(cxf_val, &scope)
     };
     match outcome {
-        Ok(value) => grounded.push((
+        Ok(value) => grounded.push(
             index,
             Arc::from(declaration.name),
             EvalResult::Scalar(value),
-        )),
-        Err(e) => emit_generic(
-            pass,
-            Diagnostic::error(DiagCode::GroundingFailed, e.to_string())
-                .with_subject(declaration.iri.to_owned()),
         ),
+        Err(e) => emit_generic(pass, ground_failure(&e, declaration.iri, owner)),
     }
 }
 
@@ -407,25 +444,17 @@ fn evaluate_one(
 /// falling through), and only names with no own binding read the enclosing entries, innermost
 /// (latest-pushed) first. Lookup-only and total.
 struct OwnDeclarationScope<'a> {
-    enclosing: &'a [(Arc<str>, EvalResult)],
+    enclosing: &'a ScopeFrame,
     own_names: &'a HashSet<&'a str>,
-    grounded: &'a [(usize, Arc<str>, EvalResult)],
+    grounded: &'a OwnGrounded,
 }
 
 impl Scope for OwnDeclarationScope<'_> {
     fn lookup(&self, name: &str) -> Option<&EvalResult> {
         if self.own_names.contains(name) {
-            return self
-                .grounded
-                .iter()
-                .find(|(_, entry, _)| entry.as_ref() == name)
-                .map(|(_, _, value)| value);
+            return self.grounded.lookup(name);
         }
-        self.enclosing
-            .iter()
-            .rev()
-            .find(|(entry, _)| entry.as_ref() == name)
-            .map(|(_, value)| value)
+        self.enclosing.lookup(name)
     }
 
     fn enum_class(&self, qualified: &str) -> Option<EnumClassId> {

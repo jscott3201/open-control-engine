@@ -141,20 +141,36 @@ pub(super) fn goldens() -> Vec<Golden> {
     assert!(!trace.cooling_enable[42] && trace.heating_enable[42]);
     assert!(trace.cooling_enable[52] && trace.heating_enable[52]);
     assert_eq!(trace.cooling_raw[2].to_bits(), 0.0f64.to_bits());
-    assert!(trace.cooling_raw[3..10].windows(2).all(|pair| pair[0] < pair[1]));
-    assert!(trace.cooling_raw[10..28]
-        .iter()
-        .filter(|&&value| value.to_bits() == Y_MAX.to_bits())
-        .count()
-        >= 3);
-    assert!(trace.cooling_output[28..32].iter().all(|&value| value > 0.0));
+    assert!(
+        trace.cooling_raw[3..10]
+            .windows(2)
+            .all(|pair| pair[0] < pair[1])
+    );
+    assert!(
+        trace.cooling_raw[10..28]
+            .iter()
+            .filter(|&&value| value.to_bits() == Y_MAX.to_bits())
+            .count()
+            >= 3
+    );
+    assert!(
+        trace.cooling_output[28..32]
+            .iter()
+            .all(|&value| value > 0.0)
+    );
     assert!(!trace.cooling_delay[32] && trace.cooling_delay[33]);
     assert!(trace.cooling_near_zero[40]);
-    assert!((LOOP_ZERO_THRESHOLD..LOOP_ZERO_THRESHOLD + LOOP_ZERO_HYSTERESIS)
-        .contains(&trace.cooling_raw[40]));
+    assert!(
+        (LOOP_ZERO_THRESHOLD..LOOP_ZERO_THRESHOLD + LOOP_ZERO_HYSTERESIS)
+            .contains(&trace.cooling_raw[40])
+    );
     assert!(!trace.cooling_near_zero[41]);
     assert!(trace.cooling_raw[41] >= LOOP_ZERO_THRESHOLD + LOOP_ZERO_HYSTERESIS);
-    assert!(trace.heating_raw[43..48].windows(2).all(|pair| pair[0] < pair[1]));
+    assert!(
+        trace.heating_raw[43..48]
+            .windows(2)
+            .all(|pair| pair[0] < pair[1])
+    );
     assert!(trace.heating_near_zero[48] && !trace.heating_delay[48]);
     assert!(!trace.heating_near_zero[49] && !trace.heating_delay[49]);
 
@@ -202,18 +218,8 @@ fn control_loop_trace(time: &[f64]) -> Trace {
     let cooling_raw = cooling_pid_direct(time, &cooling_enable);
     let heating_raw = heating_pid_reverse(time, &heating_enable);
     let threshold = vec![LOOP_ZERO_THRESHOLD; ROWS.len()];
-    let cooling_near_zero = less_hysteretic(
-        &cooling_raw,
-        &threshold,
-        LOOP_ZERO_HYSTERESIS,
-        false,
-    );
-    let heating_near_zero = less_hysteretic(
-        &heating_raw,
-        &threshold,
-        LOOP_ZERO_HYSTERESIS,
-        false,
-    );
+    let cooling_near_zero = less_hysteretic(&cooling_raw, &threshold, LOOP_ZERO_HYSTERESIS, false);
+    let heating_near_zero = less_hysteretic(&heating_raw, &threshold, LOOP_ZERO_HYSTERESIS, false);
     let cooling_delay = delayed_true(time, &cooling_near_zero);
     let heating_delay = delayed_true(time, &heating_near_zero);
     let cooling_output = cooling_raw

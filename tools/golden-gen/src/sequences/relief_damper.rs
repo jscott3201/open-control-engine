@@ -40,10 +40,7 @@ fn relief_damper_command(building_pressure: &[f64], supply_fan_status: &[bool]) 
         .collect()
 }
 
-fn relief_damper_inputs(
-    building_pressure: &[f64],
-    supply_fan_status: &[bool],
-) -> Vec<InputSeries> {
+fn relief_damper_inputs(building_pressure: &[f64], supply_fan_status: &[bool]) -> Vec<InputSeries> {
     vec![
         input_r("building_pressure", building_pressure.iter().copied()),
         input_b("supply_fan_status", supply_fan_status.iter().copied()),

@@ -1,9 +1,7 @@
 //! Airflow, system-request, and alarm behavior for CoolingOnly.Controller.
 
-use super::{
-    buildings_line, clamp, greater_hysteretic, hysteresis, less_hysteretic,
-};
 use super::cooling_only_controller_timing::{SamplerState, TrueDelayState};
+use super::{buildings_line, clamp, greater_hysteretic, hysteresis, less_hysteretic};
 
 const DESIGN_MINIMUM_FLOW: f64 = 0.5;
 const DESIGN_COOLING_MAXIMUM_FLOW: f64 = 1.5;
@@ -142,25 +140,19 @@ pub(super) struct SystemRequestsState {
 
 impl SystemRequestsState {
     /// Emit both request ladders from current inputs and sampled histories.
-    pub(super) fn output(
-        &mut self,
-        t: f64,
-        input: SystemRequestInput,
-    ) -> SystemRequestOutput {
+    pub(super) fn output(&mut self, t: f64, input: SystemRequestInput) -> SystemRequestOutput {
         let temperature_difference = input.zone_temperature - input.cooling_setpoint;
-        let hot_three =
-            hysteresis(&[temperature_difference], 2.75, 3.0, self.hot_three)[0];
+        let hot_three = hysteresis(&[temperature_difference], 2.75, 3.0, self.hot_three)[0];
         let hot_two = hysteresis(&[temperature_difference], 1.75, 2.0, self.hot_two)[0];
         self.hot_three = hot_three;
         self.hot_two = hot_two;
         let hot_three_held = self.hot_three_delay.output(t, hot_three, 120.0, false);
         let hot_two_held = self.hot_two_delay.output(t, hot_two, 120.0, false);
 
-        let sampled_cooling =
-            self.cooling_sampler
-                .sample(t, input.cooling_loop, SAMPLE_PERIOD);
-        let cooling_high =
-            hysteresis(&[sampled_cooling], 0.94, 0.95, self.cooling_high)[0];
+        let sampled_cooling = self
+            .cooling_sampler
+            .sample(t, input.cooling_loop, SAMPLE_PERIOD);
+        let cooling_high = hysteresis(&[sampled_cooling], 0.94, 0.95, self.cooling_high)[0];
         self.cooling_high = cooling_high;
         let temperature = request_level(
             input.after_suppression && hot_three_held,
@@ -174,13 +166,11 @@ impl SystemRequestsState {
         let sampled_discharge =
             self.discharge_sampler
                 .sample(t, input.discharge_airflow, SAMPLE_PERIOD);
-        let sampled_damper =
-            self.damper_sampler
-                .sample(t, input.damper_position, SAMPLE_PERIOD);
-        let setpoint_on =
-            hysteresis(&[sampled_setpoint], 0.005, 0.01, self.setpoint_on)[0];
-        let damper_high =
-            hysteresis(&[sampled_damper], 0.94, 0.95, self.damper_high)[0];
+        let sampled_damper = self
+            .damper_sampler
+            .sample(t, input.damper_position, SAMPLE_PERIOD);
+        let setpoint_on = hysteresis(&[sampled_setpoint], 0.005, 0.01, self.setpoint_on)[0];
+        let damper_high = hysteresis(&[sampled_damper], 0.94, 0.95, self.damper_high)[0];
         self.setpoint_on = setpoint_on;
         self.damper_high = damper_high;
         let damper_held = self.damper_delay.output(t, damper_high, 60.0, false);
@@ -199,11 +189,7 @@ impl SystemRequestsState {
         self.starved_half = starved_half;
         self.starved_seventy = starved_seventy;
         let gate = setpoint_on && damper_held;
-        let pressure = request_level(
-            gate && starved_half,
-            gate && starved_seventy,
-            damper_high,
-        );
+        let pressure = request_level(gate && starved_half, gate && starved_seventy, damper_high);
 
         SystemRequestOutput {
             temperature,
@@ -258,9 +244,9 @@ impl AlarmsState {
     /// Emit all active alarm levels for one Controller tick.
     pub(super) fn output(&mut self, t: f64, input: AlarmInput) -> AlarmOutput {
         let occupied = input.operation_mode == 1;
-        let fan_armed =
-            self.fan_armed
-                .output(t, input.supply_fan_status, 1800.0, false);
+        let fan_armed = self
+            .fan_armed
+            .output(t, input.supply_fan_status, 1800.0, false);
         let setpoint_nonzero = hysteresis(
             &[input.active_airflow_setpoint],
             0.005,
@@ -268,9 +254,7 @@ impl AlarmsState {
             self.setpoint_nonzero,
         )[0];
         self.setpoint_nonzero = setpoint_nonzero;
-        let setpoint_on =
-            self.setpoint_on
-                .output(t, setpoint_nonzero, 300.0, false);
+        let setpoint_on = self.setpoint_on.output(t, setpoint_nonzero, 300.0, false);
         let low_half = less_hysteretic(
             &[input.discharge_airflow],
             &[0.5 * input.active_airflow_setpoint],
@@ -285,9 +269,9 @@ impl AlarmsState {
         )[0];
         self.low_half = low_half;
         self.low_seventy = low_seventy;
-        let low_half_held =
-            self.low_half_delay
-                .output(t, low_half && fan_armed, 300.0, false);
+        let low_half_held = self
+            .low_half_delay
+            .output(t, low_half && fan_armed, 300.0, false);
         let low_seventy_held =
             self.low_seventy_delay
                 .output(t, low_seventy && fan_armed, 300.0, false);
@@ -308,12 +292,9 @@ impl AlarmsState {
             self.flow_high,
         )[0];
         self.flow_high = flow_high;
-        let sensor_held = self.sensor_delay.output(
-            t,
-            flow_high && !input.supply_fan_status,
-            600.0,
-            false,
-        );
+        let sensor_held =
+            self.sensor_delay
+                .output(t, flow_high && !input.supply_fan_status, 600.0, false);
         let airflow_sensor = if sensor_held && occupied { 3 } else { 0 };
 
         let damper_closed = less_hysteretic(

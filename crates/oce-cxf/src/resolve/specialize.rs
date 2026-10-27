@@ -11,6 +11,7 @@ use oce_model::{
 };
 
 use crate::dto::{CxfValue, IriRef, Node};
+use crate::scope_chain::ScopeFrame;
 
 use super::composite::is_runtime_composite;
 use super::declaration_scope::{Pass, WithheldFindings, evaluate_declarations};
@@ -212,7 +213,7 @@ fn complete_scope(
     let evaluation = evaluate_declarations(
         parent,
         members,
-        Vec::new(),
+        &ScopeFrame::root(),
         by_id,
         Pass::Specialize {
             composite_chain: is_runtime_composite(parent),
@@ -220,7 +221,7 @@ fn complete_scope(
     );
     withheld.record(&parent.id, evaluation.withheld);
     CompleteScope {
-        entries: evaluation.entries,
+        scope: evaluation.scope,
     }
 }
 
@@ -380,7 +381,7 @@ fn evaluate_guard(node: &Node, scope: &CompleteScope, diags: &mut Vec<Diagnostic
     if !validate_guard_ast(&ast, scope, node, diags) {
         return None;
     }
-    match oce_expr::eval(&ast, scope) {
+    match oce_expr::eval_finite(&ast, scope) {
         Ok(EvalResult::Scalar(Value::Boolean(value))) => Some(value),
         Ok(_) => {
             diags.push(
@@ -551,32 +552,25 @@ fn unsupported(node: &Node, message: &str, diags: &mut Vec<Diagnostic>) -> bool 
     false
 }
 
+/// A parent's own grounded declarations (one frame over the empty root; own names are unique),
+/// hash-indexed for guard lookups.
 struct CompleteScope {
-    entries: Vec<(Arc<str>, EvalResult)>,
+    scope: Arc<ScopeFrame>,
 }
 
 impl CompleteScope {
     fn value(&self, name: &str) -> Option<&Value> {
-        self.entries.iter().rev().find_map(|(entry_name, result)| {
-            if entry_name.as_ref() == name {
-                match result {
-                    EvalResult::Scalar(value) => Some(value),
-                    _ => None,
-                }
-            } else {
-                None
-            }
-        })
+        // Every own entry is a grounded scalar (`evaluate_declarations` grounds scalars only).
+        match self.scope.lookup(name) {
+            Some(EvalResult::Scalar(value)) => Some(value),
+            _ => None,
+        }
     }
 }
 
 impl Scope for CompleteScope {
     fn lookup(&self, name: &str) -> Option<&EvalResult> {
-        self.entries
-            .iter()
-            .rev()
-            .find(|(entry_name, _)| entry_name.as_ref() == name)
-            .map(|(_, value)| value)
+        self.scope.lookup(name)
     }
 
     fn enum_class(&self, qualified: &str) -> Option<EnumClassId> {

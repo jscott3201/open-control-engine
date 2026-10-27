@@ -6,10 +6,13 @@
 #
 # This per-PR gate is the LIGHT gate: the near-instant checks plus the compile-requiring lints
 # (clippy -D warnings), a workspace build, rustdoc, cargo-machete, cargo-deny, gate-script behavior
-# fixtures, the package/feature/publication contract, stale crate-status header lint, the targeted
-# cross-arch determinism subset for oce-api/oce-blocks/oce-expr, the scoped strict-bit matrix, and
-# `bash .agents/gate.sh` executed as a coverage backstop. It does NOT run the full workspace test
-# suite — that lives in release-gate.yml.
+# fixtures, the package/feature/publication contract, stale crate-status header lint, golden-gen
+# hygiene and golden freshness, the targeted
+# cross-arch determinism subset for oce-api/oce-blocks/oce-expr, the x86_64 debug suites of
+# oce-graph/oce-validate/oce-model/oce-cxf/oce-reference-wal-adapter, the documentation checks
+# (staging, mdBook build, links), the scoped strict-bit matrix, and `bash .agents/gate.sh`
+# executed as a coverage backstop. It does NOT run the full workspace test suite — the remaining
+# crates and the release-codegen runs of the suites above live in release-gate.yml.
 #
 # Topology:
 #   * Every job runs on a GitHub-hosted x86_64 runner. The aarch64 legs of the determinism and
@@ -117,6 +120,47 @@ jobs:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
+
+  # tools/golden-gen is its own cargo workspace (off the root `members`), so no workspace fmt,
+  # clippy or test command reaches it. This job lints and tests the generator, then regenerates
+  # every Tier-A golden and fails if the checked-in tree differs from what the generator emits:
+  # a modified file fails `git diff`, a newly emitted file fails the porcelain check.
+  # CI-only: .agents/gate.sh is a bound source of the retained native strict-bit evidence and does
+  # not run these yet; .agents/project-facts.md gives the local commands.
+  golden-gen-hygiene:
+    name: golden-gen hygiene and golden freshness
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: tools/golden-gen
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: tools/golden-gen -> target
+          cache-bin: false
+      - name: cargo fmt --check (golden-gen)
+        run: cargo fmt --check
+      - name: cargo clippy -D warnings (golden-gen)
+        run: cargo clippy --all-targets --locked -- -D warnings
+      - name: cargo test (golden-gen)
+        run: cargo test --locked
+      - name: Regenerate every golden (release)
+        run: cargo run --release --locked
+      - name: Checked-in goldens equal the regenerated goldens
+        run: |
+          git diff --exit-code --stat -- goldens
+          untracked="$(git status --porcelain -- goldens)"
+          if [ -n "$untracked" ]; then
+            printf 'FAIL: regeneration left changes under tools/golden-gen/goldens:\n%s\n' "$untracked"
+            exit 1
+          fi
 
   package-publication-contract:
     name: package, feature, and publication contract
@@ -268,6 +312,71 @@ jobs:
         run: >-
           cargo nextest run -p oce-api --lib --locked --profile ci --no-tests=fail
           -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
+
+  # The scheduler, validator, model, CXF resolver and reference WAL adapter suites, x86_64 debug
+  # only. They are not state-determinism tests, so they stay out of the determinism matrix: its
+  # QEMU-emulated aarch64 legs are the per-PR long pole, and this job runs beside it instead of
+  # lengthening it. Their release-codegen runs stay in release-gate.yml (oce-cxf's release build
+  # alone costs several minutes; its debug suite is dominated by three ~45 s resolver tests).
+  # CI-only: .agents/gate.sh is a bound source of the retained native strict-bit evidence and does
+  # not run these yet; .agents/project-facts.md gives the local command.
+  crate-tests:
+    name: crate tests (graph, validate, model, cxf, WAL adapter; x86_64 debug)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          cache-bin: false
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: nextest@0.9.143
+      - name: Clear the cached nextest report
+        run: rm -f target/nextest/ci/junit.xml
+      - name: cargo nextest crate suites (x86_64 debug)
+        run: >-
+          cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf
+          -p oce-reference-wal-adapter --locked --profile ci --no-tests=fail
+      - name: Require the nextest JUnit report
+        run: test -s target/nextest/ci/junit.xml
+
+  # The documentation checks, run on every PR so `CI OK` covers them: docs-pages.yml runs the same
+  # sequence but is path-filtered and not a required status, so GitHub #373 merged with it red
+  # under a green `CI OK`. Same steps and order as
+  # docs-pages.yml's build job, minus the Pages upload; that workflow keeps the publish from main.
+  # CI-only: .agents/gate.sh is a bound source of the retained native strict-bit evidence and does
+  # not run these yet; .agents/project-facts.md gives the local commands.
+  docs:
+    name: docs (staging, mdBook build, links)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Install checksum-pinned mdBook
+        run: bash scripts/docs/install-mdbook.sh target/mdbook-bin
+      - name: Test documentation checker contracts
+        run: python3 scripts/docs/test_check_links.py
+      - name: Test authority literals through staging and mdBook
+        run: python3 scripts/docs/test_authority_literals.py --mdbook target/mdbook-bin/mdbook
+      # The authority projection check itself runs in package-publication-contract.
+      - name: Stage documentation without source writes
+        env:
+          DOCS_REPOSITORY_REVISION: ${{ github.sha }}
+        run: >-
+          python3 scripts/docs/check_integrity.py
+          --output target/docs-book
+          --revision "$DOCS_REPOSITORY_REVISION"
+      - name: Build mdBook
+        run: target/mdbook-bin/mdbook build target/docs-book
+      - name: Check generated internal links and anchors
+        run: >-
+          python3 scripts/docs/check_links.py
+          target/docs-book/book
+          --site-prefix /open-control-engine/
 
   # Four cells (x86_64 native, aarch64 emulated) x (debug, release), each with two independent
   # capture processes, then the eight-capture comparison — one job, no artifact hand-off. Every
@@ -426,10 +535,13 @@ jobs:
       - no-secret-scan
       - default-no-db
       - golden-gen-firewall
+      - golden-gen-hygiene
       - package-publication-contract
       - gate-fixtures
       - unused-deps
       - determinism-matrix
+      - crate-tests
+      - docs
       - strict-bit-matrix
       - clippy
       - build
