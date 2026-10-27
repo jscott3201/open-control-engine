@@ -173,11 +173,15 @@ pub enum DiagCode {
     /// concrete cycle (subject = the connector's authored identity when it has one).
     AlgebraicLoop,
     /// The connector graph is acyclic, but single-pass atomic block firing still cannot order the
-    /// blocks: a stateful multi-output block's state-only output feeds back into one of its own
-    /// feedthrough inputs. One diagnostic per member block of one concrete block cycle (subject =
-    /// the block instance's authored identity when it has one). Distinct from
-    /// [`DiagCode::AlgebraicLoop`] because the members are blocks, not connectors, and the cause is
-    /// the engine's firing granularity rather than a connector-level cycle.
+    /// blocks: one of a block's outputs feeds back into an input that the block reads when it fires
+    /// but that output does not depend on. Every registered class that can do this is stateless
+    /// with mixed feedthrough (`CDL.Routing.*ExtractSignal`, `*VectorFilter`, `*VectorReplicator`,
+    /// multi-output `CDL.Reals.MatrixMax` / `MatrixMin`, and `CDL.Reals.PIDWithReset` with
+    /// `controllerType = P`, whose `trigger` feeds no output); the model may be CDL-legal. One
+    /// diagnostic per member block of one concrete block cycle (subject = the block instance's
+    /// authored identity when it has one). Distinct from [`DiagCode::AlgebraicLoop`] because the
+    /// members are blocks, not connectors, and the cause is the engine's firing granularity rather
+    /// than a connector-level cycle.
     BlockAlgebraicLoop,
 
     // --- Advisory `should`-warnings (doc 04 §9) ---

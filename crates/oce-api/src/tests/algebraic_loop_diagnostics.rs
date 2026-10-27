@@ -243,14 +243,14 @@ fn two_disjoint_self_loops(order: &[&str]) -> Vec<u8> {
     )
 }
 
-fn refuse(bytes: &[u8]) -> OperationFailure {
+pub(super) fn refuse(bytes: &[u8]) -> OperationFailure {
     Engine::in_memory()
         .load_cxf_with_receipt(bytes)
         .expect_err("fixture must be refused")
 }
 
 /// The terminal build error's own display text, without the facade's variant prefix.
-fn build_message(failure: &OperationFailure) -> String {
+pub(super) fn build_message(failure: &OperationFailure) -> String {
     let terminal = std::error::Error::source(failure.error())
         .and_then(|source| source.downcast_ref::<OcError>())
         .unwrap_or(failure.error());
@@ -295,7 +295,7 @@ fn schedule_errors(locals: &[&str]) -> Vec<(DiagnosticStage, DiagnosticSeverity,
 /// Reconstruct the reported loop from the records of `code`, without the build error: order the
 /// records by the member position each message states, then check every record's stated next
 /// member is the subject of the following record (wrapping to the first).
-fn loop_order(receipt: &DiagnosticReceipt, code: &str) -> Vec<String> {
+pub(super) fn loop_order(receipt: &DiagnosticReceipt, code: &str) -> Vec<String> {
     let mut positioned: Vec<(usize, usize, String, String)> = receipt
         .records()
         .iter()
@@ -340,7 +340,7 @@ fn loop_order(receipt: &DiagnosticReceipt, code: &str) -> Vec<String> {
         .collect()
 }
 
-fn render(receipt: &DiagnosticReceipt) -> String {
+pub(super) fn render(receipt: &DiagnosticReceipt) -> String {
     let mut rendered = String::new();
     for record in receipt.records() {
         let subject = match record.key().subject() {
