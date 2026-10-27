@@ -2,7 +2,7 @@
   "tier": "2",
   "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
   "depends_on_oce_blocks": true,
-  "content_sha256": "e571a699cbb449ded5c2095e2c865756eb70d9c3b8a1d0b0bcf28cd99948da20",
+  "content_sha256": "e3322a7f7c430838884342362784c523b88d55c17d5aa78062a7b4bc8c931100",
   "reference_columns": [
     "http://example.org#g36.source.trim_and_respond_have_hol_false.y"
   ]

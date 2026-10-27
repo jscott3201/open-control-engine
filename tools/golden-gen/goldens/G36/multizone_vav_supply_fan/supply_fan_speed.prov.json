@@ -21,7 +21,7 @@
   "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
   "fixture_status": "supported-runtime-sequence source-verified composite",
   "sequence_derivation": "g36-source-rederivation",
-  "diverges_from_g36_intent": null,
+  "diverges_from_g36_intent": "embeds Generic/TrimAndRespond.mo as staPreSetRes (duct static pressure reset); the pressure setpoint and the fan speed it drives are faithful to the pinned Generic/TrimAndRespond.mo graph, not its documentation: the documentation says the setpoint is iniSet while the device is off and the reset starts delTim after device start, but iniSet reaches the reset only through swi2 -> uniDel.u, and the UnitDelay captures it only at a samplePeriod instant. A device-off window that holds no sample instant never reseeds the UnitDelay, so after the re-armed TrueDelay the reset resumes from the stale pre-trip value, not from iniSet. Not a G36-intent answer key for short device trips. supply_fan_status does not depend on the reset; it carries this note because the label is per scenario",
   "frame_rate_dependence": null,
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
