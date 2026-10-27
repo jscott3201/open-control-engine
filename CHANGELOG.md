@@ -58,7 +58,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Verification
 
-- **golden-gen's own hygiene and its goldens' freshness now gate every PR** (GitHub #TBD, issue
+- **golden-gen's own hygiene and its goldens' freshness now gate every PR** (GitHub #360, issue
   #350). `tools/golden-gen` is a standalone cargo workspace, so no workspace command linted or
   tested it, and nothing checked that the checked-in Tier-A goldens are what it emits. The new
   `golden-gen-hygiene` job in `pr-gate.yml`, which `CI OK` needs, runs its `cargo fmt --check`,
