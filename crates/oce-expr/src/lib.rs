@@ -126,9 +126,10 @@ pub use fuel::{MAX_EVAL_FUEL, with_eval_budget};
 
 /// Maximum supported parser-entry and AST nesting depth.
 ///
-/// The parser metric counts simultaneously live guarded parse entries; the AST metric counts a
-/// leaf at depth one. Both reject only when the metric exceeds 64, so 64 is accepted and 65 is
-/// rejected. A 2 MiB debug thread exhausted its stack at 196 nested parentheses; the parser cap
+/// The parser metric counts simultaneously live guarded parse entries; the AST metric
+/// ([`nesting_depth`]) counts a leaf at depth one and does not count the length of a
+/// left-associative operator chain, so `a+b+…` is bounded by [`MAX_EXPR_NODES`], not by this
+/// limit. Both reject only when the metric exceeds 64, so 64 is accepted and 65 is rejected. A 2 MiB debug thread exhausted its stack at 196 nested parentheses; the parser cap
 /// admits 31 nested parenthesis/brace/call levels or 62 unary signs, leaving roughly 6× stack
 /// headroom for the parenthesis case and about 16× headroom over the deepest measured real binding
 /// (AST depth four).
@@ -640,7 +641,16 @@ pub fn eval_str_finite(text: &str, scope: &dyn Scope) -> Result<EvalResult, Expr
     eval_finite(&parse(text)?, scope)
 }
 
-/// Return the maximum node depth of an expression tree, with a leaf at depth one.
+/// Return the nesting depth of an expression tree, with a leaf at depth one.
+///
+/// Every child sits one level below its parent, except the left operand of a
+/// [`ExprAst::Binary`] that is itself a `Binary`: that operand continues a left-associative
+/// chain and sits at its parent's level. The parser builds `a+b+c+…`, `a*b*c*…`, `a and b and …`
+/// and `a or b or …` left-deep, so a chain of any length has the depth of its deepest operand plus
+/// one, and only true nesting — parentheses on the right of an operator, unary signs, calls,
+/// arrays, ranges, subscripts and comprehensions — adds levels. The evaluator walks such a left
+/// spine iteratively, so this metric bounds its recursion; a chain's length is bounded by
+/// [`MAX_EXPR_NODES`] at parse and by the fuel budget at evaluation instead (issue #371).
 ///
 /// This walk is iterative so checking an untrusted hand-built tree does not itself recurse.
 #[must_use]
@@ -652,7 +662,12 @@ pub fn nesting_depth(ast: &ExprAst) -> usize {
         match node {
             ExprAst::Unary(_, child) => work.push((child, depth + 1)),
             ExprAst::Binary(_, left, right) => {
-                work.push((left, depth + 1));
+                let left_depth = if matches!(**left, ExprAst::Binary(..)) {
+                    depth
+                } else {
+                    depth + 1
+                };
+                work.push((left, left_depth));
                 work.push((right, depth + 1));
             }
             ExprAst::Call(_, args) | ExprAst::ArrayLit(args) => {

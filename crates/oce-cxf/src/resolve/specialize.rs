@@ -437,9 +437,19 @@ fn validate_guard_ast(
             _ => unsupported(node, "only `!parameter` is allowed in G36 guards", diags),
         },
         ExprAst::Binary(BinOp::And | BinOp::Or, left, right) => {
-            let l_ok = validate_guard_ast(left, scope, node, diags);
-            let r_ok = validate_guard_ast(right, scope, node, diags);
-            l_ok && r_ok
+            // A long `a and b and …` chain is walked iteratively along its left spine; every
+            // operand is still validated, in source order, so each one reports its own refusal.
+            let mut rights = vec![right.as_ref()];
+            let mut leftmost = left.as_ref();
+            while let ExprAst::Binary(BinOp::And | BinOp::Or, left, right) = leftmost {
+                rights.push(right);
+                leftmost = left;
+            }
+            let mut ok = validate_guard_ast(leftmost, scope, node, diags);
+            for right in rights.into_iter().rev() {
+                ok &= validate_guard_ast(right, scope, node, diags);
+            }
+            ok
         }
         ExprAst::Binary(BinOp::Eq | BinOp::Ne, left, right) => {
             validate_enum_comparison(left, right, scope, node, diags)

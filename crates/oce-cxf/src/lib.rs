@@ -130,7 +130,9 @@ pub fn import_cxf(
     opts: &ResolveOptions,
 ) -> Result<(ModelGraph, ValidationReport), CxfError> {
     let doc = parse_document(bytes)?;
-    oce_expr::with_eval_budget(MAX_DOCUMENT_EVAL_FUEL, || resolve::resolve(&doc, opts))
+    oce_expr::with_eval_budget(MAX_DOCUMENT_EVAL_FUEL, || {
+        resolve::resolve(&doc, bytes, opts)
+    })
 }
 
 /// Export a [`ModelGraph`] back to a CXF JSON-LD document — the RT-2 partner of [`import_cxf`].

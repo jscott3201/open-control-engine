@@ -467,3 +467,43 @@ fn inactive_conditional_node_with_active_connection_is_rejected() {
     let codes = validation_codes(doc);
     assert!(codes.contains(&DiagCode::InactiveConditionalNode));
 }
+
+#[test]
+fn a_guard_chain_longer_than_the_nesting_limit_specializes_on_a_small_stack() {
+    // `hasFeature and hasFeature and …` with 2000 operands: a left-associative chain is not
+    // nesting (issue #371), so it parses, and the guard validator walks it iteratively.
+    let guard = std::iter::repeat_n("hasFeature", 2000)
+        .collect::<Vec<_>>()
+        .join(" and ");
+    let unknown_in_middle = {
+        let mut operands = vec!["hasFeature"; 2000];
+        operands[1000] = "noSuchFlag";
+        operands.join(" or ")
+    };
+    let (active, pruned, codes) = std::thread::Builder::new()
+        .stack_size(2 * 1024 * 1024)
+        .spawn(move || {
+            let blocks = |has_feature| {
+                import_doc(doc_with_children(
+                    vec![("gated", Some(guard.clone())), ("plain", None)],
+                    "California_Title_24",
+                    has_feature,
+                ))
+                .expect("a long guard chain imports")
+                .blocks
+                .len()
+            };
+            let codes = validation_codes(doc_with_children(
+                vec![("bad", Some(unknown_in_middle))],
+                "California_Title_24",
+                true,
+            ));
+            (blocks(true), blocks(false), codes)
+        })
+        .unwrap()
+        .join()
+        .unwrap();
+    assert_eq!(active, 2, "every operand true keeps the gated block");
+    assert_eq!(pruned, 1, "every operand false prunes it");
+    assert_eq!(codes, [DiagCode::ConditionalGuardUnknownParameter]);
+}

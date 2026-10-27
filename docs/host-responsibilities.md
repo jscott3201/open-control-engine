@@ -345,6 +345,22 @@ modeled value/term object is also refused: context bindings are document-level o
 never applies a scoped context to one semantic value. The canonical-key guarantee therefore holds
 for every document that loads at all.
 
+Property keys are expanded against the same `@context` (issue #383). A modeled property — `min`,
+`max`, `nominal`, `unit`, `quantity`, `displayUnit`, `value`, the structural edges, and the rest
+of the `S231:` terms the importer reads — is the same property whether it is keyed compactly
+(`S231:min`), by its full IRI in the document's own S231 namespace, by another prefix bound to
+that namespace, or by a declared term. The own namespace is the document's `S231` binding; a
+document that binds no `S231` is read in the S231P namespace (`http://data.ashrae.org/S231P#`), the
+one the exporter binds. A modeled term spelled in any other known S231 namespace — S231P, the
+`http://data.ashrae.org/S231#` namespace upstream modelica-json emits, or the `https:` spelling of
+either — is refused as `non-subset-construct`, in both directions, and the message names the
+namespace the document reads modeled keys in. A node that writes one property in two spellings
+(an explicit `null` or `[]` compact key counts) and a key that names a modeled property only after
+trimming surrounding whitespace are refused as `malformed-document`, as is any key — modeled or
+not — written more than once on one `@graph` node, since JSON parsing would silently keep only one
+of the values. None of these is silently
+dropped. Keys that name no modeled property pass through unchanged.
+
 The document's declared boundary-output names (root `S231:hasOutput`) are a second read-only
 identity space: each resolves on `get_output` and `watch` as an alias for
 its driving internal connector's slot, and `Topology.boundary_outputs` enumerates the

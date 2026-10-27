@@ -17,6 +17,11 @@ use crate::ExprError;
 pub(crate) enum Tok {
     /// An integer literal (no `.`/exponent).
     Int(i64),
+    /// The integer literal `9223372036854775808` (2^63, possibly with leading zeros), carried as
+    /// its authored text. It is one past `i64::MAX`, so it is representable only as the operand of
+    /// a unary minus: the parser folds exactly `-` followed by this token into `i64::MIN` and
+    /// refuses it in every other position with the ordinary out-of-range error.
+    IntMinMagnitude(String),
     /// A real literal (had a `.` or an exponent).
     Real(f64),
     /// A string literal (quotes stripped, simple escapes resolved).
@@ -216,12 +221,21 @@ fn lex_number(bytes: &[char], start: usize) -> Result<(Tok, usize), ExprError> {
                 .map_err(|_| parse_err(format!("malformed real literal {text:?}")))?,
         )
     } else {
-        Tok::Int(
-            text.parse::<i64>()
-                .map_err(|_| parse_err(format!("integer literal out of range {text:?}")))?,
-        )
+        match text.parse::<i64>() {
+            Ok(value) => Tok::Int(value),
+            Err(_) if text.parse::<u64>() == Ok(i64::MIN.unsigned_abs()) => {
+                Tok::IntMinMagnitude(text)
+            }
+            Err(_) => return Err(int_out_of_range(&text)),
+        }
     };
     Ok((tok, i))
+}
+
+/// The refusal for an integer literal outside `i64` (shared with the parser, which raises it for
+/// a [`Tok::IntMinMagnitude`] that is not the operand of a unary minus).
+pub(crate) fn int_out_of_range(text: &str) -> ExprError {
+    parse_err(format!("integer literal out of range {text:?}"))
 }
 
 /// Lex an identifier or dotted qualified name (`Modelica.Constants.pi`). A `.` continues the

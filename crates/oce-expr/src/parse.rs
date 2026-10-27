@@ -21,7 +21,7 @@
 
 use std::sync::Arc;
 
-use crate::lex::{Tok, lex, parse_err};
+use crate::lex::{Tok, int_out_of_range, lex, parse_err};
 use crate::{
     BinOp, Builtin, BuiltinConst, ExprAst, ExprError, MAX_EXPR_NODES, MAX_NESTING_DEPTH, UnOp,
     nesting_depth,
@@ -216,6 +216,11 @@ impl Parser {
 
     fn parse_unary_inner(&mut self) -> Result<ExprAst, ExprError> {
         match self.peek() {
+            Some(Tok::Minus) if self.at_int_min_literal() => {
+                self.pos += 2;
+                self.count_node()?;
+                Ok(ExprAst::Int(i64::MIN))
+            }
             Some(Tok::Minus) => {
                 self.pos += 1;
                 let operand = self.parse_unary()?;
@@ -228,6 +233,17 @@ impl Parser {
             }
             _ => self.parse_postfix(),
         }
+    }
+
+    /// Whether the cursor is at `-9223372036854775808`: a unary minus whose operand is exactly
+    /// the 2^63 literal, not followed by a subscript (which binds tighter than the sign, so
+    /// `-9223372036854775808[1]` subscripts the unrepresentable literal and is refused). Only this
+    /// form denotes `i64::MIN`; `--9223372036854775808` folds the inner pair and then negates it
+    /// (an evaluation-time overflow), and `+9223372036854775808` or `0 - 9223372036854775808`
+    /// stay out of range.
+    fn at_int_min_literal(&self) -> bool {
+        matches!(self.toks.get(self.pos + 1), Some(Tok::IntMinMagnitude(_)))
+            && self.toks.get(self.pos + 2) != Some(&Tok::LBracket)
     }
 
     /// `postfix : primary ("[" subscript ("," subscript)* "]")*` — zero or more subscript
@@ -288,6 +304,7 @@ impl Parser {
                 self.count_node()?;
                 Ok(ExprAst::Real(v))
             }
+            Some(Tok::IntMinMagnitude(text)) => Err(int_out_of_range(&text)),
             Some(Tok::Str(s)) => {
                 self.count_node()?;
                 Ok(ExprAst::Str(s))

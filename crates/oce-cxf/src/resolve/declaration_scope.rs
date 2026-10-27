@@ -501,8 +501,18 @@ fn collect_identifier_heads(
         | ExprAst::EnumRef(_) => {}
         ExprAst::Unary(_, value) => collect_identifier_heads(value, bound, heads),
         ExprAst::Binary(_, left, right) => {
-            collect_identifier_heads(left, bound, heads);
-            collect_identifier_heads(right, bound, heads);
+            // A left-associative chain (`a+b+…`) may be thousands of terms long, so its left
+            // spine is walked iteratively; operands are still visited in source order.
+            let mut rights = vec![right.as_ref()];
+            let mut leftmost = left.as_ref();
+            while let ExprAst::Binary(_, left, right) = leftmost {
+                rights.push(right);
+                leftmost = left;
+            }
+            collect_identifier_heads(leftmost, bound, heads);
+            for right in rights.into_iter().rev() {
+                collect_identifier_heads(right, bound, heads);
+            }
         }
         ExprAst::Call(_, args) | ExprAst::ArrayLit(args) => {
             for arg in args {
