@@ -211,6 +211,43 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
+- **Twelve classes, not nine, can trigger the atomic-firing refusal of CDL-legal feedback**
+  (GitHub #358, issue #347). The coverage table from GitHub #352 listed only the nine
+  `CDL.Routing` `*ExtractSignal`, `*VectorFilter` and `*VectorReplicator` classes. Three more have
+  mixed feedthrough and are refused as a `block-algebraic-loop` in the same way:
+  - `CDL.Reals.MatrixMax` and `CDL.Reals.MatrixMin` with two or more outputs (`nRow ≥ 2` when
+    reducing rows, `nCol ≥ 2` when reducing columns), because each output depends only on its own
+    row or column. For example, `MatrixMin` with `nRow = 2, nCol = 1, rowMin = true` and feedback
+    `y[1] → u[2, 1]` is refused.
+  - `CDL.Reals.PIDWithReset` with `controllerType = P`. With no integrator it holds no state, so it
+    reads `trigger` when it fires, although `y` depends only on `u_s` and `u_m`. Feedback such as
+    `y → GreaterThreshold → trigger` is refused. In the `PI`, `PD` and `PID` modes it loads.
+
+  `docs/cdl-coverage.md` now lists all twelve classes, each with its feedthrough and trigger
+  condition, and adds the routing condition `nout ≥ 1` and a remedy for the reset PID. The
+  `DiagCode::BlockAlgebraicLoop` and `BuildError::BlockAlgebraicLoop` rustdoc, and the
+  `oce-graph` sort's module doc, no longer give a stateful block's state-only output as the cause.
+  Every registered class that triggers the refusal is stateless with mixed feedthrough under its
+  trigger condition.
+
+  A census test in `oce-blocks` builds every registered class with its defaults and at every point
+  of a grid derived from the class's parameter rules and defaults. The grid covers structural
+  widths `0..=3`, every value of each Boolean and enumeration parameter, and every valid selector
+  or mask. Every other scalar parameter with a default is probed with a few sample values at every
+  grid point. No probe may change the mixed pairs, and the parameters whose probes change whether
+  a block is stateful are pinned (today only comparator hysteresis `h`). The test pins the set of
+  mixed-feedthrough classes to the documented twelve and checks each class's trigger condition at
+  every grid point. It is exhaustive over that grid and sampled beyond it. Mutation controls show
+  that it catches an added mixed class and a kind-changing probe.
+
+  New `oce-graph` tests refuse feedback through a real instance of each of the twelve classes, on
+  both matrix axes. Feedback into an input the output does depend on is refused as a
+  connector-level loop instead, each class without the feedback compiles, and the reset PID
+  compiles in its stateful modes. New `oce-api` tests drive the `MatrixMin` row, `MatrixMax`
+  column and P-mode reset PID refusals end to end from CXF, against new receipt goldens. No
+  behaviour, error text or receipt message changes. The release-compatibility checker re-selects
+  its implementation baseline at the change's source commit.
+
 - **Atomic block firing's refusal of some CDL-legal feedback is documented as a coverage limit,
   and the refusal now says so** (GitHub #352, issue #347). The engine fires each block's outputs together, so
   a feedback path from one output back into an input that output does not depend on is refused
