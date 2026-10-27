@@ -287,7 +287,7 @@ pub const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
         name: "multizone_vav_supply_fan",
         cxf: SUPPLY_FAN,
-        t_stop: 1920,
+        t_stop: 3000,
         sample_step: 1.0,
         inputs: SUPPLY_FAN_INPUTS,
         exact_outputs: SUPPLY_FAN_EXACT_OUTPUTS,
@@ -305,7 +305,7 @@ pub const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
         name: "trim_and_respond_have_hol_false",
         cxf: TRIM_AND_RESPOND,
-        t_stop: 22,
+        t_stop: 40,
         sample_step: 60.0,
         inputs: TRIM_AND_RESPOND_INPUTS,
         exact_outputs: TRIM_AND_RESPOND_EXACT_OUTPUTS,

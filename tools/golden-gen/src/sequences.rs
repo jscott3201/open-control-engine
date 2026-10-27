@@ -395,24 +395,19 @@ fn supply_temperature_setpoint_trace(
     const RES_AMO: f64 = -0.2;
     const MAX_RES: f64 = -0.6;
 
-    let mut true_delay_timer = 0.0;
-    let mut true_delay_prev_time: Option<f64> = None;
-    let mut true_delay_prev_u = false;
-    let mut true_delay_held = false;
-
-    let mut sampler_held = 0.0;
-    let mut sampler_t0 = 0.0;
-    let mut sampler_last_index = -1;
-    let mut sampler_initialized = false;
-
-    // Upstream Buildings `Discrete/UnitDelay.mo` pair: `y = pre(u_internal)` (held across the
-    // interval) and the staged `u_internal` (sampled at the most recent instant). Both initialize
-    // to y_start = T_SUP_COO_MAX (maxSupTemRes.uniDel iniSet).
-    let mut unit_delay_y = T_SUP_COO_MAX;
-    let mut unit_delay_u_internal = T_SUP_COO_MAX;
-    let mut unit_delay_t0 = 0.0;
-    let mut unit_delay_last_index = -1;
-    let mut unit_delay_initialized = false;
+    // `maxSupTemRes`: the shared TrimAndRespond chain, iniSet = TSupCooMax.
+    let mut max_supply_temperature_reset =
+        trim_and_respond::TrimAndRespondChain::new(trim_and_respond::TrimAndRespondParameters {
+            ini_set: T_SUP_COO_MAX,
+            min_set: T_SUP_COO_MIN,
+            max_set: T_SUP_COO_MAX,
+            del_tim: DEL_TIM,
+            sample_period: SAMPLE_PERIOD,
+            num_ign_req: NUM_IGN_REQ,
+            tri_amo: TRI_AMO,
+            res_amo: RES_AMO,
+            max_res: MAX_RES,
+        });
 
     let mut out = Vec::with_capacity(time.len());
     for ((((&t, &t_out), &fan_on), &mode), &requests) in time
@@ -422,45 +417,7 @@ fn supply_temperature_setpoint_trace(
         .zip(operating_mode)
         .zip(zone_temperature_reset_requests)
     {
-        let tim = true_delay_output(
-            t,
-            fan_on,
-            DEL_TIM + SAMPLE_PERIOD,
-            true,
-            true_delay_prev_time,
-            true_delay_prev_u,
-            true_delay_held,
-            true_delay_timer,
-        )
-        .0;
-        let sampled_requests = sampler_output(
-            t,
-            requests as f64,
-            SAMPLE_PERIOD,
-            sampler_initialized,
-            sampler_t0,
-            sampler_last_index,
-            sampler_held,
-        );
-        let request_delta = sampled_requests - NUM_IGN_REQ;
-        let response = -((RES_AMO.abs() * request_delta).min(MAX_RES.abs()));
-        let net_reset = if !tim {
-            0.0
-        } else if request_delta > 0.0 {
-            TRI_AMO + response
-        } else {
-            TRI_AMO
-        };
-        // UnitDelay output at this tick: at a sample instant the `when` fires before the output
-        // is read (y becomes the previously staged sample); between instants y holds.
-        let unit_delay_out = if !unit_delay_initialized {
-            unit_delay_y
-        } else {
-            let (due, _) = sample_due(t, unit_delay_t0, SAMPLE_PERIOD, unit_delay_last_index);
-            if due { unit_delay_u_internal } else { unit_delay_y }
-        };
-        let candidate = clamp(unit_delay_out + net_reset, T_SUP_COO_MIN, T_SUP_COO_MAX);
-        let trim_respond = if fan_on { candidate } else { T_SUP_COO_MAX };
+        let trim_respond = max_supply_temperature_reset.step(t, fan_on, requests);
         let reset_branch = buildings_line(
             T_OUT_MIN,
             trim_respond,
@@ -480,49 +437,6 @@ fn supply_temperature_setpoint_trace(
             T_DEA_BAN
         };
         out.push(selected);
-
-        let (next_true_delay, next_timer) = true_delay_output(
-            t,
-            fan_on,
-            DEL_TIM + SAMPLE_PERIOD,
-            true,
-            true_delay_prev_time,
-            true_delay_prev_u,
-            true_delay_held,
-            true_delay_timer,
-        );
-        true_delay_timer = next_timer;
-        true_delay_prev_time = Some(t);
-        true_delay_prev_u = fan_on;
-        true_delay_held = next_true_delay;
-
-        if !sampler_initialized {
-            sampler_t0 = initial_sample_time(t, SAMPLE_PERIOD);
-            sampler_last_index = sample_index(t, sampler_t0, SAMPLE_PERIOD);
-            sampler_held = requests as f64;
-            sampler_initialized = true;
-        } else {
-            let (due, index) = sample_due(t, sampler_t0, SAMPLE_PERIOD, sampler_last_index);
-            if due {
-                sampler_last_index = index;
-                sampler_held = requests as f64;
-            }
-        }
-
-        if !unit_delay_initialized {
-            unit_delay_t0 = initial_sample_time(t, SAMPLE_PERIOD);
-            unit_delay_last_index = sample_index(t, unit_delay_t0, SAMPLE_PERIOD);
-            // First instant: `y = pre(u_internal)` keeps y_start; the current input is staged.
-            unit_delay_u_internal = trim_respond;
-            unit_delay_initialized = true;
-        } else {
-            let (due, index) = sample_due(t, unit_delay_t0, SAMPLE_PERIOD, unit_delay_last_index);
-            if due {
-                unit_delay_last_index = index;
-                unit_delay_y = unit_delay_u_internal; // y = pre(u_internal)
-                unit_delay_u_internal = trim_respond; // u_internal = u
-            }
-        }
     }
     out
 }

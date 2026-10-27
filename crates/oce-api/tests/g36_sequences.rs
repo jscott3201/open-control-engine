@@ -266,7 +266,7 @@ fn supply_temperature_inputs(t: f64) -> Vec<(String, Value)> {
 
 fn supply_fan_inputs(t: f64) -> Vec<(String, Value)> {
     let operating_mode = match t as u32 {
-        300..=359 => 4,
+        300..=359 | 1980..=2099 => 4,
         _ => 1,
     };
     let requests = match t as u32 {
@@ -276,7 +276,8 @@ fn supply_fan_inputs(t: f64) -> Vec<(String, Value)> {
         1140..=1259 => 3,
         1260..=1379 => 2,
         1380..=1619 => 0,
-        _ => 4,
+        1620..=2939 => 4,
+        _ => 0,
     };
     let duct_pressure = if t >= 1500.0 {
         140.0
@@ -405,10 +406,10 @@ fn multizone_vav_supply_fan_loads_simulates_and_is_deterministic() {
             ordinal: 8,
         },
     ];
-    let (schedule_a, paths, metrics_a) = simulate(engine, supply_fan_inputs, &outputs, 1920.0);
+    let (schedule_a, paths, metrics_a) = simulate(engine, supply_fan_inputs, &outputs, 3000.0);
 
     let (engine, _) = load(SUPPLY_FAN, 65, 7);
-    let (schedule_b, paths_b, metrics_b) = simulate(engine, supply_fan_inputs, &outputs, 1920.0);
+    let (schedule_b, paths_b, metrics_b) = simulate(engine, supply_fan_inputs, &outputs, 3000.0);
 
     assert_eq!(paths, paths_b);
     assert_eq!(
@@ -444,13 +445,21 @@ fn multizone_vav_supply_fan_loads_simulates_and_is_deterministic() {
 /// `triAmo = -12 Pa` plus, above `numIgnReq = 2` requests, `min(15 * (R - 2), 32)` Pa, so the
 /// sampled request counts 5, 3, 2, 0, 0, 4, 4, 4 give the exact steps below. Every value is an
 /// integer in Pa, so the sums are exact in `f64`.
+///
+/// The fan then stops for 1980..2099 s. That window holds exactly one sample instant (2040 s), at
+/// which `swi2` stages `iniSet` into the UnitDelay while its output still holds 161 Pa. The
+/// restart at 2100 s falls between sample instants, so `swi` must publish `iniSet` there even
+/// though the reset chain alone would still read 161 Pa. The re-armed TrueDelay releases at
+/// 2820 s and the reset resumes from `iniSet`: 4 sampled requests give 120 + 18 = 138 Pa at 2820 s
+/// and again at the 2880 s instant (the UnitDelay staged 120 Pa at 2760 s), and the cleared
+/// requests trim to 138 - 12 = 126 Pa at 3000 s.
 fn assert_supply_fan_pressure_reset(metrics: &FrameRun, setpoint: &str) {
     assert_eq!(
         setpoint,
         "http://example.org#g36.source.multizone_vav_supply_fan.staPreSetRes.swi.y"
     );
     // (first row, last row, setpoint) of each hold interval.
-    let holds: [(usize, usize, f64); 9] = [
+    let holds: [(usize, usize, f64); 13] = [
         (0, 1079, 120.0),    // TrueDelay not yet elapsed: iniSet
         (1080, 1199, 140.0), // 5 requests: respond capped at maxRes, -12 + 32
         (1200, 1319, 143.0), // 3 requests: smaller respond, -12 + 15
@@ -459,7 +468,11 @@ fn assert_supply_fan_pressure_reset(metrics: &FrameRun, setpoint: &str) {
         (1560, 1679, 107.0), // no requests: trim
         (1680, 1799, 125.0), // 4 requests: respond, -12 + 30
         (1800, 1919, 143.0),
-        (1920, 1920, 161.0),
+        (1920, 1979, 161.0),
+        (1980, 2099, 120.0), // fan off (swi); the 2040 s instant stages iniSet (swi2)
+        (2100, 2819, 120.0), // restart re-arms the TrueDelay: iniSet although 161 is held at 2100
+        (2820, 2999, 138.0), // released: resumes from iniSet, 4 requests -> -12 + 30
+        (3000, 3000, 126.0), // no requests: trim
     ];
     for (first, last, expected) in holds {
         for row in first..=last {

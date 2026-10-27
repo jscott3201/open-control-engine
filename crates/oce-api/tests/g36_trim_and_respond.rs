@@ -60,14 +60,16 @@ fn load_trim_and_respond() -> Engine {
 }
 
 fn inputs(t: f64) -> Vec<(String, Value)> {
-    let requests = if (840.0..1080.0).contains(&t) {
-        6
-    } else if (720.0..840.0).contains(&t) {
+    let requests = if (720.0..840.0).contains(&t) {
         3
+    } else if (840.0..1080.0).contains(&t) {
+        6
+    } else if (2160.0..2280.0).contains(&t) {
+        5
     } else {
         0
     };
-    let device_status = !(1080.0..1260.0).contains(&t);
+    let device_status = !(1260.0..1380.0).contains(&t);
     vec![
         (REQUEST_COUNT.to_string(), Value::Integer(requests)),
         (DEVICE_STATUS.to_string(), Value::Boolean(device_status)),
@@ -88,13 +90,13 @@ fn simulate(mut engine: Engine) -> (ScheduleSignature, FrameRun) {
     let metrics = FrameRun::record(
         &mut engine,
         0.0,
-        1320.0,
+        2400.0,
         60.0,
         inputs,
         vec![SETPOINT_PATH.to_string()],
     )
     .expect("G36 TrimAndRespond simulates");
-    assert_eq!(metrics.ticks, 23);
+    assert_eq!(metrics.ticks, 41);
     assert_eq!(metrics.trace.columns(), &[SETPOINT_PATH.to_string()]);
     assert_all_finite(&metrics);
     (schedule, metrics)
@@ -172,11 +174,36 @@ fn trim_and_respond_have_hol_false_loads_simulates_and_is_deterministic() {
             "setpoint[{row}]={x} outside [0, 20]"
         );
     }
-    assert_close(real_at(&metrics_a, 0), 10.0);
-    assert_close(real_at(&metrics_a, 12), 9.9);
-    assert!(
-        real_at(&metrics_a, 14) < real_at(&metrics_a, 12),
-        "larger requests should apply the capped negative response"
-    );
-    assert_close(real_at(&metrics_a, 18), 10.0);
+    assert_restart_reinitializes_the_reset(&metrics_a);
+}
+
+/// Pin the setpoint (row = t / 60 s) across a restart whose off window holds one sample instant.
+///
+/// `iniSet = 10`, `triAmo = 0.1`, `resAmo = -0.2`, `maxRes = -0.6`, `numIgnReq = 2`, and the
+/// TrueDelay waits `delTim + samplePeriod = 720 s`. The chain reaches 9.1 by 1200 s. The device is
+/// off for 1260..1379 s: `swi` publishes `iniSet`, and at the 1320 s instant `swi2` stages `iniSet`
+/// into the UnitDelay while its output still holds 9.1. The restart at 1380 s falls between
+/// instants, so `swi` must publish `iniSet` although the chain alone would read 9.1; the re-armed
+/// TrueDelay releases at 2100 s and the reset resumes from `iniSet`.
+fn assert_restart_reinitializes_the_reset(metrics: &FrameRun) {
+    // (first row, last row, setpoint) of each hold interval.
+    let holds: [(usize, usize, f64); 12] = [
+        (0, 11, 10.0),  // TrueDelay not yet elapsed: iniSet
+        (12, 13, 9.9),  // 3 requests: 0.1 - 0.2
+        (14, 15, 9.4),  // 6 requests: 0.1 - 0.6 (maxRes cap)
+        (16, 17, 8.9),  // 6 requests again
+        (18, 19, 9.0),  // no requests: trim
+        (20, 20, 9.1),  // no requests: trim
+        (21, 22, 10.0), // device off: iniSet; the 1320 s instant stages iniSet
+        (23, 34, 10.0), // restart re-arms the TrueDelay: iniSet although 9.1 is held at 1380 s
+        (35, 35, 10.1), // released at 2100 s: iniSet + trim
+        (36, 37, 9.5),  // 5 requests at the 2160 s instant: iniSet + 0.1 - 0.6
+        (38, 39, 9.6),  // no requests: trim
+        (40, 40, 9.7),  // no requests: trim
+    ];
+    for (first, last, expected) in holds {
+        for row in first..=last {
+            assert_close(real_at(metrics, row), expected);
+        }
+    }
 }

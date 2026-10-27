@@ -110,6 +110,122 @@ fn supply_fan_reference_exercises_pressure_trim_and_respond() {
     );
 }
 
+/// Shape of a trim-and-respond restart that makes both of `TrimAndRespond.mo`'s switches visible.
+struct RestartShape {
+    sequence: &'static str,
+    /// Reference column carrying `uDevSta` (input or the sequence's own fan-status output).
+    device_status: &'static str,
+    /// Reference column carrying the trim-and-respond output `y`.
+    setpoint: &'static str,
+    ini_set: f64,
+    sample_period: f64,
+    /// `delTim + samplePeriod`, s.
+    true_delay: f64,
+    /// Largest single net reset, `max(|triAmo|, |triAmo + maxRes|)`.
+    max_net_reset: f64,
+}
+
+/// The trim-and-respond references must restart the device in a way that exposes `swi` and `swi2`.
+///
+/// `swi2` (iniSet into the UnitDelay while the device is off) only shows if a sample instant falls
+/// inside an off window after the reset has left iniSet; `swi` (iniSet until the re-armed
+/// TrueDelay elapses) only shows if the restart lands between sample instants, while the UnitDelay
+/// still holds the pre-off value. This guard fails if either reference regresses to a shape where
+/// one of the switches could be dropped without changing a value: it requires such an off window
+/// and restart, iniSet from the stop through the re-armed delay, and a first released value within
+/// one net reset of iniSet (a chain that kept the pre-off value would land further away).
+#[test]
+fn trim_and_respond_references_restart_through_both_switches() {
+    let shapes = [
+        RestartShape {
+            sequence: "trim_and_respond_have_hol_false",
+            device_status: "device_status",
+            setpoint: "setpoint",
+            ini_set: 10.0,
+            sample_period: 120.0,
+            true_delay: 720.0,
+            max_net_reset: 0.5,
+        },
+        RestartShape {
+            sequence: "multizone_vav_supply_fan",
+            device_status: "supply_fan_status",
+            setpoint: "duct_static_pressure_setpoint",
+            ini_set: 120.0,
+            sample_period: 120.0,
+            true_delay: 720.0,
+            max_net_reset: 20.0,
+        },
+    ];
+    for shape in &shapes {
+        assert_restart_shape(shape);
+    }
+}
+
+fn assert_restart_shape(shape: &RestartShape) {
+    let name = shape.sequence;
+    let spec = SEQUENCES
+        .iter()
+        .find(|spec| spec.name == name)
+        .unwrap_or_else(|| panic!("{name} sequence is registered"));
+    let reference = read_reference(spec);
+    let column = |label: &str| {
+        let index = reference
+            .col_names
+            .as_ref()
+            .and_then(|names| names.iter().position(|column| column == label))
+            .unwrap_or_else(|| panic!("{name} reference carries column {label}"));
+        reference
+            .column_owned(index)
+            .unwrap_or_else(|err| panic!("{name} column {label} reads: {err}"))
+    };
+    let status = column(shape.device_status);
+    let setpoint = column(shape.setpoint);
+    let time = &setpoint.x;
+    let y = &setpoint.y;
+    let on = |row: usize| status.y[row] != 0.0;
+    let is_ini_set = |row: usize| y[row].to_bits() == shape.ini_set.to_bits();
+    let is_sample_instant = |t: f64| (t / shape.sample_period).fract() == 0.0;
+
+    let reset_active = (0..y.len())
+        .find(|&row| !is_ini_set(row))
+        .unwrap_or_else(|| panic!("{name}: the reset never leaves iniSet"));
+    let restart = (reset_active + 1..y.len()).find(|&stop| {
+        if on(stop) || !on(stop - 1) || is_ini_set(stop - 1) {
+            return false;
+        }
+        let Some(restart) = (stop..y.len()).find(|&row| on(row)) else {
+            return false;
+        };
+        (stop..restart).any(|row| is_sample_instant(time[row])) && !is_sample_instant(time[restart])
+    });
+    let stop = restart.unwrap_or_else(|| {
+        panic!(
+            "{name}: needs a device stop after the reset left iniSet, spanning a sample instant, \
+             with the restart between sample instants"
+        )
+    });
+    let restart = (stop..y.len()).find(|&row| on(row)).expect("restart row");
+    let release_time = time[restart] + shape.true_delay;
+    let release = (restart..y.len())
+        .find(|&row| time[row] >= release_time)
+        .unwrap_or_else(|| panic!("{name}: the run ends before the re-armed TrueDelay elapses"));
+    for row in stop..release {
+        assert!(
+            is_ini_set(row),
+            "{name}: setpoint at {} s must be iniSet from the stop through the re-armed delay, got {}",
+            time[row],
+            y[row]
+        );
+    }
+    assert!(
+        (y[release] - shape.ini_set).abs() <= shape.max_net_reset,
+        "{name}: the first released setpoint {} at {} s must be one net reset from iniSet {}",
+        y[release],
+        time[release],
+        shape.ini_set
+    );
+}
+
 fn read_reference(spec: &SequenceSpec) -> CombiTimeTable {
     CombiTimeTable::read(&reference_path(spec))
         .unwrap_or_else(|err| panic!("{} reference read failed: {err}", spec.name))
