@@ -95,16 +95,16 @@ pub(crate) fn validate(
             expect_len(region, 2)?;
             prev_word(region, 1, prev_t)
         }
-        Validator::MovingAverage => validate_moving_average(region, state_t, prev_t),
         Validator::Ramp => {
             expect_len(region, 3)?;
             bool_word(region, 1)?;
             prev_word(region, 2, prev_t)
         }
         Validator::SunRiseSet => validate_sun_rise_set(region),
-        Validator::Sampled | Validator::SampleTrigger | Validator::Pid => {
-            Err("state validator requires resolved block data".into())
-        }
+        Validator::Sampled
+        | Validator::SampleTrigger
+        | Validator::Pid
+        | Validator::MovingAverage => Err("state validator requires resolved block data".into()),
     }
 }
 
@@ -378,28 +378,44 @@ fn validate_proof(region: &[u64], state_t: f64, prev_t: f64) -> Result<(), Strin
     Ok(())
 }
 
-fn validate_moving_average(region: &[u64], state_t: f64, prev_t: f64) -> Result<(), String> {
-    expect_len(region, 134)?;
+/// Validate a `CDL.Reals.MovingAverage` region against its resolved ring `capacity` and
+/// effective window `delta` (both derived from the block's `delta` parameter).
+pub(crate) fn validate_moving_average(
+    region: &[u64],
+    state_t: f64,
+    prev_t: f64,
+    capacity: usize,
+    delta: f64,
+) -> Result<(), String> {
+    expect_len(region, 6 + 2 * capacity)?;
     finite_not_after(region, 1, state_t, "start time")?;
+    let start = f64::from_bits(region[1]);
     prev_word(region, 2, prev_t)?;
     let head = usize::try_from(region[3]).map_err(|_| "ring head exceeds usize".to_string())?;
     let len = usize::try_from(region[4]).map_err(|_| "ring length exceeds usize".to_string())?;
     bool_word(region, 5)?;
-    if head >= 64 || !(1..=64).contains(&len) {
+    if head >= capacity || !(1..=capacity).contains(&len) {
         return Err(format!(
-            "ring head/length out of range: head={head}, len={len}"
+            "ring head/length out of range: head={head}, len={len}, capacity={capacity}"
         ));
     }
     let mut prior = None;
     for logical in 0..len {
-        let physical = (head + logical) % 64;
+        let physical = (head + logical) % capacity;
         let time = finite(region, 6 + physical, "history time")?;
         if time > state_t || prior.is_some_and(|prior| time < prior) {
             return Err("history times must be ordered and not later than model time".into());
         }
         prior = Some(time);
     }
-    let last = (head + len - 1) % 64;
+    let oldest = f64::from_bits(region[6 + head]);
+    if oldest < start {
+        return Err("oldest history time precedes the start time".into());
+    }
+    if oldest.to_bits() != start.to_bits() && oldest > prev_t - delta {
+        return Err("history no longer covers the window start".into());
+    }
+    let last = (head + len - 1) % capacity;
     if region[6 + last] != prev_t.to_bits() {
         return Err("last history time differs from previous tick time".into());
     }
@@ -615,7 +631,7 @@ mod tests {
             ("CDL.Reals.IntegratorWithReset", 1, PREV_T_UNSET),
             ("CDL.Reals.Derivative", 2, 2),
             ("CDL.Reals.LimitSlewRate", 1, PREV_T_UNSET),
-            ("CDL.Reals.MovingAverage", 3, 64),
+            ("CDL.Reals.MovingAverage", 4, 0),
             ("CDL.Reals.PID", 1, PREV_T_UNSET),
             ("CDL.Reals.PIDWithReset", 1, PREV_T_UNSET),
             ("CDL.Reals.Ramp", 1, 2),
@@ -674,21 +690,22 @@ mod tests {
         proof[16] = 3.0f64.to_bits();
         assert!(validate_proof(&proof, state_t, prev_t).is_err());
 
-        let mut moving = [0; 134];
+        // A capacity-8 ring with a 1 s window: checkpoints at the start (0) and at `prev_t`.
+        let mut moving = [0; 6 + 2 * 8];
         moving[1] = 0.0f64.to_bits();
         moving[2] = prev_t.to_bits();
         moving[4] = 2;
-        moving[6] = 1.0f64.to_bits();
+        moving[6] = 0.0f64.to_bits();
         moving[7] = prev_t.to_bits();
-        assert!(validate_moving_average(&moving, state_t, prev_t).is_ok());
+        assert!(validate_moving_average(&moving, state_t, prev_t, 8, 1.0).is_ok());
         let mut bad_order = moving;
         bad_order[2] = 1.0f64.to_bits();
         bad_order[6] = prev_t.to_bits();
         bad_order[7] = 1.0f64.to_bits();
-        assert!(validate_moving_average(&bad_order, state_t, 1.0).is_err());
+        assert!(validate_moving_average(&bad_order, state_t, 1.0, 8, 1.0).is_err());
         let mut bad_length = moving;
         bad_length[4] = 0;
-        assert!(validate_moving_average(&bad_length, state_t, prev_t).is_err());
+        assert!(validate_moving_average(&bad_length, state_t, prev_t, 8, 1.0).is_err());
 
         let variable_pulse = [0, 1.0f64.to_bits(), 0, 0, prev_t.to_bits()];
         assert!(

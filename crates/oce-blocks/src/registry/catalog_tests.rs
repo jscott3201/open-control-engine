@@ -172,10 +172,9 @@ fn catalog_guard_mutations_cover_required_failures() {
         "Abs",
     );
     assert!(removed);
-    package["implemented"]["legacy_evidence_exemption"]
-        .as_array_mut()
-        .unwrap()
-        .push(Value::String("Abs".to_owned()));
+    // `CDL.Reals` has no exemption list now that MovingAverage has a golden; create one.
+    package["implemented"]["legacy_evidence_exemption"] =
+        Value::Array(vec![Value::String("Abs".to_owned())]);
     assert_validation_error(
         &golden_marked_exempt,
         &prov,
