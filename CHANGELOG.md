@@ -308,7 +308,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   The release-compatibility checker re-selects its current implementation baseline at the
   change's source commit; policy and rows are unchanged. A CDL-legal model that atomic block
   firing still refuses as a block-granularity loop is tracked in GitHub issue #347.
-- **Non-finite Real parameters are refused at load and at rest** (GitHub #TBD, issue #362).
+- **Non-finite Real parameters are refused at load and at rest** (GitHub #376, issue #362).
   `NaN`, `+inf` and `-inf` were accepted silently for every class whose rules did not declare
   finiteness — `MultiplyByParameter.k`, `AddParameter.p`, `Timer.t`, `IntegratorWithReset.k` and
   `y_start` among them. CXF literals such as `"NaN"`/`"INF"` and expressions that evaluate to
