@@ -83,6 +83,14 @@ Concretely, what exists today is:
   place of the G36 sequence's own inputs. They are not answer keys for the G36 sequences they
   borrow from.
 
+Where a pinned `.mo` graph and its own documentation disagree, OCE executes the graph, and the
+Tier-A references follow it too; such references carry a `diverges_from_g36_intent` note. One case
+reaches every sequence built on `Generic.TrimAndRespond`: its documentation says the setpoint is
+`iniSet` while the device is off, but `iniSet` reaches the reset only through a sampled
+`UnitDelay`, so a device-off window that holds no `samplePeriod` instant does not reseed it. After
+the re-armed delay the reset resumes from the stale pre-trip value, not from `iniSet`. OCE follows
+the `.mo` graph, not the prose (GitHub issue #354).
+
 All of them are **pre-flattened CXF at specific parameterizations**. A variant is a fixture at a
 fixed set of parameter values, not a general instantiation of the class.
 

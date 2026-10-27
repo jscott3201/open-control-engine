@@ -137,7 +137,7 @@ from every G36 record:
   fixture-local inputs that the G36 `.mo` files do not have. Their goldens check CDL block semantics
   over the fixture topology, and they cite only those CDL block sources. They are not answer keys
   for any G36 sequence.
-- **`diverges_from_g36_intent`.** Eight signals come from fixtures that faithfully copy pinned
+- **`diverges_from_g36_intent`.** Twelve signals come from fixtures that faithfully copy pinned
   Buildings behaviour contradicting the stated G36 intent:
   - `multizone_vav_economizer_enable` and the single-damper economizer controller reference follow
     `Enable.mo`'s `Or` high-limit wiring, which enables the economizer only above the cutoff;
@@ -146,6 +146,14 @@ from every G36 record:
     because its fixture carries the swap, not because its trace shows it. Separately from the
     `.mo`, its CXF fixture writes the nested trim-and-respond parameters as literals where the
     `.mo` binds them to the outer parameters. The literals equal the outer values today.
+  - every reference built on `Generic/TrimAndRespond.mo` — `trim_and_respond_have_hol_false`,
+    `multizone_vav_supply_fan` (its pressure reset; `supply_fan_status` carries the note only
+    because the label is per scenario) and `multizone_vav_supply_temperature` — follows the
+    block's graph, not its documentation. The documentation says the setpoint is `iniSet` while
+    the device is off, but `iniSet` reaches the sampled `UnitDelay` only at a `samplePeriod`
+    instant. After an off window that holds no sample instant, the reset resumes from the stale
+    pre-trip value once the re-armed delay elapses. The standalone golden pins both sides of
+    that boundary (GitHub issue #354).
 
   The economizer goldens agree with the pinned `.mo`, not with Guideline 36.
 - **`frame_rate_dependence`.** Eight signals are driven by a `Ti = 0.5 s` PI loop. The generator
