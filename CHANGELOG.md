@@ -84,7 +84,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### CXF import and export
 
-- **Modeled `S231:` properties are read in every JSON-LD key spelling** (GitHub #TBD, issue
+- **Modeled `S231:` properties are read in every JSON-LD key spelling** (GitHub #386, issue
   #383). The importer matched `S231:min`, `S231:max`, `S231:nominal`, `S231:unit` and the other
   21 modeled properties only under the compact key. The same property keyed by its full IRI
   (`"http://data.ashrae.org/S231P#min"`), by another prefix bound to the S231 namespace, or by a
@@ -219,7 +219,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Binding expressions
 
 - **Long operator chains are no longer refused as too deep, and `-9223372036854775808` is a
-  literal** (GitHub #TBD, issue #371). The AST depth check counted the length of a
+  literal** (GitHub #386, issue #371). The AST depth check counted the length of a
   left-associative chain as nesting, so `a+b+…` with more than 64 terms (and the same for `*`,
   `/`, `-`, `and`, `or`) failed with `NestingTooDeep`. `nesting_depth` now leaves the left operand
   of a `Binary` that is itself a `Binary` at its parent's level, so only real nesting (right

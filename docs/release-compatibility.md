@@ -11,13 +11,14 @@ executable, prior-state, placement and safety qualification. No downstream pin c
 The retained [machine-readable matrix](release-compatibility.json) has exactly 36 ordered rows:
 nine artifact classes times four producer/consumer directions. The selected identities are:
 
-- **Current implementation:** `5161e918c7ed375f4f85a970965520ca196e3a85`, the standalone Tier-A goldens for Nor, Pre and
-  Assert (GitHub #385, issue #371). Its implementation boundary differs from the previous `e2b2923`
-  baseline (GitHub #384) only by test-only code under `crates/oce-blocks/src/registry`: the
-  catalog guard's expected fingerprint and one catalog test. The candidate policy, rows and
-  package version are unchanged. The baseline commit is merged with a merge commit so it stays
-  reachable; the selection commit adds evidence/docs only and does not pretend it can hash
-  itself.
+- **Current implementation:** `e007ebb348bd77dce36a69ce180c35f55609be1b`, CXF property-key normalisation and long expression
+  chains (GitHub #386, issues #383, #371) merged with `development`. Its implementation boundary
+  differs from the previous `5161e91` baseline (GitHub #385) only by that change: property-key
+  expansion and duplicate-key refusal in `oce-cxf`, chain-length depth accounting, iterative chain
+  evaluation and the `i64::MIN` literal in `oce-expr`, iterative AST walkers in `oce-cxf`, and
+  in-crate tests. The candidate policy, rows and package version are unchanged. The baseline
+  commit is merged with a merge commit so it stays reachable; the selection commit adds
+  evidence/docs only and does not pretend it can hash itself.
 - **Historical source candidate:** annotated `v0.1.0`, tag object
   `7f3b614dc0e466d54cab4677ce4bb08a5bfaf033`, peeled source
   `909a8ba699e6a2fccf3de6ac0616a9e83a04060f`, 178 commits behind the previous `e81480b` baseline
