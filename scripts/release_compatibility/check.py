@@ -22,11 +22,11 @@ import tomllib
 ROOT = Path(__file__).resolve().parents[2]
 MATRIX = "docs/release-compatibility.json"
 HISTORY = "docs/release-compatibility-history.json"
-BASELINE = "c9387710e3233cb38f116a73668afe5c68663719"
+BASELINE = "e2b2923074faed8c8b1723814561ee6fc0a4bb42"
 TAG = "7f3b614dc0e466d54cab4677ce4bb08a5bfaf033"
 HISTORICAL = "909a8ba699e6a2fccf3de6ac0616a9e83a04060f"
 # Reviewed implementation boundary at BASELINE; filled from exact Git source, not HEAD.
-IMPLEMENTATION = "0288f47e56fefcbc0d64ea9158fd23b7faefbc905247a2945bd928ea1652f91a"
+IMPLEMENTATION = "998badded3399ce9af442527196f5d93ed44c0f0b84106a9f9ac8c0916b3026e"
 HISTORY_DIGEST = "483e21edadd18cc8dac264e6ef76bbe342a09c2305fbc69642ce67dce97d41c5"
 ARTIFACTS = (
     "package-public-api", "facade-catalog-schema", "public-descriptor", "diagnostics",

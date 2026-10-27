@@ -85,7 +85,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### CXF import and export
 
 - **Out-of-range `integer()` bindings, crossed bounds and `S231:nominal` no longer load
-  silently** (GitHub #TBD, issues #374, #378, #379). Three load-time values that were wrong but
+  silently** (GitHub #384, issues #374, #378, #379). Three load-time values that were wrong but
   plausible are now refused or carried through:
   - `integer(x)` for a Real whose floor lies outside `[-2^63, 2^63)` — `NaN` and `±inf` included —
     refuses with `ExprError::DomainError` in every evaluation mode instead of saturating

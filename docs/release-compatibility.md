@@ -11,14 +11,13 @@ executable, prior-state, placement and safety qualification. No downstream pin c
 The retained [machine-readable matrix](release-compatibility.json) has exactly 36 ordered rows:
 nine artifact classes times four producer/consumer directions. The selected identities are:
 
-- **Current implementation:** `c9387710e3233cb38f116a73668afe5c68663719`, the frame-boundary checks (GitHub #382, issues
-  #363, #366, #372) merged with `development`. Its implementation boundary differs from the
-  previous `83b459e` baseline (GitHub #381) only by that change: the frame-time magnitude limit and
-  non-finite step check, restore's clock check and the opt-in non-finite input policy in
-  `oce-api`, the non-finite bound rule in `oce-validate`, the `non-finite-bound` code in
-  `oce-diag`, and in-crate tests. The candidate policy, rows and package version are unchanged.
-  The baseline commit is merged with a merge commit so it stays reachable; the selection commit
-  adds evidence/docs only and does not pretend it can hash itself.
+- **Current implementation:** `e2b2923074faed8c8b1723814561ee6fc0a4bb42`, the load-time validation follow-ups (GitHub #384,
+  issues #374, #378, #379). Its implementation boundary differs from the previous `c938771`
+  baseline (GitHub #382) only by that change: `integer()` range refusal in `oce-expr`, the
+  crossed-bounds rule in `oce-validate`, `S231:nominal` parsing and export in `oce-cxf`, the
+  `crossed-bounds` code in `oce-diag`, and in-crate tests. The candidate policy, rows and package
+  version are unchanged. The baseline commit is merged with a merge commit so it stays reachable;
+  the selection commit adds evidence/docs only and does not pretend it can hash itself.
 - **Historical source candidate:** annotated `v0.1.0`, tag object
   `7f3b614dc0e466d54cab4677ce4bb08a5bfaf033`, peeled source
   `909a8ba699e6a2fccf3de6ac0616a9e83a04060f`, 178 commits behind the previous `e81480b` baseline
