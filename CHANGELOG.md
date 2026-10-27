@@ -40,7 +40,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Host facade
 
 - **Frame times are bounded so elapsed time cannot overflow, and non-finite bounds are refused
-  at load** (GitHub #TBD, issues #366, #372). Finite times whose difference overflowed (t = -1e308
+  at load** (GitHub #382, issues #366, #372). Finite times whose difference overflowed (t = -1e308
   then +1e308) were accepted by a model without sampled blocks and gave an integrator an infinite
   `dt`, while a model with a sampled block refused them, so acceptance depended on model contents.
   Finite steps alone would not close it: -1e308 → 0 → 1e308 left a Timer reporting an infinite
@@ -64,7 +64,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   unification can compare or propagate it. Non-finite Real input values are unchanged (issue #363 stays open). The
   release-compatibility checker re-selects its current implementation baseline at the change's
   source commit.
-- **Hosts can opt in to refusing non-finite Real inputs** (GitHub #TBD, issue #363). The engine
+- **Hosts can opt in to refusing non-finite Real inputs** (GitHub #382, issue #363). The engine
   had no policy for a NaN or infinite input sample on an unbounded Real input: it reached the
   blocks, where one NaN latched `PID`, `Derivative` and `MovingAverage` state until reload, and
   `Line` and `LimitSlewRate` turned it into a believable finite command. The new
