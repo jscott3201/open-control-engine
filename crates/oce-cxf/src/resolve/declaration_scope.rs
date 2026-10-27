@@ -49,7 +49,7 @@ use oce_expr::{EvalResult, ExprAst, Scope};
 use oce_model::{EnumClassId, enum_class_id, enum_member_ordinal};
 
 use crate::dto::{CxfValue, Node};
-use crate::ground::ground_value;
+use crate::ground::{ground_failure, ground_param_value};
 
 use super::composite_rules::{ARRAY_PARAMETER, DECLARATION_CYCLE, DUPLICATE_DECLARATION};
 use super::local_name;
@@ -296,6 +296,7 @@ pub(super) fn evaluate_declarations(
         pending[index] = false;
         evaluate_one(
             &chain[index],
+            &node.id,
             index,
             &enclosing,
             &own_names,
@@ -338,6 +339,7 @@ fn emit_generic(pass: &mut Pass<'_>, diag: Diagnostic) {
 /// the grounded entry or reporting the failure per the pass's emission policy.
 fn evaluate_one(
     declaration: &Declaration<'_>,
+    owner: &str,
     index: usize,
     enclosing: &[(Arc<str>, EvalResult)],
     own_names: &HashSet<&str>,
@@ -386,7 +388,7 @@ fn evaluate_one(
         if let Pass::Lowering { diags, .. } = pass {
             validate_g36_parameter_value(pnode, cxf_val, &scope, diags);
         }
-        ground_value(cxf_val, &scope)
+        ground_param_value(cxf_val, &scope)
     };
     match outcome {
         Ok(value) => grounded.push((
@@ -394,11 +396,7 @@ fn evaluate_one(
             Arc::from(declaration.name),
             EvalResult::Scalar(value),
         )),
-        Err(e) => emit_generic(
-            pass,
-            Diagnostic::error(DiagCode::GroundingFailed, e.to_string())
-                .with_subject(declaration.iri.to_owned()),
-        ),
+        Err(e) => emit_generic(pass, ground_failure(&e, declaration.iri, owner)),
     }
 }
 

@@ -11,11 +11,12 @@ executable, prior-state, placement and safety qualification. No downstream pin c
 The retained [machine-readable matrix](release-compatibility.json) has exactly 36 ordered rows:
 nine artifact classes times four producer/consumer directions. The selected identities are:
 
-- **Current implementation:** `83f962d9deb425dd7d04afea8f2ce9970ee61437`, the MovingAverage
-  full-window fix (GitHub #373, issue #364) merged with `development`. Its implementation boundary
-  differs from the previous `2964185` baseline (GitHub #358) only by that change: the
-  `MovingAverage` block and its delta-sized state region in `oce-blocks`, its state-contract
-  validation, and in-crate tests. The candidate policy, rows and package version are unchanged.
+- **Current implementation:** `492fcfcf8d584ab8215046afbd50746f06b18018`, the non-finite Real parameter refusal
+  (GitHub #376, issue #362) merged with `development`. Its implementation boundary differs from the
+  previous `83f962d` baseline (GitHub #373) only by that change: strict load-time expression
+  evaluation in `oce-expr`, parameter grounding in `oce-cxf`, the finiteness gate in
+  `oce-validate`, the `set_param` check in `oce-api`, the `non-finite-parameter` diagnostic code
+  in `oce-diag`, and in-crate tests. The candidate policy, rows and package version are unchanged.
   The baseline commit is merged with a merge commit so it stays reachable; the selection commit
   adds evidence/docs only and does not pretend it can hash itself.
 - **Historical source candidate:** annotated `v0.1.0`, tag object

@@ -16,10 +16,14 @@
 //!
 //! Every failure path, including over-limit expression depth or size, is a typed [`GroundErr`] —
 //! **never a panic, never an `unwrap`** on input-derived text. The resolver maps a `GroundErr` to a
-//! [`oce_diag::DiagCode::GroundingFailed`] diagnostic.
+//! [`oce_diag::DiagCode::GroundingFailed`] diagnostic, except [`GroundErr::NonFinite`], which
+//! [`ground_param_value`] raises for a non-finite parameter value or expression intermediate and
+//! which maps to [`oce_diag::DiagCode::NonFiniteParameter`] (issue #362).
 
 use std::fmt;
 use std::sync::Arc;
+
+use oce_diag::Diagnostic;
 
 use oce_expr::{EvalResult, Scope};
 use oce_model::{EnumClassId, Value, enum_class_id, enum_member_ordinal, g36_integer_constant};
@@ -46,6 +50,30 @@ pub(crate) enum GroundErr {
     /// on an `isArray` parameter, which the resolver expands in `arrays.rs` before reaching here)
     /// or a `List` (array) value on a non-array parameter node.
     NonScalar,
+    /// An array parameter's value did not fit its declared shape (element count, dimensionality,
+    /// or a non-array result); the message is reported verbatim.
+    ArrayShape(String),
+    /// A parameter binding grounded to, or passed through, a non-finite Real (`NaN`, `+inf`,
+    /// `-inf`): a non-finite literal, or any non-finite expression intermediate under the
+    /// strict-finite evaluator (issue #362). Raised only by [`ground_param_value`]; mapped to
+    /// [`oce_diag::DiagCode::NonFiniteParameter`] by [`GroundErr::diag_code`].
+    NonFinite {
+        /// The offending value, rendered (`NaN`, `inf` or `-inf`).
+        value: &'static str,
+        /// `true` when the value was an expression intermediate rather than the final value.
+        intermediate: bool,
+    },
+}
+
+impl GroundErr {
+    /// The diagnostic code a resolver site reports this failure under: `non-finite-parameter`
+    /// for [`GroundErr::NonFinite`], `grounding-failed` for everything else.
+    pub(crate) fn diag_code(&self) -> oce_diag::DiagCode {
+        match self {
+            GroundErr::NonFinite { .. } => oce_diag::DiagCode::NonFiniteParameter,
+            _ => oce_diag::DiagCode::GroundingFailed,
+        }
+    }
 }
 
 impl fmt::Display for GroundErr {
@@ -62,6 +90,18 @@ impl fmt::Display for GroundErr {
             GroundErr::UnknownDatatype(dt) => write!(f, "unknown XSD datatype {dt}"),
             GroundErr::Expr(e) => write!(f, "expression binding did not ground: {e}"),
             GroundErr::NonScalar => f.write_str("binding did not ground to a scalar value"),
+            GroundErr::ArrayShape(message) => f.write_str(message),
+            GroundErr::NonFinite {
+                value,
+                intermediate: false,
+            } => write!(f, "must be finite; got {value}"),
+            GroundErr::NonFinite {
+                value,
+                intermediate: true,
+            } => write!(
+                f,
+                "must be finite; its expression produced a non-finite intermediate ({value})"
+            ),
         }
     }
 }
@@ -77,6 +117,76 @@ fn datatype_suffix(datatype: &str) -> &str {
 /// # Errors
 /// Returns a [`GroundErr`] on any parse / evaluation failure — never panics.
 pub(crate) fn ground_value(value: &CxfValue, scope: &dyn Scope) -> Result<Value, GroundErr> {
+    ground_with(value, scope, oce_expr::eval_str)
+}
+
+/// Ground a **parameter** binding under the engine-wide finiteness rule (issue #362).
+///
+/// Identical to [`ground_value`] except that an `Expr` is evaluated strict-finite
+/// ([`oce_expr::eval_str_finite`] — no node may produce `NaN`/`±inf`, so `integer(1/0)`,
+/// `sign(0/0)`, `min(1/0, 3)` or `p > 0` over a non-finite `p` cannot absorb one), and a grounded
+/// non-finite Real literal is refused. Every resolver site that grounds a declared parameter —
+/// leaf members, composite and root declarations, array elements — uses this entry; connector
+/// attribute bounds keep [`ground_value`].
+///
+/// # Errors
+/// Every [`ground_value`] error, plus [`GroundErr::NonFinite`]. Never panics.
+pub(crate) fn ground_param_value(value: &CxfValue, scope: &dyn Scope) -> Result<Value, GroundErr> {
+    match ground_with(value, scope, oce_expr::eval_str_finite) {
+        Ok(Value::Real(v)) if !v.is_finite() => Err(GroundErr::NonFinite {
+            value: non_finite_name(v),
+            intermediate: false,
+        }),
+        Err(GroundErr::Expr(error)) => Err(expr_failure(error)),
+        other => other,
+    }
+}
+
+/// The diagnostic for a declared parameter that failed to ground.
+///
+/// A non-finite value or intermediate (issue #362) reports `non-finite-parameter` with the
+/// **declaring instance** (`owner`) as subject and the parameter named in the message; every other
+/// failure keeps `grounding-failed` on the parameter node, as before.
+pub(crate) fn ground_failure(error: &GroundErr, parameter_iri: &str, owner: &str) -> Diagnostic {
+    match error {
+        GroundErr::NonFinite { .. } => Diagnostic::error(
+            error.diag_code(),
+            format!(
+                "parameter `{}` on `{owner}` {error}",
+                crate::resolve::local_name(parameter_iri)
+            ),
+        )
+        .with_subject(owner.to_owned()),
+        _ => Diagnostic::error(error.diag_code(), error.to_string())
+            .with_subject(parameter_iri.to_owned()),
+    }
+}
+
+/// Re-type a strict-evaluation [`oce_expr::ExprError::NonFinite`] as an intermediate
+/// [`GroundErr::NonFinite`]; every other expression error stays [`GroundErr::Expr`].
+pub(crate) fn expr_failure(error: oce_expr::ExprError) -> GroundErr {
+    match error {
+        oce_expr::ExprError::NonFinite { value } => GroundErr::NonFinite {
+            value,
+            intermediate: true,
+        },
+        other => GroundErr::Expr(other),
+    }
+}
+
+fn non_finite_name(v: f64) -> &'static str {
+    if v.is_nan() {
+        "NaN"
+    } else if v > 0.0 {
+        "inf"
+    } else {
+        "-inf"
+    }
+}
+
+type ExprEval = fn(&str, &dyn Scope) -> Result<EvalResult, oce_expr::ExprError>;
+
+fn ground_with(value: &CxfValue, scope: &dyn Scope, eval: ExprEval) -> Result<Value, GroundErr> {
     match value {
         CxfValue::Bool(b) => Ok(Value::Boolean(*b)),
         CxfValue::Int(i) => Ok(Value::Integer(*i)),
@@ -88,7 +198,7 @@ pub(crate) fn ground_value(value: &CxfValue, scope: &dyn Scope) -> Result<Value,
             if let Some(value) = g36_integer_constant(text) {
                 return Ok(Value::Integer(value));
             }
-            match oce_expr::eval_str(text, scope) {
+            match eval(text, scope) {
                 // `EvalResult` is `#[non_exhaustive]`; the wildcard rejects every non-scalar
                 // result — today an `Array` on a scalar parameter (array parameters never reach
                 // this: the resolver expands them in `arrays.rs` first).
@@ -113,8 +223,9 @@ fn ground_typed(lexical: &str, datatype: &str) -> Result<Value, GroundErr> {
     };
     match datatype_suffix(datatype) {
         // `double`/`float`/`decimal` → Real. `f64::from_str` faithfully accepts `inf`/`nan` (and
-        // signed forms); we ground them as-is (a faithful lowering). Rejecting non-finite parameter
-        // values is a validation/semantics policy, not the resolver's job — see test below.
+        // signed forms); `ground_value` grounds them as-is (a faithful lowering, still used for
+        // connector attribute bounds). Parameter sites use `ground_param_value`, which refuses
+        // them and every non-finite expression intermediate (issue #362) — see tests below.
         "double" | "float" | "decimal" => lexical
             .parse::<f64>()
             .map(Value::Real)
@@ -257,14 +368,20 @@ mod tests {
     fn typed_double_and_integer_and_boolean() {
         let xsd = |s: &str| format!("http://www.w3.org/2001/XMLSchema#{s}");
         assert!(
-            ground_value(&typed("2.0", &xsd("double")), &no_scope())
-                .unwrap()
-                .bit_eq(&Value::Real(2.0))
+            ground_value(
+                &typed("2.0", "http://www.w3.org/2001/XMLSchema#double"),
+                &no_scope()
+            )
+            .unwrap()
+            .bit_eq(&Value::Real(2.0))
         );
         assert!(
-            ground_value(&typed("0.5", &xsd("double")), &no_scope())
-                .unwrap()
-                .bit_eq(&Value::Real(0.5))
+            ground_value(
+                &typed("0.5", "http://www.w3.org/2001/XMLSchema#double"),
+                &no_scope()
+            )
+            .unwrap()
+            .bit_eq(&Value::Real(0.5))
         );
         assert!(
             ground_value(&typed("-7", &xsd("integer")), &no_scope())
@@ -310,7 +427,7 @@ mod tests {
     fn typed_double_nan_literal_grounds_faithfully_to_nan_real() {
         // DECIDED + TESTED behavior (TESTING.md non-finite rule): a `#double` lexical of "NaN"
         // parses (f64::from_str accepts it) and grounds to Real(NaN) — a faithful lowering.
-        // Rejecting non-finite parameter values is a validation/semantics policy, not the resolver's.
+        // Parameter sites refuse it through `ground_param_value` instead (issue #362).
         let v = ground_value(
             &typed("NaN", "http://www.w3.org/2001/XMLSchema#double"),
             &no_scope(),
@@ -490,6 +607,54 @@ mod tests {
         )
         .unwrap();
         assert!(cooling.bit_eq(&Value::Integer(3)));
+    }
+
+    #[test]
+    fn parameter_grounding_refuses_non_finite_literals_and_intermediates() {
+        // Literal non-finite values: the final value is refused (not an intermediate).
+        for (lexical, value) in [("NaN", "NaN"), ("INF", "inf"), ("-inf", "-inf")] {
+            let r = ground_param_value(
+                &typed(lexical, "http://www.w3.org/2001/XMLSchema#double"),
+                &no_scope(),
+            );
+            assert!(
+                matches!(r, Err(GroundErr::NonFinite { value: v, intermediate: false }) if v == value),
+                "{lexical}: {r:?}"
+            );
+        }
+        // Absorbed intermediates are refused at the node that produced them.
+        for (text, value) in [
+            ("integer(1/0)", "inf"),
+            ("sign(0/0)", "NaN"),
+            ("min(1/0, 3.0)", "inf"),
+            ("(0/0) > 0", "NaN"),
+            ("inf * 2", "inf"),
+        ] {
+            let r = ground_param_value(&CxfValue::Expr(text.to_owned()), &no_scope());
+            assert!(
+                matches!(r, Err(GroundErr::NonFinite { value: v, intermediate: true }) if v == value),
+                "{text}: {r:?}"
+            );
+            assert_eq!(
+                r.unwrap_err().diag_code(),
+                oce_diag::DiagCode::NonFiniteParameter
+            );
+        }
+        // The finite `inf` alias and finite extremes are untouched.
+        let alias = ground_param_value(&CxfValue::Expr("inf".to_owned()), &no_scope()).unwrap();
+        assert!(alias.bit_eq(&Value::Real(f64::MAX)));
+        let tiny = ground_param_value(
+            &typed("5e-324", "http://www.w3.org/2001/XMLSchema#double"),
+            &no_scope(),
+        )
+        .unwrap();
+        assert!(tiny.bit_eq(&Value::Real(f64::from_bits(1))));
+        // Other failures keep `grounding-failed`.
+        let unknown = ground_param_value(&CxfValue::Expr("nope".to_owned()), &no_scope());
+        assert_eq!(
+            unknown.unwrap_err().diag_code(),
+            oce_diag::DiagCode::GroundingFailed
+        );
     }
 
     #[test]
