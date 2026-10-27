@@ -46,6 +46,7 @@ mod reals_comparators;
 mod reals_filters;
 mod reals_integrator;
 mod reals_matrix;
+mod reals_moving_average;
 mod reals_ramp;
 mod reals_sources;
 mod reals_transcendental;
@@ -91,9 +92,10 @@ pub use reals_arithmetic::{
     MultiplyByParameter, Round, Sqrt, Subtract, Switch,
 };
 pub use reals_comparators::{Greater, GreaterThreshold, Hysteresis, Less, LessThreshold};
-pub use reals_filters::{Derivative, LimitSlewRate, MovingAverage};
+pub use reals_filters::{Derivative, LimitSlewRate};
 pub use reals_integrator::IntegratorWithReset;
 pub use reals_matrix::{MatrixGain, MatrixMax, MatrixMin, MatrixReductionAxis, Sort};
+pub use reals_moving_average::MovingAverage;
 pub use reals_ramp::Ramp;
 pub use reals_sources::{CalendarTime, CivilTime, SourceRamp, SourceSin};
 pub use reals_transcendental::{Acos, Asin, Atan, Atan2, Cos, Exp, Log, Log10, Sin, Tan};
@@ -796,6 +798,9 @@ mod reals_filters_derivative_tests;
 
 #[cfg(test)]
 mod reals_filters_tests;
+
+#[cfg(test)]
+mod reals_moving_average_tests;
 
 #[cfg(test)]
 mod reals_ramp_tests;

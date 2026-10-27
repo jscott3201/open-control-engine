@@ -299,6 +299,12 @@ CDL.Reals.Min reference -> goldens/CDL/Reals/Min/reference.csv
 CDL.Reals.Min y -> goldens/CDL/Reals/Min/y.csv
 CDL.Reals.Modulo reference -> goldens/CDL/Reals/Modulo/reference.csv
 CDL.Reals.Modulo y -> goldens/CDL/Reals/Modulo/y.csv
+CDL.Reals.MovingAverage/irregular_power_of_two_gaps reference -> goldens/CDL/Reals/MovingAverage/irregular_power_of_two_gaps/reference.csv
+CDL.Reals.MovingAverage/irregular_power_of_two_gaps y -> goldens/CDL/Reals/MovingAverage/irregular_power_of_two_gaps/y.csv
+CDL.Reals.MovingAverage/late_step_in_long_window reference -> goldens/CDL/Reals/MovingAverage/late_step_in_long_window/reference.csv
+CDL.Reals.MovingAverage/late_step_in_long_window y -> goldens/CDL/Reals/MovingAverage/late_step_in_long_window/y.csv
+CDL.Reals.MovingAverage/one_second_ticks_over_several_windows reference -> goldens/CDL/Reals/MovingAverage/one_second_ticks_over_several_windows/reference.csv
+CDL.Reals.MovingAverage/one_second_ticks_over_several_windows y -> goldens/CDL/Reals/MovingAverage/one_second_ticks_over_several_windows/y.csv
 CDL.Reals.MultiMax reference -> goldens/CDL/Reals/MultiMax/reference.csv
 CDL.Reals.MultiMax y -> goldens/CDL/Reals/MultiMax/y.csv
 CDL.Reals.MultiMax/empty reference -> goldens/CDL/Reals/MultiMax/empty/reference.csv

@@ -122,8 +122,7 @@ fn assert_family_round_trip(class_path: &str, parameters: ParamTable, capture_ti
         assert!(f64::from_bits(uninterrupted.state.words[1]) > uninterrupted.state.t);
     }
     if class_path == "CDL.Reals.MovingAverage" {
-        assert_ne!(uninterrupted.state.words[3], 0, "ring did not wrap");
-        assert_eq!(uninterrupted.state.words[5], 1, "warn-once bit was not set");
+        assert_ne!(uninterrupted.state.words[3], 0, "ring head did not advance");
     }
     if class_path == "CDL.Utilities.SunRiseSet" {
         assert!(f64::from_bits(uninterrupted.state.words[0]) > uninterrupted.state.t);
@@ -209,8 +208,9 @@ fn integer_stage_future_deadline_continues_bit_exactly() {
 #[test]
 fn wrapped_moving_average_state_continues_bit_exactly() {
     assert_family_round_trip(
+        // A 0.25 s window over 7 s of 0.1 s ticks: the head advances past pruned checkpoints.
         "CDL.Reals.MovingAverage",
-        params(&[("delta", Value::Real(100.0))]),
+        params(&[("delta", Value::Real(0.25))]),
         70,
     );
 }
@@ -230,9 +230,10 @@ fn initialized_sun_events_continue_bit_exactly() {
 
 #[test]
 fn moving_average_warn_once_state_survives_restore() {
+    // delta=1000 s gives a ~0.98 s history resolution, so 0.1 s ticks coalesce and set the latch.
     let graph = model(
         "CDL.Reals.MovingAverage",
-        params(&[("delta", Value::Real(100.0))]),
+        params(&[("delta", Value::Real(1000.0))]),
     );
     let mut source = Engine::in_memory();
     source.build_model_in_memory(graph.clone(), None).unwrap();

@@ -1,5 +1,5 @@
-//! Tier-1 exact conformance for the dynamic `CDL.Reals` controller and integrator blocks
-//! (PID, PIDWithReset, IntegratorWithReset) through the frozen facade. Split from
+//! Tier-1 exact conformance for the dynamic `CDL.Reals` controller, integrator, filter and
+//! moving-average blocks through the frozen facade. Split from
 //! `per_block_reals.rs` along the reals-dynamics behavioral topic; the checked-in goldens are
 //! independent Tier-A recurrence oracles from `tools/golden-gen` (never engine self-output).
 
@@ -52,6 +52,7 @@ const DERIVATIVE_INPUTS: &[Port] = &[
     Port { name: "u", kind: R },
 ];
 const LIMIT_SLEW_RATE_INPUTS: &[Port] = &[Port { name: "u", kind: R }];
+const MOVING_AVERAGE_INPUTS: &[Port] = &[Port { name: "u", kind: R }];
 
 const REAL_Y: &[Port] = &[Port { name: "y", kind: R }];
 
@@ -190,6 +191,19 @@ const LIMIT_SLEW_RATE_DISABLED_PARAMS: &[Param] = &[
     },
 ];
 
+const MOVING_AVERAGE_LONG_WINDOW_PARAMS: &[Param] = &[Param {
+    name: "delta",
+    value: ParamValue::Real("600.0"),
+}];
+const MOVING_AVERAGE_G36_WINDOW_PARAMS: &[Param] = &[Param {
+    name: "delta",
+    value: ParamValue::Real("300.0"),
+}];
+const MOVING_AVERAGE_IRREGULAR_PARAMS: &[Param] = &[Param {
+    name: "delta",
+    value: ParamValue::Real("200.0"),
+}];
+
 const CASES: &[BlockCase] = &[
     case(
         "reals_pid_pi_recurrence",
@@ -275,6 +289,32 @@ const CASES: &[BlockCase] = &[
         LIMIT_SLEW_RATE_DISABLED_PARAMS,
         REAL_Y,
     ),
+    // Window-length goldens: every scenario holds 200-600 ticks per window, far beyond the
+    // former 64-checkpoint ring that silently shrank the window (issue #364).
+    case(
+        "reals_moving_average_late_step_in_long_window",
+        "CDL.Reals.MovingAverage",
+        "MovingAverage/late_step_in_long_window",
+        MOVING_AVERAGE_INPUTS,
+        MOVING_AVERAGE_LONG_WINDOW_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "reals_moving_average_one_second_ticks_over_several_windows",
+        "CDL.Reals.MovingAverage",
+        "MovingAverage/one_second_ticks_over_several_windows",
+        MOVING_AVERAGE_INPUTS,
+        MOVING_AVERAGE_G36_WINDOW_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "reals_moving_average_irregular_power_of_two_gaps",
+        "CDL.Reals.MovingAverage",
+        "MovingAverage/irregular_power_of_two_gaps",
+        MOVING_AVERAGE_INPUTS,
+        MOVING_AVERAGE_IRREGULAR_PARAMS,
+        REAL_Y,
+    ),
 ];
 
 const DERIVATIVE_PARAMS: &[Param] = &[Param {
@@ -297,6 +337,9 @@ const DYNAMICS_SLUGS: &[&str] = &[
     "reals_limit_slew_rate_falling_saturation",
     "reals_limit_slew_rate_lag_non_uniform_grid",
     "reals_limit_slew_rate_disabled_passthrough",
+    "reals_moving_average_late_step_in_long_window",
+    "reals_moving_average_one_second_ticks_over_several_windows",
+    "reals_moving_average_irregular_power_of_two_gaps",
 ];
 
 #[test]
