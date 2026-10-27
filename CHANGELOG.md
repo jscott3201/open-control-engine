@@ -223,7 +223,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Verification
 
 - **`CDL.Logical.Nor`, `CDL.Logical.Pre` and `CDL.Utilities.Assert` now have standalone Tier-A
-  goldens** (GitHub #TBD, issue #371). Before this, the three relied on unit tests, facade contract
+  goldens** (GitHub #385, issue #371). Before this, the three relied on unit tests, facade contract
   tests and indirect G36-sequence evidence. `tools/golden-gen` now derives four new signal goldens
   from the vendored Buildings sources, citing the `.mo` file and pinned commit in each provenance
   record. `Nor` gets the exhaustive two-input truth table, with `(F,F)` revisited, from `Nor.mo`
