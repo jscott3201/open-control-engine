@@ -19,6 +19,7 @@ use super::{
     RETURN_FAN_DIRECT_PRESSURE, SAT, SUPPLY_FAN, SUPPLY_SIGNALS, SUPPLY_TEMP, TIME_SUPPRESSION,
     THERMAL_ZONES_CONTROL_LOOPS, THERMAL_ZONES_ZONE_STATES, TRIM_AND_RESPOND_HAVE_HOL_FALSE, VAV,
 };
+use super::freeze_protection::FREEZE_PROTECTION_FINE_STEP;
 
 /// Pinned Buildings source revision used by every G36 Tier-A sequence reference.
 pub(super) const SOURCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
@@ -72,7 +73,7 @@ pub(super) fn source_files(sequence: &str) -> &'static str {
         | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3 => {
             "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo"
         }
-        FREEZE_PROTECTION => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/FreezeProtection.mo",
+        FREEZE_PROTECTION | FREEZE_PROTECTION_FINE_STEP => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/FreezeProtection.mo",
         TIME_SUPPRESSION => {
             "Buildings/Controls/OBC/ASHRAE/G36/Generic/TimeSuppression.mo"
         }
@@ -133,6 +134,7 @@ pub(super) fn fixture_status(sequence: &str) -> &'static str {
         | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_2
         | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3
         | FREEZE_PROTECTION
+        | FREEZE_PROTECTION_FINE_STEP
         | THERMAL_ZONES_CONTROL_LOOPS
         | THERMAL_ZONES_ZONE_STATES
         | ASHRAE62_1_SETPOINTS
@@ -265,7 +267,9 @@ pub(super) fn g36_intent_divergence(sequence: &str) -> Option<&'static str> {
 /// frame-step-insensitive at their step: cooling_only_dampers 0.2, cooling_only_controller 0.1,
 /// vav_single_zone 0.0125, thermal_zones_control_loops ~0.0067, multizone_vav_supply_fan
 /// ~0.0017, multizone_vav_economizer_limits_common ~4.2e-4, multizone_vav_supply_signals
-/// ~8.3e-5. No fixture lies in `[0.2, 2)`. The conformance suite
+/// ~8.3e-5, and multizone_vav_freeze_protection_fine_step 0.125 (the FreezeProtection heating-coil
+/// PI at a 1/16 s frame, the continuous-time counterpart of the labelled 60 s column, which
+/// `oce-conformance` checks against the closed-form PI response). No scenario lies in `[0.2, 2)`. The conformance suite
 /// `g36_reference_frame_rate_labels` recomputes these ratios from the fixtures and fails when the
 /// labels and the criterion disagree.
 ///
@@ -280,7 +284,10 @@ pub(super) fn frame_rate_dependence(sequence: &str, signal: &str) -> Option<&'st
              k*dt/Ti=120 the integrator saturates every frame and the stage-1 and stage-3 \
              outputs alternate between yMax=1 and yMin=0. The engine uses the same forward-Euler \
              recurrence, so this column checks that shared discretization, not an independent \
-             continuous-time derivation of FreezeProtection.mo",
+             continuous-time derivation of FreezeProtection.mo. The \
+             multizone_vav_freeze_protection_fine_step scenario runs the same graph at a 1/16 s \
+             frame (k*dt/Ti=0.125), where oce-conformance checks this column against the \
+             closed-form continuous-time PI response",
         ),
         (
             ECONOMIZER_CONTROLLER_SINGLE_DAMPER_RELIEF_DAMPER_FIXED_21,

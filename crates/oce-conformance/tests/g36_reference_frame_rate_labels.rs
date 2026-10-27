@@ -9,6 +9,10 @@
 //! `frame_rate_dependence` note. Below the threshold the same recurrence is used but is treated
 //! as frame-step-insensitive at the golden's step; no current fixture lies in `[0.2, 2)`.
 //!
+//! A golden scenario is surveyed against the fixture of the same name, or, for an additional
+//! scenario of an existing fixture (such as a finer frame step), against the fixture named in
+//! `SCENARIO_FIXTURES`; every golden scenario must resolve to a fixture.
+//!
 //! This suite reads each fixture's PI blocks, resolves `controllerType`, `k` and `Ti` through the
 //! fixture's parameter bindings (falling back to the vendored CDL defaults only where the fixture
 //! leaves a parameter unset), takes the largest step of the golden's time grid, and follows the
@@ -28,9 +32,15 @@ const GOLDEN_DIR: &str = "tools/golden-gen/goldens/G36";
 const CDL_REALS: &str = "third_party/modelica-buildings-cdl/Buildings/Controls/OBC/CDL/Reals";
 const SIMPLE_CONTROLLER: &str = "Buildings.Controls.OBC.CDL.Types.SimpleController.";
 
-/// The largest `k*dt/Ti` of every G36 fixture with an integrating PI, as documented in
+/// Golden scenarios that reuse another scenario's fixture: `(golden scenario, fixture name)`.
+const SCENARIO_FIXTURES: [(&str, &str); 1] = [(
+    "multizone_vav_freeze_protection_fine_step",
+    "multizone_vav_freeze_protection",
+)];
+
+/// The largest `k*dt/Ti` of every G36 golden scenario with an integrating PI, as documented in
 /// `docs/verification-evidence.md` and the `frame_rate_dependence` field docs.
-const DOCUMENTED_RATIOS: [(&str, f64); 11] = [
+const DOCUMENTED_RATIOS: [(&str, f64); 12] = [
     ("cooling_only_controller", 0.1),
     ("cooling_only_dampers", 0.2),
     (
@@ -39,6 +49,7 @@ const DOCUMENTED_RATIOS: [(&str, f64); 11] = [
     ),
     ("multizone_vav_economizer_limits_common", 0.05 / 120.0),
     ("multizone_vav_freeze_protection", 120.0),
+    ("multizone_vav_freeze_protection_fine_step", 0.125),
     ("multizone_vav_return_fan_airflow_tracking", 2.0),
     ("multizone_vav_return_fan_direct_pressure", 2.0),
     ("multizone_vav_supply_fan", 0.1 / 60.0),
@@ -355,21 +366,35 @@ struct Survey {
 
 fn survey() -> Survey {
     let root = repository_root();
-    let mut entries = std::fs::read_dir(root.join(FIXTURE_DIR))
-        .expect("enumerate G36 fixtures")
-        .map(|entry| entry.expect("fixture entry").path())
-        .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("jsonld"))
+    let mut goldens = std::fs::read_dir(root.join(GOLDEN_DIR))
+        .expect("enumerate G36 goldens")
+        .map(|entry| entry.expect("golden entry").path())
+        .filter(|path| path.is_dir())
         .collect::<Vec<_>>();
-    entries.sort();
+    goldens.sort();
     let mut ratios = BTreeMap::new();
     let mut required_labels = BTreeSet::new();
     let mut surveyed = 0;
-    for path in entries {
-        let fixture = Fixture::load(&path);
-        let golden = root.join(GOLDEN_DIR).join(&fixture.scenario);
-        if !golden.is_dir() {
-            continue;
-        }
+    for golden in goldens {
+        let scenario = golden
+            .file_name()
+            .and_then(|name| name.to_str())
+            .expect("golden scenario name")
+            .to_string();
+        let fixture_name = SCENARIO_FIXTURES
+            .iter()
+            .find(|(golden_scenario, _)| *golden_scenario == scenario)
+            .map_or(scenario.as_str(), |(_, fixture)| fixture);
+        let path = root
+            .join(FIXTURE_DIR)
+            .join(format!("{fixture_name}.jsonld"));
+        assert!(
+            path.is_file(),
+            "golden scenario {scenario} has no fixture {}; add it to SCENARIO_FIXTURES",
+            path.display()
+        );
+        let mut fixture = Fixture::load(&path);
+        fixture.scenario = scenario;
         surveyed += 1;
         let pis = fixture.integrating_pis(frame_step(&golden));
         if let Some(max) = pis.iter().map(|pi| pi.ratio).reduce(f64::max) {
@@ -466,6 +491,25 @@ fn every_integrating_pi_ratio_is_documented() {
             *ratio >= FRAME_RATE_THRESHOLD || *ratio <= 0.2,
             "{scenario}: k*dt/Ti={ratio} lies between 0.2 and the threshold; decide whether it \
              is frame-step sensitive before relying on the threshold"
+        );
+    }
+}
+
+#[test]
+fn every_scenario_fixture_mapping_names_a_golden_and_a_distinct_fixture() {
+    let root = repository_root();
+    for (scenario, fixture) in SCENARIO_FIXTURES {
+        assert_ne!(scenario, fixture, "{scenario} maps to itself");
+        assert!(
+            root.join(GOLDEN_DIR).join(scenario).is_dir(),
+            "{scenario} has no golden; drop it from SCENARIO_FIXTURES"
+        );
+        assert!(
+            !root
+                .join(FIXTURE_DIR)
+                .join(format!("{scenario}.jsonld"))
+                .exists(),
+            "{scenario} has its own fixture; drop it from SCENARIO_FIXTURES"
         );
     }
 }
