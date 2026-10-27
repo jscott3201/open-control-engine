@@ -191,10 +191,26 @@ from every G36 record:
   `crates/oce-conformance/tests/g36_freeze_protection_heating_coil_continuous_time.rs` solves the
   `CDL/Reals/PID.mo` PI with anti-windup in closed form. That solution is piecewise linear and
   exponential, and it is exact here because every input breakpoint lies on the frame grid. The
-  suite requires the golden to stay within one frame of the largest integral rate
-  (`dt·max|der(xI)|` ≈ 0.051); the observed maximum is ≈ 0.0049. The same oracle departs from
-  the 60 s column by a full 1.0, which is why that column keeps its label. A third check shows
-  forward Euler converging to the closed form at first order as the step shrinks.
+  suite requires every row of the golden to stay within a per-row forward-Euler bound. The
+  bound adds up one-frame truncation errors taken from the closed form, carried through the
+  Euler map's Lipschitz constant: 1 when unsaturated, `1 − dt/(Ti·Ni)` when saturated. The
+  largest bound is ≈ 0.0099 and the largest observed error is ≈ 0.0049. The bound is sharp: right
+  after a mode corner the error reaches it to within rounding. Solving the closed form with `Ti`
+  off by 1% puts some rows about 10⁶ times past their bound, and `Ni` off by 5% or `yMax = 0.95`
+  is also rejected. The same oracle departs from the 60 s column by a full 1.0, which is why that
+  column keeps its label. A third check shows forward Euler converging to the closed form at
+  first order as the step shrinks, at `k = 1` and at `k = 0.37`.
+
+  The fine-step stage column must match a stage schedule derived from FreezeProtection.mo, and
+  that schedule, not the golden, picks which PI each row is checked against.
+
+  One limit: FreezeProtection.mo has `k = 1`, so these goldens cannot distinguish the
+  anti-windup gain `1/(k·Ni)` from `k/Ni` or `1/Ni`. The `k ≠ 1` form is pinned by the CDL PID
+  Tier-A goldens (`k = 0.37`, saturating at `yMax = 0.42`), which do separate the three forms.
+  The engine matches them exactly in `crates/oce-conformance/tests/per_block_reals_dynamics.rs`
+  (`reals_dynamics_blocks_match_exact_oracle`, cases `reals_pid_pi_recurrence` and
+  `reals_pid_with_reset_pi_recurrence`). No `oce-blocks` unit test exercises anti-windup with
+  `k ≠ 1`.
 
   `crates/oce-conformance/tests/g36_reference_frame_rate_labels.rs` recomputes each ratio from the
   fixture's resolved PI parameters and the golden's time grid. It traces which outputs each

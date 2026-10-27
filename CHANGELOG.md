@@ -58,7 +58,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Verification
 
-- **The G36 FreezeProtection heating-coil command now has a continuous-time reference** (issue
+- **The G36 FreezeProtection heating-coil command now has a continuous-time reference** (GitHub #357, issue
   #344). The 60 s column stays as it is. Its `Ti = 0.5 s` PI controllers run there at
   `k·dt/Ti = 120`, so it only checks the forward-Euler discretization the engine shares, and it
   keeps its `frame_rate_dependence` note, which now points at the new scenario.
@@ -69,9 +69,14 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `heating_coil_command`, which the engine matches bit-exactly.
   A new conformance suite solves the `CDL/Reals/PID.mo` PI with anti-windup in closed form,
   event by event. That solution is exact for these grid-aligned piecewise-constant inputs. The
-  suite holds the golden within one frame of the largest integral rate: the tolerance is
-  ≈ 0.051, and the observed error is ≈ 0.0049. It also shows the same oracle departing from the
-  60 s column by 1.0, and forward Euler converging to the closed form at first order. The
+  suite holds every row within a per-row forward-Euler bound: one-frame truncation errors
+  carried through the Euler map's Lipschitz constant. The largest bound is ≈ 0.0099 and the
+  largest observed error ≈ 0.0049. The bound rejects the closed form with `Ti` off by 1%, with
+  `Ni` off by 5%, and with `yMax = 0.95`. The fine-step stage column must match a schedule
+  derived from the `.mo`. The suite also shows the same oracle departing from the 60 s column
+  by 1.0, and forward Euler converging to the closed form at first order at `k = 1` and
+  `k = 0.37`. At `k = 1` the anti-windup gain forms `1/(k·Ni)`, `k/Ni` and `1/Ni` coincide;
+  the CDL PID Tier-A goldens (`k = 0.37`) pin the `k ≠ 1` form. The
   frame-rate guard now surveys every golden scenario, including scenarios that reuse another
   scenario's fixture, and documents the new ratio. Tier-A records go from 413 to 415, and G36
   signal goldens from 133 to 135.
