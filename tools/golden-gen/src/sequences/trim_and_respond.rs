@@ -9,6 +9,14 @@
 //!   the device status has elapsed, even when the `UnitDelay` still holds an older value;
 //! - `swi2` feeds `iniSet` (not the clamped reset) into the `UnitDelay` while the device is off,
 //!   so a sample instant inside an off window reinitializes the chain.
+//!
+//! The chain follows the pinned `.mo` graph, not its documentation. The documentation says the
+//! setpoint is `iniSet` while the device is off and the reset starts `delTim` after device start,
+//! but `iniSet` only reaches the `UnitDelay` when the sampled `UnitDelay` captures `swi2` at a
+//! `samplePeriod` instant. An off window that holds no sample instant therefore leaves the
+//! pre-trip value in the `UnitDelay`, and after the re-armed TrueDelay the reset resumes from that
+//! stale value rather than from `iniSet` (GitHub issue #354). Do not "fix" this here: the engine
+//! executes the same graph, and the standalone golden pins both sides of the boundary.
 
 use crate::oracle::{Golden, InputSeries, ValueKind};
 
@@ -212,7 +220,7 @@ const STANDALONE_PARAMETERS: TrimAndRespondParameters = TrimAndRespondParameters
     max_res: -0.6,
 };
 
-/// Standalone scenario: 0..=2400 s at 60 s ticks (every other tick is a 120 s sample instant).
+/// Standalone scenario: 0..=4920 s at 60 s ticks (every other tick is a 120 s sample instant).
 ///
 /// The device runs from 0 s, so the TrueDelay (`delTim + samplePeriod = 720 s`) releases the
 /// reset at 720 s. Three responds (720 s, 840 s, 960 s) and two trims (1080 s, 1200 s) move the
@@ -221,7 +229,19 @@ const STANDALONE_PARAMETERS: TrimAndRespondParameters = TrimAndRespondParameters
 /// still holds the pre-off 9.1. The restart at 1380 s lands between sample instants, so `swi`
 /// must publish iniSet although the held value is 9.1. The re-armed TrueDelay releases at
 /// 2100 s and the reset resumes from iniSet: a trim, a respond, and two more trims.
-const STANDALONE_TICKS: u32 = 40;
+///
+/// Two more trips pin both sides of the reseed boundary (GitHub issue #354):
+///
+/// - Short trip. Responds at 2520 s and 2640 s and a trim at 2760 s leave the chain at 8.8. The
+///   device is off only for 2820..2879 s, strictly between the 2760 s and 2880 s instants, so
+///   `swi2` never reaches the UnitDelay. The restart at 2880 s re-arms the TrueDelay; `swi`
+///   publishes iniSet until it releases at 3600 s, where the reset resumes from the stale 8.8:
+///   8.9, not the 10.1 a reseeded chain would give. Responds at 3720 s and 3840 s then reach 7.9.
+/// - Boundary trip. The device is off only for 3960..4019 s, the shortest 60 s-tick window that
+///   holds a sample instant (3960 s itself), so `swi2` stages iniSet there. After the restart at
+///   4020 s the re-armed TrueDelay releases at 4740 s and the reset resumes from iniSet: 10.1,
+///   not the 8.0 the stale 7.9 would give, then trims to 10.2 at 4920 s.
+const STANDALONE_TICKS: u32 = 82;
 const STANDALONE_TICK_SECONDS: f64 = 60.0;
 
 pub(super) fn goldens() -> Vec<Golden> {
@@ -237,6 +257,8 @@ pub(super) fn goldens() -> Vec<Golden> {
                 6
             } else if (2160.0..2280.0).contains(&t) {
                 5
+            } else if (2520.0..2760.0).contains(&t) || (3720.0..3960.0).contains(&t) {
+                6
             } else {
                 0
             }
@@ -244,7 +266,11 @@ pub(super) fn goldens() -> Vec<Golden> {
         .collect::<Vec<_>>();
     let device_status = time
         .iter()
-        .map(|&t| !(1260.0..1380.0).contains(&t))
+        .map(|&t| {
+            !((1260.0..1380.0).contains(&t)
+                || (2820.0..2880.0).contains(&t)
+                || (3960.0..4020.0).contains(&t))
+        })
         .collect::<Vec<_>>();
     let setpoint = trim_and_respond_trace(&time, &request_count, &device_status);
     let inputs = trim_and_respond_inputs(&request_count, &device_status);
@@ -255,8 +281,8 @@ pub(super) fn goldens() -> Vec<Golden> {
         ValueKind::Real,
         time,
         setpoint.into_iter().map(r).collect(),
-        "TrimAndRespond have_hol=false over 0..2400s at 60s ticks: device proven on except 1260..1379s (one sample instant, 1320s, inside the off window; restart at 1380s between instants); requests 0 -> 3 at 720s -> 6 at 840s -> 0 at 1080s -> 5 at 2160s -> 0 at 2280s",
-        "Pinned TrimAndRespond.mo have_hol=false variant: TrueDelay(delTim+samplePeriod=720s, delayOnInit) on uDevSta selects swi between iniSet=10 and the reset chain; swi2 feeds iniSet into UnitDelay(samplePeriod=120s, y_start=iniSet) while the device is off; net reset from Sampler(numOfReq) with triAmo=0.1, resAmo=-0.2, maxRes=-0.6, numIgnReq=2, clamp 0..20; inactive hold path is specialized away. Setpoint: 9.9 at 720s, 9.4 at 840s, 8.9 at 960s, trims to 9.0 and 9.1, iniSet 10 while off and through the re-armed delay (held 9.1 at the 1380s restart), then 10.1 at 2100s, 9.5 at 2160s, 9.6 at 2280s, 9.7 at 2400s",
+        "TrimAndRespond have_hol=false over 0..4920s at 60s ticks: device proven on except 1260..1379s (one sample instant, 1320s, inside the off window; restart at 1380s between instants), 2820..2879s (short trip strictly between the 2760s and 2880s instants) and 3960..4019s (boundary trip holding the 3960s instant; restart at 4020s between instants); requests 0 -> 3 at 720s -> 6 at 840s -> 0 at 1080s -> 5 at 2160s -> 0 at 2280s -> 6 at 2520s -> 0 at 2760s -> 6 at 3720s -> 0 at 3960s",
+        "Pinned TrimAndRespond.mo have_hol=false variant: TrueDelay(delTim+samplePeriod=720s, delayOnInit) on uDevSta selects swi between iniSet=10 and the reset chain; swi2 feeds iniSet into UnitDelay(samplePeriod=120s, y_start=iniSet) while the device is off; net reset from Sampler(numOfReq) with triAmo=0.1, resAmo=-0.2, maxRes=-0.6, numIgnReq=2, clamp 0..20; inactive hold path is specialized away. Setpoint: 9.9 at 720s, 9.4 at 840s, 8.9 at 960s, trims to 9.0 and 9.1, iniSet 10 while off and through the re-armed delay (held 9.1 at the 1380s restart), then 10.1 at 2100s, 9.5 at 2160s, 9.6 at 2280s, 9.7 at 2400s; responds to 9.2 at 2520s and 8.7 at 2640s, trims to 8.8 at 2760s; the 2820..2879s short trip holds no sample instant, so swi2 never reseeds the UnitDelay: iniSet 10 through the re-armed delay, then the reset resumes from the stale 8.8 at the 3600s release (8.9, not the reseeded 10.1); responds to 8.4 at 3720s and 7.9 at 3840s; the 3960..4019s boundary trip holds the 3960s instant, so swi2 reseeds: iniSet 10 through the re-armed delay, then 10.1 at the 4740s release (not 8.0 from the stale 7.9) and 10.2 at 4920s",
         inputs,
     )]
 }

@@ -305,7 +305,7 @@ pub const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
         name: "trim_and_respond_have_hol_false",
         cxf: TRIM_AND_RESPOND,
-        t_stop: 40,
+        t_stop: 82,
         sample_step: 60.0,
         inputs: TRIM_AND_RESPOND_INPUTS,
         exact_outputs: TRIM_AND_RESPOND_EXACT_OUTPUTS,

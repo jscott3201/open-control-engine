@@ -129,6 +129,22 @@ and a gate that accepted any text would restore exactly the false assurance desc
   references and fails the engine comparison. Both engine determinism snapshots are re-blessed
   for the longer runs.
 
+- **The G36 trim-and-respond references now pin the short-trip reseed boundary and label it**
+  (GitHub #356, issue #354). `Generic/TrimAndRespond.mo` documents `iniSet` while the device is
+  off, but its graph feeds `iniSet` to the reset only through `swi2` into a `UnitDelay` that
+  captures at `samplePeriod` instants. A device-off window holding no instant therefore leaves
+  the pre-trip value in the chain. The engine and the reference both follow the graph.
+  `trim_and_respond_have_hol_false` now runs to 4920 s with two more trips. A short trip at
+  2820..2879 s, strictly between the 2760 s and 2880 s instants, is released at 3600 s from the
+  stale 8.8: it reads 8.9, where reseeding would give 10.1. A boundary trip, whose single off
+  tick is the 3960 s instant, does reseed: it is released at 4740 s at 10.1, where the stale 7.9
+  would give 8.0. The engine matches bit-exactly, the oce-api test pins every hold, and a new
+  `g36_trim_and_respond_reseed` guard fails if the reference is changed to reseed on any off
+  edge or to skip the reseed at an instant. The standalone, SupplyFan and SupplyTemperature
+  references now carry a `diverges_from_g36_intent` note, checked against the vendored wiring,
+  and `docs/cdl-coverage.md` states that OCE follows the `.mo` graph, not the prose. The engine
+  determinism snapshot is re-blessed for the longer run.
+
 - **G36 Tier-A references now say which ones are not G36 answer keys** (GitHub #353,
   issues #342, #345, #344). Every `tools/golden-gen/goldens/G36/**/*.prov.json` carries three new fields from the
   generator: `sequence_derivation`, `diverges_from_g36_intent` and `frame_rate_dependence`. The

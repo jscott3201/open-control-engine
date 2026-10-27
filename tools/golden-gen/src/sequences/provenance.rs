@@ -228,6 +228,20 @@ pub(super) fn sequence_derivation(sequence: &str) -> &'static str {
     }
 }
 
+/// Divergence note shared by every reference built on `Generic/TrimAndRespond.mo` (GitHub issue
+/// #354). A macro, not a `const`, so `concat!` can append it to a sequence-specific note.
+macro_rules! trim_and_respond_short_trip_note {
+    () => {
+        "faithful to the pinned Generic/TrimAndRespond.mo graph, not its documentation: the \
+         documentation says the setpoint is iniSet while the device is off and the reset starts \
+         delTim after device start, but iniSet reaches the reset only through swi2 -> uniDel.u, \
+         and the UnitDelay captures it only at a samplePeriod instant. A device-off window that \
+         holds no sample instant never reseeds the UnitDelay, so after the re-armed TrueDelay the \
+         reset resumes from the stale pre-trip value, not from iniSet. Not a G36-intent answer \
+         key for short device trips"
+    };
+}
+
 /// Return the note for a reference that faithfully reproduces pinned Buildings behaviour which
 /// diverges from the stated G36 intent, or `None` when no divergence is recorded.
 ///
@@ -252,7 +266,15 @@ pub(super) fn g36_intent_divergence(sequence: &str) -> Option<&'static str> {
              documentation and G36 section 5.16.7; outputs that depend on the enable state \
              follow the pinned wiring, not G36 intent",
         ),
-        SUPPLY_TEMP => Some(
+        TRIM_AND_RESPOND_HAVE_HOL_FALSE => Some(trim_and_respond_short_trip_note!()),
+        SUPPLY_FAN => Some(concat!(
+            "embeds Generic/TrimAndRespond.mo as staPreSetRes (duct static pressure reset); the \
+             pressure setpoint and the fan speed it drives are ",
+            trim_and_respond_short_trip_note!(),
+            ". supply_fan_status does not depend on the reset; it carries this note because the \
+             label is per scenario"
+        )),
+        SUPPLY_TEMP => Some(concat!(
             "faithful to pinned SupplyTemperature.mo: cooDowMod k=3 and the 0<uOpeMod<3 reset \
              test, with OperationModes coolDown=2 and setUp=3, give cool-down the reset branch \
              and setup the minimum setpoint, the reverse of the .mo component comments and G36 \
@@ -260,8 +282,10 @@ pub(super) fn g36_intent_divergence(sequence: &str) -> Option<&'static str> {
              the inverted modes. Separately, and not from the .mo: SupplyTemperature.mo binds \
              the nested maxSupTemRes trim-and-respond parameters to the outer ones (final \
              delTim=delTim, ...), but the CXF fixture sets them as literal values; the literals \
-             equal the outer values today, so the trace is unaffected",
-        ),
+             equal the outer values today, so the trace is unaffected. Separately, the nested \
+             maxSupTemRes reset is ",
+            trim_and_respond_short_trip_note!()
+        )),
         _ => {
             let _ = source_files(sequence);
             None
