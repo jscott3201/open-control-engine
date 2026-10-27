@@ -24,6 +24,7 @@ fn image<S: Store>(engine: &Engine<S>) -> Vec<String> {
     let Engine {
         store,
         cxf_byte_limit,
+        non_finite_input_policy,
         model,
         schedule,
         blocks,
@@ -41,7 +42,10 @@ fn image<S: Store>(engine: &Engine<S>) -> Vec<String> {
         accepted_frame_sequence,
     } = engine;
     vec![
-        format!("{:p} {cxf_byte_limit}", Arc::as_ptr(store)),
+        format!(
+            "{:p} {cxf_byte_limit} {non_finite_input_policy:?}",
+            Arc::as_ptr(store)
+        ),
         format!("{:p}", Arc::as_ptr(frame_generation)),
         format!("{accepted_frame_sequence}"),
         format!("{:p} {model:?} {model_id:?}", Arc::as_ptr(model)),
@@ -279,6 +283,7 @@ fn successful_reload_replaces_model_bound_caches_but_not_host_policy() {
     let mut engine = prepared(2);
     let old_model = Arc::clone(&engine.model);
     engine.set_cxf_byte_limit(64 * 1024).unwrap();
+    engine.set_non_finite_input_policy(crate::NonFiniteInputPolicy::Refuse);
     engine.load_cxf(ANALOG_WARNING.as_bytes()).unwrap();
     let mut fresh = Engine::in_memory();
     fresh.load_cxf(ANALOG_WARNING.as_bytes()).unwrap();
@@ -318,6 +323,10 @@ fn successful_reload_replaces_model_bound_caches_but_not_host_policy() {
     assert_eq!(engine.prev_t, None);
     assert!(engine.loaded && engine.durable_restore_ready);
     assert_eq!(engine.cxf_byte_limit(), 64 * 1024);
+    assert_eq!(
+        engine.non_finite_input_policy(),
+        crate::NonFiniteInputPolicy::Refuse
+    );
     assert!(matches!(
         engine.get_output("http://example.org#MinLoop.yAlarm"),
         Err(OcError::UnknownPoint(_))

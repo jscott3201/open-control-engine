@@ -529,6 +529,10 @@ impl<S: Store> Engine<S> {
         let state_t = f64::from_bits(image.state_t);
         let prev_t = image.prev_t.map(f64::from_bits);
         validate_payload(self, &values, &image.words, state_t, prev_t)?;
+        // A clock beyond the frame-time limit would refuse every later frame; refuse it here.
+        if state_t.abs() > crate::MAX_FRAME_TIME_MAGNITUDE {
+            return invalid_global("model time exceeds MAX_FRAME_TIME_MAGNITUDE");
+        }
         Ok(PreparedRestore {
             values,
             words: image.words.clone(),

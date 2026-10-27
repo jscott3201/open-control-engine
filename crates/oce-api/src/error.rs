@@ -111,12 +111,33 @@ pub enum OcError {
         /// The supplied (non-finite) time.
         now: f64,
     },
+    /// `t_now` is finite but its magnitude exceeds [`crate::MAX_FRAME_TIME_MAGNITUDE`], so an
+    /// elapsed-time difference against another accepted time could overflow (host error;
+    /// checked for every model, whatever its blocks).
+    #[error("frame time out of range: |t_now={now:e}| exceeds {limit:e}")]
+    TimeOutOfRange {
+        /// The supplied (finite) time.
+        now: f64,
+        /// The accepted magnitude limit, [`crate::MAX_FRAME_TIME_MAGNITUDE`].
+        limit: f64,
+    },
     /// `t_now` went backwards (host error; CDL §7.16 monotonic time).
     #[error("time regression: t_now={now} < previous {prev}")]
     TimeRegression {
         /// The supplied (too-small) time.
         now: f64,
         /// The previous tick's time.
+        prev: f64,
+    },
+    /// Both times are finite and nondecreasing, but `now - prev` overflows to infinity, so no
+    /// block could integrate the step (host error; checked for every model, whatever its blocks).
+    /// Defensive: accepted and restored clocks are both bounded by
+    /// [`crate::MAX_FRAME_TIME_MAGNITUDE`], so no public sequence of calls produces it today.
+    #[error("non-finite time step: t_now={now} - previous {prev} is not finite")]
+    NonFiniteTimeStep {
+        /// The supplied (finite) time.
+        now: f64,
+        /// The previous accepted tick's (finite) time.
         prev: f64,
     },
     /// A finite model time cannot be encoded by one loaded block's sampled-time state.
@@ -162,6 +183,13 @@ pub enum OcError {
     /// One required canonical boundary input was omitted; no hold-last or seed substitution.
     #[error("missing frame input '{0}'")]
     FrameMissingInput(String),
+    /// A Real boundary input value was NaN (either sign, any payload) or infinite while the
+    /// host selected [`crate::NonFiniteInputPolicy::Refuse`]. Names the canonical input path;
+    /// nothing is staged and model time does not advance. The host substitutes a finite value
+    /// (for example a sensor-fault fallback) or does not execute the frame. Never returned under
+    /// the default [`crate::NonFiniteInputPolicy::Admit`].
+    #[error("non-finite Real value for input '{0}'; the host must substitute a finite value")]
+    InputNonFinite(String),
     /// Exact type matched but the value violates the canonical input's declared domain.
     #[error("input value outside declared domain for '{0}'")]
     InputDomain(String),

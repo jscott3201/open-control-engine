@@ -15,12 +15,14 @@ use std::sync::Arc;
 use oce_diag::Diagnostic;
 use oce_model::{BlockInstance, Connector, ConnectorId, ModelGraph};
 
+mod finite_bounds;
 mod params;
 mod params_finite;
 mod params_flattened;
 mod structural;
 mod unify;
 
+pub(crate) use finite_bounds::check_finite_bounds;
 pub(crate) use params::check_block_params;
 pub(crate) use structural::{
     check_arena_ids, check_boundary_outputs, check_connections, check_port_types,

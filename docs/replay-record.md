@@ -103,6 +103,11 @@ value/catalog contract, not a new extension registry. The codec covers every clo
 detached full-domain probes do not add String/enum signal ports to the live CXF profile. Playback
 preparation retains its executable-specific input-domain checks, including CDL Integer bounds.
 
+The host's `NonFiniteInputPolicy` is not recorded. A record captured under the default `Admit` can
+carry a non-finite Real input; it decodes, but replaying it on an engine that selects `Refuse` is
+refused at preparation with `InputNonFinite`, so replay such a record on an `Admit` engine. The
+policy only decides which frames are accepted, so an accepted replay is bit-identical under either.
+
 ### Public descriptor grammar
 
 The descriptor is at most 1024 UTF-8 bytes, with the ten existing labeled LF-terminated lines in

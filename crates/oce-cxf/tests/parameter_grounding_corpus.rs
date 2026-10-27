@@ -76,8 +76,8 @@ fn outcome_line(rel: &str, bytes: &[u8]) -> String {
 #[test]
 fn every_tracked_fixture_imports_byte_identically() {
     let corpus = corpus();
-    // The workspace tracks 213 `.jsonld` files; a walk that silently shrinks fails here.
-    assert_eq!(corpus.len(), 213, "fixture corpus size changed");
+    // The workspace tracks 214 `.jsonld` files; a walk that silently shrinks fails here.
+    assert_eq!(corpus.len(), 214, "fixture corpus size changed");
     let actual: String = corpus
         .iter()
         .map(|(rel, path)| {

@@ -90,8 +90,11 @@ are specified below; execution retains this prevalidation boundary.
 | Duplicate boundary input | Refuse even if both values are bit-identical; do not use first-wins or last-wins. Fan-out is not a duplicate. |
 | Missing required input | Refuse; no hold-last, zero/false seed or Store fill-in. Apply only explicit executable omission semantics. |
 | Wrong type or declared domain | Refuse the complete candidate, including any otherwise valid prefix. |
+| NaN or either infinite Real input value, bounded or not, while the host selects `NonFiniteInputPolicy::Refuse` | Refuse with `InputNonFinite(path)`; the host substitutes a finite value. Under the default `Admit`, unbounded inputs accept it and bounded inputs refuse it as a domain violation. The default becomes `Refuse` at the next native-evidence refresh (GitHub issue #363). |
 | NaN or either infinite model time | Refuse. |
+| Finite model time whose magnitude exceeds `MAX_FRAME_TIME_MAGNITUDE` (`f64::MAX / 4`) | Refuse, whatever blocks the model contains. |
 | Finite time below the preceding accepted model time | Refuse. |
+| Finite times whose difference from the preceding accepted time overflows (unreachable while restore also enforces the magnitude limit; kept as a defensive check) | Refuse. |
 | Time outside loaded-block representability | Refuse under the existing model-time limits, not by executing first. |
 | Stale loaded-executable or IO compatibility context | Refuse frames and references from a superseded successful load; no implicit rebinding. |
 | Accepted-frame sequence exhausted | Refuse before staging; never wrap or reset the sequence. |
@@ -224,17 +227,34 @@ changes watches/outputs/time, or closes durable-restore readiness. There is no n
 First-cause refusal precedence is:
 
 1. `State(NoLoadedModel)`, then `State(PendingParameterEdits)`.
-2. `NonFiniteTime`, `TimeRegression`, then `ModelTimeUnrepresentable`, in that order.
+2. `NonFiniteTime`, `TimeOutOfRange`, `TimeRegression`, `NonFiniteTimeStep`, then
+   `ModelTimeUnrepresentable`, in that order.
 3. The lexically first invalid submitted key: `FrameUnknownInput` or `FrameNotInput` (outputs and
    internally driven input points). These errors keep at most 64 UTF-8 bytes, cut at a character
    boundary, and the original key byte count. They do not clone an arbitrary-size submitted key.
 4. `FrameDuplicateInput`, then `FrameMissingInput`, each naming the lowest canonical input path.
-5. The first canonical input with a bad value: `InputType` before `InputDomain` for that input.
+5. The first canonical input with a bad value: `InputType`, then `InputNonFinite` (only under
+   `NonFiniteInputPolicy::Refuse`), then `InputDomain` for that input.
 
-This precedence is independent of entry order. Refusals do not accumulate a report. Unbounded Real
-values retain NaN payloads/infinities; a declared comparison bound has to hold, so any bound rejects
-NaN and finite bounds reject the respective infinity. No blanket finite-signal or equipment policy
-is introduced. Finite equal time is valid.
+This precedence is independent of entry order. Refusals do not accumulate a report. Under the
+default `NonFiniteInputPolicy::Admit`, unbounded Real values retain NaN payloads/infinities; a
+declared comparison bound has to hold, so any bound rejects NaN and finite bounds reject the
+respective infinity. Under the host-selected `NonFiniteInputPolicy::Refuse` — recommended for
+production hosts, and the default from the next native-evidence refresh (GitHub issue #363) — every
+non-finite Real value, bounded or not, is refused with `InputNonFinite`, so none reaches a block
+through a frame input. The policy covers frame inputs only; non-finite Real parameters are
+refused separately, whatever the policy: at load (`non-finite-parameter`) and by `set_param`
+(`ParamRange`). Block maths is unchanged either way, and a non-finite value a block computes itself
+still propagates. The policy is host configuration outside run state: it is in no snapshot,
+checkpoint or replay record, and it never changes how an accepted frame evolves state. No
+equipment policy is introduced for input values. A NaN or infinite `min`, `max` or `nominal` is
+refused at load (`non-finite-bound`), so a NaN bound can no longer silently empty a domain. Finite
+equal time is valid. Time magnitude is bounded by `MAX_FRAME_TIME_MAGNITUDE`: any single
+difference of two accepted times is at most `f64::MAX / 2`, and a running sum of rounded steps (an
+elapsed-time accumulator or unit-slope integrator) stays finite for fewer than about 3e15
+accumulated steps, the remaining factor of two absorbing upward rounding drift. Model maths
+applied to time (gains, slopes other than one) is not bounded. Within the range there is no
+maximum step. Restore refuses a clock beyond the limit.
 
 The internal `check_prepared_frame` seam checks readiness, incarnation, and current time eligibility
 before execution can use resolved targets. It returns `StalePreparedFrame` for a
@@ -270,9 +290,11 @@ the corresponding assertions. No external Modelica oracle exists for this OCE-sp
 
 `Engine::execute_frame(PreparedInputFrame) -> Result<CompletedFrame, OcError>` consumes one plan
 by value, even on refusal. The plan cannot be cloned, serialized or submitted twice. Preflight
-precedence is unloaded, pending edits, stale incarnation, nonfinite time, regression, block-time
-representability, then `FrameSequenceExhausted`. Preparation has already resolved and validated
-every input and fan-out target. Execution rechecks the mutable conditions, without name rebinding.
+precedence is unloaded, pending edits, stale incarnation, nonfinite time, time out of range,
+regression, nonfinite time step, block-time representability, then `InputNonFinite` for the first
+canonical non-finite Real input when the policy in force is `Refuse` (so a plan prepared under
+`Admit` cannot execute a non-finite value after a switch), then `FrameSequenceExhausted`.
+Preparation has already resolved and validated every input and fan-out target. Execution rechecks the mutable conditions, without name rebinding.
 
 After preflight, the implementation stages the entire plan, closes durable restore, calls the
 existing infallible evaluator once with the Warning collector, updates `prev_t` and latest-state inspection

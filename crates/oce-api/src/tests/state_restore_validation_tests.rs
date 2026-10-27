@@ -270,3 +270,75 @@ fn resigned_future_first_order_history_refuses_durable_restore_atomically() {
     assert!(target.durable_restore_ready);
     assert_eq!(store.calls(), calls);
 }
+
+/// Stateless `Add` engine whose clock has been forced to `time`, as a snapshot captured before
+/// the frame-time limit existed (or forged) would carry it. Capture itself does not police time.
+fn engine_at_forced_clock(time: f64) -> Engine {
+    let mut engine = Engine::in_memory();
+    engine
+        .load_cxf(include_bytes!(
+            "../../tests/fixtures/legacy_frame_add.jsonld"
+        ))
+        .unwrap();
+    let entries = [
+        ("urn:legacy-frame:a", Value::Real(1.0)),
+        ("urn:legacy-frame:b", Value::Real(2.0)),
+    ];
+    let plan = engine.prepare_frame(0.0, &entries).unwrap();
+    engine.execute_frame(plan).unwrap();
+    engine.prev_t = Some(time);
+    engine.state.t = time;
+    engine
+}
+
+#[test]
+fn restore_refuses_a_clock_beyond_the_frame_time_limit_and_accepts_the_limit() {
+    let limit = crate::MAX_FRAME_TIME_MAGNITUDE;
+    let above = f64::from_bits(limit.to_bits() + 1);
+    for time in [above, -above, f64::MAX, f64::MIN] {
+        let source = engine_at_forced_clock(time);
+        let snapshot = source.state_snapshot().unwrap();
+        let checkpoint = source.checkpoint().unwrap();
+        let mut target = Engine::in_memory();
+        target
+            .load_cxf(include_bytes!(
+                "../../tests/fixtures/legacy_frame_add.jsonld"
+            ))
+            .unwrap();
+        let before = target.state_snapshot().unwrap();
+        for result in [
+            target.restore_state(&snapshot),
+            target.restore_checkpoint(&checkpoint),
+        ] {
+            assert!(
+                matches!(
+                    result,
+                    Err(OcError::State(EngineStateError::InvalidBlockState { ref detail, .. }))
+                        if detail == "model time exceeds MAX_FRAME_TIME_MAGNITUDE"
+                ),
+                "{time:e}: {result:?}"
+            );
+            assert_eq!(
+                target.state_snapshot().unwrap().as_bytes(),
+                before.as_bytes()
+            );
+        }
+    }
+    // At the limit itself the clock restores and the engine keeps accepting frames.
+    for time in [limit, -limit] {
+        let snapshot = engine_at_forced_clock(time).state_snapshot().unwrap();
+        let mut target = Engine::in_memory();
+        target
+            .load_cxf(include_bytes!(
+                "../../tests/fixtures/legacy_frame_add.jsonld"
+            ))
+            .unwrap();
+        target.restore_state(&snapshot).unwrap();
+        let entries = [
+            ("urn:legacy-frame:a", Value::Real(1.0)),
+            ("urn:legacy-frame:b", Value::Real(2.0)),
+        ];
+        let plan = target.prepare_frame(limit, &entries).unwrap();
+        target.execute_frame(plan).unwrap();
+    }
+}
