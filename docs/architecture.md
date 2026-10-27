@@ -29,7 +29,7 @@ on any database.
 Below it sits **storage behind a trait**. Everything the evaluator must not read — equipment
 topology, points, instance structure, parameters, trends, semantic triples — plus durable
 persistence is reached only through the `oce-store` port traits
-(`crates/oce-store/src/lib.rs:580`). The library ships **no first-party database**. Durable or
+(`ModelStore`, `PointStore`, `SemanticStore`, `Durable` and the composite `Store` in `crates/oce-store/src/lib.rs`). The library ships **no first-party database**. Durable or
 queryable backends are app-side adapters behind the port, with an in-memory default
 (`oce-store-mem`) so that a downstream project can embed the engine for *load → flatten → validate →
 schedule → prepare frame → execute frame* with no database at all.
@@ -68,7 +68,7 @@ The engine is, by design:
   runtime is pulled at any layer. The check is the dependency set below, not a promise.
 - **`#![forbid(unsafe_code)]` in all 17 crates**, belt and braces: each `crates/*/src/lib.rs`
   carries the crate attribute, *and* the workspace sets `unsafe_code = "forbid"` under
-  `[workspace.lints.rust]` (`Cargo.toml:49`).
+  `[workspace.lints.rust]` (root `Cargo.toml`).
 - **Edition 2024**, `resolver = "3"`.
 
 The whole external dependency surface on the embed path is four crates: `serde`, `serde_json`,
@@ -82,7 +82,7 @@ change (PR #209).
 
 | | Value | Where | What it means to you |
 | --- | --- | --- | --- |
-| **MSRV** | `1.97.0` | `Cargo.toml:42` (`rust-version`) | The floor a consumer needs. Build the engine with any toolchain at or above this. |
+| **MSRV** | `1.97.0` | root `Cargo.toml` (`rust-version`) | The floor a consumer needs. Build the engine with any toolchain at or above this. |
 | **Pin** | `1.97.1` | `rust-toolchain.toml` (`channel`) | What CI and local development actually build with, so the two agree exactly. |
 
 The MSRV cannot be raised to match the pin casually: the release gate's `cargo public-api` surface
@@ -98,7 +98,7 @@ both stated here rather than in a footnote.
 **The evaluator is not allocation-free for every block.** The schedule and state arrays are
 preallocated and the gather scratch is reused, so most blocks tick without allocating.
 `CDL.Reals.Sort` uses fixed stack buffers through `nin = 64` (`SORT_STACK_WIDTH`,
-`crates/oce-blocks/src/reals_matrix.rs:340`), then falls back to two heap-allocated vectors for
+`crates/oce-blocks/src/reals_matrix.rs`), then falls back to two heap-allocated vectors for
 wider inputs. `CDL.Reals.Log` and `CDL.Reals.Log10` use static warning messages, so warning emission
 allocates nothing block-side — but a diagnostic sink may still allocate when it records an event,
 including the completed-frame warning collector. Size a host loop against the blocks and the diagnostic
@@ -129,9 +129,9 @@ separates host support from registry dependency closure.
 | Crate | Responsibility |
 | --- | --- |
 | `oce-model` | Pure value/connector/instance/connection types; the `Value` enum (Real/Integer/Boolean/String/Enum) and the flattened model graph — the shared executable truth. |
-| `oce-expr` | The CDL §7.7.2 binding-expression parser and evaluator (closed-world, pure). Bounded on structure: input deeper than `MAX_NESTING_DEPTH` (64) or wider than `MAX_EXPR_NODES` (4096) is a typed error, not a stack overflow (`crates/oce-expr/src/lib.rs:125`, `:132`). |
-| `oce-blocks` | The `Block` trait and the native CDL elementary-block library, publicly enumerable at runtime via `catalog()` (`crates/oce-blocks/src/catalog.rs:155`) with ports, parameter rules, and honest parameter defaults per class. |
-| `oce-flatten` | **Reserved seam; an identity passthrough today.** `oce-cxf` owns lowering because CXF arrives pre-flattened, so `flatten()` returns the model unchanged (`crates/oce-flatten/src/lib.rs:53`). Full `.mo` flattening is deferred. It is a publishable implementation dependency on the `oce-api` path, not an independently supported package. |
+| `oce-expr` | The CDL §7.7.2 binding-expression parser and evaluator (closed-world, pure). Bounded on structure: input deeper than `MAX_NESTING_DEPTH` (64) or wider than `MAX_EXPR_NODES` (4096) is a typed error, not a stack overflow (`crates/oce-expr/src/lib.rs`). |
+| `oce-blocks` | The `Block` trait and the native CDL elementary-block library, publicly enumerable at runtime via `catalog()` (`crates/oce-blocks/src/catalog.rs`) with ports, parameter rules, and honest parameter defaults per class. |
+| `oce-flatten` | **Reserved seam; an identity passthrough today.** `oce-cxf` owns lowering because CXF arrives pre-flattened, so `flatten()` returns the model unchanged (`crates/oce-flatten/src/lib.rs`). Full `.mo` flattening is deferred. It is a publishable implementation dependency on the `oce-api` path, not an independently supported package. |
 | `oce-validate` | Loader conformance: subset rejection, single-assignment, type and attribute unification, parameter rules. |
 | `oce-graph` | The deterministic scheduler and executor: direct-feedthrough DAG, algebraic-loop rejection, its own Kahn topological sort, the tick loop. |
 | `oce-cxf` | CXF (Control eXchange Format) JSON-LD ↔ model graph, both directions. Composite nesting is bounded at 64. Boundary lowering is iterative and separately bounded at 64 non-top `isConnectedTo` hops per path, 65,536 target examinations, and 8 MiB of aggregate target-IRI bytes per document. The accept/reject contract is written out in [cxf-composite-subset.md](cxf-composite-subset.md). |
@@ -152,9 +152,9 @@ separates host support from registry dependency closure.
 | --- | --- |
 | `oce-conformance` | **Verification-only, `publish = false`.** The funnel-style tolerance-band and golden-trace conformance harness. Standalone: no other crate depends on it. Read [`TESTING.md`](../TESTING.md) for what it does and does not check. |
 | `oce-bless` | **Test-support only, `publish = false`.** The single definition of the repo's environment-variable truthiness policy, so golden-regeneration switches cannot drift apart across crates. |
-| `oce-extension` | **Experimental/reserved, `publish = false`; nothing consumes it.** The intended role is the FMI / extension-block boundary. No crate depends on it, the CXF resolver has no extension-block branch (an unknown class is a hard `ClassNotFound`), and `DiagCode::MissingFmuPath` (`crates/oce-diag/src/lib.rs:197`) is declared but never constructed. **Do not plan FMI integration against this crate.** |
-| `oce-docs` | **Reserved panic-only seam, `publish = false`.** The sequence-spec and point-list export surface is declared; `point_list_html` panics with `unimplemented!` (`crates/oce-docs/src/lib.rs:17`). Nothing depends on it. |
-| `oce-api` | The primary embeddable host facade: `Engine<S: Store = MemStore>`, spanning load, complete-frame preparation/execution, parameters, IO inventory, latest-state non-receipt reads (`get_output`/`watch`), CXF export with content id, and a read-only topology view. The actively supported `oce-blocks::catalog()` metadata API is a separate companion surface; see the [public surface contract](public-surface-contract.md). |
+| `oce-extension` | **Experimental/reserved, `publish = false`; nothing consumes it.** The intended role is the FMI / extension-block boundary. No crate depends on it, the CXF resolver has no extension-block branch (an unknown class is a hard `ClassNotFound`), and `DiagCode::MissingFmuPath` (`crates/oce-diag/src/lib.rs`) is declared but never constructed. **Do not plan FMI integration against this crate.** |
+| `oce-docs` | **Reserved panic-only seam, `publish = false`.** The sequence-spec and point-list export surface is declared; `point_list_html` panics with `unimplemented!` (`crates/oce-docs/src/lib.rs`). Nothing depends on it. |
+| `oce-api` | The primary embeddable host facade: `Engine<S: Store = MemStore>`, spanning load, complete-frame preparation/execution, parameters, IO inventory, latest-state non-receipt reads (`get_output`/`watch`), CXF export with content id, and a read-only topology view. Its catalog metadata is `oce_api::catalog()`, with the actively supported `oce_blocks::catalog()` as a separate companion surface; see the [public surface contract](public-surface-contract.md). |
 
 Four of those — `oce-flatten`, `oce-semantics`, `oce-extension`, `oce-docs` — are reserved seams
 rather than working components. They are named here so that nobody plans a feature against a crate
