@@ -107,6 +107,9 @@ mod eval_array_tests;
 mod eval_comprehension;
 #[cfg(test)]
 mod eval_comprehension_tests;
+mod eval_strict;
+#[cfg(test)]
+mod eval_strict_tests;
 mod lex;
 mod parse;
 #[cfg(test)]
@@ -439,6 +442,16 @@ pub trait Scope {
     fn enum_ordinal(&self, _class: EnumClassId, _literal: &str) -> Option<u32> {
         None
     }
+
+    /// Whether evaluation under this scope must refuse every non-finite Real it produces.
+    ///
+    /// `false` (the default) keeps the IEEE propagation semantics [`eval()`] documents. The strict
+    /// entry points [`eval_finite`] / [`eval_str_finite`] wrap the caller's scope so this answers
+    /// `true`; a scope that layers over another (a comprehension iteration) forwards it. Callers
+    /// never need to override it themselves.
+    fn requires_finite(&self) -> bool {
+        false
+    }
 }
 
 /// A typed expression error (never a panic; R10/R11). `#[non_exhaustive]` keeps room for the
@@ -525,6 +538,15 @@ pub enum ExprError {
         /// The type of the value actually supplied as the subscript.
         found: &'static str,
     },
+    /// Strict evaluation ([`eval_finite`]) produced a non-finite Real (`NaN`, `+inf` or `-inf`) at
+    /// some node — a literal beyond `f64` range, an overflowing or zero-dividing operation, or a
+    /// non-finite value read from scope. Raised at the producing node, so no later function
+    /// (`integer`, `sign`, `min`/`max`, a comparison, …) can absorb it into a finite result.
+    #[error("expression produced a non-finite Real ({value}); load-time values must be finite")]
+    NonFinite {
+        /// The offending value, rendered (`NaN`, `inf` or `-inf`).
+        value: &'static str,
+    },
 }
 
 /// Parse opaque CDL binding text into an [`ExprAst`], rejecting out-of-subset constructs (R9).
@@ -563,6 +585,29 @@ pub fn eval(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
 /// limits documented by [`parse()`] and [`eval()`].
 pub fn eval_str(text: &str, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
     eval(&parse(text)?, scope)
+}
+
+/// Strict-finite [`eval()`] for load-time grounding: identical semantics, except that any node
+/// whose result is, or contains, a non-finite Real refuses with [`ExprError::NonFinite`].
+///
+/// Every node — literals, scope reads, operators, built-in calls, array constructs and each
+/// comprehension body evaluation — is checked as it is produced, so a non-finite intermediate can
+/// never be absorbed into a finite result (`integer(1/0)`, `sign(0/0)`, `min(1/0, 3)`,
+/// `x > 0` with `x = NaN`). `Modelica.Constants.inf` is `f64::MAX` and stays legal; arithmetic
+/// that overflows it (`inf*2`) refuses. [`eval()`] itself is unchanged.
+///
+/// # Errors
+/// Every error [`eval()`] returns, plus [`ExprError::NonFinite`].
+pub fn eval_finite(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
+    eval(ast, &eval_strict::FiniteScope { inner: scope })
+}
+
+/// [`parse()`] then [`eval_finite()`] in one shot.
+///
+/// # Errors
+/// Every error [`parse()`] and [`eval_finite()`] return.
+pub fn eval_str_finite(text: &str, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
+    eval_finite(&parse(text)?, scope)
 }
 
 /// Return the maximum node depth of an expression tree, with a leaf at depth one.

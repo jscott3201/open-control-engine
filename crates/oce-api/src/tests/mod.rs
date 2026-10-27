@@ -9,6 +9,7 @@ mod diagnostics_access;
 mod frame_bindings_tests;
 mod frozen_surface;
 mod load_build_tick;
+mod params_finite_tests;
 mod params_tests;
 mod pre_execution_profile_tests;
 mod projection_tests;

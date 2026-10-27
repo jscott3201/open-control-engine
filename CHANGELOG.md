@@ -228,6 +228,41 @@ and a gate that accepted any text would restore exactly the false assurance desc
   The release-compatibility checker re-selects its current implementation baseline at the
   change's source commit; policy and rows are unchanged. A CDL-legal model that atomic block
   firing still refuses as a block-granularity loop is tracked in GitHub issue #347.
+- **Non-finite Real parameters are refused at load and at rest** (GitHub #TBD, issue #362).
+  `NaN`, `+inf` and `-inf` were accepted silently for every class whose rules did not declare
+  finiteness — `MultiplyByParameter.k`, `AddParameter.p`, `Timer.t`, `IntegratorWithReset.k` and
+  `y_start` among them. CXF literals such as `"NaN"`/`"INF"` and expressions that evaluate to
+  infinity (`1/0`, `1e400`) loaded with no warning. `set_param` accepted them because
+  `v < lo || v > hi` is false for NaN, so the value reached actuator outputs as NaN; a `Timer`
+  with `t = NaN` never completed. Composite-level parameters were worse, because a function could
+  absorb the value: a NaN root `topK` read as `integer(topK)` grounded the gain to 0, and
+  `max(topK, 2.0)` to 2.0.
+  - **At load**, parameter grounding is now strict at every level: root, nested-composite and leaf
+    declarations, and each array element. A non-finite literal or any non-finite expression
+    intermediate is refused with a new `DiagCode::NonFiniteParameter` (`non-finite-parameter`)
+    error. Its subject is the declaring instance and its message names the parameter.
+  - **The strict evaluation lives in `oce-expr`**, as new `eval_finite`/`eval_str_finite` entry
+    points, a new `ExprError::NonFinite` and a defaulted `Scope::requires_finite`. Every node is
+    checked as it is produced, so `integer`, `sign`, `min`/`max`, `abs` and comparisons cannot
+    hide one. `Modelica.Constants.inf` stays the finite `f64::MAX`; `inf * 2` refuses. Plain
+    `eval`/`eval_str` keep their IEEE propagation, and `oce-expr` runs only at load, never per
+    tick. Conditional-component guards use the strict evaluator too.
+  - **On the flattened graph**, an `oce-validate` backstop applies the same code to every block
+    parameter. For that block it suppresses all class-rule diagnostics, including
+    `missing-required-parameter` and array-shape ones, which surface once the value is fixed.
+  - **At rest**, `set_param` returns the existing `OcError::ParamRange`, using the new shared
+    predicate `oce_validate::parameter_value_is_finite`.
+  - **Existing tests:** NaN cases on classes that carried finiteness rules now report
+    `non-finite-parameter` instead of `parameter-out-of-range`.
+  - **No opt-out.** No registered class takes a non-finite parameter.
+  - **State snapshots** were already safe: they compare parameters bit-exactly and never restore
+    them.
+  - **Tests:** a census over all 103 Real parameters of the 136 registered classes pins both the
+    load and the edit refusal. A corpus golden, generated from the pre-change resolver, proves all
+    213 tracked `.jsonld` fixtures import byte-identically. Non-finite input *signals* are
+    unchanged.
+  - The release-compatibility checker re-selects its current implementation baseline at the
+    change's source commit; policy and rows are unchanged.
 
 ## 0.2.0
 

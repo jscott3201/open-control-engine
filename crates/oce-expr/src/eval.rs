@@ -109,6 +109,11 @@ pub(crate) fn eval(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprE
 /// holds (arrays are cloned and re-canonicalized, like the scalar read); everything else is
 /// scalar.
 pub(crate) fn eval_node(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
+    // Strict-finite grounding checks every node result as it is produced (identity otherwise).
+    crate::eval_strict::check_result(eval_node_unchecked(ast, scope)?, scope)
+}
+
+fn eval_node_unchecked(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
     match ast {
         ExprAst::ArrayLit(elems) => crate::eval_array::eval_array_literal(elems, scope),
         ExprAst::Range { start, step, stop } => {
@@ -146,6 +151,11 @@ fn expect_scalar(r: EvalResult) -> Result<Value, ExprError> {
 /// produce arrays (identifier, literal, range, built-in call) go through [`eval_node`] and
 /// reject an array result with a typed error.
 pub(crate) fn eval_scalar(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, ExprError> {
+    // Strict-finite grounding checks every node result as it is produced (identity otherwise).
+    crate::eval_strict::check_scalar(eval_scalar_unchecked(ast, scope)?, scope)
+}
+
+fn eval_scalar_unchecked(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, ExprError> {
     match ast {
         ExprAst::Real(r) => Ok(real(*r)),
         ExprAst::Int(i) => Ok(Value::Integer(*i)),

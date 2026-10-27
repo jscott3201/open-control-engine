@@ -206,6 +206,38 @@ dirty, `resume` rebuilds blocks, allocates all state again, refreshes outputs, a
 model time. Every stateful block—including integrators, latches, timers, and filters—is re-seeded,
 and monotonic-time history is lost. Plan parameter edits as a new run.
 
+## Real parameters are always finite
+
+The engine refuses every non-finite Real parameter value (`NaN`, `+inf`, `-inf`) at every level of a
+CXF document — root and nested composite declarations as well as leaf block parameters, and each
+element of a Real array parameter — for every block class (issue #362). Load-time grounding is also
+strict about expression intermediates: no expression node may produce a non-finite Real, so a
+function cannot absorb one into a finite result. `integer(1/0)`, `sign(0/0)`, `min(1/0, 3.0)`,
+`max(p, 2.0)` or `p > 0` with a non-finite `p`, and `Modelica.Constants.inf * 2` are all refused.
+Connector attribute bounds are not parameters and keep their existing handling.
+
+At load, `load_cxf` fails with `OcError::Cxf` carrying one `non-finite-parameter` error per offending
+declaration, whose subject is the declaring instance and whose message names the parameter. That
+applies whether the value came from a typed literal such as `"NaN"` or `"INF"` or from an
+expression. Dependents that read the refused declaration add the existing `grounding-failed`
+unknown-identifier cascade. Behind the resolver, the `oce-validate` load gate is a backstop: it
+re-checks every block parameter on the flattened graph and would refuse a non-finite value under the
+same code (`OcError::Validate`, subject = the block instance). No public load path reaches it with
+one today, because grounding refuses first. When it does fire, *all* of that block's class-level
+parameter rules are suppressed, not just range rules: its
+`missing-required-parameter`, `parameter-kind-mismatch` and array/matrix/time-table shape
+diagnostics surface only once the value is fixed. The load fails either way.
+
+At rest, `set_param` returns `OcError::ParamRange` and leaves the parameter unchanged. A crafted
+state snapshot cannot reintroduce a non-finite value: snapshots are compared bit-exactly against the
+loaded, already-checked parameters and never restore parameter values.
+
+No registered class takes a non-finite parameter, so there is no opt-out. The retained
+`Modelica.Constants.inf` alias is `f64::MAX`, which is finite and accepted. Finite extremes, signed
+zero and subnormals are accepted unless a class rule bounds them. The gate covers parameters only:
+a non-finite input *signal* is still the host's to keep out, and it propagates through the blocks
+under their documented IEEE behavior.
+
 Executable ingest uses `load_cxf`; the never-working semantic/Modelica loaders have been removed.
 Hosts prepare supported CXF outside the engine. Likewise, hosts decode CSV/table input outside the
 facade and provide complete `prepare_frame` observations. `AssertLevel` contains only `Warning`,
