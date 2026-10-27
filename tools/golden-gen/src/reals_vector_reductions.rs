@@ -44,7 +44,11 @@ pub fn goldens() -> Vec<Golden> {
                 "params nin=3, k=[0.1,1,-0.1]; u rows include a non-associative cancellation probe",
                 "y = sum_i k[i]*u[i] in declaration order; empty reduction identity is 0",
             )
-            .with_inputs(vec![input_r("u1", u1), input_r("u2", u2), input_r("u3", u3)]),
+            .with_inputs(vec![
+                input_r("u1", u1),
+                input_r("u2", u2),
+                input_r("u3", u3),
+            ]),
         );
     }
 
@@ -85,7 +89,11 @@ pub fn goldens() -> Vec<Golden> {
                 "param nin=3; finite Real rows cover first/middle/tie selections and signed zero",
                 "y = min(u) over u[1:nin]; empty reduction identity is +Inf",
             )
-            .with_inputs(vec![input_r("u1", u1), input_r("u2", u2), input_r("u3", u3)]),
+            .with_inputs(vec![
+                input_r("u1", u1),
+                input_r("u2", u2),
+                input_r("u3", u3),
+            ]),
         );
     }
 
@@ -125,7 +133,11 @@ pub fn goldens() -> Vec<Golden> {
                 "param nin=3; finite Real rows cover last/middle/tie selections and signed zero",
                 "y = max(u) over u[1:nin]; empty reduction identity is -Inf",
             )
-            .with_inputs(vec![input_r("u1", u1), input_r("u2", u2), input_r("u3", u3)]),
+            .with_inputs(vec![
+                input_r("u1", u1),
+                input_r("u2", u2),
+                input_r("u3", u3),
+            ]),
         );
     }
 

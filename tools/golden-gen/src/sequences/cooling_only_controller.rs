@@ -8,22 +8,19 @@
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
 use super::cooling_only_controller_airflow::{
-    AlarmInput, AlarmsState, DamperInput, DamperState, SystemRequestInput,
-    SystemRequestsState,
+    AlarmInput, AlarmsState, DamperInput, DamperState, SystemRequestInput, SystemRequestsState,
 };
 use super::cooling_only_controller_conditioning::{
-    ControlLoopsState, SetpointInput, SetpointsState, TimeSuppressionState,
-    ZoneStatesState, active_airflow,
+    ControlLoopsState, SetpointInput, SetpointsState, TimeSuppressionState, ZoneStatesState,
+    active_airflow,
 };
 use super::{COOLING_ONLY_CONTROLLER, i, input_b, input_i, input_r, r, sequence_golden};
 
 const SAMPLE_STEP: f64 = 60.0;
 const STOP_TIME: f64 = 86_400.0;
 const ROW_COUNT: usize = 1_441;
-const INPUT_DESCRIPTION: &str =
-    "Controller.Validation.mo sampled at t=0,60,...,86400: three source sines, three ramps with Round plus RealToInteger where specified, three logical pulses including inverted window status, and four constants";
-const SAMPLING_RATIONALE: &str =
-    "The sole upstream whole-controller Validation.mo scenario is sampled for its full 86400-second horizon on the engine 60-second tick grid, preserving 120-second sampler interactions and slow 28800-43200-second source periods; runtime tests replay committed CSV bytes and never evaluate sine";
+const INPUT_DESCRIPTION: &str = "Controller.Validation.mo sampled at t=0,60,...,86400: three source sines, three ramps with Round plus RealToInteger where specified, three logical pulses including inverted window status, and four constants";
+const SAMPLING_RATIONALE: &str = "The sole upstream whole-controller Validation.mo scenario is sampled for its full 86400-second horizon on the engine 60-second tick grid, preserving 120-second sampler interactions and slow 28800-43200-second source periods; runtime tests replay committed CSV bytes and never evaluate sine";
 
 #[derive(Clone, Copy)]
 struct ControllerInput {
@@ -200,7 +197,10 @@ pub(super) fn goldens() -> Vec<Golden> {
             "adjusted_area_flow",
             ValueKind::Real,
             time.clone(),
-            outputs.iter().map(|row| r(row.adjusted_area_flow)).collect(),
+            outputs
+                .iter()
+                .map(|row| r(row.adjusted_area_flow))
+                .collect(),
             "ASHRAE62_1.Setpoints applies occupied/window and occupied-standby gates to the fixed 0.006 m3/s area breathing-zone component",
             inputs.clone(),
         ),
@@ -315,11 +315,7 @@ fn validation_input(t: f64) -> ControllerInput {
 }
 
 fn source_sin(t: f64, amplitude: f64, frequency: f64, offset: f64) -> f64 {
-    offset
-        + amplitude
-            * libm::sin(
-                2.0 * std::f64::consts::PI * frequency * t,
-            )
+    offset + amplitude * libm::sin(2.0 * std::f64::consts::PI * frequency * t)
 }
 
 fn source_ramp(t: f64, height: f64, duration: f64, offset: f64, start: f64) -> f64 {
@@ -378,15 +374,21 @@ fn rounded_integer(value: f64) -> i64 {
 fn assert_source_coverage(rows: &[ControllerInput]) {
     assert_eq!(rows.len(), ROW_COUNT);
     assert_eq!(
-        rows.iter().map(|row| row.operating_mode).collect::<std::collections::BTreeSet<_>>(),
+        rows.iter()
+            .map(|row| row.operating_mode)
+            .collect::<std::collections::BTreeSet<_>>(),
         std::collections::BTreeSet::from([1, 2, 3])
     );
     assert_eq!(
-        rows.iter().map(|row| row.airflow_override_index).collect::<std::collections::BTreeSet<_>>(),
+        rows.iter()
+            .map(|row| row.airflow_override_index)
+            .collect::<std::collections::BTreeSet<_>>(),
         std::collections::BTreeSet::from([0, 1, 2])
     );
     assert_eq!(
-        rows.iter().map(|row| row.damper_override_index).collect::<std::collections::BTreeSet<_>>(),
+        rows.iter()
+            .map(|row| row.damper_override_index)
+            .collect::<std::collections::BTreeSet<_>>(),
         std::collections::BTreeSet::from([0, 1, 2])
     );
     for values in [
@@ -420,14 +422,29 @@ fn assert_output_domain(rows: &[ControllerOutput]) {
 
 fn reference_inputs(rows: &[ControllerInput]) -> Vec<InputSeries> {
     vec![
-        input_r("zone_temperature", rows.iter().map(|row| row.zone_temperature)),
-        input_r("cooling_setpoint", rows.iter().map(|row| row.cooling_setpoint)),
-        input_r("heating_setpoint", rows.iter().map(|row| row.heating_setpoint)),
+        input_r(
+            "zone_temperature",
+            rows.iter().map(|row| row.zone_temperature),
+        ),
+        input_r(
+            "cooling_setpoint",
+            rows.iter().map(|row| row.cooling_setpoint),
+        ),
+        input_r(
+            "heating_setpoint",
+            rows.iter().map(|row| row.heating_setpoint),
+        ),
         input_b("window_status", rows.iter().map(|row| row.window_status)),
-        input_b("occupancy_status", rows.iter().map(|row| row.occupancy_status)),
+        input_b(
+            "occupancy_status",
+            rows.iter().map(|row| row.occupancy_status),
+        ),
         input_i("operating_mode", rows.iter().map(|row| row.operating_mode)),
         input_r("co2_setpoint", rows.iter().map(|row| row.co2_setpoint)),
-        input_r("co2_concentration", rows.iter().map(|row| row.co2_concentration)),
+        input_r(
+            "co2_concentration",
+            rows.iter().map(|row| row.co2_concentration),
+        ),
         input_r(
             "discharge_air_temperature",
             rows.iter().map(|row| row.discharge_air_temperature),
@@ -436,7 +453,10 @@ fn reference_inputs(rows: &[ControllerInput]) -> Vec<InputSeries> {
             "supply_air_temperature",
             rows.iter().map(|row| row.supply_air_temperature),
         ),
-        input_r("discharge_airflow", rows.iter().map(|row| row.discharge_airflow)),
+        input_r(
+            "discharge_airflow",
+            rows.iter().map(|row| row.discharge_airflow),
+        ),
         input_i(
             "airflow_override_index",
             rows.iter().map(|row| row.airflow_override_index),

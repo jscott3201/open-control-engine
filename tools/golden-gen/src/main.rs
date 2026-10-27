@@ -12,9 +12,9 @@
 
 mod csv;
 mod discrete_sources;
-mod integers_conversions;
 #[cfg(test)]
 mod integer_domain_tests;
+mod integers_conversions;
 mod integers_stage;
 mod logical;
 mod logical_proof;

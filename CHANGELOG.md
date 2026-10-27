@@ -58,6 +58,17 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Verification
 
+- **golden-gen's own hygiene and its goldens' freshness now gate every PR** (GitHub #TBD, issue
+  #350). `tools/golden-gen` is a standalone cargo workspace, so no workspace command linted or
+  tested it, and nothing checked that the checked-in Tier-A goldens are what it emits. The new
+  `golden-gen-hygiene` job in `pr-gate.yml`, which `CI OK` needs, runs its `cargo fmt --check`,
+  `cargo clippy --all-targets -D warnings` and `cargo test`, then regenerates every golden in
+  release and fails on any modified, deleted or untracked file under `tools/golden-gen/goldens`.
+  The generator source is reformatted and its clippy findings fixed (a derived `Default`, a
+  merged identical branch, iterator loops in place of index loops); two eight-argument golden
+  builders carry a scoped `too_many_arguments` allow. Regeneration leaves every golden
+  byte-identical. `.agents/gate.sh` does not run the job yet because it is a bound source of the
+  retained native strict-bit evidence; `.agents/project-facts.md` gives the local commands.
 - **The G36 FreezeProtection heating-coil command now has a continuous-time reference** (GitHub #357, issue
   #344). The 60 s column stays as it is. Its `Ti = 0.5 s` PI controllers run there at
   `k·dt/Ti = 120`, so it only checks the forward-Euler discretization the engine shares, and it

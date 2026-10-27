@@ -42,7 +42,8 @@ CI is dev-light and release-heavy, and the split is easy to misread in the
 dangerous direction.
 
 The per-PR gate into `development` runs fmt, clippy, build, rustdoc, the file-size
-cap, the no-secret scan, the database-free check, the golden-gen firewall, the closed
+cap, the no-secret scan, the database-free check, the golden-gen firewall and
+[hygiene job](#golden-gen-hygiene-is-ci-only-for-now), the closed
 package/feature/publication contract and its hostile controls, the gate fixtures,
 the [authority index/projection and its hostile controls](../docs/authority-claims.md),
 `cargo machete` — and the state-determinism tests for **`oce-api`, `oce-blocks`, and `oce-expr`**, via the
@@ -72,6 +73,24 @@ Pin-advance PRs — any change under `third_party/**` or to the pin constants �
 included, and `CI OK` is the one status that summarizes it. A PR with no checks is easy to
 mistake for a PR with no failing checks; confirm `CI OK` actually reported, not merely that
 nothing is red.
+
+## golden-gen hygiene is CI-only for now
+
+`tools/golden-gen` is its own cargo workspace, so the workspace fmt, clippy and test commands
+never reach it. The `golden-gen-hygiene` job in `pr-gate.yml` covers it: fmt, clippy
+`-D warnings`, its tests, and a release regeneration that must leave `tools/golden-gen/goldens`
+byte-identical with no untracked files. `.agents/gate.sh` does not run these yet: it is a bound
+source of the retained native strict-bit evidence, and wiring them in waits for the next native
+re-capture. Until then, run them by hand after touching the generator or its goldens:
+
+```bash
+cd tools/golden-gen
+cargo fmt --check
+cargo clippy --all-targets --locked -- -D warnings
+cargo test --locked
+cargo run --release --locked
+git status --porcelain -- goldens    # must print nothing
+```
 
 ## Clippy lints the default feature set
 
