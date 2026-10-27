@@ -98,7 +98,12 @@ bytes lacked those compatibility determinants and now return `UnsupportedFormat 
 There is no fallback, silent upgrade or migration. Rollback uses the prior qualified build and its
 own authenticated state, or a host-approved cold start—not a header edit.
 
-The byte cap is 67,108,864 inclusive. Integers and Real/state words are little-endian; Real payloads
+The byte cap is 67,108,864 inclusive. It bounds the whole snapshot, so it also bounds the state
+words a capturable model may hold. Most classes hold a few words, but `CDL.Reals.MovingAverage`
+sizes its checkpoint ring from `delta`: 4110 words (about 33 KB) for `delta ≤ 1024 s`, about
+`4·delta` words up to 65536 s, and at most 262158 words (about 2.1 MB). A model with a few dozen
+maximum-size windows loads and runs, but `state_snapshot` refuses it with `SnapshotTooLarge`.
+Nothing checks this total at load. Integers and Real/state words are little-endian; Real payloads
 preserve all bits, including signed zero and NaN payloads. Strings are length-prefixed UTF-8.
 Compound keys sort by complete encoded key bytes (including little-endian lengths/indices), not
 Rust numeric or natural string ordering. Named parameter and input-definition paths use UTF-8

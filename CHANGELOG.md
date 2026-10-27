@@ -56,6 +56,37 @@ and a gate that accepted any text would restore exactly the false assurance desc
   its current implementation baseline at the change's source commit; policy and rows are
   unchanged.
 
+### Block library
+
+- **`CDL.Reals.MovingAverage` now averages over the whole of `delta` however many ticks fall inside
+  it** (GitHub #373, issue #364). The block kept at most 64 checkpoints and dropped the oldest when
+  more arrived. With more than 64 ticks per window it averaged over only about the last 64 samples
+  and warned once. At 1 s ticks the G36 `ReliefFanGroup` and `ReturnFanDirectPressure` sequences,
+  which use `delta = 300`, were therefore averaging over about 64 s. A 600 s window with a 0 → 100
+  step at t = 640 reported 95.3125 at t = 700. It now reports 6100/600 = 10.1666…, because each
+  tick's input covers the gap that ends at that tick. The checkpoint ring is now sized from `delta`
+  at build time: `clamp(2·ceil(delta), 2048, 131072)` slots plus 4, which sets a history resolution
+  `r = delta/slots`. That gives `r ≤ 0.5 s` for every window up to 65536 s. The full-window divisor
+  is now exactly `delta`; it used to be `t - fl(t - delta)`, so other traces can move by a sub-ulp
+  amount. The oldest checkpoint is never later than the window start. The output is
+  bit-identical to an unbounded history as long as every pair of consecutive tick gaps sums to at
+  least `2r`. For a nominal 1 s host with `delta ≤ 65536 s` that holds while each tick stays
+  within ±0.5 s of its nominal time. Denser ticks are merged into the newest checkpoint: the
+  window still spans `delta`, interpolation inside a merged gap moves `y` by at most
+  `r·range/(2·delta)`, and the first merge warns once per instance. A window longer than 65536 s
+  keeps its full span at resolution `delta/131072`. **State layout changes:** the region grows
+  from 134 words to `6 + 2·(slots + 4)` words: 4110 (about 33 KB) for any `delta ≤ 1024 s`,
+  14414 for `delta = 3600`, and at most 262158 (about 2.1 MB). Snapshots stay capped at 64 MiB,
+  so a model with a few dozen maximum-size windows runs but cannot be captured; nothing checks
+  this at load. The validator now checks the region against the instance's own `delta`. It
+  refuses a ring that no longer covers the window start. A snapshot from an earlier build refuses
+  at restore on the manifest's state-length comparison, consistent with
+  current/current-only continuation. Three new standalone Tier-A goldens (`MovingAverage/*`, 200 to
+  600 ticks per window, including the 600 s step) integrate the input piece by piece without
+  interpolating `mu`. The engine matches them bit-exactly in `per_block_reals_dynamics.rs`. Per-block
+  Tier-A coverage rises to 129 of 133 CDL classes. The release-compatibility checker re-selects its
+  current implementation baseline at the change's source commit.
+
 ### Verification
 
 - **The G36 FreezeProtection heating-coil command now has a continuous-time reference** (GitHub #357, issue
@@ -179,6 +210,55 @@ and a gate that accepted any text would restore exactly the false assurance desc
     - it fails on any integrating-PI scenario that has not been reviewed.
 
 ### Documentation
+
+- **Open Control Sim is no longer treated as a current or future consumer** (GitHub #361, issue
+  #359). The project is discontinued. The stability-baseline tool no longer accepts or looks for a
+  Sim checkout: `--source open-control-sim=PATH` is refused as an unsupported name, and its
+  documented command drops that line. The dated `stability-baseline-2026-08-26.json` is unchanged
+  and `--check` still reproduces it byte for byte, because the tool keeps that capture's Sim row as
+  frozen historical evidence; the doc says a later capture should not carry it. The strict-bit
+  evidence page, the strict-bits fixture README, the product contract, the complete-frame contract
+  and the host-responsibilities page no longer promise a Sim consumer, Sim adoption under M05-PR07
+  or a Sim downstream role; the product contract records this as editorial revision 16, and its
+  traceability checker accepts that revision. Historical statements of what the Sim inventory
+  showed are kept. None of the edited files is a bound strict-bit evidence source, so no native
+  re-capture is needed.
+- **Twelve classes, not nine, can trigger the atomic-firing refusal of CDL-legal feedback**
+  (GitHub #358, issue #347). The coverage table from GitHub #352 listed only the nine
+  `CDL.Routing` `*ExtractSignal`, `*VectorFilter` and `*VectorReplicator` classes. Three more have
+  mixed feedthrough and are refused as a `block-algebraic-loop` in the same way:
+  - `CDL.Reals.MatrixMax` and `CDL.Reals.MatrixMin` with two or more outputs (`nRow ≥ 2` when
+    reducing rows, `nCol ≥ 2` when reducing columns), because each output depends only on its own
+    row or column. For example, `MatrixMin` with `nRow = 2, nCol = 1, rowMin = true` and feedback
+    `y[1] → u[2, 1]` is refused.
+  - `CDL.Reals.PIDWithReset` with `controllerType = P`. With no integrator it holds no state, so it
+    reads `trigger` when it fires, although `y` depends only on `u_s` and `u_m`. Feedback such as
+    `y → GreaterThreshold → trigger` is refused. In the `PI`, `PD` and `PID` modes it loads.
+
+  `docs/cdl-coverage.md` now lists all twelve classes, each with its feedthrough and trigger
+  condition, and adds the routing condition `nout ≥ 1` and a remedy for the reset PID. The
+  `DiagCode::BlockAlgebraicLoop` and `BuildError::BlockAlgebraicLoop` rustdoc, and the
+  `oce-graph` sort's module doc, no longer give a stateful block's state-only output as the cause.
+  Every registered class that triggers the refusal is stateless with mixed feedthrough under its
+  trigger condition.
+
+  A census test in `oce-blocks` builds every registered class with its defaults and at every point
+  of a grid derived from the class's parameter rules and defaults. The grid covers structural
+  widths `0..=3`, every value of each Boolean and enumeration parameter, and every valid selector
+  or mask. Every other scalar parameter with a default is probed with a few sample values at every
+  grid point. No probe may change the mixed pairs, and the parameters whose probes change whether
+  a block is stateful are pinned (today only comparator hysteresis `h`). The test pins the set of
+  mixed-feedthrough classes to the documented twelve and checks each class's trigger condition at
+  every grid point. It is exhaustive over that grid and sampled beyond it. Mutation controls show
+  that it catches an added mixed class and a kind-changing probe.
+
+  New `oce-graph` tests refuse feedback through a real instance of each of the twelve classes, on
+  both matrix axes. Feedback into an input the output does depend on is refused as a
+  connector-level loop instead, each class without the feedback compiles, and the reset PID
+  compiles in its stateful modes. New `oce-api` tests drive the `MatrixMin` row, `MatrixMax`
+  column and P-mode reset PID refusals end to end from CXF, against new receipt goldens. No
+  behaviour, error text or receipt message changes. The release-compatibility checker re-selects
+  its implementation baseline at the change's source commit.
 
 - **Atomic block firing's refusal of some CDL-legal feedback is documented as a coverage limit,
   and the refusal now says so** (GitHub #352, issue #347). The engine fires each block's outputs together, so

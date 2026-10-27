@@ -3,6 +3,8 @@
 
 mod common;
 mod contract;
+mod mixed_feedthrough_census;
+mod mixed_feedthrough_grid;
 mod primitive_contract;
 mod routing_typed_contract;
 mod sources_and_logical;
