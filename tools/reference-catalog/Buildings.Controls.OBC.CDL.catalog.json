@@ -167,6 +167,7 @@
           "Max",
           "Min",
           "Modulo",
+          "MovingAverage",
           "MultiMax",
           "MultiMin",
           "MultiSum",
@@ -182,9 +183,6 @@
           "Subtract",
           "Switch",
           "Tan"
-        ],
-        "legacy_evidence_exemption": [
-          "MovingAverage"
         ]
       },
       "missing": []
