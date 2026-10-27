@@ -176,14 +176,17 @@ impl<S: Store> Engine<S> {
 
     /// Set a parameter by dotted instance path. **Only permitted when `mode() == Halted`** (CDL
     /// §7.4.2 — params never change while the model advances). Validates the value against the
-    /// parameter's declared type and any declared `[min, max]`; no coercion (`01` §5 invariant 3).
+    /// parameter's declared type, the engine-wide finiteness rule (a Real value must not be `NaN`,
+    /// `+inf` or `-inf`, for every class — the same rule that refuses such a value at load), any
+    /// declared `[min, max]` and the class's registry parameter rules; no coercion (`01` §5
+    /// invariant 3). A refused edit leaves the table, the model and the dirty flag unchanged.
     /// The edit is staged and folded into block state on [`Engine::resume`].
     ///
     /// # Errors
     /// [`OcError::ParamWhileRunning`] if not `Halted`; [`OcError::UnknownPoint`] for an unknown path;
     /// [`OcError::ParamType`] on a type mismatch; [`OcError::ParamStructural`] for a conditional-
-    /// instance param (not yet tracked); [`OcError::ParamRange`] for a value rejected by registry
-    /// parameter rules. Never panics (R-ERR-1).
+    /// instance param (not yet tracked); [`OcError::ParamRange`] for a non-finite Real value or a
+    /// value rejected by declared bounds or registry parameter rules. Never panics (R-ERR-1).
     pub fn set_param(&mut self, path: &str, value: Value) -> Result<(), OcError> {
         if self.mode != RunMode::Halted {
             return Err(OcError::ParamWhileRunning {
@@ -212,6 +215,15 @@ impl<S: Store> Engine<S> {
         }
         if self.is_structural_param(idx) {
             return Err(OcError::ParamStructural {
+                path: path.to_string(),
+            });
+        }
+        // Engine-wide finiteness gate (issue #362), the same predicate the load gate uses: NaN and
+        // ±inf are refused for every Real parameter, whatever its class rules. It runs before the
+        // inclusive bounds below because every IEEE comparison with NaN is false, so a NaN would
+        // otherwise slip past `v < lo || v > hi`.
+        if !oce_validate::parameter_value_is_finite(&value) {
+            return Err(OcError::ParamRange {
                 path: path.to_string(),
             });
         }

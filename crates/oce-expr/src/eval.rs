@@ -112,6 +112,11 @@ pub(crate) fn eval_node(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, 
     if !is_scalar_form(ast) {
         crate::fuel::charge(1)?;
     }
+    // Strict-finite grounding checks every node result as it is produced (identity otherwise).
+    crate::eval_strict::check_result(eval_node_unchecked(ast, scope)?, scope)
+}
+
+fn eval_node_unchecked(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
     match ast {
         ExprAst::ArrayLit(elems) => crate::eval_array::eval_array_literal(elems, scope),
         ExprAst::Range { start, step, stop } => {
@@ -172,6 +177,11 @@ pub(crate) fn eval_scalar(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, Exp
     if is_scalar_form(ast) {
         crate::fuel::charge(1)?;
     }
+    // Strict-finite grounding checks every node result as it is produced (identity otherwise).
+    crate::eval_strict::check_scalar(eval_scalar_unchecked(ast, scope)?, scope)
+}
+
+fn eval_scalar_unchecked(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, ExprError> {
     match ast {
         ExprAst::Real(r) => Ok(real(*r)),
         ExprAst::Int(i) => Ok(Value::Integer(*i)),

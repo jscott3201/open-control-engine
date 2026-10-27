@@ -287,11 +287,7 @@ pub(super) fn goldens() -> Vec<Golden> {
     )]
 }
 
-fn trim_and_respond_trace(
-    time: &[f64],
-    request_count: &[i64],
-    device_status: &[bool],
-) -> Vec<f64> {
+fn trim_and_respond_trace(time: &[f64], request_count: &[i64], device_status: &[bool]) -> Vec<f64> {
     let mut chain = TrimAndRespondChain::new(STANDALONE_PARAMETERS);
     time.iter()
         .zip(request_count)

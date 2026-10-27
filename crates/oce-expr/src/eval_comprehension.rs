@@ -63,6 +63,10 @@ impl Scope for IterationScope<'_> {
     fn enum_ordinal(&self, class: EnumClassId, literal: &str) -> Option<u32> {
         self.outer.enum_ordinal(class, literal)
     }
+
+    fn requires_finite(&self) -> bool {
+        self.outer.requires_finite()
+    }
 }
 
 /// Evaluate a comprehension node: exactly one `i in r` clause (more is the multi-iterator

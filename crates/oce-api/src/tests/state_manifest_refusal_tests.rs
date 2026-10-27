@@ -16,6 +16,17 @@ enum Refusal {
 
 type Mutation = (&'static str, fn(&mut StateImage), Refusal);
 
+fn set_first_param(image: &mut StateImage, value: f64) {
+    image
+        .manifest
+        .blocks
+        .iter_mut()
+        .find(|b| !b.params.is_empty())
+        .unwrap()
+        .params[0]
+        .1 = WireValue::Real(value.to_bits());
+}
+
 fn mutations() -> Vec<Mutation> {
     use Refusal::{Incompatible as I, Malformed as M};
     vec![
@@ -107,6 +118,24 @@ fn mutations() -> Vec<Mutation> {
                     .params[0]
                     .1 = WireValue::Real(3.0f64.to_bits())
             },
+            I("parameter http://example.org#MinLoop.con.k"),
+        ),
+        // A crafted snapshot cannot carry a non-finite parameter past the finiteness gate:
+        // parameters are never restored from bytes, only compared bit-exactly against the
+        // gate-checked loaded model, so every non-finite value is an incompatible execution.
+        (
+            "parameter value NaN",
+            |i| set_first_param(i, f64::NAN),
+            I("parameter http://example.org#MinLoop.con.k"),
+        ),
+        (
+            "parameter value +inf",
+            |i| set_first_param(i, f64::INFINITY),
+            I("parameter http://example.org#MinLoop.con.k"),
+        ),
+        (
+            "parameter value -inf",
+            |i| set_first_param(i, f64::NEG_INFINITY),
             I("parameter http://example.org#MinLoop.con.k"),
         ),
         (

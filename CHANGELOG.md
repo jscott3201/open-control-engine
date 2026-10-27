@@ -107,8 +107,50 @@ and a gate that accepted any text would restore exactly the false assurance desc
   its current implementation baseline at the change's source commit; policy and rows are
   unchanged.
 
+### Block library
+
+- **`CDL.Reals.MovingAverage` now averages over the whole of `delta` however many ticks fall inside
+  it** (GitHub #373, issue #364). The block kept at most 64 checkpoints and dropped the oldest when
+  more arrived. With more than 64 ticks per window it averaged over only about the last 64 samples
+  and warned once. At 1 s ticks the G36 `ReliefFanGroup` and `ReturnFanDirectPressure` sequences,
+  which use `delta = 300`, were therefore averaging over about 64 s. A 600 s window with a 0 → 100
+  step at t = 640 reported 95.3125 at t = 700. It now reports 6100/600 = 10.1666…, because each
+  tick's input covers the gap that ends at that tick. The checkpoint ring is now sized from `delta`
+  at build time: `clamp(2·ceil(delta), 2048, 131072)` slots plus 4, which sets a history resolution
+  `r = delta/slots`. That gives `r ≤ 0.5 s` for every window up to 65536 s. The full-window divisor
+  is now exactly `delta`; it used to be `t - fl(t - delta)`, so other traces can move by a sub-ulp
+  amount. The oldest checkpoint is never later than the window start. The output is
+  bit-identical to an unbounded history as long as every pair of consecutive tick gaps sums to at
+  least `2r`. For a nominal 1 s host with `delta ≤ 65536 s` that holds while each tick stays
+  within ±0.5 s of its nominal time. Denser ticks are merged into the newest checkpoint: the
+  window still spans `delta`, interpolation inside a merged gap moves `y` by at most
+  `r·range/(2·delta)`, and the first merge warns once per instance. A window longer than 65536 s
+  keeps its full span at resolution `delta/131072`. **State layout changes:** the region grows
+  from 134 words to `6 + 2·(slots + 4)` words: 4110 (about 33 KB) for any `delta ≤ 1024 s`,
+  14414 for `delta = 3600`, and at most 262158 (about 2.1 MB). Snapshots stay capped at 64 MiB,
+  so a model with a few dozen maximum-size windows runs but cannot be captured; nothing checks
+  this at load. The validator now checks the region against the instance's own `delta`. It
+  refuses a ring that no longer covers the window start. A snapshot from an earlier build refuses
+  at restore on the manifest's state-length comparison, consistent with
+  current/current-only continuation. Three new standalone Tier-A goldens (`MovingAverage/*`, 200 to
+  600 ticks per window, including the 600 s step) integrate the input piece by piece without
+  interpolating `mu`. The engine matches them bit-exactly in `per_block_reals_dynamics.rs`. Per-block
+  Tier-A coverage rises to 129 of 133 CDL classes. The release-compatibility checker re-selects its
+  current implementation baseline at the change's source commit.
+
 ### Verification
 
+- **golden-gen's own hygiene and its goldens' freshness now gate every PR** (GitHub #360, issue
+  #350). `tools/golden-gen` is a standalone cargo workspace, so no workspace command linted or
+  tested it, and nothing checked that the checked-in Tier-A goldens are what it emits. The new
+  `golden-gen-hygiene` job in `pr-gate.yml`, which `CI OK` needs, runs its `cargo fmt --check`,
+  `cargo clippy --all-targets -D warnings` and `cargo test`, then regenerates every golden in
+  release and fails on any modified, deleted or untracked file under `tools/golden-gen/goldens`.
+  The generator source is reformatted and its clippy findings fixed (a derived `Default`, a
+  merged identical branch, iterator loops in place of index loops); two eight-argument golden
+  builders carry a scoped `too_many_arguments` allow. Regeneration leaves every golden
+  byte-identical. `.agents/gate.sh` does not run the job yet because it is a bound source of the
+  retained native strict-bit evidence; `.agents/project-facts.md` gives the local commands.
 - **The G36 FreezeProtection heating-coil command now has a continuous-time reference** (GitHub #357, issue
   #344). The 60 s column stays as it is. Its `Ti = 0.5 s` PI controllers run there at
   `k·dt/Ti = 120`, so it only checks the forward-Euler discretization the engine shares, and it
@@ -231,6 +273,69 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
+- **Docs drift fixed, and two host-visible limits stated** (GitHub #375, issues #368, #369).
+  - The runtime-introspection section of the CDL coverage page now describes `oce_api::catalog()`
+    and its companions `catalog_to_json`, `catalog_content_id` and `CATALOG_JSON`. It no longer
+    says `oce-api` lacks a catalog re-export, and the README points at `oce_api::catalog()`.
+  - The CDL coverage page and the README now carry a note that `TrueHoldWithReset`, counted among
+    the 133 CDL classes, has a local two-input interface, so a conforming single-input document is
+    refused by the arity guard. The page links the authority claims index and PC-022.
+  - The CDL coverage page states that the 44 vendored upstream modelica-json CXF translations do
+    not load today, why (no cross-document class library; array connectors and instances refused
+    by Rule 7 of the composite subset), and that a host must pre-flatten. The cross-document
+    class library stays tracked in GitHub #369.
+  - Stale line-number citations to `oce-store`, `oce-diag`, `oce-docs` and `oce-cxf` items in the
+    architecture and CXF round-trip pages are now symbol citations.
+
+- **Open Control Sim is no longer treated as a current or future consumer** (GitHub #361, issue
+  #359). The project is discontinued. The stability-baseline tool no longer accepts or looks for a
+  Sim checkout: `--source open-control-sim=PATH` is refused as an unsupported name, and its
+  documented command drops that line. The dated `stability-baseline-2026-08-26.json` is unchanged
+  and `--check` still reproduces it byte for byte, because the tool keeps that capture's Sim row as
+  frozen historical evidence; the doc says a later capture should not carry it. The strict-bit
+  evidence page, the strict-bits fixture README, the product contract, the complete-frame contract
+  and the host-responsibilities page no longer promise a Sim consumer, Sim adoption under M05-PR07
+  or a Sim downstream role; the product contract records this as editorial revision 16, and its
+  traceability checker accepts that revision. Historical statements of what the Sim inventory
+  showed are kept. None of the edited files is a bound strict-bit evidence source, so no native
+  re-capture is needed.
+- **Twelve classes, not nine, can trigger the atomic-firing refusal of CDL-legal feedback**
+  (GitHub #358, issue #347). The coverage table from GitHub #352 listed only the nine
+  `CDL.Routing` `*ExtractSignal`, `*VectorFilter` and `*VectorReplicator` classes. Three more have
+  mixed feedthrough and are refused as a `block-algebraic-loop` in the same way:
+  - `CDL.Reals.MatrixMax` and `CDL.Reals.MatrixMin` with two or more outputs (`nRow ≥ 2` when
+    reducing rows, `nCol ≥ 2` when reducing columns), because each output depends only on its own
+    row or column. For example, `MatrixMin` with `nRow = 2, nCol = 1, rowMin = true` and feedback
+    `y[1] → u[2, 1]` is refused.
+  - `CDL.Reals.PIDWithReset` with `controllerType = P`. With no integrator it holds no state, so it
+    reads `trigger` when it fires, although `y` depends only on `u_s` and `u_m`. Feedback such as
+    `y → GreaterThreshold → trigger` is refused. In the `PI`, `PD` and `PID` modes it loads.
+
+  `docs/cdl-coverage.md` now lists all twelve classes, each with its feedthrough and trigger
+  condition, and adds the routing condition `nout ≥ 1` and a remedy for the reset PID. The
+  `DiagCode::BlockAlgebraicLoop` and `BuildError::BlockAlgebraicLoop` rustdoc, and the
+  `oce-graph` sort's module doc, no longer give a stateful block's state-only output as the cause.
+  Every registered class that triggers the refusal is stateless with mixed feedthrough under its
+  trigger condition.
+
+  A census test in `oce-blocks` builds every registered class with its defaults and at every point
+  of a grid derived from the class's parameter rules and defaults. The grid covers structural
+  widths `0..=3`, every value of each Boolean and enumeration parameter, and every valid selector
+  or mask. Every other scalar parameter with a default is probed with a few sample values at every
+  grid point. No probe may change the mixed pairs, and the parameters whose probes change whether
+  a block is stateful are pinned (today only comparator hysteresis `h`). The test pins the set of
+  mixed-feedthrough classes to the documented twelve and checks each class's trigger condition at
+  every grid point. It is exhaustive over that grid and sampled beyond it. Mutation controls show
+  that it catches an added mixed class and a kind-changing probe.
+
+  New `oce-graph` tests refuse feedback through a real instance of each of the twelve classes, on
+  both matrix axes. Feedback into an input the output does depend on is refused as a
+  connector-level loop instead, each class without the feedback compiles, and the reset PID
+  compiles in its stateful modes. New `oce-api` tests drive the `MatrixMin` row, `MatrixMax`
+  column and P-mode reset PID refusals end to end from CXF, against new receipt goldens. No
+  behaviour, error text or receipt message changes. The release-compatibility checker re-selects
+  its implementation baseline at the change's source commit.
+
 - **Atomic block firing's refusal of some CDL-legal feedback is documented as a coverage limit,
   and the refusal now says so** (GitHub #352, issue #347). The engine fires each block's outputs together, so
   a feedback path from one output back into an input that output does not depend on is refused
@@ -279,6 +384,41 @@ and a gate that accepted any text would restore exactly the false assurance desc
   The release-compatibility checker re-selects its current implementation baseline at the
   change's source commit; policy and rows are unchanged. A CDL-legal model that atomic block
   firing still refuses as a block-granularity loop is tracked in GitHub issue #347.
+- **Non-finite Real parameters are refused at load and at rest** (GitHub #376, issue #362).
+  `NaN`, `+inf` and `-inf` were accepted silently for every class whose rules did not declare
+  finiteness — `MultiplyByParameter.k`, `AddParameter.p`, `Timer.t`, `IntegratorWithReset.k` and
+  `y_start` among them. CXF literals such as `"NaN"`/`"INF"` and expressions that evaluate to
+  infinity (`1/0`, `1e400`) loaded with no warning. `set_param` accepted them because
+  `v < lo || v > hi` is false for NaN, so the value reached actuator outputs as NaN; a `Timer`
+  with `t = NaN` never completed. Composite-level parameters were worse, because a function could
+  absorb the value: a NaN root `topK` read as `integer(topK)` grounded the gain to 0, and
+  `max(topK, 2.0)` to 2.0.
+  - **At load**, parameter grounding is now strict at every level: root, nested-composite and leaf
+    declarations, and each array element. A non-finite literal or any non-finite expression
+    intermediate is refused with a new `DiagCode::NonFiniteParameter` (`non-finite-parameter`)
+    error. Its subject is the declaring instance and its message names the parameter.
+  - **The strict evaluation lives in `oce-expr`**, as new `eval_finite`/`eval_str_finite` entry
+    points, a new `ExprError::NonFinite` and a defaulted `Scope::requires_finite`. Every node is
+    checked as it is produced, so `integer`, `sign`, `min`/`max`, `abs` and comparisons cannot
+    hide one. `Modelica.Constants.inf` stays the finite `f64::MAX`; `inf * 2` refuses. Plain
+    `eval`/`eval_str` keep their IEEE propagation, and `oce-expr` runs only at load, never per
+    tick. Conditional-component guards use the strict evaluator too.
+  - **On the flattened graph**, an `oce-validate` backstop applies the same code to every block
+    parameter. For that block it suppresses all class-rule diagnostics, including
+    `missing-required-parameter` and array-shape ones, which surface once the value is fixed.
+  - **At rest**, `set_param` returns the existing `OcError::ParamRange`, using the new shared
+    predicate `oce_validate::parameter_value_is_finite`.
+  - **Existing tests:** NaN cases on classes that carried finiteness rules now report
+    `non-finite-parameter` instead of `parameter-out-of-range`.
+  - **No opt-out.** No registered class takes a non-finite parameter.
+  - **State snapshots** were already safe: they compare parameters bit-exactly and never restore
+    them.
+  - **Tests:** a census over all 103 Real parameters of the 136 registered classes pins both the
+    load and the edit refusal. A corpus golden, generated from the pre-change resolver, proves all
+    213 tracked `.jsonld` fixtures import byte-identically. Non-finite input *signals* are
+    unchanged.
+  - The release-compatibility checker re-selects its current implementation baseline at the
+    change's source commit; policy and rows are unchanged.
 
 ## 0.2.0
 

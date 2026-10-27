@@ -381,7 +381,7 @@ fn evaluate_guard(node: &Node, scope: &CompleteScope, diags: &mut Vec<Diagnostic
     if !validate_guard_ast(&ast, scope, node, diags) {
         return None;
     }
-    match oce_expr::eval(&ast, scope) {
+    match oce_expr::eval_finite(&ast, scope) {
         Ok(EvalResult::Scalar(Value::Boolean(value))) => Some(value),
         Ok(_) => {
             diags.push(

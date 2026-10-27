@@ -11,13 +11,14 @@ executable, prior-state, placement and safety qualification. No downstream pin c
 The retained [machine-readable matrix](release-compatibility.json) has exactly 36 ordered rows:
 nine artifact classes times four producer/consumer directions. The selected identities are:
 
-- **Current implementation:** `cfcad401d57cb1c2fec133cd3a0507332d694944`, the block-firing
-  coverage-limit wording (GitHub #352, issue #347). Its implementation boundary differs from the
-  previous `1857788` baseline (GitHub #348) only by that change: the `BlockAlgebraicLoop` and
-  `block-algebraic-loop` refusal text, rustdoc and in-crate tests/fixtures. The candidate policy,
-  rows and package version are unchanged. The baseline commit is merged with a merge commit so it
-  stays reachable; the selection commit adds evidence/docs only and does not pretend it can hash
-  itself.
+- **Current implementation:** `492fcfcf8d584ab8215046afbd50746f06b18018`, the non-finite Real parameter refusal
+  (GitHub #376, issue #362) merged with `development`. Its implementation boundary differs from the
+  previous `83f962d` baseline (GitHub #373) only by that change: strict load-time expression
+  evaluation in `oce-expr`, parameter grounding in `oce-cxf`, the finiteness gate in
+  `oce-validate`, the `set_param` check in `oce-api`, the `non-finite-parameter` diagnostic code
+  in `oce-diag`, and in-crate tests. The candidate policy, rows and package version are unchanged.
+  The baseline commit is merged with a merge commit so it stays reachable; the selection commit
+  adds evidence/docs only and does not pretend it can hash itself.
 - **Historical source candidate:** annotated `v0.1.0`, tag object
   `7f3b614dc0e466d54cab4677ce4bb08a5bfaf033`, peeled source
   `909a8ba699e6a2fccf3de6ac0616a9e83a04060f`, 178 commits behind the previous `e81480b` baseline

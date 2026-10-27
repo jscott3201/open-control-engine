@@ -128,11 +128,15 @@ pub enum BuildError {
     /// The connector feedthrough graph is acyclic, but **atomic block firing** (one `emit` call
     /// produces all of a block's outputs, `01` §9) still cannot schedule the model: the block-level
     /// *emit-before* graph has a cycle. This arises when one of a block's outputs feeds a path back
-    /// to an input the block reads when it fires but that output does not depend on — a stateful
-    /// block's state-only (cut) output, or an algebraic routing block with partial feedthrough
-    /// (`CDL.Routing.*ExtractSignal`, `*VectorFilter`, `*VectorReplicator` with more than one
-    /// element). There is no single position at which the block can emit all its outputs
-    /// consistently.
+    /// to an input the block reads when it fires but that output does not depend on. Every
+    /// registered class with that shape is stateless with mixed feedthrough: the
+    /// `CDL.Routing.*ExtractSignal`, `*VectorFilter` and `*VectorReplicator` classes with two or
+    /// more inputs and at least one output, `CDL.Reals.MatrixMax` / `MatrixMin` with two or more
+    /// outputs, and `CDL.Reals.PIDWithReset` with `controllerType = P` (stateless, so it reads
+    /// `trigger` at emit time although `y` does not depend on it). The scheduler also refuses the
+    /// same shape from a stateful block's state-only output next to a feedthrough output, though
+    /// no registered class has one. There is no single position at which the block can emit all
+    /// its outputs consistently.
     ///
     /// The model may be **CDL-legal**: CDL §7.16 is satisfied, because no connector-level
     /// feedthrough cycle exists. This is an engine coverage limit (GitHub issue #347), refused

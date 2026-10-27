@@ -28,7 +28,7 @@ pub fn goldens() -> Vec<Golden> {
             [3.0, 9.0, 50.0],
         ];
         let offsets = [0.5, -1.0];
-        for out_idx in 0..2 {
+        for (out_idx, offset) in offsets.iter().enumerate() {
             out.push(Golden::new(
                 "CDL.Reals.Sources.TimeTable",
                 if out_idx == 0 { "y1" } else { "y2" },
@@ -36,7 +36,7 @@ pub fn goldens() -> Vec<Golden> {
                 time.clone(),
                 time.iter()
                     .copied()
-                    .map(|t| r(real_table_linear_last_two(t, &table, out_idx + 1) + offsets[out_idx]))
+                    .map(|t| r(real_table_linear_last_two(t, &table, out_idx + 1) + offset))
                     .collect(),
                 "table=[0,0,10;1,0,20;1,1,30;2,4,40;3,9,50], smoothness=LinearSegments, extrapolation=LastTwoPoints, offset=[0.5,-1]",
                 "Buildings Reals/Sources/TimeTable.mo delegates to CombiTimeTable: duplicate timestamps use after-event row at sampled boundary; LastTwoPoints extrapolates linearly through first/last two distinct points",

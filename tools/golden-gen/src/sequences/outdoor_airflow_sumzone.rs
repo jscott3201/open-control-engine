@@ -154,8 +154,7 @@ fn outdoor_airflow_sumzone_outputs(
         population_sum: gated(occupied[0], population_group[0])
             + gated(occupied[1], population_group[1]),
         area_sum: gated(occupied[0], area_group[0]) + gated(occupied[1], area_group[1]),
-        primary_sum: gated(occupied[0], primary_group[0])
-            + gated(occupied[1], primary_group[1]),
+        primary_sum: gated(occupied[0], primary_group[0]) + gated(occupied[1], primary_group[1]),
         maximum_outdoor_air_fraction: (membership[0] * zone_fraction[0])
             .max(membership[1] * zone_fraction[1])
             .max(membership[2] * zone_fraction[2]),

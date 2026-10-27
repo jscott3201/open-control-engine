@@ -12,9 +12,9 @@
 
 mod csv;
 mod discrete_sources;
-mod integers_conversions;
 #[cfg(test)]
 mod integer_domain_tests;
+mod integers_conversions;
 mod integers_stage;
 mod logical;
 mod logical_proof;
@@ -25,6 +25,7 @@ mod reals;
 mod reals_filters;
 mod reals_integrator;
 mod reals_matrix;
+mod reals_moving_average;
 mod reals_pid;
 mod reals_ramp;
 mod reals_scalar_arithmetic;
@@ -73,6 +74,7 @@ fn main() {
     goldens.extend(reals_pid::goldens());
     goldens.extend(reals_integrator::goldens());
     goldens.extend(reals_filters::goldens());
+    goldens.extend(reals_moving_average::goldens());
     goldens.extend(psychrometrics::goldens());
     goldens.extend(utilities::goldens());
     goldens.extend(logical::goldens());
@@ -412,6 +414,8 @@ fn provenance_source(g: &Golden) -> &'static str {
         "closed-form from _spec/03 R-REALS-2 plus Buildings CDL.Reals.PID.mo/PIDWithReset.mo wiring; independent re-derivation"
     } else if g.class_path == "CDL.Reals.LimitSlewRate" {
         "Buildings CDL.Reals.LimitSlewRate.mo plus the project-wide implicit Reals dynamics convention (implicit lag, then post-filter increment clamp); re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine"
+    } else if g.class_path == "CDL.Reals.MovingAverage" {
+        "Buildings CDL.Reals.MovingAverage.mo window mean under the documented held-backward host-tick reconstruction, integrated piece by piece over [t-delta, t] without accumulating or interpolating mu; independent re-derivation"
     } else if g.class_path == "CDL.Reals.Ramp" {
         "closed-form discrete recurrence from Buildings CDL.Reals.Ramp.mo plus the project-wide implicit Reals dynamics convention; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine"
     } else if g.class_path == "CDL.Reals.Sources.Sin" {

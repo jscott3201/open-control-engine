@@ -5,6 +5,7 @@ mod common;
 mod edge_counter_feedthrough;
 mod feedthrough_stateful;
 mod integrator_loop_cut;
+mod mixed_feedthrough_block_loop;
 mod pid_feedthrough;
 mod state_budget;
 mod tick_eval;

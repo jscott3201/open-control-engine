@@ -6,8 +6,10 @@
 
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
+mod air_economizer_high_limits;
 mod ashrae62_1_setpoints;
 mod cdl_recurrences;
+mod control_loops;
 mod cooling_only_active_air_flow;
 mod cooling_only_alarms;
 mod cooling_only_controller;
@@ -16,21 +18,19 @@ mod cooling_only_controller_conditioning;
 mod cooling_only_controller_timing;
 mod cooling_only_dampers;
 mod cooling_only_system_requests;
-mod control_loops;
-mod reheat_overrides;
-mod freeze_protection;
-mod air_economizer_high_limits;
-mod economizer_limits_common;
 mod economizer_controller;
+mod economizer_enable;
+mod economizer_limits_common;
 mod economizer_modulations_reliefs;
 mod economizer_modulations_return_fan;
-mod plant_requests;
-mod provenance;
-mod economizer_enable;
+mod freeze_protection;
 mod outdoor_airflow_ahu;
 mod outdoor_airflow_sumzone;
 mod outdoor_airflow_title24_ahu;
 mod outdoor_airflow_title24_sumzone;
+mod plant_requests;
+mod provenance;
+mod reheat_overrides;
 mod relief_damper;
 mod relief_fan;
 mod relief_fan_group;
@@ -67,8 +67,7 @@ const PLANT_REQUESTS: &str = "multizone_vav_plant_requests";
 const OUTDOOR_AIRFLOW_AHU: &str = "multizone_vav_outdoor_airflow_ahu";
 const OUTDOOR_AIRFLOW_SUMZONE: &str = "multizone_vav_outdoor_airflow_sumzone";
 const OUTDOOR_AIRFLOW_TITLE24_AHU: &str = "multizone_vav_outdoor_airflow_title24_ahu";
-const OUTDOOR_AIRFLOW_TITLE24_SUMZONE: &str =
-    "multizone_vav_outdoor_airflow_title24_sumzone";
+const OUTDOOR_AIRFLOW_TITLE24_SUMZONE: &str = "multizone_vav_outdoor_airflow_title24_sumzone";
 const RELIEF_DAMPER: &str = "multizone_vav_relief_damper";
 const RELIEF_FAN: &str = "multizone_vav_relief_fan";
 const RELIEF_FAN_GROUP: &str = "multizone_vav_relief_fan_group";
@@ -79,8 +78,7 @@ const ECONOMIZER_LIMITS_COMMON: &str = "multizone_vav_economizer_limits_common";
 const ECONOMIZER_CONTROLLER_SINGLE_DAMPER_RELIEF_DAMPER_FIXED_21: &str =
     "multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21";
 const ECONOMIZER_MODULATIONS_RELIEFS: &str = "multizone_vav_economizer_modulations_reliefs";
-const ECONOMIZER_MODULATIONS_RETURN_FAN: &str =
-    "multizone_vav_economizer_modulations_return_fan";
+const ECONOMIZER_MODULATIONS_RETURN_FAN: &str = "multizone_vav_economizer_modulations_return_fan";
 const ECONOMIZER_MODULATIONS_RETURN_FAN_RELIEF_DAMPER: &str =
     "multizone_vav_economizer_modulations_return_fan_relief_damper";
 const AIR_ECONOMIZER_HIGH_LIMITS_FIXED_24: &str =
@@ -418,13 +416,7 @@ fn supply_temperature_setpoint_trace(
         .zip(zone_temperature_reset_requests)
     {
         let trim_respond = max_supply_temperature_reset.step(t, fan_on, requests);
-        let reset_branch = buildings_line(
-            T_OUT_MIN,
-            trim_respond,
-            T_OUT_MAX,
-            T_SUP_COO_MIN,
-            t_out,
-        );
+        let reset_branch = buildings_line(T_OUT_MIN, trim_respond, T_OUT_MAX, T_SUP_COO_MIN, t_out);
         let selected = if !fan_on {
             T_DEA_BAN
         } else if mode > 0 && mode < 3 {
@@ -467,7 +459,10 @@ fn supply_temperature_inputs(
     zone_temperature_reset_requests: &[i64],
 ) -> Vec<InputSeries> {
     vec![
-        input_r("outdoor_air_temperature", outdoor_air_temperature.iter().copied()),
+        input_r(
+            "outdoor_air_temperature",
+            outdoor_air_temperature.iter().copied(),
+        ),
         input_b("supply_fan_status", supply_fan_status.iter().copied()),
         input_i("operating_mode", operating_mode.iter().copied()),
         input_i(

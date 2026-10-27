@@ -31,6 +31,13 @@
 //!    [`oce_diag::DiagCode::UnitQuantityMismatch`] / [`oce_diag::DiagCode::BoundMismatch`] — and
 //!    propagation when one-sided, R13.1/R13.2); divergent `displayUnit` is an advisory
 //!    `should`-warning (R13.3); `nominal`/`unbounded` are the only attributes not unified (R13.4).
+//! 7. **Parameter finiteness** (issue #362): every Real parameter value on every block, including
+//!    each flattened element of a Real array parameter, must be finite — `NaN`/`±inf` is a
+//!    [`oce_diag::DiagCode::NonFiniteParameter`] error regardless of class. It suppresses **all**
+//!    of that block's class-level parameter rules (which presume finite operands) — range and
+//!    ordering rules, but also its `MissingRequiredParameter`, `ParameterKindMismatch` and
+//!    array/matrix/time-table shape diagnostics — so those surface only once the non-finite value
+//!    is fixed. The load fails either way. See [`parameter_value_is_finite`].
 //!
 //! It reports problems in the **shared `oce-diag` vocabulary** (AD-4) — the same
 //! [`oce_diag::Diagnostic`] the resolver emits — so `oce-api`'s `LoadReport.warnings` is one
@@ -52,7 +59,7 @@
 //! from CXF feeds this gate, and hand-built tests exercise the unification rules directly.
 
 use oce_diag::Diagnostic;
-use oce_model::ModelGraph;
+use oce_model::{ModelGraph, Value};
 
 mod rules;
 
@@ -66,6 +73,19 @@ mod tests;
 pub struct ValidationError {
     /// The `shall`-level (error) diagnostics, in the pinned deterministic order.
     pub diagnostics: Vec<Diagnostic>,
+}
+
+/// Whether `value` satisfies the engine-wide parameter finiteness rule (issue #362).
+///
+/// Every Real parameter value must be finite: `NaN`, `+inf` and `-inf` return `false`. Every
+/// non-Real value (Integer, Boolean, String, Enum) returns `true`, because none of those domains
+/// has a non-finite member; an Integer promoted to Real is always finite. This one predicate backs
+/// both the load gate ([`validate`], which reports
+/// [`oce_diag::DiagCode::NonFiniteParameter`]) and `oce-api`'s tune-at-rest `set_param`, so the
+/// two cannot disagree. Pure, total and panic-free.
+#[must_use]
+pub fn parameter_value_is_finite(value: &Value) -> bool {
+    !matches!(value, Value::Real(v) if !v.is_finite())
 }
 
 /// Validate a flattened model **without mutating it** (the structural, type, and parameter gates

@@ -14,7 +14,7 @@ use oce_expr::{ArrayValue, EvalResult};
 use oce_model::Value;
 
 use crate::dto::{CxfValue, Node};
-use crate::ground::{GroundErr, ground_value};
+use crate::ground::{GroundErr, ground_param_value};
 use crate::resolve::local_name;
 use crate::scope_chain::{IndexedEntries, ParamScope, ScopeFrame};
 
@@ -32,7 +32,7 @@ fn strip_array_label(name: &str) -> &str {
 /// §3.6.1). Each `di` is a non-negative integer literal, or a symbolic expression evaluated against
 /// `scope` to an `Integer` (so `"(nin)"` resolves when `nin` is a ground *earlier* parameter — the
 /// same forward-reference limitation Step 7 has for value bindings). Dimensions resolve on the
-/// **undivided** latest-wins view (`ParamScope::new`), not the enclosing-first split value
+/// **undivided** latest-wins view (`ParamScope::undivided`), not the enclosing-first split value
 /// expressions use (issue #239): an enclosing-only name still resolves for shape, and a sibling
 /// binding shadows a same-named enclosing one for shape purposes — when the sibling is already
 /// grounded; member array order decides which binding the dims read. Owner-ruled; the pin set is
@@ -62,7 +62,7 @@ fn parse_size_dims(
         let n: i64 = if let Ok(lit) = term.parse::<i64>() {
             lit
         } else {
-            match oce_expr::eval_str(term, scope) {
+            match oce_expr::eval_str_finite(term, scope) {
                 Ok(EvalResult::Scalar(Value::Integer(v))) => v,
                 Ok(_) => {
                     return Err(format!(
@@ -196,35 +196,38 @@ fn array_element_names(base: &str, dims: &[usize], count: usize) -> Vec<String> 
 /// The element count is doubly bounded: the declared-dims side by `MAX_ARRAY_ELEMENTS` and the
 /// per-document budget (both checked in [`expand_array_param`] before this runs) and the expression side by `oce-expr`'s own 2^20
 /// construction cap — a hostile `fill(1, 2000000000)` returns `ExprError::ArrayTooLarge`, surfaced
-/// here as the error message. Total; never panics.
+/// here as the error message. A non-finite element or intermediate is a typed
+/// [`GroundErr::NonFinite`] (issue #362). Total; never panics.
 fn eval_array_expression(
     text: &str,
     dims: &[usize],
     expected: usize,
     scope: &dyn oce_expr::Scope,
-) -> Result<ArrayValue, String> {
+) -> Result<ArrayValue, GroundErr> {
     if dims.len() > 1 {
-        return Err(format!(
+        return Err(GroundErr::ArrayShape(format!(
             "array expression value on a {}-dimensional array parameter is not supported \
              (multi-dimensional array expressions are deferred; oce-expr arrays are 1-D)",
             dims.len()
-        ));
+        )));
     }
-    match oce_expr::eval_str(text, scope) {
+    match oce_expr::eval_str_finite(text, scope) {
         Ok(EvalResult::Array(av)) => {
             if av.len() != expected {
-                return Err(format!(
+                return Err(GroundErr::ArrayShape(format!(
                     "array expression evaluated to {} element(s) but the declared dimensions \
                      imply {expected}",
                     av.len()
-                ));
+                )));
             }
             Ok(av)
         }
         // `EvalResult` is `#[non_exhaustive]`; any non-array result (a scalar today) cannot fill
         // an array parameter — no broadcast, see above.
-        Ok(_) => Err("array parameter expression must evaluate to an array".to_owned()),
-        Err(e) => Err(GroundErr::Expr(e).to_string()),
+        Ok(_) => Err(GroundErr::ArrayShape(
+            "array parameter expression must evaluate to an array".to_owned(),
+        )),
+        Err(e) => Err(crate::ground::expr_failure(e)),
     }
 }
 
@@ -266,7 +269,7 @@ fn mint_element(
 }
 
 /// Expand one **preserved** array parameter (`isArray=true`) into per-element scalar entries on the
-/// owning instance's `table`/`scope_entries`, in 1-based row-major order (doc 04 §3.6.1).
+/// owning instance's `table`/`siblings`, in 1-based row-major order (doc 04 §3.6.1).
 /// The flattened encoding (separate `k_1`/`k_2` scalar nodes) needs no expansion — it is the
 /// convergence target — so both encodings yield the identical ordered `ParamTable`.
 ///
@@ -307,9 +310,12 @@ fn mint_element(
 /// the budget.
 ///
 /// Every failure is a typed diagnostic; never panics (no `unwrap`/index on input-derived data).
+/// A non-finite element or expression intermediate reports `non-finite-parameter` on `owner`, the
+/// declaring instance, exactly like a scalar parameter (issue #362).
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn expand_array_param(
     piri: &str,
+    owner: &str,
     pnode: &Node,
     cxf_val: &CxfValue,
     enclosing: &ScopeFrame,
@@ -398,12 +404,9 @@ pub(crate) fn expand_array_param(
                 }
                 let elem = if m == 1 { &elems[0] } else { &elems[k] };
                 let scope = ParamScope::with_enclosing(enclosing, siblings);
-                match ground_value(elem, &scope) {
+                match ground_param_value(elem, &scope) {
                     Ok(v) => mint_element(ename, v, table, siblings),
-                    Err(e) => diags.push(
-                        Diagnostic::error(DiagCode::GroundingFailed, e.to_string())
-                            .with_subject(piri.to_owned()),
-                    ),
+                    Err(e) => diags.push(crate::ground::ground_failure(&e, piri, owner)),
                 }
             }
         }
@@ -427,9 +430,7 @@ pub(crate) fn expand_array_param(
                         mint_element(ename, v.clone(), table, siblings);
                     }
                 }
-                Err(msg) => diags.push(
-                    Diagnostic::error(DiagCode::GroundingFailed, msg).with_subject(piri.to_owned()),
-                ),
+                Err(e) => diags.push(crate::ground::ground_failure(&e, piri, owner)),
             }
         }
         // A bare/typed scalar literal on an isArray parameter is malformed.

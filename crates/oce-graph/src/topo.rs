@@ -12,8 +12,10 @@
 //!    cut input is read only by the deferred state update, never at emit). Because the engine fires
 //!    a block *atomically* (one `emit` call produces all its outputs, `01` §9), a cycle in this
 //!    graph is a **block-granularity algebraic loop** — unschedulable by single-pass firing even
-//!    when the connector graph is acyclic (a stateful multi-output block whose state-only output
-//!    feeds a path back to one of its feedthrough inputs). It is rejected, not silently mis-ordered.
+//!    when the connector graph is acyclic (a block output that feeds a path back to an input the
+//!    block reads but that output does not depend on, as with a multi-element routing block, a
+//!    multi-output matrix reduction or a proportional-only reset PID's `trigger`). It is rejected,
+//!    not silently mis-ordered.
 
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;

@@ -22,7 +22,7 @@ import check
 ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = (
     "product contract: OK\n"
-    "Document revision: 15\n"
+    "Document revision: 16\n"
     "Grounding SHA: e81480b02271456719d55cbe1e5090b0dea6d63c\n"
     "Requirements: 40\n"
     "CURRENT: 35\n"
@@ -203,9 +203,9 @@ class TraceabilityTests(unittest.TestCase):
 
     def test_revision_grounding_and_change_record_are_required(self):
         for old, new, message in (
-            ("Document revision: 15", "Document revision: 0", "metadata:"),
-            ("Document revision: 15", "Document revision: 16", "current revision change record"),
-            ("Document revision: 15", "Document revision: 15\nDocument revision: 15", "metadata:"),
+            ("Document revision: 16", "Document revision: 0", "metadata:"),
+            ("Document revision: 16", "Document revision: 17", "current revision change record"),
+            ("Document revision: 16", "Document revision: 16\nDocument revision: 16", "metadata:"),
             ("Grounding SHA: e81480b02271456719d55cbe1e5090b0dea6d63c", "Grounding SHA: d2111be", "metadata:"),
             ("## Change record", "## History", "change record required"),
         ):
@@ -541,7 +541,7 @@ class TraceabilityTests(unittest.TestCase):
     def test_contraction_is_current_at_the_accepted_document_revision(self):
         self.change_cell("PC-035", 1, "HOST-OBLIGATION")
         self.rejects("frame-only: contraction is current")
-        self.write_document(self.document.replace("Document revision: 15", "Document revision: 14"))
+        self.write_document(self.document.replace("Document revision: 16", "Document revision: 15"))
         self.rejects("frame-only: document revision")
 
     def test_retired_current_claims_are_not_hidden_by_valid_evidence_links(self):

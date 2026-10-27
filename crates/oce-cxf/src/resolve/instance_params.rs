@@ -25,7 +25,7 @@ use oce_model::{BlockId, BlockInstance, ParamTable, Value};
 
 use crate::arrays::{ArrayElementBudget, expand_array_param};
 use crate::dto::Node;
-use crate::ground::ground_value;
+use crate::ground::ground_param_value;
 use crate::scope_chain::{IndexedEntries, ParamScope, ScopeFrame};
 
 use super::instance_interface::InstanceDerivation;
@@ -111,6 +111,7 @@ pub(super) fn ground_instance_params(
                 // converge here.
                 expand_array_param(
                     piri,
+                    &inst.node.id,
                     pnode,
                     cxf_val,
                     enclosing,
@@ -123,15 +124,13 @@ pub(super) fn ground_instance_params(
             } else {
                 // Scalar parameter.
                 let name: Arc<str> = Arc::from(local_name(piri));
-                match ground_value(cxf_val, &ParamScope::with_enclosing(enclosing, &siblings)) {
+                match ground_param_value(cxf_val, &ParamScope::with_enclosing(enclosing, &siblings))
+                {
                     Ok(v) => {
                         siblings.push(Arc::clone(&name), EvalResult::Scalar(v.clone()));
                         table.push((name, v));
                     }
-                    Err(e) => diags.push(
-                        Diagnostic::error(DiagCode::GroundingFailed, e.to_string())
-                            .with_subject(piri.to_owned()),
-                    ),
+                    Err(e) => diags.push(crate::ground::ground_failure(&e, piri, &inst.node.id)),
                 }
             }
         }

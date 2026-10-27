@@ -27,11 +27,19 @@ fn input_r(name: &'static str, values: impl IntoIterator<Item = f64>) -> InputSe
 }
 
 fn input_i(name: &'static str, values: impl IntoIterator<Item = i64>) -> InputSeries {
-    InputSeries::new(name, ValueKind::Integer, values.into_iter().map(i).collect())
+    InputSeries::new(
+        name,
+        ValueKind::Integer,
+        values.into_iter().map(i).collect(),
+    )
 }
 
 fn input_b(name: &'static str, values: impl IntoIterator<Item = bool>) -> InputSeries {
-    InputSeries::new(name, ValueKind::Boolean, values.into_iter().map(b).collect())
+    InputSeries::new(
+        name,
+        ValueKind::Boolean,
+        values.into_iter().map(b).collect(),
+    )
 }
 
 fn golden(
@@ -55,6 +63,9 @@ fn golden(
     .with_inputs(inputs)
 }
 
+// The flat argument list mirrors `Golden::new` plus the per-family inputs; bundling it into a
+// one-use struct would only rename the arguments.
+#[allow(clippy::too_many_arguments)]
 fn typed_golden(
     class_path: &'static str,
     signal: &'static str,
@@ -65,7 +76,10 @@ fn typed_golden(
     input_desc: &'static str,
     rule_desc: &'static str,
 ) -> Golden {
-    Golden::new(class_path, signal, kind, time, samples, input_desc, rule_desc).with_inputs(inputs)
+    Golden::new(
+        class_path, signal, kind, time, samples, input_desc, rule_desc,
+    )
+    .with_inputs(inputs)
 }
 
 /// Build CDL.Routing typed-family goldens.
@@ -87,12 +101,7 @@ pub fn goldens() -> Vec<Golden> {
             input_r("u4", u4),
             input_r("u5", u5),
         ];
-        let signals = [
-            ("y1", u5),
-            ("y2", u2),
-            ("y3", u2),
-            ("y4", u1),
-        ];
+        let signals = [("y1", u5), ("y2", u2), ("y3", u2), ("y4", u1)];
         for (signal, values) in signals {
             out.push(golden(
                 "CDL.Routing.RealExtractSignal",
@@ -364,13 +373,7 @@ pub fn goldens() -> Vec<Golden> {
         let index = [1, 3, 0, 4, -2];
         let u1 = [10, 11, 12, 13, 14];
         let u2 = [-20, -21, -22, -23, -24];
-        let u3 = [
-            i64::from(i32::MAX),
-            i64::from(i32::MIN),
-            30,
-            31,
-            32,
-        ];
+        let u3 = [i64::from(i32::MAX), i64::from(i32::MIN), 30, 31, 32];
         let y = [u1[0], u3[1], u1[2], u3[3], u1[4]];
         out.push(typed_golden(
             "CDL.Routing.IntegerExtractor",

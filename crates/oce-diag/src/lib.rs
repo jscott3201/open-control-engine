@@ -166,6 +166,13 @@ pub enum DiagCode {
     DuplicateParameter,
     /// A block parameter violates a class-level range or ordering rule.
     ParameterOutOfRange,
+    /// A parameter holds, or its binding expression produced, a non-finite Real value (`NaN`,
+    /// `+inf` or `-inf`). Engine-wide: every Real parameter at every level — root, composite and
+    /// leaf declarations, each element of a Real array parameter — must be finite regardless of
+    /// class, and load-time grounding refuses any non-finite expression intermediate. Raised by
+    /// the `oce-cxf` resolver while grounding (subject = the declaring instance) and by the
+    /// `oce-validate` backstop on the flattened graph (subject = the block instance).
+    NonFiniteParameter,
 
     // --- Build-time `shall`-errors (oce-graph schedule construction) ---
     /// Connections form a direct-feedthrough cycle that no state-holding block breaks — an
@@ -173,11 +180,15 @@ pub enum DiagCode {
     /// concrete cycle (subject = the connector's authored identity when it has one).
     AlgebraicLoop,
     /// The connector graph is acyclic, but single-pass atomic block firing still cannot order the
-    /// blocks: a stateful multi-output block's state-only output feeds back into one of its own
-    /// feedthrough inputs. One diagnostic per member block of one concrete block cycle (subject =
-    /// the block instance's authored identity when it has one). Distinct from
-    /// [`DiagCode::AlgebraicLoop`] because the members are blocks, not connectors, and the cause is
-    /// the engine's firing granularity rather than a connector-level cycle.
+    /// blocks: one of a block's outputs feeds back into an input that the block reads when it fires
+    /// but that output does not depend on. Every registered class that can do this is stateless
+    /// with mixed feedthrough (`CDL.Routing.*ExtractSignal`, `*VectorFilter`, `*VectorReplicator`,
+    /// multi-output `CDL.Reals.MatrixMax` / `MatrixMin`, and `CDL.Reals.PIDWithReset` with
+    /// `controllerType = P`, whose `trigger` feeds no output); the model may be CDL-legal. One
+    /// diagnostic per member block of one concrete block cycle (subject = the block instance's
+    /// authored identity when it has one). Distinct from [`DiagCode::AlgebraicLoop`] because the
+    /// members are blocks, not connectors, and the cause is the engine's firing granularity rather
+    /// than a connector-level cycle.
     BlockAlgebraicLoop,
 
     // --- Hostile-input resource budgets (any ingest stage) ---
@@ -262,6 +273,7 @@ impl DiagCode {
             DiagCode::ParameterKindMismatch => "parameter-kind-mismatch",
             DiagCode::DuplicateParameter => "duplicate-parameter",
             DiagCode::ParameterOutOfRange => "parameter-out-of-range",
+            DiagCode::NonFiniteParameter => "non-finite-parameter",
             DiagCode::AlgebraicLoop => "algebraic-loop",
             DiagCode::BlockAlgebraicLoop => "block-algebraic-loop",
             DiagCode::ResourceLimitExceeded => "resource-limit-exceeded",
@@ -424,6 +436,7 @@ mod tests {
         ParameterKindMismatch => "parameter-kind-mismatch",
         DuplicateParameter => "duplicate-parameter",
         ParameterOutOfRange => "parameter-out-of-range",
+        NonFiniteParameter => "non-finite-parameter",
         AlgebraicLoop => "algebraic-loop",
         BlockAlgebraicLoop => "block-algebraic-loop",
         ResourceLimitExceeded => "resource-limit-exceeded",
