@@ -56,6 +56,37 @@ and a gate that accepted any text would restore exactly the false assurance desc
   its current implementation baseline at the change's source commit; policy and rows are
   unchanged.
 
+### Block library
+
+- **`CDL.Reals.MovingAverage` now averages over the whole of `delta` however many ticks fall inside
+  it** (GitHub #TBD, issue #364). The block kept at most 64 checkpoints and dropped the oldest when
+  more arrived. With more than 64 ticks per window it averaged over only about the last 64 samples
+  and warned once. At 1 s ticks the G36 `ReliefFanGroup` and `ReturnFanDirectPressure` sequences,
+  which use `delta = 300`, were therefore averaging over about 64 s. A 600 s window with a 0 → 100
+  step at t = 640 reported 95.3125 at t = 700. It now reports 6100/600 = 10.1666…, because each
+  tick's input covers the gap that ends at that tick. The checkpoint ring is now sized from `delta`
+  at build time: `clamp(2·ceil(delta), 2048, 131072)` slots plus 4, which sets a history resolution
+  `r = delta/slots`. That gives `r ≤ 0.5 s` for every window up to 65536 s. The full-window divisor
+  is now exactly `delta`; it used to be `t - fl(t - delta)`, so other traces can move by a sub-ulp
+  amount. The oldest checkpoint is never later than the window start. The output is
+  bit-identical to an unbounded history as long as every pair of consecutive tick gaps sums to at
+  least `2r`. For a nominal 1 s host with `delta ≤ 65536 s` that holds while each tick stays
+  within ±0.5 s of its nominal time. Denser ticks are merged into the newest checkpoint: the
+  window still spans `delta`, interpolation inside a merged gap moves `y` by at most
+  `r·range/(2·delta)`, and the first merge warns once per instance. A window longer than 65536 s
+  keeps its full span at resolution `delta/131072`. **State layout changes:** the region grows
+  from 134 words to `6 + 2·(slots + 4)` words: 4110 (about 33 KB) for any `delta ≤ 1024 s`,
+  14414 for `delta = 3600`, and at most 262158 (about 2.1 MB). Snapshots stay capped at 64 MiB,
+  so a model with a few dozen maximum-size windows runs but cannot be captured; nothing checks
+  this at load. The validator now checks the region against the instance's own `delta`. It
+  refuses a ring that no longer covers the window start. A snapshot from an earlier build refuses
+  at restore on the manifest's state-length comparison, consistent with
+  current/current-only continuation. Three new standalone Tier-A goldens (`MovingAverage/*`, 200 to
+  600 ticks per window, including the 600 s step) integrate the input piece by piece without
+  interpolating `mu`. The engine matches them bit-exactly in `per_block_reals_dynamics.rs`. Per-block
+  Tier-A coverage rises to 129 of 133 CDL classes. The release-compatibility checker re-selects its
+  current implementation baseline at the change's source commit.
+
 ### Verification
 
 - **The G36 FreezeProtection heating-coil command now has a continuous-time reference** (GitHub #357, issue
