@@ -31,7 +31,7 @@ const OUTPUTS: &[PointSpec] = &[PointSpec::real(SETPOINT_SOURCE)];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "trim_and_respond_have_hol_false",
     cxf: TRIM_AND_RESPOND,
-    t_stop: 40,
+    t_stop: 82,
     sample_step: 60.0,
     inputs: INPUTS,
     outputs: OUTPUTS,
@@ -72,10 +72,16 @@ fn trim_and_respond_inputs(t: f64) -> Vec<(String, Value)> {
         6
     } else if (2160.0..2280.0).contains(&t) {
         5
+    } else if (2520.0..2760.0).contains(&t) || (3720.0..3960.0).contains(&t) {
+        6
     } else {
         0
     };
-    let device_status = !(1260.0..1380.0).contains(&t);
+    // A trip holding the 1320 s sample instant, a short trip strictly between the 2760 s and
+    // 2880 s instants, and a boundary trip whose single off tick is the 3960 s instant.
+    let device_status = !((1260.0..1380.0).contains(&t)
+        || (2820.0..2880.0).contains(&t)
+        || (3960.0..4020.0).contains(&t));
     vec![
         pair(REQUEST_COUNT, Value::Integer(requests)),
         pair(DEVICE_STATUS, Value::Boolean(device_status)),

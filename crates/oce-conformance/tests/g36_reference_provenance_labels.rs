@@ -34,10 +34,19 @@ const VENDORED_BUILDINGS: &str = "third_party/modelica-buildings-cdl";
 const G36_CATALOG: &str = "tools/reference-catalog/Buildings.Controls.OBC.ASHRAE.G36.catalog.json";
 
 /// Scenarios whose references reproduce pinned behaviour that diverges from G36 intent.
-const REVIEWED_G36_INTENT_DIVERGENCES: [&str; 3] = [
+const REVIEWED_G36_INTENT_DIVERGENCES: [&str; 5] = [
     "multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21",
     "multizone_vav_economizer_enable",
+    "multizone_vav_supply_fan",
     "multizone_vav_supply_temperature",
+    "trim_and_respond_have_hol_false",
+];
+
+/// Scenarios whose references drive `Generic/TrimAndRespond.mo`, standalone or nested.
+const TRIM_AND_RESPOND_SCENARIOS: [&str; 3] = [
+    "multizone_vav_supply_fan",
+    "multizone_vav_supply_temperature",
+    "trim_and_respond_have_hol_false",
 ];
 
 struct Record {
@@ -413,4 +422,71 @@ fn supply_temperature_nested_trim_and_respond_literals_are_a_fixture_deviation()
         note.contains("final delTim=delTim") && note.contains("CXF fixture sets them as literal"),
         "the supply temperature note must attribute the nested literals to the fixture: {note}"
     );
+}
+
+#[test]
+fn trim_and_respond_short_trip_divergence_matches_the_vendored_reseed_wiring() {
+    // Issue #354: the documentation promises iniSet whenever the device is off, but iniSet
+    // reaches the reset only through swi2 -> uniDel.u, captured at samplePeriod instants.
+    let trim_and_respond =
+        vendored_source("Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo");
+    for expected in [
+        "Buildings.Controls.OBC.CDL.Discrete.UnitDelay uniDel( final samplePeriod=samplePeriod, final y_start=iniSet)",
+        "connect(iniSetCon.y, swi2.u1)",
+        "connect(maxInp.y, swi2.u3)",
+        "connect(swi2.y, uniDel.u)",
+        "connect(uniDel.y, add1.u1)",
+        "connect(iniSetCon.y, swi.u3)",
+        "When the associated device is off (<code>uDevSta=false</code>), the setpoint shall be <code>iniSet</code>.",
+    ] {
+        assert!(
+            trim_and_respond.contains(expected),
+            "vendored TrimAndRespond.mo no longer contains `{expected}`; revisit the \
+             diverges_from_g36_intent short-trip notes"
+        );
+    }
+    let records = g36_records();
+    let citing = records
+        .iter()
+        .filter(|record| {
+            record
+                .source_files()
+                .contains(&"Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo")
+        })
+        .map(|record| record.scenario.as_str())
+        .collect::<BTreeSet<_>>();
+    assert_eq!(
+        citing,
+        BTreeSet::from(TRIM_AND_RESPOND_SCENARIOS),
+        "references citing Generic/TrimAndRespond.mo changed; give each one the short-trip \
+         divergence note and update TRIM_AND_RESPOND_SCENARIOS"
+    );
+    for scenario in TRIM_AND_RESPOND_SCENARIOS {
+        let scenario_records = records
+            .iter()
+            .filter(|record| record.scenario == scenario)
+            .collect::<Vec<_>>();
+        assert!(
+            !scenario_records.is_empty(),
+            "{scenario} has reference records"
+        );
+        for record in scenario_records {
+            assert!(
+                record
+                    .source_files()
+                    .contains(&"Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo"),
+                "{} must cite Generic/TrimAndRespond.mo",
+                record.path.display()
+            );
+            let note = optional_note(record, "diverges_from_g36_intent")
+                .unwrap_or_else(|| panic!("{} has no divergence note", record.path.display()));
+            assert!(
+                note.contains("swi2 -> uniDel.u")
+                    && note.contains("holds no sample instant")
+                    && note.contains("stale pre-trip value"),
+                "{} must carry the TrimAndRespond short-trip note: {note}",
+                record.path.display()
+            );
+        }
+    }
 }
