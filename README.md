@@ -21,7 +21,11 @@ storage port your application implements. That split is not a design preference;
 which states that such metadata does not affect the computation of a control signal.
 
 Today it loads and simulates **46 ASHRAE Guideline 36 sequence fixtures** against a registry of
-**133 CDL block classes**. It is **pre-1.0 and not published to crates.io**.
+**133 CDL block classes**\*. It is **pre-1.0 and not published to crates.io**.
+
+\* One of the 133, `TrueHoldWithReset`, uses a local two-input interface that is not in the CDL
+catalog, so a conforming single-input document is refused. See the note in
+[CDL coverage](docs/cdl-coverage.md).
 
 Read the [product contract](docs/product-contract.md) for the versioned executable-CXF/HostTick
 boundary, current limitations, host obligations and future acceptance outcomes.
@@ -120,7 +124,7 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   where re-importing the emitted bytes renders bit-identically — Reals compared by IEEE-754 bits,
   not by epsilon. See [CXF round trip](docs/cxf-round-trip.md).
 - Executes a registry of **133 CDL elementary block classes** plus 3 reserved internal lowering
-  classes, enumerable at runtime via `oce_blocks::catalog()` with per-class ports, parameter rules,
+  classes, enumerable at runtime via `oce_api::catalog()` with per-class ports, parameter rules,
   and honest parameter defaults. See [CDL coverage](docs/cdl-coverage.md).
 - Runs **46 G36 conformance fixtures** end to end through the frozen facade, each with a committed
   whole-sequence golden trace.
