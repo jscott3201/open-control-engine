@@ -158,6 +158,10 @@ pub enum DiagCode {
     /// Connected cluster members declared different `min`/`max` bounds — §7.10 R13.1
     /// hard error (the bound analogue of [`DiagCode::UnitQuantityMismatch`]).
     BoundMismatch,
+    /// A Real connector or boundary declaration carries a NaN or infinite `min`, `max` or
+    /// `nominal`. A NaN bound would admit no value at all (every comparison with NaN is false),
+    /// so the model would load and then refuse every frame; the load is refused instead.
+    NonFiniteBound,
     /// A block instance omitted a parameter that the class requires at build time.
     MissingRequiredParameter,
     /// A required block parameter has a scalar kind the block constructor does not consume.
@@ -249,6 +253,7 @@ impl DiagCode {
             DiagCode::PortKindMismatch => "port-kind-mismatch",
             DiagCode::UnitQuantityMismatch => "unit-quantity-mismatch",
             DiagCode::BoundMismatch => "bound-mismatch",
+            DiagCode::NonFiniteBound => "non-finite-bound",
             DiagCode::MissingRequiredParameter => "missing-required-parameter",
             DiagCode::ParameterKindMismatch => "parameter-kind-mismatch",
             DiagCode::DuplicateParameter => "duplicate-parameter",
@@ -409,6 +414,7 @@ mod tests {
         PortKindMismatch => "port-kind-mismatch",
         UnitQuantityMismatch => "unit-quantity-mismatch",
         BoundMismatch => "bound-mismatch",
+        NonFiniteBound => "non-finite-bound",
         MissingRequiredParameter => "missing-required-parameter",
         ParameterKindMismatch => "parameter-kind-mismatch",
         DuplicateParameter => "duplicate-parameter",

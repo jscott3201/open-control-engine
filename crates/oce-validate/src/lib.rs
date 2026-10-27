@@ -31,6 +31,9 @@
 //!    [`oce_diag::DiagCode::UnitQuantityMismatch`] / [`oce_diag::DiagCode::BoundMismatch`] — and
 //!    propagation when one-sided, R13.1/R13.2); divergent `displayUnit` is an advisory
 //!    `should`-warning (R13.3); `nominal`/`unbounded` are the only attributes not unified (R13.4).
+//! 7. **Finite numeric attributes**: every Real connector and boundary declaration `min`, `max`
+//!    and `nominal` is finite ([`oce_diag::DiagCode::NonFiniteBound`]); checked before
+//!    unification, which would otherwise compare and propagate a `NaN` bound.
 //!
 //! It reports problems in the **shared `oce-diag` vocabulary** (AD-4) — the same
 //! [`oce_diag::Diagnostic`] the resolver emits — so `oce-api`'s `LoadReport.warnings` is one
@@ -80,6 +83,7 @@ pub fn validate(model: &ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> 
     let mut diags = Vec::new();
     rules::check_arena_ids(model, &mut diags);
     rules::check_boundary_outputs(model, &mut diags);
+    rules::check_finite_bounds(model, &mut diags);
     rules::check_single_assignment(model, &mut diags);
     rules::check_connections(model, &mut diags);
     rules::check_port_types(model, &mut diags);
@@ -90,17 +94,25 @@ pub fn validate(model: &ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> 
 /// Run §7.10 attribute unification (doc 02 §9 R13.1–R13.3), **mutating** the graph to propagate a
 /// one-sided unit, quantity, or bound to its unset connector and boundary-output peers (R13.2).
 ///
+/// A non-finite `min`, `max` or `nominal` is refused first, as
+/// [`oce_diag::DiagCode::NonFiniteBound`], and nothing is unified or propagated.
+///
 /// Returns the `should`-level warnings (e.g. divergent `displayUnit`, R13.3) on success, or a
 /// [`ValidationError`] of unit, quantity, or bound conflicts (R13.1) on failure. Order-independent (a
 /// gather-then-decide cluster algorithm) and panic-free on any graph. Failure is transactional: no
 /// connector or boundary-output attribute propagation remains applied.
 ///
 /// # Errors
-/// Returns [`ValidationError`] if any cluster declares conflicting unit, quantity, or bound values
-/// (R13.1).
+/// Returns [`ValidationError`] if any Real attribute is non-finite, or if any cluster declares
+/// conflicting unit, quantity, or bound values (R13.1).
 pub fn unify_attributes(model: &mut ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> {
     let mut diags = Vec::new();
-    rules::unify_clusters(model, &mut diags);
+    // Unification compares and propagates bounds, so a non-finite one is refused first: it is
+    // the root cause, and a NaN bound would otherwise also surface as a bound mismatch.
+    rules::check_finite_bounds(model, &mut diags);
+    if diags.is_empty() {
+        rules::unify_clusters(model, &mut diags);
+    }
     finish(model, diags)
 }
 

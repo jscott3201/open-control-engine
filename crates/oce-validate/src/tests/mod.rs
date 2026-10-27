@@ -10,6 +10,7 @@
 mod boundary_outputs;
 mod common;
 mod determinism;
+mod finite_bounds;
 mod params;
 mod params_required;
 mod params_sources;

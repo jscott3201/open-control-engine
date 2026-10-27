@@ -1183,6 +1183,7 @@ pub const oce_api::CATALOG_JSON: &str
 pub const oce_api::CATALOG_SCHEMA_REVISION: u32
 pub const oce_api::DIAGNOSTIC_SCHEMA_REVISION: u32
 pub const oce_api::MAX_CXF_BYTES: usize
+pub const oce_api::MAX_FRAME_TIME_MAGNITUDE: f64
 pub const oce_api::MAX_REPLAY_BYTES: usize
 pub enum oce_api::AssertLevel
 pub enum oce_api::CatalogDefault
@@ -2219,6 +2220,9 @@ pub oce_api::OcError::ModelTimeUnrepresentable
 pub oce_api::OcError::ModelTimeUnrepresentable::now: f64
 pub oce_api::OcError::NonFiniteTime
 pub oce_api::OcError::NonFiniteTime::now: f64
+pub oce_api::OcError::NonFiniteTimeStep
+pub oce_api::OcError::NonFiniteTimeStep::now: f64
+pub oce_api::OcError::NonFiniteTimeStep::prev: f64
 pub oce_api::OcError::ParamRange
 pub oce_api::OcError::ParamRange::path: alloc::string::String
 pub oce_api::OcError::ParamStructural
@@ -2230,6 +2234,9 @@ pub oce_api::OcError::ParamWhileRunning::path: alloc::string::String
 pub oce_api::OcError::StalePreparedFrame
 pub oce_api::OcError::State(oce_api::EngineStateError)
 pub oce_api::OcError::Store(oce_store::StoreError)
+pub oce_api::OcError::TimeOutOfRange
+pub oce_api::OcError::TimeOutOfRange::limit: f64
+pub oce_api::OcError::TimeOutOfRange::now: f64
 pub oce_api::OcError::TimeRegression
 pub oce_api::OcError::TimeRegression::now: f64
 pub oce_api::OcError::TimeRegression::prev: f64

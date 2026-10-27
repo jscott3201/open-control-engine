@@ -98,7 +98,16 @@ If your plant needs to fail safe, that policy lives in the host or equipment. At
 ## Time is host-supplied
 
 The engine never reads a wall clock. Model time is host-supplied finite nondecreasing `f64` seconds;
-a decrease returns `OcError::TimeRegression`. Loaded blocks also enforce representability. The
+a decrease returns `OcError::TimeRegression`. Its magnitude must not exceed
+`MAX_FRAME_TIME_MAGNITUDE` (`f64::MAX / 4`, about 4.49e307), or the frame is refused with
+`OcError::TimeOutOfRange` for every model, and restore refuses a snapshot or checkpoint whose clock
+is beyond it. Any single difference of two accepted times (a step, or the span since a timer
+started) is then at most `f64::MAX / 2`. Accumulated elapsed time (a sum of rounded steps) can round
+upward past the exact span; the remaining factor of two keeps it finite for fewer than about 3e15
+accumulated steps. Gains and other model maths applied to time are not bounded. UNIX epoch
+seconds, milliseconds and nanoseconds are all far inside the limit. A
+large finite step (a clock jump from -1e9 to 1e18) is still accepted, and integrators take it in
+one step: keep time contiguous yourself. Loaded blocks also enforce representability. The
 host owns cadence and any mapping between model seconds and external UNIX timestamps. Realtime
 epoch configuration and realtime/Store orchestration are not facade capabilities.
 

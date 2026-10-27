@@ -8,6 +8,26 @@ use oce_store::Store;
 
 use crate::{AssertEvent, Engine, EngineStateError, OcError};
 
+/// The largest accepted frame-time magnitude in model seconds: `f64::MAX / 4` (exactly
+/// `2^1022 · (1 − 2^−53)`), about 4.49e307.
+///
+/// Guarantees for times `t` accepted within `[-MAX_FRAME_TIME_MAGNITUDE, MAX_FRAME_TIME_MAGNITUDE]`:
+///
+/// - **Single differences.** Any difference of two accepted times (one step, or the span since a
+///   timer started) is at most `f64::MAX / 2` before rounding, and so finite after it.
+/// - **Accumulations.** A running sum of rounded steps (an elapsed-time accumulator or a unit-slope
+///   forward-Euler integrator) can round upward past the exact span. With round-to-nearest each
+///   step and each addition gains at most a factor `1 + 2^−53`, so after `n` accumulated steps the
+///   sum is at most `(f64::MAX / 2) · (1 + 2^−53)^(2n)`, finite for every `n` below about `3e15`
+///   steps. The factor-of-two headroom over the exact span is what absorbs that drift; with
+///   `f64::MAX / 2` there was none, and a five-step schedule overflowed.
+///
+/// Nothing bounds model maths applied to time (a slope other than one, a gain): that remains the
+/// model's arithmetic. Frames outside the range are refused with [`OcError::TimeOutOfRange`]
+/// whatever the model contains. UNIX epoch seconds, milliseconds and nanoseconds are all many
+/// orders of magnitude inside it.
+pub const MAX_FRAME_TIME_MAGNITUDE: f64 = f64::MAX / 4.0;
+
 /// One fully resolved complete input submission, owned independently of its caller's buffers.
 ///
 /// Preparation does not execute or stage inputs. This opaque artifact retains every fan-out
@@ -172,7 +192,8 @@ impl<S: Store> Engine<S> {
     ///
     /// # Errors
     /// First cause: `State(NoLoadedModel)`, `State(PendingParameterEdits)`, `StalePreparedFrame`,
-    /// `NonFiniteTime`, `TimeRegression`, `ModelTimeUnrepresentable`, `FrameSequenceExhausted`.
+    /// `NonFiniteTime`, `TimeOutOfRange`, `TimeRegression`, `NonFiniteTimeStep`,
+    /// `ModelTimeUnrepresentable`, `FrameSequenceExhausted`.
     /// Every returned error precedes mutation: the entire execution image, restore readiness,
     /// sequence and retained results remain unchanged. The moved plan is consumed even on refusal.
     /// No ordinary recoverable operation remains after preflight under validated BUILD invariants.
@@ -246,6 +267,8 @@ impl<S: Store> Engine<S> {
     /// accepted here. All values are required exactly once, with exact types and declared domains.
     /// Unbounded Real signals admit nonfinite values; a declared bound requires its comparison
     /// to hold (thus rejects NaN). Values are never coerced through Store carriers.
+    /// `|time|` must not exceed [`MAX_FRAME_TIME_MAGNITUDE`] (`TimeOutOfRange`; see its bounds on
+    /// differences and accumulations); the step from the previous time must be finite too.
     ///
     /// Returns an owned opaque plan, not a completed transition. Borrowed keys are not retained.
     /// Allocates in proportion to schema inputs and resolved fan-out targets, not key length.
@@ -265,9 +288,10 @@ impl<S: Store> Engine<S> {
     /// ```
     ///
     /// # Errors
-    /// Deterministic precedence: unloaded, pending edits, nonfinite/regressing/unrepresentable
-    /// time; then unknown/non-boundary keys in lexical UTF-8 order; duplicate canonical input;
-    /// missing canonical input; finally type/domain in canonical input order (type first).
+    /// Deterministic precedence: unloaded, pending edits, nonfinite/out-of-range/regressing time,
+    /// nonfinite time step, unrepresentable time; then unknown/non-boundary keys in lexical UTF-8
+    /// order; duplicate canonical input; missing canonical input; finally type/domain in
+    /// canonical input order (type first).
     /// Only the first typed cause is returned. Unknown/non-boundary key errors retain at most
     /// 64 UTF-8 bytes plus the original byte count; schema-key errors name the canonical path.
     /// No staging prefix, time advance, diagnostic replacement or restore-window closure occurs
@@ -363,10 +387,21 @@ impl<S: Store> Engine<S> {
         if !time.is_finite() {
             return Err(OcError::NonFiniteTime { now: time });
         }
-        if let Some(prev) = self.prev_t
-            && time < prev
-        {
-            return Err(OcError::TimeRegression { now: time, prev });
+        if time.abs() > MAX_FRAME_TIME_MAGNITUDE {
+            return Err(OcError::TimeOutOfRange {
+                now: time,
+                limit: MAX_FRAME_TIME_MAGNITUDE,
+            });
+        }
+        if let Some(prev) = self.prev_t {
+            if time < prev {
+                return Err(OcError::TimeRegression { now: time, prev });
+            }
+            // Defensive: accepted and restored clocks both stay within the magnitude limit, so
+            // no public call sequence reaches this; it guards any future clock source.
+            if !(time - prev).is_finite() {
+                return Err(OcError::NonFiniteTimeStep { now: time, prev });
+            }
         }
         if !self.time_is_representable(time) {
             return Err(OcError::ModelTimeUnrepresentable { now: time });

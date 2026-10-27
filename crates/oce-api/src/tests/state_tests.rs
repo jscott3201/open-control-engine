@@ -229,9 +229,9 @@ fn sampled_clocks_refuse_unrepresentable_time_before_mutation() {
             .unwrap();
         let words = engine.state.words.clone();
         let values = engine.state.values.clone();
-        let error = engine.prepare_frame(f64::MAX, &[]).unwrap_err();
+        let error = engine.prepare_frame(1.0e305, &[]).unwrap_err();
         assert!(
-            matches!(error, OcError::ModelTimeUnrepresentable { now } if now == f64::MAX),
+            matches!(error, OcError::ModelTimeUnrepresentable { now } if now == 1.0e305),
             "{class_path}: {error:?}"
         );
         assert_eq!(engine.state.words, words, "{class_path}");
@@ -250,7 +250,7 @@ fn sampled_clocks_refuse_unrepresentable_time_before_mutation() {
 }
 
 #[test]
-fn initialized_max_period_clocks_accept_maximum_finite_time() {
+fn initialized_max_period_clocks_accept_the_maximum_frame_time() {
     for class_path in [
         "CDL.Discrete.Sampler",
         "CDL.Discrete.ZeroOrderHold",
@@ -268,9 +268,9 @@ fn initialized_max_period_clocks_accept_maximum_finite_time() {
             vec![("conn#0", Value::Real(0.0))]
         };
         advance(&mut engine, 0.0, &inputs).unwrap();
-        advance(&mut engine, f64::MAX, &inputs)
-            .unwrap_or_else(|error| panic!("{class_path}: {error}"));
-        assert_eq!(engine.prev_t.map(f64::to_bits), Some(f64::MAX.to_bits()));
+        let max = crate::MAX_FRAME_TIME_MAGNITUDE;
+        advance(&mut engine, max, &inputs).unwrap_or_else(|error| panic!("{class_path}: {error}"));
+        assert_eq!(engine.prev_t.map(f64::to_bits), Some(max.to_bits()));
         engine
             .checkpoint()
             .unwrap_or_else(|error| panic!("{class_path}: {error}"));
@@ -288,7 +288,7 @@ fn unrepresentable_preparation_time_preserves_the_prior_run() {
     let state_t = engine.state.t.to_bits();
     let prev_t = engine.prev_t.map(f64::to_bits);
     assert!(matches!(
-        engine.prepare_frame(f64::MAX, &[("conn#0", Value::Real(0.0))]),
+        engine.prepare_frame(1.0e305, &[("conn#0", Value::Real(0.0))]),
         Err(OcError::ModelTimeUnrepresentable { .. })
     ));
     assert_eq!(engine.state.words, words);

@@ -37,6 +37,34 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
+### Host facade
+
+- **Frame times are bounded so elapsed time cannot overflow, and non-finite bounds are refused
+  at load** (GitHub #TBD, issues #366, #372). Finite times whose difference overflowed (t = -1e308
+  then +1e308) were accepted by a model without sampled blocks and gave an integrator an infinite
+  `dt`, while a model with a sampled block refused them, so acceptance depended on model contents.
+  Finite steps alone would not close it: -1e308 → 0 → 1e308 left a Timer reporting an infinite
+  elapsed time. Preparation and execution now refuse any time whose magnitude exceeds the new
+  `MAX_FRAME_TIME_MAGNITUDE` (`f64::MAX / 4`) with the new `OcError::TimeOutOfRange { now, limit }`,
+  after `NonFiniteTime` and before `TimeRegression`, for every model. Any single difference of two
+  accepted times is then at most `f64::MAX / 2`; the factor-of-two headroom absorbs upward rounding
+  drift in accumulated elapsed time, which a `f64::MAX / 2` limit did not (a five-step schedule
+  drove an integrator to `inf`). Checkpoint and durable restore refuse a clock beyond the limit
+  (`InvalidBlockState`). The new `OcError::NonFiniteTimeStep { now, prev }`, after
+  `TimeRegression`, is kept as a defensive check. Within the limit there is no maximum step.
+  Replay records with `|t|` above the limit, which models without sampled blocks used to accept,
+  now fail with `TimeOutOfRange` when replayed. Times that a sampled block used to refuse as
+  `ModelTimeUnrepresentable` above the limit (for example `f64::MAX`) now report `TimeOutOfRange`.
+  Five existing tests were adjusted: three moved their unrepresentable probe from `f64::MAX` to
+  1e305, the period-`f64::MAX` clock test now advances to the limit, and the execution preflight
+  matrix gained out-of-range, overflowing-step and unrepresentable causes. At load, a NaN or infinite
+  `min`, `max` or `nominal` on a Real connector or a boundary input/output declaration — which
+  loaded and then refused every frame, because no value compares with NaN — is refused with the new
+  `DiagCode::NonFiniteBound` (`non-finite-bound`) error at the attribute-unification stage, before
+  unification can compare or propagate it. Non-finite Real input values are unchanged (issue #363 stays open). The
+  release-compatibility checker re-selects its current implementation baseline at the change's
+  source commit.
+
 ### CXF import and export
 
 - **A declared but unread root boundary input now warns at load** (GitHub #346, issue #339).

@@ -73,6 +73,8 @@ fn each_preflight_refusal_preserves_every_execution_bit_and_sequence() {
             "negative-infinity",
             "regression",
             "range",
+            "step",
+            "unrepresentable",
             "sequence",
         ] {
             let mut engine = loaded();
@@ -100,6 +102,14 @@ fn each_preflight_refusal_preserves_every_execution_bit_and_sequence() {
                     engine.state.t = 5.0;
                 }
                 "range" => frame.time = f64::MAX,
+                "step" => {
+                    // Only a restored clock beyond the magnitude limit can still overflow.
+                    engine.prev_t = Some(-f64::MAX);
+                    engine.state.t = -f64::MAX;
+                    frame.time = crate::MAX_FRAME_TIME_MAGNITUDE;
+                }
+                // In range, but 1e305 * 1e6 overflows the sampled clock's rounding even fresh.
+                "unrepresentable" => frame.time = 1.0e305,
                 "sequence" => engine.accepted_frame_sequence = u64::MAX,
                 _ => unreachable!(),
             }
@@ -119,7 +129,16 @@ fn each_preflight_refusal_preserves_every_execution_bit_and_sequence() {
                     "nan" | "infinity" | "negative-infinity" =>
                         matches!(error, OcError::NonFiniteTime { .. }),
                     "regression" => matches!(error, OcError::TimeRegression { .. }),
-                    "range" => matches!(error, OcError::ModelTimeUnrepresentable { .. }),
+                    "range" =>
+                        matches!(error, OcError::TimeOutOfRange { now, .. } if now == f64::MAX),
+                    "step" => matches!(
+                        error,
+                        OcError::NonFiniteTimeStep { now, prev }
+                            if now == crate::MAX_FRAME_TIME_MAGNITUDE && prev == -f64::MAX
+                    ),
+                    "unrepresentable" => {
+                        matches!(error, OcError::ModelTimeUnrepresentable { .. })
+                    }
                     "sequence" => matches!(error, OcError::FrameSequenceExhausted),
                     _ => unreachable!(),
                 },

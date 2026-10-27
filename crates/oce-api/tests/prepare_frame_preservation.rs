@@ -90,7 +90,8 @@ fn every_refusal_preserves_fresh_and_advanced_stateful_images_and_store() {
             (f64::NAN, complete(), "time"),
             (f64::INFINITY, complete(), "time"),
             (f64::NEG_INFINITY, complete(), "time"),
-            (f64::MAX, complete(), "representability"),
+            (f64::MAX, complete(), "range"),
+            (1.0e305, complete(), "representability"),
         ];
         if advanced {
             cases.push((3.0, complete(), "regression"));
@@ -109,6 +110,9 @@ fn every_refusal_preserves_fresh_and_advanced_stateful_images_and_store() {
                 "time" => assert!(
                     matches!(error, OcError::NonFiniteTime { now } if now.to_bits() == time.to_bits())
                 ),
+                "range" => {
+                    assert!(matches!(error, OcError::TimeOutOfRange { now, .. } if now == f64::MAX))
+                }
                 "representability" => {
                     assert!(matches!(error, OcError::ModelTimeUnrepresentable { .. }))
                 }
