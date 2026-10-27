@@ -181,6 +181,13 @@ pub enum OcError {
     /// One required canonical boundary input was omitted; no hold-last or seed substitution.
     #[error("missing frame input '{0}'")]
     FrameMissingInput(String),
+    /// A Real boundary input value was NaN (either sign, any payload) or infinite while the
+    /// host selected [`crate::NonFiniteInputPolicy::Refuse`]. Names the canonical input path;
+    /// nothing is staged and model time does not advance. The host substitutes a finite value
+    /// (for example a sensor-fault fallback) or does not execute the frame. Never returned under
+    /// the default [`crate::NonFiniteInputPolicy::Admit`].
+    #[error("non-finite Real value for input '{0}'; the host must substitute a finite value")]
+    InputNonFinite(String),
     /// Exact type matched but the value violates the canonical input's declared domain.
     #[error("input value outside declared domain for '{0}'")]
     InputDomain(String),

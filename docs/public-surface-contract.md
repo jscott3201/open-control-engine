@@ -68,6 +68,12 @@ crate-private and is reused by execution. The [frame contract](complete-frame-co
 owns ordering, domains, bounded errors and load/dirty-resume invalidation; the
 [adoption guide](facade-contracts.md#complete-frame-preparation-adoption) describes frame-only migration.
 
+The non-finite input policy (`NonFiniteInputPolicy`, `Engine::non_finite_input_policy`,
+`Engine::set_non_finite_input_policy` and `OcError::InputNonFinite`) is additive stable-candidate
+facade policy, like serialized admission. The enum is non-exhaustive. Its default, `Admit`, is
+planned to become `Refuse` at the next native-evidence refresh (GitHub issue #363); the
+[host obligation](host-responsibilities.md#refuse-non-finite-real-inputs) recommends `Refuse` now.
+
 `Engine::execute_frame`, immutable owned `CompletedFrame` and `OcError::FrameSequenceExhausted`
 are likewise additive stable-candidate surface. The plan is consumed; the result exposes only model
 time, engine-lifetime accepted sequence, lexical boundary `(String, Value)` pairs and Warning

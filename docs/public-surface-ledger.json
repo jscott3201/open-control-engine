@@ -13,8 +13,8 @@
     {
       "id": "oce-api",
       "path": "crates/oce-api/tests/public-api.txt",
-      "sha256": "b5852c8611a10c8a3c8dc54c4f2e645932cb35bee8856a7fc4b17a3d15c60218",
-      "item_count": 2567
+      "sha256": "d2fbe5a050aa63037d8c888ea4954fe997170e924a0322afab1fbc61011a3eb4",
+      "item_count": 2616
     },
     {
       "id": "oce-store",
@@ -59,22 +59,22 @@
     {
       "baseline": "oce-api",
       "group": "facade-stable",
-      "ranges": ["1-1565", "1567-1569", "1571-1575", "1577-1626", "1628-2566"]
+      "ranges": ["1-1592", "1594-1597", "1599-1603", "1605-1654", "1656-2615"]
     },
     {
       "baseline": "oce-api",
       "group": "schedule-leakage",
-      "ranges": ["1566"]
+      "ranges": ["1593"]
     },
     {
       "baseline": "oce-api",
       "group": "storage-port-conditional",
-      "ranges": ["1570", "1576", "2567"]
+      "ranges": ["1598", "1604", "2616"]
     },
     {
       "baseline": "oce-api",
       "group": "deprecated-compatibility",
-      "ranges": ["1627"]
+      "ranges": ["1655"]
     },
     {
       "baseline": "oce-store",

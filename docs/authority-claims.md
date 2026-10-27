@@ -62,7 +62,7 @@ Feature selections: **3**; the shared normal closure is owner-verified, not infe
 
 | Public baseline | Descriptor rows | SHA-256 (owner descriptor) |
 | --- | --- | --- |
-| [crates/oce-api/tests/public-api.txt](../crates/oce-api/tests/public-api.txt) | 2567 | <code>b5852c8611a10c8a3c8dc54c4f2e645932cb35bee8856a7fc4b17a3d15c60218</code> |
+| [crates/oce-api/tests/public-api.txt](../crates/oce-api/tests/public-api.txt) | 2616 | <code>d2fbe5a050aa63037d8c888ea4954fe997170e924a0322afab1fbc61011a3eb4</code> |
 | [crates/oce-store/tests/public-api.txt](../crates/oce-store/tests/public-api.txt) | 1230 | <code>78cf5fdbcbd415a4ca3c521501c9c1a9ccca099551839c2fd360edc311fcbafe</code> |
 
 Exact row assignments remain in the public ledger; statuses below are displayed, not re-adjudicated.
@@ -83,7 +83,7 @@ This is the existing pinned source identity, not a new numeric catalog revision.
 | catalog-registry | <code>c52b1c5807e78aaf930f09402717ab7b5f1d98d173452d0cd22bbd6cb0b16336</code> |
 | catalog-source | <code>a8109009c6ffebba52522c2d6f96ac898c926b420a6baec369328c55b40d2702</code> |
 | packages | <code>901e3ad38af0c0d223aeb0624b5bac55398cf4370155a0541301dbb2ebffb74d</code> |
-| public-surface | <code>afd0dd34ceeb12b02d93298736e9b70dbd06450a83e31ea89e75d848da06727b</code> |
+| public-surface | <code>f1b4d7197e586cd77a5387de6f7e9fd5bb940abcdd32c86f8d5ac6ab3814d0f5</code> |
 
 ## Native expected observations
 

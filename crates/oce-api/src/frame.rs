@@ -162,7 +162,8 @@ impl fmt::Debug for PreparedInputFrame {
 impl<S: Store> Engine<S> {
     /// Consume a prepared submission and commit exactly one HostTick v1 transition in place.
     ///
-    /// Rechecks readiness, incarnation and time, then sequence capacity, before any mutation.
+    /// Rechecks readiness, incarnation and time, then the [`crate::NonFiniteInputPolicy`] in force
+    /// against the plan's Real values, then sequence capacity, before any mutation.
     /// Stages all resolved fan-out targets, closes durable-restore readiness, evaluates once,
     /// refreshes latest-state inspection and returns an independent [`CompletedFrame`]. Equal
     /// finite time advances again; there is no event iteration. No Store method or host callback
@@ -193,7 +194,9 @@ impl<S: Store> Engine<S> {
     /// # Errors
     /// First cause: `State(NoLoadedModel)`, `State(PendingParameterEdits)`, `StalePreparedFrame`,
     /// `NonFiniteTime`, `TimeOutOfRange`, `TimeRegression`, `NonFiniteTimeStep`,
-    /// `ModelTimeUnrepresentable`, `FrameSequenceExhausted`.
+    /// `ModelTimeUnrepresentable`, `InputNonFinite` (only under
+    /// [`crate::NonFiniteInputPolicy::Refuse`], for the first such input in canonical order),
+    /// `FrameSequenceExhausted`.
     /// Every returned error precedes mutation: the entire execution image, restore readiness,
     /// sequence and retained results remain unchanged. The moved plan is consumed even on refusal.
     /// No ordinary recoverable operation remains after preflight under validated BUILD invariants.
@@ -201,6 +204,13 @@ impl<S: Store> Engine<S> {
     /// exclusive-borrow guarantee are excluded. No Store/persistence/actuator atomicity is promised.
     pub fn execute_frame(&mut self, frame: PreparedInputFrame) -> Result<CompletedFrame, OcError> {
         self.check_prepared_frame(&frame)?;
+        // The policy in force now governs, even for a plan prepared under a different one. The
+        // default `Admit` skips the scan entirely.
+        if self.non_finite_input_policy == crate::NonFiniteInputPolicy::Refuse {
+            for (definition, (_, value)) in self.io.frame_definitions.iter().zip(&frame.inputs) {
+                self.check_input_finite(&definition.path, value)?;
+            }
+        }
         let sequence = self
             .accepted_frame_sequence
             .checked_add(1)
@@ -265,8 +275,11 @@ impl<S: Store> Engine<S> {
     /// `time` is finite nondecreasing model seconds; equal time is allowed. Keys use the same
     /// canonical identity resolver as the input definitions; only executable boundary inputs are
     /// accepted here. All values are required exactly once, with exact types and declared domains.
-    /// Unbounded Real signals admit nonfinite values; a declared bound requires its comparison
-    /// to hold (thus rejects NaN). Values are never coerced through Store carriers.
+    /// Under the default [`crate::NonFiniteInputPolicy::Admit`], unbounded Real signals admit
+    /// nonfinite values; a declared bound requires its comparison to hold (thus rejects NaN).
+    /// Under [`crate::NonFiniteInputPolicy::Refuse`] (recommended for production hosts) every
+    /// non-finite Real value, bounded or not, is refused with `InputNonFinite`.
+    /// Values are never coerced through Store carriers.
     /// `|time|` must not exceed [`MAX_FRAME_TIME_MAGNITUDE`] (`TimeOutOfRange`; see its bounds on
     /// differences and accumulations); the step from the previous time must be finite too.
     ///
@@ -290,8 +303,9 @@ impl<S: Store> Engine<S> {
     /// # Errors
     /// Deterministic precedence: unloaded, pending edits, nonfinite/out-of-range/regressing time,
     /// nonfinite time step, unrepresentable time; then unknown/non-boundary keys in lexical UTF-8
-    /// order; duplicate canonical input; missing canonical input; finally type/domain in
-    /// canonical input order (type first).
+    /// order; duplicate canonical input; missing canonical input; finally type/non-finite/domain
+    /// in canonical input order (type, then `InputNonFinite` under the `Refuse` policy, then
+    /// domain).
     /// Only the first typed cause is returned. Unknown/non-boundary key errors retain at most
     /// 64 UTF-8 bytes plus the original byte count; schema-key errors name the canonical path.
     /// No staging prefix, time advance, diagnostic replacement or restore-window closure occurs
@@ -355,6 +369,7 @@ impl<S: Store> Engine<S> {
             if !binding.accepts_type(&self.model, value) {
                 return Err(OcError::InputType(definition.path.clone()));
             }
+            self.check_input_finite(&definition.path, value)?;
             if !definition.accepts_domain(value) {
                 return Err(OcError::InputDomain(definition.path.clone()));
             }

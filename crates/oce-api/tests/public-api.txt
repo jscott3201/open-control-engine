@@ -1,5 +1,6 @@
 #[non_exhaustive] pub enum oce_api::ContentIdError
 #[non_exhaustive] pub enum oce_api::EngineStateError
+#[non_exhaustive] pub enum oce_api::NonFiniteInputPolicy
 #[non_exhaustive] pub enum oce_api::OcError
 #[non_exhaustive] pub enum oce_api::StatePortability
 #[non_exhaustive] pub oce_api::ContentIdError::Incomplete
@@ -48,6 +49,7 @@ impl core::clone::Clone for oce_api::IoInventory
 impl core::clone::Clone for oce_api::IoSummary
 impl core::clone::Clone for oce_api::LoadReceipt
 impl core::clone::Clone for oce_api::LoadReport
+impl core::clone::Clone for oce_api::NonFiniteInputPolicy
 impl core::clone::Clone for oce_api::ParamAttrs
 impl core::clone::Clone for oce_api::ParamTable
 impl core::clone::Clone for oce_api::PassThroughPair
@@ -80,6 +82,7 @@ impl core::cmp::Eq for oce_api::DiagnosticStage
 impl core::cmp::Eq for oce_api::DiagnosticSubject
 impl core::cmp::Eq for oce_api::IoClass
 impl core::cmp::Eq for oce_api::IoSummary
+impl core::cmp::Eq for oce_api::NonFiniteInputPolicy
 impl core::cmp::Eq for oce_api::PhysicalKind
 impl core::cmp::Eq for oce_api::ReplayContentId
 impl core::cmp::Eq for oce_api::ReplayError
@@ -111,6 +114,7 @@ impl core::cmp::PartialEq for oce_api::DiagnosticStage
 impl core::cmp::PartialEq for oce_api::DiagnosticSubject
 impl core::cmp::PartialEq for oce_api::IoClass
 impl core::cmp::PartialEq for oce_api::IoSummary
+impl core::cmp::PartialEq for oce_api::NonFiniteInputPolicy
 impl core::cmp::PartialEq for oce_api::ParamAttrs
 impl core::cmp::PartialEq for oce_api::PassThroughPair
 impl core::cmp::PartialEq for oce_api::PhysicalKind
@@ -137,6 +141,7 @@ impl core::default::Default for oce_api::AssertLevel
 impl core::default::Default for oce_api::IoInventory
 impl core::default::Default for oce_api::IoSummary
 impl core::default::Default for oce_api::LoadReport
+impl core::default::Default for oce_api::NonFiniteInputPolicy
 impl core::default::Default for oce_api::ParamTable
 impl core::default::Default for oce_api::RunMode
 impl core::error::Error for oce_api::CompatibilityMismatch
@@ -183,6 +188,7 @@ impl core::fmt::Debug for oce_api::IoSummary
 impl core::fmt::Debug for oce_api::LoadErrorContext
 impl core::fmt::Debug for oce_api::LoadReceipt
 impl core::fmt::Debug for oce_api::LoadReport
+impl core::fmt::Debug for oce_api::NonFiniteInputPolicy
 impl core::fmt::Debug for oce_api::OcError
 impl core::fmt::Debug for oce_api::OperationFailure
 impl core::fmt::Debug for oce_api::ParamAttrs
@@ -216,6 +222,7 @@ impl core::hash::Hash for oce_api::DiagnosticKey
 impl core::hash::Hash for oce_api::DiagnosticSeverity
 impl core::hash::Hash for oce_api::DiagnosticStage
 impl core::hash::Hash for oce_api::DiagnosticSubject
+impl core::hash::Hash for oce_api::NonFiniteInputPolicy
 impl core::marker::Copy for oce_api::AssertLevel
 impl core::marker::Copy for oce_api::CatalogPortKind
 impl core::marker::Copy for oce_api::CatalogPortNaming
@@ -226,6 +233,7 @@ impl core::marker::Copy for oce_api::DiagnosticSeverity
 impl core::marker::Copy for oce_api::DiagnosticStage
 impl core::marker::Copy for oce_api::IoClass
 impl core::marker::Copy for oce_api::IoSummary
+impl core::marker::Copy for oce_api::NonFiniteInputPolicy
 impl core::marker::Copy for oce_api::PhysicalKind
 impl core::marker::Copy for oce_api::ReplayContentId
 impl core::marker::Copy for oce_api::ReplayExactness
@@ -268,6 +276,7 @@ impl core::marker::Freeze for oce_api::IoSummary
 impl core::marker::Freeze for oce_api::LoadErrorContext
 impl core::marker::Freeze for oce_api::LoadReceipt
 impl core::marker::Freeze for oce_api::LoadReport
+impl core::marker::Freeze for oce_api::NonFiniteInputPolicy
 impl core::marker::Freeze for oce_api::OcError
 impl core::marker::Freeze for oce_api::OperationFailure
 impl core::marker::Freeze for oce_api::ParamAttrs
@@ -323,6 +332,7 @@ impl core::marker::Send for oce_api::IoSummary
 impl core::marker::Send for oce_api::LoadErrorContext
 impl core::marker::Send for oce_api::LoadReceipt
 impl core::marker::Send for oce_api::LoadReport
+impl core::marker::Send for oce_api::NonFiniteInputPolicy
 impl core::marker::Send for oce_api::OcError
 impl core::marker::Send for oce_api::OperationFailure
 impl core::marker::Send for oce_api::ParamAttrs
@@ -363,6 +373,7 @@ impl core::marker::StructuralPartialEq for oce_api::DiagnosticStage
 impl core::marker::StructuralPartialEq for oce_api::DiagnosticSubject
 impl core::marker::StructuralPartialEq for oce_api::IoClass
 impl core::marker::StructuralPartialEq for oce_api::IoSummary
+impl core::marker::StructuralPartialEq for oce_api::NonFiniteInputPolicy
 impl core::marker::StructuralPartialEq for oce_api::ParamAttrs
 impl core::marker::StructuralPartialEq for oce_api::PassThroughPair
 impl core::marker::StructuralPartialEq for oce_api::PhysicalKind
@@ -411,6 +422,7 @@ impl core::marker::Sync for oce_api::IoSummary
 impl core::marker::Sync for oce_api::LoadErrorContext
 impl core::marker::Sync for oce_api::LoadReceipt
 impl core::marker::Sync for oce_api::LoadReport
+impl core::marker::Sync for oce_api::NonFiniteInputPolicy
 impl core::marker::Sync for oce_api::OcError
 impl core::marker::Sync for oce_api::OperationFailure
 impl core::marker::Sync for oce_api::ParamAttrs
@@ -466,6 +478,7 @@ impl core::marker::Unpin for oce_api::IoSummary
 impl core::marker::Unpin for oce_api::LoadErrorContext
 impl core::marker::Unpin for oce_api::LoadReceipt
 impl core::marker::Unpin for oce_api::LoadReport
+impl core::marker::Unpin for oce_api::NonFiniteInputPolicy
 impl core::marker::Unpin for oce_api::OcError
 impl core::marker::Unpin for oce_api::OperationFailure
 impl core::marker::Unpin for oce_api::ParamAttrs
@@ -521,6 +534,7 @@ impl core::marker::UnsafeUnpin for oce_api::IoSummary
 impl core::marker::UnsafeUnpin for oce_api::LoadErrorContext
 impl core::marker::UnsafeUnpin for oce_api::LoadReceipt
 impl core::marker::UnsafeUnpin for oce_api::LoadReport
+impl core::marker::UnsafeUnpin for oce_api::NonFiniteInputPolicy
 impl core::marker::UnsafeUnpin for oce_api::OcError
 impl core::marker::UnsafeUnpin for oce_api::OperationFailure
 impl core::marker::UnsafeUnpin for oce_api::ParamAttrs
@@ -575,6 +589,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for oce_api::IoInventory
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::IoSummary
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::LoadReceipt
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::LoadReport
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::NonFiniteInputPolicy
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ParamAttrs
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ParamTable
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::PassThroughPair
@@ -627,6 +642,7 @@ impl core::panic::unwind_safe::UnwindSafe for oce_api::IoInventory
 impl core::panic::unwind_safe::UnwindSafe for oce_api::IoSummary
 impl core::panic::unwind_safe::UnwindSafe for oce_api::LoadReceipt
 impl core::panic::unwind_safe::UnwindSafe for oce_api::LoadReport
+impl core::panic::unwind_safe::UnwindSafe for oce_api::NonFiniteInputPolicy
 impl core::panic::unwind_safe::UnwindSafe for oce_api::ParamAttrs
 impl core::panic::unwind_safe::UnwindSafe for oce_api::ParamTable
 impl core::panic::unwind_safe::UnwindSafe for oce_api::PassThroughPair
@@ -663,6 +679,7 @@ impl oce_api::OcError
 impl oce_api::OperationFailure
 impl oce_api::ParamTable
 impl oce_api::ReplayRecord
+impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
@@ -718,6 +735,7 @@ impl<T, U> core::convert::Into<U> for oce_api::IoSummary where U: core::convert:
 impl<T, U> core::convert::Into<U> for oce_api::LoadErrorContext where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::LoadReceipt where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::LoadReport where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::NonFiniteInputPolicy where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::OcError where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::OperationFailure where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::ParamAttrs where U: core::convert::From<T>
@@ -774,6 +792,7 @@ impl<T, U> core::convert::TryFrom<U> for oce_api::IoSummary where U: core::conve
 impl<T, U> core::convert::TryFrom<U> for oce_api::LoadErrorContext where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::LoadReceipt where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::LoadReport where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::NonFiniteInputPolicy where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::OcError where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::OperationFailure where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::ParamAttrs where U: core::convert::Into<T>
@@ -830,6 +849,7 @@ impl<T, U> core::convert::TryInto<U> for oce_api::IoSummary where U: core::conve
 impl<T, U> core::convert::TryInto<U> for oce_api::LoadErrorContext where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::LoadReceipt where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::LoadReport where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::NonFiniteInputPolicy where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::OcError where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::OperationFailure where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::ParamAttrs where U: core::convert::TryFrom<T>
@@ -880,6 +900,7 @@ impl<T> alloc::borrow::ToOwned for oce_api::IoInventory where T: core::clone::Cl
 impl<T> alloc::borrow::ToOwned for oce_api::IoSummary where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::LoadReceipt where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::LoadReport where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::NonFiniteInputPolicy where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::ParamAttrs where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::ParamTable where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::PassThroughPair where T: core::clone::Clone
@@ -944,6 +965,7 @@ impl<T> core::any::Any for oce_api::IoSummary where T: 'static + ?core::marker::
 impl<T> core::any::Any for oce_api::LoadErrorContext where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::LoadReceipt where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::LoadReport where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::NonFiniteInputPolicy where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::OcError where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::OperationFailure where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::ParamAttrs where T: 'static + ?core::marker::Sized
@@ -1000,6 +1022,7 @@ impl<T> core::borrow::Borrow<T> for oce_api::IoSummary where T: ?core::marker::S
 impl<T> core::borrow::Borrow<T> for oce_api::LoadErrorContext where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::LoadReceipt where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::LoadReport where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::NonFiniteInputPolicy where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::OcError where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::OperationFailure where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::ParamAttrs where T: ?core::marker::Sized
@@ -1056,6 +1079,7 @@ impl<T> core::borrow::BorrowMut<T> for oce_api::IoSummary where T: ?core::marker
 impl<T> core::borrow::BorrowMut<T> for oce_api::LoadErrorContext where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::LoadReceipt where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::LoadReport where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::NonFiniteInputPolicy where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::OcError where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::OperationFailure where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::ParamAttrs where T: ?core::marker::Sized
@@ -1106,6 +1130,7 @@ impl<T> core::clone::CloneToUninit for oce_api::IoInventory where T: core::clone
 impl<T> core::clone::CloneToUninit for oce_api::IoSummary where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::LoadReceipt where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::LoadReport where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::NonFiniteInputPolicy where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::ParamAttrs where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::ParamTable where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::PassThroughPair where T: core::clone::Clone
@@ -1159,6 +1184,7 @@ impl<T> core::convert::From<T> for oce_api::IoSummary
 impl<T> core::convert::From<T> for oce_api::LoadErrorContext
 impl<T> core::convert::From<T> for oce_api::LoadReceipt
 impl<T> core::convert::From<T> for oce_api::LoadReport
+impl<T> core::convert::From<T> for oce_api::NonFiniteInputPolicy
 impl<T> core::convert::From<T> for oce_api::OcError
 impl<T> core::convert::From<T> for oce_api::OperationFailure
 impl<T> core::convert::From<T> for oce_api::ParamAttrs
@@ -1557,6 +1583,7 @@ pub fn oce_api::Engine<S>::io_summary(&self) -> oce_api::IoSummary
 pub fn oce_api::Engine<S>::load_cxf(&mut self, &[u8]) -> core::result::Result<oce_api::LoadReport, oce_api::OcError>
 pub fn oce_api::Engine<S>::load_cxf_with_receipt(&mut self, &[u8]) -> core::result::Result<oce_api::LoadReceipt, oce_api::OperationFailure>
 pub fn oce_api::Engine<S>::mode(&self) -> oce_api::RunMode
+pub fn oce_api::Engine<S>::non_finite_input_policy(&self) -> oce_api::NonFiniteInputPolicy
 pub fn oce_api::Engine<S>::params(&self) -> &oce_api::ParamTable
 pub fn oce_api::Engine<S>::point_list(&self, core::option::Option<&str>) -> core::result::Result<alloc::vec::Vec<oce_api::PointInfo>, oce_api::OcError>
 pub fn oce_api::Engine<S>::prepare_frame(&self, f64, &[(&str, oce_model::Value)]) -> core::result::Result<oce_api::PreparedInputFrame, oce_api::OcError>
@@ -1565,6 +1592,7 @@ pub fn oce_api::Engine<S>::restore_state(&mut self, &oce_api::EngineStateSnapsho
 pub fn oce_api::Engine<S>::resume(&mut self) -> core::result::Result<(), oce_api::OcError>
 pub fn oce_api::Engine<S>::schedule(&self) -> &oce_graph::Schedule
 pub fn oce_api::Engine<S>::set_cxf_byte_limit(&mut self, usize) -> core::result::Result<(), oce_api::OcError>
+pub fn oce_api::Engine<S>::set_non_finite_input_policy(&mut self, oce_api::NonFiniteInputPolicy)
 pub fn oce_api::Engine<S>::set_param(&mut self, &str, oce_model::Value) -> core::result::Result<(), oce_api::OcError>
 pub fn oce_api::Engine<S>::state_snapshot(&self) -> core::result::Result<oce_api::EngineStateSnapshot, oce_api::OcError>
 pub fn oce_api::Engine<S>::store(&self) -> &S
@@ -1722,6 +1750,20 @@ pub fn oce_api::LoadReport::to_owned(&self) -> T
 pub fn oce_api::LoadReport::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::LoadReport::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::LoadReport::type_id(&self) -> core::any::TypeId
+pub fn oce_api::NonFiniteInputPolicy::borrow(&self) -> &T
+pub fn oce_api::NonFiniteInputPolicy::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::NonFiniteInputPolicy::clone(&self) -> oce_api::NonFiniteInputPolicy
+pub fn oce_api::NonFiniteInputPolicy::clone_into(&self, &mut T)
+pub fn oce_api::NonFiniteInputPolicy::default() -> oce_api::NonFiniteInputPolicy
+pub fn oce_api::NonFiniteInputPolicy::eq(&self, &oce_api::NonFiniteInputPolicy) -> bool
+pub fn oce_api::NonFiniteInputPolicy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::NonFiniteInputPolicy::from(T) -> T
+pub fn oce_api::NonFiniteInputPolicy::hash<__H: core::hash::Hasher>(&self, &mut __H)
+pub fn oce_api::NonFiniteInputPolicy::into(self) -> U
+pub fn oce_api::NonFiniteInputPolicy::to_owned(&self) -> T
+pub fn oce_api::NonFiniteInputPolicy::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::NonFiniteInputPolicy::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::NonFiniteInputPolicy::type_id(&self) -> core::any::TypeId
 pub fn oce_api::OcError::all_diagnostics(&self) -> impl core::iter::traits::iterator::Iterator<Item = &oce_diag::Diagnostic>
 pub fn oce_api::OcError::borrow(&self) -> &T
 pub fn oce_api::OcError::borrow_mut(&mut self) -> &mut T
@@ -2193,6 +2235,8 @@ pub oce_api::LoadReport::io: oce_api::IoSummary
 pub oce_api::LoadReport::model_id: oce_store::DomainKey
 pub oce_api::LoadReport::stateful_blocks: usize
 pub oce_api::LoadReport::warnings: alloc::vec::Vec<oce_diag::Diagnostic>
+pub oce_api::NonFiniteInputPolicy::Admit
+pub oce_api::NonFiniteInputPolicy::Refuse
 pub oce_api::OcError::Build(oce_graph::BuildError)
 pub oce_api::OcError::Cxf(oce_cxf::CxfError)
 pub oce_api::OcError::CxfByteLimitTooLarge
@@ -2212,6 +2256,7 @@ pub oce_api::OcError::FrameUnknownInput
 pub oce_api::OcError::FrameUnknownInput::bytes: usize
 pub oce_api::OcError::FrameUnknownInput::prefix: alloc::string::String
 pub oce_api::OcError::InputDomain(alloc::string::String)
+pub oce_api::OcError::InputNonFinite(alloc::string::String)
 pub oce_api::OcError::InputType(alloc::string::String)
 pub oce_api::OcError::Load
 pub oce_api::OcError::Load::detail: alloc::string::String
@@ -2458,6 +2503,9 @@ pub type oce_api::LoadReceipt::Owned = T
 pub type oce_api::LoadReport::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::LoadReport::Error = core::convert::Infallible
 pub type oce_api::LoadReport::Owned = T
+pub type oce_api::NonFiniteInputPolicy::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::NonFiniteInputPolicy::Error = core::convert::Infallible
+pub type oce_api::NonFiniteInputPolicy::Owned = T
 pub type oce_api::OcError::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::OcError::Error = core::convert::Infallible
 pub type oce_api::OcResult<T> = core::result::Result<T, oce_api::OcError>
@@ -2542,6 +2590,7 @@ pub unsafe fn oce_api::IoInventory::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::IoSummary::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::LoadReceipt::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::LoadReport::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::NonFiniteInputPolicy::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::ParamAttrs::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::ParamTable::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::PassThroughPair::clone_to_uninit(&self, *mut u8)

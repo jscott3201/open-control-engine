@@ -109,6 +109,7 @@ fn _assert_python_facing_types_are_clone() {
     needs_clone::<Value>();
     // The `Copy` enums (also `Clone`).
     needs_clone::<RunMode>();
+    needs_clone::<crate::NonFiniteInputPolicy>();
     needs_clone::<IoClass>();
     needs_clone::<PhysicalKind>();
     needs_clone::<AssertLevel>();

@@ -64,6 +64,23 @@ and a gate that accepted any text would restore exactly the false assurance desc
   unification can compare or propagate it. Non-finite Real input values are unchanged (issue #363 stays open). The
   release-compatibility checker re-selects its current implementation baseline at the change's
   source commit.
+- **Hosts can opt in to refusing non-finite Real inputs** (GitHub #TBD, issue #363). The engine
+  had no policy for a NaN or infinite input sample on an unbounded Real input: it reached the
+  blocks, where one NaN latched `PID`, `Derivative` and `MovingAverage` state until reload, and
+  `Line` and `LimitSlewRate` turned it into a believable finite command. The new
+  `Engine::set_non_finite_input_policy(NonFiniteInputPolicy::Refuse)` makes `prepare_frame` refuse
+  every non-finite Real boundary input value — NaN of either sign and payload, and both
+  infinities, bounded or not — with the new `OcError::InputNonFinite(path)`, naming the canonical
+  input; per input it follows `InputType` and precedes `InputDomain`. `execute_frame` rechecks a
+  plan against the policy in force, so a plan prepared under `Admit` cannot execute a non-finite
+  value after a switch. Block maths is unchanged. `Engine::non_finite_input_policy` reads the
+  setting. The default `NonFiniteInputPolicy::Admit` (non-exhaustive) keeps today's behaviour
+  byte-for-byte, because the Tier-A goldens and the bound strict-bit conformance evidence feed NaN
+  and ±∞ through the facade; the default becomes `Refuse` at the next native-evidence refresh.
+  The policy is host configuration like `cxf_byte_limit`: it persists across loads, resumes and
+  restores, and no snapshot, checkpoint or replay record carries it. Production hosts are
+  recommended to select `Refuse` (see `docs/host-responsibilities.md`). The release-compatibility
+  checker re-selects its current implementation baseline at the change's source commit.
 
 ### CXF import and export
 

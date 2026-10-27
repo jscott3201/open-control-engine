@@ -31,6 +31,8 @@ pub struct Engine<S: Store = MemStore> {
     pub(crate) store: Arc<S>,
     /// Host admission policy, independent of the loaded model and continuation state.
     pub(crate) cxf_byte_limit: usize,
+    /// Host frame-admission policy for non-finite Real inputs; outside run state and its codecs.
+    pub(crate) non_finite_input_policy: crate::NonFiniteInputPolicy,
     /// The flat executable truth (D1), frozen at load.
     pub(crate) model: Arc<ModelGraph>,
     /// The frozen Kahn schedule (D6; store-free).
@@ -79,6 +81,7 @@ impl<S: Store> Engine<S> {
         Self {
             store,
             cxf_byte_limit: crate::MAX_CXF_BYTES,
+            non_finite_input_policy: crate::NonFiniteInputPolicy::Admit,
             model: Arc::new(ModelGraph::new()),
             schedule: Schedule::default(),
             blocks: Vec::new(),

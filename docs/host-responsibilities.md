@@ -10,6 +10,12 @@ warn you if you skip them.
 See the [product contract](product-contract.md) for numbered host obligations and the bounded
 requirement-to-evidence map; engine boundary tests are not host-compliance evidence.
 
+> **Production hosts: select the strict non-finite input policy.** Call
+> `engine.set_non_finite_input_policy(NonFiniteInputPolicy::Refuse)` before your first frame. The
+> default is still `Admit`, which passes a NaN or infinite sensor value to the blocks; it becomes
+> `Refuse` at the next native-evidence refresh (GitHub issue #363). See
+> [Refuse non-finite Real inputs](#refuse-non-finite-real-inputs).
+
 ## Native complete frames and the host delivery boundary
 
 The [complete-frame contract](complete-frame-contract.md) supplies current typed, read-only
@@ -72,6 +78,53 @@ Frames carry typed values, not `PointStatus` or wall-clock freshness. A host tha
 resubmits stale or faulted observations can still obtain a valid computational result. Validate
 quality and observation coherence before preparation. The engine neither invents missing data nor
 qualifies a host's substitution policy.
+
+## Refuse non-finite Real inputs
+
+A NaN or infinite input sample is a hazard that no block masks reliably. One NaN can latch `PID`,
+`Derivative` or `MovingAverage` state until reload, and `Line` or `LimitSlewRate` can turn it into
+a finite, believable command. Block maths deliberately propagates non-finite values, as CDL does,
+so the protection belongs at the boundary.
+
+`Engine::set_non_finite_input_policy` selects what preparation does with a NaN (either sign, any
+payload) or infinite value on a Real boundary input:
+
+| Policy | Unbounded Real input | Bounded Real input | Default |
+| --- | --- | --- | --- |
+| `NonFiniteInputPolicy::Admit` | Accepted and passed to blocks unchanged | `InputDomain` (no value compares with NaN; finite bounds exclude the infinity beyond them) | **Yes, for now** |
+| `NonFiniteInputPolicy::Refuse` | `InputNonFinite(path)` | `InputNonFinite(path)` | From the next native-evidence refresh |
+
+**Production hosts are recommended to select `Refuse`.** `Admit` is the default only because the
+bound strict-bit conformance evidence feeds NaN and ±∞ through the facade to pin CDL's non-finite
+propagation. At the next native-evidence refresh the default becomes `Refuse`, the conformance
+driver opts out explicitly, and the evidence is re-captured (GitHub issue #363). A host that
+already selects `Refuse` sees no change then; a host relying on `Admit` must select it explicitly.
+
+Under `Refuse`, `InputNonFinite` names the canonical input. Per input it is checked after
+`InputType` and before `InputDomain`, so a NaN on a bounded input reports `InputNonFinite`. Nothing
+is staged, model time does not advance and no sequence number is consumed: the engine is exactly
+as it was before the attempt. Integer, Boolean and enum inputs are unaffected. Execution rechecks
+the plan against the policy in force, so a plan prepared under `Admit` cannot carry a non-finite
+value past a later switch to `Refuse`. Changing the policy changes nothing else: not the run
+state, the time, the sequence, the snapshot bytes or an outstanding plan's validity.
+
+The policy is host configuration, like `cxf_byte_limit`. It persists across loads, parameter
+resumes and restores, and no snapshot, checkpoint or replay record carries it. It decides only
+which frames are accepted; an accepted frame evolves state identically under either policy, so
+replay and restore stay deterministic without it. A replay record captured under `Admit` can
+carry a non-finite input; replaying it on a `Refuse` engine is refused at preparation, so replay
+such a record on an engine that selects `Admit`. Restored state is not inspected: the policy
+governs host inputs, not values a block already holds.
+
+Producing the replacement value is the host's obligation, and the engine does not choose one:
+
+1. **Substitute a finite value** that your fault policy defines for that point — a last good
+   sample within its staleness limit, a configured fallback, or a value that drives the sequence
+   toward its safe state — and record that you did.
+2. **Or do not execute the frame** and drive the equipment's safe state yourself.
+
+Do not substitute a bound or a type seed merely to get a frame accepted; a plausible value that
+the sensor never reported is the masking this refusal exists to prevent.
 
 ## The engine implements no fail-safe policy of its own
 

@@ -64,19 +64,7 @@ fn image<S: Store>(engine: &Engine<S>) -> String {
 #[test]
 fn each_preflight_refusal_preserves_every_execution_bit_and_sequence() {
     for advanced in [false, true] {
-        for cause in [
-            "unloaded",
-            "dirty",
-            "stale",
-            "nan",
-            "infinity",
-            "negative-infinity",
-            "regression",
-            "range",
-            "step",
-            "unrepresentable",
-            "sequence",
-        ] {
+        for cause in PREFLIGHT_CAUSES {
             let mut engine = loaded();
             let retained = if advanced {
                 let plan = plan(&engine, 4.0);
@@ -85,65 +73,13 @@ fn each_preflight_refusal_preserves_every_execution_bit_and_sequence() {
                 None
             };
             let mut frame = plan(&engine, 4.0);
-            match cause {
-                "unloaded" => engine.loaded = false,
-                "dirty" => {
-                    engine.halt().unwrap();
-                    engine
-                        .set_param("urn:frame:delay.samplePeriod", Value::Real(2.0))
-                        .unwrap();
-                }
-                "stale" => frame.generation = Arc::new(()),
-                "nan" => frame.time = f64::NAN,
-                "infinity" => frame.time = f64::INFINITY,
-                "negative-infinity" => frame.time = f64::NEG_INFINITY,
-                "regression" => {
-                    engine.prev_t = Some(5.0);
-                    engine.state.t = 5.0;
-                }
-                "range" => frame.time = f64::MAX,
-                "step" => {
-                    // Only a restored clock beyond the magnitude limit can still overflow.
-                    engine.prev_t = Some(-f64::MAX);
-                    engine.state.t = -f64::MAX;
-                    frame.time = crate::MAX_FRAME_TIME_MAGNITUDE;
-                }
-                // In range, but 1e305 * 1e6 overflows the sampled clock's rounding even fresh.
-                "unrepresentable" => frame.time = 1.0e305,
-                "sequence" => engine.accepted_frame_sequence = u64::MAX,
-                _ => unreachable!(),
-            }
+            inject(cause, &mut engine, &mut frame);
             let before = image(&engine);
             let retained_before = format!("{retained:?}");
             engine.store().reset_calls();
             engine.store().arm_hot_path_guard();
             let error = engine.execute_frame(frame).unwrap_err();
-            assert!(
-                match cause {
-                    "unloaded" => matches!(error, OcError::State(EngineStateError::NoLoadedModel)),
-                    "dirty" => matches!(
-                        error,
-                        OcError::State(EngineStateError::PendingParameterEdits)
-                    ),
-                    "stale" => matches!(error, OcError::StalePreparedFrame),
-                    "nan" | "infinity" | "negative-infinity" =>
-                        matches!(error, OcError::NonFiniteTime { .. }),
-                    "regression" => matches!(error, OcError::TimeRegression { .. }),
-                    "range" =>
-                        matches!(error, OcError::TimeOutOfRange { now, .. } if now == f64::MAX),
-                    "step" => matches!(
-                        error,
-                        OcError::NonFiniteTimeStep { now, prev }
-                            if now == crate::MAX_FRAME_TIME_MAGNITUDE && prev == -f64::MAX
-                    ),
-                    "unrepresentable" => {
-                        matches!(error, OcError::ModelTimeUnrepresentable { .. })
-                    }
-                    "sequence" => matches!(error, OcError::FrameSequenceExhausted),
-                    _ => unreachable!(),
-                },
-                "{cause}: {error:?}"
-            );
+            assert!(refused_for(cause, &error), "{cause}: {error:?}");
             assert_eq!(image(&engine), before, "{cause}");
             assert_eq!(format!("{retained:?}"), retained_before);
             assert_eq!(
@@ -151,6 +87,108 @@ fn each_preflight_refusal_preserves_every_execution_bit_and_sequence() {
                 StoreCallSnapshot::default(),
                 "{cause}"
             );
+        }
+    }
+}
+
+const PREFLIGHT_CAUSES: [&str; 11] = [
+    "unloaded",
+    "dirty",
+    "stale",
+    "nan",
+    "infinity",
+    "negative-infinity",
+    "regression",
+    "range",
+    "step",
+    "unrepresentable",
+    "sequence",
+];
+
+/// Put `engine`/`frame` into the state that makes execution refuse for `cause`.
+fn inject<S: Store>(cause: &str, engine: &mut Engine<S>, frame: &mut PreparedInputFrame) {
+    match cause {
+        "unloaded" => engine.loaded = false,
+        "dirty" => {
+            engine.halt().unwrap();
+            engine
+                .set_param("urn:frame:delay.samplePeriod", Value::Real(2.0))
+                .unwrap();
+        }
+        "stale" => frame.generation = Arc::new(()),
+        "nan" => frame.time = f64::NAN,
+        "infinity" => frame.time = f64::INFINITY,
+        "negative-infinity" => frame.time = f64::NEG_INFINITY,
+        "regression" => {
+            engine.prev_t = Some(5.0);
+            engine.state.t = 5.0;
+        }
+        "range" => frame.time = f64::MAX,
+        "step" => {
+            // Only a restored clock beyond the magnitude limit can still overflow.
+            engine.prev_t = Some(-f64::MAX);
+            engine.state.t = -f64::MAX;
+            frame.time = crate::MAX_FRAME_TIME_MAGNITUDE;
+        }
+        // In range, but 1e305 * 1e6 overflows the sampled clock's rounding even fresh.
+        "unrepresentable" => frame.time = 1.0e305,
+        "sequence" => engine.accepted_frame_sequence = u64::MAX,
+        _ => unreachable!(),
+    }
+}
+
+/// The typed error execution must return first for `cause`.
+fn refused_for(cause: &str, error: &OcError) -> bool {
+    match cause {
+        "unloaded" => matches!(error, OcError::State(EngineStateError::NoLoadedModel)),
+        "dirty" => matches!(
+            error,
+            OcError::State(EngineStateError::PendingParameterEdits)
+        ),
+        "stale" => matches!(error, OcError::StalePreparedFrame),
+        "nan" | "infinity" | "negative-infinity" => matches!(error, OcError::NonFiniteTime { .. }),
+        "regression" => matches!(error, OcError::TimeRegression { .. }),
+        "range" => matches!(error, OcError::TimeOutOfRange { now, .. } if *now == f64::MAX),
+        "step" => matches!(
+            error,
+            OcError::NonFiniteTimeStep { now, prev }
+                if *now == crate::MAX_FRAME_TIME_MAGNITUDE && *prev == -f64::MAX
+        ),
+        "unrepresentable" => matches!(error, OcError::ModelTimeUnrepresentable { .. }),
+        "sequence" => matches!(error, OcError::FrameSequenceExhausted),
+        _ => unreachable!(),
+    }
+}
+
+#[test]
+fn the_non_finite_recheck_follows_every_time_and_incarnation_cause_and_precedes_exhaustion() {
+    // A plan carrying a non-finite Real (injected privately: the public path would need an Admit
+    // preparation and a switch), executed under Refuse. Every readiness, incarnation and time
+    // cause still wins; only sequence exhaustion yields to `InputNonFinite`.
+    for cause in PREFLIGHT_CAUSES {
+        for bits in [0x7ff8_0000_0000_0000_u64, 0xfff0_0000_0000_0000] {
+            let mut engine = loaded();
+            let mut frame = plan(&engine, 4.0);
+            frame.inputs[1].1 = Value::Real(f64::from_bits(bits));
+            inject(cause, &mut engine, &mut frame);
+            engine.set_non_finite_input_policy(crate::NonFiniteInputPolicy::Refuse);
+            let before = image(&engine);
+            engine.store().reset_calls();
+            engine.store().arm_hot_path_guard();
+            let error = engine.execute_frame(frame).unwrap_err();
+            if cause == "sequence" {
+                assert!(
+                    matches!(&error, OcError::InputNonFinite(path) if path == "urn:frame:b"),
+                    "{cause} {bits:#018x}: {error:?}"
+                );
+            } else {
+                assert!(
+                    refused_for(cause, &error),
+                    "{cause} {bits:#018x}: {error:?}"
+                );
+            }
+            assert_eq!(image(&engine), before, "{cause}");
+            assert_eq!(engine.store().calls(), StoreCallSnapshot::default());
         }
     }
 }
