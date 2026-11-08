@@ -5,7 +5,7 @@
 //! and driven through [`TICKS`] HostTick v1 frames on the host schedule's deterministic inputs.
 //!
 //! The library is `no_std` on every target and links no `core::fmt`: its output is ASCII lines
-//! built byte by byte ([`line`]), so an image's size measures the engine rather than a formatter.
+//! built byte by byte ([`line`](mod@line)), so an image's size measures the engine rather than a formatter.
 //! The `blob-frames` bin runs [`run`] on a bare-metal target, writing each line to semihosting
 //! stdout and exiting with the [`Verdict`]'s code; on a host the same bin is the reference runner
 //! and writes the same lines to stdout. `.github/workflows/qemu.yml` runs the images under QEMU and

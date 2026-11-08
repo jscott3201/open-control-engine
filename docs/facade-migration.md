@@ -54,8 +54,9 @@ numerical goldens, catalog identity, HostTick arithmetic and engine thread-safet
 
 ## Package and panic-inventory boundary
 
-The workspace has 12 members, 10 publishable and two private. `oce-api` declares no cargo
-features, and its normal closure is eight OCE packages: no `oce-store` (GitHub #390). The former
+The workspace has 13 members, 10 publishable and three private (`oce-bless`, `oce-conformance`
+and the firmware image `oce-firmware-link`). `oce-api` declares no cargo features, and its normal
+closure is eight OCE packages: no `oce-store` (GitHub #390). The former
 `oce-store-mem` crate is folded into `oce-store` behind its default `mem` feature (GitHub #391):
 `oce_store_mem::MemStore` is now `oce_store::MemStore`, with the same behaviour. The
 verification-only `oce-reference-wal-adapter` was deleted with the engine's storage lifecycle it

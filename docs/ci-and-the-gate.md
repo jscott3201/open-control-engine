@@ -498,8 +498,8 @@ tag/version match, fmt, clippy, a workspace `cargo test`, the package validator 
 `cargo publish --workspace --locked --dry-run` — with no token and no publish, so a tag can be
 re-cut safely (see [release.yml](../.github/workflows/release.yml), `verify` job). Publishing is a
 separate manual `workflow_dispatch` into the `release` GitHub Environment. Cargo's workspace
-selection includes the 10 publishable members and skips the two members with `publish = false`:
-`oce-bless` and `oce-conformance`.
+selection includes the 10 publishable members and skips the three members with `publish = false`:
+`oce-bless`, `oce-conformance` and the firmware image `oce-firmware-link`.
 No checked-in record pins those sets any more: the guards are each crate's `publish` flag, the
 byte pin on `release.yml` (whose comment names the split) and review.
 
