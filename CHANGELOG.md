@@ -73,7 +73,10 @@ projection and state-format goldens are byte-identical to the pre-M1a `developme
   `Build` mismatch, as the fail-closed policy requires. The three places that pin that descriptor
   line move with it, one line each, as GitHub #333 did for 0.2.0: the `compatibility.txt` and
   `compatibility_export.txt` fixtures under `crates/oce-api/tests/fixtures` and the
-  `CompatibilityDescriptor` doctest. They are descriptor text, not numerical goldens;
+  `CompatibilityDescriptor` doctest. The descriptor refusal tests that name the current or a
+  neighbouring version (`compatibility_tests.rs`, `replay_codec.rs`) move from 0.2.x to 0.3.x
+  likewise, keeping each case's relation to the current version. They are descriptor text, not
+  numerical goldens;
   `tools/golden-gen/goldens` and every data golden are byte-identical. The compiled-schedule blob
   note's worked example shows engine 0.3.0, with its CRC-32C recomputed. No catalog,
   contract-schema, state-format, execution-ABI or replay-format revision changes.
