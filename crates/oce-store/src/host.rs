@@ -31,7 +31,7 @@
 //! back, and nothing here calls [`Durable::commit`]: the commit boundary is the host's too.
 
 use crate::{
-    DomainKey, Durable, ModelStore, PointHandle, PointStore, PointValueType, ResolvedModel, Store,
+    DomainKey, Durable, ModelStore, PointHandle, PointStore, PointValueType, ResolvedModel,
     StoreError, StoreResult,
 };
 
@@ -41,6 +41,10 @@ use crate::{
 /// `inputs` is every input point of the loaded model as `(canonical path, value type)` — exactly
 /// what `oce_api::LoadedModel::input_points()` yields. Returns the resolved input handles in
 /// `inputs` order (empty when the model has no inputs). Never panics.
+///
+/// `store` needs only the three ports the sequence touches ([`Durable`], [`ModelStore`],
+/// [`PointStore`]); any full [`crate::Store`], including `&dyn Store`, qualifies, and so does a
+/// backend with no semantic port at all.
 ///
 /// # Errors
 /// Returns the first [`StoreError`] from [`Durable::recover`], [`ModelStore::save_model`] or
@@ -53,7 +57,7 @@ pub fn persist_loaded_model<'a, S>(
     inputs: impl IntoIterator<Item = (&'a str, PointValueType)>,
 ) -> StoreResult<Vec<PointHandle>>
 where
-    S: Store + ?Sized,
+    S: Durable + ModelStore + PointStore + ?Sized,
 {
     recover(store)?;
     save_model(store, model)?;

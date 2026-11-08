@@ -193,7 +193,7 @@ operation. A load hands you the persistable model as plain data:
 use oce_store::host::persist_loaded_model;
 
 let (report, loaded) = engine.load_cxf(&cxf_bytes)?; // engine state is committed here
-// `your_store` is any `oce_store::Store`: your adapter, or `oce_store::MemStore`.
+// `your_store` is your adapter behind the port, or `oce_store::MemStore`.
 let input_handles = persist_loaded_model(&your_store, &loaded.model, loaded.input_points())?;
 your_store.commit()?;                                 // the commit boundary is yours too
 ```
@@ -203,7 +203,8 @@ the first error: `Durable::recover` (so the save lands after recovered state, ne
 `ModelStore::save_model`, then `PointStore::resolve_points` for every input point, refusing a
 backend that returns a different number of handles with `StoreError::Validation`. The three steps
 are also public on their own (`oce_store::host::{recover, save_model, validate_inputs}`) for a host
-that interleaves its own work. The helper takes plain data only — `loaded.model` is the
+that interleaves its own work. The returned handles are in `input_points()` order; they are yours to
+bind to your point layer or to drop, and the engine never reads them. The helper takes plain data only — `loaded.model` is the
 `ResolvedModel` the port takes unchanged (both crates share the `oce_model::resolved_model` DTOs)
 and `loaded.input_points()` yields `(canonical path, value type)` pairs — so `oce-store` never
 depends on `oce-api`.

@@ -6,7 +6,7 @@ use std::sync::Mutex;
 use super::*;
 use crate::{
     EquipmentDto, PointListRow, PointSnapshot, PointWrite, RelationDto, RetrievalHit,
-    SemanticPayloadDto, SemanticQuery, SemanticStore, TemplatePointReq,
+    SemanticPayloadDto, SemanticQuery, SemanticStore, Store, TemplatePointReq,
 };
 
 fn model(id: &str) -> ResolvedModel {
@@ -275,6 +275,70 @@ fn inputs_resolve_in_iteration_order_whatever_their_value_types() {
         store.calls(),
         ["resolve_points ahu.uOpeMod,ahu.uOcc,ahu.TZon"]
     );
+}
+
+/// A backend with only the three ports the sequence touches: no `SemanticStore`, so not a
+/// `Store`. Its methods outside the sequence are unreachable by construction.
+#[derive(Default)]
+struct PortsOnly {
+    calls: Mutex<Vec<&'static str>>,
+}
+
+impl Durable for PortsOnly {
+    fn commit(&self) -> StoreResult<()> {
+        unreachable!("the post-load sequence never commits")
+    }
+    fn flush(&self) -> StoreResult<()> {
+        unreachable!("the post-load sequence never flushes")
+    }
+    fn recover(&self) -> StoreResult<()> {
+        self.calls.lock().expect("calls lock").push("recover");
+        Ok(())
+    }
+}
+
+impl ModelStore for PortsOnly {
+    fn save_model(&self, _model: &ResolvedModel) -> StoreResult<()> {
+        self.calls.lock().expect("calls lock").push("save_model");
+        Ok(())
+    }
+    fn load_model(&self, _model_id: &DomainKey) -> StoreResult<ResolvedModel> {
+        unreachable!("the post-load sequence never reads a model back")
+    }
+    fn list_models(&self) -> StoreResult<Vec<DomainKey>> {
+        unreachable!("the post-load sequence never lists models")
+    }
+    fn delete_model(&self, _model_id: &DomainKey) -> StoreResult<()> {
+        unreachable!("the post-load sequence never deletes")
+    }
+}
+
+impl PointStore for PortsOnly {
+    fn resolve_points(&self, keys: &[DomainKey]) -> StoreResult<Vec<PointHandle>> {
+        self.calls
+            .lock()
+            .expect("calls lock")
+            .push("resolve_points");
+        Ok((0..keys.len() as u64).map(PointHandle).collect())
+    }
+    fn snapshot(&self) -> StoreResult<Box<dyn PointSnapshot>> {
+        unreachable!("the post-load sequence never snapshots")
+    }
+    fn write_points(&self, _batch: &[PointWrite]) -> StoreResult<usize> {
+        unreachable!("the post-load sequence never writes points")
+    }
+}
+
+#[test]
+fn a_backend_without_a_semantic_port_can_run_the_whole_sequence() {
+    let store = PortsOnly::default();
+    let handles = persist_loaded_model(&store, &model("seq:ahu"), INPUTS).unwrap();
+    assert_eq!(
+        handles,
+        vec![PointHandle(0), PointHandle(1), PointHandle(2)]
+    );
+    let calls = store.calls.lock().expect("calls lock").clone();
+    assert_eq!(calls, ["recover", "save_model", "resolve_points"]);
 }
 
 #[cfg(feature = "mem")]
