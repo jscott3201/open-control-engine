@@ -111,12 +111,14 @@ done
 
 # ── 4. mutation ──────────────────────────────────────────────────────────────
 # The copy holds what the two library builds read: the workspace manifests and lockfile, the clippy
-# and toolchain configuration, the crates, and the reference catalog oce-blocks includes. One
+# and toolchain configuration, the crates, the firmware members (the lockfile lists them), and the
+# reference catalog oce-blocks includes. One
 # mutation per crate that does float math; one clippy run checks both.
 COPY="$WORK/workspace"
 mkdir -p "$COPY/tools"
 cp Cargo.toml Cargo.lock clippy.toml rust-toolchain.toml "$COPY/"
 cp -R crates "$COPY/crates"
+cp -R firmware "$COPY/firmware"
 cp -R tools/reference-catalog "$COPY/tools/reference-catalog"
 # file|call it replaces|std method call it becomes|the disallowed path clippy must name
 MUTATIONS=(

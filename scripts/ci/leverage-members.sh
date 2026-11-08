@@ -20,10 +20,11 @@
 # facade's business and is not inspected. The check reads `cargo tree --depth 1`, which reports
 # real package names, so a dependency renamed in Cargo.toml cannot hide.
 #
-# THE LAYOUT RULE. Every directory crates/<name>/ or crates/leverage/<name>/ that holds a
-# Cargo.toml must be a workspace member. The root Cargo.toml selects members by the globs
-# `crates/oce-*` and `crates/leverage/*`; a crate outside both would otherwise be built and tested
-# by nothing.
+# THE LAYOUT RULE. Every directory crates/<name>/, crates/leverage/<name>/ or firmware/<name>/
+# that holds a Cargo.toml must be a workspace member. The root Cargo.toml selects members by the
+# globs `crates/oce-*`, `crates/leverage/*` and `firmware/*` (the bare-metal images, issue #402,
+# which build with the engine lane); a crate outside them would otherwise be built and tested by
+# nothing.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -86,10 +87,10 @@ check() {
   local manifests on_disk missing members member status=0
   manifests="$(member_manifests | cut -f1 | sort)"
   on_disk="$(git ls-files --cached --others --exclude-standard -- 'crates/*/Cargo.toml' 'crates/leverage/*/Cargo.toml' \
-    | grep -E '^crates/([^/]+|leverage/[^/]+)/Cargo\.toml$' | sort -u || true)"
+    'firmware/*/Cargo.toml' | grep -E '^(crates/([^/]+|leverage/[^/]+)|firmware/[^/]+)/Cargo\.toml$' | sort -u || true)"
   missing="$(comm -13 <(printf '%s\n' "$manifests") <(printf '%s\n' "$on_disk") | sed '/^$/d')"
   if [ -n "$missing" ]; then
-    echo "FAIL: crate manifests that are not workspace members (name core crates oce-*, put the rest under crates/leverage/):"
+    echo "FAIL: crate manifests that are not workspace members (name core crates oce-*, put the rest under crates/leverage/, firmware images under firmware/):"
     printf '  %s\n' $missing
     status=1
   fi

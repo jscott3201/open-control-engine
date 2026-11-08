@@ -37,6 +37,10 @@ expect readme-quickstart "$core" 'README.md'
 expect composite-contract-doc "$core" 'docs/cxf-composite-subset.md'
 # Engine paths: every one runs the determinism lane, and with it the leverage lane.
 expect core-four "$core" 'crates/oce-blocks/src/lib.rs'
+# Firmware images (issue #402) link the core: engine lane, with or without docs beside them.
+expect firmware-image "$core" $'firmware/link/src/lib.rs\nfirmware/link/size-budget.toml'
+expect firmware-plus-docs "$core" $'firmware/link/boards/virt.x\ndocs/ci-and-the-gate.md'
+expect cargo-config "$core" '.cargo/config.toml'
 expect cxf "$core" 'crates/oce-cxf/tests/fixtures/profile/a.json'
 expect lockfile "$core" 'Cargo.lock'
 expect root-manifest "$core" 'Cargo.toml'
