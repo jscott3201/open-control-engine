@@ -190,6 +190,7 @@ version = "0.3.0"
 name = "oce-expr"
 version = "0.3.0"
 dependencies = [
+ "libm",
  "oce-model",
  "thiserror",
 ]

@@ -5,7 +5,8 @@
 //! source dimensions zero-based after lowering. Selector and mask parameters are structural because
 //! they change the resolved feedthrough map.
 
-use std::borrow::Cow;
+use alloc::borrow::Cow;
+use alloc::vec::Vec;
 
 use oce_model::Value;
 

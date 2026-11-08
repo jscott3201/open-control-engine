@@ -16,10 +16,10 @@ workspace = true
 [dependencies]
 oce-api = { workspace = true }
 oce-diag = { workspace = true }
-oce-model = { workspace = true }
+oce-model = { workspace = true, features = ["std"] }
 regex = "1"
 ryu = "1.0"
-serde = { workspace = true }
+serde = { workspace = true, features = ["std", "rc"] }
 serde_json = { workspace = true }
 
 [dev-dependencies]

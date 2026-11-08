@@ -137,6 +137,25 @@ if engine_lane; then
 step 'unused dependency gate' cargo machete
 step 'clippy (default — no DB)' cargo clippy --workspace --all-targets --locked -- -D warnings
 step 'build (default — no DB)' cargo build --workspace --locked
+# ── no_std + alloc core build ────────────────────────────────────────────────
+# The core four (oce-model, oce-expr, oce-blocks, oce-graph) build without `std` (issue #397), as
+# pr-gate.yml's `no-std-build` job checks. This script installs nothing: when a target is missing,
+# its build step fails with rustc's E0463 ("can't find crate for `core`"), whose help line is the
+# `rustup target add <target>` command to run. A missing target is a failure, never a skip.
+step 'build (no_std + alloc, thumbv7em-none-eabihf)' \
+  cargo build -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features \
+    --features alloc --target thumbv7em-none-eabihf --locked
+step 'clippy (no_std + alloc, thumbv7em-none-eabihf)' \
+  cargo clippy -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features \
+    --features alloc --target thumbv7em-none-eabihf --locked -- -D warnings
+step 'build (no_std + alloc, wasm32-unknown-unknown)' \
+  cargo build -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features \
+    --features alloc --target wasm32-unknown-unknown --locked
+# Without `std` the evaluation-fuel meter is program-wide rather than thread-local, so the suite
+# runs on one test thread.
+step 'oce-expr unit suite without std' \
+  cargo test -p oce-expr --no-default-features --features alloc --lib --locked -- --test-threads=1
+
 step_env 'rustdoc — libs' RUSTDOCFLAGS '-D warnings' \
   cargo doc --no-deps --workspace --lib --document-private-items --locked
 step_env 'rustdoc — bins' RUSTDOCFLAGS '-D warnings' \

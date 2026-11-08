@@ -28,7 +28,8 @@
 //! Multi-iterator clauses parse (the reserved `iters` surface) but are rejected here with a
 //! typed [`ExprError::DomainError`] naming the deferral.
 
-use std::sync::Arc;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
 
 use oce_model::EnumClassId;
 

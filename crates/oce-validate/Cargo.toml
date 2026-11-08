@@ -13,7 +13,7 @@ homepage.workspace = true
 workspace = true
 
 [dependencies]
-oce-model = { workspace = true }
-oce-blocks = { workspace = true }
+oce-model = { workspace = true, features = ["std"] }
+oce-blocks = { workspace = true, features = ["std"] }
 oce-diag = { workspace = true }
-thiserror = { workspace = true }
+thiserror = { workspace = true, features = ["std"] }

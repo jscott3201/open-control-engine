@@ -13,15 +13,15 @@ homepage.workspace = true
 workspace = true
 
 [dependencies]
-oce-model = { workspace = true }
+oce-model = { workspace = true, features = ["std"] }
 oce-diag = { workspace = true }
 # Group A (acyclic): the resolver needs the block registry (ClassNotFound bridge) and the
 # scalar expression evaluator (Ground-mode `Expr` parameter bindings).
-oce-blocks = { workspace = true }
-oce-expr = { workspace = true }
-serde = { workspace = true }
+oce-blocks = { workspace = true, features = ["std"] }
+oce-expr = { workspace = true, features = ["std"] }
+serde = { workspace = true, features = ["std", "rc"] }
 serde_json = { workspace = true }
-thiserror = { workspace = true }
+thiserror = { workspace = true, features = ["std"] }
 
 [dev-dependencies]
 oce-bless = { workspace = true }

@@ -1,8 +1,12 @@
 //! The engine's public block catalog, distinct from the vendored Buildings classification.
 
+#[cfg(feature = "std")]
+use std::sync::OnceLock;
+
+use alloc::vec::Vec;
+
 use crate::{ParamRule, PortKind, port_names, registry};
 use oce_model::ParamTable;
-use std::sync::OnceLock;
 
 /// How a class's resolved scalar ports are identified.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -111,6 +115,9 @@ fn ports(kinds: &[PortKind], names: Option<&[&'static str]>) -> Vec<PortInfo> {
         .collect()
 }
 
+// Without `std` nothing calls this (there is no `OnceLock` to cache it behind), but it is kept
+// compiling so the no_std build checks the catalog construction path too.
+#[cfg_attr(not(feature = "std"), allow(dead_code))]
 fn build_catalog() -> Vec<CatalogEntry> {
     registry::all_entries()
         .map(|entry| {
@@ -151,6 +158,10 @@ fn build_catalog() -> Vec<CatalogEntry> {
 /// The first call performs one default-parameter construction per class and allocates the owned
 /// port metadata once behind a [`OnceLock`]. This metadata accessor is never called on the tick
 /// path.
+///
+/// Requires the `std` feature: the cache is a [`OnceLock`], and the catalog is host metadata a
+/// `no_std + alloc` target does not read.
+#[cfg(feature = "std")]
 #[must_use]
 pub fn catalog() -> &'static [CatalogEntry] {
     static CATALOG: OnceLock<Vec<CatalogEntry>> = OnceLock::new();

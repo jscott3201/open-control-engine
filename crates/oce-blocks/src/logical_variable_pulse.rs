@@ -5,7 +5,7 @@
 //! scalar state in arena words: last sampled width, current cycle anchor time, held Boolean output,
 //! current held-state dwell timer, and previous tick time.
 
-use std::cmp::Ordering;
+use core::cmp::Ordering;
 
 use oce_model::{ParamTable, Value, determinism::canonicalize_real};
 
@@ -191,7 +191,7 @@ fn cycle_output(t: Time, u: f64, t0: Time, period: f64) -> bool {
         return true;
     }
 
-    let t_start = t0 + buildings_round_six(((t - t0) / period).floor() * period);
+    let t_start = t0 + buildings_round_six(libm::floor((t - t0) / period) * period);
     let t_end = t_start + u * period;
     t >= t_start && t < t_end
 }
@@ -225,9 +225,9 @@ fn effective_min_hold(min_hold: f64) -> f64 {
 fn buildings_round_six(x: f64) -> f64 {
     const FACTOR: f64 = 1_000_000.0;
     if x > 0.0 {
-        (x * FACTOR + 0.5).floor() / FACTOR
+        libm::floor(x * FACTOR + 0.5) / FACTOR
     } else {
-        (x * FACTOR - 0.5).ceil() / FACTOR
+        libm::ceil(x * FACTOR - 0.5) / FACTOR
     }
 }
 
