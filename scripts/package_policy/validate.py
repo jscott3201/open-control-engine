@@ -28,9 +28,9 @@ EXPECTED_FEATURES: dict[str, list[str]] = {}
 EXPECTED_SELECTIONS = {
     "default": ([], []),
 }
-# The engine is pure (GitHub #390): the storage port and its in-memory backend sit beside the
-# facade, reached by the host, never by `oce-api`.
-FORBIDDEN_CLOSURE_MEMBERS = ("oce-store", "oce-store-mem")
+# The engine is pure (GitHub #390): the storage port (with its in-memory backend behind the `mem`
+# feature, GitHub #391) sits beside the facade, reached by the host, never by `oce-api`.
+FORBIDDEN_CLOSURE_MEMBERS = ("oce-store",)
 FORBIDDEN_DEPENDENCIES = ["async-std", "selene-db", "tokio"]
 UNKNOWN_FEATURE_CONTROL = "unsupported-control"
 

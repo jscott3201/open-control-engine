@@ -130,7 +130,10 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   whole-sequence golden trace.
 - Executes exclusively through `prepare_frame` followed by consuming `execute_frame`. The engine is
   pure: it has no storage dependency, and `load_cxf` returns the resolved model and IO inventory as
-  a plain-data `LoadedModel`. Hosts own cadence, persistence and equipment delivery.
+  a plain-data `LoadedModel`. Hosts own cadence, persistence and equipment delivery; for
+  persistence, `oce_store::host::persist_loaded_model` runs the post-load recover → save →
+  validate-inputs sequence against any adapter behind the storage port (or the in-memory
+  `oce_store::MemStore`).
 
 ## What it does not do
 

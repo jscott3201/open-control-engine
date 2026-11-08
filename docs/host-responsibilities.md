@@ -190,15 +190,29 @@ load, frame, snapshot or restore calls a storage port. Persisting anything is a 
 operation. A load hands you the persistable model as plain data:
 
 ```rust,ignore
+use oce_store::host::persist_loaded_model;
+
 let (report, loaded) = engine.load_cxf(&cxf_bytes)?; // engine state is committed here
-your_store.save_model(&loaded.model)?;                // your adapter behind the oce-store port
-check_bindings(loaded.input_points())?;               // (canonical path, value type) per input
+// `your_store` is your adapter behind the port, or `oce_store::MemStore`.
+let input_handles = persist_loaded_model(&your_store, &loaded.model, loaded.input_points())?;
+your_store.commit()?;                                 // the commit boundary is yours too
 ```
 
-`loaded.model` is the `ResolvedModel` the `oce-store` port takes unchanged (both crates share the
-`oce_model::resolved_model` DTOs). Ordering, recovery, transactions and compensation are yours: the
-engine has already committed the load when you persist, and nothing you persist is read back by a
-frame. A host-side helper in `oce-store` for this sequence is tracked by GitHub #391.
+`persist_loaded_model` runs the sequence the engine used to run at load, in this order, stopping at
+the first error: `Durable::recover` (so the save lands after recovered state, never under it),
+`ModelStore::save_model`, then `PointStore::resolve_points` for every input point, refusing a
+backend that returns a different number of handles with `StoreError::Validation`. The three steps
+are also public on their own (`oce_store::host::{recover, save_model, validate_inputs}`) for a host
+that interleaves its own work. The returned handles are in `input_points()` order; they are yours to
+bind to your point layer or to drop, and the engine never reads them. The helper takes plain data only — `loaded.model` is the
+`ResolvedModel` the port takes unchanged (both crates share the `oce_model::resolved_model` DTOs)
+and `loaded.input_points()` yields `(canonical path, value type)` pairs — so `oce-store` never
+depends on `oce-api`.
+
+What it does not do is yours: it never calls `commit`, and it rolls nothing back. The engine has
+already committed the load when you persist, so a failure here leaves the engine loaded and
+running with the store partly written; whether to retry, delete the model or refuse to start is
+your policy. Nothing you persist is read back by a frame.
 
 ## Persist engine state outside the engine
 

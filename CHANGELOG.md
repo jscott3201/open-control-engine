@@ -123,6 +123,28 @@ and a gate that accepted any text would restore exactly the false assurance desc
   recommended to select `Refuse` (see `docs/host-responsibilities.md`). The release-compatibility
   checker re-selects its current implementation baseline at the change's source commit.
 
+### Storage port
+
+- **`oce-store-mem` folds into `oce-store` behind a default `mem` feature, and `oce-store` gains
+  the host-side post-load helper** (GitHub #391). `oce_store_mem::MemStore` is now
+  `oce_store::MemStore`, unchanged in behaviour and tests; `default-features = false` builds the
+  ports, DTOs and helper with no `MemStore`. The new `oce_store::host` module puts back, on the
+  host's side, the sequence load ran before the engine became pure (GitHub #390):
+  `persist_loaded_model(&store, &loaded.model, loaded.input_points())` calls `Durable::recover`,
+  then `ModelStore::save_model`, then `PointStore::resolve_points` for every input, refusing a
+  handle-count mismatch with `StoreError::Validation`, and returns the input handles; the three
+  steps are public on their own as `recover`, `save_model` and `validate_inputs`. It takes only
+  the `oce_model::resolved_model` DTO and `(canonical path, value type)` pairs, so `oce-store`
+  still never depends on `oce-api` (and `oce-api` still never depends on `oce-store`). It never
+  commits and rolls nothing back. Tests pin the call order against a recording `Store` double,
+  failure propagation at each step, the mismatch message, the `MemStore` happy path, and — against
+  a minimal write-ahead-log fixture in `crates/oce-store/tests/recovery_ordering.rs` — that the
+  order is load-bearing: a save made before `recover` is discarded with the uncommitted tail, and
+  a handle resolved before `recover` indexes replaced state. The workspace has 12 members (10
+  publishable); the `oce-store` suite now runs per PR in the `crate-tests` job;
+  `check-default-no-db.sh`, the package validator and the release-workflow byte pin follow the
+  new member set.
+
 ### CXF import and export
 
 - **Modeled `S231:` properties are read in every JSON-LD key spelling** (GitHub #386, issue

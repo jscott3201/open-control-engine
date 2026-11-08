@@ -20,7 +20,7 @@ The [product contract](product-contract.md) owns the facade's current requiremen
 | The `oce-api` `mem` feature | Drop `features = ["mem"]` (and any `default-features = false` added only for it). The feature gated nothing; `oce-api` now has no storage dependency at all. |
 | `Engine<S: Store = MemStore>` (the type parameter) | Write `Engine`. It is a plain struct with no storage backend (GitHub #390). Code generic over `S: Store` that only forwarded to `Engine<S>` drops the parameter. |
 | `Engine::in_memory` | Use `Engine::new()` (or `Engine::default()`); it is the only constructor. |
-| `Engine::with_store` | Construct with `Engine::new()` and keep your adapter in the host. Take `let (report, loaded) = engine.load_cxf(bytes)?` and persist `loaded.model` through the adapter yourself; see [durability is the host's](host-responsibilities.md#durability-is-the-hosts). |
+| `Engine::with_store` | Construct with `Engine::new()` and keep your adapter in the host. Take `let (report, loaded) = engine.load_cxf(bytes)?` and persist through the adapter yourself — `oce_store::host::persist_loaded_model(&store, &loaded.model, loaded.input_points())` runs the recover, save and input-validation calls load used to make, in the same order; see [durability is the host's](host-responsibilities.md#durability-is-the-hosts). |
 | `Engine::store` | Hold your adapter in the host and call it directly. The engine owns no backend to borrow. |
 | `oce_api::oce_store` (the re-exported storage port), `_doc_link_domain_key` | Depend on `oce-store` directly for the port traits. `DomainKey`, `ResolvedModel` and the other resolved-model DTOs are `oce_api::DomainKey`, `oce_api::ResolvedModel` and `oce_api::resolved_model::*` (defined in `oce_model::resolved_model`; `oce-store` re-exports the same types, so values pass between them unchanged). |
 | `OcError::Store` | Delete the match arm. The engine calls no storage port, so no storage failure reaches `OcError`; a projection inconsistency is the existing `OcError::Load`, with detail prefixed `model projection failed:`. |
@@ -54,10 +54,12 @@ numerical goldens, catalog identity, HostTick arithmetic and engine thread-safet
 
 ## Package and panic-inventory boundary
 
-The workspace has 13 members, 11 publishable and two private. `oce-api` declares no cargo
-features, and its normal closure is eight OCE packages: no `oce-store` or `oce-store-mem`
-(GitHub #390). The verification-only `oce-reference-wal-adapter` was deleted with the engine's
-storage lifecycle it exercised. The reserved placeholder crates — an identity
+The workspace has 12 members, 10 publishable and two private. `oce-api` declares no cargo
+features, and its normal closure is eight OCE packages: no `oce-store` (GitHub #390). The former
+`oce-store-mem` crate is folded into `oce-store` behind its default `mem` feature (GitHub #391):
+`oce_store_mem::MemStore` is now `oce_store::MemStore`, with the same behaviour. The
+verification-only `oce-reference-wal-adapter` was deleted with the engine's storage lifecycle it
+exercised. The reserved placeholder crates — an identity
 elaboration pass, an FMI boundary DTO and an unimplemented document exporter — were removed
 (GitHub #389) rather than kept; `oce-semantics` actively derives effective point metadata and remains
 a wired implementation dependency. No replacement placeholder is introduced.

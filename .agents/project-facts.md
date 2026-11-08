@@ -80,9 +80,9 @@ advisory-db, neither of which a sandboxed lane has, so it runs in `advisories.ym
 The scoped `oce-conformance` strict-bit subset and four affected per-block suites also run per PR
 in the same four native Linux architecture/codegen cells, with repeat captures and an eight-capture
 cross-cell comparison ([bounded evidence](../docs/strict-bit-evidence.md)). The
-`oce-graph`, `oce-validate`, `oce-model` and `oce-cxf` suites run per
-PR too, x86_64 debug only. The remainder — and the release-codegen runs of those four — needs the
-release/full gate. A change confined to `oce-store`, `oce-diag` or `oce-semantics` can show a fully
+`oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and `oce-store` suites run per
+PR too, x86_64 debug only. The remainder — and the release-codegen runs of those five — needs the
+release/full gate. A change confined to `oce-diag` or `oce-semantics` can show a fully
 green PR having executed none of its own tests. Before claiming your tests pass, run
 `bash .agents/gate.sh full` and read the tail.
 
@@ -118,8 +118,8 @@ git status --porcelain -- goldens    # must print nothing
 Two `pr-gate.yml` jobs that `CI OK` needs run commands `.agents/gate.sh` does not, like the
 golden-gen hygiene job: wiring them into the script is a separate change.
 
-- `crate-tests` runs the `oce-graph`, `oce-validate`, `oce-model` and `oce-cxf` suites in x86_64
-  debug. It is a separate job, not a determinism-matrix
+- `crate-tests` runs the `oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and `oce-store`
+  suites in x86_64 debug. It is a separate job, not a determinism-matrix
   cell, so it runs beside the cells instead of lengthening them.
 - `docs` runs the documentation checks that `docs-pages.yml` also runs. That workflow is
   path-filtered and not required, so before this job a PR could merge green with it failing.
@@ -128,7 +128,7 @@ golden-gen hygiene job: wiring them into the script is a separate change.
 Run them by hand after touching those crates or the docs:
 
 ```bash
-cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf \
+cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf -p oce-store \
   --locked --profile ci --no-tests=fail
 
 bash scripts/docs/install-mdbook.sh target/mdbook-bin

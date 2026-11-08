@@ -1,25 +1,22 @@
-#![forbid(unsafe_code)]
-//! `oce-store-mem` — the **default** in-memory [`oce_store::Store`] backend for the Open Control
-//! Engine, so the engine runs with no database (FRAME D-OWNER-1).
+//! The in-memory [`crate::Store`] backend, [`MemStore`], compiled behind the default `mem`
+//! feature (FRAME D-OWNER-1).
 //!
-//! It is database-free (R-SEAM-1), depends only on `oce-store` + std, and is the reference
-//! implementation used in unit tests and fuzzing. It is **not** a database: no WAL, no fsync, no
-//! ANN index — an in-process `HashMap`/`Vec` projection that satisfies the trait contracts just
-//! enough that the engine's load → flatten → validate → schedule → tick → simulate loop works
-//! end to end. It mirrors a durable adapter's *read discipline* (acquire one snapshot per tick,
-//! O(1) reads), not its cost, so swapping `MemStore` for any other `Store` changes no engine code.
+//! It is database-free (R-SEAM-1), uses only std, and is the reference implementation of the port
+//! for unit tests, fuzzing and hosts that want no durability. It is **not** a database: no WAL, no
+//! fsync, no ANN index — an in-process `HashMap`/`Vec` projection that satisfies the trait
+//! contracts. It mirrors a durable adapter's *read discipline* (one snapshot per read pass, O(1)
+//! reads), not its cost, so a host that swaps `MemStore` for any other `Store` changes no other
+//! code. The engine never calls it: `oce-api` depends on no storage crate.
 //!
-//!
-//! The model round-trip ([`oce_store::ModelStore`]), runtime point path
-//! ([`oce_store::PointStore`]), and no-op durability hooks ([`oce_store::Durable`]) are implemented
-//! with non-panicking bodies. Semantic graph operations are deliberate typed deferrals: they return
-//! [`oce_store::StoreError::Unsupported`] or [`oce_store::StoreError::RetrievalUnsupported`], never
-//! silent success.
+//! The model round-trip ([`crate::ModelStore`]), runtime point path ([`crate::PointStore`]), and
+//! no-op durability hooks ([`crate::Durable`]) are implemented with non-panicking bodies. Semantic
+//! graph operations are deliberate typed deferrals: they return [`crate::StoreError::Unsupported`]
+//! or [`crate::StoreError::RetrievalUnsupported`], never silent success.
 
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use oce_store::{
+use crate::{
     DomainKey, Durable, EquipmentDto, ModelStore, PointHandle, PointListRow, PointSample,
     PointSnapshot, PointStore, PointWrite, RelationDto, ResolvedModel, RetrievalHit,
     SemanticPayloadDto, SemanticQuery, SemanticStore, StoreError, StoreResult, TemplatePointReq,
@@ -188,7 +185,7 @@ impl Durable for MemStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use oce_store::{
+    use crate::{
         Durability, OcValue, PointDirection, PointStatus, PointValueType, RelationKind, Store,
     };
 
