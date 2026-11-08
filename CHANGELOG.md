@@ -49,9 +49,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `oce-extension` (an unconsumed FMI DTO) and `oce-docs` (an `unimplemented!` exporter) had no
   dependents. `oce-api` has no features section: `cargo build -p oce-api` and
   `--no-default-features` build the same thing, and a manifest naming `features = ["mem"]` must drop
-  it. The facade compiler contract now checks the single default selection, the package ledger and
-  validator drop the three crates and the feature matrix, and the release workflow's comment and
-  approval digest are re-pinned for the new 11/3 split. The architecture page, both diagrams, the
+  it. The facade compiler contract now checks the single default selection, the package validator
+  expects no `oce-api` features and one selection, and the release workflow's comment and approval
+  digest are re-pinned for the new 11/3 split. The architecture page, both diagrams, the
   crate lists and the CI notes are updated. Fixture and provenance goldens are byte-identical.
 - **Frame times are bounded so elapsed time cannot overflow, and non-finite bounds are refused
   at load** (GitHub #382, issues #366, #372). Finite times whose difference overflowed (t = -1e308
