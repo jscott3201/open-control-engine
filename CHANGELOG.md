@@ -75,11 +75,10 @@ projection and state-format goldens are byte-identical to the pre-M1a `developme
   `compatibility_export.txt` fixtures under `crates/oce-api/tests/fixtures` and the
   `CompatibilityDescriptor` doctest. The descriptor refusal tests that name the current or a
   neighbouring version (`compatibility_tests.rs`, `replay_codec.rs`) move from 0.2.x to 0.3.x
-  likewise, keeping each case's relation to the current version. They are descriptor text, not
-  numerical goldens;
-  `tools/golden-gen/goldens` and every data golden are byte-identical. The compiled-schedule blob
-  note's worked example shows engine 0.3.0, with its CRC-32C recomputed. No catalog,
-  contract-schema, state-format, execution-ABI or replay-format revision changes.
+  likewise, keeping each case's relation to the current version. These are descriptor text, not
+  numerical goldens: `tools/golden-gen/goldens` and every data golden are byte-identical. The
+  compiled-schedule blob note's worked example shows engine 0.3.0, with its CRC-32C recomputed.
+  No catalog, contract-schema, state-format, execution-ABI or replay-format revision changes.
 - **The retained strict-bit receipt binding was retired, not re-captured** (GitHub #413, issue
   #392). The per-PR eight-cell native matrix is the standing strict-bit evidence; `receipts.json`
   is a log of the last green native run, not a gate. M1b (issue #406, closeout issue #404)
