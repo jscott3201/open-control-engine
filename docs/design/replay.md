@@ -4,16 +4,17 @@
 engine frame by frame, what happens when a sample is missing, what a run leaves behind, and how a
 long run yields to a Python interpreter or a browser event loop. Decisions 1 to 10 were settled by
 the owner (1 to 4) or accepted from the prior-art review (5 to 10) and are stated here, not
-reopened. Decisions 11 onwards were made while drafting and are marked **Proposed** until the
-architect pass rules on them (see [Review rulings](#review-rulings)). It answers GitHub #435.
+reopened. Decisions 11 to 23 were made while drafting and ruled on by the architect pass (see
+[Review rulings](#review-rulings)). It answers GitHub #435; #445 builds the crate and #444 adds the
+facade entry it moves to after #401.
 
 ## What the replay API is, and is not
 
 It is one **leverage crate**, `crates/leverage/oce-replay` (see `crates/leverage/README.md`): it
 sits above the facade and depends on `oce-api` only. It holds four things and nothing else:
 
-- **Frame sources**: a slot-indexed `FrameSource` trait and three adapters (columnar arrays, a
-  bounded CSV with a column map, step lists).
+- **Frame sources**: slot-indexed frames `(t, &[Value])` after a one-time name→slot mapping, and
+  three adapters (columnar arrays, a bounded CSV with a column map, step lists).
 - **Missing-sample policy**: `MissingPolicy`, `OnRefusal`, `DuplicateTime` and the time base.
 - **The trace**: a columnar, typed, bit-exact record of a run.
 - **A resumable cursor**: `Replay::advance(max_frames)`, with a blocking `run` built on it.
@@ -47,7 +48,8 @@ one input, a column whose type cannot carry the input's `ValueType`, or an engin
 supplies is a typed error at construction. Source columns the map does not name are ignored and
 listed in the trace metadata.
 
-**A source says "missing" with `None`.** A source yields `(t, &[Option<Value>])`. The policy stage
+**A source says "missing" with `None`.** The engine gets the owner's `(t, &[Value])` shape; one
+level down (decision 13), a source yields `(t, &[Option<Value>])`. The policy stage
 (next section) turns that into the complete `(t, &[Value])` the engine receives, or into no frame
 at all. NaN in a Real column, NaT in a time or datetime column, a blank CSV cell and a cleared
 validity bit are all `None`, never a value, whatever `NonFiniteInputPolicy` says (decision 2).
@@ -178,7 +180,7 @@ Worked numbers for `cooling_only_controller` (the "Controller" row of
 [the benchmarks](../benchmarks.md#complete-frame-observations): 14 inputs, 10 outputs). The prior
 art review computed them assuming every column is Real. The fixture's 10 outputs are 5 Real and 5
 Integer, all 8 bytes, so the outputs-only figure is exact; its 14 inputs are 8 Real, 3 Integer and
-3 Boolean (91 B, not 112 B).
+3 Boolean, 91 B in all.
 
 | Trace | B / frame | 1 day at 5 s (17,280 frames) | 1 day at 1 s (86,400 frames) |
 | --- | ---: | ---: | ---: |
@@ -321,7 +323,8 @@ golden tests prove the bits did not move.
 ## Decisions
 
 Decisions 1 to 4 are the owner's. Decisions 5 to 10 are technical recommendations accepted by the
-orchestrator. Both are settled. Decisions 11 to 23 are **Proposed**.
+orchestrator. Decisions 11 to 23 were proposed while drafting and settled by the architect pass,
+which replaced 22; each ruling is recorded under [Review rulings](#review-rulings).
 
 **1. Home: a leverage crate, `crates/leverage/oce-replay`.** Sources, missing-sample policy, trace
 and cursor, depending on `oce-api` only, consumed by `oce-verify`, `oce-py`, `oce-wasm` and
@@ -369,75 +372,80 @@ error. Rejected: trusting the file; truncating. Why: the hostile-input rule (Git
 the downstream envelope comparison is quadratic in rows.
 
 **9. The conformance driver is rebuilt on this API later, in its own PR.** Its quadratic
-`value_at` scan and f64-only capture are fixed by that rebuild, not in M3's first cut. Why: scope
-rule; the first cut must leave every golden byte-identical.
+`value_at` scan and f64-only capture are fixed by that rebuild, not in M3's first cut. The replay
+API never delivers a NaN input, so the conformance cases that feed NaN and ±∞ keep driving the
+facade directly and the rebuild excludes them. Why: scope rule; the first cut must leave every
+golden byte-identical.
 
-**10. Sequencing.** The slot shape lands with or after #401; time and missing-sample semantics are
+**10. Sequencing.** #445 builds `oce-replay` on the facade path; the slot shape moves to #401's
+driver through #444's facade entry, with or after #401; time and missing-sample semantics are
 designed with #436; M3 vector format v2 maps onto the step, CSV and series sources.
 
-**11. Proposed — samples and signals.** As stated under [Missing samples](#missing-samples).
+**11. samples and signals.** As stated under [Missing samples](#missing-samples).
 Rejected: treating zero-order hold as free (it hides staleness, the defect decision 2 exists to
 prevent); requiring `max_age` on every grid run.
 
-**12. Proposed — replay selects the non-finite policy.** `ReplayOptions::non_finite` defaults to
+**12. replay selects the non-finite policy.** `ReplayOptions::non_finite` defaults to
 `Refuse` and `Replay::new` applies it to the engine it owns, recording it in the trace metadata.
 NaN never reaches the engine (decision 2), so the option only governs ±∞ cells. Rejected:
 inheriting the engine's current default (`Admit` today, planned to become `Refuse` under #363),
 which would make a replay's outcome depend on host configuration it does not record.
 
-**13. Proposed — a source marks missing with `Option`.** Sources yield `&[Option<Value>]`; only the
+**13. a source marks missing with `Option`.** Sources yield `&[Option<Value>]`; only the
 policy stage produces the `&[Value]` the driver submits. Rejected: a placeholder value plus a mask
 (a seed one bug away from submission). This refines the cell type of decision 4, not its shape.
 
-**14. Proposed — a facade slot entry after #401.** Replay switches to slot-indexed execution when
-`oce-api` exposes one over #401's core driver, filed as its own facade issue. Rejected: a leverage
+**14. a facade slot entry after #401.** Replay switches to slot-indexed execution when
+`oce-api` exposes one over #401's core driver: #444, its own facade issue. Rejected: a leverage
 crate reaching `oce-graph` (the leverage rule).
 
-**15. Proposed — the replay owns the engine.** `Replay::new` takes the `Engine` by value and
+**15. the replay owns the engine.** `Replay::new` takes the `Engine` by value and
 `finish` returns it. Rejected: `&mut Engine` (a lifetime in every `oce-py` and `oce-wasm` class).
 The caller loads, restores or checkpoints before the run; replay never reloads.
 
-**16. Proposed — outputs from the first accepted frame, checked every frame.** A changed output set
+**16. outputs from the first accepted frame, checked every frame.** A changed output set
 is a typed stop. Rejected: trusting the inventory.
 
-**17. Proposed — time columns and origin.** Seconds as `f64`, used as given; epoch nanoseconds as
+**17. time columns and origin.** Seconds as `f64`, used as given; epoch nanoseconds as
 `i64` relative to an integer origin, subtracted in integers and converted by a fixed split (whole
 seconds plus the nanosecond remainder); or, in CSV, ISO-8601 instants with an explicit `Z` or
 `±hh:mm` offset (an RFC 3339 subset), converted against the source's origin the same way. Every
 conversion is pinned by goldens. The origin is header metadata only, as the orchestrator directed
-from the #436 research; the conversion forms are what is proposed.
+from the #436 research.
 Rejected: zone names and local-time rules (a tz database in the crate); per-frame wall-clock
 columns in the trace (8 B per frame for a value one header field determines).
 
-**18. Proposed — one row per attempted frame.** Refused and skipped frames keep their row, with
+**18. one row per attempted frame.** Refused and skipped frames keep their row, with
 zero bits in output columns masked by status. Rejected: dropping them (times would no longer align
 with the source).
 
-**19. Proposed — default limits.** `max_rows` and `max_frames` 16,777,216 (194 days at 1 s),
+**19. default limits.** `max_rows` and `max_frames` 16,777,216 (194 days at 1 s),
 `max_columns` 4,096, `max_cell_bytes` 256, `max_source_bytes` 1 GiB, `max_steps` 1,000,000 per
-input, `max_trace_bytes` 1 GiB; each pinned at its boundary. Every limit is settable downward and
-upward by the caller.
+input, `max_trace_bytes` 1 GiB; each pinned at its boundary. These are defaults and documented
+maxima: a caller may lower any of them, never raise one above its documented maximum.
 
-**20. Proposed — a dense substitution mask.** One bit per input per frame while any input's policy
+**20. a dense substitution mask.** One bit per input per frame while any input's policy
 can substitute; which substitution it was follows from that input's policy. Rejected: a sparse row
 per substitution (24 B each, larger than the mask for change-of-value logs).
 
-**21. Proposed — Boolean one byte, Enum ordinal and class path.** Booleans are one `u8` per frame
+**21. Boolean one byte, Enum ordinal and class path.** Booleans are one `u8` per frame
 so numpy can take the column as `bool`; an Enum column stores the `u32` ordinal and its class path
 once in metadata. String is metadata, never a signal, so no String column exists.
 
-**22. Proposed — a hand-written bounded CSV reader.** An RFC 4180 subset (comma, double quotes,
-LF or CRLF, UTF-8 without a byte-order mark), no third-party dependency. Rejected: the `csv` crate
-(its bounds are not ours to pin).
+**22. The `csv` crate, inside this crate's caps.** `CsvSource` parses with the `csv` crate, a
+dependency of `oce-replay` only, and enforces its own row, column, byte and cell caps around it.
+Rejected: a hand-written reader (the drafted proposal). Why: a leverage crate is never embedded;
+quoting, byte-order marks and CRLF are edge cases a well-tested reader already handles; the caps,
+not the parser, are the hostile-input boundary.
 
-**23. Proposed — `Trace::canonical_bytes()`.** A fixed little-endian encoding (magic, metadata,
+**23. `Trace::canonical_bytes()`.** A fixed little-endian encoding (magic, metadata,
 then each column in order, raw bits) for goldens, the chunk-size test and hashing. It is not a
 published interchange format until a later note says so.
 
 ## Relation to other work
 
 - **#401 (slot-indexed frame driver).** Replay's `InputMap` order is the blob's I/O order; the
-  facade path is used until a slot entry exists (decision 14). The #401 dual-path test is the
+  facade path is used until #444's slot entry exists (decision 14). The #401 dual-path test is the
   natural first replay consumer once both exist.
 - **#436 (commissioning verifier).** Uses `Recorded` time, `DuplicateTime::Allow`, the header
   origin, `CsvSource` with its caps and an input-retaining trace; converts units before the source;
@@ -451,12 +459,11 @@ published interchange format until a later note says so.
   columns; **M4 (`oce-wasm`)** runs the worker through `advance`; **M6 (`oce-host`)** reuses
   `MissingPolicy`, `OnRefusal` and `CsvSource` and adds wall-clock staleness, never a second
   policy vocabulary.
-- **Conformance driver.** Rebuilt on this API in a separate, later PR (decision 9). The strict-bit
-  cases that feed NaN through the facade on purpose keep driving the facade directly: decision 2
-  makes NaN a missing marker in every source.
-- **Implementation.** One `oce-replay` crate issue (sources, policy, trace, cursor), filed when the
-  M3 tracking issue is cut, plus the facade slot-entry issue of decision 14. Goldens use `oce-bless`
-  as a dev-dependency, under the rule change the authoring note's decision 19 already makes.
+- **Conformance driver.** Rebuilt on this API in a separate, later PR, without the NaN and ±∞
+  strict-bit cases, which keep driving the facade directly (decision 9).
+- **Implementation.** #445 builds the `oce-replay` crate (sources, policy, trace, cursor); #444
+  adds the facade slot-indexed execute entry after #401 (decision 14). Goldens use `oce-bless` as a
+  dev-dependency, under the rule change in the authoring note's decision 19.
 
 ## Test plan
 
@@ -475,8 +482,9 @@ published interchange format until a later note says so.
   directly; equal times refused under `Refuse` and kept as separate rows and transitions under
   `Allow`; `Recorded` times passed through bit for bit; regression and missing time refused before
   the engine; origin, ISO-8601 and epoch-nanosecond conversion goldens, negative offsets included.
-- **Bounds.** Every limit accepted at the limit and refused one past, with the typed error; a
-  hostile CSV corpus (unterminated quote, BOM, overlong cell, ragged rows, non-UTF-8) refuses.
+- **Bounds.** Every limit accepted at the limit and refused one past, with the typed error, and a
+  request to raise one above its maximum refused; a hostile CSV corpus (unterminated quote, BOM,
+  overlong cell, ragged rows, non-UTF-8) refuses or parses as the caps and the reader define.
 - **Mapping.** Exact path, unique suffix, ambiguous suffix, unknown target, unmapped engine input,
   two columns on one input, type mismatch, and a stale `InputMap` after a reload.
 - **Trace size and coverage.** A run's byte count equals the formula for every fixture (the budget
@@ -497,4 +505,24 @@ published interchange format until a later note says so.
 
 ## Review rulings
 
-None yet.
+The architect pass on the draft ruled:
+
+- 11 accepted: samples and signals.
+- 12 accepted: replay selects `NonFiniteInputPolicy::Refuse` explicitly and records it.
+- 13 accepted as a refinement of decision 4; the owner's `(t, &[Value])` shape stays the summary.
+- 14 accepted; the facade slot-indexed execute entry is #444.
+- 15 accepted: the `Replay` owns the `Engine`, and `finish` returns it.
+- 16 accepted: the output set is fixed by the first accepted frame and checked every frame.
+- 17 accepted: the time column forms and the header-only origin.
+- 18 accepted: one row per attempted frame, zeroed and status-masked when not executed.
+- 19 accepted; the limits are defaults a caller may lower, never raise above the documented maxima.
+- 20 accepted: the dense per-frame substitution bitmask.
+- 21 accepted: Boolean as `u8`, Enum as `u32` ordinal with its class path in metadata.
+- 22 rejected and replaced: the `csv` crate inside this crate's caps, as with the authoring
+  note's `clap` ruling.
+- 23 accepted: `Trace::canonical_bytes()` is for goldens and hashing, not a published format.
+- NaN as missing vs the strict-bit evidence: accepted; recorded under decision 9.
+- Corrected sizes accepted: 180 B per frame with inputs (3.1 MB a day at 5 s), and a
+  `ReplayRecord` at least 1,855 B per frame.
+- `oce-bless` as a dev-dependency accepted under the authoring note's decision 19.
+- Implementing issues filed: #444 (facade slot entry) and #445 (`oce-replay` crate).

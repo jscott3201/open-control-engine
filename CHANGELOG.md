@@ -147,8 +147,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   bases, a missing-sample policy that refuses and stops by default and records every substitution,
   a columnar bit-exact trace (89 B per frame for the G36 controller fixture's outputs) and a
   resumable `advance` cursor for the Python GIL and the browser worker. It states the owner's four
-  decisions and six accepted recommendations, and marks thirteen more Proposed for review; the
-  note is registered in `docs/README.md` and the book.
+  decisions, six accepted recommendations and thirteen more settled in review, among them the
+  `csv` crate inside the crate's own caps; #444 and #445 implement it. The note is registered in
+  `docs/README.md` and the book.
 - **Design note for the authoring layer (M2)** (GitHub #442). `docs/design/authoring-layer.md`
   fixes, before any code, what `oce-author` and the `oce` CLI are: leverage crates above the facade
   that never evaluate or schedule and reach the engine only as CXF through `Engine::load_cxf`. It
