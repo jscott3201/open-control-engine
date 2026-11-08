@@ -17,6 +17,12 @@
 #   bash .agents/gate.sh qemu     # qemu     — the emulation check (qemu.yml, nightly): the firmware
 #                                 #            images under QEMU against the host reference; needs
 #                                 #            qemu-system-arm and qemu-system-riscv32 on PATH
+#   bash .agents/gate.sh roundtrip # roundtrip — the blob round trip (pr-gate.yml's determinism
+#                                 #            cells, determinism-compare and blob-round-trip-wasm):
+#                                 #            record on the host, then replay the recording on the
+#                                 #            host and on wasm32-wasip1 under wasmtime; needs the
+#                                 #            wasm32-wasip1 target and the pinned wasmtime
+#                                 #            (scripts/ci/install-wasmtime.sh); full runs it too
 #
 # Commands are kept in CI's exact form, flags included. `--locked`, the `ci`
 # nextest profile, `--no-tests=fail`, and `RUSTDOCFLAGS` are each load-bearing:
@@ -38,9 +44,9 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 MODE="${1:-light}"
 case "$MODE" in
-  light | full | leverage | nostd | qemu) ;;
+  light | full | leverage | nostd | qemu | roundtrip) ;;
   *)
-    echo "usage: bash .agents/gate.sh [light|full|leverage|nostd|qemu]" >&2
+    echo "usage: bash .agents/gate.sh [light|full|leverage|nostd|qemu|roundtrip]" >&2
     exit 2
     ;;
 esac
@@ -123,10 +129,52 @@ bare_metal_cell() {
   step 'firmware run on the host' cargo test -p oce-firmware-link --locked
 }
 
-# ── Focused modes: the bare-metal cell, or the emulation check, alone ────────
-if [ "$MODE" = nostd ] || [ "$MODE" = qemu ]; then
+# ── The blob round trip (issue #403) ─────────────────────────────────────────
+# Three legs from one recording, as CI runs them: the suite records the 46 fixtures' blobs and
+# expected outputs, warnings and raw state words on this host (comparing the facade with the no_std
+# entry as it goes), then replays that recording here and on wasm32-wasip1 under wasmtime. CI's
+# second native architecture cannot run on one machine. A missing target or wasmtime is a failure
+# naming its install command, never a skip.
+ROUND_TRIP_DIR=target/round-trip
+round_trip_record() {
+  rm -rf "$ROUND_TRIP_DIR"
+  OCE_ROUND_TRIP_OUT="$ROUND_TRIP_DIR" cargo nextest run -p oce-conformance --test blob_round_trip \
+    --locked --profile ci --no-tests=fail &&
+    test "$(ls "$ROUND_TRIP_DIR" | wc -l | tr -d ' ')" = 92
+}
+round_trip_replay_host() {
+  test -d "$ROUND_TRIP_DIR" &&
+    OCE_ROUND_TRIP_EXPECT="$ROUND_TRIP_DIR" cargo nextest run -p oce-conformance \
+      --test blob_round_trip --locked --profile ci --no-tests=fail
+}
+round_trip_replay_wasm() {
+  local tools="$PWD/target/wasmtime-bin"
+  if ! rustup target list --installed | grep -qx wasm32-wasip1; then
+    echo 'the wasm32-wasip1 target is not installed: rustup target add wasm32-wasip1' >&2
+    return 1
+  fi
+  if ! PATH="$tools:$PATH" command -v wasmtime >/dev/null 2>&1; then
+    echo 'wasmtime is not installed: bash scripts/ci/install-wasmtime.sh (the pinned release, into target/wasmtime-bin)' >&2
+    return 1
+  fi
+  test -d "$ROUND_TRIP_DIR" &&
+    PATH="$tools:$PATH" wasmtime --version &&
+    PATH="$tools:$PATH" OCE_ROUND_TRIP_EXPECT="$ROUND_TRIP_DIR" cargo nextest run \
+      -p oce-conformance --test blob_round_trip --target wasm32-wasip1 --locked --profile ci \
+      --no-tests=fail
+}
+blob_round_trip() {
+  step 'blob round trip, recorded on the host' round_trip_record
+  step 'blob round trip, the recording replayed on the host' round_trip_replay_host
+  step 'blob round trip, the recording replayed on wasm32-wasip1 under wasmtime' round_trip_replay_wasm
+}
+
+# ── Focused modes: the bare-metal cell, the emulation check or the round trip, alone ──
+if [ "$MODE" = nostd ] || [ "$MODE" = qemu ] || [ "$MODE" = roundtrip ]; then
   if [ "$MODE" = nostd ]; then
     bare_metal_cell
+  elif [ "$MODE" = roundtrip ]; then
+    blob_round_trip
   else
     # qemu.yml's one command: build both images, run them under QEMU (netduinoplus2 for
     # thumbv7em-none-eabihf, riscv32 virt for riscv32imac-unknown-none-elf) with semihosting, and
@@ -139,6 +187,9 @@ if [ "$MODE" = nostd ] || [ "$MODE" = qemu ]; then
   echo '  · everything else in the per-PR gate. Run `bash .agents/gate.sh` for it.'
   if [ "$MODE" = nostd ]; then
     echo '  · executing the images on their targets: `bash .agents/gate.sh qemu` (nightly in CI).'
+  fi
+  if [ "$MODE" = roundtrip ]; then
+    echo '  · the aarch64 leg and the four-cell recording comparison: CI only (determinism-compare).'
   fi
   echo '────────────────────────────────────────────────────────────────────────────'
   if [ "$failures" -gt 0 ]; then
@@ -309,6 +360,7 @@ if [ "$MODE" = full ]; then
   # (the goldens' total). Write it the same way here, so a test that resolves the path wrongly fails
   # locally instead of first in CI (it did once, on the PR that added the blobs).
   step 'compiled-schedule blob matrix artifact' blob_matrix_artifact
+  blob_round_trip
 fi
 
 # ── Report ───────────────────────────────────────────────────────────────────
@@ -320,6 +372,9 @@ NOT COVERED BY THIS SCRIPT — a green run here does not prove these pass:
     and aarch64 on ubuntu-24.04-arm, in debug and release codegen, with the
     cross-architecture snapshot and compiled-schedule blob comparisons in a
     fan-in job. One machine cannot reproduce it. CI is the only place it runs.
+  · the blob round trip's aarch64 leg and the comparison of the four cells'
+    recordings (determinism-compare). `full` and `roundtrip` record on this
+    host and replay here and on wasm32-wasip1; the other architecture is CI's.
   · strict-bit raw-output matrix over the 21 inventoried signals: the same
     four native cells, two capture processes each, then the eight-capture
     comparison. Local synthetic controls and macOS observations are NOT
@@ -356,6 +411,8 @@ if [ "$MODE" != full ]; then
   · the workspace test suite and doctests. This was not a `full` run: it
     mirrors the per-PR gate — and the per-PR gate does not run them.
     Run `bash .agents/gate.sh full` before claiming tests pass.
+  · the blob round trip's recorded artifact and its wasm32-wasip1 replay,
+    which the per-PR gate does run: `bash .agents/gate.sh roundtrip`.
 LIGHT
 fi
 

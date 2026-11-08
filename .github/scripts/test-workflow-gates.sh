@@ -6,7 +6,8 @@
 # result check, its `changes` outputs or its lane map, or lets a job skip on the wrong lane, a
 # `continue-on-error` or a step-level `if:` that is not a static matrix selector, and a macOS or
 # Windows platform cell that loses its runner, its lane, its comparison or its strict-bit exclusion,
-# fail closed.
+# and a blob round trip that loses a leg, its recording, its comparison or its pinned wasmtime, fail
+# closed.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -212,9 +213,21 @@ jobs:
         env:
           OCE_PORTABLE_STATE_OUT: target/portable-state-release.bin
           OCE_TARGET_STATE_OUT: target/target-state-release.bin
+      - if: matrix.codegen == 'debug'
+        env:
+          OCE_ROUND_TRIP_OUT: target/determinism/round-trip
+        run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci --no-tests=fail
+      - if: matrix.codegen == 'release'
+        env:
+          OCE_ROUND_TRIP_OUT: target/determinism/round-trip
+        run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci-release --cargo-profile release --no-tests=fail
       - run: |
           test -s "target/nextest/$profile/junit.xml"
           test -s "target/portable-state-$CELL_CODEGEN.bin"
+          test "$(ls target/determinism/round-trip | wc -l | tr -d ' ')" = 92
+      - if: matrix.codegen == 'debug'
+        run: |
+          cargo nextest archive -p oce-conformance --test blob_round_trip --locked --archive-file target/determinism/blob-round-trip.tar.zst
       - uses: actions/upload-artifact@0123456789abcdef0123456789abcdef01234567 # v7
         with:
           name: determinism-${{ matrix.arch }}-${{ matrix.codegen }}
@@ -250,6 +263,35 @@ jobs:
           cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/oce-api-lib.tar.zst" \
             --workspace-remap . --profile ci --no-tests=fail \
             -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
+      - run: |
+          diff -rq determinism-x86_64-debug/round-trip determinism-x86_64-release/round-trip
+          diff -rq determinism-x86_64-debug/round-trip determinism-aarch64-debug/round-trip
+          diff -rq determinism-x86_64-debug/round-trip determinism-aarch64-release/round-trip
+      - run: |
+          export OCE_ROUND_TRIP_EXPECT="$PWD/target/determinism/determinism-x86_64-debug/round-trip"
+          cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/blob-round-trip.tar.zst" \
+            --workspace-remap . --profile ci --no-tests=fail
+  blob-round-trip-wasm:
+    needs: [changes, determinism-matrix]
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: rustup target add wasm32-wasip1
+      - uses: actions/cache@89abcdef0123456789abcdef0123456789abcdef # v6
+        with:
+          path: target/wasmtime-bin
+          key: wasmtime-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/ci/install-wasmtime.sh') }}
+      - run: bash scripts/ci/install-wasmtime.sh target/wasmtime-bin
+      - uses: actions/download-artifact@0123456789abcdef0123456789abcdef01234567 # v7
+        with:
+          name: determinism-x86_64-debug
+          path: target/round-trip-recorded
+      - env:
+          OCE_ROUND_TRIP_EXPECT: target/round-trip-recorded/round-trip
+        run: |
+          wasmtime --version
+          cargo nextest run -p oce-conformance --test blob_round_trip --target wasm32-wasip1 --locked --profile ci --no-tests=fail
+      - run: test -s target/nextest/ci/junit.xml
   portable-snapshot-macos:
     needs: changes
     if: needs.changes.outputs.core == 'true'
@@ -362,6 +404,7 @@ jobs:
       - strict-bit-compare
       - determinism-matrix
       - determinism-compare
+      - blob-round-trip-wasm
       - portable-snapshot-macos
       - portable-snapshot-compare
       - std-build-windows
@@ -379,6 +422,7 @@ jobs:
             determinism-matrix=core determinism-compare=core crate-tests=core
             portable-snapshot-macos=core portable-snapshot-compare=core std-build-windows=core
             no-std-build=core
+            blob-round-trip-wasm=core
         run: python3 scripts/ci/ci_ok.py
 EOF
   cat > "$dir/docs-pages.yml" <<'EOF'
@@ -438,6 +482,9 @@ jobs:
   gate:
     steps:
       - run: rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown
+      - run: |
+          rustup target add wasm32-wasip1
+          bash scripts/ci/install-wasmtime.sh target/wasmtime-bin
       - run: bash .agents/gate.sh full
   ci-ok:
     name: CI OK
@@ -1167,7 +1214,8 @@ mdbook_cache_after_install() {
 remove_mdbook_cache() {
   dir="$1"
   _deny="$2"
-  awk '/^      - uses: actions\/cache@/ { skip = 4 } skip > 0 { skip--; next } { print }' \
+  awk '/^  [^ ]/ { job = $0 } job == "  docs:" && /^      - uses: actions\/cache@/ { skip = 4 }
+    skip > 0 { skip--; next } { print }' \
     "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
   mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
@@ -1331,6 +1379,53 @@ release_gate_installs_targets_after_the_script() {
 
 no_std_build_out_of_ci_ok() {
   edit_pr_gate "$1" '/^      - no-std-build$/d'
+}
+
+# The blob round trip (issue #403): three legs from one recording, each of which can fail closed.
+round_trip_recording_dropped() {
+  edit_pr_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/--test blob_round_trip --locked --profile ci --no-tests=fail$/d;}'
+}
+
+round_trip_recordings_not_compared() {
+  edit_pr_gate "$1" '/diff -rq determinism-x86_64-debug\/round-trip determinism-aarch64-debug\/round-trip$/d'
+}
+
+arm64_replay_dropped() {
+  edit_pr_gate "$1" '/export OCE_ROUND_TRIP_EXPECT=/d'
+}
+
+vacuous_arm64_replay() {
+  edit_pr_gate "$1" 's/^            --workspace-remap \. --profile ci --no-tests=fail$/            --workspace-remap . --profile ci/'
+}
+
+wasm_leg_on_the_browser_target() {
+  edit_pr_gate "$1" 's/--test blob_round_trip --target wasm32-wasip1 /--test blob_round_trip --target wasm32-unknown-unknown /'
+}
+
+wasm_leg_without_wasmtime() {
+  edit_pr_gate "$1" '/^      - run: bash scripts\/ci\/install-wasmtime.sh target\/wasmtime-bin$/d'
+}
+
+wasm_leg_without_the_recording() {
+  edit_pr_gate "$1" '/^  blob-round-trip-wasm:$/,/^  [^ ]/ {/name: determinism-x86_64-debug$/d;}'
+}
+
+wasm_leg_detached_from_the_matrix() {
+  edit_pr_gate "$1" '/^  blob-round-trip-wasm:$/,/^  [^ ]/ s/^    needs: \[changes, determinism-matrix\]$/    needs: changes/'
+}
+
+wasm_leg_out_of_lane_map() {
+  edit_pr_gate "$1" '/^            blob-round-trip-wasm=core$/d'
+}
+
+wasm_leg_out_of_ci_ok() {
+  edit_pr_gate "$1" '/^      - blob-round-trip-wasm$/d'
+}
+
+release_gate_without_wasm_runtime() {
+  dir="$1"
+  grep -v 'rustup target add wasm32-wasip1' "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
 }
 
 # The emulation check (issue #402) stays nightly, non-gating and pinned.
@@ -1633,5 +1728,27 @@ run_case release-gate-without-no-std-targets fail release_gate_without_no_std_ta
   "the executed full gate script has the no_std targets it builds for"
 run_case release-gate-installs-targets-after-the-script fail release_gate_installs_targets_after_the_script \
   "the executed full gate script has the no_std targets it builds for"
+run_case round-trip-recording-dropped fail round_trip_recording_dropped \
+  "record the debug blob round trip in every determinism cell"
+run_case round-trip-recordings-not-compared fail round_trip_recordings_not_compared \
+  "compare the determinism-x86_64-debug and determinism-aarch64-debug round-trip recordings"
+run_case arm64-replay-dropped fail arm64_replay_dropped \
+  "replay the x86_64 debug round-trip recording on each architecture"
+run_case vacuous-arm64-replay fail vacuous_arm64_replay \
+  "the round-trip replay hard-fails when its suite is absent"
+run_case wasm-leg-on-the-browser-target fail wasm_leg_on_the_browser_target \
+  "the wasm32 leg runs the round trip on wasm32-wasip1 with hard-fail-on-zero-tests"
+run_case wasm-leg-without-wasmtime fail wasm_leg_without_wasmtime \
+  "the wasm32 leg installs the checksum-pinned wasmtime"
+run_case wasm-leg-without-the-recording fail wasm_leg_without_the_recording \
+  "the wasm32 leg downloads the x86_64 debug recording"
+run_case wasm-leg-detached-from-the-matrix fail wasm_leg_detached_from_the_matrix \
+  "job blob-round-trip-wasm does not need determinism-matrix"
+run_case wasm-leg-out-of-lane-map fail wasm_leg_out_of_lane_map \
+  "CI OK JOB_LANES does not match the lane-filtered jobs' if: lines"
+run_case wasm-leg-out-of-ci-ok fail wasm_leg_out_of_ci_ok \
+  "pr-gate.yml CI OK needs does not match the workflow's jobs"
+run_case release-gate-without-wasm-runtime fail release_gate_without_wasm_runtime \
+  "the executed full gate script has the wasm32-wasip1 target its round trip runs on"
 
 echo "OK: workflow gate fixtures passed."
