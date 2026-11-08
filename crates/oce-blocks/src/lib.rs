@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
+// `clippy.toml` lists every `std`-only float method; the core calls `math` (libm) instead (#399).
+#![deny(clippy::disallowed_methods)]
 //! `oce-blocks` — the native CDL elementary-block library and the [`Block`] trait for the
 //! Open Control Engine (`03-block-library.md`).
 //!
@@ -50,6 +52,7 @@ mod logical_proof;
 mod logical_timing;
 mod logical_variable_pulse;
 mod lowering;
+mod math;
 mod pid;
 pub mod port_names;
 mod psychrometrics;
@@ -741,6 +744,8 @@ mod authority_claims_tests;
 #[cfg(test)]
 mod param_rules_tests;
 
+#[cfg(test)]
+mod math_tests;
 #[cfg(test)]
 mod port_names_tests;
 

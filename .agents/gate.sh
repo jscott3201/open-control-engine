@@ -148,6 +148,9 @@ step 'build (no_std + alloc, thumbv7em-none-eabihf)' \
 step 'clippy (no_std + alloc, thumbv7em-none-eabihf)' \
   cargo clippy -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features \
     --features alloc --target thumbv7em-none-eabihf --locked -- -D warnings
+# The math rule (issue #399): the core probe, the clippy.toml list and scope, and the
+# std-float-method mutations in oce-blocks and oce-expr.
+step 'math-discipline controls' bash scripts/ci/test-math-lint.sh
 step 'build (no_std + alloc, wasm32-unknown-unknown)' \
   cargo build -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features \
     --features alloc --target wasm32-unknown-unknown --locked

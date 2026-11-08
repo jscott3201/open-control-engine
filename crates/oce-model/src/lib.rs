@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
+// `clippy.toml` lists every `std`-only float method; the core calls `math` (libm) instead (#399).
+#![deny(clippy::disallowed_methods)]
 //! `oce-model` — the pure value, connector, instance, and connection types that are the
 //! shared, executable truth of the Open Control Engine (FRAME decision D1).
 //!

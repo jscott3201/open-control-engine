@@ -10,6 +10,7 @@ use core::cmp::Ordering;
 use oce_model::{ParamTable, Value, determinism::canonicalize_real};
 
 use crate::dynamics::{PREV_T_UNSET, is_first_tick, tick_dt};
+use crate::math;
 use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, Time, read_real};
 
 const SAMPLED_U_WORD: usize = 0;
@@ -191,7 +192,7 @@ fn cycle_output(t: Time, u: f64, t0: Time, period: f64) -> bool {
         return true;
     }
 
-    let t_start = t0 + buildings_round_six(libm::floor((t - t0) / period) * period);
+    let t_start = t0 + buildings_round_six(math::floor((t - t0) / period) * period);
     let t_end = t_start + u * period;
     t >= t_start && t < t_end
 }
@@ -225,9 +226,9 @@ fn effective_min_hold(min_hold: f64) -> f64 {
 fn buildings_round_six(x: f64) -> f64 {
     const FACTOR: f64 = 1_000_000.0;
     if x > 0.0 {
-        libm::floor(x * FACTOR + 0.5) / FACTOR
+        math::floor(x * FACTOR + 0.5) / FACTOR
     } else {
-        libm::ceil(x * FACTOR - 0.5) / FACTOR
+        math::ceil(x * FACTOR - 0.5) / FACTOR
     }
 }
 

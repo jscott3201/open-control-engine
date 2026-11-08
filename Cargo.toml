@@ -49,6 +49,9 @@ todo = "deny"
 dbg_macro = "deny"
 print_stderr = "warn"
 print_stdout = "warn"
+# Allowed here and denied in each core-four crate root (`#![deny(clippy::disallowed_methods)]`), so
+# the `clippy.toml` std-float-method list binds only the `no_std` core (issue #399).
+disallowed_methods = "allow"
 
 [workspace.dependencies]
 # --- Shared infra pins. ---

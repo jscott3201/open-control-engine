@@ -1,7 +1,8 @@
 //! Oracle cross-check: the `libm` functions the `no_std + alloc` core four call in place of the
 //! `std`-only `f64` methods return the same bits as those methods.
 //!
-//! `oce-blocks` and `oce-expr` call `libm::{floor, ceil, trunc, round, sqrt}` where they called
+//! `oce-blocks` and `oce-expr` call `math::{floor, ceil, trunc, round, sqrt}` — their `math`
+//! modules re-export the pinned `libm` functions — where they called
 //! `f64::{floor, ceil, trunc, round, sqrt}`, because those methods are not in `core` on Rust 1.97.
 //! All five are exactly specified by IEEE 754 (the first four return an integral value with no
 //! rounding; `sqrt` is correctly rounded), so any conforming implementation agrees on every
@@ -10,6 +11,11 @@
 //! input must give a NaN output; its payload is not compared, because every engine `Real` output
 //! is canonicalized (`oce_model::determinism::canonicalize_real`) and the evaluator refuses NaN
 //! where it would reach an integer.
+//!
+//! The `std` methods are this oracle's whole point. `clippy.toml` disallows them and the core
+//! crate roots deny that lint (issue #399); an integration test is its own crate, which the
+//! workspace lint table already allows, and the attribute below keeps that true if the table moves.
+#![allow(clippy::disallowed_methods)]
 
 type Pair = (&'static str, fn(f64) -> f64, fn(f64) -> f64);
 

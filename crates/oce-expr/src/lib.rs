@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
+// `clippy.toml` lists every `std`-only float method; the core calls `math` (libm) instead (#399).
+#![deny(clippy::disallowed_methods)]
 //! `oce-expr` — the CDL §7.7.2 binding-expression parser/evaluator for the Open Control
 //! Engine.
 //!
@@ -132,6 +134,7 @@ mod fuel;
 #[cfg(test)]
 mod fuel_tests;
 mod lex;
+mod math;
 mod parse;
 #[cfg(test)]
 mod parse_tests;

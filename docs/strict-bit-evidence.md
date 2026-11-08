@@ -171,6 +171,8 @@ deterministic transcendentals.** The versioned [libm documentation](https://docs
 and [Rust f64 precision contract](https://doc.rust-lang.org/1.97.1/std/primitive.f64.html)
 do not justify upgrading a finite-corpus observation into an arbitrary-input guarantee.
 
+In the engine those `libm` functions are reached only through the `math` modules of `oce-blocks`
+and `oce-expr` (issue #399), so the bound implementation is named in one place per crate.
 The Tier-A generator has an independent dependency direction, enforced by the existing
 golden-gen firewall, but shares formulas and libm with these engine paths. Strict-bit evidence
 proves implementation/plumbing/pinned portability over the corpus, **not mathematical correctness

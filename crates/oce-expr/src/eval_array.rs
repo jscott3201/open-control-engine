@@ -21,6 +21,7 @@
 use alloc::vec::Vec;
 use oce_model::{Value, ValueType, determinism::canonicalize_real};
 
+use crate::math;
 use crate::{ArrayValue, EvalResult, ExprAst, ExprError, Scope, Shape, eval};
 
 /// Maximum number of elements one array construct may produce — a DoS / OOM-abort guard.
@@ -265,7 +266,7 @@ fn real_range(start: f64, step: f64, stop: f64) -> Result<EvalResult, ExprError>
     if step == 0.0 {
         return Err(ExprError::DomainError("range step is zero"));
     }
-    let count_f = libm::floor((stop - start) / step) + 1.0;
+    let count_f = math::floor((stop - start) / step) + 1.0;
     if count_f.is_nan() || count_f < 1.0 {
         return Ok(EvalResult::Array(ArrayValue::vector(
             ValueType::Real,

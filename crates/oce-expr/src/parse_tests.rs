@@ -194,7 +194,8 @@ fn every_chaining_operator_keeps_left_associative_semantics() {
         panic!("Real");
     };
     // 1/2/2/… is 2^-70 exactly: (1/2)/2 associates left; 1/(2/(2/…)) would be 1/2 or 1.
-    assert_eq!(halved.to_bits(), 2f64.powi(-70).to_bits());
+    // 2^-70 as its IEEE 754 bit pattern: biased exponent 1023 - 70, zero mantissa.
+    assert_eq!(halved.to_bits(), (1023_u64 - 70) << 52);
     assert_value(scalar(&chain("true", " and ", 200)), Value::Boolean(true));
     assert_value(
         scalar(&format!("{} and false", chain("true", " and ", 200))),

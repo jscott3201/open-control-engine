@@ -7,6 +7,7 @@
 //! never interpolates `mu`. `unbounded_history` replays the engine's documented recurrence with
 //! an unbounded `Vec` history, so whenever no tick coalesces the engine must match it bit for bit.
 
+use crate::math;
 use std::cell::RefCell;
 
 use oce_model::{ParamTable, Value};
@@ -365,7 +366,7 @@ fn hour_window_at_one_second_ticks_is_exact_and_never_coalesces() {
     let delta = 3600.0;
     let mut stream = Stream(7);
     let steps: Vec<(f64, f64)> = (0..9000)
-        .map(|k| (f64::from(k), (20.0 * stream.next()).floor()))
+        .map(|k| (f64::from(k), math::floor(20.0 * stream.next())))
         .collect();
     let block = MovingAverage { delta };
     let diag = CapturingDiagnostics::default();
@@ -453,7 +454,10 @@ fn jittered_one_second_steps(seed: u64, n: u32, jitter: f64) -> Vec<(f64, f64)> 
             } else {
                 jitter * (2.0 * stream.next() - 1.0)
             };
-            (f64::from(k) + offset, (40.0 * stream.next()).floor() - 20.0)
+            (
+                f64::from(k) + offset,
+                math::floor(40.0 * stream.next()) - 20.0,
+            )
         })
         .collect()
 }
@@ -534,7 +538,7 @@ fn ticks_denser_than_the_resolution_coalesce_without_shrinking_the_window() {
             let t = f64::from(k) / 4096.0;
             (
                 t,
-                if (t * 3.0).floor() as i64 % 2 == 0 {
+                if math::floor(t * 3.0) as i64 % 2 == 0 {
                     40.0
                 } else {
                     -60.0
