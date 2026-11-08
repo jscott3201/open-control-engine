@@ -1,15 +1,13 @@
 """Observe bounded clone-visible files, not prose or Rust semantics."""
 
 import hashlib
-import importlib
 import os
 from pathlib import Path, PurePosixPath
 import stat
 import subprocess
-import sys
 
 from model import (API_TEST, BLOCK_TEST, BINDINGS, INDEX, OUTPUT,
-                   digest_text, integer, keys, parse, require, text, validate)
+                   digest_text, keys, parse, require, text, validate)
 
 ROOT = Path(__file__).resolve().parents[2]
 PENDING = {INDEX, OUTPUT, API_TEST, BLOCK_TEST} | {
@@ -101,43 +99,6 @@ def corpus(repo, identity):
             "depends_on_oce_blocks": dependency, "inventory_sha256": sha(enumeration.encode())}
 
 
-def public_descriptors(value):
-    """Shape-check descriptors for display; native owner checks row semantics."""
-    keys(value, {"schema", "authority", "range_encoding", "statuses", "baselines", "groups", "entries"}, "public ledger")
-    require(value["schema"] == "oce-public-surface-ledger/v1" and
-            value["authority"] == "docs/public-surface-contract.md", "public ledger: identity")
-    text(value["range_encoding"])
-    require(type(value["statuses"]) is list and bool(value["statuses"]), "public ledger: statuses")
-    for status in value["statuses"]:
-        text(status)
-    require(type(value["baselines"]) is list and len(value["baselines"]) == 2, "public ledger: baselines")
-    paths = {"oce-api": "crates/oce-api/tests/public-api.txt", "oce-store": "crates/oce-store/tests/public-api.txt"}
-    seen = set()
-    for row in value["baselines"]:
-        keys(row, {"id", "path", "sha256", "item_count"}, "baseline")
-        require(type(row["id"]) is str and row["id"] in paths and row["id"] not in seen, "baseline: id")
-        seen.add(row["id"])
-        require(row["path"] == paths[row["id"]], "baseline: path binding")
-        digest_text(row["sha256"], 64)
-        require(integer(row["item_count"]) > 0, "baseline: empty")
-    require(type(value["groups"]) is dict and bool(value["groups"]), "public ledger: groups")
-    for group, row in value["groups"].items():
-        text(group)
-        keys(row, {"status", "surface", "provenance", "rationale"}, "public group")
-        for field in row.values():
-            text(field)
-        require(row["status"] in value["statuses"], "public group: status")
-    require(type(value["entries"]) is list and bool(value["entries"]), "public ledger: entries")
-    for row in value["entries"]:
-        keys(row, {"baseline", "group", "ranges"}, "public entry")
-        require(type(row["baseline"]) is str and row["baseline"] in paths and
-                type(row["group"]) is str and row["group"] in value["groups"], "public entry: binding")
-        require(type(row["ranges"]) is list and bool(row["ranges"]), "public entry: ranges")
-        for interval in row["ranges"]:
-            text(interval)
-    return value
-
-
 def observe(repo):
     index = repo.json(INDEX)
     facts = validate(index)
@@ -148,19 +109,7 @@ def observe(repo):
             observed[identity] = corpus(repo, identity)
         elif row["mode"] == "delegated":
             value = repo.json(row["source"])
-            if identity == "packages":
-                require(type(value) is dict, "package ledger: object")
-                # Reuse the owner's schema, never its package matrix/closure implementation.
-                owner_path = str(ROOT / "scripts/package_policy")
-                if owner_path not in sys.path:
-                    sys.path.insert(0, owner_path)
-                package_owner = importlib.import_module("validate")
-                package_owner.validate_ledger(value)
-            elif identity == "public-surface":
-                public_descriptors(value)
-                for baseline in value["baselines"]:
-                    repo.path(baseline["path"])
-            elif identity == "catalog-source":
+            if identity == "catalog-source":
                 keys(value, {"schema_version", "catalog", "repository", "branch", "commit", "fetched_at",
                              "catalog_fingerprint", "package_order_files", "structural_source_files",
                              "drift_source_files", "external_source_files", "notes"}, "catalog source")

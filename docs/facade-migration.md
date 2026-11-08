@@ -3,7 +3,7 @@
 This intentional **pre-release source break** removes legacy execution profiles as well as the
 earlier speculative facade shapes. Nothing is published to crates.io; no stable SemVer or
 downstream compatibility certification is implied.
-The [public surface contract](public-surface-contract.md) and its exact baseline own classification.
+The [product contract](product-contract.md) owns the facade's current requirements.
 
 ## Removed names and working alternatives
 

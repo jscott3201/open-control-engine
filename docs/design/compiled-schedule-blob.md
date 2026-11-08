@@ -207,7 +207,7 @@ Rejected alternatives:
 - **`oce-blocks`.** It cannot see `Schedule` or `RunState`; the dependency points the other way.
 - **A new `oce-exec`.** It would depend on exactly `oce-graph` and own nothing but a codec for
   `oce-graph`'s types. That would split the format from the types it encodes, and it would add a
-  package-policy and publication-ledger row for no capability.
+  package to classify and publish for no capability.
 
 **2. Class signature hash.** The hash is FNV-1a-64 over one canonical record per class, computed by
 one function in `oce-blocks` that both the encoder and the decoder call. The record is built from a
@@ -336,7 +336,7 @@ parameter, and its downstream consumers with it.
 signature-record definition, the CRC, or the content-id meaning bumps it. A decoder accepts
 exactly its own version and its own execution profile. Any other version, newer or older, is
 `UnsupportedFormat { found, supported }`. This is current/current only, as for snapshots
-([release compatibility](../release-compatibility.md)). Engine version must also match exactly;
+([state continuation and portability](../state-compatibility.md)). Engine version must also match exactly;
 a mismatch is `EngineVersionMismatch` naming both versions.
 
 Additive or skippable sections are not allowed in v1. A decoder that skips what it does not

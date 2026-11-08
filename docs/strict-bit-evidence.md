@@ -84,9 +84,8 @@ check (`source digest changed: Cargo.lock`), the cross-cell job failed only its 
 cell-success check, and `gate (light)` failed the strict-qualification prerequisite. Capture and
 cross-cell numerical comparison succeeded; their artifacts are evidence of that bounded result, not
 evidence that every hosted gate passed. Data-only admission now satisfies the ordinary retained
-check without changing any bound source. Admission also updates the `receipts.json` evidence digest
-in the [release-compatibility matrix](release-compatibility.json), which binds receipt bytes but is
-not itself a strict-bit bound source. Final hosted gate status remains a separate delivery check.
+check without changing any bound source. Final hosted gate status remains a separate delivery
+check.
 
 ### Historical receipts
 

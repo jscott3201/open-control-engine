@@ -30,7 +30,7 @@ the architecture and invariants are the design of record.
   only (including a workspace
   `cargo test`); the publish job is guarded by `github.event_name == 'workflow_dispatch'`, so a tag
   alone never publishes. The 12-publishable/five-private selection and supported `oce-api` feature matrix
-  are governed by the [package publication policy](docs/package-publication-policy.md). No crate is
+  are checked by the package validator ([CI and the gate](docs/ci-and-the-gate.md#publishing)). No crate is
   published yet; actual publication remains separately owner-authorized.
 - **Every PR runs the full per-PR gate**, including work-in-progress PRs. Confirm the checks
   actually ran and that `CI OK` is green before asking for review.

@@ -20,7 +20,7 @@
 //! # Module layout
 //!
 //! The public surface is split across internal modules and re-exported **flat** here, so every path
-//! stays `oce_api::Foo` (R-PUB-1/4; the `cargo public-api` baseline): `engine` (the
+//! stays `oce_api::Foo` (R-PUB-1/4): `engine` (the
 //! [`Engine`] handle + load/core), `error` ([`OcError`]), `loading` ([`LoadReport`]),
 //! `params` (the live parameter table), `frame` (complete typed execution), `io` (the typed IO
 //! inventory), and `observations` / `watch` (latest-state, non-receipt output inspection).

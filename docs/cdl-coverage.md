@@ -52,7 +52,7 @@ ports (`CatalogPort`) in declaration order for default parameters, the port-nami
 defaults (`CatalogParamDefault`), a `width_driven` flag, a conservative `stateful` hint, and the
 `reserved` flag. The catalog is metadata only. It carries no units or quantities, and the resolved
 instance stays authoritative. Its relationship to the primary facade is classified in the
-[public surface contract](public-surface-contract.md), and its contracts are described in
+[product contract](product-contract.md), and its contracts are described in
 [facade contracts](facade-contracts.md).
 
 The same module exports the serialization and identity helpers:

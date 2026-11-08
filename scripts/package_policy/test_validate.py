@@ -147,119 +147,109 @@ class PackagePolicyControls(unittest.TestCase):
     def setUpClass(cls) -> None:
         """Load one deterministic real-workspace fixture for all controls."""
 
-        cls.ledger = validate.read_ledger()
         cls.metadata = validate.cargo_json(
             ["metadata", "--format-version", "1", "--locked", "--no-deps"]
         )
+        cls.workspace = validate.validate_workspace(copy.deepcopy(cls.metadata))
 
     def observations(self) -> dict[str, dict[str, list[str]]]:
-        """Return feature observations matching the checked-in contract."""
+        """Return feature observations matching the live workspace closure."""
 
-        feature = self.ledger["feature_contract"]
-        closure = feature["normal_oce_dependency_closure"]
+        closure = self.workspace["api_closure"]
         return {
-            selection["name"]: {
-                "enabled_features": list(selection["enabled_features"]),
+            name: {
+                "enabled_features": list(enabled),
                 "workspace_closure": list(closure),
-                "all_packages": [feature["package"], *closure, "serde", "thiserror"],
+                "all_packages": [validate.FEATURE_PACKAGE, *closure, "serde", "thiserror"],
             }
-            for selection in feature["selections"]
+            for name, (_, enabled) in validate.EXPECTED_SELECTIONS.items()
         }
 
-    def test_checked_in_contract_reaches_every_pure_validator(self) -> None:
-        """The positive fixture traverses schema, Cargo, feature, and workflow checks."""
+    def package(self, metadata: dict, name: str) -> dict:
+        """Return one mutable workspace package from a metadata fixture."""
 
-        ledger = validate.validate_ledger(copy.deepcopy(self.ledger))
-        packages, order = validate.validate_workspace(ledger, copy.deepcopy(self.metadata))
-        private = set(packages) - EXPECTED_PUBLISHABLE
-        validate.validate_feature_observations(ledger, self.observations(), private)
+        return next(package for package in metadata["packages"] if package["name"] == name)
+
+    def test_live_workspace_reaches_every_pure_validator(self) -> None:
+        """The positive fixture traverses Cargo, feature, and workflow checks."""
+
+        workspace = validate.validate_workspace(copy.deepcopy(self.metadata))
+        validate.validate_feature_observations(
+            self.observations(), workspace["api_closure"], workspace["private"]
+        )
         validate.validate_release_workflow(APPROVED_WORKFLOW)
 
-        self.assertEqual(set(order), EXPECTED_PUBLISHABLE)
-        self.assertEqual(private, EXPECTED_PRIVATE)
+        self.assertEqual(set(workspace["order"]), workspace["publishable"])
+        self.assertEqual(workspace["order"][-1], "oce-api")
+        self.assertIn(validate.REQUIRED_CLOSURE_MEMBER, workspace["api_closure"])
+        self.assertEqual(workspace, validate.validate_workspace(copy.deepcopy(self.metadata)))
 
-    def test_ratified_publish_and_private_sets_are_exact(self) -> None:
-        """Implementation publication does not imply independent support or admit private roots."""
+    def test_publish_and_private_sets_follow_the_manifests(self) -> None:
+        """Cargo, not prose, supplies the publication bit; release.yml names the same split."""
 
-        packages = {item["name"]: item for item in self.ledger["packages"]}
-        publishable = {name for name, item in packages.items() if item["publish"]}
-        private = set(packages) - publishable
+        self.assertEqual(self.workspace["publishable"], EXPECTED_PUBLISHABLE)
+        self.assertEqual(self.workspace["private"], EXPECTED_PRIVATE)
 
-        self.assertEqual(publishable, EXPECTED_PUBLISHABLE)
-        self.assertEqual(private, EXPECTED_PRIVATE)
-        self.assertEqual(packages["oce-cxf"]["category"], "implementation-dependency")
-        self.assertEqual(packages["oce-blocks"]["category"], "transitional-companion")
+    def test_manifest_publish_flag_flip_moves_the_member(self) -> None:
+        """Flipping `publish` moves a crate between the sets and exposes private leakage."""
 
-    def test_owner_approved_categories_cannot_drift_with_same_publish_bit(self) -> None:
-        """A valid publishable category cannot replace either approved host-facing role."""
+        changed = copy.deepcopy(self.metadata)
+        self.package(changed, "oce-model")["publish"] = []
+        with self.assertRaisesRegex(validate.PolicyError, "private normal/build dependency leakage"):
+            validate.validate_workspace(changed)
 
-        mutations = {
-            "oce-api": "implementation-dependency",
-            "oce-store": "implementation-dependency",
-        }
-        for package, category in mutations.items():
-            with self.subTest(package=package):
-                changed = copy.deepcopy(self.ledger)
-                item = next(entry for entry in changed["packages"] if entry["name"] == package)
-                item["category"] = category
-                with self.assertRaisesRegex(
-                    validate.PolicyError,
-                    f"owner-approved package mapping drift for {package}",
-                ):
-                    validate.validate_ledger(changed)
+        changed = copy.deepcopy(self.metadata)
+        self.package(changed, "oce-api")["publish"] = []
+        with self.assertRaisesRegex(validate.PolicyError, "oce-api must stay registry-ready"):
+            validate.validate_workspace(changed)
 
-    def test_missing_extra_and_duplicate_member_classifications_are_rejected(self) -> None:
-        """Workspace coverage is a one-to-one mapping, never a best-effort list."""
+    def test_registry_restricted_publish_value_is_rejected(self) -> None:
+        """Only crates.io or nothing: an alternate registry list is not a supported state."""
 
-        missing = copy.deepcopy(self.metadata)
-        api_id = next(
-            package["id"] for package in missing["packages"] if package["name"] == "oce-api"
-        )
-        missing["workspace_members"].remove(api_id)
-        with self.assertRaisesRegex(validate.PolicyError, "classification coverage differs"):
-            validate.validate_workspace(validate.validate_ledger(self.ledger), missing)
+        changed = copy.deepcopy(self.metadata)
+        self.package(changed, "oce-store")["publish"] = ["private-registry"]
+        with self.assertRaisesRegex(validate.PolicyError, "registry-restricted publish value"):
+            validate.validate_workspace(changed)
 
-        extra = copy.deepcopy(self.metadata)
-        extra_package = {
-            "id": "path+file:///fixture/oce-unclassified#0.1.0",
-            "name": "oce-unclassified",
+    def test_duplicate_and_foreign_members_are_rejected(self) -> None:
+        """Workspace membership maps one-to-one to oce-* package names."""
+
+        duplicate = copy.deepcopy(self.metadata)
+        clone = copy.deepcopy(self.package(duplicate, "oce-diag"))
+        clone["id"] = "path+file:///fixture/oce-diag#0.1.0"
+        duplicate["packages"].append(clone)
+        duplicate["workspace_members"].append(clone["id"])
+        with self.assertRaisesRegex(validate.PolicyError, "duplicate Cargo workspace package name"):
+            validate.validate_workspace(duplicate)
+
+        foreign = copy.deepcopy(self.metadata)
+        extra = {
+            "id": "path+file:///fixture/unprefixed#0.1.0",
+            "name": "unprefixed",
             "publish": [],
             "features": {},
             "dependencies": [],
         }
-        extra["packages"].append(extra_package)
-        extra["workspace_members"].append(extra_package["id"])
-        with self.assertRaisesRegex(validate.PolicyError, "classification coverage differs"):
-            validate.validate_workspace(validate.validate_ledger(self.ledger), extra)
+        foreign["packages"].append(extra)
+        foreign["workspace_members"].append(extra["id"])
+        with self.assertRaisesRegex(validate.PolicyError, "outside the oce-\\* namespace"):
+            validate.validate_workspace(foreign)
 
-        duplicate = copy.deepcopy(self.ledger)
-        duplicate["packages"].append(copy.deepcopy(duplicate["packages"][0]))
-        with self.assertRaisesRegex(validate.PolicyError, "duplicate workspace package"):
-            validate.validate_ledger(duplicate)
+    def test_declared_feature_drift_is_rejected(self) -> None:
+        """The oce-api feature table is closed: no new spelling, no lost default."""
 
-    def test_category_outside_closed_vocabulary_is_rejected(self) -> None:
-        """A newly invented support status cannot bypass review."""
-
-        changed = copy.deepcopy(self.ledger)
-        changed["packages"][0]["category"] = "accidentally-public"
-        with self.assertRaisesRegex(validate.PolicyError, "invalid package category"):
-            validate.validate_ledger(changed)
-
-    def test_manifest_publish_flag_drift_is_rejected(self) -> None:
-        """Cargo, not prose, supplies the observed publication bit."""
-
-        changed = copy.deepcopy(self.metadata)
-        api = next(package for package in changed["packages"] if package["name"] == "oce-api")
-        api["publish"] = []
-        with self.assertRaisesRegex(validate.PolicyError, "publish flag drift for oce-api"):
-            validate.validate_workspace(validate.validate_ledger(self.ledger), changed)
+        for features in ({"default": [], "mem": []}, {"default": ["mem"], "mem": [], "db": []}, {}):
+            with self.subTest(features=features):
+                changed = copy.deepcopy(self.metadata)
+                self.package(changed, "oce-api")["features"] = features
+                with self.assertRaisesRegex(validate.PolicyError, "features drifted"):
+                    validate.validate_workspace(changed)
 
     def test_private_normal_dependency_leakage_is_rejected(self) -> None:
         """A publishable package cannot pull a private workspace member into registry closure."""
 
         changed = copy.deepcopy(self.metadata)
-        api = next(package for package in changed["packages"] if package["name"] == "oce-api")
-        api["dependencies"].append(
+        self.package(changed, "oce-api")["dependencies"].append(
             {
                 "name": "oce-docs",
                 "kind": None,
@@ -268,69 +258,77 @@ class PackagePolicyControls(unittest.TestCase):
             }
         )
         with self.assertRaisesRegex(validate.PolicyError, "private normal/build dependency leakage"):
-            validate.validate_workspace(validate.validate_ledger(self.ledger), changed)
+            validate.validate_workspace(changed)
 
     def test_unversioned_publishable_path_dependency_is_rejected(self) -> None:
         """Registry publication cannot depend on a path-only normal edge."""
 
         changed = copy.deepcopy(self.metadata)
-        api = next(package for package in changed["packages"] if package["name"] == "oce-api")
+        api = self.package(changed, "oce-api")
         dependency = next(item for item in api["dependencies"] if item["name"] == "oce-model")
         dependency["req"] = "*"
         with self.assertRaisesRegex(validate.PolicyError, "lacks a registry version"):
-            validate.validate_workspace(validate.validate_ledger(self.ledger), changed)
+            validate.validate_workspace(changed)
+
+        changed = copy.deepcopy(self.metadata)
+        api = self.package(changed, "oce-api")
+        dependency = next(item for item in api["dependencies"] if item["name"] == "oce-model")
+        del dependency["path"]
+        with self.assertRaisesRegex(validate.PolicyError, "is not path-backed"):
+            validate.validate_workspace(changed)
+
+    def test_api_closure_must_include_the_in_memory_store(self) -> None:
+        """The default build's no-database promise rests on oce-store-mem being reachable."""
+
+        changed = copy.deepcopy(self.metadata)
+        api = self.package(changed, "oce-api")
+        api["dependencies"] = [
+            item for item in api["dependencies"] if item["name"] != validate.REQUIRED_CLOSURE_MEMBER
+        ]
+        for package in changed["packages"]:
+            package["dependencies"] = [
+                item for item in package["dependencies"]
+                if item["name"] != validate.REQUIRED_CLOSURE_MEMBER
+            ]
+        with self.assertRaisesRegex(validate.PolicyError, "must include oce-store-mem"):
+            validate.validate_workspace(changed)
 
     def test_feature_closure_drift_and_private_leakage_are_rejected(self) -> None:
         """Every supported spelling retains the same public normal closure."""
 
+        closure = self.workspace["api_closure"]
         drifted = self.observations()
         drifted["no-default-features"]["workspace_closure"].remove("oce-store-mem")
         with self.assertRaisesRegex(validate.PolicyError, "feature closure drift"):
-            validate.validate_feature_observations(self.ledger, drifted, EXPECTED_PRIVATE)
+            validate.validate_feature_observations(drifted, closure, EXPECTED_PRIVATE)
 
         leaked = self.observations()
         leaked["explicit-mem"]["workspace_closure"].append("oce-docs")
         leaked["explicit-mem"]["workspace_closure"].sort()
         with self.assertRaisesRegex(validate.PolicyError, "feature closure drift"):
-            validate.validate_feature_observations(self.ledger, leaked, EXPECTED_PRIVATE)
+            validate.validate_feature_observations(leaked, closure, EXPECTED_PRIVATE)
+
+        enabled = self.observations()
+        enabled["no-default-features"]["enabled_features"] = ["mem"]
+        with self.assertRaisesRegex(validate.PolicyError, "enabled feature drift"):
+            validate.validate_feature_observations(enabled, closure, EXPECTED_PRIVATE)
+
+        missing = self.observations()
+        del missing["explicit-mem"]
+        with self.assertRaisesRegex(validate.PolicyError, "observation coverage differs"):
+            validate.validate_feature_observations(missing, closure, EXPECTED_PRIVATE)
 
     def test_forbidden_runtime_dependency_is_rejected(self) -> None:
         """Supported feature selections cannot add a database or async runtime."""
 
-        changed = self.observations()
-        changed["default"]["all_packages"].append("tokio")
-        with self.assertRaisesRegex(validate.PolicyError, "forbidden normal dependency"):
-            validate.validate_feature_observations(self.ledger, changed, EXPECTED_PRIVATE)
-
-    def test_release_path_and_counts_cannot_be_reconfigured(self) -> None:
-        """The minimal release ledger still fixes its path and both selection counts."""
-
-        for key, value in {"workflow": "candidate.yml", "publishable_count": 13, "private_count": 4}.items():
-            with self.subTest(key=key):
-                changed = copy.deepcopy(self.ledger)
-                changed["release_contract"][key] = value
-                self.assertNotEqual(changed, self.ledger)
-                with self.assertRaisesRegex(validate.PolicyError, "release workflow path or count"):
-                    validate.validate_ledger(changed)
-
-    def test_release_schema_rejects_missing_fields_and_alternate_authorities(self) -> None:
-        """No command grammar, configurable digest, or arbitrary field can enter the ledger."""
-
-        for key in ("validator_command", "dry_run_command", "publish_command", "publish_event",
-                    "expected_sha256", "digest_path", "extra"):
-            with self.subTest(extra=key):
-                changed = copy.deepcopy(self.ledger)
-                changed["release_contract"][key] = "unapproved"
-                with self.assertRaisesRegex(validate.PolicyError, "release_contract fields differ"):
-                    validate.validate_ledger(changed)
-        for key in self.ledger["release_contract"]:
-            with self.subTest(missing=key):
-                changed = copy.deepcopy(self.ledger)
-                del changed["release_contract"][key]
-                with self.assertRaisesRegex(validate.PolicyError, "release_contract fields differ"):
-                    validate.validate_ledger(changed)
-        with self.assertRaisesRegex(validate.PolicyError, "duplicate JSON key: workflow"):
-            validate.reject_duplicate_keys([("workflow", "approved"), ("workflow", "candidate")])
+        for forbidden in validate.FORBIDDEN_DEPENDENCIES:
+            with self.subTest(dependency=forbidden):
+                changed = self.observations()
+                changed["default"]["all_packages"].append(forbidden)
+                with self.assertRaisesRegex(validate.PolicyError, "forbidden normal dependency"):
+                    validate.validate_feature_observations(
+                        changed, self.workspace["api_closure"], EXPECTED_PRIVATE
+                    )
 
 
 class WorkflowApprovalControls(unittest.TestCase):
@@ -339,19 +337,23 @@ class WorkflowApprovalControls(unittest.TestCase):
     def run_policy(self, candidate: bytes | None) -> tuple[int, str, str]:
         """Read a real candidate file through main; isolate only unrelated Cargo observations."""
 
-        ledger = validate.read_ledger()
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            workflow = root / ledger["release_contract"]["workflow"]
+            workflow = root / validate.RELEASE_WORKFLOW
             workflow.parent.mkdir(parents=True)
             if candidate is not None:
                 workflow.write_bytes(candidate)
             stdout, stderr = io.StringIO(), io.StringIO()
             with (
                 patch.object(validate, "ROOT", root),
-                patch.object(validate, "read_ledger", return_value=ledger),
                 patch.object(validate, "cargo_json", return_value={}),
-                patch.object(validate, "validate_workspace", return_value=(EXPECTED_PUBLISHABLE | EXPECTED_PRIVATE, [])),
+                patch.object(validate, "validate_workspace", return_value={
+                    "packages": EXPECTED_PUBLISHABLE | EXPECTED_PRIVATE,
+                    "publishable": EXPECTED_PUBLISHABLE,
+                    "private": EXPECTED_PRIVATE,
+                    "order": [],
+                    "api_closure": [],
+                }),
                 patch.object(validate, "cargo_tree_observation", return_value={}),
                 patch.object(validate, "validate_feature_observations"),
                 patch.object(validate, "validate_unknown_feature_refusal"),
@@ -385,8 +387,7 @@ class WorkflowApprovalControls(unittest.TestCase):
     def test_frozen_reference_and_live_candidate_agree_and_repeat(self) -> None:
         """Approval is independent of the candidate and repeated acceptance is deterministic."""
 
-        ledger = validate.read_ledger()
-        candidate = (validate.ROOT / ledger["release_contract"]["workflow"]).read_bytes()
+        candidate = (validate.ROOT / validate.RELEASE_WORKFLOW).read_bytes()
         self.assertEqual(candidate, APPROVED_WORKFLOW)
         self.assertEqual(hashlib.sha256(APPROVED_WORKFLOW).hexdigest(), release_workflow.EXPECTED_SHA256)
         reports = []

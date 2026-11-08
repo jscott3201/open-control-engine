@@ -252,7 +252,21 @@ For `CDL.Logical.Pre`, a snapshot preserves both the currently visible output co
 Boolean memory that will be emitted on the next HostTick call. Restore does not evaluate the block.
 A call at the restored timestamp advances it again.
 
-For candidate changes, use the [release compatibility and host fallback checklist](release-compatibility.md#host-fallback-checklist).
+When the engine build changes, work through this host fallback checklist:
+
+- [ ] Preserve exact original bytes and refusal cause; do not migrate or rewrite them.
+- [ ] Fence external actuator ownership/commands and select NO_EVAL while deciding.
+- [ ] Authenticate exact bytes, full build qualifier, freshness, generation and replay order before
+  decoding. Same Cargo version, descriptor equality and integrity checks are insufficient.
+- [ ] Choose explicitly approved cold requalification or separately qualified external rollback;
+  never auto-fallback or cross-build restore.
+- [ ] For cold start, qualify CXF, parameters, complete IO domains, cadence and seeded behavior;
+  compensate/reconcile load-time Store effects and external state separately.
+- [ ] For rollback, bind the prior binary to its own authenticated state and configuration; reject
+  any mismatch before dispatch. No current decoder participates.
+- [ ] Verify field fencing, quality policy, model-time mapping and exclusive command authority before
+  delivery. Successful load, restore, replay or local tests alone authorize no field effect.
+
 Current/current is the only supported pairing; equal package strings are not build authority.
 No N-1 state/replay migration is supplied. Cold requalification starts fresh; external rollback uses
 the prior qualified binary with its own authenticated state, never a current-engine transplant.

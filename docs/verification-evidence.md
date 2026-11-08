@@ -416,8 +416,8 @@ run here does not prove these pass`, listing:
 - **The cross-architecture determinism matrix** (the script's report still names `ubuntu-latest`
   and `ubuntu-24.04-arm`; CI now runs x86_64 natively and aarch64 under QEMU emulation). One
   machine cannot reproduce it; CI is the only place it runs.
-- **The `cargo public-api` surface gates** for `oce-api` and `oce-store`. They need a gate-only
-  nightly toolchain and run in `release-gate.yml`.
+- **The retired API surface gates.** They were removed with the compatibility records (GitHub
+  #388); the listing still names them because the script changes only with GitHub #392.
 - **`cargo deny check advisories`.** It needs network access and a writable advisory database, so it
   runs in `advisories.yml` and in the release gate's cargo-deny job instead.
 - **That these commands still match `pr-gate.yml`.** Nothing verifies that mechanically. An attempt was

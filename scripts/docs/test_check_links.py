@@ -84,17 +84,6 @@ class GeneratedNavigationTests(unittest.TestCase):
             self.assertNotRegex(projection, r"\]\([^)]*(?:_spec/|_research/)")
             self.assertIn("<code>_spec/", html.unescape(projection))
 
-    def test_staged_navigation_includes_tracked_stability_baseline(self) -> None:
-        """The dated stability snapshot is both staged and included as a chapter."""
-
-        with tempfile.TemporaryDirectory() as temporary:
-            staged, _, _ = docs_stage.stage_book(Path(temporary) / "book", "a" * 40)
-
-            summary = (staged / "src" / "SUMMARY.md").read_text(encoding="utf-8")
-            chapter = "- [Stability baseline](docs/stability-baseline.md)"
-            self.assertEqual(summary.splitlines().count(chapter), 1)
-            self.assertTrue((staged / "src" / "docs" / "stability-baseline.md").is_file())
-
     def test_staged_navigation_includes_design_notes_exactly_once(self) -> None:
         """A design note under docs/design/ is staged and reachable through one chapter."""
 
@@ -107,82 +96,20 @@ class GeneratedNavigationTests(unittest.TestCase):
             self.assertEqual(summary.count("(docs/design/compiled-schedule-blob.md)"), 1)
             self.assertTrue((staged / "src" / "docs" / "design" / "compiled-schedule-blob.md").is_file())
 
-    def test_staged_navigation_includes_public_surface_authority(self) -> None:
-        """The contract is a chapter and its machine-readable ledger is an asset."""
+    def test_every_staged_chapter_is_a_tracked_document(self) -> None:
+        """mdBook silently creates a missing chapter, so a deleted page must leave the summary too."""
 
+        root = docs_stage.repository_root()
         with tempfile.TemporaryDirectory() as temporary:
             staged, _, _ = docs_stage.stage_book(Path(temporary) / "book", "a" * 40)
 
-            source = staged / "src" / "docs"
             summary = (staged / "src" / "SUMMARY.md").read_text(encoding="utf-8")
-            chapter = "- [Public surface contract](docs/public-surface-contract.md)"
-            self.assertEqual(summary.splitlines().count(chapter), 1)
-            self.assertTrue((source / "public-surface-contract.md").is_file())
-            self.assertEqual(
-                (source / "public-surface-ledger.json").read_bytes(),
-                (docs_stage.repository_root() / "docs" / "public-surface-ledger.json").read_bytes(),
-            )
-
-    def test_staged_navigation_includes_package_publication_authority(self) -> None:
-        """The package policy is a chapter and its exhaustive ledger is an asset."""
-
-        with tempfile.TemporaryDirectory() as temporary:
-            staged, _, _ = docs_stage.stage_book(Path(temporary) / "book", "a" * 40)
-
-            source = staged / "src" / "docs"
-            summary = (staged / "src" / "SUMMARY.md").read_text(encoding="utf-8")
-            chapter = (
-                "- [Package, feature, and publication policy]"
-                "(docs/package-publication-policy.md)"
-            )
-            self.assertEqual(summary.splitlines().count(chapter), 1)
-            self.assertTrue((source / "package-publication-policy.md").is_file())
-            self.assertEqual(
-                (source / "package-publication-ledger.json").read_bytes(),
-                (
-                    docs_stage.repository_root()
-                    / "docs"
-                    / "package-publication-ledger.json"
-                ).read_bytes(),
-            )
-
-
-class ContractEvidenceTests(unittest.TestCase):
-    """Require qualified test evidence named by the contract to resolve."""
-
-    def test_qualified_test_evidence_exists(self) -> None:
-        """Every module-qualified test anchor names an actual Rust test function."""
-
-        root = docs_stage.repository_root()
-        contract = (root / "docs" / "public-surface-contract.md").read_text(encoding="utf-8")
-        anchors = set(
-            re.findall(
-                r"`([a-z][a-z0-9_]*(?:_tests|_adapter))::([a-z][a-z0-9_]*)`",
-                contract,
-            )
-        )
-        self.assertTrue(anchors, "contract must name qualified test evidence")
-        for module, test in sorted(anchors):
-            matches = list((root / "crates").rglob(f"{module}.rs"))
-            self.assertEqual(len(matches), 1, f"{module} must resolve to one source file")
-            source = matches[0].read_text(encoding="utf-8")
-            self.assertRegex(
-                source,
-                rf"(?m)^\s*#\[test\]\s*\n\s*fn\s+{re.escape(test)}\s*\(",
-                f"{module}::{test} must resolve to a Rust test",
-            )
-
-    def test_package_policy_evidence_paths_resolve(self) -> None:
-        """The package ledger's authority and executable validator are clone-visible."""
-
-        root = docs_stage.repository_root()
-        ledger = json.loads(
-            (root / "docs" / "package-publication-ledger.json").read_text(encoding="utf-8")
-        )
-
-        self.assertTrue((root / ledger["authority"]).is_file())
-        self.assertTrue((root / "scripts" / "package_policy" / "validate.py").is_file())
-        self.assertEqual(len(ledger["packages"]), 17)
+            chapters = re.findall(r"\]\((docs/[^)]+\.md)\)", summary)
+            self.assertTrue(chapters)
+            for chapter in chapters:
+                with self.subTest(chapter=chapter):
+                    self.assertTrue((root / chapter).is_file())
+                    self.assertTrue((staged / "src" / chapter).is_file())
 
 
 class VerificationSummaryTests(unittest.TestCase):

@@ -52,6 +52,9 @@ FRAME_CASES = tuple(
     Case(f"{name.lower()}_type_absent", f"let _: Option<oce_api::{name}> = None;", "E0425", name)
     for name in ("Outputs", "SimSpec", "SimMetrics", "StepReport", "InputSource", "OutputTrace",
                  "CollectSpec")
+) + tuple(
+    Case(f"{name.lower()}_variant_absent", f"let _ = oce_api::OcError::{name};", "E0599", name)
+    for name in ("RealtimeEpochUnset", "RealtimeInstantUnrepresentable")
 )
 
 POSITIVE = """use oce_api::{AssertLevel, CompletedFrame, Engine, PreparedInputFrame, Value};

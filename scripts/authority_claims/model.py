@@ -12,8 +12,7 @@ BLOCK_TEST = "crates/oce-blocks/src/authority_claims_tests.rs"
 CATALOG = "crates/oce-blocks/src/catalog.rs"
 STATE = "crates/oce-api/src/state.rs"
 BINDINGS = {
-    "packages": ("delegated", "docs/package-publication-ledger.json", "scripts/package_policy/validate.py"),
-    "public-surface": ("delegated", "docs/public-surface-ledger.json", "crates/oce-api/tests/public_surface_contract.rs"),
+    "packages": ("review-only", "scripts/package_policy/validate.py", "scripts/package_policy/test_validate.py"),
     "catalog-entries": ("native", CATALOG, BLOCK_TEST),
     "catalog-reserved": ("native", CATALOG, BLOCK_TEST),
     "catalog-source": ("delegated", "tools/reference-catalog/Buildings.Controls.OBC.CDL.prov.json", "crates/oce-blocks/src/registry/catalog_tests.rs"),
@@ -24,14 +23,13 @@ BINDINGS = {
     "tier-two-records": ("corpus", "crates/oce-conformance/tests/fixtures/golden/g36_traces", "scripts/authority_claims/observe.py"),
     "host-tick": ("review-only", "docs/execution-profile.md", "crates/oce-api/src/tests/pre_execution_profile_tests.rs"),
     "platforms": ("review-only", "docs/architecture.md", ".github/workflows/pr-gate.yml"),
-    "deferred-capabilities": ("review-only", "docs/public-surface-contract.md", "docs/cdl-coverage.md"),
+    "deferred-capabilities": ("review-only", "docs/product-contract.md", "docs/cdl-coverage.md"),
     "evidence-quality": ("review-only", "docs/verification-evidence.md", "TESTING.md"),
     "true-hold-extension": ("review-only", "crates/oce-blocks/src/logical_timing.rs", "crates/oce-blocks/src/port_names.rs"),
 }
 SUPERSESSION = {
-    "dated-stability": ("historical", "docs/stability-baseline.md"),
-    "local-public-plan": ("superseded", "docs/public-surface-contract.md"),
-    "local-package-plan": ("superseded", "docs/package-publication-policy.md"),
+    "local-public-plan": ("superseded", "docs/product-contract.md"),
+    "local-package-plan": ("superseded", "docs/ci-and-the-gate.md"),
     "local-execution-plan": ("superseded", "docs/execution-profile.md"),
     "true-hold-annotation": ("ambiguous", None),
 }

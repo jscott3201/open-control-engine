@@ -162,14 +162,13 @@ is caught by the next scheduled run, not by its own gate.
 and on a daily cron against the `development` tip (see its trigger block). It is disjoint from
 `pr-gate.yml` by base
 branch, so the two never both fire on one PR. It re-runs the light correctness gates against the
-release tip and adds four things:
+release tip and adds three things:
 
 | Step | What it covers | Where |
 | --- | --- | --- |
 | workspace nextest | every unit and integration test in the workspace | `release-gate.yml`, `test-suite` job, unit + integration step |
 | workspace nextest, release codegen | release panic-freedom, `debug_assert` paths stripped; inherited `ci-release` runner policy | `release-gate.yml`, `test-suite` job, release step |
 | `cargo test --doc` | doctests — nextest cannot run them, so this is a separate step | `release-gate.yml`, `test-suite` job, doctest step |
-| two `cargo public-api` surface gates | exact public API text for `oce-api` and `oce-store` | `release-gate.yml`, `test-suite` job, per-crate surface steps |
 
 `--no-tests=fail` is explicit on the nextest steps: a run that discovers zero tests hard-fails
 rather than passing, which catches tests that silently stop compiling or being found.
@@ -179,12 +178,12 @@ rather than passing, which catches tests that silently stop compiling or being f
 Local setup and CI pin cargo-nextest `0.9.143`; `.config/nextest.toml` also declares that version as
 both required and recommended, so an older local binary exits before testing. The `default` profile
 is fail-fast. Automated debug runs use `ci`; release-codegen runs use `ci-release`, which inherits
-the same retries, timeout, leak, and reporter policy instead of copying it. The two public-API runs
-inherit that policy through separate child profiles because their nested nightly builds need a
-longer per-test timeout and separate reports.
+the same retries, timeout, leak, and reporter policy instead of copying it. The file still declares
+two child profiles for the retired API surface snapshots; nothing runs them, and they stay only
+because the file is a bound source of the strict-bit evidence until GitHub #392 removes them.
 
-Retries are zero and a flaky pass is still a failure. Ordinary tests terminate after 120 seconds;
-the public-API surface tests allow 10 minutes for their nested nightly rustdoc builds. A run stops
+Retries are zero and a flaky pass is still a failure. Ordinary tests terminate after 120 seconds. A
+run stops
 after 15 minutes, and a child process retaining inherited output handles for more than two seconds
 fails as a leak. CI writes Jenkins-compatible JUnit XML to `target/nextest/<profile>/junit.xml` and
 requires every expected report to exist and be non-empty; the reports are no longer uploaded as
@@ -199,20 +198,11 @@ that nextest still marks unstable would make the gate depend on a non-stable for
 thread reservations remain available when measurement identifies a shared resource or heavy test;
 none is known today.
 
-The public-api baselines are the strongest stability evidence in this repo. They are checked-in
-text files — `crates/oce-api/tests/public-api.txt` (1357 lines) and
-`crates/oce-store/tests/public-api.txt` (1230 lines) — and the tests at
-`crates/oce-api/tests/public_api.rs` and `crates/oce-store/tests/public_api.rs` diff the crate's
-real surface against them, so any unintended addition, removal or signature change fails the gate
-rather than shipping. Two env vars interlock to keep the gate honest: `OCE_PUBLIC_API_NIGHTLY` arms
-it and names the pinned nightly to shell out to, and `OCE_REQUIRE_SURFACE_CHECK=1` turns a missing
-nightly into a hard panic instead of a silent skip, so disarming the gate turns it red, never green
-(see the surface steps' arming environment). The two crates run as separate steps on purpose: merging the package
-selectors would let one surviving crate hide the other's vanished test.
-
-The exact rows are classified without replacing these signature baselines by the
-[public surface contract](public-surface-contract.md) and its
-[machine-checked ledger](public-surface-ledger.json).
+There is no public API surface baseline before 1.0. The engine is pre-1.0 and makes no
+backwards-compatibility promise, so the checked-in surface snapshots, their nightly toolchain and the
+compatibility records were retired (GitHub #388); a surface baseline returns with the first stable
+release. Until then the compile-time signature guards in `crates/oce-api/src/guards.rs`, which run
+in every per-PR build, are the only pinned surface.
 
 ## What CI cannot observe
 
@@ -238,25 +228,52 @@ The exact rows are classified without replacing these signature baselines by the
 
 The script says the rest itself, in its closing report: a green local run
 does **not** prove the cross-arch determinism matrix passes (one machine cannot reproduce it), does
-not prove the two `cargo public-api` surface gates pass (they need the gate-only nightly), does not
-prove `cargo deny check advisories` passes, and does not prove that the script and `pr-gate.yml`
-still agree. (The script's own closing report still names `ubuntu-24.04-arm` and `ci.yml`; the script
-is a bound source of the retained strict-bit evidence, so its text changes only with an evidence
-refresh.) A `light` run additionally does not prove the workspace suite or doctests pass, because the
+not prove `cargo deny check advisories` passes, and does not prove that the script and `pr-gate.yml`
+still agree. (The script's own closing report still names `ubuntu-24.04-arm`, `ci.yml` and the
+retired API surface gates; the script is a bound source of the retained strict-bit evidence, so its
+text changes only with GitHub #392.) A `light` run additionally does not prove the workspace suite or doctests pass, because the
 per-PR gate does not run them.
 
 ## Publishing
 
+No Open Control Engine crate is on crates.io yet, and actual publication remains deferred pending
+explicit owner authorization. A manifest without `publish = false` is only eligible for a future
+registry release.
+
 `release.yml` publishes with the crates.io token held in its `release` GitHub Environment. It is
-decoupled from both gates and from
-each other's triggers. Pushing a `v*` tag runs
-verify only — tag/version match, fmt, clippy, a workspace `cargo test`, and a full
-`cargo publish --dry-run` — with no token and no publish, so a tag can be re-cut safely
-(see [release.yml](../.github/workflows/release.yml), `verify` job). Publishing is a separate manual `workflow_dispatch` into the `release` GitHub
-Environment. Cargo's workspace selection includes the 12 publishable members and skips the five
-members with `publish = false`; the exact split and feature closure are guarded by the
-[package, feature, and publication policy](package-publication-policy.md). No crate is on crates.io
-yet, and actual publication remains deferred pending explicit owner authorization.
+decoupled from both gates and from each other's triggers. Pushing a `v*` tag runs verify only —
+tag/version match, fmt, clippy, a workspace `cargo test`, the package validator and a full
+`cargo publish --workspace --locked --dry-run` — with no token and no publish, so a tag can be
+re-cut safely (see [release.yml](../.github/workflows/release.yml), `verify` job). Publishing is a
+separate manual `workflow_dispatch` into the `release` GitHub Environment. Cargo's workspace
+selection includes the 12 publishable members and skips the five members with `publish = false`:
+`oce-bless`, `oce-conformance`, `oce-docs`, `oce-extension` and `oce-reference-wal-adapter`.
+No checked-in record pins those sets any more: the guards are each crate's `publish` flag, the
+byte pin on `release.yml` (whose comment names the split) and review.
+
+### The package validator
+
+`scripts/package_policy/validate.py` reads the publication state from each crate's `Cargo.toml`
+through live Cargo metadata; nothing else restates it. It runs in the `package-publication-contract`
+job of `pr-gate.yml`, in the gate script and in `release.yml`, with hostile controls in
+`scripts/package_policy/test_validate.py`. It requires:
+
+- every workspace member to be either private (`publish = false`) or registry-ready: its normal and
+  build dependencies on other members are path-backed, carry a registry version and are never
+  private, and the publishable graph has a deterministic leaf-to-facade order;
+- `oce-api` to declare only `default` and `mem`, with the three supported selections (default,
+  `--no-default-features --features mem`, `--no-default-features`) sharing one normal closure that
+  includes `oce-store-mem` and no private member, database, `tokio` or `async-std`, and Cargo to
+  refuse any other feature name;
+- `.github/workflows/release.yml` to match the approved bytes whose SHA-256 is fixed in
+  `scripts/package_policy/release_workflow.py`. Even comments, whitespace and line endings count;
+  an intentional workflow change updates the workflow, that digest and the byte golden in the
+  hostile controls together.
+
+`mem` is a legacy no-op spelling: `oce-store-mem` is an unconditional dependency in all three
+selections, and `Engine<S: Store = MemStore>` supplies the default type. The byte check is a drift
+guard on the approved release execution, not a sandbox: it does not verify invoked actions, the
+`release` environment's protection settings or secret placement.
 
 Related: [`host-responsibilities.md`](host-responsibilities.md) for what the engine deliberately
 leaves to the embedder, and [`../TESTING.md`](../TESTING.md) for the testing standard a change is
