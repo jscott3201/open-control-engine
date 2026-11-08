@@ -78,10 +78,10 @@ nor the leverage allowlist counts as an engine change.
 
 | Change class | Jobs that run | Jobs skipped | Expected wall-clock |
 | --- | --- | --- | --- |
-| docs-only | `classify changed paths`, fmt, file-size cap, no-secret scan, docs, gate behavior fixtures, the package/authority/product contract, `CI OK` | the determinism lane, `leverage lane`, `gate (light)` | about 2 minutes |
-| leverage-only (`crates/leverage/**`, optionally with docs) | the docs-only set plus `leverage lane` | the determinism lane, `gate (light)` | about 2 minutes with no leverage crates; plus each member's build and tests |
-| engine (any other path) | every job except `gate (light)` | `gate (light)` | about 15 minutes (the x86_64 release determinism cell is the long pole) |
-| gate scripts, workflows, tool config | every job | none | about 17 minutes |
+| docs-only | `classify changed paths`, fmt, file-size cap, no-secret scan, docs, gate behavior fixtures, the package/authority/product contract, `CI OK` | the determinism lane, `leverage lane`, `gate (light)` | under 3 minutes (2m40s in run 42476084422) |
+| leverage-only (`crates/leverage/**`, optionally with docs) | the docs-only set plus `leverage lane` | the determinism lane, `gate (light)` | about 1 minute with no leverage crates (56s in run 42476081207); plus each member's build and tests |
+| engine (any other path) | every job except `gate (light)` | `gate (light)` | about 15–17 minutes (16m52s in run 42476086689; a release determinism cell is the long pole) |
+| gate scripts, workflows, tool config | every job | none | about 15–17 minutes (15m21s in run 42476052220; `gate (light)` runs beside the long pole) |
 
 The always-on set runs whatever changed: it compiles nothing (fmt only reads the tree), and the
 package/authority/product contract stays in it because its checks read the documentation as well as
