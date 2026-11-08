@@ -1,138 +1,180 @@
 # open-control — Agent Guide
 
 **open-control** (product name **Open Control Engine**; repo
-`github.com/jscott3201/open-control-engine`) is a high-performance, **embeddable Rust control engine**
-for smart-building equipment. Crates use the **`oce-*`** prefix; the embeddable host facade is the
-package **`oce-api`**. **Nothing is published to crates.io yet** — `open-control-engine` is a
-reserved umbrella name for a future release, not a current alias. Its north-star specification is
-the **OBC / LBL Control Description Language (CDL)**:
+`github.com/jscott3201/open-control-engine`) is a high-performance, **embeddable Rust control
+engine** for smart-building equipment. Crates use the **`oce-*`** prefix; the embeddable host
+facade is the package **`oce-api`**. **Nothing is published to crates.io yet** —
+`open-control-engine` is a reserved umbrella name, not a current alias. Its north-star
+specification is the **OBC / LBL Control Description Language (CDL)**:
 
 - https://obc.lbl.gov/specification/cdl.html
 - https://obc.lbl.gov/specification/index.html
 - https://github.com/lbl-srg/modelica-buildings/tree/master/Buildings
 
-It is built to be the **core engine under the hood** for future Aionforge projects, so the public
-API and core semantics must stay embeddable and stable. The library ships **no first-party
-database** — it is database-free, full stop; durable/queryable backends (e.g. the in-house graph
-database **selene-db**, https://github.com/jscott3201/selene-db) are the consuming application's
-responsibility, authored app-side behind the storage port.
+It is the **core engine under the hood** for Aionforge projects (`mechanical-muse`,
+`open-control-library`, `rusty-bacnet` integration), so the public API and core semantics stay
+embeddable, deterministic and database-free. The engine is **greenfield, pre-1.0**: design for best
+fit, not for backwards compatibility; APIs freeze at 1.0.
+
+`CLAUDE.md` is a symlink to this file.
 
 ---
 
 ## 🧭 Start here
 
-Read [`.agents/project-facts.md`](.agents/project-facts.md) before your first change. It
-covers the gate, what CI does and does not run, and the conventions this repo enforces
-mechanically.
+Read in this order, every session, before the first change:
 
-Use the [product contract](docs/product-contract.md) for versioned product requirements and their
-evidence map; its domain delegations and current/host/future distinctions govern aggregate claims.
+1. This file.
+2. [`.agents/project-facts.md`](.agents/project-facts.md) — the gate, what CI does and does not run,
+   the conventions this repo enforces mechanically.
+3. [`docs/architecture.md`](docs/architecture.md) — the layers, the CDL §7.17 seam, what the engine
+   will never do.
+4. [`TESTING.md`](TESTING.md) — the four pillars; thin coverage is a blocking defect.
+5. The GitHub issue you are assigned, then its milestone's tracking issue.
 
-If you are an agent working on this project, `.agents/` also holds local operating notes
-kept out of the published tree — capability-aware memory and identity handling in
-`memory-bootstrap.md`, and checkout-local delegation and review notes in `lane-facts.md`.
-Use the active client's tools and follow its current guidance; historical handoffs record prior
-decisions and evidence, not current tool availability or continuing merge authority.
-The local notes are gitignored, so they exist only in a working checkout. If you cloned
-this repo and they are absent, you are a contributor and `project-facts.md` is what you need.
+The owner's planning record is two documents kept out of the tree: the **Review & Growth
+Ideation** doc (reasoning and decisions) and the **Milestone Work Plan** (M1–M9, library track,
+gates). Local checkouts carry exports in `_spec/`. GitHub issues are cut from the plan; **do not
+re-litigate a decision recorded there inside a PR** — comment on the issue and keep building.
 
-That arrangement governs what is published **from here on**. Earlier revisions of this
-file, and a since-deleted `.claude/skills/codex-handoff/SKILL.md`, carried some of the same
-orchestration material and remain readable in this repository's public git history — as do
-four `_spec/oce_g36_gap_specs_v1/reference/` files that were force-added until 2026-07-28
-and are now local-only. Nothing there is a credential or an identity value, so it is
-accepted rather than remediated — deleting a file stops publishing it, it does not
-unpublish it.
+Other files under `.agents/` beyond `gate.sh`, `project-facts.md` and `revendor-upstream.sh` are
+gitignored, checkout-local operating notes. If you cloned this repo and they are absent, you are a
+contributor and `project-facts.md` is what you need. The [product contract](docs/product-contract.md)
+owns versioned product requirements and their evidence map.
 
 ---
 
-## 🌐 Hosting, CI, and issues
+## 🎯 Milestone work: issues → branch → PR → merge
 
-- **GitHub is the primary host.** `github.com/jscott3201/open-control-engine` is `origin`:
-  branches, pull requests, reviews, merges, issues and CI all happen there. The self-hosted Forgejo
-  instance that was primary until October 2026 is retired; nothing pushes to or from it.
-- **CI is GitHub Actions**, defined in `.github/workflows/` (Linux only). The single required
-  status is `CI OK` — from `pr-gate.yml` on `development` and from `release-gate.yml` on `main`.
-  `advisories.yml` runs daily, `docs-pages.yml` validates docs PRs and publishes `main` to GitHub
-  Pages, `release.yml` keeps its tag-verify / manual-publish split, and the two manual OpenModelica
-  evidence workflows run on native arm64 runners.
-- **`.github/workflows/ci.yml` is not the CI.** It is the GitHub-era gate that produced the
-  retained native strict-bit captures and must stay byte-identical because it is a bound source of
-  that evidence. It is disabled in the repository's Actions settings; do not edit, re-enable or
-  delete it outside a deliberate native-evidence refresh.
-- **PR numbers:** GitHub PR numbers overlap the retired Forgejo numbering: Forgejo #332 (the
-  Forgejo CI port) and GitHub #332 are different changes. Bare `(#N)` citations predate the move;
-  cite every PR merged on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
-- Use `gh` (or the GitHub web UI / API) for PR operations.
+Milestone work is executed by coding agents starting cold, so the process is the same for every
+work item.
+
+**Pick up.** Work only from an open issue in the current milestone (GitHub Milestones; the
+`tracking` issue lists the order and the hard dependencies). An issue labelled `agent-ready`
+names its entry points, acceptance checks and a "do not touch" list — those are the contract. An
+issue labelled `blocked` waits on another; read the body. If the issue's spec is thin, write the
+one-page design note first (`docs/design/<topic>.md`), open it as a **draft PR**, and wait for a
+review comment before building (`design-note-first`).
+
+**Branch.** From `development`: `<area>/<what-it-does>` (`facade/pure-engine`,
+`ci/native-arm64-runners`). Never a lane tag, milestone or issue number as the name.
+
+**Build.** One PR per issue unless two are inseparable (then say so). Keep the diff to the issue's
+scope; a fix you notice elsewhere is a new issue, not a drive-by.
+
+**Prove.** Before opening the PR run `bash .agents/gate.sh full` first-hand and **paste the tail of
+the real output** into the PR description. A summary of a gate is a claim about a gate, and this
+engine controls physical equipment. Then confirm the 46 fixture goldens and 422 provenance goldens
+are byte-identical (`git status --porcelain -- tools/golden-gen/goldens` prints nothing) unless the
+issue says the PR exists to regenerate them — then the description says why and which.
+
+**PR.** Title `type(scope): what it does` in the imperative (`fix(cxf): …`, `ci: …`,
+`refactor(api): …`). Body: `Closes #N`, what changed and why in two paragraphs, the gate tail, the
+goldens line, the `CHANGELOG.md` entry you added (every behaviour, surface or published-claim change
+gets one **in the same PR**, cited `(GitHub #N)`), and the docs you updated. A fix round pushes to
+the **same branch**; never a second PR for the same work.
+
+**Merge.** `CI OK` is the one required status; confirm it **reported**, not merely that nothing is
+red (a PR with no checks looks like a PR with no failing checks). Squash-merge into `development`
+once CI OK is green and any requested review is addressed. Branches delete on merge. Release PRs
+go `development → main` through `release-gate.yml` and are tagged `v0.x` at the end of each
+milestone.
+
+**Standing rules for every PR**
+
+1. No `unsafe`, no `todo!`, no database, no async runtime below `oce-api`, no network listener, no
+   `.mo` parser. `missing_docs` is deny.
+2. Determinism is the invariant. A PR that touches the core four (`oce-model`, `oce-expr`,
+   `oce-blocks`, `oce-graph`) or `oce-cxf` leaves every golden byte-identical, or exists to
+   regenerate them and says so.
+3. Four tracked files are **bound sources of the retained strict-bit evidence** and are edited only
+   when an issue says to: `.github/workflows/ci.yml` (frozen and disabled — never),
+   `.config/nextest.toml`, `.agents/gate.sh`, and the evidence tests under
+   `crates/oce-conformance/tests/strict_bits/`. The full bound list in
+   `strict_bits/evidence.rs` also includes `Cargo.toml`, `Cargo.lock` and
+   `crates/oce-model/src/lib.rs`; during a refactor milestone the receipt may be marked
+   `recapture-pending` — read `docs/strict-bit-evidence.md`'s first section for the current status.
+4. Change a gate command by changing `.github/workflows/pr-gate.yml` **first**, then
+   `.agents/gate.sh`. Never add `--all-features` to clippy (see project-facts).
+5. Leverage crates live under `crates/leverage/<name>` and depend on `oce-api` only, never on a
+   core crate directly. They run in the lighter leverage CI lane; a change to the core four always
+   runs the determinism lane.
+6. Keep absolute paths (`/Users/...`, `/home/...`) and UUID-shaped strings out of every tracked
+   file; the no-secret gate rejects them and history then has to be scrubbed.
+7. Sequences, routines and faults live in `open-control-library`, never here; this repo keeps only
+   the minimal conformance corpus.
+8. `cargo clean` the tree at every merge boundary; never while a build is running in it.
+
+---
+
+## 🌐 Hosting and CI
+
+- **GitHub is the host**: `origin` is `github.com/jscott3201/open-control-engine`; branches, PRs,
+  issues, milestones, reviews and CI live there. Use `gh` for PR and issue operations. (A
+  self-hosted Forgejo instance was primary until October 2026; its PR numbers overlap GitHub's, so
+  cite PRs merged on GitHub as `(GitHub #N)`.)
+- **CI is GitHub Actions** in `.github/workflows/`. The single required status is `CI OK`: from
+  `pr-gate.yml` into `development`, from `release-gate.yml` into `main`. `advisories.yml` runs
+  daily, `docs-pages.yml` validates docs and publishes `main` to GitHub Pages, `release.yml` keeps
+  its tag-verify / manual-publish split, and the two OpenModelica evidence workflows run on native
+  arm64 by hand.
+- **`ci.yml` is not the CI.** It is the frozen GitHub-era gate that produced the retained native
+  strict-bit captures; it is disabled in the Actions settings and stays byte-identical.
+- **CI is dev-light / release-heavy.** A green PR is not evidence that a change's own tests pass.
+  Which crates' suites run per PR, which only in the release gate, and which commands are CI-only
+  for now is spelled out in [`.agents/project-facts.md`](.agents/project-facts.md) and
+  [`docs/ci-and-the-gate.md`](docs/ci-and-the-gate.md); run `bash .agents/gate.sh full` yourself.
+  cargo-nextest is the runner (`.config/nextest.toml`); it cannot run doctests, which is why they
+  are a separate step. The git hooks run no tests — keep commits and pushes fast.
 
 ---
 
 ## 📂 Repository layout
 
-Everything below is local-only unless marked tracked. `.gitignore` excludes every
-top-level `_*/` directory, so a clone contains none of the working directories — if
-you cloned this repo, you will not find them, and that is expected.
+`.gitignore` excludes every top-level `_*/` directory, so a clone contains none of the working
+directories — that is expected, and `git add -A` silently stages nothing under them.
 
 | Path | Tracked? | Purpose |
 | --- | --- | --- |
 | `crates/` | tracked | The engine. Published crates use the `oce-*` prefix. |
-| `third_party/` | tracked | Vendored third-party source, verbatim and uncompiled. Today: 176 Modelica Buildings `.mo` classes plus 44 modelica-json CXF translations, read as data by three input-hygiene audits. Sits outside every crate root, so `cargo package` never ships it. Its own license applies — see the directory README. |
-| `.agents/` | partly | `gate.sh`, `project-facts.md`, and `revendor-upstream.sh` are tracked; other files there are local operating notes. |
-| `_spec/` | local-only | Architecture and engine specification — the design of record before code. |
-| `_research/` | local-only | Research findings that feed the spec. |
-| `_codex-briefs/`, `_review/`, `_tracker/` | local-only | Working artifacts. |
+| `crates/leverage/` | tracked | Crates above the facade (`oce-author`, `oce-verify`, `oce-host`, bindings…) as the milestones add them; `oce-api` only, never a core crate. |
+| `docs/` | tracked | The mdBook (`architecture.md`, contracts, evidence). `docs/design/` holds one-page design notes written before a thinly specified work item. |
+| `third_party/` | tracked | Vendored Modelica Buildings `.mo` classes and modelica-json CXF translations, verbatim and uncompiled, read as data by input-hygiene audits. Outside every crate root. Own license; see its README and pin-advance policy. |
+| `tools/golden-gen/` | tracked | Its own cargo workspace; generates the checked-in goldens. Hygiene runs as a separate CI job. |
+| `.agents/` | partly | `gate.sh`, `project-facts.md`, `revendor-upstream.sh` tracked; everything else local notes. |
+| `_spec/`, `_research/`, `_review/`, `_tracker/` | local-only | Planning exports, research, working artifacts. A reference to `_spec/...` points at a file no clone has — quote the excerpt you rely on. |
 | `*-id.json` | never committed | Machine-local agent identities. |
 
 ---
 
 ## 🛠️ Working norms
 
-- Spec before code: land architecture decisions in `_spec/` before scaffolding crates.
-- **Testing standard (safety-critical):** this engine controls real equipment — a wrong result
-  is a physical hazard, so testing is a **first-class deliverable, not an afterthought**. Every
-  PR ships **extensive edge-case tests, golden tests (checked-in expected outputs compared
-  bit-exactly), oracle cross-checks, and determinism goldens** per `TESTING.md`. Thin coverage
-  is a **blocking review defect**. See `TESTING.md` for the full standard.
-- **The gate:** `bash .agents/gate.sh` runs the per-PR gate's commands; `bash .agents/gate.sh full`
-  adds the workspace suite and doctests. It is not the whole per-PR gate — the script's own closing
-  report names what it cannot cover locally (cross-arch matrix, public-api surface, cargo-deny
-  advisories), and
-  a green local run is not a green CI. That script is the single source of truth for gate commands —
-  do not restate them here or anywhere else, and change one only by changing
-  `.github/workflows/pr-gate.yml` first. Nine
-  divergent copies of the command list existed before it was written, two of them materially
-  weaker than CI. A tenth divergence appeared later and in the other direction: the CI workflow
-  grew a `gate (light)` step the script did not have, so the required check existed but no local run
-  performed it. When they disagree, check which one is behind before assuming it is the script.
-- **CI is dev-light / release-heavy.** The per-PR gate into `development` runs engine tests for
-  **`oce-api`, `oce-blocks`, and `oce-expr`** (the `determinism-matrix` job, x86_64 native and
-  aarch64 under QEMU user-mode emulation, debug and release codegen, with a byte-for-byte
-  cross-architecture portable-state vector comparison), plus the scoped `oce-conformance` strict-bit subset and four per-block suites
-  ([bounded evidence](docs/strict-bit-evidence.md)). The remainder of the workspace needs the
-  release/full gate. **A green PR is therefore not evidence that a change's own tests pass** —
-  run `bash .agents/gate.sh full` first-hand before claiming they do. cargo-nextest is the runner
-  (`.config/nextest.toml`: `default` = fast local fail-fast, `ci` = automated debug runs,
-  `ci-release` = inherited release-codegen policy); it cannot run doctests, which is why they are a
-  separate step. The git hooks run no tests — keep commits and pushes fast.
-- **Project facts:** what this repo expects of a change, beyond what the code says, lives in
-  `.agents/project-facts.md` — the gate, the CI split, the clippy feature rule, the gitignored
-  working directories, and disk hygiene. Read it before your first PR.
+- **Testing standard (safety-critical):** a wrong result is a physical hazard. Every PR ships
+  edge-case tests, golden tests compared bit-exactly, oracle cross-checks and determinism goldens
+  per `TESTING.md`. Thin coverage is a **blocking review defect**.
+- **The gate:** `bash .agents/gate.sh` mirrors the per-PR gate; `bash .agents/gate.sh full` adds
+  the workspace suite and doctests. The script is the single source of truth for gate commands —
+  do not restate them anywhere; its closing report names what it cannot cover locally, and a green
+  local run is not a green CI. Prose copies of the command list have diverged in both directions
+  before; when the script and CI disagree, check which one is behind.
+- **Spec before code:** architecture decisions land in a design note (`docs/design/`) or the
+  owner's planning docs before crates are scaffolded.
+- **Hostile input is the default assumption** for anything that parses: bound memory and CPU at
+  load, refuse with a typed error, never panic (GitHub #381, #382 are the pattern).
 
 ### Naming, modularization & docs
 
 - Identifiers name the thing, never the change. Banned in any file, module, type, function,
-  constant, or test name: lane tags `a1` through `a6`, milestones `m0`/`m1`/`m2`, workstream
-  `c1`, `pr`/`prN`, `phaseN`, `laneN`, and split-counter or grab-bag suffixes such as `foo2`,
-  `_extra`, `_more`, `misc`, and `util2`. Bookkeeping belongs in commits, PRs, and Aionforge
-  Memory, not source names.
+  constant, or test name: lane tags `a1`–`a6`, milestones `m0`/`m1`/`m2`, workstream `c1`,
+  `pr`/`prN`, `phaseN`, `laneN`, and split-counter or grab-bag suffixes such as `foo2`, `_extra`,
+  `_more`, `misc`, `util`, `util2`. Bookkeeping belongs in commits, PRs and issues, not source names.
 - Block-family modules are named for the CDL namespace: `reals*`, `logical*`, `integers*`,
-  `conversions`, and `discrete`. A size-split suffix must name a behavioral sub-topic such as
-  `logical_latch`, `logical_timing`, `reals_filters`, or `reals_integrator`; never use a number.
-  Types mirror the CDL class last segment in `UpperCamelCase`, the `class_path` string is the
-  canonical identity, and registry constructors stay `make_<snake_block_name>`.
-- Test functions name the property or scenario. They do not name the function under test and do
-  not carry numbered prefixes. Test files mirror their source module, for example
-  `reals_filters.rs` and `reals_filters_tests.rs`.
+  `conversions`, `discrete`. A size-split suffix names a behavioural sub-topic (`logical_latch`,
+  `reals_filters`), never a number. Types mirror the CDL class last segment in `UpperCamelCase`,
+  the `class_path` string is the canonical identity, and registry constructors stay
+  `make_<snake_block_name>`.
+- Test functions name the property or scenario, not the function under test, with no numbered
+  prefixes. Test files mirror their source module (`reals_filters.rs` / `reals_filters_tests.rs`).
 - Every public item has rustdoc covering what it is, what it does, invariants, units, and panic
-  behavior where applicable. Every module has a `//!` header. Keep the 700-LOC cap by using
-  per-family modules and `tests/` trees for scenario suites.
+  behaviour where applicable. Every module has a `//!` header. Keep the 700-LOC cap by splitting
+  per family and moving scenario suites to `tests/` trees.

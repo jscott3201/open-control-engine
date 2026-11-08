@@ -439,6 +439,18 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
+- **Agent guide rewritten around the issue-driven milestone workflow** (GitHub #407).
+  `AGENTS.md` now opens with the reading order, then one section that says how a work item moves
+  from a GitHub issue to a squash-merged PR: pick up only `agent-ready` issues in the current
+  milestone, branch `<area>/<what-it-does>` from `development`, one PR per issue, paste the tail of
+  `bash .agents/gate.sh full`, confirm goldens byte-identical, add the changelog entry in the same
+  PR, confirm `CI OK` reported. Eight standing rules collect what every PR must respect, including
+  the full list of strict-bit bound sources (`Cargo.toml`, `Cargo.lock` and
+  `crates/oce-model/src/lib.rs` are bound too, not only the three files earlier text named) and
+  the `crates/leverage/` dependency rule. The Forgejo, codex-handoff and divergent-gate-copy
+  history is cut to one sentence each; the checkout-local `.agents/` notes are no longer described
+  by name. A pull-request template and a work-item issue template carry the same contract.
+
 - **Docs drift fixed, and two host-visible limits stated** (GitHub #375, issues #368, #369).
   - The runtime-introspection section of the CDL coverage page now describes `oce_api::catalog()`
     and its companions `catalog_to_json`, `catalog_content_id` and `CATALOG_JSON`. It no longer
