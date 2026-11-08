@@ -21,7 +21,7 @@ first, then the script.
 GitHub is the primary host: `origin` is `github.com/jscott3201/open-control-engine`, and branches,
 PRs, reviews, issues and CI live there. The self-hosted Forgejo instance that was primary until
 October 2026 is retired. CI is GitHub Actions in `.github/workflows/` on GitHub-hosted Linux
-runners: `pr-gate.yml` (per-PR, light), `release-gate.yml` (release PRs into `main`, daily against
+runners (plus the two `pr-gate.yml` platform cells on macOS and Windows): `pr-gate.yml` (per-PR, light), `release-gate.yml` (release PRs into `main`, daily against
 `development`, heavy), `advisories.yml` (daily), `docs-pages.yml` (docs validation and the Pages
 publish from `main`), `release.yml` (tag verify / manual crates.io publish) and the two manual
 native-arm64 OpenModelica evidence workflows. `ci.yml` there is byte-frozen and disabled in the
@@ -42,6 +42,11 @@ contract); an engine change runs it too. A docs-only PR compiles nothing, and do
 reads (`README.md`, `docs/cxf-composite-subset.md`) is not docs-only. `CI OK` accepts a skip only
 when the job's lane output was `false`. Locally, `bash .agents/gate.sh leverage` mirrors a
 leverage-only PR; see [lanes](../docs/ci-and-the-gate.md#lanes-what-a-pr-runs).
+
+Two platform cells also run with the determinism lane (issue #394): macOS arm64 checks that the
+portable state snapshot equals Linux byte for byte, and Windows builds the workspace and runs its
+suite without the strict-bit binaries — observations, not qualification; see
+[platform cells](../docs/ci-and-the-gate.md#platform-cells-macos-and-windows).
 
 GitHub PR numbers collide with the retired Forgejo numbering: Forgejo #332 (the Forgejo CI port)
 and GitHub #332 are different changes. Bare `(#N)` citations predate the move; cite every PR merged

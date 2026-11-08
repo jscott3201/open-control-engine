@@ -26,6 +26,9 @@ The local macOS debug/release tests still compare against the original observati
 regression observation, **not macOS qualification**. macOS-arm64 remains explicitly
 conservative/unqualified until M06-PR02; macOS and all other unqualified targets keep
 `atoly=rtoly=ltoly=1e-12` in the four suites, with exact time/discrete comparison.
+The per-PR macOS arm64 cell (`portable-snapshot-macos`) observes only that the portable engine-state
+snapshot is byte-identical to Linux; it runs no strict-bit suite and says nothing about
+transcendentals.
 
 ## Per-PR native matrix
 

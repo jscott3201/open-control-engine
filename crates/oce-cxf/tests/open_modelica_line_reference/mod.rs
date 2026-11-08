@@ -5,6 +5,9 @@ mod assembly_boundary_tests;
 pub(crate) mod canonicalizer;
 mod expectations;
 mod manifest;
+// Its copied repositories live in `verifier_adversarial_tests::ClaimedTempDir`, which claims a
+// directory by unix device and inode, so it is unix-only with that module.
+#[cfg(unix)]
 mod manifest_contract_tests;
 mod native_records;
 mod projection_records;
