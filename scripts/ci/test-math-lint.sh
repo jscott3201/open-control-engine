@@ -11,9 +11,16 @@
 #                 bump that moves a method into `core` fails here until the tables are updated.
 #   2. list     — every `std`-only method is in `clippy.toml` for both `f64` and `f32`.
 #   3. scope    — each core crate root denies `clippy::disallowed_methods`, the workspace allows it,
-#                 and no core `src/` file other than a `math.rs` names `libm::`.
-#   4. mutation — a copy of the workspace with `x.sin()` in `reals_transcendental.rs` must fail
-#                 `cargo clippy -p oce-blocks` with the disallowed-method error at that line.
+#                 no core `src/` file other than a `math.rs` names `libm::`, and a core `tests/` or
+#                 `benches/` file that names `libm::` is a declared oracle against `std` (it allows
+#                 the lint crate-wide, as `libm_std_parity.rs` does) rather than half-and-half.
+#   4. mutation — a copy of the workspace with `x.sin()` in oce-blocks' `reals_transcendental.rs`
+#                 and `f.sqrt()` in oce-expr's `eval.rs` must fail `cargo clippy` with the
+#                 disallowed-method error at both lines.
+#
+# The lint binds each core crate's `src/` tree, unit tests included. Files under `tests/` and
+# `benches/` are separate crates outside it, deliberately: that is where the `std` methods serve as
+# the oracle (`crates/oce-blocks/tests/libm_std_parity.rs`).
 #
 # Needs the pinned toolchain with clippy and the thumbv7em-none-eabihf target
 # (`rustup target add thumbv7em-none-eabihf`); like gate.sh it installs nothing, and a missing
@@ -94,42 +101,67 @@ stray="$(grep -rnE '(^|[^[:alnum:]_])libm::' "${CORE_CRATES[@]/#/crates/}" --inc
   grep -E '^crates/[^/]+/src/' || true)"
 [ -z "$stray" ] || fail "scope: core src/ calls libm outside a math module:
 $stray"
+# Outside `src/`, a file may name `libm::` only as a declared oracle that also calls the `std`
+# methods it compares against, which is what the crate-level allow states.
+for file in $(grep -rlE '(^|[^[:alnum:]_])libm::' "${CORE_CRATES[@]/#/crates/}" --include='*.rs' |
+  grep -vE '^crates/[^/]+/src/' || true); do
+  grep -qx '#!\[allow(clippy::disallowed_methods)\]' "$file" ||
+    fail "scope: $file calls libm directly but is not a declared std oracle (#![allow(clippy::disallowed_methods)]); a test outside src/ calls the std method"
+done
 
 # ── 4. mutation ──────────────────────────────────────────────────────────────
-# The copy holds what the oce-blocks library build reads: the workspace manifests and lockfile,
-# the clippy and toolchain configuration, the crates, and the reference catalog it includes.
+# The copy holds what the two library builds read: the workspace manifests and lockfile, the clippy
+# and toolchain configuration, the crates, and the reference catalog oce-blocks includes. One
+# mutation per crate that does float math; one clippy run checks both.
 COPY="$WORK/workspace"
 mkdir -p "$COPY/tools"
 cp Cargo.toml Cargo.lock clippy.toml rust-toolchain.toml "$COPY/"
 cp -R crates "$COPY/crates"
 cp -R tools/reference-catalog "$COPY/tools/reference-catalog"
-target="$COPY/crates/oce-blocks/src/reals_transcendental.rs"
-before='emit_real(0, math::sin(read_real(inputs, 0)), emit);'
-after='emit_real(0, read_real(inputs, 0).sin(), emit);'
-if ! grep -Fq "$before" "$target"; then
-  fail "mutation: the Sin block no longer calls '$before'; update this control"
-else
-  line="$(grep -nF "$before" "$target" | head -1 | cut -d: -f1)"
-  sed -i.orig "${line}s/math::sin(read_real(inputs, 0))/read_real(inputs, 0).sin()/" "$target"
-  grep -Fq "$after" "$target" || fail "mutation: the sed edit did not apply"
-  set +e
-  output="$(cd "$COPY" && CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}" \
-    cargo clippy -p oce-blocks --lib --locked --quiet -- -D warnings 2>&1)"
-  status=$?
-  set -e
-  if [ "$status" -eq 0 ]; then
-    fail "mutation: clippy passed with x.sin() in reals_transcendental.rs"
-  elif ! grep -Fq 'use of a disallowed method `f64::sin`' <<< "$output" ||
-    ! grep -Fq "src/reals_transcendental.rs:$line:" <<< "$output"; then
-    fail "mutation: clippy failed without the disallowed-method error at line $line:
-$output"
-  else
-    echo "mutation control: clippy refused x.sin() at reals_transcendental.rs:$line, as required"
+# file|call it replaces|std method call it becomes|the disallowed path clippy must name
+MUTATIONS=(
+  'crates/oce-blocks/src/reals_transcendental.rs|math::sin(read_real(inputs, 0))|read_real(inputs, 0).sin()|f64::sin'
+  'crates/oce-expr/src/eval.rs|Ok(real(math::sqrt(f)))|Ok(real(f.sqrt()))|f64::sqrt'
+)
+expected=()
+for mutation in "${MUTATIONS[@]}"; do
+  IFS='|' read -r file before after method <<< "$mutation"
+  line="$(grep -nF "$before" "$COPY/$file" | head -1 | cut -d: -f1)"
+  if [ -z "$line" ]; then
+    fail "mutation: $file no longer contains '$before'; update this control"
+    continue
   fi
+  python3 - "$COPY/$file" "$line" "$before" "$after" <<'PY'
+import sys
+path, line, before, after = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4]
+lines = open(path).read().split("\n")
+lines[line - 1] = lines[line - 1].replace(before, after, 1)
+open(path, "w").write("\n".join(lines))
+PY
+  grep -Fq "$after" "$COPY/$file" || fail "mutation: the edit to $file did not apply"
+  expected+=("$file:$line|$method")
+done
+set +e
+output="$(cd "$COPY" && CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}" \
+  cargo clippy -p oce-blocks -p oce-expr --lib --locked --quiet -- -D warnings 2>&1)"
+status=$?
+set -e
+if [ "$status" -eq 0 ]; then
+  fail "mutation: clippy passed with std float methods in oce-blocks and oce-expr"
 fi
+for entry in ${expected[@]+"${expected[@]}"}; do
+  location="${entry%%|*}" method="${entry##*|}"
+  if grep -Fq "use of a disallowed method \`$method\`" <<< "$output" &&
+    grep -Fq "$location:" <<< "$output"; then
+    echo "mutation control: clippy refused $method at $location, as required"
+  else
+    fail "mutation: clippy did not report the disallowed $method at $location:
+$output"
+  fi
+done
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures math-discipline check(s) failed."
   exit 1
 fi
-echo "OK: ${#CORE_METHODS[@]} core and ${#STD_METHODS[@]} std-only f64 methods probed, the clippy list is total, the lint is scoped to the core four, and the x.sin() mutation fails clippy."
+echo "OK: ${#CORE_METHODS[@]} core and ${#STD_METHODS[@]} std-only f64 methods probed, the clippy list is total, the lint is scoped to the core four, and the oce-blocks and oce-expr mutations fail clippy."

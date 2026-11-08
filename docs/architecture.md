@@ -110,7 +110,9 @@ operation that is not in `core` on Rust 1.97 (`floor`, `ceil`, `trunc`, `round`,
 through `libm`, in the default build too, so the two builds share one numeric path; those five are
 exact in IEEE 754, and `crates/oce-blocks/tests/libm_std_parity.rs` checks them against the `std`
 methods bit for bit. Each of those calls goes through the crate's `math` module — the one place
-that names `libm` — and clippy refuses any `std`-only float method elsewhere in the four
+that names `libm` — and clippy refuses any `std`-only float method elsewhere in the four crates' `src/` trees, unit
+tests included (`tests/` files are separate crates outside the lint, where the `std` methods serve
+as the oracle)
 ([TESTING.md, math discipline](../TESTING.md#conventions), issue #399). The four use no hash collections (issue #398 audits the rest of the workspace).
 
 Everything else stays `std`: `oce-cxf`, `oce-validate`, `oce-semantics`, `oce-diag`, `oce-store` and

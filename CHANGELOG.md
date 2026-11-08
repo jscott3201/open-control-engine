@@ -70,12 +70,16 @@ and a gate that accepted any text would restore exactly the false assurance desc
   under `disallowed-methods`, each found by a `no_std` probe of the 1.97.1 toolchain — `core` has
   only `abs`, `signum`, `copysign`, `min`, `max`, `clamp`, `recip`, `to_degrees`, `to_radians`,
   `total_cmp` and `midpoint`; `mul_add`, `powi`, `fract` and `div_euclid` are `std`. The
-  workspace lint table allows the lint and the four crate roots deny it, so `std` crates and
-  `tools/golden-gen` (whose manifest allows it) keep their `std` methods. Three test-only `std`
+  workspace lint table allows the lint and the four crate roots deny it, so it binds each core
+  crate's `src/` tree, unit tests included, while `std` crates and `tools/golden-gen` (whose
+  manifest allows it) keep their `std` methods; files under `tests/` are separate crates outside
+  the lint, deliberately, because that is where the `std` methods serve as the oracle
+  (`libm_std_parity.rs`). Three test-only `std`
   calls move to `math` or an exact constant. `scripts/ci/test-math-lint.sh`, run by the
   `no-std-build` job and `.agents/gate.sh`, re-probes the table, checks the list is total and
-  the lint scoped, and requires an `x.sin()` mutation in `reals_transcendental.rs` to fail clippy.
-  `sqrt` stays on `libm` in every build: 2.3 ns per call slower than `f64::sqrt` on Apple M5, but
+  the lint scoped (a core `tests/` file naming `libm::` must be a declared `std` oracle), and
+  requires an `x.sin()` mutation in oce-blocks and an `f.sqrt()` mutation in oce-expr to fail clippy.
+  `sqrt` stays on `libm` in every build (currently its software routine): 2.3 ns per call slower than `f64::sqrt` on Apple M5, but
   no frame measurement separated it from noise ([benchmarks](docs/benchmarks.md)).
 
 ## 0.3.0

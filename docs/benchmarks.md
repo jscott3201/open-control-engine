@@ -99,8 +99,10 @@ repository gate remains [`.agents/gate.sh`](../.agents/gate.sh), not this measur
 
 2026-11-08, working tree based on `84cc1a1`. Apple M5, aarch64-apple-darwin, Rust 1.97.1, release
 (thin LTO, one codegen unit). Since GitHub #428 every core `sqrt` is `libm::sqrt`, and with the
-`libm` `arch` feature off (`default-features = false`) that is a software routine, where
-`f64::sqrt` lowers to `fsqrt`. Both are correctly rounded, so the question is cost only.
+`libm` `arch` feature currently off (`default-features = false`) that is a software routine, where
+`f64::sqrt` lowers to `fsqrt`. Both are correctly rounded, so the question is cost only. Feature
+unification by a future dependency could turn `arch` on; that would change speed only, with no
+determinism effect, because `sqrt` is correctly rounded either way.
 
 - **Per call** (standalone loop, 2^20 calls, best of 21): `f64::sqrt` 0.50 ns, `libm::sqrt` 2.77 ns —
   about 2.3 ns more per call.

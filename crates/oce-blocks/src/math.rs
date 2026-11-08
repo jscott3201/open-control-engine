@@ -6,7 +6,9 @@
 //! block calls `math::<fn>`. The strict-bit evidence (`docs/strict-bit-evidence.md`) is bound to
 //! these exact `libm` functions, so changing one here is a numerics change, not a refactor.
 //! `clippy.toml` lists the `std` methods and the crate root denies `clippy::disallowed_methods`, so
-//! a `std` float method anywhere else in the crate fails clippy.
+//! a `std` float method anywhere in the crate's `src/` tree, unit tests included, fails clippy.
+//! Files under `tests/` are separate crates outside the lint, deliberately: that is where the `std`
+//! methods serve as the oracle (`crates/oce-blocks/tests/libm_std_parity.rs`).
 //!
 //! What `core` provides on 1.97.1, probed per method with a `no_std` build for
 //! `thumbv7em-none-eabihf` (`scripts/ci/test-math-lint.sh` repeats the probe):
@@ -19,8 +21,10 @@
 //! `floor`, `ceil`, `round`, `trunc` and `sqrt` are exactly specified by IEEE 754, so `libm`
 //! returns the `std` method's bits; `crates/oce-blocks/tests/libm_std_parity.rs` checks that on a
 //! boundary table and a 2^20 bit-pattern sweep. `sqrt` stays on `libm` in `std` builds too: it is
-//! software there (the `libm` `arch` feature is off), about 2.3 ns slower per call on Apple M5,
-//! which no tick measurement could separate from run-to-run noise (`docs/benchmarks.md`).
+//! currently software there (the `libm` `arch` feature is off), about 2.3 ns slower per call on
+//! Apple M5, which no tick measurement could separate from run-to-run noise (`docs/benchmarks.md`).
+//! Feature unification by a future dependency could turn `arch` on and route `sqrt` to the
+//! hardware instruction; that changes speed only, since `sqrt` is correctly rounded either way.
 
 /// IEEE 754 functions `core` lacks, from the pinned `libm`. Names match `libm` (C `math.h`):
 /// `pow` is `f64::powf`, `log` is `f64::ln`.

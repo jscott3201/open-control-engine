@@ -107,7 +107,8 @@ nothing is red.
 `core::`/`alloc::` paths and import `Vec`, `String`, `Box`, `format!` and `vec!` from `alloc`; call
 the crate's `math` module (which re-exports `libm`) for any `f64` method that is not in `core`
 (`floor`, `ceil`, `trunc`, `round`, `sqrt`, `powi`, `mul_add`, the transcendentals — the full table is
-in `TESTING.md` "Conventions"), because clippy refuses the `std` method there (issue #399); use no
+in `TESTING.md` "Conventions"), because clippy refuses the `std` method in each core crate's `src/` tree, unit tests included
+(issue #399; `tests/` files are separate crates outside the lint, where `std` serves as the oracle); use no
 hash collections; and give every new dependency `default-features = false`.
 A crate that depends on one of the four names `features = ["std"]` on that edge, because their
 workspace entries carry `default-features = false`. The `no-std-build` job in `pr-gate.yml` and

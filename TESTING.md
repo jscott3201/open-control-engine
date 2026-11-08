@@ -233,10 +233,14 @@ case" is itself a finding to resolve, not a pass.
   has it; every other operation goes through the crate's `math` module (`oce-blocks` and `oce-expr`
   each have one), which re-exports the pinned `libm` the strict-bit evidence is bound to. The root
   `clippy.toml` lists every `std`-only `f64`/`f32` method under `disallowed-methods`, each core
-  crate root denies the lint (the rest of the workspace and `tools/golden-gen` allow it), and
-  `scripts/ci/test-math-lint.sh` re-probes the table below on the pinned toolchain and proves an
-  `x.sin()` in `reals_transcendental.rs` fails clippy. A test that must call the `std` method as its
-  oracle allows the lint on that item with a comment, as `math_tests.rs` and `libm_std_parity.rs` do.
+  crate root denies the lint (the rest of the workspace and `tools/golden-gen` allow it), so it binds
+  each core crate's `src/` tree, unit tests included. Files under `tests/` are separate crates
+  outside it, deliberately: that is where the `std` methods serve as the oracle
+  (`libm_std_parity.rs`, which declares `#![allow(clippy::disallowed_methods)]`; a core `tests/`
+  file that names `libm::` without that declaration is refused). A unit test that must call the
+  `std` method allows the lint on that item with a comment, as `math_tests.rs` does.
+  `scripts/ci/test-math-lint.sh` re-probes the table below on the pinned toolchain, checks that
+  scope, and proves an `x.sin()` in oce-blocks and an `f.sqrt()` in oce-expr each fail clippy.
 
   | Source on 1.97.1 (`no_std` probe, `thumbv7em-none-eabihf`) | `f64` methods |
   | --- | --- |
