@@ -45,11 +45,11 @@ fn machine_order_excludes_prose_and_retains_duplicate_records() {
         [
             (0, DiagnosticSubject::Absent),
             (0, DiagnosticSubject::Absent),
-            (3, DiagnosticSubject::Absent),
-            (3, DiagnosticSubject::Opaque("".into())),
-            (3, DiagnosticSubject::Opaque("b0".into())),
-            (3, DiagnosticSubject::Opaque("urn:authored".into())),
-            (3, DiagnosticSubject::Opaque("z".into())),
+            (2, DiagnosticSubject::Absent),
+            (2, DiagnosticSubject::Opaque("".into())),
+            (2, DiagnosticSubject::Opaque("b0".into())),
+            (2, DiagnosticSubject::Opaque("urn:authored".into())),
+            (2, DiagnosticSubject::Opaque("z".into())),
         ]
     );
     assert_eq!(receipt.records()[0].key(), receipt.records()[1].key());
