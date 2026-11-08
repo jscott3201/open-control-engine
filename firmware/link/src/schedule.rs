@@ -5,7 +5,7 @@
 //! `std`: that file builds its digest text with `format!` and parses the digest table into
 //! `Vec<String>`, which a bare-metal image without `core::fmt` does not link. The arithmetic is the
 //! same, step for step, so the two produce the same `f64` bits and the same digest:
-//! `tests/schedule_parity.rs` includes that file by path and requires every value, time and digest
+//! `tests/schedule_tests.rs` includes that file by path and requires every value, time and digest
 //! here to equal its own for every checked-in golden.
 //!
 //! Inputs are a function of each slot's type and acceptance domain only. Reals sweep the declared

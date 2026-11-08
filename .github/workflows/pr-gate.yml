@@ -10,8 +10,9 @@
 # This per-PR gate is the LIGHT gate: the near-instant checks plus the compile-requiring lints
 # (clippy -D warnings), a workspace build, the bare-metal cell (the `no_std + alloc` core four and
 # the firmware image's build and size budget), rustdoc, cargo-machete, cargo-deny, gate-script
-# behavior fixtures, the package/feature/publication contract, stale crate-status header lint, golden-gen hygiene and golden freshness, the targeted
-# cross-arch determinism subset for oce-api/oce-blocks/oce-expr, the macOS arm64 portable-snapshot
+# behavior fixtures, the package/feature/publication contract, stale crate-status header lint,
+# golden-gen hygiene and golden freshness, the targeted cross-arch determinism subset for
+# oce-api/oce-blocks/oce-expr, the macOS arm64 portable-snapshot
 # and Windows std build/nextest platform cells, the x86_64 debug suites of
 # oce-graph/oce-validate/oce-model/oce-cxf, the documentation checks
 # (staging, mdBook build, links), the scoped strict-bit matrix, the facade contract and Quickstart,
@@ -855,8 +856,8 @@ jobs:
   # fails on any package with its `std` feature on or any host-only crate: a `std`-only dependency,
   # a `std::` path or a `std`-only `f64` method fails the build, and a `std` feature that still
   # compiles fails the scan. `test-check-no-std.sh` proves both halves can fail (`extern crate std;`
-  # in oce-graph, `serde/std` turned on through oce-model). `scripts/ci/test-math-lint.sh` proves the
-  # math rule (issue #399) can fail. The oce-expr unit suite runs without the `std` feature, because
+  # in oce-graph, `serde/std` turned on through oce-model). `scripts/ci/test-math-lint.sh` proves
+  # the math rule (issue #399) can fail. The oce-expr unit suite runs without the `std` feature, because
   # that build replaces the thread-local evaluation-fuel meter with a program-wide one; one test
   # thread, since that meter is shared by the whole test binary.
   # The blob execution entry (issue #401): `check-no-std-entry-closure.sh` requires the `no_std`

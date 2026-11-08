@@ -5,7 +5,7 @@
 #   1. graph scan — synthetic `cargo tree` graphs through `check-no-std.sh scan`: a clean graph
 #      passes; a `std` feature anywhere in a package's feature list fails, and a host-only crate
 #      fails; a feature or crate that merely starts with those names (`stdio`, `serde_json_path`)
-#      does not.
+#      does not; an empty graph, or one without the root crate's own line, fails.
 #   2. extern crate std — a copy of the workspace with `extern crate std;` in oce-graph's lib.rs
 #      must fail the script on thumbv7em-none-eabihf, at the build, because that target has no std
 #      (the acceptance control the issue names).
@@ -34,7 +34,11 @@ fail() {
 # <name> <pass|fail> <graph>
 scan_case() {
   local name=$1 want=$2 graph=$3 got
-  if printf '%s\n' "$graph" | bash "$CHECK" scan "$name" >/dev/null 2>&1; then got=pass; else got=fail; fi
+  if printf '%s\n' "$graph" | bash "$CHECK" scan oce-graph "$name" >/dev/null 2>&1; then
+    got=pass
+  else
+    got=fail
+  fi
   [ "$got" = "$want" ] || fail "scan case '$name': want $want, got $got"
 }
 clean=$'oce-graph v0.3.0 (crates/oce-graph) [alloc]\noce-model v0.3.0 (crates/oce-model) [alloc]\nlibm v0.2.16 []'
@@ -49,10 +53,11 @@ scan_case host-only-facade fail "$clean"$'\noce-api v0.3.0 (crates/oce-api) []'
 scan_case std-prefixed-feature pass "$clean"$'\nsemihosting v0.1.25 [stdio]'
 scan_case std-suffixed-feature pass "$clean"$'\nportable-atomic v1.15.0 [require-cas,nostd]'
 scan_case host-only-prefixed-crate pass "$clean"$'\nserde_json_path v0.7.0 []'
-if bash "$CHECK" scan only-label < /dev/null >/dev/null 2>&1; then :; else
-  fail "scan case 'empty graph': an empty graph has no std in it and must pass"
+scan_case empty-graph fail ''
+scan_case another-crates-graph fail $'oce-model v0.3.0 (crates/oce-model) [alloc]\nlibm v0.2.16 []'
+if bash "$CHECK" scan oce-graph </dev/null >/dev/null 2>&1; then
+  fail "scan without a label must be a usage error"
 fi
-if bash "$CHECK" scan >/dev/null 2>&1; then fail "scan without a label must be a usage error"; fi
 
 # ── 2 and 3. workspace copies ────────────────────────────────────────────────
 copy() {

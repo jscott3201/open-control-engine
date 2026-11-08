@@ -12,7 +12,8 @@
 #                                 #            always-on jobs plus the leverage lane, no engine lane
 #   bash .agents/gate.sh nostd    # nostd    — the bare-metal cell alone (pr-gate.yml's
 #                                 #            `no-std-build` job): the no_std core, the firmware
-#                                 #            image's build and size budget; light and full run it too
+#                                 #            image's build and size budget; light and full run
+#                                 #            it too
 #   bash .agents/gate.sh qemu     # qemu     — the emulation check (qemu.yml, nightly): the firmware
 #                                 #            images under QEMU against the host reference; needs
 #                                 #            qemu-system-arm and qemu-system-riscv32 on PATH

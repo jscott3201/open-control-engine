@@ -9,8 +9,9 @@
 #
 #   core          the determinism lane: anything that is not a docs-only path or a leverage-crate
 #                 path, including every gate script, workflow and tool config (a CI change must
-#                 prove the whole lane still passes), Cargo.lock and every crate outside
-#                 crates/leverage.
+#                 prove the whole lane still passes), Cargo.lock, every crate outside
+#                 crates/leverage, and the bare-metal firmware images under firmware/ (they link
+#                 the core four; never add firmware/ to the docs or leverage allowlists).
 #   leverage      the leverage lane: any path under crates/leverage/, or `core` (an engine change
 #                 can break a crate built on the facade).
 #   gate_scripts  `gate (light)`, which executes .agents/gate.sh: the gate script itself, the CI

@@ -12,7 +12,8 @@
 #    crates/oce-graph/tests/fixtures/blob_frame_digests.tsv, the verdict) and must exit 0.
 # 2. Per target: the image built with the `firmware` profile, as the per-PR cell builds it, then
 #    run on the target's QEMU machine with semihosting, so its lines reach stdout and its exit code
-#    becomes QEMU's: 0 PASS, 1 MISMATCH, 3 FAULT (the engine refused), 101 PANIC. An image still
+#    becomes QEMU's: 0 PASS, 1 MISMATCH, 3 FAULT (the engine refused), 101 PANIC. QEMU itself also
+#    exits 1 when it cannot start (an unknown machine, an unloadable -kernel). An image still
 #    running at the timeout is killed and fails as 124: a hang, or a CPU fault, which lands in the
 #    runtime's spinning default handler.
 # 3. The image's lines, less its `heap` line (the arena's use, which a host has no equivalent of),
@@ -101,7 +102,7 @@ for job in "${jobs[@]}"; do
   tail -n 3 "$log"
   if [ "$status" -ne 0 ]; then
     case $status in
-      1) result='FAIL: MISMATCH (exit 1)' ;;
+      1) result="FAIL: exit 1: MISMATCH, or QEMU failed to start; see the log ($log)" ;;
       3) result='FAIL: FAULT, the engine refused (exit 3)' ;;
       101) result='FAIL: PANIC (exit 101)' ;;
       124) result="FAIL: still running after ${timeout}s (a hang, or a CPU fault)" ;;

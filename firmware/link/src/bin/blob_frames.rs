@@ -16,8 +16,8 @@
 //!
 //! The image has no `unsafe` code. The allocator is `linked_list_allocator`'s `LockedHeap`, a
 //! linked-list first fit behind a spin lock on the targets' native atomics, so it needs no critical
-//! section; its arena is a `static_cell::StaticCell` that hands out its `&'static mut` once, so
-//! giving the allocator its memory is the safe `init_from_slice`. The runtimes' entry macros
+//! section; its arena is a `static_cell::ConstStaticCell` that hands out its `&'static mut` once,
+//! so giving the allocator its memory is the safe `init_from_slice`. The runtimes' entry macros
 //! generate what the reset vector needs.
 
 #![forbid(unsafe_code)]
@@ -31,21 +31,28 @@ mod image {
     use linked_list_allocator::LockedHeap;
     use semihosting::io::Write as _;
     use semihosting::process::exit;
-    use static_cell::StaticCell;
+    use static_cell::ConstStaticCell;
 
     use oce_firmware_link::{PANIC_EXIT_CODE, Sink, line::Line, run};
 
-    /// Octets in the allocator's arena, a static in `.bss`. The fixture holds 29,344 of them after
-    /// its last frame on both targets (the image's `heap` line prints the measure); the rest is
-    /// margin for a larger fixture.
+    /// Octets in the allocator's arena, a static in `.bss`. Measured on both targets under QEMU
+    /// (the `firmware` profile, 2026-11-08, by rebuilding with smaller arenas): the run needs an
+    /// arena of more than 30,336 and at most 30,464 octets (30,336 fails allocation inside
+    /// `Executable::from_blob`; 30,464 passes), which is its peak including the first-fit
+    /// allocator's fragmentation, and it still holds 29,344 after the last frame (the `heap`
+    /// line). 64 KiB is about 2.15 times that peak, roughly 34 KiB of margin for a larger fixture;
+    /// re-measure the same way when the fixture or the decoder changes.
     const ARENA: usize = 64 * 1024;
 
     /// The global allocator: empty until the entry hands it the arena.
     #[global_allocator]
     static HEAP: LockedHeap = LockedHeap::empty();
 
-    /// The allocator's arena, handed out once.
-    static MEMORY: StaticCell<[MaybeUninit<u8>; ARENA]> = StaticCell::new();
+    /// The allocator's arena, handed out once. Its initializer is uninitialized bytes evaluated at
+    /// compile time, so the arena lives in `.bss` and `take` hands out a reference to it without
+    /// moving 64 KiB through the stack, in any profile.
+    static MEMORY: ConstStaticCell<[MaybeUninit<u8>; ARENA]> =
+        ConstStaticCell::new([MaybeUninit::uninit(); ARENA]);
 
     /// Write `bytes` to semihosting stdout; output that cannot be written is dropped, as the exit
     /// code still reports the verdict.
@@ -73,9 +80,8 @@ mod image {
 
     /// Give the allocator its arena, run the fixture, report the heap and exit with the verdict.
     fn start() -> ! {
-        // Writing uninitialized bytes initializes nothing, so this compiles to no stores: the
-        // arena stays in `.bss`, and `init` returns its `&'static mut` once (a second call panics).
-        let arena = MEMORY.init([MaybeUninit::uninit(); ARENA]);
+        // `take` returns the arena's `&'static mut` once (a second call panics).
+        let arena = MEMORY.take();
         HEAP.lock().init_from_slice(arena);
         let mut sink = Semihosting { heap_used: 0 };
         let verdict = run(&mut sink);

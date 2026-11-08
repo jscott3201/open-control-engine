@@ -13,7 +13,9 @@
 # - fmt_functions, div64_functions, memmove_functions: counts of functions, not octets, with no
 #   headroom, so a new one fails the check and a count under its limit gets a notice. The engine
 #   links core::fmt through panic and error paths it never takes in a passing run, and 64-bit
-#   division through Integer arithmetic on these 32-bit targets.
+#   division through Integer arithmetic on these 32-bit targets. A toolchain or dependency bump
+#   may legitimately move a count; that PR re-runs `check-firmware-link.sh --suggest` and says
+#   why the count moved.
 #
 # Each size is the measured size plus 12 %, rounded up to 16 (`check-firmware-link.sh --suggest`
 # prints a table); a size of 0 gets a token 64. Raising a budget is a reviewed change: say in the

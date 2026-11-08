@@ -54,7 +54,8 @@ for triple in "${targets[@]}"; do
   else
     echo "==> $package ($triple)"
     cargo tree --locked -p "$package" --target "$triple" -e normal,no-proc-macro --prefix none \
-      --format '{p} [{f}]' | bash scripts/ci/check-no-std.sh scan "$package ($triple)" || status=1
+      --format '{p} [{f}]' | bash scripts/ci/check-no-std.sh scan "$package" "$package ($triple)" ||
+      status=1
     cargo clippy -p "$package" --locked --target "$triple" -- -D warnings || status=1
     cargo build -p "$package" --locked --target "$triple" --profile firmware || status=1
   fi

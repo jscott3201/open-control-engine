@@ -5,8 +5,10 @@
 #
 #   check-no-std.sh                 the default targets below
 #   check-no-std.sh <triple>...     those targets; cargo builds them side by side, in one run
-#   check-no-std.sh scan <label>    the graph check alone, on a `cargo tree` read from stdin
-#                                   (what test-check-no-std.sh drives with synthetic graphs)
+#   check-no-std.sh scan <root> <label>
+#                                   the graph check alone, on a `cargo tree` of crate <root> read
+#                                   from stdin (what test-check-no-std.sh drives with synthetic
+#                                   graphs, and check-firmware-link.sh with the image's graph)
 #
 # A host build can't prove a crate is no_std: the host always has std, so a stray `std::` path or a
 # dependency that turns on its std feature still compiles. thumbv7em-none-eabihf (Cortex-M4F) and
@@ -37,12 +39,18 @@ default_targets=(thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unkno
 host_only=(oce-api oce-cxf oce-validate oce-diag oce-semantics oce-store oce-conformance oce-bless
   serde_json rustix std)
 
-# Fails if the `{p} [{f}]` graph on stdin turns on a std feature or holds a host-only crate,
-# naming each offending package under <label>.
+# Fails if the `{p} [{f}]` graph of crate <root> on stdin turns on a std feature or holds a
+# host-only crate, naming each offending package under <label>. A graph without <root>'s own line
+# (empty, truncated, or another crate's) fails too: a scan of nothing must not pass.
 scan() {
-  local label=$1 host_re bad
+  local root=$1 label=$2 host_re bad tree
+  tree=$(cat)
+  if ! grep -q "^$root v" <<<"$tree"; then
+    echo "error: the $label graph has no line for $root itself; cargo tree printed nothing usable" >&2
+    return 1
+  fi
   host_re=$(IFS='|'; echo "${host_only[*]}")
-  bad=$(grep -E "\[([^]]*,)?std(,[^]]*)?\]|^($host_re) v" || true)
+  bad=$(grep -E "\[([^]]*,)?std(,[^]]*)?\]|^($host_re) v" <<<"$tree" || true)
   if [ -n "$bad" ]; then
     echo "error: the $label graph has std in it:" >&2
     sort -u <<<"$bad" | sed 's/^/  /' >&2
@@ -56,14 +64,14 @@ graph() {
 }
 
 if [ "${1:-}" = scan ]; then
-  [ $# -eq 2 ] || { echo "usage: $0 scan <label> < cargo-tree-output" >&2; exit 2; }
-  scan "$2"
+  [ $# -eq 3 ] || { echo "usage: $0 scan <root crate> <label> < cargo-tree-output" >&2; exit 2; }
+  scan "$2" "$3"
   exit
 fi
 
 if [ $# -gt 0 ]; then targets=("$@"); else targets=("${default_targets[@]}"); fi
 for triple in "${targets[@]}"; do
-  case $triple in -* | '') echo "usage: $0 [<target triple>...] | scan <label>" >&2; exit 2 ;; esac
+  case $triple in -* | '') echo "usage: $0 [<target triple>...] | scan <root> <label>" >&2; exit 2 ;; esac
 done
 
 if command -v rustup >/dev/null; then
@@ -87,7 +95,7 @@ for crate in "${crates[@]}"; do
   for triple in "${targets[@]}"; do
     echo "==> graph: $crate (features: $features; $triple)"
     graph -p "$crate" --no-default-features --features "$features" --target "$triple" |
-      scan "$crate (features: $features; $triple)" || status=1
+      scan "$crate" "$crate (features: $features; $triple)" || status=1
   done
 done
 [ "$status" -eq 0 ] && echo "OK: ${crates[*]} build and lint no_std + $features on ${targets[*]}; no std in any graph."
