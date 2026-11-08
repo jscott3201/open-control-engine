@@ -5,3 +5,14 @@
 # later adds a git-sourced store adapter in its own workspace. No secrets live here.
 [net]
 git-fetch-with-cli = true
+
+# The firmware image's runners (issue #402): `cargo run -p oce-firmware-link --target <triple>
+# --profile firmware` runs the image under QEMU with semihosting, as scripts/ci/emulate-firmware.sh
+# does, and QEMU exits with the image's code. Builds never use these; only `cargo run` and
+# `cargo test` on a bare-metal target do. The image links with build.rs's `-Tlink.x`, so no
+# rustflags are set here.
+[target.thumbv7em-none-eabihf]
+runner = "qemu-system-arm -machine netduinoplus2 -nodefaults -display none -monitor none -serial none -semihosting-config enable=on,target=native -kernel"
+
+[target.riscv32imac-unknown-none-elf]
+runner = "qemu-system-riscv32 -machine virt -bios none -nodefaults -display none -monitor none -serial none -semihosting-config enable=on,target=native -kernel"

@@ -25,7 +25,9 @@ resolver = "3"
 # Leverage crates (crates/leverage/<name>) sit above the facade: they depend on `oce-api` only and
 # run in the leverage CI lane (scripts/ci/leverage-members.sh). `crates/leverage` itself is a
 # directory of members, not a package, so the core glob names `crates/oce-*` rather than `crates/*`.
-members = ["crates/oce-*", "crates/leverage/*"]
+# Firmware images (firmware/<name>, issue #402) are unpublished members that link the `no_std`
+# core into a bare-metal binary; they run in the determinism lane with the core.
+members = ["crates/oce-*", "crates/leverage/*", "firmware/*"]
 
 [workspace.package]
 version = "0.3.0"
@@ -103,6 +105,16 @@ opt-level = 3
 lto = "thin"
 codegen-units = 1
 strip = "debuginfo"
+
+# The firmware images' profile (issue #402): release, optimized for size, whole-program LTO and
+# `panic = "abort"`, as a bare-metal build ships. `scripts/ci/check-firmware-link.sh` builds the
+# images with it and holds them to `firmware/link/size-budget.toml`.
+[profile.firmware]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
 
 [profile.dev]
 debug = "line-tables-only"

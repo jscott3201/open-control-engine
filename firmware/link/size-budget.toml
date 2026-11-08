@@ -1,0 +1,42 @@
+# Size budget for the firmware image (issue #402), in octets: one table per target and image,
+# `[<target>.<image>]`. scripts/ci/check-firmware-link.sh builds the image with the `firmware`
+# profile (opt-level "z", LTO, one codegen unit, panic = "abort") and fails when a size outgrows
+# its budget, or when more core::fmt, 64-bit division or memmove functions are linked in than the
+# counts below allow. The format and the checker (scripts/ci/firmware_size.py) are rusty-bacnet's.
+#
+# - text, rodata, data, bss: those sections. .rodata holds the embedded blob (5,299 octets) and
+#   the run digest table; .bss holds the allocator's 64 KiB arena (src/bin/blob_frames.rs).
+# - flash: every loaded section with contents, .data's initial image included (on Cortex-M, also
+#   the vector table).
+# - ram: every loaded writable section. riscv-rt's .stack, which fills whatever RAM is left,
+#   doesn't count. The stack the run uses isn't measured here.
+# - fmt_functions, div64_functions, memmove_functions: counts of functions, not octets, with no
+#   headroom, so a new one fails the check and a count under its limit gets a notice. The engine
+#   links core::fmt through panic and error paths it never takes in a passing run, and 64-bit
+#   division through Integer arithmetic on these 32-bit targets.
+#
+# Each size is the measured size plus 12 %, rounded up to 16 (`check-firmware-link.sh --suggest`
+# prints a table); a size of 0 gets a token 64. Raising a budget is a reviewed change: say in the
+# PR what grew and why.
+
+[thumbv7em-none-eabihf.blob-frames]
+text = 161760
+rodata = 68112
+data = 64
+bss = 73440
+flash = 231024
+ram = 73440
+fmt_functions = 21
+div64_functions = 5
+memmove_functions = 0
+
+[riscv32imac-unknown-none-elf.blob-frames]
+text = 189664
+rodata = 68512
+data = 64
+bss = 73440
+flash = 258192
+ram = 73440
+fmt_functions = 22
+div64_functions = 5
+memmove_functions = 0
