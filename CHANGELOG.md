@@ -139,6 +139,16 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
+- **Design note for the authoring layer (M2)** (GitHub #442). `docs/design/authoring-layer.md`
+  fixes, before any code, what `oce-author` and the `oce` CLI are: leverage crates above the facade
+  that never evaluate or schedule and reach the engine only as CXF through `Engine::load_cxf`. It
+  covers the flat single-root authoring model, the terse text form (grammar, canonical printer,
+  parse bounds), the strict-JSON wire form with a `schemars`-derived schema, a two-stage validator
+  (author-side checks, then emit and load in a throwaway `Engine`) with a finding-code parity table,
+  the fixed-layout deterministic emitter and the CLI's commands, exit codes and JSON output. It
+  states the owner's nine settled decisions and marks eleven drafting decisions Proposed.
+  `docs/architecture.md` now limits the no-binaries rule to the engine crates, so leverage crates
+  may ship binaries above the facade; the note is registered in `docs/README.md` and the book.
 - The contributor-facing docs no longer describe the retired previous host by name (GitHub #439).
   `AGENTS.md`, `CONTRIBUTING.md`, `.agents/project-facts.md` and `docs/ci-and-the-gate.md` keep
   the one fact that still matters, that pull-request numbers from before the October 2026 move
