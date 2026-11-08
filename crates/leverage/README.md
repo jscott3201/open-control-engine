@@ -25,3 +25,5 @@ the `crates/leverage/*` glob in the root `Cargo.toml`.
    Adding a leverage crate or changing its dependencies changes `Cargo.lock`, which counts as an
    engine change and runs everything. `docs/ci-and-the-gate.md` ("What runs when") has the trigger
    table; `bash .agents/gate.sh leverage` runs the same lane locally.
+
+This line is a CI lane probe (issue #393) and is never merged.
