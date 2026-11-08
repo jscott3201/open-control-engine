@@ -534,7 +534,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### CI and infrastructure
 
 - **The `docs` job and `docs-pages` cache the verified mdBook binary, so a release-CDN outage no
-  longer fails them** (GitHub #PRNUM, issue #416). `actions/cache` restores `target/mdbook-bin` under
+  longer fails them** (GitHub #426, issue #416). `actions/cache` restores `target/mdbook-bin` under
   an exact key (no `restore-keys`); `install-mdbook.sh` is now idempotent and self-verifying, trusting
   an existing binary only if its SHA-256 equals the digest of the extracted executable newly recorded
   in `site/mdbook-checksums.txt`, and otherwise downloading and verifying the archive and the binary.
