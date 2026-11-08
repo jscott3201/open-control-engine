@@ -1,5 +1,6 @@
 //! Registry entries for importer-only pass-through lowering blocks.
 
+use alloc::boxed::Box;
 use oce_model::ParamTable;
 
 use crate::{Block, BooleanPassThrough, IntegerPassThrough, RealPassThrough, RegistryEntry};

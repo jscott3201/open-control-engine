@@ -12,8 +12,9 @@
 //! Exhausting a budget is the typed [`ExprError::ExpressionTooExpensive`], returned before the
 //! charged work runs; its `limit` names the budget that ran out.
 //!
-//! Budgets nest as frames on a thread-local meter. Every public evaluation opens a frame of at
-//! most [`MAX_EVAL_FUEL`] units; a frame opened inside another is capped at the enclosing frame's
+//! Budgets nest as frames on a thread-local meter (one program-wide meter without `std`; see
+//! `ambient`). Every public evaluation opens a frame of at most [`MAX_EVAL_FUEL`] units; a frame
+//! opened inside another is capped at the enclosing frame's
 //! remainder and its spending is deducted from the enclosing frame when it closes. Two callers
 //! rely on this: a [`crate::Scope`] that itself evaluates draws on the evaluation that called it
 //! (nesting cannot mint fresh fuel), and a host bounds the *total* work of many evaluations — one
@@ -21,8 +22,6 @@
 //! restores the enclosing frame (or the idle state) even if a caller-supplied scope panics.
 //! Outside every frame (crate-internal unit tests that drive the evaluator directly) charging is
 //! a no-op.
-
-use std::cell::Cell;
 
 use crate::ExprError;
 
@@ -42,9 +41,93 @@ struct Frame {
     limit: u64,
 }
 
-thread_local! {
-    /// The innermost active frame, `None` when no metered evaluation is active.
-    static ACTIVE: Cell<Option<Frame>> = const { Cell::new(None) };
+/// Where the innermost active frame lives: `None` when no metered evaluation is active.
+///
+/// With `std` it is a thread-local cell, so each thread meters its own evaluations. Without `std`
+/// there is no thread to scope it to, and one program-wide slot holds it, built from `core`
+/// atomics (no `unsafe`, no lock). That is exact for a program that evaluates from one execution
+/// context at a time. A `no_std` embedder that evaluates from more than one context at once — two
+/// cores, or an interrupt handler that evaluates while another evaluation is in flight — must
+/// serialize those evaluations; otherwise their frames share one slot and their budgets mix.
+#[cfg(feature = "std")]
+mod ambient {
+    use core::cell::Cell;
+
+    use super::Frame;
+
+    std::thread_local! {
+        static ACTIVE: Cell<Option<Frame>> = const { Cell::new(None) };
+    }
+
+    /// The innermost active frame on this thread.
+    pub(super) fn get() -> Option<Frame> {
+        ACTIVE.with(Cell::get)
+    }
+
+    /// Replace the innermost active frame on this thread.
+    pub(super) fn set(frame: Option<Frame>) {
+        ACTIVE.with(|cell| cell.set(frame));
+    }
+}
+
+/// See the `std` variant. Every target with `alloc` has 32-bit atomic loads and stores, so each
+/// `u64` is held as two halves; the slot is only read and written from one execution context at
+/// a time (the documented contract), so the halves are never observed torn.
+#[cfg(not(feature = "std"))]
+mod ambient {
+    use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+
+    use super::Frame;
+
+    /// A `u64` stored as two 32-bit atomics.
+    struct WideSlot {
+        high: AtomicU32,
+        low: AtomicU32,
+    }
+
+    impl WideSlot {
+        const fn new() -> Self {
+            Self {
+                high: AtomicU32::new(0),
+                low: AtomicU32::new(0),
+            }
+        }
+
+        fn get(&self) -> u64 {
+            (u64::from(self.high.load(Ordering::SeqCst)) << 32)
+                | u64::from(self.low.load(Ordering::SeqCst))
+        }
+
+        fn set(&self, value: u64) {
+            // Truncations are the point: the two halves of `value`.
+            self.high.store((value >> 32) as u32, Ordering::SeqCst);
+            self.low.store(value as u32, Ordering::SeqCst);
+        }
+    }
+
+    static ACTIVE: AtomicBool = AtomicBool::new(false);
+    static REMAINING: WideSlot = WideSlot::new();
+    static LIMIT: WideSlot = WideSlot::new();
+
+    /// The innermost active frame in this program.
+    pub(super) fn get() -> Option<Frame> {
+        ACTIVE.load(Ordering::SeqCst).then(|| Frame {
+            remaining: REMAINING.get(),
+            limit: LIMIT.get(),
+        })
+    }
+
+    /// Replace the innermost active frame in this program.
+    pub(super) fn set(frame: Option<Frame>) {
+        match frame {
+            Some(frame) => {
+                REMAINING.set(frame.remaining);
+                LIMIT.set(frame.limit);
+                ACTIVE.store(true, Ordering::SeqCst);
+            }
+            None => ACTIVE.store(false, Ordering::SeqCst),
+        }
+    }
 }
 
 /// Closes one frame: deducts its spending from the enclosing frame (or restores the idle state)
@@ -56,14 +139,12 @@ struct FrameGuard {
 
 impl Drop for FrameGuard {
     fn drop(&mut self) {
-        ACTIVE.with(|cell| {
-            let left = cell.get().map_or(0, |frame| frame.remaining);
-            let spent = self.start.saturating_sub(left);
-            cell.set(self.outer.map(|outer| Frame {
-                remaining: outer.remaining.saturating_sub(spent),
-                limit: outer.limit,
-            }));
-        });
+        let left = ambient::get().map_or(0, |frame| frame.remaining);
+        let spent = self.start.saturating_sub(left);
+        ambient::set(self.outer.map(|outer| Frame {
+            remaining: outer.remaining.saturating_sub(spent),
+            limit: outer.limit,
+        }));
     }
 }
 
@@ -76,7 +157,7 @@ pub(crate) fn metered<R>(f: impl FnOnce() -> R) -> R {
 /// smaller of `budget` and the enclosing remainder; when the enclosing remainder is the smaller,
 /// an exhaustion reports the enclosing frame's limit, because that is the budget that ran out.
 pub(crate) fn metered_with<R>(budget: u64, f: impl FnOnce() -> R) -> R {
-    let outer = ACTIVE.with(Cell::get);
+    let outer = ambient::get();
     let frame = match outer {
         Some(enclosing) if enclosing.remaining < budget => Frame {
             remaining: enclosing.remaining,
@@ -87,7 +168,7 @@ pub(crate) fn metered_with<R>(budget: u64, f: impl FnOnce() -> R) -> R {
             limit: budget,
         },
     };
-    ACTIVE.with(|cell| cell.set(Some(frame)));
+    ambient::set(Some(frame));
     let _guard = FrameGuard {
         outer,
         start: frame.remaining,
@@ -111,13 +192,13 @@ pub fn with_eval_budget<R>(budget: u64, f: impl FnOnce() -> R) -> R {
 /// Spend `units` of the active frame, or refuse with [`ExprError::ExpressionTooExpensive`]
 /// (spending nothing) when fewer remain.
 pub(crate) fn charge(units: usize) -> Result<(), ExprError> {
-    ACTIVE.with(|cell| match cell.get() {
+    match ambient::get() {
         None => Ok(()),
         Some(frame) => {
             let units = u64::try_from(units).unwrap_or(u64::MAX);
             match frame.remaining.checked_sub(units) {
                 Some(left) => {
-                    cell.set(Some(Frame {
+                    ambient::set(Some(Frame {
                         remaining: left,
                         limit: frame.limit,
                     }));
@@ -126,12 +207,12 @@ pub(crate) fn charge(units: usize) -> Result<(), ExprError> {
                 None => Err(ExprError::ExpressionTooExpensive { limit: frame.limit }),
             }
         }
-    })
+    }
 }
 
 /// Units remaining in the innermost active frame (`None` when none is active). Test-only
 /// observability for the deterministic cost assertions.
 #[cfg(test)]
 pub(crate) fn remaining() -> Option<u64> {
-    ACTIVE.with(|cell| cell.get().map(|frame| frame.remaining))
+    ambient::get().map(|frame| frame.remaining)
 }

@@ -4,7 +4,8 @@
 //! time. Matrix outputs use row-major lowering: `y[row, col]` is emitted as `row * nin + col`,
 //! with both source dimensions zero-based after lowering.
 
-use std::borrow::Cow;
+use alloc::borrow::Cow;
+use alloc::vec::Vec;
 
 use oce_model::Value;
 

@@ -3,7 +3,8 @@
 //! bit-identical and panic-free on input-derived overflow. Checked/saturating arithmetic plus
 //! diagnostics is deferred to a future validation/diagnostic seam if the spec tightens this policy.
 
-use std::borrow::Cow;
+use alloc::borrow::Cow;
+use alloc::vec::Vec;
 
 use oce_model::Value;
 

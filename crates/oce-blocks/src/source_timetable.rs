@@ -4,7 +4,8 @@
 //! delegate to the same table semantics as `Modelica.Blocks.Sources.CombiTimeTable`; Integer and
 //! Logical variants follow the Buildings CDL periodic step-table sources.
 
-use std::borrow::Cow;
+use alloc::borrow::Cow;
+use alloc::{vec, vec::Vec};
 
 use oce_model::{EnumClassId, ParamTable, Value};
 
@@ -258,7 +259,7 @@ impl TableData {
         if !range.is_finite() || range <= 0.0 {
             return self.times[0];
         }
-        self.times[0] + (t - self.times[0]).rem_euclid(range)
+        self.times[0] + rem_euclid(t - self.times[0], range)
     }
 
     fn last_row_at_time(&self, t: Time) -> Option<usize> {
@@ -433,7 +434,7 @@ impl IntegerTimeTable {
         if self.table.rows() == 1 || !t.is_finite() {
             return 0;
         }
-        let t_shifted = t.rem_euclid(self.period_eff());
+        let t_shifted = rem_euclid(t, self.period_eff());
         self.table
             .times
             .iter()
@@ -611,10 +612,18 @@ fn find_param<'a>(params: &'a ParamTable, name: &str) -> Option<&'a Value> {
         .map(|(_, v)| v)
 }
 
+/// `f64::rem_euclid` without `std`: the expression the 1.97 standard library evaluates
+/// (`core::f64::math::rem_euclid`), so the result is bit-identical to the method it replaces.
+/// `%` and `abs` are `core` operations.
+pub(crate) fn rem_euclid(x: f64, rhs: f64) -> f64 {
+    let r = x % rhs;
+    if r < 0.0 { r + rhs.abs() } else { r }
+}
+
 fn integer_table_value(value: f64) -> i64 {
     let shifted = value + TIMETABLE_SMALL;
     if shifted.is_finite() && shifted >= i64::MIN as f64 && shifted <= i64::MAX as f64 {
-        shifted.floor() as i64
+        libm::floor(shifted) as i64
     } else {
         0
     }

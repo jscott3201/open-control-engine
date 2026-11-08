@@ -230,7 +230,7 @@ fn source_pulse_high_at(t: Time, width: f64, period: f64, shift: f64) -> bool {
     }
 
     let phase = modelica_mod(finite_shift(shift), period);
-    let mut t0 = buildings_round_six((t / period).floor() * period + phase);
+    let mut t0 = buildings_round_six(libm::floor(t / period) * period + phase);
     let mut t1 = t0 + width * period;
 
     if t + period < t1 {
@@ -270,14 +270,14 @@ fn finite_shift(shift: f64) -> f64 {
 }
 
 fn modelica_mod(x: f64, y: f64) -> f64 {
-    x - (x / y).floor() * y
+    x - libm::floor(x / y) * y
 }
 
 fn buildings_round_six(x: f64) -> f64 {
     const FACTOR: f64 = 1_000_000.0;
     if x > 0.0 {
-        (x * FACTOR + 0.5).floor() / FACTOR
+        libm::floor(x * FACTOR + 0.5) / FACTOR
     } else {
-        (x * FACTOR - 0.5).ceil() / FACTOR
+        libm::ceil(x * FACTOR - 0.5) / FACTOR
     }
 }

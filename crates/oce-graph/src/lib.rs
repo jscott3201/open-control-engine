@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+#![cfg_attr(not(any(feature = "std", test)), no_std)]
 //! `oce-graph` — the deterministic dataflow scheduler/executor for the Open Control Engine
 //! (`01-execution-model.md`).
 //!
@@ -21,7 +22,19 @@
 //! BUILD (DAG + dual Kahn sorts + loop rejection) and TICK (state allocation + the two-pass eval
 //! loop) are implemented; catalog breadth and ingest features grow around this scheduler contract.
 
-use std::fmt;
+// `no_std + alloc` without the `std` feature (docs/architecture.md, "Embeddability posture"):
+// `alloc` is the floor, so a build with neither feature is refused here rather than failing
+// on the first `Vec`.
+extern crate alloc;
+
+#[cfg(not(feature = "alloc"))]
+compile_error!(
+    "`oce-graph` needs the `alloc` feature: build with the default `std` feature, or with \
+     `--no-default-features --features alloc`"
+);
+
+use alloc::{boxed::Box, string::String, vec::Vec};
+use core::fmt;
 
 use oce_blocks::Block;
 use oce_model::{BlockId, ConnectorId, Model, Value};

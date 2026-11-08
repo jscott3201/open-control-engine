@@ -1,5 +1,6 @@
 //! Periodic sampled/hold blocks from `CDL.Discrete`.
 
+use alloc::string::String;
 use oce_model::{ParamTable, Value, determinism::canonicalize_real};
 
 use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, Time, emit_real, read_real};
@@ -47,19 +48,19 @@ pub(crate) fn valid_sample_period(period: f64) -> f64 {
 fn buildings_round_six(x: f64) -> f64 {
     const FACTOR: f64 = 1_000_000.0;
     if x > 0.0 {
-        (x * FACTOR + 0.5).floor() / FACTOR
+        libm::floor(x * FACTOR + 0.5) / FACTOR
     } else {
-        (x * FACTOR - 0.5).ceil() / FACTOR
+        libm::ceil(x * FACTOR - 0.5) / FACTOR
     }
 }
 
 pub(crate) fn initial_sample_time(t_start: Time, sample_period: f64) -> f64 {
     let period = valid_sample_period(sample_period);
-    buildings_round_six((t_start / period).floor() * period)
+    buildings_round_six(libm::floor(t_start / period) * period)
 }
 
 fn sample_index(t_now: Time, t0: f64, sample_period: f64) -> i64 {
-    ((t_now - t0) / valid_sample_period(sample_period) + SAMPLE_INDEX_EPS).floor() as i64
+    libm::floor((t_now - t0) / valid_sample_period(sample_period) + SAMPLE_INDEX_EPS) as i64
 }
 
 pub(crate) fn sample_due(t_now: Time, t0: f64, sample_period: f64, last_index: i64) -> (bool, i64) {

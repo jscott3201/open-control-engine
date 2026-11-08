@@ -21,6 +21,7 @@
 //!   non-numeric reduction, a non-Integer count/dimension, or a dimension other than 1 is a
 //!   typed [`ExprError`] — never a panic and never an index expression that could become one.
 
+use alloc::{vec, vec::Vec};
 use oce_model::{
     Value, ValueType,
     determinism::{det_max, det_min},

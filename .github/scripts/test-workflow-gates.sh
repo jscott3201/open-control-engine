@@ -96,6 +96,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.gate_scripts == 'true'
     steps:
+      - run: rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown
       - run: bash .agents/gate.sh
   default-no-db:
     needs: changes
@@ -306,6 +307,19 @@ jobs:
       - run: >-
           cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf -p oce-store --locked --profile ci --no-tests=fail
       - run: test -s target/nextest/ci/junit.xml
+  no-std-build:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    steps:
+      - run: rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown
+      - run: >-
+          cargo build -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc --target thumbv7em-none-eabihf --locked
+      - run: >-
+          cargo clippy -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc --target thumbv7em-none-eabihf --locked -- -D warnings
+      - run: >-
+          cargo build -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc --target wasm32-unknown-unknown --locked
+      - run: >-
+          cargo test -p oce-expr --no-default-features --features alloc --lib --locked -- --test-threads=1
   docs:
     steps:
       - uses: actions/cache@89abcdef0123456789abcdef0123456789abcdef # v6
@@ -353,6 +367,7 @@ jobs:
       - portable-snapshot-compare
       - std-build-windows
       - crate-tests
+      - no-std-build
       - docs
     steps:
       - env:
@@ -364,6 +379,7 @@ jobs:
             strict-bit-matrix=core strict-bit-compare=core
             determinism-matrix=core determinism-compare=core crate-tests=core
             portable-snapshot-macos=core portable-snapshot-compare=core std-build-windows=core
+            no-std-build=core
         run: python3 scripts/ci/ci_ok.py
 EOF
   cat > "$dir/docs-pages.yml" <<'EOF'
@@ -420,10 +436,14 @@ jobs:
   golden-gen-firewall:
     steps:
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
+  gate:
+    steps:
+      - run: rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown
+      - run: bash .agents/gate.sh full
   ci-ok:
     name: CI OK
     if: always()
-    needs: [test-suite, default-no-db, unused-deps, gate-fixtures, golden-gen-firewall]
+    needs: [test-suite, default-no-db, unused-deps, gate-fixtures, golden-gen-firewall, gate]
     steps:
       - env:
           NEEDS_JSON: ${{ toJSON(needs) }}
@@ -1235,6 +1255,45 @@ windows_out_of_lane_map() {
   edit_pr_gate "$1" 's/ std-build-windows=core$//'
 }
 
+# The no_std build of the core four (issue #397).
+no_std_build_with_default_features() {
+  edit_pr_gate "$1" \
+    '/^  no-std-build:$/,/^  [^ ]/ s/ --no-default-features --features alloc --target thumbv7em-none-eabihf --locked$/ --target thumbv7em-none-eabihf --locked/'
+}
+
+no_std_wasm_cell_dropped() {
+  edit_pr_gate "$1" '/--target wasm32-unknown-unknown --locked$/d'
+}
+
+no_std_build_out_of_lane_map() {
+  edit_pr_gate "$1" '/^            no-std-build=core$/d'
+}
+
+gate_job_without_no_std_targets() {
+  edit_pr_gate "$1" '/^  gate:$/,/^  [^ ]/ {/rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown$/d;}'
+}
+
+release_gate_without_no_std_targets() {
+  dir="$1"
+  grep -v 'rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown' "$dir/release-gate.yml" \
+    > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+}
+
+release_gate_installs_targets_after_the_script() {
+  dir="$1"
+  awk '
+    /rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown/ { held = $0; next }
+    { print }
+    /run: bash .agents\/gate.sh full/ && held != "" { print held; held = "" }
+  ' "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+}
+
+no_std_build_out_of_ci_ok() {
+  edit_pr_gate "$1" '/^      - no-std-build$/d'
+}
+
 remove_crates_dir() {
   _dir="$1"
   _deny="$2"
@@ -1432,5 +1491,19 @@ run_case windows-on-linux-runner fail windows_on_linux_runner \
   "the Windows cell runs on windows-latest"
 run_case windows-out-of-lane-map fail windows_out_of_lane_map \
   "CI OK JOB_LANES does not match the lane-filtered jobs' if: lines"
+run_case no-std-build-with-default-features fail no_std_build_with_default_features \
+  "build the core four no_std + alloc on thumbv7em-none-eabihf"
+run_case no-std-wasm-cell-dropped fail no_std_wasm_cell_dropped \
+  "build the core four no_std + alloc on wasm32-unknown-unknown"
+run_case no-std-build-out-of-lane-map fail no_std_build_out_of_lane_map \
+  "CI OK JOB_LANES does not match the lane-filtered jobs' if: lines"
+run_case no-std-build-out-of-ci-ok fail no_std_build_out_of_ci_ok \
+  "pr-gate.yml CI OK needs does not match the workflow's jobs"
+run_case gate-job-without-no-std-targets fail gate_job_without_no_std_targets \
+  "the executed gate script has the no_std targets it builds for"
+run_case release-gate-without-no-std-targets fail release_gate_without_no_std_targets \
+  "the executed full gate script has the no_std targets it builds for"
+run_case release-gate-installs-targets-after-the-script fail release_gate_installs_targets_after_the_script \
+  "the executed full gate script has the no_std targets it builds for"
 
 echo "OK: workflow gate fixtures passed."

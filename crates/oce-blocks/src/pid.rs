@@ -32,6 +32,7 @@
 //! *parameters* are refused engine-wide at load and at `set_param` (issue #362), so the gains,
 //! time constants, limits and start values seen here are always finite.
 
+use alloc::string::String;
 use oce_model::{ParamTable, SimpleController, Value, determinism::canonicalize_real};
 
 use crate::dynamics::{

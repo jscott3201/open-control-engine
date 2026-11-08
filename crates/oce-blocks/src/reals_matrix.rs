@@ -4,7 +4,8 @@
 //! Matrix inputs and `K[:,:]` parameters are row-major after lowering. `Sort` emits all sorted Real
 //! values first, followed by the 1-based Integer indices returned by Modelica's vector sort.
 
-use std::borrow::Cow;
+use alloc::borrow::Cow;
+use alloc::vec::Vec;
 
 use oce_model::{
     Value,

@@ -18,6 +18,7 @@
 //!   `i64::MAX` and a later `+ 1` would overflow in debug builds; the count therefore stays in
 //!   the wide domain until after the cap check.
 
+use alloc::vec::Vec;
 use oce_model::{Value, ValueType, determinism::canonicalize_real};
 
 use crate::{ArrayValue, EvalResult, ExprAst, ExprError, Scope, Shape, eval};
@@ -264,7 +265,7 @@ fn real_range(start: f64, step: f64, stop: f64) -> Result<EvalResult, ExprError>
     if step == 0.0 {
         return Err(ExprError::DomainError("range step is zero"));
     }
-    let count_f = ((stop - start) / step).floor() + 1.0;
+    let count_f = libm::floor((stop - start) / step) + 1.0;
     if count_f.is_nan() || count_f < 1.0 {
         return Ok(EvalResult::Array(ArrayValue::vector(
             ValueType::Real,

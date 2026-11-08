@@ -9,6 +9,7 @@
 //! Nothing here refers to a database type, an adapter handle or an `Arc<dyn …>`; the engine's
 //! tick never reads them.
 
+use alloc::{boxed::Box, string::String, vec::Vec};
 use serde::{Deserialize, Serialize};
 
 /// A stable semantic domain key for any storable element — the IRI/dotted-path identity from

@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+#![cfg_attr(not(any(feature = "std", test)), no_std)]
 //! `oce-blocks` — the native CDL elementary-block library and the [`Block`] trait for the
 //! Open Control Engine (`03-block-library.md`).
 //!
@@ -18,7 +19,18 @@
 //! CDL class path. The remaining CDL catalog breadth is added family-by-family behind the same
 //! trait and registry contracts.
 
-use std::borrow::Cow;
+// `no_std + alloc` without the `std` feature (docs/architecture.md, "Embeddability posture"):
+// `alloc` is the floor, so a build with neither feature is refused here rather than failing
+// on the first `Vec`.
+extern crate alloc;
+
+#[cfg(not(feature = "alloc"))]
+compile_error!(
+    "`oce-blocks` needs the `alloc` feature: build with the default `std` feature, or with \
+     `--no-default-features --features alloc`"
+);
+
+use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 
 use oce_model::{ParamTable, Value, ValueType, determinism::canonicalize_real};
 
@@ -53,8 +65,10 @@ mod reals_transcendental;
 mod reals_vector_reductions;
 mod registry;
 
+#[cfg(feature = "std")]
+pub use catalog::catalog;
 pub use catalog::{
-    CatalogEntry, DefaultLiteral, DefaultSource, ParamDefault, PortInfo, PortNaming, catalog,
+    CatalogEntry, DefaultLiteral, DefaultSource, ParamDefault, PortInfo, PortNaming,
 };
 mod routing;
 mod routing_boolean;
@@ -193,7 +207,7 @@ impl PortShape {
 
     /// Append this shape's flattened scalar port kinds to `out`.
     pub fn extend_kinds(&self, out: &mut Vec<PortKind>) {
-        out.extend(std::iter::repeat_n(self.kind, self.width));
+        out.extend(core::iter::repeat_n(self.kind, self.width));
     }
 
     /// Return this shape as a vector of flattened scalar port kinds.

@@ -4,6 +4,7 @@
 //! transparent on rising trigger instants: same-tick `u` and `trigger` can determine `y`, so it
 //! must not be treated as a graph cut.
 
+use alloc::string::String;
 use oce_model::{
     ParamTable, Value,
     determinism::{canonicalize_real, det_max},

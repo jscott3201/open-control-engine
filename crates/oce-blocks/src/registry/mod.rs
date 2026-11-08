@@ -1,6 +1,6 @@
 //! Static class-path to constructor registry for native CDL block implementations.
 
-use std::sync::Arc;
+use alloc::sync::Arc;
 
 use oce_model::{ParamTable, SimpleController, Value, ZeroTime};
 
@@ -269,7 +269,7 @@ pub(super) fn zero_time_param(params: &ParamTable, name: &str, default: ZeroTime
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use alloc::sync::Arc;
 
     use oce_model::{EnumClassId, SimpleController, Value, ZeroTime};
 

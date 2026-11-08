@@ -81,10 +81,41 @@ The engine is, by design:
   carries the crate attribute, *and* the workspace sets `unsafe_code = "forbid"` under
   `[workspace.lints.rust]` (root `Cargo.toml`).
 - **Edition 2024**, `resolver = "3"`.
+- **A `no_std + alloc` execution core.** `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` build
+  without the standard library; see [below](#no_std--alloc-the-core-four).
 
 The whole external dependency surface on the embed path is four crates: `serde`, `serde_json`,
 `thiserror`, and `libm`. Two more — `regex` and `ryu` — exist only inside `oce-conformance`, which
 nothing else in the workspace depends on, so a host embedding `oce-api` never links them.
+
+### `no_std + alloc`: the core four
+
+The four execution-core crates — `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` — each have
+`default = ["std"]`, `std = ["alloc", …]` and `alloc = []`. Built with
+`--no-default-features --features alloc` they are `#![no_std]` and need only `core` and `alloc`:
+a global allocator for `Vec`, `String`, `Box`, `Arc` and `BTreeMap`, and nothing else — no operating
+system, threads, clock, files or I/O. `alloc` is the floor: a build with neither feature refuses with
+a `compile_error!`. The default build is unchanged, and every crate that depends on one of the four
+names `features = ["std"]` on that edge.
+
+| Crate | Built without `std` | What differs from the default build |
+| --- | --- | --- |
+| `oce-model` | `no_std + alloc` | Nothing. `serde` is linked with `alloc` and `derive` only. |
+| `oce-expr` | `no_std + alloc` | The evaluation-fuel meter is one program-wide slot instead of thread-local: evaluate from one execution context at a time, or serialize evaluations across cores and interrupt handlers yourself. |
+| `oce-blocks` | `no_std + alloc` | `catalog()` is absent: its cache is a `std::sync::OnceLock`, and the catalog is host metadata a target does not read. |
+| `oce-graph` | `no_std + alloc` | Nothing. |
+
+Errors derive `core::error::Error` through `thiserror` with its default features off. Every `f64`
+operation that is not in `core` on Rust 1.97 (`floor`, `ceil`, `trunc`, `round`, `sqrt`) goes
+through `libm`, in the default build too, so the two builds share one numeric path; those five are
+exact in IEEE 754, and `crates/oce-blocks/tests/libm_std_parity.rs` checks them against the `std`
+methods bit for bit. The four use no hash collections (issue #398 audits the rest of the workspace).
+
+Everything else stays `std`: `oce-cxf`, `oce-validate`, `oce-semantics`, `oce-diag`, `oce-store` and
+the `oce-api` facade, plus the verification-only `oce-conformance` and `oce-bless`. The
+`no-std-build` job in `pr-gate.yml` builds the four on `thumbv7em-none-eabihf` (a bare-metal
+Cortex-M target with no `std`) and `wasm32-unknown-unknown`, lints them with clippy on the first,
+and runs the `oce-expr` suite without `std`; `bash .agents/gate.sh` runs the same commands.
 
 ### Two Rust versions, and they are not the same number
 
@@ -144,7 +175,7 @@ crate is registry closure for the facade, not an independently supported host AP
 | --- | --- |
 | `oce-model` | Pure value/connector/instance/connection types; the `Value` enum (Real/Integer/Boolean/String/Enum) and the flattened model graph — the shared executable truth. Also the plain-data resolved-model DTOs (`resolved_model`) that `oce-api` returns from a load and `oce-store` re-exports, so neither of those crates depends on the other. |
 | `oce-expr` | The CDL §7.7.2 binding-expression parser and evaluator (closed-world, pure). Bounded on structure: input deeper than `MAX_NESTING_DEPTH` (64) or wider than `MAX_EXPR_NODES` (4096) is a typed error, not a stack overflow (`crates/oce-expr/src/lib.rs`). Depth counts real nesting only; a left-associative chain such as `a+b+…` is bounded by the node cap and evaluated iteratively. |
-| `oce-blocks` | The `Block` trait and the native CDL elementary-block library, publicly enumerable at runtime via `catalog()` (`crates/oce-blocks/src/catalog.rs`) with ports, parameter rules, and honest parameter defaults per class. |
+| `oce-blocks` | The `Block` trait and the native CDL elementary-block library, publicly enumerable at runtime via `catalog()` (`crates/oce-blocks/src/catalog.rs`; `std` builds only) with ports, parameter rules, and honest parameter defaults per class. |
 | `oce-validate` | Loader conformance: subset rejection, single-assignment, type and attribute unification, parameter rules. |
 | `oce-graph` | The deterministic scheduler and executor: direct-feedthrough DAG, algebraic-loop rejection, its own Kahn topological sort, the tick loop. |
 | `oce-cxf` | CXF (Control eXchange Format) JSON-LD ↔ model graph, both directions. The resolver owns all lowering: composites are flattened away, parameters grounded and array parameters normalized to per-element scalars, so nothing elaborates the graph after it. Full `.mo` flattening is not implemented. Composite nesting is bounded at 64. Boundary lowering is iterative and separately bounded at 64 non-top `isConnectedTo` hops per path, 65,536 target examinations, and 8 MiB of aggregate target-IRI bytes per document. The accept/reject contract is written out in [cxf-composite-subset.md](cxf-composite-subset.md). |

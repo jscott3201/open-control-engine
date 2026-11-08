@@ -1,4 +1,4 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::BTreeSet, sync::Arc};
 
 use crate::{
     BlockKind, Ctx, DefaultLiteral, DefaultSource, NoopDiagnostics, ParamRule, PortKind,
@@ -169,7 +169,7 @@ fn catalog_metadata_invariants_cross_check_independent_sources() {
                 .chain(&entry.outputs)
                 .all(|port| { port.name.is_some() == (entry.naming == PortNaming::Named) })
         );
-        let mut names = HashSet::new();
+        let mut names = BTreeSet::new();
         assert!(
             entry
                 .param_defaults
