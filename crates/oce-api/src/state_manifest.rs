@@ -16,24 +16,6 @@ use crate::state::{
 
 const PASS_THROUGH_PREFIX: &str = "urn:oce:lowering#PassThrough.";
 
-pub(crate) const TARGET_BOUND_CLASSES: &[&str] = &[
-    "CDL.Psychrometrics.DewPoint_TDryBulPhi",
-    "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi",
-    "CDL.Psychrometrics.WetBulb_TDryBulPhi",
-    "CDL.Reals.Acos",
-    "CDL.Reals.Asin",
-    "CDL.Reals.Atan",
-    "CDL.Reals.Atan2",
-    "CDL.Reals.Cos",
-    "CDL.Reals.Exp",
-    "CDL.Reals.Log",
-    "CDL.Reals.Log10",
-    "CDL.Reals.Sin",
-    "CDL.Reals.Sources.Sin",
-    "CDL.Reals.Tan",
-    "CDL.Utilities.SunRiseSet",
-];
-
 pub(crate) struct BuiltManifest {
     pub(crate) manifest: ExecutionManifest,
     pub(crate) fingerprint: u128,
@@ -489,8 +471,24 @@ pub(crate) fn fingerprint(execution_revision: u32, manifest_bytes: &[u8]) -> u12
     hash.finish()
 }
 
+/// Whether a block class restricts state placement to the capturing target. The one list lives in
+/// `oce-blocks` as the per-class `target_bound` flag, part of the class signature a
+/// compiled-schedule blob carries (GitHub #400); this facade reads the same flag.
 pub(crate) fn requires_target(class_path: &str) -> bool {
-    TARGET_BOUND_CLASSES.binary_search(&class_path).is_ok()
+    oce_blocks::class_is_target_bound(class_path)
+}
+
+/// Every registered target-bound class path, sorted by UTF-8 bytes, derived from the `oce-blocks`
+/// catalog flag (there is no second list).
+#[cfg(test)]
+pub(crate) fn target_bound_classes() -> Vec<&'static str> {
+    let mut classes: Vec<&'static str> = oce_blocks::catalog()
+        .iter()
+        .filter(|entry| entry.target_bound)
+        .map(|entry| entry.class_path)
+        .collect();
+    classes.sort_unstable();
+    classes
 }
 
 fn block_key(engine: &Engine, index: usize, durable: bool) -> Result<BlockKey, EngineStateError> {

@@ -43,6 +43,7 @@ use core::fmt;
 use oce_blocks::Block;
 use oce_model::{BlockId, ConnectorId, Model, Value};
 
+pub mod blob;
 mod build;
 mod tick;
 mod topo;

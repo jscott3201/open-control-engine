@@ -40,7 +40,9 @@ use oce_model::{ParamTable, Value, ValueType, determinism::canonicalize_real};
 
 mod catalog;
 mod catalog_rules;
+mod class_signature;
 pub use catalog_rules::ParamRuleProjection;
+pub use class_signature::{class_is_target_bound, class_signature_hash};
 mod conversions;
 mod discrete;
 mod discrete_sampled;
@@ -739,6 +741,9 @@ mod tests;
 
 #[cfg(test)]
 mod catalog_tests;
+
+#[cfg(test)]
+mod class_signature_tests;
 
 #[cfg(test)]
 mod authority_claims_tests;

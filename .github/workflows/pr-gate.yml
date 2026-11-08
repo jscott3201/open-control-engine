@@ -346,27 +346,32 @@ jobs:
         env:
           CELL_ARCH: ${{ matrix.arch }}
         run: test "$(uname -m)" = "$CELL_ARCH"
-      - name: Clear cached reports and state vectors
+      - name: Clear cached reports, state vectors and blobs
         run: >-
           rm -rf target/nextest/{ci,ci-release}/junit.xml
           target/{portable,target}-state-{debug,release}.bin
+          target/blobs-{debug,release}.bin
           target/determinism &&
           mkdir -p target/determinism
+      # OCE_BLOB_OUT receives the 46 compiled-schedule blob goldens' bytes as this cell encodes them
+      # (oce-api tests/blob_goldens.rs), concatenated in fixture order, for the fan-in comparison.
       - name: cargo nextest determinism subset (debug codegen)
         if: matrix.codegen == 'debug'
         env:
           OCE_PORTABLE_STATE_OUT: target/portable-state-debug.bin
           OCE_TARGET_STATE_OUT: target/target-state-debug.bin
+          OCE_BLOB_OUT: target/blobs-debug.bin
         run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
       - name: cargo nextest determinism subset (release codegen)
         if: matrix.codegen == 'release'
         env:
           OCE_PORTABLE_STATE_OUT: target/portable-state-release.bin
           OCE_TARGET_STATE_OUT: target/target-state-release.bin
+          OCE_BLOB_OUT: target/blobs-release.bin
         run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
       # The codegen steps above are selected by the matrix; this step fails a cell in which neither
       # ran, so a matrix edit cannot turn a cell into a green no-op.
-      - name: Require the cell's nextest JUnit report and both state vectors
+      - name: Require the cell's nextest JUnit report, both state vectors and the blobs
         env:
           CELL_CODEGEN: ${{ matrix.codegen }}
         run: |
@@ -378,7 +383,9 @@ jobs:
           test -s "target/nextest/$profile/junit.xml"
           test -s "target/portable-state-$CELL_CODEGEN.bin"
           test -s "target/target-state-$CELL_CODEGEN.bin"
-          cp "target/portable-state-$CELL_CODEGEN.bin" "target/target-state-$CELL_CODEGEN.bin" target/determinism/
+          test -s "target/blobs-$CELL_CODEGEN.bin"
+          cp "target/portable-state-$CELL_CODEGEN.bin" "target/target-state-$CELL_CODEGEN.bin" \
+            "target/blobs-$CELL_CODEGEN.bin" target/determinism/
       # The debug cell of each architecture also ships its built oce-api unit-test binary, so the
       # fan-in can restore the other architecture's target-bound snapshot without recompiling.
       - name: Archive the oce-api unit tests for the foreign-snapshot restore
@@ -397,7 +404,8 @@ jobs:
 
   # Fan-in over the four cells' vectors, once per architecture. Both legs compare every byte the
   # cells produced (portable and target-bound bytes equal across codegen within an architecture,
-  # portable bytes equal and target-bound bytes different across architectures); each leg then
+  # portable bytes equal and target-bound bytes different across architectures, and the
+  # compiled-schedule blobs equal in all four cells); each leg then
   # parses the OTHER architecture's target-bound snapshot and refuses it through the public restore
   # path, natively, with the oce-api unit tests its own architecture's debug cell built.
   determinism-compare:
@@ -447,6 +455,17 @@ jobs:
         run: >-
           cmp determinism-x86_64-debug/portable-state-debug.bin determinism-aarch64-debug/portable-state-debug.bin &&
           ! cmp -s determinism-x86_64-debug/target-state-debug.bin determinism-aarch64-debug/target-state-debug.bin
+      # The 46 compiled-schedule blobs (GitHub #400) carry no architecture field, so every cell's
+      # bytes must be identical: debug against release within an architecture, and x86_64 against
+      # aarch64. Each cell already compared its bytes with the checked-in goldens.
+      - name: Compare compiled-schedule blob bytes across codegen profiles and architectures
+        working-directory: target/determinism
+        run: >-
+          test -s determinism-x86_64-debug/blobs-debug.bin &&
+          cmp determinism-x86_64-debug/blobs-debug.bin determinism-x86_64-release/blobs-release.bin &&
+          cmp determinism-aarch64-debug/blobs-debug.bin determinism-aarch64-release/blobs-release.bin &&
+          cmp determinism-x86_64-debug/blobs-debug.bin determinism-aarch64-debug/blobs-debug.bin &&
+          cmp determinism-x86_64-release/blobs-release.bin determinism-aarch64-release/blobs-release.bin
       - name: Refuse a target-bound snapshot from the other architecture
         env:
           CELL_ARCH: ${{ matrix.arch }}

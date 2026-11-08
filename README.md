@@ -150,6 +150,12 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   natively, a populated portable state snapshot compared byte for byte across the two, a
   per-frame allocation census, and a hash-order-independence test that loads every fixture under
   twenty independently seeded hashers and requires identical outputs, receipts and snapshot bytes.
+- Compiles a loaded executable to an `OCEB` compiled-schedule blob — `Engine::compile_blob` in
+  `oce-api` encodes it, `oce_graph::blob::decode` in `oce-graph` (built `no_std`) decodes it into a
+  ready-to-tick schedule and run state, checking each class against a per-class signature hash. The
+  46 blob goldens are byte-identical across x86_64 and arm64, the decoded executable matches the
+  facade bit for bit after every tick, and hostile bytes are refused with typed errors. See
+  [compiled-schedule blob](docs/compiled-schedule-blob.md).
 
 ## What it does not do
 
@@ -297,6 +303,7 @@ repository is the newer copy.
 | [State compatibility](docs/state-compatibility.md) | Snapshot and checkpoint bytes: what is portable, what is target-bound |
 | [Strict-bit evidence](docs/strict-bit-evidence.md) | What the per-PR native matrix proves about exact Real results |
 | [Facade migration](docs/facade-migration.md) | Pre-1.0 source breaks and how to move across them |
+| [Compiled-schedule blob](docs/compiled-schedule-blob.md) | What travels in an OCEB blob, what does not, versioning and the trust model |
 | [Design notes](docs/design/compiled-schedule-blob.md) | One-page decisions written before thinly specified work; currently the OCEB blob format |
 | [CI and the gate](docs/ci-and-the-gate.md) | What runs when, and what a green check proves |
 | [Benchmarks](docs/benchmarks.md) | Measured tick throughput, per run |

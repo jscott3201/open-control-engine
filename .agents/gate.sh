@@ -255,8 +255,8 @@ cat <<'COVERAGE'
 NOT COVERED BY THIS SCRIPT — a green run here does not prove these pass:
   · cross-arch determinism matrix: four native cells, x86_64 on ubuntu-latest
     and aarch64 on ubuntu-24.04-arm, in debug and release codegen, with the
-    cross-architecture snapshot comparison in a fan-in job. One machine cannot
-    reproduce it. CI is the only place it runs.
+    cross-architecture snapshot and compiled-schedule blob comparisons in a
+    fan-in job. One machine cannot reproduce it. CI is the only place it runs.
   · strict-bit raw-output matrix over the 21 inventoried signals: the same
     four native cells, two capture processes each, then the eight-capture
     comparison. Local synthetic controls and macOS observations are NOT

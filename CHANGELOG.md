@@ -39,6 +39,30 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Execution core
 
+- **The `OCEB` compiled-schedule blob: `Engine::compile_blob` encodes the loaded executable and
+  `oce_graph::blob::decode` decodes it on a `no_std + alloc` target** (GitHub #PRNUM, issue #400;
+  format and decisions in `docs/design/compiled-schedule-blob.md`, contract in
+  `docs/compiled-schedule-blob.md`). The blob carries every class with its signature hash, every
+  instance with its ground parameters in table order, the frozen block order, the connections and
+  the boundary I/O table (typed acceptance domains, fan-out targets, opaque `SemanticPoint` payloads
+  that the decoder bounds and never reads), the facade content id (`None`, 32 zero bytes, for the 13
+  partial exports) and the engine version, in one canonical little-endian byte order with a CRC-32C
+  trailer; no run state and no architecture field. The decoder refuses with a typed `BlobError` —
+  never a panic — in a documented order, bounds every count against the remaining bytes before
+  allocating, re-instantiates each block from its own registry, checks arity, kind, state layout,
+  connection types and directions, the I/O table, emit-before under its own `feeds_through`,
+  `MAX_STATE_WORDS` and each block's initial-state CRC, and allocates exactly what its module
+  documentation lists (pinned per fixture). `oce-blocks` gains `class_signature_hash` (FNV-1a-64
+  over a canonical class record; a derived default's formula text is excluded) and
+  `class_is_target_bound`, both on `CatalogEntry`; the 15-class target-bound list moved there from
+  `oce-api`, which now reads the flag (snapshot bytes unchanged). `OcError::Blob` and the blob error
+  types are re-exported from `oce-api`. Evidence: 46 blob goldens and the per-class hash table under
+  `crates/oce-api/tests/fixtures/blob/`, re-encode and decode→re-encode byte equality, an
+  independent test-side writer, the determinism matrix comparing blob bytes across x86_64/aarch64
+  and debug/release, a facade-versus-decoded dual-path test comparing every boundary output and the
+  whole `RunState` after every tick for all 46 fixtures, one typed-refusal test per defect, a
+  10,000-case byte-mutation property test, a §7.17 payload-mutation seam test, and a
+  hostile-parameter fuzz over every registry constructor.
 - **`oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` build `no_std + alloc` behind a default
   `std` feature** (GitHub #428, issue #397). Each has `default = ["std"]`, `std = ["alloc", …]` and
   `alloc = []`; `--no-default-features --features alloc` builds it `#![no_std]` on `core` and

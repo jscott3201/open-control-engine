@@ -146,7 +146,11 @@ The conservative target-bound set remains exactly 15 classes: `CDL.Reals.Acos`, 
 `Atan2`, `Cos`, `Exp`, `Log`, `Log10`, `Sin`, `Tan` (each under `CDL.Reals`);
 `CDL.Reals.Sources.Sin`; `CDL.Psychrometrics.DewPoint_TDryBulPhi`,
 `SpecificEnthalpy_TDryBulPhi`, `WetBulb_TDryBulPhi` (each under `CDL.Psychrometrics`);
-and `CDL.Utilities.SunRiseSet`. Any participating target-bound class binds the executable.
+and `CDL.Utilities.SunRiseSet`. Any participating target-bound class binds the executable. The
+list is the per-class `target_bound` flag in `oce-blocks` (`oce_blocks::class_is_target_bound`,
+`CatalogEntry::target_bound`), part of each class's signature in a
+[compiled-schedule blob](compiled-schedule-blob.md); the facade reads that flag, so there is one
+list.
 
 The [per-PR native strict-bit matrix](strict-bit-evidence.md) covers only 21 Linux signal cases on
 pinned rustc/libm in four native architecture/codegen cells. It is not an arbitrary-input

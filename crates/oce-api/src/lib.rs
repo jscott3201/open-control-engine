@@ -38,6 +38,7 @@
 //! supported profile and is refused directly with [`OcError::Load`].
 
 mod admission;
+mod blob;
 mod catalog;
 mod catalog_adapter;
 mod catalog_json;
@@ -78,6 +79,7 @@ mod topology;
 mod watch;
 
 pub use admission::MAX_CXF_BYTES;
+pub use blob::CompiledBlob;
 pub use catalog::{
     CATALOG_JSON, CATALOG_SCHEMA_REVISION, CatalogDefault, CatalogEntry, CatalogParamDefault,
     CatalogPort, CatalogPortKind, CatalogPortNaming, CatalogValueKind, catalog, catalog_content_id,
@@ -105,6 +107,12 @@ pub use io::{
 };
 pub use loading::{LoadReport, LoadedModel};
 pub use observations::{AssertEvent, AssertLevel};
+/// Re-export of the compiled-schedule blob refusal type and its fault vocabularies, so a host
+/// matches [`OcError::Blob`] without a direct `oce-graph` dependency (GitHub #400).
+pub use oce_graph::blob::{
+    BlobError, ConnectionFault, ConnectorFault, EncodeFault, EngineVersion, InputFault,
+    InstanceField, MalformedFault, OutputFault, ScheduleFault,
+};
 pub use params::{ParamAttrs, ParamTable, RunMode};
 pub use replay::{MAX_REPLAY_BYTES, ReplayContentId, ReplayError, ReplayExactness, ReplayRecord};
 pub use state::{EngineCheckpoint, EngineStateError, EngineStateSnapshot};
