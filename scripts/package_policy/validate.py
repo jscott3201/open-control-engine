@@ -256,7 +256,7 @@ def validate_feature_observations(
             raise PolicyError(f"forbidden normal dependency for {name}: {sorted(forbidden)}")
         observed_closures.add(tuple(observation["workspace_closure"]))
     if len(observed_closures) != 1:
-        raise PolicyError("supported feature selections do not have equal normal OCE closures")
+        raise PolicyError("supported selections do not have equal normal OCE closures")
 
 
 def validate_unknown_feature_refusal() -> None:

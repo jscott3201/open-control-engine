@@ -62,8 +62,8 @@ cancellation or equipment-safety claim.
 
 ## Compatibility evidence limits
 
-The compiler contract checks retired names plus same-dependency frame controls under default,
-explicit mem and no-default selections. Baseline reintroduction controls are additional, not a
+The compiler contract checks retired names plus same-dependency frame controls under the default
+build, the only selection now that `oce-api` declares no features. Baseline reintroduction controls are additional, not a
 substitute for compilation; unrelated associated `Error` types remain in the baseline. Only the
 facade baseline changes (2384 to 2111 rows for this contraction); the storage baseline remains byte-identical.
 

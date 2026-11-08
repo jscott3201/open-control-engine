@@ -228,9 +228,8 @@ revisions, changed/missing/extra fields and all byte differences. OCE supplies n
 
 ### Limits and security
 
-The only build fact is the public `oce-api` package version. Default, explicit mem and no-default
-selections intentionally share the same descriptor because their supported package behavior is
-equivalent. Compiler, source commit, dependency lock, target, codegen and binary identity are not
+The only build fact is the public `oce-api` package version; `oce-api` declares no cargo features,
+so there is no feature selection to record. Compiler, source commit, dependency lock, target, codegen and binary identity are not
 captured. In particular, unpublished same-version builds can disagree while these facts agree.
 Hosts retain full source/build qualification. Matching descriptors are necessary public-fact checks,
 not sufficient execution equivalence, cross-platform numerical evidence, restore eligibility or

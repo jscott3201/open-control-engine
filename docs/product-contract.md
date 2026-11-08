@@ -17,7 +17,7 @@ Domain authorities retain their scope; this aggregate does not supersede them:
 | --- | --- |
 | Contract maintainers | This document's revision, traceability and acceptance boundaries; affected domain owners decide semantics. |
 | Facade maintainers | [Frame-only facade](#frame-only-facade), the facade rustdoc, the [compile-time signature guards](../crates/oce-api/src/guards.rs) and the [identity glossary](facade-contracts.md#identity-glossary). No enumerated surface baseline exists before 1.0. |
-| Release maintainers | [Publication rules](ci-and-the-gate.md#publishing), enforced from each crate manifest by the [package validator](ci-and-the-gate.md#the-package-validator), including the oce-api feature selections. |
+| Release maintainers | [Publication rules](ci-and-the-gate.md#publishing), enforced from each crate manifest by the [package validator](ci-and-the-gate.md#the-package-validator), including that oce-api declares no features. |
 | CXF maintainers | [Composite subset](cxf-composite-subset.md#active-nodes) and [round-trip contract](cxf-round-trip.md#the-rt-2-contract). |
 | Execution maintainers | [Execution profile](execution-profile.md#hosttick-v1), [complete-frame contract](complete-frame-contract.md#status-and-authority), load/execute/state implementation and focused tests below. |
 | Block semantics maintainers | Local block behavior and bounded [conformance boundary](execution-profile.md#conformance-boundary); upstream provenance is a separate evidence question. |

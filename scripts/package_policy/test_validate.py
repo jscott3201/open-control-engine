@@ -315,7 +315,7 @@ class PackagePolicyControls(unittest.TestCase):
             validate.validate_feature_observations(missing, closure, EXPECTED_PRIVATE)
 
     def test_forbidden_runtime_dependency_is_rejected(self) -> None:
-        """Supported feature selections cannot add a database or async runtime."""
+        """The supported selection cannot add a database or async runtime."""
 
         for forbidden in validate.FORBIDDEN_DEPENDENCIES:
             with self.subTest(dependency=forbidden):
