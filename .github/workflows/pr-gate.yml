@@ -13,9 +13,21 @@
 # hygiene and golden freshness, the targeted
 # cross-arch determinism subset for oce-api/oce-blocks/oce-expr, the x86_64 debug suites of
 # oce-graph/oce-validate/oce-model/oce-cxf, the documentation checks
-# (staging, mdBook build, links), the scoped strict-bit matrix, and `bash .agents/gate.sh`
-# executed as a coverage backstop. It does NOT run the full workspace test suite — the remaining
-# crates and the release-codegen runs of the suites above live in release-gate.yml.
+# (staging, mdBook build, links), the scoped strict-bit matrix, the facade contract and Quickstart,
+# the leverage lane, and `bash .agents/gate.sh` executed as a coverage backstop when the gate's own
+# definition changes. It does NOT run the full workspace test suite — the remaining crates and the
+# release-codegen runs of the suites above live in release-gate.yml.
+#
+# Lanes (issue #393). The `changes` job classifies the PR's changed paths
+# (scripts/ci/classify-changes.sh, fail-closed: a path no allowlist matches counts as engine):
+#   * core — the determinism lane: every compiling job below. Runs for any path that is not
+#     docs-only or under crates/leverage/, including every gate script and workflow change.
+#   * leverage — the `leverage-lane` job. Runs for crates/leverage/** and for every core change.
+#   * gate_scripts — `gate (light)`. Runs only when .agents/gate.sh, .github/scripts/**, scripts/**
+#     (outside scripts/docs/), .github/workflows/** or .config/** change; it implies core.
+#   * always — changes, fmt, file-size cap, no-secret scan, docs, gate fixtures and the
+#     package/authority/product contract (its checks read the documentation), and CI OK.
+# A lane-filtered job has exactly one job-level `if:`, `needs.changes.outputs.<lane> == 'true'`.
 #
 # Topology:
 #   * The determinism and strict-bit matrices run in four native cells each: x86_64 on
@@ -31,9 +43,10 @@
 #   * Jobs with the same build shape in this file and release-gate.yml share a rust-cache
 #     `shared-key`, so the daily release-gate run on the `development` tip seeds the default-branch
 #     cache scope that every PR can read (PR runs save only into their own scope).
-#   * Every job runs on every PR, drafts included, and no gating job carries a job-level `if:`:
-#     `CI OK` accepts only `success`, so a skipped gate would read as a failure.
-#   * cargo-deny `bans licenses sources` runs unconditionally; there is no paths-filter job.
+#   * Every PR runs this workflow, drafts included. A job is skipped only by its lane filter, and
+#     `CI OK` accepts that skip only when the `changes` output gating it is 'false'
+#     (scripts/ci/ci_ok.py); any other skip reads as a failure. cargo-deny `bans licenses sources`
+#     runs with the determinism lane.
 #   * `CI OK` at the bottom is the single required status for branch protection on `development`.
 #   * Third-party actions are pinned to full commit SHAs (the trailing comment names the tag), and
 #     checkouts do not persist the job token.
@@ -75,6 +88,41 @@ defaults:
     shell: bash
 
 jobs:
+  # Lane filter (issue #393). Classifies the PR's changed paths with plain git and the fail-closed
+  # rules in scripts/ci/classify-changes.sh; every lane-filtered job below needs this job and runs
+  # only when its output is 'true'. The checkout is GitHub's merge of the PR head into its base, so
+  # its first parent is the base and `HEAD^1..HEAD` is exactly what the PR changes in the tree it
+  # tests (fetch-depth 2 reaches it). A manual dispatch, or a checkout that is not that two-parent
+  # merge, runs every lane.
+  changes:
+    name: classify changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      core: ${{ steps.classify.outputs.core }}
+      leverage: ${{ steps.classify.outputs.leverage }}
+      gate_scripts: ${{ steps.classify.outputs.gate_scripts }}
+      docs_only: ${{ steps.classify.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Classify the changed paths into lanes
+        id: classify
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = pull_request ] && [ "$(git rev-list --parents -n 1 HEAD | wc -w)" -eq 3 ]; then
+            git diff --no-renames --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed-paths"
+            echo "Changed paths:"
+            sed 's/^/  /' "$RUNNER_TEMP/changed-paths"
+            bash scripts/ci/classify-changes.sh < "$RUNNER_TEMP/changed-paths" | tee -a "$GITHUB_OUTPUT"
+          else
+            echo "::notice::$EVENT_NAME run without a PR merge checkout; every lane runs"
+            bash scripts/ci/classify-changes.sh --all | tee -a "$GITHUB_OUTPUT"
+          fi
+
   fmt:
     name: fmt
     runs-on: ubuntu-latest
@@ -110,6 +158,8 @@ jobs:
 
   default-no-db:
     name: default build links no database / async runtime
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -125,6 +175,8 @@ jobs:
 
   golden-gen-firewall:
     name: golden-gen anti-tautology firewall
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -142,6 +194,8 @@ jobs:
   # local commands.
   golden-gen-hygiene:
     name: golden-gen hygiene and golden freshness
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     defaults:
@@ -206,6 +260,7 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - name: no-db gate fixtures
         run: bash .github/scripts/test-check-default-no-db.sh
       - name: golden-gen firewall fixtures
@@ -218,9 +273,21 @@ jobs:
         run: bash .github/scripts/test-workflow-gates.sh
       - name: real workflow smoke
         run: bash .github/scripts/check-workflow-gates.sh
+      - name: gate-script coverage
+        run: bash .github/scripts/check-gate-script-coverage.sh
+      - name: gate-script coverage fixtures
+        run: bash .github/scripts/test-check-gate-script-coverage.sh
+      - name: lane classifier fixtures
+        run: bash scripts/ci/test-classify-changes.sh
+      - name: CI OK result-check controls
+        run: python3 scripts/ci/test_ci_ok.py
+      - name: leverage dependency-rule fixtures
+        run: bash scripts/ci/test-leverage-members.sh
 
   unused-deps:
     name: unused dependency gate (cargo-machete)
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -240,6 +307,8 @@ jobs:
   # queued and `CI OK` unreported, which blocks the merge rather than passing it.
   determinism-matrix:
     name: determinism (${{ matrix.arch }}, ${{ matrix.codegen }})
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     strategy:
@@ -324,7 +393,8 @@ jobs:
   # path, natively, with the oce-api unit tests its own architecture's debug cell built.
   determinism-compare:
     name: determinism cross-cell comparison (${{ matrix.arch }} restores ${{ matrix.foreign }})
-    needs: determinism-matrix
+    needs: [changes, determinism-matrix]
+    if: needs.changes.outputs.core == 'true'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     strategy:
@@ -388,6 +458,8 @@ jobs:
   # local command.
   crate-tests:
     name: crate tests (graph, validate, model, cxf, store; x86_64 debug)
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -453,6 +525,8 @@ jobs:
   # the standing native evidence; no stored receipt admits or skips anything.
   strict-bit-matrix:
     name: strict bits (${{ matrix.arch }}, ${{ matrix.codegen }})
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     strategy:
@@ -506,7 +580,8 @@ jobs:
   # digests, matrix digest) beside the assembled matrix.json; both are uploaded for review.
   strict-bit-compare:
     name: strict bits cross-cell comparison
-    needs: strict-bit-matrix
+    needs: [changes, strict-bit-matrix]
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -551,6 +626,8 @@ jobs:
 
   clippy:
     name: clippy (-D warnings)
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -569,6 +646,8 @@ jobs:
 
   build:
     name: build
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -585,6 +664,8 @@ jobs:
 
   rustdoc:
     name: rustdoc (-D warnings)
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -607,6 +688,8 @@ jobs:
 
   deny:
     name: cargo-deny
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -619,12 +702,70 @@ jobs:
           tool: cargo-deny
       - run: cargo deny check bans licenses sources
 
-  # The gate script, EXECUTED rather than parsed: a coverage backstop, not a parity check. If a
-  # job above is ever weakened or deleted, the command still runs here on the same PR. Nothing
-  # verifies mechanically that .agents/gate.sh and this file list the same commands; see the
-  # longer rationale on the `gate` job in the frozen .github/workflows/ci.yml.
+  # The facade compiler contract and the published Quickstart, executed. These were the three steps
+  # `gate (light)` ran beyond `bash .agents/gate.sh`; they compile the facade, so they run with the
+  # determinism lane.
+  facade-contract:
+    name: facade contract and Quickstart
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: facade-contract
+          cache-bin: false
+      - name: Supported facade compiler contract
+        run: python3 scripts/facade_contract/check.py
+      - name: Facade compiler diagnostic controls
+        run: python3 scripts/facade_contract/test_check.py
+      - name: Quickstart executes successfully
+        run: bash .github/scripts/check-quickstart-runs.sh
+
+  # The leverage lane: crates/leverage/* (none yet). Layout and dependency rule (oce-api only), then
+  # fmt, clippy -D warnings, rustdoc -D warnings, nextest and cargo-machete for each member, all in
+  # scripts/ci/leverage-members.sh so `bash .agents/gate.sh leverage` runs the same commands. It runs
+  # for a change under crates/leverage/ and for every engine change (core implies leverage), and it
+  # never starts the determinism lane.
+  leverage-lane:
+    name: leverage lane
+    needs: changes
+    if: needs.changes.outputs.leverage == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: leverage
+          cache-bin: false
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: nextest@0.9.143,cargo-machete
+      - name: Leverage lane (layout, dependency rule, then each member)
+        run: bash scripts/ci/leverage-members.sh lane
+
+  # The gate script, EXECUTED rather than parsed: a coverage backstop, not a parity check. It runs
+  # only when the gate's own definition changes — .agents/gate.sh, a CI or repository script, a
+  # workflow or tool config — because those are the edits that can make a job above diverge from the
+  # script, and otherwise it re-runs what the other jobs already ran (17m28s measured 2026-11-08).
+  # release-gate.yml runs `gate (full)` daily on the `development` tip regardless. Nothing verifies
+  # mechanically that .agents/gate.sh and this file list the same commands; see the `gate` job in
+  # the frozen .github/workflows/ci.yml.
   gate:
     name: gate (light)
+    needs: changes
+    if: needs.changes.outputs.gate_scripts == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -641,23 +782,21 @@ jobs:
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143,cargo-deny,cargo-machete
-      - name: Supported facade compiler contract
-        run: python3 scripts/facade_contract/check.py
-      - name: Facade compiler diagnostic controls
-        run: python3 scripts/facade_contract/test_check.py
       # No `--` arguments: `light` is the default mode and the one this job exists to cover.
       - run: bash .agents/gate.sh
-      - name: Quickstart executes successfully
-        run: bash .github/scripts/check-quickstart-runs.sh
 
   # The single required status for branch protection on `development`. It reports on every run
-  # (`always()`) and fails unless every gating job succeeded. No gating job has an `if:`, so a
-  # skipped job is never legitimate here. check-workflow-gates.sh asserts that `needs:` lists
-  # every other job in this file, so a new job cannot silently escape the aggregate.
+  # (`always()`), needs every other job, and runs scripts/ci/ci_ok.py: a job passes on `success`, or
+  # on `skipped` only when it is listed in JOB_LANES and its lane output from `changes` is 'false'.
+  # A skip while its lane ran, a skip of an unfiltered job, any failure or cancellation, and a
+  # failed or inconsistent `changes` job all fail. check-workflow-gates.sh asserts that `needs:`
+  # lists every other job, that JOB_LANES equals the lane-filtered jobs' `if:` lines, and that this
+  # result check is present.
   ci-ok:
     name: CI OK
     if: always()
     needs:
+      - changes
       - fmt
       - file-size-cap
       - no-secret-scan
@@ -677,23 +816,33 @@ jobs:
       - build
       - rustdoc
       - deny
+      - facade-contract
+      - leverage-lane
       - gate
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Require every gating job to succeed
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Require every gating job to succeed or be skipped by its lane filter
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
-        run: |
-          python3 - <<'PY'
-          import json, os, sys
-          needs = json.loads(os.environ["NEEDS_JSON"])
-          for job, data in sorted(needs.items()):
-              print(f"{job}: {data.get('result')}")
-          bad = {job: data.get("result") for job, data in needs.items()
-                 if data.get("result") != "success"}
-          if not needs:
-              sys.exit("no gating job results reported")
-          if bad:
-              sys.exit(f"gating jobs not green: {bad}")
-          PY
+          JOB_LANES: >-
+            default-no-db=core
+            golden-gen-firewall=core
+            golden-gen-hygiene=core
+            unused-deps=core
+            determinism-matrix=core
+            determinism-compare=core
+            crate-tests=core
+            strict-bit-matrix=core
+            strict-bit-compare=core
+            clippy=core
+            build=core
+            rustdoc=core
+            deny=core
+            facade-contract=core
+            leverage-lane=leverage
+            gate=gate_scripts
+        run: python3 scripts/ci/ci_ok.py

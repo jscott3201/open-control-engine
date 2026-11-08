@@ -6,17 +6,20 @@
 # two of them materially weaker than CI, so prose copies are the failure mode
 # this file exists to remove.
 #
-#   bash .agents/gate.sh          # light  — mirrors the per-PR gate (pr-gate.yml)
-#   bash .agents/gate.sh full     # full   — adds the suite (release-gate.yml)
+#   bash .agents/gate.sh          # light    — mirrors the per-PR gate (pr-gate.yml)
+#   bash .agents/gate.sh full     # full     — adds the suite (release-gate.yml)
+#   bash .agents/gate.sh leverage # leverage — mirrors a PR confined to crates/leverage/: the
+#                                 #            always-on jobs plus the leverage lane, no engine lane
 #
 # Commands are kept in CI's exact form, flags included. `--locked`, the `ci`
 # nextest profile, `--no-tests=fail`, and `RUSTDOCFLAGS` are each load-bearing:
 # dropping any one of them turns a real gate into a green light that proves
 # less than it appears to. Change a command here only by changing CI first.
 #
-# CI executes this script as well as mirroring it — `gate (light)` in pr-gate.yml and
-# `gate (full)` in release-gate.yml — so an edit here changes what gates a pull
-# request, not merely what a local run does.
+# CI executes this script as well as mirroring it — `gate (full)` in release-gate.yml
+# daily, and `gate (light)` in pr-gate.yml on every PR that changes this script, a CI or
+# repository script, a workflow or tool config — so an edit here changes what gates a
+# pull request, not merely what a local run does.
 #
 # Agents: this script is executable but not writable inside a Codex lane
 # sandbox. That is deliberate. A failing gate is fixed at its cause, never by
@@ -28,9 +31,9 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 MODE="${1:-light}"
 case "$MODE" in
-  light | full) ;;
+  light | full | leverage) ;;
   *)
-    echo "usage: bash .agents/gate.sh [light|full]" >&2
+    echo "usage: bash .agents/gate.sh [light|full|leverage]" >&2
     exit 2
     ;;
 esac
@@ -71,6 +74,10 @@ step_env() {
 
 printf '\033[1mopen-control gate — mode: %s\033[0m\n' "$MODE"
 
+# The engine (determinism) lane: everything that compiles the engine. `leverage` mode
+# skips it, as pr-gate.yml does for a PR confined to crates/leverage/ and the docs.
+engine_lane() { [ "$MODE" != leverage ]; }
+
 # ── Formatting, size, secrets ────────────────────────────────────────────────
 step 'fmt' cargo fmt --all --check
 step 'file-size cap (700 LOC)' bash .github/scripts/check-file-size.sh
@@ -80,12 +87,15 @@ step 'no-secret scan' bash .github/scripts/check-no-secrets.sh
 # The default build linking no database and no async runtime is this repo's
 # central promise; the golden-gen firewall stops a generator from blessing its
 # own output as the oracle, and the package contract closes release selection.
-step 'default build links no database' bash .github/scripts/check-default-no-db.sh
-step 'golden-gen anti-tautology firewall' bash .github/scripts/check-golden-gen-anti-tautology.sh
+if engine_lane; then
+  step 'default build links no database' bash .github/scripts/check-default-no-db.sh
+  step 'golden-gen anti-tautology firewall' bash .github/scripts/check-golden-gen-anti-tautology.sh
+  step 'supported facade compiler contract' python3 scripts/facade_contract/check.py
+fi
+# These three read the documentation as well as the manifests, so they run in every mode.
 step 'package, feature, and publication contract' python3 scripts/package_policy/validate.py
 step 'authority claim consistency' python3 scripts/authority_claims/check.py --check
 step 'product contract traceability' python3 scripts/product_contract/check.py
-step 'supported facade compiler contract' python3 scripts/facade_contract/check.py
 
 # ── Gate behavior fixtures ───────────────────────────────────────────────────
 # The gates are themselves tested. A gate that cannot fail is not a gate, and
@@ -95,13 +105,30 @@ step 'golden-gen firewall fixtures' bash .github/scripts/test-check-golden-gen-a
 step 'package-contract hostile controls' python3 scripts/package_policy/test_validate.py
 step 'authority claim hostile controls' python3 scripts/authority_claims/test_check.py
 step 'product contract hostile controls' python3 scripts/product_contract/test_check.py
-step 'facade compiler diagnostic controls' python3 scripts/facade_contract/test_check.py
+if engine_lane; then
+  step 'facade compiler diagnostic controls' python3 scripts/facade_contract/test_check.py
+fi
 step 'stale crate-status fixtures' bash .github/scripts/test-check-stale-crate-status.sh
 step 'stale crate-status smoke' bash .github/scripts/check-stale-crate-status.sh
 step 'gate-script coverage' bash .github/scripts/check-gate-script-coverage.sh
 step 'gate-script coverage fixtures' bash .github/scripts/test-check-gate-script-coverage.sh
 step 'workflow gate fixtures' bash .github/scripts/test-workflow-gates.sh
 step 'real workflow smoke' bash .github/scripts/check-workflow-gates.sh
+step 'lane classifier fixtures' bash scripts/ci/test-classify-changes.sh
+step 'CI OK result-check controls' python3 scripts/ci/test_ci_ok.py
+step 'leverage dependency-rule fixtures' bash scripts/ci/test-leverage-members.sh
+
+# ── Leverage lane ────────────────────────────────────────────────────────────
+# crates/leverage/*: layout and the oce-api-only dependency rule, then fmt, clippy,
+# rustdoc, nextest and cargo-machete per member — the `leverage-lane` job's one
+# command. Prints "no leverage crates yet" while there are none. pr-gate.yml runs it
+# for every engine change too, so it runs in every mode.
+step 'leverage lane' bash scripts/ci/leverage-members.sh lane
+
+# ── Engine lane: everything from here to `fi # engine_lane` ──────────────────
+# Skipped in `leverage` mode, as pr-gate.yml skips the determinism lane for a PR
+# confined to crates/leverage/ and the documentation.
+if engine_lane; then
 
 # ── Build, lint, docs ────────────────────────────────────────────────────────
 # Clippy lints the DEFAULT feature set, matching ci.yml. Do not add
@@ -186,6 +213,8 @@ step 'structural oracle (input hygiene)' \
 # local-only requirement.
 step 'quickstart executes' bash .github/scripts/check-quickstart-runs.sh
 
+fi # engine_lane
+
 # ── Full suite (release-gate.yml) ────────────────────────────────────────────
 if [ "$MODE" = full ]; then
   step 'nextest — workspace' \
@@ -215,16 +244,27 @@ NOT COVERED BY THIS SCRIPT — a green run here does not prove these pass:
     job, which sweeps advisories/bans/licenses/sources on every release PR.
   · that these commands still match pr-gate.yml. Nothing verifies that
     mechanically. Change a command here only by changing CI first.
-    CI does RUN this script (`gate (light)` in pr-gate.yml, `gate (full)` in
-    release-gate.yml), so every command listed here gates a PR whether or not
-    pr-gate.yml still runs it separately. Read that as coverage, not as
-    parity: a green `gate (light)` says these commands ran, and says nothing
-    at all about whether the two files still agree.
+    CI does RUN this script: `gate (full)` in release-gate.yml daily, and
+    `gate (light)` in pr-gate.yml on a PR that changes this script, a CI or
+    repository script, a workflow or tool config — the edits that can make
+    a pr-gate.yml job diverge from it. Read that as coverage, not parity: a green
+    `gate (light)` says these commands ran, and says nothing at all about
+    whether the two files still agree.
 COVERAGE
 
-if [ "$MODE" = light ]; then
+if [ "$MODE" = leverage ]; then
+  cat <<'LEVERAGE'
+  · the engine lane: no-db, golden-gen firewall, facade contract and
+    Quickstart, clippy, build, rustdoc, cargo-machete and cargo-deny over the
+    workspace, the determinism and strict-bit subsets, and the input-hygiene
+    audits. A `leverage` run mirrors a PR confined to crates/leverage/ and
+    the docs. If anything else changed, run `bash .agents/gate.sh`.
+LEVERAGE
+fi
+
+if [ "$MODE" != full ]; then
   cat <<'LIGHT'
-  · the workspace test suite and doctests. This was a `light` run, which
+  · the workspace test suite and doctests. This was not a `full` run: it
     mirrors the per-PR gate — and the per-PR gate does not run them.
     Run `bash .agents/gate.sh full` before claiming tests pass.
 LIGHT

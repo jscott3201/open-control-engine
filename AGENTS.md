@@ -119,6 +119,15 @@ end of each milestone.
   daily, `docs-pages.yml` validates docs and publishes `main` to GitHub Pages, `release.yml` keeps
   its tag-verify / manual-publish split, and the two OpenModelica evidence workflows run on native
   arm64 by hand.
+- **Two lanes, one `CI OK`.** The first `pr-gate.yml` job classifies the PR's changed paths
+  (`scripts/ci/classify-changes.sh`, fail-closed). Anything outside the docs and `crates/leverage/`
+  runs the **determinism lane** (every compiling job); `crates/leverage/**` runs the **leverage
+  lane** (fmt, clippy, rustdoc, nextest and the `oce-api`-only rule per leverage crate) and so does
+  every engine change; a docs-only PR runs only the always-on checks. `gate (light)` runs only when
+  a gate script, workflow or tool config changes, and such a change runs everything. `CI OK`
+  accepts a skipped job only when its lane filter skipped it. `bash .agents/gate.sh leverage` is
+  the local mirror of a leverage-only PR; [`docs/ci-and-the-gate.md`](docs/ci-and-the-gate.md#lanes-what-a-pr-runs)
+  has the trigger table.
 - **`ci.yml` is not the CI.** It is the frozen GitHub-era gate that produced the retained native
   strict-bit capture archives; it is disabled in the Actions settings and stays byte-identical.
 - **The determinism and strict-bit matrices run natively**: x86_64 on `ubuntu-latest` and aarch64

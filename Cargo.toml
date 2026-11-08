@@ -22,7 +22,10 @@
 
 [workspace]
 resolver = "3"
-members = ["crates/*"]
+# Leverage crates (crates/leverage/<name>) sit above the facade: they depend on `oce-api` only and
+# run in the leverage CI lane (scripts/ci/leverage-members.sh). `crates/leverage` itself is a
+# directory of members, not a package, so the core glob names `crates/oce-*` rather than `crates/*`.
+members = ["crates/oce-*", "crates/leverage/*"]
 
 [workspace.package]
 version = "0.2.0"

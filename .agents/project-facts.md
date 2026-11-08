@@ -32,6 +32,17 @@ The per-PR gate runs once per change, on the PR. A merge into `development` runs
 path-filtered `docs-pages.yml` runs on that push. The daily `release-gate.yml` run on the
 `development` tip is the safety net. See [CI and the gate](../docs/ci-and-the-gate.md#what-runs-when).
 
+The per-PR gate has two lanes under the one `CI OK` (issue #393). Its first job classifies the
+PR's changed paths with plain git and `scripts/ci/classify-changes.sh`, fail-closed: any path that
+is not documentation or under `crates/leverage/` runs the determinism lane — every job that
+compiles the engine — and so does any change to a gate script, workflow or tool config, which also
+runs `gate (light)`. A `crates/leverage/**` change runs only the `leverage lane` job beside the
+always-on checks (fmt, file-size, no-secret, docs, gate fixtures, the package/authority/product
+contract); an engine change runs it too. A docs-only PR compiles nothing, and documentation a test
+reads (`README.md`, `docs/cxf-composite-subset.md`) is not docs-only. `CI OK` accepts a skip only
+when the job's lane output was `false`. Locally, `bash .agents/gate.sh leverage` mirrors a
+leverage-only PR; see [lanes](../docs/ci-and-the-gate.md#lanes-what-a-pr-runs).
+
 GitHub PR numbers collide with the retired Forgejo numbering: Forgejo #332 (the Forgejo CI port)
 and GitHub #332 are different changes. Bare `(#N)` citations predate the move; cite every PR merged
 on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
