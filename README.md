@@ -140,11 +140,13 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   `oce_store::MemStore`).
 - Builds its execution core — `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` —
   `no_std + alloc` behind a default `std` feature, checked for `thumbv7em-none-eabihf` and
-  `wasm32-unknown-unknown` on every pull request. Every `f64` operation `core` lacks goes through
+  `wasm32-unknown-unknown` on every pull request that changes the engine. Every `f64` operation
+  `core` lacks goes through
   `libm`, bit-identical to the `std` methods, and clippy refuses `std` float methods and hash
   collections inside those four crates. See
   [the core four](docs/architecture.md#no_std--alloc-the-core-four).
-- Proves determinism per pull request rather than asserting it: goldens on x86_64 and arm64
+- Proves determinism on every engine-changing pull request rather than asserting it: goldens on
+  x86_64 and arm64
   natively, a populated portable state snapshot compared byte for byte across the two, a
   per-frame allocation census, and a hash-order-independence test that loads every fixture under
   twenty independently seeded hashers and requires identical outputs, receipts and snapshot bytes.
@@ -317,8 +319,9 @@ One thing worth knowing up front: the per-PR gate runs the `oce-api`, `oce-block
 state-determinism subset plus the scoped `oce-conformance` strict-bit subset. Changes outside
 those and the named input-hygiene audits can show every check green without running their own
 tests. The gate also has two lanes under the one `CI OK`: a documentation-only change compiles
-nothing, a change under `crates/leverage/` runs the lighter leverage lane, and anything else runs
-the full determinism lane. [CI and the gate](docs/ci-and-the-gate.md) explains the split.
+nothing (`README.md` is the exception, because a test reads its Quickstart), a change under
+`crates/leverage/` runs the lighter leverage lane, and anything else runs the full determinism
+lane. [CI and the gate](docs/ci-and-the-gate.md) explains the split.
 
 ---
 
