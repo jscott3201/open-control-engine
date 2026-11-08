@@ -147,7 +147,12 @@ fn every_golden_decodes_once_then_runs_its_frames_with_zero_allocations() {
                 &state.words,
             );
         }
-        assert_eq!(&run.hex(), digest, "{name}: run digest");
+        assert_eq!(
+            &run.hex(),
+            digest,
+            "{name}: the blob entry's run digest moved; review the behaviour change, then bless \
+             with OCE_BLESS_FRAME_DIGESTS=1 (written by oce-api's dual-path test)"
+        );
         assert_eq!(
             replay.state_words(),
             executable.state_words(),

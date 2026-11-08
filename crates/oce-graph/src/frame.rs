@@ -336,7 +336,12 @@ pub fn check_input(
     if !accepts_type(model, input.targets, value) {
         return Err(FrameRefusal::InputType { slot });
     }
-    if policy == NonFiniteInputPolicy::Refuse && matches!(value, Value::Real(x) if !x.is_finite()) {
+    // Exhaustive on purpose: a new policy variant must decide here, never fall back to `Admit`.
+    let refuses_non_finite = match policy {
+        NonFiniteInputPolicy::Admit => false,
+        NonFiniteInputPolicy::Refuse => true,
+    };
+    if refuses_non_finite && matches!(value, Value::Real(x) if !x.is_finite()) {
         return Err(FrameRefusal::InputNonFinite { slot });
     }
     if !accepts_domain(value, input.min, input.max) {
