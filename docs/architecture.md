@@ -88,8 +88,9 @@ The engine is, by design:
 - **Synchronous and in-process.** Every public method is a blocking synchronous call, and no async
   runtime is pulled at any layer. The check is the dependency set below, not a promise.
 - **`#![forbid(unsafe_code)]` in all 13 workspace members**, belt and braces: each
-  `crates/*/src/lib.rs` and the firmware image's lib and bin roots carry the crate attribute, *and* the workspace sets `unsafe_code = "forbid"` under
-  `[workspace.lints.rust]` (root `Cargo.toml`).
+  `crates/*/src/lib.rs` and the firmware image's lib and bin roots carry the crate attribute,
+  *and* the workspace sets `unsafe_code = "forbid"` under `[workspace.lints.rust]` (root
+  `Cargo.toml`).
 - **Edition 2024**, `resolver = "3"`.
 - **A `no_std + alloc` execution core.** `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` build
   without the standard library; see [below](#no_std--alloc-the-core-four).

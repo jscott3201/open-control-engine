@@ -41,7 +41,7 @@ Nothing yet.
 
 ## 0.4.0
 
-Prepared 2026-11-09 on `development`; the release date is the date the `v0.4.0` tag is cut from
+Prepared 2026-11-08 on `development`; the release date is the date the `v0.4.0` tag is cut from
 `main`. Every workspace member is 0.4.0. Nothing is published to crates.io.
 
 0.4.0 closes milestone M1b: the portable `no_std` core. The core four (`oce-model`, `oce-expr`,
