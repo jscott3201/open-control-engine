@@ -78,6 +78,16 @@ target-bound bytes to differ across architectures. Each architecture then parses
 other's target-bound bytes through the public restore path, natively. The same fan-in requires the
 46 compiled-schedule blobs each cell encodes (`OCE_BLOB_OUT`) to be byte-identical in all four
 cells (GitHub #400).
+The blob round trip (issue #403) rides on the same cells: each records
+`crates/oce-conformance/tests/blob_round_trip.rs` (facade against the `no_std` entry, every output,
+warning and raw state word after every frame of the 46 fixtures) into `OCE_ROUND_TRIP_OUT`, the
+fan-in requires the four recordings identical and replays the x86_64 debug recording on aarch64
+through the aarch64 debug cell's archived suite, and `blob round trip (wasm32-wasip1 under wasmtime)` replays it on
+`wasm32-wasip1` under the wasmtime pinned in `scripts/ci/install-wasmtime.sh`. Locally,
+`bash .agents/gate.sh roundtrip` (also in `full`) records and replays on the host and on
+`wasm32-wasip1`; it needs `rustup target add wasm32-wasip1` and `bash scripts/ci/install-wasmtime.sh`
+and fails, not skips, without them. A behaviour change that moves a run digest moves the recording
+with it; there is nothing extra to bless.
 The standalone `cargo-deny` CI job runs `cargo deny check bans licenses sources` on every PR, and
 `.agents/gate.sh` runs it too.
 `advisories` is excluded from the script deliberately: it needs network and a writable

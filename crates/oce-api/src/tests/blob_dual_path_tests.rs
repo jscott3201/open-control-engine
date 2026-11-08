@@ -18,8 +18,8 @@
 //! facade's run of them must reproduce `oce-graph/tests/fixtures/blob_frame_digests.tsv`, which
 //! `oce-graph`'s `blob_execution` test also checks against the blob entry built
 //! `no_std + alloc`; bless the table deliberately with `OCE_BLESS_FRAME_DIGESTS=1`. The Tier-2
-//! golden input schedules live in `oce-conformance` test binaries, which reach the engine only
-//! through the facade and cannot see run state, so they are not reused here.
+//! golden input schedules cover only the fixtures with reference traces, so they are not reused
+//! here; `oce-conformance`'s blob round trip drives this schedule across targets (issue #403).
 
 #[path = "../../../oce-graph/tests/support/frame_schedule.rs"]
 mod frame_schedule;
@@ -183,6 +183,12 @@ impl Paths<'_> {
     fn compare(&self, when: &str) -> Result<(), String> {
         compare_states(when, &self.facade.state, &self.core.state)?;
         compare_states(when, &self.facade.state, &self.entry.decoded().state)?;
+        // The public raw-word views the round-trip suite compares (GitHub #403) are these words.
+        if self.facade.state_words() != self.facade.state.words.as_slice()
+            || self.entry.state_words() != self.facade.state_words()
+        {
+            return Err(format!("{when}: the public state-word views differ"));
+        }
         let clocks =
             [self.facade.prev_t, self.core.prev_t, self.entry.time()].map(|t| t.map(f64::to_bits));
         let sequences = [

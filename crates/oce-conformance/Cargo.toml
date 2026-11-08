@@ -24,4 +24,8 @@ serde_json = { workspace = true }
 
 [dev-dependencies]
 oce-bless = { workspace = true }
+# The blob round trip (issue #403) drives the `no_std` execution entry beside the facade:
+# `oce_graph::blob::Executable` and the `oce_blocks::Diagnostics` sink it reports warnings to.
+oce-blocks = { workspace = true, features = ["std"] }
+oce-graph = { workspace = true, features = ["std"] }
 sha2 = "0.10"

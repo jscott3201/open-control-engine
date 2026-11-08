@@ -148,6 +148,33 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Verification
 
+- **The blob round trip: blobs encoded on x86_64 run bit-identically on arm64 and on
+  `wasm32-wasip1`, per PR** (GitHub #451, issue #403). A new `oce-conformance` suite,
+  `tests/blob_round_trip.rs`, loads each of the 46 G36 fixtures through the facade, encodes its
+  blob, decodes it with `oce_graph::blob::Executable` and runs the shared 160-frame schedule through
+  both, comparing every boundary output by raw bits, every warning in order (source, message, time
+  bits) and the raw state words after load and after every frame; it also pins each blob to its
+  golden and the entry's run to `blob_frame_digests.tsv`. `OCE_ROUND_TRIP_OUT` records the blobs
+  and expected results as a documented, line-oriented artifact (format version 1);
+  `OCE_ROUND_TRIP_EXPECT` decodes and runs a recording's blobs on another target and compares the
+  run with the recorded one. The reader bounds every file and count and refuses malformed input
+  with a typed error naming the file and line, never a panic. In `pr-gate.yml` every determinism
+  cell records, `determinism-compare` requires the four recordings identical and replays the
+  x86_64 debug recording natively on aarch64, and a new `blob round trip (wasm32-wasip1 under
+  wasmtime)` job in the determinism lane replays it on `wasm32-wasip1` under wasmtime 50.0.1,
+  installed by `scripts/ci/install-wasmtime.sh` against pinned archive and binary SHA-256 digests
+  and run through a cargo target runner (`.cargo/config.toml`, `scripts/ci/wasmtime-runner.sh`).
+  `CI OK` requires all three legs. The controls flip one bit of a recorded output, state word
+  (after load or after a frame), warning time or blob, change or remove a recorded warning, and
+  record `-0.0` or another NaN payload against the produced Real; each must be reported with the
+  fixture, frame, slot or index and both bit patterns.
+  `bash .agents/gate.sh roundtrip` (also part of `full`) records and replays on the local host and
+  on `wasm32-wasip1`, failing with the install command when the target or wasmtime is missing;
+  `release-gate.yml`'s `gate (full)` installs both. New facade accessor: `Engine::state_words`
+  borrows the raw state words in the layout `Executable::state_words` returns — a verification
+  view, not a continuation format. Product contract revision 22 (PC-041 cites the round trip).
+  Goldens byte-identical; no core-four or `oce-cxf` source changed.
+
 - **The bare-metal gate cell: the core builds per PR for two bare-metal targets and links into a
   firmware image held to a size budget, which runs under QEMU nightly** (GitHub #449, issue #402).
   `pr-gate.yml`'s `no-std-build` job becomes the bare-metal cell. `scripts/ci/check-no-std.sh`

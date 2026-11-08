@@ -110,6 +110,11 @@ applies), so words that would index outside a block's buffers are refused, not e
 time, sequence, policy and connector values are untouched; the next frame recomputes the outputs
 from the words and its inputs. Keep words with the executable and model time they came from.
 
+On the host, `Engine::state_words` borrows the facade's words in the same layout, so a verifier can
+compare the two paths word for word after the same frames (the [round trip](#the-blob-round-trip)
+does). It is a read-only verification view, not a continuation format: continue state with
+`state_snapshot` or `checkpoint`.
+
 ## Versioning
 
 A decoder accepts exactly one format version (1), one execution profile (HostTick v1) and its own
@@ -177,6 +182,70 @@ decodes total 6,013 allocations and 992,984 bytes; the 7,360 frames, none). The
 [architecture's](architecture.md#determinism-and-the-two-allocation-carve-outs) two carve-outs
 still apply.
 
+## The blob round trip
+
+The round trip is the standing test that a blob encoded on one machine runs the same everywhere it
+is decoded (issue #403). `crates/oce-conformance/tests/blob_round_trip.rs`, for each of the 46
+fixtures: load the CXF through the facade, `compile_blob`, decode with `Executable::from_blob`, run
+the shared 160-frame schedule (`crates/oce-graph/tests/support/frame_schedule.rs`, the schedule the
+run digests and the firmware image already use, defined for every fixture) through both, and
+compare bit for bit after every frame:
+
+- every boundary output, by tag and raw bits (Reals as IEEE-754 hex, never formatted);
+- every warning the frame emitted, in order: source, message and time bits;
+- the raw state words, `Engine::state_words` against `Executable::state_words`, after load and
+  after every frame. The portable snapshot is not part of the blob path and is not compared here.
+
+The suite also requires the encoded blob to equal the checked-in golden and the entry's run to
+reproduce the pinned run digest. A difference is reported as the fixture, the frame, the output
+slot (and its path) or the state word index, and both bit patterns.
+
+**Three legs, one recording.** With `OCE_ROUND_TRIP_OUT=<dir>` the suite also records each
+fixture's blob bytes and expected results; with `OCE_ROUND_TRIP_EXPECT=<dir>` it reads a recording,
+requires its blob bytes to equal this target's encoding, decodes and runs the *recorded* bytes, and
+compares this target's run with the recorded one (still comparing the facade with the entry
+locally). A relative directory resolves against the workspace root. Per PR, every determinism cell
+records, the x86_64 debug cell's recording is the artifact, the aarch64 fan-in leg replays it
+natively, and a separate job replays it on `wasm32-wasip1` under a checksum-pinned wasmtime
+([CI and the gate](ci-and-the-gate.md#the-blob-round-trip)). `bash .agents/gate.sh roundtrip`
+records on the local host and replays here and on `wasm32-wasip1`.
+
+**The recorded artifact, format version 1.** One directory holding exactly two files per fixture;
+the reader refuses any other name. `<fixture>.oceb` is the blob the recording target encoded.
+`<fixture>.trace.tsv` is UTF-8 text, one record per line, fields separated by one tab, every line
+ending in a newline:
+
+```text
+oce-blob-round-trip<TAB>1
+fixture<TAB><name>
+blob<TAB><byte length><TAB><FNV-1a-64 of the blob file, 16 hex digits>
+outputs<TAB><n>
+output<TAB><slot><TAB><path>                      n lines, slots 0 to n-1
+words<TAB><w>                                     state words per snapshot
+load<TAB><word>...                                w words after load
+frame<TAB><k><TAB><time bits><TAB><sequence>      per frame, k from 0
+out<TAB><value>...                                n boundary outputs, slot order
+warn<TAB><source><TAB><message><TAB><time bits>   zero or more, emission order
+state<TAB><word>...                               w words after the frame
+end<TAB><frames>
+```
+
+Words and time bits are sixteen lowercase hex digits. A value is `r:<16 hex>` (a Real's bits),
+`i:<decimal>`, `b:0` or `b:1`, `s:<text>` or `e:<class>:<ordinal>`. Text escapes `\`, tab, newline
+and carriage return as `\\`, `\t`, `\n` and `\r`, and other control characters as `\xHH`. Counts
+are canonical unsigned decimals. The 46 fixtures record 92 files, about 34 MB, most of it the
+state words of the three fixtures with over 4,000 words each.
+
+The reader treats a recording as hostile: it refuses a trace over 32 MiB or a blob over 1 MiB before
+reading it, bounds every declared count (outputs, the engine's 4,194,304-word state budget,
+frames), requires the exact grammar, and returns a typed error naming the file and line, never a
+panic. Its controls feed the comparison a recording with one bit flipped in an output, a state word
+(after load or after a frame), a warning's time or the blob, with a changed or removed warning, and
+with `-0.0` or another NaN payload against the produced Real, and require the report to name the
+fixture, frame, slot or index and both bit patterns; they also refuse 28 malformed shapes (a `\xHH`
+escape outside the control characters the writer escapes among them), every truncation, 2,000 seeded byte mutations
+without a panic, and a missing, foreign, swapped or oversized file.
+
 ## Evidence
 
 | Claim | Evidence |
@@ -187,6 +256,7 @@ still apply.
 | No second frame driver in the facade | `crates/oce-api/tests/frame_driver_ownership.rs`: the facade re-exports the core's `MAX_FRAME_TIME_MAGNITUDE` and `NonFiniteInputPolicy`, and no facade source defines them, evaluates the schedule or re-implements a time or sequence rule |
 | Executing frames allocates nothing; the target closure is clean | `crates/oce-graph/tests/blob_execution.rs` (zero allocations over every golden's frames, run against the `no_std + alloc` build in `no-std-build`) and `scripts/ci/check-no-std-entry-closure.sh` (no `oce-cxf`, `oce-api`, `serde_json` or `std` in the closure, with controls) |
 | The same run on bare metal | `firmware/link/tests/run_tests.rs` (every golden reaches its digest through the image's run code) and `schedule_tests.rs` (the image's schedule equals the test schedule bit for bit), per PR; `qemu.yml` (nightly): the image on `netduinoplus2` and riscv32 `virt` prints the host's run digest after each of 160 frames |
+| Encoded on one machine, the same run on x86_64, aarch64 and wasm32 | `crates/oce-conformance/tests/blob_round_trip.rs` ([above](#the-blob-round-trip)): every output, warning and raw state word after every frame of all 46 fixtures, recorded in all four determinism cells (required identical) and replayed from the x86_64 debug recording on aarch64 and on `wasm32-wasip1` under wasmtime, per PR; its controls flip one recorded bit and require the report to name it |
 | Raw state words restore all or nothing | `crates/oce-graph/tests/blob_state_words.rs` |
 | Typed refusal, never a panic | `blob_hostile_bytes.rs` and `blob_hostile_model.rs` (one test per refusal), `blob_fuzz.rs` (10,000 seeded random mutations, re-checksummed) and `oce-blocks` `tests/hostile_parameters.rs` |
 | `SemanticPoint` payloads are non-computational | `blob_semantic_seam.rs` fills and mutates every payload byte and requires an identical executable and identical outputs |

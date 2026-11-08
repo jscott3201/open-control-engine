@@ -158,8 +158,11 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   46 blob goldens are byte-identical across x86_64 and arm64, the decoded executable matches the
   facade bit for bit after every tick, and hostile bytes are refused with typed errors. A decoded
   blob executes through the same HostTick frame driver as the facade (`oce_graph::blob::Executable`,
-  inputs and outputs by slot, zero allocations per frame). See
-  [compiled-schedule blob](docs/compiled-schedule-blob.md).
+  inputs and outputs by slot, zero allocations per frame), and every pull request that changes the
+  engine runs the blob round trip: blobs encoded on x86_64 are decoded and run natively on arm64 and
+  under wasmtime on `wasm32-wasip1`, with every output, warning and raw state word after every
+  frame of the 46 fixtures bit-identical to the recorded host run. See
+  [compiled-schedule blob](docs/compiled-schedule-blob.md#the-blob-round-trip).
 
 ## What it does not do
 
@@ -274,7 +277,10 @@ That Linux result is re-established per-PR: the scoped strict-bit subset and its
 binaries run in four native Linux cells (x86_64 and aarch64, debug and release) with repeat
 captures and a cross-cell comparison, and no source file is bound to a stored receipt any more
 ([strict-bit evidence](docs/strict-bit-evidence.md)). It bounds the claim to the pinned
-corpus, rustc and libm; it is not mathematical correctness or arbitrary-input proof. The remainder
+corpus, rustc and libm; it is not mathematical correctness or arbitrary-input proof. The blob round
+trip in `oce-conformance` also runs per-PR, from one recorded x86_64 artifact replayed natively on
+arm64 and under wasmtime on `wasm32-wasip1`
+([blob round trip](docs/compiled-schedule-blob.md#the-blob-round-trip)). The remainder
 of `oce-conformance` still needs the release/full gate.
 
 Two global report tiers are **not wired**, and no complete G36 sequence here has been executed against an

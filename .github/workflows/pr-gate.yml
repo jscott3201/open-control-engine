@@ -12,7 +12,8 @@
 # the firmware image's build and size budget), rustdoc, cargo-machete, cargo-deny, gate-script
 # behavior fixtures, the package/feature/publication contract, stale crate-status header lint,
 # golden-gen hygiene and golden freshness, the targeted cross-arch determinism subset for
-# oce-api/oce-blocks/oce-expr, the macOS arm64 portable-snapshot
+# oce-api/oce-blocks/oce-expr, the blob round trip (x86_64, aarch64 and wasm32-wasip1 from one
+# recorded artifact), the macOS arm64 portable-snapshot
 # and Windows std build/nextest platform cells, the x86_64 debug suites of
 # oce-graph/oce-validate/oce-model/oce-cxf, the documentation checks
 # (staging, mdBook build, links), the scoped strict-bit matrix, the facade contract and Quickstart,
@@ -37,6 +38,11 @@
 #     emulated. The cross-architecture byte comparisons run in fan-in jobs (determinism-compare,
 #     strict-bit-compare) over artifacts the cells upload. The per-PR native strict-bit matrix is
 #     the standing native evidence; no retained receipt admits or skips any check.
+#   * The blob round trip (issue #403) has three legs and one recorded artifact: every determinism
+#     cell runs the suite natively and records its blobs and expected results, the x86_64 debug
+#     cell's recording is the artifact, determinism-compare requires all four recordings equal and
+#     replays the artifact on aarch64, and blob-round-trip-wasm replays it on wasm32-wasip1 under a
+#     checksum-pinned wasmtime.
 #   * Two platform observation cells run with the determinism lane: `portable-snapshot-macos`
 #     (`macos-15`, arm64, debug) runs the determinism subset, and portable-snapshot-compare checks
 #     that its portable snapshot equals the Linux cells' byte for byte and its target-bound
@@ -354,6 +360,23 @@ jobs:
           target/blobs-{debug,release}.bin
           target/determinism &&
           mkdir -p target/determinism
+      # The blob round trip (issue #403), recorded. For each of the 46 G36 fixtures the suite loads
+      # the CXF through the facade, encodes the blob, decodes it with the no_std entry and compares
+      # every output, warning and raw state word after every frame on this cell, then writes the
+      # blobs and those expected results to OCE_ROUND_TRIP_OUT. determinism-compare requires the
+      # four cells' recordings to be identical and replays the x86_64 debug recording natively on
+      # aarch64; blob-round-trip-wasm replays the same recording on wasm32-wasip1. These run before
+      # the subset, so the JUnit report the cell keeps is the subset's.
+      - name: blob round trip, recorded (debug codegen)
+        if: matrix.codegen == 'debug'
+        env:
+          OCE_ROUND_TRIP_OUT: target/determinism/round-trip
+        run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci --no-tests=fail
+      - name: blob round trip, recorded (release codegen)
+        if: matrix.codegen == 'release'
+        env:
+          OCE_ROUND_TRIP_OUT: target/determinism/round-trip
+        run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci-release --cargo-profile release --no-tests=fail
       # OCE_BLOB_OUT receives the 46 compiled-schedule blob goldens' bytes as this cell encodes them
       # (oce-api tests/blob_goldens.rs), concatenated in fixture order, for the fan-in comparison.
       - name: cargo nextest determinism subset (debug codegen)
@@ -372,7 +395,7 @@ jobs:
         run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
       # The codegen steps above are selected by the matrix; this step fails a cell in which neither
       # ran, so a matrix edit cannot turn a cell into a green no-op.
-      - name: Require the cell's nextest JUnit report, both state vectors and the blobs
+      - name: Require the cell's nextest JUnit report, both state vectors, the blobs and the round trip
         env:
           CELL_CODEGEN: ${{ matrix.codegen }}
         run: |
@@ -385,15 +408,18 @@ jobs:
           test -s "target/portable-state-$CELL_CODEGEN.bin"
           test -s "target/target-state-$CELL_CODEGEN.bin"
           test -s "target/blobs-$CELL_CODEGEN.bin"
+          test "$(ls target/determinism/round-trip | wc -l | tr -d ' ')" = 92
+          test -s target/determinism/round-trip/multizone_vav_relief_fan_group.trace.tsv
           cp "target/portable-state-$CELL_CODEGEN.bin" "target/target-state-$CELL_CODEGEN.bin" \
             "target/blobs-$CELL_CODEGEN.bin" target/determinism/
-      # The debug cell of each architecture also ships its built oce-api unit-test binary, so the
-      # fan-in can restore the other architecture's target-bound snapshot without recompiling.
-      - name: Archive the oce-api unit tests for the foreign-snapshot restore
+      # The debug cell of each architecture also ships its built oce-api unit-test binary and its
+      # blob round-trip suite, so the fan-in can restore the other architecture's target-bound
+      # snapshot and replay the x86_64 recording without recompiling.
+      - name: Archive the oce-api unit tests and the blob round trip for the fan-in
         if: matrix.codegen == 'debug'
-        run: >-
-          cargo nextest archive -p oce-api --lib --locked
-          --archive-file target/determinism/oce-api-lib.tar.zst
+        run: |
+          cargo nextest archive -p oce-api --lib --locked --archive-file target/determinism/oce-api-lib.tar.zst
+          cargo nextest archive -p oce-conformance --test blob_round_trip --locked --archive-file target/determinism/blob-round-trip.tar.zst
       - name: Upload the cell's state vectors
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -476,6 +502,29 @@ jobs:
           cmp determinism-aarch64-debug/blobs-debug.bin determinism-aarch64-release/blobs-release.bin
           cmp determinism-x86_64-debug/blobs-debug.bin determinism-aarch64-debug/blobs-debug.bin
           cmp determinism-x86_64-release/blobs-release.bin determinism-aarch64-release/blobs-release.bin
+      # The blob round trip (issue #403). Every cell recorded the same 92 files (a blob and a trace
+      # per fixture): debug against release, x86_64 against aarch64. Then this architecture's debug
+      # suite, archived by its own cell, decodes the blobs the x86_64 debug cell encoded and
+      # requires every output, warning and raw state word after every frame to equal that
+      # recording, while still comparing the facade with the entry locally. On aarch64 this is the
+      # round trip's arm64 leg; the wasm32 leg is blob-round-trip-wasm.
+      - name: Compare the blob round-trip recordings across codegen profiles and architectures
+        working-directory: target/determinism
+        run: |
+          for cell in determinism-x86_64-debug determinism-x86_64-release determinism-aarch64-debug determinism-aarch64-release; do
+            test "$(ls "$cell/round-trip" | wc -l | tr -d ' ')" = 92
+          done
+          diff -rq determinism-x86_64-debug/round-trip determinism-x86_64-release/round-trip
+          diff -rq determinism-x86_64-debug/round-trip determinism-aarch64-debug/round-trip
+          diff -rq determinism-x86_64-debug/round-trip determinism-aarch64-release/round-trip
+      - name: Replay the x86_64 debug recording through this architecture's blob round trip
+        env:
+          CELL_ARCH: ${{ matrix.arch }}
+        run: |
+          export OCE_ROUND_TRIP_EXPECT="$PWD/target/determinism/determinism-x86_64-debug/round-trip"
+          test -s "$OCE_ROUND_TRIP_EXPECT/ahu_economizer.trace.tsv"
+          cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/blob-round-trip.tar.zst" \
+            --workspace-remap . --profile ci --no-tests=fail
       - name: Refuse a target-bound snapshot from the other architecture
         env:
           CELL_ARCH: ${{ matrix.arch }}
@@ -487,6 +536,65 @@ jobs:
           cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/oce-api-lib.tar.zst" \
             --workspace-remap . --profile ci --no-tests=fail \
             -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
+
+  # The blob round trip's wasm32 leg (issue #403). The suite is compiled for wasm32-wasip1 and run
+  # under a checksum-pinned wasmtime (scripts/ci/install-wasmtime.sh, cached like mdBook) through
+  # the cargo target runner in .cargo/config.toml (scripts/ci/wasmtime-runner.sh, which exposes the
+  # workspace to the guest at its host path). It decodes the blobs the x86_64 debug cell encoded
+  # and requires every output, warning and raw state word after every frame to equal that cell's
+  # recording, and compares the facade with the entry inside the guest as well. wasm32-unknown-unknown
+  # stays a build-only target in no-std-build; a headless-browser run is M4's (the oce-wasm crate).
+  # It needs only determinism-matrix, so it runs in parallel with determinism-compare and can start
+  # before the four-way `diff -rq` there has accepted the recording. That is deliberate: CI OK
+  # requires both jobs, and the wasm leg consumes the x86_64 debug recording whose identity across
+  # the four cells the fan-in proves separately.
+  blob-round-trip-wasm:
+    name: blob round trip (wasm32-wasip1 under wasmtime)
+    needs: [changes, determinism-matrix]
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: blob-round-trip-wasm
+          cache-bin: false
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: nextest@0.9.143
+      - name: Install the wasm32-wasip1 target
+        run: rustup target add wasm32-wasip1
+      - name: Restore the verified wasmtime binary
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: target/wasmtime-bin
+          key: wasmtime-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/ci/install-wasmtime.sh') }}
+      - name: Install the checksum-pinned wasmtime
+        run: bash scripts/ci/install-wasmtime.sh target/wasmtime-bin
+      - name: Put the pinned wasmtime on PATH
+        run: |
+          echo "$PWD/target/wasmtime-bin" >> "$GITHUB_PATH"
+          target/wasmtime-bin/wasmtime --version
+      - name: Clear the cached recording and nextest report
+        run: rm -rf target/round-trip-recorded target/nextest/ci/junit.xml
+      - name: Download the x86_64 debug cell's recording
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: determinism-x86_64-debug
+          path: target/round-trip-recorded
+      - name: blob round trip on wasm32-wasip1 against the x86_64 debug recording
+        env:
+          OCE_ROUND_TRIP_EXPECT: target/round-trip-recorded/round-trip
+        run: |
+          test "$(ls target/round-trip-recorded/round-trip | wc -l | tr -d ' ')" = 92
+          wasmtime --version
+          cargo nextest run -p oce-conformance --test blob_round_trip --target wasm32-wasip1 --locked --profile ci --no-tests=fail
+      - name: Require the nextest JUnit report
+        run: test -s target/nextest/ci/junit.xml
 
   # Platform observation cells (issue #394): macOS arm64 and Windows x86_64. They run with the
   # determinism lane and CI OK requires them, but neither qualifies its platform: the strict-bit
@@ -1060,6 +1168,7 @@ jobs:
       - unused-deps
       - determinism-matrix
       - determinism-compare
+      - blob-round-trip-wasm
       - portable-snapshot-macos
       - portable-snapshot-compare
       - std-build-windows
@@ -1091,6 +1200,7 @@ jobs:
             unused-deps=core
             determinism-matrix=core
             determinism-compare=core
+            blob-round-trip-wasm=core
             portable-snapshot-macos=core
             portable-snapshot-compare=core
             std-build-windows=core

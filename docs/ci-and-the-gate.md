@@ -52,7 +52,8 @@ The per-PR gate runs **once per change**, on the pull request:
 ### Lanes: what a PR runs
 
 `pr-gate.yml` has two lanes under the one `CI OK`. The **determinism lane** is every job that
-compiles the engine: the determinism and strict-bit matrices and their fan-ins, the x86_64 crate
+compiles the engine: the determinism and strict-bit matrices and their fan-ins, the
+[blob round trip](#the-blob-round-trip)'s wasm32 leg, the x86_64 crate
 suites, clippy, build, the [bare-metal cell](#the-bare-metal-cell), rustdoc,
 cargo-deny, cargo-machete, the database-free check, the golden-gen firewall and hygiene jobs, the
 facade contract and Quickstart, and the
@@ -131,6 +132,7 @@ x86_64 and arm64 never share one):
 | `clippy`, `build`, `rustdoc`, `default-no-db` | the job of that name | the job of that name |
 | `facade-contract`, `leverage` | `facade contract and Quickstart`, `leverage lane` | — |
 | `nextest-macos`, `workspace-windows` | `portable snapshot (macOS arm64, debug)`, `std build and nextest (Windows x86_64, debug)` | — |
+| `blob-round-trip-wasm` | `blob round trip (wasm32-wasip1 under wasmtime)` | — |
 
 For the like-named pairs this only makes explicit what their identical job ids already did
 (rust-cache's default key component is the job id); the `nextest` key is the new link. The release-gate `test-suite` entry is a superset (the whole workspace, both codegens), which
@@ -157,6 +159,14 @@ download from the critical path (it returned HTTP 504 for over an hour on 2026-1
 second download source on purpose: `cargo install mdbook --locked` would compile mdBook for minutes on
 every cold run, and GitHub's API asset URL is served by the same CDN, so the cache is the mitigation. A
 cold cache during an outage still fails, loudly.
+
+**wasmtime.** The [blob round trip](#the-blob-round-trip)'s wasm32 leg and `gate (full)` get
+wasmtime the same way, from `scripts/ci/install-wasmtime.sh`: version 50.0.1, the SHA-256 of each
+supported platform's release archive (the digest GitHub records for the asset) and of the binary
+inside it pinned in the script, restored first from an `actions/cache` keyed on
+`hashFiles('scripts/ci/install-wasmtime.sh')` with no `restore-keys`, and trusted from the cache
+only when the binary's digest is the pinned one. The job prints `wasmtime --version` before the run.
+Bump the version by replacing every digest in the script in one change.
 
 Branch protection on `development` makes the PR run the only way in: a pull request is required,
 the `CI OK` status is required, and the branch must be up to date with `development` before it
@@ -195,7 +205,7 @@ report.
 [`.agents/gate.sh`](../.agents/gate.sh) is the only place the gate's command list is written down.
 Every other document in this repo — including this page — points at it rather than restating it,
 because nine divergent prose copies existed before the script was written and two of them were
-materially weaker than CI (see the script's header). There are three gate invocations and two
+materially weaker than CI (see the script's header). There are three gate invocations and three
 focused ones:
 
 ```
@@ -204,6 +214,8 @@ bash .agents/gate.sh full       # full     — adds the workspace suite and doct
 bash .agents/gate.sh leverage   # leverage — mirrors a PR confined to crates/leverage/
 bash .agents/gate.sh nostd      # nostd    — the bare-metal cell alone (light and full run it too)
 bash .agents/gate.sh qemu       # qemu     — the nightly emulation check (needs QEMU installed)
+bash .agents/gate.sh roundtrip  # roundtrip — the blob round trip: record on this host, replay it
+                                #             here and on wasm32-wasip1 (full runs it too)
 ```
 
 CI does not merely mirror that script, it **executes** it: the `gate (light)` job at
@@ -335,6 +347,7 @@ and x86_64 against aarch64 — and each file 123,329 bytes, the goldens' total, 
 artifact cannot pass ([compiled-schedule blob](compiled-schedule-blob.md), GitHub #400).
 `bash .agents/gate.sh full` writes the artifact the same way and checks its size.
 Nothing is emulated; every test in the subset runs in every cell.
+
 The gate script runs the test commands locally and adds two named
 `oce-cxf` test binaries, which are input hygiene rather than
 engine coverage: the port-order audit sweeps 47 CXF documents, of which 46 are Guideline 36 catalog
@@ -359,6 +372,28 @@ there is no fallback to emulation and no skipped cell.
 The remainder waits for the release/full gate. A change outside the named test subsets can show
 a fully green PR having executed none of its own tests.
 Before claiming tests pass, run `bash .agents/gate.sh full` first-hand and read the tail.
+
+### The blob round trip
+
+The `blob_round_trip` suite in `oce-conformance` (issue #403) loads each of the 46 G36 fixtures
+through the facade, encodes its blob, decodes it with the `no_std` execution entry, runs the same
+160 frames through both and compares every boundary output, every warning and the raw state words
+after every frame, bit for bit
+([compiled-schedule blob](compiled-schedule-blob.md#the-blob-round-trip)). It has three legs and
+one recorded artifact, all under `CI OK`:
+
+| Leg | Where | What it does |
+| --- | --- | --- |
+| x86_64 (records) | every `determinism-matrix` cell, before the subset; the x86_64 debug cell's recording is the artifact | runs the suite natively with `OCE_ROUND_TRIP_OUT=target/determinism/round-trip`: 46 blobs and 46 traces, uploaded with the cell's vectors |
+| aarch64 (replays) | `determinism-compare`, aarch64 leg | requires all four cells' recordings identical (`diff -rq`, 92 files each), then runs the suite its own debug cell archived with `OCE_ROUND_TRIP_EXPECT` pointing at the x86_64 debug recording: it decodes the blobs x86_64 encoded and compares its run with the recorded one. The x86_64 leg runs the same replay. |
+| wasm32 (replays) | `blob round trip (wasm32-wasip1 under wasmtime)`, on `ubuntu-latest` after the matrix | compiles the suite for `wasm32-wasip1` and runs it under the pinned wasmtime through the cargo target runner in `.cargo/config.toml` (`scripts/ci/wasmtime-runner.sh`, which shows the guest the workspace at its host path and passes only the two round-trip variables and `RUST_BACKTRACE`), against the same recording |
+
+Every leg also compares the facade with the entry on its own target, the blob bytes with the
+checked-in goldens and the entry's run with the pinned run digests. `wasm32-unknown-unknown` stays a
+build-only target in the [bare-metal cell](#the-bare-metal-cell); a headless-browser run belongs to
+the `oce-wasm` crate (M4). `bash .agents/gate.sh roundtrip` (and `full`) records on the local host
+and replays the recording there and on `wasm32-wasip1`; it fails, naming the install command, when
+the target or wasmtime is missing. The second native architecture is CI's alone.
 
 ## Every pull request runs the gate
 
@@ -463,6 +498,9 @@ in every per-PR build, are the only pinned surface.
   arm64, and the workspace build and suite (without the strict-bit binaries) in debug on Windows.
   Every other job, and the whole release gate, runs on Linux x86_64 only: nothing runs release
   codegen or doctests on macOS or Windows, and no strict-bit result is observed on either.
+- **WebAssembly beyond one runtime.** The blob round trip's wasm32 leg runs `wasm32-wasip1` under
+  one pinned wasmtime release (Cranelift, x86_64 host). No browser engine, other runtime or
+  `wasm32-unknown-unknown` build is executed per PR.
 - **Execution on a bare-metal target, per PR.** The [bare-metal cell](#the-bare-metal-cell)
   builds the firmware image and measures it; only the [nightly emulation
   run](#the-nightly-emulation-run) executes it, under QEMU, after the PR has merged. No CI job runs
