@@ -5,14 +5,13 @@ the architecture and invariants are the design of record.
 
 ## Where the project lives
 
-- **GitHub is the primary host:** `github.com/jscott3201/open-control-engine`. Clone from, push
+- **GitHub is the host:** `github.com/jscott3201/open-control-engine`. Clone from, push
   branches to, open pull requests and file issues there. CI runs on GitHub Actions
-  (`.github/workflows/`, Linux only).
-- The self-hosted Forgejo instance that was primary until October 2026 is retired and no longer
-  mirrors anything.
-- **PR numbers overlap.** GitHub PR numbers collide with the retired Forgejo numbering: Forgejo
-  #332 (the Forgejo CI port) and GitHub #332 are different changes. Bare `(#N)` citations predate
-  the move; cite every PR merged on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
+  (`.github/workflows/`): Linux runners plus the macOS and Windows observation cells.
+- **PR numbers overlap.** Pull requests merged on the previous host before the October 2026 move
+  to GitHub share numbers with GitHub PRs (#332 names two different changes). Bare `(#N)`
+  citations predate the move; cite every PR merged on GitHub as `(GitHub #N)` in `CHANGELOG.md`
+  and the docs.
 
 ## How changes land
 

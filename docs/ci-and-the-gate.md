@@ -20,8 +20,7 @@ byte-bound by their own approval and evidence manifests, so they keep tag refere
 next reviewed refresh.
 The `ci.yml` in that directory is not the CI: it is the GitHub-era gate that produced the
 [retained strict-bit capture archives](strict-bit-evidence.md#retained-native-archives), stays
-byte-identical as their history, and is disabled in the repository's Actions settings. (CI briefly ran on
-a self-hosted Forgejo instance, now retired.)
+byte-identical as their history, and is disabled in the repository's Actions settings.
 
 Each gating workflow ends in a `CI OK` job that needs every other job and fails unless each one
 succeeded — or, in `pr-gate.yml` only, was skipped by its [lane filter](#lanes-what-a-pr-runs);
