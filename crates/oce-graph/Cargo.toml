@@ -23,3 +23,6 @@ thiserror = { workspace = true }
 default = ["std"]
 std = ["alloc", "oce-model/std", "oce-blocks/std", "thiserror/std"]
 alloc = ["oce-model/alloc", "oce-blocks/alloc"]
+
+[dev-dependencies]
+allocation-counter = "0.8.1"

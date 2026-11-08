@@ -199,6 +199,7 @@ dependencies = [
 name = "oce-graph"
 version = "0.3.0"
 dependencies = [
+ "allocation-counter",
  "oce-blocks",
  "oce-model",
  "thiserror",

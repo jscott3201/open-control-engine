@@ -858,6 +858,12 @@ jobs:
   # #399) can fail: it re-probes which `f64` methods `core` has, checks `clippy.toml` lists every
   # other one and the lint's `src/` scope holds, and requires `std` float-method mutations in
   # oce-blocks and oce-expr, in a workspace copy, to fail clippy.
+  # The blob execution entry (issue #401) adds two steps: `check-no-std-entry-closure.sh` requires
+  # the `no_std` oce-graph closure to hold no oce-cxf, oce-api, serde_json or std (with controls
+  # that must trip), and the `blob_execution` and `blob_state_words` suites run against the
+  # `no_std + alloc` build of oce-graph linked into a `std` test binary: every golden decodes, runs
+  # 160 frames with zero allocations, and matches the run digests the facade's dual-path test
+  # checks; the census lines print with `--nocapture`.
   no-std-build:
     name: no_std + alloc core build
     needs: changes
@@ -891,6 +897,11 @@ jobs:
       - name: oce-expr unit suite without std (program-wide fuel meter)
         run: >-
           cargo test -p oce-expr --no-default-features --features alloc --lib --locked -- --test-threads=1
+      - name: blob entry closure (no oce-cxf, oce-api, serde_json or std)
+        run: bash scripts/ci/check-no-std-entry-closure.sh
+      - name: blob entry suites against the no_std build (census, digests, state words)
+        run: >-
+          cargo test -p oce-graph --no-default-features --features alloc --test blob_execution --test blob_state_words --locked -- --nocapture
 
   rustdoc:
     name: rustdoc (-D warnings)
