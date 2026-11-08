@@ -84,3 +84,19 @@ disallowed-methods = [
   { path = "f32::atanh", reason = "std-only float method: call the core crate's `math` module (libm) instead (issue #399)" },
   { path = "f32::abs_sub", reason = "std-only float method: call the core crate's `math` module (libm) instead (issue #399)" },
 ]
+
+# ── Ordered collections only in the core (issue #398) ────────────────────────
+# The core four feed the schedule, the state image and exported names, so they use no hash
+# collections. `disallowed_types` is allowed workspace-wide in `Cargo.toml` and denied in each core
+# crate root, so this list binds only the core four; the `std` crates keep hash maps for lookup and
+# `clippy::iter_over_hash_type` plus `crates/oce-api/tests/hash_order_independence.rs` keep their
+# iteration order out of every output. `crates/oce-api/tests/core_crates_hash_free.rs` also refuses
+# the non-std spellings (`hashbrown`, `ahash`, `indexmap`, ...), which this list cannot name
+# because none of them is a dependency.
+disallowed-types = [
+  { path = "std::collections::HashMap", reason = "hash iteration order is per-process random; the no_std core uses BTreeMap/BTreeSet or a sorted Vec (issue #398)" },
+  { path = "std::collections::HashSet", reason = "hash iteration order is per-process random; the no_std core uses BTreeMap/BTreeSet or a sorted Vec (issue #398)" },
+  { path = "std::collections::hash_map::RandomState", reason = "hash iteration order is per-process random; the no_std core uses BTreeMap/BTreeSet or a sorted Vec (issue #398)" },
+  { path = "std::hash::DefaultHasher", reason = "hash iteration order is per-process random; the no_std core uses BTreeMap/BTreeSet or a sorted Vec (issue #398)" },
+  { path = "std::hash::BuildHasherDefault", reason = "hash iteration order is per-process random; the no_std core uses BTreeMap/BTreeSet or a sorted Vec (issue #398)" },
+]

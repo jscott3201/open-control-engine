@@ -157,7 +157,8 @@ No hash-collection iteration order reaches the snapshot bytes, or any other outp
 golden observes. `std`'s `HashMap` and `HashSet` iterate in an order seeded per thread from the OS,
 so an order that leaked would differ between two runs on the same build and target. The state image
 is built from the schedule, block and connector arrays of the `no_std` core crates, which contain no
-hash collections at all (`tests/core_crates_hash_free.rs` refuses one). The `std` crates keep hash
+hash collections at all (clippy's `disallowed-types` and `tests/core_crates_hash_free.rs` refuse
+one). The `std` crates keep hash
 maps for lookup, and every place one is iterated either sorts first or cannot affect what is emitted;
 `clippy::iter_over_hash_type` is denied workspace-wide, so a new `for` loop over one needs a stated
 reason. `tests/hash_order_independence.rs` loads all 46 G36 fixtures and the resolver-contract

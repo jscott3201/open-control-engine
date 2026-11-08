@@ -2,6 +2,8 @@
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
 // `clippy.toml` lists every `std`-only float method; the core calls `math` (libm) instead (#399).
 #![deny(clippy::disallowed_methods)]
+// `clippy.toml` lists `std`'s hash collections; the core uses ordered collections only (#398).
+#![deny(clippy::disallowed_types)]
 //! `oce-expr` — the CDL §7.7.2 binding-expression parser/evaluator for the Open Control
 //! Engine.
 //!

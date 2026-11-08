@@ -43,3 +43,5 @@ serde_json = "1.0"
 # crates (`Cargo.toml` `[workspace.lints.clippy]`).
 [lints.clippy]
 disallowed_methods = "allow"
+# Likewise the root `clippy.toml` hash-collection list (issue #398) binds only the core four.
+disallowed_types = "allow"

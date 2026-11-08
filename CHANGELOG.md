@@ -93,9 +93,12 @@ and a gate that accepted any text would restore exactly the false assurance desc
   load errors and failure receipts the same way. A synthetic `HashMap`-order emitter run through
   the same harness must diverge, so the test cannot pass by reusing one seed; swapping the
   schedule's min-heap, the `input_definitions()` sort or the resolver's diagnostic sort for hash
-  order each fails it. `oce-api/tests/core_crates_hash_free.rs` keeps hash collections and hash
-  crates out of `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph`, and
-  `clippy::iter_over_hash_type` is denied workspace-wide. The audit of `oce-api`, `oce-cxf`,
+  order each fails it. `clippy.toml` gains a `disallowed-types` list (`std`'s `HashMap`,
+  `HashSet`, `RandomState`, `DefaultHasher`, `BuildHasherDefault`), allowed workspace-wide and
+  denied in the roots of `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph`, so it binds only
+  those four; `oce-api/tests/core_crates_hash_free.rs` checks that wiring and also refuses
+  `hashbrown`, `ahash`, `indexmap` and similar crates there. `clippy::iter_over_hash_type` is
+  denied workspace-wide. The audit of `oce-api`, `oce-cxf`,
   `oce-validate` and `oce-store` found every output already canonical. Two resolver
   single-assignment refusals now also push in connector / IRI order (they were already sorted
   before leaving the resolver). `MemStore::list_models` now returns keys sorted rather than in

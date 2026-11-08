@@ -2,6 +2,8 @@
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
 // `clippy.toml` lists every `std`-only float method; the core calls `math` (libm) instead (#399).
 #![deny(clippy::disallowed_methods)]
+// `clippy.toml` lists `std`'s hash collections; the core uses ordered collections only (#398).
+#![deny(clippy::disallowed_types)]
 //! `oce-blocks` — the native CDL elementary-block library and the [`Block`] trait for the
 //! Open Control Engine (`03-block-library.md`).
 //!

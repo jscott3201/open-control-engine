@@ -196,8 +196,9 @@ executes:
   model, schedule, topology, frame outputs and snapshot bytes must match across all 20. Its control
   runs a synthetic `HashMap`-order emitter through the same harness and requires a divergence. Swap a
   `BTreeMap`, a sort or the schedule's min-heap for hash iteration and this test names the output
-  and fixture that moved. `core_crates_hash_free.rs` keeps hash collections out of the four
-  `no_std` crates, and `clippy::iter_over_hash_type` is denied workspace-wide.
+  and fixture that moved. In the four `no_std` crates, clippy's `disallowed-types` refuses
+  `std`'s hash types, and `core_crates_hash_free.rs` refuses every hash collection or hash crate
+  and checks the lint wiring. `clippy::iter_over_hash_type` is denied workspace-wide.
 - **Tick determinism.** Run the same model for N ticks twice; the traces must be bit-equal.
 - **Diagnostic determinism.** Diagnostics are sorted deterministically (e.g. by `ConnectorId`);
   assert the order, not just the set.

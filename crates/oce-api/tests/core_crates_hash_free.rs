@@ -8,9 +8,12 @@
 //! feature; this test also refuses the spellings that would compile there (`hashbrown`, `ahash`,
 //! `indexmap`, a hand-rolled `BuildHasher`) and any use gated behind the `std` feature.
 //!
-//! A clippy `disallowed-types` entry cannot express this: `clippy.toml` is read once for the whole
-//! workspace (the nearest file wins, files do not merge), so it would also refuse the lookup-only
-//! hash maps of the `std` crates `oce-api`, `oce-cxf`, `oce-validate` and `oce-store`.
+//! Two layers enforce it. Clippy's `disallowed-types` list in `clippy.toml` names `std`'s hash
+//! types, and binds only the four: the lint is allowed workspace-wide in `Cargo.toml` and denied in
+//! each core crate root, because `clippy.toml` is read once for the whole workspace and the `std`
+//! crates keep lookup-only hash maps. [`clippy_hash_type_ban_binds_exactly_the_core_crates`] keeps
+//! that wiring from being dropped. This scan is the second layer: it also catches spellings clippy
+//! cannot name because they are not dependencies (`hashbrown`, `ahash`, `indexmap`).
 //!
 //! The scan reads code, not comments: text after `//` is ignored, so documentation may name the
 //! types it rules out. A string literal containing `//` hides the rest of its line; none of the
@@ -174,4 +177,41 @@ std = [\"serde/std\"]
         vec!["hashbrown", "ahash", "indexmap"]
     );
     assert!(hash_crate_dependencies_in("[dependencies]\nserde = \"1\"\n").is_empty());
+}
+
+fn workspace_file(relative: &str) -> String {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(relative);
+    fs::read_to_string(&path).unwrap_or_else(|error| panic!("read {}: {error}", path.display()))
+}
+
+#[test]
+fn clippy_hash_type_ban_binds_exactly_the_core_crates() {
+    let config = workspace_file("clippy.toml");
+    let types = config
+        .split_once("disallowed-types")
+        .map(|(_, rest)| rest)
+        .expect("clippy.toml has a disallowed-types list");
+    for banned in ["std::collections::HashMap", "std::collections::HashSet"] {
+        assert!(
+            types.contains(&format!("path = \"{banned}\"")),
+            "clippy.toml disallowed-types no longer names {banned}"
+        );
+    }
+    let manifest = workspace_file("Cargo.toml");
+    assert!(
+        manifest
+            .lines()
+            .any(|line| line.trim() == "disallowed_types = \"allow\""),
+        "the workspace must allow disallowed_types so the std crates keep their lookup maps"
+    );
+    for name in CORE_CRATES {
+        let root = workspace_file(&format!("crates/{name}/src/lib.rs"));
+        assert!(
+            root.lines()
+                .any(|line| line.trim() == "#![deny(clippy::disallowed_types)]"),
+            "{name}/src/lib.rs must deny clippy::disallowed_types"
+        );
+    }
 }
