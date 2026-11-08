@@ -39,6 +39,38 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Execution core
 
+- **One HostTick v1 frame driver, in the core, and the `no_std` blob execution entry**
+  (GitHub #PRNUM, issue #401; design note decision 11). The frame around `eval_tick` — time checks
+  (finite, `|t| ≤ MAX_FRAME_TIME_MAGNITUDE`, nondecreasing, a finite step, representable by every
+  stateful block), per-slot input checks (exact type, then the non-finite policy, then the declared
+  domain), the accepted-frame sequence, staging into every fan-out target, the single evaluation
+  and the previous-time update — moves from `oce-api` into `oce_graph::frame` as a slot-indexed,
+  name-free `FrameDriver` with a typed `FrameRefusal`. `MAX_FRAME_TIME_MAGNITUDE` and
+  `NonFiniteInputPolicy` move with it; `oce-api` re-exports both, so host code is unchanged. The
+  facade keeps name resolution, the unknown/duplicate/missing refusals, the prepared plan and its
+  incarnation token, the load and pending-edit preconditions, the durable-restore window, replay
+  records and the owned `CompletedFrame`; its refusal order, goldens, replay records, snapshot
+  bytes and per-frame allocation census are unchanged, and every existing facade test passes
+  unmodified. New: `oce_graph::blob::Executable`, the `no_std + alloc` entry a bare-metal or WASM
+  target links — `from_blob(&[u8])`, the I/O table with `input_slot`/`output_slot`,
+  `execute_frame(time, &[Value], diagnostics)` by slot through the same driver (default policy
+  `Admit`, as on the facade), borrowed outputs by slot, `target_bound`, and the state as raw words
+  (`state_words`, `restore_state_words`, refused with a typed `StateWordsRefusal` on a wrong length,
+  non-initial words before the first frame, or a region its block's state contract rejects). Its
+  rustdoc example is a `no_implicit_prelude` firmware-shaped module over a blob golden,
+  compile-tested. Evidence: the dual-path test now runs every G36 fixture's 160 frames through the
+  facade, the core driver on a second load and the blob entry, plus the same bad frames (NaN time,
+  time going backwards, a wrong type, a non-finite Real under `Refuse`, a value above a bound), and
+  compares outputs, refusals, clock, sequence and the whole `RunState` bit for bit after every frame
+  and refusal; the facade's run must reproduce a per-fixture digest table
+  (`crates/oce-graph/tests/fixtures/blob_frame_digests.tsv`) that `oce-graph`'s new
+  `blob_execution` test checks against the entry built `no_std + alloc`, in the same census binary
+  that requires zero allocations over all 7,360 frames (decode counted, 6,013 allocations across
+  the 46 goldens). `frame_driver_ownership.rs` refuses a facade source that re-implements a frame
+  rule; `scripts/ci/check-no-std-entry-closure.sh` requires the `no_std` `oce-graph` closure to hold
+  no `oce-cxf`, `oce-api`, `serde_json` or `std`, with controls; both new steps run in
+  `no-std-build` and `bash .agents/gate.sh`. The [product contract](docs/product-contract.md)
+  advances to revision 20 (grounding and evidence anchors only).
 - **The `OCEB` compiled-schedule blob: `Engine::compile_blob` encodes the loaded executable and
   `oce_graph::blob::decode` decodes it on a `no_std + alloc` target** (GitHub #438, issue #400;
   format and decisions in `docs/design/compiled-schedule-blob.md`, contract in
