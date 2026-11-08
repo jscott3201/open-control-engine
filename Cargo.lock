@@ -205,7 +205,9 @@ version = "0.3.0"
 dependencies = [
  "oce-api",
  "oce-bless",
+ "oce-blocks",
  "oce-diag",
+ "oce-graph",
  "oce-model",
  "regex",
  "ryu",
