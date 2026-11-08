@@ -47,8 +47,17 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Restore verified mdBook binary
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: target/mdbook-bin
+          key: mdbook-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('site/mdbook-checksums.txt', 'scripts/docs/install-mdbook.sh') }}
+
       - name: Install checksum-pinned mdBook
         run: bash scripts/docs/install-mdbook.sh target/mdbook-bin
+
+      - name: Test mdBook installer verify-or-reinstall contract
+        run: bash scripts/docs/test-install-mdbook.sh
 
       - name: Test documentation checker contracts
         run: python3 scripts/docs/test_check_links.py
