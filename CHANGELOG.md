@@ -105,6 +105,15 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `HashMap` order. Goldens are byte-identical. Method-call iteration as a clippy error follows in
   issue #432.
 
+### Documentation
+
+- The README states where the project is and where it is going (GitHub #434): a status and
+  roadmap section (v0.3.0 as M1a, M1b in progress toward v0.4.0, M2–M9 as planned), the
+  `no_std + alloc` core and its math and collection discipline under "What it does today", the
+  per-PR native strict-bit evidence in place of the retired retained receipt, and documentation
+  table rows for the product contract, state compatibility, strict-bit evidence, facade migration
+  and the design notes.
+
 ## 0.3.0
 
 Prepared 2026-11-08 on `development`; the release date is the date the `v0.3.0` tag is cut from

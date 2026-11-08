@@ -20,6 +20,10 @@ no database. Everything non-computational — points, trends, tags, durability �
 storage port your application implements. That split is not a design preference; it is CDL §7.17,
 which states that such metadata does not affect the computation of a control signal.
 
+Its four execution-core crates build `#![no_std]` on `core` and `alloc` alone, and the work in
+progress lets a verified sequence leave a `std` host as a compiled-schedule blob that a bare-metal
+or WASM target executes without the CXF importer. See [Status and roadmap](#status-and-roadmap).
+
 Today it loads and simulates **46 ASHRAE Guideline 36 sequence fixtures** against a registry of
 **133 CDL block classes**\*. It is **pre-1.0 and not published to crates.io**.
 
@@ -134,6 +138,16 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   persistence, `oce_store::host::persist_loaded_model` runs the post-load recover → save →
   validate-inputs sequence against any adapter behind the storage port (or the in-memory
   `oce_store::MemStore`).
+- Builds its execution core — `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` —
+  `no_std + alloc` behind a default `std` feature, checked for `thumbv7em-none-eabihf` and
+  `wasm32-unknown-unknown` on every pull request. Every `f64` operation `core` lacks goes through
+  `libm`, bit-identical to the `std` methods, and clippy refuses `std` float methods and hash
+  collections inside those four crates. See
+  [the core four](docs/architecture.md#no_std--alloc-the-core-four).
+- Proves determinism per pull request rather than asserting it: goldens on x86_64 and arm64
+  natively, a populated portable state snapshot compared byte for byte across the two, a
+  per-frame allocation census, and a hash-order-independence test that loads every fixture under
+  twenty independently seeded hashers and requires identical outputs, receipts and snapshot bytes.
 
 ## What it does not do
 
@@ -164,6 +178,38 @@ Stating this plainly is more useful than a feature list.
 - **Assertion events and `AssertLevel` are Warning-only.** `AssertLevel::default()` is now
   `Warning`; the never-emitted `AssertLevel::Error` variant was removed. This adds no escalation
   or safety policy. See [facade migration](docs/facade-migration.md).
+
+---
+
+## Status and roadmap
+
+The current release is **v0.3.0** (milestone M1a, November 2026): the engine is pure, the reserved
+crates and the pre-1.0 compatibility ledgers are gone, and the per-PR gate runs natively on x86_64
+and arm64 under one required `CI OK` status. Work since then on `development` builds the execution
+core `no_std + alloc` and ratchets the math and collection discipline that keeps it there; see
+[CHANGELOG.md](CHANGELOG.md).
+
+Work is planned as GitHub milestones and cut into issues. Each milestone has a tracking issue that
+lists the order, the hard dependencies and the gate that closes it. The engine milestones, in order:
+
+| Milestone | Goal | State |
+| --- | --- | --- |
+| **M1a** Portable core: cleanup | Pure `Engine`, dead crates and ledgers removed, two CI lanes, native determinism and strict-bit matrices | Released as v0.3.0 |
+| **M1b** Portable core: `no_std` | Core four build `no_std + alloc`; math through `libm`; hash-free core; the **OCEB** compiled-schedule blob (encoder in `oce-api`, decoder in `oce-graph`, byte-stable across architectures); a `no_std` execution entry that never links `oce-cxf` or `oce-api`; a bare-metal gate cell with a size budget over `thumbv7em`, `riscv32imac` and `wasm32`; QEMU execution nightly | In progress, [tracking issue #406](https://github.com/jscott3201/open-control-engine/issues/406); closes as v0.4.0 |
+| **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | Planned, in parallel with M3 |
+| **M3** Verification product | Canonical content id, vector format v2, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode | Planned, in parallel with M2 |
+| **M4** WASM | `oce-wasm` over `oce-api`, a TypeScript package, a browser demo that replays vectors without a server, a tracked `.wasm` size budget | Planned, in parallel with M5 |
+| **M5** Python | `oce-py` wheels (PyO3, abi3) over the same surface; replay and receipts from a notebook | Planned, in parallel with M4 |
+| **M6** Reference host | `oce-host`: cadence, staleness limits, the non-finite policy, degraded mode and safe-state outputs as tested code; BOPTEST client and a Docker runtime | Planned, in parallel with M7 |
+| **M7** Composite lowering | Composites first-class on import, with canonical lowering order and a content id equal to the flattened form, so the library ships reusable routines | Planned, in parallel with M6 |
+| **M8** Semantics | `SemanticPoint` records (Brick, 223P, QUDT, Haystack) carried through import and export without the tick ever reading them; `oce-bind` matches a building graph to a sequence | Planned |
+| **M9** BACnet device image | One `no_std` image that is a BACnet device: compiled sequence inside, boundary points as objects, MS/TP or B/IP outside, over rusty-bacnet | Planned |
+
+Three one-page design passes (historical replay API, the CDL §12 commissioning verifier, and
+`oce-diff`) are answered before M3's crates start. Design notes for thinly specified work land in
+[`docs/design/`](docs/design/compiled-schedule-blob.md) before code; the OCEB blob format is the
+first. Sequences, routines and their test vectors live in the separate `open-control-library`;
+this repository keeps only the minimal conformance corpus.
 
 ---
 
@@ -211,10 +257,12 @@ the two standalone `CDL.Logical.Pre` goldens.
 399 retain their existing exact comparisons, including all 135 G36 sequence goldens. The other
 21 transcendental, psychrometric, and solar Real goldens compare exactly on qualified Linux
 x86_64/aarch64 debug/release and retain the unchanged 1e-12 aligned band on unqualified targets.
-The [retained strict-bit evidence](docs/strict-bit-evidence.md) bounds that Linux result to the
-pinned corpus, rustc and libm; it is not mathematical correctness or arbitrary-input proof.
-The scoped strict-bit subset and its four suite binaries now run per-PR in four native Linux
-cells with repeat captures; the remainder of `oce-conformance` still needs the release/full gate.
+That Linux result is re-established on every pull request: the scoped strict-bit subset and its
+four suite binaries run in four native Linux cells (x86_64 and aarch64, debug and release) with
+repeat captures and a cross-cell comparison, and no source file is bound to a stored receipt any
+more ([strict-bit evidence](docs/strict-bit-evidence.md)). It bounds the claim to the pinned
+corpus, rustc and libm; it is not mathematical correctness or arbitrary-input proof. The remainder
+of `oce-conformance` still needs the release/full gate.
 
 Two global report tiers are **not wired**, and no complete G36 sequence here has been executed against an
 external Modelica / Buildings toolchain. The separate OpenModelica evidence covers exhaustive
@@ -243,6 +291,11 @@ repository is the newer copy.
 | [CXF round trip](docs/cxf-round-trip.md) | Export guarantees, and where it silently drops things |
 | [CXF composite subset](docs/cxf-composite-subset.md) | Normative contract for external CXF emitters |
 | [Host responsibilities](docs/host-responsibilities.md) | What you must implement before driving equipment |
+| [Product contract](docs/product-contract.md) | The versioned executable-CXF / HostTick boundary and its evidence map |
+| [State compatibility](docs/state-compatibility.md) | Snapshot and checkpoint bytes: what is portable, what is target-bound |
+| [Strict-bit evidence](docs/strict-bit-evidence.md) | What the per-PR native matrix proves about exact Real results |
+| [Facade migration](docs/facade-migration.md) | Pre-1.0 source breaks and how to move across them |
+| [Design notes](docs/design/compiled-schedule-blob.md) | One-page decisions written before thinly specified work; currently the OCEB blob format |
 | [CI and the gate](docs/ci-and-the-gate.md) | What runs when, and what a green check proves |
 | [Benchmarks](docs/benchmarks.md) | Measured tick throughput, per run |
 | [Testing standard](TESTING.md) | The bar every change is held to |
@@ -257,12 +310,15 @@ with `bash scripts/install-hooks.sh`, and run `bash .agents/gate.sh` before open
 script is the single source of truth for what CI runs.
 
 Read **[CONTRIBUTING.md](CONTRIBUTING.md)** first, and **[TESTING.md](TESTING.md)** before writing a
-test. Notable changes are in **[CHANGELOG.md](CHANGELOG.md)**.
+test. Notable changes are in **[CHANGELOG.md](CHANGELOG.md)**. Coding agents start from
+**[AGENTS.md](AGENTS.md)**, the issue-driven milestone workflow this repository runs on.
 
 One thing worth knowing up front: the per-PR gate runs the `oce-api`, `oce-blocks`, and `oce-expr`
 state-determinism subset plus the scoped `oce-conformance` strict-bit subset. Changes outside
 those and the named input-hygiene audits can show every check green without running their own
-tests. [CI and the gate](docs/ci-and-the-gate.md) explains the split.
+tests. The gate also has two lanes under the one `CI OK`: a documentation-only change compiles
+nothing, a change under `crates/leverage/` runs the lighter leverage lane, and anything else runs
+the full determinism lane. [CI and the gate](docs/ci-and-the-gate.md) explains the split.
 
 ---
 
