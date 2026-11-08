@@ -193,7 +193,8 @@ The exact rows are classified without replacing these signature baselines by the
   aarch64 emulated, debug and release. macOS and Windows are not built or tested anywhere.
 - **Native aarch64 execution.** The per-PR gate runs its aarch64 legs under QEMU user-mode
   emulation on x86_64. The retained native qualification in `qualified-linux/` is still verified
-  on every PR, but a new native aarch64 capture needs a native arm64 runner (`ubuntu-24.04-arm`,
+  on every PR (during the M1 `recapture-pending` window without its source-digest binding; see
+  [the status](strict-bit-evidence.md)), but a new native aarch64 capture needs a native arm64 runner (`ubuntu-24.04-arm`,
   today used only by the manual OpenModelica evidence workflows).
 - **Anything derived from git history.** No workflow sets `fetch-depth`, so `actions/checkout`
   takes its default of a single commit. A check that needs history cannot run in CI. The visible

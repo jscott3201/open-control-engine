@@ -6,5 +6,13 @@
   "current": {
     "git_revision": "fbae3b96b053836b916f603a0d86c53d30bce628",
     "matrix_sha256": "78c5efaf4881977d306fc1f7a09c51f37cf897be338558d14aee9c2313d035d9"
+  },
+  "status": "recapture-pending",
+  "pending": {
+    "since": "2026-11-08",
+    "reason": "The M1 refactor window deliberately changes bound sources (Cargo.toml, Cargo.lock, crates/oce-model/src/lib.rs, .config/nextest.toml, .agents/gate.sh and the strict-bit checker itself). Source binding of the current receipt is suspended until one native re-capture is admitted at the end of M1b; numerical, topology, repeat, inventory and matrix-digest checks stay enforced.",
+    "opened_by_issue": 387,
+    "closed_by_issue": 404,
+    "supersedes_matrix_sha256": "78c5efaf4881977d306fc1f7a09c51f37cf897be338558d14aee9c2313d035d9"
   }
 }

@@ -7,30 +7,93 @@ use std::collections::BTreeMap;
 const HISTORICAL_DIRECTORY: &str = "crates/oce-conformance/tests/fixtures/strict_bits/linux";
 const NATIVE_DIRECTORY: &str = "crates/oce-conformance/tests/fixtures/strict_bits/qualified-linux";
 
+/// Reviewed Git and assembled-matrix identity of one native Linux capture set.
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Receipt {
-    git_revision: String,
-    matrix_sha256: String,
+pub(super) struct Receipt {
+    pub git_revision: String,
+    pub matrix_sha256: String,
 }
 
+/// Whether the current receipt still binds today's selected sources. Absent means admitted.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub(super) enum EvidenceStatus {
+    #[default]
+    Admitted,
+    RecapturePending,
+}
+
+/// Reviewed record of an open re-capture window; data only, never a checker switch by itself.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Pending {
+    pub since: String,
+    pub reason: String,
+    pub opened_by_issue: u32,
+    pub closed_by_issue: u32,
+    pub supersedes_matrix_sha256: String,
+}
+
+/// Closed receipt data: historical and optional current identities plus the evidence status.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Receipts {
-    historical: Receipt,
-    current: Option<Receipt>,
+pub(super) struct Receipts {
+    pub historical: Receipt,
+    pub current: Option<Receipt>,
+    #[serde(default)]
+    pub status: EvidenceStatus,
+    #[serde(default)]
+    pub pending: Option<Pending>,
 }
 
-fn receipts() -> Receipts {
+pub(super) fn receipts() -> Receipts {
     // Terminal review data, not executable checker semantics. No receipt values are hashed into
     // their own captures. Final admission changes this JSON and raw fixtures, never checker code.
     serde_json::from_str(include_str!("../fixtures/strict_bits/receipts.json")).unwrap()
 }
 
-fn current_receipt(receipts: Receipts) -> Result<Receipt, String> {
+/// The only path to a receipt that may admit or source-qualify native evidence: an admitted status.
+pub(super) fn current_receipt(receipts: Receipts) -> Result<Receipt, String> {
+    if let Some(pending) = pending_window(&receipts)? {
+        return Err(format!(
+            "RECAPTURE_PENDING: status recapture-pending (GitHub #{}) cannot admit or source-qualify \
+             native evidence; admission requires status admitted and exact source digests",
+            pending.opened_by_issue
+        ));
+    }
     receipts.current.ok_or_else(|| {
         "PENDING_NATIVE_EVIDENCE: checker-complete Linux receipt has not been admitted".into()
     })
+}
+
+/// Validates the status record. `None` is the admitted status; `Some` is a well-formed window.
+pub(super) fn pending_window(receipts: &Receipts) -> Result<Option<&Pending>, String> {
+    let pending = match (receipts.status, &receipts.pending) {
+        (EvidenceStatus::Admitted, None) => return Ok(None),
+        (EvidenceStatus::Admitted, Some(_)) => {
+            return Err("admitted status must not carry a pending record".into());
+        }
+        (EvidenceStatus::RecapturePending, None) => {
+            return Err("recapture-pending status requires a pending record".into());
+        }
+        (EvidenceStatus::RecapturePending, Some(pending)) => pending,
+    };
+    let superseded = receipts
+        .current
+        .as_ref()
+        .ok_or("recapture-pending status must supersede a current receipt")?;
+    if pending.supersedes_matrix_sha256 != superseded.matrix_sha256 {
+        return Err("pending record names a receipt other than the current one".into());
+    }
+    Ok(Some(pending))
+}
+
+/// Whether a retained report compares captured source digests with this checkout.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum SourceBinding {
+    Required,
+    PendingRecapture,
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -154,7 +217,7 @@ fn native_linux_matrix_is_complete_and_exact() {
     );
 }
 
-fn synthetic_runs() -> (Corpus, BTreeMap<String, Corpus>) {
+pub(super) fn synthetic_runs() -> (Corpus, BTreeMap<String, Corpus>) {
     let retained = evidence::read_retained();
     let runs = CELLS
         .into_iter()
@@ -270,12 +333,45 @@ fn nan_payload_is_not_a_cross_architecture_identity_claim() {
     assert_eq!(compare(&retained, &runs), Ok(vec![]));
 }
 
+// The pending-window notice is written to stderr on purpose; the workspace denies `print_stderr`.
+#[allow(clippy::print_stderr)]
 #[test]
 fn retained_native_linux_evidence_is_complete_exact_and_source_bound() {
-    let receipt = current_receipt(receipts()).expect("current native qualification required");
+    let receipts = receipts();
+    let Some(pending) = pending_window(&receipts).expect("well-formed evidence status") else {
+        let receipt = current_receipt(receipts).expect("current native qualification required");
+        let runs = read_native_runs(&evidence::root().join(NATIVE_DIRECTORY));
+        qualified_report(&runs, &receipt, &evidence::collect())
+            .expect("accepted checker-complete native Linux evidence");
+        return;
+    };
+    // Every check except the source-digest comparison still runs against the superseded receipt.
+    let receipt = receipts
+        .current
+        .as_ref()
+        .expect("validated superseded receipt");
     let runs = read_native_runs(&evidence::root().join(NATIVE_DIRECTORY));
-    qualified_report(&runs, &receipt, &evidence::collect())
-        .expect("accepted checker-complete native Linux evidence");
+    let current = evidence::collect();
+    report(&runs, receipt, &current, SourceBinding::PendingRecapture)
+        .expect("superseded native Linux evidence still exact, complete and digest-pinned");
+    let drifted: Vec<_> = current
+        .source_sha256
+        .iter()
+        .filter(|(path, digest)| {
+            runs["linux-x86_64-debug-first"].source_sha256.get(*path) != Some(*digest)
+        })
+        .map(|(path, _)| path.as_str())
+        .collect();
+    eprintln!(
+        "RECAPTURE_PENDING: source binding of native receipt {} NOT enforced since {} \
+         (opened by GitHub #{}, closes with GitHub #{}): {} Bound sources drifted from the \
+         receipt: {drifted:?}. Numerical, topology, repeat, inventory and matrix-digest checks ran.",
+        receipt.matrix_sha256,
+        pending.since,
+        pending.opened_by_issue,
+        pending.closed_by_issue,
+        pending.reason
+    );
 }
 
 #[test]
@@ -307,14 +403,25 @@ fn read_native_runs(directory: &std::path::Path) -> BTreeMap<String, Corpus> {
     runs
 }
 
-fn qualified_report(
+pub(super) fn qualified_report(
     runs: &BTreeMap<String, Corpus>,
     receipt: &Receipt,
     current: &Corpus,
 ) -> Result<Vec<u8>, String> {
+    report(runs, receipt, current, SourceBinding::Required)
+}
+
+pub(super) fn report(
+    runs: &BTreeMap<String, Corpus>,
+    receipt: &Receipt,
+    current: &Corpus,
+    binding: SourceBinding,
+) -> Result<Vec<u8>, String> {
     evidence::same_reference_inventory(&evidence::read_retained(), current)?;
     for run in runs.values() {
-        evidence::require_sources(run, &current.source_sha256)?;
+        if binding == SourceBinding::Required {
+            evidence::require_sources(run, &current.source_sha256)?;
+        }
         evidence::same_reference_inventory(current, run)?;
     }
     let baseline = runs
@@ -390,6 +497,8 @@ fn pending_receipt_is_an_explicit_refusal_not_historical_acceptance() {
     let pending = Receipts {
         historical: receipts().historical,
         current: None,
+        status: EvidenceStatus::Admitted,
+        pending: None,
     };
     assert_eq!(
         current_receipt(pending).unwrap_err(),
@@ -400,16 +509,14 @@ fn pending_receipt_is_an_explicit_refusal_not_historical_acceptance() {
     assert!(serde_json::from_str::<Receipts>(invalid).is_err());
 }
 
-#[test]
-fn every_bound_source_change_refuses_admission_even_when_raw_bits_still_match() {
-    // Synthetic positive control only: no files are written and no native claim is made.
+/// Synthetic captures bound to this checkout's exact sources, with the receipt they assemble to.
+/// No files are written and no native claim is made.
+pub(super) fn synthetic_bound_admission() -> (BTreeMap<String, Corpus>, Corpus, Receipt) {
     let (_, mut runs) = synthetic_runs();
     let current = evidence::collect();
-    let sources = &current.source_sha256;
     for run in runs.values_mut() {
-        run.source_sha256.clone_from(sources);
+        run.source_sha256.clone_from(&current.source_sha256);
     }
-    let baseline = &runs["linux-x86_64-debug-first"];
     let report = serde_json::json!({
         "schema": 1,
         "claim": "pinned-corpus-only-not-mathematical-correctness",
@@ -418,9 +525,16 @@ fn every_bound_source_change_refuses_admission_even_when_raw_bits_still_match() 
         "comparison": {"Ok": []},
     });
     let receipt = Receipt {
-        git_revision: baseline.git_revision.clone(),
+        git_revision: runs["linux-x86_64-debug-first"].git_revision.clone(),
         matrix_sha256: evidence::digest(&serde_json::to_vec(&report).unwrap()),
     };
+    (runs, current, receipt)
+}
+
+#[test]
+fn every_bound_source_change_refuses_admission_even_when_raw_bits_still_match() {
+    let (runs, current, receipt) = synthetic_bound_admission();
+    let sources = &current.source_sha256;
     qualified_report(&runs, &receipt, &current).unwrap();
     for path in sources.keys() {
         let mut changed = current.clone();

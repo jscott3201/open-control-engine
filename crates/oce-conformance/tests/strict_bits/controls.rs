@@ -1,8 +1,10 @@
 //! Mutation controls through the facade driver, not comparator-only unit tests.
 
 use super::evidence;
+use super::matrix::{self, Receipt, Receipts};
 use crate::block_harness;
 use oce_conformance::{CombiTimeTable, ComparisonResult};
+use serde_json::{Value, json};
 
 fn assert_mutation(
     case: &block_harness::BlockCase,
@@ -306,6 +308,63 @@ fn captured_provenance_binds_the_semantic_checker_and_facade_comparison_path() {
                 &std::fs::read(evidence::root().join(path)).unwrap()
             )),
             "unbound capture/comparison/admission source: {path}"
+        );
+    }
+}
+
+fn status_receipts(current: &Receipt, status: Value, pending: Value) -> Result<Receipts, String> {
+    let mut data = json!({
+        "historical": {"git_revision": "1".repeat(40), "matrix_sha256": "2".repeat(64)},
+        "current": {"git_revision": current.git_revision, "matrix_sha256": current.matrix_sha256},
+    });
+    if !status.is_null() {
+        data["status"] = status;
+    }
+    if !pending.is_null() {
+        data["pending"] = pending;
+    }
+    serde_json::from_value(data).map_err(|error| error.to_string())
+}
+
+fn pending_record(superseded: &Receipt) -> Value {
+    json!({
+        "since": "2026-11-08",
+        "reason": "bound sources change during a refactor window",
+        "opened_by_issue": 387,
+        "closed_by_issue": 404,
+        "supersedes_matrix_sha256": superseded.matrix_sha256,
+    })
+}
+
+#[test]
+fn recapture_pending_status_cannot_admit_even_with_exact_source_digests() {
+    // Synthetic captures that bind this checkout exactly: only the status decides admission.
+    let (runs, current, receipt) = matrix::synthetic_bound_admission();
+    for status in [Value::Null, json!("admitted")] {
+        let admitted = status_receipts(&receipt, status, Value::Null).unwrap();
+        let chosen = matrix::current_receipt(admitted).unwrap();
+        matrix::qualified_report(&runs, &chosen, &current).unwrap();
+    }
+    let pending = status_receipts(
+        &receipt,
+        json!("recapture-pending"),
+        pending_record(&receipt),
+    )
+    .unwrap();
+    assert_eq!(
+        matrix::current_receipt(pending).unwrap_err(),
+        "RECAPTURE_PENDING: status recapture-pending (GitHub #387) cannot admit or \
+         source-qualify native evidence; admission requires status admitted and exact source digests"
+    );
+    // Flipping the status back to admitted without matching digests still refuses admission.
+    let admitted = status_receipts(&receipt, json!("admitted"), Value::Null).unwrap();
+    let chosen = matrix::current_receipt(admitted).unwrap();
+    for path in current.source_sha256.keys() {
+        let mut drifted = current.clone();
+        drifted.source_sha256.insert(path.clone(), "0".repeat(64));
+        assert_eq!(
+            matrix::qualified_report(&runs, &chosen, &drifted).unwrap_err(),
+            format!("source digest changed: {path}: new native evidence required")
         );
     }
 }

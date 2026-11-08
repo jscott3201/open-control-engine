@@ -1,5 +1,29 @@
 # Pinned strict-bit signal evidence
 
+## Status: re-capture pending
+
+**Since 2026-11-08 the retained native receipt is `recapture-pending`, not source-bound.** The
+M1 refactor window deliberately changes bound sources (`Cargo.toml`, `Cargo.lock`,
+`crates/oce-model/src/lib.rs`, `.config/nextest.toml`, `.agents/gate.sh` and the strict-bit
+checker itself), so [`receipts.json`](../crates/oce-conformance/tests/fixtures/strict_bits/receipts.json)
+carries `"status": "recapture-pending"` and a `pending` record (reason, since, opening issue
+GitHub #387, closing issue GitHub #404, and the `matrix.json` SHA-256 of the receipt it
+supersedes). [GitHub #404](https://github.com/jscott3201/open-control-engine/issues/404) closes the
+window: one native re-capture at the end of M1b, admitted data-only with `status` back to
+`admitted`.
+
+While pending, `retained_native_linux_evidence_is_complete_exact_and_source_bound` still checks
+the eight retained captures' numbers, topology, first/repeat byte identity, reference/input
+inventory, Git provenance and exact matrix digest against the superseded receipt; it skips only
+the comparison of captured source digests with this checkout, and prints a `RECAPTURE_PENDING:`
+line naming the reason, both issues and every drifted bound path (the per-PR strict-bit cells
+rerun it with its output shown). The per-PR eight-capture comparison, repeat-capture equality and
+every hostile control run unchanged. A pending status cannot admit evidence: the admission path
+refuses it, and admission still needs `status: admitted` plus exact digests
+(`recapture_pending_status_cannot_admit_even_with_exact_source_digests`). The bounded claim below
+describes the receipt as admitted; until GitHub #404 lands, its source-boundary sentence is
+suspended, not current.
+
 ## Status and claim boundary
 
 **Accepted native Linux corpus evidence:** [receipt data](../crates/oce-conformance/tests/fixtures/strict_bits/receipts.json)
@@ -175,7 +199,10 @@ receipt nor those reruns prove behavior on arbitrary inputs.
 The receipt-binding order is **selected source bytes → captures → assembled matrix → receipt data**.
 The checker hashes its own source bytes, which contain no expected source or matrix digest.
 `receipts.json` is a closed, terminal data schema containing historical and optional current
-Git/matrix identities; it contains no executable policy and is not hashed back into captures.
+Git/matrix identities, plus an optional evidence `status` (absent or `admitted`, or
+`recapture-pending` with its required `pending` record); it contains no executable policy and is
+not hashed back into captures. The status only decides whether the retained test compares source
+digests; it never admits evidence, and a malformed or inconsistent record is refused.
 Current admission checks those reviewed identity values against actual raw data and current selected-source
 digests. Final admission changes only receipt/fixture data and documentation, not bound checker
 code. This avoids both a self-hash fixed point and a matrix-digest cycle; it is not a migration bypass.

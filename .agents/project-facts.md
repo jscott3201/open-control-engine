@@ -32,9 +32,16 @@ and GitHub #332 are different changes. Bare `(#N)` citations predate the move; c
 on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
 
 Three tracked files are bound sources of the retained native strict-bit evidence and must not
-change casually: `.github/workflows/ci.yml`, `.config/nextest.toml`, and `.agents/gate.sh`. Editing
-any of them makes `retained_native_linux_evidence_is_complete_exact_and_source_bound` fail until a
-new native receipt is admitted.
+change casually: `.github/workflows/ci.yml`, `.config/nextest.toml`, and `.agents/gate.sh` (the full
+35-path list in `crates/oce-conformance/tests/strict_bits/evidence.rs` also has `Cargo.toml`,
+`Cargo.lock`, `crates/oce-model/src/lib.rs` and the strict-bit checker). With the receipt admitted,
+editing any of them makes `retained_native_linux_evidence_is_complete_exact_and_source_bound` fail
+until a new native receipt is admitted. **Since 2026-11-08 the receipt is `recapture-pending` for
+the M1 refactor window** (GitHub #387): the test skips only its source-digest comparison and prints
+`RECAPTURE_PENDING:` with the drifted paths; every numerical and hostile check still runs. GitHub
+#404 re-captures and sets `status` back to `admitted`. Check
+[`docs/strict-bit-evidence.md`](../docs/strict-bit-evidence.md) for the current status before
+relying on either behaviour.
 
 ## A green PR does not mean the tests passed
 
