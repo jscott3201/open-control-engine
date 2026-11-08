@@ -139,7 +139,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
-- **Design note for the commissioning verifier (CDL §12)** (GitHub #PRNUM, issue #436).
+- **Design note for the commissioning verifier (CDL §12)** (GitHub #446, issue #436).
   `docs/design/commissioning.md` fixes, before any code, the tolerance mode of `oce-verify`: a
   strict-JSON superset of CDL §12.7 Listing 12.1 (LBL specs load unchanged, comments stripped),
   Listing 12.2 point mapping with a closed `units/v1` conversion table outside the engine, a
