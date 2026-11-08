@@ -72,9 +72,11 @@ timestamp. It does not implement Modelica same-time event iteration for `CDL.Log
 
 The engine is, by design:
 
-- **Library-only.** No `main`, no `[[bin]]`, no daemon, no server, no network listener — verified by
-  the absence of any binary target or `std::net` use in `crates/`. The host owns process lifecycle,
-  transport, TLS, authN/Z, multi-tenancy, off-host durability, and metrics export.
+- **Library-only.** No `main`, no `[[bin]]`, no daemon, no server, no network listener in the engine
+  crates — verified by the absence of any binary target or `std::net` use in `crates/` outside
+  `crates/leverage/`. Leverage crates may ship binaries above the facade (the planned `oce` CLI; see
+  the [authoring layer](design/authoring-layer.md)), never a listener. The host owns process
+  lifecycle, transport, TLS, authN/Z, multi-tenancy, off-host durability, and metrics export.
 - **Synchronous and in-process.** Every public method is a blocking synchronous call, and no async
   runtime is pulled at any layer. The check is the dependency set below, not a promise.
 - **`#![forbid(unsafe_code)]` in all 12 crates**, belt and braces: each `crates/*/src/lib.rs`
