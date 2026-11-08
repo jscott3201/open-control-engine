@@ -113,7 +113,11 @@ methods bit for bit. Each of those calls goes through the crate's `math` module 
 that names `libm` — and clippy refuses any `std`-only float method elsewhere in the four crates' `src/` trees, unit
 tests included (`tests/` files are separate crates outside the lint, where the `std` methods serve
 as the oracle)
-([TESTING.md, math discipline](../TESTING.md#conventions), issue #399). The four use no hash collections (issue #398 audits the rest of the workspace).
+([TESTING.md, math discipline](../TESTING.md#conventions), issue #399). The four use no hash
+collections: clippy refuses `std`'s hash types there and `crates/oce-api/tests/core_crates_hash_free.rs`
+refuses any hash collection or hash crate. In the `std` crates no hash iteration order reaches an
+output, which `crates/oce-api/tests/hash_order_independence.rs` checks across independently seeded
+hashers ([state compatibility](state-compatibility.md#portability-domains-and-evidence-limits)).
 
 Everything else stays `std`: `oce-cxf`, `oce-validate`, `oce-semantics`, `oce-diag`, `oce-store` and
 the `oce-api` facade, plus the verification-only `oce-conformance` and `oce-bless`. The
