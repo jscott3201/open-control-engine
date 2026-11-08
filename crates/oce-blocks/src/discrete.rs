@@ -330,10 +330,13 @@ impl Block for TriggeredMax {
 /// `when {initial(), trigger}`: the first tick always samples exactly once, then later ticks sample
 /// only on false-to-true trigger edges. The block owns `4 + n` `[S]` words: held output, previous
 /// trigger bit, populated-sample counter, next zero-based ring slot, and the `n` sampled `Real`
-/// words. It feeds through from both inputs to `y` because an initial event or same-tick rising
-/// trigger emits a mean that includes the current `u`. Real samples and outputs are NaN
-/// canonicalized for deterministic traces. The block never panics for finite or non-finite `Real`
-/// values; validated callers must provide a `Real` then a `Boolean` input.
+/// words. `n` is input-derived and has no class-level upper bound; the window is bounded by
+/// `oce-graph`'s model-wide `MAX_STATE_WORDS` budget, which refuses an over-large window at BUILD
+/// with a typed `StateTooLarge` (each sampling event costs `O(n)`). It feeds through from both
+/// inputs to `y` because an initial event or same-tick rising trigger emits a mean that includes
+/// the current `u`. Real samples and outputs are NaN canonicalized for deterministic traces. The
+/// block never panics for finite or non-finite `Real` values; validated callers must provide a
+/// `Real` then a `Boolean` input.
 #[derive(Clone, Copy, Debug)]
 pub struct TriggeredMovingMean {
     pub(crate) n: usize,
@@ -410,7 +413,9 @@ impl Block for TriggeredMovingMean {
     }
 
     fn state_len(&self) -> usize {
-        TRIGGERED_MOVING_MEAN_SAMPLE_WORDS_START + self.window()
+        // Saturating: an unvalidated huge window reports `usize::MAX`, which the checked BUILD
+        // allocation refuses as over budget instead of overflowing here.
+        TRIGGERED_MOVING_MEAN_SAMPLE_WORDS_START.saturating_add(self.window())
     }
 
     fn init_state(&self, region: &mut [u64], _params: &ParamTable) {

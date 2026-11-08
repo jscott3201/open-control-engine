@@ -95,9 +95,14 @@ fn make_triggered_max(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(TriggeredMax)
 }
 
+/// `n` sizes the block's `[S]` region (`4 + n` words). The conversion saturates rather than
+/// truncating on a narrow `usize`, so an out-of-range authored window reaches `oce-graph`'s
+/// checked state allocation as an over-budget request (a typed `StateTooLarge` refusal) instead
+/// of silently becoming a different window.
 fn make_triggered_moving_mean(p: &ParamTable) -> Box<dyn Block> {
+    let n = int_param(p, "n", TRIGGERED_MOVING_MEAN_N_FALLBACK).max(1);
     Box::new(TriggeredMovingMean {
-        n: int_param(p, "n", TRIGGERED_MOVING_MEAN_N_FALLBACK).max(1) as usize,
+        n: usize::try_from(n).unwrap_or(usize::MAX),
     })
 }
 

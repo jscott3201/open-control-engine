@@ -1,8 +1,6 @@
 //! Timing-state helpers for the independent CoolingOnly.Controller oracle.
 
-use super::{
-    initial_sample_time, sample_due, sample_index, sampler_output, true_delay_output,
-};
+use super::{initial_sample_time, sample_due, sample_index, sampler_output, true_delay_output};
 
 /// Periodic sampler state with same-tick capture at each sample instant.
 #[derive(Default)]

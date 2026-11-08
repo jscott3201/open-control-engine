@@ -21,7 +21,7 @@ fn historical_revision_one_vector_refuses_without_a_migration_fallback() {
 
 #[test]
 fn portable_policy_is_public_owned_inspection_not_restore_authority() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL).unwrap();
     let snapshot = engine.state_snapshot().unwrap();
     let policy = snapshot.portability().clone();
@@ -31,7 +31,7 @@ fn portable_policy_is_public_owned_inspection_not_restore_authority() {
     drop(engine);
     drop(snapshot);
     assert_eq!(parsed.portability(), &StatePortability::Portable);
-    let mut unloaded = Engine::in_memory();
+    let mut unloaded = Engine::new();
     assert!(matches!(
         unloaded.restore_state(&parsed),
         Err(OcError::State(EngineStateError::NoLoadedModel))
@@ -52,12 +52,12 @@ fn changed_node(path: &str, field: &str, value: serde_json::Value) -> Vec<u8> {
 
 #[test]
 fn changed_input_acceptance_domain_refuses_before_mutation() {
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source.load_cxf(MODEL).unwrap();
     let snapshot = source.state_snapshot().unwrap();
     for field in ["S231:min", "S231:max"] {
         let document = changed_node("urn:legacy-frame:a", field, 1.into());
-        let mut target = Engine::in_memory();
+        let mut target = Engine::new();
         target.load_cxf(&document).unwrap();
         let before = target.state_snapshot().unwrap();
         assert!(matches!(
@@ -75,7 +75,7 @@ fn changed_input_acceptance_domain_refuses_before_mutation() {
 
 #[test]
 fn changed_computation_units_and_quantities_refuse_before_mutation() {
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source.load_cxf(MODEL).unwrap();
     let snapshot = source.state_snapshot().unwrap();
     for (field, value) in [
@@ -83,7 +83,7 @@ fn changed_computation_units_and_quantities_refuse_before_mutation() {
         ("S231:quantity", "ThermodynamicTemperature"),
     ] {
         let document = changed_node("urn:legacy-frame:y", field, value.into());
-        let mut target = Engine::in_memory();
+        let mut target = Engine::new();
         target.load_cxf(&document).unwrap();
         let before = target.state_snapshot().unwrap();
         assert!(matches!(
@@ -101,7 +101,7 @@ fn changed_computation_units_and_quantities_refuse_before_mutation() {
 
 #[test]
 fn parsed_snapshot_continuation_preserves_signed_zero_and_retained_results() {
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source
         .load_cxf(include_bytes!("fixtures/frame_pre.jsonld"))
         .unwrap();
@@ -110,7 +110,7 @@ fn parsed_snapshot_continuation_preserves_signed_zero_and_retained_results() {
     let retained = source.execute_frame(prepared).unwrap();
     let snapshot = source.state_snapshot().unwrap();
     let parsed = EngineStateSnapshot::from_bytes(snapshot.as_bytes()).unwrap();
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target
         .load_cxf(include_bytes!("fixtures/frame_pre.jsonld"))
         .unwrap();

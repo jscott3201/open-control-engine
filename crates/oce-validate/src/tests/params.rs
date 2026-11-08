@@ -480,10 +480,10 @@ fn pid_range_rules_floor_at_the_upstream_min_annotation() {
         }
         let nan_gain = one_block_model(class, io.0, io.1, vec![rp("k", f64::NAN)]);
         let err = validate(&nan_gain)
-            .expect_err("a NaN gain never satisfies the upstream min annotation");
+            .expect_err("a NaN gain is refused by the engine-wide finiteness gate");
         assert_eq!(
             codes(&err.diagnostics),
-            vec![DiagCode::ParameterOutOfRange],
+            vec![DiagCode::NonFiniteParameter],
             "{class}.k=NaN"
         );
     }

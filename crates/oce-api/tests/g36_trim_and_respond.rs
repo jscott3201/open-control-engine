@@ -17,8 +17,8 @@ const SETPOINT_PATH: &str = "http://example.org#g36.source.trim_and_respond_have
 type ScheduleSignature = (Vec<u32>, Vec<u32>, Vec<u32>);
 
 fn load_trim_and_respond() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(TRIM_AND_RESPOND.as_bytes())
         .expect("G36 TrimAndRespond loads");
     assert_eq!(report.block_count, 44);
@@ -60,14 +60,22 @@ fn load_trim_and_respond() -> Engine {
 }
 
 fn inputs(t: f64) -> Vec<(String, Value)> {
-    let requests = if (840.0..1080.0).contains(&t) {
-        6
-    } else if (720.0..840.0).contains(&t) {
+    let requests = if (720.0..840.0).contains(&t) {
         3
+    } else if (840.0..1080.0).contains(&t) {
+        6
+    } else if (2160.0..2280.0).contains(&t) {
+        5
+    } else if (2520.0..2760.0).contains(&t) || (3720.0..3960.0).contains(&t) {
+        6
     } else {
         0
     };
-    let device_status = !(1080.0..1260.0).contains(&t);
+    // A trip holding the 1320 s sample instant, a short trip strictly between the 2760 s and
+    // 2880 s instants, and a boundary trip whose single off tick is the 3960 s instant.
+    let device_status = !((1260.0..1380.0).contains(&t)
+        || (2820.0..2880.0).contains(&t)
+        || (3960.0..4020.0).contains(&t));
     vec![
         (REQUEST_COUNT.to_string(), Value::Integer(requests)),
         (DEVICE_STATUS.to_string(), Value::Boolean(device_status)),
@@ -88,13 +96,13 @@ fn simulate(mut engine: Engine) -> (ScheduleSignature, FrameRun) {
     let metrics = FrameRun::record(
         &mut engine,
         0.0,
-        1320.0,
+        4920.0,
         60.0,
         inputs,
         vec![SETPOINT_PATH.to_string()],
     )
     .expect("G36 TrimAndRespond simulates");
-    assert_eq!(metrics.ticks, 23);
+    assert_eq!(metrics.ticks, 83);
     assert_eq!(metrics.trace.columns(), &[SETPOINT_PATH.to_string()]);
     assert_all_finite(&metrics);
     (schedule, metrics)
@@ -172,11 +180,70 @@ fn trim_and_respond_have_hol_false_loads_simulates_and_is_deterministic() {
             "setpoint[{row}]={x} outside [0, 20]"
         );
     }
-    assert_close(real_at(&metrics_a, 0), 10.0);
-    assert_close(real_at(&metrics_a, 12), 9.9);
+    assert_restart_reinitializes_the_reset(&metrics_a);
+}
+
+/// Pin the setpoint (row = t / 60 s) across three restarts.
+///
+/// `iniSet = 10`, `triAmo = 0.1`, `resAmo = -0.2`, `maxRes = -0.6`, `numIgnReq = 2`, and the
+/// TrueDelay waits `delTim + samplePeriod = 720 s`. The chain reaches 9.1 by 1200 s. The device is
+/// off for 1260..1379 s: `swi` publishes `iniSet`, and at the 1320 s instant `swi2` stages `iniSet`
+/// into the UnitDelay while its output still holds 9.1. The restart at 1380 s falls between
+/// instants, so `swi` must publish `iniSet` although the chain alone would read 9.1; the re-armed
+/// TrueDelay releases at 2100 s and the reset resumes from `iniSet`.
+///
+/// The next two trips pin both sides of the reseed boundary in `TrimAndRespond.mo`'s graph
+/// (GitHub issue #354): `iniSet` reaches the UnitDelay only at a sample instant, whatever the
+/// block documentation says about the device being off.
+///
+/// - Short trip, 2820..2879 s, strictly between the 2760 s and 2880 s instants: `swi2` never
+///   reaches the UnitDelay, which keeps the pre-trip 8.8. `swi` publishes `iniSet` through the
+///   re-armed delay, and at the 3600 s release the reset resumes from the stale 8.8 (8.9), not from
+///   `iniSet` (10.1).
+/// - Boundary trip, 3960..4019 s, whose single off tick is the 3960 s instant: `swi2` stages
+///   `iniSet` there, so at the 4740 s release the reset resumes from `iniSet` (10.1), not from the
+///   stale 7.9 (8.0).
+fn assert_restart_reinitializes_the_reset(metrics: &FrameRun) {
+    // (first row, last row, setpoint) of each hold interval.
+    let holds: [(usize, usize, f64); 22] = [
+        (0, 11, 10.0),  // TrueDelay not yet elapsed: iniSet
+        (12, 13, 9.9),  // 3 requests: 0.1 - 0.2
+        (14, 15, 9.4),  // 6 requests: 0.1 - 0.6 (maxRes cap)
+        (16, 17, 8.9),  // 6 requests again
+        (18, 19, 9.0),  // no requests: trim
+        (20, 20, 9.1),  // no requests: trim
+        (21, 22, 10.0), // device off: iniSet; the 1320 s instant stages iniSet
+        (23, 34, 10.0), // restart re-arms the TrueDelay: iniSet although 9.1 is held at 1380 s
+        (35, 35, 10.1), // released at 2100 s: iniSet + trim
+        (36, 37, 9.5),  // 5 requests at the 2160 s instant: iniSet + 0.1 - 0.6
+        (38, 39, 9.6),  // no requests: trim
+        (40, 41, 9.7),  // no requests: trim
+        (42, 43, 9.2),  // 6 requests: 0.1 - 0.6
+        (44, 45, 8.7),  // 6 requests again
+        (46, 46, 8.8),  // no requests: trim
+        (47, 59, 10.0), // short trip at 2820 s, no instant inside: iniSet through the re-armed delay
+        (60, 61, 8.9),  // released at 3600 s from the stale 8.8, not iniSet: 8.8 + trim
+        (62, 63, 8.4),  // 6 requests: 0.1 - 0.6
+        (64, 65, 7.9),  // 6 requests again
+        (66, 78, 10.0), // boundary trip on the 3960 s instant stages iniSet; re-armed delay
+        (79, 81, 10.1), // released at 4740 s from iniSet, not the stale 7.9: iniSet + trim
+        (82, 82, 10.2), // no requests: trim
+    ];
+    for (first, last, expected) in holds {
+        for row in first..=last {
+            assert_close(real_at(metrics, row), expected);
+        }
+    }
+    // Reseed discriminators: each release is one trim from its seed, and at least one full
+    // response away from the value the other seeding rule would give.
+    let short_trip_release = real_at(metrics, 60);
     assert!(
-        real_at(&metrics_a, 14) < real_at(&metrics_a, 12),
-        "larger requests should apply the capped negative response"
+        (short_trip_release - (10.0 + 0.1)).abs() > 1.0,
+        "a short trip with no sample instant must not reseed iniSet, got {short_trip_release}"
     );
-    assert_close(real_at(&metrics_a, 18), 10.0);
+    let boundary_trip_release = real_at(metrics, 79);
+    assert!(
+        (boundary_trip_release - (7.9 + 0.1)).abs() > 1.0,
+        "a trip holding a sample instant must reseed iniSet, got {boundary_trip_release}"
+    );
 }

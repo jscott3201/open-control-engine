@@ -1,4 +1,4 @@
-//! Exact executable-boundary metadata, separate from the lossy Store point projection.
+//! Exact executable-boundary metadata, separate from the lossy resolved-model point projection.
 
 use std::collections::{HashMap, HashSet};
 
@@ -15,13 +15,13 @@ use crate::io::connector_path;
 ///
 /// This is editable host-owned metadata, not a validation authority or reusable model reference.
 /// Retain values if useful, but refresh the definition after successful load/reconfiguration.
-/// Cloning allocates its path and shares any immutable `Value::String` storage. No Store handles,
+/// Cloning allocates its path and shares any immutable `Value::String` storage. No persistence handles,
 /// generation tokens or connector indices are exposed. Reading/cloning has no engine side effects.
 #[derive(Clone, Debug)]
 pub struct InputDefinition {
     /// Expanded canonical authored identity. No compact-IRI expansion occurs at submission time.
     pub path: String,
-    /// Exact native type, including enum class; no Store-carrier coercion.
+    /// Exact native type, including enum class; no projection-carrier coercion.
     pub value_type: ValueType,
     /// Inclusive lower bound in computation units, or absent. Real absence admits negative infinity.
     pub min: Option<Value>,

@@ -60,7 +60,7 @@ fn pid_mode_state_words_are_allocated_from_resolved_controller_type() {
         &[("controllerType", enum_param("PID"))],
     ));
     let sched = compile(&b.model, &b.blocks).unwrap();
-    let state = allocate_state(&b.model, &b.blocks);
+    let state = allocate_state(&b.model, &b.blocks).expect("state within budget");
 
     let p_block = b.blocks[p_mode.0 as usize].as_ref();
     assert!(p_block.signature().stateful);
@@ -109,7 +109,7 @@ fn pid_with_reset_trigger_is_update_routed_end_to_end() {
     b.connect(trigger_out[0], pid_in[2]);
 
     let sched = compile(&b.model, &b.blocks).expect("PIDWithReset trigger must not add loops");
-    let mut state = allocate_state(&b.model, &b.blocks);
+    let mut state = allocate_state(&b.model, &b.blocks).expect("state within budget");
 
     tick_once(&b.model, &sched, &b.blocks, &mut state, 0.0);
     assert!(

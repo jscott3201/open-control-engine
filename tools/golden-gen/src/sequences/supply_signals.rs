@@ -12,9 +12,7 @@ pub(super) fn goldens() -> Vec<Golden> {
     let supply_air_temperature = [
         300.0, 300.0, 300.0, 295.0, 310.0, 320.0, 295.0, 295.0, 295.0, 295.0,
     ];
-    let supply_fan_status = [
-        false, true, true, true, true, true, true, false, true, true,
-    ];
+    let supply_fan_status = [false, true, true, true, true, true, true, false, true, true];
     let (supply_temperature_signal, heating_coil_command, cooling_coil_command) =
         supply_signals_trace(
             &time,

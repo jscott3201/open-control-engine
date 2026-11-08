@@ -7,20 +7,20 @@ use super::{PLANT_REQUESTS, i, input_r, latch, sequence_golden, true_delay};
 pub(super) fn goldens() -> Vec<Golden> {
     let time: Vec<f64> = (0..20).map(|tick| f64::from(tick) * 60.0).collect();
     let supply_air_temperature_setpoint = [
-        300.0, 295.0, 295.0, 295.0, 295.0, 300.0, 300.0, 300.0, 300.0, 320.0,
-        320.0, 320.0, 320.0, 320.0, 320.0, 310.0, 300.0, 300.0, 300.0, 300.0,
+        300.0, 295.0, 295.0, 295.0, 295.0, 300.0, 300.0, 300.0, 300.0, 320.0, 320.0, 320.0, 320.0,
+        320.0, 320.0, 310.0, 300.0, 300.0, 300.0, 300.0,
     ];
     let supply_air_temperature = [
-        300.0, 299.0, 299.0, 299.0, 297.5, 300.0, 300.0, 300.0, 300.0, 300.0,
-        300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0,
+        300.0, 299.0, 299.0, 299.0, 297.5, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0,
+        300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0,
     ];
     let cooling_coil_valve = [
-        0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.9, 0.8, 0.05, 0.05, 0.05, 0.05, 0.05,
-        0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05,
+        0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.9, 0.8, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05,
+        0.05, 0.05, 0.05, 0.05,
     ];
     let heating_coil_valve = [
-        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.9, 0.8, 0.05,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.9,
+        0.8, 0.05,
     ];
 
     let (chilled_water_reset, chiller_plant, hot_water_reset, hot_water_plant) =
@@ -155,8 +155,7 @@ fn greater_threshold(values: &[f64], threshold: f64, hysteresis: f64) -> Vec<boo
     let mut previous = false;
     let mut out = Vec::with_capacity(values.len());
     for &value in values {
-        let next = (!previous && value > threshold)
-            || (previous && value > threshold - hysteresis);
+        let next = (!previous && value > threshold) || (previous && value > threshold - hysteresis);
         out.push(next);
         previous = next;
     }
@@ -167,8 +166,7 @@ fn less_threshold(values: &[f64], threshold: f64, hysteresis: f64) -> Vec<bool> 
     let mut previous = false;
     let mut out = Vec::with_capacity(values.len());
     for &value in values {
-        let next = (!previous && value < threshold)
-            || (previous && value < threshold + hysteresis);
+        let next = (!previous && value < threshold) || (previous && value < threshold + hysteresis);
         out.push(next);
         previous = next;
     }

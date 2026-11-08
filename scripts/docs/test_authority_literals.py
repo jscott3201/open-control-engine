@@ -94,7 +94,6 @@ class AuthorityLiteralTests(unittest.TestCase):
         self.source = self.root / "source"
         self.source.mkdir()
         paths = {"scripts/authority_claims/check.py"}
-        paths.update(row["path"] for row in self.observed["public-surface"]["value"]["baselines"])
         for row in self.index["facts"]:
             for field in ("source", "verifier"):
                 paths.add(row[field])
@@ -141,7 +140,7 @@ class AuthorityLiteralTests(unittest.TestCase):
 
     def assert_current_authority_links(self, document):
         links = [dict(attrs).get("href") for tag, attrs in document.elements if tag == "a"]
-        self.assertIn("public-surface-contract.html", links)
+        self.assertIn("product-contract.html", links)
         self.assertIn(f"{stage.REPOSITORY_URL}/blob/{REVISION}/crates/oce-api/src/state.rs", links)
 
     def test_unmodified_projection_builds_with_current_authority_links(self):

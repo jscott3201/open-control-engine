@@ -248,8 +248,8 @@ fn reference_inputs(reference: &ReferenceTable, t: f64) -> Vec<(String, Value)> 
 }
 
 fn load_controller() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(FIXTURE.as_bytes())
         .expect("source-transcribed G36 CoolingOnly.Controller fixture loads");
     assert_eq!(report.block_count, 213);

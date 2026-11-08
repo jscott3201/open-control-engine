@@ -19,9 +19,10 @@
 //! two-tick delay instead of one for the canonical `Pre`/`UnitDelay` feedback loop.)
 
 use oce_blocks::{Block, BlockKind, Ctx, NoopDiagnostics};
-use oce_model::{BlockInstance, Model, Value};
+use oce_model::{BlockId, BlockInstance, Model, Value};
 
-use crate::{RunState, Schedule, StateSlot};
+use crate::topo::block_path;
+use crate::{BuildError, MAX_STATE_WORDS, RunState, Schedule, StateSlot};
 
 /// The per-tick evaluation bundle (`01` §9): the frozen artifacts (`model`, `schedule`, immutable
 /// block impls) plus the sole mutable [`RunState`]. The block impls are `&` (not `&mut`): the arena
@@ -45,10 +46,32 @@ pub struct EvalContext<'a> {
 /// outputs hold their value before tick 0; all others the type zero), and preallocates the
 /// input-gather scratch so the eval loop itself never allocates. Individual blocks may still
 /// allocate inside `step_algebraic` — see the module header.
-#[must_use]
-pub fn allocate_state(model: &Model, blocks: &[Box<dyn Block>]) -> RunState {
+///
+/// The state buffer is sized before anything is written: region lengths are summed with checked
+/// arithmetic against [`MAX_STATE_WORDS`] and reserved with `try_reserve_exact`, so no
+/// input-derived [`Block::state_len`] can panic on capacity overflow or abort on allocation
+/// failure.
+///
+/// # Errors
+/// [`BuildError::StateTooLarge`] when the summed `[S]` regions exceed [`MAX_STATE_WORDS`] (or the
+/// allocator refuses the in-budget buffer). Nothing is seeded on that path.
+pub fn allocate_state(model: &Model, blocks: &[Box<dyn Block>]) -> Result<RunState, BuildError> {
     let nb = model.blocks.len();
+    let total = state_words_needed(model, blocks)?;
     let mut words: Vec<u64> = Vec::new();
+    if words.try_reserve_exact(total).is_err() {
+        let last = model
+            .blocks
+            .iter()
+            .rev()
+            .find(|blk| blocks[blk.id.0 as usize].kind() == BlockKind::Stateful)
+            .map_or(BlockId(0), |blk| blk.id);
+        return Err(BuildError::StateTooLarge {
+            block: block_path(model, last),
+            requested: total as u64,
+            limit: MAX_STATE_WORDS,
+        });
+    }
     let mut slots: Vec<StateSlot> = Vec::new();
     let mut slot_of: Vec<usize> = vec![usize::MAX; nb];
     let mut max_arity = 0usize;
@@ -59,6 +82,7 @@ pub fn allocate_state(model: &Model, blocks: &[Box<dyn Block>]) -> RunState {
         if blk_impl.kind() == BlockKind::Stateful {
             let len = blk_impl.state_len();
             let offset = words.len();
+            // In budget and reserved above: `offset + len <= total <= MAX_STATE_WORDS`.
             words.resize(offset + len, 0);
             // Seed from parameters — NOT a `start` attribute (none exists in CDL; §7 req 2).
             blk_impl.init_state(&mut words[offset..offset + len], &blk.params);
@@ -73,14 +97,39 @@ pub fn allocate_state(model: &Model, blocks: &[Box<dyn Block>]) -> RunState {
 
     let values = init_values(model, blocks);
     let scratch = vec![Value::Real(0.0); max_arity];
-    RunState {
+    Ok(RunState {
         values,
         words,
         slots,
         slot_of,
         scratch,
         t: 0.0,
+    })
+}
+
+/// Sum every `[S]` region length in declaration order, refusing at the first block whose region
+/// overflows `usize` or crosses [`MAX_STATE_WORDS`]. Pure; allocates nothing.
+fn state_words_needed(model: &Model, blocks: &[Box<dyn Block>]) -> Result<usize, BuildError> {
+    let mut total = 0usize;
+    for blk in &model.blocks {
+        let blk_impl = blocks[blk.id.0 as usize].as_ref();
+        if blk_impl.kind() != BlockKind::Stateful {
+            continue;
+        }
+        let len = blk_impl.state_len();
+        match total.checked_add(len) {
+            Some(next) if next <= MAX_STATE_WORDS => total = next,
+            over => {
+                let requested = over.map_or(u64::MAX, |n| u64::try_from(n).unwrap_or(u64::MAX));
+                return Err(BuildError::StateTooLarge {
+                    block: block_path(model, blk.id),
+                    requested,
+                    limit: MAX_STATE_WORDS,
+                });
+            }
+        }
     }
+    Ok(total)
 }
 
 /// Seed the connector value array (`01` §7 req 3): every connector starts at its type-appropriate

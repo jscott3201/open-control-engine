@@ -454,7 +454,7 @@ fn unknown_execution_revision_retains_future_catalog_descriptors_for_restore() {
     let bytes = state_codec::encode_snapshot(&image, false).unwrap();
     let snapshot = EngineStateSnapshot::from_bytes(&bytes).unwrap();
 
-    let mut target = crate::Engine::in_memory();
+    let mut target = crate::Engine::new();
     target
         .build_model_in_memory(
             oce_model::ModelGraph::new(),

@@ -131,13 +131,14 @@ fn port_views<'a>(
 /// determinism and boundary-elision contracts.
 pub(crate) fn resolve(
     doc: &CxfDocument,
+    raw: &[u8],
     opts: &ResolveOptions,
 ) -> Result<(ModelGraph, ValidationReport), CxfError> {
     // --- Step 0: expand identity and typing tokens against `@context` on a working clone
     // (doc 04 R-3), BEFORE any `@id` index exists — expansion must precede the by_id build or
     // `ex:A` and its absolute spelling become two nodes instead of a `DuplicateId`. A document
     // whose identity tokens cannot be canonicalized is refused here with typed diagnostics.
-    let expanded = match crate::expand::expand_document(doc) {
+    let expanded = match crate::expand::expand_document(doc, Some(raw)) {
         Ok(expanded) => expanded,
         Err(diags) => return Err(CxfError::Validation(finalize_diags(diags, &HashMap::new()))),
     };
@@ -425,9 +426,9 @@ pub(crate) fn resolve(
 
     // --- Step 6: build connectors in ConnectorId order (value_type from isOfDataType, falling back
     // to the @type port term; dir/owner from Step 5b). The resolver PARSES each connector's declared
-    // §7.4.1 attributes (unit/quantity/displayUnit/min/max) onto `Connector.attrs` so the §7.10 deep
-    // gate (oce-validate) has something to *unify* — unification is oce-validate's job (AD-8), but the
-    // declared attrs must flow from CXF first or the gate is dead on real input.
+    // §7.4.1 attributes (unit/quantity/displayUnit/min/max/nominal) onto `Connector.attrs` so the
+    // §7.10 deep gate (oce-validate) has something to *unify* — unification is oce-validate's job
+    // (AD-8), but the declared attrs must flow from CXF first or the gate is dead on real input.
     let mut connectors: Vec<Connector> =
         Vec::with_capacity(conn_nodes.len() + derivation.synthesized.len());
     for (i, &node) in conn_nodes.iter().enumerate() {
@@ -809,6 +810,15 @@ pub(crate) fn resolve(
     let boundary_inputs =
         boundary_inputs::materialize(doc, &graph, &role_aliases, &boundary_types, &mut diags);
     graph.boundary_inputs = boundary_inputs;
+    boundary_inputs::warn_unread(
+        top,
+        &boundary_in,
+        &boundary_out,
+        &by_id,
+        &role_aliases,
+        lowered.connection_edges(),
+        &mut diags,
+    );
     // `ConnectorId` is not a tie-break here, it is the whole discriminator, and calling it a
     // tie-break would misdescribe what changed: every entry belonging to ONE boundary port shares
     // that port's node position, so the first key component only orders port GROUPS relative to

@@ -34,14 +34,14 @@ fn assert_same_state(left: &Engine, right: &Engine) {
 
 #[test]
 fn durable_split_run_matches_every_continuation_tick_bit_exactly() {
-    let mut uninterrupted = Engine::in_memory();
+    let mut uninterrupted = Engine::new();
     uninterrupted.load_cxf(MINIMAL_LOOP).unwrap();
     advance(&mut uninterrupted, 0.0, &INPUTS).unwrap();
     advance(&mut uninterrupted, 1.0, &INPUTS).unwrap();
     let snapshot = uninterrupted.state_snapshot().unwrap();
     let decoded = EngineStateSnapshot::from_bytes(snapshot.as_bytes()).unwrap();
 
-    let mut restored = Engine::in_memory();
+    let mut restored = Engine::new();
     restored.load_cxf(MINIMAL_LOOP).unwrap();
     restored.restore_state(&decoded).unwrap();
     assert_same_state(&uninterrupted, &restored);
@@ -63,7 +63,7 @@ fn durable_split_run_matches_every_continuation_tick_bit_exactly() {
 
 #[test]
 fn tuned_model_exports_reloads_and_continues_bit_exactly() {
-    let mut uninterrupted = Engine::in_memory();
+    let mut uninterrupted = Engine::new();
     uninterrupted.load_cxf(MINIMAL_LOOP).unwrap();
     uninterrupted.halt().unwrap();
     uninterrupted
@@ -76,7 +76,7 @@ fn tuned_model_exports_reloads_and_continues_bit_exactly() {
     assert!(export.warnings.is_empty());
     let snapshot = uninterrupted.state_snapshot().unwrap();
 
-    let mut restored = Engine::in_memory();
+    let mut restored = Engine::new();
     restored.load_cxf(&export.bytes).unwrap();
     restored.restore_state(&snapshot).unwrap();
     assert_same_state(&uninterrupted, &restored);

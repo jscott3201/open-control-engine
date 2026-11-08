@@ -184,8 +184,7 @@ fn economizer_enable_trace(time: &[f64], inputs: &[Row]) -> EconomizerEnableTrac
         let dry_bulb_delta = row.outdoor_air_temperature - row.outdoor_air_cutoff;
         let outdoor_air_condition = hysteresis.tick(dry_bulb_delta);
         let held_condition = hold.tick(t, outdoor_air_condition);
-        let enabled =
-            held_condition && row.supply_fan_on && row.freeze_protection_stage == 0;
+        let enabled = held_condition && row.supply_fan_on && row.freeze_protection_stage == 0;
         let disabled = !enabled;
         let outdoor_delay_done = outdoor_delay.tick(t, disabled, 15.0);
         let return_delay_done = return_delay.tick(t, disabled, 180.0);
@@ -197,13 +196,15 @@ fn economizer_enable_trace(time: &[f64], inputs: &[Row]) -> EconomizerEnableTrac
         } else {
             row.outdoor_damper_max
         });
-        trace.return_damper_max
+        trace
+            .return_damper_max
             .push(if force_return_damper_physical {
                 row.return_damper_physical_max
             } else {
                 row.return_damper_max
             });
-        trace.return_damper_min
+        trace
+            .return_damper_min
             .push(if force_return_damper_physical {
                 row.return_damper_physical_max
             } else if disabled {

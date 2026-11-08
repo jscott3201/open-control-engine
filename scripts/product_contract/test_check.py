@@ -22,7 +22,7 @@ import check
 ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = (
     "product contract: OK\n"
-    "Document revision: 15\n"
+    "Document revision: 18\n"
     "Grounding SHA: e81480b02271456719d55cbe1e5090b0dea6d63c\n"
     "Requirements: 40\n"
     "CURRENT: 35\n"
@@ -203,9 +203,9 @@ class TraceabilityTests(unittest.TestCase):
 
     def test_revision_grounding_and_change_record_are_required(self):
         for old, new, message in (
-            ("Document revision: 15", "Document revision: 0", "metadata:"),
-            ("Document revision: 15", "Document revision: 16", "current revision change record"),
-            ("Document revision: 15", "Document revision: 15\nDocument revision: 15", "metadata:"),
+            ("Document revision: 18", "Document revision: 0", "metadata:"),
+            ("Document revision: 18", "Document revision: 19", "current revision change record"),
+            ("Document revision: 18", "Document revision: 18\nDocument revision: 18", "metadata:"),
             ("Grounding SHA: e81480b02271456719d55cbe1e5090b0dea6d63c", "Grounding SHA: d2111be", "metadata:"),
             ("## Change record", "## History", "change record required"),
         ):
@@ -257,8 +257,8 @@ class TraceabilityTests(unittest.TestCase):
     def test_future_rows_require_assignments_not_existing_test_promises(self):
         self.document = self.future_probe()
         self.change_cell("PC-040", 7,
-                         "test [retired_facade_symbols_are_absent]"
-                         "(../crates/oce-api/tests/public_surface_contract.rs#L507-L512)")
+                         "test [test_reintroduced_symbol_cannot_pass_by_compiling]"
+                         "(../scripts/facade_contract/test_check.py#L25)")
         self.rejects("future outcome assignment required")
         self.change_cell("PC-006", 7, "source [tick](../crates/oce-api/src/engine.rs#L279-L312)")
         self.rejects("test or future assignment required")
@@ -268,7 +268,7 @@ class TraceabilityTests(unittest.TestCase):
         for value, message in (
             ("future [later](#strict-bit-evidence)", "one named future assignment"),
               ("future [M03-PR05](#canonical-replay)", "missing future description"),
-              ("future [M03-PR05](public-surface-contract.md)", "future outcome must be in this document"),
+              ("future [M03-PR05](facade-contracts.md)", "future outcome must be in this document"),
               ("future [M03-PR05](#absent)", "missing heading"),
         ):
             with self.subTest(value=value):
@@ -433,8 +433,7 @@ class TraceabilityTests(unittest.TestCase):
             "docs/replay-record.md", "crates/oce-api/src/replay.rs",
             "crates/oce-api/tests/replay.rs", "crates/oce-api/tests/replay_codec.rs",
             "crates/oce-api/src/replay_capture_tests.rs",
-            "docs/release-compatibility.md", "scripts/release_compatibility/test_check.py",
-            "crates/oce-api/tests/release_compatibility.rs", "crates/oce-api/tests/release_fallback.rs",
+            "crates/oce-api/tests/release_fallback.rs",
         )))
         for path in ("docs/facade-migration.md", "crates/oce-api/tests/frame_assertions.rs",
                      "crates/oce-api/src/admission.rs", "crates/oce-api/src/tests/reload_tests.rs",
@@ -521,17 +520,17 @@ class TraceabilityTests(unittest.TestCase):
         path.write_text(original + "\nMigration history: tick and SimSpec were removed.\n")
         self.assertEqual(self.run_fixture(), GOLDEN)
 
-    def test_reintroduced_baseline_execution_items_refuse_without_reblessing(self):
-        path = self.root / "crates/oce-api/tests/public-api.txt"
+    def test_every_retired_name_requires_a_negative_compiler_control(self):
+        path = self.root / "scripts/facade_contract/check.py"
         original = path.read_text()
-        for symbol in ("Engine<S>::tick(", "Engine<S>::tick_with(", "Engine<S>::set_input(",
-                       "Engine<S>::simulate(", "Engine<S>::step_realtime(", "Engine<S>::outputs(",
-                       "Engine<S>::set_realtime_epoch_unix_nanos(", "Engine<S>::realtime_epoch_unix_nanos(",
-                       "Outputs", "InputSource", "CollectSpec", "SimSpec", "SimMetrics",
-                       "StepReport", "OutputTrace"):
+        for symbol in check.RETIRED_METHODS + check.RETIRED_TYPES + check.RETIRED_VARIANTS:
             with self.subTest(symbol=symbol):
-                path.write_text(original + f"\npub oce_api::{symbol}\n")
-                self.rejects("frame-only: retired baseline item")
+                quoted = f'"{symbol}"'
+                self.assertIn(quoted, original)
+                path.write_text(original.replace(quoted, '"renamed_control"'))
+                self.rejects("frame-only: retired name lacks a compiler control")
+        path.write_text(original)
+        self.assertEqual(self.run_fixture(), GOLDEN)
 
     def test_contraction_evidence_cannot_be_replaced_by_an_existing_unrelated_test(self):
         self.change_cell("PC-035", 7, "test [test_report_is_an_independent_byte_golden]"
@@ -541,7 +540,7 @@ class TraceabilityTests(unittest.TestCase):
     def test_contraction_is_current_at_the_accepted_document_revision(self):
         self.change_cell("PC-035", 1, "HOST-OBLIGATION")
         self.rejects("frame-only: contraction is current")
-        self.write_document(self.document.replace("Document revision: 15", "Document revision: 14"))
+        self.write_document(self.document.replace("Document revision: 18", "Document revision: 17"))
         self.rejects("frame-only: document revision")
 
     def test_retired_current_claims_are_not_hidden_by_valid_evidence_links(self):
@@ -557,14 +556,16 @@ class TraceabilityTests(unittest.TestCase):
         self.rejects("release: no-N-1 and host-owned limitations")
         self.change_cell("PC-040", 7, "test [test_report_is_an_independent_byte_golden]"
                          "(../scripts/product_contract/test_check.py#L94-L100)")
-        self.rejects("release: directed matrix")
+        self.rejects("release: host refusal")
 
     def test_native_exactness_is_current_with_retained_mutation_and_platform_evidence(self):
         _, _, rows = check.parse_document(self.document)
         row = next(row for row in rows if row.identifier == "PC-037")
         self.assertEqual(row.status, "CURRENT")
         self.assertEqual({name for name, _ in check.link_list(row.evidence[5:])}, {
-            "retained_native_linux_evidence_is_complete_exact_and_source_bound",
+            "native_linux_matrix_is_complete_and_exact",
+            "every_signal_and_cell_reports_the_exact_finite_mutation",
+            "one_flipped_bit_in_a_cell_or_only_its_repeat_fails_the_cross_cell_comparison",
             "every_corpus_sample_uses_exact_facade_comparison_and_rejects_mutations",
             "qualified_linux_signals_are_exact_and_other_targets_keep_the_aligned_band",
         })

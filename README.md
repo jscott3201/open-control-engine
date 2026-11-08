@@ -21,7 +21,11 @@ storage port your application implements. That split is not a design preference;
 which states that such metadata does not affect the computation of a control signal.
 
 Today it loads and simulates **46 ASHRAE Guideline 36 sequence fixtures** against a registry of
-**133 CDL block classes**. It is **pre-1.0 and not published to crates.io**.
+**133 CDL block classes**\*. It is **pre-1.0 and not published to crates.io**.
+
+\* One of the 133, `TrueHoldWithReset`, uses a local two-input interface that is not in the CDL
+catalog, so a conforming single-input document is refused. See the note in
+[CDL coverage](docs/cdl-coverage.md).
 
 Read the [product contract](docs/product-contract.md) for the versioned executable-CXF/HostTick
 boundary, current limitations, host obligations and future acceptance outcomes.
@@ -70,7 +74,7 @@ use oce_api::{Engine, Value};
 const ECONOMIZER: &str = "http://example.org#g36.ahu_economizer";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut engine = Engine::in_memory(); // Default in-memory store, no database.
+    let mut engine = Engine::new(); // A pure engine: no storage backend, no database.
     let cxf_bytes = std::fs::read("crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld")?;
     engine.load_cxf(&cxf_bytes)?;
 
@@ -120,19 +124,23 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   where re-importing the emitted bytes renders bit-identically — Reals compared by IEEE-754 bits,
   not by epsilon. See [CXF round trip](docs/cxf-round-trip.md).
 - Executes a registry of **133 CDL elementary block classes** plus 3 reserved internal lowering
-  classes, enumerable at runtime via `oce_blocks::catalog()` with per-class ports, parameter rules,
+  classes, enumerable at runtime via `oce_api::catalog()` with per-class ports, parameter rules,
   and honest parameter defaults. See [CDL coverage](docs/cdl-coverage.md).
 - Runs **46 G36 conformance fixtures** end to end through the frozen facade, each with a committed
   whole-sequence golden trace.
-- Executes exclusively through `prepare_frame` followed by consuming `execute_frame`, with no
-  Store reads or writes. Hosts own cadence, persistence and equipment delivery.
+- Executes exclusively through `prepare_frame` followed by consuming `execute_frame`. The engine is
+  pure: it has no storage dependency, and `load_cxf` returns the resolved model and IO inventory as
+  a plain-data `LoadedModel`. Hosts own cadence, persistence and equipment delivery; for
+  persistence, `oce_store::host::persist_loaded_model` runs the post-load recover → save →
+  validate-inputs sequence against any adapter behind the storage port (or the in-memory
+  `oce_store::MemStore`).
 
 ## What it does not do
 
 Stating this plainly is more useful than a feature list.
 
 - **It does not parse or flatten Modelica `.mo` sources.** It executes the block graph a CXF
-  document hands it. `oce-flatten` is a reserved seam that returns the model unchanged.
+  document hands it; the `oce-cxf` resolver lowers that document and nothing elaborates it further.
 - **It is not general ASHRAE G36 support.** The supported set is explicitly
   *selected-explicit-cxf-variants-supported*: pre-flattened CXF at specific parameterizations, not
   other G36 composites. [What "supported" means](docs/cdl-coverage.md).
@@ -167,7 +175,7 @@ host layer has to answer for:
 - **Every boundary input is required exactly once.** Missing values refuse before mutation;
   there is no sparse staging, implicit zero, or hold-last execution profile.
 - **Typed values are not sensor-quality evidence.** Frame preparation checks types and declared
-  domains, not host freshness, plausibility or permission to command. Store samples are not consulted.
+  domains, not host freshness, plausibility or permission to command. Stored samples are not consulted.
 
 Staleness limits, fault reactions, and safe-state fallback belong in the host above the engine.
 **[Host responsibilities](docs/host-responsibilities.md)** is the checklist; read it before wiring
@@ -180,9 +188,9 @@ anything to a physical output.
 CDL §7.17 states that point lists, trends, display units, tags, and Brick / Haystack / ASHRAE 223P
 semantics do not affect the computation of a control signal. That one rule is the seam the whole
 system is built around: an execution core that sees only blocks, typed connections, and values, and
-a storage port for everything else.
+a storage port for everything else, which the host reaches and the engine never does.
 
-![The execution core sees only blocks, connections, and values and has no database; everything non-computational sits behind the oce-store port](docs/diagrams/architecture-seam.svg)
+![The execution core sees only blocks, connections, and values and has no database; everything non-computational sits behind the oce-store port, which only the host reaches](docs/diagrams/architecture-seam.svg)
 
 Full layer-by-layer detail, the crate map, and the platform and MSRV policy are in
 **[Architecture](docs/architecture.md)**.
@@ -195,11 +203,12 @@ Six evidence layers in this repository are called "tests", and they prove differ
 One of them proves nothing about correctness at all — the 46 fixture goldens are **engine
 self-output**, a determinism snapshot that catches drift, not wrongness.
 
-Correctness is bounded separately by 412 provenance records generated by a tool held off the
+Correctness is bounded separately by 422 provenance records generated by a tool held off the
 workspace and **forbidden from depending on the block library**, with CI enforcing that
-code-dependency firewall. Of the 410 signal goldens, 390 check CDL / Buildings source semantics and
-20 G36 signals across three `Pre`-dependent fixtures check the HostTick v1 profile instead.
-389 retain their existing exact comparisons, including all 132 G36 sequence goldens. The other
+code-dependency firewall. Of the 420 signal goldens, 398 check CDL / Buildings source semantics and
+22 check the HostTick v1 profile instead: 20 G36 signals across three `Pre`-dependent fixtures and
+the two standalone `CDL.Logical.Pre` goldens.
+399 retain their existing exact comparisons, including all 135 G36 sequence goldens. The other
 21 transcendental, psychrometric, and solar Real goldens compare exactly on qualified Linux
 x86_64/aarch64 debug/release and retain the unchanged 1e-12 aligned band on unqualified targets.
 The [retained strict-bit evidence](docs/strict-bit-evidence.md) bounds that Linux result to the

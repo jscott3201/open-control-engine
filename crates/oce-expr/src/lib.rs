@@ -8,11 +8,13 @@
 //! `oce-expr` parses
 //! opaque CDL binding text into an [`ExprAst`] and evaluates it against a [`Scope`] to a ground
 //! value. It is **Group A** (no store, no database), pure, total through typed depth/size
-//! rejections, and never reads the clock, connectors, or computation-affecting attributes (R11).
+//! rejections and a deterministic per-evaluation work budget ([`MAX_EVAL_FUEL`], counted in
+//! operations through a thread-local meter, never time), and never reads the clock, connectors,
+//! or computation-affecting attributes (R11).
 //!
 //! # Scalar subset
 //!
-//! This crate implements the scalar grounding subset that `oce-flatten` needs to fold
+//! This crate implements the scalar grounding subset that the `oce-cxf` resolver needs to fold
 //! parameter/constant bindings (`02-type-system-and-values.md` §6–7):
 //!
 //! - **Literals** — `Real`, `Integer`, `Boolean`, `String`.
@@ -88,7 +90,7 @@
 //! binding today is a typed error, never a panic.
 //!
 //! The public surface below (`parse`/`eval`/`eval_str`, [`ExprAst`], [`Scope`], [`EvalResult`],
-//! [`ExprError`]) is the **stable contract** `oce-flatten` binds to.
+//! [`ExprError`]) is the **stable contract** the `oce-cxf` resolver binds to.
 
 use std::sync::Arc;
 
@@ -107,6 +109,12 @@ mod eval_array_tests;
 mod eval_comprehension;
 #[cfg(test)]
 mod eval_comprehension_tests;
+mod eval_strict;
+#[cfg(test)]
+mod eval_strict_tests;
+mod fuel;
+#[cfg(test)]
+mod fuel_tests;
 mod lex;
 mod parse;
 #[cfg(test)]
@@ -114,11 +122,14 @@ mod parse_tests;
 #[cfg(test)]
 mod tests;
 
+pub use fuel::{MAX_EVAL_FUEL, with_eval_budget};
+
 /// Maximum supported parser-entry and AST nesting depth.
 ///
-/// The parser metric counts simultaneously live guarded parse entries; the AST metric counts a
-/// leaf at depth one. Both reject only when the metric exceeds 64, so 64 is accepted and 65 is
-/// rejected. A 2 MiB debug thread exhausted its stack at 196 nested parentheses; the parser cap
+/// The parser metric counts simultaneously live guarded parse entries; the AST metric
+/// ([`nesting_depth`]) counts a leaf at depth one and does not count the length of a
+/// left-associative operator chain, so `a+b+…` is bounded by [`MAX_EXPR_NODES`], not by this
+/// limit. Both reject only when the metric exceeds 64, so 64 is accepted and 65 is rejected. A 2 MiB debug thread exhausted its stack at 196 nested parentheses; the parser cap
 /// admits 31 nested parenthesis/brace/call levels or 62 unary signs, leaving roughly 6× stack
 /// headroom for the parenthesis case and about 16× headroom over the deepest measured real binding
 /// (AST depth four).
@@ -208,6 +219,14 @@ pub enum ExprAst {
 /// `Buildings.Controls.OBC.CDL.Constants` module. `inf` is not defined by that package; Open Control
 /// Engine retains it as a closed-world `Modelica.Constants.inf` alias for compatibility with
 /// existing expression bindings, and pins it to the largest finite `f64`.
+///
+/// Arithmetic on the alias is therefore ordinary **finite** arithmetic on `f64::MAX`, not
+/// Modelica's IEEE-infinity arithmetic (issue #374): `inf/inf` is `1.0`, `inf-inf` is `0.0`,
+/// `inf+1` is `f64::MAX` (the `1` is below half an ulp), `-inf` is `f64::MIN`, `inf > x` holds for
+/// every other finite `x`, and `integer(inf)` is outside the Integer range and refuses. Only a
+/// result that overflows `f64` (`inf*2`, `inf+inf`) becomes IEEE `+∞`, which the load-time
+/// strict-finite evaluator ([`eval_finite`]) refuses. A binding that needs "unbounded" should
+/// use the alias for comparison or pass-through, not as an arithmetic operand.
 ///
 /// Note: this `inf` is distinct from an IEEE `±∞` literal. The spelled-out `-Inf`/`+Inf` Real
 /// literals of §6.1 are a CXF typed-value serialization concern parsed by `oce-cxf`, not part of
@@ -418,7 +437,7 @@ pub enum Shape {
 }
 
 /// Resolves identifiers to ground values during evaluation. Implemented over the in-scope
-/// parameter/constant table that `oce-flatten` supplies. Pure and total: never reads
+/// parameter/constant table that the `oce-cxf` resolver supplies. Pure and total: never reads
 /// attributes, connectors, or time (R11).
 ///
 /// `enum_class`/`enum_ordinal` back enumeration-reference grounding (`02` §7.4): evaluating an
@@ -438,6 +457,16 @@ pub trait Scope {
     /// Resolve an enumeration literal within a class to its 1-based ordinal.
     fn enum_ordinal(&self, _class: EnumClassId, _literal: &str) -> Option<u32> {
         None
+    }
+
+    /// Whether evaluation under this scope must refuse every non-finite Real it produces.
+    ///
+    /// `false` (the default) keeps the IEEE propagation semantics [`eval()`] documents. The strict
+    /// entry points [`eval_finite`] / [`eval_str_finite`] wrap the caller's scope so this answers
+    /// `true`; a scope that layers over another (a comprehension iteration) forwards it. Callers
+    /// never need to override it themselves.
+    fn requires_finite(&self) -> bool {
+        false
     }
 }
 
@@ -480,6 +509,19 @@ pub enum ExprError {
         expected: &'static str,
         /// The operand type actually supplied.
         found: &'static str,
+    },
+    /// Evaluation would spend more than [`MAX_EVAL_FUEL`] deterministic work units (one per AST
+    /// node evaluated, one per array element constructed, read or reduced) — a resource-limit
+    /// rejection for expressions that are small but quadratically expensive, such as nested
+    /// comprehensions over large ranges. Counted in operations, never time, so the refusal is
+    /// identical on every host.
+    #[error(
+        "expression too expensive: evaluation exceeds the supported work budget ({limit} units)"
+    )]
+    ExpressionTooExpensive {
+        /// The budget that ran out: [`MAX_EVAL_FUEL`] for one evaluation, or the shared budget
+        /// of an enclosing [`with_eval_budget`] call when that is what was exhausted.
+        limit: u64,
     },
     /// An array construct would produce more elements than the engine will allocate — a
     /// resource-limit rejection, distinct from [`ExprError::DomainError`]. The count is checked
@@ -525,6 +567,15 @@ pub enum ExprError {
         /// The type of the value actually supplied as the subscript.
         found: &'static str,
     },
+    /// Strict evaluation ([`eval_finite`]) produced a non-finite Real (`NaN`, `+inf` or `-inf`) at
+    /// some node — a literal beyond `f64` range, an overflowing or zero-dividing operation, or a
+    /// non-finite value read from scope. Raised at the producing node, so no later function
+    /// (`integer`, `sign`, `min`/`max`, a comparison, …) can absorb it into a finite result.
+    #[error("expression produced a non-finite Real ({value}); load-time values must be finite")]
+    NonFinite {
+        /// The offending value, rendered (`NaN`, `inf` or `-inf`).
+        value: &'static str,
+    },
 }
 
 /// Parse opaque CDL binding text into an [`ExprAst`], rejecting out-of-subset constructs (R9).
@@ -546,14 +597,16 @@ pub fn parse(text: &str) -> Result<ExprAst, ExprError> {
 /// Returns a typed [`ExprError`] on any evaluation failure (unknown identifier, type mismatch,
 /// domain violation, or division by zero), including [`ExprError::NestingTooDeep`] when a
 /// hand-built AST exceeds [`MAX_NESTING_DEPTH`]. Parse-produced ASTs are already within both
-/// expression caps.
+/// expression caps. Returns [`ExprError::ExpressionTooExpensive`] when evaluation would exceed
+/// [`MAX_EVAL_FUEL`] work units; an evaluation nested inside another (a [`Scope`] that itself
+/// evaluates) draws on the enclosing budget.
 pub fn eval(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
     if nesting_depth(ast) > MAX_NESTING_DEPTH {
         return Err(ExprError::NestingTooDeep {
             limit: MAX_NESTING_DEPTH,
         });
     }
-    eval::eval(ast, scope)
+    fuel::metered(|| eval::eval(ast, scope))
 }
 
 /// Convenience for the flattener: [`parse()`] then [`eval()`] in one shot.
@@ -565,7 +618,39 @@ pub fn eval_str(text: &str, scope: &dyn Scope) -> Result<EvalResult, ExprError> 
     eval(&parse(text)?, scope)
 }
 
-/// Return the maximum node depth of an expression tree, with a leaf at depth one.
+/// Strict-finite [`eval()`] for load-time grounding: identical semantics, except that any node
+/// whose result is, or contains, a non-finite Real refuses with [`ExprError::NonFinite`].
+///
+/// Every node — literals, scope reads, operators, built-in calls, array constructs and each
+/// comprehension body evaluation — is checked as it is produced, so a non-finite intermediate can
+/// never be absorbed into a finite result (`integer(1/0)`, `sign(0/0)`, `min(1/0, 3)`,
+/// `x > 0` with `x = NaN`). `Modelica.Constants.inf` is `f64::MAX` and stays legal; arithmetic
+/// that overflows it (`inf*2`) refuses. [`eval()`] itself is unchanged.
+///
+/// # Errors
+/// Every error [`eval()`] returns, plus [`ExprError::NonFinite`].
+pub fn eval_finite(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
+    eval(ast, &eval_strict::FiniteScope { inner: scope })
+}
+
+/// [`parse()`] then [`eval_finite()`] in one shot.
+///
+/// # Errors
+/// Every error [`parse()`] and [`eval_finite()`] return.
+pub fn eval_str_finite(text: &str, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
+    eval_finite(&parse(text)?, scope)
+}
+
+/// Return the nesting depth of an expression tree, with a leaf at depth one.
+///
+/// Every child sits one level below its parent, except the left operand of a
+/// [`ExprAst::Binary`] that is itself a `Binary`: that operand continues a left-associative
+/// chain and sits at its parent's level. The parser builds `a+b+c+…`, `a*b*c*…`, `a and b and …`
+/// and `a or b or …` left-deep, so a chain of any length has the depth of its deepest operand plus
+/// one, and only true nesting — parentheses on the right of an operator, unary signs, calls,
+/// arrays, ranges, subscripts and comprehensions — adds levels. The evaluator walks such a left
+/// spine iteratively, so this metric bounds its recursion; a chain's length is bounded by
+/// [`MAX_EXPR_NODES`] at parse and by the fuel budget at evaluation instead (issue #371).
 ///
 /// This walk is iterative so checking an untrusted hand-built tree does not itself recurse.
 #[must_use]
@@ -577,7 +662,12 @@ pub fn nesting_depth(ast: &ExprAst) -> usize {
         match node {
             ExprAst::Unary(_, child) => work.push((child, depth + 1)),
             ExprAst::Binary(_, left, right) => {
-                work.push((left, depth + 1));
+                let left_depth = if matches!(**left, ExprAst::Binary(..)) {
+                    depth
+                } else {
+                    depth + 1
+                };
+                work.push((left, left_depth));
                 work.push((right, depth + 1));
             }
             ExprAst::Call(_, args) | ExprAst::ArrayLit(args) => {

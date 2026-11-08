@@ -10,6 +10,12 @@ warn you if you skip them.
 See the [product contract](product-contract.md) for numbered host obligations and the bounded
 requirement-to-evidence map; engine boundary tests are not host-compliance evidence.
 
+> **Production hosts: select the strict non-finite input policy.** Call
+> `engine.set_non_finite_input_policy(NonFiniteInputPolicy::Refuse)` before your first frame. The
+> default is still `Admit`, which passes a NaN or infinite sensor value to the blocks; it becomes
+> `Refuse` at the next native-evidence refresh (GitHub issue #363). See
+> [Refuse non-finite Real inputs](#refuse-non-finite-real-inputs).
+
 ## Native complete frames and the host delivery boundary
 
 The [complete-frame contract](complete-frame-contract.md) supplies current typed, read-only
@@ -20,12 +26,12 @@ preparation followed by consuming execution is the only public state-advancing e
 
 Completeness means every executable boundary input exactly once, except omission explicitly
 defined by the executable schema. It does not establish sensor coherence, quality, freshness or
-plausibility. Preparation neither fills gaps from Store samples nor infers host defaults.
+plausibility. Preparation neither fills gaps from stored samples nor infers host defaults.
 Its reload fence does not authorize deployments or commands. Persistence, authentication,
 authorization, deployment fencing, scheduling/wall-clock mapping, NO_EVAL, safe states, equipment
 interlocks and actuation stay host-owned. NO_EVAL means not executing.
 
-Native execution calls no Store method or host callback. Persisting or delivering a retained result
+Native execution calls no storage port or host callback. Persisting or delivering a retained result
 is a separate host operation; a later delivery failure does not turn the accepted frame into a refusal.
 Do not blindly resubmit at the same time: that produces another state transition and sequence.
 The accepted-frame sequence correlates only within one Engine lifetime; reload, resume and restore
@@ -38,7 +44,7 @@ any subsequent persistence or actuation attempt. Do not repeat execution merely 
 even equal model time advances state again. `get_output` and `watch` inspect latest state, not a
 retained receipt; load, restore and resume can replace that state without executing a frame.
 
-Library, Studio, Edge and Sim retain their roles; Runtime is only an additive future M05-PR03
+Library, Studio and Edge retain their roles; Runtime is only an additive future M05-PR03
 consumer/host qualification candidate. BOPTEST is Runtime host evidence, not OCE equivalence.
 No host services or second evaluator/snapshot/replay stack move into OCE.
 
@@ -65,13 +71,60 @@ qualified mathematics, and conformance tolerances are not replay acceptance poli
 ## Complete values are not sensor-quality evidence
 
 Every executable boundary input is required exactly once. A missing determinant returns
-`FrameMissingInput` before mutation, even if the connector had a prior value or the Store holds a
-sample. There is no implicit hold-last, type seed, sparse write or Store fill-in.
+`FrameMissingInput` before mutation, even if the connector had a prior value or your store holds a
+sample. There is no implicit hold-last, type seed, sparse write or stored-sample fill-in.
 
 Frames carry typed values, not `PointStatus` or wall-clock freshness. A host that deliberately
 resubmits stale or faulted observations can still obtain a valid computational result. Validate
 quality and observation coherence before preparation. The engine neither invents missing data nor
 qualifies a host's substitution policy.
+
+## Refuse non-finite Real inputs
+
+A NaN or infinite input sample is a hazard that no block masks reliably. One NaN can latch `PID`,
+`Derivative` or `MovingAverage` state until reload, and `Line` or `LimitSlewRate` can turn it into
+a finite, believable command. Block maths deliberately propagates non-finite values, as CDL does,
+so the protection belongs at the boundary.
+
+`Engine::set_non_finite_input_policy` selects what preparation does with a NaN (either sign, any
+payload) or infinite value on a Real boundary input:
+
+| Policy | Unbounded Real input | Bounded Real input | Default |
+| --- | --- | --- | --- |
+| `NonFiniteInputPolicy::Admit` | Accepted and passed to blocks unchanged | `InputDomain` (no value compares with NaN; finite bounds exclude the infinity beyond them) | **Yes, for now** |
+| `NonFiniteInputPolicy::Refuse` | `InputNonFinite(path)` | `InputNonFinite(path)` | From the next native-evidence refresh |
+
+**Production hosts are recommended to select `Refuse`.** `Admit` is the default only because the
+bound strict-bit conformance evidence feeds NaN and ±∞ through the facade to pin CDL's non-finite
+propagation. At the next native-evidence refresh the default becomes `Refuse`, the conformance
+driver opts out explicitly, and the evidence is re-captured (GitHub issue #363). A host that
+already selects `Refuse` sees no change then; a host relying on `Admit` must select it explicitly.
+
+Under `Refuse`, `InputNonFinite` names the canonical input. Per input it is checked after
+`InputType` and before `InputDomain`, so a NaN on a bounded input reports `InputNonFinite`. Nothing
+is staged, model time does not advance and no sequence number is consumed: the engine is exactly
+as it was before the attempt. Integer, Boolean and enum inputs are unaffected. Execution rechecks
+the plan against the policy in force, so a plan prepared under `Admit` cannot carry a non-finite
+value past a later switch to `Refuse`. Changing the policy changes nothing else: not the run
+state, the time, the sequence, the snapshot bytes or an outstanding plan's validity.
+
+The policy is host configuration, like `cxf_byte_limit`. It persists across loads, parameter
+resumes and restores, and no snapshot, checkpoint or replay record carries it. It decides only
+which frames are accepted; an accepted frame evolves state identically under either policy, so
+replay and restore stay deterministic without it. A replay record captured under `Admit` can
+carry a non-finite input; replaying it on a `Refuse` engine is refused at preparation, so replay
+such a record on an engine that selects `Admit`. Restored state is not inspected: the policy
+governs host inputs, not values a block already holds.
+
+Producing the replacement value is the host's obligation, and the engine does not choose one:
+
+1. **Substitute a finite value** that your fault policy defines for that point — a last good
+   sample within its staleness limit, a configured fallback, or a value that drives the sequence
+   toward its safe state — and record that you did.
+2. **Or do not execute the frame** and drive the equipment's safe state yourself.
+
+Do not substitute a bound or a type seed merely to get a frame accepted; a plausible value that
+the sensor never reported is the masking this refusal exists to prevent.
 
 ## The engine implements no fail-safe policy of its own
 
@@ -98,9 +151,18 @@ If your plant needs to fail safe, that policy lives in the host or equipment. At
 ## Time is host-supplied
 
 The engine never reads a wall clock. Model time is host-supplied finite nondecreasing `f64` seconds;
-a decrease returns `OcError::TimeRegression`. Loaded blocks also enforce representability. The
+a decrease returns `OcError::TimeRegression`. Its magnitude must not exceed
+`MAX_FRAME_TIME_MAGNITUDE` (`f64::MAX / 4`, about 4.49e307), or the frame is refused with
+`OcError::TimeOutOfRange` for every model, and restore refuses a snapshot or checkpoint whose clock
+is beyond it. Any single difference of two accepted times (a step, or the span since a timer
+started) is then at most `f64::MAX / 2`. Accumulated elapsed time (a sum of rounded steps) can round
+upward past the exact span; the remaining factor of two keeps it finite for fewer than about 3e15
+accumulated steps. Gains and other model maths applied to time are not bounded. UNIX epoch
+seconds, milliseconds and nanoseconds are all far inside the limit. A
+large finite step (a clock jump from -1e9 to 1e18) is still accepted, and integrators take it in
+one step: keep time contiguous yourself. Loaded blocks also enforce representability. The
 host owns cadence and any mapping between model seconds and external UNIX timestamps. Realtime
-epoch configuration and realtime/Store orchestration are not facade capabilities.
+epoch configuration and realtime/storage orchestration are not facade capabilities.
 
 Supply time from a source you trust to be monotonic. The engine cannot detect a clock that jumped.
 
@@ -121,11 +183,42 @@ remain committed if a later frame refuses, but that refusal stages no prefix. Us
 a fresh run, or an explicit compatible process-local checkpoint for branching/rewind. There is no
 whole-horizon transaction.
 
-## Persist engine state outside the store port
+## Durability is the host's
+
+The engine is pure: it owns no storage backend, `oce-api` does not depend on `oce-store`, and no
+load, frame, snapshot or restore calls a storage port. Persisting anything is a separate host
+operation. A load hands you the persistable model as plain data:
+
+```rust,ignore
+use oce_store::host::persist_loaded_model;
+
+let (report, loaded) = engine.load_cxf(&cxf_bytes)?; // engine state is committed here
+// `your_store` is your adapter behind the port, or `oce_store::MemStore`.
+let input_handles = persist_loaded_model(&your_store, &loaded.model, loaded.input_points())?;
+your_store.commit()?;                                 // the commit boundary is yours too
+```
+
+`persist_loaded_model` runs the sequence the engine used to run at load, in this order, stopping at
+the first error: `Durable::recover` (so the save lands after recovered state, never under it),
+`ModelStore::save_model`, then `PointStore::resolve_points` for every input point, refusing a
+backend that returns a different number of handles with `StoreError::Validation`. The three steps
+are also public on their own (`oce_store::host::{recover, save_model, validate_inputs}`) for a host
+that interleaves its own work. The returned handles are in `input_points()` order; they are yours to
+bind to your point layer or to drop, and the engine never reads them. The helper takes plain data only — `loaded.model` is the
+`ResolvedModel` the port takes unchanged (both crates share the `oce_model::resolved_model` DTOs)
+and `loaded.input_points()` yields `(canonical path, value type)` pairs — so `oce-store` never
+depends on `oce-api`.
+
+What it does not do is yours: it never calls `commit`, and it rolls nothing back. The engine has
+already committed the load when you persist, so a failure here leaves the engine loaded and
+running with the store partly written; whether to retry, delete the model or refuse to start is
+your policy. Nothing you persist is read back by a frame.
+
+## Persist engine state outside the engine
 
 `Engine::state_snapshot` returns the engine-owned canonical bytes needed to continue a run. It does
 not write them anywhere. `Engine::checkpoint`, `state_snapshot`, `restore_checkpoint`, and
-`restore_state` call no `Store` method. The [state contract](state-compatibility.md) defines the
+`restore_state` call no storage port. The [state contract](state-compatibility.md) defines the
 same-loaded-executable guarantee, typed refusals and portability limits. The host owns durable
 storage and an authenticated sealed envelope binding **exact snapshot bytes** to its approved
 compiled-build/deployment qualifier, freshness and generation. Verify that envelope **before**
@@ -151,8 +244,8 @@ Durable continuation has a narrow restore window:
    is insufficient. Refuse a mismatched build/deployment here, outside OCE.
 3. Parse only approved OCE bytes with `EngineStateSnapshot::from_bytes`. Inspect `portability()`
    for placement, without treating it as build or numerical qualification.
-4. Load the exact compatible executable/parameters into a fresh target. Load can have Store
-   effects even if it fails; apply the separate compensation policy below.
+4. Load the exact compatible executable/parameters into a fresh target. Load has no external
+   effects; anything your host persisted around a load is yours to reconcile.
 5. Call `restore_state` before any accepted frame, dirty-parameter resume or either earlier restore.
    On refusal do not patch bytes, retry on an advanced target or bypass admission. Select a
    qualified target, approved cold start or rollback under host policy.
@@ -168,7 +261,7 @@ The target model must have the same executable manifest: block classes and param
 bindings, connector types, schedule, state-slot layout, enum descriptors, external inputs, and
 boundary outputs, computation units/quantities and effective complete-frame acceptance bounds.
 The diagnostic model id may differ; executable compatibility may not. A refusal
-is atomic and leaves engine and store state unchanged. Durable restore also refuses after the target
+is atomic and leaves engine state unchanged. Durable restore also refuses after the target
 crosses a mutation boundary, even if that mutation was otherwise harmless
 as defined by the state contract.
 
@@ -190,7 +283,21 @@ For `CDL.Logical.Pre`, a snapshot preserves both the currently visible output co
 Boolean memory that will be emitted on the next HostTick call. Restore does not evaluate the block.
 A call at the restored timestamp advances it again.
 
-For candidate changes, use the [release compatibility and host fallback checklist](release-compatibility.md#host-fallback-checklist).
+When the engine build changes, work through this host fallback checklist:
+
+- [ ] Preserve exact original bytes and refusal cause; do not migrate or rewrite them.
+- [ ] Fence external actuator ownership/commands and select NO_EVAL while deciding.
+- [ ] Authenticate exact bytes, full build qualifier, freshness, generation and replay order before
+  decoding. Same Cargo version, descriptor equality and integrity checks are insufficient.
+- [ ] Choose explicitly approved cold requalification or separately qualified external rollback;
+  never auto-fallback or cross-build restore.
+- [ ] For cold start, qualify CXF, parameters, complete IO domains, cadence and seeded behavior;
+  reconcile anything your host persisted around the load and external state separately.
+- [ ] For rollback, bind the prior binary to its own authenticated state and configuration; reject
+  any mismatch before dispatch. No current decoder participates.
+- [ ] Verify field fencing, quality policy, model-time mapping and exclusive command authority before
+  delivery. Successful load, restore, replay or local tests alone authorize no field effect.
+
 Current/current is the only supported pairing; equal package strings are not build authority.
 No N-1 state/replay migration is supplied. Cold requalification starts fresh; external rollback uses
 the prior qualified binary with its own authenticated state, never a current-engine transplant.
@@ -206,6 +313,49 @@ dirty, `resume` rebuilds blocks, allocates all state again, refreshes outputs, a
 model time. Every stateful block—including integrators, latches, timers, and filters—is re-seeded,
 and monotonic-time history is lost. Plan parameter edits as a new run.
 
+## Real parameters are always finite
+
+The engine refuses every non-finite Real parameter value (`NaN`, `+inf`, `-inf`) at every level of a
+CXF document — root and nested composite declarations as well as leaf block parameters, and each
+element of a Real array parameter — for every block class (issue #362). Load-time grounding is also
+strict about expression intermediates: no expression node may produce a non-finite Real, so a
+function cannot absorb one into a finite result. `integer(1/0)`, `sign(0/0)`, `min(1/0, 3.0)`,
+`max(p, 2.0)` or `p > 0` with a non-finite `p`, and `Modelica.Constants.inf * 2` are all refused.
+Connector attribute bounds are not parameters and keep their existing handling.
+
+At load, `load_cxf` fails with `OcError::Cxf` carrying one `non-finite-parameter` error per offending
+declaration, whose subject is the declaring instance and whose message names the parameter. That
+applies whether the value came from a typed literal such as `"NaN"` or `"INF"` or from an
+expression. Dependents that read the refused declaration add the existing `grounding-failed`
+unknown-identifier cascade. Behind the resolver, the `oce-validate` load gate is a backstop: it
+re-checks every block parameter on the flattened graph and would refuse a non-finite value under the
+same code (`OcError::Validate`, subject = the block instance). No public load path reaches it with
+one today, because grounding refuses first. When it does fire, *all* of that block's class-level
+parameter rules are suppressed, not just range rules: its
+`missing-required-parameter`, `parameter-kind-mismatch` and array/matrix/time-table shape
+diagnostics surface only once the value is fixed. The load fails either way.
+
+At rest, `set_param` returns `OcError::ParamRange` and leaves the parameter unchanged. A crafted
+state snapshot cannot reintroduce a non-finite value: snapshots are compared bit-exactly against the
+loaded, already-checked parameters and never restore parameter values.
+
+No registered class takes a non-finite parameter, so there is no opt-out. The retained
+`Modelica.Constants.inf` alias is `f64::MAX`, which is finite and accepted. Arithmetic on it is
+ordinary finite arithmetic, not Modelica's IEEE infinity (issue #374): `inf/inf` is `1`, `inf-inf`
+is `0`, `inf+1` is `f64::MAX`, and only an overflow such as `inf*2` produces a non-finite value that
+the load refuses. Use the alias for comparison or pass-through, not as an arithmetic operand.
+
+`integer(x)` refuses a Real whose floor lies outside the Integer range `[-2^63, 2^63)` (issue #374)
+instead of saturating: `integer(1e300)` used to load as `i64::MAX` with no diagnostic. The load
+fails with `grounding-failed` on the binding's node, for parameters and connector bounds alike;
+`integer(-9223372036854775808.0)` is still exactly `i64::MIN`. The runtime
+`CDL.Conversions.RealToInteger` block deliberately keeps its saturating conversion (NaN → 0, ±inf →
+`i64::MAX`/`i64::MIN`): a running control loop must emit an output every tick, whereas a load can
+refuse. A host that cannot tolerate saturation at run time keeps the block's Real input in range. Finite extremes, signed
+zero and subnormals are accepted unless a class rule bounds them. The gate covers parameters only:
+a non-finite input *signal* is still the host's to keep out, and it propagates through the blocks
+under their documented IEEE behavior.
+
 Executable ingest uses `load_cxf`; the never-working semantic/Modelica loaders have been removed.
 Hosts prepare supported CXF outside the engine. Likewise, hosts decode CSV/table input outside the
 facade and provide complete `prepare_frame` observations. `AssertLevel` contains only `Warning`,
@@ -215,12 +365,12 @@ See [facade migration](facade-migration.md) for the intentional pre-release sour
 
 `point_list(None)` still returns the engine's own effective inventory. Its existing argument remains,
 but device filtering is outside support: every `Some` returns `OcError::Load` directly, without
-querying the store or changing the run. Wiring a capable `SemanticStore` does not enable that filter.
+changing the run. The engine has no equipment index to delegate to.
 
 ## CXF point identities are the authored `@id`s
 
-Every point path — on the host-visible `IoInventory` and in the durable `PointDto` projection sent
-through the PointStore port — is an authored `@id` from the source CXF document, expanded against
+Every point path — on the host-visible `IoInventory` and in the plain-data `PointDto` projection a
+load returns in `LoadedModel::model` — is an authored `@id` from the source CXF document, expanded against
 the document's `@context` to canonical absolute form at ingest: for a connector driven by a
 composite boundary input it is the declared boundary input's `@id` (one host point fans out to
 every internal consumer, which is why the G36 corpus's 3020 connectors surface as 2895 points),
@@ -240,6 +390,22 @@ modeled value/term object is also refused: context bindings are document-level o
 never applies a scoped context to one semantic value. The canonical-key guarantee therefore holds
 for every document that loads at all.
 
+Property keys are expanded against the same `@context` (issue #383). A modeled property — `min`,
+`max`, `nominal`, `unit`, `quantity`, `displayUnit`, `value`, the structural edges, and the rest
+of the `S231:` terms the importer reads — is the same property whether it is keyed compactly
+(`S231:min`), by its full IRI in the document's own S231 namespace, by another prefix bound to
+that namespace, or by a declared term. The own namespace is the document's `S231` binding; a
+document that binds no `S231` is read in the S231P namespace (`http://data.ashrae.org/S231P#`), the
+one the exporter binds. A modeled term spelled in any other known S231 namespace — S231P, the
+`http://data.ashrae.org/S231#` namespace upstream modelica-json emits, or the `https:` spelling of
+either — is refused as `non-subset-construct`, in both directions, and the message names the
+namespace the document reads modeled keys in. A node that writes one property in two spellings
+(an explicit `null` or `[]` compact key counts) and a key that names a modeled property only after
+trimming surrounding whitespace are refused as `malformed-document`, as is any key — modeled or
+not — written more than once on one `@graph` node, since JSON parsing would silently keep only one
+of the values. None of these is silently
+dropped. Keys that name no modeled property pass through unchanged.
+
 The document's declared boundary-output names (root `S231:hasOutput`) are a second read-only
 identity space: each resolves on `get_output` and `watch` as an alias for
 its driving internal connector's slot, and `Topology.boundary_outputs` enumerates the
@@ -250,9 +416,15 @@ a declared output name. Because the driver's connector supplies host point metad
 alias can supply a previously unset driver unit, quantity, or bound. That changes the driver's
 `IoInventory` and `point_list(None)` row for an unchanged input document; propagated unit and
 quantity also reach the durable `PointDto`. `IoSummary` remains a count-only surface and does not
-change when metadata propagates. Hosts that retain point metadata outside the store port must
+change when metadata propagates. Hosts that retain point metadata outside the engine must
 refresh it after loading with this rule. An undriven declared output resolves nowhere; its load-time
-`undriven-boundary-output` warning is its only representation.
+`undriven-boundary-output` warning is its only representation. The input side mirrors it: a root
+`hasInput` declaration that no connection reads is absent from `input_definitions()` (every listed
+input must be supplied, and nothing would read this one), resolves nowhere, and is reported only by
+an `unused-boundary-input` load warning whose subject is the declared IRI. A host that drives frames
+from its own point list should check the load receipt for that code and reject or reconcile the
+model before preparing frames. The check covers the root interface only; an unread input of a
+nested composite's own interface is internal wiring and does not warn.
 
 A related contract for emitters and durable stores: array order is load-bearing wherever the
 resolver reads an array — `@graph` node position, `containsBlock` order, each instance's port and
@@ -270,7 +442,7 @@ changes.
 
 | Bound | Limit | Defined at | Behavior when exceeded |
 | --- | --- | --- | --- |
-| Serialized CXF at both facade load entry points | 8 MiB (8,388,608 bytes) by default; hosts may configure a smaller limit | `crates/oce-api/src/admission.rs` | `OcError::CxfTooLarge { actual_bytes, limit_bytes }` before JSON deserialization or Store calls |
+| Serialized CXF at both facade load entry points | 8 MiB (8,388,608 bytes) by default; hosts may configure a smaller limit | `crates/oce-api/src/admission.rs` | `OcError::CxfTooLarge { actual_bytes, limit_bytes }` before JSON deserialization or engine mutation |
 | Expression parse and AST nesting | 64 | `crates/oce-expr/src/lib.rs` | typed `NestingTooDeep` error |
 | Expression size | 4096 nodes | `crates/oce-expr/src/lib.rs` | typed `ExpressionTooLarge` error |
 | Composite **nesting** (`containsBlock` lowering) | 64 | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
@@ -298,11 +470,17 @@ not write. If you must:
 
 The byte cap does not bound peak memory, CPU time, expansion, or total graph complexity. It is not
 a sandbox, cancellation/deadline guarantee, or evidence that every below-cap document is safe.
+Below the cap the pipeline refuses the known amplification shapes with typed diagnostics (issue
+#365): a `containsBlock` child reached twice (`shared-instance`), array parameters past a
+1,048,576-element per-document budget and run state past 4,194,304 words
+(`resource-limit-exceeded`), and binding evaluation past 2^24 deterministic work units per
+expression or 2^26 per document (`grounding-failed`). Those limits bound growth, not absolute footprint — a maximal admissible
+document can still need hundreds of MiB — so isolation stays your obligation.
 Receipt admission refusals use the existing `Import` stage, with byte counts only and no input
 content, source error or structured diagnostics in the `OcError`; `OperationFailure` still exposes
 that original error through its normal source chain. Legacy malformed-input errors remain unchanged.
 
-## Load replacement and the Store compensation boundary
+## Load replacement leaves no external effect
 
 Ordinary returned load failures preserve the prior **in-memory executable/run image**: model and
 identity, blocks/schedule, state words and connector/output values, IO/parameters,
@@ -311,19 +489,16 @@ durable-restore readiness. Successful reload replaces model-bound caches and sta
 parameter lifecycle, and opens the fresh durable-restore window. Refresh all model-local/ephemeral
 references after success; admission policy persists and accepted-frame sequence does not reset.
 
-This is not a Store transaction. `recover`, `save_model`, and `resolve_points` execute before the
-in-memory commit and can have effects even when a later operation (or that call itself) fails.
-The port has no abort/compensation hook. A saved candidate model and allocated point handles can
-remain after refusal. The host/adapter owns compensation, isolation and re-establishing a usable
-backend; **old external handle validity is not promised**. Load-time handles are validated but
-not retained for execution. Do not blindly resume equipment control after a backend refusal. Panic, process death,
-allocation failure, and concurrent host effects are outside the ordinary returned-error guarantee.
+Load calls no storage port, so a refused load has no external effect to compensate: the engine
+either commits the new model and returns a `LoadedModel`, or returns an error and keeps the prior
+image. If your host persists the `LoadedModel`, it does so after the engine has committed, and the
+ordering, transaction and compensation of that write are yours. Panic, process death, allocation
+failure, and concurrent host effects are outside the ordinary returned-error guarantee.
 
 `reload_tests` compares the complete owned image for fresh, advanced and halted/dirty runs across
-real import, unification, validation, schedule and injected Store refusals; the private build tail
-covers instantiation and projection. Flatten is currently an infallible identity shim and semantics
-currently returns metadata without a refusal path; no injected failures are claimed for those stages.
-The separate residual-effects test demonstrates the MemStore compensation boundary.
+real import, unification, validation and schedule refusals; the private build tail covers
+instantiation and projection. Semantics currently returns metadata without a refusal path; no
+injected failures are claimed for that stage.
 
 The structural ingest paths above are bounded and return typed diagnostics rather than panicking.
 `../TESTING.md` requires new ingest code to assert the specific `DiagCode` or error variant rather

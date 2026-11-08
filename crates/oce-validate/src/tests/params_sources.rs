@@ -13,6 +13,14 @@ fn calendar_time_outputs() -> [ValueType; 6] {
     ]
 }
 
+/// The engine-wide finiteness gate owns every non-finite Real; class rules own the rest.
+fn expected_code(value: &Value) -> DiagCode {
+    match value {
+        Value::Real(v) if v.is_nan() || v.is_infinite() => DiagCode::NonFiniteParameter,
+        _ => DiagCode::ParameterOutOfRange,
+    }
+}
+
 #[test]
 fn real_source_ramp_duration_is_required_and_at_least_small() {
     let missing = one_block_model("CDL.Reals.Sources.Ramp", &[], &[ValueType::Real], vec![]);
@@ -145,11 +153,11 @@ fn calendar_time_parameters_bind_zero_time_and_source_year_bounds() {
             &outputs,
             vec![
                 (Arc::from("zerTim"), Value::Integer(11)),
-                (Arc::from("offset"), value),
+                (Arc::from("offset"), value.clone()),
             ],
         );
         let err = validate(&invalid).expect_err("invalid CalendarTime offset must fail");
-        assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+        assert_eq!(codes(&err.diagnostics), vec![expected_code(&value)]);
         assert_eq!(err.diagnostics[0].severity, Severity::Error);
         assert!(err.diagnostics[0].message.contains("`offset`"));
     }
@@ -277,10 +285,10 @@ fn psychrometric_specific_enthalpy_atmospheric_pressure_must_be_finite_positive_
             "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi",
             &[ValueType::Real, ValueType::Real],
             &[ValueType::Real],
-            vec![(Arc::from("pAtm"), value)],
+            vec![(Arc::from("pAtm"), value.clone())],
         );
         let err = validate(&invalid).expect_err("pAtm must be finite and positive");
-        assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+        assert_eq!(codes(&err.diagnostics), vec![expected_code(&value)]);
         assert_eq!(err.diagnostics[0].severity, Severity::Error);
         assert!(err.diagnostics[0].message.contains("`pAtm`"));
     }
@@ -347,7 +355,10 @@ fn sun_rise_set_parameters_are_required_bounded_and_finite() {
         let err = validate(&invalid).expect_err(&format!(
             "SunRiseSet parameter {name}={value} must be rejected"
         ));
-        assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+        assert_eq!(
+            codes(&err.diagnostics),
+            vec![expected_code(&Value::Real(value))]
+        );
         assert_eq!(err.diagnostics[0].severity, Severity::Error);
         assert!(err.diagnostics[0].message.contains(&format!("`{name}`")));
     }

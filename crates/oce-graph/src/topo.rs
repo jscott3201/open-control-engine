@@ -12,8 +12,10 @@
 //!    cut input is read only by the deferred state update, never at emit). Because the engine fires
 //!    a block *atomically* (one `emit` call produces all its outputs, `01` §9), a cycle in this
 //!    graph is a **block-granularity algebraic loop** — unschedulable by single-pass firing even
-//!    when the connector graph is acyclic (a stateful multi-output block whose state-only output
-//!    feeds a path back to one of its feedthrough inputs). It is rejected, not silently mis-ordered.
+//!    when the connector graph is acyclic (a block output that feeds a path back to an input the
+//!    block reads but that output does not depend on, as with a multi-element routing block, a
+//!    multi-output matrix reduction or a proportional-only reset PID's `trigger`). It is rejected,
+//!    not silently mis-ordered.
 
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
@@ -272,11 +274,14 @@ fn first_cycle<K: Ord>(
     roots
 }
 
-/// Render a connector as a dotted path for diagnostics. Hand-built unnamed graphs are rendered from
-/// the block class IRI and dense ids:
-/// `<class-iri>#b<block>.<dir>#c<conn>`.
+/// Render a connector for diagnostics: its authored identity ([`oce_model::Connector::iri`]) when
+/// the graph carries one, otherwise — hand-built unnamed graphs — the block class IRI and dense
+/// ids: `<class-iri>#b<block>.<dir>#c<conn>`.
 fn connector_path(model: &Model, c: ConnectorId) -> ConnectorPath {
     let conn = &model.connectors[c.0 as usize];
+    if let Some(iri) = &conn.iri {
+        return ConnectorPath(iri.to_string());
+    }
     let class = &model.blocks[conn.block.0 as usize].class_iri;
     let dir = if matches!(conn.dir, oce_model::Dir::In) {
         "in"
@@ -288,9 +293,15 @@ fn connector_path(model: &Model, c: ConnectorId) -> ConnectorPath {
     ConnectorPath(format!("{class}#b{block}.{dir}#c{cid}"))
 }
 
-/// Render a block as a dotted path for block-granularity diagnostics: `<class-iri>#b<block>`.
-fn block_path(model: &Model, b: BlockId) -> ConnectorPath {
-    let class = &model.blocks[b.0 as usize].class_iri;
+/// Render a block for block-granularity diagnostics: its authored identity
+/// ([`oce_model::BlockInstance::instance_iri`]) when the graph carries one, otherwise
+/// `<class-iri>#b<block>`.
+pub(crate) fn block_path(model: &Model, b: BlockId) -> ConnectorPath {
+    let block = &model.blocks[b.0 as usize];
+    if let Some(iri) = &block.instance_iri {
+        return ConnectorPath(iri.to_string());
+    }
+    let class = &block.class_iri;
     let id = b.0;
     ConnectorPath(format!("{class}#b{id}"))
 }

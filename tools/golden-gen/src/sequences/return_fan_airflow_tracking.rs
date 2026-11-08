@@ -29,7 +29,10 @@ pub(super) fn goldens() -> Vec<Golden> {
             "return_fan_status",
             ValueKind::Boolean,
             time,
-            return_fan_status.into_iter().map(crate::oracle::Sample::Boolean).collect(),
+            return_fan_status
+                .into_iter()
+                .map(crate::oracle::Sample::Boolean)
+                .collect(),
             "ReturnFanAirflowTracking: y1RetFan is the source boundary alias of u1SupFan",
             "Pinned ReturnFanAirflowTracking.mo connects u1SupFan directly to y1RetFan; the checked-in explicit-CXF fixture uses a pure Boolean identity bridge because OCE exposes boundary outputs through block output connectors",
             inputs,

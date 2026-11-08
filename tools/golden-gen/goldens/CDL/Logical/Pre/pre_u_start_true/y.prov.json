@@ -1,0 +1,26 @@
+{
+  "class_path": "CDL.Logical.Pre",
+  "scenario": "pre_u_start_true",
+  "signal": "y",
+  "tier": "A",
+  "source": "HostTick v1 one-transition projection of Buildings CDL.Logical.Pre.mo (initial equation pre(u)=pre_u_start; y=pre(u)) per docs/execution-profile.md; independent of oce-blocks, not a Modelica event-iteration oracle",
+  "value_kind": "Boolean",
+  "compare_regime": "exact HostTick v1 profile 0.0/1.0 (atoly=0)",
+  "n_samples": 5,
+  "n_reference_columns": 3,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Boolean", "values": [0.0, 0.0, 1.0, 0.0, 1.0] }
+  ],
+  "input": "pre_u_start=true; u=[F,F,T,F,T] at 60 s ticks; u is false on the first tick",
+  "reference_rule": "HostTick v1 projection of Buildings CDL/Logical/Pre.mo: y[0] = pre_u_start (initial equation pre(u)=pre_u_start, line 14); y[k] = u[k-1] for k >= 1 (y=pre(u), line 17, one transition per tick)",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "third_party/modelica-buildings-cdl/Buildings/Controls/OBC/CDL/Logical/Pre.mo",
+  "execution_profile": "HostTick v1",
+  "diverges_from_modelica_event_iteration": "Pre.mo line 17 y=pre(u) is a one-event-iteration delay; Modelica iterates at each input event until u == pre(u), so a converged trace reports y == u after every event. HostTick v1 performs no same-time event iteration: y at tick k is u at tick k-1 and y at the first tick is pre_u_start. This reference pins the HostTick v1 projection and claims no Modelica event-iteration equivalence.",
+  "parameters": "pre_u_start=true",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

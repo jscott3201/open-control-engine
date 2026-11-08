@@ -4,7 +4,6 @@
 
 use std::collections::BTreeSet;
 
-use oce_api::oce_store::Store;
 use oce_api::{Engine, PointDirection, PointInfo};
 
 const ORIGINAL: &[u8] = include_bytes!("../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
@@ -13,14 +12,14 @@ const COMPACT_TWIN: &[u8] =
 const MODELICA_JSON_STYLE: &[u8] =
     include_bytes!("../../oce-cxf/tests/fixtures/modelica_json_style.jsonld");
 
-fn load(bytes: &[u8]) -> Engine<impl Store> {
-    let mut engine = Engine::in_memory();
-    let report = engine.load_cxf(bytes).expect("fixture loads");
+fn load(bytes: &[u8]) -> Engine {
+    let mut engine = Engine::new();
+    let (report, _) = engine.load_cxf(bytes).expect("fixture loads");
     assert!(report.warnings.is_empty(), "{:?}", report.warnings);
     engine
 }
 
-fn point_paths<S: Store>(engine: &Engine<S>, direction: PointDirection) -> BTreeSet<String> {
+fn point_paths(engine: &Engine, direction: PointDirection) -> BTreeSet<String> {
     engine
         .point_list(None)
         .expect("point inventory")

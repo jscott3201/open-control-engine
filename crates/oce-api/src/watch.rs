@@ -3,11 +3,10 @@
 //! This module registers no watches, stores no watch state, and has no presence on the tick path.
 
 use oce_model::Value;
-use oce_store::Store;
 
 use crate::{Engine, OcError};
 
-impl<S: Store> Engine<S> {
+impl Engine {
     /// Reads selected output point values in caller order.
     ///
     /// This is latest-state, non-receipt inspection, not an immutable execution result. Load,
@@ -105,7 +104,7 @@ impl<S: Store> Engine<S> {
     ///     }
     ///   ]
     /// }"##;
-    /// let mut engine = Engine::in_memory();
+    /// let mut engine = Engine::new();
     /// engine.load_cxf(cxf)?;
     /// // The multiply's output has an upstream input, so its slot is 0.0 until a tick runs —
     /// // reading it before and after pins that watch returns exactly tick t's values.

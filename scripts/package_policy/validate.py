@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Validate the closed workspace package, feature, and publication contract."""
+"""Validate the workspace package, feature, and publication structure from live Cargo facts.
+
+Every workspace member is either private (`publish = false`) or registry-ready: its normal and
+build dependencies on other members are path-backed with a registry version, and none of them is
+private. The `oce-api` default build, its only selection, must keep a normal closure with no
+database, async runtime or storage-port crate (the engine is pure; GitHub #390), and the release
+workflow bytes stay approved. Publication state comes from each
+crate's `Cargo.toml`; nothing else restates it before 1.0.
+"""
 
 from __future__ import annotations
 
@@ -13,82 +21,22 @@ import release_workflow
 
 
 ROOT = Path(__file__).resolve().parents[2]
-LEDGER_PATH = ROOT / "docs" / "package-publication-ledger.json"
-
-PACKAGE_CATEGORIES = (
-    "host-facade",
-    "conditional-adapter-port",
-    "transitional-companion",
-    "implementation-dependency",
-    "test-support",
-    "private-reference-adapter",
-    "verification-tooling",
-    "reserved-panic-only",
-    "experimental-reserved",
-)
-EXPECTED_PACKAGE_CLASSIFICATIONS = {
-    "oce-api": ("host-facade", True),
-    "oce-bless": ("test-support", False),
-    "oce-blocks": ("transitional-companion", True),
-    "oce-conformance": ("verification-tooling", False),
-    "oce-cxf": ("implementation-dependency", True),
-    "oce-diag": ("implementation-dependency", True),
-    "oce-docs": ("reserved-panic-only", False),
-    "oce-expr": ("implementation-dependency", True),
-    "oce-extension": ("experimental-reserved", False),
-    "oce-flatten": ("implementation-dependency", True),
-    "oce-graph": ("implementation-dependency", True),
-    "oce-model": ("implementation-dependency", True),
-    "oce-reference-wal-adapter": ("private-reference-adapter", False),
-    "oce-semantics": ("implementation-dependency", True),
-    "oce-store": ("conditional-adapter-port", True),
-    "oce-store-mem": ("implementation-dependency", True),
-    "oce-validate": ("implementation-dependency", True),
-}
-PUBLISHABLE_CATEGORIES = frozenset(PACKAGE_CATEGORIES[:4])
+RELEASE_WORKFLOW = ".github/workflows/release.yml"
+FEATURE_PACKAGE = "oce-api"
+# `oce-api` declares no cargo features, so the default build is the only selection.
+EXPECTED_FEATURES: dict[str, list[str]] = {}
 EXPECTED_SELECTIONS = {
-    "default": ([], ["default", "mem"]),
-    "explicit-mem": (["--no-default-features", "--features", "mem"], ["mem"]),
-    "no-default-features": (["--no-default-features"], []),
+    "default": ([], []),
 }
-EXPECTED_FEATURES = {"default": ["mem"], "mem": []}
+# The engine is pure (GitHub #390): the storage port (with its in-memory backend behind the `mem`
+# feature, GitHub #391) sits beside the facade, reached by the host, never by `oce-api`.
+FORBIDDEN_CLOSURE_MEMBERS = ("oce-store",)
 FORBIDDEN_DEPENDENCIES = ["async-std", "selene-db", "tokio"]
 UNKNOWN_FEATURE_CONTROL = "unsupported-control"
 
 
 class PolicyError(ValueError):
     """A deterministic package-policy contract violation."""
-
-
-def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    """Build a JSON object while refusing duplicate keys."""
-
-    result: dict[str, Any] = {}
-    for key, value in pairs:
-        if key in result:
-            raise PolicyError(f"duplicate JSON key: {key}")
-        result[key] = value
-    return result
-
-
-def read_ledger(path: Path = LEDGER_PATH) -> dict[str, Any]:
-    """Read the ledger with duplicate-key rejection."""
-
-    parsed = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=reject_duplicate_keys)
-    if not isinstance(parsed, dict):
-        raise PolicyError("ledger root must be an object")
-    return parsed
-
-
-def exact_keys(value: dict[str, Any], expected: set[str], label: str) -> None:
-    """Require one exact object shape."""
-
-    actual = set(value)
-    if actual != expected:
-        raise PolicyError(
-            f"{label} fields differ: missing={sorted(expected - actual)}, "
-            f"extra={sorted(actual - expected)}"
-        )
 
 
 def require_list(value: Any, label: str) -> list[Any]:
@@ -105,153 +53,6 @@ def require_nonempty_string(value: Any, label: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise PolicyError(f"{label} must be a non-empty string")
     return value
-
-
-def validate_ledger(ledger: dict[str, Any]) -> dict[str, Any]:
-    """Validate the ledger schema and its closed vocabularies."""
-
-    exact_keys(
-        ledger,
-        {
-            "schema",
-            "authority",
-            "publication_state",
-            "package_categories",
-            "packages",
-            "feature_contract",
-            "release_contract",
-            "downstream_constraints",
-        },
-        "ledger",
-    )
-    if ledger["schema"] != "oce-package-publication-ledger/v1":
-        raise PolicyError("unsupported ledger schema")
-    if ledger["authority"] != "docs/package-publication-policy.md":
-        raise PolicyError("ledger authority path drifted")
-    if ledger["publication_state"] != "deferred-no-crates-published":
-        raise PolicyError("publication state must remain explicitly deferred")
-    if ledger["package_categories"] != list(PACKAGE_CATEGORIES):
-        raise PolicyError("package category vocabulary drifted")
-
-    packages = require_list(ledger["packages"], "packages")
-    package_names: list[str] = []
-    for index, item in enumerate(packages):
-        if not isinstance(item, dict):
-            raise PolicyError(f"packages[{index}] must be an object")
-        exact_keys(item, {"name", "category", "publish"}, f"packages[{index}]")
-        name = require_nonempty_string(item["name"], f"packages[{index}].name")
-        category = require_nonempty_string(item["category"], f"packages[{index}].category")
-        if category not in PACKAGE_CATEGORIES:
-            raise PolicyError(f"invalid package category for {name}: {category}")
-        if not isinstance(item["publish"], bool):
-            raise PolicyError(f"publish classification for {name} must be boolean")
-        if item["publish"] != (category in PUBLISHABLE_CATEGORIES):
-            raise PolicyError(f"support/publication category mismatch for {name}")
-        package_names.append(name)
-    if len(package_names) != len(set(package_names)):
-        raise PolicyError("duplicate workspace package classification")
-    if package_names != sorted(package_names):
-        raise PolicyError("package classifications must be name-sorted")
-    actual_classifications = {
-        item["name"]: (item["category"], item["publish"]) for item in packages
-    }
-    for name in sorted(set(EXPECTED_PACKAGE_CLASSIFICATIONS) | set(actual_classifications)):
-        expected = EXPECTED_PACKAGE_CLASSIFICATIONS.get(name)
-        actual = actual_classifications.get(name)
-        if actual != expected:
-            raise PolicyError(
-                f"owner-approved package mapping drift for {name}: "
-                f"expected={expected!r}, actual={actual!r}"
-            )
-
-    feature = ledger["feature_contract"]
-    if not isinstance(feature, dict):
-        raise PolicyError("feature_contract must be an object")
-    exact_keys(
-        feature,
-        {
-            "package",
-            "declared_features",
-            "selections",
-            "normal_oce_dependency_closure",
-            "forbidden_normal_dependency_names",
-        },
-        "feature_contract",
-    )
-    if feature["package"] != "oce-api" or feature["declared_features"] != EXPECTED_FEATURES:
-        raise PolicyError("oce-api declared feature contract drifted")
-    selections = require_list(feature["selections"], "feature selections")
-    seen_selections: set[str] = set()
-    for index, selection in enumerate(selections):
-        if not isinstance(selection, dict):
-            raise PolicyError(f"feature selection {index} must be an object")
-        exact_keys(
-            selection,
-            {"name", "cargo_args", "enabled_features", "classification"},
-            f"feature selection {index}",
-        )
-        name = require_nonempty_string(selection["name"], f"feature selection {index}.name")
-        if name in seen_selections:
-            raise PolicyError(f"duplicate feature selection classification: {name}")
-        seen_selections.add(name)
-        expected = EXPECTED_SELECTIONS.get(name)
-        if expected is None:
-            raise PolicyError(f"unsupported feature selection classification: {name}")
-        if (selection["cargo_args"], selection["enabled_features"]) != expected:
-            raise PolicyError(f"feature selection mechanics drifted: {name}")
-        if selection["classification"] != "supported":
-            raise PolicyError(f"feature selection must be supported: {name}")
-    if seen_selections != set(EXPECTED_SELECTIONS):
-        raise PolicyError("supported feature selection coverage is incomplete")
-
-    closure = require_list(feature["normal_oce_dependency_closure"], "normal OCE closure")
-    if closure != sorted(set(closure)) or "oce-store-mem" not in closure:
-        raise PolicyError("normal OCE closure must be unique, sorted, and include oce-store-mem")
-    if feature["forbidden_normal_dependency_names"] != FORBIDDEN_DEPENDENCIES:
-        raise PolicyError("forbidden normal dependency vocabulary drifted")
-
-    release = ledger["release_contract"]
-    if not isinstance(release, dict):
-        raise PolicyError("release_contract must be an object")
-    exact_keys(
-        release,
-        {"workflow", "publishable_count", "private_count"},
-        "release_contract",
-    )
-    expected_release = {
-        "workflow": ".github/workflows/release.yml",
-        "publishable_count": 12,
-        "private_count": 5,
-    }
-    if release != expected_release:
-        raise PolicyError("release workflow path or count contract drifted")
-    publish_count = sum(item["publish"] for item in packages)
-    if publish_count != release["publishable_count"]:
-        raise PolicyError("publishable package count disagrees with package classifications")
-    if len(packages) - publish_count != release["private_count"]:
-        raise PolicyError("private package count disagrees with package classifications")
-
-    constraints = require_list(ledger["downstream_constraints"], "downstream_constraints")
-    consumers: set[str] = set()
-    for index, constraint in enumerate(constraints):
-        if not isinstance(constraint, dict):
-            raise PolicyError(f"downstream constraint {index} must be an object")
-        exact_keys(
-            constraint,
-            {"consumer", "direct_packages", "constraint"},
-            f"downstream constraint {index}",
-        )
-        consumer = require_nonempty_string(constraint["consumer"], "consumer")
-        if consumer in consumers:
-            raise PolicyError(f"duplicate downstream constraint: {consumer}")
-        consumers.add(consumer)
-        direct = require_list(constraint["direct_packages"], f"{consumer} direct_packages")
-        if not direct or len(direct) != len(set(direct)) or not set(direct) <= set(package_names):
-            raise PolicyError(f"invalid direct package constraint for {consumer}")
-        require_nonempty_string(constraint["constraint"], f"{consumer} constraint")
-    if not constraints:
-        raise PolicyError("downstream migration constraints must not be empty")
-    return ledger
 
 
 def cargo_json(arguments: list[str]) -> dict[str, Any]:
@@ -333,42 +134,39 @@ def derived_publish_order(graph: dict[str, set[str]], publishable: set[str]) -> 
     return order
 
 
-def validate_workspace(
-    ledger: dict[str, Any], metadata: dict[str, Any]
-) -> tuple[dict[str, dict[str, Any]], list[str]]:
-    """Validate Cargo membership, publish flags, dependency safety, and ordering."""
+def publish_flag(name: str, package: dict[str, Any]) -> bool:
+    """Return whether Cargo would publish one member to crates.io."""
+
+    publish_field = package.get("publish")
+    if publish_field is None:
+        return True
+    if publish_field == []:
+        return False
+    raise PolicyError(f"{name} has a registry-restricted publish value: {publish_field!r}")
+
+
+def validate_workspace(metadata: dict[str, Any]) -> dict[str, Any]:
+    """Validate publish flags, dependency safety, the oce-api features, and ordering.
+
+    Returns the observed `packages` map, the `publishable` and `private` name sets, the derived
+    leaf-to-facade publish `order`, and the `api_closure` of workspace members `oce-api` reaches
+    through normal dependencies.
+    """
 
     packages = metadata_package_map(metadata)
-    classified = {item["name"]: item for item in ledger["packages"]}
-    if set(packages) != set(classified):
-        raise PolicyError(
-            f"workspace classification coverage differs: "
-            f"missing={sorted(set(packages) - set(classified))}, "
-            f"extra={sorted(set(classified) - set(packages))}"
-        )
-
-    for name, package in packages.items():
-        publish_field = package.get("publish")
-        if publish_field is None:
-            actual_publish = True
-        elif publish_field == []:
-            actual_publish = False
-        else:
-            raise PolicyError(f"{name} has a registry-restricted publish value: {publish_field!r}")
-        if actual_publish != classified[name]["publish"]:
-            raise PolicyError(f"publish flag drift for {name}")
-    publishable = {name for name, item in classified.items() if item["publish"]}
+    for name in packages:
+        if not name.startswith("oce-"):
+            raise PolicyError(f"workspace member outside the oce-* namespace: {name}")
+    publishable = {name for name, package in packages.items() if publish_flag(name, package)}
     private = set(packages) - publishable
-    release = ledger["release_contract"]
-    if (len(publishable), len(private)) != (
-        release["publishable_count"],
-        release["private_count"],
-    ):
-        raise PolicyError("Cargo publish/private counts drifted")
 
-    feature_package = packages[ledger["feature_contract"]["package"]]
-    if feature_package.get("features") != ledger["feature_contract"]["declared_features"]:
-        raise PolicyError("Cargo-declared oce-api features disagree with the ledger")
+    feature_package = packages.get(FEATURE_PACKAGE)
+    if feature_package is None:
+        raise PolicyError(f"workspace has no {FEATURE_PACKAGE} member")
+    if feature_package.get("features") != EXPECTED_FEATURES:
+        raise PolicyError(f"Cargo-declared {FEATURE_PACKAGE} features drifted")
+    if FEATURE_PACKAGE not in publishable:
+        raise PolicyError(f"{FEATURE_PACKAGE} must stay registry-ready")
 
     release_graph = dependency_graph(packages, {None, "build"})
     normal_graph = dependency_graph(packages, {None})
@@ -388,14 +186,17 @@ def validate_workspace(
                     f"publishable path dependency {source} -> {target} lacks a registry version"
                 )
 
-    expected_api_closure = set(ledger["feature_contract"]["normal_oce_dependency_closure"])
-    actual_api_closure = transitive_dependencies(normal_graph, "oce-api")
-    if actual_api_closure != expected_api_closure:
-        raise PolicyError(
-            f"metadata oce-api normal closure drifted: expected={sorted(expected_api_closure)}, "
-            f"actual={sorted(actual_api_closure)}"
-        )
-    return packages, derived_publish_order(release_graph, publishable)
+    api_closure = transitive_dependencies(normal_graph, FEATURE_PACKAGE)
+    reached = sorted(set(FORBIDDEN_CLOSURE_MEMBERS) & api_closure)
+    if reached:
+        raise PolicyError(f"{FEATURE_PACKAGE} normal closure must exclude storage crates: {reached}")
+    return {
+        "packages": packages,
+        "publishable": publishable,
+        "private": private,
+        "order": derived_publish_order(release_graph, publishable),
+        "api_closure": sorted(api_closure),
+    }
 
 
 def cargo_tree_observation(package: str, cargo_args: list[str]) -> dict[str, list[str]]:
@@ -438,19 +239,16 @@ def cargo_tree_observation(package: str, cargo_args: list[str]) -> dict[str, lis
 
 
 def validate_feature_observations(
-    ledger: dict[str, Any], observations: dict[str, dict[str, list[str]]], private: set[str]
+    observations: dict[str, dict[str, list[str]]], expected_closure: list[str], private: set[str]
 ) -> None:
     """Require all supported selections to retain one safe normal closure."""
 
-    feature = ledger["feature_contract"]
-    expected_closure = feature["normal_oce_dependency_closure"]
-    selection_map = {selection["name"]: selection for selection in feature["selections"]}
-    if set(observations) != set(selection_map):
+    if set(observations) != set(EXPECTED_SELECTIONS):
         raise PolicyError("feature observation coverage differs from supported selections")
     observed_closures: set[tuple[str, ...]] = set()
-    for name in sorted(selection_map):
+    for name in sorted(EXPECTED_SELECTIONS):
         observation = observations[name]
-        if observation["enabled_features"] != selection_map[name]["enabled_features"]:
+        if observation["enabled_features"] != EXPECTED_SELECTIONS[name][1]:
             raise PolicyError(f"enabled feature drift for {name}")
         if observation["workspace_closure"] != expected_closure:
             raise PolicyError(f"normal OCE feature closure drift for {name}")
@@ -462,7 +260,7 @@ def validate_feature_observations(
             raise PolicyError(f"forbidden normal dependency for {name}: {sorted(forbidden)}")
         observed_closures.add(tuple(observation["workspace_closure"]))
     if len(observed_closures) != 1:
-        raise PolicyError("supported feature selections do not have equal normal OCE closures")
+        raise PolicyError("supported selections do not have equal normal OCE closures")
 
 
 def validate_unknown_feature_refusal() -> None:
@@ -494,37 +292,29 @@ def validate_release_workflow(workflow: bytes) -> None:
 
 
 def main() -> int:
-    """Validate the checked-in policy against live Cargo and workflow facts."""
+    """Validate the workspace structure against live Cargo and workflow facts."""
 
     try:
-        ledger = validate_ledger(read_ledger())
         metadata = cargo_json(["metadata", "--format-version", "1", "--locked", "--no-deps"])
-        packages, order = validate_workspace(ledger, metadata)
-        private = {item["name"] for item in ledger["packages"] if not item["publish"]}
+        workspace = validate_workspace(metadata)
         observations = {
-            selection["name"]: cargo_tree_observation(
-                ledger["feature_contract"]["package"], selection["cargo_args"]
-            )
-            for selection in ledger["feature_contract"]["selections"]
+            name: cargo_tree_observation(FEATURE_PACKAGE, cargo_args)
+            for name, (cargo_args, _) in EXPECTED_SELECTIONS.items()
         }
-        validate_feature_observations(ledger, observations, private)
+        validate_feature_observations(observations, workspace["api_closure"], workspace["private"])
         validate_unknown_feature_refusal()
-        workflow_path = ROOT / ledger["release_contract"]["workflow"]
-        validate_release_workflow(workflow_path.read_bytes())
+        validate_release_workflow((ROOT / RELEASE_WORKFLOW).read_bytes())
     except (OSError, PolicyError) as error:
         print(f"package publication contract: FAIL: {error}", file=sys.stderr)
         return 1
 
-    publishable = [item["name"] for item in ledger["packages"] if item["publish"]]
     print(
         "package publication contract: PASS "
-        f"({len(packages)} members; {len(publishable)} publishable; {len(private)} private)"
+        f"({len(workspace['packages'])} members; {len(workspace['publishable'])} publishable; "
+        f"{len(workspace['private'])} private)"
     )
-    print("derived leaf-to-facade publish order: " + " -> ".join(order))
-    print(
-        "supported oce-api normal OCE closure: "
-        + ", ".join(ledger["feature_contract"]["normal_oce_dependency_closure"])
-    )
+    print("derived leaf-to-facade publish order: " + " -> ".join(workspace["order"]))
+    print("supported oce-api normal OCE closure: " + ", ".join(workspace["api_closure"]))
     return 0
 
 

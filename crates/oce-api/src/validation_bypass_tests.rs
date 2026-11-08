@@ -53,7 +53,7 @@ fn raw_edge(from: u32, to: u32) -> Connection {
 
 fn build_model_validate_error(model: ModelGraph) -> oce_validate::ValidationError {
     let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let mut eng = Engine::in_memory();
+        let mut eng = Engine::new();
         eng.build_model_in_memory(model, None)
     }));
     let err = outcome
@@ -167,7 +167,7 @@ fn loaded_sample_clocks_require_finite_periods_and_shift() {
             connectors: vec![raw_conn(0, 0, Dir::Out, ValueType::Boolean)],
             ..ModelGraph::new()
         };
-        assert_build_validate_codes(model, &[DiagCode::ParameterOutOfRange]);
+        assert_build_validate_codes(model, &[DiagCode::NonFiniteParameter]);
     }
 
     let sampled = ModelGraph {
@@ -185,7 +185,7 @@ fn loaded_sample_clocks_require_finite_periods_and_shift() {
         external_inputs: vec![ConnectorId(0)],
         ..ModelGraph::new()
     };
-    assert_build_validate_codes(sampled, &[DiagCode::ParameterOutOfRange]);
+    assert_build_validate_codes(sampled, &[DiagCode::NonFiniteParameter]);
 }
 
 #[test]

@@ -4,13 +4,12 @@
 //! declared-IRI set per fixture with a plain `serde_json` walk that shares no helper with
 //! `oce-cxf`, then checks `get_output`, `watch`, completed boundary membership, and input refusal.
 //!
-//! The inventory capture is regression evidence for point rows and summaries, not a Store-write
+//! The inventory capture is regression evidence for point rows and summaries, not a persistence
 //! receipt or numerical oracle. There is no engine write-back surface.
 
 use std::fs;
 use std::path::PathBuf;
 
-use oce_api::oce_store::Store;
 use oce_api::{Engine, OcError, Value};
 
 /// Every declared boundary output resolves on the lookup surfaces: the pass-through class owns
@@ -49,14 +48,14 @@ fn corpus_fixtures() -> Vec<PathBuf> {
     fixtures
 }
 
-fn load_fixture(path: &PathBuf) -> (String, Vec<u8>, Engine<impl Store>) {
+fn load_fixture(path: &PathBuf) -> (String, Vec<u8>, Engine) {
     let fixture_name = path
         .file_stem()
         .and_then(|stem| stem.to_str())
         .expect("UTF-8 fixture stem")
         .to_owned();
     let bytes = fs::read(path).expect("read G36 fixture");
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .load_cxf(&bytes)
         .unwrap_or_else(|error| panic!("{fixture_name} loads: {error:?}"));

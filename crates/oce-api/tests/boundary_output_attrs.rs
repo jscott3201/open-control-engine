@@ -1,6 +1,5 @@
 //! End-to-end projection of declared boundary-output attributes onto their driver.
 
-use oce_api::oce_store::ModelStore;
 use oce_api::{ContentIdError, Engine, IoSummary, PointDirection};
 use serde_json::{Map, Value};
 
@@ -58,8 +57,8 @@ fn declared_attrs_reach_driver_export_and_host_projections() {
     assert_eq!(declared["S231:min"]["@value"].as_str(), Some("0"));
     assert_eq!(declared["S231:max"]["@value"].as_str(), Some("1"));
 
-    let mut engine = Engine::in_memory();
-    let report = engine.load_cxf(FIXTURE.as_bytes()).expect("fixture loads");
+    let mut engine = Engine::new();
+    let (report, loaded) = engine.load_cxf(FIXTURE.as_bytes()).expect("fixture loads");
     assert_eq!(
         report.io,
         IoSummary {
@@ -91,10 +90,9 @@ fn declared_attrs_reach_driver_export_and_host_projections() {
         .expect("driver point-list row");
     assert_eq!(point_list_driver, driver);
 
-    let durable = engine
-        .store()
-        .load_model(&report.model_id)
-        .expect("durable model")
+    assert_eq!(loaded.model_id, report.model_id);
+    let durable = loaded
+        .model
         .points
         .into_iter()
         .find(|point| point.key.as_str() == DRIVER)

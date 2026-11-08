@@ -6,8 +6,8 @@ This is the execution-maintainer detail of PC-039 in the [product contract](prod
 It defines **one accepted-frame record**, not a sequence, historian, state snapshot, deployment
 receipt, network protocol or second evaluator. OCE remains synchronous, in-process, database-free
 and file-I/O-free. Nothing is published or qualified for cross-release migration by this format.
-The [release-candidate matrix and fallback guide](release-compatibility.md) retain current/current
-evidence only; the historical v0.1.0 source pin has no replay producer. Cross-build envelopes refuse
+Replay is current/current only (see the [host fallback checklist](host-responsibilities.md));
+the historical v0.1.0 source pin has no replay producer. Cross-build envelopes refuse
 outside OCE before decoding, not through an invented historical replay decoder.
 
 `CompletedFrame::inputs()` retains the canonical accepted boundary inputs independently of caller
@@ -15,7 +15,7 @@ buffers and later engine mutation. `CompletedFrame::replay_record()` encodes tho
 transition's outputs/warnings/time and its captured placement, without executing again. It records
 the public `CompatibilityDescriptor::current(None)` facts: **export is explicitly absent**, not
 silently claimed complete. The public descriptor is constant for that compiled process; it is not
-the loaded executable. No export, state capture, private fingerprint or Store operation is involved.
+the loaded executable. No export, state capture, private fingerprint or storage operation is involved.
 
 The record contains no sequence number. `CompletedFrame::sequence()` remains Engine-lifetime
 correlation only, never durable replay position. Hosts own the authenticated order, gap detection,
@@ -103,6 +103,11 @@ value/catalog contract, not a new extension registry. The codec covers every clo
 detached full-domain probes do not add String/enum signal ports to the live CXF profile. Playback
 preparation retains its executable-specific input-domain checks, including CDL Integer bounds.
 
+The host's `NonFiniteInputPolicy` is not recorded. A record captured under the default `Admit` can
+carry a non-finite Real input; it decodes, but replaying it on an engine that selects `Refuse` is
+refused at preparation with `InputNonFinite`, so replay such a record on an `Admit` engine. The
+policy only decides which frames are accepted, so an accepted replay is bit-identical under either.
+
 ### Public descriptor grammar
 
 The descriptor is at most 1024 UTF-8 bytes, with the ten existing labeled LF-terminated lines in
@@ -161,7 +166,7 @@ noncanonical keys/Boolean/labels/suffix and workspace limit. Offsets are in the 
 Eligibility compares descriptor fields in their existing canonical order, then target architecture/OS.
 Verification checks current eligibility and receipt placement, time, input rows, output rows, then
 diagnostic rows. The first differing row is reported; on pure count mismatch the index is the common
-length. Helpers never mutate engine or Store. They do not replace preparation preflight or restore
+length. Helpers never mutate the engine. They do not replace preparation preflight or restore
 manifest validation. A post-execution mismatch does not undo a prior accepted transition.
 
 ## Evidence and remaining qualification
@@ -179,7 +184,7 @@ manifest validation. A post-execution mismatch does not undo a prior accepted tr
 - `src/replay_capture_tests.rs` checks exact independent encoding of every value domain on inputs
   **and** outputs, numeric bit classes, diagnostic fields/order/duplicates/counts, enum identity,
   empty records, oversized capture and unchanged sequence-independent bytes.
-- `tests/replay.rs` exercises actual accepted receipt ownership, Store noninterference, retained
+- `tests/replay.rs` exercises actual accepted receipt ownership, retained
   capture, wrong-descriptor/target pre-execution refusal and restore-window preservation, warning
   goldens, equal-time stateful replay from separately decoded start snapshots, exact end-state bytes,
   and a 16,384-record public-only host stream. Each iteration has identical bounded allocation
@@ -188,11 +193,10 @@ manifest validation. A post-execution mismatch does not undo a prior accepted tr
 - `tests/replay_matrix.rs` supplies repeat-exact portable and target-bound local vectors via optional
   `OCE_PORTABLE_REPLAY_OUT` / `OCE_TARGET_REPLAY_OUT` paths and foreign-placement inspection via
   `OCE_FOREIGN_TARGET_REPLAY_IN`. The existing debug/release `oce-api` matrix runs these tests, but
-  **cross-architecture replay artifact comparison is pending**. Its artifact plumbing was not
-  extended because `ci.yml` is itself pinned in the accepted strict-bit 35-file source boundary;
-  changing that workflow would require separate requalification rather than silently reblessing
-  evidence. Local artifact equality never fabricates hosted results or macOS qualification.
+  **cross-architecture replay artifact comparison is pending**. The native determinism cells and
+  their `determinism-compare` fan-in in `pr-gate.yml` now carry the state vectors across
+  architectures; the replay vectors are not yet wired into that artifact plumbing. Local artifact equality never fabricates hosted results or macOS qualification.
 
 No state format/ABI, HostTick, catalog facts, conformance tolerance, dependencies, supported feature
 selections, downstream repository pins or release claims change. The new facade items are additive
-stable candidates; the exact public baseline and classification ledger record them.
+additions to the pre-1.0 facade.

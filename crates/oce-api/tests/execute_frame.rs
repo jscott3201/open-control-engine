@@ -1,13 +1,10 @@
 //! Native completed frames: hand-derived arithmetic and HostTick recurrence oracles.
 //! Expected files are authored, not generated from engine output. No Modelica solver claim.
 
-mod support;
-
 use std::fmt::Write as _;
 use std::sync::Arc;
 
 use oce_api::{CompletedFrame, Engine, EngineStateError, OcError, Value};
-use support::recording_store::{RecordingStore, StoreCallSnapshot};
 
 const ADD: &[u8] = include_bytes!("fixtures/legacy_frame_add.jsonld");
 const PRE: &[u8] = include_bytes!("fixtures/frame_pre.jsonld");
@@ -38,13 +35,11 @@ fn render(frame: &CompletedFrame) -> String {
 }
 
 #[test]
-fn arithmetic_commits_complete_values_without_store_and_retains_independent_results() {
+fn arithmetic_commits_complete_values_and_retains_independent_results() {
     for _ in 0..3 {
-        let mut engine = Engine::with_store(Arc::new(RecordingStore::default()));
+        let mut engine = Engine::new();
         engine.load_cxf(ADD).unwrap();
         let startup = engine.state_snapshot().unwrap();
-        engine.store().reset_calls();
-        engine.store().arm_hot_path_guard();
         let mut results = Vec::new();
         for (a, b, expected) in [(1.5, 2.25, 3.75), (-4.0, 0.5, -3.5)] {
             let frame = engine
@@ -89,7 +84,6 @@ fn arithmetic_commits_complete_values_without_store_and_retains_independent_resu
             results.iter().map(render).collect::<String>().as_bytes(),
             include_bytes!("fixtures/completed_arithmetic.txt")
         );
-        assert_eq!(engine.store().calls(), StoreCallSnapshot::default());
         assert!(matches!(
             engine.restore_state(&startup),
             Err(OcError::State(EngineStateError::DurableTargetAdvanced))
@@ -100,7 +94,7 @@ fn arithmetic_commits_complete_values_without_store_and_retains_independent_resu
 #[test]
 fn equal_time_feedback_advances_once_and_refusal_consumes_no_position() {
     for _ in 0..3 {
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine.load_cxf(PRE).unwrap();
         assert!(engine.input_definitions().unwrap().is_empty());
         let old = engine.prepare_frame(1.0, &[]).unwrap();
@@ -132,7 +126,7 @@ fn equal_time_feedback_advances_once_and_refusal_consumes_no_position() {
 
 #[test]
 fn sampled_delay_matches_hand_recurrence_and_retained_frames_survive_lifecycle_changes() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(DELAY).unwrap();
     let startup = engine.state_snapshot().unwrap();
     let mut retained = Vec::new();
@@ -221,7 +215,7 @@ fn sampled_delay_matches_hand_recurrence_and_retained_frames_survive_lifecycle_c
 
 #[test]
 fn fanout_tail_and_native_passthrough_bits_reach_only_the_boundary() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .load_cxf(include_bytes!(
             "../../oce-cxf/tests/fixtures/boundary_fanout.jsonld"
@@ -315,11 +309,10 @@ fn warning_only_empty_output_frames_retain_exact_deterministic_diagnostics() {
             node = node.replace("freezestat tripped", "second warning");
             nodes.push(serde_json::from_str(&node).unwrap());
         }
-        let mut engine = Engine::with_store(Arc::new(RecordingStore::default()));
+        let mut engine = Engine::new();
         engine
             .load_cxf(&serde_json::to_vec(&document).unwrap())
             .unwrap();
-        engine.store().reset_calls();
         let mut frames = Vec::new();
         for input in [false, true, false] {
             let plan = engine
@@ -337,7 +330,6 @@ fn warning_only_empty_output_frames_retain_exact_deterministic_diagnostics() {
             frames.iter().map(render).collect::<String>().as_bytes(),
             include_bytes!("fixtures/completed_warnings.txt")
         );
-        assert_eq!(engine.store().calls(), StoreCallSnapshot::default());
         let retained = frames.iter().map(render).collect::<String>();
         let checkpoint = engine.checkpoint().unwrap();
         let plan = engine

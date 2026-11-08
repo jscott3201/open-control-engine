@@ -636,9 +636,9 @@ fn registry_exposes_block_param_rules() {
     );
     // IntegratorWithReset exposes NO param rules by policy: upstream declares k=1 and
     // y_start=0 with no min/max, gain and start-state values are unconstrained engine-wide
-    // (cf. the Derivative assertion above), and non-finite parameter values follow the
-    // documented IEEE-propagation + canonical-NaN-emit convention pending the deferred
-    // centralized non-finite validation seam.
+    // (cf. the Derivative assertion above), and non-finite values need no class rule: the
+    // engine-wide finiteness gate refuses them for every class at load and at `set_param`
+    // (issue #362).
     assert_eq!(lookup("CDL.Reals.IntegratorWithReset").unwrap().param_rules(), &[] as &[ParamRule]);
     // Defaultless upstream params on the Logical/Utilities blocks (pin a131864): each declares its
     // parameter with NO default value, so it is required at load time rather than silently

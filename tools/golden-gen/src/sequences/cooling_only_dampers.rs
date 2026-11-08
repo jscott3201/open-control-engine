@@ -183,15 +183,11 @@ pub(super) fn goldens() -> Vec<Golden> {
 }
 
 fn airflow_setpoints() -> Vec<f64> {
-    let supply: Vec<f64> = ROWS
-        .iter()
-        .map(|row| row.supply_air_temperature)
-        .collect();
+    let supply: Vec<f64> = ROWS.iter().map(|row| row.supply_air_temperature).collect();
     let zone: Vec<f64> = ROWS.iter().map(|row| row.zone_temperature).collect();
     let supply_warm = greater_hysteretic(&supply, &zone, D_T_HYS, false);
 
-    ROWS
-        .iter()
+    ROWS.iter()
         .zip(supply_warm)
         .map(|(row, warm)| {
             let mapped = buildings_line(
@@ -269,9 +265,7 @@ fn inputs() -> Vec<InputSeries> {
         input_r("cooling_loop", ROWS.iter().map(|row| row.cooling_loop)),
         input_r(
             "active_cooling_maximum_airflow",
-            ROWS
-                .iter()
-                .map(|row| row.active_cooling_maximum_airflow),
+            ROWS.iter().map(|row| row.active_cooling_maximum_airflow),
         ),
         input_i("zone_state", ROWS.iter().map(|row| row.zone_state)),
         input_i(

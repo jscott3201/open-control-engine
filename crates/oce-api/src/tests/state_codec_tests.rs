@@ -6,7 +6,7 @@ use crate::{Engine, EngineStateError, EngineStateSnapshot};
 const MINIMAL_LOOP: &[u8] = include_bytes!("../../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
 
 fn snapshot_bytes() -> Vec<u8> {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MINIMAL_LOOP).unwrap();
     super::common::advance(
         &mut engine,

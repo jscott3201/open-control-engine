@@ -15,7 +15,7 @@ is the only public state-advancing execution surface. Legacy execution profiles 
 The frame path enters one private infallible evaluation/refresh core after preflight and staging.
 The core closes durable-restore readiness, evaluates once, updates
 the previous time and refreshes latest outputs. It selects no diagnostic policy and performs no
-Store IO, restart, frame-sequence update or projection. Host loops select cadence and capture traces
+storage IO, restart, frame-sequence update or projection. Host loops select cadence and capture traces
 from completed receipts or explicitly labelled latest-state inspections.
 
 ## HostTick v1
@@ -30,6 +30,14 @@ Each successful `Engine::execute_frame(prepared)` call is one state transition:
 4. The engine refreshes latest-state inspection and returns immutable `CompletedFrame` boundary
    outputs and warnings, correlated by an engine-lifetime accepted-frame sequence.
 
+Step 2 fires each block atomically, so one emission produces all of a block's outputs. The
+schedule is therefore an order of whole blocks. A model whose feedback leaves one output of a block
+and comes back into an input that output does not depend on is CDL-legal, yet it has no such order.
+The engine refuses it at load with `block-algebraic-loop`. It never runs such a model in a wrong
+order. See
+[Atomic block firing refuses some CDL-legal feedback](cdl-coverage.md#atomic-block-firing-refuses-some-cdl-legal-feedback)
+for which classes can trigger it and the remedies.
+
 Repeating a timestamp does not repeat an observation of the same transition. Every successful call
 advances state again. Time-dependent blocks see zero elapsed time, but call-based state still
 changes. The engine performs no hidden same-time evaluation, event queue processing, rollback, or
@@ -37,7 +45,7 @@ fixed-point search.
 
 Ordinary refusal preserves the full execution image, including connector values, clocks, words,
 restore readiness and sequence. Previously retained completed diagnostics are unchanged. There
-is no sparse staging prefix, Store determinant or post-write error path.
+is no sparse staging prefix, stored determinant or post-write error path.
 
 ## `CDL.Logical.Pre`
 
@@ -110,4 +118,10 @@ continuation.
 
 The Tier-A references for `Generic.TimeSuppression`, `CoolingOnly.Controller`, and
 `ReliefFanGroup` likewise check HostTick v1. Their 20 signal records are independent of
-`oce-blocks`, but they do not claim Modelica `Pre` event-iteration equivalence.
+`oce-blocks`, but they do not claim Modelica `Pre` event-iteration equivalence. Two standalone
+Tier-A goldens under `tools/golden-gen/goldens/CDL/Logical/Pre/` pin the block alone under the same
+profile: a default `pre_u_start=false` trace whose input is already true on the first tick, and a
+`pre_u_start=true` trace whose input is false on the first tick, each followed by holds and
+single-tick toggles. `crates/oce-conformance/tests/per_block_logical.rs` compares the engine with
+both exactly. They carry `execution_profile: "HostTick v1"` and are not Modelica event-iteration
+oracles either.

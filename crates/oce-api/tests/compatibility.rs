@@ -25,7 +25,7 @@ fn canonical_public_facts_match_the_hand_assembled_golden_and_repeat() {
 
 #[test]
 fn partial_exports_refuse_instead_of_becoming_absent_or_complete_content() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(DEFERRED).unwrap();
     let mut report = engine.export_cxf().unwrap();
     assert_eq!(report.warnings.len(), 2);
@@ -96,7 +96,7 @@ fn complete_export_receipts_match_the_existing_content_golden_and_repeat() {
     // Export ID is the unchanged independently verified minimal-loop golden in export_cxf.rs.
     let expected = include_str!("fixtures/compatibility_export.txt");
     for _ in 0..3 {
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine.load_cxf(MINIMAL).unwrap();
         let report = engine.export_cxf().unwrap();
         let descriptor = CompatibilityDescriptor::current(Some(&report)).unwrap();
@@ -120,8 +120,8 @@ fn complete_export_receipts_match_the_existing_content_golden_and_repeat() {
 fn absent_present_and_changed_exports_have_distinct_typed_outcomes() {
     use CompatibilityMismatch::{ExportContent, ExportPresence};
     let absent = CompatibilityDescriptor::current(None).unwrap();
-    let mut engine = Engine::in_memory();
-    let load = engine.load_cxf(MINIMAL).unwrap();
+    let mut engine = Engine::new();
+    let (load, _) = engine.load_cxf(MINIMAL).unwrap();
     let report = engine.export_cxf().unwrap();
     let before = CompatibilityDescriptor::current(Some(&report)).unwrap();
     assert_eq!(absent.check_compatible(&before), Err(ExportPresence));
@@ -145,7 +145,7 @@ fn absent_present_and_changed_exports_have_distinct_typed_outcomes() {
 
 #[test]
 fn descriptor_capture_preserves_state_and_survives_report_and_engine_lifetimes() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MINIMAL).unwrap();
     let snapshot = engine.state_snapshot().unwrap();
     let mut report = engine.export_cxf().unwrap();
@@ -186,7 +186,7 @@ fn descriptor_capture_preserves_state_and_survives_report_and_engine_lifetimes()
 
 #[test]
 fn report_bytes_are_hashed_exactly_without_claiming_validation_or_provenance() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MINIMAL).unwrap();
     let mut report = engine.export_cxf().unwrap();
     // Standard FNV-1a-128 offset (empty input) and independently documented abc vector.

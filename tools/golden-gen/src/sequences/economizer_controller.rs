@@ -19,7 +19,12 @@ pub(super) fn goldens() -> Vec<Golden> {
             "outdoor_damper_min_limit",
             ValueKind::Real,
             time.clone(),
-            trace.outdoor_damper_min_limit.iter().copied().map(r).collect(),
+            trace
+                .outdoor_damper_min_limit
+                .iter()
+                .copied()
+                .map(r)
+                .collect(),
             "Economizers.Controller restricted variant: common-damper minimum-OA loop drives outdoor minimum limit while fan and mode rows toggle the loop enable",
             "Pinned Controller.mo restricted path minOADes=SingleDamper: damLim.yOutDam_min is exported directly as yOutDam_min and feeds Enable/Reliefs",
             inputs.clone(),
@@ -44,7 +49,12 @@ pub(super) fn goldens() -> Vec<Golden> {
             "outdoor_damper_command",
             ValueKind::Real,
             time.clone(),
-            trace.outdoor_damper_command.iter().copied().map(r).collect(),
+            trace
+                .outdoor_damper_command
+                .iter()
+                .copied()
+                .map(r)
+                .collect(),
             "Economizers.Controller restricted variant: yOutDam composes common-damper limits, fixed dry-bulb enable delays, and relief-damper modulation",
             "Pinned Controller.mo path: damLim limits -> enaDis max limits with TCut=294.15K -> modRel.yOutDam",
             inputs.clone(),
@@ -312,34 +322,39 @@ fn enable_trace(time: &[f64], rows: &[Row], damper_limits: &DamperLimitsTrace) -
         let dry_bulb_delta = row.outdoor_air_temperature - OUTDOOR_AIR_CUTOFF;
         let outdoor_air_condition = hysteresis.tick(dry_bulb_delta);
         let held_condition = hold.tick(t, outdoor_air_condition);
-        let enabled =
-            held_condition && row.supply_fan_status && row.freeze_protection_stage == 0;
+        let enabled = held_condition && row.supply_fan_status && row.freeze_protection_stage == 0;
         let disabled = !enabled;
         let outdoor_delay_done = outdoor_delay.tick(t, disabled, 15.0);
         let return_delay_done = return_delay.tick(t, disabled, 180.0);
         let close_outdoor_damper = disabled && outdoor_delay_done;
         let force_return_damper_physical = disabled && !return_delay_done;
 
-        trace.outdoor_damper_max_limit.push(if close_outdoor_damper {
-            damper_limits.outdoor_damper_min_limit[idx]
-        } else {
-            damper_limits.outdoor_damper_max_limit[idx]
-        });
-        trace.return_damper_max_limit.push(if force_return_damper_physical {
-            damper_limits.return_damper_physical_max_limit[idx]
-        } else {
-            damper_limits.return_damper_max_limit[idx]
-        });
+        trace
+            .outdoor_damper_max_limit
+            .push(if close_outdoor_damper {
+                damper_limits.outdoor_damper_min_limit[idx]
+            } else {
+                damper_limits.outdoor_damper_max_limit[idx]
+            });
+        trace
+            .return_damper_max_limit
+            .push(if force_return_damper_physical {
+                damper_limits.return_damper_physical_max_limit[idx]
+            } else {
+                damper_limits.return_damper_max_limit[idx]
+            });
         let return_min_base = if disabled {
             damper_limits.return_damper_max_limit[idx]
         } else {
             damper_limits.return_damper_min_limit[idx]
         };
-        trace.return_damper_min_limit.push(if force_return_damper_physical {
-            damper_limits.return_damper_physical_max_limit[idx]
-        } else {
-            return_min_base
-        });
+        trace
+            .return_damper_min_limit
+            .push(if force_return_damper_physical {
+                damper_limits.return_damper_physical_max_limit[idx]
+            } else {
+                return_min_base
+            });
     }
 
     trace

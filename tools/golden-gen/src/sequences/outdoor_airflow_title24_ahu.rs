@@ -180,9 +180,6 @@ fn outdoor_airflow_title24_inputs(
         input_r("absolute_min_flow", absolute_min_flow.iter().copied()),
         input_r("design_min_flow", design_min_flow.iter().copied()),
         input_r("co2_loop_max", co2_loop_max.iter().copied()),
-        input_r(
-            "measured_outdoor_air",
-            measured_outdoor_air.iter().copied(),
-        ),
+        input_r("measured_outdoor_air", measured_outdoor_air.iter().copied()),
     ]
 }

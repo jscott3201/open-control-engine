@@ -26,7 +26,7 @@ fn portable_and_target_bound_vectors_repeat_and_match_the_state_placement_policy
             include_str!("fixtures/legacy_frame_add.jsonld").replace("CDL.Reals.Add", class);
         let mut previous = None;
         for _ in 0..3 {
-            let mut engine = Engine::in_memory();
+            let mut engine = Engine::new();
             engine.load_cxf(model.as_bytes()).unwrap();
             let plan = engine
                 .prepare_frame(
@@ -76,7 +76,7 @@ fn foreign_matrix_record_refuses_before_any_engine_mutation_when_supplied() {
         return;
     };
     let record = ReplayRecord::from_bytes(&std::fs::read(path).unwrap()).unwrap();
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .load_cxf(include_bytes!("fixtures/legacy_frame_add.jsonld"))
         .unwrap();

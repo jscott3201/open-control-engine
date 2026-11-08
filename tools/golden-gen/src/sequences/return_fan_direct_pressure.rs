@@ -2,7 +2,9 @@
 
 use crate::oracle::{Golden, InputSeries, ValueKind};
 
-use super::{RETURN_FAN_DIRECT_PRESSURE, b, buildings_line, input_b, input_r, r, sequence_golden, unit_ticks};
+use super::{
+    RETURN_FAN_DIRECT_PRESSURE, b, buildings_line, input_b, input_r, r, sequence_golden, unit_ticks,
+};
 
 pub(super) fn goldens() -> Vec<Golden> {
     let time = unit_ticks(6);
@@ -47,7 +49,11 @@ pub(super) fn goldens() -> Vec<Golden> {
             "discharge_pressure_setpoint",
             ValueKind::Real,
             time.clone(),
-            trace.discharge_pressure_setpoint.into_iter().map(r).collect(),
+            trace
+                .discharge_pressure_setpoint
+                .into_iter()
+                .map(r)
+                .collect(),
             "ReturnFanDirectPressure pressure setpoint path: supply-fan switch plus lower, interior, and upper Line clamp rows",
             "Pinned source: dpDisSet = Switch(Line(conP.y, x1=0.5, f1=2.4, x2=1, f2=40), u1SupFan, 0)",
             inputs.clone(),
@@ -117,28 +123,23 @@ fn return_fan_direct_pressure_trace(
 
         let relief_damper_line = buildings_line(0.0, 0.0, 0.5, 1.0, pid);
         let return_fan_pressure_setpoint = buildings_line(0.5, 2.4, 1.0, 40.0, pid);
-        let return_fan_speed_line = buildings_line(
-            2.4,
-            0.1,
-            40.0,
-            1.0,
-            return_fan_pressure_setpoint,
-        );
+        let return_fan_speed_line =
+            buildings_line(2.4, 0.1, 40.0, 1.0, return_fan_pressure_setpoint);
 
         trace.averaged_pressure.push(average);
-        trace
-            .relief_damper_command
-            .push(if min_oa && fan_on { relief_damper_line } else { 0.0 });
+        trace.relief_damper_command.push(if min_oa && fan_on {
+            relief_damper_line
+        } else {
+            0.0
+        });
         trace.discharge_pressure_setpoint.push(if fan_on {
             return_fan_pressure_setpoint
         } else {
             0.0
         });
-        trace.return_fan_speed.push(if fan_on {
-            return_fan_speed_line
-        } else {
-            0.0
-        });
+        trace
+            .return_fan_speed
+            .push(if fan_on { return_fan_speed_line } else { 0.0 });
         trace.return_fan_status.push(fan_on);
 
         let dt = previous_time.map_or(0.0, |previous| (t - previous).max(0.0));

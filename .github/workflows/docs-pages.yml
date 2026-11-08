@@ -3,7 +3,9 @@
 # PRs into `development` (and pushes to it) stage the docs, build mdBook and check links and
 # anchors without publishing. A push to `main` that touches the docs, or a manual dispatch on
 # `main`, also deploys the built site to GitHub Pages. Path-filtered, so this is not a required
-# status; the per-PR gate (pr-gate.yml) already runs the authority projection check on every PR.
+# status. The per-PR gate (pr-gate.yml) runs the same checks on every PR under `CI OK`: its `docs`
+# job mirrors the build job below minus the Pages upload, and package-publication-contract runs the
+# authority projection check. Change a check here and there together.
 
 name: docs-pages
 
@@ -45,8 +47,17 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Restore verified mdBook binary
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: target/mdbook-bin
+          key: mdbook-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('site/mdbook-checksums.txt', 'scripts/docs/install-mdbook.sh') }}
+
       - name: Install checksum-pinned mdBook
         run: bash scripts/docs/install-mdbook.sh target/mdbook-bin
+
+      - name: Test mdBook installer verify-or-reinstall contract
+        run: bash scripts/docs/test-install-mdbook.sh
 
       - name: Test documentation checker contracts
         run: python3 scripts/docs/test_check_links.py

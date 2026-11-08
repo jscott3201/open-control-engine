@@ -628,13 +628,41 @@ fn oversized_left_leaning_binding_returns_grounding_failed() {
 }
 
 #[test]
-fn deep_conditional_guard_is_rejected_during_parse() {
+fn long_conditional_guard_chain_is_validated_on_a_small_stack() {
+    // A 2000-operand `and` chain is not nesting (issue #371): it parses, and every operand is
+    // validated — here each names an unknown parameter — without exhausting a 2 MiB stack.
     let mut document = inactive_chain(1);
     document["@graph"][2]["S231:conditionalExpression"] = json!(
         std::iter::repeat_n("p", CONDITIONAL_GUARD_TERMS)
             .collect::<Vec<_>>()
             .join(" and ")
     );
+    let diags = diagnostics(on_small_stack(document));
+    let unknown = diags
+        .iter()
+        .filter(|diag| diag.code == DiagCode::ConditionalGuardUnknownParameter)
+        .count();
+    assert_eq!(unknown, CONDITIONAL_GUARD_TERMS, "one refusal per operand");
+    let others: Vec<_> = diags
+        .iter()
+        .filter(|diag| diag.code != DiagCode::ConditionalGuardUnknownParameter)
+        .map(|diag| (diag.code, diag.message.as_str()))
+        .collect();
+    // The guard cannot decide, so the leaf `S231:Block` stays and is itself refused.
+    assert_eq!(
+        others,
+        [(
+            DiagCode::ClassNotFound,
+            "no registered block class for `Block`"
+        )]
+    );
+}
+
+#[test]
+fn deep_conditional_guard_is_rejected_during_parse() {
+    let mut document = inactive_chain(1);
+    document["@graph"][2]["S231:conditionalExpression"] =
+        json!(format!("{}have{}", "(".repeat(100), ")".repeat(100)));
     let diags = diagnostics(on_small_stack(document));
     assert!(diags.iter().any(|diag| {
         diag.code == DiagCode::ConditionalGuardUnsupported

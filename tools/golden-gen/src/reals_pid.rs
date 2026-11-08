@@ -106,7 +106,9 @@ fn pi_outputs(
 
 fn pid_pi_recurrence() -> Golden {
     let time = decimal_ticks(10);
-    let u_s = [0.14, 0.16, 0.61, 0.65, -0.58, -0.63, -1.30, 1.20, -0.019, 0.021];
+    let u_s = [
+        0.14, 0.16, 0.61, 0.65, -0.58, -0.63, -1.30, 1.20, -0.019, 0.021,
+    ];
     let u_m = [0.0; 10];
     let config = PiConfig {
         k: K,
@@ -134,9 +136,13 @@ fn pid_pi_recurrence() -> Golden {
 
 fn pid_with_reset_pi_recurrence() -> Golden {
     let time = decimal_ticks(10);
-    let u_s = [0.20, 0.22, 0.95, 0.18, 0.18, -1.38, 1.10, -0.40, -0.40, 0.025];
+    let u_s = [
+        0.20, 0.22, 0.95, 0.18, 0.18, -1.38, 1.10, -0.40, -0.40, 0.025,
+    ];
     let u_m = [0.0; 10];
-    let trigger = [false, false, false, true, true, false, false, true, true, false];
+    let trigger = [
+        false, false, false, true, true, false, false, true, true, false,
+    ];
     let y_reset = 0.275;
     let config = PiConfig {
         k: K,

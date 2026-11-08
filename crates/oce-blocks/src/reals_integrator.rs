@@ -2,8 +2,9 @@
 //! forward-Euler-on-tick convention that the rest of the integrating Reals family reuses: emit the
 //! prior state first, then advance the state with `dt = t(k) - t(k-1)` in `update_state`.
 //!
-//! Non-finite inputs are deliberately not trapped here yet: NaN/Inf propagate through the
-//! documented recurrence and join the deferred centralized non-finite validation/diagnostic seam.
+//! Non-finite input *signals* are deliberately not trapped here: NaN/Inf propagate through the
+//! documented recurrence, and runtime non-finite signal diagnostics remain deferred. Non-finite
+//! *parameters* (`k`, `y_start`) are refused engine-wide at load and at `set_param` (issue #362).
 
 use oce_model::{ParamTable, Value};
 

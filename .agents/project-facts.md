@@ -21,20 +21,43 @@ first, then the script.
 GitHub is the primary host: `origin` is `github.com/jscott3201/open-control-engine`, and branches,
 PRs, reviews, issues and CI live there. The self-hosted Forgejo instance that was primary until
 October 2026 is retired. CI is GitHub Actions in `.github/workflows/` on GitHub-hosted Linux
-runners: `pr-gate.yml` (per-PR, light), `release-gate.yml` (release PRs into `main`, daily against
+runners (plus the two `pr-gate.yml` platform cells on macOS and Windows): `pr-gate.yml` (per-PR, light), `release-gate.yml` (release PRs into `main`, daily against
 `development`, heavy), `advisories.yml` (daily), `docs-pages.yml` (docs validation and the Pages
 publish from `main`), `release.yml` (tag verify / manual crates.io publish) and the two manual
 native-arm64 OpenModelica evidence workflows. `ci.yml` there is byte-frozen and disabled in the
 repository's Actions settings — it is not the CI.
 
+The per-PR gate runs once per change, on the PR. A merge into `development` runs no gate:
+`pr-gate.yml` has no `push` trigger, and `check-workflow-gates.sh` refuses one. Only the
+path-filtered `docs-pages.yml` runs on that push. The daily `release-gate.yml` run on the
+`development` tip is the safety net. See [CI and the gate](../docs/ci-and-the-gate.md#what-runs-when).
+
+The per-PR gate has two lanes under the one `CI OK` (issue #393). Its first job classifies the
+PR's changed paths with plain git and `scripts/ci/classify-changes.sh`, fail-closed: any path that
+is not documentation or under `crates/leverage/` runs the determinism lane — every job that
+compiles the engine — and so does any change to a gate script, workflow or tool config, which also
+runs `gate (light)`. A `crates/leverage/**` change runs only the `leverage lane` job beside the
+always-on checks (fmt, file-size, no-secret, docs, gate fixtures, the package/authority/product
+contract); an engine change runs it too. A docs-only PR compiles nothing, and documentation a test
+reads (`README.md`, `docs/cxf-composite-subset.md`) is not docs-only. `CI OK` accepts a skip only
+when the job's lane output was `false`. Locally, `bash .agents/gate.sh leverage` mirrors a
+leverage-only PR; see [lanes](../docs/ci-and-the-gate.md#lanes-what-a-pr-runs).
+
+Two platform cells also run with the determinism lane (issue #394): macOS arm64 checks that the
+portable state snapshot equals Linux byte for byte, and Windows builds the workspace and runs its
+suite without the strict-bit binaries — observations, not qualification; see
+[platform cells](../docs/ci-and-the-gate.md#platform-cells-macos-and-windows).
+
 GitHub PR numbers collide with the retired Forgejo numbering: Forgejo #332 (the Forgejo CI port)
 and GitHub #332 are different changes. Bare `(#N)` citations predate the move; cite every PR merged
 on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
 
-Three tracked files are bound sources of the retained native strict-bit evidence and must not
-change casually: `.github/workflows/ci.yml`, `.config/nextest.toml`, and `.agents/gate.sh`. Editing
-any of them makes `retained_native_linux_evidence_is_complete_exact_and_source_bound` fail until a
-new native receipt is admitted.
+Native strict-bit evidence is re-established on every PR: the strict-bit matrix in `pr-gate.yml`
+recaptures the pinned corpus in four native Linux cells and compares them from scratch, so no
+source file is bound to a stored receipt (the 35-file source-digest binding and its
+`recapture-pending` status were retired with GitHub #392). `.github/workflows/ci.yml` stays
+byte-frozen and disabled as the history of the retained capture archives. See
+[`docs/strict-bit-evidence.md`](../docs/strict-bit-evidence.md).
 
 ## A green PR does not mean the tests passed
 
@@ -42,25 +65,29 @@ CI is dev-light and release-heavy, and the split is easy to misread in the
 dangerous direction.
 
 The per-PR gate into `development` runs fmt, clippy, build, rustdoc, the file-size
-cap, the no-secret scan, the database-free check, the golden-gen firewall, the closed
+cap, the no-secret scan, the database-free check, the golden-gen firewall and
+[hygiene job](#golden-gen-hygiene-is-ci-only-for-now), the
+[docs and crate-suite jobs](#the-docs-and-crate-suite-jobs-are-ci-only-for-now), the closed
 package/feature/publication contract and its hostile controls, the gate fixtures,
 the [authority index/projection and its hostile controls](../docs/authority-claims.md),
 `cargo machete` — and the state-determinism tests for **`oce-api`, `oce-blocks`, and `oce-expr`**, via the
-determinism matrix on x86_64 (native) and aarch64 (QEMU user-mode emulation) in debug and release
-codegen.
-The matrix compares a populated portable engine-state snapshot byte-for-byte across architectures,
-checks portable and target-bound bytes across debug/release codegen, and requires target-bound bytes
-to differ across architectures. The same job then parses and refuses the aarch64 target-bound bytes
-through the public restore path on x86_64.
+determinism matrix: four native cells, x86_64 on `ubuntu-latest` and aarch64 on
+`ubuntu-24.04-arm`, each in debug and release codegen.
+Its fan-in job compares a populated portable engine-state snapshot byte-for-byte across
+architectures, checks portable and target-bound bytes across debug/release codegen, and requires
+target-bound bytes to differ across architectures. Each architecture then parses and refuses the
+other's target-bound bytes through the public restore path, natively.
 The standalone `cargo-deny` CI job runs `cargo deny check bans licenses sources` on every PR, and
 `.agents/gate.sh` runs it too.
 `advisories` is excluded from the script deliberately: it needs network and a writable
 advisory-db, neither of which a sandboxed lane has, so it runs in `advisories.yml`.
 
 The scoped `oce-conformance` strict-bit subset and four affected per-block suites also run per PR
-in four Linux architecture/codegen cells (x86_64 native, aarch64 emulated), with repeat captures
-and cross-cell comparison ([bounded evidence](../docs/strict-bit-evidence.md)). The remainder needs the release/full gate. A
-change confined to `oce-cxf`, `oce-store`, or `oce-diag` can show a fully
+in the same four native Linux architecture/codegen cells, with repeat captures and an eight-capture
+cross-cell comparison ([bounded evidence](../docs/strict-bit-evidence.md)). The
+`oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and `oce-store` suites run per
+PR too, x86_64 debug only. The remainder — and the release-codegen runs of those five — needs the
+release/full gate. A change confined to `oce-diag` or `oce-semantics` can show a fully
 green PR having executed none of its own tests. Before claiming your tests pass, run
 `bash .agents/gate.sh full` and read the tail.
 
@@ -73,14 +100,59 @@ included, and `CI OK` is the one status that summarizes it. A PR with no checks 
 mistake for a PR with no failing checks; confirm `CI OK` actually reported, not merely that
 nothing is red.
 
+## golden-gen hygiene is CI-only for now
+
+`tools/golden-gen` is its own cargo workspace, so the workspace fmt, clippy and test commands
+never reach it. The `golden-gen-hygiene` job in `pr-gate.yml` covers it: fmt, clippy
+`-D warnings`, its tests, and a release regeneration that must leave `tools/golden-gen/goldens`
+byte-identical with no untracked files. `.agents/gate.sh` does not run these yet; wiring them in is
+a separate change to the script. Until then, run them by hand after touching the generator or its
+goldens:
+
+```bash
+cd tools/golden-gen
+cargo fmt --check
+cargo clippy --all-targets --locked -- -D warnings
+cargo test --locked
+cargo run --release --locked
+git status --porcelain -- goldens    # must print nothing
+```
+
+## The docs and crate-suite jobs are CI-only for now
+
+Two `pr-gate.yml` jobs that `CI OK` needs run commands `.agents/gate.sh` does not, like the
+golden-gen hygiene job: wiring them into the script is a separate change.
+
+- `crate-tests` runs the `oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and `oce-store`
+  suites in x86_64 debug. It is a separate job, not a determinism-matrix
+  cell, so it runs beside the cells instead of lengthening them.
+- `docs` runs the documentation checks that `docs-pages.yml` also runs. That workflow is
+  path-filtered and not required, so before this job a PR could merge green with it failing.
+  `docs-pages.yml` still builds and publishes the site from `main`.
+
+Run them by hand after touching those crates or the docs:
+
+```bash
+cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf -p oce-store \
+  --locked --profile ci --no-tests=fail
+
+bash scripts/docs/install-mdbook.sh target/mdbook-bin
+python3 scripts/docs/test_check_links.py
+python3 scripts/docs/test_authority_literals.py --mdbook target/mdbook-bin/mdbook
+python3 scripts/docs/check_integrity.py --output target/docs-book --revision "$(git rev-parse HEAD)"
+target/mdbook-bin/mdbook build target/docs-book
+python3 scripts/docs/check_links.py target/docs-book/book --site-prefix /open-control-engine/
+rm -rf target/docs-book
+```
+
 ## Clippy lints the default feature set
 
 `cargo clippy --workspace --all-targets --locked -- -D warnings`, matching CI.
 
-Do not add `--all-features`. `oce-api` declares `default = ["mem"]`, and the promise
+Do not add `--all-features`. `oce-api` declares no features today, but the promise
 this repo gates on is that the *default* build links no database and no async
-runtime. Linting all features checks a configuration that never ships, and lets a
-default-build regression through.
+runtime. Linting all features would check a configuration that never ships, and let a
+default-build regression through once any crate grows an optional feature.
 
 ## The no-secret gate rejects more than secrets
 
@@ -123,7 +195,9 @@ Two things make this safe to do and easy to get wrong:
 
 ## Branches
 
-Base branch is `development`. Branch protection on GitHub blocks direct pushes to it
-and requires the `CI OK` status from `pr-gate.yml`; everything lands by squash-merge through a
-GitHub PR. A fix round pushes to the **same** branch — never a second PR for the same
+Base branch is `development`. Branch protection on GitHub blocks direct pushes to it, requires
+a pull request, requires the `CI OK` status from `pr-gate.yml`, and requires the branch to be up to
+date with `development` before merging; everything lands by squash-merge through a GitHub PR. A PR
+that falls behind is updated and its gate re-runs, because that run is the only one the change
+gets. A fix round pushes to the **same** branch — never a second PR for the same
 work.

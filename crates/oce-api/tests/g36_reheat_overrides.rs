@@ -143,8 +143,8 @@ fn reference_inputs(reference: &ReferenceTable, t: f64) -> Vec<(String, Value)> 
 }
 
 fn load_reheat_overrides() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(REHEAT_OVERRIDES.as_bytes())
         .expect("source-verified G36 Reheat Overrides fixture loads");
     assert_eq!(report.block_count, 11);

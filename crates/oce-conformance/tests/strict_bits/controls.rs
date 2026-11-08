@@ -1,8 +1,10 @@
 //! Mutation controls through the facade driver, not comparator-only unit tests.
 
 use super::evidence;
+use super::matrix::{self, Mismatch};
 use crate::block_harness;
 use oce_conformance::{CombiTimeTable, ComparisonResult};
+use std::collections::BTreeMap;
 
 fn assert_mutation(
     case: &block_harness::BlockCase,
@@ -277,35 +279,50 @@ fn source_oracle_and_input_drift_refuse_but_later_checkout_identity_is_allowed()
 }
 
 #[test]
-fn captured_provenance_binds_the_semantic_checker_and_facade_comparison_path() {
-    let captured = evidence::collect();
-    assert_eq!(captured.source_sha256.len(), 35);
-    for path in [
-        "crates/oce-conformance/tests/strict_bits.rs",
-        "crates/oce-conformance/tests/strict_bits/evidence.rs",
-        "crates/oce-conformance/tests/strict_bits/matrix.rs",
-        "crates/oce-conformance/tests/strict_bits/controls.rs",
-        "crates/oce-conformance/src/lib.rs",
-        "crates/oce-conformance/src/driver.rs",
-        "crates/oce-conformance/src/driver/compare.rs",
-        "crates/oce-conformance/src/exact.rs",
-        "crates/oce-conformance/src/aligned.rs",
-        "crates/oce-conformance/src/csv.rs",
-        "crates/oce-conformance/src/config.rs",
-        "crates/oce-conformance/src/funnel.rs",
-        "crates/oce-conformance/src/mask.rs",
-        "crates/oce-model/src/lib.rs",
-        "crates/oce-conformance/Cargo.toml",
-        ".github/workflows/ci.yml",
-        ".config/nextest.toml",
-        ".agents/gate.sh",
-    ] {
-        assert_eq!(
-            captured.source_sha256.get(path),
-            Some(&evidence::digest(
-                &std::fs::read(evidence::root().join(path)).unwrap()
-            )),
-            "unbound capture/comparison/admission source: {path}"
-        );
-    }
+fn one_flipped_bit_in_a_cell_or_only_its_repeat_fails_the_cross_cell_comparison() {
+    let (retained, runs) = matrix::synthetic_runs();
+    let signal = &runs["linux-aarch64-debug-first"].signals[0];
+    let sample = signal
+        .actual
+        .iter()
+        .position(|w| evidence::value(w).unwrap().is_finite())
+        .unwrap();
+    let flipped = evidence::word(f64::from_bits(
+        evidence::value(&signal.actual[sample]).unwrap().to_bits() ^ 1,
+    ));
+    let mutate = |runs: &mut BTreeMap<String, evidence::Corpus>, key: &str| {
+        let signal = &mut runs.get_mut(key).unwrap().signals[0];
+        signal.actual[sample].clone_from(&flipped);
+        signal.mismatches = vec![sample];
+    };
+    // One flipped bit in a whole cell (first and repeat agree): a numerical mismatch against both
+    // the Tier-A reference and the x86_64 debug capture.
+    let mut numerical = runs.clone();
+    mutate(&mut numerical, "linux-aarch64-debug-first");
+    mutate(&mut numerical, "linux-aarch64-debug-repeat");
+    let expected = [
+        retained.signals[0].oracle[sample].clone(),
+        runs["linux-x86_64-debug-first"].signals[0].actual[sample].clone(),
+    ];
+    assert_eq!(
+        matrix::compare(&retained, &numerical),
+        Ok(expected
+            .into_iter()
+            .map(|expected| Mismatch {
+                signal: retained.signals[0].id.clone(),
+                sample,
+                cell: "linux-aarch64-debug".into(),
+                expected,
+                actual: flipped.clone(),
+            })
+            .collect())
+    );
+    // The same bit in the repeat capture only: first/repeat byte identity is still enforced.
+    let mut repeat = runs;
+    mutate(&mut repeat, "linux-aarch64-debug-repeat");
+    assert!(
+        matrix::compare(&retained, &repeat)
+            .unwrap_err()
+            .starts_with("linux-aarch64-debug: repeated raw capture differs:")
+    );
 }

@@ -65,6 +65,7 @@ pub(super) fn collect_refusals(doc: &CxfDocument, diags: &mut Vec<Diagnostic>) {
             ("S231:value", node.value.as_ref()),
             ("S231:min", node.min.as_ref()),
             ("S231:max", node.max.as_ref()),
+            ("S231:nominal", node.nominal.as_ref()),
         ] {
             if let Some(value) = value {
                 collect_value_refusals(value, slot, &mut refuse);

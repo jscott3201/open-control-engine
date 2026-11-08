@@ -1,7 +1,9 @@
 //! `CDL.Conversions` (`03` §4.4): legal explicit crossings between Boolean, Integer, and Real.
 //! Real-to-Integer intentionally uses the sign-branched Buildings/CDL rule, so half values round
-//! away from zero (`-2.5 -> -3`). Non-finite and out-of-range casts pin Rust's current saturating
-//! `f64 as i64` behavior and join the deferred centralized non-finite diagnostics seam.
+//! away from zero (`-2.5 -> -3`). Non-finite and out-of-range signal casts pin Rust's current
+//! saturating `f64 as i64` behavior; runtime non-finite signal diagnostics remain deferred.
+//! Non-finite Real *parameters* never reach a block: the load gate and `set_param` refuse them
+//! engine-wide (issue #362).
 
 use oce_model::Value;
 

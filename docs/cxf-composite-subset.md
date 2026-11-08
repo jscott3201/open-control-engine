@@ -18,6 +18,11 @@ nesting is limited to 64. Boundary lowering is iterative and permits at most 64 
 hops per path, 65,536 target examinations, and 8 MiB of aggregate target-IRI bytes across boundary
 walks in the document. Exceeding a boundary limit returns `MalformedDocument` without constructing
 a partial flat graph. Ordinary direct leaf wiring does not consume the boundary-work budgets.
+Every composite and leaf is lowered at most once (`shared-instance` refuses a second reach), each
+composite's grounded declarations are shared by reference with its children rather than copied
+per leaf, and all preserved array parameters of one document share a 1,048,576-element budget
+(`resource-limit-exceeded`), so lowering work and inherited-scope memory grow linearly with the
+document (issue #365).
 
 ## How rejections are reported
 
@@ -154,7 +159,7 @@ an expanded IRI/name maintained by the producer and used by the host, not an arr
 | Composite own `hasParameter` + `hasConstant` | Normalized for accepted scopes | One mutual dependency-ordered scope, including forward references across the two lists. Permutations preserve the accepted graph and guard decisions. Rejected cycles/duplicates retain rule IDs and participant sets, not necessarily subjects or message order; see Rule 5. |
 | Leaf values and dimensions | Order-bearing where Rule 5 specifies | Leaf declaration chains are not composite mutual scopes. Values use enclosing-first lookup, earlier sibling fallback and no forward sibling grounding; dimensions use nearest-wins lookup. Do not generalize composite declaration-order independence to leaf chains. |
 | `isConnectedTo` | Order-bearing, with orientation normalization | Authored connection sources follow `@graph`; targets follow each source's array. Re-anchored relations follow the orientation rules in Rule 6; node-less derived sources follow authored sources in derived connector order. Direct target permutations can alter export content while leaving executable compatibility unchanged because the state manifest canonicalizes the edge set. |
-| Boundary lowering | Normalized fanout; order-bearing node positions | `external_inputs` re-key by `(boundary input node position, ConnectorId)`; fanout target-array permutation does not reorder them. Pass-through pairs re-key by `(input boundary node position, output boundary node position)`. Declared input/output definitions follow boundary `@graph` order. Boundary hops and composite nodes disappear, while declared boundary IRIs retain their public IO role. |
+| Boundary lowering | Normalized fanout; order-bearing node positions | `external_inputs` re-key by `(boundary input node position, ConnectorId)`; fanout target-array permutation does not reorder them. Pass-through pairs re-key by `(input boundary node position, output boundary node position)`. Declared input/output definitions follow boundary `@graph` order. Boundary hops and composite nodes disappear, while declared boundary IRIs retain their public IO role. A root input read by no connection (including one whose only route ends at a nested input nothing reads) has no definition and warns `unused-boundary-input` with its IRI as subject; several such warnings follow the resolver-diagnostic sort. |
 | `hasInstance` member array | Normalized | Array order is load-bearing for nothing: derived ports use names/class signature, classified parameters append in class-signature order, and synthesized connectors append after authored connectors ordered by `(owner @graph position, class-signature position)`. This does not make owner node order or authored connector node order inert. |
 | Inactive conditionals | Pruned | Inactive children and entire subtrees contribute no leaf or connector positions. Moving an inactive child among active siblings does not move the active order. Active connections referencing inactive nodes still refuse; pruning is not permission to leave dangling wiring. See Active nodes for declaration/guard exceptions. |
 | Resolver diagnostics | Deterministically finalized | Sort by numeric connector dense ID first (including recognized `connector#N` subjects), then subject, code string and message. Non-connector subjects use the final ID bucket: no subject before named subjects, then lexical subject/code/message order. Early failures with no connector index use that non-connector handling. Severity is not a sort key. Export warnings retain their separate block/cascade order, not this resolver sort. |
@@ -184,10 +189,12 @@ parameter-shadowing policy, option or diagnostic, and does not close that separa
 > names **all** participants in traversal path order, ending at the re-entered id, and the
 > re-entered id is the subject.
 
-Normative consequence: **one diagnostic per re-entry**. A cycle reachable via *k* distinct paths
-yields *k* truthful path-ordered diagnostics; a consumer must not assume one diagnostic per
-structural cycle (corpus fixture `rejected/diamond_cycle.jsonld`: one cycle, two paths, two
-diagnostics). The degenerate self-loop (`A` contains `A`) reports the two-entry list
+Normative consequence: a cycle is reported from the **first** path that re-enters it. Every
+composite and leaf is reached at most once (a CDL instance has exactly one parent; see
+`shared-instance` under [Generic diagnostics](#generic-diagnostics)), so a cycle reachable via a
+second path is not re-walked: that path's second reach of a cycle member is refused as
+`shared-instance` instead (corpus fixture `rejected/diamond_cycle.jsonld`: one cycle, two paths,
+one `contains-cycle` plus one `shared-instance`). The degenerate self-loop (`A` contains `A`) reports the two-entry list
 `…#A -> …#A` (corpus fixture `rejected/self_loop.jsonld`).
 
 ```json
@@ -219,10 +226,8 @@ rejects with subject `…#A` and message tail `…#A -> …#B -> …#C -> …#A`
 > - A reference **cycle** among a composite's own bindings — including the length-1
 >   self-reference `x = "x * 2"`, which is never an enclosing read — rejects with
 >   `composite/declaration-cycle` (DiagCode `malformed-document`): **one diagnostic per
->   distinct cycle per chain evaluation**. Like `contains-cycle`, a composite reachable via
->   multiple `containsBlock` paths is evaluated once per path (enclosing scopes can differ per
->   path), so the same cycle can surface once per visit — consumers must not assume one
->   diagnostic per structural cycle document-wide. Subject = the participant earliest in the
+>   distinct cycle per chain evaluation**. Each composite's chain is evaluated at most once,
+>   because a second `containsBlock` reach of a composite is refused as `shared-instance`. Subject = the participant earliest in the
 >   params-then-constants chained declaration order; the message's arrow list is the
 >   participant **ring** in chained declaration order closing on the first
 >   (`…#M.a -> …#M.b -> …#M.a`) — not the discovered edge path. Bindings outside the cycle
@@ -457,7 +462,7 @@ column above is display-only.
 
 ## Generic diagnostics
 
-Three diagnostics that can accompany or replace a contract rejection are shared import
+Four diagnostics that can accompany or replace a contract rejection are shared import
 machinery, **deliberately untagged** (no `composite/` prefix, no catalog entry):
 
 - `unresolved-reference` — a `containsBlock` child, parameter node, composite `@id`, or a
@@ -475,6 +480,14 @@ machinery, **deliberately untagged** (no `composite/` prefix, no catalog entry):
   `hasInstance` list whose class-declared names its own routes do not carry (a **warning**;
   compared one-directional, list minus own), or one parameter name valued differently on the
   two routes (an **error** — two values for one name state a contradiction).
+- `shared-instance` — an active `containsBlock` child (composite or leaf) reached a second time:
+  listed twice by one composite, or by two composites (subject = the child; the message names
+  the composite whose listing reached it again). A CDL component instance has exactly one
+  parent, so the document is malformed; the walk refuses the second reach instead of expanding
+  the child again. Before this refusal a composite listing `[C, C]` at every level doubled the
+  lowering work per level — a few kilobytes of document could exhaust memory (issue #365). It
+  is a structural guard on the walk rather than a catalogued shape rule, which keeps the
+  published rule-id set unchanged.
 
 They are not contract rules because they do not describe a composite *shape*; they fire anywhere
 in the import pipeline. Match them by DiagCode, not by message. The conditional-pruning
@@ -505,7 +518,8 @@ the same files and drivers.
   one fixture per contract behavior, indexed in the corpus
   [`README.md`](../crates/oce-cxf/tests/fixtures/composite_contract/README.md). The `warned/`
   category holds documents that load successfully with a pinned advisory vector — untagged
-  import machinery such as `undriven-boundary-output`, not a composite-shape rule.
+  import machinery such as `undriven-boundary-output` and `unused-boundary-input`, not a
+  composite-shape rule.
 - Accepted-fixture goldens (byte-exact `ModelGraph` renders):
   `crates/oce-cxf/tests/fixtures/golden/composite_contract_*.modelgraph.txt`.
 - Resolver-layer drivers:

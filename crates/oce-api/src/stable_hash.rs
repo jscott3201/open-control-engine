@@ -1,6 +1,6 @@
 //! Stable, dependency-free hashing shared by facade identity surfaces.
 
-use oce_store::DomainKey;
+use oce_model::resolved_model::DomainKey;
 
 pub(crate) struct StableHash {
     value: u128,

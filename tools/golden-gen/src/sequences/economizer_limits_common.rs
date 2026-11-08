@@ -10,8 +10,7 @@ use super::{
 pub(super) fn goldens() -> Vec<Golden> {
     let time = unit_ticks(8);
     let outdoor_airflow_normalized = [0.0; 8];
-    let minimum_outdoor_airflow_setpoint_normalized =
-        [1.0, 1.0, 1.0, 12.0, 24.0, 8.0, 8.0, 8.0];
+    let minimum_outdoor_airflow_setpoint_normalized = [1.0, 1.0, 1.0, 12.0, 24.0, 8.0, 8.0, 8.0];
     let operation_mode = [1, 1, 1, 1, 1, 0, 1, 1];
     let supply_fan_status = [false, true, true, true, true, true, false, true];
 
@@ -35,7 +34,12 @@ pub(super) fn goldens() -> Vec<Golden> {
             "outdoor_damper_min_limit",
             ValueKind::Real,
             time.clone(),
-            trace.outdoor_damper_min_limit.iter().copied().map(r).collect(),
+            trace
+                .outdoor_damper_min_limit
+                .iter()
+                .copied()
+                .map(r)
+                .collect(),
             "Economizer Limits.Common: fan-off, reset, enabled modulation, saturation, unoccupied, fan-off disable, and second reset rows",
             "Pinned Limits/Common.mo source-default PI branch: yOutDam_min = Line(x1=0,f1=outDamPhy_min,x2=uRetDam_min,f2=yOutDam_max,u=damLimCon.y,limitBelow=true,limitAbove=true)",
             inputs.clone(),
@@ -45,7 +49,12 @@ pub(super) fn goldens() -> Vec<Golden> {
             "outdoor_damper_max_limit",
             ValueKind::Real,
             time.clone(),
-            trace.outdoor_damper_max_limit.iter().copied().map(r).collect(),
+            trace
+                .outdoor_damper_max_limit
+                .iter()
+                .copied()
+                .map(r)
+                .collect(),
             "Economizer Limits.Common: outdoor maximum limit is disabled when fan/mode gating disables minimum outdoor air control",
             "Pinned Limits/Common.mo: outDamPosMaxSwitch selects outDamPhy_min when !yEnaMinOut else outDamPhy_max",
             inputs.clone(),
@@ -55,7 +64,12 @@ pub(super) fn goldens() -> Vec<Golden> {
             "return_damper_min_limit",
             ValueKind::Real,
             time.clone(),
-            trace.return_damper_min_limit.iter().copied().map(r).collect(),
+            trace
+                .return_damper_min_limit
+                .iter()
+                .copied()
+                .map(r)
+                .collect(),
             "Economizer Limits.Common: return minimum limit is forced to the physical maximum when the minimum outdoor air loop is disabled",
             "Pinned Limits/Common.mo: retDamPosMinSwitch selects retDamPhy_max when !yEnaMinOut else retDamPhy_min",
             inputs.clone(),
@@ -65,7 +79,12 @@ pub(super) fn goldens() -> Vec<Golden> {
             "return_damper_max_limit",
             ValueKind::Real,
             time.clone(),
-            trace.return_damper_max_limit.iter().copied().map(r).collect(),
+            trace
+                .return_damper_max_limit
+                .iter()
+                .copied()
+                .map(r)
+                .collect(),
             "Economizer Limits.Common: return maximum limit stays high below uRetDam_min and then decreases as the PI loop signal rises",
             "Pinned Limits/Common.mo source-default PI branch: yRetDam_max = Line(x1=uRetDam_min,f1=retDamPhy_max,x2=1,f2=yRetDam_min,u=damLimCon.y,limitBelow=true,limitAbove=true)",
             inputs.clone(),

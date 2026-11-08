@@ -106,8 +106,8 @@ fn same_outputs(left: &Row, right: &Row) -> bool {
 }
 
 fn load(rule: &Rule) -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine.load_cxf(rule.cxf).unwrap();
+    let mut engine = Engine::new();
+    let (report, _) = engine.load_cxf(rule.cxf).unwrap();
     assert!(
         report.warnings.is_empty(),
         "{}: unexpected load warnings {:?}",
@@ -414,7 +414,7 @@ fn library_fixtures_meet_their_own_vectors_uninterrupted() {
 /// Run B for every single restart point: the bytes Run A captured after tick `k` (or after load,
 /// before any frame) resume a fresh engine, which must then reproduce Run A's remaining rows.
 ///
-/// To keep the sweep inside the emulated-CI budget, continuation rows compare every boundary and
+/// To keep the sweep inside the per-PR CI budget, continuation rows compare every boundary and
 /// internal output bit-exactly and the final row also compares the full canonical state bytes.
 /// The chained and mid-window tests compare state bytes after every frame.
 fn assert_single_restart_at_every_tick(rule: &Rule) {

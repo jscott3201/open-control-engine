@@ -101,8 +101,8 @@ fn relief_fan_group_inputs(t: f64) -> Vec<(String, Value)> {
 }
 
 fn load_relief_fan_group() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(RELIEF_FAN_GROUP.as_bytes())
         .expect("source-transcribed G36 ReliefFanGroup fixture loads");
     assert_eq!(report.block_count, 226);

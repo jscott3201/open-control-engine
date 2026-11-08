@@ -1,11 +1,7 @@
 //! Public lifecycle refusals preserve snapshots, checkpoint-restored images, output/watch bits and
-//! every recorded Store call. These are preservation controls, not an independent numeric oracle.
-
-mod support;
+//! frame sequence. These are preservation controls, not an independent numeric oracle.
 
 use oce_api::{Engine, EngineStateError, OcError, Value};
-use std::sync::Arc;
-use support::recording_store::{RecordingStore, StoreCallSnapshot};
 
 const MODEL: &[u8] = include_bytes!("fixtures/frame_delay.jsonld");
 const Y: &str = "urn:frame:y";
@@ -26,10 +22,10 @@ fn values_equal(left: &[(String, Value)], right: &[(String, Value)]) {
 }
 
 #[test]
-fn context_readiness_and_time_refusals_preserve_public_images_and_store_calls() {
+fn context_readiness_and_time_refusals_preserve_public_images() {
     for advanced in [false, true] {
         for cause in ["cross-engine", "reload", "dirty", "dirty-resume", "time"] {
-            let mut engine = Engine::with_store(Arc::new(RecordingStore::default()));
+            let mut engine = Engine::new();
             engine.load_cxf(MODEL).unwrap();
             let retained = if advanced {
                 let plan = engine.prepare_frame(0.0, &entries()).unwrap();
@@ -40,7 +36,7 @@ fn context_readiness_and_time_refusals_preserve_public_images_and_store_calls() 
             let mut plan = engine.prepare_frame(0.0, &entries()).unwrap();
             match cause {
                 "cross-engine" => {
-                    let mut other = Engine::in_memory();
+                    let mut other = Engine::new();
                     other.load_cxf(MODEL).unwrap();
                     plan = other.prepare_frame(0.0, &entries()).unwrap();
                 }
@@ -70,8 +66,6 @@ fn context_readiness_and_time_refusals_preserve_public_images_and_store_calls() 
             let output = engine.get_output(Y).unwrap();
             let watch = engine.watch(&[Y, "urn:frame:delay.y"]).unwrap();
             let retained_image = format!("{retained:?}");
-            engine.store().reset_calls();
-            engine.store().arm_hot_path_guard();
             let error = engine.execute_frame(plan).unwrap_err();
             assert!(match cause {
                 "dirty" => matches!(
@@ -91,9 +85,8 @@ fn context_readiness_and_time_refusals_preserve_public_images_and_store_calls() 
             assert!(engine.get_output(Y).unwrap().bit_eq(&output));
             values_equal(&engine.watch(&[Y, "urn:frame:delay.y"]).unwrap(), &watch);
             assert_eq!(format!("{retained:?}"), retained_image);
-            assert_eq!(engine.store().calls(), StoreCallSnapshot::default());
             if let Ok(checkpoint) = checkpoint {
-                let mut observer = Engine::in_memory();
+                let mut observer = Engine::new();
                 observer.load_cxf(MODEL).unwrap();
                 observer.restore_checkpoint(&checkpoint).unwrap();
                 assert_eq!(
@@ -118,23 +111,21 @@ fn context_readiness_and_time_refusals_preserve_public_images_and_store_calls() 
                 engine.execute_frame(next).unwrap().sequence(),
                 1 + u64::from(advanced) + u64::from(cause == "time")
             );
-            assert_eq!(engine.store().calls(), StoreCallSnapshot::default());
         }
     }
 }
 
 #[test]
 fn unloaded_target_refuses_a_moved_plan_and_failed_load_preserves_a_usable_plan() {
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source.load_cxf(MODEL).unwrap();
     let plan = source.prepare_frame(0.0, &entries()).unwrap();
-    let mut target = Engine::with_store(Arc::new(RecordingStore::default()));
+    let mut target = Engine::new();
     assert!(matches!(
         target.execute_frame(plan),
         Err(OcError::State(EngineStateError::NoLoadedModel))
     ));
     assert!(target.watch(&[]).unwrap().is_empty());
-    assert_eq!(target.store().calls(), StoreCallSnapshot::default());
     let plan = source.prepare_frame(0.0, &entries()).unwrap();
     assert!(matches!(source.load_cxf(b"{"), Err(OcError::Cxf(_))));
     assert_eq!(source.execute_frame(plan).unwrap().sequence(), 1);
@@ -142,7 +133,7 @@ fn unloaded_target_refuses_a_moved_plan_and_failed_load_preserves_a_usable_plan(
 
 #[test]
 fn latest_state_inspections_never_consume_positions_or_change_retained_receipts() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL).unwrap();
     let plan = engine.prepare_frame(0.0, &entries()).unwrap();
     let retained = engine.execute_frame(plan).unwrap();

@@ -30,7 +30,7 @@ the architecture and invariants are the design of record.
   only (including a workspace
   `cargo test`); the publish job is guarded by `github.event_name == 'workflow_dispatch'`, so a tag
   alone never publishes. The 12-publishable/five-private selection and supported `oce-api` feature matrix
-  are governed by the [package publication policy](docs/package-publication-policy.md). No crate is
+  are checked by the package validator ([CI and the gate](docs/ci-and-the-gate.md#publishing)). No crate is
   published yet; actual publication remains separately owner-authorized.
 - **Every PR runs the full per-PR gate**, including work-in-progress PRs. Confirm the checks
   actually ran and that `CI OK` is green before asking for review.
@@ -116,9 +116,13 @@ contract and its hostile controls, the gate fixtures, `cargo machete`, clippy, b
 cargo-deny, and the `oce-api`/`oce-blocks`/`oce-expr` determinism subset in debug and release
 codegen, plus the scoped strict-bit conformance subset in both codegen profiles.
 
-CI also runs this script directly, as the `gate (light)` job in `.github/workflows/pr-gate.yml` and
-`gate (full)` in `.github/workflows/release-gate.yml`. So the commands here gate your PR whether or not each is separately wired as
-its own job — but that is coverage, not proof that the script and the workflows still agree.
+CI also runs this script directly: as the `gate (light)` job in `.github/workflows/pr-gate.yml` on
+any PR that changes a gate script, workflow or tool config, and as `gate (full)` in
+`.github/workflows/release-gate.yml` daily. So the commands here gate any PR that could make a
+workflow job diverge from them — but that is coverage, not proof that the script and the workflows
+still agree. Which `pr-gate.yml` jobs a PR runs depends on the paths it changes; see
+[the lanes](docs/ci-and-the-gate.md#lanes-what-a-pr-runs). `bash .agents/gate.sh leverage` mirrors
+a PR confined to `crates/leverage/`.
 Nothing verifies that mechanically; change a command in CI first, then here.
 
 If your change falls outside those named subsets, a green PR need not have run its tests. Add `full`:
@@ -133,11 +137,11 @@ and drifted from CI — omitting `cargo machete`, the gate-fixture job, the `--b
 and the determinism matrix — while claiming to mirror it. Change a command in
 [`.github/workflows/pr-gate.yml`](.github/workflows/pr-gate.yml) first, then in the script.
 
-`.agents/gate.sh`, `.config/nextest.toml` and the dormant, disabled `.github/workflows/ci.yml` are
-bound sources of the retained native strict-bit evidence
-([strict-bit evidence](docs/strict-bit-evidence.md)): changing any byte of them turns the
-retained-evidence test red until a new native receipt is admitted. Plan such a change as an
-evidence refresh, not as a drive-by edit.
+The dormant, disabled `.github/workflows/ci.yml` stays byte-frozen as the history of the retained
+strict-bit capture archives. Native strict-bit evidence is re-established on every PR by the native
+cells in `pr-gate.yml` ([strict-bit evidence](docs/strict-bit-evidence.md)), so `.agents/gate.sh`
+and `.config/nextest.toml` are ordinary files again: change them like any other gate change,
+`pr-gate.yml` first.
 
 CI is Linux-only. There is no macOS or Windows CI leg, and there never was one; macOS observations
 are local and are not qualification evidence.
@@ -145,8 +149,8 @@ are local and are not qualification evidence.
 ## Invariants a change must not violate
 
 - **The library is database-free.** It ships **no first-party database** (D-OWNER-1): the
-  execution core (Group A) and the store ports (`oce-store`, `oce-store-mem`) name no database
-  type. Durable/queryable backends are app-side adapters behind the `oce-store` port.
+  execution core (Group A) and the store ports (`oce-store`, including its in-memory `MemStore`)
+  name no database type. Durable/queryable backends are app-side adapters behind the `oce-store` port.
 - **The build is database-free and async-runtime-free.** `cargo tree -e normal` must list no
   `selene-db`, no `tokio`, no `async-std`. The default-no-db gate enforces this.
 - **No `unsafe` code** (`#![forbid(unsafe_code)]` in every crate); public APIs require doc
@@ -156,15 +160,15 @@ are local and are not qualification evidence.
   **not** unconditionally zero across the block library, so do not add to the exceptions:
   `Reals.Sort` is stack-backed through `SORT_STACK_WIDTH` (64) inputs and falls back to two
   heap `Vec`s only above that (`reals_matrix.rs:388`, `:399-403`). Complete-frame preparation and
-  result capture have explicit structural allocation budgets; neither calls the Store.
+  result capture have explicit structural allocation budgets; the engine has no storage port to call.
 
   A new block allocation on the evaluator thread **is** caught per-PR.
   `crates/oce-blocks/tests/tick_allocation_census.rs` sweeps the whole registry via `catalog()` and
   carries a permanent positive control (`CDL.Reals.Sort`), and `oce-blocks` is one of the three
   crates the per-PR gate runs (`.agents/gate.sh`). Current blocks do not delegate work to worker threads; a
   block that introduces worker execution also needs an allocation guard for that work. The
-  facade guards in `oce-api/tests/frame_purity.rs` and `frame_observations.rs` check Store freedom
-  and frame allocation budgets per-PR as part of the `oce-api` subset.
+  facade guards in `oce-api/tests/frame_purity.rs` and `frame_observations.rs` check engine purity,
+  storage isolation and frame allocation budgets per-PR as part of the `oce-api` subset.
 
 ## Commits
 

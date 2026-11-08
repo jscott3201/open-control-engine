@@ -109,6 +109,14 @@ pub(crate) fn eval(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprE
 /// holds (arrays are cloned and re-canonicalized, like the scalar read); everything else is
 /// scalar.
 pub(crate) fn eval_node(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
+    if !is_scalar_form(ast) {
+        crate::fuel::charge(1)?;
+    }
+    // Strict-finite grounding checks every node result as it is produced (identity otherwise).
+    crate::eval_strict::check_result(eval_node_unchecked(ast, scope)?, scope)
+}
+
+fn eval_node_unchecked(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
     match ast {
         ExprAst::ArrayLit(elems) => crate::eval_array::eval_array_literal(elems, scope),
         ExprAst::Range { start, step, stop } => {
@@ -123,11 +131,31 @@ pub(crate) fn eval_node(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, 
         ExprAst::Call(b, args) => eval_call(*b, args, scope),
         ExprAst::Ident(name) => match scope.lookup(name) {
             Some(EvalResult::Scalar(v)) => Ok(EvalResult::Scalar(canonicalize_value(v))),
-            Some(EvalResult::Array(a)) => Ok(EvalResult::Array(a.canonicalized_clone())),
+            Some(EvalResult::Array(a)) => {
+                crate::fuel::charge(a.len())?;
+                Ok(EvalResult::Array(a.canonicalized_clone()))
+            }
             None => Err(ExprError::UnknownIdent(name.to_string())),
         },
         other => Ok(EvalResult::Scalar(eval_scalar(other, scope)?)),
     }
+}
+
+/// Whether `ast` is evaluated by [`eval_scalar`]'s own arms (literals, constants, enum
+/// references, operators) rather than delegated to [`eval_node`]. Each AST node is charged one
+/// fuel unit exactly once: by `eval_scalar` for these forms, by `eval_node` for the rest.
+fn is_scalar_form(ast: &ExprAst) -> bool {
+    matches!(
+        ast,
+        ExprAst::Real(_)
+            | ExprAst::Int(_)
+            | ExprAst::Bool(_)
+            | ExprAst::Str(_)
+            | ExprAst::Const(_)
+            | ExprAst::EnumRef(_)
+            | ExprAst::Unary(..)
+            | ExprAst::Binary(..)
+    )
 }
 
 /// Unwrap a scalar result; an array in scalar position is a typed error (element-wise
@@ -146,6 +174,14 @@ fn expect_scalar(r: EvalResult) -> Result<Value, ExprError> {
 /// produce arrays (identifier, literal, range, built-in call) go through [`eval_node`] and
 /// reject an array result with a typed error.
 pub(crate) fn eval_scalar(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, ExprError> {
+    if is_scalar_form(ast) {
+        crate::fuel::charge(1)?;
+    }
+    // Strict-finite grounding checks every node result as it is produced (identity otherwise).
+    crate::eval_strict::check_scalar(eval_scalar_unchecked(ast, scope)?, scope)
+}
+
+fn eval_scalar_unchecked(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, ExprError> {
     match ast {
         ExprAst::Real(r) => Ok(real(*r)),
         ExprAst::Int(i) => Ok(Value::Integer(*i)),
@@ -154,9 +190,7 @@ pub(crate) fn eval_scalar(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, Exp
         ExprAst::Const(c) => Ok(real(const_value(*c))),
         ExprAst::EnumRef(name) => eval_enum_ref(name, scope),
         ExprAst::Unary(op, e) => eval_unary(*op, &eval_scalar(e, scope)?),
-        ExprAst::Binary(op, a, b) => {
-            eval_binary(*op, &eval_scalar(a, scope)?, &eval_scalar(b, scope)?)
-        }
+        ExprAst::Binary(op, a, b) => eval_binary_chain(*op, a, b, scope),
         ExprAst::Call(..)
         | ExprAst::Ident(_)
         | ExprAst::ArrayLit(_)
@@ -190,6 +224,41 @@ fn eval_unary(op: UnOp, v: &Value) -> Result<Value, ExprError> {
         },
         UnOp::Not => Ok(Value::Boolean(!bool_of(v)?)),
     }
+}
+
+/// Evaluate `a op b` where `a` may head a left-deep chain (`x+y+z+…`) of any length.
+///
+/// The left spine is walked with an explicit stack instead of recursion, so stack use is bounded
+/// by [`crate::nesting_depth`] (which does not count chain length) rather than by the chain's
+/// term count. The order of every observable step is exactly the recursive order: each spine node
+/// is charged one fuel unit on the way down (root first, charged by the caller), the leftmost
+/// operand is evaluated, then each right operand in source order is evaluated, applied, and — for
+/// every spine node below the root — checked by the strict-finite policy. The root's result is
+/// checked by the calling [`eval_scalar`], as for every node.
+fn eval_binary_chain(
+    op: BinOp,
+    a: &ExprAst,
+    b: &ExprAst,
+    scope: &dyn Scope,
+) -> Result<Value, ExprError> {
+    let ExprAst::Binary(..) = a else {
+        return eval_binary(op, &eval_scalar(a, scope)?, &eval_scalar(b, scope)?);
+    };
+    let mut spine = vec![(op, b)];
+    let mut leftmost = a;
+    while let ExprAst::Binary(op, left, right) = leftmost {
+        crate::fuel::charge(1)?;
+        spine.push((*op, right.as_ref()));
+        leftmost = left;
+    }
+    let mut acc = eval_scalar(leftmost, scope)?;
+    while let Some((op, right)) = spine.pop() {
+        acc = eval_binary(op, &acc, &eval_scalar(right, scope)?)?;
+        if !spine.is_empty() {
+            acc = crate::eval_strict::check_scalar(acc, scope)?;
+        }
+    }
+    Ok(acc)
 }
 
 fn eval_binary(op: BinOp, a: &Value, b: &Value) -> Result<Value, ExprError> {
@@ -326,7 +395,7 @@ fn eval_scalar_call(b: Builtin, vals: &[Value]) -> Result<Value, ExprError> {
         (Builtin::Sqrt, [v]) => builtin_sqrt(num_of(v)?),
         (Builtin::Floor, [v]) => Ok(real(num_of(v)?.as_f64().floor())),
         (Builtin::Ceil, [v]) => Ok(real(num_of(v)?.as_f64().ceil())),
-        (Builtin::Integer, [v]) => Ok(Value::Integer(builtin_integer(num_of(v)?))),
+        (Builtin::Integer, [v]) => builtin_integer(num_of(v)?).map(Value::Integer),
         (Builtin::Div, [x, y]) => builtin_div(num_of(x)?, num_of(y)?),
         (Builtin::Mod, [x, y]) => builtin_mod(num_of(x)?, num_of(y)?),
         (Builtin::Rem, [x, y]) => builtin_rem(num_of(x)?, num_of(y)?),
@@ -370,12 +439,35 @@ fn builtin_sqrt(n: Num) -> Result<Value, ExprError> {
     }
 }
 
-/// `integer(x)` = `floor(x)` cast to Integer (R10.1). `as i64` saturates (never panics) on
-/// out-of-range or NaN.
-fn builtin_integer(n: Num) -> i64 {
+/// The smallest Real whose floor is an Integer: `-2^63`, exactly `i64::MIN`.
+const INTEGER_RANGE_START: f64 = -9_223_372_036_854_775_808.0;
+/// The first Real past the Integer range: `2^63`, one more than `i64::MAX` (which `f64` cannot
+/// represent; the largest `f64` below `2^63` is `2^63 - 1024`).
+const INTEGER_RANGE_END: f64 = 9_223_372_036_854_775_808.0;
+
+/// `integer(x)` = `floor(x)` as Integer (R10.1). An Integer argument passes through unchanged.
+///
+/// A Real whose floor lies outside `[-2^63, 2^63)` — including `NaN` and `±inf` — has no Integer
+/// value and refuses with [`ExprError::DomainError`] (issue #374), in every evaluation mode. An
+/// `as i64` cast would instead saturate (`integer(1e300)` would become `i64::MAX`) or map `NaN` to
+/// `0`, turning a mistyped binding into a plausible-looking count. The runtime
+/// `CDL.Conversions.RealToInteger` block keeps its saturating cast deliberately: a running control
+/// loop must emit an output every tick, while a load can refuse.
+fn builtin_integer(n: Num) -> Result<i64, ExprError> {
     match n {
-        Num::I(i) => i,
-        Num::R(r) => r.floor() as i64,
+        Num::I(i) => Ok(i),
+        Num::R(r) => {
+            let floored = r.floor();
+            // `NaN` fails both comparisons, so it refuses here too.
+            if (INTEGER_RANGE_START..INTEGER_RANGE_END).contains(&floored) {
+                // In range and integral, so the cast is exact.
+                Ok(floored as i64)
+            } else {
+                Err(ExprError::DomainError(
+                    "integer() argument is outside the Integer range [-2^63, 2^63)",
+                ))
+            }
+        }
     }
 }
 

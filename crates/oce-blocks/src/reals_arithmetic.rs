@@ -2,8 +2,9 @@
 //!
 //! Non-finite policy is intentionally local: `Min`/`Max` absorb a single NaN operand to match
 //! `oce-expr`, arithmetic follows IEEE NaN/±Inf value behavior, and every Real output canonicalizes
-//! NaN bits for cross-architecture determinism. Centralized non-finite validation/diagnostics is
-//! deferred to the future seam.
+//! NaN bits for cross-architecture determinism. Runtime non-finite *signal* diagnostics remain
+//! deferred; non-finite *parameters* (`AddParameter.p`, `MultiplyByParameter.k`, `MultiSum.k_i`)
+//! are refused engine-wide at load and at `set_param` (issue #362).
 
 use oce_model::{
     Value,

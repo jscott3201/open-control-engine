@@ -72,12 +72,21 @@ pub(super) fn goldens() -> Vec<Golden> {
         assert!(output[20..44].iter().all(|value| *value == 0.0));
         assert!(output[52..54].iter().all(|value| *value == 0.0));
     }
-    assert_eq!(trace.adjusted_population_flow[44].to_bits(), 0.0025f64.to_bits());
+    assert_eq!(
+        trace.adjusted_population_flow[44].to_bits(),
+        0.0025f64.to_bits()
+    );
     assert_eq!(trace.occupied_minimum_flow[44].to_bits(), 1.0f64.to_bits());
-    assert_eq!(trace.adjusted_population_flow[54].to_bits(), 0.005f64.to_bits());
+    assert_eq!(
+        trace.adjusted_population_flow[54].to_bits(),
+        0.005f64.to_bits()
+    );
     assert_eq!(trace.occupied_minimum_flow[54].to_bits(), 1.5f64.to_bits());
     assert_eq!(trace.adjusted_area_flow[54].to_bits(), 0.006f64.to_bits());
-    assert_eq!(trace.minimum_outdoor_airflow[54].to_bits(), 0.011f64.to_bits());
+    assert_eq!(
+        trace.minimum_outdoor_airflow[54].to_bits(),
+        0.011f64.to_bits()
+    );
 
     let inputs = inputs(&rows);
     vec![
@@ -86,11 +95,7 @@ pub(super) fn goldens() -> Vec<Golden> {
             "adjusted_population_flow",
             ValueKind::Real,
             time.clone(),
-            trace
-                .adjusted_population_flow
-                .into_iter()
-                .map(r)
-                .collect(),
+            trace.adjusted_population_flow.into_iter().map(r).collect(),
             "ASHRAE62_1 Setpoints adjusted population flow: both CO2 clamps, moving lower knee, occupied-mode gate, standby/window priorities, compound override, and recovery",
             "Setpoints.mo lines 142-178 and 290-447: lin -> occupied-gated co2Con -> popBreOutAir, then unpPopBreAir and priority modPopBreAir Switches",
             inputs.clone(),
@@ -234,20 +239,10 @@ fn setpoint_trace(rows: &[Row]) -> Trace {
         let occupied_indicator = if occupied_mode { 1.0 } else { 0.0 };
         let corrected_co2 = occupied_indicator * loop_output;
         let gained_cooling_maximum = 1.0 * V_COOLING_MAXIMUM;
-        let occupied_minimum_setpoint = buildings_line(
-            0.0,
-            V_MINIMUM,
-            1.0,
-            gained_cooling_maximum,
-            corrected_co2,
-        );
-        let population_breathing_air = buildings_line(
-            0.0,
-            0.0,
-            1.0,
-            V_POPULATION_BREATHING_ZONE,
-            corrected_co2,
-        );
+        let occupied_minimum_setpoint =
+            buildings_line(0.0, V_MINIMUM, 1.0, gained_cooling_maximum, corrected_co2);
+        let population_breathing_air =
+            buildings_line(0.0, 0.0, 1.0, V_POPULATION_BREATHING_ZONE, corrected_co2);
 
         let not_occupied = !row.occupancy_status;
         let standby_factor = 0.0;
@@ -289,8 +284,7 @@ fn setpoint_trace(rows: &[Row]) -> Trace {
             HEATING_DISTRIBUTION_EFFECTIVENESS
         };
         assert!(
-            distribution_effectiveness.to_bits()
-                == COOLING_DISTRIBUTION_EFFECTIVENESS.to_bits()
+            distribution_effectiveness.to_bits() == COOLING_DISTRIBUTION_EFFECTIVENESS.to_bits()
                 || distribution_effectiveness.to_bits()
                     == HEATING_DISTRIBUTION_EFFECTIVENESS.to_bits()
         );
@@ -320,10 +314,7 @@ fn inputs(rows: &[Row]) -> Vec<InputSeries> {
             "occupancy_status",
             rows.iter().map(|row| row.occupancy_status),
         ),
-        input_i(
-            "operating_mode",
-            rows.iter().map(|row| row.operating_mode),
-        ),
+        input_i("operating_mode", rows.iter().map(|row| row.operating_mode)),
         input_r("co2_setpoint", rows.iter().map(|row| row.co2_setpoint)),
         input_r(
             "co2_concentration",

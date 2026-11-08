@@ -7,7 +7,7 @@
 //!
 //! - **Integer subscripts only.** A subscript must evaluate to an Integer scalar; Real,
 //!   Boolean, String, and Enumeration subscripts are [`ExprError::NonIntegerIndex`] — `A[1.0]` is
-//!   rejected, never floored. Routing a subscript through the saturating `integer()` built-in
+//!   rejected, never floored. Routing a subscript through an implicit `integer()` (floor)
 //!   coercion would turn `A[0.999999…]` (a rounding artifact) into a silent read of the wrong
 //!   element; on a control engine a wrong element is a physical hazard, so the type gate is
 //!   absolute.

@@ -3,7 +3,6 @@
 
 use std::sync::Arc;
 
-use super::state_tests::CountingStore;
 use crate::state::{BlockKey, Portability, StateImage, WireValue, WireValueType};
 use crate::{Engine, EngineStateError, EngineStateSnapshot, OcError};
 
@@ -15,6 +14,17 @@ enum Refusal {
 }
 
 type Mutation = (&'static str, fn(&mut StateImage), Refusal);
+
+fn set_first_param(image: &mut StateImage, value: f64) {
+    image
+        .manifest
+        .blocks
+        .iter_mut()
+        .find(|b| !b.params.is_empty())
+        .unwrap()
+        .params[0]
+        .1 = WireValue::Real(value.to_bits());
+}
 
 fn mutations() -> Vec<Mutation> {
     use Refusal::{Incompatible as I, Malformed as M};
@@ -107,6 +117,24 @@ fn mutations() -> Vec<Mutation> {
                     .params[0]
                     .1 = WireValue::Real(3.0f64.to_bits())
             },
+            I("parameter http://example.org#MinLoop.con.k"),
+        ),
+        // A crafted snapshot cannot carry a non-finite parameter past the finiteness gate:
+        // parameters are never restored from bytes, only compared bit-exactly against the
+        // gate-checked loaded model, so every non-finite value is an incompatible execution.
+        (
+            "parameter value NaN",
+            |i| set_first_param(i, f64::NAN),
+            I("parameter http://example.org#MinLoop.con.k"),
+        ),
+        (
+            "parameter value +inf",
+            |i| set_first_param(i, f64::INFINITY),
+            I("parameter http://example.org#MinLoop.con.k"),
+        ),
+        (
+            "parameter value -inf",
+            |i| set_first_param(i, f64::NEG_INFINITY),
             I("parameter http://example.org#MinLoop.con.k"),
         ),
         (
@@ -245,15 +273,13 @@ fn mutations() -> Vec<Mutation> {
 }
 
 #[test]
-fn every_manifest_field_refuses_deterministically_without_mutating_engine_or_store() {
-    let store = Arc::new(CountingStore::default());
-    let mut engine = Engine::with_store(Arc::clone(&store));
+fn every_manifest_field_refuses_deterministically_without_mutating_the_engine() {
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL).unwrap();
     engine.halt().unwrap();
     let before = engine.state_snapshot().unwrap();
     let checkpoint = engine.checkpoint().unwrap();
     let checkpoint_bytes = crate::state_codec::encode_snapshot(&checkpoint.image, true).unwrap();
-    let calls = store.calls();
     let frame_generation = Arc::clone(&engine.frame_generation);
     let model = Arc::clone(&engine.model);
     let inspection = format!(
@@ -317,17 +343,15 @@ fn every_manifest_field_refuses_deterministically_without_mutating_engine_or_sto
                 ),
                 inspection
             );
-            assert_eq!(store.calls(), calls, "{name}");
         }
     }
     engine.restore_state(&before).unwrap();
     engine.restore_checkpoint(&checkpoint).unwrap();
-    assert_eq!(store.calls(), calls);
 }
 
 #[test]
 fn capture_cannot_return_a_snapshot_rejected_by_the_canonical_decoder() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL).unwrap();
     // Inject a future producer defect: the existing encoder permits duplicate edges, but the
     // canonical decoder does not. Public ingest need not be able to manufacture this defect.

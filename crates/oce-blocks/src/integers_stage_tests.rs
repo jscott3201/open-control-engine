@@ -213,3 +213,121 @@ fn emitted_trace_and_state_words_are_deterministic() {
     assert_eq!(first.0, second.0);
     assert_eq!(first.1, second.1);
 }
+
+/// The source equations' literal stage search (the loop `stage_for_u` replaced), kept here as
+/// the oracle for the exact binary search.
+fn literal_source_stage(n: i64, u: f64) -> i64 {
+    let n = n.max(1);
+    let threshold = |stage_idx: i64| (stage_idx - 1) as f64 / n as f64;
+    if u >= threshold(n) {
+        return n;
+    }
+    for i in 2..=n {
+        if u < threshold(i) && u >= threshold(i - 1) {
+            return i - 1;
+        }
+    }
+    0
+}
+
+fn stage_with_n(n: i64) -> IntegerStage {
+    IntegerStage {
+        n,
+        hold_duration: 0.0,
+        h: 0.001,
+        pre_y_start: 0,
+    }
+}
+
+/// Inputs that probe every threshold of an `n`-stage block exactly and one ulp either side, plus
+/// the non-finite and signed-zero edge values.
+fn probe_inputs(n: i64) -> Vec<f64> {
+    let mut inputs = vec![
+        f64::NAN,
+        f64::INFINITY,
+        f64::NEG_INFINITY,
+        0.0,
+        -0.0,
+        f64::MIN_POSITIVE,
+        -f64::MIN_POSITIVE,
+        1.0,
+        2.0,
+        -1.0,
+        f64::MAX,
+        f64::MIN,
+    ];
+    for k in 1..=n {
+        let threshold = (k - 1) as f64 / n as f64;
+        inputs.extend([threshold, threshold.next_down(), threshold.next_up()]);
+    }
+    inputs
+}
+
+#[test]
+fn exact_stage_search_matches_the_literal_source_loop_on_every_threshold() {
+    for n in [-3, 0, 1, 2, 3, 4, 5, 7, 10, 64, 100, 257, 1000, 4099] {
+        let stage = stage_with_n(n);
+        for u in probe_inputs(n.max(1)) {
+            assert_eq!(
+                stage.stage_for_u(u),
+                literal_source_stage(n, u),
+                "n={n} u={u:e} (bits {:#x})",
+                u.to_bits()
+            );
+        }
+    }
+}
+
+#[test]
+fn exact_stage_search_matches_the_literal_source_loop_on_a_dense_input_sweep() {
+    for n in [3, 6, 9, 11, 49, 333] {
+        let stage = stage_with_n(n);
+        for step in -20..=2_020 {
+            let u = f64::from(step) / 2_000.0;
+            assert_eq!(
+                stage.stage_for_u(u),
+                literal_source_stage(n, u),
+                "n={n} u={u}"
+            );
+        }
+    }
+}
+
+/// A hostile authored `n` must not stall a tick: the source loop would run `n - 1` iterations on
+/// every stage event. The exact search answers in at most `64` halvings even at `i64::MAX`, so
+/// this test finishing at all is the bound; the answers are checked against the threshold
+/// definition (the loop itself is infeasible to run at this `n`).
+#[test]
+fn hostile_stage_count_answers_in_logarithmic_steps_without_overflow() {
+    for n in [i64::MAX, i64::MAX - 1, 1 << 53, (1 << 53) + 1, 1 << 40] {
+        let stage = stage_with_n(n);
+        let threshold = |k: i64| (k - 1) as f64 / n as f64;
+        assert_eq!(stage.stage_for_u(1.0), n, "u=1 selects every stage, n={n}");
+        assert_eq!(
+            stage.stage_for_u(f64::NAN),
+            0,
+            "NaN selects no stage, n={n}"
+        );
+        assert_eq!(
+            stage.stage_for_u(-0.5),
+            0,
+            "negative u selects no stage, n={n}"
+        );
+        for u in [0.0, 0.25, 0.5, 0.75, 0.999_999] {
+            let y = stage.stage_for_u(u);
+            assert!((1..n).contains(&y), "n={n} u={u} y={y}");
+            assert!(
+                threshold(y) <= u && u < threshold(y + 1),
+                "n={n} u={u} y={y}"
+            );
+        }
+    }
+    // Through the block API: a registry-built Stage with an `i64::MAX` stage count ticks.
+    let parameters = parameter_table(&[
+        ("n", Value::Integer(i64::MAX)),
+        ("holdDuration", Value::Real(0.0)),
+        ("h", Value::Real(0.0)),
+    ]);
+    let trace = registry_trace(&parameters, &[(0.0, 0.0), (1.0, 1.0), (2.0, 0.5)]);
+    assert_eq!(trace[1], i64::MAX);
+}

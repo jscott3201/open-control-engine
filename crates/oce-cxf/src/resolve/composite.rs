@@ -6,18 +6,15 @@ use std::sync::Arc;
 use crate::bridge;
 use crate::dto::{CxfDocument, IriRef, Node, OneOrMany};
 use oce_diag::{DiagCode, Diagnostic};
-use oce_expr::EvalResult;
 
 use super::composite_orientation::CompositeOrientation;
-use super::composite_rules::{BANNED_MODELICA_KEY, CONTAINS_CYCLE, REPLACEABLE, ROOT_COUNT};
-use super::declaration_scope::{Pass, WithheldFindings, evaluate_declarations};
+use super::composite_rules::{BANNED_MODELICA_KEY, REPLACEABLE, ROOT_COUNT};
+use super::declaration_scope::WithheldFindings;
 use super::specialize::Specialization;
+use crate::scope_chain::ScopeFrame;
+use containment::Containment;
 
-/// Maximum supported composite depth during `containsBlock` lowering.
-///
-/// The outermost composite is depth one. Real inputs measured at depth three or less; this cap
-/// bounds the recursive lowering walk well below the measured stack-exhaustion threshold.
-const MAX_COMPOSITE_NESTING_DEPTH: usize = 64;
+mod containment;
 
 /// Maximum non-top boundary nodes one rewritten connection path may enter.
 const MAX_COMPOSITE_BOUNDARY_HOPS: usize = 64;
@@ -34,7 +31,7 @@ const MAX_COMPOSITE_BOUNDARY_TARGET_BYTES: usize = 8 * 1024 * 1024;
 pub(super) struct LoweredCxf {
     pub(super) doc: CxfDocument,
     pub(super) root_iri: Option<String>,
-    pub(super) inherited_scope: HashMap<String, Vec<(Arc<str>, EvalResult)>>,
+    pub(super) inherited_scope: HashMap<String, Arc<ScopeFrame>>,
     pub(super) synthesized_connections: Vec<(String, Vec<String>)>,
     pub(super) boundary_traversal_failed: bool,
 }
@@ -72,15 +69,13 @@ pub(super) fn lower(
     diags: &mut Vec<Diagnostic>,
 ) -> LoweredCxf {
     let mut lowered = doc.clone();
-    let mut inherited_scope = HashMap::new();
-    let mut evaluated_chains: HashSet<String> = HashSet::new();
 
     let Some(root) = root_composite(doc, by_id, diags) else {
-        withheld.emit_unvisited(&evaluated_chains, diags);
+        withheld.emit_unvisited(&HashSet::new(), diags);
         return LoweredCxf {
             doc: lowered,
             root_iri: None,
-            inherited_scope,
+            inherited_scope: HashMap::new(),
             synthesized_connections: Vec::new(),
             boundary_traversal_failed: false,
         };
@@ -89,22 +84,14 @@ pub(super) fn lower(
 
     reject_unsupported_constructs(doc, specialization, diags);
 
-    let mut leaf_order = Vec::new();
-    let mut stack = HashSet::new();
-    let mut path = Vec::new();
-    let nesting_exceeded = collect_leaves(
-        root,
-        1,
-        Vec::new(),
-        by_id,
-        specialization,
-        diags,
-        &mut stack,
-        &mut path,
-        &mut leaf_order,
-        &mut inherited_scope,
-        &mut evaluated_chains,
-    );
+    let mut walk = Containment::new(by_id, specialization, diags);
+    let nesting_exceeded = walk.walk_root(root);
+    let Containment {
+        leaf_order,
+        inherited_scope,
+        evaluated_chains,
+        ..
+    } = walk;
     withheld.emit_unvisited(&evaluated_chains, diags);
     if nesting_exceeded {
         return LoweredCxf {
@@ -286,138 +273,6 @@ fn unsupported_modelica_key(key: &str) -> bool {
         term,
         "redeclare" | "constrainedby" | "extends" | "extendsFrom" | "moSource" | "modelicaSource"
     )
-}
-
-/// Depth-first `containsBlock` flattening. `stack` gives O(1) cycle membership; `path` mirrors it
-/// as the ordered traversal spine so a detected cycle can name every participant in path order.
-/// Both are pushed/popped together — `stack` and `path` always hold the same ids. A `true` result
-/// stops pre-lowering after the first depth refusal, before orientation indexes the hostile graph.
-#[allow(clippy::too_many_arguments)]
-fn collect_leaves(
-    composite_id: &str,
-    depth: usize,
-    parent_scope: Vec<(Arc<str>, EvalResult)>,
-    by_id: &HashMap<&str, &Node>,
-    specialization: &Specialization,
-    diags: &mut Vec<Diagnostic>,
-    stack: &mut HashSet<String>,
-    path: &mut Vec<String>,
-    leaf_order: &mut Vec<String>,
-    inherited_scope: &mut HashMap<String, Vec<(Arc<str>, EvalResult)>>,
-    evaluated_chains: &mut HashSet<String>,
-) -> bool {
-    if depth > MAX_COMPOSITE_NESTING_DEPTH {
-        diags.push(
-            Diagnostic::error(
-                DiagCode::MalformedDocument,
-                format!(
-                    "composite/nesting-too-deep: containsBlock nesting exceeds the supported \
-                     depth ({MAX_COMPOSITE_NESTING_DEPTH})"
-                ),
-            )
-            .with_subject(composite_id.to_owned()),
-        );
-        return true;
-    }
-    if !stack.insert(composite_id.to_owned()) {
-        // Reconstruct the cycle from the re-entered id's position on the traversal spine onward,
-        // closing with the re-entered id itself. Traversal follows `containsBlock` document
-        // order, so the participant list is deterministic. (`position` cannot miss — `stack`
-        // membership implies `path` membership — but fall back to the whole spine, never panic.)
-        let start = path
-            .iter()
-            .position(|id| id == composite_id)
-            .unwrap_or_default();
-        let mut participants: Vec<&str> = path[start..].iter().map(String::as_str).collect();
-        participants.push(composite_id);
-        diags.push(
-            Diagnostic::error(
-                CONTAINS_CYCLE.code,
-                CONTAINS_CYCLE.message(format!(
-                    "cycle in nested composite containsBlock graph: {}",
-                    participants.join(" -> ")
-                )),
-            )
-            .with_subject(composite_id.to_owned()),
-        );
-        return false;
-    }
-    path.push(composite_id.to_owned());
-    let Some(composite) = by_id.get(composite_id).copied() else {
-        diags.push(
-            Diagnostic::error(DiagCode::UnresolvedReference, "composite node not found")
-                .with_subject(composite_id.to_owned()),
-        );
-        stack.remove(composite_id);
-        path.pop();
-        return false;
-    };
-    evaluated_chains.insert(composite_id.to_owned());
-    let scope = composite_scope(composite, parent_scope, by_id, specialization, diags);
-    for child in composite.contains_block.iter().map(|r| r.id.as_str()) {
-        if specialization.is_inactive(child) {
-            continue;
-        }
-        let Some(node) = by_id.get(child).copied() else {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::UnresolvedReference,
-                    "containsBlock child not found",
-                )
-                .with_subject(child.to_owned()),
-            );
-            continue;
-        };
-        if is_runtime_composite(node) {
-            if collect_leaves(
-                child,
-                depth + 1,
-                scope.clone(),
-                by_id,
-                specialization,
-                diags,
-                stack,
-                path,
-                leaf_order,
-                inherited_scope,
-                evaluated_chains,
-            ) {
-                stack.remove(composite_id);
-                path.pop();
-                return true;
-            }
-        } else {
-            leaf_order.push(child.to_owned());
-            inherited_scope.insert(child.to_owned(), scope.clone());
-        }
-    }
-    stack.remove(composite_id);
-    path.pop();
-    false
-}
-
-/// Extend the inherited scope chain with the composite's own declarations through the shared
-/// order-independent mechanism ([`super::declaration_scope`]) at its lowering invocation:
-/// inactive declarations filtered through the completed [`Specialization`], array-flagged
-/// declarations refused (`composite/array-parameter`), and every finding emitted.
-fn composite_scope(
-    composite: &Node,
-    scope: Vec<(Arc<str>, EvalResult)>,
-    by_id: &HashMap<&str, &Node>,
-    specialization: &Specialization,
-    diags: &mut Vec<Diagnostic>,
-) -> Vec<(Arc<str>, EvalResult)> {
-    evaluate_declarations(
-        composite,
-        &[],
-        scope,
-        by_id,
-        Pass::Lowering {
-            specialization,
-            diags,
-        },
-    )
-    .entries
 }
 
 fn rewrite_connections(

@@ -157,8 +157,8 @@ pub fn catalog_adapter() -> Vec<HostEntry> {
 }
 
 pub fn receipts(bytes: &[u8]) -> Result<(), oce_api::OperationFailure> {
-    let mut engine = oce_api::Engine::in_memory();
-    let receipt = engine.load_cxf_with_receipt(bytes)?;
+    let mut engine = oce_api::Engine::new();
+    let (receipt, _) = engine.load_cxf_with_receipt(bytes)?;
     let (_legacy, diagnostics) = receipt.into_parts();
     for diagnostic in diagnostics.records() {
         let _: &str = diagnostic.key().code();

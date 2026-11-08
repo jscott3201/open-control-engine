@@ -53,13 +53,13 @@ const ROWS: [Row; 44] = [
     // direct 1->3 transition. The positive hold band then preserves a cooling-latched history
     // at +0.009 until a strict +0.01 crossing restores heating. The same neutral pair is
     // exercised under both latch histories.
-    row(0.08, 0.06),  // 660
-    row(0.07, 0.065), // 720
-    row(0.061, 0.07), // 780
-    row(0.06, 0.071), // 840
-    row(0.07, 0.065), // 900
-    row(0.079, 0.07), // 960
-    row(0.081, 0.07), // 1020
+    row(0.08, 0.06),   // 660
+    row(0.07, 0.065),  // 720
+    row(0.061, 0.07),  // 780
+    row(0.06, 0.071),  // 840
+    row(0.07, 0.065),  // 900
+    row(0.079, 0.07),  // 960
+    row(0.081, 0.07),  // 1020
     row(0.075, 0.075), // 1080
     row(0.07, 0.081),  // 1140
     row(0.075, 0.075), // 1200
@@ -77,9 +77,9 @@ const ROWS: [Row; 44] = [
     // ZS2 + ZS3: both demand latches arm; heating priority survives while both signals sit in
     // their hold bands. Releasing only heating exposes cooling, then releasing cooling yields
     // the combinational deadband state rather than a third latch.
-    row(0.07, 0.06),  // 1740
-    row(0.04, 0.03),  // 1800
-    row(0.009, 0.03), // 1860
+    row(0.07, 0.06),   // 1740
+    row(0.04, 0.03),   // 1800
+    row(0.009, 0.03),  // 1860
     row(0.009, 0.009), // 1920
     // ZS5: explicit plateaus and transitions cover every enum ordinal and every required pair:
     // 2->1, 1->2, 2->3, 3->2, and the reachable simultaneous-demand 1->3. The final pair also
@@ -129,12 +129,7 @@ fn zone_state_trace() -> Vec<i64> {
         .zip(&cooling_control)
         .map(|(&heating, &cooling)| heating - cooling)
         .collect();
-    let heating_wins_tiebreak = hysteresis(
-        &control_difference,
-        -DEMAND_LOW,
-        DEMAND_LOW,
-        false,
-    );
+    let heating_wins_tiebreak = hysteresis(&control_difference, -DEMAND_LOW, DEMAND_LOW, false);
 
     let mut zone_state = Vec::with_capacity(ROWS.len());
     for index in 0..ROWS.len() {
@@ -157,23 +152,42 @@ fn zone_state_trace() -> Vec<i64> {
 
     assert_eq!(zone_state[0], DEADBAND_STATE, "quiescent start");
     assert_eq!(zone_state[1], DEADBAND_STATE, "uHigh equality must not arm");
-    assert_eq!(zone_state[4], HEATING_STATE, "heating uLow equality must hold");
-    assert_eq!(zone_state[5], DEADBAND_STATE, "heating below uLow must release");
-    assert_eq!(zone_state[9], COOLING_STATE, "cooling uLow equality must hold");
-    assert_eq!(zone_state[10], DEADBAND_STATE, "cooling below uLow must release");
-    assert!(cooling_signal[12], "ZS3 cooling signal must be live under heating priority");
     assert_eq!(
-        zone_state[13],
-        HEATING_STATE,
+        zone_state[4], HEATING_STATE,
+        "heating uLow equality must hold"
+    );
+    assert_eq!(
+        zone_state[5], DEADBAND_STATE,
+        "heating below uLow must release"
+    );
+    assert_eq!(
+        zone_state[9], COOLING_STATE,
+        "cooling uLow equality must hold"
+    );
+    assert_eq!(
+        zone_state[10], DEADBAND_STATE,
+        "cooling below uLow must release"
+    );
+    assert!(
+        cooling_signal[12],
+        "ZS3 cooling signal must be live under heating priority"
+    );
+    assert_eq!(
+        zone_state[13], HEATING_STATE,
         "an interior negative tie-break value must hold heating"
     );
-    assert_eq!(zone_state[14], COOLING_STATE, "crossing below -0.01 must select cooling");
     assert_eq!(
-        zone_state[16],
-        COOLING_STATE,
+        zone_state[14], COOLING_STATE,
+        "crossing below -0.01 must select cooling"
+    );
+    assert_eq!(
+        zone_state[16], COOLING_STATE,
         "an interior positive tie-break value must hold cooling"
     );
-    assert_eq!(zone_state[17], HEATING_STATE, "crossing above +0.01 must select heating");
+    assert_eq!(
+        zone_state[17], HEATING_STATE,
+        "crossing above +0.01 must select heating"
+    );
 
     for (from, to) in [
         (HEATING_STATE, DEADBAND_STATE),
@@ -184,9 +198,7 @@ fn zone_state_trace() -> Vec<i64> {
         (COOLING_STATE, HEATING_STATE),
     ] {
         assert!(
-            zone_state
-                .windows(2)
-                .any(|pair| pair == [from, to]),
+            zone_state.windows(2).any(|pair| pair == [from, to]),
             "missing ZoneStates transition {from}->{to}"
         );
     }

@@ -6,12 +6,13 @@
 # The dependency direction is intentional and acyclic, organized around the CDL
 # §7.17 non-computational seam:
 #   GROUP A — execution core (NO store, NO database):
-#     oce-model -> {oce-expr, oce-blocks, oce-flatten, oce-validate, oce-graph,
-#                   oce-cxf, oce-semantics}
-#   STORAGE PORTS (traits only, NO database):
-#     oce-store -> {oce-store-mem (default)}
+#     oce-model -> {oce-expr, oce-blocks, oce-validate, oce-graph, oce-cxf,
+#                   oce-semantics}
+#   STORAGE PORTS (traits, DTOs, host-side helper; NO database; reached by the host,
+#   never by oce-api):
+#     oce-model -> oce-store (in-memory MemStore behind its default `mem` feature)
 #   GROUP C — verification / externals / host facade:
-#     oce-conformance, oce-extension, oce-docs, oce-api (the single public surface)
+#     oce-conformance, oce-api (the single public surface; pure, no storage dependency)
 #
 # The library ships NO first-party database; it is database-free, full stop
 # (D-OWNER-1). The default (and only) build links no database and no async runtime.
@@ -21,24 +22,16 @@
 
 [workspace]
 resolver = "3"
-members = ["crates/*"]
+# Leverage crates (crates/leverage/<name>) sit above the facade: they depend on `oce-api` only and
+# run in the leverage CI lane (scripts/ci/leverage-members.sh). `crates/leverage` itself is a
+# directory of members, not a package, so the core glob names `crates/oce-*` rather than `crates/*`.
+members = ["crates/oce-*", "crates/leverage/*"]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
-# MSRV. MUST NOT EXCEED the gate-only nightly pinned as `NIGHTLY` in
-# .github/workflows/release-gate.yml — today nightly-2026-05-01, which identifies as
-# `rustc 1.97.0-nightly`. That nightly is a TOOL, not a build target: it emits rustdoc JSON for the
-# `cargo public-api` surface gates. But `rustdoc_json::Builder::toolchain()` shells out to
-# `cargo +<nightly> rustdoc`, which resolves the whole workspace, so Cargo enforces THIS line
-# against it. Setting `1.97.1` here (PR #208) failed both surface gates with
-# `rustc 1.97.0-nightly is not supported by the following packages`, and per-PR CI cannot see it —
-# those gates run only in release-gate.yml. To raise this above the nightly, bump `NIGHTLY` first
-# and re-bless both public-api baselines.
-#
-# The pinned BUILD toolchain (rust-toolchain.toml) is 1.97.1 and stays there; 1.97.1 is a patch
-# release of 1.97.0, so the declared floor is honest. It is also genuinely exercised: release-gate
-# builds the whole workspace under the 1.97.0-class nightly on every release PR.
+# MSRV: the toolchain every gate builds and tests on is 1.97.1 (rust-toolchain.toml), a patch
+# release of 1.97.0, so 1.97.0 is the lowest version this workspace honestly claims to support.
 rust-version = "1.97.0"
 authors = ["Justin Scott"]
 license = "MIT OR Apache-2.0"
@@ -76,21 +69,17 @@ rustix = { version = "1.1.4", features = ["fs"] }
 #   no matching package named `oce-bless` found … location searched: crates.io index
 # because the crate is never published. Verified by execution at b811229.
 oce-bless = { path = "crates/oce-bless" }
-oce-model = { path = "crates/oce-model", version = "0.2.0" }
-oce-expr = { path = "crates/oce-expr", version = "0.2.0" }
-oce-diag = { path = "crates/oce-diag", version = "0.2.0" }
-oce-blocks = { path = "crates/oce-blocks", version = "0.2.0" }
-oce-flatten = { path = "crates/oce-flatten", version = "0.2.0" }
-oce-validate = { path = "crates/oce-validate", version = "0.2.0" }
-oce-graph = { path = "crates/oce-graph", version = "0.2.0" }
-oce-cxf = { path = "crates/oce-cxf", version = "0.2.0" }
-oce-semantics = { path = "crates/oce-semantics", version = "0.2.0" }
-oce-store = { path = "crates/oce-store", version = "0.2.0" }
-oce-store-mem = { path = "crates/oce-store-mem", version = "0.2.0" }
-oce-conformance = { path = "crates/oce-conformance", version = "0.2.0" }
-oce-extension = { path = "crates/oce-extension", version = "0.2.0" }
-oce-docs = { path = "crates/oce-docs", version = "0.2.0" }
-oce-api = { path = "crates/oce-api", version = "0.2.0" }
+oce-model = { path = "crates/oce-model", version = "0.3.0" }
+oce-expr = { path = "crates/oce-expr", version = "0.3.0" }
+oce-diag = { path = "crates/oce-diag", version = "0.3.0" }
+oce-blocks = { path = "crates/oce-blocks", version = "0.3.0" }
+oce-validate = { path = "crates/oce-validate", version = "0.3.0" }
+oce-graph = { path = "crates/oce-graph", version = "0.3.0" }
+oce-cxf = { path = "crates/oce-cxf", version = "0.3.0" }
+oce-semantics = { path = "crates/oce-semantics", version = "0.3.0" }
+oce-store = { path = "crates/oce-store", version = "0.3.0" }
+oce-conformance = { path = "crates/oce-conformance", version = "0.3.0" }
+oce-api = { path = "crates/oce-api", version = "0.3.0" }
 
 [profile.release]
 opt-level = 3

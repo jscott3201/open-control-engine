@@ -11,7 +11,7 @@
 //! `step_algebraic` may allocate. `CDL.Reals.Sort` uses stack buffers through width 64 and
 //! heap-backed vectors above that width. `CDL.Reals.Log` and `CDL.Reals.Log10` warning messages
 //! allocate nothing block-side, though the installed diagnostics sink may allocate. This crate is
-//! **Group A**: it has zero dependency on `oce-store`/`oce-store-mem` or any store/database
+//! **Group A**: it has zero dependency on `oce-store` or any store/database
 //! crate (D-OWNER-1; `01` §10).
 //!
 //! Public API names (normative, `01` §6.2): the frozen schedule is [`Schedule`] (alias
@@ -83,10 +83,12 @@ pub struct RunState {
     pub t: f64,
 }
 
-/// A human-readable dotted instance/connector path used in BUILD diagnostics (e.g. the members of
-/// a [`BuildError::AlgebraicLoop`]). For hand-built unnamed graphs it is rendered from the block
-/// class IRI and the dense block/connector ids (`<class-iri>#b<block>.<dir>#c<conn>`); CXF-resolved
-/// graphs carry source instance names when available.
+/// A human-readable identity for a connector or block named in BUILD diagnostics (e.g. the members
+/// of a [`BuildError::AlgebraicLoop`]). CXF-resolved graphs carry the authored identity: the
+/// connector's [`iri`](oce_model::Connector::iri) or the block's
+/// [`instance_iri`](oce_model::BlockInstance::instance_iri). Hand-built graphs without one are
+/// rendered from the block class IRI and the dense block/connector ids
+/// (`<class-iri>#b<block>.<dir>#c<conn>` or `<class-iri>#b<block>`).
 #[derive(Clone, PartialEq, Eq)]
 pub struct ConnectorPath(pub String);
 
@@ -125,23 +127,77 @@ pub enum BuildError {
 
     /// The connector feedthrough graph is acyclic, but **atomic block firing** (one `emit` call
     /// produces all of a block's outputs, `01` §9) still cannot schedule the model: the block-level
-    /// *emit-before* graph has a cycle. This arises when a stateful multi-output block's state-only
-    /// (cut) output feeds a path that returns to one of its own feedthrough inputs — there is no
-    /// single position at which the block can emit all its outputs consistently. Same remedy as a
-    /// connector-level loop. Carries the dotted block paths of one concrete cycle.
+    /// *emit-before* graph has a cycle. This arises when one of a block's outputs feeds a path back
+    /// to an input the block reads when it fires but that output does not depend on. Every
+    /// registered class with that shape is stateless with mixed feedthrough: the
+    /// `CDL.Routing.*ExtractSignal`, `*VectorFilter` and `*VectorReplicator` classes with two or
+    /// more inputs and at least one output, `CDL.Reals.MatrixMax` / `MatrixMin` with two or more
+    /// outputs, and `CDL.Reals.PIDWithReset` with `controllerType = P` (stateless, so it reads
+    /// `trigger` at emit time although `y` does not depend on it). The scheduler also refuses the
+    /// same shape from a stateful block's state-only output next to a feedthrough output, though
+    /// no registered class has one. There is no single position at which the block can emit all
+    /// its outputs consistently.
+    ///
+    /// The model may be **CDL-legal**: CDL §7.16 is satisfied, because no connector-level
+    /// feedthrough cycle exists. This is an engine coverage limit (GitHub issue #347), refused
+    /// fail-closed rather than mis-ordered. Remedy: split the block so the fed-back signal does not
+    /// enter the block that produces the loop's output (or connect the element directly), or insert
+    /// a delay where that is semantically acceptable. Carries the dotted block paths of one
+    /// concrete cycle.
     #[error(
-        "block-granularity algebraic loop: {} block(s) form a feedthrough cycle that single-pass \
-         atomic block firing cannot schedule (a stateful multi-output block whose state-only \
-         output feeds back into one of its feedthrough inputs). CDL §7.16 forbids algebraic loops. \
-         Remedy: insert a delay block (CDL.Logical.Pre, CDL.Discrete.UnitDelay) or an integrator \
-         into the loop. Cycle members: {members:?}",
+        "block-granularity algebraic loop: {} block(s) form an emit-before cycle that single-pass \
+         atomic block firing cannot schedule, although no connector-level feedthrough cycle \
+         exists. The model may be CDL-legal: the cycle arises only because each block fires all \
+         of its outputs together, so a block whose output feeds back into one of its own inputs \
+         cannot be ordered even when that output does not depend on that input. \
+         Remedy: split the block so the fed-back signal does not enter the block that produces \
+         the loop's output (e.g. a separate routing block per output, or a direct connection), \
+         or insert a delay block (CDL.Logical.Pre, CDL.Discrete.UnitDelay) into the loop where \
+         that is semantically acceptable. Cycle members: {members:?}",
         .members.len()
     )]
     BlockAlgebraicLoop {
         /// The dotted block paths participating in one concrete block-level feedthrough cycle.
         members: Vec<ConnectorPath>,
     },
+
+    /// The model's `[S]` state regions would exceed [`MAX_STATE_WORDS`] words, or the allocator
+    /// refused the (in-budget) state buffer. State size is input-derived — a block parameter such
+    /// as `CDL.Discrete.TriggeredMovingMean.n` sizes its region — so allocation is checked and
+    /// fallible rather than an uncatchable capacity-overflow panic or OOM abort. `block` is the
+    /// first block (declaration order) whose region crosses the budget, or the last stateful block
+    /// when the allocator itself refused. Remedy: reduce the state-sizing parameters (window
+    /// lengths) or split the model.
+    #[error(
+        "run state too large: {requested} state word(s) requested through block {block} exceed \
+         the supported maximum ({limit} words) or could not be allocated"
+    )]
+    StateTooLarge {
+        /// Authored identity of the block at which the budget was crossed.
+        block: ConnectorPath,
+        /// Words requested up to and including `block`, saturated at `u64::MAX`.
+        requested: u64,
+        /// The enforced budget, [`MAX_STATE_WORDS`].
+        limit: usize,
+    },
 }
+
+/// Maximum total `[S]` state words one model may allocate (`1 << 22` words = 32 MiB).
+///
+/// Every [`RunState::words`] word is input-derived through [`Block::state_len`], and some block
+/// parameters size their regions with no class-level ceiling: `CDL.Discrete.TriggeredMovingMean`
+/// owns `4 + n` words for an unbounded authored `n`, and `CDL.Reals.MovingAverage` (GitHub #373)
+/// owns `6 + 2·(slots + 4)` words with `slots = clamp(2·ceil(delta), 2048, 131072)`. This budget
+/// is the bound for all of them: crossing it is the typed [`BuildError::StateTooLarge`], never a
+/// panic or allocation abort. It admits a moving mean with `n` up to about four million, about 15
+/// maximum-window moving averages (`delta >= 65536 s`) or about 290 at `delta = 3600 s`, while
+/// realistic equipment models use a few thousand words.
+///
+/// Relation to snapshots: the facade's durable snapshot cap (`MAX_SNAPSHOT_BYTES`, 64 MiB in
+/// `oce-api`) is twice the budget's 32 MiB of state words, so any model that loads can always be
+/// snapshotted with about 32 MiB left for connector values and the manifest. `oce-api` keeps that
+/// relation with a compile-time assertion.
+pub const MAX_STATE_WORDS: usize = 1 << 22;
 
 /// BUILD: compile a flattened, validated [`Model`] into a frozen [`Schedule`] — build the
 /// direct-feedthrough DAG ([`build_feedthrough_dag`]), then run the deterministic own Kahn sort

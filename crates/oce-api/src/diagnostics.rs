@@ -5,7 +5,7 @@ use std::cmp::Ordering;
 use crate::{ExportReport, LoadReport, OcError};
 
 /// Revision of receipt fields and the message-independent machine ordering.
-pub const DIAGNOSTIC_SCHEMA_REVISION: u32 = 1;
+pub const DIAGNOSTIC_SCHEMA_REVISION: u32 = 3;
 
 /// Producer operation at which evidence was emitted or a terminal failure occurred.
 ///
@@ -15,8 +15,6 @@ pub const DIAGNOSTIC_SCHEMA_REVISION: u32 = 1;
 pub enum DiagnosticStage {
     /// CXF parse and resolution.
     Import,
-    /// Flattening the resolved graph.
-    Flatten,
     /// Connector attribute unification.
     AttributeUnification,
     /// Structural/type/parameter validation.
@@ -27,35 +25,30 @@ pub enum DiagnosticStage {
     Schedule,
     /// Effective semantic metadata resolution.
     Semantics,
-    /// Durable model projection.
+    /// Resolved-model projection into plain data.
     Projection,
-    /// Store recovery before saving the model.
-    StoreRecovery,
-    /// Saving the resolved model through the store port.
-    StoreSave,
-    /// Resolving store input handles.
-    StoreInputs,
     /// CXF emitted-document export.
     Export,
 }
 
 impl DiagnosticStage {
-    /// Stable revision-1 rank used by receipt machine ordering.
+    /// Stable revision-3 rank used by receipt machine ordering.
+    ///
+    /// Revision 2 removed the identity `Flatten` boundary that sat between [`Self::Import`] and
+    /// [`Self::AttributeUnification`]. Revision 3 removed the three storage boundaries that sat
+    /// between [`Self::Projection`] and [`Self::Export`], when the engine stopped calling a
+    /// storage port at load. The relative order of every remaining stage is unchanged.
     #[must_use]
     pub const fn rank(self) -> u8 {
         match self {
             Self::Import => 0,
-            Self::Flatten => 1,
-            Self::AttributeUnification => 2,
-            Self::Validation => 3,
-            Self::Instantiation => 4,
-            Self::Schedule => 5,
-            Self::Semantics => 6,
-            Self::Projection => 7,
-            Self::StoreRecovery => 8,
-            Self::StoreSave => 9,
-            Self::StoreInputs => 10,
-            Self::Export => 11,
+            Self::AttributeUnification => 1,
+            Self::Validation => 2,
+            Self::Instantiation => 3,
+            Self::Schedule => 4,
+            Self::Semantics => 5,
+            Self::Projection => 6,
+            Self::Export => 7,
         }
     }
 }
@@ -72,7 +65,7 @@ pub enum DiagnosticSeverity {
 }
 
 impl DiagnosticSeverity {
-    /// Stable revision-1 rank: error, warning, info.
+    /// Stable rank, unchanged since revision 1: error, warning, info.
     #[must_use]
     pub const fn rank(self) -> u8 {
         match self {
@@ -185,7 +178,7 @@ pub struct DiagnosticReceipt {
 }
 
 impl DiagnosticReceipt {
-    /// Borrow records in revision-1 machine order; no allocation.
+    /// Borrow records in machine order; no allocation.
     #[must_use]
     pub fn records(&self) -> &[DiagnosticRecord] {
         &self.records
@@ -256,9 +249,15 @@ impl ExportReceipt {
 
 /// A failed load/export with completed-stage evidence, terminal stage, and original error chain.
 ///
-/// This never fabricates a diagnostic code for JSON/build/store errors without diagnostics.
+/// This never fabricates a diagnostic code for JSON or projection errors without diagnostics. An
+/// algebraic-loop schedule refusal is recorded at [`DiagnosticStage::Schedule`] as one
+/// `algebraic-loop` (or `block-algebraic-loop`) error per cycle member, subject = that member's
+/// identity; its [`OperationFailure::error`] stays the legacy `OcError::Build` chain. Like every
+/// receipt, those records are in subject order, not loop order: each message names its member's
+/// position, the member count and the next member, so the loop is recovered by following
+/// `subject → next member`.
 /// Display retains the legacy terminal context; [`std::error::Error::source`] exposes the original
-/// facade error and its sources. Failure atomicity and store side effects are unchanged.
+/// facade error and its sources. Failure atomicity is unchanged.
 #[derive(Debug)]
 pub struct OperationFailure {
     stage: DiagnosticStage,
@@ -350,11 +349,110 @@ impl DiagnosticCapture {
             }
         }));
     }
+    /// Record a schedule refusal as coded evidence and return it as the unchanged terminal
+    /// [`OcError::Build`] error.
+    ///
+    /// Records one [`DiagnosticSeverity::Error`] per member of the one reported cycle: code
+    /// `algebraic-loop` (connector-level cycle) or `block-algebraic-loop` (block-granularity
+    /// cycle), subject = the member's identity (the authored IRI for CXF graphs). Each message is
+    /// bounded independently of the cycle length — it names the member's 1-based position, the
+    /// member count and the **next** member's identity, never the whole member list — so total
+    /// record bytes grow linearly with the cycle. See [`cycle_member_message`] for the exact form.
+    ///
+    /// Receipts sort records by subject, not by loop position; the loop is the chain
+    /// `subject → next member`, starting anywhere. Nothing is recorded or allocated when capture is
+    /// disabled, and a future refusal kind without a reviewed code records nothing rather than an
+    /// invented code.
+    pub(crate) fn build_refusal(&mut self, error: oce_graph::BuildError) -> OcError {
+        if let Some(records) = &mut self.records {
+            let coded = match &error {
+                oce_graph::BuildError::AlgebraicLoop { members } => {
+                    Some((oce_diag::DiagCode::AlgebraicLoop, members))
+                }
+                oce_graph::BuildError::BlockAlgebraicLoop { members } => {
+                    Some((oce_diag::DiagCode::BlockAlgebraicLoop, members))
+                }
+                oce_graph::BuildError::StateTooLarge {
+                    block,
+                    requested,
+                    limit,
+                } => {
+                    let code = oce_diag::DiagCode::ResourceLimitExceeded;
+                    records.push(DiagnosticRecord {
+                        key: DiagnosticKey {
+                            stage: self.stage,
+                            subject: DiagnosticSubject::Opaque(block.0.clone()),
+                            code: code.as_str().to_owned(),
+                            severity: DiagnosticSeverity::Error,
+                        },
+                        message: format!(
+                            "run state too large: {requested} state word(s) requested through \
+                             this block exceed the supported maximum ({limit} words). Remedy: \
+                             reduce state-sizing parameters such as window lengths."
+                        ),
+                    });
+                    None
+                }
+                _ => None,
+            };
+            if let Some((code, members)) = coded {
+                records.reserve(members.len());
+                for (index, member) in members.iter().enumerate() {
+                    let next = &members[(index + 1) % members.len()];
+                    records.push(DiagnosticRecord {
+                        key: DiagnosticKey {
+                            stage: self.stage,
+                            subject: DiagnosticSubject::Opaque(member.0.clone()),
+                            code: code.as_str().to_owned(),
+                            severity: DiagnosticSeverity::Error,
+                        },
+                        message: cycle_member_message(code, index + 1, members.len(), &next.0),
+                    });
+                }
+            }
+        }
+        OcError::Build(error)
+    }
     fn finish(self) -> DiagnosticReceipt {
         let mut records = self.records.unwrap_or_default();
         records.sort_by(|left, right| left.key.cmp(&right.key));
         DiagnosticReceipt { records }
     }
+}
+
+/// The bounded per-member message of an algebraic-loop record.
+///
+/// Form: `<kind> member <k> of <n>; next member: <next>. <cause and remedy>` where `<k>` is the
+/// 1-based position in the reported cycle, `<n>` the member count and `<next>` the identity of the
+/// member this one feeds (the first member for `k == n`; itself for a one-member cycle). Its length
+/// is a fixed text plus the two counts plus `<next>`, so it never grows with the cycle. Display
+/// text only: the stable machine fields remain the code, subject and stage.
+///
+/// A connector-level cycle is a CDL §7.16 violation and its remedy is a delay. A block-granularity
+/// cycle is not: no connector-level cycle exists, so the model may be CDL-legal and the refusal is
+/// an engine coverage limit of atomic block firing (GitHub issue #347). Its text says so, and leads
+/// with splitting the block before the delay remedy.
+fn cycle_member_message(
+    code: oce_diag::DiagCode,
+    position: usize,
+    count: usize,
+    next: &str,
+) -> String {
+    let (kind, cause_and_remedy) = match code {
+        oce_diag::DiagCode::BlockAlgebraicLoop => (
+            "block-granularity algebraic loop",
+            "The model may be CDL-legal: no connector-level cycle exists; a block fires all its \
+             outputs at once. Remedy: split that block so the looping output and the fed-back \
+             input are on separate blocks, or insert a delay where acceptable.",
+        ),
+        _ => (
+            "algebraic loop",
+            "The connectors form a direct-feedthrough cycle not broken by a state-holding block. \
+             CDL §7.16 forbids algebraic loops. Remedy: insert a delay block (CDL.Logical.Pre, \
+             CDL.Discrete.UnitDelay) or an integrator into the loop.",
+        ),
+    };
+    format!("{kind} member {position} of {count}; next member: {next}. {cause_and_remedy}")
 }
 
 #[cfg(test)]

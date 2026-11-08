@@ -37,21 +37,19 @@ pub fn goldens() -> Vec<Golden> {
     {
         let u1 = [2.0_f64, -2.0, f64::MAX, 1.0, -6.0];
         let u2 = [4.0_f64, -4.0, f64::MAX, f64::NAN, 2.0];
-        let y: Vec<Sample> = u1
-            .iter()
-            .zip(u2)
-            .map(|(&a, b)| r(0.5 * (a + b)))
-            .collect();
-        out.push(Golden::new(
-            "CDL.Reals.Average",
-            "y",
-            ValueKind::Real,
-            ticks(5),
-            y,
-            "u1=[2,-2,MAX,1,-6], u2=[4,-4,MAX,NaN,2]; basic, negatives, overflow, NaN",
-            "y = 0.5 * (u1 + u2); Buildings Reals/Average.mo",
-        )
-        .with_inputs(vec![input_r("u1", u1), input_r("u2", u2)]));
+        let y: Vec<Sample> = u1.iter().zip(u2).map(|(&a, b)| r(0.5 * (a + b))).collect();
+        out.push(
+            Golden::new(
+                "CDL.Reals.Average",
+                "y",
+                ValueKind::Real,
+                ticks(5),
+                y,
+                "u1=[2,-2,MAX,1,-6], u2=[4,-4,MAX,NaN,2]; basic, negatives, overflow, NaN",
+                "y = 0.5 * (u1 + u2); Buildings Reals/Average.mo",
+            )
+            .with_inputs(vec![input_r("u1", u1), input_r("u2", u2)]),
+        );
     }
 
     // Modulo: Modelica floored mod, not Rust truncated remainder.

@@ -1,8 +1,8 @@
-//! Durable model projection tests for the load-time store seam.
+//! Resolved-model projection tests: the plain-data model a load returns to the host.
 
-use std::collections::HashSet;
 use std::sync::Arc;
 
+use oce_model::resolved_model::TrendInterval as ProjectedTrend;
 use oce_model::{
     Attrs, BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, EnumClassId, NoAttrs,
     ParamTable, RealAttrs, Value, ValueType,
@@ -11,10 +11,6 @@ use oce_semantics::{
     EffectivePoint, PointKey, PointType as SemanticPointType, ResolvedSemantics,
     TrendInterval as SemanticTrendInterval, TrendSpec,
 };
-use oce_store::{
-    DomainKey, ModelStore, ResolvedModel, StoreError, StoreResult, TrendInterval as StoreTrend,
-};
-use oce_store_mem::MemStore;
 
 use super::common::*;
 use crate::io::IoInventory;
@@ -38,10 +34,10 @@ fn projection_maps_effective_metadata_to_resolved_model_golden() {
             .map(|point| point.trend_interval_s)
             .collect::<Vec<_>>(),
         vec![
-            StoreTrend::OnChange,
-            StoreTrend::EverySeconds(60),
-            StoreTrend::EverySeconds(5),
-            StoreTrend::OnChange,
+            ProjectedTrend::OnChange,
+            ProjectedTrend::EverySeconds(60),
+            ProjectedTrend::EverySeconds(5),
+            ProjectedTrend::OnChange,
         ]
     );
     assert_eq!(
@@ -309,7 +305,7 @@ fn string_to_store_visible_connection_is_rejected_before_projection() {
     assert_projection_validation(
         &model,
         &semantics,
-        "connection 4 -> 0 has exactly one store-visible endpoint",
+        "connection 4 -> 0 has exactly one projected endpoint",
         "String-to-non-String connection must not be silently dropped",
     );
 }
@@ -327,7 +323,7 @@ fn zero_second_semantic_trend_projects_as_on_change_with_stable_model_id() {
 
     assert_eq!(
         zero_seconds.points[0].trend_interval_s,
-        StoreTrend::OnChange
+        ProjectedTrend::OnChange
     );
     assert_eq!(
         zero_seconds.model_id, on_change.model_id,
@@ -336,45 +332,30 @@ fn zero_second_semantic_trend_projects_as_on_change_with_stable_model_id() {
 }
 
 #[test]
-fn adapter_validation_is_elective_not_memstore_mandated() {
-    let (model, semantics) = fully_populated_projection_fixture();
-    let resolved = project_resolved_model(&model, &semantics, None).expect("projection succeeds");
-    let mem = MemStore::new();
-    let validating = ValidatingModelStore;
-
-    mem.save_model(&resolved)
-        .expect("MemStore accepts the valid projection");
-    validating
-        .save_model(&resolved)
-        .expect("validating double accepts the valid projection");
-
-    let mut empty_key = resolved.clone();
-    empty_key.points[0].key = DomainKey::default();
-    mem.save_model(&empty_key)
-        .expect("MemStore does not validate DTO schema");
-    assert_validation_rejects(&validating, &empty_key, "empty point DomainKey");
-
-    let mut duplicate_key = resolved.clone();
-    duplicate_key.points[1].key = duplicate_key.points[0].key.clone();
-    mem.save_model(&duplicate_key)
-        .expect("MemStore accepts duplicate point keys");
-    assert_validation_rejects(&validating, &duplicate_key, "duplicate point DomainKey");
-}
-
-#[test]
-fn load_cxf_saves_resolved_model_matching_golden() {
-    let mut engine = Engine::in_memory();
-    let report = engine
+fn load_cxf_returns_resolved_model_matching_golden() {
+    let mut engine = Engine::new();
+    let (report, loaded) = engine
         .load_cxf(MINIMAL_LOOP.as_bytes())
         .expect("minimal_loop loads");
     assert!(!report.model_id.as_str().is_empty());
 
-    let resolved = engine
-        .store()
-        .load_model(&report.model_id)
-        .expect("load stores the resolved model");
+    let resolved = loaded.model;
     assert_eq!(resolved.model_id, report.model_id);
+    assert_eq!(loaded.model_id, report.model_id);
     assert_eq!(canonical_json(&resolved), MINIMAL_LOOP_PROJECTION_GOLDEN);
+}
+
+#[test]
+fn receipt_load_returns_the_same_resolved_model_golden() {
+    let mut engine = Engine::new();
+    let (receipt, loaded) = engine
+        .load_cxf_with_receipt(MINIMAL_LOOP.as_bytes())
+        .expect("minimal_loop loads");
+    assert_eq!(loaded.model_id, receipt.report().model_id);
+    assert_eq!(
+        canonical_json(&loaded.model),
+        MINIMAL_LOOP_PROJECTION_GOLDEN
+    );
 }
 
 fn fully_populated_projection_fixture() -> (ModelGraph, ResolvedSemantics) {
@@ -630,65 +611,11 @@ fn assert_projection_validation(
 ) {
     let err = project_resolved_model(model, semantics, None).expect_err(context);
     assert!(
-        matches!(err, StoreError::Validation(_)),
-        "expected StoreError::Validation, got {err:?}"
+        matches!(&err, OcError::Load { detail } if detail.starts_with("model projection failed: ")),
+        "expected a projection OcError::Load, got {err:?}"
     );
     assert!(
         err.to_string().contains(needle),
         "validation message should contain {needle:?}: {err}"
     );
-}
-
-fn assert_validation_rejects(store: &ValidatingModelStore, model: &ResolvedModel, needle: &str) {
-    let err = store
-        .save_model(model)
-        .expect_err("validating store rejects injected defect");
-    assert!(
-        matches!(err, StoreError::Validation(_)),
-        "expected validation error, got {err:?}"
-    );
-    assert!(
-        err.to_string().contains(needle),
-        "validation message should contain {needle:?}: {err}"
-    );
-}
-
-struct ValidatingModelStore;
-
-impl ModelStore for ValidatingModelStore {
-    fn save_model(&self, model: &ResolvedModel) -> StoreResult<()> {
-        if model.model_id.as_str().is_empty() {
-            return Err(StoreError::Validation("empty model DomainKey".to_owned()));
-        }
-        let mut point_keys = HashSet::new();
-        for point in &model.points {
-            if point.key.as_str().is_empty() {
-                return Err(StoreError::Validation("empty point DomainKey".to_owned()));
-            }
-            if point.owner_block.as_str().is_empty() {
-                return Err(StoreError::Validation(
-                    "empty owner block DomainKey".to_owned(),
-                ));
-            }
-            if !point_keys.insert(point.key.as_str().to_owned()) {
-                return Err(StoreError::Validation(format!(
-                    "duplicate point DomainKey: {}",
-                    point.key.as_str()
-                )));
-            }
-        }
-        Ok(())
-    }
-
-    fn load_model(&self, model_id: &DomainKey) -> StoreResult<ResolvedModel> {
-        Err(StoreError::ModelNotLoaded(model_id.clone()))
-    }
-
-    fn list_models(&self) -> StoreResult<Vec<DomainKey>> {
-        Ok(Vec::new())
-    }
-
-    fn delete_model(&self, _model_id: &DomainKey) -> StoreResult<()> {
-        Ok(())
-    }
 }

@@ -195,8 +195,14 @@ pub(crate) fn unify_clusters(model: &mut ModelGraph, diags: &mut Vec<Diagnostic>
     let mut roots: Vec<u32> = clusters.keys().copied().collect();
     roots.sort_unstable();
 
+    let mut sizes = Vec::with_capacity(roots.len());
     for root in roots {
         let cluster = &clusters[&root];
+        sizes.push((
+            root,
+            cluster.connectors.len() + 1,
+            cluster.boundary_outputs.len(),
+        ));
         let mut members: Vec<u32> = Vec::with_capacity(cluster.connectors.len() + 1);
         members.push(root);
         members.extend(cluster.connectors.iter().copied());
@@ -218,6 +224,13 @@ pub(crate) fn unify_clusters(model: &mut ModelGraph, diags: &mut Vec<Diagnostic>
         warn_display_unit_divergence(model, cluster_members, diags);
     }
 
+    if !diags.iter().any(Diagnostic::is_error) {
+        // Propagation can pair one member's `min` with another's `max`; an empty range it creates
+        // is refused here, once per cluster, so the rollback below also undoes it (issue #378).
+        for (root, connectors, boundary_outputs) in sizes {
+            super::check_propagated_cluster(model, root, connectors, boundary_outputs, diags);
+        }
+    }
     if diags.iter().any(Diagnostic::is_error) {
         for (connector, attrs) in model.connectors.iter_mut().zip(connector_attrs) {
             connector.attrs = attrs;

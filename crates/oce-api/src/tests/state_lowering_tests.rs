@@ -12,7 +12,7 @@ const PASS_THROUGH: &[u8] =
 #[test]
 fn duplicate_host_paths_and_lowered_block_keys_round_trip_without_slot_loss() {
     for (name, fixture) in [("fanout", FANOUT), ("pass-through", PASS_THROUGH)] {
-        let mut source = Engine::in_memory();
+        let mut source = Engine::new();
         source.load_cxf(fixture).unwrap();
         let inputs = if name == "fanout" {
             vec![(
@@ -43,7 +43,7 @@ fn duplicate_host_paths_and_lowered_block_keys_round_trip_without_slot_loss() {
             "{name}"
         );
         let decoded = EngineStateSnapshot::from_bytes(snapshot.as_bytes()).unwrap();
-        let mut target = Engine::in_memory();
+        let mut target = Engine::new();
         target.load_cxf(fixture).unwrap();
         target.restore_state(&decoded).unwrap();
         assert_eq!(target.state.words, source.state.words, "{name}");

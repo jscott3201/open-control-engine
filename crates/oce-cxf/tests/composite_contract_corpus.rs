@@ -14,6 +14,7 @@
 //! ```
 
 mod bless;
+mod composite_contract_boundary_pins;
 mod composite_contract_member_pins;
 
 use std::fmt::Write as _;
@@ -244,9 +245,10 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
             )],
         ),
         (
-            // ONE structural cycle {A, C} reachable via TWO paths (root→A and root→B→C):
-            // the k-re-entry contract — one truthful path-ordered diagnostic per re-entry,
-            // post-finalize_diags subject order.
+            // ONE structural cycle {A, C} reachable via TWO paths (root→A and root→B→C).
+            // The first path reports the cycle; the second reaches C a second time, and a
+            // CDL instance has exactly one parent, so that reach is refused as untagged
+            // `shared-instance` machinery instead of re-walking the cycle (issue #365).
             "rejected/diamond_cycle.jsonld",
             vec![
                 error_with_subject(
@@ -256,10 +258,11 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
                      http://example.org#A -> http://example.org#C -> http://example.org#A",
                 ),
                 error_with_subject(
-                    DiagCode::MalformedDocument,
+                    DiagCode::SharedInstance,
                     "http://example.org#C",
-                    "composite/contains-cycle: cycle in nested composite containsBlock graph: \
-                     http://example.org#C -> http://example.org#A -> http://example.org#C",
+                    "containsBlock child http://example.org#C is reached a second time (listed \
+                     again by http://example.org#B); a CDL component instance has exactly one \
+                     parent, so the second reach is refused rather than expanded again",
                 ),
             ],
         ),
@@ -396,16 +399,7 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
 /// The published pin per warned fixture file: the exact, complete warning vector its import
 /// returns alongside a successful load.
 fn expected_warnings() -> Vec<(&'static str, Vec<Diagnostic>)> {
-    let mut rows = vec![(
-        "warned/undriven_boundary_output.jsonld",
-        vec![
-            Diagnostic::warning(
-                DiagCode::UndrivenBoundaryOutput,
-                "declared boundary output has no internal driver",
-            )
-            .with_subject("http://example.org#M.y".to_owned()),
-        ],
-    )];
+    let mut rows = composite_contract_boundary_pins::warnings();
     rows.extend(composite_contract_member_pins::warnings());
     rows
 }

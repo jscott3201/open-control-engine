@@ -3,3 +3,11 @@
 a47d7bf0d5d670cff9ee6cce95537cbeb62dc10704d9e7131ffbd13e2b59a5de  mdbook-v0.5.4-x86_64-apple-darwin.tar.gz
 753e5c5c363ee8a56972344dcf91466f005a51db84a7aeffe427ae3ef83d6d44  mdbook-v0.5.4-aarch64-unknown-linux-musl.tar.gz
 3f28de05dafca9d0f2eab99c662116b0e37b89b1d96a08f8f430b9eeae958cd7  mdbook-v0.5.4-x86_64-unknown-linux-gnu.tar.gz
+#
+# Second table: SHA-256 of the extracted `mdbook` executable inside each archive above, recorded by
+# downloading and extracting each pinned archive once. Column 2 is `<archive>:mdbook`. The installer
+# trusts an already-present binary only when it matches this digest (the CI cache restores one).
+49f163c7a5a9d0a4fc9cacf34bd0b96b11801458effddb1b7e951377af909d8e  mdbook-v0.5.4-aarch64-apple-darwin.tar.gz:mdbook
+6cc7ce68fa024898a93bbf038785759f1f0eb11d1cf48b00985d9c9fdc273103  mdbook-v0.5.4-x86_64-apple-darwin.tar.gz:mdbook
+c3526481bf31515c75019ddeb2ac49bec1ed24b53f1b4d7c169e140f5d770c92  mdbook-v0.5.4-aarch64-unknown-linux-musl.tar.gz:mdbook
+dc9020903f60cf632c0cc01bf8c12b57237649c2ab64c7a85a60e12103e356ce  mdbook-v0.5.4-x86_64-unknown-linux-gnu.tar.gz:mdbook

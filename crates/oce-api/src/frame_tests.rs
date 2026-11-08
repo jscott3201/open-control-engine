@@ -18,7 +18,7 @@ const A: &str = "urn:legacy-frame:a";
 const B: &str = "urn:legacy-frame:b";
 
 fn loaded(bytes: &[u8]) -> Engine {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(bytes).unwrap();
     engine
 }
@@ -175,7 +175,7 @@ fn dirty_resume_invalidates_but_clean_resume_and_compatible_restore_retain_conte
 
 #[test]
 fn successful_empty_executable_is_not_an_unloaded_engine() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(ModelGraph::new(), None)
         .unwrap();
@@ -230,7 +230,7 @@ fn domain_engine(value_type: ValueType, attrs: Attrs) -> Engine {
         model.connectors[0].value_type = ValueType::Integer;
         model.connectors[0].attrs = Attrs::default_for(ValueType::Integer);
     }
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(model, Some("urn:domain:model"))
         .unwrap();

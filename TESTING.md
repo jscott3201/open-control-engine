@@ -42,9 +42,16 @@ Enumerate the input domain and hit every boundary and degenerate case:
   nested parenthesis/brace/call levels or 62 unary signs), expressions deeper than 64 AST nodes or
   larger than 4096 AST nodes, composites deeper than 64, boundary paths beyond 64 non-top hops,
   and boundary walks beyond 65,536 target examinations or 8 MiB of aggregate target-IRI bytes are
-  rejected even if a smaller input of the same shape is accepted. Assert the *specific* `DiagCode`
-  / error variant, not merely "an error occurred." Fuzz-grade hostility is the expectation within
-  the bounded ingest paths.
+  rejected even if a smaller input of the same shape is accepted. Hostile *amplification* is
+  bounded the same way (issue #365): a `containsBlock` child reached twice is `SharedInstance`,
+  array parameters beyond 1,048,576 elements per document and run state beyond
+  `oce_graph::MAX_STATE_WORDS` are `ResourceLimitExceeded`, and an evaluation beyond
+  `oce_expr::MAX_EVAL_FUEL` work units (or a document's bindings beyond
+  `oce_cxf::MAX_DOCUMENT_EVAL_FUEL` together) is `ExpressionTooExpensive`. Pin each such limit
+  at its boundary (the limit accepted, one past it refused) and assert cost with deterministic
+  measures — allocation counts and peak bytes, fuel units — never wall-clock time. Assert the
+  *specific* `DiagCode` / error variant, not merely "an error occurred." Fuzz-grade hostility is
+  the expectation within the bounded ingest paths.
 
 > **Why this is non-negotiable — the C1 lesson.** In M1-PR-1 the expression evaluator passed 22
 > tests and all CI gates while silently corrupting integer comparisons above 2^53 (relational
@@ -68,19 +75,14 @@ comparison that fails if even one bit differs.
   comparison would mask exactly the drift a golden test exists to catch. One named exception: the
   21 transcendental, psychrometric, and solar Real signal goldens retain their existing
   aligned-tolerance band on unqualified platforms. Their [strict-bit inventory and matrix](docs/strict-bit-evidence.md)
-  enforce accepted Linux x86_64/aarch64 exact comparisons: four native debug/release cells,
-  two byte-identical captures per cell, 21 signals each and zero mismatches, retained from run
-  37382761120 with a reviewed 35-file selected source boundary. macOS remains conservative/unqualified
-  until M06-PR02; other targets also retain the unchanged 1e-12 aligned band. This is empirical pinned
-  corpus evidence,
+  enforce Linux x86_64/aarch64 exact comparisons on every PR: four native debug/release cells,
+  two byte-identical captures per cell, 21 signals each and zero mismatches against the Tier-A
+  references and across cells, recomputed from the PR's own checkout through `oce_api::Engine`.
+  macOS remains conservative/unqualified until M06-PR02; other targets also retain the unchanged
+  1e-12 aligned band. This is empirical pinned corpus evidence,
   not a libm guarantee or a license for epsilon elsewhere — every other golden stays bit-exact.
-  The ordinary retained test requires exactly all 35 enumerated paths and digests, not the full
-  compiled facade dependency closure. Checker/admission/comparison source mutations refuse even
-  when recorded outputs agree. Exact-head hosted cells (x86_64 native, aarch64 QEMU-emulated) rerun `oce_api::Engine` per
-  PR and catch changes under the pinned corpus's comparison rules; an unbound transitive source
-  change preserving those outputs does not invalidate the historical raw result. These digests
-  alone do not prove current whole execution semantics. The original 17-source receipt remains
-  immutable history, not a substitute for the selected 35-file guard.
+  The retained native capture archives from runs 35492290613 and 37382761120 are reconstructed
+  history, not a substitute for the per-PR matrix.
 - **No snapshot magic.** Goldens are explicit files compared by explicit code — reviewable and
   obvious. If a golden needs regenerating, do it deliberately and explain the diff in the PR.
 
@@ -108,31 +110,34 @@ OpenModelica. A mismatch never widens a tolerance or re-blesses a golden.
   §7.7.2 expression-semantics vectors (R10.x). `compare()` is implemented
   (`crates/oce-conformance/src/funnel.rs`), and the crate carries golden traces and tolerance
   fixtures under `tests/fixtures/golden/`.
-- **The Tier-A layer is `tools/golden-gen`.** It emits **412 Tier-A provenance records — 280 CDL
-  records (278 signal goldens plus two fold-time provenance-only records), plus 132 G36 sequence
-  signal goldens spanning all 46 catalog fixtures.** The
+- **The Tier-A layer is `tools/golden-gen`.** It emits **422 Tier-A provenance records — 287 CDL
+  records (285 signal goldens plus two fold-time provenance-only records), plus 135 G36 sequence
+  signal goldens spanning all 46 catalog fixtures** (two of them in a 1/16 s FreezeProtection
+  scenario that reuses its fixture). The
   sequence side is compared by per-fixture suites in `crates/oce-conformance/tests/`: a shared
-  table in `g36_funnel_band/sequences.rs` (25 outputs), per-fixture `*_funnel.rs` suites, and four
+  table in `g36_funnel_band/sequences.rs` (26 outputs), per-fixture `*_funnel.rs` suites, and four
   `*_oracle.rs` suites whose headers state outright that there is intentionally no funnel-band
   test. **Count from the suites, not from the shared table** — reading only `sequences.rs`
   understates coverage by a factor of five, which is a mistake that has been made twice.
-  All 132 are compared **bit-exactly** (`compare_regime` on every golden: 102 `Value::bit_eq`
-  f64, 18 exact encoded integer, 12 exact 0.0/1.0). The funnel band is an *additive* Real-only
+  All 135 are compared **bit-exactly** (`compare_regime` on every golden: 104 `Value::bit_eq`
+  f64, 19 exact encoded integer, 12 exact 0.0/1.0). The funnel band is an *additive* Real-only
   layer, never the primary comparison — Boolean and Integer outputs are deliberately kept off it
   because the funnel is type-blind (`g36_funnel_band/policy.rs`).
-  Of the 410 signal goldens, 390 check CDL / Buildings source semantics. The other 20 are exact
-  HostTick v1 profile references for `Generic.TimeSuppression`, `CoolingOnly.Controller`, and
-  `ReliefFanGroup`, whose fixtures contain `CDL.Logical.Pre`; they do not claim Modelica
-  event-iteration equivalence. The generator is deliberately kept **off the workspace** and
+  Of the 420 signal goldens, 398 check CDL / Buildings source semantics. The other 22 are exact
+  HostTick v1 profile references: 20 for `Generic.TimeSuppression`, `CoolingOnly.Controller`, and
+  `ReliefFanGroup`, whose fixtures contain `CDL.Logical.Pre`, and the two standalone
+  `CDL.Logical.Pre` goldens; they do not claim Modelica event-iteration equivalence. The generator is deliberately kept **off the workspace** and
   **forbidden from depending on `oce-blocks`**; CI enforces that
   code-dependency firewall. For classes whose oracle shares a pinned math kernel or restates the
   same documented recurrence, a Tier-A pass is evidence about plumbing and transcription of the
   shared formula, not an independent check of the formula; a mechanical shared-kernel detector
   is filed as follow-up. Extending Tier-A coverage means adding to that generator, never blessing
-  engine output. Per-block Tier-A goldens cover **128 of 133 CDL classes**:
-  `CDL.Logical.Nor`, `CDL.Logical.Pre`, `CDL.Logical.Sources.Constant`, and
-  `CDL.Reals.MovingAverage` carry indirect G36-sequence evidence only; `CDL.Utilities.Assert` has
-  no output port, and its diagnostics-channel golden is filed.
+  engine output. Per-block Tier-A goldens cover **132 of 133 CDL classes**:
+  only `CDL.Logical.Sources.Constant` carries indirect G36-sequence evidence alone.
+  `CDL.Logical.Pre`'s standalone goldens pin the HostTick v1 profile, not Modelica event
+  iteration. `CDL.Utilities.Assert` has no output port, so its golden is a `warning` observation
+  column compared against each completed frame's Warning diagnostics
+  (`per_block_utilities_assert.rs`), not an output point.
 - Record the oracle's provenance (which tool, which version) alongside the vector so a future
   mismatch is debuggable.
 - When no oracle exists for a construct, say so in the test and fall back to a hand-derived
@@ -233,8 +238,8 @@ CI is **dev-light / release-heavy** (keep per-change PRs fast; save the heavy su
 
 | Gate | Trigger | Runs tests? |
 | --- | --- | --- |
-| `.github/workflows/pr-gate.yml` (light) | PRs into `development`, pushes to `development` | The `determinism-matrix` job runs **`oce-api`, `oce-blocks`, and `oce-expr`** on x86_64 (native) and aarch64 (QEMU user-mode emulation) in debug/release. Portable snapshots match across architectures; portable and target-bound snapshots match across codegen; target-bound snapshots differ across architectures and foreign restore refuses. Separately, scoped **`oce-conformance::strict_bits` controls and the four aligned suite binaries** run in a Linux architecture/codegen matrix (x86_64 native, aarch64 emulated), with repeat captures and fail-closed cross-cell comparison. This is not the full conformance suite. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, package/feature/publication and authority checks, cargo-machete, stale-status lint, golden-gen firewall, fixture smoke, and `gate (light)` executing `.agents/gate.sh`, including unconditional cargo-deny bans/licenses/sources. |
-| `.github/workflows/release-gate.yml` (heavy) | **Any** PR targeting `main` (it filters on the base branch only — there is no `head_ref == development` condition), pushes to `main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, two armed per-crate public-api surface snapshots (`oce-api` and `oce-store`), plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
+| `.github/workflows/pr-gate.yml` (light) | PRs into `development`, manual dispatch (no post-merge run: the PR run is the only one) | On an engine change, the `determinism-matrix` job runs **`oce-api`, `oce-blocks`, and `oce-expr`** in four native cells — x86_64 on `ubuntu-latest`, aarch64 on `ubuntu-24.04-arm`, debug/release — and its `determinism-compare` fan-in checks that portable snapshots match across architectures, portable and target-bound snapshots match across codegen, target-bound snapshots differ across architectures, and each architecture refuses the other's target-bound snapshot on restore. Separately, scoped **`oce-conformance::strict_bits` controls and the four aligned suite binaries** run in the same four native cells, with repeat captures and a fail-closed eight-capture comparison in the `strict-bit-compare` fan-in; that per-PR matrix is the native strict-bit evidence. This is not the full conformance suite. The `crate-tests` job runs the `oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and `oce-store` suites in x86_64 debug only (their release-codegen runs stay in the heavy gate). Two [platform cells](docs/ci-and-the-gate.md#platform-cells-macos-and-windows) observe other operating systems in debug codegen: macOS arm64 (`macos-15`) runs the three-crate subset and its fan-in requires the portable snapshot to equal Linux's byte for byte and the target-bound snapshot to differ, and Windows (`windows-latest`) builds the workspace and runs its whole nextest suite except the five strict-bit binaries (two `oce-cxf` OpenModelica reference test groups are `#[cfg(unix)]` and do not compile there: the symlink-rejection test needs unix symlinks, and the line-reference `manifest_contract_tests` claim temporary directories by unix device and inode); neither qualifies its platform or observes a strict-bit result. Alongside them: clippy `-D warnings`, build, rustdoc, workspace-wide default-no-db, cargo-machete, cargo-deny bans/licenses/sources, golden-gen firewall and the facade contract and Quickstart. All of that is the **determinism lane**, which runs only when the PR changes something outside the documentation and `crates/leverage/` (fail-closed path rules, [lanes](docs/ci-and-the-gate.md#lanes-what-a-pr-runs)). The **leverage lane** — fmt, clippy, rustdoc, nextest and the `oce-api`-only dependency rule for each `crates/leverage/*` crate — runs for a leverage change and for every engine change. Every PR runs fmt, file-size, no-secret, the docs build, the gate fixtures and the package/feature/publication, authority and product-contract checks. `gate (light)` executes `.agents/gate.sh` only when a gate script, workflow or tool config changes. A docs-only or leverage-only PR therefore runs **no engine test at all**. |
+| `.github/workflows/release-gate.yml` (heavy) | **Any** PR targeting `main` (it filters on the base branch only — there is no `head_ref == development` condition), pushes to `main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
 | `.github/workflows/advisories.yml` | Daily cron, manual dispatch | **No** — advisory/yanked scan only (`cargo deny check advisories`, `yanked = "deny"`, `ignore = []`). |
 
 Read the first row in the dangerous direction and you will trust a green PR you
@@ -258,27 +263,10 @@ cargo test --workspace --doc --locked     # doctests — nextest CANNOT run thes
 ```
 
 The default profile is fail-fast for local feedback. Automated profiles run every selected test and
-retry none. Ordinary tests terminate after 120 seconds; the public-API profiles allow 10 minutes for
-their nested nightly rustdoc builds. All profiles fail when a child process retains inherited output
+retry none. Ordinary tests terminate after 120 seconds. All profiles fail when a child process retains inherited output
 handles for more than two seconds, and bound a whole run to 15 minutes. `ci-release` inherits `ci` so
 runner semantics cannot drift between debug and release codegen. Both write JUnit under
 `target/nextest/<profile>/junit.xml`; CI uploads those files for 14 days.
-
-The public-api surface gates need the gate-only nightly and run in `release-gate.yml`. Run them
-in **the release gate's own form** — the `NIGHTLY` value is pinned at `release-gate.yml`'s `env:`
-block, so read it from there rather than copying the date:
-
-```bash
-OCE_PUBLIC_API_NIGHTLY=<release-gate.yml NIGHTLY> OCE_REQUIRE_SURFACE_CHECK=1 \
-  cargo nextest run -p oce-api -E 'test(public_api_surface_matches_blessed_baseline)' \
-  --profile public-api-oce-api --locked --no-tests=fail
-```
-
-`--no-tests=fail` is what gives it teeth: under raw `cargo test`, a surface test that is renamed,
-deleted, `#[ignore]`d or filtered out disappears silently and the run still passes green.
-`OCE_REQUIRE_SURFACE_CHECK=1` likewise turns an unarmed skip into a failure. For the other baseline,
-swap both `-p oce-api` → `-p oce-store` and `--profile public-api-oce-api` →
-`--profile public-api-oce-store`. Separate invocations preserve vanish-to-RED and separate reports.
 
 > nextest does **not** run doctests (a stable-Rust limitation). A complete local/CI test pass is
 > therefore always **two commands**: `cargo nextest run` **and** `cargo test --doc`.
@@ -379,7 +367,7 @@ fail-fast loop, `ci` for the gate (no fail-fast, no retries, slow-test guard). T
 passes `--no-tests=fail`, so a run that discovers **zero** tests hard-fails — catching the
 regression where tests silently stop compiling or being discovered.
 
-The armed public-API baselines are per crate. `oce-api` pins the embeddable facade, and `oce-store`
-pins the re-exported storage port surface that the facade baseline sees only as an opaque
-`pub use oce_api::oce_store` line. The release gate runs them as separate `cargo nextest` steps so a
-renamed, ignored, or deleted test in either crate discovers zero tests and fails that crate's gate.
+`oce-api` re-exports no storage-port item (GitHub #390). Its storage isolation is asserted three
+ways: `.github/scripts/check-default-no-db.sh` refuses `oce-store` (and any `oce-store*` name) in its normal tree,
+`crates/oce-api/tests/frame_purity.rs` checks its manifest, lockfile closure and sources, and
+`scripts/facade_contract/check.py` proves the removed storage names no longer compile.

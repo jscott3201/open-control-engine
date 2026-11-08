@@ -244,7 +244,10 @@ fn algebraic() -> Vec<Golden> {
 
         let (u_min, u_max) = (0.0_f64, 5.5_f64);
         let u = [-1.3_f64, 2.2, 9.9];
-        let y: Vec<Sample> = u.iter().map(|&x| r(limiter_chain(x, u_min, u_max))).collect();
+        let y: Vec<Sample> = u
+            .iter()
+            .map(|&x| r(limiter_chain(x, u_min, u_max)))
+            .collect();
         out.push(
             Golden::new(
                 "CDL.Reals.Limiter",
@@ -262,7 +265,10 @@ fn algebraic() -> Vec<Golden> {
         // fix: the engine previously absorbed a NaN u into uMin (fault-hiding); upstream passes
         // it through. Also pins ±inf clamping and boundary-equal passthrough.
         let u = [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, 5.5, 0.0, 2.2];
-        let y: Vec<Sample> = u.iter().map(|&x| r(limiter_chain(x, u_min, u_max))).collect();
+        let y: Vec<Sample> = u
+            .iter()
+            .map(|&x| r(limiter_chain(x, u_min, u_max)))
+            .collect();
         out.push(
             Golden::new(
                 "CDL.Reals.Limiter",

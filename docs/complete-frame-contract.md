@@ -31,16 +31,16 @@ stateful transition independent of its prior state or imply unrestricted cross-b
   out to several consumers; the host supplies it once and the engine resolves all its targets.
   Internal driven connectors and read-only output aliases are not extra host determinants.
 - Values MUST match the executable schema's types and declared domains, including enum identity
-  and legal enum values where applicable, without lossy coercion through a Store carrier. Point
+  and legal enum values where applicable, without lossy coercion through a projection carrier. Point
   metadata is not that schema: current `IoInventory` includes internal points, projects enums to
   `Int`, and omits strings. It cannot by itself establish the required executable input set.
-- Type seeds, previously staged values, held Store samples, absent quality metadata and host
+- Type seeds, previously staged values, held stored samples, absent quality metadata and host
   substitutions MUST NOT become implicit defaults. Engine-level optionality is executable schema
   semantics, not permission for OCE to invent sensor quality, freshness or fallback policy. This
   contract adds no blanket finite-Real or plausibility rule for signal values; finite **time** is
   a separate requirement.
 - Native preparation and transition MUST use only the supplied values and engine execution
-  context, with no Store reads, writes or host callbacks that add hidden input determinants.
+  context, with no storage reads, writes or host callbacks that add hidden input determinants.
   A host or convenience adapter can obtain observations before submission; it owns their coherence
   and quality. “Complete” does not prove simultaneous sampling or physical validity.
 
@@ -59,8 +59,8 @@ A frame or resolved reference MUST be checked against the current loaded-executa
 before mutation; a stale context refuses rather than silently rebinding names. Preparation alone
 does not grant permission to commit after reload or after the time guard has advanced beyond the
 submitted time. Ordinary failed load retains the prior engine-local context under the existing
-in-memory replacement guarantee; external Store effects still have their separate compensation
-boundary. Compatibility-changing reconfiguration cannot silently reuse old preparation.
+in-memory replacement guarantee, and load has no external effect to compensate (it calls no
+storage port). Compatibility-changing reconfiguration cannot silently reuse old preparation.
 
 This fence is **not** a deployment generation, lease, authentication token, sensor freshness test,
 command authorization or restored actuator ownership. A host deployment identifier cannot replace
@@ -88,10 +88,13 @@ are specified below; execution retains this prevalidation boundary.
 | Pending parameter edits | Refuse until resume; halted alone does not prohibit execution. |
 | Unknown or non-input identity | Refuse; do not ignore extra values or treat output aliases/internal driven points as boundary inputs. |
 | Duplicate boundary input | Refuse even if both values are bit-identical; do not use first-wins or last-wins. Fan-out is not a duplicate. |
-| Missing required input | Refuse; no hold-last, zero/false seed or Store fill-in. Apply only explicit executable omission semantics. |
+| Missing required input | Refuse; no hold-last, zero/false seed or stored-sample fill-in. Apply only explicit executable omission semantics. |
 | Wrong type or declared domain | Refuse the complete candidate, including any otherwise valid prefix. |
+| NaN or either infinite Real input value, bounded or not, while the host selects `NonFiniteInputPolicy::Refuse` | Refuse with `InputNonFinite(path)`; the host substitutes a finite value. Under the default `Admit`, unbounded inputs accept it and bounded inputs refuse it as a domain violation. The default becomes `Refuse` at the next native-evidence refresh (GitHub issue #363). |
 | NaN or either infinite model time | Refuse. |
+| Finite model time whose magnitude exceeds `MAX_FRAME_TIME_MAGNITUDE` (`f64::MAX / 4`) | Refuse, whatever blocks the model contains. |
 | Finite time below the preceding accepted model time | Refuse. |
+| Finite times whose difference from the preceding accepted time overflows (unreachable while restore also enforces the magnitude limit; kept as a defensive check) | Refuse. |
 | Time outside loaded-block representability | Refuse under the existing model-time limits, not by executing first. |
 | Stale loaded-executable or IO compatibility context | Refuse frames and references from a superseded successful load; no implicit rebinding. |
 | Accepted-frame sequence exhausted | Refuse before staging; never wrap or reset the sequence. |
@@ -105,9 +108,9 @@ than closing a fresh durable-restore window by staging a prefix. The refusal rep
 attempt; it does not replace the last completed outcome or masquerade as a completed diagnostic frame.
 
 This guarantee excludes panic, process death, allocation failure, cancellation and concurrency
-outside current guarantees. It is not persistence, Store rollback, delivery acknowledgment or an
-actuator guarantee. Native Store noninterference does not retroactively undo earlier host/adapter
-operations. No scheduler, deadline guarantee or universal panic freedom is introduced.
+outside current guarantees. It is not persistence, storage rollback, delivery acknowledgment or an
+actuator guarantee. The engine calls no storage port, so it cannot undo earlier host/adapter
+operations either. No scheduler, deadline guarantee or universal panic freedom is introduced.
 
 ## Accepted transition and immutable outcome
 
@@ -121,7 +124,7 @@ The accepted output frame MUST be immutable and bound to that accepted input/tra
 loaded-executable/IO compatibility context. It contains all completed executable boundary outputs
 with their identities and types, plus the execution diagnostics belonging to that transition.
 Later execution or reload cannot change a previously retained outcome. It is not merely an alias
-to a mutable latest-output view, a subset of convenient point rows, or a Store write receipt.
+to a mutable latest-output view, a subset of convenient point rows, or a storage write receipt.
 
 Output and diagnostic ordering and compatibility/sequence semantics MUST support deterministic host
 correlation, including two successes at the same time and an intervening refused attempt. Runtime
@@ -132,7 +135,7 @@ Diagnostic source semantics are preserved; no new instance-identity promise is i
 latency measurements are not deterministic replay identity.
 
 Producing or retaining an output frame means computation completed, not that an adapter persisted it
-or equipment received it. Execution performs no Store write and has no post-write error path.
+or equipment received it. Execution performs no storage write and has no post-write error path.
 External delivery failure remains the host's responsibility and does not relabel a completed frame.
 Equal-time resubmission is another transition, not a retry of external delivery.
 
@@ -143,14 +146,14 @@ configuration, `Outputs`/`Engine::outputs`, and the simulation/source/trace/repo
 are no aliases, deprecation bridges or profile tags. Sibling consumers migrate to complete frames.
 
 Collect every required observation, call `prepare_frame`, then consume the plan with `execute_frame`.
-Missing and duplicate inputs refuse; there is no sparse, last-wins, hold-last or Store-backed
+Missing and duplicate inputs refuse; there is no sparse, last-wins, hold-last or storage-backed
 fallback. A host simulation loop supplies each complete frame and owns trace capture. Repeated
 loops continue the current engine; use a fresh load or explicit compatible checkpoint restore when
 a restart or rewind is intended. A loop is not a whole-horizon transaction.
 
 `get_output` and `watch` are explicitly latest-state, non-receipt inspection. They can read internal
 points, and load/restore/resume may replace their state without a frame. Only `CompletedFrame`
-retains committed boundary results and diagnostics. There is no engine Store-write helper.
+retains committed boundary results and diagnostics. There is no engine storage-write helper.
 
 The private `transition_host_tick` remains the sole infallible evaluation/refresh core after frame
 preflight. The [instrumented core test](../crates/oce-api/src/shared_transition_tests.rs) detects
@@ -166,10 +169,9 @@ interlocks and actuation remain [host responsibilities](host-responsibilities.md
 not executing, not submitting a fabricated zero frame or calling `halt` as an equipment stop.
 
 Library keeps artifact verification; Studio keeps authoring/translation and simulation integration;
-Edge keeps deployment, observation admission, NO_EVAL and command boundaries; Sim keeps closed-loop
-simulation and replay integration. Runtime is only an **additive future M05-PR03 consumer/host
-qualification candidate**. BOPTEST results would be Runtime host evidence, not OCE equivalence or
-reassignment of Sim. No downstream qualification is claimed here.
+Edge keeps deployment, observation admission, NO_EVAL and command boundaries. Runtime is only an
+**additive future M05-PR03 consumer/host qualification candidate**. BOPTEST results would be Runtime
+host evidence, not OCE equivalence. No downstream qualification is claimed here.
 
 Tokio, Axum, SQL, HTTP/MCP, drivers, quality/staleness policy, leases, commands and fallback services
 stay outside OCE. Consumers use the engine-owned evaluator, snapshot and canonical per-frame replay
@@ -179,11 +181,12 @@ contracts; this work does not create a second evaluator, snapshot or replay stac
 
 The [frame refusal controls](../crates/oce-api/tests/frame_refusals.rs) replace historical gap tests:
 omission, duplicates and wrong types preserve the prior image without staging a prefix. The
-[Store noninterference suite](../crates/oce-api/tests/frame_purity.rs) proves that even supplied Store
-samples cannot fill missing determinants or overwrite complete values. The
+[purity suite](../crates/oce-api/tests/frame_purity.rs) proves corpus frames are a function of the
+loaded bytes and the supplied frames alone, that a missing determinant never reuses a prior value,
+and that `oce-api` declares, locks and names no storage crate. The
 [Pre profile tests](../crates/oce-api/src/tests/pre_execution_profile_tests.rs) retain the fixed
-HostTick recurrence and snapshot continuation evidence. Compiler absence controls cover all supported
-feature selections; they do not qualify downstream consumers. The product checker is still a bounded
+HostTick recurrence and snapshot continuation evidence. Compiler absence controls cover the default
+build (`oce-api` declares no features); they do not qualify downstream consumers. The product checker is still a bounded
 traceability/claim-sentinel tool, not proof of semantic compliance.
 
 Preparation evidence below fulfills PC-032; the execution evidence below fulfills PC-033 with
@@ -197,13 +200,16 @@ cross-platform/replay qualification still apply.
 `Engine::input_definitions()` returns an owned `Vec<InputDefinition>` in lexical UTF-8 canonical
 path order. Each row has `path`, exact native `value_type`, and inclusive `min`/`max` as optional
 native `Value`s. This is the represented executable boundary (`external_inputs`), not the point
-inventory or discarded source declarations with no executable consumer. Every row is required;
-the current schema has no optionality/default declaration. Fan-out yields one row, with the
-intersection of the boundary declaration's and all targets' bounds. Empty intersections accept no
-value. Real zero-bound ties have deterministic bits; a NaN bound never disappears in intersection.
+inventory or discarded source declarations with no executable consumer. A root `hasInput`
+declaration that no connection reads is such a discarded declaration: it has no row, a frame naming
+it is refused as an unknown input, and the load receipt carries an `unused-boundary-input` warning
+whose subject is its expanded `@id`, so a host can detect the omission before preparing a frame.
+Every row is required; the current schema has no optionality/default declaration. Fan-out yields
+one row, with the intersection of the boundary declaration's and all targets' bounds. Empty
+intersections accept no value. Real zero-bound ties have deterministic bits; a NaN bound never disappears in intersection.
 Integer bounds remain exact i64 values; absent Integer bounds use the documented i32 defaults,
 while explicit bounds are retained. Enum bounds carry the class and legal ordinal endpoints.
-No Store carrier, handle or public connector index is involved.
+No storage carrier, handle or public connector index is involved.
 
 Keys are the expanded identities retained by ingest. The current resolver admits **no input
 aliases**: compact names are expanded at ingest, not at submission, and elided child names are not
@@ -216,23 +222,44 @@ those signal ports; private detached probes do not claim broader CXF support.
 values and every resolved target; keys are borrowed only during the call. It is opaque and has no
 serialization or public constructor. `Engine::execute_frame` consumes it. Editing a copied definition
 does not alter validation. Neither preparation success nor preparation refusal stages a value,
-evaluates, calls Store, replaces diagnostics,
+evaluates, calls a storage port, replaces diagnostics,
 changes watches/outputs/time, or closes durable-restore readiness. There is no new replay image.
 
 First-cause refusal precedence is:
 
 1. `State(NoLoadedModel)`, then `State(PendingParameterEdits)`.
-2. `NonFiniteTime`, `TimeRegression`, then `ModelTimeUnrepresentable`, in that order.
+2. `NonFiniteTime`, `TimeOutOfRange`, `TimeRegression`, `NonFiniteTimeStep`, then
+   `ModelTimeUnrepresentable`, in that order.
 3. The lexically first invalid submitted key: `FrameUnknownInput` or `FrameNotInput` (outputs and
    internally driven input points). These errors keep at most 64 UTF-8 bytes, cut at a character
    boundary, and the original key byte count. They do not clone an arbitrary-size submitted key.
 4. `FrameDuplicateInput`, then `FrameMissingInput`, each naming the lowest canonical input path.
-5. The first canonical input with a bad value: `InputType` before `InputDomain` for that input.
+5. The first canonical input with a bad value: `InputType`, then `InputNonFinite` (only under
+   `NonFiniteInputPolicy::Refuse`), then `InputDomain` for that input.
 
-This precedence is independent of entry order. Refusals do not accumulate a report. Unbounded Real
-values retain NaN payloads/infinities; a declared comparison bound has to hold, so any bound rejects
-NaN and finite bounds reject the respective infinity. No blanket finite-signal or equipment policy
-is introduced. Finite equal time is valid.
+This precedence is independent of entry order. Refusals do not accumulate a report. Under the
+default `NonFiniteInputPolicy::Admit`, unbounded Real values retain NaN payloads/infinities; a
+declared comparison bound has to hold, so any bound rejects NaN and finite bounds reject the
+respective infinity. Under the host-selected `NonFiniteInputPolicy::Refuse` — recommended for
+production hosts, and the default from the next native-evidence refresh (GitHub issue #363) — every
+non-finite Real value, bounded or not, is refused with `InputNonFinite`, so none reaches a block
+through a frame input. The policy covers frame inputs only; non-finite Real parameters are
+refused separately, whatever the policy: at load (`non-finite-parameter`) and by `set_param`
+(`ParamRange`). Block maths is unchanged either way, and a non-finite value a block computes itself
+still propagates. The policy is host configuration outside run state: it is in no snapshot,
+checkpoint or replay record, and it never changes how an accepted frame evolves state. No
+equipment policy is introduced for input values. A NaN or infinite `min`, `max` or `nominal` is
+refused at load (`non-finite-bound`), so a NaN bound can no longer silently empty a domain. So is a
+crossed range, `min > max` (`crossed-bounds`, issue #378), whether declared on one node or formed by
+a boundary input's declaration together with the child inputs it drives, or by §7.10 propagation;
+`min == max` stays legal and admits exactly that value (IEEE-equal signed zeros included). An
+undeclared Integer bound counts as the CDL Integer limit, which the frame also applies. Finite
+equal time is valid. Time magnitude is bounded by `MAX_FRAME_TIME_MAGNITUDE`: any single
+difference of two accepted times is at most `f64::MAX / 2`, and a running sum of rounded steps (an
+elapsed-time accumulator or unit-slope integrator) stays finite for fewer than about 3e15
+accumulated steps, the remaining factor of two absorbing upward rounding drift. Model maths
+applied to time (gains, slopes other than one) is not bounded. Within the range there is no
+maximum step. Restore refuses a clock beyond the limit.
 
 The internal `check_prepared_frame` seam checks readiness, incarnation, and current time eligibility
 before execution can use resolved targets. It returns `StalePreparedFrame` for a
@@ -241,7 +268,7 @@ reload also invalidates. Failed load preserves the previous incarnation. Dirty r
 effective model mutation, even for same-value edits; clean resume and compatible checkpoint/durable
 restore alone retain the incarnation. Advancing the clock can still make a retained plan's time
 ineligible. The fence is a retained process-local allocation identity, not a serialized counter,
-model name, Store handle, deployment generation or authentication token.
+model name, storage handle, deployment generation or authentication token.
 
 ### Preparation costs and evidence limits
 
@@ -256,7 +283,7 @@ control. This is a synchronous allocation census, not a latency, throughput or g
 claim. Definition snapshots separately allocate owned metadata.
 
 The [public refusal matrix](../crates/oce-api/tests/prepare_frame_preservation.rs) compares fresh and
-advanced stateful snapshots, output/watch values, restore readiness and Store call counts. The
+advanced stateful snapshots, output/watch values and restore readiness. The
 [public ordering tests](../crates/oce-api/tests/prepare_frame.rs) and
 [private plan/lifecycle/domain/census tests](../crates/oce-api/src/frame_tests.rs) pin independently
 authored expected values and checked-in bit/diagnostic goldens. The nonserialization compile-fail
@@ -268,21 +295,23 @@ the corresponding assertions. No external Modelica oracle exists for this OCE-sp
 
 `Engine::execute_frame(PreparedInputFrame) -> Result<CompletedFrame, OcError>` consumes one plan
 by value, even on refusal. The plan cannot be cloned, serialized or submitted twice. Preflight
-precedence is unloaded, pending edits, stale incarnation, nonfinite time, regression, block-time
-representability, then `FrameSequenceExhausted`. Preparation has already resolved and validated
-every input and fan-out target. Execution rechecks the mutable conditions, without name rebinding.
+precedence is unloaded, pending edits, stale incarnation, nonfinite time, time out of range,
+regression, nonfinite time step, block-time representability, then `InputNonFinite` for the first
+canonical non-finite Real input when the policy in force is `Refuse` (so a plan prepared under
+`Admit` cannot execute a non-finite value after a switch), then `FrameSequenceExhausted`.
+Preparation has already resolved and validated every input and fan-out target. Execution rechecks the mutable conditions, without name rebinding.
 
 After preflight, the implementation stages the entire plan, closes durable restore, calls the
 existing infallible evaluator once with the Warning collector, updates `prev_t` and latest-state inspection
 once, increments the accepted-frame sequence and captures the result. All ordinary returned errors
-are before this boundary. No Store operation, host callback, shadow RunState, undo log or rollback
+are before this boundary. No storage operation, host callback, shadow RunState, undo log or rollback
 is involved. Allocation failure remains excluded, including during result capture.
 
 `CompletedFrame` is owned, Clone + Debug + Send + Sync, with private fields and read-only
 `time()`, `sequence()`, `inputs()`, `outputs()` and `diagnostics()` accessors. Inputs and outputs are `(String, Value)`
 pairs; cloning a result gives an independent owned result. Real bits are copied, not normalized by
 capture (individual block arithmetic retains its existing numerical policy). No public connector
-indices, Store handles, mutable latest-view, schedule or serialized identity are returned.
+indices, storage handles, mutable latest-view, schedule or serialized identity are returned.
 
 The output set is the same disjoint union as `Topology.boundary_outputs`: represented elided
 root declarations plus lowered pass-through outputs. It is sorted by canonical lexical UTF-8
@@ -316,7 +345,7 @@ Its [v1 contract](replay-record.md) leaves authenticated order and snapshot side
 - [Public preservation matrix](../crates/oce-api/tests/execute_frame_preservation.rs) and
   [private preflight controls](../crates/oce-api/src/frame_commit_tests.rs): fresh/advanced
   connector/word/time/output/scratch images, snapshot and checkpoint bytes, watches, restore
-  readiness, sequence and Store counts. Private injection exercises nonfinite/unrepresentable
+  readiness and sequence. Private injection exercises nonfinite/unrepresentable
   time and sequence exhaustion; opaque public plans cannot be forged. The instrumented block
   boundary detects even idempotent double updates. No postcommit ordinary failure is invented.
 - [G36 controller](../crates/oce-api/tests/g36_cooling_only_controller.rs): two complete 1,441-row,

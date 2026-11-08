@@ -5,65 +5,50 @@ Linux qualification result or a replacement oracle. See [the exactness boundary]
 Capture refuses to overwrite evidence; the historical-corpus refresh switch has been removed.
 Tier-A goldens and all original captures remain unchanged.
 
-## Current qualification
+## Current evidence: the per-PR native matrix
 
-`qualified-linux/` retains the eight canonical native captures from Actions run **37382761120**:
-Linux x86_64/aarch64 × debug/release × first/repeat. Each contains all 21 signals and 161
-samples, plus the reviewed **35-file selected source map**; there are zero mismatches and every
-first/repeat pair is byte-identical. rustc is 1.97.1 and libm is 0.2.16. All files preserve the observed
-synthetic PR merge checkout `fbae3b96b053836b916f603a0d86c53d30bce628` for run head
-`f8dcaeb861fa18ef4c720b6fa2963b026f3a8300`. `receipts.json.current` pins that revision and
-the reconstructed `matrix.json` SHA-256
-`78c5efaf4881977d306fc1f7a09c51f37cf897be338558d14aee9c2313d035d9`.
-The uploaded assembled artifact archive digest is
+Native Linux evidence is re-established on every pull request. `pr-gate.yml` captures the corpus
+in four native cells (x86_64 on `ubuntu-latest`, aarch64 on `ubuntu-24.04-arm`, debug and release),
+two independent processes per cell, and its `strict-bit-compare` fan-in runs
+`matrix::native_linux_matrix_is_complete_and_exact` over all eight captures: exact agreement with
+the Tier-A references and across cells, byte-identical repeats, and a fresh collection from the
+same checkout for provenance and inventory. Nothing in this directory admits, skips or relaxes that
+check (GitHub #392 retired the digest-bound receipt).
+
+## `receipts.json`: a log, not a gate
+
+- `last_green_native_run` records the last green native matrix — run id, PR head and merge SHAs,
+  rustc, libm, the SHA-256 of each cell's first and repeat capture, and the `matrix.json` SHA-256.
+  The fan-in job writes exactly this record as `receipt-candidate.json` in its `strict-bit-matrix`
+  artifact; updating the log is pasting that file. Today it records run **37382761120**, whose
+  captures are retained below, so the test also rebuilds the record from those files.
+- `archives` names the two retained capture directories with their run, PR head, recorded merge
+  revision and `matrix.json` SHA-256.
+
+The schema is closed. Tests require the logged run to cover exactly the four native cells with
+byte-identical first/repeat digests and distinct cells, and refuse the retired `current`, `status`,
+`pending` and source-digest fields.
+
+## Retained native archives (history)
+
+`qualified-linux/` holds the eight native captures from Actions run **37382761120** (head
+`f8dcaeb861fa18ef4c720b6fa2963b026f3a8300`, synthetic merge checkout
+`fbae3b96b053836b916f603a0d86c53d30bce628`): Linux x86_64/aarch64 × debug/release ×
+first/repeat, 21 signals and 161 samples each, zero mismatches, rustc 1.97.1, libm 0.2.16, and
+the 35-entry selected-source map that admission compared until GitHub #392. Its reconstructed
+`matrix.json` SHA-256 is `78c5efaf4881977d306fc1f7a09c51f37cf897be338558d14aee9c2313d035d9`; the
+uploaded artifact archive digest was
 `sha256:0c94225cc2499e577cb597d0c36cbee138fc88bb65791872f1deb5c38e6b6576`.
-It replaced the run 35494403523 captures (Git history) after the 0.2.0 version bump changed the
-bound `Cargo.toml`/`Cargo.lock` bytes.
 
-The ordinary retained-qualification test now validates the admitted receipt, all raw samples,
-native topology, repeats, all 35 selected paths/digests and oracle/input/CXF integrity. No bound
-source changed for admission. The collection run's required admission checks were red before the receipt was
-present; its successful capture/cross-cell comparison is not a claim of final green hosted gates.
-The exact Linux result remains limited to this pinned corpus, not macOS, arbitrary inputs,
-mathematical correctness, whole executables or Open Control Sim.
-
-The selected boundary covers checker/admission/comparison/workflow/direct formula/harness and
-supporting sources. It is **not the full compiled transitive facade closure**: `oce-api`,
-`oce-cxf`, registry/lowering and other transitive sources are not all hashed. Exactly all 35
-enumerated entries are required, and checker-source mutation controls refuse even when raw outputs
-still match. Exact-head hosted cells (x86_64 native, aarch64 QEMU-emulated) rerun the actual `oce_api::Engine` path per
-PR to catch changes under the pinned corpus's comparison rules. An unbound transitive source
-change preserving all pinned outputs does not invalidate the historical raw result. Source
-digests alone do not establish current whole execution semantics.
-
-## Historical evidence
-
-`linux/` retains the original eight captures from Actions run **35492290613**, with the same
-four cells, two runs, 21 signals, 161 samples and zero mismatches, but only 17 source digests.
-Its files preserve the synthetic PR merge checkout
-`8a63d4a042e1ca91d5dfe7bd3fc33d194f5102bb` for PR head
-`dbce73fb20ada4a3a91653bb7ad9b48fae7ee87d`. Their candidate labels are capture-time provenance;
-neither those labels nor any historical capture bytes are rewritten by current admission.
-
-The historical receipt test reconstructs the original `matrix.json` byte-for-byte and checks SHA-256
-`12a2fbdd28c9718c0145c5055240f0b7eab3d7898bc5d1f05ed0ee09db2978ad` rather than retaining a
-ninth duplicate of all raw samples. The uploaded assembled artifact digest is
+`linux/` holds the original eight captures from Actions run **35492290613** (PR head
+`dbce73fb20ada4a3a91653bb7ad9b48fae7ee87d`, synthetic merge checkout
+`8a63d4a042e1ca91d5dfe7bd3fc33d194f5102bb`) with a 17-entry source map. Its reconstructed
+`matrix.json` SHA-256 is `12a2fbdd28c9718c0145c5055240f0b7eab3d7898bc5d1f05ed0ee09db2978ad`; the
+uploaded artifact digest was
 `sha256:d5b21ca70517c793f46a99d5402d236e2c78494466367fa583ccef27431c31c4`.
-These distinct digests are not interchangeable. The historical 17-source map lacks checker
-sources required by the current selected boundary and cannot satisfy its 35-entry guard.
-Later HEAD equality is deliberately not required; no source-map exception or rewritten provenance
-is used.
 
-## Admission boundary
-
-The ignored `admit_downloaded_native_matrix_without_rewriting_provenance` test is the explicit
-local admission path used for the current captures. After reviewing a native receipt into
-`receipts.json.current`, with `OCE_STRICT_MATRIX_DIR` naming the downloaded artifact directory,
-it checks that exact receipt,
-every entry of the current selected source map and all eight input files before creating
-`qualified-linux/`. It refuses CI and
-an existing destination; it neither reruns Linux on the local host nor regenerates oracle values.
-Ordinary tests never write these files. A future evidence update needs deliberate review of the
-new native result and pins, not an automatic refresh. Expected Git/matrix hashes live only in
-terminal receipt data, outside bound checker source; capture and admission never hash their own
-future receipt. Final admission changes data/docs only, so it cannot invalidate its own source map.
+`retained_native_archives_reconstruct_their_recorded_matrix_digests` rebuilds both aggregates
+byte for byte and checks their digests, revisions, sample counts, reference inventory and zero
+mismatches; `native_receipt_refuses_relabeling_and_raw_payload_reblessing` is its hostile control.
+No capture bytes, revisions, labels or source maps are rewritten. The source maps are kept
+verbatim and are no longer compared with the checkout.

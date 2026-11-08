@@ -42,7 +42,7 @@ Verified in the tree, with the enforcing site named so you can check rather than
 | Composite boundary work | 65,536 target examinations and 8 MiB of aggregate target-IRI bytes per document | iterative CXF lowering — `crates/oce-cxf/src/resolve/composite.rs` |
 
 Each returns a typed diagnostic rather than aborting. `#![forbid(unsafe_code)]` is set in
-all 17 crates, so the usual memory-safety classes are out of scope by construction.
+all 12 crates, so the usual memory-safety classes are out of scope by construction.
 
 ## Untrusted CXF remains untrusted input
 

@@ -494,6 +494,8 @@
     "tools/golden-gen/goldens/G36/multizone_vav_return_fan_direct_pressure/return_fan_speed.prov.json",
     "tools/golden-gen/goldens/G36/multizone_vav_return_fan_direct_pressure/return_fan_status.csv",
     "tools/golden-gen/goldens/G36/multizone_vav_return_fan_direct_pressure/return_fan_status.prov.json",
+    "tools/golden-gen/goldens/G36/multizone_vav_supply_fan/duct_static_pressure_setpoint.csv",
+    "tools/golden-gen/goldens/G36/multizone_vav_supply_fan/duct_static_pressure_setpoint.prov.json",
     "tools/golden-gen/goldens/G36/multizone_vav_supply_fan/reference.csv",
     "tools/golden-gen/goldens/G36/multizone_vav_supply_fan/supply_fan_speed.csv",
     "tools/golden-gen/goldens/G36/multizone_vav_supply_fan/supply_fan_speed.prov.json",

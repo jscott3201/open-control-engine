@@ -1,17 +1,51 @@
 # Versioned facade contracts
 
 The additive `oce-api` contracts describe metadata and evidence independently of a loaded engine.
-Existing load/export reports, diagnostic aliases, value/IO types and conditional storage aliases
-retain their signatures and behavior. The [public surface contract](public-surface-contract.md)
-and row ledger classify the exact API; pre-1.0 change control still applies.
+Existing export reports, diagnostic aliases and value/IO types retain their signatures and
+behavior. Load entry points return a plain-data `LoadedModel` beside their report or receipt, and
+the facade no longer re-exports any storage-port item (GitHub #390). There is no enumerated surface baseline before 1.0;
+the [product contract](product-contract.md) and pre-1.0 change control still apply.
+
+## Identity glossary
+
+- **`DomainKey`** is a database-free semantic key DTO, defined in `oce_model::resolved_model` and
+  re-exported as `oce_api::DomainKey`. In `LoadReport.model_id` and `LoadedModel::model_id` it
+  carries the loaded model's authored top-composite identity when
+  available, otherwise the documented deterministic projection key. **Model id** is the prose role;
+  there is no separate Rust `ModelId` type.
+- **`ConnectorId`** is a dense, zero-based connector/index identity within one loaded flattened
+  model. It is not durable and has no cross-reload, cross-model, or host-control identity guarantee.
+- **`PointHandle`** belongs to the `oce-store` port, not the facade. The engine neither mints,
+  validates nor retains one: a host that binds points through a storage adapter does so from
+  `LoadedModel::input_points()`, outside the engine.
+- **Catalog content tag** identifies all canonical facade metadata bytes within catalog schema
+  revision 1. It is distinct from the existing registry fingerprint and state compatibility key.
+- **Contract descriptor revision** versions one facade domain's shapes/semantics. HostTick's
+  descriptor remains descriptive; it is not a new state-wire or execution-profile selector.
+- **Host build identity** remains consumer-owned and includes the host's source/build/features
+  qualifications; catalog metadata alone cannot establish it. The compatibility descriptor's OCE
+  package version is only a public build fact, not a unique build identity.
+- **Complete export content identity** is captured as `CompleteExportContentId`, distinct from
+  `CatalogContentId` and authored `DomainKey`. Existing string APIs retain their bytes and algorithms.
+  It identifies the emitted document, which follows authored `@graph` and `containsBlock` order, so
+  sources differing only in [that order](cxf-composite-subset.md#ordering-and-identity-contract)
+  can receive different ids. No order-independent model identity is provided.
+- **Compatibility descriptor** versions the closed public-fact receipt itself. Equality does not
+  establish executable identity, model-specific IO equality, generation, state compatibility or trust.
+
+Frame preparation and latest-state inspection resolve model-local connector identities in the IO
+inventory, not storage handles. Load calls no storage port. Preparation admits only complete
+executable boundary inputs with exact types
+and declared domains. The private incarnation fence
+is distinct from authored model identity and is neither portable nor serialized into state bytes.
 
 ## Catalog ownership and identity
 
 `oce_api::catalog()` returns facade-owned `CatalogEntry` values with static metadata strings and
 owned vectors. A caller can clone them without retaining an engine or depending directly on
 `oce-blocks`. The [sole-facade consumer fixture](../crates/oce-api/tests/fixtures/catalog_consumer.rs)
-adapts every rule payload and all Studio-shaped catalog fields under default, explicit mem and
-no-default feature selections. The existing companion catalog remains supported during migration.
+adapts every rule payload and all Studio-shaped catalog fields under the default build; `oce-api`
+declares no cargo features. The existing companion catalog remains supported during migration.
 
 Entries retain registry order; ports, rules, defaults and enum members retain declaration order.
 The projection includes canonical class paths, ordered port kinds/names, named/positional/width-driven
@@ -53,27 +87,47 @@ pipelines. Their success receipts contain the legacy report and independently ca
 the receipt's provenance. Legacy entrypoints avoid this additional evidence allocation.
 
 Failures return `OperationFailure`: terminal stage, completed-stage and terminal diagnostics, and
-the original `OcError`/standard error source chain. JSON, build and store errors can carry no
+the original `OcError`/standard error source chain. JSON and projection errors can carry no
 diagnostics; terminal stage and error context still explain failure. No engine code is invented.
+An algebraic-loop refusal records one `Error` per member of one concrete cycle at stage `Schedule`:
+`algebraic-loop` for a connector-level feedthrough cycle (subjects are member connector identities)
+and `block-algebraic-loop` for a block-granularity cycle that atomic firing cannot order (subjects
+are member block identities). A `block-algebraic-loop` refusal does not mean the model breaks CDL
+§7.16. No connector-level cycle exists, so the model may be CDL-legal, and the refusal is a
+fail-closed engine coverage limit. The message says so and suggests splitting the block. The block
+shapes that can trigger it and the remedies are listed under
+[Atomic block firing refuses some CDL-legal feedback](cdl-coverage.md#atomic-block-firing-refuses-some-cdl-legal-feedback),
+and scheduling such models is tracked in GitHub issue #347. CXF loads use authored IRIs. Exactly
+one cycle is reported even when several exist: a depth-first search over the connectors (or blocks) left unscheduled, visiting roots
+and successors in declaration order, reports the first cycle it closes. Like every receipt, the
+records are in **subject order, not loop order**. Each message is bounded independently of the loop
+length and has the form `<kind> member <k> of <n>; next member: <identity>. <cause and remedy>`,
+where `<k>` is the member's 1-based loop position; ordering records by `<k>`, or following each
+subject to its next member, reconstructs the loop. The message is still display text, not a
+machine field: the `DiagnosticKey` has no position field, so this is the only carrier. The
+`OperationFailure::error` chain is unchanged (`OcError::Build`, or `OcError::LoadContext` after a
+prior warning) and its display still lists every member in loop order; the legacy `load_cxf`
+error carries no such records.
 An unloaded export retains its existing `export-unsupported` diagnostic. A partial export still
 succeeds with warnings; use the legacy report's completeness check for emitted-document identity.
 
-Producer stages are explicit boundary labels, not inferred from codes. Revision-1 ranks are:
+Producer stages are explicit boundary labels, not inferred from codes. Revision-3 ranks are:
 
 | Rank | Stage |
 | --- | --- |
 | 0 | Import: serialized admission, parse/resolution, including the CXF resolver's internal passes |
-| 1 | Flatten |
-| 2 | AttributeUnification |
-| 3 | Validation |
-| 4 | Instantiation |
-| 5 | Schedule |
-| 6 | Semantics |
-| 7 | Projection |
-| 8 | StoreRecovery |
-| 9 | StoreSave |
-| 10 | StoreInputs |
-| 11 | Export |
+| 1 | AttributeUnification |
+| 2 | Validation |
+| 3 | Instantiation |
+| 4 | Schedule |
+| 5 | Semantics |
+| 6 | Projection: the plain-data resolved-model projection returned in `LoadedModel` |
+| 7 | Export |
+
+Revision 2 removed the revision-1 `Flatten` stage (rank 1), an identity pass that never produced
+evidence. Revision 3 removed the `StoreRecovery`, `StoreSave` and `StoreInputs` stages (ranks 7 to
+9), because load no longer calls a storage port (GitHub #390). The relative order of every
+remaining stage is unchanged.
 
 The ordering is stage rank, subject category/presence and exact UTF-8 subject text, code string,
 then severity rank (`Error=0`, `Warning=1`, `Info=2`). `Absent` sorts before `Opaque`; an empty
@@ -102,7 +156,7 @@ they do not promise new JSON wire codecs or schema-driven runtime validation.
 | [Execution profile](../crates/oce-api/contracts/execution-profile.schema.json) | Descriptor revision 2, still fixed HostTick v1: one advance per accepted complete frame, including equal timestamps; no Modelica same-time event iteration. Descriptive, not a runtime selector or snapshot revision. |
 
 Every completed frame retains warnings. There is no public no-op-sink execution profile or engine
-write-back route. Load/Store side effects and commit ordering are unchanged. These descriptors add no rollback,
+write-back route. Load has no external side effect and commit ordering is unchanged. These descriptors add no rollback,
 warn-once, escalation, scheduler, equipment policy or safety guarantee. The separately documented
 [serialized admission and replacement policy](facade-migration.md#bounded-serialized-load-adoption)
 uses `Import` for byte refusals without adding/reordering stages or changing descriptor bytes.
@@ -173,9 +227,8 @@ revisions, changed/missing/extra fields and all byte differences. OCE supplies n
 
 ### Limits and security
 
-The only build fact is the public `oce-api` package version. Default, explicit mem and no-default
-selections intentionally share the same descriptor because their supported package behavior is
-equivalent. Compiler, source commit, dependency lock, target, codegen and binary identity are not
+The only build fact is the public `oce-api` package version; `oce-api` declares no cargo features,
+so there is no feature selection to record. Compiler, source commit, dependency lock, target, codegen and binary identity are not
 captured. In particular, unpublished same-version builds can disagree while these facts agree.
 Hosts retain full source/build qualification. Matching descriptors are necessary public-fact checks,
 not sufficient execution equivalence, cross-platform numerical evidence, restore eligibility or
@@ -197,12 +250,12 @@ where currently private. Snapshots, restore, frames and admission limits retain 
 the owned exact-type definitions, not `io().iter().filter(In)`: that point projection includes
 internal driven points, omits strings and projects enums to Int. Supply every canonical definition
 once with a real host observation. The definition's exact inclusive bounds are schema domains, not
-input values or defaults. Missing values are refused rather than seeded or read from the Store.
+input values or defaults. Missing values are refused rather than seeded or read from storage.
 
 Replace old per-value staging with one complete borrowed-key list passed
 to `prepare_frame(time, entries)`. Preparation returns an owned opaque `PreparedInputFrame` without
 staging the loop's valid prefix. The plan carries all fan-out targets and exact native values, but
-no Store handles or public connector indices. There is no serializable plan or reusable schema/cache
+no storage handles or public connector indices. There is no serializable plan or reusable schema/cache
 object. Refresh discovery after successful load/reconfiguration; old plans are invalid after reload
 or dirty resume, including same-byte reload and same-value edits. Clean resume and compatible restore
 alone preserve the context, while an advanced clock can make the submitted time ineligible.
@@ -229,16 +282,16 @@ latest-state inspection. Read `time()`, `sequence()`, `outputs()` and `diagnosti
 
 The result contains lexical root boundary identities and native typed values, not every internal
 output connector or durable column. Distinct declared outputs may share a driver; pass-throughs
-occur once. Warning records retain emission order and producer source semantics. No pointer, Store
+occur once. Warning records retain emission order and producer source semantics. No pointer, storage
 handle, schedule, deployment token or durable replay identity is exposed. Sequence starts at one,
 counts successful native frames only and never resets during this Engine's lifetime, even on reload
 or checkpoint rewind. Equal-time success is another transition, never an idempotent retry.
 
-Hosts decide whether to execute and what to do with completed values; Store/actuation follow outside
+Hosts decide whether to execute and what to do with completed values; persistence/actuation follow outside
 this API. Sibling consumers need to migrate; no sibling source or pin is changed or qualified here. See the
 [execution contract and evidence](complete-frame-contract.md#current-execution-api).
 
 The single frame path retains the private HostTick evaluation/refresh implementation. Host loops
 submit complete frames and own cadence and trace capture. `get_output` and `watch` are latest-state,
-non-receipt views, including internal points. There is no raw output view or Store write helper.
+non-receipt views, including internal points. There is no raw output view or storage write helper.
 Parity evidence is limited to equivalent complete schedules, not arbitrary legacy workflows.

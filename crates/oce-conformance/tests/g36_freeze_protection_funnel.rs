@@ -1,4 +1,9 @@
 //! G36 FreezeProtection Tier-A independent-oracle check through the B3 facade driver.
+//!
+//! Two references: the 60 s staged scenario over every output, and the 1/16 s fine-step scenario
+//! over the stage and heating-coil command, where the heating-coil PI controllers run well inside
+//! forward Euler's accurate range (`k*dt/Ti = 0.125`) instead of the frame-rate-dependent 60 s
+//! regime (`k*dt/Ti = 120`).
 
 use std::path::{Path, PathBuf};
 
@@ -19,6 +24,9 @@ const GOLDEN_DIR: &str = "../../tools/golden-gen/goldens/G36";
 const SEQUENCE: &str = "multizone_vav_freeze_protection";
 const ROWS: usize = 111;
 const SAMPLE_STEP: f64 = 60.0;
+const FINE_STEP_SEQUENCE: &str = "multizone_vav_freeze_protection_fine_step";
+const FINE_STEP_ROWS: usize = 5281;
+const FINE_STEP_SAMPLE_STEP: f64 = 0.0625;
 
 const OUTDOOR_DAMPER_MIN_POSITION: &str =
     "http://example.org#g36.source.multizone_vav_freeze_protection.uOutDamPosMin";
@@ -91,6 +99,10 @@ const OUTPUTS: &[PointSpec] = &[
     PointSpec::integer("hot_water_plant_request", HOT_WATER_PLANT_REQUEST),
     PointSpec::integer("alarm_level", ALARM_LEVEL),
 ];
+const FINE_STEP_OUTPUTS: &[PointSpec] = &[
+    PointSpec::integer("freeze_protection_stage", FREEZE_PROTECTION_STAGE),
+    PointSpec::real("heating_coil_command", HEATING_COIL_COMMAND),
+];
 const REFERENCE_COLUMNS: &[&str] = &[
     "time",
     "outdoor_damper_min_position",
@@ -119,7 +131,7 @@ const REFERENCE_COLUMNS: &[&str] = &[
 
 #[test]
 fn g36_freeze_protection_tier_a_oracle_matches_engine_output() {
-    let reference = CombiTimeTable::read(&reference_path())
+    let reference = CombiTimeTable::read(&reference_path(SEQUENCE))
         .unwrap_or_else(|err| panic!("FreezeProtection reference read failed: {err}"));
     assert_eq!(
         reference.name,
@@ -136,24 +148,81 @@ fn g36_freeze_protection_tier_a_oracle_matches_engine_output() {
                 .as_slice()
         )
     );
-    assert_signal_provenance(&reference);
+    assert_signal_provenance(SEQUENCE, OUTPUTS, &reference);
+    assert_engine_matches_reference_exactly(SEQUENCE, OUTPUTS, &reference, ROWS, SAMPLE_STEP);
+}
 
+/// The fine-step reference resolves the heating-coil PI ramps, saturation and holds that the 60 s
+/// frame aliases; the engine must still reproduce it bit for bit at that frame step.
+#[test]
+fn g36_freeze_protection_fine_step_oracle_matches_engine_output() {
+    let reference = CombiTimeTable::read(&reference_path(FINE_STEP_SEQUENCE))
+        .unwrap_or_else(|err| panic!("FreezeProtection fine-step reference read failed: {err}"));
+    assert_eq!(
+        reference.name,
+        "G36_multizone_vav_freeze_protection_fine_step_reference"
+    );
+    assert_eq!(reference.n_rows, FINE_STEP_ROWS);
+    let expected_columns = REFERENCE_COLUMNS
+        .iter()
+        .filter(|column| {
+            !OUTPUTS
+                .iter()
+                .any(|output| output.reference_name == **column)
+                || FINE_STEP_OUTPUTS
+                    .iter()
+                    .any(|output| output.reference_name == **column)
+        })
+        .map(|column| (*column).to_string())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        reference.col_names.as_deref(),
+        Some(expected_columns.as_slice())
+    );
+    assert_signal_provenance(FINE_STEP_SEQUENCE, FINE_STEP_OUTPUTS, &reference);
+    for output in FINE_STEP_OUTPUTS {
+        let prov = read_json(&signal_provenance_path(
+            FINE_STEP_SEQUENCE,
+            output.reference_name,
+        ));
+        assert!(
+            prov["frame_rate_dependence"].is_null(),
+            "fine-step {} must not carry a frame-rate note",
+            output.reference_name
+        );
+    }
+    assert_engine_matches_reference_exactly(
+        FINE_STEP_SEQUENCE,
+        FINE_STEP_OUTPUTS,
+        &reference,
+        FINE_STEP_ROWS,
+        FINE_STEP_SAMPLE_STEP,
+    );
+}
+
+fn assert_engine_matches_reference_exactly(
+    sequence: &str,
+    outputs: &[PointSpec],
+    reference: &CombiTimeTable,
+    rows: usize,
+    sample_step: f64,
+) {
     let run = drive_trace_with_options(
         FREEZE_PROTECTION.as_bytes(),
-        &config(),
-        &reference,
+        &config(sequence, outputs, sample_step),
+        reference,
         &DriverOptions {
             cadence: DriveCadence::EventAligned {
-                instants: (0..ROWS).map(|tick| tick as f64 * SAMPLE_STEP).collect(),
+                instants: (0..rows).map(|tick| tick as f64 * sample_step).collect(),
             },
             input_replay: DriverInputReplay::ReferenceTable,
             comparison: ComparisonMode::Exact,
         },
     )
-    .unwrap_or_else(|err| panic!("FreezeProtection exact driver run failed: {err}"));
+    .unwrap_or_else(|err| panic!("{sequence} exact driver run failed: {err}"));
 
-    assert_eq!(run.comparisons.len(), OUTPUTS.len());
-    for output in OUTPUTS {
+    assert_eq!(run.comparisons.len(), outputs.len());
+    for output in outputs {
         let comparison = run
             .comparisons
             .iter()
@@ -166,13 +235,13 @@ fn g36_freeze_protection_tier_a_oracle_matches_engine_output() {
             ComparisonResult::Exact(result) => {
                 assert!(
                     result.passed,
-                    "FreezeProtection exact comparison failed for {}: {:?}",
+                    "{sequence} exact comparison failed for {}: {:?}",
                     output.reference_name, result.first_mismatch
                 );
-                assert_eq!(result.compared_points, ROWS);
+                assert_eq!(result.compared_points, rows);
                 assert_eq!(result.first_mismatch, None);
             }
-            other => panic!("FreezeProtection used non-exact comparison: {other:?}"),
+            other => panic!("{sequence} used non-exact comparison: {other:?}"),
         }
     }
 }
@@ -193,7 +262,7 @@ fn funnel_band_routes_freeze_protection_real_outputs() {
             outputs: &outputs,
             instants: &instants,
             sample_step: SAMPLE_STEP,
-            reference_csv: &reference_path(),
+            reference_csv: &reference_path(SEQUENCE),
             kind_to_str: kind_name,
         },
     );
@@ -243,12 +312,12 @@ impl PointSpec {
     }
 }
 
-fn config() -> VerifyConfig {
+fn config(sequence: &str, outputs: &[PointSpec], sample_step: f64) -> VerifyConfig {
     VerifyConfig {
         references: vec![ReferenceSpec {
             model: "g36".to_string(),
-            sequence: SEQUENCE.to_string(),
-            point_name_mapping: point_mapping(),
+            sequence: sequence.to_string(),
+            point_name_mapping: point_mapping(outputs),
         }],
         tolerances: Tolerances {
             atolx: 0.0,
@@ -260,15 +329,15 @@ fn config() -> VerifyConfig {
         },
         outputs: Vec::new(),
         indicators: Vec::new(),
-        sampling: Some(SAMPLE_STEP),
+        sampling: Some(sample_step),
         run_controller: true,
     }
 }
 
-fn point_mapping() -> Vec<PointMapEntry> {
+fn point_mapping(outputs: &[PointSpec]) -> Vec<PointMapEntry> {
     INPUTS
         .iter()
-        .chain(OUTPUTS.iter())
+        .chain(outputs.iter())
         .map(|point| PointMapEntry {
             cdl: point_end(point.cdl_name, point.kind),
             device: point_end(point.reference_name, point.kind),
@@ -284,11 +353,11 @@ fn point_end(name: &str, kind: ValueKind) -> PointEnd {
     }
 }
 
-fn assert_signal_provenance(reference: &CombiTimeTable) {
-    for output in OUTPUTS {
-        let prov = read_json(&signal_provenance_path(output.reference_name));
+fn assert_signal_provenance(sequence: &str, outputs: &[PointSpec], reference: &CombiTimeTable) {
+    for output in outputs {
+        let prov = read_json(&signal_provenance_path(sequence, output.reference_name));
         assert_eq!(prov["class_path"], "G36");
-        assert_eq!(prov["scenario"], SEQUENCE);
+        assert_eq!(prov["scenario"], sequence);
         assert_eq!(prov["signal"], output.reference_name);
         assert_eq!(prov["tier"], "A");
         assert_eq!(prov["depends_on_oce_blocks"], false);
@@ -324,18 +393,18 @@ fn read_json(path: &Path) -> Value {
         .unwrap_or_else(|err| panic!("parse JSON {} failed: {err}", path.display()))
 }
 
-fn reference_path() -> PathBuf {
-    reference_dir().join("reference.csv")
+fn reference_path(sequence: &str) -> PathBuf {
+    reference_dir(sequence).join("reference.csv")
 }
 
-fn signal_provenance_path(signal: &str) -> PathBuf {
-    reference_dir().join(format!("{signal}.prov.json"))
+fn signal_provenance_path(sequence: &str, signal: &str) -> PathBuf {
+    reference_dir(sequence).join(format!("{signal}.prov.json"))
 }
 
-fn reference_dir() -> PathBuf {
+fn reference_dir(sequence: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join(GOLDEN_DIR)
-        .join(SEQUENCE)
+        .join(sequence)
 }
 
 fn kind_name(kind: ValueKind) -> &'static str {

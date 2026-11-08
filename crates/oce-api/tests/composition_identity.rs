@@ -6,18 +6,17 @@
 mod documents;
 
 use documents::{COMPACT, EXPANDED, node_mut, reverse_object_keys};
-use oce_api::oce_store::Store;
 use oce_api::{Engine, EngineStateError, OcError};
 use serde_json::Value;
 
-fn load(bytes: &[u8]) -> Engine<impl Store + use<>> {
-    let mut engine = Engine::in_memory();
-    let report = engine.load_cxf(bytes).unwrap();
+fn load(bytes: &[u8]) -> Engine {
+    let mut engine = Engine::new();
+    let (report, _) = engine.load_cxf(bytes).unwrap();
     assert!(report.warnings.is_empty(), "{:?}", report.warnings);
     engine
 }
 
-fn content(engine: &Engine<impl Store>) -> String {
+fn content(engine: &Engine) -> String {
     engine.export_cxf().unwrap().content_id_complete().unwrap()
 }
 
@@ -79,7 +78,7 @@ fn containment_and_connector_transpositions_change_identity_without_changing_aut
                 .reverse(),
         }
         let mut target = load(&serde_json::to_vec(&doc).unwrap());
-        let names = |engine: &Engine<_>| {
+        let names = |engine: &Engine| {
             let mut names: Vec<_> = engine
                 .point_list(None)
                 .unwrap()

@@ -5,7 +5,6 @@ use std::sync::Arc;
 
 use oce_blocks::BlockKind;
 use oce_model::{Dir, Value, ValueType, enum_descriptor, enum_descriptor_by_path};
-use oce_store::Store;
 
 use crate::engine::Engine;
 use crate::error::OcError;
@@ -13,6 +12,14 @@ use crate::error::OcError;
 pub(crate) const FORMAT_REVISION: u32 = 2;
 pub(crate) const EXECUTION_ABI_REVISION: u32 = 2;
 pub(crate) const MAX_SNAPSHOT_BYTES: u64 = 64 * 1024 * 1024;
+
+/// Every model `oce-graph` admits fits a snapshot: its state words (at most
+/// [`oce_graph::MAX_STATE_WORDS`], 8 bytes each = 32 MiB) leave at least 32 MiB of
+/// [`MAX_SNAPSHOT_BYTES`] for connector values, the manifest and framing.
+const _: () = assert!(
+    (oce_graph::MAX_STATE_WORDS as u64) * 8 + 32 * 1024 * 1024 <= MAX_SNAPSHOT_BYTES,
+    "MAX_STATE_WORDS must leave 32 MiB of snapshot headroom"
+);
 
 pub(crate) use crate::state_snapshot::StatePortability as Portability;
 
@@ -340,7 +347,7 @@ pub(crate) struct StateImage {
     pub(crate) words: Vec<u64>,
 }
 
-impl<S: Store> Engine<S> {
+impl Engine {
     /// Capture an opaque process-local image that may later rewind a compatible engine.
     ///
     /// # Errors
@@ -387,8 +394,8 @@ impl<S: Store> Engine<S> {
     /// The host verifies its authenticated build/deployment envelope before decoding the bytes.
     /// The target must not have accepted a frame, dirty-parameter resume, or either restore since
     /// successful load. Preparation, refusal and clean resume leave this window open. Full
-    /// validation precedes commit; every returned error preserves the engine and Store. No
-    /// evaluation or Store call occurs. Panic/allocation failure and external effects are excluded.
+    /// validation precedes commit; every returned error preserves the engine. No
+    /// evaluation or persistence call occurs. Panic/allocation failure and external effects are excluded.
     pub fn restore_state(&mut self, snapshot: &EngineStateSnapshot) -> Result<(), OcError> {
         self.restore_preconditions(true)?;
         let prepared = self.prepare_restore(&snapshot.image, true)?;
@@ -521,6 +528,10 @@ impl<S: Store> Engine<S> {
         let state_t = f64::from_bits(image.state_t);
         let prev_t = image.prev_t.map(f64::from_bits);
         validate_payload(self, &values, &image.words, state_t, prev_t)?;
+        // A clock beyond the frame-time limit would refuse every later frame; refuse it here.
+        if state_t.abs() > crate::MAX_FRAME_TIME_MAGNITUDE {
+            return invalid_global("model time exceeds MAX_FRAME_TIME_MAGNITUDE");
+        }
         Ok(PreparedRestore {
             values,
             words: image.words.clone(),
@@ -545,8 +556,8 @@ struct PreparedRestore {
     prev_t: Option<f64>,
 }
 
-fn validate_payload<S: Store>(
-    engine: &Engine<S>,
+fn validate_payload(
+    engine: &Engine,
     values: &[Value],
     words: &[u64],
     state_t: f64,

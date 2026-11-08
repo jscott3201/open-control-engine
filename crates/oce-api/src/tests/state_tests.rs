@@ -2,10 +2,6 @@
 
 use super::common::*;
 use crate::{EngineStateError, EngineStateSnapshot};
-use oce_store::{
-    EquipmentDto, PointHandle, PointListRow, PointSnapshot, PointStore, PointWrite, RelationDto,
-    RetrievalHit, SemanticPayloadDto, SemanticStore, StoreResult, TemplatePointReq,
-};
 
 const MINIMAL_LOOP: &[u8] = include_bytes!("../../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
 const LOOP_INPUTS: [(&str, Value); 1] = [("http://example.org#MinLoop.uSet", Value::Real(0.0))];
@@ -59,7 +55,7 @@ pub(super) fn sampled_model(class_path: &str, period: f64) -> ModelGraph {
 
 #[test]
 fn capture_requires_a_loaded_model() {
-    let engine = Engine::in_memory();
+    let engine = Engine::new();
     assert!(matches!(
         engine.checkpoint(),
         Err(OcError::State(EngineStateError::NoLoadedModel))
@@ -73,7 +69,7 @@ fn capture_requires_a_loaded_model() {
 #[test]
 fn checkpoint_rewinds_and_replays_a_hand_built_stateful_model() {
     let (model, add_output, _, _) = build_accumulator_model();
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.build_model_in_memory(model, None).unwrap();
     advance(&mut engine, 0.0, &[]).unwrap();
     advance(&mut engine, 1.0, &[]).unwrap();
@@ -102,13 +98,13 @@ fn one_checkpoint_branches_into_independently_loaded_engines() {
     );
     let mut model = builder.finish();
     model.external_inputs = inputs;
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source.build_model_in_memory(model.clone(), None).unwrap();
     let checkpoint = source.checkpoint().unwrap();
 
-    let mut left = Engine::in_memory();
+    let mut left = Engine::new();
     left.build_model_in_memory(model.clone(), None).unwrap();
-    let mut right = Engine::in_memory();
+    let mut right = Engine::new();
     right.build_model_in_memory(model, None).unwrap();
     left.restore_checkpoint(&checkpoint).unwrap();
     right.restore_checkpoint(&checkpoint).unwrap();
@@ -138,7 +134,7 @@ fn one_checkpoint_branches_into_independently_loaded_engines() {
 
 #[test]
 fn anonymous_hand_built_model_is_not_durable() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(build_accumulator_model().0, None)
         .unwrap();
@@ -150,11 +146,11 @@ fn anonymous_hand_built_model_is_not_durable() {
 
 #[test]
 fn durable_restore_refuses_an_advanced_target() {
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source.load_cxf(MINIMAL_LOOP).unwrap();
     let snapshot = source.state_snapshot().unwrap();
 
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target.load_cxf(MINIMAL_LOOP).unwrap();
     advance(&mut target, 0.0, &LOOP_INPUTS).unwrap();
     assert!(matches!(
@@ -165,7 +161,7 @@ fn durable_restore_refuses_an_advanced_target() {
 
 #[test]
 fn checksum_corruption_is_typed() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MINIMAL_LOOP).unwrap();
     let mut bytes = engine.state_snapshot().unwrap().into_bytes();
     let middle = bytes.len() / 2;
@@ -195,7 +191,7 @@ fn every_g36_fixture_captures_before_and_after_its_first_tick() {
 
     for fixture in fixtures {
         let bytes = std::fs::read(&fixture).unwrap();
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .load_cxf(&bytes)
             .unwrap_or_else(|error| panic!("{}: {error}", fixture.display()));
@@ -223,15 +219,15 @@ fn sampled_clocks_refuse_unrepresentable_time_before_mutation() {
         "CDL.Discrete.UnitDelay",
         "CDL.Logical.Sources.SampleTrigger",
     ] {
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .build_model_in_memory(sampled_model(class_path, 1.0), None)
             .unwrap();
         let words = engine.state.words.clone();
         let values = engine.state.values.clone();
-        let error = engine.prepare_frame(f64::MAX, &[]).unwrap_err();
+        let error = engine.prepare_frame(1.0e305, &[]).unwrap_err();
         assert!(
-            matches!(error, OcError::ModelTimeUnrepresentable { now } if now == f64::MAX),
+            matches!(error, OcError::ModelTimeUnrepresentable { now } if now == 1.0e305),
             "{class_path}: {error:?}"
         );
         assert_eq!(engine.state.words, words, "{class_path}");
@@ -250,7 +246,7 @@ fn sampled_clocks_refuse_unrepresentable_time_before_mutation() {
 }
 
 #[test]
-fn initialized_max_period_clocks_accept_maximum_finite_time() {
+fn initialized_max_period_clocks_accept_the_maximum_frame_time() {
     for class_path in [
         "CDL.Discrete.Sampler",
         "CDL.Discrete.ZeroOrderHold",
@@ -258,7 +254,7 @@ fn initialized_max_period_clocks_accept_maximum_finite_time() {
         "CDL.Discrete.UnitDelay",
         "CDL.Logical.Sources.SampleTrigger",
     ] {
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .build_model_in_memory(sampled_model(class_path, f64::MAX), None)
             .unwrap();
@@ -268,9 +264,9 @@ fn initialized_max_period_clocks_accept_maximum_finite_time() {
             vec![("conn#0", Value::Real(0.0))]
         };
         advance(&mut engine, 0.0, &inputs).unwrap();
-        advance(&mut engine, f64::MAX, &inputs)
-            .unwrap_or_else(|error| panic!("{class_path}: {error}"));
-        assert_eq!(engine.prev_t.map(f64::to_bits), Some(f64::MAX.to_bits()));
+        let max = crate::MAX_FRAME_TIME_MAGNITUDE;
+        advance(&mut engine, max, &inputs).unwrap_or_else(|error| panic!("{class_path}: {error}"));
+        assert_eq!(engine.prev_t.map(f64::to_bits), Some(max.to_bits()));
         engine
             .checkpoint()
             .unwrap_or_else(|error| panic!("{class_path}: {error}"));
@@ -279,7 +275,7 @@ fn initialized_max_period_clocks_accept_maximum_finite_time() {
 
 #[test]
 fn unrepresentable_preparation_time_preserves_the_prior_run() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(sampled_model("CDL.Discrete.Sampler", 1.0), None)
         .unwrap();
@@ -288,7 +284,7 @@ fn unrepresentable_preparation_time_preserves_the_prior_run() {
     let state_t = engine.state.t.to_bits();
     let prev_t = engine.prev_t.map(f64::to_bits);
     assert!(matches!(
-        engine.prepare_frame(f64::MAX, &[("conn#0", Value::Real(0.0))]),
+        engine.prepare_frame(1.0e305, &[("conn#0", Value::Real(0.0))]),
         Err(OcError::ModelTimeUnrepresentable { .. })
     ));
     assert_eq!(engine.state.words, words);
@@ -297,14 +293,14 @@ fn unrepresentable_preparation_time_preserves_the_prior_run() {
 }
 
 fn minimal_loop_snapshot() -> EngineStateSnapshot {
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source.load_cxf(MINIMAL_LOOP).unwrap();
     advance(&mut source, 0.0, &LOOP_INPUTS).unwrap();
     source.state_snapshot().unwrap()
 }
 
 fn authored_empty_snapshot() -> EngineStateSnapshot {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(ModelGraph::new(), Some("urn:test:empty-model"))
         .unwrap();
@@ -314,7 +310,7 @@ fn authored_empty_snapshot() -> EngineStateSnapshot {
 #[test]
 fn read_only_lifecycle_calls_keep_the_durable_restore_window_open() {
     let snapshot = minimal_loop_snapshot();
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target.load_cxf(MINIMAL_LOOP).unwrap();
     target.state_snapshot().unwrap();
     target.checkpoint().unwrap();
@@ -328,7 +324,7 @@ fn read_only_lifecycle_calls_keep_the_durable_restore_window_open() {
 #[test]
 fn refused_inputs_and_time_keep_the_durable_restore_window_open() {
     let snapshot = minimal_loop_snapshot();
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target.load_cxf(MINIMAL_LOOP).unwrap();
     assert!(matches!(
         target.prepare_frame(0.0, &[("missing", Value::Real(1.0))]),
@@ -352,7 +348,7 @@ fn refused_inputs_and_time_keep_the_durable_restore_window_open() {
 fn mutation_boundaries_close_the_durable_restore_window() {
     let snapshot = minimal_loop_snapshot();
 
-    let mut input_target = Engine::in_memory();
+    let mut input_target = Engine::new();
     input_target.load_cxf(MINIMAL_LOOP).unwrap();
     let prepared = input_target.prepare_frame(0.0, &LOOP_INPUTS).unwrap();
     assert!(
@@ -365,7 +361,7 @@ fn mutation_boundaries_close_the_durable_restore_window() {
         Err(OcError::State(EngineStateError::DurableTargetAdvanced))
     ));
 
-    let mut resume_target = Engine::in_memory();
+    let mut resume_target = Engine::new();
     resume_target.load_cxf(MINIMAL_LOOP).unwrap();
     resume_target.halt().unwrap();
     resume_target
@@ -377,7 +373,7 @@ fn mutation_boundaries_close_the_durable_restore_window() {
         Err(OcError::State(EngineStateError::DurableTargetAdvanced))
     ));
 
-    let mut checkpoint_target = Engine::in_memory();
+    let mut checkpoint_target = Engine::new();
     checkpoint_target.load_cxf(MINIMAL_LOOP).unwrap();
     let checkpoint = checkpoint_target.checkpoint().unwrap();
     checkpoint_target.restore_checkpoint(&checkpoint).unwrap();
@@ -390,7 +386,7 @@ fn mutation_boundaries_close_the_durable_restore_window() {
 #[test]
 fn pending_parameter_edits_take_precedence_over_restore_readiness() {
     let snapshot = minimal_loop_snapshot();
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target.load_cxf(MINIMAL_LOOP).unwrap();
     target.halt().unwrap();
     target
@@ -409,7 +405,7 @@ fn pending_parameter_edits_take_precedence_over_restore_readiness() {
 #[test]
 fn failed_reload_preserves_the_prior_durable_restore_window() {
     let snapshot = minimal_loop_snapshot();
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target.load_cxf(MINIMAL_LOOP).unwrap();
     assert!(target.load_cxf(b"not json").is_err());
     target.restore_state(&snapshot).unwrap();
@@ -417,7 +413,7 @@ fn failed_reload_preserves_the_prior_durable_restore_window() {
 
 #[test]
 fn a_successfully_loaded_empty_model_is_capture_eligible() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(ModelGraph::new(), None)
         .unwrap();
@@ -427,23 +423,8 @@ fn a_successfully_loaded_empty_model_is_capture_eligible() {
 }
 
 #[test]
-fn capture_and_restore_call_no_store_method() {
-    let snapshot = minimal_loop_snapshot();
-    let store = Arc::new(CountingStore::default());
-    let mut target = Engine::with_store(Arc::clone(&store));
-    target.load_cxf(MINIMAL_LOOP).unwrap();
-    let after_load = store.calls();
-
-    target.checkpoint().unwrap();
-    target.state_snapshot().unwrap();
-    assert_eq!(store.calls(), after_load, "capture reached the store seam");
-    target.restore_state(&snapshot).unwrap();
-    assert_eq!(store.calls(), after_load, "restore reached the store seam");
-}
-
-#[test]
 fn checkpoint_refusal_is_bit_atomic() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(sampled_model("CDL.Discrete.UnitDelay", 1.0), None)
         .unwrap();
@@ -490,9 +471,9 @@ fn connection_vector_permutation_does_not_change_execution_identity() {
     let (model, _, _, _) = build_accumulator_model();
     let mut permuted = model.clone();
     permuted.connections.reverse();
-    let mut left = Engine::in_memory();
+    let mut left = Engine::new();
     left.build_model_in_memory(model, None).unwrap();
-    let mut right = Engine::in_memory();
+    let mut right = Engine::new();
     right.build_model_in_memory(permuted, None).unwrap();
     let left = left.checkpoint().unwrap();
     let right = right.checkpoint().unwrap();
@@ -503,7 +484,7 @@ fn connection_vector_permutation_does_not_change_execution_identity() {
 #[test]
 fn diagnostic_model_identity_is_not_an_execution_compatibility_key() {
     let snapshot = minimal_loop_snapshot();
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target.load_cxf(MINIMAL_LOOP).unwrap();
     target.model_id = DomainKey::new("urn:test:different-diagnostic-model-id");
     target.restore_state(&snapshot).unwrap();
@@ -511,7 +492,7 @@ fn diagnostic_model_identity_is_not_an_execution_compatibility_key() {
 
 #[test]
 fn changed_parameter_refuses_checkpoint_restore() {
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source
         .build_model_in_memory(build_accumulator_model().0, None)
         .unwrap();
@@ -519,7 +500,7 @@ fn changed_parameter_refuses_checkpoint_restore() {
 
     let (mut changed, _, _, _) = build_accumulator_model();
     changed.blocks[0].params.values[0].1 = Value::Real(2.0);
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target.build_model_in_memory(changed, None).unwrap();
     assert!(matches!(
         target.restore_checkpoint(&checkpoint),
@@ -563,114 +544,4 @@ fn empty_authored_model_has_pinned_durable_bytes_and_fingerprint() {
         actual,
         "4f43455354415400020000000200000076000000000000003563bc4e4d6f7568e3b58985ca1627091400000075726e3a746573743a656d7074792d6d6f64656c0000000000000000002d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002cece89772fdd4ad50df3cf14722371d"
     );
-}
-
-#[derive(Default)]
-pub(super) struct CountingStore {
-    inner: MemStore,
-    calls: std::sync::atomic::AtomicUsize,
-}
-
-impl CountingStore {
-    fn bump(&self) {
-        self.calls
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    }
-
-    pub(super) fn calls(&self) -> usize {
-        self.calls.load(std::sync::atomic::Ordering::Relaxed)
-    }
-}
-
-impl ModelStore for CountingStore {
-    fn save_model(&self, model: &ResolvedModel) -> StoreResult<()> {
-        self.bump();
-        self.inner.save_model(model)
-    }
-
-    fn load_model(&self, model_id: &DomainKey) -> StoreResult<ResolvedModel> {
-        self.bump();
-        self.inner.load_model(model_id)
-    }
-
-    fn list_models(&self) -> StoreResult<Vec<DomainKey>> {
-        self.bump();
-        self.inner.list_models()
-    }
-
-    fn delete_model(&self, model_id: &DomainKey) -> StoreResult<()> {
-        self.bump();
-        self.inner.delete_model(model_id)
-    }
-}
-
-impl PointStore for CountingStore {
-    fn resolve_points(&self, keys: &[DomainKey]) -> StoreResult<Vec<PointHandle>> {
-        self.bump();
-        self.inner.resolve_points(keys)
-    }
-
-    fn snapshot(&self) -> StoreResult<Box<dyn PointSnapshot>> {
-        self.bump();
-        self.inner.snapshot()
-    }
-
-    fn write_points(&self, batch: &[PointWrite]) -> StoreResult<usize> {
-        self.bump();
-        self.inner.write_points(batch)
-    }
-}
-
-impl SemanticStore for CountingStore {
-    fn upsert_equipment(&self, equipment: &EquipmentDto) -> StoreResult<()> {
-        self.bump();
-        self.inner.upsert_equipment(equipment)
-    }
-
-    fn add_relation(&self, relation: &RelationDto) -> StoreResult<()> {
-        self.bump();
-        self.inner.add_relation(relation)
-    }
-
-    fn put_semantic_payload(&self, payload: &SemanticPayloadDto) -> StoreResult<()> {
-        self.bump();
-        self.inner.put_semantic_payload(payload)
-    }
-
-    fn get_semantic_payloads(&self, subject: &DomainKey) -> StoreResult<Vec<SemanticPayloadDto>> {
-        self.bump();
-        self.inner.get_semantic_payloads(subject)
-    }
-
-    fn point_list(&self, controlled_device: Option<&str>) -> StoreResult<Vec<PointListRow>> {
-        self.bump();
-        self.inner.point_list(controlled_device)
-    }
-
-    fn retrieve(&self, query: &SemanticQuery) -> StoreResult<Vec<RetrievalHit>> {
-        self.bump();
-        self.inner.retrieve(query)
-    }
-
-    fn match_template(&self, required_points: &[TemplatePointReq]) -> StoreResult<Vec<DomainKey>> {
-        self.bump();
-        self.inner.match_template(required_points)
-    }
-}
-
-impl Durable for CountingStore {
-    fn commit(&self) -> StoreResult<()> {
-        self.bump();
-        self.inner.commit()
-    }
-
-    fn flush(&self) -> StoreResult<()> {
-        self.bump();
-        self.inner.flush()
-    }
-
-    fn recover(&self) -> StoreResult<()> {
-        self.bump();
-        self.inner.recover()
-    }
 }

@@ -121,6 +121,56 @@ pub(super) fn refuse_role_aliases<'a>(
     seen
 }
 
+/// Warn for every declared root boundary input whose node exists but that no connection reads.
+///
+/// `edges` is the lowered connection list, after nested-composite boundary hops are rewritten to
+/// their leaf endpoints, so an input reaching a block only through a composite boundary, or
+/// passing through to a boundary output, appears as an endpoint and stays silent. An input whose
+/// only route ends at a nested composite boundary nothing reads loses that edge in lowering and
+/// warns: no block, and no boundary output, observes its value.
+///
+/// Advisory only: an unread top-composite input is legal CDL, and listing it in the frame
+/// contract would require every frame to supply a value the model never reads. It therefore
+/// enters neither `external_inputs` nor `boundary_inputs`, and this warning is its only
+/// representation. Declarations other checks already refuse stay silent here: a missing node
+/// (`UnresolvedReference`), an IRI also declared as a boundary output (the shadowing refusal),
+/// and a role alias (`MalformedDocument`). An inactive conditional input is absent from
+/// `boundary_in`. An input whose only edge is itself refused (direction, type, missing target)
+/// counts as read and stays silent: the load refuses anyway. Emitted once per IRI in `hasInput` array order; the resolver's final sort
+/// fixes the reported order.
+pub(super) fn warn_unread<'e>(
+    top: &Node,
+    boundary_in: &HashSet<&str>,
+    boundary_out: &HashSet<&str>,
+    by_id: &HashMap<&str, &Node>,
+    role_aliases: &HashSet<&str>,
+    edges: impl Iterator<Item = (&'e str, &'e str)>,
+    diags: &mut Vec<Diagnostic>,
+) {
+    let read = edges
+        .flat_map(|(source, target)| [source, target])
+        .filter(|endpoint| boundary_in.contains(endpoint))
+        .collect::<HashSet<_>>();
+    let mut seen = HashSet::new();
+    for iri in top.has_input.iter().map(|reference| reference.id.as_str()) {
+        if boundary_in.contains(iri)
+            && !boundary_out.contains(iri)
+            && by_id.contains_key(iri)
+            && !role_aliases.contains(iri)
+            && !read.contains(iri)
+            && seen.insert(iri)
+        {
+            diags.push(
+                Diagnostic::warning(
+                    DiagCode::UnusedBoundaryInput,
+                    "declared boundary input is read by no connection",
+                )
+                .with_subject(iri.to_owned()),
+            );
+        }
+    }
+}
+
 /// Materialize one declaration per boundary IRI represented by `external_inputs`.
 ///
 /// Source-document iteration fixes declaration order to boundary-node `@graph` position. Target

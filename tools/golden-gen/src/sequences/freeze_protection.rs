@@ -1,8 +1,15 @@
 //! G36 MultiZone VAV FreezeProtection source-default sequence oracle.
+//!
+//! Two scenarios share one sequence model: the 60 s staged scenario that walks every stage, and
+//! the fine-step scenario in [`fine_step`] that resolves the heating-coil PI controllers.
+
+mod fine_step;
 
 use crate::oracle::{Golden, InputSeries, ValueKind};
 
 use super::{FREEZE_PROTECTION, b, i, input_b, input_r, r, sequence_golden};
+
+pub(super) use fine_step::FREEZE_PROTECTION_FINE_STEP;
 
 const SAMPLE_STEP_SECONDS: u32 = 60;
 const SAMPLE_STEP: f64 = SAMPLE_STEP_SECONDS as f64;
@@ -24,11 +31,11 @@ const OUTPUTS: [(&str, ValueKind); 11] = [
 
 pub(super) fn goldens() -> Vec<Golden> {
     let time = expected_times();
-    let rows = input_rows(&time);
+    let rows = input_rows(&time, input_row);
     let inputs = freeze_protection_inputs(&rows);
-    let trace = freeze_protection_trace(&time);
+    let trace = freeze_protection_trace(&time, input_row);
 
-    OUTPUTS
+    let mut goldens: Vec<Golden> = OUTPUTS
         .iter()
         .map(|&(signal, kind)| {
             sequence_golden(
@@ -42,7 +49,9 @@ pub(super) fn goldens() -> Vec<Golden> {
                 inputs.clone(),
             )
         })
-        .collect()
+        .collect();
+    goldens.extend(fine_step::goldens());
+    goldens
 }
 
 #[derive(Clone, Copy)]
@@ -81,7 +90,7 @@ fn expected_times() -> Vec<f64> {
         .collect()
 }
 
-fn input_rows(time: &[f64]) -> Vec<Inputs> {
+fn input_rows(time: &[f64], input_row: fn(f64) -> Inputs) -> Vec<Inputs> {
     time.iter().copied().map(input_row).collect()
 }
 
@@ -153,10 +162,7 @@ fn freeze_protection_inputs(rows: &[Inputs]) -> Vec<InputSeries> {
             "supply_air_temperature",
             rows.iter().map(|row| row.supply_air_temperature),
         ),
-        input_b(
-            "software_reset",
-            rows.iter().map(|row| row.software_reset),
-        ),
+        input_b("software_reset", rows.iter().map(|row| row.software_reset)),
         input_b(
             "supply_fan_status_input",
             rows.iter().map(|row| row.supply_fan_status),
@@ -173,7 +179,9 @@ fn freeze_protection_inputs(rows: &[Inputs]) -> Vec<InputSeries> {
     ]
 }
 
-fn freeze_protection_trace(time: &[f64]) -> Trace {
+/// Run the FreezeProtection.mo source-default graph over `time`, reading the inputs at each instant
+/// from `input_row`.
+fn freeze_protection_trace(time: &[f64], input_row: fn(f64) -> Inputs) -> Trace {
     let mut les_thr = ThresholdState::less(277.55, 0.25);
     let mut tim = TimerState::new(300.0);
     let mut hea_coil_stage_1 = PidState::default();
@@ -254,11 +262,7 @@ fn freeze_protection_trace(time: &[f64]) -> Trace {
             heating_stage_1
         };
         let alarm_level = if lat1_y { 2 } else { alarm_stage_2 };
-        let minimum_outdoor_damper = if lat1_y {
-            0.0
-        } else {
-            minimum_outdoor_stage_2
-        };
+        let minimum_outdoor_damper = if lat1_y { 0.0 } else { minimum_outdoor_stage_2 };
         let return_damper = if lat1_y { 0.0 } else { return_stage_2 };
         let supply_fan_status = row.supply_fan_status && !lat1_y;
         let freeze_stage = if lat1_y {
@@ -322,12 +326,7 @@ fn samples(signal: &str, trace: &Trace) -> Vec<crate::oracle::Sample> {
             .copied()
             .map(b)
             .collect(),
-        "return_damper_command" => trace
-            .return_damper_command
-            .iter()
-            .copied()
-            .map(r)
-            .collect(),
+        "return_damper_command" => trace.return_damper_command.iter().copied().map(r).collect(),
         "outdoor_damper_command" => trace
             .outdoor_damper_command
             .iter()

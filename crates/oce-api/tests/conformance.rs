@@ -1,5 +1,5 @@
 //! Conformance harness for the hand-authored fixture corpus. Each fixture is driven through the
-//! **full** `Engine::load_cxf` pipeline (CXF resolve → flatten → validate → BUILD) to assert the
+//! **full** `Engine::load_cxf` pipeline (CXF resolve → validate → BUILD) to assert the
 //! end-to-end accept/reject/warn contract and full-pipeline determinism (`TESTING.md` pillars
 //! 1, 2, and 4).
 //!
@@ -30,8 +30,8 @@ const BOUNDARY_OUTPUT_UNIT_MISMATCH: &str =
 const TWO_UNDRIVEN: &str = include_str!("../../oce-cxf/tests/fixtures/invalid/two_undriven.jsonld");
 
 fn load(src: &str) -> Result<LoadReport, OcError> {
-    let mut eng = Engine::in_memory();
-    eng.load_cxf(src.as_bytes())
+    let mut eng = Engine::new();
+    eng.load_cxf(src.as_bytes()).map(|(report, _)| report)
 }
 
 /// The error-severity `DiagCode`s an `OcError` carries across resolver, deep-gate, and contextual
@@ -140,7 +140,7 @@ fn one_sided_unit_propagates_to_peer() {
     // R13.2: con.y declares unit "K"; the driven peer input add.u1 declares none ⇒ load succeeds and
     // the peer INHERITS "K". Observed through the IO inventory (path-independent: an input now carries
     // the propagated unit, which no fixture input declared directly).
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.load_cxf(ONE_SIDED.as_bytes())
         .expect("one-sided unit is R13.2 propagation, never an error");
     let propagated = eng
@@ -227,7 +227,7 @@ fn load_composite_fixture(rel: &str) -> Result<LoadReport, OcError> {
     let path = composite_corpus_dir().join(rel);
     let bytes = std::fs::read(&path)
         .unwrap_or_else(|e| panic!("corpus fixture {} must be readable: {e}", path.display()));
-    Engine::in_memory().load_cxf(&bytes)
+    Engine::new().load_cxf(&bytes).map(|(report, _)| report)
 }
 
 /// Deterministically sorted `*.jsonld` listing of one corpus subdirectory.
@@ -249,7 +249,8 @@ fn sorted_composite_listing(subdir: &str) -> Vec<String> {
 /// shared import machinery, whose messages carry no `composite/` tag) plus the exact ordered
 /// (code, subject, message) triples `Engine::load_cxf` must surface. Subjects appear only where
 /// the contract defines one — the pure-cycle zero-root rejection carries `None`. Most fixtures
-/// pin one triple; `diamond_cycle` pins two (one per cycle re-entry).
+/// pin one triple; `diamond_cycle` pins two (its cycle, then the untagged single-parent refusal
+/// of the second path's reach).
 type CompositeRejection = (
     &'static str,
     Option<&'static str>,
@@ -309,9 +310,9 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 18] = [
         )],
     ),
     (
-        // ONE structural cycle {A, C} reachable via TWO containsBlock paths: the k-re-entry
-        // contract end-to-end — one truthful path-ordered diagnostic per re-entry, in
-        // post-finalize_diags subject order.
+        // ONE structural cycle {A, C} reachable via TWO containsBlock paths, end-to-end: the
+        // first path reports the cycle, and the second path's reach of C is refused as the
+        // untagged `shared-instance` single-parent machinery (issue #365).
         "diamond_cycle.jsonld",
         Some("contains-cycle"),
         &[
@@ -322,10 +323,11 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 18] = [
                  http://example.org#A -> http://example.org#C -> http://example.org#A",
             ),
             (
-                DiagCode::MalformedDocument,
+                DiagCode::SharedInstance,
                 Some("http://example.org#C"),
-                "composite/contains-cycle: cycle in nested composite containsBlock graph: \
-                 http://example.org#C -> http://example.org#A -> http://example.org#C",
+                "containsBlock child http://example.org#C is reached a second time (listed \
+                 again by http://example.org#B); a CDL component instance has exactly one \
+                 parent, so the second reach is refused rather than expanded again",
             ),
         ],
     ),
@@ -479,14 +481,24 @@ fn composite_rejections() -> Vec<CompositeRejection> {
 /// Every warned corpus fixture with its exact ordered warning triples — the generalized
 /// end-to-end warned driver's table, keyed by file the way `COMPOSITE_REJECTIONS` is.
 fn composite_warnings() -> Vec<CompositeWarning> {
-    let mut rows: Vec<CompositeWarning> = vec![(
-        "undriven_boundary_output.jsonld",
-        &[(
-            DiagCode::UndrivenBoundaryOutput,
-            Some("http://example.org#M.y"),
-            "declared boundary output has no internal driver",
-        )],
-    )];
+    let mut rows: Vec<CompositeWarning> = vec![
+        (
+            "undriven_boundary_output.jsonld",
+            &[(
+                DiagCode::UndrivenBoundaryOutput,
+                Some("http://example.org#M.y"),
+                "declared boundary output has no internal driver",
+            )],
+        ),
+        (
+            "unused_boundary_input.jsonld",
+            &[(
+                DiagCode::UnusedBoundaryInput,
+                Some("http://example.org#M.v"),
+                "declared boundary input is read by no connection",
+            )],
+        ),
+    ];
     rows.extend(conformance_member_pins::MEMBER_WARNINGS);
     rows
 }
@@ -497,7 +509,8 @@ fn composite_contract_rejections_carry_their_pinned_tagged_triples_end_to_end() 
     // surfaces exactly its ordered (code, subject, message) triples, and every tagged rule's
     // message begins with the `composite/<rule-id>: ` tag the catalog publishes for it. An
     // untagged (`None`) entry is shared import machinery: its message must NOT wear a contract
-    // tag it has no catalog row for.
+    // tag it has no catalog row for. The untagged `shared-instance` single-parent refusal may
+    // accompany a tagged rule (the diamond fixture); it never wears a tag either way.
     for (file, rule_id, expected) in composite_rejections() {
         let err = load_composite_fixture(&format!("rejected/{file}"))
             .expect_err("every rejected corpus fixture must fail to load");
@@ -516,7 +529,13 @@ fn composite_contract_rejections_carry_their_pinned_tagged_triples_end_to_end() 
             Some(rule_id) => {
                 let prefix = format!("composite/{rule_id}: ");
                 assert!(
-                    signature.iter().all(|(_, _, msg)| msg.starts_with(&prefix)),
+                    signature.iter().all(|(code, _, msg)| {
+                        if *code == DiagCode::SharedInstance {
+                            !msg.starts_with("composite/")
+                        } else {
+                            msg.starts_with(&prefix)
+                        }
+                    }),
                     "rejected/{file}: every contract rejection must start with {prefix:?}"
                 );
             }
@@ -620,7 +639,7 @@ fn full_pipeline_trace_is_bit_deterministic() {
     // exit #4 through the WHOLE pipeline: two independent load_cxf + multi-tick runs produce a
     // bit-identical output trace (complements resolve_golden's resolver-only render compare).
     let run = || {
-        let mut eng = Engine::in_memory();
+        let mut eng = Engine::new();
         eng.load_cxf(MINIMAL_LOOP.as_bytes()).expect("loads");
         let mut frames = Vec::new();
         for k in 0..6 {

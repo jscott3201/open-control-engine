@@ -13,6 +13,31 @@ fn r(x: f64) -> Sample {
     Sample::Real(x)
 }
 
+/// IEEE 754-2019 `minimum` for non-NaN operands: the smaller value, with `-0.0` ordered below
+/// `+0.0`. Written out because `f64::min` leaves the sign of a zero result unspecified, so it
+/// differs between x86_64 and aarch64 and would make these goldens platform-dependent.
+fn ieee_minimum(a: f64, b: f64) -> f64 {
+    if a == b {
+        if a.is_sign_negative() { a } else { b }
+    } else if a < b {
+        a
+    } else {
+        b
+    }
+}
+
+/// IEEE 754-2019 `maximum` for non-NaN operands: the larger value, with `+0.0` ordered above
+/// `-0.0`. See [`ieee_minimum`] for why `f64::max` is not used.
+fn ieee_maximum(a: f64, b: f64) -> f64 {
+    if a == b {
+        if a.is_sign_negative() { b } else { a }
+    } else if a > b {
+        a
+    } else {
+        b
+    }
+}
+
 fn input_r(name: &'static str, values: impl IntoIterator<Item = f64>) -> InputSeries {
     InputSeries::new(name, ValueKind::Real, values.into_iter().map(r).collect())
 }
@@ -44,7 +69,11 @@ pub fn goldens() -> Vec<Golden> {
                 "params nin=3, k=[0.1,1,-0.1]; u rows include a non-associative cancellation probe",
                 "y = sum_i k[i]*u[i] in declaration order; empty reduction identity is 0",
             )
-            .with_inputs(vec![input_r("u1", u1), input_r("u2", u2), input_r("u3", u3)]),
+            .with_inputs(vec![
+                input_r("u1", u1),
+                input_r("u2", u2),
+                input_r("u3", u3),
+            ]),
         );
     }
 
@@ -73,7 +102,7 @@ pub fn goldens() -> Vec<Golden> {
             .iter()
             .zip(u2)
             .zip(u3)
-            .map(|((&a, b), c)| r(a.min(b).min(c)))
+            .map(|((&a, b), c)| r(ieee_minimum(ieee_minimum(a, b), c)))
             .collect();
         out.push(
             Golden::new(
@@ -85,7 +114,11 @@ pub fn goldens() -> Vec<Golden> {
                 "param nin=3; finite Real rows cover first/middle/tie selections and signed zero",
                 "y = min(u) over u[1:nin]; empty reduction identity is +Inf",
             )
-            .with_inputs(vec![input_r("u1", u1), input_r("u2", u2), input_r("u3", u3)]),
+            .with_inputs(vec![
+                input_r("u1", u1),
+                input_r("u2", u2),
+                input_r("u3", u3),
+            ]),
         );
     }
 
@@ -113,7 +146,7 @@ pub fn goldens() -> Vec<Golden> {
             .iter()
             .zip(u2)
             .zip(u3)
-            .map(|((&a, b), c)| r(a.max(b).max(c)))
+            .map(|((&a, b), c)| r(ieee_maximum(ieee_maximum(a, b), c)))
             .collect();
         out.push(
             Golden::new(
@@ -125,7 +158,11 @@ pub fn goldens() -> Vec<Golden> {
                 "param nin=3; finite Real rows cover last/middle/tie selections and signed zero",
                 "y = max(u) over u[1:nin]; empty reduction identity is -Inf",
             )
-            .with_inputs(vec![input_r("u1", u1), input_r("u2", u2), input_r("u3", u3)]),
+            .with_inputs(vec![
+                input_r("u1", u1),
+                input_r("u2", u2),
+                input_r("u3", u3),
+            ]),
         );
     }
 
@@ -145,4 +182,19 @@ pub fn goldens() -> Vec<Golden> {
     }
 
     out
+}
+
+#[cfg(test)]
+mod signed_zero_tests {
+    use super::{ieee_maximum, ieee_minimum};
+
+    #[test]
+    fn signed_zeros_order_negative_below_positive_in_either_operand_order() {
+        assert_eq!(ieee_minimum(-0.0, 0.0).to_bits(), (-0.0_f64).to_bits());
+        assert_eq!(ieee_minimum(0.0, -0.0).to_bits(), (-0.0_f64).to_bits());
+        assert_eq!(ieee_maximum(-0.0, 0.0).to_bits(), 0.0_f64.to_bits());
+        assert_eq!(ieee_maximum(0.0, -0.0).to_bits(), 0.0_f64.to_bits());
+        assert_eq!(ieee_minimum(-8.0, -7.5), -8.0);
+        assert_eq!(ieee_maximum(-8.0, -7.5), -7.5);
+    }
 }

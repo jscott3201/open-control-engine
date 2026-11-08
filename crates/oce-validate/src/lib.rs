@@ -8,7 +8,7 @@
 //! `oce-validate` — the authoritative **deep load-conformance gate** for the Open Control Engine.
 //!
 //! After the `oce-cxf` resolver's minimal structural fail-fast (duplicate `@id`, unresolved
-//! endpoints, CXF interface arity) and `oce-flatten`'s array normalization, this crate is the gate
+//! endpoints, CXF interface arity) and its array-parameter normalization, this crate is the gate
 //! that decides whether a flattened [`ModelGraph`] may be built and ticked. It enforces:
 //!
 //! 1. **Arena id integrity**: every `BlockId` is dense/unique, every connector's owning block id is
@@ -31,6 +31,19 @@
 //!    [`oce_diag::DiagCode::UnitQuantityMismatch`] / [`oce_diag::DiagCode::BoundMismatch`] — and
 //!    propagation when one-sided, R13.1/R13.2); divergent `displayUnit` is an advisory
 //!    `should`-warning (R13.3); `nominal`/`unbounded` are the only attributes not unified (R13.4).
+//! 7. **Finite numeric attributes**: every Real connector and boundary declaration `min`, `max`
+//!    and `nominal` is finite ([`oce_diag::DiagCode::NonFiniteBound`]); checked before
+//!    unification, which would otherwise compare and propagate a `NaN` bound. In the same pass,
+//!    every bound pair must be uncrossed (`min <= max`, [`oce_diag::DiagCode::CrossedBounds`]),
+//!    on each connector and declaration and across a boundary input and the child inputs it
+//!    drives; a crossing created by propagation is refused after unification (issue #378).
+//! 8. **Parameter finiteness** (issue #362): every Real parameter value on every block, including
+//!    each flattened element of a Real array parameter, must be finite — `NaN`/`±inf` is a
+//!    [`oce_diag::DiagCode::NonFiniteParameter`] error regardless of class. It suppresses **all**
+//!    of that block's class-level parameter rules (which presume finite operands) — range and
+//!    ordering rules, but also its `MissingRequiredParameter`, `ParameterKindMismatch` and
+//!    array/matrix/time-table shape diagnostics — so those surface only once the non-finite value
+//!    is fixed. The load fails either way. See [`parameter_value_is_finite`].
 //!
 //! It reports problems in the **shared `oce-diag` vocabulary** (AD-4) — the same
 //! [`oce_diag::Diagnostic`] the resolver emits — so `oce-api`'s `LoadReport.warnings` is one
@@ -52,7 +65,7 @@
 //! from CXF feeds this gate, and hand-built tests exercise the unification rules directly.
 
 use oce_diag::Diagnostic;
-use oce_model::ModelGraph;
+use oce_model::{ModelGraph, Value};
 
 mod rules;
 
@@ -68,6 +81,19 @@ pub struct ValidationError {
     pub diagnostics: Vec<Diagnostic>,
 }
 
+/// Whether `value` satisfies the engine-wide parameter finiteness rule (issue #362).
+///
+/// Every Real parameter value must be finite: `NaN`, `+inf` and `-inf` return `false`. Every
+/// non-Real value (Integer, Boolean, String, Enum) returns `true`, because none of those domains
+/// has a non-finite member; an Integer promoted to Real is always finite. This one predicate backs
+/// both the load gate ([`validate`], which reports
+/// [`oce_diag::DiagCode::NonFiniteParameter`]) and `oce-api`'s tune-at-rest `set_param`, so the
+/// two cannot disagree. Pure, total and panic-free.
+#[must_use]
+pub fn parameter_value_is_finite(value: &Value) -> bool {
+    !matches!(value, Value::Real(v) if !v.is_finite())
+}
+
 /// Validate a flattened model **without mutating it** (the structural, type, and parameter gates
 /// above).
 ///
@@ -80,6 +106,8 @@ pub fn validate(model: &ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> 
     let mut diags = Vec::new();
     rules::check_arena_ids(model, &mut diags);
     rules::check_boundary_outputs(model, &mut diags);
+    rules::check_finite_bounds(model, &mut diags);
+    rules::check_crossed_bounds(model, &mut diags);
     rules::check_single_assignment(model, &mut diags);
     rules::check_connections(model, &mut diags);
     rules::check_port_types(model, &mut diags);
@@ -90,17 +118,30 @@ pub fn validate(model: &ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> 
 /// Run §7.10 attribute unification (doc 02 §9 R13.1–R13.3), **mutating** the graph to propagate a
 /// one-sided unit, quantity, or bound to its unset connector and boundary-output peers (R13.2).
 ///
+/// A non-finite `min`, `max` or `nominal` is refused first, as
+/// [`oce_diag::DiagCode::NonFiniteBound`], and so is a crossed `min > max`, as
+/// [`oce_diag::DiagCode::CrossedBounds`]; then nothing is unified or propagated. A crossing that
+/// propagation itself creates (one member's `min` meeting another's `max`) is refused after
+/// propagation, and the propagation is rolled back.
+///
 /// Returns the `should`-level warnings (e.g. divergent `displayUnit`, R13.3) on success, or a
 /// [`ValidationError`] of unit, quantity, or bound conflicts (R13.1) on failure. Order-independent (a
 /// gather-then-decide cluster algorithm) and panic-free on any graph. Failure is transactional: no
 /// connector or boundary-output attribute propagation remains applied.
 ///
 /// # Errors
-/// Returns [`ValidationError`] if any cluster declares conflicting unit, quantity, or bound values
-/// (R13.1).
+/// Returns [`ValidationError`] if any Real attribute is non-finite, if any bound pair is crossed,
+/// or if any cluster declares
+/// conflicting unit, quantity, or bound values (R13.1).
 pub fn unify_attributes(model: &mut ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> {
     let mut diags = Vec::new();
-    rules::unify_clusters(model, &mut diags);
+    // Unification compares and propagates bounds, so a non-finite one is refused first: it is
+    // the root cause, and a NaN bound would otherwise also surface as a bound mismatch.
+    rules::check_finite_bounds(model, &mut diags);
+    rules::check_crossed_bounds(model, &mut diags);
+    if diags.is_empty() {
+        rules::unify_clusters(model, &mut diags);
+    }
     finish(model, diags)
 }
 

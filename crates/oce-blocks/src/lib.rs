@@ -46,6 +46,7 @@ mod reals_comparators;
 mod reals_filters;
 mod reals_integrator;
 mod reals_matrix;
+mod reals_moving_average;
 mod reals_ramp;
 mod reals_sources;
 mod reals_transcendental;
@@ -91,9 +92,10 @@ pub use reals_arithmetic::{
     MultiplyByParameter, Round, Sqrt, Subtract, Switch,
 };
 pub use reals_comparators::{Greater, GreaterThreshold, Hysteresis, Less, LessThreshold};
-pub use reals_filters::{Derivative, LimitSlewRate, MovingAverage};
+pub use reals_filters::{Derivative, LimitSlewRate};
 pub use reals_integrator::IntegratorWithReset;
 pub use reals_matrix::{MatrixGain, MatrixMax, MatrixMin, MatrixReductionAxis, Sort};
+pub use reals_moving_average::MovingAverage;
 pub use reals_ramp::Ramp;
 pub use reals_sources::{CalendarTime, CivilTime, SourceRamp, SourceSin};
 pub use reals_transcendental::{Acos, Asin, Atan, Atan2, Cos, Exp, Log, Log10, Sin, Tan};
@@ -285,7 +287,7 @@ impl Diagnostics for NoopDiagnostics {
 /// The trait is **`Send + Sync`** (R-API-PY-2 / `08` R-ENG-1): a block holds only resolved
 /// parameters — plain owned `f64`/`bool` data, no `Rc`/`RefCell`/raw pointers (per-instance mutable
 /// `[S]` state lives in the engine's `RunState`, never here) — so `Box<dyn Block>` is `Send + Sync`
-/// and the frozen schedule is shareable across host threads as `Arc<Engine<S>>`. The bound is a
+/// and the frozen schedule is shareable across host threads as `Arc<oce_api::Engine>`. The bound is a
 /// zero-cost marker; it is what lets `oce-api`'s `_assert_send_sync` compile.
 pub trait Block: Send + Sync {
     /// Class-level interface descriptor. For fixed-width classes this is the same shape used at
@@ -796,6 +798,9 @@ mod reals_filters_derivative_tests;
 
 #[cfg(test)]
 mod reals_filters_tests;
+
+#[cfg(test)]
+mod reals_moving_average_tests;
 
 #[cfg(test)]
 mod reals_ramp_tests;

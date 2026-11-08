@@ -150,7 +150,9 @@ class IndexTests(unittest.TestCase):
         validate(wrong)
         wrong["supersession"][1]["superseded_by"] = wrong["supersession"][0]["id"]
         self.rejects(wrong, "cycle")
-        for position in range(4):
+        for position, row in enumerate(self.index["supersession"]):
+            if row["authority_path"] is None:
+                continue
             wrong = copy.deepcopy(self.index)
             wrong["supersession"][position]["authority_path"] = None
             self.rejects(wrong, "binding")
@@ -164,7 +166,7 @@ class SourceTests(unittest.TestCase):
         cls.live = Repository(ROOT)
         cls.index, cls.observed = observe(cls.live)
         cls.golden = (ROOT / OUTPUT).read_bytes()
-        paths = {INDEX, OUTPUT, "crates/oce-api/tests/public-api.txt", "crates/oce-store/tests/public-api.txt"}
+        paths = {INDEX, OUTPUT}
         for _, source, verifier in BINDINGS.values():
             paths.add(verifier)
             if (ROOT / source).is_file():
@@ -223,9 +225,9 @@ class SourceTests(unittest.TestCase):
             self.assertEqual((self.root / OUTPUT).read_bytes(), wrong)
 
     def test_changed_owner_requires_explicit_regeneration_not_self_bless(self):
-        name = BINDINGS["public-surface"][1]
+        name = BINDINGS["catalog-source"][1]
         owner = self.repo.json(name)
-        owner["baselines"][0]["item_count"] += 1
+        owner["fetched_at"] += " (changed owner fixture)"
         self.write_json(name, owner)
         before = {p: (self.root / p).read_bytes() for p in self.seed}
         with patch.object(check, "Repository", return_value=self.repo):
@@ -236,7 +238,7 @@ class SourceTests(unittest.TestCase):
         after = {p: (self.root / p).read_bytes() for p in self.seed}
         self.assertEqual({p for p in before if before[p] != after[p]}, {OUTPUT})
         self.assertNotEqual(after[OUTPUT], self.golden)
-        # Native/public owner validation remains REQUIRED even after --write.
+        # Native and delegated owner validation remains REQUIRED even after --write.
 
     def test_every_delegated_fact_mutation_changes_projection(self):
         for identity, (mode, name, _) in BINDINGS.items():
@@ -276,22 +278,24 @@ class SourceTests(unittest.TestCase):
                     observe(self.repo)
             (self.root / name).write_bytes(self.seed[name])
 
-    def test_public_descriptor_redirects_and_wrong_types_fail(self):
-        name = BINDINGS["public-surface"][1]
-        for field, value in [("path", "TESTING.md"), ("sha256", "0"),
-                             ("item_count", True), ("id", "unknown")]:
-            owner = parse(self.seed[name])
-            owner["baselines"][0][field] = value
-            self.write_json(name, owner)
-            with self.assertRaises(ClaimError):
-                observe(self.repo)
+    def test_catalog_source_identity_and_wrong_types_fail(self):
+        name = BINDINGS["catalog-source"][1]
+        for field, value in [("schema_version", True), ("schema_version", 2), ("commit", "0"),
+                             ("catalog_fingerprint", "0"), ("repository", ""), ("notes", [])]:
+            with self.subTest(field=field, value=value):
+                owner = parse(self.seed[name])
+                owner[field] = value
+                self.write_json(name, owner)
+                with self.assertRaises(ClaimError):
+                    observe(self.repo)
+        (self.root / name).write_bytes(self.seed[name])
 
     def test_paths_reject_escape_ignored_untracked_and_symlinks(self):
         for name in ["/etc/passwd", "docs/../TESTING.md", "docs//x", "./TESTING.md",
                      "docs\\x", "_spec/hidden", "docs/unknown.json"]:
             with self.assertRaisesRegex(ClaimError, "path:"):
                 self.repo.path(name)
-        for name in [INDEX, BINDINGS["public-surface"][1]]:
+        for name in [INDEX, BINDINGS["catalog-source"][1]]:
             path = self.root / name
             path.unlink()
             with self.assertRaisesRegex(ClaimError, "regular file missing"):

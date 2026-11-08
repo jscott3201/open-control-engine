@@ -55,7 +55,7 @@ impl fmt::Display for CatalogContentId {
 /// ```
 ///
 /// ```compile_fail,E0308
-/// let model_id = oce_api::oce_store::DomainKey::new("authored-model");
+/// let model_id = oce_api::DomainKey::new("authored-model");
 /// let _: oce_api::CompleteExportContentId = model_id;
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -92,7 +92,7 @@ impl fmt::Display for CompleteExportContentId {
 /// let receipt = oce_api::CompatibilityDescriptor::current(None)?;
 /// let bytes = receipt.to_string();
 /// assert!(bytes.starts_with("oce-compatibility:1\ncatalog-schema:1\n"));
-/// assert!(bytes.ends_with("oce-api-version:0.2.0\nexport:none\n"));
+/// assert!(bytes.ends_with("oce-api-version:0.3.0\nexport:none\n"));
 /// receipt.check_compatible(&receipt)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
@@ -101,7 +101,7 @@ impl fmt::Display for CompleteExportContentId {
 /// `parameter-schema`, `execution-profile`, `execution-profile-schema`, `oce-api-version`, `export`.
 /// `execution-profile` is exactly `HostTick-v1`; its separate descriptor revision is currently 2.
 /// `oce-api-version` includes the exact Cargo version, including any pre-release/build suffix.
-/// The three supported feature selections are equivalent and are intentionally not distinguished.
+/// `oce-api` declares no cargo features, so there is no feature selection to distinguish.
 /// Package version is NOT a source/dependency-lock/compiler/target/codegen/binary identity. Equal
 /// facts, especially on unpublished same-version builds, do not establish execution equivalence,
 /// cross-platform numerics, restore eligibility, release compatibility or authority to actuate.
@@ -131,7 +131,7 @@ impl CompatibilityDescriptor {
     ///
     /// `None` records no export, not an empty or failed export. A supplied report is checked before
     /// catalog work. Retain this owned value across engine/report mutation; capture again after
-    /// re-export if new content is wanted. No Engine/Store access or state capture occurs. Allocates
+    /// re-export if new content is wanted. No Engine access or state capture occurs. Allocates
     /// bounded tags; the first success also initializes the cached catalog tag.
     ///
     /// # Errors

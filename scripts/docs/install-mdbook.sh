@@ -35,18 +35,38 @@ if [ -z "$expected" ]; then
   exit 1
 fi
 
+expected_binary=$(awk -v key="${archive}:mdbook" '$2 == key { print $1 }' "$checksum_file")
+if [ -z "$expected_binary" ]; then
+  echo "no pinned binary checksum for $archive" >&2
+  exit 1
+fi
+
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{ print $1 }'
+  else
+    shasum -a 256 "$1" | awk '{ print $1 }'
+  fi
+}
+
 destination=${1:-"$repo_root/target/mdbook-bin"}
+
+# Idempotent and self-verifying: a binary already at the destination (a CI cache restore, or an
+# earlier local run) is trusted only if its digest equals the pinned binary digest. Anything else
+# falls through to a fresh download that is verified against the pinned archive digest.
+if [ -f "$destination/mdbook" ] && [ "$(sha256_of "$destination/mdbook")" = "$expected_binary" ]; then
+  echo "mdbook v${version} already present and verified"
+  echo "verified SHA-256 $expected_binary  $destination/mdbook"
+  exit 0
+fi
+
 download_dir=$(mktemp -d "${TMPDIR:-/tmp}/open-control-mdbook.XXXXXX")
 trap 'rm -rf -- "$download_dir"' EXIT
 archive_path="$download_dir/$archive"
 download_url="https://github.com/rust-lang/mdBook/releases/download/v${version}/${archive}"
 
 curl --fail --location --retry 3 --silent --show-error --output "$archive_path" "$download_url"
-if command -v sha256sum >/dev/null 2>&1; then
-  actual=$(sha256sum "$archive_path" | awk '{ print $1 }')
-else
-  actual=$(shasum -a 256 "$archive_path" | awk '{ print $1 }')
-fi
+actual=$(sha256_of "$archive_path")
 
 if [ "$actual" != "$expected" ]; then
   echo "mdBook checksum mismatch for $archive: expected $expected, got $actual" >&2
@@ -54,6 +74,11 @@ if [ "$actual" != "$expected" ]; then
 fi
 
 tar -xzf "$archive_path" -C "$download_dir"
+extracted=$(sha256_of "$download_dir/mdbook")
+if [ "$extracted" != "$expected_binary" ]; then
+  echo "mdBook binary checksum mismatch for $archive: expected $expected_binary, got $extracted" >&2
+  exit 1
+fi
 mkdir -p "$destination"
 install -m 0755 "$download_dir/mdbook" "$destination/mdbook"
 

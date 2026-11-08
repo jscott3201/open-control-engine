@@ -8,8 +8,7 @@ use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
 const KELVIN_OFFSET: f64 = 273.15;
 const DEFAULT_TICKS: [f64; 13] = [
-    0.0, 60.0, 120.0, 180.0, 240.0, 300.0, 360.0, 420.0, 480.0, 540.0, 600.0,
-    660.0, 720.0,
+    0.0, 60.0, 120.0, 180.0, 240.0, 300.0, 360.0, 420.0, 480.0, 540.0, 600.0, 660.0, 720.0,
 ];
 const PRESSURE_TICKS: [f64; 7] = [0.0, 60.0, 120.0, 180.0, 240.0, 300.0, 360.0];
 
@@ -134,6 +133,9 @@ pub fn goldens() -> Vec<Golden> {
     ]
 }
 
+// The flat argument list mirrors `Golden::new` plus the per-family inputs; bundling it into a
+// one-use struct would only rename the arguments.
+#[allow(clippy::too_many_arguments)]
 fn psychrometric(
     class_path: &'static str,
     signal: &'static str,
@@ -160,10 +162,7 @@ fn psychrometric(
         input_desc,
         rule_desc,
     )
-    .with_inputs(vec![
-        input_r("TDryBul", t_dry_bulb),
-        input_r("phi", phi),
-    ])
+    .with_inputs(vec![input_r("TDryBul", t_dry_bulb), input_r("phi", phi)])
     .with_provenance(
         "math_library",
         "libm 0.2.16, default-features=false, pure Rust deterministic math",
@@ -238,9 +237,7 @@ fn saturation_pressure_liquid(t_sat: f64) -> f64 {
 
 fn sublimation_pressure_ice(t_sat: f64) -> f64 {
     let r1 = t_sat / 273.16;
-    let exponent = -13.928_169_0
-        - (-13.928_169_0) * libm::pow(r1, -1.5)
-        + 34.707_823_8
+    let exponent = -13.928_169_0 - (-13.928_169_0) * libm::pow(r1, -1.5) + 34.707_823_8
         - 34.707_823_8 * libm::pow(r1, -1.25);
     libm::exp(exponent) * 611.657
 }

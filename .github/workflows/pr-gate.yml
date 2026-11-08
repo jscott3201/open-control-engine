@@ -1,34 +1,68 @@
 # Per-PR gate for open-control (the Open Control Engine) — runs on GitHub Actions for PRs into
-# `development` and for every push to `development`.
+# `development` (and on manual dispatch). It runs once per change: there is no `push` trigger, so a
+# merge into `development` does not re-run it on the tree the PR already proved. Branch protection
+# requires `CI OK` with the branch up to date with `development`, and release-gate.yml runs daily on
+# the `development` tip as the safety net. check-workflow-gates.sh refuses a `push` trigger here.
 #
 # Workflow model: every logical change opens a PR into `development` behind this gate; releases
 # batch `development` -> `main`, where .github/workflows/release-gate.yml runs the heavy gate.
 #
 # This per-PR gate is the LIGHT gate: the near-instant checks plus the compile-requiring lints
 # (clippy -D warnings), a workspace build, rustdoc, cargo-machete, cargo-deny, gate-script behavior
-# fixtures, the package/feature/publication contract, stale crate-status header lint, the targeted
-# cross-arch determinism subset for oce-api/oce-blocks/oce-expr, the scoped strict-bit matrix, and
-# `bash .agents/gate.sh` executed as a coverage backstop. It does NOT run the full workspace test
-# suite — that lives in release-gate.yml.
+# fixtures, the package/feature/publication contract, stale crate-status header lint, golden-gen
+# hygiene and golden freshness, the targeted
+# cross-arch determinism subset for oce-api/oce-blocks/oce-expr, the macOS arm64 portable-snapshot
+# and Windows std build/nextest platform cells, the x86_64 debug suites of
+# oce-graph/oce-validate/oce-model/oce-cxf, the documentation checks
+# (staging, mdBook build, links), the scoped strict-bit matrix, the facade contract and Quickstart,
+# the leverage lane, and `bash .agents/gate.sh` executed as a coverage backstop when the gate's own
+# definition changes. It does NOT run the full workspace test suite — the remaining crates and the
+# release-codegen runs of the suites above live in release-gate.yml.
+#
+# Lanes (issue #393). The `changes` job classifies the PR's changed paths
+# (scripts/ci/classify-changes.sh, fail-closed: a path no allowlist matches counts as engine):
+#   * core — the determinism lane: every compiling job below. Runs for any path that is not
+#     docs-only or under crates/leverage/, including every gate script and workflow change.
+#   * leverage — the `leverage-lane` job. Runs for crates/leverage/** and for every core change.
+#   * gate_scripts — `gate (light)`. Runs only when .agents/gate.sh, .github/scripts/**, scripts/**
+#     (outside scripts/docs/), .github/workflows/** or .config/** change; it implies core.
+#   * always — changes, fmt, file-size cap, no-secret scan, docs, gate fixtures and the
+#     package/authority/product contract (its checks read the documentation), and CI OK.
+# A lane-filtered job has exactly one job-level `if:`, `needs.changes.outputs.<lane> == 'true'`.
 #
 # Topology:
-#   * Every job runs on a GitHub-hosted x86_64 runner. The aarch64 legs of the determinism and
-#     strict-bit matrices are cross-compiled and run under QEMU user-mode emulation inside the
-#     x86_64 job, so the byte-for-byte cross-architecture comparisons run on every PR without
-#     artifact transfer between jobs. Emulated aarch64 results are CI signal, NOT native aarch64
-#     evidence; the retained native qualification (crates/oce-conformance/tests/fixtures/
-#     strict_bits/qualified-linux) is still verified by the strict-bit test binary in every cell.
-#   * Every job runs on every PR, drafts included, and no gating job carries a job-level `if:`:
-#     `CI OK` accepts only `success`, so a skipped gate would read as a failure.
-#   * cargo-deny `bans licenses sources` runs unconditionally; there is no paths-filter job.
+#   * The determinism and strict-bit matrices run in four native cells each: x86_64 on
+#     `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm`, in debug and release codegen. Nothing is
+#     emulated. The cross-architecture byte comparisons run in fan-in jobs (determinism-compare,
+#     strict-bit-compare) over artifacts the cells upload. The per-PR native strict-bit matrix is
+#     the standing native evidence; no retained receipt admits or skips any check.
+#   * Two platform observation cells run with the determinism lane: `portable-snapshot-macos`
+#     (`macos-15`, arm64, debug) runs the determinism subset, and portable-snapshot-compare checks
+#     that its portable snapshot equals the Linux cells' byte for byte and its target-bound
+#     snapshot differs; `std-build-windows` (`windows-latest`) builds the workspace and runs its
+#     nextest suite without the strict-bit binaries. Neither qualifies its platform: strict bits
+#     stay Linux-only. They are in this file because a job in another workflow cannot feed CI OK.
+#   * No job or step sets `continue-on-error`, and the only step-level `if:` shapes are a static
+#     matrix selector and `${{ !cancelled() }}` on an evidence upload (check-workflow-gates.sh).
+#   * A runner type that is unavailable leaves its cells queued, so `CI OK` never reports and the
+#     PR cannot merge. There is no fallback to emulation and no silent skip.
+#   * Every job has `timeout-minutes: 45`, so a stalled download or hung step fails the job instead
+#     of waiting for the platform's six-hour limit. Artifact uploads set `overwrite: true`, so a
+#     re-run of all jobs re-uploads the same names into the same run.
+#   * Jobs with the same build shape in this file and release-gate.yml share a rust-cache
+#     `shared-key`, so the daily release-gate run on the `development` tip seeds the default-branch
+#     cache scope that every PR can read (PR runs save only into their own scope).
+#   * Every PR runs this workflow, drafts included. A job is skipped only by its lane filter, and
+#     `CI OK` accepts that skip only when the `changes` output gating it is 'false'
+#     (scripts/ci/ci_ok.py); any other skip reads as a failure. cargo-deny `bans licenses sources`
+#     runs with the determinism lane.
 #   * `CI OK` at the bottom is the single required status for branch protection on `development`.
 #   * Third-party actions are pinned to full commit SHAs (the trailing comment names the tag), and
 #     checkouts do not persist the job token.
 #
 # .github/workflows/ci.yml is NOT this workflow. It is the GitHub-era gate that produced the
-# retained native strict-bit captures and stays byte-identical as a bound source of that evidence
-# (crates/oce-conformance/tests/strict_bits/evidence.rs); it is disabled in the repository's
-# Actions settings rather than edited or deleted.
+# retained native strict-bit capture archives; it stays byte-identical as history and is disabled
+# in the repository's Actions settings rather than edited or deleted.
 #
 # Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
 
@@ -37,8 +71,6 @@ name: pr-gate
 on:
   pull_request:
     branches: [development]
-  push:
-    branches: [development]
   workflow_dispatch:
 
 permissions:
@@ -46,7 +78,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  # Superseded PR pushes are cancelled; post-merge runs on `development` each finish.
+  # Superseded PR pushes are cancelled; manual dispatches each finish.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -65,9 +97,45 @@ defaults:
     shell: bash
 
 jobs:
+  # Lane filter (issue #393). Classifies the PR's changed paths with plain git and the fail-closed
+  # rules in scripts/ci/classify-changes.sh; every lane-filtered job below needs this job and runs
+  # only when its output is 'true'. The checkout is GitHub's merge of the PR head into its base, so
+  # its first parent is the base and `HEAD^1..HEAD` is exactly what the PR changes in the tree it
+  # tests (fetch-depth 2 reaches it). A manual dispatch, or a checkout that is not that two-parent
+  # merge, runs every lane.
+  changes:
+    name: classify changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      core: ${{ steps.classify.outputs.core }}
+      leverage: ${{ steps.classify.outputs.leverage }}
+      gate_scripts: ${{ steps.classify.outputs.gate_scripts }}
+      docs_only: ${{ steps.classify.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Classify the changed paths into lanes
+        id: classify
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = pull_request ] && [ "$(git rev-list --parents -n 1 HEAD | wc -w)" -eq 3 ]; then
+            git diff --no-renames --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed-paths"
+            echo "Changed paths:"
+            sed 's/^/  /' "$RUNNER_TEMP/changed-paths"
+            bash scripts/ci/classify-changes.sh < "$RUNNER_TEMP/changed-paths" | tee -a "$GITHUB_OUTPUT"
+          else
+            echo "::notice::$EVENT_NAME run without a PR merge checkout; every lane runs"
+            bash scripts/ci/classify-changes.sh --all | tee -a "$GITHUB_OUTPUT"
+          fi
+
   fmt:
     name: fmt
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -80,6 +148,7 @@ jobs:
   file-size-cap:
     name: file-size cap (700 LOC)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -89,6 +158,7 @@ jobs:
   no-secret-scan:
     name: no-secret scan
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -97,7 +167,10 @@ jobs:
 
   default-no-db:
     name: default build links no database / async runtime
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -105,12 +178,16 @@ jobs:
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: default-no-db
           cache-bin: false
       - run: bash .github/scripts/check-default-no-db.sh
 
   golden-gen-firewall:
     name: golden-gen anti-tautology firewall
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -118,9 +195,54 @@ jobs:
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
 
+  # tools/golden-gen is its own cargo workspace (off the root `members`), so no workspace fmt,
+  # clippy or test command reaches it. This job lints and tests the generator, then regenerates
+  # every Tier-A golden and fails if the checked-in tree differs from what the generator emits:
+  # a modified file fails `git diff`, a newly emitted file fails the porcelain check.
+  # CI-only for now: .agents/gate.sh does not run these yet; .agents/project-facts.md gives the
+  # local commands.
+  golden-gen-hygiene:
+    name: golden-gen hygiene and golden freshness
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+        working-directory: tools/golden-gen
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: tools/golden-gen -> target
+          cache-bin: false
+      - name: cargo fmt --check (golden-gen)
+        run: cargo fmt --check
+      - name: cargo clippy -D warnings (golden-gen)
+        run: cargo clippy --all-targets --locked -- -D warnings
+      - name: cargo test (golden-gen)
+        run: cargo test --locked
+      - name: Regenerate every golden (release)
+        run: cargo run --release --locked
+      - name: Checked-in goldens equal the regenerated goldens
+        run: |
+          git diff --exit-code --stat -- goldens
+          untracked="$(git status --porcelain -- goldens)"
+          if [ -n "$untracked" ]; then
+            printf 'FAIL: regeneration left changes under tools/golden-gen/goldens:\n%s\n' "$untracked"
+            exit 1
+          fi
+
   package-publication-contract:
     name: package, feature, and publication contract
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -142,10 +264,12 @@ jobs:
   gate-fixtures:
     name: gate behavior fixtures
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - name: no-db gate fixtures
         run: bash .github/scripts/test-check-default-no-db.sh
       - name: golden-gen firewall fixtures
@@ -158,10 +282,23 @@ jobs:
         run: bash .github/scripts/test-workflow-gates.sh
       - name: real workflow smoke
         run: bash .github/scripts/check-workflow-gates.sh
+      - name: gate-script coverage
+        run: bash .github/scripts/check-gate-script-coverage.sh
+      - name: gate-script coverage fixtures
+        run: bash .github/scripts/test-check-gate-script-coverage.sh
+      - name: lane classifier fixtures
+        run: bash scripts/ci/test-classify-changes.sh
+      - name: CI OK result-check controls
+        run: python3 scripts/ci/test_ci_ok.py
+      - name: leverage dependency-rule fixtures
+        run: bash scripts/ci/test-leverage-members.sh
 
   unused-deps:
     name: unused dependency gate (cargo-machete)
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -172,158 +309,484 @@ jobs:
           tool: cargo-machete
       - run: cargo machete
 
-  # x86_64 native legs, then the aarch64 legs under QEMU user-mode emulation, then the
-  # cross-architecture comparison — one job, so the state vectors never leave the workspace.
+  # Four native cells: (x86_64 on ubuntu-latest, aarch64 on ubuntu-24.04-arm) x (debug, release).
+  # Each runs the three-crate state-determinism subset under its own architecture and codegen and
+  # emits populated portable and target-bound state vectors; determinism-compare fans the vectors
+  # in. No cell is emulated, and none is skipped: a runner type that is unavailable leaves its cell
+  # queued and `CI OK` unreported, which blocks the merge rather than passing it.
   determinism-matrix:
-    name: determinism-matrix (x86_64 native, aarch64 emulated)
-    runs-on: ubuntu-latest
-    env:
-      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER: qemu-aarch64 -L /usr/aarch64-linux-gnu
-      QEMU_LD_PREFIX: /usr/aarch64-linux-gnu
+    name: determinism (${{ matrix.arch }}, ${{ matrix.codegen }})
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+        codegen: [debug, release]
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
-        with:
-          targets: aarch64-unknown-linux-gnu
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: nextest
           cache-bin: false
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143
-      - name: Install aarch64 cross linker and QEMU user-mode emulator
-        run: >-
-          sudo apt-get update -qq &&
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends
-          gcc-aarch64-linux-gnu libc6-dev-arm64-cross qemu-user
+      - name: Refuse a runner of the wrong architecture
+        env:
+          CELL_ARCH: ${{ matrix.arch }}
+        run: test "$(uname -m)" = "$CELL_ARCH"
       - name: Clear cached reports and state vectors
         run: >-
           rm -rf target/nextest/{ci,ci-release}/junit.xml
           target/{portable,target}-state-{debug,release}.bin
-          target/state-x86 target/state-arm &&
-          mkdir -p target/state-x86 target/state-arm
-      - name: cargo nextest determinism subset (x86_64)
+          target/determinism &&
+          mkdir -p target/determinism
+      - name: cargo nextest determinism subset (debug codegen)
+        if: matrix.codegen == 'debug'
         env:
           OCE_PORTABLE_STATE_OUT: target/portable-state-debug.bin
           OCE_TARGET_STATE_OUT: target/target-state-debug.bin
         run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
-      - name: cargo nextest determinism subset --release (x86_64)
+      - name: cargo nextest determinism subset (release codegen)
+        if: matrix.codegen == 'release'
         env:
           OCE_PORTABLE_STATE_OUT: target/portable-state-release.bin
           OCE_TARGET_STATE_OUT: target/target-state-release.bin
         run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
-      - name: Compare x86_64 snapshot bytes across codegen profiles
-        run: >-
-          cmp target/portable-state-debug.bin target/portable-state-release.bin &&
-          cmp target/target-state-debug.bin target/target-state-release.bin
-      - name: Require complete nextest JUnit report set (x86_64)
-        run: >-
-          for profile in ci ci-release;
-          do test -s "target/nextest/$profile/junit.xml";
-          done
-      - name: Stage x86_64 state vectors
-        run: cp target/portable-state-debug.bin target/target-state-debug.bin target/state-x86/
-      - name: Clear x86_64 nextest reports before the emulated legs
-        run: rm -f target/nextest/{ci,ci-release}/junit.xml
-      # The one excluded test re-executes its own test binary as a child process, which QEMU user
-      # mode cannot do without host binfmt registration. It probes OCE_BLESS environment
-      # truthiness, not state determinism, and runs in the x86_64 legs above.
-      - name: cargo nextest determinism subset (aarch64, emulated)
+      # The codegen steps above are selected by the matrix; this step fails a cell in which neither
+      # ran, so a matrix edit cannot turn a cell into a green no-op.
+      - name: Require the cell's nextest JUnit report and both state vectors
         env:
-          OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-debug.bin
-          OCE_TARGET_STATE_OUT: target/state-arm/target-state-debug.bin
+          CELL_CODEGEN: ${{ matrix.codegen }}
+        run: |
+          case "$CELL_CODEGEN" in
+            debug) profile=ci ;;
+            release) profile=ci-release ;;
+            *) echo "unknown codegen: $CELL_CODEGEN" >&2; exit 1 ;;
+          esac
+          test -s "target/nextest/$profile/junit.xml"
+          test -s "target/portable-state-$CELL_CODEGEN.bin"
+          test -s "target/target-state-$CELL_CODEGEN.bin"
+          cp "target/portable-state-$CELL_CODEGEN.bin" "target/target-state-$CELL_CODEGEN.bin" target/determinism/
+      # The debug cell of each architecture also ships its built oce-api unit-test binary, so the
+      # fan-in can restore the other architecture's target-bound snapshot without recompiling.
+      - name: Archive the oce-api unit tests for the foreign-snapshot restore
+        if: matrix.codegen == 'debug'
         run: >-
-          cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked
-          --target aarch64-unknown-linux-gnu --config-file "$PWD/scripts/ci/nextest-emulated.toml"
-          --profile ci --no-tests=fail
-          -E 'not test(=registry::manifest_tests::enabled_composition_is_covered_with_a_disabled_value)'
-      - name: cargo nextest determinism subset --release (aarch64, emulated)
-        env:
-          OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-release.bin
-          OCE_TARGET_STATE_OUT: target/state-arm/target-state-release.bin
-        run: >-
-          cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked
-          --target aarch64-unknown-linux-gnu --config-file "$PWD/scripts/ci/nextest-emulated.toml"
-          --profile ci-release --cargo-profile release --no-tests=fail
-          -E 'not test(=registry::manifest_tests::enabled_composition_is_covered_with_a_disabled_value)'
-      - name: Compare aarch64 snapshot bytes across codegen profiles
-        run: >-
-          cmp target/state-arm/portable-state-debug.bin target/state-arm/portable-state-release.bin &&
-          cmp target/state-arm/target-state-debug.bin target/state-arm/target-state-release.bin
-      - name: Require complete nextest JUnit report set (aarch64)
-        run: >-
-          for profile in ci ci-release;
-          do test -s "target/nextest/$profile/junit.xml";
-          done
-      - name: Compare portable snapshot bytes across architectures
-        run: >-
-          cmp target/state-x86/portable-state-debug.bin target/state-arm/portable-state-debug.bin &&
-          ! cmp -s target/state-x86/target-state-debug.bin target/state-arm/target-state-debug.bin
-      - name: Refuse a target-bound snapshot from the other architecture
-        env:
-          OCE_FOREIGN_TARGET_STATE_IN: target/state-arm/target-state-debug.bin
-        run: >-
-          cargo nextest run -p oce-api --lib --locked --profile ci --no-tests=fail
-          -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
+          cargo nextest archive -p oce-api --lib --locked
+          --archive-file target/determinism/oce-api-lib.tar.zst
+      - name: Upload the cell's state vectors
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: determinism-${{ matrix.arch }}-${{ matrix.codegen }}
+          path: target/determinism/
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
 
-  # Four cells (x86_64 native, aarch64 emulated) x (debug, release), each with two independent
-  # capture processes, then the eight-capture comparison — one job, no artifact hand-off. Every
-  # cell step runs even after an earlier cell fails, so one run reports every failing cell. The
-  # raw captures are not retained by CI.
-  strict-bit-matrix:
-    name: strict bits (x86_64 native, aarch64 emulated)
-    runs-on: ubuntu-latest
-    env:
-      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER: qemu-aarch64 -L /usr/aarch64-linux-gnu
-      QEMU_LD_PREFIX: /usr/aarch64-linux-gnu
+  # Fan-in over the four cells' vectors, once per architecture. Both legs compare every byte the
+  # cells produced (portable and target-bound bytes equal across codegen within an architecture,
+  # portable bytes equal and target-bound bytes different across architectures); each leg then
+  # parses the OTHER architecture's target-bound snapshot and refuses it through the public restore
+  # path, natively, with the oce-api unit tests its own architecture's debug cell built.
+  determinism-compare:
+    name: determinism cross-cell comparison (${{ matrix.arch }} restores ${{ matrix.foreign }})
+    needs: [changes, determinism-matrix]
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+            foreign: aarch64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+            foreign: x86_64
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
-          targets: aarch64-unknown-linux-gnu
+          tool: nextest@0.9.143
+      - name: Refuse a runner of the wrong architecture
+        env:
+          CELL_ARCH: ${{ matrix.arch }}
+        run: test "$(uname -m)" = "$CELL_ARCH"
+      - name: Clear cached state vectors
+        run: rm -rf target/determinism && mkdir -p target/determinism
+      - name: Download all four cells' state vectors
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: determinism-*
+          path: target/determinism
+      - name: Compare snapshot bytes across codegen profiles
+        working-directory: target/determinism
+        run: >-
+          cmp determinism-x86_64-debug/portable-state-debug.bin determinism-x86_64-release/portable-state-release.bin &&
+          cmp determinism-x86_64-debug/target-state-debug.bin determinism-x86_64-release/target-state-release.bin &&
+          cmp determinism-aarch64-debug/portable-state-debug.bin determinism-aarch64-release/portable-state-release.bin &&
+          cmp determinism-aarch64-debug/target-state-debug.bin determinism-aarch64-release/target-state-release.bin
+      - name: Compare portable snapshot bytes across architectures
+        working-directory: target/determinism
+        run: >-
+          cmp determinism-x86_64-debug/portable-state-debug.bin determinism-aarch64-debug/portable-state-debug.bin &&
+          ! cmp -s determinism-x86_64-debug/target-state-debug.bin determinism-aarch64-debug/target-state-debug.bin
+      - name: Refuse a target-bound snapshot from the other architecture
+        env:
+          CELL_ARCH: ${{ matrix.arch }}
+          FOREIGN_ARCH: ${{ matrix.foreign }}
+        run: |
+          test "$CELL_ARCH" != "$FOREIGN_ARCH"
+          export OCE_FOREIGN_TARGET_STATE_IN="$PWD/target/determinism/determinism-$FOREIGN_ARCH-debug/target-state-debug.bin"
+          test -s "$OCE_FOREIGN_TARGET_STATE_IN"
+          cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/oce-api-lib.tar.zst" \
+            --workspace-remap . --profile ci --no-tests=fail \
+            -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
+
+  # Platform observation cells (issue #394): macOS arm64 and Windows x86_64. They run with the
+  # determinism lane and CI OK requires them, but neither qualifies its platform: the strict-bit
+  # transcendentals stay Linux-qualified, and macOS and Windows keep the 1e-12 aligned band
+  # (docs/strict-bit-evidence.md). They live in this file, not a separate platforms workflow,
+  # because CI OK is the one required status and a job in another workflow cannot be in its needs.
+  #
+  # macOS arm64, debug codegen only: the same three-crate subset as a determinism cell, emitting
+  # populated portable and target-bound state vectors that portable-snapshot-compare checks against
+  # the Linux debug cells. It runs no strict-bit suite.
+  portable-snapshot-macos:
+    name: portable snapshot (macOS arm64, debug)
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: nextest-macos
           cache-bin: false
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143
-      - name: Install aarch64 cross linker and QEMU user-mode emulator
+      - name: Refuse a runner that is not macOS arm64
+        run: test "$(uname -s)-$(uname -m)" = Darwin-arm64
+      - name: Clear cached reports and state vectors
         run: >-
-          sudo apt-get update -qq &&
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends
-          gcc-aarch64-linux-gnu libc6-dev-arm64-cross qemu-user
+          rm -rf target/nextest/ci/junit.xml
+          target/{portable,target}-state-debug.bin
+          target/platform-snapshot &&
+          mkdir -p target/platform-snapshot
+      - name: cargo nextest determinism subset (debug codegen)
+        env:
+          OCE_PORTABLE_STATE_OUT: target/portable-state-debug.bin
+          OCE_TARGET_STATE_OUT: target/target-state-debug.bin
+        run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
+      - name: Require the nextest JUnit report and both state vectors
+        run: |
+          test -s target/nextest/ci/junit.xml
+          test -s target/portable-state-debug.bin
+          test -s target/target-state-debug.bin
+          cp target/portable-state-debug.bin target/target-state-debug.bin target/platform-snapshot/
+      - name: Upload the cell's state vectors
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: platform-snapshot-macos-arm64-debug
+          path: target/platform-snapshot/
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
+  # Fan-in for the macOS cell: its portable snapshot must equal the Linux x86_64 (and aarch64) debug
+  # portable snapshot byte for byte, and its target-bound snapshot must differ from both Linux
+  # architectures' (a target-bound snapshot records the compile target's architecture and OS). The
+  # negative checks are written as `if cmp -s`, because a `!`-negated command never trips `set -e`.
+  portable-snapshot-compare:
+    name: portable snapshot comparison (macOS arm64 against Linux)
+    needs: [changes, determinism-matrix, portable-snapshot-macos]
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Clear cached state vectors
+        run: rm -rf target/platform-snapshot && mkdir -p target/platform-snapshot
+      - name: Download the Linux x86_64 debug cell's state vectors
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: determinism-x86_64-debug
+          path: target/platform-snapshot/linux-x86_64
+      - name: Download the Linux aarch64 debug cell's state vectors
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: determinism-aarch64-debug
+          path: target/platform-snapshot/linux-aarch64
+      - name: Download the macOS arm64 debug cell's state vectors
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: platform-snapshot-macos-arm64-debug
+          path: target/platform-snapshot/macos-arm64
+      - name: Compare the macOS snapshot bytes with the Linux cells
+        working-directory: target/platform-snapshot
+        run: |
+          for file in {linux-x86_64,linux-aarch64,macos-arm64}/{portable,target}-state-debug.bin; do
+            test -s "$file"
+          done
+          cmp linux-x86_64/portable-state-debug.bin macos-arm64/portable-state-debug.bin
+          cmp linux-aarch64/portable-state-debug.bin macos-arm64/portable-state-debug.bin
+          for linux in linux-x86_64 linux-aarch64; do
+            if cmp -s "$linux/target-state-debug.bin" macos-arm64/target-state-debug.bin; then
+              echo "FAIL: the macOS arm64 target-bound snapshot equals the $linux one" >&2
+              exit 1
+            fi
+          done
+          portable_sha="$(sha256sum macos-arm64/portable-state-debug.bin | cut -d' ' -f1)"
+          echo "OK: macOS arm64 debug portable snapshot is byte-identical to Linux x86_64 and aarch64 debug ($(wc -c < macos-arm64/portable-state-debug.bin | tr -d ' ') bytes, sha256 $portable_sha); its target-bound snapshot differs from both Linux architectures'"
+
+  # Windows x86_64 (`windows-latest`, Git Bash via the workflow's default shell): a workspace build
+  # and the workspace nextest suite in debug codegen, with no determinism claim. It excludes the
+  # strict-bit binaries scripts/ci/strict-bits-cell.sh runs — `strict_bits` and the four aligned
+  # per-block suites — which are qualified on native Linux only. Everything else in the workspace
+  # runs, so the bit-exact goldens execute on a checkout whose git defaults to CRLF line endings
+  # (.gitattributes `* text=auto eol=lf` keeps them LF).
+  std-build-windows:
+    name: std build and nextest (Windows x86_64, debug)
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: workspace-windows
+          cache-bin: false
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: nextest@0.9.143
+      - name: Refuse a runner that is not Windows
+        run: |
+          case "$(uname -s)" in
+            MINGW64_NT-* | MSYS_NT-*) ;;
+            *) echo "not a Windows runner: $(uname -s)" >&2; exit 1 ;;
+          esac
+      - name: Clear the cached nextest report
+        run: rm -f target/nextest/ci/junit.xml
+      - name: cargo build (workspace)
+        run: cargo build --workspace --locked
+      - name: cargo nextest workspace suite without the strict-bit binaries (debug codegen)
+        run: >-
+          cargo nextest run --workspace --locked --profile ci --no-tests=fail
+          -E 'not (binary_id(oce-conformance::strict_bits) | binary_id(oce-conformance::per_block_reals_transcendental) | binary_id(oce-conformance::per_block_reals_sources_transcendental) | binary_id(oce-conformance::per_block_psychrometrics) | binary_id(oce-conformance::per_block_utilities))'
+      - name: Require the nextest JUnit report
+        run: test -s target/nextest/ci/junit.xml
+
+  # The scheduler, validator, model, CXF resolver and storage-port suites, x86_64 debug
+  # only. They are not state-determinism tests, so they stay out of the determinism matrix and run
+  # beside it instead of lengthening its cells. Their release-codegen runs stay in release-gate.yml (oce-cxf's release build
+  # alone costs several minutes; its debug suite is dominated by three ~45 s resolver tests).
+  # CI-only for now: .agents/gate.sh does not run these yet; .agents/project-facts.md gives the
+  # local command.
+  crate-tests:
+    name: crate tests (graph, validate, model, cxf, store; x86_64 debug)
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: nextest
+          cache-bin: false
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: nextest@0.9.143
+      - name: Clear the cached nextest report
+        run: rm -f target/nextest/ci/junit.xml
+      - name: cargo nextest crate suites (x86_64 debug)
+        run: >-
+          cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf -p oce-store --locked --profile ci --no-tests=fail
+      - name: Require the nextest JUnit report
+        run: test -s target/nextest/ci/junit.xml
+
+  # The documentation checks, run on every PR so `CI OK` covers them: docs-pages.yml runs the same
+  # sequence but is path-filtered and not a required status, so GitHub #373 merged with it red
+  # under a green `CI OK`. Same steps and order as
+  # docs-pages.yml's build job, minus the Pages upload; that workflow keeps the publish from main.
+  # CI-only for now: .agents/gate.sh does not run these yet; .agents/project-facts.md gives the
+  # local commands.
+  docs:
+    name: docs (staging, mdBook build, links)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Restore verified mdBook binary
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: target/mdbook-bin
+          key: mdbook-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('site/mdbook-checksums.txt', 'scripts/docs/install-mdbook.sh') }}
+      - name: Install checksum-pinned mdBook
+        run: bash scripts/docs/install-mdbook.sh target/mdbook-bin
+      - name: Test mdBook installer verify-or-reinstall contract
+        run: bash scripts/docs/test-install-mdbook.sh
+      - name: Test documentation checker contracts
+        run: python3 scripts/docs/test_check_links.py
+      - name: Test authority literals through staging and mdBook
+        run: python3 scripts/docs/test_authority_literals.py --mdbook target/mdbook-bin/mdbook
+      # The authority projection check itself runs in package-publication-contract.
+      - name: Stage documentation without source writes
+        env:
+          DOCS_REPOSITORY_REVISION: ${{ github.sha }}
+        run: >-
+          python3 scripts/docs/check_integrity.py
+          --output target/docs-book
+          --revision "$DOCS_REPOSITORY_REVISION"
+      - name: Build mdBook
+        run: target/mdbook-bin/mdbook build target/docs-book
+      - name: Check generated internal links and anchors
+        run: >-
+          python3 scripts/docs/check_links.py
+          target/docs-book/book
+          --site-prefix /open-control-engine/
+
+  # Four native cells, the same (runner, codegen) matrix as determinism-matrix. Each takes two
+  # independent capture processes, compares them byte for byte, and runs the exact signal wiring,
+  # corpus firewall and mutation controls (scripts/ci/strict-bits-cell.sh, which refuses a host of
+  # the wrong architecture). strict-bit-compare fans the eight captures in. This per-PR matrix is
+  # the standing native evidence; no stored receipt admits or skips anything.
+  strict-bit-matrix:
+    name: strict bits (${{ matrix.arch }}, ${{ matrix.codegen }})
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+        codegen: [debug, release]
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: nextest
+          cache-bin: false
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: nextest@0.9.143
       - name: Clear cached strict-bit evidence
         run: rm -rf target/strict-bits && mkdir -p target/strict-bits
-      - name: Cell linux-x86_64-debug (native)
-        if: ${{ !cancelled() }}
-        run: bash scripts/ci/strict-bits-cell.sh x86_64 debug
-      - name: Cell linux-x86_64-release (native)
-        if: ${{ !cancelled() }}
-        run: bash scripts/ci/strict-bits-cell.sh x86_64 release
-      - name: Cell linux-aarch64-debug (emulated)
-        if: ${{ !cancelled() }}
-        run: bash scripts/ci/strict-bits-cell.sh aarch64 debug
-      - name: Cell linux-aarch64-release (emulated)
-        if: ${{ !cancelled() }}
-        run: bash scripts/ci/strict-bits-cell.sh aarch64 release
+      - name: Strict-bit cell
+        env:
+          CELL_ARCH: ${{ matrix.arch }}
+          CELL_CODEGEN: ${{ matrix.codegen }}
+        run: bash scripts/ci/strict-bits-cell.sh "$CELL_ARCH" "$CELL_CODEGEN"
+      # The x86_64 debug cell also ships its built strict_bits test binary, so the fan-in compares
+      # the eight captures without recompiling.
+      - name: Archive the strict-bit tests for the cross-cell comparison
+        if: matrix.arch == 'x86_64' && matrix.codegen == 'debug'
+        run: >-
+          cargo nextest archive -p oce-conformance --test strict_bits --locked
+          --archive-file target/strict-bits/strict-bits-tests.tar.zst
+      - name: Upload the cell's captures
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: strict-bits-${{ matrix.arch }}-${{ matrix.codegen }}
+          path: target/strict-bits/
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
+  # Fan-in: every signal and sample of all eight captures against the Tier-A references, the
+  # x86_64 debug capture and a fresh collection from this checkout. A green comparison writes the
+  # candidate receipt-log record (run id, head and merge SHAs, rustc, libm, per-cell capture
+  # digests, matrix digest) beside the assembled matrix.json; both are uploaded for review.
+  strict-bit-compare:
+    name: strict bits cross-cell comparison
+    needs: [changes, strict-bit-matrix]
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: nextest@0.9.143
+      - name: Clear cached strict-bit evidence
+        run: rm -rf target/strict-bits && mkdir -p target/strict-bits
+      - name: Download all eight captures
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: strict-bits-*
+          path: target/strict-bits
+          merge-multiple: true
       - name: Compare every signal and sample in all eight captures
-        if: ${{ !cancelled() }}
         env:
           OCE_STRICT_MATRIX_DIR: target/strict-bits
+          OCE_STRICT_RUN_ID: ${{ github.run_id }}
+          OCE_STRICT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: >-
-          cargo nextest run -p oce-conformance --test strict_bits --locked --profile ci
-          --no-tests=fail --run-ignored only
+          cargo nextest run --archive-file target/strict-bits/strict-bits-tests.tar.zst
+          --workspace-remap . --profile ci --no-tests=fail --run-ignored only
           -E 'test(=matrix::native_linux_matrix_is_complete_and_exact)'
+      - name: Require the candidate receipt-log record
+        run: test -s target/strict-bits/receipt-candidate.json && cat target/strict-bits/receipt-candidate.json
+      - name: Upload the assembled matrix and the candidate receipt-log record
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: strict-bit-matrix
+          path: |
+            target/strict-bits/matrix.json
+            target/strict-bits/receipt-candidate.json
+            target/strict-bits/linux-*.json
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 30
 
   clippy:
     name: clippy (-D warnings)
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -333,13 +796,17 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: clippy
           cache-bin: false
       - name: clippy (default — no DB)
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
   build:
     name: build
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -347,13 +814,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: build
           cache-bin: false
       - name: cargo build (default — no DB)
         run: cargo build --workspace --locked
 
   rustdoc:
     name: rustdoc (-D warnings)
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -361,6 +832,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: rustdoc
           cache-bin: false
       - name: cargo doc — libs (deny warnings)
         env:
@@ -373,7 +845,10 @@ jobs:
 
   deny:
     name: cargo-deny
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -384,13 +859,42 @@ jobs:
           tool: cargo-deny
       - run: cargo deny check bans licenses sources
 
-  # The gate script, EXECUTED rather than parsed: a coverage backstop, not a parity check. If a
-  # job above is ever weakened or deleted, the command still runs here on the same PR. Nothing
-  # verifies mechanically that .agents/gate.sh and this file list the same commands; see the
-  # longer rationale on the `gate` job in the frozen .github/workflows/ci.yml.
-  gate:
-    name: gate (light)
+  # The facade compiler contract and the published Quickstart, executed. These were the three steps
+  # `gate (light)` ran beyond `bash .agents/gate.sh`; they compile the facade, so they run with the
+  # determinism lane.
+  facade-contract:
+    name: facade contract and Quickstart
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: facade-contract
+          cache-bin: false
+      - name: Supported facade compiler contract
+        run: python3 scripts/facade_contract/check.py
+      - name: Facade compiler diagnostic controls
+        run: python3 scripts/facade_contract/test_check.py
+      - name: Quickstart executes successfully
+        run: bash .github/scripts/check-quickstart-runs.sh
+
+  # The leverage lane: crates/leverage/* (none yet). Layout and dependency rule (oce-api only), then
+  # fmt, clippy -D warnings, rustdoc -D warnings, nextest and cargo-machete for each member, all in
+  # scripts/ci/leverage-members.sh so `bash .agents/gate.sh leverage` runs the same commands. It runs
+  # for a change under crates/leverage/ and for every engine change (core implies leverage), and it
+  # never starts the determinism lane.
+  leverage-lane:
+    name: leverage lane
+    needs: changes
+    if: needs.changes.outputs.leverage == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -400,57 +904,108 @@ jobs:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: leverage
+          cache-bin: false
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: nextest@0.9.143,cargo-machete
+      - name: Leverage lane (layout, dependency rule, then each member)
+        run: bash scripts/ci/leverage-members.sh lane
+
+  # The gate script, EXECUTED rather than parsed: a coverage backstop, not a parity check. It runs
+  # only when the gate's own definition changes — .agents/gate.sh, a CI or repository script, a
+  # workflow or tool config — because those are the edits that can make a job above diverge from the
+  # script, and otherwise it re-runs what the other jobs already ran (17m28s measured 2026-11-08).
+  # release-gate.yml runs `gate (full)` daily on the `development` tip regardless. Nothing verifies
+  # mechanically that .agents/gate.sh and this file list the same commands; see the `gate` job in
+  # the frozen .github/workflows/ci.yml.
+  gate:
+    name: gate (light)
+    needs: changes
+    if: needs.changes.outputs.gate_scripts == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: gate
           cache-bin: false
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143,cargo-deny,cargo-machete
-      - name: Supported facade compiler contract
-        run: python3 scripts/facade_contract/check.py
-      - name: Facade compiler diagnostic controls
-        run: python3 scripts/facade_contract/test_check.py
       # No `--` arguments: `light` is the default mode and the one this job exists to cover.
       - run: bash .agents/gate.sh
-      - name: Quickstart executes successfully
-        run: bash .github/scripts/check-quickstart-runs.sh
 
   # The single required status for branch protection on `development`. It reports on every run
-  # (`always()`) and fails unless every gating job succeeded. No gating job has an `if:`, so a
-  # skipped job is never legitimate here. check-workflow-gates.sh asserts that `needs:` lists
-  # every other job in this file, so a new job cannot silently escape the aggregate.
+  # (`always()`), needs every other job, and runs scripts/ci/ci_ok.py: a job passes on `success`, or
+  # on `skipped` only when it is listed in JOB_LANES and its lane output from `changes` is 'false'.
+  # A skip while its lane ran, a skip of an unfiltered job, any failure or cancellation, and a
+  # failed or inconsistent `changes` job all fail. check-workflow-gates.sh asserts that `needs:`
+  # lists every other job, that JOB_LANES equals the lane-filtered jobs' `if:` lines, and that this
+  # result check is present.
   ci-ok:
     name: CI OK
     if: always()
     needs:
+      - changes
       - fmt
       - file-size-cap
       - no-secret-scan
       - default-no-db
       - golden-gen-firewall
+      - golden-gen-hygiene
       - package-publication-contract
       - gate-fixtures
       - unused-deps
       - determinism-matrix
+      - determinism-compare
+      - portable-snapshot-macos
+      - portable-snapshot-compare
+      - std-build-windows
+      - crate-tests
+      - docs
       - strict-bit-matrix
+      - strict-bit-compare
       - clippy
       - build
       - rustdoc
       - deny
+      - facade-contract
+      - leverage-lane
       - gate
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
-      - name: Require every gating job to succeed
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Require every gating job to succeed or be skipped by its lane filter
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
-        run: |
-          python3 - <<'PY'
-          import json, os, sys
-          needs = json.loads(os.environ["NEEDS_JSON"])
-          for job, data in sorted(needs.items()):
-              print(f"{job}: {data.get('result')}")
-          bad = {job: data.get("result") for job, data in needs.items()
-                 if data.get("result") != "success"}
-          if not needs:
-              sys.exit("no gating job results reported")
-          if bad:
-              sys.exit(f"gating jobs not green: {bad}")
-          PY
+          JOB_LANES: >-
+            default-no-db=core
+            golden-gen-firewall=core
+            golden-gen-hygiene=core
+            unused-deps=core
+            determinism-matrix=core
+            determinism-compare=core
+            portable-snapshot-macos=core
+            portable-snapshot-compare=core
+            std-build-windows=core
+            crate-tests=core
+            strict-bit-matrix=core
+            strict-bit-compare=core
+            clippy=core
+            build=core
+            rustdoc=core
+            deny=core
+            facade-contract=core
+            leverage-lane=leverage
+            gate=gate_scripts
+        run: python3 scripts/ci/ci_ok.py

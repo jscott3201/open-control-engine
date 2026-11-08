@@ -255,8 +255,8 @@ fn reference_inputs(reference: &ReferenceTable, t: f64) -> Vec<(String, Value)> 
 }
 
 fn load_freeze_protection() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(FREEZE_PROTECTION.as_bytes())
         .expect("source-verified G36 FreezeProtection fixture loads");
     assert_eq!(report.block_count, 61);

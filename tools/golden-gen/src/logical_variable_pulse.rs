@@ -50,12 +50,7 @@ pub fn goldens() -> Vec<Golden> {
                 delta_u: 0.125,
                 min_hold: 0.04,
             },
-            &[
-                (0.0, 0.25),
-                (1.0, 0.25),
-                (2.0, 0.375),
-                (2.001, 0.75),
-            ],
+            &[(0.0, 0.25), (1.0, 0.25), (2.0, 0.375), (2.001, 0.75)],
             "scenario=delta_reset; period=4, deltaU=0.125, minTruFalHol=0.04; u diff exactly equal to delta then above delta just after the non-reset tick",
             "GreaterThreshold(t=deltaU,h=0) is strict: abs(sampled_u-u)>deltaU resets Cycle.t0, equality does not",
         ),

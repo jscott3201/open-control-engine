@@ -12,8 +12,8 @@ start/end snapshot bytes remain sidecars in the host's authenticated ordered env
 embedded in a record. Replay reuses this placement policy without exposing or relabeling the private
 execution fingerprint as build authority. Neither snapshot format nor execution ABI changes for replay.
 
-The [release-candidate matrix and fallback guide](release-compatibility.md) support current/current
-only, with no N-1 support or cross-build state migration. The historical v0.1.0 source pin has no
+State is current/current only, with no N-1 support or cross-build state migration (see the
+[host fallback checklist](host-responsibilities.md)). The historical v0.1.0 source pin has no
 snapshot API; its absence is not the revision-1 wire refusal described below.
 
 “Same-build” is a **mandatory host-envelope precondition**, not an OCE comparison. Before calling
@@ -22,7 +22,7 @@ snapshot bytes to its approved compiled-build/deployment qualifier and checks fr
 generation. That qualifier can cover source/dependency lock, compiler, features, target and
 codegen qualification. OCE emits, accepts, stores and enforces **no build token**. Pass only the
 OCE snapshot bytes after approval. A compatible manifest from a differently compiled implementation
-can pass OCE checks; that is not build qualification. See the [restart checklist](host-responsibilities.md#persist-engine-state-outside-the-store-port).
+can pass OCE checks; that is not build qualification. See the [restart checklist](host-responsibilities.md#persist-engine-state-outside-the-engine).
 
 `CompatibilityDescriptor`, package version, catalog metadata tag, diagnostic model ID and complete
 export tag are not substitutes for either the host envelope or the state manifest. No universal
@@ -34,9 +34,9 @@ changes to implementation code with unchanged descriptors belong to host build q
 | Operation | Contract |
 | --- | --- |
 | `checkpoint` | Owned process-local image; compatible restore can rewind. No persistence format or external authority. |
-| `state_snapshot` | Validate loaded state, stable authored identities and registered state contracts; encode and run the bounded canonical decoder before returning. Every success can be parsed by this build. No evaluation or Store calls. |
+| `state_snapshot` | Validate loaded state, stable authored identities and registered state contracts; encode and run the bounded canonical decoder before returning. Every success can be parsed by this build. No evaluation or storage calls. |
 | `from_bytes` | Validate wire structure and manifest self-consistency, not compatibility with a loaded target or every class-specific state invariant. Unknown execution ABI can parse but cannot restore. |
-| `restore_state` | Check readiness, target domain, execution ABI, full manifest/fingerprint and payload before one in-memory commit. No evaluation or Store calls. |
+| `restore_state` | Check readiness, target domain, execution ABI, full manifest/fingerprint and payload before one in-memory commit. No evaluation or storage calls. |
 | `restore_checkpoint` | Same prepare/commit discipline, without the startup-window restriction. Not a durable-byte bypass. |
 
 A successful load opens the durable restore window. Accepted frame execution, dirty-parameter
@@ -49,9 +49,10 @@ accepted-frame sequence. It replaces connector values, state words, absolute mod
 prior-time guard only. A preprepared frame still rechecks time at execution. Retained completed
 frames remain immutable and are not restored or reissued.
 
-All **returned** restore errors precede mutation and preserve both engine state and Store state.
+All **returned** restore errors precede mutation and preserve engine state; the engine has no storage
+state to preserve.
 Panic, allocation failure, process termination and external host effects are outside this guarantee.
-Capture/restore do not create a Store transaction. A later delivery failure cannot undo a frame.
+Capture/restore do not create a storage transaction. A later delivery failure cannot undo a frame.
 At restored time, another accepted frame is another HostTick transition, not event iteration.
 
 ## Compatibility and deterministic refusal
@@ -82,7 +83,7 @@ then canonical complete-frame input definitions (path, native type and effective
 
 The input definitions include the intersection of declaration and all fan-out target bounds,
 with exact Integer/enum values and Real bits. They are the actual acceptance domain, not lossy
-PointStore bounds. Unit/quantity changes affect host interpretation and refuse. Display units and
+projected-point bounds. Unit/quantity changes affect host interpretation and refuse. Display units and
 other non-executing presentation metadata are not compatibility determinants. Model ID is diagnostic
 only; changing it alone does not refuse. Parameter edits need a compatible newly loaded target.
 
@@ -98,7 +99,12 @@ bytes lacked those compatibility determinants and now return `UnsupportedFormat 
 There is no fallback, silent upgrade or migration. Rollback uses the prior qualified build and its
 own authenticated state, or a host-approved cold start—not a header edit.
 
-The byte cap is 67,108,864 inclusive. Integers and Real/state words are little-endian; Real payloads
+The byte cap is 67,108,864 inclusive. It bounds the whole snapshot, so it also bounds the state
+words a capturable model may hold. Most classes hold a few words, but `CDL.Reals.MovingAverage`
+sizes its checkpoint ring from `delta`: 4110 words (about 33 KB) for `delta ≤ 1024 s`, about
+`4·delta` words up to 65536 s, and at most 262158 words (about 2.1 MB). A model with a few dozen
+maximum-size windows loads and runs, but `state_snapshot` refuses it with `SnapshotTooLarge`.
+Nothing checks this total at load. Integers and Real/state words are little-endian; Real payloads
 preserve all bits, including signed zero and NaN payloads. Strings are length-prefixed UTF-8.
 Compound keys sort by complete encoded key bytes (including little-endian lengths/indices), not
 Rust numeric or natural string ordering. Named parameter and input-definition paths use UTF-8
@@ -142,10 +148,9 @@ The conservative target-bound set remains exactly 15 classes: `CDL.Reals.Acos`, 
 `SpecificEnthalpy_TDryBulPhi`, `WetBulb_TDryBulPhi` (each under `CDL.Psychrometrics`);
 and `CDL.Utilities.SunRiseSet`. Any participating target-bound class binds the executable.
 
-The [accepted strict-bit receipt](strict-bit-evidence.md) covers only 21 Linux signal cases on
-pinned rustc/libm, four native architecture/codegen cells and a selected 35-file source boundary.
-It is not a full compiled dependency closure, arbitrary-input guarantee, mathematical oracle or
-macOS qualification. It therefore does **not** relax this state-placement policy. Local macOS
+The [per-PR native strict-bit matrix](strict-bit-evidence.md) covers only 21 Linux signal cases on
+pinned rustc/libm in four native architecture/codegen cells. It is not an arbitrary-input
+guarantee, mathematical oracle or macOS qualification. It therefore does **not** relax this state-placement policy. Local macOS
 passing tests do not supply the hosted Linux evidence or broaden either variant's claim.
 
 ## Continuation of published Library rules
@@ -180,8 +185,7 @@ or a host `NO_EVAL` window, is host frame policy.
 - `tests/state_contract.rs`: public inspection, changed bounds/units/quantities, historical wire
   refusal and signed-zero/equal-time continuation against a hand-derived Boolean recurrence.
 - `src/tests/state_manifest_refusal_tests.rs`: rechecksummed field mutation corpus, repeat typed
-  diagnostics, full snapshot/checkpoint before/after images, retained lifecycle fences and Store
-  noninterference; capture refuses a deliberately injected noncanonical producer image.
+  diagnostics, full snapshot/checkpoint before/after images and retained lifecycle fences; capture refuses a deliberately injected noncanonical producer image.
 - `src/tests/state_format_golden_tests.rs`, `state_tests.rs`, `state_io.rs`: independent full
   codec construction, checked byte/fingerprint goldens and hand-assembled domain encoding.
 - `src/tests/state_codec_tests.rs`, `state_resource_tests.rs`, `state_restore_validation_tests.rs`:

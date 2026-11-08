@@ -10,7 +10,7 @@ const Y: &str = "urn:legacy-frame:y";
 
 #[test]
 fn complete_reordered_inputs_prepare_without_staging_or_advancing() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL).unwrap();
     let before = engine.state_snapshot().unwrap();
     let definitions = engine.input_definitions().unwrap();
@@ -46,7 +46,7 @@ fn duplicate_missing_unknown_direction_and_type_refusals_are_read_only() {
             "type",
         ),
     ] {
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine.load_cxf(MODEL).unwrap();
         let before = engine.state_snapshot().unwrap();
         let error = engine.prepare_frame(4.0, &entries).unwrap_err();
@@ -73,7 +73,7 @@ fn duplicate_missing_unknown_direction_and_type_refusals_are_read_only() {
 
 #[test]
 fn refusal_precedence_and_canonical_identity_repeat_under_entry_reordering() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL).unwrap();
     let cases = [
         (
@@ -141,7 +141,7 @@ fn refusal_precedence_and_canonical_identity_repeat_under_entry_reordering() {
 
 #[test]
 fn unbounded_real_bits_are_accepted_but_time_is_finite_and_nondecreasing() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL).unwrap();
     for real in [
         f64::from_bits(0x7ff8_0000_0000_0042),
@@ -169,7 +169,7 @@ fn unbounded_real_bits_are_accepted_but_time_is_finite_and_nondecreasing() {
 
 #[test]
 fn submitted_keys_are_not_reexpanded_or_rebound_to_elided_child_names() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL).unwrap();
     for key in ["urn:legacy-frame:add.u1", "a", "base:a"] {
         assert!(
@@ -193,7 +193,7 @@ fn submitted_keys_are_not_reexpanded_or_rebound_to_elided_child_names() {
 
 #[test]
 fn unknown_key_diagnostics_do_not_clone_unbounded_utf8_input() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL).unwrap();
     let key = "界".repeat(100_000);
     let allocation = allocation_counter::measure(|| {

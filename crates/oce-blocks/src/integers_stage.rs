@@ -114,17 +114,39 @@ impl IntegerStage {
         }
     }
 
-    fn stage_for_u(self, u: f64) -> i64 {
+    /// The source's stage search: `n` when `u >= threshold(n)`, else the first `i` in `2..=n`
+    /// with `threshold(i - 1) <= u < threshold(i)`, answering `i - 1`, else `0`.
+    ///
+    /// Evaluated as an exact binary search, `O(log n)` per stage event, so an authored `n` (which
+    /// has no class-level upper bound) cannot stall a tick. Equivalence with the source loop:
+    /// `threshold(k) = (k - 1) as f64 / n as f64` is monotone non-decreasing in `k` (both the
+    /// integer-to-`f64` conversion and division by a positive divisor are monotone), so
+    /// `u < threshold(k)` holds on a suffix `k >= first` of `1..=n`. For `i <= first` the lower
+    /// test `threshold(i - 1) <= u` is the negation of `u < threshold(i - 1)` for every non-NaN
+    /// `u`, so the loop's first hit is exactly `i = first` when `2 <= first <= n`, and there is no
+    /// hit when `first == 1` (`u < 0`). A NaN `u` fails every comparison, so the loop finds no
+    /// hit and answers `0`; it is answered up front. Past the first branch a non-NaN `u` is below
+    /// `threshold(n)`, so `first <= n` and the search range never needs `n + 1` (no overflow at
+    /// `n == i64::MAX`). The unit tests pin this against the literal loop.
+    pub(crate) fn stage_for_u(self, u: f64) -> i64 {
         let n = self.safe_n();
         if u >= threshold(n, n) {
             return n;
         }
-        for i in 2..=n {
-            if u < threshold(i, n) && u >= threshold(i - 1, n) {
-                return i - 1;
+        if u.is_nan() {
+            return 0;
+        }
+        // Smallest `k` in `1..=n` with `u < threshold(k)`; `k = n` always qualifies here.
+        let (mut lo, mut hi) = (1_i64, n);
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            if u < threshold(mid, n) {
+                hi = mid;
+            } else {
+                lo = mid + 1;
             }
         }
-        0
+        if lo >= 2 { lo - 1 } else { 0 }
     }
 
     fn next_state(self, ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> StageState {

@@ -2,7 +2,7 @@
 # DEFAULT-NO-DB gate (FRAME D-OWNER-1; roadmap 09 §2 M0 exit criterion 2).
 #
 # The DEFAULT build must link NO database, NO async runtime, and NO data-parallelism runtime. This
-# script enforces that posture with three independent canaries:
+# script enforces that posture with four independent canaries:
 #
 # 1. Transitive cargo-tree breadth check: `cargo tree -e normal` on the default feature set must
 #    list zero `selene-db-*` crates, zero `tokio`, zero `async-std`, and zero `rayon` for `oce-api`
@@ -12,20 +12,25 @@
 #    intentionally ignored so future verification adapters can be used only from tests.
 # 3. Verification-adapter unreachability check: workspace packages with `publish == []` are treated
 #    as verification-only. Shipped crates must not depend on them directly or reach them through any
-#    non-dev dependency path. The pass is forward-armed and vacuously green while no such package
-#    exists. To arm this pass, the future reference WAL adapter must be a `publish = false` workspace
-#    member under `crates/` so root cargo metadata can see it; a tests/ fixture or tools/-style
-#    standalone sub-workspace is invisible here and would leave this pass permanently vacuous.
+#    non-dev dependency path. A verification adapter must be a `publish = false` workspace member
+#    under `crates/` so root cargo metadata can see it; a tests/ fixture or tools/-style standalone
+#    sub-workspace is invisible here.
+# 4. Facade storage isolation: the engine is pure (GitHub #390). `oce-api` must not declare a
+#    normal/build dependency on `oce-store` (the one storage crate; the match is a prefix, so any
+#    future `oce-store-*` crate is refused too), and its `cargo tree -e normal` must not list one
+#    at any depth. Durability is the host's: a host persists the plain-data `LoadedModel`
+#    a load returns through its own adapter behind the `oce-store` port, which therefore sits
+#    beside the facade, never below it. Dev dependencies are ignored, as in pass 2.
 #
 # Tests may inject cargo metadata with OCE_NO_DB_METADATA_FILE; the fixture is used for both the
 # `--no-deps` package scan and the full resolve graph scan. The gate fails closed if metadata or jq
 # is unavailable, empty, malformed, has no shipped crates, or omits the canonical `oce-api` facade.
-# Together these prove a downstream project can embed the engine for load -> flatten -> validate ->
-# schedule -> tick -> simulate with no DB at all.
+# Together these prove a downstream project can embed the engine for load -> validate -> schedule ->
+# tick -> simulate with no DB at all.
 #
 # We keep `oce-api` (the public facade) as the canonical embeddable assertion AND loop the same
 # forbidden-crate check over every workspace member derived from `cargo metadata --no-deps`. That
-# catches Group C drift (`oce-conformance`, `oce-extension`, `oce-docs`) when new crates are added.
+# catches Group C drift (`oce-conformance`, `oce-bless`) when new crates are added.
 # We match real crate names (`selene-db`, `selene_*`, `tokio*`, `async-std*`, `rayon*`); `selene-db`
 # is listed as a representative graph database an app might adopt app-side — it must never enter
 # this library's tree. `rayon` is forbidden by D6: the deterministic Kahn scheduler is
@@ -42,6 +47,9 @@
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
+
+# The storage port and its in-memory backend: never reachable from the `oce-api` facade (pass 4).
+FACADE_STORAGE='(^|[[:space:]])oce-store[-a-z]* v'
 
 # Real database / async-runtime / parallelism crate names that must never enter the library tree.
 FORBIDDEN='(^|[[:space:]])(selene-db[-a-z]*|selene_[a-z]*|tokio[-a-z]*|async-std[-a-z]*|rayon[-a-z]*)([[:space:]]|$| v)'
@@ -178,6 +186,41 @@ check_tree() {
     echo "first-party database. Durable backends are app-side adapters behind the oce-store port."
     echo "It must also be rayon-free (D6): the scheduler is single-threaded for bit-stable determinism."
     exit 1
+  fi
+
+  if [ "$package" = "oce-api" ] && printf '%s\n' "$tree" | grep -Eq "$FACADE_STORAGE"; then
+    echo "FAIL: 'oce-api' reaches the storage port through its normal dependency tree:"
+    printf '%s\n' "$tree" | grep -E "$FACADE_STORAGE" || true
+    echo
+    echo "The engine is pure (GitHub #390): the host persists LoadedModel through its own adapter."
+    exit 1
+  fi
+}
+
+check_facade_storage_edges() {
+  local metadata_file="$1"
+  local failures=""
+
+  if ! failures="$(jq -r '
+    def nondev: (.kind == null or .kind == "normal" or .kind == "build");
+    .packages[]
+    | select(.name == "oce-api") as $package
+    | $package.dependencies[]?
+    | select(nondev)
+    | select(.name | test("^oce-store"))
+    | "\(.name)\t\((.kind // "normal"))"
+  ' "$metadata_file")"; then
+    echo "FAIL: cargo metadata facade storage-edge query failed"
+    return 1
+  fi
+
+  if [ -n "$failures" ]; then
+    printf '%s\n' "$failures" | while IFS="$(printf '\t')" read -r dependency kind; do
+      echo "FAIL: 'oce-api' has a direct $kind dependency on storage crate '$dependency'"
+    done
+    echo
+    echo "The engine is pure (GitHub #390): oce-api must never depend on oce-store."
+    return 1
   fi
 }
 
@@ -322,6 +365,10 @@ if ! check_direct_verification_edges "$no_deps_metadata_file"; then
   exit 1
 fi
 
+if ! check_facade_storage_edges "$no_deps_metadata_file"; then
+  exit 1
+fi
+
 if ! workspace_members > "$members_file" 2>&1; then
   cat "$members_file"
   exit 1
@@ -351,9 +398,9 @@ fi
 
 verification_count="$(verification_only_count "$no_deps_metadata_file")"
 if [ "$verification_count" -gt 0 ]; then
-  # Future adapter placement contract: the reference WAL adapter must be a `publish = false`
-  # workspace member under crates/. Root cargo metadata cannot see tests/ fixtures or tools/-style
-  # standalone sub-workspaces, which would make this forward-armed pass vacuous forever.
+  # Adapter placement contract: a verification adapter must be a `publish = false` workspace
+  # member under crates/. Root cargo metadata cannot see tests/ fixtures or tools/-style
+  # standalone sub-workspaces, which would make this pass vacuous for them.
   if ! load_metadata full "$full_metadata_file"; then
     exit 1
   fi
@@ -363,4 +410,4 @@ if [ "$verification_count" -gt 0 ]; then
   fi
 fi
 
-echo "OK: default build links no database (selene-db etc.), no tokio, no async-std, no rayon; shipped crates have no forbidden direct edges; verification-only crates are unreachable from shipped crates."
+echo "OK: default build links no database (selene-db etc.), no tokio, no async-std, no rayon; shipped crates have no forbidden direct edges; verification-only crates are unreachable from shipped crates; oce-api reaches no oce-store crate."

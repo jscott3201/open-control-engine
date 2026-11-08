@@ -1,0 +1,47 @@
+name: Work item
+description: A milestone work item an agent can start cold. Label it agent-ready once every section is filled.
+title: "<imperative: what the change does>"
+labels: []
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What is true when this is done, and the decision it rests on (name the plan section or design note; do not restate the reasoning).
+    validations:
+      required: true
+  - type: textarea
+    id: work
+    attributes:
+      label: Work
+      description: Task list. Each line is something a reviewer can see in the diff.
+      value: |
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: entry
+    attributes:
+      label: Entry points
+      description: Files and line ranges to start in; prior art to read.
+    validations:
+      required: true
+  - type: textarea
+    id: notouch
+    attributes:
+      label: Do not touch
+      description: Golden fixtures, the frozen ci.yml, other crates' concerns — anything out of scope that a cold agent might reach for.
+    validations:
+      required: true
+  - type: textarea
+    id: deps
+    attributes:
+      label: Depends on / blocks
+      description: Issue numbers. Add the `blocked` label if a dependency is open.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance
+      description: Commands and their expected output, CI runs to link, controls that must fail. A sentence saying it works is not acceptance.
+    validations:
+      required: true

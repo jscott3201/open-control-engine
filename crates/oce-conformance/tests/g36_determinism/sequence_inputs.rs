@@ -70,17 +70,26 @@ pub(crate) fn supply_temperature_inputs(t: f64) -> Vec<(String, Value)> {
 
 pub(crate) fn supply_fan_inputs(t: f64) -> Vec<(String, Value)> {
     let operating_mode = match t as u32 {
-        300..=359 => 4,
+        300..=359 | 1980..=2099 => 4,
         _ => 1,
     };
-    let pressure_requests = if t >= 840.0 {
-        5
-    } else if t >= 720.0 {
-        3
-    } else {
-        0
+    let pressure_requests = match t as u32 {
+        0..=719 => 0,
+        720..=839 => 3,
+        840..=1139 => 5,
+        1140..=1259 => 3,
+        1260..=1379 => 2,
+        1380..=1619 => 0,
+        1620..=2939 => 4,
+        _ => 0,
     };
-    let duct_pressure = if t >= 720.0 { 80.0 } else { 120.0 };
+    let duct_pressure = if t >= 1500.0 {
+        140.0
+    } else if t >= 720.0 {
+        80.0
+    } else {
+        120.0
+    };
     vec![
         pair(SUPPLY_FAN_OPERATING_MODE, Value::Integer(operating_mode)),
         pair(SUPPLY_FAN_DUCT_PRESSURE, Value::Real(duct_pressure)),

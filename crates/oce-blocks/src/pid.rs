@@ -27,8 +27,10 @@
 //! `PIDWithReset.mo` wiring: `trigger` is the only reset input, while `y_reset` is a parameter that
 //! defaults to the resolved `xi_start`.
 //!
-//! Non-finite inputs are deliberately not trapped here yet: NaN/Inf propagate through the
-//! documented recurrence and join the deferred centralized non-finite validation/diagnostic seam.
+//! Non-finite input *signals* are deliberately not trapped here: NaN/Inf propagate through the
+//! documented recurrence, and runtime non-finite signal diagnostics remain deferred. Non-finite
+//! *parameters* are refused engine-wide at load and at `set_param` (issue #362), so the gains,
+//! time constants, limits and start values seen here are always finite.
 
 use oce_model::{ParamTable, SimpleController, Value, determinism::canonicalize_real};
 

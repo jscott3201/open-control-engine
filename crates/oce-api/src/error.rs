@@ -1,9 +1,8 @@
 //! The unified, typed facade error (`08` §7). Never panics on host input (R-ERR-1);
 //! `#[non_exhaustive]` so variants evolve additively (R-ERR-2). It wraps the Group A pipeline
-//! errors and the store's `StoreError`, and — critically — **never wraps a backend-specific error
-//! type directly**: any durable-store adapter flattens its native errors to
-//! `StoreError::Backend(String)` at the seam (R-ERR-3), so the facade error surface is identical in
-//! shape regardless of which `Store` backend is wired.
+//! errors and the facade's own refusals, and **never wraps a backend-specific error type**: the
+//! engine reaches no storage backend, so no storage failure can surface here (R-ERR-3). A host's
+//! persistence errors stay in the host's own error type.
 
 use oce_diag::Diagnostic;
 
@@ -34,7 +33,7 @@ impl std::error::Error for LoadErrorContext {
 #[derive(thiserror::Error, Debug)]
 #[non_exhaustive]
 pub enum OcError {
-    /// Serialized CXF exceeded the engine's byte limit, before parsing or Store calls.
+    /// Serialized CXF exceeded the engine's byte limit, before parsing or engine mutation.
     /// Carries counts only, never input content; has no source or structured diagnostics.
     #[error("serialized CXF size {actual_bytes} bytes exceeds limit {limit_bytes} bytes")]
     CxfTooLarge {
@@ -57,9 +56,6 @@ pub enum OcError {
     /// A loader-conformance failure.
     #[error("validation failed: {0}")]
     Validate(#[from] oce_validate::ValidationError),
-    /// A flattening failure.
-    #[error("flatten error: {0}")]
-    Flatten(#[from] oce_flatten::FlattenError),
     /// A model build/schedule failure (algebraic loop, etc.).
     #[error("model build/schedule error: {0}")]
     Build(#[from] oce_graph::BuildError),
@@ -83,7 +79,9 @@ pub enum OcError {
         /// The dotted instance path of the parameter.
         path: String,
     },
-    /// A `set_param` value outside the parameter's declared `[min, max]` (CDL §7.4.1).
+    /// A `set_param` value outside the parameter's admissible domain: a non-finite Real (`NaN`,
+    /// `+inf`, `-inf` — refused for every Real parameter, issue #362), a value outside the declared
+    /// `[min, max]` (CDL §7.4.1), or a value rejected by the class's registry parameter rules.
     #[error("parameter '{path}' value out of declared [min,max] (CDL §7.4.1)")]
     ParamRange {
         /// The dotted instance path of the parameter.
@@ -109,6 +107,16 @@ pub enum OcError {
         /// The supplied (non-finite) time.
         now: f64,
     },
+    /// `t_now` is finite but its magnitude exceeds [`crate::MAX_FRAME_TIME_MAGNITUDE`], so an
+    /// elapsed-time difference against another accepted time could overflow (host error;
+    /// checked for every model, whatever its blocks).
+    #[error("frame time out of range: |t_now={now:e}| exceeds {limit:e}")]
+    TimeOutOfRange {
+        /// The supplied (finite) time.
+        now: f64,
+        /// The accepted magnitude limit, [`crate::MAX_FRAME_TIME_MAGNITUDE`].
+        limit: f64,
+    },
     /// `t_now` went backwards (host error; CDL §7.16 monotonic time).
     #[error("time regression: t_now={now} < previous {prev}")]
     TimeRegression {
@@ -117,10 +125,21 @@ pub enum OcError {
         /// The previous tick's time.
         prev: f64,
     },
+    /// Both times are finite and nondecreasing, but `now - prev` overflows to infinity, so no
+    /// block could integrate the step (host error; checked for every model, whatever its blocks).
+    /// Defensive: accepted and restored clocks are both bounded by
+    /// [`crate::MAX_FRAME_TIME_MAGNITUDE`], so no public sequence of calls produces it today.
+    #[error("non-finite time step: t_now={now} - previous {prev} is not finite")]
+    NonFiniteTimeStep {
+        /// The supplied (finite) time.
+        now: f64,
+        /// The previous accepted tick's (finite) time.
+        prev: f64,
+    },
     /// A finite model time cannot be encoded by one loaded block's sampled-time state.
     #[error("model time cannot be represented by loaded block state: t_now={now}")]
     ModelTimeUnrepresentable {
-        /// Finite time refused before any engine or store mutation.
+        /// Finite time refused before any engine mutation.
         now: f64,
     },
     /// A point/connector name that does not resolve for the requested operation: either not
@@ -160,15 +179,19 @@ pub enum OcError {
     /// One required canonical boundary input was omitted; no hold-last or seed substitution.
     #[error("missing frame input '{0}'")]
     FrameMissingInput(String),
+    /// A Real boundary input value was NaN (either sign, any payload) or infinite while the
+    /// host selected [`crate::NonFiniteInputPolicy::Refuse`]. Names the canonical input path;
+    /// nothing is staged and model time does not advance. The host substitutes a finite value
+    /// (for example a sensor-fault fallback) or does not execute the frame. Never returned under
+    /// the default [`crate::NonFiniteInputPolicy::Admit`].
+    #[error("non-finite Real value for input '{0}'; the host must substitute a finite value")]
+    InputNonFinite(String),
     /// Exact type matched but the value violates the canonical input's declared domain.
     #[error("input value outside declared domain for '{0}'")]
     InputDomain(String),
     /// A checkpoint, snapshot, or restore failure.
     #[error(transparent)]
     State(#[from] crate::state::EngineStateError),
-    /// A store-seam failure — the only path any `Store` backend reaches the error type.
-    #[error("store error: {0}")]
-    Store(#[from] oce_store::StoreError),
 }
 
 impl OcError {
@@ -219,8 +242,12 @@ impl OcError {
     /// engine-produced diagnostic-bearing variant carries a non-empty vector, so an empty slice
     /// identifies the other failures — malformed JSON, a build failure without prior warnings, a
     /// host misuse — for which the [`Display`](std::fmt::Display) message is the whole description.
-    /// A build or store failure after a warning can therefore return an empty slice here even though
-    /// [`OcError::all_diagnostics`] yields its prior warnings.
+    /// A build or projection failure after a warning can therefore return an empty slice here even though
+    /// [`OcError::all_diagnostics`] yields its prior warnings. An algebraic-loop build refusal's
+    /// coded `algebraic-loop`/`block-algebraic-loop` records (one per cycle member) are captured
+    /// only on the receipt path, [`Engine::load_cxf_with_receipt`](crate::Engine::load_cxf_with_receipt),
+    /// where [`OperationFailure::diagnostics`](crate::OperationFailure::diagnostics) carries them at
+    /// stage `Schedule`.
     ///
     /// Codes are compared as strings via [`DiagCode::as_str`](oce_diag::DiagCode::as_str), which
     /// resolves without naming the type. The enum is deliberately not re-exported: it is

@@ -76,20 +76,10 @@ fn economizer_reliefs_trace(
             .zip(return_damper_min)
             .zip(return_damper_max)
     {
-        let out_dam_pos = buildings_line(
-            U_MIN,
-            u_out_dam_min,
-            U_OUT_DAM_MAX,
-            u_out_dam_max,
-            u_t_sup,
-        );
-        let ret_dam_pos = buildings_line(
-            U_RET_DAM_MIN,
-            u_ret_dam_max,
-            U_MAX,
-            u_ret_dam_min,
-            u_t_sup,
-        );
+        let out_dam_pos =
+            buildings_line(U_MIN, u_out_dam_min, U_OUT_DAM_MAX, u_out_dam_max, u_t_sup);
+        let ret_dam_pos =
+            buildings_line(U_RET_DAM_MIN, u_ret_dam_max, U_MAX, u_ret_dam_min, u_t_sup);
         outdoor_damper_command.push(out_dam_pos.min(u_out_dam_max));
         return_damper_command.push(ret_dam_pos.max(u_ret_dam_min));
     }

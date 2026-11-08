@@ -6,6 +6,9 @@
 
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
+/// Pinned Buildings commit of the vendored `third_party/modelica-buildings-cdl` tree.
+const SOURCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
+
 fn b(x: bool) -> Sample {
     Sample::Boolean(x)
 }
@@ -139,6 +142,30 @@ fn combinational() -> Vec<Golden> {
                 "y = u1 OR u2; _spec/03 §4.3 Or",
             )
             .with_inputs(vec![input_b("u1", u1), input_b("u2", u2)]),
+        );
+    }
+    // Nor: the exhaustive two-input truth table, then (F,F) again so a stateless block is pinned
+    // to re-emit `true` after the all-true row rather than holding a prior value.
+    {
+        let u1 = [false, false, true, true, false];
+        let u2 = [false, true, false, true, false];
+        let y: Vec<Sample> = u1.iter().zip(u2).map(|(&a, c)| b(!(a || c))).collect();
+        out.push(
+            Golden::new(
+                "CDL.Logical.Nor",
+                "y",
+                ValueKind::Boolean,
+                ticks60(5),
+                y,
+                "u1=[F,F,T,T,F], u2=[F,T,F,T,F]; all four input pairs, then (F,F) revisited",
+                "y = NOT (u1 OR u2); Buildings CDL/Logical/Nor.mo line 15 `y=not (u1 or u2)`",
+            )
+            .with_inputs(vec![input_b("u1", u1), input_b("u2", u2)])
+            .with_provenance("source_commit", SOURCE_COMMIT)
+            .with_provenance(
+                "source_files",
+                "third_party/modelica-buildings-cdl/Buildings/Controls/OBC/CDL/Logical/Nor.mo",
+            ),
         );
     }
     // MultiAnd.

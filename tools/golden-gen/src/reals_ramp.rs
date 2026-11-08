@@ -19,7 +19,11 @@ fn input_r(name: &'static str, values: impl IntoIterator<Item = f64>) -> InputSe
 }
 
 fn input_b(name: &'static str, values: impl IntoIterator<Item = bool>) -> InputSeries {
-    InputSeries::new(name, ValueKind::Boolean, values.into_iter().map(b).collect())
+    InputSeries::new(
+        name,
+        ValueKind::Boolean,
+        values.into_iter().map(b).collect(),
+    )
 }
 
 /// Build base Ramp goldens.

@@ -1,5 +1,5 @@
 //! End-to-end golden for the canonical `minimal_loop.jsonld`: load it through the full
-//! `Engine::load_cxf` pipeline (CXF resolve → flatten → validate → BUILD → schedule), tick it, and
+//! `Engine::load_cxf` pipeline (CXF resolve → validate → BUILD → schedule), tick it, and
 //! assert the deterministic converging trace **bit-exactly** (`TESTING.md` pillars 2 + 4), plus that
 //! malformed CXF is a typed error and never a panic (pillar 1).
 //!
@@ -55,8 +55,8 @@ fn advance_loop(engine: &mut Engine, time: f64) {
 
 #[test]
 fn load_cxf_minimal_loop_report() {
-    let mut eng = Engine::in_memory();
-    let report = eng
+    let mut eng = Engine::new();
+    let (report, _) = eng
         .load_cxf(MINIMAL_LOOP.as_bytes())
         .expect("minimal_loop must load end-to-end");
     assert!(
@@ -70,8 +70,8 @@ fn load_cxf_minimal_loop_report() {
 
 #[test]
 fn load_cxf_uses_top_composite_id_as_model_id() {
-    let mut eng = Engine::in_memory();
-    let report = eng
+    let mut eng = Engine::new();
+    let (report, _) = eng
         .load_cxf(AHU_SUPPLY_AIR_TEMP_RESET.as_bytes())
         .expect("G36 supply-air temperature reset must load end-to-end");
 
@@ -85,7 +85,7 @@ fn load_cxf_uses_top_composite_id_as_model_id() {
 #[test]
 fn minimal_loop_converges_to_four_bit_exact() {
     let path = add_y_path();
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.load_cxf(MINIMAL_LOOP.as_bytes()).expect("load");
 
     // First ticks are dyadic-exact: 2, 3, 3.5, 3.75, 3.875, 3.9375, 3.96875.
@@ -117,7 +117,7 @@ fn load_cxf_trace_is_deterministic() {
     // Two independent loads + identical tick sequences → bit-identical add.y traces.
     let path = add_y_path();
     let run = || {
-        let mut eng = Engine::in_memory();
+        let mut eng = Engine::new();
         eng.load_cxf(MINIMAL_LOOP.as_bytes()).expect("load");
         (0..32)
             .map(|k| {
@@ -133,7 +133,7 @@ fn load_cxf_trace_is_deterministic() {
 fn load_cxf_rejects_malformed_input_without_panic() {
     // Pillar 1 / R-ERR-1: malformed CXF is a typed OcError, never a panic. Reaching each assert
     // proves no panic; load_cxf is a total function over arbitrary bytes.
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
 
     // Invalid JSON.
     assert!(matches!(

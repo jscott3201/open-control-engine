@@ -43,26 +43,26 @@ pub(super) fn goldens() -> Vec<Golden> {
         inputs.clone(),
     ));
 
-    for index in 0..4 {
+    for (signal, speed) in SPEED_SIGNALS.iter().zip(&trace.fan_speed) {
         out.push(sequence_golden(
             RELIEF_FAN_GROUP,
-            SPEED_SIGNALS[index],
+            signal,
             ValueKind::Real,
             time.clone(),
-            trace.fan_speed[index].iter().copied().map(r).collect(),
+            speed.iter().copied().map(r).collect(),
             "ReliefFanGroup staged fan speed: source-default relFanMat, staVec, 420s stage-up timer, 300s stage-down timer, proof feedback, and 2s TrueDelay acknowledgement",
             "Pinned ReliefFanGroup.mo: yRelFan[i] = logSwi[i] * Limiter(conP.y, relFanSpe_min, 1) gated by enabled relief fans",
             inputs.clone(),
         ));
     }
 
-    for index in 0..4 {
+    for (signal, damper) in DAMPER_SIGNALS.iter().zip(&trace.damper) {
         out.push(sequence_golden(
             RELIEF_FAN_GROUP,
-            DAMPER_SIGNALS[index],
+            signal,
             ValueKind::Real,
             time.clone(),
-            trace.damper[index].iter().copied().map(r).collect(),
+            damper.iter().copied().map(r).collect(),
             "ReliefFanGroup damper command: stage-zero damper enable, staged fan command fallback, and fan-1 level-2 alarm while unproven",
             "Pinned ReliefFanGroup.mo: yDam[i] selects the staged command or stage-zero damper enable, then forces zero when uRelFanAla[i] == 2 and u1RelFan[i] is false",
             inputs.clone(),
@@ -106,12 +106,7 @@ fn input_row(t: f64) -> Inputs {
         } else {
             12.0
         },
-        alarm: [
-            if (360.0..600.0).contains(&t) { 2 } else { 0 },
-            0,
-            0,
-            0,
-        ],
+        alarm: [if (360.0..600.0).contains(&t) { 2 } else { 0 }, 0, 0, 0],
         proof: [
             (1500.0..2100.0).contains(&t),
             false,
@@ -196,7 +191,13 @@ fn relief_fan_group_trace(time: &[f64]) -> Trace {
         let pro1 = each4(|i| gai[i] * sub2[i]);
         let all_fans_off = row.proof.iter().all(|proof| !proof);
         let les_thr1_y = each4(|i| les_thr1[i].output(pro1[i]));
-        let swi = each4(|i| if les_thr1_y[i] { pro1[i] + 5.0 } else { pro1[i] });
+        let swi = each4(|i| {
+            if les_thr1_y[i] {
+                pro1[i] + 5.0
+            } else {
+                pro1[i]
+            }
+        });
         let swi3 = each4(|i| if all_fans_off { pro1[i] } else { swi[i] });
         let next_stage_order = min4(swi3);
         let next_stage = each4(|i| les_thr2[i].output((gai[i] - next_stage_order).abs()));
@@ -212,7 +213,13 @@ fn relief_fan_group_trace(time: &[f64]) -> Trace {
 
         let pro2 = each4(|i| gai[i] * proof_real[i]);
         let les_thr4_y = each4(|i| les_thr4[i].output(pro2[i]));
-        let swi1 = each4(|i| if les_thr4_y[i] { pro2[i] + 5.0 } else { pro2[i] });
+        let swi1 = each4(|i| {
+            if les_thr4_y[i] {
+                pro2[i] + 5.0
+            } else {
+                pro2[i]
+            }
+        });
         let next_down_order = min4(swi1);
         let next_down = each4(|i| les_thr5[i].output((gai[i] - next_down_order).abs()));
         let xor = each4(|i| next_down[i] ^ row.proof[i]);
@@ -227,7 +234,13 @@ fn relief_fan_group_trace(time: &[f64]) -> Trace {
         let lat1_y = lat1.output(down_passed, all_stopped_matches);
 
         let log_swi1 = each4(|i| if lat1_y { xor[i] } else { row.proof[i] });
-        let log_swi3 = each4(|i| if all_fans_off { row.proof[i] } else { log_swi1[i] });
+        let log_swi3 = each4(|i| {
+            if all_fans_off {
+                row.proof[i]
+            } else {
+                log_swi1[i]
+            }
+        });
         let log_swi = each4(|i| if lat2_y { or2[i] } else { log_swi3[i] });
         let any_enabled = each4(|i| gre_thr3[i].output(ena_rel[i]))
             .iter()

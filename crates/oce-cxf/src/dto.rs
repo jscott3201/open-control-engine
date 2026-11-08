@@ -6,7 +6,8 @@
 //! `#[serde(flatten)] other` map on both [`CxfDocument`] and [`Node`] (R-8), capturing every key
 //! not explicitly modeled (`icon`/`diagram`/`graphics`/`documentation`/`qudt:*`/`cdlLineNum*`/
 //! `redeclare`/… ). (`S231:unit`/`quantity`/`displayUnit` are **modeled** typed fields, not
-//! passthrough — see [`Node::unit`] — so the §7.10 deep gate can read them.)
+//! passthrough — see [`Node::unit`] — so the §7.10 deep gate can read them; so are `S231:min`,
+//! `S231:max` and `S231:nominal`.)
 //!
 //! Layer A assigns **no meaning** — it is a dumb mirror. All interpretation (classification,
 //! library join, overlay merge, connections, grounding) happens in the resolver (§7).
@@ -155,6 +156,16 @@ pub struct Node {
     /// `S231:max` — upper-bound binding.
     #[serde(rename = "S231:max", default, skip_serializing_if = "Option::is_none")]
     pub max: Option<CxfValue>,
+    /// `S231:nominal` — the §7.4.1 tolerance-scaling nominal of a Real connector or variable.
+    /// Carried onto `RealAttrs::nominal` by the resolver so the deep gate can refuse a non-finite
+    /// one and export can round-trip it (issue #379); never unified (R13.4) and never read on the
+    /// tick.
+    #[serde(
+        rename = "S231:nominal",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub nominal: Option<CxfValue>,
     /// `S231:unit` — the connector/variable **computation** unit (§7.4.1). Carried onto
     /// `Connector.attrs` by the resolver so the §7.10 deep gate (oce-validate) can unify it; never
     /// read on the tick (R1). A [`TermAttr`] so all three legal JSON-LD wire shapes deserialize —

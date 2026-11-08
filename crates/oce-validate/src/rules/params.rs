@@ -30,6 +30,8 @@ pub(crate) fn check_block_params(model: &ModelGraph, diags: &mut Vec<Diagnostic>
                 );
             }
         }
+        // Engine-wide finiteness gate (issue #362): runs for every block, registered or not.
+        let has_non_finite = super::params_finite::check_finite_params(blk, diags);
         let Some(entry) = lookup(&blk.class_iri) else {
             continue;
         };
@@ -48,6 +50,12 @@ pub(crate) fn check_block_params(model: &ModelGraph, diags: &mut Vec<Diagnostic>
                     ),
                 );
             }
+        }
+        // Every class rule presumes finite Real operands. A block already refused for a
+        // non-finite parameter reports only that cause: its range/ordering, required-parameter,
+        // kind and array-shape rules all wait until the value is fixed (the load fails anyway).
+        if has_non_finite {
+            continue;
         }
         for rule in entry.param_rules() {
             check_rule(blk, *rule, diags);

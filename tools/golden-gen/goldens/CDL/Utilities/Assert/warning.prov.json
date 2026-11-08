@@ -1,0 +1,24 @@
+{
+  "class_path": "CDL.Utilities.Assert",
+  "signal": "warning",
+  "tier": "A",
+  "source": "closed-form from Buildings CDL.Utilities.Assert.mo equation assert(u, message, AssertionLevel.warning), read as one warning record per evaluation with u false; an engine-observation reference for the warning channel, not an output connector; independent re-derivation",
+  "value_kind": "Boolean",
+  "compare_regime": "exact per-frame warning-record count 0.0/1.0 with bit-exact record time and verbatim message (atoly=0)",
+  "n_samples": 7,
+  "n_reference_columns": 3,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "warning"],
+  "inputs": [
+    { "name": "u", "value_kind": "Boolean", "values": [0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0] }
+  ],
+  "input": "message=\"supply air temperature out of range\"; u=[F,F,T,F,T,T,F] at 60 s ticks; u is false on the first tick",
+  "reference_rule": "Buildings CDL/Utilities/Assert.mo line 11 assert(u, message, AssertionLevel.warning): warning[k] = NOT u[k]; 1.0 = exactly one Warning record carrying message at time[k], 0.0 = none",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "third_party/modelica-buildings-cdl/Buildings/Controls/OBC/CDL/Utilities/Assert.mo",
+  "message": "supply air temperature out of range",
+  "observation_channel": "warning-record count per evaluation (CDL Assert has no output connector); compare against the completed frame's Warning diagnostics: source CDL.Utilities.Assert, text = message, time = row time",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}
