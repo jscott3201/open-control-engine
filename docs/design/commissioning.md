@@ -4,8 +4,8 @@
 test-spec and point-mapping files, unit conversion, the envelope, indicators, time handling, the
 report and the receipt. Decisions 1 to 4 were settled by the owner and decisions 5 to 10 are
 technical recommendations the orchestrator accepted; both are stated here, not reopened. Decisions
-11 onwards were made while drafting and are marked **Proposed** until the architect pass rules on
-them (see [Review rulings](#review-rulings)). It answers GitHub #436 and drives
+11 to 26 were made while drafting and ruled on by the architect pass, which accepted fourteen and
+replaced 17 and 21 (see [Review rulings](#review-rulings)). It answers GitHub #436 and drives
 [the replay API](replay.md) (GitHub #435, merged as GitHub #443; the crate is #445).
 
 CDL §12.7.1 states the product: "a report that describes whether the real implementation conforms
@@ -46,8 +46,8 @@ unchanged:
 | `.model` | string | the Modelica class, a label only |
 | `.sequence` | string | the instance name; output and indicator keys are `<sequence>.<path>` |
 | `.pointNameMapping` | string or array | a mapping file path, or the mapping inline |
-| `.outputs` | object | key a regular expression, value partial tolerances |
-| `.indicators` | object | key a regular expression, value an array of indicator names (ANDed) |
+| `.outputs` | object | key an output name (or `glob:` pattern), value partial tolerances |
+| `.indicators` | object | key an output name (or `glob:` pattern), value indicator names (ANDed) |
 | `.sampling` | number (s) | per-test comparison sampling |
 | `tolerances` | object | `rtolx`, `rtoly`, `atolx`, `atoly` (Listing 12.1: `0.002, 0.002, 10, 0`) |
 | `sampling` | number (s) | default sampling (Listing 12.1: 120) |
@@ -74,10 +74,13 @@ trend format; `table` names the matrix when a file holds more than one). Time is
 since `time.origin` or an ISO-8601 column (replay decision 17). `hold.maxAge` per source is the
 replay `HoldLast` policy for that source's inputs; absent, a missing sample refuses the frame.
 
-Output and indicator keys are regular expressions, matched unanchored against `<sequence>.<path>`
-as `VerifyConfig` does today ("matches the regular expression `setPoiVAV1.TSup*`", §12.7.2).
-Overrides apply in declaration order, later fields winning; a pattern that matches nothing is an
-error, so a typo cannot pass silently (decision 17).
+Output and indicator keys are exact `<sequence>.<path>` names. A key prefixed `glob:` is a simple
+glob (`*` any run of characters, `?` one character, nothing else special) matched against the whole
+name. Overrides apply in declaration order, later fields winning. A key or glob that matches no
+output is an error, so a typo or a bare `u` cannot pass silently or select every output. Listing
+12.1's `"setPoiVAV1.TSup*"`, which §12.7.2 calls a regular expression, therefore refuses with a
+finding that names the `glob:setPoiVAV1.TSup*` spelling; that key is the one LBL field that needs
+editing to load (decision 17).
 
 ### Worked spec: Building 33 cooling-coil valve (§12.6)
 
@@ -113,8 +116,8 @@ error, so a typo cannot pass silently (decision 17).
         { "path": "data/Clg_Coil_Valve.mos", "format": "combiTimeTable", "timeColumn": 1,
           "columns": { "3": "Clg Coil Valve" } }
       ],
-      "outputs": { "cooValSta\\.yCooVal": { "atolx": 1, "rtoly": 0.01 } },
-      "indicators": { "cooValSta\\.yCooVal": [ "cooValSta.uFanSta" ] }
+      "outputs": { "cooValSta.yCooVal": { "atolx": 1, "rtoly": 0.01 } },
+      "indicators": { "cooValSta.yCooVal": [ "cooValSta.uFanSta" ] }
     }
   ]
 }
@@ -130,7 +133,8 @@ in the example to show the shape. The sequence's instance modifiers in the upstr
 class defaults, so `parameters` is empty: `k = 0.018` 1/K and `Ti = 30` s are derived inside the
 CXF from the recorded ALC gains (`k = alc_prop_k · 9/5`, `Ti = k · interval / (alc_int_k · 9/5)`),
 as §12.6 prescribes. The upstream instance sets `reverseActing = false`; §12.6's prose says
-`reverseAction = true`, written before CDL renamed and inverted that parameter. The model governs.
+`reverseAction = true`, written before CDL renamed and inverted that parameter. The worked example
+follows the model's `reverseActing = false`, not the prose.
 
 ## Point mapping
 
@@ -249,8 +253,9 @@ directories, `fail1`–`fail6`, `should_succeed1`, `success1`–`success10`, wit
 hostile set (constant series, a single point, equal times, huge and tiny `x` magnitude, every
 tolerance kind alone) and one Building 33 day. A pinned script runs `pyfunnel==2.1.1` from its wheel
 on x86_64 Linux (no fused multiply-add) and writes the files plus a provenance record (package
-version, wheel SHA-256, funnel commit, platform); they are committed as fixtures and only that
-script regenerates them. The port's own outputs are also golden-tested bit for bit.
+version, wheel SHA-256, funnel commit, platform); the script, its pins and the fixtures are
+committed, and the fixtures are regenerated only by an issue that says so. The port's own outputs
+are also golden-tested bit for bit.
 
 **`aligned-grid`.** The conservative envelope `oce-conformance` uses today (`build_bounds`): a grid
 of every sample and rectangle edge, min and max over covering rectangles, half-sizes as a **sum** of
@@ -366,10 +371,10 @@ panics on hostile input.
 `oce verify --commission <spec> [--reference <n>] [--out <dir>] [--bounds] [--format human|json]`,
 in the `oce` binary of the [authoring layer](authoring-layer.md#cli). The CLI reads the files the
 spec names (paths relative to the spec, never absolute), runs every reference unless `--reference`
-picks one, and writes the receipt, the trace and the exceedance columns to `--out`. Exit codes:
-**0** every output passed; **1** a completed run did not pass (`fail` or `no_data`); **2** no
-verdict: a usage error, or a spec, mapping, unit, source or engine refusal; **3** an I/O failure
-(decision 21).
+picks one, and writes the receipt, the trace and the exceedance columns to `--out`. Exit codes
+follow the `oce` convention (0 yes, 1 no, 2 error): **0** every output passed; **1** not passed,
+covering `fail` and `no_data` (the receipt says which); **2** a usage error, a refused spec, mapping
+or unit, an unreadable source, an engine refusal or an I/O failure (decision 21).
 
 ## Building 33 data
 
@@ -386,10 +391,10 @@ Hysteresis, And, Min, Change, BooleanToReal, Multiply, Constant), outside today'
 
 So the worked example uses real trends (decision 4). The implementing PR adds the six `.mos` files,
 their README and the sequence's `.mo` verbatim under `third_party/modelica-buildings-cdl/` at the
-existing pin, and its CXF translated at the recorded modelica-json pin, under the vendored README's
-manifest and license; it is a cone addition, not a pin advance. A synthetic trend generated from the
-engine, labelled `data: synthetic` in its receipts, is used only where no recorded data exists:
-unit-level tests and the hostile set.
+existing pin, and its CXF translated at the recorded modelica-json pin, following the vendored
+README's pin-advance process (manifest, license, `gate.sh full`) even though the pin does not move.
+A synthetic trend generated from the engine, labelled `data: synthetic` in its receipts, is used
+only where no recorded data exists: unit-level tests and the hostile set.
 
 The verdict on Building 33 is not predicted here. §12.6 names two real residuals ("ALC EIKON uses a
 discrete time step", "a proprietary algorithm for the anti-windup"), and the engine's HostTick
@@ -399,7 +404,7 @@ verdict results; a failure is a finding to adjudicate, never a reason to widen t
 ## Decisions
 
 Decisions 1 to 4 are the owner's; 5 to 10 are recommendations accepted by the orchestrator. Both are
-settled. Decisions 11 to 26 are **Proposed**.
+settled. Decisions 11 to 26 were ruled on by the architect pass; 17 and 21 are as it replaced them.
 
 **1. Envelope: a faithful port of funnel, named `funnel`,** proven by a differential test against
 pyfunnel, with the conservative grid envelope kept as a second named mode, `aligned-grid`.
@@ -426,58 +431,65 @@ verification-only and keeps its copy. **10. Replay provides** `DuplicateTime::Al
 metadata, row and column caps and `sampling` for `Grid` sources; resampling and indicators are the
 verifier's ([the replay note](replay.md) records all six).
 
-**11. Proposed: the engine series is the funnel reference by default;** `funnelReference: "trend"`
+**11. the engine series is the funnel reference by default;** `funnelReference: "trend"`
 reproduces the funnel tool's own example, and the receipt records the role. Rejected: a fixed trend
 reference. Why: the envelope is asymmetric and the CDL is the specification.
 
-**12. Proposed: funnel's tolerance arithmetic, unmodified** (maximum of terms, range-relative
+**12. funnel's tolerance arithmetic, unmodified** (maximum of terms, range-relative
 `rtol`, the magnitude and `1e-10` fallbacks); `aligned-grid` keeps its sum. Rejected: harmonising
 the two. Why: decision 1 is fidelity; receipts carry the absolute half-widths either way.
 
-**13. Proposed: the differential claim is `%.16g` text equality** on funnel's 17 cases, a hostile
+**13. the differential claim is `%.16g` text equality** on funnel's 17 cases, a hostile
 set and a Building 33 day, captured once by a pinned script on x86_64 Linux. Rejected: bit equality
 (pyfunnel cannot emit it); a numeric tolerance (it would hide a porting error).
 
-**14. Proposed: comparison sampling is zero-order hold of both series;** raw times without
+**14. comparison sampling is zero-order hold of both series;** raw times without
 `sampling`; `window` clips and pins the endpoints. Rejected: linear interpolation (invents values);
 resampling inside replay (replay decision 5).
 
-**15. Proposed: frames at the union of input times, holds declared per source** and applied by
+**15. frames at the union of input times, holds declared per source** and applied by
 replay's `HoldLast`, so every substitution is in the trace. Rejected: the verifier holding values
 itself (unrecorded); a designated clock source (drops samples replay must observe).
 
-**16. Proposed: an explicit `window` in model seconds;** a series not covering `start` is
+**16. an explicit `window` in model seconds;** a series not covering `start` is
 `no_data`. Rejected: comparing whatever overlaps (a short trend silently shrinks the test).
 
-**17. Proposed: unanchored regular expressions on `<sequence>.<path>`, no match an error.**
-Rejected: globs (§12.7.2 says regular expression); silent misses. Adds `regex` to `oce-verify`.
+**17. Exact output names, with an opt-in `glob:`.** Keys are `<sequence>.<path>`; `glob:` allows
+`*` and `?`; a key or glob matching nothing is an error; no `regex` dependency, and the copied
+`VerifyConfig` drops its regex matching. Rejected: unanchored regular expressions (the draft; an
+agent or a person writing `u` must not silently select every output).
 
-**18. Proposed: Scenario 1 fields parse and are ignored with a finding;** `controllerOutput` is the
+**18. Scenario 1 fields parse and are ignored with a finding;** `controllerOutput` is the
 expected source when `expected` is absent. Rejected: refusing them (LBL specs would not load);
 acting on them (the verifier drives no controller).
 
-**19. Proposed: `units/v1` as listed, discrete encodings exact.** Rejected: one ambiguous `inH2O`;
+**19. `units/v1` as listed, discrete encodings exact.** Rejected: one ambiguous `inH2O`;
 a `0.5` Boolean threshold (a sensor fault would read as a state).
 
-**20. Proposed: FNV-1a-128 identities** for `spec_id`, source digests and `receipt_id`, over
-canonical bytes, `timings` excluded. Rejected: a new hash dependency. M3 owns id prefixes.
+**20. FNV-1a-128 identities** for `spec_id`, source digests and `receipt_id`, over
+canonical bytes, `timings` excluded. Rejected: a new hash dependency. M3's canonical content id
+may replace the hash function; the receipt names which one was used.
 
-**21. Proposed: exit codes 0 pass, 1 not passed, 2 no verdict, 3 I/O.** Rejected: the authoring
-CLI's "1 for a parse refusal" here, where "the site failed" and "nothing was verified" must differ.
+**21. Exit codes: the `oce` convention.** 0 pass; 1 not passed (`fail` or `no_data`, the
+receipt says which); 2 usage errors, refused specs, unreadable sources and I/O. Rejected: a separate
+"no verdict" code and an exit 3 (the draft). Why: the owner fixed 0 yes, 1 no, 2 error for every
+`oce` subcommand; "nothing was verified" is a `no_data` verdict in the receipt, not an exit code.
 
-**22. Proposed: comparison caps,** 1,048,576 points per output for `funnel`, 32,768 for
+**22. comparison caps,** 1,048,576 points per output for `funnel`, 32,768 for
 `aligned-grid`, a work counter on loop removal, each a typed error pinned at its boundary.
 
-**23. Proposed: masked exceedance is reported, never counted.** Rejected: dropping it (hides mask
+**23. masked exceedance is reported, never counted.** Rejected: dropping it (hides mask
 edges); failing on it (contradicts §12.7.2's "exclude").
 
-**24. Proposed: parameters in CDL units through halt, `set_param` and resume** before the first
+**24. parameters in CDL units through halt, `set_param` and resume** before the first
 frame, echoed in the receipt, never converted.
 
-**25. Proposed: the library opens no file;** it takes bytes and the CLI resolves paths relative to
+**25. the library opens no file;** it takes bytes and the CLI resolves paths relative to
 the spec, as replay does.
 
-**26. Proposed: vendor Building 33 verbatim and whole** (about 11.6 MB beside the 3.46 MB tree).
+**26. vendor Building 33 verbatim and whole** (about 11.6 MB beside the 3.46 MB tree).
+The implementing PR follows the vendored README's pin-advance process although the pin does not
+move, and brings the `CoolingCoilValve` `.mo` and its CXF at the recorded modelica-json pin.
 Rejected: a one-day slice (not verbatim, outside the manifest's fidelity check).
 
 ## Relation to other work
@@ -501,12 +513,14 @@ Rejected: a one-day slice (not verbatim, outside the manifest's fidelity check).
 
 ## Test plan
 
-- **Funnel port.** The differential cases; bit-exact goldens of the port's own curves; each
+- **Funnel port.** The differential cases, from the committed capture script and pins (fixtures
+  regenerated only by an issue that says so); bit-exact goldens of the port's own curves; each
   tolerance kind alone; zero half-sizes taking the fallbacks; vertical steps; leading duplicates;
   loop removal at a sharp peak; mismatched endpoints and non-finite input refused with variants.
 - **Spec.** Listing 12.1 verbatim, comments included, loads; load → write → load is byte-identical;
-  duplicate keys, trailing commas, unknown fields, `NaN` and over-limit input refuse; a pattern
-  matching nothing errors; override order.
+  duplicate keys, trailing commas, unknown fields, `NaN` and over-limit input refuse; exact keys,
+  `glob:` with `*` and `?`, a key or glob matching nothing, Listing 12.1's regex key refused with
+  its glob hint; override order.
 - **Units.** Every pair golden-tested bit for bit at `-0.0`, extremes and known points (`32 degF`
   is exactly `273.15 K`); unknown and one-sided pairs refuse; `0.5`, `2` and `NaN` in a Boolean
   column refuse.
@@ -514,7 +528,7 @@ Rejected: a one-day slice (not verbatim, outside the manifest's fidelity check).
   two frames; a negative origin offset; window endpoints; zeroing, mask edges, ANDed indicators, an
   all-masked output `no_data`, masked exceedance excluded.
 - **Report, receipt, CLI.** Golden receipts for pass, fail and `no_data`; `receipt_id` identical
-  across runs and replay chunk sizes; exit code per outcome class.
+  across runs and replay chunk sizes; exit 0, 1 (`fail`, `no_data`) and 2 per outcome class.
 - **Building 33.** One day end to end, its receipt a golden regenerated only through `oce-bless`.
 
 ## Out of scope
@@ -527,4 +541,23 @@ Rejected: a one-day slice (not verbatim, outside the manifest's fidelity check).
 
 ## Review rulings
 
-None yet.
+The architect pass on the draft (orchestrator, 2026-11-08) ruled:
+
+- 11 accepted: the engine series is the funnel reference by default, `trend` opt-in.
+- 12 accepted: funnel's tolerance arithmetic from `tubeSize.c` is the contract.
+- 13 accepted: `%.16g` text equality; capture script and pins committed, regenerated only by issue.
+- 14 accepted: zero-order hold for both series, never interpolation.
+- 15 accepted: frames at the union of input times, per-source `hold.maxAge` as `HoldLast`.
+- 16 accepted: an explicit comparison `window`.
+- 17 rejected and replaced: exact `<sequence>.<path>` keys, opt-in `glob:` (`*`, `?`), no `regex`.
+- 18 accepted: Scenario 1 fields ignored with a finding; `controllerOutput` is the expected output.
+- 19 accepted: two inch-of-water units, exact discrete encodings.
+- 20 accepted: FNV-1a-128 ids; M3's canonical id may replace the hash, and the receipt names it.
+- 21 rejected and replaced: the `oce` convention, 0 pass, 1 not passed, 2 error; no exit 3.
+- 22 accepted: 1,048,576 points per output for `funnel`, 32,768 for `aligned-grid`.
+- 23 accepted: masked exceedance reported, never failing the output.
+- 24 accepted: parameters in CDL units through `set_param`.
+- 25 accepted: the library takes bytes and opens no file.
+- 26 accepted: verbatim and whole, through the pin-advance process, with the `.mo` and its CXF.
+- Conflicts accepted: the C source over the brief's formula; `aligned-grid` keeps the summed
+  tolerances; the model's `reverseActing = false` over §12.6's prose.

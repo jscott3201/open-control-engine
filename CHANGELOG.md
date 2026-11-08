@@ -147,9 +147,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `pyfunnel` 2.1.1, §12.7.2 indicator zeroing, zero-order-hold comparison sampling, per-output
   `pass` / `fail` / `no_data` reports, a receipt sharing its header with the M3 vector receipt, and
   `oce verify --commission`. Its worked example uses the Building 33 cooling-coil trends that the
-  Modelica Buildings library ships. It states the owner's four decisions and six accepted
-  recommendations, and proposes sixteen more. The note is registered in `docs/README.md` and the
-  book.
+  Modelica Buildings library ships. It states the owner's four decisions, six accepted
+  recommendations and sixteen more settled in review, among them exact output names with an opt-in
+  `glob:` and the `oce` exit-code convention (0 pass, 1 not passed, 2 error). The note is
+  registered in `docs/README.md` and the book.
 - **Design note for the historical replay API** (GitHub #443, issue #435). `docs/design/replay.md`
   fixes, before any code, the `oce-replay` leverage crate that every consumer (`oce-verify`,
   `oce-py`, `oce-wasm`, `oce-host`, the commissioning verifier) uses to drive the engine from
