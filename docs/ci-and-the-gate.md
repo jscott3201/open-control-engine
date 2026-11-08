@@ -133,6 +133,23 @@ exact-key miss, so under a shared key the first job to finish writes the entry, 
 dependency set is what that key holds until `Cargo.lock`, the toolchain or the environment changes. `golden-gen-hygiene` keeps its own
 per-job key (it builds the separate `tools/golden-gen` workspace).
 
+**mdBook.** The `docs` job and `docs-pages.yml` get mdBook only from `scripts/docs/install-mdbook.sh`,
+which downloads the pinned upstream release archive, checks its SHA-256 against
+`site/mdbook-checksums.txt`, extracts it, and checks the extracted `mdbook` executable against a second
+digest in the same file (the second table, column 2 `<archive>:mdbook`) before installing it. Both
+workflows first restore `target/mdbook-bin` with `actions/cache`, keyed on the runner OS and architecture
+plus `hashFiles('site/mdbook-checksums.txt', 'scripts/docs/install-mdbook.sh')` and with **no
+`restore-keys`**: an exact hit or nothing, so a binary cached for an older pin is never restored after
+the pin is bumped (`check-workflow-gates.sh` fails closed on a `restore-keys` line or a cache step after
+the install). The installer still runs after the restore and trusts a binary already at the destination
+only if its SHA-256 equals the pinned binary digest, printing `already present and verified` and
+skipping the download; a wrong or tampered cached file is re-downloaded and re-verified, never trusted,
+so the checksum pin stays the integrity guarantee and the cache only removes the live GitHub release
+download from the critical path (it returned HTTP 504 for over an hour on 2026-11-08). There is no
+second download source on purpose: `cargo install mdbook --locked` would compile mdBook for minutes on
+every cold run, and GitHub's API asset URL is served by the same CDN, so the cache is the mitigation. A
+cold cache during an outage still fails, loudly.
+
 Branch protection on `development` makes the PR run the only way in: a pull request is required,
 the `CI OK` status is required, and the branch must be up to date with `development` before it
 merges. GitHub PR runs test a synthetic merge of the PR head into its base, and the up-to-date

@@ -256,6 +256,10 @@ jobs:
       - run: test -s target/nextest/ci/junit.xml
   docs:
     steps:
+      - uses: actions/cache@89abcdef0123456789abcdef0123456789abcdef # v6
+        with:
+          path: target/mdbook-bin
+          key: mdbook-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('site/mdbook-checksums.txt', 'scripts/docs/install-mdbook.sh') }}
       - run: bash scripts/docs/install-mdbook.sh target/mdbook-bin
       - run: python3 scripts/docs/test_check_links.py
       - run: python3 scripts/docs/test_authority_literals.py --mdbook target/mdbook-bin/mdbook
@@ -305,6 +309,19 @@ jobs:
             strict-bit-matrix=core strict-bit-compare=core
             determinism-matrix=core determinism-compare=core crate-tests=core
         run: python3 scripts/ci/ci_ok.py
+EOF
+  cat > "$dir/docs-pages.yml" <<'EOF'
+on:
+  pull_request:
+    branches: [development]
+jobs:
+  build:
+    steps:
+      - uses: actions/cache@89abcdef0123456789abcdef0123456789abcdef # v6
+        with:
+          path: target/mdbook-bin
+          key: mdbook-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('site/mdbook-checksums.txt', 'scripts/docs/install-mdbook.sh') }}
+      - run: bash scripts/docs/install-mdbook.sh target/mdbook-bin
 EOF
   cat > "$dir/release-gate.yml" <<'EOF'
 on:
@@ -1041,6 +1058,33 @@ remove_docs_checker_contracts() {
   mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
+mdbook_cache_restore_keys() {
+  dir="$1"
+  _deny="$2"
+  sed 's|^\(          key: mdbook-.*\)$|\1\n          restore-keys: mdbook-|' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+mdbook_cache_after_install() {
+  dir="$1"
+  _deny="$2"
+  awk '
+    /^      - uses: actions\/cache@/ && !done { hold = 1 }
+    hold { buf = buf $0 "\n"; if ($0 ~ /key: mdbook-/) { hold = 0; done = 1 } ; next }
+    { print }
+    /install-mdbook\.sh target\/mdbook-bin/ && buf != "" { printf "%s", buf; buf = "" }
+  ' "$dir/docs-pages.yml" > "$dir/docs-pages.yml.tmp"
+  mv "$dir/docs-pages.yml.tmp" "$dir/docs-pages.yml"
+}
+
+remove_mdbook_cache() {
+  dir="$1"
+  _deny="$2"
+  awk '/^      - uses: actions\/cache@/ { skip = 4 } skip > 0 { skip--; next } { print }' \
+    "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
 empty_crate_dir_only() {
   _dir="$1"
   _deny="$2"
@@ -1208,6 +1252,12 @@ run_case missing-docs-link-check fail remove_docs_link_check \
   "check generated internal links and anchors"
 run_case missing-docs-checker-contracts fail remove_docs_checker_contracts \
   "run the documentation checker contracts"
+run_case mdbook-cache-restore-keys fail mdbook_cache_restore_keys \
+  "sets restore-keys on the mdBook cache"
+run_case mdbook-cache-after-install fail mdbook_cache_after_install \
+  "must restore the mdBook cache before the install step"
+run_case missing-mdbook-cache fail remove_mdbook_cache \
+  "restores the verified mdBook binary through a SHA-pinned actions/cache"
 run_case empty-crate-dir-only fail empty_crate_dir_only \
   "no crate Cargo.toml files found under"
 run_case missing-crate-lib-files fail remove_crate_lib_files \

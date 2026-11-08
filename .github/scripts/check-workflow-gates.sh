@@ -454,6 +454,38 @@ require_unsafe_forbid_layers() {
   fi
 }
 
+# The mdBook binary is restored from actions/cache before the installer runs, keyed on the pinned
+# digests and the installer, with no restore-keys: an exact hit or nothing, so a stale binary can
+# never be restored for a bumped pin. The installer re-verifies whatever it finds (issue #416).
+require_mdbook_cache() {
+  path="$1"
+  job="$2"
+  require_job_pattern "$path" "$job" \
+    "^[[:space:]]*(- )?uses:[[:space:]]*actions/cache@[0-9a-f]{40}[[:space:]]+#" \
+    "$job restores the verified mdBook binary through a SHA-pinned actions/cache"
+  require_job_pattern "$path" "$job" '^[[:space:]]*path:[[:space:]]*target/mdbook-bin[[:space:]]*$' \
+    "$job caches target/mdbook-bin"
+  require_job_pattern "$path" "$job" \
+    "^[[:space:]]*key:[[:space:]]*mdbook-.*hashFiles\\('site/mdbook-checksums\\.txt', 'scripts/docs/install-mdbook\\.sh'\\)" \
+    "$job keys the mdBook cache on the pinned checksums and the installer"
+  local body cache_line install_line
+  body="$(awk -v header="  $job:" '
+    $0 == header { found = 1; next }
+    found && /^  [^ ]/ { exit }
+    found { print }
+  ' "$path" | grep -Ev '^[[:space:]]*#')"
+  if grep -Eq 'restore-keys' <<< "$body"; then
+    echo "FAIL: $path job $job sets restore-keys on the mdBook cache; a prefix restore could serve a stale binary"
+    exit 1
+  fi
+  cache_line="$(grep -En 'uses:[[:space:]]*actions/cache@' <<< "$body" | head -n1 | cut -d: -f1)"
+  install_line="$(grep -En 'run: bash scripts/docs/install-mdbook\.sh target/mdbook-bin$' <<< "$body" | head -n1 | cut -d: -f1)"
+  if [ -z "$cache_line" ] || [ -z "$install_line" ] || [ "$cache_line" -ge "$install_line" ]; then
+    echo "FAIL: $path job $job must restore the mdBook cache before the install step"
+    exit 1
+  fi
+}
+
 ci="$WORKFLOW_DIR/pr-gate.yml"
 release="$WORKFLOW_DIR/release-gate.yml"
 advisories="$WORKFLOW_DIR/advisories.yml"
@@ -578,6 +610,11 @@ require_job_pattern "$ci" 'docs' '^[[:space:]]*(- )?run: target/mdbook-bin/mdboo
   'build the mdBook'
 require_job_pattern "$ci" 'docs' '^[[:space:]]*python3 scripts/docs/check_links\.py$' \
   'check generated internal links and anchors'
+require_mdbook_cache "$ci" docs
+docs_pages="$WORKFLOW_DIR/docs-pages.yml"
+require_file "$docs_pages"
+require_pinned_actions "$docs_pages"
+require_mdbook_cache "$docs_pages" build
 require_job_pattern "$ci" 'ci-ok' '^[[:space:]]*if:[[:space:]]*always\(\)' \
   'CI OK aggregate reports on every run'
 require_job_pattern "$ci" 'ci-ok' 'toJSON\(needs\)' 'CI OK aggregate inspects every needed result'
