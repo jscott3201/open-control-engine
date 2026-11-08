@@ -11,7 +11,8 @@ use super::safe_read;
 use super::schema::{Artifact, Manifest};
 
 pub(super) fn validate(manifest: &Manifest, root: &Path) -> Result<(), String> {
-    let root = root.canonicalize().map_err(|error| error.to_string())?;
+    let root =
+        without_verbatim_disk_prefix(root.canonicalize().map_err(|error| error.to_string())?);
     let mut paths = BTreeSet::new();
     let mut roles = BTreeSet::new();
     for artifact in &manifest.artifacts {
@@ -31,6 +32,21 @@ pub(super) fn validate(manifest: &Manifest, root: &Path) -> Result<(), String> {
     super::projection_records::validate(manifest, &root)?;
     validate_cross_architecture(manifest, &root)?;
     validate_tool_contract(manifest, &root)
+}
+
+/// On Windows `canonicalize` returns a verbatim `\\?\D:\...` path. The pinned canonicalizer's
+/// non-unix reader checks every prefix of its input with `symlink_metadata`, and the bare verbatim
+/// drive `\\?\D:` fails that with "Incorrect function", so the root drops the verbatim prefix:
+/// `D:\...` names the same canonical directory. Every other path is returned unchanged.
+fn without_verbatim_disk_prefix(path: std::path::PathBuf) -> std::path::PathBuf {
+    #[cfg(windows)]
+    if let Some(text) = path.to_str()
+        && let Some(rest) = text.strip_prefix(r"\\?\")
+        && rest.as_bytes().get(1) == Some(&b':')
+    {
+        return std::path::PathBuf::from(rest);
+    }
+    path
 }
 
 fn validate_native_provenance(manifest: &Manifest) -> Result<(), String> {

@@ -561,7 +561,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
   OpenModelica reference test groups that cannot build on Windows are now `#[cfg(unix)]` like their
   siblings: the symlink-rejection test (it creates symlinks with `std::os::unix::fs::symlink`) and
   the line-reference `manifest_contract_tests` (its temporary repositories are claimed by unix
-  device and inode); Linux and macOS run both unchanged.
+  device and inode); Linux and macOS run both unchanged. Two more fail-on-Windows causes are fixed in
+  test code: the hook truthiness test sets `PATH` on its `bash` command, so Windows resolves Git Bash
+  rather than the WSL launcher in `System32`, and passes the hook path without the verbatim `\\?\`
+  prefix and with forward slashes; the Line evidence validator drops the verbatim prefix from its
+  canonical root, which the digest-pinned canonicalizer's per-component check could not stat.
 - **Two per-PR lanes under one `CI OK`, and `gate (light)` only when the gate changes** (GitHub
   #418, issue #393). A new first job in `pr-gate.yml`, `classify changed paths`, lists the PR's
   changes with plain git (the tested merge against its base parent, renames as a deletion plus an
