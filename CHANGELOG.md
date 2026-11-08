@@ -139,6 +139,17 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
+- **Design note for the commissioning verifier (CDL §12)** (GitHub #PRNUM, issue #436).
+  `docs/design/commissioning.md` fixes, before any code, the tolerance mode of `oce-verify`: a
+  strict-JSON superset of CDL §12.7 Listing 12.1 (LBL specs load unchanged, comments stripped),
+  Listing 12.2 point mapping with a closed `units/v1` conversion table outside the engine, a
+  faithful Rust port of LBNL funnel's tube construction proven by a differential test against
+  `pyfunnel` 2.1.1, §12.7.2 indicator zeroing, zero-order-hold comparison sampling, per-output
+  `pass` / `fail` / `no_data` reports, a receipt sharing its header with the M3 vector receipt, and
+  `oce verify --commission`. Its worked example uses the Building 33 cooling-coil trends that the
+  Modelica Buildings library ships. It states the owner's four decisions and six accepted
+  recommendations, and proposes sixteen more. The note is registered in `docs/README.md` and the
+  book.
 - **Design note for the historical replay API** (GitHub #443, issue #435). `docs/design/replay.md`
   fixes, before any code, the `oce-replay` leverage crate that every consumer (`oce-verify`,
   `oce-py`, `oce-wasm`, `oce-host`, the commissioning verifier) uses to drive the engine from
