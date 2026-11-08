@@ -4,8 +4,8 @@
 a block keeps its identity across two revisions, the change categories, the data and text it
 produces, and how a site retune is told apart from a graph change. Decisions 1 to 3 are the owner's
 and decisions 4 to 8 were accepted with them from the prior-art review; both are stated here, not
-reopened. Decisions marked **Proposed** were made while drafting and wait for the architect pass
-(see [Review rulings](#review-rulings)). The model it diffs is the one in the
+reopened. Decisions 9 to 16 were made while drafting and accepted by the architect pass (see
+[Review rulings](#review-rulings)). The model it diffs is the one in the
 [authoring layer note](authoring-layer.md).
 
 The owner's work plan names the M3 deliverable as "a structural diff of two authoring models or CXF
@@ -148,8 +148,7 @@ sides must be the same kind. The JSON report is the CLI's closed envelope (`tool
 `command`, `ok`) with the `Diff` as its result. Exit codes follow the **`oce` CLI rule for every
 subcommand** (decision 1): **0** yes (here, `equal`), **1** no (any difference), **2** error (usage,
 a parse refusal of either input, a CXF load refusal, I/O). Exit 1 never means a crash. The
-[authoring note's CLI section](authoring-layer.md#cli) still gives 1 for a parse refusal and 3 for
-I/O; decision 16 aligns it.
+[authoring note's CLI section](authoring-layer.md#cli) follows the same rule.
 
 ## Relation to content ids
 
@@ -223,8 +222,8 @@ facade refuses to decode.
 
 Recreated in the M2 text form from three revision pairs in the earlier prototype's history: a
 sequence-sheet revision, a spec's version 2, and an agent's draft against its reference. Example
-(a) shows the whole JSON; (b) and (c) show the summary, notes and graph section, the other fields
-being as in (a).
+(a) shows the whole JSON; (b) shows the summary, notes and graph section, and (c) its graph
+entries only (its notes are `["names-disjoint"]`); the other fields are as in (a).
 
 ### (a) A site retune: two thresholds change
 
@@ -449,10 +448,6 @@ candidates, because `delayTime` differs.
 
 ```json
 {
-  "summary": { "equal": false, "graph_equal": false, "parameters_equal": true,
-               "interface_equal": true, "metadata_equal": false,
-               "blocks": { "by_name": 0, "renamed": 3, "base_only": 2, "head_only": 2 } },
-  "notes": ["names-disjoint"],
   "graph": [
     { "kind": "renamed", "subject": "TMax", "from": "THigh",
       "class": "CDL.Reals.Sources.Constant", "confidence": "exact" },
@@ -508,7 +503,7 @@ rename whose neighbourhood was only partly seen (`sw.u2`'s driver was never matc
 ## Decisions
 
 Decisions 1 to 3 are the owner's; 4 to 8 are the prior-art review's recommendations, accepted with
-them. All eight are settled. Decisions 9 onwards are **Proposed**.
+them. All eight are settled. Decisions 9 to 16 were drafted here and accepted in review.
 
 **1. One exit-code rule for every `oce` subcommand.** 0 is yes (same, pass, clean), 1 is no
 (different, fail, findings), 2 is an error (bad input, I/O); exit 1 never means a crash. Rejected:
@@ -547,44 +542,45 @@ never facts scraped from prose.
 **8. Equal canonical ids are the fast path once M3 ships**; today's content id says only "no byte
 change". Whether names are inside the canonical id is M3's decision, recorded as a dependency.
 
-**9. Proposed: a sibling leverage crate, `crates/leverage/oce-diff`**, on `oce-author` and
+**9. a sibling leverage crate, `crates/leverage/oce-diff`**, on `oce-author` and
 `oce-api`, `#![forbid(unsafe_code)]`, `serde` its only new dependency, linked by `oce-cli`.
 Rejected: a module in `oce-author`. Why: the leverage README already names `oce-diff`; `oce-author`
 carries M2's gate and should not change for M3 work; receipts and cards need the diff without the
 CLI; the CXF and blob adapters need facade calls `oce-author` does not make.
 
-**10. Proposed: the diff never validates**; it needs parsed models and reads the catalog only for
+**10. the diff never validates**; it needs parsed models and reads the catalog only for
 literal defaults. Rejected: diffing validated models only. Why: an agent repairing a draft needs
 the diff against the reference precisely while the draft is invalid.
 
-**11. Proposed: the rename pass as specified under [Identity](#identity)** (anchors, per-port
+**11. the rename pass as specified under [Identity](#identity)** (anchors, per-port
 agreement, mutual-unique acceptance, 8 rounds, `exact` and `high`, 2,048 blocks per side and
 65,536 pairs, boundaries never renamed). Rejected: a scored greedy assignment with a float
 threshold (order-sensitive ties, a float in receipts); an unbounded fixed point. Why: mutual
 uniqueness is order-independent and easy to pin with goldens.
 
-**12. Proposed: each connection change is reported once, at its target**, added and removed
+**12. each connection change is reported once, at its target**, added and removed
 blocks carrying their input drivers, drivers compared after renames. Rejected: reporting both
 endpoints. Why: an input has exactly one driver, and nothing is reported twice.
 
-**13. Proposed: Reals as spelling plus bits.** Rejected: JSON numbers. Why: a consumer's float
+**13. Reals as spelling plus bits.** Rejected: JSON numbers. Why: a consumer's float
 parse can lose `-0.0` or a NaN payload; the receipt states exactly what the engine compares.
 
-**14. Proposed: `unit` is interface, other `SemanticPoint` fields are metadata;** a one-sided
+**14. `unit` is interface, other `SemanticPoint` fields are metadata;** a one-sided
 assignment is `parameter-defaulted` only against a literal catalog default, never an expression
 default. Why: `unit` reaches the CXF and the rest does not before M8; the diff never evaluates.
 
-**15. Proposed: the CXF adapter** strips the root prefix, ignores order, reports
+**15. the CXF adapter** strips the root prefix, ignores order, reports
 `parameters_equal: null`, and matches an unnamed block (`b<id>`) only through the rename pass (note
 `unnamed-blocks`). **Blob comparison needs a facade accessor** for a blob's content id, class table
 and initial-state CRCs: the decoder is `oce_graph::blob`, a core crate a leverage crate may not
-call, so this is an engine issue cut with the M3 tracking issue.
+call, so the accessor is engine work, GitHub #448.
 
-**16. Proposed: `oce diff` exits 0 only when `equal`**, so a `reordered`-only or metadata-only diff
-exits 1 and scripts that want "same structure" read `summary.graph_equal`; a parse refusal of
-either input is 2, since no answer was computed. The authoring note's CLI paragraph is aligned with
-decision 1 in the first CLI PR: I/O becomes 2 instead of 3, and the reviewer rules whether a
-`validate` parse refusal stays a "no" (1, as written there) or becomes bad input (2).
+**16. `oce diff` exits 0 only when `equal`**, so a `reordered`-only or metadata-only diff
+exits 1 and scripts that want "same structure" read `summary.graph_equal`. For every `oce`
+subcommand, input that cannot be parsed or loaded exits 2 (bad input) and a parsed input whose
+answer is "no" exits 1: `oce validate` with findings is 1, with a parse refusal 2. Rejected: a
+parse refusal as 1 and I/O as 3, as the authoring note first had it. Why: decision 1, applied
+the same way by every subcommand; the authoring note is aligned in the same PR as this note.
 
 ## Relation to other work
 
@@ -600,8 +596,9 @@ decision 1 in the first CLI PR: I/O becomes 2 instead of 3, and the reviewer rul
   shape is M8's.
 - **Library bundle cards and agent explanations.** A card's "changes from base" section is
   `render_markdown`; an agent quotes `kind`, `subject` and the old and new values.
-- **Implementing issues**, cut from the M3 tracking issue: the `oce-diff` crate, the `oce diff`
-  verb, the facade blob accessor (decision 15), and the card renderer on the library track.
+- **Implementing issues.** The facade blob accessor is GitHub #448, engine work independent of M3
+  (decision 15). The `oce-diff` crate, the `oce diff` verb and the card renderer are cut from the
+  M3 tracking issue when it exists.
 
 ## Test plan
 
@@ -637,4 +634,17 @@ decision 1 in the first CLI PR: I/O becomes 2 instead of 3, and the reviewer rul
 
 ## Review rulings
 
-To be filled in by the architect pass.
+The architect pass on the draft (orchestrator, 2026-11-08) ruled:
+
+- 9 accepted: a sibling leverage crate, `crates/leverage/oce-diff`, on `oce-author` and `oce-api`.
+- 10 accepted: the diff never validates.
+- 11 accepted: the rename pass as specified, caps and rounds included.
+- 12 accepted: each connection change once, at its target, drivers compared after renames.
+- 13 accepted: Reals as spelling plus bits, never JSON numbers.
+- 14 accepted: `unit` under interface, other `SemanticPoint` fields under metadata.
+- 15 accepted; the blob accessor is filed as GitHub #448.
+- 16 accepted, with the open question ruled: unparsable or unloadable input exits 2 for every
+  subcommand, a parsed "no" exits 1; the authoring note's CLI section is aligned in this PR.
+- Block identity by authored name, with the canonical id as the whole-document fast path, accepted
+  as written.
+- The note's length is accepted for three worked examples; example (c) shows its graph entries only.

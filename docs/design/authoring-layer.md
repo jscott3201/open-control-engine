@@ -321,9 +321,9 @@ with `clap` (derive) for consistent `--help`, suggestions and shell completions 
 `.oce` files are text, `.json` files are wire; `--from text|wire` overrides and is required on
 stdin (`-`). Every command takes `--format human|json`. The JSON report is one closed object
 (`tool`, `schema`, `command`, `ok`, `findings`, plus the command's result), deterministic and
-documented, so an agent can branch on `code` and quote `detail`. Exit codes: **0** clean; **1**
-error findings, a parse refusal, or `--check` found a non-canonical file; **2** usage error; **3**
-an I/O failure.
+documented, so an agent can branch on `code` and quote `detail`. Exit codes follow the one `oce`
+rule: **0** yes (clean); **1** no (error findings, or `--check` found a non-canonical file); **2**
+error (a usage error, input that cannot be parsed or loaded, an I/O failure).
 
 **Binaries above the facade.** The architecture page says the engine is library-only, with no binary
 target in `crates/`. The PR that adds this note narrows that sentence to the engine crates: leverage
@@ -569,3 +569,5 @@ The architect pass on the draft (owner consulted on 11, 12 and 20) ruled:
 - Gate item 3 reading accepted as written; the parity test is the proof.
 - Gate item 4: accepted; the benchmark-data follow-up issue is filed when the M2 tracking issue is
   cut.
+- 2026-11-08: the CLI exit-code rule was aligned with the diff and commissioning passes: 0 yes, 1
+  no, 2 error, with a parse refusal and an I/O failure both 2 and no exit 3.
