@@ -42,6 +42,17 @@ The per-PR gate runs **once per change**, on the pull request:
   each passed on their own.
 - **A PR into `main`, or a push to `main`,** runs `release-gate.yml`.
 
+**Cache.** The `Swatinem/rust-cache` entries for `pr-gate.yml`'s jobs were written by the
+post-merge push run in `development`'s cache scope, which every PR can read. PR runs save into their
+own PR scope only, so with no push run nothing seeds those `development` entries any more. GitHub
+evicts them after seven days unused, and PRs then build cold. This is accepted for now, and the
+cost is bounded. rust-cache never caches workspace crates, so a cache saves only dependency
+compile time, and the default embed path (`oce-api`) pulls 14 external crates. Run 42439645194, a
+PR run that still had the push-seeded entries available, took 31m42s anyway: its four longest
+jobs (determinism matrix, strict bits, crate tests, golden-gen hygiene) found no cache, and only the
+shorter jobs restored one. Sharing one cache across the `pr-gate.yml` and `release-gate.yml` job
+shapes (rust-cache `shared-key`) is designed in issue #392, together with the native-runner cell split.
+
 Branch protection on `development` makes the PR run the only way in: a pull request is required,
 the `CI OK` status is required, and the branch must be up to date with `development` before it
 merges. GitHub PR runs test a synthetic merge of the PR head into its base, and the up-to-date

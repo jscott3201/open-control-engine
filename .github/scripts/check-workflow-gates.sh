@@ -116,25 +116,102 @@ require_ci_ok_covers_every_job() {
 
 # The per-PR gate runs once per change: on the pull request. A `push` trigger would re-run the
 # whole gate on the merge commit in `development` — the same tree the PR already proved — so any
-# `push` event in the workflow's `on:` (block, flow-list, or scalar form, with or without a branch
-# filter) fails. The `pull_request` trigger must remain. Only the top-level `on:` is inspected.
+# `push` event in the workflow's top-level `on:` fails, with or without a branch filter. The parse
+# accepts every trigger spelling YAML allows: a scalar (`on: push`), a flow list
+# (`on: [push, pull_request]`), a flow map (`on: {push: ..., pull_request: ...}`, also across
+# lines), and a block map or block list at any indent, with plain or quoted keys. The
+# `pull_request` trigger must remain.
 require_pr_trigger_only() {
-  path="$1"
+  local path="$1"
   local triggers
   triggers="$(awk '
-    /^("on"|'"'"'on'"'"'|on):/ {
-      in_on = 1
-      inline = $0
-      sub(/^[^:]*:[[:space:]]*/, "", inline)
-      sub(/[[:space:]]*#.*$/, "", inline)
-      gsub(/[][,]/, " ", inline)
-      count = split(inline, items, " ")
-      for (i = 1; i <= count; i++) if (items[i] != "") print items[i]
+    function unquote(word) {
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", word)
+      gsub(/^["\047]|["\047]$/, "", word)
+      return word
+    }
+    # Top-level entries of a flow collection: keys of a map, items of a list.
+    function flow_events(text,    i, c, depth, kind, token, in_value) {
+      depth = 0; kind = ""; token = ""; in_value = 0
+      for (i = 1; i <= length(text); i++) {
+        c = substr(text, i, 1)
+        if (c == "{" || c == "[") {
+          depth++
+          if (depth == 1) kind = c
+          continue
+        }
+        if (c == "}" || c == "]") {
+          depth--
+          if (depth == 0) {
+            if (!in_value && token != "") print unquote(token)
+            return
+          }
+          continue
+        }
+        if (depth != 1) continue
+        if (c == ",") {
+          if (!in_value && token != "") print unquote(token)
+          token = ""; in_value = 0
+          continue
+        }
+        if (c == ":" && kind == "{" && !in_value) {
+          print unquote(token)
+          token = ""; in_value = 1
+          continue
+        }
+        if (!in_value) token = token c
+      }
+    }
+    function bracket_balance(text,    i, c, depth) {
+      depth = 0
+      for (i = 1; i <= length(text); i++) {
+        c = substr(text, i, 1)
+        if (c == "{" || c == "[") depth++
+        else if (c == "}" || c == "]") depth--
+      }
+      return depth
+    }
+    function strip_comment(line) {
+      sub(/(^|[[:space:]])#.*$/, "", line)
+      return line
+    }
+    flow != "" {
+      flow = flow " " strip_comment($0)
+      if (bracket_balance(flow) <= 0) { flow_events(flow); flow = ""; done = 1 }
       next
     }
-    in_on && /^[^[:space:]#]/ { in_on = 0 }
-    in_on && /^  [A-Za-z_]+:/ { event = $0; sub(/^  /, "", event); sub(/:.*/, "", event); print event }
-    in_on && /^  - [A-Za-z_]+/ { event = $0; sub(/^  - /, "", event); sub(/[[:space:]#].*$/, "", event); print event }
+    done { next }
+    /^("on"|\047on\047|on)[[:space:]]*:/ {
+      inline = strip_comment($0)
+      sub(/^[^:]*:[[:space:]]*/, "", inline)
+      sub(/[[:space:]]+$/, "", inline)
+      if (inline ~ /^[[{]/) {
+        if (bracket_balance(inline) <= 0) { flow_events(inline); done = 1 }
+        else flow = inline
+      } else if (inline != "") {
+        print unquote(inline); done = 1
+      } else {
+        in_on = 1
+      }
+      next
+    }
+    !in_on { next }
+    /^[[:space:]]*(#.*)?$/ { next }
+    {
+      match($0, /^[[:space:]]*/)
+      indent = RLENGTH
+      if (indent == 0) { in_on = 0; done = 1; next }
+      if (child == 0) child = indent
+      if (indent != child) next
+      entry = substr($0, indent + 1)
+      if (entry ~ /^-[[:space:]]/) {
+        sub(/^-[[:space:]]+/, "", entry)
+        print unquote(strip_comment(entry))
+      } else {
+        sub(/[[:space:]]*:.*$/, "", entry)
+        print unquote(entry)
+      }
+    }
   ' "$path")"
   if grep -qx 'push' <<< "$triggers"; then
     echo "FAIL: $path has a push trigger; the per-PR gate must not re-run on merges into development"

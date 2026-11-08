@@ -553,6 +553,48 @@ flow_list_push_trigger() {
   mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
+# Replace the fixture's whole top-level `on:` block (up to `jobs:`) with the given text.
+replace_trigger_block() {
+  dir="$1"
+  block="$2"
+  TRIGGER_BLOCK="$block" awk '
+    /^on:/ { print ENVIRON["TRIGGER_BLOCK"]; skip = 1; next }
+    skip && /^jobs:$/ { skip = 0 }
+    !skip { print }
+  ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+four_space_push_trigger() {
+  replace_trigger_block "$1" 'on:
+    pull_request:
+        branches: [development]
+    "push":
+        branches: [development]
+    workflow_dispatch:'
+}
+
+four_space_pull_request_trigger() {
+  replace_trigger_block "$1" 'on:
+    pull_request:
+        branches: [development]
+    workflow_dispatch:'
+}
+
+block_list_push_trigger() {
+  replace_trigger_block "$1" 'on:
+  - pull_request
+  - push'
+}
+
+flow_map_push_trigger() {
+  replace_trigger_block "$1" "on: {pull_request: {branches: [development]}, 'push': {branches: [development]}}"
+}
+
+flow_map_pull_request_trigger() {
+  replace_trigger_block "$1" 'on: {pull_request: {branches: [development]}, workflow_dispatch: null}'
+}
+
 remove_pull_request_trigger() {
   dir="$1"
   _deny="$2"
@@ -722,6 +764,14 @@ run_case flow-list-push-trigger fail flow_list_push_trigger \
   "pr-gate.yml has a push trigger"
 run_case missing-pull-request-trigger fail remove_pull_request_trigger \
   "pr-gate.yml is missing its pull_request trigger"
+run_case four-space-push-trigger fail four_space_push_trigger \
+  "pr-gate.yml has a push trigger"
+run_case four-space-pull-request-trigger pass four_space_pull_request_trigger
+run_case block-list-push-trigger fail block_list_push_trigger \
+  "pr-gate.yml has a push trigger"
+run_case flow-map-push-trigger fail flow_map_push_trigger \
+  "pr-gate.yml has a push trigger"
+run_case flow-map-pull-request-trigger pass flow_map_pull_request_trigger
 run_case missing-emulated-strict-cell fail remove_emulated_strict_cell \
   "emulated aarch64 release strict-bit cell"
 run_case missing-nextest-report-cleanup fail remove_nextest_report_cleanup \
