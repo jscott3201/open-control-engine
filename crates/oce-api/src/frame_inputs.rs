@@ -29,33 +29,12 @@ pub struct InputDefinition {
     pub max: Option<Value>,
 }
 
+#[cfg(test)]
 impl InputDefinition {
-    /// Called only after exact type checking, including enum class.
+    /// Test helper. Called only after exact type checking, including enum class: the core frame driver's
+    /// domain rule ([`oce_graph::frame::accepts_domain`]) over this definition's bounds.
     pub(crate) fn accepts_domain(&self, value: &Value) -> bool {
-        match value {
-            Value::Real(value) => {
-                self.min
-                    .as_ref()
-                    .is_none_or(|min| matches!(min, Value::Real(min) if value >= min))
-                    && self
-                        .max
-                        .as_ref()
-                        .is_none_or(|max| matches!(max, Value::Real(max) if value <= max))
-            }
-            Value::Integer(value) => {
-                self.min
-                    .as_ref()
-                    .is_none_or(|min| matches!(min, Value::Integer(min) if value >= min))
-                    && self
-                        .max
-                        .as_ref()
-                        .is_none_or(|max| matches!(max, Value::Integer(max) if value <= max))
-            }
-            Value::Enum { class, ordinal } => enum_descriptor(*class).is_some_and(|descriptor| {
-                *ordinal > 0 && (*ordinal as usize) <= descriptor.members.len()
-            }),
-            Value::Boolean(_) | Value::String(_) => true,
-        }
+        oce_graph::frame::accepts_domain(value, self.min.as_ref(), self.max.as_ref())
     }
 }
 
@@ -64,14 +43,6 @@ pub(crate) struct InputBinding {
     pub(crate) targets: Vec<ConnectorId>,
     pub(crate) value_type: ValueType,
     pub(crate) boundary_index: Option<usize>,
-}
-
-impl InputBinding {
-    pub(crate) fn accepts_type(&self, model: &ModelGraph, value: &Value) -> bool {
-        self.targets
-            .iter()
-            .all(|id| model.connectors[id.0 as usize].value_type == value.value_type())
-    }
 }
 
 pub(crate) fn build_inputs(
