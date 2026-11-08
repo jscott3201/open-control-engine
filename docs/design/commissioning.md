@@ -46,8 +46,8 @@ unchanged:
 | `.model` | string | the Modelica class, a label only |
 | `.sequence` | string | the instance name; output and indicator keys are `<sequence>.<path>` |
 | `.pointNameMapping` | string or array | a mapping file path, or the mapping inline |
-| `.outputs` | object | key an output name (or `glob:` pattern), value partial tolerances |
-| `.indicators` | object | key an output name (or `glob:` pattern), value indicator names (ANDed) |
+| `.outputs` | object | key an output name or a glob, value partial tolerances |
+| `.indicators` | object | key an output name or a glob, value indicator names (ANDed) |
 | `.sampling` | number (s) | per-test comparison sampling |
 | `tolerances` | object | `rtolx`, `rtoly`, `atolx`, `atoly` (Listing 12.1: `0.002, 0.002, 10, 0`) |
 | `sampling` | number (s) | default sampling (Listing 12.1: 120) |
@@ -74,13 +74,13 @@ trend format; `table` names the matrix when a file holds more than one). Time is
 since `time.origin` or an ISO-8601 column (replay decision 17). `hold.maxAge` per source is the
 replay `HoldLast` policy for that source's inputs; absent, a missing sample refuses the frame.
 
-Output and indicator keys are exact `<sequence>.<path>` names. A key prefixed `glob:` is a simple
-glob (`*` any run of characters, `?` one character, nothing else special) matched against the whole
-name. Overrides apply in declaration order, later fields winning. A key or glob that matches no
-output is an error, so a typo or a bare `u` cannot pass silently or select every output. Listing
-12.1's `"setPoiVAV1.TSup*"`, which §12.7.2 calls a regular expression, therefore refuses with a
-finding that names the `glob:setPoiVAV1.TSup*` spelling; that key is the one LBL field that needs
-editing to load (decision 17).
+A key that contains `*` or `?` is a glob matched against the whole `<sequence>.<path>` name (`*`
+any run of characters, `?` one character, nothing else special); any other key is an exact name.
+Overrides apply in declaration order, later fields winning. A key that matches no output is an
+error, `SpecError::UnmatchedKey`, whose message names the key, whether it was read as an exact name
+or a glob, and the sequence's output names, so a typo cannot pass silently. There is no substring
+or regular-expression matching: `u` selects only an output named `u`. Listing 12.1's
+`"setPoiVAV1.TSup*"` is a glob and loads unchanged (decision 17).
 
 ### Worked spec: Building 33 cooling-coil valve (§12.6)
 
@@ -117,24 +117,25 @@ editing to load (decision 17).
           "columns": { "3": "Clg Coil Valve" } }
       ],
       "outputs": { "cooValSta.yCooVal": { "atolx": 1, "rtoly": 0.01 } },
-      "indicators": { "cooValSta.yCooVal": [ "cooValSta.uFanSta" ] }
+      "indicators": { "cooValSta.yCoo*": [ "cooValSta.uFanSta" ] }
     }
   ]
 }
 ```
 
 The tolerances are §12.6's: "an absolute tolerance in time of 1 s and a relative tolerance in y of
-1%", read as funnel's range-relative `rtoly` (1 % of the engine series' range, about 0.01 for a
-0–1 valve signal), not `ltoly`, which collapses to the 1e-10 floor wherever the valve is shut.
-Listing 12.1's global `rtolx = 0.002` would be 173 s over a one-day window; the receipt carries the
-absolute half-widths applied, so a reader sees that. The fan-enable trend logs one sample a day,
-hence its 25-hour hold. The indicator is a no-op on this data (the fan is enabled throughout); it is
-in the example to show the shape. The sequence's instance modifiers in the upstream model equal the
-class defaults, so `parameters` is empty: `k = 0.018` 1/K and `Ti = 30` s are derived inside the
-CXF from the recorded ALC gains (`k = alc_prop_k · 9/5`, `Ti = k · interval / (alc_int_k · 9/5)`),
-as §12.6 prescribes. The upstream instance sets `reverseActing = false`; §12.6's prose says
-`reverseAction = true`, written before CDL renamed and inverted that parameter. The worked example
-follows the model's `reverseActing = false`, not the prose.
+1%", read as funnel's range-relative `rtoly` (1 % of the engine series' range, about 0.01 for a 0–1
+valve signal), not `ltoly`, which collapses to the 1e-10 floor wherever the valve is shut. Listing
+12.1's global `rtolx = 0.002` would be 173 s over a one-day window; the receipt carries the absolute
+half-widths applied, so a reader sees that. The fan-enable trend logs one sample a day, hence its
+25-hour hold. The indicator is a no-op on this data (the fan is enabled throughout); it is in the
+example to show the shape, keyed by a glob where `outputs` uses the exact name. The sequence's
+instance modifiers in the upstream model equal the class defaults, so `parameters` is empty: `k =
+0.018` 1/K and `Ti = 30` s are derived inside the CXF from the recorded ALC gains (`k = alc_prop_k ·
+9/5`, `Ti = k · interval / (alc_int_k · 9/5)`), as §12.6 prescribes. The upstream instance sets
+`reverseActing = false`; §12.6's prose says `reverseAction = true`, written before CDL renamed and
+inverted that parameter. The worked example follows the model's `reverseActing = false`, not the
+prose.
 
 ## Point mapping
 
@@ -454,10 +455,11 @@ itself (unrecorded); a designated clock source (drops samples replay must observ
 **16. an explicit `window` in model seconds;** a series not covering `start` is
 `no_data`. Rejected: comparing whatever overlaps (a short trend silently shrinks the test).
 
-**17. Exact output names, with an opt-in `glob:`.** Keys are `<sequence>.<path>`; `glob:` allows
-`*` and `?`; a key or glob matching nothing is an error; no `regex` dependency, and the copied
+**17. Exact names, or whole-string globs where the key has `*` or `?`.** Any other key is an exact
+`<sequence>.<path>`; a key matching nothing is an error; no `regex` dependency, and the copied
 `VerifyConfig` drops its regex matching. Rejected: unanchored regular expressions (the draft; an
-agent or a person writing `u` must not silently select every output).
+agent or a person writing `u` must not silently select every output); a `glob:` prefix (Listing
+12.1 would need editing, against decision 3).
 
 **18. Scenario 1 fields parse and are ignored with a finding;** `controllerOutput` is the
 expected source when `expected` is absent. Rejected: refusing them (LBL specs would not load);
@@ -519,8 +521,9 @@ Rejected: a one-day slice (not verbatim, outside the manifest's fidelity check).
   loop removal at a sharp peak; mismatched endpoints and non-finite input refused with variants.
 - **Spec.** Listing 12.1 verbatim, comments included, loads; load → write → load is byte-identical;
   duplicate keys, trailing commas, unknown fields, `NaN` and over-limit input refuse; exact keys,
-  `glob:` with `*` and `?`, a key or glob matching nothing, Listing 12.1's regex key refused with
-  its glob hint; override order.
+  globs with `*` and `?` anchored at both ends, a key matching nothing refused with
+  `UnmatchedKey` and its message, `u` not matching `uFan`, Listing 12.1's keys loading unchanged;
+  override order.
 - **Units.** Every pair golden-tested bit for bit at `-0.0`, extremes and known points (`32 degF`
   is exactly `273.15 K`); unknown and one-sided pairs refuse; `0.5`, `2` and `NaN` in a Boolean
   column refuse.
@@ -549,7 +552,8 @@ The architect pass on the draft (orchestrator, 2026-11-08) ruled:
 - 14 accepted: zero-order hold for both series, never interpolation.
 - 15 accepted: frames at the union of input times, per-source `hold.maxAge` as `HoldLast`.
 - 16 accepted: an explicit comparison `window`.
-- 17 rejected and replaced: exact `<sequence>.<path>` keys, opt-in `glob:` (`*`, `?`), no `regex`.
+- 17 rejected and replaced: exact `<sequence>.<path>` keys; a key with `*` or `?` is an anchored
+  glob, so Listing 12.1 loads unchanged; no `regex`.
 - 18 accepted: Scenario 1 fields ignored with a finding; `controllerOutput` is the expected output.
 - 19 accepted: two inch-of-water units, exact discrete encodings.
 - 20 accepted: FNV-1a-128 ids; M3's canonical id may replace the hash, and the receipt names it.
