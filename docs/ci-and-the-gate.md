@@ -1,6 +1,7 @@
 # CI and the gate
 
 For contributors, and for anyone looking at a green check mark on a pull request and wondering what
+
 it proves. The short answer is: less than you would assume. The split is deliberate, and it is easy
 to misread in the dangerous direction.
 
