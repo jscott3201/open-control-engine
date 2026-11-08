@@ -1,3 +1,4 @@
+use alloc::boxed::Box;
 use oce_model::ParamTable;
 
 use super::{bool_param, real_param};

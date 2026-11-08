@@ -8,7 +8,8 @@
 //! rejected here with a message pointing at `==` — a binding's `=` never reaches the value
 //! expression this crate parses. The grammar over these tokens lives in [`mod@crate::parse`].
 
-use std::sync::Arc;
+use alloc::sync::Arc;
+use alloc::{format, string::String, vec::Vec};
 
 use crate::ExprError;
 

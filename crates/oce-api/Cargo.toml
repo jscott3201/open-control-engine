@@ -20,16 +20,16 @@ workspace = true
 # `.github/scripts/check-default-no-db.sh` and `tests/frame_purity.rs`): durability is the host's,
 # through an app-side adapter fed the plain-data `LoadedModel` a load returns.
 [dependencies]
-oce-model = { workspace = true }
-oce-graph = { workspace = true }
-oce-blocks = { workspace = true }
+oce-model = { workspace = true, features = ["std"] }
+oce-graph = { workspace = true, features = ["std"] }
+oce-blocks = { workspace = true, features = ["std"] }
 oce-cxf = { workspace = true }
 # The shared diagnostic vocabulary (AD-4): LoadReport.warnings surfaces oce-cxf/oce-validate
 # diagnostics in one shape, so a host never juggles two dialects.
 oce-diag = { workspace = true }
 oce-validate = { workspace = true }
 oce-semantics = { workspace = true }
-thiserror = { workspace = true }
+thiserror = { workspace = true, features = ["std"] }
 serde_json = { workspace = true }
 
 [dev-dependencies]

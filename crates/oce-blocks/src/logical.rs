@@ -3,7 +3,8 @@
 //! parameter-clocked Boolean source `Sources.SampleTrigger` `[S]` — the two discrete primitives of
 //! `01` §11.
 
-use std::borrow::Cow;
+use alloc::borrow::Cow;
+use alloc::{string::String, vec::Vec};
 
 use oce_model::{ParamTable, Value};
 
@@ -484,8 +485,8 @@ impl SampleTrigger {
         // The `> 0.0` test (not a negated `<=`) is deliberate: the else-branch also catches a NaN
         // `period`, since `NaN > 0.0` is false. `f64 → i64` saturates (no UB) at extreme horizons.
         if self.period > 0.0 {
-            let phase = self.shift - (self.shift / self.period).floor() * self.period;
-            ((t_now - phase) / self.period + SAMPLE_INDEX_EPS).floor() as i64
+            let phase = self.shift - libm::floor(self.shift / self.period) * self.period;
+            libm::floor((t_now - phase) / self.period + SAMPLE_INDEX_EPS) as i64
         } else {
             // Keep direct block construction panic-free even though loaded models reject this case.
             if t_now >= self.shift { 0 } else { -1 }

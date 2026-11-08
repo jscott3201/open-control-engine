@@ -4,7 +4,8 @@
 //! vectors are source-legal: Modelica reduction identities produce `0` for `MultiSum`, `+Inf` for
 //! `MultiMin`, and `-Inf` for `MultiMax`.
 
-use std::borrow::Cow;
+use alloc::borrow::Cow;
+use alloc::vec::Vec;
 
 use oce_model::{
     Value,

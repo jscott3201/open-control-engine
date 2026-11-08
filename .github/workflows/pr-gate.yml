@@ -8,9 +8,9 @@
 # batch `development` -> `main`, where .github/workflows/release-gate.yml runs the heavy gate.
 #
 # This per-PR gate is the LIGHT gate: the near-instant checks plus the compile-requiring lints
-# (clippy -D warnings), a workspace build, rustdoc, cargo-machete, cargo-deny, gate-script behavior
-# fixtures, the package/feature/publication contract, stale crate-status header lint, golden-gen
-# hygiene and golden freshness, the targeted
+# (clippy -D warnings), a workspace build, the `no_std + alloc` build of the core four, rustdoc,
+# cargo-machete, cargo-deny, gate-script behavior fixtures, the package/feature/publication
+# contract, stale crate-status header lint, golden-gen hygiene and golden freshness, the targeted
 # cross-arch determinism subset for oce-api/oce-blocks/oce-expr, the macOS arm64 portable-snapshot
 # and Windows std build/nextest platform cells, the x86_64 debug suites of
 # oce-graph/oce-validate/oce-model/oce-cxf, the documentation checks
@@ -819,6 +819,46 @@ jobs:
       - name: cargo build (default — no DB)
         run: cargo build --workspace --locked
 
+  # The core four — oce-model, oce-expr, oce-blocks, oce-graph — build `no_std + alloc` (issue
+  # #397): `--no-default-features --features alloc` on thumbv7em-none-eabihf, a bare-metal Cortex-M
+  # target that has no `std` at all, and on wasm32-unknown-unknown. A core crate that gains a
+  # `std`-only dependency, a `std::` path or a `std`-only `f64` method fails the build; clippy lints
+  # the same configuration. The last step runs the oce-expr unit suite on the host without the `std`
+  # feature, because that build replaces the thread-local evaluation-fuel meter with a program-wide
+  # one; one test thread, since that meter is shared by the whole test binary. Plain `run:` steps;
+  # a dedicated check script is #402's.
+  no-std-build:
+    name: no_std + alloc core build
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: no-std-build
+          cache-bin: false
+      - name: Install the no_std targets
+        run: rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown
+      - name: cargo build (no_std + alloc, thumbv7em-none-eabihf)
+        run: >-
+          cargo build -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc --target thumbv7em-none-eabihf --locked
+      - name: clippy (no_std + alloc, thumbv7em-none-eabihf)
+        run: >-
+          cargo clippy -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc --target thumbv7em-none-eabihf --locked -- -D warnings
+      - name: cargo build (no_std + alloc, wasm32-unknown-unknown)
+        run: >-
+          cargo build -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc --target wasm32-unknown-unknown --locked
+      - name: oce-expr unit suite without std (program-wide fuel meter)
+        run: >-
+          cargo test -p oce-expr --no-default-features --features alloc --lib --locked -- --test-threads=1
+
   rustdoc:
     name: rustdoc (-D warnings)
     needs: changes
@@ -974,6 +1014,7 @@ jobs:
       - strict-bit-compare
       - clippy
       - build
+      - no-std-build
       - rustdoc
       - deny
       - facade-contract
@@ -1003,6 +1044,7 @@ jobs:
             strict-bit-compare=core
             clippy=core
             build=core
+            no-std-build=core
             rustdoc=core
             deny=core
             facade-contract=core

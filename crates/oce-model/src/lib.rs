@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+#![cfg_attr(not(any(feature = "std", test)), no_std)]
 //! `oce-model` — the pure value, connector, instance, and connection types that are the
 //! shared, executable truth of the Open Control Engine (FRAME decision D1).
 //!
@@ -13,7 +14,18 @@
 //! The public type shapes and helper bodies below are implemented and tested; they back the
 //! non-panicking facade and scheduler contracts.
 
-use std::sync::Arc;
+// `no_std + alloc` without the `std` feature (docs/architecture.md, "Embeddability posture"):
+// `alloc` is the floor, so a build with neither feature is refused here rather than failing
+// on the first `Vec`.
+extern crate alloc;
+
+#[cfg(not(feature = "alloc"))]
+compile_error!(
+    "`oce-model` needs the `alloc` feature: build with the default `std` feature, or with \
+     `--no-default-features --features alloc`"
+);
+
+use alloc::{sync::Arc, vec::Vec};
 
 pub mod determinism;
 pub mod resolved_model;

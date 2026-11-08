@@ -14,5 +14,5 @@ workspace = true
 
 [dependencies]
 oce-diag = { workspace = true }
-oce-model = { workspace = true }
-thiserror = { workspace = true }
+oce-model = { workspace = true, features = ["std"] }
+thiserror = { workspace = true, features = ["std"] }

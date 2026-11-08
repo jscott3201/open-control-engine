@@ -284,7 +284,7 @@ require_lane_filter() {
   for want in \
     determinism-matrix=core determinism-compare=core strict-bit-matrix=core strict-bit-compare=core \
     crate-tests=core golden-gen-hygiene=core golden-gen-firewall=core build=core clippy=core \
-    rustdoc=core deny=core unused-deps=core default-no-db=core facade-contract=core \
+    rustdoc=core deny=core unused-deps=core default-no-db=core facade-contract=core no-std-build=core \
     portable-snapshot-macos=core portable-snapshot-compare=core std-build-windows=core \
     leverage-lane=leverage gate=gate_scripts \
     changes=always fmt=always file-size-cap=always no-secret-scan=always docs=always \
@@ -687,6 +687,23 @@ require_job_pattern "$ci" 'crate-tests' \
   'run the oce-graph, oce-validate, oce-model, oce-cxf and oce-store suites per PR and hard-fail on zero tests'
 require_job_pattern "$ci" 'crate-tests' '^[[:space:]]*(- )?run: test -s target/nextest/ci/junit\.xml$' \
   'refuse an absent or empty crate-suite report'
+# The `no_std + alloc` build of the core four (issue #397): both targets, no default features, and
+# the oce-expr suite that exercises the program-wide fuel meter.
+no_std_crates='-p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc'
+require_job_literal "$ci" 'no-std-build' 'rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown' \
+  'install the no_std targets'
+require_job_literal "$ci" 'no-std-build' \
+  "cargo build $no_std_crates --target thumbv7em-none-eabihf --locked" \
+  'build the core four no_std + alloc on thumbv7em-none-eabihf'
+require_job_literal "$ci" 'no-std-build' \
+  "cargo clippy $no_std_crates --target thumbv7em-none-eabihf --locked -- -D warnings" \
+  'lint the core four no_std + alloc on thumbv7em-none-eabihf'
+require_job_literal "$ci" 'no-std-build' \
+  "cargo build $no_std_crates --target wasm32-unknown-unknown --locked" \
+  'build the core four no_std + alloc on wasm32-unknown-unknown'
+require_job_literal "$ci" 'no-std-build' \
+  'cargo test -p oce-expr --no-default-features --features alloc --lib --locked -- --test-threads=1' \
+  'run the oce-expr unit suite without std'
 # Documentation checks under CI OK (issue #377); docs-pages.yml is path-filtered and not required.
 require_job_pattern "$ci" 'docs' '^[[:space:]]*(- )?run: bash scripts/docs/install-mdbook\.sh target/mdbook-bin$' \
   'install the checksum-pinned mdBook'

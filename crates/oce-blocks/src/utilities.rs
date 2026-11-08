@@ -1,6 +1,6 @@
 //! `CDL.Utilities` blocks that interact with diagnostics or model-time utility formulas.
 
-use std::sync::Arc;
+use alloc::sync::Arc;
 
 use oce_model::{ParamTable, Value, determinism::canonicalize_real};
 
@@ -18,10 +18,10 @@ const HALF_DAY_SECONDS: f64 = 43_200.0;
 const JULIAN_YEAR_DAYS: f64 = 365.25;
 const MAX_POLAR_SEARCH_DAYS: i32 = 732;
 
-const LAT_MIN: f64 = -std::f64::consts::FRAC_PI_2;
-const LAT_MAX: f64 = std::f64::consts::FRAC_PI_2;
-const LON_MIN: f64 = -std::f64::consts::PI;
-const LON_MAX: f64 = std::f64::consts::PI;
+const LAT_MIN: f64 = -core::f64::consts::FRAC_PI_2;
+const LAT_MAX: f64 = core::f64::consts::FRAC_PI_2;
+const LON_MIN: f64 = -core::f64::consts::PI;
+const LON_MAX: f64 = core::f64::consts::PI;
 
 /// `CDL.Utilities.Assert` — warning sink with no signal outputs.
 ///
@@ -140,7 +140,7 @@ impl SunRiseSet {
     }
 
     fn time_difference_local_civil(self) -> f64 {
-        self.lon * HALF_DAY_SECONDS / std::f64::consts::PI - self.tim_zon
+        self.lon * HALF_DAY_SECONDS / core::f64::consts::PI - self.tim_zon
     }
 }
 
@@ -247,7 +247,7 @@ fn next_hour_angle(t: Time, tim_dif_loc_civ: Time, lat: f64) -> Option<HourAngle
     for i_day in 1..=MAX_POLAR_SEARCH_DAYS {
         let t_next = t + f64::from(i_day) * SECONDS_PER_DAY;
         let bt =
-            std::f64::consts::PI * ((t_next + SECONDS_PER_DAY) / SECONDS_PER_DAY - 81.0) / 182.0;
+            core::f64::consts::PI * ((t_next + SECONDS_PER_DAY) / SECONDS_PER_DAY - 81.0) / 182.0;
         let eqn_tim = equation_of_time(bt);
         let tim_cor = eqn_tim + tim_dif_loc_civ;
         let dec_ang = declination_angle(t_next);
@@ -266,7 +266,7 @@ fn next_hour_angle(t: Time, tim_dif_loc_civ: Time, lat: f64) -> Option<HourAngle
 fn compute_sun_rise(t: Time, sta_tim: Time, tim_dif_loc_civ: Time, lat: f64) -> Option<Time> {
     let hour = next_hour_angle(t, tim_dif_loc_civ, lat)?;
     let sun_rise =
-        (12.0 - hour.hou_ang * 24.0 / (2.0 * std::f64::consts::PI) - hour.tim_cor / 3600.0)
+        (12.0 - hour.hou_ang * 24.0 / (2.0 * core::f64::consts::PI) - hour.tim_cor / 3600.0)
             * 3600.0
             + libm::floor(hour.t_next / SECONDS_PER_DAY) * SECONDS_PER_DAY;
     Some(if sta_tim > sun_rise {
@@ -278,7 +278,7 @@ fn compute_sun_rise(t: Time, sta_tim: Time, tim_dif_loc_civ: Time, lat: f64) -> 
 
 fn compute_sun_set(t: Time, sta_tim: Time, tim_dif_loc_civ: Time, lat: f64) -> Option<Time> {
     let hour = next_hour_angle(t, tim_dif_loc_civ, lat)?;
-    let sun_set = (12.0 + hour.hou_ang * 24.0 / (2.0 * std::f64::consts::PI)
+    let sun_set = (12.0 + hour.hou_ang * 24.0 / (2.0 * core::f64::consts::PI)
         - hour.tim_cor / 3600.0)
         * 3600.0
         + libm::floor(hour.t_next / SECONDS_PER_DAY) * SECONDS_PER_DAY;
@@ -300,8 +300,8 @@ fn equation_of_time(bt: f64) -> Time {
 }
 
 fn declination_angle(t: Time) -> f64 {
-    let k1 = libm::sin(23.45 * 2.0 * std::f64::consts::PI / 360.0);
-    let k2 = 2.0 * std::f64::consts::PI / JULIAN_YEAR_DAYS;
+    let k1 = libm::sin(23.45 * 2.0 * core::f64::consts::PI / 360.0);
+    let k2 = 2.0 * core::f64::consts::PI / JULIAN_YEAR_DAYS;
     libm::asin(-k1 * libm::cos((t / SECONDS_PER_DAY + 10.0) * k2))
 }
 

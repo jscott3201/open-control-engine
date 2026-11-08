@@ -1,3 +1,4 @@
+use alloc::boxed::Box;
 use oce_model::{ParamTable, SimpleController};
 
 use super::{bool_param, controller_type_param, real_param};

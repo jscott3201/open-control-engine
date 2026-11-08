@@ -51,8 +51,9 @@ The per-PR gate runs **once per change**, on the pull request:
 
 `pr-gate.yml` has two lanes under the one `CI OK`. The **determinism lane** is every job that
 compiles the engine: the determinism and strict-bit matrices and their fan-ins, the x86_64 crate
-suites, clippy, build, rustdoc, cargo-deny, cargo-machete, the database-free check, the golden-gen
-firewall and hygiene jobs, the facade contract and Quickstart, and the
+suites, clippy, build, the [`no_std + alloc` core build](#the-no_std--alloc-core-build), rustdoc,
+cargo-deny, cargo-machete, the database-free check, the golden-gen firewall and hygiene jobs, the
+facade contract and Quickstart, and the
 [platform cells](#platform-cells-macos-and-windows) — `portable snapshot (macOS arm64, debug)`,
 its `portable snapshot comparison` fan-in and `std build and nextest (Windows x86_64, debug)`.
 The **leverage lane** is one job,
@@ -229,6 +230,19 @@ The [authority index and generated projection](authority-claims.md) add a fast, 
 check and hostile controls. Native numeric observers run inside the existing `oce-api`/`oce-blocks`
 subset; package/public/catalog validators retain ownership. The full gate also executes those owners.
 This does not check arbitrary Markdown claims or workflow parity, and regeneration is never gated in.
+
+### The `no_std + alloc` core build
+
+The `no_std + alloc core build` job (`no-std-build`, determinism lane, issue #397) builds
+`oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` with `--no-default-features --features alloc`
+on `thumbv7em-none-eabihf`, a bare-metal Cortex-M target whose standard library does not exist, and
+on `wasm32-unknown-unknown`; runs clippy `-D warnings` on the first; and runs the `oce-expr` unit
+suite on the host without the `std` feature, on one test thread, because that build replaces the
+thread-local evaluation-fuel meter with a program-wide one. A core crate that gains a `std`-only
+dependency, a `std::` path or a `std`-only `f64` method fails it. `bash .agents/gate.sh` runs the
+same commands and installs nothing: when a target is missing, its first no_std step fails and prints
+the `rustup target add` command. What the build means is in
+[the architecture](architecture.md#no_std--alloc-the-core-four).
 
 ## Dev-light, release-heavy
 
