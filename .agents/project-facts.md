@@ -112,12 +112,33 @@ in `TESTING.md` "Conventions"), because clippy refuses the `std` method in each 
 (issue #399; `tests/` files are separate crates outside the lint, where `std` serves as the oracle); use no
 hash collections; and give every new dependency `default-features = false`.
 A crate that depends on one of the four names `features = ["std"]` on that edge, because their
-workspace entries carry `default-features = false`. The `no-std-build` job in `pr-gate.yml` and
-`.agents/gate.sh` build them for `thumbv7em-none-eabihf` and `wasm32-unknown-unknown`; the script
-installs nothing, so add both targets once with `rustup target add`. The same job checks the
-`no_std` `oce-graph` closure (`scripts/ci/check-no-std-entry-closure.sh`) and runs `oce-graph`'s
-`blob_execution` and `blob_state_words` suites against the `no_std + alloc` build. See
-[the architecture](../docs/architecture.md#no_std--alloc-the-core-four).
+workspace entries carry `default-features = false`. The bare-metal cell (the `no-std-build` job in
+`pr-gate.yml`; `bash .agents/gate.sh nostd` runs it alone, and the light gate runs it too) builds,
+lints and `cargo tree`-scans them for `thumbv7em-none-eabihf`, `riscv32imac-unknown-none-elf` and
+`wasm32-unknown-unknown` (`scripts/ci/check-no-std.sh`; a dependency that turns `std` on fails the
+scan even where it compiles); the scripts install nothing, so add the three targets once with
+`rustup target add`. The same job checks the `no_std` `oce-graph` closure
+(`scripts/ci/check-no-std-entry-closure.sh`), runs `oce-graph`'s `blob_execution` and
+`blob_state_words` suites against the `no_std + alloc` build, and builds the firmware image (next
+section). See [the architecture](../docs/architecture.md#no_std--alloc-the-core-four).
+
+## The firmware image has a size budget, and runs only nightly
+
+`firmware/link` (package `oce-firmware-link`, `publish = false`, a workspace member through the
+`firmware/*` glob) links the core four into a bare-metal image that runs the
+`multizone_vav_supply_fan` blob golden for 160 frames (issue #402). Per PR,
+`scripts/ci/check-firmware-link.sh` builds it for `thumbv7em-none-eabihf` and
+`riscv32imac-unknown-none-elf` with the root `firmware` profile and holds each ELF to
+`firmware/link/size-budget.toml`; a change that grows the core can fail that budget. Raise a budget
+only deliberately: `bash scripts/ci/check-firmware-link.sh --suggest` prints measured + 12 %, and
+the PR says what grew. The image is executed only by `qemu.yml`, nightly and outside `CI OK`
+(`bash .agents/gate.sh qemu` locally; needs `qemu-system-arm` and `qemu-system-riscv32`), which
+diffs its per-frame run digests against the host reference runner
+(`cargo run -p oce-firmware-link --bin blob-frames`). A change to a fixture's run digest in
+`blob_frame_digests.tsv` moves the image's expected output with it: nothing else to bless. The
+firmware lib and bin roots carry `#![forbid(unsafe_code)]` (`check-workflow-gates.sh` checks it).
+A workspace copy (`test-math-lint.sh`, `test-check-no-std.sh`) must copy `firmware/` too, or
+`--locked` fails on the lockfile's `oce-firmware-link` entry.
 
 The core four use no hash collections at all: use `BTreeMap`, `BTreeSet`, `BinaryHeap` or a sorted
 `Vec` (issue #398). Two things enforce this. The `clippy.toml` `disallowed-types` block refuses

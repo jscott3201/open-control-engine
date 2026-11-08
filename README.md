@@ -139,9 +139,11 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   validate-inputs sequence against any adapter behind the storage port (or the in-memory
   `oce_store::MemStore`).
 - Builds its execution core — `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` —
-  `no_std + alloc` behind a default `std` feature, checked for `thumbv7em-none-eabihf` and
-  `wasm32-unknown-unknown` on every pull request that changes the engine. Every `f64` operation
-  `core` lacks goes through
+  `no_std + alloc` behind a default `std` feature, checked for `thumbv7em-none-eabihf`,
+  `riscv32imac-unknown-none-elf` and `wasm32-unknown-unknown` on every pull request that changes
+  the engine, and linked into a bare-metal firmware image for both bare-metal targets that is held
+  to a size budget per PR and run under QEMU nightly, where its per-frame results must equal the
+  host's. Every `f64` operation `core` lacks goes through
   `libm`, bit-identical to the `std` methods, and clippy refuses `std` float methods and hash
   collections inside those four crates. See
   [the core four](docs/architecture.md#no_std--alloc-the-core-four).
@@ -196,8 +198,9 @@ Stating this plainly is more useful than a feature list.
 The current release is **v0.3.0** (milestone M1a, November 2026): the engine is pure, the reserved
 crates and the pre-1.0 compatibility ledgers are gone, and the per-PR gate runs natively on x86_64
 and arm64 under one required `CI OK` status. Work since then on `development` builds the execution
-core `no_std + alloc` and ratchets the math and collection discipline that keeps it there; see
-[CHANGELOG.md](CHANGELOG.md).
+core `no_std + alloc`, ratchets the math and collection discipline that keeps it there, and runs a
+compiled-schedule blob on bare metal (a firmware image built and size-checked per PR, executed under
+QEMU nightly); see [CHANGELOG.md](CHANGELOG.md).
 
 Work is planned as GitHub milestones and cut into issues. Each milestone has a tracking issue that
 lists the order, the hard dependencies and the gate that closes it. The engine milestones, in order:

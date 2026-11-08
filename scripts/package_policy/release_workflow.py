@@ -4,10 +4,11 @@
 import hashlib
 
 
-# Approval witness for release.yml as re-pinned when the member count fell to 12 (GitHub #391).
+# Approval witness for release.yml as re-pinned when the firmware image became the third private
+# member (GitHub #449; previously re-pinned when the member count fell to 12, GitHub #391).
 # Intentional changes follow the procedure in docs/ci-and-the-gate.md (the package validator).
 # Never derive the expected digest from the candidate workflow at validation time.
-EXPECTED_SHA256 = "e51991413ede503f304146046aa535958f2f70728ce3a50ac666d0d1106f1b6c"
+EXPECTED_SHA256 = "9d967b652f1c3deb8cebca9fcc8f2c7dc2666faf629489cc2ee92e1d83762a56"
 
 
 class WorkflowError(ValueError):

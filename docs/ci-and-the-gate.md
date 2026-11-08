@@ -13,7 +13,8 @@ determinism and strict-bit matrices, and one `macos-15` and one `windows-latest`
 [platform cells](#platform-cells-macos-and-windows): `pr-gate.yml`
 (per-PR into `development`), `release-gate.yml` (release PRs into `main` and a daily
 `development`-tip run), `advisories.yml`, `docs-pages.yml`, the tag-verify / manual-publish
-`release.yml`, and the manual native-arm64 OpenModelica evidence workflows. Actions in the gating
+`release.yml`, the manual native-arm64 OpenModelica evidence workflows, and the nightly
+[emulation run](#the-nightly-emulation-run) (`qemu.yml`). Actions in the gating
 workflows and `docs-pages.yml` are pinned to full commit SHAs, which `check-workflow-gates.sh`
 enforces for the gating workflows. `release.yml` and the OpenModelica evidence workflows are
 byte-bound by their own approval and evidence manifests, so they keep tag references until their
@@ -45,12 +46,14 @@ The per-PR gate runs **once per change**, on the pull request:
   safety net for anything per-PR CI does not cover, including an interaction between two PRs that
   each passed on their own.
 - **A PR into `main`, or a push to `main`,** runs `release-gate.yml`.
+- **Nightly**, and on manual dispatch, `qemu.yml` runs the firmware image under emulation
+  ([below](#the-nightly-emulation-run)). It is not part of any `CI OK` and never runs on a PR.
 
 ### Lanes: what a PR runs
 
 `pr-gate.yml` has two lanes under the one `CI OK`. The **determinism lane** is every job that
 compiles the engine: the determinism and strict-bit matrices and their fan-ins, the x86_64 crate
-suites, clippy, build, the [`no_std + alloc` core build](#the-no_std--alloc-core-build), rustdoc,
+suites, clippy, build, the [bare-metal cell](#the-bare-metal-cell), rustdoc,
 cargo-deny, cargo-machete, the database-free check, the golden-gen firewall and hygiene jobs, the
 facade contract and Quickstart, and the
 [platform cells](#platform-cells-macos-and-windows) — `portable snapshot (macOS arm64, debug)`,
@@ -192,12 +195,15 @@ report.
 [`.agents/gate.sh`](../.agents/gate.sh) is the only place the gate's command list is written down.
 Every other document in this repo — including this page — points at it rather than restating it,
 because nine divergent prose copies existed before the script was written and two of them were
-materially weaker than CI (see the script's header). There are three invocations:
+materially weaker than CI (see the script's header). There are three gate invocations and two
+focused ones:
 
 ```
 bash .agents/gate.sh            # light    — mirrors the per-PR gate
 bash .agents/gate.sh full       # full     — adds the workspace suite and doctests
 bash .agents/gate.sh leverage   # leverage — mirrors a PR confined to crates/leverage/
+bash .agents/gate.sh nostd      # nostd    — the bare-metal cell alone (light and full run it too)
+bash .agents/gate.sh qemu       # qemu     — the nightly emulation check (needs QEMU installed)
 ```
 
 CI does not merely mirror that script, it **executes** it: the `gate (light)` job at
@@ -230,30 +236,82 @@ check and hostile controls. Native numeric observers run inside the existing `oc
 subset; package/public/catalog validators retain ownership. The full gate also executes those owners.
 This does not check arbitrary Markdown claims or workflow parity, and regeneration is never gated in.
 
-### The `no_std + alloc` core build
+### The bare-metal cell
 
-The `no_std + alloc core build` job (`no-std-build`, determinism lane, issue #397) builds
-`oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` with `--no-default-features --features alloc`
-on `thumbv7em-none-eabihf`, a bare-metal Cortex-M target whose standard library does not exist, and
-on `wasm32-unknown-unknown`; runs clippy `-D warnings` on the first; and runs the `oce-expr` unit
-suite on the host without the `std` feature, on one test thread, because that build replaces the
-thread-local evaluation-fuel meter with a program-wide one. A core crate that gains a `std`-only
-dependency, a `std::` path or a `std`-only `f64` method fails it, and so does the clippy
-`disallowed-methods` rule in the `std` build (issue #399), which binds each core crate's `src/`
-tree, unit tests included — `tests/` files are separate crates outside it, where the `std` methods
-serve as the oracle. The job's `scripts/ci/test-math-lint.sh` step re-probes which `f64` methods
-`core` has, checks the `clippy.toml` list is total and the scope holds, and requires an `x.sin()`
-mutation in oce-blocks and an `f.sqrt()` mutation in oce-expr, in a workspace copy, to fail clippy.
-Two steps cover the blob execution entry (issue #401): `scripts/ci/check-no-std-entry-closure.sh`
-requires the `no_std` `oce-graph` closure to hold no `oce-cxf`, `oce-api`, `serde_json` or `std`
-(its controls must trip on the default build and on `oce-api`'s closure), and `oce-graph`'s
-`blob_execution` and `blob_state_words` suites run against the `no_std + alloc` build linked into a
-`std` test binary, printing the allocation census (zero allocations per frame over every golden)
-and checking the run digests the facade's dual-path test reproduces. `bash .agents/gate.sh` runs the
-same commands and installs nothing: when a target is missing, its first no_std step fails and prints
-the `rustup target add` command; the `gate (light)` and `gate (full)` jobs that execute the script
-install both targets first. What the build means is in
-[the architecture](architecture.md#no_std--alloc-the-core-four).
+The bare-metal cell (`bare-metal cell (no_std core, firmware image, size budget)`, job id
+`no-std-build`, determinism lane, issues #397 and #402) proves the `no_std` claim per PR by
+**build and size**; executing the image on a target is the [nightly emulation
+run](#the-nightly-emulation-run)'s, never a PR's. Its steps are thin calls to scripts, so
+`bash .agents/gate.sh nostd` runs exactly the job (and `bash .agents/gate.sh` runs it inside the
+light gate):
+
+- **`scripts/ci/check-no-std.sh`** builds `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` with
+  `--no-default-features --features alloc` on `thumbv7em-none-eabihf` (Cortex-M4F) and
+  `riscv32imac-unknown-none-elf` (RV32IMAC), bare-metal targets whose standard library does not
+  exist, and on `wasm32-unknown-unknown`; runs clippy `-D warnings` on the same configuration; then
+  reads each crate's `cargo tree -e normal,no-proc-macro` per target and fails on any package with
+  its `std` feature on or any host-only crate (the workspace's `std` crates, `serde_json`, `rustix`).
+  A `std`-only dependency, a `std::` path or a `std`-only `f64` method fails the build; a `std`
+  feature that still compiles (on `wasm32-unknown-unknown`, where `std` exists) fails the scan.
+  `scripts/ci/test-check-no-std.sh` proves both halves can fail: synthetic graphs through the scan,
+  `extern crate std;` in a workspace copy's `oce-graph` (the build fails on thumbv7em), and
+  `serde/std` turned on through a copy's `oce-model` (build and clippy pass on wasm32; the scan
+  names `serde`). The shape is rusty-bacnet's `check-no-std.sh`.
+- **The math rule** (issue #399): the clippy `disallowed-methods` rule binds each core crate's
+  `src/` tree, unit tests included — `tests/` files are separate crates outside it, where the `std`
+  methods serve as the oracle. `scripts/ci/test-math-lint.sh` re-probes which `f64` methods `core`
+  has, checks the `clippy.toml` list is total and the scope holds, and requires an `x.sin()`
+  mutation in oce-blocks and an `f.sqrt()` mutation in oce-expr, in a workspace copy, to fail clippy.
+- **The `oce-expr` unit suite** runs on the host without the `std` feature, on one test thread,
+  because that build replaces the thread-local evaluation-fuel meter with a program-wide one.
+- **The blob execution entry** (issue #401): `scripts/ci/check-no-std-entry-closure.sh` requires the
+  `no_std` `oce-graph` closure to hold no `oce-cxf`, `oce-api`, `serde_json` or `std` (its controls
+  must trip on the default build and on `oce-api`'s closure), and `oce-graph`'s `blob_execution` and
+  `blob_state_words` suites run against the `no_std + alloc` build linked into a `std` test binary,
+  printing the allocation census (zero allocations per frame over every golden) and checking the
+  run digests the facade's dual-path test reproduces.
+- **The firmware image** ([`firmware/link`](../firmware/link/), package `oce-firmware-link`):
+  `scripts/ci/check-firmware-link.sh` scans the image's own graph, lints it, builds its
+  `blob-frames` image for both bare-metal targets with the root `firmware` profile
+  (`opt-level = "z"`, LTO, one codegen unit, `panic = "abort"`) and runs
+  `scripts/ci/firmware_size.py` on each ELF: `.text`, `.rodata`, `.data`, `.bss`, flash and RAM
+  against [`firmware/link/size-budget.toml`](../firmware/link/size-budget.toml) (measured + 12 %,
+  rounded to 16), with counts of the `core::fmt`, 64-bit division and memmove routines linked in,
+  failing over budget and printing the delta. Raising a budget is a reviewed change;
+  `check-firmware-link.sh --suggest` prints a table. `python3 -I scripts/ci/test-firmware-size.py`
+  is the checker's own controls (it and the checker are copied from rusty-bacnet). Building the
+  image proves the core links into a bare-metal binary with no symbol only a hosted target
+  provides, which a library build never shows. The image embeds the `multizone_vav_supply_fan`
+  blob golden, decodes it with `oce_graph::blob::Executable` into a 64 KiB arena, runs the shared
+  160-frame schedule and compares its run digest with
+  `crates/oce-graph/tests/fixtures/blob_frame_digests.tsv`. `cargo test -p oce-firmware-link` runs
+  that same code on the host: every golden reaches its table digest through it, its schedule equals
+  `oce-graph`'s test schedule bit for bit, and the host reference runner prints the lines the
+  image prints.
+
+The scripts install nothing: when a target is missing, the script names the `rustup target add`
+command and fails. The `gate (light)` and `gate (full)` jobs that execute `.agents/gate.sh` install
+all three targets first. What the build means is in
+[the architecture](architecture.md#no_std--alloc-the-core-four). The image has no `unsafe` code:
+its allocator (`linked_list_allocator`'s spin-locked heap) takes its arena from a `static_cell`, and
+`check-workflow-gates.sh` requires `#![forbid(unsafe_code)]` in every firmware lib and bin root.
+
+### The nightly emulation run
+
+`qemu.yml` runs `scripts/ci/emulate-firmware.sh` nightly and on manual dispatch, on `ubuntu-24.04`
+with QEMU from the runner's apt archive (`qemu-system-arm`, `qemu-system-misc`; the job prints the
+package versions). It builds the image for both targets with the `firmware` profile — the build the
+bare-metal cell measures — runs it under QEMU with semihosting (`netduinoplus2`, an STM32F405
+Cortex-M4F, for `thumbv7em-none-eabihf`; the riscv32 `virt` machine with `-bios none` for
+`riscv32imac-unknown-none-elf`, since `sifive_e` has 16 KiB of RAM, too little for the arena), and
+diffs every line against the host reference runner (`cargo run -p oce-firmware-link --bin
+blob-frames`): the fixture, the run digest after each of the 160 frames, the final digest against
+the table, and the verdict. The image exits 0 `PASS`, 1 `MISMATCH`, 3 `FAULT` (the engine refused)
+or 101 on a panic; a hang or CPU fault fails at the per-image timeout. It is not part of any
+`CI OK`: emulation never gates a PR, and `check-workflow-gates.sh` refuses `qemu` in the gating
+workflows and a `pull_request` or `push` trigger in `qemu.yml`. `bash .agents/gate.sh qemu` runs
+the same script locally (macOS: `brew install qemu`). The cadence is this repository's decision;
+rusty-bacnet, whose image layout and QEMU invocation this follows, runs its emulation by hand.
 
 ## Dev-light, release-heavy
 
@@ -405,6 +463,11 @@ in every per-PR build, are the only pinned surface.
   arm64, and the workspace build and suite (without the strict-bit binaries) in debug on Windows.
   Every other job, and the whole release gate, runs on Linux x86_64 only: nothing runs release
   codegen or doctests on macOS or Windows, and no strict-bit result is observed on either.
+- **Execution on a bare-metal target, per PR.** The [bare-metal cell](#the-bare-metal-cell)
+  builds the firmware image and measures it; only the [nightly emulation
+  run](#the-nightly-emulation-run) executes it, under QEMU, after the PR has merged. No CI job runs
+  the image on silicon, and QEMU's netduinoplus2 and riscv32 `virt` machines stand in for real
+  parts (their memory maps, not their timing, peripherals or flash wait states).
 - **Anything derived from git history.** Only the `classify changed paths` job sets
   `fetch-depth` (2, to reach the tested merge's base parent); every other checkout takes the
   default of a single commit. A check that needs history cannot run in CI. The visible
@@ -435,8 +498,8 @@ tag/version match, fmt, clippy, a workspace `cargo test`, the package validator 
 `cargo publish --workspace --locked --dry-run` — with no token and no publish, so a tag can be
 re-cut safely (see [release.yml](../.github/workflows/release.yml), `verify` job). Publishing is a
 separate manual `workflow_dispatch` into the `release` GitHub Environment. Cargo's workspace
-selection includes the 10 publishable members and skips the two members with `publish = false`:
-`oce-bless` and `oce-conformance`.
+selection includes the 10 publishable members and skips the three members with `publish = false`:
+`oce-bless`, `oce-conformance` and the firmware image `oce-firmware-link`.
 No checked-in record pins those sets any more: the guards are each crate's `publish` flag, the
 byte pin on `release.yml` (whose comment names the split) and review.
 
