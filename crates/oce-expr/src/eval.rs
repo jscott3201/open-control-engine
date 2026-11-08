@@ -19,6 +19,7 @@ use oce_model::{
     determinism::{canonicalize_real, det_max, det_min},
 };
 
+use crate::math;
 use crate::{BinOp, Builtin, BuiltinConst, EvalResult, ExprAst, ExprError, Scope, UnOp};
 
 /// A numeric operand — Integer or Real — extracted from a [`Value`] for arithmetic.
@@ -394,8 +395,8 @@ fn eval_scalar_call(b: Builtin, vals: &[Value]) -> Result<Value, ExprError> {
         (Builtin::Abs, [v]) => builtin_abs(v),
         (Builtin::Sign, [v]) => Ok(Value::Integer(builtin_sign(num_of(v)?))),
         (Builtin::Sqrt, [v]) => builtin_sqrt(num_of(v)?),
-        (Builtin::Floor, [v]) => Ok(real(libm::floor(num_of(v)?.as_f64()))),
-        (Builtin::Ceil, [v]) => Ok(real(libm::ceil(num_of(v)?.as_f64()))),
+        (Builtin::Floor, [v]) => Ok(real(math::floor(num_of(v)?.as_f64()))),
+        (Builtin::Ceil, [v]) => Ok(real(math::ceil(num_of(v)?.as_f64()))),
         (Builtin::Integer, [v]) => builtin_integer(num_of(v)?).map(Value::Integer),
         (Builtin::Div, [x, y]) => builtin_div(num_of(x)?, num_of(y)?),
         (Builtin::Mod, [x, y]) => builtin_mod(num_of(x)?, num_of(y)?),
@@ -436,7 +437,7 @@ fn builtin_sqrt(n: Num) -> Result<Value, ExprError> {
     if f < 0.0 {
         Err(ExprError::DomainError("sqrt of a negative value"))
     } else {
-        Ok(real(libm::sqrt(f)))
+        Ok(real(math::sqrt(f)))
     }
 }
 
@@ -458,7 +459,7 @@ fn builtin_integer(n: Num) -> Result<i64, ExprError> {
     match n {
         Num::I(i) => Ok(i),
         Num::R(r) => {
-            let floored = libm::floor(r);
+            let floored = math::floor(r);
             // `NaN` fails both comparisons, so it refuses here too.
             if (INTEGER_RANGE_START..INTEGER_RANGE_END).contains(&floored) {
                 // In range and integral, so the cast is exact.
@@ -488,7 +489,7 @@ fn builtin_div(x: Num, y: Num) -> Result<Value, ExprError> {
             if b == 0.0 {
                 return Err(ExprError::DivisionByZero);
             }
-            Ok(real(libm::trunc(a / b)))
+            Ok(real(math::trunc(a / b)))
         }
     }
 }
@@ -512,7 +513,7 @@ fn builtin_mod(x: Num, y: Num) -> Result<Value, ExprError> {
             if b == 0.0 {
                 return Err(ExprError::DivisionByZero);
             }
-            Ok(real(a - libm::floor(a / b) * b))
+            Ok(real(a - math::floor(a / b) * b))
         }
     }
 }
@@ -534,7 +535,7 @@ fn builtin_rem(x: Num, y: Num) -> Result<Value, ExprError> {
             if b == 0.0 {
                 return Err(ExprError::DivisionByZero);
             }
-            Ok(real(a - libm::trunc(a / b) * b))
+            Ok(real(a - math::trunc(a / b) * b))
         }
     }
 }

@@ -9,6 +9,7 @@ use super::{
     SpecificEnthalpyTDryBulPhi, WetBulbTDryBulPhi, lookup,
 };
 use crate::ParamTable;
+use crate::math;
 
 const CANONICAL_NAN_BITS: u64 = 0x7ff8_0000_0000_0000;
 const KELVIN_OFFSET: f64 = 273.15;
@@ -38,11 +39,11 @@ fn expected_dew_point(t_dry_bulb: f64, phi: f64) -> f64 {
         return f64::NAN;
     }
 
-    let alpha = libm::log(p_w / 1000.0);
+    let alpha = math::log(p_w / 1000.0);
     6.54 + 14.526 * alpha
         + 0.7389 * alpha * alpha
         + 0.09486 * alpha * alpha * alpha
-        + 0.4569 * libm::pow(p_w / 1000.0, 0.1984)
+        + 0.4569 * math::pow(p_w / 1000.0, 0.1984)
         + KELVIN_OFFSET
 }
 
@@ -74,10 +75,10 @@ fn expected_wet_bulb(t_dry_bulb: f64, phi: f64) -> f64 {
     }
 
     KELVIN_OFFSET
-        + t_c * libm::atan(0.151_977 * libm::sqrt(rh_per + 8.313_659))
-        + libm::atan(t_c + rh_per)
-        - libm::atan(rh_per - 1.676_331)
-        + 0.003_918_38 * libm::pow(rh_per, 1.5) * libm::atan(0.023_101 * rh_per)
+        + t_c * math::atan(0.151_977 * math::sqrt(rh_per + 8.313_659))
+        + math::atan(t_c + rh_per)
+        - math::atan(rh_per - 1.676_331)
+        + 0.003_918_38 * math::pow(rh_per, 1.5) * math::atan(0.023_101 * rh_per)
         - 4.686_035
 }
 
@@ -91,14 +92,14 @@ fn expected_saturation_pressure(t_sat: f64) -> f64 {
 }
 
 fn expected_saturation_pressure_liquid(t_sat: f64) -> f64 {
-    611.657 * libm::exp(17.2799 - 4102.99 / (t_sat - 35.719))
+    611.657 * math::exp(17.2799 - 4102.99 / (t_sat - 35.719))
 }
 
 fn expected_sublimation_pressure_ice(t_sat: f64) -> f64 {
     let r1 = t_sat / 273.16;
-    let exponent = -13.928_169_0 - (-13.928_169_0) * libm::pow(r1, -1.5) + 34.707_823_8
-        - 34.707_823_8 * libm::pow(r1, -1.25);
-    libm::exp(exponent) * 611.657
+    let exponent = -13.928_169_0 - (-13.928_169_0) * math::pow(r1, -1.5) + 34.707_823_8
+        - 34.707_823_8 * math::pow(r1, -1.25);
+    math::exp(exponent) * 611.657
 }
 
 fn expected_regularized_step(x: f64, y1: f64, y2: f64, x_small: f64) -> f64 {

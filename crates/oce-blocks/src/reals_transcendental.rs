@@ -8,6 +8,7 @@
 
 use oce_model::Value;
 
+use crate::math;
 use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_real};
 
 /// `CDL.Reals.Sin` computes `y = sin(u)`.
@@ -33,7 +34,7 @@ impl Block for Sin {
     }
 
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit_real(0, libm::sin(read_real(inputs, 0)), emit);
+        emit_real(0, math::sin(read_real(inputs, 0)), emit);
     }
 }
 
@@ -59,7 +60,7 @@ impl Block for Cos {
     }
 
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit_real(0, libm::cos(read_real(inputs, 0)), emit);
+        emit_real(0, math::cos(read_real(inputs, 0)), emit);
     }
 }
 
@@ -86,7 +87,7 @@ impl Block for Tan {
     }
 
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit_real(0, libm::tan(read_real(inputs, 0)), emit);
+        emit_real(0, math::tan(read_real(inputs, 0)), emit);
     }
 }
 
@@ -112,7 +113,7 @@ impl Block for Asin {
     }
 
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit_real(0, libm::asin(read_real(inputs, 0)), emit);
+        emit_real(0, math::asin(read_real(inputs, 0)), emit);
     }
 }
 
@@ -138,7 +139,7 @@ impl Block for Acos {
     }
 
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit_real(0, libm::acos(read_real(inputs, 0)), emit);
+        emit_real(0, math::acos(read_real(inputs, 0)), emit);
     }
 }
 
@@ -165,7 +166,7 @@ impl Block for Atan {
     }
 
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit_real(0, libm::atan(read_real(inputs, 0)), emit);
+        emit_real(0, math::atan(read_real(inputs, 0)), emit);
     }
 }
 
@@ -206,7 +207,7 @@ impl Block for Atan2 {
                 "Atan2: inputs u1 and u2 shall not both be zero; returning deterministic libm branch value",
             );
         }
-        emit_real(0, libm::atan2(u1, u2), emit);
+        emit_real(0, math::atan2(u1, u2), emit);
     }
 }
 
@@ -232,7 +233,7 @@ impl Block for Exp {
     }
 
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit_real(0, libm::exp(read_real(inputs, 0)), emit);
+        emit_real(0, math::exp(read_real(inputs, 0)), emit);
     }
 }
 
@@ -262,7 +263,7 @@ impl Block for Log {
     fn step_algebraic(&self, ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         let u = read_real(inputs, 0);
         warn_if_not_positive(ctx, "CDL.Reals.Log", LOG_DOMAIN_WARNING, u);
-        emit_real(0, libm::log(u), emit);
+        emit_real(0, math::log(u), emit);
     }
 }
 
@@ -291,7 +292,7 @@ impl Block for Log10 {
     fn step_algebraic(&self, ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         let u = read_real(inputs, 0);
         warn_if_not_positive(ctx, "CDL.Reals.Log10", LOG10_DOMAIN_WARNING, u);
-        emit_real(0, libm::log10(u), emit);
+        emit_real(0, math::log10(u), emit);
     }
 }
 

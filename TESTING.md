@@ -229,6 +229,19 @@ case" is itself a finding to resolve, not a pass.
 - **No time/randomness in tests:** deterministic inputs only; no wall-clock, no RNG.
 - **Name tests for the property, not the function:** `mod_is_divisor_signed`,
   `resolve_is_byte_identical_across_two_imports`, `int_compare_is_exact_above_2_pow_53`.
+- **Math discipline (issue #399):** in the `no_std` core four, call an `f64` method only if `core`
+  has it; every other operation goes through the crate's `math` module (`oce-blocks` and `oce-expr`
+  each have one), which re-exports the pinned `libm` the strict-bit evidence is bound to. The root
+  `clippy.toml` lists every `std`-only `f64`/`f32` method under `disallowed-methods`, each core
+  crate root denies the lint (the rest of the workspace and `tools/golden-gen` allow it), and
+  `scripts/ci/test-math-lint.sh` re-probes the table below on the pinned toolchain and proves an
+  `x.sin()` in `reals_transcendental.rs` fails clippy. A test that must call the `std` method as its
+  oracle allows the lint on that item with a comment, as `math_tests.rs` and `libm_std_parity.rs` do.
+
+  | Source on 1.97.1 (`no_std` probe, `thumbv7em-none-eabihf`) | `f64` methods |
+  | --- | --- |
+  | `core`: call the method | `abs`, `signum`, `copysign`, `min`, `max`, `clamp`, `recip`, `to_degrees`, `to_radians`, `total_cmp`, `midpoint` (and the `is_*`/bit methods) |
+  | `std` only: call `math` | `floor`, `ceil`, `round`, `round_ties_even`, `trunc`, `fract`, `mul_add`, `div_euclid`, `rem_euclid`, `powi`, `powf`, `sqrt`, `cbrt`, `hypot`, `exp`, `exp2`, `exp_m1`, `ln`, `ln_1p`, `log`, `log2`, `log10`, `sin`, `cos`, `tan`, `sin_cos`, `asin`, `acos`, `atan`, `atan2`, `sinh`, `cosh`, `tanh`, `asinh`, `acosh`, `atanh`, `abs_sub` |
 
 ---
 

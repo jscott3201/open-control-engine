@@ -239,7 +239,10 @@ on `thumbv7em-none-eabihf`, a bare-metal Cortex-M target whose standard library 
 on `wasm32-unknown-unknown`; runs clippy `-D warnings` on the first; and runs the `oce-expr` unit
 suite on the host without the `std` feature, on one test thread, because that build replaces the
 thread-local evaluation-fuel meter with a program-wide one. A core crate that gains a `std`-only
-dependency, a `std::` path or a `std`-only `f64` method fails it. `bash .agents/gate.sh` runs the
+dependency, a `std::` path or a `std`-only `f64` method fails it, and so does the clippy
+`disallowed-methods` rule in the `std` build (issue #399); the job's `scripts/ci/test-math-lint.sh`
+step re-probes which `f64` methods `core` has, checks the `clippy.toml` list is total, and requires
+an `x.sin()` mutation in a workspace copy to fail clippy. `bash .agents/gate.sh` runs the
 same commands and installs nothing: when a target is missing, its first no_std step fails and prints
 the `rustup target add` command; the `gate (light)` and `gate (full)` jobs that execute the script
 install both targets first. What the build means is in

@@ -4,6 +4,7 @@ use alloc::sync::Arc;
 
 use oce_model::{ParamTable, Value, determinism::canonicalize_real};
 
+use crate::math;
 use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, Time, emit_real, read_bool};
 
 const SUN_NEXT_RISE_WORD: usize = 0;
@@ -251,10 +252,10 @@ fn next_hour_angle(t: Time, tim_dif_loc_civ: Time, lat: f64) -> Option<HourAngle
         let eqn_tim = equation_of_time(bt);
         let tim_cor = eqn_tim + tim_dif_loc_civ;
         let dec_ang = declination_angle(t_next);
-        let cos_hou = -libm::tan(lat) * libm::tan(dec_ang);
+        let cos_hou = -math::tan(lat) * math::tan(dec_ang);
         if cos_hou.is_finite() && cos_hou.abs() <= 1.0 {
             return Some(HourAngle {
-                hou_ang: libm::acos(cos_hou),
+                hou_ang: math::acos(cos_hou),
                 t_next,
                 tim_cor,
             });
@@ -268,7 +269,7 @@ fn compute_sun_rise(t: Time, sta_tim: Time, tim_dif_loc_civ: Time, lat: f64) -> 
     let sun_rise =
         (12.0 - hour.hou_ang * 24.0 / (2.0 * core::f64::consts::PI) - hour.tim_cor / 3600.0)
             * 3600.0
-            + libm::floor(hour.t_next / SECONDS_PER_DAY) * SECONDS_PER_DAY;
+            + math::floor(hour.t_next / SECONDS_PER_DAY) * SECONDS_PER_DAY;
     Some(if sta_tim > sun_rise {
         sun_rise + SECONDS_PER_DAY
     } else {
@@ -281,7 +282,7 @@ fn compute_sun_set(t: Time, sta_tim: Time, tim_dif_loc_civ: Time, lat: f64) -> O
     let sun_set = (12.0 + hour.hou_ang * 24.0 / (2.0 * core::f64::consts::PI)
         - hour.tim_cor / 3600.0)
         * 3600.0
-        + libm::floor(hour.t_next / SECONDS_PER_DAY) * SECONDS_PER_DAY;
+        + math::floor(hour.t_next / SECONDS_PER_DAY) * SECONDS_PER_DAY;
     Some(if sta_tim > sun_set {
         sun_set + SECONDS_PER_DAY
     } else {
@@ -291,18 +292,18 @@ fn compute_sun_set(t: Time, sta_tim: Time, tim_dif_loc_civ: Time, lat: f64) -> O
 
 fn current_cos_hour(t: Time, lat: f64) -> Option<f64> {
     let dec_ang = declination_angle(t);
-    let cos_hou = -libm::tan(lat) * libm::tan(dec_ang);
+    let cos_hou = -math::tan(lat) * math::tan(dec_ang);
     cos_hou.is_finite().then_some(cos_hou)
 }
 
 fn equation_of_time(bt: f64) -> Time {
-    60.0 * (9.87 * libm::sin(2.0 * bt) - 7.53 * libm::cos(bt) - 1.5 * libm::sin(bt))
+    60.0 * (9.87 * math::sin(2.0 * bt) - 7.53 * math::cos(bt) - 1.5 * math::sin(bt))
 }
 
 fn declination_angle(t: Time) -> f64 {
-    let k1 = libm::sin(23.45 * 2.0 * core::f64::consts::PI / 360.0);
+    let k1 = math::sin(23.45 * 2.0 * core::f64::consts::PI / 360.0);
     let k2 = 2.0 * core::f64::consts::PI / JULIAN_YEAR_DAYS;
-    libm::asin(-k1 * libm::cos((t / SECONDS_PER_DAY + 10.0) * k2))
+    math::asin(-k1 * math::cos((t / SECONDS_PER_DAY + 10.0) * k2))
 }
 
 pub(crate) const SUN_RISE_SET_PARAM_RULES: &[crate::ParamRule] = &[

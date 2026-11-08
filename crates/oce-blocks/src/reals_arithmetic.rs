@@ -11,6 +11,7 @@ use oce_model::{
     determinism::{det_max, det_min},
 };
 
+use crate::math;
 use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_bool, read_real};
 
 /// `CDL.Reals.Sources.Constant` — the only truly stateless source: `y = k` (`03` §4.1).
@@ -171,7 +172,7 @@ impl Block for Sqrt {
         true
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit_real(0, libm::sqrt(read_real(inputs, 0)), emit);
+        emit_real(0, math::sqrt(read_real(inputs, 0)), emit);
     }
 }
 
@@ -231,7 +232,7 @@ impl Block for Modulo {
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         let u1 = read_real(inputs, 0);
         let u2 = read_real(inputs, 1);
-        emit_real(0, u1 - libm::floor(u1 / u2) * u2, emit);
+        emit_real(0, u1 - math::floor(u1 / u2) * u2, emit);
     }
 }
 
@@ -268,9 +269,9 @@ impl Block for Round {
         let u = read_real(inputs, 0);
         let fac = decimal_factor(self.n);
         let y = if u > 0.0 {
-            libm::floor(u * fac + 0.5) / fac
+            math::floor(u * fac + 0.5) / fac
         } else {
-            libm::ceil(u * fac - 0.5) / fac
+            math::ceil(u * fac - 0.5) / fac
         };
         emit_real(0, y, emit);
     }

@@ -826,7 +826,9 @@ jobs:
   # the same configuration. The last step runs the oce-expr unit suite on the host without the `std`
   # feature, because that build replaces the thread-local evaluation-fuel meter with a program-wide
   # one; one test thread, since that meter is shared by the whole test binary. Plain `run:` steps;
-  # a dedicated check script is #402's.
+  # a dedicated check script is #402's. `scripts/ci/test-math-lint.sh` proves the math rule (issue
+  # #399) can fail: it re-probes which `f64` methods `core` has, checks `clippy.toml` lists every
+  # other one, and requires an `x.sin()` mutation in a workspace copy to fail clippy.
   no-std-build:
     name: no_std + alloc core build
     needs: changes
@@ -852,6 +854,8 @@ jobs:
       - name: clippy (no_std + alloc, thumbv7em-none-eabihf)
         run: >-
           cargo clippy -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc --target thumbv7em-none-eabihf --locked -- -D warnings
+      - name: math-discipline controls (core probe, clippy list, x.sin() mutation)
+        run: bash scripts/ci/test-math-lint.sh
       - name: cargo build (no_std + alloc, wasm32-unknown-unknown)
         run: >-
           cargo build -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc --target wasm32-unknown-unknown --locked
