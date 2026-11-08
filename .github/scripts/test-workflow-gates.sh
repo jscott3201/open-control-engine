@@ -436,10 +436,14 @@ jobs:
   golden-gen-firewall:
     steps:
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
+  gate:
+    steps:
+      - run: rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown
+      - run: bash .agents/gate.sh full
   ci-ok:
     name: CI OK
     if: always()
-    needs: [test-suite, default-no-db, unused-deps, gate-fixtures, golden-gen-firewall]
+    needs: [test-suite, default-no-db, unused-deps, gate-fixtures, golden-gen-firewall, gate]
     steps:
       - env:
           NEEDS_JSON: ${{ toJSON(needs) }}
@@ -1269,6 +1273,23 @@ gate_job_without_no_std_targets() {
   edit_pr_gate "$1" '/^  gate:$/,/^  [^ ]/ {/rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown$/d;}'
 }
 
+release_gate_without_no_std_targets() {
+  dir="$1"
+  grep -v 'rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown' "$dir/release-gate.yml" \
+    > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+}
+
+release_gate_installs_targets_after_the_script() {
+  dir="$1"
+  awk '
+    /rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown/ { held = $0; next }
+    { print }
+    /run: bash .agents\/gate.sh full/ && held != "" { print held; held = "" }
+  ' "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+}
+
 no_std_build_out_of_ci_ok() {
   edit_pr_gate "$1" '/^      - no-std-build$/d'
 }
@@ -1480,5 +1501,9 @@ run_case no-std-build-out-of-ci-ok fail no_std_build_out_of_ci_ok \
   "pr-gate.yml CI OK needs does not match the workflow's jobs"
 run_case gate-job-without-no-std-targets fail gate_job_without_no_std_targets \
   "the executed gate script has the no_std targets it builds for"
+run_case release-gate-without-no-std-targets fail release_gate_without_no_std_targets \
+  "the executed full gate script has the no_std targets it builds for"
+run_case release-gate-installs-targets-after-the-script fail release_gate_installs_targets_after_the_script \
+  "the executed full gate script has the no_std targets it builds for"
 
 echo "OK: workflow gate fixtures passed."

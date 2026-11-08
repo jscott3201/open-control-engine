@@ -67,13 +67,45 @@ fn boundary_values() -> Vec<f64> {
 fn swept_values(count: usize) -> Vec<f64> {
     let mut state: u64 = 0x9e37_79b9_7f4a_7c15;
     (0..count)
-        .map(|_| {
-            state ^= state >> 12;
-            state ^= state << 25;
-            state ^= state >> 27;
-            f64::from_bits(state.wrapping_mul(0x2545_f491_4f6c_dd1d))
-        })
+        .map(|_| f64::from_bits(xorshift(&mut state)))
         .collect()
+}
+
+/// The deterministic xorshift64* generator behind both sweeps.
+fn xorshift(state: &mut u64) -> u64 {
+    *state ^= *state >> 12;
+    *state ^= *state << 25;
+    *state ^= *state >> 27;
+    state.wrapping_mul(0x2545_f491_4f6c_dd1d)
+}
+
+/// Values around the decision boundaries of the rounding functions, which a raw bit-pattern sweep
+/// rarely reaches (about 2.6% of its draws have a magnitude in `[0.5, 2^53]`). For `count` random
+/// integers `k` below `2^53`, both signs: `k + 0.5`, one ulp either side of it, `k + 0.25` and
+/// `k + 0.75`. Each candidate is formed by `f64` addition, so the low-precision cases near `2^53`
+/// round to the nearest representable value; the exact cases are dense through `2^52`.
+fn half_integer_values(count: usize) -> Vec<f64> {
+    let mut state: u64 = 0xd1b5_4a32_d192_ed03;
+    let mut values = Vec::with_capacity(count * 5);
+    for _ in 0..count {
+        let draw = xorshift(&mut state);
+        // Spread k over every magnitude below 2^53: a random bit width, then random bits.
+        let width = (draw >> 58) % 54;
+        let k = (xorshift(&mut state) >> 11) & ((1_u64 << width) - 1);
+        let sign = if draw & 1 == 0 { 1.0 } else { -1.0 };
+        let base = k as f64;
+        let half = base + 0.5;
+        for x in [
+            half,
+            f64::from_bits(half.to_bits() + 1),
+            f64::from_bits(half.to_bits() - 1),
+            base + 0.25,
+            base + 0.75,
+        ] {
+            values.push(sign * x);
+        }
+    }
+    values
 }
 
 fn assert_parity(values: &[f64]) {
@@ -108,6 +140,21 @@ fn libm_matches_std_bit_for_bit_on_boundary_values() {
 #[test]
 fn libm_matches_std_bit_for_bit_across_a_bit_pattern_sweep() {
     assert_parity(&swept_values(1 << 20));
+}
+
+#[test]
+fn libm_matches_std_bit_for_bit_around_half_integers() {
+    let values = half_integer_values(1 << 18);
+    // The sweep does reach the rounding boundary: most cases are exact halves below 2^52.
+    let exact_halves = values
+        .iter()
+        .filter(|x| x.abs() < 4_503_599_627_370_496.0 && x.fract().abs() == 0.5)
+        .count();
+    assert!(
+        exact_halves > values.len() / 10,
+        "{exact_halves} exact halves"
+    );
+    assert_parity(&values);
 }
 
 #[test]

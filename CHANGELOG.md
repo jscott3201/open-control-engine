@@ -44,14 +44,16 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `alloc = []`; `--no-default-features --features alloc` builds it `#![no_std]` on `core` and
   `alloc` alone, and a build with neither feature is refused by a `compile_error!`. The default
   build is unchanged: goldens, the cross-architecture portable snapshot and the allocation census
-  are byte-identical. Errors derive `core::error::Error` through `thiserror` with its default
+  are byte-identical — the portable snapshot digest stays `2d21ed57…` (SHA-256) and the frame
+  allocation census is identical for all five fixtures (arithmetic, delay, feedback, controller,
+  assertion). Errors derive `core::error::Error` through `thiserror` with its default
   features off. The workspace `serde` and `thiserror` entries drop their default features (each std
   crate names `std`, and `rc` for `serde`, itself), and the four crates' workspace entries carry
   `default-features = false`, so every std crate that depends on one names `features = ["std"]`.
   `f64::{floor, ceil, trunc, round, sqrt}` are not in `core` on Rust 1.97: every call in the four
   goes through `libm` in all builds — exact IEEE 754 operations, checked against the `std` methods
-  bit for bit over boundary values and a 2^20 bit-pattern sweep (`oce-blocks/tests/libm_std_parity.rs`)
-  — and `f64::rem_euclid` through a helper that evaluates the standard library's own expression.
+  bit for bit over boundary values, a 2^20 bit-pattern sweep and a 2^18-case half-integer sweep
+  (`oce-blocks/tests/libm_std_parity.rs`) — and `f64::rem_euclid` through a helper that evaluates the standard library's own expression.
   `oce-expr` now depends on `libm`. Two differences without `std`: `oce_blocks::catalog()` is absent
   (its cache is a `OnceLock`), and `oce-expr`'s evaluation-fuel meter is one program-wide slot built
   from `core` atomics instead of a thread-local, so a `no_std` host evaluates from one execution

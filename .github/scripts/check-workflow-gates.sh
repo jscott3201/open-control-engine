@@ -60,6 +60,27 @@ require_job_pattern() {
   fi
 }
 
+# Like require_job_literal, but also requires `first` on an earlier line of the job than `second`
+# (a setup step that must run before the command that needs it).
+require_job_order() {
+  path="$1"
+  job="$2"
+  first="$3"
+  second="$4"
+  label="$5"
+  job_body="$(awk -v header="  $job:" '
+    $0 == header { found = 1; next }
+    found && /^  [^ ]/ { exit }
+    found && !/^[[:space:]]*#/ { print }
+  ' "$path")"
+  first_line="$(grep -nF -- "$first" <<< "$job_body" | head -n 1 | cut -d: -f1 || true)"
+  second_line="$(grep -nF -- "$second" <<< "$job_body" | head -n 1 | cut -d: -f1 || true)"
+  if [ -z "$first_line" ] || [ -z "$second_line" ] || [ "$first_line" -ge "$second_line" ]; then
+    echo "FAIL: $path job $job is missing required gate pattern: $label"
+    exit 1
+  fi
+}
+
 # Like require_job_pattern, but the needle is a fixed string (for long nextest filter expressions).
 require_job_literal() {
   path="$1"
@@ -704,7 +725,8 @@ require_job_literal "$ci" 'no-std-build' \
 require_job_literal "$ci" 'no-std-build' \
   'cargo test -p oce-expr --no-default-features --features alloc --lib --locked -- --test-threads=1' \
   'run the oce-expr unit suite without std'
-require_job_literal "$ci" 'gate' 'rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown' \
+no_std_targets='rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown'
+require_job_order "$ci" 'gate' "$no_std_targets" 'run: bash .agents/gate.sh' \
   'the executed gate script has the no_std targets it builds for'
 # Documentation checks under CI OK (issue #377); docs-pages.yml is path-filtered and not required.
 require_job_pattern "$ci" 'docs' '^[[:space:]]*(- )?run: bash scripts/docs/install-mdbook\.sh target/mdbook-bin$' \
@@ -812,6 +834,8 @@ require_job_pattern "$release" 'ci-ok' 'toJSON\(needs\)' \
   'release gate CI OK aggregate inspects every needed result'
 require_ci_ok_covers_every_job "$release"
 require_no_job_conditions "$release"
+require_job_order "$release" 'gate' "$no_std_targets" 'run: bash .agents/gate.sh full' \
+  'the executed full gate script has the no_std targets it builds for'
 
 # Daily advisory/yanked gate and deny.toml discipline.
 require_pattern "$advisories" 'schedule:' 'scheduled advisory gate'
