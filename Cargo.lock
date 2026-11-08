@@ -229,13 +229,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oce-store-mem"
-version = "0.2.0"
-dependencies = [
- "oce-store",
-]
-
-[[package]]
 name = "oce-validate"
 version = "0.2.0"
 dependencies = [

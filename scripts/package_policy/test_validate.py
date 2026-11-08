@@ -26,7 +26,6 @@ EXPECTED_PUBLISHABLE = {
     "oce-model",
     "oce-semantics",
     "oce-store",
-    "oce-store-mem",
     "oce-validate",
 }
 EXPECTED_PRIVATE = {
@@ -35,7 +34,7 @@ EXPECTED_PRIVATE = {
 }
 
 
-# Independent raw-byte golden from release.yml as re-pinned for GitHub #390, not read from the
+# Independent raw-byte golden from release.yml as re-pinned for GitHub #391, not read from the
 # candidate or checker.
 # Non-ASCII bytes are escaped explicitly; line endings and the final LF are pinned.
 APPROVED_WORKFLOW = b"""# release \xe2\x80\x94 the crates.io publish gate.
@@ -55,7 +54,7 @@ APPROVED_WORKFLOW = b"""# release \xe2\x80\x94 the crates.io publish gate.
 # CARGO_REGISTRY_TOKEN to this workflow (repo Settings \xe2\x86\x92 Environments \xe2\x86\x92
 # release). Enabling "Required reviewers" there adds a second human gate.
 #
-# All 11 publishable members ship in one dependency-ordered
+# All 10 publishable members ship in one dependency-ordered
 # `cargo publish --workspace` (Rust 1.90+). Two private members are skipped by
 # their own `publish = false`: `oce-bless` and `oce-conformance`. crates.io
 # rejects re-publishing an existing version, so a repeat dispatch is a
@@ -110,7 +109,7 @@ jobs:
       - name: tests
         run: cargo test --workspace --locked
 
-      - name: package, feature, and publication contract (11 publishable, 3 private)
+      - name: package, feature, and publication contract (10 publishable, 2 private)
         run: python3 scripts/package_policy/validate.py
 
       - name: publish dry-run (workspace, dependency-ordered)
@@ -288,8 +287,8 @@ class PackagePolicyControls(unittest.TestCase):
         changed = copy.deepcopy(self.metadata)
         model = self.package(changed, "oce-model")
         edge = copy.deepcopy(next(item for item in model["dependencies"] if item["name"] == "serde"))
-        edge["name"] = "oce-store-mem"
-        edge["path"] = "crates/oce-store-mem"
+        edge["name"] = "oce-store"
+        edge["path"] = "crates/oce-store"
         edge["req"] = "^0.2.0"
         model["dependencies"].append(edge)
         with self.assertRaisesRegex(validate.PolicyError, "must exclude storage crates"):
@@ -399,7 +398,7 @@ class WorkflowApprovalControls(unittest.TestCase):
             report = self.run_policy(workflow)
             self.assertEqual(report[0], 0)
             self.assertEqual(report[2], "")
-            self.assertIn("PASS (13 members; 11 publishable; 2 private)", report[1])
+            self.assertIn("PASS (12 members; 10 publishable; 2 private)", report[1])
             reports.append(report)
         self.assertEqual(reports, [reports[0]] * 3)
 

@@ -211,9 +211,10 @@ impl Engine {
     }
 
     /// Primary v1 ingest (D2: CXF JSON-LD only). Runs the Group A pipeline (`oce-cxf` resolve,
-    /// which also lowers composites and grounds parameters → `oce-validate`), builds the `oce-graph` schedule via the shared crate-private
-    /// build tail, and returns a [`LoadReport`] beside a plain-data [`LoadedModel`]. The returned
-    /// `model_id` is the raw CXF top-composite `@id` carried by the resolver side-channel.
+    /// which also lowers composites and grounds parameters → `oce-validate`), builds the
+    /// `oce-graph` schedule via the shared crate-private build tail, and returns a [`LoadReport`]
+    /// beside a plain-data [`LoadedModel`]. The returned `model_id` is the raw CXF top-composite
+    /// `@id` carried by the resolver side-channel.
     /// Replaces all per-run state, so calling it again reloads a fresh model.
     ///
     /// The [`LoadedModel`] carries the resolved-model projection, the IO inventory and the load

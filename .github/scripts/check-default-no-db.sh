@@ -16,8 +16,9 @@
 #    under `crates/` so root cargo metadata can see it; a tests/ fixture or tools/-style standalone
 #    sub-workspace is invisible here.
 # 4. Facade storage isolation: the engine is pure (GitHub #390). `oce-api` must not declare a
-#    normal/build dependency on any `oce-store*` crate, and its `cargo tree -e normal` must not
-#    list one at any depth. Durability is the host's: a host persists the plain-data `LoadedModel`
+#    normal/build dependency on `oce-store` (the one storage crate; the match is a prefix, so any
+#    future `oce-store-*` crate is refused too), and its `cargo tree -e normal` must not list one
+#    at any depth. Durability is the host's: a host persists the plain-data `LoadedModel`
 #    a load returns through its own adapter behind the `oce-store` port, which therefore sits
 #    beside the facade, never below it. Dev dependencies are ignored, as in pass 2.
 #
@@ -218,7 +219,7 @@ check_facade_storage_edges() {
       echo "FAIL: 'oce-api' has a direct $kind dependency on storage crate '$dependency'"
     done
     echo
-    echo "The engine is pure (GitHub #390): oce-api must never depend on oce-store or oce-store-mem."
+    echo "The engine is pure (GitHub #390): oce-api must never depend on oce-store."
     return 1
   fi
 }

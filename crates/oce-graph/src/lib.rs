@@ -11,7 +11,7 @@
 //! `step_algebraic` may allocate. `CDL.Reals.Sort` uses stack buffers through width 64 and
 //! heap-backed vectors above that width. `CDL.Reals.Log` and `CDL.Reals.Log10` warning messages
 //! allocate nothing block-side, though the installed diagnostics sink may allocate. This crate is
-//! **Group A**: it has zero dependency on `oce-store`/`oce-store-mem` or any store/database
+//! **Group A**: it has zero dependency on `oce-store` or any store/database
 //! crate (D-OWNER-1; `01` §10).
 //!
 //! Public API names (normative, `01` §6.2): the frozen schedule is [`Schedule`] (alias

@@ -1,6 +1,6 @@
 [package]
 name = "oce-store"
-description = "THE SEAM: database-free Store ports (ModelStore/PointStore/SemanticStore) + DTOs for the Open Control Engine. No DB types."
+description = "THE SEAM: database-free Store ports (ModelStore/PointStore/SemanticStore), DTOs, the host-side post-load helper and the in-memory MemStore (feature `mem`) for the Open Control Engine. No DB types."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -17,3 +17,8 @@ workspace = true
 oce-model = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
+
+[features]
+default = ["mem"]
+# The in-memory `MemStore` backend. Off: ports, DTOs and the `host` helper only.
+mem = []
