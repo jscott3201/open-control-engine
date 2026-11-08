@@ -1,18 +1,44 @@
 {
-  "historical": {
-    "git_revision": "8a63d4a042e1ca91d5dfe7bd3fc33d194f5102bb",
-    "matrix_sha256": "12a2fbdd28c9718c0145c5055240f0b7eab3d7898bc5d1f05ed0ee09db2978ad"
-  },
-  "current": {
-    "git_revision": "fbae3b96b053836b916f603a0d86c53d30bce628",
+  "last_green_native_run": {
+    "run_id": 37382761120,
+    "head_sha": "f8dcaeb861fa18ef4c720b6fa2963b026f3a8300",
+    "merge_sha": "fbae3b96b053836b916f603a0d86c53d30bce628",
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "libm": "0.2.16",
+    "cells": {
+      "linux-aarch64-debug": {
+        "first_sha256": "6ed52dfdeaeb04d8c270943ec8bd594c7383aa5fc37cd8beff9446d675a78751",
+        "repeat_sha256": "6ed52dfdeaeb04d8c270943ec8bd594c7383aa5fc37cd8beff9446d675a78751"
+      },
+      "linux-aarch64-release": {
+        "first_sha256": "f97c6d8c257ab632a1685268a6a350bc46b55ebc5bd4c685b0d8b51ec9588442",
+        "repeat_sha256": "f97c6d8c257ab632a1685268a6a350bc46b55ebc5bd4c685b0d8b51ec9588442"
+      },
+      "linux-x86_64-debug": {
+        "first_sha256": "84d66c267e71f7f5e7ac02e7050fee99cf33ffca9b18bd81389fd7144e9368b2",
+        "repeat_sha256": "84d66c267e71f7f5e7ac02e7050fee99cf33ffca9b18bd81389fd7144e9368b2"
+      },
+      "linux-x86_64-release": {
+        "first_sha256": "81087ece58ea985d0d11cf79df78fefe7163b0180f2b8aa05d07902a5d6772d4",
+        "repeat_sha256": "81087ece58ea985d0d11cf79df78fefe7163b0180f2b8aa05d07902a5d6772d4"
+      }
+    },
     "matrix_sha256": "78c5efaf4881977d306fc1f7a09c51f37cf897be338558d14aee9c2313d035d9"
   },
-  "status": "recapture-pending",
-  "pending": {
-    "since": "2026-11-08",
-    "reason": "The M1 refactor window deliberately changes bound sources (Cargo.toml, Cargo.lock, crates/oce-model/src/lib.rs, .config/nextest.toml, .agents/gate.sh and the strict-bit checker itself). Source binding of the current receipt is suspended until one native re-capture is admitted at the end of M1b; numerical, topology, repeat, inventory and matrix-digest checks stay enforced.",
-    "opened_by_issue": 387,
-    "closed_by_issue": 404,
-    "supersedes_matrix_sha256": "78c5efaf4881977d306fc1f7a09c51f37cf897be338558d14aee9c2313d035d9"
-  }
+  "archives": [
+    {
+      "directory": "linux",
+      "run_id": 35492290613,
+      "head_sha": "dbce73fb20ada4a3a91653bb7ad9b48fae7ee87d",
+      "git_revision": "8a63d4a042e1ca91d5dfe7bd3fc33d194f5102bb",
+      "matrix_sha256": "12a2fbdd28c9718c0145c5055240f0b7eab3d7898bc5d1f05ed0ee09db2978ad"
+    },
+    {
+      "directory": "qualified-linux",
+      "run_id": 37382761120,
+      "head_sha": "f8dcaeb861fa18ef4c720b6fa2963b026f3a8300",
+      "git_revision": "fbae3b96b053836b916f603a0d86c53d30bce628",
+      "matrix_sha256": "78c5efaf4881977d306fc1f7a09c51f37cf897be338558d14aee9c2313d035d9"
+    }
+  ]
 }

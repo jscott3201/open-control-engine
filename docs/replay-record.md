@@ -193,10 +193,9 @@ manifest validation. A post-execution mismatch does not undo a prior accepted tr
 - `tests/replay_matrix.rs` supplies repeat-exact portable and target-bound local vectors via optional
   `OCE_PORTABLE_REPLAY_OUT` / `OCE_TARGET_REPLAY_OUT` paths and foreign-placement inspection via
   `OCE_FOREIGN_TARGET_REPLAY_IN`. The existing debug/release `oce-api` matrix runs these tests, but
-  **cross-architecture replay artifact comparison is pending**. Its artifact plumbing was not
-  extended because `ci.yml` is itself pinned in the accepted strict-bit 35-file source boundary;
-  changing that workflow would require separate requalification rather than silently reblessing
-  evidence. Local artifact equality never fabricates hosted results or macOS qualification.
+  **cross-architecture replay artifact comparison is pending**. The native determinism cells and
+  their `determinism-compare` fan-in in `pr-gate.yml` now carry the state vectors across
+  architectures; the replay vectors are not yet wired into that artifact plumbing. Local artifact equality never fabricates hosted results or macOS qualification.
 
 No state format/ABI, HostTick, catalog facts, conformance tolerance, dependencies, supported feature
 selections, downstream repository pins or release claims change. The new facade items are additive

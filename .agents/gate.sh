@@ -6,7 +6,7 @@
 # two of them materially weaker than CI, so prose copies are the failure mode
 # this file exists to remove.
 #
-#   bash .agents/gate.sh          # light  — mirrors the per-PR gate (ci.yml)
+#   bash .agents/gate.sh          # light  — mirrors the per-PR gate (pr-gate.yml)
 #   bash .agents/gate.sh full     # full   — adds the suite (release-gate.yml)
 #
 # Commands are kept in CI's exact form, flags included. `--locked`, the `ci`
@@ -14,7 +14,7 @@
 # dropping any one of them turns a real gate into a green light that proves
 # less than it appears to. Change a command here only by changing CI first.
 #
-# CI executes this script as well as mirroring it — `gate (light)` in ci.yml and
+# CI executes this script as well as mirroring it — `gate (light)` in pr-gate.yml and
 # `gate (full)` in release-gate.yml — so an edit here changes what gates a pull
 # request, not merely what a local run does.
 #
@@ -202,24 +202,24 @@ cat <<'COVERAGE'
 
 ────────────────────────────────────────────────────────────────────────────
 NOT COVERED BY THIS SCRIPT — a green run here does not prove these pass:
-  · cross-arch determinism matrix (ubuntu-latest AND ubuntu-24.04-arm).
-    One machine cannot reproduce it. CI is the only place it runs.
-  · strict-bit raw-output matrix over the 21 inventoried signals, with two native
-    processes per Linux architecture/codegen cell and cross-cell comparison.
-    Local synthetic controls and macOS observations are NOT native Linux evidence.
-  · cargo public-api surface gates for oce-api / oce-store. They need the
-    gate-only nightly toolchain and run in release-gate.yml.
+  · cross-arch determinism matrix: four native cells, x86_64 on ubuntu-latest
+    and aarch64 on ubuntu-24.04-arm, in debug and release codegen, with the
+    cross-architecture snapshot comparison in a fan-in job. One machine cannot
+    reproduce it. CI is the only place it runs.
+  · strict-bit raw-output matrix over the 21 inventoried signals: the same
+    four native cells, two capture processes each, then the eight-capture
+    comparison. Local synthetic controls and macOS observations are NOT
+    native Linux evidence.
   · cargo deny check advisories. Needs network and a writable advisory-db;
     it runs in advisories.yml (daily) and in release-gate.yml's cargo-deny
     job, which sweeps advisories/bans/licenses/sources on every release PR.
-  · that these commands still MATCH ci.yml. Nothing verifies that mechanically
-    — see the tracked work item for why the attempt was withdrawn. Change a
-    command here only by changing CI first.
-    CI does RUN this script (`gate (light)` in ci.yml, `gate (full)` in
+  · that these commands still match pr-gate.yml. Nothing verifies that
+    mechanically. Change a command here only by changing CI first.
+    CI does RUN this script (`gate (light)` in pr-gate.yml, `gate (full)` in
     release-gate.yml), so every command listed here gates a PR whether or not
-    ci.yml still runs it separately. Read that as coverage, not as parity: a
-    green `gate (light)` says these commands ran, and says nothing at all about
-    whether the two files still agree.
+    pr-gate.yml still runs it separately. Read that as coverage, not as
+    parity: a green `gate (light)` says these commands ran, and says nothing
+    at all about whether the two files still agree.
 COVERAGE
 
 if [ "$MODE" = light ]; then

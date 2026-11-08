@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Gate-behavior fixtures for check-workflow-gates.sh. The negative fixtures prove missing nextest,
-# seeded advisory ignores, garbled workflow input, actions referenced by a movable tag, and a
-# per-PR gate that re-runs on pushes to development fail closed.
+# seeded advisory ignores, garbled workflow input, actions referenced by a movable tag, a per-PR
+# gate that re-runs on pushes to development, and a cell matrix that is no longer native on both
+# architectures (or loses a cell, a fan-in or a comparison) fail closed.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -51,63 +52,111 @@ jobs:
       - name: authority claim hostile controls
         run: python3 scripts/authority_claims/test_check.py
   strict-bit-matrix:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+        codegen: [debug, release]
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
     steps:
       - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
         with:
           tool: nextest@0.9.143
-      - run: bash scripts/ci/strict-bits-cell.sh aarch64 debug
-      - run: bash scripts/ci/strict-bits-cell.sh aarch64 release
+      - env:
+          CELL_ARCH: ${{ matrix.arch }}
+          CELL_CODEGEN: ${{ matrix.codegen }}
+        run: bash scripts/ci/strict-bits-cell.sh "$CELL_ARCH" "$CELL_CODEGEN"
+      - uses: actions/upload-artifact@0123456789abcdef0123456789abcdef01234567 # v7
+        with:
+          name: strict-bits-${{ matrix.arch }}-${{ matrix.codegen }}
+          path: target/strict-bits/
+          if-no-files-found: error
+  strict-bit-compare:
+    needs: strict-bit-matrix
+    steps:
+      - env:
+          OCE_STRICT_MATRIX_DIR: target/strict-bits
+          OCE_STRICT_RUN_ID: ${{ github.run_id }}
+        run: >-
+          cargo nextest run --archive-file target/strict-bits/strict-bits-tests.tar.zst
+          --workspace-remap . --profile ci --no-tests=fail --run-ignored only
+          -E 'test(=matrix::native_linux_matrix_is_complete_and_exact)'
+      - run: test -s target/strict-bits/receipt-candidate.json
   determinism-matrix:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+        codegen: [debug, release]
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
     steps:
       - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
         with:
           tool: nextest@0.9.143
+      - env:
+          CELL_ARCH: ${{ matrix.arch }}
+        run: test "$(uname -m)" = "$CELL_ARCH"
       - name: Clear cached reports and state vectors
         run: >-
           rm -rf target/nextest/{ci,ci-release}/junit.xml
           target/{portable,target}-state-{debug,release}.bin
-          target/state-x86 target/state-arm
-      - run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
+      - if: matrix.codegen == 'debug'
+        run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
         env:
           OCE_PORTABLE_STATE_OUT: target/portable-state-debug.bin
           OCE_TARGET_STATE_OUT: target/target-state-debug.bin
-      - run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
+      - if: matrix.codegen == 'release'
+        run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
         env:
           OCE_PORTABLE_STATE_OUT: target/portable-state-release.bin
           OCE_TARGET_STATE_OUT: target/target-state-release.bin
+      - run: |
+          test -s "target/nextest/$profile/junit.xml"
+          test -s "target/portable-state-$CELL_CODEGEN.bin"
+      - uses: actions/upload-artifact@0123456789abcdef0123456789abcdef01234567 # v7
+        with:
+          name: determinism-${{ matrix.arch }}-${{ matrix.codegen }}
+          path: target/determinism/
+          if-no-files-found: error
+  determinism-compare:
+    needs: determinism-matrix
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+            foreign: aarch64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+            foreign: x86_64
+    steps:
+      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
+        with:
+          tool: nextest@0.9.143
       - run: >-
-          cmp target/portable-state-debug.bin target/portable-state-release.bin &&
-          cmp target/target-state-debug.bin target/target-state-release.bin
+          cmp determinism-x86_64-debug/portable-state-debug.bin determinism-x86_64-release/portable-state-release.bin &&
+          cmp determinism-x86_64-debug/target-state-debug.bin determinism-x86_64-release/target-state-release.bin &&
+          cmp determinism-aarch64-debug/portable-state-debug.bin determinism-aarch64-release/portable-state-release.bin &&
+          cmp determinism-aarch64-debug/target-state-debug.bin determinism-aarch64-release/target-state-release.bin
       - run: >-
-          for profile in ci ci-release;
-          do test -s "target/nextest/$profile/junit.xml";
-          done
-      - run: cp target/portable-state-debug.bin target/target-state-debug.bin target/state-x86/
-      - env:
-          OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-debug.bin
-          OCE_TARGET_STATE_OUT: target/state-arm/target-state-debug.bin
-        run: >-
-          cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked
-          --target aarch64-unknown-linux-gnu --config-file "$PWD/scripts/ci/nextest-emulated.toml"
-          --profile ci --no-tests=fail
-      - env:
-          OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-release.bin
-          OCE_TARGET_STATE_OUT: target/state-arm/target-state-release.bin
-        run: >-
-          cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked
-          --target aarch64-unknown-linux-gnu --config-file "$PWD/scripts/ci/nextest-emulated.toml"
-          --profile ci-release --cargo-profile release --no-tests=fail
-      - run: >-
-          cmp target/state-arm/portable-state-debug.bin target/state-arm/portable-state-release.bin
-      - run: >-
-          cmp target/state-x86/portable-state-debug.bin target/state-arm/portable-state-debug.bin &&
-          ! cmp -s target/state-x86/target-state-debug.bin target/state-arm/target-state-debug.bin
-      - env:
-          OCE_FOREIGN_TARGET_STATE_IN: target/state-arm/target-state-debug.bin
-        run: >-
-          cargo nextest run -p oce-api --lib --locked --profile ci --no-tests=fail
-          -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
+          cmp determinism-x86_64-debug/portable-state-debug.bin determinism-aarch64-debug/portable-state-debug.bin &&
+          ! cmp -s determinism-x86_64-debug/target-state-debug.bin determinism-aarch64-debug/target-state-debug.bin
+      - run: |
+          test "$CELL_ARCH" != "$FOREIGN_ARCH"
+          export OCE_FOREIGN_TARGET_STATE_IN="$PWD/target/determinism/determinism-$FOREIGN_ARCH-debug/target-state-debug.bin"
+          cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/oce-api-lib.tar.zst" \
+            --workspace-remap . --profile ci --no-tests=fail \
+            -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
   crate-tests:
     steps:
       - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
@@ -141,7 +190,9 @@ jobs:
       - golden-gen-firewall
       - package-publication-contract
       - strict-bit-matrix
+      - strict-bit-compare
       - determinism-matrix
+      - determinism-compare
       - crate-tests
       - docs
     steps:
@@ -459,7 +510,7 @@ comment_foreign_restore_command() {
 allow_absent_foreign_restore_test() {
   dir="$1"
   _deny="$2"
-  sed '/cargo nextest run -p oce-api --lib/ s/ --no-tests=fail//' \
+  sed '/--workspace-remap \. --profile ci --no-tests=fail \\$/ s/ --no-tests=fail//' \
     "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
   mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
@@ -468,8 +519,8 @@ remove_foreign_restore_nextest_install() {
   dir="$1"
   _deny="$2"
   awk '
-    /^  determinism-matrix:/ { in_job = 1 }
-    /^  ci-ok:/ { in_job = 0 }
+    /^  determinism-compare:/ { in_job = 1 }
+    /^  crate-tests:/ { in_job = 0 }
     in_job && /tool: nextest@0.9.143/ { next }
     { print }
   ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
@@ -479,14 +530,94 @@ remove_foreign_restore_nextest_install() {
 remove_aarch64_leg() {
   dir="$1"
   _deny="$2"
-  grep -v -- '--target aarch64-unknown-linux-gnu' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  sed 's/^        runner: \[ubuntu-latest, ubuntu-24\.04-arm\]$/        runner: [ubuntu-latest]/' \
+    "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+# aarch64 cells relabeled onto an x86_64 runner: the matrix still names both architectures, but
+# no native arm64 host would ever run.
+swap_aarch64_runner() {
+  dir="$1"
+  sed 's/^          - runner: ubuntu-24\.04-arm$/          - runner: ubuntu-latest/' \
+    "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+drop_release_codegen() {
+  dir="$1"
+  sed 's/^        codegen: \[debug, release\]$/        codegen: [debug]/' \
+    "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+enable_fail_fast() {
+  dir="$1"
+  sed 's/^      fail-fast: false$/      fail-fast: true/' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+# One emulation step, in a gating workflow or only in a comment.
+reinstall_qemu() {
+  dir="$1"
+  awk '
+    { print }
+    /^  determinism-matrix:$/ { getline; print; print "    # aarch64 under qemu-user" }
+  ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+reinstall_release_cross_target() {
+  dir="$1"
+  awk '
+    { print }
+    /^      - run: cargo test --workspace --doc --locked$/ {
+      print "      - run: cargo nextest run --workspace --target aarch64-unknown-linux-gnu"
+    }
+  ' "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+}
+
+detach_fan_in() {
+  dir="$1"
+  grep -v '^    needs: determinism-matrix$' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+omit_strict_fan_in_need() {
+  dir="$1"
+  grep -v '^      - strict-bit-compare$' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+stop_requiring_target_bound_difference() {
+  dir="$1"
+  grep -v 'cmp -s determinism-x86_64-debug/target-state-debug.bin' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+restore_own_architecture_snapshot() {
+  dir="$1"
+  grep -v 'test "$CELL_ARCH" != "$FOREIGN_ARCH"' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+skip_ignored_matrix_comparison() {
+  dir="$1"
+  sed 's/ --run-ignored only$//' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+drop_receipt_candidate_requirement() {
+  dir="$1"
+  grep -v 'receipt-candidate.json' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
   mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
 remove_arm_state_vector() {
   dir="$1"
   _deny="$2"
-  grep -v 'OCE_PORTABLE_STATE_OUT: target/state-arm/' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  grep -v 'OCE_PORTABLE_STATE_OUT: target/portable-state-release.bin' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
   mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
@@ -613,10 +744,11 @@ conditional_gating_job() {
   mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
-remove_emulated_strict_cell() {
+hardcode_strict_cell_architecture() {
   dir="$1"
   _deny="$2"
-  grep -v 'strict-bits-cell.sh aarch64 release' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  sed 's/strict-bits-cell.sh "$CELL_ARCH" "$CELL_CODEGEN"/strict-bits-cell.sh x86_64 "$CELL_CODEGEN"/' \
+    "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
   mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
@@ -747,10 +879,32 @@ run_case vacuous-foreign-restore fail allow_absent_foreign_restore_test \
   "foreign target-bound restore hard-fails when its test is absent"
 run_case missing-foreign-nextest-install fail remove_foreign_restore_nextest_install \
   "pinned cargo-nextest install for foreign restore"
-run_case missing-aarch64-leg fail remove_aarch64_leg \
-  "aarch64 determinism leg"
-run_case missing-arm-state-vector fail remove_arm_state_vector \
-  "emit the aarch64 portable state vector"
+run_case missing-aarch64-runner fail remove_aarch64_leg \
+  "determinism-matrix runs native x86_64 and aarch64 runners"
+run_case aarch64-on-x86-runner fail swap_aarch64_runner \
+  "does not map x86_64 to ubuntu-latest and aarch64 to ubuntu-24.04-arm"
+run_case missing-release-codegen-cells fail drop_release_codegen \
+  "determinism-matrix runs debug and release codegen"
+run_case fail-fast-cells fail enable_fail_fast \
+  "determinism-matrix reports every failing cell (fail-fast: false)"
+run_case reinstalled-qemu fail reinstall_qemu \
+  "pr-gate.yml mentions emulation or a cross-compiled aarch64 target"
+run_case release-cross-target fail reinstall_release_cross_target \
+  "release-gate.yml mentions emulation or a cross-compiled aarch64 target"
+run_case detached-determinism-fan-in fail detach_fan_in \
+  "job determinism-compare does not need determinism-matrix"
+run_case omitted-strict-fan-in-need fail omit_strict_fan_in_need \
+  "pr-gate.yml CI OK needs does not match the workflow's jobs"
+run_case target-bound-difference-unchecked fail stop_requiring_target_bound_difference \
+  "require target-bound state bytes to differ across architectures"
+run_case own-architecture-restore fail restore_own_architecture_snapshot \
+  "the restoring architecture differs from the snapshot architecture"
+run_case unrun-matrix-comparison fail skip_ignored_matrix_comparison \
+  "the eight-capture comparison hard-fails when its test is absent"
+run_case missing-receipt-candidate fail drop_receipt_candidate_requirement \
+  "a green comparison writes the candidate receipt-log record"
+run_case missing-release-state-vector fail remove_arm_state_vector \
+  "emit the release portable state vector in every determinism cell"
 run_case conditional-ci-ok fail conditional_ci_ok \
   "CI OK aggregate reports on every run"
 run_case blind-release-ci-ok fail blind_release_ci_ok \
@@ -777,12 +931,12 @@ run_case block-list-push-trigger fail block_list_push_trigger \
 run_case flow-map-push-trigger fail flow_map_push_trigger \
   "pr-gate.yml has a push trigger"
 run_case flow-map-pull-request-trigger pass flow_map_pull_request_trigger
-run_case missing-emulated-strict-cell fail remove_emulated_strict_cell \
-  "emulated aarch64 release strict-bit cell"
+run_case hardcoded-strict-cell fail hardcode_strict_cell_architecture \
+  "native strict-bit cell for the matrix architecture and codegen"
 run_case missing-nextest-report-cleanup fail remove_nextest_report_cleanup \
   "clear cached nextest JUnit reports"
 run_case missing-nextest-report-requirements fail remove_nextest_report_requirements \
-  "require the complete nextest determinism report set"
+  "refuse an absent or empty nextest determinism report"
 run_case stale-nextest-pin fail downgrade_nextest_pin \
   "pinned cargo-nextest 0.9.143 install"
 run_case tag-referenced-action fail unpin_action \

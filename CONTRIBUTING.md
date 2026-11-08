@@ -133,11 +133,11 @@ and drifted from CI — omitting `cargo machete`, the gate-fixture job, the `--b
 and the determinism matrix — while claiming to mirror it. Change a command in
 [`.github/workflows/pr-gate.yml`](.github/workflows/pr-gate.yml) first, then in the script.
 
-`.agents/gate.sh`, `.config/nextest.toml` and the dormant, disabled `.github/workflows/ci.yml` are
-bound sources of the retained native strict-bit evidence
-([strict-bit evidence](docs/strict-bit-evidence.md)): changing any byte of them turns the
-retained-evidence test red until a new native receipt is admitted. Plan such a change as an
-evidence refresh, not as a drive-by edit.
+The dormant, disabled `.github/workflows/ci.yml` stays byte-frozen as the history of the retained
+strict-bit capture archives. Native strict-bit evidence is re-established on every PR by the native
+cells in `pr-gate.yml` ([strict-bit evidence](docs/strict-bit-evidence.md)), so `.agents/gate.sh`
+and `.config/nextest.toml` are ordinary files again: change them like any other gate change,
+`pr-gate.yml` first.
 
 CI is Linux-only. There is no macOS or Windows CI leg, and there never was one; macOS observations
 are local and are not qualification evidence.

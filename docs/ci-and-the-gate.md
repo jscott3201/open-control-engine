@@ -7,7 +7,9 @@ to misread in the dangerous direction.
 ## Where CI runs
 
 CI runs on GitHub Actions, the project's primary host, from the workflows in
-[`.github/workflows/`](../.github/workflows/) on GitHub-hosted Linux x86_64 runners: `pr-gate.yml`
+[`.github/workflows/`](../.github/workflows/) on GitHub-hosted Linux runners — x86_64
+(`ubuntu-latest`) for most jobs, plus native arm64 (`ubuntu-24.04-arm`) for the aarch64 cells of the
+determinism and strict-bit matrices: `pr-gate.yml`
 (per-PR into `development`), `release-gate.yml` (release PRs into `main` and a daily
 `development`-tip run), `advisories.yml`, `docs-pages.yml`, the tag-verify / manual-publish
 `release.yml`, and the manual native-arm64 OpenModelica evidence workflows. Actions in the gating
@@ -16,8 +18,8 @@ enforces for the gating workflows. `release.yml` and the OpenModelica evidence w
 byte-bound by their own approval and evidence manifests, so they keep tag references until their
 next reviewed refresh.
 The `ci.yml` in that directory is not the CI: it is the GitHub-era gate that produced the
-[retained strict-bit evidence](strict-bit-evidence.md), stays byte-identical because it is a bound
-source of that evidence, and is disabled in the repository's Actions settings. (CI briefly ran on
+[retained strict-bit capture archives](strict-bit-evidence.md#retained-native-archives), stays
+byte-identical as their history, and is disabled in the repository's Actions settings. (CI briefly ran on
 a self-hosted Forgejo instance, now retired.)
 
 Each gating workflow ends in a `CI OK` job that needs every other job and fails unless each one
@@ -33,8 +35,8 @@ The per-PR gate runs **once per change**, on the pull request:
 - **A PR into `development`** runs `pr-gate.yml` (and `docs-pages.yml` when it touches the docs
   paths below). A new push to the PR branch cancels the superseded run.
 - **A merge into `development`** runs no gate. `pr-gate.yml` has no `push` trigger: the merged
-  tree is the one the PR already tested, so a post-merge run would repeat about half an hour of CI
-  for no new evidence. Only the path-filtered `docs-pages.yml` runs on that push, and only when the
+  tree is the one the PR already tested, so a post-merge run would repeat the whole gate for no new
+  evidence. Only the path-filtered `docs-pages.yml` runs on that push, and only when the
   merge touches its paths. `check-workflow-gates.sh` refuses any `push` trigger in `pr-gate.yml`,
   so the duplicate run cannot return unnoticed.
 - **Daily**, `release-gate.yml` runs the heavy gate against the `development` tip. That is the
@@ -42,16 +44,28 @@ The per-PR gate runs **once per change**, on the pull request:
   each passed on their own.
 - **A PR into `main`, or a push to `main`,** runs `release-gate.yml`.
 
-**Cache.** The `Swatinem/rust-cache` entries for `pr-gate.yml`'s jobs were written by the
-post-merge push run in `development`'s cache scope, which every PR can read. PR runs save into their
-own PR scope only, so with no push run nothing seeds those `development` entries any more. GitHub
-evicts them after seven days unused, and PRs then build cold. This is accepted for now, and the
-cost is bounded. rust-cache never caches workspace crates, so a cache saves only dependency
-compile time, and the default embed path (`oce-api`) pulls 14 external crates. Run 42439645194, a
-PR run that still had the push-seeded entries available, took 31m42s anyway: its four longest
-jobs (determinism matrix, strict bits, crate tests, golden-gen hygiene) found no cache, and only the
-shorter jobs restored one. Sharing one cache across the `pr-gate.yml` and `release-gate.yml` job
-shapes (rust-cache `shared-key`) is designed in issue #392, together with the native-runner cell split.
+**Cache.** PR runs save `Swatinem/rust-cache` entries into their own PR scope only, and there is
+no post-merge push run, so nothing a PR does seeds the cache scope other PRs read. The daily
+`release-gate.yml` run does: scheduled runs execute on the default branch (`development`), whose
+cache scope every PR into `development` can read. Jobs that build the same thing in both workflows
+therefore share one rust-cache `shared-key` (the key replaces rust-cache's per-job component; the
+rustc host triple, the `CARGO_*`/`RUST*` environment and `Cargo.lock` still separate entries, so
+x86_64 and arm64 never share one):
+
+| `shared-key` | `pr-gate.yml` jobs | `release-gate.yml` jobs |
+| --- | --- | --- |
+| `nextest` | the eight determinism and strict-bit cells, `crate-tests` | `test-suite` (debug and release, whole workspace) |
+| `gate` | `gate (light)` | `gate (full)` |
+| `clippy`, `build`, `rustdoc`, `default-no-db` | the job of that name | the job of that name |
+
+For the like-named pairs this only makes explicit what their identical job ids already did
+(rust-cache's default key component is the job id); the `nextest` key is the new link. The release-gate `test-suite` entry is a superset (the whole workspace, both codegens), which
+restores as a warm start for the narrower PR cells; rust-cache never caches workspace crates, so a hit saves
+dependency compile time only. The arm64 cells have no release-gate counterpart: they reuse what an
+earlier run of the same PR saved, and build cold on a new PR. rust-cache saves only on an
+exact-key miss, so under a shared key the first job to finish writes the entry, and its profile's
+dependency set is what that key holds until `Cargo.lock`, the toolchain or the environment changes. `golden-gen-hygiene` keeps its own
+per-job key (it builds the separate `tools/golden-gen` workspace).
 
 Branch protection on `development` makes the PR run the only way in: a pull request is required,
 the `CI OK` status is required, and the branch must be up to date with `development` before it
@@ -111,15 +125,17 @@ This does not check arbitrary Markdown claims or workflow parity, and regenerati
 **A green PR is not evidence that the change's own tests pass.**
 
 The per-PR gate into `development` runs the state-determinism subset for **`oce-api`, `oce-blocks`,
-and `oce-expr`**. That is the `determinism-matrix` job in `.github/workflows/pr-gate.yml`: it runs
-that three-crate subset natively on x86_64 and, cross-compiled, on aarch64 under QEMU user-mode
-emulation, each twice — once under debug codegen, once under release codegen. Each architecture
-emits populated revision-2 portable and target-bound state vectors. The job compares both across
-codegen profiles, requires the portable files to match and the target-bound files to differ across
-architectures, then parses and refuses the aarch64 target-bound bytes on x86_64. The emulated leg
-excludes one test that re-executes its own binary (an `OCE_BLESS` truthiness probe, not a
-determinism test), which the native leg still runs. Emulation keeps the cross-architecture
-comparison on every PR with a single x86_64 runner; it is CI signal, not native aarch64 evidence.
+and `oce-expr`**. That is the `determinism-matrix` job in `.github/workflows/pr-gate.yml`: four
+native cells, x86_64 on `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm`, each under debug and
+under release codegen. Each cell refuses a runner of the wrong architecture, runs the three-crate
+subset and emits populated revision-2 portable and target-bound state vectors. The
+`determinism-compare` fan-in (one leg per architecture) downloads all four cells' vectors,
+requires portable and target-bound bytes to match across codegen within each architecture,
+portable bytes to match across architectures and target-bound bytes to differ, and then parses
+the **other** architecture's target-bound snapshot and refuses it through the public restore path
+— x86_64 refuses aarch64's, aarch64 refuses x86_64's — natively, from the oce-api unit-test binary
+its own debug cell built and archived. Nothing is emulated; every test in the subset runs in every
+cell.
 The gate script runs the test commands locally and adds two named
 `oce-cxf` test binaries, which are input hygiene rather than
 engine coverage: the port-order audit sweeps 47 CXF documents, of which 46 are Guideline 36 catalog
@@ -129,10 +145,17 @@ pair with vendored modelica-json translations
 edges — not simulated behavior.
 
 The scoped `oce-conformance` **strict-bit subset also runs per-PR**: `strict_bits` plus the four
-affected per-block suite binaries, in Linux x86_64 (native) / aarch64 (emulated) × debug/release,
-with two independent captures per cell and a fail-closed cross-cell comparison. The [retained evidence](strict-bit-evidence.md)
-covers exact comparison of 21 pinned Real cases on qualified Linux; unqualified targets retain
-the unchanged 1e-12 aligned band. This is not the whole conformance suite or a libm accuracy claim.
+affected per-block suite binaries, in the same four native cells, with two independent captures
+per cell and a fail-closed eight-capture comparison in the `strict-bit-compare` fan-in. That
+per-PR matrix **is** the native evidence for exact comparison of the 21 pinned Real cases on Linux
+([strict-bit evidence](strict-bit-evidence.md#per-pr-native-matrix)); no stored receipt admits
+anything, and the fan-in uploads `matrix.json` and a candidate receipt-log record as the
+`strict-bit-matrix` artifact. Unqualified targets retain the unchanged 1e-12 aligned band. This is
+not the whole conformance suite or a libm accuracy claim.
+
+**A runner type that is unavailable fails the check closed.** A cell that cannot get an
+`ubuntu-24.04-arm` runner stays queued, its fan-in never starts, and `CI OK` never reports success;
+there is no fallback to emulation and no skipped cell.
 
 The remainder waits for the release/full gate. A change outside the named test subsets can show
 a fully green PR having executed none of its own tests.
@@ -178,22 +201,30 @@ rather than passing, which catches tests that silently stop compiling or being f
 Local setup and CI pin cargo-nextest `0.9.143`; `.config/nextest.toml` also declares that version as
 both required and recommended, so an older local binary exits before testing. The `default` profile
 is fail-fast. Automated debug runs use `ci`; release-codegen runs use `ci-release`, which inherits
-the same retries, timeout, leak, and reporter policy instead of copying it. The file still declares
-two child profiles for the retired API surface snapshots; nothing runs them, and they stay only
-because the file is a bound source of the strict-bit evidence until GitHub #392 removes them.
+the same retries, timeout, leak, and reporter policy instead of copying it. Those three are the
+only profiles.
 
 Retries are zero and a flaky pass is still a failure. Ordinary tests terminate after 120 seconds. A
 run stops
 after 15 minutes, and a child process retaining inherited output handles for more than two seconds
 fails as a leak. CI writes Jenkins-compatible JUnit XML to `target/nextest/<profile>/junit.xml` and
 requires every expected report to exist and be non-empty; the reports are no longer uploaded as
-artifacts. The emulated aarch64 legs use `scripts/ci/nextest-emulated.toml` instead of
-`.config/nextest.toml`: the same no-retry, flaky-is-failure policy, with wider time limits because
-QEMU runs test binaries several times slower.
+artifacts. Every cell, both architectures, uses `.config/nextest.toml`.
 
-Partitioning and build archives are deliberately off: the full test execution takes seconds while
-compilation dominates, and each determinism leg must execute the complete selected set under its
-own architecture and codegen mode. Experimental record/replay is also off in CI; enabling a feature
+Partitioning is deliberately off: compilation dominates and test execution takes seconds. In run
+42462665456 the x86_64 release determinism cell, the per-PR long pole, spent 13m05s in its nextest
+step of which the 1,089 tests ran for under ten seconds; the rest was building the `oce-api` test
+binaries under the release profile (thin LTO, one codegen unit). nextest's `--partition` splits test
+execution, not the build, so it would not shorten that cell, and each determinism cell must execute
+the complete selected set under its own architecture and codegen mode anyway. Build archives (`cargo nextest archive`) are used only to hand a
+test binary that a cell already built to its fan-in job — the oce-api unit tests for the
+foreign-snapshot restore and the `strict_bits` binary for the eight-capture comparison — so the
+fan-ins compile nothing. The determinism and strict-bit cells of one (runner, codegen) pair stay
+separate jobs rather than sharing one archive: their test binaries are disjoint (`oce-api`,
+`oce-blocks` and `oce-expr` tests against the `oce-conformance` strict-bit binaries), so a shared
+archive could only reuse library builds. Measured in run 42462665456, the strict-bit cells finish in
+0m33s (debug) and 1m20s–1m23s (release) beside determinism cells of 0m55s–1m08s and 8m24s–13m24s,
+so folding one into the other could only lengthen the long pole. Experimental record/replay is also off in CI; enabling a feature
 that nextest still marks unstable would make the gate depend on a non-stable format. Test groups and
 thread reservations remain available when measurement identifies a shared resource or heavy test;
 none is known today.
@@ -208,14 +239,10 @@ in every per-PR build, are the only pinned surface.
 
 - **Operating systems other than Linux.** Every gating workflow — `pr-gate.yml`,
   `release-gate.yml`, `advisories.yml`, and `docs-pages.yml` (per-PR on `docs/**`, `README.md`, `scripts/docs/**`,
-  `scripts/authority_claims/**`, and `site/**`) — runs on `ubuntu-latest`, a Linux x86_64 runner.
-  Cross-*architecture* is covered for the determinism and strict-bit subsets — x86_64 native and
-  aarch64 emulated, debug and release. macOS and Windows are not built or tested anywhere.
-- **Native aarch64 execution.** The per-PR gate runs its aarch64 legs under QEMU user-mode
-  emulation on x86_64. The retained native qualification in `qualified-linux/` is still verified
-  on every PR (during the M1 `recapture-pending` window without its source-digest binding; see
-  [the status](strict-bit-evidence.md)), but a new native aarch64 capture needs a native arm64 runner (`ubuntu-24.04-arm`,
-  today used only by the manual OpenModelica evidence workflows).
+  `scripts/authority_claims/**`, and `site/**`) — runs on GitHub-hosted Linux runners.
+  Cross-*architecture* is covered natively for the determinism and strict-bit subsets — x86_64 on
+  `ubuntu-latest`, aarch64 on `ubuntu-24.04-arm`, debug and release. Every other job, and the
+  whole release gate, runs on x86_64 only. macOS and Windows are not built or tested anywhere.
 - **Anything derived from git history.** No workflow sets `fetch-depth`, so `actions/checkout`
   takes its default of a single commit. A check that needs history cannot run in CI. The visible
   consequence: golden provenance records bind to a content digest of the checked-in bytes rather
@@ -227,11 +254,9 @@ in every per-PR build, are the only pinned surface.
   `\r` would show up.
 
 The script says the rest itself, in its closing report: a green local run
-does **not** prove the cross-arch determinism matrix passes (one machine cannot reproduce it), does
-not prove `cargo deny check advisories` passes, and does not prove that the script and `pr-gate.yml`
-still agree. (The script's own closing report still names `ubuntu-24.04-arm`, `ci.yml` and the
-retired API surface gates; the script is a bound source of the retained strict-bit evidence, so its
-text changes only with GitHub #392.) A `light` run additionally does not prove the workspace suite or doctests pass, because the
+does **not** prove the native cross-arch determinism or strict-bit matrices pass (one machine
+cannot reproduce them), does not prove `cargo deny check advisories` passes, and does not prove
+that the script and `pr-gate.yml` still agree. A `light` run additionally does not prove the workspace suite or doctests pass, because the
 per-PR gate does not run them.
 
 ## Publishing

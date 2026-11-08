@@ -5,8 +5,8 @@
 //! `message` at that row's time, `0.0` means none. The comparison here drives a standalone
 //! `Assert` CXF through the frozen facade and checks each completed frame's diagnostics.
 //!
-//! This lives apart from `per_block_utilities.rs` because that file is a bound source of the
-//! retained native strict-bit evidence; Assert has no Real output and no libm dependence.
+//! This lives apart from `per_block_utilities.rs`, whose Real signals belong to the strict-bit
+//! corpus; Assert has no Real output and no libm dependence.
 
 use std::fs;
 use std::path::PathBuf;

@@ -3,7 +3,7 @@
 # Actions gets a chance to silently skip the heavy test suite or dependency gates.
 #
 # The live per-PR gate is .github/workflows/pr-gate.yml. .github/workflows/ci.yml is a dormant,
-# byte-frozen copy (a bound source of the retained strict-bit evidence), disabled in the
+# byte-frozen copy kept as the history of the retained strict-bit capture archives, disabled in the
 # repository's Actions settings, and is not checked here.
 
 set -euo pipefail
@@ -27,7 +27,7 @@ require_pattern() {
   pattern="$2"
   label="$3"
   searchable="$(grep -Ev '^[[:space:]]*#' "$path")"
-  if ! grep -Eq "$pattern" <<< "$searchable"; then
+  if ! grep -Eq -- "$pattern" <<< "$searchable"; then
     echo "FAIL: $path is missing required gate pattern: $label"
     exit 1
   fi
@@ -38,7 +38,7 @@ refuse_pattern() {
   pattern="$2"
   label="$3"
   searchable="$(grep -Ev '^[[:space:]]*#' "$path")"
-  if grep -Eq "$pattern" <<< "$searchable"; then
+  if grep -Eq -- "$pattern" <<< "$searchable"; then
     echo "FAIL: $path contains a refused gate pattern: $label"
     exit 1
   fi
@@ -54,8 +54,44 @@ require_job_pattern() {
     found && /^  [^ ]/ { exit }
     found { print }
   ' "$path")"
-  if ! grep -Eq "$pattern" <<< "$job_body"; then
+  if ! grep -Eq -- "$pattern" <<< "$job_body"; then
     echo "FAIL: $path job $job is missing required gate pattern: $label"
+    exit 1
+  fi
+}
+
+# No emulation anywhere in a gating workflow, comments included: the matrices run on native runners
+# and QEMU is reserved for future bare-metal targets outside these files.
+refuse_emulation() {
+  path="$1"
+  if grep -Eiq 'qemu|nextest-emulated|--target[[:space:]]+aarch64-unknown-linux-gnu' "$path"; then
+    echo "FAIL: $path mentions emulation or a cross-compiled aarch64 target; cells must run natively"
+    exit 1
+  fi
+}
+
+# A native cell matrix: every (runner, codegen) pair, x86_64 on ubuntu-latest and aarch64 on
+# ubuntu-24.04-arm, without fail-fast, so one run reports every failing cell.
+require_native_cell_matrix() {
+  path="$1"
+  job="$2"
+  require_job_pattern "$path" "$job" '^    runs-on:[[:space:]]*\$\{\{[[:space:]]*matrix\.runner[[:space:]]*\}\}[[:space:]]*$' \
+    "$job runs on the matrix runner"
+  require_job_pattern "$path" "$job" '^      fail-fast:[[:space:]]*false[[:space:]]*$' \
+    "$job reports every failing cell (fail-fast: false)"
+  require_job_pattern "$path" "$job" '^        runner:[[:space:]]*\[ubuntu-latest,[[:space:]]*ubuntu-24\.04-arm\][[:space:]]*$' \
+    "$job runs native x86_64 and aarch64 runners"
+  require_job_pattern "$path" "$job" '^        codegen:[[:space:]]*\[debug,[[:space:]]*release\][[:space:]]*$' \
+    "$job runs debug and release codegen"
+  local pairs
+  pairs="$(awk -v header="  $job:" '
+    $0 == header { found = 1; next }
+    found && /^  [^ ]/ { exit }
+    found && /^          - runner:/ { runner = $3; next }
+    found && /^            arch:/ { print runner "=" $2 }
+  ' "$path" | sort | tr '\n' ' ')"
+  if [ "$pairs" != "ubuntu-24.04-arm=aarch64 ubuntu-latest=x86_64 " ]; then
+    echo "FAIL: $path job $job does not map x86_64 to ubuntu-latest and aarch64 to ubuntu-24.04-arm (got: $pairs)"
     exit 1
   fi
 }
@@ -89,6 +125,12 @@ job_needs() {
     }
     in_list { in_list = 0 }
     /^    needs:[[:space:]]*$/ { in_list = 1; next }
+    /^    needs:[[:space:]]*[A-Za-z0-9_-]+[[:space:]]*(#.*)?$/ {
+      value = $0
+      sub(/^    needs:[[:space:]]*/, "", value)
+      sub(/[[:space:]]*(#.*)?$/, "", value)
+      print value
+    }
     /^    needs:[[:space:]]*\[/ {
       value = $0
       sub(/^[^[]*\[/, "", value)
@@ -98,6 +140,17 @@ job_needs() {
       for (i = 1; i <= count; i++) if (items[i] != "") print items[i]
     }
   ' "$1" | sort
+}
+
+# One job must need another, so a fan-in cannot start before (or without) its cells.
+require_job_needs() {
+  path="$1"
+  job="$2"
+  need="$3"
+  if ! job_needs "$path" "$job" | grep -qx -- "$need"; then
+    echo "FAIL: $path job $job does not need $need"
+    exit 1
+  fi
 }
 
 # The aggregate job must need every other job, and no other job may carry a job-level `if:` —
@@ -339,11 +392,18 @@ require_pattern "$ci" 'test-check-stale-crate-status\.sh' 'run stale crate-statu
 require_pattern "$ci" 'check-stale-crate-status\.sh' 'run stale crate-status smoke'
 require_pattern "$ci" 'check-workflow-gates\.sh' 'run workflow gate smoke'
 require_pattern "$ci" 'determinism-matrix' 'targeted cross-arch determinism matrix job'
-require_pattern "$ci" 'target aarch64-unknown-linux-gnu --config-file' 'aarch64 determinism leg'
+refuse_emulation "$ci"
+refuse_emulation "$release"
+require_native_cell_matrix "$ci" 'determinism-matrix'
+require_native_cell_matrix "$ci" 'strict-bit-matrix'
 require_pattern "$ci" 'nextest@0\.9\.143' 'pinned cargo-nextest 0.9.143 install'
-require_pattern "$ci" 'cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail' \
+require_job_pattern "$ci" 'determinism-matrix' 'test "\$\(uname -m\)" = "\$CELL_ARCH"' \
+  'determinism cells refuse a runner of the wrong architecture'
+require_job_pattern "$ci" 'determinism-matrix' \
+  'cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail' \
   'debug determinism subset with hard-fail-on-zero-tests'
-require_pattern "$ci" 'cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail' \
+require_job_pattern "$ci" 'determinism-matrix' \
+  'cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail' \
   'release determinism subset with hard-fail-on-zero-tests'
 require_pattern "$ci" 'OCE_PORTABLE_STATE_OUT: target/portable-state-debug\.bin' \
   'emit the debug portable state vector in every determinism cell'
@@ -353,36 +413,54 @@ require_pattern "$ci" 'OCE_TARGET_STATE_OUT: target/target-state-debug\.bin' \
   'emit the debug target-bound state vector in every determinism cell'
 require_pattern "$ci" 'OCE_TARGET_STATE_OUT: target/target-state-release\.bin' \
   'emit the release target-bound state vector in every determinism cell'
-require_pattern "$ci" 'cmp target/portable-state-debug\.bin target/portable-state-release\.bin' \
-  'compare portable state bytes across codegen profiles'
-require_pattern "$ci" 'cmp target/target-state-debug\.bin target/target-state-release\.bin' \
-  'compare target-bound state bytes across codegen profiles'
 require_job_pattern "$ci" 'determinism-matrix' 'tool:[[:space:]]*nextest@0\.9\.143' \
-  'pinned cargo-nextest install for foreign restore'
-require_pattern "$ci" 'cp target/portable-state-debug\.bin target/target-state-debug\.bin target/state-x86/' \
-  'stage the x86_64 state vectors for cross-architecture comparison'
-require_pattern "$ci" 'OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-debug\.bin' \
-  'emit the aarch64 portable state vector'
-require_pattern "$ci" 'OCE_TARGET_STATE_OUT: target/state-arm/target-state-debug\.bin' \
-  'emit the aarch64 target-bound state vector'
-require_pattern "$ci" 'cmp target/state-x86/portable-state-debug\.bin target/state-arm/portable-state-debug\.bin' \
-  'compare portable state bytes across architectures'
-require_pattern "$ci" '![[:space:]]*cmp -s target/state-x86/target-state-debug\.bin target/state-arm/target-state-debug\.bin' \
-  'require target-bound state bytes to differ across architectures'
-require_pattern "$ci" 'OCE_FOREIGN_TARGET_STATE_IN: target/state-arm/target-state-debug\.bin' \
-  'supply the arm64 target-bound snapshot to the x86_64 restore test'
-require_pattern "$ci" "test\(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied\).*'" \
-  'restore and refuse the foreign target-bound snapshot'
-require_pattern "$ci" 'cargo nextest run -p oce-api --lib --locked --profile ci --no-tests=fail' \
-  'foreign target-bound restore hard-fails when its test is absent'
+  'pinned cargo-nextest install for the determinism cells'
+require_job_pattern "$ci" 'determinism-matrix' 'test -s "target/nextest/\$profile/junit\.xml"' \
+  'refuse an absent or empty nextest determinism report'
+require_job_pattern "$ci" 'determinism-matrix' 'test -s "target/portable-state-\$CELL_CODEGEN\.bin"' \
+  'refuse a determinism cell that emitted no portable state vector'
+require_job_pattern "$ci" 'determinism-matrix' 'name: determinism-\$\{\{ matrix\.arch \}\}-\$\{\{ matrix\.codegen \}\}' \
+  'upload each determinism cell under its own name'
+require_job_pattern "$ci" 'determinism-matrix' 'if-no-files-found: error' \
+  'a determinism cell with no vectors fails its upload'
 require_pattern "$ci" 'target/nextest/\{ci,ci-release\}/junit\.xml' \
   'clear cached nextest JUnit reports'
 require_pattern "$ci" 'target/\{portable,target\}-state-\{debug,release\}\.bin' \
   'clear cached state vectors before the determinism matrix'
-require_pattern "$ci" 'for profile in ci ci-release;' \
-  'require the complete nextest determinism report set'
-require_pattern "$ci" 'test -s "target/nextest/\$profile/junit\.xml"' \
-  'refuse an absent or empty nextest determinism report'
+# Determinism fan-in: byte comparisons over the four cells and the foreign-snapshot refusal.
+require_job_needs "$ci" 'determinism-compare' 'determinism-matrix'
+require_job_pattern "$ci" 'determinism-compare' \
+  'cmp determinism-x86_64-debug/portable-state-debug\.bin determinism-x86_64-release/portable-state-release\.bin' \
+  'compare x86_64 portable state bytes across codegen profiles'
+require_job_pattern "$ci" 'determinism-compare' \
+  'cmp determinism-x86_64-debug/target-state-debug\.bin determinism-x86_64-release/target-state-release\.bin' \
+  'compare x86_64 target-bound state bytes across codegen profiles'
+require_job_pattern "$ci" 'determinism-compare' \
+  'cmp determinism-aarch64-debug/portable-state-debug\.bin determinism-aarch64-release/portable-state-release\.bin' \
+  'compare aarch64 portable state bytes across codegen profiles'
+require_job_pattern "$ci" 'determinism-compare' \
+  'cmp determinism-aarch64-debug/target-state-debug\.bin determinism-aarch64-release/target-state-release\.bin' \
+  'compare aarch64 target-bound state bytes across codegen profiles'
+require_job_pattern "$ci" 'determinism-compare' \
+  'cmp determinism-x86_64-debug/portable-state-debug\.bin determinism-aarch64-debug/portable-state-debug\.bin' \
+  'compare portable state bytes across architectures'
+require_job_pattern "$ci" 'determinism-compare' \
+  '![[:space:]]*cmp -s determinism-x86_64-debug/target-state-debug\.bin determinism-aarch64-debug/target-state-debug\.bin' \
+  'require target-bound state bytes to differ across architectures'
+require_job_pattern "$ci" 'determinism-compare' \
+  'export OCE_FOREIGN_TARGET_STATE_IN=.*determinism-\$FOREIGN_ARCH-debug/target-state-debug\.bin' \
+  'supply the other architecture target-bound snapshot to the restore test'
+require_job_pattern "$ci" 'determinism-compare' 'test "\$CELL_ARCH" != "\$FOREIGN_ARCH"' \
+  'the restoring architecture differs from the snapshot architecture'
+require_job_pattern "$ci" 'determinism-compare' \
+  "test\\(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied\\)'" \
+  'restore and refuse the foreign target-bound snapshot'
+require_job_pattern "$ci" 'determinism-compare' '--profile ci --no-tests=fail' \
+  'foreign target-bound restore hard-fails when its test is absent'
+require_job_pattern "$ci" 'determinism-compare' 'tool:[[:space:]]*nextest@0\.9\.143' \
+  'pinned cargo-nextest install for foreign restore'
+require_job_pattern "$ci" 'determinism-compare' 'arch: x86_64' 'x86_64 restores the aarch64 snapshot'
+require_job_pattern "$ci" 'determinism-compare' 'arch: aarch64' 'aarch64 restores the x86_64 snapshot'
 # Per-PR crate suites outside the determinism subset (issue #370).
 require_job_pattern "$ci" 'crate-tests' 'tool:[[:space:]]*nextest@0\.9\.143' \
   'pinned cargo-nextest install for the crate suites'
@@ -410,14 +488,29 @@ require_job_pattern "$ci" 'ci-ok' '^[[:space:]]*if:[[:space:]]*always\(\)' \
 require_job_pattern "$ci" 'ci-ok' 'toJSON\(needs\)' 'CI OK aggregate inspects every needed result'
 require_ci_ok_covers_every_job "$ci"
 require_pr_trigger_only "$ci"
-require_pattern "$ci" 'OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-release\.bin' \
-  'emit the aarch64 release-codegen portable state vector'
-require_pattern "$ci" 'cmp target/state-arm/portable-state-debug\.bin target/state-arm/portable-state-release\.bin' \
-  'compare aarch64 portable state bytes across codegen profiles'
-require_pattern "$ci" '^[[:space:]]*(- )?run: bash scripts/ci/strict-bits-cell\.sh aarch64 debug$' \
-  'emulated aarch64 debug strict-bit cell'
-require_pattern "$ci" '^[[:space:]]*(- )?run: bash scripts/ci/strict-bits-cell\.sh aarch64 release$' \
-  'emulated aarch64 release strict-bit cell'
+# Strict-bit cells and their fan-in.
+require_job_pattern "$ci" 'strict-bit-matrix' \
+  '^[[:space:]]*(- )?run: bash scripts/ci/strict-bits-cell\.sh "\$CELL_ARCH" "\$CELL_CODEGEN"$' \
+  'native strict-bit cell for the matrix architecture and codegen'
+require_job_pattern "$ci" 'strict-bit-matrix' 'CELL_ARCH: \$\{\{ matrix\.arch \}\}' \
+  'strict-bit cell architecture comes from the matrix'
+require_job_pattern "$ci" 'strict-bit-matrix' 'CELL_CODEGEN: \$\{\{ matrix\.codegen \}\}' \
+  'strict-bit cell codegen comes from the matrix'
+require_job_pattern "$ci" 'strict-bit-matrix' 'if-no-files-found: error' \
+  'a strict-bit cell with no captures fails its upload'
+require_job_needs "$ci" 'strict-bit-compare' 'strict-bit-matrix'
+require_job_pattern "$ci" 'strict-bit-compare' "test\\(=matrix::native_linux_matrix_is_complete_and_exact\\)'" \
+  'compare all eight strict-bit captures'
+require_job_pattern "$ci" 'strict-bit-compare' '--no-tests=fail --run-ignored only' \
+  'the eight-capture comparison hard-fails when its test is absent'
+require_job_pattern "$ci" 'strict-bit-compare' 'OCE_STRICT_MATRIX_DIR: target/strict-bits' \
+  'the eight-capture comparison reads the downloaded captures'
+require_job_pattern "$ci" 'strict-bit-compare' 'OCE_STRICT_RUN_ID: \$\{\{ github\.run_id \}\}' \
+  'the candidate receipt-log record names its run'
+require_job_pattern "$ci" 'strict-bit-compare' 'test -s target/strict-bits/receipt-candidate\.json' \
+  'a green comparison writes the candidate receipt-log record'
+require_pattern "scripts/ci/strict-bits-cell.sh" 'uname -m' \
+  'strict-bit cells refuse a host of the wrong architecture'
 
 # Heavy gate runs on release PRs, manual dispatch, and scheduled development-tip checks.
 require_pattern "$release" 'schedule:' 'scheduled heavy gate'
