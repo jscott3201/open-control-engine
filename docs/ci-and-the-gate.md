@@ -58,8 +58,9 @@ x86_64 and arm64 never share one):
 | `gate` | `gate (light)` | `gate (full)` |
 | `clippy`, `build`, `rustdoc`, `default-no-db` | the job of that name | the job of that name |
 
-The release-gate entries are supersets (the whole workspace, both codegens), which restore as a
-warm start for the narrower PR jobs; rust-cache never caches workspace crates, so a hit saves
+For the like-named pairs this only makes explicit what their identical job ids already did
+(rust-cache's default key component is the job id); the `nextest` key is the new link. The release-gate `test-suite` entry is a superset (the whole workspace, both codegens), which
+restores as a warm start for the narrower PR cells; rust-cache never caches workspace crates, so a hit saves
 dependency compile time only. The arm64 cells have no release-gate counterpart: they reuse what an
 earlier run of the same PR saved, and build cold on a new PR. `golden-gen-hygiene` keeps its own
 per-job key (it builds the separate `tools/golden-gen` workspace).
