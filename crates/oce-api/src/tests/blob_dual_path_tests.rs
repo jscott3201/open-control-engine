@@ -183,6 +183,12 @@ impl Paths<'_> {
     fn compare(&self, when: &str) -> Result<(), String> {
         compare_states(when, &self.facade.state, &self.core.state)?;
         compare_states(when, &self.facade.state, &self.entry.decoded().state)?;
+        // The public raw-word views the round-trip suite compares (GitHub #403) are these words.
+        if self.facade.state_words() != self.facade.state.words.as_slice()
+            || self.entry.state_words() != self.facade.state_words()
+        {
+            return Err(format!("{when}: the public state-word views differ"));
+        }
         let clocks =
             [self.facade.prev_t, self.core.prev_t, self.entry.time()].map(|t| t.map(f64::to_bits));
         let sequences = [

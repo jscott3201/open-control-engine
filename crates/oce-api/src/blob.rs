@@ -91,4 +91,19 @@ impl Engine {
             content_id: content_hash.map(|hash| format!("cxf:fnv1a128:{hash:032x}")),
         })
     }
+
+    /// The loaded executable's raw state words, borrowed: every stateful block's words in the
+    /// executable's own layout, with no portability tag, manifest or checksum.
+    ///
+    /// The layout is the one `oce_graph::blob::Executable::state_words` returns for the blob
+    /// [`Self::compile_blob`] encodes from this engine, so a host or a verifier compares the two
+    /// word for word after the same frames (the blob round trip, GitHub #403). It is a verification
+    /// view, not a continuation format: the words are not portable across engine versions or
+    /// models, and nothing restores them through the facade. Use [`Self::state_snapshot`] or
+    /// [`Self::checkpoint`] to continue state. Empty before a model is loaded and for a model with
+    /// no stateful block. A pure read: no engine state changes.
+    #[must_use]
+    pub fn state_words(&self) -> &[u64] {
+        &self.state.words
+    }
 }
