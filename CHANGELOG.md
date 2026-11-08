@@ -40,7 +40,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Execution core
 
 - **One HostTick v1 frame driver, in the core, and the `no_std` blob execution entry**
-  (GitHub #PRNUM, issue #401; design note decision 11). The frame around `eval_tick` — time checks
+  (GitHub #441, issue #401; design note decision 11). The frame around `eval_tick` — time checks
   (finite, `|t| ≤ MAX_FRAME_TIME_MAGNITUDE`, nondecreasing, a finite step, representable by every
   stateful block), per-slot input checks (exact type, then the non-finite policy, then the declared
   domain), the accepted-frame sequence, staging into every fan-out target, the single evaluation

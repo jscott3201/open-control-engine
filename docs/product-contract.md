@@ -469,7 +469,7 @@ written expected output and deterministic repetitions; the runnable gate remains
   requirement, status, owner or evidence link changes; state bytes, catalog, HostTick and goldens are
   unchanged. The traceability checker advances its accepted revision.
 - Revision 20, 2026-11-08: the HostTick v1 frame driver moves from `oce-api` into `oce-graph`
-  (`oce_graph::frame`, GitHub #PRNUM, issue #401), and the `no_std` blob execution entry calls it.
+  (`oce_graph::frame`, GitHub #441, issue #401), and the `no_std` blob execution entry calls it.
   Grounding only: PC-006's core link and PC-034's shared-core link now point at the core driver,
   and PC-041's two dual-path evidence links follow their tests' new lines in the extended
   dual-path file (same test names, now also covering the core driver, the blob entry and refusal
