@@ -37,6 +37,56 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.4.0
+
+Prepared 2026-11-08 on `development`; the release date is the date the `v0.4.0` tag is cut from
+`main`. Every workspace member is 0.4.0. Nothing is published to crates.io.
+
+0.4.0 closes milestone M1b: the portable `no_std` core. The core four (`oce-model`, `oce-expr`,
+`oce-blocks`, `oce-graph`) build `no_std + alloc` behind a default `std` feature, and their
+workspace entries carry `default-features = false` (GitHub #428, issue #397); every `f64` operation
+`core` lacks goes through one `libm`-backed `math` module per crate, and clippy refuses the `std`
+float methods there (GitHub #431, issue #399); the core is hash-free, and no hash-collection order
+reaches a golden, a receipt or snapshot bytes (GitHub #433, issue #398). A loaded executable encodes
+on the host into the canonical `OCEB` compiled-schedule blob, and `oce_graph::blob::decode` decodes
+it on a `no_std + alloc` target under the same engine version, refusing hostile bytes with typed
+errors (GitHub #438, issue #400). The HostTick v1 frame driver moved into the core as
+`oce_graph::frame`, and `oce_graph::blob::Executable` is the `no_std` blob execution entry that runs
+a decoded blob through it with zero allocations per frame (GitHub #441, issue #401). The
+`no-std-build` job became the bare-metal gate cell: the core builds, lints and passes a `cargo tree`
+std scan on `thumbv7em-none-eabihf`, `riscv32imac-unknown-none-elf` and `wasm32-unknown-unknown`,
+and the `oce-firmware-link` image links for the two bare-metal targets within a size budget per PR
+and runs under QEMU nightly (GitHub #449, issue #402). The blob round trip records one host run of
+the 46 G36 fixtures' blobs and replays it bit for bit on x86_64, arm64 and `wasm32-wasip1` per PR
+(GitHub #451, issue #403). The workspace has 13 members, 10 publishable and three private. The
+fixture and Tier-A provenance goldens (`tools/golden-gen/goldens`) are byte-identical to the
+`v0.3.0` tag; the blob goldens move only by the engine-version bytes and their CRC (see Release).
+The design notes for the M2 authoring layer and the three passes M3 waits on (historical replay,
+the commissioning verifier, `oce-diff`) are written (GitHub #442, #443, #446, #447).
+
+### Release
+
+- **Workspace version 0.4.0** (GitHub #452, issue #404). All 13 members and the internal
+  path+version table move from 0.3.0. `CompatibilityDescriptor` reports `oce-api-version:0.4.0`,
+  so persisted descriptor receipts and replay records from 0.3.0-labelled builds refuse with a
+  `Build` mismatch, as the fail-closed policy requires; the `compatibility.txt` and
+  `compatibility_export.txt` fixtures, the `CompatibilityDescriptor` doctest and the descriptor
+  refusal tests that name the current or a neighbouring version (`compatibility_tests.rs`,
+  `replay_codec.rs`) move from 0.3.x to 0.4.x as GitHub #427 did for 0.3.0. New with this release:
+  the `OCEB` header carries the encoder's engine version and a decoder accepts only its own, so the
+  46 blob goldens under `crates/oce-api/tests/fixtures/blob` are re-blessed with
+  `OCE_BLESS_BLOB=1`. In each, exactly two things change: the engine-minor byte at offset `0x0a`
+  (3 → 4) and the 4-byte CRC-32C trailer; every other byte, every blob length, the class-signature
+  table and the per-fixture run digests (`blob_frame_digests.tsv`) are unchanged.
+  `the_worked_example_has_the_design_note_layout` pins version bytes `0, 0, 4, 0, 0, 0`, and the
+  design note's worked example shows engine 0.4.0 with its CRC-32C recomputed. The
+  `check-no-std.sh` scan fixtures name `v0.4.0`. `tools/golden-gen/goldens` and every numerical
+  golden are byte-identical. No catalog, contract-schema, state-format, execution-ABI,
+  blob-format or replay-format revision changes. The v0.3.0 sync-back merge (GitHub #430) carried
+  no change of its own.
+
 ### Execution core
 
 - **One HostTick v1 frame driver, in the core, and the `no_std` blob execution entry**

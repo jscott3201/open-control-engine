@@ -198,12 +198,14 @@ Stating this plainly is more useful than a feature list.
 
 ## Status and roadmap
 
-The current release is **v0.3.0** (milestone M1a, November 2026): the engine is pure, the reserved
-crates and the pre-1.0 compatibility ledgers are gone, and the per-PR gate runs natively on x86_64
-and arm64 under one required `CI OK` status. Work since then on `development` builds the execution
-core `no_std + alloc`, ratchets the math and collection discipline that keeps it there, and runs a
-compiled-schedule blob on bare metal (a firmware image built and size-checked per PR, executed under
-QEMU nightly); see [CHANGELOG.md](CHANGELOG.md).
+The current release is **v0.4.0** (milestone M1b, November 2026): the execution core builds
+`no_std + alloc` with its math through `libm` and no hash collections, a loaded executable compiles
+to an `OCEB` blob on the host and runs on a `no_std` target through the same HostTick frame driver
+as the facade, a firmware image is built and size-checked per PR for two bare-metal targets and
+executed under QEMU nightly, and every engine PR replays one recorded run of the 46 fixtures' blobs
+bit for bit on x86_64, arm64 and `wasm32-wasip1`. v0.3.0 (M1a) made the engine pure and moved the
+per-PR gate to native x86_64 and arm64 cells under one required `CI OK` status. Next come M2 (the
+authoring layer) and M3 (the verification product), in parallel; see [CHANGELOG.md](CHANGELOG.md).
 
 Work is planned as GitHub milestones and cut into issues. Each milestone has a tracking issue that
 lists the order, the hard dependencies and the gate that closes it. The engine milestones, in order:
@@ -211,9 +213,9 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 | Milestone | Goal | State |
 | --- | --- | --- |
 | **M1a** Portable core: cleanup | Pure `Engine`, dead crates and ledgers removed, two CI lanes, native determinism and strict-bit matrices | Released as v0.3.0 |
-| **M1b** Portable core: `no_std` | Core four build `no_std + alloc`; math through `libm`; hash-free core; the **OCEB** compiled-schedule blob (encoder in `oce-api`, decoder in `oce-graph`, byte-stable across architectures); a `no_std` execution entry that never links `oce-cxf` or `oce-api`; a bare-metal gate cell with a size budget over `thumbv7em`, `riscv32imac` and `wasm32`; QEMU execution nightly | In progress, [tracking issue #406](https://github.com/jscott3201/open-control-engine/issues/406); closes as v0.4.0 |
-| **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | Planned, in parallel with M3 |
-| **M3** Verification product | Canonical content id, vector format v2, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode | Planned, in parallel with M2 |
+| **M1b** Portable core: `no_std` | Core four build `no_std + alloc`; math through `libm`; hash-free core; the **OCEB** compiled-schedule blob (encoder in `oce-api`, decoder in `oce-graph`, byte-stable across architectures); a `no_std` execution entry that never links `oce-cxf` or `oce-api`; a bare-metal gate cell with a size budget over `thumbv7em`, `riscv32imac` and `wasm32`; QEMU execution nightly | Released as v0.4.0 |
+| **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | Next, in parallel with M3 |
+| **M3** Verification product | Canonical content id, vector format v2, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode | Next, in parallel with M2 |
 | **M4** WASM | `oce-wasm` over `oce-api`, a TypeScript package, a browser demo that replays vectors without a server, a tracked `.wasm` size budget | Planned, in parallel with M5 |
 | **M5** Python | `oce-py` wheels (PyO3, abi3) over the same surface; replay and receipts from a notebook | Planned, in parallel with M4 |
 | **M6** Reference host | `oce-host`: cadence, staleness limits, the non-finite policy, degraded mode and safe-state outputs as tested code; BOPTEST client and a Docker runtime | Planned, in parallel with M7 |
@@ -221,8 +223,11 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 | **M8** Semantics | `SemanticPoint` records (Brick, 223P, QUDT, Haystack) carried through import and export without the tick ever reading them; `oce-bind` matches a building graph to a sequence | Planned |
 | **M9** BACnet device image | One `no_std` image that is a BACnet device: compiled sequence inside, boundary points as objects, MS/TP or B/IP outside, over rusty-bacnet | Planned |
 
-Three one-page design passes (historical replay API, the CDL §12 commissioning verifier, and
-`oce-diff`) are answered before M3's crates start. Design notes for thinly specified work land in
+The three one-page design passes M3 waits on are written: the
+[historical replay API](docs/design/replay.md), the
+[CDL §12 commissioning verifier](docs/design/commissioning.md) and
+[`oce-diff`](docs/design/diff.md), beside the [M2 authoring layer](docs/design/authoring-layer.md).
+Design notes for thinly specified work land in
 [`docs/design/`](docs/design/compiled-schedule-blob.md) before code; the OCEB blob format is the
 first. Sequences, routines and their test vectors live in the separate `open-control-library`;
 this repository keeps only the minimal conformance corpus.

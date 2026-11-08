@@ -135,7 +135,7 @@ fn the_worked_example_has_the_design_note_layout() {
     assert_eq!(bytes.len(), 418);
     assert_eq!(&bytes[..4], b"OCEB");
     assert_eq!(&bytes[4..8], [1, 0, 1, 0]);
-    assert_eq!(&bytes[8..14], [0, 0, 3, 0, 0, 0]);
+    assert_eq!(&bytes[8..14], [0, 0, 4, 0, 0, 0]);
     assert_eq!(&bytes[14..20], [0, 0, 0xa2, 0x01, 0, 0]);
     assert_eq!(
         compiled.content_id.as_deref(),
