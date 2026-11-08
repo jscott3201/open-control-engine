@@ -112,7 +112,8 @@ end of each milestone.
   issues, milestones, reviews and CI live there. Use `gh` for PR and issue operations. (A
   self-hosted Forgejo instance was primary until October 2026; its PR numbers overlap GitHub's, so
   cite PRs merged on GitHub as `(GitHub #N)`.)
-- **CI is GitHub Actions** in `.github/workflows/`. The single required status is `CI OK`: from
+- **CI is GitHub Actions** in `.github/workflows/`, on Linux runners plus two `pr-gate.yml`
+  platform observation cells (macOS arm64 portable snapshot, Windows std build and nextest). The single required status is `CI OK`: from
   `pr-gate.yml` into `development`, from `release-gate.yml` into `main`. `pr-gate.yml` runs once
   per change, on the PR; a merge into `development` runs no gate, and the daily `release-gate.yml`
   run on the `development` tip is the safety net. `advisories.yml` runs

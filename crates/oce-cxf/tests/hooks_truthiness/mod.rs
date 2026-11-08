@@ -42,6 +42,18 @@ impl Drop for TempRepo {
     }
 }
 
+/// `bash`, resolved through `PATH` as a shell would. On Windows, `Command` searches the system
+/// directories before the inherited `PATH` unless `PATH` is set on the command itself, and
+/// `System32\bash.exe` is the WSL launcher, not the Git Bash that runs this repository's hooks.
+/// Setting the inherited `PATH` explicitly is a no-op everywhere else.
+fn bash() -> Command {
+    let mut command = Command::new("bash");
+    if let Some(path) = std::env::var_os("PATH") {
+        command.env("PATH", path);
+    }
+    command
+}
+
 fn repository_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../..")
@@ -74,7 +86,7 @@ fn real_hook_agrees_with_canonical_ascii_truthiness() {
         let hook = repository_root().join(".githooks").join(hook_name);
         for value in &probes {
             let repo = TempRepo::new();
-            let output = Command::new("bash")
+            let output = bash()
                 .arg(&hook)
                 .current_dir(&repo.0)
                 .env("OCE_SKIP_HOOKS", value)
@@ -99,7 +111,7 @@ fn real_hook_agrees_with_canonical_ascii_truthiness() {
         fs::create_dir(repo.0.join(".githooks")).expect("create helper-free hook directory");
         let copied_hook = repo.0.join(".githooks").join(hook_name);
         fs::copy(&hook, &copied_hook).expect("copy real hook without its helper");
-        let output = Command::new("bash")
+        let output = bash()
             .arg(&copied_hook)
             .current_dir(&repo.0)
             .env("OCE_SKIP_HOOKS", "1")

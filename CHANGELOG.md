@@ -557,7 +557,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
   any step-level `if:` other than a static matrix selector or `${{ !cancelled() }}`, and pins the
   new cells' runners, commands, comparison and strict-bit exclusion, each with a failing fixture;
   `ci_ok.py` refuses a non-object `NEEDS_JSON` with its own error instead of a traceback, and its
-  controls cover `leverage lane` and `gate (light)` skipped while their lanes ran.
+  controls cover `leverage lane` and `gate (light)` skipped while their lanes ran. Two `oce-cxf`
+  OpenModelica reference test groups that cannot build on Windows are now `#[cfg(unix)]` like their
+  siblings: the symlink-rejection test (it creates symlinks with `std::os::unix::fs::symlink`) and
+  the line-reference `manifest_contract_tests` (its temporary repositories are claimed by unix
+  device and inode); Linux and macOS run both unchanged.
 - **Two per-PR lanes under one `CI OK`, and `gate (light)` only when the gate changes** (GitHub
   #418, issue #393). A new first job in `pr-gate.yml`, `classify changed paths`, lists the PR's
   changes with plain git (the tested merge against its base parent, renames as a deletion plus an

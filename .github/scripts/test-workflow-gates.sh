@@ -1183,6 +1183,11 @@ step_condition_on_event() {
     "s/^      - run: cargo clippy --workspace/      - if: \${{ github.event_name != 'pull_request' }}\n        run: cargo clippy --workspace/"
 }
 
+step_condition_always() {
+  edit_pr_gate "$1" \
+    's/^      - run: test -s target\/strict-bits\/receipt-candidate.json$/      - if: always()\n        run: test -s target\/strict-bits\/receipt-candidate.json/'
+}
+
 matrix_selector_widened_by_or() {
   edit_pr_gate "$1" \
     "s/^      - if: matrix.codegen == 'debug'$/      - if: matrix.codegen == 'debug' || github.event_name == 'schedule'/"
@@ -1403,6 +1408,8 @@ run_case step-condition-false fail step_condition_false \
   "has a step-level if: other than a matrix selector or !cancelled()"
 run_case step-condition-on-event fail step_condition_on_event \
   "clippy: \${{ github.event_name != 'pull_request' }}"
+run_case step-condition-always fail step_condition_always \
+  "strict-bit-compare: always()"
 run_case matrix-selector-widened-by-or fail matrix_selector_widened_by_or \
   "determinism-matrix: matrix.codegen == 'debug' || github.event_name == 'schedule'"
 run_case macos-on-intel-runner fail macos_on_intel_runner \
