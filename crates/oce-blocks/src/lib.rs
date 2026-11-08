@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+// CI lane probe (issue #393); never merged.
 //! `oce-blocks` — the native CDL elementary-block library and the [`Block`] trait for the
 //! Open Control Engine (`03-block-library.md`).
 //!
