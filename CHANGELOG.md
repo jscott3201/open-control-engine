@@ -542,6 +542,30 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `scripts/docs/test-install-mdbook.sh` covers the refuse-a-wrong-binary branch. No second download
   source was added.
 
+- **macOS arm64 and Windows platform cells in the per-PR gate** (GitHub #425, issue #394).
+  Three determinism-lane jobs join `pr-gate.yml`, each required by `CI OK` and pinned to the
+  determinism lane: `portable snapshot (macOS arm64, debug)` runs the `oce-api`/`oce-blocks`/
+  `oce-expr` subset on `macos-15` and uploads its portable and target-bound state vectors;
+  `portable snapshot comparison` requires the macOS portable snapshot to equal the Linux x86_64
+  and aarch64 debug portable snapshots byte for byte and its target-bound snapshot to differ
+  from both; `std build and nextest (Windows x86_64, debug)` builds the workspace on
+  `windows-latest` and runs its nextest suite without the five strict-bit binaries. Both are
+  observations, not qualification: strict-bit transcendentals stay Linux-qualified and macOS and
+  Windows keep the 1e-12 aligned band. They sit in `pr-gate.yml` rather than a separate workflow
+  because `CI OK` is the only required status and cannot need a job in another workflow.
+  `check-workflow-gates.sh` now also refuses `continue-on-error` anywhere in `pr-gate.yml` and
+  any step-level `if:` other than a static matrix selector or `${{ !cancelled() }}`, and pins the
+  new cells' runners, commands, comparison and strict-bit exclusion, each with a failing fixture;
+  `ci_ok.py` refuses a non-object `NEEDS_JSON` with its own error instead of a traceback, and its
+  controls cover `leverage lane` and `gate (light)` skipped while their lanes ran. Two `oce-cxf`
+  OpenModelica reference test groups that cannot build on Windows are now `#[cfg(unix)]` like their
+  siblings: the symlink-rejection test (it creates symlinks with `std::os::unix::fs::symlink`) and
+  the line-reference `manifest_contract_tests` (its temporary repositories are claimed by unix
+  device and inode); Linux and macOS run both unchanged. Two more fail-on-Windows causes are fixed in
+  test code: the hook truthiness test sets `PATH` on its `bash` command, so Windows resolves Git Bash
+  rather than the WSL launcher in `System32`, and passes the hook path without the verbatim `\\?\`
+  prefix and with forward slashes; the Line evidence validator drops the verbatim prefix from its
+  canonical root, which the digest-pinned canonicalizer's per-component check could not stat.
 - **Two per-PR lanes under one `CI OK`, and `gate (light)` only when the gate changes** (GitHub
   #418, issue #393). A new first job in `pr-gate.yml`, `classify changed paths`, lists the PR's
   changes with plain git (the tested merge against its base parent, renames as a deletion plus an

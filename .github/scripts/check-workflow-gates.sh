@@ -60,6 +60,54 @@ require_job_pattern() {
   fi
 }
 
+# Like require_job_pattern, but the needle is a fixed string (for long nextest filter expressions).
+require_job_literal() {
+  path="$1"
+  job="$2"
+  literal="$3"
+  label="$4"
+  job_body="$(awk -v header="  $job:" '
+    $0 == header { found = 1; next }
+    found && /^  [^ ]/ { exit }
+    found && !/^[[:space:]]*#/ { print }
+  ' "$path")"
+  if ! grep -Fq -- "$literal" <<< "$job_body"; then
+    echo "FAIL: $path job $job is missing required gate pattern: $label"
+    exit 1
+  fi
+}
+
+# Step-level `if:` (#418 review). A step condition can skip a gating command while its job still
+# reports success, and CI OK sees only job results, so the lane filter is the one condition that may
+# skip work. Two step-condition shapes remain, both of which run a step at least as often as its
+# cell's identity says it must: a static matrix selector (`matrix.<key> == '<value>'`, optionally
+# joined by `&&`), whose cell a later step proves did the selected work, and `${{ !cancelled() }}`,
+# which only lets an evidence upload run after an earlier failure. Every other step `if:` fails.
+require_static_step_conditions() {
+  path="$1"
+  local bad
+  bad="$(awk '
+    /^jobs:[[:space:]]*$/ { in_jobs = 1; next }
+    in_jobs && /^[^[:space:]#]/ { in_jobs = 0 }
+    !in_jobs || /^[[:space:]]*#/ { next }
+    /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { job = $0; sub(/^  /, "", job); sub(/:.*/, "", job); next }
+    /^      [[:space:]]*(- )?if:/ {
+      value = $0
+      sub(/^[[:space:]]*(- )?if:[[:space:]]*/, "", value)
+      sub(/[[:space:]]+$/, "", value)
+      selector = "matrix\\.[a-z_]+ == \047[A-Za-z0-9_.-]+\047"
+      if (value == "${{ !cancelled() }}") next
+      if (value ~ ("^" selector "( && " selector ")*$")) next
+      print job ": " value
+    }
+  ' "$path")"
+  if [ -n "$bad" ]; then
+    echo "FAIL: $path has a step-level if: other than a matrix selector or !cancelled():"
+    printf '%s\n' "$bad" | sed 's/^/  /'
+    exit 1
+  fi
+}
+
 # No emulation anywhere in a gating workflow, comments included: the matrices run on native runners
 # and QEMU is reserved for future bare-metal targets outside these files.
 refuse_emulation() {
@@ -237,6 +285,7 @@ require_lane_filter() {
     determinism-matrix=core determinism-compare=core strict-bit-matrix=core strict-bit-compare=core \
     crate-tests=core golden-gen-hygiene=core golden-gen-firewall=core build=core clippy=core \
     rustdoc=core deny=core unused-deps=core default-no-db=core facade-contract=core \
+    portable-snapshot-macos=core portable-snapshot-compare=core std-build-windows=core \
     leverage-lane=leverage gate=gate_scripts \
     changes=always fmt=always file-size-cap=always no-secret-scan=always docs=always \
     gate-fixtures=always package-publication-contract=always; do
@@ -588,6 +637,48 @@ require_job_pattern "$ci" 'determinism-compare' 'tool:[[:space:]]*nextest@0\.9\.
   'pinned cargo-nextest install for foreign restore'
 require_job_pattern "$ci" 'determinism-compare' 'arch: x86_64' 'x86_64 restores the aarch64 snapshot'
 require_job_pattern "$ci" 'determinism-compare' 'arch: aarch64' 'aarch64 restores the x86_64 snapshot'
+# Platform observation cells (issue #394): macOS arm64 portable snapshot and Windows std build.
+require_job_pattern "$ci" 'portable-snapshot-macos' '^    runs-on:[[:space:]]*macos-15[[:space:]]*$' \
+  'the macOS portable-snapshot cell runs on macos-15'
+require_job_pattern "$ci" 'portable-snapshot-macos' 'test "\$\(uname -s\)-\$\(uname -m\)" = Darwin-arm64' \
+  'the macOS cell refuses a runner that is not macOS arm64'
+require_job_pattern "$ci" 'portable-snapshot-macos' \
+  '^[[:space:]]*(- )?run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail$' \
+  'the macOS cell runs the debug determinism subset with hard-fail-on-zero-tests'
+require_job_pattern "$ci" 'portable-snapshot-macos' 'OCE_PORTABLE_STATE_OUT: target/portable-state-debug\.bin' \
+  'the macOS cell emits its portable state vector'
+require_job_pattern "$ci" 'portable-snapshot-macos' 'OCE_TARGET_STATE_OUT: target/target-state-debug\.bin' \
+  'the macOS cell emits its target-bound state vector'
+require_job_pattern "$ci" 'portable-snapshot-macos' 'test -s target/portable-state-debug\.bin' \
+  'the macOS cell refuses an absent or empty portable state vector'
+require_job_pattern "$ci" 'portable-snapshot-macos' 'test -s target/nextest/ci/junit\.xml' \
+  'the macOS cell refuses an absent or empty nextest report'
+require_job_pattern "$ci" 'portable-snapshot-macos' 'name: platform-snapshot-macos-arm64-debug' \
+  'the macOS cell uploads its state vectors'
+require_job_pattern "$ci" 'portable-snapshot-macos' 'if-no-files-found: error' \
+  'a macOS cell with no vectors fails its upload'
+require_job_needs "$ci" 'portable-snapshot-compare' 'determinism-matrix'
+require_job_needs "$ci" 'portable-snapshot-compare' 'portable-snapshot-macos'
+require_job_pattern "$ci" 'portable-snapshot-compare' \
+  '^[[:space:]]*cmp linux-x86_64/portable-state-debug\.bin macos-arm64/portable-state-debug\.bin$' \
+  'compare the macOS portable state bytes with Linux x86_64'
+require_job_pattern "$ci" 'portable-snapshot-compare' '^[[:space:]]*for linux in linux-x86_64 linux-aarch64; do$' \
+  'compare the macOS target-bound state bytes with both Linux architectures'
+require_job_literal "$ci" 'portable-snapshot-compare' \
+  'if cmp -s "$linux/target-state-debug.bin" macos-arm64/target-state-debug.bin; then' \
+  'require the macOS target-bound state bytes to differ from Linux'
+require_job_pattern "$ci" 'std-build-windows' '^    runs-on:[[:space:]]*windows-latest[[:space:]]*$' \
+  'the Windows cell runs on windows-latest'
+require_job_pattern "$ci" 'std-build-windows' '^[[:space:]]*(- )?run: cargo build --workspace --locked$' \
+  'the Windows cell builds the workspace'
+require_job_pattern "$ci" 'std-build-windows' \
+  '^[[:space:]]*cargo nextest run --workspace --locked --profile ci --no-tests=fail$' \
+  'the Windows cell runs the workspace suite with hard-fail-on-zero-tests'
+require_job_literal "$ci" 'std-build-windows' \
+  "-E 'not (binary_id(oce-conformance::strict_bits) | binary_id(oce-conformance::per_block_reals_transcendental) | binary_id(oce-conformance::per_block_reals_sources_transcendental) | binary_id(oce-conformance::per_block_psychrometrics) | binary_id(oce-conformance::per_block_utilities))'" \
+  'the Windows cell excludes exactly the strict-bit binaries'
+require_job_pattern "$ci" 'std-build-windows' '^[[:space:]]*(- )?run: test -s target/nextest/ci/junit\.xml$' \
+  'the Windows cell refuses an absent or empty nextest report'
 # Per-PR crate suites outside the determinism subset (issue #370).
 require_job_pattern "$ci" 'crate-tests' 'tool:[[:space:]]*nextest@0\.9\.143' \
   'pinned cargo-nextest install for the crate suites'
@@ -621,6 +712,9 @@ require_job_pattern "$ci" 'ci-ok' 'toJSON\(needs\)' 'CI OK aggregate inspects ev
 require_ci_ok_covers_every_job "$ci"
 require_lane_filter "$ci"
 require_pr_trigger_only "$ci"
+refuse_pattern "$ci" 'continue-on-error' \
+  'continue-on-error, which lets a failing job or step read as green'
+require_static_step_conditions "$ci"
 # The lane machinery is itself tested on every PR, and the moved gate (light) steps still run.
 require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/ci/test-classify-changes\.sh$' \
   'run the lane classifier fixtures on every PR'

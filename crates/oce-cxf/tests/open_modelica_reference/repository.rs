@@ -525,6 +525,8 @@ mod tests {
         assert!(valid_path(&format!("{at_limit}b")).is_err());
     }
 
+    // Creates symlinks with `std::os::unix::fs::symlink`; unix-only like the line-reference tests.
+    #[cfg(unix)]
     #[test]
     fn final_and_escaping_intermediate_symlinks_are_rejected() {
         use std::os::unix::fs::symlink;

@@ -42,6 +42,34 @@ impl Drop for TempRepo {
     }
 }
 
+/// `bash`, resolved through `PATH` as a shell would. On Windows, `Command` searches the system
+/// directories before the inherited `PATH` unless `PATH` is set on the command itself, and
+/// `System32\bash.exe` is the WSL launcher, not the Git Bash that runs this repository's hooks.
+/// Setting the inherited `PATH` explicitly is a no-op everywhere else.
+fn bash() -> Command {
+    let mut command = Command::new("bash");
+    if let Some(path) = std::env::var_os("PATH") {
+        command.env("PATH", path);
+    }
+    command
+}
+
+/// A script path as Git Bash reads it. On Windows the MSYS runtime treats backslashes in its
+/// command line as escapes, and `canonicalize` returns a verbatim `\\?\` path, so the path is
+/// passed with its verbatim prefix removed and forward slashes. Elsewhere it is passed unchanged.
+fn bash_path(path: &Path) -> std::ffi::OsString {
+    #[cfg(windows)]
+    {
+        let text = path.to_str().expect("hook path is UTF-8");
+        let text = text.strip_prefix(r"\\?\").unwrap_or(text);
+        text.replace('\\', "/").into()
+    }
+    #[cfg(not(windows))]
+    {
+        path.as_os_str().to_owned()
+    }
+}
+
 fn repository_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../..")
@@ -74,8 +102,8 @@ fn real_hook_agrees_with_canonical_ascii_truthiness() {
         let hook = repository_root().join(".githooks").join(hook_name);
         for value in &probes {
             let repo = TempRepo::new();
-            let output = Command::new("bash")
-                .arg(&hook)
+            let output = bash()
+                .arg(bash_path(&hook))
                 .current_dir(&repo.0)
                 .env("OCE_SKIP_HOOKS", value)
                 .output()
@@ -99,8 +127,8 @@ fn real_hook_agrees_with_canonical_ascii_truthiness() {
         fs::create_dir(repo.0.join(".githooks")).expect("create helper-free hook directory");
         let copied_hook = repo.0.join(".githooks").join(hook_name);
         fs::copy(&hook, &copied_hook).expect("copy real hook without its helper");
-        let output = Command::new("bash")
-            .arg(&copied_hook)
+        let output = bash()
+            .arg(bash_path(&copied_hook))
             .current_dir(&repo.0)
             .env("OCE_SKIP_HOOKS", "1")
             .output()

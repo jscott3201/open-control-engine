@@ -239,6 +239,7 @@ NOT COVERED BY THIS SCRIPT — a green run here does not prove these pass:
     four native cells, two capture processes each, then the eight-capture
     comparison. Local synthetic controls and macOS observations are NOT
     native Linux evidence.
+  · the macOS arm64 and Windows platform cells: they need those OSes; CI only.
   · cargo deny check advisories. Needs network and a writable advisory-db;
     it runs in advisories.yml (daily) and in release-gate.yml's cargo-deny
     job, which sweeps advisories/bans/licenses/sources on every release PR.

@@ -9,7 +9,8 @@ to misread in the dangerous direction.
 CI runs on GitHub Actions, the project's primary host, from the workflows in
 [`.github/workflows/`](../.github/workflows/) on GitHub-hosted Linux runners — x86_64
 (`ubuntu-latest`) for most jobs, plus native arm64 (`ubuntu-24.04-arm`) for the aarch64 cells of the
-determinism and strict-bit matrices: `pr-gate.yml`
+determinism and strict-bit matrices, and one `macos-15` and one `windows-latest` job for the
+[platform cells](#platform-cells-macos-and-windows): `pr-gate.yml`
 (per-PR into `development`), `release-gate.yml` (release PRs into `main` and a daily
 `development`-tip run), `advisories.yml`, `docs-pages.yml`, the tag-verify / manual-publish
 `release.yml`, and the manual native-arm64 OpenModelica evidence workflows. Actions in the gating
@@ -51,7 +52,10 @@ The per-PR gate runs **once per change**, on the pull request:
 `pr-gate.yml` has two lanes under the one `CI OK`. The **determinism lane** is every job that
 compiles the engine: the determinism and strict-bit matrices and their fan-ins, the x86_64 crate
 suites, clippy, build, rustdoc, cargo-deny, cargo-machete, the database-free check, the golden-gen
-firewall and hygiene jobs, and the facade contract and Quickstart. The **leverage lane** is one job,
+firewall and hygiene jobs, the facade contract and Quickstart, and the
+[platform cells](#platform-cells-macos-and-windows) — `portable snapshot (macOS arm64, debug)`,
+its `portable snapshot comparison` fan-in and `std build and nextest (Windows x86_64, debug)`.
+The **leverage lane** is one job,
 `leverage lane`, for the crates under [`crates/leverage/`](../crates/leverage/README.md): the
 layout and `oce-api`-only dependency rule, then fmt, clippy `-D warnings`, rustdoc `-D warnings`,
 nextest and cargo-machete per member (`scripts/ci/leverage-members.sh lane`; with no members it
@@ -123,12 +127,13 @@ x86_64 and arm64 never share one):
 | `gate` | `gate (light)` | `gate (full)` |
 | `clippy`, `build`, `rustdoc`, `default-no-db` | the job of that name | the job of that name |
 | `facade-contract`, `leverage` | `facade contract and Quickstart`, `leverage lane` | — |
+| `nextest-macos`, `workspace-windows` | `portable snapshot (macOS arm64, debug)`, `std build and nextest (Windows x86_64, debug)` | — |
 
 For the like-named pairs this only makes explicit what their identical job ids already did
 (rust-cache's default key component is the job id); the `nextest` key is the new link. The release-gate `test-suite` entry is a superset (the whole workspace, both codegens), which
 restores as a warm start for the narrower PR cells; rust-cache never caches workspace crates, so a hit saves
-dependency compile time only. The arm64 cells have no release-gate counterpart: they reuse what an
-earlier run of the same PR saved, and build cold on a new PR. rust-cache saves only on an
+dependency compile time only. The arm64 cells and the macOS and Windows cells have no release-gate
+counterpart: they reuse what an earlier run of the same PR saved, and build cold on a new PR. rust-cache saves only on an
 exact-key miss, so under a shared key the first job to finish writes the entry, and its profile's
 dependency set is what that key holds until `Cargo.lock`, the toolchain or the environment changes. `golden-gen-hygiene` keeps its own
 per-job key (it builds the separate `tools/golden-gen` workspace).
@@ -164,6 +169,23 @@ Docs-site validation (`.github/workflows/docs-pages.yml`) is path-filtered to `d
 file. It reports its own `build docs artifact` status and is **not** part of `CI OK`, so a PR that
 does not touch those paths shows no docs check at all. A push to `main` touching those paths also
 deploys the site to GitHub Pages.
+
+### Platform cells: macOS and Windows
+
+Two cells run outside Linux, with the determinism lane, under the one `CI OK` (issue #394). They
+are observations of the platform, not qualification of it.
+
+| Cell | Runner | What runs | What it proves | What it does not prove |
+| --- | --- | --- | --- | --- |
+| `portable snapshot (macOS arm64, debug)` and its `portable snapshot comparison` fan-in | `macos-15` (arm64); the fan-in on `ubuntu-latest` | `cargo nextest run -p oce-api -p oce-blocks -p oce-expr --profile ci` (debug codegen), emitting the portable and target-bound state vectors; the fan-in compares them with the Linux x86_64 and aarch64 debug cells' vectors | the determinism subset passes on macOS arm64; the populated portable engine-state snapshot is byte-identical to Linux x86_64 and aarch64; the target-bound snapshot differs from both Linux architectures' | release codegen on macOS; any strict-bit or transcendental result (no strict-bit suite runs, and macOS keeps the 1e-12 aligned band, see [strict-bit evidence](strict-bit-evidence.md)); the rest of the workspace on macOS |
+| `std build and nextest (Windows x86_64, debug)` | `windows-latest` (x86_64, Git Bash) | `cargo build --workspace --locked`, then `cargo nextest run --workspace --profile ci` without the five strict-bit binaries `scripts/ci/strict-bits-cell.sh` runs (`strict_bits` and the four aligned per-block suites) | the workspace builds on Windows and every other workspace test passes there, including the bit-exact goldens on a checkout whose git defaults to CRLF (`.gitattributes` keeps them LF) | any determinism or snapshot claim; release codegen; doctests; any strict-bit or transcendental result |
+
+They live in `pr-gate.yml`, not in a separate workflow, because `CI OK` is the only required status
+and a job in another workflow cannot appear in its `needs:`; a separate workflow would either be
+unrequired or add a second required status. Neither has a weekly schedule: the daily `release-gate.yml`
+run is Linux-only, so the cells run only on a PR that changes the engine, a gate script or a
+workflow. `.agents/gate.sh` cannot run them (wrong operating system) and says so in its closing
+report.
 
 ## One command, one source of truth
 
@@ -254,7 +276,19 @@ Before claiming tests pass, run `bash .agents/gate.sh full` first-hand and read 
 
 The per-PR gate runs on every PR, drafts included; there is no draft carve-out. The only job-level
 `if:` a `pr-gate.yml` job may carry is its lane filter, and `CI OK` reads any other skip as a
-failure. A PR with no checks still looks a lot like a PR with no failing checks — confirm `CI OK`
+failure. 
+
+**The step-condition rule.** No job or step in `pr-gate.yml` may set `continue-on-error`. A
+step-level `if:` may take exactly two shapes:
+
+- a static matrix selector — `matrix.<key> == '<value>'`, optionally joined by `&&` (for example
+  `matrix.codegen == 'debug'`) — which picks the work a cell does from its fixed identity, and which a
+  later step of that cell backs by requiring the selected work's outputs;
+- `${{ !cancelled() }}`, which only lets an evidence upload run after an earlier step failed.
+
+Anything else — a lane output, an event name, `false`, `always()`, `||` — fails
+`check-workflow-gates.sh`, with a failing fixture for each shape. The reason: `CI OK` sees job
+results only, so a step skipped inside a green job would be invisible to it. A PR with no checks still looks a lot like a PR with no failing checks — confirm `CI OK`
 actually reported, and on a docs-only or leverage-only PR expect the determinism jobs to show as
 skipped, not green.
 
@@ -334,18 +368,22 @@ in every per-PR build, are the only pinned surface.
   `release-gate.yml`, `advisories.yml`, and `docs-pages.yml` (per-PR on `docs/**`, `README.md`, `scripts/docs/**`,
   `scripts/authority_claims/**`, and `site/**`) — runs on GitHub-hosted Linux runners.
   Cross-*architecture* is covered natively for the determinism and strict-bit subsets — x86_64 on
-  `ubuntu-latest`, aarch64 on `ubuntu-24.04-arm`, debug and release. Every other job, and the
-  whole release gate, runs on x86_64 only. macOS and Windows are not built or tested anywhere.
+  `ubuntu-latest`, aarch64 on `ubuntu-24.04-arm`, debug and release. The exceptions are the two
+  [platform cells](#platform-cells-macos-and-windows): the determinism subset in debug on macOS
+  arm64, and the workspace build and suite (without the strict-bit binaries) in debug on Windows.
+  Every other job, and the whole release gate, runs on Linux x86_64 only: nothing runs release
+  codegen or doctests on macOS or Windows, and no strict-bit result is observed on either.
 - **Anything derived from git history.** Only the `classify changed paths` job sets
   `fetch-depth` (2, to reach the tested merge's base parent); every other checkout takes the
   default of a single commit. A check that needs history cannot run in CI. The visible
   consequence: golden provenance records bind to a content digest of the checked-in bytes rather
   than to the engine revision that produced them
   (`crates/oce-cxf/tests/golden_provenance/mod.rs:3-5`).
-- **Line-ending behavior.** `.gitattributes:1` pins `* text=auto eol=lf`, but an ubuntu-only CI
-  never performs a CRLF checkout, so that normalization is asserted by git configuration and
-  exercised by no test. Goldens here are compared bit-exactly, which is precisely where a stray
-  `\r` would show up.
+- **Line-ending behavior, beyond the Windows cell.** `.gitattributes:1` pins
+  `* text=auto eol=lf`. The Windows cell checks out on a runner whose git defaults to CRLF and runs
+  the bit-exact goldens there, so the normalization is exercised for every test that cell runs; the
+  strict-bit fixtures it excludes, and the `tools/golden-gen` workspace, are still only read on
+  Linux and macOS.
 
 The script says the rest itself, in its closing report: a green local run
 does **not** prove the native cross-arch determinism or strict-bit matrices pass (one machine

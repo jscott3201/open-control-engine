@@ -13,7 +13,8 @@ A job passes when its result is ``success``. A job may instead be ``skipped`` on
 ``JOB_LANES`` and its lane output is exactly ``false``: the filter skipped it. Anything else fails
 -- ``failure``, ``cancelled``, a skip while its lane output was ``true`` (a job that did not start
 although its lane ran, e.g. because a job it needs failed), a skip of an unfiltered job, or an
-absent, malformed or inconsistent ``changes`` result. Standard library only.
+absent, malformed or inconsistent ``changes`` result, and a ``NEEDS_JSON`` that is not a JSON
+object. Standard library only.
 """
 
 from __future__ import annotations
@@ -64,6 +65,8 @@ def lane_outputs(needs: dict) -> dict[str, str]:
 
 def check(needs: dict, job_lanes: dict[str, str]) -> list[str]:
     """Return one report line per job; raise CheckError if any job is not acceptable."""
+    if not isinstance(needs, dict):
+        raise CheckError(f"NEEDS_JSON is not an object of job results: {type(needs).__name__}")
     if not needs:
         raise CheckError("no gating job results reported")
     unknown = sorted(set(job_lanes) - set(needs))

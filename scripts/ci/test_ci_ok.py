@@ -51,6 +51,21 @@ class ResultCheck(unittest.TestCase):
                      gate="skipped")
         self.assert_refused(data, r"determinism-matrix.*skipped while core=true")
 
+    def test_leverage_lane_skipped_while_leverage_ran_fails(self):
+        data = needs(outputs(core="false"), determinism_matrix="skipped",
+                     leverage_lane="skipped", gate="skipped")
+        self.assert_refused(data, r"leverage-lane.*skipped while leverage=true")
+
+    def test_gate_skipped_while_gate_scripts_ran_fails(self):
+        data = needs(outputs(gate_scripts="true"), determinism_matrix="success",
+                     leverage_lane="success", gate="skipped")
+        self.assert_refused(data, r"'gate': 'skipped while gate_scripts=true'")
+
+    def test_non_object_needs_fails(self):
+        for data in ([], [{"result": "success"}], "success", 1, None, True):
+            with self.subTest(data=data):
+                self.assert_refused(data, "not an object of job results")
+
     def test_skip_of_unfiltered_job_fails(self):
         data = needs(outputs(), determinism_matrix="success", leverage_lane="success",
                      gate="skipped")
@@ -131,6 +146,11 @@ class Entrypoint(unittest.TestCase):
                     gate="skipped")
         self.assertEqual(self.run_script({**env, "NEEDS_JSON": json.dumps(bad)}).returncode, 1)
         self.assertEqual(self.run_script({**env, "NEEDS_JSON": "not json"}).returncode, 1)
+        for text in ("[]", "null", '"success"', "[{\"result\": \"success\"}]"):
+            result = self.run_script({**env, "NEEDS_JSON": text})
+            self.assertEqual(result.returncode, 1, text)
+            self.assertIn("CI OK: FAIL: NEEDS_JSON is not an object", result.stderr, text)
+            self.assertNotIn("Traceback", result.stderr, text)
         missing = {k: v for k, v in env.items() if k != "NEEDS_JSON"}
         self.assertEqual(self.run_script(missing).returncode, 1)
         self.assertEqual(self.run_script({**env, "JOB_LANES": ""}).returncode, 1)
