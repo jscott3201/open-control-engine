@@ -217,6 +217,7 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 - [Authoring layer (M2)](docs/design/authoring-layer.md)
 - [Historical replay API](docs/design/replay.md)
 - [Commissioning verifier (CDL §12)](docs/design/commissioning.md)
+- [Structural diff (oce-diff)](docs/design/diff.md)
 """
     (source / "SUMMARY.md").write_text(summary, encoding="utf-8")
 
