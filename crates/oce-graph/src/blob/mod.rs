@@ -30,17 +30,38 @@
 //!   non-empty), one `Arc<str>` per parameter name and one per String parameter value; the block
 //!   vector and one `Box<dyn Block>` per non-zero-sized block plus whatever its constructor
 //!   allocates (as on the host); `Schedule::order` and `driver_of`; the [`RunState`] arrays that
-//!   [`allocate_state`](crate::allocate_state) builds; the input and output tables, one target
-//!   vector per input and one `Arc<str>` per String bound;
+//!   [`allocate_state`](crate::allocate_state) builds; the input and output tables and one target
+//!   vector per input (a bound is never a String: those are refused);
 //! * scratch, freed before return: one default-parameter block per class, built and dropped by
 //!   [`oce_blocks::class_signature_hash`]; the class table; one parameter-name sort buffer sized
-//!   once to the largest parameter list; one per-connector table; one schedule-position table.
+//!   once to the largest parameter list; one 8-byte-per-connector ownership table; one
+//!   schedule-position table.
 //!
 //! "When non-empty" applies throughout: an empty vector allocates nothing. `RunState::slots` is
 //! pushed one slot at a time by [`allocate_state`](crate::allocate_state), so it grows by the
 //! standard library's amortized doubling rather than in one allocation.
 //!
 //! I/O paths and `SemanticPoint` payloads are borrowed from the input slice, never copied.
+//!
+//! ## Peak memory against blob length
+//!
+//! Every allocation is sized from bytes already in hand, so peak memory is linear in the blob
+//! length. The structural pass refuses a port list longer than
+//! [`oce_blocks::MAX_RESOLVED_ARITY`] before anything is sized by it, and connector ownership is
+//! tracked in 8 bytes per id; the 144-byte `Connector` arena is built only after every port list
+//! has matched its constructed block. Measured peaks, as multiples of the blob length (pinned by
+//! `oce-api`'s `blob_peak_allocation` test, with the bound it asserts):
+//!
+//! | Shape | Outcome | Peak | Bound |
+//! | --- | --- | --- | --- |
+//! | One block listing 10⁶ input ids it does not have | refused at its arity check | 2.0× | 8× |
+//! | A port list longer than `MAX_RESOLVED_ARITY` | refused by the structural pass | ≈0× | 0.01× |
+//! | 10⁵ minimal instances, schedule missing | refused at the schedule | 8.4× | 12× |
+//! | One 200,000-input block fed by one boundary input | accepted | 26.6× | 32× |
+//!
+//! The last row is the densest accepted shape: a connector costs eight encoded bytes there and
+//! about 210 bytes decoded (its `Connector`, its value, its driver and its share of the port and
+//! target vectors), which is what the decoded executable needs to run, as it does on the host.
 
 use alloc::{boxed::Box, vec::Vec};
 
@@ -49,6 +70,7 @@ use oce_model::{ConnectorId, Model, Value, ValueType};
 
 use crate::{RunState, Schedule};
 
+mod connectors;
 mod decode;
 mod encode;
 mod error;

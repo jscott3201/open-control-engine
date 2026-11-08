@@ -94,8 +94,14 @@ host's envelope before decoding them, as you would snapshot bytes.
 
 For **memory safety** a blob is hostile: `decode` never panics, refuses malformed bytes with a
 typed `BlobError` that names the offset, index or hashes concerned, and checks every count against
-the bytes that remain before allocating for it. Every registered block constructor is fuzzed with
-hostile parameter tables bounded by `MAX_RESOLVED_PORT_WIDTH`.
+the bytes that remain before allocating for it. A port list longer than any registered class can
+resolve (`oce_blocks::MAX_RESOLVED_ARITY`, twice `MAX_RESOLVED_PORT_WIDTH`) is refused before
+anything is sized by it, and connector ownership costs 8 bytes per id until every block's arity
+has been checked, so peak memory is linear in the blob length: a hostile blob that lists a
+million connector ids its block does not have is refused holding 2.0× its length (the test bounds
+it at 8×); the densest blob that decodes holds 26.6× its length, which is the decoded executable
+itself. Every registered block constructor is fuzzed with hostile parameter tables bounded by
+`MAX_RESOLVED_PORT_WIDTH`.
 
 **Integrity** is a CRC-32C trailer over every preceding byte. It detects corruption in flash,
 transfer or storage; it is not tamper evidence, because anyone can recompute it.
@@ -104,11 +110,12 @@ transfer or storage; it is not tamper evidence, because anyone can recompute it.
 
 The decoder checks, in order, and returns the first failure: the 64 MiB size limit; header shape,
 magic and total length; format version; the CRC; profile, engine version and flags; structure
-(section order and lengths, bounded counts, UTF-8, tags, canonical list order, no trailing bytes);
+(section order and lengths, bounded counts, port lists no longer than any class resolves, UTF-8,
+tags, canonical list order, no trailing bytes);
 classes (registered, same hash, each used) and instances (class index, unique parameter names,
 finite Reals, known enum classes and in-range ordinals, the constructed block's kind, state length
 and arity, every connector exactly once); boundary inputs (not Enum-typed, typed targets used once,
-typed bounds), connections (output to input, equal kinds, distinct blocks, never into a boundary
+typed, finite and uncrossed bounds), connections (output to input, equal kinds, distinct blocks, never into a boundary
 input, one driver per input), undriven inputs and boundary outputs (output sources, unique paths);
 the schedule (a permutation that respects emit-before under the target's own feedthrough); the state
 budget (`MAX_STATE_WORDS`) and each initial-state CRC.
@@ -119,7 +126,8 @@ A blob of the 46 G36 catalog fixtures is 306 to 17,001 bytes (123,329 in all). `
 what it returns — the model arena, the blocks and whatever their constructors allocate, the schedule,
 the run state and the I/O table — plus one default-parameter block per class for its signature
 hash and four scratch vectors, all freed before it returns; I/O paths and payloads borrow the input
-bytes. `crates/oce-api/tests/blob_allocations.rs` pins that count exactly for every fixture. Ticking
+bytes. `crates/oce-api/tests/blob_allocations.rs` pins that count exactly for every fixture, and
+`blob_peak_allocation.rs` bounds peak memory against blob length for hostile and dense shapes. Ticking
 the decoded executable allocates nothing in the scheduler; the
 [architecture's](architecture.md#determinism-and-the-two-allocation-carve-outs) two carve-outs
 still apply.
@@ -130,7 +138,7 @@ still apply.
 | --- | --- |
 | One canonical byte sequence per executable | 46 goldens in `crates/oce-api/tests/fixtures/blob/`, re-encoded byte for byte, and decoded then re-encoded byte for byte (`blob_goldens.rs`); an independent test-side writer reproduces every golden (`blob_hostile_bytes.rs`) |
 | Identical on x86_64 and aarch64, debug and release | Every cell of the per-PR determinism matrix compares its encoding with the goldens, and the `determinism-compare` fan-in requires the four cells' bytes identical ([CI and the gate](ci-and-the-gate.md#dev-light-release-heavy)); the macOS and Windows platform cells run the same golden test |
-| Same outputs and state as the host | `src/tests/blob_dual_path_tests.rs`: for every fixture, the facade and the decoded executable take 160 frames, and every boundary output and the whole `RunState` match bit for bit after load and after every tick |
+| Same outputs and state as the host | `src/tests/blob_dual_path_tests.rs`: for every fixture, the facade and the decoded executable take 160 frames spanning about 3.3 hours (steps from 0.75 s to 300 s), and every boundary output and the whole `RunState` match bit for bit after load and after every tick; every stateful fixture's state words change and each fixture moves at least a recorded number of outputs, and a perturbed input on the decoded side fails the comparison |
 | Typed refusal, never a panic | `blob_hostile_bytes.rs` and `blob_hostile_model.rs` (one test per refusal), `blob_fuzz.rs` (10,000 seeded random mutations, re-checksummed) and `oce-blocks` `tests/hostile_parameters.rs` |
 | `SemanticPoint` payloads are non-computational | `blob_semantic_seam.rs` fills and mutates every payload byte and requires an identical executable and identical outputs |
 

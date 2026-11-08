@@ -196,6 +196,9 @@ pub enum MalformedFault {
     SectionLength,
     /// A count is larger than the remaining bytes could hold at the minimum record size.
     CountExceedsInput,
+    /// A port list is longer than any registered class can resolve
+    /// ([`oce_blocks::MAX_RESOLVED_ARITY`]).
+    ArityTooLarge,
     /// A string is not valid UTF-8 (the offset is that of the first invalid byte).
     InvalidUtf8,
     /// A tag byte (value, value type, optional, Boolean, block kind) is not in its table.
@@ -274,6 +277,8 @@ pub enum InputFault {
     TargetShared,
     /// A bound's type differs from the input's type, or the type admits no bound.
     BoundTypeMismatch,
+    /// A Real bound is NaN or infinite, or the lower bound exceeds the upper bound.
+    InvalidBound,
 }
 
 /// What [`BlobError::InvalidOutput`] found wrong with a boundary output.
@@ -322,6 +327,8 @@ pub enum EncodeFault {
     NonFiniteParameter,
     /// Two inputs share a path.
     DuplicateInputPath,
+    /// An input bound is a non-finite Real, or its lower bound exceeds its upper bound.
+    InvalidInputBound,
 }
 
 #[cfg(feature = "std")]

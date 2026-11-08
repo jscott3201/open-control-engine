@@ -6,12 +6,13 @@
 
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 
-use oce_blocks::{Block, BlockKind, PortKind, RegistryEntry, class_is_target_bound, lookup};
+use oce_blocks::{Block, BlockKind, RegistryEntry, class_is_target_bound, lookup};
 use oce_model::{
-    BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, Model, ParamTable, Value,
-    ValueType, enum_descriptor_by_path,
+    BlockId, BlockInstance, Connection, ConnectorId, Dir, Model, ParamTable, Value, ValueType,
+    enum_descriptor_by_path,
 };
 
+use super::connectors::Owners;
 use super::error::{
     BlobError, ConnectionFault, ConnectorFault, InputFault, InstanceField, OutputFault,
     ScheduleFault,
@@ -57,37 +58,29 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded<'_>, BlobError> {
         mut model,
         blocks,
         classes,
+        mut owners,
     } = build_instances(&layout, &counts)?;
     let target_bound = classes
         .iter()
         .any(|(_, path, _)| class_is_target_bound(path));
     drop(classes);
 
-    // Per-connector scratch: the port position within its block, and whether a boundary input
-    // targets it.
-    let mut scratch = vec![PortSlot::default(); counts.connectors];
-    for block in &model.blocks {
-        for ports in [&block.inputs, &block.outputs] {
-            for (port, id) in ports.iter().enumerate() {
-                scratch[id.0 as usize].port = u32::try_from(port).unwrap_or(u32::MAX);
-            }
-        }
-    }
-    let inputs = build_inputs(&layout, &model, &mut scratch)?;
-    model.connections = build_connections(&layout, &model, &scratch)?;
+    let inputs = build_inputs(&layout, &mut owners)?;
+    model.connections = build_connections(&layout, &owners)?;
     let driver_of = build_driver_of(&model);
-    for connector in &model.connectors {
-        let id = connector.id.0 as usize;
-        if connector.dir == Dir::In && !scratch[id].target && driver_of[id] == connector.id {
-            return Err(BlobError::UndrivenInput {
-                connector: connector.id.0,
-            });
+    for (id, driver) in driver_of.iter().enumerate() {
+        let id = index_u32(id);
+        let undriven = owners
+            .get(id)
+            .is_some_and(|port| port.dir == Dir::In && !port.target && driver.0 == id);
+        if undriven {
+            return Err(BlobError::UndrivenInput { connector: id });
         }
     }
-    let outputs = build_outputs(&layout, &model)?;
+    let outputs = build_outputs(&layout, &owners)?;
 
-    let order = build_order(&layout, &model, &blocks, &scratch)?;
-    drop(scratch);
+    let order = build_order(&layout, &model, &blocks, &owners)?;
+    drop(owners);
     let schedule = Schedule {
         order,
         connector_order: Vec::new(),
@@ -108,21 +101,16 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded<'_>, BlobError> {
     })
 }
 
-/// Per-connector decode scratch.
-#[derive(Clone, Copy, Default)]
-struct PortSlot {
-    port: u32,
-    target: bool,
-}
-
 /// The class table: registry entry, shared class path, and whether an instance used it.
 type ClassTable = Vec<(&'static RegistryEntry, Arc<str>, bool)>;
 
-/// What step 7 builds: the model arena, the constructed blocks and the class table.
+/// What step 7 builds: the model arena, the constructed blocks, the class table and the
+/// per-connector ownership table.
 struct Instances {
     model: Model,
     blocks: Vec<Box<dyn Block>>,
     classes: ClassTable,
+    owners: Owners,
 }
 
 /// Step 7: classes, then every instance with its constructed block and its connectors.
@@ -150,19 +138,8 @@ fn build_instances(layout: &Layout<'_>, counts: &Counts) -> Result<Instances, Bl
     let (block_total, connector_total) = instance_counts(&mut r)?;
     let mut model = Model::new();
     model.blocks = Vec::with_capacity(block_total);
-    // Placeholder owners are `BlockId(u32::MAX)` until a port list claims the connector.
-    model.connectors = (0..connector_total)
-        .map(|id| {
-            let id = index_u32(id);
-            Connector::new(
-                ConnectorId(id),
-                BlockId(u32::MAX),
-                Dir::In,
-                ValueType::Real,
-                id,
-            )
-        })
-        .collect();
+    // Eight bytes per connector id; the arena is built from it once every id is claimed.
+    let mut owners = Owners::new(connector_total);
     let mut blocks: Vec<Box<dyn Block>> = Vec::with_capacity(block_total);
     let mut used = 0usize;
     let mut names_scratch: Vec<&str> = Vec::with_capacity(counts.largest_parameter_list);
@@ -244,13 +221,23 @@ fn build_instances(layout: &Layout<'_>, counts: &Counts) -> Result<Instances, Bl
             return mismatch(InstanceField::OutputArity);
         }
         let mut inputs = Vec::with_capacity(record.inputs.len());
-        for (id, kind) in record.inputs.iter().zip(signature.inputs.iter()) {
-            claim(&mut model.connectors, id, block, Dir::In, *kind)?;
+        for (port, (id, kind)) in record
+            .inputs
+            .iter()
+            .zip(signature.inputs.iter())
+            .enumerate()
+        {
+            owners.claim(id, block, port, Dir::In, *kind)?;
             inputs.push(ConnectorId(id));
         }
         let mut outputs = Vec::with_capacity(record.outputs.len());
-        for (id, kind) in record.outputs.iter().zip(signature.outputs.iter()) {
-            claim(&mut model.connectors, id, block, Dir::Out, *kind)?;
+        for (port, (id, kind)) in record
+            .outputs
+            .iter()
+            .zip(signature.outputs.iter())
+            .enumerate()
+        {
+            owners.claim(id, block, port, Dir::Out, *kind)?;
             outputs.push(ConnectorId(id));
         }
         drop(signature);
@@ -271,59 +258,19 @@ fn build_instances(layout: &Layout<'_>, counts: &Counts) -> Result<Instances, Bl
             class: index_u32(class),
         });
     }
-    if let Some(missing) = model
-        .connectors
-        .iter()
-        .find(|connector| connector.block.0 == u32::MAX)
-    {
+    if let Some(missing) = owners.first_unclaimed() {
         return Err(BlobError::InvalidConnector {
-            connector: missing.id.0,
+            connector: missing,
             fault: ConnectorFault::Missing,
         });
     }
+    model.connectors = owners.connectors();
     Ok(Instances {
         model,
         blocks,
         classes,
+        owners,
     })
-}
-
-/// Assign connector `id` to `block` as a port of `kind`, exactly once.
-fn claim(
-    connectors: &mut [Connector],
-    id: u32,
-    block: u32,
-    dir: Dir,
-    kind: PortKind,
-) -> Result<(), BlobError> {
-    let Some(connector) = connectors.get_mut(usize::try_from(id).unwrap_or(usize::MAX)) else {
-        return Err(BlobError::InvalidConnector {
-            connector: id,
-            fault: ConnectorFault::OutOfRange,
-        });
-    };
-    if connector.block.0 != u32::MAX {
-        return Err(BlobError::InvalidConnector {
-            connector: id,
-            fault: ConnectorFault::Duplicated,
-        });
-    }
-    *connector = Connector::new(
-        ConnectorId(id),
-        BlockId(block),
-        dir,
-        port_value_type(kind),
-        id,
-    );
-    Ok(())
-}
-
-fn port_value_type(kind: PortKind) -> ValueType {
-    match kind {
-        PortKind::Real => ValueType::Real,
-        PortKind::Integer => ValueType::Integer,
-        PortKind::Boolean => ValueType::Boolean,
-    }
 }
 
 /// A raw value as a model value, resolving an Enum's class path and range-checking its ordinal.
@@ -357,8 +304,7 @@ fn value(raw: RawValue<'_>, at: u32) -> Result<Value, BlobError> {
 /// Step 8, inputs: type, targets and bounds of every boundary input; marks each target.
 fn build_inputs<'a>(
     layout: &Layout<'a>,
-    model: &Model,
-    scratch: &mut [PortSlot],
+    owners: &mut Owners,
 ) -> Result<Vec<BlobInput<'a>>, BlobError> {
     let mut r = layout.io.reader();
     let count = input_count(&mut r)?;
@@ -379,10 +325,7 @@ fn build_inputs<'a>(
         }
         let mut targets = Vec::with_capacity(record.targets.len());
         for target in record.targets.iter() {
-            let Some(connector) = model
-                .connectors
-                .get(usize::try_from(target).unwrap_or(usize::MAX))
-            else {
+            let Some(connector) = owners.get(target) else {
                 return fault(InputFault::TargetOutOfRange);
             };
             if connector.dir != Dir::In {
@@ -391,11 +334,10 @@ fn build_inputs<'a>(
             if connector.value_type != value_type {
                 return fault(InputFault::TargetTypeMismatch);
             }
-            let slot = &mut scratch[target as usize];
-            if slot.target {
+            if connector.target {
                 return fault(InputFault::TargetShared);
             }
-            slot.target = true;
+            owners.mark_target(target);
             targets.push(ConnectorId(target));
         }
         let bound = |raw: Option<(RawValue<'_>, u32)>| -> Result<Option<Value>, BlobError> {
@@ -416,6 +358,9 @@ fn build_inputs<'a>(
         };
         let min = bound(record.min)?;
         let max = bound(record.max)?;
+        if !bounds_are_valid(min.as_ref(), max.as_ref()) {
+            return fault(InputFault::InvalidBound);
+        }
         inputs.push(BlobInput {
             path: record.path,
             value_type,
@@ -430,11 +375,7 @@ fn build_inputs<'a>(
 
 /// Step 8, connections: well-typed output-to-input edges between distinct blocks, one driver per
 /// input, never into a boundary input target.
-fn build_connections(
-    layout: &Layout<'_>,
-    model: &Model,
-    scratch: &[PortSlot],
-) -> Result<Vec<Connection>, BlobError> {
+fn build_connections(layout: &Layout<'_>, owners: &Owners) -> Result<Vec<Connection>, BlobError> {
     let mut r = layout.connections.reader();
     let count = connection_count(&mut r)?;
     let mut connections = Vec::with_capacity(count);
@@ -444,14 +385,7 @@ fn build_connections(
         let fault = |fault| Err(BlobError::InvalidConnection { connection, fault });
         let from = r.u32()?;
         let to = r.u32()?;
-        let (Some(producer), Some(consumer)) = (
-            model
-                .connectors
-                .get(usize::try_from(from).unwrap_or(usize::MAX)),
-            model
-                .connectors
-                .get(usize::try_from(to).unwrap_or(usize::MAX)),
-        ) else {
+        let (Some(producer), Some(consumer)) = (owners.get(from), owners.get(to)) else {
             return fault(ConnectionFault::OutOfRange);
         };
         if producer.dir != Dir::Out {
@@ -466,7 +400,7 @@ fn build_connections(
         if producer.block == consumer.block {
             return fault(ConnectionFault::SameBlock);
         }
-        if scratch[to as usize].target {
+        if consumer.target {
             return fault(ConnectionFault::ConsumerIsInputTarget);
         }
         if previous == Some(to) {
@@ -482,7 +416,10 @@ fn build_connections(
 }
 
 /// Step 8, outputs: each source an output connector, no path twice.
-fn build_outputs<'a>(layout: &Layout<'a>, model: &Model) -> Result<Vec<BlobOutput<'a>>, BlobError> {
+fn build_outputs<'a>(
+    layout: &Layout<'a>,
+    owners: &Owners,
+) -> Result<Vec<BlobOutput<'a>>, BlobError> {
     let mut r = layout.io.reader();
     let inputs = input_count(&mut r)?;
     for _ in 0..inputs {
@@ -494,10 +431,7 @@ fn build_outputs<'a>(layout: &Layout<'a>, model: &Model) -> Result<Vec<BlobOutpu
         let output = index_u32(index);
         let record = output_record(&mut r)?;
         let fault = |fault| Err(BlobError::InvalidOutput { output, fault });
-        match model
-            .connectors
-            .get(usize::try_from(record.source).unwrap_or(usize::MAX))
-        {
+        match owners.get(record.source) {
             None => return fault(OutputFault::SourceOutOfRange),
             Some(connector) if connector.dir != Dir::Out => {
                 return fault(OutputFault::SourceNotOutput);
@@ -523,7 +457,7 @@ fn build_order(
     layout: &Layout<'_>,
     model: &Model,
     blocks: &[Box<dyn Block>],
-    scratch: &[PortSlot],
+    owners: &Owners,
 ) -> Result<Vec<BlockId>, BlobError> {
     let mut r = layout.schedule.reader();
     let list = r.u32_list()?;
@@ -554,11 +488,15 @@ fn build_order(
         order.push(BlockId(block));
     }
     for connection in &model.connections {
-        let producer = model.connectors[connection.from.0 as usize].block.0 as usize;
-        let consumer = model.connectors[connection.to.0 as usize].block.0 as usize;
+        // Both endpoints were range-checked when the connection was decoded.
+        let (Some(from), Some(to)) = (owners.get(connection.from.0), owners.get(connection.to.0))
+        else {
+            continue;
+        };
+        let (producer, consumer) = (from.block as usize, to.block as usize);
         let instance = blocks[consumer].as_ref();
         let reads_at_emit = instance.kind() == BlockKind::Algebraic || {
-            let port = scratch[connection.to.0 as usize].port as usize;
+            let port = to.port as usize;
             (0..model.blocks[consumer].outputs.len()).any(|out| instance.feeds_through(port, out))
         };
         if reads_at_emit && position_of[producer] >= position_of[consumer] {
@@ -618,6 +556,22 @@ fn build_state(
         }
     }
     Ok(state)
+}
+
+/// Whether an input's acceptance domain is well formed: Real bounds finite, and `min <= max`
+/// when both are present. A NaN bound would admit or refuse every value depending on how a
+/// frame driver compares it, so it is refused rather than interpreted.
+pub(super) fn bounds_are_valid(min: Option<&Value>, max: Option<&Value>) -> bool {
+    let finite = |bound: Option<&Value>| match bound {
+        Some(Value::Real(x)) => x.is_finite(),
+        _ => true,
+    };
+    let ordered = match (min, max) {
+        (Some(Value::Real(lo)), Some(Value::Real(hi))) => lo <= hi,
+        (Some(Value::Integer(lo)), Some(Value::Integer(hi))) => lo <= hi,
+        _ => true,
+    };
+    finite(min) && finite(max) && ordered
 }
 
 /// An index into a list whose length the structural pass bounded by a 64 MiB input.

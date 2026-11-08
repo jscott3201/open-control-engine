@@ -267,8 +267,10 @@ the **other** architecture's target-bound snapshot and refuses it through the pu
 — x86_64 refuses aarch64's, aarch64 refuses x86_64's — natively, from the oce-api unit-test binary
 its own debug cell built and archived. Each cell also writes the 46 compiled-schedule blobs it
 encodes (`OCE_BLOB_OUT`, after its `blob_goldens` test has compared them with the checked-in
-goldens), and the fan-in requires those bytes identical in all four cells: debug against release
-and x86_64 against aarch64 ([compiled-schedule blob](compiled-schedule-blob.md), GitHub #400).
+goldens), and the fan-in requires those bytes identical in all four cells — debug against release
+and x86_64 against aarch64 — and each file 123,329 bytes, the goldens' total, so a truncated
+artifact cannot pass ([compiled-schedule blob](compiled-schedule-blob.md), GitHub #400).
+`bash .agents/gate.sh full` writes the artifact the same way and checks its size.
 Nothing is emulated; every test in the subset runs in every cell.
 The gate script runs the test commands locally and adds two named
 `oce-cxf` test binaries, which are input hygiene rather than

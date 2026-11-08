@@ -186,6 +186,17 @@ pub struct BlockSignature {
 /// keeping any realistic equipment-control vector well inside the supported range.
 pub const MAX_RESOLVED_PORT_WIDTH: usize = 1 << 20;
 
+/// The largest resolved input or output arity any registered class constructs, for any parameter
+/// table: twice [`MAX_RESOLVED_PORT_WIDTH`].
+///
+/// Every width-driven class bounds each vector port by [`MAX_RESOLVED_PORT_WIDTH`] (a product
+/// width above it resolves to zero). No class has more than one vector port in one direction
+/// except `CDL.Reals.Sort`, whose outputs are `y[nin]` and `yIdx[nin]`; the rest add at most one
+/// scalar to a vector (`CDL.Routing.*Extractor`: `index` and `u[nin]`). The compiled-schedule
+/// blob decoder refuses a port list longer than this before allocating for it, and
+/// `tests/hostile_parameters.rs` checks the bound against every constructor.
+pub const MAX_RESOLVED_ARITY: usize = 2 * MAX_RESOLVED_PORT_WIDTH;
+
 /// A BUILD-time port shape for vector-style CDL connector declarations after parameter resolution.
 ///
 /// The engine still stores and ticks one scalar [`oce_model::ConnectorId`] per element. A shape only

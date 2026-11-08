@@ -5,7 +5,7 @@
 //! every list is in canonical order and every section is consumed exactly, so that the building
 //! pass in `decode.rs` can size its allocations from counts already proven against the input.
 
-use oce_blocks::BlockKind;
+use oce_blocks::{BlockKind, MAX_RESOLVED_ARITY};
 
 use super::error::{BlobError, MalformedFault};
 use super::wire::{RawType, RawValue, Reader, U32List, crc32c};
@@ -54,7 +54,6 @@ pub(super) struct Layout<'a> {
 
 /// Counts the structural pass proved, for sizing the building pass's allocations.
 pub(super) struct Counts {
-    pub(super) connectors: usize,
     pub(super) largest_parameter_list: usize,
 }
 
@@ -216,8 +215,10 @@ pub(super) fn instance_record<'a>(r: &mut Reader<'a>) -> Result<InstanceRecord<'
     };
     let state_len = r.u32()?;
     let state_crc = r.u32()?;
-    let inputs = r.u32_list()?;
-    let outputs = r.u32_list()?;
+    // No registered class resolves a longer port list, so a longer one is refused here, before the
+    // decoder sizes anything by the connector count.
+    let inputs = r.u32_list_at_most(MAX_RESOLVED_ARITY)?;
+    let outputs = r.u32_list_at_most(MAX_RESOLVED_ARITY)?;
     let count = r.count(MIN_PARAMETER)?;
     let start = r.clone();
     for _ in 0..count {
@@ -334,7 +335,7 @@ pub(super) fn check_structure(layout: &Layout<'_>) -> Result<Counts, BlobError> 
 
     // 2 Instances, in BlockId order.
     let mut r = layout.instances.reader();
-    let (blocks, connectors) = instance_counts(&mut r)?;
+    let (blocks, _) = instance_counts(&mut r)?;
     let mut largest_parameter_list = 0;
     for _ in 0..blocks {
         let record = instance_record(&mut r)?;
@@ -374,9 +375,12 @@ pub(super) fn check_structure(layout: &Layout<'_>) -> Result<Counts, BlobError> 
             return at.malformed(MalformedFault::NotCanonical);
         }
         let mut last = None;
-        for target in record.targets.iter() {
+        for (index, target) in record.targets.iter().enumerate() {
             if last.is_some_and(|l| l >= target) {
-                return at.malformed(MalformedFault::NotCanonical);
+                return Err(BlobError::Malformed {
+                    offset: record.targets.offset_of(index),
+                    fault: MalformedFault::NotCanonical,
+                });
             }
             last = Some(target);
         }
@@ -395,7 +399,6 @@ pub(super) fn check_structure(layout: &Layout<'_>) -> Result<Counts, BlobError> 
     exhausted(&r)?;
 
     Ok(Counts {
-        connectors,
         largest_parameter_list,
     })
 }

@@ -457,14 +457,23 @@ jobs:
           ! cmp -s determinism-x86_64-debug/target-state-debug.bin determinism-aarch64-debug/target-state-debug.bin
       # The 46 compiled-schedule blobs (GitHub #400) carry no architecture field, so every cell's
       # bytes must be identical: debug against release within an architecture, and x86_64 against
-      # aarch64. Each cell already compared its bytes with the checked-in goldens.
+      # aarch64. Each cell already compared its bytes with the checked-in goldens; the size check
+      # keeps a truncated or empty artifact from passing as four equal files. 123329 is the sum of
+      # the goldens' lengths (crates/oce-api/tests/fixtures/blob/*.oceb).
       - name: Compare compiled-schedule blob bytes across codegen profiles and architectures
         working-directory: target/determinism
-        run: >-
-          test -s determinism-x86_64-debug/blobs-debug.bin &&
-          cmp determinism-x86_64-debug/blobs-debug.bin determinism-x86_64-release/blobs-release.bin &&
-          cmp determinism-aarch64-debug/blobs-debug.bin determinism-aarch64-release/blobs-release.bin &&
-          cmp determinism-x86_64-debug/blobs-debug.bin determinism-aarch64-debug/blobs-debug.bin &&
+        run: |
+          for file in determinism-{x86_64,aarch64}-{debug,release}/blobs-*.bin; do
+            size="$(wc -c < "$file" | tr -d ' ')"
+            if [ "$size" != 123329 ]; then
+              echo "FAIL: $file is $size bytes; the 46 blob goldens sum to 123329" >&2
+              exit 1
+            fi
+          done
+          test "$(ls determinism-*/blobs-*.bin | wc -l | tr -d ' ')" = 4
+          cmp determinism-x86_64-debug/blobs-debug.bin determinism-x86_64-release/blobs-release.bin
+          cmp determinism-aarch64-debug/blobs-debug.bin determinism-aarch64-release/blobs-release.bin
+          cmp determinism-x86_64-debug/blobs-debug.bin determinism-aarch64-debug/blobs-debug.bin
           cmp determinism-x86_64-release/blobs-release.bin determinism-aarch64-release/blobs-release.bin
       - name: Refuse a target-bound snapshot from the other architecture
         env:

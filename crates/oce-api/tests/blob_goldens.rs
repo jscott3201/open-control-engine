@@ -55,7 +55,16 @@ fn every_fixture_blob_matches_its_checked_in_golden_byte_for_byte() {
         let golden = std::fs::read(&path)
             .unwrap_or_else(|err| panic!("{name}: read {}: {err}", path.display()));
         if golden != compiled.bytes {
-            mismatches.push(*name);
+            let first = golden
+                .iter()
+                .zip(&compiled.bytes)
+                .position(|(a, b)| a != b)
+                .unwrap_or(golden.len().min(compiled.bytes.len()));
+            mismatches.push(format!(
+                "{name}: first difference at byte {first:#x}; golden {} bytes, encoded {} bytes",
+                golden.len(),
+                compiled.bytes.len()
+            ));
         }
     }
     if let Some(out) = std::env::var_os("OCE_BLOB_OUT").filter(|out| !out.is_empty()) {
@@ -74,7 +83,8 @@ fn every_fixture_blob_matches_its_checked_in_golden_byte_for_byte() {
     }
     assert!(
         mismatches.is_empty(),
-        "blob bytes differ from the goldens for {mismatches:?}; bless deliberately with OCE_BLESS_BLOB=1"
+        "blob bytes differ from the goldens:\n{}\nbless deliberately with OCE_BLESS_BLOB=1",
+        mismatches.join("\n")
     );
 }
 

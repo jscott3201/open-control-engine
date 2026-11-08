@@ -30,7 +30,8 @@ use crate::MAX_STATE_WORDS;
 /// # Errors
 /// [`BlobError::Unencodable`] for a non-dense id, a port outside the connector arena, a connector
 /// whose type differs from its port kind, an Enum without a canonical descriptor, a non-finite Real
-/// parameter, a duplicate input path, or a count beyond `u32`; [`BlobError::InvalidOutput`] with
+/// parameter, a duplicate input path, a non-finite or crossed input bound, or a count beyond
+/// `u32`; [`BlobError::InvalidOutput`] with
 /// [`OutputFault::DuplicatePath`] for two outputs with one path; [`BlobError::UnknownClass`] for an
 /// unregistered class; [`BlobError::StateTooLarge`] for a state region beyond
 /// [`MAX_STATE_WORDS`]; [`BlobError::TooLarge`] for a result beyond [`MAX_BLOB_BYTES`].
@@ -226,6 +227,9 @@ fn inputs(w: &mut Writer, inputs: &[BlobInput<'_>]) -> Result<(), BlobError> {
     w.count(sorted.len())?;
     for (index, input) in sorted.iter().enumerate() {
         let index = index_u32(index);
+        if !super::decode::bounds_are_valid(input.min.as_ref(), input.max.as_ref()) {
+            return Err(unencodable(EncodeFault::InvalidInputBound, index));
+        }
         w.str(input.path)?;
         w.value_type(input.value_type, index)?;
         w.optional_value(input.min.as_ref(), index)?;

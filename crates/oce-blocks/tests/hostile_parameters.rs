@@ -19,9 +19,10 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
 
 use oce_blocks::{
-    BlockKind, Ctx, MAX_RESOLVED_PORT_WIDTH, NoopDiagnostics, ParamRule, PortKind, catalog, lookup,
+    BlockKind, Ctx, MAX_RESOLVED_ARITY, MAX_RESOLVED_PORT_WIDTH, NoopDiagnostics,
+    ParamRuleProjection, PortKind, TimeTableValues, catalog, lookup,
 };
-use oce_model::{EnumClassId, ParamTable, Value};
+use oce_model::{EnumClassId, ParamTable, Value, ValueType};
 
 /// Shapes above these are constructed and queried for signature and state length only.
 const MAX_ENUMERATED_PORTS: usize = 256;
@@ -53,6 +54,179 @@ fn env_u64(name: &str, default: u64) -> u64 {
         .unwrap_or(default)
 }
 
+/// One rule's variant name, its scalar parameter names and its flattened array or matrix bases.
+type RuleNames = (&'static str, Vec<&'static str>, Vec<&'static str>);
+
+/// The parameter names each rule mentions, through the owner's exhaustive projection: a new
+/// `ParamRule` variant adds a required method here, so it cannot be skipped silently.
+struct Names;
+
+impl ParamRuleProjection for Names {
+    type Output = RuleNames;
+    fn required(name: &'static str, _: ValueType) -> RuleNames {
+        ("Required", vec![name], vec![])
+    }
+    fn structural(name: &'static str) -> RuleNames {
+        ("Structural", vec![name], vec![])
+    }
+    fn structural_array_elements(base: &'static str) -> RuleNames {
+        ("StructuralArrayElements", vec![], vec![base])
+    }
+    fn boolean(name: &'static str) -> RuleNames {
+        ("Boolean", vec![name], vec![])
+    }
+    fn real(name: &'static str) -> RuleNames {
+        ("Real", vec![name], vec![])
+    }
+    fn real_finite(name: &'static str) -> RuleNames {
+        ("RealFinite", vec![name], vec![])
+    }
+    fn real_greater_than(name: &'static str, _: f64) -> RuleNames {
+        ("RealGreaterThan", vec![name], vec![])
+    }
+    fn real_finite_greater_than(name: &'static str, _: f64) -> RuleNames {
+        ("RealFiniteGreaterThan", vec![name], vec![])
+    }
+    fn integer_greater_or_equal(name: &'static str, _: i64) -> RuleNames {
+        ("IntegerGreaterOrEqual", vec![name], vec![])
+    }
+    fn integer_less_or_equal_constant(name: &'static str, _: i64) -> RuleNames {
+        ("IntegerLessOrEqualConstant", vec![name], vec![])
+    }
+    fn integer_array_elements(base: &'static str, len: &'static str) -> RuleNames {
+        ("IntegerArrayElements", vec![len], vec![base])
+    }
+    fn integer_array_elements_in_range(
+        base: &'static str,
+        len: &'static str,
+        _: i64,
+        _: i64,
+        max: &'static str,
+        _: i64,
+        _: bool,
+    ) -> RuleNames {
+        ("IntegerArrayElementsInRange", vec![len, max], vec![base])
+    }
+    fn real_array_elements(base: &'static str, len: &'static str) -> RuleNames {
+        ("RealArrayElements", vec![len], vec![base])
+    }
+    fn real_matrix_elements(
+        base: &'static str,
+        rows: &'static str,
+        _: i64,
+        cols: &'static str,
+        _: i64,
+    ) -> RuleNames {
+        ("RealMatrixElements", vec![rows, cols], vec![base])
+    }
+    fn time_table_matrix(
+        base: &'static str,
+        _: TimeTableValues,
+        time_scale: &'static str,
+        period: Option<&'static str>,
+        extrapolation: Option<&'static str>,
+    ) -> RuleNames {
+        let mut scalars = vec![time_scale];
+        scalars.extend(period);
+        scalars.extend(extrapolation);
+        ("TimeTableMatrix", scalars, vec![base])
+    }
+    fn time_table_offset(base: &'static str, table: &'static str) -> RuleNames {
+        ("TimeTableOffset", vec![], vec![base, table])
+    }
+    fn boolean_array_elements(base: &'static str, len: &'static str) -> RuleNames {
+        ("BooleanArrayElements", vec![len], vec![base])
+    }
+    fn boolean_array_true_count_equals(
+        base: &'static str,
+        len: &'static str,
+        count: &'static str,
+        _: bool,
+    ) -> RuleNames {
+        ("BooleanArrayTrueCountEquals", vec![len, count], vec![base])
+    }
+    fn enum_members(name: &'static str, _: &'static [&'static str]) -> RuleNames {
+        ("EnumMembers", vec![name], vec![])
+    }
+    fn real_greater_or_equal(name: &'static str, _: f64) -> RuleNames {
+        ("RealGreaterOrEqual", vec![name], vec![])
+    }
+    fn real_less_or_equal_constant(name: &'static str, _: f64) -> RuleNames {
+        ("RealLessOrEqualConstant", vec![name], vec![])
+    }
+    fn real_times_integer_inclusive_range(
+        real: &'static str,
+        integer: &'static str,
+        _: f64,
+        _: f64,
+    ) -> RuleNames {
+        (
+            "RealTimesIntegerInclusiveRange",
+            vec![real, integer],
+            vec![],
+        )
+    }
+    fn integer_product_less_or_equal_constant(
+        left: &'static str,
+        right: &'static str,
+        _: i64,
+    ) -> RuleNames {
+        (
+            "IntegerProductLessOrEqualConstant",
+            vec![left, right],
+            vec![],
+        )
+    }
+    fn real_less_or_equal(lower: &'static str, upper: &'static str) -> RuleNames {
+        ("RealLessOrEqual", vec![lower, upper], vec![])
+    }
+    fn real_less_or_equal_warning(lower: &'static str, upper: &'static str) -> RuleNames {
+        ("RealLessOrEqualWarning", vec![lower, upper], vec![])
+    }
+    fn real_greater_or_equal_scaled_warning(
+        left: &'static str,
+        right: &'static str,
+        _: f64,
+    ) -> RuleNames {
+        ("RealGreaterOrEqualScaledWarning", vec![left, right], vec![])
+    }
+    fn real_equal_warning(left: &'static str, right: &'static str) -> RuleNames {
+        ("RealEqualWarning", vec![left, right], vec![])
+    }
+}
+
+/// Every `ParamRule` variant the projection names. A new variant fails to compile in `Names`
+/// first; this list then fails `every_rule_variant_is_projected_and_used_by_the_registry`.
+const RULE_VARIANTS: [&str; 27] = [
+    "Required",
+    "Structural",
+    "StructuralArrayElements",
+    "Boolean",
+    "Real",
+    "RealFinite",
+    "RealGreaterThan",
+    "RealFiniteGreaterThan",
+    "IntegerGreaterOrEqual",
+    "IntegerLessOrEqualConstant",
+    "IntegerArrayElements",
+    "IntegerArrayElementsInRange",
+    "RealArrayElements",
+    "RealMatrixElements",
+    "TimeTableMatrix",
+    "TimeTableOffset",
+    "BooleanArrayElements",
+    "BooleanArrayTrueCountEquals",
+    "EnumMembers",
+    "RealGreaterOrEqual",
+    "RealLessOrEqualConstant",
+    "RealTimesIntegerInclusiveRange",
+    "IntegerProductLessOrEqualConstant",
+    "RealLessOrEqual",
+    "RealLessOrEqualWarning",
+    "RealGreaterOrEqualScaledWarning",
+    "RealEqualWarning",
+];
+
 /// Every parameter name a class's rules and defaults mention, with array and matrix members.
 fn names_of(class_path: &str) -> Vec<String> {
     let entry = catalog()
@@ -62,78 +236,9 @@ fn names_of(class_path: &str) -> Vec<String> {
     let mut bases: Vec<&str> = Vec::new();
     let mut scalars: Vec<String> = Vec::new();
     for rule in entry.param_rules {
-        match *rule {
-            ParamRule::Required { name, .. }
-            | ParamRule::Structural { name }
-            | ParamRule::Boolean { name }
-            | ParamRule::Real { name }
-            | ParamRule::RealFinite { name }
-            | ParamRule::RealGreaterThan { name, .. }
-            | ParamRule::RealFiniteGreaterThan { name, .. }
-            | ParamRule::IntegerGreaterOrEqual { name, .. }
-            | ParamRule::IntegerLessOrEqualConstant { name, .. }
-            | ParamRule::EnumMembers { name, .. }
-            | ParamRule::RealGreaterOrEqual { name, .. }
-            | ParamRule::RealLessOrEqualConstant { name, .. } => scalars.push(name.into()),
-            ParamRule::StructuralArrayElements { base } => bases.push(base),
-            ParamRule::IntegerArrayElements { base, len }
-            | ParamRule::RealArrayElements { base, len }
-            | ParamRule::BooleanArrayElements { base, len } => {
-                bases.push(base);
-                scalars.push(len.into());
-            }
-            ParamRule::IntegerArrayElementsInRange { base, len, max, .. } => {
-                bases.push(base);
-                scalars.push(len.into());
-                scalars.push(max.into());
-            }
-            ParamRule::RealMatrixElements {
-                base, rows, cols, ..
-            } => {
-                bases.push(base);
-                scalars.push(rows.into());
-                scalars.push(cols.into());
-            }
-            ParamRule::TimeTableMatrix {
-                base,
-                time_scale,
-                period,
-                extrapolation,
-                ..
-            } => {
-                bases.push(base);
-                scalars.push(time_scale.into());
-                scalars.extend(period.map(Into::into));
-                scalars.extend(extrapolation.map(Into::into));
-            }
-            ParamRule::TimeTableOffset { base, .. } => bases.push(base),
-            ParamRule::BooleanArrayTrueCountEquals {
-                base, len, count, ..
-            } => {
-                bases.push(base);
-                scalars.push(len.into());
-                scalars.push(count.into());
-            }
-            ParamRule::RealTimesIntegerInclusiveRange { real, integer, .. } => {
-                scalars.push(real.into());
-                scalars.push(integer.into());
-            }
-            ParamRule::IntegerProductLessOrEqualConstant { left, right, .. } => {
-                scalars.push(left.into());
-                scalars.push(right.into());
-            }
-            ParamRule::RealLessOrEqual { lower, upper }
-            | ParamRule::RealLessOrEqualWarning { lower, upper } => {
-                scalars.push(lower.into());
-                scalars.push(upper.into());
-            }
-            ParamRule::RealGreaterOrEqualScaledWarning { left, right, .. }
-            | ParamRule::RealEqualWarning { left, right } => {
-                scalars.push(left.into());
-                scalars.push(right.into());
-            }
-            _ => {}
-        }
+        let (_, names, rule_bases) = rule.project::<Names>();
+        scalars.extend(names.into_iter().map(String::from));
+        bases.extend(rule_bases);
     }
     for default in entry.param_defaults {
         match default.name.split_once('<') {
@@ -245,7 +350,8 @@ fn exercise(class_path: &str, params: &ParamTable) {
         assert_eq!(state_len, 0, "an algebraic block reports state");
     }
     let (inputs, outputs) = (signature.inputs.len(), signature.outputs.len());
-    assert!(inputs <= MAX_RESOLVED_PORT_WIDTH * 2 && outputs <= MAX_RESOLVED_PORT_WIDTH * 2);
+    // The compiled-schedule decoder refuses longer port lists before allocating for them.
+    assert!(inputs <= MAX_RESOLVED_ARITY && outputs <= MAX_RESOLVED_ARITY);
     if inputs > MAX_ENUMERATED_PORTS
         || outputs > MAX_ENUMERATED_PORTS
         || state_len > MAX_INITIALIZED_WORDS
@@ -323,4 +429,48 @@ fn every_constructor_survives_hostile_parameter_tables() {
         failures.len(),
         failures.first()
     );
+}
+
+#[test]
+fn every_rule_variant_is_projected_and_used_by_the_registry() {
+    let mut used: Vec<&str> = catalog()
+        .iter()
+        .flat_map(|entry| entry.param_rules)
+        .map(|rule| rule.project::<Names>().0)
+        .collect();
+    used.sort_unstable();
+    used.dedup();
+    let mut all = RULE_VARIANTS.to_vec();
+    all.sort_unstable();
+    assert_eq!(
+        used, all,
+        "every ParamRule variant the fuzz derives names from is in use"
+    );
+}
+
+/// The arity bound is the true maximum: `CDL.Reals.Sort` reaches it at `nin` equal to the port
+/// width, and every width-driven class stays within it at and past its widest parameters.
+#[test]
+fn the_resolved_arity_bound_is_reached_and_never_exceeded() {
+    let width = MAX_RESOLVED_PORT_WIDTH as i64;
+    let sort = (lookup("CDL.Reals.Sort").unwrap().make)(&ParamTable {
+        values: vec![(Arc::from("nin"), Value::Integer(width))],
+    });
+    assert_eq!(sort.resolved_signature().outputs.len(), MAX_RESOLVED_ARITY);
+    let mut widest = 0usize;
+    for entry in catalog().iter().filter(|entry| entry.width_driven) {
+        for n in [width, width + 1, i64::MAX] {
+            let values = names_of(entry.class_path)
+                .into_iter()
+                .filter(|name| !name.contains('_'))
+                .map(|name| (Arc::from(name.as_str()), Value::Integer(n)))
+                .collect();
+            let block = (lookup(entry.class_path).unwrap().make)(&ParamTable { values });
+            let signature = block.resolved_signature();
+            widest = widest
+                .max(signature.inputs.len())
+                .max(signature.outputs.len());
+        }
+    }
+    assert_eq!(widest, MAX_RESOLVED_ARITY);
 }

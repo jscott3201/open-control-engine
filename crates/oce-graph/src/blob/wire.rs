@@ -75,17 +75,26 @@ pub(super) enum RawType {
     Enum,
 }
 
-/// A `u32` length-prefixed list of `u32`s, borrowed from the blob.
+/// A `u32` length-prefixed list of `u32`s, borrowed from the blob, with the absolute offset of its
+/// first element.
 #[derive(Clone, Copy, Debug)]
-pub(super) struct U32List<'a>(&'a [u8]);
+pub(super) struct U32List<'a> {
+    bytes: &'a [u8],
+    offset: usize,
+}
 
 impl U32List<'_> {
     pub(super) fn len(&self) -> usize {
-        self.0.len() / 4
+        self.bytes.len() / 4
+    }
+
+    /// The absolute blob offset of element `index`.
+    pub(super) fn offset_of(&self, index: usize) -> u32 {
+        u32::try_from(self.offset.saturating_add(index.saturating_mul(4))).unwrap_or(u32::MAX)
     }
 
     pub(super) fn iter(&self) -> impl Iterator<Item = u32> + '_ {
-        self.0
+        self.bytes
             .chunks_exact(4)
             .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
     }
@@ -207,9 +216,23 @@ impl<'a> Reader<'a> {
 
     /// A count-prefixed list of `u32`s, borrowed.
     pub(super) fn u32_list(&mut self) -> Result<U32List<'a>, BlobError> {
+        self.u32_list_at_most(usize::MAX)
+    }
+
+    /// A count-prefixed list of `u32`s whose count may not exceed `limit`
+    /// ([`MalformedFault::ArityTooLarge`] at the count's offset).
+    pub(super) fn u32_list_at_most(&mut self, limit: usize) -> Result<U32List<'a>, BlobError> {
+        let at = self.clone();
         let count = self.count(4)?;
+        if count > limit {
+            return at.malformed(MalformedFault::ArityTooLarge);
+        }
+        let offset = self.base.saturating_add(self.position);
         // `count * 4` cannot overflow: `count` already passed the same product against the input.
-        Ok(U32List(self.take(count * 4)?))
+        Ok(U32List {
+            bytes: self.take(count * 4)?,
+            offset,
+        })
     }
 
     /// A tag byte that must be `0` or `1`.

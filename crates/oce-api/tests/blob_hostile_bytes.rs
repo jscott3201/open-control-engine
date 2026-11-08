@@ -472,3 +472,66 @@ fn every_list_out_of_canonical_order_is_refused() {
         );
     }
 }
+
+#[test]
+fn structural_refusals_name_the_offset_of_the_offending_byte() {
+    let bytes = golden(WORKED);
+    // Invalid UTF-8: the second byte of the class path (its bytes start at 0x44).
+    let mut utf8 = bytes.clone();
+    utf8[0x45] = 0xff;
+    rechecksum(&mut utf8);
+    assert_eq!(malformed(&utf8), (0x45, MalformedFault::InvalidUtf8));
+    // An invalid tag: block 0's kind byte (after its 4-byte class index at 0x72).
+    let mut tag = bytes.clone();
+    tag[0x76] = 7;
+    rechecksum(&mut tag);
+    assert_eq!(malformed(&tag), (0x76, MalformedFault::InvalidTag));
+    // Trailing bytes: one byte after the connection section's records, which end at 0xbd.
+    let mut image = image_of(&bytes);
+    image.section_tail[3] = vec![0];
+    assert_eq!(
+        malformed(&image.to_bytes()),
+        (0xbd, MalformedFault::TrailingBytes)
+    );
+
+    // A fan-out target out of order names that target, not the input record.
+    let (_, rich) = rich();
+    let mut image = image_of(&rich);
+    let fan = image
+        .inputs
+        .iter()
+        .position(|i| i.targets.len() >= 2)
+        .unwrap();
+    image.inputs[fan].targets.swap(0, 1);
+    let sections = image.sections();
+    let mut offset = HEADER_BYTES + 8 * 5;
+    offset += sections[..4].iter().map(Vec::len).sum::<usize>();
+    offset += 4; // input count
+    for input in &image.inputs[..fan] {
+        offset += 4 + input.path.len() + 1 + 1 + 1 + 4 + 4 * input.targets.len() + 4;
+        offset += [&input.min, &input.max]
+            .iter()
+            .filter(|bound| bound.is_some())
+            .count()
+            * 9;
+        offset += input.payload.len();
+    }
+    let record = &image.inputs[fan];
+    assert!(matches!(
+        record.vtype,
+        VType::Real | VType::Integer | VType::Boolean
+    ));
+    let bounds = [&record.min, &record.max]
+        .iter()
+        .filter(|b| b.is_some())
+        .count()
+        * 9;
+    let second_target = offset + 4 + record.path.len() + 1 + 2 + bounds + 4 + 4;
+    assert_eq!(
+        malformed(&image.to_bytes()),
+        (
+            u32::try_from(second_target).unwrap(),
+            MalformedFault::NotCanonical
+        )
+    );
+}

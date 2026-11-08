@@ -50,9 +50,13 @@ and a gate that accepted any text would restore exactly the false assurance desc
   trailer; no run state and no architecture field. The decoder refuses with a typed `BlobError` —
   never a panic — in a documented order, bounds every count against the remaining bytes before
   allocating, re-instantiates each block from its own registry, checks arity, kind, state layout,
-  connection types and directions, the I/O table, emit-before under its own `feeds_through`,
-  `MAX_STATE_WORDS` and each block's initial-state CRC, and allocates exactly what its module
-  documentation lists (pinned per fixture). `oce-blocks` gains `class_signature_hash` (FNV-1a-64
+  connection types and directions, the I/O table (finite, uncrossed bounds), emit-before under its
+  own `feeds_through`, `MAX_STATE_WORDS` and each block's initial-state CRC, and allocates exactly
+  what its module documentation lists (pinned per fixture). A port list longer than any class
+  resolves (the new `oce_blocks::MAX_RESOLVED_ARITY`, twice `MAX_RESOLVED_PORT_WIDTH`) is refused
+  before anything is sized by it, and connector ownership costs 8 bytes per id until every arity is
+  checked, so peak memory is linear in the blob: a hostile million-id port list is refused at 2.0×
+  the blob length, and the densest accepted blob holds 26.6× (pinned with bounds). `oce-blocks` gains `class_signature_hash` (FNV-1a-64
   over a canonical class record; a derived default's formula text is excluded) and
   `class_is_target_bound`, both on `CatalogEntry`; the 15-class target-bound list moved there from
   `oce-api`, which now reads the flag (snapshot bytes unchanged). `OcError::Blob` and the blob error
@@ -60,9 +64,13 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `crates/oce-api/tests/fixtures/blob/`, re-encode and decode→re-encode byte equality, an
   independent test-side writer, the determinism matrix comparing blob bytes across x86_64/aarch64
   and debug/release, a facade-versus-decoded dual-path test comparing every boundary output and the
-  whole `RunState` after every tick for all 46 fixtures, one typed-refusal test per defect, a
+  whole `RunState` after every tick for all 46 fixtures over about 3.3 hours of model time (with a
+  negative control and per-fixture output-variation floors), one typed-refusal test per defect, a
   10,000-case byte-mutation property test, a §7.17 payload-mutation seam test, and a
-  hostile-parameter fuzz over every registry constructor.
+  hostile-parameter fuzz over every registry constructor. The determinism fan-in also checks each
+  blob artifact's size, and `bash .agents/gate.sh full` writes the artifact as the cells do. The
+  [product contract](docs/product-contract.md) advances to revision 19 with requirement PC-041 for
+  the blob.
 - **`oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` build `no_std + alloc` behind a default
   `std` feature** (GitHub #428, issue #397). Each has `default = ["std"]`, `std = ["alloc", …]` and
   `alloc = []`; `--no-default-features --features alloc` builds it `#![no_std]` on `core` and
