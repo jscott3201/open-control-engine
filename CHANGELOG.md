@@ -511,6 +511,30 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### CI and infrastructure
 
+- **Two per-PR lanes under one `CI OK`, and `gate (light)` only when the gate changes** (GitHub
+  #418, issue #393). A new first job in `pr-gate.yml`, `classify changed paths`, lists the PR's
+  changes with plain git (the tested merge against its base parent, renames as a deletion plus an
+  addition) and classifies them with `scripts/ci/classify-changes.sh`. The rules fail closed: any
+  path that is not documentation or under `crates/leverage/` runs the **determinism lane** — every
+  job that compiles the engine — and documentation a test reads (`README.md`,
+  `docs/cxf-composite-subset.md`) is not documentation for this purpose, with a fixture that scans
+  the crates for such reads. `crates/leverage/**` runs the new `leverage lane` job (layout and
+  `oce-api`-only dependency rule via `cargo tree`, then fmt, clippy, rustdoc, nextest and
+  cargo-machete per leverage crate; none exist yet, so it prints `no leverage crates yet`), and
+  every engine change runs it too. A docs-only PR compiles nothing. `gate (light)`, which re-ran
+  what the other jobs had run (17m28s), now runs only when `.agents/gate.sh`, a CI or repository
+  script, a workflow or `.config/` changes, and such a change runs every job; its facade-contract
+  and Quickstart steps move to a `facade contract and Quickstart` job in the determinism lane and
+  the gate-script coverage checks to `gate behavior fixtures`. `CI OK` now runs
+  `scripts/ci/ci_ok.py`, which accepts a `skipped` job only when the classifier's output for its
+  lane was `false` and fails on any other skip, failure, cancellation or inconsistent
+  classification, with hostile controls. `check-workflow-gates.sh` requires every `pr-gate.yml`
+  job-level `if:` to be a lane filter that `CI OK`'s lane map lists, pins each named job to its
+  lane, and fails when the result check or a classifier output is removed, with a fixture for each.
+  `crates/leverage/` is created with its rule, the workspace members become `crates/oce-*` and
+  `crates/leverage/*`, the unsafe-forbid layer check covers leverage crates, and
+  `bash .agents/gate.sh leverage` mirrors a leverage-only PR.
+
 - **The determinism and strict-bit matrices run on native arm64 runners, and the digest-bound
   strict-bit receipt is retired** (GitHub #392). `determinism-matrix` and `strict-bit-matrix` in
   `pr-gate.yml` are now four native cells each — x86_64 on `ubuntu-latest`, aarch64 on
