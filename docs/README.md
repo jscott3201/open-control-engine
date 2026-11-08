@@ -26,6 +26,16 @@ front door; these pages are the detail behind it.
 | [Facade migration](facade-migration.md) | Frame-only execution migration, removed pre-release names, Warning-only diagnostics and preserved host boundaries |
 | [Package, feature, and publication policy](package-publication-policy.md) | Which of all 17 workspace packages are supported or private, which `oce-api` feature selections are supported, and which 12 packages are eligible for a future release, with the [machine-checked ledger](package-publication-ledger.json) |
 
+## Design notes
+
+`docs/design/` holds one-page design notes, written and reviewed as a draft PR before a thinly
+specified work item is built. A note records the decisions, the rejected alternatives and the
+questions its reviewer ruled on; the contracts above remain the authority for shipped behavior.
+
+| Note | Decides |
+| --- | --- |
+| [Compiled-schedule blob (OCEB)](design/compiled-schedule-blob.md) | The byte format a `std` host emits after load and a `no_std` target decodes and executes: layout, class signature hash, integrity, versioning and size budget |
+
 ## Elsewhere in the repository
 
 | Document | Purpose |

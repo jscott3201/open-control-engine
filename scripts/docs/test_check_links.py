@@ -95,6 +95,18 @@ class GeneratedNavigationTests(unittest.TestCase):
             self.assertEqual(summary.splitlines().count(chapter), 1)
             self.assertTrue((staged / "src" / "docs" / "stability-baseline.md").is_file())
 
+    def test_staged_navigation_includes_design_notes_exactly_once(self) -> None:
+        """A design note under docs/design/ is staged and reachable through one chapter."""
+
+        with tempfile.TemporaryDirectory() as temporary:
+            staged, _, _ = docs_stage.stage_book(Path(temporary) / "book", "a" * 40)
+
+            summary = (staged / "src" / "SUMMARY.md").read_text(encoding="utf-8")
+            chapter = "- [Compiled-schedule blob (OCEB)](docs/design/compiled-schedule-blob.md)"
+            self.assertEqual(summary.splitlines().count(chapter), 1)
+            self.assertEqual(summary.count("(docs/design/compiled-schedule-blob.md)"), 1)
+            self.assertTrue((staged / "src" / "docs" / "design" / "compiled-schedule-blob.md").is_file())
+
     def test_staged_navigation_includes_public_surface_authority(self) -> None:
         """The contract is a chapter and its machine-readable ledger is an asset."""
 

@@ -213,6 +213,10 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 - [CI and the gate](docs/ci-and-the-gate.md)
 - [Benchmarks](docs/benchmarks.md)
 - [Stability baseline](docs/stability-baseline.md)
+
+# Design notes
+
+- [Compiled-schedule blob (OCEB)](docs/design/compiled-schedule-blob.md)
 """
     (source / "SUMMARY.md").write_text(summary, encoding="utf-8")
 
