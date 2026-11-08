@@ -3,8 +3,10 @@
 # seeded advisory ignores, garbled workflow input, actions referenced by a movable tag, a per-PR
 # gate that re-runs on pushes to development, a cell matrix that is no longer native on both
 # architectures (or loses a cell, a fan-in or a comparison), and a lane filter that loses its CI OK
-# result check, its `changes` outputs or its lane map, or lets a job skip on the wrong lane, fail
-# closed.
+# result check, its `changes` outputs or its lane map, or lets a job skip on the wrong lane, a
+# `continue-on-error` or a step-level `if:` that is not a static matrix selector, and a macOS or
+# Windows platform cell that loses its runner, its lane, its comparison or its strict-bit exclusion,
+# fail closed.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -170,6 +172,10 @@ jobs:
           --workspace-remap . --profile ci --no-tests=fail --run-ignored only
           -E 'test(=matrix::native_linux_matrix_is_complete_and_exact)'
       - run: test -s target/strict-bits/receipt-candidate.json
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@0123456789abcdef0123456789abcdef01234567 # v7
+        with:
+          name: strict-bit-matrix
   determinism-matrix:
     needs: changes
     if: needs.changes.outputs.core == 'true'
@@ -243,6 +249,52 @@ jobs:
           cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/oce-api-lib.tar.zst" \
             --workspace-remap . --profile ci --no-tests=fail \
             -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
+  portable-snapshot-macos:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    runs-on: macos-15
+    steps:
+      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
+        with:
+          tool: nextest@0.9.143
+      - run: test "$(uname -s)-$(uname -m)" = Darwin-arm64
+      - env:
+          OCE_PORTABLE_STATE_OUT: target/portable-state-debug.bin
+          OCE_TARGET_STATE_OUT: target/target-state-debug.bin
+        run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
+      - run: |
+          test -s target/nextest/ci/junit.xml
+          test -s target/portable-state-debug.bin
+          test -s target/target-state-debug.bin
+      - uses: actions/upload-artifact@0123456789abcdef0123456789abcdef01234567 # v7
+        with:
+          name: platform-snapshot-macos-arm64-debug
+          path: target/platform-snapshot/
+          if-no-files-found: error
+  portable-snapshot-compare:
+    needs: [changes, determinism-matrix, portable-snapshot-macos]
+    if: needs.changes.outputs.core == 'true'
+    steps:
+      - run: |
+          cmp linux-x86_64/portable-state-debug.bin macos-arm64/portable-state-debug.bin
+          for linux in linux-x86_64 linux-aarch64; do
+            if cmp -s "$linux/target-state-debug.bin" macos-arm64/target-state-debug.bin; then
+              exit 1
+            fi
+          done
+  std-build-windows:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
+        with:
+          tool: nextest@0.9.143
+      - run: cargo build --workspace --locked
+      - run: >-
+          cargo nextest run --workspace --locked --profile ci --no-tests=fail
+          -E 'not (binary_id(oce-conformance::strict_bits) | binary_id(oce-conformance::per_block_reals_transcendental) | binary_id(oce-conformance::per_block_reals_sources_transcendental) | binary_id(oce-conformance::per_block_psychrometrics) | binary_id(oce-conformance::per_block_utilities))'
+      - run: test -s target/nextest/ci/junit.xml
   crate-tests:
     needs: changes
     if: needs.changes.outputs.core == 'true'
@@ -297,6 +349,9 @@ jobs:
       - strict-bit-compare
       - determinism-matrix
       - determinism-compare
+      - portable-snapshot-macos
+      - portable-snapshot-compare
+      - std-build-windows
       - crate-tests
       - docs
     steps:
@@ -308,6 +363,7 @@ jobs:
             default-no-db=core unused-deps=core golden-gen-firewall=core
             strict-bit-matrix=core strict-bit-compare=core
             determinism-matrix=core determinism-compare=core crate-tests=core
+            portable-snapshot-macos=core portable-snapshot-compare=core std-build-windows=core
         run: python3 scripts/ci/ci_ok.py
 EOF
   cat > "$dir/docs-pages.yml" <<'EOF'
@@ -1102,6 +1158,78 @@ remove_crate_lib_files() {
   rm -f "$crates_dir"/*/src/lib.rs
 }
 
+# Platform cells (issue #394) and the #418-review hardening: no continue-on-error anywhere, and no
+# step-level if: beyond a static matrix selector or !cancelled().
+job_continue_on_error() {
+  edit_pr_gate "$1" 's/^  std-build-windows:$/  std-build-windows:\n    continue-on-error: true/'
+}
+
+step_continue_on_error() {
+  edit_pr_gate "$1" '/^  std-build-windows:$/,/^  [^ ]/ s/^      - run: cargo build --workspace --locked$/&\n        continue-on-error: true/'
+}
+
+step_condition_on_lane_output() {
+  edit_pr_gate "$1" \
+    "s/^      - run: bash scripts\/ci\/test-classify-changes.sh$/      - if: needs.changes.outputs.core == 'true'\n        run: bash scripts\/ci\/test-classify-changes.sh/"
+}
+
+step_condition_false() {
+  edit_pr_gate "$1" \
+    '/^  build:$/,/^  [^ ]/ s/^      - run: cargo build --workspace --locked$/      - if: false\n        run: cargo build --workspace --locked/'
+}
+
+step_condition_on_event() {
+  edit_pr_gate "$1" \
+    "s/^      - run: cargo clippy --workspace/      - if: \${{ github.event_name != 'pull_request' }}\n        run: cargo clippy --workspace/"
+}
+
+matrix_selector_widened_by_or() {
+  edit_pr_gate "$1" \
+    "s/^      - if: matrix.codegen == 'debug'$/      - if: matrix.codegen == 'debug' || github.event_name == 'schedule'/"
+}
+
+macos_on_intel_runner() {
+  edit_pr_gate "$1" 's/^    runs-on: macos-15$/    runs-on: macos-13/'
+}
+
+macos_on_leverage_lane() {
+  edit_pr_gate "$1" \
+    -e '/^  portable-snapshot-macos:$/,/^    if:/ s/outputs.core/outputs.leverage/' \
+    -e 's/portable-snapshot-macos=core/portable-snapshot-macos=leverage/'
+}
+
+macos_out_of_ci_ok() {
+  edit_pr_gate "$1" '/^      - portable-snapshot-macos$/d'
+}
+
+compare_without_macos_cell() {
+  edit_pr_gate "$1" 's/needs: \[changes, determinism-matrix, portable-snapshot-macos\]/needs: [changes, determinism-matrix]/'
+}
+
+macos_target_bound_difference_unchecked() {
+  edit_pr_gate "$1" '/if cmp -s "\$linux\/target-state-debug.bin" macos-arm64\/target-state-debug.bin; then/d'
+}
+
+macos_portable_comparison_dropped() {
+  edit_pr_gate "$1" '/^          cmp linux-x86_64\/portable-state-debug.bin macos-arm64\/portable-state-debug.bin$/d'
+}
+
+windows_strict_exclusion_dropped() {
+  edit_pr_gate "$1" "/^          -E 'not (binary_id(oce-conformance::strict_bits)/d"
+}
+
+windows_excludes_whole_conformance_crate() {
+  edit_pr_gate "$1" "s/^          -E 'not (binary_id(oce-conformance::strict_bits).*/          -E 'not package(oce-conformance)'/"
+}
+
+windows_on_linux_runner() {
+  edit_pr_gate "$1" 's/^    runs-on: windows-latest$/    runs-on: ubuntu-latest/'
+}
+
+windows_out_of_lane_map() {
+  edit_pr_gate "$1" 's/ std-build-windows=core$//'
+}
+
 remove_crates_dir() {
   _dir="$1"
   _deny="$2"
@@ -1264,5 +1392,38 @@ run_case missing-crate-lib-files fail remove_crate_lib_files \
   "no crate src/lib.rs files found under"
 run_case missing-crates-dir fail remove_crates_dir \
   "crates directory is missing"
+
+run_case job-continue-on-error fail job_continue_on_error \
+  "contains a refused gate pattern: continue-on-error"
+run_case step-continue-on-error fail step_continue_on_error \
+  "contains a refused gate pattern: continue-on-error"
+run_case step-condition-on-lane-output fail step_condition_on_lane_output \
+  "gate-fixtures: needs.changes.outputs.core == 'true'"
+run_case step-condition-false fail step_condition_false \
+  "has a step-level if: other than a matrix selector or !cancelled()"
+run_case step-condition-on-event fail step_condition_on_event \
+  "clippy: \${{ github.event_name != 'pull_request' }}"
+run_case matrix-selector-widened-by-or fail matrix_selector_widened_by_or \
+  "determinism-matrix: matrix.codegen == 'debug' || github.event_name == 'schedule'"
+run_case macos-on-intel-runner fail macos_on_intel_runner \
+  "the macOS portable-snapshot cell runs on macos-15"
+run_case macos-on-leverage-lane fail macos_on_leverage_lane \
+  "job portable-snapshot-macos runs on lane leverage, not core"
+run_case macos-out-of-ci-ok fail macos_out_of_ci_ok \
+  "pr-gate.yml CI OK needs does not match the workflow's jobs"
+run_case compare-without-macos-cell fail compare_without_macos_cell \
+  "job portable-snapshot-compare does not need portable-snapshot-macos"
+run_case macos-target-bound-difference-unchecked fail macos_target_bound_difference_unchecked \
+  "require the macOS target-bound state bytes to differ from Linux"
+run_case macos-portable-comparison-dropped fail macos_portable_comparison_dropped \
+  "compare the macOS portable state bytes with Linux x86_64"
+run_case windows-strict-exclusion-dropped fail windows_strict_exclusion_dropped \
+  "the Windows cell excludes exactly the strict-bit binaries"
+run_case windows-excludes-whole-conformance-crate fail windows_excludes_whole_conformance_crate \
+  "the Windows cell excludes exactly the strict-bit binaries"
+run_case windows-on-linux-runner fail windows_on_linux_runner \
+  "the Windows cell runs on windows-latest"
+run_case windows-out-of-lane-map fail windows_out_of_lane_map \
+  "CI OK JOB_LANES does not match the lane-filtered jobs' if: lines"
 
 echo "OK: workflow gate fixtures passed."
