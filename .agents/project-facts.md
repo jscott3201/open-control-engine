@@ -38,8 +38,9 @@ change casually: `.github/workflows/ci.yml`, `.config/nextest.toml`, and `.agent
 editing any of them makes `retained_native_linux_evidence_is_complete_exact_and_source_bound` fail
 until a new native receipt is admitted. **Since 2026-11-08 the receipt is `recapture-pending` for
 the M1 refactor window** (GitHub #387): the test skips only its source-digest comparison and prints
-`RECAPTURE_PENDING:` with the drifted paths; every numerical and hostile check still runs. GitHub
-#404 re-captures and sets `status` back to `admitted`. Check
+`RECAPTURE_PENDING:` with the drifted paths; every numerical and hostile check still runs. The
+window closes when GitHub #392 retires the digest binding, with GitHub #404 as the milestone
+closeout. Check
 [`docs/strict-bit-evidence.md`](../docs/strict-bit-evidence.md) for the current status before
 relying on either behaviour.
 

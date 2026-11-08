@@ -8,9 +8,10 @@ M1 refactor window deliberately changes bound sources (`Cargo.toml`, `Cargo.lock
 checker itself), so [`receipts.json`](../crates/oce-conformance/tests/fixtures/strict_bits/receipts.json)
 carries `"status": "recapture-pending"` and a `pending` record (reason, since, opening issue
 GitHub #387, closing issue GitHub #404, and the `matrix.json` SHA-256 of the receipt it
-supersedes). [GitHub #404](https://github.com/jscott3201/open-control-engine/issues/404) closes the
-window: one native re-capture at the end of M1b, admitted data-only with `status` back to
-`admitted`.
+supersedes). The window closes when
+[GitHub #392](https://github.com/jscott3201/open-control-engine/issues/392) retires the digest
+binding, with [GitHub #404](https://github.com/jscott3201/open-control-engine/issues/404) as the
+M1 milestone closeout.
 
 While pending, `retained_native_linux_evidence_is_complete_exact_and_source_bound` still checks
 the eight retained captures' numbers, topology, first/repeat byte identity, reference/input
@@ -21,7 +22,7 @@ rerun it with its output shown). The per-PR eight-capture comparison, repeat-cap
 every hostile control run unchanged. A pending status cannot admit evidence: the admission path
 refuses it, and admission still needs `status: admitted` plus exact digests
 (`recapture_pending_status_cannot_admit_even_with_exact_source_digests`). The bounded claim below
-describes the receipt as admitted; until GitHub #404 lands, its source-boundary sentence is
+describes the receipt as admitted; until GitHub #392 lands, its source-boundary sentence is
 suspended, not current.
 
 ## Status and claim boundary

@@ -7,6 +7,9 @@ Tier-A goldens and all original captures remain unchanged.
 
 ## Current qualification
 
+**Check `status` in `receipts.json` first:** while it is `recapture-pending`, the receipt below is
+not source-bound (see [the status section](../../../../../docs/strict-bit-evidence.md)).
+
 `qualified-linux/` retains the eight canonical native captures from Actions run **37382761120**:
 Linux x86_64/aarch64 × debug/release × first/repeat. Each contains all 21 signals and 161
 samples, plus the reviewed **35-file selected source map**; there are zero mismatches and every
