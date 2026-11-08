@@ -171,6 +171,20 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
+- **Design note for the structural diff (`oce-diff`)** (GitHub #447, issue #437).
+  `docs/design/diff.md` fixes, before any code, how two revisions of an authoring model are
+  compared: the authored block name is the identity, a class change is a removal plus an addition,
+  and a bounded, deterministic rename pass (class and bit-exact parameters as hard gates,
+  neighbourhood agreement, mutual-unique acceptance, `exact` or `high` confidence, caps of 2,048
+  blocks per side and 65,536 pairs) reports renames without ever affecting `graph_equal`. It
+  defines the closed change categories, a parameters section that keeps site retunes apart from
+  graph edits, the schema-versioned serde `Diff` with its text and Markdown renderings, the thin
+  CXF adapter over `Topology`, same-or-different blob comparison, and `oce diff` exit codes under
+  the one `oce` CLI rule (0 yes, 1 no, 2 error). Three worked examples (a site retune; added,
+  removed and rewired blocks with one rename; a wholesale rename the diff cannot fully match) show
+  the JSON and text output. `docs/design/authoring-layer.md`'s CLI exit codes are aligned with the
+  same rule (a parse refusal and an I/O failure exit 2, no exit 3), with a dated review ruling. The
+  note is registered in `docs/README.md` and the book.
 - **Design note for the commissioning verifier (CDL §12)** (GitHub #446, issue #436).
   `docs/design/commissioning.md` fixes, before any code, the tolerance mode of `oce-verify`: a
   strict-JSON superset of CDL §12.7 Listing 12.1 (LBL specs load unchanged, comments stripped),
