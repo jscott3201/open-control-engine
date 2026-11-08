@@ -248,6 +248,8 @@ re-cut safely (see [release.yml](../.github/workflows/release.yml), `verify` job
 separate manual `workflow_dispatch` into the `release` GitHub Environment. Cargo's workspace
 selection includes the 12 publishable members and skips the five members with `publish = false`:
 `oce-bless`, `oce-conformance`, `oce-docs`, `oce-extension` and `oce-reference-wal-adapter`.
+No checked-in record pins those sets any more: the guards are each crate's `publish` flag, the
+byte pin on `release.yml` (whose comment names the split) and review.
 
 ### The package validator
 

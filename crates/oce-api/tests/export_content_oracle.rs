@@ -137,3 +137,69 @@ fn every_g36_export_matches_the_recorded_content_expectation() {
         "exported bytes or completeness state moved against the recorded expectation"
     );
 }
+
+/// Swept documents whose export mints a complete content identity (34 of 47). Changing either
+/// count is a review event, not a test to re-bless.
+const COMPLETE_EXPORTS: usize = 34;
+/// Exports withheld from a complete content identity by deferral warnings.
+const INCOMPLETE_EXPORTS: usize = 13;
+
+#[test]
+fn complete_exports_mint_the_digest_of_their_bytes_and_partial_exports_refuse() {
+    // Independent of the checked-in expectation file: the property holds for whatever the
+    // engine exports, and the split is pinned so a fixture changing class shows up in review.
+    let (mut complete, mut incomplete) = (0, 0);
+    for fixture in corpus_fixtures() {
+        let stem = fixture
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .expect("UTF-8 stem");
+        let bytes = fs::read(&fixture).expect("read swept CXF fixture");
+        let mut engine = Engine::in_memory();
+        engine
+            .load_cxf(&bytes)
+            .unwrap_or_else(|error| panic!("{stem} loads: {error:?}"));
+        let export = engine
+            .export_cxf()
+            .unwrap_or_else(|error| panic!("{stem} exports: {error:?}"));
+        let again = engine.export_cxf().expect("second export");
+        assert_eq!(export.bytes, again.bytes, "{stem}: export bytes repeat");
+        match export.content_id_complete() {
+            Ok(id) => {
+                assert!(
+                    export.warnings.is_empty(),
+                    "{stem}: complete export has no deferrals"
+                );
+                assert_eq!(
+                    id,
+                    format!("cxf:fnv1a128:{}", fnv1a128_hex(&export.bytes)),
+                    "{stem}"
+                );
+                assert_eq!(
+                    again.content_id_complete().expect("repeat id"),
+                    id,
+                    "{stem}"
+                );
+                complete += 1;
+            }
+            Err(ContentIdError::Incomplete { warning_count, .. }) => {
+                assert!(
+                    warning_count > 0,
+                    "{stem}: refusal names at least one deferral"
+                );
+                assert_eq!(
+                    warning_count,
+                    export.warnings.len(),
+                    "{stem}: refusal counts every deferral"
+                );
+                incomplete += 1;
+            }
+            Err(other) => panic!("{stem}: unexpected content-id error {other:?}"),
+        }
+    }
+    assert_eq!(
+        (complete, incomplete),
+        (COMPLETE_EXPORTS, INCOMPLETE_EXPORTS),
+        "complete/incomplete export split moved"
+    );
+}
