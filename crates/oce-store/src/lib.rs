@@ -1,7 +1,8 @@
 #![forbid(unsafe_code)]
-//! `oce-store` — **THE SEAM** (FRAME D-OWNER-1). The database-free storage ports the Open Control
-//! Engine reaches a durable/queryable backend through (`06-storage-abstraction-and-selene-adapter.md`
-//! Part 1).
+//! `oce-store` — **THE SEAM** (FRAME D-OWNER-1). The database-free storage ports a host uses to
+//! reach a durable/queryable backend (`06-storage-abstraction-and-selene-adapter.md` Part 1). The
+//! engine never calls them: `oce-api` does not depend on this crate, and a host persists the
+//! plain-data `LoadedModel` a load returns through these ports itself.
 //!
 //! This crate defines three object-safe port traits — [`ModelStore`], [`PointStore`],
 //! [`SemanticStore`] — an umbrella [`Store`] trait, the plain-Rust DTOs they exchange, and a
@@ -260,7 +261,7 @@ pub trait ModelStore: Send + Sync {
     /// Returns [`StoreError`] if the write fails or is rejected at commit.
     fn save_model(&self, model: &ResolvedModel) -> StoreResult<()>;
 
-    /// Load a previously saved model by id (e.g. on engine recovery).
+    /// Load a previously saved model by id (e.g. when the host recovers after a restart).
     ///
     /// # Errors
     /// Returns [`StoreError::ModelNotLoaded`] / [`StoreError::Backend`] on failure.
@@ -397,7 +398,6 @@ pub trait Durable: Send + Sync {
     fn recover(&self) -> StoreResult<()>;
 }
 
-/// The umbrella the engine is generic over. A backend implements all three ports + the durability
-/// hooks; the blanket impl makes any type satisfying the parts a `Store` automatically.
+/// The umbrella a host-side backend implements: all three ports + the durability hooks; the blanket impl makes any type satisfying the parts a `Store` automatically.
 pub trait Store: ModelStore + PointStore + SemanticStore + Durable + Send + Sync {}
 impl<T> Store for T where T: ModelStore + PointStore + SemanticStore + Durable + Send + Sync {}

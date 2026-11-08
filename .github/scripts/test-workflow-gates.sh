@@ -115,8 +115,7 @@ jobs:
           tool: nextest@0.9.143
       - run: rm -f target/nextest/ci/junit.xml
       - run: >-
-          cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf
-          --locked --profile ci --no-tests=fail
+          cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf --locked --profile ci --no-tests=fail
       - run: test -s target/nextest/ci/junit.xml
   docs:
     steps:
@@ -660,7 +659,15 @@ unpin_action() {
 remove_crate_suite() {
   dir="$1"
   _deny="$2"
-  sed 's/ -p oce-model -p oce-cxf$/ -p oce-model/' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  sed 's/ -p oce-model -p oce-cxf --locked/ -p oce-model --locked/' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+allow_zero_crate_suite_tests() {
+  dir="$1"
+  _deny="$2"
+  sed 's/ -p oce-cxf --locked --profile ci --no-tests=fail$/ -p oce-cxf --locked --profile ci/' \
+    "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
   mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
@@ -782,6 +789,8 @@ run_case tag-referenced-action fail unpin_action \
   "uses an action not pinned to a full commit SHA"
 run_case missing-cxf-crate-suite fail remove_crate_suite \
   "run the oce-graph, oce-validate, oce-model and oce-cxf suites per PR"
+run_case crate-suite-allows-zero-tests fail allow_zero_crate_suite_tests \
+  "run the oce-graph, oce-validate, oce-model and oce-cxf suites per PR and hard-fail on zero tests"
 run_case missing-docs-link-check fail remove_docs_link_check \
   "check generated internal links and anchors"
 run_case missing-docs-checker-contracts fail remove_docs_checker_contracts \

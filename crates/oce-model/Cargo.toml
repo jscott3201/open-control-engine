@@ -13,5 +13,7 @@ homepage.workspace = true
 workspace = true
 
 [dependencies]
-# Derives only, for the resolved-model DTOs a host serializes; no codec is linked here.
+# For the resolved-model DTOs' serde derives; no codec is linked here. This currently inherits the
+# workspace entry's default (std) features plus `derive` and `rc`; #397 flips it to
+# `default-features = false, features = ["derive", "alloc"]`.
 serde = { workspace = true }

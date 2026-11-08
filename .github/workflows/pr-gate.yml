@@ -339,8 +339,7 @@ jobs:
         run: rm -f target/nextest/ci/junit.xml
       - name: cargo nextest crate suites (x86_64 debug)
         run: >-
-          cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf
-          --locked --profile ci --no-tests=fail
+          cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf --locked --profile ci --no-tests=fail
       - name: Require the nextest JUnit report
         run: test -s target/nextest/ci/junit.xml
 
