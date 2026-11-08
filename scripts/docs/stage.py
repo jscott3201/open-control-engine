@@ -214,6 +214,7 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 # Design notes
 
 - [Compiled-schedule blob (OCEB)](docs/design/compiled-schedule-blob.md)
+- [Authoring layer (M2)](docs/design/authoring-layer.md)
 """
     (source / "SUMMARY.md").write_text(summary, encoding="utf-8")
 
