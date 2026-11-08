@@ -192,6 +192,29 @@ projection and state-format goldens are byte-identical to the pre-M1a `developme
   `check-default-no-db.sh`, the package validator and the release-workflow byte pin follow the
   new member set.
 
+### Execution core
+
+- **`oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` build `no_std + alloc` behind a default
+  `std` feature** (GitHub #428, issue #397). Each has `default = ["std"]`, `std = ["alloc", …]` and
+  `alloc = []`; `--no-default-features --features alloc` builds it `#![no_std]` on `core` and
+  `alloc` alone, and a build with neither feature is refused by a `compile_error!`. The default
+  build is unchanged: goldens, the cross-architecture portable snapshot and the allocation census
+  are byte-identical. Errors derive `core::error::Error` through `thiserror` with its default
+  features off. The workspace `serde` and `thiserror` entries drop their default features (each std
+  crate names `std`, and `rc` for `serde`, itself), and the four crates' workspace entries carry
+  `default-features = false`, so every std crate that depends on one names `features = ["std"]`.
+  `f64::{floor, ceil, trunc, round, sqrt}` are not in `core` on Rust 1.97: every call in the four
+  goes through `libm` in all builds — exact IEEE 754 operations, checked against the `std` methods
+  bit for bit over boundary values and a 2^20 bit-pattern sweep (`oce-blocks/tests/libm_std_parity.rs`)
+  — and `f64::rem_euclid` through a helper that evaluates the standard library's own expression.
+  `oce-expr` now depends on `libm`. Two differences without `std`: `oce_blocks::catalog()` is absent
+  (its cache is a `OnceLock`), and `oce-expr`'s evaluation-fuel meter is one program-wide slot built
+  from `core` atomics instead of a thread-local, so a `no_std` host evaluates from one execution
+  context at a time. A `no-std-build` job in the determinism lane of `pr-gate.yml` builds the four
+  for `thumbv7em-none-eabihf` and `wasm32-unknown-unknown`, runs clippy `-D warnings` on the first
+  and the `oce-expr` unit suite without `std`; `.agents/gate.sh` runs the same commands and fails
+  with the `rustup target add` command when a target is missing.
+
 ### CXF import and export
 
 - **Modeled `S231:` properties are read in every JSON-LD key spelling** (GitHub #386, issue
