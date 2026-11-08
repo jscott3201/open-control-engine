@@ -116,6 +116,16 @@ workspace entries carry `default-features = false`. The `no-std-build` job in `p
 installs nothing, so add both targets once with `rustup target add`. See
 [the architecture](../docs/architecture.md#no_std--alloc-the-core-four).
 
+The core four use no hash collections at all: use `BTreeMap`, `BTreeSet`, `BinaryHeap` or a sorted
+`Vec` (issue #398). Two things enforce this. The `clippy.toml` `disallowed-types` block refuses
+`std`'s hash types; it is allowed workspace-wide and denied in each core crate root, so the `std`
+crates keep their lookup maps. `crates/oce-api/tests/core_crates_hash_free.rs` also refuses
+`hashbrown`, `ahash`, `indexmap` and similar crates, and checks that the lint wiring is still in
+place. Outside the core, `clippy::iter_over_hash_type` is denied workspace-wide, so a `for` loop
+over a `HashMap`/`HashSet` needs an `#[expect]` with a reason. The order-leak test is
+`crates/oce-api/tests/hash_order_independence.rs`: it runs the G36 corpus on 20 independently
+seeded threads and byte-compares every output.
+
 ## golden-gen hygiene is CI-only for now
 
 `tools/golden-gen` is its own cargo workspace, so the workspace fmt, clippy and test commands
