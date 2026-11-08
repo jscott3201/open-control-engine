@@ -206,11 +206,21 @@ fn unescape(field: &str) -> Result<String, String> {
             Some('n') => out.push('\n'),
             Some('r') => out.push('\r'),
             Some('x') => {
+                // Strict: two lowercase hex digits naming a control character the writer escapes
+                // this way (below 0x20 other than tab, newline and carriage return, or 0x7f).
                 let hex: String = chars.by_ref().take(2).collect();
                 let code = u8::from_str_radix(&hex, 16)
                     .ok()
-                    .filter(|_| hex.len() == 2 && hex.bytes().all(|b| b.is_ascii_hexdigit()))
+                    .filter(|_| {
+                        hex.len() == 2
+                            && hex.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+                    })
                     .ok_or("a malformed \\x escape")?;
+                if !((code < 0x20 && !matches!(code, b'\t' | b'\n' | b'\r')) || code == 0x7f) {
+                    return Err(format!(
+                        "\\x{hex} escapes a character the writer never escapes"
+                    ));
+                }
                 out.push(char::from(code));
             }
             _ => return Err("an unknown escape".into()),

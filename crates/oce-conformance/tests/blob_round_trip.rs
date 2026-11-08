@@ -115,7 +115,13 @@ fn fixtures() -> Vec<String> {
     let mut names: Vec<String> = std::fs::read_dir(fixture_dir())
         .unwrap_or_else(|error| panic!("read {}: {error}", fixture_dir().display()))
         .filter_map(|entry| {
-            let name = entry.ok()?.file_name().into_string().ok()?;
+            let entry = entry.unwrap_or_else(|error| {
+                panic!("read an entry of {}: {error}", fixture_dir().display())
+            });
+            let name = entry
+                .file_name()
+                .into_string()
+                .unwrap_or_else(|name| panic!("fixture directory entry {name:?} is not UTF-8"));
             name.strip_suffix(".jsonld").map(str::to_owned)
         })
         .filter(|name| name != "member_list_interface")

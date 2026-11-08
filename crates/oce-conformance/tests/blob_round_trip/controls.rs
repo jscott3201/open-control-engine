@@ -250,6 +250,21 @@ fn malformed_trace_files_are_refused_with_their_line() {
         ("an unknown escape", text.replacen("\\t", "\\q", 1), 5),
         ("a short \\x escape", text.replacen("\\x01", "\\x1", 1), 17),
         (
+            "a printable \\x escape",
+            text.replacen("\\x01", "\\x41", 1),
+            17,
+        ),
+        (
+            "an escaped tab as \\x",
+            text.replacen("\\x01", "\\x09", 1),
+            17,
+        ),
+        (
+            "an uppercase \\x escape",
+            text.replacen("\\x7f", "\\x7F", 1),
+            17,
+        ),
+        (
             "a raw control character",
             text.replacen("\\x01", "\u{1}", 1),
             17,
@@ -397,4 +412,130 @@ fn the_mode_is_local_record_or_expect_and_both_variables_at_once_are_refused() {
         Ok(Mode::Expect(absolute))
     );
     assert!(mode_from(Some("a".into()), Some("b".into())).is_err());
+}
+
+/// The first frame of `trace` that emitted a warning.
+fn first_warning_frame(trace: &Trace) -> usize {
+    trace
+        .frames
+        .iter()
+        .position(|frame| !frame.warnings.is_empty())
+        .expect("the fixture emits warnings")
+}
+
+/// The fixture whose Assert blocks warn (12 warnings over the schedule).
+const WARNING: &str = "cooling_only_alarms";
+
+#[test]
+fn a_one_bit_flip_in_a_recorded_warning_time_names_the_frame_the_warning_and_both_times() {
+    let (current, blob) = run(WARNING);
+    let frame = first_warning_frame(&current);
+    let time = current.frames[frame].warnings[0].time;
+    let mut perturbed = current.clone();
+    perturbed.frames[frame].warnings[0].time ^= 1;
+    let recorded =
+        reparse(WARNING, &blob, &perturbed).expect("a perturbed artifact is well formed");
+    let mismatch = trace::compare(WARNING, RECORDED_VS_CURRENT, &recorded.trace, &current)
+        .expect_err("one flipped warning-time bit must fail the comparison");
+    assert_eq!(mismatch.place, Place::Warning { frame, index: 0 });
+    let report = mismatch.to_string();
+    assert!(report.starts_with(&format!(
+        "fixture {WARNING}: frame {frame}, warning 0: recorded "
+    )));
+    assert!(
+        report.contains(&format!("t=0x{:016x}", time ^ 1)),
+        "{report}"
+    );
+    assert!(report.contains(&format!("t=0x{time:016x}")), "{report}");
+}
+
+#[test]
+fn a_changed_recorded_warning_message_names_the_frame_and_both_messages() {
+    let (current, blob) = run(WARNING);
+    let frame = first_warning_frame(&current);
+    let message = current.frames[frame].warnings[0].message.clone();
+    let mut perturbed = current.clone();
+    perturbed.frames[frame].warnings[0].message.push('!');
+    let recorded =
+        reparse(WARNING, &blob, &perturbed).expect("a perturbed artifact is well formed");
+    let mismatch = trace::compare(WARNING, RECORDED_VS_CURRENT, &recorded.trace, &current)
+        .expect_err("a changed warning message must fail the comparison");
+    assert_eq!(mismatch.place, Place::Warning { frame, index: 0 });
+    let report = mismatch.to_string();
+    assert!(
+        report.contains(&format!("{:?}", format!("{message}!"))),
+        "{report}"
+    );
+    assert!(report.contains(&format!("{message:?}")), "{report}");
+}
+
+#[test]
+fn a_removed_recorded_warning_names_the_frame_and_both_warning_counts() {
+    let (current, blob) = run(WARNING);
+    let frame = first_warning_frame(&current);
+    let count = current.frames[frame].warnings.len();
+    let mut perturbed = current.clone();
+    perturbed.frames[frame].warnings.pop();
+    let recorded =
+        reparse(WARNING, &blob, &perturbed).expect("a perturbed artifact is well formed");
+    let mismatch = trace::compare(WARNING, RECORDED_VS_CURRENT, &recorded.trace, &current)
+        .expect_err("a removed warning must fail the comparison");
+    assert_eq!(mismatch.place, Place::WarningCount { frame });
+    assert_eq!(
+        mismatch.to_string(),
+        format!(
+            "fixture {WARNING}: frame {frame}, warning count: recorded {}, current {count}",
+            count - 1
+        )
+    );
+}
+
+#[test]
+fn a_one_bit_flip_in_a_recorded_word_after_load_names_the_word_index() {
+    let (current, blob) = run(VARIED);
+    let index = current.initial_words.len() - 1;
+    let word = current.initial_words[index];
+    let mut perturbed = current.clone();
+    perturbed.initial_words[index] ^= 1;
+    let recorded = reparse(VARIED, &blob, &perturbed).expect("a perturbed artifact is well formed");
+    let mismatch = trace::compare(VARIED, RECORDED_VS_CURRENT, &recorded.trace, &current)
+        .expect_err("one flipped bit after load must fail the comparison");
+    assert_eq!(mismatch.place, Place::InitialWord { index });
+    assert_eq!(
+        mismatch.to_string(),
+        format!(
+            "fixture {VARIED}: after load, state word {index}: recorded 0x{:016x}, current \
+             0x{word:016x}",
+            word ^ 1
+        )
+    );
+}
+
+#[test]
+fn a_signed_zero_or_another_nan_payload_is_a_mismatch_with_both_bit_patterns() {
+    let (recorded, blob) = synthetic();
+    let recorded = reparse("synthetic", &blob, &recorded).expect("the synthetic artifact reads");
+    // Slot 0 records -0.0 and slot 1 a NaN with payload 1; `==` would call the first equal to 0.0
+    // and the second unequal to itself, so only a bit comparison reports both correctly.
+    let cases = [
+        (0, 0.0_f64.to_bits(), 0x8000_0000_0000_0000_u64),
+        (1, 0x7ff8_0000_0000_0000, 0x7ff8_0000_0000_0001),
+    ];
+    for (slot, produced, written) in cases {
+        let mut current = recorded.trace.clone();
+        for frame in &mut current.frames {
+            frame.outputs[slot] = Value::Real(f64::from_bits(produced));
+        }
+        let mismatch = trace::compare("synthetic", RECORDED_VS_CURRENT, &recorded.trace, &current)
+            .expect_err("a different bit pattern must fail the comparison");
+        assert_eq!(mismatch.place, Place::Output { frame: 0, slot });
+        assert_eq!(
+            mismatch.to_string(),
+            format!(
+                "fixture synthetic: frame 0, output slot {slot} ({}): recorded Real \
+                 0x{written:016x}, current Real 0x{produced:016x}",
+                recorded.trace.outputs[slot]
+            )
+        );
+    }
 }
