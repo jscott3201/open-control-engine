@@ -53,7 +53,7 @@ the boundary outputs.
 | 0 | 4 | bytes | Magic `OCEB` (`4f 43 45 42`) |
 | 4 | 2 | `u16` | Format version, `1` |
 | 6 | 2 | `u16` | Execution profile, `1` = HostTick v1 ([execution profile](../execution-profile.md)) |
-| 8 | 6 | `u16`×3 | Encoder engine version: major, minor, patch (`0, 2, 0` today) |
+| 8 | 6 | `u16`×3 | Encoder engine version: major, minor, patch (`0, 3, 0` today) |
 | 14 | 2 | `u16` | Reserved flags, must be 0 |
 | 16 | 4 | `u32` | Total blob length in bytes, header and trailer included |
 | 20 | 32 | bytes | Content id (decision 5) |
@@ -138,13 +138,14 @@ The model is one `CDL.Reals.AddParameter` (`p = 0.0`): boundary input `TRet` dri
 The dump below is printed by the throwaway prototype, which walks the encoded bytes field by field.
 For strings longer than four bytes it shows only the `u32` length prefix; the UTF-8 bytes follow.
 Two fields are placeholders: the class hash (`aa` ×8), because #400 fixes the signature record,
-and the CRC, which covers that placeholder.
+and the CRC, which covers that placeholder. The prototype ran at engine 0.2.0; the dump shows the
+0.3.0 version bytes and the CRC-32C recomputed for them, every other byte unchanged.
 
 ```text
 0000  4f 43 45 42                      magic "OCEB"
 0004  01 00                            format 1
 0006  01 00                            profile 1 (HostTick v1)
-0008  00 00 02 00 00 00                engine 0.2.0
+0008  00 00 03 00 00 00                engine 0.3.0
 000e  00 00                            flags 0
 0010  a2 01 00 00                      total length 418
 0014  fd e5 78 37 69 de fb 04 25 eb 62 b8 87 d9 ee 9a
@@ -177,7 +178,7 @@ and the CRC, which covers that placeholder.
 0135  01 00 00 00                      1 output
 0139  59 00 00 00                      path str "…TCut" (89 bytes)
 0196  01 00 00 00 00 00 00 00          source connector 1, empty payload
-019e  cc bc 5c 40                      CRC-32C (placeholder: covers the placeholder hash)
+019e  ef 93 7f 49                      CRC-32C (placeholder: covers the placeholder hash)
 ```
 
 ## Decisions

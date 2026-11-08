@@ -9,7 +9,7 @@ front door; these pages are the detail behind it.
 | --- | --- |
 | [Product contract](product-contract.md) | Versioned executable-CXF/HostTick requirements, domain-owner delegations, limitations, evidence and explicitly future outcomes |
 | [Authority claims and supersession](authority-claims.md) | The generated cross-domain summary, checked versus review-only boundaries, source-owner update procedure, and non-exhaustive supersession map, from the [index](authority-claims.json) |
-| [Architecture](architecture.md) | How the engine is layered, where the CDL §7.17 seam sits, what each of the 14 crates owns, and the platform and MSRV policy |
+| [Architecture](architecture.md) | How the engine is layered, where the CDL §7.17 seam sits, what each of the 12 crates owns, and the platform and MSRV policy |
 | [Execution profile](execution-profile.md) | Why each host tick is one state transition, and where `CDL.Logical.Pre` differs from Modelica same-time event iteration |
 | [Canonical replay record](replay-record.md) | Bounded per-accepted-frame exact bytes, typed refusals and host-owned ordered replay with separate snapshot sidecars |
 | [Verification and evidence](verification-evidence.md) | What has actually been proven about this engine, what has not, and which checks are deliberately not running |

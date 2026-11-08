@@ -276,7 +276,7 @@ Before claiming tests pass, run `bash .agents/gate.sh full` first-hand and read 
 
 The per-PR gate runs on every PR, drafts included; there is no draft carve-out. The only job-level
 `if:` a `pr-gate.yml` job may carry is its lane filter, and `CI OK` reads any other skip as a
-failure. 
+failure.
 
 **The step-condition rule.** No job or step in `pr-gate.yml` may set `continue-on-error`. A
 step-level `if:` may take exactly two shapes:
@@ -288,9 +288,11 @@ step-level `if:` may take exactly two shapes:
 
 Anything else — a lane output, an event name, `false`, `always()`, `||` — fails
 `check-workflow-gates.sh`, with a failing fixture for each shape. The reason: `CI OK` sees job
-results only, so a step skipped inside a green job would be invisible to it. A PR with no checks still looks a lot like a PR with no failing checks — confirm `CI OK`
-actually reported, and on a docs-only or leverage-only PR expect the determinism jobs to show as
-skipped, not green.
+results only, so a step skipped inside a green job would be invisible to it.
+
+A PR with no checks still looks a lot like a PR with no failing checks — confirm `CI OK` actually
+reported, and on a docs-only or leverage-only PR expect the determinism jobs to show as skipped, not
+green.
 
 ## cargo-deny is not skippable, but advisories do not gate a PR
 
