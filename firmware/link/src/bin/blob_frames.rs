@@ -16,7 +16,7 @@
 //!
 //! The image has no `unsafe` code. The allocator is `linked_list_allocator`'s `LockedHeap`, a
 //! linked-list first fit behind a spin lock on the targets' native atomics, so it needs no critical
-//! section; its arena is a [`static_cell::StaticCell`] that hands out its `&'static mut` once, so
+//! section; its arena is a `static_cell::StaticCell` that hands out its `&'static mut` once, so
 //! giving the allocator its memory is the safe `init_from_slice`. The runtimes' entry macros
 //! generate what the reset vector needs.
 

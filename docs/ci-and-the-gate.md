@@ -195,12 +195,15 @@ report.
 [`.agents/gate.sh`](../.agents/gate.sh) is the only place the gate's command list is written down.
 Every other document in this repo — including this page — points at it rather than restating it,
 because nine divergent prose copies existed before the script was written and two of them were
-materially weaker than CI (see the script's header). There are three invocations:
+materially weaker than CI (see the script's header). There are three gate invocations and two
+focused ones:
 
 ```
 bash .agents/gate.sh            # light    — mirrors the per-PR gate
 bash .agents/gate.sh full       # full     — adds the workspace suite and doctests
 bash .agents/gate.sh leverage   # leverage — mirrors a PR confined to crates/leverage/
+bash .agents/gate.sh nostd      # nostd    — the bare-metal cell alone (light and full run it too)
+bash .agents/gate.sh qemu       # qemu     — the nightly emulation check (needs QEMU installed)
 ```
 
 CI does not merely mirror that script, it **executes** it: the `gate (light)` job at
