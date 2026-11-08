@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Gate-behavior fixtures for check-workflow-gates.sh. The negative fixtures prove missing nextest,
-# seeded advisory ignores, garbled workflow input, and actions referenced by a movable tag fail
-# closed.
+# seeded advisory ignores, garbled workflow input, actions referenced by a movable tag, and a
+# per-PR gate that re-runs on pushes to development fail closed.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -18,6 +18,10 @@ write_positive() {
   crates_dir="$4"
   mkdir -p "$dir"
   cat > "$dir/pr-gate.yml" <<'EOF'
+on:
+  pull_request:
+    branches: [development]
+  workflow_dispatch:
 jobs:
   default-no-db:
     steps:
@@ -518,6 +522,48 @@ omit_release_ci_ok_need() {
   mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
 }
 
+restore_development_push_trigger() {
+  dir="$1"
+  _deny="$2"
+  awk '
+    { print }
+    /^    branches: \[development\]$/ && !done { print "  push:"; print "    branches: [development]"; done = 1 }
+  ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+unfiltered_push_trigger() {
+  dir="$1"
+  _deny="$2"
+  awk '
+    /^  workflow_dispatch:$/ { print "  push:" }
+    { print }
+  ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+flow_list_push_trigger() {
+  dir="$1"
+  _deny="$2"
+  awk '
+    /^on:$/ { print "on: [pull_request, push]"; skip = 1; next }
+    skip && /^  / { next }
+    { skip = 0; print }
+  ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+remove_pull_request_trigger() {
+  dir="$1"
+  _deny="$2"
+  awk '
+    /^  pull_request:$/ { skip = 1; next }
+    skip && /^    / { next }
+    { skip = 0; print }
+  ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
 conditional_gating_job() {
   dir="$1"
   _deny="$2"
@@ -668,6 +714,14 @@ run_case omitted-release-ci-ok-need fail omit_release_ci_ok_need \
   "release-gate.yml CI OK needs does not match the workflow's jobs"
 run_case conditional-gating-job fail conditional_gating_job \
   "gating job has a job-level if: that CI OK would read as failure: unused-deps"
+run_case restored-development-push-trigger fail restore_development_push_trigger \
+  "pr-gate.yml has a push trigger; the per-PR gate must not re-run on merges into development"
+run_case unfiltered-push-trigger fail unfiltered_push_trigger \
+  "pr-gate.yml has a push trigger"
+run_case flow-list-push-trigger fail flow_list_push_trigger \
+  "pr-gate.yml has a push trigger"
+run_case missing-pull-request-trigger fail remove_pull_request_trigger \
+  "pr-gate.yml is missing its pull_request trigger"
 run_case missing-emulated-strict-cell fail remove_emulated_strict_cell \
   "emulated aarch64 release strict-bit cell"
 run_case missing-nextest-report-cleanup fail remove_nextest_report_cleanup \

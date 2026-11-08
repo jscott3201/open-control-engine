@@ -24,11 +24,30 @@ Each gating workflow ends in a `CI OK` job that needs every other job and fails 
 succeeded; `check-workflow-gates.sh` asserts that its `needs:` lists every other job in the file
 and that no gating job carries a job-level `if:`. Branch protection requires exactly that one
 status: the `CI OK` check from `pr-gate.yml` on `development` and from `release-gate.yml` on
-`main`. Both gates also run on pushes to their branch, so the merged commit is re-checked.
+`main`.
 
-GitHub PR runs test a synthetic merge of the PR head into its base. Branch protection should also
-require a PR branch to be up to date with its base before merging, so the tested merge is what
-lands.
+## What runs when
+
+The per-PR gate runs **once per change**, on the pull request:
+
+- **A PR into `development`** runs `pr-gate.yml` (and `docs-pages.yml` when it touches the docs
+  paths below). A new push to the PR branch cancels the superseded run.
+- **A merge into `development`** runs no gate. `pr-gate.yml` has no `push` trigger: the merged
+  tree is the one the PR already tested, so a post-merge run would repeat about half an hour of CI
+  for no new evidence. Only the path-filtered `docs-pages.yml` runs on that push, and only when the
+  merge touches its paths. `check-workflow-gates.sh` refuses any `push` trigger in `pr-gate.yml`,
+  so the duplicate run cannot return unnoticed.
+- **Daily**, `release-gate.yml` runs the heavy gate against the `development` tip. That is the
+  safety net for anything per-PR CI does not cover, including an interaction between two PRs that
+  each passed on their own.
+- **A PR into `main`, or a push to `main`,** runs `release-gate.yml`.
+
+Branch protection on `development` makes the PR run the only way in: a pull request is required,
+the `CI OK` status is required, and the branch must be up to date with `development` before it
+merges. GitHub PR runs test a synthetic merge of the PR head into its base, and the up-to-date
+rule makes that tested merge the commit that lands; a PR that falls behind is updated and re-run
+before it merges. When work runs in two parallel lanes and those re-runs start to queue, the next
+step is a merge queue, which tests each merge group once instead.
 
 Docs-site validation (`.github/workflows/docs-pages.yml`) is path-filtered to `docs/**`,
 `README.md`, `scripts/docs/**`, `scripts/authority_claims/**`, `site/**` and its own workflow

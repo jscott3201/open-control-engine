@@ -27,6 +27,11 @@ publish from `main`), `release.yml` (tag verify / manual crates.io publish) and 
 native-arm64 OpenModelica evidence workflows. `ci.yml` there is byte-frozen and disabled in the
 repository's Actions settings — it is not the CI.
 
+The per-PR gate runs once per change, on the PR. A merge into `development` runs no gate:
+`pr-gate.yml` has no `push` trigger, and `check-workflow-gates.sh` refuses one. Only the
+path-filtered `docs-pages.yml` runs on that push. The daily `release-gate.yml` run on the
+`development` tip is the safety net. See [CI and the gate](../docs/ci-and-the-gate.md#what-runs-when).
+
 GitHub PR numbers collide with the retired Forgejo numbering: Forgejo #332 (the Forgejo CI port)
 and GitHub #332 are different changes. Bare `(#N)` citations predate the move; cite every PR merged
 on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
@@ -173,7 +178,9 @@ Two things make this safe to do and easy to get wrong:
 
 ## Branches
 
-Base branch is `development`. Branch protection on GitHub blocks direct pushes to it
-and requires the `CI OK` status from `pr-gate.yml`; everything lands by squash-merge through a
-GitHub PR. A fix round pushes to the **same** branch — never a second PR for the same
+Base branch is `development`. Branch protection on GitHub blocks direct pushes to it, requires
+a pull request, requires the `CI OK` status from `pr-gate.yml`, and requires the branch to be up to
+date with `development` before merging; everything lands by squash-merge through a GitHub PR. A PR
+that falls behind is updated and its gate re-runs, because that run is the only one the change
+gets. A fix round pushes to the **same** branch — never a second PR for the same
 work.

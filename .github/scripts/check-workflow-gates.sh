@@ -114,6 +114,38 @@ require_ci_ok_covers_every_job() {
   fi
 }
 
+# The per-PR gate runs once per change: on the pull request. A `push` trigger would re-run the
+# whole gate on the merge commit in `development` — the same tree the PR already proved — so any
+# `push` event in the workflow's `on:` (block, flow-list, or scalar form, with or without a branch
+# filter) fails. The `pull_request` trigger must remain. Only the top-level `on:` is inspected.
+require_pr_trigger_only() {
+  path="$1"
+  local triggers
+  triggers="$(awk '
+    /^("on"|'"'"'on'"'"'|on):/ {
+      in_on = 1
+      inline = $0
+      sub(/^[^:]*:[[:space:]]*/, "", inline)
+      sub(/[[:space:]]*#.*$/, "", inline)
+      gsub(/[][,]/, " ", inline)
+      count = split(inline, items, " ")
+      for (i = 1; i <= count; i++) if (items[i] != "") print items[i]
+      next
+    }
+    in_on && /^[^[:space:]#]/ { in_on = 0 }
+    in_on && /^  [A-Za-z_]+:/ { event = $0; sub(/^  /, "", event); sub(/:.*/, "", event); print event }
+    in_on && /^  - [A-Za-z_]+/ { event = $0; sub(/^  - /, "", event); sub(/[[:space:]#].*$/, "", event); print event }
+  ' "$path")"
+  if grep -qx 'push' <<< "$triggers"; then
+    echo "FAIL: $path has a push trigger; the per-PR gate must not re-run on merges into development"
+    exit 1
+  fi
+  if ! grep -qx 'pull_request' <<< "$triggers"; then
+    echo "FAIL: $path is missing its pull_request trigger"
+    exit 1
+  fi
+}
+
 # Every `uses:` of a remote action must name a full 40-hex commit SHA, never a movable tag or
 # branch. Local (`./`) and `docker://` references are exempt.
 require_pinned_actions() {
@@ -292,6 +324,7 @@ require_job_pattern "$ci" 'ci-ok' '^[[:space:]]*if:[[:space:]]*always\(\)' \
   'CI OK aggregate reports on every run'
 require_job_pattern "$ci" 'ci-ok' 'toJSON\(needs\)' 'CI OK aggregate inspects every needed result'
 require_ci_ok_covers_every_job "$ci"
+require_pr_trigger_only "$ci"
 require_pattern "$ci" 'OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-release\.bin' \
   'emit the aarch64 release-codegen portable state vector'
 require_pattern "$ci" 'cmp target/state-arm/portable-state-debug\.bin target/state-arm/portable-state-release\.bin' \
