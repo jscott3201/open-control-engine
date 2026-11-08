@@ -132,7 +132,7 @@ them, because nothing re-measures them in CI.
 
 ## The crate map
 
-Thirteen crates. The dependency direction is acyclic and organized around the seam above.
+Twelve crates. The dependency direction is acyclic and organized around the seam above.
 Their responsibilities below do not imply equal support or publication status: publication is
 read from each crate's `publish` flag and checked by the
 [package validator](ci-and-the-gate.md#the-package-validator), and a publishable implementation

@@ -37,10 +37,50 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.3.0
+
+Prepared 2026-11-08 on `development`; the release date is the date the `v0.3.0` tag is cut from
+`main`. Every workspace member is 0.3.0. Nothing is published to crates.io.
+
+0.3.0 closes milestone M1a: cleanup and a pure `Engine`. What left: the compatibility ledgers and
+the public-api surface gate (GitHub #412, issue #388); the reserved `oce-flatten`, `oce-extension`
+and `oce-docs` crates (GitHub #414, issue #389); the `Store` type parameter on `Engine`, the three
+load-time store calls and the verification-only `oce-reference-wal-adapter` (GitHub #415, issue
+#390); the separate `oce-store-mem` crate, now `oce_store::MemStore` behind `oce-store`'s default
+`mem` feature (GitHub #417, issue #391); and QEMU, with the digest-bound strict-bit receipt
+(GitHub #413, issue #392). What became pure: `Engine::new()` builds a plain struct, `load_cxf`
+returns `(LoadReport, LoadedModel)` as plain data and calls no storage, `oce-api` has no storage
+dependency, and a host that persists does so itself through `oce_store::host::persist_loaded_model`.
+The workspace has 12 members, 10 publishable and two private. What CI runs where: the per-PR gate
+runs once per change, on the PR (GitHub #411, issue #408); the determinism and strict-bit matrices
+run in four native cells each — x86_64 on `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm`, debug
+and release — so the slowest per-PR job dropped from 31m33s (run 42439645194) to 12m40s (the x86_64
+release determinism cell in run 42482063762); a docs-only PR compiles nothing and finishes in 2m40s
+(run 42476084422) and a leverage-only PR in 56s (run 42476081207) (GitHub #418, issue #393); a
+macOS arm64 cell checks the portable state snapshot is byte-identical to both Linux architectures'
+and a Windows cell builds the workspace and runs its 2,532-test suite (GitHub #425, issue #394); and
+the docs jobs cache the verified mdBook binary (GitHub #426, issue #416). The release also carries
+the load-time and frame-boundary hardening of GitHub #341 through #386. Fixture, Tier-A provenance,
+projection and state-format goldens are byte-identical to the pre-M1a `development` head.
+
+### Release
+
+- **Workspace version 0.3.0** (GitHub #CLOSEOUT, issue #395). All 12 members and the internal
+  path+version table move from 0.2.0. `CompatibilityDescriptor` reports `oce-api-version:0.3.0`,
+  so persisted descriptor receipts and replay records from 0.2.0-labelled builds refuse with a
+  `Build` mismatch, as the fail-closed policy requires. No catalog, contract-schema, state-format,
+  execution-ABI or replay-format revision changes.
+- **The retained strict-bit receipt binding was retired, not re-captured** (GitHub #413, issue
+  #392). The per-PR eight-cell native matrix is the standing strict-bit evidence; `receipts.json`
+  is a log of the last green native run, not a gate. M1b (issue #406, closeout issue #404)
+  follows: the `no_std` core and the compiled-schedule blob.
+
 ### Host facade
 
 - **The engine is pure: `Engine` loses its `Store` type parameter and the three load-time store
-  calls, and `load_cxf` returns the resolved model as plain data** (GitHub #390). `Engine` is a
+  calls, and `load_cxf` returns the resolved model as plain data** (GitHub #415, issue #390). `Engine` is a
   plain struct built by `Engine::new()` (or `Default`); `Engine<S: Store = MemStore>`,
   `Engine::in_memory`, `Engine::with_store`, `Engine::store`, the `oce_api::oce_store` re-export,
   `OcError::Store` and `DiagnosticStage::{StoreRecovery, StoreSave, StoreInputs}` are removed.
@@ -67,7 +107,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   gone); frame and snapshot allocation is unchanged. Product contract revision 18 narrows the
   Store claims. Fixture, provenance, projection and state-format goldens are byte-identical.
 - **The reserved `oce-flatten`, `oce-extension` and `oce-docs` crates are deleted, and `oce-api`
-  no longer declares the no-op `mem` feature** (GitHub #389). The workspace has 14 members, 11
+  no longer declares the no-op `mem` feature** (GitHub #414, issue #389). The workspace has 14 members, 11
   publishable and three private. `oce-flatten::flatten` returned its input unchanged — the `oce-cxf`
   resolver already lowers composites, grounds parameters and normalizes array parameters — so the
   load pipeline now goes straight from import to attribute unification rather than keeping a no-op
@@ -126,10 +166,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Storage port
 
 - **`oce-store-mem` folds into `oce-store` behind a default `mem` feature, and `oce-store` gains
-  the host-side post-load helper** (GitHub #391). `oce_store_mem::MemStore` is now
+  the host-side post-load helper** (GitHub #417, issue #391). `oce_store_mem::MemStore` is now
   `oce_store::MemStore`, unchanged in behaviour and tests; `default-features = false` builds the
   ports, DTOs and helper with no `MemStore`. The new `oce_store::host` module puts back, on the
-  host's side, the sequence load ran before the engine became pure (GitHub #390):
+  host's side, the sequence load ran before the engine became pure (GitHub #415):
   `persist_loaded_model(&store, &loaded.model, loaded.input_points())` calls `Durable::recover`,
   then `ModelStore::save_model`, then `PointStore::resolve_points` for every input, refusing a
   handle-count mismatch with `StoreError::Validation`, and returns the input handles; the three
@@ -331,7 +371,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Verification
 
-- **The compatibility records and the API surface gate are retired until 1.0** (GitHub #388). The
+- **The compatibility records and the API surface gate are retired until 1.0** (GitHub #412, issue #388). The
   engine is pre-1.0 with no backwards-compatibility promise, so the release-compatibility matrix
   and its checker, the compatibility manifest, the package-publication and public-surface ledgers,
   the dated stability baseline and its tool, and the `cargo public-api` snapshots for `oce-api` and
@@ -350,10 +390,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
   the FNV-1a-128 of their bytes, 13 partial ones refuse). A surface baseline returns at 1.0.
 
 - **The retained native strict-bit receipt is marked `recapture-pending` for the M1 refactor
-  window** (GitHub #387). `receipts.json` gains an optional evidence `status` (absent or
+  window** (GitHub #409, issue #387). `receipts.json` gains an optional evidence `status` (absent or
   `admitted` keeps the previous behaviour) and a `pending` record naming the reason, the date, the
-  closing issue and the superseded receipt's matrix digest. The window closes when GitHub #392
-  retires the digest binding, with GitHub #404 as the milestone closeout. While pending,
+  closing issue and the superseded receipt's matrix digest. The window closes when GitHub #413
+  retires the digest binding, with issue #404 as the milestone closeout. While pending,
   `retained_native_linux_evidence_is_complete_exact_and_source_bound` skips only the comparison of
   captured source digests with the checkout and prints `RECAPTURE_PENDING:` with every drifted
   bound path; the retained captures' numbers, topology, repeats, inventory, provenance and matrix
@@ -591,7 +631,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `bash .agents/gate.sh leverage` mirrors a leverage-only PR.
 
 - **The determinism and strict-bit matrices run on native arm64 runners, and the digest-bound
-  strict-bit receipt is retired** (GitHub #392). `determinism-matrix` and `strict-bit-matrix` in
+  strict-bit receipt is retired** (GitHub #413, issue #392). `determinism-matrix` and `strict-bit-matrix` in
   `pr-gate.yml` are now four native cells each — x86_64 on `ubuntu-latest`, aarch64 on
   `ubuntu-24.04-arm`, debug and release — with no cross-linker, QEMU or emulated nextest
   configuration (`scripts/ci/nextest-emulated.toml` is deleted), and the one test the emulated leg
@@ -601,8 +641,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
   and `strict-bit-compare` runs the eight-capture comparison from a nextest archive of the x86_64
   debug cell's `strict_bits` binary and uploads `matrix.json` with a candidate receipt-log record.
   The slowest per-PR job drops from 31m33s (run 42439645194) to 13m24s, the x86_64 release determinism cell, almost all of it compiling the `oce-api` test binaries under the release profile. The per-PR native matrix is now the
-  standing strict-bit evidence (owner decision in GitHub #405): `source_digests()`, its 35-file
-  binding, the admission test, the `recapture-pending` status from GitHub #387 and
+  standing strict-bit evidence (owner decision in issue #405): `source_digests()`, its 35-file
+  binding, the admission test, the `recapture-pending` status from GitHub #409 and
   `retained_native_linux_evidence_is_complete_exact_and_source_bound` are removed, new captures
   carry no source map, and `receipts.json` becomes a closed log of the last green native run (run
   id, head and merge SHAs, rustc, libm, per-cell capture digests, matrix digest) plus the two
@@ -616,7 +656,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   from another revision (`mixed Git revisions`) and a matrix captured at a revision other than the
   comparing checkout's.
 
-- **The per-PR gate runs once per change** (GitHub #408). `pr-gate.yml` ran on the PR and again
+- **The per-PR gate runs once per change** (GitHub #411, issue #408). `pr-gate.yml` ran on the PR and again
   on the post-merge push to `development`, on the same tree: runs 42439645194 and 42441875338
   took about 31 minutes each for one change. The `push` trigger is gone; the PR run is the only
   one, and the daily `release-gate.yml` run on the `development` tip stays the safety net.
@@ -628,7 +668,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
-- **Design note for the compiled-schedule blob (OCEB) format** (GitHub #396).
+- **Design note for the compiled-schedule blob (OCEB) format** (GitHub #410, issue #396).
   `docs/design/compiled-schedule-blob.md` fixes the byte format M1b encodes on a `std` host and
   decodes on a `no_std` target, before any code: a 52-byte header, five fixed-order sections
   (classes with per-class signature hashes, instances, schedule, connections, I/O) and a CRC-32C
