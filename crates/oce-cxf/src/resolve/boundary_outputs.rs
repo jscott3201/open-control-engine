@@ -110,19 +110,22 @@ fn refuse_shadowed<'doc>(
 /// Refuse every boundary output with more than one distinct driver (§7.10 single assignment):
 /// post-specialization multiplicity means two surviving values claim one declared name.
 fn refuse_multiply_driven(drivers: &HashMap<String, HashSet<String>>, diags: &mut Vec<Diagnostic>) {
-    for (output, distinct) in drivers {
-        if distinct.len() > 1 {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::SingleAssignment,
-                    format!(
-                        "boundary output is multiply driven (distinct drivers {})",
-                        distinct.len()
-                    ),
-                )
-                .with_subject(output.clone()),
-            );
-        }
+    // Emit in output-IRI order rather than hash order. `finalize_diags` re-sorts the resolver's
+    // diagnostics before they leave the crate; sorting here keeps the push order canonical too.
+    let mut multiply_driven: Vec<(&String, usize)> = drivers
+        .iter()
+        .map(|(output, distinct)| (output, distinct.len()))
+        .filter(|&(_, count)| count > 1)
+        .collect();
+    multiply_driven.sort_unstable();
+    for (output, count) in multiply_driven {
+        diags.push(
+            Diagnostic::error(
+                DiagCode::SingleAssignment,
+                format!("boundary output is multiply driven (distinct drivers {count})"),
+            )
+            .with_subject(output.clone()),
+        );
     }
 }
 
@@ -160,3 +163,7 @@ fn warn_undriven(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "boundary_outputs_tests.rs"]
+mod tests;

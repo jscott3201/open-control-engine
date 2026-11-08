@@ -153,6 +153,10 @@ impl CompositeOrientation {
             }
         }
         index.tree &= !index.has_containment_cycle();
+        #[expect(
+            clippy::iter_over_hash_type,
+            reason = "builds the `roles` lookup map, one insert per distinct port; visit order is unobservable"
+        )]
         for (port, owner) in &index.owners {
             let role = owner.as_ref().map(|(owner, input)| {
                 if index.composites.contains(owner) {

@@ -101,13 +101,16 @@ impl ModelStore for MemStore {
             .ok_or_else(|| StoreError::ModelNotLoaded(model_id.clone()))
     }
     fn list_models(&self) -> StoreResult<Vec<DomainKey>> {
-        Ok(self
+        // Sorted by key so the listing never carries `HashMap` iteration order to the host.
+        let mut ids: Vec<DomainKey> = self
             .models
             .read()
             .map_err(backend_err)?
             .keys()
             .cloned()
-            .collect())
+            .collect();
+        ids.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+        Ok(ids)
     }
     fn delete_model(&self, model_id: &DomainKey) -> StoreResult<()> {
         // Idempotent: dropping an absent model is a no-op success.
@@ -215,6 +218,27 @@ mod tests {
     #[test]
     fn mem_store_is_a_full_store() {
         _assert_is_store::<MemStore>();
+    }
+
+    #[test]
+    fn model_listing_is_sorted_by_key_not_hash_order() {
+        let store = MemStore::new();
+        let ids = [
+            "seq:vav7",
+            "seq:ahu1",
+            "seq:zone10",
+            "seq:ahu10",
+            "seq:boiler",
+            "seq:ahu2",
+        ];
+        for id in ids {
+            store.save_model(&model(id)).unwrap();
+        }
+        let mut expected: Vec<DomainKey> = ids.iter().map(|id| DomainKey::new(*id)).collect();
+        expected.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+        assert_eq!(store.list_models().unwrap(), expected);
+        assert_eq!(expected[0], DomainKey::new("seq:ahu1"));
+        assert_eq!(expected[1], DomainKey::new("seq:ahu10"));
     }
 
     #[test]

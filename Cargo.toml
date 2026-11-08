@@ -52,6 +52,13 @@ print_stdout = "warn"
 # Allowed here and denied in each core-four crate root (`#![deny(clippy::disallowed_methods)]`), so
 # the `clippy.toml` std-float-method list binds only the `no_std` core (issue #399).
 disallowed_methods = "allow"
+# Allowed here and denied in each core-four crate root (`#![deny(clippy::disallowed_types)]`), so
+# the `clippy.toml` hash-collection list binds only the `no_std` core (issue #398).
+disallowed_types = "allow"
+# A `for` loop over a `HashMap`/`HashSet` visits entries in per-process random order. Where that
+# order could reach output it must be sorted first; where it cannot, the site carries an
+# `#[expect]` saying why (issue #398, docs/state-compatibility.md).
+iter_over_hash_type = "deny"
 
 [workspace.dependencies]
 # --- Shared infra pins. ---

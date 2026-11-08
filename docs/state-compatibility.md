@@ -153,6 +153,20 @@ pinned rustc/libm in four native architecture/codegen cells. It is not an arbitr
 guarantee, mathematical oracle or macOS qualification. It therefore does **not** relax this state-placement policy. Local macOS
 passing tests do not supply the hosted Linux evidence or broaden either variant's claim.
 
+No hash-collection iteration order reaches the snapshot bytes, or any other output a host or a
+golden observes. `std`'s `HashMap` and `HashSet` iterate in an order seeded per thread from the OS,
+so an order that leaked would differ between two runs on the same build and target. The state image
+is built from the schedule, block and connector arrays of the `no_std` core crates, which contain no
+hash collections at all (clippy's `disallowed-types` and `tests/core_crates_hash_free.rs` refuse
+one). The `std` crates keep hash
+maps for lookup, and every place one is iterated either sorts first or cannot affect what is emitted;
+`clippy::iter_over_hash_type` is denied workspace-wide, so a new `for` loop over one needs a stated
+reason. `tests/hash_order_independence.rs` loads all 46 G36 fixtures and the resolver-contract
+document on 20 fresh threads, each with independently seeded hashers, and requires identical
+export bytes, content id, load and export diagnostics, input definitions, schedule, frame outputs
+and snapshot bytes after four frames. A harness control proves a seeded `HashMap` order differs
+between those threads, so the comparison cannot pass by reusing one seed.
+
 ## Continuation of published Library rules
 
 `tests/library_rule_state_continuation.rs` runs two fault rules from open-control-library through
@@ -193,6 +207,9 @@ or a host `NO_EVAL` window, is host frame policy.
   refusals and decode/capture resource checks.
 - `src/tests/state_portability_tests.rs`: all 15 actual target-bound class captures, independent
   arch/OS refusals, and artifacts consumed by the unchanged hosted state matrix.
+- `tests/hash_order_independence.rs`, `tests/core_crates_hash_free.rs`: snapshot bytes and every
+  load, export and frame output identical across independently seeded hashers, with a harness
+  control; no hash collection in the four `no_std` crates.
 - `tests/library_rule_state_continuation.rs`: durable restart of two unedited Library fault rules
   (persistence timer, moving window) at every tick, chained and mid-dwell, against an
   uninterrupted run, with cold-start divergence controls and typed refusals on advanced or foreign

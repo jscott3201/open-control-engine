@@ -82,6 +82,29 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `sqrt` stays on `libm` in every build (currently its software routine): 2.3 ns per call slower than `f64::sqrt` on Apple M5, but
   no frame measurement separated it from noise ([benchmarks](docs/benchmarks.md)).
 
+### Verification
+
+- **No hash-collection iteration order reaches a golden, a receipt or snapshot bytes** (GitHub
+  #433, issue #398). `oce-api/tests/hash_order_independence.rs` loads the 46 G36 fixtures and the
+  resolver-contract document on 20 freshly spawned threads, each with independently seeded
+  `RandomState` hashers, exports, runs four frames and snapshots. Export bytes, content id, load and
+  export receipts, `input_definitions()`, point inventory, resolved model, schedule, topology,
+  frame outputs and snapshot bytes must agree across all 20. Four refused documents pin the order of
+  load errors and failure receipts the same way. A synthetic `HashMap`-order emitter run through
+  the same harness must diverge, so the test cannot pass by reusing one seed; swapping the
+  schedule's min-heap, the `input_definitions()` sort or the resolver's diagnostic sort for hash
+  order each fails it. `clippy.toml` gains a `disallowed-types` list (`std`'s `HashMap`,
+  `HashSet`, `RandomState`, `DefaultHasher`, `BuildHasherDefault`), allowed workspace-wide and
+  denied in the roots of `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph`, so it binds only
+  those four; `oce-api/tests/core_crates_hash_free.rs` checks that wiring and also refuses
+  `hashbrown`, `ahash`, `indexmap` and similar crates there. `clippy::iter_over_hash_type` is
+  denied workspace-wide. The audit of `oce-api`, `oce-cxf`,
+  `oce-validate` and `oce-store` found every output already canonical. Two resolver
+  single-assignment refusals now also push in connector / IRI order (they were already sorted
+  before leaving the resolver). `MemStore::list_models` now returns keys sorted rather than in
+  `HashMap` order. Goldens are byte-identical. Method-call iteration as a clippy error follows in
+  issue #432.
+
 ## 0.3.0
 
 Prepared 2026-11-08 on `development`; the release date is the date the `v0.3.0` tag is cut from
