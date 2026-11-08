@@ -87,8 +87,8 @@ The engine is, by design:
   lifecycle, transport, TLS, authN/Z, multi-tenancy, off-host durability, and metrics export.
 - **Synchronous and in-process.** Every public method is a blocking synchronous call, and no async
   runtime is pulled at any layer. The check is the dependency set below, not a promise.
-- **`#![forbid(unsafe_code)]` in all 12 crates**, belt and braces: each `crates/*/src/lib.rs`
-  carries the crate attribute, *and* the workspace sets `unsafe_code = "forbid"` under
+- **`#![forbid(unsafe_code)]` in all 13 workspace members**, belt and braces: each
+  `crates/*/src/lib.rs` and the firmware image's lib and bin roots carry the crate attribute, *and* the workspace sets `unsafe_code = "forbid"` under
   `[workspace.lints.rust]` (root `Cargo.toml`).
 - **Edition 2024**, `resolver = "3"`.
 - **A `no_std + alloc` execution core.** `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` build
@@ -192,7 +192,9 @@ them, because nothing re-measures them in CI.
 
 ## The crate map
 
-Twelve crates. The dependency direction is acyclic and organized around the seam above.
+Twelve crates, plus the unpublished firmware image `oce-firmware-link` (`firmware/link`), which
+links the `no_std` core into a bare-metal binary: 13 workspace members, 10 publishable and three
+private. The dependency direction is acyclic and organized around the seam above.
 Their responsibilities below do not imply equal support or publication status: publication is
 read from each crate's `publish` flag and checked by the
 [package validator](ci-and-the-gate.md#the-package-validator), and a publishable implementation
