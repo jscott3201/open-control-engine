@@ -14,7 +14,9 @@
 # the integration tip even after `main` becomes the default branch.
 #
 # Linux x86_64 only. Every job runs on every trigger, drafts included; no gating job carries a
-# job-level `if:`. nextest JUnit reports are required to exist but are not uploaded as artifacts.
+# job-level `if:`. Jobs that share a build shape with pr-gate.yml use the same rust-cache
+# `shared-key`, so the daily scheduled run (default branch `development`) seeds the cache scope every
+# PR into `development` can read. nextest JUnit reports are required to exist but are not uploaded as artifacts.
 # `CI OK` at the bottom is the single required status for branch protection on `main`.
 #
 # WHAT RUNS HERE vs. pr-gate.yml:
@@ -90,6 +92,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: nextest
           cache-bin: false
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
@@ -194,6 +197,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: default-no-db
           cache-bin: false
       - run: bash .github/scripts/check-default-no-db.sh
 
@@ -221,6 +225,7 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: clippy
           cache-bin: false
       - name: clippy (default — no DB)
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
@@ -236,6 +241,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: build
           cache-bin: false
       - name: cargo build (default — no DB)
         run: cargo build --workspace --locked
@@ -251,6 +257,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: rustdoc
           cache-bin: false
       - name: cargo doc — libs (deny warnings)
         env:
@@ -299,6 +306,7 @@ jobs:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: gate
           cache-bin: false
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:

@@ -9,7 +9,6 @@
 #   default — local dev: fast, fail-fast feedback (`cargo nextest run`).
 #   ci      — local gate + CI debug-codegen runs: no fail-fast, no retries, JUnit output.
 #   ci-release — inherits `ci` for release-codegen runs and writes a separate JUnit report.
-#   public-api* — inherit `ci` with a longer timeout for the nested nightly rustdoc builds.
 #
 # For a deterministic, safety-critical control engine the gate must be reproducible: no
 # retries, no flake-tolerance, hard-fail if zero tests are discovered (see release-gate.yml's
@@ -71,32 +70,3 @@ inherits = "ci"
 
 [profile.ci-release.junit]
 report-name = "open-control-ci-release"
-
-[profile.public-api]
-inherits = "ci"
-# Gate-only profile for the `cargo public-api` surface snapshot (crates/oce-api/tests/public_api.rs,
-# exit #7), run as its OWN release-gate step:
-#   cargo nextest run -p oce-api -E 'test(public_api_surface_matches_blessed_baseline)' \
-#     --profile public-api-oce-api --locked --no-tests=fail
-#
-# Running it under nextest (not raw `cargo test`) is what gives `--no-tests=fail` its teeth: if the
-# test is ever renamed, deleted, `#[ignore]`'d, or filtered out, the run discovers zero tests and
-# HARD-FAILS instead of exiting 0 — a `cargo test` would have gone silently green (B3 false-green).
-#
-# But the armed test shells out to a cold `cargo +nightly rustdoc` build of the whole dep tree
-# (rustc segregates artifacts by toolchain, so nothing is cached from the stable steps). That
-# routinely exceeds the `ci` profile's 60s×2 = 120s terminate-after, which would KILL the gate. So
-# this profile gives it a generous window: flag-slow at 120s, terminate only after 5 periods (10m).
-slow-timeout = { period = "120s", terminate-after = 5, on-timeout = "fail" }
-
-[profile.public-api-oce-api]
-inherits = "public-api"
-
-[profile.public-api-oce-api.junit]
-report-name = "open-control-public-api-oce-api"
-
-[profile.public-api-oce-store]
-inherits = "public-api"
-
-[profile.public-api-oce-store.junit]
-report-name = "open-control-public-api-oce-store"

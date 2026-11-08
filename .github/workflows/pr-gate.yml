@@ -18,12 +18,16 @@
 # crates and the release-codegen runs of the suites above live in release-gate.yml.
 #
 # Topology:
-#   * Every job runs on a GitHub-hosted x86_64 runner. The aarch64 legs of the determinism and
-#     strict-bit matrices are cross-compiled and run under QEMU user-mode emulation inside the
-#     x86_64 job, so the byte-for-byte cross-architecture comparisons run on every PR without
-#     artifact transfer between jobs. Emulated aarch64 results are CI signal, NOT native aarch64
-#     evidence; the retained native qualification (crates/oce-conformance/tests/fixtures/
-#     strict_bits/qualified-linux) is still verified by the strict-bit test binary in every cell.
+#   * The determinism and strict-bit matrices run in four native cells each: x86_64 on
+#     `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm`, in debug and release codegen. Nothing is
+#     emulated. The cross-architecture byte comparisons run in fan-in jobs (determinism-compare,
+#     strict-bit-compare) over artifacts the cells upload. The per-PR native strict-bit matrix is
+#     the standing native evidence; no retained receipt admits or skips any check.
+#   * A runner type that is unavailable leaves its cells queued, so `CI OK` never reports and the
+#     PR cannot merge. There is no fallback to emulation and no silent skip.
+#   * Jobs with the same build shape in this file and release-gate.yml share a rust-cache
+#     `shared-key`, so the daily release-gate run on the `development` tip seeds the default-branch
+#     cache scope that every PR can read (PR runs save only into their own scope).
 #   * Every job runs on every PR, drafts included, and no gating job carries a job-level `if:`:
 #     `CI OK` accepts only `success`, so a skipped gate would read as a failure.
 #   * cargo-deny `bans licenses sources` runs unconditionally; there is no paths-filter job.
@@ -32,9 +36,8 @@
 #     checkouts do not persist the job token.
 #
 # .github/workflows/ci.yml is NOT this workflow. It is the GitHub-era gate that produced the
-# retained native strict-bit captures and stays byte-identical as a bound source of that evidence
-# (crates/oce-conformance/tests/strict_bits/evidence.rs); it is disabled in the repository's
-# Actions settings rather than edited or deleted.
+# retained native strict-bit capture archives; it stays byte-identical as history and is disabled
+# in the repository's Actions settings rather than edited or deleted.
 #
 # Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
 
@@ -109,6 +112,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: default-no-db
           cache-bin: false
       - run: bash .github/scripts/check-default-no-db.sh
 
@@ -126,8 +130,8 @@ jobs:
   # clippy or test command reaches it. This job lints and tests the generator, then regenerates
   # every Tier-A golden and fails if the checked-in tree differs from what the generator emits:
   # a modified file fails `git diff`, a newly emitted file fails the porcelain check.
-  # CI-only: .agents/gate.sh is a bound source of the retained native strict-bit evidence and does
-  # not run these yet; .agents/project-facts.md gives the local commands.
+  # CI-only for now: .agents/gate.sh does not run these yet; .agents/project-facts.md gives the
+  # local commands.
   golden-gen-hygiene:
     name: golden-gen hygiene and golden freshness
     runs-on: ubuntu-latest
@@ -217,110 +221,156 @@ jobs:
           tool: cargo-machete
       - run: cargo machete
 
-  # x86_64 native legs, then the aarch64 legs under QEMU user-mode emulation, then the
-  # cross-architecture comparison — one job, so the state vectors never leave the workspace.
+  # Four native cells: (x86_64 on ubuntu-latest, aarch64 on ubuntu-24.04-arm) x (debug, release).
+  # Each runs the three-crate state-determinism subset under its own architecture and codegen and
+  # emits populated portable and target-bound state vectors; determinism-compare fans the vectors
+  # in. No cell is emulated, and none is skipped: a runner type that is unavailable leaves its cell
+  # queued and `CI OK` unreported, which blocks the merge rather than passing it.
   determinism-matrix:
-    name: determinism-matrix (x86_64 native, aarch64 emulated)
-    runs-on: ubuntu-latest
-    env:
-      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER: qemu-aarch64 -L /usr/aarch64-linux-gnu
-      QEMU_LD_PREFIX: /usr/aarch64-linux-gnu
+    name: determinism (${{ matrix.arch }}, ${{ matrix.codegen }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+        codegen: [debug, release]
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
-        with:
-          targets: aarch64-unknown-linux-gnu
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: nextest
           cache-bin: false
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143
-      - name: Install aarch64 cross linker and QEMU user-mode emulator
-        run: >-
-          sudo apt-get update -qq &&
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends
-          gcc-aarch64-linux-gnu libc6-dev-arm64-cross qemu-user
+      - name: Refuse a runner of the wrong architecture
+        env:
+          CELL_ARCH: ${{ matrix.arch }}
+        run: test "$(uname -m)" = "$CELL_ARCH"
       - name: Clear cached reports and state vectors
         run: >-
           rm -rf target/nextest/{ci,ci-release}/junit.xml
           target/{portable,target}-state-{debug,release}.bin
-          target/state-x86 target/state-arm &&
-          mkdir -p target/state-x86 target/state-arm
-      - name: cargo nextest determinism subset (x86_64)
+          target/determinism &&
+          mkdir -p target/determinism
+      - name: cargo nextest determinism subset (debug codegen)
+        if: matrix.codegen == 'debug'
         env:
           OCE_PORTABLE_STATE_OUT: target/portable-state-debug.bin
           OCE_TARGET_STATE_OUT: target/target-state-debug.bin
         run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
-      - name: cargo nextest determinism subset --release (x86_64)
+      - name: cargo nextest determinism subset (release codegen)
+        if: matrix.codegen == 'release'
         env:
           OCE_PORTABLE_STATE_OUT: target/portable-state-release.bin
           OCE_TARGET_STATE_OUT: target/target-state-release.bin
         run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
-      - name: Compare x86_64 snapshot bytes across codegen profiles
-        run: >-
-          cmp target/portable-state-debug.bin target/portable-state-release.bin &&
-          cmp target/target-state-debug.bin target/target-state-release.bin
-      - name: Require complete nextest JUnit report set (x86_64)
-        run: >-
-          for profile in ci ci-release;
-          do test -s "target/nextest/$profile/junit.xml";
-          done
-      - name: Stage x86_64 state vectors
-        run: cp target/portable-state-debug.bin target/target-state-debug.bin target/state-x86/
-      - name: Clear x86_64 nextest reports before the emulated legs
-        run: rm -f target/nextest/{ci,ci-release}/junit.xml
-      # The one excluded test re-executes its own test binary as a child process, which QEMU user
-      # mode cannot do without host binfmt registration. It probes OCE_BLESS environment
-      # truthiness, not state determinism, and runs in the x86_64 legs above.
-      - name: cargo nextest determinism subset (aarch64, emulated)
+      # The codegen steps above are selected by the matrix; this step fails a cell in which neither
+      # ran, so a matrix edit cannot turn a cell into a green no-op.
+      - name: Require the cell's nextest JUnit report and both state vectors
         env:
-          OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-debug.bin
-          OCE_TARGET_STATE_OUT: target/state-arm/target-state-debug.bin
+          CELL_CODEGEN: ${{ matrix.codegen }}
+        run: |
+          case "$CELL_CODEGEN" in
+            debug) profile=ci ;;
+            release) profile=ci-release ;;
+            *) echo "unknown codegen: $CELL_CODEGEN" >&2; exit 1 ;;
+          esac
+          test -s "target/nextest/$profile/junit.xml"
+          test -s "target/portable-state-$CELL_CODEGEN.bin"
+          test -s "target/target-state-$CELL_CODEGEN.bin"
+          cp "target/portable-state-$CELL_CODEGEN.bin" "target/target-state-$CELL_CODEGEN.bin" target/determinism/
+      # The debug cell of each architecture also ships its built oce-api unit-test binary, so the
+      # fan-in can restore the other architecture's target-bound snapshot without recompiling.
+      - name: Archive the oce-api unit tests for the foreign-snapshot restore
+        if: matrix.codegen == 'debug'
         run: >-
-          cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked
-          --target aarch64-unknown-linux-gnu --config-file "$PWD/scripts/ci/nextest-emulated.toml"
-          --profile ci --no-tests=fail
-          -E 'not test(=registry::manifest_tests::enabled_composition_is_covered_with_a_disabled_value)'
-      - name: cargo nextest determinism subset --release (aarch64, emulated)
+          cargo nextest archive -p oce-api --lib --locked
+          --archive-file target/determinism/oce-api-lib.tar.zst
+      - name: Upload the cell's state vectors
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: determinism-${{ matrix.arch }}-${{ matrix.codegen }}
+          path: target/determinism/
+          if-no-files-found: error
+          retention-days: 7
+
+  # Fan-in over the four cells' vectors, once per architecture. Both legs compare every byte the
+  # cells produced (portable and target-bound bytes equal across codegen within an architecture,
+  # portable bytes equal and target-bound bytes different across architectures); each leg then
+  # parses the OTHER architecture's target-bound snapshot and refuses it through the public restore
+  # path, natively, with the oce-api unit tests its own architecture's debug cell built.
+  determinism-compare:
+    name: determinism cross-cell comparison (${{ matrix.arch }} restores ${{ matrix.foreign }})
+    needs: determinism-matrix
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+            foreign: aarch64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+            foreign: x86_64
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: nextest@0.9.143
+      - name: Refuse a runner of the wrong architecture
         env:
-          OCE_PORTABLE_STATE_OUT: target/state-arm/portable-state-release.bin
-          OCE_TARGET_STATE_OUT: target/state-arm/target-state-release.bin
+          CELL_ARCH: ${{ matrix.arch }}
+        run: test "$(uname -m)" = "$CELL_ARCH"
+      - name: Clear cached state vectors
+        run: rm -rf target/determinism && mkdir -p target/determinism
+      - name: Download all four cells' state vectors
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: determinism-*
+          path: target/determinism
+      - name: Compare snapshot bytes across codegen profiles
+        working-directory: target/determinism
         run: >-
-          cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked
-          --target aarch64-unknown-linux-gnu --config-file "$PWD/scripts/ci/nextest-emulated.toml"
-          --profile ci-release --cargo-profile release --no-tests=fail
-          -E 'not test(=registry::manifest_tests::enabled_composition_is_covered_with_a_disabled_value)'
-      - name: Compare aarch64 snapshot bytes across codegen profiles
-        run: >-
-          cmp target/state-arm/portable-state-debug.bin target/state-arm/portable-state-release.bin &&
-          cmp target/state-arm/target-state-debug.bin target/state-arm/target-state-release.bin
-      - name: Require complete nextest JUnit report set (aarch64)
-        run: >-
-          for profile in ci ci-release;
-          do test -s "target/nextest/$profile/junit.xml";
-          done
+          cmp determinism-x86_64-debug/portable-state-debug.bin determinism-x86_64-release/portable-state-release.bin &&
+          cmp determinism-x86_64-debug/target-state-debug.bin determinism-x86_64-release/target-state-release.bin &&
+          cmp determinism-aarch64-debug/portable-state-debug.bin determinism-aarch64-release/portable-state-release.bin &&
+          cmp determinism-aarch64-debug/target-state-debug.bin determinism-aarch64-release/target-state-release.bin
       - name: Compare portable snapshot bytes across architectures
+        working-directory: target/determinism
         run: >-
-          cmp target/state-x86/portable-state-debug.bin target/state-arm/portable-state-debug.bin &&
-          ! cmp -s target/state-x86/target-state-debug.bin target/state-arm/target-state-debug.bin
+          cmp determinism-x86_64-debug/portable-state-debug.bin determinism-aarch64-debug/portable-state-debug.bin &&
+          ! cmp -s determinism-x86_64-debug/target-state-debug.bin determinism-aarch64-debug/target-state-debug.bin
       - name: Refuse a target-bound snapshot from the other architecture
         env:
-          OCE_FOREIGN_TARGET_STATE_IN: target/state-arm/target-state-debug.bin
-        run: >-
-          cargo nextest run -p oce-api --lib --locked --profile ci --no-tests=fail
-          -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
+          CELL_ARCH: ${{ matrix.arch }}
+          FOREIGN_ARCH: ${{ matrix.foreign }}
+        run: |
+          test "$CELL_ARCH" != "$FOREIGN_ARCH"
+          export OCE_FOREIGN_TARGET_STATE_IN="$PWD/target/determinism/determinism-$FOREIGN_ARCH-debug/target-state-debug.bin"
+          test -s "$OCE_FOREIGN_TARGET_STATE_IN"
+          cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/oce-api-lib.tar.zst" \
+            --workspace-remap . --profile ci --no-tests=fail \
+            -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
 
   # The scheduler, validator, model and CXF resolver suites, x86_64 debug
-  # only. They are not state-determinism tests, so they stay out of the determinism matrix: its
-  # QEMU-emulated aarch64 legs are the per-PR long pole, and this job runs beside it instead of
-  # lengthening it. Their release-codegen runs stay in release-gate.yml (oce-cxf's release build
+  # only. They are not state-determinism tests, so they stay out of the determinism matrix and run
+  # beside it instead of lengthening its cells. Their release-codegen runs stay in release-gate.yml (oce-cxf's release build
   # alone costs several minutes; its debug suite is dominated by three ~45 s resolver tests).
-  # CI-only: .agents/gate.sh is a bound source of the retained native strict-bit evidence and does
-  # not run these yet; .agents/project-facts.md gives the local command.
+  # CI-only for now: .agents/gate.sh does not run these yet; .agents/project-facts.md gives the
+  # local command.
   crate-tests:
     name: crate tests (graph, validate, model, cxf; x86_64 debug)
     runs-on: ubuntu-latest
@@ -331,6 +381,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: nextest
           cache-bin: false
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
@@ -347,8 +398,8 @@ jobs:
   # sequence but is path-filtered and not a required status, so GitHub #373 merged with it red
   # under a green `CI OK`. Same steps and order as
   # docs-pages.yml's build job, minus the Pages upload; that workflow keeps the publish from main.
-  # CI-only: .agents/gate.sh is a bound source of the retained native strict-bit evidence and does
-  # not run these yet; .agents/project-facts.md gives the local commands.
+  # CI-only for now: .agents/gate.sh does not run these yet; .agents/project-facts.md gives the
+  # local commands.
   docs:
     name: docs (staging, mdBook build, links)
     runs-on: ubuntu-latest
@@ -378,57 +429,104 @@ jobs:
           target/docs-book/book
           --site-prefix /open-control-engine/
 
-  # Four cells (x86_64 native, aarch64 emulated) x (debug, release), each with two independent
-  # capture processes, then the eight-capture comparison — one job, no artifact hand-off. Every
-  # cell step runs even after an earlier cell fails, so one run reports every failing cell. The
-  # raw captures are not retained by CI.
+  # Four native cells, the same (runner, codegen) matrix as determinism-matrix. Each takes two
+  # independent capture processes, compares them byte for byte, and runs the exact signal wiring,
+  # corpus firewall and mutation controls (scripts/ci/strict-bits-cell.sh, which refuses a host of
+  # the wrong architecture). strict-bit-compare fans the eight captures in. This per-PR matrix is
+  # the standing native evidence; no stored receipt admits or skips anything.
   strict-bit-matrix:
-    name: strict bits (x86_64 native, aarch64 emulated)
-    runs-on: ubuntu-latest
-    env:
-      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER: qemu-aarch64 -L /usr/aarch64-linux-gnu
-      QEMU_LD_PREFIX: /usr/aarch64-linux-gnu
+    name: strict bits (${{ matrix.arch }}, ${{ matrix.codegen }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+        codegen: [debug, release]
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
-        with:
-          targets: aarch64-unknown-linux-gnu
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: nextest
           cache-bin: false
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143
-      - name: Install aarch64 cross linker and QEMU user-mode emulator
-        run: >-
-          sudo apt-get update -qq &&
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends
-          gcc-aarch64-linux-gnu libc6-dev-arm64-cross qemu-user
       - name: Clear cached strict-bit evidence
         run: rm -rf target/strict-bits && mkdir -p target/strict-bits
-      - name: Cell linux-x86_64-debug (native)
-        if: ${{ !cancelled() }}
-        run: bash scripts/ci/strict-bits-cell.sh x86_64 debug
-      - name: Cell linux-x86_64-release (native)
-        if: ${{ !cancelled() }}
-        run: bash scripts/ci/strict-bits-cell.sh x86_64 release
-      - name: Cell linux-aarch64-debug (emulated)
-        if: ${{ !cancelled() }}
-        run: bash scripts/ci/strict-bits-cell.sh aarch64 debug
-      - name: Cell linux-aarch64-release (emulated)
-        if: ${{ !cancelled() }}
-        run: bash scripts/ci/strict-bits-cell.sh aarch64 release
+      - name: Strict-bit cell
+        env:
+          CELL_ARCH: ${{ matrix.arch }}
+          CELL_CODEGEN: ${{ matrix.codegen }}
+        run: bash scripts/ci/strict-bits-cell.sh "$CELL_ARCH" "$CELL_CODEGEN"
+      # The x86_64 debug cell also ships its built strict_bits test binary, so the fan-in compares
+      # the eight captures without recompiling.
+      - name: Archive the strict-bit tests for the cross-cell comparison
+        if: matrix.arch == 'x86_64' && matrix.codegen == 'debug'
+        run: >-
+          cargo nextest archive -p oce-conformance --test strict_bits --locked
+          --archive-file target/strict-bits/strict-bits-tests.tar.zst
+      - name: Upload the cell's captures
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: strict-bits-${{ matrix.arch }}-${{ matrix.codegen }}
+          path: target/strict-bits/
+          if-no-files-found: error
+          retention-days: 7
+
+  # Fan-in: every signal and sample of all eight captures against the Tier-A references, the
+  # x86_64 debug capture and a fresh collection from this checkout. A green comparison writes the
+  # candidate receipt-log record (run id, head and merge SHAs, rustc, libm, per-cell capture
+  # digests, matrix digest) beside the assembled matrix.json; both are uploaded for review.
+  strict-bit-compare:
+    name: strict bits cross-cell comparison
+    needs: strict-bit-matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: nextest@0.9.143
+      - name: Clear cached strict-bit evidence
+        run: rm -rf target/strict-bits && mkdir -p target/strict-bits
+      - name: Download all eight captures
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: strict-bits-*
+          path: target/strict-bits
+          merge-multiple: true
       - name: Compare every signal and sample in all eight captures
-        if: ${{ !cancelled() }}
         env:
           OCE_STRICT_MATRIX_DIR: target/strict-bits
+          OCE_STRICT_RUN_ID: ${{ github.run_id }}
+          OCE_STRICT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: >-
-          cargo nextest run -p oce-conformance --test strict_bits --locked --profile ci
-          --no-tests=fail --run-ignored only
+          cargo nextest run --archive-file target/strict-bits/strict-bits-tests.tar.zst
+          --workspace-remap . --profile ci --no-tests=fail --run-ignored only
           -E 'test(=matrix::native_linux_matrix_is_complete_and_exact)'
+      - name: Require the candidate receipt-log record
+        run: test -s target/strict-bits/receipt-candidate.json && cat target/strict-bits/receipt-candidate.json
+      - name: Upload the assembled matrix and the candidate receipt-log record
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: strict-bit-matrix
+          path: |
+            target/strict-bits/matrix.json
+            target/strict-bits/receipt-candidate.json
+            target/strict-bits/linux-*.json
+          if-no-files-found: error
+          retention-days: 30
 
   clippy:
     name: clippy (-D warnings)
@@ -442,6 +540,7 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: clippy
           cache-bin: false
       - name: clippy (default — no DB)
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
@@ -456,6 +555,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: build
           cache-bin: false
       - name: cargo build (default — no DB)
         run: cargo build --workspace --locked
@@ -470,6 +570,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: rustdoc
           cache-bin: false
       - name: cargo doc — libs (deny warnings)
         env:
@@ -509,6 +610,7 @@ jobs:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          shared-key: gate
           cache-bin: false
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
@@ -540,9 +642,11 @@ jobs:
       - gate-fixtures
       - unused-deps
       - determinism-matrix
+      - determinism-compare
       - crate-tests
       - docs
       - strict-bit-matrix
+      - strict-bit-compare
       - clippy
       - build
       - rustdoc
