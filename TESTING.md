@@ -220,6 +220,17 @@ executes:
   `std`'s hash types, and `core_crates_hash_free.rs` refuses every hash collection or hash crate
   and checks the lint wiring. `clippy::iter_over_hash_type` is denied workspace-wide.
 - **Tick determinism.** Run the same model for N ticks twice; the traces must be bit-equal.
+- **Blob round trip.** `crates/oce-conformance/tests/blob_round_trip.rs` (issue #403) loads each of
+  the 46 G36 fixtures through the facade, encodes its compiled-schedule blob, decodes it with the
+  `no_std` execution entry and runs the shared 160-frame schedule through both, comparing every
+  boundary output by raw bits, every warning in order and the raw state words after load and
+  after every frame. Per PR it runs on x86_64, aarch64 and `wasm32-wasip1` from one recorded
+  artifact: every determinism cell records the blobs and expected results, the four recordings
+  must be identical, and the x86_64 debug recording is decoded and replayed natively on aarch64
+  and under wasmtime on `wasm32-wasip1`
+  ([the blob round trip](docs/compiled-schedule-blob.md#the-blob-round-trip)). Its controls flip
+  one bit of a recording and require the report to name the fixture, frame, slot and both bit
+  patterns. Locally: `bash .agents/gate.sh roundtrip`.
 - **Diagnostic determinism.** Diagnostics are sorted deterministically (e.g. by `ConnectorId`);
   assert the order, not just the set.
 

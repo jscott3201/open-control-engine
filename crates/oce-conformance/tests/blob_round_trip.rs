@@ -20,7 +20,8 @@
 //! * Neither variable set: the facade against the entry on this target, plus the golden and
 //!   digest checks.
 //! * `OCE_ROUND_TRIP_OUT=<dir>`: also write the recorded artifact (below) into `<dir>`, created
-//!   if absent. The x86_64 debug determinism cell does this in CI.
+//!   if absent. Every determinism cell does this in CI; the x86_64 debug cell's recording is the
+//!   artifact the other legs replay.
 //! * `OCE_ROUND_TRIP_EXPECT=<dir>`: also read the recorded artifact from `<dir>`, require its blob
 //!   bytes to equal this target's encoding, decode and run the *recorded* blob (encoded on the
 //!   recording host), and compare this target's run with the recorded one. The aarch64 and
