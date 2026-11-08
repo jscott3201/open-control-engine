@@ -10,9 +10,9 @@
 //!
 //! This is a **non-test** module (not `#[cfg(test)]`) on purpose: the per-PR `ci.yml` gate runs
 //! `cargo build` + `cargo clippy` while tests run in the release gate, so a signature/shape drift
-//! must be caught by a normal build, not a test target. The complementary
-//! layers are the checked-in `cargo public-api` baseline (release-gate; full-surface enumeration /
-//! leak detector) and the named frozen-method contract in `08` §11.1.
+//! must be caught by a normal build, not a test target. The complementary layer is the named
+//! frozen-method contract in `08` §11.1. There is no full-surface enumeration before 1.0: a
+//! public API surface baseline returns with the first stable release.
 
 #![allow(dead_code)]
 
@@ -202,10 +202,8 @@ fn _assert_frozen_signatures() {
 /// borrowed-state accessors and the enumerable snapshot types' readers. Same fn-pointer idiom, same
 /// failure mode — a return-type or arity drift stops coercing and the build fails.
 ///
-/// Pinning these here rather than leaving them to `cargo public-api` is deliberate: that baseline
-/// runs only in the release gate (PRs into `main` and a daily cron), never on a PR into
-/// `development`, so a drift landed mid-cycle would go unseen until release. This module is a
-/// non-test module, so the per-PR `cargo build` catches it instead.
+/// These are pinned here because nothing else enumerates the public surface before 1.0. This module
+/// is a non-test module, so the per-PR `cargo build` catches a drift as soon as it lands.
 ///
 /// One pin is narrower than the method it covers, stated so it is not overclaimed:
 /// `Engine::store` is pinned at `MemStore` like its neighbours, so it would not catch a newly added
@@ -215,8 +213,8 @@ fn _assert_frozen_signatures() {
 /// than an oversight. It is `#[deprecated]`, and this is a non-test module compiled under the gate's
 /// `-D warnings`, so naming it here is a hard error (`-D deprecated`). Suppressing that with an
 /// `#[allow]` would be worse than the gap: the only change anyone should now make to a deprecated
-/// method is deleting it, and a deletion is public-surface removal, which the release-gate baseline
-/// is the right review to adjudicate. A per-PR pin would make this gate fight that removal.
+/// method is deleting it, and a deletion is a reviewed public-surface removal. A per-PR pin would
+/// make this gate fight that removal.
 fn _assert_accessor_signatures() {
     let _: fn(&Engine<MemStore>) -> &oce_graph::Schedule = Engine::<MemStore>::schedule;
     let _: fn(&Engine<MemStore>) -> &MemStore = Engine::<MemStore>::store;

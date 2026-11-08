@@ -30,8 +30,8 @@ def render(index, observed):
         f"Fast checker: {link('scripts/authority_claims/check.py')}.", "",
         "## Verification modes and limits", "",
         "- **Delegated:** display structured owner data and bind its exact bytes. The fast checker",
-        "  does not run Cargo/package closure, public row classification, or catalog provenance/registry",
-        "  validators. Those existing owners run separately in CI and the full gate.",
+        "  does not run the catalog provenance/registry validators. Those existing owners run",
+        "  separately in CI and the full gate.",
         "- **Native:** expected observations below are compared with compiled private constants or",
         "  `oce_blocks::catalog()` by test-only owner modules. Python never extracts Rust literals.",
         "  A fast-check PASS alone does **not** mean native comparisons passed.",
@@ -47,25 +47,9 @@ def render(index, observed):
         if row["mode"] != "review-only":
             # Corpus directories are links to fixed declared roots, not user-selected paths.
             lines.append(f"| {row['id']} | {row['mode']} | {link(row['source'])} | {link(row['verifier'])} |")
-    packages = observed["packages"]["value"]
-    publishable = sum(row["publish"] for row in packages["packages"])
-    lines += ["", "## Delegated owner observations", "",
-              f"Packages: **{len(packages['packages'])} members; {publishable} publishable; "
-              f"{len(packages['packages']) - publishable} private**. Publication state: {code(packages['publication_state'])}.",
-              f"Feature selections: **{len(packages['feature_contract']['selections'])}**; the shared normal closure is owner-verified, not inferred here.", "",
-              "| Package | Classification | Publishable |", "| --- | --- | --- |"]
-    for row in sorted(packages["packages"], key=lambda r: r["name"]):
-        lines.append(f"| {code(row['name'])} | {code(row['category'])} | {str(row['publish']).lower()} |")
-    public = observed["public-surface"]["value"]
-    lines += ["", "| Public baseline | Descriptor rows | SHA-256 (owner descriptor) |", "| --- | --- | --- |"]
-    for row in sorted(public["baselines"], key=lambda r: r["id"]):
-        lines.append(f"| {link(row['path'])} | {row['item_count']} | {code(row['sha256'])} |")
-    lines += ["", "Exact row assignments remain in the public ledger; statuses below are displayed, not re-adjudicated.", "",
-              "| Group | Status |", "| --- | --- |"]
-    for name, row in sorted(public["groups"].items()):
-        lines.append(f"| {code(name)} | {code(row['status'])} |")
+    lines += ["", "## Delegated owner observations", ""]
     source = observed["catalog-source"]["value"]
-    lines += ["", f"CDL source revision: {code(source['commit'])}; catalog fingerprint: {code(source['catalog_fingerprint'])}.",
+    lines += [f"CDL source revision: {code(source['commit'])}; catalog fingerprint: {code(source['catalog_fingerprint'])}.",
               "This is the existing pinned source identity, not a new numeric catalog revision.", "",
               "| Delegated source | SHA-256 (exact input bytes) |", "| --- | --- |"]
     for row in facts:

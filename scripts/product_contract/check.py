@@ -50,9 +50,6 @@ PENDING = frozenset((DOCUMENT, "scripts/product_contract/check.py",
                             "docs/replay-record.md", "crates/oce-api/src/replay.rs",
                             "crates/oce-api/tests/replay.rs", "crates/oce-api/tests/replay_codec.rs",
                              "crates/oce-api/src/replay_capture_tests.rs",
-                             "docs/release-compatibility.md",
-                             "scripts/release_compatibility/test_check.py",
-                             "crates/oce-api/tests/release_compatibility.rs",
                              "crates/oce-api/tests/release_fallback.rs"))
 POINTERS = ("README.md", "AGENTS.md", "TESTING.md", "docs/architecture.md",
             "docs/host-responsibilities.md", "docs/README.md")
@@ -68,8 +65,10 @@ RETIRED_METHODS = ("tick", "tick_with", "set_input", "simulate", "step_realtime"
                    "set_realtime_epoch_unix_nanos", "realtime_epoch_unix_nanos")
 RETIRED_TYPES = ("Outputs", "InputSource", "CollectSpec", "SimSpec", "SimMetrics", "StepReport",
                  "OutputTrace")
+RETIRED_VARIANTS = ("RealtimeEpochUnset", "RealtimeInstantUnrepresentable")
+FACADE_CONTROLS = "scripts/facade_contract/check.py"
 FRAME_EVIDENCE = frozenset((
-    ("retired_facade_symbols_are_absent", "crates/oce-api/tests/public_surface_contract.rs"),
+    ("test_reintroduced_symbol_cannot_pass_by_compiling", "scripts/facade_contract/test_check.py"),
     ("incomplete_reference_inputs_refuse_in_both_cadences", "crates/oce-conformance/tests/driver.rs"),
     ("store_samples_neither_supply_missing_determinants_nor_overwrite_complete_values",
      "crates/oce-api/tests/frame_purity.rs"),
@@ -353,7 +352,7 @@ def validate(repository: Repository) -> str:
 
 def validate_frame_boundary(repository: Repository, revision: str, rows: list[Requirement]) -> None:
     """Bounded contraction sentinels, not a compiler or proof of behavioral test relevance."""
-    require(revision == "16", "frame-only: document revision must be 16")
+    require(revision == "17", "frame-only: document revision must be 17")
     contraction = next((row for row in rows if row.identifier == "PC-035"), None)
     require(contraction is not None and contraction.status == "CURRENT",
             "frame-only: contraction is current")
@@ -363,12 +362,10 @@ def validate_frame_boundary(repository: Repository, revision: str, rows: list[Re
                 for name, destination in link_list(contraction.evidence[5:])]
     require(len(evidence) == len(FRAME_EVIDENCE) and set(evidence) == FRAME_EVIDENCE,
             "frame-only: contraction evidence requires absence, driver refusal and Store controls")
-    baseline = repository.read("crates/oce-api/tests/public-api.txt")
-    forbidden = [f"oce_api::Engine<S>::{name}(" for name in RETIRED_METHODS]
-    forbidden += [f"oce_api::{name}" for name in RETIRED_TYPES]
-    forbidden += ["oce_api::OcError::RealtimeEpochUnset", "oce_api::OcError::RealtimeInstantUnrepresentable"]
-    for symbol in forbidden:
-        require(symbol not in baseline, f"frame-only: retired baseline item: {symbol}")
+    # Every retired name keeps a negative compiler control; the controls themselves prove absence.
+    controls = repository.read(FACADE_CONTROLS)
+    for symbol in RETIRED_METHODS + RETIRED_TYPES + RETIRED_VARIANTS:
+        require(f'"{symbol}"' in controls, f"frame-only: retired name lacks a compiler control: {symbol}")
     for row in rows:
         if row.status != "FUTURE":
             statement = re.sub(r"[`*_]", "", row.statement).casefold()
@@ -385,10 +382,10 @@ def validate_release_boundary(rows: list[Requirement]) -> None:
     evidence = {(name, local_path(DOCUMENT, urlsplit(destination).path))
                 for name, destination in link_list(release.evidence[5:])}
     require(evidence == {
-        ("test_retained_matrix_has_the_independent_closed_direction_table", "scripts/release_compatibility/test_check.py"),
-        ("retained_release_matrix_and_hostile_controls_are_enforced", "crates/oce-api/tests/release_compatibility.rs"),
         ("cross_candidate_envelopes_refuse_before_decode_or_engine_mutation", "crates/oce-api/tests/release_fallback.rs"),
-    }, "release: directed matrix, enforced hostility and host refusal evidence required")
+        ("absent_or_unauthenticated_envelopes_never_reach_the_decoder", "crates/oce-api/tests/release_fallback.rs"),
+        ("rollback_handoff_retains_prior_qualified_identity_and_opaque_state_outside_oce", "crates/oce-api/tests/release_fallback.rs"),
+    }, "release: host refusal, unauthenticated-envelope and external-rollback evidence required")
     require(all(text in release.limitation for text in (
         "No N-1 support, migration, release, publication or downstream qualification",
         "Producer absence is not decoder refusal", "rollback stays external",

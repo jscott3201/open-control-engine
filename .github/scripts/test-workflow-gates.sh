@@ -165,19 +165,12 @@ jobs:
         with:
           tool: nextest@0.9.143
       - name: Clear cached nextest reports
-        run: rm -f target/nextest/{ci,ci-release,public-api-oce-api,public-api-oce-store}/junit.xml
+        run: rm -f target/nextest/{ci,ci-release}/junit.xml
       - run: cargo nextest run --workspace --locked --profile ci --no-tests=fail
       - run: cargo nextest run --workspace --locked --profile ci-release --cargo-profile release --no-tests=fail
       - run: cargo test --workspace --doc --locked
-      - env:
-          OCE_REQUIRE_SURFACE_CHECK: "1"
-        run: cargo nextest run -p oce-api -E 'test(public_api_surface_matches_blessed_baseline)' --profile public-api-oce-api --locked --no-tests=fail
-      - name: cargo public-api surface gate (oce-store)
-        env:
-          OCE_REQUIRE_SURFACE_CHECK: "1"
-        run: cargo nextest run -p oce-store -E 'test(public_api_surface_matches_blessed_baseline)' --profile public-api-oce-store --locked --no-tests=fail
       - run: >-
-          for profile in ci ci-release public-api-oce-api public-api-oce-store;
+          for profile in ci ci-release;
           do test -s "target/nextest/$profile/junit.xml";
           done
   default-no-db:
@@ -372,10 +365,15 @@ remove_stale_status_gate() {
   mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
-remove_store_surface_gate() {
+reinstall_gate_nightly() {
   dir="$1"
   _deny="$2"
-  grep -v -- '-p oce-store' "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  awk '
+    { print }
+    /tool: nextest@0\.9\.143/ {
+      print "      - run: rustup toolchain install nightly-2026-05-01 --profile minimal"
+    }
+  ' "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
   mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
 }
 
@@ -716,8 +714,8 @@ run_case missing-stale-status-gate fail remove_stale_status_gate \
   "run stale crate-status fixture tests"
 run_case empty-bans-deny fail empty_bans_deny \
   "cargo-deny bans include representative SQL/ORM crate sqlx"
-run_case missing-store-surface-gate fail remove_store_surface_gate \
-  "oce-store public-api surface gate package selector"
+run_case reinstalled-gate-nightly fail reinstall_gate_nightly \
+  "release gate installs no nightly toolchain"
 run_case missing-golden-gen-firewall fail remove_golden_gen_firewall \
   "run golden-gen firewall fixture tests"
 run_case missing-package-publication-contract fail remove_package_publication_contract \

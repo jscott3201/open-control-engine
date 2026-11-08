@@ -268,6 +268,21 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Verification
 
+- **The compatibility records and the API surface gate are retired until 1.0** (GitHub #388). The
+  engine is pre-1.0 with no backwards-compatibility promise, so the release-compatibility matrix
+  and its checker, the compatibility manifest, the package-publication and public-surface ledgers,
+  the dated stability baseline and its tool, and the `cargo public-api` snapshots for `oce-api` and
+  `oce-store` are deleted with their tests, docs and dev-dependencies. `release-gate.yml` no longer
+  installs a nightly toolchain, and a change to `Cargo.lock` or `crates/*/src` no longer needs a
+  "select … as the current candidate" commit. The package validator now reads publication state
+  from each crate's `Cargo.toml` and keeps its structural checks (private or registry-ready, one
+  shared `oce-api` feature closure with no database or async runtime, approved `release.yml`
+  bytes). Retired facade names stay refused by the facade compiler controls, which now also cover
+  the two removed realtime `OcError` variants. The product contract advances to revision 17 and
+  the authority index drops its two ledger rows; the identity glossary moves to the facade
+  contracts and the host fallback checklist to the host responsibilities. A surface baseline
+  returns at 1.0.
+
 - **The retained native strict-bit receipt is marked `recapture-pending` for the M1 refactor
   window** (GitHub #387). `receipts.json` gains an optional evidence `status` (absent or
   `admitted` keeps the previous behaviour) and a `pending` record naming the reason, the date, the

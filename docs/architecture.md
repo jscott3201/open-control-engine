@@ -85,9 +85,9 @@ change (PR #209).
 | **MSRV** | `1.97.0` | root `Cargo.toml` (`rust-version`) | The floor a consumer needs. Build the engine with any toolchain at or above this. |
 | **Pin** | `1.97.1` | `rust-toolchain.toml` (`channel`) | What CI and local development actually build with, so the two agree exactly. |
 
-The MSRV cannot be raised to match the pin casually: the release gate's `cargo public-api` surface
-checks shell out to a pinned nightly that identifies as `rustc 1.97.0-nightly`, and Cargo enforces
-`rust-version` against it. `Cargo.toml` carries the full explanation inline at the declaration.
+The pin is a patch release of the MSRV, so the declared floor is the lowest version every gate
+actually builds against. Nothing in CI builds below the pin; lowering the MSRV would need a CI leg
+that does.
 
 ## Determinism, and the two allocation carve-outs
 
@@ -120,9 +120,10 @@ them, because nothing re-measures them in CI.
 ## The crate map
 
 Seventeen crates. The dependency direction is acyclic and organized around the seam above.
-Their responsibilities below do not imply equal support or publication status. The normative
-[package, feature, and publication policy](package-publication-policy.md) classifies all 17 and
-separates host support from registry dependency closure.
+Their responsibilities below do not imply equal support or publication status: publication is
+read from each crate's `publish` flag and checked by the
+[package validator](ci-and-the-gate.md#the-package-validator), and a publishable implementation
+crate is registry closure for the facade, not an independently supported host API.
 
 **Execution core (Group A — no store, no database):**
 
@@ -154,7 +155,7 @@ separates host support from registry dependency closure.
 | `oce-bless` | **Test-support only, `publish = false`.** The single definition of the repo's environment-variable truthiness policy, so golden-regeneration switches cannot drift apart across crates. |
 | `oce-extension` | **Experimental/reserved, `publish = false`; nothing consumes it.** The intended role is the FMI / extension-block boundary. No crate depends on it, the CXF resolver has no extension-block branch (an unknown class is a hard `ClassNotFound`), and `DiagCode::MissingFmuPath` (`crates/oce-diag/src/lib.rs`) is declared but never constructed. **Do not plan FMI integration against this crate.** |
 | `oce-docs` | **Reserved panic-only seam, `publish = false`.** The sequence-spec and point-list export surface is declared; `point_list_html` panics with `unimplemented!` (`crates/oce-docs/src/lib.rs`). Nothing depends on it. |
-| `oce-api` | The primary embeddable host facade: `Engine<S: Store = MemStore>`, spanning load, complete-frame preparation/execution, parameters, IO inventory, latest-state non-receipt reads (`get_output`/`watch`), CXF export with content id, and a read-only topology view. Its catalog metadata is `oce_api::catalog()`, with the actively supported `oce_blocks::catalog()` as a separate companion surface; see the [public surface contract](public-surface-contract.md). |
+| `oce-api` | The primary embeddable host facade: `Engine<S: Store = MemStore>`, spanning load, complete-frame preparation/execution, parameters, IO inventory, latest-state non-receipt reads (`get_output`/`watch`), CXF export with content id, and a read-only topology view. Its catalog metadata is `oce_api::catalog()`, with the actively supported `oce_blocks::catalog()` as a separate companion surface; see the [product contract](product-contract.md). |
 
 Four of those — `oce-flatten`, `oce-semantics`, `oce-extension`, `oce-docs` — are reserved seams
 rather than working components. They are named here so that nobody plans a feature against a crate
@@ -167,7 +168,7 @@ unconditional dependency, so disabling default features does not remove the in-m
 The flag is retained temporarily as a truthful legacy no-op while downstream manifests migrate.
 What actually makes `MemStore` the default is the type parameter in `Engine<S: Store = MemStore>`.
 To use a different backend, name it: `Engine<MyAdapter>`. The complete supported matrix and its
-mechanical closure guard are in the [package policy](package-publication-policy.md).
+mechanical closure guard are in the [package validator](ci-and-the-gate.md#the-package-validator).
 
 ## What this engine will never do
 

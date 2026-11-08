@@ -244,7 +244,7 @@ CI is **dev-light / release-heavy** (keep per-change PRs fast; save the heavy su
 | Gate | Trigger | Runs tests? |
 | --- | --- | --- |
 | `.github/workflows/pr-gate.yml` (light) | PRs into `development`, manual dispatch (no post-merge run: the PR run is the only one) | The `determinism-matrix` job runs **`oce-api`, `oce-blocks`, and `oce-expr`** on x86_64 (native) and aarch64 (QEMU user-mode emulation) in debug/release. Portable snapshots match across architectures; portable and target-bound snapshots match across codegen; target-bound snapshots differ across architectures and foreign restore refuses. Separately, scoped **`oce-conformance::strict_bits` controls and the four aligned suite binaries** run in a Linux architecture/codegen matrix (x86_64 native, aarch64 emulated), with repeat captures and fail-closed cross-cell comparison. This is not the full conformance suite. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, package/feature/publication and authority checks, cargo-machete, stale-status lint, golden-gen firewall, fixture smoke, and `gate (light)` executing `.agents/gate.sh`, including unconditional cargo-deny bans/licenses/sources. |
-| `.github/workflows/release-gate.yml` (heavy) | **Any** PR targeting `main` (it filters on the base branch only — there is no `head_ref == development` condition), pushes to `main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, two armed per-crate public-api surface snapshots (`oce-api` and `oce-store`), plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
+| `.github/workflows/release-gate.yml` (heavy) | **Any** PR targeting `main` (it filters on the base branch only — there is no `head_ref == development` condition), pushes to `main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
 | `.github/workflows/advisories.yml` | Daily cron, manual dispatch | **No** — advisory/yanked scan only (`cargo deny check advisories`, `yanked = "deny"`, `ignore = []`). |
 
 Read the first row in the dangerous direction and you will trust a green PR you
@@ -268,27 +268,10 @@ cargo test --workspace --doc --locked     # doctests — nextest CANNOT run thes
 ```
 
 The default profile is fail-fast for local feedback. Automated profiles run every selected test and
-retry none. Ordinary tests terminate after 120 seconds; the public-API profiles allow 10 minutes for
-their nested nightly rustdoc builds. All profiles fail when a child process retains inherited output
+retry none. Ordinary tests terminate after 120 seconds. All profiles fail when a child process retains inherited output
 handles for more than two seconds, and bound a whole run to 15 minutes. `ci-release` inherits `ci` so
 runner semantics cannot drift between debug and release codegen. Both write JUnit under
 `target/nextest/<profile>/junit.xml`; CI uploads those files for 14 days.
-
-The public-api surface gates need the gate-only nightly and run in `release-gate.yml`. Run them
-in **the release gate's own form** — the `NIGHTLY` value is pinned at `release-gate.yml`'s `env:`
-block, so read it from there rather than copying the date:
-
-```bash
-OCE_PUBLIC_API_NIGHTLY=<release-gate.yml NIGHTLY> OCE_REQUIRE_SURFACE_CHECK=1 \
-  cargo nextest run -p oce-api -E 'test(public_api_surface_matches_blessed_baseline)' \
-  --profile public-api-oce-api --locked --no-tests=fail
-```
-
-`--no-tests=fail` is what gives it teeth: under raw `cargo test`, a surface test that is renamed,
-deleted, `#[ignore]`d or filtered out disappears silently and the run still passes green.
-`OCE_REQUIRE_SURFACE_CHECK=1` likewise turns an unarmed skip into a failure. For the other baseline,
-swap both `-p oce-api` → `-p oce-store` and `--profile public-api-oce-api` →
-`--profile public-api-oce-store`. Separate invocations preserve vanish-to-RED and separate reports.
 
 > nextest does **not** run doctests (a stable-Rust limitation). A complete local/CI test pass is
 > therefore always **two commands**: `cargo nextest run` **and** `cargo test --doc`.

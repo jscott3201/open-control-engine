@@ -2,8 +2,42 @@
 
 The additive `oce-api` contracts describe metadata and evidence independently of a loaded engine.
 Existing load/export reports, diagnostic aliases, value/IO types and conditional storage aliases
-retain their signatures and behavior. The [public surface contract](public-surface-contract.md)
-and row ledger classify the exact API; pre-1.0 change control still applies.
+retain their signatures and behavior. There is no enumerated surface baseline before 1.0;
+the [product contract](product-contract.md) and pre-1.0 change control still apply.
+
+## Identity glossary
+
+- **`DomainKey`** is a database-free semantic key DTO. In `LoadReport.model_id` it is a
+  facade DTO carrying the loaded model's authored top-composite identity when
+  available, otherwise the documented deterministic projection key. **Model id** is the prose role;
+  there is no separate Rust `ModelId` type.
+- **`ConnectorId`** is a dense, zero-based connector/index identity within one loaded flattened
+  model. It is not durable and has no cross-reload, cross-model, or host-control identity guarantee.
+- **`PointHandle`** is an adapter-defined scalar token containing no backend type. Its public tuple
+  field is intentional: external adapters mint it in `PointStore::resolve_points` and consume it in
+  `PointSnapshot::read_resolved`. A handle is valid only for the same adapter mapping from resolution
+  through compatible snapshot reads. It is not durable, global, cross-adapter, cross-reload, or a
+  host/equipment control identity.
+- **Catalog content tag** identifies all canonical facade metadata bytes within catalog schema
+  revision 1. It is distinct from the existing registry fingerprint and state compatibility key.
+- **Contract descriptor revision** versions one facade domain's shapes/semantics. HostTick's
+  descriptor remains descriptive; it is not a new state-wire or execution-profile selector.
+- **Host build identity** remains consumer-owned and includes the host's source/build/features
+  qualifications; catalog metadata alone cannot establish it. The compatibility descriptor's OCE
+  package version is only a public build fact, not a unique build identity.
+- **Complete export content identity** is captured as `CompleteExportContentId`, distinct from
+  `CatalogContentId` and authored `DomainKey`. Existing string APIs retain their bytes and algorithms.
+  It identifies the emitted document, which follows authored `@graph` and `containsBlock` order, so
+  sources differing only in [that order](cxf-composite-subset.md#ordering-and-identity-contract)
+  can receive different ids. No order-independent model identity is provided.
+- **Compatibility descriptor** versions the closed public-fact receipt itself. Equality does not
+  establish executable identity, model-specific IO equality, generation, state compatibility or trust.
+
+Frame preparation and latest-state inspection resolve model-local connector identities in the IO
+inventory, not Store handles. Load still validates adapter handle cardinality, but retains no runtime
+Store-input handles. Preparation admits only complete executable boundary inputs with exact types
+and declared domains. The private incarnation fence
+is distinct from authored model identity and is neither portable nor serialized into state bytes.
 
 ## Catalog ownership and identity
 

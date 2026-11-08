@@ -33,6 +33,17 @@ require_pattern() {
   fi
 }
 
+refuse_pattern() {
+  path="$1"
+  pattern="$2"
+  label="$3"
+  searchable="$(grep -Ev '^[[:space:]]*#' "$path")"
+  if grep -Eq "$pattern" <<< "$searchable"; then
+    echo "FAIL: $path contains a refused gate pattern: $label"
+    exit 1
+  fi
+}
+
 require_job_pattern() {
   path="$1"
   job="$2"
@@ -422,20 +433,15 @@ require_pattern "$release" 'cargo nextest run --workspace --locked --profile ci 
   'debug nextest with hard-fail-on-zero-tests'
 require_pattern "$release" 'cargo nextest run --workspace --locked --profile ci-release --cargo-profile release --no-tests=fail' \
   'release-codegen nextest with hard-fail-on-zero-tests'
-require_pattern "$release" 'target/nextest/\{ci,ci-release,public-api-oce-api,public-api-oce-store\}/junit\.xml' \
+require_pattern "$release" 'target/nextest/\{ci,ci-release\}/junit\.xml' \
   'release gate clears cached nextest JUnit reports'
-require_pattern "$release" 'for profile in ci ci-release public-api-oce-api public-api-oce-store;' \
+require_pattern "$release" 'for profile in ci ci-release;' \
   'release gate requires the complete nextest report set'
 require_pattern "$release" 'test -s "target/nextest/\$profile/junit\.xml"' \
   'release gate refuses an absent or empty nextest report'
 require_pattern "$release" 'cargo test --workspace --doc --locked' 'doctest gate'
-require_pattern "$release" 'OCE_REQUIRE_SURFACE_CHECK:[[:space:]]*"1"' 'armed public-api surface gate'
-require_pattern "$release" 'cargo public-api surface gate \(oce-store\)' \
-  'dedicated oce-store public-api surface gate step'
-require_pattern "$release" 'cargo nextest run -p oce-store' \
-  'oce-store public-api surface gate package selector'
-require_pattern "$release" 'profile public-api-oce-api' 'oce-api surface report profile'
-require_pattern "$release" 'profile public-api-oce-store' 'oce-store surface report profile'
+refuse_pattern "$release" 'rustup[[:space:]]+toolchain[[:space:]]+install|nightly' \
+  'release gate installs no nightly toolchain; the workspace builds on its pinned stable'
 require_pattern "$release" 'cargo-machete' 'release gate installs cargo-machete'
 require_pattern "$release" 'cargo machete' 'release gate runs cargo machete'
 require_pattern "$release" 'check-default-no-db\.sh' 'release gate runs default-no-db smoke'
