@@ -19,17 +19,23 @@ let mut engine = oce_api::Engine::new();
 engine.load_cxf(&cxf_bytes)?;
 let blob = engine.compile_blob()?;          // CompiledBlob { bytes, content_id }
 
-// Target (no_std + alloc, same engine version): decode into a ready-to-tick executable.
-let decoded = oce_graph::blob::decode(&blob.bytes)?;
-// decoded.model, decoded.schedule, decoded.blocks and decoded.state feed oce_graph::eval_tick;
-// decoded.inputs and decoded.outputs are the boundary slots, sorted by path.
+// Target (no_std + alloc, same engine version): decode into a runnable executable.
+let mut executable = oce_graph::blob::Executable::from_blob(&blob.bytes)?;
+executable.set_non_finite_input_policy(oce_graph::frame::NonFiniteInputPolicy::Refuse);
+let t_ret = executable.input_slot(T_RET_PATH).unwrap();     // resolve paths once, at boot
+let t_cut = executable.output_slot(T_CUT_PATH).unwrap();
+let mut inputs = vec![Value::Real(0.0); executable.inputs().len()]; // one value per input slot
+inputs[t_ret] = Value::Real(297.15);
+executable.execute_frame(0.0, &inputs, &oce_blocks::NoopDiagnostics)?;
+let cutoff = executable.output(t_cut);                      // borrowed from the run state
 ```
 
 `Engine::compile_blob` refuses with `OcError::State` when no model is loaded or parameter edits are
 pending, and with `OcError::Blob` when the executable cannot be encoded. It decodes its own output
 before returning, so every success is a blob the same build accepts. Executed frames do not change
-the bytes; a resumed parameter edit does. The HostTick v1 frame driver that a target wraps around
-`eval_tick` (time checks, input checks, staging, outputs) is GitHub #401.
+the bytes; a resumed parameter edit does. `oce_graph::blob::decode` alone returns the decoded parts
+(model arena, schedule, blocks, run state, I/O table); `Executable` wraps them with the HostTick v1
+frame driver ([executing a blob](#executing-a-blob)).
 
 ## What travels
 
@@ -67,6 +73,42 @@ never by the run-local class id. Reals travel as their IEEE-754 bits.
   math library; the decoded executable reports this as `target_bound`. None of the 46 G36 catalog
   fixtures uses one.
 - **A signature.** See the trust model.
+
+## Executing a blob
+
+`oce_graph::blob::Executable` is the `no_std + alloc` execution entry (GitHub #401): what a
+bare-metal or WASM target links instead of the facade. It decodes the bytes once
+(`Executable::from_blob`) and runs frames through the same HostTick v1 frame driver
+(`oce_graph::frame`) the facade's `Engine::execute_frame` calls, so the time checks, the input
+checks, the non-finite policy, the accepted-frame sequence, staging and the single evaluation per
+frame are one implementation on both sides, and an equal timestamp advances state again
+([execution profile](execution-profile.md#one-frame-driver-two-callers)).
+
+- **Slots, not names.** Inputs and outputs are addressed by their position in the blob's I/O table
+  (`inputs()`, `outputs()`), sorted by UTF-8 path. The host resolves each path once
+  (`input_slot`, `output_slot`, a binary search) and passes one value per input slot each frame;
+  a slice of another length is `FrameRefusal::InputCount`. There is no hold-last value and no
+  substitution, as on the facade.
+- **Refusals** are `oce_graph::frame::FrameRefusal`, slot-indexed, in the facade's order: time,
+  input count, then per slot type, non-finite policy and domain, then sequence. Each precedes any
+  mutation.
+- **Non-finite inputs.** The policy starts at `NonFiniteInputPolicy::Admit`, the facade's default;
+  production hosts are recommended to select `Refuse` before the first frame. The blob does not
+  carry the policy.
+- **Outputs** are borrowed from the run state (`output(slot)`, `output_values()`), never copied.
+- **Placement.** `target_bound()` reports a target-bound class, as `CompletedFrame` does.
+
+### State words
+
+`state_words()` returns the stateful blocks' words in the decoded layout, raw: no portability tag,
+manifest or checksum. They are not the facade's portable state snapshot, which stays in `oce-api`,
+and a target-side snapshot format is a later decision (M9's warm restart). `restore_state_words`
+replaces them all or nothing and refuses with a typed `StateWordsRefusal`: a different length;
+before the first accepted frame, anything but the initial words; after it, any region its block's
+own state contract rejects at the executable's current model time (the check the facade's restore
+applies), so words that would index outside a block's buffers are refused, not executed. Model
+time, sequence, policy and connector values are untouched; the next frame recomputes the outputs
+from the words and its inputs. Keep words with the executable and model time they came from.
 
 ## Versioning
 
@@ -127,8 +169,11 @@ what it returns — the model arena, the blocks and whatever their constructors 
 the run state and the I/O table — plus one default-parameter block per class for its signature
 hash and four scratch vectors, all freed before it returns; I/O paths and payloads borrow the input
 bytes. `crates/oce-api/tests/blob_allocations.rs` pins that count exactly for every fixture, and
-`blob_peak_allocation.rs` bounds peak memory against blob length for hostile and dense shapes. Ticking
-the decoded executable allocates nothing in the scheduler; the
+`blob_peak_allocation.rs` bounds peak memory against blob length for hostile and dense shapes.
+Executing frames allocates nothing: `crates/oce-graph/tests/blob_execution.rs` decodes every golden
+once and runs its 160 frames inside a counting-allocator region that must record zero
+allocations, against the `no_std + alloc` build of `oce-graph` in the `no-std-build` job (the 46
+decodes total 6,013 allocations and 992,984 bytes; the 7,360 frames, none). The
 [architecture's](architecture.md#determinism-and-the-two-allocation-carve-outs) two carve-outs
 still apply.
 
@@ -138,9 +183,13 @@ still apply.
 | --- | --- |
 | One canonical byte sequence per executable | 46 goldens in `crates/oce-api/tests/fixtures/blob/`, re-encoded byte for byte, and decoded then re-encoded byte for byte (`blob_goldens.rs`); an independent test-side writer reproduces every golden (`blob_hostile_bytes.rs`) |
 | Identical on x86_64 and aarch64, debug and release | Every cell of the per-PR determinism matrix compares its encoding with the goldens, and the `determinism-compare` fan-in requires the four cells' bytes identical ([CI and the gate](ci-and-the-gate.md#dev-light-release-heavy)); the macOS and Windows platform cells run the same golden test |
-| Same outputs and state as the host | `src/tests/blob_dual_path_tests.rs`: for every fixture, the facade and the decoded executable take 160 frames spanning about 3.3 hours (steps from 0.75 s to 300 s), and every boundary output and the whole `RunState` match bit for bit after load and after every tick; every stateful fixture's state words change and each fixture moves at least a recorded number of outputs, and a perturbed input on the decoded side fails the comparison |
+| Same outputs, refusals and state as the host, through one frame driver | `src/tests/blob_dual_path_tests.rs`: for every fixture, the facade, the core frame driver on a second load and the blob entry take 160 frames spanning about 3.3 hours (steps from 0.75 s to 300 s) plus the same bad frames (NaN time, time going backwards, a wrong type, a non-finite Real under `Refuse`, a value above a declared maximum), and every boundary output, refusal, clock, sequence and the whole `RunState` match bit for bit after load and after every frame and refusal; every stateful fixture's state words change, each fixture moves at least a recorded number of outputs, and a perturbed input on the blob side fails the comparison. The facade's run must reproduce `crates/oce-graph/tests/fixtures/blob_frame_digests.tsv`, which `oce-graph`'s `blob_execution` test checks against the entry built `no_std + alloc` |
+| No second frame driver in the facade | `crates/oce-api/tests/frame_driver_ownership.rs`: the facade re-exports the core's `MAX_FRAME_TIME_MAGNITUDE` and `NonFiniteInputPolicy`, and no facade source defines them, evaluates the schedule or re-implements a time or sequence rule |
+| Executing frames allocates nothing; the target closure is clean | `crates/oce-graph/tests/blob_execution.rs` (zero allocations over every golden's frames, run against the `no_std + alloc` build in `no-std-build`) and `scripts/ci/check-no-std-entry-closure.sh` (no `oce-cxf`, `oce-api`, `serde_json` or `std` in the closure, with controls) |
+| Raw state words restore all or nothing | `crates/oce-graph/tests/blob_state_words.rs` |
 | Typed refusal, never a panic | `blob_hostile_bytes.rs` and `blob_hostile_model.rs` (one test per refusal), `blob_fuzz.rs` (10,000 seeded random mutations, re-checksummed) and `oce-blocks` `tests/hostile_parameters.rs` |
 | `SemanticPoint` payloads are non-computational | `blob_semantic_seam.rs` fills and mutates every payload byte and requires an identical executable and identical outputs |
 
-The blob is not yet executed on a bare-metal target by CI: the `no_std` build of the decoder is
-gated (`no-std-build`), and running it on a target is GitHub #401 and #402.
+The blob is not yet executed on a bare-metal target by CI: the `no_std` build of the decoder and
+the execution entry is built for `thumbv7em-none-eabihf` and `wasm32-unknown-unknown` and its
+suites run on the host against that build (`no-std-build`); running it on a target is GitHub #402.

@@ -12,11 +12,31 @@ one native atomic transition with an immutable output/diagnostic result around t
 not a second evaluator or profile selector. Preparation does not execute; consuming `execute_frame`
 is the only public state-advancing execution surface. Legacy execution profiles were removed.
 
-The frame path enters one private infallible evaluation/refresh core after preflight and staging.
-The core closes durable-restore readiness, evaluates once, updates
-the previous time and refreshes latest outputs. It selects no diagnostic policy and performs no
-storage IO, restart, frame-sequence update or projection. Host loops select cadence and capture traces
-from completed receipts or explicitly labelled latest-state inspections.
+## One frame driver, two callers
+
+HostTick v1 is implemented once, in the core: `oce_graph::frame` (design note
+[decision 11](design/compiled-schedule-blob.md#decisions), GitHub #401). Its `FrameDriver` checks
+the time (finite, `|t| ≤ MAX_FRAME_TIME_MAGNITUDE`, not before the previous accepted time, a finite
+step, representable by every stateful block), then one value per input slot and, slot by slot,
+the exact type, the `NonFiniteInputPolicy` and the declared domain, then sequence capacity; every
+refusal precedes any mutation. It then stages each value into every fan-out target, evaluates the
+frozen schedule once, sets the previous time and advances the sequence. It is slot-indexed and
+name-free, selects no diagnostic policy (the caller passes the sink) and performs no storage IO,
+restart or projection.
+
+Two callers share it:
+
+| Caller | Build | Adds |
+| --- | --- | --- |
+| `oce_api::Engine::prepare_frame` / `execute_frame` | `std` | Name resolution and the unknown, duplicate and missing-key refusals, the prepared plan and its incarnation token, load and pending-edit preconditions, the durable-restore window, replay records, `String` warnings and the owned `CompletedFrame` |
+| `oce_graph::blob::Executable::execute_frame` | `no_std + alloc` | Inputs and outputs by slot from the [compiled-schedule blob](compiled-schedule-blob.md#executing-a-blob)'s I/O table, and the state as raw words |
+
+`crates/oce-api/src/tests/blob_dual_path_tests.rs` runs every G36 fixture's frames, and the same
+bad frames, through the facade, the core driver on the host's own executable and the blob entry,
+and requires identical outputs, refusals and run state after every frame;
+`crates/oce-api/tests/frame_driver_ownership.rs` checks that no facade source holds a second copy
+of the rules. Host loops select cadence and capture traces from completed receipts or explicitly
+labelled latest-state inspections.
 
 ## HostTick v1
 

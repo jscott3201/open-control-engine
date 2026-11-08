@@ -114,7 +114,9 @@ hash collections; and give every new dependency `default-features = false`.
 A crate that depends on one of the four names `features = ["std"]` on that edge, because their
 workspace entries carry `default-features = false`. The `no-std-build` job in `pr-gate.yml` and
 `.agents/gate.sh` build them for `thumbv7em-none-eabihf` and `wasm32-unknown-unknown`; the script
-installs nothing, so add both targets once with `rustup target add`. See
+installs nothing, so add both targets once with `rustup target add`. The same job checks the
+`no_std` `oce-graph` closure (`scripts/ci/check-no-std-entry-closure.sh`) and runs `oce-graph`'s
+`blob_execution` and `blob_state_words` suites against the `no_std + alloc` build. See
 [the architecture](../docs/architecture.md#no_std--alloc-the-core-four).
 
 The core four use no hash collections at all: use `BTreeMap`, `BTreeSet`, `BinaryHeap` or a sorted
@@ -145,6 +147,22 @@ deliberately:
 Regenerate with `OCE_BLESS_BLOB=1 cargo test -p oce-api --test blob_goldens --locked`, run it again
 without the switch, and say in the PR which files moved and why. The blob decoder lives in
 `oce-graph` (`no_std`), so a decoder change also has to pass the `no-std-build` mirror.
+
+## The frame driver lives in `oce-graph`, and its run digests move with behaviour
+
+The HostTick v1 frame driver (time checks, per-slot input checks, the non-finite policy, the
+accepted-frame sequence, staging and the single evaluation) is `oce_graph::frame` (GitHub #401).
+`oce-api`'s `prepare_frame`/`execute_frame` resolve names and call it; `oce_graph::blob::Executable`
+calls it by slot on a `no_std` target. Change a frame rule there, never in the facade:
+`crates/oce-api/tests/frame_driver_ownership.rs` refuses a facade source that re-implements one.
+
+`crates/oce-graph/tests/fixtures/blob_frame_digests.tsv` holds one run digest per G36 fixture over
+the shared frame schedule (`crates/oce-graph/tests/support/frame_schedule.rs`). The facade's
+dual-path test and `oce-graph`'s `blob_execution` test (run against the `no_std + alloc` build in
+`no-std-build`) both check it, so it moves with any change to a fixture's outputs or state
+trajectory, like the Tier-2 traces. Bless deliberately with
+`OCE_BLESS_FRAME_DIGESTS=1 cargo nextest run -p oce-api --lib -E 'test(/blob_dual_path/)'`, rerun
+both tests without the switch, and say in the PR which fixtures moved and why.
 
 ## golden-gen hygiene is CI-only for now
 

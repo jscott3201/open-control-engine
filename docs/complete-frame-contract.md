@@ -155,9 +155,11 @@ a restart or rewind is intended. A loop is not a whole-horizon transaction.
 points, and load/restore/resume may replace their state without a frame. Only `CompletedFrame`
 retains committed boundary results and diagnostics. There is no engine storage-write helper.
 
-The private `transition_host_tick` remains the sole infallible evaluation/refresh core after frame
-preflight. The [instrumented core test](../crates/oce-api/src/shared_transition_tests.rs) detects
-bypass, double emit/update and entry on refusal. The conformance driver uses complete frames in both
+The core frame driver, `oce_graph::frame::FrameDriver`, is the sole HostTick v1 implementation:
+after its checks it stages, evaluates once and advances the clock and sequence, and the facade and
+the `no_std` blob entry both call it (GitHub #401). The
+[instrumented core test](../crates/oce-api/src/shared_transition_tests.rs) detects bypass, double
+emit/update and entry on refusal. The conformance driver uses complete frames in both
 uniform and event-aligned modes; equivalent complete schedules retain bit-exact traces. This does
 not claim Modelica event iteration, whole-horizon rollback, durability or host qualification.
 
@@ -299,11 +301,15 @@ precedence is unloaded, pending edits, stale incarnation, nonfinite time, time o
 regression, nonfinite time step, block-time representability, then `InputNonFinite` for the first
 canonical non-finite Real input when the policy in force is `Refuse` (so a plan prepared under
 `Admit` cannot execute a non-finite value after a switch), then `FrameSequenceExhausted`.
-Preparation has already resolved and validated every input and fan-out target. Execution rechecks the mutable conditions, without name rebinding.
+Preparation has already resolved and validated every input and fan-out target. Execution rechecks
+the mutable conditions, without name rebinding: the core frame driver (`oce_graph::frame`) runs the
+time checks, then every input's type, non-finite policy and domain against the plan's own targets
+(the incarnation token binds the plan to the definitions, so only the policy check can newly
+refuse), then sequence capacity.
 
-After preflight, the implementation stages the entire plan, closes durable restore, calls the
-existing infallible evaluator once with the Warning collector, updates `prev_t` and latest-state inspection
-once, increments the accepted-frame sequence and captures the result. All ordinary returned errors
+After preflight, the core driver stages the entire plan, calls the existing infallible evaluator
+once with the Warning collector, updates `prev_t` and increments the accepted-frame sequence; the
+facade then closes durable restore, refreshes latest-state inspection and captures the result. All ordinary returned errors
 are before this boundary. No storage operation, host callback, shadow RunState, undo log or rollback
 is involved. Allocation failure remains excluded, including during result capture.
 

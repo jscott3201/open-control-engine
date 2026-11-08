@@ -243,7 +243,13 @@ dependency, a `std::` path or a `std`-only `f64` method fails it, and so does th
 tree, unit tests included — `tests/` files are separate crates outside it, where the `std` methods
 serve as the oracle. The job's `scripts/ci/test-math-lint.sh` step re-probes which `f64` methods
 `core` has, checks the `clippy.toml` list is total and the scope holds, and requires an `x.sin()`
-mutation in oce-blocks and an `f.sqrt()` mutation in oce-expr, in a workspace copy, to fail clippy. `bash .agents/gate.sh` runs the
+mutation in oce-blocks and an `f.sqrt()` mutation in oce-expr, in a workspace copy, to fail clippy.
+Two steps cover the blob execution entry (issue #401): `scripts/ci/check-no-std-entry-closure.sh`
+requires the `no_std` `oce-graph` closure to hold no `oce-cxf`, `oce-api`, `serde_json` or `std`
+(its controls must trip on the default build and on `oce-api`'s closure), and `oce-graph`'s
+`blob_execution` and `blob_state_words` suites run against the `no_std + alloc` build linked into a
+`std` test binary, printing the allocation census (zero allocations per frame over every golden)
+and checking the run digests the facade's dual-path test reproduces. `bash .agents/gate.sh` runs the
 same commands and installs nothing: when a target is missing, its first no_std step fails and prints
 the `rustup target add` command; the `gate (light)` and `gate (full)` jobs that execute the script
 install both targets first. What the build means is in

@@ -1,8 +1,8 @@
-//! The single owned facade handle, [`Engine`], and the load → BUILD → HostTick core. The
-//! parameter-table (`params.rs`), complete-frame (`frame.rs`), and IO-inventory (`io.rs`)
-//! methods are additional `impl Engine` blocks in their own modules; every field is
-//! `pub(crate)` so those sibling impls can read/refresh engine state without a public accessor
-//! leaking it.
+//! The single owned facade handle, [`Engine`], and the load → BUILD path. HostTick frames run
+//! through the core frame driver, `oce_graph::frame`, from `frame.rs`. The parameter-table
+//! (`params.rs`), complete-frame (`frame.rs`), and IO-inventory (`io.rs`) methods are additional
+//! `impl Engine` blocks in their own modules; every field is `pub(crate)` so those sibling impls
+//! can read/refresh engine state without a public accessor leaking it.
 //!
 //! The engine is pure: plain data in, plain data out. It owns no storage backend and calls no
 //! storage port. A load returns the resolved model and its IO inventory as a [`LoadedModel`];
@@ -11,7 +11,7 @@
 use std::sync::Arc;
 
 use oce_blocks::{Block, BlockKind, lookup};
-use oce_graph::{EvalContext, RunState, Schedule, allocate_state, compile, eval_tick};
+use oce_graph::{RunState, Schedule, allocate_state, compile};
 use oce_model::ModelGraph;
 use oce_model::resolved_model::DomainKey;
 
@@ -341,38 +341,6 @@ impl Engine {
         Ok((report, loaded))
     }
 
-    /// Infallible HostTick core after caller-specific preflight and input staging.
-    ///
-    /// Closes startup restore, evaluates once, and refreshes time/latest outputs. The caller
-    /// owns diagnostics; no sink, sequence or output projection is selected here.
-    /// Validated BUILD arenas and caller-checked representable time are required. No ordinary
-    /// recoverable failure remains in this seam; panic/allocation failure is not rollback.
-    pub(crate) fn transition_host_tick(&mut self, t_now: f64, diag: &dyn oce_blocks::Diagnostics) {
-        #[cfg(test)]
-        transition_tests::TRANSITIONS.with(|count| count.set(count.get() + 1));
-
-        self.durable_restore_ready = false;
-        {
-            let mut ctx = EvalContext {
-                model: &self.model,
-                schedule: &self.schedule,
-                blocks: &self.blocks,
-                diagnostics: diag,
-                state: &mut self.state,
-            };
-            eval_tick(&mut ctx, t_now);
-        }
-        self.prev_t = Some(t_now);
-    }
-
-    pub(crate) fn time_is_representable(&self, t_now: f64) -> bool {
-        self.state.slots.iter().all(|slot| {
-            let block = &self.blocks[slot.block.0 as usize];
-            let end = slot.offset + slot.len;
-            block.time_is_representable(t_now, &self.state.words[slot.offset..end])
-        })
-    }
-
     /// The frozen schedule (for trace tooling / determinism assertions; D6).
     ///
     /// This exposes an internal graph type and is retained only for compatibility with existing
@@ -413,7 +381,3 @@ pub(crate) fn out_connector_paths(model: &ModelGraph) -> Vec<String> {
 #[cfg(test)]
 #[path = "engine_tests.rs"]
 mod tests;
-
-#[cfg(test)]
-#[path = "shared_transition_tests.rs"]
-mod transition_tests;

@@ -68,6 +68,14 @@ The current runtime is the fixed [HostTick v1 execution profile](execution-profi
 successful frame execution evaluates this schedule once and advances state once, including at a repeated
 timestamp. It does not implement Modelica same-time event iteration for `CDL.Logical.Pre`.
 
+The frame around that evaluation lives once, in the core: `oce_graph::frame` checks the time and
+every input slot (type, non-finite policy, domain), keeps the accepted-frame sequence, stages the
+values and evaluates ([one frame driver, two callers](execution-profile.md#one-frame-driver-two-callers)).
+The `oce-api` facade is a thin layer over it that resolves names, holds the prepared plan and
+returns an owned `CompletedFrame`; a `no_std` target runs the same driver by slot through the
+[compiled-schedule blob](compiled-schedule-blob.md#executing-a-blob) entry,
+`oce_graph::blob::Executable`.
+
 ## Embeddability posture
 
 The engine is, by design:
@@ -105,7 +113,7 @@ names `features = ["std"]` on that edge.
 | `oce-model` | `no_std + alloc` | Nothing. `serde` is linked with `alloc` and `derive` only. |
 | `oce-expr` | `no_std + alloc` | The evaluation-fuel meter is one program-wide slot instead of thread-local: evaluate from one execution context at a time, or serialize evaluations across cores and interrupt handlers yourself. |
 | `oce-blocks` | `no_std + alloc` | `catalog()` is absent: its cache is a `std::sync::OnceLock`, and the catalog is host metadata a target does not read. `class_signature_hash` and `class_is_target_bound`, which a blob decoder needs, are present. |
-| `oce-graph` | `no_std + alloc` | Nothing: the [compiled-schedule blob](compiled-schedule-blob.md) decoder is part of the `no_std` build. |
+| `oce-graph` | `no_std + alloc` | Nothing: the [compiled-schedule blob](compiled-schedule-blob.md) decoder, the HostTick v1 frame driver and the blob execution entry are part of the `no_std` build; its closure holds no `oce-cxf`, `oce-api`, `serde_json` or `std` (`scripts/ci/check-no-std-entry-closure.sh`). |
 
 Errors derive `core::error::Error` through `thiserror` with its default features off. Every `f64`
 operation that is not in `core` on Rust 1.97 (`floor`, `ceil`, `trunc`, `round`, `sqrt`) goes
@@ -163,7 +171,10 @@ or a whole-state clone. Load calls no storage port either: it returns the resolv
 data and the host persists it if it wants durability.
 
 Whether a block tick allocates on the evaluator thread is gated per-PR, registry-wide and with a
-positive control, by `crates/oce-blocks/tests/tick_allocation_census.rs`. No current block delegates
+positive control, by `crates/oce-blocks/tests/tick_allocation_census.rs`. The blob path (decode
+once, then frames through the core frame driver) is censused by
+`crates/oce-graph/tests/blob_execution.rs` against the `no_std + alloc` build: zero allocations per
+frame over every golden; decoding allocates what it returns. No current block delegates
 work to a worker thread; such an implementation would need a companion guard for worker allocation.
 The facade's corpus-wide purity and storage-isolation guard is
 `crates/oce-api/tests/frame_purity.rs`; frame allocation
@@ -187,7 +198,7 @@ crate is registry closure for the facade, not an independently supported host AP
 | `oce-expr` | The CDL §7.7.2 binding-expression parser and evaluator (closed-world, pure). Bounded on structure: input deeper than `MAX_NESTING_DEPTH` (64) or wider than `MAX_EXPR_NODES` (4096) is a typed error, not a stack overflow (`crates/oce-expr/src/lib.rs`). Depth counts real nesting only; a left-associative chain such as `a+b+…` is bounded by the node cap and evaluated iteratively. |
 | `oce-blocks` | The `Block` trait and the native CDL elementary-block library, publicly enumerable at runtime via `catalog()` (`crates/oce-blocks/src/catalog.rs`; `std` builds only) with ports, parameter rules, honest parameter defaults, the class signature hash and the target-bound flag per class. |
 | `oce-validate` | Loader conformance: subset rejection, single-assignment, type and attribute unification, parameter rules. |
-| `oce-graph` | The deterministic scheduler and executor: direct-feedthrough DAG, algebraic-loop rejection, its own Kahn topological sort, the tick loop. Also the `OCEB` [compiled-schedule blob](compiled-schedule-blob.md) codec (`oce_graph::blob`): the decoder a `no_std + alloc` target runs, and the byte writer the facade encodes with. |
+| `oce-graph` | The deterministic scheduler and executor: direct-feedthrough DAG, algebraic-loop rejection, its own Kahn topological sort, the tick loop, and the slot-indexed HostTick v1 frame driver around it (`oce_graph::frame`) that the facade and the blob entry both call. Also the `OCEB` [compiled-schedule blob](compiled-schedule-blob.md) codec (`oce_graph::blob`): the decoder and the execution entry (`blob::Executable`) a `no_std + alloc` target runs, and the byte writer the facade encodes with. |
 | `oce-cxf` | CXF (Control eXchange Format) JSON-LD ↔ model graph, both directions. The resolver owns all lowering: composites are flattened away, parameters grounded and array parameters normalized to per-element scalars, so nothing elaborates the graph after it. Full `.mo` flattening is not implemented. Composite nesting is bounded at 64. Boundary lowering is iterative and separately bounded at 64 non-top `isConnectedTo` hops per path, 65,536 target examinations, and 8 MiB of aggregate target-IRI bytes per document. The accept/reject contract is written out in [cxf-composite-subset.md](cxf-composite-subset.md). |
 | `oce-semantics` | **Active effective-point metadata resolver.** Derives metadata from connector attributes, direction, value type and defaults; this is unrelated to the removed semantic-template loader. Raw `__cdl` / `__CDL` annotation parsing remains deferred. It stays a wired, publishable `oce-api` implementation dependency, not an independently supported API. |
 | `oce-diag` | The shared diagnostic vocabulary (`Severity` / `DiagCode` / `Diagnostic`) across the ingest path. Zero dependencies. |

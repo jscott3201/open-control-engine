@@ -25,6 +25,11 @@
 //!
 //! BUILD (DAG + dual Kahn sorts + loop rejection) and TICK (state allocation + the two-pass eval
 //! loop) are implemented; catalog breadth and ingest features grow around this scheduler contract.
+//!
+//! **FRAME.** [`frame`] is the HostTick v1 frame driver around [`eval_tick`]: time and input
+//! checks, the accepted-frame sequence, staging and the previous-time update, slot-indexed. The
+//! `oce-api` facade and the `no_std` blob entry ([`blob::Executable`]) both call it, so the
+//! profile exists once.
 
 // `no_std + alloc` without the `std` feature (docs/architecture.md, "Embeddability posture"):
 // `alloc` is the floor, so a build with neither feature is refused here rather than failing
@@ -45,6 +50,7 @@ use oce_model::{BlockId, ConnectorId, Model, Value};
 
 pub mod blob;
 mod build;
+pub mod frame;
 mod tick;
 mod topo;
 

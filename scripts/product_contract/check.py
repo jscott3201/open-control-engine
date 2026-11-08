@@ -352,7 +352,7 @@ def validate(repository: Repository) -> str:
 
 def validate_frame_boundary(repository: Repository, revision: str, rows: list[Requirement]) -> None:
     """Bounded contraction sentinels, not a compiler or proof of behavioral test relevance."""
-    require(revision == "19", "frame-only: document revision must be 19")
+    require(revision == "20", "frame-only: document revision must be 20")
     contraction = next((row for row in rows if row.identifier == "PC-035"), None)
     require(contraction is not None and contraction.status == "CURRENT",
             "frame-only: contraction is current")

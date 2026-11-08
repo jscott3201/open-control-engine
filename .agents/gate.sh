@@ -167,6 +167,13 @@ step 'build (no_std + alloc, wasm32-unknown-unknown)' \
 # runs on one test thread.
 step 'oce-expr unit suite without std' \
   cargo test -p oce-expr --no-default-features --features alloc --lib --locked -- --test-threads=1
+# The blob execution entry (issue #401): its no_std closure holds no oce-cxf, oce-api, serde_json
+# or std, and its suites run against the no_std + alloc build of oce-graph (zero frame allocations,
+# the facade's run digests, raw state words).
+step 'blob entry closure (no_std)' bash scripts/ci/check-no-std-entry-closure.sh
+step 'blob entry suites against the no_std build' \
+  cargo test -p oce-graph --no-default-features --features alloc --test blob_execution \
+    --test blob_state_words --locked -- --nocapture
 
 step_env 'rustdoc — libs' RUSTDOCFLAGS '-D warnings' \
   cargo doc --no-deps --workspace --lib --document-private-items --locked

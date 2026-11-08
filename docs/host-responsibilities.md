@@ -11,8 +11,8 @@ See the [product contract](product-contract.md) for numbered host obligations an
 requirement-to-evidence map; engine boundary tests are not host-compliance evidence.
 
 > **Production hosts: select the strict non-finite input policy.** Call
-> `engine.set_non_finite_input_policy(NonFiniteInputPolicy::Refuse)` before your first frame. The
-> default is still `Admit`, which passes a NaN or infinite sensor value to the blocks; it becomes
+> `engine.set_non_finite_input_policy(NonFiniteInputPolicy::Refuse)` (on a target,
+> `executable.set_non_finite_input_policy(…)`) before your first frame. The default is still `Admit`, which passes a NaN or infinite sensor value to the blocks; it becomes
 > `Refuse` at the next native-evidence refresh (GitHub issue #363). See
 > [Refuse non-finite Real inputs](#refuse-non-finite-real-inputs).
 
@@ -125,6 +125,23 @@ Producing the replacement value is the host's obligation, and the engine does no
 
 Do not substitute a bound or a type seed merely to get a frame accepted; a plausible value that
 the sensor never reported is the masking this refusal exists to prevent.
+
+### On a `no_std` target
+
+A target that runs a [compiled-schedule blob](compiled-schedule-blob.md#executing-a-blob) through
+`oce_graph::blob::Executable` gets the same frame driver and the same policy, with the same
+default, `Admit`; select `Refuse` with `Executable::set_non_finite_input_policy` before the first
+frame. `FrameRefusal::InputNonFinite` names the input slot rather than the path. Three duties that
+the facade's names carry fall to the host there:
+
+- **Map names to slots once.** Resolve each point's path with `input_slot` / `output_slot` at
+  startup and keep the slot; a slot is only meaningful for the blob it came from.
+- **Supply every slot every frame.** The entry takes one value per input slot and keeps none from
+  the previous frame; reusing a stale value in your own buffer is the hold-last substitution the
+  engine refuses to make for you.
+- **Keep state words with their context.** `state_words` are raw, with no portability tag,
+  manifest or checksum; store them with the blob and model time they came from, and authenticate
+  them like any other state.
 
 ## The engine implements no fail-safe policy of its own
 
