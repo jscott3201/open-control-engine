@@ -139,20 +139,9 @@ step 'clippy (default — no DB)' cargo clippy --workspace --all-targets --locke
 step 'build (default — no DB)' cargo build --workspace --locked
 # ── no_std + alloc core build ────────────────────────────────────────────────
 # The core four (oce-model, oce-expr, oce-blocks, oce-graph) build without `std` (issue #397), as
-# pr-gate.yml's `no-std-build` job checks. This script installs nothing: a missing target fails the
-# first step below with the command that installs it, rather than skipping the build.
-no_std_targets_installed() {
-  local sysroot target missing=0
-  sysroot="$(rustc --print sysroot)"
-  for target in thumbv7em-none-eabihf wasm32-unknown-unknown; do
-    if [ ! -d "$sysroot/lib/rustlib/$target/lib" ]; then
-      echo "missing Rust target $target; install it with: rustup target add $target"
-      missing=1
-    fi
-  done
-  return "$missing"
-}
-step 'no_std targets installed' no_std_targets_installed
+# pr-gate.yml's `no-std-build` job checks. This script installs nothing: when a target is missing,
+# its build step fails with rustc's E0463 ("can't find crate for `core`"), whose help line is the
+# `rustup target add <target>` command to run. A missing target is a failure, never a skip.
 step 'build (no_std + alloc, thumbv7em-none-eabihf)' \
   cargo build -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features \
     --features alloc --target thumbv7em-none-eabihf --locked
