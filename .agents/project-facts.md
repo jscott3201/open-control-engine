@@ -77,7 +77,7 @@ in four Linux architecture/codegen cells (x86_64 native, aarch64 emulated), with
 and cross-cell comparison ([bounded evidence](../docs/strict-bit-evidence.md)). The
 `oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and `oce-reference-wal-adapter` suites run per
 PR too, x86_64 debug only. The remainder — and the release-codegen runs of those five — needs the
-release/full gate. A change confined to `oce-store`, `oce-diag` or `oce-flatten` can show a fully
+release/full gate. A change confined to `oce-store`, `oce-diag` or `oce-semantics` can show a fully
 green PR having executed none of its own tests. Before claiming your tests pass, run
 `bash .agents/gate.sh full` and read the tail.
 
@@ -140,10 +140,10 @@ rm -rf target/docs-book
 
 `cargo clippy --workspace --all-targets --locked -- -D warnings`, matching CI.
 
-Do not add `--all-features`. `oce-api` declares `default = ["mem"]`, and the promise
+Do not add `--all-features`. `oce-api` declares no features today, but the promise
 this repo gates on is that the *default* build links no database and no async
-runtime. Linting all features checks a configuration that never ships, and lets a
-default-build regression through.
+runtime. Linting all features would check a configuration that never ships, and let a
+default-build regression through once any crate grows an optional feature.
 
 ## The no-secret gate rejects more than secrets
 

@@ -15,16 +15,8 @@ homepage.workspace = true
 [lints]
 workspace = true
 
-[features]
-# Default build = engine + in-memory store. NO database, NO async runtime (D-OWNER-1).
-# `mem` is temporarily retained as a legacy no-op compatibility spelling for downstream
-# manifests. It gates nothing: `oce-store-mem` remains an unconditional normal dependency,
-# including with `--no-default-features`, and `MemStore` remains the default `Store` type.
-# Removal waits for downstream manifest migration. There is no DB-gated feature; durable
-# backends are app-side adapters the host wires behind the `oce-store` port.
-default = ["mem"]
-mem = []
-
+# No cargo features: every build is the engine plus the in-memory store, with no database and no
+# async runtime (D-OWNER-1). Durable backends are app-side adapters behind the `oce-store` port.
 [dependencies]
 oce-model = { workspace = true }
 oce-graph = { workspace = true }
@@ -34,7 +26,6 @@ oce-cxf = { workspace = true }
 # diagnostics in one shape, so a host never juggles two dialects.
 oce-diag = { workspace = true }
 oce-validate = { workspace = true }
-oce-flatten = { workspace = true }
 oce-semantics = { workspace = true }
 oce-store = { workspace = true }
 oce-store-mem = { workspace = true }

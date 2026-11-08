@@ -184,8 +184,8 @@ omission, duplicates and wrong types preserve the prior image without staging a 
 [Store noninterference suite](../crates/oce-api/tests/frame_purity.rs) proves that even supplied Store
 samples cannot fill missing determinants or overwrite complete values. The
 [Pre profile tests](../crates/oce-api/src/tests/pre_execution_profile_tests.rs) retain the fixed
-HostTick recurrence and snapshot continuation evidence. Compiler absence controls cover all supported
-feature selections; they do not qualify downstream consumers. The product checker is still a bounded
+HostTick recurrence and snapshot continuation evidence. Compiler absence controls cover the default
+build (`oce-api` declares no features); they do not qualify downstream consumers. The product checker is still a bounded
 traceability/claim-sentinel tool, not proof of semantic compliance.
 
 Preparation evidence below fulfills PC-032; the execution evidence below fulfills PC-033 with

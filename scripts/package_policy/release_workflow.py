@@ -4,10 +4,10 @@
 import hashlib
 
 
-# Approval witness for release.yml at 2bab88acbc96862f1808b34d305b795f521b3614.
+# Approval witness for release.yml as re-pinned when the reserved crates were removed (GitHub #389).
 # Intentional changes require the manual review procedure in the publication policy.
 # Never derive the expected digest from the candidate workflow at validation time.
-EXPECTED_SHA256 = "c74806d5183289662df6379adb22c1708a260e1c3f64f1cfe9314342415ee90b"
+EXPECTED_SHA256 = "7cb637906b926eaeee6f0028b28fc5b4bc840e86cbb42a3286206f4a95d336eb"
 
 
 class WorkflowError(ValueError):

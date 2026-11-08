@@ -468,8 +468,8 @@ allocation failure, and concurrent host effects are outside the ordinary returne
 
 `reload_tests` compares the complete owned image for fresh, advanced and halted/dirty runs across
 real import, unification, validation, schedule and injected Store refusals; the private build tail
-covers instantiation and projection. Flatten is currently an infallible identity shim and semantics
-currently returns metadata without a refusal path; no injected failures are claimed for those stages.
+covers instantiation and projection. Semantics currently returns metadata without a refusal path; no
+injected failures are claimed for that stage.
 The separate residual-effects test demonstrates the MemStore compensation boundary.
 
 The structural ingest paths above are bounded and return typed diagnostics rather than panicking.

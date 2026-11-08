@@ -106,8 +106,8 @@ pub fn write_document(doc: &CxfDocument) -> Result<Vec<u8>, CxfError> {
 /// import spends at most this many units, plus per refused binding only its parse and the
 /// work before its first charge (bounded by `MAX_EXPR_NODES`). `1 << 26` (67,108,864
 /// units, four maximal single evaluations, a fraction of a second of release-build work) is
-/// measured headroom: over 5,958 imports in the `oce-cxf`, `oce-api`, `oce-conformance` and
-/// `oce-flatten` suites the largest non-hostile per-document total was 101,101 units (a
+/// measured headroom: over 5,958 imports in the `oce-cxf`, `oce-api` and `oce-conformance`
+/// suites the largest non-hostile per-document total was 101,101 units (a
 /// synthetic stress document; checked-in fixtures stay in the low thousands), so the budget is
 /// over 600× that.
 pub const MAX_DOCUMENT_EVAL_FUEL: u64 = 1 << 26;

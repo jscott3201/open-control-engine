@@ -101,7 +101,7 @@ impl fmt::Display for CompleteExportContentId {
 /// `parameter-schema`, `execution-profile`, `execution-profile-schema`, `oce-api-version`, `export`.
 /// `execution-profile` is exactly `HostTick-v1`; its separate descriptor revision is currently 2.
 /// `oce-api-version` includes the exact Cargo version, including any pre-release/build suffix.
-/// The three supported feature selections are equivalent and are intentionally not distinguished.
+/// `oce-api` declares no cargo features, so there is no feature selection to distinguish.
 /// Package version is NOT a source/dependency-lock/compiler/target/codegen/binary identity. Equal
 /// facts, especially on unpublished same-version builds, do not establish execution equivalence,
 /// cross-platform numerics, restore eligibility, release compatibility or authority to actuate.

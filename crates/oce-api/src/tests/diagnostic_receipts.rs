@@ -101,12 +101,12 @@ fn code_precedes_severity_and_stage_precedes_subject() {
         observed,
         [
             (0, "duplicate-id", 1),
-            (3, "analog-coerced-to-real", 0),
-            (3, "analog-coerced-to-real", 1),
-            (3, "analog-coerced-to-real", 2),
-            (3, "duplicate-id", 0),
-            (3, "duplicate-id", 1),
-            (3, "analog-coerced-to-real", 1)
+            (2, "analog-coerced-to-real", 0),
+            (2, "analog-coerced-to-real", 1),
+            (2, "analog-coerced-to-real", 2),
+            (2, "duplicate-id", 0),
+            (2, "duplicate-id", 1),
+            (2, "analog-coerced-to-real", 1)
         ]
     );
 }
@@ -117,7 +117,6 @@ fn stage_ranks_are_explicit_and_total() {
     assert_eq!(
         [
             Import,
-            Flatten,
             AttributeUnification,
             Validation,
             Instantiation,
@@ -130,7 +129,7 @@ fn stage_ranks_are_explicit_and_total() {
             Export
         ]
         .map(DiagnosticStage::rank),
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     );
 }
 

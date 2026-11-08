@@ -44,8 +44,8 @@ is distinct from authored model identity and is neither portable nor serialized 
 `oce_api::catalog()` returns facade-owned `CatalogEntry` values with static metadata strings and
 owned vectors. A caller can clone them without retaining an engine or depending directly on
 `oce-blocks`. The [sole-facade consumer fixture](../crates/oce-api/tests/fixtures/catalog_consumer.rs)
-adapts every rule payload and all Studio-shaped catalog fields under default, explicit mem and
-no-default feature selections. The existing companion catalog remains supported during migration.
+adapts every rule payload and all Studio-shaped catalog fields under the default build; `oce-api`
+declares no cargo features. The existing companion catalog remains supported during migration.
 
 Entries retain registry order; ports, rules, defaults and enum members retain declaration order.
 The projection includes canonical class paths, ordered port kinds/names, named/positional/width-driven
@@ -111,22 +111,24 @@ error carries no such records.
 An unloaded export retains its existing `export-unsupported` diagnostic. A partial export still
 succeeds with warnings; use the legacy report's completeness check for emitted-document identity.
 
-Producer stages are explicit boundary labels, not inferred from codes. Revision-1 ranks are:
+Producer stages are explicit boundary labels, not inferred from codes. Revision-2 ranks are:
 
 | Rank | Stage |
 | --- | --- |
 | 0 | Import: serialized admission, parse/resolution, including the CXF resolver's internal passes |
-| 1 | Flatten |
-| 2 | AttributeUnification |
-| 3 | Validation |
-| 4 | Instantiation |
-| 5 | Schedule |
-| 6 | Semantics |
-| 7 | Projection |
-| 8 | StoreRecovery |
-| 9 | StoreSave |
-| 10 | StoreInputs |
-| 11 | Export |
+| 1 | AttributeUnification |
+| 2 | Validation |
+| 3 | Instantiation |
+| 4 | Schedule |
+| 5 | Semantics |
+| 6 | Projection |
+| 7 | StoreRecovery |
+| 8 | StoreSave |
+| 9 | StoreInputs |
+| 10 | Export |
+
+Revision 2 removed the revision-1 `Flatten` stage (rank 1), an identity pass that never produced
+evidence; the relative order of every remaining stage is unchanged.
 
 The ordering is stage rank, subject category/presence and exact UTF-8 subject text, code string,
 then severity rank (`Error=0`, `Warning=1`, `Info=2`). `Absent` sorts before `Opaque`; an empty

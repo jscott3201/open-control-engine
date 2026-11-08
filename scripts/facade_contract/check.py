@@ -18,10 +18,9 @@ import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[2]
+# `oce-api` declares no cargo features, so the default build is the only selection.
 SELECTIONS = {
     "default": [],
-    "mem": ["--no-default-features", "--features", "mem"],
-    "no-default": ["--no-default-features"],
 }
 
 

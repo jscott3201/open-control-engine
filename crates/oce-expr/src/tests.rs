@@ -626,7 +626,7 @@ fn evaluation_is_deterministic() {
 
 #[test]
 fn public_signatures_are_stable() {
-    // The contract `oce-flatten` binds to: these coercions fail to compile if a signature drifts.
+    // The contract the `oce-cxf` resolver binds to: these coercions fail to compile if a signature drifts.
     let _p: fn(&str) -> Result<ExprAst, ExprError> = parse;
     let _e: fn(&ExprAst, &dyn Scope) -> Result<EvalResult, ExprError> = eval;
     let _es: fn(&str, &dyn Scope) -> Result<EvalResult, ExprError> = eval_str;

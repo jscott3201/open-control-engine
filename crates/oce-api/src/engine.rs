@@ -206,8 +206,8 @@ impl<S: Store> Engine<S> {
         }
     }
 
-    /// Primary v1 ingest (D2: CXF JSON-LD only). Runs the Group A pipeline (`oce-cxf` resolve →
-    /// `oce-flatten` → `oce-validate`), builds the `oce-graph` schedule via the shared crate-private
+    /// Primary v1 ingest (D2: CXF JSON-LD only). Runs the Group A pipeline (`oce-cxf` resolve,
+    /// which also lowers composites and grounds parameters → `oce-validate`), builds the `oce-graph` schedule via the shared crate-private
     /// build tail, and returns a [`LoadReport`]. The returned `model_id` is the raw CXF
     /// top-composite `@id` carried by the resolver side-channel. Replaces all per-run state, so
     /// calling it again reloads a fresh model.
@@ -222,7 +222,7 @@ impl<S: Store> Engine<S> {
     ///
     /// # Errors
     /// Returns [`OcError`] on any ingest/validation/build/store failure (never panics; R-ERR-1):
-    /// [`OcError::CxfTooLarge`], [`OcError::Cxf`], [`OcError::Flatten`], [`OcError::Validate`], [`OcError::Build`],
+    /// [`OcError::CxfTooLarge`], [`OcError::Cxf`], [`OcError::Validate`], [`OcError::Build`],
     /// [`OcError::Load`], or [`OcError::Store`]. If a completed stage returned diagnostics before a
     /// later failure, [`OcError::LoadContext`] retains them and exposes the terminal variant through
     /// [`std::error::Error::source`].
@@ -263,17 +263,14 @@ impl<S: Store> Engine<S> {
             });
         }
         // 1. Resolve CXF → flat, ground ModelGraph (+ warning-only report; errors are Err here).
-        let (model, report) = oce_cxf::import_cxf(bytes, &oce_cxf::ResolveOptions::default())?;
+        //    The resolver owns all lowering: composites are flattened away, parameters grounded and
+        //    array parameters normalized to per-element scalars, so no separate elaboration pass
+        //    follows.
+        let (mut model, report) = oce_cxf::import_cxf(bytes, &oce_cxf::ResolveOptions::default())?;
         let model_iri = report.model_iri.clone();
         capture.record(&report.diagnostics);
         let mut diagnostics = report.diagnostics;
-        capture.enter(DiagnosticStage::Flatten);
-        // 2. Flatten (scalar identity; array-parameter normalization is resolver-owned).
-        let mut model = match oce_flatten::flatten(model) {
-            Ok(model) => model,
-            Err(error) => return Err(OcError::from(error).with_load_context(diagnostics)),
-        };
-        // 3. Deep gate: §7.10 unification (mutates the graph to propagate one-sided units), then
+        // 2. Deep gate: §7.10 unification (mutates the graph to propagate one-sided units), then
         //    the structural/type rules. A shall-violation propagates as OcError::Validate.
         capture.enter(DiagnosticStage::AttributeUnification);
         match oce_validate::unify_attributes(&mut model) {
@@ -291,7 +288,7 @@ impl<S: Store> Engine<S> {
             }
             Err(error) => return Err(OcError::from(error).with_load_context(diagnostics)),
         }
-        // 4. The explicit gate above authorizes the validated tail. Hand-built callers still use
+        // 3. The explicit gate above authorizes the validated tail. Hand-built callers still use
         //    `build_model_in_memory`, which validates defensively before entering this helper.
         let warnings = self.build_validated_model_in_memory(
             model,
