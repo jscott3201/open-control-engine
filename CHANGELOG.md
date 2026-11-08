@@ -437,6 +437,18 @@ and a gate that accepted any text would restore exactly the false assurance desc
     - it requires the labels to be exactly the signals an at-threshold PI reaches;
     - it fails on any integrating-PI scenario that has not been reviewed.
 
+### CI and infrastructure
+
+- **The per-PR gate runs once per change** (GitHub #408). `pr-gate.yml` ran on the PR and again
+  on the post-merge push to `development`, on the same tree: runs 42439645194 and 42441875338
+  took about 31 minutes each for one change. The `push` trigger is gone; the PR run is the only
+  one, and the daily `release-gate.yml` run on the `development` tip stays the safety net.
+  `check-workflow-gates.sh` now refuses any `push` trigger in `pr-gate.yml` (block, flow-list or
+  unfiltered form) and requires its `pull_request` trigger, with a fixture for each.
+  `docs/ci-and-the-gate.md` gains a "What runs when" section, and the branch protection it
+  describes — a required pull request, the required `CI OK` status, and a branch up to date with
+  `development` — is applied as a repository setting.
+
 ### Documentation
 
 - **Agent guide rewritten around the issue-driven milestone workflow** (GitHub #407).

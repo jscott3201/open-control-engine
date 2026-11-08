@@ -1,5 +1,8 @@
 # Per-PR gate for open-control (the Open Control Engine) — runs on GitHub Actions for PRs into
-# `development` and for every push to `development`.
+# `development` (and on manual dispatch). It runs once per change: there is no `push` trigger, so a
+# merge into `development` does not re-run it on the tree the PR already proved. Branch protection
+# requires `CI OK` with the branch up to date with `development`, and release-gate.yml runs daily on
+# the `development` tip as the safety net. check-workflow-gates.sh refuses a `push` trigger here.
 #
 # Workflow model: every logical change opens a PR into `development` behind this gate; releases
 # batch `development` -> `main`, where .github/workflows/release-gate.yml runs the heavy gate.
@@ -40,8 +43,6 @@ name: pr-gate
 on:
   pull_request:
     branches: [development]
-  push:
-    branches: [development]
   workflow_dispatch:
 
 permissions:
@@ -49,7 +50,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  # Superseded PR pushes are cancelled; post-merge runs on `development` each finish.
+  # Superseded PR pushes are cancelled; manual dispatches each finish.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:

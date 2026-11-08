@@ -76,9 +76,10 @@ the **same branch**; never a second PR for the same work.
 
 **Merge.** `CI OK` is the one required status; confirm it **reported**, not merely that nothing is
 red (a PR with no checks looks like a PR with no failing checks). Squash-merge into `development`
-once CI OK is green and any requested review is addressed. Branches delete on merge. Release PRs
-go `development → main` through `release-gate.yml` and are tagged `v0.x` at the end of each
-milestone.
+once CI OK is green on a branch that is up to date with `development` (branch protection requires
+both; the merge itself runs no gate) and any requested review is addressed. Branches delete on
+merge. Release PRs go `development → main` through `release-gate.yml` and are tagged `v0.x` at the
+end of each milestone.
 
 **Standing rules for every PR**
 
@@ -114,7 +115,9 @@ milestone.
   self-hosted Forgejo instance was primary until October 2026; its PR numbers overlap GitHub's, so
   cite PRs merged on GitHub as `(GitHub #N)`.)
 - **CI is GitHub Actions** in `.github/workflows/`. The single required status is `CI OK`: from
-  `pr-gate.yml` into `development`, from `release-gate.yml` into `main`. `advisories.yml` runs
+  `pr-gate.yml` into `development`, from `release-gate.yml` into `main`. `pr-gate.yml` runs once
+  per change, on the PR; a merge into `development` runs no gate, and the daily `release-gate.yml`
+  run on the `development` tip is the safety net. `advisories.yml` runs
   daily, `docs-pages.yml` validates docs and publishes `main` to GitHub Pages, `release.yml` keeps
   its tag-verify / manual-publish split, and the two OpenModelica evidence workflows run on native
   arm64 by hand.
