@@ -271,7 +271,7 @@ tag/version match, fmt, clippy, a workspace `cargo test`, the package validator 
 `cargo publish --workspace --locked --dry-run` — with no token and no publish, so a tag can be
 re-cut safely (see [release.yml](../.github/workflows/release.yml), `verify` job). Publishing is a
 separate manual `workflow_dispatch` into the `release` GitHub Environment. Cargo's workspace
-selection includes the 11 publishable members and skips the two members with `publish = false`:
+selection includes the 10 publishable members and skips the two members with `publish = false`:
 `oce-bless` and `oce-conformance`.
 No checked-in record pins those sets any more: the guards are each crate's `publish` flag, the
 byte pin on `release.yml` (whose comment names the split) and review.
@@ -287,14 +287,14 @@ job of `pr-gate.yml`, in the gate script and in `release.yml`, with hostile cont
   build dependencies on other members are path-backed, carry a registry version and are never
   private, and the publishable graph has a deterministic leaf-to-facade order;
 - `oce-api` to declare no cargo features, with the default build — its only selection — keeping a
-  normal closure that excludes `oce-store` and `oce-store-mem` (the engine is pure, GitHub #390)
+  normal closure that excludes `oce-store` (the engine is pure, GitHub #390)
   and has no private member, database, `tokio` or `async-std`, and Cargo to refuse any feature name;
 - `.github/workflows/release.yml` to match the approved bytes whose SHA-256 is fixed in
   `scripts/package_policy/release_workflow.py`. Even comments, whitespace and line endings count;
   an intentional workflow change updates the workflow, that digest and the byte golden in the
   hostile controls together.
 
-`oce-api` has no storage dependency; `check-default-no-db.sh` refuses an `oce-store*` crate in its
+`oce-api` has no storage dependency; `check-default-no-db.sh` refuses `oce-store` (any `oce-store*` name) in its
 normal tree as well. The byte check is a drift
 guard on the approved release execution, not a sandbox: it does not verify invoked actions, the
 `release` environment's protection settings or secret placement.

@@ -4,8 +4,8 @@
 //! Corpus inputs are explicit synthetic in-domain observations, not a host fallback policy or a
 //! correctness oracle; independent numerical evidence remains in the sequence suites. The
 //! storage-isolation tests read the tracked manifest, lockfile and sources rather than trusting a
-//! comment: `oce-api` must never depend on `oce-store` (or `oce-store-mem`), so a host's durability
-//! adapter can never be reached from a frame.
+//! comment: `oce-api` must never depend on `oce-store` (or any `oce-store*` crate), so a host's
+//! durability adapter can never be reached from a frame.
 
 use std::collections::{BTreeSet, VecDeque};
 use std::path::{Path, PathBuf};
@@ -186,14 +186,14 @@ fn the_facade_manifest_declares_no_storage_dependency() {
 fn the_manifest_parser_detects_a_reintroduced_storage_dependency() {
     let hostile = "[package]\nname = \"oce-api\"\n\n[dependencies]\n# comment\n\
                    oce-model = { workspace = true }\noce-store = { workspace = true }\n\n\
-                   [dev-dependencies]\noce-store-mem = { workspace = true }\n";
+                   [dev-dependencies]\noce-store-extra = { workspace = true }\n";
     assert_eq!(
         manifest_section_dependencies(hostile, "[dependencies]"),
         ["oce-model", "oce-store"]
     );
     assert_eq!(
         manifest_section_dependencies(hostile, "[dev-dependencies]"),
-        ["oce-store-mem"]
+        ["oce-store-extra"]
     );
 }
 

@@ -148,14 +148,6 @@ write_clean_metadata() {
       ]
     },
     {
-      "name": "oce-store-mem",
-      "id": "path+file:///repo/crates/oce-store-mem#0.0.0",
-      "publish": null,
-      "dependencies": [
-        { "name": "oce-store", "kind": null }
-      ]
-    },
-    {
       "name": "oce-model",
       "id": "path+file:///repo/crates/oce-model#0.0.0",
       "publish": null,
@@ -165,12 +157,13 @@ write_clean_metadata() {
       "name": "oce-store",
       "id": "path+file:///repo/crates/oce-store#0.0.0",
       "publish": null,
-      "dependencies": []
+      "dependencies": [
+        { "name": "oce-model", "kind": null }
+      ]
     }
   ],
   "workspace_members": [
     "path+file:///repo/crates/oce-api#0.0.0",
-    "path+file:///repo/crates/oce-store-mem#0.0.0",
     "path+file:///repo/crates/oce-model#0.0.0",
     "path+file:///repo/crates/oce-store#0.0.0"
   ],
@@ -182,15 +175,15 @@ EOF
 positive_fixture() {
   members="$1"
   trees="$2"
-  printf '%s\n' oce-api oce-store-mem > "$members"
+  printf '%s\n' oce-api oce-store > "$members"
   cat > "$trees/oce-api.tree" <<'EOF'
 oce-api v0.0.0 (/repo/crates/oce-api)
 ├── oce-model v0.0.0 (/repo/crates/oce-model)
 └── thiserror v2.0.0
 EOF
-  cat > "$trees/oce-store-mem.tree" <<'EOF'
-oce-store-mem v0.0.0 (/repo/crates/oce-store-mem)
-└── oce-store v0.0.0 (/repo/crates/oce-store)
+  cat > "$trees/oce-store.tree" <<'EOF'
+oce-store v0.0.0 (/repo/crates/oce-store)
+└── oce-model v0.0.0 (/repo/crates/oce-model)
 EOF
 }
 
@@ -244,15 +237,15 @@ direct_tokio_metadata_fixture() {
       ]
     },
     {
-      "name": "oce-store-mem",
-      "id": "path+file:///repo/crates/oce-store-mem#0.0.0",
+      "name": "oce-store",
+      "id": "path+file:///repo/crates/oce-store#0.0.0",
       "publish": null,
       "dependencies": []
     }
   ],
   "workspace_members": [
     "path+file:///repo/crates/oce-api#0.0.0",
-    "path+file:///repo/crates/oce-store-mem#0.0.0"
+    "path+file:///repo/crates/oce-store#0.0.0"
   ]
 }
 EOF
@@ -275,15 +268,15 @@ direct_tokio_macros_metadata_fixture() {
       ]
     },
     {
-      "name": "oce-store-mem",
-      "id": "path+file:///repo/crates/oce-store-mem#0.0.0",
+      "name": "oce-store",
+      "id": "path+file:///repo/crates/oce-store#0.0.0",
       "publish": null,
       "dependencies": []
     }
   ],
   "workspace_members": [
     "path+file:///repo/crates/oce-api#0.0.0",
-    "path+file:///repo/crates/oce-store-mem#0.0.0"
+    "path+file:///repo/crates/oce-store#0.0.0"
   ]
 }
 EOF
@@ -306,8 +299,8 @@ direct_verification_metadata_fixture() {
       ]
     },
     {
-      "name": "oce-store-mem",
-      "id": "path+file:///repo/crates/oce-store-mem#0.0.0",
+      "name": "oce-store",
+      "id": "path+file:///repo/crates/oce-store#0.0.0",
       "publish": null,
       "dependencies": []
     },
@@ -320,7 +313,7 @@ direct_verification_metadata_fixture() {
   ],
   "workspace_members": [
     "path+file:///repo/crates/oce-api#0.0.0",
-    "path+file:///repo/crates/oce-store-mem#0.0.0",
+    "path+file:///repo/crates/oce-store#0.0.0",
     "path+file:///repo/crates/oce-example-verification-adapter#0.0.0"
   ],
   "resolve": {
@@ -337,7 +330,7 @@ direct_verification_metadata_fixture() {
         ]
       },
       {
-        "id": "path+file:///repo/crates/oce-store-mem#0.0.0",
+        "id": "path+file:///repo/crates/oce-store#0.0.0",
         "deps": []
       },
       {
@@ -367,8 +360,8 @@ dev_verification_metadata_fixture() {
       ]
     },
     {
-      "name": "oce-store-mem",
-      "id": "path+file:///repo/crates/oce-store-mem#0.0.0",
+      "name": "oce-store",
+      "id": "path+file:///repo/crates/oce-store#0.0.0",
       "publish": null,
       "dependencies": []
     },
@@ -381,7 +374,7 @@ dev_verification_metadata_fixture() {
   ],
   "workspace_members": [
     "path+file:///repo/crates/oce-api#0.0.0",
-    "path+file:///repo/crates/oce-store-mem#0.0.0",
+    "path+file:///repo/crates/oce-store#0.0.0",
     "path+file:///repo/crates/oce-example-verification-adapter#0.0.0"
   ],
   "resolve": {
@@ -398,7 +391,7 @@ dev_verification_metadata_fixture() {
         ]
       },
       {
-        "id": "path+file:///repo/crates/oce-store-mem#0.0.0",
+        "id": "path+file:///repo/crates/oce-store#0.0.0",
         "deps": []
       },
       {
@@ -428,8 +421,8 @@ transitive_verification_metadata_fixture() {
       ]
     },
     {
-      "name": "oce-store-mem",
-      "id": "path+file:///repo/crates/oce-store-mem#0.0.0",
+      "name": "oce-store",
+      "id": "path+file:///repo/crates/oce-store#0.0.0",
       "publish": null,
       "dependencies": []
     },
@@ -442,7 +435,7 @@ transitive_verification_metadata_fixture() {
   ],
   "workspace_members": [
     "path+file:///repo/crates/oce-api#0.0.0",
-    "path+file:///repo/crates/oce-store-mem#0.0.0",
+    "path+file:///repo/crates/oce-store#0.0.0",
     "path+file:///repo/crates/oce-example-verification-adapter#0.0.0"
   ],
   "resolve": {
@@ -470,7 +463,7 @@ transitive_verification_metadata_fixture() {
         ]
       },
       {
-        "id": "path+file:///repo/crates/oce-store-mem#0.0.0",
+        "id": "path+file:///repo/crates/oce-store#0.0.0",
         "deps": []
       },
       {
@@ -500,9 +493,9 @@ facade_transitive_storage_tree_fixture() {
   printf '%s\n' oce-api > "$members"
   cat > "$trees/oce-api.tree" <<'EOF'
 oce-api v0.0.0 (/repo/crates/oce-api)
-└── oce-model v0.0.0 (/repo/crates/oce-model)
-    └── oce-store-mem v0.0.0 (/repo/crates/oce-store-mem)
-        └── oce-store v0.0.0 (/repo/crates/oce-store)
+└── oce-semantics v0.0.0 (/repo/crates/oce-semantics)
+    └── oce-store v0.0.0 (/repo/crates/oce-store)
+        └── oce-model v0.0.0 (/repo/crates/oce-model)
 EOF
 }
 
@@ -553,19 +546,19 @@ facade_storage_dev_metadata_fixture() {
       "publish": null,
       "dependencies": [
         { "name": "oce-model", "kind": null },
-        { "name": "oce-store-mem", "kind": "dev" }
+        { "name": "oce-store", "kind": "dev" }
       ]
     },
     {
-      "name": "oce-store-mem",
-      "id": "path+file:///repo/crates/oce-store-mem#0.0.0",
+      "name": "oce-store",
+      "id": "path+file:///repo/crates/oce-store#0.0.0",
       "publish": null,
       "dependencies": []
     }
   ],
   "workspace_members": [
     "path+file:///repo/crates/oce-api#0.0.0",
-    "path+file:///repo/crates/oce-store-mem#0.0.0"
+    "path+file:///repo/crates/oce-store#0.0.0"
   ],
   "resolve": { "nodes": [] }
 }
@@ -620,14 +613,14 @@ missing_facade_metadata_fixture() {
 {
   "packages": [
     {
-      "name": "oce-store-mem",
-      "id": "path+file:///repo/crates/oce-store-mem#0.0.0",
+      "name": "oce-store",
+      "id": "path+file:///repo/crates/oce-store#0.0.0",
       "publish": null,
       "dependencies": []
     }
   ],
   "workspace_members": [
-    "path+file:///repo/crates/oce-store-mem#0.0.0"
+    "path+file:///repo/crates/oce-store#0.0.0"
   ],
   "resolve": { "nodes": [] }
 }
@@ -692,7 +685,7 @@ run_fixture transitive-verification-metadata fail transitive_verification_metada
 run_fixture facade-storage-tree fail facade_storage_tree_fixture \
   "FAIL: 'oce-api' reaches the storage port through its normal dependency tree"
 run_fixture facade-transitive-storage-tree fail facade_transitive_storage_tree_fixture \
-  "oce-store-mem v0.0.0"
+  "    └── oce-store v0.0.0"
 run_fixture facade-storage-metadata fail facade_storage_metadata_fixture \
   "FAIL: 'oce-api' has a direct normal dependency on storage crate 'oce-store'"
 run_fixture facade-storage-dev-metadata pass facade_storage_dev_metadata_fixture

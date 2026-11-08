@@ -12,11 +12,23 @@
 //! the single permitted hot-path read). The DTOs derive `serde::{Serialize, Deserialize}` so any
 //! adapter may pick a serde codec; the runtime-value enum is kept small and `Copy`-friendly.
 //!
+//! Beside the ports it carries:
 //!
-//! The trait surface, DTO shapes, and typed error seam are active. Durable/queryable backends remain
-//! app-side adapters behind these ports.
+//! - [`host`] — the post-load sequence a host runs once after a load
+//!   ([`host::persist_loaded_model`]: recover → save the model → validate the input points),
+//!   generic over the plain-data load result so this crate never names the facade.
+//! - `MemStore` — the in-memory backend, behind the default `mem` feature. Build with
+//!   `default-features = false` for the ports, DTOs and [`host`] helper alone.
+//!
+//! Durable/queryable backends remain app-side adapters behind these ports.
 
 use serde::{Deserialize, Serialize};
+
+pub mod host;
+#[cfg(feature = "mem")]
+mod memory;
+#[cfg(feature = "mem")]
+pub use memory::MemStore;
 
 /// The resolved-model DTOs live in `oce-model` so that the engine facade can return them as plain
 /// load data without depending on this crate; they are re-exported here unchanged as the shapes

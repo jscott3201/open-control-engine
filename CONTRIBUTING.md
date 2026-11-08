@@ -145,8 +145,8 @@ are local and are not qualification evidence.
 ## Invariants a change must not violate
 
 - **The library is database-free.** It ships **no first-party database** (D-OWNER-1): the
-  execution core (Group A) and the store ports (`oce-store`, `oce-store-mem`) name no database
-  type. Durable/queryable backends are app-side adapters behind the `oce-store` port.
+  execution core (Group A) and the store ports (`oce-store`, including its in-memory `MemStore`)
+  name no database type. Durable/queryable backends are app-side adapters behind the `oce-store` port.
 - **The build is database-free and async-runtime-free.** `cargo tree -e normal` must list no
   `selene-db`, no `tokio`, no `async-std`. The default-no-db gate enforces this.
 - **No `unsafe` code** (`#![forbid(unsafe_code)]` in every crate); public APIs require doc

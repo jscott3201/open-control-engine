@@ -380,14 +380,14 @@ jobs:
             --workspace-remap . --profile ci --no-tests=fail \
             -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
 
-  # The scheduler, validator, model and CXF resolver suites, x86_64 debug
+  # The scheduler, validator, model, CXF resolver and storage-port suites, x86_64 debug
   # only. They are not state-determinism tests, so they stay out of the determinism matrix and run
   # beside it instead of lengthening its cells. Their release-codegen runs stay in release-gate.yml (oce-cxf's release build
   # alone costs several minutes; its debug suite is dominated by three ~45 s resolver tests).
   # CI-only for now: .agents/gate.sh does not run these yet; .agents/project-facts.md gives the
   # local command.
   crate-tests:
-    name: crate tests (graph, validate, model, cxf; x86_64 debug)
+    name: crate tests (graph, validate, model, cxf, store; x86_64 debug)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -406,7 +406,7 @@ jobs:
         run: rm -f target/nextest/ci/junit.xml
       - name: cargo nextest crate suites (x86_64 debug)
         run: >-
-          cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf --locked --profile ci --no-tests=fail
+          cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf -p oce-store --locked --profile ci --no-tests=fail
       - name: Require the nextest JUnit report
         run: test -s target/nextest/ci/junit.xml
 

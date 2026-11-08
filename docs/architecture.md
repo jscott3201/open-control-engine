@@ -19,8 +19,8 @@ contains oce-model, oce-expr, oce-blocks, oce-validate, oce-graph, oce-cxf, oce-
 oce-diag; it sees only blocks, connections and values, evaluates a frozen Kahn schedule over flat
 arrays, and has no database. A line marked "CDL §7.17 seam" separates it from the storage side,
 where the oce-store port publishes the ModelStore, PointStore and SemanticStore traits, served
-either by the in-memory default oce-store-mem or by an app-side adapter over a graph DB, SQL or
-time-series backend. Only the host reaches the storage side; the facade never does. The library
+either by its in-memory MemStore (the default mem feature) or by an app-side adapter over a graph
+DB, SQL or time-series backend. Only the host reaches the storage side; the facade never does. The library
 ships no first-party database.](diagrams/architecture-seam.svg)
 
 Above the seam sits an **execution core**: a small, deterministic, in-memory dataflow machine that
@@ -32,10 +32,12 @@ the evaluator must not read — equipment topology, points, instance structure, 
 semantic triples — plus durable persistence goes through the `oce-store` port traits
 (`ModelStore`, `PointStore`, `SemanticStore`, `Durable` and the composite `Store` in
 `crates/oce-store/src/lib.rs`). The library ships **no first-party database**. Durable or queryable
-backends are app-side adapters behind the port, with an in-memory default (`oce-store-mem`).
+backends are app-side adapters behind the port. `oce-store` also carries an in-memory backend,
+`MemStore`, behind its default `mem` feature, and the host-side post-load helper
+`oce_store::host::persist_loaded_model`.
 
 The facade is **pure**: `Engine` is a plain struct with no storage backend, and `oce-api` has no
-dependency on `oce-store` or `oce-store-mem` (asserted by `.github/scripts/check-default-no-db.sh`
+dependency on `oce-store` (asserted by `.github/scripts/check-default-no-db.sh`
 and `crates/oce-api/tests/frame_purity.rs`). `Engine::load_cxf` returns a plain-data `LoadedModel`
 beside its `LoadReport` — the resolved-model projection, the IO inventory and the load diagnostics —
 and the host decides whether and where to persist it. The resolved-model DTOs live in `oce-model`
@@ -75,7 +77,7 @@ The engine is, by design:
   transport, TLS, authN/Z, multi-tenancy, off-host durability, and metrics export.
 - **Synchronous and in-process.** Every public method is a blocking synchronous call, and no async
   runtime is pulled at any layer. The check is the dependency set below, not a promise.
-- **`#![forbid(unsafe_code)]` in all 13 crates**, belt and braces: each `crates/*/src/lib.rs`
+- **`#![forbid(unsafe_code)]` in all 12 crates**, belt and braces: each `crates/*/src/lib.rs`
   carries the crate attribute, *and* the workspace sets `unsafe_code = "forbid"` under
   `[workspace.lints.rust]` (root `Cargo.toml`).
 - **Edition 2024**, `resolver = "3"`.
@@ -153,8 +155,7 @@ crate is registry closure for the facade, not an independently supported host AP
 
 | Crate | Responsibility |
 | --- | --- |
-| `oce-store` | **The seam.** The `ModelStore` / `PointStore` / `SemanticStore` / `Durable` traits plus DTOs, unified by the `Store` supertrait; the resolved-model DTOs are re-exported from `oce-model`. No database types. Depends on `oce-model`, never on `oce-api`. |
-| `oce-store-mem` | The in-memory backend of the port, for a host that wants one. `oce-api` does not depend on it. |
+| `oce-store` | **The seam.** The `ModelStore` / `PointStore` / `SemanticStore` / `Durable` traits plus DTOs, unified by the `Store` supertrait; the resolved-model DTOs are re-exported from `oce-model`. No database types. Also the host-side post-load helper (`host`: recover → save the model → validate the input points) and, behind the default `mem` feature, the in-memory `MemStore` backend; `default-features = false` builds the ports, DTOs and helper alone. Depends on `oce-model`, never on `oce-api`, and `oce-api` never depends on it. |
 
 **Verification, externals, and the host facade:**
 
@@ -171,8 +172,9 @@ as empty seams, so nobody plans a feature against a crate that does nothing.
 
 `oce-api` declares no cargo features and has no storage dependency, so there is no build that links
 a store into the engine. A host that wants durability takes the `LoadedModel` a load returns and
-persists it through whichever adapter it chose behind the `oce-store` port; the engine never calls
-that adapter, on load or on a frame. What the host owns is listed in
+persists it through whichever adapter it chose behind the `oce-store` port — in one call,
+`oce_store::host::persist_loaded_model(&store, &loaded.model, loaded.input_points())`; the engine
+never calls that adapter, on load or on a frame. What the host owns is listed in
 [host-responsibilities.md](host-responsibilities.md#durability-is-the-hosts).
 
 ## What this engine will never do
