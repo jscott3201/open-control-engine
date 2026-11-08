@@ -259,10 +259,10 @@ the two standalone `CDL.Logical.Pre` goldens.
 399 retain their existing exact comparisons, including all 135 G36 sequence goldens. The other
 21 transcendental, psychrometric, and solar Real goldens compare exactly on qualified Linux
 x86_64/aarch64 debug/release and retain the unchanged 1e-12 aligned band on unqualified targets.
-That Linux result is re-established on every pull request: the scoped strict-bit subset and its
-four suite binaries run in four native Linux cells (x86_64 and aarch64, debug and release) with
-repeat captures and a cross-cell comparison, and no source file is bound to a stored receipt any
-more ([strict-bit evidence](docs/strict-bit-evidence.md)). It bounds the claim to the pinned
+That Linux result is re-established per-PR: the scoped strict-bit subset and its four suite
+binaries run in four native Linux cells (x86_64 and aarch64, debug and release) with repeat
+captures and a cross-cell comparison, and no source file is bound to a stored receipt any more
+([strict-bit evidence](docs/strict-bit-evidence.md)). It bounds the claim to the pinned
 corpus, rustc and libm; it is not mathematical correctness or arbitrary-input proof. The remainder
 of `oce-conformance` still needs the release/full gate.
 
