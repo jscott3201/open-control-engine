@@ -146,7 +146,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
   parse bounds), the strict-JSON wire form with a `schemars`-derived schema, a two-stage validator
   (author-side checks, then emit and load in a throwaway `Engine`) with a finding-code parity table,
   the fixed-layout deterministic emitter and the CLI's commands, exit codes and JSON output. It
-  states the owner's nine settled decisions and marks eleven drafting decisions Proposed.
+  states the owner's nine decisions and twelve more settled in review, among them a wire `value`
+  that is a number, boolean, string, `{"ref"}` or `{"member"}`, and `clap` for the CLI.
   `docs/architecture.md` now limits the no-binaries rule to the engine crates, so leverage crates
   may ship binaries above the facade; the note is registered in `docs/README.md` and the book.
 - The contributor-facing docs no longer describe the retired previous host by name (GitHub #439).

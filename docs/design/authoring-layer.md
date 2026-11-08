@@ -3,7 +3,7 @@
 **Design note, written before any M2 code.** It fixes what the authoring layer is, the typed model,
 its text and wire forms, the validator, the CXF emitter and the `oce` CLI. Decisions 1 to 9 were
 settled by the owner and are stated here, not reopened. Decisions 10 onwards were made while
-drafting and are marked **Proposed** for the architect pass to rule on. The engine-side
+drafting and ruled on by the architect pass (see [Review rulings](#review-rulings)). The engine-side
 prerequisite is GitHub #440 (resolved port names, descriptions and a settable flag in the catalog).
 
 The milestone goal, from the owner's work plan:
@@ -47,7 +47,7 @@ in its simplest accepted form and the dialect the library already uses. Nested c
 | --- | --- |
 | Sequence | `name` (identifier), `extends` (opaque provenance id or none, decision 5) |
 | Parameter | sequence-level `name`, `type` (Real, Integer, Boolean), literal `value`; lowered onto the root block (decision 3) |
-| Input / output | boundary `name`, `type` (Real, Integer, Boolean), optional `quantity` and `display_unit`, and a `SemanticPoint` slot (decision 2) |
+| Input / output | boundary `name`, `type` (Real, Integer, Boolean), optional `quantity` and `display_unit` (decision 21), and a `SemanticPoint` slot (decision 2) |
 | Block | instance `name`, catalog `class_path`, ordered parameter assignments |
 | Assignment | parameter `name` and a value: a literal, an enum member, a string, or a reference to a sequence parameter |
 | Connection | `source -> target`; an endpoint is a boundary name or `block.port` |
@@ -154,9 +154,10 @@ With the default namespace the emitter writes these `@graph` nodes, in this orde
 | 12–13 | `.TOut`, `.TOutCut` | `S231:RealInput` with `unit`, `quantity`, `displayUnit` where authored; `isConnectedTo [sub.u2]` / `[sub.u1]` |
 | 14 | `.ecoEna` | `S231:BooleanOutput` |
 
-The `@brick` and `@provisional` tags stay in the model and both forms and are not emitted (decision
-2). `hys.uHigh` reads `dTHys` from the root's scope: in the flat dialect the root is a composite
-and a leaf parameter value resolves enclosing-first under [Rule 5](../cxf-composite-subset.md#rule-5--parameter-scope-inheritance-rejects-compositearray-parameter-compositedeclaration-cycle-compositeduplicate-declaration),
+The `@brick` and `@provisional` tags stay in the model and both forms and are not emitted
+(decision 2). `hys.uHigh` reads `dTHys` from the root's scope: in the flat dialect the root is a
+composite and a leaf parameter value resolves enclosing-first under
+[Rule 5](../cxf-composite-subset.md#rule-5--parameter-scope-inheritance-rejects-compositearray-parameter-compositedeclaration-cycle-compositeduplicate-declaration),
 as corpus fixture `accepted/leaf_identity_parameter_modification.jsonld` already shows.
 `oce-expr` grounds it at load; `oce-author` never evaluates it.
 
@@ -165,7 +166,9 @@ as corpus fixture `accepted/leaf_identity_parameter_modification.jsonld` already
 Strict JSON for agents and structured-output decoders (decision 8). Every object is closed
 (`additionalProperties: false`), every property is required, an absent value is `""`, `[]` or
 `false`, and the profile uses no `oneOf`, `allOf`, `pattern` or `minItems`. Parameters are lists of
-`{name, value}`; below the root, `value` is a number, a boolean or a string. Connections are
+`{name, value}`; below the root, `value` is one of five shapes: a number, a boolean, a string, a
+reference `{"ref": "<sequence-param>"}` or an enum member `{"member": "<Type.Member>"}`. The two
+tagged objects are closed, and the schema lists the five shapes under `anyOf`. Connections are
 `"a.y -> b.u"` strings, parsed into typed endpoints at the model boundary.
 
 ```json
@@ -179,14 +182,16 @@ Strict JSON for agents and structured-output decoders (decision 8). Every object
                              "qudt": "", "haystack": [], "provisional": false } }],
   "outputs": [],
   "blocks": [{ "name": "hys", "class": "CDL.Reals.Hysteresis",
-               "params": [{ "name": "uLow", "value": 0.0 }, { "name": "uHigh", "value": "dTHys" }] }],
+               "params": [{ "name": "uLow", "value": 0.0 },
+                          { "name": "uHigh", "value": { "ref": "dTHys" } }] }],
   "connections": ["sub.y -> hys.u"]
 }
 ```
 
-(Abridged; a real document lists every input, output, block and connection.) A string `value` is
-read by the parameter's catalog kind: an enum member for an Enum parameter, text for a String
-parameter, otherwise a reference to a sequence parameter (decision 11).
+(Abridged; a real document lists every input, output, block and connection.) A plain string `value`
+is always text and never depends on the catalog: a reference or an enum member is written as its
+tagged object, so any parameter kind, String included, may take a reference (decision 11). An enum
+member uses the text form's `Type.Member` spelling, e.g. `{"member": "SimpleController.PI"}`.
 
 The JSON Schema is derived from the wire DTOs with `schemars`, a dependency of `oce-author` only,
 never of an engine crate. The `class` enum is generated from the non-reserved class paths of
@@ -296,15 +301,15 @@ escapes, the shortest round-trip number spelling, and relation lists always writ
 the model (block order, port-target order, boundary order, sequence parameter order) is applied in
 turn and the load → export content id is compared with what the ordering contract says for that
 surface: block and boundary order move it; direct target permutations move export bytes but leave
-executable compatibility unchanged; sequence-parameter order is normalized by Rule 5, so the
-loaded model is identical. The [emitter test drivers](../cxf-composite-subset.md#testing-your-emitter)
-(resolver-layer and full-pipeline composite-contract drivers) run over emitter output, every
-emitted golden must load warning-free, and the emitted goldens are checked in and compared bit for
-bit.
+executable compatibility unchanged; sequence-parameter order is normalized by Rule 5, so the loaded
+model is identical. The [emitter test drivers](../cxf-composite-subset.md#testing-your-emitter)
+(resolver-layer and full-pipeline composite-contract drivers) run over emitter output, every emitted
+golden must load warning-free, and the emitted goldens are checked in and compared bit for bit.
 
 ## CLI
 
-`oce` lives in its own leverage crate and links `oce-author` and `oce-api`.
+`oce` lives in its own leverage crate, links `oce-author` and `oce-api`, and parses its arguments
+with `clap` (derive) for consistent `--help`, suggestions and shell completions (decision 20).
 
 | Command | Does |
 | --- | --- |
@@ -320,9 +325,9 @@ documented, so an agent can branch on `code` and quote `detail`. Exit codes: **0
 error findings, a parse refusal, or `--check` found a non-canonical file; **2** usage error; **3**
 an I/O failure.
 
-**Binaries above the facade.** The architecture page says the engine is library-only, with no
-binary target in `crates/`. The PR that adds this note narrows that sentence to the engine crates: leverage crates may
-ship binaries above the facade, and they still run no daemon, server or network listener
+**Binaries above the facade.** The architecture page says the engine is library-only, with no binary
+target in `crates/`. The PR that adds this note narrows that sentence to the engine crates: leverage
+crates may ship binaries above the facade, and they still run no daemon, server or network listener
 (decision 9).
 
 **TUI follow-on (direction, not M2 scope).** The owner is open to a `ratatui` terminal UI for the
@@ -335,7 +340,9 @@ note and its own issue.
 
 ## Decisions
 
-Decisions 1 to 9 are the owner's and settled. Decisions 10 onwards are **Proposed**.
+Decisions 1 to 9 are the owner's. Decisions 10 to 21 were proposed while drafting and settled by
+the architect pass, with the owner deciding 11, 12 and 20; each ruling is recorded under
+[Review rulings](#review-rulings).
 
 **1. Text form: a terse line grammar.** A hand-written recursive-descent parser and canonical
 printer, no third-party parser; `fmt` is parse then print; bounded at parse with typed errors.
@@ -372,13 +379,14 @@ bundle-directory resolver (pre-empts M3); leaving it out (both forms change late
 id hashes emitted bytes, so an unemitted id cannot move it; resolution and diff are M3's
 (`oce-diff`).
 
-**6. Emission order and IRIs: authored order, never sorted.** `fmt` reorders nothing within a
-section; the emitter never sorts; connection targets follow authored order; IRIs are
-`{namespace}{sequence}.{local}` with default `urn:oce:author:` and an override; the emitter owns a
-canonical writer and does not mimic another generator's indentation. Rejected: a canonical sort in
-`fmt` or the emitter (loses intent, and every reorder becomes a `BlockId` and schedule tie-break
-change); a namespace derived from kind and name. Why: the content id is order-bearing, and a
-namespace must never derive from a host path or a UUID.
+**6. Emission order and IRIs: authored order, never sorted.** `fmt` normalises whitespace, section
+grouping and canonical Real spelling; authored order is kept inside each section, and integers and
+unit suffixes keep their spelling (decision 12); the emitter never sorts; connection targets follow
+authored order; IRIs are `{namespace}{sequence}.{local}` with default `urn:oce:author:` and an
+override; the emitter owns a canonical writer and does not mimic another generator's indentation.
+Rejected: a canonical sort in `fmt` or the emitter (loses intent, and every reorder becomes a
+`BlockId` and schedule tie-break change); a namespace derived from kind and name. Why: the content
+id is order-bearing, and a namespace must never derive from a host path or a UUID.
 
 **7. Catalog gaps: a separate pre-M2 engine issue (#440).** Port-name synthesis as a pure function
 over a constructed block, descriptions and a settable-versus-derived flag, exposed through the
@@ -388,8 +396,10 @@ core-four and leverage lanes); `oce-author` deriving names itself (an author gue
 Why: width-class port naming is an engine contract.
 
 **8. Wire-form schema: derived from the Rust types.** `schemars`, a leverage dependency only,
-checked in CI against the published file; the class enum from the catalog; the strict profile
-above. Rejected: a hand-written schema (the prototype's drifted). Why: one source of truth.
+checked in CI against the published file; the class enum from the catalog; the strict profile above,
+with parameter `value` an `anyOf` over a number, a boolean, a string, a closed `{"ref": …}` object
+and a closed `{"member": …}` object (decision 11), and no `oneOf`. Rejected: a hand-written schema
+(the prototype's drifted). Why: one source of truth.
 
 **9. CLI now, TUI later; binaries allowed above the facade.** An `oce` CLI in `crates/leverage`
 (`fmt`, `validate`, `emit`, later `bind`, `points`, `doc`, `vocab`), and the architecture page
@@ -397,69 +407,89 @@ amended so the no-binaries rule covers the engine crates only. Rejected: a libra
 user and agent experience is the point of M2; binaries stay above the facade and out of the
 engine's dependency graph.
 
-**10. Proposed: block `@type` uses a fixed class base.** The `oce-cxf` class bridge takes the
-fragment after the last `#` of `@type`, then strips `Buildings.Controls.OBC.`. The default
-namespace `urn:oce:author:` has no `#`, so a class IRI under it would resolve to nothing. The
-emitter writes `http://example.org#Buildings.Controls.OBC.<class>` (the exporter's own class base)
-whatever the instance namespace is. Rejected: changing the default namespace to end in `#` (that
+**10. Block `@type` uses a fixed class base.** The `oce-cxf` class bridge
+(`oce_cxf::bridge::class_path_of`) takes the fragment after the last `#` of `@type`, then strips
+`Buildings.Controls.OBC.`. The default namespace `urn:oce:author:` has no `#`, so a class IRI
+under it would resolve to nothing. The emitter writes
+`http://example.org#Buildings.Controls.OBC.<class>` (the exporter's own class base) whatever the
+instance namespace is. The instance namespace and the class base are independent by
+design: `class_path_of` reads only the class IRI's fragment, so no instance namespace can change
+which class a block resolves to. Rejected: changing the default namespace to end in `#` (that
 re-opens decision 6); a configurable class base (one more way to emit an unloadable document).
 
-**11. Proposed: wire strings are typed by the parameter's catalog kind.** Decision 8 fixes
-`{name, value}` with `value` a number, boolean or string, so a string must carry three meanings. An
-Enum parameter reads it as a member, a String parameter as text, any other kind as a reference. A
-String parameter therefore cannot take a reference in M2. The text form keeps three distinct
-spellings and the model is tagged. Rejected: a `$` sigil for references (a magic convention agents
-get wrong); a third `kind` property (breaks the two-property profile).
+**11. Wire values: three scalars and two tagged objects.** `value` is a number, a boolean, a
+string, `{"ref": "<sequence-param>"}` or `{"member": "<Type.Member>"}`, expressed in the schema as
+`anyOf` over five closed shapes. A plain string is always text; any parameter kind, String
+included, may take a reference. The text form keeps its three distinct spellings and the model is
+tagged, so the two forms map one to one. Rejected: typing a string by the parameter's catalog kind
+(the drafted proposal; an agent writing JSON must not have a string's meaning depend on the
+catalog, and String parameters could not take references); a `$` sigil for references (a magic
+convention agents get wrong).
 
-**12. Proposed: what `fmt` changes beyond whitespace.** Decision 6 says `fmt` normalises
-whitespace only. Two more edits are needed for a canonical text to exist: statements are grouped
-into the fixed section order (authored order kept inside each section, so emission is unaffected),
-and Real literals take their shortest round-trip spelling (`1.50` becomes `1.5`). Integer literals
-keep their spelling. Rejected: refusing out-of-section statements (hostile to hand editing);
-storing lexical spellings in the model (two equal models with different bytes).
+**12. What `fmt` changes beyond whitespace.** The owner's first wording of decision 6 said `fmt`
+normalises whitespace only. Two more edits are needed for a canonical text to exist: statements are
+grouped into the fixed section order (authored order kept inside each section, so emission is
+unaffected), and Real literals take their shortest round-trip spelling (`1.50` becomes `1.5`).
+Integer literals keep their spelling. Rejected: refusing out-of-section statements (hostile to hand
+editing); storing lexical spellings in the model (two equal models with different bytes).
 
-**13. Proposed: unit suffixes are base units only in M2.** The catalog carries no units until
+**13. Unit suffixes are base units only in M2.** The catalog carries no units until
 vocabulary v1, so there is no conversion table. A suffix is kept on the model literal as a
 text-only annotation, so `fmt` is lossless, and the number is the base-unit value as written.
 `1 h` is refused with a typed error until the vocabulary supplies scale factors. Text → wire → text
 drops suffixes; wire → text → wire, the gate's direction, is unaffected.
 
-**14. Proposed: every engine warning is an error finding.** Accepted means warning-free, so a
+**14. Every engine warning is an error finding.** Accepted means warning-free, so a
 warning is a defect in the authored sequence, not advice. This covers `unused-boundary-input`,
 `undriven-boundary-output` and parameter-rule warnings such as `uLow == uHigh` on
 `CDL.Reals.Hysteresis`.
 
-**15. Proposed: array parameters.** Text writes `[1, 2]` and `[[1, 0], [0, 1]]`; the wire form
+**15. Array parameters.** Text writes `[1, 2]` and `[[1, 0], [0, 1]]`; the wire form
 lists one `{name, value}` per element under the catalog's `<i>`, `<row>`, `<col>` template names,
 keeping decision 8's scalar profile; the emitter writes the CXF array form. Leaf array parameters
-are accepted (Rule 5 refuses arrays on composites only). #440 must expose the template expansion.
+are accepted (Rule 5 refuses arrays on composites only). #440 must expose the template expansion,
+and the amended issue does.
 
-**16. Proposed: the emitter never fills a default.** It emits exactly the assignments the author
+**16. The emitter never fills a default.** It emits exactly the assignments the author
 wrote, and the engine supplies defaults. A library convention (the library sets
 `Logical.TrueDelay.delayOnInit = true` throughout, against the CDL default) belongs in vocabulary
 notes an agent reads, not in a silent emitter default.
 
-**17. Proposed: relation lists are always arrays.** `hasInput`, `hasOutput`, `hasParameter`,
+**17. Relation lists are always arrays.** `hasInput`, `hasOutput`, `hasParameter`,
 `containsBlock` and `isConnectedTo` are written as arrays even with one entry. The singleton
 spelling is normalized on import, and one shape keeps the writer small. Byte equality with
 committed library CXF is not a goal; the gate compares content ids after load and export.
 
-**18. Proposed: the #440 surface reaches `oce-author` through `oce-api`.** A leverage crate cannot
+**18. The #440 surface reaches `oce-author` through `oce-api`.** A leverage crate cannot
 call `oce_blocks`, so the facade exposes resolved ports for a class and an `oce_api::ParamTable`,
 and the new per-class and per-parameter metadata. That metadata stays out of the revision-1
 canonical catalog JSON, so `CATALOG_JSON` and `catalog_content_id` stay byte-identical, and it does
 not enter `class_signature_hash` (descriptions are not behaviour, and settability follows from the
-already-hashed default source).
+already-hashed default source). #440 has been amended to match: a facade accessor, the
+revision-1 catalog JSON and the class signature hash unchanged, and the template expansion exposed.
 
-**19. Proposed: leverage crates may dev-depend on `oce-bless`.** Goldens in `oce-author` need the
+**19. Leverage crates may dev-depend on `oce-bless`.** Goldens in `oce-author` need the
 repo's single bless switch. The leverage rule allows only `oce-api` and other leverage crates;
 copying the truthiness policy would recreate the drift `oce-bless` exists to prevent.
-`scripts/ci/leverage-members.sh` would allow exactly this dev-dependency.
+The rule changes to allow exactly this dev-dependency; `crates/leverage/README.md` and
+`scripts/ci/leverage-members.sh` are amended in the first M2 crate PR, not in this note's PR.
 
-**20. Proposed: crate shape.** `crates/leverage/oce-author` (library) and `crates/leverage/oce-cli`
-(package `oce-cli`, binary `oce`), both `publish = false` for M2 and `#![forbid(unsafe_code)]`. The
-CLI parses its arguments by hand (four subcommands, a handful of flags), so `schemars` is the only
-new third-party dependency in M2. Rejected: `clap` (a large dependency tree for four commands).
+**20. Crate shape, and `clap` for the CLI.** `crates/leverage/oce-author` (library) and
+`crates/leverage/oce-cli` (package `oce-cli`, binary `oce`), both `publish = false` for M2 and
+`#![forbid(unsafe_code)]`. The CLI parses its arguments with `clap` (derive). `schemars` and `clap`
+are M2's two new third-party dependencies, both confined to `crates/leverage/`. Rejected:
+hand-written argument parsing (the drafted proposal). Why: the binary lives above the facade and is
+never embedded, so its dependency tree does not touch the engine, and consistent `--help`,
+suggestions and completions are the point of a CLI.
+
+**21. `quantity` and `displayUnit` live on the boundary declaration, outside `SemanticPoint`.** The
+emitter must write `S231:quantity` and `S231:displayUnit` (the library CXF carries them), but
+decision 2's closed `SemanticPoint` has no such fields. They are optional fields of the input or
+output declaration (`@quantity`, `@displayUnit` in text; `quantity`, `display_unit` on the wire);
+`unit` stays in `SemanticPoint`. Rejected: widening `SemanticPoint` (reopens decision 2 and
+pre-empts M8's record shape); deriving them from `unit` (no table until vocabulary v1). Why: they
+are CXF connector attributes the engine already reads, and M8 can then design semantic records
+without moving them.
 
 ## Dependencies and sequencing
 
@@ -519,4 +549,23 @@ new third-party dependency in M2. Rejected: `clap` (a large dependency tree for 
 
 ## Review rulings
 
-(Left empty for the architect pass.)
+The architect pass on the draft (owner consulted on 11, 12 and 20) ruled:
+
+- 10 accepted; a sentence names `class_path_of` and states that namespace and class base are
+  independent.
+- 11 rejected and replaced: wire `value` is a number, boolean, string, `{"ref"}` or `{"member"}`
+  (`anyOf`, no `oneOf`); String parameters may take references; decision 8 reworded.
+- 12 accepted; decision 6 now names whitespace, section grouping and canonical Real spelling.
+- 13 accepted: base units only in M2, `1 h` refused.
+- 14 accepted: every engine warning is an error finding.
+- 15 accepted; #440 exposes the template expansion.
+- 16 accepted: the emitter never fills a default.
+- 17 accepted: relation lists are always arrays.
+- 18 accepted; #440 amended (facade accessor, revision-1 catalog JSON and class hash unchanged).
+- 19 accepted; the leverage README and `leverage-members.sh` change in the first M2 crate PR.
+- 20 shape accepted, hand-written parsing rejected: `clap` with derive; `schemars` and `clap` are
+  M2's two new dependencies, confined to `crates/leverage/`.
+- 21 added and accepted: `quantity` and `displayUnit` on the boundary declaration.
+- Gate item 3 reading accepted as written; the parity test is the proof.
+- Gate item 4: accepted; the benchmark-data follow-up issue is filed when the M2 tracking issue is
+  cut.
