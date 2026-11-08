@@ -12,7 +12,8 @@ scheduling and state allocation. The blob carries that pipeline's output in a fo
 target can execute without `oce-cxf`, `oce-expr`, `oce-validate` or `oce-api`. Every parameter is
 a ground value, the block evaluation order is frozen, and connector numbering is unchanged. The
 target re-instantiates blocks from its own registry. It checks every class against the host's
-class signature. Then it runs the unchanged `oce_graph::eval_tick`.
+class signature. Then it runs the unchanged `oce_graph::eval_tick` through the one HostTick v1 frame driver
+(decision 11).
 
 Block and connector ids in the blob are the `std` path's own `BlockId` and `ConnectorId`. A
 decoded executable is therefore comparable with the host's `RunState` word for word, not only at
@@ -33,8 +34,9 @@ the boundary outputs.
   payload length), and its payload must be consumed exactly.
 - Every list has one canonical order, stated per section. The decoder refuses a blob whose lists
   are out of order, duplicated, or carry unused entries.
-- A whole blob is at most 64 MiB, the snapshot cap (`MAX_SNAPSHOT_BYTES`), so every section
-  length fits a `u32`.
+- A whole blob is at most 64 MiB, so every section length fits a `u32`. The value equals the
+  snapshot cap, but `MAX_SNAPSHOT_BYTES` is `pub(crate)` in `oce-api`, so `oce-graph` declares its
+  own `MAX_BLOB_BYTES`.
 
 | Encoding | Bytes |
 | --- | --- |
@@ -91,7 +93,16 @@ is `Schedule::order`. `connector_order` is not carried; only trace tooling reads
 
 **4 Connections.** The payload is a `u32` count K, then K pairs (`u32` producer output id, `u32`
 consumer input id), strictly increasing by consumer id. The order makes "one driver per input" a
-neighbor comparison. The decoder rebuilds `driver_of` with the unchanged `build_driver_of`.
+neighbor comparison. For every pair the decoder also requires:
+
+- the producer is an output connector and the consumer an input connector;
+- the producer and consumer have the same `PortKind`;
+- the producer and consumer belong to different blocks;
+- the consumer is not an I/O input target.
+
+Without the kind check, a release tick would read a mismatched value as the type zero, which is
+wrong data on a control path. The decoder then rebuilds `driver_of` with the unchanged
+`build_driver_of`.
 
 **5 I/O.** Inputs first: a `u32` count, then records strictly increasing by path bytes.
 
@@ -112,50 +123,61 @@ the `u32` length plus bytes of its `SemanticPoint` payload.
 ### Worked example
 
 The fixture is `generic_air_economizer_high_limits_ashrae_differential`, 418 bytes. Twelve of the
-46 catalog fixtures (`crates/oce-cxf/tests/fixtures/g36`) tie at one block. Among them, this one and
-the four `title24_differential_offset_*` variants are the only ones that also have a boundary input
-and output, so every section except Connections is non-empty. Of those five, this one is the
-smallest. The model is one `CDL.Reals.AddParameter` (`p = 0.0`): boundary input `TRet` drives
-connector 0 (`u`), and connector 1 (`y`) is boundary output `TCut`. The bytes come from a throwaway
-prototype of this layout. Two fields are placeholders: `HH`, because #400 fixes the signature
-record, and `CC`, which depends on it. Both I/O paths are 89 bytes:
+46 G36 catalog fixtures in `crates/oce-cxf/tests/fixtures/g36` tie at one block; that directory's
+47th document is the resolver-contract fixture `member_list_interface.jsonld`. Among the twelve,
+this one and the four `title24_differential_offset_*` variants are the only ones that also have a
+boundary input and output, so every section except Connections is non-empty. Of those five, this
+one is the smallest.
+
+The model is one `CDL.Reals.AddParameter` (`p = 0.0`): boundary input `TRet` drives connector 0
+(`u`), and connector 1 (`y`) is boundary output `TCut`. The content id decodes to
+`cxf:fnv1a128:9aeed987b862eb2504fbde693778e5fd`. Both I/O paths are 89 bytes:
 `http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.` + `TRet` /
 `TCut`.
 
+The dump below is printed by the throwaway prototype, which walks the encoded bytes field by field.
+For strings longer than four bytes it shows only the `u32` length prefix; the UTF-8 bytes follow.
+Two fields are placeholders: the class hash (`aa` ×8), because #400 fixes the signature record,
+and the CRC, which covers that placeholder.
+
 ```text
-0000  4f 43 45 42                    magic "OCEB"
-0004  01 00  01 00                   format 1, profile 1 (HostTick v1)
-0008  00 00 02 00 00 00  00 00       engine 0.2.0, flags 0
-0010  a2 01 00 00                    total length 418
-0014  fd e5 78 37 69 de fb 04        content id: FNV-1a-128 as u128 LE, i.e.
-      25 eb 62 b8 87 d9 ee 9a          cxf:fnv1a128:9aeed987b862eb2504fbde693778e5fd
-      00 ×16                           zero padding
-0034  01 00 00 00  26 00 00 00       section 1 Classes, 38 bytes
-003c  01 00 00 00                    1 class
-0040  16 00 00 00 "CDL.Reals.AddParameter"
-0056  HH HH HH HH HH HH HH HH        class signature hash
-005e  02 00 00 00  37 00 00 00       section 2 Instances, 55 bytes
-0066  01 00 00 00  02 00 00 00       1 block, 2 connectors
-006e  00 00 00 00  00                block 0: class 0, kind [A]
-0073  00 00 00 00  00 00 00 00       0 state words, state CRC 0
-007b  01 00 00 00  00 00 00 00       1 input: connector 0
-0083  01 00 00 00  01 00 00 00       1 output: connector 1
-008b  01 00 00 00                    1 parameter
-008f  01 00 00 00 70  00  00 ×8      "p", Real, bits of +0.0
-00a1  03 00 00 00  08 00 00 00       section 3 Schedule, 8 bytes
-00a9  01 00 00 00  00 00 00 00       order = [block 0]
-00b1  04 00 00 00  04 00 00 00       section 4 Connections, 4 bytes
-00b9  00 00 00 00                    0 connections
-00bd  05 00 00 00  d9 00 00 00       section 5 I/O, 217 bytes
-00c5  01 00 00 00                    1 input
-00c9  59 00 00 00 "…TRet"            path (89 bytes)
-0126  00  00  00                     Real, no min, no max
-0129  01 00 00 00  00 00 00 00       1 target: connector 0
-0131  00 00 00 00                    SemanticPoint payload, empty
-0135  01 00 00 00                    1 output
-0139  59 00 00 00 "…TCut"            path (89 bytes)
-0196  01 00 00 00  00 00 00 00       source connector 1, empty payload
-019e  CC CC CC CC                    CRC-32C of bytes 0000..019d
+0000  4f 43 45 42                      magic "OCEB"
+0004  01 00                            format 1
+0006  01 00                            profile 1 (HostTick v1)
+0008  00 00 02 00 00 00                engine 0.2.0
+000e  00 00                            flags 0
+0010  a2 01 00 00                      total length 418
+0014  fd e5 78 37 69 de fb 04 25 eb 62 b8 87 d9 ee 9a
+                                       content id, u128 LE
+0024  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                                       content id padding
+0034  01 00 00 00 26 00 00 00          section 1 Classes
+003c  01 00 00 00                      1 class
+0040  16 00 00 00                      str "CDL.Reals.AddParameter"
+005a  aa aa aa aa aa aa aa aa          class signature hash (placeholder)
+0062  02 00 00 00 37 00 00 00          section 2 Instances
+006a  01 00 00 00 02 00 00 00          1 block, 2 connectors
+0072  00 00 00 00 00                   block 0: class 0, kind [A]
+0077  00 00 00 00 00 00 00 00          0 state words, state CRC 0
+007f  01 00 00 00 00 00 00 00          1 input: connector 0
+0087  01 00 00 00 01 00 00 00          1 output: connector 1
+008f  01 00 00 00                      1 parameter
+0093  01 00 00 00 70                   name str "p"
+0098  00 00 00 00 00 00 00 00 00       value: tag 0 (Real), bits of +0.0
+00a1  03 00 00 00 08 00 00 00          section 3 Schedule
+00a9  01 00 00 00 00 00 00 00          order = [block 0]
+00b1  04 00 00 00 04 00 00 00          section 4 Connections
+00b9  00 00 00 00                      0 connections
+00bd  05 00 00 00 d9 00 00 00          section 5 I/O
+00c5  01 00 00 00                      1 input
+00c9  59 00 00 00                      path str "…TRet" (89 bytes)
+0126  00 00 00                         vtype Real, no min, no max
+0129  01 00 00 00 00 00 00 00          1 target: connector 0
+0131  00 00 00 00                      SemanticPoint payload, empty
+0135  01 00 00 00                      1 output
+0139  59 00 00 00                      path str "…TCut" (89 bytes)
+0196  01 00 00 00 00 00 00 00          source connector 1, empty payload
+019e  cc bc 5c 40                      CRC-32C (placeholder: covers the placeholder hash)
 ```
 
 ## Decisions
@@ -169,7 +191,8 @@ and `oce-blocks → {oce-model, libm}`. That is exactly what decoding needs: the
 `build_driver_of`.
 
 The byte writer sits in the same module, so one file owns the tag tables in both directions.
-`oce-api` adds the facade-only facts: content id, input definitions and output identities.
+`oce-api` adds the facade-only facts: content id, input definitions and output identities. The
+HostTick v1 frame driver moves beside the decoder (decision 11).
 
 The target does not need:
 
@@ -193,9 +216,12 @@ default-parameter instance and contains, in order:
 - `class_path`
 - resolved kind, `state_len` and `state_contract_revision`
 - the input and output port kinds and port names
-- the naming policy, `width_driven` and `reserved` flags
+- the naming policy, `width_driven`, `reserved` and `target_bound` flags
 - every `ParamRule`, as a variant tag and its fields
-- every `ParamDefault`, as name, source tag, and literal or formula text
+- every `ParamDefault`, as name, source tag and literal value
+
+A `Derived` default contributes only its source tag. Its `formula` text is documentation, and a
+wording edit must not refuse every blob that uses the class.
 
 Counts are `u32`, Reals are bits, and strings use `str`. The tag tables use exhaustive matches, so
 a new `ParamRule` variant cannot compile without one. The hash does not cover:
@@ -204,6 +230,7 @@ a new `ParamRule` variant cannot compile without one. The hash does not cover:
 - `validate_state`
 - non-default arities
 - catalog order
+- `Derived` formula text
 
 The decoder checks three of those per instance instead:
 
@@ -211,15 +238,17 @@ The decoder checks three of those per instance instead:
 - **State layout:** `kind`, `state_len` and the initial-state CRC must match (decision 3).
 - **Schedule:** the order must be valid under the target's own `feeds_through`.
 
-As with snapshots, implementation identity beyond that is host build qualification
-([state compatibility](../state-compatibility.md)). An unknown class is `UnknownClass`, and a
+Behavioral identity beyond that rests on the exact engine-version match (decision 6) and the
+per-PR dual-path test. Between release tags, every `development` build shares one version string.
+A blob and the target that runs it must therefore come from the same build: the current/current
+rule that applies to snapshots ([state compatibility](../state-compatibility.md)). An unknown class is `UnknownClass`, and a
 different hash is `ClassSignatureMismatch`; both carry the class index and both hashes where they
 apply. Neither panics.
 
 Rejected: **one registry-wide digest.** It would refuse a blob because an unused class changed, the
-case the state contract already excludes. It would also refuse every blob on a firmware image that
-compiles a reduced registry to meet #402's budget. Per class, that image accepts every blob whose
-classes it has and names the class it lacks.
+case the state contract already excludes. (A firmware image with a reduced registry would also
+benefit from per-class hashes, but no such capability exists: `registry::CATALOG` is one static
+slice. That is a possible #402 feature, not part of this rationale.)
 
 **3. Parameters and initial state.** `oce-model` has exactly five `Value` kinds. The parameters of
 the 46 fixtures use all five:
@@ -238,10 +267,24 @@ Arrays and tables are already flattened by the resolver into scalar entries name
 carries the `ParamTable` exactly as `make` received it, in table order. Equal constructor input
 gives an equal block. Enum values carry the class path, never the run-local `EnumClassId`.
 
-Initial state words are **not** carried. The decoder calls the unchanged `allocate_state`. That
-call seeds each region from `init_state` and fires constant sources once. It then compares each
-stateful block's region with that block's carried CRC-32C; a difference is `InitialStateMismatch`
-naming the block. This departs from the sketch. Carrying the words would cost 8 bytes per word,
+Non-finite Real parameters cannot reach the encoder; load and `set_param` have refused them since
+GitHub #376. NaN-payload portability is therefore moot for parameters, and the encoder checks it
+again and refuses rather than encoding a non-finite parameter. Boundary input values are frame
+data, not blob content.
+
+Initial state words are **not** carried. The decoder calls the unchanged `allocate_state`, which
+does five things:
+
+- seeds every connector with its type zero (Enum ordinal 1, String empty);
+- seeds each stateful region from `init_state`;
+- fires **every input-less algebraic block** once at `t = 0` with a no-op diagnostics sink, not
+  only constants;
+- builds `slots`, `slot_of` and the gather scratch;
+- sets `t = 0.0`.
+
+The decoder then compares each stateful block's region with that block's carried CRC-32C; a
+difference is `InitialStateMismatch` naming the block. All of this matters because the decoded
+`RunState` is compared word for word with the host's. This departs from the sketch. Carrying the words would cost 8 bytes per word,
 almost all of them a moving-average ring of zeros. `multizone_vav_relief_fan_group` would grow from
 16,438 to about 49,800 bytes, and the decoder would still have to run `init_state` to check them.
 
@@ -258,7 +301,12 @@ reuses that encoding. The decoder checks four things:
 - each target is an input connector of the record's type;
 - each target has no connection driver;
 - every input connector has exactly one driver or input target;
-- each output source is an output connector.
+- each output source is an output connector;
+- no input `vtype` is Enum. The tag stays in the table for parity with the snapshot, but
+  `oce-validate` makes an Enum input unreachable, so the decoder refuses it;
+- no two outputs share a path. The encoder refuses duplicates too, because
+  `executable_boundary_outputs` sorts unstably on path alone; this note defines refusal, not a
+  tie-break.
 
 The non-finite input policy is host configuration, not blob content.
 
@@ -274,10 +322,15 @@ a `u128` LE, followed by 16 zero bytes. The field's position and width are stabl
 "the facade's content id at encode time" until M3 replaces the algorithm. Changing the meaning bumps
 the format version.
 
-`content_id_complete` refuses partial exports. 13 of the 46 fixtures export partially today,
-because the CXF exporter defers every PID whose `controllerType` is enum-valued, together with
-its downstream consumers. For those, the field is 32 zero bytes, meaning "no content id". The decoder never
-interprets the field.
+`content_id_complete` refuses partial exports. 13 of the 46 G36 fixtures export partially today;
+in all 13, a PID's `controllerType` is enum-valued. For those, the field is 32 zero bytes, meaning
+"no content id". The `oce-api` encoder API reports the id as an `Option`. The decoder never
+interprets the field. It does keep it verbatim, and the decoded executable also exposes it as an
+`Option`, so no host has to test for 32 zero bytes. M3's canonical id
+must be defined for every loadable model, whether or not its export is partial.
+
+The enum deferral is not specific to PID: export defers any block with an Enum connector or
+parameter, and its downstream consumers with it.
 
 **6. Versioning.** The format version is a `u16`. Any change to layout, a tag table, the
 signature-record definition, the CRC, or the content-id meaning bumps it. A decoder accepts
@@ -311,8 +364,15 @@ costs 16 bytes, and lives in `oce-api`.
 **9. Target-bound flag: none in v1, and no architecture stamp.** A portable blob's bytes do not
 depend on the encoder's architecture. An encoder stamp would make x86_64 and arm64 encoders
 disagree, which defeats #403's byte-equality check. The 15 target-bound classes affect outputs,
-not blob bytes, and the class table already names every class. A host can apply the snapshot's
-target-bound policy to the blob without a flag. None of the 46 fixtures uses one of those classes.
+not blob bytes.
+
+That list, `TARGET_BOUND_CLASSES`, lives today in `oce-api/src/state_manifest.rs`, which the target
+does not link. #400 moves it into `oce-blocks` as a per-class `target_bound` flag, part of the
+hashed signature record (decision 2). `oce-api` then derives its list from that flag, with the
+same 15 classes, so snapshot bytes are unchanged. The decoded executable exposes
+`target_bound: bool` computed from its instances, as `CompletedFrame.target_bound` does today.
+None of the 46 fixtures uses one of those classes.
+
 A variant that embeds a platform stamp, as the snapshot's `TargetBound { arch, os }` does, would be
 format version 2. The reserved `u16` flags must be zero, matching the snapshot's zero reserved
 flags.
@@ -330,6 +390,53 @@ flags.
 - skippable or optional sections
 - an architecture stamp
 
+**11. One HostTick v1 frame driver, in the core.** The note so far decides the bytes; this
+decision decides what runs them. `eval_tick` is not a frame. Today `execute_frame` and
+`prepare_frame` in `crates/oce-api/src/frame.rs` add a frame around it. That frame moves to
+`oce-graph`, beside the decoder, as a slot-indexed driver. The facade and the `no_std` entry (#401)
+both call it, so HostTick v1 exists once. #401 performs the extraction, and the dual-path test then
+compares the facade with the core driver.
+
+What moves into the core driver, in the facade's documented refusal order, every refusal before
+any mutation:
+
+- **Time checks:** finite; `|t| ≤ MAX_FRAME_TIME_MAGNITUDE`, which moves to the core and is
+  re-exported; `t ≥ prev_t`; finite step; `time_is_representable` across every stateful block.
+- **Input checks, per slot in slot order:** exact type, then the non-finite Real policy
+  (`NonFiniteInputPolicy` moves to the core), then the declared domain. Inputs arrive as a slice
+  with one value per slot, so completeness is structural.
+- **Sequence:** the accepted-frame counter and `FrameSequenceExhausted`.
+- **Commit:** stage each value into every fan-out target, run `eval_tick`, set `prev_t`.
+- **Diagnostics:** the sink is a parameter (`oce_blocks::Diagnostics`).
+- **Outputs:** projected in output-slot (path) order, borrowed, not copied.
+- **Placement:** the `target_bound` flag.
+
+What stays in `oce-api`, because it needs names or `std`:
+
+- name resolution, unknown, duplicate and missing keys;
+- the `PreparedInputFrame` plan, its generation token and the stale-plan check;
+- load and pending-edit preconditions, and the durable-restore window;
+- replay records;
+- the `AssertCollector`'s `String` diagnostics and the owned `CompletedFrame`;
+- the Store.
+
+Rejected: **a second, `no_std` HostTick loop in #401.** Two implementations of the time and input
+rules would drift, and the drift would only show on equipment.
+
+**12. Trust model.** For semantics, a blob is a *trusted* artifact: a well-formed but wrong
+parameter executes as written, because `oce-validate` and its `ParamRule` checks are not linked on
+the target. For memory safety, a blob is a *hostile* artifact: the decoder never panics, bounds
+every allocation before performing it, and refuses malformed bytes with typed errors.
+
+The consequence for #400 is a hostile-parameter fuzz over `make` for every class, bounded by
+`MAX_RESOLVED_PORT_WIDTH`. The two `unreachable!` sites in `source_timetable.rs`
+(`smoothness_from_member` and `extrapolation_from_member`) are already unreachable from any typed
+table: their only non-test callers pass the module constants `TIMETABLE_SMOOTHNESS_DEFAULT_MEMBER`
+and `TIMETABLE_EXTRAPOLATION_DEFAULT_MEMBER`. A parameter value goes through `from_value`
+instead. That returns `None` for an unknown token, and the caller then falls back to the module
+constant. #400 keeps that proof as a test that feeds every member token,
+plus arbitrary strings, through `from_value` and `make`.
+
 ## Decoding, determinism and allocation
 
 The decoder refuses in this order:
@@ -341,17 +448,33 @@ The decoder refuses in this order:
 5. Wrong profile or engine version, or nonzero flags.
 6. Structural problems, each with a byte offset: section order, bounded counts, UTF-8, tags,
    ordering, trailing bytes.
-7. Classes and per-instance checks.
-8. The schedule.
+7. Classes and per-instance checks, each with a named variant:
+   - unknown class (`UnknownClass`) or hash mismatch (`ClassSignatureMismatch`);
+   - duplicate parameter names within one instance (`DuplicateParameter`);
+   - an Enum value whose class path is unknown (`UnknownEnumClass`), or whose ordinal is outside
+     `1..=members` (`EnumOrdinalOutOfRange`);
+   - resolved arity, port kinds, kind and state length (`InstanceMismatch`).
+8. Connections and I/O, as listed in their sections, including a same-block connection,
+   duplicate output paths and an Enum input.
+9. The schedule (`InvalidSchedule`).
+10. `MAX_STATE_WORDS` via `allocate_state` (`StateTooLarge`), then the state CRCs
+    (`InitialStateMismatch`).
 
 A count is accepted only if the remaining section bytes could hold that many minimal records, so
-no allocation precedes that proof. The schedule must be a permutation of `0..B`. Each connection
-whose consumer reads it at emit time, as `topo.rs` defines that, must have its producer earlier in
-the order. Any valid order gives the same outputs, so the decoder does not need to reproduce the
-host's tie-break. Then `allocate_state` enforces `MAX_STATE_WORDS`, and the state CRCs are compared.
+no allocation precedes that proof.
 
-Errors carry static labels, indices and offsets, never formatted text. The decode path is panic-free
-and links no `core::fmt`, the pattern `rusty-bacnet`'s firmware images use. The `oce-api` encoder
+The schedule must be a permutation of `0..B`, and it must respect emit-before as `topo.rs` defines
+it. An algebraic `[A]` consumer reads every input at emit time. A stateful `[S]` consumer reads
+input *i* at emit time only if `feeds_through(i, j)` holds for some output *j*. For every
+connection into an input its consumer reads at emit time, the producer's position must be
+strictly less than the consumer's. The inequality is strict, so a same-block connection could never
+pass; section 4 refuses it before this check. Any valid order gives the same outputs, so the
+decoder does not need to reproduce the host's tie-break.
+
+Errors are plain enums carrying static labels, indices and offsets, never formatted text;
+`Display` exists only under `std`. The decode path is panic-free. That it links no `core::fmt` is
+a goal, the pattern `rusty-bacnet`'s firmware images use, which #401 and #402 verify. It depends on
+#397, which converts the core four from `std` to `alloc` and is a prerequisite of #400. The `oce-api` encoder
 runs the decoder on its own output before returning, as `state_snapshot` does. It refuses while
 parameter edits are pending.
 
@@ -375,6 +498,11 @@ built, not because a test happens to pass:
 - one `Box<dyn Block>` per instance, plus whatever its constructor allocates (as on the host);
 - `Schedule::order` and `driver_of`;
 - `RunState`: values, words, slots, `slot_of` and scratch.
+
+The decoded `Model` fills the fields the execution path never reads with fixed values:
+`decl_order` equals the id, connector and instance `iri` are `None`, and each connector gets the
+default `Attrs` for its `value_type`. The decoder keeps the content id, the engine version and the
+`SemanticPoint` payloads verbatim, so decoding and re-encoding reproduces the goldens.
 
 I/O paths and `SemanticPoint` payloads are borrowed from the input slice, which on firmware is the
 `'static` blob in flash. The tick allocates nothing in the scheduler. The carve-outs in
@@ -417,12 +545,13 @@ Moving them is a separate refactor that would have to prove snapshot goldens byt
 | Fixed: header 52, five section frames 40, section counts 28, trailer 4 | 124 |
 | Per class | 12 + class-path length |
 | Per block instance, schedule entry included | 29 + 4 per port + parameters |
-| Per parameter | 5 + name length + value (Real/Integer 9, Boolean 2, String 5 + length, Enum 9 + class-path length) |
+| Per parameter | 4 + name length + `value`, where `value` includes its tag byte (Real/Integer 9, Boolean 2, String 5 + length, Enum 9 + class-path length) |
 | Per connection | 8 |
 | Per input | 15 + path length + 4 per fan-out target + 9 per present bound + payload |
 | Per output | 12 + path length + payload |
 
-The formula was measured by the prototype over all 46 fixtures. Sizes are exact; the hash values
+In the worked example, the parameter is 4 + 1 + 9 = 14 bytes, the instance 29 + 8 + 14 = 51, and
+the whole blob 124 + 34 + 51 + 108 + 101 = 418. The formula was measured by the prototype over all 46 fixtures. Sizes are exact; the hash values
 are placeholders.
 
 | Fixture | Blocks | Connectors | Connections | Parameters | Inputs (targets) / outputs | Classes | Blob bytes |
@@ -470,16 +599,28 @@ What #400, #401 and #403 must prove:
   same frames, the Tier-2 trace inputs. After every tick, every boundary output and the whole
   `RunState` (values and words) are compared bit for bit. This runs on the host in #400, on the
   `no_std` target in #401, and on x86_64, arm64 and wasm32 in #403.
+- **Hostile parameters.** A fuzz over `make` for every class, with widths bounded by
+  `MAX_RESOLVED_PORT_WIDTH`, and the `source_timetable.rs` member-token test (decision 12).
+- **Connection checks.** Refusals for a kind mismatch, reversed direction, a same-block connection
+  and a consumer that is also an I/O target.
+- **Duplicate names.** Refusal of duplicate output paths, by the decoder and by the encoder, and of
+  duplicate parameter names within an instance.
+- **Enum values.** Refusal of an Enum input `vtype`, an unknown enum class path and an
+  out-of-range ordinal.
+- **One frame driver.** For every fixture's frame sequence, the facade's `execute_frame` and the
+  core driver produce identical outputs, refusals and state (decision 11).
 - **§7.17 seam.** A `frame_purity`-style test fills and mutates every `SemanticPoint` payload byte
   and requires an identical decoded executable and identical outputs.
 
-## Questions for the reviewer
+## Review rulings
 
-1. **Initial state as per-block CRCs, not words** (decision 3). Carrying the words would make
-   `relief_fan_group` about three times larger and buys only a richer mismatch diagnostic.
-2. **Zero content id for partial exports** (decision 5). It currently applies to 13 of the 46
-   fixtures. The alternative is to hash the loaded CXF bytes, which has different semantics from
-   the facade's id.
-3. **No implementation-revision counter in the class hash** (decision 2). A hand-bumped counter
-   is a promise the compiler cannot check. This note leaves behavioral identity to host build
-   qualification, the initial-state check, and the dual-path CI.
+The architect review on the draft PR accepted:
+
+- initial state carried as per-block CRCs;
+- the zero content id for partial exports, with `Option` presence and the M3 requirement added to
+  decision 5;
+- the class hash with no implementation-revision counter, with the same-build caveat added to
+  decision 2;
+- `BlockId` order with a separate schedule list, I/O sorted by path, and an exact engine-version
+  match;
+- the decoder in `oce-graph`, with decision 11 added.
