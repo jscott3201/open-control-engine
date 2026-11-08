@@ -61,6 +61,22 @@ and a gate that accepted any text would restore exactly the false assurance desc
   for `thumbv7em-none-eabihf` and `wasm32-unknown-unknown`, runs clippy `-D warnings` on the first
   and the `oce-expr` unit suite without `std`; `.agents/gate.sh` runs the same commands and fails
   with the `rustup target add` command when a target is missing.
+- **Every `f64` operation `core` lacks goes through one `math` module per crate, and clippy refuses
+  the `std` float methods in the core four** (GitHub #431, issue #399). `oce-blocks` and `oce-expr`
+  each gain a private `math` module re-exporting the pinned `libm` functions (and the
+  `rem_euclid` helper, moved there from `source_timetable.rs`); every former `libm::` call in the
+  four goes through it, calling the same function, so goldens and the strict-bit captures are
+  unchanged. The root `clippy.toml` lists all 37 `std`-only `f64` methods (and their `f32` twins)
+  under `disallowed-methods`, each found by a `no_std` probe of the 1.97.1 toolchain — `core` has
+  only `abs`, `signum`, `copysign`, `min`, `max`, `clamp`, `recip`, `to_degrees`, `to_radians`,
+  `total_cmp` and `midpoint`; `mul_add`, `powi`, `fract` and `div_euclid` are `std`. The
+  workspace lint table allows the lint and the four crate roots deny it, so `std` crates and
+  `tools/golden-gen` (whose manifest allows it) keep their `std` methods. Three test-only `std`
+  calls move to `math` or an exact constant. `scripts/ci/test-math-lint.sh`, run by the
+  `no-std-build` job and `.agents/gate.sh`, re-probes the table, checks the list is total and
+  the lint scoped, and requires an `x.sin()` mutation in `reals_transcendental.rs` to fail clippy.
+  `sqrt` stays on `libm` in every build: 2.3 ns per call slower than `f64::sqrt` on Apple M5, but
+  no frame measurement separated it from noise ([benchmarks](docs/benchmarks.md)).
 
 ## 0.3.0
 
