@@ -19,8 +19,7 @@ first, then the script.
 ## Hosting and CI
 
 GitHub is the primary host: `origin` is `github.com/jscott3201/open-control-engine`, and branches,
-PRs, reviews, issues and CI live there. The self-hosted Forgejo instance that was primary until
-October 2026 is retired. CI is GitHub Actions in `.github/workflows/` on GitHub-hosted Linux
+PRs, reviews, issues and CI live there. CI is GitHub Actions in `.github/workflows/` on GitHub-hosted Linux
 runners (plus the two `pr-gate.yml` platform cells on macOS and Windows): `pr-gate.yml` (per-PR, light), `release-gate.yml` (release PRs into `main`, daily against
 `development`, heavy), `advisories.yml` (daily), `docs-pages.yml` (docs validation and the Pages
 publish from `main`), `release.yml` (tag verify / manual crates.io publish) and the two manual
@@ -48,9 +47,9 @@ portable state snapshot equals Linux byte for byte, and Windows builds the works
 suite without the strict-bit binaries — observations, not qualification; see
 [platform cells](../docs/ci-and-the-gate.md#platform-cells-macos-and-windows).
 
-GitHub PR numbers collide with the retired Forgejo numbering: Forgejo #332 (the Forgejo CI port)
-and GitHub #332 are different changes. Bare `(#N)` citations predate the move; cite every PR merged
-on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
+Pull requests merged on the previous host before the October 2026 move to GitHub share numbers
+with GitHub PRs (#332 names two different changes). Bare `(#N)` citations predate the move; cite
+every PR merged on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
 
 Native strict-bit evidence is re-established on every PR: the strict-bit matrix in `pr-gate.yml`
 recaptures the pinned corpus in four native Linux cells and compares them from scratch, so no

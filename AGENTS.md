@@ -109,9 +109,9 @@ end of each milestone.
 ## 🌐 Hosting and CI
 
 - **GitHub is the host**: `origin` is `github.com/jscott3201/open-control-engine`; branches, PRs,
-  issues, milestones, reviews and CI live there. Use `gh` for PR and issue operations. (A
-  self-hosted Forgejo instance was primary until October 2026; its PR numbers overlap GitHub's, so
-  cite PRs merged on GitHub as `(GitHub #N)`.)
+  issues, milestones, reviews and CI live there. Use `gh` for PR and issue operations. (Pull
+  requests merged on the previous host before the October 2026 move share numbers with GitHub
+  PRs, so cite PRs merged on GitHub as `(GitHub #N)`.)
 - **CI is GitHub Actions** in `.github/workflows/`, on Linux runners plus two `pr-gate.yml`
   platform observation cells (macOS arm64 portable snapshot, Windows std build and nextest). The single required status is `CI OK`: from
   `pr-gate.yml` into `development`, from `release-gate.yml` into `main`. `pr-gate.yml` runs once

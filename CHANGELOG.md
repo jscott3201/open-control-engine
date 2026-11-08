@@ -139,6 +139,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
+- The contributor-facing docs no longer describe the retired previous host by name (GitHub #439).
+  `AGENTS.md`, `CONTRIBUTING.md`, `.agents/project-facts.md` and `docs/ci-and-the-gate.md` keep
+  the one fact that still matters, that pull-request numbers from before the October 2026 move
+  share numbers with GitHub PRs so merged PRs are cited `(GitHub #N)`, and `CONTRIBUTING.md` now
+  names the macOS and Windows observation cells beside the Linux runners.
 - The README states where the project is and where it is going (GitHub #434): a status and
   roadmap section (v0.3.0 as M1a, M1b in progress toward v0.4.0, M2–M9 as planned), the
   `no_std + alloc` core and its math and collection discipline under "What it does today", the
