@@ -32,6 +32,7 @@ questions its reviewer ruled on; the contracts above remain the authority for sh
 | --- | --- |
 | [Compiled-schedule blob (OCEB)](design/compiled-schedule-blob.md) | The byte format a `std` host emits after load and a `no_std` target decodes and executes: layout, class signature hash, integrity, versioning and size budget |
 | [Authoring layer (M2)](design/authoring-layer.md) | How a person or an agent writes a sequence without JSON-LD: the typed model, its text and wire forms, the validator and its finding codes, the deterministic CXF emitter and the `oce` CLI |
+| [Historical replay API](design/replay.md) | How recorded or scripted inputs drive the engine frame by frame: slot-indexed frame sources, the missing-sample policy, the columnar trace and its size per frame, and the resumable cursor behind Python and the browser worker |
 
 ## Elsewhere in the repository
 
