@@ -70,8 +70,13 @@ projection and state-format goldens are byte-identical to the pre-M1a `developme
 - **Workspace version 0.3.0** (GitHub #CLOSEOUT, issue #395). All 12 members and the internal
   path+version table move from 0.2.0. `CompatibilityDescriptor` reports `oce-api-version:0.3.0`,
   so persisted descriptor receipts and replay records from 0.2.0-labelled builds refuse with a
-  `Build` mismatch, as the fail-closed policy requires. No catalog, contract-schema, state-format,
-  execution-ABI or replay-format revision changes.
+  `Build` mismatch, as the fail-closed policy requires. The three places that pin that descriptor
+  line move with it, one line each, as GitHub #333 did for 0.2.0: the `compatibility.txt` and
+  `compatibility_export.txt` fixtures under `crates/oce-api/tests/fixtures` and the
+  `CompatibilityDescriptor` doctest. They are descriptor text, not numerical goldens;
+  `tools/golden-gen/goldens` and every data golden are byte-identical. The compiled-schedule blob
+  note's worked example shows engine 0.3.0, with its CRC-32C recomputed. No catalog,
+  contract-schema, state-format, execution-ABI or replay-format revision changes.
 - **The retained strict-bit receipt binding was retired, not re-captured** (GitHub #413, issue
   #392). The per-PR eight-cell native matrix is the standing strict-bit evidence; `receipts.json`
   is a log of the last green native run, not a gate. M1b (issue #406, closeout issue #404)

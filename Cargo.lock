@@ -119,7 +119,7 @@ checksum = "88904434abc2901f197fe8cc55f0445e7ded921dba5911dad2e2b39b48e663c4"
 
 [[package]]
 name = "oce-api"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "allocation-counter",
  "oce-bless",
@@ -136,11 +136,11 @@ dependencies = [
 
 [[package]]
 name = "oce-bless"
-version = "0.2.0"
+version = "0.3.0"
 
 [[package]]
 name = "oce-blocks"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "allocation-counter",
  "libm",
@@ -151,7 +151,7 @@ dependencies = [
 
 [[package]]
 name = "oce-conformance"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "oce-api",
  "oce-bless",
@@ -166,7 +166,7 @@ dependencies = [
 
 [[package]]
 name = "oce-cxf"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "oce-bless",
  "oce-blocks",
@@ -184,11 +184,11 @@ dependencies = [
 
 [[package]]
 name = "oce-diag"
-version = "0.2.0"
+version = "0.3.0"
 
 [[package]]
 name = "oce-expr"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "oce-model",
  "thiserror",
@@ -196,7 +196,7 @@ dependencies = [
 
 [[package]]
 name = "oce-graph"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "oce-blocks",
  "oce-model",
@@ -205,14 +205,14 @@ dependencies = [
 
 [[package]]
 name = "oce-model"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "oce-semantics"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "oce-diag",
  "oce-model",
@@ -221,7 +221,7 @@ dependencies = [
 
 [[package]]
 name = "oce-store"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "oce-model",
  "serde",
@@ -230,7 +230,7 @@ dependencies = [
 
 [[package]]
 name = "oce-validate"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "oce-blocks",
  "oce-diag",
