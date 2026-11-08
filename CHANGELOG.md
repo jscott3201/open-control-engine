@@ -439,6 +439,14 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
+- **Design note for the compiled-schedule blob (OCEB) format** (GitHub #396).
+  `docs/design/compiled-schedule-blob.md` fixes the byte format M1b encodes on a `std` host and
+  decodes on a `no_std` target, before any code: a 52-byte header, five fixed-order sections
+  (classes with per-class signature hashes, instances, schedule, connections, I/O) and a CRC-32C
+  trailer. It reuses the state snapshot's value encodings without changing snapshot bytes, puts
+  the decoder in `oce-graph`, and gives a size budget measured over the 46 catalog fixtures (largest
+  blob 17,001 bytes). `docs/README.md` gains a design-notes section and the book a design-notes
+  chapter.
 - **Agent guide rewritten around the issue-driven milestone workflow** (GitHub #407).
   `AGENTS.md` now opens with the reading order, then one section that says how a work item moves
   from a GitHub issue to a squash-merged PR: pick up only `agent-ready` issues in the current
