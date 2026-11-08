@@ -25,6 +25,9 @@
 #     the standing native evidence; no retained receipt admits or skips any check.
 #   * A runner type that is unavailable leaves its cells queued, so `CI OK` never reports and the
 #     PR cannot merge. There is no fallback to emulation and no silent skip.
+#   * Every job has `timeout-minutes: 45`, so a stalled download or hung step fails the job instead
+#     of waiting for the platform's six-hour limit. Artifact uploads set `overwrite: true`, so a
+#     re-run of all jobs re-uploads the same names into the same run.
 #   * Jobs with the same build shape in this file and release-gate.yml share a rust-cache
 #     `shared-key`, so the daily release-gate run on the `development` tip seeds the default-branch
 #     cache scope that every PR can read (PR runs save only into their own scope).
@@ -75,6 +78,7 @@ jobs:
   fmt:
     name: fmt
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -87,6 +91,7 @@ jobs:
   file-size-cap:
     name: file-size cap (700 LOC)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -96,6 +101,7 @@ jobs:
   no-secret-scan:
     name: no-secret scan
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -105,6 +111,7 @@ jobs:
   default-no-db:
     name: default build links no database / async runtime
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -119,6 +126,7 @@ jobs:
   golden-gen-firewall:
     name: golden-gen anti-tautology firewall
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -135,6 +143,7 @@ jobs:
   golden-gen-hygiene:
     name: golden-gen hygiene and golden freshness
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     defaults:
       run:
         shell: bash
@@ -170,6 +179,7 @@ jobs:
   package-publication-contract:
     name: package, feature, and publication contract
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -191,6 +201,7 @@ jobs:
   gate-fixtures:
     name: gate behavior fixtures
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -211,6 +222,7 @@ jobs:
   unused-deps:
     name: unused dependency gate (cargo-machete)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -229,6 +241,7 @@ jobs:
   determinism-matrix:
     name: determinism (${{ matrix.arch }}, ${{ matrix.codegen }})
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -301,6 +314,7 @@ jobs:
           name: determinism-${{ matrix.arch }}-${{ matrix.codegen }}
           path: target/determinism/
           if-no-files-found: error
+          overwrite: true
           retention-days: 7
 
   # Fan-in over the four cells' vectors, once per architecture. Both legs compare every byte the
@@ -312,6 +326,7 @@ jobs:
     name: determinism cross-cell comparison (${{ matrix.arch }} restores ${{ matrix.foreign }})
     needs: determinism-matrix
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -374,6 +389,7 @@ jobs:
   crate-tests:
     name: crate tests (graph, validate, model, cxf; x86_64 debug)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -403,6 +419,7 @@ jobs:
   docs:
     name: docs (staging, mdBook build, links)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -437,6 +454,7 @@ jobs:
   strict-bit-matrix:
     name: strict bits (${{ matrix.arch }}, ${{ matrix.codegen }})
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -479,6 +497,7 @@ jobs:
           name: strict-bits-${{ matrix.arch }}-${{ matrix.codegen }}
           path: target/strict-bits/
           if-no-files-found: error
+          overwrite: true
           retention-days: 7
 
   # Fan-in: every signal and sample of all eight captures against the Tier-A references, the
@@ -489,6 +508,7 @@ jobs:
     name: strict bits cross-cell comparison
     needs: strict-bit-matrix
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -526,11 +546,13 @@ jobs:
             target/strict-bits/receipt-candidate.json
             target/strict-bits/linux-*.json
           if-no-files-found: error
+          overwrite: true
           retention-days: 30
 
   clippy:
     name: clippy (-D warnings)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -548,6 +570,7 @@ jobs:
   build:
     name: build
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -563,6 +586,7 @@ jobs:
   rustdoc:
     name: rustdoc (-D warnings)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -584,6 +608,7 @@ jobs:
   deny:
     name: cargo-deny
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -601,6 +626,7 @@ jobs:
   gate:
     name: gate (light)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -653,6 +679,7 @@ jobs:
       - deny
       - gate
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Require every gating job to succeed
         env:

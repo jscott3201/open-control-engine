@@ -62,7 +62,9 @@ For the like-named pairs this only makes explicit what their identical job ids a
 (rust-cache's default key component is the job id); the `nextest` key is the new link. The release-gate `test-suite` entry is a superset (the whole workspace, both codegens), which
 restores as a warm start for the narrower PR cells; rust-cache never caches workspace crates, so a hit saves
 dependency compile time only. The arm64 cells have no release-gate counterpart: they reuse what an
-earlier run of the same PR saved, and build cold on a new PR. `golden-gen-hygiene` keeps its own
+earlier run of the same PR saved, and build cold on a new PR. rust-cache saves only on an
+exact-key miss, so under a shared key the first job to finish writes the entry, and its profile's
+dependency set is what that key holds until `Cargo.lock`, the toolchain or the environment changes. `golden-gen-hygiene` keeps its own
 per-job key (it builds the separate `tools/golden-gen` workspace).
 
 Branch protection on `development` makes the PR run the only way in: a pull request is required,

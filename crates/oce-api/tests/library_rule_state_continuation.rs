@@ -414,7 +414,7 @@ fn library_fixtures_meet_their_own_vectors_uninterrupted() {
 /// Run B for every single restart point: the bytes Run A captured after tick `k` (or after load,
 /// before any frame) resume a fresh engine, which must then reproduce Run A's remaining rows.
 ///
-/// To keep the sweep inside the emulated-CI budget, continuation rows compare every boundary and
+/// To keep the sweep inside the per-PR CI budget, continuation rows compare every boundary and
 /// internal output bit-exactly and the final row also compares the full canonical state bytes.
 /// The chained and mid-window tests compare state bytes after every frame.
 fn assert_single_restart_at_every_tick(rule: &Rule) {

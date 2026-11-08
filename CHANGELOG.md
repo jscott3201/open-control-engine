@@ -533,7 +533,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   the cell matrices, both fan-ins and their `needs:`, and refuses any QEMU or cross-target string in
   the gating workflows, with a fixture for each. Jobs with the same build shape in `pr-gate.yml` and
   `release-gate.yml` share a rust-cache `shared-key`, so the daily release-gate run seeds the PR
-  cache.
+  cache. Every `pr-gate.yml` job now has `timeout-minutes: 45`, and new controls refuse a capture
+  from another revision (`mixed Git revisions`) and a matrix captured at a revision other than the
+  comparing checkout's.
 
 - **The per-PR gate runs once per change** (GitHub #408). `pr-gate.yml` ran on the PR and again
   on the post-merge push to `development`, on the same tree: runs 42439645194 and 42441875338

@@ -234,8 +234,23 @@ pub(super) fn compare(
     Ok(mismatches)
 }
 
-#[test]
+/// Every capture must come from the checkout the comparison itself runs in.
+pub(super) fn require_checkout_revision(
+    runs: &BTreeMap<String, Corpus>,
+    current: &Corpus,
+) -> Result<(), String> {
+    if runs
+        .values()
+        .any(|run| run.git_revision != current.git_revision)
+    {
+        return Err("matrix must describe this checkout revision".into());
+    }
+    Ok(())
+}
+
+// Run per PR by the strict-bit-compare fan-in in pr-gate.yml over the eight native captures.
 #[ignore = "requires eight native CI captures; synthetic controls run everywhere"]
+#[test]
 fn native_linux_matrix_is_complete_and_exact() {
     let directory = std::env::var_os("OCE_STRICT_MATRIX_DIR").expect("matrix directory required");
     let directory = evidence::root().join(directory);
@@ -250,11 +265,7 @@ fn native_linux_matrix_is_complete_and_exact() {
         }
     }
     let current = evidence::collect();
-    assert!(
-        runs.values()
-            .all(|run| run.git_revision == current.git_revision),
-        "matrix must describe this checkout revision"
-    );
+    require_checkout_revision(&runs, &current).unwrap();
     evidence::same_reference_inventory(&evidence::read_retained(), &current).unwrap();
     // Every capture is compared with a fresh collection from this checkout: the same provenance,
     // inventory and oracle bytes, then every sample against the Tier-A reference and the
@@ -587,5 +598,35 @@ fn native_receipt_refuses_relabeling_and_raw_payload_reblessing() {
     assert_eq!(
         pinned_report(&changed, archive).unwrap_err(),
         "accepted native matrix digest changed"
+    );
+}
+
+#[test]
+fn a_capture_from_another_revision_is_refused_as_mixed() {
+    let (retained, mut runs) = synthetic_runs();
+    for repeat in ["first", "repeat"] {
+        runs.get_mut(&format!("linux-aarch64-release-{repeat}"))
+            .unwrap()
+            .git_revision = "f".repeat(40);
+    }
+    assert_eq!(
+        compare(&retained, &runs).unwrap_err(),
+        "linux-aarch64-release: mixed Git revisions"
+    );
+}
+
+#[test]
+fn a_matrix_captured_at_a_foreign_revision_does_not_describe_this_checkout() {
+    let (retained, runs) = synthetic_runs();
+    require_checkout_revision(&runs, &retained).unwrap();
+    let mut foreign = runs;
+    for run in foreign.values_mut() {
+        run.git_revision = "f".repeat(40);
+    }
+    // Internally consistent, so the cross-cell comparison alone would accept it.
+    assert_eq!(compare(&retained, &foreign), Ok(vec![]));
+    assert_eq!(
+        require_checkout_revision(&foreign, &retained).unwrap_err(),
+        "matrix must describe this checkout revision"
     );
 }
