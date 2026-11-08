@@ -30,7 +30,7 @@ body:
     id: notouch
     attributes:
       label: Do not touch
-      description: Golden fixtures, bound sources, other crates' concerns — anything out of scope that a cold agent might reach for.
+      description: Golden fixtures, the frozen ci.yml, other crates' concerns — anything out of scope that a cold agent might reach for.
     validations:
       required: true
   - type: textarea

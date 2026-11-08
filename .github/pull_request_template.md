@@ -18,6 +18,6 @@ Goldens: `git status --porcelain -- tools/golden-gen/goldens` → <!-- "prints n
 
 - [ ] `CHANGELOG.md` entry under `## Unreleased`, cited `(GitHub #N)` — or this PR changes no behaviour, surface or published claim
 - [ ] Docs that named what changed are updated in this PR
-- [ ] No bound source of the strict-bit evidence touched (`.github/workflows/ci.yml`, `.config/nextest.toml`, `.agents/gate.sh`, `crates/oce-conformance/tests/strict_bits/*`) — or the issue says to and the PR says so
+- [ ] `.github/workflows/ci.yml` untouched (frozen), and the strict-bit evidence tests (`crates/oce-conformance/tests/strict_bits/*`) untouched — or the issue says to and the PR says so
 - [ ] No `--all-features`, no `unsafe`, no `todo!`, no database or async below `oce-api`, no absolute paths or UUID-shaped strings
 - [ ] `CI OK` reported green (not merely nothing red)

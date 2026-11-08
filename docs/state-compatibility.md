@@ -148,10 +148,9 @@ The conservative target-bound set remains exactly 15 classes: `CDL.Reals.Acos`, 
 `SpecificEnthalpy_TDryBulPhi`, `WetBulb_TDryBulPhi` (each under `CDL.Psychrometrics`);
 and `CDL.Utilities.SunRiseSet`. Any participating target-bound class binds the executable.
 
-The [accepted strict-bit receipt](strict-bit-evidence.md) covers only 21 Linux signal cases on
-pinned rustc/libm, four native architecture/codegen cells and a selected 35-file source boundary.
-It is not a full compiled dependency closure, arbitrary-input guarantee, mathematical oracle or
-macOS qualification. It therefore does **not** relax this state-placement policy. Local macOS
+The [per-PR native strict-bit matrix](strict-bit-evidence.md) covers only 21 Linux signal cases on
+pinned rustc/libm in four native architecture/codegen cells. It is not an arbitrary-input
+guarantee, mathematical oracle or macOS qualification. It therefore does **not** relax this state-placement policy. Local macOS
 passing tests do not supply the hosted Linux evidence or broaden either variant's claim.
 
 ## Continuation of published Library rules

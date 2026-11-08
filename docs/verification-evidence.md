@@ -87,22 +87,15 @@ The layer contains **422 Tier-A provenance records**, every one of them recordin
 
 **420 of those are signal goldens — 399 with existing exact comparisons and 21 inventoried
 accepted Linux exact cases, still aligned-tolerance on unqualified platforms.** The
-[retained native receipt](strict-bit-evidence.md#accepted-native-receipt) records run 37382761120:
-Linux x86_64/aarch64 × debug/release, two byte-identical runs per cell, 21 signals and 161 samples
-per run, zero exact mismatches against Tier-A and across cells. Raw bits, synthetic merge checkout
-provenance, exactly the 35 selected source paths/digests and oracle/input/CXF integrity are checked
-permanently, without requiring a later HEAD to equal the captured SHA. PC-037 is CURRENT only for
+[per-PR native matrix](strict-bit-evidence.md#per-pr-native-matrix) re-establishes them on every
+pull request: Linux x86_64/aarch64 × debug/release on native runners, two byte-identical runs per
+cell, 21 signals and 161 samples per run, zero exact mismatches against Tier-A and across cells,
+recomputed through `oce_api::Engine` from the PR's own checkout. No stored receipt admits or
+skips anything; `receipts.json` only logs the last green native run. PC-037 is CURRENT only for
 this pinned corpus. macOS-arm64 remains
 unqualified until M06-PR02; neither libm mathematical correctness nor arbitrary-input or whole-engine
-exactness follows. No Sim policy changes. The selected-boundary receipt is admitted and the ordinary
-current-qualification test validates it. The original 17-source receipt from run 35492290613 remains
-immutable history, not current qualification. The current collection run's successful numerical
-comparison is not evidence of final green hosted gates; the linked receipt distinguishes those outcomes.
-The reviewed 35-file map covers checker/admission/comparison/workflow/direct formula/harness and
-supporting sources, not the full compiled transitive facade closure. Exact-head hosted cells (x86_64 native, aarch64 QEMU-emulated)
-rerun `oce_api::Engine` per PR and catch changes under the pinned corpus's comparison
-rules. An unbound transitive source change preserving all pinned outputs does not invalidate the
-historical raw result. Source digests alone do not prove current whole execution semantics.
+exactness follows. No Sim policy changes. The retained capture archives from runs 35492290613 and
+37382761120 are reconstructed history, not current qualification.
 The 285 CDL signals are compared by the 16
 `crates/oce-conformance/tests/per_block_*.rs` suites. All but one go through a shared harness that drives each
 block through the frozen facade, asserts the comparison is unmasked, and asserts
@@ -413,11 +406,12 @@ Yes, and it does so in the place where it is hardest to ignore — the end of ev
 `.agents/gate.sh` finishes by printing a literal block headed `NOT COVERED BY THIS SCRIPT — a green
 run here does not prove these pass`, listing:
 
-- **The cross-architecture determinism matrix** (the script's report still names `ubuntu-latest`
-  and `ubuntu-24.04-arm`; CI now runs x86_64 natively and aarch64 under QEMU emulation). One
-  machine cannot reproduce it; CI is the only place it runs.
-- **The retired API surface gates.** They were removed with the compatibility records (GitHub
-  #388); the listing still names them because the script changes only with GitHub #392.
+- **The cross-architecture determinism matrix**: four native cells, x86_64 on `ubuntu-latest` and
+  aarch64 on `ubuntu-24.04-arm`, debug and release, with a fan-in comparison. One machine cannot
+  reproduce it; CI is the only place it runs.
+- **The strict-bit raw-output matrix** over the same four native cells, two captures each, and its
+  eight-capture comparison. Local synthetic controls and macOS observations are not native Linux
+  evidence.
 - **`cargo deny check advisories`.** It needs network access and a writable advisory database, so it
   runs in `advisories.yml` and in the release gate's cargo-deny job instead.
 - **That these commands still match `pr-gate.yml`.** Nothing verifies that mechanically. An attempt was
@@ -434,16 +428,16 @@ the per-PR gate does not run them either.
 
 CI is dev-light and release-heavy. The per-PR gate into `development` runs the state-determinism
 subset for **`oce-api`, `oce-blocks`, and `oce-expr`** — the `determinism-matrix` job
-and the corresponding steps inside the gate script, on two architectures (x86_64 native, aarch64
-under QEMU emulation) in debug and release codegen. The matrix emits
-populated portable and target-bound engine-state vectors. It requires both to match across codegen
-profiles, the portable bytes to match across architectures, and the target-bound bytes to differ.
-The job also parses the aarch64 target-bound snapshot on x86_64 and requires
-`restore_state` to return the target-domain refusal.
+and the corresponding steps inside the gate script, in four native cells (x86_64 on
+`ubuntu-latest`, aarch64 on `ubuntu-24.04-arm`) in debug and release codegen. The cells emit
+populated portable and target-bound engine-state vectors. The `determinism-compare` fan-in requires
+both to match across codegen profiles, the portable bytes to match across architectures, and the
+target-bound bytes to differ. Each architecture then parses the other's target-bound snapshot and
+requires `restore_state` to return the target-domain refusal.
 
 Separately, the scoped **`oce-conformance` strict-bit subset runs per-PR**: `strict_bits` and the
-four affected per-block suite binaries, Linux x86_64 (native) / aarch64 (emulated) ×
-debug/release, two independent process captures per cell and fail-closed cross-cell comparison. The [retained receipt](strict-bit-evidence.md)
+four affected per-block suite binaries, in the same four native Linux cells, two independent
+process captures per cell and a fail-closed eight-capture comparison. That [per-PR native matrix](strict-bit-evidence.md)
 covers the 21 formerly banded Real cases; Linux exact comparison is not a macOS qualification.
 
 The remainder of `oce-conformance` still follows release/full-gate coverage. The complete set of

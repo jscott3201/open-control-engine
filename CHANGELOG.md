@@ -511,6 +511,30 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### CI and infrastructure
 
+- **The determinism and strict-bit matrices run on native arm64 runners, and the digest-bound
+  strict-bit receipt is retired** (GitHub #392). `determinism-matrix` and `strict-bit-matrix` in
+  `pr-gate.yml` are now four native cells each — x86_64 on `ubuntu-latest`, aarch64 on
+  `ubuntu-24.04-arm`, debug and release — with no cross-linker, QEMU or emulated nextest
+  configuration (`scripts/ci/nextest-emulated.toml` is deleted), and the one test the emulated leg
+  had to exclude runs again. Two fan-in jobs take over the cross-cell checks from uploaded
+  artifacts: `determinism-compare` compares the state vectors across codegen and architecture and
+  has each architecture refuse the other's target-bound snapshot through the public restore path,
+  and `strict-bit-compare` runs the eight-capture comparison from a nextest archive of the x86_64
+  debug cell's `strict_bits` binary and uploads `matrix.json` with a candidate receipt-log record.
+  The slowest per-PR job drops from 31m33s (run 42439645194) to 13m24s, the x86_64 release determinism cell, almost all of it compiling the `oce-api` test binaries under the release profile. The per-PR native matrix is now the
+  standing strict-bit evidence (owner decision in GitHub #405): `source_digests()`, its 35-file
+  binding, the admission test, the `recapture-pending` status from GitHub #387 and
+  `retained_native_linux_evidence_is_complete_exact_and_source_bound` are removed, new captures
+  carry no source map, and `receipts.json` becomes a closed log of the last green native run (run
+  id, head and merge SHAs, rustc, libm, per-cell capture digests, matrix digest) plus the two
+  retained capture archives, which are still reconstructed byte for byte. PC-037 now describes
+  per-PR native evidence. `.config/nextest.toml` loses the dead `public-api*` profiles and
+  `.agents/gate.sh`'s closing report describes the native cells. `check-workflow-gates.sh` checks
+  the cell matrices, both fan-ins and their `needs:`, and refuses any QEMU or cross-target string in
+  the gating workflows, with a fixture for each. Jobs with the same build shape in `pr-gate.yml` and
+  `release-gate.yml` share a rust-cache `shared-key`, so the daily release-gate run seeds the PR
+  cache.
+
 - **The per-PR gate runs once per change** (GitHub #408). `pr-gate.yml` ran on the PR and again
   on the post-merge push to `development`, on the same tree: runs 42439645194 and 42441875338
   took about 31 minutes each for one change. The `push` trigger is gone; the PR run is the only

@@ -88,13 +88,11 @@ end of each milestone.
 2. Determinism is the invariant. A PR that touches the core four (`oce-model`, `oce-expr`,
    `oce-blocks`, `oce-graph`) or `oce-cxf` leaves every golden byte-identical, or exists to
    regenerate them and says so.
-3. Four tracked files are **bound sources of the retained strict-bit evidence** and are edited only
-   when an issue says to: `.github/workflows/ci.yml` (frozen and disabled — never),
-   `.config/nextest.toml`, `.agents/gate.sh`, and the evidence tests under
-   `crates/oce-conformance/tests/strict_bits/`. The full bound list in
-   `strict_bits/evidence.rs` also includes `Cargo.toml`, `Cargo.lock` and
-   `crates/oce-model/src/lib.rs`; during a refactor milestone the receipt may be marked
-   `recapture-pending` — read `docs/strict-bit-evidence.md`'s first section for the current status.
+3. `.github/workflows/ci.yml` is frozen and disabled: never edit it. Native strict-bit evidence is
+   re-established on every PR by the native cells in `pr-gate.yml`, so no source file is bound to a
+   stored receipt any more; the strict-bit evidence tests under
+   `crates/oce-conformance/tests/strict_bits/` and their fixtures still change only when an issue
+   says to. `docs/strict-bit-evidence.md` describes what the per-PR matrix proves.
 4. Change a gate command by changing `.github/workflows/pr-gate.yml` **first**, then
    `.agents/gate.sh`. Never add `--all-features` to clippy (see project-facts).
 5. Leverage crates live under `crates/leverage/<name>` and depend on `oce-api` only, never on a
@@ -122,7 +120,10 @@ end of each milestone.
   its tag-verify / manual-publish split, and the two OpenModelica evidence workflows run on native
   arm64 by hand.
 - **`ci.yml` is not the CI.** It is the frozen GitHub-era gate that produced the retained native
-  strict-bit captures; it is disabled in the Actions settings and stays byte-identical.
+  strict-bit capture archives; it is disabled in the Actions settings and stays byte-identical.
+- **The determinism and strict-bit matrices run natively**: x86_64 on `ubuntu-latest` and aarch64
+  on `ubuntu-24.04-arm`, debug and release, four cells each, with fan-in jobs for the cross-cell
+  comparisons. Nothing is emulated; an unavailable runner leaves `CI OK` unreported (no merge).
 - **CI is dev-light / release-heavy.** A green PR is not evidence that a change's own tests pass.
   Which crates' suites run per PR, which only in the release gate, and which commands are CI-only
   for now is spelled out in [`.agents/project-facts.md`](.agents/project-facts.md) and

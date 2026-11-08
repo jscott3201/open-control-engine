@@ -36,18 +36,12 @@ GitHub PR numbers collide with the retired Forgejo numbering: Forgejo #332 (the 
 and GitHub #332 are different changes. Bare `(#N)` citations predate the move; cite every PR merged
 on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
 
-Three tracked files are bound sources of the retained native strict-bit evidence and must not
-change casually: `.github/workflows/ci.yml`, `.config/nextest.toml`, and `.agents/gate.sh` (the full
-35-path list in `crates/oce-conformance/tests/strict_bits/evidence.rs` also has `Cargo.toml`,
-`Cargo.lock`, `crates/oce-model/src/lib.rs` and the strict-bit checker). With the receipt admitted,
-editing any of them makes `retained_native_linux_evidence_is_complete_exact_and_source_bound` fail
-until a new native receipt is admitted. **Since 2026-11-08 the receipt is `recapture-pending` for
-the M1 refactor window** (GitHub #387): the test skips only its source-digest comparison and prints
-`RECAPTURE_PENDING:` with the drifted paths; every numerical and hostile check still runs. The
-window closes when GitHub #392 retires the digest binding, with GitHub #404 as the milestone
-closeout. Check
-[`docs/strict-bit-evidence.md`](../docs/strict-bit-evidence.md) for the current status before
-relying on either behaviour.
+Native strict-bit evidence is re-established on every PR: the strict-bit matrix in `pr-gate.yml`
+recaptures the pinned corpus in four native Linux cells and compares them from scratch, so no
+source file is bound to a stored receipt (the 35-file source-digest binding and its
+`recapture-pending` status were retired with GitHub #392). `.github/workflows/ci.yml` stays
+byte-frozen and disabled as the history of the retained capture archives. See
+[`docs/strict-bit-evidence.md`](../docs/strict-bit-evidence.md).
 
 ## A green PR does not mean the tests passed
 
@@ -61,20 +55,20 @@ cap, the no-secret scan, the database-free check, the golden-gen firewall and
 package/feature/publication contract and its hostile controls, the gate fixtures,
 the [authority index/projection and its hostile controls](../docs/authority-claims.md),
 `cargo machete` — and the state-determinism tests for **`oce-api`, `oce-blocks`, and `oce-expr`**, via the
-determinism matrix on x86_64 (native) and aarch64 (QEMU user-mode emulation) in debug and release
-codegen.
-The matrix compares a populated portable engine-state snapshot byte-for-byte across architectures,
-checks portable and target-bound bytes across debug/release codegen, and requires target-bound bytes
-to differ across architectures. The same job then parses and refuses the aarch64 target-bound bytes
-through the public restore path on x86_64.
+determinism matrix: four native cells, x86_64 on `ubuntu-latest` and aarch64 on
+`ubuntu-24.04-arm`, each in debug and release codegen.
+Its fan-in job compares a populated portable engine-state snapshot byte-for-byte across
+architectures, checks portable and target-bound bytes across debug/release codegen, and requires
+target-bound bytes to differ across architectures. Each architecture then parses and refuses the
+other's target-bound bytes through the public restore path, natively.
 The standalone `cargo-deny` CI job runs `cargo deny check bans licenses sources` on every PR, and
 `.agents/gate.sh` runs it too.
 `advisories` is excluded from the script deliberately: it needs network and a writable
 advisory-db, neither of which a sandboxed lane has, so it runs in `advisories.yml`.
 
 The scoped `oce-conformance` strict-bit subset and four affected per-block suites also run per PR
-in four Linux architecture/codegen cells (x86_64 native, aarch64 emulated), with repeat captures
-and cross-cell comparison ([bounded evidence](../docs/strict-bit-evidence.md)). The
+in the same four native Linux architecture/codegen cells, with repeat captures and an eight-capture
+cross-cell comparison ([bounded evidence](../docs/strict-bit-evidence.md)). The
 `oce-graph`, `oce-validate`, `oce-model` and `oce-cxf` suites run per
 PR too, x86_64 debug only. The remainder — and the release-codegen runs of those four — needs the
 release/full gate. A change confined to `oce-store`, `oce-diag` or `oce-semantics` can show a fully
@@ -95,9 +89,9 @@ nothing is red.
 `tools/golden-gen` is its own cargo workspace, so the workspace fmt, clippy and test commands
 never reach it. The `golden-gen-hygiene` job in `pr-gate.yml` covers it: fmt, clippy
 `-D warnings`, its tests, and a release regeneration that must leave `tools/golden-gen/goldens`
-byte-identical with no untracked files. `.agents/gate.sh` does not run these yet: it is a bound
-source of the retained native strict-bit evidence, and wiring them in waits for the next native
-re-capture. Until then, run them by hand after touching the generator or its goldens:
+byte-identical with no untracked files. `.agents/gate.sh` does not run these yet; wiring them in is
+a separate change to the script. Until then, run them by hand after touching the generator or its
+goldens:
 
 ```bash
 cd tools/golden-gen
@@ -110,13 +104,12 @@ git status --porcelain -- goldens    # must print nothing
 
 ## The docs and crate-suite jobs are CI-only for now
 
-Two `pr-gate.yml` jobs that `CI OK` needs run commands `.agents/gate.sh` does not, for the same
-reason as the golden-gen hygiene job: the script is a bound source of the retained native
-strict-bit evidence, and wiring them in waits for the next native re-capture.
+Two `pr-gate.yml` jobs that `CI OK` needs run commands `.agents/gate.sh` does not, like the
+golden-gen hygiene job: wiring them into the script is a separate change.
 
 - `crate-tests` runs the `oce-graph`, `oce-validate`, `oce-model` and `oce-cxf` suites in x86_64
   debug. It is a separate job, not a determinism-matrix
-  leg, so it runs beside the QEMU-emulated aarch64 legs instead of lengthening them.
+  cell, so it runs beside the cells instead of lengthening them.
 - `docs` runs the documentation checks that `docs-pages.yml` also runs. That workflow is
   path-filtered and not required, so before this job a PR could merge green with it failing.
   `docs-pages.yml` still builds and publishes the site from `main`.

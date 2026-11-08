@@ -563,7 +563,8 @@ class TraceabilityTests(unittest.TestCase):
         row = next(row for row in rows if row.identifier == "PC-037")
         self.assertEqual(row.status, "CURRENT")
         self.assertEqual({name for name, _ in check.link_list(row.evidence[5:])}, {
-            "retained_native_linux_evidence_is_complete_exact_and_source_bound",
+            "every_signal_and_cell_reports_the_exact_finite_mutation",
+            "one_flipped_bit_in_a_cell_or_only_its_repeat_fails_the_cross_cell_comparison",
             "every_corpus_sample_uses_exact_facade_comparison_and_rejects_mutations",
             "qualified_linux_signals_are_exact_and_other_targets_keep_the_aligned_band",
         })

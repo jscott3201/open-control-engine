@@ -75,19 +75,14 @@ comparison that fails if even one bit differs.
   comparison would mask exactly the drift a golden test exists to catch. One named exception: the
   21 transcendental, psychrometric, and solar Real signal goldens retain their existing
   aligned-tolerance band on unqualified platforms. Their [strict-bit inventory and matrix](docs/strict-bit-evidence.md)
-  enforce accepted Linux x86_64/aarch64 exact comparisons: four native debug/release cells,
-  two byte-identical captures per cell, 21 signals each and zero mismatches, retained from run
-  37382761120 with a reviewed 35-file selected source boundary. macOS remains conservative/unqualified
-  until M06-PR02; other targets also retain the unchanged 1e-12 aligned band. This is empirical pinned
-  corpus evidence,
+  enforce Linux x86_64/aarch64 exact comparisons on every PR: four native debug/release cells,
+  two byte-identical captures per cell, 21 signals each and zero mismatches against the Tier-A
+  references and across cells, recomputed from the PR's own checkout through `oce_api::Engine`.
+  macOS remains conservative/unqualified until M06-PR02; other targets also retain the unchanged
+  1e-12 aligned band. This is empirical pinned corpus evidence,
   not a libm guarantee or a license for epsilon elsewhere — every other golden stays bit-exact.
-  The ordinary retained test requires exactly all 35 enumerated paths and digests, not the full
-  compiled facade dependency closure. Checker/admission/comparison source mutations refuse even
-  when recorded outputs agree. Exact-head hosted cells (x86_64 native, aarch64 QEMU-emulated) rerun `oce_api::Engine` per
-  PR and catch changes under the pinned corpus's comparison rules; an unbound transitive source
-  change preserving those outputs does not invalidate the historical raw result. These digests
-  alone do not prove current whole execution semantics. The original 17-source receipt remains
-  immutable history, not a substitute for the selected 35-file guard.
+  The retained native capture archives from runs 35492290613 and 37382761120 are reconstructed
+  history, not a substitute for the per-PR matrix.
 - **No snapshot magic.** Goldens are explicit files compared by explicit code — reviewable and
   obvious. If a golden needs regenerating, do it deliberately and explain the diff in the PR.
 
@@ -243,7 +238,7 @@ CI is **dev-light / release-heavy** (keep per-change PRs fast; save the heavy su
 
 | Gate | Trigger | Runs tests? |
 | --- | --- | --- |
-| `.github/workflows/pr-gate.yml` (light) | PRs into `development`, manual dispatch (no post-merge run: the PR run is the only one) | The `determinism-matrix` job runs **`oce-api`, `oce-blocks`, and `oce-expr`** on x86_64 (native) and aarch64 (QEMU user-mode emulation) in debug/release. Portable snapshots match across architectures; portable and target-bound snapshots match across codegen; target-bound snapshots differ across architectures and foreign restore refuses. Separately, scoped **`oce-conformance::strict_bits` controls and the four aligned suite binaries** run in a Linux architecture/codegen matrix (x86_64 native, aarch64 emulated), with repeat captures and fail-closed cross-cell comparison. This is not the full conformance suite. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, package/feature/publication and authority checks, cargo-machete, stale-status lint, golden-gen firewall, fixture smoke, and `gate (light)` executing `.agents/gate.sh`, including unconditional cargo-deny bans/licenses/sources. |
+| `.github/workflows/pr-gate.yml` (light) | PRs into `development`, manual dispatch (no post-merge run: the PR run is the only one) | The `determinism-matrix` job runs **`oce-api`, `oce-blocks`, and `oce-expr`** in four native cells — x86_64 on `ubuntu-latest`, aarch64 on `ubuntu-24.04-arm`, debug/release — and its `determinism-compare` fan-in checks that portable snapshots match across architectures, portable and target-bound snapshots match across codegen, target-bound snapshots differ across architectures, and each architecture refuses the other's target-bound snapshot on restore. Separately, scoped **`oce-conformance::strict_bits` controls and the four aligned suite binaries** run in the same four native cells, with repeat captures and a fail-closed eight-capture comparison in the `strict-bit-compare` fan-in; that per-PR matrix is the native strict-bit evidence. This is not the full conformance suite. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, package/feature/publication and authority checks, cargo-machete, stale-status lint, golden-gen firewall, fixture smoke, and `gate (light)` executing `.agents/gate.sh`, including unconditional cargo-deny bans/licenses/sources. |
 | `.github/workflows/release-gate.yml` (heavy) | **Any** PR targeting `main` (it filters on the base branch only — there is no `head_ref == development` condition), pushes to `main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
 | `.github/workflows/advisories.yml` | Daily cron, manual dispatch | **No** — advisory/yanked scan only (`cargo deny check advisories`, `yanked = "deny"`, `ignore = []`). |
 
