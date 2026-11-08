@@ -153,12 +153,25 @@ require_job_needs() {
   fi
 }
 
-# The aggregate job must need every other job, and no other job may carry a job-level `if:` —
-# the aggregate accepts only `success`, so a conditionally skipped gate would read as a failure,
-# and one missing from `needs:` would not be gated at all.
+# Every job-level `if:` other than CI OK's, as `job<TAB>condition` lines.
+job_conditions() {
+  awk '
+    /^jobs:[[:space:]]*$/ { in_jobs = 1; next }
+    in_jobs && /^[^[:space:]#]/ { in_jobs = 0 }
+    in_jobs && /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { job = $0; sub(/^  /, "", job); sub(/:.*/, "", job) }
+    in_jobs && job != "ci-ok" && /^    if:/ {
+      value = $0
+      sub(/^    if:[[:space:]]*/, "", value)
+      sub(/[[:space:]]+$/, "", value)
+      print job "\t" value
+    }
+  ' "$1"
+}
+
+# The aggregate job must need every other job: one missing from `needs:` would not be gated at all.
 require_ci_ok_covers_every_job() {
   path="$1"
-  local expected actual gated
+  local expected actual
   expected="$(workflow_jobs "$path" | grep -vx 'ci-ok' || true)"
   actual="$(job_needs "$path" ci-ok)"
   if [ -z "$expected" ] || [ "$expected" != "$actual" ]; then
@@ -166,16 +179,98 @@ require_ci_ok_covers_every_job() {
     diff <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") | sed 's/^/  /' || true
     exit 1
   fi
-  gated="$(awk '
-    /^jobs:[[:space:]]*$/ { in_jobs = 1; next }
-    in_jobs && /^[^[:space:]#]/ { in_jobs = 0 }
-    in_jobs && /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { job = $0; sub(/^  /, "", job); sub(/:.*/, "", job) }
-    in_jobs && job != "ci-ok" && /^    if:/ { print job }
-  ' "$path")"
+}
+
+# No job other than CI OK may carry a job-level `if:` (release-gate.yml): its aggregate accepts
+# only `success`, so a conditionally skipped gate would read as a failure.
+require_no_job_conditions() {
+  path="$1"
+  local gated
+  gated="$(job_conditions "$path" | cut -f1)"
   if [ -n "$gated" ]; then
     echo "FAIL: $path gating job has a job-level if: that CI OK would read as failure: $gated"
     exit 1
   fi
+}
+
+# The per-PR lane filter (issue #393). A job-level `if:` is allowed only in the exact form
+# `needs.changes.outputs.<lane> == 'true'` for lane core, leverage or gate_scripts, on a job that
+# needs `changes`. CI OK's JOB_LANES must list exactly those jobs with those lanes, because it is
+# what lets ci_ok.py accept their `skipped` result, and CI OK must run that result check. The
+# `changes` job must export all four outputs from the classifier. Named jobs are pinned to their
+# lane, so a determinism job cannot drift onto a lighter lane or an always-on job become optional.
+require_lane_filter() {
+  path="$1"
+  local conditions expected actual job condition lane want got
+  conditions="$(job_conditions "$path")"
+  expected=""
+  while IFS=$'\t' read -r job condition; do
+    [ -n "$job" ] || continue
+    if [[ "$condition" =~ ^needs\.changes\.outputs\.(core|leverage|gate_scripts)\ ==\ \'true\'$ ]]; then
+      lane="${BASH_REMATCH[1]}"
+    else
+      echo "FAIL: $path job $job has a job-level if: that is not a lane filter: $condition"
+      exit 1
+    fi
+    require_job_needs "$path" "$job" changes
+    expected+="$job=$lane"$'\n'
+  done <<< "$conditions"
+  expected="$(printf '%s' "$expected" | sed '/^$/d' | sort)"
+  actual="$(awk '
+    $0 == "  ci-ok:" { found = 1; next }
+    found && /^  [^ ]/ { exit }
+    found && /^          JOB_LANES:[[:space:]]*>-[[:space:]]*$/ { in_list = 1; next }
+    found && in_list && /^            [^[:space:]]/ {
+      line = $0; sub(/^[[:space:]]+/, "", line); sub(/[[:space:]]+$/, "", line)
+      count = split(line, items, /[[:space:]]+/)
+      for (i = 1; i <= count; i++) print items[i]
+      next
+    }
+    found && in_list { in_list = 0 }
+  ' "$path" | sort)"
+  if [ -z "$expected" ] || [ "$expected" != "$actual" ]; then
+    echo "FAIL: $path CI OK JOB_LANES does not match the lane-filtered jobs' if: lines"
+    diff <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") | sed 's/^/  /' || true
+    exit 1
+  fi
+  for want in \
+    determinism-matrix=core determinism-compare=core strict-bit-matrix=core strict-bit-compare=core \
+    crate-tests=core golden-gen-hygiene=core golden-gen-firewall=core build=core clippy=core \
+    rustdoc=core deny=core unused-deps=core default-no-db=core facade-contract=core \
+    leverage-lane=leverage gate=gate_scripts \
+    changes=always fmt=always file-size-cap=always no-secret-scan=always docs=always \
+    gate-fixtures=always package-publication-contract=always; do
+    job="${want%%=*}"
+    lane="${want#*=}"
+    if ! workflow_jobs "$path" | grep -qx -- "$job"; then
+      echo "FAIL: $path is missing the $job job"
+      exit 1
+    fi
+    got="$(grep -E "^$job=" <<< "$expected" | cut -d= -f2 || true)"
+    [ -n "$got" ] || got=always
+    if [ "$got" != "$lane" ]; then
+      echo "FAIL: $path job $job runs on lane $got, not $lane"
+      exit 1
+    fi
+  done
+  require_job_pattern "$path" 'ci-ok' '^[[:space:]]*(- )?run: python3 scripts/ci/ci_ok\.py$' \
+    'CI OK runs the lane-aware result check'
+  for lane in core leverage gate_scripts docs_only; do
+    require_job_pattern "$path" 'changes' \
+      "^      $lane: \\\$\\{\\{ steps\\.classify\\.outputs\\.$lane \\}\\}\$" \
+      "changes job exports the $lane lane output"
+  done
+  require_job_pattern "$path" 'changes' '^[[:space:]]*fetch-depth: 2$' \
+    'changes job fetches the merge commit and its base parent'
+  require_job_pattern "$path" 'changes' \
+    'git diff --no-renames --name-only HEAD\^1 HEAD' \
+    'changes job lists the merge against its base, renames as delete plus add'
+  require_job_pattern "$path" 'changes' \
+    'bash scripts/ci/classify-changes\.sh < "\$RUNNER_TEMP/changed-paths" \| tee -a "\$GITHUB_OUTPUT"' \
+    'changes job classifies the changed paths into its outputs'
+  require_job_pattern "$path" 'changes' \
+    'bash scripts/ci/classify-changes\.sh --all \| tee -a "\$GITHUB_OUTPUT"' \
+    'changes job runs every lane without a PR merge checkout'
 }
 
 # The per-PR gate runs once per change: on the pull request. A `push` trigger would re-run the
@@ -332,7 +427,7 @@ require_unsafe_forbid_layers() {
   require_pattern "$ROOT_CARGO_TOML" '^[[:space:]]*unsafe_code[[:space:]]*=[[:space:]]*"forbid"' \
     'workspace.lints.rust unsafe_code = "forbid"'
 
-  for manifest in "$CRATES_DIR"/*/Cargo.toml; do
+  for manifest in "$CRATES_DIR"/*/Cargo.toml "$CRATES_DIR"/leverage/*/Cargo.toml; do
     [ -e "$manifest" ] || continue
     manifest_count=$((manifest_count + 1))
     require_lints_workspace "$manifest"
@@ -343,7 +438,7 @@ require_unsafe_forbid_layers() {
     exit 1
   fi
 
-  for lib in "$CRATES_DIR"/*/src/lib.rs; do
+  for lib in "$CRATES_DIR"/*/src/lib.rs "$CRATES_DIR"/leverage/*/src/lib.rs; do
     [ -e "$lib" ] || continue
     lib_count=$((lib_count + 1))
     first_line="$(sed -n '1p' "$lib")"
@@ -487,7 +582,25 @@ require_job_pattern "$ci" 'ci-ok' '^[[:space:]]*if:[[:space:]]*always\(\)' \
   'CI OK aggregate reports on every run'
 require_job_pattern "$ci" 'ci-ok' 'toJSON\(needs\)' 'CI OK aggregate inspects every needed result'
 require_ci_ok_covers_every_job "$ci"
+require_lane_filter "$ci"
 require_pr_trigger_only "$ci"
+# The lane machinery is itself tested on every PR, and the moved gate (light) steps still run.
+require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/ci/test-classify-changes\.sh$' \
+  'run the lane classifier fixtures on every PR'
+require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: python3 scripts/ci/test_ci_ok\.py$' \
+  'run the CI OK result-check controls on every PR'
+require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/ci/test-leverage-members\.sh$' \
+  'run the leverage dependency-rule fixtures on every PR'
+require_job_pattern "$ci" 'leverage-lane' '^[[:space:]]*(- )?run: bash scripts/ci/leverage-members\.sh lane$' \
+  'run the leverage lane'
+require_job_pattern "$ci" 'facade-contract' '^[[:space:]]*(- )?run: python3 scripts/facade_contract/check\.py$' \
+  'run the supported facade compiler contract'
+require_job_pattern "$ci" 'facade-contract' '^[[:space:]]*(- )?run: python3 scripts/facade_contract/test_check\.py$' \
+  'run the facade compiler diagnostic controls'
+require_job_pattern "$ci" 'facade-contract' '^[[:space:]]*(- )?run: bash \.github/scripts/check-quickstart-runs\.sh$' \
+  'execute the Quickstart'
+require_job_pattern "$ci" 'gate' '^[[:space:]]*(- )?run: bash \.agents/gate\.sh$' \
+  'gate (light) executes the gate script'
 # Strict-bit cells and their fan-in.
 require_job_pattern "$ci" 'strict-bit-matrix' \
   '^[[:space:]]*(- )?run: bash scripts/ci/strict-bits-cell\.sh "\$CELL_ARCH" "\$CELL_CODEGEN"$' \
@@ -548,6 +661,7 @@ require_job_pattern "$release" 'ci-ok' '^[[:space:]]*if:[[:space:]]*always\(\)' 
 require_job_pattern "$release" 'ci-ok' 'toJSON\(needs\)' \
   'release gate CI OK aggregate inspects every needed result'
 require_ci_ok_covers_every_job "$release"
+require_no_job_conditions "$release"
 
 # Daily advisory/yanked gate and deny.toml discipline.
 require_pattern "$advisories" 'schedule:' 'scheduled advisory gate'

@@ -23,17 +23,19 @@ byte-identical as their history, and is disabled in the repository's Actions set
 a self-hosted Forgejo instance, now retired.)
 
 Each gating workflow ends in a `CI OK` job that needs every other job and fails unless each one
-succeeded; `check-workflow-gates.sh` asserts that its `needs:` lists every other job in the file
-and that no gating job carries a job-level `if:`. Branch protection requires exactly that one
-status: the `CI OK` check from `pr-gate.yml` on `development` and from `release-gate.yml` on
-`main`.
+succeeded — or, in `pr-gate.yml` only, was skipped by its [lane filter](#lanes-what-a-pr-runs);
+`check-workflow-gates.sh` asserts that its `needs:` lists every other job in the file, that no
+`release-gate.yml` job carries a job-level `if:`, and that every `pr-gate.yml` job-level `if:` is a
+lane filter that `CI OK` knows about. Branch protection requires exactly that one status: the
+`CI OK` check from `pr-gate.yml` on `development` and from `release-gate.yml` on `main`.
 
 ## What runs when
 
 The per-PR gate runs **once per change**, on the pull request:
 
 - **A PR into `development`** runs `pr-gate.yml` (and `docs-pages.yml` when it touches the docs
-  paths below). A new push to the PR branch cancels the superseded run.
+  paths below). Which of its jobs run depends on the paths the PR changes — see
+  [Lanes](#lanes-what-a-pr-runs). A new push to the PR branch cancels the superseded run.
 - **A merge into `development`** runs no gate. `pr-gate.yml` has no `push` trigger: the merged
   tree is the one the PR already tested, so a post-merge run would repeat the whole gate for no new
   evidence. Only the path-filtered `docs-pages.yml` runs on that push, and only when the
@@ -43,6 +45,69 @@ The per-PR gate runs **once per change**, on the pull request:
   safety net for anything per-PR CI does not cover, including an interaction between two PRs that
   each passed on their own.
 - **A PR into `main`, or a push to `main`,** runs `release-gate.yml`.
+
+### Lanes: what a PR runs
+
+`pr-gate.yml` has two lanes under the one `CI OK`. The **determinism lane** is every job that
+compiles the engine: the determinism and strict-bit matrices and their fan-ins, the x86_64 crate
+suites, clippy, build, rustdoc, cargo-deny, cargo-machete, the database-free check, the golden-gen
+firewall and hygiene jobs, and the facade contract and Quickstart. The **leverage lane** is one job,
+`leverage lane`, for the crates under [`crates/leverage/`](../crates/leverage/README.md): the
+layout and `oce-api`-only dependency rule, then fmt, clippy `-D warnings`, rustdoc `-D warnings`,
+nextest and cargo-machete per member (`scripts/ci/leverage-members.sh lane`; with no members it
+prints `no leverage crates yet`).
+
+The first job, `classify changed paths`, lists what the PR changes with plain git — the tested merge
+commit against its base parent, renames as a deletion plus an addition — and classifies it with
+`scripts/ci/classify-changes.sh`. The rules fail closed: a path that matches neither the docs-only
+nor the leverage allowlist counts as an engine change.
+
+- **docs-only** paths: `docs/**`, `site/**`, `scripts/docs/**`, a root-level `*.md`,
+  `.agents/project-facts.md`, `.github/ISSUE_TEMPLATE/**` and `.github/pull_request_template.md` —
+  except documentation a test reads (`README.md`, whose Quickstart a test byte-pins, and
+  `docs/cxf-composite-subset.md`), which counts as an engine change. A fixture scans the crates for
+  documentation reads so the exception list cannot fall behind.
+- **leverage** paths: `crates/leverage/**`.
+- **gate-script** paths: `.agents/gate.sh`, `.github/scripts/**`, `scripts/**` outside
+  `scripts/docs/`, `.github/workflows/**` and `.config/**`. A change to how CI runs must prove the
+  whole gate still passes, so these count as engine changes too.
+- **everything else** is an engine change: any crate outside `crates/leverage/`, `Cargo.toml`,
+  `Cargo.lock`, `rust-toolchain.toml`, `.cargo/**`, `deny.toml`, `tools/**`, `third_party/**`,
+  `.githooks/**`, `.gitattributes`, an unrecognised root file. Adding a leverage crate or changing
+  its dependencies changes `Cargo.lock`, so it runs everything.
+
+| Change class | Jobs that run | Jobs skipped | Expected wall-clock |
+| --- | --- | --- | --- |
+| docs-only | `classify changed paths`, fmt, file-size cap, no-secret scan, docs, gate behavior fixtures, the package/authority/product contract, `CI OK` | the determinism lane, `leverage lane`, `gate (light)` | about 2 minutes |
+| leverage-only (`crates/leverage/**`, optionally with docs) | the docs-only set plus `leverage lane` | the determinism lane, `gate (light)` | about 2 minutes with no leverage crates; plus each member's build and tests |
+| engine (any other path) | every job except `gate (light)` | `gate (light)` | about 15 minutes (the x86_64 release determinism cell is the long pole) |
+| gate scripts, workflows, tool config | every job | none | about 17 minutes |
+
+The always-on set runs whatever changed: it compiles nothing (fmt only reads the tree), and the
+package/authority/product contract stays in it because its checks read the documentation as well as
+the manifests. An engine change also runs the leverage lane, because a change behind the facade can
+break a crate built on it.
+
+`gate (light)` — `bash .agents/gate.sh` executed in CI — runs **only** for a gate-script change. It
+is a coverage backstop against a `pr-gate.yml` job drifting away from the script, and only an edit to
+the script, a workflow or a script a job runs can cause that drift; on any other PR it re-ran what
+the other jobs had just run (17m28s measured on 2026-11-08). Its three steps that no other job
+covered — the facade compiler contract, its diagnostic controls and the executed Quickstart — moved
+into the `facade contract and Quickstart` job in the determinism lane, and the gate-script coverage
+check and its fixtures into `gate behavior fixtures`. `release-gate.yml` still runs `gate (full)`
+daily on the `development` tip.
+
+**How a skip passes `CI OK`.** Each lane-filtered job has exactly one job-level `if:`,
+`needs.changes.outputs.<lane> == 'true'`, and `CI OK` (`scripts/ci/ci_ok.py`) accepts its
+`skipped` result only when that output was `false`. A job skipped while its lane ran — the shape of
+a job that never started because something it needs failed — fails, as does any skip of an
+always-on job, any failure or cancellation, and a failed or self-contradictory classification.
+`check-workflow-gates.sh` keeps `CI OK`'s lane map equal to the jobs' `if:` lines, pins each named
+job to its lane, and fails if the result check or the classifier outputs are removed; its fixtures
+prove each of those controls fails. A manual dispatch runs every lane.
+
+`bash .agents/gate.sh leverage` is the local mirror of a leverage-only PR: the always-on checks and
+the leverage lane, without the engine lane. `bash .agents/gate.sh` runs both lanes.
 
 **Cache.** PR runs save `Swatinem/rust-cache` entries into their own PR scope only, and there is
 no post-merge push run, so nothing a PR does seeds the cache scope other PRs read. The daily
@@ -57,6 +122,7 @@ x86_64 and arm64 never share one):
 | `nextest` | the eight determinism and strict-bit cells, `crate-tests` | `test-suite` (debug and release, whole workspace) |
 | `gate` | `gate (light)` | `gate (full)` |
 | `clippy`, `build`, `rustdoc`, `default-no-db` | the job of that name | the job of that name |
+| `facade-contract`, `leverage` | `facade contract and Quickstart`, `leverage lane` | — |
 
 For the like-named pairs this only makes explicit what their identical job ids already did
 (rust-cache's default key component is the job id); the `nextest` key is the new link. The release-gate `test-suite` entry is a superset (the whole workspace, both codegens), which
@@ -71,8 +137,10 @@ Branch protection on `development` makes the PR run the only way in: a pull requ
 the `CI OK` status is required, and the branch must be up to date with `development` before it
 merges. GitHub PR runs test a synthetic merge of the PR head into its base, and the up-to-date
 rule makes that tested merge the commit that lands; a PR that falls behind is updated and re-run
-before it merges. When work runs in two parallel lanes and those re-runs start to queue, the next
-step is a merge queue, which tests each merge group once instead.
+before it merges. Now that two lanes exist, the next step is a merge queue, which tests each merge
+group once instead. Until then a leverage-only PR is still serialized by the up-to-date rule: it
+skips the determinism lane, but it must be updated and re-run whenever any other PR lands first,
+and that re-run classifies only its own changes.
 
 Docs-site validation (`.github/workflows/docs-pages.yml`) is path-filtered to `docs/**`,
 `README.md`, `scripts/docs/**`, `scripts/authority_claims/**`, `site/**` and its own workflow
@@ -85,18 +153,21 @@ deploys the site to GitHub Pages.
 [`.agents/gate.sh`](../.agents/gate.sh) is the only place the gate's command list is written down.
 Every other document in this repo — including this page — points at it rather than restating it,
 because nine divergent prose copies existed before the script was written and two of them were
-materially weaker than CI (see the script's header). There are two invocations:
+materially weaker than CI (see the script's header). There are three invocations:
 
 ```
-bash .agents/gate.sh        # light — mirrors the per-PR gate
-bash .agents/gate.sh full   # full  — adds the workspace suite and doctests
+bash .agents/gate.sh            # light    — mirrors the per-PR gate
+bash .agents/gate.sh full       # full     — adds the workspace suite and doctests
+bash .agents/gate.sh leverage   # leverage — mirrors a PR confined to crates/leverage/
 ```
 
 CI does not merely mirror that script, it **executes** it: the `gate (light)` job at
-[`.github/workflows/pr-gate.yml`](../.github/workflows/pr-gate.yml) and `gate (full)` at
-[`.github/workflows/release-gate.yml`](../.github/workflows/release-gate.yml).
-So every command in the script gates a pull request whether or not `pr-gate.yml` also runs it as its
-own job. Read that as coverage, not as parity, and note that the implication does not run the other way:
+[`.github/workflows/pr-gate.yml`](../.github/workflows/pr-gate.yml) on every PR that changes a gate
+script, workflow or tool config, and `gate (full)` at
+[`.github/workflows/release-gate.yml`](../.github/workflows/release-gate.yml) daily.
+So every command in the script gates any pull request that could make a `pr-gate.yml` job diverge
+from it, whether or not `pr-gate.yml` also runs it as its own job. Read that as coverage, not as
+parity, and note that the implication does not run the other way:
 `gate (light)` is `bash .agents/gate.sh` **plus** any steps of its own. The Quickstart-executes step
 was exactly that for a while — a required check no local run of the script performed — and an
 earlier revision of this paragraph used a numeric citation that stopped one line short of it.
@@ -124,8 +195,9 @@ This does not check arbitrary Markdown claims or workflow parity, and regenerati
 
 **A green PR is not evidence that the change's own tests pass.**
 
-The per-PR gate into `development` runs the state-determinism subset for **`oce-api`, `oce-blocks`,
-and `oce-expr`**. That is the `determinism-matrix` job in `.github/workflows/pr-gate.yml`: four
+On every engine change (see [Lanes](#lanes-what-a-pr-runs)), the per-PR gate into `development`
+runs the state-determinism subset for **`oce-api`, `oce-blocks`, and `oce-expr`**. That is the
+`determinism-matrix` job in `.github/workflows/pr-gate.yml`: four
 native cells, x86_64 on `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm`, each under debug and
 under release codegen. Each cell refuses a runner of the wrong architecture, runs the three-crate
 subset and emits populated revision-2 portable and target-bound state vectors. The
@@ -163,14 +235,18 @@ Before claiming tests pass, run `bash .agents/gate.sh full` first-hand and read 
 
 ## Every pull request runs the gate
 
-The per-PR gate runs on every PR, drafts included; there is no draft carve-out, because a gating
-job with a job-level `if:` would read as a failure in `CI OK`. A PR with no checks still looks a lot
-like a PR with no failing checks — confirm `CI OK` actually reported.
+The per-PR gate runs on every PR, drafts included; there is no draft carve-out. The only job-level
+`if:` a `pr-gate.yml` job may carry is its lane filter, and `CI OK` reads any other skip as a
+failure. A PR with no checks still looks a lot like a PR with no failing checks — confirm `CI OK`
+actually reported, and on a docs-only or leverage-only PR expect the determinism jobs to show as
+skipped, not green.
 
 ## cargo-deny is not skippable, but advisories do not gate a PR
 
 The standalone `cargo-deny` job in `pr-gate.yml` runs cargo-deny's bans, licenses and sources checks
-on every PR, and the gate script runs them too (see the script's cargo-deny step).
+on every PR that changes anything outside the documentation and `crates/leverage/` — and any
+dependency change rewrites `Cargo.lock`, which always counts as an engine change — and the gate
+script runs them too (see the script's cargo-deny step).
 
 `advisories` is a different story, and the carve-out belongs next to the claim. It is deliberately
 excluded from the script — it needs network access and a writable advisory database, neither of
@@ -243,8 +319,9 @@ in every per-PR build, are the only pinned surface.
   Cross-*architecture* is covered natively for the determinism and strict-bit subsets — x86_64 on
   `ubuntu-latest`, aarch64 on `ubuntu-24.04-arm`, debug and release. Every other job, and the
   whole release gate, runs on x86_64 only. macOS and Windows are not built or tested anywhere.
-- **Anything derived from git history.** No workflow sets `fetch-depth`, so `actions/checkout`
-  takes its default of a single commit. A check that needs history cannot run in CI. The visible
+- **Anything derived from git history.** Only the `classify changed paths` job sets
+  `fetch-depth` (2, to reach the tested merge's base parent); every other checkout takes the
+  default of a single commit. A check that needs history cannot run in CI. The visible
   consequence: golden provenance records bind to a content digest of the checked-in bytes rather
   than to the engine revision that produced them
   (`crates/oce-cxf/tests/golden_provenance/mod.rs:3-5`).

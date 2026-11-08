@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Gate-behavior fixtures for check-workflow-gates.sh. The negative fixtures prove missing nextest,
 # seeded advisory ignores, garbled workflow input, actions referenced by a movable tag, a per-PR
-# gate that re-runs on pushes to development, and a cell matrix that is no longer native on both
-# architectures (or loses a cell, a fan-in or a comparison) fail closed.
+# gate that re-runs on pushes to development, a cell matrix that is no longer native on both
+# architectures (or loses a cell, a fan-in or a comparison), and a lane filter that loses its CI OK
+# result check, its `changes` outputs or its lane map, or lets a job skip on the wrong lane, fail
+# closed.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -24,10 +26,83 @@ on:
     branches: [development]
   workflow_dispatch:
 jobs:
+  changes:
+    outputs:
+      core: ${{ steps.classify.outputs.core }}
+      leverage: ${{ steps.classify.outputs.leverage }}
+      gate_scripts: ${{ steps.classify.outputs.gate_scripts }}
+      docs_only: ${{ steps.classify.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@89abcdef0123456789abcdef0123456789abcdef # v4
+        with:
+          fetch-depth: 2
+      - id: classify
+        run: |
+          if [ "$EVENT_NAME" = pull_request ]; then
+            git diff --no-renames --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed-paths"
+            bash scripts/ci/classify-changes.sh < "$RUNNER_TEMP/changed-paths" | tee -a "$GITHUB_OUTPUT"
+          else
+            bash scripts/ci/classify-changes.sh --all | tee -a "$GITHUB_OUTPUT"
+          fi
+  fmt:
+    steps:
+      - run: cargo fmt --all --check
+  file-size-cap:
+    steps:
+      - run: bash .github/scripts/check-file-size.sh
+  no-secret-scan:
+    steps:
+      - run: bash .github/scripts/check-no-secrets.sh
+  golden-gen-hygiene:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    steps:
+      - run: cargo run --release --locked
+  build:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    steps:
+      - run: cargo build --workspace --locked
+  clippy:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    steps:
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+  rustdoc:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    steps:
+      - run: cargo doc --no-deps --workspace --lib --document-private-items --locked
+  deny:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    steps:
+      - run: cargo deny check bans licenses sources
+  facade-contract:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    steps:
+      - run: python3 scripts/facade_contract/check.py
+      - run: python3 scripts/facade_contract/test_check.py
+      - run: bash .github/scripts/check-quickstart-runs.sh
+  leverage-lane:
+    needs: changes
+    if: needs.changes.outputs.leverage == 'true'
+    steps:
+      - run: bash scripts/ci/leverage-members.sh lane
+  gate:
+    needs: changes
+    if: needs.changes.outputs.gate_scripts == 'true'
+    steps:
+      - run: bash .agents/gate.sh
   default-no-db:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     steps:
       - run: bash .github/scripts/check-default-no-db.sh
   unused-deps:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     steps:
       - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
         with:
@@ -40,7 +115,12 @@ jobs:
       - run: bash .github/scripts/test-check-stale-crate-status.sh
       - run: bash .github/scripts/check-stale-crate-status.sh
       - run: bash .github/scripts/check-workflow-gates.sh
+      - run: bash scripts/ci/test-classify-changes.sh
+      - run: python3 scripts/ci/test_ci_ok.py
+      - run: bash scripts/ci/test-leverage-members.sh
   golden-gen-firewall:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     steps:
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
   package-publication-contract:
@@ -52,6 +132,8 @@ jobs:
       - name: authority claim hostile controls
         run: python3 scripts/authority_claims/test_check.py
   strict-bit-matrix:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -77,7 +159,8 @@ jobs:
           path: target/strict-bits/
           if-no-files-found: error
   strict-bit-compare:
-    needs: strict-bit-matrix
+    needs: [changes, strict-bit-matrix]
+    if: needs.changes.outputs.core == 'true'
     steps:
       - env:
           OCE_STRICT_MATRIX_DIR: target/strict-bits
@@ -88,6 +171,8 @@ jobs:
           -E 'test(=matrix::native_linux_matrix_is_complete_and_exact)'
       - run: test -s target/strict-bits/receipt-candidate.json
   determinism-matrix:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -129,7 +214,8 @@ jobs:
           path: target/determinism/
           if-no-files-found: error
   determinism-compare:
-    needs: determinism-matrix
+    needs: [changes, determinism-matrix]
+    if: needs.changes.outputs.core == 'true'
     strategy:
       matrix:
         include:
@@ -158,6 +244,8 @@ jobs:
             --workspace-remap . --profile ci --no-tests=fail \
             -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
   crate-tests:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     steps:
       - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
         with:
@@ -184,6 +272,18 @@ jobs:
     name: CI OK
     if: always()
     needs:
+      - changes
+      - fmt
+      - file-size-cap
+      - no-secret-scan
+      - golden-gen-hygiene
+      - build
+      - clippy
+      - rustdoc
+      - deny
+      - facade-contract
+      - leverage-lane
+      - gate
       - default-no-db
       - unused-deps
       - gate-fixtures
@@ -198,7 +298,13 @@ jobs:
     steps:
       - env:
           NEEDS_JSON: ${{ toJSON(needs) }}
-        run: python3 check.py
+          JOB_LANES: >-
+            golden-gen-hygiene=core build=core clippy=core rustdoc=core deny=core
+            facade-contract=core leverage-lane=leverage gate=gate_scripts
+            default-no-db=core unused-deps=core golden-gen-firewall=core
+            strict-bit-matrix=core strict-bit-compare=core
+            determinism-matrix=core determinism-compare=core crate-tests=core
+        run: python3 scripts/ci/ci_ok.py
 EOF
   cat > "$dir/release-gate.yml" <<'EOF'
 on:
@@ -580,7 +686,7 @@ reinstall_release_cross_target() {
 
 detach_fan_in() {
   dir="$1"
-  grep -v '^    needs: determinism-matrix$' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  sed 's/^    needs: \[changes, determinism-matrix\]$/    needs: [changes]/' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
   mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
@@ -739,9 +845,127 @@ conditional_gating_job() {
   _deny="$2"
   awk '
     { print }
-    /^  unused-deps:$/ { print "    if: github.event_name == '"'"'schedule'"'"'" }
+    /^  gate-fixtures:$/ { print "    if: github.event_name == '"'"'schedule'"'"'" }
   ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
   mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+conditional_release_job() {
+  dir="$1"
+  awk '
+    { print }
+    /^  unused-deps:$/ { print "    if: github.event_name == '"'"'schedule'"'"'" }
+  ' "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+}
+
+# Lane filter (issue #393): the controls the issue's acceptance names, and the ways a lane could
+# quietly widen what a PR may skip.
+edit_pr_gate() {
+  dir="$1"
+  shift
+  sed "$@" "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+delete_ci_ok_result_check() {
+  edit_pr_gate "$1" '/run: python3 scripts\/ci\/ci_ok.py/d'
+}
+
+restore_success_only_result_check() {
+  edit_pr_gate "$1" 's/run: python3 scripts\/ci\/ci_ok.py/run: python3 check.py/'
+}
+
+drop_changes_core_output() {
+  edit_pr_gate "$1" '/core: \${{ steps.classify.outputs.core }}/d'
+}
+
+drop_changes_classifier() {
+  edit_pr_gate "$1" '/classify-changes.sh < /d'
+}
+
+shallow_changes_checkout() {
+  edit_pr_gate "$1" '/fetch-depth: 2/d'
+}
+
+rename_blind_diff() {
+  edit_pr_gate "$1" 's/git diff --no-renames --name-only/git diff --name-only/'
+}
+
+unlisted_lane_job() {
+  edit_pr_gate "$1" 's/ crate-tests=core$//'
+}
+
+lane_map_names_wrong_lane() {
+  edit_pr_gate "$1" 's/deny=core$/deny=leverage/'
+}
+
+determinism_on_leverage_lane() {
+  edit_pr_gate "$1" \
+    -e '/^  determinism-matrix:$/,/^    if:/ s/outputs.core/outputs.leverage/' \
+    -e 's/determinism-matrix=core/determinism-matrix=leverage/'
+}
+
+docs_made_optional() {
+  edit_pr_gate "$1" \
+    -e 's/^  docs:$/  docs:\n    needs: changes\n    if: needs.changes.outputs.core == '"'"'true'"'"'/' \
+    -e 's/crate-tests=core$/crate-tests=core docs=core/'
+}
+
+lane_filter_without_changes_need() {
+  edit_pr_gate "$1" '/^  clippy:$/,/^    if:/ { /^    needs: changes$/d; }'
+}
+
+lane_filter_on_docs_only_output() {
+  edit_pr_gate "$1" \
+    -e '/^  leverage-lane:$/,/^    if:/ s/outputs.leverage/outputs.docs_only/' \
+    -e 's/leverage-lane=leverage/leverage-lane=docs_only/'
+}
+
+negated_lane_filter() {
+  edit_pr_gate "$1" "/^  build:\$/,/^    if:/ s/== 'true'/!= 'false'/"
+}
+
+removed_lane_job() {
+  dir="$1"
+  awk '
+    /^  leverage-lane:$/ { skip = 1; next }
+    skip && /^  [^ ]/ { skip = 0 }
+    skip { next }
+    /^      - leverage-lane$/ { next }
+    { sub(/ leverage-lane=leverage/, ""); print }
+  ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+leverage_crate_without_lints() {
+  _dir="$1"
+  _deny="$2"
+  _root_cargo="$3"
+  crates_dir="$4"
+  mkdir -p "$crates_dir/leverage/oce-host/src"
+  printf '[package]\nname = "oce-host"\n' > "$crates_dir/leverage/oce-host/Cargo.toml"
+  printf '#![forbid(unsafe_code)]\n' > "$crates_dir/leverage/oce-host/src/lib.rs"
+}
+
+leverage_crate_without_forbid() {
+  _dir="$1"
+  _deny="$2"
+  _root_cargo="$3"
+  crates_dir="$4"
+  mkdir -p "$crates_dir/leverage/oce-host/src"
+  printf '[package]\nname = "oce-host"\n\n[lints]\nworkspace = true\n' > "$crates_dir/leverage/oce-host/Cargo.toml"
+  printf '//! Fixture crate.\n' > "$crates_dir/leverage/oce-host/src/lib.rs"
+}
+
+compliant_leverage_crate() {
+  _dir="$1"
+  _deny="$2"
+  _root_cargo="$3"
+  crates_dir="$4"
+  mkdir -p "$crates_dir/leverage/oce-host/src"
+  printf '[package]\nname = "oce-host"\n\n[lints]\nworkspace = true\n' > "$crates_dir/leverage/oce-host/Cargo.toml"
+  printf '#![forbid(unsafe_code)]\n' > "$crates_dir/leverage/oce-host/src/lib.rs"
 }
 
 hardcode_strict_cell_architecture() {
@@ -914,7 +1138,42 @@ run_case omitted-ci-ok-need fail omit_ci_ok_need \
 run_case omitted-release-ci-ok-need fail omit_release_ci_ok_need \
   "release-gate.yml CI OK needs does not match the workflow's jobs"
 run_case conditional-gating-job fail conditional_gating_job \
-  "gating job has a job-level if: that CI OK would read as failure: unused-deps"
+  "pr-gate.yml job gate-fixtures has a job-level if: that is not a lane filter"
+run_case conditional-release-job fail conditional_release_job \
+  "release-gate.yml gating job has a job-level if: that CI OK would read as failure: unused-deps"
+run_case deleted-ci-ok-result-check fail delete_ci_ok_result_check \
+  "CI OK runs the lane-aware result check"
+run_case success-only-result-check fail restore_success_only_result_check \
+  "CI OK runs the lane-aware result check"
+run_case missing-changes-core-output fail drop_changes_core_output \
+  "changes job exports the core lane output"
+run_case missing-changes-classifier fail drop_changes_classifier \
+  "changes job classifies the changed paths into its outputs"
+run_case shallow-changes-checkout fail shallow_changes_checkout \
+  "changes job fetches the merge commit and its base parent"
+run_case rename-blind-changes-diff fail rename_blind_diff \
+  "renames as delete plus add"
+run_case unlisted-lane-job fail unlisted_lane_job \
+  "CI OK JOB_LANES does not match the lane-filtered jobs' if: lines"
+run_case lane-map-wrong-lane fail lane_map_names_wrong_lane \
+  "CI OK JOB_LANES does not match the lane-filtered jobs' if: lines"
+run_case determinism-on-leverage-lane fail determinism_on_leverage_lane \
+  "job determinism-matrix runs on lane leverage, not core"
+run_case docs-made-optional fail docs_made_optional \
+  "job docs runs on lane core, not always"
+run_case lane-filter-without-changes-need fail lane_filter_without_changes_need \
+  "job clippy does not need changes"
+run_case lane-filter-on-docs-only-output fail lane_filter_on_docs_only_output \
+  "job leverage-lane has a job-level if: that is not a lane filter"
+run_case negated-lane-filter fail negated_lane_filter \
+  "job build has a job-level if: that is not a lane filter"
+run_case removed-leverage-lane fail removed_lane_job \
+  "is missing the leverage-lane job"
+run_case leverage-crate-without-lints fail leverage_crate_without_lints \
+  "leverage/oce-host/Cargo.toml is missing [lints] workspace = true"
+run_case leverage-crate-without-forbid fail leverage_crate_without_forbid \
+  "leverage/oce-host/src/lib.rs line 1 must be #![forbid(unsafe_code)]"
+run_case compliant-leverage-crate pass compliant_leverage_crate
 run_case restored-development-push-trigger fail restore_development_push_trigger \
   "pr-gate.yml has a push trigger; the per-PR gate must not re-run on merges into development"
 run_case unfiltered-push-trigger fail unfiltered_push_trigger \

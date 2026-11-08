@@ -116,9 +116,13 @@ contract and its hostile controls, the gate fixtures, `cargo machete`, clippy, b
 cargo-deny, and the `oce-api`/`oce-blocks`/`oce-expr` determinism subset in debug and release
 codegen, plus the scoped strict-bit conformance subset in both codegen profiles.
 
-CI also runs this script directly, as the `gate (light)` job in `.github/workflows/pr-gate.yml` and
-`gate (full)` in `.github/workflows/release-gate.yml`. So the commands here gate your PR whether or not each is separately wired as
-its own job — but that is coverage, not proof that the script and the workflows still agree.
+CI also runs this script directly: as the `gate (light)` job in `.github/workflows/pr-gate.yml` on
+any PR that changes a gate script, workflow or tool config, and as `gate (full)` in
+`.github/workflows/release-gate.yml` daily. So the commands here gate any PR that could make a
+workflow job diverge from them — but that is coverage, not proof that the script and the workflows
+still agree. Which `pr-gate.yml` jobs a PR runs depends on the paths it changes; see
+[the lanes](docs/ci-and-the-gate.md#lanes-what-a-pr-runs). `bash .agents/gate.sh leverage` mirrors
+a PR confined to `crates/leverage/`.
 Nothing verifies that mechanically; change a command in CI first, then here.
 
 If your change falls outside those named subsets, a green PR need not have run its tests. Add `full`:

@@ -418,8 +418,9 @@ run here does not prove these pass`, listing:
   made and withdrawn; the dormant `.github/workflows/ci.yml:293-321` records why — every design either compared
   argv strings, which `RUSTFLAGS=--cap-lints=allow` leaves byte-identical while neutering clippy, or
   reimplemented enough of `if:` / `needs:` / matrix semantics to become its own untested gate. CI
-  does *execute* the script (`gate (light)`), so every command in it gates a PR; the script says
-  outright that this is coverage, not parity.
+  does *execute* the script (`gate (light)`, on every PR that changes a gate script, workflow or
+  tool config), so every command in it gates any PR that could make a workflow job diverge from it;
+  the script says outright that this is coverage, not parity.
 
 A `light` run adds a fifth line: it did not run the workspace test suite or the doctests, because
 the per-PR gate does not run them either.
