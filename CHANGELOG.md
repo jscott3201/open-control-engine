@@ -171,7 +171,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
-- **Design note for the structural diff (`oce-diff`)** (GitHub #PRNUM, issue #437).
+- **Design note for the structural diff (`oce-diff`)** (GitHub #447, issue #437).
   `docs/design/diff.md` fixes, before any code, how two revisions of an authoring model are
   compared: the authored block name is the identity, a class change is a removal plus an addition,
   and a bounded, deterministic rename pass (class and bit-exact parameters as hard gates,
