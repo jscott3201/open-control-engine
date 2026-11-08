@@ -241,7 +241,8 @@ suite on the host without the `std` feature, on one test thread, because that bu
 thread-local evaluation-fuel meter with a program-wide one. A core crate that gains a `std`-only
 dependency, a `std::` path or a `std`-only `f64` method fails it. `bash .agents/gate.sh` runs the
 same commands and installs nothing: when a target is missing, its first no_std step fails and prints
-the `rustup target add` command. What the build means is in
+the `rustup target add` command; the `gate (light)` and `gate (full)` jobs that execute the script
+install both targets first. What the build means is in
 [the architecture](architecture.md#no_std--alloc-the-core-four).
 
 ## Dev-light, release-heavy

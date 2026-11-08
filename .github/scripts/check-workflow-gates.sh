@@ -704,6 +704,8 @@ require_job_literal "$ci" 'no-std-build' \
 require_job_literal "$ci" 'no-std-build' \
   'cargo test -p oce-expr --no-default-features --features alloc --lib --locked -- --test-threads=1' \
   'run the oce-expr unit suite without std'
+require_job_literal "$ci" 'gate' 'rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown' \
+  'the executed gate script has the no_std targets it builds for'
 # Documentation checks under CI OK (issue #377); docs-pages.yml is path-filtered and not required.
 require_job_pattern "$ci" 'docs' '^[[:space:]]*(- )?run: bash scripts/docs/install-mdbook\.sh target/mdbook-bin$' \
   'install the checksum-pinned mdBook'

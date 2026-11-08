@@ -96,6 +96,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.gate_scripts == 'true'
     steps:
+      - run: rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown
       - run: bash .agents/gate.sh
   default-no-db:
     needs: changes
@@ -1264,6 +1265,10 @@ no_std_build_out_of_lane_map() {
   edit_pr_gate "$1" '/^            no-std-build=core$/d'
 }
 
+gate_job_without_no_std_targets() {
+  edit_pr_gate "$1" '/^  gate:$/,/^  [^ ]/ {/rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown$/d;}'
+}
+
 no_std_build_out_of_ci_ok() {
   edit_pr_gate "$1" '/^      - no-std-build$/d'
 }
@@ -1473,5 +1478,7 @@ run_case no-std-build-out-of-lane-map fail no_std_build_out_of_lane_map \
   "CI OK JOB_LANES does not match the lane-filtered jobs' if: lines"
 run_case no-std-build-out-of-ci-ok fail no_std_build_out_of_ci_ok \
   "pr-gate.yml CI OK needs does not match the workflow's jobs"
+run_case gate-job-without-no-std-targets fail gate_job_without_no_std_targets \
+  "the executed gate script has the no_std targets it builds for"
 
 echo "OK: workflow gate fixtures passed."

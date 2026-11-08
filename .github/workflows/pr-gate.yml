@@ -979,6 +979,9 @@ jobs:
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143,cargo-deny,cargo-machete
+      # The gate script installs nothing; its no_std + alloc build steps need these targets.
+      - name: Install the no_std targets
+        run: rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown
       # No `--` arguments: `light` is the default mode and the one this job exists to cover.
       - run: bash .agents/gate.sh
 
