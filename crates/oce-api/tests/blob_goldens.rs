@@ -58,10 +58,19 @@ fn every_fixture_blob_matches_its_checked_in_golden_byte_for_byte() {
             mismatches.push(*name);
         }
     }
-    if let Ok(out) = std::env::var("OCE_BLOB_OUT")
-        && !out.is_empty()
-    {
-        std::fs::write(out, &matrix).unwrap();
+    if let Some(out) = std::env::var_os("OCE_BLOB_OUT").filter(|out| !out.is_empty()) {
+        // A relative path is relative to the workspace root, as the CI cells pass it; nextest
+        // runs this binary from the package directory.
+        let out = PathBuf::from(out);
+        let out = if out.is_absolute() {
+            out
+        } else {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../..")
+                .join(out)
+        };
+        std::fs::write(&out, &matrix)
+            .unwrap_or_else(|err| panic!("write {}: {err}", out.display()));
     }
     assert!(
         mismatches.is_empty(),
