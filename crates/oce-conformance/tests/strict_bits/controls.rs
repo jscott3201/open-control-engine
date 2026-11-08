@@ -1,8 +1,11 @@
 //! Mutation controls through the facade driver, not comparator-only unit tests.
 
 use super::evidence;
+use super::matrix::{self, Receipt, Receipts, SourceBinding};
 use crate::block_harness;
 use oce_conformance::{CombiTimeTable, ComparisonResult};
+use serde_json::{Value, json};
+use std::collections::BTreeMap;
 
 fn assert_mutation(
     case: &block_harness::BlockCase,
@@ -308,4 +311,162 @@ fn captured_provenance_binds_the_semantic_checker_and_facade_comparison_path() {
             "unbound capture/comparison/admission source: {path}"
         );
     }
+}
+
+fn status_receipts(current: &Receipt, status: Value, pending: Value) -> Result<Receipts, String> {
+    let mut data = json!({
+        "historical": {"git_revision": "1".repeat(40), "matrix_sha256": "2".repeat(64)},
+        "current": {"git_revision": current.git_revision, "matrix_sha256": current.matrix_sha256},
+    });
+    if !status.is_null() {
+        data["status"] = status;
+    }
+    if !pending.is_null() {
+        data["pending"] = pending;
+    }
+    serde_json::from_value(data).map_err(|error| error.to_string())
+}
+
+fn pending_record(superseded: &Receipt) -> Value {
+    json!({
+        "since": "2026-11-08",
+        "reason": "bound sources change during a refactor window",
+        "opened_by_issue": 387,
+        "closed_by_issue": 404,
+        "supersedes_matrix_sha256": superseded.matrix_sha256,
+    })
+}
+
+#[test]
+fn recapture_pending_status_cannot_admit_even_with_exact_source_digests() {
+    // Synthetic captures that bind this checkout exactly: only the status decides admission.
+    let (runs, current, receipt) = matrix::synthetic_bound_admission();
+    for status in [Value::Null, json!("admitted")] {
+        let admitted = status_receipts(&receipt, status, Value::Null).unwrap();
+        let chosen = matrix::current_receipt(admitted).unwrap();
+        matrix::qualified_report(&runs, &chosen, &current).unwrap();
+    }
+    let pending = status_receipts(
+        &receipt,
+        json!("recapture-pending"),
+        pending_record(&receipt),
+    )
+    .unwrap();
+    assert_eq!(
+        matrix::current_receipt(pending).unwrap_err(),
+        "RECAPTURE_PENDING: status recapture-pending (GitHub #387) cannot admit or \
+         source-qualify native evidence; admission requires status admitted and exact source digests"
+    );
+    // Flipping the status back to admitted without matching digests still refuses admission.
+    let admitted = status_receipts(&receipt, json!("admitted"), Value::Null).unwrap();
+    let chosen = matrix::current_receipt(admitted).unwrap();
+    for path in current.source_sha256.keys() {
+        let mut drifted = current.clone();
+        drifted.source_sha256.insert(path.clone(), "0".repeat(64));
+        assert_eq!(
+            matrix::qualified_report(&runs, &chosen, &drifted).unwrap_err(),
+            format!("source digest changed: {path}: new native evidence required")
+        );
+    }
+}
+
+#[test]
+fn malformed_evidence_status_records_are_refused() {
+    let (_, _, receipt) = matrix::synthetic_bound_admission();
+    let window = |status: Value, pending: Value| {
+        let receipts = status_receipts(&receipt, status, pending)?;
+        matrix::pending_window(&receipts).map(|window| window.is_some())
+    };
+    let record = pending_record(&receipt);
+    assert_eq!(window(json!("recapture-pending"), record.clone()), Ok(true));
+    assert_eq!(window(json!("admitted"), Value::Null), Ok(false));
+    let mut elsewhere = record.clone();
+    elsewhere["supersedes_matrix_sha256"] = json!("0".repeat(64));
+    for (status, pending, detail) in [
+        (
+            json!("admitted"),
+            record.clone(),
+            "admitted status must not carry a pending record",
+        ),
+        (
+            Value::Null,
+            record.clone(),
+            "admitted status must not carry a pending record",
+        ),
+        (
+            json!("recapture-pending"),
+            Value::Null,
+            "recapture-pending status requires a pending record",
+        ),
+        (
+            json!("recapture-pending"),
+            elsewhere,
+            "pending record names a receipt other than the current one",
+        ),
+    ] {
+        assert_eq!(window(status, pending).unwrap_err(), detail);
+    }
+    let mut unsuperseded =
+        status_receipts(&receipt, json!("recapture-pending"), record.clone()).unwrap();
+    unsuperseded.current = None;
+    assert_eq!(
+        matrix::pending_window(&unsuperseded).unwrap_err(),
+        "recapture-pending status must supersede a current receipt"
+    );
+    // Closed vocabulary and closed record: deserialization itself refuses these.
+    for status in ["Admitted", "pending", "waived"] {
+        assert!(
+            status_receipts(&receipt, json!(status), Value::Null).is_err(),
+            "{status}"
+        );
+    }
+    let mut bypass = record;
+    bypass["bypass"] = json!(true);
+    assert!(status_receipts(&receipt, json!("recapture-pending"), bypass).is_err());
+}
+
+#[test]
+fn recapture_pending_suspends_source_digests_but_never_masks_raw_bit_drift() {
+    let (runs, current, receipt) = matrix::synthetic_bound_admission();
+    let check = |runs: &_, current: &_, binding| matrix::report(runs, &receipt, current, binding);
+    let mut drifted = current.clone();
+    drifted
+        .source_sha256
+        .insert("Cargo.lock".into(), "0".repeat(64));
+    assert!(check(&runs, &drifted, SourceBinding::PendingRecapture).is_ok());
+    assert_eq!(
+        check(&runs, &drifted, SourceBinding::Required).unwrap_err(),
+        "source digest changed: Cargo.lock: new native evidence required"
+    );
+
+    let signal = &runs["linux-aarch64-debug-first"].signals[0];
+    let sample = signal
+        .actual
+        .iter()
+        .position(|w| evidence::value(w).unwrap().is_finite())
+        .unwrap();
+    let flipped = evidence::word(f64::from_bits(
+        evidence::value(&signal.actual[sample]).unwrap().to_bits() ^ 1,
+    ));
+    let mutate = |runs: &mut BTreeMap<String, evidence::Corpus>, key: &str| {
+        let signal = &mut runs.get_mut(key).unwrap().signals[0];
+        signal.actual[sample].clone_from(&flipped);
+        signal.mismatches = vec![sample];
+    };
+    // One flipped bit in a whole cell (first and repeat agree): a numerical mismatch.
+    let mut numerical = runs.clone();
+    mutate(&mut numerical, "linux-aarch64-debug-first");
+    mutate(&mut numerical, "linux-aarch64-debug-repeat");
+    assert_eq!(
+        check(&numerical, &drifted, SourceBinding::PendingRecapture).unwrap_err(),
+        "accepted native matrix has numerical mismatches"
+    );
+    // The same bit in the repeat capture only: first/repeat byte identity is still enforced.
+    let mut repeat = runs.clone();
+    mutate(&mut repeat, "linux-aarch64-debug-repeat");
+    assert!(
+        check(&repeat, &drifted, SourceBinding::PendingRecapture)
+            .unwrap_err()
+            .starts_with("linux-aarch64-debug: repeated raw capture differs:")
+    );
 }

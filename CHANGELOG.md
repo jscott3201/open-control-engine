@@ -268,6 +268,19 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Verification
 
+- **The retained native strict-bit receipt is marked `recapture-pending` for the M1 refactor
+  window** (GitHub #387). `receipts.json` gains an optional evidence `status` (absent or
+  `admitted` keeps the previous behaviour) and a `pending` record naming the reason, the date, the
+  closing issue and the superseded receipt's matrix digest. The window closes when GitHub #392
+  retires the digest binding, with GitHub #404 as the milestone closeout. While pending,
+  `retained_native_linux_evidence_is_complete_exact_and_source_bound` skips only the comparison of
+  captured source digests with the checkout and prints `RECAPTURE_PENDING:` with every drifted
+  bound path; the retained captures' numbers, topology, repeats, inventory, provenance and matrix
+  digest are still checked, and the per-PR eight-capture comparison and hostile controls are
+  unchanged. New controls prove a pending status cannot admit evidence even with exact digests,
+  that it never masks a one-bit or repeat-capture drift, and that malformed status records are
+  refused. The per-PR strict-bit cells rerun the retained test with its output shown. The
+  release-compatibility evidence digests for `matrix.rs` and `receipts.json` are refreshed.
 - **`CDL.Logical.Nor`, `CDL.Logical.Pre` and `CDL.Utilities.Assert` now have standalone Tier-A
   goldens** (GitHub #385, issue #371). Before this, the three relied on unit tests, facade contract
   tests and indirect G36-sequence evidence. `tools/golden-gen` now derives four new signal goldens

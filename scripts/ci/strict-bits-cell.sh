@@ -59,3 +59,10 @@ cargo nextest run -p oce-conformance --test strict_bits --locked ${target_args[@
   --test per_block_reals_transcendental --test per_block_reals_sources_transcendental \
   --test per_block_psychrometrics --test per_block_utilities \
   --profile "$nextest_profile" --cargo-profile "$cargo_profile" --no-tests=fail
+
+# Print the retained receipt's evidence status into the log. While receipts.json is marked
+# recapture-pending the test passes without its source-digest comparison and says so on stderr
+# (RECAPTURE_PENDING: ...); this rerun shows that line instead of leaving a silent green.
+cargo nextest run -p oce-conformance --test strict_bits --locked ${target_args[@]+"${target_args[@]}"} \
+  --profile "$nextest_profile" --cargo-profile "$cargo_profile" --no-tests=fail --success-output immediate \
+  -E 'test(=matrix::retained_native_linux_evidence_is_complete_exact_and_source_bound)'
