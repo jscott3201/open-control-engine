@@ -39,6 +39,20 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Host facade
 
+- **The reserved `oce-flatten`, `oce-extension` and `oce-docs` crates are deleted, and `oce-api`
+  no longer declares the no-op `mem` feature** (GitHub #389). The workspace has 14 members, 11
+  publishable and three private. `oce-flatten::flatten` returned its input unchanged — the `oce-cxf`
+  resolver already lowers composites, grounds parameters and normalizes array parameters — so the
+  load pipeline now goes straight from import to attribute unification rather than keeping a no-op
+  stage. That removes `OcError::Flatten` and `DiagnosticStage::Flatten`; the diagnostics schema is
+  revision 2, whose stage ranks are 0..10 with every remaining stage in the same relative order.
+  `oce-extension` (an unconsumed FMI DTO) and `oce-docs` (an `unimplemented!` exporter) had no
+  dependents. `oce-api` has no features section: `cargo build -p oce-api` and
+  `--no-default-features` build the same thing, and a manifest naming `features = ["mem"]` must drop
+  it. The facade compiler contract now checks the single default selection, the package validator
+  expects no `oce-api` features and one selection, and the release workflow's comment and approval
+  digest are re-pinned for the new 11/3 split. The architecture page, both diagrams, the
+  crate lists and the CI notes are updated. Fixture and provenance goldens are byte-identical.
 - **Frame times are bounded so elapsed time cannot overflow, and non-finite bounds are refused
   at load** (GitHub #382, issues #366, #372). Finite times whose difference overflowed (t = -1e308
   then +1e308) were accepted by a model without sampled blocks and gave an integrator an infinite

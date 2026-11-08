@@ -22,7 +22,6 @@ EXPECTED_PUBLISHABLE = {
     "oce-cxf",
     "oce-diag",
     "oce-expr",
-    "oce-flatten",
     "oce-graph",
     "oce-model",
     "oce-semantics",
@@ -33,14 +32,12 @@ EXPECTED_PUBLISHABLE = {
 EXPECTED_PRIVATE = {
     "oce-bless",
     "oce-conformance",
-    "oce-docs",
-    "oce-extension",
     "oce-reference-wal-adapter",
 }
 
 
-# Independent raw-byte golden from release.yml at
-# 2bab88acbc96862f1808b34d305b795f521b3614, not read from the candidate or checker.
+# Independent raw-byte golden from release.yml as re-pinned for GitHub #389, not read from the
+# candidate or checker.
 # Non-ASCII bytes are escaped explicitly; line endings and the final LF are pinned.
 APPROVED_WORKFLOW = b"""# release \xe2\x80\x94 the crates.io publish gate.
 #
@@ -59,12 +56,11 @@ APPROVED_WORKFLOW = b"""# release \xe2\x80\x94 the crates.io publish gate.
 # CARGO_REGISTRY_TOKEN to this workflow (repo Settings \xe2\x86\x92 Environments \xe2\x86\x92
 # release). Enabling "Required reviewers" there adds a second human gate.
 #
-# All 12 publishable members ship in one dependency-ordered
-# `cargo publish --workspace` (Rust 1.90+). Five private members are skipped by
-# their own `publish = false`: `oce-bless`, `oce-conformance`, `oce-docs`,
-# `oce-extension`, and `oce-reference-wal-adapter`. crates.io rejects
-# re-publishing an existing version, so a repeat dispatch is a no-op-or-fail,
-# never a clobber.
+# All 11 publishable members ship in one dependency-ordered
+# `cargo publish --workspace` (Rust 1.90+). Three private members are skipped by
+# their own `publish = false`: `oce-bless`, `oce-conformance`, and
+# `oce-reference-wal-adapter`. crates.io rejects re-publishing an existing
+# version, so a repeat dispatch is a no-op-or-fail, never a clobber.
 #
 # Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
 # No crate is published yet; actual publication remains deferred until explicit
@@ -115,7 +111,7 @@ jobs:
       - name: tests
         run: cargo test --workspace --locked
 
-      - name: package, feature, and publication contract (12 publishable, 5 private)
+      - name: package, feature, and publication contract (11 publishable, 3 private)
         run: python3 scripts/package_policy/validate.py
 
       - name: publish dry-run (workspace, dependency-ordered)
@@ -236,9 +232,9 @@ class PackagePolicyControls(unittest.TestCase):
             validate.validate_workspace(foreign)
 
     def test_declared_feature_drift_is_rejected(self) -> None:
-        """The oce-api feature table is closed: no new spelling, no lost default."""
+        """The oce-api feature table is closed: it declares no features, so any spelling drifts."""
 
-        for features in ({"default": [], "mem": []}, {"default": ["mem"], "mem": [], "db": []}, {}):
+        for features in ({"default": []}, {"default": ["mem"], "mem": []}, {"db": []}):
             with self.subTest(features=features):
                 changed = copy.deepcopy(self.metadata)
                 self.package(changed, "oce-api")["features"] = features
@@ -251,9 +247,9 @@ class PackagePolicyControls(unittest.TestCase):
         changed = copy.deepcopy(self.metadata)
         self.package(changed, "oce-api")["dependencies"].append(
             {
-                "name": "oce-docs",
+                "name": "oce-conformance",
                 "kind": None,
-                "path": "/fixture/oce-docs",
+                "path": "/fixture/oce-conformance",
                 "req": "^0.1.0",
             }
         )
@@ -294,32 +290,32 @@ class PackagePolicyControls(unittest.TestCase):
             validate.validate_workspace(changed)
 
     def test_feature_closure_drift_and_private_leakage_are_rejected(self) -> None:
-        """Every supported spelling retains the same public normal closure."""
+        """The default build retains the public normal closure and enables no feature."""
 
         closure = self.workspace["api_closure"]
         drifted = self.observations()
-        drifted["no-default-features"]["workspace_closure"].remove("oce-store-mem")
+        drifted["default"]["workspace_closure"].remove("oce-store-mem")
         with self.assertRaisesRegex(validate.PolicyError, "feature closure drift"):
             validate.validate_feature_observations(drifted, closure, EXPECTED_PRIVATE)
 
         leaked = self.observations()
-        leaked["explicit-mem"]["workspace_closure"].append("oce-docs")
-        leaked["explicit-mem"]["workspace_closure"].sort()
+        leaked["default"]["workspace_closure"].append("oce-conformance")
+        leaked["default"]["workspace_closure"].sort()
         with self.assertRaisesRegex(validate.PolicyError, "feature closure drift"):
             validate.validate_feature_observations(leaked, closure, EXPECTED_PRIVATE)
 
         enabled = self.observations()
-        enabled["no-default-features"]["enabled_features"] = ["mem"]
+        enabled["default"]["enabled_features"] = ["mem"]
         with self.assertRaisesRegex(validate.PolicyError, "enabled feature drift"):
             validate.validate_feature_observations(enabled, closure, EXPECTED_PRIVATE)
 
         missing = self.observations()
-        del missing["explicit-mem"]
+        del missing["default"]
         with self.assertRaisesRegex(validate.PolicyError, "observation coverage differs"):
             validate.validate_feature_observations(missing, closure, EXPECTED_PRIVATE)
 
     def test_forbidden_runtime_dependency_is_rejected(self) -> None:
-        """Supported feature selections cannot add a database or async runtime."""
+        """The supported selection cannot add a database or async runtime."""
 
         for forbidden in validate.FORBIDDEN_DEPENDENCIES:
             with self.subTest(dependency=forbidden):
@@ -397,7 +393,7 @@ class WorkflowApprovalControls(unittest.TestCase):
             report = self.run_policy(workflow)
             self.assertEqual(report[0], 0)
             self.assertEqual(report[2], "")
-            self.assertIn("PASS (17 members; 12 publishable; 5 private)", report[1])
+            self.assertIn("PASS (14 members; 11 publishable; 3 private)", report[1])
             reports.append(report)
         self.assertEqual(reports, [reports[0]] * 3)
 

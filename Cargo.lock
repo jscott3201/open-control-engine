@@ -126,7 +126,6 @@ dependencies = [
  "oce-blocks",
  "oce-cxf",
  "oce-diag",
- "oce-flatten",
  "oce-graph",
  "oce-model",
  "oce-semantics",
@@ -190,26 +189,7 @@ name = "oce-diag"
 version = "0.2.0"
 
 [[package]]
-name = "oce-docs"
-version = "0.2.0"
-dependencies = [
- "oce-store",
-]
-
-[[package]]
 name = "oce-expr"
-version = "0.2.0"
-dependencies = [
- "oce-model",
- "thiserror",
-]
-
-[[package]]
-name = "oce-extension"
-version = "0.2.0"
-
-[[package]]
-name = "oce-flatten"
 version = "0.2.0"
 dependencies = [
  "oce-model",

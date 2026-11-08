@@ -27,7 +27,9 @@ fn descriptors_cover_every_domain_with_explicit_shapes_and_semantic_limits() {
     for descriptor in descriptors {
         let revision = if matches!(
             descriptor.domain,
-            ContractDomain::Assertions | ContractDomain::ExecutionProfile
+            ContractDomain::Diagnostics
+                | ContractDomain::Assertions
+                | ContractDomain::ExecutionProfile
         ) {
             2
         } else {

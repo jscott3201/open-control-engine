@@ -129,11 +129,10 @@ A missing element is a missing promotion. That is the bar, and it is why the sup
 ## The engine does not read Modelica
 
 The engine executes the block graph that CXF hands it. It does **not** parse or flatten Modelica
-`.mo` sources. `oce-flatten` is a reserved seam and an identity passthrough today: CXF arrives
-already flattened and monomorphic, the `oce-cxf` resolver owns lowering, and full Modelica
-elaboration — parameter propagation, expression folding, conditional-instance removal,
-`replaceable`/`redeclare`/`extends` — is explicitly deferred
-(see the crate-level docs of `oce-flatten`). If your sequence exists only as `.mo`, something
+`.mo` sources. CXF arrives already flattened and monomorphic, the `oce-cxf` resolver owns all
+lowering, and nothing elaborates the graph after it. Full Modelica elaboration — parameter
+propagation, expression folding, conditional-instance removal, `replaceable`/`redeclare`/`extends`
+— is not implemented. If your sequence exists only as `.mo`, something
 upstream has to produce CXF first.
 
 **Upstream modelica-json output does not load today.** The 44 modelica-json CXF translations

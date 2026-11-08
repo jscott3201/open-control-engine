@@ -1,14 +1,14 @@
 {
   "domain": "diagnostics",
   "ordering": [
-    "stage rank (listed order, 0..11)",
+    "stage rank (listed order, 0..10)",
     "subject category/presence: Absent before Opaque",
     "exact opaque subject UTF-8 text, including empty",
     "code UTF-8 string",
     "severity: Error=0, Warning=1, Info=2"
   ],
   "representation": "Rust facade contract description; not a general JSON codec",
-  "revision": 1,
+  "revision": 2,
   "semantics": [
     "Human messages excluded from machine equality/order; equal keys retain producer-relative tie order and multiplicity.",
     "Present subjects may be authored, synthetic, class-level or positional; no provenance inferred. Host owns target mapping and truncation.",
@@ -17,7 +17,6 @@
   ],
   "stages": [
     "Import",
-    "Flatten",
     "AttributeUnification",
     "Validation",
     "Instantiation",

@@ -45,11 +45,11 @@ fn machine_order_excludes_prose_and_retains_duplicate_records() {
         [
             (0, DiagnosticSubject::Absent),
             (0, DiagnosticSubject::Absent),
-            (3, DiagnosticSubject::Absent),
-            (3, DiagnosticSubject::Opaque("".into())),
-            (3, DiagnosticSubject::Opaque("b0".into())),
-            (3, DiagnosticSubject::Opaque("urn:authored".into())),
-            (3, DiagnosticSubject::Opaque("z".into())),
+            (2, DiagnosticSubject::Absent),
+            (2, DiagnosticSubject::Opaque("".into())),
+            (2, DiagnosticSubject::Opaque("b0".into())),
+            (2, DiagnosticSubject::Opaque("urn:authored".into())),
+            (2, DiagnosticSubject::Opaque("z".into())),
         ]
     );
     assert_eq!(receipt.records()[0].key(), receipt.records()[1].key());
@@ -101,12 +101,12 @@ fn code_precedes_severity_and_stage_precedes_subject() {
         observed,
         [
             (0, "duplicate-id", 1),
-            (3, "analog-coerced-to-real", 0),
-            (3, "analog-coerced-to-real", 1),
-            (3, "analog-coerced-to-real", 2),
-            (3, "duplicate-id", 0),
-            (3, "duplicate-id", 1),
-            (3, "analog-coerced-to-real", 1)
+            (2, "analog-coerced-to-real", 0),
+            (2, "analog-coerced-to-real", 1),
+            (2, "analog-coerced-to-real", 2),
+            (2, "duplicate-id", 0),
+            (2, "duplicate-id", 1),
+            (2, "analog-coerced-to-real", 1)
         ]
     );
 }
@@ -117,7 +117,6 @@ fn stage_ranks_are_explicit_and_total() {
     assert_eq!(
         [
             Import,
-            Flatten,
             AttributeUnification,
             Validation,
             Instantiation,
@@ -130,7 +129,7 @@ fn stage_ranks_are_explicit_and_total() {
             Export
         ]
         .map(DiagnosticStage::rank),
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     );
 }
 

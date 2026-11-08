@@ -1,5 +1,5 @@
 //! Conformance harness for the hand-authored fixture corpus. Each fixture is driven through the
-//! **full** `Engine::load_cxf` pipeline (CXF resolve → flatten → validate → BUILD) to assert the
+//! **full** `Engine::load_cxf` pipeline (CXF resolve → validate → BUILD) to assert the
 //! end-to-end accept/reject/warn contract and full-pipeline determinism (`TESTING.md` pillars
 //! 1, 2, and 4).
 //!

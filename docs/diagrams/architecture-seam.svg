@@ -22,17 +22,16 @@
   <text x="300" y="210" text-anchor="middle" font-size="15" font-weight="700" fill="#174ea6">Execution core · Group A</text>
   <text x="300" y="230" text-anchor="middle" font-size="12.5" fill="#174ea6">deterministic · in-memory · NO database · the hot path</text>
 
-  <!-- crate chips: 3 columns x 3 rows -->
+  <!-- crate chips: 3 + 3 + 2 rows -->
   <g font-size="12.5" font-weight="600" fill="#1967d2" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
-    <rect x="40"  y="246" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="120" y="268" text-anchor="middle">oce-model</text>
+    <rect x="40 " y="246" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="120" y="268" text-anchor="middle">oce-model</text>
     <rect x="218" y="246" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="298" y="268" text-anchor="middle">oce-expr</text>
     <rect x="396" y="246" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="476" y="268" text-anchor="middle">oce-blocks</text>
-    <rect x="40"  y="288" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="120" y="310" text-anchor="middle">oce-flatten</text>
-    <rect x="218" y="288" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="298" y="310" text-anchor="middle">oce-validate</text>
-    <rect x="396" y="288" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="476" y="310" text-anchor="middle">oce-graph</text>
-    <rect x="40"  y="330" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="120" y="352" text-anchor="middle">oce-cxf</text>
-    <rect x="218" y="330" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="298" y="352" text-anchor="middle">oce-semantics</text>
-    <rect x="396" y="330" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="476" y="352" text-anchor="middle">oce-diag</text>
+    <rect x="40 " y="288" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="120" y="310" text-anchor="middle">oce-validate</text>
+    <rect x="218" y="288" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="298" y="310" text-anchor="middle">oce-graph</text>
+    <rect x="396" y="288" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="476" y="310" text-anchor="middle">oce-cxf</text>
+    <rect x="129" y="330" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="209" y="352" text-anchor="middle">oce-semantics</text>
+    <rect x="307" y="330" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="387" y="352" text-anchor="middle">oce-diag</text>
   </g>
   <text x="300" y="392" text-anchor="middle" font-size="12" fill="#174ea6" font-style="italic">frozen Kahn schedule over flat arrays — no graph walk, no hashing, no store access</text>
   <text x="300" y="432" text-anchor="middle" font-size="13" fill="#174ea6">load → validate → schedule → prepare → execute frame</text>

@@ -5,7 +5,7 @@ use std::cmp::Ordering;
 use crate::{ExportReport, LoadReport, OcError};
 
 /// Revision of receipt fields and the message-independent machine ordering.
-pub const DIAGNOSTIC_SCHEMA_REVISION: u32 = 1;
+pub const DIAGNOSTIC_SCHEMA_REVISION: u32 = 2;
 
 /// Producer operation at which evidence was emitted or a terminal failure occurred.
 ///
@@ -15,8 +15,6 @@ pub const DIAGNOSTIC_SCHEMA_REVISION: u32 = 1;
 pub enum DiagnosticStage {
     /// CXF parse and resolution.
     Import,
-    /// Flattening the resolved graph.
-    Flatten,
     /// Connector attribute unification.
     AttributeUnification,
     /// Structural/type/parameter validation.
@@ -40,22 +38,24 @@ pub enum DiagnosticStage {
 }
 
 impl DiagnosticStage {
-    /// Stable revision-1 rank used by receipt machine ordering.
+    /// Stable revision-2 rank used by receipt machine ordering.
+    ///
+    /// Revision 2 removed the identity `Flatten` boundary that sat between [`Self::Import`] and
+    /// [`Self::AttributeUnification`]; the relative order of every remaining stage is unchanged.
     #[must_use]
     pub const fn rank(self) -> u8 {
         match self {
             Self::Import => 0,
-            Self::Flatten => 1,
-            Self::AttributeUnification => 2,
-            Self::Validation => 3,
-            Self::Instantiation => 4,
-            Self::Schedule => 5,
-            Self::Semantics => 6,
-            Self::Projection => 7,
-            Self::StoreRecovery => 8,
-            Self::StoreSave => 9,
-            Self::StoreInputs => 10,
-            Self::Export => 11,
+            Self::AttributeUnification => 1,
+            Self::Validation => 2,
+            Self::Instantiation => 3,
+            Self::Schedule => 4,
+            Self::Semantics => 5,
+            Self::Projection => 6,
+            Self::StoreRecovery => 7,
+            Self::StoreSave => 8,
+            Self::StoreInputs => 9,
+            Self::Export => 10,
         }
     }
 }
@@ -72,7 +72,7 @@ pub enum DiagnosticSeverity {
 }
 
 impl DiagnosticSeverity {
-    /// Stable revision-1 rank: error, warning, info.
+    /// Stable rank, unchanged since revision 1: error, warning, info.
     #[must_use]
     pub const fn rank(self) -> u8 {
         match self {
@@ -185,7 +185,7 @@ pub struct DiagnosticReceipt {
 }
 
 impl DiagnosticReceipt {
-    /// Borrow records in revision-1 machine order; no allocation.
+    /// Borrow records in machine order; no allocation.
     #[must_use]
     pub fn records(&self) -> &[DiagnosticRecord] {
         &self.records

@@ -14,7 +14,7 @@
 //!
 //! # Scalar subset
 //!
-//! This crate implements the scalar grounding subset that `oce-flatten` needs to fold
+//! This crate implements the scalar grounding subset that the `oce-cxf` resolver needs to fold
 //! parameter/constant bindings (`02-type-system-and-values.md` §6–7):
 //!
 //! - **Literals** — `Real`, `Integer`, `Boolean`, `String`.
@@ -90,7 +90,7 @@
 //! binding today is a typed error, never a panic.
 //!
 //! The public surface below (`parse`/`eval`/`eval_str`, [`ExprAst`], [`Scope`], [`EvalResult`],
-//! [`ExprError`]) is the **stable contract** `oce-flatten` binds to.
+//! [`ExprError`]) is the **stable contract** the `oce-cxf` resolver binds to.
 
 use std::sync::Arc;
 
@@ -437,7 +437,7 @@ pub enum Shape {
 }
 
 /// Resolves identifiers to ground values during evaluation. Implemented over the in-scope
-/// parameter/constant table that `oce-flatten` supplies. Pure and total: never reads
+/// parameter/constant table that the `oce-cxf` resolver supplies. Pure and total: never reads
 /// attributes, connectors, or time (R11).
 ///
 /// `enum_class`/`enum_ordinal` back enumeration-reference grounding (`02` §7.4): evaluating an

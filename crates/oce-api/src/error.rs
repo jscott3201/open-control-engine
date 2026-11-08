@@ -57,9 +57,6 @@ pub enum OcError {
     /// A loader-conformance failure.
     #[error("validation failed: {0}")]
     Validate(#[from] oce_validate::ValidationError),
-    /// A flattening failure.
-    #[error("flatten error: {0}")]
-    Flatten(#[from] oce_flatten::FlattenError),
     /// A model build/schedule failure (algebraic loop, etc.).
     #[error("model build/schedule error: {0}")]
     Build(#[from] oce_graph::BuildError),

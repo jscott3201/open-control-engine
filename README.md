@@ -136,7 +136,7 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
 Stating this plainly is more useful than a feature list.
 
 - **It does not parse or flatten Modelica `.mo` sources.** It executes the block graph a CXF
-  document hands it. `oce-flatten` is a reserved seam that returns the model unchanged.
+  document hands it; the `oce-cxf` resolver lowers that document and nothing elaborates it further.
 - **It is not general ASHRAE G36 support.** The supported set is explicitly
   *selected-explicit-cxf-variants-supported*: pre-flattened CXF at specific parameterizations, not
   other G36 composites. [What "supported" means](docs/cdl-coverage.md).

@@ -25,8 +25,8 @@
 //! `params` (the live parameter table), `frame` (complete typed execution), `io` (the typed IO
 //! inventory), and `observations` / `watch` (latest-state, non-receipt output inspection).
 //!
-//! [`Engine::load_cxf`] runs the end-to-end CXF ingest pipeline (resolve → flatten → validate →
-//! BUILD). Execution is exclusively [`Engine::prepare_frame`] followed by consuming
+//! [`Engine::load_cxf`] runs the end-to-end CXF ingest pipeline (resolve → validate → BUILD).
+//! Execution is exclusively [`Engine::prepare_frame`] followed by consuming
 //! [`Engine::execute_frame`]. [`CompletedFrame`] is the immutable committed boundary-output
 //! receipt. The facade also provides latest-state `get_output` / `watch`, the live parameter table
 //! (`get_param` / `set_param` / `halt` / `resume` / `mode`), and the typed IO inventory (`io` /

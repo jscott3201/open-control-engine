@@ -1,5 +1,5 @@
 //! End-to-end golden for the canonical `minimal_loop.jsonld`: load it through the full
-//! `Engine::load_cxf` pipeline (CXF resolve → flatten → validate → BUILD → schedule), tick it, and
+//! `Engine::load_cxf` pipeline (CXF resolve → validate → BUILD → schedule), tick it, and
 //! assert the deterministic converging trace **bit-exactly** (`TESTING.md` pillars 2 + 4), plus that
 //! malformed CXF is a typed error and never a panic (pillar 1).
 //!

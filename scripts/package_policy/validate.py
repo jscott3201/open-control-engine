@@ -3,8 +3,8 @@
 
 Every workspace member is either private (`publish = false`) or registry-ready: its normal and
 build dependencies on other members are path-backed with a registry version, and none of them is
-private. The `oce-api` feature selections must keep one shared normal closure with no database or
-async runtime, and the release workflow bytes stay approved. Publication state comes from each
+private. The `oce-api` default build, its only selection, must keep a normal closure with no
+database or async runtime, and the release workflow bytes stay approved. Publication state comes from each
 crate's `Cargo.toml`; nothing else restates it before 1.0.
 """
 
@@ -22,11 +22,10 @@ import release_workflow
 ROOT = Path(__file__).resolve().parents[2]
 RELEASE_WORKFLOW = ".github/workflows/release.yml"
 FEATURE_PACKAGE = "oce-api"
-EXPECTED_FEATURES = {"default": ["mem"], "mem": []}
+# `oce-api` declares no cargo features, so the default build is the only selection.
+EXPECTED_FEATURES: dict[str, list[str]] = {}
 EXPECTED_SELECTIONS = {
-    "default": ([], ["default", "mem"]),
-    "explicit-mem": (["--no-default-features", "--features", "mem"], ["mem"]),
-    "no-default-features": (["--no-default-features"], []),
+    "default": ([], []),
 }
 REQUIRED_CLOSURE_MEMBER = "oce-store-mem"
 FORBIDDEN_DEPENDENCIES = ["async-std", "selene-db", "tokio"]
@@ -257,7 +256,7 @@ def validate_feature_observations(
             raise PolicyError(f"forbidden normal dependency for {name}: {sorted(forbidden)}")
         observed_closures.add(tuple(observation["workspace_closure"]))
     if len(observed_closures) != 1:
-        raise PolicyError("supported feature selections do not have equal normal OCE closures")
+        raise PolicyError("supported selections do not have equal normal OCE closures")
 
 
 def validate_unknown_feature_refusal() -> None:

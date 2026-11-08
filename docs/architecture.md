@@ -1,7 +1,7 @@
 # Architecture
 
 This page is for an engineer deciding whether to embed the Open Control Engine in a product. It
-answers four questions: what the layers are, where the seam between them falls, what each of the 17
+answers four questions: what the layers are, where the seam between them falls, what each of the 14
 crates owns, and what this engine will never do for you.
 
 The [product contract](product-contract.md) owns the aggregate requirement/evidence map and delegates
@@ -14,7 +14,7 @@ CDL §7.17 states that point lists, trends, display units, tags, and all Brick /
 available in this problem domain, and the engine is built along it rather than around it.
 
 ![Architecture diagram. A host application drives the engine through the oce-api facade. Below it, a
-deterministic execution core labelled Group A contains oce-model, oce-expr, oce-blocks, oce-flatten,
+deterministic execution core labelled Group A contains oce-model, oce-expr, oce-blocks,
 oce-validate, oce-graph, oce-cxf, oce-semantics and oce-diag; it sees only blocks, connections and
 values, evaluates a frozen Kahn schedule over flat arrays, and has no database. A horizontal line
 marked "CDL §7.17 seam" separates it from the storage side, where the oce-store port publishes the
@@ -31,8 +31,8 @@ topology, points, instance structure, parameters, trends, semantic triples — p
 persistence is reached only through the `oce-store` port traits
 (`ModelStore`, `PointStore`, `SemanticStore`, `Durable` and the composite `Store` in `crates/oce-store/src/lib.rs`). The library ships **no first-party database**. Durable or
 queryable backends are app-side adapters behind the port, with an in-memory default
-(`oce-store-mem`) so that a downstream project can embed the engine for *load → flatten → validate →
-schedule → prepare frame → execute frame* with no database at all.
+(`oce-store-mem`) so that a downstream project can embed the engine for *load → validate → schedule →
+prepare frame → execute frame* with no database at all.
 
 The seam also fixes where responsibility for input quality lives: the host supplies every typed
 boundary input exactly once. Missing values refuse; Store samples and prior values cannot fill gaps.
@@ -43,8 +43,8 @@ Staleness limits, fault reactions, and safe-state fallback belong to the host la
 
 ## The pipeline: build once, tick many
 
-![Pipeline diagram. A build phase runs once per load and off the hot path: load ingests CXF, flatten
-elaborates, validate applies the conformance gate, and schedule performs a Kahn topological sort.
+![Pipeline diagram. A build phase runs once per load and off the hot path: load ingests and lowers
+CXF, validate applies the conformance gate, and schedule performs a Kahn topological sort.
 The host prepares complete typed observations, then consumes them in one HostTick transition with
 an owned completed result and no Store I/O.](diagrams/pipeline.svg)
 
@@ -66,7 +66,7 @@ The engine is, by design:
   transport, TLS, authN/Z, multi-tenancy, off-host durability, and metrics export.
 - **Synchronous and in-process.** Every public method is a blocking synchronous call, and no async
   runtime is pulled at any layer. The check is the dependency set below, not a promise.
-- **`#![forbid(unsafe_code)]` in all 17 crates**, belt and braces: each `crates/*/src/lib.rs`
+- **`#![forbid(unsafe_code)]` in all 14 crates**, belt and braces: each `crates/*/src/lib.rs`
   carries the crate attribute, *and* the workspace sets `unsafe_code = "forbid"` under
   `[workspace.lints.rust]` (root `Cargo.toml`).
 - **Edition 2024**, `resolver = "3"`.
@@ -119,7 +119,7 @@ them, because nothing re-measures them in CI.
 
 ## The crate map
 
-Seventeen crates. The dependency direction is acyclic and organized around the seam above.
+Fourteen crates. The dependency direction is acyclic and organized around the seam above.
 Their responsibilities below do not imply equal support or publication status: publication is
 read from each crate's `publish` flag and checked by the
 [package validator](ci-and-the-gate.md#the-package-validator), and a publishable implementation
@@ -132,10 +132,9 @@ crate is registry closure for the facade, not an independently supported host AP
 | `oce-model` | Pure value/connector/instance/connection types; the `Value` enum (Real/Integer/Boolean/String/Enum) and the flattened model graph — the shared executable truth. |
 | `oce-expr` | The CDL §7.7.2 binding-expression parser and evaluator (closed-world, pure). Bounded on structure: input deeper than `MAX_NESTING_DEPTH` (64) or wider than `MAX_EXPR_NODES` (4096) is a typed error, not a stack overflow (`crates/oce-expr/src/lib.rs`). Depth counts real nesting only; a left-associative chain such as `a+b+…` is bounded by the node cap and evaluated iteratively. |
 | `oce-blocks` | The `Block` trait and the native CDL elementary-block library, publicly enumerable at runtime via `catalog()` (`crates/oce-blocks/src/catalog.rs`) with ports, parameter rules, and honest parameter defaults per class. |
-| `oce-flatten` | **Reserved seam; an identity passthrough today.** `oce-cxf` owns lowering because CXF arrives pre-flattened, so `flatten()` returns the model unchanged (`crates/oce-flatten/src/lib.rs`). Full `.mo` flattening is deferred. It is a publishable implementation dependency on the `oce-api` path, not an independently supported package. |
 | `oce-validate` | Loader conformance: subset rejection, single-assignment, type and attribute unification, parameter rules. |
 | `oce-graph` | The deterministic scheduler and executor: direct-feedthrough DAG, algebraic-loop rejection, its own Kahn topological sort, the tick loop. |
-| `oce-cxf` | CXF (Control eXchange Format) JSON-LD ↔ model graph, both directions. Composite nesting is bounded at 64. Boundary lowering is iterative and separately bounded at 64 non-top `isConnectedTo` hops per path, 65,536 target examinations, and 8 MiB of aggregate target-IRI bytes per document. The accept/reject contract is written out in [cxf-composite-subset.md](cxf-composite-subset.md). |
+| `oce-cxf` | CXF (Control eXchange Format) JSON-LD ↔ model graph, both directions. The resolver owns all lowering: composites are flattened away, parameters grounded and array parameters normalized to per-element scalars, so nothing elaborates the graph after it. Full `.mo` flattening is not implemented. Composite nesting is bounded at 64. Boundary lowering is iterative and separately bounded at 64 non-top `isConnectedTo` hops per path, 65,536 target examinations, and 8 MiB of aggregate target-IRI bytes per document. The accept/reject contract is written out in [cxf-composite-subset.md](cxf-composite-subset.md). |
 | `oce-semantics` | **Active effective-point metadata resolver.** Derives metadata from connector attributes, direction, value type and defaults; this is unrelated to the removed semantic-template loader. Raw `__cdl` / `__CDL` annotation parsing remains deferred. It stays a wired, publishable `oce-api` implementation dependency, not an independently supported API. |
 | `oce-diag` | The shared diagnostic vocabulary (`Severity` / `DiagCode` / `Diagnostic`) across the ingest path. Zero dependencies. |
 
@@ -153,22 +152,16 @@ crate is registry closure for the facade, not an independently supported host AP
 | --- | --- |
 | `oce-conformance` | **Verification-only, `publish = false`.** The funnel-style tolerance-band and golden-trace conformance harness. Standalone: no other crate depends on it. Read [`TESTING.md`](../TESTING.md) for what it does and does not check. |
 | `oce-bless` | **Test-support only, `publish = false`.** The single definition of the repo's environment-variable truthiness policy, so golden-regeneration switches cannot drift apart across crates. |
-| `oce-extension` | **Experimental/reserved, `publish = false`; nothing consumes it.** The intended role is the FMI / extension-block boundary. No crate depends on it, the CXF resolver has no extension-block branch (an unknown class is a hard `ClassNotFound`), and `DiagCode::MissingFmuPath` (`crates/oce-diag/src/lib.rs`) is declared but never constructed. **Do not plan FMI integration against this crate.** |
-| `oce-docs` | **Reserved panic-only seam, `publish = false`.** The sequence-spec and point-list export surface is declared; `point_list_html` panics with `unimplemented!` (`crates/oce-docs/src/lib.rs`). Nothing depends on it. |
 | `oce-api` | The primary embeddable host facade: `Engine<S: Store = MemStore>`, spanning load, complete-frame preparation/execution, parameters, IO inventory, latest-state non-receipt reads (`get_output`/`watch`), CXF export with content id, and a read-only topology view. Its catalog metadata is `oce_api::catalog()`, with the actively supported `oce_blocks::catalog()` as a separate companion surface; see the [product contract](product-contract.md). |
 
-Four of those — `oce-flatten`, `oce-semantics`, `oce-extension`, `oce-docs` — are reserved seams
-rather than working components. They are named here so that nobody plans a feature against a crate
-that does nothing yet.
+Every crate listed here does work today. Reserved placeholder crates were removed rather than kept
+as empty seams, so nobody plans a feature against a crate that does nothing.
 
-### The legacy `mem` compatibility spelling
+### The default store
 
-`oce-api` declares `default = ["mem"]`, but `mem = []` gates nothing and `oce-store-mem` is an
-unconditional dependency, so disabling default features does not remove the in-memory backend.
-The flag is retained temporarily as a truthful legacy no-op while downstream manifests migrate.
-What actually makes `MemStore` the default is the type parameter in `Engine<S: Store = MemStore>`.
-To use a different backend, name it: `Engine<MyAdapter>`. The complete supported matrix and its
-mechanical closure guard are in the [package validator](ci-and-the-gate.md#the-package-validator).
+`oce-api` declares no cargo features. `oce-store-mem` is an unconditional dependency, so there is no
+build without the in-memory backend. What makes `MemStore` the default is the type parameter in
+`Engine<S: Store = MemStore>`; to use a different backend, name it: `Engine<MyAdapter>`.
 
 ## What this engine will never do
 

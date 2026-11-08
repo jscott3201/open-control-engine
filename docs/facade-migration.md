@@ -16,6 +16,8 @@ The [product contract](product-contract.md) owns the facade's current requiremen
 | `Engine::tick`, `tick_with`, `set_input`, `simulate`, `step_realtime` | Collect every required input once, call `prepare_frame`, then move the result into `execute_frame`. Missing/duplicate/domain-invalid input refuses before mutation. No compatibility aliases exist. |
 | Realtime epoch accessors and realtime-only error variants, `StepReport` | Own wall-clock mapping, persistence and delivery outside execution; realtime/Store orchestration is deferred. No engine write-back helper replaces them. |
 | `Outputs`, `Engine::outputs` | Retain `CompletedFrame` for committed boundary results and warnings. Use `get_output`/`watch` only for explicitly latest-state, non-receipt inspection. |
+| `OcError::Flatten`, `DiagnosticStage::Flatten` | Delete match arms for them. The identity pass they reported was removed; the diagnostics schema is revision 2 and later stage ranks moved down by one with their relative order unchanged. |
+| The `oce-api` `mem` feature | Drop `features = ["mem"]` (and any `default-features = false` added only for it). The feature gated nothing; the in-memory store is unconditional. |
 | `AssertLevel::Error` | Update exhaustive matches and code that constructed the unimplemented severity. `AssertLevel` now contains only `Warning`; `AssertEvent.level` remains. |
 
 **Default-value change:** `AssertLevel::default()` is now `Warning`, previously `Error`. A signature
@@ -44,12 +46,11 @@ numerical goldens, catalog identity, HostTick arithmetic and engine thread-safet
 
 ## Package and panic-inventory boundary
 
-No package/feature/dependency policy changes: 17 members, 12 publishable, five private; all three
-supported feature selections retain the same eleven normal OCE dependencies and the mem no-op.
-Private `oce-docs` retains its `point_list_html` unimplemented exporter outside the supported closure.
-Private `oce-extension` retains its reserved DTO, with no runtime. `oce-flatten` successfully returns
-its input model unchanged, and `oce-semantics` actively derives effective point metadata; both remain
-wired implementation dependencies. No new feature or replacement placeholder is introduced.
+The workspace has 14 members, 11 publishable and three private. `oce-api` declares no cargo
+features, and its normal closure is ten OCE packages. The reserved placeholder crates — an identity
+elaboration pass, an FMI boundary DTO and an unimplemented document exporter — were removed
+(GitHub #389) rather than kept; `oce-semantics` actively derives effective point metadata and remains
+a wired implementation dependency. No replacement placeholder is introduced.
 
 The focused production inventory distinguishes placeholder handlers from invariant checks:
 CXF resolver `composite.rs` and `composite_orientation/diagnostics.rs` contain `unreachable!` arms
@@ -61,8 +62,8 @@ cancellation or equipment-safety claim.
 
 ## Compatibility evidence limits
 
-The compiler contract checks retired names plus same-dependency frame controls under default,
-explicit mem and no-default selections. Baseline reintroduction controls are additional, not a
+The compiler contract checks retired names plus same-dependency frame controls under the default
+build, the only selection now that `oce-api` declares no features. Baseline reintroduction controls are additional, not a
 substitute for compilation; unrelated associated `Error` types remain in the baseline. Only the
 facade baseline changes (2384 to 2111 rows for this contraction); the storage baseline remains byte-identical.
 

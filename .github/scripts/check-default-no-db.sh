@@ -20,12 +20,12 @@
 # Tests may inject cargo metadata with OCE_NO_DB_METADATA_FILE; the fixture is used for both the
 # `--no-deps` package scan and the full resolve graph scan. The gate fails closed if metadata or jq
 # is unavailable, empty, malformed, has no shipped crates, or omits the canonical `oce-api` facade.
-# Together these prove a downstream project can embed the engine for load -> flatten -> validate ->
-# schedule -> tick -> simulate with no DB at all.
+# Together these prove a downstream project can embed the engine for load -> validate -> schedule ->
+# tick -> simulate with no DB at all.
 #
 # We keep `oce-api` (the public facade) as the canonical embeddable assertion AND loop the same
 # forbidden-crate check over every workspace member derived from `cargo metadata --no-deps`. That
-# catches Group C drift (`oce-conformance`, `oce-extension`, `oce-docs`) when new crates are added.
+# catches Group C drift (`oce-conformance`, `oce-bless`) when new crates are added.
 # We match real crate names (`selene-db`, `selene_*`, `tokio*`, `async-std*`, `rayon*`); `selene-db`
 # is listed as a representative graph database an app might adopt app-side — it must never enter
 # this library's tree. `rayon` is forbidden by D6: the deterministic Kahn scheduler is

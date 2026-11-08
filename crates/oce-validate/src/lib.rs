@@ -8,7 +8,7 @@
 //! `oce-validate` — the authoritative **deep load-conformance gate** for the Open Control Engine.
 //!
 //! After the `oce-cxf` resolver's minimal structural fail-fast (duplicate `@id`, unresolved
-//! endpoints, CXF interface arity) and `oce-flatten`'s array normalization, this crate is the gate
+//! endpoints, CXF interface arity) and its array-parameter normalization, this crate is the gate
 //! that decides whether a flattened [`ModelGraph`] may be built and ticked. It enforces:
 //!
 //! 1. **Arena id integrity**: every `BlockId` is dense/unique, every connector's owning block id is
