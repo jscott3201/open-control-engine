@@ -171,7 +171,7 @@ fn load_with_finite(entry: &CatalogEntry, name: &str) -> Option<(Engine, Value)>
             .map(Value::Real),
     );
     for candidate in candidates {
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         let model = one_block_model(entry.class_path, with_param(&base, name, candidate.clone()));
         if engine.build_model_in_memory(model, None).is_ok() {
             return Some((engine, candidate));
@@ -208,7 +208,7 @@ fn every_registered_real_parameter_refuses_non_finite_values_at_load_and_at_rest
                     entry.class_path,
                     with_param(&base_params(entry), &name, Value::Real(bad)),
                 );
-                let error = Engine::in_memory()
+                let error = Engine::new()
                     .build_model_in_memory(model, None)
                     .expect_err(&format!("{case}={bad}: load must refuse"));
                 let OcError::Validate(error) = error else {
@@ -285,7 +285,7 @@ fn unconstrained_real_parameters_accept_every_finite_boundary_at_load_and_at_res
         );
         let path = format!("b0.{name}");
         for value in boundaries {
-            let mut loaded = Engine::in_memory();
+            let mut loaded = Engine::new();
             loaded
                 .build_model_in_memory(
                     one_block_model(class, vec![(Arc::from(name), Value::Real(value))]),
@@ -294,7 +294,7 @@ fn unconstrained_real_parameters_accept_every_finite_boundary_at_load_and_at_res
                 .unwrap_or_else(|error| panic!("{class}.{name}={value:e} load: {error:?}"));
             assert!(loaded.get_param(&path).unwrap().bit_eq(&Value::Real(value)));
 
-            let mut edited = Engine::in_memory();
+            let mut edited = Engine::new();
             edited
                 .build_model_in_memory(
                     one_block_model(class, vec![(Arc::from(name), Value::Real(1.0))]),
@@ -315,7 +315,7 @@ fn unconstrained_real_parameters_accept_every_finite_boundary_at_load_and_at_res
 fn integer_and_boolean_parameters_are_outside_the_finiteness_gate() {
     // The gate is value-based: Integer extremes (always finite, also when promoted to a Real
     // parameter) and Booleans never trip it.
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(
             one_block_model(
@@ -325,7 +325,7 @@ fn integer_and_boolean_parameters_are_outside_the_finiteness_gate() {
             None,
         )
         .expect("an Integer-valued Real gain is finite");
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(
             one_block_model(

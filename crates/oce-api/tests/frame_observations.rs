@@ -37,7 +37,7 @@ const CASES: &[(&str, &[u8], usize, usize)] = &[
 ];
 
 fn setup(bytes: &[u8]) -> (Engine, Vec<(String, Value)>) {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(bytes).unwrap();
     let observations = engine
         .input_definitions()

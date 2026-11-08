@@ -55,7 +55,7 @@ impl fmt::Display for CatalogContentId {
 /// ```
 ///
 /// ```compile_fail,E0308
-/// let model_id = oce_api::oce_store::DomainKey::new("authored-model");
+/// let model_id = oce_api::DomainKey::new("authored-model");
 /// let _: oce_api::CompleteExportContentId = model_id;
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -131,7 +131,7 @@ impl CompatibilityDescriptor {
     ///
     /// `None` records no export, not an empty or failed export. A supplied report is checked before
     /// catalog work. Retain this owned value across engine/report mutation; capture again after
-    /// re-export if new content is wanted. No Engine/Store access or state capture occurs. Allocates
+    /// re-export if new content is wanted. No Engine access or state capture occurs. Allocates
     /// bounded tags; the first success also initializes the cached catalog tag.
     ///
     /// # Errors

@@ -50,8 +50,8 @@ fn economizer_modulations_return_fan_relief_damper_inputs(t: f64) -> Vec<(String
 }
 
 fn load_economizer_modulations_return_fan_relief_damper() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(ECONOMIZER_MODULATIONS_RETURN_FAN_RELIEF_DAMPER.as_bytes())
         .expect("source-verified G36 Economizers.Subsequences.Modulations.ReturnFan relief-damper variant fixture loads");
     assert_eq!(report.block_count, 6);

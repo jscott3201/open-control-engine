@@ -5,7 +5,7 @@ use std::cmp::Ordering;
 use crate::{ExportReport, LoadReport, OcError};
 
 /// Revision of receipt fields and the message-independent machine ordering.
-pub const DIAGNOSTIC_SCHEMA_REVISION: u32 = 2;
+pub const DIAGNOSTIC_SCHEMA_REVISION: u32 = 3;
 
 /// Producer operation at which evidence was emitted or a terminal failure occurred.
 ///
@@ -25,23 +25,19 @@ pub enum DiagnosticStage {
     Schedule,
     /// Effective semantic metadata resolution.
     Semantics,
-    /// Durable model projection.
+    /// Resolved-model projection into plain data.
     Projection,
-    /// Store recovery before saving the model.
-    StoreRecovery,
-    /// Saving the resolved model through the store port.
-    StoreSave,
-    /// Resolving store input handles.
-    StoreInputs,
     /// CXF emitted-document export.
     Export,
 }
 
 impl DiagnosticStage {
-    /// Stable revision-2 rank used by receipt machine ordering.
+    /// Stable revision-3 rank used by receipt machine ordering.
     ///
     /// Revision 2 removed the identity `Flatten` boundary that sat between [`Self::Import`] and
-    /// [`Self::AttributeUnification`]; the relative order of every remaining stage is unchanged.
+    /// [`Self::AttributeUnification`]. Revision 3 removed the three storage boundaries that sat
+    /// between [`Self::Projection`] and [`Self::Export`], when the engine stopped calling a
+    /// storage port at load. The relative order of every remaining stage is unchanged.
     #[must_use]
     pub const fn rank(self) -> u8 {
         match self {
@@ -52,10 +48,7 @@ impl DiagnosticStage {
             Self::Schedule => 4,
             Self::Semantics => 5,
             Self::Projection => 6,
-            Self::StoreRecovery => 7,
-            Self::StoreSave => 8,
-            Self::StoreInputs => 9,
-            Self::Export => 10,
+            Self::Export => 7,
         }
     }
 }
@@ -256,7 +249,7 @@ impl ExportReceipt {
 
 /// A failed load/export with completed-stage evidence, terminal stage, and original error chain.
 ///
-/// This never fabricates a diagnostic code for JSON/store errors without diagnostics. An
+/// This never fabricates a diagnostic code for JSON or projection errors without diagnostics. An
 /// algebraic-loop schedule refusal is recorded at [`DiagnosticStage::Schedule`] as one
 /// `algebraic-loop` (or `block-algebraic-loop`) error per cycle member, subject = that member's
 /// identity; its [`OperationFailure::error`] stays the legacy `OcError::Build` chain. Like every
@@ -264,7 +257,7 @@ impl ExportReceipt {
 /// position, the member count and the next member, so the loop is recovered by following
 /// `subject → next member`.
 /// Display retains the legacy terminal context; [`std::error::Error::source`] exposes the original
-/// facade error and its sources. Failure atomicity and store side effects are unchanged.
+/// facade error and its sources. Failure atomicity is unchanged.
 #[derive(Debug)]
 pub struct OperationFailure {
     stage: DiagnosticStage,

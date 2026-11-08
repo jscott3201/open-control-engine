@@ -50,7 +50,7 @@ fn bytes(doc: &Json) -> Vec<u8> {
 
 /// Require refusal with exactly one `non-finite-parameter` error on `subject` naming `name`.
 fn assert_refused(doc: &Json, subject: &str, name: &str, case: &str) {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     let error = engine
         .load_cxf(&bytes(doc))
         .expect_err(&format!("{case}: must refuse"));
@@ -84,7 +84,7 @@ fn assert_refused(doc: &Json, subject: &str, name: &str, case: &str) {
 
 #[test]
 fn unmodified_fixture_loads_as_the_positive_control() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL.as_bytes()).expect("fixture loads");
     assert!(
         engine
@@ -195,7 +195,7 @@ fn the_finite_inf_alias_and_finite_extremes_pass_through_every_level() {
             (".topK", lexical_or_expr),
             (".post.k", json!("max(topK, -1.0)")),
         ]);
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .load_cxf(&bytes(&doc))
             .unwrap_or_else(|error| panic!("{case}: finite topK must load: {error:?}"));
@@ -221,7 +221,7 @@ const ARRAY_EXPRESSION: &str =
 #[test]
 fn a_non_finite_array_list_element_is_refused_on_the_declaring_instance() {
     // Positive control: the G36 SumZone fixture (a `MatrixGain` with a `K[2,3]` list) loads.
-    Engine::in_memory()
+    Engine::new()
         .load_cxf(SUMZONE.as_bytes())
         .expect("fixture loads");
     for lexical in ["NaN", "INF", "-INF"] {

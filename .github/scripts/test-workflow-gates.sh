@@ -116,7 +116,7 @@ jobs:
       - run: rm -f target/nextest/ci/junit.xml
       - run: >-
           cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf
-          -p oce-reference-wal-adapter --locked --profile ci --no-tests=fail
+          --locked --profile ci --no-tests=fail
       - run: test -s target/nextest/ci/junit.xml
   docs:
     steps:

@@ -9,7 +9,6 @@ fn advance(engine: &mut Engine, time: f64, inputs: &[(&str, Value)]) {
     let prepared = engine.prepare_frame(time, inputs).unwrap();
     engine.execute_frame(prepared).unwrap();
 }
-use oce_store::ModelStore;
 
 const FANOUT: &str = include_str!("../../oce-cxf/tests/fixtures/boundary_fanout.jsonld");
 const NESTED: &str = include_str!("../../oce-cxf/tests/fixtures/nested_composite.jsonld");
@@ -67,7 +66,7 @@ fn authored_connector_iris_do_not_move_corpus_host_point_inventory() {
             .and_then(|stem| stem.to_str())
             .expect("UTF-8 fixture stem");
         let bytes = fs::read(&fixture).expect("read G36 fixture");
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .load_cxf(&bytes)
             .unwrap_or_else(|error| panic!("{fixture_name} loads: {error:?}"));
@@ -101,8 +100,8 @@ fn authored_connector_iris_do_not_move_corpus_host_point_inventory() {
 
 #[test]
 fn nested_composite_loads_builds_and_ticks_through_frozen_facade() {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(NESTED.as_bytes())
         .expect("nested CXF composite loads");
     assert_eq!(report.block_count, 3);
@@ -133,8 +132,8 @@ fn nested_composite_loads_builds_and_ticks_through_frozen_facade() {
 
 #[test]
 fn boundary_input_fanout_loads_as_one_point_and_stages_every_target() {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, loaded) = engine
         .load_cxf(FANOUT.as_bytes())
         .expect("boundary fanout CXF composite loads");
     assert_eq!(report.block_count, 3);
@@ -154,10 +153,8 @@ fn boundary_input_fanout_loads_as_one_point_and_stages_every_target() {
         1,
         "fanout input should be exposed once as a logical host point"
     );
-    let resolved = engine
-        .store()
-        .load_model(&report.model_id)
-        .expect("load stores resolved model");
+    assert_eq!(loaded.model_id, report.model_id);
+    let resolved = loaded.model;
     assert_eq!(
         resolved
             .points
@@ -165,7 +162,7 @@ fn boundary_input_fanout_loads_as_one_point_and_stages_every_target() {
             .filter(|point| point.key.as_str() == FANOUT_INPUT)
             .count(),
         1,
-        "durable point projection should also coalesce the fanout key"
+        "the resolved-model projection should also coalesce the fanout key"
     );
     let output = engine
         .io()
@@ -188,8 +185,8 @@ fn boundary_input_fanout_loads_as_one_point_and_stages_every_target() {
 
 #[test]
 fn source_verified_g36_trim_and_respond_fixture_loads_through_frozen_facade() {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(G36_TRIM_AND_RESPOND.as_bytes())
         .expect("source-verified G36 TrimAndRespond CXF fixture loads");
     assert_eq!(report.block_count, 44);
@@ -214,8 +211,8 @@ fn source_verified_g36_trim_and_respond_fixture_loads_through_frozen_facade() {
 
 #[test]
 fn source_verified_g36_supply_temperature_fixture_loads_through_frozen_facade() {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(G36_SUPPLY_TEMPERATURE.as_bytes())
         .expect("source-verified G36 SupplyTemperature CXF fixture loads");
     assert_eq!(report.block_count, 62);
@@ -278,8 +275,8 @@ fn source_verified_g36_supply_temperature_fixture_loads_through_frozen_facade() 
 
 #[test]
 fn source_verified_g36_supply_fan_fixture_loads_through_frozen_facade() {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(G36_SUPPLY_FAN.as_bytes())
         .expect("source-verified G36 SupplyFan CXF fixture loads");
     assert_eq!(report.block_count, 65);
@@ -357,8 +354,8 @@ fn source_verified_g36_supply_fan_fixture_loads_through_frozen_facade() {
 
 #[test]
 fn source_verified_g36_supply_signals_fixture_loads_through_frozen_facade() {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(G36_SUPPLY_SIGNALS.as_bytes())
         .expect("source-verified G36 SupplySignals CXF fixture loads");
     assert_eq!(report.block_count, 9);

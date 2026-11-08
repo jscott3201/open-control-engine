@@ -19,7 +19,6 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;
 
-use oce_api::oce_store::Store;
 use oce_api::{Engine, PointDirection, PointInfo, Topology};
 
 /// The positional fallback prefix, assembled with `concat!` so a repository-wide search for the
@@ -47,14 +46,14 @@ fn corpus_fixtures() -> Vec<PathBuf> {
 
 /// Load one corpus document into a fresh in-memory engine, keeping the raw document bytes so a
 /// test can read the fixture independently of everything the engine derived from it.
-fn load_fixture(path: &PathBuf) -> (String, Vec<u8>, Engine<impl Store>) {
+fn load_fixture(path: &PathBuf) -> (String, Vec<u8>, Engine) {
     let fixture_name = path
         .file_stem()
         .and_then(|stem| stem.to_str())
         .expect("UTF-8 fixture stem")
         .to_owned();
     let bytes = fs::read(path).expect("read G36 fixture");
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .load_cxf(&bytes)
         .unwrap_or_else(|error| panic!("{fixture_name} loads: {error:?}"));
@@ -120,7 +119,7 @@ fn is_derived_member_identity(path: &str, owners: &BTreeSet<String>) -> bool {
 /// Every point path visible on the seven facade surfaces: point_list, topology block ports,
 /// connection endpoints, external_inputs, pass_through pairs, boundary_outputs, and `to_map`
 /// keys.
-fn facade_surface_paths<S: Store>(engine: &Engine<S>) -> Vec<(&'static str, String)> {
+fn facade_surface_paths(engine: &Engine) -> Vec<(&'static str, String)> {
     let mut paths = Vec::new();
     for point in engine.point_list(None).expect("point inventory") {
         paths.push(("point_list", point.path));
@@ -155,7 +154,7 @@ fn facade_surface_paths<S: Store>(engine: &Engine<S>) -> Vec<(&'static str, Stri
     paths
 }
 
-fn point_list_paths<S: Store>(engine: &Engine<S>, direction: PointDirection) -> BTreeSet<String> {
+fn point_list_paths(engine: &Engine, direction: PointDirection) -> BTreeSet<String> {
     engine
         .point_list(None)
         .expect("point inventory")

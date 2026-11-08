@@ -161,8 +161,8 @@ const CASES: &[Case] = &[
 ];
 
 fn load_high_limit(case: Case) -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(case.fixture.as_bytes())
         .unwrap_or_else(|err| panic!("{} fixture loads: {err}", case.name));
     assert_eq!(report.block_count, 1, "{} block count", case.name);

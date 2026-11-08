@@ -1,7 +1,5 @@
 //! Facade-owned serialized CXF admission policy, independent of model/run state.
 
-use oce_store::Store;
-
 use crate::{Engine, OcError};
 
 /// Default and maximum supported serialized CXF size, in bytes (exactly 8 MiB).
@@ -18,7 +16,7 @@ use crate::{Engine, OcError};
 /// untrusted programs, and equipment safety policy.
 pub const MAX_CXF_BYTES: usize = 8 * 1024 * 1024;
 
-impl<S: Store> Engine<S> {
+impl Engine {
     /// Effective serialized CXF byte limit for both load entry points.
     ///
     /// Defaults to [`MAX_CXF_BYTES`]; persists across successful and failed reloads.
@@ -31,7 +29,7 @@ impl<S: Store> Engine<S> {
     ///
     /// The inclusive range is `0..=MAX_CXF_BYTES`. Zero refuses every nonempty input;
     /// an empty input still reaches normal JSON validation. Changes affect subsequent
-    /// loads only, not the current executable/run image, Store, or snapshot bytes.
+    /// loads only, not the current executable/run image or snapshot bytes.
     /// The limit may be changed again within this range. Never panics.
     ///
     /// # Errors

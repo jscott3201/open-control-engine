@@ -200,7 +200,7 @@ The target does not need:
   everything.
 - **`oce-expr`**: binding expressions are already evaluated into parameter values.
 - **`oce-validate`**: the decoder runs its own narrower structural checks, listed below.
-- **`oce-api`**: the Store port, facade lifecycle and `std` collections.
+- **`oce-api`**: the facade lifecycle and `std` collections (it has no storage dependency since #390).
 
 Rejected alternatives:
 
@@ -418,7 +418,7 @@ What stays in `oce-api`, because it needs names or `std`:
 - load and pending-edit preconditions, and the durable-restore window;
 - replay records;
 - the `AssertCollector`'s `String` diagnostics and the owned `CompletedFrame`;
-- the Store, until #390 removes it from the facade.
+- nothing from the storage port: #390 removed it from the facade.
 
 Rejected: **a second, `no_std` HostTick loop in #401.** Two implementations of the time and input
 rules would drift, and the drift would only show on equipment.

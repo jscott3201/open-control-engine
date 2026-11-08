@@ -4,8 +4,10 @@
 //!
 //! This crate is **Group A**: it has zero dependency on any store or database
 //! (D-OWNER-1), and it carries only the *computational* payload of a CDL model. The
-//! non-computational metadata seam (CDL §7.17) lives in `oce-semantics`/`oce-store`,
-//! never here on the hot path.
+//! non-computational metadata seam (CDL §7.17) lives in `oce-semantics`, never here on the hot
+//! path. [`resolved_model`] holds the plain-data DTOs of the load-time projection, shared by the
+//! engine facade (which returns them) and the storage port (which persists them) so that neither
+//! depends on the other; the execution core never reads them.
 //!
 //!
 //! The public type shapes and helper bodies below are implemented and tested; they back the
@@ -14,6 +16,7 @@
 use std::sync::Arc;
 
 pub mod determinism;
+pub mod resolved_model;
 pub mod types;
 
 /// Identifies an enumeration *class* (e.g. `CDL.Types.SimpleController`) in the flattened

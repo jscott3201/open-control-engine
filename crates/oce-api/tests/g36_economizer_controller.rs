@@ -112,8 +112,8 @@ fn economizer_controller_inputs(t: f64) -> Vec<(String, Value)> {
 }
 
 fn load_economizer_controller() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(ECONOMIZER_CONTROLLER.as_bytes())
         .expect("source-verified G36 Economizers.Controller fixture loads");
     assert_eq!(report.block_count, 44);

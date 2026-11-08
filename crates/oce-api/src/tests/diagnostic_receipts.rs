@@ -123,20 +123,18 @@ fn stage_ranks_are_explicit_and_total() {
             Schedule,
             Semantics,
             Projection,
-            StoreRecovery,
-            StoreSave,
-            StoreInputs,
             Export
         ]
         .map(DiagnosticStage::rank),
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        [0, 1, 2, 3, 4, 5, 6, 7]
     );
+    assert_eq!(crate::DIAGNOSTIC_SCHEMA_REVISION, 3);
 }
 
 #[test]
 fn successful_evidence_survives_mutation_of_the_separated_legacy_report() {
-    let mut engine = Engine::in_memory();
-    let receipt = engine.load_cxf_with_receipt(WARNING.as_bytes()).unwrap();
+    let mut engine = Engine::new();
+    let (receipt, _) = engine.load_cxf_with_receipt(WARNING.as_bytes()).unwrap();
     let expected = keys(receipt.diagnostics());
     assert_eq!(expected.len(), 1);
     assert_eq!(expected[0].stage(), DiagnosticStage::Import);
@@ -149,7 +147,12 @@ fn successful_evidence_survives_mutation_of_the_separated_legacy_report() {
     ));
     assert_eq!(keys(&evidence), expected);
     assert_eq!(
-        engine.load_cxf(WARNING.as_bytes()).unwrap().warnings.len(),
+        engine
+            .load_cxf(WARNING.as_bytes())
+            .unwrap()
+            .0
+            .warnings
+            .len(),
         1
     );
 }
@@ -157,7 +160,7 @@ fn successful_evidence_survives_mutation_of_the_separated_legacy_report() {
 #[test]
 fn diagnostic_free_refusals_retain_stage_and_original_error_source() {
     use std::error::Error;
-    let failure = Engine::in_memory()
+    let failure = Engine::new()
         .load_cxf_with_receipt(b"{bad json")
         .unwrap_err();
     assert_eq!(failure.stage(), DiagnosticStage::Import);
@@ -174,7 +177,7 @@ fn diagnostic_free_refusals_retain_stage_and_original_error_source() {
             .downcast_ref::<OcError>()
             .is_some()
     );
-    let failure = Engine::in_memory().export_cxf_with_receipt().unwrap_err();
+    let failure = Engine::new().export_cxf_with_receipt().unwrap_err();
     assert_eq!(failure.stage(), DiagnosticStage::Export);
     assert_eq!(failure.diagnostics().records().len(), 1);
     assert_eq!(
@@ -190,7 +193,7 @@ fn diagnostic_free_refusals_retain_stage_and_original_error_source() {
 
 #[test]
 fn prior_import_warning_precedes_loop_records_in_a_refused_load() {
-    let failure = Engine::in_memory().load_cxf_with_receipt(LOOP).unwrap_err();
+    let failure = Engine::new().load_cxf_with_receipt(LOOP).unwrap_err();
     assert_eq!(failure.stage(), DiagnosticStage::Schedule);
     let records = failure.diagnostics().records();
     assert_eq!(records.len(), 5);
@@ -211,7 +214,7 @@ fn unification_evidence_survives_structural_refusal_at_its_actual_producer() {
         .find(|node| node["@id"] == "http://example.org#U.con")
         .unwrap();
     node.as_object_mut().unwrap().remove("S231:hasParameter");
-    let failure = Engine::in_memory()
+    let failure = Engine::new()
         .load_cxf_with_receipt(&serde_json::to_vec(&document).unwrap())
         .unwrap_err();
     assert_eq!(failure.stage(), DiagnosticStage::Validation);
@@ -249,7 +252,7 @@ fn successful_load_retains_import_and_unification_producers() {
         node["@type"] = json!(kind);
         node.as_object_mut().unwrap().remove("S231:isOfDataType");
     }
-    let receipt = Engine::in_memory()
+    let (receipt, _) = Engine::new()
         .load_cxf_with_receipt(&serde_json::to_vec(&document).unwrap())
         .unwrap();
     let observed: Vec<_> = receipt
@@ -273,7 +276,7 @@ fn successful_load_retains_import_and_unification_producers() {
 
 #[test]
 fn export_receipt_preserves_partial_bytes_and_all_deferral_evidence() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .load_cxf(include_bytes!(
             "../../../oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_airflow_tracking.jsonld"
@@ -299,10 +302,10 @@ fn export_receipt_preserves_partial_bytes_and_all_deferral_evidence() {
 
 #[test]
 fn legacy_and_receipt_loads_keep_identical_state_and_legacy_diagnostic_order() {
-    let mut old = Engine::in_memory();
-    let mut new = Engine::in_memory();
-    let old_report = old.load_cxf(DISPLAY_WARNING.as_bytes()).unwrap();
-    let new_report = new
+    let mut old = Engine::new();
+    let mut new = Engine::new();
+    let (old_report, _) = old.load_cxf(DISPLAY_WARNING.as_bytes()).unwrap();
+    let (new_report, _) = new
         .load_cxf_with_receipt(DISPLAY_WARNING.as_bytes())
         .unwrap();
     let signature = |warnings: &[Diagnostic]| {

@@ -1,16 +1,22 @@
-//! Load-time durable projection from the flat executable model into store DTOs.
+//! Load-time projection from the flat executable model into the plain-data resolved-model DTOs
+//! (`oce_model::resolved_model`) that [`crate::LoadedModel`] carries to the host. No storage is
+//! touched; an internal inconsistency is refused as [`OcError::Load`] before the engine commits.
 
 use std::collections::HashMap;
 
+use oce_model::resolved_model::{
+    BlockClassDto, BlockInstanceDto, BlockKind, ConnectionDto, DomainKey, OcValue, PointDirection,
+    PointDto, PointType, PointValueType, ResolvedModel, TrendInterval,
+};
 use oce_model::{BlockInstance, ConnectorId, ModelGraph, Value};
 use oce_semantics::{
     EffectivePoint, PointKey, PointType as SemanticPointType, ResolvedSemantics,
     TrendInterval as SemanticTrendInterval,
 };
-use oce_store::{
-    BlockClassDto, BlockInstanceDto, BlockKind, ConnectionDto, DomainKey, OcValue, PointDto,
-    PointType, ResolvedModel, StoreError, StoreResult, TrendInterval,
-};
+
+use crate::error::OcError;
+
+type ProjectionResult<T> = Result<T, OcError>;
 
 use crate::io::point_rows_at_load;
 use crate::stable_hash::StableHash;
@@ -22,7 +28,7 @@ pub(crate) fn project_resolved_model(
     model: &ModelGraph,
     semantics: &ResolvedSemantics,
     model_iri: Option<&str>,
-) -> StoreResult<ResolvedModel> {
+) -> ProjectionResult<ResolvedModel> {
     let metadata_by_connector = metadata_index(semantics)?;
     let classes = project_classes(model);
     let blocks = project_blocks(model)?;
@@ -45,11 +51,11 @@ pub(crate) fn project_resolved_model(
 
 fn metadata_index(
     semantics: &ResolvedSemantics,
-) -> StoreResult<HashMap<ConnectorId, &EffectivePoint>> {
+) -> ProjectionResult<HashMap<ConnectorId, &EffectivePoint>> {
     let mut by_connector = HashMap::with_capacity(semantics.points.len());
     for point in &semantics.points {
         if by_connector.insert(point.connector_id, point).is_some() {
-            return Err(StoreError::Validation(format!(
+            return Err(malformed(format!(
                 "duplicate semantic metadata for connector {}",
                 point.connector_id.0
             )));
@@ -78,14 +84,14 @@ fn project_classes(model: &ModelGraph) -> Vec<BlockClassDto> {
     classes
 }
 
-fn project_blocks(model: &ModelGraph) -> StoreResult<Vec<BlockInstanceDto>> {
+fn project_blocks(model: &ModelGraph) -> ProjectionResult<Vec<BlockInstanceDto>> {
     model
         .blocks
         .iter()
         .map(|block| {
             let key = block_key(block);
             if key.as_str().is_empty() {
-                return Err(StoreError::Validation(format!(
+                return Err(malformed(format!(
                     "block {} projected an empty DomainKey",
                     block.id.0
                 )));
@@ -108,11 +114,11 @@ fn project_blocks(model: &ModelGraph) -> StoreResult<Vec<BlockInstanceDto>> {
 fn project_points(
     model: &ModelGraph,
     metadata_by_connector: &HashMap<ConnectorId, &EffectivePoint>,
-) -> StoreResult<(Vec<PointDto>, Vec<Option<DomainKey>>)> {
+) -> ProjectionResult<(Vec<PointDto>, Vec<Option<DomainKey>>)> {
     #[derive(Clone)]
     struct SeenPoint {
-        direction: oce_store::PointDirection,
-        value_type: oce_store::PointValueType,
+        direction: PointDirection,
+        value_type: PointValueType,
         key: DomainKey,
         external_input: bool,
     }
@@ -130,7 +136,7 @@ fn project_points(
         let metadata = metadata_by_connector
             .get(&row.connector_id)
             .ok_or_else(|| {
-                StoreError::Validation(format!(
+                malformed(format!(
                     "missing semantic metadata for connector {}",
                     row.connector_id.0
                 ))
@@ -139,12 +145,12 @@ fn project_points(
 
         let key = DomainKey::new(row.info.path.clone());
         if key.as_str().is_empty() {
-            return Err(StoreError::Validation(format!(
+            return Err(malformed(format!(
                 "connector {} projected an empty DomainKey",
                 row.connector_id.0
             )));
         }
-        let is_external_input = row.info.direction == oce_store::PointDirection::In
+        let is_external_input = row.info.direction == PointDirection::In
             && model.external_inputs.contains(&row.connector_id);
         if let Some(existing) = seen.get(key.as_str()) {
             if existing.external_input
@@ -155,7 +161,7 @@ fn project_points(
                 point_keys_by_connector[row.connector_id.0 as usize] = Some(existing.key.clone());
                 continue;
             }
-            return Err(StoreError::Validation(format!(
+            return Err(malformed(format!(
                 "duplicate point DomainKey: {}",
                 key.as_str()
             )));
@@ -185,9 +191,9 @@ fn project_points(
             owner_block,
             direction: row.info.direction,
             value_type: row.info.value_type,
-            point_type: store_point_type(metadata.point_type),
+            point_type: projected_point_type(metadata.point_type),
             hardwired: metadata.hardwired,
-            trend_interval_s: store_trend_interval(metadata.trend.interval),
+            trend_interval_s: projected_trend_interval(metadata.trend.interval),
             trend_enable: metadata.trend.enabled,
             quantity: metadata.quantity.as_deref().map(str::to_owned),
             unit: metadata.unit.as_deref().map(str::to_owned),
@@ -206,7 +212,7 @@ fn project_points(
 fn project_connections(
     model: &ModelGraph,
     point_keys_by_connector: &[Option<DomainKey>],
-) -> StoreResult<Vec<ConnectionDto>> {
+) -> ProjectionResult<Vec<ConnectionDto>> {
     let mut connections = Vec::with_capacity(model.connections.len());
     for connection in &model.connections {
         let from_point = point_keys_by_connector
@@ -231,8 +237,8 @@ fn project_connections(
             }
             (None, None) => {}
             (Some(_), None) | (None, Some(_)) => {
-                return Err(StoreError::Validation(format!(
-                    "connection {} -> {} has exactly one store-visible endpoint",
+                return Err(malformed(format!(
+                    "connection {} -> {} has exactly one projected endpoint",
                     connection.from.0, connection.to.0
                 )));
             }
@@ -251,12 +257,12 @@ fn validate_metadata_key(
     iri: Option<&std::sync::Arc<str>>,
     id: ConnectorId,
     metadata: &EffectivePoint,
-) -> StoreResult<()> {
+) -> ProjectionResult<()> {
     let expected = PointKey::from_connector(iri, id);
     if metadata.key == expected {
         Ok(())
     } else {
-        Err(StoreError::Validation(format!(
+        Err(malformed(format!(
             "semantic metadata key mismatch for connector {}",
             id.0
         )))
@@ -273,7 +279,7 @@ fn block_key(block: &BlockInstance) -> DomainKey {
 
 fn value_to_oc_value(value: &Value) -> OcValue {
     // Durable model parameters retain native enum identity. Frame execution does not convert
-    // outputs into Store samples; any external delivery mapping belongs to the host.
+    // outputs into persisted samples; any external delivery mapping belongs to the host.
     match value {
         Value::Real(v) => OcValue::Real(*v),
         Value::Integer(v) => OcValue::Int(*v),
@@ -286,7 +292,7 @@ fn value_to_oc_value(value: &Value) -> OcValue {
     }
 }
 
-fn store_point_type(point_type: SemanticPointType) -> PointType {
+fn projected_point_type(point_type: SemanticPointType) -> PointType {
     match point_type {
         SemanticPointType::Ai => PointType::Ai,
         SemanticPointType::Ao => PointType::Ao,
@@ -296,7 +302,7 @@ fn store_point_type(point_type: SemanticPointType) -> PointType {
     }
 }
 
-fn store_trend_interval(interval: SemanticTrendInterval) -> TrendInterval {
+fn projected_trend_interval(interval: SemanticTrendInterval) -> TrendInterval {
     match interval {
         SemanticTrendInterval::OnChange => TrendInterval::OnChange,
         SemanticTrendInterval::EverySeconds(0) => TrendInterval::OnChange,
@@ -304,8 +310,10 @@ fn store_trend_interval(interval: SemanticTrendInterval) -> TrendInterval {
     }
 }
 
-fn malformed(message: String) -> StoreError {
-    StoreError::Validation(message)
+fn malformed(message: String) -> OcError {
+    OcError::Load {
+        detail: format!("model projection failed: {message}"),
+    }
 }
 
 fn synthesize_model_id(model: &ResolvedModel) -> DomainKey {
@@ -358,13 +366,13 @@ fn hash_points(hash: &mut StableHash, points: &[PointDto]) {
         hash.write_domain_key(&point.key);
         hash.write_domain_key(&point.owner_block);
         hash.write_str(match point.direction {
-            oce_store::PointDirection::In => "in",
-            oce_store::PointDirection::Out => "out",
+            PointDirection::In => "in",
+            PointDirection::Out => "out",
         });
         hash.write_str(match point.value_type {
-            oce_store::PointValueType::Real => "real",
-            oce_store::PointValueType::Int => "int",
-            oce_store::PointValueType::Bool => "bool",
+            PointValueType::Real => "real",
+            PointValueType::Int => "int",
+            PointValueType::Bool => "bool",
         });
         hash.write_str(match point.point_type {
             PointType::Ai => "ai",

@@ -124,7 +124,7 @@ fn config_with_indicator(signal: &str) -> VerifyConfig {
 }
 
 fn indicator_output_paths() -> (String, String) {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(FREE_ADD.as_bytes()).expect("fixture loads");
     let indicators = engine
         .io()

@@ -7,7 +7,6 @@ use oce_graph::{allocate_state, compile};
 use oce_model::{
     BlockId, BlockInstance, Connector, ConnectorId, Dir, ModelGraph, ParamTable, Value, ValueType,
 };
-use oce_store_mem::MemStore;
 
 use super::{AssertLevel, Engine};
 
@@ -42,7 +41,7 @@ impl Block for WarningBlock {
     }
 }
 
-fn loaded_warning_engine() -> Engine<MemStore> {
+fn loaded_warning_engine() -> Engine {
     let mut model = ModelGraph::new();
     model.blocks.push(BlockInstance {
         id: BlockId(0),
@@ -57,7 +56,7 @@ fn loaded_warning_engine() -> Engine<MemStore> {
     let schedule = compile(&model, &blocks).expect("warning source schedule");
     let state = allocate_state(&model, &blocks).expect("warning source state");
 
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.model = Arc::new(model);
     eng.schedule = schedule;
     eng.blocks = blocks;
@@ -102,8 +101,8 @@ fn assert_model(message: &str) -> ModelGraph {
     model
 }
 
-fn loaded_assert_engine(message: &str) -> Engine<MemStore> {
-    let mut eng = Engine::in_memory();
+fn loaded_assert_engine(message: &str) -> Engine {
+    let mut eng = Engine::new();
     eng.build_model_in_memory(assert_model(message), None)
         .expect("zero-output Assert model builds");
     eng
@@ -207,7 +206,7 @@ fn mixed_native_block_and_assert_warnings_repeat_without_escalation() {
             decl_order: 1,
             instance_iri: None,
         });
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine.build_model_in_memory(model, None).unwrap();
         let mut events = Vec::new();
         for time in [0.0, 0.0, 1.0] {

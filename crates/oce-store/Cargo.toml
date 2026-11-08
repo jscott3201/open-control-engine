@@ -13,5 +13,7 @@ homepage.workspace = true
 workspace = true
 
 [dependencies]
+# The resolved-model DTOs this port persists are defined in the core model crate (re-exported).
+oce-model = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }

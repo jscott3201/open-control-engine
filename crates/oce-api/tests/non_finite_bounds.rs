@@ -50,7 +50,7 @@ fn non_finite_boundary_and_target_bounds_are_refused_at_load() {
         for attribute in ["S231:min", "S231:max"] {
             for lexical in ["NaN", "-NaN", "INF", "inf", "-inf", "infinity"] {
                 let bytes = with_attribute(node, attribute, typed(lexical));
-                let mut engine = Engine::in_memory();
+                let mut engine = Engine::new();
                 engine.load_cxf(MODEL).unwrap();
                 let before = engine.state_snapshot().unwrap();
                 let error = engine.load_cxf(&bytes).expect_err("non-finite bound");
@@ -77,7 +77,7 @@ fn non_finite_boundary_and_target_bounds_are_refused_at_load() {
 #[test]
 fn the_failure_receipt_names_the_stage_code_and_subject() {
     let bytes = with_attribute(A, "S231:min", typed("NaN"));
-    let failure = Engine::in_memory()
+    let failure = Engine::new()
         .load_cxf_with_receipt(&bytes)
         .expect_err("NaN min");
     assert_eq!(failure.stage(), DiagnosticStage::AttributeUnification);
@@ -100,12 +100,12 @@ fn the_failure_receipt_names_the_stage_code_and_subject() {
     );
     // Repeat loads produce the identical refusal.
     for _ in 0..3 {
-        let again = Engine::in_memory()
+        let again = Engine::new()
             .load_cxf_with_receipt(&bytes)
             .expect_err("NaN min");
         assert_eq!(
             codes_and_subjects(&again.into_error()),
-            codes_and_subjects(&Engine::in_memory().load_cxf(&bytes).unwrap_err())
+            codes_and_subjects(&Engine::new().load_cxf(&bytes).unwrap_err())
         );
     }
 }
@@ -118,7 +118,7 @@ fn finite_extreme_bounds_still_load_and_bound_the_frame() {
         ("S231:min", "4.9e-324", 5e-324, Some(0.0)),
         ("S231:max", "-0.0", -0.0, Some(5e-324)),
     ] {
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .load_cxf(&with_attribute(A, attribute, typed(lexical)))
             .unwrap_or_else(|error| panic!("{attribute}={lexical}: {error}"));
@@ -141,7 +141,7 @@ fn a_non_finite_nominal_is_refused_at_load_like_a_bound() {
     for lexical in ["NaN", "-NaN", "INF", "inf", "-inf", "infinity"] {
         for node in [A, "urn:legacy-frame:add.u1"] {
             let bytes = with_attribute(node, "S231:nominal", typed(lexical));
-            let error = Engine::in_memory()
+            let error = Engine::new()
                 .load_cxf(&bytes)
                 .expect_err("non-finite nominal");
             assert_eq!(
@@ -160,8 +160,8 @@ fn a_finite_nominal_loads_without_diagnostics_does_not_bound_the_frame_and_expor
         ("-0.0", "-0.0"),
         ("1.7976931348623157e308", "1.7976931348623157e+308"),
     ] {
-        let mut engine = Engine::in_memory();
-        let report = engine
+        let mut engine = Engine::new();
+        let (report, _) = engine
             .load_cxf(&with_attribute(A, "S231:nominal", typed(lexical)))
             .unwrap_or_else(|error| panic!("nominal={lexical}: {error}"));
         assert!(report.warnings.is_empty(), "nominal={lexical}");

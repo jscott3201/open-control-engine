@@ -1,4 +1,5 @@
-//! Ordinary reload refusal preserves the complete owned run image, not external Store effects.
+//! Ordinary reload refusal preserves the complete owned run image; the engine has no external
+//! effects to compensate.
 //! No independent transaction oracle exists: comparisons are same-engine before/after controls.
 //! Private caches use transient Debug comparisons, never checked-in layout/debug goldens.
 
@@ -20,9 +21,8 @@ fn bits(value: &Value) -> String {
 // Exhaustive destructuring makes new Engine fields require an explicit preservation decision.
 // Model identity plus its full content, block allocation identity, all caches and bitwise
 // numeric images are compared. This does not inspect trait-object implementation layouts.
-fn image<S: Store>(engine: &Engine<S>) -> Vec<String> {
+fn image(engine: &Engine) -> Vec<String> {
     let Engine {
-        store,
         cxf_byte_limit,
         non_finite_input_policy,
         model,
@@ -42,10 +42,7 @@ fn image<S: Store>(engine: &Engine<S>) -> Vec<String> {
         accepted_frame_sequence,
     } = engine;
     vec![
-        format!(
-            "{:p} {cxf_byte_limit} {non_finite_input_policy:?}",
-            Arc::as_ptr(store)
-        ),
+        format!("{cxf_byte_limit} {non_finite_input_policy:?}"),
         format!("{:p}", Arc::as_ptr(frame_generation)),
         format!("{accepted_frame_sequence}"),
         format!("{:p} {model:?} {model_id:?}", Arc::as_ptr(model)),
@@ -75,8 +72,8 @@ fn image<S: Store>(engine: &Engine<S>) -> Vec<String> {
     ]
 }
 
-fn prepared(state: u8) -> Engine<LoadFailureStore> {
-    let mut engine = Engine::with_store(Arc::new(LoadFailureStore::new(StoreFailure::None)));
+fn prepared(state: u8) -> Engine {
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL).unwrap();
     if state > 0 {
         for time in [0.0, 2.0] {
@@ -98,7 +95,6 @@ fn prepared(state: u8) -> Engine<LoadFailureStore> {
             .unwrap();
         assert!(engine.params_dirty);
     }
-    engine.store.calls.lock().unwrap().clear();
     engine
 }
 
@@ -126,7 +122,7 @@ fn structural_refusal() -> Vec<u8> {
 }
 
 #[test]
-fn pre_store_refusals_preserve_fresh_advanced_and_dirty_run_images() {
+fn load_refusals_preserve_fresh_advanced_and_dirty_run_images() {
     let structural = structural_refusal();
     let oversize = vec![b'?'; crate::MAX_CXF_BYTES + 1];
     for state in 0..3 {
@@ -165,84 +161,9 @@ fn pre_store_refusals_preserve_fresh_advanced_and_dirty_run_images() {
                     _ => unreachable!(),
                 }
                 assert_eq!(image(&engine), before, "{stage:?} state={state}");
-                assert!(engine.store.calls.lock().unwrap().is_empty());
             }
         }
     }
-}
-
-#[test]
-fn store_refusals_preserve_fresh_advanced_and_dirty_run_images() {
-    for state in 0..3 {
-        for (fault, stage, calls) in [
-            (StoreFailure::Recover, DiagnosticStage::StoreRecovery, 1),
-            (StoreFailure::SaveModel, DiagnosticStage::StoreSave, 2),
-            (StoreFailure::ResolvePoints, DiagnosticStage::StoreInputs, 3),
-            (StoreFailure::HandleCount, DiagnosticStage::StoreInputs, 3),
-        ] {
-            for receipt in [false, true] {
-                let mut engine = prepared(state);
-                *engine.store.failure.lock().unwrap() = fault;
-                let before = image(&engine);
-                let error = if receipt {
-                    let failure = engine
-                        .load_cxf_with_receipt(ANALOG_WARNING.as_bytes())
-                        .unwrap_err();
-                    assert_eq!(failure.stage(), stage);
-                    failure.into_error()
-                } else {
-                    engine.load_cxf(ANALOG_WARNING.as_bytes()).unwrap_err()
-                };
-                match fault {
-                    StoreFailure::HandleCount => assert!(matches!(
-                        terminal(&error),
-                        OcError::Store(StoreError::Validation(_))
-                    )),
-                    _ => assert!(matches!(
-                        terminal(&error),
-                        OcError::Store(StoreError::Backend(_))
-                    )),
-                }
-                assert_eq!(error.all_diagnostics().count(), 1);
-                assert_eq!(image(&engine), before, "{stage:?} state={state}");
-                assert_eq!(
-                    *engine.store.calls.lock().unwrap(),
-                    ["recover", "save_model", "resolve_points"][..calls]
-                );
-            }
-        }
-    }
-}
-
-#[test]
-fn failed_handle_resolution_leaves_saved_model_and_allocated_store_handles() {
-    let mut engine = prepared(1);
-    let before = image(&engine);
-    let old_models = engine.store.list_models().unwrap();
-    let (candidate, report) =
-        oce_cxf::import_cxf(ANALOG_WARNING.as_bytes(), &Default::default()).unwrap();
-    let candidate_id = DomainKey::new(report.model_iri.unwrap());
-    *engine.store.failure.lock().unwrap() = StoreFailure::HandleCount;
-    let error = engine.load_cxf(ANALOG_WARNING.as_bytes()).unwrap_err();
-    assert!(matches!(
-        terminal(&error),
-        OcError::Store(StoreError::Validation(_))
-    ));
-    assert_eq!(image(&engine), before);
-    assert!(!old_models.contains(&candidate_id));
-    assert_eq!(
-        engine.store.load_model(&candidate_id).unwrap().model_id,
-        candidate_id
-    );
-    let keys = IoInventory::build_at_load(&candidate).input_keys();
-    let residual_handles = engine.store.resolved.lock().unwrap().clone();
-    assert!(!residual_handles.is_empty());
-    // MemStore reuses the already allocated candidate handles; there is no engine rollback.
-    assert_eq!(
-        engine.store.inner.resolve_points(&keys).unwrap(),
-        residual_handles
-    );
-    assert_ne!(engine.model_id, candidate_id);
 }
 
 #[test]
@@ -265,16 +186,17 @@ fn private_build_tail_refusals_preserve_the_run_image() {
         let failure = OperationFailure::new(error, capture);
         if projection {
             assert_eq!(failure.stage(), DiagnosticStage::Projection);
-            assert!(matches!(
-                failure.error(),
-                OcError::Store(StoreError::Validation(_))
-            ));
+            assert!(
+                matches!(failure.error(), OcError::Load { detail }
+                    if detail.starts_with("model projection failed: ")),
+                "{:?}",
+                failure.error()
+            );
         } else {
             assert_eq!(failure.stage(), DiagnosticStage::Instantiation);
             assert!(matches!(failure.error(), OcError::Load { .. }));
         }
         assert_eq!(image(&engine), before);
-        assert!(engine.store.calls.lock().unwrap().is_empty());
     }
 }
 
@@ -284,9 +206,18 @@ fn successful_reload_replaces_model_bound_caches_but_not_host_policy() {
     let old_model = Arc::clone(&engine.model);
     engine.set_cxf_byte_limit(64 * 1024).unwrap();
     engine.set_non_finite_input_policy(crate::NonFiniteInputPolicy::Refuse);
-    engine.load_cxf(ANALOG_WARNING.as_bytes()).unwrap();
-    let mut fresh = Engine::in_memory();
-    fresh.load_cxf(ANALOG_WARNING.as_bytes()).unwrap();
+    let (report, loaded) = engine.load_cxf(ANALOG_WARNING.as_bytes()).unwrap();
+    let mut fresh = Engine::new();
+    let (fresh_report, fresh_loaded) = fresh.load_cxf(ANALOG_WARNING.as_bytes()).unwrap();
+    // The returned plain data is a function of the bytes alone, never of the replaced model.
+    assert_eq!(report.model_id, fresh_report.model_id);
+    assert_eq!(report.warnings, fresh_report.warnings);
+    assert_eq!(
+        serde_json::to_vec(&loaded.model).unwrap(),
+        serde_json::to_vec(&fresh_loaded.model).unwrap()
+    );
+    assert_eq!(loaded.io.to_vec(), fresh_loaded.io.to_vec());
+    assert_eq!(loaded.diagnostics, fresh_loaded.diagnostics);
     assert!(!Arc::ptr_eq(&old_model, &engine.model));
     assert_eq!(engine.model_id, fresh.model_id);
     assert_eq!(
@@ -336,8 +267,7 @@ fn successful_reload_replaces_model_bound_caches_but_not_host_policy() {
     for input in &definitions {
         assert!(!input.path.contains("MinLoop"));
     }
-    // Exercise rebuilt frame bindings without calling the Store.
-    engine.store.calls.lock().unwrap().clear();
+    // Exercise rebuilt frame bindings.
     let plan = engine
         .prepare_frame(0.0, &[(definitions[0].path.as_str(), Value::Real(4.0))])
         .unwrap();
@@ -348,7 +278,6 @@ fn successful_reload_replaces_model_bound_caches_but_not_host_policy() {
             .iter()
             .all(|(path, _)| !path.contains("MinLoop"))
     );
-    assert!(engine.store.calls.lock().unwrap().is_empty());
 }
 
 #[test]
@@ -361,5 +290,4 @@ fn configuration_refusal_preserves_an_advanced_run_and_its_limit() {
         Err(OcError::CxfByteLimitTooLarge { .. })
     ));
     assert_eq!(image(&engine), before);
-    assert!(engine.store.calls.lock().unwrap().is_empty());
 }

@@ -213,7 +213,7 @@ mod tests {
 
     #[test]
     fn contextual_warning_on_terminal_load_failure_remains_failed() {
-        let error = oce_api::Engine::in_memory()
+        let error = oce_api::Engine::new()
             .load_cxf(ANALOG_ALGEBRAIC_LOOP)
             .expect_err("fixture must fail after a resolver warning");
         let report = tier0_load_failed(&error);

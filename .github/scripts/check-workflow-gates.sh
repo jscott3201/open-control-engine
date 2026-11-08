@@ -390,8 +390,8 @@ require_job_pattern "$ci" 'crate-tests' \
   '^[[:space:]]*cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf$' \
   'run the oce-graph, oce-validate, oce-model and oce-cxf suites per PR'
 require_job_pattern "$ci" 'crate-tests' \
-  '^[[:space:]]*-p oce-reference-wal-adapter --locked --profile ci --no-tests=fail$' \
-  'crate suites include the WAL adapter and hard-fail on zero tests'
+  '^[[:space:]]*--locked --profile ci --no-tests=fail$' \
+  'crate suites hard-fail on zero tests'
 require_job_pattern "$ci" 'crate-tests' '^[[:space:]]*(- )?run: test -s target/nextest/ci/junit\.xml$' \
   'refuse an absent or empty crate-suite report'
 # Documentation checks under CI OK (issue #377); docs-pages.yml is path-filtered and not required.

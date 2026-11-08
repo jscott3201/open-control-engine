@@ -16,10 +16,10 @@
 # release). Enabling "Required reviewers" there adds a second human gate.
 #
 # All 11 publishable members ship in one dependency-ordered
-# `cargo publish --workspace` (Rust 1.90+). Three private members are skipped by
-# their own `publish = false`: `oce-bless`, `oce-conformance`, and
-# `oce-reference-wal-adapter`. crates.io rejects re-publishing an existing
-# version, so a repeat dispatch is a no-op-or-fail, never a clobber.
+# `cargo publish --workspace` (Rust 1.90+). Two private members are skipped by
+# their own `publish = false`: `oce-bless` and `oce-conformance`. crates.io
+# rejects re-publishing an existing version, so a repeat dispatch is a
+# no-op-or-fail, never a clobber.
 #
 # Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
 # No crate is published yet; actual publication remains deferred until explicit

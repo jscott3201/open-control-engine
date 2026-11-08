@@ -13,3 +13,5 @@ homepage.workspace = true
 workspace = true
 
 [dependencies]
+# Derives only, for the resolved-model DTOs a host serializes; no codec is linked here.
+serde = { workspace = true }

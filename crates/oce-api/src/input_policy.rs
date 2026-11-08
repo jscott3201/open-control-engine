@@ -2,7 +2,6 @@
 //! model, run state and every serialized artifact.
 
 use oce_model::Value;
-use oce_store::Store;
 
 use crate::{Engine, OcError};
 
@@ -34,7 +33,7 @@ pub enum NonFiniteInputPolicy {
     Refuse,
 }
 
-impl<S: Store> Engine<S> {
+impl Engine {
     /// Effective policy for non-finite Real boundary input values.
     ///
     /// Defaults to [`NonFiniteInputPolicy::Admit`]; persists across successful and failed loads,
@@ -50,7 +49,7 @@ impl<S: Store> Engine<S> {
     /// including the execution of a plan prepared before the change: under
     /// [`NonFiniteInputPolicy::Refuse`] execution refuses such a plan if it carries a non-finite
     /// Real input. Changing the policy does not touch the loaded executable, run state, model
-    /// time, accepted-frame sequence, Store, restore readiness or snapshot bytes, and does not
+    /// time, accepted-frame sequence, restore readiness or snapshot bytes, and does not
     /// stale an outstanding plan. Infallible and never panics; production hosts are recommended
     /// to select `Refuse`.
     pub fn set_non_finite_input_policy(&mut self, policy: NonFiniteInputPolicy) {

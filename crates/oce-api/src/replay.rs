@@ -167,7 +167,7 @@ pub(crate) struct ReplayData {
 /// transitions. Portable placement is the state class policy, not universal mathematical exactness.
 /// No serde format is promised. Use [`Self::from_bytes`] and [`Self::as_bytes`].
 ///
-/// Decode never accesses an Engine or Store. Compatibility/comparison helpers are read-only;
+/// Decode never accesses an Engine. Compatibility/comparison helpers are read-only;
 /// the only execution path remains preparation followed by consuming execution. Comparison failure
 /// AFTER execution cannot undo it. See `docs/replay-record.md` for the independently decodable wire
 /// grammar, resource accounting and the full host workflow.
@@ -205,7 +205,7 @@ impl CompletedFrame {
     ///
     /// # Errors
     /// Returns [`ReplayError`] for an oversized/unencodable record. Execution already succeeded:
-    /// this is a record-capture failure, not a refused frame. No engine/Store mutation occurs.
+    /// this is a record-capture failure, not a refused frame. No engine mutation occurs.
     pub fn replay_record(&self) -> Result<ReplayRecord, ReplayError> {
         let descriptor = CompatibilityDescriptor::current(None)
             .expect("absent export is always complete")
@@ -216,7 +216,7 @@ impl CompletedFrame {
 }
 
 impl ReplayRecord {
-    /// Decode authenticated/host-qualified bytes, without Engine/Store access or execution.
+    /// Decode authenticated/host-qualified bytes, without Engine access or execution.
     ///
     /// First validates all bytes and charges decoded workspace WITHOUT allocation, then allocates
     /// exact vector capacities and owned strings/bytes. At most 64 MiB canonical bytes plus 128 MiB

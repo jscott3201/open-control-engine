@@ -128,7 +128,7 @@ fn target_bound_class_set_is_exactly_pinned() {
 
 #[test]
 fn target_bound_capture_carries_the_compile_target() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(target_bound_model(), Some("urn:test:sun-model"))
         .unwrap();
@@ -155,7 +155,7 @@ fn every_target_bound_class_round_trips_policy_and_refuses_each_foreign_target_c
             _ => Vec::new(),
         };
         let graph = super::state_family_tests::model(class, ParamTable { values: params });
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .build_model_in_memory(graph, Some("urn:test:placement"))
             .unwrap();
@@ -208,7 +208,7 @@ fn every_target_bound_class_round_trips_policy_and_refuses_each_foreign_target_c
 #[test]
 fn portable_engine_snapshot_continues_and_emits_matrix_artifact() {
     let model = portable_model();
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source
         .build_model_in_memory(model.clone(), Some("urn:test:portable-model"))
         .unwrap();
@@ -228,7 +228,7 @@ fn portable_engine_snapshot_continues_and_emits_matrix_artifact() {
     let decoded = EngineStateSnapshot::from_bytes(snapshot.as_bytes()).unwrap();
     write_matrix_artifact("OCE_PORTABLE_STATE_OUT", snapshot.as_bytes());
 
-    let mut restored = Engine::in_memory();
+    let mut restored = Engine::new();
     restored
         .build_model_in_memory(model, Some("urn:test:portable-model"))
         .unwrap();
@@ -253,7 +253,7 @@ fn foreign_matrix_target_snapshot_refuses_restore_when_supplied() {
     };
     let bytes = std::fs::read(path).unwrap();
     let snapshot = EngineStateSnapshot::from_bytes(&bytes).unwrap();
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target
         .build_model_in_memory(target_bound_model(), Some("urn:test:sun-model"))
         .unwrap();

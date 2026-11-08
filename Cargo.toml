@@ -8,10 +8,10 @@
 #   GROUP A — execution core (NO store, NO database):
 #     oce-model -> {oce-expr, oce-blocks, oce-validate, oce-graph, oce-cxf,
 #                   oce-semantics}
-#   STORAGE PORTS (traits only, NO database):
-#     oce-store -> {oce-store-mem (default)}
+#   STORAGE PORTS (traits only, NO database; reached by the host, never by oce-api):
+#     oce-model -> oce-store -> {oce-store-mem (default)}
 #   GROUP C — verification / externals / host facade:
-#     oce-conformance, oce-api (the single public surface)
+#     oce-conformance, oce-api (the single public surface; pure, no storage dependency)
 #
 # The library ships NO first-party database; it is database-free, full stop
 # (D-OWNER-1). The default (and only) build links no database and no async runtime.

@@ -32,11 +32,10 @@ EXPECTED_PUBLISHABLE = {
 EXPECTED_PRIVATE = {
     "oce-bless",
     "oce-conformance",
-    "oce-reference-wal-adapter",
 }
 
 
-# Independent raw-byte golden from release.yml as re-pinned for GitHub #389, not read from the
+# Independent raw-byte golden from release.yml as re-pinned for GitHub #390, not read from the
 # candidate or checker.
 # Non-ASCII bytes are escaped explicitly; line endings and the final LF are pinned.
 APPROVED_WORKFLOW = b"""# release \xe2\x80\x94 the crates.io publish gate.
@@ -57,10 +56,10 @@ APPROVED_WORKFLOW = b"""# release \xe2\x80\x94 the crates.io publish gate.
 # release). Enabling "Required reviewers" there adds a second human gate.
 #
 # All 11 publishable members ship in one dependency-ordered
-# `cargo publish --workspace` (Rust 1.90+). Three private members are skipped by
-# their own `publish = false`: `oce-bless`, `oce-conformance`, and
-# `oce-reference-wal-adapter`. crates.io rejects re-publishing an existing
-# version, so a repeat dispatch is a no-op-or-fail, never a clobber.
+# `cargo publish --workspace` (Rust 1.90+). Two private members are skipped by
+# their own `publish = false`: `oce-bless` and `oce-conformance`. crates.io
+# rejects re-publishing an existing version, so a repeat dispatch is a
+# no-op-or-fail, never a clobber.
 #
 # Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
 # No crate is published yet; actual publication remains deferred until explicit
@@ -177,7 +176,8 @@ class PackagePolicyControls(unittest.TestCase):
 
         self.assertEqual(set(workspace["order"]), workspace["publishable"])
         self.assertEqual(workspace["order"][-1], "oce-api")
-        self.assertIn(validate.REQUIRED_CLOSURE_MEMBER, workspace["api_closure"])
+        for storage in validate.FORBIDDEN_CLOSURE_MEMBERS:
+            self.assertNotIn(storage, workspace["api_closure"])
         self.assertEqual(workspace, validate.validate_workspace(copy.deepcopy(self.metadata)))
 
     def test_publish_and_private_sets_follow_the_manifests(self) -> None:
@@ -273,20 +273,26 @@ class PackagePolicyControls(unittest.TestCase):
         with self.assertRaisesRegex(validate.PolicyError, "is not path-backed"):
             validate.validate_workspace(changed)
 
-    def test_api_closure_must_include_the_in_memory_store(self) -> None:
-        """The default build's no-database promise rests on oce-store-mem being reachable."""
+    def test_api_closure_must_exclude_the_storage_port(self) -> None:
+        """The engine is pure: a direct or transitive edge to a storage crate turns it red."""
+
+        for storage in validate.FORBIDDEN_CLOSURE_MEMBERS:
+            changed = copy.deepcopy(self.metadata)
+            api = self.package(changed, "oce-api")
+            edge = copy.deepcopy(next(item for item in api["dependencies"] if item["name"] == "oce-model"))
+            edge["name"] = storage
+            api["dependencies"].append(edge)
+            with self.assertRaisesRegex(validate.PolicyError, "must exclude storage crates"):
+                validate.validate_workspace(changed)
 
         changed = copy.deepcopy(self.metadata)
-        api = self.package(changed, "oce-api")
-        api["dependencies"] = [
-            item for item in api["dependencies"] if item["name"] != validate.REQUIRED_CLOSURE_MEMBER
-        ]
-        for package in changed["packages"]:
-            package["dependencies"] = [
-                item for item in package["dependencies"]
-                if item["name"] != validate.REQUIRED_CLOSURE_MEMBER
-            ]
-        with self.assertRaisesRegex(validate.PolicyError, "must include oce-store-mem"):
+        model = self.package(changed, "oce-model")
+        edge = copy.deepcopy(next(item for item in model["dependencies"] if item["name"] == "serde"))
+        edge["name"] = "oce-store-mem"
+        edge["path"] = "crates/oce-store-mem"
+        edge["req"] = "^0.2.0"
+        model["dependencies"].append(edge)
+        with self.assertRaisesRegex(validate.PolicyError, "must exclude storage crates"):
             validate.validate_workspace(changed)
 
     def test_feature_closure_drift_and_private_leakage_are_rejected(self) -> None:
@@ -294,7 +300,7 @@ class PackagePolicyControls(unittest.TestCase):
 
         closure = self.workspace["api_closure"]
         drifted = self.observations()
-        drifted["default"]["workspace_closure"].remove("oce-store-mem")
+        drifted["default"]["workspace_closure"].remove("oce-model")
         with self.assertRaisesRegex(validate.PolicyError, "feature closure drift"):
             validate.validate_feature_observations(drifted, closure, EXPECTED_PRIVATE)
 
@@ -393,7 +399,7 @@ class WorkflowApprovalControls(unittest.TestCase):
             report = self.run_policy(workflow)
             self.assertEqual(report[0], 0)
             self.assertEqual(report[2], "")
-            self.assertIn("PASS (14 members; 11 publishable; 3 private)", report[1])
+            self.assertIn("PASS (13 members; 11 publishable; 2 private)", report[1])
             reports.append(report)
         self.assertEqual(reports, [reports[0]] * 3)
 

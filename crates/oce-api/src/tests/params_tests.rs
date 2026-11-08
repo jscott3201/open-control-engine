@@ -186,7 +186,7 @@ fn integer_vector_filter_model() -> ModelGraph {
 
 #[test]
 fn calendar_time_param_rules_surface_bounds_and_reject_invalid_edits_at_rest() {
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(calendar_time_model(), None)
         .expect("valid CalendarTime loads");
     let rows = eng.params().to_vec();
@@ -261,7 +261,7 @@ fn calendar_time_param_rules_surface_bounds_and_reject_invalid_edits_at_rest() {
 
 #[test]
 fn sun_rise_set_param_rules_surface_bounds_and_reject_invalid_edits_at_rest() {
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(sun_rise_set_model(), None)
         .expect("valid SunRiseSet loads");
     let rows = eng.params().to_vec();
@@ -332,13 +332,13 @@ fn enum_parameters_reject_out_of_descriptor_ordinals_at_load_and_edit() {
         model
     }
 
-    let mut invalid = Engine::in_memory();
+    let mut invalid = Engine::new();
     assert!(matches!(
         invalid.build_model_in_memory(pid_model(99), None),
         Err(OcError::Validate(_))
     ));
 
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.build_model_in_memory(pid_model(2), None).unwrap();
     engine.halt().unwrap();
     assert!(matches!(
@@ -356,7 +356,7 @@ fn enum_parameters_reject_out_of_descriptor_ordinals_at_load_and_edit() {
 
 #[test]
 fn structural_vector_width_params_are_not_editable_at_rest() {
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(real_multi_sum_model(), None)
         .expect("valid MultiSum loads");
     let rows = eng.params().to_vec();
@@ -378,7 +378,7 @@ fn structural_vector_width_params_are_not_editable_at_rest() {
     eng.set_param("b0.k_1", Value::Real(-0.25))
         .expect("non-structural Real gain edit is accepted at rest");
 
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(matrix_gain_model(), None)
         .expect("valid MatrixGain loads");
     eng.halt().unwrap();
@@ -392,7 +392,7 @@ fn structural_vector_width_params_are_not_editable_at_rest() {
 
 #[test]
 fn time_table_cells_are_editable_at_rest_but_typed_encodings_are_checked() {
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(real_time_table_model(), None)
         .expect("valid Real TimeTable loads");
     eng.halt().unwrap();
@@ -403,7 +403,7 @@ fn time_table_cells_are_editable_at_rest_but_typed_encodings_are_checked() {
     eng.set_param("b0.offset_1", Value::Real(0.5))
         .expect("Real TimeTable offset cell is editable at rest");
 
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(logical_time_table_model(), None)
         .expect("valid Logical TimeTable loads");
     eng.halt().unwrap();
@@ -417,7 +417,7 @@ fn time_table_cells_are_editable_at_rest_but_typed_encodings_are_checked() {
 
 #[test]
 fn structural_routing_array_params_are_not_editable_at_rest() {
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(real_extract_signal_model(), None)
         .expect("valid RealExtractSignal loads");
     eng.halt().unwrap();
@@ -426,7 +426,7 @@ fn structural_routing_array_params_are_not_editable_at_rest() {
         Err(OcError::ParamStructural { .. })
     ));
 
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(real_vector_filter_model(), None)
         .expect("valid RealVectorFilter loads");
     eng.halt().unwrap();
@@ -439,7 +439,7 @@ fn structural_routing_array_params_are_not_editable_at_rest() {
         Err(OcError::ParamStructural { .. })
     ));
 
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(boolean_extract_signal_model(), None)
         .expect("valid BooleanExtractSignal loads");
     eng.halt().unwrap();
@@ -448,7 +448,7 @@ fn structural_routing_array_params_are_not_editable_at_rest() {
         Err(OcError::ParamStructural { .. })
     ));
 
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(integer_vector_filter_model(), None)
         .expect("valid IntegerVectorFilter loads");
     eng.halt().unwrap();

@@ -372,7 +372,7 @@ fail-fast loop, `ci` for the gate (no fail-fast, no retries, slow-test guard). T
 passes `--no-tests=fail`, so a run that discovers **zero** tests hard-fails — catching the
 regression where tests silently stop compiling or being discovered.
 
-The armed public-API baselines are per crate. `oce-api` pins the embeddable facade, and `oce-store`
-pins the re-exported storage port surface that the facade baseline sees only as an opaque
-`pub use oce_api::oce_store` line. The release gate runs them as separate `cargo nextest` steps so a
-renamed, ignored, or deleted test in either crate discovers zero tests and fails that crate's gate.
+`oce-api` re-exports no storage-port item (GitHub #390). Its storage isolation is asserted three
+ways: `.github/scripts/check-default-no-db.sh` refuses any `oce-store*` crate in its normal tree,
+`crates/oce-api/tests/frame_purity.rs` checks its manifest, lockfile closure and sources, and
+`scripts/facade_contract/check.py` proves the removed storage names no longer compile.

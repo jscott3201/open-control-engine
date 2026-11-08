@@ -3,7 +3,6 @@
 
 use std::sync::Arc;
 
-use super::state_tests::CountingStore;
 use crate::state::{BlockKey, Portability, StateImage, WireValue, WireValueType};
 use crate::{Engine, EngineStateError, EngineStateSnapshot, OcError};
 
@@ -274,15 +273,13 @@ fn mutations() -> Vec<Mutation> {
 }
 
 #[test]
-fn every_manifest_field_refuses_deterministically_without_mutating_engine_or_store() {
-    let store = Arc::new(CountingStore::default());
-    let mut engine = Engine::with_store(Arc::clone(&store));
+fn every_manifest_field_refuses_deterministically_without_mutating_the_engine() {
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL).unwrap();
     engine.halt().unwrap();
     let before = engine.state_snapshot().unwrap();
     let checkpoint = engine.checkpoint().unwrap();
     let checkpoint_bytes = crate::state_codec::encode_snapshot(&checkpoint.image, true).unwrap();
-    let calls = store.calls();
     let frame_generation = Arc::clone(&engine.frame_generation);
     let model = Arc::clone(&engine.model);
     let inspection = format!(
@@ -346,17 +343,15 @@ fn every_manifest_field_refuses_deterministically_without_mutating_engine_or_sto
                 ),
                 inspection
             );
-            assert_eq!(store.calls(), calls, "{name}");
         }
     }
     engine.restore_state(&before).unwrap();
     engine.restore_checkpoint(&checkpoint).unwrap();
-    assert_eq!(store.calls(), calls);
 }
 
 #[test]
 fn capture_cannot_return_a_snapshot_rejected_by_the_canonical_decoder() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL).unwrap();
     // Inject a future producer defect: the existing encoder permits duplicate edges, but the
     // canonical decoder does not. Public ingest need not be able to manufacture this defect.

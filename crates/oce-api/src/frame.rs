@@ -4,7 +4,6 @@ use std::fmt;
 use std::sync::Arc;
 
 use oce_model::{ConnectorId, Value};
-use oce_store::Store;
 
 use crate::{AssertEvent, Engine, EngineStateError, OcError};
 
@@ -159,14 +158,14 @@ impl fmt::Debug for PreparedInputFrame {
     }
 }
 
-impl<S: Store> Engine<S> {
+impl Engine {
     /// Consume a prepared submission and commit exactly one HostTick v1 transition in place.
     ///
     /// Rechecks readiness, incarnation and time, then the [`crate::NonFiniteInputPolicy`] in force
     /// against the plan's Real values, then sequence capacity, before any mutation.
     /// Stages all resolved fan-out targets, closes durable-restore readiness, evaluates once,
     /// refreshes latest-state inspection and returns an independent [`CompletedFrame`]. Equal
-    /// finite time advances again; there is no event iteration. No Store method or host callback
+    /// finite time advances again; there is no event iteration. No persistence call or host callback
     /// is invoked. This is the only public state-advancing execution surface; cadence and
     /// persistence orchestration are host responsibilities, not alternative execution profiles.
     ///
@@ -201,7 +200,7 @@ impl<S: Store> Engine<S> {
     /// sequence and retained results remain unchanged. The moved plan is consumed even on refusal.
     /// No ordinary recoverable operation remains after preflight under validated BUILD invariants.
     /// Panic, process death, allocation failure, cancellation and concurrency outside the existing
-    /// exclusive-borrow guarantee are excluded. No Store/persistence/actuator atomicity is promised.
+    /// exclusive-borrow guarantee are excluded. No persistence/actuator atomicity is promised.
     pub fn execute_frame(&mut self, frame: PreparedInputFrame) -> Result<CompletedFrame, OcError> {
         self.check_prepared_frame(&frame)?;
         // The policy in force now governs, even for a plan prepared under a different one. The
@@ -216,7 +215,7 @@ impl<S: Store> Engine<S> {
             .checked_add(1)
             .ok_or(OcError::FrameSequenceExhausted)?;
 
-        // COMMIT: only infallible operations remain. No Store calls occur.
+        // COMMIT: only infallible operations remain.
         for (targets, value) in &frame.inputs {
             for target in targets {
                 self.state.values[target.0 as usize] = value.clone();
@@ -256,7 +255,7 @@ impl<S: Store> Engine<S> {
     /// determinants. Paths are expanded authored identities, not positional handles; there is
     /// currently no accepted input-alias namespace. The snapshot is metadata, not a reusable
     /// schema or capability: refresh after load or reconfiguration. Allocates owned paths and
-    /// definitions proportional to the schema. No Store calls or engine mutation occur.
+    /// definitions proportional to the schema. No engine mutation occurs.
     ///
     /// A declared root input that no connection reads is not listed — nothing would consume its
     /// value — and is reported instead by the `unused-boundary-input` load warning, whose subject
@@ -270,7 +269,7 @@ impl<S: Store> Engine<S> {
         Ok(self.io.frame_definitions.clone())
     }
 
-    /// Resolve an entire typed input frame without changing any engine or Store state.
+    /// Resolve an entire typed input frame without changing any engine state.
     ///
     /// `time` is finite nondecreasing model seconds; equal time is allowed. Keys use the same
     /// canonical identity resolver as the input definitions; only executable boundary inputs are
@@ -279,7 +278,7 @@ impl<S: Store> Engine<S> {
     /// nonfinite values; a declared bound requires its comparison to hold (thus rejects NaN).
     /// Under [`crate::NonFiniteInputPolicy::Refuse`] (recommended for production hosts) every
     /// non-finite Real value, bounded or not, is refused with `InputNonFinite`.
-    /// Values are never coerced through Store carriers.
+    /// Values are never coerced through projection carriers.
     /// `|time|` must not exceed [`MAX_FRAME_TIME_MAGNITUDE`] (`TimeOutOfRange`; see its bounds on
     /// differences and accumulations); the step from the previous time must be finite too.
     ///
@@ -389,7 +388,7 @@ impl<S: Store> Engine<S> {
         Ok(())
     }
 
-    /// Shared compatibility/time preflight: no name rebinding, Store access or mutation.
+    /// Shared compatibility/time preflight: no name rebinding or mutation.
     pub(crate) fn check_prepared_frame(&self, frame: &PreparedInputFrame) -> Result<(), OcError> {
         self.frame_preconditions()?;
         if !Arc::ptr_eq(&self.frame_generation, &frame.generation) {

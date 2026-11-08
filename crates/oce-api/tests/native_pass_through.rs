@@ -7,8 +7,8 @@ const ROOT: &str = "http://example.org#PassThroughMiniature.";
 
 #[test]
 fn staged_scalar_values_are_visible_at_boundary_outputs_on_the_same_tick() {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(FIXTURE.as_bytes())
         .expect("pass-through fixture loads");
     assert_eq!(report.block_count, 4);

@@ -61,7 +61,7 @@ fn equal_doc(u1_type: &JsonValue, boundary1: &JsonValue) -> JsonValue {
 
 fn load(doc: &JsonValue) -> Result<oce_api::LoadReport, OcError> {
     let bytes = serde_json::to_vec(doc).expect("serialize");
-    Engine::in_memory().load_cxf(&bytes)
+    Engine::new().load_cxf(&bytes).map(|(report, _)| report)
 }
 
 /// The `(code, subject, message)` triples of a load refusal's errors.

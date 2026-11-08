@@ -82,8 +82,8 @@ fn expected_trace() -> (Vec<f64>, Vec<bool>) {
 }
 
 fn load_return_fan_airflow() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(RETURN_FAN_AIRFLOW.as_bytes())
         .expect("source-verified G36 ReturnFanAirflowTracking fixture loads");
     assert_eq!(report.block_count, 6);

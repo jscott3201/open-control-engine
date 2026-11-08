@@ -9,7 +9,7 @@ const U2: &str = "http://example.org#DriverAdd.u2";
 const Y: &str = "http://example.org#DriverAdd.add.y";
 
 fn loaded() -> Engine {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL).unwrap();
     let prepared = engine
         .prepare_frame(4.0, &[(U1, Value::Real(1.0)), (U2, Value::Real(2.0))])

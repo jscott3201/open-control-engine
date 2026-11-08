@@ -1,9 +1,8 @@
 //! The unified, typed facade error (`08` §7). Never panics on host input (R-ERR-1);
 //! `#[non_exhaustive]` so variants evolve additively (R-ERR-2). It wraps the Group A pipeline
-//! errors and the store's `StoreError`, and — critically — **never wraps a backend-specific error
-//! type directly**: any durable-store adapter flattens its native errors to
-//! `StoreError::Backend(String)` at the seam (R-ERR-3), so the facade error surface is identical in
-//! shape regardless of which `Store` backend is wired.
+//! errors and the facade's own refusals, and **never wraps a backend-specific error type**: the
+//! engine reaches no storage backend, so no storage failure can surface here (R-ERR-3). A host's
+//! persistence errors stay in the host's own error type.
 
 use oce_diag::Diagnostic;
 
@@ -34,7 +33,7 @@ impl std::error::Error for LoadErrorContext {
 #[derive(thiserror::Error, Debug)]
 #[non_exhaustive]
 pub enum OcError {
-    /// Serialized CXF exceeded the engine's byte limit, before parsing or Store calls.
+    /// Serialized CXF exceeded the engine's byte limit, before parsing or engine mutation.
     /// Carries counts only, never input content; has no source or structured diagnostics.
     #[error("serialized CXF size {actual_bytes} bytes exceeds limit {limit_bytes} bytes")]
     CxfTooLarge {
@@ -140,7 +139,7 @@ pub enum OcError {
     /// A finite model time cannot be encoded by one loaded block's sampled-time state.
     #[error("model time cannot be represented by loaded block state: t_now={now}")]
     ModelTimeUnrepresentable {
-        /// Finite time refused before any engine or store mutation.
+        /// Finite time refused before any engine mutation.
         now: f64,
     },
     /// A point/connector name that does not resolve for the requested operation: either not
@@ -193,9 +192,6 @@ pub enum OcError {
     /// A checkpoint, snapshot, or restore failure.
     #[error(transparent)]
     State(#[from] crate::state::EngineStateError),
-    /// A store-seam failure — the only path any `Store` backend reaches the error type.
-    #[error("store error: {0}")]
-    Store(#[from] oce_store::StoreError),
 }
 
 impl OcError {
@@ -246,7 +242,7 @@ impl OcError {
     /// engine-produced diagnostic-bearing variant carries a non-empty vector, so an empty slice
     /// identifies the other failures — malformed JSON, a build failure without prior warnings, a
     /// host misuse — for which the [`Display`](std::fmt::Display) message is the whole description.
-    /// A build or store failure after a warning can therefore return an empty slice here even though
+    /// A build or projection failure after a warning can therefore return an empty slice here even though
     /// [`OcError::all_diagnostics`] yields its prior warnings. An algebraic-loop build refusal's
     /// coded `algebraic-loop`/`block-algebraic-loop` records (one per cycle member) are captured
     /// only on the receipt path, [`Engine::load_cxf_with_receipt`](crate::Engine::load_cxf_with_receipt),

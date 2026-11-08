@@ -61,8 +61,8 @@ fn declared_roots_match_openmodelica_and_all_independent_bits() {
 
 #[test]
 fn topology_binds_declared_roots_to_min_and_max_drivers() {
-    let mut engine = Engine::in_memory();
-    let report = engine.load_cxf(scoped::CXF.as_bytes()).unwrap();
+    let mut engine = Engine::new();
+    let (report, _) = engine.load_cxf(scoped::CXF.as_bytes()).unwrap();
     assert!(report.warnings.is_empty());
     let topology = engine.topology();
     for (root, driver) in scoped::ROOT_OUTPUTS.into_iter().zip(scoped::CHILD_OUTPUTS) {

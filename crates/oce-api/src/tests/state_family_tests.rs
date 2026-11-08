@@ -106,7 +106,7 @@ fn assert_same_state(left: &Engine, right: &Engine, class_path: &str) {
 
 fn assert_family_round_trip(class_path: &str, parameters: ParamTable, capture_tick: usize) {
     let graph = model(class_path, parameters);
-    let mut uninterrupted = Engine::in_memory();
+    let mut uninterrupted = Engine::new();
     uninterrupted
         .build_model_in_memory(graph.clone(), Some("urn:test:family-model"))
         .unwrap();
@@ -130,7 +130,7 @@ fn assert_family_round_trip(class_path: &str, parameters: ParamTable, capture_ti
     }
     let snapshot = uninterrupted.state_snapshot().unwrap();
     let decoded = EngineStateSnapshot::from_bytes(snapshot.as_bytes()).unwrap();
-    let mut restored = Engine::in_memory();
+    let mut restored = Engine::new();
     restored
         .build_model_in_memory(graph.clone(), Some("urn:test:family-model"))
         .unwrap();
@@ -235,7 +235,7 @@ fn moving_average_warn_once_state_survives_restore() {
         "CDL.Reals.MovingAverage",
         params(&[("delta", Value::Real(1000.0))]),
     );
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source.build_model_in_memory(graph.clone(), None).unwrap();
     for tick in 0..=70 {
         advance(&mut source, tick as f64 * 0.1, &inputs(&graph, false)).unwrap();
@@ -243,14 +243,14 @@ fn moving_average_warn_once_state_survives_restore() {
     assert_eq!(source.state.words[5], 1);
     let checkpoint = source.checkpoint().unwrap();
 
-    let mut preserved = Engine::in_memory();
+    let mut preserved = Engine::new();
     preserved
         .build_model_in_memory(graph.clone(), None)
         .unwrap();
     preserved.restore_checkpoint(&checkpoint).unwrap();
     let mut cleared_image = (*checkpoint.image).clone();
     cleared_image.words[5] = 0;
-    let mut cleared = Engine::in_memory();
+    let mut cleared = Engine::new();
     cleared.build_model_in_memory(graph.clone(), None).unwrap();
     cleared
         .restore_checkpoint(&EngineCheckpoint {

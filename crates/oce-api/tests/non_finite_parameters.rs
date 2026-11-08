@@ -38,7 +38,7 @@ fn typed_double(lexical: &str) -> Json {
 /// Load `bytes`, require refusal, and require the complete diagnostic stream to be exactly one
 /// `non-finite-parameter` error on the gain block naming `k`.
 fn assert_refused_as_non_finite(bytes: &[u8], case: &str) {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     let error = engine
         .load_cxf(bytes)
         .expect_err(&format!("{case}: a non-finite gain must refuse the load"));
@@ -117,7 +117,7 @@ fn bare_json_overflow_literal_is_refused_before_grounding() {
     let mutated = text.replacen("\"S231:value\":0.5", "\"S231:value\":1e400", 1);
     assert_ne!(text, mutated, "fixture mutation must apply");
     bytes = mutated.into_bytes();
-    let error = Engine::in_memory().load_cxf(&bytes).unwrap_err();
+    let error = Engine::new().load_cxf(&bytes).unwrap_err();
     assert!(
         matches!(&error, OcError::Cxf(oce_cxf::CxfError::Json(_))),
         "{error:?}"
@@ -140,8 +140,8 @@ fn finite_boundary_values_load_and_round_trip_bit_exactly() {
     ];
     for (value, expected) in cases {
         let case = value.to_string();
-        let mut engine = Engine::in_memory();
-        let report = engine
+        let mut engine = Engine::new();
+        let (report, _) = engine
             .load_cxf(&with_gain_k(value))
             .unwrap_or_else(|error| panic!("{case}: finite gain must load: {error:?}"));
         assert!(
@@ -175,7 +175,7 @@ fn render(receipt: &DiagnosticReceipt) -> Vec<String> {
 
 #[test]
 fn non_finite_load_failure_receipt_is_pinned() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     let failure = engine
         .load_cxf_with_receipt(&with_gain_k(typed_double("-inf")))
         .expect_err("non-finite gain must refuse");
@@ -189,7 +189,7 @@ fn non_finite_load_failure_receipt_is_pinned() {
         ]
     );
     // Repeat: the refusal and its receipt are deterministic.
-    let again = Engine::in_memory()
+    let again = Engine::new()
         .load_cxf_with_receipt(&with_gain_k(typed_double("-inf")))
         .expect_err("non-finite gain must refuse");
     assert_eq!(render(again.diagnostics()), rendered);
@@ -197,7 +197,7 @@ fn non_finite_load_failure_receipt_is_pinned() {
 
 #[test]
 fn set_param_refuses_non_finite_gain_and_leaves_the_engine_usable() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL.as_bytes()).unwrap();
     engine.halt().unwrap();
     for value in [f64::NAN, -f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {

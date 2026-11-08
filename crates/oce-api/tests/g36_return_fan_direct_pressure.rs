@@ -224,8 +224,8 @@ fn buildings_line(x1: f64, f1: f64, x2: f64, f2: f64, u: f64) -> f64 {
 }
 
 fn load_return_fan_direct_pressure() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(RETURN_FAN_DIRECT_PRESSURE.as_bytes())
         .expect("source-verified G36 ReturnFanDirectPressure fixture loads");
     assert_eq!(report.block_count, 22);

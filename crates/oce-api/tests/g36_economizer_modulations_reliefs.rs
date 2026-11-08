@@ -58,8 +58,8 @@ fn economizer_modulations_reliefs_inputs(t: f64) -> Vec<(String, Value)> {
 }
 
 fn load_economizer_modulations_reliefs() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(ECONOMIZER_MODULATIONS_RELIEFS.as_bytes())
         .expect("source-verified G36 Economizers.Subsequences.Modulations.Reliefs fixture loads");
     assert_eq!(report.block_count, 8);

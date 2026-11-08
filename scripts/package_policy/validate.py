@@ -4,7 +4,8 @@
 Every workspace member is either private (`publish = false`) or registry-ready: its normal and
 build dependencies on other members are path-backed with a registry version, and none of them is
 private. The `oce-api` default build, its only selection, must keep a normal closure with no
-database or async runtime, and the release workflow bytes stay approved. Publication state comes from each
+database, async runtime or storage-port crate (the engine is pure; GitHub #390), and the release
+workflow bytes stay approved. Publication state comes from each
 crate's `Cargo.toml`; nothing else restates it before 1.0.
 """
 
@@ -27,7 +28,9 @@ EXPECTED_FEATURES: dict[str, list[str]] = {}
 EXPECTED_SELECTIONS = {
     "default": ([], []),
 }
-REQUIRED_CLOSURE_MEMBER = "oce-store-mem"
+# The engine is pure (GitHub #390): the storage port and its in-memory backend sit beside the
+# facade, reached by the host, never by `oce-api`.
+FORBIDDEN_CLOSURE_MEMBERS = ("oce-store", "oce-store-mem")
 FORBIDDEN_DEPENDENCIES = ["async-std", "selene-db", "tokio"]
 UNKNOWN_FEATURE_CONTROL = "unsupported-control"
 
@@ -184,8 +187,9 @@ def validate_workspace(metadata: dict[str, Any]) -> dict[str, Any]:
                 )
 
     api_closure = transitive_dependencies(normal_graph, FEATURE_PACKAGE)
-    if REQUIRED_CLOSURE_MEMBER not in api_closure:
-        raise PolicyError(f"{FEATURE_PACKAGE} normal closure must include {REQUIRED_CLOSURE_MEMBER}")
+    reached = sorted(set(FORBIDDEN_CLOSURE_MEMBERS) & api_closure)
+    if reached:
+        raise PolicyError(f"{FEATURE_PACKAGE} normal closure must exclude storage crates: {reached}")
     return {
         "packages": packages,
         "publishable": publishable,

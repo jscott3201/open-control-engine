@@ -129,8 +129,6 @@ dependencies = [
  "oce-graph",
  "oce-model",
  "oce-semantics",
- "oce-store",
- "oce-store-mem",
  "oce-validate",
  "serde_json",
  "thiserror",
@@ -208,14 +206,8 @@ dependencies = [
 [[package]]
 name = "oce-model"
 version = "0.2.0"
-
-[[package]]
-name = "oce-reference-wal-adapter"
-version = "0.2.0"
 dependencies = [
- "oce-store",
  "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -231,6 +223,7 @@ dependencies = [
 name = "oce-store"
 version = "0.2.0"
 dependencies = [
+ "oce-model",
  "serde",
  "thiserror",
 ]

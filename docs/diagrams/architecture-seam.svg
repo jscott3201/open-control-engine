@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 490" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
   <title id="title">Open Control Engine architecture: the CDL §7.17 non-computational seam</title>
-  <desc id="desc">A host application drives the engine through the oce-api facade. The deterministic execution core (Group A) sees only blocks, connections, and values and has no database. Everything non-computational — topology, points, parameters, trends, semantics, and durability — sits behind the oce-store port, reached only through traits, with an in-memory default and app-side adapters.</desc>
+  <desc id="desc">A host application drives the engine through the oce-api facade. The engine is pure: plain data in, plain data out. The deterministic execution core (Group A) sees only blocks, connections, and values and has no database. Everything non-computational — topology, points, parameters, trends, semantics, and durability — sits behind the oce-store port, reached by the host only, through traits, with an in-memory default and app-side adapters. The facade never reaches the store.</desc>
 
   <rect width="960" height="490" fill="#ffffff"/>
 
@@ -11,11 +11,11 @@
   <!-- Facade -->
   <rect x="80" y="88" width="800" height="56" rx="8" fill="#fef7e0" stroke="#ea8600" stroke-width="1.5"/>
   <text x="480" y="112" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">oce-api — the embeddable facade</text>
-  <text x="480" y="131" text-anchor="middle" font-size="12" fill="#5f6368" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Engine&lt;S: Store = MemStore&gt;&#8195;·&#8195;package oce-api</text>
+  <text x="480" y="131" text-anchor="middle" font-size="12" fill="#5f6368" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Engine — pure: plain data in, plain data out&#8195;·&#8195;package oce-api</text>
 
-  <!-- arrows from facade -->
+  <!-- the facade reaches only the execution core; the host alone reaches the store -->
   <path d="M300 144 L300 178" stroke="#9aa0a6" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
-  <path d="M770 144 L770 178" stroke="#9aa0a6" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M910 68 L910 178" stroke="#9aa0a6" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
 
   <!-- Execution core (Group A) -->
   <rect x="20" y="180" width="560" height="290" rx="10" fill="#e8f0fe" stroke="#1a73e8" stroke-width="2"/>

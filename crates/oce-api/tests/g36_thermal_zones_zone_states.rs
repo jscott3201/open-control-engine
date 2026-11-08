@@ -118,8 +118,8 @@ fn reference_inputs(reference: &ReferenceTable, t: f64) -> Vec<(String, Value)> 
 }
 
 fn load_zone_states() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(ZONE_STATES.as_bytes())
         .expect("source-verified G36 ThermalZones ZoneStates fixture loads");
     assert_eq!(report.block_count, 13);

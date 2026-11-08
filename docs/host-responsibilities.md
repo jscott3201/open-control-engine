@@ -26,12 +26,12 @@ preparation followed by consuming execution is the only public state-advancing e
 
 Completeness means every executable boundary input exactly once, except omission explicitly
 defined by the executable schema. It does not establish sensor coherence, quality, freshness or
-plausibility. Preparation neither fills gaps from Store samples nor infers host defaults.
+plausibility. Preparation neither fills gaps from stored samples nor infers host defaults.
 Its reload fence does not authorize deployments or commands. Persistence, authentication,
 authorization, deployment fencing, scheduling/wall-clock mapping, NO_EVAL, safe states, equipment
 interlocks and actuation stay host-owned. NO_EVAL means not executing.
 
-Native execution calls no Store method or host callback. Persisting or delivering a retained result
+Native execution calls no storage port or host callback. Persisting or delivering a retained result
 is a separate host operation; a later delivery failure does not turn the accepted frame into a refusal.
 Do not blindly resubmit at the same time: that produces another state transition and sequence.
 The accepted-frame sequence correlates only within one Engine lifetime; reload, resume and restore
@@ -71,8 +71,8 @@ qualified mathematics, and conformance tolerances are not replay acceptance poli
 ## Complete values are not sensor-quality evidence
 
 Every executable boundary input is required exactly once. A missing determinant returns
-`FrameMissingInput` before mutation, even if the connector had a prior value or the Store holds a
-sample. There is no implicit hold-last, type seed, sparse write or Store fill-in.
+`FrameMissingInput` before mutation, even if the connector had a prior value or your store holds a
+sample. There is no implicit hold-last, type seed, sparse write or stored-sample fill-in.
 
 Frames carry typed values, not `PointStatus` or wall-clock freshness. A host that deliberately
 resubmits stale or faulted observations can still obtain a valid computational result. Validate
@@ -162,7 +162,7 @@ seconds, milliseconds and nanoseconds are all far inside the limit. A
 large finite step (a clock jump from -1e9 to 1e18) is still accepted, and integrators take it in
 one step: keep time contiguous yourself. Loaded blocks also enforce representability. The
 host owns cadence and any mapping between model seconds and external UNIX timestamps. Realtime
-epoch configuration and realtime/Store orchestration are not facade capabilities.
+epoch configuration and realtime/storage orchestration are not facade capabilities.
 
 Supply time from a source you trust to be monotonic. The engine cannot detect a clock that jumped.
 
@@ -183,11 +183,28 @@ remain committed if a later frame refuses, but that refusal stages no prefix. Us
 a fresh run, or an explicit compatible process-local checkpoint for branching/rewind. There is no
 whole-horizon transaction.
 
-## Persist engine state outside the store port
+## Durability is the host's
+
+The engine is pure: it owns no storage backend, `oce-api` does not depend on `oce-store`, and no
+load, frame, snapshot or restore calls a storage port. Persisting anything is a separate host
+operation. A load hands you the persistable model as plain data:
+
+```rust,ignore
+let (report, loaded) = engine.load_cxf(&cxf_bytes)?; // engine state is committed here
+your_store.save_model(&loaded.model)?;                // your adapter behind the oce-store port
+check_bindings(loaded.input_points())?;               // (canonical path, value type) per input
+```
+
+`loaded.model` is the `ResolvedModel` the `oce-store` port takes unchanged (both crates share the
+`oce_model::resolved_model` DTOs). Ordering, recovery, transactions and compensation are yours: the
+engine has already committed the load when you persist, and nothing you persist is read back by a
+frame. A host-side helper in `oce-store` for this sequence is tracked by GitHub #391.
+
+## Persist engine state outside the engine
 
 `Engine::state_snapshot` returns the engine-owned canonical bytes needed to continue a run. It does
 not write them anywhere. `Engine::checkpoint`, `state_snapshot`, `restore_checkpoint`, and
-`restore_state` call no `Store` method. The [state contract](state-compatibility.md) defines the
+`restore_state` call no storage port. The [state contract](state-compatibility.md) defines the
 same-loaded-executable guarantee, typed refusals and portability limits. The host owns durable
 storage and an authenticated sealed envelope binding **exact snapshot bytes** to its approved
 compiled-build/deployment qualifier, freshness and generation. Verify that envelope **before**
@@ -213,8 +230,8 @@ Durable continuation has a narrow restore window:
    is insufficient. Refuse a mismatched build/deployment here, outside OCE.
 3. Parse only approved OCE bytes with `EngineStateSnapshot::from_bytes`. Inspect `portability()`
    for placement, without treating it as build or numerical qualification.
-4. Load the exact compatible executable/parameters into a fresh target. Load can have Store
-   effects even if it fails; apply the separate compensation policy below.
+4. Load the exact compatible executable/parameters into a fresh target. Load has no external
+   effects; anything your host persisted around a load is yours to reconcile.
 5. Call `restore_state` before any accepted frame, dirty-parameter resume or either earlier restore.
    On refusal do not patch bytes, retry on an advanced target or bypass admission. Select a
    qualified target, approved cold start or rollback under host policy.
@@ -230,7 +247,7 @@ The target model must have the same executable manifest: block classes and param
 bindings, connector types, schedule, state-slot layout, enum descriptors, external inputs, and
 boundary outputs, computation units/quantities and effective complete-frame acceptance bounds.
 The diagnostic model id may differ; executable compatibility may not. A refusal
-is atomic and leaves engine and store state unchanged. Durable restore also refuses after the target
+is atomic and leaves engine state unchanged. Durable restore also refuses after the target
 crosses a mutation boundary, even if that mutation was otherwise harmless
 as defined by the state contract.
 
@@ -261,7 +278,7 @@ When the engine build changes, work through this host fallback checklist:
 - [ ] Choose explicitly approved cold requalification or separately qualified external rollback;
   never auto-fallback or cross-build restore.
 - [ ] For cold start, qualify CXF, parameters, complete IO domains, cadence and seeded behavior;
-  compensate/reconcile load-time Store effects and external state separately.
+  reconcile anything your host persisted around the load and external state separately.
 - [ ] For rollback, bind the prior binary to its own authenticated state and configuration; reject
   any mismatch before dispatch. No current decoder participates.
 - [ ] Verify field fencing, quality policy, model-time mapping and exclusive command authority before
@@ -334,12 +351,12 @@ See [facade migration](facade-migration.md) for the intentional pre-release sour
 
 `point_list(None)` still returns the engine's own effective inventory. Its existing argument remains,
 but device filtering is outside support: every `Some` returns `OcError::Load` directly, without
-querying the store or changing the run. Wiring a capable `SemanticStore` does not enable that filter.
+changing the run. The engine has no equipment index to delegate to.
 
 ## CXF point identities are the authored `@id`s
 
-Every point path — on the host-visible `IoInventory` and in the durable `PointDto` projection sent
-through the PointStore port — is an authored `@id` from the source CXF document, expanded against
+Every point path — on the host-visible `IoInventory` and in the plain-data `PointDto` projection a
+load returns in `LoadedModel::model` — is an authored `@id` from the source CXF document, expanded against
 the document's `@context` to canonical absolute form at ingest: for a connector driven by a
 composite boundary input it is the declared boundary input's `@id` (one host point fans out to
 every internal consumer, which is why the G36 corpus's 3020 connectors surface as 2895 points),
@@ -385,7 +402,7 @@ a declared output name. Because the driver's connector supplies host point metad
 alias can supply a previously unset driver unit, quantity, or bound. That changes the driver's
 `IoInventory` and `point_list(None)` row for an unchanged input document; propagated unit and
 quantity also reach the durable `PointDto`. `IoSummary` remains a count-only surface and does not
-change when metadata propagates. Hosts that retain point metadata outside the store port must
+change when metadata propagates. Hosts that retain point metadata outside the engine must
 refresh it after loading with this rule. An undriven declared output resolves nowhere; its load-time
 `undriven-boundary-output` warning is its only representation. The input side mirrors it: a root
 `hasInput` declaration that no connection reads is absent from `input_definitions()` (every listed
@@ -411,7 +428,7 @@ changes.
 
 | Bound | Limit | Defined at | Behavior when exceeded |
 | --- | --- | --- | --- |
-| Serialized CXF at both facade load entry points | 8 MiB (8,388,608 bytes) by default; hosts may configure a smaller limit | `crates/oce-api/src/admission.rs` | `OcError::CxfTooLarge { actual_bytes, limit_bytes }` before JSON deserialization or Store calls |
+| Serialized CXF at both facade load entry points | 8 MiB (8,388,608 bytes) by default; hosts may configure a smaller limit | `crates/oce-api/src/admission.rs` | `OcError::CxfTooLarge { actual_bytes, limit_bytes }` before JSON deserialization or engine mutation |
 | Expression parse and AST nesting | 64 | `crates/oce-expr/src/lib.rs` | typed `NestingTooDeep` error |
 | Expression size | 4096 nodes | `crates/oce-expr/src/lib.rs` | typed `ExpressionTooLarge` error |
 | Composite **nesting** (`containsBlock` lowering) | 64 | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
@@ -449,7 +466,7 @@ Receipt admission refusals use the existing `Import` stage, with byte counts onl
 content, source error or structured diagnostics in the `OcError`; `OperationFailure` still exposes
 that original error through its normal source chain. Legacy malformed-input errors remain unchanged.
 
-## Load replacement and the Store compensation boundary
+## Load replacement leaves no external effect
 
 Ordinary returned load failures preserve the prior **in-memory executable/run image**: model and
 identity, blocks/schedule, state words and connector/output values, IO/parameters,
@@ -458,19 +475,16 @@ durable-restore readiness. Successful reload replaces model-bound caches and sta
 parameter lifecycle, and opens the fresh durable-restore window. Refresh all model-local/ephemeral
 references after success; admission policy persists and accepted-frame sequence does not reset.
 
-This is not a Store transaction. `recover`, `save_model`, and `resolve_points` execute before the
-in-memory commit and can have effects even when a later operation (or that call itself) fails.
-The port has no abort/compensation hook. A saved candidate model and allocated point handles can
-remain after refusal. The host/adapter owns compensation, isolation and re-establishing a usable
-backend; **old external handle validity is not promised**. Load-time handles are validated but
-not retained for execution. Do not blindly resume equipment control after a backend refusal. Panic, process death,
-allocation failure, and concurrent host effects are outside the ordinary returned-error guarantee.
+Load calls no storage port, so a refused load has no external effect to compensate: the engine
+either commits the new model and returns a `LoadedModel`, or returns an error and keeps the prior
+image. If your host persists the `LoadedModel`, it does so after the engine has committed, and the
+ordering, transaction and compensation of that write are yours. Panic, process death, allocation
+failure, and concurrent host effects are outside the ordinary returned-error guarantee.
 
 `reload_tests` compares the complete owned image for fresh, advanced and halted/dirty runs across
-real import, unification, validation, schedule and injected Store refusals; the private build tail
-covers instantiation and projection. Semantics currently returns metadata without a refusal path; no
+real import, unification, validation and schedule refusals; the private build tail covers
+instantiation and projection. Semantics currently returns metadata without a refusal path; no
 injected failures are claimed for that stage.
-The separate residual-effects test demonstrates the MemStore compensation boundary.
 
 The structural ingest paths above are bounded and return typed diagnostics rather than panicking.
 `../TESTING.md` requires new ingest code to assert the specific `DiagCode` or error variant rather

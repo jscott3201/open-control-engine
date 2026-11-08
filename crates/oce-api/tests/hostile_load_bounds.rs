@@ -168,10 +168,10 @@ fn array_document(lengths: &[usize]) -> Vec<u8> {
 }
 
 fn load(bytes: &[u8]) -> (Result<oce_api::LoadReport, OcError>, AllocationInfo) {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     let mut result = None;
     let info = measure(|| result = Some(engine.load_cxf(bytes)));
-    (result.unwrap(), info)
+    (result.unwrap().map(|(report, _)| report), info)
 }
 
 fn error_codes(error: &OcError) -> Vec<DiagCode> {
@@ -202,7 +202,7 @@ fn moving_mean_window_past_the_state_budget_is_a_typed_build_refusal_without_all
 #[test]
 fn moving_mean_window_at_i64_max_and_the_receipt_record_are_typed() {
     let bytes = moving_mean_document(&[i64::MAX]);
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     let failure = engine
         .load_cxf_with_receipt(&bytes)
         .expect_err("i64::MAX window refuses");
@@ -531,7 +531,7 @@ fn resume_past_the_state_budget_refuses_typed_and_stays_halted_until_corrected()
     use oce_api::{EngineStateError, RunMode, Value};
 
     let path = "http://example.org#M.mean0.n";
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .load_cxf(&moving_mean_document(&[8]))
         .expect("a small window loads");

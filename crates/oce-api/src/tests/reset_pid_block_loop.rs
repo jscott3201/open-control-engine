@@ -148,7 +148,7 @@ fn proportional_reset_pid_trigger_feedback_is_refused_as_a_block_loop() {
 #[test]
 fn reset_pid_trigger_feedback_loads_in_every_mode_with_state() {
     for member in ["PI", "PD", "PID"] {
-        Engine::in_memory()
+        Engine::new()
             .load_cxf(&reset_pid_trigger(member, true))
             .unwrap_or_else(|err| panic!("{member} must load: {err:?}"));
     }
@@ -156,7 +156,7 @@ fn reset_pid_trigger_feedback_loads_in_every_mode_with_state() {
 
 #[test]
 fn proportional_reset_pid_without_the_feedback_loads() {
-    Engine::in_memory()
+    Engine::new()
         .load_cxf(&reset_pid_trigger("P", false))
         .unwrap_or_else(|err| panic!("P without feedback must load: {err:?}"));
 }

@@ -106,8 +106,8 @@ fn same_outputs(left: &Row, right: &Row) -> bool {
 }
 
 fn load(rule: &Rule) -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine.load_cxf(rule.cxf).unwrap();
+    let mut engine = Engine::new();
+    let (report, _) = engine.load_cxf(rule.cxf).unwrap();
     assert!(
         report.warnings.is_empty(),
         "{}: unexpected load warnings {:?}",

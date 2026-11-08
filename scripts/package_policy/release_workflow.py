@@ -4,10 +4,10 @@
 import hashlib
 
 
-# Approval witness for release.yml as re-pinned when the reserved crates were removed (GitHub #389).
+# Approval witness for release.yml as re-pinned when the reference WAL adapter was removed (GitHub #390).
 # Intentional changes follow the procedure in docs/ci-and-the-gate.md (the package validator).
 # Never derive the expected digest from the candidate workflow at validation time.
-EXPECTED_SHA256 = "7cb637906b926eaeee6f0028b28fc5b4bc840e86cbb42a3286206f4a95d336eb"
+EXPECTED_SHA256 = "ea12ba3227925ddf2012741170704c25d11135185960baa21d9709b8dce59e28"
 
 
 class WorkflowError(ValueError):

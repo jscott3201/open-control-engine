@@ -7,22 +7,21 @@
 //! - an injected feedthrough cycle is rejected with a typed [`BuildError::AlgebraicLoop`];
 //! - determinism: two independent compiles of the same model produce **byte-identical**
 //!   `order`/`connector_order`/`driver_of`;
-//! - a `MemStore` model round-trip + no-op `commit`/`flush`/`recover` through the engine.
+//! - the plain-data resolved-model projection a load returns.
 
 pub(super) use std::sync::Arc;
 
 pub(super) use oce_graph::BuildError;
+pub(super) use oce_model::resolved_model::{DomainKey, ResolvedModel};
 pub(super) use oce_model::{
     BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, ModelGraph, ParamTable, Value,
     ValueType,
 };
-pub(super) use oce_store::{DomainKey, Durable, ModelStore, ResolvedModel, SemanticQuery};
 
 pub(super) use crate::{Engine, IoClass, OcError, PhysicalKind, PointDirection, RunMode};
-pub(super) use oce_store_mem::MemStore;
 
 /// Owned inspection image for lifecycle tests, not a public receipt or raw-output API.
-pub(super) fn output_image<S: oce_store::Store>(engine: &Engine<S>) -> Vec<(String, Value)> {
+pub(super) fn output_image(engine: &Engine) -> Vec<(String, Value)> {
     engine
         .io()
         .iter()
@@ -35,8 +34,8 @@ pub(super) fn output_image<S: oce_store::Store>(engine: &Engine<S>) -> Vec<(Stri
 }
 
 /// Submit explicitly supplied complete observations through the sole execution boundary.
-pub(super) fn advance<S: oce_store::Store>(
-    engine: &mut Engine<S>,
+pub(super) fn advance(
+    engine: &mut Engine,
     time: f64,
     entries: &[(&str, Value)],
 ) -> Result<crate::CompletedFrame, OcError> {

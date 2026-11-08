@@ -31,7 +31,7 @@ fn assert_model(message: Arc<str>) -> ModelGraph {
 }
 
 fn snapshot_with_message(message: Arc<str>) -> Result<crate::EngineStateSnapshot, OcError> {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(assert_model(message), Some("urn:test:resource-model"))
         .unwrap();
@@ -64,7 +64,7 @@ fn exact_snapshot_cap_round_trips_and_one_byte_over_refuses_capture() {
 #[test]
 fn opaque_image_debug_output_is_bounded() {
     let model_id = format!("urn:test:{}", "x".repeat(32 * 1024));
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(ModelGraph::new(), Some(&model_id))
         .unwrap();
@@ -78,7 +78,7 @@ fn opaque_image_debug_output_is_bounded() {
 
 #[test]
 fn checkpoint_size_counter_matches_the_wire_encoder() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(assert_model(Arc::from("sized")), None)
         .unwrap();
@@ -108,7 +108,7 @@ fn compact_many_block_snapshot_round_trips_within_the_decode_budget() {
                 .with_iri(format!("v:{index:03}")),
         );
     }
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(model, Some("urn:test:compact-manifest"))
         .unwrap();
@@ -118,13 +118,13 @@ fn compact_many_block_snapshot_round_trips_within_the_decode_budget() {
 
 #[test]
 fn compatibility_diagnostics_bound_large_parameter_values() {
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source
         .build_model_in_memory(assert_model(Arc::from("x".repeat(1024 * 1024))), None)
         .unwrap();
     let checkpoint = source.checkpoint().unwrap();
 
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target
         .build_model_in_memory(assert_model(Arc::from("y".repeat(1024 * 1024))), None)
         .unwrap();
@@ -144,7 +144,7 @@ fn compatibility_diagnostics_bound_large_parameter_values() {
 
 #[test]
 fn target_domain_diagnostics_bound_hostile_descriptor_strings() {
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source
         .build_model_in_memory(target_bound_model(), Some("urn:test:sun-model"))
         .unwrap();
@@ -160,7 +160,7 @@ fn target_domain_diagnostics_bound_hostile_descriptor_strings() {
     let bytes = crate::state_codec::encode_snapshot(&image, false).unwrap();
     let snapshot = EngineStateSnapshot::from_bytes(&bytes).unwrap();
 
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target
         .build_model_in_memory(target_bound_model(), Some("urn:test:sun-model"))
         .unwrap();
@@ -180,7 +180,7 @@ fn target_domain_diagnostics_bound_hostile_descriptor_strings() {
 
 #[test]
 fn malformed_diagnostics_bound_hostile_enum_class_paths() {
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source
         .build_model_in_memory(target_bound_model(), Some("urn:test:sun-model"))
         .unwrap();

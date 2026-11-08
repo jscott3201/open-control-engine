@@ -15,7 +15,7 @@ fn scrambled_connector_ids_refuse_before_execution() {
     model.external_inputs = inputs;
     model.connectors[0].id = ConnectorId(1);
     model.connectors[1].id = ConnectorId(0);
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     let error = engine.build_model_in_memory(model, None).unwrap_err();
     let OcError::Validate(error) = error else {
         panic!("wrong refusal: {error:?}")
@@ -42,7 +42,7 @@ fn fanout(types: &[ValueType], class: &str, params: Vec<(Arc<str>, Value)>) -> M
 
 #[test]
 fn heterogeneous_fanout_refuses_during_load() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     let model = fanout(
         &[ValueType::Real, ValueType::Boolean],
         "CDL.Reals.Ramp",
@@ -54,15 +54,16 @@ fn heterogeneous_fanout_refuses_during_load() {
     );
     let error = engine.build_model_in_memory(model, None).unwrap_err();
     assert!(
-        matches!(&error, OcError::Store(oce_store::StoreError::Validation(detail))
-        if detail.contains("duplicate point DomainKey") && detail.contains("urn:point#u")),
+        matches!(&error, OcError::Load { detail }
+        if detail.starts_with("model projection failed: duplicate point DomainKey")
+            && detail.contains("urn:point#u")),
         "{error:?}"
     );
 }
 
 #[test]
 fn one_logical_input_stages_every_homogeneous_target_on_each_transition() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(fanout(&[ValueType::Real; 2], "CDL.Reals.Add", vec![]), None)
         .unwrap();

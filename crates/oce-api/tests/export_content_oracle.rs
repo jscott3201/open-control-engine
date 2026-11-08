@@ -94,7 +94,7 @@ fn rendered_expectations() -> String {
             .expect("UTF-8 fixture stem")
             .to_owned();
         let bytes = fs::read(&fixture).expect("read swept CXF fixture");
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .load_cxf(&bytes)
             .unwrap_or_else(|error| panic!("{stem} loads: {error:?}"));
@@ -155,7 +155,7 @@ fn complete_exports_mint_the_digest_of_their_bytes_and_partial_exports_refuse() 
             .and_then(|stem| stem.to_str())
             .expect("UTF-8 stem");
         let bytes = fs::read(&fixture).expect("read swept CXF fixture");
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .load_cxf(&bytes)
             .unwrap_or_else(|error| panic!("{stem} loads: {error:?}"));

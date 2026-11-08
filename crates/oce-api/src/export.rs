@@ -1,7 +1,6 @@
 //! CXF export and emitted-document identity.
 
 use oce_cxf::ExportReport as CxfExportReport;
-use oce_store::Store;
 
 use crate::diagnostics::{DiagnosticCapture, DiagnosticStage, ExportReceipt, OperationFailure};
 use crate::engine::Engine;
@@ -90,7 +89,7 @@ impl ExportReport {
     }
 }
 
-impl<S: Store> Engine<S> {
+impl Engine {
     /// Export the current resolved model as deterministic CXF bytes.
     ///
     /// # Errors
