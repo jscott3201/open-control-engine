@@ -13,6 +13,7 @@ WORKFLOW_DIR="${OCE_WORKFLOW_DIR:-.github/workflows}"
 DENY_TOML="${OCE_DENY_TOML:-deny.toml}"
 ROOT_CARGO_TOML="${OCE_ROOT_CARGO_TOML:-Cargo.toml}"
 CRATES_DIR="${OCE_CRATES_DIR:-crates}"
+FIRMWARE_DIR="${OCE_FIRMWARE_DIR:-firmware}"
 
 require_file() {
   path="$1"
@@ -522,6 +523,29 @@ require_unsafe_forbid_layers() {
     echo "FAIL: no crate src/lib.rs files found under $CRATES_DIR"
     exit 1
   fi
+
+  # Firmware members (issue #402) hold no `unsafe` either: their manifests take the workspace lints,
+  # their lib roots start with the forbid, and every bin root carries it, since an image's entry,
+  # allocator and panic handler live in its bin.
+  for manifest in "$FIRMWARE_DIR"/*/Cargo.toml; do
+    [ -e "$manifest" ] || continue
+    require_lints_workspace "$manifest"
+  done
+  for lib in "$FIRMWARE_DIR"/*/src/lib.rs; do
+    [ -e "$lib" ] || continue
+    first_line="$(sed -n '1p' "$lib")"
+    if [ "$first_line" != '#![forbid(unsafe_code)]' ]; then
+      echo "FAIL: $lib line 1 must be #![forbid(unsafe_code)]"
+      exit 1
+    fi
+  done
+  for bin in "$FIRMWARE_DIR"/*/src/main.rs "$FIRMWARE_DIR"/*/src/bin/*.rs; do
+    [ -e "$bin" ] || continue
+    if ! grep -qx '#!\[forbid(unsafe_code)\]' "$bin"; then
+      echo "FAIL: $bin must carry #![forbid(unsafe_code)]"
+      exit 1
+    fi
+  done
 }
 
 # The mdBook binary is restored from actions/cache before the installer runs, keyed on the pinned
@@ -710,22 +734,28 @@ require_job_pattern "$ci" 'crate-tests' '^[[:space:]]*(- )?run: test -s target/n
   'refuse an absent or empty crate-suite report'
 # The `no_std + alloc` build of the core four (issue #397): both targets, no default features, and
 # the oce-expr suite that exercises the program-wide fuel meter.
-no_std_crates='-p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc'
-require_job_literal "$ci" 'no-std-build' 'rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown' \
-  'install the no_std targets'
-require_job_literal "$ci" 'no-std-build' \
-  "cargo build $no_std_crates --target thumbv7em-none-eabihf --locked" \
-  'build the core four no_std + alloc on thumbv7em-none-eabihf'
-require_job_literal "$ci" 'no-std-build' \
-  "cargo clippy $no_std_crates --target thumbv7em-none-eabihf --locked -- -D warnings" \
-  'lint the core four no_std + alloc on thumbv7em-none-eabihf'
-require_job_literal "$ci" 'no-std-build' \
-  "cargo build $no_std_crates --target wasm32-unknown-unknown --locked" \
-  'build the core four no_std + alloc on wasm32-unknown-unknown'
+# The bare-metal cell (issues #397, #402): the three targets, the core four's build, clippy and
+# graph scan with its controls, the oce-expr suite without std, and the firmware image's build,
+# size budget, size-checker controls and host run. The scripts own the commands; check-no-std.sh
+# names the crates, features and targets.
+no_std_targets='rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown'
+require_job_literal "$ci" 'no-std-build' "$no_std_targets" 'install the no_std targets'
+require_job_pattern "$ci" 'no-std-build' '^[[:space:]]*(- )?run: bash scripts/ci/check-no-std\.sh$' \
+  'build, lint and graph-scan the core four no_std + alloc on every target'
+require_job_pattern "$ci" 'no-std-build' '^[[:space:]]*(- )?run: bash scripts/ci/test-check-no-std\.sh$' \
+  'prove the no_std check fails on std'
 require_job_literal "$ci" 'no-std-build' \
   'cargo test -p oce-expr --no-default-features --features alloc --lib --locked -- --test-threads=1' \
   'run the oce-expr unit suite without std'
-no_std_targets='rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown'
+require_job_pattern "$ci" 'no-std-build' '^[[:space:]]*(- )?run: bash scripts/ci/check-firmware-link\.sh$' \
+  'build the firmware image for each bare-metal target within its size budget'
+require_job_pattern "$ci" 'no-std-build' \
+  '^[[:space:]]*(- )?run: python3 -I scripts/ci/test-firmware-size\.py$' \
+  'run the firmware size-check controls'
+require_job_pattern "$ci" 'no-std-build' '^[[:space:]]*(- )?run: cargo test -p oce-firmware-link --locked$' \
+  'run the firmware image on the host against every golden'
+require_job_order "$ci" 'no-std-build' "$no_std_targets" 'run: bash scripts/ci/check-no-std.sh' \
+  'the bare-metal cell installs its targets before building for them'
 require_job_order "$ci" 'gate' "$no_std_targets" 'run: bash .agents/gate.sh' \
   'the executed gate script has the no_std targets it builds for'
 # Documentation checks under CI OK (issue #377); docs-pages.yml is path-filtered and not required.
@@ -836,6 +866,19 @@ require_ci_ok_covers_every_job "$release"
 require_no_job_conditions "$release"
 require_job_order "$release" 'gate' "$no_std_targets" 'run: bash .agents/gate.sh full' \
   'the executed full gate script has the no_std targets it builds for'
+
+# The emulation check (issue #402): nightly and on dispatch, never on a pull request or a push (it
+# is not part of CI OK), its actions pinned, and it runs the emulation script.
+qemu="$WORKFLOW_DIR/qemu.yml"
+require_file "$qemu"
+require_pinned_actions "$qemu"
+require_pattern "$qemu" '^[[:space:]]*schedule:' 'scheduled emulation run'
+require_pattern "$qemu" '^[[:space:]]*- cron:' 'emulation cron entry'
+require_pattern "$qemu" '^[[:space:]]*workflow_dispatch:' 'manual emulation run'
+require_pattern "$qemu" '^[[:space:]]*(- )?run: bash scripts/ci/emulate-firmware\.sh$' \
+  'the emulation run executes emulate-firmware.sh'
+refuse_pattern "$qemu" '^on:[[:space:]]*[^[:space:]#]|^[[:space:]]*(pull_request|pull_request_target|push|merge_group):' \
+  'a pull_request or push trigger, or a one-line on:; the emulation run is nightly and non-gating'
 
 # Daily advisory/yanked gate and deny.toml discipline.
 require_pattern "$advisories" 'schedule:' 'scheduled advisory gate'

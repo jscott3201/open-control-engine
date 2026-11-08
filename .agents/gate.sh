@@ -10,6 +10,12 @@
 #   bash .agents/gate.sh full     # full     — adds the suite (release-gate.yml)
 #   bash .agents/gate.sh leverage # leverage — mirrors a PR confined to crates/leverage/: the
 #                                 #            always-on jobs plus the leverage lane, no engine lane
+#   bash .agents/gate.sh nostd    # nostd    — the bare-metal cell alone (pr-gate.yml's
+#                                 #            `no-std-build` job): the no_std core, the firmware
+#                                 #            image's build and size budget; light and full run it too
+#   bash .agents/gate.sh qemu     # qemu     — the emulation check (qemu.yml, nightly): the firmware
+#                                 #            images under QEMU against the host reference; needs
+#                                 #            qemu-system-arm and qemu-system-riscv32 on PATH
 #
 # Commands are kept in CI's exact form, flags included. `--locked`, the `ci`
 # nextest profile, `--no-tests=fail`, and `RUSTDOCFLAGS` are each load-bearing:
@@ -31,9 +37,9 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 MODE="${1:-light}"
 case "$MODE" in
-  light | full | leverage) ;;
+  light | full | leverage | nostd | qemu) ;;
   *)
-    echo "usage: bash .agents/gate.sh [light|full|leverage]" >&2
+    echo "usage: bash .agents/gate.sh [light|full|leverage|nostd|qemu]" >&2
     exit 2
     ;;
 esac
@@ -82,6 +88,68 @@ step_env() {
 }
 
 printf '\033[1mopen-control gate — mode: %s\033[0m\n' "$MODE"
+
+# ── The bare-metal cell (pr-gate.yml's `no-std-build` job) ──────────────────
+# The core four (oce-model, oce-expr, oce-blocks, oce-graph) build without `std` (issues #397,
+# #402), and the firmware image links them for a bare-metal target. This script installs nothing:
+# check-no-std.sh and check-firmware-link.sh fail, naming the `rustup target add <target>` command,
+# when a target is missing. A missing target is a failure, never a skip.
+bare_metal_cell() {
+  # Build, clippy and the `cargo tree` std-feature scan on thumbv7em-none-eabihf,
+  # riscv32imac-unknown-none-elf and wasm32-unknown-unknown, then the controls that prove both
+  # halves can fail.
+  step 'no_std + alloc core (build, clippy, graph scan)' bash scripts/ci/check-no-std.sh
+  step 'no_std check controls' bash scripts/ci/test-check-no-std.sh
+  # The math rule (issue #399): the core probe, the clippy.toml list and scope, and the
+  # std-float-method mutations in oce-blocks and oce-expr.
+  step 'math-discipline controls' bash scripts/ci/test-math-lint.sh
+  # Without `std` the evaluation-fuel meter is program-wide rather than thread-local, so the suite
+  # runs on one test thread.
+  step 'oce-expr unit suite without std' \
+    cargo test -p oce-expr --no-default-features --features alloc --lib --locked -- --test-threads=1
+  # The blob execution entry (issue #401): its no_std closure holds no oce-cxf, oce-api, serde_json
+  # or std, and its suites run against the no_std + alloc build of oce-graph (zero frame
+  # allocations, the facade's run digests, raw state words).
+  step 'blob entry closure (no_std)' bash scripts/ci/check-no-std-entry-closure.sh
+  step 'blob entry suites against the no_std build' \
+    cargo test -p oce-graph --no-default-features --features alloc --test blob_execution \
+      --test blob_state_words --locked -- --nocapture
+  # The firmware image (issue #402): graph scan, clippy, the `firmware`-profile build for both
+  # bare-metal targets, the size budget, the size checker's own controls, and the image's run on
+  # the host.
+  step 'firmware image (build and size budget)' bash scripts/ci/check-firmware-link.sh
+  step 'firmware size-check controls' python3 -I scripts/ci/test-firmware-size.py
+  step 'firmware run on the host' cargo test -p oce-firmware-link --locked
+}
+
+# ── Focused modes: the bare-metal cell, or the emulation check, alone ────────
+if [ "$MODE" = nostd ] || [ "$MODE" = qemu ]; then
+  if [ "$MODE" = nostd ]; then
+    bare_metal_cell
+  else
+    # qemu.yml's one command: build both images, run them under QEMU (netduinoplus2 for
+    # thumbv7em-none-eabihf, riscv32 virt for riscv32imac-unknown-none-elf) with semihosting, and
+    # diff each one's lines against the host reference runner's.
+    step 'firmware images under QEMU against the host reference' bash scripts/ci/emulate-firmware.sh
+  fi
+  echo
+  echo '────────────────────────────────────────────────────────────────────────────'
+  echo "NOT COVERED BY THIS RUN — mode $MODE runs one cell, not the gate:"
+  echo '  · everything else in the per-PR gate. Run `bash .agents/gate.sh` for it.'
+  if [ "$MODE" = nostd ]; then
+    echo '  · executing the images on their targets: `bash .agents/gate.sh qemu` (nightly in CI).'
+  fi
+  echo '────────────────────────────────────────────────────────────────────────────'
+  if [ "$failures" -gt 0 ]; then
+    printf '\n\033[31mGATE FAILED\033[0m — %d step(s):\n' "$failures"
+    printf '  · %s\n' "${failed_steps[@]}"
+    echo
+    echo 'Fix the cause. Never weaken a gate to reach green.'
+    exit 1
+  fi
+  printf '\n\033[32mGATE PASSED\033[0m (%s) — all steps green.\n' "$MODE"
+  exit 0
+fi
 
 # The engine (determinism) lane: everything that compiles the engine. `leverage` mode
 # skips it, as pr-gate.yml does for a PR confined to crates/leverage/ and the docs.
@@ -146,34 +214,7 @@ if engine_lane; then
 step 'unused dependency gate' cargo machete
 step 'clippy (default — no DB)' cargo clippy --workspace --all-targets --locked -- -D warnings
 step 'build (default — no DB)' cargo build --workspace --locked
-# ── no_std + alloc core build ────────────────────────────────────────────────
-# The core four (oce-model, oce-expr, oce-blocks, oce-graph) build without `std` (issue #397), as
-# pr-gate.yml's `no-std-build` job checks. This script installs nothing: when a target is missing,
-# its build step fails with rustc's E0463 ("can't find crate for `core`"), whose help line is the
-# `rustup target add <target>` command to run. A missing target is a failure, never a skip.
-step 'build (no_std + alloc, thumbv7em-none-eabihf)' \
-  cargo build -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features \
-    --features alloc --target thumbv7em-none-eabihf --locked
-step 'clippy (no_std + alloc, thumbv7em-none-eabihf)' \
-  cargo clippy -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features \
-    --features alloc --target thumbv7em-none-eabihf --locked -- -D warnings
-# The math rule (issue #399): the core probe, the clippy.toml list and scope, and the
-# std-float-method mutations in oce-blocks and oce-expr.
-step 'math-discipline controls' bash scripts/ci/test-math-lint.sh
-step 'build (no_std + alloc, wasm32-unknown-unknown)' \
-  cargo build -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features \
-    --features alloc --target wasm32-unknown-unknown --locked
-# Without `std` the evaluation-fuel meter is program-wide rather than thread-local, so the suite
-# runs on one test thread.
-step 'oce-expr unit suite without std' \
-  cargo test -p oce-expr --no-default-features --features alloc --lib --locked -- --test-threads=1
-# The blob execution entry (issue #401): its no_std closure holds no oce-cxf, oce-api, serde_json
-# or std, and its suites run against the no_std + alloc build of oce-graph (zero frame allocations,
-# the facade's run digests, raw state words).
-step 'blob entry closure (no_std)' bash scripts/ci/check-no-std-entry-closure.sh
-step 'blob entry suites against the no_std build' \
-  cargo test -p oce-graph --no-default-features --features alloc --test blob_execution \
-    --test blob_state_words --locked -- --nocapture
+bare_metal_cell
 
 step_env 'rustdoc — libs' RUSTDOCFLAGS '-D warnings' \
   cargo doc --no-deps --workspace --lib --document-private-items --locked

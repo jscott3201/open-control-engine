@@ -96,7 +96,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.gate_scripts == 'true'
     steps:
-      - run: rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown
+      - run: rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown
       - run: bash .agents/gate.sh
   default-no-db:
     needs: changes
@@ -311,15 +311,14 @@ jobs:
     needs: changes
     if: needs.changes.outputs.core == 'true'
     steps:
-      - run: rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown
-      - run: >-
-          cargo build -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc --target thumbv7em-none-eabihf --locked
-      - run: >-
-          cargo clippy -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc --target thumbv7em-none-eabihf --locked -- -D warnings
-      - run: >-
-          cargo build -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc --target wasm32-unknown-unknown --locked
+      - run: rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown
+      - run: bash scripts/ci/check-no-std.sh
+      - run: bash scripts/ci/test-check-no-std.sh
       - run: >-
           cargo test -p oce-expr --no-default-features --features alloc --lib --locked -- --test-threads=1
+      - run: bash scripts/ci/check-firmware-link.sh
+      - run: python3 -I scripts/ci/test-firmware-size.py
+      - run: cargo test -p oce-firmware-link --locked
   docs:
     steps:
       - uses: actions/cache@89abcdef0123456789abcdef0123456789abcdef # v6
@@ -438,7 +437,7 @@ jobs:
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
   gate:
     steps:
-      - run: rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown
+      - run: rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown
       - run: bash .agents/gate.sh full
   ci-ok:
     name: CI OK
@@ -448,6 +447,17 @@ jobs:
       - env:
           NEEDS_JSON: ${{ toJSON(needs) }}
         run: python3 check.py
+EOF
+  cat > "$dir/qemu.yml" <<'EOF'
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+jobs:
+  emulate:
+    steps:
+      - uses: actions/checkout@89abcdef0123456789abcdef0123456789abcdef # v4
+      - run: bash scripts/ci/emulate-firmware.sh
 EOF
   cat > "$dir/advisories.yml" <<'EOF'
 on:
@@ -518,6 +528,7 @@ run_case() {
     OCE_DENY_TOML="$deny" \
     OCE_ROOT_CARGO_TOML="$root_cargo" \
     OCE_CRATES_DIR="$crates_dir" \
+    OCE_FIRMWARE_DIR="$tmp/$name/firmware" \
     bash "$SCRIPT" 2>&1
   )"
   status=$?
@@ -1255,14 +1266,42 @@ windows_out_of_lane_map() {
   edit_pr_gate "$1" 's/ std-build-windows=core$//'
 }
 
-# The no_std build of the core four (issue #397).
-no_std_build_with_default_features() {
-  edit_pr_gate "$1" \
-    '/^  no-std-build:$/,/^  [^ ]/ s/ --no-default-features --features alloc --target thumbv7em-none-eabihf --locked$/ --target thumbv7em-none-eabihf --locked/'
+# The bare-metal cell (issues #397, #402).
+no_std_check_script_dropped() {
+  edit_pr_gate "$1" '/^      - run: bash scripts\/ci\/check-no-std.sh$/d'
 }
 
-no_std_wasm_cell_dropped() {
-  edit_pr_gate "$1" '/--target wasm32-unknown-unknown --locked$/d'
+no_std_controls_dropped() {
+  edit_pr_gate "$1" '/^      - run: bash scripts\/ci\/test-check-no-std.sh$/d'
+}
+
+no_std_riscv_target_dropped() {
+  edit_pr_gate "$1" \
+    '/^  no-std-build:$/,/^  [^ ]/ s/ riscv32imac-unknown-none-elf wasm32-unknown-unknown$/ wasm32-unknown-unknown/'
+}
+
+no_std_targets_after_the_check() {
+  dir="$1"
+  awk '
+    /^  no-std-build:$/ { in_job = 1 }
+    in_job && /^  [^ ]/ && !/^  no-std-build:$/ { in_job = 0 }
+    in_job && /rustup target add/ { held = $0; next }
+    { print }
+    in_job && /run: bash scripts\/ci\/check-no-std.sh$/ && held != "" { print held; held = "" }
+  ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+firmware_link_check_dropped() {
+  edit_pr_gate "$1" '/^      - run: bash scripts\/ci\/check-firmware-link.sh$/d'
+}
+
+firmware_size_controls_dropped() {
+  edit_pr_gate "$1" '/^      - run: python3 -I scripts\/ci\/test-firmware-size.py$/d'
+}
+
+firmware_host_run_dropped() {
+  edit_pr_gate "$1" '/^      - run: cargo test -p oce-firmware-link --locked$/d'
 }
 
 no_std_build_out_of_lane_map() {
@@ -1270,12 +1309,12 @@ no_std_build_out_of_lane_map() {
 }
 
 gate_job_without_no_std_targets() {
-  edit_pr_gate "$1" '/^  gate:$/,/^  [^ ]/ {/rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown$/d;}'
+  edit_pr_gate "$1" '/^  gate:$/,/^  [^ ]/ {/rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown$/d;}'
 }
 
 release_gate_without_no_std_targets() {
   dir="$1"
-  grep -v 'rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown' "$dir/release-gate.yml" \
+  grep -v 'rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown' "$dir/release-gate.yml" \
     > "$dir/release-gate.yml.tmp"
   mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
 }
@@ -1283,7 +1322,7 @@ release_gate_without_no_std_targets() {
 release_gate_installs_targets_after_the_script() {
   dir="$1"
   awk '
-    /rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown/ { held = $0; next }
+    /rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown/ { held = $0; next }
     { print }
     /run: bash .agents\/gate.sh full/ && held != "" { print held; held = "" }
   ' "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
@@ -1292,6 +1331,66 @@ release_gate_installs_targets_after_the_script() {
 
 no_std_build_out_of_ci_ok() {
   edit_pr_gate "$1" '/^      - no-std-build$/d'
+}
+
+# The emulation check (issue #402) stays nightly, non-gating and pinned.
+qemu_workflow_missing() {
+  rm -f "$1/qemu.yml"
+}
+
+qemu_on_pull_request() {
+  awk '{ print } /^  workflow_dispatch:$/ { print "  pull_request:" }' "$1/qemu.yml" > "$1/qemu.yml.tmp"
+  mv "$1/qemu.yml.tmp" "$1/qemu.yml"
+}
+
+qemu_on_push_one_line() {
+  # The block triggers stay, so only the one-line `on:` refusal can catch it.
+  sed '1s/^on:$/on: [push]/' "$1/qemu.yml" > "$1/qemu.yml.tmp"
+  mv "$1/qemu.yml.tmp" "$1/qemu.yml"
+}
+
+qemu_without_schedule() {
+  sed '/^  schedule:$/d; /^    - cron:/d' "$1/qemu.yml" > "$1/qemu.yml.tmp"
+  mv "$1/qemu.yml.tmp" "$1/qemu.yml"
+}
+
+qemu_unpinned_action() {
+  sed 's/actions\/checkout@[0-9a-f]* # v4/actions\/checkout@v4/' "$1/qemu.yml" > "$1/qemu.yml.tmp"
+  mv "$1/qemu.yml.tmp" "$1/qemu.yml"
+}
+
+qemu_without_the_script() {
+  sed '/emulate-firmware.sh/d' "$1/qemu.yml" > "$1/qemu.yml.tmp"
+  mv "$1/qemu.yml.tmp" "$1/qemu.yml"
+}
+
+# A firmware member (firmware/<name>) and the three ways its unsafe-code layer can lapse.
+firmware_member() {
+  local root="$1" manifest="$2" lib="$3" bin="$4"
+  mkdir -p "$root/link/src/bin"
+  printf '%b' "$manifest" > "$root/link/Cargo.toml"
+  printf '%b' "$lib" > "$root/link/src/lib.rs"
+  printf '%b' "$bin" > "$root/link/src/bin/image.rs"
+}
+
+compliant_firmware_member() {
+  firmware_member "$(dirname "$1")/firmware" '[package]\nname = "oce-firmware-link"\n\n[lints]\nworkspace = true\n' \
+    '#![forbid(unsafe_code)]\n#![no_std]\n' '//! Image.\n\n#![forbid(unsafe_code)]\n'
+}
+
+firmware_member_without_lints() {
+  firmware_member "$(dirname "$1")/firmware" '[package]\nname = "oce-firmware-link"\n' \
+    '#![forbid(unsafe_code)]\n' '#![forbid(unsafe_code)]\n'
+}
+
+firmware_lib_without_forbid() {
+  firmware_member "$(dirname "$1")/firmware" '[package]\nname = "oce-firmware-link"\n\n[lints]\nworkspace = true\n' \
+    '#![no_std]\n#![forbid(unsafe_code)]\n' '#![forbid(unsafe_code)]\n'
+}
+
+firmware_bin_without_forbid() {
+  firmware_member "$(dirname "$1")/firmware" '[package]\nname = "oce-firmware-link"\n\n[lints]\nworkspace = true\n' \
+    '#![forbid(unsafe_code)]\n' '//! Image.\n#![allow(unsafe_code)]\n'
 }
 
 remove_crates_dir() {
@@ -1491,10 +1590,39 @@ run_case windows-on-linux-runner fail windows_on_linux_runner \
   "the Windows cell runs on windows-latest"
 run_case windows-out-of-lane-map fail windows_out_of_lane_map \
   "CI OK JOB_LANES does not match the lane-filtered jobs' if: lines"
-run_case no-std-build-with-default-features fail no_std_build_with_default_features \
-  "build the core four no_std + alloc on thumbv7em-none-eabihf"
-run_case no-std-wasm-cell-dropped fail no_std_wasm_cell_dropped \
-  "build the core four no_std + alloc on wasm32-unknown-unknown"
+run_case no-std-check-script-dropped fail no_std_check_script_dropped \
+  "build, lint and graph-scan the core four no_std + alloc on every target"
+run_case no-std-controls-dropped fail no_std_controls_dropped \
+  "prove the no_std check fails on std"
+run_case no-std-riscv-target-dropped fail no_std_riscv_target_dropped \
+  "install the no_std targets"
+run_case no-std-targets-after-the-check fail no_std_targets_after_the_check \
+  "the bare-metal cell installs its targets before building for them"
+run_case firmware-link-check-dropped fail firmware_link_check_dropped \
+  "build the firmware image for each bare-metal target within its size budget"
+run_case firmware-size-controls-dropped fail firmware_size_controls_dropped \
+  "run the firmware size-check controls"
+run_case firmware-host-run-dropped fail firmware_host_run_dropped \
+  "run the firmware image on the host against every golden"
+run_case qemu-workflow-missing fail qemu_workflow_missing \
+  "required gate file is missing or empty"
+run_case qemu-on-pull-request fail qemu_on_pull_request \
+  "the emulation run is nightly and non-gating"
+run_case qemu-on-push-one-line fail qemu_on_push_one_line \
+  "the emulation run is nightly and non-gating"
+run_case qemu-without-schedule fail qemu_without_schedule \
+  "scheduled emulation run"
+run_case qemu-unpinned-action fail qemu_unpinned_action \
+  "uses an action not pinned to a full commit SHA"
+run_case qemu-without-the-script fail qemu_without_the_script \
+  "the emulation run executes emulate-firmware.sh"
+run_case compliant-firmware-member pass compliant_firmware_member
+run_case firmware-member-without-lints fail firmware_member_without_lints \
+  "is missing [lints] workspace = true"
+run_case firmware-lib-without-forbid fail firmware_lib_without_forbid \
+  "line 1 must be #![forbid(unsafe_code)]"
+run_case firmware-bin-without-forbid fail firmware_bin_without_forbid \
+  "must carry #![forbid(unsafe_code)]"
 run_case no-std-build-out-of-lane-map fail no_std_build_out_of_lane_map \
   "CI OK JOB_LANES does not match the lane-filtered jobs' if: lines"
 run_case no-std-build-out-of-ci-ok fail no_std_build_out_of_ci_ok \

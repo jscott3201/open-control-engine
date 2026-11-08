@@ -8,9 +8,9 @@
 # batch `development` -> `main`, where .github/workflows/release-gate.yml runs the heavy gate.
 #
 # This per-PR gate is the LIGHT gate: the near-instant checks plus the compile-requiring lints
-# (clippy -D warnings), a workspace build, the `no_std + alloc` build of the core four, rustdoc,
-# cargo-machete, cargo-deny, gate-script behavior fixtures, the package/feature/publication
-# contract, stale crate-status header lint, golden-gen hygiene and golden freshness, the targeted
+# (clippy -D warnings), a workspace build, the bare-metal cell (the `no_std + alloc` core four and
+# the firmware image's build and size budget), rustdoc, cargo-machete, cargo-deny, gate-script
+# behavior fixtures, the package/feature/publication contract, stale crate-status header lint, golden-gen hygiene and golden freshness, the targeted
 # cross-arch determinism subset for oce-api/oce-blocks/oce-expr, the macOS arm64 portable-snapshot
 # and Windows std build/nextest platform cells, the x86_64 debug suites of
 # oce-graph/oce-validate/oce-model/oce-cxf, the documentation checks
@@ -847,25 +847,31 @@ jobs:
       - name: cargo build (default — no DB)
         run: cargo build --workspace --locked
 
-  # The core four — oce-model, oce-expr, oce-blocks, oce-graph — build `no_std + alloc` (issue
-  # #397): `--no-default-features --features alloc` on thumbv7em-none-eabihf, a bare-metal Cortex-M
-  # target that has no `std` at all, and on wasm32-unknown-unknown. A core crate that gains a
-  # `std`-only dependency, a `std::` path or a `std`-only `f64` method fails the build; clippy lints
-  # the same configuration. The last step runs the oce-expr unit suite on the host without the `std`
-  # feature, because that build replaces the thread-local evaluation-fuel meter with a program-wide
-  # one; one test thread, since that meter is shared by the whole test binary. Plain `run:` steps;
-  # a dedicated check script is #402's. `scripts/ci/test-math-lint.sh` proves the math rule (issue
-  # #399) can fail: it re-probes which `f64` methods `core` has, checks `clippy.toml` lists every
-  # other one and the lint's `src/` scope holds, and requires `std` float-method mutations in
-  # oce-blocks and oce-expr, in a workspace copy, to fail clippy.
-  # The blob execution entry (issue #401) adds two steps: `check-no-std-entry-closure.sh` requires
-  # the `no_std` oce-graph closure to hold no oce-cxf, oce-api, serde_json or std (with controls
-  # that must trip), and the `blob_execution` and `blob_state_words` suites run against the
-  # `no_std + alloc` build of oce-graph linked into a `std` test binary: every golden decodes, runs
-  # 160 frames with zero allocations, and matches the run digests the facade's dual-path test
-  # checks; the census lines print with `--nocapture`.
+  # The bare-metal cell (issues #397, #402). The core four — oce-model, oce-expr, oce-blocks,
+  # oce-graph — build `no_std + alloc`, and a firmware image links them into a bare-metal binary.
+  # `check-no-std.sh` builds and lints the four with `--no-default-features --features alloc` on
+  # thumbv7em-none-eabihf (Cortex-M4F) and riscv32imac-unknown-none-elf (RV32IMAC), which have no
+  # `std` at all, and on wasm32-unknown-unknown, then scans each crate's `cargo tree` per target and
+  # fails on any package with its `std` feature on or any host-only crate: a `std`-only dependency,
+  # a `std::` path or a `std`-only `f64` method fails the build, and a `std` feature that still
+  # compiles fails the scan. `test-check-no-std.sh` proves both halves can fail (`extern crate std;`
+  # in oce-graph, `serde/std` turned on through oce-model). `scripts/ci/test-math-lint.sh` proves the
+  # math rule (issue #399) can fail. The oce-expr unit suite runs without the `std` feature, because
+  # that build replaces the thread-local evaluation-fuel meter with a program-wide one; one test
+  # thread, since that meter is shared by the whole test binary.
+  # The blob execution entry (issue #401): `check-no-std-entry-closure.sh` requires the `no_std`
+  # oce-graph closure to hold no oce-cxf, oce-api, serde_json or std (with controls that must trip),
+  # and the `blob_execution` and `blob_state_words` suites run against the `no_std + alloc` build of
+  # oce-graph linked into a `std` test binary: every golden decodes, runs 160 frames with zero
+  # allocations, and matches the run digests the facade's dual-path test checks.
+  # The firmware image (firmware/link, issue #402): `check-firmware-link.sh` scans the image's
+  # graph, lints it, builds it for both bare-metal targets with the `firmware` profile and holds
+  # each to firmware/link/size-budget.toml through `firmware_size.py`, whose own controls run next.
+  # The image's run is tested on the host (every golden reaches its table digest through it, and the
+  # host reference runner prints it). The image itself is executed only by the nightly emulation
+  # workflow, never per PR: a gating job runs natively.
   no-std-build:
-    name: no_std + alloc core build
+    name: bare-metal cell (no_std core, firmware image, size budget)
     needs: changes
     if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
@@ -882,18 +888,13 @@ jobs:
           shared-key: no-std-build
           cache-bin: false
       - name: Install the no_std targets
-        run: rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown
-      - name: cargo build (no_std + alloc, thumbv7em-none-eabihf)
-        run: >-
-          cargo build -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc --target thumbv7em-none-eabihf --locked
-      - name: clippy (no_std + alloc, thumbv7em-none-eabihf)
-        run: >-
-          cargo clippy -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc --target thumbv7em-none-eabihf --locked -- -D warnings
+        run: rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown
+      - name: no_std + alloc core (build, clippy and graph scan on every target)
+        run: bash scripts/ci/check-no-std.sh
+      - name: no_std check controls (extern crate std, a std feature that compiles)
+        run: bash scripts/ci/test-check-no-std.sh
       - name: math-discipline controls (core probe, clippy list, mutations)
         run: bash scripts/ci/test-math-lint.sh
-      - name: cargo build (no_std + alloc, wasm32-unknown-unknown)
-        run: >-
-          cargo build -p oce-model -p oce-expr -p oce-blocks -p oce-graph --no-default-features --features alloc --target wasm32-unknown-unknown --locked
       - name: oce-expr unit suite without std (program-wide fuel meter)
         run: >-
           cargo test -p oce-expr --no-default-features --features alloc --lib --locked -- --test-threads=1
@@ -902,6 +903,12 @@ jobs:
       - name: blob entry suites against the no_std build (census, digests, state words)
         run: >-
           cargo test -p oce-graph --no-default-features --features alloc --test blob_execution --test blob_state_words --locked -- --nocapture
+      - name: firmware image (graph scan, clippy, firmware-profile build, size budget)
+        run: bash scripts/ci/check-firmware-link.sh
+      - name: firmware size-check controls
+        run: python3 -I scripts/ci/test-firmware-size.py
+      - name: firmware run on the host (every golden, the reference runner, the refusals)
+        run: cargo test -p oce-firmware-link --locked
 
   rustdoc:
     name: rustdoc (-D warnings)
@@ -1023,9 +1030,9 @@ jobs:
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143,cargo-deny,cargo-machete
-      # The gate script installs nothing; its no_std + alloc build steps need these targets.
+      # The gate script installs nothing; its bare-metal cell steps need these targets.
       - name: Install the no_std targets
-        run: rustup target add thumbv7em-none-eabihf wasm32-unknown-unknown
+        run: rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown
       # No `--` arguments: `light` is the default mode and the one this job exists to cover.
       - run: bash .agents/gate.sh
 
