@@ -70,7 +70,7 @@ FACADE_CONTROLS = "scripts/facade_contract/check.py"
 FRAME_EVIDENCE = frozenset((
     ("test_reintroduced_symbol_cannot_pass_by_compiling", "scripts/facade_contract/test_check.py"),
     ("incomplete_reference_inputs_refuse_in_both_cadences", "crates/oce-conformance/tests/driver.rs"),
-    ("store_samples_neither_supply_missing_determinants_nor_overwrite_complete_values",
+    ("a_missing_determinant_refuses_and_never_reuses_a_prior_value",
      "crates/oce-api/tests/frame_purity.rs"),
 ))
 
@@ -352,7 +352,7 @@ def validate(repository: Repository) -> str:
 
 def validate_frame_boundary(repository: Repository, revision: str, rows: list[Requirement]) -> None:
     """Bounded contraction sentinels, not a compiler or proof of behavioral test relevance."""
-    require(revision == "17", "frame-only: document revision must be 17")
+    require(revision == "18", "frame-only: document revision must be 18")
     contraction = next((row for row in rows if row.identifier == "PC-035"), None)
     require(contraction is not None and contraction.status == "CURRENT",
             "frame-only: contraction is current")
@@ -361,7 +361,7 @@ def validate_frame_boundary(repository: Repository, revision: str, rows: list[Re
     evidence = [(name, local_path(DOCUMENT, urlsplit(destination).path))
                 for name, destination in link_list(contraction.evidence[5:])]
     require(len(evidence) == len(FRAME_EVIDENCE) and set(evidence) == FRAME_EVIDENCE,
-            "frame-only: contraction evidence requires absence, driver refusal and Store controls")
+            "frame-only: contraction evidence requires absence, driver refusal and purity controls")
     # Every retired name keeps a negative compiler control; the controls themselves prove absence.
     controls = repository.read(FACADE_CONTROLS)
     for symbol in RETIRED_METHODS + RETIRED_TYPES + RETIRED_VARIANTS:

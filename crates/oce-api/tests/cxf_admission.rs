@@ -1,22 +1,17 @@
 //! Serialized admission boundary controls. Expected sizes are independently byte-counted;
 //! parser allocation is measured using the existing thread-local allocator seam.
 
-mod support;
-
-use std::{error::Error as _, sync::Arc};
+use std::error::Error as _;
 
 use allocation_counter::measure;
 use oce_api::{DiagnosticStage, Engine, MAX_CXF_BYTES, OcError};
-use support::recording_store::{RecordingStore, StoreCallSnapshot};
 
 const LIMIT: usize = 8 * 1024 * 1024;
 const MODEL: &[u8] = include_bytes!("../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
 
 #[test]
-fn oversized_valid_document_refuses_without_parser_allocation_or_store_calls() {
-    let store = Arc::new(RecordingStore::default());
-    let mut engine = Engine::with_store(Arc::clone(&store));
-    store.reset_calls();
+fn oversized_valid_document_refuses_without_parser_allocation() {
+    let mut engine = Engine::new();
     let mut bytes = MODEL.to_vec();
     bytes.resize(LIMIT + 1, b' ');
     let mut result = None;
@@ -26,7 +21,6 @@ fn oversized_valid_document_refuses_without_parser_allocation_or_store_calls() {
         .expect_err("oversize admission must refuse before parsing");
     assert_oversize(&error, LIMIT + 1, LIMIT);
     assert_eq!(allocations.count_total, 0, "{allocations:?}");
-    assert_eq!(store.calls(), StoreCallSnapshot::default());
 }
 
 fn assert_oversize(error: &OcError, actual: usize, limit: usize) {
@@ -48,7 +42,7 @@ fn inclusive_default_and_stricter_boundaries_preserve_legacy_acceptance() {
             let mut bytes = MODEL.to_vec();
             bytes.resize(size, b' ');
             for receipt in [false, true] {
-                let mut engine = Engine::in_memory();
+                let mut engine = Engine::new();
                 assert_eq!(engine.cxf_byte_limit(), LIMIT);
                 engine.set_cxf_byte_limit(limit).unwrap();
                 let result = if receipt {
@@ -68,7 +62,7 @@ fn inclusive_default_and_stricter_boundaries_preserve_legacy_acceptance() {
                 } else {
                     result.unwrap();
                     assert_eq!(engine.export_cxf().unwrap().bytes, {
-                        let mut reference = Engine::in_memory();
+                        let mut reference = Engine::new();
                         reference.load_cxf(MODEL).unwrap();
                         reference.export_cxf().unwrap().bytes
                     });
@@ -81,8 +75,7 @@ fn inclusive_default_and_stricter_boundaries_preserve_legacy_acceptance() {
 
 #[test]
 fn invalid_configuration_is_typed_and_never_silently_widens() {
-    let store = Arc::new(RecordingStore::default());
-    let mut engine = Engine::with_store(Arc::clone(&store));
+    let mut engine = Engine::new();
     engine.set_cxf_byte_limit(17).unwrap();
     for actual in [LIMIT + 1, usize::MAX] {
         let error = engine.set_cxf_byte_limit(actual).unwrap_err();
@@ -97,17 +90,14 @@ fn invalid_configuration_is_typed_and_never_silently_widens() {
     engine.set_cxf_byte_limit(0).unwrap();
     assert_oversize(&engine.load_cxf(b"x").unwrap_err(), 1, 0);
     assert!(matches!(engine.load_cxf(b""), Err(OcError::Cxf(_))));
-    assert_eq!(store.calls(), StoreCallSnapshot::default());
 }
 
 #[test]
 fn oversize_receipts_allocate_only_the_error_box_and_are_deterministic() {
-    let store = Arc::new(RecordingStore::default());
-    let mut engine = Engine::with_store(Arc::clone(&store));
+    let mut engine = Engine::new();
     // An allocating malformed JSON prefix distinguishes admission from parser refusal.
     let mut bytes = b"{\"@graph\":[{\"@id\":\"untrusted-payload\"},".to_vec();
     bytes.resize(LIMIT + 1, b' ');
-    store.arm_hot_path_guard();
     for _ in 0..2 {
         let mut result = None;
         let allocations = measure(|| result = Some(engine.load_cxf_with_receipt(&bytes)));
@@ -130,7 +120,6 @@ fn oversize_receipts_allocate_only_the_error_box_and_are_deterministic() {
             format!("{}\n", failure.error()),
             include_str!("fixtures/admission/refusal.txt")
         );
-        assert_eq!(store.calls(), StoreCallSnapshot::default());
     }
     // Direct parser control over the same prefix (bounded to a few bytes), not a shipping hook.
     let allocations = measure(|| {
@@ -144,8 +133,7 @@ fn oversize_receipts_allocate_only_the_error_box_and_are_deterministic() {
 
 #[test]
 fn empty_and_hostile_corpus_below_cap_keep_json_errors_and_import_stage() {
-    let store = Arc::new(RecordingStore::default());
-    let mut engine = Engine::with_store(Arc::clone(&store));
+    let mut engine = Engine::new();
     let corpus = include_str!("fixtures/admission/malformed.txt");
     for input in std::iter::once("").chain(corpus.lines()) {
         let error = engine.load_cxf(input.as_bytes()).unwrap_err();
@@ -162,7 +150,6 @@ fn empty_and_hostile_corpus_below_cap_keep_json_errors_and_import_stage() {
         ));
         assert!(failure.diagnostics().records().is_empty());
     }
-    assert_eq!(store.calls(), StoreCallSnapshot::default());
 }
 
 /// Bounded manual observation, not a timing assertion or a resource-safety certification.

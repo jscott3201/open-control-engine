@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 use oce_blocks::BlockKind;
 use oce_model::{ConnectorId, ValueType, enum_descriptor};
-use oce_store::Store;
 
 use crate::engine::Engine;
 use crate::stable_hash::StableHash;
@@ -42,8 +41,8 @@ pub(crate) struct BuiltManifest {
     pub(crate) dense_by_sorted_key: BTreeMap<ConnectorKey, usize>,
 }
 
-pub(crate) fn build_manifest<S: Store>(
-    engine: &Engine<S>,
+pub(crate) fn build_manifest(
+    engine: &Engine,
     durable: bool,
 ) -> Result<BuiltManifest, EngineStateError> {
     let mut block_keys = Vec::with_capacity(engine.model.blocks.len());
@@ -470,7 +469,7 @@ fn compare_port_bindings(
     Ok(())
 }
 
-pub(crate) fn block_subject<S: Store>(engine: &Engine<S>, block_index: usize) -> String {
+pub(crate) fn block_subject(engine: &Engine, block_index: usize) -> String {
     engine.model.blocks[block_index]
         .instance_iri
         .as_deref()
@@ -494,11 +493,7 @@ pub(crate) fn requires_target(class_path: &str) -> bool {
     TARGET_BOUND_CLASSES.binary_search(&class_path).is_ok()
 }
 
-fn block_key<S: Store>(
-    engine: &Engine<S>,
-    index: usize,
-    durable: bool,
-) -> Result<BlockKey, EngineStateError> {
+fn block_key(engine: &Engine, index: usize, durable: bool) -> Result<BlockKey, EngineStateError> {
     let block = &engine.model.blocks[index];
     if let Some(instance_iri) = &block.instance_iri {
         return Ok(BlockKey::Authored(instance_iri.to_string()));

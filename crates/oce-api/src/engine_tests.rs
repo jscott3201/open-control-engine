@@ -1,223 +1,151 @@
-//! Unit tests for engine load helpers and preserved load-time Store refusal boundaries.
-
-use oce_model::{BlockId, Connector, ConnectorId, Dir, Value, ValueType};
-use oce_store::{
-    Durable, EquipmentDto, ModelStore, PointHandle, PointListRow, PointSnapshot, PointStore,
-    PointWrite, RelationDto, ResolvedModel, RetrievalHit, SemanticPayloadDto, SemanticQuery,
-    SemanticStore, StoreResult, TemplatePointReq,
-};
+//! Unit tests for the pure load tail: the plain-data [`LoadedModel`] a load returns, its
+//! agreement with the engine it describes, and its independence from that engine.
 
 use super::*;
+use crate::PointDirection;
+use oce_model::Value;
 
-const PATH: &str = "test:input";
 const ANALOG_WARNING: &str = include_str!(
     "../../oce-cxf/tests/fixtures/composite_contract/warned/analog_coerced_member.jsonld"
 );
+const ADD: &[u8] = include_bytes!("../tests/fixtures/legacy_frame_add.jsonld");
 
-#[test]
-fn load_validation_rejects_mismatched_handle_count() {
-    let store = LoadFailureStore::default();
-    let mut model = ModelGraph::new();
-    model.connectors.push(
-        Connector::new(ConnectorId(0), BlockId(0), Dir::In, ValueType::Real, 0).with_iri(PATH),
-    );
-    let io = IoInventory::build_at_load(&model);
+fn corpus() -> Vec<std::path::PathBuf> {
+    let directory =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../oce-cxf/tests/fixtures/g36");
+    let mut paths: Vec<_> = std::fs::read_dir(directory)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.extension().is_some_and(|ext| ext == "jsonld"))
+        .collect();
+    paths.sort();
+    assert_eq!(paths.len(), 47, "corpus size positive control");
+    paths
+}
 
-    let err = validate_store_inputs(&store, &io).unwrap_err();
-    match err {
-        OcError::Store(StoreError::Validation(detail)) => {
-            assert!(detail.contains("0 handles for 1 input points"));
-        }
-        other => panic!("expected StoreError::Validation, got {other:?}"),
-    }
+fn model_json(loaded: &LoadedModel) -> Vec<u8> {
+    serde_json::to_vec(&loaded.model).unwrap()
 }
 
 #[test]
-fn warning_context_survives_each_later_store_failure() {
-    for (failure, expected) in [
-        (StoreFailure::Recover, "injected recover failure"),
-        (StoreFailure::SaveModel, "injected save_model failure"),
-        (
-            StoreFailure::ResolvePoints,
-            "injected resolve_points failure",
-        ),
-        (StoreFailure::HandleCount, "0 handles for 1 input points"),
-    ] {
-        let mut engine = Engine::with_store(Arc::new(LoadFailureStore::new(failure)));
-        let error = engine
-            .load_cxf(ANALOG_WARNING.as_bytes())
-            .expect_err("the injected store failure must refuse the load");
-        assert!(matches!(error, OcError::LoadContext(_)));
-        let source = std::error::Error::source(&error)
-            .and_then(|source| source.downcast_ref::<OcError>())
-            .expect("terminal OcError source");
-        assert!(matches!(source, OcError::Store(_)), "{source:?}");
-        assert!(source.to_string().contains(expected), "{source}");
-        assert!(error.diagnostics().is_empty());
-        assert_eq!(error.all_diagnostics().count(), 1);
-        assert_eq!(
-            error.all_diagnostics().next().expect("prior warning").code,
-            oce_diag::DiagCode::AnalogCoercedToReal
+fn loaded_model_agrees_with_its_report_and_engine_across_the_corpus() {
+    for path in corpus() {
+        let mut engine = Engine::new();
+        let (report, loaded) = engine.load_cxf(&std::fs::read(&path).unwrap()).unwrap();
+        let name = path.display();
+        assert_eq!(loaded.model_id, report.model_id, "{name}");
+        assert_eq!(loaded.model.model_id, loaded.model_id, "{name}");
+        assert_eq!(loaded.model_id, engine.model_id, "{name}");
+        assert_eq!(loaded.diagnostics, report.warnings, "{name}");
+        // Semantic resolution is the last diagnostic-producing stage of a successful load.
+        assert!(
+            loaded.diagnostics.ends_with(&loaded.semantic_warnings),
+            "{name}"
         );
-        assert!(!engine.loaded);
-        assert!(engine.model.blocks.is_empty());
-    }
-}
-
-#[derive(Clone, Copy, Default)]
-enum StoreFailure {
-    None,
-    Recover,
-    SaveModel,
-    ResolvePoints,
-    #[default]
-    HandleCount,
-}
-
-#[derive(Default)]
-struct LoadFailureStore {
-    inner: MemStore,
-    failure: std::sync::Mutex<StoreFailure>,
-    calls: std::sync::Mutex<Vec<&'static str>>,
-    resolved: std::sync::Mutex<Vec<PointHandle>>,
-}
-
-impl LoadFailureStore {
-    fn new(failure: StoreFailure) -> Self {
-        Self {
-            failure: std::sync::Mutex::new(failure),
-            ..Self::default()
+        assert_eq!(loaded.semantic_warnings, engine.semantic_warnings, "{name}");
+        assert_eq!(loaded.io.to_vec(), engine.io().to_vec(), "{name}");
+        assert_eq!(loaded.io.len(), report.io.total, "{name}");
+        assert_eq!(loaded.model.blocks.len(), report.block_count, "{name}");
+        let inputs: Vec<_> = loaded.input_points().collect();
+        let expected: Vec<_> = engine
+            .io()
+            .iter()
+            .filter(|point| point.direction == PointDirection::In)
+            .map(|point| (point.path, point.value_type))
+            .collect();
+        assert_eq!(
+            inputs
+                .iter()
+                .map(|(path, value_type)| ((*path).to_owned(), *value_type))
+                .collect::<Vec<_>>(),
+            expected,
+            "{name}"
+        );
+        // Every input the host must bind is a projected point with the same identity and type.
+        for (path, value_type) in &inputs {
+            let point = loaded
+                .model
+                .points
+                .iter()
+                .find(|point| point.key.as_str() == *path)
+                .unwrap_or_else(|| panic!("{name}: input {path} missing from projection"));
+            assert_eq!(point.value_type, *value_type, "{name}: {path}");
+            assert_eq!(point.direction, PointDirection::In, "{name}: {path}");
         }
     }
 }
 
-impl ModelStore for LoadFailureStore {
-    fn save_model(&self, model: &ResolvedModel) -> StoreResult<()> {
-        self.calls.lock().unwrap().push("save_model");
-        if matches!(*self.failure.lock().unwrap(), StoreFailure::SaveModel) {
-            return Err(StoreError::Backend(
-                "injected save_model failure".to_owned(),
-            ));
-        }
-        self.inner.save_model(model)
-    }
-
-    fn load_model(&self, model_id: &DomainKey) -> StoreResult<ResolvedModel> {
-        self.inner.load_model(model_id)
-    }
-
-    fn list_models(&self) -> StoreResult<Vec<DomainKey>> {
-        self.inner.list_models()
-    }
-
-    fn delete_model(&self, model_id: &DomainKey) -> StoreResult<()> {
-        self.inner.delete_model(model_id)
+#[test]
+fn loaded_model_is_deterministic_and_identical_on_the_receipt_path() {
+    for path in corpus() {
+        let bytes = std::fs::read(&path).unwrap();
+        let (_, first) = Engine::new().load_cxf(&bytes).unwrap();
+        let (_, second) = Engine::new().load_cxf(&bytes).unwrap();
+        let (receipt, third) = Engine::new().load_cxf_with_receipt(&bytes).unwrap();
+        assert_eq!(
+            model_json(&first),
+            model_json(&second),
+            "{}",
+            path.display()
+        );
+        assert_eq!(model_json(&first), model_json(&third), "{}", path.display());
+        assert_eq!(first.io.to_vec(), third.io.to_vec());
+        assert_eq!(first.diagnostics, third.diagnostics);
+        assert_eq!(receipt.report().warnings, third.diagnostics);
     }
 }
 
-impl PointStore for LoadFailureStore {
-    fn resolve_points(&self, keys: &[DomainKey]) -> StoreResult<Vec<PointHandle>> {
-        self.calls.lock().unwrap().push("resolve_points");
-        if matches!(*self.failure.lock().unwrap(), StoreFailure::ResolvePoints) {
-            return Err(StoreError::Backend(
-                "injected resolve_points failure".to_owned(),
-            ));
-        }
-        let handles = self.inner.resolve_points(keys)?;
-        *self.resolved.lock().unwrap() = handles.clone();
-        if matches!(*self.failure.lock().unwrap(), StoreFailure::HandleCount) {
-            Ok(Vec::new())
-        } else {
-            Ok(handles)
-        }
-    }
-
-    fn snapshot(&self) -> StoreResult<Box<dyn PointSnapshot>> {
-        self.inner.snapshot()
-    }
-
-    fn write_points(&self, batch: &[PointWrite]) -> StoreResult<usize> {
-        self.inner.write_points(batch)
-    }
+#[test]
+fn resolved_model_survives_a_serde_round_trip_bit_for_bit() {
+    let (_, loaded) = Engine::new().load_cxf(ADD).unwrap();
+    let encoded = model_json(&loaded);
+    let decoded: oce_model::resolved_model::ResolvedModel =
+        serde_json::from_slice(&encoded).unwrap();
+    assert_eq!(serde_json::to_vec(&decoded).unwrap(), encoded);
+    assert_eq!(decoded.model_id, loaded.model_id);
 }
 
-impl SemanticStore for LoadFailureStore {
-    fn upsert_equipment(&self, eq: &EquipmentDto) -> StoreResult<()> {
-        self.inner.upsert_equipment(eq)
-    }
-
-    fn add_relation(&self, rel: &RelationDto) -> StoreResult<()> {
-        self.inner.add_relation(rel)
-    }
-
-    fn put_semantic_payload(&self, p: &SemanticPayloadDto) -> StoreResult<()> {
-        self.inner.put_semantic_payload(p)
-    }
-
-    fn get_semantic_payloads(&self, subject: &DomainKey) -> StoreResult<Vec<SemanticPayloadDto>> {
-        self.inner.get_semantic_payloads(subject)
-    }
-
-    fn point_list(&self, controlled_device: Option<&str>) -> StoreResult<Vec<PointListRow>> {
-        self.inner.point_list(controlled_device)
-    }
-
-    fn retrieve(&self, q: &SemanticQuery) -> StoreResult<Vec<RetrievalHit>> {
-        self.inner.retrieve(q)
-    }
-
-    fn match_template(&self, required_points: &[TemplatePointReq]) -> StoreResult<Vec<DomainKey>> {
-        self.inner.match_template(required_points)
-    }
+#[test]
+fn dropping_or_mutating_the_loaded_model_never_reaches_the_engine() {
+    let mut engine = Engine::new();
+    let (_, mut loaded) = engine.load_cxf(ADD).unwrap();
+    let snapshot = engine.state_snapshot().unwrap();
+    let io = engine.io().to_vec();
+    loaded.model.points.clear();
+    loaded.model.blocks.clear();
+    loaded.model_id = DomainKey::new("host-owned");
+    loaded.diagnostics.clear();
+    drop(loaded);
+    assert_eq!(
+        engine.state_snapshot().unwrap().as_bytes(),
+        snapshot.as_bytes()
+    );
+    assert_eq!(engine.io().to_vec(), io);
+    let plan = engine
+        .prepare_frame(
+            0.0,
+            &[
+                ("urn:legacy-frame:a", oce_model::Value::Real(1.0)),
+                ("urn:legacy-frame:b", oce_model::Value::Real(2.0)),
+            ],
+        )
+        .unwrap();
+    let frame = engine.execute_frame(plan).unwrap();
+    assert!(frame.outputs()[0].1.bit_eq(&oce_model::Value::Real(3.0)));
 }
 
-impl Durable for LoadFailureStore {
-    fn commit(&self) -> StoreResult<()> {
-        self.inner.commit()
-    }
-
-    fn flush(&self) -> StoreResult<()> {
-        self.inner.flush()
-    }
-
-    fn recover(&self) -> StoreResult<()> {
-        self.calls.lock().unwrap().push("recover");
-        if matches!(*self.failure.lock().unwrap(), StoreFailure::Recover) {
-            return Err(StoreError::Backend("injected recover failure".to_owned()));
-        }
-        self.inner.recover()
-    }
+#[test]
+fn warned_load_returns_its_warning_in_both_results() {
+    let mut engine = Engine::new();
+    let (report, loaded) = engine.load_cxf(ANALOG_WARNING.as_bytes()).unwrap();
+    assert_eq!(report.warnings.len(), 1);
+    assert_eq!(
+        report.warnings[0].code,
+        oce_diag::DiagCode::AnalogCoercedToReal
+    );
+    assert_eq!(loaded.diagnostics, report.warnings);
+    assert!(loaded.semantic_warnings.is_empty());
 }
 
 #[path = "tests/reload_tests.rs"]
 mod reload;
-
-#[test]
-fn receipt_preserves_prior_evidence_at_each_store_boundary() {
-    use crate::DiagnosticStage;
-    for (failure, stage) in [
-        (StoreFailure::Recover, DiagnosticStage::StoreRecovery),
-        (StoreFailure::SaveModel, DiagnosticStage::StoreSave),
-        (StoreFailure::ResolvePoints, DiagnosticStage::StoreInputs),
-        (StoreFailure::HandleCount, DiagnosticStage::StoreInputs),
-    ] {
-        let mut engine = Engine::with_store(Arc::new(LoadFailureStore::new(failure)));
-        let failure = engine
-            .load_cxf_with_receipt(ANALOG_WARNING.as_bytes())
-            .unwrap_err();
-        assert_eq!(failure.stage(), stage);
-        assert!(matches!(failure.error(), OcError::LoadContext(_)));
-        let terminal = std::error::Error::source(failure.error())
-            .unwrap()
-            .downcast_ref::<OcError>()
-            .unwrap();
-        assert!(matches!(terminal, OcError::Store(_)));
-        assert!(failure.error().diagnostics().is_empty());
-        let records = failure.diagnostics().records();
-        assert_eq!(records.len(), 1);
-        assert_eq!(records[0].key().stage(), DiagnosticStage::Import);
-        assert_eq!(records[0].key().code(), "analog-coerced-to-real");
-        assert!(!engine.loaded);
-        assert!(engine.model.blocks.is_empty());
-    }
-}

@@ -11,13 +11,21 @@ The [product contract](product-contract.md) owns the facade's current requiremen
 | --- | --- |
 | `Engine::load_modelica` | Prepare already-specialized, supported CXF externally, then use `load_cxf`. OCE does not parse Modelica source. |
 | `Engine::load_from_semantic`, `TemplateRef` | Remove speculative loader calls. There is no semantic-template loader replacement; an app can prepare supported CXF itself. The active effective-point metadata resolver is unrelated and remains wired. |
-| Flat `oce_api::SemanticQuery` | For conditional adapter queries, use `oce_api::oce_store::SemanticQuery` or direct `oce_store::SemanticQuery`. Those types/traits are unchanged; this does not supply a template loader. |
+| Flat `oce_api::SemanticQuery` | For conditional adapter queries, depend on `oce-store` directly and use `oce_store::SemanticQuery`. The facade re-exports no storage item; this does not supply a template loader. |
 | `InputSource` and its variants, `SimSpec`, `CollectSpec`, `SimMetrics`, `OutputTrace` | Decode tables and drive a host-owned loop of complete frames. There is no implicit restart, input callback or facade trace collector. Conformance reference-table replay remains host-side. |
 | `Engine::tick`, `tick_with`, `set_input`, `simulate`, `step_realtime` | Collect every required input once, call `prepare_frame`, then move the result into `execute_frame`. Missing/duplicate/domain-invalid input refuses before mutation. No compatibility aliases exist. |
-| Realtime epoch accessors and realtime-only error variants, `StepReport` | Own wall-clock mapping, persistence and delivery outside execution; realtime/Store orchestration is deferred. No engine write-back helper replaces them. |
+| Realtime epoch accessors and realtime-only error variants, `StepReport` | Own wall-clock mapping, persistence and delivery outside execution; realtime/storage orchestration is deferred. No engine write-back helper replaces them. |
 | `Outputs`, `Engine::outputs` | Retain `CompletedFrame` for committed boundary results and warnings. Use `get_output`/`watch` only for explicitly latest-state, non-receipt inspection. |
 | `OcError::Flatten`, `DiagnosticStage::Flatten` | Delete match arms for them. The identity pass they reported was removed; the diagnostics schema is revision 2 and later stage ranks moved down by one with their relative order unchanged. |
-| The `oce-api` `mem` feature | Drop `features = ["mem"]` (and any `default-features = false` added only for it). The feature gated nothing; the in-memory store is unconditional. |
+| The `oce-api` `mem` feature | Drop `features = ["mem"]` (and any `default-features = false` added only for it). The feature gated nothing; `oce-api` now has no storage dependency at all. |
+| `Engine<S: Store = MemStore>` (the type parameter) | Write `Engine`. It is a plain struct with no storage backend (GitHub #390). Code generic over `S: Store` that only forwarded to `Engine<S>` drops the parameter. |
+| `Engine::in_memory` | Use `Engine::new()` (or `Engine::default()`); it is the only constructor. |
+| `Engine::with_store` | Construct with `Engine::new()` and keep your adapter in the host. Take `let (report, loaded) = engine.load_cxf(bytes)?` and persist `loaded.model` through the adapter yourself; see [durability is the host's](host-responsibilities.md#durability-is-the-hosts). |
+| `Engine::store` | Hold your adapter in the host and call it directly. The engine owns no backend to borrow. |
+| `oce_api::oce_store` (the re-exported storage port), `_doc_link_domain_key` | Depend on `oce-store` directly for the port traits. `DomainKey`, `ResolvedModel` and the other resolved-model DTOs are `oce_api::DomainKey`, `oce_api::ResolvedModel` and `oce_api::resolved_model::*` (defined in `oce_model::resolved_model`; `oce-store` re-exports the same types, so values pass between them unchanged). |
+| `OcError::Store` | Delete the match arm. The engine calls no storage port, so no storage failure reaches `OcError`; a projection inconsistency is the existing `OcError::Load`, with detail prefixed `model projection failed:`. |
+| `DiagnosticStage::StoreRecovery`, `StoreSave`, `StoreInputs` | Delete match arms for them. Load no longer calls `recover`, `save_model` or `resolve_points`; the diagnostics schema is revision 3 and `Export` moved from rank 10 to rank 7, with the relative order of every remaining stage unchanged. |
+| `load_cxf` and `load_cxf_with_receipt` returning only the report or receipt | Destructure the tuple: `let (report, loaded) = engine.load_cxf(bytes)?;` and `let (receipt, loaded) = engine.load_cxf_with_receipt(bytes)?;`. Bind `_` for `loaded` when unused. The report and receipt are unchanged. |
 | `AssertLevel::Error` | Update exhaustive matches and code that constructed the unimplemented severity. `AssertLevel` now contains only `Warning`; `AssertEvent.level` remains. |
 
 **Default-value change:** `AssertLevel::default()` is now `Warning`, previously `Error`. A signature
@@ -33,21 +41,23 @@ execution does not perform an external write or acquire a post-write failure mod
 
 `point_list(None)` keeps its existing signature and returns the engine's own effective inventory.
 Device filtering (`Some`, including empty/unknown strings) is outside the supported profile and
-returns the **existing `OcError::Load`** directly. No new Unsupported variant exists and no store
-query is delegated, even with a capable adapter. This is not an experimental supported feature.
-The custom-adapter regression checks the None result, specific refusal, no store calls and no engine
-mutation. Existing error detail text is retained for compatibility, not promoted into an API schema.
+returns the **existing `OcError::Load`** directly. No new Unsupported variant exists and the engine
+has no equipment index to delegate to. This is not an experimental supported feature. The detail
+text no longer names a storage trait; it is not an API schema.
 
-Load/store side effects still precede engine-field commit; only the in-memory executable/run image
-has the [replacement guarantee](host-responsibilities.md#load-replacement-and-the-store-compensation-boundary).
+Load has no external side effect: it calls no storage port, and a refused load keeps the in-memory
+executable/run image under the
+[replacement guarantee](host-responsibilities.md#load-replacement-leaves-no-external-effect).
 Frame refusal preserves the current run. Consecutive frames continue state; fresh loads and explicit
 compatible checkpoint restores are distinct lifecycle operations. State-wire bytes, independent
 numerical goldens, catalog identity, HostTick arithmetic and engine thread-safety remain unchanged.
 
 ## Package and panic-inventory boundary
 
-The workspace has 14 members, 11 publishable and three private. `oce-api` declares no cargo
-features, and its normal closure is ten OCE packages. The reserved placeholder crates — an identity
+The workspace has 13 members, 11 publishable and two private. `oce-api` declares no cargo
+features, and its normal closure is eight OCE packages: no `oce-store` or `oce-store-mem`
+(GitHub #390). The verification-only `oce-reference-wal-adapter` was deleted with the engine's
+storage lifecycle it exercised. The reserved placeholder crates — an identity
 elaboration pass, an FMI boundary DTO and an unimplemented document exporter — were removed
 (GitHub #389) rather than kept; `oce-semantics` actively derives effective point metadata and remains
 a wired implementation dependency. No replacement placeholder is introduced.
@@ -110,10 +120,9 @@ Read the effective policy with `Engine::cxf_byte_limit()` and optionally set a s
 return the typed `OcError::CxfByteLimitTooLarge`, leaving the engine unchanged. Configuration is
 per-engine, may be changed within that range, persists across reload and is not encoded in snapshots.
 
-Failed ordinary reloads preserve the old in-memory run image, but Store effects are not rolled back
-and old external handles may no longer be valid. Plan adapter compensation before continuing control.
-Successful reload requires refreshing model-local IDs, IO views and other ephemeral references as
-before. No Store trait, catalog/descriptor identity, state bytes, HostTick, package or dependency
+Failed ordinary reloads preserve the old in-memory run image and have no external effect (load
+calls no storage port since GitHub #390). Successful reload requires refreshing model-local IDs, IO
+views and other ephemeral references as before. No catalog/descriptor identity, state bytes, HostTick, package or dependency
 changes accompany admission. No downstream source or pin migration is performed here.
 
 ## Compatibility receipt adoption

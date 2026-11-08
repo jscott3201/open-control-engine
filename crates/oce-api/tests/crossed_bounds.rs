@@ -105,7 +105,7 @@ fn crossed_declarations_and_targets_are_refused_at_load_with_their_cause() {
         ),
     ];
     for (edits, subject, message) in cases {
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine.load_cxf(MODEL).unwrap();
         let before = engine.state_snapshot().unwrap();
         let error = engine
@@ -149,7 +149,7 @@ fn equal_bounds_load_and_admit_exactly_that_value() {
             vec![(A, "S231:min", min), (A, "S231:max", max)],
             vec![(A, "S231:min", min), (U1, "S231:max", max)],
         ] {
-            let mut engine = Engine::in_memory();
+            let mut engine = Engine::new();
             engine
                 .load_cxf(&with_attributes(&edits))
                 .unwrap_or_else(|error| panic!("{edits:?}: {error}"));
@@ -174,7 +174,7 @@ fn equal_bounds_load_and_admit_exactly_that_value() {
 #[test]
 fn the_crossed_bounds_receipt_names_the_unification_stage_and_is_deterministic() {
     let bytes = with_attributes(&[(A, "S231:min", "2"), (A, "S231:max", "1")]);
-    let failure = Engine::in_memory()
+    let failure = Engine::new()
         .load_cxf_with_receipt(&bytes)
         .expect_err("crossed bounds");
     assert_eq!(failure.stage(), DiagnosticStage::AttributeUnification);
@@ -196,12 +196,12 @@ fn the_crossed_bounds_receipt_names_the_unification_stage_and_is_deterministic()
         )]
     );
     for _ in 0..3 {
-        let again = Engine::in_memory()
+        let again = Engine::new()
             .load_cxf_with_receipt(&bytes)
             .expect_err("crossed bounds");
         assert_eq!(
             refusals(&again.into_error()),
-            refusals(&Engine::in_memory().load_cxf(&bytes).unwrap_err())
+            refusals(&Engine::new().load_cxf(&bytes).unwrap_err())
         );
     }
 }
@@ -209,7 +209,7 @@ fn the_crossed_bounds_receipt_names_the_unification_stage_and_is_deterministic()
 #[test]
 fn a_non_finite_crossed_pair_reports_only_the_non_finite_cause() {
     let bytes = with_attributes(&[(A, "S231:min", "INF"), (A, "S231:max", "1")]);
-    let error = Engine::in_memory().load_cxf(&bytes).unwrap_err();
+    let error = Engine::new().load_cxf(&bytes).unwrap_err();
     let codes: Vec<_> = refusals(&error)
         .into_iter()
         .map(|(code, ..)| code)
@@ -227,7 +227,7 @@ fn an_internal_cluster_that_propagation_would_cross_is_refused_at_load() {
         ("urn:legacy-frame:add.y", "S231:min", "5"),
         (Y, "S231:max", "3"),
     ]);
-    let failure = Engine::in_memory()
+    let failure = Engine::new()
         .load_cxf_with_receipt(&bytes)
         .expect_err("propagated crossing");
     assert_eq!(failure.stage(), DiagnosticStage::AttributeUnification);

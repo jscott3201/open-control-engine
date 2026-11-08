@@ -287,7 +287,7 @@ impl Diagnostics for NoopDiagnostics {
 /// The trait is **`Send + Sync`** (R-API-PY-2 / `08` R-ENG-1): a block holds only resolved
 /// parameters — plain owned `f64`/`bool` data, no `Rc`/`RefCell`/raw pointers (per-instance mutable
 /// `[S]` state lives in the engine's `RunState`, never here) — so `Box<dyn Block>` is `Send + Sync`
-/// and the frozen schedule is shareable across host threads as `Arc<Engine<S>>`. The bound is a
+/// and the frozen schedule is shareable across host threads as `Arc<oce_api::Engine>`. The bound is a
 /// zero-cost marker; it is what lets `oce-api`'s `_assert_send_sync` compile.
 pub trait Block: Send + Sync {
     /// Class-level interface descriptor. For fixed-width classes this is the same shape used at

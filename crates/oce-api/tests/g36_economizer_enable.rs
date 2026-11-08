@@ -236,8 +236,8 @@ fn expected_trace() -> ExpectedTrace {
 }
 
 fn load_economizer_enable() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(ECONOMIZER_ENABLE.as_bytes())
         .expect("source-verified G36 Economizers.Subsequences.Enable fixture loads");
     assert_eq!(report.block_count, 19);

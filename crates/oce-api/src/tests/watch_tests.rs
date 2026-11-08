@@ -28,7 +28,7 @@ fn sat_reset_inputs(t: f64) -> [(&'static str, Value); 2] {
 
 #[test]
 fn selected_g36_outputs_match_the_independent_outputs_snapshot_path() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .load_cxf(AHU_SAT_RESET.as_bytes())
         .expect("G36 fixture loads");
@@ -130,9 +130,9 @@ fn chain_model() -> (ModelGraph, [ConnectorId; 3]) {
     (mb.finish(), [constant[0], first[0], second[0]])
 }
 
-fn loaded_chain() -> Engine<MemStore> {
+fn loaded_chain() -> Engine {
     let (model, _) = chain_model();
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(model, None)
         .expect("three-block chain builds");
@@ -152,7 +152,7 @@ fn chained_outputs_match_hand_computed_exact_literals() {
     assert!(driven.contains(&output_ids[1]));
     assert!(!driven.contains(&output_ids[2]));
 
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(model, None)
         .expect("three-block chain builds");
@@ -225,7 +225,7 @@ fn caller_order_duplicates_and_first_error_are_preserved() {
             .is_empty()
     );
 
-    let unloaded = Engine::in_memory();
+    let unloaded = Engine::new();
     assert!(matches!(
         unloaded.watch(&["conn#0"]),
         Err(OcError::UnknownPoint(path)) if path == "conn#0"
@@ -249,10 +249,10 @@ fn internal_inspection_does_not_expand_committed_boundary_receipts() {
 
 #[test]
 fn identical_engines_produce_bit_identical_selected_snapshots() {
-    let mut left = Engine::in_memory();
+    let mut left = Engine::new();
     left.load_cxf(AHU_SAT_RESET.as_bytes())
         .expect("left engine loads");
-    let mut right = Engine::in_memory();
+    let mut right = Engine::new();
     right
         .load_cxf(AHU_SAT_RESET.as_bytes())
         .expect("right engine loads");
@@ -301,7 +301,7 @@ fn boolean_and_integer_outputs_are_watchable_with_exact_literals() {
     let model = mb.finish();
     assert_eq!([flag[0], count[0]], [ConnectorId(0), ConnectorId(1)]);
 
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(model, None)
         .expect("typed source pair builds");

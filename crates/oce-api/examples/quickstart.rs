@@ -7,7 +7,7 @@ use oce_api::{Engine, Value};
 const ECONOMIZER: &str = "http://example.org#g36.ahu_economizer";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut engine = Engine::in_memory(); // Default in-memory store, no database.
+    let mut engine = Engine::new(); // A pure engine: no storage backend, no database.
     let cxf_bytes = std::fs::read("crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld")?;
     engine.load_cxf(&cxf_bytes)?;
 

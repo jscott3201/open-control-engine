@@ -148,7 +148,7 @@ fn every_declared_alias_resolves_to_the_document_derived_driver_connector() {
     let mut checked = 0usize;
     for fixture in corpus_fixtures() {
         let bytes = fs::read(&fixture).expect("read G36 fixture");
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .load_cxf(&bytes)
             .unwrap_or_else(|error| panic!("{} loads: {error:?}", fixture.display()));

@@ -22,7 +22,7 @@ fn just_above() -> f64 {
 }
 
 fn loaded(bytes: &[u8]) -> Engine {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(bytes).expect("fixture loads");
     engine
 }

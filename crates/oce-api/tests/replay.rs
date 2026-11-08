@@ -1,7 +1,6 @@
 //! Public-only host composition of accepted-frame replay records. No implementation crate access.
 
 mod replay_oracle;
-mod support;
 
 use allocation_counter::measure;
 use oce_api::{
@@ -9,14 +8,12 @@ use oce_api::{
     ReplayRecord, StatePortability, Value,
 };
 use std::hint::black_box;
-use std::sync::Arc;
-use support::recording_store::{RecordingStore, StoreCallSnapshot};
 
 const ADD: &[u8] = include_bytes!("fixtures/legacy_frame_add.jsonld");
 
 #[test]
 fn accepted_inputs_survive_execution_reload_and_caller_buffer_reuse() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(ADD).unwrap();
     let mut observations = vec![
         (
@@ -50,10 +47,8 @@ fn canonical_receipt_matches_independent_bytes_and_repeats_without_reexecution()
     let expected = replay_oracle::add();
     assert_eq!(expected.len(), 389, "hand-counted wire size");
     for _ in 0..3 {
-        let mut engine = Engine::with_store(Arc::new(RecordingStore::default()));
+        let mut engine = Engine::new();
         engine.load_cxf(ADD).unwrap();
-        engine.store().reset_calls();
-        engine.store().arm_hot_path_guard();
         let plan = engine
             .prepare_frame(
                 -0.0,
@@ -82,7 +77,6 @@ fn canonical_receipt_matches_independent_bytes_and_repeats_without_reexecution()
             record.verify(&completed).unwrap();
         }
         assert_eq!(engine.state_snapshot().unwrap().as_bytes(), end.as_bytes());
-        assert_eq!(engine.store().calls(), StoreCallSnapshot::default());
         drop(engine);
         assert_eq!(completed.replay_record().unwrap().as_bytes(), expected);
     }
@@ -94,12 +88,12 @@ fn host_stream_continues_from_separate_snapshot_with_equal_times_and_exact_end_s
     // authentication/build approval are assumed by this deterministic fixture, never simulated
     // by the content tag. The host, not OCE, owns this loop and the separately supplied sidecar.
     let model = include_bytes!("fixtures/frame_pre.jsonld");
-    let mut producer = Engine::in_memory();
+    let mut producer = Engine::new();
     producer.load_cxf(model).unwrap();
     let plan = producer.prepare_frame(-0.0, &[]).unwrap();
     assert_eq!(producer.execute_frame(plan).unwrap().sequence(), 1);
     let start_bytes = producer.state_snapshot().unwrap().into_bytes();
-    let mut playback = Engine::in_memory();
+    let mut playback = Engine::new();
     playback.load_cxf(model).unwrap();
     playback
         .restore_state(&EngineStateSnapshot::from_bytes(&start_bytes).unwrap())
@@ -171,7 +165,7 @@ fn host_stream_continues_from_separate_snapshot_with_equal_times_and_exact_end_s
 fn output_input_and_time_mismatches_are_exact_and_do_not_change_the_completed_engine() {
     let bytes = replay_oracle::add();
     let expected = ReplayRecord::from_bytes(&bytes).unwrap();
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(ADD).unwrap();
     let entries: Vec<_> = expected
         .inputs()
@@ -210,7 +204,7 @@ fn warning_records_match_hand_bytes_and_replay_without_severity_or_order_policy(
         None,
         &replay_oracle::hex(include_str!("fixtures/replay_warning.hex")),
     );
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     for _ in 0..3 {
         engine
             .load_cxf(include_bytes!("fixtures/assertion_model.jsonld"))
@@ -233,7 +227,7 @@ fn warning_records_match_hand_bytes_and_replay_without_severity_or_order_policy(
 
 #[test]
 fn stateful_inputs_replay_from_a_separate_start_sidecar_to_exact_end_bytes() {
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source
         .load_cxf(include_bytes!("fixtures/frame_delay.jsonld"))
         .unwrap();
@@ -246,7 +240,7 @@ fn stateful_inputs_replay_from_a_separate_start_sidecar_to_exact_end_bytes() {
     let plan = source.prepare_frame(0.0, &entries(2.0)).unwrap();
     source.execute_frame(plan).unwrap();
     let sidecar = source.state_snapshot().unwrap();
-    let mut playback = Engine::in_memory();
+    let mut playback = Engine::new();
     playback
         .load_cxf(include_bytes!("fixtures/frame_delay.jsonld"))
         .unwrap();
@@ -277,10 +271,10 @@ fn stateful_inputs_replay_from_a_separate_start_sidecar_to_exact_end_bytes() {
 }
 
 #[test]
-fn host_eligibility_refusals_preserve_fresh_and_advanced_state_store_and_restore_window() {
+fn host_eligibility_refusals_preserve_fresh_and_advanced_state_and_restore_window() {
     let payload = replay_oracle::hex(include_str!("fixtures/replay_add.hex"));
     for advanced in [false, true] {
-        let mut engine = Engine::with_store(Arc::new(RecordingStore::default()));
+        let mut engine = Engine::new();
         engine.load_cxf(ADD).unwrap();
         if advanced {
             let frame = engine
@@ -294,8 +288,6 @@ fn host_eligibility_refusals_preserve_fresh_and_advanced_state_store_and_restore
                 .unwrap();
             engine.execute_frame(frame).unwrap();
         }
-        engine.store().reset_calls();
-        engine.store().arm_hot_path_guard();
         let before = engine.state_snapshot().unwrap();
         let descriptor = CompatibilityDescriptor::current(None).unwrap();
         for (text, target, cause) in [
@@ -318,7 +310,6 @@ fn host_eligibility_refusals_preserve_fresh_and_advanced_state_store_and_restore
                     engine.state_snapshot().unwrap().as_bytes(),
                     before.as_bytes()
                 );
-                assert_eq!(engine.store().calls(), StoreCallSnapshot::default());
             }
         }
         if advanced {

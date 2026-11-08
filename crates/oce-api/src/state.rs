@@ -5,7 +5,6 @@ use std::sync::Arc;
 
 use oce_blocks::BlockKind;
 use oce_model::{Dir, Value, ValueType, enum_descriptor, enum_descriptor_by_path};
-use oce_store::Store;
 
 use crate::engine::Engine;
 use crate::error::OcError;
@@ -348,7 +347,7 @@ pub(crate) struct StateImage {
     pub(crate) words: Vec<u64>,
 }
 
-impl<S: Store> Engine<S> {
+impl Engine {
     /// Capture an opaque process-local image that may later rewind a compatible engine.
     ///
     /// # Errors
@@ -395,8 +394,8 @@ impl<S: Store> Engine<S> {
     /// The host verifies its authenticated build/deployment envelope before decoding the bytes.
     /// The target must not have accepted a frame, dirty-parameter resume, or either restore since
     /// successful load. Preparation, refusal and clean resume leave this window open. Full
-    /// validation precedes commit; every returned error preserves the engine and Store. No
-    /// evaluation or Store call occurs. Panic/allocation failure and external effects are excluded.
+    /// validation precedes commit; every returned error preserves the engine. No
+    /// evaluation or persistence call occurs. Panic/allocation failure and external effects are excluded.
     pub fn restore_state(&mut self, snapshot: &EngineStateSnapshot) -> Result<(), OcError> {
         self.restore_preconditions(true)?;
         let prepared = self.prepare_restore(&snapshot.image, true)?;
@@ -557,8 +556,8 @@ struct PreparedRestore {
     prev_t: Option<f64>,
 }
 
-fn validate_payload<S: Store>(
-    engine: &Engine<S>,
+fn validate_payload(
+    engine: &Engine,
     values: &[Value],
     words: &[u64],
     state_t: f64,

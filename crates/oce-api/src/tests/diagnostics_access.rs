@@ -57,7 +57,7 @@ const FAILED_LOAD_CONTEXT_GOLDEN: &str =
     include_str!("fixtures/golden/failed_load_context.diagnostics.txt");
 
 fn refuse(bytes: &[u8]) -> OcError {
-    Engine::in_memory()
+    Engine::new()
         .load_cxf(bytes)
         .expect_err("fixture must be refused")
 }
@@ -238,7 +238,7 @@ fn successful_unification_warning_survives_a_structural_failure() {
 
 #[test]
 fn failed_contextual_reload_keeps_the_previous_engine_state() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .load_cxf(ANALOG_WARNING.as_bytes())
         .expect("baseline model must load");
@@ -258,7 +258,7 @@ fn failed_contextual_reload_keeps_the_previous_engine_state() {
 
 #[test]
 fn warning_only_success_reports_the_resolver_warning_once() {
-    let report = Engine::in_memory()
+    let (report, _) = Engine::new()
         .load_cxf(ANALOG_WARNING.as_bytes())
         .expect("warning-only fixture must load");
     assert_eq!(

@@ -1,23 +1,23 @@
 # Versioned facade contracts
 
 The additive `oce-api` contracts describe metadata and evidence independently of a loaded engine.
-Existing load/export reports, diagnostic aliases, value/IO types and conditional storage aliases
-retain their signatures and behavior. There is no enumerated surface baseline before 1.0;
+Existing export reports, diagnostic aliases and value/IO types retain their signatures and
+behavior. Load entry points return a plain-data `LoadedModel` beside their report or receipt, and
+the facade no longer re-exports any storage-port item (GitHub #390). There is no enumerated surface baseline before 1.0;
 the [product contract](product-contract.md) and pre-1.0 change control still apply.
 
 ## Identity glossary
 
-- **`DomainKey`** is a database-free semantic key DTO. In `LoadReport.model_id` it is a
-  facade DTO carrying the loaded model's authored top-composite identity when
+- **`DomainKey`** is a database-free semantic key DTO, defined in `oce_model::resolved_model` and
+  re-exported as `oce_api::DomainKey`. In `LoadReport.model_id` and `LoadedModel::model_id` it
+  carries the loaded model's authored top-composite identity when
   available, otherwise the documented deterministic projection key. **Model id** is the prose role;
   there is no separate Rust `ModelId` type.
 - **`ConnectorId`** is a dense, zero-based connector/index identity within one loaded flattened
   model. It is not durable and has no cross-reload, cross-model, or host-control identity guarantee.
-- **`PointHandle`** is an adapter-defined scalar token containing no backend type. Its public tuple
-  field is intentional: external adapters mint it in `PointStore::resolve_points` and consume it in
-  `PointSnapshot::read_resolved`. A handle is valid only for the same adapter mapping from resolution
-  through compatible snapshot reads. It is not durable, global, cross-adapter, cross-reload, or a
-  host/equipment control identity.
+- **`PointHandle`** belongs to the `oce-store` port, not the facade. The engine neither mints,
+  validates nor retains one: a host that binds points through a storage adapter does so from
+  `LoadedModel::input_points()`, outside the engine.
 - **Catalog content tag** identifies all canonical facade metadata bytes within catalog schema
   revision 1. It is distinct from the existing registry fingerprint and state compatibility key.
 - **Contract descriptor revision** versions one facade domain's shapes/semantics. HostTick's
@@ -34,8 +34,8 @@ the [product contract](product-contract.md) and pre-1.0 change control still app
   establish executable identity, model-specific IO equality, generation, state compatibility or trust.
 
 Frame preparation and latest-state inspection resolve model-local connector identities in the IO
-inventory, not Store handles. Load still validates adapter handle cardinality, but retains no runtime
-Store-input handles. Preparation admits only complete executable boundary inputs with exact types
+inventory, not storage handles. Load calls no storage port. Preparation admits only complete
+executable boundary inputs with exact types
 and declared domains. The private incarnation fence
 is distinct from authored model identity and is neither portable nor serialized into state bytes.
 
@@ -87,7 +87,7 @@ pipelines. Their success receipts contain the legacy report and independently ca
 the receipt's provenance. Legacy entrypoints avoid this additional evidence allocation.
 
 Failures return `OperationFailure`: terminal stage, completed-stage and terminal diagnostics, and
-the original `OcError`/standard error source chain. JSON and store errors can carry no
+the original `OcError`/standard error source chain. JSON and projection errors can carry no
 diagnostics; terminal stage and error context still explain failure. No engine code is invented.
 An algebraic-loop refusal records one `Error` per member of one concrete cycle at stage `Schedule`:
 `algebraic-loop` for a connector-level feedthrough cycle (subjects are member connector identities)
@@ -111,7 +111,7 @@ error carries no such records.
 An unloaded export retains its existing `export-unsupported` diagnostic. A partial export still
 succeeds with warnings; use the legacy report's completeness check for emitted-document identity.
 
-Producer stages are explicit boundary labels, not inferred from codes. Revision-2 ranks are:
+Producer stages are explicit boundary labels, not inferred from codes. Revision-3 ranks are:
 
 | Rank | Stage |
 | --- | --- |
@@ -121,14 +121,13 @@ Producer stages are explicit boundary labels, not inferred from codes. Revision-
 | 3 | Instantiation |
 | 4 | Schedule |
 | 5 | Semantics |
-| 6 | Projection |
-| 7 | StoreRecovery |
-| 8 | StoreSave |
-| 9 | StoreInputs |
-| 10 | Export |
+| 6 | Projection: the plain-data resolved-model projection returned in `LoadedModel` |
+| 7 | Export |
 
 Revision 2 removed the revision-1 `Flatten` stage (rank 1), an identity pass that never produced
-evidence; the relative order of every remaining stage is unchanged.
+evidence. Revision 3 removed the `StoreRecovery`, `StoreSave` and `StoreInputs` stages (ranks 7 to
+9), because load no longer calls a storage port (GitHub #390). The relative order of every
+remaining stage is unchanged.
 
 The ordering is stage rank, subject category/presence and exact UTF-8 subject text, code string,
 then severity rank (`Error=0`, `Warning=1`, `Info=2`). `Absent` sorts before `Opaque`; an empty
@@ -157,7 +156,7 @@ they do not promise new JSON wire codecs or schema-driven runtime validation.
 | [Execution profile](../crates/oce-api/contracts/execution-profile.schema.json) | Descriptor revision 2, still fixed HostTick v1: one advance per accepted complete frame, including equal timestamps; no Modelica same-time event iteration. Descriptive, not a runtime selector or snapshot revision. |
 
 Every completed frame retains warnings. There is no public no-op-sink execution profile or engine
-write-back route. Load/Store side effects and commit ordering are unchanged. These descriptors add no rollback,
+write-back route. Load has no external side effect and commit ordering is unchanged. These descriptors add no rollback,
 warn-once, escalation, scheduler, equipment policy or safety guarantee. The separately documented
 [serialized admission and replacement policy](facade-migration.md#bounded-serialized-load-adoption)
 uses `Import` for byte refusals without adding/reordering stages or changing descriptor bytes.
@@ -251,12 +250,12 @@ where currently private. Snapshots, restore, frames and admission limits retain 
 the owned exact-type definitions, not `io().iter().filter(In)`: that point projection includes
 internal driven points, omits strings and projects enums to Int. Supply every canonical definition
 once with a real host observation. The definition's exact inclusive bounds are schema domains, not
-input values or defaults. Missing values are refused rather than seeded or read from the Store.
+input values or defaults. Missing values are refused rather than seeded or read from storage.
 
 Replace old per-value staging with one complete borrowed-key list passed
 to `prepare_frame(time, entries)`. Preparation returns an owned opaque `PreparedInputFrame` without
 staging the loop's valid prefix. The plan carries all fan-out targets and exact native values, but
-no Store handles or public connector indices. There is no serializable plan or reusable schema/cache
+no storage handles or public connector indices. There is no serializable plan or reusable schema/cache
 object. Refresh discovery after successful load/reconfiguration; old plans are invalid after reload
 or dirty resume, including same-byte reload and same-value edits. Clean resume and compatible restore
 alone preserve the context, while an advanced clock can make the submitted time ineligible.
@@ -283,16 +282,16 @@ latest-state inspection. Read `time()`, `sequence()`, `outputs()` and `diagnosti
 
 The result contains lexical root boundary identities and native typed values, not every internal
 output connector or durable column. Distinct declared outputs may share a driver; pass-throughs
-occur once. Warning records retain emission order and producer source semantics. No pointer, Store
+occur once. Warning records retain emission order and producer source semantics. No pointer, storage
 handle, schedule, deployment token or durable replay identity is exposed. Sequence starts at one,
 counts successful native frames only and never resets during this Engine's lifetime, even on reload
 or checkpoint rewind. Equal-time success is another transition, never an idempotent retry.
 
-Hosts decide whether to execute and what to do with completed values; Store/actuation follow outside
+Hosts decide whether to execute and what to do with completed values; persistence/actuation follow outside
 this API. Sibling consumers need to migrate; no sibling source or pin is changed or qualified here. See the
 [execution contract and evidence](complete-frame-contract.md#current-execution-api).
 
 The single frame path retains the private HostTick evaluation/refresh implementation. Host loops
 submit complete frames and own cadence and trace capture. `get_output` and `watch` are latest-state,
-non-receipt views, including internal points. There is no raw output view or Store write helper.
+non-receipt views, including internal points. There is no raw output view or storage write helper.
 Parity evidence is limited to equivalent complete schedules, not arbitrary legacy workflows.

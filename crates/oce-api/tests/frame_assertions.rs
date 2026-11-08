@@ -24,8 +24,8 @@ fn default_severity_is_warning_not_an_unemitted_failure() {
 }
 
 fn loaded() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine.load_cxf(MODEL).expect("actual CXF Assert loads");
+    let mut engine = Engine::new();
+    let (report, _) = engine.load_cxf(MODEL).expect("actual CXF Assert loads");
     assert_eq!(report.block_count, 2);
     assert!(report.warnings.is_empty());
     engine

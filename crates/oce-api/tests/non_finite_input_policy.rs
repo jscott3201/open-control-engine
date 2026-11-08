@@ -33,7 +33,7 @@ const NON_FINITE: [u64; 6] = [
 ];
 
 fn loaded() -> Engine {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL).expect("fixture loads");
     engine
 }
@@ -69,7 +69,7 @@ fn snapshot(engine: &Engine) -> Vec<u8> {
 fn the_default_policy_is_admit_before_and_after_load() {
     assert_eq!(NonFiniteInputPolicy::default(), NonFiniteInputPolicy::Admit);
     assert_eq!(
-        Engine::in_memory().non_finite_input_policy(),
+        Engine::new().non_finite_input_policy(),
         NonFiniteInputPolicy::Admit
     );
     assert_eq!(
@@ -271,7 +271,7 @@ fn snapshots_do_not_carry_the_policy_and_restore_keeps_the_host_choice() {
 
     // A fresh Refuse target restores an Admit capture and keeps refusing; the reverse holds too.
     let captured = admit.state_snapshot().unwrap();
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target.set_non_finite_input_policy(NonFiniteInputPolicy::Refuse);
     target.load_cxf(MODEL).unwrap();
     target.restore_state(&captured).unwrap();
@@ -306,7 +306,7 @@ fn a_replay_record_with_a_non_finite_input_replays_only_under_admit() {
         .collect();
 
     let replay_target = |policy| {
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine.set_non_finite_input_policy(policy);
         engine.load_cxf(MODEL).unwrap();
         run(&mut engine, 0.0, &entries(1.0, 0.0, false, 1));
@@ -355,7 +355,7 @@ fn integer_boolean_and_time_refusals_are_independent_of_the_policy() {
 
 #[test]
 fn execution_recheck_names_the_first_canonical_non_finite_input() {
-    let mut probe = Engine::in_memory();
+    let mut probe = Engine::new();
     probe.load_cxf(TWO_INPUTS).unwrap();
     let schema: Vec<_> = probe
         .input_definitions()
@@ -386,7 +386,7 @@ fn execution_recheck_names_the_first_canonical_non_finite_input() {
             if reversed {
                 entries.reverse();
             }
-            let mut engine = Engine::in_memory();
+            let mut engine = Engine::new();
             engine.load_cxf(TWO_INPUTS).unwrap();
             let plan = engine.prepare_frame(0.0, &entries).expect("Admit prepares");
             engine.set_non_finite_input_policy(NonFiniteInputPolicy::Refuse);

@@ -302,7 +302,7 @@ direct_verification_metadata_fixture() {
       "id": "path+file:///repo/crates/oce-api#0.0.0",
       "publish": null,
       "dependencies": [
-        { "name": "oce-reference-wal-adapter", "kind": "normal" }
+        { "name": "oce-example-verification-adapter", "kind": "normal" }
       ]
     },
     {
@@ -312,8 +312,8 @@ direct_verification_metadata_fixture() {
       "dependencies": []
     },
     {
-      "name": "oce-reference-wal-adapter",
-      "id": "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0",
+      "name": "oce-example-verification-adapter",
+      "id": "path+file:///repo/crates/oce-example-verification-adapter#0.0.0",
       "publish": [],
       "dependencies": []
     }
@@ -321,7 +321,7 @@ direct_verification_metadata_fixture() {
   "workspace_members": [
     "path+file:///repo/crates/oce-api#0.0.0",
     "path+file:///repo/crates/oce-store-mem#0.0.0",
-    "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0"
+    "path+file:///repo/crates/oce-example-verification-adapter#0.0.0"
   ],
   "resolve": {
     "nodes": [
@@ -329,7 +329,7 @@ direct_verification_metadata_fixture() {
         "id": "path+file:///repo/crates/oce-api#0.0.0",
         "deps": [
           {
-            "pkg": "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0",
+            "pkg": "path+file:///repo/crates/oce-example-verification-adapter#0.0.0",
             "dep_kinds": [
               { "kind": "dev" }
             ]
@@ -341,7 +341,7 @@ direct_verification_metadata_fixture() {
         "deps": []
       },
       {
-        "id": "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0",
+        "id": "path+file:///repo/crates/oce-example-verification-adapter#0.0.0",
         "deps": []
       }
     ]
@@ -363,7 +363,7 @@ dev_verification_metadata_fixture() {
       "id": "path+file:///repo/crates/oce-api#0.0.0",
       "publish": null,
       "dependencies": [
-        { "name": "oce-reference-wal-adapter", "kind": "dev" }
+        { "name": "oce-example-verification-adapter", "kind": "dev" }
       ]
     },
     {
@@ -373,8 +373,8 @@ dev_verification_metadata_fixture() {
       "dependencies": []
     },
     {
-      "name": "oce-reference-wal-adapter",
-      "id": "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0",
+      "name": "oce-example-verification-adapter",
+      "id": "path+file:///repo/crates/oce-example-verification-adapter#0.0.0",
       "publish": [],
       "dependencies": []
     }
@@ -382,7 +382,7 @@ dev_verification_metadata_fixture() {
   "workspace_members": [
     "path+file:///repo/crates/oce-api#0.0.0",
     "path+file:///repo/crates/oce-store-mem#0.0.0",
-    "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0"
+    "path+file:///repo/crates/oce-example-verification-adapter#0.0.0"
   ],
   "resolve": {
     "nodes": [
@@ -390,7 +390,7 @@ dev_verification_metadata_fixture() {
         "id": "path+file:///repo/crates/oce-api#0.0.0",
         "deps": [
           {
-            "pkg": "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0",
+            "pkg": "path+file:///repo/crates/oce-example-verification-adapter#0.0.0",
             "dep_kinds": [
               { "kind": "dev" }
             ]
@@ -402,7 +402,7 @@ dev_verification_metadata_fixture() {
         "deps": []
       },
       {
-        "id": "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0",
+        "id": "path+file:///repo/crates/oce-example-verification-adapter#0.0.0",
         "deps": []
       }
     ]
@@ -434,8 +434,8 @@ transitive_verification_metadata_fixture() {
       "dependencies": []
     },
     {
-      "name": "oce-reference-wal-adapter",
-      "id": "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0",
+      "name": "oce-example-verification-adapter",
+      "id": "path+file:///repo/crates/oce-example-verification-adapter#0.0.0",
       "publish": [],
       "dependencies": []
     }
@@ -443,7 +443,7 @@ transitive_verification_metadata_fixture() {
   "workspace_members": [
     "path+file:///repo/crates/oce-api#0.0.0",
     "path+file:///repo/crates/oce-store-mem#0.0.0",
-    "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0"
+    "path+file:///repo/crates/oce-example-verification-adapter#0.0.0"
   ],
   "resolve": {
     "nodes": [
@@ -462,7 +462,7 @@ transitive_verification_metadata_fixture() {
         "id": "registry+https://github.com/rust-lang/crates.io-index#third-party-helper@1.0.0",
         "deps": [
           {
-            "pkg": "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0",
+            "pkg": "path+file:///repo/crates/oce-example-verification-adapter#0.0.0",
             "dep_kinds": [
               { "kind": "normal" }
             ]
@@ -474,11 +474,100 @@ transitive_verification_metadata_fixture() {
         "deps": []
       },
       {
-        "id": "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0",
+        "id": "path+file:///repo/crates/oce-example-verification-adapter#0.0.0",
         "deps": []
       }
     ]
   }
+}
+EOF
+}
+
+facade_storage_tree_fixture() {
+  members="$1"
+  trees="$2"
+  printf '%s\n' oce-api > "$members"
+  cat > "$trees/oce-api.tree" <<'EOF'
+oce-api v0.0.0 (/repo/crates/oce-api)
+├── oce-model v0.0.0 (/repo/crates/oce-model)
+└── oce-store v0.0.0 (/repo/crates/oce-store)
+EOF
+}
+
+facade_transitive_storage_tree_fixture() {
+  members="$1"
+  trees="$2"
+  printf '%s\n' oce-api > "$members"
+  cat > "$trees/oce-api.tree" <<'EOF'
+oce-api v0.0.0 (/repo/crates/oce-api)
+└── oce-model v0.0.0 (/repo/crates/oce-model)
+    └── oce-store-mem v0.0.0 (/repo/crates/oce-store-mem)
+        └── oce-store v0.0.0 (/repo/crates/oce-store)
+EOF
+}
+
+facade_storage_metadata_fixture() {
+  members="$1"
+  trees="$2"
+  metadata="$3"
+  positive_fixture "$members" "$trees"
+  cat > "$metadata" <<'EOF'
+{
+  "packages": [
+    {
+      "name": "oce-api",
+      "id": "path+file:///repo/crates/oce-api#0.0.0",
+      "publish": null,
+      "dependencies": [
+        { "name": "oce-model", "kind": null },
+        { "name": "oce-store", "kind": null }
+      ]
+    },
+    {
+      "name": "oce-store",
+      "id": "path+file:///repo/crates/oce-store#0.0.0",
+      "publish": null,
+      "dependencies": []
+    }
+  ],
+  "workspace_members": [
+    "path+file:///repo/crates/oce-api#0.0.0",
+    "path+file:///repo/crates/oce-store#0.0.0"
+  ],
+  "resolve": { "nodes": [] }
+}
+EOF
+}
+
+facade_storage_dev_metadata_fixture() {
+  members="$1"
+  trees="$2"
+  metadata="$3"
+  positive_fixture "$members" "$trees"
+  cat > "$metadata" <<'EOF'
+{
+  "packages": [
+    {
+      "name": "oce-api",
+      "id": "path+file:///repo/crates/oce-api#0.0.0",
+      "publish": null,
+      "dependencies": [
+        { "name": "oce-model", "kind": null },
+        { "name": "oce-store-mem", "kind": "dev" }
+      ]
+    },
+    {
+      "name": "oce-store-mem",
+      "id": "path+file:///repo/crates/oce-store-mem#0.0.0",
+      "publish": null,
+      "dependencies": []
+    }
+  ],
+  "workspace_members": [
+    "path+file:///repo/crates/oce-api#0.0.0",
+    "path+file:///repo/crates/oce-store-mem#0.0.0"
+  ],
+  "resolve": { "nodes": [] }
 }
 EOF
 }
@@ -508,14 +597,14 @@ zero_shipped_metadata_fixture() {
 {
   "packages": [
     {
-      "name": "oce-reference-wal-adapter",
-      "id": "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0",
+      "name": "oce-example-verification-adapter",
+      "id": "path+file:///repo/crates/oce-example-verification-adapter#0.0.0",
       "publish": [],
       "dependencies": []
     }
   ],
   "workspace_members": [
-    "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0"
+    "path+file:///repo/crates/oce-example-verification-adapter#0.0.0"
   ],
   "resolve": { "nodes": [] }
 }
@@ -596,10 +685,17 @@ run_fixture direct-tokio-metadata fail direct_tokio_metadata_fixture \
 run_fixture direct-tokio-macros-metadata fail direct_tokio_macros_metadata_fixture \
   "shipped crate 'oce-api' has forbidden direct normal dependency 'tokio-macros'"
 run_fixture direct-verification-metadata fail direct_verification_metadata_fixture \
-  "shipped crate 'oce-api' has forbidden direct normal dependency on verification-only crate 'oce-reference-wal-adapter'"
+  "shipped crate 'oce-api' has forbidden direct normal dependency on verification-only crate 'oce-example-verification-adapter'"
 run_fixture dev-verification-metadata pass dev_verification_metadata_fixture
 run_fixture transitive-verification-metadata fail transitive_verification_metadata_fixture \
-  "shipped crate 'oce-api' reaches verification-only crate 'oce-reference-wal-adapter' through non-dev dependencies"
+  "shipped crate 'oce-api' reaches verification-only crate 'oce-example-verification-adapter' through non-dev dependencies"
+run_fixture facade-storage-tree fail facade_storage_tree_fixture \
+  "FAIL: 'oce-api' reaches the storage port through its normal dependency tree"
+run_fixture facade-transitive-storage-tree fail facade_transitive_storage_tree_fixture \
+  "oce-store-mem v0.0.0"
+run_fixture facade-storage-metadata fail facade_storage_metadata_fixture \
+  "FAIL: 'oce-api' has a direct normal dependency on storage crate 'oce-store'"
+run_fixture facade-storage-dev-metadata pass facade_storage_dev_metadata_fixture
 run_fixture empty-metadata fail empty_metadata_fixture \
   "cargo metadata fixture is missing or empty"
 run_fixture malformed-metadata fail malformed_metadata_fixture \

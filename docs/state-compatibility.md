@@ -22,7 +22,7 @@ snapshot bytes to its approved compiled-build/deployment qualifier and checks fr
 generation. That qualifier can cover source/dependency lock, compiler, features, target and
 codegen qualification. OCE emits, accepts, stores and enforces **no build token**. Pass only the
 OCE snapshot bytes after approval. A compatible manifest from a differently compiled implementation
-can pass OCE checks; that is not build qualification. See the [restart checklist](host-responsibilities.md#persist-engine-state-outside-the-store-port).
+can pass OCE checks; that is not build qualification. See the [restart checklist](host-responsibilities.md#persist-engine-state-outside-the-engine).
 
 `CompatibilityDescriptor`, package version, catalog metadata tag, diagnostic model ID and complete
 export tag are not substitutes for either the host envelope or the state manifest. No universal
@@ -34,9 +34,9 @@ changes to implementation code with unchanged descriptors belong to host build q
 | Operation | Contract |
 | --- | --- |
 | `checkpoint` | Owned process-local image; compatible restore can rewind. No persistence format or external authority. |
-| `state_snapshot` | Validate loaded state, stable authored identities and registered state contracts; encode and run the bounded canonical decoder before returning. Every success can be parsed by this build. No evaluation or Store calls. |
+| `state_snapshot` | Validate loaded state, stable authored identities and registered state contracts; encode and run the bounded canonical decoder before returning. Every success can be parsed by this build. No evaluation or storage calls. |
 | `from_bytes` | Validate wire structure and manifest self-consistency, not compatibility with a loaded target or every class-specific state invariant. Unknown execution ABI can parse but cannot restore. |
-| `restore_state` | Check readiness, target domain, execution ABI, full manifest/fingerprint and payload before one in-memory commit. No evaluation or Store calls. |
+| `restore_state` | Check readiness, target domain, execution ABI, full manifest/fingerprint and payload before one in-memory commit. No evaluation or storage calls. |
 | `restore_checkpoint` | Same prepare/commit discipline, without the startup-window restriction. Not a durable-byte bypass. |
 
 A successful load opens the durable restore window. Accepted frame execution, dirty-parameter
@@ -49,9 +49,10 @@ accepted-frame sequence. It replaces connector values, state words, absolute mod
 prior-time guard only. A preprepared frame still rechecks time at execution. Retained completed
 frames remain immutable and are not restored or reissued.
 
-All **returned** restore errors precede mutation and preserve both engine state and Store state.
+All **returned** restore errors precede mutation and preserve engine state; the engine has no storage
+state to preserve.
 Panic, allocation failure, process termination and external host effects are outside this guarantee.
-Capture/restore do not create a Store transaction. A later delivery failure cannot undo a frame.
+Capture/restore do not create a storage transaction. A later delivery failure cannot undo a frame.
 At restored time, another accepted frame is another HostTick transition, not event iteration.
 
 ## Compatibility and deterministic refusal
@@ -82,7 +83,7 @@ then canonical complete-frame input definitions (path, native type and effective
 
 The input definitions include the intersection of declaration and all fan-out target bounds,
 with exact Integer/enum values and Real bits. They are the actual acceptance domain, not lossy
-PointStore bounds. Unit/quantity changes affect host interpretation and refuse. Display units and
+projected-point bounds. Unit/quantity changes affect host interpretation and refuse. Display units and
 other non-executing presentation metadata are not compatibility determinants. Model ID is diagnostic
 only; changing it alone does not refuse. Parameter edits need a compatible newly loaded target.
 
@@ -185,8 +186,7 @@ or a host `NO_EVAL` window, is host frame policy.
 - `tests/state_contract.rs`: public inspection, changed bounds/units/quantities, historical wire
   refusal and signed-zero/equal-time continuation against a hand-derived Boolean recurrence.
 - `src/tests/state_manifest_refusal_tests.rs`: rechecksummed field mutation corpus, repeat typed
-  diagnostics, full snapshot/checkpoint before/after images, retained lifecycle fences and Store
-  noninterference; capture refuses a deliberately injected noncanonical producer image.
+  diagnostics, full snapshot/checkpoint before/after images and retained lifecycle fences; capture refuses a deliberately injected noncanonical producer image.
 - `src/tests/state_format_golden_tests.rs`, `state_tests.rs`, `state_io.rs`: independent full
   codec construction, checked byte/fingerprint goldens and hand-assembled domain encoding.
 - `src/tests/state_codec_tests.rs`, `state_resource_tests.rs`, `state_restore_validation_tests.rs`:

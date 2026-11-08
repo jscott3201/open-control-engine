@@ -4,7 +4,7 @@
 //! binding-shape constraints apply to that wrapped subset and to the selected owned/thread-safe
 //! shapes pinned below; they do not describe every Rust facade signature. Drift in a pinned shape
 //! (a generic that cannot be a `#[pyclass]`, a non-`Clone` type that cannot cross to Python, a
-//! borrowed/lifetime/`&dyn Store` return, or a non-`Send` engine) must fail the build here, with **no
+//! borrowed/lifetime/trait-object return, or a non-`Send` engine) must fail the build here, with **no
 //! PyO3 dependency**. Every item below is a never-called `fn` whose mere compilation IS the
 //! assertion; `#[allow(dead_code)]` keeps them off the dead-code lint.
 //!
@@ -18,14 +18,12 @@
 
 use std::sync::Arc;
 
-use oce_store_mem::MemStore;
-
 use crate::{
     AssertEvent, AssertLevel, ConnectorId, DeclaredOutput, Diagnostic, Engine, EngineCheckpoint,
     EngineStateError, EngineStateSnapshot, IoClass, IoInventory, IoSummary, LoadErrorContext,
-    LoadReport, OcError, ParamAttrs, ParamTable, PassThroughPair, PhysicalKind, PointDirection,
-    PointInfo, PointValueType, RunMode, Topology, TopologyBlock, TopologyConnection, TrendCfg,
-    TrendInterval, Value, ValueType,
+    LoadReport, LoadedModel, OcError, ParamAttrs, ParamTable, PassThroughPair, PhysicalKind,
+    PointDirection, PointInfo, PointValueType, RunMode, Topology, TopologyBlock,
+    TopologyConnection, TrendCfg, TrendInterval, Value, ValueType,
 };
 
 /// `T: Send + Sync` (used for the concrete thread-safety guards).
@@ -58,35 +56,25 @@ fn _assert_complete_frame_shapes() {
     let _: fn(&crate::CompletedFrame) -> &[AssertEvent] = crate::CompletedFrame::diagnostics;
 }
 
-// ---- R-API-PY-1 — no generic `#[pyclass]`: the binding wraps the concrete `Engine<MemStore>` ----
+// ---- R-API-PY-1 — no generic `#[pyclass]`: the binding wraps the concrete `Engine` ----
 
-/// R-API-PY-1: the PyO3 binding wraps a single concrete `PyEngine(Engine<MemStore>)`, never
-/// `Engine<S>` generically (a generic type cannot be a `#[pyclass]`). Pin that `Engine<MemStore>`
-/// is the constructible, monomorphic shape the wheel wraps.
+/// R-API-PY-1: the PyO3 binding wraps a single concrete `PyEngine(Engine)` (a generic type cannot
+/// be a `#[pyclass]`). `Engine` has no type parameter; pin that it is the constructible,
+/// monomorphic shape the wheel wraps.
 fn _assert_engine_monomorphic() {
-    let _: fn() -> Engine<MemStore> = Engine::<MemStore>::in_memory;
+    let _: fn() -> Engine = Engine::new;
+    let _: fn() -> Engine = <Engine as Default>::default;
 }
 
 // ---- R-API-PY-2 / R-THREAD-1 — the engine handle is `Send + Sync` (shareable as `Arc<Engine>`) ----
 
 /// R-API-PY-2 / R-THREAD-1 — the **load-bearing** thread-safety guard. It is **concrete** on
-/// purpose: `Engine<MemStore>` forces rustc to actually compute the auto-traits (which transitively
+/// purpose: `Engine` forces rustc to actually compute the auto-traits (which transitively
 /// require `Box<dyn Block>: Send + Sync`, i.e. the `oce-blocks` `Block: Send + Sync` supertrait).
 /// This is what fails to compile if that bound is ever removed.
 fn _assert_engine_send_sync() {
-    needs_send_sync::<Engine<MemStore>>();
-    needs_send_sync::<Arc<Engine<MemStore>>>();
-}
-
-/// R-API-PY-2, the generic `08` R-ENG-1 *statement* `Engine<S>: Send + Sync for all S: Store`.
-/// NOTE: this form is **documentation only and intentionally NON-enforcing** — a `where`-clause on
-/// an uninstantiated generic `fn` is *assumed*, never *proven* (it would only be checked at a
-/// concrete call site, of which there are none), so it compiles GREEN even if the bound were false.
-/// The mechanically load-bearing guard is the concrete [`_assert_engine_send_sync`] above.
-fn _doc_engine_send_sync_for_all_stores<S: oce_store::Store>()
-where
-    Engine<S>: Send + Sync,
-{
+    needs_send_sync::<Engine>();
+    needs_send_sync::<Arc<Engine>>();
 }
 
 // ---- R-API-PY-3 — every type that reaches Python is owned-convertible (`Clone`, no borrow) ----
@@ -98,6 +86,7 @@ where
 /// error requirements.
 fn _assert_python_facing_types_are_clone() {
     needs_clone::<LoadReport>();
+    needs_clone::<LoadedModel>();
     needs_clone::<IoSummary>();
     needs_clone::<PointInfo>();
     needs_clone::<AssertEvent>();
@@ -145,43 +134,38 @@ fn _assert_enumeration_item_types(i: &IoInventory, p: &ParamTable) {
     let _: Option<(String, Value, ParamAttrs)> = p.iter().next();
 }
 
-// ---- R-API-PY-5/6 — String-path + `Value`-typed, no generic / lifetime / `Cow` / `&dyn Store` ----
+// ---- R-API-PY-5/6 — String-path + `Value`-typed, no generic / lifetime / `Cow` / `&dyn Trait` ----
 
 /// R-API-PY-5/6: the frozen method set, each pinned to its exact signature via a fn-pointer. A
 /// fn-pointer is monomorphic, lifetime-erased, and concrete-typed, so a leaked generic parameter, an
-/// `impl Trait` tied to `&self`, a `Cow<'_, _>`, or a `&dyn Store` in any of these would fail to
+/// `impl Trait` tied to `&self`, a `Cow<'_, _>`, or a trait object in any of these would fail to
 /// coerce — a unit-build error, not a runtime surprise.
 #[allow(clippy::type_complexity)]
 fn _assert_frozen_signatures() {
-    let _: fn() -> Engine<MemStore> = Engine::<MemStore>::in_memory;
-    let _: fn(Arc<MemStore>) -> Engine<MemStore> = Engine::<MemStore>::with_store;
-    let _: fn(&mut Engine<MemStore>, &[u8]) -> Result<LoadReport, OcError> =
-        Engine::<MemStore>::load_cxf;
-    let _: fn(&Engine<MemStore>) -> Result<EngineCheckpoint, OcError> =
-        Engine::<MemStore>::checkpoint;
-    let _: fn(&mut Engine<MemStore>, &EngineCheckpoint) -> Result<(), OcError> =
-        Engine::<MemStore>::restore_checkpoint;
-    let _: fn(&Engine<MemStore>) -> Result<EngineStateSnapshot, OcError> =
-        Engine::<MemStore>::state_snapshot;
-    let _: fn(&mut Engine<MemStore>, &EngineStateSnapshot) -> Result<(), OcError> =
-        Engine::<MemStore>::restore_state;
-    let _: fn(&Engine<MemStore>, &str) -> Result<Value, OcError> = Engine::<MemStore>::get_output;
-    let _: fn(&Engine<MemStore>, &[&str]) -> Result<Vec<(String, Value)>, OcError> =
-        Engine::<MemStore>::watch;
-    let _: fn(&Engine<MemStore>, &str) -> Result<Value, OcError> = Engine::<MemStore>::get_param;
-    let _: fn(&Engine<MemStore>) -> &ParamTable = Engine::<MemStore>::params;
-    let _: fn(&mut Engine<MemStore>, &str, Value) -> Result<(), OcError> =
-        Engine::<MemStore>::set_param;
-    let _: fn(&mut Engine<MemStore>) -> Result<(), OcError> = Engine::<MemStore>::halt;
-    let _: fn(&mut Engine<MemStore>) -> Result<(), OcError> = Engine::<MemStore>::resume;
-    let _: fn(&Engine<MemStore>) -> RunMode = Engine::<MemStore>::mode;
-    let _: fn(&Engine<MemStore>) -> &IoInventory = Engine::<MemStore>::io;
-    let _: fn(&Engine<MemStore>) -> IoSummary = Engine::<MemStore>::io_summary;
-    let _: fn(&Engine<MemStore>, Option<&str>) -> Result<Vec<PointInfo>, OcError> =
-        Engine::<MemStore>::point_list;
-    let _: fn(&Engine<MemStore>) -> Result<crate::ExportReport, OcError> =
-        Engine::<MemStore>::export_cxf;
-    let _: fn(&Engine<MemStore>) -> crate::Topology = Engine::<MemStore>::topology;
+    let _: fn() -> Engine = Engine::new;
+    let _: fn(&mut Engine, &[u8]) -> Result<(LoadReport, LoadedModel), OcError> = Engine::load_cxf;
+    let _: fn(
+        &mut Engine,
+        &[u8],
+    ) -> Result<(crate::LoadReceipt, LoadedModel), crate::OperationFailure> =
+        Engine::load_cxf_with_receipt;
+    let _: fn(&Engine) -> Result<EngineCheckpoint, OcError> = Engine::checkpoint;
+    let _: fn(&mut Engine, &EngineCheckpoint) -> Result<(), OcError> = Engine::restore_checkpoint;
+    let _: fn(&Engine) -> Result<EngineStateSnapshot, OcError> = Engine::state_snapshot;
+    let _: fn(&mut Engine, &EngineStateSnapshot) -> Result<(), OcError> = Engine::restore_state;
+    let _: fn(&Engine, &str) -> Result<Value, OcError> = Engine::get_output;
+    let _: fn(&Engine, &[&str]) -> Result<Vec<(String, Value)>, OcError> = Engine::watch;
+    let _: fn(&Engine, &str) -> Result<Value, OcError> = Engine::get_param;
+    let _: fn(&Engine) -> &ParamTable = Engine::params;
+    let _: fn(&mut Engine, &str, Value) -> Result<(), OcError> = Engine::set_param;
+    let _: fn(&mut Engine) -> Result<(), OcError> = Engine::halt;
+    let _: fn(&mut Engine) -> Result<(), OcError> = Engine::resume;
+    let _: fn(&Engine) -> RunMode = Engine::mode;
+    let _: fn(&Engine) -> &IoInventory = Engine::io;
+    let _: fn(&Engine) -> IoSummary = Engine::io_summary;
+    let _: fn(&Engine, Option<&str>) -> Result<Vec<PointInfo>, OcError> = Engine::point_list;
+    let _: fn(&Engine) -> Result<crate::ExportReport, OcError> = Engine::export_cxf;
+    let _: fn(&Engine) -> crate::Topology = Engine::topology;
     // R-PUB-6 owned-snapshot accessors (also asserted by `_assert_outputs_enumerable`).
     let _: fn(&IoInventory) -> Vec<PointInfo> = IoInventory::to_vec;
     let _: fn(&ParamTable) -> Vec<(String, Value, ParamAttrs)> = ParamTable::to_vec;
@@ -205,10 +189,6 @@ fn _assert_frozen_signatures() {
 /// These are pinned here because nothing else enumerates the public surface before 1.0. This module
 /// is a non-test module, so the per-PR `cargo build` catches a drift as soon as it lands.
 ///
-/// One pin is narrower than the method it covers, stated so it is not overclaimed:
-/// `Engine::store` is pinned at `MemStore` like its neighbours, so it would not catch a newly added
-/// `where` bound on `S`.
-///
 /// `ExportReport::content_id` is **deliberately not pinned**, and its absence is a decision rather
 /// than an oversight. It is `#[deprecated]`, and this is a non-test module compiled under the gate's
 /// `-D warnings`, so naming it here is a hard error (`-D deprecated`). Suppressing that with an
@@ -216,8 +196,7 @@ fn _assert_frozen_signatures() {
 /// method is deleting it, and a deletion is a reviewed public-surface removal. A per-PR pin would
 /// make this gate fight that removal.
 fn _assert_accessor_signatures() {
-    let _: fn(&Engine<MemStore>) -> &oce_graph::Schedule = Engine::<MemStore>::schedule;
-    let _: fn(&Engine<MemStore>) -> &MemStore = Engine::<MemStore>::store;
+    let _: fn(&Engine) -> &oce_graph::Schedule = Engine::schedule;
     let _: fn(&IoInventory, usize) -> Option<&PointInfo> = IoInventory::get;
     let _: fn(&IoInventory) -> usize = IoInventory::len;
     let _: fn(&IoInventory) -> bool = IoInventory::is_empty;

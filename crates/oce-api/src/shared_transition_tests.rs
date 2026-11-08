@@ -53,7 +53,7 @@ impl Block for CountedBlock {
 
 #[test]
 fn accepted_frames_enter_the_shared_core_once_and_refusals_never_enter() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .load_cxf(include_bytes!("../tests/fixtures/frame_pre.jsonld"))
         .unwrap();

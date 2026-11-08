@@ -101,7 +101,7 @@ fn assert_visible_output(engine: &Engine, output: ConnectorId, expected: bool) {
 #[test]
 fn parameter_seed_is_first_call_output_and_equal_time_calls_advance_memory() {
     let (model, output) = pre_model(false);
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.build_model_in_memory(model, None).unwrap();
 
     // Allocation seeds connector values independently of block state. The parameter is not visible
@@ -121,7 +121,7 @@ fn parameter_seed_is_first_call_output_and_equal_time_calls_advance_memory() {
     assert_visible_output(&engine, output, false);
 
     let (seeded_model, seeded_output) = pre_model(true);
-    let mut seeded = Engine::in_memory();
+    let mut seeded = Engine::new();
     seeded.build_model_in_memory(seeded_model, None).unwrap();
     assert_visible_output(&seeded, seeded_output, false);
     advance(&mut seeded, 0.0, &[(INPUT_PATH, Value::Boolean(false))]).unwrap();
@@ -131,7 +131,7 @@ fn parameter_seed_is_first_call_output_and_equal_time_calls_advance_memory() {
 #[test]
 fn nonconvergent_boolean_feedback_is_accepted_and_advances_per_call() {
     let (model, pre_output, not_output) = oscillating_feedback_model();
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(model, None)
         .expect("Pre cuts the feedthrough loop without event fixed-point analysis");
@@ -163,7 +163,7 @@ fn nonconvergent_boolean_feedback_is_accepted_and_advances_per_call() {
 #[test]
 fn snapshot_restores_next_pre_output_at_same_timestamp() {
     let (model, output) = pre_model(false);
-    let mut uninterrupted = Engine::in_memory();
+    let mut uninterrupted = Engine::new();
     uninterrupted
         .build_model_in_memory(model.clone(), Some("urn:test:pre-profile:model"))
         .unwrap();
@@ -177,7 +177,7 @@ fn snapshot_restores_next_pre_output_at_same_timestamp() {
 
     let snapshot = uninterrupted.state_snapshot().unwrap();
     let decoded = EngineStateSnapshot::from_bytes(snapshot.as_bytes()).unwrap();
-    let mut restored = Engine::in_memory();
+    let mut restored = Engine::new();
     restored
         .build_model_in_memory(model, Some("urn:test:pre-profile:model"))
         .unwrap();

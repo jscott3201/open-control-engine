@@ -7,7 +7,6 @@ use oce_model::{
 };
 
 use super::common::{advance, output_image};
-use super::state_tests::CountingStore;
 const INPUTS: [(&str, Value); 1] = [("urn:test:sampled.u", Value::Real(0.0))];
 use crate::{Engine, EngineCheckpoint, EngineStateError, EngineStateSnapshot, OcError, RunMode};
 
@@ -79,12 +78,12 @@ fn upward_rounded_sample_origins_remain_capturable_and_restorable() {
             ("CDL.Discrete.FirstOrderHold", 1),
         ] {
             let graph = sampled_model(class_path, period);
-            let mut source = Engine::in_memory();
+            let mut source = Engine::new();
             source.build_model_in_memory(graph.clone(), None).unwrap();
             advance(&mut source, period, &INPUTS).unwrap();
             assert!(f64::from_bits(source.state.words[t0_word]) > source.state.t);
             let checkpoint = source.checkpoint().unwrap();
-            let mut target = Engine::in_memory();
+            let mut target = Engine::new();
             target.build_model_in_memory(graph, None).unwrap();
             target.restore_checkpoint(&checkpoint).unwrap();
             assert_eq!(target.state.words, source.state.words);
@@ -98,7 +97,7 @@ fn downward_rounded_late_first_order_sample_remains_capturable_and_restorable() 
     let period = 1.000_000_4;
     let first_tick = 2.000_000_7;
     let graph = sampled_model("CDL.Discrete.FirstOrderHold", period);
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source.build_model_in_memory(graph.clone(), None).unwrap();
     advance(&mut source, first_tick, &INPUTS).unwrap();
     assert_eq!(
@@ -108,7 +107,7 @@ fn downward_rounded_late_first_order_sample_remains_capturable_and_restorable() 
     assert_eq!(source.state.words[2].cast_signed(), 1);
     assert_eq!(source.state.words[3], source.state.words[1]);
     let checkpoint = source.checkpoint().unwrap();
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target.build_model_in_memory(graph, None).unwrap();
     target.restore_checkpoint(&checkpoint).unwrap();
     assert_eq!(target.state.words, source.state.words);
@@ -117,7 +116,7 @@ fn downward_rounded_late_first_order_sample_remains_capturable_and_restorable() 
 #[test]
 fn sample_origin_quotient_outside_i64_remains_capturable() {
     let graph = sampled_model("CDL.Discrete.Sampler", 1.0);
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.build_model_in_memory(graph, None).unwrap();
     advance(&mut engine, 1.0e20, &INPUTS).unwrap();
     engine.checkpoint().unwrap();
@@ -127,7 +126,7 @@ fn sample_origin_quotient_outside_i64_remains_capturable() {
 fn epsilon_early_first_order_sample_remains_capturable_and_restorable() {
     let period = 1.000_000_6;
     let graph = sampled_model("CDL.Discrete.FirstOrderHold", period);
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source
         .build_model_in_memory(graph.clone(), Some("urn:test:sampled-model"))
         .unwrap();
@@ -139,12 +138,12 @@ fn epsilon_early_first_order_sample_remains_capturable_and_restorable() {
     let checkpoint = source.checkpoint().unwrap();
     let snapshot = source.state_snapshot().unwrap();
     let decoded = EngineStateSnapshot::from_bytes(snapshot.as_bytes()).unwrap();
-    let mut local = Engine::in_memory();
+    let mut local = Engine::new();
     local
         .build_model_in_memory(graph.clone(), Some("urn:test:sampled-model"))
         .unwrap();
     local.restore_checkpoint(&checkpoint).unwrap();
-    let mut durable = Engine::in_memory();
+    let mut durable = Engine::new();
     durable
         .build_model_in_memory(graph, Some("urn:test:sampled-model"))
         .unwrap();
@@ -155,7 +154,7 @@ fn epsilon_early_first_order_sample_remains_capturable_and_restorable() {
 
 #[test]
 fn removing_previous_time_from_an_advanced_image_refuses_atomically() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(sampled_model("CDL.Discrete.UnitDelay", 1.0), None)
         .unwrap();
@@ -174,7 +173,7 @@ fn removing_previous_time_from_an_advanced_image_refuses_atomically() {
 fn invalid_state_errors_bound_hostile_block_identity() {
     let mut graph = sampled_model("CDL.Discrete.UnitDelay", 1.0);
     graph.blocks[0].instance_iri = Some(Arc::from("x".repeat(1024 * 1024)));
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.build_model_in_memory(graph, None).unwrap();
     advance(&mut engine, 0.0, &INPUTS).unwrap();
     let mut image = (*engine.checkpoint().unwrap().image).clone();
@@ -192,7 +191,7 @@ fn invalid_state_errors_bound_hostile_block_identity() {
 
 #[test]
 fn off_grid_sample_origin_refuses_atomically() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(sampled_model("CDL.Discrete.Sampler", 1.0), None)
         .unwrap();
@@ -213,7 +212,7 @@ fn off_grid_sample_origin_refuses_atomically() {
 #[test]
 fn resigned_future_first_order_history_refuses_durable_restore_atomically() {
     let graph = sampled_model("CDL.Discrete.FirstOrderHold", 1.0);
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source
         .build_model_in_memory(graph.clone(), Some("urn:test:sampled-model"))
         .unwrap();
@@ -223,8 +222,7 @@ fn resigned_future_first_order_history_refuses_durable_restore_atomically() {
     let bytes = crate::state_codec::encode_snapshot(&image, false).unwrap();
     let corrupted = EngineStateSnapshot::from_bytes(&bytes).unwrap();
 
-    let store = Arc::new(CountingStore::default());
-    let mut target = Engine::with_store(Arc::clone(&store));
+    let mut target = Engine::new();
     target
         .build_model_in_memory(graph, Some("urn:test:sampled-model"))
         .unwrap();
@@ -239,7 +237,6 @@ fn resigned_future_first_order_history_refuses_durable_restore_atomically() {
     let state_t = target.state.t.to_bits();
     let prev_t = target.prev_t.map(f64::to_bits);
     let outputs = output_image(&target);
-    let calls = store.calls();
 
     assert!(matches!(
         target.restore_state(&corrupted),
@@ -268,13 +265,12 @@ fn resigned_future_first_order_history_refuses_durable_restore_atomically() {
     ));
     assert_eq!(target.mode(), RunMode::Halted);
     assert!(target.durable_restore_ready);
-    assert_eq!(store.calls(), calls);
 }
 
 /// Stateless `Add` engine whose clock has been forced to `time`, as a snapshot captured before
 /// the frame-time limit existed (or forged) would carry it. Capture itself does not police time.
 fn engine_at_forced_clock(time: f64) -> Engine {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .load_cxf(include_bytes!(
             "../../tests/fixtures/legacy_frame_add.jsonld"
@@ -299,7 +295,7 @@ fn restore_refuses_a_clock_beyond_the_frame_time_limit_and_accepts_the_limit() {
         let source = engine_at_forced_clock(time);
         let snapshot = source.state_snapshot().unwrap();
         let checkpoint = source.checkpoint().unwrap();
-        let mut target = Engine::in_memory();
+        let mut target = Engine::new();
         target
             .load_cxf(include_bytes!(
                 "../../tests/fixtures/legacy_frame_add.jsonld"
@@ -327,7 +323,7 @@ fn restore_refuses_a_clock_beyond_the_frame_time_limit_and_accepts_the_limit() {
     // At the limit itself the clock restores and the engine keeps accepting frames.
     for time in [limit, -limit] {
         let snapshot = engine_at_forced_clock(time).state_snapshot().unwrap();
-        let mut target = Engine::in_memory();
+        let mut target = Engine::new();
         target
             .load_cxf(include_bytes!(
                 "../../tests/fixtures/legacy_frame_add.jsonld"

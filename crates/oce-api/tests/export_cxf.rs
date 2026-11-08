@@ -22,10 +22,10 @@ fn independent_content_id(bytes: &[u8]) -> String {
 }
 
 fn assert_fixpoint(source: &[u8]) -> String {
-    let mut first = Engine::in_memory();
+    let mut first = Engine::new();
     first.load_cxf(source).expect("fixture loads");
     let first_export = first.export_cxf().expect("first export succeeds");
-    let mut second = Engine::in_memory();
+    let mut second = Engine::new();
     second
         .load_cxf(&first_export.bytes)
         .expect("export reloads");
@@ -49,7 +49,7 @@ fn deterministic_export_reaches_fixpoint_for_regular_and_pass_through_models() {
 
 #[test]
 fn content_id_hashes_exact_export_bytes_without_a_prefix_or_length_input() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(MINIMAL.as_bytes()).expect("fixture loads");
     let exported = engine.export_cxf().expect("fixture exports");
     assert_eq!(
@@ -62,7 +62,7 @@ fn content_id_hashes_exact_export_bytes_without_a_prefix_or_length_input() {
 
 #[test]
 fn completeness_boundary_distinguishes_zero_from_one_warning() {
-    let mut complete_engine = Engine::in_memory();
+    let mut complete_engine = Engine::new();
     complete_engine
         .load_cxf(MINIMAL.as_bytes())
         .expect("complete fixture loads");
@@ -77,7 +77,7 @@ fn completeness_boundary_distinguishes_zero_from_one_warning() {
         independent_content_id(&complete.bytes)
     );
 
-    let mut partial_engine = Engine::in_memory();
+    let mut partial_engine = Engine::new();
     partial_engine
         .load_cxf(DEFERRED.as_bytes())
         .expect("deferred fixture loads");
@@ -96,8 +96,8 @@ fn completeness_boundary_distinguishes_zero_from_one_warning() {
 
 #[test]
 fn content_id_tracks_exported_synthetic_document_while_model_id_stays_authored() {
-    let mut engine = Engine::in_memory();
-    let loaded = engine.load_cxf(MINIMAL.as_bytes()).expect("fixture loads");
+    let mut engine = Engine::new();
+    let (loaded, _) = engine.load_cxf(MINIMAL.as_bytes()).expect("fixture loads");
     assert_eq!(loaded.model_id.as_str(), "http://example.org#MinLoop");
     let before = engine.export_cxf().expect("fixture exports");
     let rendered = std::str::from_utf8(&before.bytes).expect("export is UTF-8 JSON-LD");
@@ -123,7 +123,7 @@ fn content_id_tracks_exported_synthetic_document_while_model_id_stays_authored()
 
 #[test]
 fn warning_bearing_content_id_identifies_the_partial_document() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(DEFERRED.as_bytes()).expect("fixture loads");
     let exported = engine.export_cxf().expect("survivor cone exports");
     assert!(!exported.warnings.is_empty());
@@ -176,8 +176,8 @@ fn abs_document(abs_output_node_first: bool) -> String {
 }
 
 fn clean_complete_content_id(source: &[u8]) -> String {
-    let mut engine = Engine::in_memory();
-    let receipt = engine
+    let mut engine = Engine::new();
+    let (receipt, _) = engine
         .load_cxf_with_receipt(source)
         .expect("order variant loads");
     assert!(receipt.diagnostics().records().is_empty());
@@ -214,5 +214,5 @@ fn content_id_identifies_authored_graph_order_not_an_order_independent_model() {
 
 #[test]
 fn unloaded_engine_returns_an_error_without_panicking() {
-    assert!(Engine::in_memory().export_cxf().is_err());
+    assert!(Engine::new().export_cxf().is_err());
 }

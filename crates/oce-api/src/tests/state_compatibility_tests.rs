@@ -7,12 +7,12 @@ use crate::state::{Portability, WireValueType};
 use crate::{EngineCheckpoint, EngineStateError, EngineStateSnapshot};
 
 fn checkpoint_and_target() -> (EngineCheckpoint, Engine) {
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source
         .build_model_in_memory(build_accumulator_model().0, None)
         .unwrap();
     let checkpoint = source.checkpoint().unwrap();
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target
         .build_model_in_memory(build_accumulator_model().0, None)
         .unwrap();
@@ -146,7 +146,7 @@ fn enum_member_identity_change_is_incompatible() {
         connector.iri = Some(Arc::from(format!("urn:test:enum-connector:{index}")));
     }
     model.external_inputs = inputs;
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source
         .build_model_in_memory(model.clone(), Some("urn:test:enum-model"))
         .unwrap();
@@ -157,7 +157,7 @@ fn enum_member_identity_change_is_incompatible() {
     image.fingerprint = crate::state_manifest::fingerprint(image.execution_revision, &manifest);
     let bytes = crate::state_codec::encode_snapshot(&image, false).unwrap();
     let snapshot = EngineStateSnapshot::from_bytes(&bytes).unwrap();
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target
         .build_model_in_memory(model, Some("urn:test:enum-model"))
         .unwrap();
@@ -185,7 +185,7 @@ fn capture_rejects_an_enum_parameter_outside_its_canonical_descriptor() {
     );
     let mut model = builder.finish();
     model.external_inputs = inputs;
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.build_model_in_memory(model, None).unwrap();
     let Value::Enum { ordinal, .. } =
         &mut Arc::make_mut(&mut engine.model).blocks[0].params.values[0].1
@@ -204,7 +204,7 @@ fn capture_rejects_an_enum_parameter_outside_its_canonical_descriptor() {
 fn foreign_target_domain_refuses_before_commit() {
     const MINIMAL_LOOP: &[u8] =
         include_bytes!("../../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
-    let mut source = Engine::in_memory();
+    let mut source = Engine::new();
     source.load_cxf(MINIMAL_LOOP).unwrap();
     let snapshot = source.state_snapshot().unwrap();
     let mut image = (*snapshot.image).clone();
@@ -217,7 +217,7 @@ fn foreign_target_domain_refuses_before_commit() {
         bytes: snapshot.bytes,
         image: Arc::new(image),
     };
-    let mut target = Engine::in_memory();
+    let mut target = Engine::new();
     target.load_cxf(MINIMAL_LOOP).unwrap();
     assert!(matches!(
         target.restore_state(&foreign),

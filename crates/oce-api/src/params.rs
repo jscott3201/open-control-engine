@@ -14,7 +14,6 @@ use std::collections::HashMap;
 use oce_blocks::{ParamRule, lookup};
 use oce_graph::allocate_state;
 use oce_model::{BlockId, ModelGraph, Value, ValueType, enum_descriptor};
-use oce_store::Store;
 
 use crate::engine::{Engine, instantiate_blocks};
 use crate::error::OcError;
@@ -136,7 +135,7 @@ impl ParamTable {
     }
 }
 
-impl<S: Store> Engine<S> {
+impl Engine {
     /// Read the current value of a parameter by dotted instance path. Always allowed (read-only).
     ///
     /// # Errors

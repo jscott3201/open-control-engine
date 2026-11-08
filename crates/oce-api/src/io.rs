@@ -10,18 +10,19 @@
 use std::collections::HashMap;
 
 use oce_model::{Attrs, ConnectorId, Dir, ModelGraph, ValueType};
-use oce_store::Store;
 
 use crate::engine::Engine;
 use crate::error::OcError;
 use crate::frame_inputs::{InputBinding, InputDefinition, build_inputs};
 
-// Re-export the store-seam point DTOs (R-PUB-1) so a host names one type space. These are the
-// canonical direction/value-type/trend-interval enums; `oce-api` owns only the IO-class +
-// physical-kind classifications that have no store equivalent.
-pub use oce_store::{PointDirection, PointValueType, TrendInterval};
+// Re-export the resolved-model point enums (R-PUB-1) so a host names one type space. These are
+// the canonical direction/value-type/trend-interval enums of the plain-data load projection
+// (`oce_model::resolved_model`); `oce-api` owns only the IO-class + physical-kind
+// classifications that have no projection equivalent.
+pub use oce_model::resolved_model::{PointDirection, PointValueType, TrendInterval};
 
-/// AI/AO/DI/DO/Network (use case 4.2.1). `oce-api`-owned (distinct from `oce_store::PointType`,
+/// AI/AO/DI/DO/Network (use case 4.2.1). `oce-api`-owned (distinct from the projection's
+/// [`oce_model::resolved_model::PointType`],
 /// whose variants are `Ai/Ao/Di/Do/Mode`). Derive set matches `08` §6 (no `Hash` — counted by
 /// `match`, never used as a map key).
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -46,7 +47,7 @@ mod frame_alias_tests {
     fn two_resolver_spellings_cannot_satisfy_one_logical_input_twice() {
         // Public ingest has no input aliases. Inject an alias at the shared identity seam to
         // ensure uniqueness is by logical input, never submitted spelling, if one is added later.
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .load_cxf(include_bytes!("../tests/fixtures/legacy_frame_add.jsonld"))
             .unwrap();
@@ -156,7 +157,7 @@ pub struct IoSummary {
 }
 
 /// The typed IO surface, built at load from the model connectors. Dense arena keyed by point path;
-/// store-free, owned by `Engine`. Private bindings resolve frames and latest-state reads by
+/// storage-free, owned by `Engine` (a [`crate::LoadedModel`] carries an owned copy). Private bindings resolve frames and latest-state reads by
 /// [`ConnectorId`] without leaking the mutable arena. Composite boundary inputs
 /// may fan out to multiple internal input connectors; the host still sees one logical point path,
 /// while `input_by_path` preserves every staging target at load time.
@@ -206,7 +207,7 @@ pub(crate) fn connector_path(iri: Option<&str>, id: ConnectorId) -> String {
 }
 
 /// The shared load-time point walk. It is the single source of truth for both host-visible
-/// [`IoInventory`] rows and the durable [`oce_store::PointDto`] projection.
+/// [`IoInventory`] rows and the plain-data [`oce_model::resolved_model::PointDto`] projection.
 pub(crate) fn point_rows_at_load(model: &ModelGraph) -> Vec<PointInventoryRow> {
     let mut rows = Vec::with_capacity(model.connectors.len());
     for c in &model.connectors {
@@ -344,13 +345,14 @@ impl IoInventory {
             .copied()
     }
 
-    /// Load-time Store validation keys, in inventory order. No handle is used during execution.
-    pub(crate) fn input_keys(&self) -> Vec<oce_store::DomainKey> {
+    /// Every input point as `(canonical path, value type)`, in inventory order. This is the
+    /// plain-data view a host hands its own persistence or point-binding layer; the engine never
+    /// resolves handles for it. Borrows only; allocates nothing; never panics.
+    pub fn input_points(&self) -> impl Iterator<Item = (&str, PointValueType)> + '_ {
         self.points
             .iter()
             .filter(|p| p.direction == PointDirection::In)
-            .map(|p| oce_store::DomainKey::new(p.path.clone()))
-            .collect()
+            .map(|p| (p.path.as_str(), p.value_type))
     }
 
     /// Owned iterator over every [`PointInfo`] (R-PUB-6; a PyO3 binder copies without the borrow).
@@ -435,7 +437,7 @@ fn executable_boundary_outputs(model: &ModelGraph) -> Vec<(String, ConnectorId)>
     columns
 }
 
-impl<S: Store> Engine<S> {
+impl Engine {
     /// The full typed IO inventory (host GUI / point-schedule export, use case 4.2.1).
     #[must_use]
     pub fn io(&self) -> &IoInventory {
@@ -449,8 +451,8 @@ impl<S: Store> Engine<S> {
     }
 
     /// The effective point list (CDL §7.7.5). `None` returns the full in-memory inventory mirror
-    /// (R-IO-3). Device filtering (`Some`) is outside the supported profile. It is refused directly,
-    /// even when a custom store supports equipment queries; this method never delegates to the store.
+    /// (R-IO-3). Device filtering (`Some`) is outside the supported profile and is refused
+    /// directly; the engine has no equipment index to delegate to.
     ///
     /// # Errors
     /// [`OcError::Load`] for any unsupported `controlled_device` query; `point_list(None)` is
@@ -461,7 +463,7 @@ impl<S: Store> Engine<S> {
             Some(dev) => Err(OcError::Load {
                 detail: format!(
                     "point_list(controlled_device={dev:?}) requires the §7.7.5 equipment traversal \
-                     (oce-semantics + SemanticStore::point_list), deferred to M2; call \
+                     (oce-semantics equipment index), deferred to M2; call \
                      point_list(None) for the full in-memory inventory mirror"
                 ),
             }),

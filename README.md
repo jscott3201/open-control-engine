@@ -74,7 +74,7 @@ use oce_api::{Engine, Value};
 const ECONOMIZER: &str = "http://example.org#g36.ahu_economizer";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut engine = Engine::in_memory(); // Default in-memory store, no database.
+    let mut engine = Engine::new(); // A pure engine: no storage backend, no database.
     let cxf_bytes = std::fs::read("crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld")?;
     engine.load_cxf(&cxf_bytes)?;
 
@@ -128,8 +128,9 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   and honest parameter defaults. See [CDL coverage](docs/cdl-coverage.md).
 - Runs **46 G36 conformance fixtures** end to end through the frozen facade, each with a committed
   whole-sequence golden trace.
-- Executes exclusively through `prepare_frame` followed by consuming `execute_frame`, with no
-  Store reads or writes. Hosts own cadence, persistence and equipment delivery.
+- Executes exclusively through `prepare_frame` followed by consuming `execute_frame`. The engine is
+  pure: it has no storage dependency, and `load_cxf` returns the resolved model and IO inventory as
+  a plain-data `LoadedModel`. Hosts own cadence, persistence and equipment delivery.
 
 ## What it does not do
 
@@ -171,7 +172,7 @@ host layer has to answer for:
 - **Every boundary input is required exactly once.** Missing values refuse before mutation;
   there is no sparse staging, implicit zero, or hold-last execution profile.
 - **Typed values are not sensor-quality evidence.** Frame preparation checks types and declared
-  domains, not host freshness, plausibility or permission to command. Store samples are not consulted.
+  domains, not host freshness, plausibility or permission to command. Stored samples are not consulted.
 
 Staleness limits, fault reactions, and safe-state fallback belong in the host above the engine.
 **[Host responsibilities](docs/host-responsibilities.md)** is the checklist; read it before wiring
@@ -184,9 +185,9 @@ anything to a physical output.
 CDL §7.17 states that point lists, trends, display units, tags, and Brick / Haystack / ASHRAE 223P
 semantics do not affect the computation of a control signal. That one rule is the seam the whole
 system is built around: an execution core that sees only blocks, typed connections, and values, and
-a storage port for everything else.
+a storage port for everything else, which the host reaches and the engine never does.
 
-![The execution core sees only blocks, connections, and values and has no database; everything non-computational sits behind the oce-store port](docs/diagrams/architecture-seam.svg)
+![The execution core sees only blocks, connections, and values and has no database; everything non-computational sits behind the oce-store port, which only the host reaches](docs/diagrams/architecture-seam.svg)
 
 Full layer-by-layer detail, the crate map, and the platform and MSRV policy are in
 **[Architecture](docs/architecture.md)**.

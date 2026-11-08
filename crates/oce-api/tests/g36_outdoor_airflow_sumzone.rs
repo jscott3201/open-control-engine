@@ -172,8 +172,8 @@ fn gate(enabled: bool, value: f64) -> f64 {
 }
 
 fn load_outdoor_airflow_sumzone() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(OUTDOOR_AIRFLOW_SUMZONE.as_bytes())
         .expect("source-verified G36 OutdoorAirFlow ASHRAE62_1 SumZone fixture loads");
     assert_eq!(report.block_count, 35);

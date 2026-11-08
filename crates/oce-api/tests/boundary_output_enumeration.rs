@@ -12,7 +12,6 @@
 use std::fs;
 use std::path::PathBuf;
 
-use oce_api::oce_store::Store;
 use oce_api::{DeclaredOutput, Engine, OcError, Topology};
 
 /// Every `.jsonld` document in the G36 corpus, sorted for deterministic iteration order.
@@ -34,8 +33,8 @@ fn corpus_fixtures() -> Vec<PathBuf> {
     fixtures
 }
 
-fn load_engine(bytes: &[u8]) -> Engine<impl Store> {
-    let mut engine = Engine::in_memory();
+fn load_engine(bytes: &[u8]) -> Engine {
+    let mut engine = Engine::new();
     engine.load_cxf(bytes).expect("fixture loads");
     engine
 }
@@ -318,8 +317,8 @@ fn undriven_declared_output_is_absent_from_the_vector_and_unknown_to_lookup() {
         env!("CARGO_MANIFEST_DIR")
     );
     let bytes = fs::read(path).expect("read warned corpus fixture");
-    let mut engine = Engine::in_memory();
-    let report = engine.load_cxf(&bytes).expect("warned fixture loads");
+    let mut engine = Engine::new();
+    let (report, _) = engine.load_cxf(&bytes).expect("warned fixture loads");
     assert_eq!(report.warnings.len(), 1, "exactly one advisory");
     assert!(
         engine.topology().boundary_outputs.is_empty(),

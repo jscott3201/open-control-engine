@@ -60,7 +60,7 @@ fn out_of_range_integer_parameter_bindings_refuse_the_load() {
         "integer(-inf) * 1.0",
         "1.0 * integer(1e19)",
     ] {
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         let error = engine
             .load_cxf(&with(
                 MODEL.as_bytes(),
@@ -105,7 +105,7 @@ fn in_range_integer_and_finite_inf_alias_arithmetic_load_bit_exactly() {
         ("Modelica.Constants.inf + 1", f64::MAX),
         ("-Modelica.Constants.inf", f64::MIN),
     ] {
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .load_cxf(&with(
                 MODEL.as_bytes(),
@@ -130,7 +130,7 @@ fn out_of_range_integer_connector_bound_refuses_the_load() {
         ("S231:min", "integer(1e300)"),
         ("S231:max", "integer(-1e19)"),
     ] {
-        let error = Engine::in_memory()
+        let error = Engine::new()
             .load_cxf(&with(BOUNDS_MODEL, A, attribute, json!(expression)))
             .expect_err(expression);
         let message = format!("{attribute} connector bound failed to ground: {REFUSAL}");
@@ -167,7 +167,7 @@ fn integer_range_failure_receipt_is_pinned_and_deterministic() {
         "S231:value",
         json!("integer(1e300)"),
     );
-    let failure = Engine::in_memory()
+    let failure = Engine::new()
         .load_cxf_with_receipt(&bytes)
         .expect_err("out-of-range integer()");
     assert_eq!(failure.stage(), DiagnosticStage::Import);
@@ -179,7 +179,7 @@ fn integer_range_failure_receipt_is_pinned_and_deterministic() {
         )]
     );
     for _ in 0..3 {
-        let again = Engine::in_memory()
+        let again = Engine::new()
             .load_cxf_with_receipt(&bytes)
             .expect_err("out-of-range integer()");
         assert_eq!(render(again.diagnostics()), rendered);

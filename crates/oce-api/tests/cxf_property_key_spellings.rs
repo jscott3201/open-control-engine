@@ -61,14 +61,14 @@ fn crossed_and_non_finite_full_iri_bounds_are_refused_with_the_compact_diagnosti
         (&[("nominal", "-INF")][..], "non-finite-bound"),
     ] {
         let expected = refusals(
-            &Engine::in_memory()
+            &Engine::new()
                 .load_cxf(&with_attributes(attributes, &compact))
                 .expect_err("compact spelling refuses"),
         );
         assert_eq!(expected.len(), 1, "{attributes:?}: {expected:?}");
         assert_eq!(expected[0].0, code, "{attributes:?}");
         let actual = refusals(
-            &Engine::in_memory()
+            &Engine::new()
                 .load_cxf(&with_attributes(attributes, &full_iri))
                 .expect_err("full-IRI spelling refuses too"),
         );
@@ -79,7 +79,7 @@ fn crossed_and_non_finite_full_iri_bounds_are_refused_with_the_compact_diagnosti
 #[test]
 fn a_full_iri_range_is_enforced_on_every_frame() {
     for key in [&compact as &dyn Fn(&str) -> String, &full_iri] {
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .load_cxf(&with_attributes(&[("min", "0"), ("max", "10")], key))
             .expect("the range loads");
@@ -105,7 +105,7 @@ fn compact_and_full_iri_documents_load_to_byte_identical_state() {
     let attributes = [("min", "-1.5"), ("max", "99.25"), ("nominal", "20")];
     let mut snapshots = Vec::new();
     for key in [&compact as &dyn Fn(&str) -> String, &full_iri] {
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .load_cxf(&with_attributes(&attributes, key))
             .expect("loads");

@@ -4,7 +4,6 @@ use std::cell::RefCell;
 
 use oce_blocks::Diagnostics;
 use oce_model::Value;
-use oce_store::Store;
 
 use crate::{Engine, OcError};
 
@@ -45,7 +44,7 @@ impl Diagnostics for AssertCollector {
     }
 }
 
-impl<S: Store> Engine<S> {
+impl Engine {
     /// Inspect the latest output value by connector path or declared boundary-output alias.
     ///
     /// This is a latest-state, non-receipt view. Load, restore and parameter resume can replace
@@ -53,7 +52,7 @@ impl<S: Store> Engine<S> {
     /// correlated boundary outputs and warnings from an accepted transition. Internal connector
     /// observations do not enlarge that receipt's executable boundary output set.
     ///
-    /// Values retain native types, declared units and exact Real bits. No Store calls occur.
+    /// Values retain native types, declared units and exact Real bits.
     ///
     /// # Errors
     /// Returns [`OcError::UnknownPoint`] if the name is not a known output. Does not panic.

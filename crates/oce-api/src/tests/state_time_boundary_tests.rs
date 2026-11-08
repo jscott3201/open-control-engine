@@ -43,7 +43,7 @@ fn initialized_clocks_accept_the_last_upper_index_then_refuse_two_to_the_sixty_t
         "CDL.Discrete.UnitDelay",
         "CDL.Logical.Sources.SampleTrigger",
     ] {
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .build_model_in_memory(sampled_model(class_path, 1.0), None)
             .unwrap();
@@ -62,14 +62,14 @@ fn initialized_clocks_accept_the_last_upper_index_then_refuse_two_to_the_sixty_t
 #[test]
 fn sample_trigger_accepts_the_lower_bound_and_refuses_the_adjacent_float_below_it() {
     let class_path = "CDL.Logical.Sources.SampleTrigger";
-    let mut accepted = Engine::in_memory();
+    let mut accepted = Engine::new();
     accepted
         .build_model_in_memory(sampled_model(class_path, 1.0), None)
         .unwrap();
     advance(&mut accepted, LOWER_ACCEPTED, &[]).unwrap();
     assert_eq!(accepted.state.words[0].cast_signed(), -1);
 
-    let mut refused = Engine::in_memory();
+    let mut refused = Engine::new();
     refused
         .build_model_in_memory(sampled_model(class_path, 1.0), None)
         .unwrap();

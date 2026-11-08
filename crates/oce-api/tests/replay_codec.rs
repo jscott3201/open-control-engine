@@ -308,7 +308,7 @@ fn every_public_fact_has_an_ordered_typed_eligibility_refusal() {
         }
     }
     // A present expected export is compared as content, never treated as a wildcard.
-    let mut engine = oce_api::Engine::in_memory();
+    let mut engine = oce_api::Engine::new();
     engine
         .load_cxf(include_bytes!("fixtures/legacy_frame_add.jsonld"))
         .unwrap();

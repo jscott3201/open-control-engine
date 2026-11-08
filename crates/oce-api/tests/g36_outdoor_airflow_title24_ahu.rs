@@ -109,8 +109,8 @@ fn buildings_line(
 }
 
 fn load_outdoor_airflow_title24_ahu() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(OUTDOOR_AIRFLOW_TITLE24_AHU.as_bytes())
         .expect("source-verified G36 OutdoorAirFlow Title24 AHU fixture loads");
     assert_eq!(report.block_count, 14);

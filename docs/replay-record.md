@@ -15,7 +15,7 @@ buffers and later engine mutation. `CompletedFrame::replay_record()` encodes tho
 transition's outputs/warnings/time and its captured placement, without executing again. It records
 the public `CompatibilityDescriptor::current(None)` facts: **export is explicitly absent**, not
 silently claimed complete. The public descriptor is constant for that compiled process; it is not
-the loaded executable. No export, state capture, private fingerprint or Store operation is involved.
+the loaded executable. No export, state capture, private fingerprint or storage operation is involved.
 
 The record contains no sequence number. `CompletedFrame::sequence()` remains Engine-lifetime
 correlation only, never durable replay position. Hosts own the authenticated order, gap detection,
@@ -166,7 +166,7 @@ noncanonical keys/Boolean/labels/suffix and workspace limit. Offsets are in the 
 Eligibility compares descriptor fields in their existing canonical order, then target architecture/OS.
 Verification checks current eligibility and receipt placement, time, input rows, output rows, then
 diagnostic rows. The first differing row is reported; on pure count mismatch the index is the common
-length. Helpers never mutate engine or Store. They do not replace preparation preflight or restore
+length. Helpers never mutate the engine. They do not replace preparation preflight or restore
 manifest validation. A post-execution mismatch does not undo a prior accepted transition.
 
 ## Evidence and remaining qualification
@@ -184,7 +184,7 @@ manifest validation. A post-execution mismatch does not undo a prior accepted tr
 - `src/replay_capture_tests.rs` checks exact independent encoding of every value domain on inputs
   **and** outputs, numeric bit classes, diagnostic fields/order/duplicates/counts, enum identity,
   empty records, oversized capture and unchanged sequence-independent bytes.
-- `tests/replay.rs` exercises actual accepted receipt ownership, Store noninterference, retained
+- `tests/replay.rs` exercises actual accepted receipt ownership, retained
   capture, wrong-descriptor/target pre-execution refusal and restore-window preservation, warning
   goldens, equal-time stateful replay from separately decoded start snapshots, exact end-state bytes,
   and a 16,384-record public-only host stream. Each iteration has identical bounded allocation

@@ -2,12 +2,7 @@
 //! words and both clocks; output/watch comparisons are separate. Expected refusal classes and
 //! bounds are authored here, not derived from the implementation. No frame-execution claim.
 
-mod support;
-
-use std::sync::Arc;
-
 use oce_api::{Engine, EngineCheckpoint, EngineStateError, OcError, Value};
-use support::recording_store::{RecordingStore, StoreCallSnapshot};
 
 const MODEL: &[u8] = include_bytes!("fixtures/frame_delay.jsonld");
 const A: &str = "urn:frame:a";
@@ -19,10 +14,10 @@ fn complete() -> Vec<(&'static str, Value)> {
 }
 
 #[test]
-fn every_refusal_preserves_fresh_and_advanced_stateful_images_and_store() {
+fn every_refusal_preserves_fresh_and_advanced_stateful_images() {
     for advanced in [false, true] {
-        let mut engine = Engine::with_store(Arc::new(RecordingStore::default()));
-        let report = engine.load_cxf(MODEL).unwrap();
+        let mut engine = Engine::new();
+        let (report, _) = engine.load_cxf(MODEL).unwrap();
         assert_eq!(report.stateful_blocks, 1);
         assert!(report.warnings.is_empty());
         if advanced {
@@ -38,8 +33,6 @@ fn every_refusal_preserves_fresh_and_advanced_stateful_images_and_store() {
         let checkpoint_before = checkpoint_image(&checkpoint);
         let output = engine.get_output(Y).unwrap();
         let watched = engine.watch(&[Y, "urn:frame:delay.y"]).unwrap();
-        engine.store().reset_calls();
-        engine.store().arm_hot_path_guard();
         let mut cases = vec![
             (
                 4.0,
@@ -132,7 +125,6 @@ fn every_refusal_preserves_fresh_and_advanced_stateful_images_and_store() {
                 assert_eq!(*key, after_key);
                 assert!(before.bit_eq(&after));
             }
-            assert_eq!(engine.store().calls(), StoreCallSnapshot::default());
             assert_eq!(
                 checkpoint_image(&engine.checkpoint().unwrap()),
                 checkpoint_before
@@ -147,7 +139,6 @@ fn every_refusal_preserves_fresh_and_advanced_stateful_images_and_store() {
             engine.state_snapshot().unwrap().as_bytes(),
             snapshot.as_bytes()
         );
-        assert_eq!(engine.store().calls(), StoreCallSnapshot::default());
         if !advanced {
             engine.restore_state(&snapshot).unwrap();
         }
@@ -161,7 +152,7 @@ fn every_refusal_preserves_fresh_and_advanced_stateful_images_and_store() {
 
 #[test]
 fn unloaded_and_pending_edits_are_distinct_from_an_empty_complete_schema() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     assert!(matches!(
         engine.prepare_frame(f64::NAN, &[]),
         Err(OcError::State(EngineStateError::NoLoadedModel))
@@ -186,7 +177,7 @@ fn unloaded_and_pending_edits_are_distinct_from_an_empty_complete_schema() {
 fn checkpoint_image(checkpoint: &EngineCheckpoint) -> Vec<u8> {
     // The checkpoint is intentionally opaque. Observe its entire restored image in a separate
     // compatible engine, without closing the tested engine's fresh durable-restore window.
-    let mut observer = Engine::in_memory();
+    let mut observer = Engine::new();
     observer.load_cxf(MODEL).unwrap();
     observer.restore_checkpoint(checkpoint).unwrap();
     observer.state_snapshot().unwrap().into_bytes()

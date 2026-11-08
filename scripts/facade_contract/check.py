@@ -43,6 +43,20 @@ CASES = (
     Case("error_severity_absent", "let _ = oce_api::AssertLevel::Error;", "E0599", "Error"),
 )
 
+# The engine is pure (GitHub #390): no storage type, constructor, accessor, error or stage is
+# reachable through the facade.
+STORAGE_CASES = (
+    Case("storage_reexport_absent", "let _: Option<oce_api::oce_store::DomainKey> = None;", "E0433",
+         "oce_store"),
+    Case("with_store_absent", "let _ = Host::with_store;", "E0599", "with_store"),
+    Case("store_accessor_absent", "let _ = Host::store;", "E0599", "store"),
+    Case("in_memory_absent", "let _ = Host::in_memory;", "E0599", "in_memory"),
+    Case("store_error_absent", "let _ = oce_api::OcError::Store;", "E0599", "Store"),
+) + tuple(
+    Case(f"{name.lower()}_stage_absent", f"let _ = oce_api::DiagnosticStage::{name};", "E0599", name)
+    for name in ("StoreRecovery", "StoreSave", "StoreInputs")
+)
+
 FRAME_CASES = tuple(
     Case(f"{name}_absent", f"let _ = Host::{name};", "E0599", name)
     for name in ("tick", "tick_with", "set_input", "simulate", "step_realtime", "outputs",
@@ -62,7 +76,7 @@ fn supported(bytes: &[u8]) -> Result<(), oce_api::OcError> {
     send_sync::<Engine>();
     send_sync::<PreparedInputFrame>();
     send_sync::<CompletedFrame>();
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     let _: usize = engine.cxf_byte_limit();
     engine.set_cxf_byte_limit(oce_api::MAX_CXF_BYTES / 2)?;
     let bounded = oce_api::OcError::CxfTooLarge { actual_bytes: 2, limit_bytes: 1 };
@@ -70,10 +84,11 @@ fn supported(bytes: &[u8]) -> Result<(), oce_api::OcError> {
         actual_bytes: usize::MAX, limit_bytes: oce_api::MAX_CXF_BYTES,
     };
     let _ = (bounded, invalid);
-    let _ = engine.load_cxf(bytes)?;
+    let (report, loaded): (oce_api::LoadReport, oce_api::LoadedModel) = engine.load_cxf(bytes)?;
+    let _: &oce_api::DomainKey = &report.model_id;
+    let _: &oce_api::ResolvedModel = &loaded.model;
+    let _: Vec<(&str, oce_api::PointValueType)> = loaded.input_points().collect();
     let _ = engine.point_list(None)?;
-    let query = oce_api::oce_store::SemanticQuery::FuzzyText { query: "x".into(), k: 1 };
-    let _: oce_store::SemanticQuery = query;
     let _ = AssertLevel::Warning;
     let prepared = engine.prepare_frame(0.0, &[("u", Value::Real(1.0))])?;
     let completed = engine.execute_frame(prepared)?;
@@ -141,7 +156,7 @@ def check_selection(selection: str, cases: tuple[Case, ...]) -> list[str]:
     if build.returncode:
         raise ContractError(f"{selection}: dependency build failed\n{build.stderr}\n{build.stdout}")
     messages = [json.loads(line) for line in build.stdout.splitlines()]
-    dependencies = {name: artifact(messages, name) for name in ("oce_api", "oce_store")}
+    dependencies = {name: artifact(messages, name) for name in ("oce_api",)}
     failures = []
     with tempfile.TemporaryDirectory(prefix="consumers-", dir=target) as temporary:
         directory = Path(temporary)
@@ -173,11 +188,12 @@ def check_selection(selection: str, cases: tuple[Case, ...]) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--group", choices=("all", "deferred", "assertion", "frame"), default="all",
+    parser.add_argument("--group", choices=("all", "deferred", "assertion", "frame", "storage"),
+                        default="all",
                         help="focused test-first group; the gate always runs all")
     args = parser.parse_args()
-    cases = {"all": CASES + FRAME_CASES, "deferred": CASES[:4],
-             "assertion": CASES[4:], "frame": FRAME_CASES}[args.group]
+    cases = {"all": CASES + FRAME_CASES + STORAGE_CASES, "deferred": CASES[:4],
+             "assertion": CASES[4:], "frame": FRAME_CASES, "storage": STORAGE_CASES}[args.group]
     try:
         failures = [failure for selection in SELECTIONS
                     for failure in check_selection(selection, cases)]

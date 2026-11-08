@@ -15,7 +15,7 @@ is the only public state-advancing execution surface. Legacy execution profiles 
 The frame path enters one private infallible evaluation/refresh core after preflight and staging.
 The core closes durable-restore readiness, evaluates once, updates
 the previous time and refreshes latest outputs. It selects no diagnostic policy and performs no
-Store IO, restart, frame-sequence update or projection. Host loops select cadence and capture traces
+storage IO, restart, frame-sequence update or projection. Host loops select cadence and capture traces
 from completed receipts or explicitly labelled latest-state inspections.
 
 ## HostTick v1
@@ -45,7 +45,7 @@ fixed-point search.
 
 Ordinary refusal preserves the full execution image, including connector values, clocks, words,
 restore readiness and sequence. Previously retained completed diagnostics are unchanged. There
-is no sparse staging prefix, Store determinant or post-write error path.
+is no sparse staging prefix, stored determinant or post-write error path.
 
 ## `CDL.Logical.Pre`
 

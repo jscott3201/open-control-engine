@@ -1,7 +1,7 @@
 # Architecture
 
 This page is for an engineer deciding whether to embed the Open Control Engine in a product. It
-answers four questions: what the layers are, where the seam between them falls, what each of the 14
+answers four questions: what the layers are, where the seam between them falls, what each of the 13
 crates owns, and what this engine will never do for you.
 
 The [product contract](product-contract.md) owns the aggregate requirement/evidence map and delegates
@@ -13,29 +13,38 @@ CDL §7.17 states that point lists, trends, display units, tags, and all Brick /
 223P semantics **do not affect the computation of a control signal**. That is the cleanest seam
 available in this problem domain, and the engine is built along it rather than around it.
 
-![Architecture diagram. A host application drives the engine through the oce-api facade. Below it, a
-deterministic execution core labelled Group A contains oce-model, oce-expr, oce-blocks,
-oce-validate, oce-graph, oce-cxf, oce-semantics and oce-diag; it sees only blocks, connections and
-values, evaluates a frozen Kahn schedule over flat arrays, and has no database. A horizontal line
-marked "CDL §7.17 seam" separates it from the storage side, where the oce-store port publishes the
-ModelStore, PointStore and SemanticStore traits, served either by the in-memory default oce-store-mem
-or by an app-side adapter over a graph DB, SQL or time-series backend. The library ships no
-first-party database.](diagrams/architecture-seam.svg)
+![Architecture diagram. A host application drives the engine through the oce-api facade, which is
+pure: plain data in, plain data out. Below it, a deterministic execution core labelled Group A
+contains oce-model, oce-expr, oce-blocks, oce-validate, oce-graph, oce-cxf, oce-semantics and
+oce-diag; it sees only blocks, connections and values, evaluates a frozen Kahn schedule over flat
+arrays, and has no database. A line marked "CDL §7.17 seam" separates it from the storage side,
+where the oce-store port publishes the ModelStore, PointStore and SemanticStore traits, served
+either by the in-memory default oce-store-mem or by an app-side adapter over a graph DB, SQL or
+time-series backend. Only the host reaches the storage side; the facade never does. The library
+ships no first-party database.](diagrams/architecture-seam.svg)
 
 Above the seam sits an **execution core**: a small, deterministic, in-memory dataflow machine that
 sees *only* blocks, typed connections, and values. This is the hot path, and it has zero dependency
 on any database.
 
-Below it sits **storage behind a trait**. Everything the evaluator must not read — equipment
-topology, points, instance structure, parameters, trends, semantic triples — plus durable
-persistence is reached only through the `oce-store` port traits
-(`ModelStore`, `PointStore`, `SemanticStore`, `Durable` and the composite `Store` in `crates/oce-store/src/lib.rs`). The library ships **no first-party database**. Durable or
-queryable backends are app-side adapters behind the port, with an in-memory default
-(`oce-store-mem`) so that a downstream project can embed the engine for *load → validate → schedule →
-prepare frame → execute frame* with no database at all.
+Beside it sits **storage behind a trait**, reached by the host and never by the engine. Everything
+the evaluator must not read — equipment topology, points, instance structure, parameters, trends,
+semantic triples — plus durable persistence goes through the `oce-store` port traits
+(`ModelStore`, `PointStore`, `SemanticStore`, `Durable` and the composite `Store` in
+`crates/oce-store/src/lib.rs`). The library ships **no first-party database**. Durable or queryable
+backends are app-side adapters behind the port, with an in-memory default (`oce-store-mem`).
+
+The facade is **pure**: `Engine` is a plain struct with no storage backend, and `oce-api` has no
+dependency on `oce-store` or `oce-store-mem` (asserted by `.github/scripts/check-default-no-db.sh`
+and `crates/oce-api/tests/frame_purity.rs`). `Engine::load_cxf` returns a plain-data `LoadedModel`
+beside its `LoadReport` — the resolved-model projection, the IO inventory and the load diagnostics —
+and the host decides whether and where to persist it. The resolved-model DTOs live in `oce-model`
+(`oce_model::resolved_model`) so the facade can return them and the store port can persist them
+without either crate depending on the other. A downstream project embeds the engine for *load →
+validate → schedule → prepare frame → execute frame* with no storage crate in the build at all.
 
 The seam also fixes where responsibility for input quality lives: the host supplies every typed
-boundary input exactly once. Missing values refuse; Store samples and prior values cannot fill gaps.
+boundary input exactly once. Missing values refuse; stored samples and prior values cannot fill gaps.
 Typed completeness does not establish sensor quality or freshness, so the engine still implements
 **no fail-safe policy of its own**.
 Staleness limits, fault reactions, and safe-state fallback belong to the host layer above it; see
@@ -46,7 +55,7 @@ Staleness limits, fault reactions, and safe-state fallback belong to the host la
 ![Pipeline diagram. A build phase runs once per load and off the hot path: load ingests and lowers
 CXF, validate applies the conformance gate, and schedule performs a Kahn topological sort.
 The host prepares complete typed observations, then consumes them in one HostTick transition with
-an owned completed result and no Store I/O.](diagrams/pipeline.svg)
+an owned completed result and no storage I/O.](diagrams/pipeline.svg)
 
 Parsing, elaboration, conformance
 rejection, algebraic-loop rejection, and topological sorting all run once per load. What survives is
@@ -66,7 +75,7 @@ The engine is, by design:
   transport, TLS, authN/Z, multi-tenancy, off-host durability, and metrics export.
 - **Synchronous and in-process.** Every public method is a blocking synchronous call, and no async
   runtime is pulled at any layer. The check is the dependency set below, not a promise.
-- **`#![forbid(unsafe_code)]` in all 14 crates**, belt and braces: each `crates/*/src/lib.rs`
+- **`#![forbid(unsafe_code)]` in all 13 crates**, belt and braces: each `crates/*/src/lib.rs`
   carries the crate attribute, *and* the workspace sets `unsafe_code = "forbid"` under
   `[workspace.lints.rust]` (root `Cargo.toml`).
 - **Edition 2024**, `resolver = "3"`.
@@ -104,22 +113,24 @@ allocates nothing block-side — but a diagnostic sink may still allocate when i
 including the completed-frame warning collector. Size a host loop against the blocks and the diagnostic
 sink your sequence actually uses, not against a blanket guarantee.
 
-**Frame execution is Store-free.** Preparation owns the complete typed observations and resolved
+**The engine is storage-free.** Preparation owns the complete typed observations and resolved
 targets; execution consumes the plan and produces an owned receipt. Their structural allocation
 budget scales with inputs, fan-out, boundary outputs and emitted warnings. It is not zero allocation
-or a whole-state clone. Load-time Store recovery, save and handle-cardinality validation remain.
+or a whole-state clone. Load calls no storage port either: it returns the resolved model as plain
+data and the host persists it if it wants durability.
 
 Whether a block tick allocates on the evaluator thread is gated per-PR, registry-wide and with a
 positive control, by `crates/oce-blocks/tests/tick_allocation_census.rs`. No current block delegates
 work to a worker thread; such an implementation would need a companion guard for worker allocation.
-The facade's corpus-wide Store guard is `crates/oce-api/tests/frame_purity.rs`; frame allocation
+The facade's corpus-wide purity and storage-isolation guard is
+`crates/oce-api/tests/frame_purity.rs`; frame allocation
 formulas are checked by `frame_observations.rs`. Throughput figures
 live in [`docs/benchmarks.md`](benchmarks.md), recorded per run with the commit and host that produced
 them, because nothing re-measures them in CI.
 
 ## The crate map
 
-Fourteen crates. The dependency direction is acyclic and organized around the seam above.
+Thirteen crates. The dependency direction is acyclic and organized around the seam above.
 Their responsibilities below do not imply equal support or publication status: publication is
 read from each crate's `publish` flag and checked by the
 [package validator](ci-and-the-gate.md#the-package-validator), and a publishable implementation
@@ -129,7 +140,7 @@ crate is registry closure for the facade, not an independently supported host AP
 
 | Crate | Responsibility |
 | --- | --- |
-| `oce-model` | Pure value/connector/instance/connection types; the `Value` enum (Real/Integer/Boolean/String/Enum) and the flattened model graph — the shared executable truth. |
+| `oce-model` | Pure value/connector/instance/connection types; the `Value` enum (Real/Integer/Boolean/String/Enum) and the flattened model graph — the shared executable truth. Also the plain-data resolved-model DTOs (`resolved_model`) that `oce-api` returns from a load and `oce-store` re-exports, so neither of those crates depends on the other. |
 | `oce-expr` | The CDL §7.7.2 binding-expression parser and evaluator (closed-world, pure). Bounded on structure: input deeper than `MAX_NESTING_DEPTH` (64) or wider than `MAX_EXPR_NODES` (4096) is a typed error, not a stack overflow (`crates/oce-expr/src/lib.rs`). Depth counts real nesting only; a left-associative chain such as `a+b+…` is bounded by the node cap and evaluated iteratively. |
 | `oce-blocks` | The `Block` trait and the native CDL elementary-block library, publicly enumerable at runtime via `catalog()` (`crates/oce-blocks/src/catalog.rs`) with ports, parameter rules, and honest parameter defaults per class. |
 | `oce-validate` | Loader conformance: subset rejection, single-assignment, type and attribute unification, parameter rules. |
@@ -138,13 +149,12 @@ crate is registry closure for the facade, not an independently supported host AP
 | `oce-semantics` | **Active effective-point metadata resolver.** Derives metadata from connector attributes, direction, value type and defaults; this is unrelated to the removed semantic-template loader. Raw `__cdl` / `__CDL` annotation parsing remains deferred. It stays a wired, publishable `oce-api` implementation dependency, not an independently supported API. |
 | `oce-diag` | The shared diagnostic vocabulary (`Severity` / `DiagCode` / `Diagnostic`) across the ingest path. Zero dependencies. |
 
-**Storage ports (the seam — traits only, no database types):**
+**Storage ports (the seam — traits only, no database types; reached by the host, never by `oce-api`):**
 
 | Crate | Responsibility |
 | --- | --- |
-| `oce-store` | **The seam.** The `ModelStore` / `PointStore` / `SemanticStore` / `Durable` traits plus DTOs, unified by the `Store` supertrait. No database types. |
-| `oce-store-mem` | The default in-memory backend, so the engine runs with no database. It is an unconditional publishable implementation dependency, not independently supported host surface. |
-| `oce-reference-wal-adapter` | **Verification-only, `publish = false`.** A `std::fs` WAL and atomic-snapshot adapter that exists to prove the frozen seam can carry real durability without a first-party database. Not a supported backend. |
+| `oce-store` | **The seam.** The `ModelStore` / `PointStore` / `SemanticStore` / `Durable` traits plus DTOs, unified by the `Store` supertrait; the resolved-model DTOs are re-exported from `oce-model`. No database types. Depends on `oce-model`, never on `oce-api`. |
+| `oce-store-mem` | The in-memory backend of the port, for a host that wants one. `oce-api` does not depend on it. |
 
 **Verification, externals, and the host facade:**
 
@@ -152,22 +162,25 @@ crate is registry closure for the facade, not an independently supported host AP
 | --- | --- |
 | `oce-conformance` | **Verification-only, `publish = false`.** The funnel-style tolerance-band and golden-trace conformance harness. Standalone: no other crate depends on it. Read [`TESTING.md`](../TESTING.md) for what it does and does not check. |
 | `oce-bless` | **Test-support only, `publish = false`.** The single definition of the repo's environment-variable truthiness policy, so golden-regeneration switches cannot drift apart across crates. |
-| `oce-api` | The primary embeddable host facade: `Engine<S: Store = MemStore>`, spanning load, complete-frame preparation/execution, parameters, IO inventory, latest-state non-receipt reads (`get_output`/`watch`), CXF export with content id, and a read-only topology view. Its catalog metadata is `oce_api::catalog()`, with the actively supported `oce_blocks::catalog()` as a separate companion surface; see the [product contract](product-contract.md). |
+| `oce-api` | The primary embeddable host facade: a pure `Engine` (no type parameter, no storage dependency), spanning load with a plain-data `LoadedModel` result, complete-frame preparation/execution, parameters, IO inventory, latest-state non-receipt reads (`get_output`/`watch`), CXF export with content id, and a read-only topology view. Its catalog metadata is `oce_api::catalog()`, with the actively supported `oce_blocks::catalog()` as a separate companion surface; see the [product contract](product-contract.md). |
 
 Every crate listed here does work today. Reserved placeholder crates were removed rather than kept
 as empty seams, so nobody plans a feature against a crate that does nothing.
 
-### The default store
+### Durability is the host's
 
-`oce-api` declares no cargo features. `oce-store-mem` is an unconditional dependency, so there is no
-build without the in-memory backend. What makes `MemStore` the default is the type parameter in
-`Engine<S: Store = MemStore>`; to use a different backend, name it: `Engine<MyAdapter>`.
+`oce-api` declares no cargo features and has no storage dependency, so there is no build that links
+a store into the engine. A host that wants durability takes the `LoadedModel` a load returns and
+persists it through whichever adapter it chose behind the `oce-store` port; the engine never calls
+that adapter, on load or on a frame. What the host owns is listed in
+[host-responsibilities.md](host-responsibilities.md#durability-is-the-hosts).
 
 ## What this engine will never do
 
 Each of these is a design commitment, not a gap waiting to be closed.
 
-- **No first-party database.** Persistence lives behind the `oce-store` port, authored app-side.
+- **No first-party database.** Persistence lives behind the `oce-store` port, authored app-side and
+  driven by the host; the engine never calls it.
 - **No daemon, no server, no network listener.** It is a library; the host owns the process.
 - **No async runtime** at any layer, pulled by any crate.
 - **No fail-safe policy of its own.** It does not decide what a stale sample means, what a faulted

@@ -72,8 +72,8 @@ fn schedule_signature(engine: &Engine) -> ScheduleSignature {
 }
 
 fn load(src: &str, expected_blocks: usize, expected_stateful: usize) -> (Engine, LoadReport) {
-    let mut engine = Engine::in_memory();
-    let report = engine.load_cxf(src.as_bytes()).expect("G36 fixture loads");
+    let mut engine = Engine::new();
+    let (report, _) = engine.load_cxf(src.as_bytes()).expect("G36 fixture loads");
     assert_eq!(report.block_count, expected_blocks);
     assert_eq!(report.stateful_blocks, expected_stateful);
     assert!(

@@ -6,7 +6,7 @@
 //! - an injected feedthrough cycle is rejected with a typed [`BuildError::AlgebraicLoop`];
 //! - determinism: two independent compiles of the same model produce **byte-identical**
 //!   `order`/`connector_order`/`driver_of`;
-//! - a `MemStore` model round-trip + no-op `commit`/`flush`/`recover` through the engine.
+//! - the plain-data resolved-model projection a load returns.
 
 use super::common::*;
 use crate::TopologyBlock;
@@ -36,9 +36,9 @@ fn topology_block_equality_compares_real_parameters_by_bits() {
 
 /// Load the canonical accumulator model into a fresh in-memory engine. Connector paths are
 /// `conn#<id>` (hand-built, no `iri`); param paths are `b<id>.<name>` (no `instance_iri`).
-fn loaded_accumulator() -> Engine<MemStore> {
+fn loaded_accumulator() -> Engine {
     let (m, _, _, _) = build_accumulator_model();
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(m, None)
         .expect("BUILD must succeed");
     eng
@@ -131,7 +131,7 @@ fn frozen_surface_guards_compile() {
 
 #[test]
 fn empty_engine_surface_is_inert_not_panicking() {
-    let eng = Engine::in_memory(); // no model loaded
+    let eng = Engine::new(); // no model loaded
     assert!(eng.io().is_empty());
     assert_eq!(eng.io_summary().total, 0);
     assert_eq!(eng.params().iter().count(), 0);
@@ -145,7 +145,7 @@ fn empty_engine_surface_is_inert_not_panicking() {
 
 #[test]
 fn complete_observations_resolve_without_coercion_or_internal_input_access() {
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(free_add_model(), None).unwrap();
     // conn#0 = Add.u0 (Real input). A wrong-typed value is a typed error — no coercion.
     assert!(matches!(
@@ -183,7 +183,7 @@ fn complete_observations_resolve_without_coercion_or_internal_input_access() {
 
 #[test]
 fn get_output_on_input_point_is_unknown_point() {
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(free_add_model(), None).unwrap();
     advance(
         &mut eng,
@@ -199,7 +199,7 @@ fn get_output_on_input_point_is_unknown_point() {
 
 #[test]
 fn device_filtered_inventory_preserves_the_load_typed_refusal() {
-    let eng = Engine::in_memory();
+    let eng = Engine::new();
     // Device filtering is outside the supported profile; the in-memory mirror still works.
     assert!(matches!(
         eng.point_list(Some("AHU-1")),
@@ -259,7 +259,7 @@ fn param_lifecycle_halt_set_resume_refolds() {
 
 #[test]
 fn positive_param_rules_surface_attrs_and_reject_zero_at_rest() {
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(sample_trigger_model(1.0), None)
         .expect("valid SampleTrigger loads");
     let (_, period_value, period_attrs) = eng
@@ -307,7 +307,7 @@ fn limiter_cross_param_rules_reject_inverted_at_rest() {
 
 #[test]
 fn ramp_param_rules_surface_attrs_and_reject_invalid_edits_at_rest() {
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(ramp_model(), None)
         .expect("valid Ramp loads");
     let rows = eng.params().to_vec();
@@ -359,7 +359,7 @@ fn ramp_param_rules_surface_attrs_and_reject_invalid_edits_at_rest() {
 
 #[test]
 fn stage_dependent_param_rules_reject_invalid_edits_at_rest() {
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(stage_model(4, 0.0, 0.02 / 4.0), None)
         .expect("valid Stage loads");
     let rows = eng.params().to_vec();
@@ -409,7 +409,7 @@ fn stage_dependent_param_rules_reject_invalid_edits_at_rest() {
     eng.set_param("b0.h", Value::Real(0.5 / 4.0))
         .expect("upper h boundary is valid");
 
-    let mut default_h = Engine::in_memory();
+    let mut default_h = Engine::new();
     default_h
         .build_model_in_memory(stage_model_default_h(4, 0.0), None)
         .expect("valid Stage with default h loads");

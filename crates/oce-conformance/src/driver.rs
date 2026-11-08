@@ -324,8 +324,8 @@ pub fn drive_trace_with_options(
     config.validate()?;
     validate_reference_shape(reference)?;
 
-    let mut engine = Engine::in_memory();
-    let load_report = engine.load_cxf(cxf).map_err(DriverError::Load)?;
+    let mut engine = Engine::new();
+    let (load_report, _) = engine.load_cxf(cxf).map_err(DriverError::Load)?;
     let plan = Plan::new(&engine, config, reference)?;
     let (trace, drive_mode) = match &options.cadence {
         DriveCadence::Auto => {

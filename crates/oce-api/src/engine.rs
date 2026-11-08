@@ -1,34 +1,37 @@
-//! The single owned facade handle, [`Engine<S>`], and the load → BUILD → HostTick core. The
+//! The single owned facade handle, [`Engine`], and the load → BUILD → HostTick core. The
 //! parameter-table (`params.rs`), complete-frame (`frame.rs`), and IO-inventory (`io.rs`)
-//! methods are additional `impl<S: Store> Engine<S>` blocks in their own
-//! modules; every field is `pub(crate)` so those sibling impls can read/refresh engine state
-//! without a public accessor leaking it.
+//! methods are additional `impl Engine` blocks in their own modules; every field is
+//! `pub(crate)` so those sibling impls can read/refresh engine state without a public accessor
+//! leaking it.
+//!
+//! The engine is pure: plain data in, plain data out. It owns no storage backend and calls no
+//! storage port. A load returns the resolved model and its IO inventory as a [`LoadedModel`];
+//! persisting it is the host's choice (see `docs/host-responsibilities.md`).
 
 use std::sync::Arc;
 
 use oce_blocks::{Block, BlockKind, lookup};
 use oce_graph::{EvalContext, RunState, Schedule, allocate_state, compile, eval_tick};
 use oce_model::ModelGraph;
-use oce_store::{DomainKey, Store, StoreError};
-use oce_store_mem::MemStore;
+use oce_model::resolved_model::DomainKey;
 
 use crate::diagnostics::{DiagnosticCapture, DiagnosticStage, LoadReceipt, OperationFailure};
 use crate::error::OcError;
 use crate::io::IoInventory;
-use crate::loading::LoadReport;
+use crate::loading::{LoadReport, LoadedModel};
 use crate::params::{ParamTable, RunMode};
 use crate::projection::project_resolved_model;
 
-/// The single owned facade handle, generic over a `Store`; default `MemStore` (no DB, D-OWNER-1).
-/// Not `Clone` (it owns mutable run state); intended to be shared across threads as `Arc<Engine<S>>`.
-/// `Engine<S>` **is** `Send + Sync` for every `S: Store` (`08` R-ENG-1 / R-API-PY-2): `Arc<S>` and
-/// the load-frozen `Arc<ModelGraph>` are `Send + Sync`, `blocks: Vec<Box<dyn Block>>` is `Send + Sync`
-/// now that `oce-blocks` declares `Block: Send + Sync`, and every other field is plain owned data —
-/// no `unsafe`, no raw pointers (R-API-3). CI-asserted by `guards::_assert_engine_send_sync`
+/// The single owned facade handle: a plain struct with no storage backend and no type parameter
+/// (no database, D-OWNER-1). Durability is the host's, outside the engine.
+/// Not `Clone` (it owns mutable run state); intended to be shared across threads as `Arc<Engine>`.
+/// `Engine` **is** `Send + Sync` (`08` R-ENG-1 / R-API-PY-2): the load-frozen `Arc<ModelGraph>`
+/// is `Send + Sync`, `blocks: Vec<Box<dyn Block>>` is `Send + Sync` now that `oce-blocks` declares
+/// `Block: Send + Sync`, and every other field is plain owned data — no `unsafe`, no raw pointers
+/// (R-API-3). CI-asserted by `guards::_assert_engine_send_sync`.
 /// Fields are `pub(crate)`: the split-out method modules (`params`/`frame`/`io`) and the
 /// in-crate test harness read engine state directly, but nothing escapes the crate.
-pub struct Engine<S: Store = MemStore> {
-    pub(crate) store: Arc<S>,
+pub struct Engine {
     /// Host admission policy, independent of the loaded model and continuation state.
     pub(crate) cxf_byte_limit: usize,
     /// Host frame-admission policy for non-finite Real inputs; outside run state and its codecs.
@@ -55,9 +58,10 @@ pub struct Engine<S: Store = MemStore> {
     pub(crate) params_dirty: bool,
     /// The typed IO inventory: built at load for frame preparation and latest-state inspection.
     pub(crate) io: IoInventory,
-    /// True only after a model has completed the full load and store-open path successfully.
+    /// True only after a model has completed the full load path successfully.
     pub(crate) loaded: bool,
-    /// Durable restore is a startup operation and closes at the first mutation boundary.
+    /// Snapshot restore ([`Engine::restore_state`]) is a startup operation: open after a
+    /// successful load, closed at the first mutation boundary. Snapshot-codec state, not storage.
     pub(crate) durable_restore_ready: bool,
     /// Process-local incarnation fence; retained artifacts keep old allocations alive (no ABA).
     pub(crate) frame_generation: Arc<()>,
@@ -65,21 +69,18 @@ pub struct Engine<S: Store = MemStore> {
     pub(crate) accepted_frame_sequence: u64,
 }
 
-impl Engine<MemStore> {
-    /// Default constructor — **no database** (D-OWNER-1). Load CXF, then prepare and execute frames.
-    #[must_use]
-    pub fn in_memory() -> Self {
-        Engine::with_store(Arc::new(MemStore::default()))
+impl Default for Engine {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
-impl<S: Store> Engine<S> {
-    /// Generic constructor over any `Store` backend. Engine logic is written only against the
-    /// `Store` trait, so backends are drop-in.
+impl Engine {
+    /// The constructor: an empty engine with no model loaded and **no database** (D-OWNER-1).
+    /// Load CXF with [`Engine::load_cxf`], then prepare and execute frames. Never panics.
     #[must_use]
-    pub fn with_store(store: Arc<S>) -> Self {
+    pub fn new() -> Self {
         Self {
-            store,
             cxf_byte_limit: crate::MAX_CXF_BYTES,
             non_finite_input_policy: crate::NonFiniteInputPolicy::Admit,
             model: Arc::new(ModelGraph::new()),
@@ -107,10 +108,9 @@ impl<S: Store> Engine<S> {
     /// Instantiates each block from the `oce-blocks` registry by its `class_iri`, runs the
     /// `oce-graph` BUILD (direct-feedthrough DAG → deterministic Kahn schedule, hard-rejecting
     /// algebraic loops per CDL §7.16), allocates the parameter-seeded run state, builds the IO
-    /// inventory + parameter table, snapshots the output connectors, projects the durable
-    /// [`oce_store::ResolvedModel`], saves it through the store port, and opens the store's
-    /// durability lifecycle (`recover`). Replaces all per-run state, so calling it again reloads a
-    /// fresh model.
+    /// inventory + parameter table, and projects the plain-data
+    /// [`oce_model::resolved_model::ResolvedModel`]. No storage is touched. Replaces all per-run
+    /// state, so calling it again reloads a fresh model.
     ///
     /// # Structural invariant
     /// `model` must be flattened before this tail. The tail runs the pure `oce-validate` structural
@@ -125,8 +125,7 @@ impl<S: Store> Engine<S> {
     /// # Errors
     /// [`OcError::Validate`] if the graph is malformed; [`OcError::Load`] if a block's `class_iri` is
     /// not in the registry or semantic resolution fails; [`OcError::Build`] if the graph has an
-    /// algebraic loop; [`OcError::Store`] if the store's `recover`/`save_model` fails. Never panics
-    /// on host input covered by the validation seam (R-ERR-1).
+    /// algebraic loop. Never panics on host input covered by the validation seam (R-ERR-1).
     #[cfg(test)]
     pub(crate) fn build_model_in_memory(
         &mut self,
@@ -146,15 +145,17 @@ impl<S: Store> Engine<S> {
     }
 
     /// Build a graph that has already passed the structural gate, preserving prior diagnostics if a
-    /// later registry, schedule, semantic, projection, or store stage fails.
+    /// later registry, schedule, semantic or projection stage fails. On success the engine is
+    /// committed and the plain-data [`LoadedModel`] is handed back; its `diagnostics` are every
+    /// load diagnostic, in report order.
     fn build_validated_model_in_memory(
         &mut self,
         model: ModelGraph,
         model_iri: Option<&str>,
         mut diagnostics: Vec<oce_diag::Diagnostic>,
         capture: &mut DiagnosticCapture,
-    ) -> Result<Vec<oce_diag::Diagnostic>, OcError> {
-        let result: Result<(), OcError> = (|| {
+    ) -> Result<LoadedModel, OcError> {
+        let result: Result<LoadedModel, OcError> = (|| {
             // Resolve every block instance to its native impl up front — an unknown class is a typed
             // load error, never a panic (R-IMPL-2 / R-ERR-1).
             capture.enter(DiagnosticStage::Instantiation);
@@ -175,15 +176,15 @@ impl<S: Store> Engine<S> {
             capture.enter(DiagnosticStage::Projection);
             let resolved_model = project_resolved_model(&model, &semantics, model_iri)?;
             let semantic_warnings = semantics.diagnostics;
-            // Open the store's durability lifecycle before the first tick (no-op for `MemStore`).
-            capture.enter(DiagnosticStage::StoreRecovery);
-            self.store.recover()?;
-            capture.enter(DiagnosticStage::StoreSave);
-            self.store.save_model(&resolved_model)?;
-            capture.enter(DiagnosticStage::StoreInputs);
-            validate_store_inputs(self.store.as_ref(), &io)?;
-            // In-memory commit boundary: every ordinary fallible stage is complete. Store
-            // effects above are NOT rolled back, even if one of those calls returned an error.
+            // Commit boundary: every ordinary fallible stage is complete and nothing outside this
+            // engine has been touched, so a refusal above leaves no external effect to compensate.
+            let loaded = LoadedModel {
+                model_id: resolved_model.model_id.clone(),
+                model: resolved_model,
+                io: io.clone(),
+                semantic_warnings: semantic_warnings.clone(),
+                diagnostics: Vec::new(),
+            };
             self.model = Arc::new(model);
             self.blocks = blocks;
             self.schedule = schedule;
@@ -193,40 +194,64 @@ impl<S: Store> Engine<S> {
             self.mode = RunMode::Running;
             self.params_dirty = false;
             self.prev_t = None;
-            self.model_id = resolved_model.model_id;
+            self.model_id = loaded.model_id.clone();
             self.semantic_warnings = semantic_warnings;
             self.loaded = true;
             self.frame_generation = Arc::new(());
             self.durable_restore_ready = true;
-            Ok(())
+            Ok(loaded)
         })();
         match result {
-            Ok(()) => Ok(diagnostics),
+            Ok(mut loaded) => {
+                loaded.diagnostics = diagnostics;
+                Ok(loaded)
+            }
             Err(error) => Err(error.with_load_context(diagnostics)),
         }
     }
 
     /// Primary v1 ingest (D2: CXF JSON-LD only). Runs the Group A pipeline (`oce-cxf` resolve,
     /// which also lowers composites and grounds parameters → `oce-validate`), builds the `oce-graph` schedule via the shared crate-private
-    /// build tail, and returns a [`LoadReport`]. The returned `model_id` is the raw CXF
-    /// top-composite `@id` carried by the resolver side-channel. Replaces all per-run state, so
-    /// calling it again reloads a fresh model.
+    /// build tail, and returns a [`LoadReport`] beside a plain-data [`LoadedModel`]. The returned
+    /// `model_id` is the raw CXF top-composite `@id` carried by the resolver side-channel.
+    /// Replaces all per-run state, so calling it again reloads a fresh model.
     ///
-    /// The serialized length is checked against [`Self::cxf_byte_limit`] before parsing,
-    /// Store calls or engine mutation. On any returned error the prior in-memory executable
-    /// and run image remain unchanged. Store recovery, model saves and handle resolution
-    /// may already have external effects: the host owns compensation, and old external
-    /// handle validity is not promised. This is not a distributed transaction or a panic/
+    /// The [`LoadedModel`] carries the resolved-model projection, the IO inventory and the load
+    /// diagnostics as owned data. The engine keeps no storage backend and never persists it:
+    /// a host that wants durability saves it through its own adapter after this call returns.
+    ///
+    /// The serialized length is checked against [`Self::cxf_byte_limit`] before parsing or
+    /// engine mutation. On any returned error the prior in-memory executable and run image remain
+    /// unchanged, and nothing outside the engine has been touched. This is not a panic/
     /// allocation-failure recovery guarantee. Successful reload replaces model-bound state
     /// and caches; prior ephemeral model references are invalid under their existing contract.
     ///
+    /// ```
+    /// use oce_api::{Engine, PointDirection};
+    ///
+    /// # fn main() -> Result<(), oce_api::OcError> {
+    /// let bytes = include_bytes!("../tests/fixtures/legacy_frame_add.jsonld");
+    /// let mut engine = Engine::new();
+    /// let (report, loaded) = engine.load_cxf(bytes)?;
+    ///
+    /// // Plain data, no store in scope: the projection and the IO inventory are owned values.
+    /// assert_eq!(loaded.model_id, report.model_id);
+    /// assert_eq!(loaded.model.model_id, loaded.model_id);
+    /// assert!(!loaded.model.points.is_empty());
+    /// let inputs: Vec<_> = loaded.input_points().collect();
+    /// assert!(inputs.iter().any(|(path, _)| *path == "urn:legacy-frame:a"));
+    /// assert!(loaded.io.iter().any(|point| point.direction == PointDirection::Out));
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
     /// # Errors
-    /// Returns [`OcError`] on any ingest/validation/build/store failure (never panics; R-ERR-1):
+    /// Returns [`OcError`] on any ingest/validation/build failure (never panics; R-ERR-1):
     /// [`OcError::CxfTooLarge`], [`OcError::Cxf`], [`OcError::Validate`], [`OcError::Build`],
-    /// [`OcError::Load`], or [`OcError::Store`]. If a completed stage returned diagnostics before a
-    /// later failure, [`OcError::LoadContext`] retains them and exposes the terminal variant through
+    /// or [`OcError::Load`]. If a completed stage returned diagnostics before a later failure,
+    /// [`OcError::LoadContext`] retains them and exposes the terminal variant through
     /// [`std::error::Error::source`].
-    pub fn load_cxf(&mut self, bytes: &[u8]) -> Result<LoadReport, OcError> {
+    pub fn load_cxf(&mut self, bytes: &[u8]) -> Result<(LoadReport, LoadedModel), OcError> {
         self.load_cxf_pipeline(
             bytes,
             &mut DiagnosticCapture::new(false, DiagnosticStage::Import),
@@ -236,17 +261,21 @@ impl<S: Store> Engine<S> {
     /// Load CXF through the same pipeline as [`Self::load_cxf`], with immutable producer evidence.
     ///
     /// Captures every returned diagnostic at its actual producer boundary, independently of the
-    /// legacy report. The receipt has its own revisioned machine order. Engine/store side effects,
-    /// numerical behavior, error variants and legacy warning order remain unchanged. Allocates
-    /// evidence only on this opt-in path; no runtime warning collection is enabled.
+    /// legacy report. The receipt has its own revisioned machine order. Engine effects, the
+    /// returned [`LoadedModel`], numerical behavior, error variants and legacy warning order
+    /// remain unchanged. Allocates evidence only on this opt-in path; no runtime warning
+    /// collection is enabled.
     ///
     /// # Errors
     /// Returns [`OperationFailure`] with prior evidence, terminal stage and original error context
     /// on any load failure, including failures without structured diagnostics.
-    pub fn load_cxf_with_receipt(&mut self, bytes: &[u8]) -> Result<LoadReceipt, OperationFailure> {
+    pub fn load_cxf_with_receipt(
+        &mut self,
+        bytes: &[u8],
+    ) -> Result<(LoadReceipt, LoadedModel), OperationFailure> {
         let mut capture = DiagnosticCapture::new(true, DiagnosticStage::Import);
         match self.load_cxf_pipeline(bytes, &mut capture) {
-            Ok(report) => Ok(LoadReceipt::new(report, capture)),
+            Ok((report, loaded)) => Ok((LoadReceipt::new(report, capture), loaded)),
             Err(error) => Err(OperationFailure::new(error, capture)),
         }
     }
@@ -255,7 +284,7 @@ impl<S: Store> Engine<S> {
         &mut self,
         bytes: &[u8],
         capture: &mut DiagnosticCapture,
-    ) -> Result<LoadReport, OcError> {
+    ) -> Result<(LoadReport, LoadedModel), OcError> {
         if bytes.len() > self.cxf_byte_limit {
             return Err(OcError::CxfTooLarge {
                 actual_bytes: bytes.len(),
@@ -290,7 +319,7 @@ impl<S: Store> Engine<S> {
         }
         // 3. The explicit gate above authorizes the validated tail. Hand-built callers still use
         //    `build_model_in_memory`, which validates defensively before entering this helper.
-        let warnings = self.build_validated_model_in_memory(
+        let loaded = self.build_validated_model_in_memory(
             model,
             model_iri.as_deref(),
             diagnostics,
@@ -301,19 +330,20 @@ impl<S: Store> Engine<S> {
             .iter()
             .filter(|b| b.kind() == BlockKind::Stateful)
             .count();
-        Ok(LoadReport {
+        let report = LoadReport {
             model_id: self.model_id.clone(),
-            warnings,
+            warnings: loaded.diagnostics.clone(),
             io: self.io.summary(),
             block_count: self.model.blocks.len(),
             stateful_blocks,
-        })
+        };
+        Ok((report, loaded))
     }
 
     /// Infallible HostTick core after caller-specific preflight and input staging.
     ///
     /// Closes startup restore, evaluates once, and refreshes time/latest outputs. The caller
-    /// owns diagnostics; no sink, Store access, sequence or output projection is selected here.
+    /// owns diagnostics; no sink, sequence or output projection is selected here.
     /// Validated BUILD arenas and caller-checked representable time are required. No ordinary
     /// recoverable failure remains in this seam; panic/allocation failure is not rollback.
     pub(crate) fn transition_host_tick(&mut self, t_now: f64, diag: &dyn oce_blocks::Diagnostics) {
@@ -351,15 +381,6 @@ impl<S: Store> Engine<S> {
     pub fn schedule(&self) -> &Schedule {
         &self.schedule
     }
-
-    /// Borrow the wired store backend (e.g. for model round-trips or durability hooks).
-    ///
-    /// This is conditional storage-port surface: the returned backend and every handle it owns keep
-    /// their adapter-specific lifecycle and validity rules.
-    #[must_use]
-    pub fn store(&self) -> &S {
-        &self.store
-    }
 }
 
 /// Instantiate every block instance from the `oce-blocks` registry. This lookup + `make` loop is
@@ -374,25 +395,6 @@ pub(crate) fn instantiate_blocks(model: &ModelGraph) -> Result<Vec<Box<dyn Block
         blocks.push((entry.make)(&blk.params));
     }
     Ok(blocks)
-}
-
-// Preserve load-time adapter validation and its failure boundary. Handles are not retained:
-// complete-frame execution never obtains determinants from the Store.
-fn validate_store_inputs<S: Store>(store: &S, io: &IoInventory) -> Result<(), OcError> {
-    let inputs = io.input_keys();
-    if inputs.is_empty() {
-        return Ok(());
-    }
-    let handles = store.resolve_points(&inputs)?;
-    if handles.len() != inputs.len() {
-        return Err(StoreError::Validation(format!(
-            "PointStore::resolve_points returned {} handles for {} input points",
-            handles.len(),
-            inputs.len()
-        ))
-        .into());
-    }
-    Ok(())
 }
 
 /// Test inspection keys in connector declaration order, including metadata-only String outputs.

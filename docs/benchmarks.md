@@ -118,7 +118,7 @@ conclusion would come from.
   usually matters more than the mean, and one property that governs it — whether the evaluator
   thread allocates during a block tick — is gated separately and much more strictly, by
   `crates/oce-blocks/tests/tick_allocation_census.rs` (registry-wide, with a positive control),
-   which runs per-PR. Current facade frame allocation and Store-noninterference checks also run
+   which runs per-PR. Current facade frame allocation and frame-purity checks also run
    per-PR in `frame_observations.rs` and `frame_purity.rs`. Historical throughput is not gated.
 - **Multi-core or concurrent engines.** Single engine, single thread.
 - **Any architecture other than the one in the run header.** CI runs a determinism matrix across
@@ -175,7 +175,8 @@ always taken after a 20,000-tick warmup, which is exactly the discipline the loa
 schedule, state, outputs, io, params, store recovery). That is not a JSON parse, so a plain parser
 MB/s intuition does not apply. The measured revision re-ran pure validation in the build tail.
 Current `load_cxf` validates once before entering `build_validated_model_in_memory`
-(`crates/oce-api/src/engine.rs:231-244`), so this historical table includes work the current path no
+(`crates/oce-api/src/engine.rs:312-327`), and no longer calls a storage port at all (GitHub #390),
+so this historical table includes work the current path no
 longer performs.
 
 **Observation — cost is linear in block count.** Across a 28× size range the per-block cost holds
@@ -211,13 +212,13 @@ they are not predictions for the frame-only facade. No older timing table has be
 Run it on an **idle** machine, and run it at least twice — a figure that does not reproduce is not
 a measurement.
 
-**To measure load rather than ticks**, loop the `Engine::in_memory()` + `load_cxf` pair on its own
+**To measure load rather than ticks**, loop the `Engine::new()` + `load_cxf` pair on its own
 (60 iterations is plenty) and report **first / median / min**, not a single call. The first call in
 a cold process absorbs process start and page-cache misses; on the largest fixture that inflated the
 figure by 3× and produced the erroneous `11.0 ms` corrected above. Reporting only a median hides the
 cold cost from anyone who cares about startup, and reporting only a first call is simply wrong —
-report both. Time `Engine::in_memory()` inside the measured region and let the engine drop outside
-it, since teardown is not part of load.
+report both. Time `Engine::new()` inside the measured region and let the engine and the returned
+`LoadedModel` drop outside it, since teardown is not part of load.
 
 ## Adding a run
 

@@ -75,8 +75,8 @@ advisory-db, neither of which a sandboxed lane has, so it runs in `advisories.ym
 The scoped `oce-conformance` strict-bit subset and four affected per-block suites also run per PR
 in four Linux architecture/codegen cells (x86_64 native, aarch64 emulated), with repeat captures
 and cross-cell comparison ([bounded evidence](../docs/strict-bit-evidence.md)). The
-`oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and `oce-reference-wal-adapter` suites run per
-PR too, x86_64 debug only. The remainder — and the release-codegen runs of those five — needs the
+`oce-graph`, `oce-validate`, `oce-model` and `oce-cxf` suites run per
+PR too, x86_64 debug only. The remainder — and the release-codegen runs of those four — needs the
 release/full gate. A change confined to `oce-store`, `oce-diag` or `oce-semantics` can show a fully
 green PR having executed none of its own tests. Before claiming your tests pass, run
 `bash .agents/gate.sh full` and read the tail.
@@ -114,8 +114,8 @@ Two `pr-gate.yml` jobs that `CI OK` needs run commands `.agents/gate.sh` does no
 reason as the golden-gen hygiene job: the script is a bound source of the retained native
 strict-bit evidence, and wiring them in waits for the next native re-capture.
 
-- `crate-tests` runs the `oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and
-  `oce-reference-wal-adapter` suites in x86_64 debug. It is a separate job, not a determinism-matrix
+- `crate-tests` runs the `oce-graph`, `oce-validate`, `oce-model` and `oce-cxf` suites in x86_64
+  debug. It is a separate job, not a determinism-matrix
   leg, so it runs beside the QEMU-emulated aarch64 legs instead of lengthening them.
 - `docs` runs the documentation checks that `docs-pages.yml` also runs. That workflow is
   path-filtered and not required, so before this job a PR could merge green with it failing.
@@ -125,7 +125,7 @@ Run them by hand after touching those crates or the docs:
 
 ```bash
 cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf \
-  -p oce-reference-wal-adapter --locked --profile ci --no-tests=fail
+  --locked --profile ci --no-tests=fail
 
 bash scripts/docs/install-mdbook.sh target/mdbook-bin
 python3 scripts/docs/test_check_links.py

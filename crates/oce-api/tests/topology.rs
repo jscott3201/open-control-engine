@@ -169,7 +169,7 @@ fn assert_param_matches(actual: &Value, expected: &GoldenValue) {
 #[test]
 fn topology_matches_checked_in_resolver_golden() {
     let golden = parse_golden();
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .load_cxf(RETURN_FAN.as_bytes())
         .expect("fixture loads");
@@ -260,11 +260,11 @@ fn topology_matches_checked_in_resolver_golden() {
 
 #[test]
 fn independent_loads_produce_equal_reconstructable_topologies() {
-    let mut first = Engine::in_memory();
+    let mut first = Engine::new();
     first
         .load_cxf(RETURN_FAN.as_bytes())
         .expect("fixture loads");
-    let mut second = Engine::in_memory();
+    let mut second = Engine::new();
     second
         .load_cxf(RETURN_FAN.as_bytes())
         .expect("fixture loads independently");
@@ -304,7 +304,7 @@ fn independent_loads_produce_equal_reconstructable_topologies() {
 
 #[test]
 fn unloaded_engine_has_an_empty_non_panicking_topology() {
-    let topology = Engine::in_memory().topology();
+    let topology = Engine::new().topology();
     assert!(topology.blocks.is_empty());
     assert!(topology.connections.is_empty());
     assert!(topology.external_inputs.is_empty());

@@ -6,7 +6,7 @@
 //! - an injected feedthrough cycle is rejected with a typed [`BuildError::AlgebraicLoop`];
 //! - determinism: two independent compiles of the same model produce **byte-identical**
 //!   `order`/`connector_order`/`driver_of`;
-//! - a `MemStore` model round-trip + no-op `commit`/`flush`/`recover` through the engine.
+//! - the plain-data resolved-model projection a load returns.
 
 use super::common::*;
 
@@ -15,12 +15,12 @@ fn hand_built_graph_builds_advances_and_is_byte_identical() {
     let (m1, add_out, gt_out, lim_out) = build_accumulator_model();
     let (m2, _, _, _) = build_accumulator_model();
 
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(m1, None)
         .expect("BUILD must succeed for an acyclic (loop-broken) graph");
 
     // Determinism: an independent compile of the same model is byte-identical.
-    let mut eng2 = Engine::in_memory();
+    let mut eng2 = Engine::new();
     eng2.build_model_in_memory(m2, None)
         .expect("BUILD must succeed");
     assert_eq!(
@@ -92,7 +92,7 @@ fn hand_built_graph_builds_advances_and_is_byte_identical() {
 
 #[test]
 fn injected_algebraic_loop_is_rejected() {
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     let err = eng
         .build_model_in_memory(build_algebraic_loop_model(), None)
         .expect_err("a feedthrough cycle with no loop-breaker must be rejected (CDL §7.16)");
@@ -106,7 +106,7 @@ fn injected_algebraic_loop_is_rejected() {
 fn unknown_block_class_is_a_typed_load_error() {
     let mut mb = Mb::new();
     mb.block("CDL.Reals.NotARealBlock", &[], &[ValueType::Real], vec![]);
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     let err = eng
         .build_model_in_memory(mb.finish(), None)
         .expect_err("an unknown class IRI must not panic");
@@ -119,7 +119,7 @@ fn unknown_block_class_is_a_typed_load_error() {
 #[test]
 fn tick_time_must_be_monotonic() {
     let (m, _, _, _) = build_accumulator_model();
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(m, None).unwrap();
 
     advance(&mut eng, 0.0, &[]).unwrap();
@@ -139,7 +139,7 @@ fn tick_time_must_be_monotonic() {
 #[test]
 fn non_finite_tick_time_is_rejected() {
     let (m, _, _, _) = build_accumulator_model();
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.build_model_in_memory(m, None).unwrap();
 
     // NaN/∞ are rejected up front: a NaN would otherwise slip past `t_now < prev` and silently
@@ -156,32 +156,4 @@ fn non_finite_tick_time_is_rejected() {
     // A finite tick still works afterwards (state was never corrupted by the rejected ticks).
     advance(&mut eng, 0.0, &[]).unwrap();
     advance(&mut eng, 1.0, &[]).unwrap();
-}
-
-#[test]
-fn engine_store_round_trips_and_durability_is_noop() {
-    let (m, _, _, _) = build_accumulator_model();
-    let mut eng = Engine::in_memory();
-    eng.build_model_in_memory(m, None).unwrap();
-
-    // Exit #5: a model round-trips through the engine's wired store…
-    let rm = ResolvedModel {
-        model_id: DomainKey::new("seq:m0-harness"),
-        schema_rev: 1,
-        classes: Vec::new(),
-        blocks: Vec::new(),
-        points: Vec::new(),
-        connections: Vec::new(),
-        containment: Vec::new(),
-    };
-    eng.store().save_model(&rm).unwrap();
-    assert_eq!(
-        eng.store().load_model(&rm.model_id).unwrap().model_id,
-        rm.model_id
-    );
-
-    // …and the no-op durability hooks all succeed (MemStore offers no crash durability; §5 R-6).
-    eng.store().commit().unwrap();
-    eng.store().flush().unwrap();
-    eng.store().recover().unwrap();
 }

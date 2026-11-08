@@ -25,15 +25,10 @@ fn descriptors_cover_every_domain_with_explicit_shapes_and_semantic_limits() {
         ]
     );
     for descriptor in descriptors {
-        let revision = if matches!(
-            descriptor.domain,
-            ContractDomain::Diagnostics
-                | ContractDomain::Assertions
-                | ContractDomain::ExecutionProfile
-        ) {
-            2
-        } else {
-            1
+        let revision = match descriptor.domain {
+            ContractDomain::Diagnostics => 3,
+            ContractDomain::Assertions | ContractDomain::ExecutionProfile => 2,
+            _ => 1,
         };
         assert_eq!(descriptor.revision, revision);
         let json: serde_json::Value = serde_json::from_str(descriptor.schema).unwrap();

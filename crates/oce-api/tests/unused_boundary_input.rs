@@ -50,8 +50,8 @@ fn unused_row() -> Row {
 
 #[test]
 fn the_load_receipt_names_the_unread_input_and_the_frame_contract_omits_it() {
-    let mut engine = Engine::in_memory();
-    let receipt = engine
+    let mut engine = Engine::new();
+    let (receipt, _) = engine
         .load_cxf_with_receipt(&warned_fixture())
         .expect("an unread input is advisory, not a refusal");
     assert_eq!(rows(receipt.diagnostics()), vec![unused_row()]);
@@ -69,7 +69,7 @@ fn the_load_receipt_names_the_unread_input_and_the_frame_contract_omits_it() {
 fn a_frame_naming_the_unread_input_is_refused_as_unknown() {
     // The issue's downstream symptom, kept as the observable contract: the host learns of the
     // unread input from the receipt, not from this refusal.
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.load_cxf(&warned_fixture()).expect("loads");
     let entries = [
         ("http://example.org#M.u", Value::Real(1.0)),
@@ -90,8 +90,8 @@ fn a_frame_naming_the_unread_input_is_refused_as_unknown() {
 #[test]
 fn repeated_loads_produce_identical_receipts() {
     let bytes = warned_fixture();
-    let first = Engine::in_memory().load_cxf_with_receipt(&bytes).unwrap();
-    let second = Engine::in_memory().load_cxf_with_receipt(&bytes).unwrap();
+    let (first, _) = Engine::new().load_cxf_with_receipt(&bytes).unwrap();
+    let (second, _) = Engine::new().load_cxf_with_receipt(&bytes).unwrap();
     assert_eq!(rows(first.diagnostics()), rows(second.diagnostics()));
 }
 
@@ -119,7 +119,7 @@ fn unit_mismatch_with_unread_input() -> Vec<u8> {
 
 #[test]
 fn the_warning_survives_a_later_attribute_unification_failure() {
-    let failure = Engine::in_memory()
+    let failure = Engine::new()
         .load_cxf_with_receipt(&unit_mismatch_with_unread_input())
         .expect_err("the unit clash still refuses the load");
     assert_eq!(failure.stage(), DiagnosticStage::AttributeUnification);

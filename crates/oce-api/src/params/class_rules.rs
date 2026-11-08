@@ -4,13 +4,12 @@ use std::cmp::Ordering;
 
 use oce_blocks::{ParamRule, TimeTableValues, lookup};
 use oce_model::{BlockId, Value};
-use oce_store::Store;
 
 use crate::engine::Engine;
 
 use super::ParamEntry;
 
-impl<S: Store> Engine<S> {
+impl Engine {
     /// Whether parameter `idx` changes the resolved block structure and therefore requires reload.
     pub(super) fn is_structural_param(&self, idx: usize) -> bool {
         let edited = &self.params.entries[idx];

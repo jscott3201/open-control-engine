@@ -164,8 +164,8 @@ fn reference_inputs(reference: &ReferenceTable, t: f64) -> Vec<(String, Value)> 
 }
 
 fn load_system_requests() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(SYSTEM_REQUESTS.as_bytes())
         .expect("source-verified G36 CoolingOnly SystemRequests fixture loads");
     assert_eq!(report.block_count, 33);

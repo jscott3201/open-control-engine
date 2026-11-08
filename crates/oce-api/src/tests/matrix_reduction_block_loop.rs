@@ -252,7 +252,7 @@ fn matrix_reduction_without_feedback_loads() {
         ("MatrixMin", matrix_min_rows(1, None)),
         ("MatrixMax", matrix_max_columns(1, None)),
     ] {
-        Engine::in_memory()
+        Engine::new()
             .load_cxf(&bytes)
             .unwrap_or_else(|err| panic!("{class} without feedback must load: {err:?}"));
     }

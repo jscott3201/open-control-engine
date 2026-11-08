@@ -5,19 +5,15 @@
 use super::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-#[path = "../tests/support/recording_store.rs"]
-mod recording_store;
-use recording_store::{RecordingStore, StoreCallSnapshot};
-
 const DELAY: &[u8] = include_bytes!("../tests/fixtures/frame_delay.jsonld");
 
-fn loaded() -> Engine<RecordingStore> {
-    let mut engine = Engine::with_store(Arc::new(RecordingStore::default()));
+fn loaded() -> Engine {
+    let mut engine = Engine::new();
     engine.load_cxf(DELAY).unwrap();
     engine
 }
 
-fn plan<S: Store>(engine: &Engine<S>, time: f64) -> PreparedInputFrame {
+fn plan(engine: &Engine, time: f64) -> PreparedInputFrame {
     engine
         .prepare_frame(
             time,
@@ -35,7 +31,7 @@ fn bits(values: impl Iterator<Item = Value>) -> Vec<crate::state::WireValue> {
         .collect()
 }
 
-fn image<S: Store>(engine: &Engine<S>) -> String {
+fn image(engine: &Engine) -> String {
     let checkpoint = engine
         .checkpoint()
         .map(|c| crate::state_codec::encode_snapshot(&c.image, true).unwrap())
@@ -76,17 +72,10 @@ fn each_preflight_refusal_preserves_every_execution_bit_and_sequence() {
             inject(cause, &mut engine, &mut frame);
             let before = image(&engine);
             let retained_before = format!("{retained:?}");
-            engine.store().reset_calls();
-            engine.store().arm_hot_path_guard();
             let error = engine.execute_frame(frame).unwrap_err();
             assert!(refused_for(cause, &error), "{cause}: {error:?}");
             assert_eq!(image(&engine), before, "{cause}");
             assert_eq!(format!("{retained:?}"), retained_before);
-            assert_eq!(
-                engine.store().calls(),
-                StoreCallSnapshot::default(),
-                "{cause}"
-            );
         }
     }
 }
@@ -106,7 +95,7 @@ const PREFLIGHT_CAUSES: [&str; 11] = [
 ];
 
 /// Put `engine`/`frame` into the state that makes execution refuse for `cause`.
-fn inject<S: Store>(cause: &str, engine: &mut Engine<S>, frame: &mut PreparedInputFrame) {
+fn inject(cause: &str, engine: &mut Engine, frame: &mut PreparedInputFrame) {
     match cause {
         "unloaded" => engine.loaded = false,
         "dirty" => {
@@ -173,8 +162,6 @@ fn the_non_finite_recheck_follows_every_time_and_incarnation_cause_and_precedes_
             inject(cause, &mut engine, &mut frame);
             engine.set_non_finite_input_policy(crate::NonFiniteInputPolicy::Refuse);
             let before = image(&engine);
-            engine.store().reset_calls();
-            engine.store().arm_hot_path_guard();
             let error = engine.execute_frame(frame).unwrap_err();
             if cause == "sequence" {
                 assert!(
@@ -188,7 +175,6 @@ fn the_non_finite_recheck_follows_every_time_and_incarnation_cause_and_precedes_
                 );
             }
             assert_eq!(image(&engine), before, "{cause}");
-            assert_eq!(engine.store().calls(), StoreCallSnapshot::default());
         }
     }
 }
@@ -278,7 +264,7 @@ fn accepted_transition_emits_and_updates_exactly_once_without_reallocating_run_a
 
 #[test]
 fn loaded_empty_executable_commits_without_allocations_or_outputs() {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine
         .build_model_in_memory(oce_model::ModelGraph::new(), None)
         .unwrap();

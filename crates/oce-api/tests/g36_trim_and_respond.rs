@@ -17,8 +17,8 @@ const SETPOINT_PATH: &str = "http://example.org#g36.source.trim_and_respond_have
 type ScheduleSignature = (Vec<u32>, Vec<u32>, Vec<u32>);
 
 fn load_trim_and_respond() -> Engine {
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(TRIM_AND_RESPOND.as_bytes())
         .expect("G36 TrimAndRespond loads");
     assert_eq!(report.block_count, 44);

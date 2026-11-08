@@ -30,7 +30,7 @@ const NON_FINITE: [u64; 6] = [
 
 /// A fresh engine with the strict policy selected before load, as a production host would.
 fn strict() -> Engine {
-    let mut engine = Engine::in_memory();
+    let mut engine = Engine::new();
     engine.set_non_finite_input_policy(NonFiniteInputPolicy::Refuse);
     engine
 }

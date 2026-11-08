@@ -1,14 +1,10 @@
 //! Host-policy fixture, not an OCE build token, authenticator, rollback API or field qualification.
 //! Identities stand for externally authenticated full build/deployment qualifiers, NOT Cargo versions.
 
-mod support;
-
 use oce_api::{
     CompatibilityDescriptor, Engine, EngineStateError, EngineStateSnapshot, OcError, ReplayRecord,
     Value,
 };
-use std::sync::Arc;
-use support::recording_store::{RecordingStore, StoreCallSnapshot};
 
 const CURRENT: &str = "e81480b02271456719d55cbe1e5090b0dea6d63c";
 const HISTORICAL: &str = "909a8ba699e6a2fccf3de6ac0616a9e83a04060f";
@@ -54,11 +50,9 @@ fn admit<T>(
     Ok(consume(envelope.bytes))
 }
 
-fn engine() -> Engine<RecordingStore> {
-    let mut engine = Engine::with_store(Arc::new(RecordingStore::default()));
+fn engine() -> Engine {
+    let mut engine = Engine::new();
     engine.load_cxf(MODEL).unwrap();
-    engine.store().reset_calls();
-    engine.store().arm_hot_path_guard();
     engine
 }
 
@@ -105,7 +99,6 @@ fn cross_candidate_envelopes_refuse_before_decode_or_engine_mutation() {
                     target.state_snapshot().unwrap().as_bytes(),
                     before.as_bytes()
                 );
-                assert_eq!(target.store().calls(), StoreCallSnapshot::default());
             }
         }
         if advanced {
@@ -166,7 +159,6 @@ fn approved_same_candidate_continuation_differs_from_fresh_cold_requalification(
         source.state_snapshot().unwrap().as_bytes(),
         target.state_snapshot().unwrap().as_bytes()
     );
-    assert_eq!(target.store().calls(), StoreCallSnapshot::default());
 
     // Host explicitly chooses cold load and isolated requalification, never old state or a rewritten
     // header. This is a fresh Engine, not automatic recovery on the advanced target.
@@ -190,7 +182,6 @@ fn approved_same_candidate_continuation_differs_from_fresh_cold_requalification(
         cold.state_snapshot().unwrap().as_bytes(),
         target.state_snapshot().unwrap().as_bytes()
     );
-    assert_eq!(cold.store().calls(), StoreCallSnapshot::default());
 }
 
 #[test]

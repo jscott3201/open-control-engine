@@ -39,6 +39,33 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Host facade
 
+- **The engine is pure: `Engine` loses its `Store` type parameter and the three load-time store
+  calls, and `load_cxf` returns the resolved model as plain data** (GitHub #390). `Engine` is a
+  plain struct built by `Engine::new()` (or `Default`); `Engine<S: Store = MemStore>`,
+  `Engine::in_memory`, `Engine::with_store`, `Engine::store`, the `oce_api::oce_store` re-export,
+  `OcError::Store` and `DiagnosticStage::{StoreRecovery, StoreSave, StoreInputs}` are removed.
+  `oce-api` no longer depends on `oce-store` or `oce-store-mem`, and load no longer calls
+  `recover`, `save_model` or `resolve_points`, so a refused load has no external effect to
+  compensate. `load_cxf` returns `(LoadReport, LoadedModel)` and `load_cxf_with_receipt` returns
+  `(LoadReceipt, LoadedModel)`: a `#[non_exhaustive]` plain-data value carrying `model_id`, the
+  serde-serializable `ResolvedModel` projection, the `IoInventory`, the semantic warnings and every
+  load diagnostic, plus `input_points()` as `(canonical path, value type)`. The resolved-model DTOs
+  (`DomainKey`, `ResolvedModel`, `PointDto` and the rest) move verbatim from `oce-store` to
+  `oce_model::resolved_model`; `oce-store` re-exports them unchanged and `oce-api` re-exports them
+  as `oce_api::DomainKey`, `oce_api::ResolvedModel` and `oce_api::resolved_model`, so neither crate
+  depends on the other and their serde bytes are identical. A resolved-model projection
+  inconsistency, formerly `OcError::Store`, is now `OcError::Load` with detail prefixed
+  `model projection failed:`. The diagnostics schema is revision 3: `Export` moves from rank 10 to
+  rank 7 and every other stage keeps its rank. The snapshot restore window (`restore_state` only
+  before the first mutation) is snapshot-codec state, not storage, and is unchanged. The
+  verification-only `oce-reference-wal-adapter` crate, whose subject was the removed engine
+  storage lifecycle, is deleted: the workspace has 13 members, 11 publishable and two private, and
+  the release workflow's comment and approval digest are re-pinned. `check-default-no-db.sh` and
+  the package validator now refuse any `oce-store*` crate in `oce-api`'s normal graph, the facade
+  compiler contract proves each removed name no longer compiles, and `frame_purity.rs` checks the
+  manifest, lockfile closure and sources. Load allocates less (the in-memory store's model copy is
+  gone); frame and snapshot allocation is unchanged. Product contract revision 18 narrows the
+  Store claims. Fixture, provenance, projection and state-format goldens are byte-identical.
 - **The reserved `oce-flatten`, `oce-extension` and `oce-docs` crates are deleted, and `oce-api`
   no longer declares the no-op `mem` feature** (GitHub #389). The workspace has 14 members, 11
   publishable and three private. `oce-flatten::flatten` returned its input unchanged — the `oce-cxf`

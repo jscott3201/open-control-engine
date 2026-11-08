@@ -56,8 +56,8 @@ fn drive_assert(reference: &CombiTimeTable, message: &str) -> Vec<String> {
         .as_ref()
         .expect("named reference columns");
     assert_eq!(names, &["time", "u", "warning"]);
-    let mut engine = Engine::in_memory();
-    let report = engine
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(assert_cxf(message).as_bytes())
         .expect("standalone Assert CXF loads");
     assert_eq!(report.block_count, 1);

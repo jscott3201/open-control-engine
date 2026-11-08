@@ -30,8 +30,8 @@ const BOUNDARY_OUTPUT_UNIT_MISMATCH: &str =
 const TWO_UNDRIVEN: &str = include_str!("../../oce-cxf/tests/fixtures/invalid/two_undriven.jsonld");
 
 fn load(src: &str) -> Result<LoadReport, OcError> {
-    let mut eng = Engine::in_memory();
-    eng.load_cxf(src.as_bytes())
+    let mut eng = Engine::new();
+    eng.load_cxf(src.as_bytes()).map(|(report, _)| report)
 }
 
 /// The error-severity `DiagCode`s an `OcError` carries across resolver, deep-gate, and contextual
@@ -140,7 +140,7 @@ fn one_sided_unit_propagates_to_peer() {
     // R13.2: con.y declares unit "K"; the driven peer input add.u1 declares none ⇒ load succeeds and
     // the peer INHERITS "K". Observed through the IO inventory (path-independent: an input now carries
     // the propagated unit, which no fixture input declared directly).
-    let mut eng = Engine::in_memory();
+    let mut eng = Engine::new();
     eng.load_cxf(ONE_SIDED.as_bytes())
         .expect("one-sided unit is R13.2 propagation, never an error");
     let propagated = eng
@@ -227,7 +227,7 @@ fn load_composite_fixture(rel: &str) -> Result<LoadReport, OcError> {
     let path = composite_corpus_dir().join(rel);
     let bytes = std::fs::read(&path)
         .unwrap_or_else(|e| panic!("corpus fixture {} must be readable: {e}", path.display()));
-    Engine::in_memory().load_cxf(&bytes)
+    Engine::new().load_cxf(&bytes).map(|(report, _)| report)
 }
 
 /// Deterministically sorted `*.jsonld` listing of one corpus subdirectory.
@@ -639,7 +639,7 @@ fn full_pipeline_trace_is_bit_deterministic() {
     // exit #4 through the WHOLE pipeline: two independent load_cxf + multi-tick runs produce a
     // bit-identical output trace (complements resolve_golden's resolver-only render compare).
     let run = || {
-        let mut eng = Engine::in_memory();
+        let mut eng = Engine::new();
         eng.load_cxf(MINIMAL_LOOP.as_bytes()).expect("loads");
         let mut frames = Vec::new();
         for k in 0..6 {

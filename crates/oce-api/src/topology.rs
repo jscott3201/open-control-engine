@@ -1,7 +1,6 @@
 //! Owned, read-only topology snapshots of the resolved engine model.
 
 use oce_model::{ConnectorId, ModelGraph, Value};
-use oce_store::Store;
 
 use crate::engine::Engine;
 use crate::io::connector_path;
@@ -135,7 +134,7 @@ impl PartialEq for Topology {
     }
 }
 
-impl<S: Store> Engine<S> {
+impl Engine {
     /// Build an owned, read-only topology snapshot.
     ///
     /// Every connector path is the authored `@id` of its host-visible identity node, as written

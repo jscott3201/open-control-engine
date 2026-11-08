@@ -244,7 +244,7 @@ fn two_disjoint_self_loops(order: &[&str]) -> Vec<u8> {
 }
 
 pub(super) fn refuse(bytes: &[u8]) -> OperationFailure {
-    Engine::in_memory()
+    Engine::new()
         .load_cxf_with_receipt(bytes)
         .expect_err("fixture must be refused")
 }
@@ -408,7 +408,7 @@ fn coded_records_leave_the_legacy_error_chain_unchanged() {
     assert_eq!(failure.error().all_diagnostics().count(), 0);
     assert_eq!(failure.to_string(), failure.error().to_string());
 
-    let legacy = Engine::in_memory()
+    let legacy = Engine::new()
         .load_cxf(&self_loop())
         .expect_err("legacy load must refuse the same loop");
     assert!(matches!(legacy, OcError::Build(_)), "{legacy:?}");
@@ -449,7 +449,7 @@ fn disjoint_cycles_report_the_first_declared_cycle_only() {
 
 #[test]
 fn delay_broken_feedback_loads_without_an_algebraic_loop_record() {
-    let receipt = Engine::in_memory()
+    let (receipt, _) = Engine::new()
         .load_cxf_with_receipt(DELAY_BROKEN_LOOP)
         .expect("a UnitDelay cuts the feedback, so the model must load");
     assert!(
@@ -486,7 +486,7 @@ fn repeated_refusals_produce_identical_records() {
         assert_eq!(first, second);
 
         // Refusing a reload over a loaded model records the same evidence as a fresh engine.
-        let mut engine = Engine::in_memory();
+        let mut engine = Engine::new();
         engine
             .load_cxf(DELAY_BROKEN_LOOP)
             .expect("baseline model must load");
@@ -653,8 +653,8 @@ fn refused_loop_reload_keeps_the_previous_model_serving() {
         ANALOG_ALGEBRAIC_LOOP.to_vec(),
         EXTRACT_SIGNAL_BLOCK_LOOP.to_vec(),
     ] {
-        let mut engine = Engine::in_memory();
-        let loaded = engine
+        let mut engine = Engine::new();
+        let (loaded, _) = engine
             .load_cxf_with_receipt(DELAY_BROKEN_LOOP)
             .expect("baseline model must load");
         advance(&mut engine, 0.0, 1.0);
@@ -674,7 +674,7 @@ fn refused_loop_reload_keeps_the_previous_model_serving() {
 
         // The previous model keeps advancing exactly like one that never saw the refusal.
         advance(&mut engine, 1.0, 3.0);
-        let mut twin = Engine::in_memory();
+        let mut twin = Engine::new();
         twin.load_cxf(DELAY_BROKEN_LOOP).unwrap();
         advance(&mut twin, 0.0, 1.0);
         advance(&mut twin, 1.0, 3.0);
