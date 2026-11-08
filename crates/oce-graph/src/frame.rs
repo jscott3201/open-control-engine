@@ -1,8 +1,8 @@
 //! The HostTick v1 frame driver (`docs/execution-profile.md`; design note
 //! `docs/design/compiled-schedule-blob.md`, decision 11): the one implementation of what turns
-//! [`eval_tick`](crate::eval_tick) into a frame.
+//! [`eval_tick`] into a frame.
 //!
-//! [`eval_tick`](crate::eval_tick) evaluates the frozen schedule once. A *frame* adds the rules
+//! [`eval_tick`] evaluates the frozen schedule once. A *frame* adds the rules
 //! around it: time checks, per-input checks, the accepted-frame sequence, staging every value into
 //! its fan-out targets, and the previous-time update. Those rules live here, slot-indexed and
 //! name-free, so the `std` facade (`oce_api::Engine::prepare_frame` / `execute_frame`) and the
@@ -31,7 +31,7 @@
 //! # Commit
 //!
 //! After the last check only infallible work remains: each value is staged into every fan-out
-//! target, [`eval_tick`](crate::eval_tick) runs once, the previous time becomes the frame's time
+//! target, [`eval_tick`] runs once, the previous time becomes the frame's time
 //! and the sequence advances. An equal timestamp is a new transition (HostTick v1 has no
 //! same-time event iteration). The driver allocates nothing; the carve-outs in
 //! `docs/architecture.md` (a `CDL.Reals.Sort` wider than 64 inputs, and whatever the diagnostics
