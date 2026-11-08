@@ -9,6 +9,10 @@
 //! ([`oce_blocks::class_signature_hash`]), validates the schedule under its own `feeds_through`,
 //! and allocates the same [`RunState`] the host allocates, word for word.
 //!
+//! [`Executable`] wraps [`decode()`] and the HostTick v1 frame driver ([`crate::frame`]) into the
+//! `no_std` execution entry: construct from bytes, pass one value per input slot, execute one
+//! frame, read outputs by slot and the state as raw words.
+//!
 //! This one module owns the format in both directions (the tag tables, the section layout, the
 //! checks), so the encoder and decoder cannot drift. The user-facing contract is
 //! `docs/compiled-schedule-blob.md`.
@@ -74,6 +78,7 @@ mod connectors;
 mod decode;
 mod encode;
 mod error;
+mod executable;
 mod sections;
 mod wire;
 
@@ -83,6 +88,7 @@ pub use error::{
     BlobError, ConnectionFault, ConnectorFault, EncodeFault, InputFault, InstanceField,
     MalformedFault, OutputFault, ScheduleFault,
 };
+pub use executable::{Executable, StateWordsRefusal};
 pub use wire::crc32c;
 
 /// The four magic bytes every blob starts with: ASCII `OCEB`.
