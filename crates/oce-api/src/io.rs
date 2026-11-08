@@ -270,6 +270,14 @@ pub(crate) fn point_rows_at_load(model: &ModelGraph) -> Vec<PointInventoryRow> {
 }
 
 impl IoInventory {
+    /// Every staging target of the boundary input `path`, in load order, or `None` for a path that
+    /// is not an input binding.
+    pub(crate) fn input_targets(&self, path: &str) -> Option<&[ConnectorId]> {
+        self.input_by_path
+            .get(path)
+            .map(|binding| binding.targets.as_slice())
+    }
+
     /// Build the inventory from a flattened, structurally-valid [`ModelGraph`]. `String`-typed
     /// connectors are skipped (metadata-only, CDL §7.8). Pure function of the model — no map order
     /// feeds a position (connectors are walked in arena order).

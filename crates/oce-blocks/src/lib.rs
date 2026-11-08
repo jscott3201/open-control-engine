@@ -40,7 +40,9 @@ use oce_model::{ParamTable, Value, ValueType, determinism::canonicalize_real};
 
 mod catalog;
 mod catalog_rules;
+mod class_signature;
 pub use catalog_rules::ParamRuleProjection;
+pub use class_signature::{class_is_target_bound, class_signature_hash};
 mod conversions;
 mod discrete;
 mod discrete_sampled;
@@ -183,6 +185,17 @@ pub struct BlockSignature {
 /// This bounds input-derived BUILD-time allocation for blocks such as `MultiAnd(nin=...)` while
 /// keeping any realistic equipment-control vector well inside the supported range.
 pub const MAX_RESOLVED_PORT_WIDTH: usize = 1 << 20;
+
+/// The largest resolved input or output arity any registered class constructs, for any parameter
+/// table: twice [`MAX_RESOLVED_PORT_WIDTH`].
+///
+/// Every width-driven class bounds each vector port by [`MAX_RESOLVED_PORT_WIDTH`] (a product
+/// width above it resolves to zero). No class has more than one vector port in one direction
+/// except `CDL.Reals.Sort`, whose outputs are `y[nin]` and `yIdx[nin]`; the rest add at most one
+/// scalar to a vector (`CDL.Routing.*Extractor`: `index` and `u[nin]`). The compiled-schedule
+/// blob decoder refuses a port list longer than this before allocating for it, and
+/// `tests/hostile_parameters.rs` checks the bound against every constructor.
+pub const MAX_RESOLVED_ARITY: usize = 2 * MAX_RESOLVED_PORT_WIDTH;
 
 /// A BUILD-time port shape for vector-style CDL connector declarations after parameter resolution.
 ///
@@ -739,6 +752,9 @@ mod tests;
 
 #[cfg(test)]
 mod catalog_tests;
+
+#[cfg(test)]
+mod class_signature_tests;
 
 #[cfg(test)]
 mod authority_claims_tests;

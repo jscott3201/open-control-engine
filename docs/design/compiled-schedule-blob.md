@@ -3,7 +3,7 @@
 **Design note, written before M1b code (GitHub #396).** It fixes the byte format that #400 encodes
 and decodes, #401 executes on a `no_std` target, #402 sizes in a firmware image and #403
 round-trips across architectures. Where this note departs from the owner's starting sketch, it says
-so and why.
+so and why. The user-facing contract #400 shipped is [Compiled-schedule blob](../compiled-schedule-blob.md).
 
 ## What the blob is
 
@@ -367,9 +367,10 @@ depend on the encoder's architecture. An encoder stamp would make x86_64 and arm
 disagree, which defeats #403's byte-equality check. The 15 target-bound classes affect outputs,
 not blob bytes.
 
-That list, `TARGET_BOUND_CLASSES`, lives today in `oce-api/src/state_manifest.rs`, which the target
-does not link. #400 moves it into `oce-blocks` as a per-class `target_bound` flag, part of the
-hashed signature record (decision 2). `oce-api` then derives its list from that flag, with the
+That list, `TARGET_BOUND_CLASSES`, lived in `oce-api/src/state_manifest.rs`, which the target
+does not link. #400 moved it into `oce-blocks` as a per-class `target_bound` flag
+(`oce_blocks::class_is_target_bound`, `CatalogEntry::target_bound`), part of the hashed signature
+record (decision 2). `oce-api` then derives its list from that flag, with the
 same 15 classes, so snapshot bytes are unchanged. The decoded executable exposes
 `target_bound: bool` computed from its instances, as `CompletedFrame.target_bound` does today.
 None of the 46 fixtures uses one of those classes.

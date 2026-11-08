@@ -76,7 +76,9 @@ determinism matrix: four native cells, x86_64 on `ubuntu-latest` and aarch64 on
 Its fan-in job compares a populated portable engine-state snapshot byte-for-byte across
 architectures, checks portable and target-bound bytes across debug/release codegen, and requires
 target-bound bytes to differ across architectures. Each architecture then parses and refuses the
-other's target-bound bytes through the public restore path, natively.
+other's target-bound bytes through the public restore path, natively. The same fan-in requires the
+46 compiled-schedule blobs each cell encodes (`OCE_BLOB_OUT`) to be byte-identical in all four
+cells (GitHub #400).
 The standalone `cargo-deny` CI job runs `cargo deny check bans licenses sources` on every PR, and
 `.agents/gate.sh` runs it too.
 `advisories` is excluded from the script deliberately: it needs network and a writable
@@ -125,6 +127,25 @@ place. Outside the core, `clippy::iter_over_hash_type` is denied workspace-wide,
 over a `HashMap`/`HashSet` needs an `#[expect]` with a reason. The order-leak test is
 `crates/oce-api/tests/hash_order_independence.rs`: it runs the G36 corpus on 20 independently
 seeded threads and byte-compares every output.
+
+## Compiled-schedule blob goldens move with the engine version
+
+`crates/oce-api/tests/fixtures/blob/` holds one `OCEB` blob per G36 catalog fixture (46) and
+`class_signatures.tsv`, the per-class signature hash of every registered class (GitHub #400).
+`tests/blob_goldens.rs` re-encodes and compares them byte for byte. Three kinds of change move them,
+deliberately:
+
+- **A workspace version bump.** The header carries the encoder's engine version and the decoder
+  accepts only its own, so every blob changes (header and CRC only) when `workspace.package.version`
+  does. Regenerate them in the version-bump PR.
+- **A class signature change.** A port, a parameter rule, a literal default, the state layout or a
+  flag of any class changes `class_signatures.tsv`, and every blob that uses the class. A derived
+  default's formula text does not.
+- **A format change**, which also bumps `FORMAT_VERSION` in `oce_graph::blob`.
+
+Regenerate with `OCE_BLESS_BLOB=1 cargo test -p oce-api --test blob_goldens --locked`, run it again
+without the switch, and say in the PR which files moved and why. The blob decoder lives in
+`oce-graph` (`no_std`), so a decoder change also has to pass the `no-std-build` mirror.
 
 ## golden-gen hygiene is CI-only for now
 
