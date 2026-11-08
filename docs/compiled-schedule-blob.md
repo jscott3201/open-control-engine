@@ -186,10 +186,16 @@ still apply.
 | Same outputs, refusals and state as the host, through one frame driver | `src/tests/blob_dual_path_tests.rs`: for every fixture, the facade, the core frame driver on a second load and the blob entry take 160 frames spanning about 3.3 hours (steps from 0.75 s to 300 s) plus the same bad frames (NaN time, time going backwards, a wrong type, a non-finite Real under `Refuse`, a value above a declared maximum), and every boundary output, refusal, clock, sequence and the whole `RunState` match bit for bit after load and after every frame and refusal; every stateful fixture's state words change, each fixture moves at least a recorded number of outputs, and a perturbed input on the blob side fails the comparison. The facade's run must reproduce `crates/oce-graph/tests/fixtures/blob_frame_digests.tsv`, which `oce-graph`'s `blob_execution` test checks against the entry built `no_std + alloc` |
 | No second frame driver in the facade | `crates/oce-api/tests/frame_driver_ownership.rs`: the facade re-exports the core's `MAX_FRAME_TIME_MAGNITUDE` and `NonFiniteInputPolicy`, and no facade source defines them, evaluates the schedule or re-implements a time or sequence rule |
 | Executing frames allocates nothing; the target closure is clean | `crates/oce-graph/tests/blob_execution.rs` (zero allocations over every golden's frames, run against the `no_std + alloc` build in `no-std-build`) and `scripts/ci/check-no-std-entry-closure.sh` (no `oce-cxf`, `oce-api`, `serde_json` or `std` in the closure, with controls) |
+| The same run on bare metal | `firmware/link/tests/run_tests.rs` (every golden reaches its digest through the image's run code) and `schedule_tests.rs` (the image's schedule equals the test schedule bit for bit), per PR; `qemu.yml` (nightly): the image on `netduinoplus2` and riscv32 `virt` prints the host's run digest after each of 160 frames |
 | Raw state words restore all or nothing | `crates/oce-graph/tests/blob_state_words.rs` |
 | Typed refusal, never a panic | `blob_hostile_bytes.rs` and `blob_hostile_model.rs` (one test per refusal), `blob_fuzz.rs` (10,000 seeded random mutations, re-checksummed) and `oce-blocks` `tests/hostile_parameters.rs` |
 | `SemanticPoint` payloads are non-computational | `blob_semantic_seam.rs` fills and mutates every payload byte and requires an identical executable and identical outputs |
 
-The blob is not yet executed on a bare-metal target by CI: the `no_std` build of the decoder and
-the execution entry is built for `thumbv7em-none-eabihf` and `wasm32-unknown-unknown` and its
-suites run on the host against that build (`no-std-build`); running it on a target is GitHub #402.
+On a bare-metal target the blob runs in the firmware image (`firmware/link`, GitHub #449, issue
+#402): it embeds the `multizone_vav_supply_fan` golden, decodes it with `Executable` and runs the
+same 160-frame schedule. Per PR the [bare-metal cell](ci-and-the-gate.md#the-bare-metal-cell)
+builds the image for `thumbv7em-none-eabihf` and `riscv32imac-unknown-none-elf` within its size
+budget and runs the image's code on the host against every golden's digest; the [nightly emulation
+run](ci-and-the-gate.md#the-nightly-emulation-run) executes the image under QEMU and requires its
+run digest after every frame to equal the host's. CI never runs it on silicon, and emulation is not
+part of `CI OK`.

@@ -131,9 +131,17 @@ hashers ([state compatibility](state-compatibility.md#portability-domains-and-ev
 
 Everything else stays `std`: `oce-cxf`, `oce-validate`, `oce-semantics`, `oce-diag`, `oce-store` and
 the `oce-api` facade, plus the verification-only `oce-conformance` and `oce-bless`. The
-`no-std-build` job in `pr-gate.yml` builds the four on `thumbv7em-none-eabihf` (a bare-metal
-Cortex-M target with no `std`) and `wasm32-unknown-unknown`, lints them with clippy on the first,
-and runs the `oce-expr` suite without `std`; `bash .agents/gate.sh` runs the same commands.
+[bare-metal cell](ci-and-the-gate.md#the-bare-metal-cell) in `pr-gate.yml` builds and lints the
+four on `thumbv7em-none-eabihf` (Cortex-M4F) and `riscv32imac-unknown-none-elf` (RV32IMAC), two
+bare-metal targets with no `std`, and on `wasm32-unknown-unknown`; fails on any `std` feature or
+host-only crate in their dependency graphs; runs the `oce-expr` suite without `std`; and links them
+into a firmware image ([`firmware/link`](../firmware/link/), `publish = false`) for both bare-metal
+targets, held to a per-target size budget. The image decodes a checked-in blob golden with
+`oce_graph::blob::Executable` and runs the shared 160-frame schedule; the nightly `qemu.yml` runs it
+under emulation and requires its per-frame run digests to equal the host's
+([the nightly emulation run](ci-and-the-gate.md#the-nightly-emulation-run)). `bash .agents/gate.sh`
+runs the cell (`bash .agents/gate.sh nostd` runs it alone). What a target integrator supplies is
+what the image supplies: a global allocator and a reset entry; the engine asks for nothing else.
 
 ### Two Rust versions, and they are not the same number
 

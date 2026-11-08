@@ -148,6 +148,28 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Verification
 
+- **The bare-metal gate cell: the core builds per PR for two bare-metal targets and links into a
+  firmware image held to a size budget, which runs under QEMU nightly** (GitHub #449, issue #402).
+  `pr-gate.yml`'s `no-std-build` job becomes the bare-metal cell. `scripts/ci/check-no-std.sh`
+  builds and lints `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` `no_std + alloc` on
+  `thumbv7em-none-eabihf`, `riscv32imac-unknown-none-elf` (new) and `wasm32-unknown-unknown`, then
+  scans each crate's `cargo tree` per target and fails on any `std` feature or host-only crate;
+  `scripts/ci/test-check-no-std.sh` proves it fails on `extern crate std;` in `oce-graph` and on a
+  `serde/std` that still compiles on wasm32. The new unpublished member `oce-firmware-link`
+  (`firmware/link`) embeds the `multizone_vav_supply_fan` blob golden, decodes it with
+  `oce_graph::blob::Executable` and runs the shared 160-frame schedule, printing a run digest per
+  frame and the verdict against `blob_frame_digests.tsv`; it has no `unsafe` code.
+  `scripts/ci/check-firmware-link.sh` builds its `blob-frames` image for both bare-metal targets
+  with the new `firmware` profile and holds `.text`/`.rodata`/`.data`/`.bss`, flash and RAM to
+  `firmware/link/size-budget.toml` through `scripts/ci/firmware_size.py` (copied with its tests from
+  rusty-bacnet); its host tests require the image's schedule to equal `oce-graph`'s test schedule
+  bit for bit and every golden to reach its table digest through the image's code. The new
+  `qemu.yml` (nightly and dispatch, outside `CI OK`) runs the images on QEMU's `netduinoplus2` and
+  riscv32 `virt` machines and requires every line to equal the host reference runner's; both
+  targets reproduce the host digests. `bash .agents/gate.sh nostd` and `bash .agents/gate.sh qemu`
+  run the cell and the emulation check alone. The [product contract](docs/product-contract.md)
+  advances to revision 21: PC-041's limitation and evidence now cite the bare-metal image.
+  Goldens are byte-identical.
 - **No hash-collection iteration order reaches a golden, a receipt or snapshot bytes** (GitHub
   #433, issue #398). `oce-api/tests/hash_order_independence.rs` loads the 46 G36 fixtures and the
   resolver-contract document on 20 freshly spawned threads, each with independently seeded
