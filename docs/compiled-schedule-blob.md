@@ -239,9 +239,11 @@ state words of the three fixtures with over 4,000 words each.
 The reader treats a recording as hostile: it refuses a trace over 32 MiB or a blob over 1 MiB before
 reading it, bounds every declared count (outputs, the engine's 4,194,304-word state budget,
 frames), requires the exact grammar, and returns a typed error naming the file and line, never a
-panic. Its controls feed the comparison a recording with one output bit, one state-word bit or one
-blob bit flipped and require the report to name the fixture, frame, slot or index and both bit
-patterns; they also refuse 25 malformed shapes, every truncation, 2,000 seeded byte mutations
+panic. Its controls feed the comparison a recording with one bit flipped in an output, a state word
+(after load or after a frame), a warning's time or the blob, with a changed or removed warning, and
+with `-0.0` or another NaN payload against the produced Real, and require the report to name the
+fixture, frame, slot or index and both bit patterns; they also refuse 28 malformed shapes (a `\xHH`
+escape outside the control characters the writer escapes among them), every truncation, 2,000 seeded byte mutations
 without a panic, and a missing, foreign, swapped or oversized file.
 
 ## Evidence

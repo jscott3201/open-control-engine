@@ -164,8 +164,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
   wasmtime)` job in the determinism lane replays it on `wasm32-wasip1` under wasmtime 50.0.1,
   installed by `scripts/ci/install-wasmtime.sh` against pinned archive and binary SHA-256 digests
   and run through a cargo target runner (`.cargo/config.toml`, `scripts/ci/wasmtime-runner.sh`).
-  `CI OK` requires all three legs. The controls flip one bit of a recorded output, state word or
-  blob and require the report to name the fixture, frame, slot or index and both bit patterns.
+  `CI OK` requires all three legs. The controls flip one bit of a recorded output, state word
+  (after load or after a frame), warning time or blob, change or remove a recorded warning, and
+  record `-0.0` or another NaN payload against the produced Real; each must be reported with the
+  fixture, frame, slot or index and both bit patterns.
   `bash .agents/gate.sh roundtrip` (also part of `full`) records and replays on the local host and
   on `wasm32-wasip1`, failing with the install command when the target or wasmtime is missing;
   `release-gate.yml`'s `gate (full)` installs both. New facade accessor: `Engine::state_words`

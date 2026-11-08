@@ -544,6 +544,10 @@ jobs:
   # and requires every output, warning and raw state word after every frame to equal that cell's
   # recording, and compares the facade with the entry inside the guest as well. wasm32-unknown-unknown
   # stays a build-only target in no-std-build; a headless-browser run is M4's (the oce-wasm crate).
+  # It needs only determinism-matrix, so it runs in parallel with determinism-compare and can start
+  # before the four-way `diff -rq` there has accepted the recording. That is deliberate: CI OK
+  # requires both jobs, and the wasm leg consumes the x86_64 debug recording whose identity across
+  # the four cells the fan-in proves separately.
   blob-round-trip-wasm:
     name: blob round trip (wasm32-wasip1 under wasmtime)
     needs: [changes, determinism-matrix]
