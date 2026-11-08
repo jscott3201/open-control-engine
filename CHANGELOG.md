@@ -40,7 +40,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Execution core
 
 - **The `OCEB` compiled-schedule blob: `Engine::compile_blob` encodes the loaded executable and
-  `oce_graph::blob::decode` decodes it on a `no_std + alloc` target** (GitHub #PRNUM, issue #400;
+  `oce_graph::blob::decode` decodes it on a `no_std + alloc` target** (GitHub #438, issue #400;
   format and decisions in `docs/design/compiled-schedule-blob.md`, contract in
   `docs/compiled-schedule-blob.md`). The blob carries every class with its signature hash, every
   instance with its ground parameters in table order, the frozen block order, the connections and
