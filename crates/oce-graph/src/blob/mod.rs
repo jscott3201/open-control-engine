@@ -97,7 +97,7 @@ pub const MAGIC: [u8; 4] = *b"OCEB";
 /// The one format version this build encodes and decodes. Any change to the layout, a tag table,
 /// the class signature record, the CRC or the content-id meaning bumps it; a decoder accepts
 /// exactly its own version ([`BlobError::UnsupportedFormat`]).
-pub const FORMAT_VERSION: u16 = 2;
+pub const FORMAT_VERSION: u16 = 1;
 
 /// The execution profile the blob is encoded for: `1` is HostTick v1 (`docs/execution-profile.md`).
 pub const EXECUTION_PROFILE: u16 = 1;

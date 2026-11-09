@@ -9,8 +9,8 @@ use oce_model::{Dir, Value, ValueType, enum_descriptor, enum_descriptor_by_path}
 use crate::engine::Engine;
 use crate::error::OcError;
 
-pub(crate) const FORMAT_REVISION: u32 = 2;
-pub(crate) const EXECUTION_ABI_REVISION: u32 = 2;
+pub(crate) const FORMAT_REVISION: u32 = 1;
+pub(crate) const EXECUTION_ABI_REVISION: u32 = 1;
 pub(crate) const MAX_SNAPSHOT_BYTES: u64 = 64 * 1024 * 1024;
 
 /// Every model `oce-graph` admits fits a snapshot: its state words (at most

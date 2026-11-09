@@ -6,17 +6,28 @@ use oce_api::{Engine, EngineStateError, EngineStateSnapshot, OcError, StatePorta
 const MODEL: &[u8] = include_bytes!("fixtures/legacy_frame_add.jsonld");
 
 #[test]
-fn historical_revision_one_vector_refuses_without_a_migration_fallback() {
-    // Unchanged empty-authored-model golden from the preceding wire contract, not re-blessed.
+fn old_layout_snapshot_sharing_the_format_revision_is_refused_by_structure() {
+    // The empty-authored-model vector an earlier build wrote, never re-blessed. Its header names
+    // format revision 1 and execution-state ABI revision 1, the numbers the current layout
+    // carries (every format stays at revision 1 until 1.0.0), its length is consistent and its
+    // trailer checksum is valid, so only the manifest's structure can refuse it: the old layout
+    // ends before the input-definition count.
     let hex = include_str!("fixtures/state_legacy.hex").trim();
     let bytes: Vec<_> = (0..hex.len())
         .step_by(2)
         .map(|index| u8::from_str_radix(&hex[index..index + 2], 16).unwrap())
         .collect();
-    assert!(matches!(
-        EngineStateSnapshot::from_bytes(&bytes),
-        Err(EngineStateError::UnsupportedFormat { revision: 1 })
-    ));
+    assert_eq!(bytes[8..16], [1, 0, 0, 0, 1, 0, 0, 0]);
+    match EngineStateSnapshot::from_bytes(&bytes) {
+        Err(EngineStateError::MalformedSnapshot { offset, detail }) => {
+            assert_eq!(
+                (offset, detail.as_str()),
+                (122, "unexpected end of snapshot")
+            );
+        }
+        Err(other) => panic!("expected MalformedSnapshot, got {other:?}"),
+        Ok(_) => panic!("old-layout snapshot was ACCEPTED"),
+    }
 }
 
 #[test]
