@@ -203,8 +203,10 @@ deliberately:
   version in the same PR, because the engine version in the header is what refuses a blob of the
   earlier layout. `tests/blob_old_layout.rs` keeps one release-0.4.0 blob unblessed to prove it.
 - **A canonical content id change.** The header carries the loaded model's `oce:canon1:` digest
-  (GitHub #470), so a change to the id's encoding or meaning (a `canon2`, a new graph
-  record) or to anything it covers moves every affected blob header and `restamp.tsv` together.
+  (GitHub #470), so a change to the id's encoding or meaning (a new graph record, say) or to
+  anything it covers moves every affected blob header and `restamp.tsv` together. The tag stays
+  `oce:canon1:` before 1.0.0: an encoding change re-stamps the ids in place, and the engine version
+  tells the layouts apart.
 
 Regenerate with `OCE_BLESS_BLOB=1 cargo test -p oce-api --test blob_goldens --locked`, run it again
 without the switch, and say in the PR which files moved and why. The blob decoder lives in
@@ -226,13 +228,18 @@ workspace version bump.
 Every format and schema the project defines stays at revision 1 until 1.0.0 (owner ruling,
 2026-11-09, issue #509): the OCEB blob format, the state snapshot format and execution-state ABI,
 the compatibility descriptor, every contract descriptor under `crates/oce-api/contracts/`, the
-replay record and trace, `OCECANON`. A format changes in place and its goldens are re-blessed.
+replay record and trace, `OCECANON` and its id tag `oce:canon1:`, and each stateful class's
+`state_contract_revision`. A format changes in place and its goldens are re-blessed.
 
-That makes the engine version the only field that tells two layouts apart, where a format carries
-one. The blob header and the descriptor's `oce-api-version` line do; a state snapshot does not, by
-contract (the host envelope binds the build). So the first PR after a release tag that changes a
-format's bytes or meaning also bumps `workspace.package.version` on `development` to the next
-milestone's version, if it is not bumped already. A version bump is not a release: it cuts no tag
+That makes the engine version the only field that tells two layouts apart. The blob header and
+the descriptor's `oce-api-version` line carry it. Known gap: a state snapshot header carries no
+engine version yet, so released snapshots are refused today only because they carry format
+revision 2; GitHub #530 stamps the version before `v0.5.0` is tagged. So the first PR after a
+release tag that changes a format's bytes or meaning does three things: it bumps
+`workspace.package.version` on `development` to the next milestone's version, if it is not bumped
+already; it re-blesses; and it includes a test that an artefact of the previous layout is refused
+with a typed error (`tests/blob_old_layout.rs` and `tests/state_old_layout.rs` are the pattern).
+A version bump is not a release: it cuts no tag
 and leaves `CHANGELOG.md`'s unreleased section open. It moves the 46 blob goldens (version bytes
 and CRC), `compatibility.txt` and `compatibility_export.txt`, the `restamp.tsv` header line, the
 worked hex in `docs/design/compiled-schedule-blob.md`, and the version literals in

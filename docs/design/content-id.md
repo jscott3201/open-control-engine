@@ -208,8 +208,9 @@ not an `unwrap`.
 ## Hash and id format
 
 The id is **SHA-256** over the canonical bytes, written `oce:canon1:` followed by the 64 lowercase
-hex digits of the digest in output order. `canon1` is the encoding version; changing the encoding
-or the hash is `canon2`, never a silent change under `canon1`.
+hex digits of the digest in output order. `canon1` names the encoding and the hash. *Amended
+2026-11-09 (owner ruling on issue #509):* the tag stays `oce:canon1:` before 1.0.0. A change to the
+encoding or the hash re-stamps ids in place, and the engine version tells the layouts apart.
 
 FNV-1a-128 is what the repo uses for every other tag, and it is documented as "non-cryptographic
 and collision-prone in adversarial use". That was acceptable for an integrity tag over bytes the
