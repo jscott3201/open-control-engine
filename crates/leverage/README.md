@@ -1,14 +1,16 @@
 # Leverage crates
 
 This directory holds the crates that sit **above the facade**: authoring, verification, diffing,
-hosting, bindings, packaging and tools (`oce-author`, `oce-cli`, `oce-verify`, `oce-diff`,
-`oce-host`, `oce-bind`, `oce-bacnet`, `oce-wasm`, `oce-py`, …) as the milestones add them.
+hosting, bindings, packaging and tools (`oce-author`, `oce-cli`, `oce-vocab`, `oce-verify`,
+`oce-diff`, `oce-host`, `oce-bind`, `oce-bacnet`, `oce-wasm`, `oce-py`, …) as the milestones add
+them.
 
 | Crate | Responsibility |
 | --- | --- |
 | [`oce-replay`](oce-replay/) | Historical replay (M3, [design note](../../docs/design/replay.md)): slot-indexed frame sources (columnar, bounded CSV, step lists), the missing-sample policy, a columnar bit-exact trace and a resumable cursor over the facade's slot entry. `publish = false`. |
 | [`oce-author`](oce-author/) | Authoring layer (M2, [design note](../../docs/design/authoring-layer.md), [README](oce-author/README.md)): the typed authoring model and builder, the strict-JSON wire form (`from_wire_str` / `to_wire_string`, five value shapes) with its pinned `schemars` schema (`WIRE_SCHEMA`, [`schema/sequence.schema.json`](oce-author/schema/sequence.schema.json)), the two-stage validator (author side, then a throwaway engine load), the deterministic emitter to flat CXF (`emit`), the importer (`import_cxf` for the in-subset library CXF, `import_graph_v0` for the frozen prototype's v0 graph JSON, a typed `ImportErrorKind` and an `ImportReport`) and the text form (`parse_text` / `print_text` / `fmt_text`, typed `ParseError` refusals, finding spans). `publish = false`. |
 | [`oce-cli`](oce-cli/) | The `oce` command-line tool (M2, [design note](../../docs/design/authoring-layer.md) "CLI", [README](oce-cli/README.md)): `emit`, `validate`, `fmt`, `catalog` and `vocab` over `oce-author` and the facade, `clap` argument parsing, bounded reads, a documented JSON report and the exit rule 0 yes / 1 no / 2 error. The first leverage crate with a binary (`oce`); leverage crates may ship binaries, engine crates never do. `publish = false`. |
+| [`oce-vocab`](oce-vocab/) | The block vocabulary (M2, [design note](../../docs/design/vocabulary.md), [README](oce-vocab/README.md)): descriptions, declared units and quantities and curated notes for the 133 authorable classes, as [`data/generated.json`](oce-vocab/data/generated.json) (regenerated from the vendored modelica-json CXF-Core document and compared byte for byte) and [`data/curated.json`](oce-vocab/data/curated.json) (written by people, additive only), served as `vocabulary()` and the catalog-joined `class_vocab()`. `publish = false`. |
 
 Each one lives at `crates/leverage/<name>`, is named `oce-<name>`, and is a workspace member through
 the `crates/leverage/*` glob in the root `Cargo.toml`.

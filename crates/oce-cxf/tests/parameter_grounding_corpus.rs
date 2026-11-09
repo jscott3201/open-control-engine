@@ -76,8 +76,10 @@ fn outcome_line(rel: &str, bytes: &[u8]) -> String {
 #[test]
 fn every_tracked_fixture_imports_byte_identically() {
     let corpus = corpus();
-    // The workspace tracks 222 `.jsonld` files; a walk that silently shrinks fails here.
-    assert_eq!(corpus.len(), 222, "fixture corpus size changed");
+    // The workspace tracks 223 `.jsonld` files; a walk that silently shrinks fails here. One of
+    // them, the vendored `cxf-core/CXF-Core.jsonld` (issue #499), is the upstream class library
+    // rather than a sequence; its import outcome is pinned like every other file's.
+    assert_eq!(corpus.len(), 223, "fixture corpus size changed");
     let actual: String = corpus
         .iter()
         .map(|(rel, path)| {

@@ -268,6 +268,22 @@ which transcripts moved and why. `tests/report_shape.rs` holds every report tran
 README's contract (sorted keys, `ok` iff exit 0, `errors` iff exit 2, no absolute path), so a
 blessed transcript that breaks the contract still fails.
 
+## The `oce-vocab` data files move with catalog names and the vendored CXF-Core
+
+`crates/leverage/oce-vocab/data/generated.json` is regenerated and compared byte for byte by the
+crate's own test (issue #499): it is the vendored
+`third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld` projected through the catalog's
+names. A new, renamed or removed class, port or parameter moves it (and fails the generator by
+name until upstream has text for it or `curated.json` does), and so does a pin advance that
+changes an upstream description or unit. Regenerate with
+`OCE_BLESS=1 cargo nextest run -p oce-vocab`, run it again without the switch, and say in the PR
+which entries moved and why. `data/curated.json` is written by hand and never blessed; the reader
+refuses it unless it is in the canonical spelling. A new width-driven or positional class needs a
+row in `tests/vocabulary/widths.rs`, and a new `loop`, `port-order`, `convention` or `pitfall`
+note needs its case in `tests/vocabulary/engine_agreement.rs`. Vendoring a new `CXF-Core.jsonld`
+is a pin advance: it also moves the vendored README's digest row, the hash manifest and its
+tree-SHA constant, and `oce-cxf`'s `fixture_corpus_import.txt` line for the file.
+
 ## The frame driver lives in `oce-graph`, and its run digests move with behaviour
 
 The HostTick v1 frame driver (time checks, per-slot input checks, the non-finite policy, the

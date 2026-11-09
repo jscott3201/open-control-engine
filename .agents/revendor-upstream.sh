@@ -204,12 +204,14 @@ for relative in walked:
         counts["upstream-buildings"] += 1
     elif relative.startswith("cxf/"):
         counts["generated-cxf"] += 1
+    elif relative == "cxf-core/CXF-Core.jsonld":
+        counts["generated-cxf-core"] += 1
     elif relative == "README.md":
         counts["repo-authored"] += 1
     else:
         local_errors.append(f"unrecognized vendored path: {relative}")
 if manifest:
-    for bucket in ("upstream-buildings", "generated-cxf", "repo-authored"):
+    for bucket in ("upstream-buildings", "generated-cxf", "generated-cxf-core", "repo-authored"):
         expected = manifest.get("bucket_counts", {}).get(bucket)
         if counts[bucket] != expected:
             local_errors.append(f"{bucket} walked count {counts[bucket]} != header {expected}")

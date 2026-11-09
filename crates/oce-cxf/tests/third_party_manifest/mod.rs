@@ -1,7 +1,8 @@
 //! Byte-integrity manifest for the vendored Modelica Buildings CDL corpus.
 //!
 //! The whitelist is a fail-closed stand-in for Git's tracked set: every walked file must belong
-//! to one of the upstream-Buildings, generated-CXF, or repo-authored provenance buckets. Git blob
+//! to one of the upstream-Buildings, generated-CXF, generated-CXF-Core (the one document
+//! `cxf-core/CXF-Core.jsonld`, issue #499), or repo-authored provenance buckets. Git blob
 //! and tree objects are recomputed byte-for-byte, including Git's trailing-slash ordering rule
 //! for subtrees. The checked-in manifest can be regenerated, but the tree-SHA Rust constant is a
 //! deliberate hand edit so tampering plus re-blessing cannot silently move the independent pin.
@@ -19,7 +20,7 @@ const BUILDINGS_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
 const MODELICA_JSON_COMMIT: &str = "85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb";
 // Derived after the README commit with:
 // git rev-parse HEAD:third_party/modelica-buildings-cdl
-const SUBTREE_TREE_SHA: &str = "3f04e42cdf3f2edcb78aa3817f48bcd680a71ac8";
+const SUBTREE_TREE_SHA: &str = "c943691a48fe4e6d511884634b27b193252339bf";
 const SCHEMA: &str = "open-control/modelica-buildings-cdl-hash-manifest/v1";
 const MANIFEST_PATH: &str =
     "../../tools/reference-catalog/modelica-buildings-cdl.hash-manifest.json";
@@ -169,6 +170,8 @@ fn validate_path(path: &str) -> Result<&'static str, String> {
         Ok("upstream-buildings")
     } else if path.starts_with("cxf/") {
         Ok("generated-cxf")
+    } else if path == "cxf-core/CXF-Core.jsonld" {
+        Ok("generated-cxf-core")
     } else if path == "README.md" {
         Ok("repo-authored")
     } else {
@@ -424,10 +427,12 @@ fn manifest_headers_match_source_pins() {
         .find(|file| file.path == "README.md")
         .expect("vendored README must be listed");
     let tokens = modelica_json_tokens(&readme.bytes);
+    // Two in the `cxf/` section and two in the `cxf-core/` section: the sentence that names
+    // the generator and the checkout command, in each.
     assert_eq!(
         tokens.len(),
-        2,
-        "vendored README must carry exactly two modelica-json commit tokens"
+        4,
+        "vendored README must carry exactly four modelica-json commit tokens"
     );
     assert!(
         tokens.iter().all(|token| token == MODELICA_JSON_COMMIT),
@@ -532,6 +537,22 @@ fn additions_deletions_and_junk_are_distinct_failures() {
     assert!(error.contains("cxf/.DS_Store"), "{error}");
     assert!(error.contains("untracked junk"), "{error}");
     assert!(error.contains("new vendored file type"), "{error}");
+
+    // The CXF-Core bucket is one named document: a second file beside it has no bucket.
+    let mut sibling = base.listing.clone();
+    sibling.push(FileData {
+        path: "cxf-core/Other.jsonld".to_owned(),
+        bytes: b"{}".to_vec(),
+    });
+    let error = build_manifest(&sibling).expect_err("a second CXF-Core file must fail");
+    assert!(
+        error.contains("no origin bucket: `cxf-core/Other.jsonld`"),
+        "{error}"
+    );
+    assert_eq!(
+        base.manifest.bucket_counts.get("generated-cxf-core"),
+        Some(&1)
+    );
 }
 
 #[test]

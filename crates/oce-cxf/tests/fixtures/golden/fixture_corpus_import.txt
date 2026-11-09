@@ -176,6 +176,7 @@ crates/oce-cxf/tests/fixtures/node_scoped_contexts.jsonld err 4d8aca754a66cf83ba
 crates/oce-cxf/tests/fixtures/pass_through_miniature.jsonld ok 9ee833bdc14efcf37d140b30b9df10f6fae6c55ca80c62b3ef66e3209823f4b5
 crates/oce-cxf/tests/fixtures/profile/parameter-gated-connector.jsonld err 9ad4aeacb8836ea2d6cee2dce1a8d81c336232f3dac44d02f07de1b83934a221
 crates/oce-cxf/tests/fixtures/profile/small-composite.jsonld ok 5ba8e522df24c904d8c82d1be371185a756708536285c0c0213c510a5965d6d2
+third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld err 13e043faadc7043f9b3c36ff97495ee52abbe900bac927184084a7835759e452
 third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.jsonld err 379d910673ea8815f0bd5b69e6e8e640995cded32e2d4e46c8702ba1994b7bff
 third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.jsonld err 4e69f45454e290e8a41c88f59bf1239a11c62570912595d43069695341ce7e03
 third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.jsonld err 260ad3ac75956e214d4c02c1008693eba886a3ae20c61f6af050a2ebd827be2a

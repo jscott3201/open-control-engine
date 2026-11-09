@@ -16,11 +16,11 @@
 # release). Enabling "Required reviewers" there adds a second human gate.
 #
 # All 10 publishable members ship in one dependency-ordered
-# `cargo publish --workspace` (Rust 1.90+). Six private members are skipped
+# `cargo publish --workspace` (Rust 1.90+). Seven private members are skipped
 # by their own `publish = false`: `oce-bless`, `oce-conformance`, the
 # firmware image `oce-firmware-link` (GitHub #449) and the leverage crates
-# `oce-replay` (issue #445), `oce-author` (issue #463) and `oce-cli`
-# (issue #489). crates.io
+# `oce-replay` (issue #445), `oce-author` (issue #463), `oce-cli`
+# (issue #489) and `oce-vocab` (issue #499). crates.io
 # rejects re-publishing an existing version, so a repeat dispatch is a
 # no-op-or-fail, never a clobber.
 #
@@ -73,7 +73,7 @@ jobs:
       - name: tests
         run: cargo test --workspace --locked
 
-      - name: package, feature, and publication contract (10 publishable, 6 private)
+      - name: package, feature, and publication contract (10 publishable, 7 private)
         run: python3 scripts/package_policy/validate.py
 
       - name: publish dry-run (workspace, dependency-ordered)
