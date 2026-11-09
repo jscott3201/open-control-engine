@@ -220,6 +220,7 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 - [Structural diff (oce-diff)](docs/design/diff.md)
 - [Canonical content id](docs/design/content-id.md)
 - [Importer (oce-author)](docs/design/importer.md)
+- [Vocabulary v1](docs/design/vocabulary.md)
 """
     (source / "SUMMARY.md").write_text(summary, encoding="utf-8")
 
