@@ -1,0 +1,467 @@
+exit: 0
+--- stdout
+{
+  "base_units": [
+    "m",
+    "kg",
+    "s",
+    "A",
+    "K",
+    "mol",
+    "cd",
+    "rad",
+    "sr",
+    "Hz",
+    "N",
+    "Pa",
+    "J",
+    "W",
+    "C",
+    "V",
+    "F",
+    "Ohm",
+    "S",
+    "Wb",
+    "T",
+    "H",
+    "lm",
+    "lx",
+    "Bq",
+    "Gy",
+    "Sv",
+    "kat"
+  ],
+  "command": "vocab",
+  "enumerations": null,
+  "error_codes": [
+    {
+      "code": "missing-from",
+      "meaning": "stdin (-) was given without --from text|wire"
+    },
+    {
+      "code": "unknown-form",
+      "meaning": "the extension is neither .oce nor .json and --from was not given"
+    },
+    {
+      "code": "not-found",
+      "meaning": "the input path does not exist"
+    },
+    {
+      "code": "not-a-file",
+      "meaning": "the input path is a directory or another non-file"
+    },
+    {
+      "code": "read-failed",
+      "meaning": "the input could not be read"
+    },
+    {
+      "code": "input-too-large",
+      "meaning": "the input is over its form's 4 MiB limit; refused before it is read"
+    },
+    {
+      "code": "invalid-namespace",
+      "meaning": "--namespace is empty, too long, not printable ASCII or does not end in #, / or :"
+    },
+    {
+      "code": "unspellable",
+      "meaning": "the model cannot be written as text"
+    },
+    {
+      "code": "write-failed",
+      "meaning": "the output could not be written or renamed into place"
+    },
+    {
+      "code": "write-needs-file",
+      "meaning": "--write or -o cannot rewrite stdin"
+    },
+    {
+      "code": "write-needs-text",
+      "meaning": "fmt --write rewrites text files only; redirect a wire file's text instead"
+    },
+    {
+      "code": "malformed-param",
+      "meaning": "a --param is not NAME=VALUE"
+    },
+    {
+      "code": "unknown-param",
+      "meaning": "a --param names no parameter of the class"
+    },
+    {
+      "code": "duplicate-param",
+      "meaning": "a --param names one parameter twice"
+    },
+    {
+      "code": "malformed-value",
+      "meaning": "a --param value is not of the parameter's type"
+    },
+    {
+      "code": "ports-unresolvable",
+      "meaning": "the facade could not name the ports of an accepted table"
+    },
+    {
+      "code": "emit-refused",
+      "meaning": "the emitter refused for a reason this tool does not know"
+    }
+  ],
+  "errors": [],
+  "exit_codes": [
+    {
+      "code": 0,
+      "meaning": "yes: clean, canonical, resolved"
+    },
+    {
+      "code": 1,
+      "meaning": "no: an error finding, a non-canonical file, ports that do not resolve"
+    },
+    {
+      "code": 2,
+      "meaning": "error: a usage, read, parse, size or I/O failure; the question was not answered"
+    }
+  ],
+  "finding_codes": [
+    {
+      "code": "empty-sequence",
+      "meaning": "the sequence has no blocks",
+      "stage": 1
+    },
+    {
+      "code": "invalid-name",
+      "meaning": "a declared name is not an identifier, or is a reserved word or keyword",
+      "stage": 1
+    },
+    {
+      "code": "duplicate-name",
+      "meaning": "a name is declared twice across parameters, inputs, outputs and blocks",
+      "stage": 1
+    },
+    {
+      "code": "class-not-found",
+      "meaning": "a block's class path is not a registered class",
+      "stage": 1
+    },
+    {
+      "code": "class-not-authorable",
+      "meaning": "a block's class is an engine-reserved lowering identity",
+      "stage": 1
+    },
+    {
+      "code": "unknown-parameter",
+      "meaning": "an assignment names no parameter of the block's class",
+      "stage": 1
+    },
+    {
+      "code": "parameter-not-settable",
+      "meaning": "an assignment names a parameter no author may set",
+      "stage": 1
+    },
+    {
+      "code": "duplicate-parameter",
+      "meaning": "a block assigns one parameter twice",
+      "stage": 1
+    },
+    {
+      "code": "missing-required-parameter",
+      "meaning": "a required parameter is not assigned",
+      "stage": 1
+    },
+    {
+      "code": "parameter-kind-mismatch",
+      "meaning": "a value's kind does not fit the parameter",
+      "stage": 1
+    },
+    {
+      "code": "parameter-out-of-range",
+      "meaning": "a value breaks a catalog rule, widths included",
+      "stage": 1
+    },
+    {
+      "code": "non-finite-parameter",
+      "meaning": "a Real value is NaN or infinite",
+      "stage": 1
+    },
+    {
+      "code": "unknown-enum-literal",
+      "meaning": "an enumeration member is not a member of the parameter's type",
+      "stage": 1
+    },
+    {
+      "code": "unknown-parameter-reference",
+      "meaning": "a reference names no sequence parameter",
+      "stage": 1
+    },
+    {
+      "code": "malformed-connection",
+      "meaning": "a connection endpoint is not name or block.port",
+      "stage": 1
+    },
+    {
+      "code": "unknown-source",
+      "meaning": "a connection source is neither a boundary input nor a block output",
+      "stage": 1
+    },
+    {
+      "code": "unknown-target",
+      "meaning": "a connection target is neither a boundary output nor a block input",
+      "stage": 1
+    },
+    {
+      "code": "unknown-port",
+      "meaning": "a connection names a port the configured block does not have on that side",
+      "stage": 1
+    },
+    {
+      "code": "invalid-semantic-point",
+      "meaning": "a semantic, quantity or displayUnit field is malformed",
+      "stage": 1
+    },
+    {
+      "code": "invalid-provenance-id",
+      "meaning": "the extends provenance id is malformed",
+      "stage": 1
+    },
+    {
+      "code": "single-assignment",
+      "meaning": "two connections drive one block input or boundary output",
+      "stage": 1
+    },
+    {
+      "code": "document-too-large",
+      "meaning": "the emitted document is larger than the engine loads",
+      "stage": 2
+    },
+    {
+      "code": "load-failed",
+      "meaning": "the throwaway engine refused the emitted document",
+      "stage": 2
+    }
+  ],
+  "findings": [],
+  "input": null,
+  "keywords": [
+    "sequence",
+    "extends",
+    "none",
+    "param",
+    "in",
+    "out",
+    "block",
+    "true",
+    "false",
+    "Real",
+    "Integer",
+    "Boolean"
+  ],
+  "ok": true,
+  "parse_codes": [
+    {
+      "code": "not-utf8",
+      "meaning": "the input is not UTF-8"
+    },
+    {
+      "code": "byte-order-mark",
+      "meaning": "the input starts with a byte-order mark"
+    },
+    {
+      "code": "control-character",
+      "meaning": "a tab, carriage return, other control character or bidirectional override"
+    },
+    {
+      "code": "input-too-large",
+      "meaning": "the input is larger than 4 MiB"
+    },
+    {
+      "code": "too-many-lines",
+      "meaning": "the input has more than 100,000 lines"
+    },
+    {
+      "code": "line-too-long",
+      "meaning": "a line is longer than 8,192 bytes"
+    },
+    {
+      "code": "token-too-long",
+      "meaning": "a name, number, suffix, atom or provenance id is longer than 256 bytes"
+    },
+    {
+      "code": "string-too-long",
+      "meaning": "a string is longer than 4,096 bytes as written"
+    },
+    {
+      "code": "comment-too-long",
+      "meaning": "a comment is longer than 8,189 bytes after its #"
+    },
+    {
+      "code": "nesting-too-deep",
+      "meaning": "lists nest deeper than 2"
+    },
+    {
+      "code": "too-many-statements",
+      "meaning": "more than 65,536 statements of one kind or assignments in one block"
+    },
+    {
+      "code": "unterminated-string",
+      "meaning": "a string has no closing quote on its line"
+    },
+    {
+      "code": "bad-escape",
+      "meaning": "a backslash escape other than \\\", \\\\ or \\n"
+    },
+    {
+      "code": "malformed-number",
+      "meaning": "a number with a leading + or zero, a bare dot, an empty exponent or glued letters"
+    },
+    {
+      "code": "integer-out-of-range",
+      "meaning": "an integer outside the 64-bit signed range"
+    },
+    {
+      "code": "non-finite-number",
+      "meaning": "NaN, inf or Infinity as a value, or a real that overflows binary64"
+    },
+    {
+      "code": "malformed-suffix",
+      "meaning": "a unit suffix that is not a unit expression"
+    },
+    {
+      "code": "unit-not-base",
+      "meaning": "a unit suffix that is not built from base SI units"
+    },
+    {
+      "code": "malformed-atom",
+      "meaning": "a tag atom or provenance id with a byte outside printable ASCII"
+    },
+    {
+      "code": "stray-token",
+      "meaning": "a token where the grammar allows none, or a missing one"
+    },
+    {
+      "code": "unknown-keyword",
+      "meaning": "a line that starts with no statement keyword and is not a connection"
+    },
+    {
+      "code": "unknown-tag",
+      "meaning": "a boundary tag the grammar does not name"
+    },
+    {
+      "code": "duplicate-tag",
+      "meaning": "a boundary tag other than @haystack written twice on one statement"
+    },
+    {
+      "code": "unknown-type",
+      "meaning": "a type other than Real, Integer or Boolean"
+    },
+    {
+      "code": "missing-sequence",
+      "meaning": "the file does not start with a sequence statement"
+    },
+    {
+      "code": "missing-extends",
+      "meaning": "the sequence statement is not followed by an extends statement"
+    },
+    {
+      "code": "misplaced-statement",
+      "meaning": "a second sequence or extends statement"
+    },
+    {
+      "code": "misplaced-value",
+      "meaning": "a reference or a list as a sequence parameter's value"
+    },
+    {
+      "code": "malformed-list",
+      "meaning": "an empty, ragged or mixed list"
+    },
+    {
+      "code": "unclosed-bracket",
+      "meaning": "a ( or [ that is never closed"
+    },
+    {
+      "code": "comment-before-close",
+      "meaning": "a comment after the last item of a (...) or [...]"
+    }
+  ],
+  "schema": "oce-report/1",
+  "tags": [
+    "@unit",
+    "@quantity",
+    "@displayUnit",
+    "@brick",
+    "@s223",
+    "@qudt",
+    "@haystack",
+    "@name",
+    "@label",
+    "@provisional"
+  ],
+  "tool": "oce",
+  "types": [
+    "Real",
+    "Integer",
+    "Boolean"
+  ],
+  "wire_codes": [
+    {
+      "code": "not-utf8",
+      "meaning": "the bytes are not UTF-8"
+    },
+    {
+      "code": "byte-order-mark",
+      "meaning": "the document starts with a byte-order mark"
+    },
+    {
+      "code": "input-too-large",
+      "meaning": "the document is larger than 4 MiB"
+    },
+    {
+      "code": "nesting-too-deep",
+      "meaning": "objects and arrays nest deeper than 8 levels"
+    },
+    {
+      "code": "list-too-long",
+      "meaning": "a list has more than 65,536 entries"
+    },
+    {
+      "code": "string-too-long",
+      "meaning": "a string is longer than 4,096 bytes"
+    },
+    {
+      "code": "duplicate-key",
+      "meaning": "an object repeats a key"
+    },
+    {
+      "code": "non-finite-number",
+      "meaning": "NaN or Infinity as a number, or a real that overflows binary64"
+    },
+    {
+      "code": "integer-out-of-range",
+      "meaning": "an integer token outside the 64-bit signed range"
+    },
+    {
+      "code": "control-character",
+      "meaning": "a string carries a control character"
+    },
+    {
+      "code": "unknown-key",
+      "meaning": "an object carries a key its schema does not define"
+    },
+    {
+      "code": "missing-key",
+      "meaning": "an object lacks a required key"
+    },
+    {
+      "code": "wrong-type",
+      "meaning": "a value has the wrong JSON type or an unknown enumerator"
+    },
+    {
+      "code": "json-syntax",
+      "meaning": "the document is not JSON"
+    },
+    {
+      "code": "malformed-connection",
+      "meaning": "a connection is not `source -> target` with exactly one ->"
+    },
+    {
+      "code": "wire-refused",
+      "meaning": "a wire refusal this version of oce does not name"
+    }
+  ]
+}
+--- stderr

@@ -1,0 +1,29 @@
+exit: 0
+--- stdout
+Author, check and inspect Open Control Engine sequences.
+
+Exit status: 0 yes (clean), 1 no (error findings, a non-canonical file), 2 error (usage, read, parse or size failure). Reports are JSON on stdout; see the crate README for the contract.
+
+Usage: oce [OPTIONS] <COMMAND>
+
+Commands:
+  emit      Validate a sequence, then write it as flat CXF
+  validate  Validate a sequence and print the findings as a JSON report
+  fmt       Print the canonical text form of a sequence
+  catalog   List the block classes, or describe one with its resolved ports
+  vocab     Print the text-form vocabulary and every code oce reports
+  help      Print this message or the help of the given subcommand(s)
+
+Options:
+      --render <RENDER>
+          When to write a human-readable rendering of the report to stderr
+          
+          [default: auto]
+          [possible values: auto, always, never]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+--- stderr

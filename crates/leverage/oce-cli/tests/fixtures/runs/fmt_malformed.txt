@@ -1,0 +1,22 @@
+exit: 2
+--- stdout
+{
+  "command": "fmt",
+  "errors": [
+    {
+      "code": "bad-escape",
+      "detail": "`\\q` is not an escape; only `\\\"`, `\\\\` and `\\n` are",
+      "span": {
+        "column": 24,
+        "line": 4
+      }
+    }
+  ],
+  "findings": [],
+  "form": "text",
+  "input": "tests/fixtures/inputs/malformed.oce",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

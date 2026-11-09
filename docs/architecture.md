@@ -82,14 +82,17 @@ The engine is, by design:
 
 - **Library-only.** No `main`, no `[[bin]]`, no daemon, no server, no network listener in the engine
   crates — verified by the absence of any binary target or `std::net` use in `crates/` outside
-  `crates/leverage/`. Leverage crates may ship binaries above the facade (the planned `oce` CLI; see
-  the [authoring layer](design/authoring-layer.md)), never a listener. The host owns process
+  `crates/leverage/`. The no-binaries rule covers the engine crates only: leverage crates may ship
+  binaries above the facade, never a daemon, server or listener (authoring note decision 9). The
+  first is the `oce` command-line tool (`crates/leverage/oce-cli`; see the
+  [authoring layer](design/authoring-layer.md)). The host owns process
   lifecycle, transport, TLS, authN/Z, multi-tenancy, off-host durability, and metrics export.
 - **Synchronous and in-process.** Every public method is a blocking synchronous call, and no async
   runtime is pulled at any layer. The check is the dependency set below, not a promise.
-- **`#![forbid(unsafe_code)]` in all 15 workspace members**, belt and braces: each
-  `crates/*/src/lib.rs`, each `crates/leverage/*/src/lib.rs` and the firmware image's lib and bin
-  roots carry the crate attribute,
+- **`#![forbid(unsafe_code)]` in all 16 workspace members**, belt and braces: each
+  `crates/*/src/lib.rs`, each `crates/leverage/*/src/lib.rs`, the `oce` binary root
+  (`crates/leverage/oce-cli/src/main.rs`) and the firmware image's lib and bin roots carry the crate
+  attribute,
   *and* the workspace sets `unsafe_code = "forbid"` under `[workspace.lints.rust]` (root
   `Cargo.toml`).
 - **Edition 2024**, `resolver = "3"`.
@@ -103,8 +106,8 @@ small RustCrypto tree (`digest`, `block-buffer`, `crypto-common`, `generic-array
 `cpufeatures` with `libc` on some targets, `cfg-if`); the core four never link it. Two more —
 `regex` and `ryu` — exist only inside `oce-conformance`, which
 nothing else in the workspace depends on, so a host embedding `oce-api` never links them; and
-`csv-core` exists only inside the leverage crate `oce-replay`, and `schemars` only inside
-`oce-author`, both above the facade.
+`csv-core` exists only inside the leverage crate `oce-replay`, `schemars` only inside
+`oce-author` and `clap` only inside `oce-cli`, all above the facade.
 
 ### `no_std + alloc`: the core four
 
@@ -201,9 +204,9 @@ them, because nothing re-measures them in CI.
 ## The crate map
 
 Twelve engine crates, plus the unpublished firmware image `oce-firmware-link` (`firmware/link`),
-which links the `no_std` core into a bare-metal binary, and two unpublished leverage crates above the
-facade, `oce-replay` (`crates/leverage/oce-replay`) and `oce-author` (`crates/leverage/oce-author`):
-15 workspace members, 10 publishable and five
+which links the `no_std` core into a bare-metal binary, and three unpublished leverage crates above
+the facade, `oce-replay` (`crates/leverage/oce-replay`), `oce-author` (`crates/leverage/oce-author`)
+and `oce-cli` (`crates/leverage/oce-cli`): 16 workspace members, 10 publishable and six
 private. The dependency direction is acyclic and organized around the seam above.
 Their responsibilities below do not imply equal support or publication status: publication is
 read from each crate's `publish` flag and checked by the
@@ -243,6 +246,7 @@ crate is registry closure for the facade, not an independently supported host AP
 | --- | --- |
 | `oce-replay` | **Leverage, `publish = false`.** Historical replay ([design note](design/replay.md)): frame sources by slot (owned columns, a bounded CSV reader, step lists), the missing-sample policy (refuse and stop by default; every hold, fallback, skip and refusal recorded), a columnar bit-exact trace with a documented size per frame, and a resumable cursor over the facade's slot entry (`Engine::execute_slots`). It is host policy applied offline, never engine policy; `oce-bless` is its one other `oce-*` edge, as a dev-dependency. |
 | `oce-author` | **Leverage, `publish = false`.** The authoring layer's library ([design note](design/authoring-layer.md), [crate README](../crates/leverage/oce-author/README.md)): the typed authoring model and builder, the strict-JSON wire form (`from_wire_str` / `to_wire_string`: closed objects, five value shapes, bounded reads, one canonical spelling) with its `schemars`-derived JSON Schema (`WIRE_SCHEMA`, `schema/sequence.schema.json`) pinned byte for byte, the author-side (stage 1) validator, which judges a sequence against `oce_api::class_metadata` and `oce_api::class_ports`, and the text form (`parse_text` / `print_text` / `fmt_text`: a hand-written parser with typed refusals and a canonical, idempotent printer). It never evaluates, schedules or loads an engine; `oce-bless` is its one other `oce-*` edge, as a dev-dependency. |
+| `oce-cli` | **Leverage, `publish = false`; binary `oce`.** The command-line tool ([crate README](../crates/leverage/oce-cli/README.md)): `emit`, `validate`, `fmt`, `catalog` and `vocab` over `oce-author` and the facade's catalog (`class_metadata`, `class_ports`), with `clap` argument parsing, bounded reads, a documented JSON report on stdout and the exit rule 0 yes / 1 no / 2 error. It loads only the validator's throwaway engines and opens no listener; it depends on `oce-api` and `oce-author`, with `oce-bless` as a dev-dependency. |
 
 Every crate listed here does work today. Reserved placeholder crates were removed rather than kept
 as empty seams, so nobody plans a feature against a crate that does nothing.

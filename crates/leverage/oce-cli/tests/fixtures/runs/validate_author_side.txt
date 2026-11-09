@@ -1,0 +1,15 @@
+exit: 0
+--- stdout
+{
+  "command": "validate",
+  "errors": [],
+  "findings": [],
+  "input": "tests/fixtures/inputs/unused_input.oce",
+  "ok": true,
+  "schema": "oce-report/1",
+  "stages": [
+    "author"
+  ],
+  "tool": "oce"
+}
+--- stderr

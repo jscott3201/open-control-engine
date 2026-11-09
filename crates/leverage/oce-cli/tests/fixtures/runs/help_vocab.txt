@@ -1,0 +1,12 @@
+exit: 0
+--- stdout
+Print the text-form vocabulary and every code oce reports
+
+Usage: oce vocab [OPTIONS]
+
+Options:
+      --json             Print the JSON report instead of text
+      --render <RENDER>  When to write a human-readable rendering of the report to stderr [default: auto] [possible values: auto, always, never]
+  -h, --help             Print help
+  -V, --version          Print version
+--- stderr

@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "validate",
+  "errors": [
+    {
+      "code": "unknown-form",
+      "detail": "the file extension is neither .oce (text) nor .json (wire); pass --from text or --from wire",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "tests/fixtures/inputs/plain.txt",
+  "ok": false,
+  "schema": "oce-report/1",
+  "stages": [],
+  "tool": "oce"
+}
+--- stderr

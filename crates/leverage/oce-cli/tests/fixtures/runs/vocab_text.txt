@@ -1,0 +1,118 @@
+exit: 0
+--- stdout
+keywords:
+  sequence extends none param in out block true false Real Integer Boolean
+
+types:
+  Real Integer Boolean
+
+tags:
+  @unit @quantity @displayUnit @brick @s223 @qudt @haystack @name @label @provisional
+
+base units:
+  m kg s A K mol cd rad sr Hz N Pa J W C V F Ohm S Wb T H lm lx Bq Gy Sv kat
+
+parse codes (text form, exit 2):
+  not-utf8              the input is not UTF-8
+  byte-order-mark       the input starts with a byte-order mark
+  control-character     a tab, carriage return, other control character or bidirectional override
+  input-too-large       the input is larger than 4 MiB
+  too-many-lines        the input has more than 100,000 lines
+  line-too-long         a line is longer than 8,192 bytes
+  token-too-long        a name, number, suffix, atom or provenance id is longer than 256 bytes
+  string-too-long       a string is longer than 4,096 bytes as written
+  comment-too-long      a comment is longer than 8,189 bytes after its #
+  nesting-too-deep      lists nest deeper than 2
+  too-many-statements   more than 65,536 statements of one kind or assignments in one block
+  unterminated-string   a string has no closing quote on its line
+  bad-escape            a backslash escape other than \", \\ or \n
+  malformed-number      a number with a leading + or zero, a bare dot, an empty exponent or glued letters
+  integer-out-of-range  an integer outside the 64-bit signed range
+  non-finite-number     NaN, inf or Infinity as a value, or a real that overflows binary64
+  malformed-suffix      a unit suffix that is not a unit expression
+  unit-not-base         a unit suffix that is not built from base SI units
+  malformed-atom        a tag atom or provenance id with a byte outside printable ASCII
+  stray-token           a token where the grammar allows none, or a missing one
+  unknown-keyword       a line that starts with no statement keyword and is not a connection
+  unknown-tag           a boundary tag the grammar does not name
+  duplicate-tag         a boundary tag other than @haystack written twice on one statement
+  unknown-type          a type other than Real, Integer or Boolean
+  missing-sequence      the file does not start with a sequence statement
+  missing-extends       the sequence statement is not followed by an extends statement
+  misplaced-statement   a second sequence or extends statement
+  misplaced-value       a reference or a list as a sequence parameter's value
+  malformed-list        an empty, ragged or mixed list
+  unclosed-bracket      a ( or [ that is never closed
+  comment-before-close  a comment after the last item of a (...) or [...]
+
+finding codes, stage 1 (exit 1):
+  empty-sequence               the sequence has no blocks
+  invalid-name                 a declared name is not an identifier, or is a reserved word or keyword
+  duplicate-name               a name is declared twice across parameters, inputs, outputs and blocks
+  class-not-found              a block's class path is not a registered class
+  class-not-authorable         a block's class is an engine-reserved lowering identity
+  unknown-parameter            an assignment names no parameter of the block's class
+  parameter-not-settable       an assignment names a parameter no author may set
+  duplicate-parameter          a block assigns one parameter twice
+  missing-required-parameter   a required parameter is not assigned
+  parameter-kind-mismatch      a value's kind does not fit the parameter
+  parameter-out-of-range       a value breaks a catalog rule, widths included
+  non-finite-parameter         a Real value is NaN or infinite
+  unknown-enum-literal         an enumeration member is not a member of the parameter's type
+  unknown-parameter-reference  a reference names no sequence parameter
+  malformed-connection         a connection endpoint is not name or block.port
+  unknown-source               a connection source is neither a boundary input nor a block output
+  unknown-target               a connection target is neither a boundary output nor a block input
+  unknown-port                 a connection names a port the configured block does not have on that side
+  invalid-semantic-point       a semantic, quantity or displayUnit field is malformed
+  invalid-provenance-id        the extends provenance id is malformed
+  single-assignment            two connections drive one block input or boundary output
+
+finding codes, stage 2 (exit 1; engine codes pass through as well):
+  document-too-large  the emitted document is larger than the engine loads
+  load-failed         the throwaway engine refused the emitted document
+
+wire codes (exit 2):
+  not-utf8              the bytes are not UTF-8
+  byte-order-mark       the document starts with a byte-order mark
+  input-too-large       the document is larger than 4 MiB
+  nesting-too-deep      objects and arrays nest deeper than 8 levels
+  list-too-long         a list has more than 65,536 entries
+  string-too-long       a string is longer than 4,096 bytes
+  duplicate-key         an object repeats a key
+  non-finite-number     NaN or Infinity as a number, or a real that overflows binary64
+  integer-out-of-range  an integer token outside the 64-bit signed range
+  control-character     a string carries a control character
+  unknown-key           an object carries a key its schema does not define
+  missing-key           an object lacks a required key
+  wrong-type            a value has the wrong JSON type or an unknown enumerator
+  json-syntax           the document is not JSON
+  malformed-connection  a connection is not `source -> target` with exactly one ->
+  wire-refused          a wire refusal this version of oce does not name
+
+error codes (exit 2):
+  missing-from        stdin (-) was given without --from text|wire
+  unknown-form        the extension is neither .oce nor .json and --from was not given
+  not-found           the input path does not exist
+  not-a-file          the input path is a directory or another non-file
+  read-failed         the input could not be read
+  input-too-large     the input is over its form's 4 MiB limit; refused before it is read
+  invalid-namespace   --namespace is empty, too long, not printable ASCII or does not end in #, / or :
+  unspellable         the model cannot be written as text
+  write-failed        the output could not be written or renamed into place
+  write-needs-file    --write or -o cannot rewrite stdin
+  write-needs-text    fmt --write rewrites text files only; redirect a wire file's text instead
+  malformed-param     a --param is not NAME=VALUE
+  unknown-param       a --param names no parameter of the class
+  duplicate-param     a --param names one parameter twice
+  malformed-value     a --param value is not of the parameter's type
+  ports-unresolvable  the facade could not name the ports of an accepted table
+  emit-refused        the emitter refused for a reason this tool does not know
+
+exit codes:
+  0  yes: clean, canonical, resolved
+  1  no: an error finding, a non-canonical file, ports that do not resolve
+  2  error: a usage, read, parse, size or I/O failure; the question was not answered
+
+enumerations: not yet published by the facade (issue #468); see the crate README
+--- stderr

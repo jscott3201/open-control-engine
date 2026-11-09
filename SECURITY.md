@@ -45,8 +45,8 @@ Verified in the tree, with the enforcing site named so you can check rather than
 
 Each count or byte bound returns a typed diagnostic rather than aborting. The connection-collection
 row is a complexity guarantee, not a limit, and the last row is a known gap, described under [Untrusted CXF remains untrusted input](#untrusted-cxf-remains-untrusted-input).
-`#![forbid(unsafe_code)]` is set in all 15 workspace members (the 12 engine crates, the firmware image and the leverage crates
-`oce-replay` and `oce-author`), so the usual memory-safety
+`#![forbid(unsafe_code)]` is set in all 16 workspace members (the 12 engine crates, the firmware image and the leverage crates
+`oce-replay`, `oce-author` and `oce-cli`, whose `oce` binary root carries it too), so the usual memory-safety
 classes are out of scope by construction.
 
 ## Untrusted CXF remains untrusted input

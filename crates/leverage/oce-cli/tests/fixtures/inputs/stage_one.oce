@@ -1,0 +1,13 @@
+# Stage-1 defects with spans.
+sequence stage_one
+extends none
+
+in TOut : Real
+out y : Real
+
+block lim = CDL.Reals.Limiter(uMin = 0.0)
+block lim = CDL.Reals.Nope
+
+TOut -> lim.u
+lim.y -> y
+lim.x -> y

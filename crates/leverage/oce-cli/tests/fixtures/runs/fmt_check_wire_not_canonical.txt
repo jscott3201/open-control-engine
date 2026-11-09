@@ -1,0 +1,14 @@
+exit: 1
+--- stdout
+{
+  "canonical": false,
+  "command": "fmt",
+  "errors": [],
+  "findings": [],
+  "form": "wire",
+  "input": "-",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

@@ -1,0 +1,14 @@
+exit: 0
+--- stdout
+{
+  "canonical": true,
+  "command": "fmt",
+  "errors": [],
+  "findings": [],
+  "form": "text",
+  "input": "../oce-author/tests/fixtures/text/econ_enable.oce",
+  "ok": true,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

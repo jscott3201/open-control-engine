@@ -65,7 +65,7 @@ layout and `oce-api`-only dependency rule (`oce-bless` is allowed as a dev-depen
 golden switch; normal and build edges and dev edges are read separately), then fmt, clippy
 `-D warnings`, rustdoc `-D warnings`, nextest and cargo-machete per member
 (`scripts/ci/leverage-members.sh lane`; with no members it prints `no leverage crates yet`). The
-members are `oce-replay` and `oce-author`.
+members are `oce-replay`, `oce-author` and `oce-cli` (the `oce` binary).
 
 The first job, `classify changed paths`, lists what the PR changes with plain git — the tested merge
 commit against its base parent, renames as a deletion plus an addition — and classifies it with
@@ -538,9 +538,9 @@ tag/version match, fmt, clippy, a workspace `cargo test`, the package validator 
 `cargo publish --workspace --locked --dry-run` — with no token and no publish, so a tag can be
 re-cut safely (see [release.yml](../.github/workflows/release.yml), `verify` job). Publishing is a
 separate manual `workflow_dispatch` into the `release` GitHub Environment. Cargo's workspace
-selection includes the 10 publishable members and skips the five members with `publish = false`:
+selection includes the 10 publishable members and skips the six members with `publish = false`:
 `oce-bless`, `oce-conformance`, the firmware image `oce-firmware-link` and the leverage crates
-`oce-replay` and `oce-author`.
+`oce-replay`, `oce-author` and `oce-cli`.
 No checked-in record pins those sets any more: the guards are each crate's `publish` flag, the
 byte pin on `release.yml` (whose comment names the split) and review.
 

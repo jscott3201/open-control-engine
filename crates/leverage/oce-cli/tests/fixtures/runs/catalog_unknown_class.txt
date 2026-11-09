@@ -1,0 +1,23 @@
+exit: 1
+--- stdout
+{
+  "class": null,
+  "command": "catalog",
+  "errors": [],
+  "findings": [
+    {
+      "code": "class-not-found",
+      "detail": "`CDL.Reals.Nope` is not a registered class",
+      "origin": "engine",
+      "severity": "error",
+      "span": null,
+      "subject": "CDL.Reals.Nope"
+    }
+  ],
+  "input": null,
+  "ok": false,
+  "params": [],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr
