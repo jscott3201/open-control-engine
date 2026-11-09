@@ -39,6 +39,31 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Facade
 
+- **Enumeration and constant-package table** (GitHub #488, issue #468). `oce_api::enumerations()`
+  lists, beside `class_metadata()`, every named type the engine knows as one `&'static` table of
+  `EnumerationClass { class_path, qualified_path, kind, id, members, values }`: the four CDL
+  enumerations, the ten G36 enumerations (`ASHRAEClimateZone`, `ControlEconomizer`, `CoolingCoil`,
+  `EnergyStandard`, `FreezeStat`, `HeatingCoil`, `OutdoorAirSection`, `PressureControl`,
+  `Title24ClimateZone`, `VentilationStandard`) with their members in source order, and the four G36
+  Integer constant packages (`DemandLimitLevels`, `FreezeProtectionStages`, `OperationModes`,
+  `ZoneStates`) with each constant's value. `class_path` has one form for every row, relative to
+  `Buildings.Controls.OBC.` (`CDL.Types.SimpleController`, `ASHRAE.G36.Types.OperationModes`); each
+  row is an `EnumerationKind::Enumeration` (a parameter and connector type, carrying its
+  `EnumClassId`) or an `EnumerationKind::ConstantPackage` (named Integer constants, never a
+  parameter type). `enumeration(class_path)`, `enumeration_by_id(id)`,
+  `enumeration_class_path(id)`, `enumeration_member_value(class_path, member)` and
+  `enumeration_types()` look rows up without allocating, and `EnumerationClass::member_value` gives
+  a member's ordinal or Integer (`MemberValue`); `EnumClassId` is re-exported.
+  `enumeration_class_path` is the relative authoring form; the durable spelling snapshots, blobs,
+  the replay wire and class hashes record stays `EnumDescriptor::class_path` (fully qualified for
+  G36), and the rustdoc on both says so. `CATALOG_JSON`,
+  `catalog_content_id`, every class signature hash and the `class_ports` golden are unchanged. Tests
+  (`crates/oce-api/tests/enumerations.rs`) hold the table to every `EnumMembers` rule, `Required`
+  Enum kind, enum default and Enum-typed parameter the catalog publishes (members in order), and to
+  every Enum parameter a load of the G36 corpus keeps. #465 (recording an Enum column's class in
+  `oce-replay` traces) stays open; a trace must record the durable `enum_descriptor` spelling, not
+  `enumeration_class_path`.
+
 - **Canonical content id** (GitHub #474, issue #470; design note GitHub #471).
   `Engine::content_id()` mints one identity for a loaded sequence, `oce:canon1:` and the 64 hex
   digits of the SHA-256 (via `sha2` 0.10, `default-features = false`, on `oce-api` only) of the
@@ -167,6 +192,30 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Execution core
 
+- **One enumeration table in `oce-model`** (GitHub #488, issue #468). The enum facts that lived in
+  hand-written `match` arms and member constants in `oce-model/src/types.rs` are now one static
+  table, `oce_model::enumerations` (`no_std`, plain `&'static` data, linear lookups with no
+  allocation and no hashing). `enum_class_id`, `enum_descriptor`, `enum_descriptor_by_path`,
+  `enum_member_ordinal`, `g36_enum_class_id`, `g36_enum_literals`,
+  `is_g36_integer_constant_package`, `g36_integer_constant` and `g36_integer_constant_in_package`
+  read it, so the four G36 constant packages have a list a test can enumerate for the first time.
+  No behaviour change and no golden moved: the descriptor keeps its frozen durable class paths
+  (relative for CDL, fully qualified for G36), and `crates/oce-model/tests/enumeration_table.rs`
+  checks every table-backed function against a verbatim copy of the old `match` arms on every class
+  path and member, and on hostile spellings (wrong case, trailing dot, prefixes, the full
+  `Buildings.Controls.OBC.` form, IRIs, empty), plus the table's invariants (unique ids, paths and
+  last segments; one value per constant) and the G36 members against the vendored `.mo` sources in
+  order. `tests/enumeration_corpus_references.rs` checks that every `CDL.Types` / `G36.Types` class,
+  member and constant the CXF corpus names is a row or member, grounding to the row's value.
+  Provenance: the 10 G36 enumerations are checked against the vendored `.mo` sources in order; the 4
+  CDL enumerations are not vendored and are held to the registry's `EnumMembers` lists and the typed
+  `SimpleController` / `ZeroTime` parsers; the 4 constant packages are not vendored either and carry
+  exactly the members and values the resolver always used, pinned only by the differential test
+  against the old `match` arms (the corpus test cannot catch a wrong value there).
+  `DemandLimitLevels`' member order (`cooling0..3`, then `heating0..3`) is a choice, not an upstream
+  order. A test pins that every row lies in `CDL.Types` or `ASHRAE.G36.Types`, the two packages
+  whose durable class-path form is decided.
+
 - **Blob format 2: the content-id field holds the canonical digest** (GitHub #474, issue #470).
   `oce_graph::blob::FORMAT_VERSION` is 2 and the decoder accepts only 2: the 32-byte header field
   now holds the SHA-256 digest of the canonical content id in output order, present for all 46
@@ -242,6 +291,13 @@ and a gate that accepted any text would restore exactly the false assurance desc
   the mixed shape as round-trippable now pins its refusal.
 
 ### Leverage
+
+- **`oce-author` reads the facade's enumeration table** (GitHub #488, issue #468). The pinned
+  four-row `ENUM_TYPES` table is deleted: the validator and emitter look an enum parameter's type up
+  with `oce_api::enumeration_by_id`, and `tests/enum_member_oracle.rs` loads each member of the
+  facade's `SimpleController` row through the engine. A test round-trips every row's class path
+  through the emitter's class base (`http://example.org#Buildings.Controls.OBC.`). Findings and
+  emitted bytes are unchanged.
 
 - **`oce-replay`, the first leverage crate** (GitHub #462, issue #445). `crates/leverage/oce-replay`
   implements the historical replay note (`docs/design/replay.md`, decisions 1 to 23) above the

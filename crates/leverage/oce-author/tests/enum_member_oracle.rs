@@ -1,7 +1,8 @@
-//! The pinned `SimpleController` table checked against the engine itself: the facade publishes
-//! no member names for it (GitHub #468), so each member of `oce-author`'s table is loaded through
-//! `Engine::load_cxf` in a minimal CXF document and must ground to the ordinal the table gives it,
-//! and a name outside the table must be refused. The validator agrees member by member.
+//! The facade's `SimpleController` row (`oce_api::enumeration`, issue #468) checked against the
+//! engine's CXF load: each member the row lists is loaded through `Engine::load_cxf` in a minimal
+//! CXF document and must ground to the ordinal the row gives it, the row must be exactly the four
+//! upstream members in source order, and a name outside the row must be refused. The validator,
+//! which reads the same row, agrees member by member.
 //!
 //! Parity note for the engine-side stage (#464): through this full-path string spelling the engine
 //! refuses an unknown member as `grounding-failed`, while stage 1 reports `unknown-enum-literal`
@@ -97,7 +98,13 @@ fn author_findings(member: &str) -> Vec<&'static str> {
 
 #[test]
 fn simple_controller_members_ground_to_the_tables_ordinals_in_the_engine() {
-    for (ordinal, member) in ["P", "PI", "PD", "PID"].iter().enumerate() {
+    let row = oce_api::enumeration("CDL.Types.SimpleController").expect("facade row");
+    assert_eq!(
+        row.members,
+        ["P", "PI", "PD", "PID"],
+        "upstream source order"
+    );
+    for (ordinal, member) in row.members.iter().enumerate() {
         assert_eq!(
             engine_ordinal(member),
             Ok(u32::try_from(ordinal + 1).expect("small")),

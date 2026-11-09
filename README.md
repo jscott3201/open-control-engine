@@ -260,7 +260,9 @@ The three one-page design passes M3 waits on are written: the
 [`oce-diff`](docs/design/diff.md), beside the [M2 authoring layer](docs/design/authoring-layer.md).
 M2's engine prerequisite is in: `oce_api::class_ports` names every port of a configured block, and
 `oce_api::class_metadata` gives each class a description and each parameter a settable flag
-(issue #440; [port naming contract](docs/cdl-coverage.md#port-names-are-an-engine-contract)).
+(issue #440; [port naming contract](docs/cdl-coverage.md#port-names-are-an-engine-contract)), and
+`oce_api::enumerations` lists every CDL and G36 enumeration and G36 Integer constant package with
+its members (issue #468; [enumerations](docs/cdl-coverage.md#enumerations-and-constant-packages)).
 Design notes for thinly specified work land in
 [`docs/design/`](docs/design/compiled-schedule-blob.md) before code; the OCEB blob format is the
 first. Sequences, routines and their test vectors live in the separate `open-control-library`;

@@ -2,7 +2,8 @@
 //! `oce-api` — the primary embeddable host facade for the Open Control Engine
 //! (`08-embeddable-api-and-performance.md`). [`catalog()`] and [`contract_descriptors`] expose
 //! independent host metadata; [`class_ports()`] and [`class_metadata()`] add the resolved port names,
-//! class descriptions and settable flags an authoring tool needs, outside the revision-1 catalog. The supported `oce-blocks::catalog()` remains a companion surface. The `open-control-engine` umbrella name is reserved for a
+//! class descriptions and settable flags an authoring tool needs, and [`enumerations()`] the
+//! enumeration and Integer constant-package table, outside the revision-1 catalog. The supported `oce-blocks::catalog()` remains a companion surface. The `open-control-engine` umbrella name is reserved for a
 //! future release; nothing is published to crates.io yet.
 //!
 //! # Posture (binding, FRAME §6)
@@ -52,6 +53,7 @@ mod content_id;
 mod contracts;
 mod diagnostics;
 mod engine;
+mod enumerations;
 mod error;
 mod export;
 mod frame;
@@ -106,6 +108,10 @@ pub use diagnostics::{
     OperationFailure,
 };
 pub use engine::Engine;
+pub use enumerations::{
+    EnumClassId, EnumerationClass, EnumerationKind, MemberValue, enumeration, enumeration_by_id,
+    enumeration_class_path, enumeration_member_value, enumeration_types, enumerations,
+};
 pub use error::{LoadErrorContext, OcError, OcResult};
 pub use export::{ExportIncomplete, ExportReport};
 pub use frame::{CompletedFrame, PreparedInputFrame};
