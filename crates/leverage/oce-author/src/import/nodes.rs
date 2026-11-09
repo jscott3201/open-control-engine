@@ -1,58 +1,152 @@
-//! Node-level reading for the importer: the property whitelists, relation and attribute
-//! access, connector and parameter typing, the value-shape check against `isOfDataType`, and the
-//! document's IRI scheme.
+//! Node-level reading for the CXF importer: the property whitelists and the kind each foreign
+//! property is refused with, relation and attribute access, connector and parameter typing
+//! through the facade's named-type table, and the document's IRI scheme.
 
+use oce_api::{EnumerationClass, EnumerationKind, enumeration};
 use serde_json::{Map, Value};
 
 use crate::identifier::check_identifier_syntax;
-use crate::model::{Assignment, Literal, ParamValue, SignalType};
+use crate::model::SignalType;
 
-use super::{ImportError, malformed, unresolved, unsupported};
+use super::error::{ImportError, ImportErrorKind as Kind, SourceForm};
 
 /// The `S231` context IRI a document must bind.
 pub(super) const S231_IRI: &str = "http://data.ashrae.org/S231P#";
 
-/// Keys every node kind may carry besides its own.
-pub(super) const COMMON_KEYS: [&str; 3] = ["@id", "@type", "S231:label"];
+/// The package every block class and named type sits under, after the class IRI's `#`.
+pub(super) const OBC_PACKAGE: &str = "Buildings.Controls.OBC.";
 
-/// Keys each node kind may carry (beyond [`COMMON_KEYS`]).
-pub(super) const ROOT_KEYS: [&str; 4] = [
-    "S231:hasParameter",
-    "S231:hasInput",
-    "S231:hasOutput",
-    "S231:containsBlock",
-];
-pub(super) const BLOCK_KEYS: [&str; 3] = ["S231:hasParameter", "S231:hasInput", "S231:hasOutput"];
-pub(super) const PARAM_KEYS: [&str; 8] = [
-    "S231:isOfDataType",
-    "S231:value",
+/// A CXF refusal at `subject`.
+pub(super) fn refuse(subject: &str, kind: Kind) -> ImportError {
+    ImportError::new(SourceForm::Cxf, subject, kind)
+}
+
+/// Keys every node kind may carry besides its own.
+const COMMON_KEYS: [&str; 3] = ["@id", "@type", "S231:label"];
+
+/// The node kinds, each with its own key whitelist and its own refusal for a foreign key.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum NodeKind {
+    /// The root block.
+    Root,
+    /// A root (sequence) parameter.
+    SequenceParameter,
+    /// A boundary input or output.
+    Boundary,
+    /// A leaf block.
+    Block,
+    /// A block parameter.
+    BlockParameter,
+    /// A block input or output port.
+    Port,
+}
+
+/// The descriptive parameter attributes the importer reads, drops and reports (decision 9).
+pub(super) const PARAMETER_ATTRIBUTES: [&str; 5] = [
     "S231:unit",
     "S231:quantity",
     "S231:displayUnit",
+    "S231:min",
+    "S231:max",
+];
+
+/// The attributes a block port may not carry (decision 8), in the order they are checked.
+pub(super) const PORT_ATTRIBUTES: [&str; 6] = [
+    "S231:unit",
+    "S231:quantity",
+    "S231:displayUnit",
+    "S231:min",
+    "S231:max",
+    "S231:nominal",
+];
+
+/// The array keys of a parameter node.
+const ARRAY_KEYS: [&str; 3] = [
     "S231:isArray",
     "S231:numberDimensions",
     "S231:sizeOfDimensions",
 ];
-pub(super) const PORT_KEYS: [&str; 2] = ["S231:isOfDataType", "S231:isConnectedTo"];
-pub(super) const BOUNDARY_KEYS: [&str; 5] = [
-    "S231:isOfDataType",
-    "S231:isConnectedTo",
-    "S231:unit",
-    "S231:quantity",
-    "S231:displayUnit",
-];
 
-/// Refuse any key outside `allowed` and [`COMMON_KEYS`].
+impl NodeKind {
+    fn allowed(self) -> &'static [&'static str] {
+        match self {
+            Self::Root => &[
+                "S231:hasParameter",
+                "S231:hasInput",
+                "S231:hasOutput",
+                "S231:containsBlock",
+            ],
+            Self::Block => &["S231:hasParameter", "S231:hasInput", "S231:hasOutput"],
+            Self::SequenceParameter => &[
+                "S231:isOfDataType",
+                "S231:value",
+                "S231:unit",
+                "S231:quantity",
+                "S231:displayUnit",
+                "S231:min",
+                "S231:max",
+            ],
+            Self::BlockParameter => &[
+                "S231:isOfDataType",
+                "S231:value",
+                "S231:unit",
+                "S231:quantity",
+                "S231:displayUnit",
+                "S231:min",
+                "S231:max",
+                "S231:isArray",
+                "S231:numberDimensions",
+                "S231:sizeOfDimensions",
+            ],
+            Self::Boundary => &[
+                "S231:isOfDataType",
+                "S231:isConnectedTo",
+                "S231:unit",
+                "S231:quantity",
+                "S231:displayUnit",
+                "S231:min",
+                "S231:max",
+            ],
+            Self::Port => &["S231:isOfDataType", "S231:isConnectedTo"],
+        }
+    }
+
+    /// The kind a key outside the whitelist is refused with: the out-of-subset construct it
+    /// spells, or [`Kind::UnknownKey`].
+    fn foreign(self, key: &str) -> Kind {
+        match (self, key) {
+            (_, "S231:isConditionalComponent" | "S231:conditionalExpression") => {
+                Kind::ConditionalComponent
+            }
+            (_, "S231:hasInstance") => Kind::InstanceMember,
+            (_, "S231:hasConstant") => Kind::ConstantMember,
+            (Self::SequenceParameter, k) if ARRAY_KEYS.contains(&k) => Kind::ArraySequenceParameter,
+            (Self::Boundary | Self::Port, k) if ARRAY_KEYS.contains(&k) => Kind::ArrayConnector,
+            (Self::Boundary, "S231:nominal" | "S231:unbounded") => Kind::ConnectorAttribute {
+                attribute: key.to_owned(),
+            },
+            (Self::Port, k) if PORT_ATTRIBUTES.contains(&k) => Kind::PortAttribute {
+                attribute: key.to_owned(),
+            },
+            _ => Kind::UnknownKey {
+                key: key.to_owned(),
+            },
+        }
+    }
+}
+
+/// Refuse any key outside `kind`'s whitelist and the common keys, with the kind it spells.
 pub(super) fn check_keys(
     id: &str,
     node: &Map<String, Value>,
-    allowed: &[&str],
+    kind: NodeKind,
 ) -> Result<(), ImportError> {
+    let allowed = kind.allowed();
     match node
         .keys()
         .find(|k| !COMMON_KEYS.contains(&k.as_str()) && !allowed.contains(&k.as_str()))
     {
-        Some(key) => Err(unsupported(id, &format!("the property `{key}` here"))),
+        Some(key) => Err(refuse(id, kind.foreign(key))),
         None => Ok(()),
     }
 }
@@ -63,13 +157,21 @@ pub(super) fn references<'a>(
     node: &'a Map<String, Value>,
     key: &str,
 ) -> Result<Vec<&'a str>, ImportError> {
+    let wrong = || {
+        refuse(
+            id,
+            Kind::WrongShape {
+                key: key.to_owned(),
+            },
+        )
+    };
     let one = |value: &'a Value| -> Result<&'a str, ImportError> {
         match value {
             Value::Object(map) if map.len() == 1 => match map.get("@id") {
                 Some(Value::String(iri)) => Ok(iri.as_str()),
-                _ => Err(malformed(format!("`{id}`: `{key}` holds a non-reference"))),
+                _ => Err(wrong()),
             },
-            _ => Err(malformed(format!("`{id}`: `{key}` holds a non-reference"))),
+            _ => Err(wrong()),
         }
     };
     match node.get(key) {
@@ -88,22 +190,69 @@ pub(super) fn text_attribute<'a>(
     match node.get(key) {
         None => Ok(None),
         Some(Value::String(text)) => Ok(Some(text.as_str())),
-        Some(_) => Err(malformed(format!("`{id}`: `{key}` is not a string"))),
+        Some(_) => Err(refuse(
+            id,
+            Kind::WrongShape {
+                key: key.to_owned(),
+            },
+        )),
     }
 }
 
-/// The signal type an `isOfDataType` reference names, if it names Real, Integer or Boolean.
-pub(super) fn data_type(
+/// A value as written, for the report: a string's text, anything else compact JSON.
+pub(super) fn spelled(value: &Value) -> String {
+    match value {
+        Value::String(text) => text.clone(),
+        other => other.to_string(),
+    }
+}
+
+/// What an `isOfDataType` names.
+#[derive(Clone, Copy, Debug)]
+pub(super) enum DataType {
+    /// `S231:Real`, `S231:Integer` or `S231:Boolean`.
+    Scalar(SignalType),
+    /// `S231:String`.
+    String,
+    /// A row of the facade's named-type table: an enumeration or a constant package.
+    Named(&'static EnumerationClass),
+}
+
+/// The one `isOfDataType` reference of a node, or `None` when absent.
+pub(super) fn declared_type<'a>(
     id: &str,
-    node: &Map<String, Value>,
-) -> Result<Option<SignalType>, ImportError> {
-    let named = references(id, node, "S231:isOfDataType")?;
-    Ok(match named.as_slice() {
-        ["S231:Real"] => Some(SignalType::Real),
-        ["S231:Integer"] => Some(SignalType::Integer),
-        ["S231:Boolean"] => Some(SignalType::Boolean),
-        _ => None,
-    })
+    node: &'a Map<String, Value>,
+) -> Result<Option<&'a str>, ImportError> {
+    if !node.contains_key("S231:isOfDataType") {
+        return Ok(None);
+    }
+    match references(id, node, "S231:isOfDataType")?.as_slice() {
+        [one] => Ok(Some(one)),
+        _ => Err(refuse(
+            id,
+            Kind::WrongShape {
+                key: "S231:isOfDataType".to_owned(),
+            },
+        )),
+    }
+}
+
+/// Resolve an `isOfDataType` IRI: an S231 scalar, or a class IRI whose fragment (after its last
+/// `#`) is `Buildings.Controls.OBC.<class path>` of a row the facade table holds. Anything else
+/// is [`Kind::UnknownDatatype`].
+pub(super) fn data_type(id: &str, iri: &str) -> Result<DataType, ImportError> {
+    let resolved = match iri {
+        "S231:Real" => Some(DataType::Scalar(SignalType::Real)),
+        "S231:Integer" => Some(DataType::Scalar(SignalType::Integer)),
+        "S231:Boolean" => Some(DataType::Scalar(SignalType::Boolean)),
+        "S231:String" => Some(DataType::String),
+        _ => iri
+            .rsplit_once('#')
+            .and_then(|(_, fragment)| fragment.strip_prefix(OBC_PACKAGE))
+            .and_then(enumeration)
+            .map(DataType::Named),
+    };
+    resolved.ok_or_else(|| refuse(id, Kind::UnknownDatatype))
 }
 
 /// The IRI scheme the document uses: the root `@id` is `{namespace}{sequence}`, where
@@ -115,19 +264,26 @@ pub(super) struct Names<'a> {
 impl<'a> Names<'a> {
     /// The local path under the root, checked as dot-separated identifiers.
     pub(super) fn local(&self, subject: &str, iri: &'a str) -> Result<Vec<&'a str>, ImportError> {
-        let path = iri
-            .strip_prefix(self.root)
-            .and_then(|rest| rest.strip_prefix('.'))
-            .ok_or_else(|| unresolved(subject, iri))?;
+        let path = local_path(self.root, iri).ok_or_else(|| {
+            refuse(
+                subject,
+                Kind::Unresolved {
+                    reference: iri.to_owned(),
+                },
+            )
+        })?;
         let parts: Vec<&str> = path.split('.').collect();
         if parts.iter().any(|p| check_identifier_syntax(p).is_err()) {
-            return Err(unsupported(
-                iri,
-                "a local name that is not dot-separated identifiers",
-            ));
+            return Err(refuse(iri, Kind::InvalidName));
         }
         Ok(parts)
     }
+}
+
+/// The path of `iri` under `root` (`block.member`), when `iri` is `{root}.{path}`.
+pub(super) fn local_path<'a>(root: &str, iri: &'a str) -> Option<&'a str> {
+    iri.strip_prefix(root)
+        .and_then(|rest| rest.strip_prefix('.'))
 }
 
 /// A parameter node's `@type`, when written, is `S231:Parameter`.
@@ -138,61 +294,13 @@ pub(super) fn check_parameter_type(
     match node.get("@type") {
         None => Ok(()),
         Some(Value::String(t)) if t == "S231:Parameter" => Ok(()),
-        Some(_) => Err(unsupported(
+        Some(_) => Err(refuse(
             iri,
-            "a parameter whose `@type` is not `S231:Parameter`",
+            Kind::WrongShape {
+                key: "@type".to_owned(),
+            },
         )),
     }
-}
-
-/// A block parameter's `isOfDataType`, when written, agrees with the shape of every value read
-/// for it: a reference agrees with any type; otherwise Real takes a Real or Integer literal,
-/// Integer an Integer, Boolean a Boolean, String a string and a `CDL.Types` enumeration class a
-/// member of that type. Any other datatype is refused.
-pub(super) fn check_value_shapes(
-    iri: &str,
-    node: &Map<String, Value>,
-    assignments: &[Assignment],
-) -> Result<(), ImportError> {
-    if !node.contains_key("S231:isOfDataType") {
-        return Ok(());
-    }
-    let declared = references(iri, node, "S231:isOfDataType")?;
-    let [declared] = declared.as_slice() else {
-        return Err(unsupported(iri, "more than one `isOfDataType`"));
-    };
-    let enum_type = declared
-        .rsplit_once('#')
-        .and_then(|(_, fragment)| fragment.strip_prefix("Buildings.Controls.OBC.CDL.Types."));
-    let fits = |literal: &Literal| match (*declared, literal) {
-        ("S231:Real", Literal::Real(_) | Literal::Integer(_))
-        | ("S231:Integer", Literal::Integer(_))
-        | ("S231:Boolean", Literal::Boolean(_))
-        | ("S231:String", Literal::Text(_)) => true,
-        (_, Literal::Member(member)) => enum_type == Some(member.type_name.as_str()),
-        _ => false,
-    };
-    let known = matches!(
-        *declared,
-        "S231:Real" | "S231:Integer" | "S231:Boolean" | "S231:String"
-    ) || enum_type.is_some_and(|t| !t.is_empty() && !t.contains('.'));
-    if !known {
-        return Err(unsupported(
-            iri,
-            "an `isOfDataType` outside the S231 scalars and `CDL.Types`",
-        ));
-    }
-    for assignment in assignments {
-        if let ParamValue::Literal(literal) = &assignment.value
-            && !fits(literal)
-        {
-            return Err(unsupported(
-                iri,
-                "a value whose shape disagrees with its `isOfDataType`",
-            ));
-        }
-    }
-    Ok(())
 }
 
 /// The sequence name: the trailing identifier of the root `@id`.
@@ -206,38 +314,74 @@ pub(super) fn sequence_name(root: &str) -> Result<&str, ImportError> {
         .map_or(0, |(at, c)| at + c.len_utf8());
     let name = root.get(start..).unwrap_or_default();
     if start == 0 || check_identifier_syntax(name).is_err() {
-        return Err(unsupported(
-            root,
-            "a root `@id` that does not end in an identifier after a delimiter",
-        ));
+        return Err(refuse(root, Kind::InvalidName));
     }
     Ok(name)
 }
 
-/// The signal type of a connector node from its `@type` and `isOfDataType`, which must agree.
-pub(super) fn connector_type(
+/// A connector's type, read from its `@type` and `isOfDataType`, which must agree.
+pub(super) struct ConnectorType<'a> {
+    /// The type the connector is read as.
+    pub(super) signal: SignalType,
+    /// The constant-package IRI an Integer connector was typed by, when it was (decision 21).
+    pub(super) package: Option<&'a str>,
+}
+
+/// The type of a connector node from its `@type` (`S231:<Kind><side>`) and its `isOfDataType`.
+/// An Integer connector typed by a constant package is read as an Integer and the package IRI
+/// returned for the report (decision 21); a Real or Boolean one, or one typed by an enumeration,
+/// is [`Kind::DatatypeMismatch`].
+pub(super) fn connector_type<'a>(
     iri: &str,
-    node: &Map<String, Value>,
+    node: &'a Map<String, Value>,
     side: &str,
-) -> Result<SignalType, ImportError> {
+) -> Result<ConnectorType<'a>, ImportError> {
+    let mismatch = || refuse(iri, Kind::DatatypeMismatch);
     let from_type = match node.get("@type") {
         Some(Value::String(t)) => {
             match t.strip_prefix("S231:").and_then(|k| k.strip_suffix(side)) {
-                Some("Real") => Some(SignalType::Real),
-                Some("Integer") => Some(SignalType::Integer),
-                Some("Boolean") => Some(SignalType::Boolean),
-                _ => None,
+                Some("Real") => SignalType::Real,
+                Some("Integer") => SignalType::Integer,
+                Some("Boolean") => SignalType::Boolean,
+                _ => return Err(mismatch()),
             }
         }
-        _ => None,
+        Some(_) => {
+            return Err(refuse(
+                iri,
+                Kind::WrongShape {
+                    key: "@type".to_owned(),
+                },
+            ));
+        }
+        None => {
+            return Err(refuse(
+                iri,
+                Kind::MissingKey {
+                    key: "@type".to_owned(),
+                },
+            ));
+        }
     };
-    let declared = data_type(iri, node)?;
-    match (from_type, declared) {
-        (Some(a), Some(b)) if a == b => Ok(a),
-        (Some(a), None) if !node.contains_key("S231:isOfDataType") => Ok(a),
-        _ => Err(unsupported(
-            iri,
-            &format!("a connector that is not a typed S231 Real, Integer or Boolean {side}"),
-        )),
+    let Some(declared) = declared_type(iri, node)? else {
+        return Ok(ConnectorType {
+            signal: from_type,
+            package: None,
+        });
+    };
+    match data_type(iri, declared)? {
+        DataType::Scalar(signal) if signal == from_type => Ok(ConnectorType {
+            signal,
+            package: None,
+        }),
+        DataType::Named(row)
+            if row.kind == EnumerationKind::ConstantPackage && from_type == SignalType::Integer =>
+        {
+            Ok(ConnectorType {
+                signal: SignalType::Integer,
+                package: Some(declared),
+            })
+        }
+        _ => Err(mismatch()),
     }
 }

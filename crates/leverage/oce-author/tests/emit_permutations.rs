@@ -15,7 +15,7 @@ use support::every_element;
 /// A corpus sequence whose export is complete (so it has a content id), with fan-out sources.
 fn base() -> Sequence {
     let bytes = std::fs::read(corpus_fixture("reheat_overrides")).expect("read");
-    oce_author::import_cxf(&bytes).expect("import")
+    support::imported(&bytes)
 }
 
 fn emitted(s: &Sequence) -> Vec<u8> {

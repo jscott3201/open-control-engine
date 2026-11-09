@@ -1,0 +1,18 @@
+# report
+dropped override_active description: "Manual override active flag"
+dropped override_active unit: "bool"
+dropped yFault description: "True once the override has been held for a day, then for another hour"
+# text
+# imported from v0 graph JSON
+sequence ahu_0027
+extends none
+# Manual override active flag
+# unit: bool
+in override_active : Boolean
+# True once the override has been held for a day, then for another hour
+out yFault : Boolean
+block staleOvr = CDL.Logical.TrueDelay(delayTime = 86400.0, delayOnInit = true)
+block persist = CDL.Logical.TrueDelay(delayTime = 3600, delayOnInit = true)
+override_active -> staleOvr.u
+staleOvr.y -> persist.u
+persist.y -> yFault

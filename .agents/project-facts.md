@@ -217,17 +217,23 @@ each. A DTO doc comment, a catalog class, a finding message or the canonical wri
 Regenerate with `OCE_BLESS_AUTHOR=1 cargo nextest run -p oce-author`, run it again without the
 switch, and say in the PR which files moved and why. Nothing else rewrites them.
 `tests/fixtures/emit/*.cxf.json` are the emitter's byte goldens (issue #464): the worked example,
-the every-element sequence and the four corpus fixtures the importer reads, each emitted under the
+the every-element sequence and four of the 31 corpus fixtures the importer reads, each emitted under the
 default namespace. They are named `.cxf.json`, not `.jsonld`, because `oce-cxf`'s
-`parameter_grounding_corpus` test counts every tracked `.jsonld` file in the workspace (214) and
+`parameter_grounding_corpus` test pins the count of every tracked `.jsonld` file in the workspace and
 pins each one's import; a leverage golden must not move an engine census. The emitter's layout or
 writer, a catalog change (port names, parameter types, enumeration members) or the fixed class base
 moves them; the same bless switch regenerates them, and every one must still load warning-free.
-`tests/fixtures/text/*.oce` are the canonical text of every wire bundle and imported corpus
-fixture, and `tests/fixtures/text/fmt/*.out.oce` the `fmt` output of the hand-written
+`tests/fixtures/text/*.oce` are the canonical text of every wire bundle and of the same four
+imported corpus fixtures, and `tests/fixtures/text/fmt/*.out.oce` the `fmt` output of the hand-written
 `*.in.oce` inputs beside them (comment and blank-line preservation; issue #482); the printer's
 spelling, a catalog change to an array template or a bundle moves them, and the same
 `OCE_BLESS_AUTHOR` switch regenerates them (the `*.in.oce` inputs are hand-written, never blessed).
+`tests/fixtures/v0/` holds the frozen prototype's three v0 golden pairs (`*.graph.json`,
+`*.cxf.json`), copied verbatim from its repository at a pinned commit (`PROVENANCE.md` there):
+never blessed and never edited; the prototype's `.cxf.jsonld` files are renamed `.cxf.json` for the
+same census reason as the emit goldens; re-copy them only with the provenance record. The `*.import.txt`
+beside them are this crate's goldens of what `import_graph_v0` makes of each graph (the report and
+the canonical text) and regenerate with the same switch.
 `tests/fixtures/note/text_example.oce` is the note's worked text example, copied by hand like the
 wire example below.
 `tests/fixtures/note/wire_example.json` is the JSON block of the authoring note's "Wire form"

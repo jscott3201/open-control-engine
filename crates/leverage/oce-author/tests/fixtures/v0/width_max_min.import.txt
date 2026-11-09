@@ -1,0 +1,36 @@
+# report
+dropped pA description: "First value"
+dropped pA unit: "1"
+dropped pB description: "Second value"
+dropped pB unit: "1"
+dropped pC description: "Third value"
+dropped pC unit: "1"
+dropped hiVal description: "Largest of the three"
+dropped loVal description: "Smallest of the three"
+# text
+# imported from v0 graph JSON
+sequence width_max_min
+extends none
+# First value
+# unit: 1
+in pA : Real
+# Second value
+# unit: 1
+in pB : Real
+# Third value
+# unit: 1
+in pC : Real
+# Largest of the three
+out hiVal : Real
+# Smallest of the three
+out loVal : Real
+block hi = CDL.Reals.MultiMax(nin = 3)
+block lo = CDL.Reals.MultiMin(nin = 3)
+pA -> hi.u1
+pB -> hi.u2
+pC -> hi.u3
+pA -> lo.u1
+pB -> lo.u2
+pC -> lo.u3
+hi.y -> hiVal
+lo.y -> loVal

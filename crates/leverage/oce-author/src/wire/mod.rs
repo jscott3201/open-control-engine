@@ -21,7 +21,7 @@ use crate::json::Json;
 pub use crate::location::Location;
 use crate::model::{Bound, Boundary, Literal, ParamValue, Sequence};
 
-pub(crate) use dto::WireSequence;
+pub(crate) use dto::{WireSequence, split_connection};
 
 /// The largest wire document, in bytes (4 MiB, the text form's bound).
 pub const MAX_WIRE_BYTES: usize = 4 * 1024 * 1024;

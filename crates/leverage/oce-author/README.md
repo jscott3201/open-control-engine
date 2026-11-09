@@ -1,7 +1,7 @@
 # oce-author
 
 The authoring layer's library (M2; design note [`docs/design/authoring-layer.md`](../../../docs/design/authoring-layer.md),
-issues #463, #464, #482 and #492). A leverage crate: it depends on `oce-api` only, never evaluates an expression,
+issues #463, #464, #482, #492 and #496). A leverage crate: it depends on `oce-api` only, never evaluates an expression,
 and loads only throwaway engines of its own (validation stage 2), never one a host runs.
 `publish = false`.
 
@@ -13,32 +13,67 @@ and loads only throwaway engines of its own (validation stage 2), never one a ho
 | `WIRE_SCHEMA`, `wire_schema()` | The JSON Schema (draft 2020-12) derived from the wire DTOs with `schemars`, published at [`schema/sequence.schema.json`](schema/sequence.schema.json) and pinned byte for byte; the `class` enum is the catalog's authorable class paths and a sequence parameter's `type` enum is `parameter_type_names()` (`Real`, `Integer`, `Boolean` and every enumeration of `oce_api::enumeration_types()`, never a constant package). Strict profile: closed objects, all required, `anyOf` only over the value shapes. |
 | `validate`, `validate_author_side`, `Finding` | The two-stage validator. Stage 1 (`validate_author_side`): twenty-five finding codes (`STAGE_ONE_CODES`) from the model and the catalog, a repeated connection target (`single-assignment`), an Integer above 2^53 on a Real parameter, enumeration types and members (`unknown-enum-type`, `unknown-enum-literal`) and boundary bounds (`invalid-bound`, `non-finite-bound`, `crossed-bounds`) included. Stage 2, only when stage 1 is clean: emit, load in a throwaway `Engine::new()` and map every engine diagnostic back through the IRI scheme — every warning is an error finding with the engine's code (decision 14), `origin = engine`; a subject the scheme cannot name is attached to `sequence` with the raw subject in `detail`. Findings are sorted by authored position, code and detail. |
 | `emit`, `EmitOptions`, `EmitError` | The emitter to flat CXF: authored order, never sorted; IRIs `{namespace}{sequence}.{local}` (default `urn:oce:author:`, an override must end in `#`, `/` or `:`); block `@type` under the fixed class base `http://example.org#Buildings.Controls.OBC.`; only the assignments the author wrote; arrays in the CXF array form (element by element under the flattened names when the author left a gap); an enumeration-typed sequence parameter with its class IRI as `isOfDataType` and the full member path as value, and a library constant with its package IRI as `isOfDataType`, as the corpus writes them; boundary `unit`, `quantity`, `displayUnit`, `min` and `max` and no semantic record; a canonical writer (fixed key order, two-space indentation, ASCII, shortest round-trip reals); refuses stage-1 errors (`EmitError::Invalid`), a malformed namespace (`EmitError::InvalidNamespace`) and anything above `oce_api::MAX_CXF_BYTES` (`EmitError::TooLarge`). |
-| `import_cxf`, `ImportError` | A minimal importer for the flat corpus dialect (gate item 1); see below. |
+| `import_cxf`, `import_graph_v0`, `ImportOptions`, `Imported`, `ImportReport`, `ImportError` | The importer (importer note [`docs/design/importer.md`](../../../docs/design/importer.md), issue #496): the in-subset library CXF and the frozen prototype's v0 graph JSON into the model, a report of what was read and not carried, and a closed `ImportErrorKind` with a stable `code()` for every refusal; see below. |
 | `parse_text`, `parse_text_bytes`, `print_text`, `fmt_text`, `ParseError`, `PrintError` | The text form (issue #482): a hand-written recursive-descent parser over `&str` or raw bytes, bounded at parse, refusing each malformed construct with one typed `ParseError { code, location, detail }` (`PARSE_CODES`, thirty-one codes, pinned in order); a canonical printer that is total or refusing (`PrintError::Unspellable`); `fmt_text` = parse then print, idempotent. See below. |
 | `validate_text`, `parse_text_with_spans`, `SourceMap` | Validation of a text document: both stages, with every finding's `span` set to its subject's line and column. |
 
-## The minimal importer
+## The importer
 
-`import_cxf` reads one flat, single-root CXF document into the model and refuses everything outside
-the authoring subset with a typed `ImportError`, never a panic: oversize input (`TooLarge`),
-non-strict JSON — a key written twice, or an integer-shaped token outside `i64` at any depth, checked lexically, with `-0` read as the Integer zero as on the wire (`Malformed`) — a construct outside
-the subset (`Unsupported`) or a dangling reference (`Unresolved`). It deliberately ignores
-`S231:label` everywhere, a parameter's descriptive `unit`, `quantity` and `displayUnit`, and the
-root's `@type`. Gate item 1 is not yet met: of the 46 G36 fixtures, 6 are out of the M2 subset and 4
-of the other 40 import and round-trip; the 36 others wait on model decisions (GitHub #475). The
-model carries enumeration-typed parameters, bounds and constant members since issue #492; the
-importer reads them with the importer PR, so today the first refusals are still:
+Two pure functions, one per source form, each returning `Imported { sequence, report }`: the
+sequence in the source's own order and an `ImportReport` of what was read and not carried. Neither
+validates nor evaluates; names are carried, never repaired, for the validator to judge.
 
-| First refusal | Fixtures |
+- **`import_cxf(bytes, &ImportOptions)`** reads one flat, single-root CXF document (the library
+  dialect): leaf blocks; boundaries with `unit`, `quantity`, `displayUnit`, `min` and `max` (a bound
+  converted exactly as the loader converts it: a typed literal's text with `str::parse`, untrimmed,
+  an Integer on a Real boundary with `as f64`); sequence parameters of a scalar or enumeration type;
+  block parameters, arrays row-major under the catalog's template names; enumeration members and
+  library constants as full member paths resolved through `oce_api::enumerations()`; connections.
+- **`import_graph_v0(bytes, &ImportOptions)`** reads the prototype's compact block graph under the
+  wire form's bounds: `bool`/`real`/`int` boundaries, blocks under `CDL.`, parameters by token kind.
+  `unit` and `description` become comment lines on the boundary (split at line feeds, every other
+  control character a space, each line truncated at a character boundary so `# ` plus the line
+  stays within `MAX_V0_COMMENT_LINE_BYTES` = 4,096, the truncation reported), never
+  `SemanticPoint.unit`; the sequence gets `# imported from v0 graph JSON`
+  (`V0_PROVENANCE_COMMENT`). Nothing about provenance reaches the wire form or the emitter.
+- **`ImportOptions`** sets `extends` (none by default; the importer never derives one).
+- **`ImportReport`** lists, in reading order, every `Dropped { subject, property, value }` (closed
+  `DroppedProperty`: the CXF root's `@type` when it is not `S231:Block`, an `S231:label` that
+  differs from the local name, a parameter's descriptive `unit`, `quantity`, `displayUnit`, `min`
+  and `max` — the engine reads none of them — and a v0 `unit` or `description`), every
+  `Normalised` connector (one typed by a constant package, `S231:IntegerInput` with
+  `isOfDataType …G36.Types.OperationModes`, read as the Integer the engine reads; importer note,
+  decision 21) and every `Truncated` v0 comment line. An emitted document re-imports with an empty
+  report.
+
+Every refusal is an `ImportError { source, subject, kind }`, never a panic. `ImportErrorKind` is
+`#[non_exhaustive]`; branch on `code()`, one of the 29 stable kebab-case codes in
+`IMPORT_ERROR_CODES` (pinned by an in-crate test, and each produced by `tests/import_codes.rs`):
+`too-large`, `not-strict-json` (a key written twice, an integer outside `i64` at any depth, broken
+syntax, non-UTF-8), `limit-exceeded` (v0 bounds), `unknown-key`, `missing-key`, `wrong-shape`,
+`no-root`, `duplicate-id`, `unresolved-reference`, `stray-node`, `invalid-name`, the out-of-subset
+kinds `nested-composite`, `instance-member`, `constant-member`, `conditional-component`,
+`array-connector`, `array-sequence-parameter`, `expression-value`, `port-attribute` and
+`connector-attribute` (`nominal`, `unbounded`), then `driving-sink`, `class-outside-obc`,
+`datatype-mismatch`, `unknown-datatype`, `unknown-member-type`, `malformed-literal`,
+`array-shape`, `string-value` and `malformed-connection`. A document with several out-of-subset
+constructs is refused for the first of nested composite, conditional component, expression value,
+port attribute and name, whatever its node order.
+
+**Gate item 1 is met** (`tests/library_round_trip.rs`): 31 of the 34 G36 fixtures inside the M2
+subset import, emit under `urn:oce:library:`, load warning-free and have the canonical content id
+of the committed fixture re-stamped and loaded directly; their exports match byte for byte wherever
+block order agrees. The other 15 are refused with their kind:
+
+| Kind | Fixtures |
 | --- | --- |
-| Sequence parameter of an enumeration type (CDL `SimpleController` or a G36 type) | 21 |
-| `S231:min` / `S231:max` on a boundary or block-port connector | 10 |
-| A G36 (library) enumeration as a block parameter value | 5 |
-| Nested composite (out of subset) | 4 |
-| Conditional component (out of subset) | 2 |
+| `nested-composite` (out of subset) | 4 |
+| `conditional-component` (out of subset; post-M2 design pass #487) | 7 |
+| `expression-value` (out of subset) | 1 |
+| `port-attribute` (block-port bounds, not authorable in M2; #486) | 3 |
 
-`ImportError::Unsupported { subject, construct }` carries `construct` as a `String` for now; its
-shape is provisional until the full importer's design note (M2 item 5).
+The three v0 golden pairs vendored from the prototype (`tests/fixtures/v0/`, provenance in its
+`PROVENANCE.md`) each import and load to the content id of the CXF the prototype wrote.
 
 The stage-1 / engine parity table, the library round-trip table and the permutation classes are
 in the tests (`src/validate/engine_tests.rs`, `tests/library_round_trip.rs`,
@@ -58,8 +93,8 @@ A sequence parameter's value takes the same shapes except the reference.
 
 ## Enumeration types, members and bounds (issue #492)
 
-The three model changes the importer note (`docs/design/importer.md`, decisions 1 to 6 and 10)
-sequences before the importer:
+The three model changes of the importer note (`docs/design/importer.md`, decisions 1 to 6 and 10),
+which the importer reads:
 
 - **Enumeration-typed sequence parameters.** `ParameterType::Enum(type_name)`, spelled by the
   enumeration's last segment in both forms: wire `"type": "SimpleController"`, text

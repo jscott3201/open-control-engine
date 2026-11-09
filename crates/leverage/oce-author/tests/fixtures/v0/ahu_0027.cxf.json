@@ -1,0 +1,148 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "urn:mechanical-muse:ahu_0027#"
+  },
+  "@graph": [
+    {
+      "@id": "urn:mechanical-muse:ahu_0027#ahu_0027",
+      "@type": "S231:Block",
+      "S231:label": "ahu_0027",
+      "S231:containsBlock": [
+        {
+          "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.staleOvr"
+        },
+        {
+          "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.persist"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.override_active"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.yFault"
+        }
+      ]
+    },
+    {
+      "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.staleOvr",
+      "@type": "urn:mechanical-muse:ahu_0027#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "staleOvr",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.staleOvr.delayTime"
+        },
+        {
+          "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.staleOvr.delayOnInit"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.staleOvr.u"
+      },
+      "S231:hasOutput": {
+        "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.staleOvr.y"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.staleOvr.delayTime",
+      "S231:value": {
+        "@value": "86400.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.staleOvr.delayOnInit",
+      "S231:value": {
+        "@value": "true",
+        "@type": "http://www.w3.org/2001/XMLSchema#boolean"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.staleOvr.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.staleOvr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.persist.u"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.persist",
+      "@type": "urn:mechanical-muse:ahu_0027#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "persist",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.persist.delayTime"
+        },
+        {
+          "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.persist.delayOnInit"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.persist.u"
+      },
+      "S231:hasOutput": {
+        "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.persist.y"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.persist.delayTime",
+      "S231:value": {
+        "@value": "3600.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.persist.delayOnInit",
+      "S231:value": {
+        "@value": "true",
+        "@type": "http://www.w3.org/2001/XMLSchema#boolean"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.persist.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.persist.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.yFault"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.override_active",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.staleOvr.u"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:ahu_0027#ahu_0027.yFault",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    }
+  ]
+}

@@ -15,8 +15,10 @@
 //!   a throwaway engine and maps every engine diagnostic back onto the model;
 //! - the **emitter** ([`emit()`], [`EmitOptions`]): one deterministic, canonical path from the model
 //!   to flat CXF, in authored order, refusing any model stage 1 refuses;
-//! - a minimal **importer** ([`import_cxf`]) from flat CXF back to the model, sized to the
-//!   library round trip (gate item 1);
+//! - the **importer** ([`import_cxf`], [`import_graph_v0`]): the in-subset library CXF and the
+//!   frozen prototype's v0 graph JSON into the model, refusing everything else with a typed
+//!   [`ImportError`] ([`ImportErrorKind::code`]) and reporting what it read and did not carry
+//!   ([`ImportReport`]);
 //! - the **text form** ([`parse_text`], [`print_text`], [`fmt_text`]): a terse line grammar with a
 //!   hand-written recursive-descent parser, bounded at parse with one typed [`ParseError`] per
 //!   malformed construct, a canonical printer and an idempotent `fmt`; [`validate_text`] places
@@ -45,7 +47,11 @@ pub use identifier::{
     MODELICA_RESERVED_WORDS, NON_FINITE_WORDS, ProvenanceId, ProvenanceIdError, TEXT_FORM_KEYWORDS,
     check_declared_name, check_identifier_syntax, check_provenance_id,
 };
-pub use import::{ImportError, import_cxf};
+pub use import::{
+    Dropped, DroppedProperty, IMPORT_ERROR_CODES, ImportError, ImportErrorKind, ImportOptions,
+    ImportReport, Imported, Limit, MAX_V0_COMMENT_LINE_BYTES, Normalised, SourceForm, StrictJson,
+    Truncated, V0_PROVENANCE_COMMENT, import_cxf, import_graph_v0,
+};
 pub use location::Location;
 pub use model::{
     Annotations, Assignment, Block, Bound, Boundary, Connection, Endpoint, Literal, MemberRef,
