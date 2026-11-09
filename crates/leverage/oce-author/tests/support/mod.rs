@@ -8,8 +8,8 @@ pub mod text;
 use std::path::PathBuf;
 
 use oce_author::{
-    Bound, Boundary, Finding, Identifier, Literal, MemberRef, ParamValue, ParameterType, Sequence,
-    SequenceBuilder, SignalType,
+    Bound, Boundary, Finding, Identifier, ImportError, Literal, MemberRef, ParamValue,
+    ParameterType, Sequence, SequenceBuilder, SignalType,
 };
 
 /// A `Type.Member` literal.
@@ -25,6 +25,21 @@ pub const BLESS_SWITCH: &str = "OCE_BLESS_AUTHOR";
 /// members (issue #492), which the importer reads only once the importer PR of the importer note
 /// lands. The import tests assert the refusal for these and the round trip for every other golden.
 pub const BEYOND_MINIMAL_IMPORTER: &[&str] = &["every_element.cxf.json"];
+
+/// Assert `result` is the refusal [`BEYOND_MINIMAL_IMPORTER`] expects for `name`: the importer
+/// refuses the first enumeration-typed sequence parameter, `conTyp`, as an unsupported construct,
+/// so an unrelated regression in the same document cannot hide behind "some error".
+pub fn assert_beyond_minimal_refusal(name: &str, result: &Result<Sequence, ImportError>) {
+    assert!(
+        matches!(
+            result,
+            Err(ImportError::Unsupported { subject, construct })
+                if subject.ends_with(".conTyp")
+                    && construct == "a sequence parameter that is not Real, Integer or Boolean"
+        ),
+        "{name}: refused until the importer PR, at the enumeration-typed parameter: {result:?}"
+    );
+}
 
 /// The crate root.
 pub fn crate_dir() -> PathBuf {

@@ -240,10 +240,7 @@ fn every_emitted_golden_reimports_to_the_same_bytes() {
         let bytes = std::fs::read(&path).expect("read");
         let name = path.file_name().and_then(|n| n.to_str()).expect("name");
         if support::BEYOND_MINIMAL_IMPORTER.contains(&name) {
-            assert!(
-                import_cxf(&bytes).is_err(),
-                "{name}: refused until the importer PR"
-            );
+            support::assert_beyond_minimal_refusal(name, &import_cxf(&bytes));
             continue;
         }
         let sequence = import_cxf(&bytes).unwrap_or_else(|e| panic!("{}: {e}", path.display()));

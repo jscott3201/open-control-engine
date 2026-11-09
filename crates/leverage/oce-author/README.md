@@ -78,8 +78,9 @@ sequences before the importer:
 - **Boundary bounds.** `Boundary::min` / `max`, each an optional `Bound` (an Integer or Real number
   literal, never a reference): wire `"min": []` or `[<number>]`, text `@min <number>` / `@max
   <number>` beside `@displayUnit` (no unit suffix). A Real boundary takes either kind (an Integer
-  widened, exactly up to 2^53), an Integer boundary an Integer, a Boolean boundary none
-  (`invalid-bound`); a non-finite bound is `non-finite-bound` (the builder refuses it too,
+  widened, exactly up to 2^53), an Integer boundary an Integer inside the engine's `i32` Integer
+  domain (a bound outside `i32::MIN..=i32::MAX` is refused by stage 1, because the engine would
+  narrow it silently), a Boolean boundary none (`invalid-bound`); a non-finite bound is `non-finite-bound` (the builder refuses it too,
   `BuildError::NonFiniteBound`) and `min > max` is `crossed-bounds`. The emitter writes `S231:min` /
   `S231:max` after `S231:displayUnit`: a typed `xsd:double` on a Real boundary, a bare JSON integer
   on an Integer one. On an input they are the effective acceptance domain and inside the canonical

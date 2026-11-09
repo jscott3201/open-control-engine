@@ -59,9 +59,9 @@ IRI under the root. Port names are never authored; they come from the catalog (#
 
 `SemanticPoint` is a closed struct of optional fields: `name`, `label`, `unit`, `brick`, `s223`,
 `qudt`, `haystack` (a list of tags) and `provisional`. Literals are tagged: `Integer(i64)` when the
-token has no fraction or exponent, `Real(f64)` otherwise, `Boolean`, `Text`, `EnumMember` (the
-member's type and name). A Real parameter accepts an Integer literal, as CDL parameter validation
-widens it; an Integer parameter refuses a Real literal.
+token has no fraction or exponent, `Real(f64)` otherwise, `Boolean`, `Text`, `EnumMember` (now
+`Member`; the member's type and name). A Real parameter accepts an Integer literal, as CDL
+parameter validation widens it; an Integer parameter refuses a Real literal.
 
 *Amended 2026-11-09 (issue #492, from the [importer note](importer.md#model-changes)):* three model
 changes. A sequence parameter's type is a `ParameterType`: `Real`, `Integer`, `Boolean` or
@@ -334,7 +334,7 @@ pre-empt where one exists. The table is a test fixture: gate item 3 is a table-d
 | `unknown-target` | author-only | `unknown-destination` | 1 | `unresolved-reference` |
 | `unknown-port` | author-only | — | 1 | `unresolved-reference` (no such port node; amended 2026-11-09) |
 | `invalid-semantic-point` | author-only | — | 1 | — |
-| `invalid-bound` | author-only (added 2026-11-09, issue #492) | — | 1 | `malformed-document` (a bound on a Boolean boundary, a Real on an Integer boundary; also an Integer above 2^53 on a Real boundary) |
+| `invalid-bound` | author-only (added 2026-11-09, issue #492) | — | 1 | `malformed-document` (a bound on a Boolean boundary, a Real on an Integer boundary; also an Integer above 2^53 on a Real boundary). *Amended 2026-11-09, #493:* also an Integer bound on an Integer boundary outside `i32::MIN..=i32::MAX`, because the engine narrows it to `i32` without a warning (no engine code to pre-empt; a parity test pins the narrowing) |
 | `non-finite-bound` | engine (added 2026-11-09, issue #492) | — | 1 | — (the builder refuses it too) |
 | `crossed-bounds` | engine (added 2026-11-09, issue #492) | — | 1 | — (`min > max`) |
 | `invalid-provenance-id` | author-only | — | 1 | — |

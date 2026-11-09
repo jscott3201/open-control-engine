@@ -7,7 +7,7 @@
 
 mod support;
 
-use oce_api::Value;
+use oce_api::{PointDirection, Value};
 use oce_author::{
     Block, Bound, Boundary, BuildError, Connection, EmitOptions, Endpoint, Sequence,
     SequenceBuilder, SignalType, WireError, emit, from_wire_str, parse_text, print_text,
@@ -272,6 +272,41 @@ fn an_input_bound_moves_the_content_id_and_an_output_bound_does_not() {
     assert_eq!(i32_range, plain);
 }
 
+#[test]
+fn an_output_bound_reaches_the_loaded_point_list_bit_for_bit() {
+    for (low, high) in [(-0.0, 1.5), (5e-324, f64::MAX), (-273.15, 0.1 + 0.2)] {
+        let s = bounded(
+            NONE,
+            (Some(Bound::Real(low)), Some(Bound::Real(high))),
+            NONE,
+            (
+                Some(Bound::Integer(i64::from(i32::MIN))),
+                Some(Bound::Integer(7)),
+            ),
+        );
+        assert_eq!(validate(&s), vec![], "{low:?} {high:?}");
+        let engine = load_clean(&emit(&s, &EmitOptions::new()).expect("emit"));
+        let points = engine.point_list(None).expect("point list");
+        // The loaded point list names an output point by the block output that drives it.
+        let out = |suffix: &str| {
+            points
+                .iter()
+                .find(|p| p.direction == PointDirection::Out && p.path.ends_with(suffix))
+                .unwrap_or_else(|| panic!("{suffix}: {points:?}"))
+        };
+        let y = out(".abs.y");
+        assert_eq!(y.min.map(f64::to_bits), Some(low.to_bits()), "{y:?}");
+        assert_eq!(y.max.map(f64::to_bits), Some(high.to_bits()), "{y:?}");
+        let m = out(".absInt.y");
+        assert_eq!(
+            m.min.map(f64::to_bits),
+            Some(f64::from(i32::MIN).to_bits()),
+            "{m:?}"
+        );
+        assert_eq!(m.max.map(f64::to_bits), Some(7.0_f64.to_bits()), "{m:?}");
+    }
+}
+
 /// A finding as `(code, subject)`.
 type Pair = (&'static str, String);
 
@@ -330,6 +365,8 @@ fn each_bound_refusal_has_its_code() {
             bounded(NONE, NONE, NONE, (None, real(1.5))),
             vec![pair("invalid-bound", "m")],
         ),
+        // Author-only, with no engine parity row: the engine would round the Integer to the
+        // nearest Real and load it warning-free, so stage 1 is the only place it can be refused.
         (
             "an inexact Integer on a Real input",
             bounded(
@@ -339,6 +376,28 @@ fn each_bound_refusal_has_its_code() {
                 NONE,
             ),
             vec![pair("invalid-bound", "u")],
+        ),
+        // The engine's Integer domain is `i32`; it narrows a wider bound without a warning
+        // (decision 6, amended by #493; parity row in `validate/engine_tests.rs`).
+        (
+            "an Integer input bound one above the i32 range",
+            bounded(NONE, NONE, (None, int(i64::from(i32::MAX) + 1)), NONE),
+            vec![pair("invalid-bound", "n")],
+        ),
+        (
+            "an Integer input bound one below the i32 range",
+            bounded(NONE, NONE, (int(i64::from(i32::MIN) - 1), None), NONE),
+            vec![pair("invalid-bound", "n")],
+        ),
+        (
+            "an Integer output bound one above the i32 range",
+            bounded(NONE, NONE, NONE, (int(i64::from(i32::MAX) + 1), None)),
+            vec![pair("invalid-bound", "m")],
+        ),
+        (
+            "the i64 extremes on an Integer input",
+            bounded(NONE, NONE, (int(i64::MIN), int(i64::MAX)), NONE),
+            vec![pair("invalid-bound", "n"), pair("invalid-bound", "n")],
         ),
         (
             "crossed Reals",
@@ -378,6 +437,12 @@ fn each_bound_refusal_has_its_code() {
         let s = bounded((min, max), NONE, NONE, NONE);
         assert_eq!(validate(&s), vec![], "{min:?} {max:?}");
     }
+    // Exactly the i32 range is accepted on both Integer boundaries, and an i64 beyond it on a Real
+    // boundary is not an Integer-domain question.
+    let edges = (int(i64::from(i32::MIN)), int(i64::from(i32::MAX)));
+    let wide = (int(i64::from(i32::MIN) - 1), int(i64::from(i32::MAX) + 1));
+    let s = bounded(wide, NONE, edges, edges);
+    assert_eq!(validate(&s), vec![]);
 }
 
 #[test]

@@ -521,3 +521,46 @@ fn a_real_bound_on_an_integer_boundary_meets_the_engines_malformed_document() {
         "{engine:?}"
     );
 }
+
+#[test]
+fn an_integer_bound_outside_i32_preempts_a_silent_narrowing() {
+    // Kind: pre-empts a silent narrowing. The engine's Integer domain is `i32`; with stage 1
+    // bypassed an Integer input declared over the whole `i64` range loads warning-free and
+    // reports the `i32` range, so the loaded domain is not the declared one. That is why stage 1
+    // refuses the bound as `invalid-bound` (importer note, decision 6, amended by #493).
+    let mut s = econ_enable();
+    s.inputs
+        .push(Boundary::new(id("uStage"), SignalType::Integer));
+    s.inputs[2].min = Some(Bound::Integer(i64::MIN));
+    s.inputs[2].max = Some(Bound::Integer(i64::from(i32::MAX) + 1));
+    s.blocks
+        .push(Block::new(id("toReal"), "CDL.Conversions.IntegerToReal"));
+    s.outputs
+        .push(Boundary::new(id("yStage"), SignalType::Real));
+    for (from, to) in [("uStage", "toReal.u"), ("toReal.y", "yStage")] {
+        s.connections
+            .push(Connection::new(Endpoint::parse(from), Endpoint::parse(to)));
+    }
+    assert_eq!(
+        pairs(&validate_author_side(&s)),
+        vec![
+            ("invalid-bound", "uStage".to_owned()),
+            ("invalid-bound", "uStage".to_owned())
+        ]
+    );
+    assert_eq!(pairs(&engine(&s)), vec![], "the engine says nothing");
+    let bytes = emit_unchecked(&s, &EmitOptions::default()).expect("bypass emits");
+    let mut loaded = oce_api::Engine::new();
+    let (report, _) = loaded.load_cxf(&bytes).expect("the engine loads it");
+    assert!(report.warnings.is_empty(), "{:?}", report.warnings);
+    let inputs = loaded.input_definitions().expect("definitions");
+    let stage = inputs
+        .iter()
+        .find(|d| d.path.ends_with(".uStage"))
+        .expect("uStage");
+    assert!(
+        matches!(stage.min, Some(oce_api::Value::Integer(v)) if v == i64::from(i32::MIN))
+            && matches!(stage.max, Some(oce_api::Value::Integer(v)) if v == i64::from(i32::MAX)),
+        "the engine narrows to i32: {stage:?}"
+    );
+}

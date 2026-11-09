@@ -4,9 +4,11 @@
 //! non-finite Real (`non-finite-bound`, the engine's code); a bound on a Boolean boundary, a Real
 //! literal on an Integer boundary, or an Integer literal on a Real boundary above 2^53 in magnitude
 //! (no exact Real) (`invalid-bound`, author-only, pre-empting the engine's `malformed-document`).
+//! An Integer bound on an Integer boundary outside the engine's `i32` Integer domain is refused
+//! as `invalid-bound` too: the engine narrows such a bound to `i32` without a warning, so the
+//! loaded domain would differ from the declared one (decision 6, amended 2026-11-09, #493).
 //! Then, when both bounds pass, a crossed pair, `min > max` (`crossed-bounds`, the engine's
-//! code). No range check against the CDL `i32` range is made: the engine applies none (decision
-//! 6). `bound-mismatch` against a connected port stays a stage-2 engine code.
+//! code). `bound-mismatch` against a connected port stays a stage-2 engine code.
 
 use crate::model::{Bound, Boundary, SignalType};
 
@@ -26,6 +28,14 @@ fn bound_problem(boundary: &Boundary, side: &str, bound: Bound) -> Option<(&'sta
             INVALID_BOUND,
             format!(
                 "`{side}` of the Real boundary `{name}`: the Integer {value} exceeds 2^53 ({MAX_EXACT_INTEGER}) in magnitude, so its Real may round; write the Real you mean"
+            ),
+        )),
+        (SignalType::Integer, Bound::Integer(value)) if i32::try_from(value).is_err() => Some((
+            INVALID_BOUND,
+            format!(
+                "`{side}` of the Integer boundary `{name}` is {value}, outside the engine's Integer range {}..={}; the engine would narrow it",
+                i32::MIN,
+                i32::MAX
             ),
         )),
         (SignalType::Real, _) | (SignalType::Integer, Bound::Integer(_)) => None,

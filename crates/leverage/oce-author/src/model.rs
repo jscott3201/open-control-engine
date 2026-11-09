@@ -245,7 +245,10 @@ impl Boundary {
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug)]
 pub enum Bound {
-    /// An integer token: no fraction and no exponent.
+    /// An integer token: no fraction and no exponent. The model, wire and text form carry the
+    /// full `i64` bit for bit, but the engine's Integer domain is `i32`: on an Integer boundary
+    /// stage 1 refuses a bound outside `i32::MIN..=i32::MAX` with `invalid-bound`, because the
+    /// engine would narrow it without a warning (on a Real boundary the limit is 2^53).
     Integer(i64),
     /// A real token: a fraction or an exponent.
     Real(f64),
@@ -383,7 +386,10 @@ impl From<Literal> for ParamValue {
 #[non_exhaustive]
 #[derive(Clone, Debug)]
 pub enum Literal {
-    /// An integer token: no fraction and no exponent.
+    /// An integer token: no fraction and no exponent. The model, wire and text form carry the
+    /// full `i64` bit for bit, but the engine's Integer domain is `i32`: on an Integer boundary
+    /// stage 1 refuses a bound outside `i32::MIN..=i32::MAX` with `invalid-bound`, because the
+    /// engine would narrow it without a warning (on a Real boundary the limit is 2^53).
     Integer(i64),
     /// A real token: a fraction or an exponent.
     Real(f64),

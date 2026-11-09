@@ -308,7 +308,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `S231:max` (a typed `xsd:double` on a Real boundary, a bare integer on an Integer one). Stage 1
   gains four codes (`STAGE_ONE_CODES` is twenty-five): `unknown-enum-type` (an unknown type name or a
   constant package as a type; the engine's code), `invalid-bound` (author-only: a bound on a Boolean
-  boundary, a Real on an Integer boundary, an Integer above 2^53 on a Real one), `non-finite-bound`
+  boundary, a Real on an Integer boundary, an Integer above 2^53 on a Real one, and an Integer
+  bound on an Integer boundary outside the engine's `i32` domain, which the engine would narrow
+  without a warning: the importer note's decision 6 is amended, and a parity test pins the
+  narrowing), `non-finite-bound`
   and `crossed-bounds` (the engine's codes), each pinned by the parity test; a reference to an
   enumeration parameter type-checks by class identity (`parameter-kind-mismatch` otherwise), and the
   builder refuses a non-finite bound (`BuildError::NonFiniteBound`). Tests generate every enumeration
@@ -321,7 +324,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
   emit goldens, `wire/econ_enable.json`, `wire/note_example.json`, `wire/defects.json` and its
   findings golden; the authoring note's wire example gained `"min": [], "max": []`. The minimal
   importer refuses the every-element golden until the importer PR, which unblocks 27 of #475's 36
-  fixtures with these model changes; the authoring note carries the dated amendments.
+  fixtures with these model changes; the authoring note carries the dated amendments. The renames
+  (`EnumMember` to `MemberRef`, `Literal::EnumMember` to `Literal::Member`, `value_type:
+  ParameterType`) are breaking for pre-1.0 consumers of `oce-author`; the `oce` CLI (GitHub #491)
+  is the only one.
 
 - **`oce-author` reads the facade's enumeration table** (GitHub #488, issue #468). The pinned
   four-row `ENUM_TYPES` table is deleted: the validator and emitter look an enum parameter's type up

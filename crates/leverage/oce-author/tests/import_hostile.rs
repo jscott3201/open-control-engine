@@ -338,11 +338,14 @@ fn a_bounded_mutation_sweep_over_every_document_never_panics() {
     let reduced: [&[u8]; 1] = [full[3]];
     let mut cases = 0usize;
     for (name, bytes) in documents() {
-        assert_eq!(
-            import_cxf(&bytes).is_ok(),
-            !support::BEYOND_MINIMAL_IMPORTER.contains(&name.as_str()),
-            "{name} reads unmutated, or is refused until the importer PR"
-        );
+        // A document the importer already refuses unmutated makes a weaker sweep (most mutations
+        // stop at the same refusal) until the importer PR reads it.
+        let read = import_cxf(&bytes);
+        if support::BEYOND_MINIMAL_IMPORTER.contains(&name.as_str()) {
+            support::assert_beyond_minimal_refusal(&name, &read);
+        } else {
+            assert!(read.is_ok(), "{name} reads unmutated: {read:?}");
+        }
         let large = bytes.len() > 16 * 1024;
         // Above 128 KiB the replacement is dropped too: a flip, an insertion, a truncation.
         let huge = bytes.len() > 128 * 1024;
