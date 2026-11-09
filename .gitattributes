@@ -1,3 +1,5 @@
 * text=auto eol=lf
 # Compiled-schedule blob goldens are byte-exact binary fixtures: never normalize line endings.
 *.oceb binary
+# oce-replay canonical trace goldens are byte-exact binary fixtures too.
+*.trace binary
