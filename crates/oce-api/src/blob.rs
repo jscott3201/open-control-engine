@@ -7,7 +7,7 @@
 
 use oce_graph::blob::{self, BlobInput, BlobOutput, BlobSource, content_id_field};
 
-use crate::{ContentId, Engine, OcError};
+use crate::{ContentId, ContentIdError, Engine, OcError};
 
 /// A compiled-schedule blob for the loaded executable, and the content id it records.
 ///
@@ -23,7 +23,7 @@ pub struct CompiledBlob {
     /// The canonical content id the blob records, exactly as [`Engine::content_id`] mints it: its
     /// 32 SHA-256 digest bytes fill the header's content-id field. Present for every loaded CXF
     /// document, partial export or not; `None` only for a hand-built model with no id, which the
-    /// blob records as 32 zero bytes.
+    /// blob records as 32 zero bytes. Any other failure to mint the id refuses the blob.
     pub content_id: Option<ContentId>,
 }
 
@@ -41,11 +41,21 @@ impl Engine {
     ///
     /// # Errors
     /// [`OcError::State`] when no model is loaded or parameter edits are pending;
+    /// [`OcError::ContentId`] when the canonical content id cannot be minted for any reason other
+    /// than an unnamed block of a hand-built model (which no CXF load produces, and which records
+    /// "no content id"): a blob from CXF always carries its id;
     /// [`OcError::Blob`] when the executable cannot be encoded (for example two boundary outputs
     /// with one path, or a non-finite parameter) or its encoding does not decode.
     pub fn compile_blob(&self) -> Result<CompiledBlob, OcError> {
         self.capture_preconditions()?;
-        let content_id = self.content_id().ok();
+        // Only a hand-built model, with an unnamed block, has no id; no CXF load produces one. Any
+        // other minting failure is an encoder defect and refuses the blob, so a blob loaded from
+        // CXF never ships without its id (the registry fetches by it).
+        let content_id = match self.content_id() {
+            Ok(id) => Some(id),
+            Err(OcError::ContentId(ContentIdError::UnnamedBlock { .. })) => None,
+            Err(error) => return Err(error),
+        };
 
         let inputs: Vec<BlobInput<'_>> = self
             .io

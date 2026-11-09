@@ -214,3 +214,18 @@ fn a_width_driven_and_a_matrix_element_alias_are_refused() {
     );
     assert_spelling_refused(&doc, "K_01_1");
 }
+
+#[test]
+fn a_zero_index_is_still_refused_end_to_end_by_the_range_rule() {
+    // `table_0_1` is a canonical spelling of an out-of-range index: the spelling check leaves it
+    // to the table's own range rule, which refuses the load with its typed diagnostic.
+    let Err(error) = Engine::new().load_cxf(time_table(&[("table_0_1", 5.0)]).as_bytes()) else {
+        panic!("a zero table index refuses the load");
+    };
+    let codes: Vec<DiagCode> = error.all_diagnostics().map(|d| d.code).collect();
+    assert!(codes.contains(&DiagCode::ParameterOutOfRange), "{codes:?}");
+    assert!(
+        !codes.contains(&DiagCode::NonCanonicalElementName),
+        "{codes:?}"
+    );
+}

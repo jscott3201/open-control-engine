@@ -213,7 +213,7 @@ natively, and a separate job replays it on `wasm32-wasip1` under a checksum-pinn
 ([CI and the gate](ci-and-the-gate.md#the-blob-round-trip)). `bash .agents/gate.sh roundtrip`
 records on the local host and replays here and on `wasm32-wasip1`.
 
-**The recorded artifact, format version 1.** One directory holding exactly two files per fixture;
+**The recorded artifact, recording format 1.** One directory holding exactly two files per fixture;
 the reader refuses any other name. `<fixture>.oceb` is the blob the recording target encoded.
 `<fixture>.trace.tsv` is UTF-8 text, one record per line, fields separated by one tab, every line
 ending in a newline:

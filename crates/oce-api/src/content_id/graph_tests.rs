@@ -171,8 +171,29 @@ fn the_engine_surfaces_the_refusal_as_a_typed_error() {
             ContentIdError::UnnamedBlock { .. }
         ))
     ));
-    // The blob then records no id rather than refusing to compile.
+    // An unnamed block is the hand-built "no content id" case: the blob records 32 zero bytes.
     assert_eq!(engine.compile_blob().unwrap().content_id, None);
+}
+
+#[test]
+fn any_other_minting_failure_refuses_the_blob_instead_of_dropping_its_id() {
+    let mut engine = Engine::new();
+    engine
+        .load_cxf(include_bytes!(
+            "../../tests/fixtures/content_id/offset_gain.jsonld"
+        ))
+        .unwrap();
+    std::sync::Arc::make_mut(&mut engine.model).blocks[0].class_iri = Arc::from("CDL.Not.A.Class");
+    let refused = engine.compile_blob();
+    assert!(
+        matches!(
+            refused,
+            Err(crate::OcError::ContentId(
+                ContentIdError::UnregisteredClass { .. }
+            ))
+        ),
+        "{refused:?}"
+    );
 }
 
 #[test]

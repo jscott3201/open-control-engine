@@ -32,6 +32,11 @@ the [product contract](product-contract.md) and pre-1.0 change control still app
   [order](cxf-composite-subset.md#ordering-and-identity-contract), JSON spelling and instance
   namespace, and moves with any parameter bit, name, wiring, class or boundary I/O definition.
   `ExportReport::complete` separately says whether an export is partial; the report carries no id.
+  `Engine::canonical_content_bytes` returns the `OCECANON` bytes the id hashes, versioned with the
+  id text (`canon1`) and intended for recomputing the SHA-256 or diagnostics; no decoder is provided
+  or promised. A minting failure is `OcError::ContentId` with a `ContentIdError` (`UnnamedBlock`,
+  `UnregisteredClass`, `UnknownEnumClass`, `MalformedModel`, `TooLarge`), reachable only from a
+  hand-built model.
 - **Compatibility descriptor** versions the closed public-fact receipt itself. Equality does not
   establish executable identity, model-specific IO equality, generation, state compatibility or trust.
 

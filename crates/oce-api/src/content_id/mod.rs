@@ -76,10 +76,11 @@ impl Engine {
         Ok(ContentId::from_digest(hash::sha256(&bytes)))
     }
 
-    /// The `OCECANON` v1 canonical bytes [`Self::content_id`] hashes, for a host that recomputes
-    /// the SHA-256 itself or inspects what the id covers. The layout is the design note's
-    /// encoding table (`docs/design/content-id.md`, "Canonical bytes"); it is versioned with the
-    /// id text (`canon1`), so the bytes for one model change only with a `canon2`. Allocates one
+    /// The `OCECANON` v1 canonical bytes [`Self::content_id`] hashes, intended for recomputing the
+    /// SHA-256 independently or for diagnostics (seeing what the id covers). The layout is the
+    /// design note's encoding table (`docs/design/content-id.md`, "Canonical bytes") and is
+    /// versioned with the id text (`canon1`): a layout change is `canon2`. No decoder is provided
+    /// or promised; the bytes are hashed, never parsed. Allocates one
     /// `Vec<u8>` for the bytes (plus the sorted records it writes them from), bounded by the loaded
     /// model's size; no engine state changes.
     ///

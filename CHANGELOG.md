@@ -49,13 +49,16 @@ and a gate that accepted any text would restore exactly the false assurance desc
   by port index, every name stripped of its namespace with the whole-IRI fallback. It refuses
   before a load and while parameter edits are pending (`compile_blob`'s preconditions) and is a
   typed `OcError::ContentId` for a hand-built model with an unnamed block. `ContentId` has
-  `Display`, a checked `parse`/`FromStr` of the exact text and `digest()`; it does not convert from
+  `Display`, a checked `parse`/`FromStr` of the exact text (refusing with `ContentIdParseError`)
+  and `digest()`; it does not convert from
   a string, `CatalogContentId` or `DomainKey`. `Engine::canonical_content_bytes()` returns the
-  encoded bytes so a host can recompute the digest. The order-bearing export tag is removed:
+  encoded bytes, versioned with the id text (`canon1`), for recomputing the digest or diagnostics;
+  no decoder is provided or promised. The order-bearing export tag is removed:
   `ExportReport::content_id_complete()`, the deprecated `ExportReport::content_id()`,
   `CompleteExportContentId` and `ContentIdError::Incomplete` are gone; `ExportReport::complete()
   -> Result<(), ExportIncomplete>` keeps the completeness check, and `ContentIdError` now names the
-  minting refusals. The compatibility descriptor is revision 2: its tenth line is `content:none` or
+  minting refusals (`UnnamedBlock`, `UnregisteredClass`, `UnknownEnumClass`, `MalformedModel`,
+  `TooLarge`, carried as the new `OcError::ContentId`). The compatibility descriptor is revision 2: its tenth line is `content:none` or
   the `oce:canon1:` id, `CompatibilityDescriptor::current` takes an `Option<&ContentId>` and is
   infallible, `export_content_id()` is `content_id()`, `check_compatible` requires revision 2, and
   `ExportPresence`/`ExportContent` are `ContentIdPresence`/`ContentIdMismatch`; the replay record's
@@ -77,7 +80,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   and `content` line); `oce-cxf`'s `fixture_corpus_import.txt` gains one line for each of the four
   new `tests/fixtures/content_id/*.jsonld` documents (the tracked corpus is 218), every existing
   line unchanged. `g36_export_content.txt`, the export bytes and every other golden are
-  byte-identical. PC-018, PC-021 and PC-036 are reworded (product contract revision 23).
+  byte-identical. PC-018, PC-021 and PC-036 are reworded and PC-041 names a format-2 blob (product
+  contract revision 23). `oce-author`'s `validate_cost` ratio test fails on `development` as well on
+  a local arm64 debug build; it is tracked as #478, untouched here.
 
 - **Slot-indexed execute entry** (GitHub #459, issue #444). `Engine::frame_slots()` resolves the
   executable boundary once into an owned `FrameSlots` map (input slots in `input_definitions()`
@@ -158,7 +163,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
 - **Blob format 2: the content-id field holds the canonical digest** (GitHub #474, issue #470).
   `oce_graph::blob::FORMAT_VERSION` is 2 and the decoder accepts only 2: the 32-byte header field
   now holds the SHA-256 digest of the canonical content id in output order, present for all 46
-  fixtures including the 13 partial exports, and 32 zero bytes only for a hand-built model.
+  fixtures including the 13 partial exports, and 32 zero bytes only for a hand-built model with an
+  unnamed block. Any other failure to mint the id refuses `compile_blob` with `OcError::ContentId`,
+  so a blob from CXF never ships without its id.
   `content_id_field` takes the digest bytes; `CompiledBlob::content_id` is `Option<ContentId>`.
   The decoder still carries the field verbatim, so `sha2` never enters the `no_std` core. The 46
   blob goldens are re-blessed and differ from format 1 in exactly three places: byte 4 (format
