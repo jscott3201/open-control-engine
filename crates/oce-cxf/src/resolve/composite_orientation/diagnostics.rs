@@ -16,11 +16,7 @@ impl CompositeOrientation {
         let endpoints = &canonical.endpoints;
         let mut expansions = HashMap::new();
         let mut expansion_reaches = |target: EndpointIx, required_polarity: Option<Polarity>| {
-            *expansions
-                .entry((target, required_polarity))
-                .or_insert_with(|| {
-                    self.expansion_reaches_generic_refusal(canonical, target, required_polarity)
-                })
+            self.memoized_expansion_reaches(canonical, &mut expansions, target, required_polarity)
         };
         for &(authored_source, authored_target) in canonical.authored() {
             let source_port = endpoints.get(authored_source);
@@ -119,6 +115,20 @@ impl CompositeOrientation {
         None
     }
 
+    /// [`Self::expansion_reaches_generic_refusal`] answered once per distinct `(target,
+    /// polarity)` and read back from `memo` afterwards; the verdict is the unmemoized one.
+    fn memoized_expansion_reaches(
+        &self,
+        canonical: &CanonicalConnections<'_>,
+        memo: &mut HashMap<(EndpointIx, Option<Polarity>), bool>,
+        target: EndpointIx,
+        required_polarity: Option<Polarity>,
+    ) -> bool {
+        *memo.entry((target, required_polarity)).or_insert_with(|| {
+            self.expansion_reaches_generic_refusal(canonical, target, required_polarity)
+        })
+    }
+
     fn expansion_reaches_generic_refusal(
         &self,
         canonical: &CanonicalConnections<'_>,
@@ -180,3 +190,7 @@ impl CompositeOrientation {
         false
     }
 }
+
+#[cfg(test)]
+#[path = "diagnostics_tests.rs"]
+mod tests;

@@ -41,7 +41,7 @@ Verified in the tree, with the enforcing site named so you can check rather than
 | Composite boundary path | 64 non-top `isConnectedTo` hops | iterative CXF lowering — `crates/oce-cxf/src/resolve/composite.rs` |
 | Composite boundary work | 65,536 target examinations and 8 MiB of aggregate target-IRI bytes per document | iterative CXF lowering — `crates/oce-cxf/src/resolve/composite.rs` |
 | Connection collection (resolve Step 9) | time and memory linear in the edge list: each distinct endpoint IRI classified once, one shared diagnostic subject per endpoint | `crates/oce-cxf/src/resolve/connection_endpoints.rs` |
-| Composite lowering (connection orientation, boundary walk, lowered edge list) | time and memory linear in the document: each distinct endpoint IRI classified once, one shared allocation per lowered IRI | `crates/oce-cxf/src/resolve/composite_orientation/endpoints.rs` |
+| Composite lowering (connection orientation, boundary walk, lowered edge list) | time and memory linear in the document's edge list and IRI bytes: each distinct endpoint IRI classified once, one shared allocation per lowered IRI | `crates/oce-cxf/src/resolve/composite_orientation/endpoints.rs` |
 
 Each count or byte bound returns a typed diagnostic rather than aborting. The connection-collection
 and composite-lowering rows are complexity guarantees, not limits; see [Untrusted CXF remains untrusted input](#untrusted-cxf-remains-untrusted-input).

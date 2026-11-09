@@ -65,6 +65,7 @@ impl LoweredCxf {
     }
 
     /// Each lowered `@graph` node's `@id` with its lowered targets, in `@graph` order.
+    /// Guarantees the same edges in the same order as the previously rewritten `isConnectedTo`.
     pub(super) fn graph_edge_groups(&self) -> impl Iterator<Item = (&str, &[Arc<str>])> {
         self.doc
             .graph
@@ -74,6 +75,7 @@ impl LoweredCxf {
     }
 
     /// Authored edges followed by node-less derived-source edges in block-2 order.
+    /// Guarantees the same edges in the same order as the previously rewritten `isConnectedTo`.
     pub(super) fn connection_edges(&self) -> impl Iterator<Item = (&str, &str)> {
         let synthesized = self
             .synthesized_connections

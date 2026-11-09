@@ -8,12 +8,12 @@
 //! once per edge — 64 GiB. Lowering now interns each distinct endpoint once and shares one
 //! allocation per lowered IRI, so these documents import in time and memory linear in their size.
 //!
-//! The 15 s wall-clock bound per import is deliberately generous — it guards the complexity
-//! class, not a speed. With the fix one 10 MB import takes well under a second in debug and under
-//! 0.1 s in release on a developer machine; allowing roughly 3× for a Windows cell or a loaded CI
-//! runner still leaves more than 5× headroom. Before the fix the same import took several minutes
-//! in release (and about half an hour in debug), so the pre-fix code fails the bound by more than
-//! an order of magnitude. Documents are generated straight to bytes, and each test builds at most
+//! The 30 s wall-clock bound per import is deliberately generous — it guards the complexity
+//! class, not a speed. With the fix one 10 MB import takes about a second in debug and under
+//! 0.1 s in release on a developer machine; the bound is a hedge for the Windows debug cell under
+//! parallel load. Before the fix the same import took more than 180 s in release (244 s of CPU)
+//! and about half an hour in debug, so 30 s still separates the two complexity classes by more
+//! than 5×, and nextest's 120 s slow-timeout kill still holds. Documents are generated straight to bytes, and each test builds at most
 //! three 10 MB documents, so each stays under 10 s in debug.
 
 use std::time::{Duration, Instant};
@@ -27,7 +27,7 @@ const MIB: usize = 1024 * 1024;
 const FANOUT: usize = 65_535;
 
 /// Generous bound on one import; see the module docs.
-const IMPORT_BOUND: Duration = Duration::from_secs(15);
+const IMPORT_BOUND: Duration = Duration::from_secs(30);
 
 const MODEL: &str = "http://example.org#fan";
 
