@@ -1,7 +1,8 @@
 //! Refusal parity between the slot entry and the named path, and refusal atomicity (issue #444).
 //!
 //! For every G36 catalog fixture, after a few accepted frames, each refusal class is submitted to
-//! both entries (`support/dual_entry.rs`): every shorter arity, every wrong type in every slot,
+//! both entries (`support/dual_entry.rs`): every shorter arity, every other scalar type (String
+//! included) in every slot,
 //! NaN and both infinities in every Real slot under each non-finite policy, and every bad time
 //! (NaN, both infinities, beyond `MAX_FRAME_TIME_MAGNITUDE`, before the previous frame). Both must
 //! return the same error (variant, path, time) — derived independently here from the slot's
@@ -70,20 +71,32 @@ fn unchanged(dual: &DualEntry, before: &[u8], when: &str) {
         .unwrap_or_else(|error| panic!("{when}: {error}"));
 }
 
-/// A value of each other scalar type than `value_type`.
+/// A value of each other scalar type than `value_type`, String included. The corpus has only
+/// Real, Integer and Boolean inputs (no registry block has String or Enum signal ports), so every
+/// slot is refused a String too; the Enum-slot and String-slot cases run on detached private
+/// probes in `src/frame_slots_tests.rs`.
 fn wrong_types(value_type: ValueType) -> Vec<Value> {
-    [Value::Real(0.0), Value::Integer(0), Value::Boolean(false)]
-        .into_iter()
-        .filter(|value| value.value_type() != value_type)
-        .collect()
+    [
+        Value::Real(0.0),
+        Value::Integer(0),
+        Value::Boolean(false),
+        Value::String("not a signal".into()),
+    ]
+    .into_iter()
+    .filter(|value| value.value_type() != value_type)
+    .collect()
 }
 
 /// Whether `definition` declares a bound, so `Admit` still refuses the non-finite `x` as a domain
 /// violation: any bound refuses NaN, a finite bound refuses the infinity beyond it.
 fn domain_refuses(definition: &InputDefinition, x: f64) -> bool {
-    let below = |bound: &Option<Value>| matches!(bound, Some(Value::Real(lo)) if x.partial_cmp(lo).is_none_or(|o| o.is_lt()));
-    let above = |bound: &Option<Value>| matches!(bound, Some(Value::Real(hi)) if x.partial_cmp(hi).is_none_or(|o| o.is_gt()));
-    below(&definition.min) || above(&definition.max)
+    // NaN compares as neither ordering, so it fails any present bound.
+    let outside = |bound: &Option<Value>, fails: fn(std::cmp::Ordering) -> bool| match bound {
+        Some(Value::Real(bound)) => x.partial_cmp(bound).is_none_or(fails),
+        _ => false,
+    };
+    outside(&definition.min, std::cmp::Ordering::is_lt)
+        || outside(&definition.max, std::cmp::Ordering::is_gt)
 }
 
 /// Every refusal class on one fixture, then one good frame.
@@ -98,6 +111,7 @@ fn refusal_matrix(name: &str) -> usize {
     let good = frame(&dual.slots, WARM_FRAMES);
     let definitions = dual.slots.inputs().to_vec();
     let mut refused = 0;
+    let mut admitted = 0;
 
     // Arity: every shorter vector is missing its first absent slot, on both entries.
     let before = snapshot(&dual);
@@ -225,7 +239,7 @@ fn refusal_matrix(name: &str) -> usize {
                 refused += 1;
             } else {
                 match dual.step(time, &values) {
-                    Ok(Outcome::Accepted { .. }) => {}
+                    Ok(Outcome::Accepted { .. }) => admitted += 1,
                     other => panic!("{when}: {other:?}"),
                 }
             }
@@ -233,8 +247,14 @@ fn refusal_matrix(name: &str) -> usize {
     }
 
     // A good frame after all of it agrees on both entries.
+    // A good frame after all of it agrees on both entries, and its absolute position counts
+    // only accepted frames: the warm-up, the admitted non-finite frames and itself.
     match dual.step(time, &good) {
-        Ok(Outcome::Accepted { .. }) => {}
+        Ok(Outcome::Accepted { sequence, .. }) => assert_eq!(
+            sequence,
+            u64::from(WARM_FRAMES) + admitted + 1,
+            "{name}: refusals consumed a sequence position"
+        ),
         other => panic!("{name}: the good frame after the refusals: {other:?}"),
     }
     dual.compare_state()
@@ -468,4 +488,24 @@ fn lifecycle_refusals_match_the_named_path_and_a_map_never_rebinds_to_a_new_inca
         engine.execute_slots(&slots, 0.0, &good).unwrap().sequence(),
         4
     );
+}
+
+#[test]
+fn a_first_frame_at_negative_zero_keeps_its_sign_bit_through_both_entries() {
+    let mut dual = DualEntry::load(DELAY);
+    let values = [Value::Real(-0.0), Value::Real(2.0)];
+    match dual.step(-0.0, &values) {
+        Ok(Outcome::Accepted { sequence, .. }) => assert_eq!(sequence, 1),
+        other => panic!("{other:?}"),
+    }
+    let mut fresh = oce_api::Engine::new();
+    fresh.load_cxf(DELAY).unwrap();
+    let slots = fresh.frame_slots().unwrap();
+    let frame = fresh.execute_slots(&slots, -0.0, &values).unwrap();
+    assert_eq!(frame.time().to_bits(), (-0.0_f64).to_bits());
+    assert_eq!(frame.sequence(), 1);
+    // Equal time, positive zero, is not a regression: -0.0 == 0.0.
+    let frame = fresh.execute_slots(&slots, 0.0, &values).unwrap();
+    assert_eq!(frame.time().to_bits(), 0.0_f64.to_bits());
+    dual.compare_state().unwrap();
 }

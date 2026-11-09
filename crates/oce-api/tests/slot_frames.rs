@@ -11,10 +11,13 @@
 //!   frames between good ones are in `slot_frame_refusals.rs`.
 //! * **Slot order is the blob's I/O order.** The map's input and output paths equal the
 //!   compiled-schedule blob's I/O tables, entry for entry.
-//! * **Allocation census.** Once the map exists, all 160 frames of every fixture, values built
-//!   beforehand, run inside one measured region on a fresh load: zero allocations and zero bytes,
-//!   with a counter positive control. `allocation-counter`'s counters are local to the measuring
-//!   thread. The census prints per-fixture rows, which the PR pastes.
+//! * **Allocation census.** Once the map exists, every one of the 160 frames of every fixture, values
+//!   built beforehand, is measured in its own region on a fresh load, after a counter positive
+//!   control. A frame that grows no warning record must allocate zero times and zero bytes; a frame
+//!   that does (more warnings, or longer text, than any earlier frame) is bounded and counted, and
+//!   exactly one such frame is expected per fixture that warns at all. `allocation-counter`'s
+//!   counters are local to the measuring thread. The census prints per-fixture rows, which the PR
+//!   pastes.
 
 #![allow(clippy::print_stdout)] // The census table is the evidence the PR pastes.
 
@@ -152,6 +155,7 @@ fn the_slot_entry_allocates_nothing_per_frame_once_the_map_exists() {
          record-growing frames\tallocations on them\tallocations on all other frames"
     );
     let (mut all_frames, mut quiet_total, mut growing_total) = (0_u64, 0_u64, 0_u64);
+    let mut warning_fixtures = 0_u64;
     for name in FIXTURES {
         let mut engine = load(name);
         let mut slots = None;
@@ -192,6 +196,16 @@ fn the_slot_entry_allocates_nothing_per_frame_once_the_map_exists() {
                 }
             }
             if grows {
+                // At most: the record vector's geometric regrowths up to this frame's count, and
+                // a source and a message buffer per record.
+                let records = lengths.len() as u64;
+                let bound =
+                    2 * records + u64::from(records.next_power_of_two().trailing_zeros()) + 1;
+                assert!(
+                    census.count_total <= bound,
+                    "{name}: frame {k}: {} allocations for {records} warnings (bound {bound})",
+                    census.count_total
+                );
                 growing += 1;
                 on_growing += census.count_total;
             } else {
@@ -209,6 +223,7 @@ fn the_slot_entry_allocates_nothing_per_frame_once_the_map_exists() {
         all_frames += u64::from(TICKS);
         quiet_total += on_quiet;
         growing_total += growing;
+        warning_fixtures += u64::from(warnings > 0);
     }
     println!(
         "total: {all_frames} frames across {} fixtures; {growing_total} frames grew a warning \
@@ -217,4 +232,8 @@ fn the_slot_entry_allocates_nothing_per_frame_once_the_map_exists() {
         all_frames - growing_total
     );
     assert_eq!(quiet_total, 0);
+    // The corpus's warnings repeat their first frame's records: each fixture that warns grows its
+    // records once, on its first warning frame, and never again.
+    assert!(warning_fixtures > 0, "the census exercises warning records");
+    assert_eq!(growing_total, warning_fixtures);
 }

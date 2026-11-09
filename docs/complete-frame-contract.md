@@ -273,7 +273,8 @@ different engine or superseded load/rebuild, without rebinding names. Successful
 reload also invalidates. Failed load preserves the previous incarnation. Dirty resume fences before
 effective model mutation, even for same-value edits; clean resume and compatible checkpoint/durable
 restore alone retain the incarnation. Advancing the clock can still make a retained plan's time
-ineligible. The fence is a retained process-local allocation identity, not a serialized counter,
+ineligible. A [slot map](#current-slot-indexed-execution-api) carries the same fence and is refused
+with the same `StalePreparedFrame` under the same rules. The fence is a retained process-local allocation identity, not a serialized counter,
 model name, storage handle, deployment generation or authentication token.
 
 ### Preparation costs and evidence limits

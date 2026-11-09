@@ -135,7 +135,8 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
 - Executes exclusively through `prepare_frame` followed by consuming `execute_frame`, or by slot:
   `frame_slots` resolves the boundary once and `execute_slots(&slots, t, &values)` then submits each
   complete frame through the same core driver, with the same refusals, borrowing its outputs and
-  allocating nothing per frame. The engine is pure: it has no storage dependency, and `load_cxf` returns the resolved model and IO inventory as
+  allocating nothing per frame once the map exists, beyond warning-record growth. The engine is
+  pure: it has no storage dependency, and `load_cxf` returns the resolved model and IO inventory as
   a plain-data `LoadedModel`. Hosts own cadence, persistence and equipment delivery; for
   persistence, `oce_store::host::persist_loaded_model` runs the post-load recover → save →
   validate-inputs sequence against any adapter behind the storage port (or the in-memory

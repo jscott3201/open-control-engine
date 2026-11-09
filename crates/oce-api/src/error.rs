@@ -151,8 +151,10 @@ pub enum OcError {
     /// A staged input value whose type does not match the target connector (no coercion; `01` §5).
     #[error("input type mismatch for '{0}'")]
     InputType(String),
-    /// A prepared frame belongs to another engine or a superseded executable incarnation.
-    #[error("prepared input frame is stale for this executable context")]
+    /// A prepared frame or a [`crate::FrameSlots`] map belongs to another engine or a superseded
+    /// executable incarnation (a successful reload or a dirty parameter resume); nothing is
+    /// rebound and nothing is mutated.
+    #[error("prepared input frame or slot map is stale for this executable context")]
     StalePreparedFrame,
     /// The lifetime-local accepted-frame sequence has no next position; nothing was mutated.
     #[error("accepted frame sequence is exhausted")]

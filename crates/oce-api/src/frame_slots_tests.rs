@@ -1,15 +1,19 @@
 //! Private slot-entry controls a public test cannot reach: every preflight cause the named path's
 //! fault controls inject (sequence exhaustion, a restored clock beyond the limit, a forged stale
 //! map) refuses the slot entry with the named path's error and preserves every execution bit; the
-//! instrumented core counts one transition per accepted slot frame and none per refusal; and the
-//! reused warning records match the named path's and stop allocating once warm.
+//! instrumented core counts one transition per accepted slot frame and none per refusal; the
+//! reused warning records match the named path's and stop allocating once warm; and Enum and
+//! String slots, which no public CXF can declare, refuse like the named path on detached probes.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use allocation_counter::measure;
 use oce_blocks::{Block, BlockKind, BlockSignature, Ctx};
-use oce_model::{ParamTable, Value};
+use oce_model::{
+    Attrs, BlockId, BlockInstance, Connector, ConnectorId, Dir, EnumClassId, ModelGraph,
+    ParamTable, Value, ValueType, enum_descriptor,
+};
 
 use crate::frame::transition_count;
 use crate::{Engine, FrameSlots, OcError, PreparedInputFrame};
@@ -304,4 +308,115 @@ fn reused_warning_records_match_the_named_path_and_stop_allocating_once_warm() {
         std::hint::black_box(frame.diagnostics());
     });
     assert!(first.count_total > 0, "the counter observes allocations");
+}
+
+/// A detached probe with one boundary input of `value_type` and a constant output. No registry
+/// block has Enum or String signal ports, so no CXF (and no corpus fixture) can declare such an
+/// input; the private model gate accepts this probe, as `frame_tests.rs` does for the named path.
+fn probe(value_type: ValueType) -> Engine {
+    let mut model = ModelGraph::new();
+    model.blocks.push(BlockInstance {
+        id: BlockId(0),
+        class_iri: Arc::from("CDL.Reals.Sources.Constant"),
+        inputs: vec![],
+        outputs: vec![ConnectorId(0)],
+        params: ParamTable {
+            values: vec![(Arc::from("k"), Value::Real(0.0))],
+        },
+        decl_order: 0,
+        instance_iri: Some(Arc::from("urn:probe:constant")),
+    });
+    model.connectors.push(
+        Connector::new(ConnectorId(0), BlockId(0), Dir::Out, ValueType::Real, 0)
+            .with_iri("urn:probe:y"),
+    );
+    model.connectors.push(
+        Connector::new(ConnectorId(1), BlockId(0), Dir::In, value_type, 1)
+            .with_iri("urn:probe:u")
+            .with_attrs(Attrs::default_for(value_type))
+            .unwrap(),
+    );
+    model.external_inputs.push(ConnectorId(1));
+    let mut engine = Engine::new();
+    engine
+        .build_model_in_memory(model, Some("urn:probe:model"))
+        .unwrap();
+    engine
+}
+
+/// The probe's run image; detached probes have no state-manifest identity, so no snapshot.
+fn run_image(engine: &Engine) -> String {
+    format!(
+        "{:?} {:?} {} {}",
+        engine.state, engine.prev_t, engine.accepted_frame_sequence, engine.durable_restore_ready
+    )
+}
+
+/// Submit `value` to the probe through both entries; both must refuse with `expected` (by
+/// `Debug`) and leave the run image untouched.
+fn refuse_on_probe(engine: &mut Engine, value: Value, expected: &OcError) {
+    let before = run_image(engine);
+    let slots = engine.frame_slots().unwrap();
+    let path = slots.inputs()[0].path.clone();
+    let named = engine
+        .prepare_frame(1.0, &[(path.as_str(), value.clone())])
+        .and_then(|plan| engine.execute_frame(plan))
+        .unwrap_err();
+    let slotted = engine.execute_slots(&slots, 1.0, &[value]).unwrap_err();
+    assert_eq!(format!("{named:?}"), format!("{expected:?}"));
+    assert_eq!(format!("{slotted:?}"), format!("{expected:?}"));
+    assert_eq!(run_image(engine), before);
+}
+
+#[test]
+fn enum_and_string_slots_refuse_type_and_domain_like_the_named_path() {
+    let class = EnumClassId::SIMPLE_CONTROLLER;
+    let members = enum_descriptor(class).unwrap().members.len() as u32;
+    let mut engine = probe(ValueType::Enum(class));
+    let path = "urn:probe:u".to_owned();
+    let other_class = Value::Enum {
+        class: EnumClassId::SMOOTHNESS,
+        ordinal: 1,
+    };
+    for wrong in [
+        other_class,
+        Value::Integer(1),
+        Value::Real(1.0),
+        Value::Boolean(true),
+        Value::String("PI".into()),
+    ] {
+        refuse_on_probe(&mut engine, wrong, &OcError::InputType(path.clone()));
+    }
+    for ordinal in [0, members + 1, u32::MAX] {
+        refuse_on_probe(
+            &mut engine,
+            Value::Enum { class, ordinal },
+            &OcError::InputDomain(path.clone()),
+        );
+    }
+    // Every legal ordinal is accepted by both entries alike.
+    let slots = engine.frame_slots().unwrap();
+    for ordinal in 1..=members {
+        let value = Value::Enum { class, ordinal };
+        let sequence = engine
+            .execute_slots(&slots, f64::from(ordinal), &[value])
+            .unwrap()
+            .sequence();
+        assert_eq!(sequence, u64::from(ordinal));
+    }
+
+    let mut engine = probe(ValueType::String);
+    for wrong in [
+        Value::Real(0.0),
+        Value::Integer(0),
+        Value::Boolean(false),
+        Value::Enum { class, ordinal: 1 },
+    ] {
+        refuse_on_probe(&mut engine, wrong, &OcError::InputType(path.clone()));
+    }
+    let slots = engine.frame_slots().unwrap();
+    let frame = engine
+        .execute_slots(&slots, 0.0, &[Value::String("owned".into())])
+        .unwrap();
+    assert_eq!(frame.sequence(), 1);
 }

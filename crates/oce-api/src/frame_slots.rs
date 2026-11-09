@@ -236,7 +236,7 @@ impl Engine {
     /// order of [`crate::CompletedFrame::outputs`]; see [`FrameSlots`] for the invariants. No
     /// engine mutation occurs. Allocates the owned map in proportion to the boundary (inputs, their
     /// fan-out targets and outputs); call it after each successful load or dirty resume, not per
-    /// frame.
+    /// frame. A clean resume, a compatible restore and a failed load keep an existing map valid.
     ///
     /// # Errors
     /// `State(NoLoadedModel)` before a successful load, or `State(PendingParameterEdits)` while
