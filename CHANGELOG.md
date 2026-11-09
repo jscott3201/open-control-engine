@@ -39,7 +39,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Facade
 
-- **Enumeration and constant-package table** (GitHub #PRNUM, issue #468). `oce_api::enumerations()`
+- **Enumeration and constant-package table** (GitHub #488, issue #468). `oce_api::enumerations()`
   lists, beside `class_metadata()`, every named type the engine knows as one `&'static` table of
   `EnumerationClass { class_path, qualified_path, kind, id, members, values }`: the four CDL
   enumerations, the ten G36 enumerations (`ASHRAEClimateZone`, `ControlEconomizer`, `CoolingCoil`,
@@ -136,7 +136,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Execution core
 
-- **One enumeration table in `oce-model`** (GitHub #PRNUM, issue #468). The enum facts that lived in
+- **One enumeration table in `oce-model`** (GitHub #488, issue #468). The enum facts that lived in
   hand-written `match` arms and member constants in `oce-model/src/types.rs` are now one static
   table, `oce_model::enumerations` (`no_std`, plain `&'static` data, linear lookups with no
   allocation and no hashing). `enum_class_id`, `enum_descriptor`, `enum_descriptor_by_path`,
@@ -184,7 +184,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
-- **`oce-author` reads the facade's enumeration table** (GitHub #PRNUM, issue #468). The pinned
+- **`oce-author` reads the facade's enumeration table** (GitHub #488, issue #468). The pinned
   four-row `ENUM_TYPES` table is deleted: the validator and emitter look an enum parameter's type up
   with `oce_api::enumeration_by_id`, and `tests/enum_member_oracle.rs` loads each member of the
   facade's `SimpleController` row through the engine. A test round-trips every row's class path
