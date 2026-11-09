@@ -63,6 +63,12 @@ case_tree bless-as-dev-dependency pass oce-replay \
 case_tree bless-as-normal-dependency fail oce-replay \
   $'oce-replay v0.4.0 (crates/leverage/oce-replay)\noce-api v0.4.0 (crates/oce-api)\noce-bless v0.4.0 (crates/oce-bless)' \
   'leverage crate oce-replay depends directly on oce-bless;' oce-replay
+case_tree bless-as-build-dependency fail oce-replay \
+  $'oce-replay v0.4.0 (crates/leverage/oce-replay)\n[build-dependencies]\noce-bless v0.4.0 (crates/oce-bless)' \
+  'leverage crate oce-replay depends directly on oce-bless;' oce-replay
+case_tree dev-flag-after-allowed-names pass oce-replay \
+  $'oce-replay v0.4.0 (crates/leverage/oce-replay)\noce-bless v0.4.0 (crates/oce-bless)\noce-host v0.4.0 (crates/leverage/oce-host)' \
+  '' oce-host oce-replay --dev
 case_tree engine-crate-as-dev-dependency fail oce-replay \
   $'oce-replay v0.4.0 (crates/leverage/oce-replay)\noce-bless v0.4.0 (crates/oce-bless)\noce-graph v0.4.0 (crates/oce-graph)' \
   'depends directly on oce-graph (dev)' --dev oce-replay

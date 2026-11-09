@@ -27,7 +27,11 @@ pub struct ReplayLimits {
     /// Attempted frames (trace rows) in one run. Maximum 16,777,216.
     pub max_frames: u64,
     /// Trace bytes: frame columns, sparse rows and snapshots ([`crate::Trace::byte_size`]).
-    /// Maximum 1 GiB.
+    /// Maximum 1 GiB. Checked before each frame against the frame's row bytes; before the first
+    /// accepted frame fixes the output set, each output is estimated at 8 bytes (the widest
+    /// kind), so the check is conservative on that frame only. Diagnostic rows, refusal rows and
+    /// snapshots are known only after the frame that produced them and are checked then, so the
+    /// cap is enforced to within one frame's sparse output.
     pub max_trace_bytes: u64,
 }
 

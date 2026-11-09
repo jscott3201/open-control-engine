@@ -11,7 +11,8 @@
 //!                  HoldLast: f64 max_age; Fallback: value
 //!          value: u8 kind tag (0 Real, 1 Integer, 2 Boolean, 3 Enum), then 8 bytes:
 //!                 Real bits, Integer i64, Boolean 0/1 as u64, Enum ordinal as u64
-//! outputs: count; per output: path, u8 kind, u8 has enum class index, u32 index (0 when none)
+//! outputs: count; per output: path, u8 kind, enum class (string; always empty: the facade
+//!          exposes no class-path lookup, and its in-memory class index is process-local)
 //! options: u8 time base (0 Recorded, 1 Grid), f64 t0, f64 step (0 bits when Recorded),
 //!          u8 duplicate (0 Refuse, 1 Allow), u8 on refusal (0 Stop, 1 RecordAndContinue),
 //!          u8 non-finite (0 Admit, 1 Refuse, 255 other), u8 retains inputs,
@@ -24,7 +25,8 @@
 //!          its cells
 //! diagnostics: count; per row: u64 frame, f64 time, u8 level (0 Warning), block, message
 //! refusals:    count; per row: u64 frame, u8 cause (0 MissingInput, 1 Engine), then
-//!              MissingInput: u64 slot, path; Engine: message
+//!              MissingInput: u64 slot, path; Engine: u8 `EngineRefusal` tag (the facade's
+//!              message text is not encoded)
 //! snapshots:   count; per snapshot: u64 frame, u64 length, the snapshot's bytes
 //! ```
 
@@ -136,8 +138,7 @@ pub(crate) fn encode(trace: &Trace) -> Vec<u8> {
     for output in &meta.outputs {
         w.str(&output.path);
         w.u8(output.kind.tag());
-        w.flag(output.enum_class_index.is_some());
-        w.u32(output.enum_class_index.unwrap_or(0));
+        w.str("");
     }
     match meta.time {
         TimeBase::Recorded => {
@@ -208,9 +209,9 @@ pub(crate) fn encode(trace: &Trace) -> Vec<u8> {
                 w.len(*slot);
                 w.str(path);
             }
-            RefusalCause::Engine { message } => {
+            RefusalCause::Engine { refusal, .. } => {
                 w.u8(1);
-                w.str(message);
+                w.u8(refusal.tag());
             }
         }
     }

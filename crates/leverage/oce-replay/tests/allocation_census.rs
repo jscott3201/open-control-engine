@@ -12,9 +12,9 @@
 //! G36 fixture through `ColumnarSource` and `StepSource` on the `Recorded` time base, the
 //! controller's two-hour 5 s grid with every input held, and the controller's reference day read
 //! from CSV text. Each quiet frame (no warning) must allocate zero times and zero bytes; a warning
-//! frame is bounded by its warnings. The table it prints is the PR's census.
+//! frame is bounded by its warnings. It prints one census row per fixture and source.
 
-#![allow(clippy::print_stdout)] // The census table is the evidence the PR pastes.
+#![allow(clippy::print_stdout)] // The census rows are the measured evidence, printed per fixture.
 
 extern crate oce_api as oce_model;
 

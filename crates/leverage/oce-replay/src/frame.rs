@@ -217,6 +217,7 @@ impl<S: FrameSource> Replay<S> {
                 }
                 Err(error) => {
                     refusal = Some(RefusalCause::Engine {
+                        refusal: crate::EngineRefusal::of(&error),
                         message: error.to_string(),
                     });
                     FrameStatus::RefusedEngine
@@ -246,7 +247,7 @@ impl<S: FrameSource> Replay<S> {
                 trace.sparse_bytes += 16
                     + match &cause {
                         RefusalCause::MissingInput { path, .. } => path.len(),
-                        RefusalCause::Engine { message } => message.len(),
+                        RefusalCause::Engine { message, .. } => message.len(),
                     } as u64;
                 trace.refusals.push(RefusalRow {
                     frame: row,

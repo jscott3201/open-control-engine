@@ -42,3 +42,41 @@ pub trait FrameSource {
     /// A [`SourceError`] for a row the source cannot produce; replay ends the run with it.
     fn next_row(&mut self) -> Result<Option<Row<'_>>, SourceError>;
 }
+
+/// A borrowed source is a source, so a run can drive one it does not own.
+impl<S: FrameSource + ?Sized> FrameSource for &mut S {
+    fn map_id(&self) -> &MapId {
+        (**self).map_id()
+    }
+    fn kind(&self) -> SourceKind {
+        (**self).kind()
+    }
+    fn origin(&self) -> Option<&TimeOrigin> {
+        (**self).origin()
+    }
+    fn ignored_columns(&self) -> &[String] {
+        (**self).ignored_columns()
+    }
+    fn next_row(&mut self) -> Result<Option<Row<'_>>, SourceError> {
+        (**self).next_row()
+    }
+}
+
+/// A boxed source is a source, so a binding can hold `Replay<Box<dyn FrameSource>>`.
+impl<S: FrameSource + ?Sized> FrameSource for Box<S> {
+    fn map_id(&self) -> &MapId {
+        (**self).map_id()
+    }
+    fn kind(&self) -> SourceKind {
+        (**self).kind()
+    }
+    fn origin(&self) -> Option<&TimeOrigin> {
+        (**self).origin()
+    }
+    fn ignored_columns(&self) -> &[String] {
+        (**self).ignored_columns()
+    }
+    fn next_row(&mut self) -> Result<Option<Row<'_>>, SourceError> {
+        (**self).next_row()
+    }
+}

@@ -320,6 +320,52 @@ that both the facade and the `no_std` entry call. A leverage crate reaches it on
 private driver alone; the trace and every public signature stay as above, and the chunk-size and
 golden tests prove the bits did not move.
 
+## As built (GitHub #462)
+
+`crates/leverage/oce-replay` implements this note with these differences from the sketch above.
+The decisions stand; where one could not be built as written, the gap is named.
+
+- **`ColumnSpec { name, kind: ColumnKind }`**, not `value_type: ValueType`: a caller cannot
+  construct an enum class identity, so a column declares its kind (`Real`, `Integer`, `Boolean`,
+  `Enum(class_path)`) and the map checks that it carries the input's type.
+- **`FrameSource`** exposes `map_id` (the `InputMap` it was bound to; `Replay::new` refuses another),
+  `kind` (`Samples` or `Signals`, decision 11), `origin` and `ignored_columns`, not `columns()`.
+  Rows are lent as `Row<'_> = (f64, &[Option<Value>])`. `&mut S` and `Box<S>` are sources too, so a
+  binding can hold `Replay<Box<dyn FrameSource>>`. Replay itself treats a Real NaN cell from any
+  source as missing.
+- **`TimeOrigin`** is a parsed struct (the text as written plus its Unix nanoseconds), not a
+  newtype over the string.
+- **`StepSource::with_instants`** adds evaluation instants at which no input changes; a model with
+  no inputs runs on these alone.
+- **`Replay::reserve(frames)`** preallocates trace rows; each `advance` chunk also reserves its own.
+- **`Trace::check_coverage`** holds the coverage check (`Replay::check_coverage` delegates); a window
+  counts only rows the engine executed (`Executed` or `Substituted`).
+- **`ReplayError::TooManyFrames`**: reaching `max_frames` with frames still to attempt is a typed
+  error, never truncation, on either time base. **`ReplayError::GridNotIncreasing`**: a grid whose
+  consecutive ticks round equal (a huge `t0`, or `k` beyond 2^53) stops with a typed error.
+- **Precedence within a frame.** If any missing input cannot be substituted (`Refuse`, or `HoldLast`
+  with no sample young enough), the frame is `RefusedMissing`, naming the first such input in slot
+  order, even when another missing input is `SkipFrame`; otherwise a missing `SkipFrame` input skips
+  it. The substitution mask records every input substituted on a row whatever its status, skipped
+  and refused rows included. Observations on refused or skipped rows still count as the latest
+  observed sample for a later hold.
+- **Engine refusals.** A refusal row stores a closed `EngineRefusal` class (input type, non-finite,
+  domain, the time classes, or `Run`) in the canonical bytes and keeps the facade's message text in
+  memory only. A `Run` refusal (a state precondition, `FrameSequenceExhausted`, a stale slot map) is
+  about the run, not the frame, so it stops the run even under `RecordAndContinue`.
+- **Decision 21 as built.** The facade exposes no lookup from an enum class to its class path. An
+  Enum input column carries the class path its source declares, recorded as an unverified label; an
+  Enum output keeps the facade's process-local class index in memory only, and the canonical bytes
+  carry the ordinal with an empty class path. A facade class-path lookup is a follow-up.
+- **Decision 22 as built.** `CsvSource` tokenizes with `csv-core`, the allocation-free core of the
+  `csv` crate, so the column, cell and byte caps are enforced field by field as the bytes arrive:
+  peak memory is one 8 KiB chunk, one cell and one record of at most `max_columns` cells, whatever
+  the input. The `csv` crate's reader buffers a whole record before a caller can check it, which
+  made a hostile header line an out-of-memory abort at the default byte cap.
+- **The trace byte cap** is checked before each frame against its row bytes (each output counted at
+  8 bytes until the first accepted frame fixes the set) and after it for its sparse rows and
+  snapshots, so it holds to within one frame's sparse output.
+
 ## Decisions
 
 Decisions 1 to 4 are the owner's. Decisions 5 to 10 are technical recommendations accepted by the

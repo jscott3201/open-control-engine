@@ -15,7 +15,7 @@
 //! None takes a state snapshot: a snapshot may be target-bound, and these bytes must be equal on
 //! x86_64 and aarch64. Regenerate only through the repository's bless switch:
 //! `OCE_BLESS_REPLAY=1 cargo test -p oce-replay --test canonical_goldens`, then run again without
-//! it and say in the PR which files moved and why.
+//! it; a regeneration names the files that moved and why.
 
 #[path = "support/controller.rs"]
 mod controller;

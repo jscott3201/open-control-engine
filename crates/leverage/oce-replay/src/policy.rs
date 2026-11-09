@@ -72,6 +72,10 @@ pub enum MissingPolicy {
     /// resolved. Per-input overrides only.
     Fallback(Value),
     /// The frame is not submitted and the run continues: status [`FrameStatus::Skipped`].
+    ///
+    /// Precedence: if another input missing on the same frame cannot be substituted (`Refuse`, or
+    /// `HoldLast` with an expired or absent sample), the frame is `RefusedMissing` instead, naming
+    /// the first such input in slot order, and [`OnRefusal`] applies. Refusal dominates skipping.
     SkipFrame,
 }
 
@@ -114,7 +118,9 @@ pub enum FrameStatus {
     Executed = 0,
     /// At least one input held or defaulted; the engine accepted the frame.
     Substituted = 1,
-    /// A `SkipFrame` input was missing; nothing was submitted.
+    /// A `SkipFrame` input was missing and no missing input refused the frame; nothing was
+    /// submitted. The substitution mask still records any input substituted on the row (as on a
+    /// refused row): the mask is per input and per row, whatever the status.
     Skipped = 2,
     /// A missing input could not be substituted; replay refused the frame before the engine.
     RefusedMissing = 3,

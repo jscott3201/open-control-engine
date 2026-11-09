@@ -19,7 +19,7 @@
 //! `max_trace_bytes` ([`Trace::byte_size`]): a diagnostic row 24 bytes plus its two strings, a
 //! refusal row 16 bytes plus its message (or input path), a snapshot 16 bytes plus its encoding.
 
-use oce_api::{AssertLevel, EngineStateSnapshot, NonFiniteInputPolicy, Value};
+use oce_api::{AssertLevel, EngineStateSnapshot, NonFiniteInputPolicy, OcError, Value};
 
 use crate::{
     DuplicateTime, FrameStatus, MissingPolicy, OnRefusal, ReplayError, ReplayLimits, TimeBase,
@@ -171,6 +171,58 @@ pub struct DiagnosticRow {
     pub level: AssertLevel,
 }
 
+/// The closed class of an engine refusal, the part of it the canonical bytes record. The facade
+/// error's display text is kept beside it in memory only, so a wording change in the facade moves
+/// no golden.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum EngineRefusal {
+    /// `OcError::InputType`: a value of the wrong type (a custom source can lend one).
+    InputType,
+    /// `OcError::InputNonFinite`: ±∞ under `NonFiniteInputPolicy::Refuse`.
+    InputNonFinite,
+    /// `OcError::InputDomain`: a value outside the input's declared bounds.
+    InputDomain,
+    /// `OcError::NonFiniteTime` (replay refuses these first; kept for completeness).
+    NonFiniteTime,
+    /// `OcError::TimeOutOfRange`: a time beyond the engine's magnitude limit.
+    TimeOutOfRange,
+    /// `OcError::TimeRegression` (replay refuses these first; kept for completeness).
+    TimeRegression,
+    /// `OcError::NonFiniteTimeStep`.
+    NonFiniteTimeStep,
+    /// `OcError::ModelTimeUnrepresentable`.
+    ModelTimeUnrepresentable,
+    /// Any other refusal: one about the engine or the run, not the frame
+    /// (`FrameSequenceExhausted`, a state precondition, a stale slot map, a slot-count mismatch).
+    /// Later frames would be refused the same way, so it **stops the run** whatever
+    /// [`crate::OnRefusal`] says.
+    Run,
+}
+
+impl EngineRefusal {
+    /// Classify a facade error from `execute_slots`.
+    #[must_use]
+    pub fn of(error: &OcError) -> Self {
+        match error {
+            OcError::InputType(_) => Self::InputType,
+            OcError::InputNonFinite(_) => Self::InputNonFinite,
+            OcError::InputDomain(_) => Self::InputDomain,
+            OcError::NonFiniteTime { .. } => Self::NonFiniteTime,
+            OcError::TimeOutOfRange { .. } => Self::TimeOutOfRange,
+            OcError::TimeRegression { .. } => Self::TimeRegression,
+            OcError::NonFiniteTimeStep { .. } => Self::NonFiniteTimeStep,
+            OcError::ModelTimeUnrepresentable { .. } => Self::ModelTimeUnrepresentable,
+            _ => Self::Run,
+        }
+    }
+
+    /// The canonical tag: the variants in declaration order from 0.
+    #[must_use]
+    pub fn tag(self) -> u8 {
+        self as u8
+    }
+}
+
 /// Why a frame was refused.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RefusalCause {
@@ -182,9 +234,11 @@ pub enum RefusalCause {
         /// The input path.
         path: String,
     },
-    /// The engine refused it; the message is the facade error's display text.
+    /// The engine refused it.
     Engine {
-        /// `OcError`'s display text.
+        /// The closed class of the refusal (in the canonical bytes).
+        refusal: EngineRefusal,
+        /// `OcError`'s display text (in memory only, never in the canonical bytes).
         message: String,
     },
 }
@@ -205,7 +259,9 @@ pub struct TraceInput {
     pub path: String,
     /// The column kind.
     pub kind: TraceKind,
-    /// The enum class path the source declared, for an Enum input.
+    /// The enum class path the source declared, for an Enum input: a source-declared,
+    /// **unverified** label. The facade exposes no lookup from the engine's enum class to its
+    /// path, so replay cannot check it; verification waits for that lookup.
     pub enum_class: Option<String>,
     /// The slot's missing-sample policy.
     pub policy: MissingPolicy,
@@ -218,8 +274,9 @@ pub struct TraceOutput {
     pub path: String,
     /// The column kind.
     pub kind: TraceKind,
-    /// The facade's in-memory enum class index, for an Enum output. The facade exposes no
-    /// class-path lookup, so the path is not recorded (see the crate docs).
+    /// The facade's in-memory enum class index, for an Enum output: process-local, kept in
+    /// memory only and never written to the canonical bytes, which carry an empty class path for
+    /// every output until the facade exposes a class-path lookup (see the crate docs).
     pub enum_class_index: Option<u32>,
 }
 

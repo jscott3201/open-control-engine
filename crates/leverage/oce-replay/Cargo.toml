@@ -21,8 +21,9 @@ workspace = true
 
 [dependencies]
 oce-api = { workspace = true }
-# The CSV adapter parses with the `csv` crate inside this crate's own caps (decision 22).
-csv = "=1.4.0"
+# The CSV adapter tokenizes with `csv-core`, the allocation-free core of the `csv` crate (decision
+# 22), so this crate's caps bound memory as the bytes arrive (see src/csv_source.rs).
+csv-core = "=0.1.13"
 
 [dev-dependencies]
 allocation-counter = "0.8.1"

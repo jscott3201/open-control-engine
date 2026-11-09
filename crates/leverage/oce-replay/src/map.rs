@@ -12,7 +12,9 @@ use oce_api::{InputDefinition, Value, ValueType};
 use crate::{MapError, MissingPolicy};
 
 /// The kind of a source column. An Enum column names its class path, which the trace records in
-/// its metadata (the facade exposes no class-path lookup, so the source declares it).
+/// its metadata. That path is a **source-declared, unverified label**: the facade exposes no
+/// lookup from the engine's enum class to its path, so a wrong path (`Enum("Wrong.Class")`) on an
+/// Enum input resolves and is recorded as given. Verification waits for that lookup.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ColumnKind {
     /// IEEE-754 `f64`; NaN is missing.

@@ -1,19 +1,29 @@
 //! The bounded CSV adapter (decisions 8 and 22): a byte reader, a header row, a time column and the
-//! map's column names, parsed by the `csv` crate inside this crate's caps.
+//! map's column names, tokenized by `csv-core` (the allocation-free core of the `csv` crate) inside
+//! this crate's caps.
 //!
-//! The caps, not the parser, are the hostile-input boundary: bytes read (`max_source_bytes`),
-//! header fields (`max_columns`), bytes per cell (`max_cell_bytes`, header cells included) and
-//! data rows (`max_rows`), each a typed [`SourceError`] and never truncation. Records must all have
-//! the header's field count; cells must be UTF-8. The `csv` crate handles quoting, CRLF and a
-//! leading UTF-8 byte-order mark. Reading a file by path is the caller's job.
+//! The caps, not the parser, are the hostile-input boundary, for memory as well as for content.
+//! Bytes are pulled from the reader in 8 KiB chunks and handed to `csv_core::Reader` one field at a
+//! time, into a cell buffer of `max_cell_bytes + 1` bytes; each cap is checked as the bytes arrive:
+//! bytes read (`max_source_bytes`), header fields (`max_columns`, checked per field), bytes per cell
+//! (`max_cell_bytes`, header cells included, checked when the cell buffer overflows), fields per
+//! data record (the header's count, checked per field) and data rows (`max_rows`). Peak memory is
+//! therefore bounded by the chunk, one cell and one record of at most `max_columns` cells of at
+//! most `max_cell_bytes`, whatever the input: a multi-megabyte line of commas or an unterminated
+//! quote is refused after at most one cap's worth of bytes is held. Each refusal is a typed
+//! [`SourceError`], never truncation. `csv-core` handles quoting, doubled quotes, CRLF, empty
+//! lines and a leading UTF-8 byte-order mark. Reading a file by path is the caller's job.
 
-use std::io::{self, Read};
+use std::io::Read;
 
-use csv::{ByteRecord, ErrorKind, ReaderBuilder};
+use csv_core::{ReadFieldResult, Reader as CoreReader, ReaderBuilder};
 use oce_api::{Value, ValueType};
 
 use crate::source::Row;
 use crate::{FrameSource, InputMap, MapId, ReplayLimits, SourceError, TimeOrigin};
+
+/// Bytes requested from the reader per refill.
+const CHUNK: usize = 8 * 1024;
 
 /// How the time column is written.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -32,7 +42,7 @@ pub enum CsvTime {
 /// The shape of one CSV source.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CsvFormat {
-    /// The field delimiter. Default `b','`.
+    /// The field delimiter: one ASCII byte other than `"`, `\r` and `\n`. Default `b','`.
     pub delimiter: u8,
     /// The header name of the time column.
     pub time_column: String,
@@ -56,26 +66,106 @@ impl CsvFormat {
     }
 }
 
-/// Counts bytes and fails the read one byte past the cap.
-struct Bounded<R> {
-    inner: R,
+/// The byte side: a reader, a fixed chunk buffer, the byte count against the cap, and the
+/// tokenizer with its cell buffer and the current record's cells.
+struct Tokenizer<R> {
+    reader: R,
+    core: CoreReader,
+    chunk: Vec<u8>,
+    start: usize,
+    end: usize,
+    eof: bool,
     read: u64,
-    max: u64,
-    over: bool,
+    max_bytes: u64,
+    max_cell: usize,
+    cell: Vec<u8>,
+    /// The current record's cell bytes, concatenated; `ends[i]` is the end of cell `i`.
+    record: Vec<u8>,
+    ends: Vec<usize>,
 }
 
-impl<R: Read> Read for Bounded<R> {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        // Ask for at most one byte past the cap, so an oversized source is detected without
-        // reading it all.
-        let room = (self.max + 1 - self.read).min(buf.len() as u64) as usize;
-        let n = self.inner.read(&mut buf[..room])?;
-        self.read += n as u64;
-        if self.read > self.max {
-            self.over = true;
-            return Err(io::Error::other("source byte cap"));
+impl<R: Read> Tokenizer<R> {
+    /// Refill the chunk if it is empty; reading one byte past the cap is `TooManyBytes`.
+    fn refill(&mut self) -> Result<(), SourceError> {
+        if self.start < self.end || self.eof {
+            return Ok(());
         }
-        Ok(n)
+        let room = (self.max_bytes + 1 - self.read).min(CHUNK as u64) as usize;
+        let n = loop {
+            match self.reader.read(&mut self.chunk[..room]) {
+                Ok(n) => break n,
+                Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {}
+                Err(e) => {
+                    return Err(SourceError::Read {
+                        message: e.to_string(),
+                    });
+                }
+            }
+        };
+        self.read += n as u64;
+        if self.read > self.max_bytes {
+            return Err(SourceError::TooManyBytes {
+                limit: self.max_bytes,
+            });
+        }
+        self.start = 0;
+        self.end = n;
+        self.eof = n == 0;
+        Ok(())
+    }
+
+    /// Read one record's cells into `record`/`ends`, refusing a cell longer than the cap and a
+    /// record wider than `max_fields` as the bytes arrive. `Ok(false)` at the end of the input.
+    fn next_record(
+        &mut self,
+        row: u64,
+        max_fields: usize,
+        too_wide: impl Fn() -> SourceError,
+    ) -> Result<bool, SourceError> {
+        self.record.clear();
+        self.ends.clear();
+        let mut filled = 0;
+        loop {
+            self.refill()?;
+            let input = &self.chunk[self.start..self.end];
+            let (result, nin, nout) = self.core.read_field(input, &mut self.cell[filled..]);
+            self.start += nin;
+            filled += nout;
+            match result {
+                ReadFieldResult::InputEmpty => {}
+                ReadFieldResult::OutputFull => {
+                    return Err(SourceError::CellTooLong {
+                        row,
+                        field: self.ends.len(),
+                        limit: self.max_cell as u32,
+                    });
+                }
+                ReadFieldResult::Field { record_end } => {
+                    if filled > self.max_cell {
+                        return Err(SourceError::CellTooLong {
+                            row,
+                            field: self.ends.len(),
+                            limit: self.max_cell as u32,
+                        });
+                    }
+                    if self.ends.len() >= max_fields {
+                        return Err(too_wide());
+                    }
+                    self.record.extend_from_slice(&self.cell[..filled]);
+                    self.ends.push(self.record.len());
+                    filled = 0;
+                    if record_end {
+                        return Ok(true);
+                    }
+                }
+                ReadFieldResult::End => return Ok(false),
+            }
+        }
+    }
+
+    fn field(&self, index: usize) -> &[u8] {
+        let start = if index == 0 { 0 } else { self.ends[index - 1] };
+        &self.record[start..self.ends[index]]
     }
 }
 
@@ -88,8 +178,8 @@ impl<R: Read> Read for Bounded<R> {
 /// grown to the longest row, reading a row allocates nothing.
 pub struct CsvSource<R: Read> {
     map: MapId,
-    reader: csv::Reader<Bounded<R>>,
-    record: ByteRecord,
+    bytes: Tokenizer<R>,
+    width: usize,
     time_field: usize,
     time_name: String,
     fields: Vec<usize>,
@@ -101,13 +191,12 @@ pub struct CsvSource<R: Read> {
     cells: Vec<Option<Value>>,
     row: u64,
     max_rows: u64,
-    max_cell: u32,
 }
 
 impl<R: Read> std::fmt::Debug for CsvSource<R> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CsvSource")
-            .field("fields", &self.fields.len())
+            .field("fields", &self.width)
             .field("row", &self.row)
             .finish_non_exhaustive()
     }
@@ -117,9 +206,9 @@ impl<R: Read> CsvSource<R> {
     /// Read the header from `reader` and bind its columns to `map`.
     ///
     /// # Errors
-    /// [`SourceError::Limit`]; `TooManyBytes`; `TooManyColumns`; `CellTooLong` (row 0);
-    /// `NotUtf8` (row 0); `DuplicateColumn`; `MissingColumn` for the time column or a mapped
-    /// column (time first, then slot order); `Read` for a reader failure.
+    /// [`SourceError::Limit`]; `BadDelimiter`; `TooManyBytes`; `TooManyColumns`; `CellTooLong`
+    /// (row 0); `NotUtf8` (row 0); `DuplicateColumn`; `MissingColumn` for the time column or a
+    /// mapped column (time first, then slot order); `Read` for a reader failure.
     pub fn new(
         map: &InputMap,
         reader: R,
@@ -127,41 +216,39 @@ impl<R: Read> CsvSource<R> {
         limits: &ReplayLimits,
     ) -> Result<Self, SourceError> {
         limits.validate()?;
-        let bounded = Bounded {
-            inner: reader,
+        let d = format.delimiter;
+        if !d.is_ascii() || matches!(d, b'"' | b'\r' | b'\n') {
+            return Err(SourceError::BadDelimiter { delimiter: d });
+        }
+        let max_cell = limits.max_cell_bytes as usize;
+        let max_columns = limits.max_columns as usize;
+        let mut bytes = Tokenizer {
+            reader,
+            core: ReaderBuilder::new().delimiter(d).build(),
+            chunk: vec![0; CHUNK],
+            start: 0,
+            end: 0,
+            eof: false,
             read: 0,
-            max: limits.max_source_bytes,
-            over: false,
+            max_bytes: limits.max_source_bytes,
+            max_cell,
+            cell: vec![0; max_cell + 1],
+            record: Vec::new(),
+            ends: Vec::new(),
         };
-        let mut reader = ReaderBuilder::new()
-            .delimiter(format.delimiter)
-            .has_headers(false)
-            .flexible(false)
-            .from_reader(bounded);
-        let mut header = ByteRecord::new();
-        let read = reader.read_byte_record(&mut header);
-        let present = read.map_err(|e| map_csv_error(&e, reader.get_ref(), 0))?;
-        if !present {
+        let too_many = || SourceError::TooManyColumns {
+            limit: limits.max_columns,
+        };
+        if !bytes.next_record(0, max_columns, too_many)? {
             return Err(SourceError::MissingColumn {
                 column: format.time_column,
             });
         }
-        if header.len() as u64 > u64::from(limits.max_columns) {
-            return Err(SourceError::TooManyColumns {
-                limit: limits.max_columns,
-            });
-        }
-        let mut names: Vec<String> = Vec::with_capacity(header.len());
-        for (field, cell) in header.iter().enumerate() {
-            if cell.len() as u64 > u64::from(limits.max_cell_bytes) {
-                return Err(SourceError::CellTooLong {
-                    row: 0,
-                    field,
-                    limit: limits.max_cell_bytes,
-                });
-            }
-            let name =
-                std::str::from_utf8(cell).map_err(|_| SourceError::NotUtf8 { row: 0, field })?;
+        let width = bytes.ends.len();
+        let mut names: Vec<String> = Vec::with_capacity(width);
+        for field in 0..width {
+            let name = std::str::from_utf8(bytes.field(field))
+                .map_err(|_| SourceError::NotUtf8 { row: 0, field })?;
             if names.iter().any(|n| n == name) {
                 return Err(SourceError::DuplicateColumn {
                     column: name.to_owned(),
@@ -189,8 +276,8 @@ impl<R: Read> CsvSource<R> {
             .collect();
         Ok(Self {
             map: map.id().clone(),
-            reader,
-            record: ByteRecord::new(),
+            bytes,
+            width,
             time_field,
             time_name: format.time_column,
             names: (0..map.len()).map(|s| map.column(s).to_owned()).collect(),
@@ -206,7 +293,6 @@ impl<R: Read> CsvSource<R> {
             cells: vec![None; map.len()],
             row: 0,
             max_rows: limits.max_rows,
-            max_cell: limits.max_cell_bytes,
         })
     }
 
@@ -231,18 +317,6 @@ impl<R: Read> CsvSource<R> {
                 .seconds_of(text)
                 .ok_or(SourceError::BadInstant { row }),
         }
-    }
-}
-
-fn map_csv_error<R>(error: &csv::Error, bounded: &Bounded<R>, row: u64) -> SourceError {
-    if bounded.over {
-        return SourceError::TooManyBytes { limit: bounded.max };
-    }
-    match error.kind() {
-        ErrorKind::UnequalLengths { .. } => SourceError::Ragged { row },
-        _ => SourceError::Read {
-            message: error.to_string(),
-        },
     }
 }
 
@@ -284,12 +358,14 @@ impl<R: Read> FrameSource for CsvSource<R> {
 
     fn next_row(&mut self) -> Result<Option<Row<'_>>, SourceError> {
         let row = self.row + 1;
-        let present = match self.reader.read_byte_record(&mut self.record) {
-            Ok(present) => present,
-            Err(error) => return Err(map_csv_error(&error, self.reader.get_ref(), row)),
-        };
-        if !present {
+        if !self
+            .bytes
+            .next_record(row, self.width, || SourceError::Ragged { row })?
+        {
             return Ok(None);
+        }
+        if self.bytes.ends.len() != self.width {
+            return Err(SourceError::Ragged { row });
         }
         if row > self.max_rows {
             return Err(SourceError::TooManyRows {
@@ -297,19 +373,10 @@ impl<R: Read> FrameSource for CsvSource<R> {
             });
         }
         self.row = row;
-        for (field, cell) in self.record.iter().enumerate() {
-            if cell.len() as u64 > u64::from(self.max_cell) {
-                return Err(SourceError::CellTooLong {
-                    row,
-                    field,
-                    limit: self.max_cell,
-                });
-            }
-        }
-        let t = self.parse_time(&self.record[self.time_field], row)?;
+        let t = self.parse_time(self.bytes.field(self.time_field), row)?;
         for slot in 0..self.cells.len() {
             let field = self.fields[slot];
-            let cell = &self.record[field];
+            let cell = self.bytes.field(field);
             self.cells[slot] =
                 if cell.is_empty() || self.missing.iter().any(|m| m.as_slice() == cell) {
                     None

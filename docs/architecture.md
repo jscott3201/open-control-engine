@@ -99,7 +99,7 @@ The engine is, by design:
 The whole external dependency surface on the embed path is four crates: `serde`, `serde_json`,
 `thiserror`, and `libm`. Two more — `regex` and `ryu` — exist only inside `oce-conformance`, which
 nothing else in the workspace depends on, so a host embedding `oce-api` never links them; and
-`csv` exists only inside the leverage crate `oce-replay`, above the facade.
+`csv-core` exists only inside the leverage crate `oce-replay`, above the facade.
 
 ### `no_std + alloc`: the core four
 

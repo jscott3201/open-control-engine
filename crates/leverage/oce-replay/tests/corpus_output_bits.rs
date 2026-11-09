@@ -11,7 +11,7 @@
 //! * **Trace size is the formula.** For every fixture the frame columns hold exactly
 //!   `rows × (9 + Σ width(output) [+ mask] [+ Σ width(input)])` bytes, with the widths derived
 //!   here from the oracle's output values, for outputs only and with inputs retained. The table
-//!   it prints is the PR's per-fixture size table.
+//!   it prints is the per-fixture size table.
 //! * **The controller's conformance golden.** `cooling_only_controller` driven minute by minute
 //!   from its golden-gen reference table, through both sources, gives the outputs of
 //!   `crates/oce-conformance/tests/fixtures/golden/g36_traces/cooling_only_controller.csv` bit for
@@ -19,7 +19,7 @@
 //!   conformance crate's test binaries, which a leverage crate cannot reach; the named-path
 //!   comparison above covers them.
 
-#![allow(clippy::print_stdout)] // The size table is the evidence the PR pastes.
+#![allow(clippy::print_stdout)] // The per-fixture size table is printed as measured evidence.
 
 // `frame_schedule.rs` names `oce_model::{Value, ValueType}`; the facade re-exports both.
 extern crate oce_api as oce_model;

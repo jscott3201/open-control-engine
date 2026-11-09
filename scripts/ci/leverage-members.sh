@@ -55,17 +55,17 @@ list_members() {
 }
 
 # Reads `cargo tree --depth 1 --prefix none --format {p}` output for one member on stdin. The first
-# package line is the member itself; every later one is a direct dependency. With `--dev` the
-# listing is the member's dev edges, where `oce-bless` is also allowed.
+# package line is the member itself; every later one is a direct dependency. With `--dev`
+# (anywhere after the member, before or among the allowed names) the listing is the member's dev
+# edges, where `oce-bless` is also allowed.
 check_tree() {
   [ "$#" -ge 1 ] || usage
-  local member="$1" dev=""
+  local member="$1" dev="" arg names=()
   shift
-  if [ "${1:-}" = --dev ]; then
-    dev=1
-    shift
-  fi
-  local allowed=" oce-api $* " line name first="" bad=()
+  for arg in "$@"; do
+    if [ "$arg" = --dev ]; then dev=1; else names+=("$arg"); fi
+  done
+  local allowed=" oce-api ${names[*]-} " line name first="" bad=()
   [ -z "$dev" ] || allowed="$allowed oce-bless "
   while IFS= read -r line; do
     case "$line" in '' | '['*) continue ;; esac

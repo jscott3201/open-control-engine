@@ -241,7 +241,7 @@ fn every_status_has_the_exact_status_column_mask_and_refusal_rows() {
                 assert_eq!(p, &path(*slot));
                 (r.frame, Some(*slot))
             }
-            RefusalCause::Engine { message } => {
+            RefusalCause::Engine { message, .. } => {
                 assert!(message.contains("uRetDam_max"), "{message}");
                 (r.frame, None)
             }
@@ -347,7 +347,7 @@ fn nan_blank_and_cleared_validity_are_missing_and_infinity_is_a_value_under_both
             let expected = if non_finite == Refuse { 4 } else { 0 };
             assert_eq!(trace.status()[1], expected, "{non_finite:?} {infinity}");
             if non_finite == Refuse {
-                let RefusalCause::Engine { message } = &trace.refusals()[0].cause else {
+                let RefusalCause::Engine { message, .. } = &trace.refusals()[0].cause else {
                     panic!("an infinity is not missing");
                 };
                 assert!(message.contains("TZon"), "{message}");
@@ -401,5 +401,90 @@ fn blank_na_and_nan_csv_cells_are_missing_under_both_policies_and_inf_is_a_value
                 .iter()
                 .all(|r| r.cause == missing_tzon(r.frame).cause)
         );
+    }
+}
+
+#[test]
+fn an_expired_hold_refuses_the_frame_even_when_another_input_skips_it() {
+    // TSet: HoldLast { max_age: 0.5 }; TZon: SkipFrame. Frame 2 lacks both: TSet's hold is one
+    // second old (expired), so refusal dominates the skip and names TSet.
+    for on_refusal in [OnRefusal::RecordAndContinue, OnRefusal::Stop] {
+        let engine = load(FIXTURE);
+        let specs = path_specs(&engine);
+        let map = InputMap::resolve(
+            &engine.input_definitions().unwrap(),
+            &specs,
+            &ColumnMap::by_name(&specs),
+            &MissingPolicy::HoldLast { max_age: 0.5 },
+            &[("TZon".to_owned(), MissingPolicy::SkipFrame)],
+        )
+        .unwrap();
+        let source = columnar_with_missing(&map, &frames(), &[(2, 0), (2, 1), (3, 1)]);
+        let mut options = ReplayOptions::new(TimeBase::Recorded);
+        options.on_refusal = on_refusal;
+        let mut replay = Replay::new(engine, map, source, options).unwrap();
+        let progress = replay.advance(100).unwrap();
+        let (_, trace) = replay.finish();
+        let tset = RefusalCause::MissingInput {
+            slot: 0,
+            path: "http://example.org#g36.source.generic_time_suppression.TSet".to_owned(),
+        };
+        assert_eq!(
+            trace.refusals()[0],
+            RefusalRow {
+                frame: 2,
+                cause: tset.clone()
+            }
+        );
+        match on_refusal {
+            OnRefusal::Stop => {
+                assert_eq!(
+                    progress,
+                    Progress::Stopped {
+                        frame: 2,
+                        cause: tset
+                    }
+                );
+                assert_eq!(trace.status(), [0, 0, 3]);
+            }
+            OnRefusal::RecordAndContinue => {
+                // Frame 3 lacks only TZon: skipped.
+                assert_eq!(trace.status(), [0, 0, 3, 2, 0, 0]);
+            }
+        }
+        // The mask is per input and per row whatever the status: no substitution happened here.
+        assert!(trace.substitution_mask().unwrap().iter().all(|b| *b == 0));
+    }
+}
+
+#[test]
+fn the_mask_records_a_substitution_on_skipped_and_refused_rows() {
+    // TSet: Fallback; TZon: SkipFrame on frame 2, Refuse on frame 3 (run-level).
+    for (tzon_policy, expected) in [(MissingPolicy::SkipFrame, 2_u8), (MissingPolicy::Refuse, 3)] {
+        let engine = load(FIXTURE);
+        let specs = path_specs(&engine);
+        let map = InputMap::resolve(
+            &engine.input_definitions().unwrap(),
+            &specs,
+            &ColumnMap::by_name(&specs),
+            &MissingPolicy::Refuse,
+            &[
+                (
+                    "TSet".to_owned(),
+                    MissingPolicy::Fallback(Value::Real(21.0)),
+                ),
+                ("TZon".to_owned(), tzon_policy),
+            ],
+        )
+        .unwrap();
+        let source = columnar_with_missing(&map, &frames(), &[(2, 0), (2, 1)]);
+        let mut options = ReplayOptions::new(TimeBase::Recorded);
+        options.on_refusal = OnRefusal::RecordAndContinue;
+        let (_, trace) = Replay::new(engine, map, source, options)
+            .unwrap()
+            .run()
+            .unwrap();
+        assert_eq!(trace.status()[2], expected);
+        assert!(trace.substituted(2, 0) && !trace.substituted(2, 1));
     }
 }

@@ -13,9 +13,9 @@ use oce_api::{Engine, FrameSlots, NonFiniteInputPolicy, Value, ValueType};
 
 use crate::frame::{Attempt, Cells};
 use crate::{
-    ColumnKind, DuplicateTime, FrameSource, InputMap, OnRefusal, RefusalCause, ReplayError,
-    ReplayLimits, SourceError, SourceKind, TimeBase, TimeOrigin, Trace, TraceColumn, TraceInput,
-    TraceKind, TraceMeta,
+    ColumnKind, DuplicateTime, EngineRefusal, FrameSource, InputMap, OnRefusal, RefusalCause,
+    ReplayError, ReplayLimits, SourceError, SourceKind, TimeBase, TimeOrigin, Trace, TraceColumn,
+    TraceInput, TraceKind, TraceMeta,
 };
 
 /// The most rows one chunk reserves ahead; a larger chunk grows its columns geometrically.
@@ -140,12 +140,16 @@ impl<S: FrameSource> std::fmt::Debug for Replay<S> {
     }
 }
 
-fn trace_kind(value_type: ValueType) -> TraceKind {
+/// The trace kind of an input type. `None` for String, which `InputMap::resolve` already refuses
+/// (`MapError::UnsupportedInputType`), so `Replay::new` turns it into a typed error rather than
+/// coercing it; it is unreachable for a map that resolved.
+fn trace_kind(value_type: ValueType) -> Option<TraceKind> {
     match value_type {
-        ValueType::Real | ValueType::String => TraceKind::Real,
-        ValueType::Integer => TraceKind::Integer,
-        ValueType::Boolean => TraceKind::Boolean,
-        ValueType::Enum(_) => TraceKind::Enum,
+        ValueType::Real => Some(TraceKind::Real),
+        ValueType::Integer => Some(TraceKind::Integer),
+        ValueType::Boolean => Some(TraceKind::Boolean),
+        ValueType::Enum(_) => Some(TraceKind::Enum),
+        ValueType::String => None,
     }
 }
 
@@ -159,7 +163,13 @@ impl<S: FrameSource> Replay<S> {
     ///
     /// # Errors
     /// `Limit`, `InvalidTimeBase`, `InvalidTraceOptions`, `SourceNotBound`, `Engine` (no loaded
-    /// model, pending edits), `StaleMap`, `OriginConflict`, in that order.
+    /// model, pending edits), `StaleMap` (also when the slot map's input order differs from the
+    /// map's), `UnsupportedInputType`, `OriginConflict`, in that order. On any error the engine,
+    /// already moved in, is dropped: a caller that must keep it checks the map against
+    /// `engine.input_definitions()` first.
+    ///
+    /// The engine handed back by [`Self::finish`] or [`Self::run`] keeps the non-finite policy set
+    /// here.
     pub fn new(
         mut engine: Engine,
         map: InputMap,
@@ -188,18 +198,35 @@ impl<S: FrameSource> Replay<S> {
         };
         engine.set_non_finite_input_policy(options.non_finite);
         let slots = engine.frame_slots()?;
+        // A structural check: the slot map's input order is the map's (canonical path order).
+        if slots.inputs().len() != map.len()
+            || slots
+                .inputs()
+                .iter()
+                .zip(map.inputs())
+                .any(|(a, b)| a.path != b.path)
+        {
+            return Err(ReplayError::StaleMap);
+        }
         let n = map.len();
         let inputs = (0..n)
-            .map(|slot| TraceInput {
-                path: map.inputs()[slot].path.clone(),
-                kind: trace_kind(map.inputs()[slot].value_type),
-                enum_class: match map.kind(slot) {
-                    ColumnKind::Enum(class) => Some(class.clone()),
-                    _ => None,
-                },
-                policy: map.policy(slot).clone(),
+            .map(|slot| {
+                let definition = &map.inputs()[slot];
+                Ok(TraceInput {
+                    path: definition.path.clone(),
+                    kind: trace_kind(definition.value_type).ok_or_else(|| {
+                        ReplayError::UnsupportedInputType {
+                            path: definition.path.clone(),
+                        }
+                    })?,
+                    enum_class: match map.kind(slot) {
+                        ColumnKind::Enum(class) => Some(class.clone()),
+                        _ => None,
+                    },
+                    policy: map.policy(slot).clone(),
+                })
             })
-            .collect::<Vec<_>>();
+            .collect::<Result<Vec<_>, ReplayError>>()?;
         let mut ignored = map.ignored_columns().to_vec();
         ignored.extend(source.ignored_columns().iter().cloned());
         let mut snapshot_at = options.trace.snapshot_at.clone();
@@ -344,7 +371,7 @@ impl<S: FrameSource> Replay<S> {
         for _ in 0..max_frames {
             let step = match self.time {
                 TimeBase::Recorded => self.recorded_step(),
-                TimeBase::Grid { t0, step } => self.grid_step(t0, step),
+                grid @ TimeBase::Grid { t0, step } => self.grid_step(grid, t0, step),
             };
             match step {
                 Ok(Step::Frame) => {}
@@ -373,7 +400,9 @@ impl<S: FrameSource> Replay<S> {
     /// and the trace.
     ///
     /// # Errors
-    /// As [`Self::advance`]; the engine is dropped with the replay.
+    /// As [`Self::advance`]. On an error the engine is dropped with the replay; when the engine must
+    /// survive a failed run, drive [`Self::advance`] and call [`Self::finish`] yourself (an error
+    /// from `advance` leaves the replay, and so the engine, in place).
     pub fn run(mut self) -> Result<(Engine, Trace), ReplayError> {
         loop {
             match self.advance(4_096)? {
@@ -383,7 +412,8 @@ impl<S: FrameSource> Replay<S> {
         }
     }
 
-    /// End the run and hand back the engine and the trace.
+    /// End the run and hand back the engine and the trace. The engine's non-finite input policy is
+    /// the one [`Self::new`] set (`ReplayOptions::non_finite`), not the one it arrived with.
     #[must_use]
     pub fn finish(self) -> (Engine, Trace) {
         (self.engine, self.trace)
@@ -423,7 +453,14 @@ impl<S: FrameSource> Replay<S> {
         } else {
             &mut self.cells.current
         };
-        dest.clone_from_slice(row);
+        // NaN is missing whatever the source says (decisions 2 and 9): a custom source that lends
+        // `Some(Real(NaN))` gets the same treatment as the three adapters.
+        for (cell, value) in dest.iter_mut().zip(row) {
+            *cell = match value {
+                Some(Value::Real(x)) if x.is_nan() => None,
+                other => other.clone(),
+            };
+        }
         self.source_rows = number;
         self.prev_time = Some(t);
         Ok(Some(t))
@@ -453,11 +490,19 @@ impl<S: FrameSource> Replay<S> {
         self.finish_attempt(t)
     }
 
-    fn grid_step(&mut self, t0: f64, step: f64) -> Result<Step, ReplayError> {
+    fn grid_step(&mut self, grid: TimeBase, t0: f64, step: f64) -> Result<Step, ReplayError> {
         let k = self.tick;
-        // The documented tick rule; `TimeBase::tick` is the same expression.
-        #[allow(clippy::cast_precision_loss)]
-        let tick = t0 + (k as f64) * step;
+        let tick = grid.tick(k).unwrap_or(t0);
+        // The interval a current sample arrived in is `(previous, tick]`. Past the precision of
+        // `t0` and `step` (a huge `t0`, or `k` beyond 2^53) consecutive ticks can round equal;
+        // the grid has then stopped advancing, which is a typed error, never a repeated time.
+        let previous = match k.checked_sub(1) {
+            Some(j) => grid.tick(j).unwrap_or(t0),
+            None => t0 - step,
+        };
+        if previous >= tick {
+            return Err(ReplayError::GridNotIncreasing { tick: k });
+        }
         loop {
             if self.pending.is_none() && !self.exhausted {
                 match self.read_row(true)? {
@@ -478,12 +523,6 @@ impl<S: FrameSource> Replay<S> {
             return Ok(Step::End);
         }
         self.check_frame_budget()?;
-        #[allow(clippy::cast_precision_loss)]
-        let previous = if k == 0 {
-            t0 - step
-        } else {
-            t0 + ((k - 1) as f64) * step
-        };
         self.cells
             .current_from_observed(previous, self.kind == SourceKind::Signals);
         self.tick = k + 1;
@@ -501,6 +540,13 @@ impl<S: FrameSource> Replay<S> {
         }
         Ok(match outcome {
             Attempt::Recorded => Step::Frame,
+            // A refusal about the engine or the run, not the frame, stops whatever the policy.
+            Attempt::Refused(
+                cause @ RefusalCause::Engine {
+                    refusal: EngineRefusal::Run,
+                    ..
+                },
+            ) => Step::Stop(row, cause),
             Attempt::Refused(cause) => match self.on_refusal {
                 OnRefusal::Stop => Step::Stop(row, cause),
                 OnRefusal::RecordAndContinue => Step::Frame,
@@ -521,3 +567,7 @@ impl<S: FrameSource> Replay<S> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "replay_tests.rs"]
+mod tests;

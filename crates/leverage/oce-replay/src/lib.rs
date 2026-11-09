@@ -52,10 +52,13 @@
 //! # Ok(()) }
 //! ```
 //!
-//! **Enum classes.** The facade exposes no lookup from an enum value's class to its class path,
-//! so an Enum *input* column carries the class path its source declared ([`ColumnKind::Enum`]),
-//! and an Enum *output* column records the facade's in-memory class index only
-//! ([`TraceOutput::enum_class_index`]). No G36 corpus fixture has an Enum boundary port.
+//! **Enum classes (decision 21 as built).** The facade exposes no lookup from an enum value's
+//! class to its class path, so an Enum *input* column carries the class path its source declared
+//! ([`ColumnKind::Enum`]), an unverified label replay cannot check against the engine's class;
+//! an Enum *output* column keeps the facade's process-local class index in memory only
+//! ([`TraceOutput::enum_class_index`]), and [`Trace::canonical_bytes`] writes the ordinal with an
+//! empty class path for every output. No G36 corpus fixture has an Enum boundary port; a facade
+//! class-path lookup is a follow-up.
 
 pub mod canonical;
 mod columnar;
@@ -83,6 +86,6 @@ pub use source::{FrameSource, Row};
 pub use step::StepSource;
 pub use time::{TimeColumn, TimeOrigin};
 pub use trace::{
-    DiagnosticRow, RefusalCause, RefusalRow, Trace, TraceColumn, TraceInput, TraceKind, TraceMeta,
-    TraceOutput,
+    DiagnosticRow, EngineRefusal, RefusalCause, RefusalRow, Trace, TraceColumn, TraceInput,
+    TraceKind, TraceMeta, TraceOutput,
 };

@@ -22,7 +22,11 @@ the `crates/leverage/*` glob in the root `Cargo.toml`.
    `oce-graph`, `oce-cxf`, …) are reached through the facade or not at all, so a leverage crate
    can never come to depend on behaviour the facade does not promise.
    `bash scripts/ci/leverage-members.sh check` enforces it with `cargo tree` on every leverage-lane
-   run, reading normal and build edges and dev edges separately.
+   run, reading normal and build edges and dev edges separately. Leverage *tests* may also include
+   core-crate test-support files by `#[path]` (the shared G36 corpus list and frame schedule, as
+   `oce-replay` does), which `cargo tree` does not see; that is source reuse, not a dependency,
+   and because any core change also runs the leverage lane, a change to those files is exercised
+   here too.
 2. **It ships the same goldens.** Tests compare checked-in expected outputs bit-exactly, as the
    engine crates do (see `TESTING.md`); a leverage crate is not a lighter testing tier.
 3. **It runs in the leverage CI lane.** A pull request that touches `crates/leverage/**` and

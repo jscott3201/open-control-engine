@@ -1084,7 +1084,7 @@ jobs:
       - name: Quickstart executes successfully
         run: bash .github/scripts/check-quickstart-runs.sh
 
-  # The leverage lane: crates/leverage/* (none yet). Layout and dependency rule (oce-api only), then
+  # The leverage lane: crates/leverage/* (oce-replay first). Layout and dependency rule (oce-api, plus oce-bless as dev), then
   # fmt, clippy -D warnings, rustdoc -D warnings, nextest and cargo-machete for each member, all in
   # scripts/ci/leverage-members.sh so `bash .agents/gate.sh leverage` runs the same commands. It runs
   # for a change under crates/leverage/ and for every engine change (core implies leverage), and it

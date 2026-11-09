@@ -262,3 +262,138 @@ fn integer_boolean_and_enum_cells_parse_strictly() {
         }
     }
 }
+
+/// A reader that yields `prefix`, then `count` copies of `byte`, without holding them.
+struct Flood {
+    prefix: Vec<u8>,
+    at: usize,
+    byte: u8,
+    count: u64,
+}
+
+impl std::io::Read for Flood {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if self.at < self.prefix.len() {
+            let n = buf.len().min(self.prefix.len() - self.at);
+            buf[..n].copy_from_slice(&self.prefix[self.at..self.at + n]);
+            self.at += n;
+            return Ok(n);
+        }
+        let n = (buf.len() as u64).min(self.count) as usize;
+        buf[..n].fill(self.byte);
+        self.count -= n as u64;
+        Ok(n)
+    }
+}
+
+/// Construct and read a CSV source over `flood`, returning the error and the peak bytes allocated.
+fn flooded(prefix: &str, byte: u8, count: u64, limits: ReplayLimits) -> (SourceError, u64) {
+    let engine = load(FIXTURE);
+    let map = path_map(&engine, &MissingPolicy::Refuse);
+    let prefix = prefix
+        .replacen('H', &format!("t,{TSET},{TZON}"), 1)
+        .into_bytes();
+    let mut error = None;
+    let info = allocation_counter::measure(|| {
+        let flood = Flood {
+            prefix,
+            at: 0,
+            byte,
+            count,
+        };
+        error = Some(
+            match CsvSource::new(&map, flood, CsvFormat::seconds("t"), &limits) {
+                Err(e) => e,
+                Ok(mut source) => loop {
+                    match source.next_row() {
+                        Err(e) => break e,
+                        Ok(None) => panic!("the flood parsed to the end"),
+                        Ok(Some(_)) => {}
+                    }
+                },
+            },
+        );
+    });
+    (error.unwrap(), info.bytes_max)
+}
+
+const MB: u64 = 1 << 20;
+
+#[test]
+fn a_flood_of_delimiters_or_an_unterminated_quote_is_refused_in_bounded_memory() {
+    let small = ReplayLimits {
+        max_columns: 16,
+        max_cell_bytes: 64,
+        ..ReplayLimits::MAX
+    };
+    // 64 MB of commas as the header: refused at the 17th field.
+    let (error, peak) = flooded("", b',', 64 * MB, small);
+    assert_eq!(error, SourceError::TooManyColumns { limit: 16 });
+    assert!(peak < 64 * 1024, "peak {peak} bytes");
+    // ... and as a data record: refused at the fourth field (the header has three).
+    let (error, peak) = flooded("H\n0,1,2\n", b',', 64 * MB, small);
+    assert_eq!(error, SourceError::Ragged { row: 2 });
+    assert!(peak < 64 * 1024, "peak {peak} bytes");
+    // 64 MB inside an unterminated quote, in the header and in a data cell.
+    let (error, peak) = flooded("\"", b'x', 64 * MB, small);
+    assert_eq!(
+        error,
+        SourceError::CellTooLong {
+            row: 0,
+            field: 0,
+            limit: 64
+        }
+    );
+    assert!(peak < 64 * 1024, "peak {peak} bytes");
+    let (error, peak) = flooded("H\n0,\"", b'9', 64 * MB, small);
+    assert_eq!(
+        error,
+        SourceError::CellTooLong {
+            row: 1,
+            field: 1,
+            limit: 64
+        }
+    );
+    assert!(peak < 64 * 1024, "peak {peak} bytes");
+}
+
+#[test]
+fn at_the_default_caps_a_100_mb_hostile_line_is_refused_within_the_documented_bound() {
+    // The bound: an 8 KiB chunk, one cell and one record of at most 4,096 cells of 256 bytes.
+    let bound = 8 * 1024 + 257 + 4 * MB;
+    let (error, peak) = flooded("", b',', 100 * MB, ReplayLimits::MAX);
+    assert_eq!(error, SourceError::TooManyColumns { limit: 4_096 });
+    assert!(peak < bound, "peak {peak} bytes");
+    let (error, peak) = flooded("H\n0,", b'7', 100 * MB, ReplayLimits::MAX);
+    assert_eq!(
+        error,
+        SourceError::CellTooLong {
+            row: 1,
+            field: 1,
+            limit: 256
+        }
+    );
+    assert!(peak < bound, "peak {peak} bytes");
+}
+
+#[test]
+fn an_invalid_delimiter_is_refused() {
+    let engine = load(FIXTURE);
+    let map = path_map(&engine, &MissingPolicy::Refuse);
+    for delimiter in [b'"', b'\r', b'\n', 0xff] {
+        let format = CsvFormat {
+            delimiter,
+            ..CsvFormat::seconds("t")
+        };
+        assert_eq!(
+            CsvSource::new(&map, &b"t\n"[..], format, &ReplayLimits::default()).unwrap_err(),
+            SourceError::BadDelimiter { delimiter }
+        );
+    }
+    let format = CsvFormat {
+        delimiter: b';',
+        ..CsvFormat::seconds("t")
+    };
+    let text = format!("t;{TSET};{TZON}\n0;1;2\n");
+    assert!(CsvSource::new(&map, text.as_bytes(), format, &ReplayLimits::default()).is_ok());
+}

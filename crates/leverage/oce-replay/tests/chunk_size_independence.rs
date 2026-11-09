@@ -113,3 +113,16 @@ fn advance_of_zero_frames_reads_nothing() {
     assert_eq!(replay.trace().rows(), 0);
     assert_eq!(replay.advance(3).unwrap(), Progress::More { done: 3 });
 }
+
+#[test]
+fn reserving_room_mid_run_does_not_change_the_trace() {
+    let (_, plain) = scenarios::every_status(|_| {}).run().unwrap();
+    let mut replay = scenarios::every_status(|_| {});
+    replay.advance(5).unwrap();
+    replay.reserve(3).unwrap();
+    replay.advance(2).unwrap();
+    replay.reserve(1_000).unwrap();
+    replay.reserve(0).unwrap();
+    let (_, trace) = replay.run().unwrap();
+    assert_eq!(trace.canonical_bytes(), plain.canonical_bytes());
+}

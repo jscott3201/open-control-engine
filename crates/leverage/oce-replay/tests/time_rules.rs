@@ -529,3 +529,43 @@ fn on_a_grid_a_step_list_is_a_signal_and_never_a_hold() {
         [0.0, 290.0, 290.0, 291.0, 291.0, 291.0, 291.0]
     );
 }
+
+#[test]
+fn a_grid_whose_ticks_stop_advancing_is_a_typed_error() {
+    let run = |t0: f64| {
+        let engine = load(FIXTURE);
+        let map = path_map(&engine, &MissingPolicy::Refuse);
+        let steps = (0..map.len())
+            .map(|slot| (map.column(slot).to_owned(), vec![(t0, Value::Real(290.0))]))
+            .collect();
+        let source =
+            StepSource::with_instants(&map, steps, vec![t0 + 64.0], &ReplayLimits::default())
+                .unwrap();
+        let options = ReplayOptions::new(TimeBase::Grid { t0, step: 1.0 });
+        let mut replay = Replay::new(engine, map, source, options).unwrap();
+        let result = replay.advance(10);
+        (result, replay.trace().rows())
+    };
+    // t0 = 2^53, step 1: tick 0 runs (2^53 - 1 is below it), tick 1 = 2^53 + 1 rounds back to 2^53.
+    let (result, rows) = run(9_007_199_254_740_992.0);
+    assert!(
+        matches!(result, Err(ReplayError::GridNotIncreasing { tick: 1 })),
+        "{result:?}"
+    );
+    assert_eq!(rows, 1, "tick 0 ran");
+    // At t0 = 1e17 one ulp is 16 s: even the interval before tick 0 is empty.
+    let (result, rows) = run(1e17);
+    assert!(
+        matches!(result, Err(ReplayError::GridNotIncreasing { tick: 0 })),
+        "{result:?}"
+    );
+    assert_eq!(rows, 0);
+    // From 0 the same holds past k = 2^53: tick(2^53 + 1) == tick(2^53).
+    let grid = TimeBase::Grid { t0: 0.0, step: 1.0 };
+    let k: u64 = (1 << 53) + 1;
+    assert_eq!(
+        grid.tick(k),
+        grid.tick(k - 1),
+        "the condition the error guards"
+    );
+}

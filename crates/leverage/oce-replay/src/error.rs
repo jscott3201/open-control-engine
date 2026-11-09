@@ -262,6 +262,11 @@ pub enum SourceError {
         /// The data row, or 0 for the origin.
         row: u64,
     },
+    /// A CSV delimiter that is not ASCII, or is `"`, `\r` or `\n`.
+    BadDelimiter {
+        /// The delimiter given.
+        delimiter: u8,
+    },
     /// The underlying reader failed (other than the byte cap).
     Read {
         /// The reader's message.
@@ -297,6 +302,9 @@ impl fmt::Display for SourceError {
             Self::BadStep { column, step } => write!(f, "step {step} of {column} is invalid"),
             Self::RowWidth { row } => write!(f, "row {row} width differs from the map"),
             Self::BadInstant { row } => write!(f, "row {row} instant is not RFC 3339 subset"),
+            Self::BadDelimiter { delimiter } => {
+                write!(f, "delimiter byte {delimiter:#04x} is invalid")
+            }
             Self::Read { message } => write!(f, "source read failed: {message}"),
         }
     }
@@ -363,6 +371,16 @@ pub enum ReplayError {
         /// The window index.
         index: usize,
     },
+    /// An input of a type no trace column carries (String); unreachable for a resolved map.
+    UnsupportedInputType {
+        /// The input path.
+        path: String,
+    },
+    /// Consecutive grid ticks no longer increase (`t0 + k * step` rounded to the previous tick).
+    GridNotIncreasing {
+        /// The tick index `k`.
+        tick: u64,
+    },
     /// `advance` called after an earlier call returned an error.
     Failed,
 }
@@ -386,6 +404,10 @@ impl fmt::Display for ReplayError {
             }
             Self::InvalidWindow { index } => write!(f, "coverage window {index} is invalid"),
             Self::Uncovered { index } => write!(f, "coverage window {index} has no executed tick"),
+            Self::UnsupportedInputType { path } => {
+                write!(f, "input {path} has a type no trace column carries")
+            }
+            Self::GridNotIncreasing { tick } => write!(f, "grid tick {tick} does not advance"),
             Self::Failed => write!(f, "the replay already failed"),
         }
     }

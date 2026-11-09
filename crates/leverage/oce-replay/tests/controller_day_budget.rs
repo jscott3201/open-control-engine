@@ -8,7 +8,7 @@
 //! inputs retained it carries them too. The frame bytes are exactly `rows × B/frame` and within
 //! the documented megabytes; the warnings table is reported beside them.
 
-#![allow(clippy::print_stdout)] // The budget lines are the evidence the PR pastes.
+#![allow(clippy::print_stdout)] // The budget lines are printed as measured evidence.
 
 #[path = "support/controller.rs"]
 mod controller;
