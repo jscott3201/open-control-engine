@@ -18,6 +18,7 @@ mod scan;
 use std::fmt;
 
 use crate::json::Json;
+pub use crate::location::Location;
 use crate::model::{Boundary, Literal, ParamValue, Sequence};
 
 pub(crate) use dto::WireSequence;
@@ -35,21 +36,6 @@ pub const MAX_WIRE_LIST_LEN: usize = 65_536;
 
 /// The longest string token, in bytes as written (escapes counted as written).
 pub const MAX_WIRE_STRING_BYTES: usize = 4_096;
-
-/// A 1-based line and column (bytes) in a wire document.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Position {
-    /// 1-based line.
-    pub line: usize,
-    /// 1-based column, in bytes.
-    pub column: usize,
-}
-
-impl fmt::Display for Position {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "line {} column {}", self.line, self.column)
-    }
-}
 
 /// Why a wire document was refused. Never a panic.
 #[non_exhaustive]
@@ -72,21 +58,21 @@ pub enum WireError {
     /// Objects and arrays nest deeper than [`MAX_WIRE_DEPTH`].
     TooDeep {
         /// Where the refused level opens.
-        at: Position,
+        at: Location,
         /// The limit.
         limit: usize,
     },
     /// A list is longer than [`MAX_WIRE_LIST_LEN`].
     ListTooLong {
         /// Where the list opens.
-        at: Position,
+        at: Location,
         /// The limit.
         limit: usize,
     },
     /// A string is longer than [`MAX_WIRE_STRING_BYTES`].
     StringTooLong {
         /// Where the string opens.
-        at: Position,
+        at: Location,
         /// The limit.
         limit: usize,
     },
@@ -95,51 +81,51 @@ pub enum WireError {
         /// The repeated key.
         key: String,
         /// Where the repeat is.
-        at: Position,
+        at: Location,
     },
     /// `NaN` or `Infinity` spelled as a number, or a real that overflows binary64.
     NonFiniteNumber {
         /// Where the number is.
-        at: Position,
+        at: Location,
     },
     /// An integer token (no fraction or exponent) outside the `i64` range.
     IntegerOutOfRange {
         /// Where the number is.
-        at: Position,
+        at: Location,
     },
     /// A string carries a control character (anything in C0 but line feed, DEL or C1), raw or
     /// escaped.
     ControlCharacter {
         /// Where it is.
-        at: Position,
+        at: Location,
     },
     /// An object carries a key its schema does not define.
     UnknownKey {
         /// The key.
         key: String,
         /// Where the parse stopped.
-        at: Position,
+        at: Location,
     },
     /// An object lacks a required key.
     MissingKey {
         /// The key.
         key: String,
         /// Where the parse stopped.
-        at: Position,
+        at: Location,
     },
     /// A value has the wrong JSON type or an unknown enumerator.
     WrongType {
         /// What the parser found and expected.
         detail: String,
         /// Where the parse stopped.
-        at: Position,
+        at: Location,
     },
     /// The document is not JSON.
     Syntax {
         /// What the parser found.
         detail: String,
         /// Where the parse stopped.
-        at: Position,
+        at: Location,
     },
     /// A connection string does not have exactly one `->`.
     MalformedConnection {
@@ -249,10 +235,7 @@ pub fn from_wire_str(text: &str) -> Result<Sequence, WireError> {
 /// (`unknown field`, `missing field`, `duplicate field`); anything else is a wrong type, and a
 /// syntax or end-of-input error is [`WireError::Syntax`].
 fn classify(error: &serde_json::Error) -> WireError {
-    let at = Position {
-        line: error.line(),
-        column: error.column(),
-    };
+    let at = Location::new(error.line(), error.column());
     let full = error.to_string();
     let suffix = format!(" at line {} column {}", at.line, at.column);
     let detail = full.strip_suffix(&suffix).unwrap_or(&full).to_owned();

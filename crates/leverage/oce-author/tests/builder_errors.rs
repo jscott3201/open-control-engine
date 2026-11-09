@@ -173,14 +173,14 @@ fn array_element_names_are_checked_against_the_class_templates() {
     let with = |name: &str| {
         let mut s = econ_enable();
         let mut sum = oce_author::Block::new(support::id("sum"), "CDL.Reals.MultiSum");
-        sum.assignments.push(oce_author::Assignment {
-            name: support::id("nin"),
-            value: Literal::Integer(2).into(),
-        });
-        sum.assignments.push(oce_author::Assignment {
-            name: Identifier::unchecked(name),
-            value: Literal::Real(1.0).into(),
-        });
+        sum.assignments.push(oce_author::Assignment::new(
+            support::id("nin"),
+            Literal::Integer(2),
+        ));
+        sum.assignments.push(oce_author::Assignment::new(
+            Identifier::unchecked(name),
+            Literal::Real(1.0),
+        ));
         s.blocks.push(sum);
         codes(&validate(&s))
     };

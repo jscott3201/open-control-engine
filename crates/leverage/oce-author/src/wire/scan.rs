@@ -10,7 +10,7 @@
 
 use std::collections::BTreeSet;
 
-use super::{MAX_WIRE_DEPTH, MAX_WIRE_LIST_LEN, MAX_WIRE_STRING_BYTES, Position, WireError};
+use super::{Location, MAX_WIRE_DEPTH, MAX_WIRE_LIST_LEN, MAX_WIRE_STRING_BYTES, WireError};
 
 /// Why the pass stopped early.
 enum Halt {
@@ -49,14 +49,11 @@ struct Scanner<'a> {
 }
 
 impl<'a> Scanner<'a> {
-    fn position(&self) -> Position {
-        Position {
-            line: self.line,
-            column: self.at - self.line_start + 1,
-        }
+    fn position(&self) -> Location {
+        Location::new(self.line, self.at - self.line_start + 1)
     }
 
-    fn refuse<T>(&self, make: impl FnOnce(Position) -> WireError) -> Step<T> {
+    fn refuse<T>(&self, make: impl FnOnce(Location) -> WireError) -> Step<T> {
         Err(Halt::Refuse(make(self.position())))
     }
 

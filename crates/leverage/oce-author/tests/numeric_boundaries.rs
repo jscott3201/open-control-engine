@@ -16,15 +16,15 @@ fn constant(class: &str, kind: SignalType, value: Literal) -> Sequence {
     let mut s = Sequence::new(id("numbers"));
     s.outputs.push(Boundary::new(id("y"), kind));
     let mut block = Block::new(id("c"), class);
-    block.assignments.push(oce_author::Assignment {
-        name: id("k"),
-        value: ParamValue::Literal(value),
-    });
+    block.assignments.push(oce_author::Assignment::new(
+        id("k"),
+        ParamValue::Literal(value),
+    ));
     s.blocks.push(block);
-    s.connections.push(Connection {
-        source: Endpoint::parse("c.y"),
-        target: Endpoint::parse("y"),
-    });
+    s.connections.push(Connection::new(
+        Endpoint::parse("c.y"),
+        Endpoint::parse("y"),
+    ));
     s
 }
 
@@ -195,11 +195,11 @@ fn non_finite_reals_are_findings_in_the_model_and_null_on_the_wire() {
 #[test]
 fn sequence_parameter_integer_widening_reaches_a_real_reference() {
     let mut s = real_constant(Literal::Integer(0));
-    s.params.push(oce_author::SequenceParameter {
-        name: id("big"),
-        value_type: SignalType::Real,
-        value: Literal::Integer(i64::MAX),
-    });
+    s.params.push(oce_author::SequenceParameter::new(
+        id("big"),
+        SignalType::Real,
+        Literal::Integer(i64::MAX),
+    ));
     s.blocks[0].assignments[0].value = ParamValue::Ref(id("big"));
     assert_eq!(codes(&validate(&s)), vec![]);
     s.params[0].value_type = SignalType::Integer;
@@ -209,11 +209,11 @@ fn sequence_parameter_integer_widening_reaches_a_real_reference() {
         "an Integer sequence parameter feeds a Real one"
     );
     let mut int = integer_constant(Literal::Integer(0));
-    int.params.push(oce_author::SequenceParameter {
-        name: id("r"),
-        value_type: SignalType::Real,
-        value: Literal::Integer(2),
-    });
+    int.params.push(oce_author::SequenceParameter::new(
+        id("r"),
+        SignalType::Real,
+        Literal::Integer(2),
+    ));
     int.blocks[0].assignments[0].value = ParamValue::Ref(id("r"));
     assert_eq!(
         codes(&validate(&int)),

@@ -319,22 +319,20 @@ impl WireType {
 impl WireBoundary {
     fn model(self) -> Boundary {
         let s = self.semantic;
-        Boundary {
-            name: Identifier::unchecked(self.name),
-            value_type: self.value_type.model(),
-            quantity: optional(self.quantity),
-            display_unit: optional(self.display_unit),
-            semantic: SemanticPoint {
-                name: optional(s.name),
-                label: optional(s.label),
-                unit: optional(s.unit),
-                brick: optional(s.brick),
-                s223: optional(s.s223),
-                qudt: optional(s.qudt),
-                haystack: s.haystack,
-                provisional: s.provisional,
-            },
-        }
+        let mut boundary = Boundary::new(Identifier::unchecked(self.name), self.value_type.model());
+        boundary.quantity = optional(self.quantity);
+        boundary.display_unit = optional(self.display_unit);
+        boundary.semantic = SemanticPoint {
+            name: optional(s.name),
+            label: optional(s.label),
+            unit: optional(s.unit),
+            brick: optional(s.brick),
+            s223: optional(s.s223),
+            qudt: optional(s.qudt),
+            haystack: s.haystack,
+            provisional: s.provisional,
+        };
+        boundary
     }
 }
 
@@ -344,10 +342,10 @@ impl WireBoundary {
 fn connection_of(index: usize, text: String) -> Result<Connection, WireError> {
     let mut parts = text.split("->");
     match (parts.next(), parts.next(), parts.next()) {
-        (Some(source), Some(target), None) => Ok(Connection {
-            source: Endpoint::parse(source.trim_matches(' ')),
-            target: Endpoint::parse(target.trim_matches(' ')),
-        }),
+        (Some(source), Some(target), None) => Ok(Connection::new(
+            Endpoint::parse(source.trim_matches(' ')),
+            Endpoint::parse(target.trim_matches(' ')),
+        )),
         _ => Err(WireError::MalformedConnection { index, text }),
     }
 }
@@ -358,26 +356,25 @@ impl WireSequence {
         let params = self
             .params
             .into_iter()
-            .map(|p| SequenceParameter {
-                name: Identifier::unchecked(p.name),
-                value_type: p.value_type.model(),
-                value: p.value.0,
+            .map(|p| {
+                SequenceParameter::new(
+                    Identifier::unchecked(p.name),
+                    p.value_type.model(),
+                    p.value.0,
+                )
             })
             .collect();
         let blocks = self
             .blocks
             .into_iter()
-            .map(|b| Block {
-                name: Identifier::unchecked(b.name),
-                class_path: b.class_path,
-                assignments: b
+            .map(|b| {
+                let mut block = Block::new(Identifier::unchecked(b.name), b.class_path);
+                block.assignments = b
                     .params
                     .into_iter()
-                    .map(|a| Assignment {
-                        name: Identifier::unchecked(a.name),
-                        value: a.value.0,
-                    })
-                    .collect(),
+                    .map(|a| Assignment::new(Identifier::unchecked(a.name), a.value.0))
+                    .collect();
+                block
             })
             .collect();
         let connections = self
@@ -386,14 +383,13 @@ impl WireSequence {
             .enumerate()
             .map(|(index, text)| connection_of(index, text))
             .collect::<Result<_, _>>()?;
-        Ok(Sequence {
-            name: Identifier::unchecked(self.sequence),
-            extends: optional(self.extends).map(ProvenanceId::unchecked),
-            params,
-            inputs: self.inputs.into_iter().map(WireBoundary::model).collect(),
-            outputs: self.outputs.into_iter().map(WireBoundary::model).collect(),
-            blocks,
-            connections,
-        })
+        let mut sequence = Sequence::new(Identifier::unchecked(self.sequence));
+        sequence.extends = optional(self.extends).map(ProvenanceId::unchecked);
+        sequence.params = params;
+        sequence.inputs = self.inputs.into_iter().map(WireBoundary::model).collect();
+        sequence.outputs = self.outputs.into_iter().map(WireBoundary::model).collect();
+        sequence.blocks = blocks;
+        sequence.connections = connections;
+        Ok(sequence)
     }
 }

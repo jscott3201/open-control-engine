@@ -16,64 +16,56 @@ fn defects() -> oce_author::Sequence {
     let mut s = econ_enable();
     s.name = Identifier::unchecked("defects");
     s.extends = Some(ProvenanceId::unchecked("CXF:abc"));
-    s.params.push(oce_author::SequenceParameter {
-        name: id("nStage"),
-        value_type: SignalType::Integer,
-        value: Literal::Real(2.5),
-    });
+    s.params.push(oce_author::SequenceParameter::new(
+        id("nStage"),
+        SignalType::Integer,
+        Literal::Real(2.5),
+    ));
     s.inputs[0].semantic.unit = Some("deg C".to_owned());
     s.outputs.push(Boundary::new(
         Identifier::unchecked("sub"),
         SignalType::Real,
     ));
     let hys = &mut s.blocks[1];
-    hys.assignments.push(oce_author::Assignment {
-        name: id("uLow"),
-        value: Literal::Real(0.5).into(),
-    });
-    hys.assignments.push(oce_author::Assignment {
-        name: id("uMid"),
-        value: Literal::Real(0.5).into(),
-    });
-    hys.assignments.push(oce_author::Assignment {
-        name: id("pre_y_start"),
-        value: ParamValue::Ref(id("dTHysX")),
-    });
+    hys.assignments
+        .push(oce_author::Assignment::new(id("uLow"), Literal::Real(0.5)));
+    hys.assignments
+        .push(oce_author::Assignment::new(id("uMid"), Literal::Real(0.5)));
+    hys.assignments.push(oce_author::Assignment::new(
+        id("pre_y_start"),
+        ParamValue::Ref(id("dTHysX")),
+    ));
     let mut pid = Block::new(id("con"), "CDL.Reals.PID");
-    pid.assignments.push(oce_author::Assignment {
-        name: id("controllerType"),
-        value: Literal::EnumMember(EnumMember::parse("SimpleController.PIX")).into(),
-    });
-    pid.assignments.push(oce_author::Assignment {
-        name: id("k"),
-        value: Literal::Real(-1.0).into(),
-    });
+    pid.assignments.push(oce_author::Assignment::new(
+        id("controllerType"),
+        Literal::EnumMember(EnumMember::parse("SimpleController.PIX")),
+    ));
+    pid.assignments
+        .push(oce_author::Assignment::new(id("k"), Literal::Real(-1.0)));
     s.blocks.push(pid);
     s.blocks
         .push(Block::new(Identifier::unchecked("end"), "CDL.Reals.Nope"));
     let mut pass = Block::new(id("pass"), "urn:oce:lowering#PassThrough.Real");
-    pass.assignments.push(oce_author::Assignment {
-        name: id("k"),
-        value: Literal::Integer(1).into(),
-    });
+    pass.assignments
+        .push(oce_author::Assignment::new(id("k"), Literal::Integer(1)));
     s.blocks.push(pass);
     s.blocks.push(Block::new(id("limit"), "CDL.Reals.Limiter"));
-    s.connections.push(oce_author::Connection {
-        source: Endpoint::parse("hys.y.z"),
-        target: Endpoint::parse("ecoEna"),
-    });
-    s.connections.push(oce_author::Connection {
-        source: Endpoint::parse("ecoEna"),
-        target: Endpoint::parse("hys.u"),
-    });
-    s.connections.push(oce_author::Connection {
-        source: Endpoint::parse("sub.y"),
-        target: Endpoint::parse("TOut"),
-    });
-    s.connections.push(oce_author::Connection {
-        source: Endpoint::parse("TOut"),
-        target: Endpoint::parse("sub.u9"),
-    });
+    s.connections.push(oce_author::Connection::new(
+        Endpoint::parse("hys.y.z"),
+        Endpoint::parse("ecoEna"),
+    ));
+    s.connections.push(oce_author::Connection::new(
+        Endpoint::parse("ecoEna"),
+        Endpoint::parse("hys.u"),
+    ));
+    s.connections.push(oce_author::Connection::new(
+        Endpoint::parse("sub.y"),
+        Endpoint::parse("TOut"),
+    ));
+    s.connections.push(oce_author::Connection::new(
+        Endpoint::parse("TOut"),
+        Endpoint::parse("sub.u9"),
+    ));
     s
 }
 

@@ -23,6 +23,7 @@ pub(crate) use semantic::boundary_problems as boundary_syntax_problems;
 
 use std::fmt;
 
+use crate::location::Location;
 use crate::model::Sequence;
 
 pub use codes::*;
@@ -97,6 +98,7 @@ mod codes {
 }
 
 /// The two validation stages (decision 4).
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Stage {
     /// Stage 1: the model and the catalog alone ([`validate_author_side`]).
@@ -108,6 +110,7 @@ pub enum Stage {
 
 /// How serious a finding is. Every stage-1 finding is an error; stage 2 turns every engine
 /// warning into an error too (decision 14).
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Severity {
     /// The sequence is wrong; it must not be emitted.
@@ -117,6 +120,7 @@ pub enum Severity {
 }
 
 /// Who found it.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Origin {
     /// The authoring layer (stage 1).
@@ -125,16 +129,8 @@ pub enum Origin {
     Engine,
 }
 
-/// A location in a text-form source. `None` on every finding until the text form exists.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Span {
-    /// 1-based line.
-    pub line: u32,
-    /// 1-based column.
-    pub column: u32,
-}
-
 /// One validation finding.
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Finding {
     /// The exact code (`duplicate-name`, …); see [`STAGE_ONE_CODES`].
@@ -145,7 +141,7 @@ pub struct Finding {
     /// (`dTHys`, `TOut`, `hys`), an assignment (`hys.uHigh`) or a connection (`connection[2]`).
     pub subject: String,
     /// The text location, when the input was text.
-    pub span: Option<Span>,
+    pub span: Option<Location>,
     /// What is wrong, in the author's terms.
     pub detail: String,
     /// Who found it.
@@ -158,9 +154,9 @@ impl fmt::Display for Finding {
     }
 }
 
-/// Where a subject sits in the authored model; findings sort by it first.
+/// Where a subject sits in the authored model (crate-private); findings sort by it first.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) enum Position {
+pub(crate) enum Anchor {
     Sequence,
     Extends,
     Param(usize),
@@ -174,14 +170,14 @@ pub(crate) enum Position {
 /// The findings of one run, before ordering.
 #[derive(Default)]
 pub(crate) struct Findings {
-    items: Vec<(Position, Finding)>,
+    items: Vec<(Anchor, Finding)>,
 }
 
 impl Findings {
     /// Record an author-side error.
     pub(crate) fn error(
         &mut self,
-        position: Position,
+        position: Anchor,
         code: &'static str,
         subject: impl Into<String>,
         detail: impl Into<String>,

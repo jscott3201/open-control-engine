@@ -30,10 +30,10 @@ fn set(block: &mut Block, name: &str, value: ParamValue) {
         .find(|a| a.name.as_str() == name)
     {
         Some(assignment) => assignment.value = value,
-        None => block.assignments.push(oce_author::Assignment {
-            name: Identifier::unchecked(name),
+        None => block.assignments.push(oce_author::Assignment::new(
+            Identifier::unchecked(name),
             value,
-        }),
+        )),
     }
 }
 
@@ -47,26 +47,25 @@ fn with_block(block: Block) -> Sequence {
     let mut s = Sequence::new(id("one"));
     s.outputs.push(Boundary::new(id("y"), SignalType::Real));
     let mut source = Block::new(id("src"), "CDL.Reals.Sources.Constant");
-    source.assignments.push(oce_author::Assignment {
-        name: id("k"),
-        value: real(1.0),
-    });
+    source
+        .assignments
+        .push(oce_author::Assignment::new(id("k"), real(1.0)));
     s.blocks.push(source);
     s.blocks.push(block);
-    s.connections.push(Connection {
-        source: Endpoint::parse("src.y"),
-        target: Endpoint::parse("y"),
-    });
+    s.connections.push(Connection::new(
+        Endpoint::parse("src.y"),
+        Endpoint::parse("y"),
+    ));
     s
 }
 
 fn assigned(block: &str, class: &str, assignments: &[(&str, ParamValue)]) -> Block {
     let mut b = Block::new(id(block), class);
     for (name, value) in assignments {
-        b.assignments.push(oce_author::Assignment {
-            name: Identifier::unchecked(*name),
-            value: value.clone(),
-        });
+        b.assignments.push(oce_author::Assignment::new(
+            Identifier::unchecked(*name),
+            value.clone(),
+        ));
     }
     b
 }
@@ -245,10 +244,9 @@ fn parameter_not_settable() {
 #[test]
 fn duplicate_parameter() {
     let mut s = econ_enable();
-    hys(&mut s).assignments.push(oce_author::Assignment {
-        name: id("uLow"),
-        value: real(0.25),
-    });
+    hys(&mut s)
+        .assignments
+        .push(oce_author::Assignment::new(id("uLow"), real(0.25)));
     let findings = validate(&s);
     assert_eq!(
         codes(&findings),
@@ -404,14 +402,14 @@ fn malformed_connection() {
     let mut s = econ_enable();
     s.connections[2].source = Endpoint::parse("sub.y.z");
     s.connections[3].target = Endpoint::parse("");
-    s.connections.push(Connection {
-        source: Endpoint::parse("sub.y"),
-        target: Endpoint::parse("sub.y"),
-    });
-    s.connections.push(Connection {
-        source: Endpoint::parse("1sub.y"),
-        target: Endpoint::parse("hys.u"),
-    });
+    s.connections.push(Connection::new(
+        Endpoint::parse("sub.y"),
+        Endpoint::parse("sub.y"),
+    ));
+    s.connections.push(Connection::new(
+        Endpoint::parse("1sub.y"),
+        Endpoint::parse("hys.u"),
+    ));
     assert_eq!(
         codes(&validate(&s)),
         vec![
@@ -429,10 +427,10 @@ fn unknown_source() {
     s.connections[0].source = Endpoint::parse("TOutCutt");
     s.connections[1].source = Endpoint::parse("ecoEna");
     s.connections[2].source = Endpoint::parse("subb.y");
-    s.connections.push(Connection {
-        source: Endpoint::parse("dTHys"),
-        target: Endpoint::parse("hys.u"),
-    });
+    s.connections.push(Connection::new(
+        Endpoint::parse("dTHys"),
+        Endpoint::parse("hys.u"),
+    ));
     let findings = validate(&s);
     assert_eq!(
         codes(&findings),
@@ -459,10 +457,10 @@ fn unknown_source() {
 fn unknown_target() {
     let mut s = econ_enable();
     s.connections[3].target = Endpoint::parse("TOut");
-    s.connections.push(Connection {
-        source: Endpoint::parse("hys.y"),
-        target: Endpoint::parse("hys"),
-    });
+    s.connections.push(Connection::new(
+        Endpoint::parse("hys.y"),
+        Endpoint::parse("hys"),
+    ));
     let findings = validate(&s);
     assert_eq!(
         codes(&findings),
@@ -509,10 +507,10 @@ fn unknown_port_follows_the_configured_width() {
             &[("nin", ParamValue::Literal(Literal::Integer(nin)))],
         ));
         s.inputs.push(Boundary::new(id("u"), SignalType::Real));
-        s.connections.push(Connection {
-            source: Endpoint::parse("u"),
-            target: Endpoint::parse("sum.u3"),
-        });
+        s.connections.push(Connection::new(
+            Endpoint::parse("u"),
+            Endpoint::parse("sum.u3"),
+        ));
         s
     };
     assert_eq!(codes(&validate(&sum(3))), vec![]);

@@ -6,9 +6,7 @@ use oce_api::{ClassPort, ClassPorts};
 use crate::identifier::check_identifier_syntax;
 use crate::model::{Endpoint, Sequence};
 
-use super::{
-    Findings, MALFORMED_CONNECTION, Position, UNKNOWN_PORT, UNKNOWN_SOURCE, UNKNOWN_TARGET,
-};
+use super::{Anchor, Findings, MALFORMED_CONNECTION, UNKNOWN_PORT, UNKNOWN_SOURCE, UNKNOWN_TARGET};
 
 /// Which end of a connection.
 #[derive(Clone, Copy)]
@@ -28,7 +26,7 @@ impl End {
 
 pub(super) fn check(sequence: &Sequence, ports: &[Option<ClassPorts>], findings: &mut Findings) {
     for (index, connection) in sequence.connections.iter().enumerate() {
-        let position = Position::Connection(index);
+        let position = Anchor::Connection(index);
         let subject = format!("connection[{index}]");
         let spelled = connection.spelling();
         let mut well_formed = true;

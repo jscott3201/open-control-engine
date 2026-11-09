@@ -6,7 +6,7 @@
 mod support;
 
 use oce_author::{
-    MAX_WIRE_BYTES, MAX_WIRE_DEPTH, MAX_WIRE_LIST_LEN, MAX_WIRE_STRING_BYTES, Position, WireError,
+    Location, MAX_WIRE_BYTES, MAX_WIRE_DEPTH, MAX_WIRE_LIST_LEN, MAX_WIRE_STRING_BYTES, WireError,
     from_wire_bytes, from_wire_str, to_wire_string,
 };
 
@@ -156,10 +156,9 @@ fn the_five_value_shapes_read_as_tagged_values() {
     assert_eq!(read(r#"{"ref":"p"}"#), ParamValue::Ref(support::id("p")));
     assert_eq!(
         read(r#"{"member":"SimpleController.PI"}"#),
-        ParamValue::Literal(Literal::EnumMember(oce_author::EnumMember {
-            type_name: "SimpleController".to_owned(),
-            member: "PI".to_owned()
-        }))
+        ParamValue::Literal(Literal::EnumMember(oce_author::EnumMember::parse(
+            "SimpleController.PI"
+        )))
     );
 }
 
@@ -246,7 +245,7 @@ fn list_lengths_are_bounded() {
         from_wire_str(&list(MAX_WIRE_LIST_LEN + 1)),
         Err(WireError::ListTooLong {
             limit: MAX_WIRE_LIST_LEN,
-            at: Position { line: 1, .. }
+            at: Location { line: 1, .. }
         })
     ));
 }
@@ -306,7 +305,7 @@ fn duplicate_keys_are_refused_at_every_level() {
     );
     assert!(matches!(
         from_wire_str(&root),
-        Err(WireError::DuplicateKey { ref key, at: Position { line: 4, .. } }) if key == "extends"
+        Err(WireError::DuplicateKey { ref key, at: Location { line: 4, .. } }) if key == "extends"
     ));
     let nested = canonical().replacen("\"unit\": \"K\",", "\"unit\": \"K\", \"unit\": \"Pa\",", 1);
     assert!(matches!(

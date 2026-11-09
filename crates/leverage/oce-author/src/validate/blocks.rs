@@ -15,8 +15,8 @@ use crate::model::{Block, Literal, ParamValue, Sequence, SignalType};
 use super::catalog::{ClassView, enum_type, lookup_class, lookup_parameter};
 use super::names::literal_fits;
 use super::{
-    CLASS_NOT_AUTHORABLE, CLASS_NOT_FOUND, DUPLICATE_PARAMETER, Findings, NON_FINITE_PARAMETER,
-    PARAMETER_KIND_MISMATCH, PARAMETER_NOT_SETTABLE, PARAMETER_OUT_OF_RANGE, Position,
+    Anchor, CLASS_NOT_AUTHORABLE, CLASS_NOT_FOUND, DUPLICATE_PARAMETER, Findings,
+    NON_FINITE_PARAMETER, PARAMETER_KIND_MISMATCH, PARAMETER_NOT_SETTABLE, PARAMETER_OUT_OF_RANGE,
     UNKNOWN_ENUM_LITERAL, UNKNOWN_PARAMETER, UNKNOWN_PARAMETER_REFERENCE,
 };
 
@@ -48,7 +48,7 @@ fn check_block(
     block: &Block,
     findings: &mut Findings,
 ) -> Option<ClassPorts> {
-    let block_position = Position::Block(index, None);
+    let block_position = Anchor::Block(index, None);
     let Some(class) = lookup_class(&block.class_path) else {
         findings.error(
             block_position,
@@ -94,7 +94,7 @@ fn check_block(
             Err(refusal) => {
                 withheld.insert(name);
                 findings.error(
-                    Position::Block(index, Some(j)),
+                    Anchor::Block(index, Some(j)),
                     refusal.code,
                     format!("{}.{name}", block.name),
                     refusal.detail,
@@ -119,7 +119,7 @@ fn check_block(
                     .position(|a| named.contains(&a.name.as_str()));
                 let (position, subject) = match position {
                     Some(j) => (
-                        Position::Block(index, Some(j)),
+                        Anchor::Block(index, Some(j)),
                         format!("{}.{}", block.name, block.assignments[j].name),
                     ),
                     None => (block_position, block.name.as_str().to_owned()),

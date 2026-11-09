@@ -18,6 +18,7 @@ use crate::model::{
 use crate::validate::boundary_syntax_problems;
 
 /// Why the builder refused a step.
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BuildError {
     /// A declared name is not a valid identifier.
@@ -199,11 +200,9 @@ impl SequenceBuilder {
         value: Literal,
     ) -> Result<Self, BuildError> {
         let name = self.fresh(name)?;
-        self.sequence.params.push(SequenceParameter {
-            name,
-            value_type,
-            value,
-        });
+        self.sequence
+            .params
+            .push(SequenceParameter::new(name, value_type, value));
         Ok(self)
     }
 
@@ -272,10 +271,9 @@ impl SequenceBuilder {
                 block: block.to_owned(),
             });
         };
-        target.assignments.push(Assignment {
-            name: Identifier::unchecked(parameter),
-            value,
-        });
+        target
+            .assignments
+            .push(Assignment::new(Identifier::unchecked(parameter), value));
         Ok(self)
     }
 
@@ -365,10 +363,7 @@ impl SequenceBuilder {
                     spelling: spelling.to_owned(),
                 })
         };
-        let connection = Connection {
-            source: endpoint(source)?,
-            target: endpoint(target)?,
-        };
+        let connection = Connection::new(endpoint(source)?, endpoint(target)?);
         self.sequence.connections.push(connection);
         Ok(self)
     }

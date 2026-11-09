@@ -97,11 +97,11 @@ fn reserved_words_and_keywords_are_refused_as_declared_names() {
 #[test]
 fn every_declaration_kind_reports_invalid_names() {
     let mut s = Sequence::new(Identifier::unchecked("sequence"));
-    s.params.push(oce_author::SequenceParameter {
-        name: Identifier::unchecked("end"),
-        value_type: SignalType::Real,
-        value: oce_author::Literal::Real(1.0),
-    });
+    s.params.push(oce_author::SequenceParameter::new(
+        Identifier::unchecked("end"),
+        SignalType::Real,
+        oce_author::Literal::Real(1.0),
+    ));
     s.inputs.push(Boundary::new(
         Identifier::unchecked("1in"),
         SignalType::Real,
@@ -114,10 +114,10 @@ fn every_declaration_kind_reports_invalid_names() {
         Identifier::unchecked("Real"),
         "CDL.Reals.Sources.Constant",
     ));
-    s.blocks[0].assignments.push(oce_author::Assignment {
-        name: id("k"),
-        value: oce_author::Literal::Real(1.0).into(),
-    });
+    s.blocks[0].assignments.push(oce_author::Assignment::new(
+        id("k"),
+        oce_author::Literal::Real(1.0),
+    ));
     assert_eq!(
         codes(&validate(&s)),
         vec![
@@ -138,11 +138,11 @@ fn names_are_unique_across_parameters_inputs_outputs_and_blocks() {
         for second in &kinds[i..] {
             let mut s = econ_enable();
             let mut declare = |kind: &str, name: &str| match kind {
-                "param" => s.params.push(oce_author::SequenceParameter {
-                    name: id(name),
-                    value_type: SignalType::Real,
-                    value: oce_author::Literal::Real(0.0),
-                }),
+                "param" => s.params.push(oce_author::SequenceParameter::new(
+                    id(name),
+                    SignalType::Real,
+                    oce_author::Literal::Real(0.0),
+                )),
                 "input" => s.inputs.push(Boundary::new(id(name), SignalType::Real)),
                 "output" => s.outputs.push(Boundary::new(id(name), SignalType::Real)),
                 _ => {

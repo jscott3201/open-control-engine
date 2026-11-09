@@ -22,14 +22,14 @@ fn defective() -> Sequence {
     s.inputs[1].name = Identifier::unchecked("hys");
     let hys = &mut s.blocks[1];
     hys.assignments[0].value = ParamValue::Literal(Literal::Boolean(true));
-    hys.assignments.push(oce_author::Assignment {
-        name: Identifier::unchecked("zeta"),
-        value: Literal::Real(1.0).into(),
-    });
-    hys.assignments.push(oce_author::Assignment {
-        name: Identifier::unchecked("alpha"),
-        value: Literal::Real(1.0).into(),
-    });
+    hys.assignments.push(oce_author::Assignment::new(
+        Identifier::unchecked("zeta"),
+        Literal::Real(1.0),
+    ));
+    hys.assignments.push(oce_author::Assignment::new(
+        Identifier::unchecked("alpha"),
+        Literal::Real(1.0),
+    ));
     s.connections[0].target = Endpoint::parse("sub.u9");
     s.connections[2].source = Endpoint::parse("nope");
     s

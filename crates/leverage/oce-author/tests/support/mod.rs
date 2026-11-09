@@ -5,8 +5,7 @@
 use std::path::PathBuf;
 
 use oce_author::{
-    Boundary, Finding, Identifier, Literal, ParamValue, SemanticPoint, Sequence, SequenceBuilder,
-    SignalType,
+    Boundary, Finding, Identifier, Literal, ParamValue, Sequence, SequenceBuilder, SignalType,
 };
 
 /// The golden switch for this crate (see `.agents/project-facts.md`).
@@ -86,16 +85,14 @@ pub fn every_element() -> Sequence {
     let mut supply = Boundary::new(id("TSup"), SignalType::Real);
     supply.quantity = Some("ThermodynamicTemperature".to_owned());
     supply.display_unit = Some("degC".to_owned());
-    supply.semantic = SemanticPoint {
-        name: Some("Supply air temperature".to_owned()),
-        label: Some("TSup \"AHU-1\" \u{b0}C".to_owned()),
-        unit: Some("K".to_owned()),
-        brick: Some("brick:Supply_Air_Temperature_Sensor".to_owned()),
-        s223: Some("s223:Sensor".to_owned()),
-        qudt: Some("quantitykind:Temperature".to_owned()),
-        haystack: vec!["air".to_owned(), "temp".to_owned(), "sensor".to_owned()],
-        provisional: false,
-    };
+    let semantic = &mut supply.semantic;
+    semantic.name = Some("Supply air temperature".to_owned());
+    semantic.label = Some("TSup \"AHU-1\" \u{b0}C".to_owned());
+    semantic.unit = Some("K".to_owned());
+    semantic.brick = Some("brick:Supply_Air_Temperature_Sensor".to_owned());
+    semantic.s223 = Some("s223:Sensor".to_owned());
+    semantic.qudt = Some("quantitykind:Temperature".to_owned());
+    semantic.haystack = vec!["air".to_owned(), "temp".to_owned(), "sensor".to_owned()];
     let setpoint = Boundary::new(id("TSupSet"), SignalType::Real);
     let enable = Boundary::new(id("uEna"), SignalType::Boolean);
     let mut stage = Boundary::new(id("yStage"), SignalType::Integer);

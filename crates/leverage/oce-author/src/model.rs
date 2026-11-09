@@ -4,10 +4,31 @@
 //! outputs, leaf blocks and connections, every list an ordered vector kept in authored order.
 //! Nothing here is sorted, evaluated or resolved: the model is what the author wrote, and
 //! [`crate::validate()`] judges it against the catalog.
+//!
+//! Every statement (a sequence parameter, a boundary, a block, an assignment, a connection) carries
+//! [`Annotations`]: text-form-only facts (leading comments, a blank line before it) that the model
+//! keeps so the text form's `fmt` loses nothing (decision 13). Assignments and sequence parameters
+//! also keep a text-only unit suffix. The wire form and the emitter ignore all of them; equality is
+//! structural and does compare them.
+//!
+//! The model types are `#[non_exhaustive]`: build them through their constructors or
+//! [`crate::SequenceBuilder`], then set the public fields.
 
 use crate::identifier::{Identifier, ProvenanceId};
 
+/// Text-form-only annotations of one statement. Never written to the wire form and never
+/// emitted; a wire document reads with empty annotations.
+#[non_exhaustive]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Annotations {
+    /// Comment lines immediately before the statement, without the leading `#`, in order.
+    pub comments: Vec<String>,
+    /// Whether a blank line precedes the statement (the printer collapses runs to one).
+    pub blank_line_before: bool,
+}
+
 /// One authored sequence.
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub struct Sequence {
     /// The sequence name; the root block's local name.
@@ -43,6 +64,7 @@ impl Sequence {
 }
 
 /// The type of a sequence parameter or a boundary connector.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SignalType {
     /// IEEE-754 binary64 Real.
@@ -66,6 +88,7 @@ impl SignalType {
 }
 
 /// A sequence-level parameter: a name, a type and a literal value.
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub struct SequenceParameter {
     /// The parameter name.
@@ -75,9 +98,28 @@ pub struct SequenceParameter {
     /// The value. A `Real` parameter accepts an [`Literal::Integer`]; anything else must match
     /// the declared type (the validator reports `parameter-kind-mismatch` otherwise).
     pub value: Literal,
+    /// The text form's unit suffix on the value (`1 K`), text-only (decision 13).
+    pub suffix: Option<String>,
+    /// Text-form annotations.
+    pub annotations: Annotations,
+}
+
+impl SequenceParameter {
+    /// A parameter with no suffix and no annotations.
+    #[must_use]
+    pub fn new(name: Identifier, value_type: SignalType, value: Literal) -> Self {
+        Self {
+            name,
+            value_type,
+            value,
+            suffix: None,
+            annotations: Annotations::default(),
+        }
+    }
 }
 
 /// A boundary input or output declaration.
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub struct Boundary {
     /// The connector name.
@@ -90,6 +132,8 @@ pub struct Boundary {
     pub display_unit: Option<String>,
     /// The semantic slot (decision 2).
     pub semantic: SemanticPoint,
+    /// Text-form annotations.
+    pub annotations: Annotations,
 }
 
 impl Boundary {
@@ -102,6 +146,7 @@ impl Boundary {
             quantity: None,
             display_unit: None,
             semantic: SemanticPoint::default(),
+            annotations: Annotations::default(),
         }
     }
 }
@@ -109,6 +154,7 @@ impl Boundary {
 /// The semantic slot of a boundary connector (decision 2): a closed struct of optional fields,
 /// syntax-checked by the validator and never emitted as a semantic record before M8. `unit` is
 /// emitted as the CXF `unit` attribute.
+#[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SemanticPoint {
     /// A display name (free text).
@@ -130,6 +176,7 @@ pub struct SemanticPoint {
 }
 
 /// A leaf block instance.
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub struct Block {
     /// The instance name.
@@ -138,6 +185,8 @@ pub struct Block {
     pub class_path: String,
     /// Parameter assignments, in authored order.
     pub assignments: Vec<Assignment>,
+    /// Text-form annotations.
+    pub annotations: Annotations,
 }
 
 impl Block {
@@ -148,22 +197,42 @@ impl Block {
             name,
             class_path: class_path.into(),
             assignments: Vec::new(),
+            annotations: Annotations::default(),
         }
     }
 }
 
 /// One parameter assignment on a block. An array parameter is assigned one element at a time,
 /// under the element name [`oce_api::param_element_name`] mints (`k_2`, `K_1_2`; decision 15).
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub struct Assignment {
     /// The catalog parameter name, or an array element name.
     pub name: Identifier,
     /// The value.
     pub value: ParamValue,
+    /// The text form's unit suffix on a literal value (`86400 s`), text-only (decision 13).
+    pub suffix: Option<String>,
+    /// Text-form annotations.
+    pub annotations: Annotations,
+}
+
+impl Assignment {
+    /// An assignment with no suffix and no annotations.
+    #[must_use]
+    pub fn new(name: Identifier, value: impl Into<ParamValue>) -> Self {
+        Self {
+            name,
+            value: value.into(),
+            suffix: None,
+            annotations: Annotations::default(),
+        }
+    }
 }
 
 /// The value of a block parameter assignment (decision 3): a literal or a reference to a
 /// sequence parameter, never an expression.
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub enum ParamValue {
     /// A literal: a number, a Boolean, a string or an enumeration member.
@@ -180,6 +249,7 @@ impl From<Literal> for ParamValue {
 
 /// A tagged literal. Equality compares a Real by its bits, so `-0.0` and `0.0` differ and a NaN
 /// equals itself: the model is compared exactly, as its serializations are.
+#[non_exhaustive]
 #[derive(Clone, Debug)]
 pub enum Literal {
     /// An integer token: no fraction and no exponent.
@@ -223,6 +293,7 @@ impl Literal {
 
 /// An enumeration member as authored: `type_name` is the last segment of the enumeration class
 /// (`SimpleController`) and `member` the member (`PI`). The catalog resolves the full path.
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EnumMember {
     /// The enumeration type's last segment; empty when the author wrote no `Type.` prefix.
@@ -260,16 +331,20 @@ impl EnumMember {
 }
 
 /// A directed connection, `source -> target`.
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Connection {
     /// The driving endpoint: a boundary input or a block output port.
     pub source: Endpoint,
     /// The driven endpoint: a boundary output or a block input port.
     pub target: Endpoint,
+    /// Text-form annotations.
+    pub annotations: Annotations,
 }
 
 /// One end of a connection. Port names are never authored as declarations; they come from the
 /// catalog (#440), and the validator checks them.
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Endpoint {
     /// A boundary input or output, by name.
@@ -309,6 +384,16 @@ impl Endpoint {
 }
 
 impl Connection {
+    /// A connection with no annotations.
+    #[must_use]
+    pub fn new(source: Endpoint, target: Endpoint) -> Self {
+        Self {
+            source,
+            target,
+            annotations: Annotations::default(),
+        }
+    }
+
     /// The canonical `source -> target` spelling.
     #[must_use]
     pub fn spelling(&self) -> String {

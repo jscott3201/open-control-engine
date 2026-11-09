@@ -7,8 +7,8 @@ use crate::model::{Literal, Sequence, SignalType};
 
 use super::semantic::boundary_problems;
 use super::{
-    DUPLICATE_NAME, EMPTY_SEQUENCE, Findings, INVALID_NAME, INVALID_PROVENANCE_ID,
-    INVALID_SEMANTIC_POINT, NON_FINITE_PARAMETER, PARAMETER_KIND_MISMATCH, Position,
+    Anchor, DUPLICATE_NAME, EMPTY_SEQUENCE, Findings, INVALID_NAME, INVALID_PROVENANCE_ID,
+    INVALID_SEMANTIC_POINT, NON_FINITE_PARAMETER, PARAMETER_KIND_MISMATCH,
 };
 
 /// Whether a literal fits a sequence parameter's declared type. A Real accepts an Integer
@@ -25,7 +25,7 @@ pub(crate) fn literal_fits(value_type: SignalType, literal: &Literal) -> bool {
 pub(super) fn check(sequence: &Sequence, findings: &mut Findings) {
     if let Err(error) = sequence.name.check() {
         findings.error(
-            Position::Sequence,
+            Anchor::Sequence,
             INVALID_NAME,
             "sequence",
             format!("sequence name `{}`: {error}", sequence.name),
@@ -33,7 +33,7 @@ pub(super) fn check(sequence: &Sequence, findings: &mut Findings) {
     }
     if sequence.blocks.is_empty() {
         findings.error(
-            Position::Sequence,
+            Anchor::Sequence,
             EMPTY_SEQUENCE,
             "sequence",
             "the sequence has no blocks; it must contain at least one",
@@ -43,7 +43,7 @@ pub(super) fn check(sequence: &Sequence, findings: &mut Findings) {
         && let Err(error) = id.check()
     {
         findings.error(
-            Position::Extends,
+            Anchor::Extends,
             INVALID_PROVENANCE_ID,
             "extends",
             format!("`{id}`: {error}"),
@@ -54,27 +54,27 @@ pub(super) fn check(sequence: &Sequence, findings: &mut Findings) {
         .params
         .iter()
         .enumerate()
-        .map(|(i, p)| (Position::Param(i), "parameter", &p.name))
+        .map(|(i, p)| (Anchor::Param(i), "parameter", &p.name))
         .chain(
             sequence
                 .inputs
                 .iter()
                 .enumerate()
-                .map(|(i, b)| (Position::Input(i), "input", &b.name)),
+                .map(|(i, b)| (Anchor::Input(i), "input", &b.name)),
         )
         .chain(
             sequence
                 .outputs
                 .iter()
                 .enumerate()
-                .map(|(i, b)| (Position::Output(i), "output", &b.name)),
+                .map(|(i, b)| (Anchor::Output(i), "output", &b.name)),
         )
         .chain(
             sequence
                 .blocks
                 .iter()
                 .enumerate()
-                .map(|(i, b)| (Position::Block(i, None), "block", &b.name)),
+                .map(|(i, b)| (Anchor::Block(i, None), "block", &b.name)),
         );
     let mut first_seen: BTreeMap<&str, &str> = BTreeMap::new();
     for (position, kind, name) in declared {
@@ -101,7 +101,7 @@ pub(super) fn check(sequence: &Sequence, findings: &mut Findings) {
     }
 
     for (index, param) in sequence.params.iter().enumerate() {
-        let position = Position::Param(index);
+        let position = Anchor::Param(index);
         if !literal_fits(param.value_type, &param.value) {
             findings.error(
                 position,
@@ -130,13 +130,13 @@ pub(super) fn check(sequence: &Sequence, findings: &mut Findings) {
         .inputs
         .iter()
         .enumerate()
-        .map(|(i, b)| (Position::Input(i), b))
+        .map(|(i, b)| (Anchor::Input(i), b))
         .chain(
             sequence
                 .outputs
                 .iter()
                 .enumerate()
-                .map(|(i, b)| (Position::Output(i), b)),
+                .map(|(i, b)| (Anchor::Output(i), b)),
         );
     for (position, boundary) in boundaries {
         for problem in boundary_problems(boundary) {
