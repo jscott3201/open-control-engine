@@ -91,6 +91,12 @@ pub const TEXT_FORM_KEYWORDS: &[&str] = &[
     "Integer", "Boolean",
 ];
 
+/// The words the text form reads as non-finite numbers (`NaN`, `inf`, `Infinity`), compared
+/// ignoring ASCII case. A declared name is never one of them, so a reference to a declared name is
+/// always spellable in text (issue #482 review); [`check_declared_name`] refuses them as
+/// [`IdentifierError::Keyword`].
+pub const NON_FINITE_WORDS: &[&str] = &["nan", "inf", "infinity"];
+
 /// Why a name is not a valid identifier.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IdentifierError {
@@ -104,7 +110,7 @@ pub enum IdentifierError {
     BadCharacter(usize),
     /// The name is a Modelica reserved word.
     ReservedWord,
-    /// The name is a text-form keyword.
+    /// The name is a text-form keyword, or a non-finite word ([`NON_FINITE_WORDS`], any case).
     Keyword,
 }
 
@@ -157,7 +163,8 @@ pub fn check_identifier_syntax(name: &str) -> Result<(), IdentifierError> {
 }
 
 /// Check a name the author declares (a sequence, parameter, boundary or block name): the syntax
-/// of [`check_identifier_syntax`], then not a Modelica reserved word, then not a text-form keyword.
+/// of [`check_identifier_syntax`], then not a Modelica reserved word, then not a text-form keyword
+/// or a non-finite word ([`NON_FINITE_WORDS`], any case).
 ///
 /// # Errors
 ///
@@ -167,7 +174,11 @@ pub fn check_declared_name(name: &str) -> Result<(), IdentifierError> {
     if MODELICA_RESERVED_WORDS.contains(&name) {
         return Err(IdentifierError::ReservedWord);
     }
-    if TEXT_FORM_KEYWORDS.contains(&name) {
+    if TEXT_FORM_KEYWORDS.contains(&name)
+        || NON_FINITE_WORDS
+            .iter()
+            .any(|w| w.eq_ignore_ascii_case(name))
+    {
         return Err(IdentifierError::Keyword);
     }
     Ok(())
