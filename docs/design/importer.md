@@ -4,8 +4,8 @@
 flat dialect and the frozen prototype's v0 graph JSON enter the [authoring model](authoring-layer.md),
 and it settles the model decisions the minimal importer (GitHub #473) could not make: sequence
 parameters of an enumeration type, bounds on boundary declarations, and library constants as block
-parameter values. Every decision below was made while drafting and waits for the review comment
-(see [Review rulings](#review-rulings)); nothing here is built yet. The authoring note's decisions
+parameter values. Every decision below was made while drafting and ruled on in review (see
+[Review rulings](#review-rulings)); the note is amended to match, and nothing here is built yet. The authoring note's decisions
 and review rulings are not reopened; where this note changes the model it says so, and the model
 PR amends the authoring note with dated rulings.
 
@@ -63,7 +63,13 @@ earlier enumeration or bound refusal, and one expression behind a bound. With th
 and the widened #468, **31** round-trip; 10 do without #468. The three block-port fixtures are the
 only in-subset documents this note leaves refused, and they are the review's call (question 2).
 No in-subset fixture carries `nominal`, `unbounded`, `hasInstance`, `hasConstant`, an array
-connector, an Enum-typed boundary, a port `unit` or a local name that breaks the identifier syntax.
+connector, an enumeration-typed boundary, a port `unit` or a local name that breaks the identifier
+syntax. One in-subset boundary is typed by a **constant package**:
+`multizone_vav_economizer_limits_common.uOpeMod` is an `S231:IntegerInput` whose `isOfDataType` is
+`…ASHRAE.G36.Types.OperationModes`. The engine reads it as Integer
+(`oce_cxf::resolve::value_types`, a constant package maps to `ValueType::Integer`), so the importer
+normalises it to an Integer boundary and records the normalisation in the report (decision 21); the
+emitter then writes `S231:Integer`, which loads to the same type and the same content id.
 
 Two corrections to the issue thread, both confirmed in the code:
 
@@ -81,8 +87,10 @@ Two corrections to the issue thread, both confirmed in the code:
 
 ## Model changes
 
-Three changes, all to the model, both forms, the schema, the validator and the emitter. The model PR
-amends the authoring note's model table, decisions and finding-code table with dated rulings.
+Three changes, each touching the model, both forms, the schema, the validator and the emitter. The
+model PR carries the first two and amends the authoring note's model table, decisions and
+finding-code table with dated rulings; the third (library constants) lands with the importer PR
+(ruling 10).
 
 ### Sequence parameters of an enumeration type
 
@@ -99,7 +107,8 @@ for boundaries.
 
 The text parser accepts any identifier in the type position and stays catalog-free; the validator
 resolves it. The wire reader accepts any identifier string; the schema's `type` enum lists `Real`,
-`Integer`, `Boolean` and every enumeration the facade publishes, generated like the `class` enum.
+`Integer`, `Boolean` and every **enumeration** row of the facade table, generated like the `class`
+enum. Constant packages are never a parameter type and never appear in that enum.
 The emitter writes the class IRI under the fixed class base (authoring decision 10) and the full
 member path, exactly as the corpus does (`multizone_vav_return_fan_direct_pressure.conTyp`), so
 Rule 5 grounds the block's reference to it.
@@ -109,13 +118,15 @@ Rule 5 grounds the block's reference to it.
 grounds the reference to `Value::Enum { class: c, ordinal }` for the catalog's rules, as it grounds
 Real and Integer references today. Any other pairing is `parameter-kind-mismatch`. An enumeration
 sequence parameter's value must be a member of its own type (`unknown-enum-literal` otherwise). An
-unknown type name is a new author-only code, `unknown-enum-type`; the parity test pins the engine
-code it pre-empts.
+unknown type name is `unknown-enum-type`, an **existing engine code** (`DiagCode::UnknownEnumType`,
+raised in `oce_cxf::resolve::specialize`) that stage 1 reuses with the same string, pinned by the
+parity test.
 
 Many of these parameters are referenced by nothing (the twelve `generic_air_economizer_high_limits_*`
 fixtures declare `eneStd`, `ecoHigLimCon` and a climate zone that no leaf reads). They do not survive
 flattening and do not enter the content id; the importer still carries them, because they are what
-the author wrote.
+the author wrote. A dedicated test covers one: the emitted root parameter node is asserted (type IRI
+and member path), and an engine load of the emitted document is warning-free.
 
 ### Bounds on boundary declarations
 
@@ -125,12 +136,20 @@ Real or Integer, never a reference (the engine grounds bounds in an empty scope)
 | Form | Spelling |
 | --- | --- |
 | Text | `out yRelDam : Real @unit 1 @min 0 @max 1`; tags `@min` and `@max` take a number, no unit suffix |
-| Wire | `"min": [0], "max": [1]` on the input or output object; absent is `[]` |
+| Wire | `"min": [0], "max": [1]` on the input or output object; absent is `[]`; at most one item |
 | CXF (emitted) | `S231:min` / `S231:max` on the boundary node, a typed `xsd:double` for Real (shortest round-trip spelling), a bare JSON integer for Integer, written after `S231:displayUnit` |
 
 The canonical printer places `@min` and `@max` immediately after `@displayUnit`. A Real boundary
 accepts an Integer literal, widened as parameters are; an Integer boundary refuses a Real literal; a
 Boolean boundary takes no bound.
+
+The strict schema profile cannot say "at most one item" (`maxItems` is outside it), so the wire reader
+refuses a second item with a typed `WireError` and the schema's `description` for `min` and `max`
+says so. On import, a bound's text (`xsd:double` or `xsd:decimal` typed literal, or a bare JSON
+number) is converted to `f64` exactly as the loader converts it (`str::parse::<f64>`, the conversion
+`oce_cxf::ground` uses), and a test pins bit equality between the imported bound and the engine's
+`InputDefinition` bound for every bounded input in the corpus: the effective input domain is inside
+the content id, so one ulp of drift would move it.
 
 What the engine does with them today, by side:
 
@@ -149,7 +168,8 @@ The validator checks, at stage 1: a crossed pair is `crossed-bounds` (the engine
 with the same string); a bound on a Boolean boundary or a Real literal on an Integer boundary is the
 new author-only `invalid-bound` (pre-empting the engine's `malformed-document`); an Integer literal
 above 2^53 on a Real boundary is `invalid-bound` (no exact Real, as for parameters). Non-finite
-bounds cannot be spelled in either form; the builder refuses them with `non-finite-bound`.
+bounds cannot be spelled in either form; the builder refuses them with `non-finite-bound`, an
+**existing engine code** (`DiagCode::NonFiniteBound`) reused with the same string and parity-pinned.
 `bound-mismatch` stays a stage-2 engine code.
 
 `nominal` and `unbounded` are **not** carried. No fixture has them, `unbounded` is not parsed by the
@@ -178,11 +198,19 @@ parameter is `parameter-kind-mismatch` until a document needs the widening.
 with its class path, last segment and kind: the four CDL enumerations, the ten G36 enumerations
 (`oce_model::g36_enum_class_id`) with their ordered members, and the four G36 constant packages
 (`DemandLimitLevels`, `FreezeProtectionStages`, `OperationModes`, `ZoneStates`) with their member
-values. `oce-author` deletes its pinned `ENUM_TYPES` table. A test pins that last segments are unique
+values. Today the constant packages exist only as hand-written `match` arms in `oce-model`
+(`is_g36_integer_constant_package`, `g36_integer_constant_in_package`) with no list a test can
+enumerate, so #468 (amended) replaces those arms with **one data table** that both the existing
+functions and the new accessor read. Every row has one class-path form, relative to
+`Buildings.Controls.OBC.` (`CDL.Types.SimpleController`, `ASHRAE.G36.Types.OperationModes`), so the
+emitter's fixed class base serves CDL and G36 alike, and every row is marked **enumeration** (a valid
+parameter type) or **constant package** (members are Integer constants; never a parameter type).
+`oce-author` deletes its pinned `ENUM_TYPES` table. A test pins that last segments are unique
 across the whole table, which is what makes `Type.Member` unambiguous; a future collision is refused
 until the spelling is decided, never resolved by guess.
 
-**Until #468 lands** the importer and the validator know only the four pinned CDL rows. A G36 type
+**#468 lands first** (see [sequencing](#dependencies-and-sequencing)). Should it slip, the importer
+and the validator know only the four pinned CDL rows. A G36 type
 or package is refused at import (`unknown-datatype` for a parameter's type, `unknown-member-type`
 for a member path) and at validation (`unknown-enum-type`, `unknown-enum-literal`). No G36 rows are copied into `oce-author` meanwhile:
 #468 exists to delete the copied table, and the G36 lists are long (eighteen climate zones).
@@ -203,7 +231,9 @@ for a member path) and at validation (`unknown-enum-type`, `unknown-enum-literal
 node's local name; a parameter's descriptive `unit`, `quantity`, `displayUnit`, `min` and `max`. The
 engine reads none of these on a parameter node: only connector nodes reach
 `oce_cxf::resolve::attrs::connector_attrs`. Carrying parameter bounds would give the author a range
-the engine never enforces (decision 9).
+the engine never enforces (decision 9). In the in-subset corpus, root parameters carry `unit` in 16
+fixtures, `quantity` in 13 and `min`/`max` in 3. The report also lists one **normalisation**: a
+boundary typed by a constant package becomes an Integer boundary (decision 21).
 
 **Refused, never guessed** (each a typed kind, see [`ImportError`](#importerror)): every construct in
 the authoring note's out-of-scope list, an expression value, a block-port attribute, `nominal` and
@@ -229,7 +259,7 @@ with five required keys and closed objects throughout:
 | --- | --- |
 | `name` | `Sequence.name`; `extends` none unless `ImportOptions` sets it |
 | `inputs[]` / `outputs[]` `name`, `type` | boundaries; `bool`, `real`, `int` to `Boolean`, `Real`, `Integer` |
-| `inputs[].unit`, `*.description` | a comment annotation on the boundary (`# <description> (unit: <unit>)`) and a `Dropped` entry; never `SemanticPoint.unit` |
+| `inputs[].unit`, `*.description` | comment annotations on the boundary (see below) and a `Dropped` entry; never `SemanticPoint.unit` |
 | `blocks[].id`, `class` | block name; class path `CDL.` + `class` |
 | `blocks[].params[]` | assignments in order; an integer token is `Integer`, a fraction or exponent `Real`, `true`/`false` `Boolean` |
 | `connections[]` | the model's connection parser, as the wire form uses it |
@@ -250,14 +280,25 @@ model's parser refuses. The reader is the strict reader (`import/strict.rs`: dup
 integers outside `i64` refused) under the wire form's bounds (4 MiB, depth 8, 65,536 entries per
 list, 4,096-byte strings).
 
-**Provenance.** The importer prepends one comment annotation to the sequence naming the source form
-(`# imported from v0 graph JSON`); the caller may set `extends`. Nothing about provenance reaches the
-wire form or the emitter.
+**Comments from v0 text.** A v0 `description` may be up to 4,096 bytes and contain line feeds, and
+`unit` is free text, so neither is pasted into a comment as is. Each becomes one or more comment
+lines on the boundary's existing `annotations`: the text is split at line feeds; every other control
+character (CR and tab included) becomes one space; each line is truncated at a character boundary so
+`# ` plus the line stays within the text form's 4,096-byte line limit (a truncation is recorded in
+the report); `unit` is written as a last line `unit: <unit>`. No escaping is needed beyond that,
+because a comment runs to the end of its line and the parser accepts any other UTF-8 there. A test
+feeds a description with line feeds, CR, tab, NUL and 4,096 bytes through import, `print` and `parse`
+and requires the parse to succeed and `fmt` to be idempotent.
+
+**Provenance.** The importer adds one comment line naming the source form
+(`# imported from v0 graph JSON`) to `Sequence.annotations`, which the text-form PR (GitHub #485,
+issue #482) adds with `Sequence.trailing_comments`; it is not a model change of this note's. The
+caller may set `extends`. Nothing about provenance reaches the wire form or the emitter.
 
 **Fixtures (vendored in the importer PR, not now).** The prototype's three golden pairs, each a v0
 graph and the CXF its emitter wrote, copied verbatim into `crates/leverage/oce-author/tests/fixtures/v0/`
-with a `PROVENANCE.md` naming the source repository, the pinned commit (`f951346`) and each source
-path:
+with a `PROVENANCE.md` naming the source repository by its URL (never a local path), the pinned
+commit (`f951346`), each source path and the licence, and retaining the source's copyright line:
 
 - `crates/mm-graph/tests/golden/ahu_0005.graph.json` and `ahu_0005.cxf.jsonld`
 - `crates/mm-graph/tests/golden/ahu_0027.graph.json` and `ahu_0027.cxf.jsonld`
@@ -268,7 +309,9 @@ graphs under the prototype's `specs/` belong to #457's destination decision. The
 licensed `MIT OR Apache-2.0` with the same copyright holder as this repository, so verbatim copies
 need only the provenance file. The prototype's CXF uses the namespace `urn:mechanical-muse:<name>#`,
 which ends in `#`, so its names reduce cleanly under the content-id rule and the pairs need no
-re-stamp.
+re-stamp. `width_max_min` uses the width-driven `Reals.MultiMax`/`MultiMin` (`nin = 3`), so it
+also exercises the port synthesis of #440 and the extent questions of #467. One benchmark graph is
+added when #457 decides where the benchmark graphs live: v0 import is their migration path.
 
 ## Names and namespace
 
@@ -336,17 +379,30 @@ impl ImportErrorKind { pub fn code(&self) -> &'static str }   // stable kebab-ca
 The out-of-subset kinds map one to one onto the authoring note's out-of-scope list, so the round-trip
 test's exclusion table matches on `kind`, not on a substring of a message. `Display` stays for
 humans; the CLI's JSON report (when an `oce import` command exists) carries `code` and `subject`.
-`ImportErrorKind` is exhaustive (no `#[non_exhaustive]`): a new kind is a compile error in every
-consumer, which is the point of closing it (question 6).
+`ImportErrorKind` is `#[non_exhaustive]`, the crate's policy since GitHub #466; consumers branch on
+`code()`, and an in-crate test pins the full kebab-case code list, so a new kind still breaks a test
+(ruling 6).
+
+**Refusal precedence.** A document with several out-of-subset constructs is refused for the first in
+this fixed order, whatever its node order: nested composite, conditional component, expression
+value, port attribute, name. Examples: `multizone_vav_supply_temperature` (nested, conditional,
+`hasConstant`, port bounds) is `nested-composite`; `…_fixed_21` (nested and a 72-byte sequence name)
+is `nested-composite`; `trim_and_respond_have_hol_false` (conditional and an expression) is
+`conditional-component`. The importer checks those classes in that order before reading values, and
+the exclusion table, which names one kind per fixture, tests the order.
 
 ## Test plan
 
 - **Gate item 1.** Every in-subset fixture imports, emits under `urn:oce:library:` and loads
-  warning-free, and its `Engine::content_id()` equals that of the committed fixture re-stamped and
-  loaded directly (#474 is landing the canonical id; until it merges the order-bearing comparison
-  stands). Export bytes are also compared where the fixture's `@graph` block order agrees with
-  `containsBlock`; for `multizone_vav_outdoor_airflow_sumzone`, whose order differs (#458), only the
-  canonical id is compared, so the order exclusion goes. `IMPORTED` grows from 4 to 31.
+  warning-free, and its identity equals that of the committed fixture re-stamped and loaded
+  directly. The switch of `tests/support/cxf.rs::identity` and `library_round_trip.rs` to
+  `Engine::content_id()` is already in #474, so for the importer PR it is a rebase item, not
+  importer work. Until #474 lands, most of the 31 are compared on export bytes plus deferral codes:
+  an enumeration-valued block parameter (`controllerType` from a `SimpleController` reference) has no
+  CXF literal in the export subset (`oce_cxf::export`), so those exports are partial and have no
+  complete export id. Once the canonical id is in, block order no longer bears on the comparison, so
+  `multizone_vav_outdoor_airflow_sumzone` (#458) is compared like the others and its exclusion goes.
+  Export bytes are still compared where block order agrees. `IMPORTED` grows from 4 to 31.
 - **The exclusion table** shrinks to 15 rows, each naming its `ImportErrorKind`: 4
   `nested-composite`, 7 `conditional-component`, 1 `expression-value`, 3 `port-attribute`. A fixture
   that starts importing fails `every_other_fixture_is_refused_with_its_reason`, as today. The
@@ -358,7 +414,8 @@ consumer, which is the point of closing it (question 6).
   a Boolean boundary; crossed bounds (imported, then refused by the validator); `nominal` and
   `unbounded`; an enumeration parameter whose value is an Integer; a constant member on a Real
   parameter; an unknown package and an unknown member; each out-of-subset construct grafted onto an
-  importable fixture; v0 duplicate keys, nesting past depth 8, 65,537 blocks, a 4,097-byte string, a
+  importable fixture; a package-typed Integer boundary (normalised and reported) and a
+  package-typed Real or Boolean boundary (`datatype-mismatch`); v0 duplicate keys, nesting past depth 8, 65,537 blocks, a 4,097-byte string, a
   string, `null`, object and array `value`, `"type": "boolean"`, an extra key. Every case returns a
   typed error with its exact kind; none panics (`catch_unwind` names the mutant).
 - **v0 fixtures.** Each vendored graph imports; emitting it with the default namespace and loading it
@@ -383,19 +440,18 @@ consumer, which is the point of closing it (question 6).
 
 ## Dependencies and sequencing
 
-**Recommendation: two PRs, model first.**
+**Ruled order: #468, then the model PR, then the importer PR** (ruling 10).
 
-1. **Model PR** (issue cut from this note): `ParameterType`, boundary bounds, `Literal::Member`; the
-   wire DTOs, the schema, the text grammar and printer, the validator and the emitter; the authoring
-   note amended with dated rulings; the minimal importer untouched except for the rename. It lands
-   after #482 (the text form is in flight and its issue says "do not touch the model": the model PR
-   then extends the merged parser rather than racing it) and with the four pinned CDL rows, so it does
-   not wait on #468.
-2. **Importer PR**: `ImportErrorKind`, `ImportReport`, the CXF importer widened, `import_graph_v0`,
-   the vendored v0 fixtures, the round-trip and hostile suites. It needs the model PR, #474 for the
-   order-free comparison, and the widened #468 for 21 of its 27 new fixtures. If #468 is late, it
-   lands with 10 fixtures round-tripping and the 21 refused as `unknown-member-type`, and the table
-   flips when #468 merges.
+0. **#468** (facade, amended): the one named-type data table and its accessor. It lands first.
+1. **Model PR** (issue cut from this note): `ParameterType` and boundary bounds; the wire DTOs, the
+   schema, the text grammar and printer, the validator and the emitter; the authoring note amended
+   with dated rulings. It follows the text-form PR GitHub #485 (issue #482), which adds
+   `Sequence.annotations` and `Sequence.trailing_comments`, and extends the merged parser rather than
+   racing it.
+2. **Importer PR**: the constants half of decision 10 (`Literal::Member`, the constant column of the
+   member table and its emitter row), `ImportErrorKind`, `ImportReport`, the CXF importer widened,
+   `import_graph_v0`, the vendored v0 fixtures, the round-trip and hostile suites. It needs the model
+   PR, #468 for 21 of its 27 new fixtures, and rebases onto #474 for the canonical comparison.
 
 One PR was considered: the importer is the model changes' first consumer, so one PR proves both at
 once. Rejected because the model change is a decision-record amendment that #482, the CLI and the
@@ -413,6 +469,9 @@ Relation to other work:
   facade change this note needs.
 - **#474** supplies `Engine::content_id()`.
 - **#457** owns the prototype's benchmark graphs; this note vendors only the three golden pairs.
+- **#485** (text form, issue #482) adds the sequence-level annotations the v0 provenance comment uses.
+- **#486** (block-port attributes) and **#487** (conditional components) are the post-M2 design
+  passes for the two largest refused classes (rulings 2 and 7).
 
 ## Decisions
 
@@ -420,8 +479,11 @@ Relation to other work:
 spelled by the last segment in both forms (`"type": "SimpleController"`). Rejected: a tagged object
 `{"enum": "…"}` (an `anyOf` in a field that has none today, and two spellings of a type); the full
 class path (inconsistent with `Type.Member`, and longer for agents); lowering to an Integer ordinal
-(the engine's Enum kind check refuses it, and the author's type is lost). Why: 21 fixtures declare
-one; the engine already types them.
+(the engine's Enum kind check refuses it, and the author's type is lost). Why: enumeration-typed
+root parameters appear in 24 fixtures, 17 of them in the subset (the twelve
+`generic_air_economizer_high_limits_*`, `cooling_only_dampers`, `multizone_vav_economizer_limits_common`,
+`multizone_vav_freeze_protection`, `multizone_vav_return_fan_airflow_tracking`,
+`multizone_vav_return_fan_direct_pressure`); the engine already types them.
 
 **2. A reference to an enumeration parameter type-checks by class identity.** Rejected: matching
 the type name as a string (two names could one day reach one class). Why: the engine checks
@@ -433,7 +495,8 @@ Rejected: any other spelling (the corpus spelling is the one the engine is prove
 
 **4. Boundary declarations carry optional `min` and `max`.** Number literals, Real or Integer
 boundaries only. Rejected: leaving them out (an imported input would accept frames its author
-refused; ten fixtures stay blocked); carrying only input bounds (output bounds are load-checked and
+refused; boundary bounds appear in 14 fixtures, 9 of them in the subset, beside 3 in-subset
+fixtures with block-port bounds); carrying only input bounds (output bounds are load-checked and
 exported, and the importer never drops what the engine reads). Why: safety; the input domain is
 what the frame driver enforces.
 
@@ -443,7 +506,8 @@ number field that is sometimes a string needs `anyOf`); `null` (not in the stric
 side). Why: the profile's absent convention for a list, and a reader that refuses a second item.
 
 **6. Bound findings.** `crossed-bounds` at stage 1 with the engine's code, the new author-only
-`invalid-bound`, `non-finite-bound` from the builder, `bound-mismatch` at stage 2. Rejected: a range
+`invalid-bound`, the existing engine code `non-finite-bound` from the builder, `bound-mismatch` at
+stage 2. Rejected: a range
 check against the CDL `i32` range for Integer bounds (the engine applies none).
 
 **7. `nominal` and `unbounded` are refused, not carried.** Rejected: carrying them now (no
@@ -459,14 +523,18 @@ guesses; question 2 asks the owner.
 
 **9. Sequence-parameter bounds and units are read, dropped and reported.** Rejected: carrying them
 with an author-side range check (a second semantics the engine does not share, authoring decision
-4); refusing them (four fixtures blocked for attributes nothing reads). Why: the engine reads no
-parameter `min`/`max`; `ImportReport` makes the drop visible.
+4); refusing them (root-parameter `min`/`max` appear in 5 fixtures, 3 in the subset:
+`multizone_vav_economizer_modulations_reliefs`, `multizone_vav_economizer_modulations_return_fan`,
+`multizone_vav_relief_damper`; root-parameter `unit` and `quantity` appear in 16 and 13 in-subset
+fixtures, so refusing descriptive parameter attributes would block far more). Why: the engine reads
+no parameter `min`/`max` (verified in review: `connector_attrs` is reached only for connectors and
+boundaries); `ImportReport` makes the drop visible.
 
 **10. Library constants are members.** `{"member": "OperationModes.occupied"}` covers enumeration
 members and Integer constants, resolved by the type name. Rejected: importing the ground Integer (the
 author's name is the point of an authoring form); a separate `{"constant": …}` tag and text keyword
 (two spellings for one syntactic thing). Why: one closed table resolves both, and type names are
-unique across it.
+unique across it. Lands in the importer PR, not the model PR (ruling 10).
 
 **11. One facade table for named types, through #468 widened.** Rejected: extending `oce-author`'s
 pinned table with the G36 rows (the drift #468 removes, multiplied); a second facade issue for
@@ -492,9 +560,12 @@ not "revision of Y"); the source's content id in `extends` (a CXF round trip mak
 own id, a self-loop); a `source` field on `Sequence` (metadata the engine never sees; M3's registry
 owns provenance).
 
-**16. `ImportError` is a subject plus a closed, exhaustive kind with a stable code.** Rejected: the
-provisional free-text construct (tests matched substrings); `#[non_exhaustive]` (callers could not
-match every kind). Why: an agent and a test branch on `code`.
+**16. `ImportError` is a subject plus a typed kind with a stable code.** `ImportErrorKind` is
+`#[non_exhaustive]` (crate policy, GitHub #466) and its code list is pinned by an in-crate test;
+refusal precedence is fixed (nested, conditional, expression, port attribute, name). Rejected: the
+provisional free-text construct (tests matched substrings); an exhaustive enum (amended in review,
+ruling 6: crate policy wins, and the pinned list still breaks a test on a new kind). Why: an agent and
+a test branch on `code`.
 
 **17. v0 import maps only what v0 has.** `unit` and `description` become comments and report entries;
 string values are refused. Rejected: `unit` into `SemanticPoint.unit` (emitted as `S231:unit`, moving
@@ -505,11 +576,19 @@ not a point label, and M8 owns the record).
 benchmark graphs (#457 decides where they live); regenerating pairs here (the point is the
 prototype's own emitter output).
 
-**19. Model PR first, then the importer PR.** See [Dependencies and sequencing](#dependencies-and-sequencing).
+**19. #468, then the model PR, then the importer PR.** Rejected: one PR, and a model PR that does not
+wait for #485; see [Dependencies and sequencing](#dependencies-and-sequencing).
 
 **20. Gate item 1 compares canonical content ids once #474 lands.** Export bytes are compared only
 where block order agrees. Rejected: keeping the order exclusion (#458) after the id stops bearing
 order.
+
+**21. A boundary typed by a constant package is normalised to Integer and reported.** Rejected:
+refusing it (`unknown-datatype` would block `multizone_vav_economizer_limits_common`, which the
+engine loads as an Integer input); an enumeration-typed or package-typed boundary in the model (no
+fixture needs it, and the engine has no package type to carry). Why: the engine reads the package
+IRI on a connector as `ValueType::Integer`, so the normalised boundary loads to the same type and
+the same content id; the report keeps the change visible.
 
 ## Out of scope
 
@@ -520,7 +599,7 @@ order.
 - An `oce import` command (the CLI PR or a follow-up wires it).
 - Vocabulary v1 (descriptions, units) and M8 semantic records.
 
-## Questions for review
+## Questions for review (ruled; see below)
 
 1. **The subset count.** The scan finds 12 out-of-subset fixtures (4 nested, 7 conditional, 1
    expression), not 6; the #455 gate row's denominator becomes 34. Accept, and record it there?
@@ -543,4 +622,30 @@ order.
 
 ## Review rulings
 
-Pending: the owner's review comment on the draft PR records them here.
+The [review comment on GitHub #484](https://github.com/jscott3201/open-control-engine/pull/484#issuecomment-6737566636)
+(2026-11-09) ruled on the ten questions; the note is amended to match:
+
+1. **Subset:** accepted, 12 of 46 outside it; the M2 gate denominator becomes 34 and the tracking
+   issue's row is corrected.
+2. **Block-port bounds:** refused in M2 with a typed error (3 fixtures); per-instance port
+   attributes are a post-M2 model decision, #486.
+3. **#468 widened** to one data table (4 CDL enumerations, 10 G36 enumerations, 4 G36 constant
+   packages) replacing the hand-written `match` arms, rows marked enumeration or constant package,
+   one class-path form relative to `Buildings.Controls.OBC.`; it lands before the model PR.
+4. **Sequence-parameter `min`/`max`:** dropped and listed in the `ImportReport`; the engine reads no
+   parameter bounds at load.
+5. **Bounds on the wire** as a 0- or 1-item list: accepted; the reader refuses a second item and the
+   schema `description` says so.
+6. **`ImportErrorKind`:** `#[non_exhaustive]` per crate policy, with the code list pinned by a test.
+7. **Conditional components:** a post-M2 design pass, #487.
+8. **v0 import:** kept as the migration path for the benchmark graphs (#457); the three golden pairs
+   are vendored with a `PROVENANCE.md` (repository URL, copyright line), and one benchmark graph is
+   added when #457 lands.
+9. **Constant members:** the emitter writes the package IRI as `isOfDataType`.
+10. **Sequencing:** #468, then the model PR (after #485), then the importer PR; the constants half of
+    decision 10 moves to the importer PR.
+
+The same review's fix round added decision 21 (a package-typed Integer boundary, blocking), corrected
+the decision counts to in-subset figures, reclassified `unknown-enum-type` and `non-finite-bound` as
+existing engine codes, fixed refusal precedence, the bound-conversion test, the v0 comment rules and
+the gate-item-1 rebase note.
