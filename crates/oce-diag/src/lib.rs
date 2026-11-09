@@ -176,7 +176,7 @@ pub enum DiagCode {
     DuplicateParameter,
     /// A bound parameter spells an element of one of its class's array or matrix parameters
     /// (`k_<i>`, `table_<row>_<col>`) with an index in any form other than the canonical one-based
-    /// decimal the CXF import writes: a sign (`table_+1_2`), a leading zero (`k_01`) or zero. Two
+    /// decimal the CXF import writes: a sign (`table_+1_2`) or a leading zero (`k_01`). Two
     /// spellings of one element would otherwise both reach a block that parses indices as
     /// integers, and the later one in table order would win (GitHub #470).
     NonCanonicalElementName,

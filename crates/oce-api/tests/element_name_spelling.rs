@@ -1,5 +1,5 @@
 //! The load gate refuses non-canonical array and matrix element names (GitHub #470): an index with
-//! a sign, a leading zero or zero. Without it, `TimeTable` would read `table_01_2` and `table_1_2`
+//! a sign or a leading zero. Without it, `TimeTable` would read `table_01_2` and `table_1_2`
 //! as one cell and keep the later in table order, two documents differing only in that order would
 //! execute differently, and the canonical content id, which sorts parameters by name, could not
 //! tell them apart. The canonical spellings still load. GitHub #467 (names outside the declared

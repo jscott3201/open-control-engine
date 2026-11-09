@@ -199,3 +199,38 @@ fn the_encoder_allocates_its_bytes_once_at_their_exact_length() {
     );
     assert_eq!(census.bytes_total, bytes.len() as u64);
 }
+
+#[test]
+fn input_records_follow_the_frame_definitions_which_equal_the_declarations_on_the_corpus() {
+    // The id enumerates inputs from the executable boundary (what the blob carries) and joins
+    // their labels from `ModelGraph::boundary_inputs` by IRI; on every loadable document the two
+    // sets are the same, so no declaration is dropped and none is invented.
+    let dir =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../oce-cxf/tests/fixtures/g36");
+    let mut checked = 0;
+    for entry in std::fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_none_or(|ext| ext != "jsonld") {
+            continue;
+        }
+        let mut engine = Engine::new();
+        engine.load_cxf(&std::fs::read(&path).unwrap()).unwrap();
+        let mut declared: Vec<&str> = engine
+            .model
+            .boundary_inputs
+            .iter()
+            .map(|d| d.iri.as_ref())
+            .collect();
+        let mut executable: Vec<&str> = engine
+            .io
+            .frame_definitions
+            .iter()
+            .map(|d| d.path.as_str())
+            .collect();
+        declared.sort_unstable();
+        executable.sort_unstable();
+        assert_eq!(declared, executable, "{}", path.display());
+        checked += 1;
+    }
+    assert_eq!(checked, 47);
+}

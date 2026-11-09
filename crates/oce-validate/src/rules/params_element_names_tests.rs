@@ -43,10 +43,10 @@ fn index_classifiers_accept_exactly_their_spellings() {
     for text in ["", "+", "-", "1a", "a", "1.0", " 1", "١"] {
         assert!(!is_signed_decimal(text), "{text}");
     }
-    for text in ["1", "9", "10", "123"] {
+    for text in ["0", "1", "9", "10", "123"] {
         assert!(is_canonical_index(text), "{text}");
     }
-    for text in ["", "0", "01", "+1", "-1", "00", "1a"] {
+    for text in ["", "01", "+1", "-1", "00", "+0", "-0", "1a"] {
         assert!(!is_canonical_index(text), "{text}");
     }
 }
@@ -60,7 +60,7 @@ fn every_aliasing_spelling_of_a_table_cell_or_offset_is_refused() {
         "table_+1_2",
         "table_1_+2",
         "table_-1_2",
-        "table_0_1",
+        "table_00_1",
     ] {
         assert_eq!(
             refused(class, &["table_1_1", "table_1_2", name]),
@@ -69,13 +69,14 @@ fn every_aliasing_spelling_of_a_table_cell_or_offset_is_refused() {
         );
         assert_eq!(refused(class, &[name]), 1, "{name} alone");
     }
-    for name in ["offset_01", "offset_+1", "offset_0"] {
+    for name in ["offset_01", "offset_+1", "offset_00"] {
         assert_eq!(refused(class, &[name]), 1, "{name}");
     }
     assert_eq!(
         refused(class, &["table_1_1", "table_1_2", "table_10_2", "offset_1"]),
         0
-    );
+    ); // A zero index is a canonical spelling; the table's own range rule refuses it.
+    assert_eq!(refused(class, &["table_0_1", "offset_0"]), 0);
 }
 
 #[test]

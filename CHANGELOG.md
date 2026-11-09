@@ -74,7 +74,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   (64,491 bytes) pinned. `tests/fixtures/content_id/restamp.tsv` maps all 47 documents' retired
   `cxf:fnv1a128:` tags (`-` for the 13 partial exports) to their new ids, in the format the
   library's re-stamp uses. Re-blessed: `compatibility.txt` and `compatibility_export.txt` (revision
-  and `content` line). `g36_export_content.txt`, the export bytes and every other golden are
+  and `content` line); `oce-cxf`'s `fixture_corpus_import.txt` gains one line for each of the four
+  new `tests/fixtures/content_id/*.jsonld` documents (the tracked corpus is 218), every existing
+  line unchanged. `g36_export_content.txt`, the export bytes and every other golden are
   byte-identical. PC-018, PC-021 and PC-036 are reworded (product contract revision 23).
 
 - **Slot-indexed execute entry** (GitHub #459, issue #444). `Engine::frame_slots()` resolves the
@@ -167,8 +169,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 - **The load gate refuses non-canonical array and matrix element names** (GitHub #474, issue
   #470). A bound parameter that spells an element of one of its class's array templates (`k_<i>`,
-  `K_<row>_<col>`, `table_<row>_<col>`, `offset_<i>`) with a sign, a leading zero or a zero index
-  (`table_01_2`, `table_+1_2`, `offset_+1`, `k_01`) is refused with the new
+  `K_<row>_<col>`, `table_<row>_<col>`, `offset_<i>`) with a sign or a leading zero (`table_01_2`,
+  `table_+1_2`, `offset_+1`, `k_01`) is refused with the new
   `DiagCode::NonCanonicalElementName` (`non-canonical-element-name`) before `make`. `TimeTable`
   parsed indices with `usize::parse`, so an aliased spelling silently replaced a cell and the later
   one in table order won; with one spelling per element, sorting parameters by name in the content
