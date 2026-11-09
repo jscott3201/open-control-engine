@@ -116,7 +116,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### CXF import and export
 
 - **A block input driven by both a block output and a root boundary input is refused**
-  (GitHub #PRNUM, issue #472). CDL §7.10 gives every input exactly one driver, and the resolver
+  (GitHub #477, issue #472). CDL §7.10 gives every input exactly one driver, and the resolver
   refused two of the three double-driver shapes (two block outputs; two boundary inputs) but
   loaded the mixed one warning-free: boundary-driven assignments were counted by the
   boundary-input elision pass and wire in-degree by the later single-assignment check, and that
