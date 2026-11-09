@@ -1,0 +1,219 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "urn:mechanical-muse:width_max_min#"
+  },
+  "@graph": [
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min",
+      "@type": "S231:Block",
+      "S231:label": "width_max_min",
+      "S231:containsBlock": [
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.hi"
+        },
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.lo"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.pA"
+        },
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.pB"
+        },
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.pC"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.hiVal"
+        },
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.loVal"
+        }
+      ]
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.hi",
+      "@type": "urn:mechanical-muse:width_max_min#Buildings.Controls.OBC.CDL.Reals.MultiMax",
+      "S231:label": "hi",
+      "S231:hasParameter": {
+        "@id": "urn:mechanical-muse:width_max_min#width_max_min.hi.nin"
+      },
+      "S231:hasInput": [
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.hi.u1"
+        },
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.hi.u2"
+        },
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.hi.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "urn:mechanical-muse:width_max_min#width_max_min.hi.y"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.hi.nin",
+      "S231:value": {
+        "@value": "3",
+        "@type": "http://www.w3.org/2001/XMLSchema#integer"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.hi.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.hi.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.hi.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.hi.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "urn:mechanical-muse:width_max_min#width_max_min.hiVal"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.lo",
+      "@type": "urn:mechanical-muse:width_max_min#Buildings.Controls.OBC.CDL.Reals.MultiMin",
+      "S231:label": "lo",
+      "S231:hasParameter": {
+        "@id": "urn:mechanical-muse:width_max_min#width_max_min.lo.nin"
+      },
+      "S231:hasInput": [
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.lo.u1"
+        },
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.lo.u2"
+        },
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.lo.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "urn:mechanical-muse:width_max_min#width_max_min.lo.y"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.lo.nin",
+      "S231:value": {
+        "@value": "3",
+        "@type": "http://www.w3.org/2001/XMLSchema#integer"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.lo.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.lo.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.lo.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.lo.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "urn:mechanical-muse:width_max_min#width_max_min.loVal"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.pA",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.hi.u1"
+        },
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.lo.u1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.pB",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.hi.u2"
+        },
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.lo.u2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.pC",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.hi.u3"
+        },
+        {
+          "@id": "urn:mechanical-muse:width_max_min#width_max_min.lo.u3"
+        }
+      ]
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.hiVal",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:mechanical-muse:width_max_min#width_max_min.loVal",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    }
+  ]
+}

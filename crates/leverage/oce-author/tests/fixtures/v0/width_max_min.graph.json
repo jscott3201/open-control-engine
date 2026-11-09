@@ -1,0 +1,17 @@
+{
+  "name": "width_max_min",
+  "inputs": [
+    {"name": "pA", "type": "real", "unit": "1", "description": "First value"},
+    {"name": "pB", "type": "real", "unit": "1", "description": "Second value"},
+    {"name": "pC", "type": "real", "unit": "1", "description": "Third value"}
+  ],
+  "outputs": [
+    {"name": "hiVal", "type": "real", "description": "Largest of the three"},
+    {"name": "loVal", "type": "real", "description": "Smallest of the three"}
+  ],
+  "blocks": [
+    {"id": "hi", "class": "Reals.MultiMax", "params": [{"name": "nin", "value": 3}]},
+    {"id": "lo", "class": "Reals.MultiMin", "params": [{"name": "nin", "value": 3}]}
+  ],
+  "connections": ["pA -> hi.u1", "pB -> hi.u2", "pC -> hi.u3", "pA -> lo.u1", "pB -> lo.u2", "pC -> lo.u3", "hi.y -> hiVal", "lo.y -> loVal"]
+}

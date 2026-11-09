@@ -1,0 +1,14 @@
+{
+  "name": "ahu_0027",
+  "inputs": [
+    {"name": "override_active", "type": "bool", "unit": "bool", "description": "Manual override active flag"}
+  ],
+  "outputs": [
+    {"name": "yFault", "type": "bool", "description": "True once the override has been held for a day, then for another hour"}
+  ],
+  "blocks": [
+    {"id": "staleOvr", "class": "Logical.TrueDelay", "params": [{"name": "delayTime", "value": 86400.0}, {"name": "delayOnInit", "value": true}]},
+    {"id": "persist", "class": "Logical.TrueDelay", "params": [{"name": "delayTime", "value": 3600}, {"name": "delayOnInit", "value": true}]}
+  ],
+  "connections": ["override_active -> staleOvr.u", "staleOvr.y -> persist.u", "persist.y -> yFault"]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "ahu_0005",
+  "inputs": [
+    {"name": "mat", "type": "real", "unit": "degC", "description": "Mixed air temperature"},
+    {"name": "sat", "type": "real", "unit": "degC", "description": "Supply air temperature"}
+  ],
+  "outputs": [
+    {"name": "yFault", "type": "bool", "description": "Supply air stays well below mixed air for too long"}
+  ],
+  "blocks": [
+    {"id": "gap", "class": "Reals.Subtract", "params": []},
+    {"id": "gapBig", "class": "Reals.GreaterThreshold", "params": [{"name": "t", "value": 3.0}]},
+    {"id": "persist", "class": "Logical.TrueDelay", "params": [{"name": "delayTime", "value": 1800.0}, {"name": "delayOnInit", "value": true}]}
+  ],
+  "connections": ["mat -> gap.u1", "sat -> gap.u2", "gap.y -> gapBig.u", "gapBig.y -> persist.u", "persist.y -> yFault"]
+}
