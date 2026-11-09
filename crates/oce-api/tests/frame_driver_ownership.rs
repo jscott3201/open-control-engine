@@ -5,7 +5,8 @@
 //! non-test `oce-api` source defines either item, evaluates the schedule, checks time
 //! representability, advances a sequence with `checked_add`, or compares a frame time with the
 //! magnitude limit; and the facade's frame module calls the core driver's `FrameDriver`,
-//! `check_time` and `check_input`. A second implementation of any rule would have to reintroduce
+//! `check_time` and `check_input`, and the slot entry (`frame_slots.rs`) is the only other caller
+//! of `FrameDriver`. A second implementation of any rule would have to reintroduce
 //! one of the refused spellings, which is what this lexical check catches; its control proves the
 //! scan reads the sources it claims to.
 
@@ -114,6 +115,18 @@ fn no_facade_source_holds_a_second_frame_driver() {
             "the facade frame module calls `{call}`"
         );
     }
+    // The slot entry (issue #444) drives the same core driver; the named and slot entries are
+    // the only two callers in the facade, so a third execution path would show up here.
+    let slots = code(&std::fs::read_to_string(source_root().join("frame_slots.rs")).unwrap());
+    for call in ["FrameDriver {", "oce_graph::frame::output_value("] {
+        assert!(slots.contains(call), "the slot entry calls `{call}`");
+    }
+    let callers: Vec<&str> = sources
+        .iter()
+        .filter(|(_, text)| code(text).contains("FrameDriver {"))
+        .map(|(path, _)| path.rsplit(['/', '\\']).next().unwrap_or(path))
+        .collect();
+    assert_eq!(callers, ["frame.rs", "frame_slots.rs"]);
 }
 
 #[test]

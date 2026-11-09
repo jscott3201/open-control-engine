@@ -30,8 +30,10 @@
 //!
 //! [`Engine::load_cxf`] runs the end-to-end CXF ingest pipeline (resolve → validate → BUILD).
 //! Execution is exclusively [`Engine::prepare_frame`] followed by consuming
-//! [`Engine::execute_frame`]. [`CompletedFrame`] is the immutable committed boundary-output
-//! receipt. The facade also provides latest-state `get_output` / `watch`, the live parameter table
+//! [`Engine::execute_frame`], or its slot-indexed twin [`Engine::execute_slots`] over a
+//! [`FrameSlots`] map resolved once by [`Engine::frame_slots`]; both run the one core frame driver.
+//! [`CompletedFrame`] is the immutable committed boundary-output receipt; [`SlotFrame`] borrows the
+//! same outputs from the engine. The facade also provides latest-state `get_output` / `watch`, the live parameter table
 //! (`get_param` / `set_param` / `halt` / `resume` / `mode`), and the typed IO inventory (`io` /
 //! `io_summary` / `point_list`). Executable ingest is CXF only; there is no source Modelica or
 //! semantic-template loader. Only `point_list(None)` is supported: device filtering is outside the
@@ -51,6 +53,7 @@ mod error;
 mod export;
 mod frame;
 mod frame_inputs;
+mod frame_slots;
 /// Compile-time PyO3 binding-shape guards (R-API-PY-1..8). A non-test module so a frozen surface
 /// drift fails the normal `cargo build`, not only the release-gate test run.
 mod guards;
@@ -100,6 +103,7 @@ pub use error::{LoadErrorContext, OcError, OcResult};
 pub use export::{ContentIdError, ExportReport};
 pub use frame::{CompletedFrame, PreparedInputFrame};
 pub use frame_inputs::InputDefinition;
+pub use frame_slots::{FrameSlots, SlotFrame};
 // The HostTick v1 time limit and the non-finite input policy are the core frame driver's own
 // (`oce_graph::frame`), re-exported so the facade names no second copy.
 pub use io::{

@@ -1,17 +1,18 @@
-//! One HostTick v1 frame driver, three callers (GitHub #400, #401): for every G36 catalog fixture
-//! the same frames run through
+//! One HostTick v1 frame driver, four callers (GitHub #400, #401, issue #444): for every G36
+//! catalog fixture the same frames run through
 //!
 //! * the **facade** (`Engine::prepare_frame` / `execute_frame`),
+//! * the facade's **slot entry** (`Engine::frame_slots` once, then `execute_slots`) on its own load,
 //! * the **core driver** (`oce_graph::frame::FrameDriver`) on a second load of the same CXF, slot
 //!   by slot with no names, and
 //! * the **blob entry** (`oce_graph::blob::Executable`) over the executable decoded from the
 //!   fixture's compiled-schedule blob,
 //!
 //! and after load and after every frame the boundary outputs, the sequence, the clock and the whole
-//! `RunState` (connector values, state words, slot layout and time) of all three are compared bit
+//! `RunState` (connector values, state words, slot layout and time) of all four are compared bit
 //! for bit. Before some frames each path also receives the same bad frames (a NaN time, time going
 //! backwards, a wrong type, a non-finite Real under `NonFiniteInputPolicy::Refuse`, a value outside
-//! a declared bound); the three must refuse each with the same refusal for the same slot and leave
+//! a declared bound); the four must refuse each with the same refusal for the same slot and leave
 //! every bit of state unchanged.
 //!
 //! The frames come from `oce-graph`'s `tests/support/frame_schedule.rs`, shared by path, and the
@@ -30,7 +31,7 @@ use oce_graph::blob::Executable;
 use oce_graph::frame::{FrameDriver, FrameInputs, FrameRefusal, InputSlot, NonFiniteInputPolicy};
 use oce_model::{ConnectorId, Value, ValueType};
 
-use crate::{Engine, OcError};
+use crate::{Engine, FrameSlots, OcError};
 
 fn fixture_dir() -> std::path::PathBuf {
     std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../oce-cxf/tests/fixtures/g36")
@@ -112,9 +113,12 @@ impl FrameInputs for Slots<'_> {
     }
 }
 
-/// The three callers of the one frame driver.
+/// The four callers of the one frame driver.
 struct Paths<'b> {
     facade: Engine,
+    /// The slot entry's engine and its one-time map.
+    slotted: Engine,
+    slots: FrameSlots,
     core: Engine,
     /// The core path's slot table, from its own engine's IO inventory.
     core_slots: Vec<(Vec<ConnectorId>, Option<Value>, Option<Value>)>,
@@ -124,12 +128,14 @@ struct Paths<'b> {
 impl Paths<'_> {
     fn set_policy(&mut self, policy: NonFiniteInputPolicy) {
         self.facade.set_non_finite_input_policy(policy);
+        self.slotted.set_non_finite_input_policy(policy);
         self.core.set_non_finite_input_policy(policy);
         self.entry.set_non_finite_input_policy(policy);
     }
 
-    /// Run one frame on all three paths: the facade's completed outputs (or its refusal), and the
-    /// core driver's and the entry's sequence (or refusal).
+    /// Run one frame on all four paths: the facade's completed outputs (or its refusal), the slot
+    /// entry's sequence and outputs in slot order (or its refusal), and the core driver's and the
+    /// blob entry's sequence (or refusal).
     #[allow(clippy::type_complexity)]
     fn execute(
         &mut self,
@@ -138,6 +144,7 @@ impl Paths<'_> {
         entry_values: &[Value],
     ) -> (
         Result<crate::CompletedFrame, OcError>,
+        Result<(u64, Vec<Value>), OcError>,
         Result<u64, FrameRefusal>,
         Result<u64, FrameRefusal>,
     ) {
@@ -153,6 +160,10 @@ impl Paths<'_> {
             .facade
             .prepare_frame(time, &entries)
             .and_then(|plan| self.facade.execute_frame(plan));
+        let slotted = self
+            .slotted
+            .execute_slots(&self.slots, time, values)
+            .map(|frame| (frame.sequence(), frame.outputs().cloned().collect()));
         let core = &mut self.core;
         let collector = crate::observations::AssertCollector::default();
         let policy = core.non_finite_input_policy;
@@ -176,11 +187,12 @@ impl Paths<'_> {
         let entry = self
             .entry
             .execute_frame(time, entry_values, &oce_blocks::NoopDiagnostics);
-        (facade, core_result, entry)
+        (facade, slotted, core_result, entry)
     }
 
-    /// Compare all three after an accepted frame or a refusal.
+    /// Compare all four after an accepted frame or a refusal.
     fn compare(&self, when: &str) -> Result<(), String> {
+        compare_states(when, &self.facade.state, &self.slotted.state)?;
         compare_states(when, &self.facade.state, &self.core.state)?;
         compare_states(when, &self.facade.state, &self.entry.decoded().state)?;
         // The public raw-word views the round-trip suite compares (GitHub #403) are these words.
@@ -189,10 +201,16 @@ impl Paths<'_> {
         {
             return Err(format!("{when}: the public state-word views differ"));
         }
-        let clocks =
-            [self.facade.prev_t, self.core.prev_t, self.entry.time()].map(|t| t.map(f64::to_bits));
+        let clocks = [
+            self.facade.prev_t,
+            self.slotted.prev_t,
+            self.core.prev_t,
+            self.entry.time(),
+        ]
+        .map(|t| t.map(f64::to_bits));
         let sequences = [
             self.facade.accepted_frame_sequence,
+            self.slotted.accepted_frame_sequence,
             self.core.accepted_frame_sequence,
             self.entry.sequence(),
         ];
@@ -336,6 +354,9 @@ fn drive(name: &str, perturb_at: Option<u32>) -> Result<Exercised, String> {
     facade.load_cxf(&cxf).unwrap();
     let mut core = Engine::new();
     core.load_cxf(&cxf).unwrap();
+    let mut slotted = Engine::new();
+    slotted.load_cxf(&cxf).unwrap();
+    let slots = slotted.frame_slots().unwrap();
     let blob = facade.compile_blob().unwrap();
     let entry = Executable::from_blob(&blob.bytes).unwrap();
     let core_slots = core
@@ -350,6 +371,8 @@ fn drive(name: &str, perturb_at: Option<u32>) -> Result<Exercised, String> {
         .collect();
     let mut paths = Paths {
         facade,
+        slotted,
+        slots,
         core,
         core_slots,
         entry,
@@ -402,13 +425,16 @@ fn drive(name: &str, perturb_at: Option<u32>) -> Result<Exercised, String> {
             for (what, bad_time, bad, policy) in bad_frames(&paths, &values, time) {
                 let when = format!("tick {k}, {what}");
                 paths.set_policy(policy);
-                let (facade, core, entry) = paths.execute(bad_time, &bad, &bad);
+                let (facade, slotted, core, entry) = paths.execute(bad_time, &bad, &bad);
                 paths.set_policy(NonFiniteInputPolicy::Admit);
-                let (Err(facade), Err(core), Err(entry)) = (facade, core, entry) else {
+                let (Err(facade), Err(slotted), Err(core), Err(entry)) =
+                    (facade, slotted, core, entry)
+                else {
                     return Err(format!("{when}: a path accepted the frame"));
                 };
                 let keys = [
                     facade_key(&paths.facade, &facade),
+                    facade_key(&paths.slotted, &slotted),
                     refusal_key(&core),
                     refusal_key(&entry),
                 ];
@@ -431,26 +457,35 @@ fn drive(name: &str, perturb_at: Option<u32>) -> Result<Exercised, String> {
             };
         }
         let when = format!("tick {k} (t = {time} s)");
-        let (completed, core, entry) = paths.execute(time, &values, &entry_values);
+        let (completed, slotted, core, entry) = paths.execute(time, &values, &entry_values);
         let completed = completed.map_err(|error| format!("{when}: facade: {error}"))?;
+        let (slot_sequence, slot_outputs) =
+            slotted.map_err(|error| format!("{when}: slot entry: {error}"))?;
         let sequences = [
             Ok(completed.sequence()),
+            Ok(slot_sequence),
             core.map_err(|r| format!("core: {r}")),
             entry.map_err(|r| format!("entry: {r}")),
         ];
         if sequences[1..].iter().any(|s| *s != sequences[0]) {
             return Err(format!("{when}: sequences {sequences:?}"));
         }
-        if completed.outputs().len() != paths.entry.outputs().len() {
+        if completed.outputs().len() != paths.entry.outputs().len()
+            || slot_outputs.len() != completed.outputs().len()
+        {
             return Err(format!("{when}: output count"));
         }
         for (slot, (path, value)) in completed.outputs().iter().enumerate() {
             let source = paths.facade.io.frame_outputs[slot].1;
             let core_value = oce_graph::frame::output_value(&paths.core.state, source);
             let entry = paths.entry.output(slot);
-            if entry.is_none_or(|entry| !value.bit_eq(entry)) || !value.bit_eq(core_value) {
+            let slotted = slot_outputs.get(slot);
+            if entry.is_none_or(|entry| !value.bit_eq(entry))
+                || slotted.is_none_or(|slotted| !value.bit_eq(slotted))
+                || !value.bit_eq(core_value)
+            {
                 return Err(format!(
-                    "{when}: {path}: {value:?} vs {core_value:?} vs {entry:?}"
+                    "{when}: {path}: {value:?} vs {slotted:?} vs {core_value:?} vs {entry:?}"
                 ));
             }
         }
@@ -576,7 +611,8 @@ fn the_facade_and_the_decoded_blob_agree_bit_for_bit_after_every_tick() {
             "{name}: {} varying outputs, below the recorded floor {floor}",
             exercised.varying_outputs
         );
-        // Every fixture is refused at least the NaN time and the backwards time, four times over.
+        // Every fixture is refused at least the NaN time and the backwards time, four times over,
+        // identically by all four callers.
         assert!(
             exercised.refusals >= 7,
             "{name}: {} refusals",

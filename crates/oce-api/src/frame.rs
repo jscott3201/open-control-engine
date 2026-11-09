@@ -33,8 +33,8 @@ use crate::{AssertEvent, Engine, EngineStateError, InputDefinition, OcError};
 /// }
 /// ```
 pub struct PreparedInputFrame {
-    generation: Arc<()>,
-    time: f64,
+    pub(crate) generation: Arc<()>,
+    pub(crate) time: f64,
     inputs: Vec<(Vec<ConnectorId>, Value)>,
 }
 
@@ -137,6 +137,18 @@ mod replay_tests;
 #[path = "shared_transition_tests.rs"]
 mod transition_tests;
 
+/// Count one accepted transition for the instrumented core controls; both entries call it.
+#[cfg(test)]
+pub(crate) fn count_transition() {
+    transition_tests::TRANSITIONS.with(|count| count.set(count.get() + 1));
+}
+
+/// The accepted transitions counted on this thread so far.
+#[cfg(test)]
+pub(crate) fn transition_count() -> usize {
+    transition_tests::TRANSITIONS.with(std::cell::Cell::get)
+}
+
 impl fmt::Debug for PreparedInputFrame {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PreparedInputFrame")
@@ -158,8 +170,9 @@ impl Engine {
     /// Stages all resolved fan-out targets, closes durable-restore readiness, evaluates once,
     /// refreshes latest-state inspection and returns an independent [`CompletedFrame`]. Equal
     /// finite time advances again; there is no event iteration. No persistence call or host callback
-    /// is invoked. This is the only public state-advancing execution surface; cadence and
-    /// persistence orchestration are host responsibilities, not alternative execution profiles.
+    /// is invoked. This and its slot-indexed twin [`Self::execute_slots`], which runs the same core
+    /// driver, are the only public state-advancing execution surfaces; cadence and persistence
+    /// orchestration are host responsibilities, not alternative execution profiles.
     ///
     /// Allocation/copy costs beyond normal evaluation scale with boundary inputs/outputs and emitted
     /// warnings; staging scales with prepared fan-out. There is no run-state clone or rollback.
@@ -223,7 +236,7 @@ impl Engine {
         // An accepted frame is the first mutation boundary: it closes startup restore.
         self.durable_restore_ready = false;
         #[cfg(test)]
-        transition_tests::TRANSITIONS.with(|count| count.set(count.get() + 1));
+        count_transition();
         Ok(CompletedFrame {
             _generation: frame.generation,
             time: frame.time,
@@ -384,7 +397,7 @@ impl Engine {
         Ok(frame)
     }
 
-    fn frame_preconditions(&self) -> Result<(), OcError> {
+    pub(crate) fn frame_preconditions(&self) -> Result<(), OcError> {
         if !self.loaded {
             return Err(EngineStateError::NoLoadedModel.into());
         }
@@ -412,7 +425,7 @@ impl Engine {
     }
 
     /// Name a core-driver refusal: a slot becomes its canonical input path.
-    fn frame_refusal(&self, refusal: FrameRefusal) -> OcError {
+    pub(crate) fn frame_refusal(&self, refusal: FrameRefusal) -> OcError {
         let path = |slot: usize| {
             self.io
                 .frame_definitions
@@ -429,10 +442,16 @@ impl Engine {
             FrameRefusal::ModelTimeUnrepresentable { now } => {
                 OcError::ModelTimeUnrepresentable { now }
             }
-            // A plan always carries one value per definition (the incarnation token binds it to
-            // this table), so the counts never differ here; a short plan would be missing the
-            // input at its first absent slot.
-            FrameRefusal::InputCount { found, .. } => OcError::FrameMissingInput(path(found)),
+            // A prepared plan always carries one value per definition (the incarnation token
+            // binds it to this table), so only a slot frame reaches this arm. A short frame is
+            // missing the input at its first absent slot, as the named path reports the same
+            // omission; a long one has no input to name.
+            FrameRefusal::InputCount { expected, found } if found < expected => {
+                OcError::FrameMissingInput(path(found))
+            }
+            FrameRefusal::InputCount { expected, found } => {
+                OcError::FrameExtraInputs { expected, found }
+            }
             FrameRefusal::InputType { slot } => OcError::InputType(path(slot)),
             FrameRefusal::InputNonFinite { slot } => OcError::InputNonFinite(path(slot)),
             FrameRefusal::InputDomain { slot } => OcError::InputDomain(path(slot)),

@@ -179,6 +179,16 @@ pub enum OcError {
     /// One required canonical boundary input was omitted; no hold-last or seed substitution.
     #[error("missing frame input '{0}'")]
     FrameMissingInput(String),
+    /// A slot-indexed frame ([`crate::Engine::execute_slots`]) supplied more values than the
+    /// executable has input slots. Refused before any value is read; nothing is staged. A frame
+    /// with fewer values is [`Self::FrameMissingInput`] instead, naming the first absent slot.
+    #[error("{found} frame input values supplied for {expected} input slots")]
+    FrameExtraInputs {
+        /// The executable's input slot count.
+        expected: usize,
+        /// The number of values supplied.
+        found: usize,
+    },
     /// A Real boundary input value was NaN (either sign, any payload) or infinite while the
     /// host selected [`crate::NonFiniteInputPolicy::Refuse`]. Names the canonical input path;
     /// nothing is staged and model time does not advance. The host substitutes a finite value

@@ -4,12 +4,16 @@
 
 This is the normative detail of PC-031 in the [product contract](product-contract.md).
 **Preparation (PC-032), complete-frame execution (PC-033), shared evaluation core (PC-034), and
-frame-only facade contraction (PC-035) are implemented.** The APIs below supply no
+frame-only facade contraction (PC-035) are implemented**, and so is the
+[slot-indexed execute entry](#current-slot-indexed-execution-api) (issue #444) that submits the
+same complete frames by slot through the same core driver. The APIs below supply no
 profile selector or stable-product guarantee. The separate [replay record](replay-record.md) defines
 the canonical per-accepted-frame encoding. Execution maintainers own
 these semantics; host policy remains with the host integrator.
 
-The requirements below describe the sole public execution path. Legacy execution methods have
+The requirements below describe the sole public execution path, which has two entries: named
+preparation followed by consuming execution, and its slot-indexed twin. Both run one core driver
+under the same requirements; neither is another profile. Legacy execution methods have
 been removed, not reinterpreted or aliased. “Atomic” means an engine-owned transition under
 the ordinary returned-refusal boundary below, not a distributed, persistent or actuator transaction.
 The fixed [HostTick v1 profile](execution-profile.md#hosttick-v1) remains unchanged.
@@ -156,8 +160,8 @@ points, and load/restore/resume may replace their state without a frame. Only `C
 retains committed boundary results and diagnostics. There is no engine storage-write helper.
 
 The core frame driver, `oce_graph::frame::FrameDriver`, is the sole HostTick v1 implementation:
-after its checks it stages, evaluates once and advances the clock and sequence, and the facade and
-the `no_std` blob entry both call it (GitHub #401). The
+after its checks it stages, evaluates once and advances the clock and sequence, and the facade (both
+its named and its slot entry) and the `no_std` blob entry call it (GitHub #401, issue #444). The
 [instrumented core test](../crates/oce-api/src/shared_transition_tests.rs) detects bypass, double
 emit/update and entry on refusal. The conformance driver uses complete frames in both
 uniform and event-aligned modes; equivalent complete schedules retain bit-exact traces. This does
@@ -367,6 +371,84 @@ Its [v1 contract](replay-record.md) leaves authenticated order and snapshot side
    evaluator allocation exceptions remain, and latest-state inspection refreshes after each commit.
   No whole-engine/state copy is charged as result capture. See [measured observations](benchmarks.md#complete-frame-observations)
   for debug/release timing scope; no universal speed or latency-ratio guarantee follows.
+
+## Current slot-indexed execution API
+
+`Engine::frame_slots()` resolves the executable boundary once into an owned `FrameSlots` map, and
+`Engine::execute_slots(&slots, time, &[Value]) -> Result<SlotFrame<'_>, OcError>` then commits one
+complete frame from one value per input slot (issue #444; the
+[replay design note](design/replay.md#decisions), decisions 4 and 14). It is the named path by
+position instead of by key: the same core driver checks and commits the frame, so a slot frame
+whose `values[i]` is the named frame's value for `slots.inputs()[i].path` refuses with the same
+error or commits the same state, outputs, warnings and sequence.
+
+**Slot order.** Input slot `i` is row `i` of `input_definitions()` (lexical UTF-8 canonical path
+order); output slot `j` is the `j`-th entry of `CompletedFrame::outputs()` (the same lexical
+boundary-output order). Both are the [compiled-schedule blob](compiled-schedule-blob.md)'s I/O
+order, so one host-side name→slot table drives the facade and a `no_std` target alike.
+`FrameSlots::inputs()` returns the definitions in slot order, `outputs()` the output identities,
+and `input_slot(path)` / `output_slot(path)` resolve a canonical identity (exact bytes, no aliases).
+
+**Incarnation.** The map carries the same process-local load/rebuild fence as a prepared plan:
+every successful reload (identical bytes included) and every dirty resume supersedes it, and
+`execute_slots` then refuses with `StalePreparedFrame` rather than binding old positions to a new
+schema. A map from another engine is stale too. Clean resume, compatible restore and a failed load
+keep it. Building a map requires a loaded engine without pending edits, like `input_definitions()`.
+
+**Refusal order.** First cause, every one before any mutation:
+
+1. `State(NoLoadedModel)`, then `State(PendingParameterEdits)`, then `StalePreparedFrame`.
+2. `NonFiniteTime`, `TimeOutOfRange`, `TimeRegression`, `NonFiniteTimeStep`, then
+   `ModelTimeUnrepresentable`.
+3. The value count. A shorter vector is `FrameMissingInput` naming the first absent slot's
+   canonical path, which is what the named path returns for the same omission. A longer one is
+   `FrameExtraInputs { expected, found }`, the one variant the slot entry adds: the named path has
+   no spelling for a value beyond the last slot. The count is checked before any value is read, so
+   an oversized vector costs one comparison and no allocation.
+4. Per slot in slot order: `InputType`, `InputNonFinite` (only under
+   `NonFiniteInputPolicy::Refuse`), then `InputDomain`, each naming the slot's canonical path.
+5. `FrameSequenceExhausted`.
+
+The named path refuses unknown, non-input and duplicate keys between steps 2 and 3; positions
+cannot express them. A refused slot frame leaves the entire execution image unchanged exactly as a
+refused named frame does: model time and guard, state words, connector image (no staged prefix),
+latest-state views, sequence and restore readiness.
+
+**Result.** `SlotFrame` borrows the engine: `time()`, `sequence()`, `output_count()`,
+`output(slot)`, `outputs()` (an iterator in output-slot order, exact native values) and
+`diagnostics()` (the transition's warnings in emission order). It owns nothing, so the next frame,
+reload or restore cannot run while it lives, and a host that keeps values copies them out. It is not
+a receipt or replay record; a host that needs `CompletedFrame` or `replay_record()` uses the named
+path. Sequence, equal-time and restore-window semantics are the named path's.
+
+**Allocation.** Building the map allocates in proportion to the boundary. Once it exists an
+accepted slot frame allocates nothing itself: values are cloned into their fan-out targets (a
+`Value::String` shares its storage) and the result borrows the engine. The evaluator's documented
+exceptions remain (a `CDL.Reals.Sort` wider than 64 inputs). Warning records are reused in place, so
+only a frame that emits more warnings, or a longer source or message, than any earlier slot frame
+of the engine allocates.
+
+### Slot-indexed execution evidence
+
+- [Dual-entry equivalence](../crates/oce-api/tests/slot_frames.rs): the 46 G36 fixtures' 160-frame
+  schedule through both entries, with the same sequence, time bits, output identities and bits,
+  warnings, state words and latest outputs after every frame and byte-identical state snapshots
+  every sixteenth frame; the map's order equals the compiled blob's I/O tables. The
+  [four-caller dual-path test](../crates/oce-api/src/tests/blob_dual_path_tests.rs) adds the slot
+  entry beside the named path, the bare core driver and the blob entry and compares the whole
+  `RunState` after every frame and every bad frame.
+- [Refusal parity](../crates/oce-api/tests/slot_frame_refusals.rs): on every fixture, every
+  shorter arity, every wrong type in every slot, NaN and both infinities in every Real slot under
+  each policy, and every bad time refuse both entries with the same independently derived error and
+  leave snapshot bytes unchanged; precedence across classes, lifecycle refusals (no load, pending
+  edits, foreign, superseded and dirty-resumed maps) and a quarter-million-cell hostile vector
+  refused without allocating. [Private controls](../crates/oce-api/src/frame_slots_tests.rs) inject
+  every preflight cause the named path's fault controls use (sequence exhaustion included) and
+  require the named path's error and an unchanged image, count one core transition per accepted
+  slot frame and none per refusal, and pin warning-record parity and reuse.
+- [Census](../crates/oce-api/tests/slot_frames.rs): every frame of the 46 fixtures measured on its
+  own with a positive control; zero allocations on all 7,357 frames that grow no warning record,
+  and the three that do are reported.
 
 Compile-fail rustdoc pins nonserialization and single-use preparation. Exact public baselines and
 shape guards cover the frame-only API. Hosted architecture qualification and actual downstream host

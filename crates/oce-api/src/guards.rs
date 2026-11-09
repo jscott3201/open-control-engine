@@ -54,6 +54,19 @@ fn _assert_complete_frame_shapes() {
     let _: fn(&crate::CompletedFrame) -> f64 = crate::CompletedFrame::time;
     let _: fn(&crate::CompletedFrame) -> &[(String, Value)] = crate::CompletedFrame::outputs;
     let _: fn(&crate::CompletedFrame) -> &[AssertEvent] = crate::CompletedFrame::diagnostics;
+    // The slot entry (issue #444): the map is owned, cloneable and thread-safe; the frame borrows
+    // the engine, so it is a Rust-host shape, not one the Python binding returns.
+    needs_send_sync::<crate::FrameSlots>();
+    needs_clone::<crate::FrameSlots>();
+    let _: fn(&Engine) -> Result<crate::FrameSlots, OcError> = Engine::frame_slots;
+    let _: for<'a> fn(
+        &'a mut Engine,
+        &crate::FrameSlots,
+        f64,
+        &[Value],
+    ) -> Result<crate::SlotFrame<'a>, OcError> = Engine::execute_slots;
+    let _: fn(&crate::FrameSlots) -> &[crate::InputDefinition] = crate::FrameSlots::inputs;
+    let _: fn(&crate::FrameSlots) -> &[String] = crate::FrameSlots::outputs;
 }
 
 // ---- R-API-PY-1 — no generic `#[pyclass]`: the binding wraps the concrete `Engine` ----

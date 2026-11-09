@@ -132,8 +132,10 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   and honest parameter defaults. See [CDL coverage](docs/cdl-coverage.md).
 - Runs **46 G36 conformance fixtures** end to end through the frozen facade, each with a committed
   whole-sequence golden trace.
-- Executes exclusively through `prepare_frame` followed by consuming `execute_frame`. The engine is
-  pure: it has no storage dependency, and `load_cxf` returns the resolved model and IO inventory as
+- Executes exclusively through `prepare_frame` followed by consuming `execute_frame`, or by slot:
+  `frame_slots` resolves the boundary once and `execute_slots(&slots, t, &values)` then submits each
+  complete frame through the same core driver, with the same refusals, borrowing its outputs and
+  allocating nothing per frame. The engine is pure: it has no storage dependency, and `load_cxf` returns the resolved model and IO inventory as
   a plain-data `LoadedModel`. Hosts own cadence, persistence and equipment delivery; for
   persistence, `oce_store::host::persist_loaded_model` runs the post-load recover → save →
   validate-inputs sequence against any adapter behind the storage port (or the in-memory
@@ -205,7 +207,8 @@ as the facade, a firmware image is built and size-checked per PR for two bare-me
 executed under QEMU nightly, and every engine PR replays one recorded run of the 46 fixtures' blobs
 bit for bit on x86_64, arm64 and `wasm32-wasip1`. v0.3.0 (M1a) made the engine pure and moved the
 per-PR gate to native x86_64 and arm64 cells under one required `CI OK` status. Next come M2 (the
-authoring layer) and M3 (the verification product), in parallel; see [CHANGELOG.md](CHANGELOG.md).
+authoring layer) and M3 (the verification product), in parallel; M3's first engine change, the
+facade's slot-indexed execute entry that replay drives, is in. See [CHANGELOG.md](CHANGELOG.md).
 
 Work is planned as GitHub milestones and cut into issues. Each milestone has a tracking issue that
 lists the order, the hard dependencies and the gate that closes it. The engine milestones, in order:
