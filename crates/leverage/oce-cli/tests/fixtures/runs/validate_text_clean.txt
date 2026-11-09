@@ -1,0 +1,16 @@
+exit: 0
+--- stdout
+{
+  "command": "validate",
+  "errors": [],
+  "findings": [],
+  "input": "../oce-author/tests/fixtures/text/econ_enable.oce",
+  "ok": true,
+  "schema": "oce-report/1",
+  "stages": [
+    "author",
+    "engine"
+  ],
+  "tool": "oce"
+}
+--- stderr

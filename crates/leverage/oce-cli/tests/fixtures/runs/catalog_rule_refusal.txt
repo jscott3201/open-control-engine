@@ -1,0 +1,53 @@
+exit: 1
+--- stdout
+{
+  "class": {
+    "class_path": "CDL.Reals.MultiSum",
+    "description": "Sum of Reals, y = k[1]*u[1] + k[2]*u[2] + ... + k[n]*u[n]",
+    "inputs": null,
+    "outputs": null,
+    "parameters": [
+      {
+        "default": {
+          "kind": "integer",
+          "value": 0
+        },
+        "enumeration": null,
+        "name": "nin",
+        "settable": true,
+        "type": "Integer"
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 1.0
+        },
+        "enumeration": null,
+        "name": "k_<i>",
+        "settable": true,
+        "type": "Real"
+      }
+    ],
+    "reserved": false
+  },
+  "command": "catalog",
+  "errors": [],
+  "findings": [
+    {
+      "code": "parameter-out-of-range",
+      "detail": "parameter `nin` on block `CDL.Reals.MultiSum` must be >= 0; got -1",
+      "origin": "engine",
+      "severity": "error",
+      "span": null,
+      "subject": "CDL.Reals.MultiSum"
+    }
+  ],
+  "input": null,
+  "ok": false,
+  "params": [
+    "nin=-1"
+  ],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

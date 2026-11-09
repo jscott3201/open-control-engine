@@ -1,0 +1,22 @@
+exit: 2
+--- stdout
+{
+  "class": null,
+  "command": "catalog",
+  "errors": [
+    {
+      "code": "malformed-value",
+      "detail": "`PIX` is not a SimpleController value for `controllerType`",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": null,
+  "ok": false,
+  "params": [
+    "controllerType=PIX"
+  ],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

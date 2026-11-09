@@ -1,0 +1,16 @@
+exit: 0
+--- stdout
+CDL.Reals.Hysteresis
+  Transform Real to Boolean signal with Hysteresis
+
+parameters:
+  uLow : Real (required)
+  uHigh : Real (required)
+  pre_y_start : Boolean = false
+
+inputs:
+  u : Real
+
+outputs:
+  y : Boolean
+--- stderr
