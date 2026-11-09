@@ -1,0 +1,29 @@
+# Historical replay above the facade (design note docs/design/replay.md, issue #445): the first
+# leverage crate. It depends on `oce-api` only among the engine crates (crates/leverage/README.md);
+# `oce-bless` is its one other `oce-*` edge, as a dev-dependency for the golden switch (authoring
+# note decision 19).
+[package]
+name = "oce-replay"
+description = "Historical replay over the Open Control Engine facade: slot-indexed frame sources, the missing-sample policy, a columnar typed trace and a resumable cursor."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+# A leverage crate is never embedded, and nothing is published yet; it stays private until a
+# milestone decides otherwise.
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+oce-api = { workspace = true }
+# The CSV adapter parses with the `csv` crate inside this crate's own caps (decision 22).
+csv = "=1.4.0"
+
+[dev-dependencies]
+allocation-counter = "0.8.1"
+oce-bless = { workspace = true }

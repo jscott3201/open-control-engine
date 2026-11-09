@@ -61,9 +61,11 @@ facade contract and Quickstart, and the
 its `portable snapshot comparison` fan-in and `std build and nextest (Windows x86_64, debug)`.
 The **leverage lane** is one job,
 `leverage lane`, for the crates under [`crates/leverage/`](../crates/leverage/README.md): the
-layout and `oce-api`-only dependency rule, then fmt, clippy `-D warnings`, rustdoc `-D warnings`,
-nextest and cargo-machete per member (`scripts/ci/leverage-members.sh lane`; with no members it
-prints `no leverage crates yet`).
+layout and `oce-api`-only dependency rule (`oce-bless` is allowed as a dev-dependency only, for the
+golden switch; normal and build edges and dev edges are read separately), then fmt, clippy
+`-D warnings`, rustdoc `-D warnings`, nextest and cargo-machete per member
+(`scripts/ci/leverage-members.sh lane`; with no members it prints `no leverage crates yet`). The
+first member is `oce-replay`.
 
 The first job, `classify changed paths`, lists what the PR changes with plain git — the tested merge
 commit against its base parent, renames as a deletion plus an addition — and classifies it with
@@ -536,8 +538,9 @@ tag/version match, fmt, clippy, a workspace `cargo test`, the package validator 
 `cargo publish --workspace --locked --dry-run` — with no token and no publish, so a tag can be
 re-cut safely (see [release.yml](../.github/workflows/release.yml), `verify` job). Publishing is a
 separate manual `workflow_dispatch` into the `release` GitHub Environment. Cargo's workspace
-selection includes the 10 publishable members and skips the three members with `publish = false`:
-`oce-bless`, `oce-conformance` and the firmware image `oce-firmware-link`.
+selection includes the 10 publishable members and skips the four members with `publish = false`:
+`oce-bless`, `oce-conformance`, the firmware image `oce-firmware-link` and the leverage crate
+`oce-replay`.
 No checked-in record pins those sets any more: the guards are each crate's `publish` flag, the
 byte pin on `release.yml` (whose comment names the split) and review.
 

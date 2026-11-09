@@ -87,8 +87,9 @@ The engine is, by design:
   lifecycle, transport, TLS, authN/Z, multi-tenancy, off-host durability, and metrics export.
 - **Synchronous and in-process.** Every public method is a blocking synchronous call, and no async
   runtime is pulled at any layer. The check is the dependency set below, not a promise.
-- **`#![forbid(unsafe_code)]` in all 13 workspace members**, belt and braces: each
-  `crates/*/src/lib.rs` and the firmware image's lib and bin roots carry the crate attribute,
+- **`#![forbid(unsafe_code)]` in all 14 workspace members**, belt and braces: each
+  `crates/*/src/lib.rs`, each `crates/leverage/*/src/lib.rs` and the firmware image's lib and bin
+  roots carry the crate attribute,
   *and* the workspace sets `unsafe_code = "forbid"` under `[workspace.lints.rust]` (root
   `Cargo.toml`).
 - **Edition 2024**, `resolver = "3"`.
@@ -97,7 +98,8 @@ The engine is, by design:
 
 The whole external dependency surface on the embed path is four crates: `serde`, `serde_json`,
 `thiserror`, and `libm`. Two more — `regex` and `ryu` — exist only inside `oce-conformance`, which
-nothing else in the workspace depends on, so a host embedding `oce-api` never links them.
+nothing else in the workspace depends on, so a host embedding `oce-api` never links them; and
+`csv` exists only inside the leverage crate `oce-replay`, above the facade.
 
 ### `no_std + alloc`: the core four
 
@@ -193,8 +195,9 @@ them, because nothing re-measures them in CI.
 
 ## The crate map
 
-Twelve crates, plus the unpublished firmware image `oce-firmware-link` (`firmware/link`), which
-links the `no_std` core into a bare-metal binary: 13 workspace members, 10 publishable and three
+Twelve engine crates, plus the unpublished firmware image `oce-firmware-link` (`firmware/link`),
+which links the `no_std` core into a bare-metal binary, and one unpublished leverage crate above the
+facade, `oce-replay` (`crates/leverage/oce-replay`): 14 workspace members, 10 publishable and four
 private. The dependency direction is acyclic and organized around the seam above.
 Their responsibilities below do not imply equal support or publication status: publication is
 read from each crate's `publish` flag and checked by the
@@ -227,6 +230,12 @@ crate is registry closure for the facade, not an independently supported host AP
 | `oce-conformance` | **Verification-only, `publish = false`.** The funnel-style tolerance-band and golden-trace conformance harness. Standalone: no other crate depends on it. Read [`TESTING.md`](../TESTING.md) for what it does and does not check. |
 | `oce-bless` | **Test-support only, `publish = false`.** The single definition of the repo's environment-variable truthiness policy, so golden-regeneration switches cannot drift apart across crates. |
 | `oce-api` | The primary embeddable host facade: a pure `Engine` (no type parameter, no storage dependency), spanning load with a plain-data `LoadedModel` result, complete-frame preparation/execution, parameters, IO inventory, latest-state non-receipt reads (`get_output`/`watch`), CXF export with content id, compiled-schedule blob encoding (`Engine::compile_blob`), the raw state words in the blob entry's layout (`Engine::state_words`, a read-only verification view, not a continuation format; continue state with `state_snapshot` or `checkpoint`), and a read-only topology view. Its catalog metadata is `oce_api::catalog()`, with the actively supported `oce_blocks::catalog()` as a separate companion surface; see the [product contract](product-contract.md). |
+
+**Leverage crates (above the facade; `oce-api` only, see [`crates/leverage/`](../crates/leverage/README.md)):**
+
+| Crate | Responsibility |
+| --- | --- |
+| `oce-replay` | **Leverage, `publish = false`.** Historical replay ([design note](design/replay.md)): frame sources by slot (owned columns, a bounded CSV reader, step lists), the missing-sample policy (refuse and stop by default; every hold, fallback, skip and refusal recorded), a columnar bit-exact trace with a documented size per frame, and a resumable cursor over the facade's slot entry (`Engine::execute_slots`). It is host policy applied offline, never engine policy; `oce-bless` is its one other `oce-*` edge, as a dev-dependency. |
 
 Every crate listed here does work today. Reserved placeholder crates were removed rather than kept
 as empty seams, so nobody plans a feature against a crate that does nothing.
