@@ -166,6 +166,22 @@ and a gate that accepted any text would restore exactly the false assurance desc
   14 members (10 publishable, four private); `release.yml`'s comment and step name, its digest and
   the validator's controls are re-pinned.
 
+### Documentation
+
+- **Design note for the canonical content id** (GitHub #PRNUM, issue #470).
+  `docs/design/content-id.md` fixes, before any code, the one content id that replaces the
+  order-bearing `cxf:fnv1a128:` export tag: SHA-256 over an `OCECANON` version 1 encoding of the
+  loaded flat graph, written `oce:canon1:<64 hex>`. Names are inside the id (instance namespace
+  stripped through the last `#`, `/` or `:`, the sequence name kept, whole-IRI fallback rather than
+  refusal); blocks sort by name with class path, class signature hash and ground parameter bits;
+  connections sort by target then source port; boundaries carry type, `quantity`, `unit`,
+  `displayUnit` and an input's effective domain; `SemanticPoint` records, `extends`, comments and
+  authored order never enter it. It defines the permutation classes and what equal ids promise
+  (equal outputs and per-block state per frame, not byte-identical blobs), the surface changes
+  (`Engine::content_id`, `ExportReport`, blob format version 2, compatibility descriptor revision
+  2, PC-018/PC-021), the TSV mapping table for the library re-stamp, and a worked example with an
+  exact 394-byte dump and its id. The note is registered in `docs/README.md` and the book.
+
 ## 0.4.0
 
 Prepared 2026-11-08 on `development`; the release date is the date the `v0.4.0` tag is cut from

@@ -35,6 +35,7 @@ questions its reviewer ruled on; the contracts above remain the authority for sh
 | [Historical replay API](design/replay.md) | How recorded or scripted inputs drive the engine frame by frame: slot-indexed frame sources, the missing-sample policy, the columnar trace and its size per frame, and the resumable cursor behind Python and the browser worker |
 | [Commissioning verifier (CDL §12)](design/commissioning.md) | How `oce-verify`'s tolerance mode checks a real controller's trends against the engine per CDL §12: the test-spec and point-mapping files, unit conversion, the funnel envelope port, indicators, the report and the receipt, with a worked Building 33 example |
 | [Structural diff (`oce-diff`)](design/diff.md) | How two revisions of a sequence are compared: authored names as block identity with a bounded rename pass, the closed change categories, site parameters apart from the graph, the serde `Diff` and its text and Markdown renderings, and the CXF and blob adapters, with three worked examples |
+| [Canonical content id](design/content-id.md) | What one canonical content id covers: the loaded flat graph with names inside and namespaces stripped, its `OCECANON` byte encoding, SHA-256 and the `oce:canon1:` format, the surfaces it replaces on `ExportReport`, the blob header and the compatibility descriptor, and the mapping table for the library re-stamp, with a worked byte dump |
 
 ## Elsewhere in the repository
 
