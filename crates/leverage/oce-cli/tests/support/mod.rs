@@ -109,6 +109,19 @@ pub fn compare_or_bless(relative: &str, actual: &str) {
     );
 }
 
+/// Run one golden case in the crate directory: check its exit status, then compare its
+/// transcript with `tests/fixtures/runs/<name>.txt` (or write it when blessing).
+pub fn case(name: &str, expected_exit: i32, args: &[&str], stdin: &[u8]) {
+    let run = oce(args, stdin);
+    assert_eq!(
+        run.code,
+        expected_exit,
+        "{name}: exit status\n{}",
+        run.transcript()
+    );
+    compare_or_bless(&format!("runs/{name}.txt"), &run.transcript());
+}
+
 /// A fresh scratch directory for one test, under cargo's per-crate temporary directory.
 pub fn scratch(name: &str) -> PathBuf {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))

@@ -12,6 +12,11 @@ tags:
 base units:
   m kg s A K mol cd rad sr Hz N Pa J W C V F Ohm S Wb T H lm lx Bq Gy Sv kat
 
+scale factors (time only; one symbol is exactly this many base units):
+  min  60 s
+  h    3600 s
+  d    86400 s
+
 parse codes (text form, exit 2):
   not-utf8              the input is not UTF-8
   byte-order-mark       the input starts with a byte-order mark

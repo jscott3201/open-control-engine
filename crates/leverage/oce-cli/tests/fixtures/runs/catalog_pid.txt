@@ -1,0 +1,58 @@
+exit: 0
+--- stdout
+CDL.Reals.PID
+  P, PI, PD, and PID controller
+
+parameters:
+  controllerType : SimpleController = PI
+      Type of controller
+  k : Real = 1.0
+      Gain of controller
+      range: k >= 1e-13
+  Ti : Real = 0.5
+      Time constant of integrator block
+      unit: s; quantity: Time
+      range: Ti >= 1e-13
+  Td : Real = 0.1
+      Time constant of derivative block
+      unit: s; quantity: Time
+      range: Td >= 1e-13
+  r : Real = 1.0
+      Typical range of control error, used for scaling the control error
+      range: r >= 1e-13
+  yMax : Real = 1.0
+      Upper limit of output
+      range: yMin <= yMax; yMin == yMax warns
+  yMin : Real = 0.0
+      Lower limit of output
+      range: yMin <= yMax; yMin == yMax warns
+  Ni : Real = 0.9
+      Ni*Ti is time constant of anti-windup compensation
+      range: Ni >= 1e-13
+  Nd : Real = 10.0
+      The higher Nd, the more ideal the derivative block
+      range: Nd >= 1e-13
+  xi_start : Real = 0.0
+      Initial value of integrator state
+  yd_start : Real = 0.0
+      Initial value of derivative output
+  reverseActing : Boolean = true
+      Set to true for reverse acting, or false for direct acting control action
+
+inputs:
+  u_s : Real
+      Setpoint input signal
+  u_m : Real
+      Measurement input signal
+
+outputs:
+  y : Real
+      Actuator output signal
+
+notes:
+  (none)
+
+links:
+  source at the pinned Buildings commit: https://github.com/lbl-srg/modelica-buildings/blob/a131864e4c4df22ebcd52bb8da439de0087ac365/Buildings/Controls/OBC/CDL/Reals/PID.mo
+  help in the latest Buildings release (may drift from the pin): https://simulationresearch.lbl.gov/modelica/releases/latest/help/Buildings_Controls_OBC_CDL_Reals.html#Buildings.Controls.OBC.CDL.Reals.PID
+--- stderr

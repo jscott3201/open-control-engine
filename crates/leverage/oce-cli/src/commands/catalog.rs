@@ -1,29 +1,39 @@
-//! `oce catalog`: the block classes, their parameters and their resolved ports.
+//! `oce catalog`: the block classes, their parameters and resolved ports, and the block
+//! vocabulary that says what each one means (vocabulary note decision 12, GitHub issue #500).
 //!
 //! Without a class: every class in catalog order (`oce_api::class_metadata`), each with its ports
 //! at the default parameter table where they resolve (`null` where a required parameter has no
-//! default); exit `0`. With a class: that class, its parameters (type, default, settable) and its
-//! ports resolved at the default table or at the `--param NAME=VALUE` values
-//! (`oce_api::class_ports`). The class rules' refusal of the table is a finding (exit `1`), and so
-//! is an unknown class; a malformed `--param` is an error (exit `2`).
+//! default); exit `0`. The text listing is one line per class. With a class: that class, its
+//! parameters (type, default, settable) and its ports resolved at the default table or at the
+//! `--param NAME=VALUE` values (`oce_api::class_ports`, [`super::catalog_params`]). The class
+//! rules' refusal of the table is a finding (exit `1`), and so is an unknown class; a malformed
+//! `--param` is an error (exit `2`).
 //!
-//! An enumeration parameter's `--param` value is a member name, bare (`PI`) or qualified by the
-//! type (`SimpleController.PI`), resolved through the facade's enumeration table
-//! (`oce_api::enumeration_by_id`, GitHub #488); its JSON `enumeration` is the type's authoring class
-//! path (`oce_api::enumeration_class_path`), `null` for every other type.
+//! Every class carries the vocabulary of `oce-vocab` joined in: each parameter's and port's
+//! `description`, declared `unit` and `quantity`, each parameter's `range`, the class's typed
+//! `notes` and its upstream `links`. The split of who owns what is the vocabulary's: meanings,
+//! units, notes and links come from its two data files; **a range is rendered from the
+//! catalog's rules** (`oce_vocab::parameter_range`), never from the data. A port's text is its
+//! connector's (`u3` of a `MultiSum` reads the vector connector `u`). A note is printed as its
+//! `kind`, `subject` and `text`: its `evidence` is for reviewers and is never printed. An
+//! engine-reserved lowering identity has no vocabulary: its strings are empty and its `links`
+//! are `null`.
+//!
+//! An enumeration parameter's JSON `enumeration` is the type's authoring class path
+//! (`oce_api::enumeration_class_path`), `null` for every other type.
 
-use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
 use oce_api::{
-    CatalogDefault, CatalogPortKind, ClassMetadata, ClassParameter, ClassPort, ClassPortsError,
-    MemberValue, PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER,
-    Value as EngineValue, ValueType, catalog, class_metadata, class_ports, enumeration_by_id,
-    enumeration_class_path, param_element_name,
+    CatalogDefault, CatalogPortKind, CatalogRule, ClassMetadata, ClassParameter, ClassPort,
+    ClassPortsError, Value as EngineValue, ValueType, catalog, class_metadata, class_ports,
+    enumeration_class_path,
 };
+use oce_vocab::{ClassVocab, Side, class_vocab, parameter_base_name, parameter_range};
 use serde_json::{Value, json};
 
 use super::Outcome;
+use super::catalog_params::{parse_params, text_type_name, type_name};
 use crate::report::Report;
 use crate::{Exit, codes};
 
@@ -47,10 +57,8 @@ fn list(mut report: Report, json: bool) -> Outcome {
         .iter()
         .map(|meta| {
             let ports = class_ports(meta.class_path, &[]).ok();
-            class_json(
-                meta,
-                ports.as_ref().map(|p| (&p.inputs[..], &p.outputs[..])),
-            )
+            let ports = ports.as_ref().map(|p| (&p.inputs[..], &p.outputs[..]));
+            ClassView::new(meta).to_json(ports)
         })
         .collect();
     report.set("classes", Value::Array(classes));
@@ -113,13 +121,14 @@ fn describe(mut report: Report, class: &str, json: bool, params: &[String]) -> O
             None
         }
     };
-    report.set("class", class_json(meta, ports));
+    let view = ClassView::new(meta);
+    report.set("class", view.to_json(ports));
     report.verdict(if ports.is_some() {
         "ports resolved"
     } else {
         "ports do not resolve at this parameter table"
     });
-    let text = ports.map(|ports| render_class(meta, ports));
+    let text = ports.map(|ports| view.to_text(ports));
     finish(report, json, text)
 }
 
@@ -134,131 +143,6 @@ fn finish(report: Report, json: bool, text: Option<String>) -> Outcome {
 /// The `--param` values as given, for the report.
 fn params_echo(params: &[String]) -> Value {
     Value::Array(params.iter().map(|p| Value::from(p.as_str())).collect())
-}
-
-/// Parse `NAME=VALUE` pairs against the class's parameters.
-fn parse_params(
-    meta: &ClassMetadata,
-    params: &[String],
-) -> Result<Vec<(String, EngineValue)>, (&'static str, String)> {
-    let mut seen = BTreeSet::new();
-    let mut table = Vec::with_capacity(params.len());
-    for param in params {
-        let Some((name, value)) = param.split_once('=') else {
-            return Err((
-                codes::MALFORMED_PARAM,
-                format!("`{param}` is not NAME=VALUE"),
-            ));
-        };
-        let Some(parameter) = meta.parameters.iter().find(|p| names_element(p.name, name)) else {
-            return Err((
-                codes::UNKNOWN_PARAM,
-                format!("`{name}` is not a parameter of {}", meta.class_path),
-            ));
-        };
-        if !seen.insert(name.to_owned()) {
-            return Err((codes::DUPLICATE_PARAM, format!("`{name}` is given twice")));
-        }
-        let value = parse_value(parameter.value_type, value).ok_or_else(|| {
-            (
-                codes::MALFORMED_VALUE,
-                format!(
-                    "`{value}` is not a {} value for `{name}`",
-                    text_type_name(parameter.value_type)
-                ),
-            )
-        })?;
-        table.push((name.to_owned(), value));
-    }
-    Ok(table)
-}
-
-/// Whether `name` is the scalar parameter `template` or one element of the array it spells.
-fn names_element(template: &str, name: &str) -> bool {
-    if template == name {
-        return true;
-    }
-    let mut indices = Vec::new();
-    let (mut rest_template, mut rest_name) = (template, name);
-    loop {
-        let next = [
-            PARAM_INDEX_PLACEHOLDER,
-            PARAM_ROW_PLACEHOLDER,
-            PARAM_COL_PLACEHOLDER,
-        ]
-        .iter()
-        .filter_map(|placeholder| {
-            rest_template
-                .find(placeholder)
-                .map(|at| (at, placeholder.len()))
-        })
-        .min();
-        let Some((at, len)) = next else {
-            if rest_template != rest_name || indices.is_empty() {
-                return false;
-            }
-            break;
-        };
-        let Some(after) = rest_name.strip_prefix(&rest_template[..at]) else {
-            return false;
-        };
-        let digits = after.bytes().take_while(u8::is_ascii_digit).count();
-        let Ok(index) = after[..digits].parse::<usize>() else {
-            return false;
-        };
-        indices.push(index);
-        rest_name = &after[digits..];
-        rest_template = &rest_template[at + len..];
-    }
-    param_element_name(template, &indices).as_deref() == Some(name)
-}
-
-/// A `--param` value of type `value_type`.
-fn parse_value(value_type: ValueType, text: &str) -> Option<EngineValue> {
-    match value_type {
-        ValueType::Real => text
-            .parse::<f64>()
-            .ok()
-            .filter(|v| v.is_finite())
-            .map(EngineValue::Real),
-        ValueType::Integer => text.parse::<i64>().ok().map(EngineValue::Integer),
-        ValueType::Boolean => match text {
-            "true" => Some(EngineValue::Boolean(true)),
-            "false" => Some(EngineValue::Boolean(false)),
-            _ => None,
-        },
-        ValueType::String => Some(EngineValue::String(text.into())),
-        ValueType::Enum(class) => {
-            let row = enumeration_by_id(class)?;
-            let member = match text.split_once('.') {
-                Some((type_name, member)) if type_name == row.type_name() => member,
-                Some(_) => return None,
-                None => text,
-            };
-            match row.member_value(member)? {
-                MemberValue::Ordinal(ordinal) => Some(EngineValue::Enum { class, ordinal }),
-                MemberValue::Integer(_) => None,
-            }
-        }
-    }
-}
-
-fn type_name(value_type: ValueType) -> &'static str {
-    match value_type {
-        ValueType::Real => "Real",
-        ValueType::Integer => "Integer",
-        ValueType::Boolean => "Boolean",
-        ValueType::String => "String",
-        ValueType::Enum(_) => "Enum",
-    }
-}
-
-/// The type as the text listing spells it: an enumeration by its type name (`SimpleController`).
-fn text_type_name(value_type: ValueType) -> &'static str {
-    match value_type {
-        ValueType::Enum(id) => enumeration_by_id(id).map_or("Enum", |row| row.type_name()),
-        other => type_name(other),
-    }
 }
 
 fn kind_name(kind: CatalogPortKind) -> &'static str {
@@ -296,16 +180,6 @@ fn default_text(default: &CatalogDefault) -> String {
     }
 }
 
-fn parameter_json(parameter: &ClassParameter) -> Value {
-    json!({
-        "default": default_json(&parameter.default),
-        "enumeration": enumeration_of(parameter.value_type).map_or(Value::Null, Value::from),
-        "name": parameter.name,
-        "settable": parameter.settable,
-        "type": type_name(parameter.value_type),
-    })
-}
-
 /// The authoring class path of an enumeration type; `None` for every other type.
 fn enumeration_of(value_type: ValueType) -> Option<&'static str> {
     match value_type {
@@ -314,159 +188,371 @@ fn enumeration_of(value_type: ValueType) -> Option<&'static str> {
     }
 }
 
-fn ports_json(ports: &[ClassPort]) -> Value {
-    Value::Array(
-        ports
+/// What the vocabulary says about one parameter or port. Every string is `""` where the
+/// vocabulary says nothing (an undeclared unit, a reserved class).
+#[derive(Debug, Default, PartialEq, Eq)]
+struct Meaning<'a> {
+    description: &'a str,
+    unit: &'a str,
+    quantity: &'a str,
+}
+
+impl Meaning<'_> {
+    /// The indented lines of the text listing: the description, then the declared unit and
+    /// quantity on one line. Nothing for an empty field.
+    fn write_text(&self, text: &mut String) {
+        if !self.description.is_empty() {
+            let _ = writeln!(text, "      {}", self.description);
+        }
+        let declared: Vec<String> = [("unit", self.unit), ("quantity", self.quantity)]
             .iter()
-            .map(|port| json!({ "kind": kind_name(port.kind), "name": port.name }))
-            .collect(),
-    )
+            .filter(|(_, value)| !value.is_empty())
+            .map(|(label, value)| format!("{label}: {value}"))
+            .collect();
+        if !declared.is_empty() {
+            let _ = writeln!(text, "      {}", declared.join("; "));
+        }
+    }
 }
 
-fn class_json(meta: &ClassMetadata, ports: Option<(&[ClassPort], &[ClassPort])>) -> Value {
-    let reserved = catalog()
-        .iter()
-        .any(|entry| entry.class_path == meta.class_path && entry.reserved);
-    json!({
-        "class_path": meta.class_path,
-        "description": meta.description,
-        "inputs": ports.map_or(Value::Null, |(inputs, _)| ports_json(inputs)),
-        "outputs": ports.map_or(Value::Null, |(_, outputs)| ports_json(outputs)),
-        "parameters": meta.parameters.iter().map(parameter_json).collect::<Vec<_>>(),
-        "reserved": reserved,
-    })
+/// One class as `oce catalog` serves it: the facade's metadata, the catalog's rules and the
+/// vocabulary, joined. The JSON and the text listing are both rendered from this one view.
+struct ClassView<'a> {
+    meta: &'a ClassMetadata,
+    /// Whether the class is an engine-reserved lowering identity.
+    reserved: bool,
+    /// The catalog's parameter rules, which the ranges are rendered from.
+    rules: &'static [CatalogRule],
+    /// The class's vocabulary; `None` for a reserved class.
+    vocab: Option<ClassVocab<'static>>,
 }
 
-/// The text rendering of one resolved class, in the text form's own spelling.
-fn render_class(meta: &ClassMetadata, (inputs, outputs): (&[ClassPort], &[ClassPort])) -> String {
-    let mut text = format!("{}\n  {}\n", meta.class_path, meta.description);
-    text.push_str("\nparameters:\n");
-    if meta.parameters.is_empty() {
-        text.push_str("  (none)\n");
+impl<'a> ClassView<'a> {
+    fn new(meta: &'a ClassMetadata) -> Self {
+        let entry = catalog()
+            .iter()
+            .find(|entry| entry.class_path == meta.class_path);
+        Self {
+            meta,
+            reserved: entry.is_some_and(|entry| entry.reserved),
+            rules: entry.map_or(&[], |entry| &entry.param_rules),
+            vocab: class_vocab(meta.class_path),
+        }
     }
-    for parameter in &meta.parameters {
-        let _ = writeln!(
-            text,
-            "  {} : {} {}{}",
-            parameter.name,
-            text_type_name(parameter.value_type),
-            default_text(&parameter.default),
-            if parameter.settable {
-                ""
-            } else {
-                " [not settable]"
-            }
-        );
+
+    /// The meaning of the parameter at `index` of the class's parameters. The vocabulary lists
+    /// them in the catalog's order; a position that names another parameter says nothing.
+    fn parameter_meaning(&self, index: usize, parameter: &ClassParameter) -> Meaning<'_> {
+        self.vocab
+            .as_ref()
+            .and_then(|vocab| vocab.parameters.get(index))
+            .filter(|found| found.catalog.name == parameter.name)
+            .map_or_else(Meaning::default, |found| Meaning {
+                description: found.description,
+                unit: found.unit,
+                quantity: found.quantity,
+            })
     }
-    for (title, ports) in [("inputs", inputs), ("outputs", outputs)] {
-        let _ = writeln!(text, "\n{title}:");
-        if ports.is_empty() {
+
+    /// The constraints the catalog's rules place on the parameter's value.
+    fn parameter_range(&self, parameter: &ClassParameter) -> Vec<String> {
+        parameter_range(self.rules, parameter_base_name(parameter.name))
+    }
+
+    /// The meaning of a resolved port: its connector's.
+    fn port_meaning(&self, side: Side, port: &ClassPort) -> Meaning<'_> {
+        self.vocab
+            .as_ref()
+            .and_then(|vocab| vocab.connector_of_port(side, &port.name))
+            .map_or_else(Meaning::default, |(connector, _)| Meaning {
+                description: connector.description,
+                unit: connector.unit,
+                quantity: connector.quantity,
+            })
+    }
+
+    fn ports_json(&self, side: Side, ports: &[ClassPort]) -> Value {
+        Value::Array(
+            ports
+                .iter()
+                .map(|port| {
+                    let meaning = self.port_meaning(side, port);
+                    json!({
+                        "description": meaning.description,
+                        "kind": kind_name(port.kind),
+                        "name": port.name,
+                        "quantity": meaning.quantity,
+                        "unit": meaning.unit,
+                    })
+                })
+                .collect(),
+        )
+    }
+
+    fn parameters_json(&self) -> Value {
+        Value::Array(
+            self.meta
+                .parameters
+                .iter()
+                .enumerate()
+                .map(|(index, parameter)| {
+                    let meaning = self.parameter_meaning(index, parameter);
+                    json!({
+                        "default": default_json(&parameter.default),
+                        "description": meaning.description,
+                        "enumeration": enumeration_of(parameter.value_type),
+                        "name": parameter.name,
+                        "quantity": meaning.quantity,
+                        "range": self.parameter_range(parameter),
+                        "settable": parameter.settable,
+                        "type": type_name(parameter.value_type),
+                        "unit": meaning.unit,
+                    })
+                })
+                .collect(),
+        )
+    }
+
+    /// The notes as an agent reads them: `kind`, `subject` and `text`. `evidence` is left out.
+    fn notes_json(&self) -> Value {
+        let notes = self.vocab.as_ref().map_or(&[][..], |vocab| vocab.notes);
+        Value::Array(
+            notes
+                .iter()
+                .map(|note| {
+                    json!({
+                        "kind": note.kind.as_str(),
+                        "subject": note.subject,
+                        "text": note.text,
+                    })
+                })
+                .collect(),
+        )
+    }
+
+    fn links_json(&self) -> Value {
+        let links = self.vocab.as_ref().and_then(|vocab| vocab.links.as_ref());
+        links.map_or(Value::Null, |links| {
+            json!({
+                "latest_help": links.latest_help,
+                "pinned_source": links.pinned_source,
+            })
+        })
+    }
+
+    /// The class as the report's JSON; `ports` is `None` where they do not resolve.
+    fn to_json(&self, ports: Option<(&[ClassPort], &[ClassPort])>) -> Value {
+        json!({
+            "class_path": self.meta.class_path,
+            "description": self.meta.description,
+            "inputs": ports.map_or(Value::Null, |(inputs, _)| self.ports_json(Side::Input, inputs)),
+            "links": self.links_json(),
+            "notes": self.notes_json(),
+            "outputs": ports
+                .map_or(Value::Null, |(_, outputs)| self.ports_json(Side::Output, outputs)),
+            "parameters": self.parameters_json(),
+            "reserved": self.reserved,
+        })
+    }
+
+    /// The text rendering of the resolved class, in the text form's own spelling.
+    fn to_text(&self, (inputs, outputs): (&[ClassPort], &[ClassPort])) -> String {
+        let meta = self.meta;
+        let mut text = format!("{}\n  {}\n", meta.class_path, meta.description);
+        text.push_str("\nparameters:\n");
+        if meta.parameters.is_empty() {
             text.push_str("  (none)\n");
         }
-        for port in ports {
-            let _ = writeln!(text, "  {} : {}", port.name, kind_name(port.kind));
+        for (index, parameter) in meta.parameters.iter().enumerate() {
+            let _ = writeln!(
+                text,
+                "  {} : {} {}{}",
+                parameter.name,
+                text_type_name(parameter.value_type),
+                default_text(&parameter.default),
+                if parameter.settable {
+                    ""
+                } else {
+                    " [not settable]"
+                }
+            );
+            self.parameter_meaning(index, parameter)
+                .write_text(&mut text);
+            let range = self.parameter_range(parameter);
+            if !range.is_empty() {
+                let _ = writeln!(text, "      range: {}", range.join("; "));
+            }
+        }
+        for (title, side, ports) in [
+            ("inputs", Side::Input, inputs),
+            ("outputs", Side::Output, outputs),
+        ] {
+            let _ = writeln!(text, "\n{title}:");
+            if ports.is_empty() {
+                text.push_str("  (none)\n");
+            }
+            for port in ports {
+                let _ = writeln!(text, "  {} : {}", port.name, kind_name(port.kind));
+                self.port_meaning(side, port).write_text(&mut text);
+            }
+        }
+        self.write_notes_and_links(&mut text);
+        text
+    }
+
+    /// The `notes:` and `links:` sections of the text rendering.
+    fn write_notes_and_links(&self, text: &mut String) {
+        let vocab = self.vocab.as_ref();
+        text.push_str("\nnotes:\n");
+        let notes = vocab.map_or(&[][..], |vocab| vocab.notes);
+        if notes.is_empty() {
+            text.push_str("  (none)\n");
+        }
+        for note in notes {
+            let kind = note.kind.as_str();
+            let _ = if note.subject.is_empty() {
+                writeln!(text, "  {kind}: {}", note.text)
+            } else {
+                writeln!(text, "  {kind} ({}): {}", note.subject, note.text)
+            };
+        }
+        text.push_str("\nlinks:\n");
+        match vocab.and_then(|vocab| vocab.links.as_ref()) {
+            Some(links) => {
+                let _ = writeln!(
+                    text,
+                    "  source at the pinned Buildings commit: {}",
+                    links.pinned_source
+                );
+                let _ = writeln!(
+                    text,
+                    "  help in the latest Buildings release (may drift from the pin): {}",
+                    links.latest_help
+                );
+            }
+            None => text.push_str("  (none)\n"),
         }
     }
-    text
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn a_name_matches_a_scalar_or_an_element_of_its_array_template() {
-        assert!(names_element("nin", "nin"));
-        assert!(!names_element("nin", "nin1"));
-        assert!(names_element("k_<i>", "k_1"));
-        assert!(names_element("k_<i>", "k_12"));
-        assert!(!names_element("k_<i>", "k_0"));
-        assert!(!names_element("k_<i>", "k_"));
-        assert!(!names_element("k_<i>", "k_01"));
-        assert!(!names_element("k_<i>", "k_1x"));
-        assert!(!names_element("k_<i>", "k"));
-        assert!(names_element("K_<row>_<col>", "K_2_1"));
-        assert!(!names_element("K_<row>_<col>", "K_2"));
-        assert!(!names_element("K_<row>_<col>", "K_2_1_1"));
-        assert!(!names_element("K_<row>_<col>", "k_2_1"));
+    fn view(class_path: &str) -> ClassView<'static> {
+        let meta = class_metadata()
+            .iter()
+            .find(|meta| meta.class_path == class_path)
+            .unwrap_or_else(|| panic!("{class_path} is a registered class"));
+        ClassView::new(meta)
     }
 
-    /// `Value` has no `PartialEq`; its `Debug` spelling is exact for these cases.
-    fn parsed(value_type: ValueType, text: &str) -> String {
-        format!("{:?}", parse_value(value_type, text))
-    }
-
-    fn some(value: EngineValue) -> String {
-        format!("{:?}", Some(value))
-    }
-
-    #[test]
-    fn values_parse_by_the_parameter_type() {
-        assert_eq!(parsed(ValueType::Real, "1"), some(EngineValue::Real(1.0)));
-        assert_eq!(
-            parsed(ValueType::Real, "-0.5e1"),
-            some(EngineValue::Real(-5.0))
-        );
-        for refused in ["NaN", "inf", "-infinity", "1e999", "", "one"] {
-            assert_eq!(parsed(ValueType::Real, refused), "None", "{refused}");
+    fn port(name: &str) -> ClassPort {
+        ClassPort {
+            name: name.to_owned(),
+            kind: CatalogPortKind::Real,
         }
-        assert_eq!(
-            parsed(ValueType::Integer, "-3"),
-            some(EngineValue::Integer(-3))
-        );
-        assert_eq!(parsed(ValueType::Integer, "1.0"), "None");
-        assert_eq!(parsed(ValueType::Integer, "9223372036854775808"), "None");
-        assert_eq!(
-            parsed(ValueType::Boolean, "true"),
-            some(EngineValue::Boolean(true))
-        );
-        assert_eq!(parsed(ValueType::Boolean, "True"), "None");
-        assert_eq!(
-            parsed(ValueType::String, "a b"),
-            some(EngineValue::String("a b".into()))
-        );
     }
 
     #[test]
-    fn an_enumeration_value_is_a_member_name_of_its_own_type() {
-        let mut checked = 0;
+    fn only_an_enumeration_type_names_an_enumeration() {
         for row in oce_api::enumeration_types() {
-            let Some(class) = row.id else {
-                panic!("{} is an enumeration without an id", row.class_path);
-            };
-            let value_type = ValueType::Enum(class);
-            for (index, member) in row.members.iter().enumerate() {
-                let ordinal = u32::try_from(index + 1).unwrap_or(u32::MAX);
-                let expected = some(EngineValue::Enum { class, ordinal });
-                assert_eq!(parsed(value_type, member), expected, "{member}");
-                let qualified = format!("{}.{member}", row.type_name());
-                assert_eq!(parsed(value_type, &qualified), expected, "{qualified}");
-                assert_eq!(parsed(value_type, &format!("Other.{member}")), "None");
-                checked += 1;
-            }
-            assert_eq!(parsed(value_type, "1"), "None", "ordinals are not names");
-            assert_eq!(parsed(value_type, "NoSuchMember"), "None");
-            assert_eq!(enumeration_of(value_type), Some(row.class_path));
+            let class = row.id.expect("an enumeration has an id");
+            assert_eq!(enumeration_of(ValueType::Enum(class)), Some(row.class_path));
         }
-        assert!(checked > 0);
-        assert_eq!(enumeration_of(ValueType::Real), None);
+        for other in [
+            ValueType::Real,
+            ValueType::Integer,
+            ValueType::Boolean,
+            ValueType::String,
+        ] {
+            assert_eq!(enumeration_of(other), None);
+        }
     }
 
     #[test]
-    fn every_class_parameter_name_matches_itself_or_its_first_element() {
-        for meta in class_metadata() {
-            for parameter in &meta.parameters {
-                let first = [vec![1], vec![1, 1]]
-                    .iter()
-                    .find_map(|indices| param_element_name(parameter.name, indices))
-                    .unwrap_or_else(|| parameter.name.to_owned());
-                assert!(
-                    names_element(parameter.name, &first),
-                    "{}.{}",
-                    meta.class_path,
-                    parameter.name
-                );
-            }
+    fn a_port_reads_its_connectors_meaning_whichever_element_it_is() {
+        let sum = view("CDL.Reals.MultiSum");
+        let first = sum.port_meaning(Side::Input, &port("u1"));
+        assert!(!first.description.is_empty());
+        for element in ["u2", "u3", "u1048576"] {
+            assert_eq!(sum.port_meaning(Side::Input, &port(element)), first);
         }
+        // Not an element of any input connector: no text, never another port's.
+        for stranger in ["u", "u0", "u01", "v1", "y", ""] {
+            assert_eq!(
+                sum.port_meaning(Side::Input, &port(stranger)),
+                Meaning::default(),
+                "{stranger:?}"
+            );
+        }
+        // The output of the same name is a different connector on the other side.
+        assert_ne!(
+            sum.port_meaning(Side::Output, &port("y")),
+            Meaning::default()
+        );
+        assert_eq!(
+            sum.port_meaning(Side::Output, &port("u1")),
+            Meaning::default()
+        );
+    }
+
+    #[test]
+    fn a_reserved_class_has_no_vocabulary_and_still_renders() {
+        let reserved = class_metadata()
+            .iter()
+            .find(|meta| ClassView::new(meta).reserved)
+            .expect("a reserved class");
+        let view = ClassView::new(reserved);
+        assert!(view.vocab.is_none());
+        let json = view.to_json(Some((&[port("u")], &[port("y")])));
+        assert_eq!(json["links"], Value::Null);
+        assert_eq!(json["notes"], json!([]));
+        assert_eq!(json["inputs"][0]["description"], "");
+        assert_eq!(json["inputs"][0]["unit"], "");
+        assert_eq!(json["inputs"][0]["quantity"], "");
+        let text = view.to_text((&[port("u")], &[port("y")]));
+        assert!(
+            text.ends_with("\nnotes:\n  (none)\n\nlinks:\n  (none)\n"),
+            "{text}"
+        );
+        assert!(text.contains("\ninputs:\n  u : Real\n\noutputs:\n  y : Real\n"));
+    }
+
+    #[test]
+    fn a_meaning_writes_only_what_it_has() {
+        let lines = |description, unit, quantity| {
+            let mut text = String::new();
+            Meaning {
+                description,
+                unit,
+                quantity,
+            }
+            .write_text(&mut text);
+            text
+        };
+        assert_eq!(lines("", "", ""), "");
+        assert_eq!(lines("Delay time", "", ""), "      Delay time\n");
+        assert_eq!(
+            lines("Delay time", "s", "Time"),
+            "      Delay time\n      unit: s; quantity: Time\n"
+        );
+        assert_eq!(lines("", "1", ""), "      unit: 1\n");
+        assert_eq!(lines("", "", "Time"), "      quantity: Time\n");
+    }
+
+    #[test]
+    fn the_range_of_an_array_parameter_is_looked_up_by_its_cdl_name() {
+        let extract = view("CDL.Routing.BooleanExtractSignal");
+        let parameter = extract
+            .meta
+            .parameters
+            .iter()
+            .find(|parameter| parameter.name == "extract_<i>")
+            .expect("the array template");
+        assert_eq!(
+            extract.parameter_range(parameter),
+            ["1 <= extract_<i> <= nin"]
+        );
     }
 }

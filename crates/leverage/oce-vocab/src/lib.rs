@@ -32,7 +32,13 @@
 //! [`vocabulary()`] is the merged, checked pair, and [`class_vocab`] one class of it joined with
 //! the catalog: [`ClassVocab`]. A resolved port name maps to its connector with
 //! [`ClassVocab::connector_of_port`] (`u3` is element 3 of the vector connector `u`), and a
-//! catalog parameter name to its entry with [`parameter_base_name`].
+//! catalog parameter name to its entry with [`parameter_base_name`]. A parameter's range is
+//! rendered from the catalog's rules ([`parameter_range`]), never stored.
+//!
+//! # Unit scale factors
+//!
+//! [`SCALE_FACTORS`] is the closed table of unit symbols that are an exact multiple of a base
+//! unit (design note decision 14): time only in v1, `min`, `h` and `d`.
 //!
 //! ```
 //! let delay = oce_vocab::class_vocab("CDL.Logical.TrueDelay").expect("an authorable class");
@@ -50,6 +56,8 @@ mod data;
 mod error;
 mod json;
 mod naming;
+mod range;
+mod scale;
 mod view;
 mod vocabulary;
 
@@ -62,6 +70,8 @@ pub use data::{
 };
 pub use error::VocabError;
 pub use naming::{PortElement, parameter_base_name, port_element};
+pub use range::parameter_range;
+pub use scale::{SCALE_FACTORS, ScaleFactor, scale_factor};
 pub use view::{CLASS_BASE, ClassLinks, ClassVocab, ConnectorVocab, ParameterVocab, TextOrigin};
 pub use vocabulary::Vocabulary;
 

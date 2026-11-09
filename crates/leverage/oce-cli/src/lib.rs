@@ -1,15 +1,18 @@
 #![forbid(unsafe_code)]
 //! `oce-cli`: the `oce` command-line tool (authoring note `docs/design/authoring-layer.md`, "CLI",
-//! decisions 9 and 20; GitHub issue #489).
+//! decisions 9 and 20; GitHub issue #489; vocabulary note `docs/design/vocabulary.md`, decision
+//! 12, GitHub issue #500).
 //!
 //! The binary (`src/main.rs`) is a thin shell over [`run`], which parses the arguments with `clap`
-//! and dispatches to one of five commands over `oce-author` and the facade:
+//! and dispatches to one of five commands over `oce-author`, `oce-vocab` and the facade:
 //!
 //! - `emit`: an authored sequence (text or wire) to flat CXF, after both validation stages;
 //! - `validate`: both validation stages, or stage 1 alone, as a JSON report;
 //! - `fmt`: the canonical text form, `--check` and an atomic `--write`;
-//! - `catalog`: the classes, their parameters and their resolved ports;
-//! - `vocab`: the text-form vocabulary and every code the tool can report.
+//! - `catalog`: the classes, their parameters and resolved ports, and the block vocabulary:
+//!   descriptions, declared units and quantities, ranges, typed notes and upstream links;
+//! - `vocab`: the text-form vocabulary, the unit scale factors and every code the tool can
+//!   report.
 //!
 //! **Exit codes** follow the one `oce` rule: `0` yes (clean), `1` no (an error finding, a
 //! non-canonical file, a class whose ports do not resolve), `2` error (a usage error, input that
@@ -23,8 +26,8 @@
 //! The `pub` items ([`Exit`], [`Streams`], [`run`], [`REPORT_SCHEMA`]) are exposed for the crate's
 //! own binary and integration tests; they are not a supported library API.
 //!
-//! The crate sits above the facade: it depends on `oce-api` and `oce-author` only, and every
-//! engine it loads is a throwaway of the validator's own.
+//! The crate sits above the facade: it depends on `oce-api` and the leverage crates `oce-author`
+//! and `oce-vocab` only, and every engine it loads is a throwaway of the validator's own.
 
 mod codes;
 mod commands;
@@ -147,7 +150,7 @@ enum Command {
         #[arg(long)]
         write: bool,
     },
-    /// List the block classes, or describe one with its resolved ports.
+    /// List the block classes, or describe one: its ports, parameters, units, ranges and notes.
     Catalog {
         /// A class path (`CDL.Reals.Hysteresis`); every class when absent.
         class: Option<String>,
@@ -158,7 +161,7 @@ enum Command {
         #[arg(long = "param", value_name = "NAME=VALUE", requires = "class")]
         params: Vec<String>,
     },
-    /// Print the text-form vocabulary and every code oce reports.
+    /// Print the text-form vocabulary, the unit scale factors and every code oce reports.
     Vocab {
         /// Print the JSON report instead of text.
         #[arg(long)]

@@ -382,6 +382,54 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
+- **Vocabulary v1, part 2: `oce catalog` serves the block vocabulary and `oce vocab` the unit
+  scale-factor table** (GitHub #PRNUM, issue #500; vocabulary note decisions 12 and 14). `oce-cli`
+  now depends on `oce-vocab` (a leverage crate, so the `oce-api`-only rule holds as written).
+  - **`oce catalog CLASS`** adds, to each parameter and each resolved port, the vocabulary's
+    `description` and the `unit` and `quantity` the CDL source declares; to each parameter a
+    `range`; and to the class its typed `notes` and its upstream `links` (the Modelica source at the
+    pinned Buildings commit, and the latest-release help page, labelled as possibly drifting from
+    the pin). A port reads its connector's text, so `u3` of a `MultiSum` carries the vector
+    connector `u`'s. A note is printed as `kind`, `subject` and `text`: its `evidence` is for
+    reviewers and is never printed, in text or JSON, which a test holds over every class. The text
+    list of `oce catalog` is still one line per class; `oce catalog --json` gives every class the
+    same shape as a single one. The report schema stays `oce-report/1`: the change adds keys
+    (`description`, `unit`, `quantity` on ports and parameters, `range` on parameters, `notes` and
+    `links` on the class) and removes none. A reserved lowering identity has no vocabulary: empty
+    strings and `"links": null`.
+  - **A range is rendered from the catalog's rules, never stored.** `oce_vocab::parameter_range`
+    (and `ParameterVocab::range` in the joined view) turns `oce_api::CatalogEntry::param_rules`
+    into one line of text per value rule: a bound (`Ti >= 1e-13`, `delta > 0.0`,
+    `pAtm > 0.0 and finite`, `shift is finite`), a relation listed for both parameters
+    (`uLow <= uHigh`, `nout * nin <= 1048576`, `0.001 <= h * n <= 0.5`), a relation that only warns
+    (`uLow == uHigh warns`) and an element bound (`1 <= extract_<i> <= nin`). Rules about type,
+    array shape and port structure render nothing. All 27 rule kinds the catalog uses are named in
+    one total `match` and pinned by a test, and every kind of line is checked against what
+    `oce_api::class_ports` and a loaded engine accept, refuse and warn about at the boundary value
+    and the next `f64` past it. 101 of the 189 parameters have a range (176 lines).
+  - **`oce vocab`** adds `scale_factors`, in text and JSON: `min` 60, `h` 3600 and `d` 86400, each
+    an exact multiple of `s`. The table is `oce_vocab::SCALE_FACTORS` (with `scale_factor(symbol)`),
+    time only; `degC`, `%` and prefixed SI units are not in it. It states the table: the text form
+    still refuses `1 h` (`unit-not-base`) until part 3 (#501) reads it.
+  - **Carried in from the review of GitHub #511, in `oce-vocab`:** the curated join no longer
+    scans a class once per curated entry. Each curated class indexes its subjects once and every
+    description and note is a binary search, so the reviewer's pair (one class with 24,000
+    connectors, 32,000 notes naming the last) costs about 0.83 million name comparisons where the
+    scan made 498 million; a test holds the join to `n log n` in name comparisons, not wall-clock
+    time, and the resolved positions are kept so a view searches nothing. The reader's comment and test no
+    longer say the list bound "cannot be reached": that holds for an accepted document only, and
+    a compact 95,000-item document under the byte bound is read, checked and then refused
+    `NotCanonical` (now pinned). A 1,000,000-deep nest is refused where the closed shape ends, in
+    both readers, with a typed `VocabError::Json` (now pinned; an open shape would have scanned the
+    whole document). The design note says 189 parameters and gives the regeneration command with
+    `-p`.
+  - Transcripts: seven new (`catalog_true_delay`, `catalog_true_hold_with_reset`, each as text and
+    `_json`; `catalog_pid`, `catalog_hysteresis_json`, `catalog_multisum`) and eleven re-blessed
+    (`catalog_class`, `catalog_class_params_json`, `catalog_enum_param`, `catalog_rule_refusal`,
+    `catalog_unresolved`, `vocab_text`, `vocab_json`, `help_oce`, `help_catalog`, `help_vocab`,
+    `usage_no_arguments`). `oce-api`, the core four, `oce-cxf`, `oce-author` and both vocabulary
+    data files are untouched.
+
 - **Vocabulary v1, part 1: the vendored CXF-Core document and the `oce-vocab` crate** (GitHub
   #511, issue #499; design note GitHub #497).
   `third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld` is modelica-json's

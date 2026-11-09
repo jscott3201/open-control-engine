@@ -3,7 +3,8 @@
 //! Nothing the engine owns is copied into the data files. A [`ClassVocab`] reads the class's
 //! one-line description and each parameter's type, default and settable flag from
 //! `oce_api::class_metadata()` when it is built, and takes only meanings, declared units and
-//! quantities, links and notes from the vocabulary (design note decisions 8 and 10).
+//! quantities, links and notes from the vocabulary (design note decisions 8 and 10). A
+//! parameter's range is rendered from the catalog's rules the same way ([`crate::parameter_range`]).
 
 use oce_api::ClassParameter;
 
@@ -91,6 +92,10 @@ pub struct ParameterVocab<'a> {
     pub unit: &'a str,
     /// The declared Modelica quantity, or `""`.
     pub quantity: &'a str,
+    /// The constraints the catalog's rules place on the value, one line each, in rule order
+    /// (`uLow <= uHigh`, `uLow == uHigh warns`); empty when there is none. Rendered from
+    /// `oce_api::catalog()` when the view is built ([`crate::parameter_range`]), never stored.
+    pub range: Vec<String>,
 }
 
 /// The vocabulary of one class, joined with the catalog.
@@ -108,7 +113,9 @@ pub struct ClassVocab<'a> {
     pub connectors: Vec<ConnectorVocab<'a>>,
     /// Parameters in the catalog's order.
     pub parameters: Vec<ParameterVocab<'a>>,
-    /// Curated notes about the class and its connectors and parameters, in file order.
+    /// Curated notes about the class and its connectors and parameters, in file order. A
+    /// note's `evidence` is for reviewers: a surface that serves agents shows `kind`, `subject`
+    /// and `text` only, as `oce catalog` does.
     pub notes: &'a [Note],
 }
 

@@ -4,24 +4,96 @@
 //! (a curated description exists only where the generated one is empty), every subject a curated
 //! entry names exists, every connector and parameter is described after the merge, and the
 //! classes, parameters and named-class connectors are exactly the catalog's, in its order.
+//!
+//! The join is bounded in work as well as in bytes: each curated class indexes its generated
+//! class's subjects once ([`SubjectIndex`]), every curated description and note is then one
+//! binary search, and the resolved positions are kept, so a view never searches a list.
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use oce_api::{CatalogPortNaming, ClassMetadata, ClassParameter};
+use oce_api::{CatalogEntry, CatalogPortNaming, ClassMetadata, ClassParameter};
 
 use crate::data::{CuratedClass, CuratedVocabulary, GeneratedClass, GeneratedVocabulary, Side};
 use crate::error::VocabError;
 use crate::naming::parameter_base_name;
+use crate::range::parameter_range;
 use crate::view::{ClassLinks, ClassVocab, ConnectorVocab, ParameterVocab, TextOrigin};
 
 /// One class's place in the catalog and in `curated.json`.
 #[derive(Clone, Debug)]
 struct ClassJoin {
     metadata: &'static ClassMetadata,
+    /// The catalog entry, whose rules the parameter ranges are rendered from.
+    entry: &'static CatalogEntry,
     /// The catalog parameter behind each generated parameter, in the same order.
     parameters: Vec<&'static ClassParameter>,
+    /// Where the class is in `curated.json`, and which of its subjects that file describes.
+    curated: CuratedJoin,
+}
+
+/// One generated class's place in `curated.json`, resolved once when the files are joined.
+#[derive(Clone, Debug, Default)]
+struct CuratedJoin {
     /// Index of the class in `curated.json`, when it is curated.
-    curated: Option<usize>,
+    class: Option<usize>,
+    /// For each subject of the generated class (its connectors, then its parameters), the index
+    /// of the curated description that names it. Empty when the class has none.
+    descriptions: Vec<Option<usize>>,
+}
+
+impl CuratedJoin {
+    /// The curated description of the subject at `position`, as an index into the curated
+    /// class's `descriptions`.
+    fn description(&self, position: usize) -> Option<usize> {
+        self.descriptions.get(position).copied().flatten()
+    }
+}
+
+/// What joining the two files cost, in a unit that does not depend on the machine: the name
+/// comparisons made while looking curated subjects up. The crate's cost test holds it to
+/// `n log n` in the entries of the two documents.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct JoinCost {
+    /// Comparisons of two connector or parameter names.
+    pub(crate) name_comparisons: u64,
+}
+
+/// The connectors and parameters of one generated class by name, built once per curated class
+/// so that each curated description and note is one binary search, not a scan of the class.
+struct SubjectIndex<'a> {
+    /// `(name, position among the class's subjects)`, sorted by name. Names are unique:
+    /// [`index_generated`] has already refused a repeated one.
+    by_name: Vec<(&'a str, usize)>,
+    /// The generated description of the subject at each position.
+    generated: Vec<&'a str>,
+}
+
+impl<'a> SubjectIndex<'a> {
+    fn new(class: &'a GeneratedClass, cost: &mut JoinCost) -> Self {
+        let generated: Vec<&str> = subjects(class)
+            .map(|(_, description)| description)
+            .collect();
+        let mut by_name: Vec<(&str, usize)> = subjects(class)
+            .enumerate()
+            .map(|(position, (name, _))| (name, position))
+            .collect();
+        by_name.sort_unstable_by(|a, b| {
+            cost.name_comparisons += 1;
+            a.0.cmp(b.0)
+        });
+        Self { by_name, generated }
+    }
+
+    /// The position of `subject` among the class's subjects, when it names one.
+    fn position(&self, subject: &str, cost: &mut JoinCost) -> Option<usize> {
+        self.by_name
+            .binary_search_by(|(name, _)| {
+                cost.name_comparisons += 1;
+                (*name).cmp(subject)
+            })
+            .ok()
+            .map(|found| self.by_name[found].1)
+    }
 }
 
 /// The block vocabulary: `generated.json` and `curated.json`, checked against each other and
@@ -50,6 +122,8 @@ impl Vocabulary {
 
     /// Join the two files and hold them against `oce_api::catalog()`.
     ///
+    /// The work is `n log n` in the entries of the two files: no curated entry scans its class.
+    ///
     /// # Errors
     ///
     /// In this order, the first that applies:
@@ -70,12 +144,30 @@ impl Vocabulary {
         generated: GeneratedVocabulary,
         curated: CuratedVocabulary,
     ) -> Result<Self, VocabError> {
+        Self::from_parts_costed(generated, curated).0
+    }
+
+    /// [`Self::from_parts`], with what the curated join cost. The cost is reported for a refusal
+    /// too: a hostile pair is refused, and the work done before the refusal is what is bounded.
+    pub(crate) fn from_parts_costed(
+        generated: GeneratedVocabulary,
+        curated: CuratedVocabulary,
+    ) -> (Result<Self, VocabError>, JoinCost) {
+        let mut cost = JoinCost::default();
+        let joined = Self::join(generated, curated, &mut cost);
+        (joined, cost)
+    }
+
+    fn join(
+        generated: GeneratedVocabulary,
+        curated: CuratedVocabulary,
+        cost: &mut JoinCost,
+    ) -> Result<Self, VocabError> {
         let by_path = index_generated(&generated)?;
-        let curated_of = join_curated(&generated, &curated, &by_path)?;
-        for (class, curated_index) in generated.classes.iter().zip(&curated_of) {
-            let curated_class = curated_index.map(|index| &curated.classes[index]);
-            for (name, description) in subjects(class) {
-                if description.is_empty() && curated_text(curated_class, name).is_none() {
+        let curated_of = join_curated(&generated, &curated, &by_path, cost)?;
+        for (class, join) in generated.classes.iter().zip(&curated_of) {
+            for (position, (name, description)) in subjects(class).enumerate() {
+                if description.is_empty() && join.description(position).is_none() {
                     return Err(VocabError::Undescribed {
                         class: class.class_path.clone(),
                         subject: name.to_owned(),
@@ -83,7 +175,7 @@ impl Vocabulary {
                 }
             }
         }
-        let joins = join_catalog(&generated, &curated_of)?;
+        let joins = join_catalog(&generated, curated_of)?;
         Ok(Self {
             generated,
             curated,
@@ -98,7 +190,9 @@ impl Vocabulary {
         &self.generated
     }
 
-    /// `curated.json` as data.
+    /// `curated.json` as data, each entry's `evidence` included. `evidence` is for reviewers:
+    /// a surface that serves agents prints the merged view ([`Self::class`]) and a note's
+    /// `kind`, `subject` and `text` only.
     #[must_use]
     pub fn curated(&self) -> &CuratedVocabulary {
         &self.curated
@@ -120,7 +214,11 @@ impl Vocabulary {
     fn view(&self, index: usize) -> ClassVocab<'_> {
         let class = &self.generated.classes[index];
         let join = &self.joins[index];
-        let curated = join.curated.map(|index| &self.curated.classes[index]);
+        let curated = join.curated.class.map(|index| &self.curated.classes[index]);
+        let merged = |position, generated| merged_text(&join.curated, curated, position, generated);
+        let connector_count = class.connectors.len();
+        let connectors = class.connectors.iter().enumerate();
+        let parameters = class.parameters.iter().zip(&join.parameters).enumerate();
         ClassVocab {
             class_path: &class.class_path,
             description: join.metadata.description,
@@ -128,12 +226,9 @@ impl Vocabulary {
             links: class.upstream.then(|| {
                 ClassLinks::new(&class.class_path, &self.generated.source.buildings_commit)
             }),
-            connectors: class
-                .connectors
-                .iter()
-                .map(|connector| {
-                    let (description, origin) =
-                        merged_text(curated, &connector.name, &connector.description);
+            connectors: connectors
+                .map(|(position, connector)| {
+                    let (description, origin) = merged(position, &connector.description);
                     ConnectorVocab {
                         name: &connector.name,
                         side: connector.side,
@@ -145,13 +240,10 @@ impl Vocabulary {
                     }
                 })
                 .collect(),
-            parameters: class
-                .parameters
-                .iter()
-                .zip(&join.parameters)
-                .map(|(parameter, catalog)| {
+            parameters: parameters
+                .map(|(position, (parameter, catalog))| {
                     let (description, origin) =
-                        merged_text(curated, &parameter.name, &parameter.description);
+                        merged(connector_count + position, &parameter.description);
                     ParameterVocab {
                         name: &parameter.name,
                         catalog,
@@ -159,6 +251,7 @@ impl Vocabulary {
                         origin,
                         unit: &parameter.unit,
                         quantity: &parameter.quantity,
+                        range: parameter_range(&join.entry.param_rules, &parameter.name),
                     }
                 })
                 .collect(),
@@ -167,7 +260,8 @@ impl Vocabulary {
     }
 }
 
-/// Every connector and parameter of a generated class as `(name, generated description)`.
+/// Every connector and parameter of a generated class as `(name, generated description)`:
+/// the connectors, then the parameters, each in file order.
 fn subjects(class: &GeneratedClass) -> impl Iterator<Item = (&str, &str)> {
     let connectors = class
         .connectors
@@ -180,27 +274,23 @@ fn subjects(class: &GeneratedClass) -> impl Iterator<Item = (&str, &str)> {
     connectors.chain(parameters)
 }
 
-/// The curated description of `subject`, if the class has one.
-fn curated_text<'a>(curated: Option<&'a CuratedClass>, subject: &str) -> Option<&'a str> {
-    curated?
-        .descriptions
-        .iter()
-        .find(|description| description.subject == subject)
-        .map(|description| description.text.as_str())
-}
-
-/// The description a reader gets: the generated one, or the curated one where that is empty.
+/// The description a reader gets for the subject at `position` (the class's connectors, then
+/// its parameters): the generated one, or the curated one where that is empty.
 fn merged_text<'a>(
+    join: &CuratedJoin,
     curated: Option<&'a CuratedClass>,
-    subject: &str,
+    position: usize,
     generated: &'a str,
 ) -> (&'a str, TextOrigin) {
-    if generated.is_empty()
-        && let Some(text) = curated_text(curated, subject)
-    {
-        return (text, TextOrigin::Curated);
+    let curated_text = join
+        .description(position)
+        .and_then(|at| curated?.descriptions.get(at));
+    match curated_text {
+        Some(description) if generated.is_empty() => {
+            (description.text.as_str(), TextOrigin::Curated)
+        }
+        _ => (generated, TextOrigin::Generated),
     }
-    (generated, TextOrigin::Generated)
 }
 
 /// Class path to index, refusing a repeated class or a repeated name inside one.
@@ -225,52 +315,52 @@ fn index_generated(generated: &GeneratedVocabulary) -> Result<BTreeMap<String, u
     Ok(by_path)
 }
 
-/// For each generated class, its index in `curated.json`, after checking every curated entry.
+/// For each generated class, its place in `curated.json`, after checking every curated entry.
+///
+/// Each curated class indexes its generated class's subjects once ([`SubjectIndex`]), so the
+/// work is `n log n` in the entries of the two files, not their product.
 fn join_curated(
     generated: &GeneratedVocabulary,
     curated: &CuratedVocabulary,
     by_path: &BTreeMap<String, usize>,
-) -> Result<Vec<Option<usize>>, VocabError> {
-    let mut curated_of = vec![None; generated.classes.len()];
+    cost: &mut JoinCost,
+) -> Result<Vec<CuratedJoin>, VocabError> {
+    let mut curated_of = vec![CuratedJoin::default(); generated.classes.len()];
     let mut last: Option<usize> = None;
     for (curated_index, class) in curated.classes.iter().enumerate() {
         let path = || class.class_path.clone();
         let Some(&index) = by_path.get(&class.class_path) else {
             return Err(VocabError::UnknownClass { class: path() });
         };
-        if curated_of[index].is_some() {
+        if curated_of[index].class.is_some() {
             return Err(VocabError::DuplicateClass { class: path() });
         }
         if last.is_some_and(|last| index < last) {
             return Err(VocabError::CuratedOutOfOrder { class: path() });
         }
         last = Some(index);
-        curated_of[index] = Some(curated_index);
+        curated_of[index].class = Some(curated_index);
         if class.descriptions.is_empty() && class.notes.is_empty() {
             return Err(VocabError::EmptyCuratedClass { class: path() });
         }
-        let generated_class = &generated.classes[index];
-        let generated_text = |subject: &str| {
-            subjects(generated_class)
-                .find(|(name, _)| *name == subject)
-                .map(|(_, description)| description)
-        };
-        let mut described = BTreeSet::new();
-        for description in &class.descriptions {
+        let subjects = SubjectIndex::new(&generated.classes[index], cost);
+        let mut described = vec![None; subjects.generated.len()];
+        for (at, description) in class.descriptions.iter().enumerate() {
             let subject = || description.subject.clone();
-            let Some(generated_description) = generated_text(&description.subject) else {
+            let Some(position) = subjects.position(&description.subject, cost) else {
                 return Err(VocabError::UnknownSubject {
                     class: path(),
                     subject: subject(),
                 });
             };
-            if !described.insert(description.subject.as_str()) {
+            if described[position].is_some() {
                 return Err(VocabError::DuplicateSubject {
                     class: path(),
                     subject: subject(),
                 });
             }
-            if !generated_description.is_empty() {
+            described[position] = Some(at);
+            if !subjects.generated[position].is_empty() {
                 return Err(VocabError::CuratedReplacesGenerated {
                     class: path(),
                     subject: subject(),
@@ -278,13 +368,14 @@ fn join_curated(
             }
         }
         for note in &class.notes {
-            if !note.subject.is_empty() && generated_text(&note.subject).is_none() {
+            if !note.subject.is_empty() && subjects.position(&note.subject, cost).is_none() {
                 return Err(VocabError::UnknownSubject {
                     class: path(),
                     subject: note.subject.clone(),
                 });
             }
         }
+        curated_of[index].descriptions = described;
     }
     Ok(curated_of)
 }
@@ -324,7 +415,7 @@ fn same_names(class: &str, vocabulary: &[&str], catalog: &[&str]) -> Result<(), 
 /// Hold the generated classes against the catalog and collect each class's catalog entries.
 fn join_catalog(
     generated: &GeneratedVocabulary,
-    curated_of: &[Option<usize>],
+    curated_of: Vec<CuratedJoin>,
 ) -> Result<Vec<ClassJoin>, VocabError> {
     let authorable: Vec<_> = oce_api::catalog()
         .iter()
@@ -394,53 +485,14 @@ fn join_catalog(
         }
         joins.push(ClassJoin {
             metadata,
+            entry,
             parameters: metadata.parameters.iter().collect(),
-            curated: *curated,
+            curated,
         });
     }
     Ok(joins)
 }
 
 #[cfg(test)]
-mod tests {
-    use super::same_names;
-    use crate::VocabError;
-
-    fn missing(subject: &str) -> VocabError {
-        VocabError::MissingFromVocabulary {
-            class: "C".to_owned(),
-            subject: subject.to_owned(),
-        }
-    }
-
-    fn extra(subject: &str) -> VocabError {
-        VocabError::NotInCatalog {
-            class: "C".to_owned(),
-            subject: subject.to_owned(),
-        }
-    }
-
-    #[test]
-    fn equal_lists_pass_and_two_empty_lists_pass() {
-        assert_eq!(same_names("C", &["a", "b"], &["a", "b"]), Ok(()));
-        assert_eq!(same_names("C", &[], &[]), Ok(()));
-    }
-
-    #[test]
-    fn a_name_on_one_side_only_is_reported_from_that_side() {
-        assert_eq!(same_names("C", &["a"], &["a", "b"]), Err(missing("b")));
-        assert_eq!(same_names("C", &[], &["a"]), Err(missing("a")));
-        assert_eq!(same_names("C", &["a", "x"], &["a"]), Err(extra("x")));
-        assert_eq!(same_names("C", &["x"], &[]), Err(extra("x")));
-        // A rename is a catalog name the vocabulary lacks.
-        assert_eq!(
-            same_names("C", &["a", "old"], &["a", "new"]),
-            Err(missing("new"))
-        );
-    }
-
-    #[test]
-    fn the_same_names_in_another_order_are_refused() {
-        assert_eq!(same_names("C", &["b", "a"], &["a", "b"]), Err(extra("b")));
-    }
-}
+#[path = "vocabulary_tests.rs"]
+mod tests;

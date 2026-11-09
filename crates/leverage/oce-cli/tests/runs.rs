@@ -2,26 +2,15 @@
 //! stderr of each run, pinned as one golden transcript per case in `tests/fixtures/runs/`
 //! (`exit: N`, `--- stdout`, `--- stderr`). Stdout is the JSON report, or the command's document
 //! (CXF, canonical text, a listing); stderr is clap's message or, under `--render always`, the
-//! human-readable rendering. Regenerate with `OCE_BLESS_CLI=1`.
+//! human-readable rendering. Regenerate with `OCE_BLESS_CLI=1`. The block-vocabulary runs of
+//! `catalog` are in `vocabulary.rs`.
 
 mod support;
 
-use support::{author_fixture, compare_or_bless, input, oce};
+use support::{author_fixture, case, input, oce};
 
 const ECON_TEXT: &str = "text/econ_enable.oce";
 const ECON_WIRE: &str = "wire/econ_enable.json";
-
-/// Run one case, check its exit status, and compare its transcript with the golden.
-fn case(name: &str, expected_exit: i32, args: &[&str], stdin: &[u8]) {
-    let run = oce(args, stdin);
-    assert_eq!(
-        run.code,
-        expected_exit,
-        "{name}: exit status\n{}",
-        run.transcript()
-    );
-    compare_or_bless(&format!("runs/{name}.txt"), &run.transcript());
-}
 
 fn econ_text() -> String {
     author_fixture(ECON_TEXT)

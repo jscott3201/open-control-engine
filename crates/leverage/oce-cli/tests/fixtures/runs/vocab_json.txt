@@ -1051,6 +1051,23 @@ exit: 0
       "meaning": "a comment after the last item of a (...) or [...]"
     }
   ],
+  "scale_factors": [
+    {
+      "base": "s",
+      "factor": 60,
+      "symbol": "min"
+    },
+    {
+      "base": "s",
+      "factor": 3600,
+      "symbol": "h"
+    },
+    {
+      "base": "s",
+      "factor": 86400,
+      "symbol": "d"
+    }
+  ],
   "schema": "oce-report/1",
   "tags": [
     "@unit",
