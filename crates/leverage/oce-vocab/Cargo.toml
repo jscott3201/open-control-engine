@@ -1,0 +1,33 @@
+# Vocabulary v1 above the facade (design note docs/design/vocabulary.md, issue #499): reference
+# text and declared units for the authorable block classes, as two checked-in JSON files joined
+# with the facade's catalog. It depends on `oce-api` only among the engine crates
+# (crates/leverage/README.md); `oce-bless` is its one other `oce-*` edge, as a dev-dependency for
+# the golden switch (authoring note decision 19).
+[package]
+name = "oce-vocab"
+description = "Block vocabulary for the Open Control Engine catalog: generated port and parameter descriptions with declared units, curated notes, and the view that joins them with the facade's catalog."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+# Nothing above the facade is published in M2 (authoring note decision 20).
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+oce-api = { workspace = true }
+# The two data files are read through closed serde DTOs. The workspace entries pin serde without
+# default features for the `no_std` core, so this crate names `std` itself.
+serde = { workspace = true, features = ["std"] }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+oce-bless = { workspace = true }
+# The generator test records the SHA-256 of the vendored CXF-Core document it read in
+# `generated.json`; the same crate and version line as `oce-api`'s content id.
+sha2 = { version = "0.10.9", default-features = false }

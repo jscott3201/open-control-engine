@@ -406,6 +406,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "oce-vocab"
+version = "0.4.0"
+dependencies = [
+ "oce-api",
+ "oce-bless",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "pastey"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

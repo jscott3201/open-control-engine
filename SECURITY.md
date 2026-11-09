@@ -45,8 +45,8 @@ Verified in the tree, with the enforcing site named so you can check rather than
 
 Each count or byte bound returns a typed diagnostic rather than aborting. The connection-collection
 and composite-lowering rows are complexity guarantees, not limits; see [Untrusted CXF remains untrusted input](#untrusted-cxf-remains-untrusted-input).
-`#![forbid(unsafe_code)]` is set in all 16 workspace members (the 12 engine crates, the firmware image and the leverage crates
-`oce-replay`, `oce-author` and `oce-cli`, whose `oce` binary root carries it too), so the usual memory-safety
+`#![forbid(unsafe_code)]` is set in all 17 workspace members (the 12 engine crates, the firmware image and the leverage crates
+`oce-replay`, `oce-author`, `oce-vocab` and `oce-cli`, whose `oce` binary root carries it too), so the usual memory-safety
 classes are out of scope by construction.
 
 The `oce` binary (`crates/leverage/oce-cli`) is a local command-line tool with no listener. It

@@ -406,7 +406,7 @@ mean of at least 131.
 2. **Vendoring and `oce-vocab` in one PR**: CXF-Core under `third_party/` with the README rows and
    the hash-manifest re-bless, the crate with both data files, the generator test, the coverage
    tests and the seed curation. A `third_party` change and a new crate both run the determinism
-   lane.
+   lane. *(Landed in GitHub #511.)*
 3. **CLI PR**: `oce catalog` and `oce vocab` as decision 12.
 4. **Text-form PR**: scale factors and `unit-suffix-mismatch`, amending authoring decision 13 with a
    dated ruling.

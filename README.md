@@ -238,6 +238,15 @@ cargo run -p oce-cli -- fmt --check econ_enable.oce     # exit 1 when not canoni
 cargo run -p oce-cli -- catalog CDL.Reals.MultiSum --param nin=3
 ```
 
+Vocabulary v1 has started with its data: `oce-vocab` (`crates/leverage/oce-vocab`,
+[README](crates/leverage/oce-vocab/README.md)) carries, for each of the 133 authorable classes, a
+description of every connector and parameter with the unit and quantity the CDL source declares,
+generated from modelica-json's CXF-Core output (vendored under `third_party/` and regenerated and
+compared byte for byte by a test), plus hand-written notes an agent needs and the catalog cannot
+say: which input is the minuend, which classes break an algebraic loop, the library's
+`delayOnInit` convention. `class_vocab()` joins it with the catalog; serving it through
+`oce catalog` and accepting time-unit suffixes in the text form are the next two steps.
+
 See [CHANGELOG.md](CHANGELOG.md).
 
 Work is planned as GitHub milestones and cut into issues. Each milestone has a tracking issue that
@@ -247,7 +256,7 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 | --- | --- | --- |
 | **M1a** Portable core: cleanup | Pure `Engine`, dead crates and ledgers removed, two CI lanes, native determinism and strict-bit matrices | Released as v0.3.0 |
 | **M1b** Portable core: `no_std` | Core four build `no_std + alloc`; math through `libm`; hash-free core; the **OCEB** compiled-schedule blob (encoder in `oce-api`, decoder in `oce-graph`, byte-stable across architectures); a `no_std` execution entry that never links `oce-cxf` or `oce-api`; a bare-metal gate cell with a size budget over `thumbv7em`, `riscv32imac` and `wasm32`; QEMU execution nightly | Released as v0.4.0 |
-| **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | In progress: `oce-author`'s model, wire form, schema, two-stage validator, emitter, text form and importer are in, and so is the `oce` CLI (`emit`, `validate`, `fmt`, `catalog`, `vocab`); vocabulary v1 next; in parallel with M3 |
+| **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | In progress: `oce-author`'s model, wire form, schema, two-stage validator, emitter, text form and importer are in, and so are the `oce` CLI (`emit`, `validate`, `fmt`, `catalog`, `vocab`) and vocabulary v1's data crate `oce-vocab`; serving the vocabulary through `oce catalog` and time-unit suffixes next; in parallel with M3 |
 | **M3** Verification product | Canonical content id, vector format v2, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode, on the `oce-replay` historical replay crate | In progress: `oce-replay` and the canonical content id (`Engine::content_id`, `oce:canon1:` over the loaded graph; blob format 2) are in; in parallel with M2 |
 | **M4** WASM | `oce-wasm` over `oce-api`, a TypeScript package, a browser demo that replays vectors without a server, a tracked `.wasm` size budget | Planned, in parallel with M5 |
 | **M5** Python | `oce-py` wheels (PyO3, abi3) over the same surface; replay and receipts from a notebook | Planned, in parallel with M4 |
@@ -400,7 +409,7 @@ at your option. Unless you explicitly state otherwise, any contribution intentio
 inclusion in the work by you shall be dual-licensed as above, without any additional terms or
 conditions.
 
-`third_party/` vendors upstream Modelica Buildings CDL sources and modelica-json CXF translations
-verbatim, under their own license — see
+`third_party/` vendors upstream Modelica Buildings CDL sources, modelica-json CXF translations and
+its CXF-Core document verbatim, under their own license — see
 [`third_party/modelica-buildings-cdl/README.md`](third_party/modelica-buildings-cdl/README.md). That
 tree sits outside every crate root, so `cargo package` never ships it.

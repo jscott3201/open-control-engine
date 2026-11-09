@@ -315,6 +315,56 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
+- **Vocabulary v1, part 1: the vendored CXF-Core document and the `oce-vocab` crate** (GitHub
+  #511, issue #499; design note GitHub #497).
+  `third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld` is modelica-json's
+  `-o cxf --elementary --cxfCore -p` output over the Buildings `CDL` package at the two recorded
+  pins (682,615 bytes; the vendored README records the command, both pins, the date and the
+  SHA-256, and says that byte-identity across operating systems and Node versions is unverified,
+  so a pin advance re-vendors and re-blesses). The hash manifest gains a
+  `generated-cxf-core` bucket of exactly that one file, the tree-SHA constant and the tracked
+  `.jsonld` census (now 223; the document's import outcome is one new golden line, a refusal) move
+  with it, and `.agents/revendor-upstream.sh` knows the bucket.
+  `crates/leverage/oce-vocab` (`publish = false`; `oce-api`, `serde` and `serde_json`, with
+  `oce-bless` and `sha2` as dev-dependencies) holds two strict-JSON files in one canonical spelling
+  (closed objects, sorted keys, no `null`; a bounded reader that refuses anything else with a typed
+  `VocabError`): `data/generated.json`, a description plus the declared Modelica unit and quantity
+  for every connector and parameter of the 133 authorable classes, and `data/curated.json`, typed
+  notes (`convention`, `pitfall`, `port-order`, `loop`, `units`) and descriptions only where the
+  generated one is empty, every entry with `evidence`. `vocabulary()` merges and checks the pair
+  against the catalog; `class_vocab(class_path)` joins one class with `class_metadata()` (the
+  one-liner, each parameter's type, default and settable flag) and derives its pinned source link
+  and its latest-release help link, labelled as possibly drifting from the pin; a resolved port
+  name maps to its connector with `ClassVocab::connector_of_port` (`u3` is element 3 of `u`).
+  Defaults and ranges are never copied into the data, and `oce-api` is untouched: `catalog()`,
+  `class_metadata()` and `CATALOG_JSON` are byte-identical.
+  - **The generator is a regenerate-and-diff test** (`OCE_BLESS=1` rewrites `generated.json`). It
+    walks the catalog's own names, looks each up in CXF-Core by `@id`, and inverts modelica-json's
+    QUDT unit table through a closed pinned table plus the S231 fallback (`1/s`). It refuses, naming
+    the class and the subject, a missing node, a node for something pinned as absent
+    (`TrueHoldWithReset`, and `MatrixGain`'s `protected` `nin` and `nout`), a malformed node, an
+    unknown unit or quantity identifier, and a quantity kind with two inverses on a subject without
+    a pinned resolution (`Pressure` also stands for `PressureDifference`; one parameter,
+    `SpecificEnthalpy_TDryBulPhi.pAtm`, is resolved and checked against its `.mo` declaration).
+  - **Coverage:** 133 classes (132 upstream, with links), 322 connectors (265 named ports and 57
+    vector or positional connectors) and 189 parameters (the note's 186 plus the three `TimeTable`
+    sources' rule-only `table`), every one described: 505 descriptions generated and six curated
+    (`TrueHoldWithReset`'s `u`, `clr`, `y` and `duration`; `MatrixGain`'s `nout` and `nin`); 73
+    declared units and 52 quantities. Curation seed: 13 notes over 11 classes (the prototype's port
+    order, `delayOnInit` and loop-breaker rules, and a `Discrete.Sampler` pitfall).
+  - **Tests:** the regeneration is byte-stable and fails on a renamed port or parameter, a
+    removed or added class and an edited file; coverage against the catalog in both directions,
+    with every width-driven and positional class resolved at widths 1, 2 and 1,048,576; every
+    generated description, unit and quantity found in its vendored `.mo` declaration, and no
+    declared unit dropped; each curation rule refused with its typed error; no string in either
+    file with an absolute path, a UUID shape, a `modelica://` link or an HTML tag; and every seeded
+    note the engine can decide held against a loaded engine (a self-loop through each class with a
+    `loop` note, swapped inputs for each `port-order` note, both `delayOnInit` settings, runs of
+    frames through `TrueHoldWithReset` and `Sampler`).
+  Workspace 17 members (10 publishable, seven private); `release.yml`'s comment and step name, its
+  byte pin and the package validator's golden name the new split. Parts 2 (`oce catalog`, #500)
+  and 3 (time-unit suffixes, #501) follow.
+
 - **The importer: the in-subset library CXF and the prototype's v0 graph JSON into the
   authoring model** (GitHub #498, issue #496; the [importer note](docs/design/importer.md); closes
   #475, M2 gate item 1). `oce-author`'s `import_cxf(bytes, &ImportOptions)` now returns
