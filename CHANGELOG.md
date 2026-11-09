@@ -284,6 +284,29 @@ and a gate that accepted any text would restore exactly the false assurance desc
   imported document) are tested. Found on the way, and fixed by GitHub #477: a block input driven by
   both a block output and a boundary input loaded without a `single-assignment` refusal (#472);
   the parity test now pins the engine's refusal of it.
+- **`oce-author`: the text form, with an idempotent `fmt`** (GitHub #PRNUM, issue #482). The
+  authoring note's terse line grammar (decisions 1, 3, 12, 13 and 15) as a hand-written
+  recursive-descent parser and a canonical printer: `parse_text` / `parse_text_bytes` /
+  `print_text` / `fmt_text`, `fmt_text` being parse then print and idempotent. Parsing is bounded
+  (4 MiB, 100,000 lines, 8,192-byte lines, 256-byte tokens, 4,096-byte strings, list depth 2,
+  65,536 statements of one kind) and refuses each malformed construct with one typed
+  `ParseError { code, location, detail }` among twenty-nine codes (`PARSE_CODES`), never a panic;
+  semantic defects stay the validator's. Unit suffixes are base units only (`1 h` is refused as
+  `unit-not-base`, naming vocabulary v1); lists lower to the catalog's element names and complete,
+  consecutive, uncommented runs print back as `[..]`; Reals print in the shortest round-trip
+  spelling, Integers keep theirs, and a leading `+` or zero is refused. Comments and blank lines
+  travel through the model's annotations, an end-of-line comment moving above its statement.
+  `validate_text` fills `Finding::span` for both stages from a `SourceMap`, a duplicate placed on
+  its repeat. **The one model change the text form required:** `Sequence::annotations` (header
+  comments) and `Sequence::trailing_comments`, which the wire form, the schema and the emitter
+  ignore (the note's worked example opens with a header comment). Gate item 2 holds: wire → text →
+  wire is byte-identical for the three wire bundles and the four imported corpus fixtures, and the
+  note's worked text example parses to its wire bundle. Tests: canonical bundle texts and `fmt`
+  comment goldens (`OCE_BLESS_AUTHOR`), 48 enumerated models through print and parse, one test per
+  refusal code with its exact location, every bound at its boundary, finding spans, and a
+  deterministic mutation sweep (more than 25,000 mutants, `catch_unwind` naming each) that also requires
+  every mutant that parses to print and parse back unchanged. The note's line bound and error shape
+  are amended (dated).
 
 ### Documentation
 

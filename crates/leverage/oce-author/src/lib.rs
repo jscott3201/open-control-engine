@@ -16,9 +16,13 @@
 //! - the **emitter** ([`emit()`], [`EmitOptions`]): one deterministic, canonical path from the model
 //!   to flat CXF, in authored order, refusing any model stage 1 refuses;
 //! - a minimal **importer** ([`import_cxf`]) from flat CXF back to the model, sized to the
-//!   library round trip (gate item 1).
+//!   library round trip (gate item 1);
+//! - the **text form** ([`parse_text`], [`print_text`], [`fmt_text`]): a terse line grammar with a
+//!   hand-written recursive-descent parser, bounded at parse with one typed [`ParseError`] per
+//!   malformed construct, a canonical printer and an idempotent `fmt`; [`validate_text`] places
+//!   every finding on the text ([`SourceMap`]).
 //!
-//! The text form and the `oce` CLI are later items of the M2 milestone. The crate sits above the
+//! The `oce` CLI is a later item of the M2 milestone. The crate sits above the
 //! facade: it depends on `oce-api` only, never evaluates an expression, and loads only throwaway
 //! engines of its own (stage 2), never one a host runs.
 
@@ -30,6 +34,7 @@ mod json;
 mod location;
 mod model;
 mod schema;
+mod text;
 mod validate;
 mod wire;
 
@@ -47,6 +52,17 @@ pub use model::{
     ParamValue, SemanticPoint, Sequence, SequenceParameter, SignalType,
 };
 pub use schema::{SCHEMA_PROFILE_KEYWORDS, WIRE_SCHEMA, authorable_class_paths, wire_schema};
+pub use text::{
+    BAD_ESCAPE, BASE_UNIT_SYMBOLS, BYTE_ORDER_MARK, COMMENT_BEFORE_CLOSE, CONTROL_CHARACTER,
+    DUPLICATE_TAG, INPUT_TOO_LARGE, INTEGER_OUT_OF_RANGE, LINE_TOO_LONG, MALFORMED_LIST,
+    MALFORMED_NUMBER, MALFORMED_SUFFIX, MAX_LINE_BYTES, MAX_LIST_DEPTH, MAX_ONE_LINE_COLUMNS,
+    MAX_STATEMENTS_PER_KIND, MAX_STRING_BYTES, MAX_TEXT_BYTES, MAX_TEXT_LINES, MAX_TOKEN_BYTES,
+    MISPLACED_STATEMENT, MISPLACED_VALUE, MISSING_EXTENDS, MISSING_SEQUENCE, NESTING_TOO_DEEP,
+    NON_FINITE_NUMBER, NOT_UTF8, PARSE_CODES, ParseError, STRAY_TOKEN, STRING_TOO_LONG, SourceMap,
+    TOKEN_TOO_LONG, TOO_MANY_LINES, TOO_MANY_STATEMENTS, UNCLOSED_BRACKET, UNIT_NOT_BASE,
+    UNKNOWN_KEYWORD, UNKNOWN_TAG, UNKNOWN_TYPE, UNTERMINATED_STRING, fmt_text, parse_text,
+    parse_text_bytes, parse_text_with_spans, print_text, validate_text, validate_text_author_side,
+};
 pub use validate::{
     CLASS_NOT_AUTHORABLE, CLASS_NOT_FOUND, DOCUMENT_TOO_LARGE, DUPLICATE_NAME, DUPLICATE_PARAMETER,
     EMPTY_SEQUENCE, Finding, INVALID_NAME, INVALID_PROVENANCE_ID, INVALID_SEMANTIC_POINT,

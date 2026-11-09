@@ -156,9 +156,9 @@ pub struct Finding {
     /// The model path it concerns: `sequence` (the sequence itself), `extends`, a declared name
     /// (`dTHys`, `TOut`, `hys`), an assignment (`hys.uHigh`) or a connection (`connection[2]`).
     pub subject: String,
-    /// The text location, when the input was text. Always `None` today: neither the wire form
-    /// nor stage 2 has a text position; the text form (a later M2 item) fills it from a
-    /// subject-to-location map built while parsing.
+    /// The text location, when the input was text. [`crate::validate_text`] fills it from the
+    /// subject-to-location map built while parsing ([`crate::SourceMap`]); [`validate()`] on a
+    /// model (from the wire form or the builder) leaves it `None`.
     pub span: Option<Location>,
     /// What is wrong, in the author's terms.
     pub detail: String,

@@ -95,7 +95,13 @@ on the right of `=` is a reference to a sequence parameter. A string is double-q
 **Unit-literal sugar.** `86400 s` is text-only: the suffix never reaches the wire form, the
 emitter or the engine, and the value is the number as written (decision 3, refined by decision 13).
 Comments are text-only in the same way: the model keeps them so `fmt` loses nothing, and the wire
-form and the emitter drop them.
+form and the emitter drop them. *Amended 2026-11-09 (issue #482):* statement annotations alone could
+not hold a comment above `sequence` (this note's own worked example opens with one) or after the last
+statement, so the model gained two fields, `Sequence::annotations` (the header comments; a comment
+between `sequence` and `extends` folds in and prints above `sequence`) and
+`Sequence::trailing_comments`, which the wire form, the schema and the emitter ignore. A comment
+after the last item of a block's `(...)` precedes nothing and is refused (`comment-before-close`).
+An end-of-line comment moves to its own line above its statement.
 
 **Canonical printer.** `fmt` is parse then print. The printer emits statements in the section
 order of the `file` production, keeps authored order inside every section, puts one space around
@@ -109,6 +115,11 @@ it never reorders anything (decision 6; decision 12 states what `fmt` changes be
 input above 4 MiB, more than 100,000 lines, a line above 4,096 bytes, a token above 256 bytes, list
 nesting deeper than 2, more than 65,536 statements of one kind, and non-UTF-8, control characters or
 a byte-order mark. Each limit is pinned at its boundary: accepted at the limit, refused one past.
+*Amended 2026-11-09 (issue #482):* the error is `ParseError { code, location, detail }` with one
+exact code per malformed construct; a line may be 8,192 bytes, because a string the wire form
+carries may be 4,096 bytes as written and must fit on one line with its assignment; a string is
+bounded at those 4,096 bytes rather than by the 256-byte token bound, which keeps governing names,
+numbers, suffixes, atoms and provenance ids.
 
 **Round-trip properties.** For every canonical text `t`, `print(parse(t)) == t` byte for byte; for
 every model `m`, `parse(print(m)) == m`; and `fmt` is idempotent. Tests enumerate models
@@ -617,5 +628,11 @@ The architect pass on the draft (owner consulted on 11, 12 and 20) ruled:
   `load-failed`), made `single-assignment` a stage-1 code for a repeated target as well as an
   engine code, refused Integer literals above 2^53 on Real parameters, and added decision 15's
   partial-array sentence.
+- 2026-11-09 (issue #482): the text form added the model's two header and trailing comment fields
+  (the one model change it needed), the `ParseError { code, location, detail }` shape, the
+  8,192-byte line bound, and the printer conventions the crate README documents: end-of-line
+  comments move above their statement; a complete, consecutive, uncommented run of array elements
+  regroups into `[..]` through the catalog and anything else prints flattened; an integer never
+  becomes a Real, and a leading `+` or zero is refused.
 - 2026-11-08: the CLI exit-code rule was aligned with the diff and commissioning passes: 0 yes, 1
   no, 2 error, with a parse refusal and an I/O failure both 2 and no exit 3.

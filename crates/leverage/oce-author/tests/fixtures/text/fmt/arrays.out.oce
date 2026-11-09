@@ -1,0 +1,13 @@
+sequence arrays
+extends none
+block sum3 = CDL.Reals.MultiSum(nin = 3, k = [1, 2, 3])
+block sum4 = CDL.Reals.MultiSum(k = [1], k_3 = 3)
+block sum5 = CDL.Reals.MultiSum(k = [1 K, 2 K, 3 K])
+block gain = CDL.Reals.MatrixGain(K = [[0.5, 0.5], [1.5, -1.5]])
+block gain2 = CDL.Reals.MatrixGain(K = [[1.0, 0.0], [0.0, 1.0]])
+block gain3 = CDL.Reals.MatrixGain(K_2_1 = 1.0, K = [[2.0]])
+block tab = CDL.Reals.Sources.TimeTable(
+  table = [[0.0, 1.0], [3600.0, 2.0]],
+  smoothness = Smoothness.ConstantSegments
+)
+block odd = CDL.Reals.Nope(x_1 = 1, x_2 = 2)

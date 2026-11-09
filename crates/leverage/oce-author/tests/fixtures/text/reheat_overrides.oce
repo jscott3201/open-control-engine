@@ -1,0 +1,37 @@
+sequence reheat_overrides
+extends none
+in oveDamPos : Integer
+in uDam : Real @unit 1
+in uHeaOff : Boolean
+in uVal : Real @unit 1
+out yDam : Real @unit 1
+out yVal : Real @unit 1
+block conInt3 = CDL.Integers.Sources.Constant(k = 1)
+block intEqu3 = CDL.Integers.Equal
+block intEqu4 = CDL.Integers.Equal
+block conInt4 = CDL.Integers.Sources.Constant(k = 2)
+block cloDam = CDL.Conversions.BooleanToReal(realTrue = 0.0, realFalse = 0.0)
+block opeDam = CDL.Conversions.BooleanToReal(realTrue = 1.0, realFalse = 0.0)
+block add3 = CDL.Reals.Add
+block or2 = CDL.Logical.Or
+block swi1 = CDL.Reals.Switch
+block pro = CDL.Reals.Multiply
+block booToRea = CDL.Conversions.BooleanToReal(realTrue = 0.0, realFalse = 1.0)
+oveDamPos -> intEqu3.u1
+oveDamPos -> intEqu4.u1
+uDam -> swi1.u3
+uHeaOff -> booToRea.u
+uVal -> pro.u2
+conInt3.y -> intEqu3.u2
+intEqu3.y -> cloDam.u
+intEqu3.y -> or2.u1
+intEqu4.y -> opeDam.u
+intEqu4.y -> or2.u2
+conInt4.y -> intEqu4.u2
+cloDam.y -> add3.u1
+opeDam.y -> add3.u2
+add3.y -> swi1.u1
+or2.y -> swi1.u2
+swi1.y -> yDam
+pro.y -> yVal
+booToRea.y -> pro.u1

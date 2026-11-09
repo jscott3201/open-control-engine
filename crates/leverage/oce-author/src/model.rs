@@ -7,9 +7,11 @@
 //!
 //! Every statement (a sequence parameter, a boundary, a block, an assignment, a connection) carries
 //! [`Annotations`]: text-form-only facts (leading comments, a blank line before it) that the model
-//! keeps so the text form's `fmt` loses nothing (decision 13). Assignments and sequence parameters
-//! also keep a text-only unit suffix. The wire form and the emitter ignore all of them; equality is
-//! structural and does compare them.
+//! keeps so the text form's `fmt` loses nothing (decision 13). The sequence itself keeps the
+//! comments above its `sequence` line ([`Sequence::annotations`]) and those after its last statement
+//! ([`Sequence::trailing_comments`]); the text form needed both (issue #482). Assignments and
+//! sequence parameters also keep a text-only unit suffix. The wire form and the emitter ignore all
+//! of them; equality is structural and does compare them.
 //!
 //! The model types are `#[non_exhaustive]`: build them through their constructors or
 //! [`crate::SequenceBuilder`], then set the public fields.
@@ -45,10 +47,18 @@ pub struct Sequence {
     pub blocks: Vec<Block>,
     /// Connections, `source -> target`.
     pub connections: Vec<Connection>,
+    /// Text-form annotations of the header: the comment lines above the `sequence` line (a
+    /// comment between `sequence` and `extends` folds in here). `blank_line_before` has no meaning
+    /// at the top of a file; the text printer ignores it and the parser never sets it. Never
+    /// written to the wire form and never emitted (issue #482).
+    pub annotations: Annotations,
+    /// Comment lines after the last statement, without the leading `#`, in order. Text-only like
+    /// [`Annotations`] (issue #482).
+    pub trailing_comments: Vec<String>,
 }
 
 impl Sequence {
-    /// An empty sequence named `name`, extending nothing.
+    /// An empty sequence named `name`, extending nothing, with no annotations.
     #[must_use]
     pub fn new(name: Identifier) -> Self {
         Self {
@@ -59,6 +69,8 @@ impl Sequence {
             outputs: Vec::new(),
             blocks: Vec::new(),
             connections: Vec::new(),
+            annotations: Annotations::default(),
+            trailing_comments: Vec::new(),
         }
     }
 }
