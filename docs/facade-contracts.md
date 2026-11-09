@@ -25,11 +25,13 @@ the [product contract](product-contract.md) and pre-1.0 change control still app
 - **Host build identity** remains consumer-owned and includes the host's source/build/features
   qualifications; catalog metadata alone cannot establish it. The compatibility descriptor's OCE
   package version is only a public build fact, not a unique build identity.
-- **Complete export content identity** is captured as `CompleteExportContentId`, distinct from
-  `CatalogContentId` and authored `DomainKey`. Existing string APIs retain their bytes and algorithms.
-  It identifies the emitted document, which follows authored `@graph` and `containsBlock` order, so
-  sources differing only in [that order](cxf-composite-subset.md#ordering-and-identity-contract)
-  can receive different ids. No order-independent model identity is provided.
+- **Canonical content identity** is `ContentId` (`oce:canon1:` and a SHA-256 digest), minted only
+  by `Engine::content_id` over the loaded flat graph (GitHub #470, [design
+  note](design/content-id.md)). It is distinct from `CatalogContentId`, authored `DomainKey`,
+  executable compatibility, export bytes and build identity. It is independent of authored
+  [order](cxf-composite-subset.md#ordering-and-identity-contract), JSON spelling and instance
+  namespace, and moves with any parameter bit, name, wiring, class or boundary I/O definition.
+  `ExportReport::complete` separately says whether an export is partial; the report carries no id.
 - **Compatibility descriptor** versions the closed public-fact receipt itself. Equality does not
   establish executable identity, model-specific IO equality, generation, state compatibility or trust.
 
@@ -177,26 +179,27 @@ actual downstream qualification remain separate evidence.
 ## Closed host compatibility descriptor
 
 `CompatibilityDescriptor::current(None)` captures public facade facts without an engine. Passing
-`Some(&export_report)` additionally captures the existing complete exported-document tag, calling
-`content_id_complete()` first. Any warnings return its unchanged `ContentIdError::Incomplete`;
-partial export never silently becomes absent or complete content. No export is performed implicitly.
-This additive artifact does not add an eighth `ContractDomain` or change the seven existing artifacts.
+`Some(&content_id)` additionally records the canonical content id `Engine::content_id` minted. A
+model whose export is partial still has an id, so partial export never withholds the line. No load
+or export is performed implicitly. This additive artifact does not add an eighth `ContractDomain`
+or change the seven existing artifacts.
 
-`CatalogContentId` and `CompleteExportContentId` are distinct read-only types. Hosts can borrow their
-unchanged tag strings with `as_str()` or print them. Neither accepts an authored `DomainKey`, an
-arbitrary string, or the other category. No speculative executable, generation or state-wire type
-is exposed. The owned descriptor survives report mutation and engine reload/drop; capture again
-after re-export to describe changed exported content. Capture neither observes nor changes run state.
+`CatalogContentId` and `ContentId` are distinct read-only types. Hosts can borrow their tag strings
+with `as_str()` or print them; `ContentId::parse` is a checked parser of the exact `oce:canon1:`
+text, for a host comparing a stored id. Neither converts from an authored `DomainKey`, an arbitrary
+string, or the other category. No speculative executable, generation or state-wire type is
+exposed. The owned descriptor survives engine reload/drop; capture again for changed content.
+Capture neither observes nor changes run state.
 
 ### Canonical bytes and comparison
 
-`Display` / `to_string()` is the complete revision-1 artifact, not Debug output. UTF-8 lines occur
+`Display` / `to_string()` is the complete revision-2 artifact, not Debug output. UTF-8 lines occur
 in exactly this order, with no spaces, BOM or CR, decimal revisions without leading zeros, and one
 LF after every line, including the last:
 
 | Label | Covered value |
 | --- | --- |
-| `oce-compatibility` | Descriptor revision, exactly `1`. |
+| `oce-compatibility` | Descriptor revision, exactly `2`. |
 | `catalog-schema` | Current public catalog schema revision. |
 | `catalog` | Verbatim current facade catalog content tag. |
 | `io-schema` | Public IO inventory contract revision, not a loaded input-definition digest. |
@@ -205,22 +208,24 @@ LF after every line, including the last:
 | `execution-profile` | Exactly `HostTick-v1`, the canonical label for fixed HostTick v1. |
 | `execution-profile-schema` | Public execution-profile descriptor revision (currently 2). |
 | `oce-api-version` | Exact Cargo package version, including any pre-release/build suffix. |
-| `export` | Verbatim complete CXF content tag, or exactly `none` if no report was supplied. |
+| `content` | Verbatim `oce:canon1:` canonical content id, or exactly `none` if none was supplied. |
 
-The [absent-export golden](../crates/oce-api/tests/fixtures/compatibility.txt) and
-[complete-export golden](../crates/oce-api/tests/fixtures/compatibility_export.txt) are hand-assembled
-from those fields, public revisions/version and the existing independently checked tag goldens.
-No source normalization is claimed. Catalog FNV-1a-128 covers ASCII `oce:catalog:1`, NUL, then all
-`catalog_to_json(catalog())` bytes including LF. Export FNV-1a-128 covers exactly `ExportReport.bytes`,
-without prefix or length. Both start at `0x6c62272e07bb014262b821756295c58d`; each byte is XORed,
-then multiplied by `0x0000000001000000000000000000013b` modulo 2^128. Existing tag prefixes and
-32-lowercase-hex formatting stay unchanged. The new artifact adds no hash of its own.
+Revision 1 carried an `export` line holding the retired `cxf:fnv1a128:` export tag; revision 2
+replaces it with `content` (GitHub #470), and a revision-1 receipt is refused.
+The [absent-content golden](../crates/oce-api/tests/fixtures/compatibility.txt) and
+[content golden](../crates/oce-api/tests/fixtures/compatibility_export.txt) are hand-assembled
+from those fields, public revisions/version and the independently checked tag goldens (the content
+line is the minimal-loop id pinned in `export_cxf.rs`). No source normalization is claimed. Catalog
+FNV-1a-128 covers ASCII `oce:catalog:1`, NUL, then all `catalog_to_json(catalog())` bytes including
+LF; it starts at `0x6c62272e07bb014262b821756295c58d`, and each byte is XORed, then multiplied by
+`0x0000000001000000000000000000013b` modulo 2^128. The content id is SHA-256 over the `OCECANON`
+encoding of the loaded graph. The descriptor adds no hash of its own.
 
 `check_compatible` requires exact field equality and returns the first `CompatibilityMismatch` in
 canonical order: DescriptorRevision, CatalogSchema, CatalogContent, IoSchema, ValueSchema,
 ParameterSchema, ExecutionProfile (label or descriptor revision), Build (package version),
-ExportPresence, ExportContent. Either unsupported descriptor revision refuses, even if equal.
-There is no SemVer range, wildcard, fallback or coercion. Two absent exports agree only on absence;
+ContentIdPresence, ContentIdMismatch. Either unsupported descriptor revision refuses, even if equal.
+There is no SemVer range, wildcard, fallback or coercion. Two absent content ids agree only on absence;
 hosts needing content identity separately require presence. Persisted receipts are canonical bytes,
 not parsed OCE objects: compare exactly against a newly captured descriptor, refusing unknown
 revisions, changed/missing/extra fields and all byte differences. OCE supplies no receipt parser.
@@ -236,9 +241,8 @@ release-to-release compatibility. `io()` inventory is not `input_definitions()`;
 do not identify either model's actual IO. LoadReport.model_id remains diagnostic authored/synthetic
 identity, never a compatibility key.
 
-FNV is non-cryptographic; collision resistance, authenticity and authorization are not supplied.
-ExportReport is mutable: an empty warning list at capture is not authenticated producer provenance
-or CXF revalidation. Hosts may hash/sign canonical bytes themselves and own freshness, trust,
+The catalog's FNV is non-cryptographic. The content id's SHA-256 is collision resistant, but neither
+supplies authenticity or authorization: an id is not a signature. Hosts may hash/sign canonical bytes themselves and own freshness, trust,
 generation fencing and equipment policy. OCE is not a signing/PKI authority. State/manifest bytes,
 executable fingerprints, generation tokens and native frame sequence are absent and remain private
 where currently private. Snapshots, restore, frames and admission limits retain their existing rules.

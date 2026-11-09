@@ -1,6 +1,6 @@
 # Compiled-schedule blob
 
-A compiled-schedule blob (`OCEB`, format version 1) is the loaded executable as bytes: what a `std`
+A compiled-schedule blob (`OCEB`, format version 2) is the loaded executable as bytes: what a `std`
 host computes from CXF — every block with its ground parameters, the frozen evaluation order, the
 connections and the boundary I/O table — in a form a `no_std + alloc` target decodes and runs
 without the CXF importer, the expression evaluator or the validator. It is the sibling of
@@ -48,7 +48,7 @@ frame driver ([executing a blob](#executing-a-blob)).
 | Boundary inputs | Path, exact type, the effective inclusive acceptance domain, and every fan-out target connector |
 | Boundary outputs | The executable boundary identity and its source output connector |
 | `SemanticPoint` payloads | One opaque, length-bounded payload per input and output, empty in v1 |
-| Content id | The facade's `cxf:fnv1a128` content id at encode time, or "none" for a partial export |
+| Content id | The 32 SHA-256 digest bytes of the loaded model's [canonical content id](design/content-id.md) (`Engine::content_id`, `oce:canon1:`) at encode time, for every loaded document, partial export or not; 32 zero bytes ("none") only for a hand-built model with no id. Carried verbatim, never interpreted by the decoder |
 | Engine version | The encoder's `major.minor.patch` |
 
 Block and connector ids are the host's own, so the decoded `RunState` compares with the host's word
@@ -117,12 +117,15 @@ does). It is a read-only verification view, not a continuation format: continue 
 
 ## Versioning
 
-A decoder accepts exactly one format version (1), one execution profile (HostTick v1) and its own
+A decoder accepts exactly one format version (2), one execution profile (HostTick v1) and its own
 engine version; anything else, older or newer, is a typed refusal. Between release tags every
 `development` build shares one version string, so a blob and the target that runs it must come
 from the same build — the same current/current rule as state snapshots. The reserved header flags
 must be zero. Any change to the layout, a tag table, the class signature record, the CRC or the
-content-id meaning bumps the format version; v1 has no optional or skippable sections.
+content-id meaning bumps the format version; format 2 has no optional or skippable sections.
+Format 2 (GitHub #470) differs from format 1 only in the content-id field: format 1 held the
+retired `cxf:fnv1a128:` export tag (zero for a partial export), format 2 the canonical content id's
+digest. A format-1 blob is refused like any other foreign version.
 
 Each class carries an FNV-1a-64 **class signature hash** over a canonical record of the class: the
 default instance's kind, state length and state-contract revision, its port kinds and names, the

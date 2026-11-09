@@ -6,6 +6,9 @@ use std::collections::BTreeSet;
 
 use oce_api::{Engine, PointDirection, PointInfo};
 
+/// The canonical content id of `minimal_loop.jsonld`, pinned in `export_cxf.rs` too.
+const MINIMAL_LOOP_CONTENT_ID: &str =
+    "oce:canon1:0cef94f71eddaea00a23797d1e5844ed2e6ca41a0be9a2e938fc587c5d31e6c8";
 const ORIGINAL: &[u8] = include_bytes!("../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
 const COMPACT_TWIN: &[u8] =
     include_bytes!("../../oce-cxf/tests/fixtures/minimal_loop_compact.jsonld");
@@ -45,20 +48,21 @@ fn compact_and_expanded_twins_name_the_same_points_and_content_identity() {
             "point paths diverge between spellings"
         );
     }
-    let original_id = original
-        .export_cxf()
-        .expect("original exports")
-        .content_id_complete()
-        .expect("original export is complete");
-    let compact_id = compact
-        .export_cxf()
-        .expect("compact twin exports")
-        .content_id_complete()
-        .expect("compact twin export is complete");
-    assert_eq!(original_id, compact_id);
-    // The value already pinned for minimal_loop's export fixpoint (export_cxf.rs): both
-    // spellings reach the identical canonical bytes.
-    assert_eq!(original_id, "cxf:fnv1a128:de3ae3208d304eb9b8300520e730fed7");
+    for engine in [&original, &compact] {
+        engine
+            .export_cxf()
+            .expect("twin exports")
+            .complete()
+            .expect("twin export is complete");
+    }
+    let original_id = original.content_id().expect("original has a content id");
+    assert_eq!(
+        original_id,
+        compact.content_id().expect("twin has a content id")
+    );
+    // The value pinned for minimal_loop (export_cxf.rs): both spellings reach the identical
+    // canonical bytes.
+    assert_eq!(original_id.as_str(), MINIMAL_LOOP_CONTENT_ID);
 }
 
 #[test]

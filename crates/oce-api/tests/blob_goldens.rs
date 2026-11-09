@@ -14,6 +14,10 @@ use std::path::PathBuf;
 use blob_corpus::{FIXTURES, compile, fixture_names_on_disk};
 use oce_graph::blob::{decode, encode};
 
+/// The canonical content id of the worked example the blob notes dump.
+const WORKED_EXAMPLE_CONTENT_ID: &str =
+    "oce:canon1:22d010e1298d0a1392a8bcc0475d9e201c2b41406bd90593c5207b60aa015a51";
+
 fn golden_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/blob")
 }
@@ -106,24 +110,30 @@ fn decoding_and_re_encoding_reproduces_every_golden() {
 }
 
 #[test]
-fn the_content_id_field_matches_the_facade_content_id_or_is_zero_for_a_partial_export() {
+fn the_content_id_field_is_the_canonical_digest_for_every_fixture_partial_export_or_not() {
     let mut partial = Vec::new();
     for name in FIXTURES {
         let compiled = compile(name);
         let decoded = decode(&compiled.bytes).unwrap();
-        match (&compiled.content_id, decoded.content_id) {
-            (Some(id), Some(field)) => {
-                let hash = u128::from_le_bytes(field[..16].try_into().unwrap());
-                assert_eq!(*id, format!("cxf:fnv1a128:{hash:032x}"), "{name}");
-                assert_eq!(field[16..], [0u8; 16], "{name}: padding");
-            }
-            (None, None) => partial.push(*name),
-            other => panic!("{name}: content id and field disagree: {other:?}"),
+        let id = compiled
+            .content_id
+            .as_ref()
+            .unwrap_or_else(|| panic!("{name}: every loaded fixture has a content id"));
+        // The 32 header bytes are the SHA-256 digest in output order, with no padding, and the
+        // id's hex digits spell exactly those bytes.
+        assert_eq!(decoded.content_id, Some(*id.digest()), "{name}");
+        assert_eq!(&compiled.bytes[20..52], id.digest(), "{name}");
+        let hex: String = compiled.bytes[20..52]
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect();
+        assert_eq!(id.as_str(), format!("oce:canon1:{hex}"), "{name}");
+        let mut engine = oce_api::Engine::new();
+        engine.load_cxf(&blob_corpus::fixture_bytes(name)).unwrap();
+        assert_eq!(engine.content_id().unwrap(), *id, "{name}");
+        if engine.export_cxf().unwrap().complete().is_err() {
+            partial.push(*name);
         }
-        assert_eq!(
-            compiled.bytes[20..52] == [0u8; 32],
-            compiled.content_id.is_none()
-        );
     }
     assert_eq!(partial.len(), 13, "the 13 partial exports: {partial:?}");
 }
@@ -134,12 +144,12 @@ fn the_worked_example_has_the_design_note_layout() {
     let bytes = &compiled.bytes;
     assert_eq!(bytes.len(), 418);
     assert_eq!(&bytes[..4], b"OCEB");
-    assert_eq!(&bytes[4..8], [1, 0, 1, 0]);
+    assert_eq!(&bytes[4..8], [2, 0, 1, 0]);
     assert_eq!(&bytes[8..14], [0, 0, 4, 0, 0, 0]);
     assert_eq!(&bytes[14..20], [0, 0, 0xa2, 0x01, 0, 0]);
     assert_eq!(
-        compiled.content_id.as_deref(),
-        Some("cxf:fnv1a128:9aeed987b862eb2504fbde693778e5fd")
+        compiled.content_id.as_ref().map(oce_api::ContentId::as_str),
+        Some(WORKED_EXAMPLE_CONTENT_ID)
     );
     // Section frames at the offsets the note's dump shows.
     for (offset, id, length) in [

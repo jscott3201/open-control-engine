@@ -95,9 +95,11 @@ Every connection change is reported **once, at its target**, because an input ha
 driver moved is `rewired`. Drivers are compared after mapping renames, so a renamed source alone
 does not rewire its targets.
 
-`reordered` is its own kind because order moves the content id but not the semantics: under the
-[ordering contract](../cxf-composite-subset.md#ordering-and-identity-contract) `@graph` and
-`containsBlock` order assign `BlockId`, and the emitter keeps authored order. It is computed over
+`reordered` is its own kind because it is not semantic: the canonical content id
+([content-id note](content-id.md)) ignores authored order, but under the [ordering
+contract](../cxf-composite-subset.md#ordering-and-identity-contract) `@graph` and `containsBlock`
+order still assign `BlockId`, and the emitter keeps authored order. (Before GitHub #470 order also
+moved the export content id; that order-bearing id is retired.) It is computed over
 name-matched elements only, at most one entry per list (`blocks`, `connections`, a block's
 assignments).
 
@@ -152,16 +154,20 @@ a parse refusal of either input, a CXF load refusal, I/O). Exit 1 never means a 
 
 ## Relation to content ids
 
-Today's export content id (PC-018: `cxf:fnv1a128:<32 hex>` over exactly the emitted bytes) "follows
-order-bearing authored `@graph`/`containsBlock` order and is not an order-independent model
-identity". Equal ids mean only **no byte change**, and unequal ids may still be a `reordered`-only
-diff. PC-021 keeps it apart from the authored model id, which a re-emit does not move.
+The canonical content id ([content-id note](content-id.md), GitHub #470) is `oce:canon1:` and the
+SHA-256 of a canonical encoding of the **loaded flat graph**: boundary I/O definitions, blocks by
+authored name with class, class signature hash and bound parameters sorted by name, and connections
+by port index. Authored order, JSON spelling and the instance namespace never enter it; authored
+names do (owner, 2026-11-09), so a rename moves it and this crate's rename pass explains the
+change. It replaces the order-bearing export tag (`cxf:fnv1a128:` over the emitted bytes), and
+PC-021 keeps it apart from the authored model id.
 
-Once M3's canonical id ships, **equal canonical ids are the empty-diff fast path** (decision 8):
-`diff` returns the empty result without matching; unequal ids still need the full diff. **M3 must
-decide whether authored names are inside the canonical id.** The plan's "sorted nodes, normalized
-IRIs" implies they are, so a pure rename changes the id, and a diff whose only entries are `exact`
-renames is the case M3 must explain. This note records that as a dependency, not a decision.
+**Equal canonical ids prove the two loaded graphs are equal** (decision 8, as narrowed by the
+content-id review). So the CXF adapter and the blob comparison may return graph-equal without
+matching, and an authoring diff whose two sides load to equal ids may skip its rename pass. They do
+**not** prove an empty authoring diff: a sequence-parameter rename, a literal against a reference
+with the same ground value, `extends`, comments, `SemanticPoint` fields and `reordered` entries are
+all outside the id. Unequal ids still need the full diff.
 
 ## Rust API sketch
 
@@ -527,7 +533,8 @@ rename pass. Rejected: a content id as block identity (it identifies a document)
 control names; the heuristic only presents leftovers.
 
 **5. A closed `#[non_exhaustive]` graph category enum**, interface and metadata in their own
-sections, `reordered` separate because order moves the content id but not semantics. Rejected: a
+sections, `reordered` separate because order is not semantic (and, since GitHub #470, does not move
+the canonical content id either). Rejected: a
 JSON-Patch-style path list. Why: cards and agents branch on a category.
 
 **6. Site parameters in their own section** with derived `affects`, and the `graph_equal` and
@@ -539,8 +546,12 @@ codes, a text renderer in the text form's syntax, a Markdown table, no LLM. Reje
 change lists like the prototype's "explain the fix" records. Why: prose is rendered from facts,
 never facts scraped from prose.
 
-**8. Equal canonical ids are the fast path once M3 ships**; today's content id says only "no byte
-change". Whether names are inside the canonical id is M3's decision, recorded as a dependency.
+**8. Equal canonical ids are a graph-level fast path**, narrowed by the content-id review (ruling
+11, 2026-11-09): equal ids prove equal loaded graphs, so the CXF and blob comparisons return
+graph-equal and the authoring diff skips its rename pass; they do not prove an empty authoring diff
+(sequence parameters, literal-against-reference, `extends`, comments, `SemanticPoint` fields and
+`reordered` are outside the id). M3 decided names are inside the id
+([content-id note](content-id.md), decision 2).
 
 **9. a sibling leverage crate, `crates/leverage/oce-diff`**, on `oce-author` and
 `oce-api`, `#![forbid(unsafe_code)]`, `serde` its only new dependency, linked by `oce-cli`.

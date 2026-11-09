@@ -171,31 +171,31 @@ resolver produced.
 
 Every graph the resolver produces is correct by construction on both axes.
 
-## `content_id_complete`: a checked integrity tag, not a digest
+## Export completeness and the canonical content id
 
-`ExportReport::content_id_complete()` returns `cxf:fnv1a128:<32 hex chars>` computed over
-**exactly** the emitted bytes when the export is complete. If any content was deferred, it returns
-the typed `ContentIdError::Incomplete { warning_count, .. }` instead of minting an identity. Its
-rustdoc carries a runnable reproduction of the tag computation so a host can verify a returned tag
-independently. Four properties worth internalizing:
+`ExportReport::complete()` is the export's completeness check: `Ok(())` when nothing was deferred,
+or the typed `ExportIncomplete { warning_count, .. }` when the emitted document is a partial
+survivor cone. The report carries no identity. The retired `content_id_complete()` and `content_id()`
+methods, which tagged the emitted bytes with `cxf:fnv1a128:`, are gone (GitHub #470).
 
-- It is explicitly **non-cryptographic** and not a security boundary. A host needing a cryptographic
-  digest must hash the same bytes itself.
-- It is **not** `LoadReport::model_id`. `model_id` preserves the authored top-composite `@id`; export
-  uses a synthetic root, and resumed parameter edits change exported bytes without recomputing
-  `model_id`.
-- When `warnings` is non-empty, the unchecked tag would name only the **partial** survivor document;
-  `content_id_complete()` refuses that case and reports the exact warning count. The older
-  `content_id()` method remains only as deprecated compatibility behavior and should not be used to
-  mint version identities. The checked behavior is pinned by `crates/oce-api/tests/export_cxf.rs`.
-- It identifies the **emitted document, not an order-independent model**. `@graph` node order and
-  `containsBlock` order are [order-bearing](cxf-composite-subset.md#ordering-and-identity-contract):
-  they assign `ConnectorId`/`BlockId` and `decl_order`, and export follows those vectors. Two
-  sources with the same nodes and edges that differ only in that order can both load cleanly and
-  receive different tags; reloading identical bytes always reproduces the same tag. The engine
-  provides no "same model regardless of serialization order" identity today; a host that needs one
-  must define it itself and must not substitute this tag for it. Pinned by
-  `content_id_identifies_authored_graph_order_not_an_order_independent_model`.
+The identity of a loaded model is `Engine::content_id()`, `oce:canon1:` and the SHA-256 of a
+canonical encoding of the loaded flat graph ([design note](design/content-id.md)). Four properties
+worth internalizing:
+
+- It names the **loaded graph, not the emitted document**. `@graph` and `containsBlock` order are
+  still [order-bearing](cxf-composite-subset.md#ordering-and-identity-contract) for `ConnectorId`,
+  `BlockId`, `decl_order` and so for the export bytes, but the id sorts by name and indexes ports,
+  so two sources that differ only in authored order, JSON spelling or instance namespace share an
+  id. Pinned by `content_id_is_independent_of_authored_graph_order` and the corpus-wide
+  `content_id_permutations.rs`.
+- It is **defined for a partial export too**: the 13 G36 fixtures whose export is partial each have
+  one. A host that wants "the id of a completely exportable model" calls both
+  `Engine::content_id()` and `ExportReport::complete()`.
+- **Load → export → load** of a complete export reproduces the canonical bytes exactly (the 34
+  complete exports of the swept corpus, `a_complete_export_reloads_to_byte_identical_canonical_bytes`).
+- It is **not** `LoadReport::model_id`, which keeps the authored root `@id` for diagnostics: the
+  exporter replaces that root with a synthetic URN, and resumed parameter edits move the content id
+  without moving `model_id`. It is not a signature either; authenticity stays the host's.
 
 ## The import side
 

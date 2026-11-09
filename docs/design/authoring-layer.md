@@ -310,10 +310,11 @@ escapes, the shortest round-trip number spelling, and relation lists always writ
 
 **Determinism tests.** Emitting one model twice yields identical bytes. Each permutation class of
 the model (block order, port-target order, boundary order, sequence parameter order) is applied in
-turn and the load → export content id is compared with what the ordering contract says for that
-surface: block and boundary order move it; direct target permutations move export bytes but leave
-executable compatibility unchanged; sequence-parameter order is normalized by Rule 5, so the loaded
-model is identical. The [emitter test drivers](../cxf-composite-subset.md#testing-your-emitter)
+turn and checked against what the ordering contract says for that surface: no permutation moves
+the canonical content id (`Engine::content_id`, GitHub #470), which names the loaded graph by name;
+block and boundary order still move export bytes and dense ids; direct target permutations move
+export bytes but leave executable compatibility unchanged; sequence-parameter order is normalized
+by Rule 5, so the loaded model is identical. The [emitter test drivers](../cxf-composite-subset.md#testing-your-emitter)
 (resolver-layer and full-pipeline composite-contract drivers) run over emitter output, every emitted
 golden must load warning-free, and the emitted goldens are checked in and compared bit for bit.
 
@@ -327,7 +328,7 @@ with `clap` (derive) for consistent `--help`, suggestions and shell completions 
 | `oce fmt <file> [--check] [--to text\|wire]` | Parse, then print canonically. `--check` prints nothing and fails if the file is not canonical. `--to` converts between the forms. |
 | `oce validate <file> [--author-only]` | Both validator stages; `--author-only` skips the engine load. |
 | `oce emit <file> [-o <out>] [--namespace <iri>]` | Full validation, then the CXF bytes; refuses to write anything on an error finding. |
-| `oce check <file>` | `validate`, then the throwaway load's report: input definitions, outputs, block count and the export content id. |
+| `oce check <file>` | `validate`, then the throwaway load's report: input definitions, outputs, block count and the canonical content id (`Engine::content_id`). |
 
 `.oce` files are text, `.json` files are wire; `--from text|wire` overrides and is required on
 stdin (`-`). Every command takes `--format human|json`. The JSON report is one closed object
@@ -396,8 +397,11 @@ unit suffixes keep their spelling (decision 12); the emitter never sorts; connec
 authored order; IRIs are `{namespace}{sequence}.{local}` with default `urn:oce:author:` and an
 override; the emitter owns a canonical writer and does not mimic another generator's indentation.
 Rejected: a canonical sort in `fmt` or the emitter (loses intent, and every reorder becomes a
-`BlockId` and schedule tie-break change); a namespace derived from kind and name. Why: the content
-id is order-bearing, and a namespace must never derive from a host path or a UUID.
+`BlockId` and schedule tie-break change); a namespace derived from kind and name. Why: authored
+order still assigns `BlockId` and schedule tie-breaks, and a namespace must never derive from a host
+path or a UUID. *Amended 2026-11-09 (GitHub #470):* the original rationale also said "the content
+id is order-bearing"; the canonical content id ([content-id note](content-id.md)) ignores order and
+namespace, so that reason is superseded. The decision stands on the `BlockId` reason.
 
 **7. Catalog gaps: a separate pre-M2 engine issue (#440).** Port-name synthesis as a pure function
 over a constructed block, descriptions and a settable-versus-derived flag, exposed through the
@@ -469,7 +473,7 @@ notes an agent reads, not in a silent emitter default.
 **17. Relation lists are always arrays.** `hasInput`, `hasOutput`, `hasParameter`,
 `containsBlock` and `isConnectedTo` are written as arrays even with one entry. The singleton
 spelling is normalized on import, and one shape keeps the writer small. Byte equality with
-committed library CXF is not a goal; the gate compares content ids after load and export.
+committed library CXF is not a goal; the gate compares canonical content ids after load.
 
 **18. The #440 surface reaches `oce-author` through `oce-api`.** A leverage crate cannot
 call `oce_blocks`, so the facade exposes resolved ports for a class and an `oce_api::ParamTable`,
@@ -511,9 +515,11 @@ without moving them.
   architecture amendment taking effect; (5) the importer (library CXF and the prototype's v0 JSON
   into the model) and vocabulary v1, each with its own note. Adding a leverage crate changes
   `Cargo.lock`, so those PRs run the determinism lane as well.
-- **M2 runs in parallel with M3.** M3 owns the content id, the registry and `oce-diff`. If M3
-  replaces today's order-bearing `content_id_complete()`, gate item 1's comparison moves with it;
-  because the emitter's order is a function of the model, the gate holds under either definition.
+- **M2 runs in parallel with M3.** M3 owns the content id, the registry and `oce-diff`. M3 replaced
+  the order-bearing `content_id_complete()` with `Engine::content_id` (GitHub #470), so gate item
+  1 compares canonical ids: the canonical id of the emitter's output equals the committed CXF's.
+  The namespace is free (the default `urn:oce:author:` matches the library's `http://example.org#`);
+  the sequence name must match, because it is inside every name.
   M3 also gives `extends` its resolution and diff. Four library rules are known to differ in node
   order from the emitter's layout; library bundle v2 regenerates them with the emitter, or the gate
   compares loaded models for them.
@@ -542,8 +548,8 @@ without moving them.
   the permutation-class tests; every emitted golden loads warning-free; the composite-contract
   drivers over emitter output; the default namespace and an override both load; a document at
   `MAX_CXF_BYTES` is accepted and one byte over is refused before load.
-- **Library round trip (gate item 1).** Every library rule imports into the model, emits, and its
-  load → export content id equals that of its committed CXF.
+- **Library round trip (gate item 1).** Every library rule imports into the model, emits, and the
+  canonical content id of the emitter's output equals that of its committed CXF.
 - **CLI.** Golden JSON reports for each command and exit-code tests for each outcome class.
 - **§7.17 seam.** Filling and mutating every `SemanticPoint` field leaves emitted bytes unchanged
   except `unit`, and leaves the loaded executable identical.
