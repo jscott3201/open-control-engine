@@ -18,7 +18,7 @@ pub(super) fn subject_of(c: &Connector) -> Arc<str> {
 /// (connector subjects first), then by `DiagCode` string, then message. Non-connector subjects sort
 /// after all connectors (`u32::MAX`) by their raw subject string — total and panic-free.
 pub(super) fn finalize_diags(
-    mut diags: Vec<Diagnostic>,
+    diags: Vec<Diagnostic>,
     conn_of_iri: &HashMap<&str, ConnectorId>,
 ) -> Vec<Diagnostic> {
     // Resolve a subject IRI to its `ConnectorId.0`: either via a real source IRI (in `conn_of_iri`)
@@ -37,7 +37,24 @@ pub(super) fn finalize_diags(
             })
             .unwrap_or(u32::MAX)
     };
-    diags.sort_by(|a, b| {
+    // Each distinct subject allocation is keyed once: a long subject shared by a whole fan-out's
+    // diagnostics would otherwise be hashed on every comparison (GitHub issue #480). The memo is
+    // keyed by allocation address while every subject is alive, so it only ever answers what
+    // `key_cid` would; the sort order is unchanged.
+    let mut keys_by_allocation: HashMap<*const u8, u32> = HashMap::new();
+    let mut keyed: Vec<(u32, Diagnostic)> = diags
+        .into_iter()
+        .map(|diagnostic| {
+            let key = match &diagnostic.subject {
+                Some(subject) => *keys_by_allocation
+                    .entry(Arc::as_ptr(subject).cast::<u8>())
+                    .or_insert_with(|| key_cid(&diagnostic)),
+                None => key_cid(&diagnostic),
+            };
+            (key, diagnostic)
+        })
+        .collect();
+    keyed.sort_by(|(a_key, a), (b_key, b)| {
         if matches!((&a.subject, &b.subject), (Some(a), Some(b)) if Arc::ptr_eq(a, b)) {
             return a
                 .code
@@ -45,11 +62,18 @@ pub(super) fn finalize_diags(
                 .cmp(b.code.as_str())
                 .then_with(|| a.message.cmp(&b.message));
         }
-        key_cid(a)
-            .cmp(&key_cid(b))
+        a_key
+            .cmp(b_key)
             .then_with(|| a.subject.as_deref().cmp(&b.subject.as_deref()))
             .then_with(|| a.code.as_str().cmp(b.code.as_str()))
             .then_with(|| a.message.cmp(&b.message))
     });
-    diags
+    keyed
+        .into_iter()
+        .map(|(_, diagnostic)| diagnostic)
+        .collect()
 }
+
+#[cfg(test)]
+#[path = "diags_tests.rs"]
+mod tests;

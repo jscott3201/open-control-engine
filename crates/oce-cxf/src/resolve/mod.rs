@@ -512,8 +512,13 @@ pub(crate) fn resolve(
     // Boundary nodes never enter Step 6, so derive their types separately in deterministic graph
     // order. Keep failed derivations as `None`: the helper has already diagnosed the declaration,
     // and the elision arms must not add a placeholder-based TypeMismatch.
-    let boundary_types =
-        pass_through::derive_boundary_types(doc, &boundary_in, &boundary_out, &mut diags);
+    let boundary_types = pass_through::derive_boundary_types(
+        doc,
+        lowered.graph_edge_groups(),
+        &boundary_in,
+        &boundary_out,
+        &mut diags,
+    );
     let connector_dirs: Vec<Dir> = connectors.iter().map(|c| c.dir).collect();
     let connections::CollectedConnections {
         connections,

@@ -64,6 +64,12 @@ fn byte_equal_iris_share_one_id_whatever_their_allocation() {
     // A memo miss after another source still answers by content, never by the stale memo.
     assert_eq!(table.intern_source(&other), EndpointId(1));
     assert_eq!(table.intern_source(&first), id);
+    // The target memo answers the same way.
+    assert_eq!(table.intern_target(&first), id);
+    assert_eq!(table.intern_target(&first), id);
+    assert_eq!(table.intern_target(&second), id);
+    assert_eq!(table.intern_target(&other), EndpointId(1));
+    assert_eq!(table.intern_target(&first), id);
 }
 
 #[test]
@@ -213,4 +219,50 @@ fn shared_and_separate_source_allocations_collect_identically() {
         assert!(shared.contains(expected), "missing {expected}: {shared}");
     }
     assert_eq!(shared.matches("not found").count(), 3, "{shared}");
+}
+
+/// The same edge list built with one shared allocation per repeated target (as lowering hands a
+/// swapped fan-out over) and with a separate allocation per edge collects byte-identical output:
+/// the target memo never decides a result (GitHub issue #480).
+#[test]
+fn shared_and_separate_target_allocations_collect_identically() {
+    let fixture = Fixture::new();
+    let [missing, other] = ["target", "other"]
+        .map(|name| Arc::<str>::from(format!("urn:missing:{name}:{}", "x".repeat(4096))));
+    let shape: Vec<(&str, Arc<str>)> = vec![
+        ("urn:top:u", Arc::clone(&missing)),
+        ("urn:top:u", Arc::clone(&missing)),
+        ("urn:top:u", Arc::from("urn:child:u")),
+        ("urn:top:u", Arc::clone(&missing)),
+        ("urn:child:u", Arc::clone(&other)),
+        ("urn:child:u", Arc::clone(&other)),
+        ("urn:top:u", Arc::from("urn:top:y")),
+        ("urn:top:u", Arc::from("urn:top:y")),
+    ];
+    let shared: Vec<(&str, &str)> = shape
+        .iter()
+        .map(|(source, target)| (*source, &**target))
+        .collect();
+    assert!(
+        std::ptr::eq(shared[0].1, shared[1].1),
+        "a run shares its target"
+    );
+    let shared = collect_rendered(&fixture, &shared);
+
+    let owned: Vec<(&str, String)> = shape
+        .iter()
+        .map(|(source, target)| (*source, target.to_string()))
+        .collect();
+    let separate: Vec<(&str, &str)> = owned
+        .iter()
+        .map(|(source, target)| (*source, target.as_str()))
+        .collect();
+    assert!(
+        !std::ptr::eq(separate[0].1, separate[1].1),
+        "each edge owns its target"
+    );
+    let separate = collect_rendered(&fixture, &separate);
+
+    assert_eq!(shared, separate);
+    assert_eq!(shared.matches("not found").count(), 2, "{shared}");
 }

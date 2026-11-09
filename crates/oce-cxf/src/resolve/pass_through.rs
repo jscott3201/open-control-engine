@@ -12,25 +12,36 @@ use super::attrs::connector_attrs;
 use super::value_types::{first_type, term_of, try_derive_value_type};
 
 /// Derive boundary types, retaining `String` only for endpoints of a native pass-through edge.
-pub(super) fn derive_boundary_types<'a>(
+///
+/// `edge_groups` is the lowered `@graph` edge list, one group per source node. A source is
+/// classified once per group and a target only when its source is a boundary port, with the
+/// previous target skipped when the next one is the same shared allocation, so a long
+/// IRI repeated across a fan-out is hashed once, not once per edge (GitHub issue #480).
+pub(super) fn derive_boundary_types<'a, 'e>(
     doc: &'a CxfDocument,
+    edge_groups: impl Iterator<Item = (&'e str, &'e [Arc<str>])>,
     boundary_in: &HashSet<&str>,
     boundary_out: &HashSet<&str>,
     diags: &mut Vec<Diagnostic>,
 ) -> HashMap<&'a str, Option<ValueType>> {
-    let mut pass_endpoints = HashSet::new();
-    for node in &doc.graph {
-        let source = node.id.as_str();
-        for target in node
-            .is_connected_to
-            .iter()
-            .map(|reference| reference.id.as_str())
-        {
-            if (boundary_in.contains(source) && boundary_out.contains(target))
-                || (boundary_out.contains(source) && boundary_in.contains(target))
+    let mut pass_endpoints: HashSet<&str> = HashSet::new();
+    for (source, targets) in edge_groups {
+        let source_in = boundary_in.contains(source);
+        let source_out = boundary_out.contains(source);
+        if !source_in && !source_out {
+            continue;
+        }
+        let mut previous: Option<&Arc<str>> = None;
+        for target in targets {
+            if previous.is_some_and(|last| Arc::ptr_eq(last, target)) {
+                continue;
+            }
+            previous = Some(target);
+            if (source_in && boundary_out.contains(&**target))
+                || (source_out && boundary_in.contains(&**target))
             {
                 pass_endpoints.insert(source);
-                pass_endpoints.insert(target);
+                pass_endpoints.insert(&**target);
             }
         }
     }
@@ -132,3 +143,7 @@ pub(super) fn materialize(
         });
     }
 }
+
+#[cfg(test)]
+#[path = "pass_through_tests.rs"]
+mod tests;
