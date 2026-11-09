@@ -39,9 +39,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic, has_errors};
-use oce_model::{
-    BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, ModelGraph, ParamTable,
-};
+use oce_model::{BlockId, BlockInstance, Connector, ConnectorId, Dir, ModelGraph, ParamTable};
 
 use crate::dto::{CxfDocument, Node};
 use crate::{CxfError, bridge};
@@ -55,7 +53,9 @@ mod composite_orientation;
 mod composite_rules;
 #[cfg(test)]
 mod composite_rules_tests;
+mod connection_endpoints;
 mod connection_orientation;
+mod connections;
 mod declaration_scope;
 #[cfg(test)]
 mod declaration_scope_tests;
@@ -75,7 +75,7 @@ pub use report::ValidationReport;
 
 use attrs::connector_attrs;
 use composite::lower;
-use connection_orientation::orient_edge;
+use connection_endpoints::EndpointLookups;
 use diags::{finalize_diags, subject_of};
 use instance_params::{Inst, ground_instance_params};
 use specialize::specialize;
@@ -508,246 +508,35 @@ pub(crate) fn resolve(
 
     // --- Step 9: collect connections with boundary elision (authored source @graph order followed
     // by node-less derived sources in block-2 order; target array order within each source).
-    // Mutates connectors[].iri for the elided boundary-input child.
-    let mut connections: Vec<Connection> = Vec::new();
-    let mut external_inputs: Vec<ConnectorId> = Vec::new();
-    let mut boundary_input_assignments = boundary_inputs::AssignmentTracker::default();
-    let mut pass_through_pairs: Vec<(String, String)> = Vec::new();
-    let mut seen_pass_through_pairs: HashSet<(String, String)> = HashSet::new();
-    let mut boundary_output_drivers: HashMap<String, HashSet<String>> = HashMap::new();
-    let mut boundary_output_sources: HashMap<String, ConnectorId> = HashMap::new();
+    // Mutates connectors[].iri for the elided boundary-input child. See `connections`.
     // Boundary nodes never enter Step 6, so derive their types separately in deterministic graph
     // order. Keep failed derivations as `None`: the helper has already diagnosed the declaration,
     // and the elision arms must not add a placeholder-based TypeMismatch.
     let boundary_types =
         pass_through::derive_boundary_types(doc, &boundary_in, &boundary_out, &mut diags);
-    let mut inactive_connection_sources = HashSet::new();
-    let mut reported_missing_endpoints = HashSet::new();
-    for (source, target) in lowered.connection_edges() {
-        if specialization.is_inactive(source) {
-            if inactive_connection_sources.insert(source) {
-                diags.push(
-                    Diagnostic::error(
-                        DiagCode::InactiveConditionalNode,
-                        "inactive conditional node still carries active connections",
-                    )
-                    .with_subject(source.to_owned()),
-                );
-            }
-            continue;
-        }
-        if specialization.is_inactive(target) {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::InactiveConditionalNode,
-                    "connection targets an inactive conditional node",
-                )
-                .with_subject(target.to_owned()),
-            );
-            continue;
-        }
-        // Both endpoints have now been screened for inactivity in their authored roles; the
-        // orientation swap below only relabels which is the driver.
-        let (source, target) = orient_edge(
-            source,
-            target,
-            &boundary_in,
-            &boundary_out,
-            &conn_of_iri,
-            &connectors,
-        );
-        if boundary_in.contains(source) && boundary_in.contains(target) {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::DirectionMismatch,
-                    "connection joins two boundary inputs",
-                )
-                .with_subject(target.to_owned()),
-            );
-            continue;
-        }
-        if boundary_out.contains(source) && boundary_out.contains(target) {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::DirectionMismatch,
-                    "connection joins two boundary outputs",
-                )
-                .with_subject(target.to_owned()),
-            );
-            continue;
-        }
-        if boundary_in.contains(source) && boundary_out.contains(target) {
-            let source_node = by_id.get(source).copied();
-            let target_node = by_id.get(target).copied();
-            let array_endpoint = source_node
-                .is_some_and(|node| node.is_array == Some(true) || node.size_dims.is_some())
-                || target_node
-                    .is_some_and(|node| node.is_array == Some(true) || node.size_dims.is_some());
-            if array_endpoint {
-                diags.push(
-                    Diagnostic::error(
-                        DiagCode::NonSubsetConstruct,
-                        "array boundary pass-through endpoints are unsupported",
-                    )
-                    .with_subject(target.to_owned()),
-                );
-                continue;
-            }
-            if let (Some(source_type), Some(target_type)) = (
-                boundary_types.get(source).copied().flatten(),
-                boundary_types.get(target).copied().flatten(),
-            ) && source_type != target_type
-            {
-                diags.push(
-                    Diagnostic::error(
-                        DiagCode::TypeMismatch,
-                        format!(
-                            "connected types differ: {:?} → {:?}",
-                            source_type, target_type
-                        ),
-                    )
-                    .with_subject(target.to_owned()),
-                );
-                continue;
-            }
-            let pair = (source.to_owned(), target.to_owned());
-            if seen_pass_through_pairs.insert(pair.clone()) {
-                boundary_output_drivers
-                    .entry(target.to_owned())
-                    .or_default()
-                    .insert(format!("boundary-input:{source}"));
-                pass_through_pairs.push(pair);
-            }
-            continue;
-        }
-        if boundary_in.contains(source) {
-            // boundary input → child input: elide; record external + attach boundary IRI (AD-2).
-            match conn_of_iri.get(target).copied() {
-                Some(to) if connectors[to.0 as usize].dir != Dir::In => {
-                    // A composite boundary INPUT may only drive a child INPUT — `external_inputs`
-                    // are inputs by contract (oce-model). Driving an output is a direction error,
-                    // and this elision path bypasses Step 10, so it must be checked here.
-                    diags.push(
-                        Diagnostic::error(
-                            DiagCode::DirectionMismatch,
-                            "boundary input drives a non-input connector",
-                        )
-                        .with_subject(target.to_owned()),
-                    );
-                }
-                Some(to) => {
-                    if !boundary_input_assignments.record(to, source, target) {
-                        continue;
-                    }
-                    // This elision path bypasses Step 10, so it must also compare the boundary
-                    // input's type with the child input's type here.
-                    if let Some(boundary_type) = boundary_types.get(source).copied().flatten() {
-                        let child = &connectors[to.0 as usize];
-                        if boundary_type != child.value_type {
-                            diags.push(
-                                Diagnostic::error(
-                                    DiagCode::TypeMismatch,
-                                    format!(
-                                        "connected types differ: {:?} → {:?}",
-                                        boundary_type, child.value_type
-                                    ),
-                                )
-                                .with_subject(target.to_owned()),
-                            );
-                        }
-                    }
-                    if !external_inputs.contains(&to) {
-                        external_inputs.push(to);
-                    }
-                    connectors[to.0 as usize].iri = Some(Arc::from(source));
-                }
-                None if reported_missing_endpoints.insert(target) => diags.push(
-                    Diagnostic::error(
-                        DiagCode::UnresolvedReference,
-                        "boundary-input target not found",
-                    )
-                    .with_subject(target.to_owned()),
-                ),
-                None => {}
-            }
-            continue;
-        }
-        if boundary_out.contains(target) {
-            // child output → boundary output: elide (the child output IS the model output).
-            // The driving end MUST be checked here for the same reason the boundary-input arm
-            // checks its target: this path `continue`s past Step 10, so nothing downstream ever
-            // looks at `source`. Without it, `<boundary output> isConnectedTo <anything>` — a
-            // child input, a parameter node, or an `@id` in no node at all — elides to silence.
-            match conn_of_iri.get(source).copied() {
-                Some(from) if connectors[from.0 as usize].dir != Dir::Out => diags.push(
-                    Diagnostic::error(
-                        DiagCode::DirectionMismatch,
-                        "boundary output is driven by a non-output connector",
-                    )
-                    .with_subject(source.to_owned()),
-                ),
-                Some(from) => {
-                    if let Some(boundary_type) = boundary_types.get(target).copied().flatten() {
-                        let child = &connectors[from.0 as usize];
-                        if child.value_type != boundary_type {
-                            diags.push(
-                                Diagnostic::error(
-                                    DiagCode::TypeMismatch,
-                                    format!(
-                                        "connected types differ: {:?} → {:?}",
-                                        child.value_type, boundary_type
-                                    ),
-                                )
-                                .with_subject(source.to_owned()),
-                            );
-                        }
-                    }
-                    boundary_output_drivers
-                        .entry(target.to_owned())
-                        .or_default()
-                        .insert(format!("connector:{}", from.0));
-                    boundary_output_sources
-                        .entry(target.to_owned())
-                        .or_insert(from);
-                }
-                None if reported_missing_endpoints.insert(source) => diags.push(
-                    Diagnostic::error(
-                        DiagCode::UnresolvedReference,
-                        "boundary-output source not found",
-                    )
-                    .with_subject(source.to_owned()),
-                ),
-                None => {}
-            }
-            continue;
-        }
-        match (
-            conn_of_iri.get(source).copied(),
-            conn_of_iri.get(target).copied(),
-        ) {
-            (Some(from), Some(to)) => connections.push(Connection { from, to }),
-            (from, to) => {
-                if from.is_none() && reported_missing_endpoints.insert(source) {
-                    diags.push(
-                        Diagnostic::error(
-                            DiagCode::UnresolvedReference,
-                            "connection source not found",
-                        )
-                        .with_subject(source.to_owned()),
-                    );
-                }
-                if to.is_none() && reported_missing_endpoints.insert(target) {
-                    diags.push(
-                        Diagnostic::error(
-                            DiagCode::UnresolvedReference,
-                            "connection target not found",
-                        )
-                        .with_subject(target.to_owned()),
-                    );
-                }
-            }
-        }
-    }
+    let connector_dirs: Vec<Dir> = connectors.iter().map(|c| c.dir).collect();
+    let connections::CollectedConnections {
+        connections,
+        mut external_inputs,
+        boundary_input_assignments,
+        mut pass_through_pairs,
+        boundary_output_drivers,
+        boundary_output_sources,
+        boundary_inputs_read,
+    } = connections::collect(
+        lowered.connection_edges(),
+        EndpointLookups {
+            specialization: &specialization,
+            boundary_in: &boundary_in,
+            boundary_out: &boundary_out,
+            conn_of_iri: &conn_of_iri,
+            connector_dirs: &connector_dirs,
+            by_id: &by_id,
+            boundary_types: &boundary_types,
+        },
+        &mut connectors,
+        &mut diags,
+    );
 
     boundary_input_assignments.emit_diagnostics(&connections, &connectors, &mut diags);
 
@@ -816,7 +605,7 @@ pub(crate) fn resolve(
         &boundary_out,
         &by_id,
         &role_aliases,
-        lowered.connection_edges(),
+        &boundary_inputs_read,
         &mut diags,
     );
     // `ConnectorId` is not a tie-break here, it is the whole discriminator, and calling it a
