@@ -305,7 +305,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   docs), the TSV mapping table for the library re-stamp, and two worked examples with exact byte
   dumps and ids (the second shows that binding a default moves the id). The architect review's
   rulings are recorded in the note. It is registered in `docs/README.md` and the book.
-- **Design note for the `oce-author` importer** (GitHub #PRNUM, issue #483).
+- **Design note for the `oce-author` importer** (GitHub #484, issue #483).
   `docs/design/importer.md` fixes, before the importer PR, how flat library CXF and the frozen
   prototype's v0 graph JSON enter the authoring model, and proposes the three model changes gate
   item 1 waits on: sequence parameters of an enumeration type (`"type": "SimpleController"`,
