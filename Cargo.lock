@@ -407,7 +407,7 @@ dependencies = [
 
 [[package]]
 name = "oce-vocab"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "oce-api",
  "oce-bless",
