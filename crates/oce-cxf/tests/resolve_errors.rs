@@ -57,8 +57,11 @@ fn node_mut<'a>(doc: &'a mut Value, suffix: &str) -> &'a mut Value {
         .unwrap_or_else(|| panic!("no @graph node ending in {suffix:?}"))
 }
 
-/// Add a composite boundary input that drives `M.c2.u`.
+/// Add a composite boundary input that drives `M.c2.u`, removing the BASE output-to-input edge so
+/// the boundary input is `M.c2.u`'s only driver (both drivers at once is the mixed double-driver
+/// refusal, issue #472, not the property any caller here tests).
 fn add_boundary_input(doc: &mut Value, datatype: &str) {
+    remove_internal_input_drive(doc);
     node_mut(doc, "#M")["S231:hasInput"] = json!({ "@id": "http://example.org#M.boundaryInput" });
     doc["@graph"].as_array_mut().unwrap().push(json!({
         "@id": "http://example.org#M.boundaryInput",
@@ -247,7 +250,6 @@ fn type_mismatched_connection_is_rejected() {
 #[test]
 fn real_boundary_input_driving_boolean_child_input_is_rejected() {
     let mut doc = base();
-    remove_internal_input_drive(&mut doc);
     let child = node_mut(&mut doc, "M.c2.u");
     child["@type"] = json!("S231:BooleanInput");
     child["S231:isOfDataType"] = json!({ "@id": "S231:Boolean" });
@@ -302,7 +304,6 @@ fn real_child_output_driving_integer_boundary_output_is_rejected() {
 #[test]
 fn enum_boundary_input_driving_integer_child_input_is_rejected() {
     let mut doc = base();
-    remove_internal_input_drive(&mut doc);
     let child = node_mut(&mut doc, "M.c2.u");
     child["@type"] = json!("S231:IntegerInput");
     child["S231:isOfDataType"] = json!({ "@id": "S231:Integer" });
@@ -324,7 +325,6 @@ fn enum_boundary_input_driving_integer_child_input_is_rejected() {
 #[test]
 fn different_enum_classes_across_boundary_elision_are_rejected() {
     let mut doc = base();
-    remove_internal_input_drive(&mut doc);
     let child = node_mut(&mut doc, "M.c2.u");
     child["@type"] = json!("S231:Input");
     child["S231:isOfDataType"] =

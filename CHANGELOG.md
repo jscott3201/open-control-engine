@@ -113,6 +113,36 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `every_constructor_survives_hostile_parameter_tables` in `docs/product-contract.md` moves to
   where that test now starts. `docs/cdl-coverage.md` states the naming contract.
 
+### CXF import and export
+
+- **A block input driven by both a block output and a root boundary input is refused**
+  (GitHub #477, issue #472). CDL §7.10 gives every input exactly one driver, and the resolver
+  refused two of the three double-driver shapes (two block outputs; two boundary inputs) but
+  loaded the mixed one warning-free: boundary-driven assignments were counted by the
+  boundary-input elision pass and wire in-degree by the later single-assignment check, and that
+  check deliberately accepted an `external_inputs` connector with one wire. At run time the wire
+  won (`build_driver_of` points the input at the driving output's slot) and the frame value the
+  host staged for the boundary input was discarded without a trace. The boundary-input pass now
+  counts both kinds of driver and refuses the mixed shape with `single-assignment` at the input's
+  authored IRI, message `input is driven by a block output and a boundary input`; the wire-only
+  check leaves every frame-driven input to it. A wire from an input connector is not counted (it
+  is the existing direction refusal). The exporter refuses the same shape on a hand-built graph
+  (`ExportUnsupported`, owning block named) instead of emitting bytes that no longer re-import.
+  New rejected-corpus fixtures pin all three shapes and the authoring note's `econ_enable`
+  example with `TOut -> hys.u` added, through `import_cxf`, `Engine::load_cxf` and
+  `load_cxf_with_receipt`, with hostile spellings (reversed edges, a repeated boundary target,
+  a nested pass-through composite on either driver, a parameter wired to the input) and a
+  sweep proving every one of the 47 G36 fixture documents gives each input exactly one driver.
+  No golden moved: the 46 fixture goldens, the 422 provenance goldens, the blob goldens and
+  `class_signatures.tsv` are byte-identical. The vendored-corpus characterization moved
+  deliberately: `single-assignment` 57 → 68, eleven mixed inputs in three documents
+  (`Limits/SeparateWithDP`, `SetPoints/FreezeProtection`, `Generic/AirEconomizerHighLimits`)
+  that were already refused for unresolvable conditional guards, so no document changed outcome
+  (`fixture_corpus_import.txt` re-hashes those three error lines, and gains four new lines for
+  the new fixtures, corpus 214 → 218). Three existing tests that
+  had carried an unintended mixed driver were corrected, and the export-side test that pinned
+  the mixed shape as round-trippable now pins its refusal.
+
 ### Leverage
 
 - **`oce-replay`, the first leverage crate** (GitHub #462, issue #445). `crates/leverage/oce-replay`

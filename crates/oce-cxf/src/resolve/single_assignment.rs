@@ -7,7 +7,15 @@ use oce_model::{Connection, Connector, ConnectorId, Dir};
 
 use super::diags::subject_of;
 
-/// Diagnose input connectors whose resolved in-degree is not exactly one.
+/// Diagnose input connectors whose resolved wire in-degree is not exactly one.
+///
+/// A connector in `external_inputs` is driven by the frame, so its wire in-degree must be zero:
+/// any wire into it is a second driver. Every such connector a root boundary input reaches was
+/// already refused by `boundary_inputs::AssignmentTracker::emit_diagnostics` (the mixed
+/// block-output-and-boundary-input shape), which names the authored input IRI — this check would
+/// name the boundary IRI the elision copied onto the connector — so it is skipped here. The only
+/// other members, the pass-through inputs minted after Step 9, are fresh connectors no wire can
+/// reach.
 pub(super) fn check(
     connectors: &[Connector],
     connections: &[Connection],
@@ -22,13 +30,14 @@ pub(super) fn check(
         if connector.dir != Dir::In {
             continue;
         }
-        // Boundary inputs are elided into `external_inputs`. A connector that is both external
-        // and the target of one wire therefore remains valid; boundary membership is not folded
-        // into this wire count.
         let degree = in_degree.get(&connector.id).copied().unwrap_or(0);
+        if external_inputs.contains(&connector.id) {
+            // Frame-driven: in-degree 0 is the legal shape, and any wire was refused by the
+            // boundary-input pass with the authored subject (see the function docs).
+            continue;
+        }
         match degree {
             1 => {}
-            0 if external_inputs.contains(&connector.id) => {}
             0 => diags.push(
                 Diagnostic::error(
                     DiagCode::SingleAssignment,
@@ -46,3 +55,7 @@ pub(super) fn check(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "single_assignment_tests.rs"]
+mod tests;
