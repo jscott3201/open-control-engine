@@ -176,6 +176,7 @@ README_CHECKS=(
 OTHER_READMES=(
   .agents/gate.sh                                     # comments; it runs the two README checks
   .agents/revendor-upstream.sh                        # the vendored tree's README
+  crates/leverage/oce-vocab/tests/vocabulary/declared_units.rs  # the vendored tree's README
   crates/oce-cxf/tests/composite_contract_corpus.rs   # read_fixture: the composite corpus index
   crates/oce-cxf/tests/third_party_manifest/mod.rs    # the vendored tree's README
   scripts/ci/classify-changes.sh                      # classifies the path; opens nothing
