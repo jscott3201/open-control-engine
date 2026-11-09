@@ -115,6 +115,57 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
+- **`oce-replay`, the first leverage crate** (GitHub #462, issue #445). `crates/leverage/oce-replay`
+  implements the historical replay note (`docs/design/replay.md`, decisions 1 to 23) above the
+  facade, `publish = false`: an `InputMap` resolves source columns to engine input slots once (exact
+  path or unique `.`-boundary suffix; ambiguous, unknown, unmapped, doubled, mistyped and stale maps
+  are typed errors), and three sources lend rows by slot with `None` for a missing sample —
+  `ColumnarSource` (owned typed columns, NaN and cleared validity missing, seconds or epoch
+  nanoseconds), `CsvSource<R: Read>` (RFC 3339 instants with an explicit offset against a
+  header-only origin) and `StepSource` (change lists as signals). `TimeBase::Recorded` passes times
+  through bit for bit; `TimeBase::Grid { t0, step }` ticks at `t0 + k * step` by multiply with
+  zero-order hold, a sample current only for its tick interval. `MissingPolicy` (`Refuse` by
+  default, `HoldLast { max_age }` holding only observed samples, per-input `Fallback`, `SkipFrame`),
+  `OnRefusal` (`Stop` by default, `RecordAndContinue`) and `DuplicateTime` (`Refuse` by default,
+  `Allow`) are recorded frame by frame; `ReplayOptions::non_finite` defaults to `Refuse` and is set
+  on the owned engine and recorded. `Replay::advance(max_frames)` is a resumable cursor over
+  `Engine::execute_slots` (GitHub #459) and `finish` returns the engine. The `Trace` is columnar
+  with raw bits: one row per attempted frame with a status byte, outputs fixed by the first accepted
+  frame and checked every frame, a dense substitution mask, opt-in inputs and state snapshots,
+  sparse diagnostic and refusal tables, and `Trace::canonical_bytes()`; every limit of decision 19
+  is a typed error, accepted at the cap and refused one past.
+  As built, against the note's sketch (its new "As built" section lists them): column specs carry a
+  `ColumnKind` rather than a `ValueType`; `FrameSource` exposes `map_id`, `kind`, `origin` and
+  `ignored_columns` rather than `columns()`, and `&mut S` and `Box<S>` are sources; `TimeOrigin` is
+  a parsed struct; `StepSource::with_instants` adds evaluation instants with no input change;
+  `Replay::reserve` preallocates rows; `Trace::check_coverage` counts only executed rows;
+  `max_frames` with frames remaining is `ReplayError::TooManyFrames` and a grid whose ticks stop
+  advancing is `ReplayError::GridNotIncreasing`; a missing input that cannot be substituted refuses
+  the frame even when another is `SkipFrame`, and the mask records substitutions on skipped and
+  refused rows; a refusal stores a closed `EngineRefusal` class in the canonical bytes (the facade's
+  message stays in memory), and a `Run`-class refusal stops the run whatever `OnRefusal` says; Real
+  NaN from any source, custom ones included, is missing. Decision 21 as built: the facade has no
+  enum class-path lookup, so an Enum input records its source-declared class path as an unverified
+  label and the canonical bytes carry an Enum output's ordinal with an empty class path. Decision 22
+  as built: `CsvSource` tokenizes with `csv-core` (pinned `=0.1.13`, the allocation-free core of the
+  `csv` crate) so the column, cell and byte caps bound memory as the bytes arrive; the `csv`
+  crate's reader buffered a whole record first (a 100 MB header line of commas reached 3.2 GB in
+  review). `allocation-counter` is a new dev-dependency, for the census.
+  Evidence: all 46 G36 fixtures through the columnar and step sources equal the named facade path
+  bit for bit, and the controller's minute day equals its conformance golden
+  (`g36_traces/cooling_only_controller.csv`); four canonical-byte goldens; chunk sizes 1, 7 and N,
+  and a mid-run `reserve`, byte-identical; every policy pair with exact status, mask and refusal
+  rows; refusal atomicity against a run that never saw the frames; time, mapping, bounds, a custom
+  source, and a hostile CSV corpus including 64 and 100 MB floods refused at small peak memory;
+  trace bytes equal `rows × bytes_per_frame` for every fixture (the controller: 89 B a frame,
+  1,538,009 B for a day at 5 s); and an allocation census: nothing on any quiet frame after the
+  first, once the trace columns are reserved; the first frame allocates the output columns;
+  warning, refusal and snapshot frames allocate as documented. The leverage rule now allows
+  `oce-bless` as a dev-dependency only (authoring note decision 19): `scripts/ci/leverage-members.sh`
+  reads normal and build edges and dev edges separately, with fixtures for each. The workspace has
+  14 members (10 publishable, four private); `release.yml`'s comment and step name, its digest and
+  the validator's controls are re-pinned.
+
 - **`oce-author`: the authoring model, wire form, pinned schema and stage-1 validator** (GitHub
   #466, issue #463). `crates/leverage/oce-author` (`publish = false`, `oce-api` only) is M2's first
   crate, built to `docs/design/authoring-layer.md`. The model is one flat `Sequence` of sequence
@@ -152,9 +203,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   sign, a non-finite Real (reachable only through the Rust model) is written `null`, a String value
   the wire cannot carry is `parameter-out-of-range`, and an array element past the configured width
   (`k_3` on `nin = 2`) is not refused until the facade reports unread names (#467). The crate
-  relies on the leverage rule from GitHub #462 that allows `oce-bless` as a dev-dependency only. The workspace has 14
-  members (10 publishable, four private); `release.yml`'s comment and step name, its digest and the
-  validator's controls are re-pinned.
+  relies on the leverage rule from GitHub #462 that allows `oce-bless` as a dev-dependency only.
+  The workspace has 15 members (10 publishable, five private); `release.yml`'s comment and step
+  name, its digest and the validator's controls are re-pinned.
 
 ## 0.4.0
 

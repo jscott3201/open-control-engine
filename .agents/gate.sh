@@ -250,7 +250,7 @@ step 'leverage dependency-rule fixtures' bash scripts/ci/test-leverage-members.s
 # ── Leverage lane ────────────────────────────────────────────────────────────
 # crates/leverage/*: layout and the oce-api-only dependency rule, then fmt, clippy,
 # rustdoc, nextest and cargo-machete per member — the `leverage-lane` job's one
-# command. Prints "no leverage crates yet" while there are none. pr-gate.yml runs it
+# command (oce-replay is the first member; with none it prints "no leverage crates yet"). pr-gate.yml runs it
 # for every engine change too, so it runs in every mode.
 step 'leverage lane' bash scripts/ci/leverage-members.sh lane
 
