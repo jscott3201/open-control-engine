@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 //! `oce-author`: the authoring layer's library (authoring note `docs/design/authoring-layer.md`,
 //! GitHub issue #463).
 //!
@@ -15,8 +16,6 @@
 //! The emitter to CXF, the engine-side validation stage, the text form and the `oce` CLI are
 //! later items of the M2 milestone. The crate sits above the facade: it depends on `oce-api`
 //! only, never evaluates an expression and never loads an engine.
-
-#![forbid(unsafe_code)]
 
 mod builder;
 mod identifier;

@@ -7,19 +7,11 @@ use oce_author::{from_wire_str, to_wire_string, validate};
 
 use support::{compare_or_bless, econ_enable, every_element, fixture};
 
-/// The JSON block of the note's "Wire form" section, verbatim.
+/// The JSON block of the note's "Wire form" section, copied verbatim into
+/// `tests/fixtures/note/wire_example.json` (a test that read the note itself would put a docs file
+/// on the determinism lane's trigger list).
 fn note_wire_example() -> String {
-    let note = std::fs::read_to_string(
-        support::crate_dir().join("../../../docs/design/authoring-layer.md"),
-    )
-    .expect("read the authoring note");
-    let section = note
-        .split("## Wire form")
-        .nth(1)
-        .expect("the note has a Wire form section");
-    let start = section.find("```json\n").expect("a json block") + "```json\n".len();
-    let end = section[start..].find("```").expect("the block closes") + start;
-    section[start..end].to_owned()
+    std::fs::read_to_string(fixture("note/wire_example.json")).expect("read the note's example")
 }
 
 #[test]
