@@ -416,13 +416,20 @@ impl WireBoundary {
 /// so a malformed endpoint becomes a `malformed-connection` finding; a string without exactly one
 /// arrow cannot be split into endpoints at all and is refused here.
 fn connection_of(index: usize, text: String) -> Result<Connection, WireError> {
+    split_connection(&text).ok_or(WireError::MalformedConnection { index, text })
+}
+
+/// The model's connection parser: split `source -> target` at its one arrow, trimming spaces
+/// around each endpoint and keeping the parts unchecked. `None` without exactly one `->`. The
+/// wire form and the v0 graph importer share it.
+pub(crate) fn split_connection(text: &str) -> Option<Connection> {
     let mut parts = text.split("->");
     match (parts.next(), parts.next(), parts.next()) {
-        (Some(source), Some(target), None) => Ok(Connection::new(
+        (Some(source), Some(target), None) => Some(Connection::new(
             Endpoint::parse(source.trim_matches(' ')),
             Endpoint::parse(target.trim_matches(' ')),
         )),
-        _ => Err(WireError::MalformedConnection { index, text }),
+        _ => None,
     }
 }
 

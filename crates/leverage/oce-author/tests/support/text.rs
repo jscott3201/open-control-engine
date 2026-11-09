@@ -4,14 +4,15 @@
 use oce_author::{
     Annotations, Assignment, Block, Bound, Boundary, Connection, Endpoint, Identifier, Literal,
     MemberRef, ParamValue, ParameterType, ProvenanceId, Sequence, SequenceParameter, SignalType,
-    from_wire_str, import_cxf,
+    from_wire_str,
 };
 
 use super::cxf::corpus_fixture;
 use super::fixture;
 
-/// The corpus fixtures the minimal importer reads (as in `library_round_trip.rs`).
-pub const IMPORTED: &[&str] = &[
+/// The corpus fixtures the text bundles carry: four of the importer's
+/// [`super::cxf::IMPORTED`], each with a checked-in canonical text under `tests/fixtures/text/`.
+pub const CORPUS_BUNDLES: &[&str] = &[
     "cooling_only_system_requests",
     "generic_time_suppression",
     "multizone_vav_relief_fan_group",
@@ -37,9 +38,9 @@ pub fn bundles() -> Vec<(String, String)> {
             )
         })
         .collect();
-    for name in IMPORTED {
+    for name in CORPUS_BUNDLES {
         let bytes = std::fs::read(corpus_fixture(name)).expect("corpus fixture");
-        let model = import_cxf(&bytes).expect("imports");
+        let model = super::imported(&bytes);
         all.push(((*name).to_owned(), oce_author::to_wire_string(&model)));
     }
     all

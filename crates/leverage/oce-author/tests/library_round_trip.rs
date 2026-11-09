@@ -1,12 +1,14 @@
-//! Gate item 1 (authoring note; issue #464): every G36 corpus fixture the flat authoring dialect
-//! covers imports into the model, emits, loads warning-free and has the same identity as the
-//! committed fixture loaded directly; every other fixture is refused by the importer with a typed
-//! error, listed here with its reason.
+//! Gate item 1 (authoring note; importer note, "Test plan"; issues #464, #475 and #496): every
+//! G36 corpus fixture inside the M2 authoring subset imports into the model, emits, loads
+//! warning-free and has the same identity as the committed fixture loaded directly; every other
+//! fixture is refused by the importer with a typed error, listed with its kind.
 //!
-//! **Coverage.** Gate item 1 is not yet met: 4 of the 40 in-subset fixtures (6 are nested or
-//! conditional, out of the M2 subset); the 36 others wait on model decisions (GitHub #475).
-//! `multizone_vav_relief_fan_group` exports partially (63 deferrals), so it has no complete content
-//! id and is compared on its export bytes plus deferral codes ([`support::cxf::identity`]).
+//! **Coverage.** Gate item 1 is met: 31 of the 34 in-subset fixtures ([`support::cxf::IMPORTED`]).
+//! The other 15 ([`support::cxf::REFUSED`]) are refused under the fixed precedence: 12 are outside
+//! the M2 subset (4 nested composites, 7 conditional components, 1 expression value) and 3
+//! hand-written fixtures carry block-port bounds, which are not authorable in M2 (importer note,
+//! decision 8; GitHub #486). Identity is the canonical content id ([`support::cxf::identity`],
+//! GitHub #470), defined whether or not the export is partial.
 //!
 //! **Namespace.** The corpus names its nodes under `http://example.org#g36.source.` (or
 //! `http://example.org#g36.`), which ends in `.`; an emitter namespace must end in `#`, `/` or
@@ -15,25 +17,24 @@
 //! `urn:oce:library:{sequence}` — a textual substitution of the root prefix only, after which no
 //! occurrence of the corpus namespace may remain — and the test also proves that the re-stamp is
 //! the only difference: the committed fixture's own export, with the same substitution, equals the
-//! emitted document's export byte for byte. The re-stamp stays after the canonical content id
-//! lands: under the content-id note's naming rule (namespace stripped through the last `#`, `/` or
-//! `:`) the corpus keeps `g36.source.` inside its names, so only library bundle v2, regenerated
-//! from the authoring form, removes it.
+//! emitted document's export byte for byte, wherever block order agrees. The re-stamp stays until
+//! library bundle v2, regenerated from the authoring form, removes it (importer note, decision 14).
 //!
 //! **Node order (GitHub #458).** The canonical content id ignores order, but the export bytes do
-//! not. One flat fixture's `@graph` block
-//! order differs from its `containsBlock` order (`multizone_vav_outdoor_airflow_sumzone`), which
-//! the emitter's layout cannot reproduce, and four fixtures are nested composites the flat
-//! layout has no order for; all five are refused by the importer before order matters (see
-//! [`REFUSED`]). The trip-wire is `every_other_fixture_is_refused_with_its_reason`: the day the
-//! importer reads one of them, that test fails and the order question returns.
+//! not. One flat fixture's `@graph` block order differs from its `containsBlock` order
+//! (`multizone_vav_outdoor_airflow_sumzone`), which the emitter's layout cannot reproduce; it is
+//! compared on its identity like the others and its export bytes are left out ([`ORDER_DIFFERS`]).
 //! `node_order_alone_moves_the_sumzone_export_but_not_its_identity` pins the mismatch itself.
 
 mod support;
 
-use oce_author::{EmitOptions, ImportError, emit, import_cxf};
+use oce_api::Value;
+use oce_author::{
+    Bound, DroppedProperty, EmitOptions, ImportOptions, ParameterType, SignalType, emit, import_cxf,
+};
 
-use support::cxf::{corpus_fixture, export_text, identity, load_clean};
+use support::cxf::{IMPORTED, REFUSED, corpus_fixture, export_text, identity, load_clean};
+use support::imported;
 
 #[path = "../../../oce-api/tests/support/blob_corpus.rs"]
 mod blob_corpus;
@@ -41,144 +42,9 @@ mod blob_corpus;
 /// The namespace the round trip emits under.
 const LIBRARY_NAMESPACE: &str = "urn:oce:library:";
 
-/// The fixtures the importer reads, all of which must round-trip.
-const IMPORTED: &[&str] = &[
-    "cooling_only_system_requests",
-    "generic_time_suppression",
-    "multizone_vav_relief_fan_group",
-    "reheat_overrides",
-];
-
-/// Every other fixture, with the construct outside the authoring subset that refuses it (a
-/// substring of the `ImportError` display). The first refusal found is the one listed.
-const REFUSED: &[(&str, &str)] = &[
-    ("ahu_economizer", "`S231:max`"),
-    ("ahu_supply_air_temp_reset", "`S231:max`"),
-    ("cooling_only_active_air_flow", "a library enumeration"),
-    ("cooling_only_alarms", "a library enumeration"),
-    ("cooling_only_controller", "a nested or second composite"),
-    ("cooling_only_dampers", "not Real, Integer or Boolean"),
-    (
-        "generic_air_economizer_high_limits_ashrae_differential",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "generic_air_economizer_high_limits_ashrae_fixed_18",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "generic_air_economizer_high_limits_ashrae_fixed_21",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "generic_air_economizer_high_limits_ashrae_fixed_24",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "generic_air_economizer_high_limits_title24_differential_offset_0",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "generic_air_economizer_high_limits_title24_differential_offset_1",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "generic_air_economizer_high_limits_title24_differential_offset_2",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "generic_air_economizer_high_limits_title24_differential_offset_3",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "generic_air_economizer_high_limits_title24_fixed_21",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "generic_air_economizer_high_limits_title24_fixed_22",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "generic_air_economizer_high_limits_title24_fixed_23",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "generic_air_economizer_high_limits_title24_fixed_24",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21",
-        "a nested or second composite",
-    ),
-    ("multizone_vav_economizer_enable", "`S231:max`"),
-    (
-        "multizone_vav_economizer_limits_common",
-        "not Real, Integer or Boolean",
-    ),
-    ("multizone_vav_economizer_modulations_reliefs", "`S231:max`"),
-    (
-        "multizone_vav_economizer_modulations_return_fan_relief_damper",
-        "`S231:max`",
-    ),
-    (
-        "multizone_vav_economizer_modulations_return_fan",
-        "`S231:max`",
-    ),
-    (
-        "multizone_vav_freeze_protection",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "multizone_vav_outdoor_airflow_ahu",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "multizone_vav_outdoor_airflow_sumzone",
-        "a library enumeration",
-    ),
-    (
-        "multizone_vav_outdoor_airflow_title24_ahu",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "multizone_vav_outdoor_airflow_title24_sumzone",
-        "`S231:conditionalExpression`",
-    ),
-    (
-        "multizone_vav_plant_requests",
-        "not Real, Integer or Boolean",
-    ),
-    ("multizone_vav_relief_damper", "`S231:max`"),
-    ("multizone_vav_relief_fan", "`S231:max`"),
-    (
-        "multizone_vav_return_fan_airflow_tracking",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "multizone_vav_return_fan_direct_pressure",
-        "not Real, Integer or Boolean",
-    ),
-    ("multizone_vav_supply_fan", "a nested or second composite"),
-    (
-        "multizone_vav_supply_signals",
-        "not Real, Integer or Boolean",
-    ),
-    (
-        "multizone_vav_supply_temperature",
-        "a nested or second composite",
-    ),
-    ("thermal_zones_control_loops", "`S231:max`"),
-    ("thermal_zones_zone_states", "a library enumeration"),
-    (
-        "trim_and_respond_have_hol_false",
-        "`S231:conditionalExpression`",
-    ),
-    ("vav_single_zone", "`S231:max`"),
-    (
-        "ventilation_zones_ashrae62_1_setpoints",
-        "a library enumeration",
-    ),
-];
+/// The imported fixtures whose `@graph` block order differs from `containsBlock` order, so the
+/// emitter's export bytes cannot equal the committed fixture's (GitHub #458).
+const ORDER_DIFFERS: &[&str] = &["multizone_vav_outdoor_airflow_sumzone"];
 
 fn committed(name: &str) -> String {
     let path = corpus_fixture(name);
@@ -197,23 +63,39 @@ fn root_iri(text: &str) -> String {
 }
 
 #[test]
-fn the_tables_cover_the_corpus_exactly_once() {
+fn the_tables_partition_the_corpus() {
     let mut listed: Vec<&str> = IMPORTED
         .iter()
         .copied()
         .chain(REFUSED.iter().map(|(n, _)| *n))
         .collect();
     listed.sort_unstable();
+    let mut deduped = listed.clone();
+    deduped.dedup();
+    assert_eq!(listed, deduped, "a fixture is listed twice");
     let mut corpus = blob_corpus::FIXTURES.to_vec();
     corpus.sort_unstable();
     assert_eq!(listed, corpus);
+    assert_eq!((IMPORTED.len(), REFUSED.len()), (31, 15));
+    let count = |code: &str| REFUSED.iter().filter(|(_, c)| *c == code).count();
+    assert_eq!(
+        [
+            count("nested-composite"),
+            count("conditional-component"),
+            count("expression-value"),
+            count("port-attribute"),
+        ],
+        [4, 7, 1, 3]
+    );
+    // The M2 subset is the 34 fixtures that are not nested, conditional or expression-valued.
+    assert_eq!(IMPORTED.len() + count("port-attribute"), 34);
 }
 
 #[test]
 fn every_covered_fixture_round_trips_to_the_committed_identity() {
     for name in IMPORTED {
         let text = committed(name);
-        let sequence = import_cxf(text.as_bytes()).unwrap_or_else(|e| panic!("{name}: {e}"));
+        let sequence = imported(text.as_bytes());
         let root = root_iri(&text);
         let namespace = root
             .strip_suffix(sequence.name.as_str())
@@ -234,6 +116,9 @@ fn every_covered_fixture_round_trips_to_the_committed_identity() {
         assert_eq!(identity(&from_model), identity(&reference), "{name}");
         // The re-stamp is the only difference from the committed fixture loaded directly.
         let direct = load_clean(text.as_bytes());
+        if ORDER_DIFFERS.contains(name) {
+            continue;
+        }
         let direct_export = export_text(&direct).replace(&root, &restamped_root);
         assert!(!direct_export.contains(namespace), "{name}");
         assert_eq!(direct_export, export_text(&from_model), "{name}");
@@ -241,13 +126,11 @@ fn every_covered_fixture_round_trips_to_the_committed_identity() {
 }
 
 #[test]
-fn every_other_fixture_is_refused_with_its_reason() {
-    for (name, reason) in REFUSED {
-        match import_cxf(committed(name).as_bytes()) {
-            Err(error @ ImportError::Unsupported { .. }) => {
-                assert!(error.to_string().contains(reason), "{name}: {error}");
-            }
-            other => panic!("{name}: expected an unsupported construct, got {other:?}"),
+fn every_other_fixture_is_refused_with_its_kind() {
+    for (name, code) in REFUSED {
+        match import_cxf(committed(name).as_bytes(), &ImportOptions::new()) {
+            Err(error) => assert_eq!(error.code(), *code, "{name}: {error}"),
+            Ok(_) => panic!("{name}: expected `{code}`, but it imported"),
         }
     }
 }
@@ -255,10 +138,13 @@ fn every_other_fixture_is_refused_with_its_reason() {
 #[test]
 fn re_emitting_an_imported_document_is_byte_stable() {
     for name in IMPORTED {
-        let sequence = import_cxf(committed(name).as_bytes()).expect("import");
+        let sequence = imported(committed(name).as_bytes());
         let options = EmitOptions::new();
         let once = emit(&sequence, &options).expect("emit");
-        let again = import_cxf(&once).expect("re-import");
+        let again = import_cxf(&once, &ImportOptions::new()).expect("re-import");
+        // An emitted document drops nothing: no label, no root class, no parameter attribute.
+        assert!(again.report.is_empty(), "{name}: {:?}", again.report);
+        let again = again.sequence;
         assert_eq!(emit(&again, &options).expect("emit"), once, "{name}");
         // The model reads back whole; only connections regroup, by source node in the
         // emitter's layout (each source's targets keep their order).
@@ -279,6 +165,137 @@ fn re_emitting_an_imported_document_is_byte_stable() {
         };
         assert_eq!(spelled(&again), spelled(&sequence), "{name}");
     }
+}
+
+#[test]
+fn every_imported_input_bound_is_the_engines_bound_bit_for_bit() {
+    // The effective input domain is inside the content id (content-id note, decision 10): one ulp
+    // of drift between the importer's conversion and the loader's would move it.
+    let mut compared = 0usize;
+    for name in IMPORTED {
+        let text = committed(name);
+        let sequence = imported(text.as_bytes());
+        let engine = load_clean(text.as_bytes());
+        let definitions = engine.input_definitions().expect("definitions");
+        for input in &sequence.inputs {
+            if input.min.is_none() && input.max.is_none() {
+                continue;
+            }
+            let suffix = format!(".{}", input.name);
+            let loaded = definitions
+                .iter()
+                .find(|d| d.path.ends_with(&suffix))
+                .unwrap_or_else(|| panic!("{name}: no definition for {}", input.name));
+            for (declared, engine_bound) in [(input.min, &loaded.min), (input.max, &loaded.max)] {
+                let Some(declared) = declared else { continue };
+                let same = match (input.value_type, declared, engine_bound) {
+                    (SignalType::Real, Bound::Real(v), Some(Value::Real(e))) => {
+                        v.to_bits() == e.to_bits()
+                    }
+                    (SignalType::Integer, Bound::Integer(v), Some(Value::Integer(e))) => v == *e,
+                    _ => false,
+                };
+                assert!(
+                    same,
+                    "{name}.{}: {declared:?} vs {engine_bound:?}",
+                    input.name
+                );
+                compared += 1;
+            }
+        }
+    }
+    assert!(compared >= 20, "{compared} bounds compared");
+}
+
+#[test]
+fn the_package_typed_boundary_is_normalised_to_integer_and_reported() {
+    // Decision 21: `uOpeMod` is an `S231:IntegerInput` typed by the constant package
+    // `OperationModes`; the engine reads it as an Integer, so the importer does too.
+    let text = committed("multizone_vav_economizer_limits_common");
+    let read = import_cxf(text.as_bytes(), &ImportOptions::new()).expect("import");
+    let normalised: Vec<(&str, &str, SignalType)> = read
+        .report
+        .normalised
+        .iter()
+        .map(|n| (n.subject.as_str(), n.data_type.as_str(), n.to))
+        .collect();
+    assert_eq!(
+        normalised,
+        [(
+            "http://example.org#g36.source.multizone_vav_economizer_limits_common.uOpeMod",
+            "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes",
+            SignalType::Integer
+        )]
+    );
+    let input = read
+        .sequence
+        .inputs
+        .iter()
+        .find(|b| b.name.as_str() == "uOpeMod")
+        .expect("uOpeMod");
+    assert_eq!(input.value_type, SignalType::Integer);
+    let emitted =
+        String::from_utf8(emit(&read.sequence, &EmitOptions::new()).expect("emit")).expect("UTF-8");
+    let node = "{\n      \"@id\": \"urn:oce:author:multizone_vav_economizer_limits_common.uOpeMod\",\n      \"@type\": \"S231:IntegerInput\",\n      \"S231:isOfDataType\": {\n        \"@id\": \"S231:Integer\"\n      }";
+    assert!(emitted.contains(node), "{emitted}");
+    // The normalised boundary loads to the same identity as the package-typed one.
+    let restamped = text.replace("http://example.org#g36.source.", "urn:oce:author:");
+    assert_eq!(
+        identity(&load_clean(emitted.as_bytes())),
+        identity(&load_clean(restamped.as_bytes()))
+    );
+}
+
+#[test]
+fn an_unreferenced_enumeration_parameter_is_carried_and_emitted_as_the_corpus_writes_it() {
+    // `eneStd` is read by no leaf: it does not survive flattening, but it is what the author
+    // wrote, so the importer carries it with its enumeration type.
+    let text = committed("generic_air_economizer_high_limits_ashrae_differential");
+    let sequence = imported(text.as_bytes());
+    let param = sequence
+        .params
+        .iter()
+        .find(|p| p.name.as_str() == "eneStd")
+        .expect("eneStd");
+    assert_eq!(
+        param.value_type,
+        ParameterType::Enum("EnergyStandard".to_owned())
+    );
+    assert_eq!(param.value, support::member("EnergyStandard.ASHRAE90_1"));
+    let emitted = emit(&sequence, &EmitOptions::new()).expect("emit");
+    load_clean(&emitted);
+    let text = String::from_utf8(emitted).expect("UTF-8");
+    assert!(text.contains(
+        "\"S231:isOfDataType\": {\n        \"@id\": \"http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.EnergyStandard\"\n      },\n      \"S231:value\": \"Buildings.Controls.OBC.ASHRAE.G36.Types.EnergyStandard.ASHRAE90_1\""
+    ));
+}
+
+#[test]
+fn the_report_lists_what_the_corpus_import_dropped() {
+    // The root's library class, labels that differ from the local name and descriptive parameter
+    // attributes; never a property the engine reads.
+    let text = committed("cooling_only_dampers");
+    let read = import_cxf(text.as_bytes(), &ImportOptions::new()).expect("import");
+    let root = "http://example.org#g36.source.cooling_only_dampers";
+    let first = read.report.dropped.first().expect("an entry");
+    assert_eq!(
+        (first.subject.as_str(), first.property, first.value.as_str()),
+        (
+            root,
+            DroppedProperty::RootType,
+            "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Dampers"
+        )
+    );
+    for entry in &read.report.dropped {
+        assert!(
+            entry.subject == root || entry.subject.starts_with(&format!("{root}.")),
+            "{entry:?}"
+        );
+    }
+    let kinds: std::collections::BTreeSet<DroppedProperty> =
+        read.report.dropped.iter().map(|d| d.property).collect();
+    assert!(kinds.contains(&DroppedProperty::Unit), "{kinds:?}");
+    assert!(read.report.normalised.is_empty() && read.report.truncated.is_empty());
 }
 
 /// Reorder a fixture's `@graph` so block nodes follow `containsBlock` (keeping every other node

@@ -7,7 +7,7 @@
 
 mod support;
 
-use oce_author::{EmitOptions, Sequence, emit, import_cxf};
+use oce_author::{EmitOptions, Sequence, emit};
 
 use support::cxf::{corpus_fixture, load_clean};
 use support::{compare_or_bless, econ_enable, every_element, fixture};
@@ -27,7 +27,7 @@ fn goldens() -> Vec<(String, Sequence)> {
     ];
     for name in CORPUS {
         let bytes = std::fs::read(corpus_fixture(name)).expect("read fixture");
-        all.push(((*name).to_owned(), import_cxf(&bytes).expect("import")));
+        all.push(((*name).to_owned(), support::imported(&bytes)));
     }
     all
 }
