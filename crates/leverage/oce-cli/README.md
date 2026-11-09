@@ -100,7 +100,7 @@ The tool's own error codes: `missing-from`, `unknown-form`, `not-found`, `not-a-
 `oce_author::WireError`: `not-utf8`, `byte-order-mark`, `nesting-too-deep`, `list-too-long`,
 `string-too-long`, `duplicate-key`, `non-finite-number`, `integer-out-of-range`,
 `control-character`, `unknown-key`, `missing-key`, `wrong-type`, `json-syntax`,
-`malformed-connection`, `wire-refused`) are listed with their meanings by `oce vocab --json` under
+`bound-list-too-long`, `malformed-connection`, `wire-refused`) are listed with their meanings by `oce vocab --json` under
 `wire_codes`.
 
 ### Enumerations

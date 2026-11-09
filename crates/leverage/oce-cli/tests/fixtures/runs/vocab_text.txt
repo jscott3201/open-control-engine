@@ -59,12 +59,16 @@ finding codes, stage 1 (exit 1):
   parameter-out-of-range       a value breaks a catalog rule, widths included
   non-finite-parameter         a Real value is NaN or infinite
   unknown-enum-literal         an enumeration member is not a member of the parameter's type
+  unknown-enum-type            a sequence parameter's type names no enumeration, or names a constant package
   unknown-parameter-reference  a reference names no sequence parameter
   malformed-connection         a connection endpoint is not name or block.port
   unknown-source               a connection source is neither a boundary input nor a block output
   unknown-target               a connection target is neither a boundary output nor a block input
   unknown-port                 a connection names a port the configured block does not have on that side
   invalid-semantic-point       a semantic, quantity or displayUnit field is malformed
+  invalid-bound                a boundary bound the boundary's type cannot take
+  non-finite-bound             a boundary bound is NaN or infinite
+  crossed-bounds               a boundary's min exceeds its max
   invalid-provenance-id        the extends provenance id is malformed
   single-assignment            two connections drive one block input or boundary output
 
@@ -87,6 +91,7 @@ wire codes (exit 2):
   missing-key           an object lacks a required key
   wrong-type            a value has the wrong JSON type or an unknown enumerator
   json-syntax           the document is not JSON
+  bound-list-too-long   a boundary's min or max list has more than one number
   malformed-connection  a connection is not `source -> target` with exactly one ->
   wire-refused          a wire refusal this version of oce does not name
 

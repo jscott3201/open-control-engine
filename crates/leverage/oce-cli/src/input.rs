@@ -226,6 +226,7 @@ pub(crate) fn wire_code(error: &WireError) -> (&'static str, Option<Location>) {
         WireError::MissingKey { at, .. } => (codes::WIRE_MISSING_KEY, Some(*at)),
         WireError::WrongType { at, .. } => (codes::WIRE_WRONG_TYPE, Some(*at)),
         WireError::Syntax { at, .. } => (codes::WIRE_SYNTAX, Some(*at)),
+        WireError::BoundListTooLong { at } => (codes::WIRE_BOUND_LIST_TOO_LONG, Some(*at)),
         WireError::MalformedConnection { .. } => (codes::WIRE_MALFORMED_CONNECTION, None),
         _ => (codes::WIRE_REFUSED, None),
     }
@@ -284,6 +285,7 @@ mod tests {
                 },
                 Some(at),
             ),
+            (WireError::BoundListTooLong { at }, Some(at)),
             (
                 WireError::MalformedConnection {
                     index: 0,

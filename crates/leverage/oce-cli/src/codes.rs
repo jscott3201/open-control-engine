@@ -68,6 +68,8 @@ pub(crate) const WIRE_MISSING_KEY: &str = "missing-key";
 pub(crate) const WIRE_WRONG_TYPE: &str = "wrong-type";
 /// Not JSON.
 pub(crate) const WIRE_SYNTAX: &str = "json-syntax";
+/// A boundary's `min` or `max` list with a second item.
+pub(crate) const WIRE_BOUND_LIST_TOO_LONG: &str = "bound-list-too-long";
 /// A connection string without exactly one `->`.
 pub(crate) const WIRE_MALFORMED_CONNECTION: &str = "malformed-connection";
 /// A wire refusal this tool does not know (a newer `WireError` variant).
@@ -162,6 +164,10 @@ pub(crate) const WIRE_CODES: &[(&str, &str)] = &[
         "a value has the wrong JSON type or an unknown enumerator",
     ),
     (WIRE_SYNTAX, "the document is not JSON"),
+    (
+        WIRE_BOUND_LIST_TOO_LONG,
+        "a boundary's min or max list has more than one number",
+    ),
     (
         WIRE_MALFORMED_CONNECTION,
         "a connection is not `source -> target` with exactly one ->",
@@ -316,6 +322,10 @@ pub(crate) const STAGE_ONE_MEANINGS: &[(&str, &str)] = &[
         "an enumeration member is not a member of the parameter's type",
     ),
     (
+        "unknown-enum-type",
+        "a sequence parameter's type names no enumeration, or names a constant package",
+    ),
+    (
         "unknown-parameter-reference",
         "a reference names no sequence parameter",
     ),
@@ -339,6 +349,12 @@ pub(crate) const STAGE_ONE_MEANINGS: &[(&str, &str)] = &[
         "invalid-semantic-point",
         "a semantic, quantity or displayUnit field is malformed",
     ),
+    (
+        "invalid-bound",
+        "a boundary bound the boundary's type cannot take",
+    ),
+    ("non-finite-bound", "a boundary bound is NaN or infinite"),
+    ("crossed-bounds", "a boundary's min exceeds its max"),
     (
         "invalid-provenance-id",
         "the extends provenance id is malformed",

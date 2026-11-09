@@ -21,12 +21,36 @@ exit: 1
       "subject": "nStage"
     },
     {
+      "code": "unknown-enum-type",
+      "detail": "sequence parameter `eneStd`: `OperationModes` (ASHRAE.G36.Types.OperationModes) is a constant package, never a parameter type; declare the parameter `Integer` and assign `OperationModes.<member>`",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "eneStd"
+    },
+    {
+      "code": "crossed-bounds",
+      "detail": "`TOut` declares `min` 30.0 above `max` -10; no value lies between them",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "TOut"
+    },
+    {
       "code": "invalid-semantic-point",
       "detail": "`unit` byte 3 is not printable ASCII without space or `#`",
       "origin": "author",
       "severity": "error",
       "span": null,
       "subject": "TOut"
+    },
+    {
+      "code": "invalid-bound",
+      "detail": "`ecoEna` is a Boolean boundary, which takes no `max`",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "ecoEna"
     },
     {
       "code": "duplicate-name",

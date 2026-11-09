@@ -838,6 +838,11 @@ exit: 0
       "stage": 1
     },
     {
+      "code": "unknown-enum-type",
+      "meaning": "a sequence parameter's type names no enumeration, or names a constant package",
+      "stage": 1
+    },
+    {
       "code": "unknown-parameter-reference",
       "meaning": "a reference names no sequence parameter",
       "stage": 1
@@ -865,6 +870,21 @@ exit: 0
     {
       "code": "invalid-semantic-point",
       "meaning": "a semantic, quantity or displayUnit field is malformed",
+      "stage": 1
+    },
+    {
+      "code": "invalid-bound",
+      "meaning": "a boundary bound the boundary's type cannot take",
+      "stage": 1
+    },
+    {
+      "code": "non-finite-bound",
+      "meaning": "a boundary bound is NaN or infinite",
+      "stage": 1
+    },
+    {
+      "code": "crossed-bounds",
+      "meaning": "a boundary's min exceeds its max",
       "stage": 1
     },
     {
@@ -1106,6 +1126,10 @@ exit: 0
     {
       "code": "json-syntax",
       "meaning": "the document is not JSON"
+    },
+    {
+      "code": "bound-list-too-long",
+      "meaning": "a boundary's min or max list has more than one number"
     },
     {
       "code": "malformed-connection",
