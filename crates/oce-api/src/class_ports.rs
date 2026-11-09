@@ -1,7 +1,7 @@
 //! Resolved port names and per-class authoring metadata, beside the revision-1 catalog
 //! (GitHub #440; authoring-layer design note, decision 18).
 //!
-//! [`catalog()`](crate::catalog) lists each class's ports at default parameters only, and names
+//! [`catalog()`](crate::catalog()) lists each class's ports at default parameters only, and names
 //! them only for the 108 fixed-arity classes. An authoring tool needs the ports of a block as the
 //! author configured it — a `MultiSum` with `nin = 3` has inputs `u1`, `u2`, `u3` — and needs to
 //! know which parameters it may set. [`class_ports`] and [`class_metadata`] answer both without a
@@ -166,7 +166,7 @@ pub struct ClassMetadata {
 }
 
 /// Authoring metadata for every registered class, in the same deterministic order as
-/// [`catalog()`](crate::catalog). The first call allocates once; never panics.
+/// [`catalog()`](crate::catalog()). The first call allocates once; never panics.
 #[must_use]
 pub fn class_metadata() -> &'static [ClassMetadata] {
     static METADATA: OnceLock<Vec<ClassMetadata>> = OnceLock::new();

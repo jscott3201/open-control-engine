@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 //! `oce-api` — the primary embeddable host facade for the Open Control Engine
 //! (`08-embeddable-api-and-performance.md`). [`catalog()`] and [`contract_descriptors`] expose
-//! independent host metadata; [`class_ports`] and [`class_metadata`] add the resolved port names,
+//! independent host metadata; [`class_ports()`] and [`class_metadata()`] add the resolved port names,
 //! class descriptions and settable flags an authoring tool needs, outside the revision-1 catalog. The supported `oce-blocks::catalog()` remains a companion surface. The `open-control-engine` umbrella name is reserved for a
 //! future release; nothing is published to crates.io yet.
 //!
