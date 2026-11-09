@@ -4,16 +4,19 @@
 content id covers, how a loaded sequence becomes canonical bytes, which hash names those bytes, and
 what moves on `ExportReport`, the `OCEB` blob header, the compatibility descriptor and the mapping
 table the library re-stamps its cards from. Decisions 1 to 3 are the owner's and are stated here,
-not reopened. Decisions 4 to 17 were made while drafting; the ones a reviewer may want to overrule
-are listed under [Questions for review](#questions-for-review). The implementation is the core PR
-the issue names; nothing here is built yet.
+not reopened. Decisions 4 to 17 were made while drafting and ruled on in review (see
+[Review rulings](#review-rulings)); the note is amended to match. The implementation is the core
+PR the issue names; nothing here is built yet.
 
 ## What the id is, and is not
 
 It is **one identity for a loaded sequence**: `oce:canon1:` and 64 lowercase hex digits, the
 SHA-256 of a canonical byte encoding of the loaded flat graph. Re-serializing the document,
 reordering its arrays or moving it to another instance namespace leaves it unchanged; changing
-anything that reaches execution or the host-visible boundary moves it. It replaces today's
+anything that reaches execution or the boundary I/O definitions (the inputs a frame takes, their
+types and acceptance domains, and the outputs it returns) moves it. It is not an identity for
+every host-visible fact: the point inventory and the snapshot manifest also name internal
+connectors, which the id leaves out (see [What equal ids promise](#what-equal-ids-promise)). It replaces today's
 `cxf:fnv1a128:` export tag outright (decision 1).
 
 It is not:
@@ -57,40 +60,61 @@ Every instance and boundary IRI is reduced to a **name** before it enters the by
    delimiter) is kept whole, form 1 (absolute). If two IRIs of one kind (blocks, inputs or outputs)
    reduce to the same relative name, which takes two namespaces in one document, every IRI in that
    collision is kept whole, form 1. Full IRIs are unique in a loadable document, so the names stay
-   unique and the encoding stays injective. Such a document loses only namespace invariance.
-4. **Class paths are not IRIs here.** A block's class is the bridged class path the loader already
-   stores (`CDL.Reals.Add`), taken from the class IRI's fragment by `oce_cxf::bridge::class_path_of`
-   (authoring note decision 10), so no class base or instance namespace reaches the bytes.
+   unique and the encoding stays injective. Such a document loses only namespace invariance. No
+   authored or library document reaches this fallback: authored names contain no delimiter, the
+   authoring emitter writes one namespace, and every node `@id` in the G36 fixtures reduces
+   cleanly.
+4. **Class paths are not IRIs here.** The encoder reads `BlockInstance::class_iri`, which despite
+   its name holds the bridged class path (`CDL.Reals.Add`) the resolver took from the class IRI's
+   fragment (authoring note decision 10), so no class base or instance namespace reaches the bytes.
 
 No other normalization is applied: no Unicode normalization, no case folding, no percent-decoding.
 Names compare and sort by `(form, UTF-8 bytes)`.
 
 Every G36 fixture uses the one namespace `http://example.org#`, and no node `@id` in them has a
-`#`, `/` or `:` after it, so no fixture needs form 1.
+`#`, `/` or `:` after it, so no fixture needs form 1. A namespace that does not end in a delimiter
+(`http://example.org/lib.`) would leak its tail into every name; `oce-author` therefore refuses an
+`--namespace` override that does not end in `#`, `/` or `:` (review ruling 2). The exporter's
+synthetic root is unchanged.
 
 ### Interface
 
 **Boundary inputs**, one record per `ModelGraph::boundary_inputs` entry (an input with at least one
-surviving target; an unused input is not part of the executable and not part of the id), sorted by
-name:
+surviving target connector; an unused input is not part of the executable and not part of the id),
+sorted by name:
 
 - the name;
 - the value type, Enum with its class path;
 - `quantity`, `unit` and `displayUnit` as loaded, each optional;
 - the **effective** acceptance domain, min then max, exactly as `Engine::input_definitions` reports
   it and the blob carries it: the declaration's bounds intersected with every target connector's;
-- the fan-out targets as `(block name, input port index)`, sorted.
+- the fan-out targets as `(block name, input port index)`, sorted, pass-through blocks excluded.
+  An input whose only target is a pass-through still has a record, with an empty target list: the
+  resolver pushes the pass-through's input connector onto `external_inputs` before
+  `boundary_inputs` is materialized, so the declaration survives.
 
-**Boundary outputs**, one record per `ModelGraph::boundary_outputs` entry, sorted by name: the
-name, the value type, `quantity`, `unit` and `displayUnit` as loaded (after §7.10 unification), and
-the driver: either `(block name, output port index)` or, for a pass-through, the boundary input's
-name.
+**Boundary outputs** are the same disjoint union `executable_boundary_outputs` (in
+`crates/oce-api/src/io.rs`) and `Topology::boundary_outputs` use: every
+`ModelGraph::boundary_outputs` entry, plus the minted output connector of every block whose class
+path starts with `urn:oce:lowering#`. `ModelGraph::boundary_outputs` alone is not enough: the
+pass-through lowering (`pass_through.rs`) mints the output connector and the block but no
+`BoundaryOutput`. One record per output, sorted by name:
+
+- the name: the declaration's IRI, or for a pass-through the minted output connector's IRI (the
+  declared output's `@id`);
+- the value type;
+- `quantity`, `unit` and `displayUnit` as loaded: the declaration's attributes after §7.10
+  unification, or for a pass-through the minted output connector's, which carry the declared
+  output node's authored attributes;
+- the driver: `(block name, output port index)`, or for a pass-through the name of the boundary
+  input whose connector feeds the pass-through's input (that connector's IRI is the input's).
 
 **Pass-through blocks are not blocks.** When a boundary input feeds a boundary output directly, the
-resolver mints a reserved `urn:oce:lowering#PassThrough.*` block with no instance IRI. The id
-records it as the output's driver ("input `X`") and leaves it out of the block list and out of the
-input's target list, as `Topology` already does. Reserved means the catalog's `reserved` flag
-(decision 6). No G36 fixture has one.
+resolver mints a reserved `urn:oce:lowering#PassThrough.{Real,Integer,Boolean}` block with no
+instance IRI. The id records it only as the output's driver ("input `X`") and leaves it out of the
+block list and out of the input's target list, as `Topology` already does. Reserved means the
+catalog's `reserved` flag, which is set for exactly those three classes (decision 6). No G36
+fixture has one; the test plan adds one.
 
 ### Blocks
 
@@ -100,17 +124,33 @@ hash (`oce_blocks::class_signature_hash`), and the parameter table.
 **Parameters.** The loaded `ParamTable` holds exactly the parameters the document bound, each
 evaluated by `oce-expr` to a ground value at load (arrays already flattened to `k_1`, `table_1_2`).
 The id writes them **sorted by name**, not in table order: table order is the authored
-`hasParameter` order, which the blob keeps because `make` receives it, but `make` looks parameters
-up by name and duplicates are refused, so sorting loses nothing. Values are the blob's tagged
+`hasParameter` order, which the blob keeps because `make` receives it. Values are the blob's tagged
 values: Real as `f64::to_bits`, Integer `i64`, Boolean, String, Enum as class path plus ordinal.
+
+Sorting is sound only if no class reads two entries as the same parameter, and today one can.
+Duplicate detection is by exact name, but `TimeTable` walks `params.values` in table order and
+parses `table_<r>_<c>` and `offset_<i>` with `usize::parse` (`source_timetable.rs`
+`parse_matrix_param_name`, `parse_array_param_name`), which accepts `table_01_2` and `table_+1_2`;
+the validator's matrix check (`params_flattened.rs` `check_time_table_matrix`) inserts into a map,
+so an aliased spelling silently overwrites the canonical one, and the one that wins is the later
+in table order. Two documents differing only in that order would share an id and execute
+differently. **The implementation PR therefore makes the load gate refuse every non-canonical
+array or matrix element name**: an index with a sign, a leading zero, or any form other than the
+one `oce_api::param_element_name` writes, refused with a typed load error before `make`. With one
+spelling per element, names are unique per meaning and sorting loses nothing. This is the same
+family as GitHub #467 (the facade and load gate accept parameter names outside the declared
+extent); the implementation PR names the gap there and closes the spelling half of it.
 
 **The evaluated-or-not flag is presence.** `oce-model` has no unevaluated value: every table entry
 is ground. A parameter the document did not bind is absent, and `make` supplies the class default.
 A literal default's value and a derived default's source tag are inside the class signature hash,
 so the id covers what an absent parameter means without evaluating it. A parameter bound to a value
 equal to its default is present, so it is a different id from the same document with the binding
-removed, although both execute alike (decision 8). Parameter edits applied by `resume` change the
-table and therefore the id; pending edits do not count until applied.
+removed, although both execute alike (decision 8; the [second worked
+example](#worked-example-a-bound-default) shows the bytes). Parameter edits applied by `resume`
+change the table and therefore the id. While edits are pending, `Engine::content_id` refuses, with
+the same precondition `compile_blob` has, so an id always names what would execute;
+`Engine::export_cxf` is unchanged and still exports the applied table.
 
 ### Connections
 
@@ -132,6 +172,8 @@ connector node's IRI and not the synthesized port name (decision 7).
 - Internal connector node IRIs and internal connector attributes, except through an input's
   effective domain. Output `min`/`max`, `nominal` and `unbounded`: the engine enforces none of them
   and the exporter emits only `unit`, `quantity`, `displayUnit`, `min` and `max` (decision 10).
+- Internal connector paths, units and quantities as the point inventory (`point_rows_at_load`)
+  and the snapshot manifest publish them.
 - `BlockId`, `ConnectorId`, `decl_order` and the schedule.
 - The engine version and anything the host configures (non-finite input policy, limits).
 
@@ -158,8 +200,9 @@ The rules are the blob's and the replay trace's:
 
 Records sort by name as `(form, bytes)`; targets and connections sort by their tuples in field
 order. The encoder is a pure function of the loaded model and the class registry, allocates one
-`Vec<u8>` bounded by the already-capped model size (the largest G36 encoding is 64,491 bytes, for
-`multizone_vav_relief_fan_group`), and never panics: a missing class signature is a typed error,
+`Vec<u8>` bounded by the already-capped model size (the prototype measured the largest G36
+encoding at 64,491 bytes, for `multizone_vav_relief_fan_group`; the implementation PR pins the real
+figure in a test), and never panics: a missing class signature is a typed error,
 not an `unwrap`.
 
 ## Hash and id format
@@ -179,7 +222,8 @@ digest most hosts can recompute without anything from this repo (decision 12).
 The implementation uses `sha2` 0.10 with `default-features = false`, in `oce-api` only. It is
 already in `Cargo.lock` as a dev-dependency of `oce-cxf` and `oce-conformance`, so `cargo deny`
 already admits it and its tree (`digest`, `block-buffer`, `crypto-common`, `generic-array`,
-`typenum`, `cpufeatures`, `cfg-if`). The cost is one new normal edge from `oce-api`; the core four
+`typenum`, `cpufeatures` with `libc`, `cfg-if`, and `version_check` as `generic-array`'s build
+dependency), all already locked. The cost is one new normal edge from `oce-api`; the core four
 gain nothing, because the `no_std` target never computes an id (the blob decoder never interprets
 the field). A digest of a fixed input is a function, so `cpufeatures` choosing a SHA extension or
 the portable code cannot change the output.
@@ -336,8 +380,102 @@ Python's `hashlib` agree on the digest. The same prototype gave the same id for 
 `@graph` and `containsBlock` reversed and for the document with every instance IRI moved to
 `urn:oce:author:`, and a different id (`acde31d2…`) with `k` one ulp higher. Over the corpus, every
 document whose export is complete (33 G36 fixtures and `member_list_interface.jsonld`) gave
-byte-identical canonical bytes after load → export → load. The two class hashes move with their
-classes, as the blob goldens do (see the test plan).
+byte-identical canonical bytes after load → export → load. That corpus result and the 64,491-byte
+maximum are prototype measurements, not review-verified facts; the implementation PR's tests
+re-establish both. The two class hashes move with their classes, as the blob goldens do (see the
+test plan).
+
+### Worked example: a bound default
+
+Presence is the evaluated-or-not flag, so binding a parameter to its class default moves the id.
+`CDL.Logical.TrueDelay` has a required `delayTime` and `delayOnInit` with the literal default
+`false`. Document A binds only `delayTime = 60.0`; document B is A plus one parameter node binding
+`delayOnInit` to `false`. Both load with no warnings and execute identically. The core PR checks
+them in as `true_delay.jsonld` and `true_delay_default.jsonld` beside the first example. A:
+
+```json
+{
+  "@context": { "S231": "http://data.ashrae.org/S231P#" },
+  "@graph": [
+    { "@id": "http://example.org#ex.true_delay", "@type": "S231:Block",
+      "S231:hasInput": [{ "@id": "http://example.org#ex.true_delay.u" }],
+      "S231:containsBlock": [{ "@id": "http://example.org#ex.true_delay.del" }],
+      "S231:hasOutput": [{ "@id": "http://example.org#ex.true_delay.y" }] },
+    { "@id": "http://example.org#ex.true_delay.del",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:hasParameter": [{ "@id": "http://example.org#ex.true_delay.del.delayTime" }],
+      "S231:hasInput": [{ "@id": "http://example.org#ex.true_delay.del.u" }],
+      "S231:hasOutput": [{ "@id": "http://example.org#ex.true_delay.del.y" }] },
+    { "@id": "http://example.org#ex.true_delay.del.delayTime", "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "60.0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#ex.true_delay.del.u", "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#ex.true_delay.del.y", "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [{ "@id": "http://example.org#ex.true_delay.y" }] },
+    { "@id": "http://example.org#ex.true_delay.u", "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [{ "@id": "http://example.org#ex.true_delay.del.u" }] },
+    { "@id": "http://example.org#ex.true_delay.y", "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" } }
+  ]
+}
+```
+
+B adds `{ "@id": "http://example.org#ex.true_delay.del.delayOnInit" }` after the `delayTime`
+reference in `del`'s `S231:hasParameter`, and this node before `del.u`:
+
+```json
+    { "@id": "http://example.org#ex.true_delay.del.delayOnInit", "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:value": false },
+```
+
+Bytes `0000` to `00b9` are identical in both: the header, the Boolean input `ex.true_delay.u`
+(no attributes, one target `del` port 0), the Boolean output `ex.true_delay.y` driven by `del` port
+0, and the block's name, class and signature hash. A's block section, from its count:
+
+```text
+007f  01 00 00 00                                       blocks: count 1
+0083  00                                                  name form 0
+0084  11 00 00 00                                         length 17
+0088  65 78 2e 74 72 75 65 5f 64 65 6c 61 79 2e 64 65     "ex.true_delay.del"
+0098  6c
+0099  15 00 00 00                                         class length 21
+009d  43 44 4c 2e 4c 6f 67 69 63 61 6c 2e 54 72 75 65     "CDL.Logical.TrueDelay"
+00ad  44 65 6c 61 79
+00b2  7d 02 d6 fe 4f 11 21 d3                             class signature hash 0xd321114ffed6027d
+00ba  01 00 00 00                                         parameters: count 1
+00be  09 00 00 00                                           name length 9
+00c2  64 65 6c 61 79 54 69 6d 65                            "delayTime"
+00cb  00                                                    value tag 0 (Real)
+00cc  00 00 00 00 00 00 4e 40                               bits of 60.0 (0x404e000000000000)
+00d4  00 00 00 00                                       connections: count 0
+```
+
+B, from the parameter count where it departs:
+
+```text
+00ba  02 00 00 00                                         parameters: count 2
+00be  0b 00 00 00                                           name length 11
+00c2  64 65 6c 61 79 4f 6e 49 6e 69 74                      "delayOnInit"
+00cd  02                                                    value tag 2 (Boolean)
+00ce  00                                                    false
+00cf  09 00 00 00                                           name length 9
+00d3  64 65 6c 61 79 54 69 6d 65                            "delayTime"
+00dc  00                                                    value tag 0 (Real)
+00dd  00 00 00 00 00 00 4e 40                               bits of 60.0 (0x404e000000000000)
+00e5  00 00 00 00                                       connections: count 0
+```
+
+A is 216 bytes and B 233. Their ids:
+
+```text
+A  oce:canon1:aff7775cd0e7efb52af23c0347455f5806f789ee719df142c7c33f458ed9e91c
+B  oce:canon1:05b0f40f98a38ed7e6dffca3157cae70d5f077c1893cb1587880a33ebc11752b
+```
+
+B's `delayOnInit` sorts before `delayTime` because `O` (0x4f) precedes `T` (0x54).
 
 ## Permutation classes
 
@@ -363,64 +501,129 @@ classes, as the blob goldens do (see the test plan).
 - a boundary type change; a `quantity`, `unit` or `displayUnit` change on a boundary; a change to an
   input's effective acceptance domain.
 
-**What equal ids promise.** Two documents with the same id, loaded by the same engine build, have
-the same blocks (class, signature hash and ground parameters), the same wiring per port and the
-same boundary types and domains. They therefore produce **the same boundary outputs and the same
-per-block state, bit for bit, at every frame**, given the same frames keyed by name. The reason:
-HostTick evaluates each block once per tick in a topological order of one DAG, a block reads only
-its own input connectors and its own state, and so every topological order hands every block the
-same inputs. Equal ids do **not** promise byte-identical executables, and the exceptions are
-exactly the things the id leaves out:
+### What equal ids promise
 
-- boundary paths carry the namespace, so the blob's I/O strings differ across namespaces;
+Two documents with the same id, loaded by the same engine build, have the same blocks (class,
+signature hash and ground parameters), the same wiring per port and the same boundary types and
+domains. For every **successful** frame they therefore produce **the same boundary outputs and the
+same per-block state, bit for bit**, given the same frames keyed by name; a frame one refuses, the
+other refuses too, because time, type and domain checks read only those facts. The argument rests
+on two facts of the core, both stated where they live:
+
+- **The two-pass tick** (`crates/oce-graph/src/tick.rs`). Pass 1 emits every block's outputs in
+  schedule order: an algebraic block through `step_algebraic`, a stateful one through
+  `emit_from_state` from its prior state. Pass 2 then runs every `update_state`, after all emits.
+  So no update observes another block's mid-tick state, whatever the order.
+- **The feedthrough contract** (`Block::feeds_through`). A stateful block's emit ignores the
+  inputs it does not feed through, which is what lets the scheduler cut a loop at it. The schedule
+  is a topological order of the feedthrough DAG, and every topological order of one DAG gives each
+  emit the same input values; each update then reads current-tick inputs that are equal too.
+
+The only order-dependent output of a successful frame is the **order of its warnings**, which
+follows the schedule: two equal-id documents emit the same set of warnings per frame, possibly in a
+different order. Equal ids do **not** promise byte-identical executables or interchangeable state,
+and the exceptions are exactly what the id leaves out:
+
+- boundary paths carry the namespace, so the blob's I/O strings and frame paths differ across
+  namespaces;
 - `BlockId`, `ConnectorId` and schedule tie-breaks follow authored order, so blob bytes, the
-  state-word layout, snapshot manifests and run digests can differ across permutations;
-- warnings within one frame follow schedule order, so their order can differ while the set is the
-  same.
+  state-word layout and run digests can differ across permutations;
+- the **point inventory** (`point_rows_at_load`) publishes every connector, internal ones
+  included, with its path, `quantity`, `unit`, `displayUnit`, `min` and `max`, and the **snapshot
+  manifest** embeds every connector's path, unit and quantity; internal connector IRIs and
+  attributes are outside the id, so both can differ;
+- therefore **snapshot restorability**: a state snapshot taken on one document need not restore on
+  another with the same id. Equal ids do not imply snapshot interchange; the manifest check
+  decides that, as it does today.
 
-Two documents with equal ids, the same namespace and the same authored order compile to
-byte-identical blobs. The core PR proves the frame-level claim by test rather than by this
-argument (see the test plan).
+Two documents with equal ids, the same namespace, the same authored order and the same internal
+connector IRIs and attributes compile to byte-identical blobs. The core PR proves the frame-level
+claim by test rather than by this argument (see the test plan).
 
 ## Surface changes
 
-- **`Engine::content_id() -> Result<ContentId, OcError>`**, new, the primary entry. It has
-  `compile_blob`'s preconditions (a model loaded, no pending parameter edits) and is defined for
-  every loaded CXF document. The only refusal beyond the preconditions is a hand-built model with an
-  unnamed, non-reserved block, which no public load path produces.
-- **`ExportReport::content_id_complete()`** returns the canonical id of the model the export was
-  taken from, captured when `export_cxf` ran. It still refuses a partial export with
-  `ContentIdError::Incomplete`: the id travels with those bytes, and partial bytes do not load back
-  to that model. A host that needs the id of a partially exportable model calls
-  `Engine::content_id`. The deprecated `ExportReport::content_id()` is **removed** (deprecated
-  since 0.1.0; no compatibility is owed). `ExportReport::bytes` are unchanged, so the export goldens
-  and `g36_export_content.txt` (which hashes the bytes itself) stay byte-identical.
+**Facade API.**
+
+- **`Engine::content_id() -> Result<ContentId, OcError>`**, new, and the **only** place an id is
+  minted. It has `compile_blob`'s preconditions: a model loaded, and no pending parameter edits
+  (it refuses while edits are pending; `export_cxf` is unchanged). It is defined for every loaded
+  CXF document. The only refusal beyond the preconditions is a hand-built model with an unnamed,
+  non-reserved block, which no public load path produces.
+- **`ExportReport::content_id_complete()` and the deprecated `ExportReport::content_id()` are
+  removed** (review ruling 10). An id captured on a report would sit beside a public, mutable
+  `bytes` field and could drift from it. `ExportReport` keeps only a completeness check,
+  `complete(&self) -> Result<(), ExportIncomplete>`, where `ExportIncomplete { warning_count }`
+  replaces `ContentIdError::Incomplete`; a host that wants "the id of a completely exportable
+  model" calls both. `ExportReport::bytes` are unchanged, so the export goldens stay
+  byte-identical.
 - **`CompleteExportContentId` becomes `ContentId`**, with the same no-public-constructor and
   no-conversion compile-fail guarantees against `CatalogContentId` and `DomainKey`.
-- **Blob header.** The 32-byte content-id field holds the SHA-256 digest bytes in output order, with
-  no padding, and 32 zero bytes only when there is no id (a hand-built model). It is present for all
-  46 fixtures, including the 13 with partial exports. `CompiledBlob::content_id` carries the
-  `oce:canon1:` string. `oce_graph::blob::content_id_field(Option<u128>)` takes the 32 digest bytes
-  instead. The field's meaning changes, so `FORMAT_VERSION` goes from 1 to 2, as the blob note's
-  decision 6 requires; layout, sections and CRC rules are unchanged.
-- **Compatibility descriptor.** The descriptor revision goes from 1 to 2, the tenth line's label
-  from `export` to `content`, and its value is `none` or the `oce:canon1:` id.
-  `CompatibilityDescriptor::current` takes an `Option<&ContentId>`. The replay record's descriptor
-  parser (`replay_descriptor.rs`) accepts the new label and tag grammar, and
-  `docs/replay-record.md` follows.
-- **Product contract.** PC-018 is reworded: the facade **MUST** mint one canonical content id over
-  the loaded graph (SHA-256, `oce:canon1:`), invariant under re-serialization, reordering and
-  namespace, and moved by any parameter bit, name, wiring, class or boundary change; `ExportReport`
-  **MUST** still refuse to attach it to a partial export. The evidence column moves to the
-  permutation and one-bit tests below. PC-021 names **canonical content identity** as a role
-  distinct from the authored model id, executable compatibility, export bytes and build identity.
-- **Docs.** The identity glossary in `facade-contracts.md` replaces "Complete export content
-  identity … No order-independent model identity is provided" with the canonical id;
-  `compiled-schedule-blob.md`, `cxf-round-trip.md`, the "Dense IDs versus authored identity" row of
-  `cxf-composite-subset.md` and `replay-record.md` follow.
-- **`oce-replay`.** `TraceMeta` records no content id today, so nothing changes. The `oce-verify`
-  receipt header carries the canonical id when it is built.
-- **`oce-diff`.** See [Relation to other work](#relation-to-other-work).
+- **`guards.rs`** (the accessor-signature pin, ~lines 205 to 219): the pin of
+  `ExportReport::content_id_complete` and the comment explaining why `content_id` is not pinned
+  are replaced by pins of `Engine::content_id` and `ExportReport::complete`.
+
+**Blob.**
+
+- The 32-byte content-id field holds the SHA-256 digest bytes in output order, with no padding,
+  and 32 zero bytes only when there is no id (a hand-built model). It is present for all 46
+  fixtures, including the 13 with partial exports.
+- `CompiledBlob::content_id` becomes **`Option<ContentId>`**, typed rather than a string; `None`
+  only for a hand-built model.
+- `oce_graph::blob::content_id_field(Option<u128>)` takes the 32 digest bytes instead.
+- The field's meaning changes, so `FORMAT_VERSION` goes from 1 to 2, as the blob note's decision 6
+  requires; layout, sections and CRC rules are unchanged. The version loop in
+  `crates/oce-api/tests/blob_hostile_bytes.rs` (~lines 132 to 150) and `format: 1` in
+  `crates/oce-api/tests/support/blob_image.rs` (line 130) follow.
+- Both blob dumps regenerate: the worked example in the user-facing
+  [`docs/compiled-schedule-blob.md`](../compiled-schedule-blob.md) and the one in this directory's
+  [`compiled-schedule-blob.md`](compiled-schedule-blob.md) design note, whose decision 5 also gets
+  a dated amendment pointing here.
+
+**Compatibility descriptor.**
+
+- The descriptor revision goes from 1 to 2, and `check_compatible`'s rule that both revisions are
+  1 becomes 2. The tenth line's label goes from `export` to `content`; its value is `none` or the
+  `oce:canon1:` id.
+- `CompatibilityDescriptor::current` takes an `Option<&ContentId>`;
+  `CompatibilityDescriptor::export_content_id()` becomes `content_id()`.
+- `CompatibilityMismatch::ExportPresence` and `ExportContent` are renamed `ContentIdPresence` and
+  `ContentIdMismatch`, with messages to match.
+- The replay record's descriptor parser (`replay_descriptor.rs`) accepts the new label and tag
+  grammar, and `docs/replay-record.md` follows. `compatibility.txt` feeds the replay oracle at run
+  time and moves; the `replay_*.hex` payloads do not.
+
+**Product contract.**
+
+- PC-018 is reworded: the facade **MUST** mint one canonical content id over the loaded graph
+  (SHA-256, `oce:canon1:`) only through `Engine::content_id`, invariant under re-serialization,
+  reordering and namespace, and moved by any parameter bit, name, wiring, class or boundary
+  change; `ExportReport::complete` **MUST** still distinguish a partial export. Its three evidence
+  tests change: `warning_bearing_content_id_identifies_the_partial_document` becomes a test of
+  `complete()`; `content_id_tracks_exported_synthetic_document_while_model_id_stays_authored` is
+  rewritten against `Engine::content_id`; and
+  `content_id_identifies_authored_graph_order_not_an_order_independent_model` **inverts**: authored
+  order no longer moves the id. The permutation and one-change tests below join the evidence.
+- PC-021 names **canonical content identity** as a role distinct from the authored model id,
+  executable compatibility, export bytes and build identity.
+
+**Call sites and tests.** `crates/oce-api/tests/export_content_oracle.rs` (~lines 105 to 110 and
+148 to 180) is reworked to check `complete()` and to hash the bytes itself; its file
+`g36_export_content.txt` stays byte-identical. Further call sites: `tests/export_cxf.rs`,
+`tests/compatibility.rs`, `tests/composition_identity.rs`, `tests/context_expansion_identity.rs`,
+`tests/boundary_output_attrs.rs`, `tests/hash_order_independence.rs`, `tests/replay.rs`,
+`src/compatibility_tests.rs` and `tests/fixtures/catalog_consumer.rs` (line 177) in `oce-api`, and
+`crates/oce-graph/tests/blob_state_words.rs`.
+
+**Docs in this repo.** The identity glossary in `facade-contracts.md` replaces "Complete export
+content identity … No order-independent model identity is provided" with the canonical id;
+`facade-migration.md` (line 143, the `content_id_complete()` row); `cxf-round-trip.md`'s
+"`content_id_complete`: a checked integrity tag, not a digest" section (~lines 174 to 198); the
+"Dense IDs versus authored identity" row of `cxf-composite-subset.md`; `compiled-schedule-blob.md`;
+`replay-record.md`; and the M3 status row of `README.md` (the README has no other content-id
+claim). The other design notes are listed under [Relation to other work](#relation-to-other-work).
+
+**Leverage crates.** `oce-replay`'s `TraceMeta` records no content id, so nothing changes there. The
+`oce-verify` receipt header carries the canonical id when it is built.
 
 ## Mapping table for the library re-stamp
 
@@ -467,6 +670,8 @@ without moving this one.
 **3. `SemanticPoint` records, `extends`, comments, annotations, `@context` and authored order
 never enter the id** (owner). Why: the §7.17 seam keeps semantic records non-computational, and
 authoring decisions 2, 5 and 6 keep `extends` as opaque provenance and order as presentation.
+Rejected: hashing the `SemanticPoint` slot too (it would make M8's record shape, not yet designed,
+part of every id); keeping authored order (that is the order-bearing id being replaced).
 
 **4. The id is defined over the loaded flat graph.** Rejected: over the authoring model (CXF from
 `modelica-json` would have no id); over export bytes (partial for 13 fixtures and order-bearing,
@@ -504,12 +709,18 @@ differently, and its id must say so. The re-stamp that follows is deliberate, li
 **10. Boundaries carry type, `quantity`, `unit` and `displayUnit`, and inputs their effective
 domain.** Rejected: every §7.4.1 attribute (the exporter drops `nominal` and `unbounded`, so the id
 would move under a round trip); declared bounds instead of effective ones (an internal target's
-bound would change the refusal domain without changing the id). Why: these are the boundary facts
-a host sees (`PointDto`, `InputDefinition`) and the frame driver enforces.
+bound would change the refusal domain without changing the id); every connector's attributes,
+internal ones included (renaming or annotating an internal port node would then move the id with
+no change to execution or the frame interface). Why: these are the facts of the boundary I/O
+definitions (`InputDefinition` and the output projection) and what the frame driver enforces.
+They are not the whole point inventory: `PointDto` rows also cover internal connectors, which stay
+out (see [What equal ids promise](#what-equal-ids-promise)).
 
 **11. `OCECANON` version 1 encoding**, under the blob's and the trace's rules, with no section
-frames. Why: the bytes are hashed, never parsed, so framing would buy nothing; the counts make the
-encoding injective.
+frames. Rejected: section frames as in the blob (`u32` id and length per section), and reusing
+the blob encoding itself (it is in `BlockId` order and carries ids, which is what this one must not
+depend on). Why: the bytes are hashed, never parsed, so framing would buy nothing; the counts make
+the encoding injective.
 
 **12. SHA-256 through `sha2`, `default-features = false`, in `oce-api` only.** Rejected:
 FNV-1a-128 (collision-prone in adversarial use, and this id becomes a registry key and a receipt
@@ -518,12 +729,18 @@ SHA-256 (the blob's table-less CRC-32C is a precedent, but a cryptographic primi
 taken from a vetted crate than re-derived). Why: collision resistance, 32 bytes that fill the blob
 field, a crate the lockfile and `cargo deny` already carry.
 
-**13. `oce:canon1:<64 hex>`.** Why: distinguishable from `cxf:fnv1a128:`, `catalog:1:fnv1a128:`
-and `replay:1:fnv1a128:` at a glance, with the encoding version in the prefix.
+**13. `oce:canon1:<64 hex>`.** Rejected: `canon:1:sha256:<hex>`, mirroring
+`catalog:1:fnv1a128:` (the hash is fixed by the version, so naming it again only adds a way to
+disagree); a bare digest (no version to bump). Why: distinguishable from `cxf:fnv1a128:`,
+`catalog:1:fnv1a128:` and `replay:1:fnv1a128:` at a glance, with the encoding version in the
+prefix.
 
-**14. `Engine::content_id` is the entry; `ExportReport::content_id_complete` keeps refusing
-partial exports; `content_id()` is removed.** Why: the id names a model and is always defined, but
-attaching it to bytes that do not load back to that model would mislabel them.
+**14. `Engine::content_id` is the only entry; `ExportReport` loses both id methods and keeps a
+completeness check** (review ruling 10). Rejected: the draft's `content_id_complete()` returning
+the canonical id captured at export time (a captured id on a report with public, mutable `bytes`
+is a claim that can drift from them). Why: the id names a model and is always defined; a host that
+wants the id of a completely exportable model asks `Engine::content_id` and
+`ExportReport::complete`.
 
 **15. The blob field holds the digest, and `FORMAT_VERSION` becomes 2.** Rejected: keeping format
 1 because the decoder ignores the field (the blob note's decision 6 says a change of the field's
@@ -535,8 +752,10 @@ revision). Why: the descriptor's contract is exact-byte comparison and refusal o
 revisions.
 
 **17. The mapping table is plain TSV, sorted, with `-` for a missing old id**, owned by a test in
-this repo and produced by the library's own tooling for its cards. Why: one line per document
-diffs and greps cleanly, and the re-stamp refuses rather than guesses.
+this repo and produced by the library's own tooling for its cards. Rejected: JSON (no gain for
+three string fields, and a noisier diff); keying the table by old id alone (13 fixtures have
+none). Why: one line per document diffs and greps cleanly, and the re-stamp refuses rather than
+guesses.
 
 ## Relation to other work
 
@@ -547,8 +766,24 @@ diffs and greps cleanly, and the re-stamp refuses rather than guesses.
   equal, so the CXF adapter and the blob comparison can return graph-empty without matching, and
   the authoring diff can skip its rename pass. They do not prove an empty authoring diff: a
   sequence-parameter rename, a literal against a reference with the same value, `extends`,
-  comments, `SemanticPoint` fields and `reordered` entries are all outside the id. The diff note's
-  decision 8 wording should be narrowed to that in the core PR; it is recorded here, not decided.
+  comments, `SemanticPoint` fields and `reordered` entries are all outside the id (review ruling
+  11 narrows decision 8 to that).
+- **Other design notes: the implementation PR's doc scope.** Each of these becomes false or stale
+  when the id ships, and the core PR amends it:
+  - `diff.md`: "order moves the content id" (~line 98, under Categories, and decision 5, ~line
+    530) is no longer true, `reordered` stays its own kind only because it is not semantic; the
+    whole "Relation to content ids" section (~lines 153 to 163) is rewritten around this note, and
+    decision 8 is narrowed as above.
+  - `authoring-layer.md`: decision 6's rationale ("the content id is order-bearing") is superseded;
+    the decision stands because authored order still assigns `BlockId` and schedule tie-breaks.
+    The export content id is also named at ~line 313 (the throwaway load), ~line 330 (`oce check`
+    reports "the export content id") and ~lines 514 to 515 (gate item 1 moving with M3); each
+    names `Engine::content_id` instead.
+  - `commissioning.md`: the receipt example's `content_id` (~line 305) becomes an `oce:canon1:`
+    value, and decision 20 ("Rejected: a new hash dependency") is reconciled with the `sha2` edge:
+    receipts may keep FNV-1a-128 for `spec_id` and `receipt_id`, but the content id they carry is
+    SHA-256, and the receipt names both.
+  - `compiled-schedule-blob.md`: decision 5 is amended (dated) to point here; its dump regenerates.
 - **#464, M2 gate item 1.** "Load → export id equals the committed CXF's" becomes "the canonical id
   of the emitter's output equals the committed CXF's". The namespace is free, so the emitter's
   default `urn:oce:author:` matches the library's `http://example.org#`; the sequence name must
@@ -557,41 +792,57 @@ diffs and greps cleanly, and the re-stamp refuses rather than guesses.
   12. Resolving `extends` stays the registry's.
 - **Library L3.** The re-stamp consumes the mapping table as described above.
 - **`oce-verify` receipts.** The shared receipt header's content id is this id.
+- **M7, composite lowering.** The roadmap promises "a content id equal to the flattened form". This
+  id is already defined over the flattened graph and ignores order, so a composite document and its
+  hand-flattened form share an id exactly when lowering gives the leaves the same names, classes,
+  parameters and wiring. M7's canonical lowering order cannot move it; how M7 names lowered leaves
+  can, and M7 must choose names that equal the flattened form's.
 
 ## Test plan
 
 What the core PR must prove:
 
-- **Worked example.** The document above is checked in; its canonical bytes equal the dump byte for
-  byte and its id equals the one printed. A hand-assembled byte vector in the test, not the encoder,
-  is the oracle.
+- **Worked examples.** The three documents above are checked in; their canonical bytes equal the
+  dumps byte for byte and their ids equal the ones printed, and the two `TrueDelay` documents have
+  different ids. A hand-assembled byte vector in the test, not the encoder, is the oracle.
 - **Mapping table.** `restamp.tsv` pins the new id of all 46 fixtures; any change shows in review.
 - **Permutation classes, over all 46 fixtures**, enumerated, no RNG: `@graph` reversed and rotated;
   `containsBlock`, `isConnectedTo`, `hasInput`/`hasOutput` and `hasParameter` arrays reversed where
   the document still loads to the same ground values; compact and expanded IRIs; the namespace
-  rewritten to `urn:oce:author:`; load → export → load for the 33 complete exports (the prototype
-  already shows these equal). Each keeps the id.
+  rewritten to `urn:oce:author:`; load → export → load for the 33 complete exports (a prototype
+  measurement this test re-establishes). Each keeps the id.
 - **Equal ids, equal behaviour.** For every fixture and each of its permuted variants, run the
   shared 160-frame schedule (`crates/oce-graph/tests/support/frame_schedule.rs`) and compare every
-  boundary output by raw bits after every frame, keyed by name, and every block's state words
-  keyed by block name. Warnings compare as sets per frame.
+  boundary output by raw bits after every successful frame, keyed by name, and every block's state
+  words keyed by block name; a refused frame must be refused by both. Warnings compare as sets per
+  frame, the one documented order difference.
 - **One-change matrix.** For every fixture: every Real parameter one ulp up, every Integer ±1, every
   Boolean flipped, every Enum to another member, `+0.0` to `-0.0` where present; one block and one
   boundary renamed; one connection rewired; one class swapped for a same-arity class; one boundary
   `quantity`, `unit` and `displayUnit` changed; one input bound tightened. Each moves the id, and
   no two variants of one fixture share an id.
 - **Names.** A document with two namespaces that collide on one name uses form 1 for both; an IRI
-  ending in a delimiter uses form 1; a pass-through output records its input as the driver.
+  ending in a delimiter uses form 1.
+- **Pass-through.** A document with one block plus a boundary input `a` wired straight to a
+  boundary output `b`: the output list holds `b` (from the minted connector) with driver "input
+  `a`", the input `a` has a record with an empty target list, the pass-through block is in neither
+  the block list nor any target list, and changing `b`'s `unit` or rewiring `b` to a block output
+  moves the id. (The prototype, run on such a document, produced exactly that.)
+- **Element-name spellings.** A `TimeTable` document binding `table_01_2` or `table_+1_2`, alone or
+  beside `table_1_2`, and the same for an `offset_<i>` and a width-driven array parameter (`k_01`),
+  is refused at load with a typed error; the canonical spellings still load.
 - **Hostile and boundary cases.** A hand-built model with an unnamed block is a typed refusal, not a
-  panic; the largest fixture's encoding stays within a pinned size; the encoder never allocates
-  past its one `Vec`.
+  panic; `Engine::content_id` refuses while parameter edits are pending and before a model is
+  loaded; the largest fixture's encoding is pinned (the prototype's 64,491 bytes is re-measured
+  here); the encoder never allocates past its one `Vec`.
 - **SHA-256.** The FIPS 180-4 vectors (`""`, `"abc"` and the 448-bit message) pin the dependency's
   output, so a dependency bump that changed it would fail.
 - **Goldens that re-bless, and why.** The 46 blob goldens move by their 32 id bytes, the format
   version and the CRC: the field's meaning changed (decision 15). `compatibility.txt`,
   `compatibility_export.txt`, the descriptor doctest and the replay-record goldens that embed a
-  descriptor move by the revision and the `content` line (decision 16). The firmware image's embedded `multizone_vav_supply_fan` blob moves with its
-  golden; its run digests do not. Everything else stays byte-identical: export bytes,
+  descriptor move by the revision and the `content` line (decision 16); the `replay_*.hex`
+  payloads do not move. The two blob dumps in the docs regenerate. The firmware image's embedded
+  `multizone_vav_supply_fan` blob moves with its golden; its run digests do not. Everything else stays byte-identical: export bytes,
   `g36_export_content.txt`, `blob_frame_digests.tsv`, the class-ports golden, the 46 fixture
   goldens and 422 provenance goldens.
 - **Determinism across architectures.** The id bytes live in the blob goldens, and the determinism
@@ -608,30 +859,37 @@ What the core PR must prove:
 - Sequence-level parameters as such: the id sees their grounded effect on leaves, not their names.
 - The `oce id` CLI verb itself, beyond naming it as the library's source of new ids.
 
-## Questions for review
+## Review rulings
 
-1. **Hash.** SHA-256 through `sha2` adds a normal dependency edge to `oce-api` (already locked and
-   deny-checked). Keep FNV-1a-128 for consistency and no new edge, or hand-roll SHA-256 as the blob
-   did CRC-32C?
-2. **Namespace rule.** The last `#`, `/` or `:` ends the namespace, so the sequence name is inside
-   every name and renaming a sequence moves the id. A namespace that does not end in a delimiter
-   (`http://example.org/lib.`) leaks its tail into names. Should `oce-author` require
-   `--namespace` to end in a delimiter? Or should the exporter carry the root `@id`, so the root
-   prefix can be stripped instead (that moves every export golden)?
-3. **Collisions.** Two IRIs that reduce to one name fall back to whole IRIs rather than refusing.
-   Is losing namespace invariance for such a document acceptable, or should it refuse?
-4. **`unit`.** It is inside the id as a boundary attribute, although the authoring model keeps it in
-   `SemanticPoint`. Editing `SemanticPoint.unit` therefore moves the id, as it moves emitted bytes
-   today.
-5. **Bounds.** Inputs carry their effective domain; output `min`/`max`, `nominal` and `unbounded`
-   are left out because nothing enforces them and the exporter drops the last two.
-6. **Ports.** Ports are indices; connector node IRIs are left out, so renaming only a port node's
-   `@id` keeps the id.
-7. **Defaults.** Binding a parameter to its default value moves the id although execution is the
-   same.
-8. **Blob.** `FORMAT_VERSION` 2, no padding, and the id is now present for the 13 partial-export
-   fixtures.
-9. **Descriptor.** Revision 2 with a `content` line, against keeping `export` at revision 1.
-10. **`ExportReport`.** It keeps refusing partial exports and loses `content_id()`.
-11. **`oce-diff`.** Narrow its decision 8: equal ids prove equal loaded graphs, not an empty
-    authoring diff.
+The orchestrator's review of the draft PR ruled on the eleven questions it raised
+([PR #471 comment](https://github.com/jscott3201/open-control-engine/pull/471#issuecomment-6733407567),
+2026-11-09); the note above is amended to match:
+
+1. **Hash:** SHA-256 via `sha2`, `default-features = false`, on `oce-api` only, accepted (decision
+   12). Keeping FNV-1a-128 and hand-writing SHA-256 rejected.
+2. **Namespace rule:** accepted as drafted; the exporter's synthetic root is unchanged, and
+   `oce-author` refuses a `--namespace` override that does not end in `#`, `/` or `:`. A sequence
+   rename moves the id, consistent with names inside it.
+3. **Collisions:** the whole-IRI fallback stands; no authored or library document reaches it.
+4. **`unit`:** inside the id; it is a connector attribute the engine reads.
+5. **Bounds:** inputs carry the effective domain; output `min`/`max`, `nominal` and `unbounded`
+   stay out.
+6. **Ports:** indices; the class signature hash pins names and kinds.
+7. **Defaults:** presence is the evaluated-or-not flag, and binding a default moves the id; the
+   second worked example was added to show it.
+8. **Blob:** `FORMAT_VERSION` 2, the digest fills the 32-byte field, present for the 13
+   partial-export fixtures; both blob dumps regenerate.
+9. **Descriptor:** revision 2 with a `content` line; `check_compatible` requires revision 2, and
+   the `Export*` mismatch variants are renamed.
+10. **`ExportReport`:** both id methods are dropped; the id comes only from `Engine::content_id`,
+    and `ExportReport` keeps `complete() -> Result<(), ExportIncomplete>` (decision 14 rewritten).
+11. **`oce-diff` and the other notes:** decision 8 narrowed, the "Relation to content ids" section
+    rewritten, authoring decision 6's rationale amended, commissioning decision 20 reconciled, the
+    M7 line added, all as the implementation PR's doc scope.
+
+The same review's fix round required, and the note now has: boundary outputs as the union with
+pass-through outputs (blocking); the headline narrowed to execution and the boundary I/O
+definitions, with the point inventory, snapshot manifest and snapshot restorability as stated
+exceptions; the canonical element-name refusal behind sorted parameters (the GitHub #467 family);
+the two-pass tick and feedthrough contract behind the equal-ids claim; the complete surface-change
+list; and the prototype measurements marked as such.

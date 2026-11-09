@@ -211,17 +211,22 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 - **Design note for the canonical content id** (GitHub #471, issue #470).
   `docs/design/content-id.md` fixes, before any code, the one content id that replaces the
-  order-bearing `cxf:fnv1a128:` export tag: SHA-256 over an `OCECANON` version 1 encoding of the
-  loaded flat graph, written `oce:canon1:<64 hex>`. Names are inside the id (instance namespace
-  stripped through the last `#`, `/` or `:`, the sequence name kept, whole-IRI fallback rather than
-  refusal); blocks sort by name with class path, class signature hash and ground parameter bits;
-  connections sort by target then source port; boundaries carry type, `quantity`, `unit`,
-  `displayUnit` and an input's effective domain; `SemanticPoint` records, `extends`, comments and
-  authored order never enter it. It defines the permutation classes and what equal ids promise
-  (equal outputs and per-block state per frame, not byte-identical blobs), the surface changes
-  (`Engine::content_id`, `ExportReport`, blob format version 2, compatibility descriptor revision
-  2, PC-018/PC-021), the TSV mapping table for the library re-stamp, and a worked example with an
-  exact 394-byte dump and its id. The note is registered in `docs/README.md` and the book.
+  order-bearing `cxf:fnv1a128:` export tag: SHA-256 (via `sha2`) over an `OCECANON` version 1
+  encoding of the loaded flat graph, written `oce:canon1:<64 hex>` and minted only by
+  `Engine::content_id`. Names are inside the id (instance namespace stripped through the last `#`,
+  `/` or `:`, the sequence name kept, whole-IRI fallback rather than refusal); blocks sort by name
+  with class path, class signature hash and ground parameter bits, presence being the
+  evaluated-or-not flag; connections sort by target then source port; boundary outputs include
+  pass-through outputs; boundaries carry type, `quantity`, `unit`, `displayUnit` and an input's
+  effective domain; `SemanticPoint` records, `extends`, comments and authored order never enter it.
+  It states what equal ids promise (equal outputs and per-block state on every successful frame,
+  resting on the two-pass tick and the feedthrough contract; not equal blobs, point inventories or
+  snapshot interchange), the canonical element-name refusal that makes sorted parameters sound, the
+  surface changes (`ExportReport` loses both id methods and keeps `complete()`, blob format version
+  2, compatibility descriptor revision 2 with a `content` line, PC-018/PC-021, the call sites and
+  docs), the TSV mapping table for the library re-stamp, and two worked examples with exact byte
+  dumps and ids (the second shows that binding a default moves the id). The architect review's
+  rulings are recorded in the note. It is registered in `docs/README.md` and the book.
 
 ## 0.4.0
 
