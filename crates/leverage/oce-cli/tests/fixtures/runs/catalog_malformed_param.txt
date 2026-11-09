@@ -1,0 +1,22 @@
+exit: 2
+--- stdout
+{
+  "class": null,
+  "command": "catalog",
+  "errors": [
+    {
+      "code": "malformed-param",
+      "detail": "`nin` is not NAME=VALUE",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": null,
+  "ok": false,
+  "params": [
+    "nin"
+  ],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

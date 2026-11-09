@@ -1,0 +1,23 @@
+exit: 2
+--- stdout
+{
+  "class": null,
+  "command": "catalog",
+  "errors": [
+    {
+      "code": "duplicate-param",
+      "detail": "`nin` is given twice",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": null,
+  "ok": false,
+  "params": [
+    "nin=2",
+    "nin=3"
+  ],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

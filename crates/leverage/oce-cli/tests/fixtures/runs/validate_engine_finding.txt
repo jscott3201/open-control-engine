@@ -1,0 +1,28 @@
+exit: 1
+--- stdout
+{
+  "command": "validate",
+  "errors": [],
+  "findings": [
+    {
+      "code": "unused-boundary-input",
+      "detail": "declared boundary input is read by no connection",
+      "origin": "engine",
+      "severity": "error",
+      "span": {
+        "column": 4,
+        "line": 5
+      },
+      "subject": "TSpare"
+    }
+  ],
+  "input": "tests/fixtures/inputs/unused_input.oce",
+  "ok": false,
+  "schema": "oce-report/1",
+  "stages": [
+    "author",
+    "engine"
+  ],
+  "tool": "oce"
+}
+--- stderr

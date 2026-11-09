@@ -224,7 +224,20 @@ emitted bytes in a throwaway engine and maps every diagnostic back onto the mode
 prototype's v0 graph JSON imports to the content id of the CXF it wrote), and the text form:
 a hand-written parser with one typed refusal per malformed construct, a canonical printer and an
 idempotent `fmt` that keeps every comment (an end-of-line comment moves above its statement; a
-comment after the last item of a list or block is refused).
+comment after the last item of a list or block is refused). The `oce` command-line tool
+(`crates/leverage/oce-cli`, the first binary above the facade) puts all of it at a shell prompt:
+`emit`, `validate`, `fmt`, `catalog` and `vocab`, each with a documented JSON report on stdout for
+agents and the exit rule 0 yes / 1 no / 2 error
+([report contract](crates/leverage/oce-cli/README.md)):
+
+```sh
+# econ_enable.oce is crates/leverage/oce-author/tests/fixtures/text/econ_enable.oce; copy it here first
+cargo run -p oce-cli -- validate econ_enable.oce        # findings as JSON; exit 0, 1 or 2
+cargo run -p oce-cli -- emit econ_enable.oce -o out.json # validate, then write flat CXF
+cargo run -p oce-cli -- fmt --check econ_enable.oce     # exit 1 when not canonical
+cargo run -p oce-cli -- catalog CDL.Reals.MultiSum --param nin=3
+```
+
 See [CHANGELOG.md](CHANGELOG.md).
 
 Work is planned as GitHub milestones and cut into issues. Each milestone has a tracking issue that
@@ -234,7 +247,7 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 | --- | --- | --- |
 | **M1a** Portable core: cleanup | Pure `Engine`, dead crates and ledgers removed, two CI lanes, native determinism and strict-bit matrices | Released as v0.3.0 |
 | **M1b** Portable core: `no_std` | Core four build `no_std + alloc`; math through `libm`; hash-free core; the **OCEB** compiled-schedule blob (encoder in `oce-api`, decoder in `oce-graph`, byte-stable across architectures); a `no_std` execution entry that never links `oce-cxf` or `oce-api`; a bare-metal gate cell with a size budget over `thumbv7em`, `riscv32imac` and `wasm32`; QEMU execution nightly | Released as v0.4.0 |
-| **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | In progress: `oce-author`'s model, wire form, schema, two-stage validator, emitter, text form and importer are in; the CLI next; in parallel with M3 |
+| **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | In progress: `oce-author`'s model, wire form, schema, two-stage validator, emitter, text form and importer are in, and so is the `oce` CLI (`emit`, `validate`, `fmt`, `catalog`, `vocab`); vocabulary v1 next; in parallel with M3 |
 | **M3** Verification product | Canonical content id, vector format v2, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode, on the `oce-replay` historical replay crate | In progress: `oce-replay` and the canonical content id (`Engine::content_id`, `oce:canon1:` over the loaded graph; blob format 2) are in; in parallel with M2 |
 | **M4** WASM | `oce-wasm` over `oce-api`, a TypeScript package, a browser demo that replays vectors without a server, a tracked `.wasm` size budget | Planned, in parallel with M5 |
 | **M5** Python | `oce-py` wheels (PyO3, abi3) over the same surface; replay and receipts from a notebook | Planned, in parallel with M4 |

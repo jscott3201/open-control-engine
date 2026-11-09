@@ -611,6 +611,37 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
   The note's text-form section is amended (dated) with each of these.
 
+- **The `oce` command-line tool** (GitHub #491, issue #489). `crates/leverage/oce-cli` (package
+  `oce-cli`, binary `oce`, `publish = false`) is M2 item 4 and the first binary above the facade:
+  `docs/architecture.md`'s no-binaries rule now covers the engine crates only (authoring note
+  decision 9). `oce emit` validates both stages and writes flat CXF to stdout or atomically to `-o`
+  (`--namespace` checked by the emitter), writing nothing on an error finding; `oce validate`
+  reports both stages or `--author-side` alone, with spans for text input; `oce fmt` prints the
+  canonical text (wire input converted), `--check` answers whether the input is canonical in its own
+  form and `--write` rewrites a text file atomically and only on change (both file writes go
+  through a uniquely named `create_new` temporary file that never follows a planted link and is
+  never more permissive than the target, new files `0600` on Unix, keep the target's permissions, follow a symbolic-link target, and report `changed`, `output` and `bytes`
+  only once the write succeeded); `oce catalog` lists the
+  classes or describes one with its parameters (type, default, settable) and its ports resolved at
+  the default table or at `--param NAME=VALUE`; `oce vocab` prints the keywords, tags, base units and
+  every code the tool reports with one line of meaning, and the facade's enumeration and
+  constant-package table (`oce_api::enumerations()`, GitHub #488) with each member's value. Arguments are parsed with `clap` (derive,
+  pinned `=4.6.7`, no colour), the second of M2's two new dependencies. Input is `.oce` text or
+  `.json` wire by extension, `--from text|wire` required for stdin; every read is bounded by the
+  form's 4 MiB limit, a file's size checked from its metadata before a byte is read. Stdout carries
+  one document per run — the product, or a JSON report (`schema: "oce-report/1"`: `tool`, `command`,
+  `input` as given, `ok`, `findings`, `errors`, command keys; sorted keys, LF, no clock, no host
+  path) documented in the crate README as the agent-facing contract; a human rendering goes to
+  stderr only on a terminal or with `--render always`. Exit codes: `0` yes, `1` no (error findings,
+  non-canonical, unresolved ports, unknown class), `2` error (usage, read, parse, size, write). A catalog
+  parameter of an enumeration type names its type's class path, and its `--param` value is a member
+  name (`PI` or `SimpleController.PI`). Evidence: 59 golden transcripts (exit, stdout, stderr) through the built binary
+  for every subcommand × outcome class and every `--help`; a contract test over every report;
+  `fmt --check` over every `oce-author` text fixture in place, `fmt` equal to its goldens and
+  idempotent; every emitted bundle loads warning-free in a throwaway `Engine` under two namespaces;
+  hostile inputs (binary junk, bad UTF-8, a 100 MB sparse file refused from its metadata, an
+  over-size stdin, a directory, a missing path, an empty file). 16 workspace members (10
+  publishable, 6 private); `release.yml`'s comment and step name re-pinned.
 ### Documentation
 
 - **Design note for the canonical content id** (GitHub #471, issue #470).

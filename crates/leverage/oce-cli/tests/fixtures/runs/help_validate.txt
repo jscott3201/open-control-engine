@@ -1,0 +1,33 @@
+exit: 0
+--- stdout
+Validate a sequence and print the findings as a JSON report.
+
+Stage 1 judges the model against the catalog; stage 2 (only when stage 1 is clean) loads the emitted CXF in a throwaway engine. Text input carries spans.
+
+Usage: oce validate [OPTIONS] <FILE>
+
+Arguments:
+  <FILE>
+          The input file (`.oce` text, `.json` wire), or `-` for stdin
+
+Options:
+      --from <FROM>
+          The input form; overrides the extension, and is required for stdin
+          
+          [possible values: text, wire]
+
+      --render <RENDER>
+          When to write a human-readable rendering of the report to stderr
+          
+          [default: auto]
+          [possible values: auto, always, never]
+
+      --author-side
+          Run stage 1 only (no engine load)
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+--- stderr

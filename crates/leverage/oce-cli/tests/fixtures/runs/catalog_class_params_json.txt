@@ -1,0 +1,63 @@
+exit: 0
+--- stdout
+{
+  "class": {
+    "class_path": "CDL.Reals.MultiSum",
+    "description": "Sum of Reals, y = k[1]*u[1] + k[2]*u[2] + ... + k[n]*u[n]",
+    "inputs": [
+      {
+        "kind": "Real",
+        "name": "u1"
+      },
+      {
+        "kind": "Real",
+        "name": "u2"
+      },
+      {
+        "kind": "Real",
+        "name": "u3"
+      }
+    ],
+    "outputs": [
+      {
+        "kind": "Real",
+        "name": "y"
+      }
+    ],
+    "parameters": [
+      {
+        "default": {
+          "kind": "integer",
+          "value": 0
+        },
+        "enumeration": null,
+        "name": "nin",
+        "settable": true,
+        "type": "Integer"
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 1.0
+        },
+        "enumeration": null,
+        "name": "k_<i>",
+        "settable": true,
+        "type": "Real"
+      }
+    ],
+    "reserved": false
+  },
+  "command": "catalog",
+  "errors": [],
+  "findings": [],
+  "input": null,
+  "ok": true,
+  "params": [
+    "nin=3",
+    "k_2=0.5"
+  ],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

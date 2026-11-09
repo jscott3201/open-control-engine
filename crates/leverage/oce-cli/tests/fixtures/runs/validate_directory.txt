@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "validate",
+  "errors": [
+    {
+      "code": "not-a-file",
+      "detail": "the path is not a regular file",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "tests/fixtures/inputs",
+  "ok": false,
+  "schema": "oce-report/1",
+  "stages": [],
+  "tool": "oce"
+}
+--- stderr

@@ -1,0 +1,59 @@
+exit: 1
+--- stdout
+{
+  "class": {
+    "class_path": "CDL.Reals.Limiter",
+    "description": "Limit the range of a signal",
+    "inputs": null,
+    "outputs": null,
+    "parameters": [
+      {
+        "default": {
+          "kind": "required",
+          "value": null
+        },
+        "enumeration": null,
+        "name": "uMin",
+        "settable": true,
+        "type": "Real"
+      },
+      {
+        "default": {
+          "kind": "required",
+          "value": null
+        },
+        "enumeration": null,
+        "name": "uMax",
+        "settable": true,
+        "type": "Real"
+      }
+    ],
+    "reserved": false
+  },
+  "command": "catalog",
+  "errors": [],
+  "findings": [
+    {
+      "code": "missing-required-parameter",
+      "detail": "block `CDL.Reals.Limiter` is missing required parameter `uMax`",
+      "origin": "engine",
+      "severity": "error",
+      "span": null,
+      "subject": "CDL.Reals.Limiter"
+    },
+    {
+      "code": "missing-required-parameter",
+      "detail": "block `CDL.Reals.Limiter` is missing required parameter `uMin`",
+      "origin": "engine",
+      "severity": "error",
+      "span": null,
+      "subject": "CDL.Reals.Limiter"
+    }
+  ],
+  "input": null,
+  "ok": false,
+  "params": [],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

@@ -1,0 +1,189 @@
+exit: 0
+--- stdout
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#"
+  },
+  "@graph": [
+    {
+      "@id": "urn:oce:author:econ_enable",
+      "@type": "S231:Block",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:econ_enable.dTHys"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:econ_enable.TOut"
+        },
+        {
+          "@id": "urn:oce:author:econ_enable.TOutCut"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:econ_enable.ecoEna"
+        }
+      ],
+      "S231:containsBlock": [
+        {
+          "@id": "urn:oce:author:econ_enable.sub"
+        },
+        {
+          "@id": "urn:oce:author:econ_enable.hys"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:econ_enable.dTHys",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:econ_enable.sub",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:econ_enable.sub.u1"
+        },
+        {
+          "@id": "urn:oce:author:econ_enable.sub.u2"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:econ_enable.sub.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:econ_enable.sub.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:econ_enable.sub.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:econ_enable.sub.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:econ_enable.hys.u"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:econ_enable.hys",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:econ_enable.hys.uLow"
+        },
+        {
+          "@id": "urn:oce:author:econ_enable.hys.uHigh"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:econ_enable.hys.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:econ_enable.hys.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:econ_enable.hys.uLow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:econ_enable.hys.uHigh",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "dTHys"
+    },
+    {
+      "@id": "urn:oce:author:econ_enable.hys.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:econ_enable.hys.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:econ_enable.ecoEna"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:econ_enable.TOut",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:displayUnit": "degC",
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:econ_enable.sub.u2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:econ_enable.TOutCut",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:econ_enable.sub.u1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:econ_enable.ecoEna",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    }
+  ]
+}
+--- stderr
