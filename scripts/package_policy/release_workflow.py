@@ -4,11 +4,12 @@
 import hashlib
 
 
-# Approval witness for release.yml as re-pinned when the firmware image became the third private
-# member (GitHub #449; previously re-pinned when the member count fell to 12, GitHub #391).
+# Approval witness for release.yml as re-pinned when the leverage crate oce-author became the fourth
+# private member (issue #463; previously for the firmware image, GitHub #449, and when the member
+# count fell to 12, GitHub #391).
 # Intentional changes follow the procedure in docs/ci-and-the-gate.md (the package validator).
 # Never derive the expected digest from the candidate workflow at validation time.
-EXPECTED_SHA256 = "9d967b652f1c3deb8cebca9fcc8f2c7dc2666faf629489cc2ee92e1d83762a56"
+EXPECTED_SHA256 = "56ca5bf1135e52cc4e0dc0f42757369630b5e6c05dfc3fd1039267689a0199f6"
 
 
 class WorkflowError(ValueError):
