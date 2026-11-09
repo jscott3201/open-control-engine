@@ -132,6 +132,11 @@ pub use state::{EngineCheckpoint, EngineStateError, EngineStateSnapshot};
 pub use state_snapshot::StatePortability;
 pub use topology::{DeclaredOutput, PassThroughPair, Topology, TopologyBlock, TopologyConnection};
 
+/// Re-export of the diagnostic code vocabulary: the type of [`Diagnostic::code`], so a host
+/// matches a refusal's code (for example [`ClassPortsError::InvalidParameters`]) as
+/// `oce_api::DiagCode` without a direct `oce-diag` dependency. `DiagCode::as_str` is the stable
+/// spelling.
+pub use oce_diag::DiagCode;
 /// Re-export of the shared diagnostic type: the element type of [`LoadReport::warnings`], so a
 /// binder owns it as `oce_api::Diagnostic`.
 pub use oce_diag::Diagnostic;

@@ -1,11 +1,11 @@
 //! Per-class authoring metadata kept beside the revision-1 catalog (GitHub #440).
 //!
 //! Two facts an authoring tool needs and the catalog does not carry: a one-sentence description
-//! of each class, and, for each parameter, whether an author may set it. Both are read from
-//! static tables and the registry's own defaults and rules; neither enters
-//! [`crate::catalog()`]'s entries, the `oce-api` canonical catalog JSON, or
-//! [`crate::class_signature_hash`] (descriptions are not behaviour, and settability follows from
-//! the already-hashed default source).
+//! of each class, and, for each parameter, its value type, its default and whether an author may
+//! assign it. All of it is read from static tables and the registry's own defaults and rules; none
+//! of it enters [`crate::catalog()`]'s entries, the `oce-api` canonical catalog JSON, or
+//! [`crate::class_signature_hash`] (descriptions are not behaviour, and settability is a property
+//! of the class's reservation, not of its computation).
 //!
 //! # Which parameters a class has
 //!
@@ -16,27 +16,44 @@
 //! parameters appear once, under their `<i>` / `<row>_<col>` template (see
 //! [`crate::ParamNameTemplate`]).
 //!
+//! # Value type
+//!
+//! A literal default gives the type directly. Otherwise the type comes from the class's
+//! parameter rules (a `Required` rule's kind, an `Integer…` or `Real…` bound, an array rule's
+//! element kind, an `EnumMembers` rule's member list matched to its CDL enumeration). Three
+//! derived defaults no rule names are typed by a short table here, transcribed from the vendored
+//! sources (all `Real`). A test requires every parameter of every class to be typed, and every
+//! source of evidence for one parameter to agree.
+//!
 //! # Settable
 //!
-//! A parameter is settable unless its default is [`DefaultSource::Derived`] (computed from other
-//! parameters) or it belongs to an engine-reserved lowering identity, which no author can spell.
-//! This is the owner's recorded rule for M2 (GitHub #440 and decision 18 of the authoring-layer
-//! design note), not a claim about Modelica `final`: upstream CDL declares every derived parameter
-//! listed here as an ordinary, overridable parameter.
+//! `settable` means "an author may assign this parameter" (GitHub #440, amendment of 2026-11-08):
+//! false only for the parameters of the three engine-reserved lowering identities, which no
+//! author can spell. A derived default (`MatrixGain.K`, `PIDWithReset.y_reset`, …) is a fact
+//! about the default, carried in [`ClassParameter::default`], not about assignability: upstream
+//! CDL declares every such parameter as a plain, overridable `parameter`, and the G36 corpus
+//! binds three of them.
 
 use alloc::vec::Vec;
 
+use oce_model::{EnumClassId, ValueType, enum_descriptor};
+
 use crate::class_descriptions::CLASS_DESCRIPTIONS;
 use crate::class_signature::is_reserved;
-use crate::{DefaultSource, ParamRule, registry};
+use crate::{DefaultLiteral, DefaultSource, ParamRule, RegistryEntry, registry};
 
 /// One parameter of a class, as an author sees it.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ClassParameter {
     /// CDL name, or the array template (`k_<i>`, `K_<row>_<col>`) for an array parameter.
     pub name: &'static str,
-    /// Whether an author may assign this parameter: false for a derived default and for every
-    /// parameter of an engine-reserved class.
+    /// The value type an assignment must have; for an array template, the element type.
+    pub value_type: ValueType,
+    /// The authored default: a literal, a derived formula, or [`DefaultSource::Required`] (no
+    /// default; the author must assign it). The rule-only `table_<row>_<col>` is `Required`.
+    pub default: DefaultSource,
+    /// Whether an author may assign this parameter: false only for the parameters of an
+    /// engine-reserved lowering identity. A derived default is still settable.
     pub settable: bool,
 }
 
@@ -49,25 +66,29 @@ pub fn class_description(class_path: &str) -> Option<&'static str> {
         .map(|(_, description)| *description)
 }
 
-/// Every parameter of a registered class with its settable flag, or `None` for an unregistered
-/// path. Allocates the returned list; never panics.
+/// Every parameter of a registered class with its type, default and settable flag, or `None` for
+/// an unregistered path. Allocates the returned list; never panics.
 #[must_use]
 pub fn class_parameters(class_path: &str) -> Option<Vec<ClassParameter>> {
     let entry = registry::lookup(class_path)?;
-    let reserved = is_reserved(entry.class_path);
+    let settable = !is_reserved(entry.class_path);
     let mut parameters: Vec<ClassParameter> = registry::param_defaults(entry.class_path)
         .iter()
         .map(|param| ClassParameter {
             name: param.name,
-            settable: !reserved && !matches!(param.default, DefaultSource::Derived { .. }),
+            value_type: parameter_type(entry, param.name, Some(param.default)),
+            default: param.default,
+            settable,
         })
         .collect();
     for rule in entry.param_rules() {
-        for name in rule_parameters(rule).into_iter().flatten() {
+        for (name, _) in rule_parameters(rule).into_iter().flatten() {
             if !parameters.iter().any(|param| param.name == name) {
                 parameters.push(ClassParameter {
                     name,
-                    settable: !reserved,
+                    value_type: parameter_type(entry, name, None),
+                    default: DefaultSource::Required,
+                    settable,
                 });
             }
         }
@@ -75,37 +96,167 @@ pub fn class_parameters(class_path: &str) -> Option<Vec<ClassParameter>> {
     Some(parameters)
 }
 
-/// The parameters one rule names, as catalog names (array bases as templates). Exhaustive with no
-/// wildcard arm, so a new rule variant fails compilation here until it is classified.
-pub(crate) fn rule_parameters(rule: &ParamRule) -> [Option<&'static str>; 4] {
+/// The value type of one class parameter (see the module documentation), or `Real` for a
+/// parameter no evidence types. The `every_parameter_has_one_agreed_type` test requires
+/// [`parameter_type_evidence`] to type every registered parameter, so the fallback is unreachable
+/// for the registry as shipped.
+fn parameter_type(entry: &RegistryEntry, name: &str, default: Option<DefaultSource>) -> ValueType {
+    parameter_type_evidence(entry, name, default)
+        .into_iter()
+        .next()
+        .unwrap_or(ValueType::Real)
+}
+
+/// Every type the registry's own data assigns to one parameter, literal default first, then each
+/// rule in declaration order, then the untyped-derived table.
+pub(crate) fn parameter_type_evidence(
+    entry: &RegistryEntry,
+    name: &str,
+    default: Option<DefaultSource>,
+) -> Vec<ValueType> {
+    let mut evidence = Vec::new();
+    if let Some(DefaultSource::Literal(literal)) = default {
+        evidence.extend(literal_type(entry, name, literal));
+    }
+    for rule in entry.param_rules() {
+        for (rule_name, value_type) in rule_parameters(rule).into_iter().flatten() {
+            if rule_name == name {
+                evidence.extend(value_type);
+            }
+        }
+    }
+    evidence.extend(
+        UNRULED_DERIVED_TYPES
+            .iter()
+            .filter(|(class, param, _)| *class == entry.class_path && *param == name)
+            .map(|(_, _, value_type)| *value_type),
+    );
+    evidence
+}
+
+/// Derived defaults that no parameter rule names, typed from their vendored declarations
+/// (`parameter Real fallingSlewRate(...) = -raisingSlewRate`, `parameter Real y_reset =
+/// xi_start`, `parameter Real falseHoldDuration(...) = trueHoldDuration`).
+const UNRULED_DERIVED_TYPES: &[(&str, &str, ValueType)] = &[
+    (
+        "CDL.Reals.LimitSlewRate",
+        "fallingSlewRate",
+        ValueType::Real,
+    ),
+    ("CDL.Reals.PIDWithReset", "y_reset", ValueType::Real),
+    (
+        "CDL.Logical.TrueFalseHold",
+        "falseHoldDuration",
+        ValueType::Real,
+    ),
+];
+
+/// The CDL enumerations a parameter of a registered class can take.
+const CDL_ENUMS: [EnumClassId; 4] = [
+    EnumClassId::SIMPLE_CONTROLLER,
+    EnumClassId::SMOOTHNESS,
+    EnumClassId::EXTRAPOLATION,
+    EnumClassId::ZERO_TIME,
+];
+
+/// The CDL enumeration whose members are exactly `members`.
+fn enum_with_members(members: &[&str]) -> Option<ValueType> {
+    CDL_ENUMS
+        .into_iter()
+        .find(|class| enum_descriptor(*class).is_some_and(|d| d.members == members))
+        .map(ValueType::Enum)
+}
+
+fn literal_type(entry: &RegistryEntry, name: &str, literal: DefaultLiteral) -> Option<ValueType> {
+    Some(match literal {
+        DefaultLiteral::Real(_) => ValueType::Real,
+        DefaultLiteral::Integer(_) => ValueType::Integer,
+        DefaultLiteral::Boolean(_) => ValueType::Boolean,
+        DefaultLiteral::Str(_) => ValueType::String,
+        // A member token is typed by the class's `EnumMembers` rule for the same parameter, or,
+        // where the class has none (`PID.controllerType`), by the one CDL enumeration that
+        // declares the member.
+        DefaultLiteral::EnumMember(member) => {
+            let by_rule = entry.param_rules().iter().find_map(|rule| match *rule {
+                ParamRule::EnumMembers {
+                    name: rule_name,
+                    members,
+                } if rule_name == name => enum_with_members(members),
+                _ => None,
+            });
+            let mut declaring = CDL_ENUMS.into_iter().filter(|class| {
+                enum_descriptor(*class).is_some_and(|d| d.members.contains(&member))
+            });
+            return by_rule.or_else(|| match (declaring.next(), declaring.next()) {
+                (Some(class), None) => Some(ValueType::Enum(class)),
+                _ => None,
+            });
+        }
+    })
+}
+
+/// The parameters one rule names, as catalog names (array bases as templates), each with the
+/// value type the rule implies, if it implies one. Exhaustive with no wildcard arm, so a new rule
+/// variant fails compilation here until it is classified.
+pub(crate) fn rule_parameters(rule: &ParamRule) -> [Option<(&'static str, Option<ValueType>)>; 4] {
+    use ValueType::{Boolean, Integer, Real};
+    let named = |name: &'static str, value_type: Option<ValueType>| Some((name, value_type));
+    let vector =
+        |base: &str, value_type: ValueType| vector_template(base).map(|t| (t, Some(value_type)));
+    let matrix = |base: &str| matrix_template(base).map(|t| (t, Some(Real)));
     match *rule {
-        ParamRule::Required { name, .. }
-        | ParamRule::Structural { name }
-        | ParamRule::Boolean { name }
-        | ParamRule::Real { name }
+        ParamRule::Required { name, kind } => [named(name, Some(kind)), None, None, None],
+        ParamRule::Structural { name } => [named(name, None), None, None, None],
+        ParamRule::Boolean { name } => [named(name, Some(Boolean)), None, None, None],
+        ParamRule::Real { name }
         | ParamRule::RealFinite { name }
         | ParamRule::RealGreaterThan { name, .. }
         | ParamRule::RealFiniteGreaterThan { name, .. }
-        | ParamRule::IntegerGreaterOrEqual { name, .. }
-        | ParamRule::IntegerLessOrEqualConstant { name, .. }
-        | ParamRule::EnumMembers { name, .. }
         | ParamRule::RealGreaterOrEqual { name, .. }
-        | ParamRule::RealLessOrEqualConstant { name, .. } => [Some(name), None, None, None],
-        ParamRule::StructuralArrayElements { base } => [vector_template(base), None, None, None],
-        ParamRule::IntegerArrayElements { base, len }
-        | ParamRule::RealArrayElements { base, len }
-        | ParamRule::BooleanArrayElements { base, len } => {
-            [vector_template(base), Some(len), None, None]
+        | ParamRule::RealLessOrEqualConstant { name, .. } => {
+            [named(name, Some(Real)), None, None, None]
         }
-        ParamRule::IntegerArrayElementsInRange { base, len, max, .. } => {
-            [vector_template(base), Some(len), Some(max), None]
+        ParamRule::IntegerGreaterOrEqual { name, .. }
+        | ParamRule::IntegerLessOrEqualConstant { name, .. } => {
+            [named(name, Some(Integer)), None, None, None]
         }
+        ParamRule::EnumMembers { name, members } => {
+            [named(name, enum_with_members(members)), None, None, None]
+        }
+        ParamRule::StructuralArrayElements { base } => {
+            [vector_template(base).map(|t| (t, None)), None, None, None]
+        }
+        ParamRule::IntegerArrayElements { base, len } => {
+            [vector(base, Integer), named(len, Some(Integer)), None, None]
+        }
+        ParamRule::RealArrayElements { base, len } => {
+            [vector(base, Real), named(len, Some(Integer)), None, None]
+        }
+        ParamRule::BooleanArrayElements { base, len } => {
+            [vector(base, Boolean), named(len, Some(Integer)), None, None]
+        }
+        ParamRule::IntegerArrayElementsInRange { base, len, max, .. } => [
+            vector(base, Integer),
+            named(len, Some(Integer)),
+            named(max, Some(Integer)),
+            None,
+        ],
         ParamRule::BooleanArrayTrueCountEquals {
             base, len, count, ..
-        } => [vector_template(base), Some(len), Some(count), None],
+        } => [
+            vector(base, Boolean),
+            named(len, Some(Integer)),
+            named(count, Some(Integer)),
+            None,
+        ],
         ParamRule::RealMatrixElements {
             base, rows, cols, ..
-        } => [matrix_template(base), Some(rows), Some(cols), None],
+        } => [
+            matrix(base),
+            named(rows, Some(Integer)),
+            named(cols, Some(Integer)),
+            None,
+        ],
         ParamRule::TimeTableMatrix {
             base,
             time_scale,
@@ -113,24 +264,41 @@ pub(crate) fn rule_parameters(rule: &ParamRule) -> [Option<&'static str>; 4] {
             extrapolation,
             ..
         } => [
-            matrix_template(base),
-            Some(time_scale),
-            period,
-            extrapolation,
+            matrix(base),
+            named(time_scale, Some(Real)),
+            period.and_then(|name| named(name, Some(Real))),
+            extrapolation
+                .and_then(|name| named(name, Some(ValueType::Enum(EnumClassId::EXTRAPOLATION)))),
         ],
         ParamRule::TimeTableOffset { base, table } => {
-            [vector_template(base), matrix_template(table), None, None]
+            [vector(base, Real), matrix(table), None, None]
         }
-        ParamRule::RealTimesIntegerInclusiveRange { real, integer, .. } => {
-            [Some(real), Some(integer), None, None]
-        }
-        ParamRule::IntegerProductLessOrEqualConstant { left, right, .. }
-        | ParamRule::RealGreaterOrEqualScaledWarning { left, right, .. }
-        | ParamRule::RealEqualWarning { left, right } => [Some(left), Some(right), None, None],
+        ParamRule::RealTimesIntegerInclusiveRange { real, integer, .. } => [
+            named(real, Some(Real)),
+            named(integer, Some(Integer)),
+            None,
+            None,
+        ],
+        ParamRule::IntegerProductLessOrEqualConstant { left, right, .. } => [
+            named(left, Some(Integer)),
+            named(right, Some(Integer)),
+            None,
+            None,
+        ],
+        ParamRule::RealGreaterOrEqualScaledWarning { left, right, .. }
+        | ParamRule::RealEqualWarning { left, right } => [
+            named(left, Some(Real)),
+            named(right, Some(Real)),
+            None,
+            None,
+        ],
         ParamRule::RealLessOrEqual { lower, upper }
-        | ParamRule::RealLessOrEqualWarning { lower, upper } => {
-            [Some(lower), Some(upper), None, None]
-        }
+        | ParamRule::RealLessOrEqualWarning { lower, upper } => [
+            named(lower, Some(Real)),
+            named(upper, Some(Real)),
+            None,
+            None,
+        ],
     }
 }
 

@@ -141,7 +141,7 @@ enum MatrixCols {
 }
 
 /// The declared connectors of one class without stable scalar names.
-struct Layout {
+pub(crate) struct Layout {
     inputs: &'static [Connector],
     outputs: &'static [Connector],
 }
@@ -194,7 +194,7 @@ const TIME_TABLE: Layout = Layout {
 
 /// The connector layout of every class [`crate::port_names`] does not name: the 25 width-driven
 /// classes and the three `TimeTable` sources, transcribed from their upstream CDL declarations.
-fn layout(class_path: &str) -> Option<&'static Layout> {
+pub(crate) fn layout(class_path: &str) -> Option<&'static Layout> {
     Some(match class_path {
         "CDL.Reals.MultiMax"
         | "CDL.Reals.MultiMin"
@@ -250,35 +250,67 @@ pub fn resolved_ports(
     let entry = registry::lookup(class_path).ok_or(ResolvedPortsError::UnknownClass)?;
     let block = (entry.make)(params);
     let signature = block.resolved_signature();
-    let (inputs, outputs) = if let Some(names) = port_names::port_names(entry.class_path) {
-        (
-            named_side(names.inputs, &signature.inputs, PortSide::Input)?,
-            named_side(names.outputs, &signature.outputs, PortSide::Output)?,
-        )
-    } else {
-        let layout = layout(entry.class_path).ok_or(ResolvedPortsError::NoLayout)?;
-        let input_count = signature.inputs.len();
-        let output_count = signature.outputs.len();
-        let shape = SideShape {
-            params,
-            class_path: entry.class_path,
-            input_count,
-            output_count,
-        };
-        let (input_names, input_vector_width) =
-            shape.names(layout.inputs, PortSide::Input, None)?;
-        let (output_names, _) =
-            shape.names(layout.outputs, PortSide::Output, input_vector_width)?;
-        (
-            zip_kinds(input_names, &signature.inputs),
-            zip_kinds(output_names, &signature.outputs),
-        )
+    let declared = match port_names::port_names(entry.class_path) {
+        Some(names) => Declared::Names(names.inputs, names.outputs),
+        None => Declared::Layout(layout(entry.class_path)),
     };
+    let (inputs, outputs) = name_signature(
+        entry.class_path,
+        declared,
+        params,
+        &signature.inputs,
+        &signature.outputs,
+    )?;
     Ok(ResolvedPorts {
         class_path: entry.class_path,
         inputs,
         outputs,
     })
+}
+
+/// What a class declares about its ports: fixed CDL names, or a connector layout (`None` when a
+/// registered class has neither, which [`ResolvedPortsError::NoLayout`] reports).
+#[derive(Clone, Copy)]
+pub(crate) enum Declared {
+    /// Fixed names, inputs then outputs.
+    Names(&'static [&'static str], &'static [&'static str]),
+    /// A connector layout for a parameter-shaped class.
+    Layout(Option<&'static Layout>),
+}
+
+/// Name a resolved signature by what its class declares. The seam [`resolved_ports`] calls with
+/// the constructed block's signature; tests call it with hand-built signatures to reach every
+/// refusal.
+pub(crate) fn name_signature(
+    class_path: &'static str,
+    declared: Declared,
+    params: &ParamTable,
+    input_kinds: &[PortKind],
+    output_kinds: &[PortKind],
+) -> Result<(Vec<ResolvedPort>, Vec<ResolvedPort>), ResolvedPortsError> {
+    match declared {
+        Declared::Names(inputs, outputs) => Ok((
+            named_side(inputs, input_kinds, PortSide::Input)?,
+            named_side(outputs, output_kinds, PortSide::Output)?,
+        )),
+        Declared::Layout(layout) => {
+            let layout = layout.ok_or(ResolvedPortsError::NoLayout)?;
+            let shape = SideShape {
+                params,
+                class_path,
+                input_count: input_kinds.len(),
+                output_count: output_kinds.len(),
+            };
+            let (input_names, input_vector_width) =
+                shape.names(layout.inputs, PortSide::Input, None)?;
+            let (output_names, _) =
+                shape.names(layout.outputs, PortSide::Output, input_vector_width)?;
+            Ok((
+                zip_kinds(input_names, input_kinds),
+                zip_kinds(output_names, output_kinds),
+            ))
+        }
+    }
 }
 
 fn named_side(
@@ -433,3 +465,7 @@ fn matrix_rows_cols(elements: usize, cols: Option<usize>) -> Option<(usize, usiz
             .then(|| (elements / cols, cols)),
     }
 }
+
+#[cfg(test)]
+#[path = "resolved_ports_tests.rs"]
+mod tests;

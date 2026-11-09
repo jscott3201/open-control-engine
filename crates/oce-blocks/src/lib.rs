@@ -42,7 +42,10 @@ use oce_model::{ParamTable, Value, ValueType, determinism::canonicalize_real};
 
 mod catalog;
 mod catalog_rules;
+// Host-facing authoring metadata (GitHub #440): `std` only, so no bare-metal image carries it.
+#[cfg(feature = "std")]
 mod class_descriptions;
+#[cfg(feature = "std")]
 mod class_metadata;
 mod class_signature;
 pub use catalog_rules::ParamRuleProjection;
@@ -61,6 +64,7 @@ mod logical_timing;
 mod logical_variable_pulse;
 mod lowering;
 mod math;
+#[cfg(feature = "std")]
 mod param_templates;
 mod pid;
 pub mod port_names;
@@ -76,6 +80,7 @@ mod reals_sources;
 mod reals_transcendental;
 mod reals_vector_reductions;
 mod registry;
+#[cfg(feature = "std")]
 mod resolved_ports;
 
 #[cfg(feature = "std")]
@@ -83,10 +88,13 @@ pub use catalog::catalog;
 pub use catalog::{
     CatalogEntry, DefaultLiteral, DefaultSource, ParamDefault, PortInfo, PortNaming,
 };
+#[cfg(feature = "std")]
 pub use class_metadata::{ClassParameter, class_description, class_parameters};
+#[cfg(feature = "std")]
 pub use param_templates::{
     PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER, ParamNameTemplate,
 };
+#[cfg(feature = "std")]
 pub use resolved_ports::{
     PortSide, ResolvedPort, ResolvedPorts, ResolvedPortsError, resolved_ports,
 };
@@ -769,7 +777,7 @@ mod catalog_tests;
 #[cfg(test)]
 mod class_signature_tests;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod class_metadata_tests;
 
 #[cfg(test)]

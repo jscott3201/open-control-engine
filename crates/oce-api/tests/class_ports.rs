@@ -14,7 +14,7 @@ use std::path::PathBuf;
 use oce_api::{
     CatalogDefault, CatalogPortKind, CatalogPortNaming, CatalogRule, CatalogValueKind,
     ClassPortsError, PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER, Value,
-    catalog, class_metadata, class_ports, param_element_name,
+    ValueType, catalog, class_metadata, class_ports, param_element_name,
 };
 
 fn workspace_path(relative: &str) -> PathBuf {
@@ -125,201 +125,6 @@ fn port_names_equal_the_connectors_the_import_bound_across_the_corpus() {
             parameter_shaped.contains(class),
             "{class} not compared: {parameter_shaped:?}"
         );
-    }
-}
-
-/// A one-block CXF document: `class` with `scalars` as Integer parameters, `arrays` as preserved
-/// array parameters `(label, sizeOfDimensions, element literals in row-major order)`, and the
-/// ports `class_ports` names for the same flattened parameters, as connector nodes.
-fn array_document(
-    class: &str,
-    scalars: &[(&str, i64)],
-    arrays: &[(&str, &str, Vec<f64>)],
-    ports: &oce_api::ClassPorts,
-) -> String {
-    let base = "http://example.org#arr";
-    let mut parameter_ids = Vec::new();
-    let mut nodes = Vec::new();
-    for (name, value) in scalars {
-        parameter_ids.push(format!("{{ \"@id\": \"{base}.blk.{name}\" }}"));
-        nodes.push(format!(
-            "{{ \"@id\": \"{base}.blk.{name}\", \"@type\": \"S231:Parameter\", \
-             \"S231:isOfDataType\": {{ \"@id\": \"S231:Integer\" }}, \"S231:value\": {value} }}"
-        ));
-    }
-    for (label, size, elements) in arrays {
-        let name = label.split('[').next().unwrap();
-        let rank = size.matches(',').count() + 1;
-        let literals: Vec<String> = elements
-            .iter()
-            .map(|value| {
-                format!(
-                    "{{ \"@value\": \"{value:?}\", \
-                     \"@type\": \"http://www.w3.org/2001/XMLSchema#double\" }}"
-                )
-            })
-            .collect();
-        parameter_ids.push(format!("{{ \"@id\": \"{base}.blk.{name}\" }}"));
-        nodes.push(format!(
-            "{{ \"@id\": \"{base}.blk.{name}\", \"S231:label\": \"{label}\", \
-             \"S231:isArray\": true, \"S231:numberDimensions\": {rank}, \
-             \"S231:sizeOfDimensions\": \"{size}\", \"S231:value\": [{}] }}",
-            literals.join(", ")
-        ));
-    }
-    // Every input is driven by its own `Sources.Constant`, so the import's single-assignment
-    // check passes without a boundary connector replacing the port's own identity.
-    let mut port_ids = [Vec::new(), Vec::new()];
-    let mut drivers = Vec::new();
-    for (side, (named, direction)) in [(&ports.inputs, "Input"), (&ports.outputs, "Output")]
-        .into_iter()
-        .enumerate()
-    {
-        for port in named {
-            assert_eq!(
-                port.kind,
-                CatalogPortKind::Real,
-                "the driver blocks are Real"
-            );
-            port_ids[side].push(format!("{{ \"@id\": \"{base}.blk.{}\" }}", port.name));
-            nodes.push(format!(
-                "{{ \"@id\": \"{base}.blk.{}\", \"@type\": \"S231:Real{direction}\", \
-                 \"S231:isOfDataType\": {{ \"@id\": \"S231:Real\" }} }}",
-                port.name
-            ));
-            if direction == "Input" {
-                let driver = format!("{base}.drv_{}", port.name);
-                drivers.push(format!("{{ \"@id\": \"{driver}\" }}"));
-                nodes.push(format!(
-                    "{{ \"@id\": \"{driver}\", \
-                     \"@type\": \"http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant\", \
-                     \"S231:hasParameter\": [{{ \"@id\": \"{driver}.k\" }}], \
-                     \"S231:hasOutput\": [{{ \"@id\": \"{driver}.y\" }}] }}, \
-                     {{ \"@id\": \"{driver}.k\", \"@type\": \"S231:Parameter\", \
-                     \"S231:isOfDataType\": {{ \"@id\": \"S231:Real\" }}, \"S231:value\": 1.0 }}, \
-                     {{ \"@id\": \"{driver}.y\", \"@type\": \"S231:RealOutput\", \
-                     \"S231:isOfDataType\": {{ \"@id\": \"S231:Real\" }}, \
-                     \"S231:isConnectedTo\": {{ \"@id\": \"{base}.blk.{}\" }} }}",
-                    port.name
-                ));
-            }
-        }
-    }
-    drivers.push(format!("{{ \"@id\": \"{base}.blk\" }}"));
-    format!(
-        "{{ \"@context\": {{ \"S231\": \"http://data.ashrae.org/S231P#\" }}, \"@graph\": [\
-         {{ \"@id\": \"{base}\", \"@type\": \"S231:Block\", \
-            \"S231:containsBlock\": [{}] }},\
-         {{ \"@id\": \"{base}.blk\", \
-            \"@type\": \"http://example.org#Buildings.Controls.OBC.{class}\", \
-            \"S231:hasParameter\": [{}], \"S231:hasInput\": [{}], \"S231:hasOutput\": [{}] }}, \
-         {} ] }}",
-        drivers.join(", "),
-        parameter_ids.join(", "),
-        port_ids[0].join(", "),
-        port_ids[1].join(", "),
-        nodes.join(", ")
-    )
-}
-
-/// Resolve `document` with the CXF import and return the block under test's flattened parameter
-/// names in the import's order, and the local names of the connectors bound at each port index.
-fn imported_names(document: &str) -> (Vec<String>, Vec<String>, Vec<String>) {
-    let (model, _) = oce_cxf::import_cxf(document.as_bytes(), &oce_cxf::ResolveOptions::default())
-        .unwrap_or_else(|error| panic!("import refused: {error:?}\n{document}"));
-    let block = model
-        .blocks
-        .iter()
-        .find(|block| block.instance_iri.as_deref() == Some("http://example.org#arr.blk"))
-        .expect("the block under test");
-    let local = |ids: &[oce_model::ConnectorId]| -> Vec<String> {
-        ids.iter()
-            .map(|id| {
-                let iri = model.connectors[id.0 as usize]
-                    .iri
-                    .as_deref()
-                    .expect("authored");
-                iri.rsplit('.').next().unwrap().to_owned()
-            })
-            .collect()
-    };
-    (
-        block
-            .params
-            .values
-            .iter()
-            .map(|(name, _)| name.to_string())
-            .collect(),
-        local(&block.inputs),
-        local(&block.outputs),
-    )
-}
-
-#[test]
-fn param_element_names_equal_the_names_the_import_mints_for_preserved_arrays() {
-    // (class, scalar widths, preserved arrays, the catalog template and its index space)
-    struct Case {
-        class: &'static str,
-        scalars: Vec<(&'static str, i64)>,
-        array: (&'static str, &'static str, Vec<f64>),
-        template: &'static str,
-        indices: Vec<Vec<usize>>,
-    }
-    let cases = [
-        Case {
-            class: "CDL.Reals.MultiSum",
-            scalars: vec![("nin", 3)],
-            array: ("k[3]", "(3)", vec![0.5, 1.5, 2.5]),
-            template: "k_<i>",
-            indices: (1..=3).map(|i| vec![i]).collect(),
-        },
-        Case {
-            class: "CDL.Reals.MatrixGain",
-            scalars: vec![("nout", 2), ("nin", 3)],
-            array: ("K[2,3]", "(2, 3)", vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
-            template: "K_<row>_<col>",
-            indices: (1..=2)
-                .flat_map(|r| (1..=3).map(move |c| vec![r, c]))
-                .collect(),
-        },
-    ];
-    for case in cases {
-        let spelled: Vec<String> = case
-            .indices
-            .iter()
-            .map(|indices| param_element_name(case.template, indices).unwrap())
-            .collect();
-        let mut params: Vec<(&str, Value)> = case
-            .scalars
-            .iter()
-            .map(|(name, value)| (*name, Value::Integer(*value)))
-            .collect();
-        params.extend(
-            spelled
-                .iter()
-                .zip(&case.array.2)
-                .map(|(name, v)| (name.as_str(), Value::Real(*v))),
-        );
-        let ports = class_ports(case.class, &params).expect("valid");
-        let document = array_document(
-            case.class,
-            &case.scalars,
-            std::slice::from_ref(&case.array),
-            &ports,
-        );
-        let (parameters, inputs, outputs) = imported_names(&document);
-        let flattened: Vec<String> = parameters
-            .into_iter()
-            .filter(|name| !case.scalars.iter().any(|(scalar, _)| scalar == name))
-            .collect();
-        // The import mints exactly the spelled names, row-major, last index fastest.
-        assert_eq!(flattened, spelled, "{}", case.class);
-        // And it binds the named ports at the indices `class_ports` gives them.
-        let names = |side: &[oce_api::ClassPort]| -> Vec<String> {
-            side.iter().map(|port| port.name.clone()).collect()
-        };
-        assert_eq!(inputs, names(&ports.inputs), "{}", case.class);
-        assert_eq!(outputs, names(&ports.outputs), "{}", case.class);
     }
 }
 
@@ -564,20 +369,80 @@ fn class_metadata_covers_every_class_in_catalog_order() {
     for (meta, entry) in metadata.iter().zip(catalog) {
         assert_eq!(meta.class_path, entry.class_path);
         assert!(!meta.description.is_empty(), "{}", meta.class_path);
-        // Every authored default is a parameter, in order, settable unless derived or reserved.
+        // Every authored default is a parameter, in order, with the catalog's own default
+        // payload; settable is the reservation alone (GitHub #440 amendment, 2026-11-08), so a
+        // derived default such as `MatrixGain.K` is settable.
         for (parameter, default) in meta.parameters.iter().zip(&entry.param_defaults) {
             assert_eq!(parameter.name, default.name);
-            let derived = matches!(default.default, CatalogDefault::Derived(_));
-            assert_eq!(
-                parameter.settable,
-                !derived && !entry.reserved,
-                "{}",
-                parameter.name
-            );
+            assert_eq!(parameter.default, default.default, "{}", parameter.name);
+        }
+        for parameter in &meta.parameters {
+            assert_eq!(parameter.settable, !entry.reserved, "{}", parameter.name);
+        }
+        // A `Required` rule's kind is the parameter's type.
+        for rule in &entry.param_rules {
+            if let CatalogRule::Required { name, kind } = rule {
+                let parameter = meta.parameters.iter().find(|p| p.name == *name).unwrap();
+                let expected = match kind {
+                    CatalogValueKind::Real => ValueType::Real,
+                    CatalogValueKind::Integer => ValueType::Integer,
+                    CatalogValueKind::Boolean => ValueType::Boolean,
+                    CatalogValueKind::String => ValueType::String,
+                    CatalogValueKind::Enum { .. } => parameter.value_type,
+                };
+                assert_eq!(
+                    parameter.value_type, expected,
+                    "{}.{name}",
+                    entry.class_path
+                );
+            }
         }
         assert!(meta.parameters.len() >= entry.param_defaults.len());
     }
+    // A derived default stays settable: the corpus itself assigns `MatrixGain.K`.
+    let gain = metadata
+        .iter()
+        .find(|meta| meta.class_path == "CDL.Reals.MatrixGain")
+        .unwrap();
+    let k = gain
+        .parameters
+        .iter()
+        .find(|p| p.name == "K_<row>_<col>")
+        .unwrap();
+    assert!(matches!(k.default, CatalogDefault::Derived(_)));
+    assert!(k.settable);
+    assert_eq!(k.value_type, ValueType::Real);
     assert!(std::ptr::eq(class_metadata(), metadata), "allocated once");
+}
+
+/// The body of a Modelica string literal whose opening quote is already consumed, with its
+/// escapes (`\"`, `\\`, `\n`, …) decoded; `None` if the literal never closes.
+fn modelica_string(tail: &str) -> Option<String> {
+    let mut out = String::new();
+    let mut chars = tail.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '"' => return Some(out),
+            '\\' => match chars.next()? {
+                'n' => out.push('\n'),
+                't' => out.push('\t'),
+                other => out.push(other),
+            },
+            other => out.push(other),
+        }
+    }
+    None
+}
+
+#[test]
+fn the_modelica_string_reader_decodes_escaped_quotes() {
+    assert_eq!(modelica_string(r#"plain" rest"#).as_deref(), Some("plain"));
+    assert_eq!(
+        modelica_string(r#"say \"hi\" now" rest"#).as_deref(),
+        Some(r#"say "hi" now"#)
+    );
+    assert_eq!(modelica_string(r#"a \\ b""#).as_deref(), Some(r"a \ b"));
+    assert_eq!(modelica_string("never closes"), None);
 }
 
 #[test]
@@ -601,8 +466,7 @@ fn class_descriptions_match_vendored_sources() {
         let rest = text[declaration..].trim_start();
         let description = rest
             .strip_prefix('"')
-            .and_then(|tail| tail.split_once('"'))
-            .map(|(description, _)| description)
+            .and_then(modelica_string)
             .unwrap_or_else(|| panic!("{}: no description string", meta.class_path));
         assert_eq!(meta.description, description, "{}", meta.class_path);
         checked += 1;

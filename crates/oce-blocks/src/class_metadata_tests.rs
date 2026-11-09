@@ -2,7 +2,8 @@
 //!
 //! The per-class values are pinned byte for byte by the `class_ports` golden in `tests/`; these
 //! tests assert the properties that golden cannot show on its own: every class is covered exactly
-//! once and in registry order, the settable rule follows the default source and nothing else, every
+//! once and in registry order, the settable flag follows the reservation and nothing else, every
+//! parameter is typed by agreeing evidence, every
 //! array a rule names maps to its catalog template, and the template expansion is the import's
 //! row-major underscore spelling at its edges.
 
@@ -10,7 +11,9 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 use crate::class_descriptions::CLASS_DESCRIPTIONS;
-use crate::class_metadata::rule_parameters;
+use oce_model::{EnumClassId, ValueType};
+
+use crate::class_metadata::{parameter_type_evidence, rule_parameters};
 use crate::registry::{all_entries, param_defaults};
 use crate::{
     DefaultSource, PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER,
@@ -52,27 +55,33 @@ fn unregistered_paths_have_no_metadata() {
 }
 
 #[test]
-fn settable_follows_the_default_source_and_the_reserved_flag_only() {
+fn defaults_come_first_in_order_with_their_source_and_settable_follows_reservation_only() {
     for entry in all_entries() {
         let reserved = entry.class_path.starts_with("urn:oce:lowering#");
         let parameters = class_parameters(entry.class_path).expect("registered");
         let defaults = param_defaults(entry.class_path);
-        // Defaults come first, in declaration order, one parameter each.
+        // Defaults come first, in declaration order, one parameter each, carrying their source.
         assert!(parameters.len() >= defaults.len(), "{}", entry.class_path);
         for (parameter, default) in parameters.iter().zip(defaults) {
             assert_eq!(parameter.name, default.name);
-            let derived = matches!(default.default, DefaultSource::Derived { .. });
+            assert_eq!(parameter.default, default.default);
+        }
+        // Rule-only parameters have no default: the author must assign them.
+        for parameter in &parameters[defaults.len()..] {
             assert_eq!(
-                parameter.settable,
-                !reserved && !derived,
-                "{}.{}",
-                entry.class_path,
+                parameter.default,
+                DefaultSource::Required,
+                "{}",
                 parameter.name
             );
         }
-        // Rule-only parameters have no default, so they are settable unless reserved.
-        for parameter in &parameters[defaults.len()..] {
-            assert_eq!(parameter.settable, !reserved, "{}", parameter.name);
+        // Settable is the reservation and nothing else (GitHub #440 amendment, 2026-11-08).
+        for parameter in &parameters {
+            assert_eq!(
+                parameter.settable, !reserved,
+                "{}.{}",
+                entry.class_path, parameter.name
+            );
         }
         let mut names: Vec<&str> = parameters.iter().map(|p| p.name).collect();
         names.sort_unstable();
@@ -87,18 +96,32 @@ fn settable_follows_the_default_source_and_the_reserved_flag_only() {
 }
 
 #[test]
-fn derived_defaults_are_the_only_unsettable_authorable_parameters() {
-    let mut unsettable: Vec<String> = Vec::new();
+fn every_derived_default_is_settable_and_only_reserved_identities_are_not() {
+    let mut derived: Vec<String> = Vec::new();
     for entry in all_entries() {
         for parameter in class_parameters(entry.class_path).expect("registered") {
+            if matches!(parameter.default, DefaultSource::Derived { .. }) {
+                assert!(
+                    parameter.settable,
+                    "{}.{}",
+                    entry.class_path, parameter.name
+                );
+                derived.push(alloc::format!("{}.{}", entry.class_path, parameter.name));
+            }
             if !parameter.settable {
-                unsettable.push(alloc::format!("{}.{}", entry.class_path, parameter.name));
+                assert!(
+                    entry.class_path.starts_with("urn:oce:lowering#"),
+                    "{}.{} is unsettable but not reserved",
+                    entry.class_path,
+                    parameter.name
+                );
             }
         }
     }
-    // The twelve derived defaults in the registry today; a new one is a conscious change here.
+    // The twelve derived defaults in the registry today, every one assignable upstream; a new one
+    // is a conscious change here.
     assert_eq!(
-        unsettable,
+        derived,
         [
             "CDL.Reals.MatrixGain.K_<row>_<col>",
             "CDL.Reals.LimitSlewRate.fallingSlewRate",
@@ -115,6 +138,101 @@ fn derived_defaults_are_the_only_unsettable_authorable_parameters() {
         ]
         .map(String::from)
         .to_vec()
+    );
+    // The reserved identities declare no parameters today, so `settable == false` is vacuous for
+    // them; the flag is still computed from the reservation, which the test above pins.
+    for entry in all_entries().filter(|e| e.class_path.starts_with("urn:oce:lowering#")) {
+        assert!(
+            class_parameters(entry.class_path)
+                .expect("registered")
+                .is_empty()
+        );
+    }
+}
+
+#[test]
+fn every_parameter_has_one_agreed_type() {
+    for entry in all_entries() {
+        for parameter in class_parameters(entry.class_path).expect("registered") {
+            let defaults = param_defaults(entry.class_path);
+            let default = defaults
+                .iter()
+                .find(|d| d.name == parameter.name)
+                .map(|d| d.default);
+            let evidence = parameter_type_evidence(entry, parameter.name, default);
+            assert!(
+                !evidence.is_empty(),
+                "{}.{}: no evidence types this parameter",
+                entry.class_path,
+                parameter.name
+            );
+            assert!(
+                evidence.iter().all(|t| *t == evidence[0]),
+                "{}.{}: conflicting types {evidence:?}",
+                entry.class_path,
+                parameter.name
+            );
+            assert_eq!(parameter.value_type, evidence[0]);
+        }
+    }
+}
+
+#[test]
+fn spot_checked_types_match_the_cdl_declarations() {
+    let type_of = |class: &str, name: &str| {
+        class_parameters(class)
+            .unwrap()
+            .into_iter()
+            .find(|p| p.name == name)
+            .unwrap_or_else(|| panic!("{class}.{name}"))
+            .value_type
+    };
+    assert_eq!(type_of("CDL.Reals.MultiSum", "nin"), ValueType::Integer);
+    assert_eq!(type_of("CDL.Reals.MultiSum", "k_<i>"), ValueType::Real);
+    assert_eq!(
+        type_of("CDL.Integers.MultiSum", "k_<i>"),
+        ValueType::Integer
+    );
+    assert_eq!(
+        type_of("CDL.Reals.MatrixGain", "K_<row>_<col>"),
+        ValueType::Real
+    );
+    assert_eq!(type_of("CDL.Reals.MatrixMax", "rowMax"), ValueType::Boolean);
+    assert_eq!(
+        type_of("CDL.Routing.RealVectorFilter", "msk_<i>"),
+        ValueType::Boolean
+    );
+    assert_eq!(
+        type_of("CDL.Routing.RealExtractSignal", "extract_<i>"),
+        ValueType::Integer
+    );
+    assert_eq!(
+        type_of("CDL.Reals.Sources.TimeTable", "table_<row>_<col>"),
+        ValueType::Real
+    );
+    assert_eq!(
+        type_of("CDL.Reals.Sources.TimeTable", "extrapolation"),
+        ValueType::Enum(EnumClassId::EXTRAPOLATION)
+    );
+    assert_eq!(
+        type_of("CDL.Reals.Sources.TimeTable", "smoothness"),
+        ValueType::Enum(EnumClassId::SMOOTHNESS)
+    );
+    assert_eq!(
+        type_of("CDL.Reals.PID", "controllerType"),
+        ValueType::Enum(EnumClassId::SIMPLE_CONTROLLER)
+    );
+    assert_eq!(
+        type_of("CDL.Reals.Sources.CalendarTime", "zerTim"),
+        ValueType::Enum(EnumClassId::ZERO_TIME)
+    );
+    assert_eq!(
+        type_of("CDL.Utilities.Assert", "message"),
+        ValueType::String
+    );
+    assert_eq!(
+        type_of("CDL.Reals.PIDWithReset", "y_reset"),
+        ValueType::Real
     );
 }
 
@@ -139,7 +257,7 @@ fn every_array_a_rule_names_maps_to_its_catalog_template() {
                 let template = named
                     .iter()
                     .flatten()
-                    .map(|name| ParamNameTemplate::parse(name))
+                    .map(|(name, _)| ParamNameTemplate::parse(name))
                     .find(|template| template.base() == *base && template.rank() == *rank);
                 assert!(
                     template.is_some(),

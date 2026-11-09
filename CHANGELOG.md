@@ -66,7 +66,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `docs/host-responsibilities.md`, PC-035 in `docs/product-contract.md` and the README name the
   slot entry beside the named path. `oce-graph` and every golden are unchanged.
 
-- **Resolved port names, class descriptions and the settable flag** (GitHub #461, issue #440;
+- **Resolved port names, class descriptions and parameter metadata** (GitHub #461, issue #440;
   authoring-layer design note decisions 15 and 18). `oce_api::class_ports(class_path, params)`
   names every port of a class as configured, in port index order: scalar connectors keep their CDL
   name, a vector connector `u[n]` is `u1`…`un` (the corpus's spelling, bound by position by the
@@ -74,27 +74,44 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `n`-value-column table. The parameters are first checked with the load gate's own rules through
   the new `oce_validate::validate_block_parameters`, so a table a load would refuse is
   `ClassPortsError::InvalidParameters` (carrying the load diagnostics) and an unregistered class is
-  `ClassPortsError::UnknownClass`; nothing panics. `oce_api::class_metadata()` gives every class in
-  catalog order a one-sentence description (the vendored Modelica class description string,
-  checked against `third_party/`, or an engine-written sentence for `TrueHoldWithReset` and the
-  three reserved identities) and its parameters with a `settable` flag, false for a derived default
-  and for a reserved identity's parameters; the `TimeTable` sources' rule-only
-  `table_<row>_<col>` is listed too. `oce_api::param_element_name` expands a catalog template
-  (`k_<i>`, `K_<row>_<col>`) to the names the CXF import mints, and the placeholders are exported
-  as `PARAM_INDEX_PLACEHOLDER`, `PARAM_ROW_PLACEHOLDER` and `PARAM_COL_PLACEHOLDER`. Underneath,
+  `ClassPortsError::UnknownClass`; nothing panics. `oce_api::DiagCode` is now re-exported (the type
+  of `Diagnostic::code`), so a host matches those refusals without `oce-diag`; `as_str()` is the
+  stable key. `oce_api::class_metadata()` gives every class in catalog order a one-sentence
+  description (the vendored Modelica class description string, checked against `third_party/`, or
+  an engine-written sentence for `TrueHoldWithReset` and the three reserved identities) and its
+  parameters, each with `value_type`, `default` (the catalog's `CatalogDefault`: a literal,
+  `Derived` with its formula, or `Required`) and `settable`; the `TimeTable` sources' rule-only
+  `table_<row>_<col>` is listed as `Required`. Per the
+  [#440 amendment](https://github.com/jscott3201/open-control-engine/issues/440#issuecomment-6730952664),
+  `settable` means "an author may assign this parameter" and is false only for the reserved
+  identities: the twelve derived defaults (`MatrixGain.K`, `PIDWithReset.y_reset`, …) are plain
+  overridable CDL parameters, and the M2 design note's `parameter-not-settable` row is narrowed to
+  the reserved classes. `oce_api::param_element_name` expands a catalog template (`k_<i>`,
+  `K_<row>_<col>`) to the names the CXF import mints, and the placeholders are exported as
+  `PARAM_INDEX_PLACEHOLDER`, `PARAM_ROW_PLACEHOLDER` and `PARAM_COL_PLACEHOLDER`. Underneath,
   `oce_blocks::resolved_ports` synthesizes the names over the registry constructor's
   `resolved_signature()` and refuses a layout that does not cover it exactly;
   `oce_blocks::class_description`, `class_parameters` and `ParamNameTemplate` carry the metadata.
-  No constructor, tick behaviour or `ParamRule` changes, and the metadata stays outside the
-  revision-1 catalog: `CATALOG_JSON`, `catalog_content_id`, `class_signatures.tsv` and every golden
-  under `tools/golden-gen/goldens` are byte-identical. A new golden,
-  `crates/oce-blocks/tests/fixtures/class_ports.golden.txt` (bless switch
-  `OCE_BLESS_CLASS_PORTS`), pins the names of every class at its empty table and of every
-  width-driven class at widths 1, 2 and the maximum, every description and every settable flag. A
-  facade test loads every G36 document and requires the names to equal the connectors the import
-  bound at each index, and requires preserved array parameters to import under exactly the expanded
-  template names. The hostile-parameter fuzz now also requires every nameable table to name each
-  resolved port once with the signature's kind. `docs/cdl-coverage.md` states the naming contract.
+  All four new `oce-blocks` modules compile only with the `std` feature, so the bare-metal firmware
+  image is byte-for-byte the size it was on `development` (`thumbv7em` `.text` 144,428 B, flash
+  206,264 B; `core::fmt` 21 and 22 functions). No constructor, tick behaviour or `ParamRule`
+  changes, and the metadata stays outside the revision-1 catalog: `CATALOG_JSON`,
+  `catalog_content_id`, `class_signatures.tsv` and every golden under `tools/golden-gen/goldens`
+  are byte-identical. A new golden, `crates/oce-blocks/tests/fixtures/class_ports.golden.txt`
+  (bless switch `OCE_BLESS_CLASS_PORTS`), pins the names of every class at its empty table and of
+  every width-driven class at widths 1, 2 and the maximum, every description, and every
+  parameter's type, default and settable flag. Cross-checks run against the CXF import: every G36
+  document's bound connectors, and hand-written documents for the replicators, matrix reductions,
+  `Sort`, the extractors, filters and extract signals, `Integers.MultiSum` and the three
+  `TimeTable` sources, must equal `class_ports`; preserved arrays import under exactly the
+  expanded template names. The naming seam's every refusal is reached with hand-built signatures,
+  names are checked against the constructed blocks' feedthrough under every flag spelling, and
+  `validate_block_parameters` is held equal to whole-model validation over the constructor fuzz's
+  hostile tables for every class (the generator moved to
+  `crates/oce-blocks/tests/support/hostile_tables.rs` so both crates share it). The fuzz also
+  names every constructible table. PC-041's evidence line for
+  `every_constructor_survives_hostile_parameter_tables` in `docs/product-contract.md` moves to
+  where that test now starts. `docs/cdl-coverage.md` states the naming contract.
 
 ## 0.4.0
 

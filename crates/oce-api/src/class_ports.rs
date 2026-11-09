@@ -25,9 +25,10 @@ use std::sync::{Arc, OnceLock};
 
 use oce_blocks::ParamNameTemplate;
 use oce_diag::Diagnostic;
-use oce_model::{ParamTable as BlockParams, Value};
+use oce_model::{ParamTable as BlockParams, Value, ValueType};
 
-use crate::CatalogPortKind;
+use crate::catalog::project_default;
+use crate::{CatalogDefault, CatalogPortKind};
 
 pub use oce_blocks::{PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER};
 
@@ -62,8 +63,11 @@ pub enum ClassPortsError {
         class_path: String,
     },
     /// The parameters violate the class's rules, exactly as a load would refuse them. Carries the
-    /// load gate's error diagnostics (`missing-required-parameter`, `parameter-out-of-range`,
-    /// `non-finite-parameter`, `duplicate-parameter`, …), subjects naming the block `block#0`.
+    /// load gate's error diagnostics. Match on [`Diagnostic::code`], a [`crate::DiagCode`]
+    /// (`MissingRequiredParameter`, `ParameterOutOfRange`, `NonFiniteParameter`,
+    /// `DuplicateParameter`, `ParameterKindMismatch`, …), whose `as_str()` spelling
+    /// (`missing-required-parameter`, …) is the stable key; the offending parameter's name is in
+    /// the human-readable `message`, and every subject names the block `block#0`.
     #[error("parameters of `{class_path}` are refused by its rules ({} diagnostic(s))", .diagnostics.len())]
     InvalidParameters {
         /// Canonical class path.
@@ -143,17 +147,26 @@ pub fn class_ports(
 }
 
 /// One parameter of a class, as an author sees it.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ClassParameter {
     /// CDL name, or the array template (`k_<i>`, `K_<row>_<col>`) for an array parameter.
     pub name: &'static str,
-    /// Whether an author may assign it: false for a parameter whose default is derived from
-    /// other parameters and for every parameter of an engine-reserved class (GitHub #440).
+    /// The value type an assignment must have; for an array template, the element type.
+    pub value_type: ValueType,
+    /// The authored default, as [`crate::catalog()`] reports it: a literal,
+    /// [`CatalogDefault::Derived`] (computed from other parameters unless assigned), or
+    /// [`CatalogDefault::Required`] (no default; the author must assign it). The `TimeTable`
+    /// sources' rule-only `table_<row>_<col>` is `Required`.
+    pub default: CatalogDefault,
+    /// Whether an author may assign this parameter: false only for the parameters of an
+    /// engine-reserved lowering identity, which no author can spell. A derived default is
+    /// settable: upstream CDL declares every one as a plain, overridable `parameter` (GitHub #440,
+    /// amendment of 2026-11-08).
     pub settable: bool,
 }
 
 /// Authoring metadata for one registered class. Not part of the revision-1 catalog JSON.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ClassMetadata {
     /// Canonical registered class path.
     pub class_path: &'static str,
@@ -181,6 +194,8 @@ pub fn class_metadata() -> &'static [ClassMetadata] {
                     .into_iter()
                     .map(|parameter| ClassParameter {
                         name: parameter.name,
+                        value_type: parameter.value_type,
+                        default: project_default(parameter.default),
                         settable: parameter.settable,
                     })
                     .collect(),

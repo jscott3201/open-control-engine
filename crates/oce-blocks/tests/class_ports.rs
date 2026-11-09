@@ -18,11 +18,12 @@ use std::fmt::Write as _;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use oce_blocks::{DefaultLiteral, DefaultSource};
 use oce_blocks::{
     MAX_RESOLVED_PORT_WIDTH, PortKind, PortNaming, PortSide, ResolvedPorts, ResolvedPortsError,
     catalog, class_description, class_parameters, resolved_ports,
 };
-use oce_model::{ParamTable, Value};
+use oce_model::{ParamTable, Value, ValueType, enum_descriptor};
 
 const MAX: i64 = MAX_RESOLVED_PORT_WIDTH as i64;
 
@@ -256,6 +257,29 @@ fn render_value(value: &Value) -> String {
     }
 }
 
+fn render_type(value_type: ValueType) -> String {
+    match value_type {
+        ValueType::Real => "Real".to_owned(),
+        ValueType::Integer => "Integer".to_owned(),
+        ValueType::Boolean => "Boolean".to_owned(),
+        ValueType::String => "String".to_owned(),
+        ValueType::Enum(class) => enum_descriptor(class)
+            .map_or_else(|| format!("Enum#{}", class.0), |d| d.class_path.to_owned()),
+    }
+}
+
+fn render_default(default: DefaultSource) -> String {
+    match default {
+        DefaultSource::Literal(DefaultLiteral::Real(v)) => format!("{v:?}"),
+        DefaultSource::Literal(DefaultLiteral::Integer(v)) => v.to_string(),
+        DefaultSource::Literal(DefaultLiteral::Boolean(v)) => v.to_string(),
+        DefaultSource::Literal(DefaultLiteral::Str(v)) => format!("{v:?}"),
+        DefaultSource::Literal(DefaultLiteral::EnumMember(v)) => v.to_owned(),
+        DefaultSource::Derived { formula } => format!("derived `{formula}`"),
+        DefaultSource::Required => "required".to_owned(),
+    }
+}
+
 fn render() -> String {
     let mut out = String::from(
         "# Contract port names, descriptions and settable flags (GitHub #440).\n\
@@ -297,14 +321,21 @@ fn render() -> String {
         render_ports(&mut out, &format!("{class} table={rows}x{columns}"), &ports);
     }
     out.push_str(
-        "\n## Descriptions and parameters (`-` marks a parameter an author may not set)\n\n",
+        "\n## Descriptions and parameters (`name: type = default`; `-` marks a parameter an author \
+         may not set)\n\n",
     );
     for entry in catalog() {
         let description = class_description(entry.class_path).expect("described");
         let _ = writeln!(out, "{}\n  \"{description}\"", entry.class_path);
         for parameter in class_parameters(entry.class_path).expect("registered") {
             let mark = if parameter.settable { '+' } else { '-' };
-            let _ = writeln!(out, "  {mark} {}", parameter.name);
+            let _ = writeln!(
+                out,
+                "  {mark} {}: {} = {}",
+                parameter.name,
+                render_type(parameter.value_type),
+                render_default(parameter.default)
+            );
         }
     }
     out
@@ -603,4 +634,86 @@ fn errors_render_their_cause() {
         .to_string(),
         "3 resolved output port(s) do not fit the class's declared connectors"
     );
+}
+
+/// The 1-based indices a contract name carries after its base: `u2_3` is `[2, 3]`, `y4` is `[4]`.
+fn indices(name: &str, base: &str) -> Vec<usize> {
+    name.strip_prefix(base)
+        .unwrap_or_else(|| panic!("{name} does not start with {base}"))
+        .split('_')
+        .map(|part| part.parse().unwrap_or_else(|_| panic!("{name}: bad index")))
+        .collect()
+}
+
+/// For every (input, output) pair, the constructed block's own feedthrough must be what the two
+/// names say it is. A divergence in how the naming and the constructor read a parameter (the
+/// reduction flag, the selector array) shows up here even where port counts agree.
+fn assert_wiring(class: &str, params: &[(&str, Value)], expect: impl Fn(&str, &str) -> bool) {
+    let params = table(params);
+    let ports = resolved_ports(class, &params).expect("ok");
+    let block = (oce_blocks::lookup(class).unwrap().make)(&params);
+    for (i, input) in ports.inputs.iter().enumerate() {
+        for (j, output) in ports.outputs.iter().enumerate() {
+            assert_eq!(
+                block.feeds_through(i, j),
+                expect(&input.name, &output.name),
+                "{class} {:?}: {} -> {}",
+                params.values,
+                input.name,
+                output.name
+            );
+        }
+    }
+}
+
+#[test]
+fn names_agree_with_the_constructed_blocks_wiring_under_every_flag_spelling() {
+    for (class, flag) in [
+        ("CDL.Reals.MatrixMax", "rowMax"),
+        ("CDL.Reals.MatrixMin", "rowMin"),
+    ] {
+        // Square matrices give the same count either way, so only the wiring can tell the
+        // reduction axis apart.
+        for (rows, cols) in [(2, 2), (3, 3), (2, 3), (3, 1)] {
+            for value in [
+                None,
+                Some(Value::Boolean(true)),
+                Some(Value::Boolean(false)),
+                Some(Value::Integer(0)),
+                Some(Value::Real(0.0)),
+                Some(Value::String(Arc::from("false"))),
+            ] {
+                let by_row = !matches!(value, Some(Value::Boolean(false)));
+                let mut params = vec![int("nRow", rows), int("nCol", cols)];
+                params.extend(value.map(|v| (flag, v)));
+                assert_wiring(class, &params, |input, output| {
+                    let cell = indices(input, "u");
+                    let k = indices(output, "y")[0];
+                    if by_row { cell[0] == k } else { cell[1] == k }
+                });
+            }
+        }
+    }
+    for class in ROUTING_FAMILIES.iter().map(|family| family[4]) {
+        for (nin, nout) in [(1, 1), (2, 3), (3, 2)] {
+            assert_wiring(
+                class,
+                &[int("nin", nin), int("nout", nout)],
+                |input, output| indices(input, "u")[0] == indices(output, "y")[1],
+            );
+        }
+    }
+    for class in ROUTING_FAMILIES.iter().map(|family| family[0]) {
+        let selectors = [3_i64, 1];
+        let mut params = vec![int("nin", 3), int("nout", 2)];
+        params.push(("extract_1", Value::Integer(selectors[0])));
+        params.push(("extract_2", Value::Integer(selectors[1])));
+        assert_wiring(class, &params, |input, output| {
+            let k = indices(output, "y")[0];
+            indices(input, "u")[0] as i64 == selectors[k - 1]
+        });
+    }
+    for class in ROUTING_FAMILIES.iter().map(|family| family[2]) {
+        assert_wiring(class, &[int("nout", 3)], |input, _| input == "u");
+    }
 }

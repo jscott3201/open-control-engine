@@ -235,7 +235,7 @@ pre-empt where one exists. The table is a test fixture: gate item 3 is a table-d
 | `class-not-found` | engine | `unknown-class` | 1 | — |
 | `class-not-authorable` | author-only | `class-not-authorable` | 1 | — (reserved classes) |
 | `unknown-parameter` | author-only | `unknown-param` | 1 | pinned by the parity test |
-| `parameter-not-settable` | author-only | `unsupported-param` | 1 | — (#440's settable flag) |
+| `parameter-not-settable` | author-only | `unsupported-param` | 1 | — (reserved classes only; #440's settable flag) |
 | `duplicate-parameter` | engine | `duplicate-param` | 1 | — |
 | `missing-required-parameter` | engine | `missing-required-param` | 1 | — |
 | `parameter-kind-mismatch` | engine | `param-type-mismatch` | 1 | — |
@@ -255,6 +255,13 @@ pre-empt where one exists. The table is a test fixture: gate item 3 is a table-d
 | `unused-boundary-input` | engine (warning → error) | `unused-input` | 2 | — |
 | `undriven-boundary-output` | engine (warning → error) | — | 2 | — |
 | any other `DiagCode` | engine | — | 2 | passed through verbatim |
+
+`parameter-not-settable` fires only for a parameter of a reserved lowering identity: #440's
+`settable` flag means "an author may assign this parameter", so every parameter of an authorable
+class is settable, derived defaults included ([#440 amendment](https://github.com/jscott3201/open-control-engine/issues/440#issuecomment-6730952664)).
+It stays a code distinct from `class-not-authorable`, which the same block also earns: that finding's
+subject is the block (`hys`), this one's is the parameter (`hys.uHigh`), so an agent is told both
+that the class cannot be authored and which assignment to remove.
 
 A stage-1 finding that carries an engine code must agree with the engine. The parity test emits
 each defect with stage 1 bypassed (a test-only path) and asserts that the engine reports the same

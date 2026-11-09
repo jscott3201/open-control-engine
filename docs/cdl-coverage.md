@@ -105,11 +105,17 @@ catalog lists `k_<i>` and `K_<row>_<col>` once, and `oce_api::param_element_name
 `oce_api::class_metadata()` adds, for every class in catalog order, a one-sentence `description`
 (the upstream Modelica class description string where a vendored source exists, held to it by a
 test; engine-written for `CDL.Logical.TrueHoldWithReset` and the three reserved identities) and the
-class's parameters with a `settable` flag: false for a parameter whose default is derived from other
-parameters and for every parameter of a reserved identity. None of this enters the revision-1
-catalog: `CATALOG_JSON`, `catalog_content_id` and every class signature hash are unchanged. The
-names at widths 1, 2 and the maximum, every description and every settable flag are pinned by
-`crates/oce-blocks/tests/fixtures/class_ports.golden.txt`.
+class's parameters, each with its `value_type` (the element type for an array template), its
+`default` (a literal, `Derived` with its formula, or `Required`) and a `settable` flag. `settable`
+means "an author may assign this parameter": it is false only for the parameters of the three
+reserved identities. A derived default such as `MatrixGain.K` or `PIDWithReset.y_reset` is
+settable — upstream CDL declares every one as a plain, overridable `parameter`, and the G36 corpus
+assigns three of them ([#440 amendment](https://github.com/jscott3201/open-control-engine/issues/440#issuecomment-6730952664)).
+None of this enters the revision-1 catalog: `CATALOG_JSON`, `catalog_content_id` and every class
+signature hash are unchanged. The names at widths 1, 2 and the maximum, every description, and
+every parameter's type, default and settable flag are pinned by
+`crates/oce-blocks/tests/fixtures/class_ports.golden.txt`. The metadata is host-side: in
+`oce-blocks` it is compiled only with the `std` feature, so no bare-metal image carries it.
 
 ## What "supported" means for a G36 sequence
 

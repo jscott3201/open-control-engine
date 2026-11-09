@@ -730,45 +730,45 @@ CDL.Logical.Sources.TimeTable table=2x4
   in  (0)
   out (3) y1:Boolean y2:Boolean y3:Boolean
 
-## Descriptions and parameters (`-` marks a parameter an author may not set)
+## Descriptions and parameters (`name: type = default`; `-` marks a parameter an author may not set)
 
 CDL.Reals.Sources.Constant
   "Output constant signal of type Real"
-  + k
+  + k: Real = required
 CDL.Reals.Sources.CivilTime
   "Civil time"
 CDL.Reals.Sources.Pulse
   "Generate pulse signal of type Real"
-  + amplitude
-  + width
-  + period
-  + shift
-  + offset
+  + amplitude: Real = 1.0
+  + width: Real = 0.5
+  + period: Real = required
+  + shift: Real = 0.0
+  + offset: Real = 0.0
 CDL.Reals.Sources.Ramp
   "Generate ramp signal"
-  + height
-  + duration
-  + offset
-  + startTime
+  + height: Real = 1.0
+  + duration: Real = required
+  + offset: Real = 0.0
+  + startTime: Real = 0.0
 CDL.Reals.Sources.Sin
   "Generate sine signal"
-  + amplitude
-  + freqHz
-  + phase
-  + offset
-  + startTime
+  + amplitude: Real = 1.0
+  + freqHz: Real = required
+  + phase: Real = 0.0
+  + offset: Real = 0.0
+  + startTime: Real = 0.0
 CDL.Reals.Sources.CalendarTime
   "Computes the unix time stamp and calendar time from the simulation time"
-  + zerTim
-  + yearRef
-  + offset
+  + zerTim: CDL.Types.ZeroTime = required
+  + yearRef: Integer = 2016
+  + offset: Real = 0.0
 CDL.Reals.Sources.TimeTable
   "Table look-up with respect to time and linear or periodic extrapolation"
-  + smoothness
-  + extrapolation
-  + offset_<i>
-  + timeScale
-  + table_<row>_<col>
+  + smoothness: CDL.Types.Smoothness = LinearSegments
+  + extrapolation: CDL.Types.Extrapolation = Periodic
+  + offset_<i>: Real = 0.0
+  + timeScale: Real = 1.0
+  + table_<row>_<col>: Real = required
 CDL.Reals.Add
   "Output the sum of the two inputs"
 CDL.Reals.Subtract
@@ -805,13 +805,13 @@ CDL.Reals.Modulo
   "Output the remainder of first input divided by second input (~=0)"
 CDL.Reals.Round
   "Round real number to given digits"
-  + n
+  + n: Integer = required
 CDL.Reals.AddParameter
   "Output the sum of an input plus a parameter"
-  + p
+  + p: Real = required
 CDL.Reals.MultiplyByParameter
   "Output the product of a gain value with the input signal"
-  + k
+  + k: Real = required
 CDL.Reals.Abs
   "Output the absolute value of the input"
 CDL.Reals.Min
@@ -820,146 +820,146 @@ CDL.Reals.Max
   "Pass through the largest signal"
 CDL.Reals.MultiMax
   "Output the maximum element of the input vector"
-  + nin
+  + nin: Integer = 0
 CDL.Reals.MultiMin
   "Output the minimum element of the input vector"
-  + nin
+  + nin: Integer = 0
 CDL.Reals.MultiSum
   "Sum of Reals, y = k[1]*u[1] + k[2]*u[2] + ... + k[n]*u[n]"
-  + nin
-  + k_<i>
+  + nin: Integer = 0
+  + k_<i>: Real = 1.0
 CDL.Reals.MatrixGain
   "Output the product of a gain matrix with the input signal vector"
-  + nout
-  + nin
-  - K_<row>_<col>
+  + nout: Integer = 2
+  + nin: Integer = 2
+  + K_<row>_<col>: Real = derived `1.0 if row == col else 0.0`
 CDL.Reals.MatrixMax
   "Output vector of row- or column-wise maximum of the input matrix"
-  + nRow
-  + nCol
-  + rowMax
+  + nRow: Integer = required
+  + nCol: Integer = required
+  + rowMax: Boolean = true
 CDL.Reals.MatrixMin
   "Output vector of row- or column-wise minimum values"
-  + nRow
-  + nCol
-  + rowMin
+  + nRow: Integer = required
+  + nCol: Integer = required
+  + rowMin: Boolean = true
 CDL.Reals.Sort
   "Sort elements of input vector in ascending or descending order"
-  + nin
-  + ascending
+  + nin: Integer = 0
+  + ascending: Boolean = true
 CDL.Reals.Limiter
   "Limit the range of a signal"
-  + uMin
-  + uMax
+  + uMin: Real = required
+  + uMax: Real = required
 CDL.Reals.Line
   "Output the value of the input x along a line specified by two points"
-  + limitBelow
-  + limitAbove
+  + limitBelow: Boolean = true
+  + limitAbove: Boolean = true
 CDL.Reals.Greater
   "Output y is true, if input u1 is greater than input u2 with hysteresis"
-  + h
-  + pre_y_start
+  + h: Real = 0.0
+  + pre_y_start: Boolean = false
 CDL.Reals.GreaterThreshold
   "Output y is true, if input u is greater than threshold with hysteresis"
-  + t
-  + h
-  + pre_y_start
+  + t: Real = 0.0
+  + h: Real = 0.0
+  + pre_y_start: Boolean = false
 CDL.Reals.Hysteresis
   "Transform Real to Boolean signal with Hysteresis"
-  + uLow
-  + uHigh
-  + pre_y_start
+  + uLow: Real = required
+  + uHigh: Real = required
+  + pre_y_start: Boolean = false
 CDL.Reals.Less
   "Output y is true, if input u1 is less than input u2"
-  + h
-  + pre_y_start
+  + h: Real = 0.0
+  + pre_y_start: Boolean = false
 CDL.Reals.LessThreshold
   "Output y is true, if input u is less than threshold with hysteresis"
-  + t
-  + h
-  + pre_y_start
+  + t: Real = 0.0
+  + h: Real = 0.0
+  + pre_y_start: Boolean = false
 CDL.Reals.Switch
   "Switch between two Real signals"
 CDL.Reals.IntegratorWithReset
   "Output the integral of the input signal"
-  + k
-  + y_start
+  + k: Real = 1.0
+  + y_start: Real = 0.0
 CDL.Reals.Derivative
   "Block that approximates the derivative of the input"
-  + y_start
+  + y_start: Real = 0.0
 CDL.Reals.LimitSlewRate
   "Limit the increase or decrease rate of input"
-  + raisingSlewRate
-  - fallingSlewRate
-  - Td
-  + enable
+  + raisingSlewRate: Real = required
+  + fallingSlewRate: Real = derived `-raisingSlewRate`
+  + Td: Real = derived `raisingSlewRate * 10.0`
+  + enable: Boolean = true
 CDL.Reals.MovingAverage
   "Block to output moving average"
-  + delta
+  + delta: Real = required
 CDL.Reals.Ramp
   "Limit the changing rate of the input"
-  + raisingSlewRate
-  - fallingSlewRate
-  - Td
+  + raisingSlewRate: Real = required
+  + fallingSlewRate: Real = derived `-raisingSlewRate`
+  + Td: Real = derived `raisingSlewRate * 0.001`
 CDL.Reals.PID
   "P, PI, PD, and PID controller"
-  + controllerType
-  + k
-  + Ti
-  + Td
-  + r
-  + yMax
-  + yMin
-  + Ni
-  + Nd
-  + xi_start
-  + yd_start
-  + reverseActing
+  + controllerType: CDL.Types.SimpleController = PI
+  + k: Real = 1.0
+  + Ti: Real = 0.5
+  + Td: Real = 0.1
+  + r: Real = 1.0
+  + yMax: Real = 1.0
+  + yMin: Real = 0.0
+  + Ni: Real = 0.9
+  + Nd: Real = 10.0
+  + xi_start: Real = 0.0
+  + yd_start: Real = 0.0
+  + reverseActing: Boolean = true
 CDL.Reals.PIDWithReset
   "P, PI, PD, and PID controller with output reset"
-  + controllerType
-  + k
-  + Ti
-  + Td
-  + r
-  + yMax
-  + yMin
-  + Ni
-  + Nd
-  + xi_start
-  + yd_start
-  + reverseActing
-  - y_reset
+  + controllerType: CDL.Types.SimpleController = PI
+  + k: Real = 1.0
+  + Ti: Real = 0.5
+  + Td: Real = 0.1
+  + r: Real = 1.0
+  + yMax: Real = 1.0
+  + yMin: Real = 0.0
+  + Ni: Real = 0.9
+  + Nd: Real = 10.0
+  + xi_start: Real = 0.0
+  + yd_start: Real = 0.0
+  + reverseActing: Boolean = true
+  + y_reset: Real = derived `xi_start`
 CDL.Psychrometrics.DewPoint_TDryBulPhi
   "Block to compute the dew point temperature based on relative humidity"
 CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi
   "Block to compute the specific enthalpy based on relative humidity"
-  + pAtm
+  + pAtm: Real = 101325.0
 CDL.Psychrometrics.WetBulb_TDryBulPhi
   "Block to compute the wet bulb temperature based on relative humidity"
 CDL.Logical.Sources.Constant
   "Output constant signal of type Boolean"
-  + k
+  + k: Boolean = required
 CDL.Logical.Sources.Pulse
   "Generate pulse signal of type Boolean"
-  + width
-  + period
-  + shift
+  + width: Real = 0.5
+  + period: Real = required
+  + shift: Real = 0.0
 CDL.Logical.Sources.TimeTable
   "Table look-up with respect to time with constant segments"
-  + timeScale
-  + period
-  + table_<row>_<col>
+  + timeScale: Real = 1.0
+  + period: Real = required
+  + table_<row>_<col>: Real = required
 CDL.Logical.And
   "Logical 'and': y = u1 and u2"
 CDL.Logical.Or
   "Logical 'or': y = u1 or u2"
 CDL.Logical.MultiAnd
   "Logical MultiAnd, y = u[1] and u[2] and u[3] and ..."
-  + nin
+  + nin: Integer = 0
 CDL.Logical.MultiOr
   "Logical MultiOr, y = u[1] or u[2] or u[3] or ..."
-  + nin
+  + nin: Integer = 0
 CDL.Logical.Not
   "Logical not"
 CDL.Logical.Nand
@@ -972,50 +972,50 @@ CDL.Logical.Switch
   "Switch between two boolean signals"
 CDL.Logical.Pre
   "Breaks algebraic loops by adding a delay of the output without advancing time (y = pre(u): event iteration continues until u = pre(u))"
-  + pre_u_start
+  + pre_u_start: Boolean = false
 CDL.Logical.Edge
   "Output y is true, if the input u has a rising edge (y = edge(u))"
-  + pre_u_start
+  + pre_u_start: Boolean = false
 CDL.Logical.Sources.SampleTrigger
   "Generate sample trigger signal"
-  + period
-  + shift
+  + period: Real = required
+  + shift: Real = 0.0
 CDL.Logical.Proof
   "Verify two boolean inputs"
-  + debounce
-  + feedbackDelay
+  + debounce: Real = required
+  + feedbackDelay: Real = required
 CDL.Logical.VariablePulse
   "Generate boolean pulse with the width specified by input"
-  + period
-  + deltaU
-  - minTruFalHol
+  + period: Real = required
+  + deltaU: Real = 0.01
+  + minTruFalHol: Real = derived `0.01 * period`
 CDL.Logical.FallingEdge
   "Output y is true, if the input u has a falling edge (y = edge(not u))"
-  + pre_u_start
+  + pre_u_start: Boolean = false
 CDL.Logical.Change
   "Output y is true, if the input u has a rising or falling edge (y = change(u))"
-  + pre_u_start
+  + pre_u_start: Boolean = false
 CDL.Logical.Latch
   "Maintains a true signal until cleared"
 CDL.Logical.Toggle
   "Toggles output value whenever its input turns true"
 CDL.Logical.Timer
   "Timer measuring the time from the time instant where the Boolean input became true"
-  + t
+  + t: Real = 0.0
 CDL.Logical.TimerAccumulating
   "Accumulating timer that can be reset"
-  + t
+  + t: Real = 0.0
 CDL.Logical.TrueDelay
   "Delay a rising edge of the input, but do not delay a falling edge"
-  + delayTime
-  + delayOnInit
+  + delayTime: Real = required
+  + delayOnInit: Boolean = false
 CDL.Logical.TrueFalseHold
   "Block that holds an output signal for at least a specified duration"
-  + trueHoldDuration
-  - falseHoldDuration
+  + trueHoldDuration: Real = required
+  + falseHoldDuration: Real = derived `trueHoldDuration`
 CDL.Logical.TrueHoldWithReset
   "Hold a true output for at least a duration; the engine-local clr input resets the hold"
-  + duration
+  + duration: Real = 0.0
 urn:oce:lowering#PassThrough.Real
   "Engine-reserved identity that forwards a Real boundary input straight to a boundary output"
 urn:oce:lowering#PassThrough.Integer
@@ -1024,31 +1024,31 @@ urn:oce:lowering#PassThrough.Boolean
   "Engine-reserved identity that forwards a Boolean boundary input straight to a boundary output"
 CDL.Conversions.BooleanToInteger
   "Convert Boolean to Integer signal"
-  + integerTrue
-  + integerFalse
+  + integerTrue: Integer = 1
+  + integerFalse: Integer = 0
 CDL.Conversions.BooleanToReal
   "Convert Boolean to Real signal"
-  + realTrue
-  + realFalse
+  + realTrue: Real = 1.0
+  + realFalse: Real = 0.0
 CDL.Conversions.IntegerToReal
   "Convert Integer to Real signals"
 CDL.Conversions.RealToInteger
   "Convert Real to Integer signal"
 CDL.Integers.Sources.Constant
   "Output constant signal of type Integer"
-  + k
+  + k: Integer = required
 CDL.Integers.Sources.Pulse
   "Generate pulse signal of type Integer"
-  + amplitude
-  + width
-  + period
-  + shift
-  + offset
+  + amplitude: Integer = 1
+  + width: Real = 0.5
+  + period: Real = required
+  + shift: Real = 0.0
+  + offset: Integer = 0
 CDL.Integers.Sources.TimeTable
   "Table look-up with respect to time with constant segments"
-  + timeScale
-  + period
-  + table_<row>_<col>
+  + timeScale: Real = 1.0
+  + period: Real = required
+  + table_<row>_<col>: Real = required
 CDL.Integers.Abs
   "Output the absolute value of the input"
 CDL.Integers.Add
@@ -1059,15 +1059,15 @@ CDL.Integers.Multiply
   "Output product of the two inputs"
 CDL.Integers.AddParameter
   "Output the sum of an input plus a parameter"
-  + p
+  + p: Integer = required
 CDL.Integers.Max
   "Pass through the largest signal"
 CDL.Integers.Min
   "Pass through the smallest signal"
 CDL.Integers.MultiSum
   "Sum of Integers, y = k[1]*u[1] + k[2]*u[2] + ... + k[n]*u[n]"
-  + nin
-  + k_<i>
+  + nin: Integer = 0
+  + k_<i>: Integer = 1
 CDL.Integers.Switch
   "Switch between two integer signals"
 CDL.Integers.Equal
@@ -1076,120 +1076,120 @@ CDL.Integers.Greater
   "Output y is true, if input u1 is greater than input u2"
 CDL.Integers.GreaterThreshold
   "Output y is true, if input u is greater than a threshold"
-  + t
+  + t: Integer = 0
 CDL.Integers.GreaterEqual
   "Output y is true, if input u1 is greater or equal than input u2"
 CDL.Integers.GreaterEqualThreshold
   "Output y is true, if input u is greater or equal than a threshold"
-  + t
+  + t: Integer = 0
 CDL.Integers.Less
   "Output y is true, if input u1 is less than input u2"
 CDL.Integers.LessThreshold
   "Output y is true, if input u is less than a threshold"
-  + t
+  + t: Integer = 0
 CDL.Integers.LessEqual
   "Output y is true, if input u1 is less or equal than input u2"
 CDL.Integers.LessEqualThreshold
   "Output y is true, if input u is less or equal than a threshold"
-  + t
+  + t: Integer = 0
 CDL.Integers.OnCounter
   "Increment the output if the input switches to true"
-  + y_start
+  + y_start: Integer = 0
 CDL.Integers.Change
   "Output whether the Integer input changes values, increases or decreases"
-  + pre_u_start
+  + pre_u_start: Integer = 0
 CDL.Integers.Stage
   "Output total stages that should be enabled"
-  + n
-  + holdDuration
-  - h
-  + pre_y_start
+  + n: Integer = required
+  + holdDuration: Real = required
+  + h: Real = derived `0.02 / n`
+  + pre_y_start: Integer = 0
 CDL.Routing.BooleanExtractSignal
   "Extract signals from a boolean input signal vector"
-  + nin
-  + nout
-  - extract_<i>
+  + nin: Integer = 1
+  + nout: Integer = 1
+  + extract_<i>: Integer = derived `i`
 CDL.Routing.BooleanExtractor
   "Extract scalar signal out of boolean signal vector dependent on integer input index"
-  + nin
+  + nin: Integer = 1
 CDL.Routing.BooleanScalarReplicator
   "Boolean signal replicator"
-  + nout
+  + nout: Integer = 1
 CDL.Routing.BooleanVectorFilter
   "Filter a boolean vector based on a boolean mask"
-  + nin
-  + nout
-  + msk_<i>
+  + nin: Integer = required
+  + nout: Integer = required
+  + msk_<i>: Boolean = true
 CDL.Routing.BooleanVectorReplicator
   "Boolean vector signal replicator"
-  + nin
-  + nout
+  + nin: Integer = 1
+  + nout: Integer = 1
 CDL.Routing.IntegerExtractSignal
   "Extract signals from an integer input signal vector"
-  + nin
-  + nout
-  - extract_<i>
+  + nin: Integer = 1
+  + nout: Integer = 1
+  + extract_<i>: Integer = derived `i`
 CDL.Routing.IntegerExtractor
   "Extract scalar signal out of integer signal vector dependent on integer input index"
-  + nin
+  + nin: Integer = 1
 CDL.Routing.IntegerScalarReplicator
   "Integer signal replicator"
-  + nout
+  + nout: Integer = 1
 CDL.Routing.IntegerVectorFilter
   "Filter an integer vector based on a boolean mask"
-  + nin
-  + nout
-  + msk_<i>
+  + nin: Integer = required
+  + nout: Integer = required
+  + msk_<i>: Boolean = true
 CDL.Routing.IntegerVectorReplicator
   "Integer vector signal replicator"
-  + nin
-  + nout
+  + nin: Integer = 1
+  + nout: Integer = 1
 CDL.Routing.RealExtractSignal
   "Extract signals from a real input signal vector"
-  + nin
-  + nout
-  - extract_<i>
+  + nin: Integer = 1
+  + nout: Integer = 1
+  + extract_<i>: Integer = derived `i`
 CDL.Routing.RealExtractor
   "Extract scalar signal out of real signal vector dependent on integer input index"
-  + nin
+  + nin: Integer = 1
 CDL.Routing.RealScalarReplicator
   "Real signal replicator"
-  + nout
+  + nout: Integer = 1
 CDL.Routing.RealVectorFilter
   "Filter a real vector of based on a boolean mask"
-  + nin
-  + nout
-  + msk_<i>
+  + nin: Integer = required
+  + nout: Integer = required
+  + msk_<i>: Boolean = true
 CDL.Routing.RealVectorReplicator
   "Real vector signal replicator"
-  + nin
-  + nout
+  + nin: Integer = 1
+  + nout: Integer = 1
 CDL.Discrete.FirstOrderHold
   "First order hold of a sampled-data system"
-  + samplePeriod
+  + samplePeriod: Real = required
 CDL.Discrete.Sampler
   "Ideal sampler of a continuous signal"
-  + samplePeriod
+  + samplePeriod: Real = required
 CDL.Discrete.TriggeredMax
   "Output the maximum, absolute value of a continuous signal at trigger instants"
 CDL.Discrete.TriggeredMovingMean
   "Triggered discrete moving mean of an input signal"
-  + n
+  + n: Integer = required
 CDL.Discrete.TriggeredSampler
   "Triggered sampling of continuous signals"
-  + y_start
+  + y_start: Real = 0.0
 CDL.Discrete.UnitDelay
   "Output the input signal with a unit delay"
-  + samplePeriod
-  + y_start
+  + samplePeriod: Real = required
+  + y_start: Real = 0.0
 CDL.Discrete.ZeroOrderHold
   "Output the input signal with a zero order hold"
-  + samplePeriod
+  + samplePeriod: Real = required
 CDL.Utilities.Assert
   "Print a warning message when input becomes false"
-  + message
+  + message: String = required
 CDL.Utilities.SunRiseSet
   "Next sunrise and sunset time"
-  + lat
-  + lon
-  + timZon
+  + lat: Real = required
+  + lon: Real = required
+  + timZon: Real = required
