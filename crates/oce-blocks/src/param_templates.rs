@@ -10,8 +10,7 @@
 //! an authoring tool can list one `{name, value}` per element without re-implementing the
 //! spelling. `oce_api`'s tests hold the expansion equal to the names the import itself mints.
 
-use alloc::string::String;
-use core::fmt::Write as _;
+use alloc::{format, string::String};
 
 /// The placeholder for a vector element index in a catalog parameter name (`k_<i>`).
 pub const PARAM_INDEX_PLACEHOLDER: &str = "<i>";
@@ -81,11 +80,11 @@ impl<'a> ParamNameTemplate<'a> {
         if indices.len() != self.rank() || indices.contains(&0) {
             return None;
         }
-        let mut name = String::from(self.base());
-        for index in indices {
-            // Writing to a `String` cannot fail.
-            let _ = write!(name, "_{index}");
-        }
-        Some(name)
+        Some(match *indices {
+            [] => String::from(self.base()),
+            [index] => format!("{}_{index}", self.base()),
+            [row, col] => format!("{}_{row}_{col}", self.base()),
+            _ => return None,
+        })
     }
 }

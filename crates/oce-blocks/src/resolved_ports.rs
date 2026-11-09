@@ -231,10 +231,11 @@ fn layout(class_path: &str) -> Option<&'static Layout> {
 /// Resolve the named input and output ports of `class_path` constructed from `params`.
 ///
 /// Builds the block with the class's registry constructor (the same call a load makes), reads
-/// [`crate::Block::resolved_signature`], and names each resolved port by the rules in the
-/// [module documentation](self). Pure: the same class and table always give the same names, and
-/// nothing is cached. Allocates one `String` per port, so cost is linear in the resolved arity,
-/// which every constructor bounds by [`crate::MAX_RESOLVED_ARITY`].
+/// [`crate::Block::resolved_signature`], and names each resolved port: a scalar connector by its
+/// CDL name, a vector `u[n]` as `u1`…`un`, a matrix `y[r, c]` as `y1_1`…`yr_c` row-major (the
+/// engine's port-naming contract, `docs/cdl-coverage.md`). Pure: the same class and table always
+/// give the same names, and nothing is cached. Allocates one `String` per port, so cost is linear
+/// in the resolved arity, which every constructor bounds by [`crate::MAX_RESOLVED_ARITY`].
 ///
 /// # Errors
 ///
