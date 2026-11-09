@@ -646,6 +646,22 @@ and a gate that accepted any text would restore exactly the false assurance desc
   pairs, the naming and re-stamp rules, the test plan and the order #468, model PR, importer PR. The
   review's rulings on its ten questions are recorded in the note. It is registered in
   `docs/README.md` and the book.
+- **Design note for vocabulary v1** (M2 item 6, tracking issue #455). `docs/design/vocabulary.md`
+  fixes, before any code, where the block vocabulary comes from and how it is served. A scratch run
+  of modelica-json at the recorded pins showed that `-o doc` (the plan's wording) is the G36
+  sequence-document generator and yields nothing for elementary classes, while
+  `-o cxf --elementary --cxfCore` gives a byte-stable `CXF-Core.jsonld` with a description on every
+  connector and public parameter; the note proposes vendoring it at the existing pins and
+  generating from it with a regenerate-and-diff test, walking the catalog's names. It describes 262 of 265 named ports,
+  all 57 vector connectors and 183 of 186 parameters of the 133 classes, leaving six to curate. The
+  data is two strict-JSON files (`generated.json`, `curated.json` with typed notes) in a new
+  leverage crate `oce-vocab`; `oce-api`, its catalog JSON, the content id and class signature hashes
+  are unchanged. `oce catalog` serves the block vocabulary and `oce vocab` gains a time-only
+  scale-factor table, so `1 h` becomes legal with exact scaling and an author-only
+  `unit-suffix-mismatch` check (amending authoring decision 13). Gate item 4 (agent-usable) is
+  deferred to the milestone that lands the benchmark harness (owner-confirmed), and M2 closes on
+  items 1 to 3. The review's rulings on its ten questions are recorded in the note. It is registered
+  in `docs/README.md` and the book.
 
 ## 0.4.0
 
