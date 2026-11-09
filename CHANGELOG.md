@@ -833,6 +833,27 @@ and a gate that accepted any text would restore exactly the false assurance desc
   deferred to the milestone that lands the benchmark harness (owner-confirmed), and M2 closes on
   items 1 to 3. The review's rulings on its ten questions are recorded in the note. It is registered
   in `docs/README.md` and the book.
+- **Design note for vectors, the verify replayer and receipts** (GitHub #512, issue #508).
+  `docs/design/vectors.md` fixes, before any `oce-verify` code, the one vector format
+  (`oce/vectors/v1`, changed in place until 1.0.0 by the owner's ruling of 2026-11-09: no importer
+  from the old shape, no dual-read path), how a set is bound to a loaded sequence and replayed on
+  `oce-replay`, the vector receipt body under the header shared with the commissioning verifier,
+  mutant mode and its integer score, the complete error-code table, the `oce verify` verb and the
+  in-repo fixtures to rewrite: 37 numbered decisions with their rejected alternatives and a
+  normative receipt field table. The owner ruled on 2026-11-09, accepting all eleven questions the
+  draft put as recommended, and the rulings are recorded in the note (Real `equals` by bits,
+  tolerance names, expected state deferred, warnings
+  reported and not failed, a refused frame failing its scenario, the mutant score not gating
+  `passed`, the AHU-0016 mutants, zero timings by default, the argument shape, where the in-repo
+  replay gate runs, and #460's `FrameSlots::output_types()` moving into M3 so outputs can be typed
+  before any frame runs). Checked against the
+  tree, it records where the code overrules the issue's outline: a run-time warning carries a class
+  path and a message but no code and no instance, so a diagnostic expectation can match only those;
+  `Grid` replay runs to the last source row, so a step after the horizon is refused; the replay
+  name rule is private and input-only; the catalog has no Real `>=` class. The "vector format v2"
+  wording in `docs/design/replay.md`, `docs/design/commissioning.md` and the README's M3 roadmap
+  row becomes "the vector format". Nothing is implemented. It is registered in `docs/README.md`
+  and the book.
 
 ## 0.4.0
 
