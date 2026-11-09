@@ -59,7 +59,7 @@ pub(crate) fn compare(actual: &str, expected: &str) -> Result<(), ReplayError> {
         },
     ];
     for (index, cause) in causes.into_iter().enumerate() {
-        if a[index] != b[index] || (index == 0 && a[index] != "2") {
+        if a[index] != b[index] || (index == 0 && a[index] != "1") {
             return Err(ReplayError::DescriptorMismatch(cause));
         }
     }

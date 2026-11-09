@@ -5,7 +5,7 @@ use std::cmp::Ordering;
 use crate::{ExportReport, LoadReport, OcError};
 
 /// Revision of receipt fields and the message-independent machine ordering.
-pub const DIAGNOSTIC_SCHEMA_REVISION: u32 = 3;
+pub const DIAGNOSTIC_SCHEMA_REVISION: u32 = 1;
 
 /// Producer operation at which evidence was emitted or a terminal failure occurred.
 ///
@@ -32,12 +32,7 @@ pub enum DiagnosticStage {
 }
 
 impl DiagnosticStage {
-    /// Stable revision-3 rank used by receipt machine ordering.
-    ///
-    /// Revision 2 removed the identity `Flatten` boundary that sat between [`Self::Import`] and
-    /// [`Self::AttributeUnification`]. Revision 3 removed the three storage boundaries that sat
-    /// between [`Self::Projection`] and [`Self::Export`], when the engine stopped calling a
-    /// storage port at load. The relative order of every remaining stage is unchanged.
+    /// Stable rank used by receipt machine ordering: the eight stages in pipeline order, 0 to 7.
     #[must_use]
     pub const fn rank(self) -> u8 {
         match self {
@@ -65,7 +60,7 @@ pub enum DiagnosticSeverity {
 }
 
 impl DiagnosticSeverity {
-    /// Stable rank, unchanged since revision 1: error, warning, info.
+    /// Stable rank: error, warning, info.
     #[must_use]
     pub const fn rank(self) -> u8 {
         match self {

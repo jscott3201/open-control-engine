@@ -97,8 +97,8 @@ impl ContentId {
         &self.text
     }
 
-    /// The 32 SHA-256 digest bytes in output order: the bytes a format-2 compiled-schedule blob
-    /// carries in its header. No allocation or panic.
+    /// The 32 SHA-256 digest bytes in output order: the bytes a compiled-schedule blob carries
+    /// in its header. No allocation or panic.
     #[must_use]
     pub fn digest(&self) -> &[u8; 32] {
         &self.digest

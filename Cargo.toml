@@ -30,7 +30,7 @@ resolver = "3"
 members = ["crates/oce-*", "crates/leverage/*", "firmware/*"]
 
 [workspace.package]
-version = "0.4.0"
+version = "0.5.0"
 edition = "2024"
 # MSRV: the toolchain every gate builds and tests on is 1.97.1 (rust-toolchain.toml), a patch
 # release of 1.97.0, so 1.97.0 is the lowest version this workspace honestly claims to support.
@@ -88,17 +88,17 @@ rustix = { version = "1.1.4", features = ["fs"] }
 oce-bless = { path = "crates/oce-bless" }
 # The `no_std + alloc` core four carry `default-features = false` so a core crate can depend on
 # another without pulling `std`; every std consumer names `features = ["std"]` on its own edge.
-oce-model = { path = "crates/oce-model", version = "0.4.0", default-features = false }
-oce-expr = { path = "crates/oce-expr", version = "0.4.0", default-features = false }
-oce-diag = { path = "crates/oce-diag", version = "0.4.0" }
-oce-blocks = { path = "crates/oce-blocks", version = "0.4.0", default-features = false }
-oce-validate = { path = "crates/oce-validate", version = "0.4.0" }
-oce-graph = { path = "crates/oce-graph", version = "0.4.0", default-features = false }
-oce-cxf = { path = "crates/oce-cxf", version = "0.4.0" }
-oce-semantics = { path = "crates/oce-semantics", version = "0.4.0" }
-oce-store = { path = "crates/oce-store", version = "0.4.0" }
-oce-conformance = { path = "crates/oce-conformance", version = "0.4.0" }
-oce-api = { path = "crates/oce-api", version = "0.4.0" }
+oce-model = { path = "crates/oce-model", version = "0.5.0", default-features = false }
+oce-expr = { path = "crates/oce-expr", version = "0.5.0", default-features = false }
+oce-diag = { path = "crates/oce-diag", version = "0.5.0" }
+oce-blocks = { path = "crates/oce-blocks", version = "0.5.0", default-features = false }
+oce-validate = { path = "crates/oce-validate", version = "0.5.0" }
+oce-graph = { path = "crates/oce-graph", version = "0.5.0", default-features = false }
+oce-cxf = { path = "crates/oce-cxf", version = "0.5.0" }
+oce-semantics = { path = "crates/oce-semantics", version = "0.5.0" }
+oce-store = { path = "crates/oce-store", version = "0.5.0" }
+oce-conformance = { path = "crates/oce-conformance", version = "0.5.0" }
+oce-api = { path = "crates/oce-api", version = "0.5.0" }
 
 [profile.release]
 opt-level = 3

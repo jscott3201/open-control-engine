@@ -49,8 +49,8 @@ This is the existing pinned source identity, not a new numeric catalog revision.
 | --- | --- |
 | catalog-entries | 136 |
 | catalog-reserved | 3 |
-| execution-abi | 2 |
-| state-format | 2 |
+| execution-abi | 1 |
+| state-format | 1 |
 
 ## Raw evidence inventories
 

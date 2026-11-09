@@ -2,7 +2,7 @@
   "domain": "execution-profile",
   "profile": "HostTick v1",
   "representation": "Rust facade contract description; not a general JSON codec",
-  "revision": 2,
+  "revision": 1,
   "semantics": [
     "No Modelica same-time event iteration or solver selection. Host owns cadence.",
     "This descriptor is descriptive, not a runtime/profile selector or a snapshot-format revision.",

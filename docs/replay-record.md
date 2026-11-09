@@ -116,8 +116,8 @@ exact order: `oce-compatibility`, `catalog-schema`, `catalog`, `io-schema`, `val
 `parameter-schema`, `execution-profile`, `execution-profile-schema`, `oce-api-version`, `content`.
 No missing/extra lines, CR/BOM, whitespace or escaping is accepted. Revision fields are positive
 u32 decimal with no leading zeros. Catalog text is `catalog:1:fnv1a128:` plus 32 lowercase hex
-digits; content is `none` or `oce:canon1:` plus 64 lowercase hex digits (descriptor revision 2,
-GitHub #470; the revision-1 `export` line is refused). The profile is `HostTick-v`
+digits; content is `none` or `oce:canon1:` plus 64 lowercase hex digits (an `export` line in its
+place, as release 0.4.0 wrote under the same revision number, is refused). The profile is `HostTick-v`
 plus a positive u32 decimal. Package version uses SemVer syntax: three canonical u64 decimal
 components, optional dot-separated ASCII alphanumeric/hyphen prerelease (numeric identifiers
 have no leading zeros), and optional build identifiers. Empty identifiers refuse.

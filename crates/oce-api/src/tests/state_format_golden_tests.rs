@@ -1,4 +1,4 @@
-//! Independent revision-2 byte and fingerprint vector. No numerical oracle applies to this codec.
+//! Independent byte and fingerprint vector for the current wire format. No numerical oracle applies to this codec.
 
 use crate::state::{
     BlockKey, BlockManifestEntry, ConnectorKey, ConnectorManifestEntry, EnumManifestEntry,
@@ -172,7 +172,7 @@ fn vector_image() -> StateImage {
         ),
     ]);
     StateImage {
-        execution_revision: 2,
+        execution_revision: 1,
         fingerprint: 0,
         model_id: "urn:test:model:Δ".into(),
         state_t: 3.5f64.to_bits(),
@@ -368,8 +368,8 @@ fn expected_snapshot(image: &StateImage, manifest: &[u8], fingerprint: u128) -> 
 
     let mut bytes = ExpectedWriter(Vec::new());
     bytes.0.extend_from_slice(b"OCESTAT\0");
-    bytes.u32(2);
-    bytes.u32(2);
+    bytes.u32(1);
+    bytes.u32(1);
     bytes.u64(body.0.len() as u64);
     bytes.0.extend_from_slice(&body.0);
     let checksum = fnv(&bytes.0);
@@ -381,7 +381,7 @@ fn expected_snapshot(image: &StateImage, manifest: &[u8], fingerprint: u128) -> 
 fn production_codec_matches_the_independent_complete_vector() {
     let mut image = vector_image();
     let manifest = expected_manifest(&image.manifest);
-    let mut fingerprint_preimage = 2u32.to_le_bytes().to_vec();
+    let mut fingerprint_preimage = 1u32.to_le_bytes().to_vec();
     fingerprint_preimage.extend_from_slice(&manifest);
     image.fingerprint = fnv(&fingerprint_preimage);
     let expected = expected_snapshot(&image, &manifest, image.fingerprint);
@@ -397,7 +397,7 @@ fn populated_portable_vector_is_target_independent() {
     image.manifest.portability = Portability::Portable;
     image.manifest.blocks[0].class_path = "CDL.Reals.Add".into();
     let manifest = expected_manifest(&image.manifest);
-    let mut fingerprint_preimage = 2u32.to_le_bytes().to_vec();
+    let mut fingerprint_preimage = 1u32.to_le_bytes().to_vec();
     fingerprint_preimage.extend_from_slice(&manifest);
     image.fingerprint = fnv(&fingerprint_preimage);
     let expected = expected_snapshot(&image, &manifest, image.fingerprint);
@@ -405,14 +405,14 @@ fn populated_portable_vector_is_target_independent() {
     assert_eq!(actual, expected);
     assert_eq!(
         fnv(&actual),
-        145_450_162_107_920_511_159_976_950_771_821_137_540
+        200_433_802_359_411_970_882_540_475_153_470_569_876
     );
     EngineStateSnapshot::from_bytes(&actual).unwrap();
 }
 
 fn encoded_vector(mut image: StateImage) -> Vec<u8> {
     let manifest = expected_manifest(&image.manifest);
-    let mut fingerprint_preimage = 2u32.to_le_bytes().to_vec();
+    let mut fingerprint_preimage = 1u32.to_le_bytes().to_vec();
     fingerprint_preimage.extend_from_slice(&manifest);
     image.fingerprint = fnv(&fingerprint_preimage);
     expected_snapshot(&image, &manifest, image.fingerprint)

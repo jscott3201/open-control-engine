@@ -207,14 +207,17 @@ to an `OCEB` blob on the host and runs on a `no_std` target through the same Hos
 as the facade, a firmware image is built and size-checked per PR for two bare-metal targets and
 executed under QEMU nightly, and every engine PR replays one recorded run of the 46 fixtures' blobs
 bit for bit on x86_64, arm64 and `wasm32-wasip1`. v0.3.0 (M1a) made the engine pure and moved the
-per-PR gate to native x86_64 and arm64 cells under one required `CI OK` status. Next come M2 (the
+per-PR gate to native x86_64 and arm64 cells under one required `CI OK` status. `development`
+carries the next version, 0.5.0, which is not released: every format and schema stays at revision
+1 until 1.0.0 and changes in place, so the engine version is what separates one layout from
+another. Next come M2 (the
 authoring layer) and M3 (the verification product), in parallel; M3's first engine change, the
 facade's slot-indexed execute entry, is in, and so is the first leverage crate built on it:
 `oce-replay`, which drives the engine frame by frame from recorded or scripted inputs (columnar
 arrays, a bounded CSV reader, step lists) under an explicit missing-sample policy and records a
 columnar, bit-exact trace. M3's canonical content id is in as well: `Engine::content_id` names a
 loaded sequence by the SHA-256 of a canonical encoding of its flat graph, the same whatever its
-authored order, JSON spelling or instance namespace, and the blob header carries it (format 2).
+authored order, JSON spelling or instance namespace, and the blob header carries it.
 M2 has started too: its first leverage crate, `oce-author`, holds the
 typed authoring model and builder, the strict-JSON wire form with a pinned JSON Schema, and the
 author-side validator that reports every catalog-level defect before an engine sees the sequence,

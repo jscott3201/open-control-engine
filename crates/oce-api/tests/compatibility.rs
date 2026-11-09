@@ -46,7 +46,7 @@ fn typed_fields_project_only_the_existing_public_contract_facts() {
             .unwrap()
             .revision
     };
-    assert_eq!(descriptor.revision(), 2);
+    assert_eq!(descriptor.revision(), 1);
     assert_eq!(
         descriptor.catalog_schema_revision(),
         revision(ContractDomain::Catalog)

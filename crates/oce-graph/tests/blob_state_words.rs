@@ -95,7 +95,7 @@ fn every_path_resolves_to_its_own_slot_and_nothing_else_does() {
             "{name}: no G36 fixture is target-bound"
         );
         assert_eq!(executable.content_id(), executable.decoded().content_id);
-        // Format 2: every golden carries its canonical content id's 32 digest bytes verbatim
+        // Every golden carries its canonical content id's 32 digest bytes verbatim
         // (the 13 partial exports included), and the decoder never interprets them.
         assert_eq!(
             executable.content_id(),

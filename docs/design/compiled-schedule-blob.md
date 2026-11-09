@@ -1,11 +1,12 @@
-# Compiled-schedule blob (OCEB), format version 2
+# Compiled-schedule blob (OCEB), format version 1
 
 **Design note, written before M1b code (GitHub #396).** It fixes the byte format that #400 encodes
 and decodes, #401 executes on a `no_std` target, #402 sizes in a firmware image and #403
 round-trips across architectures. Where this note departs from the owner's starting sketch, it says
 so and why. The user-facing contract #400 shipped is [Compiled-schedule blob](../compiled-schedule-blob.md).
-Format version 2 (GitHub #470) changes only the meaning of the content-id field (decision 5); the
-layout, sections and CRC rules are format 1's.
+The content-id field's meaning changed once after the first release that shipped the format
+(GitHub #470, decision 5). The format number is 1 and stays 1 until 1.0.0 (issue #509, decision 6):
+the change was made in place, and the engine version in the header separates the two layouts.
 
 ## What the blob is
 
@@ -53,9 +54,9 @@ the boundary outputs.
 | Offset | Width | Type | Meaning |
 | --- | --- | --- | --- |
 | 0 | 4 | bytes | Magic `OCEB` (`4f 43 45 42`) |
-| 4 | 2 | `u16` | Format version, `2` |
+| 4 | 2 | `u16` | Format version, `1` |
 | 6 | 2 | `u16` | Execution profile, `1` = HostTick v1 ([execution profile](../execution-profile.md)) |
-| 8 | 6 | `u16`×3 | Encoder engine version: major, minor, patch (`0, 4, 0` today) |
+| 8 | 6 | `u16`×3 | Encoder engine version: major, minor, patch (`0, 5, 0` today) |
 | 14 | 2 | `u16` | Reserved flags, must be 0 |
 | 16 | 4 | `u32` | Total blob length in bytes, header and trailer included |
 | 20 | 32 | bytes | Content id (decision 5) |
@@ -134,23 +135,23 @@ one is the smallest.
 The model is one `CDL.Reals.AddParameter` (`p = 0.0`): boundary input `TRet` drives connector 0
 (`u`), and connector 1 (`y`) is boundary output `TCut`. The content id field holds the SHA-256
 digest of its canonical content id,
-`oce:canon1:22d010e1298d0a1392a8bcc0475d9e201c2b41406bd90593c5207b60aa015a51` (format version 2,
-[content-id note](content-id.md)). Both I/O paths are 89 bytes:
+`oce:canon1:22d010e1298d0a1392a8bcc0475d9e201c2b41406bd90593c5207b60aa015a51`
+([content-id note](content-id.md)). Both I/O paths are 89 bytes:
 `http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.` + `TRet` /
 `TCut`.
 
 The dump below walks the encoded bytes field by field. For strings longer than four bytes it shows
 only the `u32` length prefix; the UTF-8 bytes follow. It was first printed by the throwaway
-prototype at engine 0.2.0 with a placeholder class hash; it is regenerated (2026-11-09, GitHub #470)
-from the checked-in format-2 golden
+prototype at engine 0.2.0 with a placeholder class hash; it is regenerated (2026-11-09, issue #509)
+from the checked-in golden
 (`crates/oce-api/tests/fixtures/blob/generic_air_economizer_high_limits_ashrae_differential.oceb`)
-at engine 0.4.0, so the class hash, the content id and the CRC are the real bytes.
+at engine 0.5.0, so the class hash, the content id and the CRC are the real bytes.
 
 ```text
 0000  4f 43 45 42                      magic "OCEB"
-0004  02 00                            format 2
+0004  01 00                            format 1
 0006  01 00                            profile 1 (HostTick v1)
-0008  00 00 04 00 00 00                engine 0.4.0
+0008  00 00 05 00 00 00                engine 0.5.0
 000e  00 00                            flags 0
 0010  a2 01 00 00                      total length 418
 0014  22 d0 10 e1 29 8d 0a 13 92 a8 bc c0 47 5d 9e 20
@@ -183,7 +184,7 @@ at engine 0.4.0, so the class hash, the content id and the CRC are the real byte
 0135  01 00 00 00                      1 output
 0139  59 00 00 00                      path str "…TCut" (89 bytes)
 0196  01 00 00 00 00 00 00 00          source connector 1, empty payload
-019e  90 3f 99 a7                      CRC-32C
+019e  26 83 7c 9b                      CRC-32C
 ```
 
 ## Decisions
@@ -329,11 +330,12 @@ a `u128` LE, followed by 16 zero bytes. The field's position and width are stabl
 the format version.
 
 *Amended 2026-11-09 (GitHub #470, [canonical content id](content-id.md)).* M3 replaced the
-algorithm: format version 2's field holds the 32 SHA-256 digest bytes of the canonical content id
+algorithm: the field holds the 32 SHA-256 digest bytes of the canonical content id
 (`oce:canon1:`, over the loaded flat graph) in digest output order, with no padding, and is present
 for every loaded document, the 13 partial exports included. 32 zero bytes now means only "no id"
 (a hand-built model). The decoder still never interprets the field, so no hash is linked on a
-target. The rest of this decision records format 1.
+target. The rest of this decision records the field as release 0.4.0 wrote it; that change did not
+keep its own format number (decision 6, as amended).
 
 `content_id_complete` refused partial exports. 13 of the 46 G36 fixtures export partially today;
 in all 13, a PID's `controllerType` is enum-valued. For those, the field is 32 zero bytes, meaning
@@ -351,6 +353,15 @@ exactly its own version and its own execution profile. Any other version, newer 
 `UnsupportedFormat { found, supported }`. This is current/current only, as for snapshots
 ([state continuation and portability](../state-compatibility.md)). Engine version must also match exactly;
 a mismatch is `EngineVersionMismatch` naming both versions.
+
+*Amended 2026-11-09 (issue #509).* The owner ruled that every format the project defines stays at
+revision 1 until 1.0.0, with no backwards compatibility: a change of the kinds listed above is made
+in place and the goldens are re-blessed, and nothing reads two layouts. The format number therefore
+no longer separates layouts; the engine version does, because the header carries it and the decoder
+accepts only its own. The first PR after a release tag that changes the format's bytes or meaning
+bumps the workspace version on `development`. This was found the hard way: with the number reset
+and the workspace still at 0.4.0, all 46 blobs of release 0.4.0 decoded, 33 of them presenting the
+retired export tag as a canonical content id.
 
 Additive or skippable sections are not allowed in v1. A decoder that skips what it does not
 understand would execute a model differently from what its encoder meant, for example by

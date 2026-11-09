@@ -128,7 +128,7 @@ fn stage_ranks_are_explicit_and_total() {
         .map(DiagnosticStage::rank),
         [0, 1, 2, 3, 4, 5, 6, 7]
     );
-    assert_eq!(crate::DIAGNOSTIC_SCHEMA_REVISION, 3);
+    assert_eq!(crate::DIAGNOSTIC_SCHEMA_REVISION, 1);
 }
 
 #[test]

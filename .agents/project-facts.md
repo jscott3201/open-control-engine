@@ -198,25 +198,46 @@ deliberately:
 - **A class signature change.** A port, a parameter rule, a literal default, the state layout or a
   flag of any class changes `class_signatures.tsv`, and every blob that uses the class. A derived
   default's formula text does not.
-- **A format change**, which also bumps `FORMAT_VERSION` in `oce_graph::blob`.
+- **A format change.** `FORMAT_VERSION` in `oce_graph::blob` stays 1 until 1.0.0 (issue #509): the
+  layout changes in place, and the first such change after a release tag bumps the workspace
+  version in the same PR, because the engine version in the header is what refuses a blob of the
+  earlier layout. `tests/blob_old_layout.rs` keeps one release-0.4.0 blob unblessed to prove it.
 - **A canonical content id change.** The header carries the loaded model's `oce:canon1:` digest
-  (format 2, GitHub #470), so a change to the id's encoding or meaning (a `canon2`, a new graph
+  (GitHub #470), so a change to the id's encoding or meaning (a `canon2`, a new graph
   record) or to anything it covers moves every affected blob header and `restamp.tsv` together.
 
 Regenerate with `OCE_BLESS_BLOB=1 cargo test -p oce-api --test blob_goldens --locked`, run it again
 without the switch, and say in the PR which files moved and why. The blob decoder lives in
 `oce-graph` (`no_std`), so a decoder change also has to pass the `no-std-build` mirror.
 
-## The content-id re-stamp table moves with the canonical ids
+## The content-id pin moves with the canonical ids
 
-`crates/oce-api/tests/fixtures/content_id/restamp.tsv` maps every G36 corpus document's retired
-`cxf:fnv1a128:` export tag to its canonical content id (GitHub #470), in the format the library's
-re-stamp consumes. Its owner test, `crates/oce-api/tests/content_id_restamp.rs`, regenerates the
-whole file and compares it; regenerate with
+`crates/oce-api/tests/fixtures/content_id/restamp.tsv` pins the canonical content id of every G36
+corpus document (GitHub #470), one `<content id> TAB <source path>` line each. It holds current ids
+only: the retired-id column went with issue #509, and nothing in this repo maps one id scheme to
+another. Its owner test, `crates/oce-api/tests/content_id_restamp.rs`, regenerates the whole file
+and compares it; regenerate with
 `OCE_BLESS=1 cargo nextest run -p oce-api --test content_id_restamp`, run it again without the
-switch, and say in the PR which ids moved and why. The old column is a migration record only: it
-is copied from `g36_export_content.txt` and never gains a new kind of id; only the new column
-moves, and only when a canonical id does.
+switch, and say in the PR which ids moved and why. Its `# Engine version:` line moves with a
+workspace version bump.
+
+## Formats stay at revision 1, and the workspace version separates layouts
+
+Every format and schema the project defines stays at revision 1 until 1.0.0 (owner ruling,
+2026-11-09, issue #509): the OCEB blob format, the state snapshot format and execution-state ABI,
+the compatibility descriptor, every contract descriptor under `crates/oce-api/contracts/`, the
+replay record and trace, `OCECANON`. A format changes in place and its goldens are re-blessed.
+
+That makes the engine version the only field that tells two layouts apart, where a format carries
+one. The blob header and the descriptor's `oce-api-version` line do; a state snapshot does not, by
+contract (the host envelope binds the build). So the first PR after a release tag that changes a
+format's bytes or meaning also bumps `workspace.package.version` on `development` to the next
+milestone's version, if it is not bumped already. A version bump is not a release: it cuts no tag
+and leaves `CHANGELOG.md`'s unreleased section open. It moves the 46 blob goldens (version bytes
+and CRC), `compatibility.txt` and `compatibility_export.txt`, the `restamp.tsv` header line, the
+worked hex in `docs/design/compiled-schedule-blob.md`, and the version literals in
+`blob_goldens.rs`, `compatibility.rs`, `compatibility_tests.rs`, `replay_codec.rs`,
+`scripts/ci/test-check-no-std.sh` and `scripts/ci/test-leverage-members.sh`.
 
 ## The class-ports golden moves with port names, descriptions and parameters
 

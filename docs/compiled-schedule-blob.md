@@ -1,6 +1,6 @@
 # Compiled-schedule blob
 
-A compiled-schedule blob (`OCEB`, format version 2) is the loaded executable as bytes: what a `std`
+A compiled-schedule blob (`OCEB`, format version 1) is the loaded executable as bytes: what a `std`
 host computes from CXF — every block with its ground parameters, the frozen evaluation order, the
 connections and the boundary I/O table — in a form a `no_std + alloc` target decodes and runs
 without the CXF importer, the expression evaluator or the validator. It is the sibling of
@@ -117,15 +117,21 @@ does). It is a read-only verification view, not a continuation format: continue 
 
 ## Versioning
 
-A decoder accepts exactly one format version (2), one execution profile (HostTick v1) and its own
+A decoder accepts exactly one format version (1), one execution profile (HostTick v1) and its own
 engine version; anything else, older or newer, is a typed refusal. Between release tags every
 `development` build shares one version string, so a blob and the target that runs it must come
 from the same build — the same current/current rule as state snapshots. The reserved header flags
-must be zero. Any change to the layout, a tag table, the class signature record, the CRC or the
-content-id meaning bumps the format version; format 2 has no optional or skippable sections.
-Format 2 (GitHub #470) differs from format 1 only in the content-id field: format 1 held the
-retired `cxf:fnv1a128:` export tag (zero for a partial export), format 2 the canonical content id's
-digest. A format-1 blob is refused like any other foreign version.
+must be zero. The format has no optional or skippable sections.
+
+The format version stays 1 until the engine's 1.0.0 (issue #509). A change to the layout, a tag
+table, the class signature record, the CRC or the content-id meaning is made in place and the
+goldens are re-blessed; there is no importer and no decoder that reads two layouts. The engine
+version in the header is therefore what tells a blob of one layout from another, so the first
+change of that kind after a release tag also moves the workspace version. A blob encoded by
+release 0.4.0 shows why: it carries this same format number, valid sections, class hashes and
+CRC, and the retired `cxf:fnv1a128:` export tag where today's layout carries the canonical content
+id's digest. It is refused with `EngineVersionMismatch` and never becomes an executable
+(`tests/blob_old_layout.rs`).
 
 Each class carries an FNV-1a-64 **class signature hash** over a canonical record of the class: the
 default instance's kind, state length and state-contract revision, its port kinds and names, the
@@ -262,6 +268,7 @@ without a panic, and a missing, foreign, swapped or oversized file.
 | Encoded on one machine, the same run on x86_64, aarch64 and wasm32 | `crates/oce-conformance/tests/blob_round_trip.rs` ([above](#the-blob-round-trip)): every output, warning and raw state word after every frame of all 46 fixtures, recorded in both per-PR determinism cells (required identical; all four cells, release codegen included, in the release gate after the merge) and replayed from the x86_64 debug recording on aarch64 and on `wasm32-wasip1` under wasmtime, per PR; its controls flip one recorded bit and require the report to name it |
 | Raw state words restore all or nothing | `crates/oce-graph/tests/blob_state_words.rs` |
 | Typed refusal, never a panic | `blob_hostile_bytes.rs` and `blob_hostile_model.rs` (one test per refusal), `blob_fuzz.rs` (10,000 seeded random mutations, re-checksummed) and `oce-blocks` `tests/hostile_parameters.rs` |
+| A blob of an earlier layout under the same format number is refused | `blob_old_layout.rs`: the release-0.4.0 encoding of one fixture, kept unblessed, is refused with `EngineVersionMismatch` by `decode` and by `Executable::from_blob` |
 | `SemanticPoint` payloads are non-computational | `blob_semantic_seam.rs` fills and mutates every payload byte and requires an identical executable and identical outputs |
 
 On a bare-metal target the blob runs in the firmware image (`firmware/link`, GitHub #449, issue
