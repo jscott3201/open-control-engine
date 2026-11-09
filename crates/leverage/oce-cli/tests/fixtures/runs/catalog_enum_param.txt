@@ -1,0 +1,158 @@
+exit: 0
+--- stdout
+{
+  "class": {
+    "class_path": "CDL.Reals.PID",
+    "description": "P, PI, PD, and PID controller",
+    "inputs": [
+      {
+        "kind": "Real",
+        "name": "u_s"
+      },
+      {
+        "kind": "Real",
+        "name": "u_m"
+      }
+    ],
+    "outputs": [
+      {
+        "kind": "Real",
+        "name": "y"
+      }
+    ],
+    "parameters": [
+      {
+        "default": {
+          "kind": "member",
+          "value": "PI"
+        },
+        "enumeration": "CDL.Types.SimpleController",
+        "name": "controllerType",
+        "settable": true,
+        "type": "Enum"
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 1.0
+        },
+        "enumeration": null,
+        "name": "k",
+        "settable": true,
+        "type": "Real"
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 0.5
+        },
+        "enumeration": null,
+        "name": "Ti",
+        "settable": true,
+        "type": "Real"
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 0.1
+        },
+        "enumeration": null,
+        "name": "Td",
+        "settable": true,
+        "type": "Real"
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 1.0
+        },
+        "enumeration": null,
+        "name": "r",
+        "settable": true,
+        "type": "Real"
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 1.0
+        },
+        "enumeration": null,
+        "name": "yMax",
+        "settable": true,
+        "type": "Real"
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 0.0
+        },
+        "enumeration": null,
+        "name": "yMin",
+        "settable": true,
+        "type": "Real"
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 0.9
+        },
+        "enumeration": null,
+        "name": "Ni",
+        "settable": true,
+        "type": "Real"
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 10.0
+        },
+        "enumeration": null,
+        "name": "Nd",
+        "settable": true,
+        "type": "Real"
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 0.0
+        },
+        "enumeration": null,
+        "name": "xi_start",
+        "settable": true,
+        "type": "Real"
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 0.0
+        },
+        "enumeration": null,
+        "name": "yd_start",
+        "settable": true,
+        "type": "Real"
+      },
+      {
+        "default": {
+          "kind": "boolean",
+          "value": true
+        },
+        "enumeration": null,
+        "name": "reverseActing",
+        "settable": true,
+        "type": "Boolean"
+      }
+    ],
+    "reserved": false
+  },
+  "command": "catalog",
+  "errors": [],
+  "findings": [],
+  "input": null,
+  "ok": true,
+  "params": [
+    "controllerType=SimpleController.P"
+  ],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

@@ -1,0 +1,36 @@
+exit: 0
+--- stdout
+Validate a sequence, then write it as flat CXF.
+
+Runs both validation stages and writes nothing on an error finding (exit 1, the report on stdout). Without -o, the CXF document is stdout.
+
+Usage: oce emit [OPTIONS] <FILE>
+
+Arguments:
+  <FILE>
+          The input file (`.oce` text, `.json` wire), or `-` for stdin
+
+Options:
+      --from <FROM>
+          The input form; overrides the extension, and is required for stdin
+          
+          [possible values: text, wire]
+
+      --render <RENDER>
+          When to write a human-readable rendering of the report to stderr
+          
+          [default: auto]
+          [possible values: auto, always, never]
+
+      --namespace <NAMESPACE>
+          The instance namespace every IRI starts with; must end in `#`, `/` or `:`
+
+  -o, --output <OUTPUT>
+          Write the CXF here (atomically) and print the report on stdout; `-` is stdout
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+--- stderr

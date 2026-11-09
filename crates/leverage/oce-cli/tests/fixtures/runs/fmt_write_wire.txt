@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "fmt",
+  "errors": [
+    {
+      "code": "write-needs-text",
+      "detail": "--write rewrites text files only; redirect `oce fmt FILE.json` to a .oce file instead",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "form": "wire",
+  "input": "../oce-author/tests/fixtures/wire/econ_enable.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

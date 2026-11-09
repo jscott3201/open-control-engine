@@ -234,6 +234,20 @@ wire example below.
 section copied verbatim (a test that read `docs/design/` would put the note on the classifier's
 test-read list); when that block changes, copy it again by hand.
 
+## The `oce` CLI transcripts move with every message they print
+
+`crates/leverage/oce-cli/tests/fixtures/runs/*.txt` pin each golden run of the `oce` binary
+(issue #489): its exit status, stdout (the JSON report or the command's document: CXF, canonical
+text, a catalog or vocabulary listing) and stderr (clap's message, or the `--render always`
+rendering), one transcript per subcommand and outcome class, plus `--help` of every command. They
+read the `oce-author` fixtures in place, so anything that moves an `oce-author` golden, a finding or
+parse message, a catalog description, parameter or port name (`catalog_list`, `catalog_class*`), a
+`clap` upgrade or a flag's doc comment (the `help_*` transcripts) moves them too. Regenerate with
+`OCE_BLESS_CLI=1 cargo nextest run -p oce-cli`, run it again without the switch, and say in the PR
+which transcripts moved and why. `tests/report_shape.rs` holds every report transcript to the
+README's contract (sorted keys, `ok` iff exit 0, `errors` iff exit 2, no absolute path), so a
+blessed transcript that breaks the contract still fails.
+
 ## The frame driver lives in `oce-graph`, and its run digests move with behaviour
 
 The HostTick v1 frame driver (time checks, per-slot input checks, the non-finite policy, the
