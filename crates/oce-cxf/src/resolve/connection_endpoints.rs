@@ -11,9 +11,10 @@
 //! [`EndpointTable`] classifies each distinct endpoint IRI once and hands Step 9 a dense
 //! [`EndpointId`]. The source of an edge group is interned once per group — every edge of a
 //! group yields the same borrowed slice, so a pointer-identity memo skips the hash — and each
-//! target once per edge, so Step 9 costs time linear in the bytes of the edge list. A diagnostic
-//! subject is minted once per endpoint and shared by reference count, so a per-edge diagnostic
-//! never copies a long IRI.
+//! target once per edge, with the same memo for a run of edges to one shared lowered target (a
+//! swapped fan-out, GitHub issue #480), so Step 9 costs time linear in the bytes of the edge
+//! list. A diagnostic subject is minted once per endpoint and shared by reference count, so a
+//! per-edge diagnostic never copies a long IRI.
 //!
 //! Ids are assigned in first-seen edge order and are used only as set and map keys; no hash
 //! iteration order reaches a diagnostic, a model id or a vector position.
@@ -79,6 +80,7 @@ pub(super) struct EndpointTable<'a> {
     ids: HashMap<&'a str, EndpointId>,
     endpoints: Vec<Endpoint<'a>>,
     last_source: Option<(&'a str, EndpointId)>,
+    last_target: Option<(&'a str, EndpointId)>,
 }
 
 impl<'a> EndpointTable<'a> {
@@ -89,6 +91,7 @@ impl<'a> EndpointTable<'a> {
             ids: HashMap::new(),
             endpoints: Vec::new(),
             last_source: None,
+            last_target: None,
         }
     }
 
@@ -103,6 +106,21 @@ impl<'a> EndpointTable<'a> {
         }
         let id = self.intern(iri);
         self.last_source = Some((iri, id));
+        id
+    }
+
+    /// Intern an edge's target. Lowering hands every copy of one lowered target the same shared
+    /// allocation (GitHub issue #480), so a run of edges to one long target (a swapped fan-out)
+    /// reuses the previous target's id on a pointer-and-length match without hashing the IRI. A
+    /// miss falls back to [`Self::intern`], so the result never depends on the memo.
+    pub(super) fn intern_target(&mut self, iri: &'a str) -> EndpointId {
+        if let Some((last, id)) = self.last_target
+            && std::ptr::eq(last, iri)
+        {
+            return id;
+        }
+        let id = self.intern(iri);
+        self.last_target = Some((iri, id));
         id
     }
 

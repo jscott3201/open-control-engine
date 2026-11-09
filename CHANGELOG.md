@@ -242,6 +242,29 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### CXF import and export
 
+- **Composite lowering costs time and memory linear in the document, not fan-out × IRI length**
+  (GitHub #490, issue #480). The lowering pass classified both ends of every authored
+  `isConnectedTo` edge by string content and keyed its duplicate counts, crossed drivers and
+  adjacency on IRI strings, so one long authored source shared by a whole fan-out cost fan-out ×
+  IRI length: a leaf port with a 1 MiB `@id` wired 65,535 times to a top boundary port (a 10 MB
+  document) took more than three minutes of release CPU before any diagnostic, and the swapped
+  variant (a leaf input naming a top input) copied the IRI into the lowered list once per edge,
+  about 64 GiB. Lowering now interns each distinct endpoint once
+  (`resolve/composite_orientation/endpoints.rs`) and runs orientation, duplicate suppression, the
+  boundary walk and the erased-relation check on dense ids, with expansion checks memoized per
+  start; owners, composites and parents are `@graph` positions rather than copied IRIs; and the
+  lowered edge list lives beside the lowered document with one shared allocation per distinct
+  IRI. The passes after it keep the same cost: boundary-type derivation classifies a source once
+  per node and skips a repeated shared target, Step 9 memoizes a run of one shared target as it
+  already did a source, and the diagnostic sort keys each subject allocation once instead of
+  hashing a long subject on every comparison. That document now imports to its ordinary
+  diagnostics in under 0.1 s in release (about 1 s in debug). Every diagnostic, its order and its
+  text are unchanged, and no bound changed; no golden moved. Regression tests pin the bound (1 MiB
+  × 65,535 for a kept, a contradictory and a swapped fan-out, with a short-source control) and
+  determinism (a repeated import, lowering one document twice, and shared versus separate
+  allocations for lowered targets, boundary-type derivation and the diagnostic sort).
+  `SECURITY.md` no longer lists the path as not yet bounded.
+
 - **Resolve Step 9 costs time linear in the edge list, not fan-out × source-IRI length**
   (GitHub #481, issue #479). Connection collection classified both ends of every
   `isConnectedTo` edge by string content, hashing the source IRI about ten times per edge, so one

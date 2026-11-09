@@ -71,7 +71,7 @@ pub(super) fn collect<'a>(
         // Intern both ends of every edge, even one an inactivity screen drops below: the set of
         // boundary inputs read is taken over the whole lowered edge list.
         let source = table.intern_source(source);
-        let target = table.intern(target);
+        let target = table.intern_target(target);
         if table.get(source).inactive {
             if inactive_connection_sources.insert(source) {
                 diags.push(
