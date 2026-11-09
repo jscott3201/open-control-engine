@@ -9,12 +9,19 @@
 //! source node in `@graph` order with each source's targets in array order. Everything else is
 //! refused with a typed [`ImportError`], never guessed and never a panic: nested composites,
 //! `hasInstance`, `hasConstant`, conditional components, boundary or port `min` / `max`, library
-//! enumerations, expressions, and any property the subset does not carry. `S231:label` is
-//! dropped everywhere, and a parameter's descriptive `unit`, `quantity` and `displayUnit`, which
-//! the model has no place for, are dropped too. The full importer (library CXF and the
+//! enumerations, expressions, a value whose shape disagrees with its `isOfDataType`, a parameter
+//! `@type` other than `S231:Parameter`, and any property the subset does not carry. The JSON is
+//! read strictly: a key written twice or an integer outside `i64` is refused, not resolved.
+//!
+//! Deliberately ignored (read, never carried into the model): `S231:label` everywhere; a
+//! parameter's descriptive `unit`, `quantity` and `displayUnit`, which the model has no place for;
+//! and the root's `@type` (the corpus names a library class there; the emitter writes
+//! `S231:Block`). The full importer (library CXF and the
 //! prototype's v0 JSON, with its own design note) is a later M2 item; this one is sized to the
 //! flat corpus.
 
+mod nodes;
+mod strict;
 mod values;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -23,11 +30,17 @@ use std::fmt;
 use oce_api::{MAX_CXF_BYTES, param_element_name};
 use serde_json::{Map, Value};
 
-use crate::identifier::{Identifier, check_identifier_syntax};
+use crate::identifier::Identifier;
 use crate::model::{
-    Assignment, Block, Boundary, Connection, Endpoint, Sequence, SequenceParameter, SignalType,
+    Assignment, Block, Boundary, Connection, Endpoint, Sequence, SequenceParameter,
 };
 use crate::validate::catalog::{is_template, lookup_class};
+
+use nodes::{
+    BLOCK_KEYS, BOUNDARY_KEYS, Names, PARAM_KEYS, PORT_KEYS, ROOT_KEYS, S231_IRI, check_keys,
+    check_parameter_type, check_value_shapes, connector_type, data_type, references, sequence_name,
+    text_attribute,
+};
 
 /// Why [`import_cxf`] refused a document. Never a panic.
 #[non_exhaustive]
@@ -93,130 +106,16 @@ pub(crate) fn unsupported(subject: &str, construct: &str) -> ImportError {
     }
 }
 
-fn malformed(detail: impl Into<String>) -> ImportError {
+pub(super) fn malformed(detail: impl Into<String>) -> ImportError {
     ImportError::Malformed {
         detail: detail.into(),
     }
 }
 
-fn unresolved(subject: &str, reference: &str) -> ImportError {
+pub(super) fn unresolved(subject: &str, reference: &str) -> ImportError {
     ImportError::Unresolved {
         subject: subject.to_owned(),
         reference: reference.to_owned(),
-    }
-}
-
-/// The `S231` context IRI a document must bind.
-const S231_IRI: &str = "http://data.ashrae.org/S231P#";
-
-/// Keys every node kind may carry besides its own.
-const COMMON_KEYS: [&str; 3] = ["@id", "@type", "S231:label"];
-
-/// Keys each node kind may carry (beyond [`COMMON_KEYS`]).
-const ROOT_KEYS: [&str; 4] = [
-    "S231:hasParameter",
-    "S231:hasInput",
-    "S231:hasOutput",
-    "S231:containsBlock",
-];
-const BLOCK_KEYS: [&str; 3] = ["S231:hasParameter", "S231:hasInput", "S231:hasOutput"];
-const PARAM_KEYS: [&str; 8] = [
-    "S231:isOfDataType",
-    "S231:value",
-    "S231:unit",
-    "S231:quantity",
-    "S231:displayUnit",
-    "S231:isArray",
-    "S231:numberDimensions",
-    "S231:sizeOfDimensions",
-];
-const PORT_KEYS: [&str; 2] = ["S231:isOfDataType", "S231:isConnectedTo"];
-const BOUNDARY_KEYS: [&str; 5] = [
-    "S231:isOfDataType",
-    "S231:isConnectedTo",
-    "S231:unit",
-    "S231:quantity",
-    "S231:displayUnit",
-];
-
-/// Refuse any key outside `allowed` and [`COMMON_KEYS`].
-fn check_keys(id: &str, node: &Map<String, Value>, allowed: &[&str]) -> Result<(), ImportError> {
-    match node
-        .keys()
-        .find(|k| !COMMON_KEYS.contains(&k.as_str()) && !allowed.contains(&k.as_str()))
-    {
-        Some(key) => Err(unsupported(id, &format!("the property `{key}` here"))),
-        None => Ok(()),
-    }
-}
-
-/// The `@id` references of a relation: one `{"@id"}` object or an array of them.
-fn references<'a>(
-    id: &str,
-    node: &'a Map<String, Value>,
-    key: &str,
-) -> Result<Vec<&'a str>, ImportError> {
-    let one = |value: &'a Value| -> Result<&'a str, ImportError> {
-        match value {
-            Value::Object(map) if map.len() == 1 => match map.get("@id") {
-                Some(Value::String(iri)) => Ok(iri.as_str()),
-                _ => Err(malformed(format!("`{id}`: `{key}` holds a non-reference"))),
-            },
-            _ => Err(malformed(format!("`{id}`: `{key}` holds a non-reference"))),
-        }
-    };
-    match node.get(key) {
-        None => Ok(Vec::new()),
-        Some(Value::Array(items)) => items.iter().map(one).collect(),
-        Some(value) => Ok(vec![one(value)?]),
-    }
-}
-
-/// A string-valued attribute, or `None` when absent.
-fn text_attribute<'a>(
-    id: &str,
-    node: &'a Map<String, Value>,
-    key: &str,
-) -> Result<Option<&'a str>, ImportError> {
-    match node.get(key) {
-        None => Ok(None),
-        Some(Value::String(text)) => Ok(Some(text.as_str())),
-        Some(_) => Err(malformed(format!("`{id}`: `{key}` is not a string"))),
-    }
-}
-
-/// The signal type an `isOfDataType` reference names, if it names Real, Integer or Boolean.
-fn data_type(id: &str, node: &Map<String, Value>) -> Result<Option<SignalType>, ImportError> {
-    let named = references(id, node, "S231:isOfDataType")?;
-    Ok(match named.as_slice() {
-        ["S231:Real"] => Some(SignalType::Real),
-        ["S231:Integer"] => Some(SignalType::Integer),
-        ["S231:Boolean"] => Some(SignalType::Boolean),
-        _ => None,
-    })
-}
-
-/// The IRI scheme the document uses: the root `@id` is `{namespace}{sequence}`, where
-/// `sequence` is the trailing identifier, and every other node is `{root}.{local}`.
-struct Names<'a> {
-    root: &'a str,
-}
-
-impl<'a> Names<'a> {
-    /// The local path under the root, checked as dot-separated identifiers.
-    fn local(&self, subject: &str, iri: &'a str) -> Result<Vec<&'a str>, ImportError> {
-        let path = iri
-            .strip_prefix(self.root)
-            .and_then(|rest| rest.strip_prefix('.'))
-            .ok_or_else(|| unresolved(subject, iri))?;
-        let parts: Vec<&str> = path.split('.').collect();
-        if parts.iter().any(|p| check_identifier_syntax(p).is_err()) {
-            return Err(unsupported(
-                iri,
-                "a local name that is not dot-separated identifiers",
-            ));
-        }
-        Ok(parts)
     }
 }
 
@@ -236,7 +135,7 @@ pub fn import_cxf(bytes: &[u8]) -> Result<Sequence, ImportError> {
         });
     }
     let document: Value =
-        serde_json::from_slice(bytes).map_err(|e| malformed(format!("not JSON: {e}")))?;
+        strict::parse(bytes).map_err(|e| malformed(format!("not strict JSON: {e}")))?;
     let Value::Object(top) = &document else {
         return Err(malformed("the document is not an object"));
     };
@@ -349,6 +248,14 @@ impl<'a> Reader<'a> {
 
     fn read(mut self, order: &[&'a str]) -> Result<Sequence, ImportError> {
         check_keys(self.root_id, self.root, &ROOT_KEYS)?;
+        // The root's `@type` is read and ignored (the corpus names a library class there; the
+        // emitter always writes `S231:Block`), but it must be one string.
+        if !matches!(self.root.get("@type"), None | Some(Value::String(_))) {
+            return Err(malformed(format!(
+                "`{}`: the root `@type` is not one string",
+                self.root_id
+            )));
+        }
         let name = sequence_name(self.root_id)?;
         let mut sequence = Sequence::new(Identifier::unchecked(name));
         for iri in references(self.root_id, self.root, "S231:hasParameter")? {
@@ -418,6 +325,7 @@ impl<'a> Reader<'a> {
         node: &Map<String, Value>,
     ) -> Result<SequenceParameter, ImportError> {
         check_keys(iri, node, &PARAM_KEYS)?;
+        check_parameter_type(iri, node)?;
         if node.contains_key("S231:isArray") {
             return Err(unsupported(iri, "an array sequence parameter"));
         }
@@ -523,6 +431,20 @@ impl<'a> Reader<'a> {
         params: &[Identifier],
     ) -> Result<Vec<Assignment>, ImportError> {
         check_keys(iri, node, &PARAM_KEYS)?;
+        check_parameter_type(iri, node)?;
+        let read = self.read_assignments(iri, node, class_path, local, params)?;
+        check_value_shapes(iri, node, &read)?;
+        Ok(read)
+    }
+
+    fn read_assignments(
+        &self,
+        iri: &str,
+        node: &Map<String, Value>,
+        class_path: &str,
+        local: &str,
+        params: &[Identifier],
+    ) -> Result<Vec<Assignment>, ImportError> {
         let value = node
             .get("S231:value")
             .ok_or_else(|| unsupported(iri, "a block parameter without a value"))?;
@@ -555,8 +477,9 @@ impl<'a> Reader<'a> {
                 "an array parameter whose value is not a list",
             ));
         };
-        let total = dims.iter().product::<usize>();
-        if items.len() != total {
+        // Checked: hostile sizes overflow `usize` (and wrap to 0 in release).
+        let total = dims.iter().try_fold(1usize, |acc, &d| acc.checked_mul(d));
+        if total != Some(items.len()) {
             return Err(unsupported(
                 iri,
                 "an array whose element count disagrees with its sizes",
@@ -591,48 +514,5 @@ impl<'a> Reader<'a> {
                 Ok(Assignment::new(Identifier::unchecked(name), value))
             })
             .collect()
-    }
-}
-
-/// The sequence name: the trailing identifier of the root `@id`.
-fn sequence_name(root: &str) -> Result<&str, ImportError> {
-    let start = root
-        .rfind(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
-        .map_or(0, |at| at + 1);
-    let name = &root[start..];
-    if start == 0 || check_identifier_syntax(name).is_err() {
-        return Err(unsupported(
-            root,
-            "a root `@id` that does not end in an identifier after a delimiter",
-        ));
-    }
-    Ok(name)
-}
-
-/// The signal type of a connector node from its `@type` and `isOfDataType`, which must agree.
-fn connector_type(
-    iri: &str,
-    node: &Map<String, Value>,
-    side: &str,
-) -> Result<SignalType, ImportError> {
-    let from_type = match node.get("@type") {
-        Some(Value::String(t)) => {
-            match t.strip_prefix("S231:").and_then(|k| k.strip_suffix(side)) {
-                Some("Real") => Some(SignalType::Real),
-                Some("Integer") => Some(SignalType::Integer),
-                Some("Boolean") => Some(SignalType::Boolean),
-                _ => None,
-            }
-        }
-        _ => None,
-    };
-    let declared = data_type(iri, node)?;
-    match (from_type, declared) {
-        (Some(a), Some(b)) if a == b => Ok(a),
-        (Some(a), None) if !node.contains_key("S231:isOfDataType") => Ok(a),
-        _ => Err(unsupported(
-            iri,
-            &format!("a connector that is not a typed S231 Real, Integer or Boolean {side}"),
-        )),
     }
 }

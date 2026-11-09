@@ -95,6 +95,7 @@ fn the_stage_one_code_table_is_the_notes() {
             "unknown-port",
             "invalid-semantic-point",
             "invalid-provenance-id",
+            "single-assignment",
         ]
     );
     // Every code that names an engine defect uses the engine's spelling.
@@ -565,4 +566,45 @@ fn invalid_provenance_id() {
     );
     s.extends = Some(ProvenanceId::unchecked("cxf:fnv1a128:0123abcd"));
     assert_eq!(codes(&validate(&s)), vec![]);
+}
+
+#[test]
+fn single_assignment() {
+    // A repeated target in the connection list: the second connection is refused at stage 1
+    // (the engine would refuse two block outputs, but not a block output beside a boundary
+    // input, GitHub #472).
+    let mut s = econ_enable();
+    s.connections.push(Connection::new(
+        Endpoint::parse("TOut"),
+        Endpoint::parse("hys.u"),
+    ));
+    s.connections.push(Connection::new(
+        Endpoint::parse("TOutCut"),
+        Endpoint::parse("sub.u1"),
+    ));
+    let findings = validate(&s);
+    assert_eq!(
+        codes(&findings),
+        vec![
+            pair("single-assignment", "connection[4]"),
+            pair("single-assignment", "connection[5]")
+        ]
+    );
+    assert!(
+        findings[0]
+            .detail
+            .contains("already driven by connection[2]"),
+        "{}",
+        findings[0].detail
+    );
+    // A repeated boundary-output target too.
+    let mut s = econ_enable();
+    s.connections.push(Connection::new(
+        Endpoint::parse("sub.y"),
+        Endpoint::parse("ecoEna"),
+    ));
+    assert_eq!(
+        codes(&validate(&s)),
+        vec![pair("single-assignment", "connection[4]")]
+    );
 }

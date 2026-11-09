@@ -93,6 +93,9 @@ enum EngineSays {
     Preempts(&'static str),
     /// The engine reports nothing at that subject.
     Silent,
+    /// The engine reports this very code, at the input it names rather than at the repeated
+    /// connection: stage 1 points at the second driver, the engine's subject maps to the first.
+    SameCode,
 }
 
 /// The authoring note's finding-code table, restricted to the stage-1 rows that carry an engine
@@ -124,7 +127,69 @@ const PARITY: &[(&str, EngineSays)] = &[
         EngineSays::Preempts("unresolved-reference"),
     ),
     ("unknown-port", EngineSays::Preempts("unresolved-reference")),
+    ("single-assignment", EngineSays::SameCode),
 ];
+
+/// The note's finding-code table for every stage-1 code, as `(code, owner, pre-empted engine
+/// code)`: owner `engine` or `author`, the pre-empted column `None` for "—". Kept in the note's
+/// row order and checked against [`super::super::STAGE_ONE_CODES`] and [`PARITY`] below, so a
+/// row added to one and not the others fails here.
+const NOTE_TABLE: &[(&str, &str, Option<&str>)] = &[
+    ("empty-sequence", "author", Some("malformed-document")),
+    ("invalid-name", "author", None),
+    ("duplicate-name", "author", Some("duplicate-id")),
+    ("class-not-found", "engine", None),
+    ("class-not-authorable", "author", None),
+    ("unknown-parameter", "author", Some("none")),
+    ("parameter-not-settable", "author", None),
+    ("duplicate-parameter", "author", Some("duplicate-id")),
+    ("missing-required-parameter", "engine", None),
+    ("parameter-kind-mismatch", "engine", None),
+    ("parameter-out-of-range", "engine", None),
+    ("non-finite-parameter", "engine", None),
+    ("unknown-enum-literal", "author", Some("grounding-failed")),
+    (
+        "unknown-parameter-reference",
+        "author",
+        Some("grounding-failed"),
+    ),
+    ("malformed-connection", "author", None),
+    ("unknown-source", "author", Some("unresolved-reference")),
+    ("unknown-target", "author", Some("unresolved-reference")),
+    ("unknown-port", "author", Some("unresolved-reference")),
+    ("invalid-semantic-point", "author", None),
+    ("invalid-provenance-id", "author", None),
+    ("single-assignment", "engine", None),
+];
+
+#[test]
+fn the_parity_table_covers_exactly_the_notes_engine_rows() {
+    let codes: Vec<&str> = NOTE_TABLE.iter().map(|(c, _, _)| *c).collect();
+    assert_eq!(codes, super::super::STAGE_ONE_CODES);
+    let expected: Vec<(&str, String)> = NOTE_TABLE
+        .iter()
+        .filter(|(_, owner, preempted)| *owner == "engine" || preempted.is_some())
+        .map(|(code, owner, preempted)| {
+            let says = match (*owner, preempted) {
+                ("engine", _) if *code == "single-assignment" => "SameCode".to_owned(),
+                ("engine", _) => "Same".to_owned(),
+                (_, Some("none")) => "Silent".to_owned(),
+                (_, Some(engine)) => format!("Preempts({engine:?})"),
+                (_, None) => unreachable!(),
+            };
+            (*code, says)
+        })
+        .collect();
+    let actual: Vec<(&str, String)> = PARITY
+        .iter()
+        .map(|(code, says)| (*code, format!("{says:?}")))
+        .collect();
+    let mut expected = expected;
+    let mut actual = actual;
+    expected.sort();
+    actual.sort();
+    assert_eq!(actual, expected);
+}
 
 /// One sequence carrying exactly the defect `code` names, built from the worked example.
 fn defect(code: &str) -> Sequence {
@@ -163,6 +228,17 @@ fn defect(code: &str) -> Sequence {
         "unknown-source" => s.connections[0].source = Endpoint::parse("TOutCutt"),
         "unknown-target" => s.connections[3].target = Endpoint::parse("ecoEnaa"),
         "unknown-port" => s.connections[0].target = Endpoint::parse("sub.u9"),
+        "single-assignment" => {
+            s.blocks.push(Block::new(id("abs"), "CDL.Reals.Abs"));
+            s.connections.push(Connection::new(
+                Endpoint::parse("TOut"),
+                Endpoint::parse("abs.u"),
+            ));
+            s.connections.push(Connection::new(
+                Endpoint::parse("abs.y"),
+                Endpoint::parse("hys.u"),
+            ));
+        }
         other => panic!("no defect for {other}"),
     }
     s
@@ -210,6 +286,10 @@ fn each_stage_one_defect_meets_the_engine_code_the_table_names() {
                 "{code}: expected `{engine_code}` at `{subject}`, the engine reports {engine:?}"
             ),
             EngineSays::Silent => assert_eq!(engine, vec![], "{code}"),
+            EngineSays::SameCode => assert!(
+                engine.iter().any(|(c, _)| *c == code),
+                "{code}: the engine reports {engine:?}"
+            ),
         }
     }
 }
@@ -226,5 +306,133 @@ fn every_engine_finding_is_an_error_from_the_engine() {
             assert_eq!(finding.origin, crate::validate::Origin::Engine, "{finding}");
             assert_eq!(finding.span, None, "{finding}");
         }
+    }
+}
+
+fn connect(s: &mut Sequence, from: &str, to: &str) {
+    s.connections
+        .push(Connection::new(Endpoint::parse(from), Endpoint::parse(to)));
+}
+
+#[test]
+fn two_block_outputs_on_one_input_meet_the_engines_single_assignment() {
+    let mut s = econ_enable();
+    s.blocks.push(Block::new(id("abs"), "CDL.Reals.Abs"));
+    connect(&mut s, "TOut", "abs.u");
+    connect(&mut s, "abs.y", "hys.u");
+    assert_eq!(
+        pairs(&validate_author_side(&s)),
+        vec![("single-assignment", "connection[5]".to_owned())]
+    );
+    assert_eq!(
+        pairs(&engine(&s)),
+        vec![("single-assignment", "connection[2]".to_owned())]
+    );
+}
+
+#[test]
+fn two_boundary_inputs_on_one_input_meet_the_engines_single_assignment() {
+    let mut s = econ_enable();
+    connect(&mut s, "TOut", "sub.u1");
+    assert_eq!(
+        pairs(&validate_author_side(&s)),
+        vec![("single-assignment", "connection[4]".to_owned())]
+    );
+    let engine = engine(&s);
+    assert_eq!(
+        pairs(&engine),
+        vec![("single-assignment", "connection[0]".to_owned())]
+    );
+    assert!(
+        engine[0].detail.contains("distinct boundary inputs"),
+        "{}",
+        engine[0].detail
+    );
+}
+
+#[test]
+fn a_mixed_double_driver_is_not_yet_refused_by_the_engine() {
+    // A block input driven by a block output and a boundary input loads warning-free (GitHub
+    // #472); stage 1 refuses it (`single-assignment`). Flip this when #472 lands.
+    let mut s = econ_enable();
+    connect(&mut s, "TOut", "hys.u");
+    assert_eq!(
+        pairs(&validate_author_side(&s)),
+        vec![("single-assignment", "connection[4]".to_owned())]
+    );
+    assert_eq!(engine(&s), vec![]);
+}
+
+#[test]
+fn a_refusal_without_a_coded_diagnostic_is_load_failed() {
+    let s = econ_enable();
+    let findings = judge(&s, b"{\"@graph\": [", "urn:oce:author:");
+    assert_eq!(
+        pairs(&findings),
+        vec![("load-failed", "sequence".to_owned())]
+    );
+    assert_eq!(findings[0].origin, crate::validate::Origin::Engine);
+    assert!(!findings[0].detail.is_empty());
+}
+
+#[test]
+fn a_diagnostic_on_the_root_maps_to_the_sequence() {
+    // A second top composite: `composite/root-count` names the first candidate, the root.
+    let s = econ_enable();
+    let options = EmitOptions::default();
+    let text = String::from_utf8(emit_unchecked(&s, &options).expect("emit")).expect("utf8");
+    let doubled = text.replacen(
+        "\"@graph\": [",
+        "\"@graph\": [{\"@id\": \"urn:oce:other:x\", \"@type\": \"S231:Block\", \"S231:containsBlock\": [{\"@id\": \"urn:oce:other:x.c\"}]}, {\"@id\": \"urn:oce:other:x.c\", \"@type\": \"http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant\"},",
+        1,
+    );
+    let findings = judge(&s, doubled.as_bytes(), &options.namespace);
+    let root: Vec<_> = findings
+        .iter()
+        .filter(|f| f.code == "malformed-document")
+        .collect();
+    assert_eq!(root.len(), 1, "{findings:#?}");
+    // `urn:oce:other:x` is first in `@graph`, so it is the subject: outside the scheme.
+    assert_eq!(root[0].subject, "sequence");
+    assert!(
+        root[0]
+            .detail
+            .starts_with("engine subject `urn:oce:other:x`"),
+        "{}",
+        root[0].detail
+    );
+}
+
+#[test]
+fn subjects_outside_the_scheme_stay_on_the_sequence_with_the_raw_subject() {
+    let s = econ_enable();
+    let scheme = crate::emit::Scheme::new("urn:oce:author:", "econ_enable");
+    for raw in [
+        "connector#3",
+        "block#1",
+        "urn:other:econ_enable.hys",
+        "urn:oce:author:econ_enabled.hys",
+    ] {
+        let (anchor, subject, detail) =
+            super::map_subject(&s, &scheme, Some(raw), "message".to_owned());
+        assert_eq!(anchor, super::super::Anchor::Sequence, "{raw}");
+        assert_eq!(subject, "sequence");
+        assert_eq!(detail, format!("engine subject `{raw}`: message"));
+    }
+    let (_, subject, detail) = super::map_subject(&s, &scheme, None, "m".to_owned());
+    assert_eq!((subject.as_str(), detail.as_str()), ("sequence", "m"));
+    let cases = [
+        ("urn:oce:author:econ_enable", "sequence"),
+        ("urn:oce:author:econ_enable.dTHys", "dTHys"),
+        ("urn:oce:author:econ_enable.TOut", "TOut"),
+        ("urn:oce:author:econ_enable.ecoEna", "ecoEna"),
+        ("urn:oce:author:econ_enable.hys", "hys"),
+        ("urn:oce:author:econ_enable.hys.uHigh", "hys.uHigh"),
+        ("urn:oce:author:econ_enable.hys.u", "connection[2]"),
+        ("urn:oce:author:econ_enable.sub.y", "connection[2]"),
+    ];
+    for (raw, expected) in cases {
+        let (_, subject, _) = super::map_subject(&s, &scheme, Some(raw), "m".to_owned());
+        assert_eq!(subject, expected, "{raw}");
     }
 }

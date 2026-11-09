@@ -85,36 +85,14 @@ fn a_parameter_rule_warning_is_an_error_at_the_assignment() {
 fn a_type_mismatch_is_reported_at_the_connection() {
     let mut s = econ_enable();
     s.blocks.push(Block::new(id("not1"), "CDL.Logical.Not"));
+    s.outputs
+        .push(Boundary::new(id("yNot"), SignalType::Boolean));
     connect(&mut s, "TOut", "not1.u");
-    connect(&mut s, "not1.y", "ecoEna");
+    connect(&mut s, "not1.y", "yNot");
     assert_eq!(
         pairs(&engine_only(&s)),
-        vec![
-            pair("single-assignment", "ecoEna"),
-            pair("type-mismatch", "connection[4]")
-        ]
+        vec![pair("type-mismatch", "connection[4]")]
     );
-}
-
-#[test]
-fn two_block_outputs_on_one_input_break_single_assignment() {
-    let mut s = econ_enable();
-    s.blocks.push(Block::new(id("abs"), "CDL.Reals.Abs"));
-    connect(&mut s, "TOut", "abs.u");
-    connect(&mut s, "abs.y", "hys.u");
-    assert_eq!(
-        pairs(&engine_only(&s)),
-        vec![pair("single-assignment", "connection[2]")]
-    );
-}
-
-#[test]
-fn a_mixed_double_driver_is_not_yet_refused_by_the_engine() {
-    // A block input driven by a block output and a boundary input loads warning-free today
-    // (GitHub #472). Stage 2 reports whatever the engine reports; flip this when #472 lands.
-    let mut s = econ_enable();
-    connect(&mut s, "TOut", "hys.u");
-    assert_eq!(engine_only(&s), vec![]);
 }
 
 #[test]

@@ -137,10 +137,24 @@ fn record_finding(
         DiagnosticSubject::Opaque(raw) => Some(raw.as_str()),
         _ => None,
     };
+    let (anchor, subject, detail) = map_subject(sequence, scheme, raw, message);
+    findings.push(anchor, engine_finding(code, subject, detail));
+}
+
+/// The anchor, subject and detail of an engine diagnostic with subject `raw` and `message`: a
+/// subject under the scheme maps to its model path; any other — `connector#N` or `block#N` for an
+/// IRI-less connector or block, a foreign IRI — stays on `sequence` with the raw subject quoted in
+/// the detail; no subject is the sequence's.
+pub(super) fn map_subject(
+    sequence: &Sequence,
+    scheme: &Scheme,
+    raw: Option<&str>,
+    message: String,
+) -> (Anchor, String, String) {
     let mapped = raw
         .and_then(|raw| scheme.model_path(raw))
         .map(|path| locate(sequence, path));
-    let (anchor, subject, detail) = match (mapped, raw) {
+    match (mapped, raw) {
         (Some((Anchor::Block(index, None), subject)), _) => {
             let (anchor, subject) = refine(sequence, index, subject, &message);
             (anchor, subject, message)
@@ -152,8 +166,7 @@ fn record_finding(
             format!("engine subject `{raw}`: {message}"),
         ),
         (None, None) => (Anchor::Sequence, "sequence".to_owned(), message),
-    };
-    findings.push(anchor, engine_finding(code, subject, detail));
+    }
 }
 
 /// A block-level engine message that names one of the block's assignments in backticks (the

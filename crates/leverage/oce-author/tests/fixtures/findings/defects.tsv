@@ -14,6 +14,7 @@ parameter-not-settable	pass.k	`urn:oce:lowering#PassThrough.Real` is an engine-r
 missing-required-parameter	limit	block `limit`: block `CDL.Reals.Limiter` is missing required parameter `uMax`
 missing-required-parameter	limit	block `limit`: block `CDL.Reals.Limiter` is missing required parameter `uMin`
 malformed-connection	connection[4]	`hys.y.z -> ecoEna`: the source port `y.z` is malformed: byte 1 is not an ASCII letter, digit or `_` (dots are not allowed)
-unknown-source	connection[5]	`ecoEna -> hys.u`: the source `ecoEna` is a boundary output, which cannot drive a connection
-unknown-target	connection[6]	`sub.y -> TOut`: the target `TOut` is a boundary input, which cannot be driven
-unknown-port	connection[7]	`TOut -> sub.u9`: block `sub` (`CDL.Reals.Subtract`) has no input port `u9`; its inputs are: u1, u2
+single-assignment	connection[5]	`TOut -> sub.u1`: `sub.u1` is already driven by connection[0]; an input has exactly one driver (CDL single assignment)
+unknown-source	connection[6]	`ecoEna -> hys.u`: the source `ecoEna` is a boundary output, which cannot drive a connection
+unknown-target	connection[7]	`sub.y -> TOut`: the target `TOut` is a boundary input, which cannot be driven
+unknown-port	connection[8]	`TOut -> sub.u9`: block `sub` (`CDL.Reals.Subtract`) has no input port `u9`; its inputs are: u1, u2

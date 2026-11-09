@@ -3,19 +3,30 @@
 //! committed fixture loaded directly; every other fixture is refused by the importer with a typed
 //! error, listed here with its reason.
 //!
+//! **Coverage.** Gate item 1 is not yet met: 4 of the 40 in-subset fixtures (6 are nested or
+//! conditional, out of the M2 subset); the 36 others wait on model decisions (GitHub #475).
+//! `multizone_vav_relief_fan_group` exports partially (63 deferrals), so it has no complete content
+//! id and is compared on its export bytes plus deferral codes ([`support::cxf::identity`]).
+//!
 //! **Namespace.** The corpus names its nodes under `http://example.org#g36.source.` (or
 //! `http://example.org#g36.`), which ends in `.`; an emitter namespace must end in `#`, `/` or
 //! `:` (the content-id note, GitHub #470/#471), so the emitter cannot spell the corpus IRIs. The
 //! comparison therefore re-stamps the committed fixture's root IRI `{namespace}{sequence}` to
-//! `urn:oce:library:{sequence}` — a textual substitution of the root prefix only — and the test
-//! also proves that the re-stamp is the only difference: the committed fixture's own export,
-//! with the same substitution, equals the emitted document's export byte for byte.
+//! `urn:oce:library:{sequence}` — a textual substitution of the root prefix only, after which no
+//! occurrence of the corpus namespace may remain — and the test also proves that the re-stamp is
+//! the only difference: the committed fixture's own export, with the same substitution, equals the
+//! emitted document's export byte for byte. The re-stamp stays after the canonical content id
+//! lands: under the content-id note's naming rule (namespace stripped through the last `#`, `/` or
+//! `:`) the corpus keeps `g36.source.` inside its names, so only library bundle v2, regenerated
+//! from the authoring form, removes it.
 //!
 //! **Node order (GitHub #458).** Today's id is order-bearing. One flat fixture's `@graph` block
 //! order differs from its `containsBlock` order (`multizone_vav_outdoor_airflow_sumzone`), which
 //! the emitter's layout cannot reproduce, and four fixtures are nested composites the flat
 //! layout has no order for; all five are refused by the importer before order matters (see
-//! [`REFUSED`]), and `node_order_alone_moves_the_sumzone_identity` pins the mismatch itself.
+//! [`REFUSED`]). The trip-wire is `every_other_fixture_is_refused_with_its_reason`: the day the
+//! importer reads one of them, that test fails and the order question returns.
+//! `node_order_alone_moves_the_sumzone_identity` pins the mismatch itself.
 
 mod support;
 
@@ -203,22 +214,28 @@ fn every_covered_fixture_round_trips_to_the_committed_identity() {
         let text = committed(name);
         let sequence = import_cxf(text.as_bytes()).unwrap_or_else(|e| panic!("{name}: {e}"));
         let root = root_iri(&text);
+        let namespace = root
+            .strip_suffix(sequence.name.as_str())
+            .expect("the root ends in the sequence name");
         let restamped_root = format!("{LIBRARY_NAMESPACE}{}", sequence.name);
+        let restamped = text.replace(&root, &restamped_root);
+        assert!(
+            !restamped.contains(namespace),
+            "{name}: the re-stamp left `{namespace}`"
+        );
         let emitted = emit(
             &sequence,
             &EmitOptions::new().with_namespace(LIBRARY_NAMESPACE),
         )
         .unwrap_or_else(|e| panic!("{name}: {e}"));
         let from_model = load_clean(&emitted);
-        let reference = load_clean(text.replace(&root, &restamped_root).as_bytes());
+        let reference = load_clean(restamped.as_bytes());
         assert_eq!(identity(&from_model), identity(&reference), "{name}");
         // The re-stamp is the only difference from the committed fixture loaded directly.
         let direct = load_clean(text.as_bytes());
-        assert_eq!(
-            export_text(&direct).replace(&root, &restamped_root),
-            export_text(&from_model),
-            "{name}"
-        );
+        let direct_export = export_text(&direct).replace(&root, &restamped_root);
+        assert!(!direct_export.contains(namespace), "{name}");
+        assert_eq!(direct_export, export_text(&from_model), "{name}");
     }
 }
 
@@ -312,7 +329,6 @@ fn node_order_alone_moves_the_sumzone_identity() {
     // only the block nodes into `containsBlock` order — the emitter's layout — moves the id.
     let text = committed("multizone_vav_outdoor_airflow_sumzone");
     let reordered = blocks_in_contains_order(&text);
-    assert_ne!(reordered, text);
     let direct = identity(&support::cxf::load(text.as_bytes()).expect("load").0);
     let moved = identity(&support::cxf::load(reordered.as_bytes()).expect("load").0);
     assert_ne!(direct, moved);

@@ -55,6 +55,10 @@ fn defects() -> oce_author::Sequence {
         Endpoint::parse("ecoEna"),
     ));
     s.connections.push(oce_author::Connection::new(
+        Endpoint::parse("TOut"),
+        Endpoint::parse("sub.u1"),
+    ));
+    s.connections.push(oce_author::Connection::new(
         Endpoint::parse("ecoEna"),
         Endpoint::parse("hys.u"),
     ));

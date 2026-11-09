@@ -5,7 +5,8 @@
 //! (`"\"text\""`), an enumeration member its full member path, and a reference the bare
 //! sequence-parameter name, which the engine grounds from the root's scope (Rule 5). The CXF type
 //! follows the parameter's catalog type, so an Integer literal assigned to a Real parameter is
-//! written as a Real. Array elements, assigned one at a time in the model, are gathered into one
+//! written as a Real; stage 1 refuses one above 2^53 in magnitude ([`crate::MAX_EXACT_INTEGER`]),
+//! so that conversion is always exact. Array elements, assigned one at a time in the model, are gathered into one
 //! `isArray` node per array parameter at the position of the first element authored, in
 //! row-major order (an array with a gap is written element by element under the flattened
 //! names instead). Only what the author assigned is written; no default is ever filled.

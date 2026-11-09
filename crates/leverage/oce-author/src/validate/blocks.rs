@@ -20,7 +20,7 @@ use crate::wire::MAX_WIRE_STRING_BYTES;
 
 use super::catalog::{ClassView, enum_type, lookup_class, lookup_parameter};
 use super::index::{Declared, Ports};
-use super::names::literal_fits;
+use super::names::{exact_as_real, inexact_detail, literal_fits};
 use super::{
     Anchor, CLASS_NOT_AUTHORABLE, CLASS_NOT_FOUND, DUPLICATE_PARAMETER, Findings,
     NON_FINITE_PARAMETER, PARAMETER_KIND_MISMATCH, PARAMETER_NOT_SETTABLE, PARAMETER_OUT_OF_RANGE,
@@ -282,8 +282,20 @@ fn judge(
             return match (expected, param.value_type, &param.value) {
                 (ValueType::Real, SignalType::Real, Literal::Real(v)) => Ok(Some(Value::Real(*v))),
                 // A Real sequence parameter widens its Integer literal, as CDL does.
+                // An inexact Integer on the Real sequence parameter is reported there.
+                (ValueType::Real, SignalType::Real, Literal::Integer(v)) if !exact_as_real(*v) => {
+                    Ok(None)
+                }
                 (ValueType::Real, SignalType::Real, Literal::Integer(v)) => {
                     Ok(Some(Value::Real(*v as f64)))
+                }
+                (ValueType::Real, SignalType::Integer, Literal::Integer(v))
+                    if !exact_as_real(*v) =>
+                {
+                    Err(refuse(
+                        PARAMETER_OUT_OF_RANGE,
+                        inexact_detail(&format!("parameter `{name}` (via `{target}`)"), *v),
+                    ))
                 }
                 (
                     ValueType::Real | ValueType::Integer,
@@ -306,6 +318,10 @@ fn judge(
             format!("parameter `{name}` must be finite; the value is {v}"),
         )),
         (ValueType::Real, Literal::Real(v)) => Ok(Some(Value::Real(*v))),
+        (ValueType::Real, Literal::Integer(v)) if !exact_as_real(*v) => Err(refuse(
+            PARAMETER_OUT_OF_RANGE,
+            inexact_detail(&format!("parameter `{name}`"), *v),
+        )),
         (ValueType::Real | ValueType::Integer, Literal::Integer(v)) => Ok(Some(Value::Integer(*v))),
         (ValueType::Boolean, Literal::Boolean(v)) => Ok(Some(Value::Boolean(*v))),
         (ValueType::String, Literal::Text(v)) => match text_problem(v) {

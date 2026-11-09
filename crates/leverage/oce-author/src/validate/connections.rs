@@ -1,12 +1,17 @@
 //! Connection checks: endpoint syntax, what each endpoint names, and port names against the
 //! ports the catalog resolves for each block as configured (#440).
 
+use std::collections::BTreeMap;
+
 use crate::identifier::check_identifier_syntax;
 use crate::model::{Endpoint, Sequence};
 
 use super::index::{Declared, Ports};
 
-use super::{Anchor, Findings, MALFORMED_CONNECTION, UNKNOWN_PORT, UNKNOWN_SOURCE, UNKNOWN_TARGET};
+use super::{
+    Anchor, Findings, MALFORMED_CONNECTION, SINGLE_ASSIGNMENT, UNKNOWN_PORT, UNKNOWN_SOURCE,
+    UNKNOWN_TARGET,
+};
 
 /// Which end of a connection.
 #[derive(Clone, Copy)]
@@ -30,6 +35,8 @@ pub(super) fn check(
     ports: &[Option<Ports>],
     findings: &mut Findings,
 ) {
+    // The first connection driving each resolved target, for the single-assignment check.
+    let mut driven: BTreeMap<(&str, &str), usize> = BTreeMap::new();
     for (index, connection) in sequence.connections.iter().enumerate() {
         let position = Anchor::Connection(index);
         let subject = format!("connection[{index}]");
@@ -61,11 +68,13 @@ pub(super) fn check(
             );
             continue;
         }
+        let mut resolved = true;
         for (end, endpoint) in [
             (End::Source, &connection.source),
             (End::Target, &connection.target),
         ] {
             if let Some((code, detail)) = resolve(declared, ports, end, endpoint) {
+                resolved = false;
                 findings.error(
                     position,
                     code,
@@ -74,6 +83,39 @@ pub(super) fn check(
                 );
             }
         }
+        // A target only a resolved connection names; a repeat drives one input twice.
+        if resolved && is_known(declared, ports, &connection.target) {
+            let target = match &connection.target {
+                Endpoint::Boundary(name) => (name.as_str(), ""),
+                Endpoint::Port { block, port } => (block.as_str(), port.as_str()),
+            };
+            if let Some(&first) = driven.get(&target) {
+                findings.error(
+                    position,
+                    SINGLE_ASSIGNMENT,
+                    subject.as_str(),
+                    format!(
+                        "`{spelled}`: `{}` is already driven by connection[{first}]; an input has \
+                         exactly one driver (CDL single assignment)",
+                        connection.target.spelling()
+                    ),
+                );
+            } else {
+                driven.insert(target, index);
+            }
+        }
+    }
+}
+
+/// Whether a target's interface is known (its block's ports resolved), so `resolve` judged it.
+fn is_known(declared: &Declared<'_>, ports: &[Option<Ports>], target: &Endpoint) -> bool {
+    match target {
+        Endpoint::Boundary(_) => true,
+        Endpoint::Port { block, .. } => declared
+            .blocks
+            .get(block.as_str())
+            .and_then(|&i| ports.get(i))
+            .is_some_and(Option::is_some),
     }
 }
 

@@ -8,7 +8,7 @@
 //! throwaway engine and map each engine diagnostic back onto the model, every engine warning
 //! becoming an error finding (decision 14). [`validate()`] runs both stages.
 //!
-//! Every finding carries an exact code string. [`STAGE_ONE_CODES`] lists the twenty stage-1 codes;
+//! Every finding carries an exact code string. [`STAGE_ONE_CODES`] lists the twenty-one stage-1 codes;
 //! a code the engine also uses has the engine's [`oce_api::DiagCode`] spelling. The returned list is
 //! sorted by the subject's authored position, then code, then detail, and deduplicated, so it is
 //! a pure function of the model.
@@ -22,6 +22,7 @@ mod names;
 mod semantic;
 
 pub use engine::{DOCUMENT_TOO_LARGE, LOAD_FAILED};
+pub use names::MAX_EXACT_INTEGER;
 pub use semantic::MAX_SEMANTIC_FIELD_BYTES;
 pub(crate) use semantic::boundary_problems as boundary_syntax_problems;
 
@@ -79,6 +80,10 @@ mod codes {
     pub const INVALID_SEMANTIC_POINT: &str = "invalid-semantic-point";
     /// The `extends` provenance id is malformed.
     pub const INVALID_PROVENANCE_ID: &str = "invalid-provenance-id";
+    /// Two connections drive one block input or boundary output. Stage 1 refuses a target the
+    /// connection list repeats; the engine's own `single-assignment` covers the rest in stage 2
+    /// (and does not yet refuse a block output beside a boundary input, GitHub #472).
+    pub const SINGLE_ASSIGNMENT: &str = "single-assignment";
 
     /// Every stage-1 code, in the order of the authoring note's table.
     pub const STAGE_ONE_CODES: &[&str] = &[
@@ -102,6 +107,7 @@ mod codes {
         UNKNOWN_PORT,
         INVALID_SEMANTIC_POINT,
         INVALID_PROVENANCE_ID,
+        SINGLE_ASSIGNMENT,
     ];
 }
 
@@ -150,7 +156,9 @@ pub struct Finding {
     /// The model path it concerns: `sequence` (the sequence itself), `extends`, a declared name
     /// (`dTHys`, `TOut`, `hys`), an assignment (`hys.uHigh`) or a connection (`connection[2]`).
     pub subject: String,
-    /// The text location, when the input was text.
+    /// The text location, when the input was text. Always `None` today: neither the wire form
+    /// nor stage 2 has a text position; the text form (a later M2 item) fills it from a
+    /// subject-to-location map built while parsing.
     pub span: Option<Location>,
     /// What is wrong, in the author's terms.
     pub detail: String,
