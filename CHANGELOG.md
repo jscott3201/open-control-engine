@@ -645,7 +645,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Verification
 
 - **The per-PR gate keeps the debug determinism cells and loses its three long jobs, which move to
-  the release gate; the release gate now runs on every merge into `development`** (GitHub #0000,
+  the release gate; the release gate now runs on every merge into `development`** (GitHub #505,
   issue #502; owner decision of 2026-11-09, which amends the plan's "debug and release on every PR"
   for the determinism matrix only). `pr-gate.yml`'s determinism matrix is two native cells, x86_64
   on `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm`, in debug codegen, and its fan-in keeps every
