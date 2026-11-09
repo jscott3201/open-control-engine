@@ -1,0 +1,636 @@
+sequence multizone_vav_relief_fan_group
+extends none
+param nSupFan : Integer = 2
+param nRelFan : Integer = 4
+param relFanSpe_min : Real = 0.1
+param dpBuiSet : Real = 12.0
+param k : Real = 1.0
+param hys : Real = 0.005
+in u1SupFan_1 : Boolean
+in u1SupFan_2 : Boolean
+in dpBui : Real
+in uRelFanAla_1 : Integer
+in uRelFanAla_2 : Integer
+in uRelFanAla_3 : Integer
+in uRelFanAla_4 : Integer
+in u1RelFan_1 : Boolean
+in u1RelFan_2 : Boolean
+in u1RelFan_3 : Boolean
+in u1RelFan_4 : Boolean
+out yDpBui : Real
+out yRelFan_1 : Real
+out yRelFan_2 : Real
+out yRelFan_3 : Real
+out yRelFan_4 : Real
+out yDam_1 : Real
+out yDam_2 : Real
+out yDam_3 : Real
+out yDam_4 : Real
+block enaRel = CDL.Reals.MatrixGain(
+  nout = 4,
+  nin = 2,
+  K = [[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]]
+)
+block booToRea_1 = CDL.Conversions.BooleanToReal
+block booToRea_2 = CDL.Conversions.BooleanToReal
+block gai_1 = CDL.Reals.MultiplyByParameter(k = 2.0)
+block gai_2 = CDL.Reals.MultiplyByParameter(k = 3.0)
+block gai_3 = CDL.Reals.MultiplyByParameter(k = 1.0)
+block gai_4 = CDL.Reals.MultiplyByParameter(k = 4.0)
+block movMea = CDL.Reals.MovingAverage(delta = 300.0)
+block div1 = CDL.Reals.Divide
+block conP = CDL.Reals.PID(
+  controllerType = SimpleController.P,
+  k = 1.0,
+  reverseActing = false
+)
+block enaRelGro = CDL.Logical.MultiOr(nin = 2)
+block booToRea1 = CDL.Conversions.BooleanToReal
+block pro = CDL.Reals.Multiply
+block greThr = CDL.Reals.GreaterThreshold(t = 0.05, h = 0.005)
+block and2 = CDL.Logical.And
+block lat = CDL.Logical.Latch
+block lesThr = CDL.Reals.LessThreshold(t = 0.005, h = 0.005)
+block tim = CDL.Logical.Timer(t = 300.0)
+block booRep = CDL.Routing.BooleanScalarReplicator(nout = 4)
+block greThr1_1 = CDL.Reals.GreaterThreshold(t = 0.5)
+block greThr1_2 = CDL.Reals.GreaterThreshold(t = 0.5)
+block greThr1_3 = CDL.Reals.GreaterThreshold(t = 0.5)
+block greThr1_4 = CDL.Reals.GreaterThreshold(t = 0.5)
+block enaDam_1 = CDL.Logical.And
+block enaDam_2 = CDL.Logical.And
+block enaDam_3 = CDL.Logical.And
+block enaDam_4 = CDL.Logical.And
+block greThr2 = CDL.Reals.GreaterThreshold(t = 0.25, h = 0.005)
+block upTim = CDL.Logical.Timer(t = 420.0)
+block pre = CDL.Logical.Pre(pre_u_start = true)
+block booToRea2_1 = CDL.Conversions.BooleanToReal
+block booToRea2_2 = CDL.Conversions.BooleanToReal
+block booToRea2_3 = CDL.Conversions.BooleanToReal
+block booToRea2_4 = CDL.Conversions.BooleanToReal
+block sub2_1 = CDL.Reals.Subtract
+block sub2_2 = CDL.Reals.Subtract
+block sub2_3 = CDL.Reals.Subtract
+block sub2_4 = CDL.Reals.Subtract
+block pro1_1 = CDL.Reals.Multiply
+block pro1_2 = CDL.Reals.Multiply
+block pro1_3 = CDL.Reals.Multiply
+block pro1_4 = CDL.Reals.Multiply
+block mulMin = CDL.Reals.MultiMin(nin = 4)
+block reaRep = CDL.Routing.RealScalarReplicator(nout = 4)
+block sub1_1 = CDL.Reals.Subtract
+block sub1_2 = CDL.Reals.Subtract
+block sub1_3 = CDL.Reals.Subtract
+block sub1_4 = CDL.Reals.Subtract
+block lesThr1_1 = CDL.Reals.LessThreshold(t = 0.5)
+block lesThr1_2 = CDL.Reals.LessThreshold(t = 0.5)
+block lesThr1_3 = CDL.Reals.LessThreshold(t = 0.5)
+block lesThr1_4 = CDL.Reals.LessThreshold(t = 0.5)
+block addPar_1 = CDL.Reals.AddParameter(p = 5.0)
+block addPar_2 = CDL.Reals.AddParameter(p = 5.0)
+block addPar_3 = CDL.Reals.AddParameter(p = 5.0)
+block addPar_4 = CDL.Reals.AddParameter(p = 5.0)
+block swi_1 = CDL.Reals.Switch
+block swi_2 = CDL.Reals.Switch
+block swi_3 = CDL.Reals.Switch
+block swi_4 = CDL.Reals.Switch
+block abs1_1 = CDL.Reals.Abs
+block abs1_2 = CDL.Reals.Abs
+block abs1_3 = CDL.Reals.Abs
+block abs1_4 = CDL.Reals.Abs
+block lesThr2_1 = CDL.Reals.LessThreshold(t = 0.5)
+block lesThr2_2 = CDL.Reals.LessThreshold(t = 0.5)
+block lesThr2_3 = CDL.Reals.LessThreshold(t = 0.5)
+block lesThr2_4 = CDL.Reals.LessThreshold(t = 0.5)
+block or2_1 = CDL.Logical.Or
+block or2_2 = CDL.Logical.Or
+block or2_3 = CDL.Logical.Or
+block or2_4 = CDL.Logical.Or
+block lat2 = CDL.Logical.Latch
+block lesThr3 = CDL.Reals.LessThreshold(t = 0.1, h = 0.005)
+block dowTim = CDL.Logical.Timer(t = 300.0)
+block pre1 = CDL.Logical.Pre(pre_u_start = true)
+block pro2_1 = CDL.Reals.Multiply
+block pro2_2 = CDL.Reals.Multiply
+block pro2_3 = CDL.Reals.Multiply
+block pro2_4 = CDL.Reals.Multiply
+block addPar1_1 = CDL.Reals.AddParameter(p = 5.0)
+block addPar1_2 = CDL.Reals.AddParameter(p = 5.0)
+block addPar1_3 = CDL.Reals.AddParameter(p = 5.0)
+block addPar1_4 = CDL.Reals.AddParameter(p = 5.0)
+block lesThr4_1 = CDL.Reals.LessThreshold(t = 0.5)
+block lesThr4_2 = CDL.Reals.LessThreshold(t = 0.5)
+block lesThr4_3 = CDL.Reals.LessThreshold(t = 0.5)
+block lesThr4_4 = CDL.Reals.LessThreshold(t = 0.5)
+block swi1_1 = CDL.Reals.Switch
+block swi1_2 = CDL.Reals.Switch
+block swi1_3 = CDL.Reals.Switch
+block swi1_4 = CDL.Reals.Switch
+block mulMin1 = CDL.Reals.MultiMin(nin = 4)
+block sub3_1 = CDL.Reals.Subtract
+block sub3_2 = CDL.Reals.Subtract
+block sub3_3 = CDL.Reals.Subtract
+block sub3_4 = CDL.Reals.Subtract
+block abs2_1 = CDL.Reals.Abs
+block abs2_2 = CDL.Reals.Abs
+block abs2_3 = CDL.Reals.Abs
+block abs2_4 = CDL.Reals.Abs
+block lesThr5_1 = CDL.Reals.LessThreshold(t = 0.5)
+block lesThr5_2 = CDL.Reals.LessThreshold(t = 0.5)
+block lesThr5_3 = CDL.Reals.LessThreshold(t = 0.5)
+block lesThr5_4 = CDL.Reals.LessThreshold(t = 0.5)
+block reaRep1 = CDL.Routing.RealScalarReplicator(nout = 4)
+block xor_1 = CDL.Logical.Xor
+block xor_2 = CDL.Logical.Xor
+block xor_3 = CDL.Logical.Xor
+block xor_4 = CDL.Logical.Xor
+block booToInt_1 = CDL.Conversions.BooleanToInteger
+block booToInt_2 = CDL.Conversions.BooleanToInteger
+block booToInt_3 = CDL.Conversions.BooleanToInteger
+block booToInt_4 = CDL.Conversions.BooleanToInteger
+block booToInt1_1 = CDL.Conversions.BooleanToInteger
+block booToInt1_2 = CDL.Conversions.BooleanToInteger
+block booToInt1_3 = CDL.Conversions.BooleanToInteger
+block booToInt1_4 = CDL.Conversions.BooleanToInteger
+block booToInt2_1 = CDL.Conversions.BooleanToInteger
+block booToInt2_2 = CDL.Conversions.BooleanToInteger
+block booToInt2_3 = CDL.Conversions.BooleanToInteger
+block booToInt2_4 = CDL.Conversions.BooleanToInteger
+block intEqu_1 = CDL.Integers.Equal
+block intEqu_2 = CDL.Integers.Equal
+block intEqu_3 = CDL.Integers.Equal
+block intEqu_4 = CDL.Integers.Equal
+block mulAnd = CDL.Logical.MultiAnd(nin = 4)
+block intEqu1_1 = CDL.Integers.Equal
+block intEqu1_2 = CDL.Integers.Equal
+block intEqu1_3 = CDL.Integers.Equal
+block intEqu1_4 = CDL.Integers.Equal
+block mulAnd2 = CDL.Logical.MultiAnd(nin = 4)
+block lat1 = CDL.Logical.Latch
+block logSwi_1 = CDL.Logical.Switch
+block logSwi_2 = CDL.Logical.Switch
+block logSwi_3 = CDL.Logical.Switch
+block logSwi_4 = CDL.Logical.Switch
+block booRep1 = CDL.Routing.BooleanScalarReplicator(nout = 4)
+block logSwi1_1 = CDL.Logical.Switch
+block logSwi1_2 = CDL.Logical.Switch
+block logSwi1_3 = CDL.Logical.Switch
+block logSwi1_4 = CDL.Logical.Switch
+block booRep2 = CDL.Routing.BooleanScalarReplicator(nout = 4)
+block booToRea3_1 = CDL.Conversions.BooleanToReal
+block booToRea3_2 = CDL.Conversions.BooleanToReal
+block booToRea3_3 = CDL.Conversions.BooleanToReal
+block booToRea3_4 = CDL.Conversions.BooleanToReal
+block lim = CDL.Reals.Limiter(uMax = 1.0, uMin = 0.1)
+block reaRep2 = CDL.Routing.RealScalarReplicator(nout = 4)
+block pro3_1 = CDL.Reals.Multiply
+block pro3_2 = CDL.Reals.Multiply
+block pro3_3 = CDL.Reals.Multiply
+block pro3_4 = CDL.Reals.Multiply
+block logSwi2_1 = CDL.Logical.Switch
+block logSwi2_2 = CDL.Logical.Switch
+block logSwi2_3 = CDL.Logical.Switch
+block logSwi2_4 = CDL.Logical.Switch
+block dpBuiSetPoi = CDL.Reals.Sources.Constant(k = 12.0)
+block conOne = CDL.Reals.Sources.Constant(k = 1.0)
+block con = CDL.Reals.Sources.Constant(k = 0.0)
+block swi2 = CDL.Reals.Switch
+block mulOr = CDL.Logical.MultiOr(nin = 4)
+block booToRea4_1 = CDL.Conversions.BooleanToReal
+block booToRea4_2 = CDL.Conversions.BooleanToReal
+block booToRea4_3 = CDL.Conversions.BooleanToReal
+block booToRea4_4 = CDL.Conversions.BooleanToReal
+block not1 = CDL.Logical.Not
+block and1 = CDL.Logical.And
+block and3 = CDL.Logical.And
+block not2 = CDL.Logical.Not
+block intEqu2_1 = CDL.Integers.Equal
+block intEqu2_2 = CDL.Integers.Equal
+block intEqu2_3 = CDL.Integers.Equal
+block intEqu2_4 = CDL.Integers.Equal
+block conInt_1 = CDL.Integers.Sources.Constant(k = 2)
+block conInt_2 = CDL.Integers.Sources.Constant(k = 2)
+block conInt_3 = CDL.Integers.Sources.Constant(k = 2)
+block conInt_4 = CDL.Integers.Sources.Constant(k = 2)
+block not3_1 = CDL.Logical.Not
+block not3_2 = CDL.Logical.Not
+block not3_3 = CDL.Logical.Not
+block not3_4 = CDL.Logical.Not
+block and4_1 = CDL.Logical.And
+block and4_2 = CDL.Logical.And
+block and4_3 = CDL.Logical.And
+block and4_4 = CDL.Logical.And
+block booToRea5_1 = CDL.Conversions.BooleanToReal(realTrue = 0.0, realFalse = 1.0)
+block booToRea5_2 = CDL.Conversions.BooleanToReal(realTrue = 0.0, realFalse = 1.0)
+block booToRea5_3 = CDL.Conversions.BooleanToReal(realTrue = 0.0, realFalse = 1.0)
+block booToRea5_4 = CDL.Conversions.BooleanToReal(realTrue = 0.0, realFalse = 1.0)
+block mul_1 = CDL.Reals.Multiply
+block mul_2 = CDL.Reals.Multiply
+block mul_3 = CDL.Reals.Multiply
+block mul_4 = CDL.Reals.Multiply
+block greThr3_1 = CDL.Reals.GreaterThreshold(t = 0.5)
+block greThr3_2 = CDL.Reals.GreaterThreshold(t = 0.5)
+block greThr3_3 = CDL.Reals.GreaterThreshold(t = 0.5)
+block greThr3_4 = CDL.Reals.GreaterThreshold(t = 0.5)
+block mulAnd1 = CDL.Logical.MultiAnd(nin = 4)
+block swi3_1 = CDL.Reals.Switch
+block swi3_2 = CDL.Reals.Switch
+block swi3_3 = CDL.Reals.Switch
+block swi3_4 = CDL.Reals.Switch
+block booRep4 = CDL.Routing.BooleanScalarReplicator(nout = 4)
+block logSwi3_1 = CDL.Logical.Switch
+block logSwi3_2 = CDL.Logical.Switch
+block logSwi3_3 = CDL.Logical.Switch
+block logSwi3_4 = CDL.Logical.Switch
+block truDel_1 = CDL.Logical.TrueDelay(delayTime = 2.0)
+block truDel_2 = CDL.Logical.TrueDelay(delayTime = 2.0)
+block truDel_3 = CDL.Logical.TrueDelay(delayTime = 2.0)
+block truDel_4 = CDL.Logical.TrueDelay(delayTime = 2.0)
+block mulOr1 = CDL.Logical.MultiOr(nin = 4)
+block booRep5 = CDL.Routing.BooleanScalarReplicator(nout = 4)
+block not5_1 = CDL.Logical.Not
+block not5_2 = CDL.Logical.Not
+block not5_3 = CDL.Logical.Not
+block not5_4 = CDL.Logical.Not
+block not6_1 = CDL.Logical.Not
+block not6_2 = CDL.Logical.Not
+block not6_3 = CDL.Logical.Not
+block not6_4 = CDL.Logical.Not
+block truDel1_1 = CDL.Logical.TrueDelay(delayTime = 2.0)
+block truDel1_2 = CDL.Logical.TrueDelay(delayTime = 2.0)
+block truDel1_3 = CDL.Logical.TrueDelay(delayTime = 2.0)
+block truDel1_4 = CDL.Logical.TrueDelay(delayTime = 2.0)
+u1SupFan_1 -> booToRea_1.u
+u1SupFan_1 -> enaRelGro.u1
+u1SupFan_2 -> booToRea_2.u
+u1SupFan_2 -> enaRelGro.u2
+dpBui -> movMea.u
+uRelFanAla_1 -> intEqu2_1.u1
+uRelFanAla_2 -> intEqu2_2.u1
+uRelFanAla_3 -> intEqu2_3.u1
+uRelFanAla_4 -> intEqu2_4.u1
+u1RelFan_1 -> booToRea2_1.u
+u1RelFan_1 -> or2_1.u2
+u1RelFan_1 -> booToInt1_1.u
+u1RelFan_1 -> xor_1.u2
+u1RelFan_1 -> logSwi1_1.u3
+u1RelFan_1 -> not3_1.u
+u1RelFan_1 -> logSwi3_1.u1
+u1RelFan_2 -> booToRea2_2.u
+u1RelFan_2 -> or2_2.u2
+u1RelFan_2 -> booToInt1_2.u
+u1RelFan_2 -> xor_2.u2
+u1RelFan_2 -> logSwi1_2.u3
+u1RelFan_2 -> not3_2.u
+u1RelFan_2 -> logSwi3_2.u1
+u1RelFan_3 -> booToRea2_3.u
+u1RelFan_3 -> or2_3.u2
+u1RelFan_3 -> booToInt1_3.u
+u1RelFan_3 -> xor_3.u2
+u1RelFan_3 -> logSwi1_3.u3
+u1RelFan_3 -> not3_3.u
+u1RelFan_3 -> logSwi3_3.u1
+u1RelFan_4 -> booToRea2_4.u
+u1RelFan_4 -> or2_4.u2
+u1RelFan_4 -> booToInt1_4.u
+u1RelFan_4 -> xor_4.u2
+u1RelFan_4 -> logSwi1_4.u3
+u1RelFan_4 -> not3_4.u
+u1RelFan_4 -> logSwi3_4.u1
+enaRel.y1 -> gai_1.u
+enaRel.y1 -> sub2_1.u1
+enaRel.y1 -> greThr3_1.u
+enaRel.y2 -> gai_2.u
+enaRel.y2 -> sub2_2.u1
+enaRel.y2 -> greThr3_2.u
+enaRel.y3 -> gai_3.u
+enaRel.y3 -> sub2_3.u1
+enaRel.y3 -> greThr3_3.u
+enaRel.y4 -> gai_4.u
+enaRel.y4 -> sub2_4.u1
+enaRel.y4 -> greThr3_4.u
+booToRea_1.y -> enaRel.u1
+booToRea_2.y -> enaRel.u2
+gai_1.y -> greThr1_1.u
+gai_1.y -> pro1_1.u1
+gai_1.y -> sub1_1.u1
+gai_1.y -> pro2_1.u1
+gai_1.y -> sub3_1.u1
+gai_2.y -> greThr1_2.u
+gai_2.y -> pro1_2.u1
+gai_2.y -> sub1_2.u1
+gai_2.y -> pro2_2.u1
+gai_2.y -> sub3_2.u1
+gai_3.y -> greThr1_3.u
+gai_3.y -> pro1_3.u1
+gai_3.y -> sub1_3.u1
+gai_3.y -> pro2_3.u1
+gai_3.y -> sub3_3.u1
+gai_4.y -> greThr1_4.u
+gai_4.y -> pro1_4.u1
+gai_4.y -> sub1_4.u1
+gai_4.y -> pro2_4.u1
+gai_4.y -> sub3_4.u1
+movMea.y -> div1.u1
+movMea.y -> yDpBui
+div1.y -> conP.u_m
+conP.y -> greThr.u
+conP.y -> lesThr.u
+conP.y -> greThr2.u
+conP.y -> lesThr3.u
+conP.y -> lim.u
+enaRelGro.y -> booToRea1.u
+enaRelGro.y -> and2.u2
+booToRea1.y -> pro.u1
+pro.y -> swi2.u1
+greThr.y -> and2.u1
+and2.y -> lat.u
+lat.y -> booRep.u
+lesThr.y -> tim.u
+tim.passed -> lat.clr
+booRep.y1 -> enaDam_1.u2
+booRep.y2 -> enaDam_2.u2
+booRep.y3 -> enaDam_3.u2
+booRep.y4 -> enaDam_4.u2
+greThr1_1.y -> enaDam_1.u1
+greThr1_2.y -> enaDam_2.u1
+greThr1_3.y -> enaDam_3.u1
+greThr1_4.y -> enaDam_4.u1
+enaDam_1.y -> logSwi2_1.u3
+enaDam_2.y -> logSwi2_2.u3
+enaDam_3.y -> logSwi2_3.u3
+enaDam_4.y -> logSwi2_4.u3
+greThr2.y -> and1.u1
+upTim.passed -> not1.u
+upTim.passed -> lat2.u
+pre.y -> and1.u2
+booToRea2_1.y -> sub2_1.u2
+booToRea2_1.y -> pro2_1.u2
+booToRea2_2.y -> sub2_2.u2
+booToRea2_2.y -> pro2_2.u2
+booToRea2_3.y -> sub2_3.u2
+booToRea2_3.y -> pro2_3.u2
+booToRea2_4.y -> sub2_4.u2
+booToRea2_4.y -> pro2_4.u2
+sub2_1.y -> pro1_1.u2
+sub2_2.y -> pro1_2.u2
+sub2_3.y -> pro1_3.u2
+sub2_4.y -> pro1_4.u2
+pro1_1.y -> swi_1.u3
+pro1_1.y -> addPar_1.u
+pro1_1.y -> lesThr1_1.u
+pro1_1.y -> swi3_1.u1
+pro1_2.y -> swi_2.u3
+pro1_2.y -> addPar_2.u
+pro1_2.y -> lesThr1_2.u
+pro1_2.y -> swi3_2.u1
+pro1_3.y -> swi_3.u3
+pro1_3.y -> addPar_3.u
+pro1_3.y -> lesThr1_3.u
+pro1_3.y -> swi3_3.u1
+pro1_4.y -> swi_4.u3
+pro1_4.y -> addPar_4.u
+pro1_4.y -> lesThr1_4.u
+pro1_4.y -> swi3_4.u1
+mulMin.y -> reaRep.u
+reaRep.y1 -> sub1_1.u2
+reaRep.y2 -> sub1_2.u2
+reaRep.y3 -> sub1_3.u2
+reaRep.y4 -> sub1_4.u2
+sub1_1.y -> abs1_1.u
+sub1_2.y -> abs1_2.u
+sub1_3.y -> abs1_3.u
+sub1_4.y -> abs1_4.u
+lesThr1_1.y -> swi_1.u2
+lesThr1_2.y -> swi_2.u2
+lesThr1_3.y -> swi_3.u2
+lesThr1_4.y -> swi_4.u2
+addPar_1.y -> swi_1.u1
+addPar_2.y -> swi_2.u1
+addPar_3.y -> swi_3.u1
+addPar_4.y -> swi_4.u1
+swi_1.y -> swi3_1.u3
+swi_2.y -> swi3_2.u3
+swi_3.y -> swi3_3.u3
+swi_4.y -> swi3_4.u3
+abs1_1.y -> lesThr2_1.u
+abs1_2.y -> lesThr2_2.u
+abs1_3.y -> lesThr2_3.u
+abs1_4.y -> lesThr2_4.u
+lesThr2_1.y -> or2_1.u1
+lesThr2_2.y -> or2_2.u1
+lesThr2_3.y -> or2_3.u1
+lesThr2_4.y -> or2_4.u1
+or2_1.y -> truDel_1.u
+or2_1.y -> logSwi_1.u1
+or2_2.y -> truDel_2.u
+or2_2.y -> logSwi_2.u1
+or2_3.y -> truDel_3.u
+or2_3.y -> logSwi_3.u1
+or2_4.y -> truDel_4.u
+or2_4.y -> logSwi_4.u1
+lat2.y -> booRep1.u
+lesThr3.y -> and3.u1
+dowTim.passed -> not2.u
+dowTim.passed -> lat1.u
+pre1.y -> and3.u2
+pro2_1.y -> addPar1_1.u
+pro2_1.y -> lesThr4_1.u
+pro2_1.y -> swi1_1.u3
+pro2_2.y -> addPar1_2.u
+pro2_2.y -> lesThr4_2.u
+pro2_2.y -> swi1_2.u3
+pro2_3.y -> addPar1_3.u
+pro2_3.y -> lesThr4_3.u
+pro2_3.y -> swi1_3.u3
+pro2_4.y -> addPar1_4.u
+pro2_4.y -> lesThr4_4.u
+pro2_4.y -> swi1_4.u3
+addPar1_1.y -> swi1_1.u1
+addPar1_2.y -> swi1_2.u1
+addPar1_3.y -> swi1_3.u1
+addPar1_4.y -> swi1_4.u1
+lesThr4_1.y -> swi1_1.u2
+lesThr4_2.y -> swi1_2.u2
+lesThr4_3.y -> swi1_3.u2
+lesThr4_4.y -> swi1_4.u2
+swi1_1.y -> mulMin1.u1
+swi1_2.y -> mulMin1.u2
+swi1_3.y -> mulMin1.u3
+swi1_4.y -> mulMin1.u4
+mulMin1.y -> reaRep1.u
+sub3_1.y -> abs2_1.u
+sub3_2.y -> abs2_2.u
+sub3_3.y -> abs2_3.u
+sub3_4.y -> abs2_4.u
+abs2_1.y -> lesThr5_1.u
+abs2_2.y -> lesThr5_2.u
+abs2_3.y -> lesThr5_3.u
+abs2_4.y -> lesThr5_4.u
+lesThr5_1.y -> xor_1.u1
+lesThr5_2.y -> xor_2.u1
+lesThr5_3.y -> xor_3.u1
+lesThr5_4.y -> xor_4.u1
+reaRep1.y1 -> sub3_1.u2
+reaRep1.y2 -> sub3_2.u2
+reaRep1.y3 -> sub3_3.u2
+reaRep1.y4 -> sub3_4.u2
+xor_1.y -> logSwi1_1.u1
+xor_1.y -> not5_1.u
+xor_2.y -> logSwi1_2.u1
+xor_2.y -> not5_2.u
+xor_3.y -> logSwi1_3.u1
+xor_3.y -> not5_3.u
+xor_4.y -> logSwi1_4.u1
+xor_4.y -> not5_4.u
+booToInt_1.y -> intEqu_1.u1
+booToInt_2.y -> intEqu_2.u1
+booToInt_3.y -> intEqu_3.u1
+booToInt_4.y -> intEqu_4.u1
+booToInt1_1.y -> intEqu_1.u2
+booToInt1_1.y -> intEqu1_1.u1
+booToInt1_2.y -> intEqu_2.u2
+booToInt1_2.y -> intEqu1_2.u1
+booToInt1_3.y -> intEqu_3.u2
+booToInt1_3.y -> intEqu1_3.u1
+booToInt1_4.y -> intEqu_4.u2
+booToInt1_4.y -> intEqu1_4.u1
+booToInt2_1.y -> intEqu1_1.u2
+booToInt2_2.y -> intEqu1_2.u2
+booToInt2_3.y -> intEqu1_3.u2
+booToInt2_4.y -> intEqu1_4.u2
+intEqu_1.y -> mulAnd.u1
+intEqu_2.y -> mulAnd.u2
+intEqu_3.y -> mulAnd.u3
+intEqu_4.y -> mulAnd.u4
+mulAnd.y -> lat2.clr
+intEqu1_1.y -> mulAnd2.u1
+intEqu1_2.y -> mulAnd2.u2
+intEqu1_3.y -> mulAnd2.u3
+intEqu1_4.y -> mulAnd2.u4
+mulAnd2.y -> lat1.clr
+lat1.y -> booRep2.u
+logSwi_1.y -> booToRea3_1.u
+logSwi_1.y -> logSwi2_1.u1
+logSwi_1.y -> mulOr1.u1
+logSwi_2.y -> booToRea3_2.u
+logSwi_2.y -> logSwi2_2.u1
+logSwi_2.y -> mulOr1.u2
+logSwi_3.y -> booToRea3_3.u
+logSwi_3.y -> logSwi2_3.u1
+logSwi_3.y -> mulOr1.u3
+logSwi_4.y -> booToRea3_4.u
+logSwi_4.y -> logSwi2_4.u1
+logSwi_4.y -> mulOr1.u4
+booRep1.y1 -> logSwi_1.u2
+booRep1.y2 -> logSwi_2.u2
+booRep1.y3 -> logSwi_3.u2
+booRep1.y4 -> logSwi_4.u2
+logSwi1_1.y -> logSwi3_1.u3
+logSwi1_2.y -> logSwi3_2.u3
+logSwi1_3.y -> logSwi3_3.u3
+logSwi1_4.y -> logSwi3_4.u3
+booRep2.y1 -> logSwi1_1.u2
+booRep2.y2 -> logSwi1_2.u2
+booRep2.y3 -> logSwi1_3.u2
+booRep2.y4 -> logSwi1_4.u2
+booToRea3_1.y -> pro3_1.u2
+booToRea3_2.y -> pro3_2.u2
+booToRea3_3.y -> pro3_3.u2
+booToRea3_4.y -> pro3_4.u2
+lim.y -> pro.u2
+reaRep2.y1 -> pro3_1.u1
+reaRep2.y2 -> pro3_2.u1
+reaRep2.y3 -> pro3_3.u1
+reaRep2.y4 -> pro3_4.u1
+pro3_1.y -> yRelFan_1
+pro3_2.y -> yRelFan_2
+pro3_3.y -> yRelFan_3
+pro3_4.y -> yRelFan_4
+logSwi2_1.y -> booToRea4_1.u
+logSwi2_2.y -> booToRea4_2.u
+logSwi2_3.y -> booToRea4_3.u
+logSwi2_4.y -> booToRea4_4.u
+dpBuiSetPoi.y -> div1.u2
+conOne.y -> conP.u_s
+con.y -> swi2.u3
+swi2.y -> reaRep2.u
+mulOr.y -> swi2.u2
+booToRea4_1.y -> mul_1.u1
+booToRea4_2.y -> mul_2.u1
+booToRea4_3.y -> mul_3.u1
+booToRea4_4.y -> mul_4.u1
+not1.y -> pre.u
+and1.y -> upTim.u
+and3.y -> dowTim.u
+not2.y -> pre1.u
+intEqu2_1.y -> and4_1.u1
+intEqu2_2.y -> and4_2.u1
+intEqu2_3.y -> and4_3.u1
+intEqu2_4.y -> and4_4.u1
+conInt_1.y -> intEqu2_1.u2
+conInt_2.y -> intEqu2_2.u2
+conInt_3.y -> intEqu2_3.u2
+conInt_4.y -> intEqu2_4.u2
+not3_1.y -> and4_1.u2
+not3_1.y -> mulAnd1.u1
+not3_2.y -> and4_2.u2
+not3_2.y -> mulAnd1.u2
+not3_3.y -> and4_3.u2
+not3_3.y -> mulAnd1.u3
+not3_4.y -> and4_4.u2
+not3_4.y -> mulAnd1.u4
+and4_1.y -> booToRea5_1.u
+and4_2.y -> booToRea5_2.u
+and4_3.y -> booToRea5_3.u
+and4_4.y -> booToRea5_4.u
+booToRea5_1.y -> mul_1.u2
+booToRea5_2.y -> mul_2.u2
+booToRea5_3.y -> mul_3.u2
+booToRea5_4.y -> mul_4.u2
+mul_1.y -> yDam_1
+mul_2.y -> yDam_2
+mul_3.y -> yDam_3
+mul_4.y -> yDam_4
+greThr3_1.y -> mulOr.u1
+greThr3_2.y -> mulOr.u2
+greThr3_3.y -> mulOr.u3
+greThr3_4.y -> mulOr.u4
+mulAnd1.y -> booRep4.u
+swi3_1.y -> mulMin.u1
+swi3_2.y -> mulMin.u2
+swi3_3.y -> mulMin.u3
+swi3_4.y -> mulMin.u4
+booRep4.y1 -> swi3_1.u2
+booRep4.y1 -> logSwi3_1.u2
+booRep4.y2 -> swi3_2.u2
+booRep4.y2 -> logSwi3_2.u2
+booRep4.y3 -> swi3_3.u2
+booRep4.y3 -> logSwi3_3.u2
+booRep4.y4 -> swi3_4.u2
+booRep4.y4 -> logSwi3_4.u2
+logSwi3_1.y -> logSwi_1.u3
+logSwi3_2.y -> logSwi_2.u3
+logSwi3_3.y -> logSwi_3.u3
+logSwi3_4.y -> logSwi_4.u3
+truDel_1.y -> booToInt_1.u
+truDel_2.y -> booToInt_2.u
+truDel_3.y -> booToInt_3.u
+truDel_4.y -> booToInt_4.u
+mulOr1.y -> booRep5.u
+booRep5.y1 -> logSwi2_1.u2
+booRep5.y2 -> logSwi2_2.u2
+booRep5.y3 -> logSwi2_3.u2
+booRep5.y4 -> logSwi2_4.u2
+not5_1.y -> truDel1_1.u
+not5_2.y -> truDel1_2.u
+not5_3.y -> truDel1_3.u
+not5_4.y -> truDel1_4.u
+not6_1.y -> booToInt2_1.u
+not6_2.y -> booToInt2_2.u
+not6_3.y -> booToInt2_3.u
+not6_4.y -> booToInt2_4.u
+truDel1_1.y -> not6_1.u
+truDel1_2.y -> not6_2.u
+truDel1_3.y -> not6_3.u
+truDel1_4.y -> not6_4.u

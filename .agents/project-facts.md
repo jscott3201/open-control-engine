@@ -222,6 +222,13 @@ default namespace. They are named `.cxf.json`, not `.jsonld`, because `oce-cxf`'
 pins each one's import; a leverage golden must not move an engine census. The emitter's layout or
 writer, a catalog change (port names, parameter types, enumeration members) or the fixed class base
 moves them; the same bless switch regenerates them, and every one must still load warning-free.
+`tests/fixtures/text/*.oce` are the canonical text of every wire bundle and imported corpus
+fixture, and `tests/fixtures/text/fmt/*.out.oce` the `fmt` output of the hand-written
+`*.in.oce` inputs beside them (comment and blank-line preservation; issue #482); the printer's
+spelling, a catalog change to an array template or a bundle moves them, and the same
+`OCE_BLESS_AUTHOR` switch regenerates them (the `*.in.oce` inputs are hand-written, never blessed).
+`tests/fixtures/note/text_example.oce` is the note's worked text example, copied by hand like the
+wire example below.
 `tests/fixtures/note/wire_example.json` is the JSON block of the authoring note's "Wire form"
 section copied verbatim (a test that read `docs/design/` would put the note on the classifier's
 test-read list); when that block changes, copy it again by hand.

@@ -95,7 +95,13 @@ on the right of `=` is a reference to a sequence parameter. A string is double-q
 **Unit-literal sugar.** `86400 s` is text-only: the suffix never reaches the wire form, the
 emitter or the engine, and the value is the number as written (decision 3, refined by decision 13).
 Comments are text-only in the same way: the model keeps them so `fmt` loses nothing, and the wire
-form and the emitter drop them.
+form and the emitter drop them. *Amended 2026-11-09 (issue #482):* statement annotations alone could
+not hold a comment above `sequence` (this note's own worked example opens with one) or after the last
+statement, so the model gained two fields, `Sequence::annotations` (the header comments; a comment
+between `sequence` and `extends` folds in and prints above `sequence`) and
+`Sequence::trailing_comments`, which the wire form, the schema and the emitter ignore. A comment
+after the last item of a block's `(...)` precedes nothing and is refused (`comment-before-close`).
+An end-of-line comment moves to its own line above its statement.
 
 **Canonical printer.** `fmt` is parse then print. The printer emits statements in the section
 order of the `file` production, keeps authored order inside every section, puts one space around
@@ -109,11 +115,63 @@ it never reorders anything (decision 6; decision 12 states what `fmt` changes be
 input above 4 MiB, more than 100,000 lines, a line above 4,096 bytes, a token above 256 bytes, list
 nesting deeper than 2, more than 65,536 statements of one kind, and non-UTF-8, control characters or
 a byte-order mark. Each limit is pinned at its boundary: accepted at the limit, refused one past.
+*Amended 2026-11-09 (issue #482):* the error is `ParseError { code, location, detail }` with one
+exact code per malformed construct; a line may be 8,192 bytes, because a string the wire form
+carries may be 4,096 bytes as written and must fit on one line with its assignment; a string is
+bounded at those 4,096 bytes rather than by the 256-byte token bound, which keeps governing names,
+numbers, suffixes, atoms and provenance ids.
 
 **Round-trip properties.** For every canonical text `t`, `print(parse(t)) == t` byte for byte; for
 every model `m`, `parse(print(m)) == m`; and `fmt` is idempotent. Tests enumerate models
 deterministically (no RNG, per [TESTING.md](../../TESTING.md#conventions)) and run over every
 corpus bundle.
+
+*Amended 2026-11-09 (issue #482 and its review):*
+
+- **The property, exactly.** `print_text` returns `Result<String, PrintError>` and is total or
+  refusing. It never emits text that parses to a different model. A name, class path, atom,
+  suffix, string, value or `extends` id that the lexer would not read back as the same value is
+  refused with `PrintError::Unspellable { subject, detail }`. Its only normalizations are the
+  parser's own: a comment with a line feed prints as several comment lines, trailing spaces in a
+  comment are dropped, and the header's meaningless `blank_line_before` is not printed.
+- **Which models round-trip.** `print` refuses, never emits, a statement whose printed line would
+  pass the line bound and a document that would pass 4 MiB, 100,000 lines or 65,536 statements of
+  one kind, so whatever it emits `parse` reads back equal within every bound. It succeeds for every
+  model `parse` returns and every model stage 1 accepts whose comments and suffixes are spellable,
+  except a document that would print past 4 MiB or 100,000 lines (comments alone, or re-spacing
+  one already at a bound). `fmt(fmt(t)) == fmt(t)` for every text whose `fmt` succeeds.
+- **Stage 1 additions** that make every clean model printable within the line bound:
+  - `nan`, `inf` and `infinity`, in any case, are refused as declared names (`invalid-name`);
+  - a boundary carries at most 16 `@haystack` tags (`invalid-semantic-point`);
+  - a String value, `@name` or `@label` with a bidirectional override or isolate is refused.
+- **Parser rules stricter than drafted:**
+  - An atom is 1 to 256 bytes of printable ASCII without `#` (`malformed-atom`). A provenance id
+    may contain `#`, as decision 5's grammar allows.
+  - Bidirectional overrides and isolates (U+202A to U+202E, U+2066 to U+2069) are refused anywhere
+    (`control-character`).
+  - A dotted name has no space around its dots.
+  - A comment is at most 8,189 bytes after its `#`: the line bound less the `#` and the two-space
+    indent the printer may give it.
+  - The empty list `[]` is refused (`malformed-list`); the `list` production above allowed it.
+  - Inside a list, an end-of-line comment belongs to the element before it.
+- **Numbers.** `-0` reads as the Integer `0`, as on the wire. A leading `+` or a leading zero is
+  refused (`malformed-number`) rather than normalized. That is stricter than decision 12's
+  "Integer literals keep their spelling": a spelling the model cannot keep is refused, never
+  silently changed.
+- **The unit-suffix production** is a subset of Modelica's unit syntax:
+  `suffix = ( "1" "/" factors ) | factors [ "/" factors ]`,
+  `factors = factor { "." factor }`, `factor = symbol [ [ "-" ] digits ]`.
+  - The exponent is an integer other than zero (`K0` and `m-0` are refused).
+  - `.` forms products, and there are no parentheses.
+  - There is at most one `/`, and its right-hand side is the whole denominator. So `kg/m.s2`
+    reads as kg/(m·s²), a deliberate deviation from Modelica's left-to-right reading.
+- **Array regrouping, made precise.** The printer regroups a run of array elements into `[..]` only
+  when that run is every element of the template that the block assigns:
+  - consecutive, starting at index 1, in row-major order;
+  - at least two elements, and a matrix only as a whole rectangle;
+  - no comment or blank line before any element but the first.
+
+  Everything else prints flattened.
 
 ### Worked example
 
@@ -623,5 +681,18 @@ The architect pass on the draft (owner consulted on 11, 12 and 20) ruled:
   `load-failed`), made `single-assignment` a stage-1 code for a repeated target as well as an
   engine code, refused Integer literals above 2^53 on Real parameters, and added decision 15's
   partial-array sentence.
+- 2026-11-09 (issue #482): the text form added the model's two header and trailing comment fields
+  (the one model change it needed), the `ParseError { code, location, detail }` shape, the
+  8,192-byte line bound, and the printer conventions the crate README documents: end-of-line
+  comments move above their statement; array elements regroup into `[..]` through the catalog
+  only as the "Round-trip properties" amendment defines, and anything else prints flattened; an
+  integer never becomes a Real, and a leading `+` or zero is refused.
+- 2026-11-09 (issue #482 review): `print_text` is total or refusing (`PrintError::Unspellable`);
+  every stage-1-clean model prints within the line bound and parses back equal, which stage 1 now
+  backs with the non-finite-word names, the 16-tag `@haystack` cap and the bidirectional-override
+  refusal; atoms are checked as printable ASCII at parse; comments reserve the printer's indent;
+  the empty list, `-0`, the `+1` / `01` refusal and the unit-suffix production are recorded; array
+  regrouping is made precise (every element of the template in the block, at least two, a whole
+  rectangle). Each is stated under "Round-trip properties".
 - 2026-11-08: the CLI exit-code rule was aligned with the diff and commissioning passes: 0 yes, 1
   no, 2 error, with a parse refusal and an I/O failure both 2 and no exit 3.

@@ -1,0 +1,44 @@
+sequence every_element
+extends cxf:fnv1a128:00112233445566778899aabbccddeeff
+param kGain : Real = 0.25
+param nStages : Integer = 3
+param reverse : Boolean = false
+param TiSec : Real = 300
+in TSup : Real @unit K @quantity ThermodynamicTemperature @displayUnit degC @brick brick:Supply_Air_Temperature_Sensor @s223 s223:Sensor @qudt quantitykind:Temperature @haystack air @haystack temp @haystack sensor @name "Supply air temperature" @label "TSup \"AHU-1\" °C"
+in TSupSet : Real
+in uEna : Boolean
+out yStage : Integer @provisional
+out ySum : Real
+out yGain1 : Real
+out yGain2 : Real
+out yTab : Real
+out yCon : Real
+block conPID = CDL.Reals.PID(
+  controllerType = SimpleController.PI,
+  k = kGain,
+  Ti = TiSec,
+  reverseActing = reverse,
+  yMin = -0.0
+)
+block sum3 = CDL.Reals.MultiSum(nin = nStages, k = [1.0, -2, 1e-7])
+block gain = CDL.Reals.MatrixGain(K = [[0.5, 0.5], [1.5, -1.5]])
+block tab = CDL.Reals.Sources.TimeTable(
+  smoothness = Smoothness.ConstantSegments,
+  table = [[0.0, 1.0], [3600.0, 2.0]]
+)
+block staCon = CDL.Integers.Sources.Constant(k = nStages)
+block assMes = CDL.Utilities.Assert(message = "enable is \"off\"\nline two")
+TSupSet -> conPID.u_s
+TSup -> conPID.u_m
+conPID.y -> yCon
+TSup -> sum3.u1
+TSupSet -> sum3.u2
+conPID.y -> sum3.u3
+sum3.y -> ySum
+TSup -> gain.u1
+TSupSet -> gain.u2
+gain.y1 -> yGain1
+gain.y2 -> yGain2
+tab.y1 -> yTab
+staCon.y -> yStage
+uEna -> assMes.u

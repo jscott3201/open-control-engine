@@ -23,8 +23,8 @@ mod semantic;
 
 pub use engine::{DOCUMENT_TOO_LARGE, LOAD_FAILED};
 pub use names::MAX_EXACT_INTEGER;
-pub use semantic::MAX_SEMANTIC_FIELD_BYTES;
 pub(crate) use semantic::boundary_problems as boundary_syntax_problems;
+pub use semantic::{MAX_HAYSTACK_TAGS, MAX_SEMANTIC_FIELD_BYTES};
 
 use std::fmt;
 
@@ -156,9 +156,9 @@ pub struct Finding {
     /// The model path it concerns: `sequence` (the sequence itself), `extends`, a declared name
     /// (`dTHys`, `TOut`, `hys`), an assignment (`hys.uHigh`) or a connection (`connection[2]`).
     pub subject: String,
-    /// The text location, when the input was text. Always `None` today: neither the wire form
-    /// nor stage 2 has a text position; the text form (a later M2 item) fills it from a
-    /// subject-to-location map built while parsing.
+    /// The text location, when the input was text. [`crate::validate_text`] fills it from the
+    /// subject-to-location map built while parsing ([`crate::SourceMap`]); [`validate()`] on a
+    /// model (from the wire form or the builder) leaves it `None`.
     pub span: Option<Location>,
     /// What is wrong, in the author's terms.
     pub detail: String,
