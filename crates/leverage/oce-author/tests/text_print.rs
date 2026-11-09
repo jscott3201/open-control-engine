@@ -12,6 +12,7 @@ use oce_author::{
     validate_author_side,
 };
 
+use support::fixture;
 use support::text::{bundle_model, bundles};
 use support::{econ_enable, every_element};
 
@@ -277,7 +278,9 @@ fn every_clean_model_prints_parseable_text_that_reads_back_equal() {
         assert_eq!(fmt_text(&once).expect("fmt"), once);
         checked += 1;
     }
-    assert!(checked >= 13, "{checked} clean models checked");
+    // econ_enable, every_element, the wide and array models, five numeric edges and the six clean
+    // bundles (the abridged note example is not clean).
+    assert_eq!(checked, 15, "clean models checked");
 }
 
 #[test]
@@ -302,4 +305,261 @@ fn the_widest_clean_boundary_and_matrix_rows_stay_within_the_line_bound() {
         arrays.contains("  k = [\n    0.123456789,\n    0.246913578 kg/m.s2,\n"),
         "{arrays}"
     );
+}
+
+/// Whether `text` is within every parse bound a single statement can reach.
+fn within_line_bound(text: &str) -> bool {
+    text.lines().all(|l| l.len() <= MAX_LINE_BYTES)
+}
+
+#[test]
+fn a_statement_too_long_for_one_line_is_refused_not_printed() {
+    // The re-review's cases: each model loads (the first from the wire form) and each prints a
+    // statement past the line bound, which `parse_text` would refuse.
+    let mut wide = econ_enable();
+    wide.inputs[0].semantic.haystack = (0..40).map(|_| "h".repeat(256)).collect();
+    let wire = oce_author::to_wire_string(&wide);
+    let loaded = oce_author::from_wire_str(&wire).expect("the wire form loads 40 tags");
+    assert!(
+        !validate_author_side(&loaded).is_empty(),
+        "stage 1 refuses it"
+    );
+    unspellable(&loaded, "TOut", "printed statement exceeds 8192 bytes");
+
+    // Past the 16-tag cap beside every other field at its bound: 17 tags still fit one line, so
+    // the model prints (stage 1 refuses it); 30 do not, so it is refused.
+    let mut full = clean_models().swap_remove(2);
+    let tag = "h".repeat(MAX_SEMANTIC_FIELD_BYTES);
+    full.inputs[0].semantic.haystack.push(tag.clone());
+    let text = print_text(&full).expect("17 full-width tags fit one line");
+    assert!(within_line_bound(&text));
+    assert_eq!(parse_text(&text).expect("parses"), full);
+    full.inputs[0].semantic.haystack = vec![tag; 30];
+    let name = full.inputs[0].name.as_str().to_owned();
+    unspellable(&full, &name, "printed statement exceeds");
+
+    // A class path and a port of forty dotted 256-byte words: each word is a legal token, the
+    // statement is not.
+    let long = vec!["w".repeat(256); 40].join(".");
+    let mut class = econ_enable();
+    class.blocks[0].class_path = long.clone();
+    unspellable(&class, "sub", "printed statement exceeds");
+    let mut port = econ_enable();
+    port.connections[0].target = Endpoint::parse(&format!("sub.{long}"));
+    unspellable(&port, "connection[0]", "printed statement exceeds");
+}
+
+#[test]
+fn a_document_past_the_byte_or_line_bound_is_refused_not_printed() {
+    // A clean model whose comments alone pass 4 MiB.
+    let mut big = econ_enable();
+    big.trailing_comments = vec!["c".repeat(MAX_COMMENT_BYTES); 520];
+    assert!(validate_author_side(&big).is_empty());
+    unspellable(&big, "sequence", "4194304 bytes");
+    // Past 100,000 lines: many comments, or one comment of many lines.
+    let mut many = econ_enable();
+    many.trailing_comments = vec!["c".to_owned(); 100_001];
+    unspellable(&many, "sequence", "100000 lines");
+    let mut one = econ_enable();
+    one.trailing_comments = vec!["\n".repeat(100_001)];
+    unspellable(&one, "sequence", "100000 lines");
+    // At the bound it prints and reads back.
+    let mut at = econ_enable();
+    let room = 100_000 - print_text(&at).expect("prints").lines().count() - 1;
+    at.trailing_comments = vec!["c".to_owned(); room];
+    let text = print_text(&at).expect("at the line bound");
+    assert_eq!(text.lines().count(), 100_000);
+    assert_eq!(parse_text(&text).expect("parses"), at);
+}
+
+/// The model `parse_text` reads back from a printed model: comments split at line feeds and
+/// trimmed of trailing spaces, the header blank line dropped.
+fn normalized(model: &Sequence) -> Sequence {
+    fn split(lines: &mut Vec<String>) {
+        *lines = lines
+            .iter()
+            .flat_map(|l| l.split('\n'))
+            .map(|l| l.trim_end_matches(' ').to_owned())
+            .collect();
+    }
+    let mut m = model.clone();
+    m.annotations.blank_line_before = false;
+    split(&mut m.annotations.comments);
+    split(&mut m.trailing_comments);
+    for p in &mut m.params {
+        split(&mut p.annotations.comments);
+    }
+    for b in m.inputs.iter_mut().chain(m.outputs.iter_mut()) {
+        split(&mut b.annotations.comments);
+    }
+    for b in &mut m.blocks {
+        split(&mut b.annotations.comments);
+        for a in &mut b.assignments {
+            split(&mut a.annotations.comments);
+        }
+    }
+    for c in &mut m.connections {
+        split(&mut c.annotations.comments);
+    }
+    m
+}
+
+type Slot = fn(&mut Sequence, &str);
+
+/// Every string slot of the model, set on the worked example.
+fn slots() -> Vec<(&'static str, Slot)> {
+    fn id(v: &str) -> Identifier {
+        Identifier::unchecked(v)
+    }
+    fn some(v: &str) -> Option<String> {
+        Some(v.to_owned())
+    }
+    vec![
+        ("sequence name", |s, v| s.name = id(v)),
+        ("extends", |s, v| {
+            s.extends = Some(ProvenanceId::unchecked(v))
+        }),
+        ("header comment", |s, v| {
+            s.annotations.comments = vec![v.to_owned()]
+        }),
+        ("trailing comment", |s, v| {
+            s.trailing_comments = vec![v.to_owned()]
+        }),
+        ("parameter name", |s, v| s.params[0].name = id(v)),
+        ("parameter string", |s, v| {
+            s.params[0].value = Literal::Text(v.to_owned())
+        }),
+        ("parameter member type", |s, v| {
+            s.params[0].value = Literal::EnumMember(EnumMember::parse(&format!("{v}.PI")));
+        }),
+        ("parameter member", |s, v| {
+            s.params[0].value = Literal::EnumMember(EnumMember::parse(&format!("T.{v}")));
+        }),
+        ("parameter suffix", |s, v| s.params[0].suffix = some(v)),
+        ("parameter comment", |s, v| {
+            s.params[0].annotations.comments = vec![v.to_owned()]
+        }),
+        ("input name", |s, v| s.inputs[0].name = id(v)),
+        ("output name", |s, v| s.outputs[0].name = id(v)),
+        ("quantity", |s, v| s.inputs[0].quantity = some(v)),
+        ("display unit", |s, v| s.inputs[0].display_unit = some(v)),
+        ("unit", |s, v| s.inputs[0].semantic.unit = some(v)),
+        ("brick", |s, v| s.inputs[0].semantic.brick = some(v)),
+        ("s223", |s, v| s.inputs[0].semantic.s223 = some(v)),
+        ("qudt", |s, v| s.inputs[0].semantic.qudt = some(v)),
+        ("haystack tag", |s, v| {
+            s.inputs[0].semantic.haystack = vec![v.to_owned()]
+        }),
+        ("forty haystack tags", |s, v| {
+            s.inputs[0].semantic.haystack = vec![v.to_owned(); 40]
+        }),
+        ("name", |s, v| s.inputs[0].semantic.name = some(v)),
+        ("label", |s, v| s.inputs[0].semantic.label = some(v)),
+        ("boundary comment", |s, v| {
+            s.inputs[0].annotations.comments = vec![v.to_owned()]
+        }),
+        ("block name", |s, v| s.blocks[0].name = id(v)),
+        ("class path", |s, v| s.blocks[0].class_path = v.to_owned()),
+        ("block comment", |s, v| {
+            s.blocks[0].annotations.comments = vec![v.to_owned()]
+        }),
+        ("assignment name", |s, v| {
+            s.blocks[1].assignments[0].name = id(v)
+        }),
+        ("assignment string", |s, v| {
+            s.blocks[1].assignments[0].value = ParamValue::Literal(Literal::Text(v.to_owned()));
+        }),
+        ("reference", |s, v| {
+            s.blocks[1].assignments[1].value = ParamValue::Ref(id(v))
+        }),
+        ("assignment member type", |s, v| {
+            s.blocks[1].assignments[0].value =
+                ParamValue::Literal(Literal::EnumMember(EnumMember::parse(&format!("{v}.PI"))));
+        }),
+        ("assignment member", |s, v| {
+            s.blocks[1].assignments[0].value =
+                ParamValue::Literal(Literal::EnumMember(EnumMember::parse(&format!("T.{v}"))));
+        }),
+        ("assignment suffix", |s, v| {
+            s.blocks[1].assignments[0].suffix = some(v)
+        }),
+        ("assignment comment", |s, v| {
+            s.blocks[1].assignments[0].annotations.comments = vec![v.to_owned()];
+        }),
+        ("source boundary", |s, v| {
+            s.connections[0].source = Endpoint::Boundary(id(v))
+        }),
+        ("source block", |s, v| {
+            s.connections[2].source = Endpoint::parse(&format!("{v}.y"))
+        }),
+        ("source port", |s, v| {
+            s.connections[2].source = Endpoint::parse(&format!("sub.{v}"))
+        }),
+        ("target boundary", |s, v| {
+            s.connections[3].target = Endpoint::Boundary(id(v))
+        }),
+        ("target port", |s, v| {
+            s.connections[0].target = Endpoint::parse(&format!("sub.{v}"))
+        }),
+        ("connection comment", |s, v| {
+            s.connections[0].annotations.comments = vec![v.to_owned()]
+        }),
+    ]
+}
+
+#[test]
+fn every_string_slot_with_hostile_text_is_refused_or_reads_back_equal() {
+    // The re-review's probe: every slot × a hostile set. `print_text` either refuses, or writes
+    // text within the line bound that parses back to the same model (up to the comment
+    // normalizations). Never text that parses to something else, never text the parser refuses.
+    let hostile: Vec<String> = [
+        "->", "#", "\"", "\\", "\n", "\t", "\u{202e}", "param", "in", "block", "true", "nan",
+        "Inf", "Type.a.b", "a b", "K", "s-1", "cxf:a#", "none", "", "ok_word", "x\n# y  ",
+    ]
+    .iter()
+    .map(|s| (*s).to_owned())
+    .chain([
+        "x".repeat(256),
+        "x".repeat(257),
+        "x".repeat(9_000),
+        "\u{e9}".repeat(2_049),
+    ])
+    .collect();
+    let (mut refused, mut printed) = (0, 0);
+    for (slot, set) in slots() {
+        for value in &hostile {
+            let mut model = econ_enable();
+            set(&mut model, value);
+            let label = format!("{slot} = {:?}", value.chars().take(20).collect::<String>());
+            match print_text(&model) {
+                Err(PrintError::Unspellable { .. }) => refused += 1,
+                Err(other) => panic!("{label}: {other}"),
+                Ok(text) => {
+                    printed += 1;
+                    assert!(within_line_bound(&text), "{label}: a line past the bound");
+                    let back = parse_text(&text)
+                        .unwrap_or_else(|e| panic!("{label}: printed text is refused: {e}"));
+                    assert_eq!(back, normalized(&model), "{label}: read back differently");
+                    assert_eq!(fmt_text(&text).as_deref(), Ok(text.as_str()), "{label}");
+                }
+            }
+        }
+    }
+    assert_eq!(slots().len(), 39);
+    assert!(
+        refused > 300 && printed > 300,
+        "{refused} refused, {printed} printed"
+    );
+}
+
+#[test]
+fn the_wire_fixtures_print_or_refuse_by_the_same_rule() {
+    for name in ["econ_enable", "every_element", "note_example", "defects"] {
+        let wire = std::fs::read_to_string(fixture(&format!("wire/{name}.json"))).expect("wire");
+        let model = oce_author::from_wire_str(&wire).expect("reads");
+        if let Ok(text) = print_text(&model) {
+            assert!(within_line_bound(&text), "{name}");
+            assert_eq!(parse_text(&text).expect(name), model, "{name}");
+        }
+    }
 }

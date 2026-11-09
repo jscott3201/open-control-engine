@@ -423,7 +423,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   - The line bound is 8,192 bytes, not 4,096, so the longest string the wire form carries
     (4,096 bytes as written) fits on one line with its assignment.
   - `print_text` is total or refusing. A name, class path, atom, suffix, string, value or
-    `extends` id the lexer could not read back is `PrintError::Unspellable`, never text that parses
+    `extends` id the lexer could not read back, a statement whose printed line would pass 8,192
+    bytes, and a document that would pass 4 MiB, 100,000 lines or 65,536 statements of one kind are
+    `PrintError::Unspellable`, never text that `parse_text` refuses or reads
     to a different model.
   - `tests/fixtures/wire/defects.json` is excluded from wire → text → wire. It holds a `unit` atom
     with a space and a non-path class, which stage 1 refuses and which `print_text` refuses as
@@ -448,8 +450,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
   - 48 enumerated models through print and parse;
   - every stage-1-clean fixture and a set of clean models at their field bounds printing within the
     line bound and reading back equal;
-  - one test per unspellable value;
-  - one test per refusal code with its exact location, and every bound at its boundary;
+  - one test per unspellable value, statements and documents past a bound refused rather than
+    printed, and a dirty-model sweep (39 string slots × 26 hostile strings) in which every model
+    either refuses or prints text that reads back equal within the bounds;
+  - one test per refusal code with its exact location, a mechanical check that every code in
+    `PARSE_CODES` is produced by some input, and every bound at its boundary;
   - finding spans and a span-cost test at the statement cap;
   - a deterministic mutation sweep of more than 25,000 mutants, with `catch_unwind` naming each,
     that also requires every mutant that parses to print and parse back unchanged.

@@ -134,11 +134,12 @@ corpus bundle.
   refused with `PrintError::Unspellable { subject, detail }`. Its only normalizations are the
   parser's own: a comment with a line feed prints as several comment lines, trailing spaces in a
   comment are dropped, and the header's meaningless `blank_line_before` is not printed.
-- **Which models round-trip.** Every model `parse` returns, and every model stage 1 accepts whose
-  comments and suffixes are spellable. For those, `print` succeeds, no printed line exceeds the
-  line bound, and `parse(print(m)) == m`; `fmt(fmt(t)) == fmt(t)` for every text that parses. The
-  only bounds re-spacing can push a document past are the document-level ones: 4 MiB, 100,000
-  lines, 65,536 statements of one kind.
+- **Which models round-trip.** `print` refuses, never emits, a statement whose printed line would
+  pass the line bound and a document that would pass 4 MiB, 100,000 lines or 65,536 statements of
+  one kind, so whatever it emits `parse` reads back equal within every bound. It succeeds for every
+  model `parse` returns and every model stage 1 accepts whose comments and suffixes are spellable,
+  except a document that would print past 4 MiB or 100,000 lines (comments alone, or re-spacing
+  one already at a bound). `fmt(fmt(t)) == fmt(t)` for every text whose `fmt` succeeds.
 - **Stage 1 additions** that make every clean model printable within the line bound:
   - `nan`, `inf` and `infinity`, in any case, are refused as declared names (`invalid-name`);
   - a boundary carries at most 16 `@haystack` tags (`invalid-semantic-point`);

@@ -1,6 +1,8 @@
-//! What the text form can spell: the check [`crate::print_text`] runs before it writes anything,
-//! so it either refuses a model with a typed [`PrintError`] or writes text that parses back to the
-//! same model (issue #482 review, ruling A).
+//! What the text form can spell: the lexical check [`crate::print_text`] runs before it writes
+//! anything, so it either refuses a model with a typed [`PrintError`] or writes text that parses
+//! back to the same model (issue #482 review, ruling A). The printer then refuses, with the same
+//! error, a statement whose printed line would pass the line bound and a document that would pass
+//! the byte or line bound, so every bound `parse_text` enforces is enforced here first.
 //!
 //! A model from the wire form or the builder can hold values the lexer cannot read back: a name
 //! with a space or a line feed, an atom with a `#`, a class path that is not dotted words, a
@@ -17,7 +19,7 @@ use crate::model::{
     Annotations, Endpoint, EnumMember, Literal, ParamValue, SemanticPoint, Sequence,
 };
 
-use super::codes::{MAX_COMMENT_BYTES, MAX_STRING_BYTES, MAX_TOKEN_BYTES};
+use super::codes::{MAX_COMMENT_BYTES, MAX_STATEMENTS_PER_KIND, MAX_STRING_BYTES, MAX_TOKEN_BYTES};
 use super::is_bidi_control;
 use super::units::check_suffix;
 
@@ -228,6 +230,28 @@ pub(super) fn check(s: &Sequence) -> Result<(), PrintError> {
             detail,
         }
     };
+    let kinds = [
+        ("parameters", s.params.len()),
+        ("inputs", s.inputs.len()),
+        ("outputs", s.outputs.len()),
+        ("blocks", s.blocks.len()),
+        ("connections", s.connections.len()),
+    ];
+    if let Some((kind, len)) = kinds.iter().find(|(_, len)| *len > MAX_STATEMENTS_PER_KIND) {
+        return Err(at("sequence")(format!(
+            "{len} {kind}; the text form reads at most {MAX_STATEMENTS_PER_KIND} of one kind"
+        )));
+    }
+    if let Some(b) = s
+        .blocks
+        .iter()
+        .find(|b| b.assignments.len() > MAX_STATEMENTS_PER_KIND)
+    {
+        return Err(at(b.name.as_str())(format!(
+            "{} assignments; the text form reads at most {MAX_STATEMENTS_PER_KIND} in one block",
+            b.assignments.len()
+        )));
+    }
     word(s.name.as_str())
         .and_then(|()| comment_lines(&s.annotations.comments))
         .and_then(|()| comment_lines(&s.trailing_comments))

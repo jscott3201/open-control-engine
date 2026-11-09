@@ -25,20 +25,26 @@
 use crate::model::{Annotations, Assignment, Block, Boundary, Literal, ParamValue, Sequence};
 use crate::validate::catalog::{is_template, lookup_class, lookup_parameter, match_template};
 
+use super::codes::{MAX_LINE_BYTES, MAX_TEXT_BYTES, MAX_TEXT_LINES};
 use super::parser::{TAGS, template_base};
+use super::spell::PrintError;
 
 /// The widest one-line block, in columns (characters).
 pub const MAX_ONE_LINE_COLUMNS: usize = 100;
 
-/// Print a sequence canonically.
-pub(super) fn print(sequence: &Sequence) -> String {
+/// Print a sequence canonically, refusing (as [`PrintError::Unspellable`]) a statement whose
+/// printed line would exceed [`MAX_LINE_BYTES`] and a document that would exceed
+/// [`MAX_TEXT_BYTES`] or [`MAX_TEXT_LINES`]: what this returns, `parse_text` always reads.
+pub(super) fn print(sequence: &Sequence) -> Result<String, PrintError> {
     let mut out = String::new();
+    let mut start = 0;
     comments(&mut out, &sequence.annotations.comments, "");
     out.push_str(&format!("sequence {}\n", sequence.name));
     match &sequence.extends {
         Some(id) => out.push_str(&format!("extends {id}\n")),
         None => out.push_str("extends none\n"),
     }
+    fits(&out, &mut start, "sequence")?;
     for param in &sequence.params {
         annotations(&mut out, &param.annotations, "");
         out.push_str(&format!(
@@ -47,26 +53,56 @@ pub(super) fn print(sequence: &Sequence) -> String {
             param.value_type.as_str(),
             with_suffix(&literal(&param.value), param.suffix.as_deref())
         ));
+        fits(&out, &mut start, param.name.as_str())?;
     }
-    for input in &sequence.inputs {
-        boundary(&mut out, "in", input);
-    }
-    for output in &sequence.outputs {
-        boundary(&mut out, "out", output);
+    for (keyword, list) in [("in", &sequence.inputs), ("out", &sequence.outputs)] {
+        for b in list {
+            boundary(&mut out, keyword, b);
+            fits(&out, &mut start, b.name.as_str())?;
+        }
     }
     for block in &sequence.blocks {
         print_block(&mut out, block);
+        fits(&out, &mut start, block.name.as_str())?;
     }
-    for connection in &sequence.connections {
+    for (i, connection) in sequence.connections.iter().enumerate() {
         annotations(&mut out, &connection.annotations, "");
         out.push_str(&connection.spelling());
         out.push('\n');
+        fits(&out, &mut start, &format!("connection[{i}]"))?;
     }
     if !sequence.trailing_comments.is_empty() {
         out.push('\n');
         comments(&mut out, &sequence.trailing_comments, "");
+        fits(&out, &mut start, "sequence")?;
     }
-    out
+    let lines = out.bytes().filter(|&b| b == b'\n').count();
+    if out.len() > MAX_TEXT_BYTES || lines > MAX_TEXT_LINES {
+        return Err(PrintError::Unspellable {
+            subject: "sequence".to_owned(),
+            detail: format!(
+                "the printed document is {} bytes and {lines} lines; the text form reads at most {MAX_TEXT_BYTES} bytes and {MAX_TEXT_LINES} lines",
+                out.len()
+            ),
+        });
+    }
+    Ok(out)
+}
+
+/// Refuse the statement printed since `start` (its comments included) if any of its lines exceeds
+/// [`MAX_LINE_BYTES`]; then move `start` past it.
+fn fits(out: &str, start: &mut usize, subject: &str) -> Result<(), PrintError> {
+    let chunk = out.get(*start..).unwrap_or("");
+    *start = out.len();
+    match chunk.split('\n').map(str::len).max() {
+        Some(longest) if longest > MAX_LINE_BYTES => Err(PrintError::Unspellable {
+            subject: subject.to_owned(),
+            detail: format!(
+                "printed statement exceeds {MAX_LINE_BYTES} bytes (a {longest}-byte line)"
+            ),
+        }),
+        _ => Ok(()),
+    }
 }
 
 /// Comment lines, each split at its line feeds and without trailing spaces (the two comment

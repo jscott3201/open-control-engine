@@ -489,3 +489,96 @@ fn the_suffix_denominator_and_exponent_edges() {
         );
     }
 }
+
+#[test]
+fn every_parse_code_is_produced_by_some_input() {
+    // A mechanical cover: one input per code, run through the byte entry; the codes seen must be
+    // exactly `PARSE_CODES`. (The tests above pin each code's location; this pins that none is
+    // dead.)
+    let many = |n: usize, line: &str| format!("{HEAD}{}", line.repeat(n));
+    let mut big = format!(
+        "{HEAD}{}",
+        format!("#{}\n", "x".repeat(4_094)).repeat(1_024)
+    );
+    big.push_str(&"#".repeat(64));
+    let cases: Vec<(Vec<u8>, &str)> = vec![
+        (b"sequence s\nextends none\n\xff".to_vec(), NOT_UTF8),
+        ("\u{feff}sequence s".into(), BYTE_ORDER_MARK),
+        ("sequence\ts".into(), CONTROL_CHARACTER),
+        (big.into_bytes(), oce_author::INPUT_TOO_LARGE),
+        (many(100_000, "\n").into_bytes(), oce_author::TOO_MANY_LINES),
+        (
+            body(&format!("#{}\n", "x".repeat(9_000))).into_bytes(),
+            oce_author::LINE_TOO_LONG,
+        ),
+        (
+            body(&format!("param {} : Real = 1\n", "a".repeat(257))).into_bytes(),
+            oce_author::TOKEN_TOO_LONG,
+        ),
+        (
+            body(&format!("in u : Real @name \"{}\"\n", "x".repeat(4_097))).into_bytes(),
+            oce_author::STRING_TOO_LONG,
+        ),
+        (
+            body(&format!("#{}\n", "x".repeat(8_190))).into_bytes(),
+            oce_author::COMMENT_TOO_LONG,
+        ),
+        (
+            body("block g = C(K = [[[1]]])\n").into_bytes(),
+            NESTING_TOO_DEEP,
+        ),
+        (
+            many(65_537, "u -> y\n").into_bytes(),
+            oce_author::TOO_MANY_STATEMENTS,
+        ),
+        (
+            body("in u : Real @name \"x\n").into_bytes(),
+            UNTERMINATED_STRING,
+        ),
+        (body("in u : Real @name \"\\t\"\n").into_bytes(), BAD_ESCAPE),
+        (body("param p : Real = 01\n").into_bytes(), MALFORMED_NUMBER),
+        (
+            body("param p : Integer = 9223372036854775808\n").into_bytes(),
+            INTEGER_OUT_OF_RANGE,
+        ),
+        (
+            body("param p : Real = NaN\n").into_bytes(),
+            NON_FINITE_NUMBER,
+        ),
+        (
+            body("param p : Real = 1 m^2\n").into_bytes(),
+            MALFORMED_SUFFIX,
+        ),
+        (body("param p : Real = 1 h\n").into_bytes(), UNIT_NOT_BASE),
+        (
+            body("in u : Real @unit d\u{e9}g\n").into_bytes(),
+            MALFORMED_ATOM,
+        ),
+        (body("$\n").into_bytes(), STRAY_TOKEN),
+        (body("blok h = C\n").into_bytes(), UNKNOWN_KEYWORD),
+        (body("in u : Real @colour red\n").into_bytes(), UNKNOWN_TAG),
+        (
+            body("in u : Real @unit K @unit K\n").into_bytes(),
+            DUPLICATE_TAG,
+        ),
+        (body("param p : Float = 1\n").into_bytes(), UNKNOWN_TYPE),
+        (b"param p : Real = 1\n".to_vec(), MISSING_SEQUENCE),
+        (b"sequence s\n".to_vec(), MISSING_EXTENDS),
+        (body("sequence t\n").into_bytes(), MISPLACED_STATEMENT),
+        (body("param p : Real = q\n").into_bytes(), MISPLACED_VALUE),
+        (body("block g = C(K = [])\n").into_bytes(), MALFORMED_LIST),
+        (body("block h = C(k = 1\n").into_bytes(), UNCLOSED_BRACKET),
+        (
+            body("block h = C(\n  k = 1\n  # x\n)\n").into_bytes(),
+            COMMENT_BEFORE_CLOSE,
+        ),
+    ];
+    let mut seen = std::collections::BTreeSet::new();
+    for (input, code) in cases {
+        let error = parse_text_bytes(&input).expect_err(code);
+        assert_eq!(error.code, code, "{error}");
+        seen.insert(error.code);
+    }
+    let all: std::collections::BTreeSet<&str> = PARSE_CODES.iter().copied().collect();
+    assert_eq!(seen, all, "a parse code no input produces");
+}

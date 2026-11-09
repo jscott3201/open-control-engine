@@ -9,7 +9,7 @@ mod support;
 
 use oce_author::{
     EmitOptions, Literal, ParamValue, PrintError, Sequence, WIRE_SCHEMA, emit, from_wire_str,
-    parse_text, print_text, to_wire_string, wire_schema,
+    parse_text, print_text, to_wire_string, validate_author_side, wire_schema,
 };
 
 use support::text::{bundle_model, bundles, enumerated_models, note_text_example, print};
@@ -132,15 +132,30 @@ fn the_worked_text_example_carries_the_same_sequence_as_the_wire_form() {
 
 #[test]
 fn every_enumerated_model_survives_print_then_parse() {
+    // The enumeration is built for printer shapes, so it carries deliberate stage-1 defects (an
+    // unknown class, dangling references); `text_print.rs` runs the same property over a set that
+    // stage 1 accepts. Here every model, clean or not, must print within the line bound.
     let models = enumerated_models();
     assert_eq!(models.len(), 48);
+    let mut clean = 0;
     for model in models {
         let text = print(&model);
+        assert!(
+            text.lines().all(|l| l.len() <= oce_author::MAX_LINE_BYTES),
+            "a line past the bound\n{text}"
+        );
+        if validate_author_side(&model).is_empty() {
+            clean += 1;
+        }
         let parsed = parse_text(&text).unwrap_or_else(|e| panic!("{e}\n{text}"));
         assert_eq!(parsed, model, "model → text → model\n{text}");
         assert_eq!(print(&parsed), text, "text → model → text\n{text}");
         assert_eq!(to_wire_string(&parsed), to_wire_string(&model));
     }
+    assert_eq!(
+        clean, 0,
+        "every enumerated model carries its stage-1 defects"
+    );
 }
 
 #[test]

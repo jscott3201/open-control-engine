@@ -180,19 +180,22 @@ parses to a different model. A name, class path, atom, suffix, string, value or 
 lexer would not read back as the same value — a space or line feed in a name, `#` in an atom, a
 non-path class, a suffix that is not a base unit, `extends none` as an id, a reference named
 `true` or `inf`, a member with no `Type.`, a non-finite Real, a control character or bidirectional
-override in a string — is refused with `PrintError::Unspellable { subject, detail }`. The only
+override in a string — is refused with `PrintError::Unspellable { subject, detail }`, and so is a
+statement whose printed line would pass 8,192 bytes (a dotted name or a tag list too long for one
+line) and a document that would pass 4 MiB, 100,000 lines or 65,536 statements of one kind. The only
 normalizations are the parser's own: a comment with a line feed prints as several comment lines,
 trailing spaces in a comment are dropped, and the header's `blank_line_before` is not printed.
 
-**The round-trip property.** For every model `m` that `parse_text` returns, and for every model
-stage 1 accepts whose comments and suffixes are spellable, `print_text(m)` succeeds, no line it
-writes is longer than 8,192 bytes, and `parse_text(&print_text(m)?) == m`; for every text `t`
-that parses, `fmt_text(&fmt_text(t)?) == fmt_text(t)`. Stage 1 makes the per-line bound hold: at
-most 16 `@haystack` tags (`MAX_HAYSTACK_TAGS`), 256-byte atoms and labels, 4,096-byte strings, and
-no non-finite word or bidirectional override where text would refuse it. The document-level
-bounds (4 MiB, 100,000 lines, 65,536 statements of one kind) are the one thing re-spacing can
-reach: a document already at one may print past it. Gate item 2: wire → text → wire is
-byte-identical for every bundle.
+**The round-trip property.** For every model `m`, `print_text(m)` either refuses or returns text
+within every parse bound that `parse_text` reads back as `m` (up to the three normalizations).
+It succeeds for every model `parse_text` returns and every model stage 1 accepts whose comments and
+suffixes are spellable, unless the printed document would pass 4 MiB or 100,000 lines (comments
+alone, or re-spacing a document already at a bound), which it refuses rather than emits. For every
+text `t` that parses, `fmt_text(t)` is either that refusal or a canonical text with
+`fmt_text(&fmt_text(t)?) == fmt_text(t)`. Stage 1 keeps every clean statement within the line
+bound: at most 16 `@haystack` tags (`MAX_HAYSTACK_TAGS`), 64-byte names, catalog class paths,
+256-byte atoms and labels, 4,096-byte strings, and no non-finite word or bidirectional override
+where text would refuse it. Gate item 2: wire → text → wire is byte-identical for every bundle.
 
 ### Bounds
 
