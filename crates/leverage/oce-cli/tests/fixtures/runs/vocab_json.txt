@@ -32,7 +32,660 @@ exit: 0
     "kat"
   ],
   "command": "vocab",
-  "enumerations": null,
+  "enumerations": [
+    {
+      "class_path": "CDL.Types.SimpleController",
+      "kind": "enumeration",
+      "members": [
+        {
+          "name": "P",
+          "value": 1
+        },
+        {
+          "name": "PI",
+          "value": 2
+        },
+        {
+          "name": "PD",
+          "value": 3
+        },
+        {
+          "name": "PID",
+          "value": 4
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Types.Smoothness",
+      "kind": "enumeration",
+      "members": [
+        {
+          "name": "LinearSegments",
+          "value": 1
+        },
+        {
+          "name": "ConstantSegments",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Types.Extrapolation",
+      "kind": "enumeration",
+      "members": [
+        {
+          "name": "HoldLastPoint",
+          "value": 1
+        },
+        {
+          "name": "LastTwoPoints",
+          "value": 2
+        },
+        {
+          "name": "Periodic",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Types.ZeroTime",
+      "kind": "enumeration",
+      "members": [
+        {
+          "name": "UnixTimeStamp",
+          "value": 1
+        },
+        {
+          "name": "UnixTimeStampGMT",
+          "value": 2
+        },
+        {
+          "name": "Custom",
+          "value": 3
+        },
+        {
+          "name": "NY2010",
+          "value": 4
+        },
+        {
+          "name": "NY2011",
+          "value": 5
+        },
+        {
+          "name": "NY2012",
+          "value": 6
+        },
+        {
+          "name": "NY2013",
+          "value": 7
+        },
+        {
+          "name": "NY2014",
+          "value": 8
+        },
+        {
+          "name": "NY2015",
+          "value": 9
+        },
+        {
+          "name": "NY2016",
+          "value": 10
+        },
+        {
+          "name": "NY2017",
+          "value": 11
+        },
+        {
+          "name": "NY2018",
+          "value": 12
+        },
+        {
+          "name": "NY2019",
+          "value": 13
+        },
+        {
+          "name": "NY2020",
+          "value": 14
+        },
+        {
+          "name": "NY2021",
+          "value": 15
+        },
+        {
+          "name": "NY2022",
+          "value": 16
+        },
+        {
+          "name": "NY2023",
+          "value": 17
+        },
+        {
+          "name": "NY2024",
+          "value": 18
+        },
+        {
+          "name": "NY2025",
+          "value": 19
+        },
+        {
+          "name": "NY2026",
+          "value": 20
+        },
+        {
+          "name": "NY2027",
+          "value": 21
+        },
+        {
+          "name": "NY2028",
+          "value": 22
+        },
+        {
+          "name": "NY2029",
+          "value": 23
+        },
+        {
+          "name": "NY2030",
+          "value": 24
+        },
+        {
+          "name": "NY2031",
+          "value": 25
+        },
+        {
+          "name": "NY2032",
+          "value": 26
+        },
+        {
+          "name": "NY2033",
+          "value": 27
+        },
+        {
+          "name": "NY2034",
+          "value": 28
+        },
+        {
+          "name": "NY2035",
+          "value": 29
+        },
+        {
+          "name": "NY2036",
+          "value": 30
+        },
+        {
+          "name": "NY2037",
+          "value": 31
+        },
+        {
+          "name": "NY2038",
+          "value": 32
+        },
+        {
+          "name": "NY2039",
+          "value": 33
+        },
+        {
+          "name": "NY2040",
+          "value": 34
+        },
+        {
+          "name": "NY2041",
+          "value": 35
+        },
+        {
+          "name": "NY2042",
+          "value": 36
+        },
+        {
+          "name": "NY2043",
+          "value": 37
+        },
+        {
+          "name": "NY2044",
+          "value": 38
+        },
+        {
+          "name": "NY2045",
+          "value": 39
+        },
+        {
+          "name": "NY2046",
+          "value": 40
+        },
+        {
+          "name": "NY2047",
+          "value": 41
+        },
+        {
+          "name": "NY2048",
+          "value": 42
+        },
+        {
+          "name": "NY2049",
+          "value": 43
+        },
+        {
+          "name": "NY2050",
+          "value": 44
+        }
+      ]
+    },
+    {
+      "class_path": "ASHRAE.G36.Types.ASHRAEClimateZone",
+      "kind": "enumeration",
+      "members": [
+        {
+          "name": "Not_Specified",
+          "value": 1
+        },
+        {
+          "name": "Zone_1A",
+          "value": 2
+        },
+        {
+          "name": "Zone_1B",
+          "value": 3
+        },
+        {
+          "name": "Zone_2A",
+          "value": 4
+        },
+        {
+          "name": "Zone_2B",
+          "value": 5
+        },
+        {
+          "name": "Zone_3A",
+          "value": 6
+        },
+        {
+          "name": "Zone_3B",
+          "value": 7
+        },
+        {
+          "name": "Zone_3C",
+          "value": 8
+        },
+        {
+          "name": "Zone_4A",
+          "value": 9
+        },
+        {
+          "name": "Zone_4B",
+          "value": 10
+        },
+        {
+          "name": "Zone_4C",
+          "value": 11
+        },
+        {
+          "name": "Zone_5A",
+          "value": 12
+        },
+        {
+          "name": "Zone_5B",
+          "value": 13
+        },
+        {
+          "name": "Zone_5C",
+          "value": 14
+        },
+        {
+          "name": "Zone_6A",
+          "value": 15
+        },
+        {
+          "name": "Zone_6B",
+          "value": 16
+        },
+        {
+          "name": "Zone_7",
+          "value": 17
+        },
+        {
+          "name": "Zone_8",
+          "value": 18
+        }
+      ]
+    },
+    {
+      "class_path": "ASHRAE.G36.Types.ControlEconomizer",
+      "kind": "enumeration",
+      "members": [
+        {
+          "name": "FixedDryBulb",
+          "value": 1
+        },
+        {
+          "name": "DifferentialDryBulb",
+          "value": 2
+        },
+        {
+          "name": "FixedDryBulbWithDifferentialDryBulb",
+          "value": 3
+        },
+        {
+          "name": "FixedEnthalpyWithFixedDryBulb",
+          "value": 4
+        },
+        {
+          "name": "DifferentialEnthalpyWithFixedDryBulb",
+          "value": 5
+        }
+      ]
+    },
+    {
+      "class_path": "ASHRAE.G36.Types.CoolingCoil",
+      "kind": "enumeration",
+      "members": [
+        {
+          "name": "None",
+          "value": 1
+        },
+        {
+          "name": "WaterBased",
+          "value": 2
+        },
+        {
+          "name": "DXCoil",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "class_path": "ASHRAE.G36.Types.EnergyStandard",
+      "kind": "enumeration",
+      "members": [
+        {
+          "name": "ASHRAE90_1",
+          "value": 1
+        },
+        {
+          "name": "California_Title_24",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "class_path": "ASHRAE.G36.Types.FreezeStat",
+      "kind": "enumeration",
+      "members": [
+        {
+          "name": "No_freeze_stat",
+          "value": 1
+        },
+        {
+          "name": "Hardwired_to_equipment",
+          "value": 2
+        },
+        {
+          "name": "Hardwired_to_BAS",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "class_path": "ASHRAE.G36.Types.HeatingCoil",
+      "kind": "enumeration",
+      "members": [
+        {
+          "name": "None",
+          "value": 1
+        },
+        {
+          "name": "WaterBased",
+          "value": 2
+        },
+        {
+          "name": "Electric",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "class_path": "ASHRAE.G36.Types.OutdoorAirSection",
+      "kind": "enumeration",
+      "members": [
+        {
+          "name": "DedicatedDampersAirflow",
+          "value": 1
+        },
+        {
+          "name": "DedicatedDampersPressure",
+          "value": 2
+        },
+        {
+          "name": "SingleDamper",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "class_path": "ASHRAE.G36.Types.PressureControl",
+      "kind": "enumeration",
+      "members": [
+        {
+          "name": "BarometricRelief",
+          "value": 1
+        },
+        {
+          "name": "ReliefDamper",
+          "value": 2
+        },
+        {
+          "name": "ReliefFan",
+          "value": 3
+        },
+        {
+          "name": "ReturnFanMeasuredAir",
+          "value": 4
+        },
+        {
+          "name": "ReturnFanDp",
+          "value": 5
+        }
+      ]
+    },
+    {
+      "class_path": "ASHRAE.G36.Types.Title24ClimateZone",
+      "kind": "enumeration",
+      "members": [
+        {
+          "name": "Not_Specified",
+          "value": 1
+        },
+        {
+          "name": "Zone_1",
+          "value": 2
+        },
+        {
+          "name": "Zone_2",
+          "value": 3
+        },
+        {
+          "name": "Zone_3",
+          "value": 4
+        },
+        {
+          "name": "Zone_4",
+          "value": 5
+        },
+        {
+          "name": "Zone_5",
+          "value": 6
+        },
+        {
+          "name": "Zone_6",
+          "value": 7
+        },
+        {
+          "name": "Zone_7",
+          "value": 8
+        },
+        {
+          "name": "Zone_8",
+          "value": 9
+        },
+        {
+          "name": "Zone_9",
+          "value": 10
+        },
+        {
+          "name": "Zone_10",
+          "value": 11
+        },
+        {
+          "name": "Zone_11",
+          "value": 12
+        },
+        {
+          "name": "Zone_12",
+          "value": 13
+        },
+        {
+          "name": "Zone_13",
+          "value": 14
+        },
+        {
+          "name": "Zone_14",
+          "value": 15
+        },
+        {
+          "name": "Zone_15",
+          "value": 16
+        },
+        {
+          "name": "Zone_16",
+          "value": 17
+        }
+      ]
+    },
+    {
+      "class_path": "ASHRAE.G36.Types.VentilationStandard",
+      "kind": "enumeration",
+      "members": [
+        {
+          "name": "ASHRAE62_1",
+          "value": 1
+        },
+        {
+          "name": "California_Title_24",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "class_path": "ASHRAE.G36.Types.DemandLimitLevels",
+      "kind": "constant-package",
+      "members": [
+        {
+          "name": "cooling0",
+          "value": 0
+        },
+        {
+          "name": "cooling1",
+          "value": 1
+        },
+        {
+          "name": "cooling2",
+          "value": 2
+        },
+        {
+          "name": "cooling3",
+          "value": 3
+        },
+        {
+          "name": "heating0",
+          "value": 0
+        },
+        {
+          "name": "heating1",
+          "value": 1
+        },
+        {
+          "name": "heating2",
+          "value": 2
+        },
+        {
+          "name": "heating3",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "class_path": "ASHRAE.G36.Types.FreezeProtectionStages",
+      "kind": "constant-package",
+      "members": [
+        {
+          "name": "stage0",
+          "value": 0
+        },
+        {
+          "name": "stage1",
+          "value": 1
+        },
+        {
+          "name": "stage2",
+          "value": 2
+        },
+        {
+          "name": "stage3",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "class_path": "ASHRAE.G36.Types.OperationModes",
+      "kind": "constant-package",
+      "members": [
+        {
+          "name": "occupied",
+          "value": 1
+        },
+        {
+          "name": "coolDown",
+          "value": 2
+        },
+        {
+          "name": "setUp",
+          "value": 3
+        },
+        {
+          "name": "warmUp",
+          "value": 4
+        },
+        {
+          "name": "setBack",
+          "value": 5
+        },
+        {
+          "name": "freezeProtection",
+          "value": 6
+        },
+        {
+          "name": "unoccupied",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "class_path": "ASHRAE.G36.Types.ZoneStates",
+      "kind": "constant-package",
+      "members": [
+        {
+          "name": "heating",
+          "value": 1
+        },
+        {
+          "name": "deadband",
+          "value": 2
+        },
+        {
+          "name": "cooling",
+          "value": 3
+        }
+      ]
+    }
+  ],
   "error_codes": [
     {
       "code": "missing-from",

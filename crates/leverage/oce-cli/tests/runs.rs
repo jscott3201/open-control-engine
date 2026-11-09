@@ -391,6 +391,32 @@ fn catalog_resolves_ports_at_given_parameters() {
 }
 
 #[test]
+fn catalog_takes_an_enumeration_member_by_name() {
+    case(
+        "catalog_enum_param",
+        0,
+        &[
+            "catalog",
+            "CDL.Reals.PID",
+            "--json",
+            "--param",
+            "controllerType=SimpleController.P",
+        ],
+        b"",
+    );
+}
+
+#[test]
+fn catalog_unknown_enumeration_member_is_an_error() {
+    case(
+        "catalog_enum_unknown_member",
+        2,
+        &["catalog", "CDL.Reals.PID", "--param", "controllerType=PIX"],
+        b"",
+    );
+}
+
+#[test]
 fn catalog_class_with_required_parameters_does_not_resolve_at_defaults() {
     case(
         "catalog_unresolved",

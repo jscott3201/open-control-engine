@@ -114,5 +114,23 @@ exit codes:
   1  no: an error finding, a non-canonical file, ports that do not resolve
   2  error: a usage, read, parse, size or I/O failure; the question was not answered
 
-enumerations: not yet published by the facade (issue #468); see the crate README
+enumerations (Type.Member values; a constant package's members are Integers):
+  CDL.Types.SimpleController (enumeration): P=1 PI=2 PD=3 PID=4
+  CDL.Types.Smoothness (enumeration): LinearSegments=1 ConstantSegments=2
+  CDL.Types.Extrapolation (enumeration): HoldLastPoint=1 LastTwoPoints=2 Periodic=3
+  CDL.Types.ZeroTime (enumeration): UnixTimeStamp=1 UnixTimeStampGMT=2 Custom=3 NY2010=4 NY2011=5 NY2012=6 NY2013=7 NY2014=8 NY2015=9 NY2016=10 NY2017=11 NY2018=12 NY2019=13 NY2020=14 NY2021=15 NY2022=16 NY2023=17 NY2024=18 NY2025=19 NY2026=20 NY2027=21 NY2028=22 NY2029=23 NY2030=24 NY2031=25 NY2032=26 NY2033=27 NY2034=28 NY2035=29 NY2036=30 NY2037=31 NY2038=32 NY2039=33 NY2040=34 NY2041=35 NY2042=36 NY2043=37 NY2044=38 NY2045=39 NY2046=40 NY2047=41 NY2048=42 NY2049=43 NY2050=44
+  ASHRAE.G36.Types.ASHRAEClimateZone (enumeration): Not_Specified=1 Zone_1A=2 Zone_1B=3 Zone_2A=4 Zone_2B=5 Zone_3A=6 Zone_3B=7 Zone_3C=8 Zone_4A=9 Zone_4B=10 Zone_4C=11 Zone_5A=12 Zone_5B=13 Zone_5C=14 Zone_6A=15 Zone_6B=16 Zone_7=17 Zone_8=18
+  ASHRAE.G36.Types.ControlEconomizer (enumeration): FixedDryBulb=1 DifferentialDryBulb=2 FixedDryBulbWithDifferentialDryBulb=3 FixedEnthalpyWithFixedDryBulb=4 DifferentialEnthalpyWithFixedDryBulb=5
+  ASHRAE.G36.Types.CoolingCoil (enumeration): None=1 WaterBased=2 DXCoil=3
+  ASHRAE.G36.Types.EnergyStandard (enumeration): ASHRAE90_1=1 California_Title_24=2
+  ASHRAE.G36.Types.FreezeStat (enumeration): No_freeze_stat=1 Hardwired_to_equipment=2 Hardwired_to_BAS=3
+  ASHRAE.G36.Types.HeatingCoil (enumeration): None=1 WaterBased=2 Electric=3
+  ASHRAE.G36.Types.OutdoorAirSection (enumeration): DedicatedDampersAirflow=1 DedicatedDampersPressure=2 SingleDamper=3
+  ASHRAE.G36.Types.PressureControl (enumeration): BarometricRelief=1 ReliefDamper=2 ReliefFan=3 ReturnFanMeasuredAir=4 ReturnFanDp=5
+  ASHRAE.G36.Types.Title24ClimateZone (enumeration): Not_Specified=1 Zone_1=2 Zone_2=3 Zone_3=4 Zone_4=5 Zone_5=6 Zone_6=7 Zone_7=8 Zone_8=9 Zone_9=10 Zone_10=11 Zone_11=12 Zone_12=13 Zone_13=14 Zone_14=15 Zone_15=16 Zone_16=17
+  ASHRAE.G36.Types.VentilationStandard (enumeration): ASHRAE62_1=1 California_Title_24=2
+  ASHRAE.G36.Types.DemandLimitLevels (constant-package): cooling0=0 cooling1=1 cooling2=2 cooling3=3 heating0=0 heating1=1 heating2=2 heating3=3
+  ASHRAE.G36.Types.FreezeProtectionStages (constant-package): stage0=0 stage1=1 stage2=2 stage3=3
+  ASHRAE.G36.Types.OperationModes (constant-package): occupied=1 coolDown=2 setUp=3 warmUp=4 setBack=5 freezeProtection=6 unoccupied=7
+  ASHRAE.G36.Types.ZoneStates (constant-package): heating=1 deadband=2 cooling=3
 --- stderr

@@ -7,17 +7,19 @@
 //! (`oce_api::class_ports`). The class rules' refusal of the table is a finding (exit `1`), and so
 //! is an unknown class; a malformed `--param` is an error (exit `2`).
 //!
-//! An enumeration parameter's `--param` value is its 1-based ordinal, and its JSON `enumeration`
-//! is `null`, until the facade publishes the enumeration table (issue #468, GitHub #488); then the
-//! value is a member name and `enumeration` the type's class path.
+//! An enumeration parameter's `--param` value is a member name, bare (`PI`) or qualified by the
+//! type (`SimpleController.PI`), resolved through the facade's enumeration table
+//! (`oce_api::enumeration_by_id`, GitHub #488); its JSON `enumeration` is the type's authoring class
+//! path (`oce_api::enumeration_class_path`), `null` for every other type.
 
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
 use oce_api::{
     CatalogDefault, CatalogPortKind, ClassMetadata, ClassParameter, ClassPort, ClassPortsError,
-    PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER, Value as EngineValue,
-    ValueType, catalog, class_metadata, class_ports, param_element_name,
+    MemberValue, PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER,
+    Value as EngineValue, ValueType, catalog, class_metadata, class_ports, enumeration_by_id,
+    enumeration_class_path, param_element_name,
 };
 use serde_json::{Value, json};
 
@@ -162,7 +164,7 @@ fn parse_params(
                 codes::MALFORMED_VALUE,
                 format!(
                     "`{value}` is not a {} value for `{name}`",
-                    type_name(parameter.value_type)
+                    text_type_name(parameter.value_type)
                 ),
             )
         })?;
@@ -226,11 +228,18 @@ fn parse_value(value_type: ValueType, text: &str) -> Option<EngineValue> {
             _ => None,
         },
         ValueType::String => Some(EngineValue::String(text.into())),
-        ValueType::Enum(class) => text
-            .parse::<u32>()
-            .ok()
-            .filter(|ordinal| *ordinal >= 1)
-            .map(|ordinal| EngineValue::Enum { class, ordinal }),
+        ValueType::Enum(class) => {
+            let row = enumeration_by_id(class)?;
+            let member = match text.split_once('.') {
+                Some((type_name, member)) if type_name == row.type_name() => member,
+                Some(_) => return None,
+                None => text,
+            };
+            match row.member_value(member)? {
+                MemberValue::Ordinal(ordinal) => Some(EngineValue::Enum { class, ordinal }),
+                MemberValue::Integer(_) => None,
+            }
+        }
     }
 }
 
@@ -241,6 +250,14 @@ fn type_name(value_type: ValueType) -> &'static str {
         ValueType::Boolean => "Boolean",
         ValueType::String => "String",
         ValueType::Enum(_) => "Enum",
+    }
+}
+
+/// The type as the text listing spells it: an enumeration by its type name (`SimpleController`).
+fn text_type_name(value_type: ValueType) -> &'static str {
+    match value_type {
+        ValueType::Enum(id) => enumeration_by_id(id).map_or("Enum", |row| row.type_name()),
+        other => type_name(other),
     }
 }
 
@@ -282,12 +299,19 @@ fn default_text(default: &CatalogDefault) -> String {
 fn parameter_json(parameter: &ClassParameter) -> Value {
     json!({
         "default": default_json(&parameter.default),
-        // The hook for the facade's enumeration table (issue #468): the type's class path.
-        "enumeration": Value::Null,
+        "enumeration": enumeration_of(parameter.value_type).map_or(Value::Null, Value::from),
         "name": parameter.name,
         "settable": parameter.settable,
         "type": type_name(parameter.value_type),
     })
+}
+
+/// The authoring class path of an enumeration type; `None` for every other type.
+fn enumeration_of(value_type: ValueType) -> Option<&'static str> {
+    match value_type {
+        ValueType::Enum(id) => enumeration_class_path(id),
+        _ => None,
+    }
 }
 
 fn ports_json(ports: &[ClassPort]) -> Value {
@@ -325,7 +349,7 @@ fn render_class(meta: &ClassMetadata, (inputs, outputs): (&[ClassPort], &[ClassP
             text,
             "  {} : {} {}{}",
             parameter.name,
-            type_name(parameter.value_type),
+            text_type_name(parameter.value_type),
             default_text(&parameter.default),
             if parameter.settable {
                 ""
@@ -404,24 +428,28 @@ mod tests {
     }
 
     #[test]
-    fn an_enumeration_value_is_a_one_based_ordinal() {
-        let Some(enum_type) = class_metadata()
-            .iter()
-            .flat_map(|m| m.parameters.iter())
-            .map(|p| p.value_type)
-            .find(|t| matches!(t, ValueType::Enum(_)))
-        else {
-            panic!("the catalog has an enumeration parameter");
-        };
-        let ValueType::Enum(class) = enum_type else {
-            unreachable!("filtered above");
-        };
-        assert_eq!(
-            parsed(enum_type, "2"),
-            some(EngineValue::Enum { class, ordinal: 2 })
-        );
-        assert_eq!(parsed(enum_type, "0"), "None");
-        assert_eq!(parsed(enum_type, "PI"), "None");
+    fn an_enumeration_value_is_a_member_name_of_its_own_type() {
+        let mut checked = 0;
+        for row in oce_api::enumeration_types() {
+            let Some(class) = row.id else {
+                panic!("{} is an enumeration without an id", row.class_path);
+            };
+            let value_type = ValueType::Enum(class);
+            for (index, member) in row.members.iter().enumerate() {
+                let ordinal = u32::try_from(index + 1).unwrap_or(u32::MAX);
+                let expected = some(EngineValue::Enum { class, ordinal });
+                assert_eq!(parsed(value_type, member), expected, "{member}");
+                let qualified = format!("{}.{member}", row.type_name());
+                assert_eq!(parsed(value_type, &qualified), expected, "{qualified}");
+                assert_eq!(parsed(value_type, &format!("Other.{member}")), "None");
+                checked += 1;
+            }
+            assert_eq!(parsed(value_type, "1"), "None", "ordinals are not names");
+            assert_eq!(parsed(value_type, "NoSuchMember"), "None");
+            assert_eq!(enumeration_of(value_type), Some(row.class_path));
+        }
+        assert!(checked > 0);
+        assert_eq!(enumeration_of(ValueType::Real), None);
     }
 
     #[test]

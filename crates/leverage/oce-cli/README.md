@@ -12,7 +12,7 @@ oce emit <FILE> [--namespace <NS>] [-o <OUT>]    validate both stages, then flat
 oce validate <FILE> [--author-side]              findings as a JSON report
 oce fmt <FILE> [--check | --write]               canonical text (wire input becomes text)
 oce catalog [<CLASS>] [--json] [--param N=V ...] classes, parameters, resolved ports
-oce vocab [--json]                               keywords, tags, base units, every code
+oce vocab [--json]                               keywords, tags, units, enumerations, codes
 ```
 
 `FILE` is a `.oce` (text form) or `.json` (wire form) file, or `-` for stdin; `--from text|wire`
@@ -87,21 +87,23 @@ Command keys:
 | `emit` | `stages` as for `validate`; with `-o` on success, `output` (the path as given) and `bytes` |
 | `fmt` | `form` (`text`, `wire`, or `null` before the form is known); with `--check`, `canonical` (whether the input is already canonical **in its own form**: text against `fmt`, wire against the canonical wire writer); with `--write`, `changed` and `output` |
 | `catalog` | without a class, `classes`; with one, `class` (`null` when the class is unknown or a `--param` is malformed) and `params` (the `--param` strings as given). A class is `{ "class_path", "description", "reserved", "parameters", "inputs", "outputs" }`; a parameter `{ "name", "type", "default": { "kind", "value" }, "settable", "enumeration" }`, `kind` one of `real`, `integer`, `boolean`, `string`, `member`, `derived` (value: the formula) or `required` (value `null`); a port `{ "name", "kind" }`; `inputs`/`outputs` are `null` where the ports do not resolve (a required parameter at the default table) |
-| `vocab` | `keywords`, `types`, `tags`, `base_units`, `parse_codes`, `finding_codes` (each with `stage`), `wire_codes`, `error_codes`, `exit_codes` (each `{ "code", "meaning" }`), `enumerations` |
+| `vocab` | `keywords`, `types`, `tags`, `base_units`, `parse_codes`, `finding_codes` (each with `stage`), `wire_codes`, `error_codes`, `exit_codes` (each `{ "code", "meaning" }`), `enumerations` (below) |
 
 The tool's own error codes: `missing-from`, `unknown-form`, `not-found`, `not-a-file`,
 `read-failed`, `input-too-large`, `invalid-namespace`, `unspellable`, `write-failed`,
 `write-needs-file`, `write-needs-text`, `malformed-param`, `unknown-param`, `duplicate-param`,
 `malformed-value`, `ports-unresolvable`, `emit-refused`.
 
-### Enumerations (hook)
+### Enumerations
 
-The facade's enumeration and constant-package table (issue #468, GitHub #488) is not on
-`development` yet. Until it is: `vocab`'s `enumerations` is `null`, a catalog parameter's
-`enumeration` is `null` (its `type` is `Enum`), and an enumeration `--param` value is the member's
-1-based ordinal. When the table lands, `enumerations` lists each row's class path, kind and members,
-`enumeration` names the parameter's type, and `--param` takes the member name. Each is one site in
-`src/commands/{vocab,catalog}.rs`, and each moves the goldens.
+Both commands read the facade's enumeration and Integer constant-package table
+(`oce_api::enumerations()`, GitHub #488). `vocab`'s `enumerations` lists every row in table order as
+`{ "class_path", "kind", "members": [{ "name", "value" }] }`, `kind` `enumeration` (each value the
+member's 1-based ordinal) or `constant-package` (each value its Integer; a package is never a
+parameter type). A catalog parameter of an enumeration type has `type` `Enum` and `enumeration` the
+type's authoring class path (`CDL.Types.SimpleController`; `null` for every other type), and its
+`--param` value is a member name, bare (`PI`) or qualified by the type (`SimpleController.PI`); an
+ordinal or another type's member is `malformed-value`.
 
 ## Bounds and hostile input
 

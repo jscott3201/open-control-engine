@@ -527,7 +527,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
   form and `--write` rewrites a text file atomically and only on change; `oce catalog` lists the
   classes or describes one with its parameters (type, default, settable) and its ports resolved at
   the default table or at `--param NAME=VALUE`; `oce vocab` prints the keywords, tags, base units and
-  every code the tool reports with one line of meaning. Arguments are parsed with `clap` (derive,
+  every code the tool reports with one line of meaning, and the facade's enumeration and
+  constant-package table (`oce_api::enumerations()`, GitHub #488) with each member's value. Arguments are parsed with `clap` (derive,
   pinned `=4.6.7`, no colour), the second of M2's two new dependencies. Input is `.oce` text or
   `.json` wire by extension, `--from text|wire` required for stdin; every read is bounded by the
   form's 4 MiB limit, a file's size checked from its metadata before a byte is read. Stdout carries
@@ -535,10 +536,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `input` as given, `ok`, `findings`, `errors`, command keys; sorted keys, LF, no clock, no host
   path) documented in the crate README as the agent-facing contract; a human rendering goes to
   stderr only on a terminal or with `--render always`. Exit codes: `0` yes, `1` no (error findings,
-  non-canonical, unresolved ports, unknown class), `2` error (usage, read, parse, size, write). The
-  facade's enumeration table (GitHub #488) is not used yet: `vocab`'s `enumerations` and a catalog
-  parameter's `enumeration` are `null` and an enumeration `--param` is its 1-based ordinal, a
-  documented hook. Evidence: 57 golden transcripts (exit, stdout, stderr) through the built binary
+  non-canonical, unresolved ports, unknown class), `2` error (usage, read, parse, size, write). A catalog
+  parameter of an enumeration type names its type's class path, and its `--param` value is a member
+  name (`PI` or `SimpleController.PI`). Evidence: 59 golden transcripts (exit, stdout, stderr) through the built binary
   for every subcommand × outcome class and every `--help`; a contract test over every report;
   `fmt --check` over every `oce-author` text fixture in place, `fmt` equal to its goldens and
   idempotent; every emitted bundle loads warning-free in a throwaway `Engine` under two namespaces;

@@ -163,3 +163,65 @@ fn vocab_tags_are_exactly_the_tags_the_text_form_reads() {
         serde_json::json!(oce_author::BASE_UNIT_SYMBOLS)
     );
 }
+
+#[test]
+fn vocab_enumerations_are_the_facade_table_in_order() {
+    let report = support::oce(&["vocab", "--json"], b"").report();
+    let rows = report["enumerations"].as_array().expect("enumerations");
+    let table = oce_api::enumerations();
+    assert_eq!(rows.len(), table.len());
+    for (row, class) in rows.iter().zip(table) {
+        assert_eq!(row["class_path"], class.class_path);
+        let kind = match class.kind {
+            oce_api::EnumerationKind::Enumeration => "enumeration",
+            oce_api::EnumerationKind::ConstantPackage => "constant-package",
+        };
+        assert_eq!(row["kind"], kind);
+        let members = row["members"].as_array().expect("members");
+        let names: Vec<&str> = members
+            .iter()
+            .map(|m| m["name"].as_str().unwrap())
+            .collect();
+        assert_eq!(names, class.members);
+        for member in members {
+            let expected = match class.member_value(member["name"].as_str().unwrap()) {
+                Some(oce_api::MemberValue::Ordinal(v)) => serde_json::json!(v),
+                Some(oce_api::MemberValue::Integer(v)) => serde_json::json!(v),
+                None => serde_json::Value::Null,
+            };
+            assert_eq!(member["value"], expected);
+        }
+    }
+}
+
+#[test]
+fn catalog_names_the_enumeration_of_every_enumeration_parameter() {
+    let report = support::oce(&["catalog", "--json"], b"").report();
+    let mut named = 0;
+    for (class, meta) in report["classes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .zip(oce_api::class_metadata())
+    {
+        for (parameter, expected) in class["parameters"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(&meta.parameters)
+        {
+            match expected.value_type {
+                oce_api::ValueType::Enum(id) => {
+                    assert_eq!(parameter["type"], "Enum");
+                    assert_eq!(
+                        parameter["enumeration"],
+                        oce_api::enumeration_class_path(id).unwrap()
+                    );
+                    named += 1;
+                }
+                _ => assert!(parameter["enumeration"].is_null()),
+            }
+        }
+    }
+    assert!(named > 0);
+}

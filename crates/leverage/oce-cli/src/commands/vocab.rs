@@ -5,10 +5,12 @@
 //! finding codes (`oce_author::STAGE_ONE_CODES`), the stage-2 codes, the wire codes and the tool's
 //! own error codes, each with one line of meaning; and the exit statuses.
 //!
-//! `enumerations` is the hook for the facade's enumeration and constant-package table (issue #468,
-//! GitHub #488): `null` until `oce_api::enumerations()` exists on `development`, then each row's
-//! class path, kind and members.
+//! `enumerations` is the facade's enumeration and Integer constant-package table
+//! (`oce_api::enumerations()`, GitHub #488), in table order: each row's authoring class path, kind
+//! (`enumeration` or `constant-package`) and members with the value each stands for (an
+//! enumeration's 1-based ordinal, a package's Integer).
 
+use oce_api::{EnumerationKind, MemberValue, enumerations};
 use serde_json::{Value, json};
 
 use super::Outcome;
@@ -41,13 +43,48 @@ pub(crate) fn run(json: bool) -> Outcome {
                 .collect(),
         ),
     );
-    report.set("enumerations", Value::Null);
+    report.set("enumerations", enumerations_json());
     report.verdict("ok");
     if json {
         return Outcome::judged(report);
     }
     let text = render_text();
     Outcome::document(report, text.into_bytes())
+}
+
+/// The enumeration table as JSON rows.
+fn enumerations_json() -> Value {
+    Value::Array(
+        enumerations()
+            .iter()
+            .map(|row| {
+                let members: Vec<Value> = row
+                    .members
+                    .iter()
+                    .map(|member| {
+                        let value = match row.member_value(member) {
+                            Some(MemberValue::Ordinal(v)) => Value::from(v),
+                            Some(MemberValue::Integer(v)) => Value::from(v),
+                            None => Value::Null,
+                        };
+                        json!({ "name": member, "value": value })
+                    })
+                    .collect();
+                json!({
+                    "class_path": row.class_path,
+                    "kind": kind_name(row.kind),
+                    "members": members,
+                })
+            })
+            .collect(),
+    )
+}
+
+fn kind_name(kind: EnumerationKind) -> &'static str {
+    match kind {
+        EnumerationKind::Enumeration => "enumeration",
+        EnumerationKind::ConstantPackage => "constant-package",
+    }
 }
 
 fn strings(items: &[&str]) -> Value {
@@ -113,7 +150,24 @@ fn render_text() -> String {
         out.push_str(&format!("  {code}  {meaning}\n"));
     }
     out.push_str(
-        "\nenumerations: not yet published by the facade (issue #468); see the crate README\n",
+        "\nenumerations (Type.Member values; a constant package's members are Integers):\n",
     );
+    for row in enumerations() {
+        let members: Vec<String> = row
+            .members
+            .iter()
+            .map(|member| match row.member_value(member) {
+                Some(MemberValue::Ordinal(v)) => format!("{member}={v}"),
+                Some(MemberValue::Integer(v)) => format!("{member}={v}"),
+                None => (*member).to_owned(),
+            })
+            .collect();
+        out.push_str(&format!(
+            "  {} ({}): {}\n",
+            row.class_path,
+            kind_name(row.kind),
+            members.join(" ")
+        ));
+    }
     out
 }
