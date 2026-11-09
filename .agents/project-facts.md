@@ -179,6 +179,18 @@ Regenerate with `OCE_BLESS_BLOB=1 cargo test -p oce-api --test blob_goldens --lo
 without the switch, and say in the PR which files moved and why. The blob decoder lives in
 `oce-graph` (`no_std`), so a decoder change also has to pass the `no-std-build` mirror.
 
+## The class-ports golden moves with port names, descriptions and parameters
+
+`crates/oce-blocks/tests/fixtures/class_ports.golden.txt` pins the contract port names of every
+registered class (GitHub #440): at the empty parameter table, for every width-driven class at widths
+1, 2 and the maximum, and for the three `TimeTable` shapes, plus every class description and every
+parameter's type, default and settable flag. A new class, a port, a parameter default or a
+description moves it.
+Regenerate with `OCE_BLESS_CLASS_PORTS=1 cargo nextest run -p oce-blocks --test class_ports`, run
+it again without the switch, and say in the PR which lines moved and why. It is separate from the
+revision-1 catalog, whose bytes (`crates/oce-api/contracts/catalog.json`) and content id do not
+move with it.
+
 ## The frame driver lives in `oce-graph`, and its run digests move with behaviour
 
 The HostTick v1 frame driver (time checks, per-slot input checks, the non-finite policy, the
