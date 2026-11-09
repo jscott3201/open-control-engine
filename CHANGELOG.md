@@ -525,8 +525,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
   reports both stages or `--author-side` alone, with spans for text input; `oce fmt` prints the
   canonical text (wire input converted), `--check` answers whether the input is canonical in its own
   form and `--write` rewrites a text file atomically and only on change (both file writes go
-  through a uniquely named `create_new` temporary file that never follows a planted link, keep the
-  target's permissions, follow a symbolic-link target, and report `changed`, `output` and `bytes`
+  through a uniquely named `create_new` temporary file that never follows a planted link and is
+  never more permissive than the target, new files `0600` on Unix, keep the target's permissions, follow a symbolic-link target, and report `changed`, `output` and `bytes`
   only once the write succeeded); `oce catalog` lists the
   classes or describes one with its parameters (type, default, settable) and its ports resolved at
   the default table or at `--param NAME=VALUE`; `oce vocab` prints the keywords, tags, base units and

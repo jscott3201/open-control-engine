@@ -1,7 +1,8 @@
-//! The two commands that write files (`fmt --write`, `emit -o`) through the built binary: a link
-//! or file planted at the old fixed temporary name never redirects or clobbers anything, the
-//! target keeps its permissions, a symbolic-link target is followed, and a failed write reports
-//! no `changed`, `output` or `bytes` and leaves no temporary file behind.
+//! The two commands that write files (`fmt --write`, `emit -o`) through the built binary: a stale
+//! file beside the target is ignored, the target keeps its permissions, a new file is owner-only
+//! (Unix), a symbolic-link target is followed, and a failed write reports no `changed`, `output`
+//! or `bytes` and leaves no temporary file behind. Planted links and files at the temporary names
+//! themselves are unit-tested in `src/commands/atomic_write.rs`, which can predict the names.
 
 mod support;
 
@@ -34,8 +35,10 @@ fn names(dir: &Path) -> Vec<String> {
     names
 }
 
+/// Pins only that a stale file beside the target (here at the pre-release fixed temporary name) is
+/// ignored and kept; temporary names are now unique per run, so this is not a collision test.
 #[test]
-fn a_regular_file_at_the_old_temporary_name_is_not_clobbered() {
+fn a_stale_file_beside_the_target_is_ignored() {
     let dir = scratch("planted_file");
     fs::write(dir.join("t.oce"), non_canonical()).expect("target");
     fs::write(dir.join(".t.oce.oce-tmp"), b"someone else's").expect("plant");
@@ -79,30 +82,13 @@ mod unix {
     }
 
     #[test]
-    fn fmt_write_never_follows_a_link_planted_at_the_old_temporary_name() {
-        let dir = scratch("planted_link_fmt");
-        fs::write(dir.join("v.oce"), non_canonical()).expect("target");
-        fs::write(dir.join("victim.txt"), b"victim").expect("victim");
-        symlink("victim.txt", dir.join(".v.oce.oce-tmp")).expect("plant");
-        let run = oce_in(&dir, &["fmt", "--write", "v.oce"], b"");
-        assert_eq!(run.code, 0, "{}", run.transcript());
-        assert_eq!(fs::read(dir.join("victim.txt")).expect("victim"), b"victim");
-        assert_eq!(fs::read(dir.join("v.oce")).expect("target"), canonical());
-    }
-
-    #[test]
-    fn emit_output_never_follows_a_link_planted_at_the_old_temporary_name() {
-        let dir = scratch("planted_link_emit");
+    fn emit_output_to_a_new_file_is_owner_only() {
+        let dir = scratch("new_file_mode");
         fs::write(dir.join("econ.oce"), clean()).expect("input");
-        fs::write(dir.join("victim.txt"), b"victim").expect("victim");
-        symlink("victim.txt", dir.join(".out.json.oce-tmp")).expect("plant");
         let run = oce_in(&dir, &["emit", "econ.oce", "-o", "out.json"], b"");
         assert_eq!(run.code, 0, "{}", run.transcript());
-        assert_eq!(fs::read(dir.join("victim.txt")).expect("victim"), b"victim");
-        assert_eq!(
-            run.report()["bytes"],
-            fs::read(dir.join("out.json")).expect("out").len()
-        );
+        assert_eq!(mode(&dir.join("out.json")), 0o600);
+        assert_eq!(names(&dir), ["econ.oce", "out.json"], "no temporary file");
     }
 
     #[test]
@@ -167,6 +153,13 @@ mod unix {
         fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).expect("chmod back");
         if run.code == 0 {
             // A privileged runner (root) writes regardless; there is no failure to observe.
+            #[allow(
+                clippy::print_stderr,
+                reason = "an explicit skip note in the test output"
+            )]
+            {
+                eprintln!("skipped: running as root or on a privileged filesystem");
+            }
             return;
         }
         assert_eq!(run.code, 2, "{}", run.transcript());

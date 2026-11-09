@@ -126,7 +126,10 @@ directory and a missing path each get one typed error code. Nothing panics.
 (`.NAME.<pid>.<counter>.oce-tmp`), opened with `create_new` so it never follows a link or
 truncates a file already there, sync it, give it the target's permissions (Unix mode bits) and
 rename it over the target; on any failure the temporary file is removed and the target is
-untouched. A target that is a symbolic link is followed: the file it names is replaced and the
+untouched. On Unix the temporary file is created no more permissive than the target, and a new
+file (no target yet) is created with mode `0600` whatever the umask allows. The rename replaces
+whatever directory entry is at the target, so a FIFO or device there becomes a regular file. The
+replace is atomic, but the directory itself is not fsynced. A target that is a symbolic link is followed: the file it names is replaced and the
 link stays a link (a dangling link is `write-failed`). **The file is replaced, not rewritten in
 place: a hard link to the old inode keeps the old bytes.** `fmt --write` rewrites only when the
 text changes.
