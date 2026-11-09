@@ -2,7 +2,7 @@
 
 use super::*;
 
-fn derived_output_document(node_bearing: bool, listed_output: bool) -> Value {
+pub(super) fn derived_output_document(node_bearing: bool, listed_output: bool) -> Value {
     let model = "http://example.org#derived_output";
     let output = format!("{model}.sub.con.y");
     let mut members = vec![json!({ "@id": format!("{model}.sub.con.k") })];
@@ -327,7 +327,7 @@ fn synthesized_output_relation_bytes_are_aggregated() {
 }
 
 #[derive(Clone, Copy)]
-enum FanoutTarget {
+pub(super) enum FanoutTarget {
     LeafInput,
     BoundaryInput,
     BoundaryOutput,

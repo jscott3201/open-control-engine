@@ -14,10 +14,11 @@ use crate::export_defer::deferral_set;
 use crate::export_pass_through::is_pass_through_class;
 
 use super::attrs::connector_attrs;
+use super::connection_endpoints::EndpointId;
 use super::instance_params::Inst;
 
 struct Assignment {
-    source: String,
+    source: EndpointId,
     target: String,
     count: usize,
     has_distinct_sources: bool,
@@ -35,7 +36,15 @@ pub(super) struct AssignmentTracker {
 
 impl AssignmentTracker {
     /// Record an assignment and return whether it is the first assignment to the child input.
-    pub(super) fn record(&mut self, target_id: ConnectorId, source: &str, target: &str) -> bool {
+    ///
+    /// `source` is the boundary input's interned identity, so a repeated assignment from one long
+    /// boundary IRI compares two integers rather than two strings (GitHub issue #479).
+    pub(super) fn record(
+        &mut self,
+        target_id: ConnectorId,
+        source: EndpointId,
+        target: &str,
+    ) -> bool {
         match self.by_target.entry(target_id) {
             std::collections::btree_map::Entry::Occupied(mut entry) => {
                 let assignment = entry.get_mut();
@@ -45,7 +54,7 @@ impl AssignmentTracker {
             }
             std::collections::btree_map::Entry::Vacant(entry) => {
                 entry.insert(Assignment {
-                    source: source.to_owned(),
+                    source,
                     target: target.to_owned(),
                     count: 1,
                     has_distinct_sources: false,
@@ -161,7 +170,9 @@ pub(super) fn refuse_role_aliases<'a>(
 
 /// Warn for every declared root boundary input whose node exists but that no connection reads.
 ///
-/// `edges` is the lowered connection list, after nested-composite boundary hops are rewritten to
+/// `read` holds every boundary input that is an endpoint, in either authored role, of an edge in
+/// the lowered connection list — Step 9 collects it while interning endpoints, so this pass never
+/// walks the edges again. The list is taken after nested-composite boundary hops are rewritten to
 /// their leaf endpoints, so an input reaching a block only through a composite boundary, or
 /// passing through to a boundary output, appears as an endpoint and stays silent. An input whose
 /// only route ends at a nested composite boundary nothing reads loses that edge in lowering and
@@ -176,19 +187,15 @@ pub(super) fn refuse_role_aliases<'a>(
 /// `boundary_in`. An input whose only edge is itself refused (direction, type, missing target)
 /// counts as read and stays silent: the load refuses anyway. Emitted once per IRI in `hasInput` array order; the resolver's final sort
 /// fixes the reported order.
-pub(super) fn warn_unread<'e>(
+pub(super) fn warn_unread(
     top: &Node,
     boundary_in: &HashSet<&str>,
     boundary_out: &HashSet<&str>,
     by_id: &HashMap<&str, &Node>,
     role_aliases: &HashSet<&str>,
-    edges: impl Iterator<Item = (&'e str, &'e str)>,
+    read: &HashSet<&str>,
     diags: &mut Vec<Diagnostic>,
 ) {
-    let read = edges
-        .flat_map(|(source, target)| [source, target])
-        .filter(|endpoint| boundary_in.contains(endpoint))
-        .collect::<HashSet<_>>();
     let mut seen = HashSet::new();
     for iri in top.has_input.iter().map(|reference| reference.id.as_str()) {
         if boundary_in.contains(iri)
