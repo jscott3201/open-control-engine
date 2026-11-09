@@ -66,6 +66,39 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `docs/host-responsibilities.md`, PC-035 in `docs/product-contract.md` and the README name the
   slot entry beside the named path. `oce-graph` and every golden are unchanged.
 
+### Leverage
+
+- **`oce-replay`, the first leverage crate** (GitHub #462, issue #445). `crates/leverage/oce-replay`
+  implements the historical replay note (`docs/design/replay.md`, decisions 1 to 23) above the
+  facade, `publish = false`: an `InputMap` resolves source columns to engine input slots once (exact
+  path or unique `.`-boundary suffix; ambiguous, unknown, unmapped, doubled, mistyped and stale maps
+  are typed errors), and three sources lend rows by slot with `None` for a missing sample —
+  `ColumnarSource` (owned typed columns, NaN and cleared validity missing, seconds or epoch
+  nanoseconds), `CsvSource<R: Read>` (the `csv` crate inside the crate's own row, column, byte and
+  cell caps; RFC 3339 instants with an explicit offset against a header-only origin) and
+  `StepSource` (change lists as signals). `TimeBase::Recorded` passes times through bit for bit;
+  `TimeBase::Grid { t0, step }` ticks at `t0 + k * step` by multiply with zero-order hold, a sample
+  current only for its tick interval. `MissingPolicy` (`Refuse` by default, `HoldLast { max_age }`
+  holding only observed samples, per-input `Fallback`, `SkipFrame`), `OnRefusal` (`Stop` by default,
+  `RecordAndContinue`) and `DuplicateTime` (`Refuse` by default, `Allow`) are recorded frame by
+  frame; `ReplayOptions::non_finite` defaults to `Refuse` and is set on the owned engine and
+  recorded. `Replay::advance(max_frames)` is a resumable cursor over `Engine::execute_slots`
+  (GitHub #459) and `finish` returns the engine. The `Trace` is columnar with raw bits: one row per
+  attempted frame with a status byte, outputs fixed by the first accepted frame and checked every
+  frame, a dense substitution mask, opt-in inputs and state snapshots, sparse diagnostic and
+  refusal tables, and `Trace::canonical_bytes()`; every limit of decision 19 is a typed error,
+  accepted at the cap and refused one past. Evidence: all 46 G36 fixtures through the columnar and
+  step sources equal the named facade path bit for bit, and the controller's minute day equals its
+  conformance golden (`g36_traces/cooling_only_controller.csv`); four canonical-byte goldens; chunk
+  sizes 1, 7 and N byte-identical; every policy pair with exact status, mask and refusal rows;
+  refusal atomicity against a run that never saw the frames; time, mapping, bounds and a hostile CSV
+  corpus; trace bytes equal `rows × bytes_per_frame` for every fixture (the controller: 89 B a
+  frame, 1,538,009 B for a day at 5 s); and an allocation census (0 allocations on every quiet
+  frame). The leverage rule now allows `oce-bless` as a dev-dependency only (authoring note
+  decision 19): `scripts/ci/leverage-members.sh` reads normal and build edges and dev edges
+  separately, with fixtures for both. The workspace has 14 members (10 publishable, four private);
+  `release.yml`'s comment and step name, its digest and the validator's controls are re-pinned.
+
 ## 0.4.0
 
 Prepared 2026-11-08 on `development`; the release date is the date the `v0.4.0` tag is cut from
