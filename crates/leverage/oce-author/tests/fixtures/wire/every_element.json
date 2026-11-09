@@ -1,0 +1,326 @@
+{
+  "sequence": "every_element",
+  "extends": "cxf:fnv1a128:00112233445566778899aabbccddeeff",
+  "params": [
+    {
+      "name": "kGain",
+      "type": "Real",
+      "value": 0.25
+    },
+    {
+      "name": "nStages",
+      "type": "Integer",
+      "value": 3
+    },
+    {
+      "name": "reverse",
+      "type": "Boolean",
+      "value": false
+    },
+    {
+      "name": "TiSec",
+      "type": "Real",
+      "value": 300
+    }
+  ],
+  "inputs": [
+    {
+      "name": "TSup",
+      "type": "Real",
+      "quantity": "ThermodynamicTemperature",
+      "display_unit": "degC",
+      "semantic": {
+        "name": "Supply air temperature",
+        "label": "TSup \"AHU-1\" \u00b0C",
+        "unit": "K",
+        "brick": "brick:Supply_Air_Temperature_Sensor",
+        "s223": "s223:Sensor",
+        "qudt": "quantitykind:Temperature",
+        "haystack": [
+          "air",
+          "temp",
+          "sensor"
+        ],
+        "provisional": false
+      }
+    },
+    {
+      "name": "TSupSet",
+      "type": "Real",
+      "quantity": "",
+      "display_unit": "",
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    },
+    {
+      "name": "uEna",
+      "type": "Boolean",
+      "quantity": "",
+      "display_unit": "",
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "yStage",
+      "type": "Integer",
+      "quantity": "",
+      "display_unit": "",
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": true
+      }
+    },
+    {
+      "name": "ySum",
+      "type": "Real",
+      "quantity": "",
+      "display_unit": "",
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    },
+    {
+      "name": "yGain1",
+      "type": "Real",
+      "quantity": "",
+      "display_unit": "",
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    },
+    {
+      "name": "yGain2",
+      "type": "Real",
+      "quantity": "",
+      "display_unit": "",
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    },
+    {
+      "name": "yTab",
+      "type": "Real",
+      "quantity": "",
+      "display_unit": "",
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    },
+    {
+      "name": "yCon",
+      "type": "Real",
+      "quantity": "",
+      "display_unit": "",
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    }
+  ],
+  "blocks": [
+    {
+      "name": "conPID",
+      "class": "CDL.Reals.PID",
+      "params": [
+        {
+          "name": "controllerType",
+          "value": {
+            "member": "SimpleController.PI"
+          }
+        },
+        {
+          "name": "k",
+          "value": {
+            "ref": "kGain"
+          }
+        },
+        {
+          "name": "Ti",
+          "value": {
+            "ref": "TiSec"
+          }
+        },
+        {
+          "name": "reverseActing",
+          "value": {
+            "ref": "reverse"
+          }
+        },
+        {
+          "name": "yMin",
+          "value": -0.0
+        }
+      ]
+    },
+    {
+      "name": "sum3",
+      "class": "CDL.Reals.MultiSum",
+      "params": [
+        {
+          "name": "nin",
+          "value": {
+            "ref": "nStages"
+          }
+        },
+        {
+          "name": "k_1",
+          "value": 1.0
+        },
+        {
+          "name": "k_2",
+          "value": -2
+        },
+        {
+          "name": "k_3",
+          "value": 1e-7
+        }
+      ]
+    },
+    {
+      "name": "gain",
+      "class": "CDL.Reals.MatrixGain",
+      "params": [
+        {
+          "name": "K_1_1",
+          "value": 0.5
+        },
+        {
+          "name": "K_1_2",
+          "value": 0.5
+        },
+        {
+          "name": "K_2_1",
+          "value": 1.5
+        },
+        {
+          "name": "K_2_2",
+          "value": -1.5
+        }
+      ]
+    },
+    {
+      "name": "tab",
+      "class": "CDL.Reals.Sources.TimeTable",
+      "params": [
+        {
+          "name": "smoothness",
+          "value": {
+            "member": "Smoothness.ConstantSegments"
+          }
+        },
+        {
+          "name": "table_1_1",
+          "value": 0.0
+        },
+        {
+          "name": "table_1_2",
+          "value": 1.0
+        },
+        {
+          "name": "table_2_1",
+          "value": 3600.0
+        },
+        {
+          "name": "table_2_2",
+          "value": 2.0
+        }
+      ]
+    },
+    {
+      "name": "staCon",
+      "class": "CDL.Integers.Sources.Constant",
+      "params": [
+        {
+          "name": "k",
+          "value": {
+            "ref": "nStages"
+          }
+        }
+      ]
+    },
+    {
+      "name": "assMes",
+      "class": "CDL.Utilities.Assert",
+      "params": [
+        {
+          "name": "message",
+          "value": "enable is \"off\"\nline two"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    "TSupSet -> conPID.u_s",
+    "TSup -> conPID.u_m",
+    "conPID.y -> yCon",
+    "TSup -> sum3.u1",
+    "TSupSet -> sum3.u2",
+    "conPID.y -> sum3.u3",
+    "sum3.y -> ySum",
+    "TSup -> gain.u1",
+    "TSupSet -> gain.u2",
+    "gain.y1 -> yGain1",
+    "gain.y2 -> yGain2",
+    "tab.y1 -> yTab",
+    "staCon.y -> yStage",
+    "uEna -> assMes.u"
+  ]
+}
