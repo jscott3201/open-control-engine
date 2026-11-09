@@ -10,8 +10,10 @@ Reads two environment variables the `ci-ok` job sets:
   ``check-workflow-gates.sh`` asserts that this list matches the jobs' ``if:`` lines exactly.
 
 A job passes when its result is ``success``. A job may instead be ``skipped`` only when it is in
-``JOB_LANES`` and its lane output is exactly ``false``: the filter skipped it. Only ``core`` and
-``leverage`` are filter lanes. ``gate_scripts`` and ``docs_only`` are classifier outputs no job is
+``JOB_LANES`` and its lane output is exactly ``false``: the filter skipped it. Only ``core``,
+``leverage`` and ``readme`` are filter lanes (``readme``, issue #503, gates the job that runs the
+checks reading the root README; ``core`` implies it, as it implies ``leverage``).
+``gate_scripts`` and ``docs_only`` are classifier outputs no job is
 filtered on (``gate (light)``, the one job ``gate_scripts`` gated, was retired by issue #502), so a
 ``JOB_LANES`` entry naming either is refused; both must still be reported and consistent with the
 filter lanes. Anything else fails
@@ -27,8 +29,8 @@ import json
 import os
 import sys
 
-LANES = ("core", "leverage", "gate_scripts", "docs_only")
-FILTERS = ("core", "leverage")
+LANES = ("core", "leverage", "readme", "gate_scripts", "docs_only")
+FILTERS = ("core", "leverage", "readme")
 
 
 class CheckError(Exception):
@@ -62,7 +64,9 @@ def lane_outputs(needs: dict) -> dict[str, str]:
         raise CheckError("gate_scripts=true requires core=true")
     if values["core"] == "true" and values["leverage"] != "true":
         raise CheckError("core=true requires leverage=true")
-    if values["docs_only"] == "true" and "true" in (values["core"], values["leverage"]):
+    if values["core"] == "true" and values["readme"] != "true":
+        raise CheckError("core=true requires readme=true")
+    if values["docs_only"] == "true" and "true" in (values[lane] for lane in FILTERS):
         raise CheckError("docs_only=true contradicts a code lane")
     return values
 

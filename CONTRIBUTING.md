@@ -132,7 +132,7 @@ CI script or a workflow is first executed by CI on its merge commit, and before 
 own run. That is coverage, not proof that the script and the workflows
 still agree. Which `pr-gate.yml` jobs a PR runs depends on the paths it changes; see
 [the lanes](docs/ci-and-the-gate.md#lanes-what-a-pr-runs). `bash .agents/gate.sh leverage` mirrors
-a PR confined to `crates/leverage/`.
+a PR confined to `crates/leverage/`, the documentation and the root `README.md`.
 Nothing verifies that mechanically; change a command in CI first, then here.
 
 If your change falls outside those named subsets, a green PR need not have run its tests. Add `full`:

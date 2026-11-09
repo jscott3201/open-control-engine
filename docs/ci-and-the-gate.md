@@ -54,12 +54,13 @@ The per-PR gate runs **once per change**, on the pull request:
 
 ### Lanes: what a PR runs
 
-`pr-gate.yml` has two lanes under the one `CI OK`. The **determinism lane** is every job that
-compiles the engine: the determinism and strict-bit matrices and their fan-ins, the
+`pr-gate.yml` has three lanes under the one `CI OK`. The **determinism lane** is every job that
+compiles the engine, bar the one the README lane holds: the determinism and strict-bit matrices
+and their fan-ins, the
 [blob round trip](#the-blob-round-trip)'s wasm32 leg, the x86_64 crate
 suites, clippy, build, the [bare-metal cell](#the-bare-metal-cell), rustdoc,
-cargo-deny, cargo-machete, the database-free check, the golden-gen firewall and hygiene jobs, the
-facade contract and Quickstart, and the macOS
+cargo-deny, cargo-machete, the database-free check, the golden-gen firewall and hygiene jobs, and
+the macOS
 [platform cell](#platform-cells-macos-and-windows) — `portable snapshot (macOS arm64, debug)` and
 its `portable snapshot comparison` fan-in. The determinism matrix is two cells per PR (x86_64 and
 aarch64, debug codegen) and the strict-bit matrix four (both architectures, debug and release).
@@ -70,17 +71,31 @@ golden switch; normal and build edges and dev edges are read separately), then f
 `-D warnings`, rustdoc `-D warnings`, nextest and cargo-machete per member
 (`scripts/ci/leverage-members.sh lane`; with no members it prints `no leverage crates yet`). The
 members are `oce-replay`, `oce-author`, `oce-cli` (the `oce` binary) and `oce-vocab`.
+The **README lane** is one job, `facade contract and Quickstart` (issue #503). It runs when the
+root `README.md` changes and for every engine change, and it holds the two checks that read the
+root README and are in no always-on job: the `readme_quickstart` test, which requires the README's
+first Rust block to be byte-identical to `crates/oce-api/examples/quickstart.rs`, and the
+execution of that example. The facade compiler contract and its controls share the job because
+they build the same facade; they do not read the README.
 
 The first job, `classify changed paths`, lists what the PR changes with plain git — the tested merge
 commit against its base parent, renames as a deletion plus an addition — and classifies it with
 `scripts/ci/classify-changes.sh`. The rules fail closed: a path that matches neither the docs-only
-nor the leverage allowlist counts as an engine change.
+nor the leverage allowlist, and is not the root README, counts as an engine change.
 
 - **docs-only** paths: `docs/**`, `site/**`, `scripts/docs/**`, a root-level `*.md`,
   `.agents/project-facts.md`, `.github/ISSUE_TEMPLATE/**` and `.github/pull_request_template.md` —
-  except documentation a test reads (`README.md`, whose Quickstart a test byte-pins, and
-  `docs/cxf-composite-subset.md`), which counts as an engine change. A fixture scans the crates for
+  except the root `README.md` (next) and documentation an engine test reads
+  (`docs/cxf-composite-subset.md`), which counts as an engine change. A fixture scans the crates for
   documentation reads so the exception list cannot fall behind.
+- **the root `README.md`**, and only that file (`crates/*/README.md` is an engine path,
+  `crates/leverage/**/README.md` a leverage path, `docs/README.md` docs-only): it selects the README
+  lane and neither of the other two. Its other readers are always-on: docs staging copies its
+  Quickstart into the book, the documentation checker contracts compare its verification section
+  with the evidence pages, and the product contract check reads its pointer and its Rust example.
+  The classifier fixture (`scripts/ci/test-classify-changes.sh`) holds that list: it scans the
+  crates and scripts for sources that name the root `README.md` and fails when one is run neither
+  by an always-on job nor by the README-lane job, and its controls prove each of those failures.
 - **leverage** paths: `crates/leverage/**`.
 - **gate-script** paths: `.agents/gate.sh`, `.github/scripts/**`, `scripts/**` outside
   `scripts/docs/`, `.github/workflows/**` and `.config/**`. A change to how CI runs must prove the
@@ -94,13 +109,18 @@ nor the leverage allowlist counts as an engine change.
 | Change class | Jobs that run | Jobs skipped | Expected wall-clock |
 | --- | --- | --- | --- |
 | docs-only | `classify changed paths`, fmt, file-size cap, no-secret scan, docs, gate behavior fixtures, the package/authority/product contract, `CI OK` | the determinism lane, `leverage lane` | under 3 minutes (2m40s in run 42476084422) |
-| leverage-only (`crates/leverage/**`, optionally with docs) | the docs-only set plus `leverage lane` | the determinism lane | about 1 minute before the first leverage crate (56s in run 42476081207), plus each member's build and tests (`oce-replay` builds the facade and runs its suite) |
+| README (the root `README.md`, optionally with docs) | the docs-only set plus `facade contract and Quickstart` | the determinism lane, `leverage lane` | the docs-only time or the README job, whichever is longer: that job took 44 s with a warm cache in run 42692342222, and builds the facade and its dev-dependencies cold on a new PR |
+| leverage-only (`crates/leverage/**`, optionally with docs) | the docs-only set plus `leverage lane` | the determinism lane, `facade contract and Quickstart` | about 1 minute before the first leverage crate (56s in run 42476081207), plus each member's build and tests (`oce-replay` builds the facade and runs its suite) |
+| leverage with the root `README.md` (a landing PR that updates the README's status) | the docs-only set plus `leverage lane` and `facade contract and Quickstart` | the determinism lane | the leverage-only time; the two jobs run side by side |
 | engine (any other path, gate scripts, workflows and tool config included) | every job | none | about 4 minutes expected: the longest job left is the macOS cell (150–177 s on 2026-11-09) and every other job took 154 s or less. Before issue #502 it was a median of 18.3 minutes over 69 full-lane runs (2026-11-07 to 2026-11-09), and about 26 with `gate (light)` |
 
 The always-on set runs whatever changed: it compiles nothing (fmt only reads the tree), and the
 package/authority/product contract stays in it because its checks read the documentation as well as
 the manifests. An engine change also runs the leverage lane, because a change behind the facade can
-break a crate built on it.
+break a crate built on it, and the README lane, because a facade change can break the Quickstart.
+Before issue #503 the root `README.md` counted as an engine change, so a leverage PR that also
+updated the README ran the whole determinism lane (GitHub #485 and #498, about 18 minutes a push
+then) where one without a README change ran the leverage lane alone (GitHub #493, 2 minutes).
 
 **No per-PR job executes `.agents/gate.sh`.** `gate (light)` did, for a gate-script change only,
 until issue #502 retired it: it was a coverage backstop against a `pr-gate.yml` job drifting away
@@ -110,8 +130,8 @@ and daily, so an edit to the script, a workflow or a script a job runs is first 
 its merge commit; before the merge, the author's own `bash .agents/gate.sh full` on the final head
 is the run. The three steps `gate (light)` once ran that no other job covered — the facade compiler
 contract, its diagnostic controls and the executed Quickstart — are the `facade contract and
-Quickstart` job in the determinism lane, and the gate-script coverage check and its fixtures are in
-`gate behavior fixtures`.
+Quickstart` job, which runs for every engine change (it is the README lane), and the gate-script
+coverage check and its fixtures are in `gate behavior fixtures`.
 
 ### What runs after the merge
 
@@ -147,18 +167,23 @@ hand the fan-in cells built from two commits, which fails the comparison instead
 `check-workflow-gates.sh` pins the trigger, the checkout ref and both concurrency lines.
 
 **How a skip passes `CI OK`.** Each lane-filtered job has exactly one job-level `if:`,
-`needs.changes.outputs.<lane> == 'true'` with lane `core` or `leverage` (a job filtered on
+`needs.changes.outputs.<lane> == 'true'` with lane `core`, `leverage` or `readme` (a job filtered on
 `gate_scripts` or `docs_only` fails the checker, and `ci_ok.py` refuses a lane map that names
 either), and `CI OK` (`scripts/ci/ci_ok.py`) accepts its
-`skipped` result only when that output was `false`. A job skipped while its lane ran — the shape of
+`skipped` result only when that output was `false`. `core` implies the other two, and `ci_ok.py`
+refuses a classification that says otherwise. A job skipped while its lane ran — the shape of
 a job that never started because something it needs failed — fails, as does any skip of an
 always-on job, any failure or cancellation, and a failed or self-contradictory classification.
 `check-workflow-gates.sh` keeps `CI OK`'s lane map equal to the jobs' `if:` lines, pins each named
 job to its lane, and fails if the result check or the classifier outputs are removed; its fixtures
 prove each of those controls fails. A manual dispatch runs every lane.
 
-`bash .agents/gate.sh leverage` is the local mirror of a leverage-only PR: the always-on checks and
-the leverage lane, without the engine lane. `bash .agents/gate.sh` runs both lanes.
+`bash .agents/gate.sh leverage` is the local mirror of a PR confined to `crates/leverage/`, the
+documentation and the root `README.md`: the always-on checks, the leverage lane and the README
+lane's two checks (the Quickstart byte-pin and the executed Quickstart), without the engine lane.
+It runs the README checks whether or not the README changed, because a landing leverage PR usually
+changes it and CI then runs them. It leaves out the facade compiler contract, which shares the
+README-lane job in CI but reads only the facade's source. `bash .agents/gate.sh` runs every lane.
 
 **Cache.** PR runs save `Swatinem/rust-cache` entries into their own PR scope only, so nothing a
 PR does seeds the cache scope other PRs read. The `release-gate.yml` runs on `development` do,
@@ -221,7 +246,7 @@ Branch protection on `development` makes the PR run the only way in: a pull requ
 the `CI OK` status is required, and the branch must be up to date with `development` before it
 merges. GitHub PR runs test a synthetic merge of the PR head into its base, and the up-to-date
 rule makes that tested merge the commit that lands; a PR that falls behind is updated and re-run
-before it merges. Now that two lanes exist, the next step is a merge queue, which tests each merge
+before it merges. Now that lanes exist, the next step is a merge queue, which tests each merge
 group once instead. Until then a leverage-only PR is still serialized by the up-to-date rule: it
 skips the determinism lane, but it must be updated and re-run whenever any other PR lands first,
 and that re-run classifies only its own changes.
