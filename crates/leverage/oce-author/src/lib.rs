@@ -48,10 +48,12 @@ pub use identifier::{
 pub use import::{ImportError, import_cxf};
 pub use location::Location;
 pub use model::{
-    Annotations, Assignment, Block, Boundary, Connection, Endpoint, EnumMember, Literal,
-    ParamValue, SemanticPoint, Sequence, SequenceParameter, SignalType,
+    Annotations, Assignment, Block, Bound, Boundary, Connection, Endpoint, Literal, MemberRef,
+    ParamValue, ParameterType, SemanticPoint, Sequence, SequenceParameter, SignalType,
 };
-pub use schema::{SCHEMA_PROFILE_KEYWORDS, WIRE_SCHEMA, authorable_class_paths, wire_schema};
+pub use schema::{
+    SCHEMA_PROFILE_KEYWORDS, WIRE_SCHEMA, authorable_class_paths, parameter_type_names, wire_schema,
+};
 pub use text::{
     BAD_ESCAPE, BASE_UNIT_SYMBOLS, BYTE_ORDER_MARK, COMMENT_BEFORE_CLOSE, COMMENT_TOO_LONG,
     CONTROL_CHARACTER, DUPLICATE_TAG, INPUT_TOO_LARGE, INTEGER_OUT_OF_RANGE, LINE_TOO_LONG,
@@ -65,14 +67,14 @@ pub use text::{
     parse_text_bytes, parse_text_with_spans, print_text, validate_text, validate_text_author_side,
 };
 pub use validate::{
-    CLASS_NOT_AUTHORABLE, CLASS_NOT_FOUND, DOCUMENT_TOO_LARGE, DUPLICATE_NAME, DUPLICATE_PARAMETER,
-    EMPTY_SEQUENCE, Finding, INVALID_NAME, INVALID_PROVENANCE_ID, INVALID_SEMANTIC_POINT,
-    LOAD_FAILED, MALFORMED_CONNECTION, MAX_EXACT_INTEGER, MAX_HAYSTACK_TAGS,
-    MAX_SEMANTIC_FIELD_BYTES, MISSING_REQUIRED_PARAMETER, NON_FINITE_PARAMETER, Origin,
-    PARAMETER_KIND_MISMATCH, PARAMETER_NOT_SETTABLE, PARAMETER_OUT_OF_RANGE, SINGLE_ASSIGNMENT,
-    STAGE_ONE_CODES, Severity, Stage, UNKNOWN_ENUM_LITERAL, UNKNOWN_PARAMETER,
-    UNKNOWN_PARAMETER_REFERENCE, UNKNOWN_PORT, UNKNOWN_SOURCE, UNKNOWN_TARGET, validate,
-    validate_author_side,
+    CLASS_NOT_AUTHORABLE, CLASS_NOT_FOUND, CROSSED_BOUNDS, DOCUMENT_TOO_LARGE, DUPLICATE_NAME,
+    DUPLICATE_PARAMETER, EMPTY_SEQUENCE, Finding, INVALID_BOUND, INVALID_NAME,
+    INVALID_PROVENANCE_ID, INVALID_SEMANTIC_POINT, LOAD_FAILED, MALFORMED_CONNECTION,
+    MAX_EXACT_INTEGER, MAX_HAYSTACK_TAGS, MAX_SEMANTIC_FIELD_BYTES, MISSING_REQUIRED_PARAMETER,
+    NON_FINITE_BOUND, NON_FINITE_PARAMETER, Origin, PARAMETER_KIND_MISMATCH,
+    PARAMETER_NOT_SETTABLE, PARAMETER_OUT_OF_RANGE, SINGLE_ASSIGNMENT, STAGE_ONE_CODES, Severity,
+    Stage, UNKNOWN_ENUM_LITERAL, UNKNOWN_ENUM_TYPE, UNKNOWN_PARAMETER, UNKNOWN_PARAMETER_REFERENCE,
+    UNKNOWN_PORT, UNKNOWN_SOURCE, UNKNOWN_TARGET, validate, validate_author_side,
 };
 pub use wire::{
     MAX_WIRE_BYTES, MAX_WIRE_DEPTH, MAX_WIRE_LIST_LEN, MAX_WIRE_STRING_BYTES, WireError,

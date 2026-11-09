@@ -1,14 +1,16 @@
 //! Sequence-level checks: the sequence shape, declared names and their uniqueness, `extends`,
-//! sequence parameter values and boundary semantic slots.
+//! sequence parameter types and values, and boundary semantic slots and bounds.
 
 use std::collections::BTreeMap;
 
-use crate::model::{Literal, Sequence, SignalType};
+use crate::model::Sequence;
 
+use super::bounds::boundary_bound_problems;
+use super::members::parameter_problem;
 use super::semantic::boundary_problems;
 use super::{
     Anchor, DUPLICATE_NAME, EMPTY_SEQUENCE, Findings, INVALID_NAME, INVALID_PROVENANCE_ID,
-    INVALID_SEMANTIC_POINT, NON_FINITE_PARAMETER, PARAMETER_KIND_MISMATCH, PARAMETER_OUT_OF_RANGE,
+    INVALID_SEMANTIC_POINT,
 };
 
 /// The largest magnitude up to which every Integer has an exact Real: 2^53. Above it some do not
@@ -27,17 +29,6 @@ pub(crate) fn inexact_detail(what: &str, value: i64) -> String {
     format!(
         "{what}: the Integer {value} on a Real exceeds 2^53 ({MAX_EXACT_INTEGER}) in magnitude, \
          so its Real may round; write the Real you mean"
-    )
-}
-
-/// Whether a literal fits a sequence parameter's declared type. A Real accepts an Integer
-/// literal (CDL widens it); nothing else crosses kinds.
-pub(crate) fn literal_fits(value_type: SignalType, literal: &Literal) -> bool {
-    matches!(
-        (value_type, literal),
-        (SignalType::Real, Literal::Real(_) | Literal::Integer(_))
-            | (SignalType::Integer, Literal::Integer(_))
-            | (SignalType::Boolean, Literal::Boolean(_))
     )
 }
 
@@ -120,37 +111,8 @@ pub(super) fn check(sequence: &Sequence, findings: &mut Findings) {
     }
 
     for (index, param) in sequence.params.iter().enumerate() {
-        let position = Anchor::Param(index);
-        if !literal_fits(param.value_type, &param.value) {
-            findings.error(
-                position,
-                PARAMETER_KIND_MISMATCH,
-                param.name.as_str(),
-                format!(
-                    "sequence parameter `{}` is declared {} but its value is {}",
-                    param.name,
-                    param.value_type.as_str(),
-                    param.value.kind_name()
-                ),
-            );
-        } else if let Literal::Real(value) = param.value
-            && !value.is_finite()
-        {
-            findings.error(
-                position,
-                NON_FINITE_PARAMETER,
-                param.name.as_str(),
-                format!("sequence parameter `{}` is {value}", param.name),
-            );
-        } else if let (SignalType::Real, Literal::Integer(value)) = (param.value_type, &param.value)
-            && !exact_as_real(*value)
-        {
-            findings.error(
-                position,
-                PARAMETER_OUT_OF_RANGE,
-                param.name.as_str(),
-                inexact_detail(&format!("sequence parameter `{}`", param.name), *value),
-            );
+        if let Some((code, detail)) = parameter_problem(param) {
+            findings.error(Anchor::Param(index), code, param.name.as_str(), detail);
         }
     }
 
@@ -174,6 +136,9 @@ pub(super) fn check(sequence: &Sequence, findings: &mut Findings) {
                 boundary.name.as_str(),
                 problem,
             );
+        }
+        for (code, detail) in boundary_bound_problems(boundary) {
+            findings.error(position, code, boundary.name.as_str(), detail);
         }
     }
 }

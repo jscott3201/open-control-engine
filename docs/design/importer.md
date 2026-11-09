@@ -167,7 +167,9 @@ What the engine does with them today, by side:
 The validator checks, at stage 1: a crossed pair is `crossed-bounds` (the engine's code, pre-empted
 with the same string); a bound on a Boolean boundary or a Real literal on an Integer boundary is the
 new author-only `invalid-bound` (pre-empting the engine's `malformed-document`); an Integer literal
-above 2^53 on a Real boundary is `invalid-bound` (no exact Real, as for parameters). Non-finite
+above 2^53 on a Real boundary is `invalid-bound` (no exact Real, as for parameters), and so is an
+Integer bound on an Integer boundary outside the engine's `i32` domain (decision 6, amended by
+#493). Non-finite
 bounds cannot be spelled in either form; the builder refuses them with `non-finite-bound`, an
 **existing engine code** (`DiagCode::NonFiniteBound`) reused with the same string and parity-pinned.
 `bound-mismatch` stays a stage-2 engine code.
@@ -180,7 +182,8 @@ rather than dropping it (decision 7).
 
 The tagged member value widens from "an enumeration member" to "a member of a named type": an
 enumeration member, or a named Integer constant of a library constant package. The model's
-`Literal::EnumMember` becomes `Literal::Member(MemberRef { type_name, member })`; the wire tag
+`Literal::EnumMember` becomes `Literal::Member(MemberRef { type_name, member })` (landed in #493,
+issue #492); the wire tag
 `{"member": "OperationModes.occupied"}` and the text spelling `OperationModes.occupied` are
 unchanged. The type name decides which it is, through one facade table (#468, widened), never the
 parameter's kind, so a document's meaning never depends on the catalog (authoring decision 11).
@@ -508,7 +511,10 @@ side). Why: the profile's absent convention for a list, and a reader that refuse
 **6. Bound findings.** `crossed-bounds` at stage 1 with the engine's code, the new author-only
 `invalid-bound`, the existing engine code `non-finite-bound` from the builder, `bound-mismatch` at
 stage 2. Rejected: a range
-check against the CDL `i32` range for Integer bounds (the engine applies none).
+check against the CDL `i32` range for Integer bounds (the engine applies none). *(Amended
+2026-11-09, #493: an Integer bound on an Integer boundary outside `i32::MIN..=i32::MAX` is now
+`invalid-bound` at stage 1, because the engine does narrow it to `i32` without a warning, so the
+loaded domain would differ from the declared one; a parity test pins the narrowing.)*
 
 **7. `nominal` and `unbounded` are refused, not carried.** Rejected: carrying them now (no
 fixture, `unbounded` unparsed, neither in the id); dropping them silently. Why: model surface follows
@@ -534,7 +540,9 @@ boundaries); `ImportReport` makes the drop visible.
 members and Integer constants, resolved by the type name. Rejected: importing the ground Integer (the
 author's name is the point of an authoring form); a separate `{"constant": …}` tag and text keyword
 (two spellings for one syntactic thing). Why: one closed table resolves both, and type names are
-unique across it. Lands in the importer PR, not the model PR (ruling 10).
+unique across it. Lands in the importer PR, not the model PR (ruling 10). *(The model half
+landed in #493, issue #492: `Literal::Member`, the validator and the emitter; the importer half
+stays with the importer PR.)*
 
 **11. One facade table for named types, through #468 widened.** Rejected: extending `oce-author`'s
 pinned table with the G36 rows (the drift #468 removes, multiplied); a second facade issue for
@@ -643,7 +651,8 @@ The [review comment on GitHub #484](https://github.com/jscott3201/open-control-e
    added when #457 lands.
 9. **Constant members:** the emitter writes the package IRI as `isOfDataType`.
 10. **Sequencing:** #468, then the model PR (after #485), then the importer PR; the constants half of
-    decision 10 moves to the importer PR.
+    decision 10 moves to the importer PR. *(The model PR landed in #493, issue #492, with the
+    constant member in the model, validator and emitter; importing it stays with the importer PR.)*
 
 The same review's fix round added decision 21 (a package-typed Integer boundary, blocking), corrected
 the decision counts to in-subset figures, reclassified `unknown-enum-type` and `non-finite-bound` as

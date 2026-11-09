@@ -12,8 +12,8 @@
 use crate::emit::{EmitOptions, emit_unchecked};
 use crate::identifier::Identifier;
 use crate::model::{
-    Assignment, Block, Boundary, Connection, Endpoint, EnumMember, Literal, ParamValue, Sequence,
-    SignalType,
+    Assignment, Block, Bound, Boundary, Connection, Endpoint, Literal, MemberRef, ParamValue,
+    ParameterType, Sequence, SequenceParameter, SignalType,
 };
 use crate::validate::{Finding, validate_author_side};
 
@@ -116,10 +116,14 @@ const PARITY: &[(&str, EngineSays)] = &[
         "unknown-enum-literal",
         EngineSays::Preempts("grounding-failed"),
     ),
+    ("unknown-enum-type", EngineSays::Same),
     (
         "unknown-parameter-reference",
         EngineSays::Preempts("grounding-failed"),
     ),
+    ("invalid-bound", EngineSays::Preempts("malformed-document")),
+    ("non-finite-bound", EngineSays::Same),
+    ("crossed-bounds", EngineSays::Same),
     (
         "unknown-source",
         EngineSays::Preempts("unresolved-reference"),
@@ -150,6 +154,7 @@ const NOTE_TABLE: &[(&str, &str, Option<&str>)] = &[
     ("parameter-out-of-range", "engine", None),
     ("non-finite-parameter", "engine", None),
     ("unknown-enum-literal", "author", Some("grounding-failed")),
+    ("unknown-enum-type", "engine", None),
     (
         "unknown-parameter-reference",
         "author",
@@ -160,6 +165,9 @@ const NOTE_TABLE: &[(&str, &str, Option<&str>)] = &[
     ("unknown-target", "author", Some("unresolved-reference")),
     ("unknown-port", "author", Some("unresolved-reference")),
     ("invalid-semantic-point", "author", None),
+    ("invalid-bound", "author", Some("malformed-document")),
+    ("non-finite-bound", "engine", None),
+    ("crossed-bounds", "engine", None),
     ("invalid-provenance-id", "author", None),
     (
         "single-assignment",
@@ -222,14 +230,23 @@ fn defect(code: &str) -> Sequence {
             let mut pid = Block::new(id("con"), "CDL.Reals.PID");
             pid.assignments.push(Assignment::new(
                 id("controllerType"),
-                ParamValue::Literal(Literal::EnumMember(EnumMember::parse(
-                    "SimpleController.PIX",
-                ))),
+                ParamValue::Literal(Literal::Member(MemberRef::parse("SimpleController.PIX"))),
             ));
             s.blocks.push(pid);
         }
         "unknown-parameter-reference" => {
             set(hys(&mut s), "uHigh", ParamValue::Ref(id("dTHyst")));
+        }
+        "unknown-enum-type" => s.params.push(SequenceParameter::new(
+            id("eneStd"),
+            ParameterType::parse("EnergyStandards"),
+            Literal::Member(MemberRef::parse("EnergyStandards.ASHRAE90_1")),
+        )),
+        "invalid-bound" => s.outputs[0].min = Some(Bound::Integer(0)),
+        "non-finite-bound" => s.inputs[0].max = Some(Bound::Real(f64::NAN)),
+        "crossed-bounds" => {
+            s.inputs[0].min = Some(Bound::Real(30.0));
+            s.inputs[0].max = Some(Bound::Integer(-10));
         }
         "unknown-source" => s.connections[0].source = Endpoint::parse("TOutCutt"),
         "unknown-target" => s.connections[3].target = Endpoint::parse("ecoEnaa"),
@@ -455,4 +472,95 @@ fn subjects_outside_the_scheme_stay_on_the_sequence_with_the_raw_subject() {
         let (_, subject, _) = super::map_subject(&s, &scheme, Some(raw), "m".to_owned());
         assert_eq!(subject, expected, "{raw}");
     }
+}
+
+#[test]
+fn a_mismatched_enumeration_reference_meets_the_engines_kind_check() {
+    // An enumeration sequence parameter referenced by a Real block parameter: stage 1 refuses the
+    // pairing as `parameter-kind-mismatch`; with stage 1 bypassed the engine refuses the same
+    // assignment with the same code (issue #492, the importer note's decision 2).
+    let mut s = econ_enable();
+    s.params.push(SequenceParameter::new(
+        id("conTyp"),
+        ParameterType::parse("SimpleController"),
+        Literal::Member(MemberRef::parse("SimpleController.PI")),
+    ));
+    set(hys(&mut s), "uHigh", ParamValue::Ref(id("conTyp")));
+    assert_eq!(
+        pairs(&validate_author_side(&s)),
+        vec![("parameter-kind-mismatch", "hys.uHigh".to_owned())]
+    );
+    let engine = pairs(&engine(&s));
+    assert!(
+        engine.contains(&("parameter-kind-mismatch", "hys.uHigh".to_owned())),
+        "{engine:?}"
+    );
+}
+
+#[test]
+fn a_real_bound_on_an_integer_boundary_meets_the_engines_malformed_document() {
+    let mut s = econ_enable();
+    s.inputs
+        .push(Boundary::new(id("uStage"), SignalType::Integer));
+    s.inputs[2].min = Some(Bound::Real(0.5));
+    s.blocks
+        .push(Block::new(id("toReal"), "CDL.Conversions.IntegerToReal"));
+    s.outputs
+        .push(Boundary::new(id("yStage"), SignalType::Real));
+    for (from, to) in [("uStage", "toReal.u"), ("toReal.y", "yStage")] {
+        s.connections
+            .push(Connection::new(Endpoint::parse(from), Endpoint::parse(to)));
+    }
+    assert_eq!(
+        pairs(&validate_author_side(&s)),
+        vec![("invalid-bound", "uStage".to_owned())]
+    );
+    let engine = pairs(&engine(&s));
+    assert!(
+        engine.contains(&("malformed-document", "uStage".to_owned())),
+        "{engine:?}"
+    );
+}
+
+#[test]
+fn an_integer_bound_outside_i32_preempts_a_silent_narrowing() {
+    // Kind: pre-empts a silent narrowing. The engine's Integer domain is `i32`; with stage 1
+    // bypassed an Integer input declared over the whole `i64` range loads warning-free and
+    // reports the `i32` range, so the loaded domain is not the declared one. That is why stage 1
+    // refuses the bound as `invalid-bound` (importer note, decision 6, amended by #493).
+    let mut s = econ_enable();
+    s.inputs
+        .push(Boundary::new(id("uStage"), SignalType::Integer));
+    s.inputs[2].min = Some(Bound::Integer(i64::MIN));
+    s.inputs[2].max = Some(Bound::Integer(i64::from(i32::MAX) + 1));
+    s.blocks
+        .push(Block::new(id("toReal"), "CDL.Conversions.IntegerToReal"));
+    s.outputs
+        .push(Boundary::new(id("yStage"), SignalType::Real));
+    for (from, to) in [("uStage", "toReal.u"), ("toReal.y", "yStage")] {
+        s.connections
+            .push(Connection::new(Endpoint::parse(from), Endpoint::parse(to)));
+    }
+    assert_eq!(
+        pairs(&validate_author_side(&s)),
+        vec![
+            ("invalid-bound", "uStage".to_owned()),
+            ("invalid-bound", "uStage".to_owned())
+        ]
+    );
+    assert_eq!(pairs(&engine(&s)), vec![], "the engine says nothing");
+    let bytes = emit_unchecked(&s, &EmitOptions::default()).expect("bypass emits");
+    let mut loaded = oce_api::Engine::new();
+    let (report, _) = loaded.load_cxf(&bytes).expect("the engine loads it");
+    assert!(report.warnings.is_empty(), "{:?}", report.warnings);
+    let inputs = loaded.input_definitions().expect("definitions");
+    let stage = inputs
+        .iter()
+        .find(|d| d.path.ends_with(".uStage"))
+        .expect("uStage");
+    assert!(
+        matches!(stage.min, Some(oce_api::Value::Integer(v)) if v == i64::from(i32::MIN))
+            && matches!(stage.max, Some(oce_api::Value::Integer(v)) if v == i64::from(i32::MAX)),
+        "the engine narrows to i32: {stage:?}"
+    );
 }

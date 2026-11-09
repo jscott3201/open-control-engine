@@ -1,16 +1,23 @@
 //! The declaration statements: `param`, `in` / `out` with their tags, and `block` with its
 //! parameter list.
+//!
+//! A sequence parameter's type is `Real`, `Integer`, `Boolean` or any other word, read as an
+//! enumeration type name the validator resolves (the parser stays catalog-free; issue #492). A
+//! boundary's type is one of the three scalars. `@min` and `@max` take one number token, with no
+//! unit suffix.
 
 use crate::location::Location;
-use crate::model::{Annotations, Block, Boundary, SequenceParameter, SignalType};
+use crate::model::{
+    Annotations, Block, Bound, Boundary, Literal, ParameterType, SequenceParameter, SignalType,
+};
 
 use super::super::ParseError;
 use super::super::codes::{
-    COMMENT_BEFORE_CLOSE, DUPLICATE_TAG, MALFORMED_ATOM, MISPLACED_VALUE, STRAY_TOKEN,
-    UNCLOSED_BRACKET, UNKNOWN_TAG, UNKNOWN_TYPE,
+    COMMENT_BEFORE_CLOSE, DUPLICATE_TAG, MALFORMED_ATOM, MALFORMED_NUMBER, MISPLACED_VALUE,
+    NON_FINITE_NUMBER, STRAY_TOKEN, UNCLOSED_BRACKET, UNKNOWN_TAG, UNKNOWN_TYPE,
 };
 use super::super::lexer::Tok;
-use super::values::Value;
+use super::values::{Value, non_finite_word, number};
 use super::{Parser, room};
 
 /// The boundary tags, in canonical order.
@@ -18,6 +25,8 @@ pub(in crate::text) const TAGS: &[&str] = &[
     "unit",
     "quantity",
     "displayUnit",
+    "min",
+    "max",
     "brick",
     "s223",
     "qudt",
@@ -56,12 +65,28 @@ impl Parser<'_> {
         Ok(value_type)
     }
 
+    /// `":" type` of a sequence parameter: a scalar type or an enumeration type name.
+    fn parameter_type(&mut self) -> Result<ParameterType, ParseError> {
+        self.punct(b':', "before the type")?;
+        let token = self.lx.peek()?;
+        if token.tok != Tok::Word {
+            return Err(ParseError::new(
+                STRAY_TOKEN,
+                token.at,
+                format!("expected a type, found {}", token.describe(self.lx.src())),
+            ));
+        }
+        let value_type = ParameterType::parse(token.text(self.lx.src()));
+        self.lx.bump(&token);
+        Ok(value_type)
+    }
+
     /// `param name ":" type "=" value`.
     pub(super) fn param(&mut self, keyword: Location) -> Result<(), ParseError> {
         room(self.sequence.params.len(), keyword, "sequence parameters")?;
         let annotations = self.take_pending();
         let (name, at) = self.name("a parameter name")?;
-        let value_type = self.signal_type()?;
+        let value_type = self.parameter_type()?;
         self.punct(b'=', "before the value")?;
         let next = self.lx.peek()?;
         if next.tok == Tok::Punct(b'[') {
@@ -148,8 +173,74 @@ impl Parser<'_> {
         Ok(())
     }
 
-    /// One tag's operand: an atom, a string (`@name`, `@label`) or nothing (`@provisional`).
+    /// The number operand of `@min` / `@max`: one number token, with no unit suffix.
+    fn bound(&mut self, tag: &str) -> Result<Bound, ParseError> {
+        let token = self.lx.peek()?;
+        let word = token.text(self.lx.src());
+        if token.tok == Tok::Word && non_finite_word(word) || token.tok == Tok::Punct(b'-') {
+            return Err(ParseError::new(
+                if token.tok == Tok::Word {
+                    NON_FINITE_NUMBER
+                } else {
+                    STRAY_TOKEN
+                },
+                token.at,
+                format!("`@{tag}` takes a finite number with no space after its sign"),
+            ));
+        }
+        if token.tok != Tok::Number {
+            return Err(ParseError::new(
+                STRAY_TOKEN,
+                token.at,
+                format!(
+                    "expected a number after `@{tag}`, found {}",
+                    token.describe(self.lx.src())
+                ),
+            ));
+        }
+        let bound = match number(token.text(self.lx.src()), token.at)? {
+            Literal::Integer(v) => Bound::Integer(v),
+            Literal::Real(v) => Bound::Real(v),
+            other => {
+                return Err(ParseError::new(
+                    MALFORMED_NUMBER,
+                    token.at,
+                    format!("`@{tag}` takes a number, not {}", other.kind_name()),
+                ));
+            }
+        };
+        self.lx.bump(&token);
+        let next = self.lx.peek()?;
+        if !matches!(
+            next.tok,
+            Tok::Punct(b'@') | Tok::Newline | Tok::Comment { .. } | Tok::Eof
+        ) {
+            return Err(ParseError::new(
+                STRAY_TOKEN,
+                next.at,
+                format!(
+                    "a bound takes no unit suffix; expected a tag or the end of the line after `@{tag}`, found {}",
+                    next.describe(self.lx.src())
+                ),
+            ));
+        }
+        Ok(bound)
+    }
+
+    /// One tag's operand: an atom, a string (`@name`, `@label`), a number (`@min`, `@max`) or
+    /// nothing (`@provisional`).
     fn tag(&mut self, tag: &str, boundary: &mut Boundary) -> Result<(), ParseError> {
+        match tag {
+            "min" => {
+                boundary.min = Some(self.bound(tag)?);
+                return Ok(());
+            }
+            "max" => {
+                boundary.max = Some(self.bound(tag)?);
+                return Ok(());
+            }
+            _ => {}
+        }
         let semantic = &mut boundary.semantic;
         match tag {
             "provisional" => semantic.provisional = true,

@@ -5,7 +5,7 @@
 use serde_json::Value;
 
 use crate::identifier::Identifier;
-use crate::model::{EnumMember, Literal, ParamValue, SignalType};
+use crate::model::{Literal, MemberRef, ParamValue, SignalType};
 
 use super::{ImportError, unsupported};
 
@@ -136,9 +136,7 @@ pub(super) fn param_value(
             Some((type_name, member))
                 if !type_name.is_empty() && !member.is_empty() && !member.contains('.') =>
             {
-                Ok(ParamValue::Literal(Literal::EnumMember(EnumMember::parse(
-                    path,
-                ))))
+                Ok(ParamValue::Literal(Literal::Member(MemberRef::parse(path))))
             }
             _ => Err(unsupported(
                 subject,

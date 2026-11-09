@@ -8,11 +8,38 @@ pub mod text;
 use std::path::PathBuf;
 
 use oce_author::{
-    Boundary, Finding, Identifier, Literal, ParamValue, Sequence, SequenceBuilder, SignalType,
+    Bound, Boundary, Finding, Identifier, ImportError, Literal, MemberRef, ParamValue,
+    ParameterType, Sequence, SequenceBuilder, SignalType,
 };
+
+/// A `Type.Member` literal.
+pub fn member(spelling: &str) -> Literal {
+    Literal::Member(MemberRef::parse(spelling))
+}
 
 /// The golden switch for this crate (see `.agents/project-facts.md`).
 pub const BLESS_SWITCH: &str = "OCE_BLESS_AUTHOR";
+
+/// The emitter goldens the minimal importer (GitHub #473) refuses with a typed error: the
+/// every-element sequence carries enumeration-typed parameters, boundary bounds and constant
+/// members (issue #492), which the importer reads only once the importer PR of the importer note
+/// lands. The import tests assert the refusal for these and the round trip for every other golden.
+pub const BEYOND_MINIMAL_IMPORTER: &[&str] = &["every_element.cxf.json"];
+
+/// Assert `result` is the refusal [`BEYOND_MINIMAL_IMPORTER`] expects for `name`: the importer
+/// refuses the first enumeration-typed sequence parameter, `conTyp`, as an unsupported construct,
+/// so an unrelated regression in the same document cannot hide behind "some error".
+pub fn assert_beyond_minimal_refusal(name: &str, result: &Result<Sequence, ImportError>) {
+    assert!(
+        matches!(
+            result,
+            Err(ImportError::Unsupported { subject, construct })
+                if subject.ends_with(".conTyp")
+                    && construct == "a sequence parameter that is not Real, Integer or Boolean"
+        ),
+        "{name}: refused until the importer PR, at the enumeration-typed parameter: {result:?}"
+    );
+}
 
 /// The crate root.
 pub fn crate_dir() -> PathBuf {
@@ -81,13 +108,19 @@ pub fn econ_enable() -> Sequence {
         .build()
 }
 
-/// A sequence that uses every element of the model: `extends`, all three parameter types, every
-/// semantic field, Integer and Boolean boundaries, an enum member, a string, a reference, a
-/// width-driven block with array elements, a matrix parameter and a time table.
+/// A sequence that uses every element of the model: `extends`, all three scalar parameter types,
+/// an enumeration-typed parameter referenced by a block and one referenced by nothing, an Integer
+/// parameter holding a library constant, every semantic field, Integer and Boolean boundaries,
+/// bounds on both boundary kinds (both sides, one side, Integer and Real literals), an enum
+/// member, a constant member on a block parameter, a string, a reference, a width-driven block
+/// with array elements, a matrix parameter and a time table (issue #492 added the enumeration
+/// types, the bounds and the constants).
 pub fn every_element() -> Sequence {
     let mut supply = Boundary::new(id("TSup"), SignalType::Real);
     supply.quantity = Some("ThermodynamicTemperature".to_owned());
     supply.display_unit = Some("degC".to_owned());
+    supply.min = Some(Bound::Integer(223));
+    supply.max = Some(Bound::Real(353.15));
     let semantic = &mut supply.semantic;
     semantic.name = Some("Supply air temperature".to_owned());
     semantic.label = Some("TSup \"AHU-1\" \u{b0}C".to_owned());
@@ -96,11 +129,17 @@ pub fn every_element() -> Sequence {
     semantic.s223 = Some("s223:Sensor".to_owned());
     semantic.qudt = Some("quantitykind:Temperature".to_owned());
     semantic.haystack = vec!["air".to_owned(), "temp".to_owned(), "sensor".to_owned()];
-    let setpoint = Boundary::new(id("TSupSet"), SignalType::Real);
+    let mut setpoint = Boundary::new(id("TSupSet"), SignalType::Real);
+    setpoint.max = Some(Bound::Real(303.15));
     let enable = Boundary::new(id("uEna"), SignalType::Boolean);
     let mut stage = Boundary::new(id("yStage"), SignalType::Integer);
     stage.semantic.provisional = true;
-    let total = Boundary::new(id("ySum"), SignalType::Real);
+    stage.min = Some(Bound::Integer(0));
+    stage.max = Some(Bound::Integer(3));
+    let mut total = Boundary::new(id("ySum"), SignalType::Real);
+    total.min = Some(Bound::Real(-1e3));
+    let mut mode = Boundary::new(id("yMode"), SignalType::Integer);
+    mode.max = Some(Bound::Integer(7));
     let gain_out = Boundary::new(id("yGain1"), SignalType::Real);
     let gain_out2 = Boundary::new(id("yGain2"), SignalType::Real);
     let table_out = Boundary::new(id("yTab"), SignalType::Real);
@@ -111,6 +150,27 @@ pub fn every_element() -> Sequence {
         .and_then(|b| b.parameter("nStages", SignalType::Integer, Literal::Integer(3)))
         .and_then(|b| b.parameter("reverse", SignalType::Boolean, Literal::Boolean(false)))
         .and_then(|b| b.parameter("TiSec", SignalType::Real, Literal::Integer(300)))
+        .and_then(|b| {
+            b.parameter(
+                "conTyp",
+                ParameterType::parse("SimpleController"),
+                member("SimpleController.PI"),
+            )
+        })
+        .and_then(|b| {
+            b.parameter(
+                "eneStd",
+                ParameterType::parse("EnergyStandard"),
+                member("EnergyStandard.California_Title_24"),
+            )
+        })
+        .and_then(|b| {
+            b.parameter(
+                "occMode",
+                SignalType::Integer,
+                member("OperationModes.occupied"),
+            )
+        })
         .and_then(|b| b.input(supply))
         .and_then(|b| b.input(setpoint))
         .and_then(|b| b.input(enable))
@@ -120,14 +180,9 @@ pub fn every_element() -> Sequence {
         .and_then(|b| b.output(gain_out2))
         .and_then(|b| b.output(table_out))
         .and_then(|b| b.output(control))
+        .and_then(|b| b.output(mode))
         .and_then(|b| b.block("conPID", "CDL.Reals.PID"))
-        .and_then(|b| {
-            b.assign(
-                "conPID",
-                "controllerType",
-                Literal::EnumMember(oce_author::EnumMember::parse("SimpleController.PI")),
-            )
-        })
+        .and_then(|b| b.assign_ref("conPID", "controllerType", "conTyp"))
         .and_then(|b| b.assign_ref("conPID", "k", "kGain"))
         .and_then(|b| b.assign_ref("conPID", "Ti", "TiSec"))
         .and_then(|b| b.assign_ref("conPID", "reverseActing", "reverse"))
@@ -147,7 +202,7 @@ pub fn every_element() -> Sequence {
             b.assign(
                 "tab",
                 "smoothness",
-                Literal::EnumMember(oce_author::EnumMember::parse("Smoothness.ConstantSegments")),
+                Literal::Member(oce_author::MemberRef::parse("Smoothness.ConstantSegments")),
             )
         })
         .and_then(|b| b.assign_element("tab", "table_<row>_<col>", &[1, 1], Literal::Real(0.0)))
@@ -164,6 +219,11 @@ pub fn every_element() -> Sequence {
                 ParamValue::Literal(Literal::Text("enable is \"off\"\nline two".to_owned())),
             )
         })
+        .and_then(|b| b.block("modCon", "CDL.Integers.Sources.Constant"))
+        .and_then(|b| b.assign("modCon", "k", member("OperationModes.unoccupied")))
+        .and_then(|b| b.block("occCon", "CDL.Integers.Sources.Constant"))
+        .and_then(|b| b.assign_ref("occCon", "k", "occMode"))
+        .and_then(|b| b.block("modMax", "CDL.Integers.Max"))
         .and_then(|b| b.connect("TSupSet", "conPID.u_s"))
         .and_then(|b| b.connect("TSup", "conPID.u_m"))
         .and_then(|b| b.connect("conPID.y", "yCon"))
@@ -177,6 +237,9 @@ pub fn every_element() -> Sequence {
         .and_then(|b| b.connect("gain.y2", "yGain2"))
         .and_then(|b| b.connect("tab.y1", "yTab"))
         .and_then(|b| b.connect("staCon.y", "yStage"))
+        .and_then(|b| b.connect("modCon.y", "modMax.u1"))
+        .and_then(|b| b.connect("occCon.y", "modMax.u2"))
+        .and_then(|b| b.connect("modMax.y", "yMode"))
         .and_then(|b| b.connect("uEna", "assMes.u"))
         .expect("every-element sequence builds")
         .build()

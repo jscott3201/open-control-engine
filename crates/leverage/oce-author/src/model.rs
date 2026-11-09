@@ -75,7 +75,8 @@ impl Sequence {
     }
 }
 
-/// The type of a sequence parameter or a boundary connector.
+/// The type of a boundary connector, and the scalar types of a sequence parameter
+/// ([`ParameterType`]).
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SignalType {
@@ -99,6 +100,70 @@ impl SignalType {
     }
 }
 
+/// The type of a sequence parameter: a scalar [`SignalType`], or an enumeration named by the last
+/// segment of its class (`SimpleController`, `EnergyStandard`), the name the `Type.Member` spelling
+/// uses (importer note, decision 1; issue #492). The type name is kept as authored and resolved
+/// by the validator through `oce_api::enumeration_types()`; a constant package is never a
+/// parameter type (`unknown-enum-type`).
+#[non_exhaustive]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ParameterType {
+    /// IEEE-754 binary64 Real.
+    Real,
+    /// Signed Integer, carried in an `i64`.
+    Integer,
+    /// Boolean.
+    Boolean,
+    /// An enumeration, by the last segment of its class path.
+    Enum(String),
+}
+
+impl ParameterType {
+    /// Read a spelling in either form: `Real`, `Integer` and `Boolean` are the scalar types and
+    /// any other spelling is an enumeration type name, kept unchecked for the validator.
+    #[must_use]
+    pub fn parse(spelling: &str) -> Self {
+        match spelling {
+            "Real" => Self::Real,
+            "Integer" => Self::Integer,
+            "Boolean" => Self::Boolean,
+            other => Self::Enum(other.to_owned()),
+        }
+    }
+
+    /// The spelling in both forms: `Real`, `Integer`, `Boolean` or the enumeration type name.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Real => "Real",
+            Self::Integer => "Integer",
+            Self::Boolean => "Boolean",
+            Self::Enum(type_name) => type_name,
+        }
+    }
+
+    /// The scalar type, or `None` for an enumeration.
+    #[must_use]
+    pub fn signal(&self) -> Option<SignalType> {
+        match self {
+            Self::Real => Some(SignalType::Real),
+            Self::Integer => Some(SignalType::Integer),
+            Self::Boolean => Some(SignalType::Boolean),
+            Self::Enum(_) => None,
+        }
+    }
+}
+
+impl From<SignalType> for ParameterType {
+    fn from(value_type: SignalType) -> Self {
+        match value_type {
+            SignalType::Real => Self::Real,
+            SignalType::Integer => Self::Integer,
+            SignalType::Boolean => Self::Boolean,
+        }
+    }
+}
+
 /// A sequence-level parameter: a name, a type and a literal value.
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
@@ -106,9 +171,11 @@ pub struct SequenceParameter {
     /// The parameter name.
     pub name: Identifier,
     /// The declared type.
-    pub value_type: SignalType,
-    /// The value. A `Real` parameter accepts an [`Literal::Integer`]; anything else must match
-    /// the declared type (the validator reports `parameter-kind-mismatch` otherwise).
+    pub value_type: ParameterType,
+    /// The value. A `Real` parameter accepts an [`Literal::Integer`]; an `Integer` parameter
+    /// accepts a member of a constant package; an `Enum` parameter takes a member of its own
+    /// type; anything else must match the declared type (the validator reports
+    /// `parameter-kind-mismatch` or `unknown-enum-literal` otherwise).
     pub value: Literal,
     /// The text form's unit suffix on the value (`1 K`), text-only (decision 13).
     pub suffix: Option<String>,
@@ -117,12 +184,13 @@ pub struct SequenceParameter {
 }
 
 impl SequenceParameter {
-    /// A parameter with no suffix and no annotations.
+    /// A parameter with no suffix and no annotations. `value_type` is a [`ParameterType`] or a
+    /// [`SignalType`].
     #[must_use]
-    pub fn new(name: Identifier, value_type: SignalType, value: Literal) -> Self {
+    pub fn new(name: Identifier, value_type: impl Into<ParameterType>, value: Literal) -> Self {
         Self {
             name,
-            value_type,
+            value_type: value_type.into(),
             value,
             suffix: None,
             annotations: Annotations::default(),
@@ -142,6 +210,11 @@ pub struct Boundary {
     pub quantity: Option<String>,
     /// The CXF `displayUnit` attribute, if authored (decision 21); an atom.
     pub display_unit: Option<String>,
+    /// The CXF `min` attribute, if authored (importer note, decision 4; issue #492). On an input
+    /// it bounds the effective acceptance domain, which is inside the canonical content id.
+    pub min: Option<Bound>,
+    /// The CXF `max` attribute, if authored (as [`Boundary::min`]).
+    pub max: Option<Bound>,
     /// The semantic slot (decision 2).
     pub semantic: SemanticPoint,
     /// Text-form annotations.
@@ -149,7 +222,7 @@ pub struct Boundary {
 }
 
 impl Boundary {
-    /// A boundary with no quantity, display unit or semantic field.
+    /// A boundary with no quantity, display unit, bound or semantic field.
     #[must_use]
     pub fn new(name: Identifier, value_type: SignalType) -> Self {
         Self {
@@ -157,8 +230,57 @@ impl Boundary {
             value_type,
             quantity: None,
             display_unit: None,
+            min: None,
+            max: None,
             semantic: SemanticPoint::default(),
             annotations: Annotations::default(),
+        }
+    }
+}
+
+/// A boundary bound as authored: a number literal, never a reference (the engine grounds bounds
+/// in an empty scope). Equality compares a Real by its bits, as [`Literal`] does. The validator
+/// accepts an Integer on a Real or Integer boundary (widened on a Real one, exactly up to 2^53) and
+/// a finite Real on a Real boundary only (importer note, "Bounds on boundary declarations").
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug)]
+pub enum Bound {
+    /// An integer token: no fraction and no exponent. The model, wire and text form carry the
+    /// full `i64` bit for bit, but the engine's Integer domain is `i32`: on an Integer boundary
+    /// stage 1 refuses a bound outside `i32::MIN..=i32::MAX` with `invalid-bound`, because the
+    /// engine would narrow it without a warning (on a Real boundary the limit is 2^53).
+    Integer(i64),
+    /// A real token: a fraction or an exponent.
+    Real(f64),
+}
+
+impl PartialEq for Bound {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Integer(a), Self::Integer(b)) => a == b,
+            (Self::Real(a), Self::Real(b)) => a.to_bits() == b.to_bits(),
+            _ => false,
+        }
+    }
+}
+
+impl Bound {
+    /// The bound as the engine reads it on a Real connector: a Real as it is, an Integer
+    /// converted with `as` (exact up to 2^53 in magnitude, which stage 1 enforces).
+    #[must_use]
+    pub fn as_f64(self) -> f64 {
+        match self {
+            Self::Integer(v) => v as f64,
+            Self::Real(v) => v,
+        }
+    }
+
+    /// The bound's kind, for messages: `Integer` or `Real`.
+    #[must_use]
+    pub fn kind_name(self) -> &'static str {
+        match self {
+            Self::Integer(_) => "Integer",
+            Self::Real(_) => "Real",
         }
     }
 }
@@ -247,7 +369,7 @@ impl Assignment {
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub enum ParamValue {
-    /// A literal: a number, a Boolean, a string or an enumeration member.
+    /// A literal: a number, a Boolean, a string or a member of a named type.
     Literal(Literal),
     /// A reference to a sequence parameter, by name, resolved by the engine's scope rules.
     Ref(Identifier),
@@ -264,7 +386,7 @@ impl From<Literal> for ParamValue {
 #[non_exhaustive]
 #[derive(Clone, Debug)]
 pub enum Literal {
-    /// An integer token: no fraction and no exponent.
+    /// An integer token: no fraction and no exponent; carried as the full `i64` bit for bit.
     Integer(i64),
     /// A real token: a fraction or an exponent.
     Real(f64),
@@ -272,8 +394,10 @@ pub enum Literal {
     Boolean(bool),
     /// A string; always text, never a reference (decision 11).
     Text(String),
-    /// An enumeration member, `Type.Member`.
-    EnumMember(EnumMember),
+    /// A member of a named type, `Type.Member`: an enumeration member (`SimpleController.PI`) or
+    /// an Integer constant of a library constant package (`OperationModes.occupied`). The type
+    /// name decides which, through `oce_api::enumerations()`, never the parameter's kind.
+    Member(MemberRef),
 }
 
 impl PartialEq for Literal {
@@ -283,14 +407,14 @@ impl PartialEq for Literal {
             (Self::Real(a), Self::Real(b)) => a.to_bits() == b.to_bits(),
             (Self::Boolean(a), Self::Boolean(b)) => a == b,
             (Self::Text(a), Self::Text(b)) => a == b,
-            (Self::EnumMember(a), Self::EnumMember(b)) => a == b,
+            (Self::Member(a), Self::Member(b)) => a == b,
             _ => false,
         }
     }
 }
 
 impl Literal {
-    /// The literal's kind, for messages: `Integer`, `Real`, `Boolean`, `String` or `enum member`.
+    /// The literal's kind, for messages: `Integer`, `Real`, `Boolean`, `String` or `member`.
     #[must_use]
     pub fn kind_name(&self) -> &'static str {
         match self {
@@ -298,23 +422,24 @@ impl Literal {
             Self::Real(_) => "Real",
             Self::Boolean(_) => "Boolean",
             Self::Text(_) => "String",
-            Self::EnumMember(_) => "enum member",
+            Self::Member(_) => "member",
         }
     }
 }
 
-/// An enumeration member as authored: `type_name` is the last segment of the enumeration class
-/// (`SimpleController`) and `member` the member (`PI`). The catalog resolves the full path.
+/// A member of a named type as authored: `type_name` is the last segment of the enumeration or
+/// constant package class (`SimpleController`, `OperationModes`) and `member` the member (`PI`,
+/// `occupied`). `oce_api::enumerations()` resolves the full path.
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct EnumMember {
-    /// The enumeration type's last segment; empty when the author wrote no `Type.` prefix.
+pub struct MemberRef {
+    /// The type's last segment; empty when the author wrote no `Type.` prefix.
     pub type_name: String,
     /// The member name.
     pub member: String,
 }
 
-impl EnumMember {
+impl MemberRef {
     /// Split a `Type.Member` spelling at its first dot. A spelling with no dot is a member with
     /// an empty type name, which the validator refuses (`unknown-enum-literal`).
     #[must_use]
@@ -331,7 +456,7 @@ impl EnumMember {
         }
     }
 
-    /// The `Type.Member` spelling; the inverse of [`EnumMember::parse`].
+    /// The `Type.Member` spelling; the inverse of [`MemberRef::parse`].
     #[must_use]
     pub fn spelling(&self) -> String {
         if self.type_name.is_empty() {

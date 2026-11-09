@@ -211,7 +211,7 @@ fn sequence_parameter_integer_widening_reaches_a_real_reference() {
         codes(&validate(&s)),
         vec![("parameter-out-of-range", "big".to_owned())]
     );
-    s.params[0].value_type = SignalType::Integer;
+    s.params[0].value_type = oce_author::ParameterType::Integer;
     assert_eq!(
         codes(&validate(&s)),
         vec![("parameter-out-of-range", "c.k".to_owned())],

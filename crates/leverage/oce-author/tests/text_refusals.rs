@@ -266,7 +266,7 @@ fn an_unknown_tag_type_or_repeated_tag_is_refused() {
         3,
         26,
     );
-    refused(&body("param p : Float = 1\n"), UNKNOWN_TYPE, 3, 11);
+    refused(&body("in u : Float\n"), UNKNOWN_TYPE, 3, 8);
     refused(&body("in u : real\n"), UNKNOWN_TYPE, 3, 8);
     // `@haystack` repeats.
     let model = parse_text(&body("in u : Real @haystack a @haystack b\n")).expect("parses");
@@ -561,7 +561,7 @@ fn every_parse_code_is_produced_by_some_input() {
             body("in u : Real @unit K @unit K\n").into_bytes(),
             DUPLICATE_TAG,
         ),
-        (body("param p : Float = 1\n").into_bytes(), UNKNOWN_TYPE),
+        (body("in u : Float\n").into_bytes(), UNKNOWN_TYPE),
         (b"param p : Real = 1\n".to_vec(), MISSING_SEQUENCE),
         (b"sequence s\n".to_vec(), MISSING_EXTENDS),
         (body("sequence t\n").into_bytes(), MISPLACED_STATEMENT),

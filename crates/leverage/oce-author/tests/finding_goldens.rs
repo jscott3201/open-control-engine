@@ -5,7 +5,7 @@
 mod support;
 
 use oce_author::{
-    Block, Boundary, Endpoint, EnumMember, Identifier, Literal, ParamValue, ProvenanceId,
+    Block, Boundary, Endpoint, Identifier, Literal, MemberRef, ParamValue, ProvenanceId,
     SignalType, from_wire_str, to_wire_string, validate,
 };
 
@@ -21,7 +21,15 @@ fn defects() -> oce_author::Sequence {
         SignalType::Integer,
         Literal::Real(2.5),
     ));
+    s.params.push(oce_author::SequenceParameter::new(
+        id("eneStd"),
+        oce_author::ParameterType::parse("OperationModes"),
+        Literal::Member(MemberRef::parse("OperationModes.occupied")),
+    ));
     s.inputs[0].semantic.unit = Some("deg C".to_owned());
+    s.inputs[0].min = Some(oce_author::Bound::Real(30.0));
+    s.inputs[0].max = Some(oce_author::Bound::Integer(-10));
+    s.outputs[0].max = Some(oce_author::Bound::Integer(1));
     s.outputs.push(Boundary::new(
         Identifier::unchecked("sub"),
         SignalType::Real,
@@ -38,7 +46,7 @@ fn defects() -> oce_author::Sequence {
     let mut pid = Block::new(id("con"), "CDL.Reals.PID");
     pid.assignments.push(oce_author::Assignment::new(
         id("controllerType"),
-        Literal::EnumMember(EnumMember::parse("SimpleController.PIX")),
+        Literal::Member(MemberRef::parse("SimpleController.PIX")),
     ));
     pid.assignments
         .push(oce_author::Assignment::new(id("k"), Literal::Real(-1.0)));
@@ -108,8 +116,9 @@ fn the_defects_bundle_covers_every_wire_expressible_code() {
     let expected: std::collections::BTreeSet<&str> = oce_author::STAGE_ONE_CODES
         .iter()
         .copied()
-        // A sequence with blocks is not empty; a non-finite Real has no wire spelling.
-        .filter(|c| !["empty-sequence", "non-finite-parameter"].contains(c))
+        // A sequence with blocks is not empty; a non-finite Real has no wire spelling, as a
+        // parameter value or as a bound.
+        .filter(|c| !["empty-sequence", "non-finite-parameter", "non-finite-bound"].contains(c))
         .collect();
     assert_eq!(codes, expected);
 }

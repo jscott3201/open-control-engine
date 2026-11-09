@@ -22,7 +22,9 @@
 //! Before printing, [`super::spell::check`] refuses a model the text cannot spell, so what this
 //! module writes always parses back to the model it was given (up to the comment normalizations).
 
-use crate::model::{Annotations, Assignment, Block, Boundary, Literal, ParamValue, Sequence};
+use crate::model::{
+    Annotations, Assignment, Block, Bound, Boundary, Literal, ParamValue, Sequence,
+};
 use crate::validate::catalog::{is_template, lookup_class, lookup_parameter, match_template};
 
 use super::codes::{MAX_LINE_BYTES, MAX_TEXT_BYTES, MAX_TEXT_LINES};
@@ -149,7 +151,14 @@ fn literal(value: &Literal) -> String {
         Literal::Real(v) => format!("{v:?}"),
         Literal::Boolean(v) => v.to_string(),
         Literal::Text(text) => quoted(text),
-        Literal::EnumMember(member) => member.spelling(),
+        Literal::Member(member) => member.spelling(),
+    }
+}
+
+fn bound(value: Bound) -> String {
+    match value {
+        Bound::Integer(v) => v.to_string(),
+        Bound::Real(v) => format!("{v:?}"),
     }
 }
 
@@ -177,6 +186,8 @@ fn boundary(out: &mut String, keyword: &str, b: &Boundary) {
             "unit" => s.unit.iter().cloned().collect(),
             "quantity" => b.quantity.iter().cloned().collect(),
             "displayUnit" => b.display_unit.iter().cloned().collect(),
+            "min" => b.min.iter().map(|v| bound(*v)).collect(),
+            "max" => b.max.iter().map(|v| bound(*v)).collect(),
             "brick" => s.brick.iter().cloned().collect(),
             "s223" => s.s223.iter().cloned().collect(),
             "qudt" => s.qudt.iter().cloned().collect(),

@@ -242,6 +242,29 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### CXF import and export
 
+- **Composite lowering costs time and memory linear in the document, not fan-out × IRI length**
+  (GitHub #490, issue #480). The lowering pass classified both ends of every authored
+  `isConnectedTo` edge by string content and keyed its duplicate counts, crossed drivers and
+  adjacency on IRI strings, so one long authored source shared by a whole fan-out cost fan-out ×
+  IRI length: a leaf port with a 1 MiB `@id` wired 65,535 times to a top boundary port (a 10 MB
+  document) took more than three minutes of release CPU before any diagnostic, and the swapped
+  variant (a leaf input naming a top input) copied the IRI into the lowered list once per edge,
+  about 64 GiB. Lowering now interns each distinct endpoint once
+  (`resolve/composite_orientation/endpoints.rs`) and runs orientation, duplicate suppression, the
+  boundary walk and the erased-relation check on dense ids, with expansion checks memoized per
+  start; owners, composites and parents are `@graph` positions rather than copied IRIs; and the
+  lowered edge list lives beside the lowered document with one shared allocation per distinct
+  IRI. The passes after it keep the same cost: boundary-type derivation classifies a source once
+  per node and skips a repeated shared target, Step 9 memoizes a run of one shared target as it
+  already did a source, and the diagnostic sort keys each subject allocation once instead of
+  hashing a long subject on every comparison. That document now imports to its ordinary
+  diagnostics in under 0.1 s in release (about 1 s in debug). Every diagnostic, its order and its
+  text are unchanged, and no bound changed; no golden moved. Regression tests pin the bound (1 MiB
+  × 65,535 for a kept, a contradictory and a swapped fan-out, with a short-source control) and
+  determinism (a repeated import, lowering one document twice, and shared versus separate
+  allocations for lowered targets, boundary-type derivation and the diagnostic sort).
+  `SECURITY.md` no longer lists the path as not yet bounded.
+
 - **Resolve Step 9 costs time linear in the edge list, not fan-out × source-IRI length**
   (GitHub #481, issue #479). Connection collection classified both ends of every
   `isConnectedTo` edge by string content, hashing the source IRI about ten times per edge, so one
@@ -291,6 +314,43 @@ and a gate that accepted any text would restore exactly the false assurance desc
   the mixed shape as round-trippable now pins its refusal.
 
 ### Leverage
+
+- **Enumeration-typed sequence parameters, boundary bounds and member literals in the authoring
+  model** (GitHub #493, issue #492; the [importer note](docs/design/importer.md)'s model changes).
+  `oce-author`'s `SequenceParameter::value_type` is a `ParameterType` (`Real`, `Integer`, `Boolean`
+  or `Enum(type_name)`, the enumeration's last segment): wire `"type": "SimpleController"`, text
+  `param conTyp : SimpleController = SimpleController.PI`; the pinned schema lists a `type` enum of
+  the three scalars and every `oce_api::enumeration_types()` row (17 values, never a constant
+  package). `Literal::EnumMember` is renamed `Literal::Member(MemberRef)` and covers library
+  constants (`OperationModes.occupied`) beside enumeration members, resolved through
+  `oce_api::enumerations()`; a constant fits an Integer parameter and the emitter writes the package
+  IRI as its `isOfDataType` (importer note, ruling 9), an enumeration parameter its class IRI and
+  full member path, as the corpus does. `Boundary` gains `min` and `max` (`Option<Bound>`, an Integer
+  or Real literal): wire `"min": []` or `[<number>]` (a second item is
+  `WireError::BoundListTooLong`), text `@min` / `@max` after `@displayUnit`, emitted as `S231:min` /
+  `S231:max` (a typed `xsd:double` on a Real boundary, a bare integer on an Integer one). Stage 1
+  gains four codes (`STAGE_ONE_CODES` is twenty-five): `unknown-enum-type` (an unknown type name or a
+  constant package as a type; the engine's code), `invalid-bound` (author-only: a bound on a Boolean
+  boundary, a Real on an Integer boundary, an Integer above 2^53 on a Real one, and an Integer
+  bound on an Integer boundary outside the engine's `i32` domain, which the engine would narrow
+  without a warning: the importer note's decision 6 is amended, and a parity test pins the
+  narrowing), `non-finite-bound`
+  and `crossed-bounds` (the engine's codes), each pinned by the parity test; a reference to an
+  enumeration parameter type-checks by class identity (`parameter-kind-mismatch` otherwise), and the
+  builder refuses a non-finite bound (`BuildError::NonFiniteBound`). Tests generate every enumeration
+  member and every constant of the facade table through both forms, the emitter and a warning-free
+  load; pin each input's loaded domain to its declared bounds bit for bit (the text spelling
+  converted as the loader converts it); show an input bound moves the canonical content id and an
+  output bound does not; and extend the refusal matrix, the printer's totality cases, the enumerated
+  round-trip models, the schema checker and the hostile sweeps (a new wire mutation sweep over the
+  every-element bundle). Re-blessed: `schema/sequence.schema.json`, the every-element wire, text and
+  emit goldens, `wire/econ_enable.json`, `wire/note_example.json`, `wire/defects.json` and its
+  findings golden; the authoring note's wire example gained `"min": [], "max": []`. The minimal
+  importer refuses the every-element golden until the importer PR, which unblocks 27 of #475's 36
+  fixtures with these model changes; the authoring note carries the dated amendments. The renames
+  (`EnumMember` to `MemberRef`, `Literal::EnumMember` to `Literal::Member`, `value_type:
+  ParameterType`) are breaking for pre-1.0 consumers of `oce-author`; the `oce` CLI (GitHub #491)
+  is the only one.
 
 - **`oce-author` reads the facade's enumeration table** (GitHub #488, issue #468). The pinned
   four-row `ENUM_TYPES` table is deleted: the validator and emitter look an enum parameter's type up

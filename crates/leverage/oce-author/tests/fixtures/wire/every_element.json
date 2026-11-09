@@ -21,6 +21,27 @@
       "name": "TiSec",
       "type": "Real",
       "value": 300
+    },
+    {
+      "name": "conTyp",
+      "type": "SimpleController",
+      "value": {
+        "member": "SimpleController.PI"
+      }
+    },
+    {
+      "name": "eneStd",
+      "type": "EnergyStandard",
+      "value": {
+        "member": "EnergyStandard.California_Title_24"
+      }
+    },
+    {
+      "name": "occMode",
+      "type": "Integer",
+      "value": {
+        "member": "OperationModes.occupied"
+      }
     }
   ],
   "inputs": [
@@ -29,6 +50,12 @@
       "type": "Real",
       "quantity": "ThermodynamicTemperature",
       "display_unit": "degC",
+      "min": [
+        223
+      ],
+      "max": [
+        353.15
+      ],
       "semantic": {
         "name": "Supply air temperature",
         "label": "TSup \"AHU-1\" \u00b0C",
@@ -49,6 +76,10 @@
       "type": "Real",
       "quantity": "",
       "display_unit": "",
+      "min": [],
+      "max": [
+        303.15
+      ],
       "semantic": {
         "name": "",
         "label": "",
@@ -65,6 +96,8 @@
       "type": "Boolean",
       "quantity": "",
       "display_unit": "",
+      "min": [],
+      "max": [],
       "semantic": {
         "name": "",
         "label": "",
@@ -83,6 +116,12 @@
       "type": "Integer",
       "quantity": "",
       "display_unit": "",
+      "min": [
+        0
+      ],
+      "max": [
+        3
+      ],
       "semantic": {
         "name": "",
         "label": "",
@@ -99,6 +138,10 @@
       "type": "Real",
       "quantity": "",
       "display_unit": "",
+      "min": [
+        -1000.0
+      ],
+      "max": [],
       "semantic": {
         "name": "",
         "label": "",
@@ -115,6 +158,8 @@
       "type": "Real",
       "quantity": "",
       "display_unit": "",
+      "min": [],
+      "max": [],
       "semantic": {
         "name": "",
         "label": "",
@@ -131,6 +176,8 @@
       "type": "Real",
       "quantity": "",
       "display_unit": "",
+      "min": [],
+      "max": [],
       "semantic": {
         "name": "",
         "label": "",
@@ -147,6 +194,8 @@
       "type": "Real",
       "quantity": "",
       "display_unit": "",
+      "min": [],
+      "max": [],
       "semantic": {
         "name": "",
         "label": "",
@@ -163,6 +212,28 @@
       "type": "Real",
       "quantity": "",
       "display_unit": "",
+      "min": [],
+      "max": [],
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    },
+    {
+      "name": "yMode",
+      "type": "Integer",
+      "quantity": "",
+      "display_unit": "",
+      "min": [],
+      "max": [
+        7
+      ],
       "semantic": {
         "name": "",
         "label": "",
@@ -183,7 +254,7 @@
         {
           "name": "controllerType",
           "value": {
-            "member": "SimpleController.PI"
+            "ref": "conTyp"
           }
         },
         {
@@ -305,6 +376,35 @@
           "value": "enable is \"off\"\nline two"
         }
       ]
+    },
+    {
+      "name": "modCon",
+      "class": "CDL.Integers.Sources.Constant",
+      "params": [
+        {
+          "name": "k",
+          "value": {
+            "member": "OperationModes.unoccupied"
+          }
+        }
+      ]
+    },
+    {
+      "name": "occCon",
+      "class": "CDL.Integers.Sources.Constant",
+      "params": [
+        {
+          "name": "k",
+          "value": {
+            "ref": "occMode"
+          }
+        }
+      ]
+    },
+    {
+      "name": "modMax",
+      "class": "CDL.Integers.Max",
+      "params": []
     }
   ],
   "connections": [
@@ -321,6 +421,9 @@
     "gain.y2 -> yGain2",
     "tab.y1 -> yTab",
     "staCon.y -> yStage",
+    "modCon.y -> modMax.u1",
+    "occCon.y -> modMax.u2",
+    "modMax.y -> yMode",
     "uEna -> assMes.u"
   ]
 }

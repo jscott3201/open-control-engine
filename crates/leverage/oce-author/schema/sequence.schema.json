@@ -189,6 +189,20 @@
           "description": "The CXF display unit (for example \"degC\"), or \"\".",
           "type": "string"
         },
+        "max": {
+          "description": "The CXF maximum: [] for none, or a list of exactly one number (at most one item; a second\nis refused). Real or Integer boundaries only; an Integer boundary takes an Integer.",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "min": {
+          "description": "The CXF minimum: [] for none, or a list of exactly one number (at most one item; a second\nis refused). Real or Integer boundaries only; an Integer boundary takes an Integer.",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
         "name": {
           "description": "The connector name, an identifier.",
           "type": "string"
@@ -211,21 +225,9 @@
         "type",
         "quantity",
         "display_unit",
+        "min",
+        "max",
         "semantic"
-      ],
-      "type": "object"
-    },
-    "EnumMember": {
-      "additionalProperties": false,
-      "description": "An enumeration member.",
-      "properties": {
-        "member": {
-          "description": "The member as \"Type.Member\", Type the last segment of the enumeration class (for example\n\"SimpleController.PI\").",
-          "type": "string"
-        }
-      },
-      "required": [
-        "member"
       ],
       "type": "object"
     },
@@ -241,10 +243,24 @@
           "type": "string"
         },
         {
-          "$ref": "#/$defs/EnumMember"
+          "$ref": "#/$defs/Member"
         }
       ],
       "description": "A sequence parameter value: a number (an Integer is written without a fraction or exponent), a boolean, a string, or an enumeration member."
+    },
+    "Member": {
+      "additionalProperties": false,
+      "description": "A member of an enumeration or of a library constant package.",
+      "properties": {
+        "member": {
+          "description": "The member as \"Type.Member\", Type the last segment of the enumeration or constant package\nclass (for example \"SimpleController.PI\" or \"OperationModes.occupied\").",
+          "type": "string"
+        }
+      },
+      "required": [
+        "member"
+      ],
+      "type": "object"
     },
     "ParameterValue": {
       "anyOf": [
@@ -261,7 +277,7 @@
           "$ref": "#/$defs/Reference"
         },
         {
-          "$ref": "#/$defs/EnumMember"
+          "$ref": "#/$defs/Member"
         }
       ],
       "description": "A block parameter value: a number (an Integer is written without a fraction or exponent), a boolean, a string (always text), a reference to a sequence parameter, or an enumeration member."
@@ -341,12 +357,31 @@
           "type": "string"
         },
         "type": {
-          "$ref": "#/$defs/SignalType",
-          "description": "The parameter type."
+          "description": "The parameter type: \"Real\", \"Integer\", \"Boolean\", or an enumeration type name (the last\nsegment of its class, for example \"SimpleController\"), whose value is then one of its\nmembers.",
+          "enum": [
+            "Real",
+            "Integer",
+            "Boolean",
+            "SimpleController",
+            "Smoothness",
+            "Extrapolation",
+            "ZeroTime",
+            "ASHRAEClimateZone",
+            "ControlEconomizer",
+            "CoolingCoil",
+            "EnergyStandard",
+            "FreezeStat",
+            "HeatingCoil",
+            "OutdoorAirSection",
+            "PressureControl",
+            "Title24ClimateZone",
+            "VentilationStandard"
+          ],
+          "type": "string"
         },
         "value": {
           "$ref": "#/$defs/LiteralValue",
-          "description": "The value: a number (an Integer is written without a fraction or exponent), a boolean, a\nstring or an enumeration member."
+          "description": "The value: a number (an Integer is written without a fraction or exponent), a boolean, a\nstring or a member of an enumeration or library constant package."
         }
       },
       "required": [
@@ -357,7 +392,7 @@
       "type": "object"
     },
     "SignalType": {
-      "description": "The type of a sequence parameter or a boundary connector.",
+      "description": "The type of a boundary connector.",
       "enum": [
         "Real",
         "Integer",
