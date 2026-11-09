@@ -1,4 +1,4 @@
-//! `enumerations`, `enumeration`, `enumeration_by_id` and `enum_class_path` through the facade
+//! `enumerations`, `enumeration`, `enumeration_by_id` and `enumeration_class_path` through the facade
 //! (issue #468, and the Enum class path lookup of #465).
 //!
 //! The table is held complete against everything else the facade publishes about enumerations:
@@ -10,8 +10,8 @@ use std::collections::BTreeSet;
 
 use oce_api::{
     CatalogDefault, CatalogRule, CatalogValueKind, EnumClassId, EnumerationKind, MemberValue,
-    Value, ValueType, catalog, class_metadata, enum_class_path, enumeration, enumeration_by_id,
-    enumerations,
+    Value, ValueType, catalog, class_metadata, enumeration, enumeration_by_id,
+    enumeration_class_path, enumerations,
 };
 
 #[test]
@@ -42,7 +42,7 @@ fn facade_publishes_the_engine_table_itself() {
         match row.id {
             Some(id) => {
                 assert_eq!(enumeration_by_id(id), Some(row));
-                assert_eq!(enum_class_path(id), Some(row.class_path));
+                assert_eq!(enumeration_class_path(id), Some(row.class_path));
             }
             None => assert_eq!(row.kind, EnumerationKind::ConstantPackage),
         }
@@ -141,9 +141,32 @@ fn every_catalog_enum_rule_anywhere_matches_some_row() {
 }
 
 #[test]
+fn enumeration_types_and_member_values_are_thin_views_of_the_table() {
+    let types: Vec<_> = oce_api::enumeration_types().collect();
+    assert_eq!(types.len(), 14);
+    assert!(
+        types
+            .iter()
+            .all(|r| r.kind == EnumerationKind::Enumeration && r.id.is_some())
+    );
+    for row in enumerations() {
+        for member in row.members {
+            assert_eq!(
+                oce_api::enumeration_member_value(row.class_path, member),
+                row.member_value(member)
+            );
+        }
+    }
+    assert_eq!(
+        oce_api::enumeration_member_value("ASHRAE.G36.Types.DemandLimitLevels", "heating2"),
+        Some(MemberValue::Integer(2))
+    );
+}
+
+#[test]
 fn unknown_ids_have_no_path() {
     for id in [0, 5, 100, 111, u32::MAX] {
-        assert_eq!(enum_class_path(EnumClassId(id)), None);
+        assert_eq!(enumeration_class_path(EnumClassId(id)), None);
         assert_eq!(enumeration_by_id(EnumClassId(id)), None);
     }
 }
@@ -187,7 +210,7 @@ fn every_loaded_enum_parameter_of_the_g36_corpus_names_its_class_through_the_loo
             if let Value::Enum { class, ordinal } = value {
                 let row = enumeration_by_id(class)
                     .unwrap_or_else(|| panic!("{}: {name}: no row", path.display()));
-                assert_eq!(enum_class_path(class), Some(row.class_path));
+                assert_eq!(enumeration_class_path(class), Some(row.class_path));
                 assert!(
                     ordinal >= 1 && ordinal as usize <= row.members.len(),
                     "{}: {name}",

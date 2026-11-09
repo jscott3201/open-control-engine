@@ -124,9 +124,15 @@ pub fn enumeration_class_by_id(id: EnumClassId) -> Option<&'static EnumerationCl
     ENUMERATION_CLASSES.iter().find(|row| row.id == Some(id))
 }
 
-/// The class path (relative to `Buildings.Controls.OBC.`) of the enumeration `id` names.
+/// The authoring class path (relative to `Buildings.Controls.OBC.`, [`EnumerationClass::class_path`])
+/// of the enumeration `id` names: `CDL.Types.SimpleController`, `ASHRAE.G36.Types.CoolingCoil`.
+///
+/// This is **not** the durable spelling. A durable record (state snapshot, compiled-schedule blob,
+/// replay wire or trace, class signature hash) writes [`crate::EnumDescriptor::class_path`] from
+/// [`crate::enum_descriptor`], which is fully qualified for a G36 enumeration
+/// (`Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil`). The two agree only for CDL.
 #[must_use]
-pub fn enum_class_path(id: EnumClassId) -> Option<&'static str> {
+pub fn enumeration_class_path(id: EnumClassId) -> Option<&'static str> {
     enumeration_class_by_id(id).map(|row| row.class_path)
 }
 
@@ -190,10 +196,19 @@ const fn constant_package(
     }
 }
 
-/// The table. Enumeration members follow the pinned Buildings source order (the vendored
-/// `third_party/modelica-buildings-cdl` `.mo` classes, checked by a test). The constant packages
-/// are not vendored; their members and values are the `constant Integer` declarations of
-/// `Buildings.Controls.OBC.ASHRAE.G36.Types` that the CXF resolver grounds.
+/// The table: 18 rows. Provenance differs by group, and the tests that hold each group differ:
+///
+/// - The ten G36 enumerations are checked member by member, in order, against the vendored
+///   `third_party/modelica-buildings-cdl` `.mo` classes.
+/// - The four CDL enumerations are not vendored (`CDL/Types` is outside the vendored subset);
+///   they are held to the registry's independent `EnumMembers` rule lists, the typed
+///   `SimpleController` / `ZeroTime` parsers, and the match arms they replaced.
+/// - The four constant packages are **not vendored**. Their members and values are exactly the
+///   ones the resolver always grounded (the hand-written match arms this table replaced, pinned
+///   by the differential test in `tests/enumeration_table.rs`); no upstream source checks them,
+///   and the corpus-reference test only proves that the corpus names nothing outside them. The
+///   member order of `DemandLimitLevels` (`cooling0..3`, then `heating0..3`) is a choice, not an
+///   upstream order; for a constant package only the name-to-value map carries meaning.
 static ENUMERATION_CLASSES: &[EnumerationClass] = &[
     enumeration(
         "Buildings.Controls.OBC.CDL.Types.SimpleController",

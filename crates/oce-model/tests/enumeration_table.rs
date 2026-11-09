@@ -10,8 +10,8 @@ use std::path::Path;
 
 use oce_model::{
     EnumClassId, EnumerationClass, EnumerationKind, MemberValue, OBC_PACKAGE, enum_class_id,
-    enum_class_path, enum_descriptor, enum_descriptor_by_path, enum_member_ordinal,
-    enumeration_class, enumeration_class_by_id, enumeration_classes, enumeration_member_value,
+    enum_descriptor, enum_descriptor_by_path, enum_member_ordinal, enumeration_class,
+    enumeration_class_by_id, enumeration_class_path, enumeration_classes, enumeration_member_value,
     g36_enum_class_id, g36_enum_literals, g36_integer_constant, g36_integer_constant_in_package,
     is_g36_integer_constant_package, is_g36_type_path,
 };
@@ -163,7 +163,7 @@ fn lookups_by_path_id_and_member_agree_with_the_rows() {
         assert_eq!(enumeration_class(row.class_path), Some(row));
         if let Some(id) = row.id {
             assert_eq!(enumeration_class_by_id(id), Some(row));
-            assert_eq!(enum_class_path(id), Some(row.class_path));
+            assert_eq!(enumeration_class_path(id), Some(row.class_path));
         }
         for (index, member) in row.members.iter().enumerate() {
             let expected = match row.kind {
@@ -191,7 +191,7 @@ fn lookups_by_path_id_and_member_agree_with_the_rows() {
     );
     for id in [0, 5, 100, 111, 999, u32::MAX] {
         assert_eq!(enumeration_class_by_id(EnumClassId(id)), None, "{id}");
-        assert_eq!(enum_class_path(EnumClassId(id)), None, "{id}");
+        assert_eq!(enumeration_class_path(EnumClassId(id)), None, "{id}");
     }
 }
 
@@ -423,5 +423,49 @@ fn g36_enumeration_members_match_the_vendored_source_in_order() {
             "{name}"
         );
         assert_eq!(vendored_enumeration_members(&source), row.members, "{name}");
+    }
+}
+
+#[test]
+fn every_row_lies_in_a_package_whose_durable_form_is_decided() {
+    // `enum_descriptor` picks the durable class-path form by package: relative for
+    // `CDL.Types`, fully qualified for `ASHRAE.G36.Types`. A row in any other package would get a
+    // form nobody chose, so it must be refused here until one is.
+    for row in rows() {
+        assert!(
+            row.class_path.starts_with("CDL.Types.")
+                || row.class_path.starts_with("ASHRAE.G36.Types."),
+            "{}: no durable class-path form is decided for this package",
+            row.class_path
+        );
+    }
+}
+
+#[test]
+fn cdl_rows_agree_with_the_typed_simple_controller_and_zero_time_parsers() {
+    use oce_model::{SimpleController, ZeroTime};
+    let simple = enumeration_class("CDL.Types.SimpleController").expect("row");
+    let typed = [
+        SimpleController::P,
+        SimpleController::Pi,
+        SimpleController::Pd,
+        SimpleController::Pid,
+    ];
+    assert_eq!(simple.members.len(), typed.len());
+    for (member, expected) in simple.members.iter().zip(typed) {
+        assert_eq!(
+            SimpleController::from_qualified(&format!("{}.{member}", simple.qualified_path)),
+            Some(expected)
+        );
+    }
+    let zero_time = enumeration_class("CDL.Types.ZeroTime").expect("row");
+    assert_eq!(zero_time.members.len(), ZeroTime::MEMBER_COUNT as usize);
+    for (index, member) in zero_time.members.iter().enumerate() {
+        let ordinal = u32::try_from(index + 1).expect("small");
+        assert_eq!(
+            ZeroTime::from_member(member).map(ZeroTime::ordinal),
+            Some(ordinal),
+            "{member}"
+        );
     }
 }

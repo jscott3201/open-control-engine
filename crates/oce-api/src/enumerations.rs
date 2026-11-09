@@ -21,6 +21,23 @@
 
 pub use oce_model::{EnumClassId, EnumerationClass, EnumerationKind, MemberValue};
 
+/// What `member` of the row at `class_path` stands for: an enumeration's one-based ordinal or a
+/// constant package's Integer. Exact names only; equal to
+/// `enumeration(class_path)?.member_value(member)` ([`EnumerationClass::member_value`]).
+#[must_use]
+pub fn enumeration_member_value(class_path: &str, member: &str) -> Option<MemberValue> {
+    oce_model::enumeration_member_value(class_path, member)
+}
+
+/// The enumeration rows only — the types a parameter or connector may have — in table order.
+/// Equivalent to `enumerations().iter().filter(|r| r.kind == EnumerationKind::Enumeration)`; a
+/// constant package is never a parameter type.
+pub fn enumeration_types() -> impl Iterator<Item = &'static EnumerationClass> {
+    enumerations()
+        .iter()
+        .filter(|row| row.kind == EnumerationKind::Enumeration)
+}
+
 /// Every enumeration and Integer constant package the engine knows, in a fixed order: the four CDL
 /// enumerations, the ten G36 enumerations, then the four G36 constant packages. Pure; no
 /// allocation.
@@ -43,9 +60,15 @@ pub fn enumeration_by_id(id: EnumClassId) -> Option<&'static EnumerationClass> {
     oce_model::enumeration_class_by_id(id)
 }
 
-/// The class path (relative to `Buildings.Controls.OBC.`) of the enumeration `id` names, for
-/// labelling an Enum port or trace column. `None` for an id the engine does not know.
+/// The authoring class path (relative to `Buildings.Controls.OBC.`) of the enumeration `id` names:
+/// `CDL.Types.SimpleController`, `ASHRAE.G36.Types.CoolingCoil`. `None` for an id the engine does
+/// not know.
+///
+/// This is the form an authoring document or a CXF class IRI after `Buildings.Controls.OBC.`
+/// spells. It is **not** the durable spelling the engine's own records use (state snapshots,
+/// compiled-schedule blobs, the replay wire, class signature hashes), which is fully qualified for
+/// a G36 enumeration; a trace that must agree with those records writes that durable form.
 #[must_use]
-pub fn enum_class_path(id: EnumClassId) -> Option<&'static str> {
-    oce_model::enum_class_path(id)
+pub fn enumeration_class_path(id: EnumClassId) -> Option<&'static str> {
+    oce_model::enumeration_class_path(id)
 }

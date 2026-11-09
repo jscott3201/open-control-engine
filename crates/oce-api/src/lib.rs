@@ -109,8 +109,8 @@ pub use diagnostics::{
 };
 pub use engine::Engine;
 pub use enumerations::{
-    EnumClassId, EnumerationClass, EnumerationKind, MemberValue, enum_class_path, enumeration,
-    enumeration_by_id, enumerations,
+    EnumClassId, EnumerationClass, EnumerationKind, MemberValue, enumeration, enumeration_by_id,
+    enumeration_class_path, enumeration_member_value, enumeration_types, enumerations,
 };
 pub use error::{LoadErrorContext, OcError, OcResult};
 pub use export::{ExportIncomplete, ExportReport};

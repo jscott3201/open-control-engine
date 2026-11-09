@@ -50,15 +50,19 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `Buildings.Controls.OBC.` (`CDL.Types.SimpleController`, `ASHRAE.G36.Types.OperationModes`); each
   row is an `EnumerationKind::Enumeration` (a parameter and connector type, carrying its
   `EnumClassId`) or an `EnumerationKind::ConstantPackage` (named Integer constants, never a
-  parameter type). `enumeration(class_path)`, `enumeration_by_id(id)` and
-  `enum_class_path(id)` look rows up without allocating, and `EnumerationClass::member_value` gives
-  a member's ordinal or Integer (`MemberValue`); `EnumClassId` is re-exported. `CATALOG_JSON`,
+  parameter type). `enumeration(class_path)`, `enumeration_by_id(id)`,
+  `enumeration_class_path(id)`, `enumeration_member_value(class_path, member)` and
+  `enumeration_types()` look rows up without allocating, and `EnumerationClass::member_value` gives
+  a member's ordinal or Integer (`MemberValue`); `EnumClassId` is re-exported.
+  `enumeration_class_path` is the relative authoring form; the durable spelling snapshots, blobs,
+  the replay wire and class hashes record stays `EnumDescriptor::class_path` (fully qualified for
+  G36), and the rustdoc on both says so. `CATALOG_JSON`,
   `catalog_content_id`, every class signature hash and the `class_ports` golden are unchanged. Tests
   (`crates/oce-api/tests/enumerations.rs`) hold the table to every `EnumMembers` rule, `Required`
   Enum kind, enum default and Enum-typed parameter the catalog publishes (members in order), and to
-  every Enum parameter a load of the G36 corpus keeps. The facade half of #465 (a class-path lookup
-  for an `EnumClassId`) is this `enum_class_path`; recording the path in `oce-replay` traces stays
-  open there.
+  every Enum parameter a load of the G36 corpus keeps. #465 (recording an Enum column's class in
+  `oce-replay` traces) stays open; a trace must record the durable `enum_descriptor` spelling, not
+  `enumeration_class_path`.
 
 - **Canonical content id** (GitHub #474, issue #470; design note GitHub #471).
   `Engine::content_id()` mints one identity for a loaded sequence, `oce:canon1:` and the 64 hex
@@ -203,6 +207,14 @@ and a gate that accepted any text would restore exactly the false assurance desc
   last segments; one value per constant) and the G36 members against the vendored `.mo` sources in
   order. `tests/enumeration_corpus_references.rs` checks that every `CDL.Types` / `G36.Types` class,
   member and constant the CXF corpus names is a row or member, grounding to the row's value.
+  Provenance: the 10 G36 enumerations are checked against the vendored `.mo` sources in order; the 4
+  CDL enumerations are not vendored and are held to the registry's `EnumMembers` lists and the typed
+  `SimpleController` / `ZeroTime` parsers; the 4 constant packages are not vendored either and carry
+  exactly the members and values the resolver always used, pinned only by the differential test
+  against the old `match` arms (the corpus test cannot catch a wrong value there).
+  `DemandLimitLevels`' member order (`cooling0..3`, then `heating0..3`) is a choice, not an upstream
+  order. A test pins that every row lies in `CDL.Types` or `ASHRAE.G36.Types`, the two packages
+  whose durable class-path form is decided.
 
 - **Blob format 2: the content-id field holds the canonical digest** (GitHub #474, issue #470).
   `oce_graph::blob::FORMAT_VERSION` is 2 and the decoder accepts only 2: the 32-byte header field

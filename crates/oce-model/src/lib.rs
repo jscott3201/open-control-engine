@@ -53,8 +53,8 @@ impl EnumClassId {
 }
 
 pub use enumerations::{
-    EnumerationClass, EnumerationKind, MemberValue, OBC_PACKAGE, enum_class_path,
-    enumeration_class, enumeration_class_by_id, enumeration_classes, enumeration_member_value,
+    EnumerationClass, EnumerationKind, MemberValue, OBC_PACKAGE, enumeration_class,
+    enumeration_class_by_id, enumeration_class_path, enumeration_classes, enumeration_member_value,
 };
 pub use types::{
     EnumDescriptor, SimpleController, ZeroTime, enum_class_id, enum_descriptor,

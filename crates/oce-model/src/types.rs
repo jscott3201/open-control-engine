@@ -14,7 +14,12 @@ const CDL_TYPES_PREFIX: &str = "Buildings.Controls.OBC.CDL.Types.";
 pub struct EnumDescriptor {
     /// Stable in-memory class id used by [`crate::ValueType::Enum`].
     pub id: EnumClassId,
-    /// Canonical class path used by durable formats instead of the numeric id.
+    /// Canonical class path used by durable formats instead of the numeric id: the form state
+    /// snapshots, compiled-schedule blobs, replay wire and traces, and class signature hashes
+    /// record. Relative to `Buildings.Controls.OBC.` for a CDL enumeration
+    /// (`CDL.Types.SimpleController`), **fully qualified** for a G36 one
+    /// (`Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil`). Frozen; it is not
+    /// [`crate::EnumerationClass::class_path`], the one relative authoring form.
     pub class_path: &'static str,
     /// Members in their one-based source ordinal order.
     pub members: &'static [&'static str],

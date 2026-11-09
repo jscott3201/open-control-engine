@@ -137,11 +137,26 @@ lookup in the engine reads (issue #468): the four CDL enumerations (`CDL.Types.S
   the package is an Integer connector.
 - Last segments are unique across the table, so an authored `Type.Member` names one row.
 
-`enumeration(class_path)`, `enumeration_by_id(id)` and `enum_class_path(id)` look rows up without
-allocating. None of it enters the revision-1 catalog: `CATALOG_JSON`, `catalog_content_id` and the
+The table has 18 rows, and their provenance differs. The ten G36 enumerations are checked against
+the vendored `.mo` sources, member by member and in order. The four CDL enumerations are not
+vendored (`CDL/Types` is outside the vendored subset); they are held to the registry's own
+`EnumMembers` rule lists and the typed `SimpleController` / `ZeroTime` parsers. The four constant
+packages are not vendored either: they carry exactly the members and values the resolver always
+used, pinned by a differential test against the hand-written `match` arms the table replaced, and
+nothing upstream checks them. `DemandLimitLevels` lists `cooling0`…`cooling3` then
+`heating0`…`heating3`; that order is a choice, not an upstream order — only the name-to-value map of
+a constant package carries meaning.
+
+`enumeration(class_path)`, `enumeration_by_id(id)`, `enumeration_class_path(id)`,
+`enumeration_member_value(class_path, member)` and `enumeration_types()` (the enumeration rows only)
+look rows up without allocating. `enumeration_class_path` returns the **authoring** form above; it
+is not the durable spelling. None of it enters the revision-1 catalog: `CATALOG_JSON`, `catalog_content_id` and the
 class signature hashes are unchanged. The durable class identity recorded in state snapshots,
-compiled-schedule blobs and class signature hashes is `oce_model::EnumDescriptor::class_path`, which
-predates the table and stays frozen (relative for CDL, fully qualified for G36).
+compiled-schedule blobs, the replay wire and class signature hashes is
+`oce_model::EnumDescriptor::class_path` (from `oce_model::enum_descriptor`), which predates the
+table and stays frozen: relative for CDL, **fully qualified** for G36
+(`Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil`). A record that must agree with those
+writes the durable form, never `enumeration_class_path`.
 
 ## What "supported" means for a G36 sequence
 
