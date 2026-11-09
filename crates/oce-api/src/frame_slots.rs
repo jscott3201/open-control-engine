@@ -23,7 +23,7 @@ use std::sync::Arc;
 use oce_blocks::Diagnostics;
 use oce_graph::RunState;
 use oce_graph::frame::{FrameDriver, FrameInputs, InputSlot};
-use oce_model::{ConnectorId, Value};
+use oce_model::{ConnectorId, Value, ValueType};
 
 use crate::{AssertEvent, AssertLevel, Engine, InputDefinition, OcError};
 
@@ -33,7 +33,9 @@ use crate::{AssertEvent, AssertLevel, Engine, InputDefinition, OcError};
 /// [`Engine::input_definitions`]; output slot `j` is [`Self::outputs`]`[j]`, in the lexical order
 /// of [`crate::CompletedFrame::outputs`]. Both orders equal the compiled-schedule blob's I/O
 /// tables. A host resolves its own names to slots here once (with [`Self::input_slot`] and
-/// [`Self::output_slot`]) and then submits frames by slot with [`Engine::execute_slots`].
+/// [`Self::output_slot`]) and then submits frames by slot with [`Engine::execute_slots`]. Both
+/// sides are typed before any frame runs: an input slot by its definition's `value_type`, an
+/// output slot by [`Self::output_types`].
 ///
 /// The map belongs to one engine-local successful load incarnation, exactly like a
 /// [`crate::PreparedInputFrame`]: every successful reload (identical bytes included) and every
@@ -48,6 +50,7 @@ pub struct FrameSlots {
     inputs: Vec<InputDefinition>,
     targets: Vec<Vec<ConnectorId>>,
     outputs: Vec<String>,
+    output_types: Vec<ValueType>,
 }
 
 impl fmt::Debug for FrameSlots {
@@ -72,6 +75,30 @@ impl FrameSlots {
     #[must_use]
     pub fn outputs(&self) -> &[String] {
         &self.outputs
+    }
+
+    /// The exact native value type of each boundary output in output-slot order: entry `j` types
+    /// [`Self::outputs`]`[j]`, so the slice always has the length of `outputs()` and is empty for
+    /// an executable with no boundary output.
+    ///
+    /// Each entry is the declared type of the connector that drives the output (for a
+    /// pass-through declared output, the type of the boundary input it copies), fixed at load and
+    /// known before the first frame. It is the type alone, as [`InputDefinition::value_type`] is on
+    /// the input side: no unit, bound or other attribute, and no projection-carrier coercion. An
+    /// Enum output is [`ValueType::Enum`] with its exact class identity, never `Integer`.
+    ///
+    /// Invariant: for every frame accepted in the load incarnation this map was built from,
+    /// through either entry, the `j`-th output value has exactly this type; `frame.output(j)`
+    /// satisfies `value.value_type() == slots.output_types()[j]`, and so does the `j`-th entry of
+    /// [`crate::CompletedFrame::outputs`]. The types belong to that incarnation, like the paths.
+    /// Once a successful reload or a dirty parameter resume supersedes the map it keeps returning
+    /// the types it was built with, which say nothing about the executable now loaded, and
+    /// [`Engine::execute_slots`] refuses it with [`OcError::StalePreparedFrame`]; compare
+    /// boundaries only between maps built from the loads being compared. Does not allocate and
+    /// does not panic.
+    #[must_use]
+    pub fn output_types(&self) -> &[ValueType] {
+        &self.output_types
     }
 
     /// The input slot of canonical input `path`, or `None` when `path` is not a boundary input
@@ -235,8 +262,9 @@ impl Engine {
     /// Input slots follow [`Self::input_definitions`] and output slots the lexical boundary-output
     /// order of [`crate::CompletedFrame::outputs`]; see [`FrameSlots`] for the invariants. No
     /// engine mutation occurs. Allocates the owned map in proportion to the boundary (inputs, their
-    /// fan-out targets and outputs); call it after each successful load or dirty resume, not per
-    /// frame. A clean resume, a compatible restore and a failed load keep an existing map valid.
+    /// fan-out targets, outputs and output types); call it after each successful load or dirty
+    /// resume, not per frame. A clean resume, a compatible restore and a failed load keep an
+    /// existing map valid.
     ///
     /// # Errors
     /// `State(NoLoadedModel)` before a successful load, or `State(PendingParameterEdits)` while
@@ -261,6 +289,15 @@ impl Engine {
                 .frame_outputs
                 .iter()
                 .map(|(path, _)| path.clone())
+                .collect(),
+            // The declared type of each output's driving connector. Load admits a boundary output
+            // only with an in-range source (the same guarantee `SlotFrame::output` reads state
+            // under), so the index is in bounds for every loaded executable.
+            output_types: self
+                .io
+                .frame_outputs
+                .iter()
+                .map(|(_, source)| self.model.connectors[source.0 as usize].value_type)
                 .collect(),
         })
     }

@@ -197,7 +197,8 @@ scenario runs. Any failure is an error (exit 2, no receipt), never a failed scen
 3. **Values.** Each JSON value is typed by the declared type of what it lands on (decision 7): an
    input by `InputDefinition::value_type`, a parameter by its declared type, an `equals` literal by
    `FrameSlots::output_types()`. That last accessor is #460; today `outputs()` is paths only and a
-   type exists only after the first accepted frame, which is why #460 moves into M3.
+   type exists only after the first accepted frame, which is why #460 moves into M3. *(2026-11-09:
+   the accessor landed in GitHub #525.)*
 4. **Parameters.** Each scenario's effective edits are resolved and ordered (decision 14).
 5. **Mutants.** Every listed mutant is loaded and validated ([Mutant mode](#mutant-mode)).
 6. **Frames.** `(N + 1) * scenarios * (1 + mutants)` must fit `VerifyLimits::max_total_frames`.

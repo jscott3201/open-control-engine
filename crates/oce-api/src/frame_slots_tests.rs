@@ -2,8 +2,10 @@
 //! fault controls inject (sequence exhaustion, a restored clock beyond the limit, a forged stale
 //! map) refuses the slot entry with the named path's error and preserves every execution bit; the
 //! instrumented core counts one transition per accepted slot frame and none per refusal; the
-//! reused warning records match the named path's and stop allocating once warm; and Enum and
-//! String slots, which no public CXF can declare, refuse like the named path on detached probes.
+//! reused warning records match the named path's and stop allocating once warm; Enum and String
+//! slots, which no public CXF can declare, refuse like the named path on detached probes; and a
+//! hand-built boundary with an output of every value kind is typed by `output_types()` in lexical
+//! slot order, exact Enum class included, with every frame's values agreeing (issue #460).
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -11,8 +13,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use allocation_counter::measure;
 use oce_blocks::{Block, BlockKind, BlockSignature, Ctx};
 use oce_model::{
-    Attrs, BlockId, BlockInstance, Connector, ConnectorId, Dir, EnumClassId, ModelGraph,
-    ParamTable, Value, ValueType, enum_descriptor,
+    Attrs, BlockId, BlockInstance, BoundaryOutput, Connector, ConnectorId, Dir, EnumClassId,
+    ModelGraph, ParamTable, Value, ValueType, enum_descriptor,
 };
 
 use crate::frame::transition_count;
@@ -419,4 +421,181 @@ fn enum_and_string_slots_refuse_type_and_domain_like_the_named_path() {
         .execute_slots(&slots, 0.0, &[Value::String("owned".into())])
         .unwrap();
     assert_eq!(frame.sequence(), 1);
+}
+
+/// A detached probe whose boundary declares an output of every value kind, in an order that is
+/// not the lexical one. No registry block has an Enum or String output port, so no CXF (and no
+/// corpus fixture) can declare such an output; here they are output connectors no block writes,
+/// which hold whatever the test stages. `first` and `last` share the Enum driver: one driver may
+/// serve several declarations.
+fn output_probe() -> Engine {
+    let kinds = [
+        ValueType::Real,
+        ValueType::Enum(EnumClassId::SIMPLE_CONTROLLER),
+        ValueType::String,
+        ValueType::Enum(EnumClassId::SMOOTHNESS),
+        ValueType::Integer,
+        ValueType::Boolean,
+    ];
+    let mut model = ModelGraph::new();
+    model.blocks.push(BlockInstance {
+        id: BlockId(0),
+        class_iri: Arc::from("CDL.Reals.Sources.Constant"),
+        inputs: vec![],
+        outputs: vec![ConnectorId(0)],
+        params: ParamTable {
+            values: vec![(Arc::from("k"), Value::Real(-0.0))],
+        },
+        decl_order: 0,
+        instance_iri: Some(Arc::from("urn:probe:constant")),
+    });
+    for (index, value_type) in kinds.into_iter().enumerate() {
+        let id = ConnectorId(index as u32);
+        model.connectors.push(
+            Connector::new(id, BlockId(0), Dir::Out, value_type, index as u32)
+                .with_iri(format!("urn:probe:driver{index}")),
+        );
+    }
+    // Declaration order: Real, Enum, String, Enum, Integer, Boolean, then the shared Enum driver.
+    for (iri, source) in [
+        ("urn:probe:out:zeta", 0_u32),
+        ("urn:probe:out:first", 1),
+        ("urn:probe:out:mid", 2),
+        ("urn:probe:out:beta", 3),
+        ("urn:probe:out:gamma", 4),
+        ("urn:probe:out:delta", 5),
+        ("urn:probe:out:last", 1),
+    ] {
+        model.boundary_outputs.push(BoundaryOutput {
+            iri: Arc::from(iri),
+            source: ConnectorId(source),
+            attrs: Attrs::default_for(kinds[source as usize]),
+        });
+    }
+    let mut engine = Engine::new();
+    engine
+        .build_model_in_memory(model, Some("urn:probe:outputs"))
+        .unwrap();
+    engine
+}
+
+#[test]
+fn every_value_kind_is_typed_in_lexical_slot_order_with_the_exact_enum_class() {
+    let controller = EnumClassId::SIMPLE_CONTROLLER;
+    let smoothness = EnumClassId::SMOOTHNESS;
+    assert_ne!(controller, smoothness);
+    let mut engine = output_probe();
+    let slots = engine.frame_slots().unwrap();
+    // Lexical by declared identity, never declaration order or connector index.
+    let paths = [
+        "urn:probe:out:beta",
+        "urn:probe:out:delta",
+        "urn:probe:out:first",
+        "urn:probe:out:gamma",
+        "urn:probe:out:last",
+        "urn:probe:out:mid",
+        "urn:probe:out:zeta",
+    ];
+    assert_eq!(slots.outputs(), paths.map(str::to_owned));
+    // An Enum output carries its exact class, not `Integer` and not merely "an enumeration".
+    let types = [
+        ValueType::Enum(smoothness),
+        ValueType::Boolean,
+        ValueType::Enum(controller),
+        ValueType::Integer,
+        ValueType::Enum(controller),
+        ValueType::String,
+        ValueType::Real,
+    ];
+    assert_eq!(slots.output_types(), types);
+
+    // Stage values no seed holds into the connectors no block writes, then run both entries: every
+    // accepted frame's outputs carry exactly the map's types, class identity included.
+    let members = enum_descriptor(controller).unwrap().members.len() as u32;
+    assert!(members >= 2);
+    let top = Value::Enum {
+        class: controller,
+        ordinal: members,
+    };
+    let second = Value::Enum {
+        class: smoothness,
+        ordinal: 2,
+    };
+    let staged = [
+        (1, top.clone()),
+        (2, Value::String("held".into())),
+        (3, second.clone()),
+        (4, Value::Integer(i64::from(i32::MIN))),
+        (5, Value::Boolean(true)),
+    ];
+    for (connector, value) in &staged {
+        engine.state.values[*connector] = value.clone();
+    }
+    let expected = [
+        second,
+        Value::Boolean(true),
+        top.clone(),
+        Value::Integer(i64::from(i32::MIN)),
+        top,
+        Value::String("held".into()),
+        Value::Real(-0.0),
+    ];
+    for k in 0..3_u32 {
+        let time = f64::from(k);
+        let accepted = engine.execute_slots(&slots, time, &[]).unwrap();
+        assert_eq!(accepted.output_count(), types.len());
+        for (slot, value) in accepted.outputs().enumerate() {
+            assert_eq!(value.value_type(), types[slot], "frame {k}: slot {slot}");
+            assert!(value.bit_eq(&expected[slot]), "frame {k}: slot {slot}");
+        }
+        let plan = engine.prepare_frame(time, &[]).unwrap();
+        let completed = engine.execute_frame(plan).unwrap();
+        for (slot, (path, value)) in completed.outputs().iter().enumerate() {
+            assert_eq!(path, paths[slot]);
+            assert_eq!(value.value_type(), types[slot], "frame {k}: named {path}");
+            assert!(value.bit_eq(&expected[slot]), "frame {k}: named {path}");
+        }
+    }
+    // The map read after the frames is the map read before them, a clone carries it, and the
+    // read allocates nothing.
+    assert_eq!(slots.output_types(), types);
+    assert_eq!(slots.clone().output_types(), types);
+    let census = measure(|| {
+        std::hint::black_box(slots.output_types());
+    });
+    assert_eq!(census.count_total, 0, "{census:?}");
+}
+
+#[test]
+fn a_superseded_map_keeps_its_types_and_is_still_refused() {
+    let mut engine = output_probe();
+    let slots = engine.frame_slots().unwrap();
+    let types = slots.output_types().to_vec();
+    assert_eq!(types.len(), 7);
+    let before = run_image(&engine);
+    // A forged incarnation, as a reload or dirty resume leaves an old map: the types are still
+    // readable, the frame is refused before any mutation, and a fresh map types the same boundary.
+    let mut stale = slots.clone();
+    stale.generation = Arc::new(());
+    assert_eq!(stale.output_types(), types);
+    assert!(matches!(
+        engine.execute_slots(&stale, 0.0, &[]),
+        Err(OcError::StalePreparedFrame)
+    ));
+    assert_eq!(run_image(&engine), before);
+    assert_eq!(engine.frame_slots().unwrap().output_types(), types);
+    assert_eq!(
+        engine.execute_slots(&slots, 0.0, &[]).unwrap().sequence(),
+        1
+    );
+}
+
+#[test]
+fn the_debug_form_of_a_map_still_prints_counts_only() {
+    let engine = output_probe();
+    let slots = engine.frame_slots().unwrap();
+    assert_eq!(
+        format!("{slots:?}"),
+        "FrameSlots { inputs: 0, outputs: 7, .. }"
+    );
 }

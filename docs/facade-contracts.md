@@ -311,7 +311,12 @@ A host loop or replay that submits many frames resolves names once: `engine.fram
 returns a `FrameSlots` map whose input slots follow `input_definitions()` and whose output slots
 follow `CompletedFrame::outputs()`, both the compiled blob's I/O order. Build the host's own
 column→slot table from `FrameSlots::input_slot` and `output_slot`, then call
-`engine.execute_slots(&slots, t, &values)` per frame with one value per input slot. The returned
+`engine.execute_slots(&slots, t, &values)` per frame with one value per input slot. Both sides are
+typed at load: an input slot by `FrameSlots::inputs()[i].value_type`, an output slot by
+`FrameSlots::output_types()[j]` (parallel to `outputs()`, an Enum with its class identity), and
+the `j`-th output of every frame accepted in the load the map was built from has that type, so
+expected values and a second executable's boundary are checked before the first frame, not after
+it (issue #460). The returned
 `SlotFrame` borrows outputs in output-slot order and the frame's warnings; copy out what you keep.
 Rebuild the map after every successful load or dirty resume: a superseded map is refused with
 `StalePreparedFrame`, never rebound. Refusals, their order and their atomicity are the named

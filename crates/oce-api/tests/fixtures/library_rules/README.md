@@ -2,7 +2,8 @@
 
 Byte-for-byte copies of two published fault rules from
 [open-control-library](https://github.com/jscott3201/open-control-library), used as inputs by
-`crates/oce-api/tests/library_rule_state_continuation.rs`. They are **data**, never edited here: a
+`crates/oce-api/tests/library_rule_state_continuation.rs` (and, for the CXF graphs alone, by
+`crates/oce-api/tests/slot_output_types.rs`). They are **data**, never edited here: a
 rule change goes to the Library as its own pull request, then a fresh copy lands here with this
 table updated.
 

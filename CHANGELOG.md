@@ -39,6 +39,36 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Facade
 
+- **Output types in slot order** (GitHub #525, issue #460). `FrameSlots::output_types()` returns
+  one `ValueType` per output slot, parallel to `outputs()`: the declared type of the connector that
+  drives each boundary output (for a pass-through declared output, the type of the input it
+  copies), known at load. Until now `outputs()` gave paths only and an output's type existed only
+  on the first accepted frame; `oce-verify` types every expected value and compares a mutant's
+  boundary with the subject's before any frame runs (`docs/design/vectors.md`, decisions 7 and 27).
+  It is the type alone, as `InputDefinition::value_type` is for an input, and an Enum output is
+  `ValueType::Enum` with its exact class identity. For every frame accepted in the load the map
+  was built from, through either entry, the `j`-th output value has the type of entry `j`. The slice is borrowed (no allocation
+  on read), is empty for an executable with no boundary output, and belongs to the map's load
+  incarnation like the paths: a superseded map keeps its types and is still refused with
+  `StalePreparedFrame`. Additive only: no existing signature, refusal, error variant or behaviour
+  changes, `execute_slots` and the frame driver are untouched, `oce-replay` still fixes its output
+  columns from the first accepted frame, and every golden is byte-identical. The `is_current`
+  staleness probe that shared this issue is split off to M6.
+  Evidence (`tests/slot_output_types.rs`): over the 46 G36 fixtures and the two library rules, each
+  of the 134 output slots (102 Real, 18 Integer, 14 Boolean) is typed before any frame exactly as
+  its CXF document node declares it, by a `serde_json` walk that shares no engine helper, with a
+  transposition control on the ten mixed-type boundaries; all 21,440 output values of the shared
+  160-frame schedule and the named path's first `CompletedFrame` have their slot's type; an empty
+  boundary, Real, Integer and Boolean pass-through outputs copied bit for bit, a reload of
+  identical bytes (a new map, the same types, the old map refused), a dirty parameter resume, a
+  reload of a different model, a failed load and an allocation-free read with a positive control.
+  An Enum and a String boundary output, which no CXF can declare, are hand-built in
+  `frame_slots_tests.rs`: seven declared outputs over every value kind and two enumeration
+  classes, typed in lexical slot order with the exact class, on both entries. The signature guard
+  (`guards.rs`) and the facade compiler contract's positive control name the accessor;
+  `docs/complete-frame-contract.md`, `docs/facade-contracts.md` and the README are updated, and
+  `docs/design/vectors.md` records that the accessor landed.
+
 - **Enumeration and constant-package table** (GitHub #488, issue #468). `oce_api::enumerations()`
   lists, beside `class_metadata()`, every named type the engine knows as one `&'static` table of
   `EnumerationClass { class_path, qualified_path, kind, id, members, values }`: the four CDL
