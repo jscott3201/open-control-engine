@@ -293,7 +293,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Leverage
 
 - **Enumeration-typed sequence parameters, boundary bounds and member literals in the authoring
-  model** (GitHub #PRNUM, issue #492; the [importer note](docs/design/importer.md)'s model changes).
+  model** (GitHub #493, issue #492; the [importer note](docs/design/importer.md)'s model changes).
   `oce-author`'s `SequenceParameter::value_type` is a `ParameterType` (`Real`, `Integer`, `Boolean`
   or `Enum(type_name)`, the enumeration's last segment): wire `"type": "SimpleController"`, text
   `param conTyp : SimpleController = SimpleController.PI`; the pinned schema lists a `type` enum of
