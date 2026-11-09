@@ -1,7 +1,11 @@
 //! A JSON reader that refuses what `serde_json::Value` would silently resolve: a key written
 //! twice in one object (where `serde_json` keeps the last value) and an integer token outside the
-//! `i64` range (where it keeps a `u64` the model cannot hold). Nesting is bounded by
-//! `serde_json`'s own recursion limit (128), which it reports as an error, never a stack overflow.
+//! `i64` range (where it keeps a `u64`, or reads a longer token as a float). Integer range is
+//! enforced lexically before parsing: every token outside a string that is an optional `-` and
+//! digits with no fraction or exponent must parse as an `i64`, at any depth. The token `-0` is the
+//! Integer zero, as in the wire form (`serde_json` would read it as the Real `-0.0`). Nesting is
+//! bounded by `serde_json`'s own recursion limit (128), which it reports as an error, never a
+//! stack overflow.
 
 use std::fmt;
 
@@ -9,12 +13,76 @@ use serde::Deserializer;
 use serde::de::{self, DeserializeSeed, MapAccess, SeqAccess, Visitor};
 use serde_json::{Map, Number, Value};
 
-/// Parse `bytes` strictly.
-pub(super) fn parse(bytes: &[u8]) -> Result<Value, serde_json::Error> {
-    let mut deserializer = serde_json::Deserializer::from_slice(bytes);
-    let value = Strict.deserialize(&mut deserializer)?;
-    deserializer.end()?;
+/// Parse `bytes` strictly; the error is a message for `ImportError::Malformed`.
+pub(super) fn parse(bytes: &[u8]) -> Result<Value, String> {
+    let negative_zeros = integer_tokens(bytes)?;
+    let mut owned;
+    let mut source = bytes;
+    if !negative_zeros.is_empty() {
+        owned = bytes.to_vec();
+        for at in negative_zeros {
+            owned[at] = b' ';
+        }
+        source = &owned;
+    }
+    let mut deserializer = serde_json::Deserializer::from_slice(source);
+    let value = Strict
+        .deserialize(&mut deserializer)
+        .map_err(|e| e.to_string())?;
+    deserializer.end().map_err(|e| e.to_string())?;
     Ok(value)
+}
+
+/// Walk the raw bytes outside strings and check every integer-shaped token (`-`? digits, not
+/// followed by `.`, `e` or `E`) against the `i64` range. Returns the offsets of the `-` of every
+/// `-0` token, whose sign the caller blanks. Not a JSON parser: anything malformed is left for
+/// `serde_json` to report with a position.
+fn integer_tokens(bytes: &[u8]) -> Result<Vec<usize>, String> {
+    let mut negative_zeros = Vec::new();
+    let mut at = 0;
+    while at < bytes.len() {
+        match bytes[at] {
+            b'"' => {
+                at += 1;
+                while at < bytes.len() && bytes[at] != b'"' {
+                    at += if bytes[at] == b'\\' { 2 } else { 1 };
+                }
+                at += 1;
+            }
+            b'-' | b'0'..=b'9' => {
+                let start = at;
+                at += usize::from(bytes[at] == b'-');
+                let digits = at;
+                while at < bytes.len() && bytes[at].is_ascii_digit() {
+                    at += 1;
+                }
+                let fraction = matches!(bytes.get(at), Some(b'.' | b'e' | b'E'));
+                if fraction {
+                    while at < bytes.len()
+                        && matches!(bytes[at], b'0'..=b'9' | b'.' | b'e' | b'E' | b'+' | b'-')
+                    {
+                        at += 1;
+                    }
+                    continue;
+                }
+                if at == digits {
+                    continue;
+                }
+                let token = std::str::from_utf8(&bytes[start..at]).unwrap_or_default();
+                match token.parse::<i64>() {
+                    Ok(0) if bytes[start] == b'-' => negative_zeros.push(start),
+                    Ok(_) => {}
+                    Err(_) => {
+                        return Err(format!(
+                            "the integer {token} at byte {start} is outside the i64 range"
+                        ));
+                    }
+                }
+            }
+            _ => at += 1,
+        }
+    }
+    Ok(negative_zeros)
 }
 
 /// The seed that reads one strict value.

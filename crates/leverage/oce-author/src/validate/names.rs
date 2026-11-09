@@ -11,9 +11,10 @@ use super::{
     INVALID_SEMANTIC_POINT, NON_FINITE_PARAMETER, PARAMETER_KIND_MISMATCH, PARAMETER_OUT_OF_RANGE,
 };
 
-/// The largest Integer magnitude a Real holds exactly: 2^53. A larger Integer literal on a Real
-/// parameter would be rounded on its way to the engine, so the value loaded would not be the
-/// value written; stage 1 refuses it (`parameter-out-of-range`).
+/// The largest magnitude up to which every Integer has an exact Real: 2^53. Above it some do not
+/// (2^53 + 1 rounds to 2^53), so an Integer literal on a Real parameter may load as a value the
+/// author never wrote; stage 1 refuses every one above the bound
+/// (`parameter-out-of-range`).
 pub const MAX_EXACT_INTEGER: i64 = 1 << 53;
 
 /// Whether an Integer literal converts to a Real without rounding (|v| <= 2^53).
@@ -25,7 +26,7 @@ pub(crate) fn exact_as_real(value: i64) -> bool {
 pub(crate) fn inexact_detail(what: &str, value: i64) -> String {
     format!(
         "{what}: the Integer {value} on a Real exceeds 2^53 ({MAX_EXACT_INTEGER}) in magnitude, \
-         so it has no exact Real; write the Real you mean"
+         so its Real may round; write the Real you mean"
     )
 }
 

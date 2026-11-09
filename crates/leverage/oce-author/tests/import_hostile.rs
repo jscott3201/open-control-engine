@@ -91,7 +91,14 @@ fn a_multi_byte_root_id_is_refused_without_panicking() {
             let mut id = root.to_owned();
             id.insert(at, ch);
             let doc = econ().replace(&format!("\"{root}\""), &format!("\"{id}\""));
-            let _ = import_cxf(doc.as_bytes());
+            // Either the name is no identifier or the members are no longer under the root.
+            assert!(
+                matches!(
+                    import_cxf(doc.as_bytes()),
+                    Err(ImportError::Unsupported { .. } | ImportError::Unresolved { .. })
+                ),
+                "{id}"
+            );
         }
     }
 }
@@ -224,7 +231,7 @@ fn a_value_that_disagrees_with_its_datatype_is_refused() {
 }
 
 #[test]
-fn an_unchecked_type_is_now_checked() {
+fn a_parameter_type_other_than_parameter_is_refused() {
     is_unsupported(
         &edited(
             "\"@id\": \"urn:oce:author:econ_enable.hys.uLow\",\n      \"@type\": \"S231:Parameter\",",
@@ -275,22 +282,50 @@ fn giant_lists_are_refused_in_bounded_time() {
     assert!(start.elapsed() < std::time::Duration::from_secs(60));
 }
 
-/// The byte offsets a sweep visits. The sweep reads about 20 mutants per offset, so a document of
-/// `len` bytes gets at most `BYTES_PER_DOCUMENT / (20 * len)` offsets at a fixed stride (every
-/// offset of a small document): the sweep's cost is bounded by construction, about 60 MB parsed
-/// per document.
-fn offsets(len: usize) -> Vec<usize> {
-    const BYTES_PER_DOCUMENT: usize = 60_000_000;
-    let budget = (BYTES_PER_DOCUMENT / (20 * len.max(1))).clamp(8, len.max(1));
-    let stride = len.div_ceil(budget).max(1);
-    (0..len).step_by(stride).collect()
+/// The most offsets a sweep visits in one document.
+const MAX_OFFSETS: usize = 300;
+
+/// The offsets a sweep visits, at most [`MAX_OFFSETS`]: half spread evenly over the structural
+/// bytes (`"`, `\`, braces, brackets, `:`, `,`) and the digit boundaries, half evenly over every
+/// offset, so a large document is probed at its syntax and not only mid-string.
+fn offsets(bytes: &[u8]) -> Vec<usize> {
+    let structural: Vec<usize> = (0..bytes.len())
+        .filter(|&i| {
+            matches!(
+                bytes[i],
+                b'"' | b'\\' | b'{' | b'}' | b'[' | b']' | b':' | b','
+            ) || (bytes[i].is_ascii_digit() != bytes.get(i + 1).is_some_and(u8::is_ascii_digit))
+        })
+        .collect();
+    let spread = |all: &[usize], count: usize| -> Vec<usize> {
+        let stride = all.len().div_ceil(count.max(1)).max(1);
+        all.iter().copied().step_by(stride).collect()
+    };
+    let every: Vec<usize> = (0..bytes.len()).collect();
+    let mut chosen = spread(&structural, MAX_OFFSETS / 2);
+    chosen.extend(spread(&every, MAX_OFFSETS / 2));
+    chosen.sort_unstable();
+    chosen.dedup();
+    chosen
+}
+
+/// Import `bytes`, turning a panic into a failure that names the mutant.
+fn import_named(bytes: &[u8], document: &str, at: usize, mutation: &str) -> Result<(), ()> {
+    match std::panic::catch_unwind(|| import_cxf(bytes)) {
+        Ok(Ok(_)) => Ok(()),
+        Ok(Err(_)) => Err(()),
+        Err(_) => panic!("import_cxf panicked on {document} at byte {at} ({mutation})"),
+    }
 }
 
 #[test]
 fn a_bounded_mutation_sweep_over_every_document_never_panics() {
-    // Per offset: three bit flips, a multi-byte character replacing the byte, an inserted
-    // escape, quote, backslash, lone surrogate escape or bracket, and the truncation there.
-    let insertions: [&[u8]; 8] = [
+    // Per offset: bit flips, a multi-byte character, an escape, a quote, a backslash, a lone
+    // surrogate escape or a bracket replacing the byte or inserted before it, and the truncation
+    // there. A document above 16 KiB gets a reduced mutation set (one flip, a quote replacing or
+    // inserted, the truncation; above 128 KiB only inserted), so every document runs a few
+    // hundred offsets at bounded cost (about 20 s in a debug build).
+    let full: [&[u8]; 8] = [
         "\u{e9}".as_bytes(),
         "\u{1f321}".as_bytes(),
         b"\\",
@@ -300,30 +335,49 @@ fn a_bounded_mutation_sweep_over_every_document_never_panics() {
         b"[",
         b"}",
     ];
+    let reduced: [&[u8]; 1] = [full[3]];
     let mut cases = 0usize;
     for (name, bytes) in documents() {
         assert!(import_cxf(&bytes).is_ok(), "{name} reads unmutated");
-        for at in offsets(bytes.len()) {
-            for flip in [0x01u8, 0x20, 0x80] {
+        let large = bytes.len() > 16 * 1024;
+        // Above 128 KiB the replacement is dropped too: a flip, an insertion, a truncation.
+        let huge = bytes.len() > 128 * 1024;
+        let (flips, insertions): (&[u8], &[&[u8]]) = if large {
+            (&[0x80], &reduced)
+        } else {
+            (&[0x01, 0x20, 0x80], &full)
+        };
+        let visited = offsets(&bytes);
+        assert!(
+            visited.len() >= 250.min(bytes.len()),
+            "{name}: {} offsets",
+            visited.len()
+        );
+        for at in visited {
+            for &flip in flips {
                 let mut mutated = bytes.clone();
                 mutated[at] ^= flip;
-                let _ = import_cxf(&mutated);
+                let _ = import_named(&mutated, &name, at, &format!("xor {flip:#04x}"));
                 cases += 1;
             }
             for insert in insertions {
-                let mut replaced = bytes[..at].to_vec();
-                replaced.extend_from_slice(insert);
-                replaced.extend_from_slice(&bytes[at + 1..]);
-                let _ = import_cxf(&replaced);
+                let label = String::from_utf8_lossy(insert).into_owned();
+                if !huge {
+                    let mut replaced = bytes[..at].to_vec();
+                    replaced.extend_from_slice(insert);
+                    replaced.extend_from_slice(&bytes[at + 1..]);
+                    let _ = import_named(&replaced, &name, at, &format!("replace with {label:?}"));
+                    cases += 1;
+                }
                 let mut inserted = bytes[..at].to_vec();
                 inserted.extend_from_slice(insert);
                 inserted.extend_from_slice(&bytes[at..]);
-                let _ = import_cxf(&inserted);
-                cases += 2;
+                let _ = import_named(&inserted, &name, at, &format!("insert {label:?}"));
+                cases += 1;
             }
             if at + 1 < bytes.len() {
                 assert!(
-                    import_cxf(&bytes[..at]).is_err(),
+                    import_named(&bytes[..at], &name, at, "truncate").is_err(),
                     "{name} truncated at {at}"
                 );
                 cases += 1;
@@ -331,4 +385,84 @@ fn a_bounded_mutation_sweep_over_every_document_never_panics() {
         }
     }
     assert!(cases > 10_000, "{cases} cases");
+}
+
+#[test]
+fn integer_tokens_outside_i64_are_refused_at_any_depth() {
+    for token in [
+        "-9223372036854775809",
+        "9223372036854775808",
+        "18446744073709551616",
+        "-18446744073709551616",
+        "123456789012345678901234567890",
+        "-123456789012345678901234567890",
+    ] {
+        is_malformed(
+            &edited(
+                "\"S231:value\": \"dTHys\"",
+                &format!("\"S231:value\": {token}"),
+            ),
+            "outside the i64 range",
+        );
+        // Deep in an unread key and inside an array: still refused, lexically.
+        is_malformed(
+            &edited(
+                "\"@type\": \"S231:Block\",",
+                &format!("\"@type\": \"S231:Block\", \"x:y\": [[{{\"z\": [{token}]}}]],"),
+            ),
+            "outside the i64 range",
+        );
+    }
+    // A real-shaped token of any size is a Real, and a digit run inside a string is text.
+    for real in ["1e400", "123456789012345678901234567890.0", "-1.5e-3"] {
+        let doc = edited(
+            "\"S231:value\": \"dTHys\"",
+            &format!("\"S231:value\": {real}"),
+        );
+        assert!(
+            !matches!(import_cxf(&doc), Err(ImportError::Malformed { ref detail }) if detail.contains("i64")),
+            "{real}"
+        );
+    }
+}
+
+#[test]
+fn negative_zero_reads_as_the_integer_zero_as_on_the_wire() {
+    let doc = edited("\"S231:value\": \"dTHys\"", "\"S231:value\": -0");
+    let sequence = import_cxf(&doc).expect("reads");
+    let hys = sequence
+        .blocks
+        .iter()
+        .find(|b| b.name.as_str() == "hys")
+        .expect("hys");
+    let high = hys
+        .assignments
+        .iter()
+        .find(|a| a.name.as_str() == "uHigh")
+        .expect("uHigh");
+    assert_eq!(
+        high.value,
+        oce_author::ParamValue::Literal(oce_author::Literal::Integer(0))
+    );
+    // `-0.0` is the Real negative zero.
+    let doc = edited("\"S231:value\": \"dTHys\"", "\"S231:value\": -0.0");
+    let sequence = import_cxf(&doc).expect("reads");
+    let value = &sequence.blocks[1].assignments[1].value;
+    assert!(
+        matches!(value, oce_author::ParamValue::Literal(oce_author::Literal::Real(v)) if v.to_bits() == (-0.0f64).to_bits()),
+        "{value:?}"
+    );
+}
+
+#[test]
+fn nesting_is_pinned_at_the_recursion_limit() {
+    // Total nesting depth = the top object plus `k` arrays. 127 levels parse (and are then
+    // refused for their shape); 128 and 129 hit `serde_json`'s recursion limit. Neither panics.
+    let nested = |depth: usize| {
+        let k = depth - 1;
+        format!("{{\"@graph\": {}{}}}", "[".repeat(k), "]".repeat(k))
+    };
+    is_malformed(nested(127).as_bytes(), "a `@graph` entry is not an object");
+    is_malformed(nested(128).as_bytes(), "recursion limit exceeded");
+    is_malformed(nested(129).as_bytes(), "recursion limit exceeded");
 }

@@ -19,7 +19,7 @@ and loads only throwaway engines of its own (validation stage 2), never one a ho
 
 `import_cxf` reads one flat, single-root CXF document into the model and refuses everything outside
 the authoring subset with a typed `ImportError`, never a panic: oversize input (`TooLarge`),
-non-strict JSON — a key written twice, an integer outside `i64` (`Malformed`) — a construct outside
+non-strict JSON — a key written twice, or an integer-shaped token outside `i64` at any depth, checked lexically, with `-0` read as the Integer zero as on the wire (`Malformed`) — a construct outside
 the subset (`Unsupported`) or a dangling reference (`Unresolved`). It deliberately ignores
 `S231:label` everywhere, a parameter's descriptive `unit`, `quantity` and `displayUnit`, and the
 root's `@type`. Gate item 1 is not yet met: of the 46 G36 fixtures, 6 are out of the M2 subset and 4

@@ -5,7 +5,9 @@
 //! engine; the engine's findings are mapped back through the same code stage 2 uses. A row whose
 //! owner is the engine asserts the engine reports the stage-1 code at the stage-1 subject; an
 //! author-only row that pre-empts an engine code asserts that code at the same subject; the
-//! `unknown-parameter` row pins that the engine reports nothing at all (GitHub #467).
+//! `unknown-parameter` row pins that the engine reports nothing at all (GitHub #467). The
+//! `single-assignment` row (author and engine) is same-code only: stage 1 reports the repeating
+//! connection, the engine the input, which stage 2 maps to the first connection driving it.
 
 use crate::emit::{EmitOptions, emit_unchecked};
 use crate::identifier::Identifier;
@@ -159,7 +161,11 @@ const NOTE_TABLE: &[(&str, &str, Option<&str>)] = &[
     ("unknown-port", "author", Some("unresolved-reference")),
     ("invalid-semantic-point", "author", None),
     ("invalid-provenance-id", "author", None),
-    ("single-assignment", "engine", None),
+    (
+        "single-assignment",
+        "author and engine",
+        Some("single-assignment"),
+    ),
 ];
 
 #[test]
@@ -171,7 +177,7 @@ fn the_parity_table_covers_exactly_the_notes_engine_rows() {
         .filter(|(_, owner, preempted)| *owner == "engine" || preempted.is_some())
         .map(|(code, owner, preempted)| {
             let says = match (*owner, preempted) {
-                ("engine", _) if *code == "single-assignment" => "SameCode".to_owned(),
+                ("author and engine", _) => "SameCode".to_owned(),
                 ("engine", _) => "Same".to_owned(),
                 (_, Some("none")) => "Silent".to_owned(),
                 (_, Some(engine)) => format!("Preempts({engine:?})"),

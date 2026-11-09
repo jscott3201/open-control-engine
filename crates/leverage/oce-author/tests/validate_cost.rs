@@ -1,6 +1,6 @@
 //! Stage-1 validation cost stays near-linear in the document: a chain of blocks filling most of the
-//! 4 MiB wire bound validates clean, and quadrupling the chain costs well under the sixteen-fold
-//! a per-endpoint scan would (the issue #463 review measured 3.4 s for 30,000 blocks before the
+//! 4 MiB wire bound validates clean, and sixteen times the chain costs well under the 256-fold a
+//! per-endpoint scan would (the issue #463 review measured 3.4 s for 30,000 blocks before the
 //! name indexes).
 
 mod support;
@@ -78,10 +78,13 @@ fn a_document_at_the_wire_bound_validates_clean() {
 }
 
 #[test]
-fn quadrupling_the_document_costs_well_under_a_quadratic_factor() {
-    let (ratio, small, large) = quietest_ratio(&chain(7_500), &chain(30_000));
+fn sixteen_times_the_document_costs_well_under_a_quadratic_factor() {
+    // 16x the blocks: linear work is ~16x (a little more for the logarithmic indexes), quadratic
+    // work ~256x; the bound sits at 32x, far from both, so neither load nor the quietest-pair
+    // selection decides the outcome.
+    let (ratio, small, large) = quietest_ratio(&chain(1_875), &chain(30_000));
     assert!(
-        ratio < 10.0,
-        "4x the blocks took {ratio:.1}x the time in the quietest pair ({small:?} vs {large:?})"
+        ratio < 32.0,
+        "16x the blocks took {ratio:.1}x the time in the quietest pair ({small:?} vs {large:?})"
     );
 }

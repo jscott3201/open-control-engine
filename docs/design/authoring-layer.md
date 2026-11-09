@@ -234,28 +234,28 @@ pre-empt where one exists. The table is a test fixture: gate item 3 is a table-d
 | `duplicate-name` | author-only | `duplicate-name` | 1 | `duplicate-id` |
 | `class-not-found` | engine | `unknown-class` | 1 | — |
 | `class-not-authorable` | author-only | `class-not-authorable` | 1 | — (reserved classes) |
-| `unknown-parameter` | author-only | `unknown-param` | 1 | none: the engine ignores an unknown name (#467) |
+| `unknown-parameter` | author-only | `unknown-param` | 1 | none: the engine ignores an unknown name (#467; amended 2026-11-09) |
 | `parameter-not-settable` | author-only | `unsupported-param` | 1 | — (reserved classes only; #440's settable flag) |
-| `duplicate-parameter` | author-only | `duplicate-param` | 1 | `duplicate-id` (the repeated parameter node) |
+| `duplicate-parameter` | author-only (amended 2026-11-09) | `duplicate-param` | 1 | `duplicate-id` (the repeated parameter node) |
 | `missing-required-parameter` | engine | `missing-required-param` | 1 | — |
 | `parameter-kind-mismatch` | engine | `param-type-mismatch` | 1 | — |
 | `parameter-out-of-range` | engine | `invalid-width` | 1 | — (catalog rules, widths included) |
 | `non-finite-parameter` | engine | — | 1 | — |
-| `unknown-enum-literal` | author-only | — | 1 | `grounding-failed` |
+| `unknown-enum-literal` | author-only (amended 2026-11-09) | — | 1 | `grounding-failed` |
 | `unknown-parameter-reference` | author-only | — | 1 | `grounding-failed` |
 | `malformed-connection` | author-only | `malformed-edge` | 1 | — |
 | `unknown-source` | author-only | `unknown-source` | 1 | `unresolved-reference` |
 | `unknown-target` | author-only | `unknown-destination` | 1 | `unresolved-reference` |
-| `unknown-port` | author-only | — | 1 | `unresolved-reference` (no such port node) |
+| `unknown-port` | author-only | — | 1 | `unresolved-reference` (no such port node; amended 2026-11-09) |
 | `invalid-semantic-point` | author-only | — | 1 | — |
 | `invalid-provenance-id` | author-only | — | 1 | — |
 | `type-mismatch` | engine | `type-mismatch` | 2 | — |
-| `single-assignment` | author (a target the connection list repeats) and engine (the rest) | `multiply-driven`, `undriven` | 1 and 2 | — (stage 1 pre-empts the engine's own code for a repeated target) |
+| `single-assignment` | author and engine (amended 2026-11-09: author for a target the connection list repeats, engine for the rest) | `multiply-driven`, `undriven` | 1 and 2 | `single-assignment` (stage 1 pre-empts the engine's own code for a repeated target) |
 | `algebraic-loop` | engine | — | 2 | — (one finding per member) |
 | `unused-boundary-input` | engine (warning → error) | `unused-input` | 2 | — |
 | `undriven-boundary-output` | engine (warning → error) | — | 2 | — |
-| `document-too-large` | author-only | — | 2 | — (the emitted document exceeds `MAX_CXF_BYTES`) |
-| `load-failed` | engine | — | 2 | — (a refusal that carries no coded diagnostic) |
+| `document-too-large` | author-only (added 2026-11-09) | — | 2 | — (the emitted document exceeds `MAX_CXF_BYTES`) |
+| `load-failed` | engine (added 2026-11-09) | — | 2 | — (a refusal that carries no coded diagnostic) |
 | any other `DiagCode` | engine | — | 2 | passed through verbatim |
 
 `parameter-out-of-range` also covers, author-side only, a String value the wire form cannot carry
@@ -283,8 +283,11 @@ nothing, because the load gate ignores a parameter name it does not read (#467);
 pre-empts `unresolved-reference`, because the emitter writes every port the catalog resolves, so a
 wrong port name is a dangling target rather than a port-name mismatch. Stage 2 also has two codes of
 its own: `document-too-large` (the emitter's size refusal after a clean stage 1) and `load-failed`.
-In every row the engine reports at the same model subject: stage 2 maps a block-level message that
-names an assignment in backticks to that assignment, as stage 1 does. The same review added two stage-1
+In every row but one the engine reports at the same model subject: stage 2 maps a block-level
+message that names an assignment in backticks to that assignment, as stage 1 does. The exception
+is `single-assignment`, which is same-code only: stage 1 reports the repeating connection
+(`connection[N]`), the engine the input it names, which stage 2 maps to the first connection
+driving it. The same review added two stage-1
 rules: a target the connection list repeats is `single-assignment` at stage 1 (the engine refuses
 two block outputs or two boundary inputs on one input, but loads a block output beside a boundary
 input without a refusal, GitHub #472), and an Integer literal of magnitude above 2^53 on a Real
