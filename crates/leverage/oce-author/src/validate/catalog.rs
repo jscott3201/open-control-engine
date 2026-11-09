@@ -5,8 +5,9 @@ use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
 use oce_api::{
-    CatalogEntry, ClassMetadata, ClassParameter, PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER,
-    PARAM_ROW_PLACEHOLDER, ValueType, catalog, class_metadata, param_element_name,
+    CatalogEntry, ClassMetadata, ClassParameter, EnumerationClass, EnumerationKind,
+    PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER, ValueType, catalog,
+    class_metadata, enumeration_by_id, param_element_name,
 };
 
 /// One registered class: its catalog entry and its authoring metadata.
@@ -91,114 +92,15 @@ pub(crate) fn match_template(template: &str, name: &str) -> Option<Vec<usize>> {
     }
 }
 
-/// One enumeration type an enum parameter may take.
-pub(crate) struct EnumType {
-    /// The type's last segment, as authored (`SimpleController`).
-    pub(crate) type_name: &'static str,
-    /// The enumeration class path.
-    pub(crate) class_path: &'static str,
-    /// The members in one-based ordinal order.
-    pub(crate) members: &'static [&'static str],
-}
-
-/// The enumeration types of the registered enum parameters, keyed by the stable class id
-/// `oce_api::ValueType::Enum` carries.
-///
-/// The facade publishes members for `ZeroTime` (a `Required` rule's kind) and for the
-/// `TimeTable` parameters (`EnumMembers` rules), but not for `SimpleController`, and names no
-/// enumeration class path for the `TimeTable` ones (facade accessor requested in GitHub #468); so
-/// the table is pinned here and the
-/// `enum_table_agrees_with_the_catalog` test checks every row the catalog can see — members,
-/// class path, defaults and the ordinal count the load gate accepts — against `oce-api`.
-pub(crate) const ENUM_TYPES: &[(u32, EnumType)] = &[
-    (
-        1,
-        EnumType {
-            type_name: "SimpleController",
-            class_path: "CDL.Types.SimpleController",
-            members: &["P", "PI", "PD", "PID"],
-        },
-    ),
-    (
-        2,
-        EnumType {
-            type_name: "Smoothness",
-            class_path: "CDL.Types.Smoothness",
-            members: &["LinearSegments", "ConstantSegments"],
-        },
-    ),
-    (
-        3,
-        EnumType {
-            type_name: "Extrapolation",
-            class_path: "CDL.Types.Extrapolation",
-            members: &["HoldLastPoint", "LastTwoPoints", "Periodic"],
-        },
-    ),
-    (
-        4,
-        EnumType {
-            type_name: "ZeroTime",
-            class_path: "CDL.Types.ZeroTime",
-            members: &[
-                "UnixTimeStamp",
-                "UnixTimeStampGMT",
-                "Custom",
-                "NY2010",
-                "NY2011",
-                "NY2012",
-                "NY2013",
-                "NY2014",
-                "NY2015",
-                "NY2016",
-                "NY2017",
-                "NY2018",
-                "NY2019",
-                "NY2020",
-                "NY2021",
-                "NY2022",
-                "NY2023",
-                "NY2024",
-                "NY2025",
-                "NY2026",
-                "NY2027",
-                "NY2028",
-                "NY2029",
-                "NY2030",
-                "NY2031",
-                "NY2032",
-                "NY2033",
-                "NY2034",
-                "NY2035",
-                "NY2036",
-                "NY2037",
-                "NY2038",
-                "NY2039",
-                "NY2040",
-                "NY2041",
-                "NY2042",
-                "NY2043",
-                "NY2044",
-                "NY2045",
-                "NY2046",
-                "NY2047",
-                "NY2048",
-                "NY2049",
-                "NY2050",
-            ],
-        },
-    ),
-];
-
-/// The enumeration type of an enum-valued parameter type, if this crate knows it.
-pub(crate) fn enum_type(value_type: ValueType) -> Option<&'static EnumType> {
+/// The enumeration type of an enum-valued parameter type: the facade's table row for the class
+/// `ValueType::Enum` carries (issue #468), with its class path, last segment
+/// ([`EnumerationClass::type_name`]) and members in one-based ordinal order. `None` for any other
+/// value type or an id the engine does not know.
+pub(crate) fn enum_type(value_type: ValueType) -> Option<&'static EnumerationClass> {
     let ValueType::Enum(class) = value_type else {
         return None;
     };
-    ENUM_TYPES
-        .iter()
-        .find(|(id, _)| *id == class.0)
-        .map(|(_, t)| t)
+    enumeration_by_id(class).filter(|row| row.kind == EnumerationKind::Enumeration)
 }
 
 #[cfg(test)]

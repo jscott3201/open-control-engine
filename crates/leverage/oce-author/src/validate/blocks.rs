@@ -342,7 +342,7 @@ fn judge(
                 .members
                 .iter()
                 .position(|m| *m == member.member)
-                .filter(|_| member.type_name == enum_type.type_name);
+                .filter(|_| member.type_name == enum_type.type_name());
             match ordinal.and_then(|o| u32::try_from(o + 1).ok()) {
                 Some(ordinal) => Ok(Some(Value::Enum {
                     class: class_id,
@@ -353,9 +353,9 @@ fn judge(
                     format!(
                         "`{}` is not a member of `{}` ({}); write `{}.<member>` with one of: {}",
                         member.spelling(),
-                        enum_type.type_name,
+                        enum_type.type_name(),
                         enum_type.class_path,
-                        enum_type.type_name,
+                        enum_type.type_name(),
                         enum_type.members.join(", ")
                     ),
                 )),
