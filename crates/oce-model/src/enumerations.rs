@@ -1,9 +1,10 @@
 //! The one table of every enumeration and Integer constant package the engine knows (issue #468).
 //!
-//! [`ENUMERATION_CLASSES`] is plain `&'static` data: the four CDL enumerations, the ten source-pinned
-//! ASHRAE G36 enumerations and the four G36 Integer constant packages, each with its members in
-//! source order. Every enum helper in [`crate::types`] (`enum_class_id`, `enum_descriptor`,
-//! `g36_enum_literals`, `is_g36_integer_constant_package`, `g36_integer_constant_in_package`, …)
+//! [`enumeration_classes()`] returns plain `&'static` data: the four CDL enumerations, the ten
+//! source-pinned ASHRAE G36 enumerations and the four G36 Integer constant packages, each with its
+//! members in source order. Every enum helper in [`crate::types`] (`enum_class_id`,
+//! `enum_descriptor`, `g36_enum_literals`, `is_g36_integer_constant_package`,
+//! `g36_integer_constant_in_package`, …)
 //! reads this table; there is no second copy of the facts.
 //!
 //! # One class-path form
