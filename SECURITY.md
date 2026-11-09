@@ -56,6 +56,14 @@ partial flattened graph. Resource-limit diagnostics omit the attempted target su
 does not add another attacker-controlled IRI copy. Direct leaf wiring does not consume the
 boundary-work budgets.
 
+Connection collection after lowering classifies each distinct endpoint IRI once and shares one
+diagnostic-subject allocation per endpoint, so a long source fanned out to many targets costs time
+and memory linear in the document, not fan-out × IRI length. The source of a derivation-skipped,
+re-anchored synthesized connection is not charged against the byte budget, and it no longer needs
+to be: a 10 MB document with a 1 MiB such source and 65,535 targets is refused in under 0.1 s of
+release CPU, where it took about a minute before (GitHub issue #479). The lowering pass itself
+still hashes a long *authored* source once per edge; issue #480 tracks that case.
+
 The library does not impose a byte limit before JSON deserialization. A host accepting CXF from an
 untrusted source must still cap document size and resource use before calling the loader. Keep
 untrusted loading outside the process that is actively commanding equipment when your threat model

@@ -18,6 +18,9 @@ nesting is limited to 64. Boundary lowering is iterative and permits at most 64 
 hops per path, 65,536 target examinations, and 8 MiB of aggregate target-IRI bytes across boundary
 walks in the document. Exceeding a boundary limit returns `MalformedDocument` without constructing
 a partial flat graph. Ordinary direct leaf wiring does not consume the boundary-work budgets.
+Connection collection after lowering interns each distinct endpoint IRI once, so a long re-anchored
+source shared by a whole fan-out (including a derivation-skipped synthesized source, whose bytes no
+budget charges) costs time linear in the edge list rather than fan-out × IRI length (issue #479).
 Every composite and leaf is lowered at most once (`shared-instance` refuses a second reach), each
 composite's grounded declarations are shared by reference with its children rather than copied
 per leaf, and all preserved array parameters of one document share a 1,048,576-element budget
