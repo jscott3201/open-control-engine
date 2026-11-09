@@ -694,6 +694,16 @@ choice open, or the implementation reads a rule more narrowly, the choice is rec
   (`MAX_V0_COMMENT_LINE_BYTES`); the text form's own line bound has since become 8,192, so every
   imported line is inside both. v0 refusal subjects are JSON paths (`blocks[2].params[0]`); report
   subjects are boundary names.
+- **Text bundles stay at four corpus fixtures.** The text goldens (`tests/fixtures/text/*.oce`)
+  still cover the four fixtures the text-form PR chose; every one of the 31 imported fixtures is
+  instead proven by re-emit byte stability and the content-id round trip, so 27 new text goldens
+  were not added.
+- **The vendored prototype CXF is named `.cxf.json`.** `oce-cxf`'s `parameter_grounding_corpus`
+  test pins the count of tracked `.jsonld` files as an engine census, so the three prototype
+  documents keep their bytes and take the emit goldens' extension; `PROVENANCE.md` records the
+  rename.
+- **The mutation sweep lives in `tests/import_sweep.rs`**, split by fixture family to stay under the
+  700-line cap; `import_hostile.rs` keeps the hand-written cases.
 - **Gate item 1's export comparison** runs for 30 of the 31 fixtures; the 31st,
   `multizone_vav_outdoor_airflow_sumzone` (#458), is compared on its canonical content id only,
   because its `@graph` block order differs from `containsBlock` order.

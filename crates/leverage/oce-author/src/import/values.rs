@@ -298,7 +298,8 @@ fn cdl_string(subject: &str, body: &str) -> Result<String, ImportError> {
     Err(refuse(subject, Kind::MalformedLiteral))
 }
 
-/// Parse a `sizeOfDimensions` spelling, `(3)` or `(2, 3)`.
+/// Parse a `sizeOfDimensions` spelling, `(3)` or `(2, 3)`. Every size is a run of ASCII digits:
+/// a sign (`(+3)`), which `usize::parse` would accept, is refused as `array-shape`.
 pub(super) fn dimensions(subject: &str, spelled: &str) -> Result<Vec<usize>, ImportError> {
     let shape = || refuse(subject, Kind::ArrayShape);
     let inner = spelled
@@ -307,7 +308,14 @@ pub(super) fn dimensions(subject: &str, spelled: &str) -> Result<Vec<usize>, Imp
         .ok_or_else(shape)?;
     let parsed: Option<Vec<usize>> = inner
         .split(',')
-        .map(|part| part.trim().parse::<usize>().ok().filter(|&n| n > 0))
+        .map(|part| {
+            let part = part.trim();
+            part.bytes()
+                .next()
+                .filter(u8::is_ascii_digit)
+                .and_then(|_| part.parse::<usize>().ok())
+                .filter(|&n| n > 0)
+        })
         .collect();
     match parsed {
         Some(dims) if (1..=2).contains(&dims.len()) => Ok(dims),

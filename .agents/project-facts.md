@@ -219,7 +219,7 @@ switch, and say in the PR which files moved and why. Nothing else rewrites them.
 `tests/fixtures/emit/*.cxf.json` are the emitter's byte goldens (issue #464): the worked example,
 the every-element sequence and four of the 31 corpus fixtures the importer reads, each emitted under the
 default namespace. They are named `.cxf.json`, not `.jsonld`, because `oce-cxf`'s
-`parameter_grounding_corpus` test counts every tracked `.jsonld` file in the workspace (214) and
+`parameter_grounding_corpus` test pins the count of every tracked `.jsonld` file in the workspace and
 pins each one's import; a leverage golden must not move an engine census. The emitter's layout or
 writer, a catalog change (port names, parameter types, enumeration members) or the fixed class base
 moves them; the same bless switch regenerates them, and every one must still load warning-free.
