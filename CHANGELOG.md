@@ -305,6 +305,24 @@ and a gate that accepted any text would restore exactly the false assurance desc
   docs), the TSV mapping table for the library re-stamp, and two worked examples with exact byte
   dumps and ids (the second shows that binding a default moves the id). The architect review's
   rulings are recorded in the note. It is registered in `docs/README.md` and the book.
+- **Design note for the `oce-author` importer** (GitHub #484, issue #483).
+  `docs/design/importer.md` fixes, before the implementation PRs, how flat library CXF and the frozen
+  prototype's v0 graph JSON enter the authoring model, and the model changes gate item 1 waits on:
+  sequence parameters of an enumeration type (`"type": "SimpleController"`, references checked by
+  class identity, lowered as the corpus does; 17 in-subset fixtures), optional `min`/`max` on
+  boundary declarations (`@min`/`@max`, `"min": []`; 9 in-subset fixtures; input bounds are the frame
+  acceptance domain the engine refuses outside of, not a clamp), and library constants
+  (`OperationModes.occupied`, G36 Integer constants rather than enumerations) as member values
+  resolved through one facade data table (#468, widened to the G36 enumerations and constant
+  packages). A full-construct scan of the 46 G36 fixtures puts 12 outside the M2 subset (4 nested, 7
+  conditional, 1 expression), not 6, so the gate denominator is 34; 31 round-trip with the decisions
+  and the widened #468, and three with block-port bounds stay refused (#486). It also fixes the
+  normalisation of a constant-package-typed Integer boundary, a `#[non_exhaustive]` `ImportError`
+  kind with pinned codes and a fixed refusal precedence, an `ImportReport` of dropped properties
+  (root-parameter bounds and units), the v0 mapping with its comment rules and three vendored golden
+  pairs, the naming and re-stamp rules, the test plan and the order #468, model PR, importer PR. The
+  review's rulings on its ten questions are recorded in the note. It is registered in
+  `docs/README.md` and the book.
 
 ## 0.4.0
 
