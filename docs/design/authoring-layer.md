@@ -669,6 +669,11 @@ without moving them.
   in-subset G36 fixtures (4 nested and 2 conditional fixtures are out of the M2 subset), and all 4
   round-trip; the other 36 wait on model decisions — enumeration-typed sequence parameters,
   connector `min`/`max`, library enumerations — tracked in GitHub #475.
+  *Coverage, 2026-11-09 (GitHub #498, issue #496):* met. The M2 subset is 34 fixtures (the
+  [importer note](importer.md)'s corrected count: 4 nested, 7 conditional and 1 expression-valued
+  fixture are outside it); 31 import, emit, load warning-free and match the committed fixture's
+  canonical content id, and the 3 with block-port bounds are refused (`port-attribute`, importer
+  note decision 8).
 - **CLI.** Golden JSON reports for each command and exit-code tests for each outcome class.
 - **§7.17 seam.** Filling and mutating every `SemanticPoint` field leaves emitted bytes unchanged
   except `unit`, and leaves the loaded executable identical.

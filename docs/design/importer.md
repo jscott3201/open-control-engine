@@ -5,7 +5,7 @@ flat dialect and the frozen prototype's v0 graph JSON enter the [authoring model
 and it settles the model decisions the minimal importer (GitHub #473) could not make: sequence
 parameters of an enumeration type, bounds on boundary declarations, and library constants as block
 parameter values. Every decision below was made while drafting and ruled on in review (see
-[Review rulings](#review-rulings)); the note is amended to match, and nothing here is built yet. The authoring note's decisions
+[Review rulings](#review-rulings)); the note is amended to match. The model changes landed in GitHub #493 (issue #492) and the importer in GitHub #498 (issue #496), 2026-11-09; see [As landed](#as-landed). The authoring note's decisions
 and review rulings are not reopened; where this note changes the model it says so, and the model
 PR amends the authoring note with dated rulings.
 
@@ -518,14 +518,14 @@ loaded domain would differ from the declared one; a parity test pins the narrowi
 
 **7. `nominal` and `unbounded` are refused, not carried.** Rejected: carrying them now (no
 fixture, `unbounded` unparsed, neither in the id); dropping them silently. Why: model surface follows
-the corpus; a refusal is reversible, a silent drop is not.
+the corpus; a refusal is reversible, a silent drop is not. *(Landed in GitHub #498, 2026-11-09.)*
 
 **8. Block-port attributes are not authorable in M2.** `min`/`max` (and `unit`, `quantity`,
 `displayUnit`, `nominal`) on a block port node are refused (`port-attribute`); three fixtures stay
 out. Rejected: a per-instance port attribute statement (a new model element for three hand-written
 fixtures, and the emitter writes ports from the catalog); moving the bound onto the connected
 boundary output and relying on §7.10 propagation (a guess about intent). Why: the importer never
-guesses; question 2 asks the owner.
+guesses; question 2 asks the owner. *(Landed in GitHub #498, 2026-11-09.)*
 
 **9. Sequence-parameter bounds and units are read, dropped and reported.** Rejected: carrying them
 with an author-side range check (a second semantics the engine does not share, authoring decision
@@ -534,7 +534,7 @@ with an author-side range check (a second semantics the engine does not share, a
 `multizone_vav_relief_damper`; root-parameter `unit` and `quantity` appear in 16 and 13 in-subset
 fixtures, so refusing descriptive parameter attributes would block far more). Why: the engine reads
 no parameter `min`/`max` (verified in review: `connector_attrs` is reached only for connectors and
-boundaries); `ImportReport` makes the drop visible.
+boundaries); `ImportReport` makes the drop visible. *(Landed in GitHub #498, 2026-11-09.)*
 
 **10. Library constants are members.** `{"member": "OperationModes.occupied"}` covers enumeration
 members and Integer constants, resolved by the type name. Rejected: importing the ground Integer (the
@@ -542,7 +542,7 @@ author's name is the point of an authoring form); a separate `{"constant": …}`
 (two spellings for one syntactic thing). Why: one closed table resolves both, and type names are
 unique across it. Lands in the importer PR, not the model PR (ruling 10). *(The model half
 landed in #493, issue #492: `Literal::Member`, the validator and the emitter; the importer half
-stays with the importer PR.)*
+stays with the importer PR.)* *(The importer half landed in GitHub #498, 2026-11-09.)*
 
 **11. One facade table for named types, through #468 widened.** Rejected: extending `oce-author`'s
 pinned table with the G36 rows (the drift #468 removes, multiplied); a second facade issue for
@@ -552,11 +552,11 @@ one invariant.
 **12. Out-of-subset constructs stay refused.** Nested composites, `hasInstance`, `hasConstant`,
 conditional components, array connectors and expression values, each a typed kind; twelve fixtures.
 Rejected: importing a conditional component's pruned result (evaluation in `oce-author`). Why: the
-authoring note's out-of-scope list.
+authoring note's out-of-scope list. *(Landed in GitHub #498, 2026-11-09.)*
 
 **13. Names are carried, never repaired.** Syntax breaks are refused at import; reserved words,
 keywords and duplicates are carried for the validator. Rejected: renaming or suffixing (an imported
-sequence would no longer name the library's blocks, and the content id holds names).
+sequence would no longer name the library's blocks, and the content id holds names). *(Landed in GitHub #498, 2026-11-09.)*
 
 **14. The library re-stamp stays until library bundle v2.** Rejected: an emitter namespace that does
 not end in a delimiter (refused by the content-id note's review ruling 2). v0 fixtures need none.
@@ -566,37 +566,37 @@ every dropped property; one leading comment names the form; `extends` is none un
 it. Rejected: the root `@type` in `extends` (M3 owns its prefixes, and "translated from class X" is
 not "revision of Y"); the source's content id in `extends` (a CXF round trip makes it the sequence's
 own id, a self-loop); a `source` field on `Sequence` (metadata the engine never sees; M3's registry
-owns provenance).
+owns provenance). *(Landed in GitHub #498, 2026-11-09.)*
 
 **16. `ImportError` is a subject plus a typed kind with a stable code.** `ImportErrorKind` is
 `#[non_exhaustive]` (crate policy, GitHub #466) and its code list is pinned by an in-crate test;
 refusal precedence is fixed (nested, conditional, expression, port attribute, name). Rejected: the
 provisional free-text construct (tests matched substrings); an exhaustive enum (amended in review,
 ruling 6: crate policy wins, and the pinned list still breaks a test on a new kind). Why: an agent and
-a test branch on `code`.
+a test branch on `code`. *(Landed in GitHub #498, 2026-11-09.)*
 
 **17. v0 import maps only what v0 has.** `unit` and `description` become comments and report entries;
 string values are refused. Rejected: `unit` into `SemanticPoint.unit` (emitted as `S231:unit`, moving
 the id against the prototype's own CXF); `description` into `SemanticPoint.label` (a description is
-not a point label, and M8 owns the record).
+not a point label, and M8 owns the record). *(Landed in GitHub #498, 2026-11-09.)*
 
 **18. v0 fixtures are the prototype's three golden pairs, vendored verbatim.** Rejected: the five
 benchmark graphs (#457 decides where they live); regenerating pairs here (the point is the
-prototype's own emitter output).
+prototype's own emitter output). *(Landed in GitHub #498, 2026-11-09.)*
 
 **19. #468, then the model PR, then the importer PR.** Rejected: one PR, and a model PR that does not
 wait for #485; see [Dependencies and sequencing](#dependencies-and-sequencing).
 
 **20. Gate item 1 compares canonical content ids once #474 lands.** Export bytes are compared only
 where block order agrees. Rejected: keeping the order exclusion (#458) after the id stops bearing
-order.
+order. *(Landed in GitHub #498, 2026-11-09.)*
 
 **21. A boundary typed by a constant package is normalised to Integer and reported.** Rejected:
 refusing it (`unknown-datatype` would block `multizone_vav_economizer_limits_common`, which the
 engine loads as an Integer input); an enumeration-typed or package-typed boundary in the model (no
 fixture needs it, and the engine has no package type to carry). Why: the engine reads the package
 IRI on a connector as `ValueType::Integer`, so the normalised boundary loads to the same type and
-the same content id; the report keeps the change visible.
+the same content id; the report keeps the change visible. *(Landed in GitHub #498, 2026-11-09.)*
 
 ## Out of scope
 
@@ -658,3 +658,42 @@ The same review's fix round added decision 21 (a package-typed Integer boundary,
 the decision counts to in-subset figures, reclassified `unknown-enum-type` and `non-finite-bound` as
 existing engine codes, fixed refusal precedence, the bound-conversion test, the v0 comment rules and
 the gate-item-1 rebase note.
+
+## As landed
+
+GitHub #498 (issue #496, 2026-11-09) implements the importer as specified; where the note left a
+choice open, or the implementation reads a rule more narrowly, the choice is recorded here.
+
+- **29 kinds.** `ImportErrorKind` has the 29 rows of the [`ImportError`](#importerror) table, one
+  code each, in table order (`IMPORT_ERROR_CODES`); the issue's "30-row" count was off by one.
+- **Kinds for cases the table leaves open.** A bound written as a string is `expression-value`; a
+  bound on a Boolean boundary, a Real literal on an Integer boundary and a typed Boolean bound are
+  `datatype-mismatch` at import (the validator's `invalid-bound` stays for models built in the
+  other forms); an `S231:String` sequence parameter, a v0 `type` other than the three and a class
+  IRI no table row names are `unknown-datatype`; an enumeration-typed boundary is
+  `datatype-mismatch`; a parameter `@type` other than `S231:Parameter`, a typed literal with
+  another key and a non-string label are `wrong-shape`; a member named under another block or a
+  path deeper than `block.member` is `invalid-name`; a node reached twice is `stray-node`; text
+  after a string expression's closing quote is `expression-value`.
+- **Members.** A member path whose type the facade table holds is carried whatever its member
+  name, so an unknown member of a known type reaches the validator (`unknown-enum-literal`); a
+  path whose type the table lacks, `CDL.Types` included, is `unknown-member-type` (the minimal
+  importer carried any `CDL.Types` path).
+- **Literals as the loader reads them.** A typed literal's lexical form is parsed untrimmed, as
+  `oce_cxf::ground` parses it (the minimal importer trimmed it); every bound on a Real boundary is
+  read as a Real (an Integer token with `as f64`), so a re-emitted bound reads back equal.
+- **The report.** `ImportReport` carries `normalised` and `truncated` beside `dropped`, and each
+  `Dropped` its value as written. A block parameter's descriptive attributes are reported like a
+  root parameter's; a block port typed by a constant package is normalised and reported like a
+  boundary (no in-subset fixture has one).
+- **v0 comment lines.** "Every other control character" is read as the set the text form refuses
+  on a line: C0 (CR and tab included), DEL, C1 and the bidirectional overrides and isolates
+  (U+202A to U+202E, U+2066 to U+2069), each one space, so the printed text always parses.
+  Trailing spaces are removed, as the parser removes them, and an empty description writes no
+  line. The line bound is the note's 4,096 bytes for `# ` plus the line
+  (`MAX_V0_COMMENT_LINE_BYTES`); the text form's own line bound has since become 8,192, so every
+  imported line is inside both. v0 refusal subjects are JSON paths (`blocks[2].params[0]`); report
+  subjects are boundary names.
+- **Gate item 1's export comparison** runs for 30 of the 31 fixtures; the 31st,
+  `multizone_vav_outdoor_airflow_sumzone` (#458), is compared on its canonical content id only,
+  because its `@graph` block order differs from `containsBlock` order.

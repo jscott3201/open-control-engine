@@ -315,6 +315,40 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
+- **The importer: the in-subset library CXF and the prototype's v0 graph JSON into the
+  authoring model** (GitHub #498, issue #496; the [importer note](docs/design/importer.md); closes
+  #475, M2 gate item 1). `oce-author`'s `import_cxf(bytes, &ImportOptions)` now returns
+  `Imported { sequence, report }` and reads the full flat library dialect: enumeration-typed
+  sequence parameters, boundary `min` / `max` converted exactly as the loader converts them (a
+  test pins every corpus input bound to the engine's `InputDefinition` bound bit for bit),
+  enumeration members and library constants as full member paths resolved through
+  `oce_api::enumerations()`, and a constant-package-typed Integer boundary normalised to the
+  Integer the engine reads. **Gate item 1 is met:** 31 of the 34 in-subset G36 fixtures import,
+  emit, load warning-free and match the committed fixture's canonical content id (their exports
+  byte for byte wherever block order agrees); the other 15 are refused with their kind (4
+  `nested-composite`, 7 `conditional-component`, 1 `expression-value`, 3 `port-attribute`).
+  `ImportError` becomes `{ source, subject, kind }` with a closed, `#[non_exhaustive]`
+  `ImportErrorKind` of 29 kinds, each with a stable kebab-case `code()` (`IMPORT_ERROR_CODES`,
+  pinned in-crate and each produced by a test), refused in a fixed precedence (nested composite,
+  conditional component, expression value, port attribute, name) whatever the node order; the
+  provisional `Unsupported { construct }` and `Malformed` variants are gone. `ImportReport` lists
+  every dropped property (the root's `@type`, a differing `S231:label`, a parameter's `unit`,
+  `quantity`, `displayUnit`, `min` and `max`), every normalisation and every truncated v0 comment
+  line. The new `import_graph_v0` reads the frozen prototype's compact block graph under the wire
+  form's bounds: `unit` and `description` become comment lines (split at line feeds, controls to
+  spaces, truncated at a character boundary within `MAX_V0_COMMENT_LINE_BYTES`) and report
+  entries, never a point unit, and the sequence carries `# imported from v0 graph JSON`; string,
+  null, object and list values are refused. The prototype's three golden pairs are vendored
+  verbatim under `crates/leverage/oce-author/tests/fixtures/v0/` with a `PROVENANCE.md`
+  (repository URL, commit `f951346`, `MIT OR Apache-2.0`, the copyright line), and each graph
+  loads to the canonical content id of the CXF the prototype wrote. The hostile suite grows: a
+  mutation sweep over all 31 fixtures, every emitted golden and the three graphs; every bound,
+  member, datatype and v0 refusal with its exact kind; each out-of-subset construct grafted onto an
+  importable fixture. New goldens: `tests/fixtures/v0/*.import.txt`; no other golden moved, and the
+  every-element emit golden now re-imports to the same bytes. `import_cxf`'s signature and
+  `ImportError`'s shape are breaking for pre-1.0 consumers of `oce-author`; none outside the crate
+  calls it. The importer note records the choices the note left open under "As landed".
+
 - **Enumeration-typed sequence parameters, boundary bounds and member literals in the authoring
   model** (GitHub #493, issue #492; the [importer note](docs/design/importer.md)'s model changes).
   `oce-author`'s `SequenceParameter::value_type` is a `ParameterType` (`Real`, `Integer`, `Boolean`
