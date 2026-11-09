@@ -191,6 +191,20 @@ it again without the switch, and say in the PR which lines moved and why. It is 
 revision-1 catalog, whose bytes (`crates/oce-api/contracts/catalog.json`) and content id do not
 move with it.
 
+## The `oce-author` goldens and schema move with the authoring surface
+
+`crates/leverage/oce-author/schema/sequence.schema.json` is the published wire-form JSON Schema
+(derived with `schemars` from the wire DTOs, the `class` enum from the catalog's non-reserved class
+paths; issue #463). `tests/schema_pinned.rs` regenerates it and compares byte for byte, and walks it
+for keywords outside the strict profile. `tests/fixtures/wire/*.json` are canonical wire bundles
+(each must round-trip byte for byte) and `tests/fixtures/findings/*.tsv` the stage-1 finding list of
+each. A DTO doc comment, a catalog class, a finding message or the canonical writer moves them.
+Regenerate with `OCE_BLESS_AUTHOR=1 cargo nextest run -p oce-author`, run it again without the
+switch, and say in the PR which files moved and why. Nothing else rewrites them.
+`tests/fixtures/note/wire_example.json` is the JSON block of the authoring note's "Wire form"
+section copied verbatim (a test that read `docs/design/` would put the note on the classifier's
+test-read list); when that block changes, copy it again by hand.
+
 ## The frame driver lives in `oce-graph`, and its run digests move with behaviour
 
 The HostTick v1 frame driver (time checks, per-slot input checks, the non-finite policy, the

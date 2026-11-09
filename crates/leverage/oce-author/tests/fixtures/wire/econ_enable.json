@@ -1,0 +1,92 @@
+{
+  "sequence": "econ_enable",
+  "extends": "",
+  "params": [
+    {
+      "name": "dTHys",
+      "type": "Real",
+      "value": 1
+    }
+  ],
+  "inputs": [
+    {
+      "name": "TOut",
+      "type": "Real",
+      "quantity": "ThermodynamicTemperature",
+      "display_unit": "degC",
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "K",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    },
+    {
+      "name": "TOutCut",
+      "type": "Real",
+      "quantity": "",
+      "display_unit": "",
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "K",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": true
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "ecoEna",
+      "type": "Boolean",
+      "quantity": "",
+      "display_unit": "",
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "",
+        "brick": "Enable_Command",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    }
+  ],
+  "blocks": [
+    {
+      "name": "sub",
+      "class": "CDL.Reals.Subtract",
+      "params": []
+    },
+    {
+      "name": "hys",
+      "class": "CDL.Reals.Hysteresis",
+      "params": [
+        {
+          "name": "uLow",
+          "value": 0.0
+        },
+        {
+          "name": "uHigh",
+          "value": {
+            "ref": "dTHys"
+          }
+        }
+      ]
+    }
+  ],
+  "connections": [
+    "TOutCut -> sub.u1",
+    "TOut -> sub.u2",
+    "sub.y -> hys.u",
+    "hys.y -> ecoEna"
+  ]
+}
