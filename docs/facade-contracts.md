@@ -295,3 +295,17 @@ The single frame path retains the private HostTick evaluation/refresh implementa
 submit complete frames and own cadence and trace capture. `get_output` and `watch` are latest-state,
 non-receipt views, including internal points. There is no raw output view or storage write helper.
 Parity evidence is limited to equivalent complete schedules, not arbitrary legacy workflows.
+
+## Slot-indexed execution adoption
+
+A host loop or replay that submits many frames resolves names once: `engine.frame_slots()?`
+returns a `FrameSlots` map whose input slots follow `input_definitions()` and whose output slots
+follow `CompletedFrame::outputs()`, both the compiled blob's I/O order. Build the host's own
+column→slot table from `FrameSlots::input_slot` and `output_slot`, then call
+`engine.execute_slots(&slots, t, &values)` per frame with one value per input slot. The returned
+`SlotFrame` borrows outputs in output-slot order and the frame's warnings; copy out what you keep.
+Rebuild the map after every successful load or dirty resume: a superseded map is refused with
+`StalePreparedFrame`, never rebound. Refusals, their order and their atomicity are the named
+path's; a vector longer than the slot count is `FrameExtraInputs`. Once the map exists a slot frame
+allocates nothing beyond reused warning records. See the
+[slot-indexed execution contract](complete-frame-contract.md#current-slot-indexed-execution-api).

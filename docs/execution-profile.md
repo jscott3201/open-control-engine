@@ -10,7 +10,8 @@ separate compatibility and snapshot contract.
 The [complete-frame contract](complete-frame-contract.md) implements read-only preparation and
 one native atomic transition with an immutable output/diagnostic result around this same profile,
 not a second evaluator or profile selector. Preparation does not execute; consuming `execute_frame`
-is the only public state-advancing execution surface. Legacy execution profiles were removed.
+and its slot-indexed twin `execute_slots` (issue #444), which runs the same core driver, are the
+only public state-advancing execution surfaces. Legacy execution profiles were removed.
 
 ## One frame driver, two callers
 
@@ -29,10 +30,12 @@ Two callers share it:
 | Caller | Build | Adds |
 | --- | --- | --- |
 | `oce_api::Engine::prepare_frame` / `execute_frame` | `std` | Name resolution and the unknown, duplicate and missing-key refusals, the prepared plan and its incarnation token, load and pending-edit preconditions, the durable-restore window, replay records, `String` warnings and the owned `CompletedFrame` |
+| `oce_api::Engine::frame_slots` / `execute_slots` | `std` | The same facade, by slot: a `FrameSlots` map resolved once and bound to the incarnation token, the same preconditions and restore window, `FrameExtraInputs` for an over-long vector, reused warning records and a borrowed `SlotFrame` ([slot-indexed execution](complete-frame-contract.md#current-slot-indexed-execution-api)) |
 | `oce_graph::blob::Executable::execute_frame` | `no_std + alloc` | Inputs and outputs by slot from the [compiled-schedule blob](compiled-schedule-blob.md#executing-a-blob)'s I/O table, and the state as raw words |
 
 `crates/oce-api/src/tests/blob_dual_path_tests.rs` runs every G36 fixture's frames, and the same
-bad frames, through the facade, the core driver on the host's own executable and the blob entry,
+bad frames, through the facade's named and slot entries, the core driver on the host's own
+executable and the blob entry,
 and requires identical outputs, refusals and run state after every frame;
 `crates/oce-api/tests/frame_driver_ownership.rs` checks that no facade source holds a second copy
 of the rules. Host loops select cadence and capture traces from completed receipts or explicitly

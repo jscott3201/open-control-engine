@@ -151,8 +151,10 @@ pub enum OcError {
     /// A staged input value whose type does not match the target connector (no coercion; `01` §5).
     #[error("input type mismatch for '{0}'")]
     InputType(String),
-    /// A prepared frame belongs to another engine or a superseded executable incarnation.
-    #[error("prepared input frame is stale for this executable context")]
+    /// A prepared frame or a [`crate::FrameSlots`] map belongs to another engine or a superseded
+    /// executable incarnation (a successful reload or a dirty parameter resume); nothing is
+    /// rebound and nothing is mutated.
+    #[error("prepared input frame or slot map is stale for this executable context")]
     StalePreparedFrame,
     /// The lifetime-local accepted-frame sequence has no next position; nothing was mutated.
     #[error("accepted frame sequence is exhausted")]
@@ -179,6 +181,16 @@ pub enum OcError {
     /// One required canonical boundary input was omitted; no hold-last or seed substitution.
     #[error("missing frame input '{0}'")]
     FrameMissingInput(String),
+    /// A slot-indexed frame ([`crate::Engine::execute_slots`]) supplied more values than the
+    /// executable has input slots. Refused before any value is read; nothing is staged. A frame
+    /// with fewer values is [`Self::FrameMissingInput`] instead, naming the first absent slot.
+    #[error("{found} frame input values supplied for {expected} input slots")]
+    FrameExtraInputs {
+        /// The executable's input slot count.
+        expected: usize,
+        /// The number of values supplied.
+        found: usize,
+    },
     /// A Real boundary input value was NaN (either sign, any payload) or infinite while the
     /// host selected [`crate::NonFiniteInputPolicy::Refuse`]. Names the canonical input path;
     /// nothing is staged and model time does not advance. The host substitutes a finite value

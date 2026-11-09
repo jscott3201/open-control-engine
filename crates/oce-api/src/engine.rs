@@ -67,6 +67,10 @@ pub struct Engine {
     pub(crate) frame_generation: Arc<()>,
     /// Lifetime-local complete-frame correlation, deliberately outside run state and its codecs.
     pub(crate) accepted_frame_sequence: u64,
+    /// Warning records reused in place by slot-indexed frames ([`Engine::execute_slots`]): the
+    /// latest accepted slot frame's warnings are a prefix, the rest retained capacity. Scratch
+    /// outside run state and its codecs, observable only through a live [`crate::SlotFrame`].
+    pub(crate) slot_warnings: Vec<crate::AssertEvent>,
 }
 
 impl Default for Engine {
@@ -98,6 +102,7 @@ impl Engine {
             durable_restore_ready: false,
             frame_generation: Arc::new(()),
             accepted_frame_sequence: 0,
+            slot_warnings: Vec::new(),
         }
     }
 
