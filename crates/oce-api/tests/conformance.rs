@@ -266,7 +266,7 @@ type CompositeWarning = (
     &'static [(DiagCode, Option<&'static str>, &'static str)],
 );
 
-const COMPOSITE_REJECTIONS: [CompositeRejection; 18] = [
+const COMPOSITE_REJECTIONS: [CompositeRejection; 22] = [
     (
         "multi_root.jsonld",
         Some("root-count"),
@@ -464,6 +464,42 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 18] = [
             DiagCode::SingleAssignment,
             Some("http://example.org#M.y"),
             "boundary output is multiply driven (distinct drivers 2)",
+        )],
+    ),
+    (
+        "double_driver_two_block_outputs.jsonld",
+        None,
+        &[(
+            DiagCode::SingleAssignment,
+            Some("http://example.org#M.abs.u"),
+            "input is multiply driven (in-degree 2)",
+        )],
+    ),
+    (
+        "double_driver_two_boundary_inputs.jsonld",
+        None,
+        &[(
+            DiagCode::SingleAssignment,
+            Some("http://example.org#M.abs.u"),
+            "input is driven by distinct boundary inputs",
+        )],
+    ),
+    (
+        "double_driver_block_output_and_boundary_input.jsonld",
+        None,
+        &[(
+            DiagCode::SingleAssignment,
+            Some("http://example.org#M.abs.u"),
+            "input is driven by a block output and a boundary input",
+        )],
+    ),
+    (
+        "double_driver_econ_enable.jsonld",
+        None,
+        &[(
+            DiagCode::SingleAssignment,
+            Some("http://example.org#econ_enable.hys.u"),
+            "input is driven by a block output and a boundary input",
         )],
     ),
 ];

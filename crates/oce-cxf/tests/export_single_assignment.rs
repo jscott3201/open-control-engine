@@ -1,5 +1,6 @@
 //! §7.10 single assignment on the export side: an input connector driven by more than one
-//! **surviving** output is rejected rather than emitted.
+//! **surviving** output, or listed in `external_inputs` and also driven by a surviving output, is
+//! rejected rather than emitted.
 //!
 //! Why this rejection exists at all, given that `oce-validate` and the resolver both check the
 //! same law: the exporter's contract is RT-2, and a multiply-driven input breaks it in the worst
@@ -33,11 +34,16 @@ use oce_model::{
 };
 
 /// The rejection text, written out literally rather than imported. `MSG_MULTIPLY_DRIVEN` is
-/// private to `src/export.rs`, and a golden that re-derived it from the constant would pass
+/// private to `src/export_single_assignment.rs`, and a golden that re-derived it from the constant would pass
 /// against any edit to the constant — including one that made the message describe the wrong
 /// defect. This is the same discipline the deferral-diagnostic goldens use.
 const MSG_MULTIPLY_DRIVEN: &str = "export subset: input connector is driven by more than one surviving output, and the emitted \
      document fails re-import with a single-assignment error (§7.10)";
+
+/// The mixed-driver rejection text, written out literally for the same reason.
+const MSG_DRIVEN_EXTERNAL_INPUT: &str = "export subset: input connector is listed in external_inputs and is also driven by a \
+     surviving output, and the emitted document fails re-import with a single-assignment error \
+     (§7.10)";
 
 /// IRI prefix for every hand-built block here, so a diagnostic subject reads back as a name.
 const PREFIX: &str = "http://example.org#SingleAssign.";
@@ -421,13 +427,40 @@ fn a_multiply_driven_input_on_a_deferred_block_does_not_abort_the_export() {
 }
 
 #[test]
-fn a_boundary_input_that_is_also_driven_by_one_output_is_accepted() {
-    // The false-reject guard. `fed.in0` is both an `external_inputs` entry and the target of one
-    // wire. Re-import elides the boundary node into `external_inputs` rather than into a
-    // connection, so the resolver's pre-check sees in-degree 1 and accepts. An export-side count
-    // that folded boundary targets in would see 2 and reject a graph that round-trips — a false
-    // reject is not the safe direction here, it is a regression that blocks legitimate work.
-    let g = ModelGraph {
+fn a_boundary_input_that_is_also_driven_by_one_output_is_rejected() {
+    // The mixed double driver (issue #472). `fed.in0` is both an `external_inputs` entry and the
+    // target of one wire, so the emitted document would carry the boundary node's `isConnectedTo`
+    // AND the driving port's. Re-import refuses that input as driven by a block output and a
+    // boundary input, so an `Ok` here would be bytes that do not load. The owning block is named.
+    let g = boundary_input_also_wired();
+    let diags = export_rejection(&g);
+    assert_eq!(
+        diags
+            .iter()
+            .map(|d| (d.code, d.subject.as_deref(), d.message.as_str()))
+            .collect::<Vec<_>>(),
+        vec![(
+            DiagCode::ExportUnsupported,
+            Some(iri("fed").as_str()),
+            MSG_DRIVEN_EXTERNAL_INPUT,
+        )]
+    );
+    // Control: the same graph without the wire exports and round-trips its boundary entry.
+    let control = ModelGraph {
+        connections: vec![],
+        ..g
+    };
+    let g2 = reimport_clean(&export_ok(&control).bytes);
+    assert_eq!(
+        g2.external_inputs.len(),
+        1,
+        "the boundary entry round-trips"
+    );
+}
+
+/// `src → fed.in0` plus `fed.in0` listed in `external_inputs`: one wire and one frame driver.
+fn boundary_input_also_wired() -> ModelGraph {
+    ModelGraph {
         blocks: vec![
             source(0, "src", 0, 4.0),
             block(1, "CDL.Reals.Abs", "fed", &[1], &[2], vec![]),
@@ -441,16 +474,7 @@ fn a_boundary_input_that_is_also_driven_by_one_output_is_accepted() {
         external_inputs: vec![ConnectorId(1)],
         boundary_inputs: vec![],
         boundary_outputs: vec![],
-    };
-
-    let report = export_ok(&g);
-    let g2 = reimport_clean(&report.bytes);
-    assert_eq!(g2.connections.len(), 1, "the driving edge round-trips");
-    assert_eq!(
-        g2.external_inputs.len(),
-        1,
-        "the boundary entry round-trips alongside it"
-    );
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -510,6 +534,11 @@ fn an_accepted_export_never_re_imports_with_a_single_assignment_error() {
         ("nine drivers", &fan9, false),
         ("self-loop driven twice", &self_loop_driven_twice(), false),
         ("self-loop driven once", &single_self_loop(), true),
+        (
+            "boundary input also wired",
+            &boundary_input_also_wired(),
+            false,
+        ),
     ] {
         let report = match export_with_report(g) {
             Ok(report) => {
