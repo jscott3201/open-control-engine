@@ -316,11 +316,12 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Leverage
 
 - **Vocabulary v1, part 1: the vendored CXF-Core document and the `oce-vocab` crate** (GitHub
-  #PRNUM, issue #499; design note GitHub #497). `third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld`
-  is modelica-json's `-o cxf --elementary --cxfCore -p` output over the Buildings `CDL` package at
-  the two recorded pins (682,615 bytes; the vendored README records the command, both pins, the
-  date and the SHA-256, and says that byte-identity across operating systems and Node versions is
-  unverified, so a pin advance re-vendors and re-blesses). The hash manifest gains a
+  #511, issue #499; design note GitHub #497).
+  `third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld` is modelica-json's
+  `-o cxf --elementary --cxfCore -p` output over the Buildings `CDL` package at the two recorded
+  pins (682,615 bytes; the vendored README records the command, both pins, the date and the
+  SHA-256, and says that byte-identity across operating systems and Node versions is unverified,
+  so a pin advance re-vendors and re-blesses). The hash manifest gains a
   `generated-cxf-core` bucket of exactly that one file, the tree-SHA constant and the tracked
   `.jsonld` census (now 223; the document's import outcome is one new golden line, a refusal) move
   with it, and `.agents/revendor-upstream.sh` knows the bucket.
