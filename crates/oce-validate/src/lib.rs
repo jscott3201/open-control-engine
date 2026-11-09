@@ -115,6 +115,38 @@ pub fn validate(model: &ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> 
     finish(model, diags)
 }
 
+/// Check one block's resolved parameter table against its class's registry parameter rules —
+/// the parameter part of [`validate`], for a block that is not part of a model.
+///
+/// Builds a one-block, port-less model and runs exactly the load gate's parameter checks on it:
+/// duplicate names, the engine-wide finiteness rule, enum ordinals and every class rule. An
+/// unregistered `class_path` gets only the class-independent checks, as at load (the caller owns
+/// the unknown-class error). Diagnostic subjects name the block `block#0`. This is what
+/// `oce_api::class_ports` refuses an invalid table with before it names any port (GitHub #440).
+/// Total and panic-free; cost is the load gate's cost for one block.
+///
+/// # Errors
+/// Returns [`ValidationError`] with the error-severity diagnostics when any rule is violated;
+/// otherwise the warning-severity diagnostics (for example equal hysteresis bounds).
+pub fn validate_block_parameters(
+    class_path: &str,
+    params: &oce_model::ParamTable,
+) -> Result<Vec<Diagnostic>, ValidationError> {
+    let mut model = ModelGraph::default();
+    model.blocks.push(oce_model::BlockInstance {
+        id: oce_model::BlockId(0),
+        class_iri: std::sync::Arc::from(class_path),
+        inputs: Vec::new(),
+        outputs: Vec::new(),
+        params: params.clone(),
+        decl_order: 0,
+        instance_iri: None,
+    });
+    let mut diags = Vec::new();
+    rules::check_block_params(&model, &mut diags);
+    finish(&model, diags)
+}
+
 /// Run §7.10 attribute unification (doc 02 §9 R13.1–R13.3), **mutating** the graph to propagate a
 /// one-sided unit, quantity, or bound to its unset connector and boundary-output peers (R13.2).
 ///

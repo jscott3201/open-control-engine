@@ -72,6 +72,51 @@ binary64 bits, including signed zero.
 `DefaultSource` types. A host that wants the facade metadata, the JSON form, or the content tag
 should use the `oce-api` catalog.
 
+## Port names are an engine contract
+
+`oce_api::class_ports(class_path, params)` names every port of a class as the author configured it,
+in port index order (GitHub #440). The catalog above names ports for the 108 fixed-arity classes at
+default parameters only; the 25 width-driven classes and the three `TimeTable` sources expose their
+ports only once their parameters are bound, so an authoring tool must ask the engine rather than
+derive the names itself. The names are part of the engine's contract:
+
+- A scalar connector keeps its CDL name (`u`, `index`, `u_s`).
+- A vector connector `u[n]` is `u1`, `u2`, …, `un`: the base name and the 1-based index with no
+  separator. This is the spelling the G36 corpus already uses (`mulSum.u1`, `booRep.y4`), and the
+  CXF import binds those ports by position in exactly this order.
+- A matrix connector `y[r, c]` is `y1_1`, `y1_2`, …, `yr_c`, row-major with the last index
+  fastest — the order every matrix block lowers its ports in (`CDL.Reals.MatrixMax` inputs,
+  `CDL.Routing.*VectorReplicator` outputs).
+- `CDL.Routing.*Extractor` lists `index` before `u1`…`un`, and `CDL.Reals.Sort` lists `y1`…`yn`
+  before `yIdx1`…`yIdxn`, as upstream declares them. A `TimeTable` source has one output per value
+  column of its table: a `rows x (n + 1)` table gives `y1`…`yn`.
+
+The names are synthesized over the block the registry constructor builds from the parameters
+(`oce_blocks::resolved_ports`), so they cannot disagree with the ports a load of the same block
+would have. `class_ports` first checks the parameters with the load gate's own parameter rules
+(`oce_validate::validate_block_parameters`) and refuses a table a load would refuse with
+`ClassPortsError::InvalidParameters`, so a width past the cap is refused rather than named at the
+clamped width; an unknown class is `ClassPortsError::UnknownClass`. Neither panics.
+
+Array **parameters** keep the older import spelling, with an underscore before every index: the
+catalog lists `k_<i>` and `K_<row>_<col>` once, and `oce_api::param_element_name` expands them to the
+`k_1`, `K_2_1` names the CXF import mints for a preserved array.
+
+`oce_api::class_metadata()` adds, for every class in catalog order, a one-sentence `description`
+(the upstream Modelica class description string where a vendored source exists, held to it by a
+test; engine-written for `CDL.Logical.TrueHoldWithReset` and the three reserved identities) and the
+class's parameters, each with its `value_type` (the element type for an array template), its
+`default` (a literal, `Derived` with its formula, or `Required`) and a `settable` flag. `settable`
+means "an author may assign this parameter": it is false only for the parameters of the three
+reserved identities. A derived default such as `MatrixGain.K` or `PIDWithReset.y_reset` is
+settable — upstream CDL declares every one as a plain, overridable `parameter`, and the G36 corpus
+assigns three of them ([#440 amendment](https://github.com/jscott3201/open-control-engine/issues/440#issuecomment-6730952664)).
+None of this enters the revision-1 catalog: `CATALOG_JSON`, `catalog_content_id` and every class
+signature hash are unchanged. The names at widths 1, 2 and the maximum, every description, and
+every parameter's type, default and settable flag are pinned by
+`crates/oce-blocks/tests/fixtures/class_ports.golden.txt`. The metadata is host-side: in
+`oce-blocks` it is compiled only with the `std` feature, so no bare-metal image carries it.
+
 ## What "supported" means for a G36 sequence
 
 The repo's own catalog is explicit, and it under-claims on purpose. The `support_policy` block in

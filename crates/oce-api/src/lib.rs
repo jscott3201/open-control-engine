@@ -1,7 +1,8 @@
 #![forbid(unsafe_code)]
 //! `oce-api` — the primary embeddable host facade for the Open Control Engine
 //! (`08-embeddable-api-and-performance.md`). [`catalog()`] and [`contract_descriptors`] expose
-//! independent host metadata. The supported `oce-blocks::catalog()` remains a companion surface. The `open-control-engine` umbrella name is reserved for a
+//! independent host metadata; [`class_ports()`] and [`class_metadata()`] add the resolved port names,
+//! class descriptions and settable flags an authoring tool needs, outside the revision-1 catalog. The supported `oce-blocks::catalog()` remains a companion surface. The `open-control-engine` umbrella name is reserved for a
 //! future release; nothing is published to crates.io yet.
 //!
 //! # Posture (binding, FRAME §6)
@@ -45,6 +46,7 @@ mod catalog;
 mod catalog_adapter;
 mod catalog_json;
 mod catalog_rules;
+mod class_ports;
 mod compatibility;
 mod contracts;
 mod diagnostics;
@@ -89,6 +91,11 @@ pub use catalog::{
     catalog_to_json,
 };
 pub use catalog_rules::CatalogRule;
+pub use class_ports::{
+    ClassMetadata, ClassParameter, ClassPort, ClassPorts, ClassPortsError, PARAM_COL_PLACEHOLDER,
+    PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER, class_metadata, class_ports,
+    param_element_name,
+};
 pub use compatibility::{
     CatalogContentId, CompatibilityDescriptor, CompatibilityMismatch, CompleteExportContentId,
 };
@@ -125,6 +132,11 @@ pub use state::{EngineCheckpoint, EngineStateError, EngineStateSnapshot};
 pub use state_snapshot::StatePortability;
 pub use topology::{DeclaredOutput, PassThroughPair, Topology, TopologyBlock, TopologyConnection};
 
+/// Re-export of the diagnostic code vocabulary: the type of [`Diagnostic::code`], so a host
+/// matches a refusal's code (for example [`ClassPortsError::InvalidParameters`]) as
+/// `oce_api::DiagCode` without a direct `oce-diag` dependency. `DiagCode::as_str` is the stable
+/// spelling.
+pub use oce_diag::DiagCode;
 /// Re-export of the shared diagnostic type: the element type of [`LoadReport::warnings`], so a
 /// binder owns it as `oce_api::Diagnostic`.
 pub use oce_diag::Diagnostic;
