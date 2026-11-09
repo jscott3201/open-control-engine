@@ -45,14 +45,20 @@ fn timed(sequence: &Sequence) -> Duration {
     start.elapsed()
 }
 
-/// The fastest of several runs of each size, the two sizes interleaved so a burst of load from
-/// tests running beside this one (the crate's mutation sweep, the 8 MiB emitter bound) inflates
-/// both minimums alike rather than only the larger, slower run's.
-fn fastest_pair(small: &Sequence, large: &Sequence) -> (Duration, Duration) {
-    let mut best = (Duration::MAX, Duration::MAX);
-    for _ in 0..7 {
-        best.0 = best.0.min(timed(small));
-        best.1 = best.1.min(timed(large));
+/// The smallest ratio of a large run to the small run just before it, over several interleaved
+/// pairs. A burst of load from tests running beside this one (the crate's mutation sweep, the
+/// 8 MiB emitter bound, the rest of the workspace suite) inflates single runs, mostly the longer
+/// large ones; a quadratic validator, though, is slow in every pair, so the quietest pair still
+/// exposes it. Returns that ratio and its two timings.
+fn quietest_ratio(small: &Sequence, large: &Sequence) -> (f64, Duration, Duration) {
+    let mut best = (f64::INFINITY, Duration::ZERO, Duration::ZERO);
+    for _ in 0..9 {
+        let s = timed(small);
+        let l = timed(large);
+        let ratio = l.as_secs_f64() / s.as_secs_f64().max(1e-6);
+        if ratio < best.0 {
+            best = (ratio, s, l);
+        }
     }
     best
 }
@@ -73,10 +79,9 @@ fn a_document_at_the_wire_bound_validates_clean() {
 
 #[test]
 fn quadrupling_the_document_costs_well_under_a_quadratic_factor() {
-    let (small, large) = fastest_pair(&chain(7_500), &chain(30_000));
-    let ratio = large.as_secs_f64() / small.as_secs_f64().max(1e-6);
+    let (ratio, small, large) = quietest_ratio(&chain(7_500), &chain(30_000));
     assert!(
         ratio < 10.0,
-        "4x the blocks took {ratio:.1}x the time ({small:?} vs {large:?})"
+        "4x the blocks took {ratio:.1}x the time in the quietest pair ({small:?} vs {large:?})"
     );
 }
