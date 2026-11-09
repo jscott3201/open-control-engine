@@ -116,7 +116,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### CXF import and export
 
 - **Resolve Step 9 costs time linear in the edge list, not fan-out × source-IRI length**
-  (GitHub #PRNUM, issue #479). Connection collection classified both ends of every
+  (GitHub #481, issue #479). Connection collection classified both ends of every
   `isConnectedTo` edge by string content, hashing the source IRI about ten times per edge, so one
   long source shared by a whole fan-out cost fan-out × IRI length: a 10 MB document with a 1 MiB
   derivation-skipped re-anchored source and 65,535 targets took about 71 s of release CPU before it
