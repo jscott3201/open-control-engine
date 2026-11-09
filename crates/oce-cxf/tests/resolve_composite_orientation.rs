@@ -8,6 +8,8 @@ use serde_json::{Value, json};
 mod bless;
 #[path = "resolve_composite_orientation/diagnostics.rs"]
 mod diagnostics;
+#[path = "resolve_composite_orientation/fanout_cpu.rs"]
+mod fanout_cpu;
 mod render;
 
 #[path = "resolve_composite_orientation/multiplicity.rs"]
