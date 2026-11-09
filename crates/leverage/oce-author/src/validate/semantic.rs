@@ -2,6 +2,7 @@
 //! (decisions 2 and 21). Syntax only: no vocabulary is consulted before M8 and vocabulary v1.
 
 use crate::model::Boundary;
+use crate::wire::MAX_WIRE_LIST_LEN;
 
 /// The longest semantic field, in bytes (the text form's token bound).
 pub const MAX_SEMANTIC_FIELD_BYTES: usize = 256;
@@ -67,6 +68,12 @@ pub(crate) fn boundary_problems(boundary: &Boundary) -> Vec<String> {
                 .map(|problem| format!("`{field}` {problem}"))
         })
         .collect();
+    if s.haystack.len() > MAX_WIRE_LIST_LEN {
+        problems.push(format!(
+            "`haystack` has {} tags; the wire form carries at most {MAX_WIRE_LIST_LEN}",
+            s.haystack.len()
+        ));
+    }
     for (index, tag) in s.haystack.iter().enumerate() {
         if let Some(problem) = atom_problem(tag) {
             problems.push(format!("`haystack[{index}]` {problem}"));

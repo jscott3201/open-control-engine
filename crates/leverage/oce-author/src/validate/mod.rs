@@ -15,6 +15,7 @@
 mod blocks;
 mod catalog;
 mod connections;
+mod index;
 mod names;
 mod semantic;
 
@@ -216,8 +217,9 @@ pub fn validate(sequence: &Sequence) -> Vec<Finding> {
 #[must_use]
 pub fn validate_author_side(sequence: &Sequence) -> Vec<Finding> {
     let mut findings = Findings::default();
+    let declared = index::Declared::new(sequence);
     names::check(sequence, &mut findings);
-    let ports = blocks::check(sequence, &mut findings);
-    connections::check(sequence, &ports, &mut findings);
+    let ports = blocks::check(sequence, &declared, &mut findings);
+    connections::check(sequence, &declared, &ports, &mut findings);
     findings.finish()
 }

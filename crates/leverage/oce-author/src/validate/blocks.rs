@@ -4,31 +4,42 @@
 //! The catalog rules are not re-implemented: the assignments that pass the author-side checks
 //! are handed to [`oce_api::class_ports`], which runs the load gate's own parameter checks, and
 //! each refusal it returns becomes a finding with the engine's code ([`oce_api::DiagCode::as_str`]).
+//! Every code a finding carries is in [`super::STAGE_ONE_CODES`]: an engine code outside that list
+//! (none is reachable through `class_ports` today) is reported as `parameter-out-of-range` with the
+//! engine's code named in the detail, `ClassPortsError::UnknownClass` as `class-not-found`, and any
+//! other `class_ports` refusal (a table whose ports cannot be named) as `parameter-out-of-range`.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use oce_api::{ClassPorts, ClassPortsError, Value, ValueType, class_ports};
+use oce_api::{ClassPortsError, Diagnostic, Value, ValueType, class_ports};
 
+use crate::json::wire_string_len;
 use crate::model::{Block, Literal, ParamValue, Sequence, SignalType};
+use crate::wire::MAX_WIRE_STRING_BYTES;
 
 use super::catalog::{ClassView, enum_type, lookup_class, lookup_parameter};
+use super::index::{Declared, Ports};
 use super::names::literal_fits;
 use super::{
     Anchor, CLASS_NOT_AUTHORABLE, CLASS_NOT_FOUND, DUPLICATE_PARAMETER, Findings,
     NON_FINITE_PARAMETER, PARAMETER_KIND_MISMATCH, PARAMETER_NOT_SETTABLE, PARAMETER_OUT_OF_RANGE,
-    UNKNOWN_ENUM_LITERAL, UNKNOWN_PARAMETER, UNKNOWN_PARAMETER_REFERENCE,
+    STAGE_ONE_CODES, UNKNOWN_ENUM_LITERAL, UNKNOWN_PARAMETER, UNKNOWN_PARAMETER_REFERENCE,
 };
 
 /// Check every block; return each block's resolved ports, or `None` where they are unknown (an
 /// unknown class, a refused parameter table, or an assignment withheld by an author-side
 /// finding, which could change the port widths).
-pub(super) fn check(sequence: &Sequence, findings: &mut Findings) -> Vec<Option<ClassPorts>> {
+pub(super) fn check(
+    sequence: &Sequence,
+    declared: &Declared<'_>,
+    findings: &mut Findings,
+) -> Vec<Option<Ports>> {
     sequence
         .blocks
         .iter()
         .enumerate()
-        .map(|(index, block)| check_block(sequence, index, block, findings))
+        .map(|(index, block)| check_block(sequence, declared, index, block, findings))
         .collect()
 }
 
@@ -44,10 +55,11 @@ fn refuse(code: &'static str, detail: String) -> Refusal {
 
 fn check_block(
     sequence: &Sequence,
+    declared: &Declared<'_>,
     index: usize,
     block: &Block,
     findings: &mut Findings,
-) -> Option<ClassPorts> {
+) -> Option<Ports> {
     let block_position = Anchor::Block(index, None);
     let Some(class) = lookup_class(&block.class_path) else {
         findings.error(
@@ -79,7 +91,7 @@ fn check_block(
     for (j, assignment) in block.assignments.iter().enumerate() {
         let name = assignment.name.as_str();
         let outcome = if seen.insert(name) {
-            judge(sequence, &class, block, name, &assignment.value)
+            judge(sequence, declared, &class, block, name, &assignment.value)
         } else {
             Err(refuse(
                 DUPLICATE_PARAMETER,
@@ -103,46 +115,95 @@ fn check_block(
         }
     }
 
+    let mut assigned: BTreeMap<&str, usize> = BTreeMap::new();
+    for (j, assignment) in block.assignments.iter().enumerate() {
+        assigned.entry(assignment.name.as_str()).or_insert(j);
+    }
     match class_ports(class.entry.class_path, &table) {
-        Ok(ports) => withheld.is_empty().then_some(ports),
+        Ok(ports) => withheld.is_empty().then(|| Ports::new(ports)),
         Err(ClassPortsError::InvalidParameters { diagnostics, .. }) => {
-            for diagnostic in diagnostics {
-                let code = diagnostic.code.as_str();
-                let named = backticked(&diagnostic.message);
-                if named.iter().any(|token| withheld.contains(token)) {
-                    // Already reported (or withheld for a reported reason) by the author side.
-                    continue;
+            for diagnostic in &diagnostics {
+                if let Some(mapped) = engine_finding(block, index, &assigned, &withheld, diagnostic)
+                {
+                    findings.error(mapped.anchor, mapped.code, mapped.subject, mapped.detail);
                 }
-                let position = block
-                    .assignments
-                    .iter()
-                    .position(|a| named.contains(&a.name.as_str()));
-                let (position, subject) = match position {
-                    Some(j) => (
-                        Anchor::Block(index, Some(j)),
-                        format!("{}.{}", block.name, block.assignments[j].name),
-                    ),
-                    None => (block_position, block.name.as_str().to_owned()),
-                };
-                findings.error(
-                    position,
-                    code,
-                    subject,
-                    format!("block `{}`: {}", block.name, diagnostic.message),
-                );
             }
             None
         }
+        Err(ClassPortsError::UnknownClass { class_path }) => {
+            findings.error(
+                block_position,
+                CLASS_NOT_FOUND,
+                block.name.as_str(),
+                format!(
+                    "block `{}` names class `{class_path}`, which the catalog does not register",
+                    block.name
+                ),
+            );
+            None
+        }
+        // `Unresolvable`, and any refusal a later facade adds: the table cannot be built into
+        // nameable ports, which is a parameter defect of this block.
         Err(other) => {
             findings.error(
                 block_position,
                 PARAMETER_OUT_OF_RANGE,
                 block.name.as_str(),
-                format!("block `{}`: {other}", block.name),
+                format!(
+                    "block `{}`: its parameters cannot be built into ports: {other}",
+                    block.name
+                ),
             );
             None
         }
     }
+}
+
+/// One engine diagnostic mapped onto the model.
+pub(super) struct EngineFinding {
+    pub(super) anchor: Anchor,
+    pub(super) code: &'static str,
+    pub(super) subject: String,
+    pub(super) detail: String,
+}
+
+/// Map one `class_ports` diagnostic: the subject is the first assignment whose name the message
+/// backticks (`block.param`), else the block; the code is the engine's when it is a stage-1 code,
+/// else `parameter-out-of-range` naming the engine code. `None` when the message names an
+/// assignment the author side already reported or withheld.
+pub(super) fn engine_finding(
+    block: &Block,
+    index: usize,
+    assigned: &BTreeMap<&str, usize>,
+    withheld: &BTreeSet<&str>,
+    diagnostic: &Diagnostic,
+) -> Option<EngineFinding> {
+    let named = backticked(&diagnostic.message);
+    if named.iter().any(|token| withheld.contains(token)) {
+        return None;
+    }
+    let engine_code = diagnostic.code.as_str();
+    let (code, prefix) = if STAGE_ONE_CODES.contains(&engine_code) {
+        (engine_code, String::new())
+    } else {
+        (
+            PARAMETER_OUT_OF_RANGE,
+            format!("engine code `{engine_code}`: "),
+        )
+    };
+    let (anchor, subject) = match named.iter().find_map(|token| assigned.get(token)) {
+        Some(&j) => (
+            Anchor::Block(index, Some(j)),
+            format!("{}.{}", block.name, block.assignments[j].name),
+        ),
+        None => (Anchor::Block(index, None), block.name.as_str().to_owned()),
+    };
+    Some(EngineFinding {
+        anchor,
+        code,
+        subject,
+        detail: format!("block `{}`: {prefix}{}", block.name, diagnostic.message),
+    })
 }
 
 /// The backticked tokens of an engine message, in order.
@@ -155,6 +216,7 @@ fn backticked(message: &str) -> Vec<&str> {
 /// references); `Err` is a finding on the assignment.
 fn judge(
     sequence: &Sequence,
+    declared: &Declared<'_>,
     class: &ClassView,
     block: &Block,
     name: &str,
@@ -203,7 +265,11 @@ fn judge(
     let literal = match value {
         ParamValue::Literal(literal) => literal,
         ParamValue::Ref(target) => {
-            let Some(param) = sequence.params.iter().find(|p| p.name == *target) else {
+            let Some(param) = declared
+                .params
+                .get(target.as_str())
+                .map(|&i| &sequence.params[i])
+            else {
                 return Err(refuse(
                     UNKNOWN_PARAMETER_REFERENCE,
                     format!("`{name}` references `{target}`, which is not a sequence parameter"),
@@ -242,7 +308,13 @@ fn judge(
         (ValueType::Real, Literal::Real(v)) => Ok(Some(Value::Real(*v))),
         (ValueType::Real | ValueType::Integer, Literal::Integer(v)) => Ok(Some(Value::Integer(*v))),
         (ValueType::Boolean, Literal::Boolean(v)) => Ok(Some(Value::Boolean(*v))),
-        (ValueType::String, Literal::Text(v)) => Ok(Some(Value::String(Arc::from(v.as_str())))),
+        (ValueType::String, Literal::Text(v)) => match text_problem(v) {
+            Some(problem) => Err(refuse(
+                PARAMETER_OUT_OF_RANGE,
+                format!("parameter `{name}`: the string {problem}"),
+            )),
+            None => Ok(Some(Value::String(Arc::from(v.as_str())))),
+        },
         (ValueType::Enum(class_id), Literal::EnumMember(member)) => {
             let Some(enum_type) = enum_type(expected) else {
                 return Err(refuse(
@@ -277,6 +349,21 @@ fn judge(
     }
 }
 
+/// Why a String value cannot be carried by the wire form, if it cannot: a control character
+/// other than line feed, or more than [`MAX_WIRE_STRING_BYTES`] bytes as written (escapes
+/// counted). A validate-clean model therefore always reads back from its own wire bytes.
+fn text_problem(text: &str) -> Option<String> {
+    if text.chars().any(|c| c.is_control() && c != '\n') {
+        return Some("carries a control character other than a line feed".to_owned());
+    }
+    let written = wire_string_len(text);
+    (written > MAX_WIRE_STRING_BYTES).then(|| {
+        format!(
+            "is {written} bytes as written; the wire form carries at most {MAX_WIRE_STRING_BYTES}"
+        )
+    })
+}
+
 fn kind_name(value_type: ValueType) -> &'static str {
     match value_type {
         ValueType::Real => "a Real (or an Integer literal)",
@@ -288,15 +375,5 @@ fn kind_name(value_type: ValueType) -> &'static str {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::backticked;
-
-    #[test]
-    fn backticked_tokens_are_read_in_order() {
-        assert_eq!(
-            backticked("block `CDL.Reals.Hysteresis` is missing required parameter `uLow`"),
-            vec!["CDL.Reals.Hysteresis", "uLow"]
-        );
-        assert!(backticked("no tokens").is_empty());
-    }
-}
+#[path = "blocks_tests.rs"]
+mod tests;

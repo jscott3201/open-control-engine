@@ -201,6 +201,9 @@ for keywords outside the strict profile. `tests/fixtures/wire/*.json` are canoni
 each. A DTO doc comment, a catalog class, a finding message or the canonical writer moves them.
 Regenerate with `OCE_BLESS_AUTHOR=1 cargo nextest run -p oce-author`, run it again without the
 switch, and say in the PR which files moved and why. Nothing else rewrites them.
+`tests/fixtures/note/wire_example.json` is the JSON block of the authoring note's "Wire form"
+section copied verbatim (a test that read `docs/design/` would put the note on the classifier's
+test-read list); when that block changes, copy it again by hand.
 
 ## The frame driver lives in `oce-graph`, and its run digests move with behaviour
 

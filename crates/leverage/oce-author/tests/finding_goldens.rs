@@ -109,3 +109,21 @@ fn the_defects_bundle_covers_every_wire_expressible_code() {
         .collect();
     assert_eq!(codes, expected);
 }
+
+#[test]
+fn every_emitted_code_is_a_stage_one_code() {
+    let mut models = vec![defects()];
+    for entry in std::fs::read_dir(fixture("wire")).expect("fixtures") {
+        let text = std::fs::read_to_string(entry.expect("entry").path()).expect("read");
+        models.push(from_wire_str(&text).expect("parse"));
+    }
+    for model in &models {
+        for finding in validate(model) {
+            assert!(
+                oce_author::STAGE_ONE_CODES.contains(&finding.code),
+                "{}: {finding}",
+                model.name
+            );
+        }
+    }
+}

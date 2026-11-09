@@ -235,7 +235,7 @@ crate is registry closure for the facade, not an independently supported host AP
 
 | Crate | Responsibility |
 | --- | --- |
-| `oce-author` | **Leverage, `publish = false`.** The authoring layer's library ([design note](design/authoring-layer.md)): the typed authoring model and builder, the strict-JSON wire form (closed objects, bounded reads, one canonical spelling) with its `schemars`-derived JSON Schema pinned byte for byte, and the author-side (stage 1) validator, which judges a sequence against `oce_api::class_metadata` and `oce_api::class_ports`. It never evaluates, schedules or loads an engine; `oce-bless` is its one other `oce-*` edge, as a dev-dependency. |
+| `oce-author` | **Leverage, `publish = false`.** The authoring layer's library ([design note](design/authoring-layer.md), [crate README](../crates/leverage/oce-author/README.md)): the typed authoring model and builder, the strict-JSON wire form (`from_wire_str` / `to_wire_string`: closed objects, five value shapes, bounded reads, one canonical spelling) with its `schemars`-derived JSON Schema (`WIRE_SCHEMA`, `schema/sequence.schema.json`) pinned byte for byte, and the author-side (stage 1) validator, which judges a sequence against `oce_api::class_metadata` and `oce_api::class_ports`. It never evaluates, schedules or loads an engine; `oce-bless` is its one other `oce-*` edge, as a dev-dependency. |
 
 Every crate listed here does work today. Reserved placeholder crates were removed rather than kept
 as empty seams, so nobody plans a feature against a crate that does nothing.

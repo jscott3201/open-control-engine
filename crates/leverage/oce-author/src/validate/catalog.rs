@@ -1,6 +1,9 @@
 //! The catalog view stage 1 judges against: class lookup, parameter lookup (array templates
 //! included) and enumeration members, all read through `oce-api`.
 
+use std::collections::BTreeMap;
+use std::sync::OnceLock;
+
 use oce_api::{
     CatalogEntry, ClassMetadata, ClassParameter, PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER,
     PARAM_ROW_PLACEHOLDER, ValueType, catalog, class_metadata, param_element_name,
@@ -14,13 +17,26 @@ pub(crate) struct ClassView {
     pub(crate) metadata: &'static ClassMetadata,
 }
 
-/// Look up a class by its exact catalog path.
+/// Look up a class by its exact catalog path (an index built once per process).
 pub(crate) fn lookup_class(class_path: &str) -> Option<ClassView> {
-    let entry = catalog().iter().find(|e| e.class_path == class_path)?;
-    let metadata = class_metadata()
-        .iter()
-        .find(|m| m.class_path == class_path)?;
-    Some(ClassView { entry, metadata })
+    static INDEX: OnceLock<BTreeMap<&'static str, (usize, usize)>> = OnceLock::new();
+    let index = INDEX.get_or_init(|| {
+        let metadata: BTreeMap<&str, usize> = class_metadata()
+            .iter()
+            .enumerate()
+            .map(|(i, m)| (m.class_path, i))
+            .collect();
+        catalog()
+            .iter()
+            .enumerate()
+            .filter_map(|(i, e)| metadata.get(e.class_path).map(|&m| (e.class_path, (i, m))))
+            .collect()
+    });
+    let &(entry, metadata) = index.get(class_path)?;
+    Some(ClassView {
+        entry: &catalog()[entry],
+        metadata: &class_metadata()[metadata],
+    })
 }
 
 /// Find the class parameter an assignment name addresses: a scalar by its name, an array element
@@ -90,7 +106,8 @@ pub(crate) struct EnumType {
 ///
 /// The facade publishes members for `ZeroTime` (a `Required` rule's kind) and for the
 /// `TimeTable` parameters (`EnumMembers` rules), but not for `SimpleController`, and names no
-/// enumeration class path for the `TimeTable` ones; so the table is pinned here and the
+/// enumeration class path for the `TimeTable` ones (facade accessor requested in GitHub #468); so
+/// the table is pinned here and the
 /// `enum_table_agrees_with_the_catalog` test checks every row the catalog can see — members,
 /// class path, defaults and the ordinal count the load gate accepts — against `oce-api`.
 pub(crate) const ENUM_TYPES: &[(u32, EnumType)] = &[

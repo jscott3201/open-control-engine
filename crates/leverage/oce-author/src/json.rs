@@ -141,3 +141,16 @@ pub(crate) fn sorted(value: &serde_json::Value) -> Json {
         }
     }
 }
+
+/// The length in bytes of `text` as [`Json`] writes it, without the quotes: escapes counted as
+/// written (`\"`, `\\`, `\n` two bytes; any other non-printable or non-ASCII character six bytes
+/// per UTF-16 unit).
+pub(crate) fn wire_string_len(text: &str) -> usize {
+    text.chars()
+        .map(|ch| match ch {
+            '"' | '\\' | '\n' => 2,
+            ' '..='~' => 1,
+            _ => 6 * ch.len_utf16(),
+        })
+        .sum()
+}

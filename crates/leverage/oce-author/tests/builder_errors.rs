@@ -192,9 +192,9 @@ fn array_element_names_are_checked_against_the_class_templates() {
             "{unknown}"
         );
     }
-    // An element past the configured width names a real template element, and the class rules
-    // `class_ports` runs do not refuse it; the emitted array's shape is judged by the engine load
-    // (stage 2), so stage 1 is silent here by design.
+    // An element past the configured width is not refused: `class_ports` ignores any name the
+    // class does not read (GitHub #467, a facade issue), and stage 1 does not guess a width from
+    // the resolved port count. Stage 2 judges the emitted array until #467 lands.
     assert_eq!(with("k_3"), vec![]);
 }
 

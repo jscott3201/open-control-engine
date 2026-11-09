@@ -256,6 +256,10 @@ pre-empt where one exists. The table is a test fixture: gate item 3 is a table-d
 | `undriven-boundary-output` | engine (warning → error) | — | 2 | — |
 | any other `DiagCode` | engine | — | 2 | passed through verbatim |
 
+`parameter-out-of-range` also covers, author-side only, a String value the wire form cannot carry
+(a control character other than line feed, or more than 4,096 bytes as written), so every
+validate-clean model reads back from its own wire bytes (GitHub #466).
+
 `parameter-not-settable` fires only for a parameter of a reserved lowering identity: #440's
 `settable` flag means "an author may assign this parameter", so every parameter of an authorable
 class is settable, derived defaults included ([#440 amendment](https://github.com/jscott3201/open-control-engine/issues/440#issuecomment-6730952664)).

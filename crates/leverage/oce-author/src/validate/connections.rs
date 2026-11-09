@@ -1,10 +1,10 @@
 //! Connection checks: endpoint syntax, what each endpoint names, and port names against the
 //! ports the catalog resolves for each block as configured (#440).
 
-use oce_api::{ClassPort, ClassPorts};
-
 use crate::identifier::check_identifier_syntax;
 use crate::model::{Endpoint, Sequence};
+
+use super::index::{Declared, Ports};
 
 use super::{Anchor, Findings, MALFORMED_CONNECTION, UNKNOWN_PORT, UNKNOWN_SOURCE, UNKNOWN_TARGET};
 
@@ -24,7 +24,12 @@ impl End {
     }
 }
 
-pub(super) fn check(sequence: &Sequence, ports: &[Option<ClassPorts>], findings: &mut Findings) {
+pub(super) fn check(
+    sequence: &Sequence,
+    declared: &Declared<'_>,
+    ports: &[Option<Ports>],
+    findings: &mut Findings,
+) {
     for (index, connection) in sequence.connections.iter().enumerate() {
         let position = Anchor::Connection(index);
         let subject = format!("connection[{index}]");
@@ -60,7 +65,7 @@ pub(super) fn check(sequence: &Sequence, ports: &[Option<ClassPorts>], findings:
             (End::Source, &connection.source),
             (End::Target, &connection.target),
         ] {
-            if let Some((code, detail)) = resolve(sequence, ports, end, endpoint) {
+            if let Some((code, detail)) = resolve(declared, ports, end, endpoint) {
                 findings.error(
                     position,
                     code,
@@ -85,10 +90,13 @@ fn syntax_problem(endpoint: &Endpoint) -> Option<String> {
     })
 }
 
+/// The longest port list an `unknown-port` detail spells out.
+const PORT_HINT_LIMIT: usize = 16;
+
 /// What a well-formed endpoint fails to name, as `(code, detail)`, or `None` when it resolves.
 fn resolve(
-    sequence: &Sequence,
-    ports: &[Option<ClassPorts>],
+    declared: &Declared<'_>,
+    ports: &[Option<Ports>],
     end: End,
     endpoint: &Endpoint,
 ) -> Option<(&'static str, String)> {
@@ -98,21 +106,22 @@ fn resolve(
     };
     match endpoint {
         Endpoint::Boundary(name) => {
+            let name = name.as_str();
             let (wanted, other) = match end {
-                End::Source => (&sequence.inputs, &sequence.outputs),
-                End::Target => (&sequence.outputs, &sequence.inputs),
+                End::Source => (&declared.inputs, &declared.outputs),
+                End::Target => (&declared.outputs, &declared.inputs),
             };
-            if wanted.iter().any(|b| b.name == *name) {
+            if wanted.contains_key(name) {
                 return None;
             }
-            let what = if other.iter().any(|b| b.name == *name) {
+            let what = if other.contains_key(name) {
                 match end {
                     End::Source => "a boundary output, which cannot drive a connection",
                     End::Target => "a boundary input, which cannot be driven",
                 }
-            } else if sequence.params.iter().any(|p| p.name == *name) {
+            } else if declared.params.contains_key(name) {
                 "a sequence parameter, not a connector"
-            } else if sequence.blocks.iter().any(|b| b.name == *name) {
+            } else if declared.blocks.contains_key(name) {
                 "a block; name one of its ports as `block.port`"
             } else {
                 "not declared"
@@ -120,7 +129,7 @@ fn resolve(
             Some((unknown, format!("the {} `{name}` is {what}", end.word())))
         }
         Endpoint::Port { block, port } => {
-            let Some(index) = sequence.blocks.iter().position(|b| b.name == *block) else {
+            let Some(&index) = declared.blocks.get(block.as_str()) else {
                 return Some((
                     unknown,
                     format!("the {} block `{block}` is not declared", end.word()),
@@ -128,37 +137,48 @@ fn resolve(
             };
             // Ports are unknown when the block's class or parameters were refused; that
             // finding is the one to fix first.
-            let resolved = ports.get(index)?.as_ref()?;
-            let (wanted, other, side, other_side) = match end {
-                End::Source => (&resolved.outputs, &resolved.inputs, "output", "input"),
-                End::Target => (&resolved.inputs, &resolved.outputs, "input", "output"),
+            let ports = ports.get(index)?.as_ref()?;
+            let (wanted, other, listed, side, other_side) = match end {
+                End::Source => (
+                    &ports.outputs,
+                    &ports.inputs,
+                    &ports.resolved.outputs,
+                    "output",
+                    "input",
+                ),
+                End::Target => (
+                    &ports.inputs,
+                    &ports.outputs,
+                    &ports.resolved.inputs,
+                    "input",
+                    "output",
+                ),
             };
-            if wanted.iter().any(|p| p.name == port.as_str()) {
+            if wanted.contains(port.as_str()) {
                 return None;
             }
-            let hint = if other.iter().any(|p| p.name == port.as_str()) {
+            let hint = if other.contains(port.as_str()) {
                 format!("`{port}` is an {other_side}")
+            } else if listed.is_empty() {
+                format!("it has no {side}s")
             } else {
-                format!("its {side}s are: {}", names(wanted))
+                let mut names: Vec<&str> = listed
+                    .iter()
+                    .take(PORT_HINT_LIMIT)
+                    .map(|p| p.name.as_str())
+                    .collect();
+                if listed.len() > PORT_HINT_LIMIT {
+                    names.push("…");
+                }
+                format!("its {side}s are: {}", names.join(", "))
             };
             Some((
                 UNKNOWN_PORT,
                 format!(
                     "block `{block}` (`{}`) has no {side} port `{port}`; {hint}",
-                    resolved.class_path
+                    ports.resolved.class_path
                 ),
             ))
         }
     }
-}
-
-fn names(ports: &[ClassPort]) -> String {
-    if ports.is_empty() {
-        return "none".to_owned();
-    }
-    ports
-        .iter()
-        .map(|p| p.name.as_str())
-        .collect::<Vec<_>>()
-        .join(", ")
 }

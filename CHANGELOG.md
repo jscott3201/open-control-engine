@@ -140,9 +140,19 @@ and a gate that accepted any text would restore exactly the false assurance desc
   not published by the facade, so the crate pins the four enumeration types and a test checks the
   table against everything `oce-api` does publish (noted on #455). Goldens: four canonical wire
   bundles (the worked example, an every-element sequence, the note's abridged example and a
-  defects bundle) and their finding lists, bless switch `OCE_BLESS_AUTHOR`. The leverage rule now
-  allows `oce-bless` as a dev-dependency only (decision 19): `scripts/ci/leverage-members.sh` reads
-  normal and build edges and dev edges separately, with fixtures for both. The workspace has 14
+  defects bundle) and their finding lists, bless switch `OCE_BLESS_AUTHOR`; a structural schema
+  checker agrees with the parser shape by shape, the `SimpleController` table is loaded member by
+  member through `Engine::load_cxf`, and a document near the 4 MiB bound validates in near-linear
+  time (name indexes built once per run). Every statement carries text-form `Annotations`
+  (comments, a blank line before it) and assignments and sequence parameters a unit `suffix`, so
+  the text form needs no model change; the wire form and the emitter ignore them, and the model,
+  `BuildError`, `Stage`, `Origin`, `Severity` and `Finding` are `#[non_exhaustive]`. Choices the
+  note left open: a connection string without exactly one `->` is a `WireError`, a sequence
+  parameter's value is a literal (no reference), `-0` reads as `Integer(0)` while `-0.0` keeps its
+  sign, a non-finite Real (reachable only through the Rust model) is written `null`, a String value
+  the wire cannot carry is `parameter-out-of-range`, and an array element past the configured width
+  (`k_3` on `nin = 2`) is not refused until the facade reports unread names (#467). The crate
+  relies on the leverage rule from GitHub #462 that allows `oce-bless` as a dev-dependency only. The workspace has 14
   members (10 publishable, four private); `release.yml`'s comment and step name, its digest and the
   validator's controls are re-pinned.
 

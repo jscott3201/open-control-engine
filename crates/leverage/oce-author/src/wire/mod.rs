@@ -198,6 +198,11 @@ pub fn from_wire_bytes(bytes: &[u8]) -> Result<Sequence, WireError> {
 
 /// Read a wire document into the model.
 ///
+/// Numbers: a token with no fraction or exponent is an `Integer` (`-0` reads as `Integer(0)`); any
+/// other token is a `Real` read with correct rounding, so `-0.0` keeps its sign, `1e-400`
+/// underflows to `0.0` and `1e999` is refused as non-finite. An Integer assigned to a Real
+/// parameter is widened by the engine as CDL does, rounding to the nearest binary64 above 2^53.
+///
 /// # Errors
 ///
 /// A typed [`WireError`] for a document over a bound, with a byte-order mark, a duplicate key, a
@@ -261,7 +266,10 @@ fn classify(error: &serde_json::Error) -> WireError {
 }
 
 /// Write the model in the canonical wire spelling (see the module documentation). Infallible: a
-/// name the validator would refuse is written as it is, and a non-finite Real as `null`.
+/// name the validator would refuse is written as it is, and a non-finite Real as `null`. Text-form
+/// annotations and unit suffixes are never written. For a model [`crate::validate()`] accepts,
+/// [`from_wire_str`] reads the result back to an equal model (string values that would break a
+/// wire bound are findings), provided its lists and the document stay within the wire bounds.
 #[must_use]
 pub fn to_wire_string(sequence: &Sequence) -> String {
     let params = sequence

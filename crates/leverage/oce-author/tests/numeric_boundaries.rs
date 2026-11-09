@@ -220,3 +220,20 @@ fn sequence_parameter_integer_widening_reaches_a_real_reference() {
         vec![("parameter-kind-mismatch", "c.k".to_owned())]
     );
 }
+
+#[test]
+fn a_real_below_the_smallest_subnormal_underflows_to_zero() {
+    let text = to_wire_string(&real_constant(Literal::Real(1.0)))
+        .replace("\"value\": 1.0", "\"value\": 1e-400");
+    let read = from_wire_str(&text).expect("an underflowing real is finite");
+    assert_eq!(
+        read.blocks[0].assignments[0].value,
+        ParamValue::Literal(Literal::Real(0.0))
+    );
+    let negative = text.replace("1e-400", "-1e-400");
+    let read = from_wire_str(&negative).expect("reads");
+    assert_eq!(
+        read.blocks[0].assignments[0].value,
+        ParamValue::Literal(Literal::Real(-0.0))
+    );
+}
