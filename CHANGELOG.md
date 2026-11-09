@@ -168,7 +168,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
-- **Design note for the canonical content id** (GitHub #PRNUM, issue #470).
+- **Design note for the canonical content id** (GitHub #471, issue #470).
   `docs/design/content-id.md` fixes, before any code, the one content id that replaces the
   order-bearing `cxf:fnv1a128:` export tag: SHA-256 over an `OCECANON` version 1 encoding of the
   loaded flat graph, written `oce:canon1:<64 hex>`. Names are inside the id (instance namespace
