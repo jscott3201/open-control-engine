@@ -194,7 +194,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### CXF import and export
 
 - **Composite lowering costs time and memory linear in the document, not fan-out × IRI length**
-  (GitHub #489, issue #480). The lowering pass classified both ends of every authored
+  (GitHub #490, issue #480). The lowering pass classified both ends of every authored
   `isConnectedTo` edge by string content and keyed its duplicate counts, crossed drivers and
   adjacency on IRI strings, so one long authored source shared by a whole fan-out cost fan-out ×
   IRI length: a leaf port with a 1 MiB `@id` wired 65,535 times to a top boundary port (a 10 MB
