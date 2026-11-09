@@ -39,7 +39,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Facade
 
-- **Slot-indexed execute entry** (GitHub #PRNUM, issue #444). `Engine::frame_slots()` resolves the
+- **Slot-indexed execute entry** (GitHub #459, issue #444). `Engine::frame_slots()` resolves the
   executable boundary once into an owned `FrameSlots` map (input slots in `input_definitions()`
   order, output slots in `CompletedFrame::outputs()` order, both the compiled blob's I/O order),
   and `Engine::execute_slots(&slots, t, &values)` commits one complete frame from one value per
