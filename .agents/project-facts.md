@@ -37,17 +37,28 @@ reverted before the next determinism-lane merge. Pushes queue: a run in progress
 the newest waiting run is kept, so an older waiting run shows as cancelled. The daily run on the
 `development` tip stays. See [CI and the gate](../docs/ci-and-the-gate.md#what-runs-when).
 
-The per-PR gate has two lanes under the one `CI OK` (issue #393). Its first job classifies the
+The per-PR gate has three lanes under the one `CI OK` (issues #393 and #503). Its first job classifies the
 PR's changed paths with plain git and `scripts/ci/classify-changes.sh`, fail-closed: any path that
 is not documentation or under `crates/leverage/` runs the determinism lane — every job that
 compiles the engine — and so does any change to a gate script, workflow or tool config. No per-PR
 job executes `.agents/gate.sh` any more (`gate (light)` did; `gate (full)` in `release-gate.yml`
 runs it after the merge). A `crates/leverage/**` change runs only the `leverage lane` job beside the
 always-on checks (fmt, file-size, no-secret, docs, gate fixtures, the package/authority/product
-contract); an engine change runs it too. A docs-only PR compiles nothing, and documentation a test
-reads (`README.md`, `docs/cxf-composite-subset.md`) is not docs-only. `CI OK` accepts a skip only
-when the job's lane output was `false`. Locally, `bash .agents/gate.sh leverage` mirrors a
-leverage-only PR; see [lanes](../docs/ci-and-the-gate.md#lanes-what-a-pr-runs).
+contract); an engine change runs it too. A docs-only PR compiles nothing, and documentation an
+engine test reads (`docs/cxf-composite-subset.md`) is not docs-only: it is an engine change.
+
+The root `README.md` is its own lane (issue #503), so updating it in a landing PR no longer costs
+the determinism lane. It runs one job, `facade contract and Quickstart`, which holds the two README
+checks that are in no always-on job: the `readme_quickstart` byte-pin of the Quickstart against
+`crates/oce-api/examples/quickstart.rs`, and the executed example. An engine change runs that job
+too. Only the root file: `crates/*/README.md` is still an engine path. If you add a test or script
+that reads the root README, `scripts/ci/test-classify-changes.sh` fails until its `README_CHECKS`
+table names the always-on or README-lane job that runs it.
+
+`CI OK` accepts a skip only when the job's lane output was `false`. Locally,
+`bash .agents/gate.sh leverage` mirrors a PR confined to `crates/leverage/`, the docs and the root
+README (it always runs the two README checks); see
+[lanes](../docs/ci-and-the-gate.md#lanes-what-a-pr-runs).
 
 Two platform cells observe other operating systems (issue #394): macOS arm64, per PR with the
 determinism lane, checks that the portable state snapshot equals Linux byte for byte; Windows, in

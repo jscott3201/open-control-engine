@@ -30,6 +30,11 @@
 #   * core — the determinism lane: every compiling job below. Runs for any path that is not
 #     docs-only or under crates/leverage/, including every gate script and workflow change.
 #   * leverage — the `leverage-lane` job. Runs for crates/leverage/** and for every core change.
+#   * readme — the `facade-contract` job (issue #503). Runs when the root README.md changes and for
+#     every core change. The root README.md alone is not a core change: the job runs the two checks
+#     that read it and are not always-on (the Quickstart byte-pin and the executed Quickstart), and
+#     its other readers (docs staging, the documentation checker contracts, the product contract)
+#     are always-on. scripts/ci/test-classify-changes.sh fails when a reader is covered by neither.
 #   * gate_scripts — informational, like docs_only: no job is filtered on it. It is 'true' when
 #     .agents/gate.sh, .github/scripts/**, scripts/** (outside scripts/docs/),
 #     .github/workflows/** or .config/** change, and it implies core, so such a change runs the
@@ -126,6 +131,7 @@ jobs:
     outputs:
       core: ${{ steps.classify.outputs.core }}
       leverage: ${{ steps.classify.outputs.leverage }}
+      readme: ${{ steps.classify.outputs.readme }}
       gate_scripts: ${{ steps.classify.outputs.gate_scripts }}
       docs_only: ${{ steps.classify.outputs.docs_only }}
     steps:
@@ -995,12 +1001,19 @@ jobs:
           tool: cargo-deny
       - run: cargo deny check bans licenses sources
 
-  # The facade compiler contract and the published Quickstart, executed. They compile the facade,
-  # so they run with the determinism lane.
+  # The facade compiler contract, and the published Quickstart: byte-pinned to the README, then
+  # executed. This job is the README lane (issue #503): it runs for every engine change (core
+  # implies readme) and when the root README.md changes, and it holds every check that reads the
+  # root README and is not in an always-on job. The byte-pin is the one that can fail on a README
+  # edit: `readme_quickstart` compares the README's first Rust block with
+  # crates/oce-api/examples/quickstart.rs, the copy that compiles, and the last step runs that
+  # example. The determinism cells run the same test as part of the oce-api suite; it is named here
+  # so a README change that skips those cells still runs it. The facade checks do not read the
+  # README; they ride along because they build the same facade, which keeps this one job.
   facade-contract:
     name: facade contract and Quickstart
     needs: changes
-    if: needs.changes.outputs.core == 'true'
+    if: needs.changes.outputs.readme == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -1012,10 +1025,19 @@ jobs:
         with:
           shared-key: facade-contract
           cache-bin: false
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: nextest@0.9.143
       - name: Supported facade compiler contract
         run: python3 scripts/facade_contract/check.py
       - name: Facade compiler diagnostic controls
         run: python3 scripts/facade_contract/test_check.py
+      - name: Clear the cached nextest report
+        run: rm -f target/nextest/ci/junit.xml
+      - name: README Quickstart is byte-identical to the compiled example
+        run: cargo nextest run -p oce-api --test readme_quickstart --locked --profile ci --no-tests=fail
+      - name: Require the nextest JUnit report
+        run: test -s target/nextest/ci/junit.xml
       - name: Quickstart executes successfully
         run: bash .github/scripts/check-quickstart-runs.sh
 
@@ -1049,8 +1071,8 @@ jobs:
 
   # The single required status for branch protection on `development`. It reports on every run
   # (`always()`), needs every other job, and runs scripts/ci/ci_ok.py: a job passes on `success`, or
-  # on `skipped` only when it is listed in JOB_LANES (lane core or leverage) and its lane output
-  # from `changes` is 'false'.
+  # on `skipped` only when it is listed in JOB_LANES (lane core, leverage or readme) and its lane
+  # output from `changes` is 'false'.
   # A skip while its lane ran, a skip of an unfiltered job, any failure or cancellation, and a
   # failed or inconsistent `changes` job all fail. check-workflow-gates.sh asserts that `needs:`
   # lists every other job, that JOB_LANES equals the lane-filtered jobs' `if:` lines, and that this
@@ -1112,6 +1134,6 @@ jobs:
             no-std-build=core
             rustdoc=core
             deny=core
-            facade-contract=core
+            facade-contract=readme
             leverage-lane=leverage
         run: python3 scripts/ci/ci_ok.py

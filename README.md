@@ -391,8 +391,9 @@ test. Notable changes are in **[CHANGELOG.md](CHANGELOG.md)**. Coding agents sta
 One thing worth knowing up front: the per-PR gate runs the `oce-api`, `oce-blocks`, and `oce-expr`
 state-determinism subset plus the scoped `oce-conformance` strict-bit subset. Changes outside
 those and the named input-hygiene audits can show every check green without running their own
-tests. The gate also has two lanes under the one `CI OK`: a documentation-only change compiles
-nothing (`README.md` is the exception, because a test reads its Quickstart), a change under
+tests. The gate also has three lanes under the one `CI OK`: a documentation-only change compiles
+nothing, a change to this `README.md` runs the checks that read it (a test byte-pins the Quickstart
+above to the example that compiles, and the gate executes that example), a change under
 `crates/leverage/` runs the lighter leverage lane, and anything else runs the full determinism
 lane. [CI and the gate](docs/ci-and-the-gate.md) explains the split.
 

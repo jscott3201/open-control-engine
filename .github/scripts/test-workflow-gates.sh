@@ -6,8 +6,9 @@
 # result check, its `changes` outputs or its lane map, or lets a job skip on the wrong lane, a
 # `continue-on-error` or a step-level `if:` that is not a static matrix selector, and a macOS or
 # Windows platform cell that loses its runner, its lane, its comparison or its strict-bit exclusion,
-# and a blob round trip that loses a leg, its recording, its comparison or its pinned wasmtime, fail
-# closed. Since issue #502 the determinism matrix is split across the two workflows, and the
+# and a blob round trip that loses a leg, its recording, its comparison or its pinned wasmtime, and
+# a README lane (issue #503) whose job loses its lane-map entry, its lane, its classifier output or
+# its byte-pin step, fail closed. Since issue #502 the determinism matrix is split across the two workflows, and the
 # fixtures follow it: pr-gate.yml must hold exactly the two debug cells and the cross-architecture
 # comparisons, and release-gate.yml all four cells, the cross-codegen comparisons, the Windows
 # cell, the push-to-development trigger, a pinned checkout ref and a concurrency group that never
@@ -37,6 +38,7 @@ jobs:
     outputs:
       core: ${{ steps.classify.outputs.core }}
       leverage: ${{ steps.classify.outputs.leverage }}
+      readme: ${{ steps.classify.outputs.readme }}
       gate_scripts: ${{ steps.classify.outputs.gate_scripts }}
       docs_only: ${{ steps.classify.outputs.docs_only }}
     steps:
@@ -87,10 +89,15 @@ jobs:
       - run: cargo deny check bans licenses sources
   facade-contract:
     needs: changes
-    if: needs.changes.outputs.core == 'true'
+    if: needs.changes.outputs.readme == 'true'
     steps:
+      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
+        with:
+          tool: nextest@0.9.143
       - run: python3 scripts/facade_contract/check.py
       - run: python3 scripts/facade_contract/test_check.py
+      - run: cargo nextest run -p oce-api --test readme_quickstart --locked --profile ci --no-tests=fail
+      - run: test -s target/nextest/ci/junit.xml
       - run: bash .github/scripts/check-quickstart-runs.sh
   leverage-lane:
     needs: changes
@@ -388,7 +395,7 @@ jobs:
           NEEDS_JSON: ${{ toJSON(needs) }}
           JOB_LANES: >-
             golden-gen-hygiene=core build=core clippy=core rustdoc=core deny=core
-            facade-contract=core leverage-lane=leverage
+            facade-contract=readme leverage-lane=leverage
             default-no-db=core unused-deps=core golden-gen-firewall=core
             strict-bit-matrix=core strict-bit-compare=core
             determinism-matrix=core determinism-compare=core crate-tests=core
@@ -1215,8 +1222,73 @@ edit_pr_gate() {
 # gate_scripts stays a classifier output but is no longer a lane a job may be filtered on.
 lane_filter_on_gate_scripts_output() {
   edit_pr_gate "$1" \
-    -e '/^  facade-contract:$/,/^    if:/ s/outputs.core/outputs.gate_scripts/' \
-    -e 's/facade-contract=core/facade-contract=gate_scripts/'
+    -e '/^  facade-contract:$/,/^    if:/ s/outputs.readme/outputs.gate_scripts/' \
+    -e 's/facade-contract=readme/facade-contract=gate_scripts/'
+}
+
+# The README lane (issue #503). `facade-contract` is the job filtered on `readme`; each control
+# below is one way a README-only change could stop running the README checks, or stop being able
+# to pass CI OK.
+readme_job_out_of_lane_map() {
+  edit_pr_gate "$1" 's/facade-contract=readme leverage-lane=leverage$/leverage-lane=leverage/'
+}
+
+readme_job_on_core_lane() {
+  edit_pr_gate "$1" \
+    -e '/^  facade-contract:$/,/^    if:/ s/outputs.readme/outputs.core/' \
+    -e 's/facade-contract=readme/facade-contract=core/'
+}
+
+readme_job_made_always_on() {
+  edit_pr_gate "$1" \
+    -e '/^  facade-contract:$/,/^    if:/ { /^    needs: changes$/d; /^    if:/d; }' \
+    -e 's/facade-contract=readme leverage-lane=leverage$/leverage-lane=leverage/'
+}
+
+determinism_on_readme_lane() {
+  edit_pr_gate "$1" \
+    -e '/^  determinism-matrix:$/,/^    if:/ s/outputs.core/outputs.readme/' \
+    -e 's/determinism-matrix=core/determinism-matrix=readme/'
+}
+
+drop_changes_readme_output() {
+  edit_pr_gate "$1" '/readme: \${{ steps.classify.outputs.readme }}/d'
+}
+
+drop_readme_byte_pin() {
+  edit_pr_gate "$1" '/cargo nextest run -p oce-api --test readme_quickstart /d'
+}
+
+readme_byte_pin_passes_on_zero_tests() {
+  edit_pr_gate "$1" \
+    's/--test readme_quickstart --locked --profile ci --no-tests=fail$/--test readme_quickstart --locked --profile ci/'
+}
+
+readme_job_without_nextest() {
+  dir="$1"
+  awk '
+    /^  facade-contract:$/ { in_job = 1 }
+    in_job && /^      - uses: taiki-e\/install-action@/ { skip = 3 }
+    in_job && /^  [^ ]/ && !/^  facade-contract:$/ { in_job = 0 }
+    skip > 0 { skip--; next }
+    { print }
+  ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+readme_job_without_report_check() {
+  dir="$1"
+  awk '
+    /^  facade-contract:$/ { in_job = 1 }
+    in_job && /^  [^ ]/ && !/^  facade-contract:$/ { in_job = 0 }
+    in_job && /^      - run: test -s target\/nextest\/ci\/junit\.xml$/ { next }
+    { print }
+  ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+drop_quickstart_execution() {
+  edit_pr_gate "$1" '/run: bash .github\/scripts\/check-quickstart-runs.sh/d'
 }
 
 delete_ci_ok_result_check() {
@@ -1874,6 +1946,26 @@ run_case lane-filter-on-gate-scripts-output fail lane_filter_on_gate_scripts_out
   "job facade-contract has a job-level if: that is not a lane filter: needs.changes.outputs.gate_scripts == 'true'"
 run_case removed-leverage-lane fail removed_lane_job \
   "is missing the leverage-lane job"
+run_case readme-job-out-of-lane-map fail readme_job_out_of_lane_map \
+  "CI OK JOB_LANES does not match the lane-filtered jobs' if: lines"
+run_case readme-job-on-core-lane fail readme_job_on_core_lane \
+  "job facade-contract runs on lane core, not readme"
+run_case readme-job-made-always-on fail readme_job_made_always_on \
+  "job facade-contract runs on lane always, not readme"
+run_case determinism-on-readme-lane fail determinism_on_readme_lane \
+  "job determinism-matrix runs on lane readme, not core"
+run_case missing-changes-readme-output fail drop_changes_readme_output \
+  "changes job exports the readme lane output"
+run_case readme-byte-pin-dropped fail drop_readme_byte_pin \
+  "pr-gate.yml job facade-contract is missing required gate pattern: run the README Quickstart byte-pin on the README lane"
+run_case readme-byte-pin-passes-on-zero-tests fail readme_byte_pin_passes_on_zero_tests \
+  "pr-gate.yml job facade-contract is missing required gate pattern: run the README Quickstart byte-pin on the README lane"
+run_case readme-job-without-nextest fail readme_job_without_nextest \
+  "pr-gate.yml job facade-contract is missing required gate pattern: pinned cargo-nextest install for the README Quickstart byte-pin"
+run_case readme-job-without-report-check fail readme_job_without_report_check \
+  "pr-gate.yml job facade-contract is missing required gate pattern: the README lane refuses an absent or empty nextest report"
+run_case quickstart-execution-dropped fail drop_quickstart_execution \
+  "pr-gate.yml job facade-contract is missing required gate pattern: execute the Quickstart"
 run_case leverage-crate-without-lints fail leverage_crate_without_lints \
   "leverage/oce-host/Cargo.toml is missing [lints] workspace = true"
 run_case leverage-crate-without-forbid fail leverage_crate_without_forbid \

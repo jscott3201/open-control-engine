@@ -10,8 +10,10 @@
 #                                 #            the determinism subset under release codegen as
 #                                 #            well, which CI runs only after the merge
 #   bash .agents/gate.sh full     # full     — adds the suite (release-gate.yml)
-#   bash .agents/gate.sh leverage # leverage — mirrors a PR confined to crates/leverage/: the
-#                                 #            always-on jobs plus the leverage lane, no engine lane
+#   bash .agents/gate.sh leverage # leverage — mirrors a PR confined to crates/leverage/, the
+#                                 #            documentation and the root README.md: the always-on
+#                                 #            jobs, the leverage lane and the README lane, no
+#                                 #            engine lane
 #   bash .agents/gate.sh nostd    # nostd    — the bare-metal cell alone (pr-gate.yml's
 #                                 #            `no-std-build` job): the no_std core, the firmware
 #                                 #            image's build and size budget; light and full run
@@ -207,7 +209,8 @@ if [ "$MODE" = nostd ] || [ "$MODE" = qemu ] || [ "$MODE" = roundtrip ]; then
 fi
 
 # The engine (determinism) lane: everything that compiles the engine. `leverage` mode
-# skips it, as pr-gate.yml does for a PR confined to crates/leverage/ and the docs.
+# skips it, as pr-gate.yml does for a PR confined to crates/leverage/, the docs and the
+# root README.md.
 engine_lane() { [ "$MODE" != leverage ]; }
 
 # ── Formatting, size, secrets ────────────────────────────────────────────────
@@ -257,9 +260,38 @@ step 'leverage dependency-rule fixtures' bash scripts/ci/test-leverage-members.s
 # for every engine change too, so it runs in every mode.
 step 'leverage lane' bash scripts/ci/leverage-members.sh lane
 
+# ── README lane ──────────────────────────────────────────────────────────────
+# The two checks that read the root README.md and are in no always-on job: pr-gate.yml's
+# `facade-contract` job, filtered on the `readme` lane (issue #503), which runs when the root
+# README.md changes and for every engine change. They run in every mode. A landing PR
+# confined to crates/leverage/ usually updates the README's status and roadmap too; CI then
+# runs these two beside the leverage lane, so a `leverage` run that left them out could pass
+# here and go red there. That job's other two steps, the facade compiler contract and its
+# controls, stay in the engine lane below: they read the facade's source, which no leverage
+# or README change touches.
+#
+# The byte-pin proves the README's Quickstart and crates/oce-api/examples/quickstart.rs are
+# the same bytes (the determinism subset below runs the same test inside the oce-api suite;
+# it is named here because `leverage` mode skips that subset). `--no-tests=fail` so a renamed
+# or deleted test hard-fails instead of going green on zero tests.
+step 'README Quickstart byte-pin' \
+  cargo nextest run -p oce-api --test readme_quickstart --locked --profile ci --no-tests=fail
+
+# The published Quickstart, EXECUTED. A byte-pin proves the README and the example agree; it does
+# not prove either one runs, and this repo once shipped a Quickstart that compiled, was byte-pinned,
+# and had never been executed by anything.
+#
+# This step existed in ci.yml as its own `gate (light)` step and NOT here, which made it the one
+# command out of eleven that gated a pull request while being invisible to anyone running this
+# script. `bash .agents/gate.sh` could pass locally and CI still go red on a check the contributor
+# had no way to run. Adding it closes that gap in the direction the rule requires: ci.yml already
+# demanded it, so this is the script catching up to CI rather than the script growing a
+# local-only requirement.
+step 'quickstart executes' bash .github/scripts/check-quickstart-runs.sh
+
 # ── Engine lane: everything from here to `fi # engine_lane` ──────────────────
 # Skipped in `leverage` mode, as pr-gate.yml skips the determinism lane for a PR
-# confined to crates/leverage/ and the documentation.
+# confined to crates/leverage/, the documentation and the root README.md.
 if engine_lane; then
 
 # ── Build, lint, docs ────────────────────────────────────────────────────────
@@ -340,18 +372,6 @@ step 'structural oracle (input hygiene)' \
   cargo nextest run -p oce-cxf --locked --profile ci \
   -E 'binary(fixture_structural_oracle)' --no-tests=fail
 
-# The published Quickstart, EXECUTED. A byte-pin proves the README and the example agree; it does
-# not prove either one runs, and this repo once shipped a Quickstart that compiled, was byte-pinned,
-# and had never been executed by anything.
-#
-# This step existed in ci.yml as its own `gate (light)` step and NOT here, which made it the one
-# command out of eleven that gated a pull request while being invisible to anyone running this
-# script. `bash .agents/gate.sh` could pass locally and CI still go red on a check the contributor
-# had no way to run. Adding it closes that gap in the direction the rule requires: ci.yml already
-# demanded it, so this is the script catching up to CI rather than the script growing a
-# local-only requirement.
-step 'quickstart executes' bash .github/scripts/check-quickstart-runs.sh
-
 fi # engine_lane
 
 # ── Full suite (release-gate.yml) ────────────────────────────────────────────
@@ -414,11 +434,12 @@ COVERAGE
 
 if [ "$MODE" = leverage ]; then
   cat <<'LEVERAGE'
-  · the engine lane: no-db, golden-gen firewall, facade contract and
-    Quickstart, clippy, build, rustdoc, cargo-machete and cargo-deny over the
+  · the engine lane: no-db, golden-gen firewall, the facade compiler
+    contract, clippy, build, rustdoc, cargo-machete and cargo-deny over the
     workspace, the determinism and strict-bit subsets, and the input-hygiene
-    audits. A `leverage` run mirrors a PR confined to crates/leverage/ and
-    the docs. If anything else changed, run `bash .agents/gate.sh`.
+    audits. A `leverage` run mirrors a PR confined to crates/leverage/, the
+    docs and the root README.md (whose Quickstart byte-pin and execution it
+    did run). If anything else changed, run `bash .agents/gate.sh`.
 LEVERAGE
 fi
 

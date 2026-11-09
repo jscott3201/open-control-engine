@@ -694,6 +694,45 @@ and a gate that accepted any text would restore exactly the false assurance desc
   publishable, 6 private); `release.yml`'s comment and step name re-pinned.
 ### Verification
 
+- **The root `README.md` has its own lane in the per-PR gate, so a pull request that updates it
+  beside leverage or documentation paths no longer runs the determinism lane** (GitHub #507,
+  issue #503; owner decision of 2026-11-09). `scripts/ci/classify-changes.sh` emits a fifth output,
+  `readme`, true when the root `README.md` changed or `core` is true; the root `README.md` alone
+  sets neither `core` nor `leverage` and is not `docs_only`. Nothing else is reclassified:
+  `crates/*/README.md` and `third_party/**/README.md` stay `core`, `crates/leverage/**/README.md`
+  stays `leverage`, `docs/cxf-composite-subset.md` stays `core`, an unmatched path is `core` and
+  empty input runs every lane. The README lane is one job, the existing `facade-contract`
+  (`facade contract and Quickstart`), now filtered on `readme` instead of `core` and so still run by
+  every engine change. It gains a step that runs `readme_quickstart`, the byte-pin of the README's
+  first Rust block against `crates/oce-api/examples/quickstart.rs`, beside the executed Quickstart
+  it already ran; before this the byte-pin ran only inside the determinism cells' `oce-api` suite.
+  The README's other readers were already in always-on jobs (`scripts/docs/stage.py` and
+  `scripts/docs/test_check_links.py` in `docs`, `scripts/product_contract/check.py` and its controls
+  in the package/authority/product contract job). `scripts/ci/test-classify-changes.sh` now holds
+  that enumeration: it scans the crates, tools, firmware and script trees for sources that name the
+  root `README.md` and fails when one is run neither by an always-on job nor by the README-lane job,
+  when a recorded job is filtered on another lane or loses the command, and when a recorded
+  exception no longer matches; eleven controls (a reader on the `core` lane, three dropped steps,
+  an always-on job given a filter, a removed job, four unlisted-reader constructions and a
+  non-root README that must not be reported) prove each failure. `ci_ok.py` accepts `readme` as a
+  filter lane, requires the output, and refuses `core=true` without `readme=true` and
+  `docs_only=true` with it; `check-workflow-gates.sh` accepts the lane name, pins
+  `facade-contract=readme`, requires the `readme` output on the `changes` job and requires the
+  byte-pin step, its pinned nextest, its report check and the Quickstart execution in that job.
+  Their fixtures go from 160 to 170 cases and from 20 to 35 tests: a README-lane job missing from
+  `JOB_LANES`, moved back to `core`, made always-on, or stripped of a step each fail. Eight of the
+  new `test_ci_ok.py` tests compose the real classifier with `pr-gate.yml`'s own `needs:` and
+  `JOB_LANES`, because a pull request that changes CI files runs every lane and so cannot show its
+  own filter working: a README-only change runs `facade-contract` alone among the filtered jobs and
+  passes `CI OK`, README with a leverage path adds only `leverage-lane`, an engine path runs every
+  filtered job, and a failed or unstarted README job fails a README-only change.
+  `bash .agents/gate.sh` runs the byte-pin and the executed Quickstart in every mode, `leverage`
+  included, so the local mirror of a leverage PR that also edits the README covers what CI runs;
+  the facade compiler contract stays in the engine lane there. Before this, GitHub #485 and #498
+  (leverage, documentation and `README.md` only) ran the whole determinism lane, about 18 minutes a
+  push at the time, where GitHub #493 (no README change) ran in 2. No crate source or golden
+  changed.
+
 - **The per-PR gate keeps the debug determinism cells and loses its three long jobs, which move to
   the release gate; the release gate now runs on every merge into `development`** (GitHub #505,
   issue #502; owner decision of 2026-11-09, which amends the plan's "debug and release on every PR"

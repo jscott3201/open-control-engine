@@ -130,15 +130,19 @@ tagged `v0.x` at the end of each milestone.
   daily, `docs-pages.yml` validates docs and publishes `main` to GitHub Pages, `release.yml` keeps
   its tag-verify / manual-publish split, and the two OpenModelica evidence workflows run on native
   arm64 by hand.
-- **Two lanes, one `CI OK`.** The first `pr-gate.yml` job classifies the PR's changed paths
-  (`scripts/ci/classify-changes.sh`, fail-closed). Anything outside the docs and `crates/leverage/`
-  runs the **determinism lane** (every compiling job); `crates/leverage/**` runs the **leverage
-  lane** (fmt, clippy, rustdoc, nextest and the `oce-api`-only rule per leverage crate) and so does
-  every engine change; a docs-only PR runs only the always-on checks. A gate script, workflow or
-  tool-config change counts as an engine change and runs both lanes. No per-PR job executes
-  `.agents/gate.sh`: `gate (full)` in `release-gate.yml` does, after the merge. `CI OK`
-  accepts a skipped job only when its lane filter skipped it. `bash .agents/gate.sh leverage` is
-  the local mirror of a leverage-only PR; [`docs/ci-and-the-gate.md`](docs/ci-and-the-gate.md#lanes-what-a-pr-runs)
+- **Three lanes, one `CI OK`.** The first `pr-gate.yml` job classifies the PR's changed paths
+  (`scripts/ci/classify-changes.sh`, fail-closed). Anything outside the docs, the root `README.md`
+  and `crates/leverage/` runs the **determinism lane** (every compiling job); `crates/leverage/**`
+  runs the **leverage lane** (fmt, clippy, rustdoc, nextest and the `oce-api`-only rule per
+  leverage crate) and so does every engine change; the root `README.md` runs the **README lane**
+  (the `facade contract and Quickstart` job: the Quickstart byte-pin and the executed Quickstart)
+  and so does every engine change; a docs-only PR runs only the always-on checks. So a landing PR
+  that updates the README beside leverage or documentation paths does not run the determinism
+  lane. A gate script, workflow or tool-config change counts as an engine change and runs every
+  lane. No per-PR job executes `.agents/gate.sh`: `gate (full)` in `release-gate.yml` does, after
+  the merge. `CI OK` accepts a skipped job only when its lane filter skipped it.
+  `bash .agents/gate.sh leverage` is the local mirror of a PR confined to `crates/leverage/`, the
+  docs and the root README; [`docs/ci-and-the-gate.md`](docs/ci-and-the-gate.md#lanes-what-a-pr-runs)
   has the trigger table.
 - **`ci.yml` is not the CI.** It is the frozen GitHub-era gate that produced the retained native
   strict-bit capture archives; it is disabled in the Actions settings and stays byte-identical.

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Hostile controls for ci_ok.py: every way a skipped or failed job could read as green."""
+"""Hostile controls for ci_ok.py: every way a skipped or failed job could read as green.
+
+The last-but-one class composes the real classifier and pr-gate.yml's own lane map with the check.
+"""
 
 import os
 from pathlib import Path
@@ -11,11 +14,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ci_ok  # noqa: E402
 
 LANES = {"determinism-matrix": "core", "leverage-lane": "leverage", "clippy": "core"}
+# The README lane (issue #503): `facade-contract` is the one job filtered on `readme`.
+README_LANES = {**LANES, "facade-contract": "readme"}
 
 
-def outputs(core="true", leverage="true", gate_scripts="false", docs_only="false"):
-    return {"core": core, "leverage": leverage, "gate_scripts": gate_scripts,
-            "docs_only": docs_only}
+def outputs(core="true", leverage="true", gate_scripts="false", docs_only="false", readme=None):
+    # `core` implies `readme`, as the classifier emits it; a case that needs another value says so.
+    return {"core": core, "leverage": leverage, "readme": core if readme is None else readme,
+            "gate_scripts": gate_scripts, "docs_only": docs_only}
 
 
 def needs(lane_outputs, **results):
@@ -62,6 +68,59 @@ class ResultCheck(unittest.TestCase):
         data = needs(outputs(gate_scripts="true"), determinism_matrix="success",
                      leverage_lane="success", clippy="skipped")
         self.assert_refused(data, r"'clippy': 'skipped while core=true'")
+
+    def test_readme_only_runs_the_readme_job_and_skips_both_other_lanes(self):
+        data = needs(outputs(core="false", leverage="false", readme="true"),
+                     determinism_matrix="skipped", leverage_lane="skipped", clippy="skipped",
+                     facade_contract="success")
+        report = ci_ok.check(data, README_LANES)
+        self.assertIn("facade-contract: success", report)
+        self.assertIn("determinism-matrix: skipped by the lane filter (core=false)", report)
+        self.assertIn("leverage-lane: skipped by the lane filter (leverage=false)", report)
+
+    def test_readme_with_leverage_skips_only_the_determinism_lane(self):
+        data = needs(outputs(core="false", readme="true"), determinism_matrix="skipped",
+                     leverage_lane="success", clippy="skipped", facade_contract="success")
+        ci_ok.check(data, README_LANES)
+
+    def test_readme_job_is_skipped_when_the_readme_did_not_change(self):
+        data = needs(outputs(core="false"), determinism_matrix="skipped",
+                     leverage_lane="success", clippy="skipped", facade_contract="skipped")
+        self.assertIn("facade-contract: skipped by the lane filter (readme=false)",
+                      ci_ok.check(data, README_LANES))
+
+    def test_readme_job_skipped_while_the_readme_lane_ran_fails(self):
+        for lane_outputs in (outputs(core="false", leverage="false", readme="true"), outputs()):
+            data = needs(lane_outputs, determinism_matrix="skipped", leverage_lane="skipped",
+                         clippy="skipped", facade_contract="skipped")
+            self.assert_refused(data, r"'facade-contract': 'skipped while readme=true'",
+                                README_LANES)
+
+    def test_broken_quickstart_fails_a_readme_only_change(self):
+        # The acceptance case of issue #503: the README lane ran and its job failed.
+        for result in ("failure", "cancelled"):
+            data = needs(outputs(core="false", leverage="false", readme="true"),
+                         determinism_matrix="skipped", leverage_lane="skipped", clippy="skipped",
+                         facade_contract=result)
+            self.assert_refused(data, f"'facade-contract': '{result}'", README_LANES)
+
+    def test_readme_job_missing_from_the_lane_map_cannot_skip(self):
+        # A job filtered on `readme` but absent from JOB_LANES is an unfiltered job to this
+        # check: its skip fails, whatever the lane output says.
+        data = needs(outputs(core="false"), determinism_matrix="skipped",
+                     leverage_lane="success", clippy="skipped", facade_contract="skipped")
+        self.assert_refused(data, r"'facade-contract': 'skipped'")
+
+    def test_readme_output_is_required(self):
+        for value in (None, "", "yes"):
+            broken = outputs(core="false")
+            if value is None:
+                del broken["readme"]
+            else:
+                broken["readme"] = value
+            data = needs(broken, determinism_matrix="skipped", leverage_lane="success",
+                         clippy="skipped", facade_contract="skipped")
+            self.assert_refused(data, "missing or not true/false.*readme", README_LANES)
 
     def test_gate_scripts_output_is_still_required(self):
         for value in (None, "", "yes"):
@@ -115,7 +174,10 @@ class ResultCheck(unittest.TestCase):
         cases = [
             (outputs(core="false", gate_scripts="true"), "gate_scripts=true requires core=true"),
             (outputs(leverage="false"), "core=true requires leverage=true"),
+            (outputs(readme="false"), "core=true requires readme=true"),
             (outputs(core="false", docs_only="true"), "docs_only=true contradicts"),
+            (outputs(core="false", leverage="false", readme="true", docs_only="true"),
+             "docs_only=true contradicts"),
         ]
         for lane_outputs, message in cases:
             data = needs(lane_outputs, determinism_matrix="success", leverage_lane="success",
@@ -134,8 +196,8 @@ class ResultCheck(unittest.TestCase):
 
 class LaneMap(unittest.TestCase):
     def test_parses_pairs(self):
-        self.assertEqual(ci_ok.parse_lanes(" a=core\n b=leverage c=core "),
-                         {"a": "core", "b": "leverage", "c": "core"})
+        self.assertEqual(ci_ok.parse_lanes(" a=core\n b=leverage c=core d=readme "),
+                         {"a": "core", "b": "leverage", "c": "core", "d": "readme"})
 
     def test_refuses_malformed_unknown_duplicate_and_empty(self):
         for text in ("a", "a=", "=core", "a=docs_only", "a=nightly", "a=core a=core", "", "  "):
@@ -149,6 +211,114 @@ class LaneMap(unittest.TestCase):
             with self.assertRaisesRegex(ci_ok.CheckError,
                                         "malformed JOB_LANES entry: 'gate=gate_scripts'"):
                 ci_ok.parse_lanes(text)
+
+
+class RealWorkflow(unittest.TestCase):
+    """The real classifier, the real lane map and the result check, composed (issue #503).
+
+    A pull request cannot show its own lane filter working: it changes CI files, so it runs every
+    lane. These cases stand in for that run. Each classifies a changed-path list with
+    classify-changes.sh, gives every job `CI OK` needs in pr-gate.yml the result GitHub would
+    report (`skipped` when its lane output is 'false', `success` otherwise), and runs the check
+    with the workflow's own JOB_LANES.
+    """
+
+    ROOT = Path(__file__).resolve().parents[2]
+
+    @classmethod
+    def setUpClass(cls):
+        lines = (cls.ROOT / ".github/workflows/pr-gate.yml").read_text().splitlines()
+        start = lines.index("  ci-ok:")
+        job = lines[start + 1:]
+        needs_at = job.index("    needs:")
+        cls.needed = []
+        for line in job[needs_at + 1:]:
+            if not line.startswith("      - "):
+                break
+            cls.needed.append(line[len("      - "):].strip())
+        lanes_at = job.index("          JOB_LANES: >-")
+        pairs = []
+        for line in job[lanes_at + 1:]:
+            if not line.startswith("            "):
+                break
+            pairs.append(line.strip())
+        cls.lanes = ci_ok.parse_lanes(" ".join(pairs))
+
+    def classify(self, *paths):
+        result = subprocess.run(["bash", str(self.ROOT / "scripts/ci/classify-changes.sh")],
+                                input="".join(f"{path}\n" for path in paths), text=True,
+                                capture_output=True, check=True)
+        return dict(line.split("=", 1) for line in result.stdout.splitlines())
+
+    def run_for(self, *paths, **overrides):
+        """Return (needs, lane-filtered jobs that ran) for a pull request changing `paths`."""
+        lane_outputs = self.classify(*paths)
+        data = {"changes": {"result": "success", "outputs": lane_outputs}}
+        ran = set()
+        for job in self.needed:
+            if job == "changes":
+                continue
+            lane = self.lanes.get(job)
+            if lane is not None and lane_outputs[lane] == "false":
+                data[job] = {"result": "skipped"}
+            else:
+                data[job] = {"result": "success"}
+                if lane is not None:
+                    ran.add(job)
+        for job, result in overrides.items():
+            data[job.replace("_", "-")] = {"result": result}
+        return data, ran
+
+    def test_the_workflow_lane_map_is_the_one_under_test(self):
+        self.assertIn("facade-contract", self.needed)
+        self.assertEqual(self.lanes["facade-contract"], "readme")
+        self.assertEqual(self.lanes["leverage-lane"], "leverage")
+        self.assertEqual(self.lanes["determinism-matrix"], "core")
+        self.assertEqual({job for job, lane in self.lanes.items() if lane == "readme"},
+                         {"facade-contract"})
+
+    def test_readme_only_change_runs_the_readme_job_alone_and_passes(self):
+        for paths in (("README.md",), ("README.md", "docs/ci-and-the-gate.md", "CHANGELOG.md")):
+            data, ran = self.run_for(*paths)
+            self.assertEqual(ran, {"facade-contract"}, paths)
+            report = ci_ok.check(data, self.lanes)
+            self.assertIn("facade-contract: success", report)
+            self.assertIn("determinism-matrix: skipped by the lane filter (core=false)", report)
+            self.assertIn("leverage-lane: skipped by the lane filter (leverage=false)", report)
+
+    def test_readme_with_a_leverage_path_adds_the_leverage_lane_only(self):
+        data, ran = self.run_for("README.md", "crates/leverage/oce-cli/src/lib.rs", "CHANGELOG.md")
+        self.assertEqual(ran, {"facade-contract", "leverage-lane"})
+        ci_ok.check(data, self.lanes)
+
+    def test_leverage_without_the_readme_skips_the_readme_job(self):
+        data, ran = self.run_for("crates/leverage/oce-cli/src/lib.rs")
+        self.assertEqual(ran, {"leverage-lane"})
+        self.assertIn("facade-contract: skipped by the lane filter (readme=false)",
+                      ci_ok.check(data, self.lanes))
+
+    def test_docs_only_change_runs_no_filtered_job(self):
+        data, ran = self.run_for("docs/ci-and-the-gate.md", "AGENTS.md")
+        self.assertEqual(ran, set())
+        ci_ok.check(data, self.lanes)
+
+    def test_engine_change_runs_every_filtered_job(self):
+        for paths in (("README.md", "crates/oce-api/src/lib.rs"), ("crates/oce-api/README.md",),
+                      ("README.md", ".github/workflows/pr-gate.yml")):
+            data, ran = self.run_for(*paths)
+            self.assertEqual(ran, set(self.lanes), paths)
+            ci_ok.check(data, self.lanes)
+
+    def test_broken_quickstart_fails_a_readme_only_change(self):
+        data, _ = self.run_for("README.md", facade_contract="failure")
+        with self.assertRaisesRegex(ci_ok.CheckError, "'facade-contract': 'failure'"):
+            ci_ok.check(data, self.lanes)
+
+    def test_readme_job_that_did_not_start_fails_a_readme_only_change(self):
+        data, _ = self.run_for("README.md", facade_contract="skipped")
+        with self.assertRaisesRegex(ci_ok.CheckError,
+                                    "'facade-contract': 'skipped while readme=true'"):
+            ci_ok.check(data, self.lanes)
 
 
 class Entrypoint(unittest.TestCase):
@@ -166,6 +336,15 @@ class Entrypoint(unittest.TestCase):
         bad = needs(outputs(), determinism_matrix="skipped", leverage_lane="success",
                     clippy="success")
         self.assertEqual(self.run_script({**env, "NEEDS_JSON": json.dumps(bad)}).returncode, 1)
+        readme_env = {**env, "JOB_LANES": env["JOB_LANES"] + " facade-contract=readme"}
+        readme_only = needs(outputs(core="false", leverage="false", readme="true"),
+                            determinism_matrix="skipped", leverage_lane="skipped",
+                            clippy="skipped", facade_contract="success")
+        self.assertEqual(
+            self.run_script({**readme_env, "NEEDS_JSON": json.dumps(readme_only)}).returncode, 0)
+        readme_only["facade-contract"] = {"result": "failure"}
+        self.assertEqual(
+            self.run_script({**readme_env, "NEEDS_JSON": json.dumps(readme_only)}).returncode, 1)
         retired = {**env, "JOB_LANES": env["JOB_LANES"] + " gate=gate_scripts"}
         self.assertEqual(self.run_script(retired).returncode, 1)
         self.assertEqual(self.run_script({**env, "NEEDS_JSON": "not json"}).returncode, 1)

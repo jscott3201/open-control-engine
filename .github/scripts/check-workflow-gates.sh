@@ -478,13 +478,17 @@ require_no_job_conditions() {
 }
 
 # The per-PR lane filter (issue #393). A job-level `if:` is allowed only in the exact form
-# `needs.changes.outputs.<lane> == 'true'` for lane core or leverage, on a job that needs
+# `needs.changes.outputs.<lane> == 'true'` for lane core, leverage or readme, on a job that needs
 # `changes`. `gate_scripts` is not a filter lane (issue #502 retired `gate (light)`, the one job it
 # gated): it stays a classifier output, informational like `docs_only`, and a job filtered on it
 # fails here. CI OK's JOB_LANES must list exactly the filtered jobs with their lanes, because it
 # is what lets ci_ok.py accept their `skipped` result, and CI OK must run that result check. The
-# `changes` job must export all four outputs from the classifier. Named jobs are pinned to their
+# `changes` job must export all five outputs from the classifier. Named jobs are pinned to their
 # lane, so a determinism job cannot drift onto a lighter lane or an always-on job become optional.
+# The `readme` lane (issue #503) is the root README's: `facade-contract` is pinned to it, so the
+# Quickstart byte-pin and the executed Quickstart run when the README changes without the
+# determinism lane, and cannot drift back onto `core` (where a README-only change would skip them)
+# or lose their JOB_LANES entry (where ci_ok.py would read their skip as a failure).
 require_lane_filter() {
   path="$1"
   local conditions expected actual job condition lane want got
@@ -492,7 +496,7 @@ require_lane_filter() {
   expected=""
   while IFS=$'\t' read -r job condition; do
     [ -n "$job" ] || continue
-    if [[ "$condition" =~ ^needs\.changes\.outputs\.(core|leverage)\ ==\ \'true\'$ ]]; then
+    if [[ "$condition" =~ ^needs\.changes\.outputs\.(core|leverage|readme)\ ==\ \'true\'$ ]]; then
       lane="${BASH_REMATCH[1]}"
     else
       echo "FAIL: $path job $job has a job-level if: that is not a lane filter: $condition"
@@ -522,9 +526,9 @@ require_lane_filter() {
   for want in \
     determinism-matrix=core determinism-compare=core strict-bit-matrix=core strict-bit-compare=core \
     crate-tests=core golden-gen-hygiene=core golden-gen-firewall=core build=core clippy=core \
-    rustdoc=core deny=core unused-deps=core default-no-db=core facade-contract=core no-std-build=core \
+    rustdoc=core deny=core unused-deps=core default-no-db=core no-std-build=core \
     blob-round-trip-wasm=core portable-snapshot-macos=core portable-snapshot-compare=core \
-    leverage-lane=leverage \
+    leverage-lane=leverage facade-contract=readme \
     changes=always fmt=always file-size-cap=always no-secret-scan=always docs=always \
     gate-fixtures=always package-publication-contract=always; do
     job="${want%%=*}"
@@ -542,7 +546,7 @@ require_lane_filter() {
   done
   require_job_pattern "$path" 'ci-ok' '^[[:space:]]*(- )?run: python3 scripts/ci/ci_ok\.py$' \
     'CI OK runs the lane-aware result check'
-  for lane in core leverage gate_scripts docs_only; do
+  for lane in core leverage readme gate_scripts docs_only; do
     require_job_pattern "$path" 'changes' \
       "^      $lane: \\\$\\{\\{ steps\\.classify\\.outputs\\.$lane \\}\\}\$" \
       "changes job exports the $lane lane output"
@@ -967,8 +971,8 @@ refuse_pattern "$ci" 'continue-on-error' \
   'continue-on-error, which lets a failing job or step read as green'
 require_static_step_conditions "$ci"
 # The lane machinery is itself tested on every PR, and the facade contract and Quickstart run in
-# their own job. Nothing in pr-gate.yml executes .agents/gate.sh: release-gate.yml's `gate (full)`
-# does, on every merge into `development` (below).
+# their own job, on the README lane. Nothing in pr-gate.yml executes .agents/gate.sh:
+# release-gate.yml's `gate (full)` does, on every merge into `development` (below).
 require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/ci/test-classify-changes\.sh$' \
   'run the lane classifier fixtures on every PR'
 require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: python3 scripts/ci/test_ci_ok\.py$' \
@@ -983,6 +987,16 @@ require_job_pattern "$ci" 'facade-contract' '^[[:space:]]*(- )?run: python3 scri
   'run the facade compiler diagnostic controls'
 require_job_pattern "$ci" 'facade-contract' '^[[:space:]]*(- )?run: bash \.github/scripts/check-quickstart-runs\.sh$' \
   'execute the Quickstart'
+# The README lane's own check (issue #503): the byte-pin of the README's Quickstart, named in the
+# job so a README-only change runs it without the determinism cells that run the whole oce-api
+# suite. `--no-tests=fail` and the report requirement keep a renamed or emptied test binary red.
+require_job_pattern "$ci" 'facade-contract' 'tool:[[:space:]]*nextest@0\.9\.143' \
+  'pinned cargo-nextest install for the README Quickstart byte-pin'
+require_job_pattern "$ci" 'facade-contract' \
+  '^[[:space:]]*(- )?run: cargo nextest run -p oce-api --test readme_quickstart --locked --profile ci --no-tests=fail$' \
+  'run the README Quickstart byte-pin on the README lane'
+require_job_pattern "$ci" 'facade-contract' '^[[:space:]]*(- )?run: test -s target/nextest/ci/junit\.xml$' \
+  'the README lane refuses an absent or empty nextest report'
 # Strict-bit cells and their fan-in.
 require_job_pattern "$ci" 'strict-bit-matrix' \
   '^[[:space:]]*(- )?run: bash scripts/ci/strict-bits-cell\.sh "\$CELL_ARCH" "\$CELL_CODEGEN"$' \
