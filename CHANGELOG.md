@@ -66,7 +66,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `docs/host-responsibilities.md`, PC-035 in `docs/product-contract.md` and the README name the
   slot entry beside the named path. `oce-graph` and every golden are unchanged.
 
-- **Resolved port names, class descriptions and the settable flag** (GitHub #PRNUM, issue #440;
+- **Resolved port names, class descriptions and the settable flag** (GitHub #461, issue #440;
   authoring-layer design note decisions 15 and 18). `oce_api::class_ports(class_path, params)`
   names every port of a class as configured, in port index order: scalar connectors keep their CDL
   name, a vector connector `u[n]` is `u1`…`un` (the corpus's spelling, bound by position by the
