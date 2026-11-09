@@ -4,7 +4,8 @@
 where the block vocabulary comes from, the shape of the data and how generated text is kept apart
 from curated text, where the data lives and who serves it, what v1 does with units, the coverage
 targets, and how the M2 "agent-usable" gate row is measured against it. Every decision below was
-made while drafting and is open for review (see [Questions for review](#questions-for-review)).
+made while drafting and ruled on in review (see [Review rulings](#review-rulings)); the note is
+amended to match, and nothing here is built yet.
 The authoring note's decisions and review rulings are not reopened; where this note amends one
 (decision 13 on unit suffixes) it says so, and the implementing PR amends the authoring note with
 a dated ruling.
@@ -98,34 +99,30 @@ ports are deliberately unit-free (`Reals.Add` adds whatever it is given); their 
 
 Two files in `crates/leverage/oce-vocab/data/`, both strict JSON under the authoring wire profile
 (closed objects, every key present, absent is `""` or `[]`, no `null`), written by one canonical
-writer: keys in a fixed order, two-space indent, LF, a trailing newline, classes in catalog order,
-connectors and parameters in declaration order.
+writer: keys sorted, two-space indent, LF, a trailing newline, classes in catalog order,
+connectors and parameters in declaration order. *(Ruled 2026-11-09: both files are under the
+wire profile with sorted keys, so the same reader bounds apply to them as to an authored bundle.)*
 
 `generated.json`, regenerated from the vendored CXF-Core and never edited by hand:
 
 ```json
 {
-  "format": 1,
-  "source": {
-    "buildings_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
-    "modelica_json_commit": "85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb",
-    "document": "third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld",
-    "sha256": "bb2bf4a7f868af884df4b2f05258a754625e10920716739527b46631a4383314"
-  },
   "classes": [
     {
       "class": "CDL.Logical.TrueDelay",
-      "upstream": true,
       "connectors": [
-        {"name": "u", "side": "input", "dims": 0, "description": "Input signal to be delayed when it switches to true", "unit": "", "quantity": ""},
-        {"name": "y", "side": "output", "dims": 0, "description": "Output with delayed input signal after it switched to true", "unit": "", "quantity": ""}
+        {"description": "Input signal to be delayed when it switches to true", "dims": 0, "name": "u", "quantity": "", "side": "input", "unit": ""},
+        {"description": "Output with delayed input signal after it switched to true", "dims": 0, "name": "y", "quantity": "", "side": "output", "unit": ""}
       ],
       "parameters": [
-        {"name": "delayTime", "description": "Delay time", "unit": "s", "quantity": "Time"},
-        {"name": "delayOnInit", "description": "Set to true to delay initial true input", "unit": "", "quantity": ""}
-      ]
+        {"description": "Delay time", "name": "delayTime", "quantity": "Time", "unit": "s"},
+        {"description": "Set to true to delay initial true input", "name": "delayOnInit", "quantity": "", "unit": ""}
+      ],
+      "upstream": true
     }
-  ]
+  ],
+  "format": 1,
+  "source": {"buildings_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365", "document": "third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld", "modelica_json_commit": "85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb", "sha256": "bb2bf4a7f868af884df4b2f05258a754625e10920716739527b46631a4383314"}
 }
 ```
 
@@ -133,31 +130,31 @@ connectors and parameters in declaration order.
 
 ```json
 {
-  "format": 1,
   "classes": [
     {
       "class": "CDL.Logical.TrueDelay",
+      "descriptions": [],
       "notes": [
-        {"kind": "convention", "subject": "delayOnInit", "text": "The open-control-library sets delayOnInit = true on every TrueDelay, against the CDL default false, so a condition already true at start-up must still persist for the full delay. The emitter never fills it; write it.", "evidence": "open-control-library: 177 of 177 TrueDelay instances"},
-        {"kind": "loop", "subject": "", "text": "Passes the current value through: a feedback loop through TrueDelay alone is an algebraic loop. Break it with Logical.Pre.", "evidence": "prototype authoring rule 9"}
-      ],
-      "descriptions": []
+        {"evidence": "open-control-library: 177 of 177 TrueDelay instances", "kind": "convention", "subject": "delayOnInit", "text": "The open-control-library sets delayOnInit = true on every TrueDelay, against the CDL default false, so a condition already true at start-up must still persist for the full delay. The emitter never fills it; write it."},
+        {"evidence": "prototype authoring rule 9", "kind": "loop", "subject": "", "text": "Passes the current value through: a feedback loop through TrueDelay alone is an algebraic loop. Break it with Logical.Pre."}
+      ]
     },
     {
       "class": "CDL.Reals.Hysteresis",
+      "descriptions": [],
       "notes": [
-        {"kind": "pitfall", "subject": "uLow", "text": "uLow equal to uHigh is refused: the engine warns and the validator reports every warning as an error.", "evidence": "authoring decision 14"}
-      ],
-      "descriptions": []
+        {"evidence": "authoring decision 14", "kind": "pitfall", "subject": "uLow", "text": "uLow equal to uHigh is refused: the engine warns and the validator reports every warning as an error."}
+      ]
     },
     {
       "class": "CDL.Logical.TrueHoldWithReset",
-      "notes": [],
       "descriptions": [
         {"subject": "clr", "text": "Clears the hold: while true, the output follows the input"}
-      ]
+      ],
+      "notes": []
     }
-  ]
+  ],
+  "format": 1
 }
 ```
 
@@ -203,7 +200,9 @@ reading `.mo` declarations in a generator (a `.mo` parser by another name, and t
 extractor defects are the warning); `Documentation(info=…)` HTML (prose, not per port; turning it
 into plain text is a lossy derivation); the vendored G36 `cxf/` (instance descriptions, not class
 ones). Why: it is the upstream translator's own per-connector and per-parameter output, it is
-byte-stable, and reading JSON-LD as data is what the engine already does.
+byte-stable, and reading JSON-LD as data is what the engine already does. *(Ruled 2026-11-09:
+accepted; the plan's `-o doc` wording is corrected in the owner's planning record, and this note
+is where the correction is stated.)*
 
 **2. CXF-Core is vendored, at the existing pins, as a derived file.**
 `third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld` (683 KB), with its regeneration
@@ -212,6 +211,12 @@ modelica-json never run in CI. Rejected: running modelica-json in CI (a Node too
 clone of the whole Buildings `CDL` package, because the vendored cone omits `package.mo`,
 `Interfaces` and `Types`); vendoring modelica-json's root copy (a different Buildings commit). Why:
 the same contract as the 44 checked-in `cxf/` translations; a pin advance regenerates both.
+*(Ruled 2026-11-09: accepted, with three additions. The vendored README records the regeneration
+command, both pins, the date and the file's sha256. Byte-identity of a regeneration across
+operating systems and Node versions is unverified (one macOS host, two runs), so a pin advance
+re-vendors the file and re-blesses the manifest and `generated.json` rather than assuming
+reproducibility. The derived file is covered by the same Buildings licence line as the 44 `cxf/`
+translations.)*
 
 **3. The generator is a regenerate-and-diff test in `oce-vocab`.** It reads the vendored CXF-Core
 at test time, walks the catalog's class, port and parameter names through `oce-api`, looks each up
@@ -242,6 +247,8 @@ generated one is `""`; replacing a generated description is refused by a test in
 file with `generated`/`curated` fields per entry (every regeneration rewrites the file people edit,
 and a merge conflict there is where curation gets lost); provenance markers inside strings. Why: a
 reviewer sees a regeneration and a curation as separate diffs, and neither can clobber the other.
+*(Ruled 2026-11-09: accepted, additive only in v1 with the refusing test; an override carrying a
+required reason is v2.)*
 
 **7. Notes are typed.** `kind` is one of `convention` (a library convention, such as
 `delayOnInit`), `pitfall`, `port-order` (`Subtract` gives `u1 - u2`), `loop` (whether the class
@@ -274,7 +281,11 @@ accessor parses embedded bytes a test proves well formed, the same posture as `c
 unchanged, and so is the facade's sentence "units and quantities are not available in this
 catalog". Rejected: adding `units` to `ClassParameter` (engine surface for non-behaviour). Why: the
 plan's "serve through `catalog()`" is met by `oce catalog` and `class_vocab()`, which join the
-catalog with the vocabulary; question 1 asks whether the owner meant the facade itself.
+catalog with the vocabulary. *(Ruled 2026-11-09, the orchestrator's reading, which the owner may overrule: no facade change in v1. The
+plan's "serve through `catalog()`" is read as the catalog surface: `oce_api::catalog()` for
+behaviour, `oce_vocab::class_vocab()` joined over it for text, `oce catalog` for people and agents.
+A facade accessor is a separate decision when an MCP server or `oce-bacnet` needs one; the owner
+may overrule this reading.)*
 
 **12. `oce catalog` serves the block vocabulary; `oce vocab` serves the language.** On the CLI
 branch, `oce vocab` lists the text form's keywords, tags, base units, codes and the enumeration
@@ -295,7 +306,10 @@ offset is not a scale); `%` and prefixed SI units (`kPa`) in v1 (no corpus need 
 the same table later); a unit check on connections (ports are mostly unit-free, block-port unit
 attributes are refused, and the engine's §7.10 check covers declared units; a second semantics is
 what authoring decision 4 rules out). Why: the one thing decision 13 deferred, delays and periods
-written in hours, with no new silent conversion.
+written in hours, with no new silent conversion. *(Ruled 2026-11-09: accepted; `degC`/`degF`, `%`
+and prefixed SI units stay refused. `unit-suffix-mismatch` is a stage-1, author-only parse-meaning
+check, and the dated amendment of authoring decision 13 in `authoring-layer.md` lands with the
+implementation PR, not with this note.)*
 
 **15. Coverage targets.** v1: an entry for every one of the 133 classes; a description for every
 catalog port (by connector) and parameter, generated for all but the six curated ones; every
@@ -308,7 +322,9 @@ measurable (an entry is curated when `curated.json` names it).
 **16. The benchmark harness is not part of this work.** The vocabulary is what a harness consumes;
 measuring gate item 4 needs the benchmark data (#457), a harness and model access, none of which is
 CI. Rejected: building a harness in this PR series (out of the item's scope, and the prototype is
-frozen). Why: see [The benchmark gate](#the-benchmark-gate); question 8 asks where it lands.
+frozen). Why: see [The benchmark gate](#the-benchmark-gate). *(Ruled 2026-11-09: the harness is
+an `open-control-library` issue consuming `oce catalog --json` (standing rule 7), and gate item 4
+is deferred to the milestone that lands it; the owner confirmed this on 2026-11-09.)*
 
 ## Serving to agents
 
@@ -342,8 +358,14 @@ after repair on engine `fa5cb19`. A comparable measurement consumes `oce catalog
 
 What it cannot run on today: the 137 rules and their vectors live in the library and the frozen
 prototype, and #457 (benchmark specs out of the prototype) is open. A harness needs model access and
-is not a CI job. So v1 lands without claiming the row; the row closes when #457 has landed the data
-and a harness run is recorded. The pass criterion is question 7.
+is not a CI job.
+
+**Gate item 4 is deferred to the milestone that lands the harness, and M2 closes on gate items 1
+to 3 with the vocabulary shipped** *(ruled 2026-11-09 and confirmed by the owner the same day; it
+changes the M2 gate, and tracking issue #455 carries the deferral)*. The harness is an
+`open-control-library` issue consuming `oce catalog --json`. Its pass criterion *(ruled
+2026-11-09)*: three runs at the v0 settings, at least 130 of 137 after repair in each run, and a
+mean of at least 131.
 
 ## Test plan
 
@@ -363,9 +385,11 @@ and a harness run is recorded. The pass criterion is question 7.
   `2 d` and a literal past 2^53; `unit-suffix-mismatch` for a wrong base, a scaled suffix on an
   undeclared parameter, and an unknown symbol, each with its exact code and subject; `fmt` keeps
   `1 h`; wire → text → wire stays byte-stable.
-- **Agent-facing text.** No served string contains an absolute path, a UUID-shaped string,
-  `modelica://`, `<html`, or an HTML tag from a closed list (`<p>`, `<code>`, `<a `, `<br`, `<img`,
-  `<i>`, closing tags); comparison signs in descriptions (`u<uLow`) stay legal. No string is empty
+- **Agent-facing text** *(ruled 2026-11-09: run over every string in both JSON files, since the
+  doc-mode side output leaked a host path)*. No agent-facing string contains an absolute path, a
+  UUID-shaped string, a `modelica://` link, `<html`, or an HTML tag from a closed list (`<p>`,
+  `<code>`, `<a `, `<br`, `<img`, `<i>`, closing tags); comparison signs in descriptions (`u<uLow`)
+  stay legal. No string is empty
   after the merge, none has leading or trailing whitespace or a newline, and each fits a bound.
 - **Serving.** Goldens for `oce catalog CLASS` text and `--json` for PID, TrueDelay, Hysteresis,
   `MultiSum` at `nin = 3` and `TrueHoldWithReset`; `oce vocab` golden with the unit table; the
@@ -377,7 +401,7 @@ and a harness run is recorded. The pass criterion is question 7.
 
 ## Dependencies and sequencing
 
-1. **After the importer (#496) and the CLI (#489)**, which touch `oce-author`'s text form and both
+1. **After the importer (#496) and the CLI (issue #489, PR #491)**, which touch `oce-author`'s text form and both
    CLI commands this work extends.
 2. **Vendoring and `oce-vocab` in one PR**: CXF-Core under `third_party/` with the README rows and
    the hash-manifest re-bless, the crate with both data files, the generator test, the coverage
@@ -399,35 +423,73 @@ and a harness run is recorded. The pass criterion is question 7.
 - The benchmark harness and the move of its data (#457).
 - Any change to `oce-api`'s catalog, the content id or the class signature hash.
 
-## Questions for review
+## Questions for review (ruled; see below)
 
 1. **"Serve through `catalog()`".** The note serves the vocabulary from a leverage crate joined with
    the catalog, and leaves `oce_api::catalog()` unchanged (decisions 10 and 11). Did the owner mean
    the facade function itself? Recommendation: no facade change in v1; revisit when an MCP server
-   or `oce-bacnet` (M9) needs it, and then as a separate accessor, not the revision-1 JSON.
+   or `oce-bacnet` (M9) needs it, and then as a separate accessor, not the revision-1 JSON. *(Ruled 2026-11-09: no facade change, the orchestrator's reading, which the owner may overrule.)*
 2. **The generation source.** CXF-Core from `-o cxf --elementary --cxfCore` instead of the plan's
    `-o doc`, vendored at the existing pins (decisions 1 and 2). Recommendation: accept, and amend
-   the plan's wording.
+   the plan's wording. *(Ruled 2026-11-09: accepted, with the decision-2 additions.)*
 3. **Generator location.** A regenerate-and-diff test in `oce-vocab` rather than `tools/vocab-gen`
-   (decision 3). Recommendation: accept.
+   (decision 3). Recommendation: accept. *(Ruled 2026-11-09: accepted.)*
 4. **Two files.** `generated.json` and `curated.json`, curated text additive only in v1 (decision
    6). Should v1 allow a curated description to replace a poor upstream one (for example
    Hysteresis's "if y=false and u>uHigh, switch to y=true")? Recommendation: not in v1; v2 adds an
-   override with a required reason.
+   override with a required reason. *(Ruled 2026-11-09: accepted.)*
 5. **Scale factors.** Time only (`min`, `h`, `d`), exact, plus `unit-suffix-mismatch` (decision
    14). Add `%` or `kPa` now? Recommendation: time only; `degC` stays refused until a design pass
-   on affine units.
+   on affine units. *(Ruled 2026-11-09: accepted.)*
 6. **The suffix check is stage 1 and author-only.** It pre-empts no engine code and the engine never
    sees declared block-port or block-parameter units. Accept it as a parse-meaning check rather than
-   a second semantics? Recommendation: accept; refusing is reversible, a wrong conversion is not.
+   a second semantics? Recommendation: accept; refusing is reversible, a wrong conversion is not. *(Ruled
+   2026-11-09: accepted; the authoring-note amendment lands with the implementation PR.)*
 7. **Gate item 4's pass criterion.** Recommendation: three runs, same settings as the v0 record, at
-   least 130 after repair in every run and a mean of at least 131.
+   least 130 after repair in every run and a mean of at least 131. *(Ruled 2026-11-09: accepted.)*
 8. **Where the benchmark harness lives.** The prototype is frozen; #457 moves the data but not a
    harness. Recommendation: a harness issue in `open-control-library` (rule 7: rules and their
    vectors live there) consuming `oce catalog --json`; if it cannot land in M2, gate item 4 moves to
-   the milestone that lands it, and M2 closes on items 1 to 3 with the vocabulary shipped.
+   the milestone that lands it, and M2 closes on items 1 to 3 with the vocabulary shipped. *(Ruled 2026-11-09 and confirmed by
+   the owner: gate item 4 deferred.)*
 9. **Curation seed size.** v1 seeds notes for the prototype's three rules (eleven classes) and
    the six missing descriptions. Recommendation: that seed, plus a `Discrete.Sampler` pitfall once
-   written from the engine's tests; everything else is v2.
+   written from the engine's tests; everything else is v2. *(Ruled 2026-11-09: accepted; each note carries `evidence`.)*
 10. **Sequencing.** Vendoring and `oce-vocab` together, then CLI, then the text form. Recommendation:
-    as listed; the vendored file has no reader without the crate.
+    as listed; the vendored file has no reader without the crate. *(Ruled 2026-11-09:
+    accepted, after #496 and #491; implementation issues are cut from this note after it merges.)*
+
+## Review rulings
+
+The [review comment on GitHub #497](https://github.com/jscott3201/open-control-engine/pull/497#issuecomment-6744139683)
+(2026-11-09) ruled on the ten questions; the note is amended to match. Two rulings are
+owner-visible: the owner confirmed 8 on 2026-11-09, and 1 stands as the orchestrator's reading,
+which the owner may overrule.
+
+1. **"Serve through `catalog()`":** no facade change in v1; the phrase means the catalog surface
+   (`oce_api::catalog()`, `oce_vocab::class_vocab()` joined over it, `oce catalog`). A facade
+   accessor is a later, separate decision. *The orchestrator's reading; the owner may overrule it.*
+2. **Source:** CXF-Core, vendored at the existing pins, accepted. The vendored README records the
+   command, both pins, the date and the sha256; cross-OS and cross-Node byte-identity is unverified,
+   so a pin advance re-vendors and re-blesses; the Buildings licence line covers the file.
+3. **Generator:** a regenerate-and-diff test in `oce-vocab`, accepted.
+4. **Curation:** additive only in v1 with the refusing test; an override with a required reason is
+   v2.
+5. **Scale factors:** time only (`min`, `h`, `d`), exact; `degC`/`degF`, `%` and prefixed SI stay
+   refused.
+6. **`unit-suffix-mismatch`:** a stage-1, author-only parse-meaning check, accepted; the dated
+   amendment of authoring decision 13 lands with the implementation PR.
+7. **Gate item 4 criterion:** three runs at the v0 settings, at least 130 of 137 after repair in
+   each, mean at least 131.
+8. **Harness and gate item 4:** the harness is an `open-control-library` issue consuming
+   `oce catalog --json`; gate item 4 is deferred to the milestone that lands it, and M2 closes on
+   items 1 to 3 with vocabulary v1 shipped. *Confirmed by the owner 2026-11-09; #455 carries the deferral.*
+9. **Curation seed:** the prototype's three rules over eleven classes, the six missing
+   descriptions and the `Discrete.Sampler` pitfall written from the engine's tests, each note with
+   `evidence`.
+10. **Sequencing:** vendoring and `oce-vocab` in one PR, then the CLI PR, then the text-form PR,
+    after #496 and #491; implementation issues are cut from the amended note after it merges.
+
+The same review added two requirements, now in the note: the agent-facing-text test runs over every
+string in both JSON files (no absolute path, no HTML tag, no `modelica://` link), and both data files
+are strict JSON under the authoring wire profile with sorted keys.

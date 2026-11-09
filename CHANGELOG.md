@@ -627,9 +627,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
   leverage crate `oce-vocab`; `oce-api`, its catalog JSON, the content id and class signature hashes
   are unchanged. `oce catalog` serves the block vocabulary and `oce vocab` gains a time-only
   scale-factor table, so `1 h` becomes legal with exact scaling and an author-only
-  `unit-suffix-mismatch` check (amending authoring decision 13). The benchmark gate row waits on
-  #457 and a harness; ten questions are open for review. It is registered in `docs/README.md` and
-  the book.
+  `unit-suffix-mismatch` check (amending authoring decision 13). Gate item 4 (agent-usable) is
+  deferred to the milestone that lands the benchmark harness (owner-confirmed), and M2 closes on
+  items 1 to 3. The review's rulings on its ten questions are recorded in the note. It is registered
+  in `docs/README.md` and the book.
 
 ## 0.4.0
 
