@@ -78,8 +78,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `cxf:fnv1a128:` tags (`-` for the 13 partial exports) to their new ids, in the format the
   library's re-stamp uses. Re-blessed: `compatibility.txt` and `compatibility_export.txt` (revision
   and `content` line); `oce-cxf`'s `fixture_corpus_import.txt` gains one line for each of the four
-  new `tests/fixtures/content_id/*.jsonld` documents (the tracked corpus is 222 with #477's four), every existing
-  line unchanged. `g36_export_content.txt`, the export bytes and every other golden are
+  new `tests/fixtures/content_id/*.jsonld` documents (the tracked corpus is 222 with #477's
+  four), every existing line unchanged. `g36_export_content.txt`, the export bytes and every other golden are
   byte-identical. PC-018, PC-021 and PC-036 are reworded and PC-041 names a format-2 blob (product
   contract revision 23). `oce-author`'s `validate_cost` ratio test fails on `development` as well on
   a local arm64 debug build; it is tracked as #478, untouched here.
