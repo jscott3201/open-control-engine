@@ -1,4 +1,5 @@
-//! Independent byte and fingerprint vector for the current wire format. No numerical oracle applies to this codec.
+//! Independent byte and fingerprint vector for the current wire format. No numerical oracle
+//! applies to this codec.
 
 use crate::state::{
     BlockKey, BlockManifestEntry, ConnectorKey, ConnectorManifestEntry, EnumManifestEntry,

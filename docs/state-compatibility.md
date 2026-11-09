@@ -106,8 +106,9 @@ same numbers are separated only by the mandatory host envelope above and, failin
 decoder's structure, fingerprint and manifest checks. What is pinned today
 (`tests/state_old_layout.rs`, both fixtures kept unblessed):
 
-- Releases 0.2.0 to 0.4.0 wrote this layout under other format and ABI numbers. A populated
-  snapshot carrying them is refused with `UnsupportedFormat`. With only its format field edited
+- Releases 0.2.0 to 0.4.0 numbered their snapshots differently (release 0.4.0 with this same
+  layout). A populated snapshot carrying those numbers is refused with `UnsupportedFormat`. With
+  only its format field edited
   it parses and refuses at restore (`IncompatibleExecution`, subject
   `execution-state ABI revision`); with both numbers edited it fails its execution fingerprint,
   which covers the ABI revision.
