@@ -39,15 +39,22 @@ fn chain(n: usize) -> Sequence {
     s
 }
 
-fn fastest_validation(sequence: &Sequence) -> Duration {
-    (0..3)
-        .map(|_| {
-            let start = Instant::now();
-            assert!(validate_author_side(sequence).is_empty());
-            start.elapsed()
-        })
-        .min()
-        .expect("three runs")
+fn timed(sequence: &Sequence) -> Duration {
+    let start = Instant::now();
+    assert!(validate_author_side(sequence).is_empty());
+    start.elapsed()
+}
+
+/// The fastest of several runs of each size, the two sizes interleaved so a burst of load from
+/// tests running beside this one (the crate's mutation sweep, the 8 MiB emitter bound) inflates
+/// both minimums alike rather than only the larger, slower run's.
+fn fastest_pair(small: &Sequence, large: &Sequence) -> (Duration, Duration) {
+    let mut best = (Duration::MAX, Duration::MAX);
+    for _ in 0..7 {
+        best.0 = best.0.min(timed(small));
+        best.1 = best.1.min(timed(large));
+    }
+    best
 }
 
 #[test]
@@ -66,8 +73,7 @@ fn a_document_at_the_wire_bound_validates_clean() {
 
 #[test]
 fn quadrupling_the_document_costs_well_under_a_quadratic_factor() {
-    let small = fastest_validation(&chain(7_500));
-    let large = fastest_validation(&chain(30_000));
+    let (small, large) = fastest_pair(&chain(7_500), &chain(30_000));
     let ratio = large.as_secs_f64() / small.as_secs_f64().max(1e-6);
     assert!(
         ratio < 10.0,
