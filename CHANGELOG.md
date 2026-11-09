@@ -642,6 +642,54 @@ and a gate that accepted any text would restore exactly the false assurance desc
   hostile inputs (binary junk, bad UTF-8, a 100 MB sparse file refused from its metadata, an
   over-size stdin, a directory, a missing path, an empty file). 16 workspace members (10
   publishable, 6 private); `release.yml`'s comment and step name re-pinned.
+### Verification
+
+- **The per-PR gate keeps the debug determinism cells and loses its three long jobs, which move to
+  the release gate; the release gate now runs on every merge into `development`** (GitHub #505,
+  issue #502; owner decision of 2026-11-09, which amends the plan's "debug and release on every PR"
+  for the determinism matrix only). `pr-gate.yml`'s determinism matrix is two native cells, x86_64
+  on `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm`, in debug codegen, and its fan-in keeps every
+  cross-architecture check: portable snapshot bytes equal, target-bound bytes different, the 46
+  compiled-schedule blobs equal and 123329 bytes each, the round-trip recordings equal (92 files
+  each), the replay of the x86_64 recording and the refusal of the foreign target-bound snapshot.
+  `std-build-windows` and `gate` (`gate (light)`) leave `pr-gate.yml`, `CI OK`'s `needs:` and
+  `JOB_LANES`. The strict-bit matrix (four cells) and its eight-capture fan-in, the wasm32 round-trip
+  leg, the macOS cell and its comparison, `crate-tests`, the bare-metal cell, the leverage lane and
+  every always-on job are unchanged. `gate_scripts` stays a classifier output, informational like
+  `docs_only`: a gate-script path still implies `core`, and `ci_ok.py` and
+  `check-workflow-gates.sh` now refuse a job filtered on it. `release-gate.yml` gains the
+  determinism matrix in all four cells (both architectures, debug and release) with the full
+  fan-in — the cross-architecture checks plus portable and target-bound bytes, blobs and round-trip
+  recordings equal across debug and release — and the Windows cell, all in its `CI OK`;
+  `gate (full)` already covers what `gate (light)` ran. It also triggers on push to `development`.
+  Its concurrency group cancels only a superseded release-PR run, so for pushes the run in progress
+  finishes and only the newest waiting run is kept, and a push run now checks out the pushed commit
+  (`github.sha`) in every job, so the cells and their fan-in build one tree when another merge lands
+  meanwhile (a push to `main` therefore tests the pushed commit too, not the branch tip at job
+  start). The x86_64 determinism cells there restore the shared `nextest` rust-cache key without
+  saving it, so `test-suite`'s superset entry stays the one PRs warm-start from; the arm64 cells
+  save. `check-workflow-gates.sh` follows the jobs: `codegen: [debug]` exactly for the per-PR
+  determinism matrix, `[debug, release]` for the release gate's and for the strict-bit matrix; the
+  release-codegen cell rules, the cross-codegen comparisons and the Windows cell rules apply to
+  `release-gate.yml`; the cross-architecture fan-in rules apply to both files and now include the
+  blob comparison and its size check; new rules pin the release gate's push branches, the push
+  checkout ref, `ref: ${{ env.CHECKOUT_REF }}` on every checkout, both concurrency lines, no
+  `continue-on-error` and the two step-condition shapes; the full-suite rules are scoped to the
+  `test-suite` job, because the copied cells carry look-alike lines; `pr-gate.yml` still refuses a
+  `push` trigger. Its fixtures go from 129 to 160 cases, one or more failing control for each moved
+  or new rule, and `test_ci_ok.py` from 18 to 20. Measured on 2026-11-09: the release-codegen cells
+  took 809–1101 s (x86_64) and 653–671 s (aarch64), the Windows cell 251–450 s and `gate (light)`
+  1540–1600 s, and 69 full-lane runs had a median of 18.3 minutes. What this costs, stated in
+  `AGENTS.md`, `CONTRIBUTING.md` and [CI and the gate](docs/ci-and-the-gate.md#what-runs-after-the-merge):
+  no per-PR job runs the determinism subset under release codegen, compares a debug artifact with
+  a release one, builds on Windows or executes `.agents/gate.sh`. The author's
+  `bash .agents/gate.sh` (commands unchanged; comments and closing report updated) runs the subset
+  under release codegen on one host and is the pre-merge release-codegen evidence; after merging a
+  change that runs the determinism lane, the release-gate run on the merge commit is watched, and a
+  red run is fixed forward or reverted before the next determinism-lane merge. Product contract
+  revision 24 records the evidence-delivery change in PC-041's limitation; PC-037 is unchanged.
+  No crate source or golden changed.
+
 ### Documentation
 
 - **Design note for the canonical content id** (GitHub #471, issue #470).

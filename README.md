@@ -320,7 +320,10 @@ That Linux result is re-established per-PR: the scoped strict-bit subset and its
 binaries run in four native Linux cells (x86_64 and aarch64, debug and release) with repeat
 captures and a cross-cell comparison, and no source file is bound to a stored receipt any more
 ([strict-bit evidence](docs/strict-bit-evidence.md)). It bounds the claim to the pinned
-corpus, rustc and libm; it is not mathematical correctness or arbitrary-input proof. The blob round
+corpus, rustc and libm; it is not mathematical correctness or arbitrary-input proof. The
+state-determinism subset runs per-PR on both architectures in debug codegen; its release-codegen
+cells and the debug-against-release comparison run in the release gate on every merge into
+`development` ([CI and the gate](docs/ci-and-the-gate.md#what-runs-after-the-merge)). The blob round
 trip in `oce-conformance` also runs per-PR, from one recorded x86_64 artifact replayed natively on
 arm64 and under wasmtime on `wasm32-wasip1`
 ([blob round trip](docs/compiled-schedule-blob.md#the-blob-round-trip)). The remainder

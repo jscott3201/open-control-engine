@@ -20,31 +20,39 @@ first, then the script.
 
 GitHub is the primary host: `origin` is `github.com/jscott3201/open-control-engine`, and branches,
 PRs, reviews, issues and CI live there. CI is GitHub Actions in `.github/workflows/` on GitHub-hosted Linux
-runners (plus the two `pr-gate.yml` platform cells on macOS and Windows): `pr-gate.yml` (per-PR, light), `release-gate.yml` (release PRs into `main`, daily against
-`development`, heavy), `advisories.yml` (daily), `docs-pages.yml` (docs validation and the Pages
+runners (plus the macOS platform cell in `pr-gate.yml` and the Windows one in `release-gate.yml`): `pr-gate.yml` (per-PR, light), `release-gate.yml` (every merge into `development`, release PRs into `main`, daily against
+`development`; heavy), `advisories.yml` (daily), `docs-pages.yml` (docs validation and the Pages
 publish from `main`), `release.yml` (tag verify / manual crates.io publish) and the two manual
 native-arm64 OpenModelica evidence workflows. `ci.yml` there is byte-frozen and disabled in the
 repository's Actions settings — it is not the CI.
 
-The per-PR gate runs once per change, on the PR. A merge into `development` runs no gate:
-`pr-gate.yml` has no `push` trigger, and `check-workflow-gates.sh` refuses one. Only the
-path-filtered `docs-pages.yml` runs on that push. The daily `release-gate.yml` run on the
-`development` tip is the safety net. See [CI and the gate](../docs/ci-and-the-gate.md#what-runs-when).
+The per-PR gate runs once per change, on the PR: `pr-gate.yml` has no `push` trigger, and
+`check-workflow-gates.sh` refuses one. A merge into `development` runs `release-gate.yml` on the
+merge commit instead (issue #502), beside the path-filtered `docs-pages.yml`. That run holds what
+the per-PR gate no longer does: the determinism subset under release codegen on both
+architectures with the debug-against-release comparisons, the Windows cell, and the executed gate
+script (`gate (full)`). It is not a required status on `development` — the commit has landed — so
+after merging a change that runs the determinism lane, watch it: a red run is fixed forward or
+reverted before the next determinism-lane merge. Pushes queue: a run in progress finishes and only
+the newest waiting run is kept, so an older waiting run shows as cancelled. The daily run on the
+`development` tip stays. See [CI and the gate](../docs/ci-and-the-gate.md#what-runs-when).
 
 The per-PR gate has two lanes under the one `CI OK` (issue #393). Its first job classifies the
 PR's changed paths with plain git and `scripts/ci/classify-changes.sh`, fail-closed: any path that
 is not documentation or under `crates/leverage/` runs the determinism lane — every job that
-compiles the engine — and so does any change to a gate script, workflow or tool config, which also
-runs `gate (light)`. A `crates/leverage/**` change runs only the `leverage lane` job beside the
+compiles the engine — and so does any change to a gate script, workflow or tool config. No per-PR
+job executes `.agents/gate.sh` any more (`gate (light)` did; `gate (full)` in `release-gate.yml`
+runs it after the merge). A `crates/leverage/**` change runs only the `leverage lane` job beside the
 always-on checks (fmt, file-size, no-secret, docs, gate fixtures, the package/authority/product
 contract); an engine change runs it too. A docs-only PR compiles nothing, and documentation a test
 reads (`README.md`, `docs/cxf-composite-subset.md`) is not docs-only. `CI OK` accepts a skip only
 when the job's lane output was `false`. Locally, `bash .agents/gate.sh leverage` mirrors a
 leverage-only PR; see [lanes](../docs/ci-and-the-gate.md#lanes-what-a-pr-runs).
 
-Two platform cells also run with the determinism lane (issue #394): macOS arm64 checks that the
-portable state snapshot equals Linux byte for byte, and Windows builds the workspace and runs its
-suite without the strict-bit binaries — observations, not qualification; see
+Two platform cells observe other operating systems (issue #394): macOS arm64, per PR with the
+determinism lane, checks that the portable state snapshot equals Linux byte for byte; Windows, in
+`release-gate.yml` after each merge (issue #502), builds the workspace and runs its suite without
+the strict-bit binaries — observations, not qualification; see
 [platform cells](../docs/ci-and-the-gate.md#platform-cells-macos-and-windows).
 
 Pull requests merged on the previous host before the October 2026 move to GitHub share numbers
@@ -70,18 +78,23 @@ cap, the no-secret scan, the database-free check, the golden-gen firewall and
 package/feature/publication contract and its hostile controls, the gate fixtures,
 the [authority index/projection and its hostile controls](../docs/authority-claims.md),
 `cargo machete` — and the state-determinism tests for **`oce-api`, `oce-blocks`, and `oce-expr`**, via the
-determinism matrix: four native cells, x86_64 on `ubuntu-latest` and aarch64 on
-`ubuntu-24.04-arm`, each in debug and release codegen.
+determinism matrix: two native cells per PR, x86_64 on `ubuntu-latest` and aarch64 on
+`ubuntu-24.04-arm`, in debug codegen.
 Its fan-in job compares a populated portable engine-state snapshot byte-for-byte across
-architectures, checks portable and target-bound bytes across debug/release codegen, and requires
-target-bound bytes to differ across architectures. Each architecture then parses and refuses the
-other's target-bound bytes through the public restore path, natively. The same fan-in requires the
-46 compiled-schedule blobs each cell encodes (`OCE_BLOB_OUT`) to be byte-identical in all four
-cells (GitHub #400).
+architectures and requires target-bound bytes to differ across architectures. Each architecture
+then parses and refuses the other's target-bound bytes through the public restore path, natively.
+The same fan-in requires the 46 compiled-schedule blobs each cell encodes (`OCE_BLOB_OUT`) to be
+byte-identical in both cells (GitHub #400).
+The release-codegen cells of that matrix do not run per PR (issue #502): `release-gate.yml` runs
+all four cells on every merge into `development`, and its fan-in adds the checks that portable and
+target-bound bytes, the blobs and the round-trip recordings match across debug/release codegen.
+Before the merge, `bash .agents/gate.sh` runs the subset under release codegen on your machine;
+that run is the release-codegen evidence a PR has.
 The blob round trip (issue #403) rides on the same cells: each records
 `crates/oce-conformance/tests/blob_round_trip.rs` (facade against the `no_std` entry, every output,
 warning and raw state word after every frame of the 46 fixtures) into `OCE_ROUND_TRIP_OUT`, the
-fan-in requires the four recordings identical and replays the x86_64 debug recording on aarch64
+fan-in requires the recordings identical (the two debug cells per PR, all four in the release
+gate) and replays the x86_64 debug recording on aarch64
 through the aarch64 debug cell's archived suite, and `blob round trip (wasm32-wasip1 under wasmtime)` replays it on
 `wasm32-wasip1` under the wasmtime pinned in `scripts/ci/install-wasmtime.sh`. Locally,
 `bash .agents/gate.sh roundtrip` (also in `full`) records and replays on the host and on
@@ -94,7 +107,8 @@ The standalone `cargo-deny` CI job runs `cargo deny check bans licenses sources`
 advisory-db, neither of which a sandboxed lane has, so it runs in `advisories.yml`.
 
 The scoped `oce-conformance` strict-bit subset and four affected per-block suites also run per PR
-in the same four native Linux architecture/codegen cells, with repeat captures and an eight-capture
+in four native Linux architecture/codegen cells (both architectures, debug and release; this
+matrix did not move), with repeat captures and an eight-capture
 cross-cell comparison ([bounded evidence](../docs/strict-bit-evidence.md)). The
 `oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and `oce-store` suites run per
 PR too, x86_64 debug only. The remainder — and the release-codegen runs of those five — needs the

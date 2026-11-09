@@ -194,7 +194,8 @@ manifest validation. A post-execution mismatch does not undo a prior accepted tr
   This fixture is not a whole-program performance or all-model memory claim.
 - `tests/replay_matrix.rs` supplies repeat-exact portable and target-bound local vectors via optional
   `OCE_PORTABLE_REPLAY_OUT` / `OCE_TARGET_REPLAY_OUT` paths and foreign-placement inspection via
-  `OCE_FOREIGN_TARGET_REPLAY_IN`. The existing debug/release `oce-api` matrix runs these tests, but
+  `OCE_FOREIGN_TARGET_REPLAY_IN`. The `oce-api` determinism matrix runs these tests (debug codegen per PR; debug and release in
+  the release gate after each merge), but
   **cross-architecture replay artifact comparison is pending**. The native determinism cells and
   their `determinism-compare` fan-in in `pr-gate.yml` now carry the state vectors across
   architectures; the replay vectors are not yet wired into that artifact plumbing. Local artifact equality never fabricates hosted results or macOS qualification.

@@ -6,7 +6,9 @@
 # two of them materially weaker than CI, so prose copies are the failure mode
 # this file exists to remove.
 #
-#   bash .agents/gate.sh          # light    — mirrors the per-PR gate (pr-gate.yml)
+#   bash .agents/gate.sh          # light    — mirrors the per-PR gate (pr-gate.yml), and runs
+#                                 #            the determinism subset under release codegen as
+#                                 #            well, which CI runs only after the merge
 #   bash .agents/gate.sh full     # full     — adds the suite (release-gate.yml)
 #   bash .agents/gate.sh leverage # leverage — mirrors a PR confined to crates/leverage/: the
 #                                 #            always-on jobs plus the leverage lane, no engine lane
@@ -29,10 +31,11 @@
 # dropping any one of them turns a real gate into a green light that proves
 # less than it appears to. Change a command here only by changing CI first.
 #
-# CI executes this script as well as mirroring it — `gate (full)` in release-gate.yml
-# daily, and `gate (light)` in pr-gate.yml on every PR that changes this script, a CI or
-# repository script, a workflow or tool config — so an edit here changes what gates a
-# pull request, not merely what a local run does.
+# CI executes this script as well as mirroring it: `gate (full)` in release-gate.yml, on
+# every merge into `development` and daily. No per-PR job executes it (pr-gate.yml's
+# `gate (light)` was retired by issue #502), so CI first runs an edit to this script, a CI
+# or repository script, a workflow or tool config on its merge commit. Before the merge the
+# author's own `bash .agents/gate.sh full` on the final head is the only run there is.
 #
 # Agents: this script is executable but not writable inside a Codex lane
 # sandbox. That is deliberate. A failing gate is fixed at its cause, never by
@@ -189,7 +192,7 @@ if [ "$MODE" = nostd ] || [ "$MODE" = qemu ] || [ "$MODE" = roundtrip ]; then
     echo '  · executing the images on their targets: `bash .agents/gate.sh qemu` (nightly in CI).'
   fi
   if [ "$MODE" = roundtrip ]; then
-    echo '  · the aarch64 leg and the four-cell recording comparison: CI only (determinism-compare).'
+    echo '  · the aarch64 leg and the comparison of the cells'"'"' recordings: CI only (determinism-compare).'
   fi
   echo '────────────────────────────────────────────────────────────────────────────'
   if [ "$failures" -gt 0 ]; then
@@ -283,6 +286,11 @@ step 'cargo-deny (bans licenses sources)' cargo deny check bans licenses sources
 # These three crates form the state-determinism subset. The scoped conformance strict-bit
 # tests below are additional; the rest of the workspace waits for the release gate — why `full` exists
 # and why a green PR is not evidence that the suite passes.
+#
+# The release-codegen run of the subset is this script's alone before a merge (issue #502):
+# pr-gate.yml runs the subset in debug codegen on both architectures, and the release-codegen
+# cells run in release-gate.yml on the merge commit. Run on the final head, this step is the
+# pre-merge release-codegen determinism evidence for a change, on one host.
 step 'determinism subset' \
   cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
 step 'determinism subset (release codegen)' \
@@ -368,18 +376,25 @@ cat <<'COVERAGE'
 
 ────────────────────────────────────────────────────────────────────────────
 NOT COVERED BY THIS SCRIPT — a green run here does not prove these pass:
-  · cross-arch determinism matrix: four native cells, x86_64 on ubuntu-latest
-    and aarch64 on ubuntu-24.04-arm, in debug and release codegen, with the
-    cross-architecture snapshot and compiled-schedule blob comparisons in a
-    fan-in job. One machine cannot reproduce it. CI is the only place it runs.
-  · the blob round trip's aarch64 leg and the comparison of the four cells'
+  · cross-arch determinism matrix. Per PR (pr-gate.yml): two native cells in
+    debug codegen, x86_64 on ubuntu-latest and aarch64 on ubuntu-24.04-arm,
+    with the cross-architecture snapshot, compiled-schedule blob and
+    round-trip comparisons in a fan-in job. After each merge into
+    development (release-gate.yml): the same matrix in four cells, debug and
+    release codegen, adding the debug-against-release comparisons. One
+    machine cannot reproduce either. CI is the only place they run.
+    What `light` and `full` DO run is the determinism subset under release
+    codegen on this host. No per-PR CI job runs it, so that step, run on the
+    final head, is the pre-merge release-codegen evidence for a change.
+  · the blob round trip's aarch64 leg and the comparison of the cells'
     recordings (determinism-compare). `full` and `roundtrip` record on this
     host and replay here and on wasm32-wasip1; the other architecture is CI's.
-  · strict-bit raw-output matrix over the 21 inventoried signals: the same
-    four native cells, two capture processes each, then the eight-capture
-    comparison. Local synthetic controls and macOS observations are NOT
-    native Linux evidence.
-  · the macOS arm64 and Windows platform cells: they need those OSes; CI only.
+  · strict-bit raw-output matrix over the 21 inventoried signals: four native
+    cells on every PR (both architectures, debug and release codegen), two
+    capture processes each, then the eight-capture comparison. Local
+    synthetic controls and macOS observations are NOT native Linux evidence.
+  · the macOS arm64 platform cell (per PR) and the Windows platform cell
+    (release-gate.yml, after each merge): they need those OSes; CI only.
   · executing the firmware images on their targets. This run builds them and
     checks their size; qemu.yml runs them under QEMU nightly, and
     `bash .agents/gate.sh qemu` does locally when QEMU is installed.
@@ -388,11 +403,12 @@ NOT COVERED BY THIS SCRIPT — a green run here does not prove these pass:
     job, which sweeps advisories/bans/licenses/sources on every release PR.
   · that these commands still match pr-gate.yml. Nothing verifies that
     mechanically. Change a command here only by changing CI first.
-    CI does RUN this script: `gate (full)` in release-gate.yml daily, and
-    `gate (light)` in pr-gate.yml on a PR that changes this script, a CI or
-    repository script, a workflow or tool config — the edits that can make
-    a pr-gate.yml job diverge from it. Read that as coverage, not parity: a green
-    `gate (light)` says these commands ran, and says nothing at all about
+    CI does RUN this script, but only after a merge: `gate (full)` in
+    release-gate.yml, on every merge into development and daily. No per-PR
+    job executes it, so for a PR that changes this script, a CI or
+    repository script, a workflow or tool config, this run is the only one
+    before the merge. Read the CI run as coverage, not parity: a green
+    `gate (full)` says these commands ran, and says nothing at all about
     whether the two files still agree.
 COVERAGE
 

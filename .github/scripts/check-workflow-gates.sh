@@ -140,19 +140,37 @@ refuse_emulation() {
   fi
 }
 
-# A native cell matrix: every (runner, codegen) pair, x86_64 on ubuntu-latest and aarch64 on
-# ubuntu-24.04-arm, without fail-fast, so one run reports every failing cell.
+# A native cell matrix: x86_64 on ubuntu-latest and aarch64 on ubuntu-24.04-arm, in exactly the
+# codegen modes named (`debug, release`, or `debug` alone), without fail-fast, so one run reports
+# every failing cell. The codegen list is exact in both directions (issue #502): pr-gate.yml's
+# determinism matrix is debug only, because its release-codegen cells run in release-gate.yml, and
+# release-gate.yml's must name both.
 require_native_cell_matrix() {
   path="$1"
   job="$2"
+  local codegen_pattern codegen_label
+  case "$3" in
+    'debug, release')
+      codegen_pattern='\[debug,[[:space:]]*release\]'
+      codegen_label="$job runs debug and release codegen"
+      ;;
+    'debug')
+      codegen_pattern='\[debug\]'
+      codegen_label="$job runs debug codegen only (its release-codegen cells belong to release-gate.yml)"
+      ;;
+    *)
+      echo "BUG: require_native_cell_matrix: unknown codegen list '$3'"
+      exit 1
+      ;;
+  esac
   require_job_pattern "$path" "$job" '^    runs-on:[[:space:]]*\$\{\{[[:space:]]*matrix\.runner[[:space:]]*\}\}[[:space:]]*$' \
     "$job runs on the matrix runner"
   require_job_pattern "$path" "$job" '^      fail-fast:[[:space:]]*false[[:space:]]*$' \
     "$job reports every failing cell (fail-fast: false)"
   require_job_pattern "$path" "$job" '^        runner:[[:space:]]*\[ubuntu-latest,[[:space:]]*ubuntu-24\.04-arm\][[:space:]]*$' \
     "$job runs native x86_64 and aarch64 runners"
-  require_job_pattern "$path" "$job" '^        codegen:[[:space:]]*\[debug,[[:space:]]*release\][[:space:]]*$' \
-    "$job runs debug and release codegen"
+  require_job_pattern "$path" "$job" "^        codegen:[[:space:]]*${codegen_pattern}[[:space:]]*\$" \
+    "$codegen_label"
   local pairs
   pairs="$(awk -v header="  $job:" '
     $0 == header { found = 1; next }
@@ -162,6 +180,202 @@ require_native_cell_matrix() {
   ' "$path" | sort | tr '\n' ' ')"
   if [ "$pairs" != "ubuntu-24.04-arm=aarch64 ubuntu-latest=x86_64 " ]; then
     echo "FAIL: $path job $job does not map x86_64 to ubuntu-latest and aarch64 to ubuntu-24.04-arm (got: $pairs)"
+    exit 1
+  fi
+}
+
+# The determinism cells, in either workflow (issue #502 split the matrix: pr-gate.yml runs the two
+# debug cells per PR, release-gate.yml runs all four after the merge). Every cell refuses a runner
+# of the wrong architecture, records the blob round trip (issue #403), runs the debug subset with
+# hard-fail-on-zero-tests, emits both state vectors, archives its round-trip suite for the fan-in
+# and uploads under its own name.
+require_determinism_cells() {
+  path="$1"
+  require_job_pattern "$path" 'determinism-matrix' 'test "\$\(uname -m\)" = "\$CELL_ARCH"' \
+    'determinism cells refuse a runner of the wrong architecture'
+  require_job_pattern "$path" 'determinism-matrix' \
+    'cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail' \
+    'debug determinism subset with hard-fail-on-zero-tests'
+  require_job_pattern "$path" 'determinism-matrix' 'OCE_PORTABLE_STATE_OUT: target/portable-state-debug\.bin' \
+    'emit the debug portable state vector in every determinism cell'
+  require_job_pattern "$path" 'determinism-matrix' 'OCE_TARGET_STATE_OUT: target/target-state-debug\.bin' \
+    'emit the debug target-bound state vector in every determinism cell'
+  require_job_pattern "$path" 'determinism-matrix' 'tool:[[:space:]]*nextest@0\.9\.143' \
+    'pinned cargo-nextest install for the determinism cells'
+  require_job_pattern "$path" 'determinism-matrix' 'name: determinism-\$\{\{ matrix\.arch \}\}-\$\{\{ matrix\.codegen \}\}' \
+    'upload each determinism cell under its own name'
+  require_job_pattern "$path" 'determinism-matrix' 'if-no-files-found: error' \
+    'a determinism cell with no vectors fails its upload'
+  require_job_pattern "$path" 'determinism-matrix' 'target/nextest/\{ci,ci-release\}/junit\.xml' \
+    'clear cached nextest JUnit reports'
+  require_job_pattern "$path" 'determinism-matrix' 'target/\{portable,target\}-state-\{debug,release\}\.bin' \
+    'clear cached state vectors before the determinism matrix'
+  require_job_pattern "$path" 'determinism-matrix' \
+    '^[[:space:]]*(- )?run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci --no-tests=fail$' \
+    'record the debug blob round trip in every determinism cell'
+  require_job_pattern "$path" 'determinism-matrix' 'OCE_ROUND_TRIP_OUT: target/determinism/round-trip$' \
+    'write the blob round-trip recording into the uploaded cell directory'
+  require_job_literal "$path" 'determinism-matrix' \
+    'test "$(ls target/determinism/round-trip | wc -l | tr -d '"' '"')" = 92' \
+    'refuse a determinism cell whose round-trip recording is not 46 blobs and 46 traces'
+  require_job_literal "$path" 'determinism-matrix' \
+    'cargo nextest archive -p oce-conformance --test blob_round_trip --locked --archive-file target/determinism/blob-round-trip.tar.zst' \
+    'archive each architecture'"'"'s debug blob round trip for the fan-in'
+}
+
+# The release-codegen determinism cells (release-gate.yml only): the subset and the blob round trip
+# under `--cargo-profile release`, their state vectors, and the report and vector checks that follow
+# the cell's codegen so a matrix edit cannot leave a release cell a green no-op.
+require_release_codegen_determinism_cells() {
+  path="$1"
+  require_job_pattern "$path" 'determinism-matrix' \
+    'cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail' \
+    'release determinism subset with hard-fail-on-zero-tests'
+  require_job_pattern "$path" 'determinism-matrix' 'OCE_PORTABLE_STATE_OUT: target/portable-state-release\.bin' \
+    'emit the release portable state vector in every determinism cell'
+  require_job_pattern "$path" 'determinism-matrix' 'OCE_TARGET_STATE_OUT: target/target-state-release\.bin' \
+    'emit the release target-bound state vector in every determinism cell'
+  require_job_pattern "$path" 'determinism-matrix' \
+    '^[[:space:]]*(- )?run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci-release --cargo-profile release --no-tests=fail$' \
+    'record the release blob round trip in every determinism cell'
+  require_job_pattern "$path" 'determinism-matrix' 'test -s "target/nextest/\$profile/junit\.xml"' \
+    'refuse an absent or empty nextest determinism report'
+  require_job_pattern "$path" 'determinism-matrix' 'test -s "target/portable-state-\$CELL_CODEGEN\.bin"' \
+    'refuse a determinism cell that emitted no portable state vector'
+}
+
+# The determinism fan-in's cross-architecture half, in either workflow: portable bytes equal,
+# target-bound bytes different, compiled-schedule blobs equal and the goldens' 123329 bytes, the
+# round-trip recordings equal, the x86_64 debug recording replayed through each architecture's
+# archived suite, and the other architecture's target-bound snapshot refused.
+require_determinism_fan_in() {
+  path="$1"
+  require_job_needs "$path" 'determinism-compare' 'determinism-matrix'
+  require_job_pattern "$path" 'determinism-compare' \
+    'cmp determinism-x86_64-debug/portable-state-debug\.bin determinism-aarch64-debug/portable-state-debug\.bin' \
+    'compare portable state bytes across architectures'
+  require_job_pattern "$path" 'determinism-compare' \
+    '![[:space:]]*cmp -s determinism-x86_64-debug/target-state-debug\.bin determinism-aarch64-debug/target-state-debug\.bin' \
+    'require target-bound state bytes to differ across architectures'
+  require_job_pattern "$path" 'determinism-compare' \
+    '^[[:space:]]*cmp determinism-x86_64-debug/blobs-debug\.bin determinism-aarch64-debug/blobs-debug\.bin$' \
+    'compare compiled-schedule blob bytes across architectures'
+  require_job_literal "$path" 'determinism-compare' 'if [ "$size" != 123329 ]; then' \
+    'refuse a compiled-schedule blob artifact that is not the 123329 bytes of the goldens'
+  require_job_pattern "$path" 'determinism-compare' \
+    'export OCE_FOREIGN_TARGET_STATE_IN=.*determinism-\$FOREIGN_ARCH-debug/target-state-debug\.bin' \
+    'supply the other architecture target-bound snapshot to the restore test'
+  require_job_pattern "$path" 'determinism-compare' 'test "\$CELL_ARCH" != "\$FOREIGN_ARCH"' \
+    'the restoring architecture differs from the snapshot architecture'
+  require_job_pattern "$path" 'determinism-compare' \
+    "test\\(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied\\)'" \
+    'restore and refuse the foreign target-bound snapshot'
+  require_job_pattern "$path" 'determinism-compare' '--profile ci --no-tests=fail \\$' \
+    'foreign target-bound restore hard-fails when its test is absent'
+  require_job_pattern "$path" 'determinism-compare' 'tool:[[:space:]]*nextest@0\.9\.143' \
+    'pinned cargo-nextest install for foreign restore'
+  require_job_pattern "$path" 'determinism-compare' 'arch: x86_64' 'x86_64 restores the aarch64 snapshot'
+  require_job_pattern "$path" 'determinism-compare' 'arch: aarch64' 'aarch64 restores the x86_64 snapshot'
+  require_job_literal "$path" 'determinism-compare' \
+    'diff -rq determinism-x86_64-debug/round-trip determinism-aarch64-debug/round-trip' \
+    'compare the determinism-x86_64-debug and determinism-aarch64-debug round-trip recordings'
+  require_job_literal "$path" 'determinism-compare' \
+    'export OCE_ROUND_TRIP_EXPECT="$PWD/target/determinism/determinism-x86_64-debug/round-trip"' \
+    'replay the x86_64 debug round-trip recording on each architecture'
+  require_job_literal "$path" 'determinism-compare' \
+    'cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/blob-round-trip.tar.zst"' \
+    'replay the recording through this architecture'"'"'s own archived suite'
+  require_job_pattern "$path" 'determinism-compare' '^[[:space:]]*--workspace-remap \. --profile ci --no-tests=fail$' \
+    'the round-trip replay hard-fails when its suite is absent'
+}
+
+# The determinism fan-in's cross-codegen half (release-gate.yml only, issue #502): debug against
+# release within each architecture, for the portable and target-bound state bytes, the
+# compiled-schedule blobs and the round-trip recordings, over all four cells' artifacts.
+require_cross_codegen_fan_in() {
+  path="$1"
+  require_job_pattern "$path" 'determinism-compare' \
+    'cmp determinism-x86_64-debug/portable-state-debug\.bin determinism-x86_64-release/portable-state-release\.bin' \
+    'compare x86_64 portable state bytes across codegen profiles'
+  require_job_pattern "$path" 'determinism-compare' \
+    'cmp determinism-x86_64-debug/target-state-debug\.bin determinism-x86_64-release/target-state-release\.bin' \
+    'compare x86_64 target-bound state bytes across codegen profiles'
+  require_job_pattern "$path" 'determinism-compare' \
+    'cmp determinism-aarch64-debug/portable-state-debug\.bin determinism-aarch64-release/portable-state-release\.bin' \
+    'compare aarch64 portable state bytes across codegen profiles'
+  require_job_pattern "$path" 'determinism-compare' \
+    'cmp determinism-aarch64-debug/target-state-debug\.bin determinism-aarch64-release/target-state-release\.bin' \
+    'compare aarch64 target-bound state bytes across codegen profiles'
+  for arch in x86_64 aarch64; do
+    require_job_pattern "$path" 'determinism-compare' \
+      "^[[:space:]]*cmp determinism-$arch-debug/blobs-debug\\.bin determinism-$arch-release/blobs-release\\.bin\$" \
+      "compare $arch compiled-schedule blob bytes across codegen profiles"
+  done
+  require_job_literal "$path" 'determinism-compare' \
+    'test "$(ls determinism-*/blobs-*.bin | wc -l | tr -d '"' '"')" = 4' \
+    'the fan-in holds the compiled-schedule blobs of all four cells'
+  for pair in 'x86_64-debug determinism-x86_64-release' 'x86_64-debug determinism-aarch64-release'; do
+    require_job_literal "$path" 'determinism-compare' \
+      "diff -rq determinism-${pair% *}/round-trip ${pair#* }/round-trip" \
+      "compare the determinism-${pair% *} and ${pair#* } round-trip recordings"
+  done
+}
+
+# The Windows platform cell (issue #394; in release-gate.yml since issue #502): the workspace build
+# and the workspace suite without exactly the strict-bit binaries, on a Windows runner.
+require_windows_cell() {
+  path="$1"
+  require_job_pattern "$path" 'std-build-windows' '^    runs-on:[[:space:]]*windows-latest[[:space:]]*$' \
+    'the Windows cell runs on windows-latest'
+  require_job_pattern "$path" 'std-build-windows' '^[[:space:]]*(- )?run: cargo build --workspace --locked$' \
+    'the Windows cell builds the workspace'
+  require_job_pattern "$path" 'std-build-windows' \
+    '^[[:space:]]*cargo nextest run --workspace --locked --profile ci --no-tests=fail$' \
+    'the Windows cell runs the workspace suite with hard-fail-on-zero-tests'
+  require_job_literal "$path" 'std-build-windows' \
+    "-E 'not (binary_id(oce-conformance::strict_bits) | binary_id(oce-conformance::per_block_reals_transcendental) | binary_id(oce-conformance::per_block_reals_sources_transcendental) | binary_id(oce-conformance::per_block_psychrometrics) | binary_id(oce-conformance::per_block_utilities))'" \
+    'the Windows cell excludes exactly the strict-bit binaries'
+  require_job_pattern "$path" 'std-build-windows' '^[[:space:]]*(- )?run: test -s target/nextest/ci/junit\.xml$' \
+    'the Windows cell refuses an absent or empty nextest report'
+}
+
+# release-gate.yml runs on every push to `development` — each merged PR — as well as to `main`
+# (issue #502): that run is where the release-codegen determinism cells, the Windows cell and the
+# executed gate script now run for a change. The parse reads the block-map `on:` the workflow uses.
+require_release_push_branches() {
+  path="$1"
+  local branches
+  branches="$(awk '
+    /^on:[[:space:]]*$/ { in_on = 1; next }
+    in_on && /^[^[:space:]#]/ { in_on = 0 }
+    !in_on || /^[[:space:]]*#/ { next }
+    /^  [A-Za-z_]+:/ { in_push = ($0 ~ /^  push:[[:space:]]*$/); next }
+    in_push && /^    branches:/ { sub(/^    branches:[[:space:]]*/, ""); sub(/[[:space:]]+$/, ""); print }
+  ' "$path")"
+  if [ "$branches" != '[main, development]' ]; then
+    echo "FAIL: $path push trigger does not name branches [main, development] (got: ${branches:-none}); the release gate must run on every merge into development"
+    exit 1
+  fi
+}
+
+# Every checkout in release-gate.yml pins `ref: ${{ env.CHECKOUT_REF }}`: a job that took the
+# default ref would test a different commit from the rest of its run on a dispatched run, and a
+# fan-in would compare cells built from two trees.
+require_pinned_checkout_ref() {
+  path="$1"
+  local unpinned
+  unpinned="$(awk '
+    function flush() { if (in_checkout && !pinned) print job; in_checkout = 0; pinned = 0 }
+    /^[[:space:]]*#/ { next }
+    /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { flush(); job = $0; sub(/^  /, "", job); sub(/:.*/, "", job); next }
+    /^      - / { flush() }
+    /^      - uses:[[:space:]]*actions\/checkout@/ { in_checkout = 1; next }
+    in_checkout && /^          ref: \$\{\{ env\.CHECKOUT_REF \}\}[[:space:]]*$/ { pinned = 1 }
+    END { flush() }
+  ' "$path")"
+  if [ -n "$unpinned" ]; then
+    echo "FAIL: $path has a checkout that does not pin ref: \${{ env.CHECKOUT_REF }}:"
+    printf '%s\n' "$unpinned" | sed 's/^/  /'
     exit 1
   fi
 }
@@ -264,9 +478,11 @@ require_no_job_conditions() {
 }
 
 # The per-PR lane filter (issue #393). A job-level `if:` is allowed only in the exact form
-# `needs.changes.outputs.<lane> == 'true'` for lane core, leverage or gate_scripts, on a job that
-# needs `changes`. CI OK's JOB_LANES must list exactly those jobs with those lanes, because it is
-# what lets ci_ok.py accept their `skipped` result, and CI OK must run that result check. The
+# `needs.changes.outputs.<lane> == 'true'` for lane core or leverage, on a job that needs
+# `changes`. `gate_scripts` is not a filter lane (issue #502 retired `gate (light)`, the one job it
+# gated): it stays a classifier output, informational like `docs_only`, and a job filtered on it
+# fails here. CI OK's JOB_LANES must list exactly the filtered jobs with their lanes, because it
+# is what lets ci_ok.py accept their `skipped` result, and CI OK must run that result check. The
 # `changes` job must export all four outputs from the classifier. Named jobs are pinned to their
 # lane, so a determinism job cannot drift onto a lighter lane or an always-on job become optional.
 require_lane_filter() {
@@ -276,7 +492,7 @@ require_lane_filter() {
   expected=""
   while IFS=$'\t' read -r job condition; do
     [ -n "$job" ] || continue
-    if [[ "$condition" =~ ^needs\.changes\.outputs\.(core|leverage|gate_scripts)\ ==\ \'true\'$ ]]; then
+    if [[ "$condition" =~ ^needs\.changes\.outputs\.(core|leverage)\ ==\ \'true\'$ ]]; then
       lane="${BASH_REMATCH[1]}"
     else
       echo "FAIL: $path job $job has a job-level if: that is not a lane filter: $condition"
@@ -307,8 +523,8 @@ require_lane_filter() {
     determinism-matrix=core determinism-compare=core strict-bit-matrix=core strict-bit-compare=core \
     crate-tests=core golden-gen-hygiene=core golden-gen-firewall=core build=core clippy=core \
     rustdoc=core deny=core unused-deps=core default-no-db=core facade-contract=core no-std-build=core \
-    blob-round-trip-wasm=core portable-snapshot-macos=core portable-snapshot-compare=core std-build-windows=core \
-    leverage-lane=leverage gate=gate_scripts \
+    blob-round-trip-wasm=core portable-snapshot-macos=core portable-snapshot-compare=core \
+    leverage-lane=leverage \
     changes=always fmt=always file-size-cap=always no-secret-scan=always docs=always \
     gate-fixtures=always package-publication-contract=always; do
     job="${want%%=*}"
@@ -615,105 +831,21 @@ require_pattern "$ci" 'check-workflow-gates\.sh' 'run workflow gate smoke'
 require_pattern "$ci" 'determinism-matrix' 'targeted cross-arch determinism matrix job'
 refuse_emulation "$ci"
 refuse_emulation "$release"
-require_native_cell_matrix "$ci" 'determinism-matrix'
-require_native_cell_matrix "$ci" 'strict-bit-matrix'
+# Per PR the determinism matrix is two native cells in debug codegen, and its fan-in compares
+# across architectures; the strict-bit matrix keeps all four cells (issue #502).
+require_native_cell_matrix "$ci" 'determinism-matrix' 'debug'
+require_native_cell_matrix "$ci" 'strict-bit-matrix' 'debug, release'
 require_pattern "$ci" 'nextest@0\.9\.143' 'pinned cargo-nextest 0.9.143 install'
-require_job_pattern "$ci" 'determinism-matrix' 'test "\$\(uname -m\)" = "\$CELL_ARCH"' \
-  'determinism cells refuse a runner of the wrong architecture'
-require_job_pattern "$ci" 'determinism-matrix' \
-  'cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail' \
-  'debug determinism subset with hard-fail-on-zero-tests'
-require_job_pattern "$ci" 'determinism-matrix' \
-  'cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail' \
-  'release determinism subset with hard-fail-on-zero-tests'
-require_pattern "$ci" 'OCE_PORTABLE_STATE_OUT: target/portable-state-debug\.bin' \
-  'emit the debug portable state vector in every determinism cell'
-require_pattern "$ci" 'OCE_PORTABLE_STATE_OUT: target/portable-state-release\.bin' \
-  'emit the release portable state vector in every determinism cell'
-require_pattern "$ci" 'OCE_TARGET_STATE_OUT: target/target-state-debug\.bin' \
-  'emit the debug target-bound state vector in every determinism cell'
-require_pattern "$ci" 'OCE_TARGET_STATE_OUT: target/target-state-release\.bin' \
-  'emit the release target-bound state vector in every determinism cell'
-require_job_pattern "$ci" 'determinism-matrix' 'tool:[[:space:]]*nextest@0\.9\.143' \
-  'pinned cargo-nextest install for the determinism cells'
-require_job_pattern "$ci" 'determinism-matrix' 'test -s "target/nextest/\$profile/junit\.xml"' \
+require_determinism_cells "$ci"
+require_job_pattern "$ci" 'determinism-matrix' 'test -s target/nextest/ci/junit\.xml$' \
   'refuse an absent or empty nextest determinism report'
-require_job_pattern "$ci" 'determinism-matrix' 'test -s "target/portable-state-\$CELL_CODEGEN\.bin"' \
+require_job_pattern "$ci" 'determinism-matrix' 'test -s target/portable-state-debug\.bin$' \
   'refuse a determinism cell that emitted no portable state vector'
-require_job_pattern "$ci" 'determinism-matrix' 'name: determinism-\$\{\{ matrix\.arch \}\}-\$\{\{ matrix\.codegen \}\}' \
-  'upload each determinism cell under its own name'
-require_job_pattern "$ci" 'determinism-matrix' 'if-no-files-found: error' \
-  'a determinism cell with no vectors fails its upload'
-require_pattern "$ci" 'target/nextest/\{ci,ci-release\}/junit\.xml' \
-  'clear cached nextest JUnit reports'
-require_pattern "$ci" 'target/\{portable,target\}-state-\{debug,release\}\.bin' \
-  'clear cached state vectors before the determinism matrix'
-# Determinism fan-in: byte comparisons over the four cells and the foreign-snapshot refusal.
-require_job_needs "$ci" 'determinism-compare' 'determinism-matrix'
-require_job_pattern "$ci" 'determinism-compare' \
-  'cmp determinism-x86_64-debug/portable-state-debug\.bin determinism-x86_64-release/portable-state-release\.bin' \
-  'compare x86_64 portable state bytes across codegen profiles'
-require_job_pattern "$ci" 'determinism-compare' \
-  'cmp determinism-x86_64-debug/target-state-debug\.bin determinism-x86_64-release/target-state-release\.bin' \
-  'compare x86_64 target-bound state bytes across codegen profiles'
-require_job_pattern "$ci" 'determinism-compare' \
-  'cmp determinism-aarch64-debug/portable-state-debug\.bin determinism-aarch64-release/portable-state-release\.bin' \
-  'compare aarch64 portable state bytes across codegen profiles'
-require_job_pattern "$ci" 'determinism-compare' \
-  'cmp determinism-aarch64-debug/target-state-debug\.bin determinism-aarch64-release/target-state-release\.bin' \
-  'compare aarch64 target-bound state bytes across codegen profiles'
-require_job_pattern "$ci" 'determinism-compare' \
-  'cmp determinism-x86_64-debug/portable-state-debug\.bin determinism-aarch64-debug/portable-state-debug\.bin' \
-  'compare portable state bytes across architectures'
-require_job_pattern "$ci" 'determinism-compare' \
-  '![[:space:]]*cmp -s determinism-x86_64-debug/target-state-debug\.bin determinism-aarch64-debug/target-state-debug\.bin' \
-  'require target-bound state bytes to differ across architectures'
-require_job_pattern "$ci" 'determinism-compare' \
-  'export OCE_FOREIGN_TARGET_STATE_IN=.*determinism-\$FOREIGN_ARCH-debug/target-state-debug\.bin' \
-  'supply the other architecture target-bound snapshot to the restore test'
-require_job_pattern "$ci" 'determinism-compare' 'test "\$CELL_ARCH" != "\$FOREIGN_ARCH"' \
-  'the restoring architecture differs from the snapshot architecture'
-require_job_pattern "$ci" 'determinism-compare' \
-  "test\\(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied\\)'" \
-  'restore and refuse the foreign target-bound snapshot'
-require_job_pattern "$ci" 'determinism-compare' '--profile ci --no-tests=fail \\$' \
-  'foreign target-bound restore hard-fails when its test is absent'
-require_job_pattern "$ci" 'determinism-compare' 'tool:[[:space:]]*nextest@0\.9\.143' \
-  'pinned cargo-nextest install for foreign restore'
-require_job_pattern "$ci" 'determinism-compare' 'arch: x86_64' 'x86_64 restores the aarch64 snapshot'
-require_job_pattern "$ci" 'determinism-compare' 'arch: aarch64' 'aarch64 restores the x86_64 snapshot'
 # The blob round trip (issue #403): three legs, one recorded artifact. Every determinism cell
-# records the suite natively, the fan-in requires the four recordings equal and replays the x86_64
+# records the suite natively, the fan-in requires the recordings equal and replays the x86_64
 # debug recording through each architecture's archived suite, and the wasm32-wasip1 leg replays it
 # under the checksum-pinned wasmtime.
-require_job_pattern "$ci" 'determinism-matrix' \
-  '^[[:space:]]*(- )?run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci --no-tests=fail$' \
-  'record the debug blob round trip in every determinism cell'
-require_job_pattern "$ci" 'determinism-matrix' \
-  '^[[:space:]]*(- )?run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci-release --cargo-profile release --no-tests=fail$' \
-  'record the release blob round trip in every determinism cell'
-require_job_pattern "$ci" 'determinism-matrix' 'OCE_ROUND_TRIP_OUT: target/determinism/round-trip$' \
-  'write the blob round-trip recording into the uploaded cell directory'
-require_job_literal "$ci" 'determinism-matrix' \
-  'test "$(ls target/determinism/round-trip | wc -l | tr -d '"' '"')" = 92' \
-  'refuse a determinism cell whose round-trip recording is not 46 blobs and 46 traces'
-require_job_literal "$ci" 'determinism-matrix' \
-  'cargo nextest archive -p oce-conformance --test blob_round_trip --locked --archive-file target/determinism/blob-round-trip.tar.zst' \
-  'archive each architecture'"'"'s debug blob round trip for the fan-in'
-for pair in 'x86_64-debug determinism-x86_64-release' 'x86_64-debug determinism-aarch64-debug' \
-  'x86_64-debug determinism-aarch64-release'; do
-  require_job_literal "$ci" 'determinism-compare' \
-    "diff -rq determinism-${pair% *}/round-trip ${pair#* }/round-trip" \
-    "compare the determinism-${pair% *} and ${pair#* } round-trip recordings"
-done
-require_job_literal "$ci" 'determinism-compare' \
-  'export OCE_ROUND_TRIP_EXPECT="$PWD/target/determinism/determinism-x86_64-debug/round-trip"' \
-  'replay the x86_64 debug round-trip recording on each architecture'
-require_job_literal "$ci" 'determinism-compare' \
-  'cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/blob-round-trip.tar.zst"' \
-  'replay the recording through this architecture'"'"'s own archived suite'
-require_job_pattern "$ci" 'determinism-compare' '^[[:space:]]*--workspace-remap \. --profile ci --no-tests=fail$' \
-  'the round-trip replay hard-fails when its suite is absent'
+require_determinism_fan_in "$ci"
 require_job_needs "$ci" 'blob-round-trip-wasm' 'determinism-matrix'
 require_job_pattern "$ci" 'blob-round-trip-wasm' '^    runs-on:[[:space:]]*ubuntu-latest[[:space:]]*$' \
   'the wasm32 leg runs on the x86_64 runner'
@@ -743,7 +875,8 @@ require_job_order "$ci" 'blob-round-trip-wasm' 'run: rustup target add wasm32-wa
 require_job_order "$ci" 'blob-round-trip-wasm' 'run: bash scripts/ci/install-wasmtime.sh target/wasmtime-bin' \
   'cargo nextest run -p oce-conformance --test blob_round_trip --target wasm32-wasip1' \
   'the wasm32 leg installs wasmtime before running under it'
-# Platform observation cells (issue #394): macOS arm64 portable snapshot and Windows std build.
+# Platform observation cell (issue #394): macOS arm64 portable snapshot. The Windows std build is
+# release-gate.yml's (below).
 require_job_pattern "$ci" 'portable-snapshot-macos' '^    runs-on:[[:space:]]*macos-15[[:space:]]*$' \
   'the macOS portable-snapshot cell runs on macos-15'
 require_job_pattern "$ci" 'portable-snapshot-macos' 'test "\$\(uname -s\)-\$\(uname -m\)" = Darwin-arm64' \
@@ -773,18 +906,6 @@ require_job_pattern "$ci" 'portable-snapshot-compare' '^[[:space:]]*for linux in
 require_job_literal "$ci" 'portable-snapshot-compare' \
   'if cmp -s "$linux/target-state-debug.bin" macos-arm64/target-state-debug.bin; then' \
   'require the macOS target-bound state bytes to differ from Linux'
-require_job_pattern "$ci" 'std-build-windows' '^    runs-on:[[:space:]]*windows-latest[[:space:]]*$' \
-  'the Windows cell runs on windows-latest'
-require_job_pattern "$ci" 'std-build-windows' '^[[:space:]]*(- )?run: cargo build --workspace --locked$' \
-  'the Windows cell builds the workspace'
-require_job_pattern "$ci" 'std-build-windows' \
-  '^[[:space:]]*cargo nextest run --workspace --locked --profile ci --no-tests=fail$' \
-  'the Windows cell runs the workspace suite with hard-fail-on-zero-tests'
-require_job_literal "$ci" 'std-build-windows' \
-  "-E 'not (binary_id(oce-conformance::strict_bits) | binary_id(oce-conformance::per_block_reals_transcendental) | binary_id(oce-conformance::per_block_reals_sources_transcendental) | binary_id(oce-conformance::per_block_psychrometrics) | binary_id(oce-conformance::per_block_utilities))'" \
-  'the Windows cell excludes exactly the strict-bit binaries'
-require_job_pattern "$ci" 'std-build-windows' '^[[:space:]]*(- )?run: test -s target/nextest/ci/junit\.xml$' \
-  'the Windows cell refuses an absent or empty nextest report'
 # Per-PR crate suites outside the determinism subset (issue #370).
 require_job_pattern "$ci" 'crate-tests' 'tool:[[:space:]]*nextest@0\.9\.143' \
   'pinned cargo-nextest install for the crate suites'
@@ -817,8 +938,6 @@ require_job_pattern "$ci" 'no-std-build' '^[[:space:]]*(- )?run: cargo test -p o
   'run the firmware image on the host against every golden'
 require_job_order "$ci" 'no-std-build' "$no_std_targets" 'run: bash scripts/ci/check-no-std.sh' \
   'the bare-metal cell installs its targets before building for them'
-require_job_order "$ci" 'gate' "$no_std_targets" 'run: bash .agents/gate.sh' \
-  'the executed gate script has the no_std targets it builds for'
 # Documentation checks under CI OK (issue #377); docs-pages.yml is path-filtered and not required.
 require_job_pattern "$ci" 'docs' '^[[:space:]]*(- )?run: bash scripts/docs/install-mdbook\.sh target/mdbook-bin$' \
   'install the checksum-pinned mdBook'
@@ -847,7 +966,9 @@ require_pr_trigger_only "$ci"
 refuse_pattern "$ci" 'continue-on-error' \
   'continue-on-error, which lets a failing job or step read as green'
 require_static_step_conditions "$ci"
-# The lane machinery is itself tested on every PR, and the moved gate (light) steps still run.
+# The lane machinery is itself tested on every PR, and the facade contract and Quickstart run in
+# their own job. Nothing in pr-gate.yml executes .agents/gate.sh: release-gate.yml's `gate (full)`
+# does, on every merge into `development` (below).
 require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/ci/test-classify-changes\.sh$' \
   'run the lane classifier fixtures on every PR'
 require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: python3 scripts/ci/test_ci_ok\.py$' \
@@ -862,8 +983,6 @@ require_job_pattern "$ci" 'facade-contract' '^[[:space:]]*(- )?run: python3 scri
   'run the facade compiler diagnostic controls'
 require_job_pattern "$ci" 'facade-contract' '^[[:space:]]*(- )?run: bash \.github/scripts/check-quickstart-runs\.sh$' \
   'execute the Quickstart'
-require_job_pattern "$ci" 'gate' '^[[:space:]]*(- )?run: bash \.agents/gate\.sh$' \
-  'gate (light) executes the gate script'
 # Strict-bit cells and their fan-in.
 require_job_pattern "$ci" 'strict-bit-matrix' \
   '^[[:space:]]*(- )?run: bash scripts/ci/strict-bits-cell\.sh "\$CELL_ARCH" "\$CELL_CODEGEN"$' \
@@ -888,24 +1007,40 @@ require_job_pattern "$ci" 'strict-bit-compare' 'test -s target/strict-bits/recei
 require_pattern "scripts/ci/strict-bits-cell.sh" 'uname -m' \
   'strict-bit cells refuse a host of the wrong architecture'
 
-# Heavy gate runs on release PRs, manual dispatch, and scheduled development-tip checks.
+# Heavy gate runs on release PRs, on every push to `development` and `main`, on manual dispatch,
+# and on scheduled development-tip checks.
 require_pattern "$release" 'schedule:' 'scheduled heavy gate'
 require_pattern "$release" 'cron:' 'cron entry'
 require_pattern "$release" 'workflow_dispatch:' 'manual heavy gate'
 require_pattern "$release" '(CHECKOUT_REF:.*development|ref:.*development)' 'scheduled checkout targets development tip'
 require_pattern "$release" 'ref:.*(CHECKOUT_REF|development)' 'checkout uses the scheduled development ref'
+# The run after each merge (issue #502): the push trigger names `development`, a push run checks out
+# the pushed commit, every checkout takes the one pinned ref, and the concurrency group never
+# cancels a push run in progress (GitHub then keeps the run in progress and the newest waiting one).
+require_release_push_branches "$release"
+require_pattern "$release" "CHECKOUT_REF:.*github\\.event_name == 'push' && github\\.sha" \
+  'a push run checks out the pushed commit in every job'
+require_pinned_checkout_ref "$release"
+require_pattern "$release" '^  group: \$\{\{ github\.workflow \}\}-\$\{\{ github\.event_name \}\}-\$\{\{ github\.ref \}\}$' \
+  'one concurrency group per event and ref, so pushes to development queue behind each other'
+require_pattern "$release" "^  cancel-in-progress: \\\$\\{\\{ github\\.event_name == 'pull_request' \\}\\}\$" \
+  'only a superseded release-PR run is cancelled; a push run in progress always finishes'
 require_pattern "$release" 'nextest@0\.9\.143' 'release gate pinned cargo-nextest 0.9.143 install'
-require_pattern "$release" 'cargo nextest run --workspace --locked --profile ci --no-tests=fail' \
+# Scoped to the `test-suite` job: the determinism cells and the Windows cell in this file carry
+# look-alike lines that must not stand in for the full suite's.
+require_job_pattern "$release" 'test-suite' \
+  'cargo nextest run --workspace --locked --profile ci --no-tests=fail$' \
   'debug nextest with hard-fail-on-zero-tests'
-require_pattern "$release" 'cargo nextest run --workspace --locked --profile ci-release --cargo-profile release --no-tests=fail' \
+require_job_pattern "$release" 'test-suite' \
+  'cargo nextest run --workspace --locked --profile ci-release --cargo-profile release --no-tests=fail$' \
   'release-codegen nextest with hard-fail-on-zero-tests'
-require_pattern "$release" 'target/nextest/\{ci,ci-release\}/junit\.xml' \
+require_job_pattern "$release" 'test-suite' 'target/nextest/\{ci,ci-release\}/junit\.xml' \
   'release gate clears cached nextest JUnit reports'
-require_pattern "$release" 'for profile in ci ci-release;' \
+require_job_pattern "$release" 'test-suite' 'for profile in ci ci-release;' \
   'release gate requires the complete nextest report set'
-require_pattern "$release" 'test -s "target/nextest/\$profile/junit\.xml"' \
+require_job_pattern "$release" 'test-suite' 'test -s "target/nextest/\$profile/junit\.xml"' \
   'release gate refuses an absent or empty nextest report'
-require_pattern "$release" 'cargo test --workspace --doc --locked' 'doctest gate'
+require_job_pattern "$release" 'test-suite' 'cargo test --workspace --doc --locked' 'doctest gate'
 refuse_pattern "$release" 'rustup[[:space:]]+toolchain[[:space:]]+install|nightly' \
   'release gate installs no nightly toolchain; the workspace builds on its pinned stable'
 require_pattern "$release" 'cargo-machete' 'release gate installs cargo-machete'
@@ -925,6 +1060,18 @@ require_job_pattern "$release" 'ci-ok' 'toJSON\(needs\)' \
   'release gate CI OK aggregate inspects every needed result'
 require_ci_ok_covers_every_job "$release"
 require_no_job_conditions "$release"
+refuse_pattern "$release" 'continue-on-error' \
+  'continue-on-error, which lets a failing job or step read as green'
+require_static_step_conditions "$release"
+# The determinism matrix in all four native cells, with the cross-architecture and the cross-codegen
+# halves of its fan-in, and the Windows cell (issue #502: the release-codegen cells, the
+# debug-against-release comparisons and the Windows cell moved here from pr-gate.yml).
+require_native_cell_matrix "$release" 'determinism-matrix' 'debug, release'
+require_determinism_cells "$release"
+require_release_codegen_determinism_cells "$release"
+require_determinism_fan_in "$release"
+require_cross_codegen_fan_in "$release"
+require_windows_cell "$release"
 require_job_order "$release" 'gate' "$no_std_targets" 'run: bash .agents/gate.sh full' \
   'the executed full gate script has the no_std targets it builds for'
 # `gate.sh full` runs the blob round trip's wasm32 leg and fails closed without its runtime.

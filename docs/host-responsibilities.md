@@ -522,6 +522,7 @@ The structural ingest paths above are bounded and return typed diagnostics rathe
 `../TESTING.md` requires new ingest code to assert the specific `DiagCode` or error variant rather
 than "an error occurred."
 
-The tests cited on this page live in `oce-api` and run per PR on x86_64 and arm64 under debug and
-release codegen. The full workspace and doctests still wait for the release gate. See
+The tests cited on this page live in `oce-api` and run per PR on x86_64 and arm64 in debug
+codegen; under release codegen they run in the release gate on every merge into `development`, and
+locally in `bash .agents/gate.sh`. The full workspace and doctests still wait for the release gate. See
 [`ci-and-the-gate.md`](ci-and-the-gate.md) for the exact split.
