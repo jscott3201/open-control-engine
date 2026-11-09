@@ -32,10 +32,11 @@ EXPECTED_PRIVATE = {
     "oce-bless",
     "oce-conformance",
     "oce-firmware-link",
+    "oce-replay",
 }
 
 
-# Independent raw-byte golden from release.yml as re-pinned for GitHub #449, not read from the
+# Independent raw-byte golden from release.yml as re-pinned for issue #445, not read from the
 # candidate or checker.
 # Non-ASCII bytes are escaped explicitly; line endings and the final LF are pinned.
 APPROVED_WORKFLOW = b"""# release \xe2\x80\x94 the crates.io publish gate.
@@ -56,9 +57,10 @@ APPROVED_WORKFLOW = b"""# release \xe2\x80\x94 the crates.io publish gate.
 # release). Enabling "Required reviewers" there adds a second human gate.
 #
 # All 10 publishable members ship in one dependency-ordered
-# `cargo publish --workspace` (Rust 1.90+). Three private members are skipped
-# by their own `publish = false`: `oce-bless`, `oce-conformance` and the
-# firmware image `oce-firmware-link` (GitHub #449). crates.io
+# `cargo publish --workspace` (Rust 1.90+). Four private members are skipped
+# by their own `publish = false`: `oce-bless`, `oce-conformance`, the
+# firmware image `oce-firmware-link` (GitHub #449) and the leverage crate
+# `oce-replay` (issue #445). crates.io
 # rejects re-publishing an existing version, so a repeat dispatch is a
 # no-op-or-fail, never a clobber.
 #
@@ -111,7 +113,7 @@ jobs:
       - name: tests
         run: cargo test --workspace --locked
 
-      - name: package, feature, and publication contract (10 publishable, 3 private)
+      - name: package, feature, and publication contract (10 publishable, 4 private)
         run: python3 scripts/package_policy/validate.py
 
       - name: publish dry-run (workspace, dependency-ordered)
@@ -400,7 +402,7 @@ class WorkflowApprovalControls(unittest.TestCase):
             report = self.run_policy(workflow)
             self.assertEqual(report[0], 0)
             self.assertEqual(report[2], "")
-            self.assertIn("PASS (13 members; 10 publishable; 3 private)", report[1])
+            self.assertIn("PASS (14 members; 10 publishable; 4 private)", report[1])
             reports.append(report)
         self.assertEqual(reports, [reports[0]] * 3)
 

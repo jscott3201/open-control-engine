@@ -209,7 +209,10 @@ executed under QEMU nightly, and every engine PR replays one recorded run of the
 bit for bit on x86_64, arm64 and `wasm32-wasip1`. v0.3.0 (M1a) made the engine pure and moved the
 per-PR gate to native x86_64 and arm64 cells under one required `CI OK` status. Next come M2 (the
 authoring layer) and M3 (the verification product), in parallel; M3's first engine change, the
-facade's slot-indexed execute entry that replay drives, is in. See [CHANGELOG.md](CHANGELOG.md).
+facade's slot-indexed execute entry, is in, and so is the first leverage crate built on it:
+`oce-replay`, which drives the engine frame by frame from recorded or scripted inputs (columnar
+arrays, a bounded CSV reader, step lists) under an explicit missing-sample policy and records a
+columnar, bit-exact trace. See [CHANGELOG.md](CHANGELOG.md).
 
 Work is planned as GitHub milestones and cut into issues. Each milestone has a tracking issue that
 lists the order, the hard dependencies and the gate that closes it. The engine milestones, in order:
@@ -219,7 +222,7 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 | **M1a** Portable core: cleanup | Pure `Engine`, dead crates and ledgers removed, two CI lanes, native determinism and strict-bit matrices | Released as v0.3.0 |
 | **M1b** Portable core: `no_std` | Core four build `no_std + alloc`; math through `libm`; hash-free core; the **OCEB** compiled-schedule blob (encoder in `oce-api`, decoder in `oce-graph`, byte-stable across architectures); a `no_std` execution entry that never links `oce-cxf` or `oce-api`; a bare-metal gate cell with a size budget over `thumbv7em`, `riscv32imac` and `wasm32`; QEMU execution nightly | Released as v0.4.0 |
 | **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | Next, in parallel with M3 |
-| **M3** Verification product | Canonical content id, vector format v2, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode | Next, in parallel with M2 |
+| **M3** Verification product | Canonical content id, vector format v2, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode, on the `oce-replay` historical replay crate | In progress: `oce-replay` is in; in parallel with M2 |
 | **M4** WASM | `oce-wasm` over `oce-api`, a TypeScript package, a browser demo that replays vectors without a server, a tracked `.wasm` size budget | Planned, in parallel with M5 |
 | **M5** Python | `oce-py` wheels (PyO3, abi3) over the same surface; replay and receipts from a notebook | Planned, in parallel with M4 |
 | **M6** Reference host | `oce-host`: cadence, staleness limits, the non-finite policy, degraded mode and safe-state outputs as tested code; BOPTEST client and a Docker runtime | Planned, in parallel with M7 |
@@ -228,7 +231,7 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 | **M9** BACnet device image | One `no_std` image that is a BACnet device: compiled sequence inside, boundary points as objects, MS/TP or B/IP outside, over rusty-bacnet | Planned |
 
 The three one-page design passes M3 waits on are written: the
-[historical replay API](docs/design/replay.md), the
+[historical replay API](docs/design/replay.md) (built as `crates/leverage/oce-replay`), the
 [CDL §12 commissioning verifier](docs/design/commissioning.md) and
 [`oce-diff`](docs/design/diff.md), beside the [M2 authoring layer](docs/design/authoring-layer.md).
 M2's engine prerequisite is in: `oce_api::class_ports` names every port of a configured block, and

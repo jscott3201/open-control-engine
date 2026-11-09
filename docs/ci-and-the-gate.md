@@ -61,9 +61,11 @@ facade contract and Quickstart, and the
 its `portable snapshot comparison` fan-in and `std build and nextest (Windows x86_64, debug)`.
 The **leverage lane** is one job,
 `leverage lane`, for the crates under [`crates/leverage/`](../crates/leverage/README.md): the
-layout and `oce-api`-only dependency rule, then fmt, clippy `-D warnings`, rustdoc `-D warnings`,
-nextest and cargo-machete per member (`scripts/ci/leverage-members.sh lane`; with no members it
-prints `no leverage crates yet`).
+layout and `oce-api`-only dependency rule (`oce-bless` is allowed as a dev-dependency only, for the
+golden switch; normal and build edges and dev edges are read separately), then fmt, clippy
+`-D warnings`, rustdoc `-D warnings`, nextest and cargo-machete per member
+(`scripts/ci/leverage-members.sh lane`; with no members it prints `no leverage crates yet`). The
+first member is `oce-replay`.
 
 The first job, `classify changed paths`, lists what the PR changes with plain git — the tested merge
 commit against its base parent, renames as a deletion plus an addition — and classifies it with
@@ -87,7 +89,7 @@ nor the leverage allowlist counts as an engine change.
 | Change class | Jobs that run | Jobs skipped | Expected wall-clock |
 | --- | --- | --- | --- |
 | docs-only | `classify changed paths`, fmt, file-size cap, no-secret scan, docs, gate behavior fixtures, the package/authority/product contract, `CI OK` | the determinism lane, `leverage lane`, `gate (light)` | under 3 minutes (2m40s in run 42476084422) |
-| leverage-only (`crates/leverage/**`, optionally with docs) | the docs-only set plus `leverage lane` | the determinism lane, `gate (light)` | about 1 minute with no leverage crates (56s in run 42476081207); plus each member's build and tests |
+| leverage-only (`crates/leverage/**`, optionally with docs) | the docs-only set plus `leverage lane` | the determinism lane, `gate (light)` | about 1 minute before the first leverage crate (56s in run 42476081207), plus each member's build and tests (`oce-replay` builds the facade and runs its suite) |
 | engine (any other path) | every job except `gate (light)` | `gate (light)` | about 15–17 minutes (16m52s in run 42476086689; a release determinism cell is the long pole) |
 | gate scripts, workflows, tool config | every job | none | about 15–17 minutes (15m21s in run 42476052220; `gate (light)` runs beside the long pole) |
 
@@ -536,8 +538,9 @@ tag/version match, fmt, clippy, a workspace `cargo test`, the package validator 
 `cargo publish --workspace --locked --dry-run` — with no token and no publish, so a tag can be
 re-cut safely (see [release.yml](../.github/workflows/release.yml), `verify` job). Publishing is a
 separate manual `workflow_dispatch` into the `release` GitHub Environment. Cargo's workspace
-selection includes the 10 publishable members and skips the three members with `publish = false`:
-`oce-bless`, `oce-conformance` and the firmware image `oce-firmware-link`.
+selection includes the 10 publishable members and skips the four members with `publish = false`:
+`oce-bless`, `oce-conformance`, the firmware image `oce-firmware-link` and the leverage crate
+`oce-replay`.
 No checked-in record pins those sets any more: the guards are each crate's `publish` flag, the
 byte pin on `release.yml` (whose comment names the split) and review.
 

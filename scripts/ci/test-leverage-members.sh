@@ -54,6 +54,27 @@ case_tree unlisted-leverage-sibling fail oce-py \
 case_tree allowed-name-prefix-lookalike fail oce-host \
   $'oce-host v0.2.0 (crates/leverage/oce-host)\noce-api-internal v0.2.0 (crates/oce-api-internal)' \
   'depends directly on oce-api-internal'
+# oce-bless (the golden-bless switch) is allowed as a dev-dependency only (authoring note decision
+# 19, issue #445): in the dev listing it passes; as a normal dependency, or under a lookalike name,
+# it fails, and the dev listing still refuses an engine crate.
+case_tree bless-as-dev-dependency pass oce-replay \
+  $'oce-replay v0.4.0 (crates/leverage/oce-replay)\nallocation-counter v0.8.1\noce-bless v0.4.0 (crates/oce-bless)' \
+  '' --dev oce-replay
+case_tree bless-as-normal-dependency fail oce-replay \
+  $'oce-replay v0.4.0 (crates/leverage/oce-replay)\noce-api v0.4.0 (crates/oce-api)\noce-bless v0.4.0 (crates/oce-bless)' \
+  'leverage crate oce-replay depends directly on oce-bless;' oce-replay
+case_tree bless-as-build-dependency fail oce-replay \
+  $'oce-replay v0.4.0 (crates/leverage/oce-replay)\n[build-dependencies]\noce-bless v0.4.0 (crates/oce-bless)' \
+  'leverage crate oce-replay depends directly on oce-bless;' oce-replay
+case_tree dev-flag-after-allowed-names pass oce-replay \
+  $'oce-replay v0.4.0 (crates/leverage/oce-replay)\noce-bless v0.4.0 (crates/oce-bless)\noce-host v0.4.0 (crates/leverage/oce-host)' \
+  '' oce-host oce-replay --dev
+case_tree engine-crate-as-dev-dependency fail oce-replay \
+  $'oce-replay v0.4.0 (crates/leverage/oce-replay)\noce-bless v0.4.0 (crates/oce-bless)\noce-graph v0.4.0 (crates/oce-graph)' \
+  'depends directly on oce-graph (dev)' --dev oce-replay
+case_tree bless-lookalike-as-dev-dependency fail oce-replay \
+  $'oce-replay v0.4.0 (crates/leverage/oce-replay)\noce-bless-extra v0.4.0 (crates/oce-bless-extra)' \
+  'depends directly on oce-bless-extra (dev)' --dev oce-replay
 case_tree tree-of-another-crate fail oce-host 'oce-blocks v0.2.0 (crates/oce-blocks)' \
   'not at the leverage member oce-host'
 case_tree empty-tree fail oce-host '' 'no cargo tree output'
