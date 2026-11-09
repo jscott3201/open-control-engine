@@ -1,7 +1,8 @@
 //! The permutation classes (authoring note, "Determinism tests"; the composite subset's ordering
 //! and identity contract): each permutation of the model is emitted, loaded and compared with
-//! what the contract says for that surface. Nothing is sorted, so every authored order that
-//! bears on identity reaches the bytes.
+//! what the contract says for that surface. Nothing is sorted, so every authored order reaches
+//! the bytes; the canonical content id (GitHub #470) is independent of authored order, so no
+//! permutation here moves it.
 
 mod support;
 
@@ -41,18 +42,18 @@ fn the_unpermuted_sequence_restores_into_itself() {
 }
 
 #[test]
-fn block_order_moves_the_bytes_and_the_identity() {
+fn block_order_moves_the_bytes_but_not_the_identity() {
     let base = base();
     let (base_bytes, base_engine) = loaded(&base);
     let mut swapped = base.clone();
     swapped.blocks.swap(0, 1);
     let (bytes, engine) = loaded(&swapped);
     assert_ne!(bytes, base_bytes);
-    assert_ne!(identity(&engine), identity(&base_engine));
+    assert_eq!(identity(&engine), identity(&base_engine));
 }
 
 #[test]
-fn boundary_order_moves_the_bytes_and_the_identity() {
+fn boundary_order_moves_the_bytes_but_not_the_identity() {
     let base = base();
     let (base_bytes, base_engine) = loaded(&base);
     for permute in [
@@ -63,12 +64,12 @@ fn boundary_order_moves_the_bytes_and_the_identity() {
         permute(&mut permuted);
         let (bytes, engine) = loaded(&permuted);
         assert_ne!(bytes, base_bytes);
-        assert_ne!(identity(&engine), identity(&base_engine));
+        assert_eq!(identity(&engine), identity(&base_engine));
     }
 }
 
 #[test]
-fn a_direct_target_permutation_moves_the_export_but_not_executable_compatibility() {
+fn a_direct_target_permutation_moves_the_export_but_not_the_identity_or_executable_compatibility() {
     // The first block output with two targets; swapping them permutes that source's target array
     // only. (A boundary input's fan-out is normalized by boundary lowering instead.)
     let base = base();
@@ -90,7 +91,7 @@ fn a_direct_target_permutation_moves_the_export_but_not_executable_compatibility
     permuted.connections.swap(first, second);
     let (bytes, mut engine) = loaded(&permuted);
     assert_ne!(bytes, base_bytes);
-    assert_ne!(identity(&engine), identity(&base_engine));
+    assert_eq!(identity(&engine), identity(&base_engine));
     assert!(restores(&base_engine, &mut engine));
 }
 

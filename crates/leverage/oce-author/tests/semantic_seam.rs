@@ -1,6 +1,6 @@
 //! The CDL §7.17 seam (authoring note, test plan; decisions 2 and 21): filling and mutating every
 //! `SemanticPoint` field changes the emitted bytes only in the boundary `unit` attribute, and the
-//! loaded executable — the compiled-schedule blob, apart from the export content id it records —
+//! loaded executable — the compiled-schedule blob, apart from the canonical content id it records —
 //! is identical, so semantics never reach execution.
 
 mod support;
@@ -74,7 +74,7 @@ fn a_unit_change_moves_only_unit_lines_and_not_the_executable() {
         assert!(a.trim().starts_with("\"S231:unit\": \"K\""), "{a}");
         assert!(b.trim().starts_with("\"S231:unit\": \"degC\""), "{b}");
     }
-    // The blob records the export content id, which carries `unit`; everything else in the
+    // The blob records the canonical content id, which carries boundary `unit`; everything else in the
     // blob — classes, blocks, parameters, order, connections, boundary I/O — is identical.
     let kelvin_engine = load_clean(kelvin.as_bytes());
     let celsius_engine = load_clean(celsius.as_bytes());

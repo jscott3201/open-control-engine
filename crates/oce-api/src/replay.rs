@@ -180,7 +180,7 @@ pub(crate) struct ReplayData {
 ///     -> Result<CompletedFrame, Box<dyn std::error::Error>>
 /// {
 ///     let record = ReplayRecord::from_bytes(approved_bytes)?;
-///     record.check_compatible(&CompatibilityDescriptor::current(None)?)?;
+///     record.check_compatible(&CompatibilityDescriptor::current(None))?;
 ///     let inputs: Vec<_> = record.inputs().iter()
 ///         .map(|(path, value)| (path.as_str(), value.clone())).collect();
 ///     let plan = isolated.prepare_frame(record.time(), &inputs)?;
@@ -198,7 +198,7 @@ pub struct ReplayRecord {
 impl CompletedFrame {
     /// Encode this accepted receipt without executing again or consulting current engine state.
     ///
-    /// Captures current public descriptor facts with `export:none` (no export is performed).
+    /// Captures current public descriptor facts with `content:none` (no content id is captured).
     /// Retained inputs, outputs, warnings, time and placement belong to this receipt, even after
     /// reload/resume/restore. Sequence is deliberately omitted. Encoding sizes before allocation
     /// and validates its result with the same bounded canonical decoder used by hosts.
@@ -207,9 +207,7 @@ impl CompletedFrame {
     /// Returns [`ReplayError`] for an oversized/unencodable record. Execution already succeeded:
     /// this is a record-capture failure, not a refused frame. No engine mutation occurs.
     pub fn replay_record(&self) -> Result<ReplayRecord, ReplayError> {
-        let descriptor = CompatibilityDescriptor::current(None)
-            .expect("absent export is always complete")
-            .to_string();
+        let descriptor = CompatibilityDescriptor::current(None).to_string();
         let bytes = crate::replay_codec::encode(self, &descriptor)?;
         ReplayRecord::from_bytes(&bytes)
     }
@@ -318,9 +316,7 @@ impl ReplayRecord {
     /// # Errors
     /// First typed mismatch in the order above. Counts differ at the common-length index.
     pub fn verify(&self, completed: &CompletedFrame) -> Result<(), ReplayError> {
-        self.check_compatible(
-            &CompatibilityDescriptor::current(None).expect("absent export is always complete"),
-        )?;
+        self.check_compatible(&CompatibilityDescriptor::current(None))?;
         if completed.target_bound
             != matches!(self.portability(), StatePortability::TargetBound { .. })
         {

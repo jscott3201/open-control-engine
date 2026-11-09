@@ -48,7 +48,7 @@ fn portable_and_target_bound_vectors_repeat_and_match_the_state_placement_policy
                 portable
             );
             record
-                .check_compatible(&CompatibilityDescriptor::current(None).unwrap())
+                .check_compatible(&CompatibilityDescriptor::current(None))
                 .unwrap();
             record.verify(&receipt).unwrap();
             if let Some(previous) = &previous {
@@ -82,7 +82,7 @@ fn foreign_matrix_record_refuses_before_any_engine_mutation_when_supplied() {
         .unwrap();
     let before = engine.state_snapshot().unwrap();
     assert_eq!(
-        record.check_compatible(&CompatibilityDescriptor::current(None).unwrap()),
+        record.check_compatible(&CompatibilityDescriptor::current(None)),
         Err(ReplayError::TargetMismatch)
     );
     assert_eq!(

@@ -164,7 +164,7 @@ seeded threads and byte-compares every output.
 
 `crates/oce-api/tests/fixtures/blob/` holds one `OCEB` blob per G36 catalog fixture (46) and
 `class_signatures.tsv`, the per-class signature hash of every registered class (GitHub #400).
-`tests/blob_goldens.rs` re-encodes and compares them byte for byte. Three kinds of change move them,
+`tests/blob_goldens.rs` re-encodes and compares them byte for byte. Four kinds of change move them,
 deliberately:
 
 - **A workspace version bump.** The header carries the encoder's engine version and the decoder
@@ -174,10 +174,24 @@ deliberately:
   flag of any class changes `class_signatures.tsv`, and every blob that uses the class. A derived
   default's formula text does not.
 - **A format change**, which also bumps `FORMAT_VERSION` in `oce_graph::blob`.
+- **A canonical content id change.** The header carries the loaded model's `oce:canon1:` digest
+  (format 2, GitHub #470), so a change to the id's encoding or meaning (a `canon2`, a new graph
+  record) or to anything it covers moves every affected blob header and `restamp.tsv` together.
 
 Regenerate with `OCE_BLESS_BLOB=1 cargo test -p oce-api --test blob_goldens --locked`, run it again
 without the switch, and say in the PR which files moved and why. The blob decoder lives in
 `oce-graph` (`no_std`), so a decoder change also has to pass the `no-std-build` mirror.
+
+## The content-id re-stamp table moves with the canonical ids
+
+`crates/oce-api/tests/fixtures/content_id/restamp.tsv` maps every G36 corpus document's retired
+`cxf:fnv1a128:` export tag to its canonical content id (GitHub #470), in the format the library's
+re-stamp consumes. Its owner test, `crates/oce-api/tests/content_id_restamp.rs`, regenerates the
+whole file and compares it; regenerate with
+`OCE_BLESS=1 cargo nextest run -p oce-api --test content_id_restamp`, run it again without the
+switch, and say in the PR which ids moved and why. The old column is a migration record only: it
+is copied from `g36_export_content.txt` and never gains a new kind of id; only the new column
+moves, and only when a canonical id does.
 
 ## The class-ports golden moves with port names, descriptions and parameters
 

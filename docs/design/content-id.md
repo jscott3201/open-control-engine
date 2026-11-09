@@ -562,6 +562,15 @@ claim by test rather than by this argument (see the test plan).
   `ExportReport::content_id_complete` and the comment explaining why `content_id` is not pinned
   are replaced by pins of `Engine::content_id` and `ExportReport::complete`.
 
+*Amended 2026-11-09 (implementation, GitHub #474).* Two facade additions beyond the list above:
+`Engine::canonical_content_bytes() -> Result<Vec<u8>, OcError>` returns the `OCECANON` bytes the id
+hashes, versioned with the id text (`canon1`) and intended for recomputing the SHA-256 or for
+diagnostics; no decoder is provided or promised. `ContentIdError`, freed by `ExportIncomplete`,
+now names the minting refusals (`UnnamedBlock`, `UnregisteredClass`, `UnknownEnumClass`,
+`MalformedModel`, `TooLarge`), carried as the new `OcError::ContentId`; only `UnnamedBlock` is a
+hand-built model's "no id", and `compile_blob` refuses on any other. `ContentId` also has a checked
+`parse`/`FromStr` of its exact text (`ContentIdParseError`), with no string conversion.
+
 **Blob.**
 
 - The 32-byte content-id field holds the SHA-256 digest bytes in output order, with no padding,

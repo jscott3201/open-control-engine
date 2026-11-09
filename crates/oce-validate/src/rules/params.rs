@@ -30,6 +30,7 @@ pub(crate) fn check_block_params(model: &ModelGraph, diags: &mut Vec<Diagnostic>
                 );
             }
         }
+        super::params_element_names::check_element_name_spelling(blk, diags);
         // Engine-wide finiteness gate (issue #362): runs for every block, registered or not.
         let has_non_finite = super::params_finite::check_finite_params(blk, diags);
         let Some(entry) = lookup(&blk.class_iri) else {

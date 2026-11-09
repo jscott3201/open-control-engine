@@ -7,11 +7,11 @@
 
 use oce_graph::blob::{self, BlobInput, BlobOutput, BlobSource, content_id_field};
 
-use crate::{Engine, OcError};
+use crate::{ContentId, ContentIdError, Engine, OcError};
 
 /// A compiled-schedule blob for the loaded executable, and the content id it records.
 ///
-/// `bytes` is the canonical `OCEB` format-1 encoding: identical for one loaded executable on every
+/// `bytes` is the canonical `OCEB` format-2 encoding: identical for one loaded executable on every
 /// architecture and codegen profile, decoded by `oce_graph::blob::decode` on a `no_std + alloc`
 /// target built from the same engine version. It carries no run state, no host or architecture
 /// field and no signature; authenticating and transporting it is the host's job.
@@ -20,11 +20,11 @@ use crate::{Engine, OcError};
 pub struct CompiledBlob {
     /// The canonical blob bytes, header to CRC-32C trailer.
     pub bytes: Vec<u8>,
-    /// The facade content id the blob records, `cxf:fnv1a128:<32 hex>` exactly as
-    /// [`crate::ExportReport::content_id_complete`] mints it, or `None` when the export is
-    /// partial (any block deferred from the emitted document) or refused: the blob then records 32
-    /// zero bytes, meaning "no content id".
-    pub content_id: Option<String>,
+    /// The canonical content id the blob records, exactly as [`Engine::content_id`] mints it: its
+    /// 32 SHA-256 digest bytes fill the header's content-id field. Present for every loaded CXF
+    /// document, partial export or not; `None` only for a hand-built model with no id, which the
+    /// blob records as 32 zero bytes. Any other failure to mint the id refuses the blob.
+    pub content_id: Option<ContentId>,
 }
 
 impl Engine {
@@ -41,14 +41,21 @@ impl Engine {
     ///
     /// # Errors
     /// [`OcError::State`] when no model is loaded or parameter edits are pending;
+    /// [`OcError::ContentId`] when the canonical content id cannot be minted for any reason other
+    /// than an unnamed block of a hand-built model (which no CXF load produces, and which records
+    /// "no content id"): a blob from CXF always carries its id;
     /// [`OcError::Blob`] when the executable cannot be encoded (for example two boundary outputs
     /// with one path, or a non-finite parameter) or its encoding does not decode.
     pub fn compile_blob(&self) -> Result<CompiledBlob, OcError> {
         self.capture_preconditions()?;
-        let content_hash = self
-            .export_cxf()
-            .ok()
-            .and_then(|report| report.complete_content_hash());
+        // Only a hand-built model, with an unnamed block, has no id; no CXF load produces one. Any
+        // other minting failure is an encoder defect and refuses the blob, so a blob loaded from
+        // CXF never ships without its id (the registry fetches by it).
+        let content_id = match self.content_id() {
+            Ok(id) => Some(id),
+            Err(OcError::ContentId(ContentIdError::UnnamedBlock { .. })) => None,
+            Err(error) => return Err(error),
+        };
 
         let inputs: Vec<BlobInput<'_>> = self
             .io
@@ -81,15 +88,14 @@ impl Engine {
             model: &self.model,
             blocks: &self.blocks,
             schedule: &self.schedule,
-            content_id: content_hash.map(|hash| content_id_field(Some(hash))),
+            content_id: content_id
+                .as_ref()
+                .map(|id| content_id_field(Some(*id.digest()))),
             inputs: &inputs,
             outputs: &outputs,
         })?;
         blob::decode(&bytes)?;
-        Ok(CompiledBlob {
-            bytes,
-            content_id: content_hash.map(|hash| format!("cxf:fnv1a128:{hash:032x}")),
-        })
+        Ok(CompiledBlob { bytes, content_id })
     }
 
     /// The loaded executable's raw state words, borrowed: every stateful block's words in the
