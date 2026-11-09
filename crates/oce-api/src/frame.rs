@@ -1,31 +1,19 @@
 //! Complete input preparation and one in-place HostTick transition with an owned outcome.
+//!
+//! The HostTick v1 rules themselves (time checks, per-input type/non-finite/domain checks, the
+//! accepted-frame sequence, staging, evaluation and the previous-time update) live once in the core
+//! frame driver, [`oce_graph::frame`], which the `no_std` blob entry calls too. This module keeps
+//! what needs names or `std`: key resolution and the unknown/duplicate/missing refusals, the
+//! prepared plan with its incarnation token, load and pending-edit preconditions, the
+//! durable-restore window, and the owned [`CompletedFrame`] with its `String` diagnostics.
 
 use std::fmt;
 use std::sync::Arc;
 
+use oce_graph::frame::{FrameDriver, FrameInputs, FrameRefusal, InputSlot};
 use oce_model::{ConnectorId, Value};
 
-use crate::{AssertEvent, Engine, EngineStateError, OcError};
-
-/// The largest accepted frame-time magnitude in model seconds: `f64::MAX / 4` (exactly
-/// `2^1022 · (1 − 2^−53)`), about 4.49e307.
-///
-/// Guarantees for times `t` accepted within `[-MAX_FRAME_TIME_MAGNITUDE, MAX_FRAME_TIME_MAGNITUDE]`:
-///
-/// - **Single differences.** Any difference of two accepted times (one step, or the span since a
-///   timer started) is at most `f64::MAX / 2` before rounding, and so finite after it.
-/// - **Accumulations.** A running sum of rounded steps (an elapsed-time accumulator or a unit-slope
-///   forward-Euler integrator) can round upward past the exact span. With round-to-nearest each
-///   step and each addition gains at most a factor `1 + 2^−53`, so after `n` accumulated steps the
-///   sum is at most `(f64::MAX / 2) · (1 + 2^−53)^(2n)`, finite for every `n` below about `3e15`
-///   steps. The factor-of-two headroom over the exact span is what absorbs that drift; with
-///   `f64::MAX / 2` there was none, and a five-step schedule overflowed.
-///
-/// Nothing bounds model maths applied to time (a slope other than one, a gain): that remains the
-/// model's arithmetic. Frames outside the range are refused with [`OcError::TimeOutOfRange`]
-/// whatever the model contains. UNIX epoch seconds, milliseconds and nanoseconds are all many
-/// orders of magnitude inside it.
-pub const MAX_FRAME_TIME_MAGNITUDE: f64 = f64::MAX / 4.0;
+use crate::{AssertEvent, Engine, EngineStateError, InputDefinition, OcError};
 
 /// One fully resolved complete input submission, owned independently of its caller's buffers.
 ///
@@ -145,6 +133,10 @@ mod commit_tests;
 #[path = "replay_capture_tests.rs"]
 mod replay_tests;
 
+#[cfg(test)]
+#[path = "shared_transition_tests.rs"]
+mod transition_tests;
+
 impl fmt::Debug for PreparedInputFrame {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PreparedInputFrame")
@@ -202,28 +194,36 @@ impl Engine {
     /// Panic, process death, allocation failure, cancellation and concurrency outside the existing
     /// exclusive-borrow guarantee are excluded. No persistence/actuator atomicity is promised.
     pub fn execute_frame(&mut self, frame: PreparedInputFrame) -> Result<CompletedFrame, OcError> {
-        self.check_prepared_frame(&frame)?;
-        // The policy in force now governs, even for a plan prepared under a different one. The
-        // default `Admit` skips the scan entirely.
-        if self.non_finite_input_policy == crate::NonFiniteInputPolicy::Refuse {
-            for (definition, (_, value)) in self.io.frame_definitions.iter().zip(&frame.inputs) {
-                self.check_input_finite(&definition.path, value)?;
-            }
-        }
-        let sequence = self
-            .accepted_frame_sequence
-            .checked_add(1)
-            .ok_or(OcError::FrameSequenceExhausted)?;
-
-        // COMMIT: only infallible operations remain.
-        for (targets, value) in &frame.inputs {
-            for target in targets {
-                self.state.values[target.0 as usize] = value.clone();
-            }
-        }
+        self.check_incarnation(&frame)?;
         let collector = crate::observations::AssertCollector::default();
-        self.transition_host_tick(frame.time, &collector);
-        self.accepted_frame_sequence = sequence;
+        // The core driver rechecks time, then every input against the plan's own targets and the
+        // definitions' domains under the policy in force now (a plan prepared under `Admit` cannot
+        // carry a non-finite value past a switch to `Refuse`), then sequence capacity, and only
+        // then stages, evaluates once and advances the clock and sequence. The incarnation token
+        // binds the plan to these definitions, so its type and domain checks cannot fail here.
+        let planned = PlannedInputs {
+            definitions: &self.io.frame_definitions,
+            inputs: &frame.inputs,
+        };
+        let accepted = FrameDriver {
+            model: &self.model,
+            schedule: &self.schedule,
+            blocks: &self.blocks,
+            state: &mut self.state,
+            prev_t: &mut self.prev_t,
+            sequence: &mut self.accepted_frame_sequence,
+        }
+        .execute(
+            frame.time,
+            &planned,
+            self.non_finite_input_policy,
+            &collector,
+        );
+        let sequence = accepted.map_err(|refusal| self.frame_refusal(refusal))?;
+        // An accepted frame is the first mutation boundary: it closes startup restore.
+        self.durable_restore_ready = false;
+        #[cfg(test)]
+        transition_tests::TRANSITIONS.with(|count| count.set(count.get() + 1));
         Ok(CompletedFrame {
             _generation: frame.generation,
             time: frame.time,
@@ -235,15 +235,15 @@ impl Engine {
                 .zip(frame.inputs)
                 .map(|(definition, (_, value))| (definition.path.clone(), value))
                 .collect(),
-            target_bound: self
-                .blocks
-                .iter()
-                .any(|block| crate::state_manifest::requires_target(block.signature().class_path)),
+            target_bound: oce_graph::frame::target_bound(&self.blocks),
             outputs: self
                 .io
                 .frame_outputs
                 .iter()
-                .map(|(path, id)| (path.clone(), self.state.values[id.0 as usize].clone()))
+                .map(|(path, id)| {
+                    let value = oce_graph::frame::output_value(&self.state, *id);
+                    (path.clone(), value.clone())
+                })
                 .collect(),
             diagnostics: collector.events.into_inner(),
         })
@@ -279,7 +279,7 @@ impl Engine {
     /// Under [`crate::NonFiniteInputPolicy::Refuse`] (recommended for production hosts) every
     /// non-finite Real value, bounded or not, is refused with `InputNonFinite`.
     /// Values are never coerced through projection carriers.
-    /// `|time|` must not exceed [`MAX_FRAME_TIME_MAGNITUDE`] (`TimeOutOfRange`; see its bounds on
+    /// `|time|` must not exceed [`crate::MAX_FRAME_TIME_MAGNITUDE`] (`TimeOutOfRange`; see its bounds on
     /// differences and accumulations); the step from the previous time must be finite too.
     ///
     /// Returns an owned opaque plan, not a completed transition. Borrowed keys are not retained.
@@ -359,19 +359,25 @@ impl Engine {
             return Err(OcError::FrameMissingInput(definitions[index].path.clone()));
         }
         let mut inputs = Vec::with_capacity(definitions.len());
-        for (definition, value) in definitions.iter().zip(values) {
+        for (slot, (definition, value)) in definitions.iter().zip(values).enumerate() {
             let value = value.expect("completeness checked");
             let binding = self
                 .io
                 .input_binding(&definition.path)
                 .expect("schema binding");
-            if !binding.accepts_type(&self.model, value) {
-                return Err(OcError::InputType(definition.path.clone()));
-            }
-            self.check_input_finite(&definition.path, value)?;
-            if !definition.accepts_domain(value) {
-                return Err(OcError::InputDomain(definition.path.clone()));
-            }
+            let input = InputSlot {
+                targets: &binding.targets,
+                min: definition.min.as_ref(),
+                max: definition.max.as_ref(),
+            };
+            oce_graph::frame::check_input(
+                &self.model,
+                slot,
+                &input,
+                value,
+                self.non_finite_input_policy,
+            )
+            .map_err(|refusal| self.frame_refusal(refusal))?;
             inputs.push((binding.targets.clone(), value.clone()));
         }
         frame.inputs = inputs;
@@ -388,38 +394,79 @@ impl Engine {
         Ok(())
     }
 
-    /// Shared compatibility/time preflight: no name rebinding or mutation.
-    pub(crate) fn check_prepared_frame(&self, frame: &PreparedInputFrame) -> Result<(), OcError> {
+    /// Readiness and incarnation preflight: no name rebinding, time check or mutation.
+    fn check_incarnation(&self, frame: &PreparedInputFrame) -> Result<(), OcError> {
         self.frame_preconditions()?;
         if !Arc::ptr_eq(&self.frame_generation, &frame.generation) {
             return Err(OcError::StalePreparedFrame);
         }
-        self.validate_frame_time(frame.time)
+        Ok(())
     }
 
-    fn validate_frame_time(&self, time: f64) -> Result<(), OcError> {
-        if !time.is_finite() {
-            return Err(OcError::NonFiniteTime { now: time });
-        }
-        if time.abs() > MAX_FRAME_TIME_MAGNITUDE {
-            return Err(OcError::TimeOutOfRange {
-                now: time,
-                limit: MAX_FRAME_TIME_MAGNITUDE,
-            });
-        }
-        if let Some(prev) = self.prev_t {
-            if time < prev {
-                return Err(OcError::TimeRegression { now: time, prev });
+    /// Shared compatibility/time preflight: readiness, incarnation, then the core driver's time
+    /// checks ([`oce_graph::frame::check_time`]). No name rebinding or mutation.
+    pub(crate) fn check_prepared_frame(&self, frame: &PreparedInputFrame) -> Result<(), OcError> {
+        self.check_incarnation(frame)?;
+        oce_graph::frame::check_time(&self.blocks, &self.state, self.prev_t, frame.time)
+            .map_err(|refusal| self.frame_refusal(refusal))
+    }
+
+    /// Name a core-driver refusal: a slot becomes its canonical input path.
+    fn frame_refusal(&self, refusal: FrameRefusal) -> OcError {
+        let path = |slot: usize| {
+            self.io
+                .frame_definitions
+                .get(slot)
+                .map_or_else(String::new, |definition| definition.path.clone())
+        };
+        match refusal {
+            FrameRefusal::NonFiniteTime { now } => OcError::NonFiniteTime { now },
+            FrameRefusal::TimeOutOfRange { now, limit } => OcError::TimeOutOfRange { now, limit },
+            FrameRefusal::TimeRegression { now, prev } => OcError::TimeRegression { now, prev },
+            FrameRefusal::NonFiniteTimeStep { now, prev } => {
+                OcError::NonFiniteTimeStep { now, prev }
             }
-            // Defensive: accepted and restored clocks both stay within the magnitude limit, so
-            // no public call sequence reaches this; it guards any future clock source.
-            if !(time - prev).is_finite() {
-                return Err(OcError::NonFiniteTimeStep { now: time, prev });
+            FrameRefusal::ModelTimeUnrepresentable { now } => {
+                OcError::ModelTimeUnrepresentable { now }
             }
+            // A plan always carries one value per definition (the incarnation token binds it to
+            // this table), so the counts never differ here; a short plan would be missing the
+            // input at its first absent slot.
+            FrameRefusal::InputCount { found, .. } => OcError::FrameMissingInput(path(found)),
+            FrameRefusal::InputType { slot } => OcError::InputType(path(slot)),
+            FrameRefusal::InputNonFinite { slot } => OcError::InputNonFinite(path(slot)),
+            FrameRefusal::InputDomain { slot } => OcError::InputDomain(path(slot)),
+            FrameRefusal::SequenceExhausted => OcError::FrameSequenceExhausted,
         }
-        if !self.time_is_representable(time) {
-            return Err(OcError::ModelTimeUnrepresentable { now: time });
+    }
+}
+
+/// A prepared plan beside the input definitions it was prepared against, as the core driver reads
+/// it: each slot's targets are the plan's own, its domain the definition's.
+struct PlannedInputs<'a> {
+    definitions: &'a [InputDefinition],
+    inputs: &'a [(Vec<ConnectorId>, Value)],
+}
+
+impl FrameInputs for PlannedInputs<'_> {
+    fn slot_count(&self) -> usize {
+        self.definitions.len()
+    }
+
+    fn value_count(&self) -> usize {
+        self.inputs.len()
+    }
+
+    fn slot(&self, slot: usize) -> InputSlot<'_> {
+        let definition = &self.definitions[slot];
+        InputSlot {
+            targets: &self.inputs[slot].0,
+            min: definition.min.as_ref(),
+            max: definition.max.as_ref(),
         }
-        Ok(())
+    }
+
+    fn value(&self, slot: usize) -> &Value {
+        &self.inputs[slot].1
     }
 }

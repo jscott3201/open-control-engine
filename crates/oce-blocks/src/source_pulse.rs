@@ -7,6 +7,7 @@
 
 use oce_model::Value;
 
+use crate::math;
 use crate::{Block, BlockKind, BlockSignature, Ctx, ParamRule, PortKind, Time, emit_real};
 
 /// Minimum valid `period` and `width` bound for source pulses, from `CDL.Constants.small`.
@@ -230,7 +231,7 @@ fn source_pulse_high_at(t: Time, width: f64, period: f64, shift: f64) -> bool {
     }
 
     let phase = modelica_mod(finite_shift(shift), period);
-    let mut t0 = buildings_round_six((t / period).floor() * period + phase);
+    let mut t0 = buildings_round_six(math::floor(t / period) * period + phase);
     let mut t1 = t0 + width * period;
 
     if t + period < t1 {
@@ -270,14 +271,14 @@ fn finite_shift(shift: f64) -> f64 {
 }
 
 fn modelica_mod(x: f64, y: f64) -> f64 {
-    x - (x / y).floor() * y
+    x - math::floor(x / y) * y
 }
 
 fn buildings_round_six(x: f64) -> f64 {
     const FACTOR: f64 = 1_000_000.0;
     if x > 0.0 {
-        (x * FACTOR + 0.5).floor() / FACTOR
+        math::floor(x * FACTOR + 0.5) / FACTOR
     } else {
-        (x * FACTOR - 0.5).ceil() / FACTOR
+        math::ceil(x * FACTOR - 0.5) / FACTOR
     }
 }

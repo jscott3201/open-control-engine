@@ -13,7 +13,13 @@ homepage.workspace = true
 workspace = true
 
 [dependencies]
-# For the resolved-model DTOs' serde derives; no codec is linked here. This currently inherits the
-# workspace entry's default (std) features plus `derive` and `rc`; #397 flips it to
-# `default-features = false, features = ["derive", "alloc"]`.
-serde = { workspace = true }
+# For the resolved-model DTOs' serde derives; no codec is linked here. `alloc` is the floor (the
+# DTOs hold `String`/`Vec`); `std` re-enables `serde/std` through this crate's `std` feature.
+serde = { workspace = true, features = ["alloc"] }
+
+[features]
+# `std` is the default; `--no-default-features --features alloc` builds the crate `no_std + alloc`
+# (see docs/architecture.md, "Embeddability posture").
+default = ["std"]
+std = ["alloc", "serde/std"]
+alloc = []

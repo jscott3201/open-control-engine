@@ -83,9 +83,18 @@ impl ExportReport {
     }
 
     fn content_id_unchecked(&self) -> String {
+        format!("cxf:fnv1a128:{:032x}", self.content_hash())
+    }
+
+    /// The FNV-1a-128 behind the content id, only when the export is complete.
+    pub(crate) fn complete_content_hash(&self) -> Option<u128> {
+        self.warnings.is_empty().then(|| self.content_hash())
+    }
+
+    fn content_hash(&self) -> u128 {
         let mut hash = StableHash::new();
         hash.write_bytes(&self.bytes);
-        format!("cxf:fnv1a128:{:032x}", hash.finish())
+        hash.finish()
     }
 }
 

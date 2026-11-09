@@ -1,0 +1,73 @@
+# The emulation check (issue #402): the firmware image runs on emulated bare-metal boards and its
+# output must equal the host reference runner's, line for line. scripts/ci/emulate-firmware.sh
+# builds the image for thumbv7em-none-eabihf and riscv32imac-unknown-none-elf with the `firmware`
+# profile (the build the per-PR bare-metal cell measures), runs each under QEMU with semihosting
+# (`netduinoplus2`, a Cortex-M4F; the riscv32 `virt` machine, an RV32IMAC hart) and diffs every
+# line: the fixture, the run digest after each of 160 frames, the final digest against
+# crates/oce-graph/tests/fixtures/blob_frame_digests.tsv (the table the facade's dual-path test
+# checks), and the verdict. `bash .agents/gate.sh qemu` runs the same script locally.
+#
+# Non-gating: nightly and on manual dispatch only, never on a pull request, and not part of
+# `CI OK`. The per-PR gate builds the images and holds them to their size budget; execution under
+# emulation is this workflow's alone (rusty-bacnet's decision D13, which keeps its own emulation
+# workflow manual; this repository runs it nightly as well). QEMU comes from the runner's apt
+# archive, with the installed package versions printed into the log.
+
+name: qemu
+
+on:
+  schedule:
+    # 04:17 UTC daily, clear of release-gate.yml's and advisories.yml's runs.
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # One run per ref at a time; a second waits instead of cancelling.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  emulate:
+    name: "Emulation: firmware image under QEMU against the host reference"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: qemu
+          cache-bin: false
+      - name: Install the bare-metal targets
+        run: rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf
+      - name: Install QEMU (qemu-system-arm, qemu-system-misc) and print its versions
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends qemu-system-arm qemu-system-misc
+          dpkg-query -W -f '${Package} ${Version}\n' qemu-system-arm qemu-system-misc
+          qemu-system-arm --version | head -n 1
+          qemu-system-riscv32 --version | head -n 1
+      - name: Run the images under QEMU and diff them against the host reference
+        run: bash scripts/ci/emulate-firmware.sh
+      - name: Upload the runs' output
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qemu-firmware-output
+          path: target/emulation/
+          overwrite: true
+          if-no-files-found: error

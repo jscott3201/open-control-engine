@@ -101,7 +101,7 @@ pub(super) fn target_bound_model() -> ModelGraph {
 #[test]
 fn target_bound_class_set_is_exactly_pinned() {
     assert_eq!(
-        crate::state_manifest::TARGET_BOUND_CLASSES,
+        crate::state_manifest::target_bound_classes(),
         [
             "CDL.Psychrometrics.DewPoint_TDryBulPhi",
             "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi",
@@ -120,7 +120,7 @@ fn target_bound_class_set_is_exactly_pinned() {
             "CDL.Utilities.SunRiseSet",
         ]
     );
-    for class_path in crate::state_manifest::TARGET_BOUND_CLASSES {
+    for class_path in crate::state_manifest::target_bound_classes() {
         assert!(crate::state_manifest::requires_target(class_path));
     }
     assert!(!crate::state_manifest::requires_target("CDL.Reals.Add"));
@@ -144,8 +144,8 @@ fn target_bound_capture_carries_the_compile_target() {
 
 #[test]
 fn every_target_bound_class_round_trips_policy_and_refuses_each_foreign_target_component() {
-    for class in crate::state_manifest::TARGET_BOUND_CLASSES {
-        let params = match *class {
+    for class in crate::state_manifest::target_bound_classes() {
+        let params = match class {
             "CDL.Reals.Sources.Sin" => vec![(Arc::from("freqHz"), Value::Real(1.0))],
             "CDL.Utilities.SunRiseSet" => vec![
                 (Arc::from("lat"), Value::Real(0.0)),

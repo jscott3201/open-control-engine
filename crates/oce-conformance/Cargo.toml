@@ -16,12 +16,16 @@ workspace = true
 [dependencies]
 oce-api = { workspace = true }
 oce-diag = { workspace = true }
-oce-model = { workspace = true }
+oce-model = { workspace = true, features = ["std"] }
 regex = "1"
 ryu = "1.0"
-serde = { workspace = true }
+serde = { workspace = true, features = ["std", "rc"] }
 serde_json = { workspace = true }
 
 [dev-dependencies]
 oce-bless = { workspace = true }
+# The blob round trip (issue #403) drives the `no_std` execution entry beside the facade:
+# `oce_graph::blob::Executable` and the `oce_blocks::Diagnostics` sink it reports warnings to.
+oce-blocks = { workspace = true, features = ["std"] }
+oce-graph = { workspace = true, features = ["std"] }
 sha2 = "0.10"

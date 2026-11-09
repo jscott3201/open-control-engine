@@ -394,6 +394,118 @@ fn member_token_mappings_agree_with_from_value_for_every_member() {
     }
 }
 
+/// Decision 12 of the compiled-schedule blob note (GitHub #400): the two `unreachable!` sites in
+/// `smoothness_from_member` and `extrapolation_from_member` are unreachable from any typed
+/// parameter table. Every non-test call passes a module default-member constant (checked on the
+/// source text below), and a parameter value goes through `from_value`, which answers `None` for
+/// anything that is not a member, after which the constructor falls back to that constant.
+#[test]
+fn no_parameter_value_reaches_a_member_token_unreachable() {
+    let source = include_str!("source_timetable.rs");
+    for (function, constant) in [
+        (
+            "smoothness_from_member(",
+            "TIMETABLE_SMOOTHNESS_DEFAULT_MEMBER)",
+        ),
+        (
+            "extrapolation_from_member(",
+            "TIMETABLE_EXTRAPOLATION_DEFAULT_MEMBER)",
+        ),
+    ] {
+        let calls: Vec<&str> = source
+            .match_indices(function)
+            .map(|(at, _)| &source[at + function.len()..])
+            .filter(|rest| !rest.starts_with("member: &str)"))
+            .collect();
+        assert!(!calls.is_empty(), "{function} has callers");
+        for rest in calls {
+            assert!(
+                rest.starts_with(constant),
+                "{function} is called with something other than {constant}"
+            );
+        }
+    }
+
+    let mut strings: Vec<String> = Vec::new();
+    for member in SMOOTHNESS_MEMBERS.iter().chain(EXTRAPOLATION_MEMBERS) {
+        for prefix in [
+            "",
+            ".",
+            "CDL.Types.Smoothness.",
+            "Buildings.Controls.OBC.CDL.Types.Extrapolation.",
+            "x.",
+        ] {
+            strings.push(format!("{prefix}{member}"));
+            strings.push(format!("{prefix}{member}."));
+            strings.push(format!("{prefix}{}", member.to_lowercase()));
+        }
+    }
+    strings.extend(
+        [
+            "",
+            ".",
+            "..",
+            "LinearSegments ",
+            "Periodic\0",
+            "\u{1F525}",
+            "P",
+        ]
+        .iter()
+        .map(|s| (*s).to_owned()),
+    );
+    let mut values: Vec<Value> = strings
+        .iter()
+        .map(|s| Value::String(s.as_str().into()))
+        .collect();
+    for n in [i64::MIN, -1, 0, 1, 2, 3, 4, i64::MAX] {
+        values.push(Value::Integer(n));
+    }
+    for class in [0, 1, 2, 3, 4, 101, u32::MAX] {
+        for ordinal in [0, 1, 2, 3, 4, u32::MAX] {
+            values.push(Value::Enum {
+                class: EnumClassId(class),
+                ordinal,
+            });
+        }
+    }
+    values.extend([
+        Value::Real(1.0),
+        Value::Real(f64::NAN),
+        Value::Boolean(true),
+    ]);
+
+    for value in &values {
+        let smoothness = TimeTableSmoothness::from_value(value);
+        let extrapolation = TimeTableExtrapolation::from_value(value);
+        if let Value::String(s) = value {
+            let token = s.rsplit('.').next().unwrap_or(s);
+            assert_eq!(
+                smoothness.is_some(),
+                SMOOTHNESS_MEMBERS.contains(&token),
+                "{s:?}"
+            );
+            assert_eq!(
+                extrapolation.is_some(),
+                EXTRAPOLATION_MEMBERS.contains(&token),
+                "{s:?}"
+            );
+        }
+        for class in [
+            "CDL.Reals.Sources.TimeTable",
+            "CDL.Integers.Sources.TimeTable",
+            "CDL.Logical.Sources.TimeTable",
+        ] {
+            for name in ["smoothness", "extrapolation"] {
+                let mut params =
+                    table_params(&[(1, 1, 0.0), (1, 2, 1.0), (2, 1, 1.0), (2, 2, 0.0)]);
+                params.push((name.into(), value.clone()));
+                let block = (lookup(class).unwrap().make)(&ParamTable { values: params });
+                let _ = block.resolved_signature();
+            }
+        }
+    }
+}
+
 #[test]
 fn absent_period_wraps_on_the_unit_modulus() {
     // Times [0, 1] with period absent: the defensive fallback modulus keeps every probe

@@ -403,7 +403,7 @@ impl Engine {
         Ok(())
     }
 
-    fn capture_preconditions(&self) -> Result<(), EngineStateError> {
+    pub(crate) fn capture_preconditions(&self) -> Result<(), EngineStateError> {
         if !self.loaded {
             return Err(EngineStateError::NoLoadedModel);
         }

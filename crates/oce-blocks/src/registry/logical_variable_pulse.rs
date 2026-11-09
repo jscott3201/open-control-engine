@@ -1,5 +1,6 @@
 //! Registry entry for `CDL.Logical.VariablePulse`.
 
+use alloc::boxed::Box;
 use oce_model::ParamTable;
 
 use super::real_param;

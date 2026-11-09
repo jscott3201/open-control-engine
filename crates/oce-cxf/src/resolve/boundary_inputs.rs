@@ -1,6 +1,6 @@
 //! Materialization of represented top-composite boundary-input declarations.
 
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
@@ -22,22 +22,26 @@ struct Assignment {
 }
 
 /// Assignment cardinality for child inputs reached through top-composite boundary inputs.
+///
+/// Ordered by `ConnectorId` so [`Self::emit_diagnostics`] pushes its refusals in connector order;
+/// `finalize_diags` sorts the resolver's diagnostics again before they leave the crate, so this is
+/// defence in depth, not the canonicalizing step.
 #[derive(Default)]
 pub(super) struct AssignmentTracker {
-    by_target: HashMap<ConnectorId, Assignment>,
+    by_target: BTreeMap<ConnectorId, Assignment>,
 }
 
 impl AssignmentTracker {
     /// Record an assignment and return whether it is the first assignment to the child input.
     pub(super) fn record(&mut self, target_id: ConnectorId, source: &str, target: &str) -> bool {
         match self.by_target.entry(target_id) {
-            std::collections::hash_map::Entry::Occupied(mut entry) => {
+            std::collections::btree_map::Entry::Occupied(mut entry) => {
                 let assignment = entry.get_mut();
                 assignment.count += 1;
                 assignment.has_distinct_sources |= assignment.source != source;
                 false
             }
-            std::collections::hash_map::Entry::Vacant(entry) => {
+            std::collections::btree_map::Entry::Vacant(entry) => {
                 entry.insert(Assignment {
                     source: source.to_owned(),
                     target: target.to_owned(),
@@ -284,3 +288,7 @@ fn declared_attrs(
         None => Attrs::Boolean(NoAttrs),
     }
 }
+
+#[cfg(test)]
+#[path = "boundary_inputs_tests.rs"]
+mod tests;

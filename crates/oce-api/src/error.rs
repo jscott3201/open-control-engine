@@ -192,6 +192,10 @@ pub enum OcError {
     /// A checkpoint, snapshot, or restore failure.
     #[error(transparent)]
     State(#[from] crate::state::EngineStateError),
+    /// The loaded executable cannot be compiled to a compiled-schedule blob, or the blob it
+    /// produced did not decode ([`crate::Engine::compile_blob`]).
+    #[error("compiled-schedule blob: {0}")]
+    Blob(#[from] crate::BlobError),
 }
 
 impl OcError {

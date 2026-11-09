@@ -5,14 +5,13 @@ the architecture and invariants are the design of record.
 
 ## Where the project lives
 
-- **GitHub is the primary host:** `github.com/jscott3201/open-control-engine`. Clone from, push
+- **GitHub is the host:** `github.com/jscott3201/open-control-engine`. Clone from, push
   branches to, open pull requests and file issues there. CI runs on GitHub Actions
-  (`.github/workflows/`, Linux only).
-- The self-hosted Forgejo instance that was primary until October 2026 is retired and no longer
-  mirrors anything.
-- **PR numbers overlap.** GitHub PR numbers collide with the retired Forgejo numbering: Forgejo
-  #332 (the Forgejo CI port) and GitHub #332 are different changes. Bare `(#N)` citations predate
-  the move; cite every PR merged on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
+  (`.github/workflows/`): Linux runners plus the macOS and Windows observation cells.
+- **PR numbers overlap.** Pull requests merged on the previous host before the October 2026 move
+  to GitHub share numbers with GitHub PRs (#332 names two different changes). Bare `(#N)`
+  citations predate the move; cite every PR merged on GitHub as `(GitHub #N)` in `CHANGELOG.md`
+  and the docs.
 
 ## How changes land
 
@@ -79,6 +78,7 @@ cargo nextest show-config version                         # must report required
 
 The installed version matches CI; [`.config/nextest.toml`](.config/nextest.toml) rejects older
 versions while allowing a newer compatible local runner.
+Only `--target wasm32-wasip1` runs (the blob round trip's wasm32 leg, `bash .agents/gate.sh roundtrip` and `full`) need `rustup target add wasm32-wasip1` and wasmtime on PATH or in `target/wasmtime-bin` (`bash scripts/ci/install-wasmtime.sh`); without wasmtime the cargo runner exits with that install hint.
 The command above builds nextest from source; CI uses its pre-built binary through
 `taiki-e/install-action`. On macOS, if even trivial nextest cases take more than about 0.2 seconds,
 follow nextest's [XProtect guidance](https://nexte.st/docs/installation/macos/): enable your terminal

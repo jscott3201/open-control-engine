@@ -9,7 +9,8 @@ front door; these pages are the detail behind it.
 | --- | --- |
 | [Product contract](product-contract.md) | Versioned executable-CXF/HostTick requirements, domain-owner delegations, limitations, evidence and explicitly future outcomes |
 | [Authority claims and supersession](authority-claims.md) | The generated cross-domain summary, checked versus review-only boundaries, source-owner update procedure, and non-exhaustive supersession map, from the [index](authority-claims.json) |
-| [Architecture](architecture.md) | How the engine is layered, where the CDL §7.17 seam sits, what each of the 12 crates owns, and the platform and MSRV policy |
+| [Architecture](architecture.md) | How the engine is layered, where the CDL §7.17 seam sits, what each of the 12 engine crates and the firmware image owns, and the platform and MSRV policy |
+| [Compiled-schedule blob](compiled-schedule-blob.md) | What an `OCEB` blob carries from a `std` host to a `no_std` target, what it leaves behind, how it is versioned, and what the decoder trusts and refuses |
 | [Execution profile](execution-profile.md) | Why each host tick is one state transition, and where `CDL.Logical.Pre` differs from Modelica same-time event iteration |
 | [Canonical replay record](replay-record.md) | Bounded per-accepted-frame exact bytes, typed refusals and host-owned ordered replay with separate snapshot sidecars |
 | [Verification and evidence](verification-evidence.md) | What has actually been proven about this engine, what has not, and which checks are deliberately not running |
@@ -30,6 +31,10 @@ questions its reviewer ruled on; the contracts above remain the authority for sh
 | Note | Decides |
 | --- | --- |
 | [Compiled-schedule blob (OCEB)](design/compiled-schedule-blob.md) | The byte format a `std` host emits after load and a `no_std` target decodes and executes: layout, class signature hash, integrity, versioning and size budget |
+| [Authoring layer (M2)](design/authoring-layer.md) | How a person or an agent writes a sequence without JSON-LD: the typed model, its text and wire forms, the validator and its finding codes, the deterministic CXF emitter and the `oce` CLI |
+| [Historical replay API](design/replay.md) | How recorded or scripted inputs drive the engine frame by frame: slot-indexed frame sources, the missing-sample policy, the columnar trace and its size per frame, and the resumable cursor behind Python and the browser worker |
+| [Commissioning verifier (CDL §12)](design/commissioning.md) | How `oce-verify`'s tolerance mode checks a real controller's trends against the engine per CDL §12: the test-spec and point-mapping files, unit conversion, the funnel envelope port, indicators, the report and the receipt, with a worked Building 33 example |
+| [Structural diff (`oce-diff`)](design/diff.md) | How two revisions of a sequence are compared: authored names as block identity with a bounded rename pass, the closed change categories, site parameters apart from the graph, the serde `Diff` and its text and Markdown renderings, and the CXF and blob adapters, with three worked examples |
 
 ## Elsewhere in the repository
 

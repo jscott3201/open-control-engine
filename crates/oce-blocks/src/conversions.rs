@@ -7,6 +7,7 @@
 
 use oce_model::Value;
 
+use crate::math;
 use crate::{
     Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_bool, read_int, read_real,
 };
@@ -149,9 +150,9 @@ impl Block for RealToInteger {
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         let u = read_real(inputs, 0);
         let y = if u > 0.0 {
-            (u + 0.5).floor()
+            math::floor(u + 0.5)
         } else {
-            (u - 0.5).ceil()
+            math::ceil(u - 0.5)
         };
         emit(0, Value::Integer(y as i64));
     }

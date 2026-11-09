@@ -1,8 +1,15 @@
 //! The engine's public block catalog, distinct from the vendored Buildings classification.
 
+#[cfg(feature = "std")]
+use std::sync::OnceLock;
+
+use alloc::vec::Vec;
+
+use crate::class_signature::{
+    class_is_target_bound, entry_signature_hash, is_reserved, naming_policy,
+};
 use crate::{ParamRule, PortKind, port_names, registry};
 use oce_model::ParamTable;
-use std::sync::OnceLock;
 
 /// How a class's resolved scalar ports are identified.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -84,6 +91,12 @@ pub struct CatalogEntry {
     pub param_rules: &'static [ParamRule],
     /// Authored parameter defaults.
     pub param_defaults: &'static [ParamDefault],
+    /// FNV-1a-64 class signature hash: the value [`crate::class_signature_hash`] returns for this
+    /// class, which a compiled-schedule blob carries per class and a decoder compares with its own
+    /// registry's (GitHub #400). It covers the default instance's kind, state layout and ports,
+    /// the naming policy and flags, every rule and every default, but not a derived default's
+    /// formula text.
+    pub signature_hash: u64,
     /// Whether any parameter rule drives resolved port structure.
     pub width_driven: bool,
     /// Conservative class-level state hint.
@@ -98,6 +111,11 @@ pub struct CatalogEntry {
     /// Reserved `urn:oce:lowering#` identities are not authorable CDL and cannot be spelled in
     /// authored CXF. Palette-building hosts should filter on this flag.
     pub reserved: bool,
+    /// Whether this class is target-bound: its outputs depend on the host's transcendental math
+    /// library, so an engine state containing it is placement-restricted to the capturing
+    /// architecture and operating system. Exactly 15 classes; the same flag
+    /// [`crate::class_is_target_bound`] reports.
+    pub target_bound: bool,
 }
 
 fn ports(kinds: &[PortKind], names: Option<&[&'static str]>) -> Vec<PortInfo> {
@@ -111,26 +129,17 @@ fn ports(kinds: &[PortKind], names: Option<&[&'static str]>) -> Vec<PortInfo> {
         .collect()
 }
 
+// Without `std` nothing calls this (there is no `OnceLock` to cache it behind), but it is kept
+// compiling so the no_std build checks the catalog construction path too.
+#[cfg_attr(not(feature = "std"), allow(dead_code))]
 fn build_catalog() -> Vec<CatalogEntry> {
     registry::all_entries()
         .map(|entry| {
             let block = (entry.make)(&ParamTable::default());
             let signature = block.resolved_signature();
             let rules = entry.param_rules();
-            let width_driven = rules.iter().any(|rule| {
-                matches!(
-                    rule,
-                    ParamRule::Structural { .. } | ParamRule::StructuralArrayElements { .. }
-                )
-            });
+            let (naming, width_driven) = naming_policy(entry);
             let names = port_names::port_names(entry.class_path);
-            let naming = if names.is_some() {
-                PortNaming::Named
-            } else if width_driven {
-                PortNaming::WidthDriven
-            } else {
-                PortNaming::Positional
-            };
             CatalogEntry {
                 class_path: entry.class_path,
                 inputs: ports(&signature.inputs, names.map(|value| value.inputs)),
@@ -138,9 +147,11 @@ fn build_catalog() -> Vec<CatalogEntry> {
                 naming,
                 param_rules: rules,
                 param_defaults: registry::param_defaults(entry.class_path),
+                signature_hash: entry_signature_hash(entry),
                 width_driven,
                 stateful: block.signature().stateful,
-                reserved: entry.class_path.starts_with("urn:oce:lowering#"),
+                reserved: is_reserved(entry.class_path),
+                target_bound: class_is_target_bound(entry.class_path),
             }
         })
         .collect()
@@ -151,6 +162,10 @@ fn build_catalog() -> Vec<CatalogEntry> {
 /// The first call performs one default-parameter construction per class and allocates the owned
 /// port metadata once behind a [`OnceLock`]. This metadata accessor is never called on the tick
 /// path.
+///
+/// Requires the `std` feature: the cache is a [`OnceLock`], and the catalog is host metadata a
+/// `no_std + alloc` target does not read.
+#[cfg(feature = "std")]
 #[must_use]
 pub fn catalog() -> &'static [CatalogEntry] {
     static CATALOG: OnceLock<Vec<CatalogEntry>> = OnceLock::new();

@@ -1,4 +1,9 @@
 #![forbid(unsafe_code)]
+#![cfg_attr(not(any(feature = "std", test)), no_std)]
+// `clippy.toml` lists every `std`-only float method; the core calls `math` (libm) instead (#399).
+#![deny(clippy::disallowed_methods)]
+// `clippy.toml` lists `std`'s hash collections; the core uses ordered collections only (#398).
+#![deny(clippy::disallowed_types)]
 //! `oce-blocks` — the native CDL elementary-block library and the [`Block`] trait for the
 //! Open Control Engine (`03-block-library.md`).
 //!
@@ -18,13 +23,26 @@
 //! CDL class path. The remaining CDL catalog breadth is added family-by-family behind the same
 //! trait and registry contracts.
 
-use std::borrow::Cow;
+// `no_std + alloc` without the `std` feature (docs/architecture.md, "Embeddability posture"):
+// `alloc` is the floor, so a build with neither feature is refused here rather than failing
+// on the first `Vec`.
+extern crate alloc;
+
+#[cfg(not(feature = "alloc"))]
+compile_error!(
+    "`oce-blocks` needs the `alloc` feature: build with the default `std` feature, or with \
+     `--no-default-features --features alloc`"
+);
+
+use alloc::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 
 use oce_model::{ParamTable, Value, ValueType, determinism::canonicalize_real};
 
 mod catalog;
 mod catalog_rules;
+mod class_signature;
 pub use catalog_rules::ParamRuleProjection;
+pub use class_signature::{class_is_target_bound, class_signature_hash};
 mod conversions;
 mod discrete;
 mod discrete_sampled;
@@ -38,6 +56,7 @@ mod logical_proof;
 mod logical_timing;
 mod logical_variable_pulse;
 mod lowering;
+mod math;
 mod pid;
 pub mod port_names;
 mod psychrometrics;
@@ -53,8 +72,10 @@ mod reals_transcendental;
 mod reals_vector_reductions;
 mod registry;
 
+#[cfg(feature = "std")]
+pub use catalog::catalog;
 pub use catalog::{
-    CatalogEntry, DefaultLiteral, DefaultSource, ParamDefault, PortInfo, PortNaming, catalog,
+    CatalogEntry, DefaultLiteral, DefaultSource, ParamDefault, PortInfo, PortNaming,
 };
 mod routing;
 mod routing_boolean;
@@ -165,6 +186,17 @@ pub struct BlockSignature {
 /// keeping any realistic equipment-control vector well inside the supported range.
 pub const MAX_RESOLVED_PORT_WIDTH: usize = 1 << 20;
 
+/// The largest resolved input or output arity any registered class constructs, for any parameter
+/// table: twice [`MAX_RESOLVED_PORT_WIDTH`].
+///
+/// Every width-driven class bounds each vector port by [`MAX_RESOLVED_PORT_WIDTH`] (a product
+/// width above it resolves to zero). No class has more than one vector port in one direction
+/// except `CDL.Reals.Sort`, whose outputs are `y[nin]` and `yIdx[nin]`; the rest add at most one
+/// scalar to a vector (`CDL.Routing.*Extractor`: `index` and `u[nin]`). The compiled-schedule
+/// blob decoder refuses a port list longer than this before allocating for it, and
+/// `tests/hostile_parameters.rs` checks the bound against every constructor.
+pub const MAX_RESOLVED_ARITY: usize = 2 * MAX_RESOLVED_PORT_WIDTH;
+
 /// A BUILD-time port shape for vector-style CDL connector declarations after parameter resolution.
 ///
 /// The engine still stores and ticks one scalar [`oce_model::ConnectorId`] per element. A shape only
@@ -193,7 +225,7 @@ impl PortShape {
 
     /// Append this shape's flattened scalar port kinds to `out`.
     pub fn extend_kinds(&self, out: &mut Vec<PortKind>) {
-        out.extend(std::iter::repeat_n(self.kind, self.width));
+        out.extend(core::iter::repeat_n(self.kind, self.width));
     }
 
     /// Return this shape as a vector of flattened scalar port kinds.
@@ -722,11 +754,16 @@ mod tests;
 mod catalog_tests;
 
 #[cfg(test)]
+mod class_signature_tests;
+
+#[cfg(test)]
 mod authority_claims_tests;
 
 #[cfg(test)]
 mod param_rules_tests;
 
+#[cfg(test)]
+mod math_tests;
 #[cfg(test)]
 mod port_names_tests;
 

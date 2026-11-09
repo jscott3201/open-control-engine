@@ -16,3 +16,13 @@ workspace = true
 oce-model = { workspace = true }
 oce-blocks = { workspace = true }
 thiserror = { workspace = true }
+
+[features]
+# `std` is the default; `--no-default-features --features alloc` builds the crate `no_std + alloc`
+# (see docs/architecture.md, "Embeddability posture").
+default = ["std"]
+std = ["alloc", "oce-model/std", "oce-blocks/std", "thiserror/std"]
+alloc = ["oce-model/alloc", "oce-blocks/alloc"]
+
+[dev-dependencies]
+allocation-counter = "0.8.1"

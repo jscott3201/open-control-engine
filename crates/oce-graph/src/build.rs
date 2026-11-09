@@ -8,6 +8,7 @@
 //! `feeds_through == false` on its state-bearing path, emits no internal edge, and thereby *cuts*
 //! the graph so the otherwise-cyclic feedback is legal (`01` §4.2/§4.3).
 
+use alloc::{boxed::Box, vec, vec::Vec};
 use oce_blocks::Block;
 use oce_model::{ConnectorId, Model};
 

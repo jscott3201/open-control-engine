@@ -17,8 +17,9 @@
 //!    multi-output matrix reduction or a proportional-only reset PID's `trigger`). It is rejected,
 //!    not silently mis-ordered.
 
-use std::cmp::Reverse;
-use std::collections::BinaryHeap;
+use alloc::collections::BinaryHeap;
+use alloc::{boxed::Box, format, string::ToString, vec, vec::Vec};
+use core::cmp::Reverse;
 
 use oce_blocks::{Block, BlockKind};
 use oce_model::{BlockId, ConnectorId, Model};

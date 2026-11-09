@@ -18,6 +18,7 @@
 //! loop-breaker scheduled before its input's producer latch the *previous* tick's input, yielding a
 //! two-tick delay instead of one for the canonical `Pre`/`UnitDelay` feedback loop.)
 
+use alloc::{boxed::Box, vec, vec::Vec};
 use oce_blocks::{Block, BlockKind, Ctx, NoopDiagnostics};
 use oce_model::{BlockId, BlockInstance, Model, Value};
 

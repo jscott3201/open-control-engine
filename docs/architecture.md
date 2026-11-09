@@ -68,23 +68,81 @@ The current runtime is the fixed [HostTick v1 execution profile](execution-profi
 successful frame execution evaluates this schedule once and advances state once, including at a repeated
 timestamp. It does not implement Modelica same-time event iteration for `CDL.Logical.Pre`.
 
+The frame around that evaluation lives once, in the core: `oce_graph::frame` checks the time and
+every input slot (type, non-finite policy, domain), keeps the accepted-frame sequence, stages the
+values and evaluates ([one frame driver, two callers](execution-profile.md#one-frame-driver-two-callers)).
+The `oce-api` facade is a thin layer over it that resolves names, holds the prepared plan and
+returns an owned `CompletedFrame`; a `no_std` target runs the same driver by slot through the
+[compiled-schedule blob](compiled-schedule-blob.md#executing-a-blob) entry,
+`oce_graph::blob::Executable`.
+
 ## Embeddability posture
 
 The engine is, by design:
 
-- **Library-only.** No `main`, no `[[bin]]`, no daemon, no server, no network listener — verified by
-  the absence of any binary target or `std::net` use in `crates/`. The host owns process lifecycle,
-  transport, TLS, authN/Z, multi-tenancy, off-host durability, and metrics export.
+- **Library-only.** No `main`, no `[[bin]]`, no daemon, no server, no network listener in the engine
+  crates — verified by the absence of any binary target or `std::net` use in `crates/` outside
+  `crates/leverage/`. Leverage crates may ship binaries above the facade (the planned `oce` CLI; see
+  the [authoring layer](design/authoring-layer.md)), never a listener. The host owns process
+  lifecycle, transport, TLS, authN/Z, multi-tenancy, off-host durability, and metrics export.
 - **Synchronous and in-process.** Every public method is a blocking synchronous call, and no async
   runtime is pulled at any layer. The check is the dependency set below, not a promise.
-- **`#![forbid(unsafe_code)]` in all 12 crates**, belt and braces: each `crates/*/src/lib.rs`
-  carries the crate attribute, *and* the workspace sets `unsafe_code = "forbid"` under
-  `[workspace.lints.rust]` (root `Cargo.toml`).
+- **`#![forbid(unsafe_code)]` in all 13 workspace members**, belt and braces: each
+  `crates/*/src/lib.rs` and the firmware image's lib and bin roots carry the crate attribute,
+  *and* the workspace sets `unsafe_code = "forbid"` under `[workspace.lints.rust]` (root
+  `Cargo.toml`).
 - **Edition 2024**, `resolver = "3"`.
+- **A `no_std + alloc` execution core.** `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` build
+  without the standard library; see [below](#no_std--alloc-the-core-four).
 
 The whole external dependency surface on the embed path is four crates: `serde`, `serde_json`,
 `thiserror`, and `libm`. Two more — `regex` and `ryu` — exist only inside `oce-conformance`, which
 nothing else in the workspace depends on, so a host embedding `oce-api` never links them.
+
+### `no_std + alloc`: the core four
+
+The four execution-core crates — `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` — each have
+`default = ["std"]`, `std = ["alloc", …]` and `alloc = []`. Built with
+`--no-default-features --features alloc` they are `#![no_std]` and need only `core` and `alloc`:
+a global allocator for `Vec`, `String`, `Box`, `Arc` and `BTreeMap`, and nothing else — no operating
+system, threads, clock, files or I/O. `alloc` is the floor: a build with neither feature refuses with
+a `compile_error!`. The default build is unchanged, and every crate that depends on one of the four
+names `features = ["std"]` on that edge.
+
+| Crate | Built without `std` | What differs from the default build |
+| --- | --- | --- |
+| `oce-model` | `no_std + alloc` | Nothing. `serde` is linked with `alloc` and `derive` only. |
+| `oce-expr` | `no_std + alloc` | The evaluation-fuel meter is one program-wide slot instead of thread-local: evaluate from one execution context at a time, or serialize evaluations across cores and interrupt handlers yourself. |
+| `oce-blocks` | `no_std + alloc` | `catalog()` is absent: its cache is a `std::sync::OnceLock`, and the catalog is host metadata a target does not read. `class_signature_hash` and `class_is_target_bound`, which a blob decoder needs, are present. |
+| `oce-graph` | `no_std + alloc` | Nothing: the [compiled-schedule blob](compiled-schedule-blob.md) decoder, the HostTick v1 frame driver and the blob execution entry are part of the `no_std` build; its closure holds no `oce-cxf`, `oce-api`, `serde_json` or `std` (`scripts/ci/check-no-std-entry-closure.sh`). |
+
+Errors derive `core::error::Error` through `thiserror` with its default features off. Every `f64`
+operation that is not in `core` on Rust 1.97 (`floor`, `ceil`, `trunc`, `round`, `sqrt`) goes
+through `libm`, in the default build too, so the two builds share one numeric path; those five are
+exact in IEEE 754, and `crates/oce-blocks/tests/libm_std_parity.rs` checks them against the `std`
+methods bit for bit. Each of those calls goes through the crate's `math` module — the one place
+that names `libm` — and clippy refuses any `std`-only float method elsewhere in the four crates' `src/` trees, unit
+tests included (`tests/` files are separate crates outside the lint, where the `std` methods serve
+as the oracle)
+([TESTING.md, math discipline](../TESTING.md#conventions), issue #399). The four use no hash
+collections: clippy refuses `std`'s hash types there and `crates/oce-api/tests/core_crates_hash_free.rs`
+refuses any hash collection or hash crate. In the `std` crates no hash iteration order reaches an
+output, which `crates/oce-api/tests/hash_order_independence.rs` checks across independently seeded
+hashers ([state compatibility](state-compatibility.md#portability-domains-and-evidence-limits)).
+
+Everything else stays `std`: `oce-cxf`, `oce-validate`, `oce-semantics`, `oce-diag`, `oce-store` and
+the `oce-api` facade, plus the verification-only `oce-conformance` and `oce-bless`. The
+[bare-metal cell](ci-and-the-gate.md#the-bare-metal-cell) in `pr-gate.yml` builds and lints the
+four on `thumbv7em-none-eabihf` (Cortex-M4F) and `riscv32imac-unknown-none-elf` (RV32IMAC), two
+bare-metal targets with no `std`, and on `wasm32-unknown-unknown`; fails on any `std` feature or
+host-only crate in their dependency graphs; runs the `oce-expr` suite without `std`; and links them
+into a firmware image ([`firmware/link`](../firmware/link/), `publish = false`) for both bare-metal
+targets, held to a per-target size budget. The image decodes a checked-in blob golden with
+`oce_graph::blob::Executable` and runs the shared 160-frame schedule; the nightly `qemu.yml` runs it
+under emulation and requires its per-frame run digests to equal the host's
+([the nightly emulation run](ci-and-the-gate.md#the-nightly-emulation-run)). `bash .agents/gate.sh`
+runs the cell (`bash .agents/gate.sh nostd` runs it alone). What a target integrator supplies is
+what the image supplies: a global allocator and a reset entry; the engine asks for nothing else.
 
 ### Two Rust versions, and they are not the same number
 
@@ -122,7 +180,10 @@ or a whole-state clone. Load calls no storage port either: it returns the resolv
 data and the host persists it if it wants durability.
 
 Whether a block tick allocates on the evaluator thread is gated per-PR, registry-wide and with a
-positive control, by `crates/oce-blocks/tests/tick_allocation_census.rs`. No current block delegates
+positive control, by `crates/oce-blocks/tests/tick_allocation_census.rs`. The blob path (decode
+once, then frames through the core frame driver) is censused by
+`crates/oce-graph/tests/blob_execution.rs` against the `no_std + alloc` build: zero allocations per
+frame over every golden; decoding allocates what it returns. No current block delegates
 work to a worker thread; such an implementation would need a companion guard for worker allocation.
 The facade's corpus-wide purity and storage-isolation guard is
 `crates/oce-api/tests/frame_purity.rs`; frame allocation
@@ -132,7 +193,9 @@ them, because nothing re-measures them in CI.
 
 ## The crate map
 
-Twelve crates. The dependency direction is acyclic and organized around the seam above.
+Twelve crates, plus the unpublished firmware image `oce-firmware-link` (`firmware/link`), which
+links the `no_std` core into a bare-metal binary: 13 workspace members, 10 publishable and three
+private. The dependency direction is acyclic and organized around the seam above.
 Their responsibilities below do not imply equal support or publication status: publication is
 read from each crate's `publish` flag and checked by the
 [package validator](ci-and-the-gate.md#the-package-validator), and a publishable implementation
@@ -144,9 +207,9 @@ crate is registry closure for the facade, not an independently supported host AP
 | --- | --- |
 | `oce-model` | Pure value/connector/instance/connection types; the `Value` enum (Real/Integer/Boolean/String/Enum) and the flattened model graph — the shared executable truth. Also the plain-data resolved-model DTOs (`resolved_model`) that `oce-api` returns from a load and `oce-store` re-exports, so neither of those crates depends on the other. |
 | `oce-expr` | The CDL §7.7.2 binding-expression parser and evaluator (closed-world, pure). Bounded on structure: input deeper than `MAX_NESTING_DEPTH` (64) or wider than `MAX_EXPR_NODES` (4096) is a typed error, not a stack overflow (`crates/oce-expr/src/lib.rs`). Depth counts real nesting only; a left-associative chain such as `a+b+…` is bounded by the node cap and evaluated iteratively. |
-| `oce-blocks` | The `Block` trait and the native CDL elementary-block library, publicly enumerable at runtime via `catalog()` (`crates/oce-blocks/src/catalog.rs`) with ports, parameter rules, and honest parameter defaults per class. |
+| `oce-blocks` | The `Block` trait and the native CDL elementary-block library, publicly enumerable at runtime via `catalog()` (`crates/oce-blocks/src/catalog.rs`; `std` builds only) with ports, parameter rules, honest parameter defaults, the class signature hash and the target-bound flag per class. |
 | `oce-validate` | Loader conformance: subset rejection, single-assignment, type and attribute unification, parameter rules. |
-| `oce-graph` | The deterministic scheduler and executor: direct-feedthrough DAG, algebraic-loop rejection, its own Kahn topological sort, the tick loop. |
+| `oce-graph` | The deterministic scheduler and executor: direct-feedthrough DAG, algebraic-loop rejection, its own Kahn topological sort, the tick loop, and the slot-indexed HostTick v1 frame driver around it (`oce_graph::frame`) that the facade and the blob entry both call. Also the `OCEB` [compiled-schedule blob](compiled-schedule-blob.md) codec (`oce_graph::blob`): the decoder and the execution entry (`blob::Executable`) a `no_std + alloc` target runs, and the byte writer the facade encodes with. |
 | `oce-cxf` | CXF (Control eXchange Format) JSON-LD ↔ model graph, both directions. The resolver owns all lowering: composites are flattened away, parameters grounded and array parameters normalized to per-element scalars, so nothing elaborates the graph after it. Full `.mo` flattening is not implemented. Composite nesting is bounded at 64. Boundary lowering is iterative and separately bounded at 64 non-top `isConnectedTo` hops per path, 65,536 target examinations, and 8 MiB of aggregate target-IRI bytes per document. The accept/reject contract is written out in [cxf-composite-subset.md](cxf-composite-subset.md). |
 | `oce-semantics` | **Active effective-point metadata resolver.** Derives metadata from connector attributes, direction, value type and defaults; this is unrelated to the removed semantic-template loader. Raw `__cdl` / `__CDL` annotation parsing remains deferred. It stays a wired, publishable `oce-api` implementation dependency, not an independently supported API. |
 | `oce-diag` | The shared diagnostic vocabulary (`Severity` / `DiagCode` / `Diagnostic`) across the ingest path. Zero dependencies. |
@@ -163,7 +226,7 @@ crate is registry closure for the facade, not an independently supported host AP
 | --- | --- |
 | `oce-conformance` | **Verification-only, `publish = false`.** The funnel-style tolerance-band and golden-trace conformance harness. Standalone: no other crate depends on it. Read [`TESTING.md`](../TESTING.md) for what it does and does not check. |
 | `oce-bless` | **Test-support only, `publish = false`.** The single definition of the repo's environment-variable truthiness policy, so golden-regeneration switches cannot drift apart across crates. |
-| `oce-api` | The primary embeddable host facade: a pure `Engine` (no type parameter, no storage dependency), spanning load with a plain-data `LoadedModel` result, complete-frame preparation/execution, parameters, IO inventory, latest-state non-receipt reads (`get_output`/`watch`), CXF export with content id, and a read-only topology view. Its catalog metadata is `oce_api::catalog()`, with the actively supported `oce_blocks::catalog()` as a separate companion surface; see the [product contract](product-contract.md). |
+| `oce-api` | The primary embeddable host facade: a pure `Engine` (no type parameter, no storage dependency), spanning load with a plain-data `LoadedModel` result, complete-frame preparation/execution, parameters, IO inventory, latest-state non-receipt reads (`get_output`/`watch`), CXF export with content id, compiled-schedule blob encoding (`Engine::compile_blob`), the raw state words in the blob entry's layout (`Engine::state_words`, a read-only verification view, not a continuation format; continue state with `state_snapshot` or `checkpoint`), and a read-only topology view. Its catalog metadata is `oce_api::catalog()`, with the actively supported `oce_blocks::catalog()` as a separate companion surface; see the [product contract](product-contract.md). |
 
 Every crate listed here does work today. Reserved placeholder crates were removed rather than kept
 as empty seams, so nobody plans a feature against a crate that does nothing.

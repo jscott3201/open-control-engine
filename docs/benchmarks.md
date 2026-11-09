@@ -95,6 +95,29 @@ Use `--locked --profile ci --no-tests=fail` for debug and
 `--locked --profile ci-release --cargo-profile release --no-tests=fail` for release. The full
 repository gate remains [`.agents/gate.sh`](../.agents/gate.sh), not this measurement selection.
 
+## `sqrt`: `libm` software versus the hardware instruction (issue #399)
+
+2026-11-08, working tree based on `84cc1a1`. Apple M5, aarch64-apple-darwin, Rust 1.97.1, release
+(thin LTO, one codegen unit). Since GitHub #428 every core `sqrt` is `libm::sqrt`, and with the
+`libm` `arch` feature currently off (`default-features = false`) that is a software routine, where
+`f64::sqrt` lowers to `fsqrt`. Both are correctly rounded, so the question is cost only. Feature
+unification by a future dependency could turn `arch` on; that would change speed only, with no
+determinism effect, because `sqrt` is correctly rounded either way.
+
+- **Per call** (standalone loop, 2^20 calls, best of 21): `f64::sqrt` 0.50 ns, `libm::sqrt` 2.77 ns —
+  about 2.3 ns more per call.
+- **Per frame** (`frame_observations.rs` commit, two binaries differing only in the `CDL.Reals.Sqrt`
+  call, run alternately ten times each, 50 batch means per cell): a one-block `Sqrt` model,
+  median 93 ns with `libm` against 90 ns with `std`, minimum 79 ns for both; the unchanged `Add`
+  model in the same binaries moved 123.5 against 115.5 ns, so run-to-run noise (about 7 %) exceeds
+  the difference. The 213-block G36 controller calls no `sqrt`; its medians were 5,166 against
+  5,122 ns, within the same noise.
+
+No frame measurement separates the two above the 2 % threshold the issue set, so `math::sqrt` keeps
+the one `libm` path in every build. A model dense in `Sqrt` blocks or psychrometric blocks would be
+the case to re-measure; the `libm` `arch` feature, which routes `sqrt` to the instruction on
+aarch64 and x86_64 without `std`, is the lever that would keep one path.
+
 ## What the historical throughput runs measured
 
 The now-retired steady-state `Engine::tick()` on real G36 fixtures, through the then-public facade:

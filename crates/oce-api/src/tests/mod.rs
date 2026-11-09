@@ -2,6 +2,7 @@
 
 mod algebraic_loop_diagnostics;
 mod authority_claims_tests;
+mod blob_dual_path_tests;
 mod boundary_alias_tests;
 mod common;
 mod contract_schemas;

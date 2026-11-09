@@ -1,6 +1,6 @@
 //! Shared helpers for the checked-in Buildings CDL catalog guard.
 
-use std::collections::BTreeSet;
+use alloc::collections::BTreeSet;
 
 use serde_json::Value;
 
@@ -297,7 +297,7 @@ fn validate_structural_catalog(catalog: &Value, errors: &mut Vec<String>) {
     let constants = &catalog["structural"]["constants"];
     assert_f64_bits(
         constants["values"]["pi"].as_f64(),
-        std::f64::consts::PI,
+        core::f64::consts::PI,
         "pi",
         errors,
     );

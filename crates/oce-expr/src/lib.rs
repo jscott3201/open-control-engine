@@ -1,4 +1,9 @@
 #![forbid(unsafe_code)]
+#![cfg_attr(not(any(feature = "std", test)), no_std)]
+// `clippy.toml` lists every `std`-only float method; the core calls `math` (libm) instead (#399).
+#![deny(clippy::disallowed_methods)]
+// `clippy.toml` lists `std`'s hash collections; the core uses ordered collections only (#398).
+#![deny(clippy::disallowed_types)]
 //! `oce-expr` — the CDL §7.7.2 binding-expression parser/evaluator for the Open Control
 //! Engine.
 //!
@@ -11,6 +16,10 @@
 //! rejections and a deterministic per-evaluation work budget ([`MAX_EVAL_FUEL`], counted in
 //! operations through a thread-local meter, never time), and never reads the clock, connectors,
 //! or computation-affecting attributes (R11).
+//!
+//! Without its default `std` feature the crate is `no_std + alloc`; the work meter is then one
+//! program-wide slot, so a `no_std` host evaluates from one execution context at a time
+//! (`docs/architecture.md`, "Embeddability posture").
 //!
 //! # Scalar subset
 //!
@@ -92,7 +101,18 @@
 //! The public surface below (`parse`/`eval`/`eval_str`, [`ExprAst`], [`Scope`], [`EvalResult`],
 //! [`ExprError`]) is the **stable contract** the `oce-cxf` resolver binds to.
 
-use std::sync::Arc;
+// `no_std + alloc` without the `std` feature (docs/architecture.md, "Embeddability posture"):
+// `alloc` is the floor, so a build with neither feature is refused here rather than failing
+// on the first `Vec`.
+extern crate alloc;
+
+#[cfg(not(feature = "alloc"))]
+compile_error!(
+    "`oce-expr` needs the `alloc` feature: build with the default `std` feature, or with \
+     `--no-default-features --features alloc`"
+);
+
+use alloc::{boxed::Box, string::String, sync::Arc, vec, vec::Vec};
 
 use oce_model::{EnumClassId, Value, ValueType};
 
@@ -116,6 +136,7 @@ mod fuel;
 #[cfg(test)]
 mod fuel_tests;
 mod lex;
+mod math;
 mod parse;
 #[cfg(test)]
 mod parse_tests;

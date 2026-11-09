@@ -25,10 +25,12 @@ resolver = "3"
 # Leverage crates (crates/leverage/<name>) sit above the facade: they depend on `oce-api` only and
 # run in the leverage CI lane (scripts/ci/leverage-members.sh). `crates/leverage` itself is a
 # directory of members, not a package, so the core glob names `crates/oce-*` rather than `crates/*`.
-members = ["crates/oce-*", "crates/leverage/*"]
+# Firmware images (firmware/<name>, issue #402) are unpublished members that link the `no_std`
+# core into a bare-metal binary; they run in the determinism lane with the core.
+members = ["crates/oce-*", "crates/leverage/*", "firmware/*"]
 
 [workspace.package]
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 # MSRV: the toolchain every gate builds and tests on is 1.97.1 (rust-toolchain.toml), a patch
 # release of 1.97.0, so 1.97.0 is the lowest version this workspace honestly claims to support.
@@ -49,12 +51,27 @@ todo = "deny"
 dbg_macro = "deny"
 print_stderr = "warn"
 print_stdout = "warn"
+# Allowed here and denied in each core-four crate root (`#![deny(clippy::disallowed_methods)]`), so
+# the `clippy.toml` std-float-method list binds only the `no_std` core (issue #399).
+disallowed_methods = "allow"
+# Allowed here and denied in each core-four crate root (`#![deny(clippy::disallowed_types)]`), so
+# the `clippy.toml` hash-collection list binds only the `no_std` core (issue #398).
+disallowed_types = "allow"
+# A `for` loop over a `HashMap`/`HashSet` visits entries in per-process random order. Where that
+# order could reach output it must be sorted first; where it cannot, the site carries an
+# `#[expect]` saying why (issue #398, docs/state-compatibility.md).
+iter_over_hash_type = "deny"
 
 [workspace.dependencies]
 # --- Shared infra pins. ---
-serde = { version = "1.0", features = ["derive", "rc"] }
+# `serde` and `thiserror` carry no default features here so the `no_std + alloc` core four
+# (`oce-model`, `oce-expr`, `oce-blocks`, `oce-graph`) can opt out of `std`: Cargo ignores a
+# member's `default-features = false` while the workspace entry keeps defaults on. Each core crate
+# re-enables `serde/std` / `thiserror/std` through its own `std` feature; every std crate names
+# `std` (and `rc` for `serde`) itself, so its behaviour is unchanged.
+serde = { version = "1.0", default-features = false, features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
-thiserror = "2.0"
+thiserror = { version = "2.0", default-features = false }
 libm = { version = "0.2.16", default-features = false }
 rustix = { version = "1.1.4", features = ["fs"] }
 
@@ -69,23 +86,35 @@ rustix = { version = "1.1.4", features = ["fs"] }
 #   no matching package named `oce-bless` found … location searched: crates.io index
 # because the crate is never published. Verified by execution at b811229.
 oce-bless = { path = "crates/oce-bless" }
-oce-model = { path = "crates/oce-model", version = "0.3.0" }
-oce-expr = { path = "crates/oce-expr", version = "0.3.0" }
-oce-diag = { path = "crates/oce-diag", version = "0.3.0" }
-oce-blocks = { path = "crates/oce-blocks", version = "0.3.0" }
-oce-validate = { path = "crates/oce-validate", version = "0.3.0" }
-oce-graph = { path = "crates/oce-graph", version = "0.3.0" }
-oce-cxf = { path = "crates/oce-cxf", version = "0.3.0" }
-oce-semantics = { path = "crates/oce-semantics", version = "0.3.0" }
-oce-store = { path = "crates/oce-store", version = "0.3.0" }
-oce-conformance = { path = "crates/oce-conformance", version = "0.3.0" }
-oce-api = { path = "crates/oce-api", version = "0.3.0" }
+# The `no_std + alloc` core four carry `default-features = false` so a core crate can depend on
+# another without pulling `std`; every std consumer names `features = ["std"]` on its own edge.
+oce-model = { path = "crates/oce-model", version = "0.4.0", default-features = false }
+oce-expr = { path = "crates/oce-expr", version = "0.4.0", default-features = false }
+oce-diag = { path = "crates/oce-diag", version = "0.4.0" }
+oce-blocks = { path = "crates/oce-blocks", version = "0.4.0", default-features = false }
+oce-validate = { path = "crates/oce-validate", version = "0.4.0" }
+oce-graph = { path = "crates/oce-graph", version = "0.4.0", default-features = false }
+oce-cxf = { path = "crates/oce-cxf", version = "0.4.0" }
+oce-semantics = { path = "crates/oce-semantics", version = "0.4.0" }
+oce-store = { path = "crates/oce-store", version = "0.4.0" }
+oce-conformance = { path = "crates/oce-conformance", version = "0.4.0" }
+oce-api = { path = "crates/oce-api", version = "0.4.0" }
 
 [profile.release]
 opt-level = 3
 lto = "thin"
 codegen-units = 1
 strip = "debuginfo"
+
+# The firmware images' profile (issue #402): release, optimized for size, whole-program LTO and
+# `panic = "abort"`, as a bare-metal build ships. `scripts/ci/check-firmware-link.sh` builds the
+# images with it and holds them to `firmware/link/size-budget.toml`.
+[profile.firmware]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
 
 [profile.dev]
 debug = "line-tables-only"

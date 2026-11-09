@@ -19,8 +19,7 @@ first, then the script.
 ## Hosting and CI
 
 GitHub is the primary host: `origin` is `github.com/jscott3201/open-control-engine`, and branches,
-PRs, reviews, issues and CI live there. The self-hosted Forgejo instance that was primary until
-October 2026 is retired. CI is GitHub Actions in `.github/workflows/` on GitHub-hosted Linux
+PRs, reviews, issues and CI live there. CI is GitHub Actions in `.github/workflows/` on GitHub-hosted Linux
 runners (plus the two `pr-gate.yml` platform cells on macOS and Windows): `pr-gate.yml` (per-PR, light), `release-gate.yml` (release PRs into `main`, daily against
 `development`, heavy), `advisories.yml` (daily), `docs-pages.yml` (docs validation and the Pages
 publish from `main`), `release.yml` (tag verify / manual crates.io publish) and the two manual
@@ -48,9 +47,9 @@ portable state snapshot equals Linux byte for byte, and Windows builds the works
 suite without the strict-bit binaries — observations, not qualification; see
 [platform cells](../docs/ci-and-the-gate.md#platform-cells-macos-and-windows).
 
-GitHub PR numbers collide with the retired Forgejo numbering: Forgejo #332 (the Forgejo CI port)
-and GitHub #332 are different changes. Bare `(#N)` citations predate the move; cite every PR merged
-on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
+Pull requests merged on the previous host before the October 2026 move to GitHub share numbers
+with GitHub PRs (#332 names two different changes). Bare `(#N)` citations predate the move; cite
+every PR merged on GitHub as `(GitHub #N)` in `CHANGELOG.md` and the docs.
 
 Native strict-bit evidence is re-established on every PR: the strict-bit matrix in `pr-gate.yml`
 recaptures the pinned corpus in four native Linux cells and compares them from scratch, so no
@@ -76,7 +75,19 @@ determinism matrix: four native cells, x86_64 on `ubuntu-latest` and aarch64 on
 Its fan-in job compares a populated portable engine-state snapshot byte-for-byte across
 architectures, checks portable and target-bound bytes across debug/release codegen, and requires
 target-bound bytes to differ across architectures. Each architecture then parses and refuses the
-other's target-bound bytes through the public restore path, natively.
+other's target-bound bytes through the public restore path, natively. The same fan-in requires the
+46 compiled-schedule blobs each cell encodes (`OCE_BLOB_OUT`) to be byte-identical in all four
+cells (GitHub #400).
+The blob round trip (issue #403) rides on the same cells: each records
+`crates/oce-conformance/tests/blob_round_trip.rs` (facade against the `no_std` entry, every output,
+warning and raw state word after every frame of the 46 fixtures) into `OCE_ROUND_TRIP_OUT`, the
+fan-in requires the four recordings identical and replays the x86_64 debug recording on aarch64
+through the aarch64 debug cell's archived suite, and `blob round trip (wasm32-wasip1 under wasmtime)` replays it on
+`wasm32-wasip1` under the wasmtime pinned in `scripts/ci/install-wasmtime.sh`. Locally,
+`bash .agents/gate.sh roundtrip` (also in `full`) records and replays on the host and on
+`wasm32-wasip1`; it needs `rustup target add wasm32-wasip1` and `bash scripts/ci/install-wasmtime.sh`
+and fails, not skips, without them. A behaviour change that moves a run digest moves the recording
+with it; there is nothing extra to bless.
 The standalone `cargo-deny` CI job runs `cargo deny check bans licenses sources` on every PR, and
 `.agents/gate.sh` runs it too.
 `advisories` is excluded from the script deliberately: it needs network and a writable
@@ -99,6 +110,90 @@ Pin-advance PRs — any change under `third_party/**` or to the pin constants �
 included, and `CI OK` is the one status that summarizes it. A PR with no checks is easy to
 mistake for a PR with no failing checks; confirm `CI OK` actually reported, not merely that
 nothing is red.
+
+## The core four build `no_std + alloc`
+
+`oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` have `default = ["std"]` and build
+`#![no_std]` with `--no-default-features --features alloc` (issue #397). In those four, write
+`core::`/`alloc::` paths and import `Vec`, `String`, `Box`, `format!` and `vec!` from `alloc`; call
+the crate's `math` module (which re-exports `libm`) for any `f64` method that is not in `core`
+(`floor`, `ceil`, `trunc`, `round`, `sqrt`, `powi`, `mul_add`, the transcendentals — the full table is
+in `TESTING.md` "Conventions"), because clippy refuses the `std` method in each core crate's `src/` tree, unit tests included
+(issue #399; `tests/` files are separate crates outside the lint, where `std` serves as the oracle); use no
+hash collections; and give every new dependency `default-features = false`.
+A crate that depends on one of the four names `features = ["std"]` on that edge, because their
+workspace entries carry `default-features = false`. The bare-metal cell (the `no-std-build` job in
+`pr-gate.yml`; `bash .agents/gate.sh nostd` runs it alone, and the light gate runs it too) builds,
+lints and `cargo tree`-scans them for `thumbv7em-none-eabihf`, `riscv32imac-unknown-none-elf` and
+`wasm32-unknown-unknown` (`scripts/ci/check-no-std.sh`; a dependency that turns `std` on fails the
+scan even where it compiles); the scripts install nothing, so add the three targets once with
+`rustup target add`. The same job checks the `no_std` `oce-graph` closure
+(`scripts/ci/check-no-std-entry-closure.sh`), runs `oce-graph`'s `blob_execution` and
+`blob_state_words` suites against the `no_std + alloc` build, and builds the firmware image (next
+section). See [the architecture](../docs/architecture.md#no_std--alloc-the-core-four).
+
+## The firmware image has a size budget, and runs only nightly
+
+`firmware/link` (package `oce-firmware-link`, `publish = false`, a workspace member through the
+`firmware/*` glob) links the core four into a bare-metal image that runs the
+`multizone_vav_supply_fan` blob golden for 160 frames (issue #402). Per PR,
+`scripts/ci/check-firmware-link.sh` builds it for `thumbv7em-none-eabihf` and
+`riscv32imac-unknown-none-elf` with the root `firmware` profile and holds each ELF to
+`firmware/link/size-budget.toml`; a change that grows the core can fail that budget. Raise a budget
+only deliberately: `bash scripts/ci/check-firmware-link.sh --suggest` prints measured + 12 %, and
+the PR says what grew. The image is executed only by `qemu.yml`, nightly and outside `CI OK`
+(`bash .agents/gate.sh qemu` locally; needs `qemu-system-arm` and `qemu-system-riscv32`), which
+diffs its per-frame run digests against the host reference runner
+(`cargo run -p oce-firmware-link --bin blob-frames`). A change to a fixture's run digest in
+`blob_frame_digests.tsv` moves the image's expected output with it: nothing else to bless. The
+firmware lib and bin roots carry `#![forbid(unsafe_code)]` (`check-workflow-gates.sh` checks it).
+A workspace copy (`test-math-lint.sh`, `test-check-no-std.sh`) must copy `firmware/` too, or
+`--locked` fails on the lockfile's `oce-firmware-link` entry.
+
+The core four use no hash collections at all: use `BTreeMap`, `BTreeSet`, `BinaryHeap` or a sorted
+`Vec` (issue #398). Two things enforce this. The `clippy.toml` `disallowed-types` block refuses
+`std`'s hash types; it is allowed workspace-wide and denied in each core crate root, so the `std`
+crates keep their lookup maps. `crates/oce-api/tests/core_crates_hash_free.rs` also refuses
+`hashbrown`, `ahash`, `indexmap` and similar crates, and checks that the lint wiring is still in
+place. Outside the core, `clippy::iter_over_hash_type` is denied workspace-wide, so a `for` loop
+over a `HashMap`/`HashSet` needs an `#[expect]` with a reason. The order-leak test is
+`crates/oce-api/tests/hash_order_independence.rs`: it runs the G36 corpus on 20 independently
+seeded threads and byte-compares every output.
+
+## Compiled-schedule blob goldens move with the engine version
+
+`crates/oce-api/tests/fixtures/blob/` holds one `OCEB` blob per G36 catalog fixture (46) and
+`class_signatures.tsv`, the per-class signature hash of every registered class (GitHub #400).
+`tests/blob_goldens.rs` re-encodes and compares them byte for byte. Three kinds of change move them,
+deliberately:
+
+- **A workspace version bump.** The header carries the encoder's engine version and the decoder
+  accepts only its own, so every blob changes (header and CRC only) when `workspace.package.version`
+  does. Regenerate them in the version-bump PR.
+- **A class signature change.** A port, a parameter rule, a literal default, the state layout or a
+  flag of any class changes `class_signatures.tsv`, and every blob that uses the class. A derived
+  default's formula text does not.
+- **A format change**, which also bumps `FORMAT_VERSION` in `oce_graph::blob`.
+
+Regenerate with `OCE_BLESS_BLOB=1 cargo test -p oce-api --test blob_goldens --locked`, run it again
+without the switch, and say in the PR which files moved and why. The blob decoder lives in
+`oce-graph` (`no_std`), so a decoder change also has to pass the `no-std-build` mirror.
+
+## The frame driver lives in `oce-graph`, and its run digests move with behaviour
+
+The HostTick v1 frame driver (time checks, per-slot input checks, the non-finite policy, the
+accepted-frame sequence, staging and the single evaluation) is `oce_graph::frame` (GitHub #401).
+`oce-api`'s `prepare_frame`/`execute_frame` resolve names and call it; `oce_graph::blob::Executable`
+calls it by slot on a `no_std` target. Change a frame rule there, never in the facade:
+`crates/oce-api/tests/frame_driver_ownership.rs` refuses a facade source that re-implements one.
+
+`crates/oce-graph/tests/fixtures/blob_frame_digests.tsv` holds one run digest per G36 fixture over
+the shared frame schedule (`crates/oce-graph/tests/support/frame_schedule.rs`). The facade's
+dual-path test and `oce-graph`'s `blob_execution` test (run against the `no_std + alloc` build in
+`no-std-build`) both check it, so it moves with any change to a fixture's outputs or state
+trajectory, like the Tier-2 traces. Bless deliberately with
+`OCE_BLESS_FRAME_DIGESTS=1 cargo nextest run -p oce-api --lib -E 'test(/blob_dual_path/)'`, rerun
+both tests without the switch, and say in the PR which fixtures moved and why.
 
 ## golden-gen hygiene is CI-only for now
 

@@ -39,6 +39,297 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 Nothing yet.
 
+## 0.4.0
+
+Prepared 2026-11-08 on `development`; the release date is the date the `v0.4.0` tag is cut from
+`main`. Every workspace member is 0.4.0. Nothing is published to crates.io.
+
+0.4.0 closes milestone M1b: the portable `no_std` core. The core four (`oce-model`, `oce-expr`,
+`oce-blocks`, `oce-graph`) build `no_std + alloc` behind a default `std` feature, and their
+workspace entries carry `default-features = false` (GitHub #428, issue #397); every `f64` operation
+`core` lacks goes through one `libm`-backed `math` module per crate, and clippy refuses the `std`
+float methods there (GitHub #431, issue #399); the core is hash-free, and no hash-collection order
+reaches a golden, a receipt or snapshot bytes (GitHub #433, issue #398). A loaded executable encodes
+on the host into the canonical `OCEB` compiled-schedule blob, and `oce_graph::blob::decode` decodes
+it on a `no_std + alloc` target under the same engine version, refusing hostile bytes with typed
+errors (GitHub #438, issue #400). The HostTick v1 frame driver moved into the core as
+`oce_graph::frame`, and `oce_graph::blob::Executable` is the `no_std` blob execution entry that runs
+a decoded blob through it with zero allocations per frame (GitHub #441, issue #401). The
+`no-std-build` job became the bare-metal gate cell: the core builds, lints and passes a `cargo tree`
+std scan on `thumbv7em-none-eabihf`, `riscv32imac-unknown-none-elf` and `wasm32-unknown-unknown`,
+and the `oce-firmware-link` image links for the two bare-metal targets within a size budget per PR
+and runs under QEMU nightly (GitHub #449, issue #402). The blob round trip records one host run of
+the 46 G36 fixtures' blobs and replays it bit for bit on x86_64, arm64 and `wasm32-wasip1` per PR
+(GitHub #451, issue #403). The workspace has 13 members, 10 publishable and three private. The
+fixture and Tier-A provenance goldens (`tools/golden-gen/goldens`) are byte-identical to the
+`v0.3.0` tag; the blob goldens move only by the engine-version bytes and their CRC (see Release).
+The design notes for the M2 authoring layer and the three passes M3 waits on (historical replay,
+the commissioning verifier, `oce-diff`) are written (GitHub #442, #443, #446, #447).
+
+### Release
+
+- **Workspace version 0.4.0** (GitHub #452, issue #404). All 13 members and the internal
+  path+version table move from 0.3.0. `CompatibilityDescriptor` reports `oce-api-version:0.4.0`,
+  so persisted descriptor receipts and replay records from 0.3.0-labelled builds refuse with a
+  `Build` mismatch, as the fail-closed policy requires; the `compatibility.txt` and
+  `compatibility_export.txt` fixtures, the `CompatibilityDescriptor` doctest and the descriptor
+  refusal tests that name the current or a neighbouring version (`compatibility_tests.rs`,
+  `replay_codec.rs`) move from 0.3.x to 0.4.x as GitHub #427 did for 0.3.0. New with this release:
+  the `OCEB` header carries the encoder's engine version and a decoder accepts only its own, so the
+  46 blob goldens under `crates/oce-api/tests/fixtures/blob` are re-blessed with
+  `OCE_BLESS_BLOB=1`. In each, exactly two things change: the engine-minor byte at offset `0x0a`
+  (3 → 4) and the 4-byte CRC-32C trailer; every other byte, every blob length, the class-signature
+  table and the per-fixture run digests (`blob_frame_digests.tsv`) are unchanged.
+  `the_worked_example_has_the_design_note_layout` pins version bytes `0, 0, 4, 0, 0, 0`, and the
+  design note's worked example shows engine 0.4.0 with its CRC-32C recomputed. The
+  `check-no-std.sh` scan fixtures name `v0.4.0`. `tools/golden-gen/goldens` and every numerical
+  golden are byte-identical. No catalog, contract-schema, state-format, execution-ABI,
+  blob-format or replay-format revision changes. The v0.3.0 sync-back merge (GitHub #430) carried
+  no change of its own.
+
+### Execution core
+
+- **One HostTick v1 frame driver, in the core, and the `no_std` blob execution entry**
+  (GitHub #441, issue #401; design note decision 11). The frame around `eval_tick` — time checks
+  (finite, `|t| ≤ MAX_FRAME_TIME_MAGNITUDE`, nondecreasing, a finite step, representable by every
+  stateful block), per-slot input checks (exact type, then the non-finite policy, then the declared
+  domain), the accepted-frame sequence, staging into every fan-out target, the single evaluation
+  and the previous-time update — moves from `oce-api` into `oce_graph::frame` as a slot-indexed,
+  name-free `FrameDriver` with a typed `FrameRefusal`. `MAX_FRAME_TIME_MAGNITUDE` and
+  `NonFiniteInputPolicy` move with it; `oce-api` re-exports both, so host code is unchanged. The
+  facade keeps name resolution, the unknown/duplicate/missing refusals, the prepared plan and its
+  incarnation token, the load and pending-edit preconditions, the durable-restore window, replay
+  records and the owned `CompletedFrame`; its refusal order, goldens, replay records, snapshot
+  bytes and per-frame allocation census are unchanged, and every existing facade test passes
+  unmodified. New: `oce_graph::blob::Executable`, the `no_std + alloc` entry a bare-metal or WASM
+  target links — `from_blob(&[u8])`, the I/O table with `input_slot`/`output_slot`,
+  `execute_frame(time, &[Value], diagnostics)` by slot through the same driver (default policy
+  `Admit`, as on the facade), borrowed outputs by slot, `target_bound`, and the state as raw words
+  (`state_words`, `restore_state_words`, refused with a typed `StateWordsRefusal` on a wrong length,
+  non-initial words before the first frame, or a region its block's state contract rejects). Its
+  rustdoc example is a `no_implicit_prelude` firmware-shaped module over a blob golden,
+  compile-tested. Evidence: the dual-path test now runs every G36 fixture's 160 frames through the
+  facade, the core driver on a second load and the blob entry, plus the same bad frames (NaN time,
+  time going backwards, a wrong type, a non-finite Real under `Refuse`, a value above a bound), and
+  compares outputs, refusals, clock, sequence and the whole `RunState` bit for bit after every frame
+  and refusal; the facade's run must reproduce a per-fixture digest table
+  (`crates/oce-graph/tests/fixtures/blob_frame_digests.tsv`) that `oce-graph`'s new
+  `blob_execution` test checks against the entry built `no_std + alloc`, in the same census binary
+  that requires zero allocations over all 7,360 frames (decode counted, 6,013 allocations across
+  the 46 goldens). `frame_driver_ownership.rs` refuses a facade source that re-implements a frame
+  rule; `scripts/ci/check-no-std-entry-closure.sh` requires the `no_std` `oce-graph` closure to hold
+  no `oce-cxf`, `oce-api`, `serde_json` or `std`, with controls; both new steps run in
+  `no-std-build` and `bash .agents/gate.sh`. The [product contract](docs/product-contract.md)
+  advances to revision 20 (grounding and evidence anchors only).
+- **The `OCEB` compiled-schedule blob: `Engine::compile_blob` encodes the loaded executable and
+  `oce_graph::blob::decode` decodes it on a `no_std + alloc` target** (GitHub #438, issue #400;
+  format and decisions in `docs/design/compiled-schedule-blob.md`, contract in
+  `docs/compiled-schedule-blob.md`). The blob carries every class with its signature hash, every
+  instance with its ground parameters in table order, the frozen block order, the connections and
+  the boundary I/O table (typed acceptance domains, fan-out targets, opaque `SemanticPoint` payloads
+  that the decoder bounds and never reads), the facade content id (`None`, 32 zero bytes, for the 13
+  partial exports) and the engine version, in one canonical little-endian byte order with a CRC-32C
+  trailer; no run state and no architecture field. The decoder refuses with a typed `BlobError` —
+  never a panic — in a documented order, bounds every count against the remaining bytes before
+  allocating, re-instantiates each block from its own registry, checks arity, kind, state layout,
+  connection types and directions, the I/O table (finite, uncrossed bounds), emit-before under its
+  own `feeds_through`, `MAX_STATE_WORDS` and each block's initial-state CRC, and allocates exactly
+  what its module documentation lists (pinned per fixture). A port list longer than any class
+  resolves (the new `oce_blocks::MAX_RESOLVED_ARITY`, twice `MAX_RESOLVED_PORT_WIDTH`) is refused
+  before anything is sized by it, and connector ownership costs 8 bytes per id until every arity is
+  checked, so peak memory is linear in the blob: a hostile million-id port list is refused at 2.0×
+  the blob length, and the densest accepted blob holds 26.6× (pinned with bounds). `oce-blocks` gains `class_signature_hash` (FNV-1a-64
+  over a canonical class record; a derived default's formula text is excluded) and
+  `class_is_target_bound`, both on `CatalogEntry`; the 15-class target-bound list moved there from
+  `oce-api`, which now reads the flag (snapshot bytes unchanged). `OcError::Blob` and the blob error
+  types are re-exported from `oce-api`. Evidence: 46 blob goldens and the per-class hash table under
+  `crates/oce-api/tests/fixtures/blob/`, re-encode and decode→re-encode byte equality, an
+  independent test-side writer, the determinism matrix comparing blob bytes across x86_64/aarch64
+  and debug/release, a facade-versus-decoded dual-path test comparing every boundary output and the
+  whole `RunState` after every tick for all 46 fixtures over about 3.3 hours of model time (with a
+  negative control and per-fixture output-variation floors), one typed-refusal test per defect, a
+  10,000-case byte-mutation property test, a §7.17 payload-mutation seam test, and a
+  hostile-parameter fuzz over every registry constructor. The determinism fan-in also checks each
+  blob artifact's size, and `bash .agents/gate.sh full` writes the artifact as the cells do. The
+  [product contract](docs/product-contract.md) advances to revision 19 with requirement PC-041 for
+  the blob.
+- **`oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` build `no_std + alloc` behind a default
+  `std` feature** (GitHub #428, issue #397). Each has `default = ["std"]`, `std = ["alloc", …]` and
+  `alloc = []`; `--no-default-features --features alloc` builds it `#![no_std]` on `core` and
+  `alloc` alone, and a build with neither feature is refused by a `compile_error!`. The default
+  build is unchanged: goldens, the cross-architecture portable snapshot and the allocation census
+  are byte-identical — the portable snapshot digest stays `2d21ed57…` (SHA-256) and the frame
+  allocation census is identical for all five fixtures (arithmetic, delay, feedback, controller,
+  assertion). Errors derive `core::error::Error` through `thiserror` with its default
+  features off. The workspace `serde` and `thiserror` entries drop their default features (each std
+  crate names `std`, and `rc` for `serde`, itself), and the four crates' workspace entries carry
+  `default-features = false`, so every std crate that depends on one names `features = ["std"]`.
+  `f64::{floor, ceil, trunc, round, sqrt}` are not in `core` on Rust 1.97: every call in the four
+  goes through `libm` in all builds — exact IEEE 754 operations, checked against the `std` methods
+  bit for bit over boundary values, a 2^20 bit-pattern sweep and a 2^18-case half-integer sweep
+  (`oce-blocks/tests/libm_std_parity.rs`) — and `f64::rem_euclid` through a helper that evaluates the standard library's own expression.
+  `oce-expr` now depends on `libm`. Two differences without `std`: `oce_blocks::catalog()` is absent
+  (its cache is a `OnceLock`), and `oce-expr`'s evaluation-fuel meter is one program-wide slot built
+  from `core` atomics instead of a thread-local, so a `no_std` host evaluates from one execution
+  context at a time. A `no-std-build` job in the determinism lane of `pr-gate.yml` builds the four
+  for `thumbv7em-none-eabihf` and `wasm32-unknown-unknown`, runs clippy `-D warnings` on the first
+  and the `oce-expr` unit suite without `std`; `.agents/gate.sh` runs the same commands and fails
+  with the `rustup target add` command when a target is missing.
+- **Every `f64` operation `core` lacks goes through one `math` module per crate, and clippy refuses
+  the `std` float methods in the core four** (GitHub #431, issue #399). `oce-blocks` and `oce-expr`
+  each gain a private `math` module re-exporting the pinned `libm` functions (and the
+  `rem_euclid` helper, moved there from `source_timetable.rs`); every former `libm::` call in the
+  four goes through it, calling the same function, so goldens and the strict-bit captures are
+  unchanged. The root `clippy.toml` lists all 37 `std`-only `f64` methods (and their `f32` twins)
+  under `disallowed-methods`, each found by a `no_std` probe of the 1.97.1 toolchain — `core` has
+  only `abs`, `signum`, `copysign`, `min`, `max`, `clamp`, `recip`, `to_degrees`, `to_radians`,
+  `total_cmp` and `midpoint`; `mul_add`, `powi`, `fract` and `div_euclid` are `std`. The
+  workspace lint table allows the lint and the four crate roots deny it, so it binds each core
+  crate's `src/` tree, unit tests included, while `std` crates and `tools/golden-gen` (whose
+  manifest allows it) keep their `std` methods; files under `tests/` are separate crates outside
+  the lint, deliberately, because that is where the `std` methods serve as the oracle
+  (`libm_std_parity.rs`). Three test-only `std`
+  calls move to `math` or an exact constant. `scripts/ci/test-math-lint.sh`, run by the
+  `no-std-build` job and `.agents/gate.sh`, re-probes the table, checks the list is total and
+  the lint scoped (a core `tests/` file naming `libm::` must be a declared `std` oracle), and
+  requires an `x.sin()` mutation in oce-blocks and an `f.sqrt()` mutation in oce-expr to fail clippy.
+  `sqrt` stays on `libm` in every build (currently its software routine): 2.3 ns per call slower than `f64::sqrt` on Apple M5, but
+  no frame measurement separated it from noise ([benchmarks](docs/benchmarks.md)).
+
+### Verification
+
+- **The blob round trip: blobs encoded on x86_64 run bit-identically on arm64 and on
+  `wasm32-wasip1`, per PR** (GitHub #451, issue #403). A new `oce-conformance` suite,
+  `tests/blob_round_trip.rs`, loads each of the 46 G36 fixtures through the facade, encodes its
+  blob, decodes it with `oce_graph::blob::Executable` and runs the shared 160-frame schedule through
+  both, comparing every boundary output by raw bits, every warning in order (source, message, time
+  bits) and the raw state words after load and after every frame; it also pins each blob to its
+  golden and the entry's run to `blob_frame_digests.tsv`. `OCE_ROUND_TRIP_OUT` records the blobs
+  and expected results as a documented, line-oriented artifact (format version 1);
+  `OCE_ROUND_TRIP_EXPECT` decodes and runs a recording's blobs on another target and compares the
+  run with the recorded one. The reader bounds every file and count and refuses malformed input
+  with a typed error naming the file and line, never a panic. In `pr-gate.yml` every determinism
+  cell records, `determinism-compare` requires the four recordings identical and replays the
+  x86_64 debug recording natively on aarch64, and a new `blob round trip (wasm32-wasip1 under
+  wasmtime)` job in the determinism lane replays it on `wasm32-wasip1` under wasmtime 50.0.1,
+  installed by `scripts/ci/install-wasmtime.sh` against pinned archive and binary SHA-256 digests
+  and run through a cargo target runner (`.cargo/config.toml`, `scripts/ci/wasmtime-runner.sh`).
+  `CI OK` requires all three legs. The controls flip one bit of a recorded output, state word
+  (after load or after a frame), warning time or blob, change or remove a recorded warning, and
+  record `-0.0` or another NaN payload against the produced Real; each must be reported with the
+  fixture, frame, slot or index and both bit patterns.
+  `bash .agents/gate.sh roundtrip` (also part of `full`) records and replays on the local host and
+  on `wasm32-wasip1`, failing with the install command when the target or wasmtime is missing;
+  `release-gate.yml`'s `gate (full)` installs both. New facade accessor: `Engine::state_words`
+  borrows the raw state words in the layout `Executable::state_words` returns — a verification
+  view, not a continuation format. Product contract revision 22 (PC-041 cites the round trip).
+  Goldens byte-identical; no core-four or `oce-cxf` source changed.
+
+- **The bare-metal gate cell: the core builds per PR for two bare-metal targets and links into a
+  firmware image held to a size budget, which runs under QEMU nightly** (GitHub #449, issue #402).
+  `pr-gate.yml`'s `no-std-build` job becomes the bare-metal cell. `scripts/ci/check-no-std.sh`
+  builds and lints `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` `no_std + alloc` on
+  `thumbv7em-none-eabihf`, `riscv32imac-unknown-none-elf` (new) and `wasm32-unknown-unknown`, then
+  scans each crate's `cargo tree` per target and fails on any `std` feature or host-only crate;
+  `scripts/ci/test-check-no-std.sh` proves it fails on `extern crate std;` in `oce-graph` and on a
+  `serde/std` that still compiles on wasm32. The new unpublished member `oce-firmware-link`
+  (`firmware/link`) embeds the `multizone_vav_supply_fan` blob golden, decodes it with
+  `oce_graph::blob::Executable` and runs the shared 160-frame schedule, printing a run digest per
+  frame and the verdict against `blob_frame_digests.tsv`; it has no `unsafe` code.
+  `scripts/ci/check-firmware-link.sh` builds its `blob-frames` image for both bare-metal targets
+  with the new `firmware` profile and holds `.text`/`.rodata`/`.data`/`.bss`, flash and RAM to
+  `firmware/link/size-budget.toml` through `scripts/ci/firmware_size.py` (copied with its tests from
+  rusty-bacnet); its host tests require the image's schedule to equal `oce-graph`'s test schedule
+  bit for bit and every golden to reach its table digest through the image's code. The new
+  `qemu.yml` (nightly and dispatch, outside `CI OK`) runs the images on QEMU's `netduinoplus2` and
+  riscv32 `virt` machines and requires every line to equal the host reference runner's; both
+  targets reproduce the host digests. `bash .agents/gate.sh nostd` and `bash .agents/gate.sh qemu`
+  run the cell and the emulation check alone. The [product contract](docs/product-contract.md)
+  advances to revision 21: PC-041's limitation and evidence now cite the bare-metal image.
+  Goldens are byte-identical.
+- **No hash-collection iteration order reaches a golden, a receipt or snapshot bytes** (GitHub
+  #433, issue #398). `oce-api/tests/hash_order_independence.rs` loads the 46 G36 fixtures and the
+  resolver-contract document on 20 freshly spawned threads, each with independently seeded
+  `RandomState` hashers, exports, runs four frames and snapshots. Export bytes, content id, load and
+  export receipts, `input_definitions()`, point inventory, resolved model, schedule, topology,
+  frame outputs and snapshot bytes must agree across all 20. Four refused documents pin the order of
+  load errors and failure receipts the same way. A synthetic `HashMap`-order emitter run through
+  the same harness must diverge, so the test cannot pass by reusing one seed; swapping the
+  schedule's min-heap, the `input_definitions()` sort or the resolver's diagnostic sort for hash
+  order each fails it. `clippy.toml` gains a `disallowed-types` list (`std`'s `HashMap`,
+  `HashSet`, `RandomState`, `DefaultHasher`, `BuildHasherDefault`), allowed workspace-wide and
+  denied in the roots of `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph`, so it binds only
+  those four; `oce-api/tests/core_crates_hash_free.rs` checks that wiring and also refuses
+  `hashbrown`, `ahash`, `indexmap` and similar crates there. `clippy::iter_over_hash_type` is
+  denied workspace-wide. The audit of `oce-api`, `oce-cxf`,
+  `oce-validate` and `oce-store` found every output already canonical. Two resolver
+  single-assignment refusals now also push in connector / IRI order (they were already sorted
+  before leaving the resolver). `MemStore::list_models` now returns keys sorted rather than in
+  `HashMap` order. Goldens are byte-identical. Method-call iteration as a clippy error follows in
+  issue #432.
+
+### Documentation
+
+- **Design note for the structural diff (`oce-diff`)** (GitHub #447, issue #437).
+  `docs/design/diff.md` fixes, before any code, how two revisions of an authoring model are
+  compared: the authored block name is the identity, a class change is a removal plus an addition,
+  and a bounded, deterministic rename pass (class and bit-exact parameters as hard gates,
+  neighbourhood agreement, mutual-unique acceptance, `exact` or `high` confidence, caps of 2,048
+  blocks per side and 65,536 pairs) reports renames without ever affecting `graph_equal`. It
+  defines the closed change categories, a parameters section that keeps site retunes apart from
+  graph edits, the schema-versioned serde `Diff` with its text and Markdown renderings, the thin
+  CXF adapter over `Topology`, same-or-different blob comparison, and `oce diff` exit codes under
+  the one `oce` CLI rule (0 yes, 1 no, 2 error). Three worked examples (a site retune; added,
+  removed and rewired blocks with one rename; a wholesale rename the diff cannot fully match) show
+  the JSON and text output. `docs/design/authoring-layer.md`'s CLI exit codes are aligned with the
+  same rule (a parse refusal and an I/O failure exit 2, no exit 3), with a dated review ruling. The
+  note is registered in `docs/README.md` and the book.
+- **Design note for the commissioning verifier (CDL §12)** (GitHub #446, issue #436).
+  `docs/design/commissioning.md` fixes, before any code, the tolerance mode of `oce-verify`: a
+  strict-JSON superset of CDL §12.7 Listing 12.1 (LBL specs load unchanged, comments stripped),
+  Listing 12.2 point mapping with a closed `units/v1` conversion table outside the engine, a
+  faithful Rust port of LBNL funnel's tube construction proven by a differential test against
+  `pyfunnel` 2.1.1, §12.7.2 indicator zeroing, zero-order-hold comparison sampling, per-output
+  `pass` / `fail` / `no_data` reports, a receipt sharing its header with the M3 vector receipt, and
+  `oce verify --commission`. Its worked example uses the Building 33 cooling-coil trends that the
+  Modelica Buildings library ships. It states the owner's four decisions, six accepted
+  recommendations and sixteen more settled in review, among them exact output names (a key with `*`
+  or `?` is an anchored glob) and the `oce` exit-code convention (0 pass, 1 not passed, 2 error).
+  The note is registered in `docs/README.md` and the book.
+- **Design note for the historical replay API** (GitHub #443, issue #435). `docs/design/replay.md`
+  fixes, before any code, the `oce-replay` leverage crate that every consumer (`oce-verify`,
+  `oce-py`, `oce-wasm`, `oce-host`, the commissioning verifier) uses to drive the engine from
+  recorded or scripted inputs: slot-indexed frame sources after a one-time name-to-slot mapping
+  (columnar arrays, a bounded CSV with a column map, step lists), the `Recorded` and `Grid` time
+  bases, a missing-sample policy that refuses and stops by default and records every substitution,
+  a columnar bit-exact trace (89 B per frame for the G36 controller fixture's outputs) and a
+  resumable `advance` cursor for the Python GIL and the browser worker. It states the owner's four
+  decisions, six accepted recommendations and thirteen more settled in review, among them the
+  `csv` crate inside the crate's own caps; #444 and #445 implement it. The note is registered in
+  `docs/README.md` and the book.
+- **Design note for the authoring layer (M2)** (GitHub #442). `docs/design/authoring-layer.md`
+  fixes, before any code, what `oce-author` and the `oce` CLI are: leverage crates above the facade
+  that never evaluate or schedule and reach the engine only as CXF through `Engine::load_cxf`. It
+  covers the flat single-root authoring model, the terse text form (grammar, canonical printer,
+  parse bounds), the strict-JSON wire form with a `schemars`-derived schema, a two-stage validator
+  (author-side checks, then emit and load in a throwaway `Engine`) with a finding-code parity table,
+  the fixed-layout deterministic emitter and the CLI's commands, exit codes and JSON output. It
+  states the owner's nine decisions and twelve more settled in review, among them a wire `value`
+  that is a number, boolean, string, `{"ref"}` or `{"member"}`, and `clap` for the CLI.
+  `docs/architecture.md` now limits the no-binaries rule to the engine crates, so leverage crates
+  may ship binaries above the facade; the note is registered in `docs/README.md` and the book.
+- The contributor-facing docs no longer describe the retired previous host by name (GitHub #439).
+  `AGENTS.md`, `CONTRIBUTING.md`, `.agents/project-facts.md` and `docs/ci-and-the-gate.md` keep
+  the one fact that still matters, that pull-request numbers from before the October 2026 move
+  share numbers with GitHub PRs so merged PRs are cited `(GitHub #N)`, and `CONTRIBUTING.md` now
+  names the macOS and Windows observation cells beside the Linux runners.
+- The README states where the project is and where it is going (GitHub #434): a status and
+  roadmap section (v0.3.0 as M1a, M1b in progress toward v0.4.0, M2–M9 as planned), the
+  `no_std + alloc` core and its math and collection discipline under "What it does today", the
+  per-PR native strict-bit evidence in place of the retired retained receipt, and documentation
+  table rows for the product contract, state compatibility, strict-bit evidence, facade migration
+  and the design notes.
+
 ## 0.3.0
 
 Prepared 2026-11-08 on `development`; the release date is the date the `v0.3.0` tag is cut from

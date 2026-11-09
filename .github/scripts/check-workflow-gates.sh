@@ -13,6 +13,7 @@ WORKFLOW_DIR="${OCE_WORKFLOW_DIR:-.github/workflows}"
 DENY_TOML="${OCE_DENY_TOML:-deny.toml}"
 ROOT_CARGO_TOML="${OCE_ROOT_CARGO_TOML:-Cargo.toml}"
 CRATES_DIR="${OCE_CRATES_DIR:-crates}"
+FIRMWARE_DIR="${OCE_FIRMWARE_DIR:-firmware}"
 
 require_file() {
   path="$1"
@@ -55,6 +56,27 @@ require_job_pattern() {
     found { print }
   ' "$path")"
   if ! grep -Eq -- "$pattern" <<< "$job_body"; then
+    echo "FAIL: $path job $job is missing required gate pattern: $label"
+    exit 1
+  fi
+}
+
+# Like require_job_literal, but also requires `first` on an earlier line of the job than `second`
+# (a setup step that must run before the command that needs it).
+require_job_order() {
+  path="$1"
+  job="$2"
+  first="$3"
+  second="$4"
+  label="$5"
+  job_body="$(awk -v header="  $job:" '
+    $0 == header { found = 1; next }
+    found && /^  [^ ]/ { exit }
+    found && !/^[[:space:]]*#/ { print }
+  ' "$path")"
+  first_line="$(grep -nF -- "$first" <<< "$job_body" | head -n 1 | cut -d: -f1 || true)"
+  second_line="$(grep -nF -- "$second" <<< "$job_body" | head -n 1 | cut -d: -f1 || true)"
+  if [ -z "$first_line" ] || [ -z "$second_line" ] || [ "$first_line" -ge "$second_line" ]; then
     echo "FAIL: $path job $job is missing required gate pattern: $label"
     exit 1
   fi
@@ -284,8 +306,8 @@ require_lane_filter() {
   for want in \
     determinism-matrix=core determinism-compare=core strict-bit-matrix=core strict-bit-compare=core \
     crate-tests=core golden-gen-hygiene=core golden-gen-firewall=core build=core clippy=core \
-    rustdoc=core deny=core unused-deps=core default-no-db=core facade-contract=core \
-    portable-snapshot-macos=core portable-snapshot-compare=core std-build-windows=core \
+    rustdoc=core deny=core unused-deps=core default-no-db=core facade-contract=core no-std-build=core \
+    blob-round-trip-wasm=core portable-snapshot-macos=core portable-snapshot-compare=core std-build-windows=core \
     leverage-lane=leverage gate=gate_scripts \
     changes=always fmt=always file-size-cap=always no-secret-scan=always docs=always \
     gate-fixtures=always package-publication-contract=always; do
@@ -501,6 +523,29 @@ require_unsafe_forbid_layers() {
     echo "FAIL: no crate src/lib.rs files found under $CRATES_DIR"
     exit 1
   fi
+
+  # Firmware members (issue #402) hold no `unsafe` either: their manifests take the workspace lints,
+  # their lib roots start with the forbid, and every bin root carries it, since an image's entry,
+  # allocator and panic handler live in its bin.
+  for manifest in "$FIRMWARE_DIR"/*/Cargo.toml; do
+    [ -e "$manifest" ] || continue
+    require_lints_workspace "$manifest"
+  done
+  for lib in "$FIRMWARE_DIR"/*/src/lib.rs; do
+    [ -e "$lib" ] || continue
+    first_line="$(sed -n '1p' "$lib")"
+    if [ "$first_line" != '#![forbid(unsafe_code)]' ]; then
+      echo "FAIL: $lib line 1 must be #![forbid(unsafe_code)]"
+      exit 1
+    fi
+  done
+  for bin in "$FIRMWARE_DIR"/*/src/main.rs "$FIRMWARE_DIR"/*/src/bin/*.rs; do
+    [ -e "$bin" ] || continue
+    if ! grep -qx '#!\[forbid(unsafe_code)\]' "$bin"; then
+      echo "FAIL: $bin must carry #![forbid(unsafe_code)]"
+      exit 1
+    fi
+  done
 }
 
 # The mdBook binary is restored from actions/cache before the installer runs, keyed on the pinned
@@ -631,12 +676,73 @@ require_job_pattern "$ci" 'determinism-compare' 'test "\$CELL_ARCH" != "\$FOREIG
 require_job_pattern "$ci" 'determinism-compare' \
   "test\\(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied\\)'" \
   'restore and refuse the foreign target-bound snapshot'
-require_job_pattern "$ci" 'determinism-compare' '--profile ci --no-tests=fail' \
+require_job_pattern "$ci" 'determinism-compare' '--profile ci --no-tests=fail \\$' \
   'foreign target-bound restore hard-fails when its test is absent'
 require_job_pattern "$ci" 'determinism-compare' 'tool:[[:space:]]*nextest@0\.9\.143' \
   'pinned cargo-nextest install for foreign restore'
 require_job_pattern "$ci" 'determinism-compare' 'arch: x86_64' 'x86_64 restores the aarch64 snapshot'
 require_job_pattern "$ci" 'determinism-compare' 'arch: aarch64' 'aarch64 restores the x86_64 snapshot'
+# The blob round trip (issue #403): three legs, one recorded artifact. Every determinism cell
+# records the suite natively, the fan-in requires the four recordings equal and replays the x86_64
+# debug recording through each architecture's archived suite, and the wasm32-wasip1 leg replays it
+# under the checksum-pinned wasmtime.
+require_job_pattern "$ci" 'determinism-matrix' \
+  '^[[:space:]]*(- )?run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci --no-tests=fail$' \
+  'record the debug blob round trip in every determinism cell'
+require_job_pattern "$ci" 'determinism-matrix' \
+  '^[[:space:]]*(- )?run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci-release --cargo-profile release --no-tests=fail$' \
+  'record the release blob round trip in every determinism cell'
+require_job_pattern "$ci" 'determinism-matrix' 'OCE_ROUND_TRIP_OUT: target/determinism/round-trip$' \
+  'write the blob round-trip recording into the uploaded cell directory'
+require_job_literal "$ci" 'determinism-matrix' \
+  'test "$(ls target/determinism/round-trip | wc -l | tr -d '"' '"')" = 92' \
+  'refuse a determinism cell whose round-trip recording is not 46 blobs and 46 traces'
+require_job_literal "$ci" 'determinism-matrix' \
+  'cargo nextest archive -p oce-conformance --test blob_round_trip --locked --archive-file target/determinism/blob-round-trip.tar.zst' \
+  'archive each architecture'"'"'s debug blob round trip for the fan-in'
+for pair in 'x86_64-debug determinism-x86_64-release' 'x86_64-debug determinism-aarch64-debug' \
+  'x86_64-debug determinism-aarch64-release'; do
+  require_job_literal "$ci" 'determinism-compare' \
+    "diff -rq determinism-${pair% *}/round-trip ${pair#* }/round-trip" \
+    "compare the determinism-${pair% *} and ${pair#* } round-trip recordings"
+done
+require_job_literal "$ci" 'determinism-compare' \
+  'export OCE_ROUND_TRIP_EXPECT="$PWD/target/determinism/determinism-x86_64-debug/round-trip"' \
+  'replay the x86_64 debug round-trip recording on each architecture'
+require_job_literal "$ci" 'determinism-compare' \
+  'cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/blob-round-trip.tar.zst"' \
+  'replay the recording through this architecture'"'"'s own archived suite'
+require_job_pattern "$ci" 'determinism-compare' '^[[:space:]]*--workspace-remap \. --profile ci --no-tests=fail$' \
+  'the round-trip replay hard-fails when its suite is absent'
+require_job_needs "$ci" 'blob-round-trip-wasm' 'determinism-matrix'
+require_job_pattern "$ci" 'blob-round-trip-wasm' '^    runs-on:[[:space:]]*ubuntu-latest[[:space:]]*$' \
+  'the wasm32 leg runs on the x86_64 runner'
+require_job_pattern "$ci" 'blob-round-trip-wasm' '^[[:space:]]*(- )?run: rustup target add wasm32-wasip1$' \
+  'the wasm32 leg installs the wasm32-wasip1 target'
+require_job_pattern "$ci" 'blob-round-trip-wasm' \
+  '^[[:space:]]*(- )?run: bash scripts/ci/install-wasmtime\.sh target/wasmtime-bin$' \
+  'the wasm32 leg installs the checksum-pinned wasmtime'
+require_job_pattern "$ci" 'blob-round-trip-wasm' \
+  "^[[:space:]]*key:[[:space:]]*wasmtime-.*hashFiles\\('scripts/ci/install-wasmtime\\.sh'\\)" \
+  'the wasm32 leg keys its wasmtime cache on the pinned installer'
+require_job_pattern "$ci" 'blob-round-trip-wasm' '^[[:space:]]*name:[[:space:]]*determinism-x86_64-debug$' \
+  'the wasm32 leg downloads the x86_64 debug recording'
+require_job_pattern "$ci" 'blob-round-trip-wasm' \
+  'OCE_ROUND_TRIP_EXPECT: target/round-trip-recorded/round-trip$' \
+  'the wasm32 leg replays the downloaded recording'
+require_job_pattern "$ci" 'blob-round-trip-wasm' '^[[:space:]]*wasmtime --version$' \
+  'the wasm32 leg prints the wasmtime version it ran under'
+require_job_pattern "$ci" 'blob-round-trip-wasm' \
+  '^[[:space:]]*cargo nextest run -p oce-conformance --test blob_round_trip --target wasm32-wasip1 --locked --profile ci --no-tests=fail$' \
+  'the wasm32 leg runs the round trip on wasm32-wasip1 with hard-fail-on-zero-tests'
+require_job_pattern "$ci" 'blob-round-trip-wasm' '^[[:space:]]*(- )?run: test -s target/nextest/ci/junit\.xml$' \
+  'the wasm32 leg refuses an absent or empty nextest report'
+require_job_order "$ci" 'blob-round-trip-wasm' 'run: rustup target add wasm32-wasip1' \
+  'cargo nextest run -p oce-conformance --test blob_round_trip --target wasm32-wasip1' \
+  'the wasm32 leg installs its target before running on it'
+require_job_order "$ci" 'blob-round-trip-wasm' 'run: bash scripts/ci/install-wasmtime.sh target/wasmtime-bin' \
+  'cargo nextest run -p oce-conformance --test blob_round_trip --target wasm32-wasip1' \
+  'the wasm32 leg installs wasmtime before running under it'
 # Platform observation cells (issue #394): macOS arm64 portable snapshot and Windows std build.
 require_job_pattern "$ci" 'portable-snapshot-macos' '^    runs-on:[[:space:]]*macos-15[[:space:]]*$' \
   'the macOS portable-snapshot cell runs on macos-15'
@@ -687,6 +793,32 @@ require_job_pattern "$ci" 'crate-tests' \
   'run the oce-graph, oce-validate, oce-model, oce-cxf and oce-store suites per PR and hard-fail on zero tests'
 require_job_pattern "$ci" 'crate-tests' '^[[:space:]]*(- )?run: test -s target/nextest/ci/junit\.xml$' \
   'refuse an absent or empty crate-suite report'
+# The `no_std + alloc` build of the core four (issue #397): both targets, no default features, and
+# the oce-expr suite that exercises the program-wide fuel meter.
+# The bare-metal cell (issues #397, #402): the three targets, the core four's build, clippy and
+# graph scan with its controls, the oce-expr suite without std, and the firmware image's build,
+# size budget, size-checker controls and host run. The scripts own the commands; check-no-std.sh
+# names the crates, features and targets.
+no_std_targets='rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown'
+require_job_literal "$ci" 'no-std-build' "$no_std_targets" 'install the no_std targets'
+require_job_pattern "$ci" 'no-std-build' '^[[:space:]]*(- )?run: bash scripts/ci/check-no-std\.sh$' \
+  'build, lint and graph-scan the core four no_std + alloc on every target'
+require_job_pattern "$ci" 'no-std-build' '^[[:space:]]*(- )?run: bash scripts/ci/test-check-no-std\.sh$' \
+  'prove the no_std check fails on std'
+require_job_literal "$ci" 'no-std-build' \
+  'cargo test -p oce-expr --no-default-features --features alloc --lib --locked -- --test-threads=1' \
+  'run the oce-expr unit suite without std'
+require_job_pattern "$ci" 'no-std-build' '^[[:space:]]*(- )?run: bash scripts/ci/check-firmware-link\.sh$' \
+  'build the firmware image for each bare-metal target within its size budget'
+require_job_pattern "$ci" 'no-std-build' \
+  '^[[:space:]]*(- )?run: python3 -I scripts/ci/test-firmware-size\.py$' \
+  'run the firmware size-check controls'
+require_job_pattern "$ci" 'no-std-build' '^[[:space:]]*(- )?run: cargo test -p oce-firmware-link --locked$' \
+  'run the firmware image on the host against every golden'
+require_job_order "$ci" 'no-std-build' "$no_std_targets" 'run: bash scripts/ci/check-no-std.sh' \
+  'the bare-metal cell installs its targets before building for them'
+require_job_order "$ci" 'gate' "$no_std_targets" 'run: bash .agents/gate.sh' \
+  'the executed gate script has the no_std targets it builds for'
 # Documentation checks under CI OK (issue #377); docs-pages.yml is path-filtered and not required.
 require_job_pattern "$ci" 'docs' '^[[:space:]]*(- )?run: bash scripts/docs/install-mdbook\.sh target/mdbook-bin$' \
   'install the checksum-pinned mdBook'
@@ -793,6 +925,27 @@ require_job_pattern "$release" 'ci-ok' 'toJSON\(needs\)' \
   'release gate CI OK aggregate inspects every needed result'
 require_ci_ok_covers_every_job "$release"
 require_no_job_conditions "$release"
+require_job_order "$release" 'gate' "$no_std_targets" 'run: bash .agents/gate.sh full' \
+  'the executed full gate script has the no_std targets it builds for'
+# `gate.sh full` runs the blob round trip's wasm32 leg and fails closed without its runtime.
+require_job_order "$release" 'gate' 'rustup target add wasm32-wasip1' 'run: bash .agents/gate.sh full' \
+  'the executed full gate script has the wasm32-wasip1 target its round trip runs on'
+require_job_order "$release" 'gate' 'bash scripts/ci/install-wasmtime.sh target/wasmtime-bin' \
+  'run: bash .agents/gate.sh full' \
+  'the executed full gate script has the pinned wasmtime its round trip runs under'
+
+# The emulation check (issue #402): nightly and on dispatch, never on a pull request or a push (it
+# is not part of CI OK), its actions pinned, and it runs the emulation script.
+qemu="$WORKFLOW_DIR/qemu.yml"
+require_file "$qemu"
+require_pinned_actions "$qemu"
+require_pattern "$qemu" '^[[:space:]]*schedule:' 'scheduled emulation run'
+require_pattern "$qemu" '^[[:space:]]*- cron:' 'emulation cron entry'
+require_pattern "$qemu" '^[[:space:]]*workflow_dispatch:' 'manual emulation run'
+require_pattern "$qemu" '^[[:space:]]*(- )?run: bash scripts/ci/emulate-firmware\.sh$' \
+  'the emulation run executes emulate-firmware.sh'
+refuse_pattern "$qemu" '^on:[[:space:]]*[^[:space:]#]|^[[:space:]]*(pull_request|pull_request_target|push|merge_group):' \
+  'a pull_request or push trigger, or a one-line on:; the emulation run is nightly and non-gating'
 
 # Daily advisory/yanked gate and deny.toml discipline.
 require_pattern "$advisories" 'schedule:' 'scheduled advisory gate'

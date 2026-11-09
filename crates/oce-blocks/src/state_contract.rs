@@ -1,8 +1,10 @@
 //! Runtime-state revisions and structural validation owned by the block library.
 
+use alloc::{format, string::String, string::ToString};
 use oce_model::determinism::CANONICAL_NAN_BITS;
 
 use crate::BlockKind;
+use crate::math;
 use crate::state_contract_registry::{self, Validator};
 
 const PREV_T_UNSET: u64 = u64::MAX;
@@ -131,7 +133,7 @@ pub(crate) fn validate_sampled(
         return Err("sample origin is not on the rounded period grid".into());
     }
     if t0_value > state_t {
-        let quotient = (state_t / period).floor();
+        let quotient = math::floor(state_t / period);
         let product = quotient * period;
         if !quotient.is_finite()
             || !product.is_finite()
@@ -214,7 +216,7 @@ pub(crate) fn sampled_time_representable(
         return false;
     }
     let t0 = if initialized == 0 {
-        let q = (t_now / period).floor();
+        let q = math::floor(t_now / period);
         let r = q * period;
         let rounded = round_six(r);
         if !q.is_finite() || !r.is_finite() || !rounded.is_finite() {
@@ -238,7 +240,7 @@ pub(crate) fn sampled_horizon_representable(first: f64, last: f64, period: f64) 
     if !period.is_finite() || period <= 0.0 {
         return false;
     }
-    let quotient = (first / period).floor();
+    let quotient = math::floor(first / period);
     let product = quotient * period;
     let t0 = round_six(product);
     quotient.is_finite()
@@ -266,14 +268,14 @@ fn sampled_index(t_now: f64, t0: f64, period: f64) -> Option<i64> {
     if !period.is_finite() || period <= 0.0 || !t0.is_finite() {
         return None;
     }
-    checked_index(((t_now - t0) / period + 1e-9).floor())
+    checked_index(math::floor((t_now - t0) / period + 1e-9))
 }
 
 fn rounded_grid_origin(t0: f64, period: f64) -> bool {
     if !period.is_finite() || period <= 0.0 || !t0.is_finite() {
         return false;
     }
-    let quotient = (t0 / period).round();
+    let quotient = math::round(t0 / period);
     let product = quotient * period;
     quotient.is_finite() && product.is_finite() && round_six(product).to_bits() == t0.to_bits()
 }
@@ -282,13 +284,13 @@ fn sample_trigger_index(t_now: f64, period: f64, shift: f64) -> Option<i64> {
     if !period.is_finite() || period <= 0.0 || !shift.is_finite() {
         return None;
     }
-    let quotient = (shift / period).floor();
+    let quotient = math::floor(shift / period);
     let product = quotient * period;
     let phase = shift - product;
     if !quotient.is_finite() || !product.is_finite() || !phase.is_finite() {
         return None;
     }
-    checked_index(((t_now - phase) / period + 1e-9).floor())
+    checked_index(math::floor((t_now - phase) / period + 1e-9))
 }
 
 fn checked_index(value: f64) -> Option<i64> {
@@ -300,9 +302,9 @@ fn checked_index(value: f64) -> Option<i64> {
 fn round_six(value: f64) -> f64 {
     const FACTOR: f64 = 1_000_000.0;
     if value > 0.0 {
-        (value * FACTOR + 0.5).floor() / FACTOR
+        math::floor(value * FACTOR + 0.5) / FACTOR
     } else {
-        (value * FACTOR - 0.5).ceil() / FACTOR
+        math::ceil(value * FACTOR - 0.5) / FACTOR
     }
 }
 
@@ -505,7 +507,7 @@ fn prev_word(region: &[u64], index: usize, prev_t: f64) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use alloc::sync::Arc;
 
     use oce_model::{ParamTable, Value};
 

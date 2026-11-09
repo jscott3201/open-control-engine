@@ -1,0 +1,51 @@
+[package]
+name = "oce-firmware-link"
+description = "Bare-metal firmware image that runs a compiled-schedule blob through the no_std engine entry, with its size budget (issue #402)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+# The lib holds the run: the embedded fixture blob, the frame schedule and the digest, and the
+# output lines. It is `no_std` everywhere. The bin is the image on a bare-metal target and the host
+# reference runner on a host: the same run, printing the same lines. Neither has unit tests; the
+# host tests are in tests/.
+[lib]
+test = false
+doctest = false
+
+[[bin]]
+name = "blob-frames"
+path = "src/bin/blob_frames.rs"
+test = false
+bench = false
+
+[dependencies]
+oce-model = { workspace = true, features = ["alloc"] }
+oce-blocks = { workspace = true, features = ["alloc"] }
+oce-graph = { workspace = true, features = ["alloc"] }
+
+# What only a bare-metal image chooses, so a host build pulls in none of it: the global allocator
+# (a linked-list first fit, locked by a spin lock on the targets' native atomics, over an arena that
+# `static_cell` hands out once, so no `unsafe` is needed to give it its memory) and semihosting, the
+# image's output and exit code under QEMU.
+[target.'cfg(target_os = "none")'.dependencies]
+linked_list_allocator = { version = "0.10.6", default-features = false, features = ["use_spin"] }
+static_cell = "2.1.1"
+semihosting = { version = "0.1.25", features = ["stdio"] }
+
+# The startup code: the reset vector, RAM initialization and the FPU on an eabihf target.
+[target.'cfg(all(target_arch = "arm", target_os = "none"))'.dependencies]
+cortex-m-rt = "0.7.7"
+
+# single-hart: the image runs on one hart, so the startup code drops its multi-hart gate; memory:
+# its link.x includes the memory.x build.rs places.
+[target.'cfg(all(target_arch = "riscv32", target_os = "none"))'.dependencies]
+riscv-rt = { version = "0.18.0", features = ["single-hart", "memory"] }
+
+[lints]
+workspace = true

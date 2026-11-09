@@ -10,6 +10,19 @@
 #   bash .agents/gate.sh full     # full     — adds the suite (release-gate.yml)
 #   bash .agents/gate.sh leverage # leverage — mirrors a PR confined to crates/leverage/: the
 #                                 #            always-on jobs plus the leverage lane, no engine lane
+#   bash .agents/gate.sh nostd    # nostd    — the bare-metal cell alone (pr-gate.yml's
+#                                 #            `no-std-build` job): the no_std core, the firmware
+#                                 #            image's build and size budget; light and full run
+#                                 #            it too
+#   bash .agents/gate.sh qemu     # qemu     — the emulation check (qemu.yml, nightly): the firmware
+#                                 #            images under QEMU against the host reference; needs
+#                                 #            qemu-system-arm and qemu-system-riscv32 on PATH
+#   bash .agents/gate.sh roundtrip # roundtrip — the blob round trip (pr-gate.yml's determinism
+#                                 #            cells, determinism-compare and blob-round-trip-wasm):
+#                                 #            record on the host, then replay the recording on the
+#                                 #            host and on wasm32-wasip1 under wasmtime; needs the
+#                                 #            wasm32-wasip1 target and the pinned wasmtime
+#                                 #            (scripts/ci/install-wasmtime.sh); full runs it too
 #
 # Commands are kept in CI's exact form, flags included. `--locked`, the `ci`
 # nextest profile, `--no-tests=fail`, and `RUSTDOCFLAGS` are each load-bearing:
@@ -31,9 +44,9 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 MODE="${1:-light}"
 case "$MODE" in
-  light | full | leverage) ;;
+  light | full | leverage | nostd | qemu | roundtrip) ;;
   *)
-    echo "usage: bash .agents/gate.sh [light|full|leverage]" >&2
+    echo "usage: bash .agents/gate.sh [light|full|leverage|nostd|qemu|roundtrip]" >&2
     exit 2
     ;;
 esac
@@ -59,6 +72,15 @@ step() {
 }
 
 # Same, for steps needing an environment variable set only for that command.
+# Write the blob artifact exactly as a determinism cell does, then check its size.
+blob_matrix_artifact() {
+  rm -f target/blobs-gate.bin
+  OCE_BLOB_OUT=target/blobs-gate.bin cargo nextest run -p oce-api --locked --profile ci \
+    --no-tests=fail -E 'binary(blob_goldens)' &&
+    test -s target/blobs-gate.bin &&
+    test "$(wc -c < target/blobs-gate.bin | tr -d ' ')" = 123329
+}
+
 step_env() {
   local label="$1" var="$2" val="$3"
   shift 3
@@ -73,6 +95,113 @@ step_env() {
 }
 
 printf '\033[1mopen-control gate — mode: %s\033[0m\n' "$MODE"
+
+# ── The bare-metal cell (pr-gate.yml's `no-std-build` job) ──────────────────
+# The core four (oce-model, oce-expr, oce-blocks, oce-graph) build without `std` (issues #397,
+# #402), and the firmware image links them for a bare-metal target. This script installs nothing:
+# check-no-std.sh and check-firmware-link.sh fail, naming the `rustup target add <target>` command,
+# when a target is missing. A missing target is a failure, never a skip.
+bare_metal_cell() {
+  # Build, clippy and the `cargo tree` std-feature scan on thumbv7em-none-eabihf,
+  # riscv32imac-unknown-none-elf and wasm32-unknown-unknown, then the controls that prove both
+  # halves can fail.
+  step 'no_std + alloc core (build, clippy, graph scan)' bash scripts/ci/check-no-std.sh
+  step 'no_std check controls' bash scripts/ci/test-check-no-std.sh
+  # The math rule (issue #399): the core probe, the clippy.toml list and scope, and the
+  # std-float-method mutations in oce-blocks and oce-expr.
+  step 'math-discipline controls' bash scripts/ci/test-math-lint.sh
+  # Without `std` the evaluation-fuel meter is program-wide rather than thread-local, so the suite
+  # runs on one test thread.
+  step 'oce-expr unit suite without std' \
+    cargo test -p oce-expr --no-default-features --features alloc --lib --locked -- --test-threads=1
+  # The blob execution entry (issue #401): its no_std closure holds no oce-cxf, oce-api, serde_json
+  # or std, and its suites run against the no_std + alloc build of oce-graph (zero frame
+  # allocations, the facade's run digests, raw state words).
+  step 'blob entry closure (no_std)' bash scripts/ci/check-no-std-entry-closure.sh
+  step 'blob entry suites against the no_std build' \
+    cargo test -p oce-graph --no-default-features --features alloc --test blob_execution \
+      --test blob_state_words --locked -- --nocapture
+  # The firmware image (issue #402): graph scan, clippy, the `firmware`-profile build for both
+  # bare-metal targets, the size budget, the size checker's own controls, and the image's run on
+  # the host.
+  step 'firmware image (build and size budget)' bash scripts/ci/check-firmware-link.sh
+  step 'firmware size-check controls' python3 -I scripts/ci/test-firmware-size.py
+  step 'firmware run on the host' cargo test -p oce-firmware-link --locked
+}
+
+# ── The blob round trip (issue #403) ─────────────────────────────────────────
+# Three legs from one recording, as CI runs them: the suite records the 46 fixtures' blobs and
+# expected outputs, warnings and raw state words on this host (comparing the facade with the no_std
+# entry as it goes), then replays that recording here and on wasm32-wasip1 under wasmtime. CI's
+# second native architecture cannot run on one machine. A missing target or wasmtime is a failure
+# naming its install command, never a skip.
+ROUND_TRIP_DIR=target/round-trip
+round_trip_record() {
+  rm -rf "$ROUND_TRIP_DIR"
+  OCE_ROUND_TRIP_OUT="$ROUND_TRIP_DIR" cargo nextest run -p oce-conformance --test blob_round_trip \
+    --locked --profile ci --no-tests=fail &&
+    test "$(ls "$ROUND_TRIP_DIR" | wc -l | tr -d ' ')" = 92
+}
+round_trip_replay_host() {
+  test -d "$ROUND_TRIP_DIR" &&
+    OCE_ROUND_TRIP_EXPECT="$ROUND_TRIP_DIR" cargo nextest run -p oce-conformance \
+      --test blob_round_trip --locked --profile ci --no-tests=fail
+}
+round_trip_replay_wasm() {
+  local tools="$PWD/target/wasmtime-bin"
+  if ! rustup target list --installed | grep -qx wasm32-wasip1; then
+    echo 'the wasm32-wasip1 target is not installed: rustup target add wasm32-wasip1' >&2
+    return 1
+  fi
+  if ! PATH="$tools:$PATH" command -v wasmtime >/dev/null 2>&1; then
+    echo 'wasmtime is not installed: bash scripts/ci/install-wasmtime.sh (the pinned release, into target/wasmtime-bin)' >&2
+    return 1
+  fi
+  test -d "$ROUND_TRIP_DIR" &&
+    PATH="$tools:$PATH" wasmtime --version &&
+    PATH="$tools:$PATH" OCE_ROUND_TRIP_EXPECT="$ROUND_TRIP_DIR" cargo nextest run \
+      -p oce-conformance --test blob_round_trip --target wasm32-wasip1 --locked --profile ci \
+      --no-tests=fail
+}
+blob_round_trip() {
+  step 'blob round trip, recorded on the host' round_trip_record
+  step 'blob round trip, the recording replayed on the host' round_trip_replay_host
+  step 'blob round trip, the recording replayed on wasm32-wasip1 under wasmtime' round_trip_replay_wasm
+}
+
+# ── Focused modes: the bare-metal cell, the emulation check or the round trip, alone ──
+if [ "$MODE" = nostd ] || [ "$MODE" = qemu ] || [ "$MODE" = roundtrip ]; then
+  if [ "$MODE" = nostd ]; then
+    bare_metal_cell
+  elif [ "$MODE" = roundtrip ]; then
+    blob_round_trip
+  else
+    # qemu.yml's one command: build both images, run them under QEMU (netduinoplus2 for
+    # thumbv7em-none-eabihf, riscv32 virt for riscv32imac-unknown-none-elf) with semihosting, and
+    # diff each one's lines against the host reference runner's.
+    step 'firmware images under QEMU against the host reference' bash scripts/ci/emulate-firmware.sh
+  fi
+  echo
+  echo '────────────────────────────────────────────────────────────────────────────'
+  echo "NOT COVERED BY THIS RUN — mode $MODE runs one cell, not the gate:"
+  echo '  · everything else in the per-PR gate. Run `bash .agents/gate.sh` for it.'
+  if [ "$MODE" = nostd ]; then
+    echo '  · executing the images on their targets: `bash .agents/gate.sh qemu` (nightly in CI).'
+  fi
+  if [ "$MODE" = roundtrip ]; then
+    echo '  · the aarch64 leg and the four-cell recording comparison: CI only (determinism-compare).'
+  fi
+  echo '────────────────────────────────────────────────────────────────────────────'
+  if [ "$failures" -gt 0 ]; then
+    printf '\n\033[31mGATE FAILED\033[0m — %d step(s):\n' "$failures"
+    printf '  · %s\n' "${failed_steps[@]}"
+    echo
+    echo 'Fix the cause. Never weaken a gate to reach green.'
+    exit 1
+  fi
+  printf '\n\033[32mGATE PASSED\033[0m (%s) — all steps green.\n' "$MODE"
+  exit 0
+fi
 
 # The engine (determinism) lane: everything that compiles the engine. `leverage` mode
 # skips it, as pr-gate.yml does for a PR confined to crates/leverage/ and the docs.
@@ -137,6 +266,8 @@ if engine_lane; then
 step 'unused dependency gate' cargo machete
 step 'clippy (default — no DB)' cargo clippy --workspace --all-targets --locked -- -D warnings
 step 'build (default — no DB)' cargo build --workspace --locked
+bare_metal_cell
+
 step_env 'rustdoc — libs' RUSTDOCFLAGS '-D warnings' \
   cargo doc --no-deps --workspace --lib --document-private-items --locked
 step_env 'rustdoc — bins' RUSTDOCFLAGS '-D warnings' \
@@ -224,6 +355,12 @@ if [ "$MODE" = full ]; then
     --cargo-profile release --no-tests=fail
   # nextest cannot run doctests; this step is not optional.
   step 'doctests' cargo test --workspace --doc --locked
+  # The determinism cells write the 46 compiled-schedule blobs to OCE_BLOB_OUT as a path relative
+  # to the workspace root, and the determinism-compare fan-in requires each file to be 123329 bytes
+  # (the goldens' total). Write it the same way here, so a test that resolves the path wrongly fails
+  # locally instead of first in CI (it did once, on the PR that added the blobs).
+  step 'compiled-schedule blob matrix artifact' blob_matrix_artifact
+  blob_round_trip
 fi
 
 # ── Report ───────────────────────────────────────────────────────────────────
@@ -233,13 +370,19 @@ cat <<'COVERAGE'
 NOT COVERED BY THIS SCRIPT — a green run here does not prove these pass:
   · cross-arch determinism matrix: four native cells, x86_64 on ubuntu-latest
     and aarch64 on ubuntu-24.04-arm, in debug and release codegen, with the
-    cross-architecture snapshot comparison in a fan-in job. One machine cannot
-    reproduce it. CI is the only place it runs.
+    cross-architecture snapshot and compiled-schedule blob comparisons in a
+    fan-in job. One machine cannot reproduce it. CI is the only place it runs.
+  · the blob round trip's aarch64 leg and the comparison of the four cells'
+    recordings (determinism-compare). `full` and `roundtrip` record on this
+    host and replay here and on wasm32-wasip1; the other architecture is CI's.
   · strict-bit raw-output matrix over the 21 inventoried signals: the same
     four native cells, two capture processes each, then the eight-capture
     comparison. Local synthetic controls and macOS observations are NOT
     native Linux evidence.
   · the macOS arm64 and Windows platform cells: they need those OSes; CI only.
+  · executing the firmware images on their targets. This run builds them and
+    checks their size; qemu.yml runs them under QEMU nightly, and
+    `bash .agents/gate.sh qemu` does locally when QEMU is installed.
   · cargo deny check advisories. Needs network and a writable advisory-db;
     it runs in advisories.yml (daily) and in release-gate.yml's cargo-deny
     job, which sweeps advisories/bans/licenses/sources on every release PR.
@@ -268,6 +411,8 @@ if [ "$MODE" != full ]; then
   · the workspace test suite and doctests. This was not a `full` run: it
     mirrors the per-PR gate — and the per-PR gate does not run them.
     Run `bash .agents/gate.sh full` before claiming tests pass.
+  · the blob round trip's recorded artifact and its wasm32-wasip1 replay,
+    which the per-PR gate does run: `bash .agents/gate.sh roundtrip`.
 LIGHT
 fi
 

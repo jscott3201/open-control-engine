@@ -1,4 +1,9 @@
 #![forbid(unsafe_code)]
+#![cfg_attr(not(any(feature = "std", test)), no_std)]
+// `clippy.toml` lists every `std`-only float method; the core calls `math` (libm) instead (#399).
+#![deny(clippy::disallowed_methods)]
+// `clippy.toml` lists `std`'s hash collections; the core uses ordered collections only (#398).
+#![deny(clippy::disallowed_types)]
 //! `oce-graph` — the deterministic dataflow scheduler/executor for the Open Control Engine
 //! (`01-execution-model.md`).
 //!
@@ -20,13 +25,32 @@
 //!
 //! BUILD (DAG + dual Kahn sorts + loop rejection) and TICK (state allocation + the two-pass eval
 //! loop) are implemented; catalog breadth and ingest features grow around this scheduler contract.
+//!
+//! **FRAME.** [`frame`] is the HostTick v1 frame driver around [`eval_tick`]: time and input
+//! checks, the accepted-frame sequence, staging and the previous-time update, slot-indexed. The
+//! `oce-api` facade and the `no_std` blob entry ([`blob::Executable`]) both call it, so the
+//! profile exists once.
 
-use std::fmt;
+// `no_std + alloc` without the `std` feature (docs/architecture.md, "Embeddability posture"):
+// `alloc` is the floor, so a build with neither feature is refused here rather than failing
+// on the first `Vec`.
+extern crate alloc;
+
+#[cfg(not(feature = "alloc"))]
+compile_error!(
+    "`oce-graph` needs the `alloc` feature: build with the default `std` feature, or with \
+     `--no-default-features --features alloc`"
+);
+
+use alloc::{boxed::Box, string::String, vec::Vec};
+use core::fmt;
 
 use oce_blocks::Block;
 use oce_model::{BlockId, ConnectorId, Model, Value};
 
+pub mod blob;
 mod build;
+pub mod frame;
 mod tick;
 mod topo;
 

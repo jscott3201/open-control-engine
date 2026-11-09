@@ -13,11 +13,13 @@
 //! arguments) an array is a typed [`ExprError::TypeError`] — element-wise operators are not
 //! in the subset.
 
+use alloc::{borrow::ToOwned, string::ToString, vec, vec::Vec};
 use oce_model::{
     Value,
     determinism::{canonicalize_real, det_max, det_min},
 };
 
+use crate::math;
 use crate::{BinOp, Builtin, BuiltinConst, EvalResult, ExprAst, ExprError, Scope, UnOp};
 
 /// A numeric operand — Integer or Real — extracted from a [`Value`] for arithmetic.
@@ -76,7 +78,7 @@ fn bool_of(v: &Value) -> Result<bool, ExprError> {
 fn const_value(c: BuiltinConst) -> f64 {
     match c {
         // 2·asin(1.0) is π to f64; use the library constant for bit-exactness.
-        BuiltinConst::Pi => std::f64::consts::PI,
+        BuiltinConst::Pi => core::f64::consts::PI,
         BuiltinConst::Eps => 1e-15,
         BuiltinConst::Small => 1e-37,
         BuiltinConst::Inf => f64::MAX,
@@ -393,8 +395,8 @@ fn eval_scalar_call(b: Builtin, vals: &[Value]) -> Result<Value, ExprError> {
         (Builtin::Abs, [v]) => builtin_abs(v),
         (Builtin::Sign, [v]) => Ok(Value::Integer(builtin_sign(num_of(v)?))),
         (Builtin::Sqrt, [v]) => builtin_sqrt(num_of(v)?),
-        (Builtin::Floor, [v]) => Ok(real(num_of(v)?.as_f64().floor())),
-        (Builtin::Ceil, [v]) => Ok(real(num_of(v)?.as_f64().ceil())),
+        (Builtin::Floor, [v]) => Ok(real(math::floor(num_of(v)?.as_f64()))),
+        (Builtin::Ceil, [v]) => Ok(real(math::ceil(num_of(v)?.as_f64()))),
         (Builtin::Integer, [v]) => builtin_integer(num_of(v)?).map(Value::Integer),
         (Builtin::Div, [x, y]) => builtin_div(num_of(x)?, num_of(y)?),
         (Builtin::Mod, [x, y]) => builtin_mod(num_of(x)?, num_of(y)?),
@@ -435,7 +437,7 @@ fn builtin_sqrt(n: Num) -> Result<Value, ExprError> {
     if f < 0.0 {
         Err(ExprError::DomainError("sqrt of a negative value"))
     } else {
-        Ok(real(f.sqrt()))
+        Ok(real(math::sqrt(f)))
     }
 }
 
@@ -457,7 +459,7 @@ fn builtin_integer(n: Num) -> Result<i64, ExprError> {
     match n {
         Num::I(i) => Ok(i),
         Num::R(r) => {
-            let floored = r.floor();
+            let floored = math::floor(r);
             // `NaN` fails both comparisons, so it refuses here too.
             if (INTEGER_RANGE_START..INTEGER_RANGE_END).contains(&floored) {
                 // In range and integral, so the cast is exact.
@@ -487,7 +489,7 @@ fn builtin_div(x: Num, y: Num) -> Result<Value, ExprError> {
             if b == 0.0 {
                 return Err(ExprError::DivisionByZero);
             }
-            Ok(real((a / b).trunc()))
+            Ok(real(math::trunc(a / b)))
         }
     }
 }
@@ -511,7 +513,7 @@ fn builtin_mod(x: Num, y: Num) -> Result<Value, ExprError> {
             if b == 0.0 {
                 return Err(ExprError::DivisionByZero);
             }
-            Ok(real(a - (a / b).floor() * b))
+            Ok(real(a - math::floor(a / b) * b))
         }
     }
 }
@@ -533,7 +535,7 @@ fn builtin_rem(x: Num, y: Num) -> Result<Value, ExprError> {
             if b == 0.0 {
                 return Err(ExprError::DivisionByZero);
             }
-            Ok(real(a - (a / b).trunc() * b))
+            Ok(real(a - math::trunc(a / b) * b))
         }
     }
 }

@@ -311,6 +311,16 @@ jobs:
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143,cargo-deny,cargo-machete
+      # The gate script installs nothing; its no_std + alloc build steps need these targets.
+      - name: Install the no_std targets
+        run: rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown
+      # `full` includes the blob round trip, whose wasm32 leg runs under wasmtime and fails closed
+      # without it (issue #403). The script installs nothing; gate.sh finds this binary in
+      # target/wasmtime-bin.
+      - name: Install the round trip's wasm32-wasip1 target and pinned wasmtime
+        run: |
+          rustup target add wasm32-wasip1
+          bash scripts/ci/install-wasmtime.sh target/wasmtime-bin
       - run: bash .agents/gate.sh full
 
   # The single required status for branch protection on `main`. It reports on every run

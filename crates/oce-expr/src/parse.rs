@@ -19,7 +19,8 @@
 //! [`ExprError::Parse`]. Recursively shaped or oversized inputs return the crate's typed
 //! depth/size errors, never a panic.
 
-use std::sync::Arc;
+use alloc::sync::Arc;
+use alloc::{boxed::Box, format, string::String, string::ToString, vec, vec::Vec};
 
 use crate::lex::{Tok, int_out_of_range, lex, parse_err};
 use crate::{

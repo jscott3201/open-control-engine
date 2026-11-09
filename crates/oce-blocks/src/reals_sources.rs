@@ -6,6 +6,7 @@
 
 use oce_model::{Value, ZeroTime};
 
+use crate::math;
 use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real};
 
 /// Minimum valid `CDL.Reals.Sources.Ramp.duration`, from `CDL.Constants.small`.
@@ -283,10 +284,11 @@ fn calendar_fields(unix: f64) -> Option<CalendarFields> {
         .windows(2)
         .position(|pair| unix >= pair[0] && unix < pair[1])?;
     let year = FIRST_CALENDAR_YEAR + i32::try_from(year_index).ok()?;
-    let day_of_year = ((unix - NEW_YEAR_TIMESTAMPS[year_index]) / SECONDS_PER_DAY).floor() as i32;
+    let day_of_year =
+        math::floor((unix - NEW_YEAR_TIMESTAMPS[year_index]) / SECONDS_PER_DAY) as i32;
     let (month, day) = month_day(year_index, day_of_year)?;
-    let hour = ((unix % SECONDS_PER_DAY) / SECONDS_PER_HOUR).floor() as i32;
-    let days_since_epoch = (unix / SECONDS_PER_DAY).floor() as i64;
+    let hour = math::floor((unix % SECONDS_PER_DAY) / SECONDS_PER_HOUR) as i32;
+    let days_since_epoch = math::floor(unix / SECONDS_PER_DAY) as i64;
     let week_day = ((4 + days_since_epoch - 1).rem_euclid(7) + 1) as i32;
     let minute = unix / 60.0 - days_since_epoch as f64 * MINUTES_PER_DAY - f64::from(hour) * 60.0;
     Some(CalendarFields {
@@ -426,8 +428,8 @@ impl SourceSin {
                 0.0
             } else {
                 self.amplitude
-                    * libm::sin(
-                        2.0 * std::f64::consts::PI * self.freq_hz * (t - self.start_time)
+                    * math::sin(
+                        2.0 * core::f64::consts::PI * self.freq_hz * (t - self.start_time)
                             + self.phase,
                     )
             }

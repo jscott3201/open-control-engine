@@ -1,3 +1,4 @@
+use crate::math;
 use std::cell::RefCell;
 
 use oce_model::determinism::CANONICAL_NAN_BITS;
@@ -256,13 +257,13 @@ fn source_sin_matches_source_equation_boundaries() {
         &block,
         &[
             (0.0, 0.5),
-            (1.0, 0.5 + 2.0 * libm::sin(std::f64::consts::FRAC_PI_2)),
-            (2.0, 0.5 + 2.0 * libm::sin(std::f64::consts::PI)),
+            (1.0, 0.5 + 2.0 * math::sin(std::f64::consts::FRAC_PI_2)),
+            (2.0, 0.5 + 2.0 * math::sin(std::f64::consts::PI)),
             (3.0, -1.5),
-            (4.0, 0.5 + 2.0 * libm::sin(2.0 * std::f64::consts::PI)),
+            (4.0, 0.5 + 2.0 * math::sin(2.0 * std::f64::consts::PI)),
             (
                 5.0,
-                0.5 + 2.0 * libm::sin(2.0 * std::f64::consts::PI + std::f64::consts::FRAC_PI_2),
+                0.5 + 2.0 * math::sin(2.0 * std::f64::consts::PI + std::f64::consts::FRAC_PI_2),
             ),
         ],
     );
@@ -479,7 +480,7 @@ fn source_registry_constructors_resolve_parameters() {
         ],
     });
     assert!(out_at(source_sin.as_ref(), 1.0).bit_eq(&Value::Real(
-        0.5 + 2.0 * libm::sin(std::f64::consts::FRAC_PI_2)
+        0.5 + 2.0 * math::sin(std::f64::consts::FRAC_PI_2)
     )));
 
     let calendar = (lookup("CDL.Reals.Sources.CalendarTime").unwrap().make)(&ParamTable {

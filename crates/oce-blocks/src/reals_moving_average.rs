@@ -11,9 +11,11 @@
 //! [`MovingAverage`]), so the window always spans the full `delta`; the ring never evicts an
 //! in-window checkpoint.
 
+use alloc::string::String;
 use oce_model::{ParamTable, Value};
 
 use crate::dynamics::{PREV_T_UNSET, forward_euler_accumulate, is_first_tick, tick_dt};
+use crate::math;
 use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_real};
 
 /// Upstream `delta(min=1E-5)`; also the internal positive floor for an unvalidated `delta`.
@@ -216,7 +218,7 @@ impl MovingAverage {
     /// Ring geometry resolved from `delta`.
     pub(crate) fn geometry(self) -> RingGeometry {
         let delta = self.delta_eff();
-        let whole = SLOTS_PER_SECOND * delta.ceil();
+        let whole = SLOTS_PER_SECOND * math::ceil(delta);
         let slots = if whole >= MAX_SLOTS as f64 {
             MAX_SLOTS
         } else if whole <= MIN_SLOTS as f64 {
