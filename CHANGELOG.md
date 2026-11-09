@@ -37,7 +37,34 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
-### Host facade
+### Facade
+
+- **Slot-indexed execute entry** (GitHub #459, issue #444). `Engine::frame_slots()` resolves the
+  executable boundary once into an owned `FrameSlots` map (input slots in `input_definitions()`
+  order, output slots in `CompletedFrame::outputs()` order, both the compiled blob's I/O order),
+  and `Engine::execute_slots(&slots, t, &values)` commits one complete frame from one value per
+  input slot, returning a `SlotFrame` that borrows the outputs in slot order and the frame's
+  warnings. It runs the same core driver (`oce_graph::frame::FrameDriver`) as `execute_frame`, with
+  the same refusal order, error variants and atomicity: a shorter vector is `FrameMissingInput` for
+  the first absent slot, and the one new variant, `OcError::FrameExtraInputs { expected, found }`,
+  refuses a longer one before any value is read. The map carries the prepared-plan incarnation
+  fence, so a reload or dirty resume makes it `StalePreparedFrame` instead of rebinding positions;
+  that variant's rustdoc and `Display` text now name the slot map too ("prepared input frame or slot
+  map is stale for this executable context").
+  Once the map exists a slot frame allocates nothing; warning records are reused in place, so only
+  a frame that emits more or longer warnings than any before it allocates (census: 0 allocations
+  on 7,357 of the 7,360 corpus frames; the other three each grow a warning record). New evidence:
+  dual-entry equivalence on all 46 G36 fixtures (`tests/slot_frames.rs`, and the slot entry as a
+  fourth caller in `blob_dual_path_tests.rs`), refusal parity for every class on every fixture
+  (`tests/slot_frame_refusals.rs`, String values in every slot included), Enum- and String-slot
+  type and domain parity on detached probes plus private preflight and transition-count controls
+  (`frame_slots_tests.rs`), a whitespace-tolerant, path-exact check that `frame.rs` and
+  `frame_slots.rs` are the only `FrameDriver` constructors and that every excluded test source
+  compiles only under `#[cfg(test)]` (`tests/frame_driver_ownership.rs`), and the slot path in the
+  facade compiler contract's positive control.
+  `docs/complete-frame-contract.md`, `docs/facade-contracts.md`, `docs/execution-profile.md`,
+  `docs/host-responsibilities.md`, PC-035 in `docs/product-contract.md` and the README name the
+  slot entry beside the named path. `oce-graph` and every golden are unchanged.
 
 - **Resolved port names, class descriptions and the settable flag** (GitHub #PRNUM, issue #440;
   authoring-layer design note decisions 15 and 18). `oce_api::class_ports(class_path, params)`

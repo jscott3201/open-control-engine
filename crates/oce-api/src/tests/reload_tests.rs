@@ -40,6 +40,8 @@ fn image(engine: &Engine) -> Vec<String> {
         durable_restore_ready,
         frame_generation,
         accepted_frame_sequence,
+        // Scratch for the latest slot frame's warnings, observable only through a live borrow.
+        slot_warnings: _,
     } = engine;
     vec![
         format!("{cxf_byte_limit} {non_finite_input_policy:?}"),

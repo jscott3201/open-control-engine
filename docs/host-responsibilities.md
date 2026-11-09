@@ -22,7 +22,8 @@ The [complete-frame contract](complete-frame-contract.md) supplies current typed
 preparation and an engine-local load/rebuild fence (PC-032). `execute_frame` consumes a prepared
 submission and returns one immutable `CompletedFrame` after one atomic HostTick transition (PC-033).
 PC-034 retains the shared private evaluation core. PC-035 removes the weaker legacy profiles;
-preparation followed by consuming execution is the only public state-advancing execution surface.
+preparation followed by consuming execution, and its slot-indexed twin over the same core driver
+(`execute_slots`, issue #444), are the only public state-advancing execution surfaces.
 
 Completeness means every executable boundary input exactly once, except omission explicitly
 defined by the executable schema. It does not establish sensor coherence, quality, freshness or
