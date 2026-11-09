@@ -1,6 +1,6 @@
 //! End-to-end projection of declared boundary-output attributes onto their driver.
 
-use oce_api::{ContentIdError, Engine, IoSummary, PointDirection};
+use oce_api::{Engine, ExportIncomplete, IoSummary, PointDirection};
 use serde_json::{Map, Value};
 
 const FIXTURE: &str =
@@ -103,8 +103,8 @@ fn declared_attrs_reach_driver_export_and_host_projections() {
 
     let export = engine.export_cxf().expect("fixture exports");
     assert!(matches!(
-        export.content_id_complete(),
-        Err(ContentIdError::Incomplete {
+        export.complete(),
+        Err(ExportIncomplete {
             warning_count: 3,
             ..
         })

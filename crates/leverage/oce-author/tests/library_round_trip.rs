@@ -20,13 +20,14 @@
 //! `:`) the corpus keeps `g36.source.` inside its names, so only library bundle v2, regenerated
 //! from the authoring form, removes it.
 //!
-//! **Node order (GitHub #458).** Today's id is order-bearing. One flat fixture's `@graph` block
+//! **Node order (GitHub #458).** The canonical content id ignores order, but the export bytes do
+//! not. One flat fixture's `@graph` block
 //! order differs from its `containsBlock` order (`multizone_vav_outdoor_airflow_sumzone`), which
 //! the emitter's layout cannot reproduce, and four fixtures are nested composites the flat
 //! layout has no order for; all five are refused by the importer before order matters (see
 //! [`REFUSED`]). The trip-wire is `every_other_fixture_is_refused_with_its_reason`: the day the
 //! importer reads one of them, that test fails and the order question returns.
-//! `node_order_alone_moves_the_sumzone_identity` pins the mismatch itself.
+//! `node_order_alone_moves_the_sumzone_export_but_not_its_identity` pins the mismatch itself.
 
 mod support;
 
@@ -322,16 +323,18 @@ fn blocks_in_contains_order(text: &str) -> String {
 }
 
 #[test]
-fn node_order_alone_moves_the_sumzone_identity() {
+fn node_order_alone_moves_the_sumzone_export_but_not_its_identity() {
     // GitHub #458: `multizone_vav_outdoor_airflow_sumzone` lists its blocks in `@graph` as
     // groFlo, groFlo1, groFlo2, groFlo3, booToRea_1, … while `containsBlock` reads groFlo,
     // groFlo1, booToRea_1, booToRea_2, mul_1, … (first divergence at the third block). Moving
-    // only the block nodes into `containsBlock` order — the emitter's layout — moves the id.
+    // only the block nodes into `containsBlock` order — the emitter's layout — moves the export
+    // bytes; the canonical content id (GitHub #470) ignores order, so it does not move.
     let text = committed("multizone_vav_outdoor_airflow_sumzone");
     let reordered = blocks_in_contains_order(&text);
-    let direct = identity(&support::cxf::load(text.as_bytes()).expect("load").0);
-    let moved = identity(&support::cxf::load(reordered.as_bytes()).expect("load").0);
-    assert_ne!(direct, moved);
+    let direct = support::cxf::load(text.as_bytes()).expect("load").0;
+    let moved = support::cxf::load(reordered.as_bytes()).expect("load").0;
+    assert_ne!(export_text(&direct), export_text(&moved));
+    assert_eq!(identity(&direct), identity(&moved));
     // The same reordering leaves a fixture whose order already agrees unchanged.
     let agreeing = committed("reheat_overrides");
     let same = identity(&support::cxf::load(agreeing.as_bytes()).expect("load").0);

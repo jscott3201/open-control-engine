@@ -168,8 +168,8 @@ an expanded IRI/name maintained by the producer and used by the host, not an arr
 | `hasInstance` member array | Normalized | Array order is load-bearing for nothing: derived ports use names/class signature, classified parameters append in class-signature order, and synthesized connectors append after authored connectors ordered by `(owner @graph position, class-signature position)`. This does not make owner node order or authored connector node order inert. |
 | Inactive conditionals | Pruned | Inactive children and entire subtrees contribute no leaf or connector positions. Moving an inactive child among active siblings does not move the active order. Active connections referencing inactive nodes still refuse; pruning is not permission to leave dangling wiring. See Active nodes for declaration/guard exceptions. |
 | Resolver diagnostics | Deterministically finalized | Sort by numeric connector dense ID first (including recognized `connector#N` subjects), then subject, code string and message. Non-connector subjects use the final ID bucket: no subject before named subjects, then lexical subject/code/message order. Early failures with no connector index use that non-connector handling. Severity is not a sort key. Export warnings retain their separate block/cascade order, not this resolver sort. |
-| Export | Derived from `ModelGraph` vectors | Emit the synthetic root, surviving blocks and their parameters, surviving connectors, then boundary nodes in their vector-derived order. Deferral filters the survivor cone without lexically sorting it. Export is flat, not source recovery; a partial export tag is not whole-model identity. See the [round-trip contract](cxf-round-trip.md#the-deferral-trap). |
-| Dense IDs versus authored identity | Derived storage versus stable authored identity | `BlockId`, `ConnectorId`, `decl_order`, schedule/vector positions and synthetic positional port names are **never stable external identities**. Hosts key by authored expanded IRI/name, preserving that identity across producer revisions deliberately. Authored identity does not imply executable compatibility: unchanged names can accompany incompatible storage/order. Export content identity, state compatibility and replay identity remain distinct. |
+| Export | Derived from `ModelGraph` vectors | Emit the synthetic root, surviving blocks and their parameters, surviving connectors, then boundary nodes in their vector-derived order. Deferral filters the survivor cone without lexically sorting it. Export is flat, not source recovery; a partial export is not the whole model (`ExportReport::complete` says which). See the [round-trip contract](cxf-round-trip.md#the-deferral-trap). |
+| Dense IDs versus authored identity | Derived storage versus stable authored identity | `BlockId`, `ConnectorId`, `decl_order`, schedule/vector positions and synthetic positional port names are **never stable external identities**. Hosts key by authored expanded IRI/name, preserving that identity across producer revisions deliberately. Authored identity does not imply executable compatibility: unchanged names can accompany incompatible storage/order. The [canonical content id](design/content-id.md) (`Engine::content_id`) names the loaded graph by authored names and port indices, so none of these orders reach it; it remains distinct from state compatibility and replay identity. |
 
 #### Emitter guidance and qualification limits
 
@@ -557,9 +557,10 @@ the same files and drivers.
   survivor orders, object-key reversal, declaration/member permutations, and exact ordered
   diagnostic vectors. These are OCE profile expectations, not an external numerical oracle.
 - Public identity: [`composition_identity.rs`](../crates/oce-api/tests/composition_identity.rs)
-  checks complete export content tags and public state-restore compatibility. It distinguishes
-  normalized permutations, incompatible containment/connector/positional-port changes, and direct
-  fanout permutations that change content but preserve executable compatibility. It neither exposes
+  checks the canonical content id and public state-restore compatibility. Normalized permutations,
+  containment, `@graph` and positional-port transpositions and direct fanout permutations keep the
+  content id; the transpositions still move dense ids and so refuse a snapshot, while the fanout
+  permutation preserves executable compatibility. It neither exposes
   private fingerprints nor changes format revisions.
 - Complementary contract evidence: `resolve_external_input_order`, `resolve_declaration_scope`,
   `resolve_param_precedence`, and `resolve_composite_orientation` retain boundary, leaf-scope and

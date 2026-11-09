@@ -1,4 +1,4 @@
-//! The `OCEB` compiled-schedule blob, format version 1 (`docs/design/compiled-schedule-blob.md`,
+//! The `OCEB` compiled-schedule blob, format version 2 (`docs/design/compiled-schedule-blob.md`,
 //! GitHub #396/#400): the byte form of a loaded executable that a `no_std + alloc` target decodes
 //! and runs without the CXF importer, the expression evaluator or the validator.
 //!
@@ -97,7 +97,7 @@ pub const MAGIC: [u8; 4] = *b"OCEB";
 /// The one format version this build encodes and decodes. Any change to the layout, a tag table,
 /// the class signature record, the CRC or the content-id meaning bumps it; a decoder accepts
 /// exactly its own version ([`BlobError::UnsupportedFormat`]).
-pub const FORMAT_VERSION: u16 = 1;
+pub const FORMAT_VERSION: u16 = 2;
 
 /// The execution profile the blob is encoded for: `1` is HostTick v1 (`docs/execution-profile.md`).
 pub const EXECUTION_PROFILE: u16 = 1;
@@ -151,17 +151,15 @@ const fn parse_u16(text: &str) -> u16 {
     value as u16
 }
 
-/// The 32-byte content-id field for a facade content id: the 16 hash bytes as a `u128`
-/// little-endian, then 16 zero bytes. `None` (a partial export, which has no complete content id)
-/// is 32 zero bytes. The field's meaning is "the facade's content id at encode time"; changing it
-/// bumps [`FORMAT_VERSION`].
+/// The 32-byte content-id field for a canonical content id: the 32 SHA-256 digest bytes of the
+/// facade's `oce:canon1:` id in digest output order, with no padding (format version 2,
+/// `docs/design/content-id.md`). `None` (a hand-built model, which has no id) is 32 zero bytes.
+/// The decoder carries the field verbatim and never interprets it, so no hash is linked on a
+/// `no_std` target. The field's meaning is "the facade's canonical content id at encode time";
+/// changing it bumps [`FORMAT_VERSION`] (format 1 held an FNV-1a-128 export tag here).
 #[must_use]
-pub fn content_id_field(content_id: Option<u128>) -> [u8; 32] {
-    let mut field = [0u8; 32];
-    if let Some(id) = content_id {
-        field[..16].copy_from_slice(&id.to_le_bytes());
-    }
-    field
+pub fn content_id_field(digest: Option<[u8; 32]>) -> [u8; 32] {
+    digest.unwrap_or([0u8; 32])
 }
 
 /// One executable boundary input: the record the encoder writes and the decoder returns.

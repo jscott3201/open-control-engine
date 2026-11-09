@@ -24,8 +24,8 @@ codegen qualification. OCE emits, accepts, stores and enforces **no build token*
 OCE snapshot bytes after approval. A compatible manifest from a differently compiled implementation
 can pass OCE checks; that is not build qualification. See the [restart checklist](host-responsibilities.md#persist-engine-state-outside-the-engine).
 
-`CompatibilityDescriptor`, package version, catalog metadata tag, diagnostic model ID and complete
-export tag are not substitutes for either the host envelope or the state manifest. No universal
+`CompatibilityDescriptor`, package version, catalog metadata tag, diagnostic model ID and canonical
+content id are not substitutes for either the host envelope or the state manifest. No universal
 identity is introduced. Differences in unused catalog entries do not affect this executable;
 changes to implementation code with unchanged descriptors belong to host build qualification.
 

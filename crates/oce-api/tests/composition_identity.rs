@@ -1,6 +1,8 @@
 //! Public compatibility observations for OCE's executable ordering profile.
-//! A content tag identifies export bytes, NOT executable compatibility. Restore is the public
-//! executable-identity probe; no private manifest fields or fingerprint byte offsets are used.
+//! The canonical content id (GitHub #470) names the loaded graph, not authored order and NOT
+//! executable compatibility: restore is the public executable-identity probe, and authored order
+//! still assigns dense ids, so a reordered document keeps its id but may refuse a snapshot. No
+//! private manifest fields or fingerprint byte offsets are used.
 
 #[path = "../../oce-cxf/tests/resolve_ordering/documents.rs"]
 mod documents;
@@ -16,8 +18,9 @@ fn load(bytes: &[u8]) -> Engine {
     engine
 }
 
-fn content(engine: &Engine) -> String {
-    engine.export_cxf().unwrap().content_id_complete().unwrap()
+fn content(engine: &Engine) -> oce_api::ContentId {
+    engine.export_cxf().unwrap().complete().unwrap();
+    engine.content_id().unwrap()
 }
 
 #[test]
@@ -54,7 +57,7 @@ fn normalized_spellings_preserve_content_and_public_restore_compatibility() {
 }
 
 #[test]
-fn containment_and_connector_transpositions_change_identity_without_changing_authored_names() {
+fn transpositions_keep_the_content_id_but_move_dense_execution_identity() {
     let baseline = load(COMPACT.as_bytes());
     let snapshot = baseline.state_snapshot().unwrap();
     for axis in ["containsBlock", "@graph", "positional ports"] {
@@ -93,7 +96,10 @@ fn containment_and_connector_transpositions_change_identity_without_changing_aut
             names(&source_engine),
             "{axis}: authored names survive"
         );
-        assert_ne!(content(&target), content(&source_engine), "{axis}");
+        // Both `aSum` inputs read `zSource.y`, so even the positional-port reversal binds the same
+        // source to each port index: the loaded graph, and so the id, is unchanged, while the
+        // dense connector numbering, and so the snapshot, moves.
+        assert_eq!(content(&target), content(&source_engine), "{axis}");
         let before = target.state_snapshot().unwrap();
         assert_ne!(before.as_bytes(), source_snapshot.as_bytes(), "{axis}");
         assert!(
@@ -118,7 +124,7 @@ fn containment_and_connector_transpositions_change_identity_without_changing_aut
 }
 
 #[test]
-fn direct_fanout_order_changes_content_but_not_execution_compatibility() {
+fn direct_fanout_order_preserves_content_and_execution_compatibility() {
     let baseline = load(COMPACT.as_bytes());
     let mut doc: Value = serde_json::from_str(COMPACT).unwrap();
     node_mut(&mut doc, "m:M.branch.zSource.y")["S231:isConnectedTo"]
@@ -126,9 +132,9 @@ fn direct_fanout_order_changes_content_but_not_execution_compatibility() {
         .unwrap()
         .reverse();
     let mut target = load(&serde_json::to_vec(&doc).unwrap());
-    assert_ne!(content(&target), content(&baseline));
+    assert_eq!(content(&target), content(&baseline));
     let snapshot = baseline.state_snapshot().unwrap();
-    // The executable manifest canonicalizes the connection edge set; exported arrays do not.
+    // The executable manifest and the canonical id both canonicalize the connection edge set.
     assert_eq!(
         target.state_snapshot().unwrap().as_bytes(),
         snapshot.as_bytes()

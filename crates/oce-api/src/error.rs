@@ -208,6 +208,10 @@ pub enum OcError {
     /// produced did not decode ([`crate::Engine::compile_blob`]).
     #[error("compiled-schedule blob: {0}")]
     Blob(#[from] crate::BlobError),
+    /// The loaded model has no canonical content id ([`crate::Engine::content_id`]): a hand-built
+    /// model no public load path produces, such as one with an unnamed block.
+    #[error("canonical content id: {0}")]
+    ContentId(#[from] crate::ContentIdError),
 }
 
 impl OcError {

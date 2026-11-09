@@ -130,7 +130,8 @@ fn header_defects_refuse_in_the_documented_order() {
         assert_eq!(malformed(&length), (16, MalformedFault::LengthMismatch));
     }
 
-    for version in [0u16, 2, u16::MAX] {
+    // Format 1 (the FNV export-tag field) is refused like any other foreign version.
+    for version in [0u16, 1, 3, u16::MAX] {
         let mut format = bytes.clone();
         format[4..6].copy_from_slice(&version.to_le_bytes());
         rechecksum(&mut format);
@@ -138,13 +139,13 @@ fn header_defects_refuse_in_the_documented_order() {
             decode(&format).err(),
             Some(BlobError::UnsupportedFormat {
                 found: version,
-                supported: 1
+                supported: 2
             })
         );
     }
     // A wrong version is refused before the CRC is even read.
     let mut format = bytes.clone();
-    format[4] = 2;
+    format[4] = 1;
     assert!(matches!(
         decode(&format),
         Err(BlobError::UnsupportedFormat { .. })

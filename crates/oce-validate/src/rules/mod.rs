@@ -18,6 +18,7 @@ use oce_model::{BlockInstance, Connector, ConnectorId, ModelGraph};
 mod crossed_bounds;
 mod finite_bounds;
 mod params;
+mod params_element_names;
 mod params_finite;
 mod params_flattened;
 mod structural;
