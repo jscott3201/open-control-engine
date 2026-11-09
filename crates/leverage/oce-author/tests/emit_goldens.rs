@@ -1,6 +1,7 @@
 //! Emitter byte goldens (authoring note, "Emitter" and "Determinism tests"): the worked example,
 //! the every-element sequence and every corpus fixture the importer covers, emitted with the
-//! default namespace and compared bit for bit with `tests/fixtures/emit/`; each golden loads
+//! default namespace and compared bit for bit with `tests/fixtures/emit/` (`.cxf.json`, so the
+//! engine's tracked-`.jsonld` corpus census does not count them); each golden loads
 //! warning-free (acceptance precondition 4), emits twice to the same bytes and loads under an
 //! overridden namespace too.
 
@@ -39,14 +40,14 @@ fn emitted(sequence: &Sequence, options: &EmitOptions) -> String {
 fn every_golden_matches_its_checked_in_bytes() {
     for (name, sequence) in goldens() {
         let text = emitted(&sequence, &EmitOptions::new());
-        compare_or_bless(&fixture(&format!("emit/{name}.jsonld")), &text);
+        compare_or_bless(&fixture(&format!("emit/{name}.cxf.json")), &text);
     }
 }
 
 #[test]
 fn every_golden_loads_warning_free() {
     for (name, _) in goldens() {
-        let text = std::fs::read(fixture(&format!("emit/{name}.jsonld"))).expect("golden");
+        let text = std::fs::read(fixture(&format!("emit/{name}.cxf.json"))).expect("golden");
         load_clean(&text);
     }
 }

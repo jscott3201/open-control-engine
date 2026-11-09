@@ -10,7 +10,7 @@ use support::fixture;
 
 /// A small valid document, edited per case by textual substitution.
 fn document() -> String {
-    std::fs::read_to_string(fixture("emit/econ_enable.jsonld")).expect("golden")
+    std::fs::read_to_string(fixture("emit/econ_enable.cxf.json")).expect("golden")
 }
 
 fn edited(from: &str, to: &str) -> Vec<u8> {
