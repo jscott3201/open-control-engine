@@ -207,7 +207,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   The workspace has 15 members (10 publishable, five private); `release.yml`'s comment and step
   name, its digest and the validator's controls are re-pinned.
 
-- **`oce-author`: the emitter, engine-side validation and the library round trip** (GitHub #PRNUM,
+- **`oce-author`: the emitter, engine-side validation and the library round trip** (GitHub #473,
   issue #464). `emit(&Sequence, &EmitOptions)` writes one flat, single-root CXF document in the
   authoring note's fixed layout and authored order, never sorted: instance IRIs
   `{namespace}{sequence}.{local}` under `urn:oce:author:` or an override that must end in `#`, `/`
