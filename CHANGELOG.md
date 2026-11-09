@@ -193,6 +193,26 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### CXF import and export
 
+- **Resolve Step 9 costs time linear in the edge list, not fan-out × source-IRI length**
+  (GitHub #481, issue #479). Connection collection classified both ends of every
+  `isConnectedTo` edge by string content, hashing the source IRI about ten times per edge, so one
+  long source shared by a whole fan-out cost fan-out × IRI length: a 10 MB document with a 1 MiB
+  derivation-skipped re-anchored source and 65,535 targets took about 71 s of release CPU before it
+  was refused, breaking the bound-CPU-at-load rule. Step 9 now interns each distinct endpoint once
+  (`resolve/connection_endpoints.rs`, the loop moved to `resolve/connections.rs`), memoizes an edge
+  group's shared source by slice identity, keys every report-once set, the pass-through pair set
+  and the boundary-input assignment tracker on endpoint ids, and mints one shared subject
+  allocation per endpoint, so a per-edge diagnostic no longer copies a long IRI. The unused-input
+  warning reads the boundary inputs Step 9 interned instead of walking the edges again. That
+  document is now refused in about 75 ms in release (0.9 s in debug), and the three
+  `skipped_synthesized_*` tests drop from 55–86 s to about 1 s in debug, which closes #469 with
+  no test-side change. Every diagnostic, its order and its text are unchanged; no golden moved.
+  Regression tests pin the bound (1 MiB × 65,535 at and one past the target-examination limit for
+  all three target roles, a short-source control) and determinism (a repeated import, and shared
+  versus separate source allocations collecting identically). A long *authored* source fanned out
+  in the lowering pass remains bilinear — more than 180 s of release CPU at 1 MiB × 65,535 — and
+  is tracked in #480; `SECURITY.md` lists that path as not yet bounded.
+
 - **A block input driven by both a block output and a root boundary input is refused**
   (GitHub #477, issue #472). CDL §7.10 gives every input exactly one driver, and the resolver
   refused two of the three double-driver shapes (two block outputs; two boundary inputs) but
@@ -383,6 +403,24 @@ and a gate that accepted any text would restore exactly the false assurance desc
   docs), the TSV mapping table for the library re-stamp, and two worked examples with exact byte
   dumps and ids (the second shows that binding a default moves the id). The architect review's
   rulings are recorded in the note. It is registered in `docs/README.md` and the book.
+- **Design note for the `oce-author` importer** (GitHub #484, issue #483).
+  `docs/design/importer.md` fixes, before the implementation PRs, how flat library CXF and the frozen
+  prototype's v0 graph JSON enter the authoring model, and the model changes gate item 1 waits on:
+  sequence parameters of an enumeration type (`"type": "SimpleController"`, references checked by
+  class identity, lowered as the corpus does; 17 in-subset fixtures), optional `min`/`max` on
+  boundary declarations (`@min`/`@max`, `"min": []`; 9 in-subset fixtures; input bounds are the frame
+  acceptance domain the engine refuses outside of, not a clamp), and library constants
+  (`OperationModes.occupied`, G36 Integer constants rather than enumerations) as member values
+  resolved through one facade data table (#468, widened to the G36 enumerations and constant
+  packages). A full-construct scan of the 46 G36 fixtures puts 12 outside the M2 subset (4 nested, 7
+  conditional, 1 expression), not 6, so the gate denominator is 34; 31 round-trip with the decisions
+  and the widened #468, and three with block-port bounds stay refused (#486). It also fixes the
+  normalisation of a constant-package-typed Integer boundary, a `#[non_exhaustive]` `ImportError`
+  kind with pinned codes and a fixed refusal precedence, an `ImportReport` of dropped properties
+  (root-parameter bounds and units), the v0 mapping with its comment rules and three vendored golden
+  pairs, the naming and re-stamp rules, the test plan and the order #468, model PR, importer PR. The
+  review's rulings on its ten questions are recorded in the note. It is registered in
+  `docs/README.md` and the book.
 
 ## 0.4.0
 
