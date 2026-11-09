@@ -72,8 +72,8 @@ golden switch; normal and build edges and dev edges are read separately), then f
 (`scripts/ci/leverage-members.sh lane`; with no members it prints `no leverage crates yet`). The
 members are `oce-replay`, `oce-author`, `oce-cli` (the `oce` binary) and `oce-vocab`.
 The **README lane** is one job, `facade contract and Quickstart` (issue #503). It runs when the
-root `README.md` changes and for every engine change, and it holds the two checks that read the
-root README and are in no always-on job: the `readme_quickstart` test, which requires the README's
+root `README.md` changes and for every engine change, and it holds the two checks of the README's
+Quickstart that no always-on job runs: the `readme_quickstart` test, which requires the README's
 first Rust block to be byte-identical to `crates/oce-api/examples/quickstart.rs`, and the
 execution of that example. The facade compiler contract and its controls share the job because
 they build the same facade; they do not read the README.
@@ -171,7 +171,11 @@ hand the fan-in cells built from two commits, which fails the comparison instead
 `gate_scripts` or `docs_only` fails the checker, and `ci_ok.py` refuses a lane map that names
 either), and `CI OK` (`scripts/ci/ci_ok.py`) accepts its
 `skipped` result only when that output was `false`. `core` implies the other two, and `ci_ok.py`
-refuses a classification that says otherwise. A job skipped while its lane ran — the shape of
+refuses a classification that says otherwise. A pull request that adds a lane cannot show its own
+filter working, because it changes CI files and so runs every lane; `test_ci_ok.py` therefore
+composes the real classifier with the workflow's own lane map and checks, for a README-only, a
+README-and-leverage, a leverage-only, a docs-only and an engine change, which filtered jobs run
+and that `CI OK` passes, and that a failed README job fails it. A job skipped while its lane ran — the shape of
 a job that never started because something it needs failed — fails, as does any skip of an
 always-on job, any failure or cancellation, and a failed or self-contradictory classification.
 `check-workflow-gates.sh` keeps `CI OK`'s lane map equal to the jobs' `if:` lines, pins each named

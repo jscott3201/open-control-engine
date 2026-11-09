@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Hostile controls for ci_ok.py: every way a skipped or failed job could read as green."""
+"""Hostile controls for ci_ok.py: every way a skipped or failed job could read as green.
+
+The last-but-one class composes the real classifier and pr-gate.yml's own lane map with the check.
+"""
 
 import os
 from pathlib import Path
@@ -208,6 +211,114 @@ class LaneMap(unittest.TestCase):
             with self.assertRaisesRegex(ci_ok.CheckError,
                                         "malformed JOB_LANES entry: 'gate=gate_scripts'"):
                 ci_ok.parse_lanes(text)
+
+
+class RealWorkflow(unittest.TestCase):
+    """The real classifier, the real lane map and the result check, composed (issue #503).
+
+    A pull request cannot show its own lane filter working: it changes CI files, so it runs every
+    lane. These cases stand in for that run. Each classifies a changed-path list with
+    classify-changes.sh, gives every job `CI OK` needs in pr-gate.yml the result GitHub would
+    report (`skipped` when its lane output is 'false', `success` otherwise), and runs the check
+    with the workflow's own JOB_LANES.
+    """
+
+    ROOT = Path(__file__).resolve().parents[2]
+
+    @classmethod
+    def setUpClass(cls):
+        lines = (cls.ROOT / ".github/workflows/pr-gate.yml").read_text().splitlines()
+        start = lines.index("  ci-ok:")
+        job = lines[start + 1:]
+        needs_at = job.index("    needs:")
+        cls.needed = []
+        for line in job[needs_at + 1:]:
+            if not line.startswith("      - "):
+                break
+            cls.needed.append(line[len("      - "):].strip())
+        lanes_at = job.index("          JOB_LANES: >-")
+        pairs = []
+        for line in job[lanes_at + 1:]:
+            if not line.startswith("            "):
+                break
+            pairs.append(line.strip())
+        cls.lanes = ci_ok.parse_lanes(" ".join(pairs))
+
+    def classify(self, *paths):
+        result = subprocess.run(["bash", str(self.ROOT / "scripts/ci/classify-changes.sh")],
+                                input="".join(f"{path}\n" for path in paths), text=True,
+                                capture_output=True, check=True)
+        return dict(line.split("=", 1) for line in result.stdout.splitlines())
+
+    def run_for(self, *paths, **overrides):
+        """Return (needs, lane-filtered jobs that ran) for a pull request changing `paths`."""
+        lane_outputs = self.classify(*paths)
+        data = {"changes": {"result": "success", "outputs": lane_outputs}}
+        ran = set()
+        for job in self.needed:
+            if job == "changes":
+                continue
+            lane = self.lanes.get(job)
+            if lane is not None and lane_outputs[lane] == "false":
+                data[job] = {"result": "skipped"}
+            else:
+                data[job] = {"result": "success"}
+                if lane is not None:
+                    ran.add(job)
+        for job, result in overrides.items():
+            data[job.replace("_", "-")] = {"result": result}
+        return data, ran
+
+    def test_the_workflow_lane_map_is_the_one_under_test(self):
+        self.assertIn("facade-contract", self.needed)
+        self.assertEqual(self.lanes["facade-contract"], "readme")
+        self.assertEqual(self.lanes["leverage-lane"], "leverage")
+        self.assertEqual(self.lanes["determinism-matrix"], "core")
+        self.assertEqual({job for job, lane in self.lanes.items() if lane == "readme"},
+                         {"facade-contract"})
+
+    def test_readme_only_change_runs_the_readme_job_alone_and_passes(self):
+        for paths in (("README.md",), ("README.md", "docs/ci-and-the-gate.md", "CHANGELOG.md")):
+            data, ran = self.run_for(*paths)
+            self.assertEqual(ran, {"facade-contract"}, paths)
+            report = ci_ok.check(data, self.lanes)
+            self.assertIn("facade-contract: success", report)
+            self.assertIn("determinism-matrix: skipped by the lane filter (core=false)", report)
+            self.assertIn("leverage-lane: skipped by the lane filter (leverage=false)", report)
+
+    def test_readme_with_a_leverage_path_adds_the_leverage_lane_only(self):
+        data, ran = self.run_for("README.md", "crates/leverage/oce-cli/src/lib.rs", "CHANGELOG.md")
+        self.assertEqual(ran, {"facade-contract", "leverage-lane"})
+        ci_ok.check(data, self.lanes)
+
+    def test_leverage_without_the_readme_skips_the_readme_job(self):
+        data, ran = self.run_for("crates/leverage/oce-cli/src/lib.rs")
+        self.assertEqual(ran, {"leverage-lane"})
+        self.assertIn("facade-contract: skipped by the lane filter (readme=false)",
+                      ci_ok.check(data, self.lanes))
+
+    def test_docs_only_change_runs_no_filtered_job(self):
+        data, ran = self.run_for("docs/ci-and-the-gate.md", "AGENTS.md")
+        self.assertEqual(ran, set())
+        ci_ok.check(data, self.lanes)
+
+    def test_engine_change_runs_every_filtered_job(self):
+        for paths in (("README.md", "crates/oce-api/src/lib.rs"), ("crates/oce-api/README.md",),
+                      ("README.md", ".github/workflows/pr-gate.yml")):
+            data, ran = self.run_for(*paths)
+            self.assertEqual(ran, set(self.lanes), paths)
+            ci_ok.check(data, self.lanes)
+
+    def test_broken_quickstart_fails_a_readme_only_change(self):
+        data, _ = self.run_for("README.md", facade_contract="failure")
+        with self.assertRaisesRegex(ci_ok.CheckError, "'facade-contract': 'failure'"):
+            ci_ok.check(data, self.lanes)
+
+    def test_readme_job_that_did_not_start_fails_a_readme_only_change(self):
+        data, _ = self.run_for("README.md", facade_contract="skipped")
+        with self.assertRaisesRegex(ci_ok.CheckError,
+                                    "'facade-contract': 'skipped while readme=true'"):
+            ci_ok.check(data, self.lanes)
 
 
 class Entrypoint(unittest.TestCase):

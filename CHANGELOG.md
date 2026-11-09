@@ -719,8 +719,13 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `docs_only=true` with it; `check-workflow-gates.sh` accepts the lane name, pins
   `facade-contract=readme`, requires the `readme` output on the `changes` job and requires the
   byte-pin step, its pinned nextest, its report check and the Quickstart execution in that job.
-  Their fixtures go from 160 to 170 cases and from 20 to 27 tests: a README-lane job missing from
-  `JOB_LANES`, moved back to `core`, made always-on, or stripped of a step each fail.
+  Their fixtures go from 160 to 170 cases and from 20 to 35 tests: a README-lane job missing from
+  `JOB_LANES`, moved back to `core`, made always-on, or stripped of a step each fail. Eight of the
+  new `test_ci_ok.py` tests compose the real classifier with `pr-gate.yml`'s own `needs:` and
+  `JOB_LANES`, because a pull request that changes CI files runs every lane and so cannot show its
+  own filter working: a README-only change runs `facade-contract` alone among the filtered jobs and
+  passes `CI OK`, README with a leverage path adds only `leverage-lane`, an engine path runs every
+  filtered job, and a failed or unstarted README job fails a README-only change.
   `bash .agents/gate.sh` runs the byte-pin and the executed Quickstart in every mode, `leverage`
   included, so the local mirror of a leverage PR that also edits the README covers what CI runs;
   the facade compiler contract stays in the engine lane there. Before this, GitHub #485 and #498

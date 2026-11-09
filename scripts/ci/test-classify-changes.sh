@@ -180,6 +180,7 @@ OTHER_READMES=(
   crates/oce-cxf/tests/third_party_manifest/mod.rs    # the vendored tree's README
   scripts/ci/classify-changes.sh                      # classifies the path; opens nothing
   scripts/ci/test-classify-changes.sh                 # this file
+  scripts/ci/test_ci_ok.py                            # feeds the path to the classifier
 )
 
 # Tracked sources that name the root README.md: any `README.md` not directly inside a named
@@ -233,10 +234,10 @@ readme_coverage_defects() {
       *) lane="$condition" ;;
     esac
     if [ "$lane" != always ] && [ "$lane" != readme ]; then
-      echo "$source reads the root README.md, but job $job is filtered on: $lane"
+      echo "$source is a root README check, but job $job is filtered on: $lane"
     fi
     if ! grep -qF -- "$command" <<< "$body"; then
-      echo "$source reads the root README.md, but job $job does not run: $command"
+      echo "$source is a root README check, but job $job does not run: $command"
     fi
   done
   found="$(readme_sources "$@")"
@@ -290,28 +291,28 @@ expect_defect() {
 sed "/^  facade-contract:\$/,/^    if:/ s/outputs.readme == 'true'/outputs.core == 'true'/" "$WORKFLOW" \
   > "$tmp/readme-job-on-core.yml"
 expect_defect readme-job-on-core \
-  "crates/oce-api/tests/readme_quickstart.rs reads the root README.md, but job facade-contract is filtered on: needs.changes.outputs.core == 'true'" \
+  "crates/oce-api/tests/readme_quickstart.rs is a root README check, but job facade-contract is filtered on: needs.changes.outputs.core == 'true'" \
   "$tmp/readme-job-on-core.yml"
 # The byte-pin step removed from the README job.
 grep -v 'cargo nextest run -p oce-api --test readme_quickstart ' "$WORKFLOW" > "$tmp/byte-pin-dropped.yml"
 expect_defect byte-pin-dropped \
-  'crates/oce-api/tests/readme_quickstart.rs reads the root README.md, but job facade-contract does not run: cargo nextest run -p oce-api --test readme_quickstart' \
+  'crates/oce-api/tests/readme_quickstart.rs is a root README check, but job facade-contract does not run: cargo nextest run -p oce-api --test readme_quickstart' \
   "$tmp/byte-pin-dropped.yml"
 # The Quickstart execution removed from the README job.
 grep -v 'run: bash .github/scripts/check-quickstart-runs.sh' "$WORKFLOW" > "$tmp/execution-dropped.yml"
 expect_defect execution-dropped \
-  '.github/scripts/check-quickstart-runs.sh reads the root README.md, but job facade-contract does not run: bash .github/scripts/check-quickstart-runs.sh' \
+  '.github/scripts/check-quickstart-runs.sh is a root README check, but job facade-contract does not run: bash .github/scripts/check-quickstart-runs.sh' \
   "$tmp/execution-dropped.yml"
 # An always-on reader's job given a lane filter: a README-only change would skip the docs staging.
 awk '{ print } /^  docs:$/ { print "    if: needs.changes.outputs.leverage == '"'"'true'"'"'" }' "$WORKFLOW" \
   > "$tmp/docs-on-leverage.yml"
 expect_defect docs-on-leverage \
-  "scripts/docs/stage.py reads the root README.md, but job docs is filtered on: needs.changes.outputs.leverage == 'true'" \
+  "scripts/docs/stage.py is a root README check, but job docs is filtered on: needs.changes.outputs.leverage == 'true'" \
   "$tmp/docs-on-leverage.yml"
 # The product contract check removed from its always-on job.
 grep -v 'run: python3 scripts/product_contract/check.py' "$WORKFLOW" > "$tmp/product-contract-dropped.yml"
 expect_defect product-contract-dropped \
-  'scripts/product_contract/check.py reads the root README.md, but job package-publication-contract does not run: python3 scripts/product_contract/check.py' \
+  'scripts/product_contract/check.py is a root README check, but job package-publication-contract does not run: python3 scripts/product_contract/check.py' \
   "$tmp/product-contract-dropped.yml"
 # A job that holds a reader deleted from the workflow.
 awk '
