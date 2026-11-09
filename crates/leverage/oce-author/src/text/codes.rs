@@ -49,11 +49,12 @@ pub const MALFORMED_ATOM: &str = "malformed-atom";
 pub const STRAY_TOKEN: &str = "stray-token";
 /// A line starts with a word that is not a statement keyword and is not a connection.
 pub const UNKNOWN_KEYWORD: &str = "unknown-keyword";
-/// A boundary tag other than the ten the grammar names.
+/// A boundary tag other than the twelve the grammar names.
 pub const UNKNOWN_TAG: &str = "unknown-tag";
 /// A boundary tag other than `@haystack` written twice on one statement.
 pub const DUPLICATE_TAG: &str = "duplicate-tag";
-/// A type other than `Real`, `Integer` or `Boolean`.
+/// A boundary type other than `Real`, `Integer` or `Boolean` (a sequence parameter's type may
+/// also be an enumeration type name, which the validator resolves).
 pub const UNKNOWN_TYPE: &str = "unknown-type";
 /// The file does not start with a `sequence` statement.
 pub const MISSING_SEQUENCE: &str = "missing-sequence";

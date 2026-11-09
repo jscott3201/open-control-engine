@@ -2,9 +2,9 @@
 //! enumeration of models (no RNG, per TESTING.md "Conventions"), and the text fixtures.
 
 use oce_author::{
-    Annotations, Assignment, Block, Boundary, Connection, Endpoint, EnumMember, Identifier,
-    Literal, ParamValue, ProvenanceId, Sequence, SequenceParameter, SignalType, from_wire_str,
-    import_cxf,
+    Annotations, Assignment, Block, Bound, Boundary, Connection, Endpoint, Identifier, Literal,
+    MemberRef, ParamValue, ParameterType, ProvenanceId, Sequence, SequenceParameter, SignalType,
+    from_wire_str, import_cxf,
 };
 
 use super::cxf::corpus_fixture;
@@ -98,8 +98,37 @@ pub fn literals() -> Vec<Literal> {
         Literal::Text("a \"quoted\" back\\slash\nnew line".to_owned()),
         Literal::Text("# not a comment, ) ] -> @tag".to_owned()),
         Literal::Text("\u{e9}\u{b0}\u{1f321}".to_owned()),
-        Literal::EnumMember(EnumMember::parse("SimpleController.PI")),
-        Literal::EnumMember(EnumMember::parse("A.B.C")),
+        Literal::Member(MemberRef::parse("SimpleController.PI")),
+        Literal::Member(MemberRef::parse("A.B.C")),
+        Literal::Member(MemberRef::parse("OperationModes.occupied")),
+    ]
+}
+
+/// Bound values covering both kinds and the spelling edges of each (issue #492).
+pub fn bounds() -> Vec<Bound> {
+    vec![
+        Bound::Integer(0),
+        Bound::Integer(-1),
+        Bound::Integer(i64::MAX),
+        Bound::Integer(i64::MIN),
+        Bound::Real(0.0),
+        Bound::Real(-0.0),
+        Bound::Real(1.5),
+        Bound::Real(-1e-7),
+        Bound::Real(0.1 + 0.2),
+        Bound::Real(f64::MAX),
+        Bound::Real(5e-324),
+    ]
+}
+
+/// Sequence parameter types: the three scalars, an enumeration and a word the validator refuses.
+pub fn parameter_types() -> Vec<ParameterType> {
+    vec![
+        ParameterType::Real,
+        ParameterType::Integer,
+        ParameterType::Boolean,
+        ParameterType::parse("SimpleController"),
+        ParameterType::parse("NoSuchType"),
     ]
 }
 
@@ -180,12 +209,15 @@ fn array_block(variant: usize) -> Block {
 }
 
 /// A deterministic enumeration of models that every round-trip property runs over: every literal
-/// kind and spelling edge, every suffix shape, every annotation shape, every boundary tag, array
+/// kind and spelling edge, every parameter type shape, every bound kind and spelling edge on both
+/// sides of a boundary, every suffix shape, every annotation shape, every boundary tag, array
 /// runs that regroup and that stay flat, unknown classes, one-line and multi-line blocks, header
 /// and trailing comments, and out-of-section authored orders.
 pub fn enumerated_models() -> Vec<Sequence> {
     let lits = literals();
     let types = [SignalType::Real, SignalType::Integer, SignalType::Boolean];
+    let param_types = parameter_types();
+    let bounds = bounds();
     let mut out = Vec::new();
     for i in 0..48usize {
         let mut s = Sequence::new(id(if i % 2 == 0 { "enumerated" } else { "none_" }));
@@ -200,8 +232,11 @@ pub fn enumerated_models() -> Vec<Sequence> {
         }
         for k in 0..(i % 4) {
             let literal = lits[(i * 3 + k) % lits.len()].clone();
-            let mut p =
-                SequenceParameter::new(id(&format!("p{k}")), types[(i + k) % 3], literal.clone());
+            let mut p = SequenceParameter::new(
+                id(&format!("p{k}")),
+                param_types[(i + k) % param_types.len()].clone(),
+                literal.clone(),
+            );
             if numeric(&literal) {
                 p.suffix = SUFFIXES[(i + k) % SUFFIXES.len()].map(str::to_owned);
             }
@@ -230,9 +265,18 @@ pub fn enumerated_models() -> Vec<Sequence> {
             b.semantic.label = Some("label # not a comment".to_owned());
             b.semantic.provisional = true;
         }
+        if i % 3 != 2 {
+            b.min = Some(bounds[i % bounds.len()]);
+        }
+        if i % 4 != 3 {
+            b.max = Some(bounds[(i * 5 + 1) % bounds.len()]);
+        }
         s.inputs.push(b);
         let mut o = Boundary::new(id("yOut"), types[(i + 1) % 3]);
         o.semantic.provisional = bit(4);
+        if bit(5) {
+            o.max = Some(bounds[(i + 2) % bounds.len()]);
+        }
         s.outputs.push(o);
 
         let mut hys = Block::new(id("hys"), "CDL.Reals.Hysteresis");

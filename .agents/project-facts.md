@@ -209,7 +209,8 @@ move with it.
 
 `crates/leverage/oce-author/schema/sequence.schema.json` is the published wire-form JSON Schema
 (derived with `schemars` from the wire DTOs, the `class` enum from the catalog's non-reserved class
-paths; issue #463). `tests/schema_pinned.rs` regenerates it and compares byte for byte, and walks it
+paths, issue #463; a sequence parameter's `type` enum from `oce_api::enumeration_types()`, issue
+#492, so a new enumeration row in the facade table moves it). `tests/schema_pinned.rs` regenerates it and compares byte for byte, and walks it
 for keywords outside the strict profile. `tests/fixtures/wire/*.json` are canonical wire bundles
 (each must round-trip byte for byte) and `tests/fixtures/findings/*.tsv` the stage-1 finding list of
 each. A DTO doc comment, a catalog class, a finding message or the canonical writer moves them.

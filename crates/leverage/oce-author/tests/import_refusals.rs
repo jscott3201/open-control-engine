@@ -238,6 +238,14 @@ fn every_emitted_golden_reimports_to_the_same_bytes() {
     for entry in std::fs::read_dir(fixture("emit")).expect("goldens") {
         let path = entry.expect("entry").path();
         let bytes = std::fs::read(&path).expect("read");
+        let name = path.file_name().and_then(|n| n.to_str()).expect("name");
+        if support::BEYOND_MINIMAL_IMPORTER.contains(&name) {
+            assert!(
+                import_cxf(&bytes).is_err(),
+                "{name}: refused until the importer PR"
+            );
+            continue;
+        }
         let sequence = import_cxf(&bytes).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
         assert_eq!(
             emit(&sequence, &EmitOptions::new()).expect("emit"),

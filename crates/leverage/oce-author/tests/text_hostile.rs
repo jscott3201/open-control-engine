@@ -244,3 +244,42 @@ fn a_multi_byte_character_at_every_offset_of_a_statement_is_typed() {
         }
     }
 }
+
+#[test]
+fn hostile_bounds_and_parameter_types_are_typed() {
+    // Issue #492's syntax at its edges: a type name at and past the token bound, a bound at the
+    // token bound, every tag repeated on one line, and every byte of a bounded statement replaced
+    // or preceded by a multi-byte character.
+    let head = "sequence s\nextends none\n";
+    let at_bound = format!("T{}", "y".repeat(255));
+    let s = parse_text(&format!("{head}param p : {at_bound} = {at_bound}.m\n")).expect("parses");
+    assert_eq!(s.params[0].value_type.as_str(), at_bound);
+    let past = format!("{at_bound}y");
+    let error = parse_text(&format!("{head}param p : {past} = 1\n")).expect_err("refused");
+    assert_eq!(error.code, "token-too-long");
+    let digits = format!("1.{}", "0".repeat(254));
+    assert_eq!(digits.len(), 256);
+    let s = parse_text(&format!("{head}in u : Real @min {digits}\n")).expect("parses");
+    assert_eq!(s.inputs[0].min, Some(oce_author::Bound::Real(1.0)));
+    let error = parse_text(&format!("{head}in u : Real @min {digits}0\n")).expect_err("refused");
+    assert_eq!(error.code, "token-too-long");
+    let repeated = format!("{head}in u : Real{}\n", " @min 0".repeat(1_000));
+    let error = parse_text(&repeated).expect_err("refused");
+    assert_eq!(error.code, "duplicate-tag");
+    let base = "sequence s\nextends none\nparam c : SimpleController = SimpleController.PI\nin u : Real @min -1.5e3 @max 2\n";
+    for at in 0..=base.len() {
+        if !base.is_char_boundary(at) {
+            continue;
+        }
+        for ch in ['\u{e9}', '\u{1f321}', '\u{202e}', '-', '@', '.', '#', ' '] {
+            let mut text = base.to_owned();
+            text.insert(at, ch);
+            check(
+                text.as_bytes(),
+                "bounded statement",
+                at,
+                &format!("insert {ch:?}"),
+            );
+        }
+    }
+}

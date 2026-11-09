@@ -1,7 +1,8 @@
 //! A typed builder over the model.
 //!
 //! The builder refuses, with a typed [`BuildError`], every defect it can see without the catalog:
-//! a malformed or duplicate name, a malformed provenance id or semantic field, an assignment to a
+//! a malformed or duplicate name, a malformed provenance id or semantic field, a non-finite
+//! boundary bound, an assignment to a
 //! block not yet declared, a reference to a sequence parameter not yet declared, an array element
 //! index the template does not take, and a malformed connection endpoint. What needs the catalog
 //! (classes, parameters, kinds, rules, ports) is [`crate::validate()`]'s.
@@ -11,9 +12,11 @@ use std::fmt;
 use crate::identifier::{
     Identifier, IdentifierError, ProvenanceId, ProvenanceIdError, check_identifier_syntax,
 };
+#[cfg(doc)]
+use crate::model::SignalType;
 use crate::model::{
-    Assignment, Block, Boundary, Connection, Endpoint, Literal, ParamValue, Sequence,
-    SequenceParameter, SignalType,
+    Assignment, Block, Bound, Boundary, Connection, Endpoint, Literal, ParamValue, ParameterType,
+    Sequence, SequenceParameter,
 };
 use crate::validate::boundary_syntax_problems;
 
@@ -76,6 +79,13 @@ pub enum BuildError {
         /// The endpoint as given.
         spelling: String,
     },
+    /// A boundary bound is NaN or infinite (the engine's `non-finite-bound`; issue #492).
+    NonFiniteBound {
+        /// The boundary name.
+        name: String,
+        /// `min` or `max`.
+        side: &'static str,
+    },
 }
 
 impl fmt::Display for BuildError {
@@ -102,6 +112,12 @@ impl fmt::Display for BuildError {
             }
             Self::MalformedEndpoint { spelling } => {
                 write!(f, "endpoint `{spelling}` is not `name` or `block.port`")
+            }
+            Self::NonFiniteBound { name, side } => {
+                write!(
+                    f,
+                    "non-finite-bound: `{side}` of boundary `{name}` is not finite"
+                )
             }
         }
     }
@@ -187,8 +203,9 @@ impl SequenceBuilder {
         Ok(self)
     }
 
-    /// Declare a sequence parameter. Whether the literal fits the type is the validator's
-    /// (`parameter-kind-mismatch`), as is finiteness.
+    /// Declare a sequence parameter of a [`SignalType`] or a [`ParameterType`] (an enumeration
+    /// type name). Whether the type is known and the literal fits it is the validator's
+    /// (`unknown-enum-type`, `parameter-kind-mismatch`, `unknown-enum-literal`), as is finiteness.
     ///
     /// # Errors
     ///
@@ -196,7 +213,7 @@ impl SequenceBuilder {
     pub fn parameter(
         mut self,
         name: &str,
-        value_type: SignalType,
+        value_type: impl Into<ParameterType>,
         value: Literal,
     ) -> Result<Self, BuildError> {
         let name = self.fresh(name)?;
@@ -214,6 +231,16 @@ impl SequenceBuilder {
                 problem,
             });
         }
+        for (side, bound) in [("min", boundary.min), ("max", boundary.max)] {
+            if let Some(Bound::Real(value)) = bound
+                && !value.is_finite()
+            {
+                return Err(BuildError::NonFiniteBound {
+                    name: boundary.name.as_str().to_owned(),
+                    side,
+                });
+            }
+        }
         Ok(())
     }
 
@@ -221,8 +248,8 @@ impl SequenceBuilder {
     ///
     /// # Errors
     ///
-    /// [`BuildError::InvalidName`], [`BuildError::DuplicateName`] or
-    /// [`BuildError::InvalidSemanticPoint`].
+    /// [`BuildError::InvalidName`], [`BuildError::DuplicateName`],
+    /// [`BuildError::InvalidSemanticPoint`] or [`BuildError::NonFiniteBound`].
     pub fn input(mut self, boundary: Boundary) -> Result<Self, BuildError> {
         self.boundary(&boundary)?;
         self.sequence.inputs.push(boundary);

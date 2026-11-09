@@ -11,6 +11,13 @@
       "name": "nStage",
       "type": "Integer",
       "value": 2.5
+    },
+    {
+      "name": "eneStd",
+      "type": "OperationModes",
+      "value": {
+        "member": "OperationModes.occupied"
+      }
     }
   ],
   "inputs": [
@@ -19,6 +26,12 @@
       "type": "Real",
       "quantity": "ThermodynamicTemperature",
       "display_unit": "degC",
+      "min": [
+        30.0
+      ],
+      "max": [
+        -10
+      ],
       "semantic": {
         "name": "",
         "label": "",
@@ -35,6 +48,8 @@
       "type": "Real",
       "quantity": "",
       "display_unit": "",
+      "min": [],
+      "max": [],
       "semantic": {
         "name": "",
         "label": "",
@@ -53,6 +68,10 @@
       "type": "Boolean",
       "quantity": "",
       "display_unit": "",
+      "min": [],
+      "max": [
+        1
+      ],
       "semantic": {
         "name": "",
         "label": "",
@@ -69,6 +88,8 @@
       "type": "Real",
       "quantity": "",
       "display_unit": "",
+      "min": [],
+      "max": [],
       "semantic": {
         "name": "",
         "label": "",

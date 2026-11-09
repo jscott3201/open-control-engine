@@ -19,7 +19,7 @@ use std::fmt;
 
 use crate::json::Json;
 pub use crate::location::Location;
-use crate::model::{Boundary, Literal, ParamValue, Sequence};
+use crate::model::{Bound, Boundary, Literal, ParamValue, Sequence};
 
 pub(crate) use dto::WireSequence;
 
@@ -127,6 +127,12 @@ pub enum WireError {
         /// Where the parse stopped.
         at: Location,
     },
+    /// A boundary's `min` or `max` list has a second item; a bound list holds at most one number
+    /// (issue #492).
+    BoundListTooLong {
+        /// Where the parse stopped.
+        at: Location,
+    },
     /// A connection string does not have exactly one `->`.
     MalformedConnection {
         /// The connection's index in `connections`.
@@ -168,6 +174,12 @@ impl fmt::Display for WireError {
             Self::MissingKey { key, at } => write!(f, "missing key `{key}` at {at}"),
             Self::WrongType { detail, at } => write!(f, "{detail} at {at}"),
             Self::Syntax { detail, at } => write!(f, "not JSON: {detail} at {at}"),
+            Self::BoundListTooLong { at } => {
+                write!(
+                    f,
+                    "a bound list holds at most one number; a second item at {at}"
+                )
+            }
             Self::MalformedConnection { index, text } => write!(
                 f,
                 "connection {index} `{text}` is not `source -> target` with exactly one `->`"
@@ -207,7 +219,8 @@ pub fn from_wire_bytes(bytes: &[u8]) -> Result<Sequence, WireError> {
 ///
 /// A typed [`WireError`] for a document over a bound, with a byte-order mark, a duplicate key, a
 /// non-finite or out-of-range number, a control character, an unknown or missing key, a wrong
-/// type, broken syntax, or a connection without exactly one `->`. Never panics.
+/// type, broken syntax, a bound list with a second item, or a connection without exactly one
+/// `->`. Never panics.
 pub fn from_wire_str(text: &str) -> Result<Sequence, WireError> {
     if text.len() > MAX_WIRE_BYTES {
         return Err(WireError::TooLarge {
@@ -257,6 +270,8 @@ fn classify(error: &serde_json::Error) -> WireError {
                 WireError::MissingKey { key, at }
             } else if let Some(key) = quoted("duplicate field `") {
                 WireError::DuplicateKey { key, at }
+            } else if detail.starts_with(dto::BOUND_LIST_TOO_LONG) {
+                WireError::BoundListTooLong { at }
             } else {
                 WireError::WrongType { detail, at }
             }
@@ -331,8 +346,20 @@ fn literal(value: &Literal) -> Json {
         Literal::Real(v) => Json::real(*v),
         Literal::Boolean(v) => Json::boolean(*v),
         Literal::Text(v) => Json::str(v),
-        Literal::EnumMember(m) => Json::obj([("member", Json::Str(m.spelling()))]),
+        Literal::Member(m) => Json::obj([("member", Json::Str(m.spelling()))]),
     }
+}
+
+fn bound(value: Option<Bound>) -> Json {
+    Json::Arr(
+        value
+            .map(|b| match b {
+                Bound::Integer(v) => Json::integer(v),
+                Bound::Real(v) => Json::real(v),
+            })
+            .into_iter()
+            .collect(),
+    )
 }
 
 fn text(value: Option<&String>) -> Json {
@@ -349,6 +376,8 @@ fn boundaries(list: &[Boundary]) -> Json {
                     ("type", Json::str(b.value_type.as_str())),
                     ("quantity", text(b.quantity.as_ref())),
                     ("display_unit", text(b.display_unit.as_ref())),
+                    ("min", bound(b.min)),
+                    ("max", bound(b.max)),
                     (
                         "semantic",
                         Json::obj([

@@ -15,12 +15,13 @@ use std::sync::Arc;
 use oce_api::{ClassPortsError, Diagnostic, Value, ValueType, class_ports};
 
 use crate::json::wire_string_len;
-use crate::model::{Block, Literal, ParamValue, Sequence, SignalType};
+use crate::model::{Block, Literal, ParamValue, ParameterType, Sequence};
 use crate::wire::MAX_WIRE_STRING_BYTES;
 
 use super::catalog::{ClassView, enum_type, lookup_class, lookup_parameter};
 use super::index::{Declared, Ports};
-use super::names::{exact_as_real, inexact_detail, literal_fits};
+use super::members::{constant_member, enum_ordinal, parameter_enum, parameter_problem};
+use super::names::{exact_as_real, inexact_detail};
 use super::{
     Anchor, CLASS_NOT_AUTHORABLE, CLASS_NOT_FOUND, DUPLICATE_PARAMETER, Findings,
     NON_FINITE_PARAMETER, PARAMETER_KIND_MISMATCH, PARAMETER_NOT_SETTABLE, PARAMETER_OUT_OF_RANGE,
@@ -275,21 +276,20 @@ fn judge(
                     format!("`{name}` references `{target}`, which is not a sequence parameter"),
                 ));
             };
-            let finite = !matches!(param.value, Literal::Real(v) if !v.is_finite());
-            if !literal_fits(param.value_type, &param.value) || !finite {
+            if parameter_problem(param).is_some() {
+                // The sequence parameter carries its own finding; withhold this assignment.
                 return Ok(None);
             }
-            return match (expected, param.value_type, &param.value) {
-                (ValueType::Real, SignalType::Real, Literal::Real(v)) => Ok(Some(Value::Real(*v))),
-                // A Real sequence parameter widens its Integer literal, as CDL does.
-                // An inexact Integer on the Real sequence parameter is reported there.
-                (ValueType::Real, SignalType::Real, Literal::Integer(v)) if !exact_as_real(*v) => {
-                    Ok(None)
+            return match (expected, &param.value_type, &param.value) {
+                (ValueType::Real, ParameterType::Real, Literal::Real(v)) => {
+                    Ok(Some(Value::Real(*v)))
                 }
-                (ValueType::Real, SignalType::Real, Literal::Integer(v)) => {
+                // A Real sequence parameter widens its Integer literal, as CDL does (exactly: its
+                // own check refused an Integer above 2^53).
+                (ValueType::Real, ParameterType::Real, Literal::Integer(v)) => {
                     Ok(Some(Value::Real(*v as f64)))
                 }
-                (ValueType::Real, SignalType::Integer, Literal::Integer(v))
+                (ValueType::Real, ParameterType::Integer, Literal::Integer(v))
                     if !exact_as_real(*v) =>
                 {
                     Err(refuse(
@@ -299,11 +299,29 @@ fn judge(
                 }
                 (
                     ValueType::Real | ValueType::Integer,
-                    SignalType::Integer,
+                    ParameterType::Integer,
                     Literal::Integer(v),
                 ) => Ok(Some(Value::Integer(*v))),
-                (ValueType::Boolean, SignalType::Boolean, Literal::Boolean(v)) => {
+                // An Integer sequence parameter holding a constant-package member grounds to its
+                // Integer, which the parameter's own check resolved.
+                (ValueType::Integer, ParameterType::Integer, Literal::Member(member)) => {
+                    Ok(constant_member(member, name).ok().map(Value::Integer))
+                }
+                (ValueType::Boolean, ParameterType::Boolean, Literal::Boolean(v)) => {
                     Ok(Some(Value::Boolean(*v)))
+                }
+                // An enumeration reference type-checks by class identity (importer note,
+                // decision 2), then grounds to the member's ordinal.
+                (ValueType::Enum(class), ParameterType::Enum(_), Literal::Member(member))
+                    if parameter_enum(&param.value_type)
+                        .ok()
+                        .flatten()
+                        .and_then(|row| row.id)
+                        == Some(class) =>
+                {
+                    Ok(enum_type(expected)
+                        .and_then(|row| enum_ordinal(member, row).ok())
+                        .map(|ordinal| Value::Enum { class, ordinal }))
                 }
                 (_, declared, _) => Err(mismatch(&format!(
                     "a reference to the {} sequence parameter `{target}`",
@@ -331,34 +349,30 @@ fn judge(
             )),
             None => Ok(Some(Value::String(Arc::from(v.as_str())))),
         },
-        (ValueType::Enum(class_id), Literal::EnumMember(member)) => {
+        (ValueType::Enum(class_id), Literal::Member(member)) => {
             let Some(enum_type) = enum_type(expected) else {
                 return Err(refuse(
                     UNKNOWN_ENUM_LITERAL,
                     format!("parameter `{name}` takes an enumeration whose members are not known"),
                 ));
             };
-            let ordinal = enum_type
-                .members
-                .iter()
-                .position(|m| *m == member.member)
-                .filter(|_| member.type_name == enum_type.type_name());
-            match ordinal.and_then(|o| u32::try_from(o + 1).ok()) {
-                Some(ordinal) => Ok(Some(Value::Enum {
+            match enum_ordinal(member, enum_type) {
+                Ok(ordinal) => Ok(Some(Value::Enum {
                     class: class_id,
                     ordinal,
                 })),
-                None => Err(refuse(
-                    UNKNOWN_ENUM_LITERAL,
-                    format!(
-                        "`{}` is not a member of `{}` ({}); write `{}.<member>` with one of: {}",
-                        member.spelling(),
-                        enum_type.type_name(),
-                        enum_type.class_path,
-                        enum_type.type_name(),
-                        enum_type.members.join(", ")
-                    ),
-                )),
+                Err(detail) => Err(refuse(UNKNOWN_ENUM_LITERAL, detail)),
+            }
+        }
+        // A constant-package member on an Integer parameter grounds to its Integer (importer
+        // note, decision 10); an enumeration member there is a kind mismatch.
+        (ValueType::Integer, Literal::Member(member)) => {
+            match constant_member(
+                member,
+                &format!("parameter `{name}` of `{}`", block.class_path),
+            ) {
+                Ok(value) => Ok(Some(Value::Integer(value))),
+                Err((code, detail)) => Err(refuse(code, detail)),
             }
         }
         (_, found) => Err(mismatch(found.kind_name())),

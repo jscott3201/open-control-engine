@@ -103,7 +103,10 @@ fn a_wrong_type_is_refused() {
     for (from, to) in [
         ("\"sequence\": \"econ_enable\"", "\"sequence\": 7"),
         ("\"provisional\": false", "\"provisional\": \"no\""),
-        ("\"type\": \"Real\"", "\"type\": \"Float\""),
+        // A boundary type is one of the three scalars; a sequence parameter's type is any string
+        // (an enumeration type name the validator resolves), but a string.
+        ("\"type\": \"Boolean\"", "\"type\": \"Float\""),
+        ("\"type\": \"Real\"", "\"type\": 7"),
         ("\"haystack\": []", "\"haystack\": \"air\""),
         ("\"connections\": [", "\"connections\": [1, "),
     ] {
@@ -156,7 +159,7 @@ fn the_five_value_shapes_read_as_tagged_values() {
     assert_eq!(read(r#"{"ref":"p"}"#), ParamValue::Ref(support::id("p")));
     assert_eq!(
         read(r#"{"member":"SimpleController.PI"}"#),
-        ParamValue::Literal(Literal::EnumMember(oce_author::EnumMember::parse(
+        ParamValue::Literal(Literal::Member(oce_author::MemberRef::parse(
             "SimpleController.PI"
         )))
     );
@@ -416,4 +419,35 @@ fn broken_syntax_is_a_typed_syntax_error() {
 fn errors_display_their_position() {
     let error = from_wire_str(&with_value("NaN")).expect_err("refused");
     assert!(error.to_string().contains("line 1 column"), "{error}");
+}
+
+#[test]
+fn a_mutation_sweep_over_the_every_element_bundle_never_panics() {
+    // The bundle carries every wire construct, issue #492's enumeration types, bounds and
+    // constant members included. Every byte is case-flipped (0x20), replaced by a digit and
+    // truncated there (three mutants per byte keep the sweep near ten seconds in a debug build);
+    // each mutant is a typed refusal or a model that writes back to bytes reading to the same
+    // model.
+    let bytes = std::fs::read(support::fixture("wire/every_element.json")).expect("bundle");
+    let mut cases = 0usize;
+    for at in 0..bytes.len() {
+        let mut flipped = bytes.clone();
+        flipped[at] ^= 0x20;
+        let mut digit = bytes.clone();
+        digit[at] = b'9';
+        let mutants = [flipped, digit, bytes[..at].to_vec()];
+        for mutant in mutants {
+            let outcome = std::panic::catch_unwind(|| {
+                if let Ok(model) = oce_author::from_wire_bytes(&mutant) {
+                    let written = to_wire_string(&model);
+                    if let Ok(again) = from_wire_str(&written) {
+                        assert_eq!(again, model);
+                    }
+                }
+            });
+            assert!(outcome.is_ok(), "panic at byte {at}");
+            cases += 1;
+        }
+    }
+    assert!(cases > 5_000, "{cases}");
 }

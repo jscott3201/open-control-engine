@@ -3,21 +3,24 @@
 //! Validation runs in two stages. **Stage 1** ([`Stage::Author`], [`validate_author_side`]) judges
 //! the model against the catalog alone: names, the sequence shape, connection syntax and
 //! endpoints, class and parameter lookup, parameter kinds and catalog rules, references, arity
-//! and port names, duplicates, `SemanticPoint` and `extends` syntax. **Stage 2**
+//! and port names, duplicates, enumeration types and members, boundary bounds, `SemanticPoint` and
+//! `extends` syntax. **Stage 2**
 //! ([`Stage::Engine`], the `engine` module) runs only when stage 1 found no error: emit, load in a
 //! throwaway engine and map each engine diagnostic back onto the model, every engine warning
 //! becoming an error finding (decision 14). [`validate()`] runs both stages.
 //!
-//! Every finding carries an exact code string. [`STAGE_ONE_CODES`] lists the twenty-one stage-1 codes;
+//! Every finding carries an exact code string. [`STAGE_ONE_CODES`] lists the twenty-five stage-1 codes;
 //! a code the engine also uses has the engine's [`oce_api::DiagCode`] spelling. The returned list is
 //! sorted by the subject's authored position, then code, then detail, and deduplicated, so it is
 //! a pure function of the model.
 
 mod blocks;
+mod bounds;
 pub(crate) mod catalog;
 mod connections;
 mod engine;
 mod index;
+pub(crate) mod members;
 mod names;
 mod semantic;
 
@@ -66,6 +69,9 @@ mod codes {
     /// An enumeration member is not a member of the parameter's type (the engine refuses the same
     /// value as `grounding-failed`).
     pub const UNKNOWN_ENUM_LITERAL: &str = "unknown-enum-literal";
+    /// A sequence parameter's type names no enumeration, or names a constant package, which is
+    /// never a parameter type (the engine's code, raised for an unknown G36 type).
+    pub const UNKNOWN_ENUM_TYPE: &str = "unknown-enum-type";
     /// A reference names no sequence parameter.
     pub const UNKNOWN_PARAMETER_REFERENCE: &str = "unknown-parameter-reference";
     /// A connection endpoint is not `name` or `block.port` with identifier parts.
@@ -78,6 +84,14 @@ mod codes {
     pub const UNKNOWN_PORT: &str = "unknown-port";
     /// A `SemanticPoint`, `quantity` or `display_unit` field is malformed.
     pub const INVALID_SEMANTIC_POINT: &str = "invalid-semantic-point";
+    /// A boundary bound the boundary cannot take: a bound on a Boolean boundary, a Real literal on
+    /// an Integer boundary, or an Integer above 2^53 in magnitude on a Real boundary (pre-empts the
+    /// engine's `malformed-document`).
+    pub const INVALID_BOUND: &str = "invalid-bound";
+    /// A boundary bound is NaN or infinite (the engine's code).
+    pub const NON_FINITE_BOUND: &str = "non-finite-bound";
+    /// A boundary's `min` exceeds its `max` (the engine's code).
+    pub const CROSSED_BOUNDS: &str = "crossed-bounds";
     /// The `extends` provenance id is malformed.
     pub const INVALID_PROVENANCE_ID: &str = "invalid-provenance-id";
     /// Two connections drive one block input or boundary output. Stage 1 refuses a target the
@@ -100,12 +114,16 @@ mod codes {
         PARAMETER_OUT_OF_RANGE,
         NON_FINITE_PARAMETER,
         UNKNOWN_ENUM_LITERAL,
+        UNKNOWN_ENUM_TYPE,
         UNKNOWN_PARAMETER_REFERENCE,
         MALFORMED_CONNECTION,
         UNKNOWN_SOURCE,
         UNKNOWN_TARGET,
         UNKNOWN_PORT,
         INVALID_SEMANTIC_POINT,
+        INVALID_BOUND,
+        NON_FINITE_BOUND,
+        CROSSED_BOUNDS,
         INVALID_PROVENANCE_ID,
         SINGLE_ASSIGNMENT,
     ];

@@ -7,7 +7,8 @@
 //! A model from the wire form or the builder can hold values the lexer cannot read back: a name
 //! with a space or a line feed, an atom with a `#`, a class path that is not dotted words, a
 //! suffix that is not a base unit, an `extends` id of `none`, a reference named `true`, an
-//! enumeration member with no type, a non-finite Real, a string with a control character or a
+//! enumeration member with no type, an enumeration type spelled as a scalar type or not as one
+//! word, a non-finite Real or bound, a string with a control character or a
 //! bidirectional override. Each is refused here, naming the subject by the validator's model
 //! path. Comments are the exception: a line feed in a comment splits it into several comment
 //! lines and trailing spaces are dropped, the two normalizations the parser applies itself; a
@@ -16,7 +17,8 @@
 use std::fmt;
 
 use crate::model::{
-    Annotations, Endpoint, EnumMember, Literal, ParamValue, SemanticPoint, Sequence,
+    Annotations, Bound, Boundary, Endpoint, Literal, MemberRef, ParamValue, ParameterType,
+    SemanticPoint, Sequence,
 };
 
 use super::codes::{MAX_COMMENT_BYTES, MAX_STATEMENTS_PER_KIND, MAX_STRING_BYTES, MAX_TOKEN_BYTES};
@@ -133,7 +135,7 @@ fn string(text: &str) -> Checked {
     Ok(())
 }
 
-fn member(m: &EnumMember) -> Checked {
+fn member(m: &MemberRef) -> Checked {
     if m.type_name.is_empty() {
         return Err(format!(
             "the member `{}` has no `Type.` prefix and would read as a reference",
@@ -149,9 +151,36 @@ fn literal(value: &Literal) -> Checked {
     match value {
         Literal::Real(v) if !v.is_finite() => Err(format!("the Real {v} is not finite")),
         Literal::Text(text) => string(text),
-        Literal::EnumMember(m) => member(m),
+        Literal::Member(m) => member(m),
         _ => Ok(()),
     }
+}
+
+/// A parameter type: an enumeration type name is one word, and not a scalar type's spelling
+/// (which would read back as the scalar type).
+fn parameter_type(value_type: &ParameterType) -> Checked {
+    let ParameterType::Enum(type_name) = value_type else {
+        return Ok(());
+    };
+    word(type_name)?;
+    if ParameterType::parse(type_name) != *value_type {
+        return Err(format!(
+            "the enumeration type `{type_name}` reads as the scalar type `{type_name}`"
+        ));
+    }
+    Ok(())
+}
+
+/// A boundary's bounds: each finite.
+fn bounds(b: &Boundary) -> Checked {
+    for (side, bound) in [("min", b.min), ("max", b.max)] {
+        if let Some(Bound::Real(v)) = bound
+            && !v.is_finite()
+        {
+            return Err(format!("the `{side}` bound {v} is not finite"));
+        }
+    }
+    Ok(())
 }
 
 fn suffix(value: &ParamValue, suffix: Option<&String>) -> Checked {
@@ -271,6 +300,7 @@ pub(super) fn check(s: &Sequence) -> Result<(), PrintError> {
     for p in &s.params {
         let name = p.name.as_str();
         word(name)
+            .and_then(|()| parameter_type(&p.value_type))
             .and_then(|()| literal(&p.value))
             .and_then(|()| suffix(&ParamValue::Literal(p.value.clone()), p.suffix.as_ref()))
             .and_then(|()| annotations(&p.annotations))
@@ -280,6 +310,7 @@ pub(super) fn check(s: &Sequence) -> Result<(), PrintError> {
         let name = b.name.as_str();
         word(name)
             .and_then(|()| semantic(&b.semantic, b.quantity.as_ref(), b.display_unit.as_ref()))
+            .and_then(|()| bounds(b))
             .and_then(|()| annotations(&b.annotations))
             .map_err(at(name))?;
     }

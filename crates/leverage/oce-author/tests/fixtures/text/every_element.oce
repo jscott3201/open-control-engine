@@ -4,17 +4,21 @@ param kGain : Real = 0.25
 param nStages : Integer = 3
 param reverse : Boolean = false
 param TiSec : Real = 300
-in TSup : Real @unit K @quantity ThermodynamicTemperature @displayUnit degC @brick brick:Supply_Air_Temperature_Sensor @s223 s223:Sensor @qudt quantitykind:Temperature @haystack air @haystack temp @haystack sensor @name "Supply air temperature" @label "TSup \"AHU-1\" °C"
-in TSupSet : Real
+param conTyp : SimpleController = SimpleController.PI
+param eneStd : EnergyStandard = EnergyStandard.California_Title_24
+param occMode : Integer = OperationModes.occupied
+in TSup : Real @unit K @quantity ThermodynamicTemperature @displayUnit degC @min 223 @max 353.15 @brick brick:Supply_Air_Temperature_Sensor @s223 s223:Sensor @qudt quantitykind:Temperature @haystack air @haystack temp @haystack sensor @name "Supply air temperature" @label "TSup \"AHU-1\" °C"
+in TSupSet : Real @max 303.15
 in uEna : Boolean
-out yStage : Integer @provisional
-out ySum : Real
+out yStage : Integer @min 0 @max 3 @provisional
+out ySum : Real @min -1000.0
 out yGain1 : Real
 out yGain2 : Real
 out yTab : Real
 out yCon : Real
+out yMode : Integer @max 7
 block conPID = CDL.Reals.PID(
-  controllerType = SimpleController.PI,
+  controllerType = conTyp,
   k = kGain,
   Ti = TiSec,
   reverseActing = reverse,
@@ -28,6 +32,9 @@ block tab = CDL.Reals.Sources.TimeTable(
 )
 block staCon = CDL.Integers.Sources.Constant(k = nStages)
 block assMes = CDL.Utilities.Assert(message = "enable is \"off\"\nline two")
+block modCon = CDL.Integers.Sources.Constant(k = OperationModes.unoccupied)
+block occCon = CDL.Integers.Sources.Constant(k = occMode)
+block modMax = CDL.Integers.Max
 TSupSet -> conPID.u_s
 TSup -> conPID.u_m
 conPID.y -> yCon
@@ -41,4 +48,7 @@ gain.y1 -> yGain1
 gain.y2 -> yGain2
 tab.y1 -> yTab
 staCon.y -> yStage
+modCon.y -> modMax.u1
+occCon.y -> modMax.u2
+modMax.y -> yMode
 uEna -> assMes.u

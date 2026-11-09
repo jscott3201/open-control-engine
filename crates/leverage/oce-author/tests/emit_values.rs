@@ -31,7 +31,7 @@ fn agrees(literal: &Literal, value: &Value) -> bool {
         (Literal::Integer(a), Value::Integer(b)) => a == b,
         (Literal::Boolean(a), Value::Boolean(b)) => a == b,
         (Literal::Text(a), Value::String(b)) => a.as_str() == &**b,
-        (Literal::EnumMember(member), Value::Enum { ordinal, .. }) => {
+        (Literal::Member(member), Value::Enum { ordinal, .. }) => {
             let members: &[&str] = match member.type_name.as_str() {
                 "SimpleController" => &["P", "PI", "PD", "PID"],
                 "Smoothness" => &["LinearSegments", "ConstantSegments"],
@@ -42,6 +42,25 @@ fn agrees(literal: &Literal, value: &Value) -> bool {
                 .position(|m| *m == member.member)
                 .map(|p| p + 1)
                 == usize::try_from(*ordinal).ok()
+        }
+        // A library constant grounds to its Integer: the upstream `OperationModes` values,
+        // copied from `Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes` as the oracle.
+        (Literal::Member(member), Value::Integer(value)) => {
+            let constants: &[(&str, i64)] = match member.type_name.as_str() {
+                "OperationModes" => &[
+                    ("occupied", 1),
+                    ("coolDown", 2),
+                    ("setUp", 3),
+                    ("warmUp", 4),
+                    ("setBack", 5),
+                    ("freezeProtection", 6),
+                    ("unoccupied", 7),
+                ],
+                other => panic!("no constant list for {other}"),
+            };
+            constants
+                .iter()
+                .any(|(name, v)| *name == member.member && v == value)
         }
         _ => false,
     }
@@ -79,7 +98,7 @@ fn every_assignment_grounds_to_the_models_value() {
         }
     }
     assert_eq!(
-        checked, 20,
+        checked, 22,
         "every assignment of the every-element sequence"
     );
 }
@@ -138,7 +157,7 @@ fn lit(literal: Literal) -> ParamValue {
 
 #[test]
 fn the_bit_exact_table_grounds_through_the_engine() {
-    use oce_author::{Block, EnumMember, Identifier, SequenceParameter, SignalType};
+    use oce_author::{Block, Identifier, MemberRef, SequenceParameter, SignalType};
     const REAL: &str = "CDL.Reals.Sources.Constant";
     const INT: &str = "CDL.Integers.Sources.Constant";
     const BOOL: &str = "CDL.Logical.Sources.Constant";
@@ -224,7 +243,7 @@ fn the_bit_exact_table_grounds_through_the_engine() {
         let mut pid = Block::new(support::id(&format!("pid{member}")), "CDL.Reals.PID");
         pid.assignments.push(oce_author::Assignment::new(
             support::id("controllerType"),
-            lit(Literal::EnumMember(EnumMember::parse(&format!(
+            lit(Literal::Member(MemberRef::parse(&format!(
                 "SimpleController.{member}"
             )))),
         ));

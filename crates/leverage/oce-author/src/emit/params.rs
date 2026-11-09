@@ -3,8 +3,10 @@
 //! A Real is a typed literal (`{"@value": "<shortest round-trip>", "@type": xsd:double}`), an
 //! Integer a bare JSON integer, a Boolean a JSON boolean, a String the CDL string expression
 //! (`"\"text\""`), an enumeration member its full member path, and a reference the bare
-//! sequence-parameter name, which the engine grounds from the root's scope (Rule 5). The CXF type
-//! follows the parameter's catalog type, so an Integer literal assigned to a Real parameter is
+//! sequence-parameter name, which the engine grounds from the root's scope (Rule 5). A member of a
+//! library constant package is written as its full member path too, with the package IRI as the
+//! node's `isOfDataType` (importer note, ruling 9). The CXF type otherwise follows the parameter's
+//! catalog type, so an Integer literal assigned to a Real parameter is
 //! written as a Real; stage 1 refuses one above 2^53 in magnitude ([`crate::MAX_EXACT_INTEGER`]),
 //! so that conversion is always exact. Array elements, assigned one at a time in the model, are gathered into one
 //! `isArray` node per array parameter at the position of the first element authored, in
@@ -16,10 +18,15 @@ use std::collections::BTreeMap;
 use oce_api::ValueType;
 
 use crate::json::Json;
-use crate::model::{Assignment, Block, Literal, ParamValue, SignalType};
+use oce_api::EnumerationKind;
+
+use crate::model::{
+    Assignment, Block, Bound, Literal, MemberRef, ParamValue, ParameterType, SignalType,
+};
 use crate::validate::catalog::{
     ClassView, enum_type, is_template, lookup_class, lookup_parameter, match_template,
 };
+use crate::validate::members::{named_type, parameter_enum};
 
 use super::iri::{MODELICA_PACKAGE, XSD_DOUBLE, class_iri};
 
@@ -52,10 +59,51 @@ pub(super) fn signal_data_type(value_type: SignalType) -> &'static str {
     }
 }
 
-/// A sequence parameter's value in its declared type (a Real widens an Integer literal).
-pub(super) fn sequence_value(value_type: SignalType, literal: &Literal) -> Json {
+/// The class path (relative to `Buildings.Controls.OBC.`) of the row a member's type names. A type
+/// the facade does not know (only the stage-1 bypass emits one) is written under `CDL.Types.`, so
+/// the engine judges it.
+fn member_class_path(member: &MemberRef) -> String {
+    named_type(&member.type_name).map_or_else(
+        || format!("CDL.Types.{}", member.type_name),
+        |row| row.class_path.to_owned(),
+    )
+}
+
+/// The class IRI of a constant-package member's package, when `literal` is one: the corpus
+/// writes it as the `isOfDataType` of an Integer parameter holding a library constant (importer
+/// note, ruling 9).
+fn constant_package_iri(literal: &Literal) -> Option<String> {
+    let Literal::Member(member) = literal else {
+        return None;
+    };
+    named_type(&member.type_name)
+        .filter(|row| row.kind == EnumerationKind::ConstantPackage)
+        .map(|row| class_iri(row.class_path))
+}
+
+/// The `S231:isOfDataType` IRI of a sequence parameter: the scalar type, the enumeration's class
+/// IRI (importer note, decision 3), or a constant package's IRI for an Integer parameter holding
+/// one of its members. An enumeration type the facade does not know (only the stage-1 bypass
+/// emits one) is written under `ASHRAE.G36.Types.`: the CDL enumerations are a closed set the
+/// table holds whole, and under that package the engine refuses an unknown type with the code
+/// stage 1 uses (`unknown-enum-type`), which the parity test pins.
+pub(super) fn sequence_data_type(value_type: &ParameterType, literal: &Literal) -> String {
     match (value_type, literal) {
-        (SignalType::Real, Literal::Integer(v)) => real(*v as f64),
+        (ParameterType::Enum(type_name), _) => match parameter_enum(value_type) {
+            Ok(Some(row)) => class_iri(row.class_path),
+            _ => class_iri(&format!("ASHRAE.G36.Types.{type_name}")),
+        },
+        (ParameterType::Integer, literal) => constant_package_iri(literal)
+            .unwrap_or_else(|| signal_data_type(SignalType::Integer).to_owned()),
+        (ParameterType::Real, _) => signal_data_type(SignalType::Real).to_owned(),
+        (ParameterType::Boolean, _) => signal_data_type(SignalType::Boolean).to_owned(),
+    }
+}
+
+/// A sequence parameter's value in its declared type (a Real widens an Integer literal).
+pub(super) fn sequence_value(value_type: &ParameterType, literal: &Literal) -> Json {
+    match (value_type, literal) {
+        (ParameterType::Real, Literal::Integer(v)) => real(*v as f64),
         (_, literal) => literal_value(None, literal),
     }
 }
@@ -92,10 +140,10 @@ fn literal_data_type(literal: &Literal) -> Option<String> {
         Literal::Real(_) => Some("S231:Real".to_owned()),
         Literal::Boolean(_) => Some("S231:Boolean".to_owned()),
         Literal::Text(_) => Some("S231:String".to_owned()),
-        Literal::EnumMember(member) if !member.type_name.is_empty() => {
-            Some(class_iri(&format!("CDL.Types.{}", member.type_name)))
+        Literal::Member(member) if !member.type_name.is_empty() => {
+            Some(class_iri(&member_class_path(member)))
         }
-        Literal::EnumMember(_) => None,
+        Literal::Member(_) => None,
     }
 }
 
@@ -108,16 +156,11 @@ fn literal_value(expected: Option<ValueType>, literal: &Literal) -> Json {
         (_, Literal::Integer(v)) => Json::integer(*v),
         (_, Literal::Boolean(v)) => Json::boolean(*v),
         (_, Literal::Text(text)) => Json::str(&cdl_string(text)),
-        (_, Literal::EnumMember(member)) => {
-            let class_path = expected
-                .and_then(enum_type)
-                .filter(|t| t.type_name() == member.type_name)
-                .map_or_else(
-                    || format!("CDL.Types.{}", member.type_name),
-                    |t| t.class_path.to_owned(),
-                );
-            Json::str(&format!("{MODELICA_PACKAGE}{class_path}.{}", member.member))
-        }
+        (_, Literal::Member(member)) => Json::str(&format!(
+            "{MODELICA_PACKAGE}{}.{}",
+            member_class_path(member),
+            member.member
+        )),
     }
 }
 
@@ -181,6 +224,13 @@ pub(super) fn block_parameters(block: &Block) -> Vec<ParamNode> {
         }
         let expected = parameter.map(|p| p.value_type);
         let data_type = match (expected, &assignment.value) {
+            // A library constant on an Integer parameter: the package IRI, as the corpus writes
+            // it (importer note, ruling 9).
+            (Some(ValueType::Integer), ParamValue::Literal(literal))
+                if constant_package_iri(literal).is_some() =>
+            {
+                constant_package_iri(literal)
+            }
             (Some(value_type), _) => data_type_of(value_type),
             (None, ParamValue::Literal(literal)) => literal_data_type(literal),
             (None, ParamValue::Ref(_)) => None,
@@ -239,4 +289,16 @@ fn array_node(group: &ArrayGroup<'_>) -> Vec<ParamNode> {
         dimensions: Some(dimensions),
         value: Json::Arr(values),
     }]
+}
+
+/// A boundary bound in CXF: a typed `xsd:double` (shortest round-trip spelling) on a Real
+/// boundary, an Integer literal widened exactly; a bare JSON integer on an Integer boundary. A
+/// bound stage 1 refuses (a Real on an Integer boundary, any bound on a Boolean one; only the
+/// stage-1 bypass emits one) is written in its own kind, so the engine judges it.
+pub(super) fn bound_value(value_type: SignalType, bound: Bound) -> Json {
+    match (value_type, bound) {
+        (SignalType::Real, bound) => real(bound.as_f64()),
+        (_, Bound::Integer(v)) => Json::integer(v),
+        (_, Bound::Real(v)) => real(v),
+    }
 }

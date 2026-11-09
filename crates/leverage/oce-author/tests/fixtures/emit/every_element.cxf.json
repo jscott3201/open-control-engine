@@ -18,6 +18,15 @@
         },
         {
           "@id": "urn:oce:author:every_element.TiSec"
+        },
+        {
+          "@id": "urn:oce:author:every_element.conTyp"
+        },
+        {
+          "@id": "urn:oce:author:every_element.eneStd"
+        },
+        {
+          "@id": "urn:oce:author:every_element.occMode"
         }
       ],
       "S231:hasInput": [
@@ -49,6 +58,9 @@
         },
         {
           "@id": "urn:oce:author:every_element.yCon"
+        },
+        {
+          "@id": "urn:oce:author:every_element.yMode"
         }
       ],
       "S231:containsBlock": [
@@ -69,6 +81,15 @@
         },
         {
           "@id": "urn:oce:author:every_element.assMes"
+        },
+        {
+          "@id": "urn:oce:author:every_element.modCon"
+        },
+        {
+          "@id": "urn:oce:author:every_element.occCon"
+        },
+        {
+          "@id": "urn:oce:author:every_element.modMax"
         }
       ]
     },
@@ -111,6 +132,30 @@
       }
     },
     {
+      "@id": "urn:oce:author:every_element.conTyp",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
+      },
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI"
+    },
+    {
+      "@id": "urn:oce:author:every_element.eneStd",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.EnergyStandard"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.EnergyStandard.California_Title_24"
+    },
+    {
+      "@id": "urn:oce:author:every_element.occMode",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.occupied"
+    },
+    {
       "@id": "urn:oce:author:every_element.conPID",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.PID",
       "S231:hasParameter": [
@@ -150,7 +195,7 @@
       "S231:isOfDataType": {
         "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
       },
-      "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI"
+      "S231:value": "conTyp"
     },
     {
       "@id": "urn:oce:author:every_element.conPID.k",
@@ -529,6 +574,117 @@
       }
     },
     {
+      "@id": "urn:oce:author:every_element.modCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:every_element.modCon.k"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:every_element.modCon.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.modCon.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.unoccupied"
+    },
+    {
+      "@id": "urn:oce:author:every_element.modCon.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:every_element.modMax.u1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.occCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:every_element.occCon.k"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:every_element.occCon.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.occCon.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": "occMode"
+    },
+    {
+      "@id": "urn:oce:author:every_element.occCon.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:every_element.modMax.u2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.modMax",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Max",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:every_element.modMax.u1"
+        },
+        {
+          "@id": "urn:oce:author:every_element.modMax.u2"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:every_element.modMax.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.modMax.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.modMax.u2",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.modMax.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:every_element.yMode"
+        }
+      ]
+    },
+    {
       "@id": "urn:oce:author:every_element.TSup",
       "@type": "S231:RealInput",
       "S231:isOfDataType": {
@@ -537,6 +693,14 @@
       "S231:unit": "K",
       "S231:quantity": "ThermodynamicTemperature",
       "S231:displayUnit": "degC",
+      "S231:min": {
+        "@value": "223.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "353.15",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
       "S231:isConnectedTo": [
         {
           "@id": "urn:oce:author:every_element.conPID.u_m"
@@ -554,6 +718,10 @@
       "@type": "S231:RealInput",
       "S231:isOfDataType": {
         "@id": "S231:Real"
+      },
+      "S231:max": {
+        "@value": "303.15",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
       },
       "S231:isConnectedTo": [
         {
@@ -584,13 +752,19 @@
       "@type": "S231:IntegerOutput",
       "S231:isOfDataType": {
         "@id": "S231:Integer"
-      }
+      },
+      "S231:min": 0,
+      "S231:max": 3
     },
     {
       "@id": "urn:oce:author:every_element.ySum",
       "@type": "S231:RealOutput",
       "S231:isOfDataType": {
         "@id": "S231:Real"
+      },
+      "S231:min": {
+        "@value": "-1000.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
       }
     },
     {
@@ -620,6 +794,14 @@
       "S231:isOfDataType": {
         "@id": "S231:Real"
       }
+    },
+    {
+      "@id": "urn:oce:author:every_element.yMode",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:max": 7
     }
   ]
 }

@@ -14,6 +14,8 @@
       "type": "Real",
       "quantity": "ThermodynamicTemperature",
       "display_unit": "degC",
+      "min": [],
+      "max": [],
       "semantic": {
         "name": "",
         "label": "",

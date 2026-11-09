@@ -1,7 +1,8 @@
 //! The published JSON Schema of the wire form (decision 8).
 //!
 //! [`wire_schema`] derives the schema from the wire DTOs with `schemars` (draft 2020-12) and the
-//! `class` enumeration from the non-reserved class paths of [`oce_api::catalog`], and writes it
+//! `class` enumeration from the non-reserved class paths of [`oce_api::catalog`] (and a sequence
+//! parameter's `type` enumeration from [`parameter_type_names`]), and writes it
 //! with the canonical writer (keys sorted). [`WIRE_SCHEMA`] is the checked-in copy,
 //! `schema/sequence.schema.json`; a test regenerates it and compares byte for byte, and only the
 //! `OCE_BLESS_AUTHOR` switch rewrites it.
@@ -52,6 +53,25 @@ pub(crate) fn class_schema(_: &mut SchemaGenerator) -> Schema {
     json_schema!({
         "type": "string",
         "enum": authorable_class_paths(),
+    })
+}
+
+/// The sequence parameter type names, in table order: `Real`, `Integer`, `Boolean`, then the
+/// last segment of every enumeration row of `oce_api::enumeration_types()` (never a constant
+/// package; importer note, decision 1).
+#[must_use]
+pub fn parameter_type_names() -> Vec<&'static str> {
+    ["Real", "Integer", "Boolean"]
+        .into_iter()
+        .chain(oce_api::enumeration_types().map(oce_api::EnumerationClass::type_name))
+        .collect()
+}
+
+/// The schema of a sequence parameter's `type`: a string from [`parameter_type_names`].
+pub(crate) fn parameter_type_schema(_: &mut SchemaGenerator) -> Schema {
+    json_schema!({
+        "type": "string",
+        "enum": parameter_type_names(),
     })
 }
 

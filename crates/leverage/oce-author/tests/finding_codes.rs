@@ -4,7 +4,7 @@
 mod support;
 
 use oce_author::{
-    Block, Boundary, Connection, Endpoint, EnumMember, Finding, Identifier, Literal, Origin,
+    Block, Boundary, Connection, Endpoint, Finding, Identifier, Literal, MemberRef, Origin,
     ParamValue, ProvenanceId, STAGE_ONE_CODES, Sequence, Severity, SignalType, validate,
     validate_author_side,
 };
@@ -88,12 +88,16 @@ fn the_stage_one_code_table_is_the_notes() {
             "parameter-out-of-range",
             "non-finite-parameter",
             "unknown-enum-literal",
+            "unknown-enum-type",
             "unknown-parameter-reference",
             "malformed-connection",
             "unknown-source",
             "unknown-target",
             "unknown-port",
             "invalid-semantic-point",
+            "invalid-bound",
+            "non-finite-bound",
+            "crossed-bounds",
             "invalid-provenance-id",
             "single-assignment",
         ]
@@ -107,6 +111,9 @@ fn the_stage_one_code_table_is_the_notes() {
         oce_api::DiagCode::ParameterOutOfRange,
         oce_api::DiagCode::NonFiniteParameter,
         oce_api::DiagCode::UnknownEnumLiteral,
+        oce_api::DiagCode::UnknownEnumType,
+        oce_api::DiagCode::NonFiniteBound,
+        oce_api::DiagCode::CrossedBounds,
     ] {
         assert!(STAGE_ONE_CODES.contains(&engine.as_str()), "{engine}");
     }
@@ -356,7 +363,7 @@ fn unknown_enum_literal() {
             "CDL.Reals.PID",
             &[(
                 "controllerType",
-                ParamValue::Literal(Literal::EnumMember(EnumMember::parse(spelling))),
+                ParamValue::Literal(Literal::Member(MemberRef::parse(spelling))),
             )],
         );
         let findings = validate(&with_block(pid));
@@ -376,9 +383,7 @@ fn unknown_enum_literal() {
         "CDL.Reals.Sources.Constant",
         &[(
             "k",
-            ParamValue::Literal(Literal::EnumMember(EnumMember::parse(
-                "SimpleController.PI",
-            ))),
+            ParamValue::Literal(Literal::Member(MemberRef::parse("SimpleController.PI"))),
         )],
     );
     assert_eq!(
