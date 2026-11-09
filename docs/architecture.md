@@ -96,8 +96,12 @@ The engine is, by design:
 - **A `no_std + alloc` execution core.** `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` build
   without the standard library; see [below](#no_std--alloc-the-core-four).
 
-The whole external dependency surface on the embed path is four crates: `serde`, `serde_json`,
-`thiserror`, and `libm`. Two more — `regex` and `ryu` — exist only inside `oce-conformance`, which
+The whole external dependency surface on the embed path is five direct crates: `serde`,
+`serde_json`, `thiserror`, `libm`, and `sha2`. `sha2` sits on `oce-api` only, with
+`default-features = false`, for the [canonical content id](design/content-id.md), and brings its
+small RustCrypto tree (`digest`, `block-buffer`, `crypto-common`, `generic-array`, `typenum`,
+`cpufeatures` with `libc` on some targets, `cfg-if`); the core four never link it. Two more —
+`regex` and `ryu` — exist only inside `oce-conformance`, which
 nothing else in the workspace depends on, so a host embedding `oce-api` never links them; and
 `csv-core` exists only inside the leverage crate `oce-replay`, and `schemars` only inside
 `oce-author`, both above the facade.

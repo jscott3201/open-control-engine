@@ -30,47 +30,25 @@ pub fn export_text(engine: &Engine) -> String {
     String::from_utf8(export.bytes).expect("UTF-8 export")
 }
 
-/// The identity of a loaded model that gate item 1 compares — today the complete export content
-/// id (`ExportReport::content_id_complete`), or, for a partial export that has none, the export
-/// bytes with their deferral codes. Every comparison goes through this one function, so the
-/// switch to the canonical content id (GitHub #470) is a change here only.
+/// The identity of a loaded model that gate item 1 compares: the canonical content id
+/// (`Engine::content_id`, GitHub #470), defined whether or not the export is partial and
+/// independent of authored order and instance namespace. Every comparison goes through this one
+/// function.
 pub fn identity(engine: &Engine) -> String {
-    let export = engine.export_cxf().expect("export");
-    match export.content_id_complete() {
-        Ok(id) => id,
-        Err(_) => {
-            let codes: Vec<&str> = export.warnings.iter().map(|w| w.code.as_str()).collect();
-            format!(
-                "partial[{}]:{}",
-                codes.join(","),
-                String::from_utf8_lossy(&export.bytes)
-            )
-        }
-    }
+    engine.content_id().expect("content id").to_string()
 }
 
-/// The loaded executable as compiled-schedule blob bytes with the content id it records (and the
-/// CRC-32C trailer that covers it) zeroed, so two executables compare without their export
-/// identity. Like [`identity`], the one place the id format is known.
+/// The loaded executable as compiled-schedule blob bytes with the content-id field (header bytes
+/// 20..52, format 2) and the CRC-32C trailer that covers it zeroed, so two executables compare
+/// without their content id. Like [`identity`], the one place the id's position is known.
 pub fn executable(engine: &Engine) -> Vec<u8> {
     let blob = engine.compile_blob().expect("blob");
     let mut bytes = blob.bytes;
-    if let Some(hex) = blob
-        .content_id
-        .as_deref()
-        .and_then(|id| id.strip_prefix("cxf:fnv1a128:"))
-    {
-        // The blob stores the 128-bit tag little-endian.
-        let needle: Vec<u8> = (0..16)
-            .filter_map(|i| u8::from_str_radix(hex.get(2 * i..2 * i + 2)?, 16).ok())
-            .rev()
-            .collect();
-        let at = bytes
-            .windows(needle.len())
-            .position(|w| w == needle.as_slice())
-            .expect("the blob records its content id");
-        bytes[at..at + needle.len()].fill(0);
-    }
+    assert!(
+        blob.content_id.is_some(),
+        "a loaded model's blob records its id"
+    );
+    bytes[20..52].fill(0);
     let len = bytes.len();
     bytes[len - 4..].fill(0);
     bytes

@@ -60,6 +60,58 @@ and a gate that accepted any text would restore exactly the false assurance desc
   for an `EnumClassId`) is this `enum_class_path`; recording the path in `oce-replay` traces stays
   open there.
 
+- **Canonical content id** (GitHub #474, issue #470; design note GitHub #471).
+  `Engine::content_id()` mints one identity for a loaded sequence, `oce:canon1:` and the 64 hex
+  digits of the SHA-256 (via `sha2` 0.10, `default-features = false`, on `oce-api` only) of the
+  `OCECANON` version 1 encoding of the loaded flat graph, exactly as `docs/design/content-id.md`
+  specifies: boundary inputs (name, type, `quantity`/`unit`/`displayUnit`, effective domain,
+  fan-out), boundary outputs including pass-through outputs (driven by their input), non-reserved
+  blocks (name, class path, class signature hash, bound parameters sorted by name) and connections
+  by port index, every name stripped of its namespace with the whole-IRI fallback. It refuses
+  before a load and while parameter edits are pending (`compile_blob`'s preconditions) and is a
+  typed `OcError::ContentId` for a hand-built model with an unnamed block. `ContentId` has
+  `Display`, a checked `parse`/`FromStr` of the exact text (refusing with `ContentIdParseError`)
+  and `digest()`; it does not convert from
+  a string, `CatalogContentId` or `DomainKey`. `Engine::canonical_content_bytes()` returns the
+  encoded bytes, versioned with the id text (`canon1`), for recomputing the digest or diagnostics;
+  no decoder is provided or promised. The order-bearing export tag is removed:
+  `ExportReport::content_id_complete()`, the deprecated `ExportReport::content_id()`,
+  `CompleteExportContentId` and `ContentIdError::Incomplete` are gone; `ExportReport::complete()
+  -> Result<(), ExportIncomplete>` keeps the completeness check, and `ContentIdError` now names the
+  minting refusals (`UnnamedBlock`, `UnregisteredClass`, `UnknownEnumClass`, `MalformedModel`,
+  `TooLarge`, carried as the new `OcError::ContentId`). The compatibility descriptor is revision 2: its tenth line is `content:none` or
+  the `oce:canon1:` id, `CompatibilityDescriptor::current` takes an `Option<&ContentId>` and is
+  infallible, `export_content_id()` is `content_id()`, `check_compatible` requires revision 2, and
+  `ExportPresence`/`ExportContent` are `ContentIdPresence`/`ContentIdMismatch`; the replay record's
+  descriptor grammar follows (its wire size grows by one byte, `export:none` to `content:none`).
+  Evidence: the note's two worked examples reproduced byte for byte from hand-assembled vectors
+  (`offset_gain` 394 bytes `fbbea1ef…`, `TrueDelay` 216/233 bytes `aff7775c…`/`05b0f40f…`); 13
+  same-id rewrites of all 47 corpus documents (`@graph` reversed and rotated, relation arrays
+  reversed, keys reversed, pretty-printed, compact IRIs, two other namespaces) and a leaf
+  port-list reversal that keeps the id exactly when the binding is unchanged; load → export →
+  load canonical-byte equality for the 34 complete exports; every parameter's one-bit, ±1,
+  flipped or other-member edit (837 edits, 120 of them `+0.0` to `-0.0`) and block, boundary and
+  sequence renames, rewires, class swaps, boundary label changes, tightened bounds and removed
+  bindings each moving the id with no two variants sharing one; the 160-frame schedule over every
+  document and four permuted variants giving identical outputs, per-block state and refusals; the
+  pass-through case, name collisions, refusals, the FIPS 180-4 vectors and the largest encoding
+  (64,491 bytes) pinned. `tests/fixtures/content_id/restamp.tsv` maps all 47 documents' retired
+  `cxf:fnv1a128:` tags (`-` for the 13 partial exports) to their new ids, in the format the
+  library's re-stamp uses. Re-blessed: `compatibility.txt` and `compatibility_export.txt` (revision
+  and `content` line); `oce-cxf`'s `fixture_corpus_import.txt` gains one line for each of the four
+  new `tests/fixtures/content_id/*.jsonld` documents (the tracked corpus is 222 with #477's
+  four), every existing line unchanged. `g36_export_content.txt`, the export bytes and every other golden are
+  byte-identical. PC-018, PC-021 and PC-036 are reworded and PC-041 names a format-2 blob (product
+  contract revision 23). `oce-author`'s `validate_cost` ratio test fails on `development` as well on
+  a local arm64 debug build; it is tracked as #478, untouched here.
+  `oce-author`'s test helpers (merged first in GitHub #473) move to the new id: `identity` is
+  `Engine::content_id`, and `executable` zeroes header bytes 20..52 and the CRC. The order tests
+  invert, because order no longer moves the id: `block_order_moves_the_bytes_but_not_the_identity`,
+  `boundary_order_moves_the_bytes_but_not_the_identity`, the direct-target permutation, and
+  `node_order_alone_moves_the_sumzone_export_but_not_its_identity`, which now pins the export-byte
+  difference. The kelvin/celsius semantic-seam test is unchanged. `fixture_corpus_import.txt`'s
+  corpus pin is 222: GitHub #477 added four fixtures, and this PR adds four more.
+
 - **Slot-indexed execute entry** (GitHub #459, issue #444). `Engine::frame_slots()` resolves the
   executable boundary once into an owned `FrameSlots` map (input slots in `input_definitions()`
   order, output slots in `CompletedFrame::outputs()` order, both the compiled blob's I/O order),
@@ -151,6 +203,30 @@ and a gate that accepted any text would restore exactly the false assurance desc
   last segments; one value per constant) and the G36 members against the vendored `.mo` sources in
   order. `tests/enumeration_corpus_references.rs` checks that every `CDL.Types` / `G36.Types` class,
   member and constant the CXF corpus names is a row or member, grounding to the row's value.
+
+- **Blob format 2: the content-id field holds the canonical digest** (GitHub #474, issue #470).
+  `oce_graph::blob::FORMAT_VERSION` is 2 and the decoder accepts only 2: the 32-byte header field
+  now holds the SHA-256 digest of the canonical content id in output order, present for all 46
+  fixtures including the 13 partial exports, and 32 zero bytes only for a hand-built model with an
+  unnamed block. Any other failure to mint the id refuses `compile_blob` with `OcError::ContentId`,
+  so a blob from CXF never ships without its id.
+  `content_id_field` takes the digest bytes; `CompiledBlob::content_id` is `Option<ContentId>`.
+  The decoder still carries the field verbatim, so `sha2` never enters the `no_std` core. The 46
+  blob goldens are re-blessed and differ from format 1 in exactly three places: byte 4 (format
+  version 1 → 2), bytes 20 to 51 (the content id) and the 4-byte CRC-32C trailer.
+  `blob_frame_digests.tsv` and the firmware image's expected run digests are unchanged. Both blob
+  docs say format 2; the design note's dump is regenerated from the golden with the real class
+  hash, id and CRC.
+
+- **The load gate refuses non-canonical array and matrix element names** (GitHub #474, issue
+  #470). A bound parameter that spells an element of one of its class's array templates (`k_<i>`,
+  `K_<row>_<col>`, `table_<row>_<col>`, `offset_<i>`) with a sign or a leading zero (`table_01_2`,
+  `table_+1_2`, `offset_+1`, `k_01`) is refused with the new
+  `DiagCode::NonCanonicalElementName` (`non-canonical-element-name`) before `make`. `TimeTable`
+  parsed indices with `usize::parse`, so an aliased spelling silently replaced a cell and the later
+  one in table order won; with one spelling per element, sorting parameters by name in the content
+  id loses nothing. This is the spelling half of the facade gap GitHub #467 (names outside the
+  declared extent), which stays open.
 
 ### CXF import and export
 

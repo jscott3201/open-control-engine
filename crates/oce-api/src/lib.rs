@@ -49,6 +49,7 @@ mod catalog_json;
 mod catalog_rules;
 mod class_ports;
 mod compatibility;
+mod content_id;
 mod contracts;
 mod diagnostics;
 mod engine;
@@ -98,9 +99,8 @@ pub use class_ports::{
     PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER, class_metadata, class_ports,
     param_element_name,
 };
-pub use compatibility::{
-    CatalogContentId, CompatibilityDescriptor, CompatibilityMismatch, CompleteExportContentId,
-};
+pub use compatibility::{CatalogContentId, CompatibilityDescriptor, CompatibilityMismatch};
+pub use content_id::{ContentId, ContentIdError, ContentIdParseError};
 pub use contracts::{ContractDescriptor, ContractDomain, contract_descriptors};
 pub use diagnostics::{
     DIAGNOSTIC_SCHEMA_REVISION, DiagnosticKey, DiagnosticReceipt, DiagnosticRecord,
@@ -113,7 +113,7 @@ pub use enumerations::{
     enumeration_by_id, enumerations,
 };
 pub use error::{LoadErrorContext, OcError, OcResult};
-pub use export::{ContentIdError, ExportReport};
+pub use export::{ExportIncomplete, ExportReport};
 pub use frame::{CompletedFrame, PreparedInputFrame};
 pub use frame_inputs::InputDefinition;
 pub use frame_slots::{FrameSlots, SlotFrame};

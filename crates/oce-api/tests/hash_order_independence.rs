@@ -9,7 +9,8 @@
 //! The order-leak test loads every swept CXF document — the 46 G36 catalog fixtures and the one
 //! resolver-contract document, the same corpus `export_content_oracle.rs` pins — on
 //! [`ITERATIONS`] fresh threads each, and requires every run to produce the same bytes for each
-//! output a host or a golden observes: the exported CXF document, its content identity and export
+//! output a host or a golden observes: the exported CXF document, its completeness, the canonical
+//! content id of the loaded model and the export
 //! receipt, the `LoadReport` and load receipt diagnostics, `input_definitions()`, the IO point
 //! inventory, the resolved-model projection, the schedule and topology, the frame outputs and
 //! assertion events of a fixed frame sequence, and the durable state snapshot bytes after it.
@@ -39,9 +40,10 @@ const ITERATIONS: usize = 20;
 const FRAMES: u32 = 4;
 
 /// One output surface, named so a divergence report says which output leaked.
-const COMPONENTS: [&str; 12] = [
+const COMPONENTS: [&str; 13] = [
     "export bytes",
-    "export content id",
+    "export completeness",
+    "canonical content id",
     "export receipt diagnostics",
     "load report",
     "load receipt diagnostics",
@@ -213,7 +215,8 @@ fn observe_document(stem: &str, bytes: &[u8]) -> Fingerprint {
     let report = export.report();
     vec![
         digest(&report.bytes),
-        debug_digest(&report.content_id_complete()),
+        debug_digest(&report.complete()),
+        debug_digest(&engine.content_id()),
         debug_digest(export.diagnostics()),
         debug_digest(receipt.report()),
         debug_digest(receipt.diagnostics()),

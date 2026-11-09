@@ -196,6 +196,7 @@ dependencies = [
  "oce-semantics",
  "oce-validate",
  "serde_json",
+ "sha2",
  "thiserror",
 ]
 

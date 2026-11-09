@@ -302,7 +302,7 @@ the same id (decision 20).
 {
   "schema": "oce/receipt/v1",
   "kind": "commissioning",
-  "content_id": "cxf:fnv1a128:3b1f0c92d47e8a6b5c0d9e1f2a3b4c5d",
+  "content_id": "oce:canon1:fbbea1ef32cb24797011163d09ead7ee5c17757a4aad551b6989c745740a07a5",
   "engine_version": "0.3.0",
   "spec_id": "spec:fnv1a128:9e4d2a7c1b0f8e6d5c4b3a2918070605",
   "comparison": { "mode": "tolerance", "envelope": "funnel", "envelope_version": "funnel@a12fa96" },
@@ -469,8 +469,11 @@ acting on them (the verifier drives no controller).
 a `0.5` Boolean threshold (a sensor fault would read as a state).
 
 **20. FNV-1a-128 identities** for `spec_id`, source digests and `receipt_id`, over
-canonical bytes, `timings` excluded. Rejected: a new hash dependency. M3's canonical content id
-may replace the hash function; the receipt names which one was used.
+canonical bytes, `timings` excluded. Rejected: a new hash dependency in the verifier. *Reconciled
+2026-11-09 with the canonical content id (GitHub #470, [content-id note](content-id.md)):* the
+content id a receipt carries is M3's `oce:canon1:` id, SHA-256 through `sha2` on `oce-api`, which
+the verifier reads from `Engine::content_id` and adds no edge for; `spec_id` and `receipt_id` keep
+FNV-1a-128, and the receipt names both algorithms by their prefixes.
 
 **21. Exit codes: the `oce` convention.** 0 pass; 1 not passed (`fail` or `no_data`, the
 receipt says which); 2 usage errors, refused specs, unreadable sources and I/O. Rejected: a separate

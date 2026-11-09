@@ -127,7 +127,7 @@ impl Image {
         let version = oce_graph::blob::ENGINE_VERSION;
         Self {
             magic: *b"OCEB",
-            format: 1,
+            format: 2,
             profile: 1,
             version: [version.major, version.minor, version.patch],
             flags: 0,

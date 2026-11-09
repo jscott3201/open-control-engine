@@ -174,6 +174,12 @@ pub enum DiagCode {
     ParameterKindMismatch,
     /// One block instance carries the same raw parameter name more than once.
     DuplicateParameter,
+    /// A bound parameter spells an element of one of its class's array or matrix parameters
+    /// (`k_<i>`, `table_<row>_<col>`) with an index in any form other than the canonical one-based
+    /// decimal the CXF import writes: a sign (`table_+1_2`) or a leading zero (`k_01`). Two
+    /// spellings of one element would otherwise both reach a block that parses indices as
+    /// integers, and the later one in table order would win (GitHub #470).
+    NonCanonicalElementName,
     /// A block parameter violates a class-level range or ordering rule.
     ParameterOutOfRange,
     /// A parameter holds, or its binding expression produced, a non-finite Real value (`NaN`,
@@ -284,6 +290,7 @@ impl DiagCode {
             DiagCode::MissingRequiredParameter => "missing-required-parameter",
             DiagCode::ParameterKindMismatch => "parameter-kind-mismatch",
             DiagCode::DuplicateParameter => "duplicate-parameter",
+            DiagCode::NonCanonicalElementName => "non-canonical-element-name",
             DiagCode::ParameterOutOfRange => "parameter-out-of-range",
             DiagCode::NonFiniteParameter => "non-finite-parameter",
             DiagCode::AlgebraicLoop => "algebraic-loop",
@@ -449,6 +456,7 @@ mod tests {
         MissingRequiredParameter => "missing-required-parameter",
         ParameterKindMismatch => "parameter-kind-mismatch",
         DuplicateParameter => "duplicate-parameter",
+        NonCanonicalElementName => "non-canonical-element-name",
         ParameterOutOfRange => "parameter-out-of-range",
         NonFiniteParameter => "non-finite-parameter",
         AlgebraicLoop => "algebraic-loop",
