@@ -215,6 +215,13 @@ for keywords outside the strict profile. `tests/fixtures/wire/*.json` are canoni
 each. A DTO doc comment, a catalog class, a finding message or the canonical writer moves them.
 Regenerate with `OCE_BLESS_AUTHOR=1 cargo nextest run -p oce-author`, run it again without the
 switch, and say in the PR which files moved and why. Nothing else rewrites them.
+`tests/fixtures/emit/*.cxf.json` are the emitter's byte goldens (issue #464): the worked example,
+the every-element sequence and the four corpus fixtures the importer reads, each emitted under the
+default namespace. They are named `.cxf.json`, not `.jsonld`, because `oce-cxf`'s
+`parameter_grounding_corpus` test counts every tracked `.jsonld` file in the workspace (214) and
+pins each one's import; a leverage golden must not move an engine census. The emitter's layout or
+writer, a catalog change (port names, parameter types, enumeration members) or the fixed class base
+moves them; the same bless switch regenerates them, and every one must still load warning-free.
 `tests/fixtures/note/wire_example.json` is the JSON block of the authoring note's "Wire form"
 section copied verbatim (a test that read `docs/design/` would put the note on the classifier's
 test-read list); when that block changes, copy it again by hand.

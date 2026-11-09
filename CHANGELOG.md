@@ -78,11 +78,18 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `cxf:fnv1a128:` tags (`-` for the 13 partial exports) to their new ids, in the format the
   library's re-stamp uses. Re-blessed: `compatibility.txt` and `compatibility_export.txt` (revision
   and `content` line); `oce-cxf`'s `fixture_corpus_import.txt` gains one line for each of the four
-  new `tests/fixtures/content_id/*.jsonld` documents (the tracked corpus is 218), every existing
+  new `tests/fixtures/content_id/*.jsonld` documents (the tracked corpus is 222 with #477's four), every existing
   line unchanged. `g36_export_content.txt`, the export bytes and every other golden are
   byte-identical. PC-018, PC-021 and PC-036 are reworded and PC-041 names a format-2 blob (product
   contract revision 23). `oce-author`'s `validate_cost` ratio test fails on `development` as well on
   a local arm64 debug build; it is tracked as #478, untouched here.
+  `oce-author`'s test helpers (merged first in GitHub #473) move to the new id: `identity` is
+  `Engine::content_id`, and `executable` zeroes header bytes 20..52 and the CRC. The order tests
+  invert, because order no longer moves the id: `block_order_moves_the_bytes_but_not_the_identity`,
+  `boundary_order_moves_the_bytes_but_not_the_identity`, the direct-target permutation, and
+  `node_order_alone_moves_the_sumzone_export_but_not_its_identity`, which now pins the export-byte
+  difference. The kelvin/celsius semantic-seam test is unchanged. `fixture_corpus_import.txt`'s
+  corpus pin is 222: GitHub #477 added four fixtures, and this PR adds four more.
 
 - **Slot-indexed execute entry** (GitHub #459, issue #444). `Engine::frame_slots()` resolves the
   executable boundary once into an owned `FrameSlots` map (input slots in `input_definitions()`
@@ -184,6 +191,36 @@ and a gate that accepted any text would restore exactly the false assurance desc
   id loses nothing. This is the spelling half of the facade gap GitHub #467 (names outside the
   declared extent), which stays open.
 
+### CXF import and export
+
+- **A block input driven by both a block output and a root boundary input is refused**
+  (GitHub #477, issue #472). CDL §7.10 gives every input exactly one driver, and the resolver
+  refused two of the three double-driver shapes (two block outputs; two boundary inputs) but
+  loaded the mixed one warning-free: boundary-driven assignments were counted by the
+  boundary-input elision pass and wire in-degree by the later single-assignment check, and that
+  check deliberately accepted an `external_inputs` connector with one wire. At run time the wire
+  won (`build_driver_of` points the input at the driving output's slot) and the frame value the
+  host staged for the boundary input was discarded without a trace. The boundary-input pass now
+  counts both kinds of driver and refuses the mixed shape with `single-assignment` at the input's
+  authored IRI, message `input is driven by a block output and a boundary input`; the wire-only
+  check leaves every frame-driven input to it. A wire from an input connector is not counted (it
+  is the existing direction refusal). The exporter refuses the same shape on a hand-built graph
+  (`ExportUnsupported`, owning block named) instead of emitting bytes that no longer re-import.
+  New rejected-corpus fixtures pin all three shapes and the authoring note's `econ_enable`
+  example with `TOut -> hys.u` added, through `import_cxf`, `Engine::load_cxf` and
+  `load_cxf_with_receipt`, with hostile spellings (reversed edges, a repeated boundary target,
+  a nested pass-through composite on either driver, a parameter wired to the input) and a
+  sweep proving every one of the 47 G36 fixture documents gives each input exactly one driver.
+  No golden moved: the 46 fixture goldens, the 422 provenance goldens, the blob goldens and
+  `class_signatures.tsv` are byte-identical. The vendored-corpus characterization moved
+  deliberately: `single-assignment` 57 → 68, eleven mixed inputs in three documents
+  (`Limits/SeparateWithDP`, `SetPoints/FreezeProtection`, `Generic/AirEconomizerHighLimits`)
+  that were already refused for unresolvable conditional guards, so no document changed outcome
+  (`fixture_corpus_import.txt` re-hashes those three error lines, and gains four new lines for
+  the new fixtures, corpus 214 → 218). Three existing tests that
+  had carried an unintended mixed driver were corrected, and the export-side test that pinned
+  the mixed shape as round-trippable now pins its refusal.
+
 ### Leverage
 
 - **`oce-replay`, the first leverage crate** (GitHub #462, issue #445). `crates/leverage/oce-replay`
@@ -277,6 +314,54 @@ and a gate that accepted any text would restore exactly the false assurance desc
   relies on the leverage rule from GitHub #462 that allows `oce-bless` as a dev-dependency only.
   The workspace has 15 members (10 publishable, five private); `release.yml`'s comment and step
   name, its digest and the validator's controls are re-pinned.
+
+- **`oce-author`: the emitter, engine-side validation and the library round trip** (GitHub #473,
+  issue #464). `emit(&Sequence, &EmitOptions)` writes one flat, single-root CXF document in the
+  authoring note's fixed layout and authored order, never sorted: instance IRIs
+  `{namespace}{sequence}.{local}` under `urn:oce:author:` or an override that must end in `#`, `/`
+  or `:` (the content-id note's last-delimiter rule, GitHub #471), block `@type` under the fixed
+  class base `http://example.org#Buildings.Controls.OBC.`, only the assignments the author wrote,
+  relation lists always arrays, array parameters in the CXF array form, boundary `unit`, `quantity`
+  and `displayUnit` and no semantic record, from a canonical writer; it refuses a stage-1 error
+  (`EmitError::Invalid`), a malformed namespace and a document above `MAX_CXF_BYTES` (one byte over
+  is refused, the limit itself loads). `validate` now runs stage 2 when stage 1 is clean: it emits,
+  loads in a throwaway `Engine::new()` through the receipt path and maps every engine diagnostic
+  back through the IRI scheme, every warning an error finding with the engine's code (decision 14),
+  `origin = engine`; `connector#N` and other subjects outside the scheme stay on `sequence` with
+  the raw subject in `detail`. Two new codes: `document-too-large` and `load-failed`. Stage 1
+  gains two rules: a target the connection list repeats is `single-assignment` (pre-empting the
+  engine's own refusal, which covers a block output beside a boundary input since GitHub #477),
+  and an Integer literal above 2^53 in magnitude on a Real parameter is `parameter-out-of-range`
+  (`MAX_EXACT_INTEGER`). A minimal `import_cxf` reads the flat corpus dialect strictly (a key
+  written twice or an integer outside `i64` is refused) and refuses everything outside the
+  authoring subset with a typed `ImportError`. The parity test emits each stage-1 defect with
+  stage 1 bypassed and amends four rows of the note's finding-code table: `duplicate-parameter`
+  pre-empts `duplicate-id`, `unknown-enum-literal` pre-empts `grounding-failed`,
+  `unknown-parameter` pre-empts nothing (#467) and `unknown-port` pre-empts
+  `unresolved-reference`; decision 15 gains the partial array (written element by element under
+  the flattened names, no default filled). **Gate item 1 is not yet met:** 4 of the 40 in-subset
+  G36 fixtures (6 are nested or conditional, out of subset) import — `cooling_only_system_requests`,
+  `generic_time_suppression`, `multizone_vav_relief_fan_group`, `reheat_overrides` — and each
+  round-trips to the committed fixture's export identity (`multizone_vav_relief_fan_group` exports
+  partially, so it is compared on export bytes plus deferral codes, not a content id); the 36
+  others wait on model decisions (boundary or port `min`/`max`, enumeration-typed sequence
+  parameters, library enumerations; #475). The comparison re-stamps the corpus namespace
+  (`http://example.org#g36.source.`, which ends in `.` and so cannot be an emitter namespace) to
+  `urn:oce:library:`; the re-stamp stays after the canonical content id lands, until library
+  bundle v2. **#458:** the only flat fixture whose `@graph` order differs from the emitter's
+  layout is `multizone_vav_outdoor_airflow_sumzone` (block nodes out of `containsBlock` order
+  from the third block), and the four nested fixtures have no flat layout; all five are refused by
+  the importer before order matters, so they are excluded with a documented list and a test that
+  pins the sumzone mismatch, not compared on loaded models.
+  Byte goldens under `tests/fixtures/emit/` (`.cxf.json`, so `oce-cxf`'s `.jsonld` census is
+  unchanged; the worked example, the every-element sequence and the four imported fixtures) each
+  load warning-free and load to the model's topology; values ground bit for bit through the
+  engine (subnormals, `f64::MAX`, `-0.0`, `i64::MIN`/`MAX`, enumeration members, references); the
+  permutation classes, the §7.17 seam (only `unit` lines move and the compiled blob is unit-blind
+  apart from its content id) and hostile importer input (a bounded mutation sweep over every
+  imported document) are tested. Found on the way, and fixed by GitHub #477: a block input driven by
+  both a block output and a boundary input loaded without a `single-assignment` refusal (#472);
+  the parity test now pins the engine's refusal of it.
 
 ### Documentation
 

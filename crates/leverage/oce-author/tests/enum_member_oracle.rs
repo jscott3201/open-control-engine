@@ -10,7 +10,7 @@
 mod support;
 
 use oce_api::{DiagCode, Engine, Value};
-use oce_author::{Block, Literal, ParamValue, validate};
+use oce_author::{Block, Literal, ParamValue, validate_author_side};
 
 /// A one-PID document whose `controllerType` is `member` (full CDL path).
 fn pid_document(member: &str) -> Vec<u8> {
@@ -89,7 +89,10 @@ fn author_findings(member: &str) -> Vec<&'static str> {
     ));
     let mut s = oce_author::Sequence::new(support::id("s"));
     s.blocks.push(block);
-    validate(&s).into_iter().map(|f| f.code).collect()
+    validate_author_side(&s)
+        .into_iter()
+        .map(|f| f.code)
+        .collect()
 }
 
 #[test]

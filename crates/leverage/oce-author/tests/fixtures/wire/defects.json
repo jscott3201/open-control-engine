@@ -160,6 +160,7 @@
     "sub.y -> hys.u",
     "hys.y -> ecoEna",
     "hys.y.z -> ecoEna",
+    "TOut -> sub.u1",
     "ecoEna -> hys.u",
     "sub.y -> TOut",
     "TOut -> sub.u9"

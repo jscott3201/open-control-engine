@@ -8,8 +8,27 @@ use crate::model::{Literal, Sequence, SignalType};
 use super::semantic::boundary_problems;
 use super::{
     Anchor, DUPLICATE_NAME, EMPTY_SEQUENCE, Findings, INVALID_NAME, INVALID_PROVENANCE_ID,
-    INVALID_SEMANTIC_POINT, NON_FINITE_PARAMETER, PARAMETER_KIND_MISMATCH,
+    INVALID_SEMANTIC_POINT, NON_FINITE_PARAMETER, PARAMETER_KIND_MISMATCH, PARAMETER_OUT_OF_RANGE,
 };
+
+/// The largest magnitude up to which every Integer has an exact Real: 2^53. Above it some do not
+/// (2^53 + 1 rounds to 2^53), so an Integer literal on a Real parameter may load as a value the
+/// author never wrote; stage 1 refuses every one above the bound
+/// (`parameter-out-of-range`).
+pub const MAX_EXACT_INTEGER: i64 = 1 << 53;
+
+/// Whether an Integer literal converts to a Real without rounding (|v| <= 2^53).
+pub(crate) fn exact_as_real(value: i64) -> bool {
+    value.unsigned_abs() <= MAX_EXACT_INTEGER.unsigned_abs()
+}
+
+/// The detail of an inexact Integer-to-Real conversion.
+pub(crate) fn inexact_detail(what: &str, value: i64) -> String {
+    format!(
+        "{what}: the Integer {value} on a Real exceeds 2^53 ({MAX_EXACT_INTEGER}) in magnitude, \
+         so its Real may round; write the Real you mean"
+    )
+}
 
 /// Whether a literal fits a sequence parameter's declared type. A Real accepts an Integer
 /// literal (CDL widens it); nothing else crosses kinds.
@@ -122,6 +141,15 @@ pub(super) fn check(sequence: &Sequence, findings: &mut Findings) {
                 NON_FINITE_PARAMETER,
                 param.name.as_str(),
                 format!("sequence parameter `{}` is {value}", param.name),
+            );
+        } else if let (SignalType::Real, Literal::Integer(value)) = (param.value_type, &param.value)
+            && !exact_as_real(*value)
+        {
+            findings.error(
+                position,
+                PARAMETER_OUT_OF_RANGE,
+                param.name.as_str(),
+                inexact_detail(&format!("sequence parameter `{}`", param.name), *value),
             );
         }
     }

@@ -154,7 +154,8 @@ pub fn import_cxf(
 /// When deferral fires, equality holds over the cone and not over the input — the omitted blocks
 /// are gone from the document by design, and no re-import can restore them. Acceptance is what
 /// makes the promise good on the single-assignment axis: an input driven by more than one
-/// surviving output is **rejected** (§7.10) rather than emitted, because those bytes would fail
+/// surviving output, or listed in `external_inputs` and also driven by a surviving output, is
+/// **rejected** (§7.10) rather than emitted, because those bytes would fail
 /// re-import outright rather than round-trip imperfectly. Block ids are
 /// renumbered densely on re-import, so the comparison is by `instance_iri`, never by raw
 /// `BlockId`. `export_with_report` is the only way to tell the two cases apart: an empty

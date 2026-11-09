@@ -1,11 +1,11 @@
 # The authoring layer above the facade (design note docs/design/authoring-layer.md, issue #463):
-# the typed authoring model, a builder, the strict-JSON wire form with its pinned schema, and the
-# author-side (stage 1) validator. It depends on `oce-api` only among the engine crates
-# (crates/leverage/README.md); `oce-bless` is its one other `oce-*` edge, as a dev-dependency for
-# the golden switch (decision 19).
+# the typed authoring model, a builder, the strict-JSON wire form with its pinned schema, the
+# two-stage validator, the CXF emitter and a minimal flat-CXF importer (issue #464). It depends
+# on `oce-api` only among the engine crates (crates/leverage/README.md); `oce-bless` is its one
+# other `oce-*` edge, as a dev-dependency for the golden switch (decision 19).
 [package]
 name = "oce-author"
-description = "Authoring model, strict-JSON wire form, pinned JSON Schema and author-side validator for Open Control Engine sequences."
+description = "Authoring model, strict-JSON wire form, pinned JSON Schema, two-stage validator, CXF emitter and minimal importer for Open Control Engine sequences."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

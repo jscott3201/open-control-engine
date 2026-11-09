@@ -494,6 +494,25 @@ in the import pipeline. Match them by DiagCode, not by message. The conditional-
 rejection `inactive-conditional-node` (see [Active nodes](#active-nodes)) is generic machinery
 in the same sense — untagged, no catalog entry.
 
+### Single assignment: the double-driver shapes
+
+CDL §7.10 gives every block input exactly one driver: a block output (a connection) or a root
+boundary input (elided into the frame contract). A second driver of either kind refuses the
+document with the untagged `single-assignment` code, subject the driven input's authored IRI,
+one refusal per input:
+
+| Drivers of one input | Message |
+| --- | --- |
+| Two or more block outputs | `input is multiply driven (in-degree N)` |
+| Two or more distinct root boundary inputs | `input is driven by distinct boundary inputs` |
+| At least one block output and at least one root boundary input | `input is driven by a block output and a boundary input` |
+
+The mixed shape takes precedence and carries no count, so two block outputs plus a boundary input
+read the same as one of each. It loaded warning-free before issue #472, when the wire won at run
+time and the staged boundary value was discarded. Edge spelling does not matter: a reversed
+`isConnectedTo`, or a route through a nested composite's pass-through, lowers to the same drivers.
+The rejected corpus pins each shape (`rejected/double_driver_*.jsonld`).
+
 ## Acceptance preconditions
 
 A document that satisfies rules 1–7 must also meet the general import preconditions before it
@@ -579,3 +598,9 @@ member connector bounds ground for the first time on class-translation documents
 `inactive-conditional-node` rising 11 → 44 because pruning now reaches a conditional instance's
 listed members as well as its `@graph` nodes (32 members still carrying active connections, 12
 connection targets).
+The mixed double-driver refusal (issue #472) then raised `single-assignment` 57 → 68: eleven
+inputs driven by both a block output and a root boundary input — one in
+`Limits/SeparateWithDP`, one in `SetPoints/FreezeProtection`, nine in
+`Generic/AirEconomizerHighLimits` — all in documents already refused for unresolvable
+conditional guards, whose unpruned alternative branches carry both drivers. No document changed
+outcome.

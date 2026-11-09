@@ -6,7 +6,7 @@ mod support;
 
 use oce_author::{
     Boundary, Endpoint, Finding, Identifier, Literal, ParamValue, ProvenanceId, Sequence,
-    SignalType, validate,
+    SignalType, validate, validate_author_side,
 };
 
 use support::econ_enable;
@@ -173,5 +173,17 @@ fn an_input_order_permutation_of_a_clean_sequence_stays_clean() {
     s.connections.swap(0, 1);
     s.outputs
         .push(Boundary::new(support::id("spare"), SignalType::Real));
-    assert_eq!(validate(&s), vec![], "unused boundaries are stage 2's");
+    assert_eq!(
+        validate_author_side(&s),
+        vec![],
+        "unused boundaries are stage 2's"
+    );
+    let engine: Vec<(&str, String)> = validate(&s)
+        .into_iter()
+        .map(|f| (f.code, f.subject))
+        .collect();
+    assert_eq!(
+        engine,
+        vec![("undriven-boundary-output", "spare".to_owned())]
+    );
 }

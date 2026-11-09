@@ -749,7 +749,7 @@ pub(crate) fn resolve(
         }
     }
 
-    boundary_input_assignments.emit_diagnostics(&mut diags);
+    boundary_input_assignments.emit_diagnostics(&connections, &connectors, &mut diags);
 
     // Declared-interface checks (`boundary_outputs`): refuse a declared output whose IRI
     // shadows an existing connector identity, refuse one with multiple distinct drivers, and
