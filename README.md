@@ -230,6 +230,7 @@ agents and the exit rule 0 yes / 1 no / 2 error
 ([report contract](crates/leverage/oce-cli/README.md)):
 
 ```sh
+# econ_enable.oce is crates/leverage/oce-author/tests/fixtures/text/econ_enable.oce; copy it here first
 cargo run -p oce-cli -- validate econ_enable.oce        # findings as JSON; exit 0, 1 or 2
 cargo run -p oce-cli -- emit econ_enable.oce -o out.json # validate, then write flat CXF
 cargo run -p oce-cli -- fmt --check econ_enable.oce     # exit 1 when not canonical

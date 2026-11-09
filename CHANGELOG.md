@@ -524,7 +524,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
   (`--namespace` checked by the emitter), writing nothing on an error finding; `oce validate`
   reports both stages or `--author-side` alone, with spans for text input; `oce fmt` prints the
   canonical text (wire input converted), `--check` answers whether the input is canonical in its own
-  form and `--write` rewrites a text file atomically and only on change; `oce catalog` lists the
+  form and `--write` rewrites a text file atomically and only on change (both file writes go
+  through a uniquely named `create_new` temporary file that never follows a planted link, keep the
+  target's permissions, follow a symbolic-link target, and report `changed`, `output` and `bytes`
+  only once the write succeeded); `oce catalog` lists the
   classes or describes one with its parameters (type, default, settable) and its ports resolved at
   the default table or at `--param NAME=VALUE`; `oce vocab` prints the keywords, tags, base units and
   every code the tool reports with one line of meaning, and the facade's enumeration and

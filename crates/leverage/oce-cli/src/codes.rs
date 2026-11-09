@@ -122,6 +122,10 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
 ];
 
 /// The wire-form refusal codes and their meanings, in `WireError` order.
+///
+/// The table lives here, not in `oce-author`, because `oce_author::WireError` has no `code()`
+/// accessor yet (GitHub issue #495); `input::wire_code` maps each variant onto it, pinned by its
+/// unit test.
 pub(crate) const WIRE_CODES: &[(&str, &str)] = &[
     (WIRE_NOT_UTF8, "the bytes are not UTF-8"),
     (

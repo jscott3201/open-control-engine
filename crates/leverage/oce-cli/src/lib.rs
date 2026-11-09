@@ -20,6 +20,9 @@
 //! terminal or `--render always` asks for it. Nothing here panics on hostile input, and no path
 //! the tool prints is one it did not receive as an argument.
 //!
+//! The `pub` items ([`Exit`], [`Streams`], [`run`], [`REPORT_SCHEMA`]) are exposed for the crate's
+//! own binary and integration tests; they are not a supported library API.
+//!
 //! The crate sits above the facade: it depends on `oce-api` and `oce-author` only, and every
 //! engine it loads is a throwaway of the validator's own.
 
@@ -133,14 +136,14 @@ enum Command {
     /// Print the canonical text form of a sequence.
     ///
     /// Wire input is converted to text. --check answers whether the file is already canonical in
-    /// its own form; --write rewrites a text file in place, atomically.
+    /// its own form; --write replaces a text file atomically.
     Fmt {
         #[command(flatten)]
         source: Source,
         /// Print a report instead of the text; exit 1 when the input is not canonical.
         #[arg(long, conflicts_with = "write")]
         check: bool,
-        /// Rewrite the text file in place (write a temporary file, then rename).
+        /// Rewrite the text file (a temporary file, then a rename; a hard link keeps the old bytes).
         #[arg(long)]
         write: bool,
     },

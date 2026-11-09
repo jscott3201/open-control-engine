@@ -49,6 +49,15 @@ row is a complexity guarantee, not a limit, and the last row is a known gap, des
 `oce-replay`, `oce-author` and `oce-cli`, whose `oce` binary root carries it too), so the usual memory-safety
 classes are out of scope by construction.
 
+The `oce` binary (`crates/leverage/oce-cli`) is a local command-line tool with no listener. It
+checks an input file's size from its metadata before reading it and reads every input through a
+bounded reader capped at the form's limit (4 MiB, `oce_author::MAX_TEXT_BYTES` and
+`MAX_WIRE_BYTES`) — `crates/leverage/oce-cli/src/input.rs`. Its file writes (`fmt --write`,
+`emit -o`) go through a uniquely named `create_new` temporary file beside the target and an atomic
+rename, so a planted link is never followed and an interrupted write never leaves a half-written
+file — `crates/leverage/oce-cli/src/commands/atomic_write.rs`. Stdin is bounded in bytes, not in
+time: a pipe that never closes keeps the process waiting.
+
 ## Untrusted CXF remains untrusted input
 
 Composite boundary resolution is iterative and bounded independently from composite nesting. A

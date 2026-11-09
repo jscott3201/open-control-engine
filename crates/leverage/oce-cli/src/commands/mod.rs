@@ -5,6 +5,7 @@
 //! one of the two is written to stdout; the human-readable rendering of the report goes to stderr
 //! when asked for.
 
+mod atomic_write;
 pub(crate) mod catalog;
 pub(crate) mod emit;
 pub(crate) mod fmt;
@@ -12,12 +13,11 @@ pub(crate) mod validate;
 pub(crate) mod vocab;
 
 use std::ffi::OsStr;
-use std::fs::{self, File};
-use std::io::Write;
-use std::path::{Path, PathBuf};
 
 use crate::report::Report;
-use crate::{Exit, Streams, codes, input};
+use crate::{Exit, Streams, input};
+
+pub(crate) use atomic_write::write_atomically;
 
 /// What one command produced.
 pub(crate) struct Outcome {
@@ -88,33 +88,6 @@ pub(crate) fn finish(outcome: Outcome, render: bool, streams: &mut Streams<'_>) 
         let _ = streams.stderr.flush();
     }
     if written.is_err() { Exit::Error } else { exit }
-}
-
-/// Write `bytes` to `path` atomically: a temporary file beside it, synced, then renamed over it.
-/// On failure the temporary file is removed and the target is untouched.
-pub(crate) fn write_atomically(path: &Path, bytes: &[u8]) -> Result<(), (&'static str, String)> {
-    let temporary = temporary_path(path);
-    let result = File::create(&temporary)
-        .and_then(|mut file| {
-            file.write_all(bytes)?;
-            file.sync_all()
-        })
-        .and_then(|()| fs::rename(&temporary, path));
-    result.map_err(|error| {
-        let _ = fs::remove_file(&temporary);
-        (
-            codes::WRITE_FAILED,
-            format!("the output could not be written: {}", error.kind()),
-        )
-    })
-}
-
-/// `dir/.name.oce-tmp` beside `path`, so the rename never crosses a file system.
-fn temporary_path(path: &Path) -> PathBuf {
-    let name = path
-        .file_name()
-        .map_or_else(|| "output".into(), OsStr::to_string_lossy);
-    path.with_file_name(format!(".{name}.oce-tmp"))
 }
 
 /// The report of a command that reads one sequence.

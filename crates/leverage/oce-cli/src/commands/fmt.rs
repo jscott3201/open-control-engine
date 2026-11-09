@@ -3,9 +3,10 @@
 //! Plain `fmt` prints the canonical text (`oce_author::fmt_text`; a wire file is converted with
 //! `oce_author::print_text`). `--check` prints a report instead and answers whether the input is
 //! already canonical **in its own form**: text against `fmt_text`, wire against
-//! `oce_author::to_wire_string` (exit `0` yes, `1` no). `--write` rewrites a text file in place,
-//! atomically and only when it changes; it refuses stdin and wire files. A read or parse failure
-//! is exit `2`.
+//! `oce_author::to_wire_string` (exit `0` yes, `1` no). `--write` rewrites a text file atomically
+//! and only when it changes (`atomic_write`: a symbolic link is followed, the file is replaced,
+//! not rewritten in place), reporting `changed` and `output` only once the write succeeded; it
+//! refuses stdin and wire files. A read or parse failure is exit `2`.
 
 use std::path::Path;
 
@@ -59,16 +60,17 @@ pub(crate) fn run(source: &Source, check: bool, write: bool, streams: &mut Strea
         return Outcome::with_exit(exit, report);
     }
     if write {
-        report.set("changed", Value::Bool(!original_is_canonical));
-        report.set("output", Value::from(input::display_name(&source.file)));
         if !original_is_canonical
             && let Err((code, detail)) =
                 write_atomically(Path::new(&source.file), canonical.as_bytes())
         {
+            // `changed` and `output` describe a finished write; a failed one carries neither.
             report.error(code, detail, None);
             report.verdict("refused: the file could not be rewritten");
             return Outcome::judged(report);
         }
+        report.set("changed", Value::Bool(!original_is_canonical));
+        report.set("output", Value::from(input::display_name(&source.file)));
         report.verdict(if original_is_canonical {
             "already canonical"
         } else {

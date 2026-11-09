@@ -18,7 +18,11 @@ oce vocab [--json]                               keywords, tags, units, enumerat
 `FILE` is a `.oce` (text form) or `.json` (wire form) file, or `-` for stdin; `--from text|wire`
 overrides the extension and is **required** for stdin. Every command takes `--render
 auto|always|never` (default `auto`: a human-readable rendering of the report on stderr only when
-stderr is a terminal), `--help`, and `--version` (the workspace version).
+**stderr** is a terminal, whatever stdout is; stdout is the same bytes whatever `--render` says),
+`--help`, and `--version` (the workspace version). `--json` exists only on `catalog` and `vocab`,
+the two commands whose default stdout is text; every other command's report is already JSON. A
+failing `catalog` (an unknown class, a refused table) prints the JSON report on stdout even
+without `--json`.
 
 ```sh
 oce validate econ_enable.oce                 # report on stdout, exit 0 / 1 / 2
@@ -84,15 +88,20 @@ Command keys:
 | Command | Keys |
 | --- | --- |
 | `validate` | `stages`: the stages that ran, `["author"]` or `["author", "engine"]` (`[]` after a read or parse refusal); stage 2 runs only when stage 1 found no error and `--author-side` is absent |
-| `emit` | `stages` as for `validate`; with `-o` on success, `output` (the path as given) and `bytes` |
-| `fmt` | `form` (`text`, `wire`, or `null` before the form is known); with `--check`, `canonical` (whether the input is already canonical **in its own form**: text against `fmt`, wire against the canonical wire writer); with `--write`, `changed` and `output` |
+| `emit` | `stages` as for `validate`; with `-o`, only once the write succeeded, `output` (the path as given) and `bytes` (absent from a failed write's report) |
+| `fmt` | `form` (`text`, `wire`, or `null` before the form is known); with `--check`, `canonical` (whether the input is already canonical **in its own form**: text against `fmt`, wire against the canonical wire writer); with `--write`, only once the file is known canonical on disk (unchanged, or rewritten), `changed` and `output` (absent from a failed write's report) |
 | `catalog` | without a class, `classes`; with one, `class` (`null` when the class is unknown or a `--param` is malformed) and `params` (the `--param` strings as given). A class is `{ "class_path", "description", "reserved", "parameters", "inputs", "outputs" }`; a parameter `{ "name", "type", "default": { "kind", "value" }, "settable", "enumeration" }`, `kind` one of `real`, `integer`, `boolean`, `string`, `member`, `derived` (value: the formula) or `required` (value `null`); a port `{ "name", "kind" }`; `inputs`/`outputs` are `null` where the ports do not resolve (a required parameter at the default table) |
 | `vocab` | `keywords`, `types`, `tags`, `base_units`, `parse_codes`, `finding_codes` (each with `stage`), `wire_codes`, `error_codes`, `exit_codes` (each `{ "code", "meaning" }`), `enumerations` (below) |
 
 The tool's own error codes: `missing-from`, `unknown-form`, `not-found`, `not-a-file`,
 `read-failed`, `input-too-large`, `invalid-namespace`, `unspellable`, `write-failed`,
 `write-needs-file`, `write-needs-text`, `malformed-param`, `unknown-param`, `duplicate-param`,
-`malformed-value`, `ports-unresolvable`, `emit-refused`.
+`malformed-value`, `ports-unresolvable`, `emit-refused`. The wire-form refusal codes (one per
+`oce_author::WireError`: `not-utf8`, `byte-order-mark`, `nesting-too-deep`, `list-too-long`,
+`string-too-long`, `duplicate-key`, `non-finite-number`, `integer-out-of-range`,
+`control-character`, `unknown-key`, `missing-key`, `wrong-type`, `json-syntax`,
+`malformed-connection`, `wire-refused`) are listed with their meanings by `oce vocab --json` under
+`wire_codes`.
 
 ### Enumerations
 
@@ -109,10 +118,18 @@ ordinal or another type's member is `malformed-value`.
 
 Every read is bounded by its form's limit (`oce_author::MAX_TEXT_BYTES`, `MAX_WIRE_BYTES`, 4 MiB):
 a file's size is checked from its metadata before a byte is read (a 100 MB file costs one `stat`),
-and every read, stdin included, stops one byte past the limit. Non-UTF-8, binary junk, an empty
-file, a directory and a missing path each get one typed error code. `fmt --write` and `emit -o`
-write a temporary file beside the target, sync it and rename it over the target, so a failure
-leaves the target untouched; `fmt --write` rewrites only when the text changes. Nothing panics.
+and every read, stdin included, stops one byte past the limit. Stdin is bounded in size, not in
+time: a pipe that never closes keeps `oce` waiting. Non-UTF-8, binary junk, an empty file, a
+directory and a missing path each get one typed error code. Nothing panics.
+
+`fmt --write` and `emit -o` write a uniquely named temporary file beside the target
+(`.NAME.<pid>.<counter>.oce-tmp`), opened with `create_new` so it never follows a link or
+truncates a file already there, sync it, give it the target's permissions (Unix mode bits) and
+rename it over the target; on any failure the temporary file is removed and the target is
+untouched. A target that is a symbolic link is followed: the file it names is replaced and the
+link stays a link (a dangling link is `write-failed`). **The file is replaced, not rewritten in
+place: a hard link to the old inode keeps the old bytes.** `fmt --write` rewrites only when the
+text changes.
 
 ## Tests and goldens
 
@@ -121,6 +138,8 @@ class and pins each run's exit status, stdout and stderr as one transcript in
 `tests/fixtures/runs/*.txt` (`--help` of every command included, so flag drift is visible);
 `tests/report_shape.rs` holds every report to the contract above; `tests/files.rs` covers `fmt`
 over the `oce-author` text fixtures (referenced in place), `--write`, `-o` and a warning-free
-engine load of every emitted bundle; `tests/hostile_inputs.rs` the bounds. The transcripts
+engine load of every emitted bundle; `tests/atomic_writes.rs` the write hardening (a planted link
+or file at the temporary name, permissions, a link target, a failed write's report);
+`tests/hostile_inputs.rs` the bounds. The transcripts
 regenerate only with `OCE_BLESS_CLI=1 cargo nextest run -p oce-cli` (see
 `.agents/project-facts.md`).

@@ -3,8 +3,9 @@
 //! Order: the namespace and stage 1 (`oce_author::emit`), then stage 2 (`oce_author::validate`,
 //! a throwaway engine load). Nothing is written while any error finding stands (exit `1`, the
 //! report on stdout). On success the CXF is stdout, or with `-o FILE` it is written atomically
-//! and the report (with `output` and `bytes`) is stdout. A malformed namespace, an unreadable or
-//! unparsable input and a failed write are errors (exit `2`).
+//! (`atomic_write`) and the report is stdout, with `output` and `bytes` set only once the write
+//! succeeded. A malformed namespace, an unreadable or unparsable input and a failed write are
+//! errors (exit `2`).
 
 use std::ffi::OsStr;
 use std::path::Path;
@@ -57,10 +58,11 @@ pub(crate) fn run(
             Outcome::document(report, bytes)
         }
         Some(path) => {
-            report.set("output", Value::from(input::display_name(path)));
-            report.set("bytes", Value::from(bytes.len()));
             match write_atomically(Path::new(path), &bytes) {
                 Ok(()) => {
+                    // `output` and `bytes` describe a finished write; a failed one carries neither.
+                    report.set("output", Value::from(input::display_name(path)));
+                    report.set("bytes", Value::from(bytes.len()));
                     report.verdict(format!(
                         "{} bytes of CXF written to {}",
                         bytes.len(),

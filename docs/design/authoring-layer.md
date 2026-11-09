@@ -406,17 +406,24 @@ with `clap` (derive) for consistent `--help`, suggestions and shell completions 
 
 | Command | Does |
 | --- | --- |
-| `oce fmt <file> [--check] [--to text\|wire]` | Parse, then print canonically. `--check` prints nothing and fails if the file is not canonical. `--to` converts between the forms. |
-| `oce validate <file> [--author-only]` | Both validator stages; `--author-only` skips the engine load. |
+| `oce fmt <file> [--check \| --write]` (amended 2026-11-09, #489: no `--to`) | Parse, then print the canonical text; wire input is printed as text (amended 2026-11-09, #489). `--check` prints the JSON report and exits 1 when the file is not canonical in its own form (amended 2026-11-09, #489). `--write` replaces a text file atomically and needs text input (amended 2026-11-09, #489). |
+| `oce validate <file> [--author-side]` (amended 2026-11-09, #489) | Both validator stages; `--author-side` skips the engine load. |
 | `oce emit <file> [-o <out>] [--namespace <iri>]` | Full validation, then the CXF bytes; refuses to write anything on an error finding. |
-| `oce check <file>` | `validate`, then the throwaway load's report: input definitions, outputs, block count and the canonical content id (`Engine::content_id`). |
+| `oce check <file>` (amended 2026-11-09, #489: deferred, not dropped) | `validate`, then the throwaway load's report: input definitions, outputs, block count and the canonical content id (`Engine::content_id`). |
 
 `.oce` files are text, `.json` files are wire; `--from text|wire` overrides and is required on
-stdin (`-`). Every command takes `--format human|json`. The JSON report is one closed object
+stdin (`-`). Every command takes `--render auto|always|never` (amended 2026-11-09, #489, replacing
+`--format human|json`): the human rendering goes to stderr when **stderr** is a terminal (`auto`) or
+always, and stdout (the command's document or its JSON report) is the same bytes whatever
+`--render` says. The JSON report is one closed object
 (`tool`, `schema`, `command`, `ok`, `findings`, plus the command's result), deterministic and
 documented, so an agent can branch on `code` and quote `detail`. Exit codes follow the one `oce`
 rule: **0** yes (clean); **1** no (error findings, or `--check` found a non-canonical file); **2**
 error (a usage error, input that cannot be parsed or loaded, an I/O failure).
+
+*Amended 2026-11-09 (#489):* `oce check` is deferred, not dropped: it returns when the M3 receipts
+work defines the load report it would print, so M2 ships `emit`, `validate`, `fmt`, `catalog` and
+`vocab`.
 
 **Binaries above the facade.** The architecture page says the engine is library-only, with no binary
 target in `crates/`. The PR that adds this note narrows that sentence to the engine crates: leverage
