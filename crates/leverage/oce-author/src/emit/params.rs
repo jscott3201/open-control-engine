@@ -111,7 +111,7 @@ fn literal_value(expected: Option<ValueType>, literal: &Literal) -> Json {
         (_, Literal::EnumMember(member)) => {
             let class_path = expected
                 .and_then(enum_type)
-                .filter(|t| t.type_name == member.type_name)
+                .filter(|t| t.type_name() == member.type_name)
                 .map_or_else(
                     || format!("CDL.Types.{}", member.type_name),
                     |t| t.class_path.to_owned(),

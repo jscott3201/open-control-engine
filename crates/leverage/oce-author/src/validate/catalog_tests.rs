@@ -1,12 +1,13 @@
-//! The catalog view: template matching, and the pinned enumeration table checked against
-//! everything `oce-api` publishes about enumerations.
+//! The catalog view: template matching, and the facade's enumeration table (issue #468) checked
+//! against everything else `oce-api` publishes about enumerations.
 
 use oce_api::{
-    CatalogDefault, CatalogRule, CatalogValueKind, ClassPortsError, DiagCode, Value, ValueType,
-    catalog, class_metadata, class_ports,
+    CatalogDefault, CatalogRule, CatalogValueKind, ClassPortsError, DiagCode, EnumerationKind,
+    Value, ValueType, catalog, class_metadata, class_ports, enumeration, enumerations,
 };
 
-use super::{ENUM_TYPES, enum_type, match_template};
+use super::{enum_type, match_template};
+use crate::emit::iri::{CLASS_BASE, MODELICA_PACKAGE, class_iri};
 
 #[test]
 fn templates_match_only_positive_unpadded_indices() {
@@ -74,19 +75,41 @@ fn enum_table_agrees_with_the_catalog() {
             }
         }
     }
-    for (id, table) in ENUM_TYPES {
+    for row in enumerations() {
+        let Some(id) = row.id else {
+            assert_eq!(row.kind, EnumerationKind::ConstantPackage);
+            continue;
+        };
         assert_eq!(
-            table.class_path.rsplit('.').next(),
-            Some(table.type_name),
-            "{id}: the type name is the class path's last segment"
+            enum_type(ValueType::Enum(id)),
+            Some(row),
+            "{}",
+            row.class_path
         );
-        assert!(
-            parameters
-                .iter()
-                .any(|(_, _, t, _)| enum_type(*t).is_some_and(|u| u.class_path == table.class_path)),
-            "{}: some registered parameter uses it",
-            table.class_path
-        );
+        if row.class_path.starts_with("CDL.Types.") {
+            assert!(
+                parameters
+                    .iter()
+                    .any(|(_, _, t, _)| enum_type(*t).is_some_and(|u| u == row)),
+                "{}: some registered parameter uses it",
+                row.class_path
+            );
+        }
+    }
+}
+
+#[test]
+fn every_table_class_path_round_trips_through_the_class_base() {
+    for row in enumerations() {
+        let iri = class_iri(row.class_path);
+        assert!(iri.starts_with(CLASS_BASE), "{iri}");
+        // The engine's class bridge reads the fragment after the last `#`.
+        let fragment = iri.rsplit('#').next().expect("fragment");
+        assert_eq!(fragment, row.qualified_path, "{}", row.class_path);
+        let relative = fragment
+            .strip_prefix(MODELICA_PACKAGE)
+            .expect("under Buildings.Controls.OBC.");
+        assert_eq!(enumeration(relative), Some(row));
     }
 }
 

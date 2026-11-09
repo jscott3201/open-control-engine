@@ -32,6 +32,7 @@ compile_error!(
 use alloc::{sync::Arc, vec::Vec};
 
 pub mod determinism;
+pub mod enumerations;
 pub mod resolved_model;
 pub mod types;
 
@@ -51,6 +52,10 @@ impl EnumClassId {
     pub const ZERO_TIME: Self = Self(4);
 }
 
+pub use enumerations::{
+    EnumerationClass, EnumerationKind, MemberValue, OBC_PACKAGE, enumeration_class,
+    enumeration_class_by_id, enumeration_class_path, enumeration_classes, enumeration_member_value,
+};
 pub use types::{
     EnumDescriptor, SimpleController, ZeroTime, enum_class_id, enum_descriptor,
     enum_descriptor_by_path, enum_member_ordinal, g36_enum_class_id, g36_enum_literals,
