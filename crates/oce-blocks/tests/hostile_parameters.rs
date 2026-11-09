@@ -10,7 +10,9 @@
 //! classes and ordinals, arbitrary strings) — and requires construction and every structural query
 //! to return without a panic: the resolved signature, kind, state length and revision, and, while
 //! the resolved shape stays small enough to enumerate, `feeds_through` over every port pair,
-//! `init_state`, and one emit and state update at two times with typed zero inputs.
+//! `init_state`, one emit and state update at two times with typed zero inputs, and the
+//! contract port names (`resolved_ports`, GitHub #440), which must name every resolved port
+//! exactly once with the signature's kind.
 //!
 //! A seeded xorshift64* generator, no dependency: `OCE_PARAM_FUZZ_CASES` overrides the per-class
 //! case count (default 200) and `OCE_PARAM_FUZZ_SEED` the seed.
@@ -20,13 +22,15 @@ use std::sync::Arc;
 
 use oce_blocks::{
     BlockKind, Ctx, MAX_RESOLVED_ARITY, MAX_RESOLVED_PORT_WIDTH, NoopDiagnostics,
-    ParamRuleProjection, PortKind, TimeTableValues, catalog, lookup,
+    ParamRuleProjection, PortKind, TimeTableValues, catalog, lookup, resolved_ports,
 };
 use oce_model::{EnumClassId, ParamTable, Value, ValueType};
 
 /// Shapes above these are constructed and queried for signature and state length only.
 const MAX_ENUMERATED_PORTS: usize = 256;
 const MAX_INITIALIZED_WORDS: usize = 1 << 16;
+/// Shapes up to this many ports per side also have their contract names synthesized and checked.
+const MAX_NAMED_PORTS: usize = 4096;
 
 struct XorShift(u64);
 
@@ -352,6 +356,9 @@ fn exercise(class_path: &str, params: &ParamTable) {
     let (inputs, outputs) = (signature.inputs.len(), signature.outputs.len());
     // The compiled-schedule decoder refuses longer port lists before allocating for them.
     assert!(inputs <= MAX_RESOLVED_ARITY && outputs <= MAX_RESOLVED_ARITY);
+    if inputs <= MAX_NAMED_PORTS && outputs <= MAX_NAMED_PORTS {
+        check_names(class_path, params, &signature.inputs, &signature.outputs);
+    }
     if inputs > MAX_ENUMERATED_PORTS
         || outputs > MAX_ENUMERATED_PORTS
         || state_len > MAX_INITIALIZED_WORDS
@@ -382,6 +389,28 @@ fn exercise(class_path: &str, params: &ParamTable) {
                 block.update_state(&ctx, &values, &mut region);
             }
         }
+    }
+}
+
+/// The contract names cover the constructed block exactly: one unique name per resolved port, in
+/// signature order, with the signature's kind. Any table a constructor accepts must be nameable.
+fn check_names(class_path: &str, params: &ParamTable, inputs: &[PortKind], outputs: &[PortKind]) {
+    let ports = resolved_ports(class_path, params)
+        .unwrap_or_else(|error| panic!("{class_path}: ports not nameable: {error}"));
+    for (named, kinds) in [(&ports.inputs, inputs), (&ports.outputs, outputs)] {
+        let named_kinds: Vec<PortKind> = named.iter().map(|port| port.kind).collect();
+        assert_eq!(
+            named_kinds, kinds,
+            "{class_path}: names disagree with the signature"
+        );
+        let mut names: Vec<&str> = named.iter().map(|port| port.name.as_str()).collect();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(
+            names.len(),
+            named.len(),
+            "{class_path}: duplicate port name"
+        );
     }
 }
 

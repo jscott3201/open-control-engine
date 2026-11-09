@@ -1,7 +1,8 @@
 #![forbid(unsafe_code)]
 //! `oce-api` — the primary embeddable host facade for the Open Control Engine
 //! (`08-embeddable-api-and-performance.md`). [`catalog()`] and [`contract_descriptors`] expose
-//! independent host metadata. The supported `oce-blocks::catalog()` remains a companion surface. The `open-control-engine` umbrella name is reserved for a
+//! independent host metadata; [`class_ports`] and [`class_metadata`] add the resolved port names,
+//! class descriptions and settable flags an authoring tool needs, outside the revision-1 catalog. The supported `oce-blocks::catalog()` remains a companion surface. The `open-control-engine` umbrella name is reserved for a
 //! future release; nothing is published to crates.io yet.
 //!
 //! # Posture (binding, FRAME §6)
@@ -43,6 +44,7 @@ mod catalog;
 mod catalog_adapter;
 mod catalog_json;
 mod catalog_rules;
+mod class_ports;
 mod compatibility;
 mod contracts;
 mod diagnostics;
@@ -86,6 +88,11 @@ pub use catalog::{
     catalog_to_json,
 };
 pub use catalog_rules::CatalogRule;
+pub use class_ports::{
+    ClassMetadata, ClassParameter, ClassPort, ClassPorts, ClassPortsError, PARAM_COL_PLACEHOLDER,
+    PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER, class_metadata, class_ports,
+    param_element_name,
+};
 pub use compatibility::{
     CatalogContentId, CompatibilityDescriptor, CompatibilityMismatch, CompleteExportContentId,
 };

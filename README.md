@@ -227,6 +227,9 @@ The three one-page design passes M3 waits on are written: the
 [historical replay API](docs/design/replay.md), the
 [CDL §12 commissioning verifier](docs/design/commissioning.md) and
 [`oce-diff`](docs/design/diff.md), beside the [M2 authoring layer](docs/design/authoring-layer.md).
+M2's engine prerequisite is in: `oce_api::class_ports` names every port of a configured block, and
+`oce_api::class_metadata` gives each class a description and each parameter a settable flag
+(issue #440; [port naming contract](docs/cdl-coverage.md#port-names-are-an-engine-contract)).
 Design notes for thinly specified work land in
 [`docs/design/`](docs/design/compiled-schedule-blob.md) before code; the OCEB blob format is the
 first. Sequences, routines and their test vectors live in the separate `open-control-library`;

@@ -1,0 +1,1195 @@
+# Contract port names, descriptions and settable flags (GitHub #440).
+# Regenerate: OCE_BLESS_CLASS_PORTS=1 cargo nextest run -p oce-blocks --test class_ports
+
+## Every class at the empty parameter table
+
+CDL.Reals.Sources.Constant
+  in  (0)
+  out (1) y:Real
+CDL.Reals.Sources.CivilTime
+  in  (0)
+  out (1) y:Real
+CDL.Reals.Sources.Pulse
+  in  (0)
+  out (1) y:Real
+CDL.Reals.Sources.Ramp
+  in  (0)
+  out (1) y:Real
+CDL.Reals.Sources.Sin
+  in  (0)
+  out (1) y:Real
+CDL.Reals.Sources.CalendarTime
+  in  (0)
+  out (6) year:Integer month:Integer day:Integer hour:Integer minute:Real weekDay:Integer
+CDL.Reals.Sources.TimeTable
+  in  (0)
+  out (1) y1:Real
+CDL.Reals.Add
+  in  (2) u1:Real u2:Real
+  out (1) y:Real
+CDL.Reals.Subtract
+  in  (2) u1:Real u2:Real
+  out (1) y:Real
+CDL.Reals.Multiply
+  in  (2) u1:Real u2:Real
+  out (1) y:Real
+CDL.Reals.Divide
+  in  (2) u1:Real u2:Real
+  out (1) y:Real
+CDL.Reals.Sqrt
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.Sin
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.Cos
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.Tan
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.Asin
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.Acos
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.Atan
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.Atan2
+  in  (2) u1:Real u2:Real
+  out (1) y:Real
+CDL.Reals.Exp
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.Log
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.Log10
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.Average
+  in  (2) u1:Real u2:Real
+  out (1) y:Real
+CDL.Reals.Modulo
+  in  (2) u1:Real u2:Real
+  out (1) y:Real
+CDL.Reals.Round
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.AddParameter
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.MultiplyByParameter
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.Abs
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.Min
+  in  (2) u1:Real u2:Real
+  out (1) y:Real
+CDL.Reals.Max
+  in  (2) u1:Real u2:Real
+  out (1) y:Real
+CDL.Reals.MultiMax
+  in  (0)
+  out (1) y:Real
+CDL.Reals.MultiMin
+  in  (0)
+  out (1) y:Real
+CDL.Reals.MultiSum
+  in  (0)
+  out (1) y:Real
+CDL.Reals.MatrixGain
+  in  (2) u1:Real u2:Real
+  out (2) y1:Real y2:Real
+CDL.Reals.MatrixMax
+  in  (1) u1_1:Real
+  out (1) y1:Real
+CDL.Reals.MatrixMin
+  in  (1) u1_1:Real
+  out (1) y1:Real
+CDL.Reals.Sort
+  in  (0)
+  out (0)
+CDL.Reals.Limiter
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.Line
+  in  (5) x1:Real f1:Real x2:Real f2:Real u:Real
+  out (1) y:Real
+CDL.Reals.Greater
+  in  (2) u1:Real u2:Real
+  out (1) y:Boolean
+CDL.Reals.GreaterThreshold
+  in  (1) u:Real
+  out (1) y:Boolean
+CDL.Reals.Hysteresis
+  in  (1) u:Real
+  out (1) y:Boolean
+CDL.Reals.Less
+  in  (2) u1:Real u2:Real
+  out (1) y:Boolean
+CDL.Reals.LessThreshold
+  in  (1) u:Real
+  out (1) y:Boolean
+CDL.Reals.Switch
+  in  (3) u1:Real u2:Boolean u3:Real
+  out (1) y:Real
+CDL.Reals.IntegratorWithReset
+  in  (3) u:Real y_reset_in:Real trigger:Boolean
+  out (1) y:Real
+CDL.Reals.Derivative
+  in  (3) k:Real T:Real u:Real
+  out (1) y:Real
+CDL.Reals.LimitSlewRate
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.MovingAverage
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Reals.Ramp
+  in  (2) u:Real active:Boolean
+  out (1) y:Real
+CDL.Reals.PID
+  in  (2) u_s:Real u_m:Real
+  out (1) y:Real
+CDL.Reals.PIDWithReset
+  in  (3) u_s:Real u_m:Real trigger:Boolean
+  out (1) y:Real
+CDL.Psychrometrics.DewPoint_TDryBulPhi
+  in  (2) TDryBul:Real phi:Real
+  out (1) TDewPoi:Real
+CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi
+  in  (2) TDryBul:Real phi:Real
+  out (1) h:Real
+CDL.Psychrometrics.WetBulb_TDryBulPhi
+  in  (2) TDryBul:Real phi:Real
+  out (1) TWetBul:Real
+CDL.Logical.Sources.Constant
+  in  (0)
+  out (1) y:Boolean
+CDL.Logical.Sources.Pulse
+  in  (0)
+  out (1) y:Boolean
+CDL.Logical.Sources.TimeTable
+  in  (0)
+  out (1) y1:Boolean
+CDL.Logical.And
+  in  (2) u1:Boolean u2:Boolean
+  out (1) y:Boolean
+CDL.Logical.Or
+  in  (2) u1:Boolean u2:Boolean
+  out (1) y:Boolean
+CDL.Logical.MultiAnd
+  in  (0)
+  out (1) y:Boolean
+CDL.Logical.MultiOr
+  in  (0)
+  out (1) y:Boolean
+CDL.Logical.Not
+  in  (1) u:Boolean
+  out (1) y:Boolean
+CDL.Logical.Nand
+  in  (2) u1:Boolean u2:Boolean
+  out (1) y:Boolean
+CDL.Logical.Nor
+  in  (2) u1:Boolean u2:Boolean
+  out (1) y:Boolean
+CDL.Logical.Xor
+  in  (2) u1:Boolean u2:Boolean
+  out (1) y:Boolean
+CDL.Logical.Switch
+  in  (3) u1:Boolean u2:Boolean u3:Boolean
+  out (1) y:Boolean
+CDL.Logical.Pre
+  in  (1) u:Boolean
+  out (1) y:Boolean
+CDL.Logical.Edge
+  in  (1) u:Boolean
+  out (1) y:Boolean
+CDL.Logical.Sources.SampleTrigger
+  in  (0)
+  out (1) y:Boolean
+CDL.Logical.Proof
+  in  (2) u_s:Boolean u_m:Boolean
+  out (2) yLocFal:Boolean yLocTru:Boolean
+CDL.Logical.VariablePulse
+  in  (1) u:Real
+  out (1) y:Boolean
+CDL.Logical.FallingEdge
+  in  (1) u:Boolean
+  out (1) y:Boolean
+CDL.Logical.Change
+  in  (1) u:Boolean
+  out (1) y:Boolean
+CDL.Logical.Latch
+  in  (2) u:Boolean clr:Boolean
+  out (1) y:Boolean
+CDL.Logical.Toggle
+  in  (2) u:Boolean clr:Boolean
+  out (1) y:Boolean
+CDL.Logical.Timer
+  in  (1) u:Boolean
+  out (2) y:Real passed:Boolean
+CDL.Logical.TimerAccumulating
+  in  (2) u:Boolean reset:Boolean
+  out (2) y:Real passed:Boolean
+CDL.Logical.TrueDelay
+  in  (1) u:Boolean
+  out (1) y:Boolean
+CDL.Logical.TrueFalseHold
+  in  (1) u:Boolean
+  out (1) y:Boolean
+CDL.Logical.TrueHoldWithReset
+  in  (2) u:Boolean clr:Boolean
+  out (1) y:Boolean
+urn:oce:lowering#PassThrough.Real
+  in  (1) u:Real
+  out (1) y:Real
+urn:oce:lowering#PassThrough.Integer
+  in  (1) u:Integer
+  out (1) y:Integer
+urn:oce:lowering#PassThrough.Boolean
+  in  (1) u:Boolean
+  out (1) y:Boolean
+CDL.Conversions.BooleanToInteger
+  in  (1) u:Boolean
+  out (1) y:Integer
+CDL.Conversions.BooleanToReal
+  in  (1) u:Boolean
+  out (1) y:Real
+CDL.Conversions.IntegerToReal
+  in  (1) u:Integer
+  out (1) y:Real
+CDL.Conversions.RealToInteger
+  in  (1) u:Real
+  out (1) y:Integer
+CDL.Integers.Sources.Constant
+  in  (0)
+  out (1) y:Integer
+CDL.Integers.Sources.Pulse
+  in  (0)
+  out (1) y:Integer
+CDL.Integers.Sources.TimeTable
+  in  (0)
+  out (1) y1:Integer
+CDL.Integers.Abs
+  in  (1) u:Integer
+  out (1) y:Integer
+CDL.Integers.Add
+  in  (2) u1:Integer u2:Integer
+  out (1) y:Integer
+CDL.Integers.Subtract
+  in  (2) u1:Integer u2:Integer
+  out (1) y:Integer
+CDL.Integers.Multiply
+  in  (2) u1:Integer u2:Integer
+  out (1) y:Integer
+CDL.Integers.AddParameter
+  in  (1) u:Integer
+  out (1) y:Integer
+CDL.Integers.Max
+  in  (2) u1:Integer u2:Integer
+  out (1) y:Integer
+CDL.Integers.Min
+  in  (2) u1:Integer u2:Integer
+  out (1) y:Integer
+CDL.Integers.MultiSum
+  in  (0)
+  out (1) y:Integer
+CDL.Integers.Switch
+  in  (3) u1:Integer u2:Boolean u3:Integer
+  out (1) y:Integer
+CDL.Integers.Equal
+  in  (2) u1:Integer u2:Integer
+  out (1) y:Boolean
+CDL.Integers.Greater
+  in  (2) u1:Integer u2:Integer
+  out (1) y:Boolean
+CDL.Integers.GreaterThreshold
+  in  (1) u:Integer
+  out (1) y:Boolean
+CDL.Integers.GreaterEqual
+  in  (2) u1:Integer u2:Integer
+  out (1) y:Boolean
+CDL.Integers.GreaterEqualThreshold
+  in  (1) u:Integer
+  out (1) y:Boolean
+CDL.Integers.Less
+  in  (2) u1:Integer u2:Integer
+  out (1) y:Boolean
+CDL.Integers.LessThreshold
+  in  (1) u:Integer
+  out (1) y:Boolean
+CDL.Integers.LessEqual
+  in  (2) u1:Integer u2:Integer
+  out (1) y:Boolean
+CDL.Integers.LessEqualThreshold
+  in  (1) u:Integer
+  out (1) y:Boolean
+CDL.Integers.OnCounter
+  in  (2) trigger:Boolean reset:Boolean
+  out (1) y:Integer
+CDL.Integers.Change
+  in  (1) u:Integer
+  out (3) y:Boolean up:Boolean down:Boolean
+CDL.Integers.Stage
+  in  (1) u:Real
+  out (1) y:Integer
+CDL.Routing.BooleanExtractSignal
+  in  (1) u1:Boolean
+  out (1) y1:Boolean
+CDL.Routing.BooleanExtractor
+  in  (2) index:Integer u1:Boolean
+  out (1) y:Boolean
+CDL.Routing.BooleanScalarReplicator
+  in  (1) u:Boolean
+  out (1) y1:Boolean
+CDL.Routing.BooleanVectorFilter
+  in  (0)
+  out (0)
+CDL.Routing.BooleanVectorReplicator
+  in  (1) u1:Boolean
+  out (1) y1_1:Boolean
+CDL.Routing.IntegerExtractSignal
+  in  (1) u1:Integer
+  out (1) y1:Integer
+CDL.Routing.IntegerExtractor
+  in  (2) index:Integer u1:Integer
+  out (1) y:Integer
+CDL.Routing.IntegerScalarReplicator
+  in  (1) u:Integer
+  out (1) y1:Integer
+CDL.Routing.IntegerVectorFilter
+  in  (0)
+  out (0)
+CDL.Routing.IntegerVectorReplicator
+  in  (1) u1:Integer
+  out (1) y1_1:Integer
+CDL.Routing.RealExtractSignal
+  in  (1) u1:Real
+  out (1) y1:Real
+CDL.Routing.RealExtractor
+  in  (2) index:Integer u1:Real
+  out (1) y:Real
+CDL.Routing.RealScalarReplicator
+  in  (1) u:Real
+  out (1) y1:Real
+CDL.Routing.RealVectorFilter
+  in  (0)
+  out (0)
+CDL.Routing.RealVectorReplicator
+  in  (1) u1:Real
+  out (1) y1_1:Real
+CDL.Discrete.FirstOrderHold
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Discrete.Sampler
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Discrete.TriggeredMax
+  in  (2) u:Real trigger:Boolean
+  out (1) y:Real
+CDL.Discrete.TriggeredMovingMean
+  in  (2) u:Real trigger:Boolean
+  out (1) y:Real
+CDL.Discrete.TriggeredSampler
+  in  (2) u:Real trigger:Boolean
+  out (1) y:Real
+CDL.Discrete.UnitDelay
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Discrete.ZeroOrderHold
+  in  (1) u:Real
+  out (1) y:Real
+CDL.Utilities.Assert
+  in  (1) u:Boolean
+  out (0)
+CDL.Utilities.SunRiseSet
+  in  (0)
+  out (3) nextSunRise:Real nextSunSet:Real sunUp:Boolean
+
+## Width-driven classes at widths 1, 2 and the maximum
+
+CDL.Reals.MultiMax nin=1
+  in  (1) u1:Real
+  out (1) y:Real
+CDL.Reals.MultiMax nin=2
+  in  (2) u1:Real u2:Real
+  out (1) y:Real
+CDL.Reals.MultiMax nin=1048576
+  in  (1048576) u1:Real u2:Real u3:Real ... u1048574:Real u1048575:Real u1048576:Real
+  out (1) y:Real
+CDL.Reals.MultiMin nin=1
+  in  (1) u1:Real
+  out (1) y:Real
+CDL.Reals.MultiMin nin=2
+  in  (2) u1:Real u2:Real
+  out (1) y:Real
+CDL.Reals.MultiMin nin=1048576
+  in  (1048576) u1:Real u2:Real u3:Real ... u1048574:Real u1048575:Real u1048576:Real
+  out (1) y:Real
+CDL.Reals.MultiSum nin=1
+  in  (1) u1:Real
+  out (1) y:Real
+CDL.Reals.MultiSum nin=2
+  in  (2) u1:Real u2:Real
+  out (1) y:Real
+CDL.Reals.MultiSum nin=1048576
+  in  (1048576) u1:Real u2:Real u3:Real ... u1048574:Real u1048575:Real u1048576:Real
+  out (1) y:Real
+CDL.Integers.MultiSum nin=1
+  in  (1) u1:Integer
+  out (1) y:Integer
+CDL.Integers.MultiSum nin=2
+  in  (2) u1:Integer u2:Integer
+  out (1) y:Integer
+CDL.Integers.MultiSum nin=1048576
+  in  (1048576) u1:Integer u2:Integer u3:Integer ... u1048574:Integer u1048575:Integer u1048576:Integer
+  out (1) y:Integer
+CDL.Logical.MultiAnd nin=1
+  in  (1) u1:Boolean
+  out (1) y:Boolean
+CDL.Logical.MultiAnd nin=2
+  in  (2) u1:Boolean u2:Boolean
+  out (1) y:Boolean
+CDL.Logical.MultiAnd nin=1048576
+  in  (1048576) u1:Boolean u2:Boolean u3:Boolean ... u1048574:Boolean u1048575:Boolean u1048576:Boolean
+  out (1) y:Boolean
+CDL.Logical.MultiOr nin=1
+  in  (1) u1:Boolean
+  out (1) y:Boolean
+CDL.Logical.MultiOr nin=2
+  in  (2) u1:Boolean u2:Boolean
+  out (1) y:Boolean
+CDL.Logical.MultiOr nin=1048576
+  in  (1048576) u1:Boolean u2:Boolean u3:Boolean ... u1048574:Boolean u1048575:Boolean u1048576:Boolean
+  out (1) y:Boolean
+CDL.Reals.MatrixGain nin=1 nout=1
+  in  (1) u1:Real
+  out (1) y1:Real
+CDL.Reals.MatrixGain nin=2 nout=2
+  in  (2) u1:Real u2:Real
+  out (2) y1:Real y2:Real
+CDL.Reals.MatrixGain nin=1048576 nout=1
+  in  (1048576) u1:Real u2:Real u3:Real ... u1048574:Real u1048575:Real u1048576:Real
+  out (1) y1:Real
+CDL.Reals.MatrixGain nin=1 nout=1048576
+  in  (1) u1:Real
+  out (1048576) y1:Real y2:Real y3:Real ... y1048574:Real y1048575:Real y1048576:Real
+CDL.Reals.MatrixMax nRow=1 nCol=1 rowMax=true
+  in  (1) u1_1:Real
+  out (1) y1:Real
+CDL.Reals.MatrixMax nRow=1 nCol=1 rowMax=false
+  in  (1) u1_1:Real
+  out (1) y1:Real
+CDL.Reals.MatrixMax nRow=2 nCol=3 rowMax=true
+  in  (6) u1_1:Real u1_2:Real u1_3:Real u2_1:Real u2_2:Real u2_3:Real
+  out (2) y1:Real y2:Real
+CDL.Reals.MatrixMax nRow=2 nCol=3 rowMax=false
+  in  (6) u1_1:Real u1_2:Real u1_3:Real u2_1:Real u2_2:Real u2_3:Real
+  out (3) y1:Real y2:Real y3:Real
+CDL.Reals.MatrixMax nRow=1048576 nCol=1 rowMax=true
+  in  (1048576) u1_1:Real u2_1:Real u3_1:Real ... u1048574_1:Real u1048575_1:Real u1048576_1:Real
+  out (1048576) y1:Real y2:Real y3:Real ... y1048574:Real y1048575:Real y1048576:Real
+CDL.Reals.MatrixMax nRow=1048576 nCol=1 rowMax=false
+  in  (1048576) u1_1:Real u2_1:Real u3_1:Real ... u1048574_1:Real u1048575_1:Real u1048576_1:Real
+  out (1) y1:Real
+CDL.Reals.MatrixMax nRow=1 nCol=1048576 rowMax=true
+  in  (1048576) u1_1:Real u1_2:Real u1_3:Real ... u1_1048574:Real u1_1048575:Real u1_1048576:Real
+  out (1) y1:Real
+CDL.Reals.MatrixMax nRow=1 nCol=1048576 rowMax=false
+  in  (1048576) u1_1:Real u1_2:Real u1_3:Real ... u1_1048574:Real u1_1048575:Real u1_1048576:Real
+  out (1048576) y1:Real y2:Real y3:Real ... y1048574:Real y1048575:Real y1048576:Real
+CDL.Reals.MatrixMin nRow=1 nCol=1 rowMin=true
+  in  (1) u1_1:Real
+  out (1) y1:Real
+CDL.Reals.MatrixMin nRow=1 nCol=1 rowMin=false
+  in  (1) u1_1:Real
+  out (1) y1:Real
+CDL.Reals.MatrixMin nRow=2 nCol=3 rowMin=true
+  in  (6) u1_1:Real u1_2:Real u1_3:Real u2_1:Real u2_2:Real u2_3:Real
+  out (2) y1:Real y2:Real
+CDL.Reals.MatrixMin nRow=2 nCol=3 rowMin=false
+  in  (6) u1_1:Real u1_2:Real u1_3:Real u2_1:Real u2_2:Real u2_3:Real
+  out (3) y1:Real y2:Real y3:Real
+CDL.Reals.MatrixMin nRow=1048576 nCol=1 rowMin=true
+  in  (1048576) u1_1:Real u2_1:Real u3_1:Real ... u1048574_1:Real u1048575_1:Real u1048576_1:Real
+  out (1048576) y1:Real y2:Real y3:Real ... y1048574:Real y1048575:Real y1048576:Real
+CDL.Reals.MatrixMin nRow=1048576 nCol=1 rowMin=false
+  in  (1048576) u1_1:Real u2_1:Real u3_1:Real ... u1048574_1:Real u1048575_1:Real u1048576_1:Real
+  out (1) y1:Real
+CDL.Reals.MatrixMin nRow=1 nCol=1048576 rowMin=true
+  in  (1048576) u1_1:Real u1_2:Real u1_3:Real ... u1_1048574:Real u1_1048575:Real u1_1048576:Real
+  out (1) y1:Real
+CDL.Reals.MatrixMin nRow=1 nCol=1048576 rowMin=false
+  in  (1048576) u1_1:Real u1_2:Real u1_3:Real ... u1_1048574:Real u1_1048575:Real u1_1048576:Real
+  out (1048576) y1:Real y2:Real y3:Real ... y1048574:Real y1048575:Real y1048576:Real
+CDL.Reals.Sort nin=1
+  in  (1) u1:Real
+  out (2) y1:Real yIdx1:Integer
+CDL.Reals.Sort nin=2
+  in  (2) u1:Real u2:Real
+  out (4) y1:Real y2:Real yIdx1:Integer yIdx2:Integer
+CDL.Reals.Sort nin=1048576
+  in  (1048576) u1:Real u2:Real u3:Real ... u1048574:Real u1048575:Real u1048576:Real
+  out (2097152) y1:Real y2:Real y3:Real ... yIdx1048574:Integer yIdx1048575:Integer yIdx1048576:Integer
+CDL.Routing.BooleanExtractSignal nin=1 nout=1
+  in  (1) u1:Boolean
+  out (1) y1:Boolean
+CDL.Routing.BooleanExtractor nin=1
+  in  (2) index:Integer u1:Boolean
+  out (1) y:Boolean
+CDL.Routing.BooleanScalarReplicator nout=1
+  in  (1) u:Boolean
+  out (1) y1:Boolean
+CDL.Routing.BooleanVectorFilter nin=1 nout=1
+  in  (1) u1:Boolean
+  out (1) y1:Boolean
+CDL.Routing.BooleanExtractSignal nin=2 nout=2
+  in  (2) u1:Boolean u2:Boolean
+  out (2) y1:Boolean y2:Boolean
+CDL.Routing.BooleanExtractor nin=2
+  in  (3) index:Integer u1:Boolean u2:Boolean
+  out (1) y:Boolean
+CDL.Routing.BooleanScalarReplicator nout=2
+  in  (1) u:Boolean
+  out (2) y1:Boolean y2:Boolean
+CDL.Routing.BooleanVectorFilter nin=2 nout=2
+  in  (2) u1:Boolean u2:Boolean
+  out (2) y1:Boolean y2:Boolean
+CDL.Routing.BooleanExtractSignal nin=1048576 nout=1048576
+  in  (1048576) u1:Boolean u2:Boolean u3:Boolean ... u1048574:Boolean u1048575:Boolean u1048576:Boolean
+  out (1048576) y1:Boolean y2:Boolean y3:Boolean ... y1048574:Boolean y1048575:Boolean y1048576:Boolean
+CDL.Routing.BooleanExtractor nin=1048576
+  in  (1048577) index:Integer u1:Boolean u2:Boolean ... u1048574:Boolean u1048575:Boolean u1048576:Boolean
+  out (1) y:Boolean
+CDL.Routing.BooleanScalarReplicator nout=1048576
+  in  (1) u:Boolean
+  out (1048576) y1:Boolean y2:Boolean y3:Boolean ... y1048574:Boolean y1048575:Boolean y1048576:Boolean
+CDL.Routing.BooleanVectorFilter nin=1048576 nout=1048576
+  in  (1048576) u1:Boolean u2:Boolean u3:Boolean ... u1048574:Boolean u1048575:Boolean u1048576:Boolean
+  out (1048576) y1:Boolean y2:Boolean y3:Boolean ... y1048574:Boolean y1048575:Boolean y1048576:Boolean
+CDL.Routing.BooleanVectorFilter nin=3 nout=2 msk_2=false
+  in  (3) u1:Boolean u2:Boolean u3:Boolean
+  out (2) y1:Boolean y2:Boolean
+CDL.Routing.BooleanVectorReplicator nin=1 nout=1
+  in  (1) u1:Boolean
+  out (1) y1_1:Boolean
+CDL.Routing.BooleanVectorReplicator nin=2 nout=2
+  in  (2) u1:Boolean u2:Boolean
+  out (4) y1_1:Boolean y1_2:Boolean y2_1:Boolean y2_2:Boolean
+CDL.Routing.BooleanVectorReplicator nin=2 nout=3
+  in  (2) u1:Boolean u2:Boolean
+  out (6) y1_1:Boolean y1_2:Boolean y2_1:Boolean y2_2:Boolean y3_1:Boolean y3_2:Boolean
+CDL.Routing.BooleanVectorReplicator nin=1048576 nout=1
+  in  (1048576) u1:Boolean u2:Boolean u3:Boolean ... u1048574:Boolean u1048575:Boolean u1048576:Boolean
+  out (1048576) y1_1:Boolean y1_2:Boolean y1_3:Boolean ... y1_1048574:Boolean y1_1048575:Boolean y1_1048576:Boolean
+CDL.Routing.BooleanVectorReplicator nin=1 nout=1048576
+  in  (1) u1:Boolean
+  out (1048576) y1_1:Boolean y2_1:Boolean y3_1:Boolean ... y1048574_1:Boolean y1048575_1:Boolean y1048576_1:Boolean
+CDL.Routing.IntegerExtractSignal nin=1 nout=1
+  in  (1) u1:Integer
+  out (1) y1:Integer
+CDL.Routing.IntegerExtractor nin=1
+  in  (2) index:Integer u1:Integer
+  out (1) y:Integer
+CDL.Routing.IntegerScalarReplicator nout=1
+  in  (1) u:Integer
+  out (1) y1:Integer
+CDL.Routing.IntegerVectorFilter nin=1 nout=1
+  in  (1) u1:Integer
+  out (1) y1:Integer
+CDL.Routing.IntegerExtractSignal nin=2 nout=2
+  in  (2) u1:Integer u2:Integer
+  out (2) y1:Integer y2:Integer
+CDL.Routing.IntegerExtractor nin=2
+  in  (3) index:Integer u1:Integer u2:Integer
+  out (1) y:Integer
+CDL.Routing.IntegerScalarReplicator nout=2
+  in  (1) u:Integer
+  out (2) y1:Integer y2:Integer
+CDL.Routing.IntegerVectorFilter nin=2 nout=2
+  in  (2) u1:Integer u2:Integer
+  out (2) y1:Integer y2:Integer
+CDL.Routing.IntegerExtractSignal nin=1048576 nout=1048576
+  in  (1048576) u1:Integer u2:Integer u3:Integer ... u1048574:Integer u1048575:Integer u1048576:Integer
+  out (1048576) y1:Integer y2:Integer y3:Integer ... y1048574:Integer y1048575:Integer y1048576:Integer
+CDL.Routing.IntegerExtractor nin=1048576
+  in  (1048577) index:Integer u1:Integer u2:Integer ... u1048574:Integer u1048575:Integer u1048576:Integer
+  out (1) y:Integer
+CDL.Routing.IntegerScalarReplicator nout=1048576
+  in  (1) u:Integer
+  out (1048576) y1:Integer y2:Integer y3:Integer ... y1048574:Integer y1048575:Integer y1048576:Integer
+CDL.Routing.IntegerVectorFilter nin=1048576 nout=1048576
+  in  (1048576) u1:Integer u2:Integer u3:Integer ... u1048574:Integer u1048575:Integer u1048576:Integer
+  out (1048576) y1:Integer y2:Integer y3:Integer ... y1048574:Integer y1048575:Integer y1048576:Integer
+CDL.Routing.IntegerVectorFilter nin=3 nout=2 msk_2=false
+  in  (3) u1:Integer u2:Integer u3:Integer
+  out (2) y1:Integer y2:Integer
+CDL.Routing.IntegerVectorReplicator nin=1 nout=1
+  in  (1) u1:Integer
+  out (1) y1_1:Integer
+CDL.Routing.IntegerVectorReplicator nin=2 nout=2
+  in  (2) u1:Integer u2:Integer
+  out (4) y1_1:Integer y1_2:Integer y2_1:Integer y2_2:Integer
+CDL.Routing.IntegerVectorReplicator nin=2 nout=3
+  in  (2) u1:Integer u2:Integer
+  out (6) y1_1:Integer y1_2:Integer y2_1:Integer y2_2:Integer y3_1:Integer y3_2:Integer
+CDL.Routing.IntegerVectorReplicator nin=1048576 nout=1
+  in  (1048576) u1:Integer u2:Integer u3:Integer ... u1048574:Integer u1048575:Integer u1048576:Integer
+  out (1048576) y1_1:Integer y1_2:Integer y1_3:Integer ... y1_1048574:Integer y1_1048575:Integer y1_1048576:Integer
+CDL.Routing.IntegerVectorReplicator nin=1 nout=1048576
+  in  (1) u1:Integer
+  out (1048576) y1_1:Integer y2_1:Integer y3_1:Integer ... y1048574_1:Integer y1048575_1:Integer y1048576_1:Integer
+CDL.Routing.RealExtractSignal nin=1 nout=1
+  in  (1) u1:Real
+  out (1) y1:Real
+CDL.Routing.RealExtractor nin=1
+  in  (2) index:Integer u1:Real
+  out (1) y:Real
+CDL.Routing.RealScalarReplicator nout=1
+  in  (1) u:Real
+  out (1) y1:Real
+CDL.Routing.RealVectorFilter nin=1 nout=1
+  in  (1) u1:Real
+  out (1) y1:Real
+CDL.Routing.RealExtractSignal nin=2 nout=2
+  in  (2) u1:Real u2:Real
+  out (2) y1:Real y2:Real
+CDL.Routing.RealExtractor nin=2
+  in  (3) index:Integer u1:Real u2:Real
+  out (1) y:Real
+CDL.Routing.RealScalarReplicator nout=2
+  in  (1) u:Real
+  out (2) y1:Real y2:Real
+CDL.Routing.RealVectorFilter nin=2 nout=2
+  in  (2) u1:Real u2:Real
+  out (2) y1:Real y2:Real
+CDL.Routing.RealExtractSignal nin=1048576 nout=1048576
+  in  (1048576) u1:Real u2:Real u3:Real ... u1048574:Real u1048575:Real u1048576:Real
+  out (1048576) y1:Real y2:Real y3:Real ... y1048574:Real y1048575:Real y1048576:Real
+CDL.Routing.RealExtractor nin=1048576
+  in  (1048577) index:Integer u1:Real u2:Real ... u1048574:Real u1048575:Real u1048576:Real
+  out (1) y:Real
+CDL.Routing.RealScalarReplicator nout=1048576
+  in  (1) u:Real
+  out (1048576) y1:Real y2:Real y3:Real ... y1048574:Real y1048575:Real y1048576:Real
+CDL.Routing.RealVectorFilter nin=1048576 nout=1048576
+  in  (1048576) u1:Real u2:Real u3:Real ... u1048574:Real u1048575:Real u1048576:Real
+  out (1048576) y1:Real y2:Real y3:Real ... y1048574:Real y1048575:Real y1048576:Real
+CDL.Routing.RealVectorFilter nin=3 nout=2 msk_2=false
+  in  (3) u1:Real u2:Real u3:Real
+  out (2) y1:Real y2:Real
+CDL.Routing.RealVectorReplicator nin=1 nout=1
+  in  (1) u1:Real
+  out (1) y1_1:Real
+CDL.Routing.RealVectorReplicator nin=2 nout=2
+  in  (2) u1:Real u2:Real
+  out (4) y1_1:Real y1_2:Real y2_1:Real y2_2:Real
+CDL.Routing.RealVectorReplicator nin=2 nout=3
+  in  (2) u1:Real u2:Real
+  out (6) y1_1:Real y1_2:Real y2_1:Real y2_2:Real y3_1:Real y3_2:Real
+CDL.Routing.RealVectorReplicator nin=1048576 nout=1
+  in  (1048576) u1:Real u2:Real u3:Real ... u1048574:Real u1048575:Real u1048576:Real
+  out (1048576) y1_1:Real y1_2:Real y1_3:Real ... y1_1048574:Real y1_1048575:Real y1_1048576:Real
+CDL.Routing.RealVectorReplicator nin=1 nout=1048576
+  in  (1) u1:Real
+  out (1048576) y1_1:Real y2_1:Real y3_1:Real ... y1048574_1:Real y1048575_1:Real y1048576_1:Real
+
+## TimeTable shapes (positional; one output per value column)
+
+CDL.Reals.Sources.TimeTable table=2x2
+  in  (0)
+  out (1) y1:Real
+CDL.Reals.Sources.TimeTable table=3x3
+  in  (0)
+  out (2) y1:Real y2:Real
+CDL.Reals.Sources.TimeTable table=2x4
+  in  (0)
+  out (3) y1:Real y2:Real y3:Real
+CDL.Integers.Sources.TimeTable table=2x2
+  in  (0)
+  out (1) y1:Integer
+CDL.Integers.Sources.TimeTable table=3x3
+  in  (0)
+  out (2) y1:Integer y2:Integer
+CDL.Integers.Sources.TimeTable table=2x4
+  in  (0)
+  out (3) y1:Integer y2:Integer y3:Integer
+CDL.Logical.Sources.TimeTable table=2x2
+  in  (0)
+  out (1) y1:Boolean
+CDL.Logical.Sources.TimeTable table=3x3
+  in  (0)
+  out (2) y1:Boolean y2:Boolean
+CDL.Logical.Sources.TimeTable table=2x4
+  in  (0)
+  out (3) y1:Boolean y2:Boolean y3:Boolean
+
+## Descriptions and parameters (`-` marks a parameter an author may not set)
+
+CDL.Reals.Sources.Constant
+  "Output constant signal of type Real"
+  + k
+CDL.Reals.Sources.CivilTime
+  "Civil time"
+CDL.Reals.Sources.Pulse
+  "Generate pulse signal of type Real"
+  + amplitude
+  + width
+  + period
+  + shift
+  + offset
+CDL.Reals.Sources.Ramp
+  "Generate ramp signal"
+  + height
+  + duration
+  + offset
+  + startTime
+CDL.Reals.Sources.Sin
+  "Generate sine signal"
+  + amplitude
+  + freqHz
+  + phase
+  + offset
+  + startTime
+CDL.Reals.Sources.CalendarTime
+  "Computes the unix time stamp and calendar time from the simulation time"
+  + zerTim
+  + yearRef
+  + offset
+CDL.Reals.Sources.TimeTable
+  "Table look-up with respect to time and linear or periodic extrapolation"
+  + smoothness
+  + extrapolation
+  + offset_<i>
+  + timeScale
+  + table_<row>_<col>
+CDL.Reals.Add
+  "Output the sum of the two inputs"
+CDL.Reals.Subtract
+  "Output the difference of the two inputs"
+CDL.Reals.Multiply
+  "Output product of the two inputs"
+CDL.Reals.Divide
+  "Output first input divided by second input"
+CDL.Reals.Sqrt
+  "Output the square root of the input (input >= 0 required)"
+CDL.Reals.Sin
+  "Output the sine of the input"
+CDL.Reals.Cos
+  "Output the cosine of the input"
+CDL.Reals.Tan
+  "Output the tangent of the input"
+CDL.Reals.Asin
+  "Output the arc sine of the input"
+CDL.Reals.Acos
+  "Output the arc cosine of the input"
+CDL.Reals.Atan
+  "Output the arc tangent of the input"
+CDL.Reals.Atan2
+  "Output atan(u1/u2) of the inputs u1 and u2"
+CDL.Reals.Exp
+  "Output the exponential (base e) of the input"
+CDL.Reals.Log
+  "Output the natural (base e) logarithm of the input (input > 0 required)"
+CDL.Reals.Log10
+  "Output the base 10 logarithm of the input (input > 0 required)"
+CDL.Reals.Average
+  "Output the average of its two inputs"
+CDL.Reals.Modulo
+  "Output the remainder of first input divided by second input (~=0)"
+CDL.Reals.Round
+  "Round real number to given digits"
+  + n
+CDL.Reals.AddParameter
+  "Output the sum of an input plus a parameter"
+  + p
+CDL.Reals.MultiplyByParameter
+  "Output the product of a gain value with the input signal"
+  + k
+CDL.Reals.Abs
+  "Output the absolute value of the input"
+CDL.Reals.Min
+  "Pass through the smallest signal"
+CDL.Reals.Max
+  "Pass through the largest signal"
+CDL.Reals.MultiMax
+  "Output the maximum element of the input vector"
+  + nin
+CDL.Reals.MultiMin
+  "Output the minimum element of the input vector"
+  + nin
+CDL.Reals.MultiSum
+  "Sum of Reals, y = k[1]*u[1] + k[2]*u[2] + ... + k[n]*u[n]"
+  + nin
+  + k_<i>
+CDL.Reals.MatrixGain
+  "Output the product of a gain matrix with the input signal vector"
+  + nout
+  + nin
+  - K_<row>_<col>
+CDL.Reals.MatrixMax
+  "Output vector of row- or column-wise maximum of the input matrix"
+  + nRow
+  + nCol
+  + rowMax
+CDL.Reals.MatrixMin
+  "Output vector of row- or column-wise minimum values"
+  + nRow
+  + nCol
+  + rowMin
+CDL.Reals.Sort
+  "Sort elements of input vector in ascending or descending order"
+  + nin
+  + ascending
+CDL.Reals.Limiter
+  "Limit the range of a signal"
+  + uMin
+  + uMax
+CDL.Reals.Line
+  "Output the value of the input x along a line specified by two points"
+  + limitBelow
+  + limitAbove
+CDL.Reals.Greater
+  "Output y is true, if input u1 is greater than input u2 with hysteresis"
+  + h
+  + pre_y_start
+CDL.Reals.GreaterThreshold
+  "Output y is true, if input u is greater than threshold with hysteresis"
+  + t
+  + h
+  + pre_y_start
+CDL.Reals.Hysteresis
+  "Transform Real to Boolean signal with Hysteresis"
+  + uLow
+  + uHigh
+  + pre_y_start
+CDL.Reals.Less
+  "Output y is true, if input u1 is less than input u2"
+  + h
+  + pre_y_start
+CDL.Reals.LessThreshold
+  "Output y is true, if input u is less than threshold with hysteresis"
+  + t
+  + h
+  + pre_y_start
+CDL.Reals.Switch
+  "Switch between two Real signals"
+CDL.Reals.IntegratorWithReset
+  "Output the integral of the input signal"
+  + k
+  + y_start
+CDL.Reals.Derivative
+  "Block that approximates the derivative of the input"
+  + y_start
+CDL.Reals.LimitSlewRate
+  "Limit the increase or decrease rate of input"
+  + raisingSlewRate
+  - fallingSlewRate
+  - Td
+  + enable
+CDL.Reals.MovingAverage
+  "Block to output moving average"
+  + delta
+CDL.Reals.Ramp
+  "Limit the changing rate of the input"
+  + raisingSlewRate
+  - fallingSlewRate
+  - Td
+CDL.Reals.PID
+  "P, PI, PD, and PID controller"
+  + controllerType
+  + k
+  + Ti
+  + Td
+  + r
+  + yMax
+  + yMin
+  + Ni
+  + Nd
+  + xi_start
+  + yd_start
+  + reverseActing
+CDL.Reals.PIDWithReset
+  "P, PI, PD, and PID controller with output reset"
+  + controllerType
+  + k
+  + Ti
+  + Td
+  + r
+  + yMax
+  + yMin
+  + Ni
+  + Nd
+  + xi_start
+  + yd_start
+  + reverseActing
+  - y_reset
+CDL.Psychrometrics.DewPoint_TDryBulPhi
+  "Block to compute the dew point temperature based on relative humidity"
+CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi
+  "Block to compute the specific enthalpy based on relative humidity"
+  + pAtm
+CDL.Psychrometrics.WetBulb_TDryBulPhi
+  "Block to compute the wet bulb temperature based on relative humidity"
+CDL.Logical.Sources.Constant
+  "Output constant signal of type Boolean"
+  + k
+CDL.Logical.Sources.Pulse
+  "Generate pulse signal of type Boolean"
+  + width
+  + period
+  + shift
+CDL.Logical.Sources.TimeTable
+  "Table look-up with respect to time with constant segments"
+  + timeScale
+  + period
+  + table_<row>_<col>
+CDL.Logical.And
+  "Logical 'and': y = u1 and u2"
+CDL.Logical.Or
+  "Logical 'or': y = u1 or u2"
+CDL.Logical.MultiAnd
+  "Logical MultiAnd, y = u[1] and u[2] and u[3] and ..."
+  + nin
+CDL.Logical.MultiOr
+  "Logical MultiOr, y = u[1] or u[2] or u[3] or ..."
+  + nin
+CDL.Logical.Not
+  "Logical not"
+CDL.Logical.Nand
+  "Logical 'nand': y = not (u1 and u2)"
+CDL.Logical.Nor
+  "Logical 'nor': y = not (u1 or u2)"
+CDL.Logical.Xor
+  "Logical 'xor': y = u1 xor u2"
+CDL.Logical.Switch
+  "Switch between two boolean signals"
+CDL.Logical.Pre
+  "Breaks algebraic loops by adding a delay of the output without advancing time (y = pre(u): event iteration continues until u = pre(u))"
+  + pre_u_start
+CDL.Logical.Edge
+  "Output y is true, if the input u has a rising edge (y = edge(u))"
+  + pre_u_start
+CDL.Logical.Sources.SampleTrigger
+  "Generate sample trigger signal"
+  + period
+  + shift
+CDL.Logical.Proof
+  "Verify two boolean inputs"
+  + debounce
+  + feedbackDelay
+CDL.Logical.VariablePulse
+  "Generate boolean pulse with the width specified by input"
+  + period
+  + deltaU
+  - minTruFalHol
+CDL.Logical.FallingEdge
+  "Output y is true, if the input u has a falling edge (y = edge(not u))"
+  + pre_u_start
+CDL.Logical.Change
+  "Output y is true, if the input u has a rising or falling edge (y = change(u))"
+  + pre_u_start
+CDL.Logical.Latch
+  "Maintains a true signal until cleared"
+CDL.Logical.Toggle
+  "Toggles output value whenever its input turns true"
+CDL.Logical.Timer
+  "Timer measuring the time from the time instant where the Boolean input became true"
+  + t
+CDL.Logical.TimerAccumulating
+  "Accumulating timer that can be reset"
+  + t
+CDL.Logical.TrueDelay
+  "Delay a rising edge of the input, but do not delay a falling edge"
+  + delayTime
+  + delayOnInit
+CDL.Logical.TrueFalseHold
+  "Block that holds an output signal for at least a specified duration"
+  + trueHoldDuration
+  - falseHoldDuration
+CDL.Logical.TrueHoldWithReset
+  "Hold a true output for at least a duration; the engine-local clr input resets the hold"
+  + duration
+urn:oce:lowering#PassThrough.Real
+  "Engine-reserved identity that forwards a Real boundary input straight to a boundary output"
+urn:oce:lowering#PassThrough.Integer
+  "Engine-reserved identity that forwards an Integer boundary input straight to a boundary output"
+urn:oce:lowering#PassThrough.Boolean
+  "Engine-reserved identity that forwards a Boolean boundary input straight to a boundary output"
+CDL.Conversions.BooleanToInteger
+  "Convert Boolean to Integer signal"
+  + integerTrue
+  + integerFalse
+CDL.Conversions.BooleanToReal
+  "Convert Boolean to Real signal"
+  + realTrue
+  + realFalse
+CDL.Conversions.IntegerToReal
+  "Convert Integer to Real signals"
+CDL.Conversions.RealToInteger
+  "Convert Real to Integer signal"
+CDL.Integers.Sources.Constant
+  "Output constant signal of type Integer"
+  + k
+CDL.Integers.Sources.Pulse
+  "Generate pulse signal of type Integer"
+  + amplitude
+  + width
+  + period
+  + shift
+  + offset
+CDL.Integers.Sources.TimeTable
+  "Table look-up with respect to time with constant segments"
+  + timeScale
+  + period
+  + table_<row>_<col>
+CDL.Integers.Abs
+  "Output the absolute value of the input"
+CDL.Integers.Add
+  "Output the sum of the two inputs"
+CDL.Integers.Subtract
+  "Output the difference of the two inputs"
+CDL.Integers.Multiply
+  "Output product of the two inputs"
+CDL.Integers.AddParameter
+  "Output the sum of an input plus a parameter"
+  + p
+CDL.Integers.Max
+  "Pass through the largest signal"
+CDL.Integers.Min
+  "Pass through the smallest signal"
+CDL.Integers.MultiSum
+  "Sum of Integers, y = k[1]*u[1] + k[2]*u[2] + ... + k[n]*u[n]"
+  + nin
+  + k_<i>
+CDL.Integers.Switch
+  "Switch between two integer signals"
+CDL.Integers.Equal
+  "Output y is true, if input u1 is equal to input u2"
+CDL.Integers.Greater
+  "Output y is true, if input u1 is greater than input u2"
+CDL.Integers.GreaterThreshold
+  "Output y is true, if input u is greater than a threshold"
+  + t
+CDL.Integers.GreaterEqual
+  "Output y is true, if input u1 is greater or equal than input u2"
+CDL.Integers.GreaterEqualThreshold
+  "Output y is true, if input u is greater or equal than a threshold"
+  + t
+CDL.Integers.Less
+  "Output y is true, if input u1 is less than input u2"
+CDL.Integers.LessThreshold
+  "Output y is true, if input u is less than a threshold"
+  + t
+CDL.Integers.LessEqual
+  "Output y is true, if input u1 is less or equal than input u2"
+CDL.Integers.LessEqualThreshold
+  "Output y is true, if input u is less or equal than a threshold"
+  + t
+CDL.Integers.OnCounter
+  "Increment the output if the input switches to true"
+  + y_start
+CDL.Integers.Change
+  "Output whether the Integer input changes values, increases or decreases"
+  + pre_u_start
+CDL.Integers.Stage
+  "Output total stages that should be enabled"
+  + n
+  + holdDuration
+  - h
+  + pre_y_start
+CDL.Routing.BooleanExtractSignal
+  "Extract signals from a boolean input signal vector"
+  + nin
+  + nout
+  - extract_<i>
+CDL.Routing.BooleanExtractor
+  "Extract scalar signal out of boolean signal vector dependent on integer input index"
+  + nin
+CDL.Routing.BooleanScalarReplicator
+  "Boolean signal replicator"
+  + nout
+CDL.Routing.BooleanVectorFilter
+  "Filter a boolean vector based on a boolean mask"
+  + nin
+  + nout
+  + msk_<i>
+CDL.Routing.BooleanVectorReplicator
+  "Boolean vector signal replicator"
+  + nin
+  + nout
+CDL.Routing.IntegerExtractSignal
+  "Extract signals from an integer input signal vector"
+  + nin
+  + nout
+  - extract_<i>
+CDL.Routing.IntegerExtractor
+  "Extract scalar signal out of integer signal vector dependent on integer input index"
+  + nin
+CDL.Routing.IntegerScalarReplicator
+  "Integer signal replicator"
+  + nout
+CDL.Routing.IntegerVectorFilter
+  "Filter an integer vector based on a boolean mask"
+  + nin
+  + nout
+  + msk_<i>
+CDL.Routing.IntegerVectorReplicator
+  "Integer vector signal replicator"
+  + nin
+  + nout
+CDL.Routing.RealExtractSignal
+  "Extract signals from a real input signal vector"
+  + nin
+  + nout
+  - extract_<i>
+CDL.Routing.RealExtractor
+  "Extract scalar signal out of real signal vector dependent on integer input index"
+  + nin
+CDL.Routing.RealScalarReplicator
+  "Real signal replicator"
+  + nout
+CDL.Routing.RealVectorFilter
+  "Filter a real vector of based on a boolean mask"
+  + nin
+  + nout
+  + msk_<i>
+CDL.Routing.RealVectorReplicator
+  "Real vector signal replicator"
+  + nin
+  + nout
+CDL.Discrete.FirstOrderHold
+  "First order hold of a sampled-data system"
+  + samplePeriod
+CDL.Discrete.Sampler
+  "Ideal sampler of a continuous signal"
+  + samplePeriod
+CDL.Discrete.TriggeredMax
+  "Output the maximum, absolute value of a continuous signal at trigger instants"
+CDL.Discrete.TriggeredMovingMean
+  "Triggered discrete moving mean of an input signal"
+  + n
+CDL.Discrete.TriggeredSampler
+  "Triggered sampling of continuous signals"
+  + y_start
+CDL.Discrete.UnitDelay
+  "Output the input signal with a unit delay"
+  + samplePeriod
+  + y_start
+CDL.Discrete.ZeroOrderHold
+  "Output the input signal with a zero order hold"
+  + samplePeriod
+CDL.Utilities.Assert
+  "Print a warning message when input becomes false"
+  + message
+CDL.Utilities.SunRiseSet
+  "Next sunrise and sunset time"
+  + lat
+  + lon
+  + timZon
