@@ -67,6 +67,12 @@ impl AssignmentTracker {
     /// direction mismatch and it is not counted twice. This is the only pass that sees both
     /// counts for an elided input — the wire-only check in `single_assignment` leaves every
     /// boundary-reached input to it.
+    ///
+    /// One refusal per input, by precedence: any driving wire gives `input is driven by a block
+    /// output and a boundary input` (with no count, so a mixed input with three or more drivers —
+    /// say two block outputs and a boundary input — reads the same); otherwise two or more
+    /// distinct boundary sources give `input is driven by distinct boundary inputs`; otherwise a
+    /// repeated assignment from one source gives `input is multiply driven (in-degree N)`.
     pub(super) fn emit_diagnostics(
         self,
         connections: &[Connection],

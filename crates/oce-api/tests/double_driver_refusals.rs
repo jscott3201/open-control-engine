@@ -181,17 +181,77 @@ fn removing_the_extra_connection_loads_warning_free_and_the_block_output_drives(
 }
 
 #[test]
-fn removing_the_block_wire_instead_loads_warning_free() {
-    // The other half of the control: the boundary edge alone is a legal single driver.
+fn removing_the_block_wire_instead_loads_warning_free_and_the_boundary_input_drives() {
+    // The other half of the control: the boundary edge alone is a legal single driver, and at run
+    // time `hys.u` follows `TOut` alone. `TOutCut` stays at 100, so `sub.y = 100 - TOut` would read
+    // high (enabled) on every frame; the disabled frames prove the boundary value is what is read.
     let mut document = econ();
     node_mut(&mut document, "sub.y")
         .as_object_mut()
         .expect("node")
         .remove("S231:isConnectedTo");
-    let (report, _) = Engine::new()
+    let mut engine = Engine::new();
+    let (report, _) = engine
         .load_cxf(&bytes(&document))
         .expect("TOut alone drives hys.u");
     assert!(report.warnings.is_empty(), "{:?}", report.warnings);
+    // uLow = 0, uHigh = 1: below 0 clears, above 1 sets, in between holds.
+    for (time, t_out, enabled) in [
+        (0.0, -5.0, false),
+        (1.0, 2.0, true),
+        (2.0, 0.5, true),
+        (3.0, -1.0, false),
+        (4.0, 0.5, false),
+    ] {
+        let frame = engine
+            .prepare_frame(
+                time,
+                &[
+                    (iri("TOut").as_str(), Value::Real(t_out)),
+                    (iri("TOutCut").as_str(), Value::Real(100.0)),
+                ],
+            )
+            .expect("both declared inputs");
+        let completed = engine.execute_frame(frame).expect("frame runs");
+        let outputs = completed.outputs();
+        assert_eq!(outputs.len(), 1, "t = {time}");
+        assert_eq!(outputs[0].0, iri("ecoEna"));
+        assert!(
+            matches!(outputs[0].1, Value::Boolean(value) if value == enabled),
+            "t = {time}: {:?}",
+            outputs[0].1
+        );
+    }
+}
+
+#[test]
+fn two_block_outputs_and_a_boundary_input_are_refused_once_as_mixed() {
+    // Three drivers on `hys.u`: `sub.y`, a second block output `extra.y`, and `TOut`. The boundary
+    // pass is the only refuser of a frame-driven input, so the input gets exactly one refusal, the
+    // mixed message, with no count.
+    let mut document = econ();
+    document["@graph"][0]["S231:containsBlock"]
+        .as_array_mut()
+        .expect("containsBlock")
+        .push(json!({ "@id": iri("extra") }));
+    document["@graph"].as_array_mut().expect("@graph").extend([
+        json!({
+            "@id": iri("extra"),
+            "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+            "S231:hasParameter": { "@id": iri("extra.k") },
+            "S231:hasOutput": { "@id": iri("extra.y") }
+        }),
+        json!({ "@id": iri("extra.k"), "S231:value": 1 }),
+        json!({
+            "@id": iri("extra.y"), "@type": "S231:RealOutput",
+            "S231:isOfDataType": { "@id": "S231:Real" },
+            "S231:isConnectedTo": { "@id": iri("hys.u") }
+        }),
+    ]);
+    assert_eq!(
+        refusal(&bytes(&document)),
+        single_assignment(&iri("hys.u"), MIXED)
+    );
 }
 
 #[test]

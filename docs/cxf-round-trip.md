@@ -44,6 +44,10 @@ produces (`crates/oce-cxf/src/lib.rs`). Everything outside it is a typed
 `CxfError::Validation` carrying `DiagCode::ExportUnsupported` error diagnostics whose `subject` is
 the offending block, connector owner, or declared boundary node. Never a panic
 (`crates/oce-cxf/src/export.rs`).
+Single assignment is judged over the emitted survivor cone: an input driven by more than one
+surviving output, and an `external_inputs` connector that a surviving output also drives, are
+refused rather than emitted, because either document would fail re-import with `single-assignment`
+(`crates/oce-cxf/src/export_single_assignment.rs`).
 
 Of the §7.4.1 connector attributes, five survive, each emitted as a bare JSON scalar on minted child
 ports and represented root boundary-input and boundary-output nodes. A root boundary input that no

@@ -138,7 +138,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
   deliberately: `single-assignment` 57 → 68, eleven mixed inputs in three documents
   (`Limits/SeparateWithDP`, `SetPoints/FreezeProtection`, `Generic/AirEconomizerHighLimits`)
   that were already refused for unresolvable conditional guards, so no document changed outcome
-  (`fixture_corpus_import.txt` re-hashes those three error lines). Three existing tests that
+  (`fixture_corpus_import.txt` re-hashes those three error lines, and gains four new lines for
+  the new fixtures, corpus 214 → 218). Three existing tests that
   had carried an unintended mixed driver were corrected, and the export-side test that pinned
   the mixed shape as round-trippable now pins its refusal.
 
