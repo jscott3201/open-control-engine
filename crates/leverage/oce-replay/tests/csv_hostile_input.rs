@@ -397,3 +397,151 @@ fn an_invalid_delimiter_is_refused() {
     let text = format!("t;{TSET};{TZON}\n0;1;2\n");
     assert!(CsvSource::new(&map, text.as_bytes(), format, &ReplayLimits::default()).is_ok());
 }
+
+/// A reader that returns `bytes` one byte per call, then fails or ends.
+struct Trickle {
+    bytes: Vec<u8>,
+    at: usize,
+    fail_at_end: bool,
+}
+
+impl std::io::Read for Trickle {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if self.at == self.bytes.len() {
+            return if self.fail_at_end {
+                Err(std::io::Error::other("disk gone"))
+            } else {
+                Ok(0)
+            };
+        }
+        if buf.is_empty() {
+            return Ok(0);
+        }
+        buf[0] = self.bytes[self.at];
+        self.at += 1;
+        Ok(1)
+    }
+}
+
+fn source_over<R: std::io::Read>(reader: R, limits: ReplayLimits) -> CsvSource<R> {
+    let engine = load(FIXTURE);
+    let map = path_map(&engine, &MissingPolicy::Refuse);
+    CsvSource::new(&map, reader, CsvFormat::seconds("t"), &limits).unwrap()
+}
+
+#[test]
+fn a_byte_order_mark_split_across_reads_is_still_stripped() {
+    let text = format!("\u{feff}t,{TSET},{TZON}\n0,1,2\n").into_bytes();
+    let mut source = source_over(
+        Trickle {
+            bytes: text,
+            at: 0,
+            fail_at_end: false,
+        },
+        ReplayLimits::MAX,
+    );
+    let (t, cells) = source.next_row().unwrap().unwrap();
+    assert_eq!(t, 0.0);
+    assert!(cells.iter().all(Option::is_some));
+    assert!(source.next_row().unwrap().is_none());
+}
+
+#[test]
+fn errors_are_sticky_so_a_retry_never_truncates() {
+    // Over the byte cap in the middle of the third record.
+    // Longer than one 8 KiB chunk, so the cap is crossed after rows have been read.
+    let mut text = format!("t,{TSET},{TZON}\n");
+    for k in 0..2_000 {
+        text.push_str(&format!("{k},1,2\n"));
+    }
+    let cap = (text.len() - 4) as u64;
+    let limits = ReplayLimits {
+        max_source_bytes: cap,
+        ..ReplayLimits::MAX
+    };
+    let mut source = source_over(text.as_bytes(), limits);
+    let mut seen = 0;
+    let error = loop {
+        match source.next_row() {
+            Ok(Some(_)) => seen += 1,
+            Ok(None) => panic!("the over-cap input ended cleanly"),
+            Err(e) => break e,
+        }
+    };
+    assert_eq!(error, SourceError::TooManyBytes { limit: cap });
+    assert!(seen > 0 && seen < 2_000, "{seen}");
+    for _ in 0..2 {
+        assert_eq!(
+            source.next_row().unwrap_err(),
+            error,
+            "a retry returns the same error"
+        );
+    }
+    // A reader failure mid-record.
+    let text = format!("t,{TSET},{TZON}\n0,1,2\n1,1").into_bytes();
+    let mut source = source_over(
+        Trickle {
+            bytes: text,
+            at: 0,
+            fail_at_end: true,
+        },
+        ReplayLimits::MAX,
+    );
+    assert!(source.next_row().unwrap().is_some());
+    let error = source.next_row().unwrap_err();
+    assert!(matches!(error, SourceError::Read { .. }), "{error:?}");
+    for _ in 0..2 {
+        assert_eq!(source.next_row().unwrap_err(), error);
+    }
+    // A content error is sticky too.
+    let text = format!("t,{TSET},{TZON}\n0,x,2\n1,1,2\n");
+    let mut source = source_over(text.as_bytes(), ReplayLimits::MAX);
+    let error = source.next_row().unwrap_err();
+    assert!(matches!(error, SourceError::BadCell { row: 1, .. }));
+    assert_eq!(source.next_row().unwrap_err(), error);
+}
+
+#[test]
+fn a_record_at_the_default_column_and_cell_caps_is_accepted_within_the_documented_bound() {
+    // 4,096 cells of 256 bytes: the time, TSet and TZon cells are zero-padded numbers.
+    let mut header: Vec<String> = vec!["t".to_owned(), TSET.to_owned(), TZON.to_owned()];
+    header.extend((3..4_096).map(|i| format!("x{i}")));
+    let number = |n: &str| format!("{}{n}", "0".repeat(256 - n.len()));
+    let mut row: Vec<String> = vec![number("0"), number("295"), number("293")];
+    row.extend((3..4_096).map(|_| "x".repeat(256)));
+    let text = format!("{}\n{}\n", header.join(","), row.join(","));
+    assert!(row.iter().all(|c| c.len() == 256) && row.len() == 4_096);
+    let engine = load(FIXTURE);
+    let map = path_map(&engine, &MissingPolicy::Refuse);
+    let mut outcome = None;
+    let info = allocation_counter::measure(|| {
+        let mut source = CsvSource::new(
+            &map,
+            text.as_bytes(),
+            CsvFormat::seconds("t"),
+            &ReplayLimits::MAX,
+        )
+        .unwrap();
+        let first = source
+            .next_row()
+            .unwrap()
+            .map(|(t, cells)| (t, cells.to_vec()));
+        outcome = Some((first, source.next_row().unwrap().is_none()));
+    });
+    let (first, ended) = outcome.unwrap();
+    let (t, cells) = first.expect("the record at the caps is accepted");
+    assert_eq!(t, 0.0);
+    assert!(
+        matches!(cells[..], [Some(oce_api::Value::Real(a)), Some(oce_api::Value::Real(b))] if a == 295.0 && b == 293.0)
+    );
+    assert!(ended);
+    // The documented bound: an 8 KiB chunk, one cell and one record of 4,096 × 256 bytes (the
+    // record buffer may double past 1 MiB while growing), plus the header's names.
+    let bound = 8 * 1024 + 257 + 4 * MB;
+    assert!(info.bytes_max < bound, "peak {} bytes", info.bytes_max);
+    assert!(
+        info.bytes_max > MB,
+        "the record itself is held: peak {} bytes",
+        info.bytes_max
+    );
+}

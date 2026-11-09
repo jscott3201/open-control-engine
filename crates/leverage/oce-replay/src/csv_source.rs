@@ -85,32 +85,49 @@ struct Tokenizer<R> {
 }
 
 impl<R: Read> Tokenizer<R> {
-    /// Refill the chunk if it is empty; reading one byte past the cap is `TooManyBytes`.
+    /// Refill the chunk if it is empty; reading one byte past the cap is `TooManyBytes`. The very
+    /// first fill keeps reading until at least four bytes are buffered (or the input ends), so a
+    /// UTF-8 byte-order mark is recognised, and skipped, even from a reader that returns one byte
+    /// at a time.
     fn refill(&mut self) -> Result<(), SourceError> {
         if self.start < self.end || self.eof {
             return Ok(());
         }
-        let room = (self.max_bytes + 1 - self.read).min(CHUNK as u64) as usize;
-        let n = loop {
-            match self.reader.read(&mut self.chunk[..room]) {
-                Ok(n) => break n,
-                Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {}
-                Err(e) => {
-                    return Err(SourceError::Read {
-                        message: e.to_string(),
-                    });
-                }
-            }
-        };
-        self.read += n as u64;
-        if self.read > self.max_bytes {
-            return Err(SourceError::TooManyBytes {
-                limit: self.max_bytes,
-            });
-        }
+        let first = self.read == 0;
         self.start = 0;
-        self.end = n;
-        self.eof = n == 0;
+        self.end = 0;
+        loop {
+            let room = (self.max_bytes + 1 - self.read).min((CHUNK - self.end) as u64) as usize;
+            let n = loop {
+                match self.reader.read(&mut self.chunk[self.end..self.end + room]) {
+                    Ok(n) => break n,
+                    Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {}
+                    Err(e) => {
+                        return Err(SourceError::Read {
+                            message: e.to_string(),
+                        });
+                    }
+                }
+            };
+            self.read += n as u64;
+            if self.read > self.max_bytes {
+                return Err(SourceError::TooManyBytes {
+                    limit: self.max_bytes,
+                });
+            }
+            self.end += n;
+            if n == 0 {
+                self.eof = true;
+            }
+            if self.eof || !(first && self.end < 4) {
+                break;
+            }
+        }
+        // A leading UTF-8 byte-order mark is skipped here rather than by `csv-core`, whose own
+        // strip needs the mark and a following byte in its first input slice.
+        if first && self.chunk[..self.end].starts_with(b"\xef\xbb\xbf") {
+            self.start = 3;
+        }
         Ok(())
     }
 
@@ -191,6 +208,9 @@ pub struct CsvSource<R: Read> {
     cells: Vec<Option<Value>>,
     row: u64,
     max_rows: u64,
+    /// The first error, returned again by every later `next_row`: after a refusal the byte
+    /// position is undefined, so reading on could only truncate silently.
+    failed: Option<SourceError>,
 }
 
 impl<R: Read> std::fmt::Debug for CsvSource<R> {
@@ -293,6 +313,7 @@ impl<R: Read> CsvSource<R> {
             cells: vec![None; map.len()],
             row: 0,
             max_rows: limits.max_rows,
+            failed: None,
         })
     }
 
@@ -356,7 +377,26 @@ impl<R: Read> FrameSource for CsvSource<R> {
         &self.ignored
     }
 
+    /// The next row. Errors are sticky: after any error every later call returns the same error,
+    /// never a truncated or resumed row.
     fn next_row(&mut self) -> Result<Option<Row<'_>>, SourceError> {
+        if let Some(error) = &self.failed {
+            return Err(error.clone());
+        }
+        match self.read_row() {
+            Ok(Some(t)) => Ok(Some((t, &self.cells))),
+            Ok(None) => Ok(None),
+            Err(error) => {
+                self.failed = Some(error.clone());
+                Err(error)
+            }
+        }
+    }
+}
+
+impl<R: Read> CsvSource<R> {
+    /// Tokenize and parse the next record into `cells`; its time, or `None` at the end.
+    fn read_row(&mut self) -> Result<Option<f64>, SourceError> {
         let row = self.row + 1;
         if !self
             .bytes
@@ -389,6 +429,6 @@ impl<R: Read> FrameSource for CsvSource<R> {
                     })?
                 };
         }
-        Ok(Some((t, &self.cells)))
+        Ok(Some(t))
     }
 }
