@@ -58,7 +58,7 @@ validity bit are all `None`, never a value, whatever `NonFiniteInputPolicy` says
 | --- | --- | --- | --- |
 | `ColumnarSource` | one time column and one owned typed column per input (numpy or pandas shape) | NaN (Real); validity mask (Integer, Boolean, Enum) | `oce-py`, `oce-wasm`, the benchmark |
 | `CsvSource` | a byte reader, a header row, a time column and a `ColumnMap` | empty cell or a configured token (`NaN`, `NA`) | `oce-verify`, `oce-host`, #436 |
-| `StepSource` | per input, a list of `(t, value)` changes; a constant is a one-step list | none: a step list defines a value on every interval it covers | `oce-verify` vector format v2 |
+| `StepSource` | per input, a list of `(t, value)` changes; a constant is a one-step list | none: a step list defines a value on every interval it covers | `oce-verify` vector format |
 
 The columnar adapter owns its columns. Python and JavaScript copy their arrays in before the run, so
 no foreign buffer is borrowed across a released lock (a day of 14 inputs at 5 s is under 2 MB).
@@ -425,7 +425,7 @@ golden byte-identical.
 
 **10. Sequencing.** #445 builds `oce-replay` on the facade path; the slot shape moves to #401's
 driver through #444's facade entry, with or after #401; time and missing-sample semantics are
-designed with #436; M3 vector format v2 maps onto the step, CSV and series sources.
+designed with #436; the M3 vector format maps onto the step, CSV and series sources.
 
 **11. samples and signals.** As stated under [Missing samples](#missing-samples).
 Rejected: treating zero-order hold as free (it hides staleness, the defect decision 2 exists to
@@ -497,10 +497,12 @@ published interchange format until a later note says so.
   origin, `CsvSource` with its caps and an input-retaining trace; converts units before the source;
   resamples references, builds its funnel envelope and derives indicators from the trace's exact
   times and bits. The two notes settle time and missing-sample semantics together.
-- **M3 vector format v2.** Constant and step inputs map onto `StepSource`, CSV columns onto
-  `CsvSource`, series onto `ColumnarSource`; expected diagnostics read the diagnostics table and
-  expected state reads snapshots; windows go through `check_coverage`. Comparison is `oce-verify`'s
-  layer over the trace; the trace never embeds a tolerance.
+- **M3 vector format** ([design note](vectors.md)). Constant and step inputs map onto
+  `StepSource`, CSV columns onto `CsvSource`, series onto `ColumnarSource`; expected diagnostics
+  read the diagnostics table; windows go through `check_coverage`. Comparison is `oce-verify`'s
+  layer over the trace; the trace never embeds a tolerance. *Amended 2026-11-09:* this bullet
+  first said "expected state reads snapshots"; the vectors note defers expected state (its
+  decision 13), so no vector reads a snapshot.
 - **M5 (`oce-py`)** builds `engine.run(frames) -> Trace` and `Trace.to_pandas()` on the cursor and
   columns; **M4 (`oce-wasm`)** runs the worker through `advance`; **M6 (`oce-host`)** reuses
   `MissingPolicy`, `OnRefusal` and `CsvSource` and adds wall-clock staleness, never a second

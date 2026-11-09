@@ -504,9 +504,10 @@ Rejected: a one-day slice (not verbatim, outside the manifest's fidelity check).
   with substitution bits, an input-retaining trace and `check_coverage`; the replay note provides
   all of them and leaves comparison, resampling, indicators and units here. The `combiTimeTable`
   reader lives in `oce-verify`.
-- **M3 `oce-verify` and vector format v2.** Tolerance mode shares source, tolerance and receipt
-  header types with v2's `within` / `of` / `when`: "a §12 commissioning spec and a library vector
-  set are the same machinery". The vector receipt's body is M3's.
+- **M3 `oce-verify` and the vector format** ([design note](vectors.md)). Tolerance mode shares
+  source, tolerance and receipt header types with its `within` / `of` / `when`: "a §12
+  commissioning spec and a library vector set are the same machinery". The vector receipt's body
+  is M3's.
 - **M5 notebooks** read the receipt through `serde` and the trace and exceedance columns through
   `Trace.to_pandas()`; plots are theirs.
 - **Conformance harness.** `oce-conformance` keeps `VerifyConfig`, `build_bounds` and segmented
