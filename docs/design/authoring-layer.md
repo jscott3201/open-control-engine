@@ -288,9 +288,9 @@ message that names an assignment in backticks to that assignment, as stage 1 doe
 is `single-assignment`, which is same-code only: stage 1 reports the repeating connection
 (`connection[N]`), the engine the input it names, which stage 2 maps to the first connection
 driving it. The same review added two stage-1
-rules: a target the connection list repeats is `single-assignment` at stage 1 (the engine refuses
-two block outputs or two boundary inputs on one input, but loads a block output beside a boundary
-input without a refusal, GitHub #472), and an Integer literal of magnitude above 2^53 on a Real
+rules: a target the connection list repeats is `single-assignment` at stage 1 (when this was
+written the engine loaded a block output beside a boundary input without a refusal, GitHub #472;
+it refuses it since GitHub #477, and stage 1 still reports the repeat first), and an Integer literal of magnitude above 2^53 on a Real
 parameter is `parameter-out-of-range` (it has no exact Real, so the engine would load a value the
 author never wrote).
 

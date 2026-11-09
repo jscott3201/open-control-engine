@@ -252,8 +252,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `origin = engine`; `connector#N` and other subjects outside the scheme stay on `sequence` with
   the raw subject in `detail`. Two new codes: `document-too-large` and `load-failed`. Stage 1
   gains two rules: a target the connection list repeats is `single-assignment` (pre-empting the
-  engine, which does not yet refuse a block output beside a boundary input, #472), and an Integer
-  literal above 2^53 in magnitude on a Real parameter is `parameter-out-of-range`
+  engine's own refusal, which covers a block output beside a boundary input since GitHub #477),
+  and an Integer literal above 2^53 in magnitude on a Real parameter is `parameter-out-of-range`
   (`MAX_EXACT_INTEGER`). A minimal `import_cxf` reads the flat corpus dialect strictly (a key
   written twice or an integer outside `i64` is refused) and refuses everything outside the
   authoring subset with a typed `ImportError`. The parity test emits each stage-1 defect with
@@ -281,8 +281,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   engine (subnormals, `f64::MAX`, `-0.0`, `i64::MIN`/`MAX`, enumeration members, references); the
   permutation classes, the §7.17 seam (only `unit` lines move and the compiled blob is unit-blind
   apart from its content id) and hostile importer input (a bounded mutation sweep over every
-  imported document) are tested. Found on the way: a block input driven by both a block output and a
-  boundary input loads without a `single-assignment` refusal (#472).
+  imported document) are tested. Found on the way, and fixed by GitHub #477: a block input driven by
+  both a block output and a boundary input loaded without a `single-assignment` refusal (#472);
+  the parity test now pins the engine's refusal of it.
 
 ### Documentation
 

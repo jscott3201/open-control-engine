@@ -357,16 +357,30 @@ fn two_boundary_inputs_on_one_input_meet_the_engines_single_assignment() {
 }
 
 #[test]
-fn a_mixed_double_driver_is_not_yet_refused_by_the_engine() {
-    // A block input driven by a block output and a boundary input loads warning-free (GitHub
-    // #472); stage 1 refuses it (`single-assignment`). Flip this when #472 lands.
+fn a_block_output_beside_a_boundary_input_breaks_the_engines_single_assignment() {
+    // A block input driven by a block output and a boundary input: stage 1 refuses the repeated
+    // target, and with stage 1 bypassed the engine refuses it too at the input (GitHub #472,
+    // fixed in GitHub #477), mapped to the first connection driving it.
     let mut s = econ_enable();
     connect(&mut s, "TOut", "hys.u");
     assert_eq!(
         pairs(&validate_author_side(&s)),
         vec![("single-assignment", "connection[4]".to_owned())]
     );
-    assert_eq!(engine(&s), vec![]);
+    let findings = engine(&s);
+    assert_eq!(
+        pairs(&findings),
+        vec![("single-assignment", "connection[2]".to_owned())]
+    );
+    assert_eq!(findings[0].origin, crate::validate::Origin::Engine);
+    // The engine's subject is the input `hys.u`; stage 2 names the first connection driving it.
+    assert!(
+        findings[0]
+            .detail
+            .contains("a block output and a boundary input"),
+        "{}",
+        findings[0].detail
+    );
 }
 
 #[test]

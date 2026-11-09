@@ -570,9 +570,9 @@ fn invalid_provenance_id() {
 
 #[test]
 fn single_assignment() {
-    // A repeated target in the connection list: the second connection is refused at stage 1
-    // (the engine would refuse two block outputs, but not a block output beside a boundary
-    // input, GitHub #472).
+    // A repeated target in the connection list: the second connection is refused at stage 1,
+    // before the engine sees it (the engine refuses every double-driver shape too since
+    // GitHub #477).
     let mut s = econ_enable();
     s.connections.push(Connection::new(
         Endpoint::parse("TOut"),

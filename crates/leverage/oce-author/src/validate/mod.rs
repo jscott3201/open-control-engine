@@ -82,7 +82,7 @@ mod codes {
     pub const INVALID_PROVENANCE_ID: &str = "invalid-provenance-id";
     /// Two connections drive one block input or boundary output. Stage 1 refuses a target the
     /// connection list repeats; the engine's own `single-assignment` covers the rest in stage 2
-    /// (and does not yet refuse a block output beside a boundary input, GitHub #472).
+    /// (it refuses every double-driver shape since GitHub #477).
     pub const SINGLE_ASSIGNMENT: &str = "single-assignment";
 
     /// Every stage-1 code, in the order of the authoring note's table.
