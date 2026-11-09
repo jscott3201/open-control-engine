@@ -383,7 +383,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Leverage
 
 - **Vocabulary v1, part 2: `oce catalog` serves the block vocabulary and `oce vocab` the unit
-  scale-factor table** (GitHub #PRNUM, issue #500; vocabulary note decisions 12 and 14). `oce-cli`
+  scale-factor table** (GitHub #526, issue #500; vocabulary note decisions 12 and 14). `oce-cli`
   now depends on `oce-vocab` (a leverage crate, so the `oce-api`-only rule holds as written).
   - **`oce catalog CLASS`** adds, to each parameter and each resolved port, the vocabulary's
     `description` and the `unit` and `quantity` the CDL source declares; to each parameter a

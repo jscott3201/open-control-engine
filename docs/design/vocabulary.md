@@ -299,7 +299,7 @@ table. v1 adds the scale-factor table there. `oce catalog CLASS` gains per-port 
 `description`, `unit`, `quantity` and `range`, the notes and the links; the class list keeps one
 line per class. Both keep `--json` in the strict profile. Rejected: block text under `oce vocab`
 (two commands answering "what does PID take"). Why: the CLI already split them that way.
-*(Landed in GitHub #PRNUM, issue #500, with three readings the implementation had to make. `range` is
+*(Landed in GitHub #526, issue #500, with the readings the implementation had to make. `range` is
 per parameter only: the catalog has no rule about a port's value, so a port carries `description`,
 `unit` and `quantity`. A range is one line per catalog rule that constrains a value (bounds,
 relations, relations that only warn, element bounds); rules about type, array shape and port
@@ -422,7 +422,7 @@ mean of at least 131.
    the hash-manifest re-bless, the crate with both data files, the generator test, the coverage
    tests and the seed curation. A `third_party` change and a new crate both run the determinism
    lane. *(Landed in GitHub #511.)*
-3. **CLI PR**: `oce catalog` and `oce vocab` as decision 12. *(Landed in GitHub #PRNUM. The
+3. **CLI PR**: `oce catalog` and `oce vocab` as decision 12. *(Landed in GitHub #526. The
    scale-factor table itself is `oce_vocab::SCALE_FACTORS`, so step 4 reads it and does not
    restate it; until step 4 lands the text form still refuses `1 h`.)*
 4. **Text-form PR**: scale factors and `unit-suffix-mismatch`, amending authoring decision 13 with a
