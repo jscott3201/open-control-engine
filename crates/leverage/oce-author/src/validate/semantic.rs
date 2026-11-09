@@ -2,10 +2,14 @@
 //! (decisions 2 and 21). Syntax only: no vocabulary is consulted before M8 and vocabulary v1.
 
 use crate::model::Boundary;
-use crate::wire::MAX_WIRE_LIST_LEN;
+use crate::text::is_bidi_control;
 
 /// The longest semantic field, in bytes (the text form's token bound).
 pub const MAX_SEMANTIC_FIELD_BYTES: usize = 256;
+
+/// The most `@haystack` tags on one boundary (amended 2026-11-09, issue #482): with every other
+/// field at its bound, a boundary still prints on one text line within the line bound.
+pub const MAX_HAYSTACK_TAGS: usize = 16;
 
 /// An atom: non-empty printable ASCII with no space or `#`, at most
 /// [`MAX_SEMANTIC_FIELD_BYTES`] bytes (the text form's `atom`).
@@ -26,7 +30,7 @@ fn atom_problem(value: &str) -> Option<String> {
 }
 
 /// A free-text field (`name`, `label`): non-empty, at most [`MAX_SEMANTIC_FIELD_BYTES`] bytes,
-/// no control characters.
+/// no control characters and no bidirectional override or isolate (the text form refuses them).
 fn text_problem(value: &str) -> Option<String> {
     if value.is_empty() {
         return Some("is empty; an absent field is left out, not empty".to_owned());
@@ -39,8 +43,8 @@ fn text_problem(value: &str) -> Option<String> {
     }
     value
         .chars()
-        .any(char::is_control)
-        .then(|| "carries a control character".to_owned())
+        .any(|c| c.is_control() || is_bidi_control(c))
+        .then(|| "carries a control character or a bidirectional override".to_owned())
 }
 
 /// A field check: the problem with a present value, if any.
@@ -68,9 +72,9 @@ pub(crate) fn boundary_problems(boundary: &Boundary) -> Vec<String> {
                 .map(|problem| format!("`{field}` {problem}"))
         })
         .collect();
-    if s.haystack.len() > MAX_WIRE_LIST_LEN {
+    if s.haystack.len() > MAX_HAYSTACK_TAGS {
         problems.push(format!(
-            "`haystack` has {} tags; the wire form carries at most {MAX_WIRE_LIST_LEN}",
+            "`haystack` has {} tags; at most {MAX_HAYSTACK_TAGS} are allowed",
             s.haystack.len()
         ));
     }

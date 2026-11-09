@@ -1,0 +1,101 @@
+sequence cooling_only_system_requests
+extends none
+param thrTemDif : Real = 3.0
+param twoTemDif : Real = 2.0
+param durTimTem : Real = 120.0
+param durTimFlo : Real = 60.0
+param dTHys : Real = 0.25
+param floHys : Real = 0.01
+param looHys : Real = 0.01
+param damPosHys : Real = 0.01
+param samplePeriod : Real = 120.0
+in uAftSup : Boolean
+in TCooSet : Real @unit K @quantity ThermodynamicTemperature
+in TZon : Real @unit K @quantity ThermodynamicTemperature
+in uCoo : Real @unit 1
+in VSet_flow : Real @unit m3/s @quantity VolumeFlowRate
+in VDis_flow : Real @unit m3/s @quantity VolumeFlowRate
+in uDam : Real @unit 1
+out yZonTemResReq : Integer
+out yZonPreResReq : Integer
+block greThr1 = CDL.Reals.GreaterThreshold(t = thrTemDif, h = dTHys)
+block greThr2 = CDL.Reals.GreaterThreshold(t = twoTemDif, h = dTHys)
+block greThr3 = CDL.Reals.GreaterThreshold(t = 0.95, h = damPosHys)
+block greThr = CDL.Reals.GreaterThreshold(t = 0.95, h = looHys)
+block greThr4 = CDL.Reals.GreaterThreshold(t = floHys, h = 0.005)
+block booToInt = CDL.Conversions.BooleanToInteger
+block booToInt1 = CDL.Conversions.BooleanToInteger
+block gai1 = CDL.Reals.MultiplyByParameter(k = 0.5)
+block gai2 = CDL.Reals.MultiplyByParameter(k = 0.7)
+block sub2 = CDL.Reals.Subtract
+block sub3 = CDL.Reals.Subtract
+block and1 = CDL.Logical.And
+block and2 = CDL.Logical.And
+block and3 = CDL.Logical.And
+block and4 = CDL.Logical.And
+block thrCooResReq = CDL.Integers.Sources.Constant(k = 3)
+block twoCooResReq = CDL.Integers.Sources.Constant(k = 2)
+block thrPreResReq = CDL.Integers.Sources.Constant(k = 3)
+block twoPreResReq = CDL.Integers.Sources.Constant(k = 2)
+block intSwi = CDL.Integers.Switch
+block intSwi1 = CDL.Integers.Switch
+block swi4 = CDL.Integers.Switch
+block swi5 = CDL.Integers.Switch
+block tim1 = CDL.Logical.TrueDelay(delayTime = durTimTem)
+block tim2 = CDL.Logical.TrueDelay(delayTime = durTimTem)
+block tim3 = CDL.Logical.TrueDelay(delayTime = durTimFlo)
+block greEqu = CDL.Reals.Greater(h = floHys)
+block greEqu1 = CDL.Reals.Greater(h = floHys)
+block and5 = CDL.Logical.And
+block sampler = CDL.Discrete.Sampler(samplePeriod = samplePeriod)
+block sampler1 = CDL.Discrete.Sampler(samplePeriod = samplePeriod)
+block sampler2 = CDL.Discrete.Sampler(samplePeriod = samplePeriod)
+block sampler3 = CDL.Discrete.Sampler(samplePeriod = samplePeriod)
+uAftSup -> and2.u1
+uAftSup -> and1.u1
+TCooSet -> sub2.u2
+TCooSet -> sub3.u2
+TZon -> sub2.u1
+TZon -> sub3.u1
+uCoo -> sampler.u
+VSet_flow -> sampler3.u
+VDis_flow -> sampler2.u
+uDam -> sampler1.u
+greThr1.y -> tim1.u
+greThr2.y -> tim2.u
+greThr3.y -> tim3.u
+greThr3.y -> booToInt1.u
+greThr.y -> booToInt.u
+greThr4.y -> and5.u1
+booToInt.y -> intSwi1.u3
+booToInt1.y -> swi5.u3
+gai1.y -> greEqu.u1
+gai2.y -> greEqu1.u1
+sub2.y -> greThr1.u
+sub3.y -> greThr2.u
+and1.y -> intSwi1.u2
+and2.y -> intSwi.u2
+and3.y -> swi4.u2
+and4.y -> swi5.u2
+thrCooResReq.y -> intSwi.u1
+twoCooResReq.y -> intSwi1.u1
+thrPreResReq.y -> swi4.u1
+twoPreResReq.y -> swi5.u1
+intSwi.y -> yZonTemResReq
+intSwi1.y -> intSwi.u3
+swi4.y -> yZonPreResReq
+swi5.y -> swi4.u3
+tim1.y -> and2.u2
+tim2.y -> and1.u2
+tim3.y -> and5.u2
+greEqu.y -> and3.u2
+greEqu1.y -> and4.u2
+and5.y -> and3.u1
+and5.y -> and4.u1
+sampler.y -> greThr.u
+sampler1.y -> greThr3.u
+sampler2.y -> greEqu.u2
+sampler2.y -> greEqu1.u2
+sampler3.y -> greThr4.u
+sampler3.y -> gai1.u
+sampler3.y -> gai2.u
