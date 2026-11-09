@@ -7,6 +7,7 @@ hosting, bindings and packaging (`oce-author`, `oce-verify`, `oce-diff`, `oce-ho
 | Crate | Responsibility |
 | --- | --- |
 | [`oce-replay`](oce-replay/) | Historical replay (M3, [design note](../../docs/design/replay.md)): slot-indexed frame sources (columnar, bounded CSV, step lists), the missing-sample policy, a columnar bit-exact trace and a resumable cursor over the facade's slot entry. `publish = false`. |
+| [`oce-author`](oce-author/) | Authoring layer (M2, [design note](../../docs/design/authoring-layer.md), [README](oce-author/README.md)): the typed authoring model and builder, the strict-JSON wire form (`from_wire_str` / `to_wire_string`, five value shapes) with its pinned `schemars` schema (`WIRE_SCHEMA`, [`schema/sequence.schema.json`](oce-author/schema/sequence.schema.json)), and the author-side (stage 1) validator. `publish = false`. |
 
 Each one lives at `crates/leverage/<name>`, is named `oce-<name>`, and is a workspace member through
 the `crates/leverage/*` glob in the root `Cargo.toml`.

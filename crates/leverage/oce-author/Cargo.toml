@@ -1,0 +1,33 @@
+# The authoring layer above the facade (design note docs/design/authoring-layer.md, issue #463):
+# the typed authoring model, a builder, the strict-JSON wire form with its pinned schema, and the
+# author-side (stage 1) validator. It depends on `oce-api` only among the engine crates
+# (crates/leverage/README.md); `oce-bless` is its one other `oce-*` edge, as a dev-dependency for
+# the golden switch (decision 19).
+[package]
+name = "oce-author"
+description = "Authoring model, strict-JSON wire form, pinned JSON Schema and author-side validator for Open Control Engine sequences."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+# Nothing above the facade is published in M2 (decision 20).
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+oce-api = { workspace = true }
+# The wire DTOs (decision 8). The workspace entries pin serde without default features for the
+# `no_std` core, so this crate names `std` itself.
+serde = { workspace = true, features = ["std"] }
+serde_json = { workspace = true }
+# The wire-form JSON Schema is derived from the DTOs (decision 8); M2's one new third-party
+# dependency in this crate, confined to crates/leverage/ (decision 20).
+schemars = { version = "=1.2.3", default-features = false, features = ["derive", "std"] }
+
+[dev-dependencies]
+oce-bless = { workspace = true }

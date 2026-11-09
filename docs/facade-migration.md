@@ -54,8 +54,8 @@ numerical goldens, catalog identity, HostTick arithmetic and engine thread-safet
 
 ## Package and panic-inventory boundary
 
-The workspace has 14 members, 10 publishable and four private (`oce-bless`, `oce-conformance`,
-the firmware image `oce-firmware-link` and the leverage crate `oce-replay`). `oce-api` declares no cargo features, and its normal
+The workspace has 15 members, 10 publishable and five private (`oce-bless`, `oce-conformance`,
+the firmware image `oce-firmware-link` and the leverage crates `oce-replay` and `oce-author`). `oce-api` declares no cargo features, and its normal
 closure is eight OCE packages: no `oce-store` (GitHub #390). The former
 `oce-store-mem` crate is folded into `oce-store` behind its default `mem` feature (GitHub #391):
 `oce_store_mem::MemStore` is now `oce_store::MemStore`, with the same behaviour. The
