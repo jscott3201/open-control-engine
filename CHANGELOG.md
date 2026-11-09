@@ -116,7 +116,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Leverage
 
 - **`oce-author`: the authoring model, wire form, pinned schema and stage-1 validator** (GitHub
-  #PRNUM, issue #463). `crates/leverage/oce-author` (`publish = false`, `oce-api` only) is M2's first
+  #466, issue #463). `crates/leverage/oce-author` (`publish = false`, `oce-api` only) is M2's first
   crate, built to `docs/design/authoring-layer.md`. The model is one flat `Sequence` of sequence
   parameters, boundary inputs and outputs (with `quantity`, `display_unit` and a closed
   `SemanticPoint` slot), leaf blocks with ordered assignments (a tagged literal or a reference to a
