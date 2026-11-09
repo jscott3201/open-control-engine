@@ -160,7 +160,7 @@ fn an_aliased_table_cell_is_refused_alone_or_beside_its_canonical_spelling() {
         "table_+1_2",
         "table_1_02",
         "table_-1_2",
-        "table_0_2",
+        "table_00_2",
     ] {
         assert_spelling_refused(&time_table(&[(name, 5.0)]), name);
     }
