@@ -6,9 +6,12 @@
 //! in debug) before it was refused with ordinary diagnostics. Step 9 now interns each distinct
 //! endpoint once, so these documents resolve in time linear in their size.
 //!
-//! The wall-clock bound is deliberately generous — it guards the complexity class, not a speed:
-//! the pre-fix code exceeds it by more than an order of magnitude in either profile, and the
-//! fixed code clears it by more than an order of magnitude in debug.
+//! The 30 s wall-clock bound per import is deliberately generous — it guards the complexity class,
+//! not a speed. With the fix a 1 MiB × 65,535 import takes about 1 s in debug (about 0.08 s in
+//! release) on a developer machine; allowing roughly 3× for a Windows cell or a loaded CI runner
+//! still leaves about 10× headroom. Before the fix the same import took about 71 s in release and
+//! about ten minutes in debug, so the pre-fix code fails the bound in either profile. Each test
+//! builds at most three 10 MB documents so it stays well under 10 s in debug.
 
 use std::time::{Duration, Instant};
 
@@ -148,11 +151,7 @@ fn assert_reported_once(target_kind: FanoutTarget, source: &str, diagnostics: &[
 /// minute in release.
 #[test]
 fn mebibyte_skipped_source_at_the_target_limit_resolves_within_the_cpu_bound() {
-    for target_kind in [
-        FanoutTarget::LeafInput,
-        FanoutTarget::BoundaryInput,
-        FanoutTarget::BoundaryOutput,
-    ] {
+    for target_kind in ROLES {
         let (document, source) = skipped_source_fanout(target_kind, MIB, TARGET_LIMIT - 1);
         let (diagnostics, elapsed) = timed_refusal(&document, kind_name(target_kind));
         assert_reported_once(target_kind, &source, &diagnostics);
@@ -164,33 +163,74 @@ fn mebibyte_skipped_source_at_the_target_limit_resolves_within_the_cpu_bound() {
     }
 }
 
-/// Across source lengths, a fan-out at the examined-target limit keeps its ordinary verdict and
-/// one past it is refused by the target-count bound, each within the CPU bound. The source bytes
-/// are never charged, so the verdict at each fan-out is the same for every source length.
-#[test]
-fn source_length_sweep_keeps_target_limit_verdicts_within_the_cpu_bound() {
-    let over_limit = Diagnostic::error(
+const ROLES: [FanoutTarget; 3] = [
+    FanoutTarget::LeafInput,
+    FanoutTarget::BoundaryInput,
+    FanoutTarget::BoundaryOutput,
+];
+
+fn over_limit() -> Diagnostic {
+    Diagnostic::error(
         DiagCode::MalformedDocument,
         format!(
             "composite boundary resolution exceeds the supported target examination count \
              ({TARGET_LIMIT})"
         ),
-    );
-    for padding in [1, MIB] {
-        for target_kind in [FanoutTarget::LeafInput, FanoutTarget::BoundaryOutput] {
-            let label = format!("{} padding={padding}", kind_name(target_kind));
-            let (document, source) = skipped_source_fanout(target_kind, padding, TARGET_LIMIT - 1);
-            let (diagnostics, elapsed) = timed_refusal(&document, &label);
-            assert_reported_once(target_kind, &source, &diagnostics);
-            assert!(elapsed < IMPORT_BOUND, "{label} at limit: {elapsed:?}");
+    )
+}
 
-            let (document, _) = skipped_source_fanout(target_kind, padding, TARGET_LIMIT);
-            let (diagnostics, elapsed) = timed_refusal(&document, &label);
-            assert!(
-                diagnostics.contains(&over_limit),
-                "{label} over limit: {diagnostics:?}"
-            );
-            assert!(elapsed < IMPORT_BOUND, "{label} over limit: {elapsed:?}");
-        }
+/// Assert that a fan-out one past the examined-target limit is refused by the target-count bound
+/// within the CPU bound.
+fn assert_refused_past_the_limit(target_kind: FanoutTarget, padding: usize) {
+    let label = format!("{} padding={padding}", kind_name(target_kind));
+    let (document, _) = skipped_source_fanout(target_kind, padding, TARGET_LIMIT);
+    let (diagnostics, elapsed) = timed_refusal(&document, &label);
+    assert!(
+        diagnostics.contains(&over_limit()),
+        "{label}: {} diagnostics, none the target-count refusal",
+        diagnostics.len()
+    );
+    assert!(elapsed < IMPORT_BOUND, "{label} over limit: {elapsed:?}");
+}
+
+/// A 1 MiB skipped source fanned out one past the examined-target limit is refused by the
+/// target-count bound, for every target role, within the CPU bound. The source bytes are never
+/// charged, so the verdict is the one a short source gets.
+#[test]
+fn mebibyte_skipped_source_past_the_target_limit_is_refused_within_the_cpu_bound() {
+    for target_kind in ROLES {
+        assert_refused_past_the_limit(target_kind, MIB);
+    }
+}
+
+/// A one-byte-padded skipped source at the examined-target limit keeps the same ordinary verdict
+/// as the 1 MiB one. (Past the limit only the 1 MiB source is swept: the over-limit refusal comes
+/// from the lowering target budget, which never charges the source, and each extra
+/// 65,536-target document costs about a second in debug.)
+#[test]
+fn short_skipped_source_keeps_the_at_limit_verdict() {
+    for target_kind in ROLES {
+        let label = kind_name(target_kind);
+        let (document, source) = skipped_source_fanout(target_kind, 1, TARGET_LIMIT - 1);
+        let (diagnostics, elapsed) = timed_refusal(&document, label);
+        assert_reported_once(target_kind, &source, &diagnostics);
+        assert!(elapsed < IMPORT_BOUND, "{label} at limit: {elapsed:?}");
+    }
+}
+
+/// Resolving one fan-out document twice in one process yields identical diagnostic vectors, for
+/// every target role: endpoint ids and the source memo never leak into the output.
+#[test]
+fn repeated_fanout_import_reports_identical_diagnostics() {
+    for target_kind in ROLES {
+        let label = kind_name(target_kind);
+        let (document, _) = skipped_source_fanout(target_kind, 64, 16);
+        let (first, _) = timed_refusal(&document, label);
+        let (second, _) = timed_refusal(&document, label);
+        assert!(!first.is_empty(), "{label}");
+        assert_eq!(
+            first, second,
+            "{label}: repeated import changed the diagnostics"
+        );
     }
 }

@@ -128,10 +128,12 @@ and a gate that accepted any text would restore exactly the false assurance desc
   warning reads the boundary inputs Step 9 interned instead of walking the edges again. That
   document is now refused in about 75 ms in release (0.9 s in debug), and the three
   `skipped_synthesized_*` tests drop from 55–86 s to about 1 s in debug, which closes #469 with
-  no test-side change. Every diagnostic, its order and its text are unchanged; no golden moved. A
-  1 MiB × 65,535 regression test and a source-length sweep at the target-examination limit pin
-  the bound. A long *authored* source fanned out in the lowering pass remains bilinear and is
-  tracked in #480.
+  no test-side change. Every diagnostic, its order and its text are unchanged; no golden moved.
+  Regression tests pin the bound (1 MiB × 65,535 at and one past the target-examination limit for
+  all three target roles, a short-source control) and determinism (a repeated import, and shared
+  versus separate source allocations collecting identically). A long *authored* source fanned out
+  in the lowering pass remains bilinear — more than 180 s of release CPU at 1 MiB × 65,535 — and
+  is tracked in #480; `SECURITY.md` lists that path as not yet bounded.
 
 - **A block input driven by both a block output and a root boundary input is refused**
   (GitHub #477, issue #472). CDL §7.10 gives every input exactly one driver, and the resolver

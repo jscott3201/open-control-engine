@@ -32,7 +32,7 @@ use super::specialize::Specialization;
 ///
 /// Two endpoints have the same id exactly when their IRIs are byte-equal.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub(super) struct EndpointId(pub(super) u32);
+pub(super) struct EndpointId(pub(super) usize);
 
 /// Everything Step 9 asks about one endpoint IRI, computed once per distinct IRI.
 pub(super) struct Endpoint<'a> {
@@ -111,7 +111,8 @@ impl<'a> EndpointTable<'a> {
         if let Some(&id) = self.ids.get(iri) {
             return id;
         }
-        let id = EndpointId(self.endpoints.len() as u32);
+        // A `usize` index cannot overflow: every id is a distinct entry already held in memory.
+        let id = EndpointId(self.endpoints.len());
         let endpoint = self.classify(iri);
         self.endpoints.push(endpoint);
         self.ids.insert(iri, id);
@@ -120,13 +121,13 @@ impl<'a> EndpointTable<'a> {
 
     /// The classification of an interned endpoint.
     pub(super) fn get(&self, id: EndpointId) -> &Endpoint<'a> {
-        &self.endpoints[id.0 as usize]
+        &self.endpoints[id.0]
     }
 
     /// The endpoint's IRI as a diagnostic subject, allocated once and shared by every diagnostic
     /// that names this endpoint.
     pub(super) fn subject(&self, id: EndpointId) -> Arc<str> {
-        let endpoint = &self.endpoints[id.0 as usize];
+        let endpoint = &self.endpoints[id.0];
         Arc::clone(endpoint.subject.get_or_init(|| Arc::from(endpoint.iri)))
     }
 

@@ -21,6 +21,8 @@ a partial flat graph. Ordinary direct leaf wiring does not consume the boundary-
 Connection collection after lowering interns each distinct endpoint IRI once, so a long re-anchored
 source shared by a whole fan-out (including a derivation-skipped synthesized source, whose bytes no
 budget charges) costs time linear in the edge list rather than fan-out × IRI length (issue #479).
+That is not yet true of the whole import: the lowering pass still hashes a long *authored* source
+once per edge (more than 180 s of release CPU at 1 MiB × 65,535; issue #480).
 Every composite and leaf is lowered at most once (`shared-instance` refuses a second reach), each
 composite's grounded declarations are shared by reference with its children rather than copied
 per leaf, and all preserved array parameters of one document share a 1,048,576-element budget

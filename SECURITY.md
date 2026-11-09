@@ -40,9 +40,12 @@ Verified in the tree, with the enforcing site named so you can check rather than
 | Composite *nesting* depth | 64 (`MAX_COMPOSITE_NESTING_DEPTH`) | CXF import — `crates/oce-cxf/src/resolve/composite.rs` |
 | Composite boundary path | 64 non-top `isConnectedTo` hops | iterative CXF lowering — `crates/oce-cxf/src/resolve/composite.rs` |
 | Composite boundary work | 65,536 target examinations and 8 MiB of aggregate target-IRI bytes per document | iterative CXF lowering — `crates/oce-cxf/src/resolve/composite.rs` |
+| Connection collection (resolve Step 9) | time and memory linear in the edge list: each distinct endpoint IRI classified once, one shared diagnostic subject per endpoint | `crates/oce-cxf/src/resolve/connection_endpoints.rs` |
+| Lowering of a long *authored* connection source | **not yet bounded**: fan-out × IRI length (issue #480); cap document size in the host | `crates/oce-cxf/src/resolve/composite_orientation.rs` |
 
-Each returns a typed diagnostic rather than aborting. `#![forbid(unsafe_code)]` is set in
-all 15 workspace members (the 12 engine crates, the firmware image and the leverage crates
+Each count or byte bound returns a typed diagnostic rather than aborting. The connection-collection
+row is a complexity guarantee, not a limit, and the last row is a known gap, described under [Untrusted CXF remains untrusted input](#untrusted-cxf-remains-untrusted-input).
+`#![forbid(unsafe_code)]` is set in all 15 workspace members (the 12 engine crates, the firmware image and the leverage crates
 `oce-replay` and `oce-author`), so the usual memory-safety
 classes are out of scope by construction.
 
@@ -61,8 +64,15 @@ diagnostic-subject allocation per endpoint, so a long source fanned out to many 
 and memory linear in the document, not fan-out × IRI length. The source of a derivation-skipped,
 re-anchored synthesized connection is not charged against the byte budget, and it no longer needs
 to be: a 10 MB document with a 1 MiB such source and 65,535 targets is refused in under 0.1 s of
-release CPU, where it took about a minute before (GitHub issue #479). The lowering pass itself
-still hashes a long *authored* source once per edge; issue #480 tracks that case.
+release CPU, where it took about a minute before (GitHub issue #479).
+
+**Hostile input is not yet fully CPU-bounded on one path.** The lowering pass that runs before
+connection collection still hashes a long *authored* source IRI once per edge, so a single leaf
+port with a long `@id` wired to many targets costs fan-out × IRI length: 4.4 s of release CPU at a
+16 KiB IRI × 65,535 targets, and more than 180 s at 1 MiB × 65,535 (a document of about 10 MB).
+That document is not refused early: lowering is the slow part, and every edge in it is legal to
+lower, so no budget trips before the work is done. Issue #480 tracks the fix. Until it lands, the
+host-side document-size cap in the next paragraph is the mitigation.
 
 The library does not impose a byte limit before JSON deserialization. A host accepting CXF from an
 untrusted source must still cap document size and resource use before calling the loader. Keep

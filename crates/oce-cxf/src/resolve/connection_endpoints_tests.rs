@@ -117,3 +117,100 @@ fn subjects_are_minted_once_per_endpoint_and_shared() {
     );
     assert_eq!(&*first, long.as_str());
 }
+
+/// Run Step 9 over `edges` against the fixture and render everything it produced.
+fn collect_rendered(fixture: &Fixture<'_>, edges: &[(&str, &str)]) -> String {
+    let lookups = EndpointLookups {
+        specialization: &fixture.specialization,
+        boundary_in: &fixture.boundary_in,
+        boundary_out: &fixture.boundary_out,
+        conn_of_iri: &fixture.conn_of_iri,
+        connector_dirs: &fixture.connector_dirs,
+        by_id: &fixture.by_id,
+        boundary_types: &fixture.boundary_types,
+    };
+    let mut connectors = vec![oce_model::Connector::new(
+        ConnectorId(0),
+        oce_model::BlockId(0),
+        Dir::In,
+        ValueType::Real,
+        0,
+    )];
+    let mut diags = Vec::new();
+    let collected = crate::resolve::connections::collect(
+        edges.iter().copied(),
+        lookups,
+        &mut connectors,
+        &mut diags,
+    );
+    let mut drivers: Vec<_> = collected
+        .boundary_output_drivers
+        .iter()
+        .map(|(output, set)| {
+            let mut set: Vec<_> = set.iter().cloned().collect();
+            set.sort();
+            (output.clone(), set)
+        })
+        .collect();
+    drivers.sort();
+    let mut sources: Vec<_> = collected.boundary_output_sources.into_iter().collect();
+    sources.sort();
+    let mut read: Vec<_> = collected.boundary_inputs_read.into_iter().collect();
+    read.sort();
+    format!(
+        "{diags:?}\n{:?}\n{:?}\n{:?}\n{drivers:?}\n{sources:?}\n{read:?}\n{:?}",
+        collected.connections,
+        collected.external_inputs,
+        collected.pass_through_pairs,
+        connectors[0].iri,
+    )
+}
+
+/// The same edge list built from one shared source allocation and from a separate allocation per
+/// edge collects byte-identical output: the slice-identity memo never decides a result.
+#[test]
+fn shared_and_separate_source_allocations_collect_identically() {
+    let fixture = Fixture::new();
+    // One long missing source per arm (the report-once set spans arms), each fanned out twice so
+    // the shared build exercises the source memo.
+    let [leaf, output, input] =
+        ["leaf", "output", "input"].map(|arm| format!("urn:missing:{arm}:{}", "x".repeat(4096)));
+    let shape: [(&str, &str); 10] = [
+        (&leaf, "urn:child:u"),
+        (&leaf, "urn:child:u"),
+        (&output, "urn:top:y"),
+        (&output, "urn:top:y"),
+        (&input, "urn:top:u"),
+        (&input, "urn:top:u"),
+        ("urn:top:u", "urn:child:u"),
+        ("urn:top:u", "urn:child:u"),
+        ("urn:top:u", "urn:top:y"),
+        ("urn:top:u", "urn:top:y"),
+    ];
+    let shared = collect_rendered(&fixture, &shape);
+
+    let owned: Vec<(String, String)> = shape
+        .iter()
+        .map(|(source, target)| ((*source).to_owned(), (*target).to_owned()))
+        .collect();
+    let separate: Vec<(&str, &str)> = owned
+        .iter()
+        .map(|(source, target)| (source.as_str(), target.as_str()))
+        .collect();
+    assert!(
+        !std::ptr::eq(separate[0].0, separate[1].0),
+        "each edge owns its source"
+    );
+    let separate = collect_rendered(&fixture, &separate);
+
+    assert_eq!(shared, separate);
+    for expected in [
+        "connection source not found",
+        "boundary-output source not found",
+        "boundary-input target not found",
+        "boundary-input:urn:top:u",
+    ] {
+        assert!(shared.contains(expected), "missing {expected}: {shared}");
+    }
+    assert_eq!(shared.matches("not found").count(), 3, "{shared}");
+}
