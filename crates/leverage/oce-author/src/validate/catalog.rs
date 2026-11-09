@@ -62,13 +62,13 @@ const PLACEHOLDERS: [&str; 3] = [
     PARAM_COL_PLACEHOLDER,
 ];
 
-fn is_template(name: &str) -> bool {
+pub(crate) fn is_template(name: &str) -> bool {
     PLACEHOLDERS.iter().any(|p| name.contains(p))
 }
 
 /// Read the 1-based indices `name` fills into `template`, or `None` when it does not fit. Each
 /// placeholder takes a run of digits without a leading zero.
-fn match_template(template: &str, name: &str) -> Option<Vec<usize>> {
+pub(crate) fn match_template(template: &str, name: &str) -> Option<Vec<usize>> {
     let mut indices = Vec::new();
     let mut rest_template = template;
     let mut rest_name = name;

@@ -1,0 +1,625 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#"
+  },
+  "@graph": [
+    {
+      "@id": "urn:oce:author:every_element",
+      "@type": "S231:Block",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:every_element.kGain"
+        },
+        {
+          "@id": "urn:oce:author:every_element.nStages"
+        },
+        {
+          "@id": "urn:oce:author:every_element.reverse"
+        },
+        {
+          "@id": "urn:oce:author:every_element.TiSec"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:every_element.TSup"
+        },
+        {
+          "@id": "urn:oce:author:every_element.TSupSet"
+        },
+        {
+          "@id": "urn:oce:author:every_element.uEna"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:every_element.yStage"
+        },
+        {
+          "@id": "urn:oce:author:every_element.ySum"
+        },
+        {
+          "@id": "urn:oce:author:every_element.yGain1"
+        },
+        {
+          "@id": "urn:oce:author:every_element.yGain2"
+        },
+        {
+          "@id": "urn:oce:author:every_element.yTab"
+        },
+        {
+          "@id": "urn:oce:author:every_element.yCon"
+        }
+      ],
+      "S231:containsBlock": [
+        {
+          "@id": "urn:oce:author:every_element.conPID"
+        },
+        {
+          "@id": "urn:oce:author:every_element.sum3"
+        },
+        {
+          "@id": "urn:oce:author:every_element.gain"
+        },
+        {
+          "@id": "urn:oce:author:every_element.tab"
+        },
+        {
+          "@id": "urn:oce:author:every_element.staCon"
+        },
+        {
+          "@id": "urn:oce:author:every_element.assMes"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.kGain",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.25",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.nStages",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 3
+    },
+    {
+      "@id": "urn:oce:author:every_element.reverse",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": false
+    },
+    {
+      "@id": "urn:oce:author:every_element.TiSec",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "300.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.conPID",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.PID",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:every_element.conPID.controllerType"
+        },
+        {
+          "@id": "urn:oce:author:every_element.conPID.k"
+        },
+        {
+          "@id": "urn:oce:author:every_element.conPID.Ti"
+        },
+        {
+          "@id": "urn:oce:author:every_element.conPID.reverseActing"
+        },
+        {
+          "@id": "urn:oce:author:every_element.conPID.yMin"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:every_element.conPID.u_s"
+        },
+        {
+          "@id": "urn:oce:author:every_element.conPID.u_m"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:every_element.conPID.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.conPID.controllerType",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
+      },
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI"
+    },
+    {
+      "@id": "urn:oce:author:every_element.conPID.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "kGain"
+    },
+    {
+      "@id": "urn:oce:author:every_element.conPID.Ti",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "TiSec"
+    },
+    {
+      "@id": "urn:oce:author:every_element.conPID.reverseActing",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": "reverse"
+    },
+    {
+      "@id": "urn:oce:author:every_element.conPID.yMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "-0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.conPID.u_s",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.conPID.u_m",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.conPID.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:every_element.yCon"
+        },
+        {
+          "@id": "urn:oce:author:every_element.sum3.u3"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.sum3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiSum",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:every_element.sum3.nin"
+        },
+        {
+          "@id": "urn:oce:author:every_element.sum3.k"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:every_element.sum3.u1"
+        },
+        {
+          "@id": "urn:oce:author:every_element.sum3.u2"
+        },
+        {
+          "@id": "urn:oce:author:every_element.sum3.u3"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:every_element.sum3.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.sum3.nin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": "nStages"
+    },
+    {
+      "@id": "urn:oce:author:every_element.sum3.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isArray": true,
+      "S231:numberDimensions": 1,
+      "S231:sizeOfDimensions": "(3)",
+      "S231:value": [
+        {
+          "@value": "1.0",
+          "@type": "http://www.w3.org/2001/XMLSchema#double"
+        },
+        {
+          "@value": "-2.0",
+          "@type": "http://www.w3.org/2001/XMLSchema#double"
+        },
+        {
+          "@value": "1e-7",
+          "@type": "http://www.w3.org/2001/XMLSchema#double"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.sum3.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.sum3.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.sum3.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.sum3.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:every_element.ySum"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.gain",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MatrixGain",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:every_element.gain.K"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:every_element.gain.u1"
+        },
+        {
+          "@id": "urn:oce:author:every_element.gain.u2"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:every_element.gain.y1"
+        },
+        {
+          "@id": "urn:oce:author:every_element.gain.y2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.gain.K",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isArray": true,
+      "S231:numberDimensions": 2,
+      "S231:sizeOfDimensions": "(2, 2)",
+      "S231:value": [
+        {
+          "@value": "0.5",
+          "@type": "http://www.w3.org/2001/XMLSchema#double"
+        },
+        {
+          "@value": "0.5",
+          "@type": "http://www.w3.org/2001/XMLSchema#double"
+        },
+        {
+          "@value": "1.5",
+          "@type": "http://www.w3.org/2001/XMLSchema#double"
+        },
+        {
+          "@value": "-1.5",
+          "@type": "http://www.w3.org/2001/XMLSchema#double"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.gain.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.gain.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.gain.y1",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:every_element.yGain1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.gain.y2",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:every_element.yGain2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.tab",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.TimeTable",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:every_element.tab.smoothness"
+        },
+        {
+          "@id": "urn:oce:author:every_element.tab.table"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:every_element.tab.y1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.tab.smoothness",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.Smoothness"
+      },
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.Smoothness.ConstantSegments"
+    },
+    {
+      "@id": "urn:oce:author:every_element.tab.table",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isArray": true,
+      "S231:numberDimensions": 2,
+      "S231:sizeOfDimensions": "(2, 2)",
+      "S231:value": [
+        {
+          "@value": "0.0",
+          "@type": "http://www.w3.org/2001/XMLSchema#double"
+        },
+        {
+          "@value": "1.0",
+          "@type": "http://www.w3.org/2001/XMLSchema#double"
+        },
+        {
+          "@value": "3600.0",
+          "@type": "http://www.w3.org/2001/XMLSchema#double"
+        },
+        {
+          "@value": "2.0",
+          "@type": "http://www.w3.org/2001/XMLSchema#double"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.tab.y1",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:every_element.yTab"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.staCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:every_element.staCon.k"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:every_element.staCon.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.staCon.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": "nStages"
+    },
+    {
+      "@id": "urn:oce:author:every_element.staCon.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:every_element.yStage"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.assMes",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Utilities.Assert",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:every_element.assMes.message"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:every_element.assMes.u"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.assMes.message",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:String"
+      },
+      "S231:value": "\"enable is \\\"off\\\"\\nline two\""
+    },
+    {
+      "@id": "urn:oce:author:every_element.assMes.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.TSup",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:displayUnit": "degC",
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:every_element.conPID.u_m"
+        },
+        {
+          "@id": "urn:oce:author:every_element.sum3.u1"
+        },
+        {
+          "@id": "urn:oce:author:every_element.gain.u1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.TSupSet",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:every_element.conPID.u_s"
+        },
+        {
+          "@id": "urn:oce:author:every_element.sum3.u2"
+        },
+        {
+          "@id": "urn:oce:author:every_element.gain.u2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.uEna",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:every_element.assMes.u"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:every_element.yStage",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.ySum",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.yGain1",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.yGain2",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.yTab",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:every_element.yCon",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    }
+  ]
+}

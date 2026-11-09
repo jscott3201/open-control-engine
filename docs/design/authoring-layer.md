@@ -234,26 +234,28 @@ pre-empt where one exists. The table is a test fixture: gate item 3 is a table-d
 | `duplicate-name` | author-only | `duplicate-name` | 1 | `duplicate-id` |
 | `class-not-found` | engine | `unknown-class` | 1 | — |
 | `class-not-authorable` | author-only | `class-not-authorable` | 1 | — (reserved classes) |
-| `unknown-parameter` | author-only | `unknown-param` | 1 | pinned by the parity test |
+| `unknown-parameter` | author-only | `unknown-param` | 1 | none: the engine ignores an unknown name (#467; amended 2026-11-09) |
 | `parameter-not-settable` | author-only | `unsupported-param` | 1 | — (reserved classes only; #440's settable flag) |
-| `duplicate-parameter` | engine | `duplicate-param` | 1 | — |
+| `duplicate-parameter` | author-only (amended 2026-11-09) | `duplicate-param` | 1 | `duplicate-id` (the repeated parameter node) |
 | `missing-required-parameter` | engine | `missing-required-param` | 1 | — |
 | `parameter-kind-mismatch` | engine | `param-type-mismatch` | 1 | — |
 | `parameter-out-of-range` | engine | `invalid-width` | 1 | — (catalog rules, widths included) |
 | `non-finite-parameter` | engine | — | 1 | — |
-| `unknown-enum-literal` | engine | — | 1 | — |
+| `unknown-enum-literal` | author-only (amended 2026-11-09) | — | 1 | `grounding-failed` |
 | `unknown-parameter-reference` | author-only | — | 1 | `grounding-failed` |
 | `malformed-connection` | author-only | `malformed-edge` | 1 | — |
 | `unknown-source` | author-only | `unknown-source` | 1 | `unresolved-reference` |
 | `unknown-target` | author-only | `unknown-destination` | 1 | `unresolved-reference` |
-| `unknown-port` | author-only | — | 1 | `port-name-mismatch` |
+| `unknown-port` | author-only | — | 1 | `unresolved-reference` (no such port node; amended 2026-11-09) |
 | `invalid-semantic-point` | author-only | — | 1 | — |
 | `invalid-provenance-id` | author-only | — | 1 | — |
 | `type-mismatch` | engine | `type-mismatch` | 2 | — |
-| `single-assignment` | engine | `multiply-driven`, `undriven` | 2 | — |
+| `single-assignment` | author and engine (amended 2026-11-09: author for a target the connection list repeats, engine for the rest) | `multiply-driven`, `undriven` | 1 and 2 | `single-assignment` (stage 1 pre-empts the engine's own code for a repeated target) |
 | `algebraic-loop` | engine | — | 2 | — (one finding per member) |
 | `unused-boundary-input` | engine (warning → error) | `unused-input` | 2 | — |
 | `undriven-boundary-output` | engine (warning → error) | — | 2 | — |
+| `document-too-large` | author-only (added 2026-11-09) | — | 2 | — (the emitted document exceeds `MAX_CXF_BYTES`) |
+| `load-failed` | engine (added 2026-11-09) | — | 2 | — (a refusal that carries no coded diagnostic) |
 | any other `DiagCode` | engine | — | 2 | passed through verbatim |
 
 `parameter-out-of-range` also covers, author-side only, a String value the wire form cannot carry
@@ -272,6 +274,26 @@ each defect with stage 1 bypassed (a test-only path) and asserts that the engine
 code at the same subject. An author-only code that pre-empts an engine code is checked the same way
 against the code in the last column.
 
+**Amended 2026-11-09 by the parity test (issue #464, GitHub #473).** Four rows changed when the
+parity test first ran against the emitter: `duplicate-parameter` and `unknown-enum-literal` were marked engine codes, but
+the flat emitter writes a repeated assignment as a second node with the same `@id` (`duplicate-id`)
+and the engine refuses an unknown member while grounding it (`grounding-failed`, recorded on #455),
+so both are author-only codes that pre-empt those engine codes; `unknown-parameter` pre-empts
+nothing, because the load gate ignores a parameter name it does not read (#467); and `unknown-port`
+pre-empts `unresolved-reference`, because the emitter writes every port the catalog resolves, so a
+wrong port name is a dangling target rather than a port-name mismatch. Stage 2 also has two codes of
+its own: `document-too-large` (the emitter's size refusal after a clean stage 1) and `load-failed`.
+In every row but one the engine reports at the same model subject: stage 2 maps a block-level
+message that names an assignment in backticks to that assignment, as stage 1 does. The exception
+is `single-assignment`, which is same-code only: stage 1 reports the repeating connection
+(`connection[N]`), the engine the input it names, which stage 2 maps to the first connection
+driving it. The same review added two stage-1
+rules: a target the connection list repeats is `single-assignment` at stage 1 (when this was
+written the engine loaded a block output beside a boundary input without a refusal, GitHub #472;
+it refuses it since GitHub #477, and stage 1 still reports the repeat first), and an Integer literal of magnitude above 2^53 on a Real
+parameter is `parameter-out-of-range` (it has no exact Real, so the engine would load a value the
+author never wrote).
+
 ## Emitter
 
 `emit(&Sequence, &EmitOptions) -> Result<Vec<u8>, EmitError>` runs stage 1 first and refuses with
@@ -287,7 +309,8 @@ hangs on the source node, with targets in authored connection order. Nothing is 
 
 **Identity.** Instance IRIs are `{namespace}{sequence}.{local}`. The namespace defaults to
 `urn:oce:author:` and `EmitOptions` overrides it for library round trips; it is never derived from
-a host path or a UUID-shaped value. Block `@type` is the exporter's class base
+a host path or a UUID-shaped value, and must end in `#`, `/` or `:` so the canonical content id's
+last-delimiter rule (GitHub #471) strips exactly the namespace. Block `@type` is the exporter's class base
 `http://example.org#Buildings.Controls.OBC.` followed by the catalog class path (decision 10). The
 context is `{"S231": "http://data.ashrae.org/S231P#"}`.
 
@@ -459,7 +482,10 @@ warning is a defect in the authored sequence, not advice. This covers `unused-bo
 lists one `{name, value}` per element under the catalog's `<i>`, `<row>`, `<col>` template names,
 keeping decision 8's scalar profile; the emitter writes the CXF array form. Leaf array parameters
 are accepted (Rule 5 refuses arrays on composites only). #440 must expose the template expansion,
-and the amended issue does.
+and the amended issue does. *Amended 2026-11-09 (issue #464):* when the author assigns only some
+elements, the array form would need the rest, which the emitter never fills (decision 16), so each
+assigned element is written as its own parameter node under its flattened name (`k_2`), the name
+the engine's class rules read; the class default supplies the others.
 
 **16. The emitter never fills a default.** It emits exactly the assignments the author
 wrote, and the engine supplies defaults. A library convention (the library sets
@@ -544,6 +570,10 @@ without moving them.
   `MAX_CXF_BYTES` is accepted and one byte over is refused before load.
 - **Library round trip (gate item 1).** Every library rule imports into the model, emits, and its
   load → export content id equals that of its committed CXF.
+  *Coverage, 2026-11-09 (GitHub #473):* not yet met. The minimal importer reads 4 of the 40
+  in-subset G36 fixtures (4 nested and 2 conditional fixtures are out of the M2 subset), and all 4
+  round-trip; the other 36 wait on model decisions — enumeration-typed sequence parameters,
+  connector `min`/`max`, library enumerations — tracked in GitHub #475.
 - **CLI.** Golden JSON reports for each command and exit-code tests for each outcome class.
 - **§7.17 seam.** Filling and mutating every `SemanticPoint` field leaves emitted bytes unchanged
   except `unit`, and leaves the loaded executable identical.
@@ -580,5 +610,12 @@ The architect pass on the draft (owner consulted on 11, 12 and 20) ruled:
 - Gate item 3 reading accepted as written; the parity test is the proof.
 - Gate item 4: accepted; the benchmark-data follow-up issue is filed when the M2 tracking issue is
   cut.
+- 2026-11-09 (issue #464, GitHub #473): the parity test amended four rows of the finding-code
+  table (`duplicate-parameter` and `unknown-enum-literal` became author-only codes pre-empting
+  `duplicate-id` and `grounding-failed`; `unknown-parameter` pre-empts nothing, #467;
+  `unknown-port` pre-empts `unresolved-reference`), added two stage-2 rows (`document-too-large`,
+  `load-failed`), made `single-assignment` a stage-1 code for a repeated target as well as an
+  engine code, refused Integer literals above 2^53 on Real parameters, and added decision 15's
+  partial-array sentence.
 - 2026-11-08: the CLI exit-code rule was aligned with the diff and commissioning passes: 0 yes, 1
   no, 2 error, with a parse refusal and an I/O failure both 2 and no exit 3.

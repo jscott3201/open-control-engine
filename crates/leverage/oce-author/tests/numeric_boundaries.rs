@@ -110,9 +110,14 @@ fn integers_past_two_to_the_fifty_three_stay_exact() {
     let (text, literal) = wire_value(&integer_constant(Literal::Integer(past)));
     assert_eq!(text, "9007199254740993");
     assert_eq!(literal, Literal::Integer(past));
-    // A Real parameter accepts it, widening as CDL does; the engine accepts it too.
+    // On a Real parameter it has no exact Real (it would load as 2^53), so stage 1 refuses it
+    // (issue #464 review); 2^53 itself widens exactly.
     assert_eq!(
         codes(&validate(&real_constant(Literal::Integer(past)))),
+        vec![("parameter-out-of-range", "c.k".to_owned())]
+    );
+    assert_eq!(
+        codes(&validate(&real_constant(Literal::Integer(past - 1)))),
         vec![]
     );
     let (text, _) = wire_value(&real_constant(Literal::Real(9_007_199_254_740_992.0)));
@@ -201,13 +206,19 @@ fn sequence_parameter_integer_widening_reaches_a_real_reference() {
         Literal::Integer(i64::MAX),
     ));
     s.blocks[0].assignments[0].value = ParamValue::Ref(id("big"));
-    assert_eq!(codes(&validate(&s)), vec![]);
+    // `i64::MAX` has no exact Real: refused on the Real sequence parameter, the reference withheld.
+    assert_eq!(
+        codes(&validate(&s)),
+        vec![("parameter-out-of-range", "big".to_owned())]
+    );
     s.params[0].value_type = SignalType::Integer;
     assert_eq!(
         codes(&validate(&s)),
-        vec![],
-        "an Integer sequence parameter feeds a Real one"
+        vec![("parameter-out-of-range", "c.k".to_owned())],
+        "an Integer sequence parameter feeds a Real one only within 2^53"
     );
+    s.params[0].value = Literal::Integer(1 << 53);
+    assert_eq!(codes(&validate(&s)), vec![]);
     let mut int = integer_constant(Literal::Integer(0));
     int.params.push(oce_author::SequenceParameter::new(
         id("r"),
@@ -235,5 +246,57 @@ fn a_real_below_the_smallest_subnormal_underflows_to_zero() {
     assert_eq!(
         read.blocks[0].assignments[0].value,
         ParamValue::Literal(Literal::Real(-0.0))
+    );
+}
+
+#[test]
+fn an_integer_beyond_two_to_the_53_on_a_real_parameter_is_refused() {
+    use oce_author::{MAX_EXACT_INTEGER, SequenceParameter};
+    let at = |value: i64| {
+        let mut s = support::econ_enable();
+        s.blocks[1].assignments[0].value = ParamValue::Literal(Literal::Integer(value));
+        // keep uLow <= uHigh: uHigh is a large Real literal
+        s.blocks[1].assignments[1].value = ParamValue::Literal(Literal::Real(1e300));
+        support::codes(&oce_author::validate_author_side(&s))
+    };
+    for ok in [MAX_EXACT_INTEGER, -MAX_EXACT_INTEGER, 0, -1] {
+        assert_eq!(at(ok), vec![], "{ok}");
+    }
+    for refused in [
+        MAX_EXACT_INTEGER + 1,
+        -MAX_EXACT_INTEGER - 1,
+        i64::MAX,
+        i64::MIN,
+    ] {
+        assert_eq!(
+            at(refused),
+            vec![("parameter-out-of-range", "hys.uLow".to_owned())],
+            "{refused}"
+        );
+    }
+    // On a Real sequence parameter, reported there (the reference is withheld).
+    let mut s = support::econ_enable();
+    s.params[0].value = Literal::Integer(9_007_199_254_740_993);
+    let findings = oce_author::validate_author_side(&s);
+    assert_eq!(
+        support::codes(&findings),
+        vec![("parameter-out-of-range", "dTHys".to_owned())]
+    );
+    assert!(
+        findings[0].detail.contains("2^53"),
+        "{}",
+        findings[0].detail
+    );
+    // Through an Integer sequence parameter into a Real block parameter: at the assignment.
+    let mut s = support::econ_enable();
+    s.params.push(SequenceParameter::new(
+        support::id("big"),
+        oce_author::SignalType::Integer,
+        Literal::Integer(-9_007_199_254_740_993),
+    ));
+    s.blocks[1].assignments[0].value = ParamValue::Ref(support::id("big"));
+    assert_eq!(
+        support::codes(&oce_author::validate_author_side(&s)),
+        vec![("parameter-out-of-range", "hys.uLow".to_owned())]
     );
 }
