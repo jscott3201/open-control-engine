@@ -13,14 +13,19 @@ GitHub issue #496).
 | Licence | `MIT OR Apache-2.0` (the source's `LICENSE-MIT` and `LICENSE-APACHE`) |
 | Copyright | Copyright (c) 2026 Justin Scott |
 
+The CXF files keep their bytes but not their extension: the source's `.cxf.jsonld` is renamed
+`.cxf.json` here, as the emitter's goldens are named, because `oce-cxf`'s
+`parameter_grounding_corpus` test counts and pins every tracked `.jsonld` file in the workspace and
+a leverage fixture must not move an engine census.
+
 | File here | Source path at the pinned commit |
 | --- | --- |
 | `ahu_0005.graph.json` | `crates/mm-graph/tests/golden/ahu_0005.graph.json` |
-| `ahu_0005.cxf.jsonld` | `crates/mm-graph/tests/golden/ahu_0005.cxf.jsonld` |
+| `ahu_0005.cxf.json` | `crates/mm-graph/tests/golden/ahu_0005.cxf.jsonld` |
 | `ahu_0027.graph.json` | `crates/mm-graph/tests/golden/ahu_0027.graph.json` |
-| `ahu_0027.cxf.jsonld` | `crates/mm-graph/tests/golden/ahu_0027.cxf.jsonld` |
+| `ahu_0027.cxf.json` | `crates/mm-graph/tests/golden/ahu_0027.cxf.jsonld` |
 | `width_max_min.graph.json` | `crates/mm-graph/tests/golden/width_max_min.graph.json` |
-| `width_max_min.cxf.jsonld` | `crates/mm-graph/tests/golden/width_max_min.cxf.jsonld` |
+| `width_max_min.cxf.json` | `crates/mm-graph/tests/golden/width_max_min.cxf.jsonld` |
 
 The prototype is licensed `MIT OR Apache-2.0` with the same copyright holder as this repository,
 so the verbatim copies need only this record. They are small conformance fixtures, not control

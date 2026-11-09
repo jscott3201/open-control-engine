@@ -37,7 +37,7 @@ fn every_vendored_graph_loads_to_the_content_id_of_the_prototypes_cxf() {
         let emitted =
             emit(&imported.sequence, &EmitOptions::new()).unwrap_or_else(|e| panic!("{name}: {e}"));
         let from_model = load_clean(&emitted);
-        let (prototype, _) = load(&read(name, "cxf.jsonld"))
+        let (prototype, _) = load(&read(name, "cxf.json"))
             .unwrap_or_else(|e| panic!("{name}: the prototype's CXF loads: {e}"));
         assert_eq!(identity(&from_model), identity(&prototype), "{name}");
     }

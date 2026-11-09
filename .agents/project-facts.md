@@ -229,8 +229,9 @@ imported corpus fixtures, and `tests/fixtures/text/fmt/*.out.oce` the `fmt` outp
 spelling, a catalog change to an array template or a bundle moves them, and the same
 `OCE_BLESS_AUTHOR` switch regenerates them (the `*.in.oce` inputs are hand-written, never blessed).
 `tests/fixtures/v0/` holds the frozen prototype's three v0 golden pairs (`*.graph.json`,
-`*.cxf.jsonld`), copied verbatim from its repository at a pinned commit (`PROVENANCE.md` there):
-never blessed and never edited; re-copy them only with the provenance record. The `*.import.txt`
+`*.cxf.json`), copied verbatim from its repository at a pinned commit (`PROVENANCE.md` there):
+never blessed and never edited; the prototype's `.cxf.jsonld` files are renamed `.cxf.json` for the
+same census reason as the emit goldens; re-copy them only with the provenance record. The `*.import.txt`
 beside them are this crate's goldens of what `import_graph_v0` makes of each graph (the report and
 the canonical text) and regenerate with the same switch.
 `tests/fixtures/note/text_example.oce` is the note's worked text example, copied by hand like the
