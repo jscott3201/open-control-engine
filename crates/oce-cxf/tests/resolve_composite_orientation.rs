@@ -10,6 +10,8 @@ mod bless;
 mod diagnostics;
 #[path = "resolve_composite_orientation/fanout_cpu.rs"]
 mod fanout_cpu;
+#[path = "resolve_composite_orientation/lowering_cpu.rs"]
+mod lowering_cpu;
 mod render;
 
 #[path = "resolve_composite_orientation/multiplicity.rs"]
