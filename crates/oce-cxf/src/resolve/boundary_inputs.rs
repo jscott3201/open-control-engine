@@ -4,7 +4,9 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
-use oce_model::{Attrs, BoundaryInput, ConnectorId, ModelGraph, NoAttrs, ValueType};
+use oce_model::{
+    Attrs, BoundaryInput, Connection, Connector, ConnectorId, Dir, ModelGraph, NoAttrs, ValueType,
+};
 
 use crate::dto::{CxfDocument, Node};
 use crate::export::EXPORT_ROOT_IRI;
@@ -53,13 +55,39 @@ impl AssignmentTracker {
         }
     }
 
-    /// Emit one refusal for each child input reached more than once.
-    pub(super) fn emit_diagnostics(self, diags: &mut Vec<Diagnostic>) {
-        for assignment in self.by_target.into_values() {
-            if assignment.count <= 1 {
+    /// Emit one `single-assignment` refusal for each child input a boundary input reaches that
+    /// has more than one driver, counting both kinds of driver against one total.
+    ///
+    /// `connections` is the complete wire list Step 9 collected and `connectors` the table its
+    /// ids index. A tracked input that is also the target of a wire from an output connector is
+    /// driven by a block output AND a boundary input: at run time the wire would win (the gather
+    /// reads the driving output's slot) and the host-staged boundary value would be discarded
+    /// without a trace, so CDL §7.10's one driver per input is refused here with the authored
+    /// input IRI as the subject. A wire from an input is not a driver; Step 10 refuses it as a
+    /// direction mismatch and it is not counted twice. This is the only pass that sees both
+    /// counts for an elided input — the wire-only check in `single_assignment` leaves every
+    /// boundary-reached input to it.
+    pub(super) fn emit_diagnostics(
+        self,
+        connections: &[Connection],
+        connectors: &[Connector],
+        diags: &mut Vec<Diagnostic>,
+    ) {
+        let wired = connections
+            .iter()
+            .filter(|connection| {
+                connectors
+                    .get(connection.from.0 as usize)
+                    .is_some_and(|from| from.dir == Dir::Out)
+            })
+            .map(|connection| connection.to)
+            .collect::<BTreeSet<_>>();
+        for (target_id, assignment) in self.by_target {
+            let message = if wired.contains(&target_id) {
+                "input is driven by a block output and a boundary input".to_owned()
+            } else if assignment.count <= 1 {
                 continue;
-            }
-            let message = if assignment.has_distinct_sources {
+            } else if assignment.has_distinct_sources {
                 "input is driven by distinct boundary inputs".to_owned()
             } else {
                 format!("input is multiply driven (in-degree {})", assignment.count)

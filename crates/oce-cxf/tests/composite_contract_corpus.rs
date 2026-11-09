@@ -393,6 +393,7 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
         ),
     ];
     rows.extend(composite_contract_member_pins::rejections());
+    rows.extend(composite_contract_boundary_pins::rejections());
     rows
 }
 

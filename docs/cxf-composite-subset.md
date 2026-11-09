@@ -578,3 +578,9 @@ member connector bounds ground for the first time on class-translation documents
 `inactive-conditional-node` rising 11 → 44 because pruning now reaches a conditional instance's
 listed members as well as its `@graph` nodes (32 members still carrying active connections, 12
 connection targets).
+The mixed double-driver refusal (issue #472) then raised `single-assignment` 57 → 68: eleven
+inputs driven by both a block output and a root boundary input — one in
+`Limits/SeparateWithDP`, one in `SetPoints/FreezeProtection`, nine in
+`Generic/AirEconomizerHighLimits` — all in documents already refused for unresolvable
+conditional guards, whose unpruned alternative branches carry both drivers. No document changed
+outcome.
