@@ -11,7 +11,7 @@
 //! Emitting one model twice yields identical bytes; text-form annotations and suffixes never
 //! reach the output.
 
-mod iri;
+pub(crate) mod iri;
 mod params;
 mod writer;
 

@@ -117,6 +117,32 @@ every parameter's type, default and settable flag are pinned by
 `crates/oce-blocks/tests/fixtures/class_ports.golden.txt`. The metadata is host-side: in
 `oce-blocks` it is compiled only with the `std` feature, so no bare-metal image carries it.
 
+## Enumerations and constant packages
+
+`oce_api::enumerations()` lists every named type the engine knows, from the one table every enum
+lookup in the engine reads (issue #468): the four CDL enumerations (`CDL.Types.SimpleController`,
+`Smoothness`, `Extrapolation`, `ZeroTime`), the ten source-pinned G36 enumerations
+(`ASHRAE.G36.Types.ASHRAEClimateZone`, `ControlEconomizer`, `CoolingCoil`, `EnergyStandard`,
+`FreezeStat`, `HeatingCoil`, `OutdoorAirSection`, `PressureControl`, `Title24ClimateZone`,
+`VentilationStandard`) and the four G36 Integer constant packages (`DemandLimitLevels`,
+`FreezeProtectionStages`, `OperationModes`, `ZoneStates`).
+
+- Every row's `class_path` is relative to `Buildings.Controls.OBC.`, the form the catalog uses for
+  block classes; `qualified_path` is the full Modelica name.
+- An **enumeration** row is a parameter and connector type: it carries the `EnumClassId` a
+  `ValueType::Enum` names, and its members, in source order, are one-based ordinals.
+- A **constant package** row is never a parameter type. Its members are named Integer constants
+  (`OperationModes.occupied` is `1`, `DemandLimitLevels.heating2` is `2`); the CXF import grounds a
+  full constant path to its Integer before any expression is evaluated, and a connector typed by
+  the package is an Integer connector.
+- Last segments are unique across the table, so an authored `Type.Member` names one row.
+
+`enumeration(class_path)`, `enumeration_by_id(id)` and `enum_class_path(id)` look rows up without
+allocating. None of it enters the revision-1 catalog: `CATALOG_JSON`, `catalog_content_id` and the
+class signature hashes are unchanged. The durable class identity recorded in state snapshots,
+compiled-schedule blobs and class signature hashes is `oce_model::EnumDescriptor::class_path`, which
+predates the table and stays frozen (relative for CDL, fully qualified for G36).
+
 ## What "supported" means for a G36 sequence
 
 The repo's own catalog is explicit, and it under-claims on purpose. The `support_policy` block in
