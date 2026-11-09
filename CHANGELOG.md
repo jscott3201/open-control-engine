@@ -237,6 +237,54 @@ and a gate that accepted any text would restore exactly the false assurance desc
   The workspace has 15 members (10 publishable, five private); `release.yml`'s comment and step
   name, its digest and the validator's controls are re-pinned.
 
+- **`oce-author`: the emitter, engine-side validation and the library round trip** (GitHub #473,
+  issue #464). `emit(&Sequence, &EmitOptions)` writes one flat, single-root CXF document in the
+  authoring note's fixed layout and authored order, never sorted: instance IRIs
+  `{namespace}{sequence}.{local}` under `urn:oce:author:` or an override that must end in `#`, `/`
+  or `:` (the content-id note's last-delimiter rule, GitHub #471), block `@type` under the fixed
+  class base `http://example.org#Buildings.Controls.OBC.`, only the assignments the author wrote,
+  relation lists always arrays, array parameters in the CXF array form, boundary `unit`, `quantity`
+  and `displayUnit` and no semantic record, from a canonical writer; it refuses a stage-1 error
+  (`EmitError::Invalid`), a malformed namespace and a document above `MAX_CXF_BYTES` (one byte over
+  is refused, the limit itself loads). `validate` now runs stage 2 when stage 1 is clean: it emits,
+  loads in a throwaway `Engine::new()` through the receipt path and maps every engine diagnostic
+  back through the IRI scheme, every warning an error finding with the engine's code (decision 14),
+  `origin = engine`; `connector#N` and other subjects outside the scheme stay on `sequence` with
+  the raw subject in `detail`. Two new codes: `document-too-large` and `load-failed`. Stage 1
+  gains two rules: a target the connection list repeats is `single-assignment` (pre-empting the
+  engine's own refusal, which covers a block output beside a boundary input since GitHub #477),
+  and an Integer literal above 2^53 in magnitude on a Real parameter is `parameter-out-of-range`
+  (`MAX_EXACT_INTEGER`). A minimal `import_cxf` reads the flat corpus dialect strictly (a key
+  written twice or an integer outside `i64` is refused) and refuses everything outside the
+  authoring subset with a typed `ImportError`. The parity test emits each stage-1 defect with
+  stage 1 bypassed and amends four rows of the note's finding-code table: `duplicate-parameter`
+  pre-empts `duplicate-id`, `unknown-enum-literal` pre-empts `grounding-failed`,
+  `unknown-parameter` pre-empts nothing (#467) and `unknown-port` pre-empts
+  `unresolved-reference`; decision 15 gains the partial array (written element by element under
+  the flattened names, no default filled). **Gate item 1 is not yet met:** 4 of the 40 in-subset
+  G36 fixtures (6 are nested or conditional, out of subset) import — `cooling_only_system_requests`,
+  `generic_time_suppression`, `multizone_vav_relief_fan_group`, `reheat_overrides` — and each
+  round-trips to the committed fixture's export identity (`multizone_vav_relief_fan_group` exports
+  partially, so it is compared on export bytes plus deferral codes, not a content id); the 36
+  others wait on model decisions (boundary or port `min`/`max`, enumeration-typed sequence
+  parameters, library enumerations; #475). The comparison re-stamps the corpus namespace
+  (`http://example.org#g36.source.`, which ends in `.` and so cannot be an emitter namespace) to
+  `urn:oce:library:`; the re-stamp stays after the canonical content id lands, until library
+  bundle v2. **#458:** the only flat fixture whose `@graph` order differs from the emitter's
+  layout is `multizone_vav_outdoor_airflow_sumzone` (block nodes out of `containsBlock` order
+  from the third block), and the four nested fixtures have no flat layout; all five are refused by
+  the importer before order matters, so they are excluded with a documented list and a test that
+  pins the sumzone mismatch, not compared on loaded models.
+  Byte goldens under `tests/fixtures/emit/` (`.cxf.json`, so `oce-cxf`'s `.jsonld` census is
+  unchanged; the worked example, the every-element sequence and the four imported fixtures) each
+  load warning-free and load to the model's topology; values ground bit for bit through the
+  engine (subnormals, `f64::MAX`, `-0.0`, `i64::MIN`/`MAX`, enumeration members, references); the
+  permutation classes, the §7.17 seam (only `unit` lines move and the compiled blob is unit-blind
+  apart from its content id) and hostile importer input (a bounded mutation sweep over every
+  imported document) are tested. Found on the way, and fixed by GitHub #477: a block input driven by
+  both a block output and a boundary input loaded without a `single-assignment` refusal (#472);
+  the parity test now pins the engine's refusal of it.
+
 ### Documentation
 
 - **Design note for the canonical content id** (GitHub #471, issue #470).

@@ -1,0 +1,1322 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#"
+  },
+  "@graph": [
+    {
+      "@id": "urn:oce:author:generic_time_suppression",
+      "@type": "S231:Block",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.chaRat"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.maxTim"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.samplePeriod"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.dTHys"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.TSet"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.TZon"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.yAftSup"
+        }
+      ],
+      "S231:containsBlock": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.supTim"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.samSet"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.uniDel"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.abs1"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.triSam"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.edg"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.lat"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.lat1"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.tim"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.greThr"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.gai"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.sub1"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.conZer"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.maxSupTim"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.con5"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.swi"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pre1"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pasSupTim"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pasSup"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.temDif"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.triSam1"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.abs2"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.truDel"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.con1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.chaRat",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "540.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.maxTim",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1800.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.samplePeriod",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "120.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.dTHys",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.25",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.supTim",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Min",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.supTim.u1"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.supTim.u2"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.supTim.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.supTim.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.supTim.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.supTim.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pasSup.u2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.samSet",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.Sampler",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.samSet.samplePeriod"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.samSet.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.samSet.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.samSet.samplePeriod",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "samplePeriod"
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.samSet.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.samSet.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.uniDel.u"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.sub1.u1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.uniDel",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.uniDel.samplePeriod"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.uniDel.y_start"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.uniDel.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.uniDel.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.uniDel.samplePeriod",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "samplePeriod"
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.uniDel.y_start",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.uniDel.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.uniDel.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.sub1.u2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.abs1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Abs",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.abs1.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.abs1.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.abs1.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.abs1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.greThr.u"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.triSam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.triSam.y_start"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.triSam.u"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.triSam.trigger"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.triSam.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.triSam.y_start",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.triSam.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.triSam.trigger",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.triSam.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.temDif.u1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.edg",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Edge",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.edg.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.edg.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.edg.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.edg.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.lat1.clr"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.triSam1.trigger"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.triSam.trigger"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.lat",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.lat.u"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.lat.clr"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.lat.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.lat.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.lat.clr",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.lat.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.tim.u"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.edg.u"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pasSupTim.u2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.lat1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.lat1.u"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.lat1.clr"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.lat1.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.lat1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.lat1.clr",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.lat1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pasSupTim.u1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.tim",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Timer",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.tim.t"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.tim.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.tim.y"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.tim.passed"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.tim.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.tim.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.tim.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pasSup.u1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.tim.passed",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.greThr",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.greThr.t"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.greThr.h"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.greThr.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.greThr.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.greThr.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "dTHys"
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.greThr.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.125",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.greThr.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.greThr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.lat.u"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.gai",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.gai.k"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.gai.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.gai.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.gai.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "chaRat"
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.gai.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.gai.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.supTim.u1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.sub1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.sub1.u1"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.sub1.u2"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.sub1.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.sub1.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.sub1.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.sub1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.swi.u1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.conZer",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.conZer.k"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.conZer.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.conZer.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.conZer.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.swi.u3"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.maxSupTim",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.maxSupTim.k"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.maxSupTim.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.maxSupTim.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "maxTim"
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.maxSupTim.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.supTim.u2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.con5",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.con5.k"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.con5.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.con5.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.con5.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pasSupTim.u3"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.swi",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.swi.u1"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.swi.u2"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.swi.u3"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.swi.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.swi.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.swi.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.swi.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.swi.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.abs1.u"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.pre1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Pre",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pre1.pre_u_start"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pre1.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pre1.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.pre1.pre_u_start",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": false
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.pre1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.pre1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.lat.clr"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.pasSupTim",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Switch",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pasSupTim.u1"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pasSupTim.u2"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pasSupTim.u3"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pasSupTim.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.pasSupTim.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.pasSupTim.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.pasSupTim.u3",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.pasSupTim.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.yAftSup"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.pasSup",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Greater",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pasSup.h"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pasSup.u1"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pasSup.u2"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pasSup.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.pasSup.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.pasSup.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.pasSup.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.pasSup.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.lat1.u"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.pre1.u"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.temDif",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.temDif.u1"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.temDif.u2"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.temDif.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.temDif.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.temDif.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.temDif.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.abs2.u"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.triSam1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.triSam1.y_start"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.triSam1.u"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.triSam1.trigger"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.triSam1.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.triSam1.y_start",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.triSam1.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.triSam1.trigger",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.triSam1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.temDif.u2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.abs2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Abs",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.abs2.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.abs2.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.abs2.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.abs2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.gai.u"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.truDel",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.truDel.delayTime"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.truDel.delayOnInit"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.truDel.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.truDel.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.truDel.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "samplePeriod"
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.truDel.delayOnInit",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.truDel.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.truDel.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.swi.u2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.con1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.con1.k"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.con1.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.con1.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.con1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.truDel.u"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.TSet",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.samSet.u"
+        },
+        {
+          "@id": "urn:oce:author:generic_time_suppression.triSam.u"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.TZon",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:generic_time_suppression.triSam1.u"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:generic_time_suppression.yAftSup",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    }
+  ]
+}
