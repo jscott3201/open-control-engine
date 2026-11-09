@@ -10,7 +10,7 @@ use oce_api::{PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOL
 
 use crate::identifier::Identifier;
 use crate::location::Location;
-use crate::model::{Annotations, Assignment, EnumMember, Literal, ParamValue};
+use crate::model::{Annotations, Assignment, Literal, MemberRef, ParamValue};
 use crate::validate::catalog::{is_template, lookup_class};
 
 use super::super::ParseError;
@@ -37,7 +37,7 @@ pub(super) enum Value {
 }
 
 /// Whether a word spells a non-finite number (`NaN`, `inf`, `Infinity`, any case).
-fn non_finite_word(word: &str) -> bool {
+pub(super) fn non_finite_word(word: &str) -> bool {
     ["nan", "inf", "infinity"]
         .iter()
         .any(|w| w.eq_ignore_ascii_case(word))
@@ -225,7 +225,7 @@ impl Parser<'_> {
                         let mut path = word.to_owned();
                         self.path_rest(&mut path, token.end)?;
                         if path.contains('.') {
-                            ParamValue::Literal(Literal::EnumMember(EnumMember::parse(&path)))
+                            ParamValue::Literal(Literal::Member(MemberRef::parse(&path)))
                         } else {
                             ParamValue::Ref(Identifier::unchecked(path))
                         }

@@ -4,7 +4,9 @@
 //! Every object denies unknown fields and requires every property; an absent value is `""`,
 //! `[]` or `false`. A parameter `value` is one of five shapes (decision 11): a number, a boolean,
 //! a string, `{"ref": "<sequence-param>"}` or `{"member": "<Type.Member>"}`. A sequence
-//! parameter's value is a literal: the same shapes without the reference.
+//! parameter's value is a literal: the same shapes without the reference. A sequence parameter's
+//! `type` is a scalar type or an enumeration type name, and a boundary's `min` and `max` are lists
+//! of at most one number (importer note, decisions 1 and 5; issue #492).
 
 use std::borrow::Cow;
 use std::fmt;
@@ -15,8 +17,8 @@ use serde::de::{self, MapAccess, Visitor};
 
 use crate::identifier::{Identifier, ProvenanceId};
 use crate::model::{
-    Assignment, Block, Boundary, Connection, Endpoint, EnumMember, Literal, ParamValue,
-    SemanticPoint, Sequence, SequenceParameter, SignalType,
+    Assignment, Block, Bound, Boundary, Connection, Endpoint, Literal, MemberRef, ParamValue,
+    ParameterType, SemanticPoint, Sequence, SequenceParameter, SignalType,
 };
 
 use super::WireError;
@@ -43,7 +45,7 @@ pub(crate) struct WireSequence {
     connections: Vec<String>,
 }
 
-/// The type of a sequence parameter or a boundary connector.
+/// The type of a boundary connector.
 #[derive(Clone, Copy, Deserialize, JsonSchema)]
 #[schemars(rename = "SignalType")]
 pub(crate) enum WireType {
@@ -64,11 +66,14 @@ pub(crate) enum WireType {
 pub(crate) struct WireSequenceParam {
     /// The parameter name, an identifier.
     name: String,
-    /// The parameter type.
+    /// The parameter type: "Real", "Integer", "Boolean", or an enumeration type name (the last
+    /// segment of its class, for example "SimpleController"), whose value is then one of its
+    /// members.
     #[serde(rename = "type")]
-    value_type: WireType,
+    #[schemars(schema_with = "crate::schema::parameter_type_schema")]
+    value_type: String,
     /// The value: a number (an Integer is written without a fraction or exponent), a boolean, a
-    /// string or an enumeration member.
+    /// string or a member of an enumeration or library constant package.
     value: WireLiteral,
 }
 
@@ -86,6 +91,12 @@ pub(crate) struct WireBoundary {
     quantity: String,
     /// The CXF display unit (for example "degC"), or "".
     display_unit: String,
+    /// The CXF minimum: [] for none, or a list of exactly one number (at most one item; a second
+    /// is refused). Real or Integer boundaries only; an Integer boundary takes an Integer.
+    min: WireBound,
+    /// The CXF maximum: [] for none, or a list of exactly one number (at most one item; a second
+    /// is refused). Real or Integer boundaries only; an Integer boundary takes an Integer.
+    max: WireBound,
     /// The semantic slot; every field optional ("" or [] or false when absent).
     semantic: WireSemantic,
 }
@@ -152,15 +163,78 @@ pub(crate) struct WireRef {
     reference: String,
 }
 
-/// An enumeration member.
+/// A member of an enumeration or of a library constant package.
 #[derive(JsonSchema)]
 #[serde(deny_unknown_fields)]
-#[schemars(rename = "EnumMember")]
+#[schemars(rename = "Member")]
 #[expect(dead_code, reason = "schema-only: `ShapeVisitor` reads the shape")]
 pub(crate) struct WireMember {
-    /// The member as "Type.Member", Type the last segment of the enumeration class (for example
-    /// "SimpleController.PI").
+    /// The member as "Type.Member", Type the last segment of the enumeration or constant package
+    /// class (for example "SimpleController.PI" or "OperationModes.occupied").
     member: String,
+}
+
+/// The message prefix of a bound list with a second item; [`super::classify`] maps it to
+/// [`WireError::BoundListTooLong`].
+pub(super) const BOUND_LIST_TOO_LONG: &str = "a bound list holds at most one number";
+
+/// A boundary bound: `[]` or `[<number>]`.
+pub(crate) struct WireBound(Option<Bound>);
+
+struct BoundVisitor;
+
+impl<'de> Visitor<'de> for BoundVisitor {
+    type Value = WireBound;
+
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("a list of at most one number")
+    }
+
+    fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<WireBound, A::Error> {
+        let Some(shape) = seq.next_element::<BoundShape>()? else {
+            return Ok(WireBound(None));
+        };
+        if seq.next_element::<de::IgnoredAny>()?.is_some() {
+            return Err(de::Error::custom(BOUND_LIST_TOO_LONG));
+        }
+        Ok(WireBound(Some(shape.0)))
+    }
+}
+
+impl<'de> Deserialize<'de> for WireBound {
+    fn deserialize<D: de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        deserializer.deserialize_seq(BoundVisitor)
+    }
+}
+
+impl JsonSchema for WireBound {
+    fn schema_name() -> Cow<'static, str> {
+        "BoundList".into()
+    }
+
+    fn inline_schema() -> bool {
+        true
+    }
+
+    fn json_schema(_: &mut SchemaGenerator) -> Schema {
+        json_schema!({
+            "type": "array",
+            "items": { "type": "number" },
+        })
+    }
+}
+
+/// One bound item: a number token, kept as an Integer when it has no fraction or exponent.
+struct BoundShape(Bound);
+
+impl<'de> Deserialize<'de> for BoundShape {
+    fn deserialize<D: de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        match deserializer.deserialize_any(ShapeVisitor)? {
+            Shape::Integer(v) => Ok(Self(Bound::Integer(v))),
+            Shape::Real(v) => Ok(Self(Bound::Real(v))),
+            _ => Err(de::Error::custom("invalid type: a bound is a number")),
+        }
+    }
 }
 
 /// The five value shapes, as read.
@@ -297,7 +371,7 @@ fn literal_of(shape: Shape) -> Result<Literal, Identifier> {
         Shape::Real(v) => Literal::Real(v),
         Shape::Boolean(v) => Literal::Boolean(v),
         Shape::Text(v) => Literal::Text(v),
-        Shape::Member(v) => Literal::EnumMember(EnumMember::parse(&v)),
+        Shape::Member(v) => Literal::Member(MemberRef::parse(&v)),
         Shape::Ref(name) => return Err(Identifier::unchecked(name)),
     })
 }
@@ -322,6 +396,8 @@ impl WireBoundary {
         let mut boundary = Boundary::new(Identifier::unchecked(self.name), self.value_type.model());
         boundary.quantity = optional(self.quantity);
         boundary.display_unit = optional(self.display_unit);
+        boundary.min = self.min.0;
+        boundary.max = self.max.0;
         boundary.semantic = SemanticPoint {
             name: optional(s.name),
             label: optional(s.label),
@@ -359,7 +435,7 @@ impl WireSequence {
             .map(|p| {
                 SequenceParameter::new(
                     Identifier::unchecked(p.name),
-                    p.value_type.model(),
+                    ParameterType::parse(&p.value_type),
                     p.value.0,
                 )
             })

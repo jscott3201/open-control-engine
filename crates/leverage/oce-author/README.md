@@ -1,18 +1,18 @@
 # oce-author
 
 The authoring layer's library (M2; design note [`docs/design/authoring-layer.md`](../../../docs/design/authoring-layer.md),
-issues #463, #464 and #482). A leverage crate: it depends on `oce-api` only, never evaluates an expression,
+issues #463, #464, #482 and #492). A leverage crate: it depends on `oce-api` only, never evaluates an expression,
 and loads only throwaway engines of its own (validation stage 2), never one a host runs.
 `publish = false`.
 
 | Surface | What it is |
 | --- | --- |
-| `Sequence` and its statements | The typed model: one flat sequence of parameters, boundary inputs and outputs (with `quantity`, `display_unit` and a closed `SemanticPoint`), leaf blocks with ordered assignments and typed connections, in authored order. Each statement carries text-form `Annotations` (comments, a blank line before it), the sequence its header comments (`annotations`) and `trailing_comments`, and assignments and parameters a text-only unit suffix; the wire form and the emitter ignore them. The model types are `#[non_exhaustive]`: build through the constructors or `SequenceBuilder`. |
+| `Sequence` and its statements | The typed model: one flat sequence of parameters (typed `ParameterType`: `Real`, `Integer`, `Boolean` or an enumeration type name), boundary inputs and outputs (with `quantity`, `display_unit`, optional `min` and `max` bounds (`Bound`) and a closed `SemanticPoint`), leaf blocks with ordered assignments and typed connections, in authored order. Each statement carries text-form `Annotations` (comments, a blank line before it), the sequence its header comments (`annotations`) and `trailing_comments`, and assignments and parameters a text-only unit suffix; the wire form and the emitter ignore them. The model types are `#[non_exhaustive]`: build through the constructors or `SequenceBuilder`. |
 | `SequenceBuilder` | A checked builder; refuses with a typed `BuildError` what it can see without the catalog. |
-| `from_wire_str`, `from_wire_bytes`, `to_wire_string` | The strict-JSON wire form: closed objects, every key required, absent values `""`/`[]`/`false`, connections as `"a.y -> b.u"`. Reads are bounded (4 MiB, depth 8, 65,536 entries per list, 4,096-byte strings) and refuse hostile input with a typed `WireError`; writes are canonical and byte-stable. |
-| `WIRE_SCHEMA`, `wire_schema()` | The JSON Schema (draft 2020-12) derived from the wire DTOs with `schemars`, published at [`schema/sequence.schema.json`](schema/sequence.schema.json) and pinned byte for byte; the `class` enum is the catalog's authorable class paths. Strict profile: closed objects, all required, `anyOf` only over the value shapes. |
-| `validate`, `validate_author_side`, `Finding` | The two-stage validator. Stage 1 (`validate_author_side`): twenty-one finding codes (`STAGE_ONE_CODES`) from the model and the catalog, a repeated connection target (`single-assignment`) and an Integer above 2^53 on a Real parameter included. Stage 2, only when stage 1 is clean: emit, load in a throwaway `Engine::new()` and map every engine diagnostic back through the IRI scheme — every warning is an error finding with the engine's code (decision 14), `origin = engine`; a subject the scheme cannot name is attached to `sequence` with the raw subject in `detail`. Findings are sorted by authored position, code and detail. |
-| `emit`, `EmitOptions`, `EmitError` | The emitter to flat CXF: authored order, never sorted; IRIs `{namespace}{sequence}.{local}` (default `urn:oce:author:`, an override must end in `#`, `/` or `:`); block `@type` under the fixed class base `http://example.org#Buildings.Controls.OBC.`; only the assignments the author wrote; arrays in the CXF array form (element by element under the flattened names when the author left a gap); boundary `unit`, `quantity` and `displayUnit` and no semantic record; a canonical writer (fixed key order, two-space indentation, ASCII, shortest round-trip reals); refuses stage-1 errors (`EmitError::Invalid`), a malformed namespace (`EmitError::InvalidNamespace`) and anything above `oce_api::MAX_CXF_BYTES` (`EmitError::TooLarge`). |
+| `from_wire_str`, `from_wire_bytes`, `to_wire_string` | The strict-JSON wire form: closed objects, every key required, absent values `""`/`[]`/`false`, connections as `"a.y -> b.u"`, boundary bounds as a list of at most one number (`"min": []` or `[0]`; a second item is `WireError::BoundListTooLong`). Reads are bounded (4 MiB, depth 8, 65,536 entries per list, 4,096-byte strings) and refuse hostile input with a typed `WireError`; writes are canonical and byte-stable. |
+| `WIRE_SCHEMA`, `wire_schema()` | The JSON Schema (draft 2020-12) derived from the wire DTOs with `schemars`, published at [`schema/sequence.schema.json`](schema/sequence.schema.json) and pinned byte for byte; the `class` enum is the catalog's authorable class paths and a sequence parameter's `type` enum is `parameter_type_names()` (`Real`, `Integer`, `Boolean` and every enumeration of `oce_api::enumeration_types()`, never a constant package). Strict profile: closed objects, all required, `anyOf` only over the value shapes. |
+| `validate`, `validate_author_side`, `Finding` | The two-stage validator. Stage 1 (`validate_author_side`): twenty-five finding codes (`STAGE_ONE_CODES`) from the model and the catalog, a repeated connection target (`single-assignment`), an Integer above 2^53 on a Real parameter, enumeration types and members (`unknown-enum-type`, `unknown-enum-literal`) and boundary bounds (`invalid-bound`, `non-finite-bound`, `crossed-bounds`) included. Stage 2, only when stage 1 is clean: emit, load in a throwaway `Engine::new()` and map every engine diagnostic back through the IRI scheme — every warning is an error finding with the engine's code (decision 14), `origin = engine`; a subject the scheme cannot name is attached to `sequence` with the raw subject in `detail`. Findings are sorted by authored position, code and detail. |
+| `emit`, `EmitOptions`, `EmitError` | The emitter to flat CXF: authored order, never sorted; IRIs `{namespace}{sequence}.{local}` (default `urn:oce:author:`, an override must end in `#`, `/` or `:`); block `@type` under the fixed class base `http://example.org#Buildings.Controls.OBC.`; only the assignments the author wrote; arrays in the CXF array form (element by element under the flattened names when the author left a gap); an enumeration-typed sequence parameter with its class IRI as `isOfDataType` and the full member path as value, and a library constant with its package IRI as `isOfDataType`, as the corpus writes them; boundary `unit`, `quantity`, `displayUnit`, `min` and `max` and no semantic record; a canonical writer (fixed key order, two-space indentation, ASCII, shortest round-trip reals); refuses stage-1 errors (`EmitError::Invalid`), a malformed namespace (`EmitError::InvalidNamespace`) and anything above `oce_api::MAX_CXF_BYTES` (`EmitError::TooLarge`). |
 | `import_cxf`, `ImportError` | A minimal importer for the flat corpus dialect (gate item 1); see below. |
 | `parse_text`, `parse_text_bytes`, `print_text`, `fmt_text`, `ParseError`, `PrintError` | The text form (issue #482): a hand-written recursive-descent parser over `&str` or raw bytes, bounded at parse, refusing each malformed construct with one typed `ParseError { code, location, detail }` (`PARSE_CODES`, thirty-one codes, pinned in order); a canonical printer that is total or refusing (`PrintError::Unspellable`); `fmt_text` = parse then print, idempotent. See below. |
 | `validate_text`, `parse_text_with_spans`, `SourceMap` | Validation of a text document: both stages, with every finding's `span` set to its subject's line and column. |
@@ -25,7 +25,9 @@ non-strict JSON — a key written twice, or an integer-shaped token outside `i64
 the subset (`Unsupported`) or a dangling reference (`Unresolved`). It deliberately ignores
 `S231:label` everywhere, a parameter's descriptive `unit`, `quantity` and `displayUnit`, and the
 root's `@type`. Gate item 1 is not yet met: of the 46 G36 fixtures, 6 are out of the M2 subset and 4
-of the other 40 import and round-trip; the 36 others wait on model decisions (GitHub #475):
+of the other 40 import and round-trip; the 36 others wait on model decisions (GitHub #475). The
+model carries enumeration-typed parameters, bounds and constant members since issue #492; the
+importer reads them with the importer PR, so today the first refusals are still:
 
 | First refusal | Fixtures |
 | --- | --- |
@@ -50,9 +52,40 @@ A block parameter `value` takes one of five shapes on the wire:
 | boolean | `true` | `Literal::Boolean` |
 | string | `"text"` | `Literal::Text`; always text, never a reference |
 | reference | `{"ref": "dTHys"}` | `ParamValue::Ref` to a sequence parameter |
-| enumeration member | `{"member": "SimpleController.PI"}` | `Literal::EnumMember` |
+| member | `{"member": "SimpleController.PI"}`, `{"member": "OperationModes.occupied"}` | `Literal::Member` (`MemberRef`): an enumeration member or a library constant |
 
 A sequence parameter's value takes the same shapes except the reference.
+
+## Enumeration types, members and bounds (issue #492)
+
+The three model changes the importer note (`docs/design/importer.md`, decisions 1 to 6 and 10)
+sequences before the importer:
+
+- **Enumeration-typed sequence parameters.** `ParameterType::Enum(type_name)`, spelled by the
+  enumeration's last segment in both forms: wire `"type": "SimpleController"`, text
+  `param conTyp : SimpleController = SimpleController.PI`. The value is a member of that type. The
+  reader and the parser accept any type string (the schema's `type` enum lists the known ones);
+  the validator resolves it through `oce_api::enumeration_types()` and refuses an unknown name or a
+  constant package (`unknown-enum-type`). A block parameter of `ValueType::Enum(c)` may reference
+  it only when the type resolves to class `c`; any other pairing is `parameter-kind-mismatch`. The
+  emitter writes `isOfDataType` the class IRI and the full member path, as the corpus does.
+- **Members.** `Literal::Member(MemberRef)` covers an enumeration member (`SimpleController.PI`)
+  and an Integer constant of a library constant package (`OperationModes.occupied`), one wire tag
+  and one text spelling; the type name decides which, through `oce_api::enumerations()`. A constant
+  fits an Integer parameter (sequence or block) and grounds to its Integer; on any other parameter
+  it is `parameter-kind-mismatch` (`unknown-enum-literal` on an enumeration parameter). The emitter
+  writes the package IRI as the node's `isOfDataType` (importer note, ruling 9).
+- **Boundary bounds.** `Boundary::min` / `max`, each an optional `Bound` (an Integer or Real number
+  literal, never a reference): wire `"min": []` or `[<number>]`, text `@min <number>` / `@max
+  <number>` beside `@displayUnit` (no unit suffix). A Real boundary takes either kind (an Integer
+  widened, exactly up to 2^53), an Integer boundary an Integer inside the engine's `i32` Integer
+  domain (a bound outside `i32::MIN..=i32::MAX` is refused by stage 1, because the engine would
+  narrow it silently), a Boolean boundary none (`invalid-bound`); a non-finite bound is `non-finite-bound` (the builder refuses it too,
+  `BuildError::NonFiniteBound`) and `min > max` is `crossed-bounds`. The emitter writes `S231:min` /
+  `S231:max` after `S231:displayUnit`: a typed `xsd:double` on a Real boundary, a bare JSON integer
+  on an Integer one. On an input they are the effective acceptance domain and inside the canonical
+  content id; on an output they are load-checked and outside it. `nominal` and `unbounded` are not
+  carried.
 
 Goldens regenerate only with `OCE_BLESS_AUTHOR=1 cargo nextest run -p oce-author` (see
 `.agents/project-facts.md`).
@@ -89,16 +122,16 @@ file        = sequence-stmt extends-stmt { statement }
 sequence-stmt = "sequence" name
 extends-stmt  = "extends" ( "none" | provenance-id )
 statement   = param-stmt | in-stmt | out-stmt | block-stmt | connection
-param-stmt  = "param" name ":" type "=" scalar
+param-stmt  = "param" name ":" ( type | name ) "=" scalar   (a name: an enumeration type)
 in-stmt     = "in" name ":" type { tag }        (out-stmt alike, with "out")
 block-stmt  = "block" name "=" path [ "(" [ assign { "," assign } ] ")" ]
 assign      = name "=" ( scalar | list )
 connection  = path "->" path                    (an endpoint: name or block.port)
 scalar      = number [ suffix ] | "true" | "false" | string | path
 list        = "[" item { "," item } "]"         (items scalars, or rows of scalars)
-tag         = "@unit" atom | "@quantity" atom | "@displayUnit" atom | "@brick" atom
-            | "@s223" atom | "@qudt" atom | "@haystack" atom | "@name" string
-            | "@label" string | "@provisional"
+tag         = "@unit" atom | "@quantity" atom | "@displayUnit" atom | "@min" number
+            | "@max" number | "@brick" atom | "@s223" atom | "@qudt" atom
+            | "@haystack" atom | "@name" string | "@label" string | "@provisional"
 type        = "Real" | "Integer" | "Boolean"
 path        = name { "." name }
 number      = [ "-" ] ( "0" | [1-9][0-9]* ) [ "." [0-9]+ ] [ ( "e" | "E" ) [ "+" | "-" ] [0-9]+ ]
@@ -122,10 +155,14 @@ comment     = "#" to the end of the line, anywhere
   provenance id runs to the next space and may contain `#`, as decision 5's grammar allows; it too
   must be printable ASCII.
 - On the right of `=` in a block, a bare `name` is a reference to a sequence parameter and a
-  dotted `Type.Member` an enumeration member. A sequence parameter takes a literal or a member,
+  dotted `Type.Member` a member of an enumeration or a library constant package. A sequence parameter takes a literal or a member,
   never a reference or a list (`misplaced-value`). `NaN`, `inf` and `Infinity` in any case are
   refused as values (`non-finite-number`), and stage 1 refuses them as declared names
   (`invalid-name`, `NON_FINITE_WORDS`), so every reference a clean model holds is spellable.
+- A sequence parameter's type is `Real`, `Integer`, `Boolean` or any other word, read as an
+  enumeration type name the validator resolves; a boundary's type is one of the three
+  (`unknown-type`). `@min` and `@max` take one number token and nothing after it but another tag,
+  a comment or the end of the line (a unit suffix is `stray-token`).
 - An integer token is a `Literal::Integer` and never becomes a Real; a token with a fraction or an
   exponent is a `Literal::Real`. A leading `+` or a leading zero is **refused**
   (`malformed-number`), not normalized; `-0` reads as the Integer `0`, as on the wire.
@@ -151,7 +188,7 @@ comment     = "#" to the end of the line, anywhere
 
 - **Section order**: header comments, `sequence`, `extends`, then parameters, inputs, outputs,
   blocks and connections, each section in authored order (decision 12). Nothing is sorted.
-- **Spelling**: one space around `=`, `->` and `:`; Reals in Rust's shortest round-trip spelling
+- **Spelling**: one space around `=`, `->` and `:`; Reals (bounds included) in Rust's shortest round-trip spelling
   (`1.50` → `1.5`, `1E5` → `100000.0`, `0.000001` → `1e-6`); Integers bare; suffixes re-emitted
   after one space; tags in the grammar's order; two-space indentation; one final line feed.
 - **Blocks** print on one line when they have at most two items, none annotated, and the line fits
@@ -179,7 +216,8 @@ comment     = "#" to the end of the line, anywhere
 parses to a different model. A name, class path, atom, suffix, string, value or `extends` id the
 lexer would not read back as the same value — a space or line feed in a name, `#` in an atom, a
 non-path class, a suffix that is not a base unit, `extends none` as an id, a reference named
-`true` or `inf`, a member with no `Type.`, a non-finite Real, a control character or bidirectional
+`true` or `inf`, a member with no `Type.`, an enumeration type spelled as a scalar type or not as
+one word, a non-finite Real or bound, a control character or bidirectional
 override in a string — is refused with `PrintError::Unspellable { subject, detail }`, and so is a
 statement whose printed line would pass 8,192 bytes (a dotted name or a tag list too long for one
 line) and a document that would pass 4 MiB, 100,000 lines or 65,536 statements of one kind. The only

@@ -6,9 +6,9 @@
 mod support;
 
 use oce_author::{
-    Endpoint, EnumMember, Identifier, Literal, MAX_COMMENT_BYTES, MAX_HAYSTACK_TAGS,
-    MAX_IDENTIFIER_BYTES, MAX_LINE_BYTES, MAX_SEMANTIC_FIELD_BYTES, MAX_STRING_BYTES, ParamValue,
-    PrintError, ProvenanceId, Sequence, check_declared_name, fmt_text, parse_text, print_text,
+    Endpoint, Identifier, Literal, MAX_COMMENT_BYTES, MAX_HAYSTACK_TAGS, MAX_IDENTIFIER_BYTES,
+    MAX_LINE_BYTES, MAX_SEMANTIC_FIELD_BYTES, MAX_STRING_BYTES, MemberRef, ParamValue, PrintError,
+    ProvenanceId, Sequence, check_declared_name, fmt_text, parse_text, print_text,
     validate_author_side,
 };
 
@@ -63,7 +63,7 @@ fn a_comment_with_a_line_feed_prints_as_comment_lines_and_injects_nothing() {
 #[test]
 fn every_value_the_lexer_cannot_read_back_is_refused_by_subject() {
     type Edit = fn(&mut Sequence);
-    let cases: [(Edit, &str, &str); 16] = [
+    let cases: [(Edit, &str, &str); 21] = [
         (
             |s| s.name = Identifier::unchecked("econ enable"),
             "sequence",
@@ -110,9 +110,37 @@ fn every_value_the_lexer_cannot_read_back_is_refused_by_subject() {
             "not finite",
         ),
         (
-            |s| s.params[0].value = Literal::EnumMember(EnumMember::parse("PI")),
+            |s| s.params[0].value = Literal::Member(MemberRef::parse("PI")),
             "dTHys",
             "no `Type.` prefix",
+        ),
+        (
+            |s| s.params[0].value_type = oce_author::ParameterType::Enum("Real".to_owned()),
+            "dTHys",
+            "reads as the scalar type",
+        ),
+        (
+            |s| {
+                s.params[0].value_type =
+                    oce_author::ParameterType::Enum("Simple Controller".to_owned())
+            },
+            "dTHys",
+            "is not a word",
+        ),
+        (
+            |s| s.params[0].value_type = oce_author::ParameterType::Enum(String::new()),
+            "dTHys",
+            "is not a word",
+        ),
+        (
+            |s| s.inputs[0].min = Some(oce_author::Bound::Real(f64::NAN)),
+            "TOut",
+            "not finite",
+        ),
+        (
+            |s| s.outputs[0].max = Some(oce_author::Bound::Real(f64::NEG_INFINITY)),
+            "ecoEna",
+            "not finite",
         ),
         (
             |s| s.blocks[1].assignments[1].value = ParamValue::Ref(Identifier::unchecked("true")),
@@ -430,10 +458,10 @@ fn slots() -> Vec<(&'static str, Slot)> {
             s.params[0].value = Literal::Text(v.to_owned())
         }),
         ("parameter member type", |s, v| {
-            s.params[0].value = Literal::EnumMember(EnumMember::parse(&format!("{v}.PI")));
+            s.params[0].value = Literal::Member(MemberRef::parse(&format!("{v}.PI")));
         }),
         ("parameter member", |s, v| {
-            s.params[0].value = Literal::EnumMember(EnumMember::parse(&format!("T.{v}")));
+            s.params[0].value = Literal::Member(MemberRef::parse(&format!("T.{v}")));
         }),
         ("parameter suffix", |s, v| s.params[0].suffix = some(v)),
         ("parameter comment", |s, v| {
@@ -474,11 +502,11 @@ fn slots() -> Vec<(&'static str, Slot)> {
         }),
         ("assignment member type", |s, v| {
             s.blocks[1].assignments[0].value =
-                ParamValue::Literal(Literal::EnumMember(EnumMember::parse(&format!("{v}.PI"))));
+                ParamValue::Literal(Literal::Member(MemberRef::parse(&format!("{v}.PI"))));
         }),
         ("assignment member", |s, v| {
             s.blocks[1].assignments[0].value =
-                ParamValue::Literal(Literal::EnumMember(EnumMember::parse(&format!("T.{v}"))));
+                ParamValue::Literal(Literal::Member(MemberRef::parse(&format!("T.{v}"))));
         }),
         ("assignment suffix", |s, v| {
             s.blocks[1].assignments[0].suffix = some(v)

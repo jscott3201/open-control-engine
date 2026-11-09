@@ -84,9 +84,9 @@ fn author_findings(member: &str) -> Vec<&'static str> {
     let mut block = Block::new(support::id("con"), "CDL.Reals.PID");
     block.assignments.push(oce_author::Assignment::new(
         support::id("controllerType"),
-        ParamValue::Literal(Literal::EnumMember(oce_author::EnumMember::parse(
-            &format!("SimpleController.{member}"),
-        ))),
+        ParamValue::Literal(Literal::Member(oce_author::MemberRef::parse(&format!(
+            "SimpleController.{member}"
+        )))),
     ));
     let mut s = oce_author::Sequence::new(support::id("s"));
     s.blocks.push(block);

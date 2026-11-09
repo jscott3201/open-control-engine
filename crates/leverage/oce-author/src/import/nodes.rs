@@ -169,7 +169,7 @@ pub(super) fn check_value_shapes(
         | ("S231:Integer", Literal::Integer(_))
         | ("S231:Boolean", Literal::Boolean(_))
         | ("S231:String", Literal::Text(_)) => true,
-        (_, Literal::EnumMember(member)) => enum_type == Some(member.type_name.as_str()),
+        (_, Literal::Member(member)) => enum_type == Some(member.type_name.as_str()),
         _ => false,
     };
     let known = matches!(

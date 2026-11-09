@@ -1,6 +1,9 @@
 invalid-provenance-id	extends	`CXF:abc`: a provenance id starts with a lowercase format prefix (`[a-z][a-z0-9]*`) and a colon
 parameter-kind-mismatch	nStage	sequence parameter `nStage` is declared Integer but its value is Real
+unknown-enum-type	eneStd	sequence parameter `eneStd`: `OperationModes` (ASHRAE.G36.Types.OperationModes) is a constant package, never a parameter type; declare the parameter `Integer` and assign `OperationModes.<member>`
+crossed-bounds	TOut	`TOut` declares `min` 30.0 above `max` -10; no value lies between them
 invalid-semantic-point	TOut	`unit` byte 3 is not printable ASCII without space or `#`
+invalid-bound	ecoEna	`ecoEna` is a Boolean boundary, which takes no `max`
 duplicate-name	sub	block `sub` repeats the name of an earlier output; names are unique across parameters, inputs, outputs and blocks
 duplicate-parameter	hys.uLow	block `hys` assigns `uLow` more than once
 unknown-parameter	hys.uMid	`CDL.Reals.Hysteresis` has no parameter `uMid`; array parameters are assigned per element (`k_1`)

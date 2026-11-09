@@ -148,7 +148,7 @@ fn any_of_appears_only_over_the_value_shapes() {
             scalar("boolean"),
             scalar("string"),
             reference("Reference"),
-            reference("EnumMember")
+            reference("Member")
         ]
     );
     assert_eq!(
@@ -157,7 +157,7 @@ fn any_of_appears_only_over_the_value_shapes() {
             scalar("number"),
             scalar("boolean"),
             scalar("string"),
-            reference("EnumMember")
+            reference("Member")
         ]
     );
     assert!(!WIRE_SCHEMA.contains("\"oneOf\""));
@@ -206,4 +206,78 @@ fn root_requires_the_seven_sequence_keys_in_wire_order() {
         "https://json-schema.org/draft/2020-12/schema"
     );
     assert_eq!(schema["title"], "Sequence");
+}
+
+#[test]
+fn the_parameter_type_enum_lists_the_scalars_and_every_enumeration_but_no_package() {
+    let schema = published();
+    let listed: Vec<&str> = schema["$defs"]["SequenceParameter"]["properties"]["type"]["enum"]
+        .as_array()
+        .expect("type enum")
+        .iter()
+        .map(|v| v.as_str().expect("string"))
+        .collect();
+    assert_eq!(listed, oce_author::parameter_type_names());
+    let enumerations: Vec<&str> = oce_api::enumeration_types()
+        .map(oce_api::EnumerationClass::type_name)
+        .collect();
+    assert_eq!(&listed[3..], enumerations.as_slice());
+    for row in oce_api::enumerations() {
+        let is_type = row.kind == oce_api::EnumerationKind::Enumeration;
+        assert_eq!(
+            listed.contains(&row.type_name()),
+            is_type,
+            "{}",
+            row.class_path
+        );
+    }
+    // Far under the 1,000-value cap of common structured-output decoders.
+    assert!(listed.len() < 100, "{}", listed.len());
+    // A boundary keeps the three scalar types.
+    assert_eq!(
+        schema["$defs"]["Boundary"]["properties"]["type"]["$ref"],
+        "#/$defs/SignalType"
+    );
+    assert_eq!(
+        schema["$defs"]["SignalType"]["enum"],
+        serde_json::json!(["Real", "Integer", "Boolean"])
+    );
+}
+
+#[test]
+fn boundary_bounds_are_number_lists_whose_description_says_at_most_one() {
+    let schema = published();
+    let boundary = &schema["$defs"]["Boundary"];
+    let required: Vec<&str> = boundary["required"]
+        .as_array()
+        .expect("required")
+        .iter()
+        .map(|v| v.as_str().expect("string"))
+        .collect();
+    assert_eq!(
+        required,
+        [
+            "name",
+            "type",
+            "quantity",
+            "display_unit",
+            "min",
+            "max",
+            "semantic"
+        ]
+    );
+    for side in ["min", "max"] {
+        let property = &boundary["properties"][side];
+        assert_eq!(property["type"], "array", "{side}");
+        assert_eq!(
+            property["items"],
+            serde_json::json!({"type": "number"}),
+            "{side}"
+        );
+        let description = property["description"].as_str().expect("description");
+        assert!(
+            description.contains("at most one item"),
+            "{side}: {description}"
+        );
+    }
 }

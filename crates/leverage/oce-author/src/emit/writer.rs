@@ -18,7 +18,9 @@ use crate::model::{Boundary, Endpoint, Sequence};
 
 use super::EmitError;
 use super::iri::{S231_IRI, Scheme, class_iri};
-use super::params::{ParamNode, block_parameters, sequence_value, signal_data_type};
+use super::params::{
+    ParamNode, block_parameters, bound_value, sequence_data_type, sequence_value, signal_data_type,
+};
 
 fn reference(iri: &str) -> Json {
     Json::obj([("@id", Json::str(iri))])
@@ -79,11 +81,11 @@ pub(super) fn document(
             ("@type".to_owned(), Json::str("S231:Parameter")),
             (
                 "S231:isOfDataType".to_owned(),
-                reference(signal_data_type(param.value_type)),
+                reference(&sequence_data_type(&param.value_type, &param.value)),
             ),
             (
                 "S231:value".to_owned(),
-                sequence_value(param.value_type, &param.value),
+                sequence_value(&param.value_type, &param.value),
             ),
         ]));
     }
@@ -253,6 +255,12 @@ fn boundary_node(
     for (key, value) in attributes {
         if let Some(value) = value {
             entries.push((key.to_owned(), Json::str(value)));
+        }
+    }
+    // Bounds after `displayUnit` (importer note, "Bounds on boundary declarations").
+    for (key, bound) in [("S231:min", boundary.min), ("S231:max", boundary.max)] {
+        if let Some(bound) = bound {
+            entries.push((key.to_owned(), bound_value(boundary.value_type, bound)));
         }
     }
     if let Some(list) = connected {

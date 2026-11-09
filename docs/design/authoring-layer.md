@@ -46,10 +46,10 @@ in its simplest accepted form and the dialect the library already uses. Nested c
 | Element | Content |
 | --- | --- |
 | Sequence | `name` (identifier), `extends` (opaque provenance id or none, decision 5) |
-| Parameter | sequence-level `name`, `type` (Real, Integer, Boolean), literal `value`; lowered onto the root block (decision 3) |
-| Input / output | boundary `name`, `type` (Real, Integer, Boolean), optional `quantity` and `display_unit` (decision 21), and a `SemanticPoint` slot (decision 2) |
+| Parameter | sequence-level `name`, `type` (Real, Integer, Boolean, or an enumeration type name; amended 2026-11-09, issue #492), literal `value`; lowered onto the root block (decision 3) |
+| Input / output | boundary `name`, `type` (Real, Integer, Boolean), optional `quantity` and `display_unit` (decision 21), optional `min` and `max` number bounds (amended 2026-11-09, issue #492), and a `SemanticPoint` slot (decision 2) |
 | Block | instance `name`, catalog `class_path`, ordered parameter assignments |
-| Assignment | parameter `name` and a value: a literal, an enum member, a string, or a reference to a sequence parameter |
+| Assignment | parameter `name` and a value: a literal, a member of an enumeration or library constant package, a string, or a reference to a sequence parameter |
 | Connection | `source -> target`; an endpoint is a boundary name or `block.port` |
 
 Every list is an ordered vector, kept in authored order. Names are identifiers
@@ -59,9 +59,22 @@ IRI under the root. Port names are never authored; they come from the catalog (#
 
 `SemanticPoint` is a closed struct of optional fields: `name`, `label`, `unit`, `brick`, `s223`,
 `qudt`, `haystack` (a list of tags) and `provisional`. Literals are tagged: `Integer(i64)` when the
-token has no fraction or exponent, `Real(f64)` otherwise, `Boolean`, `Text`, `EnumMember` (the
-member's type and name). A Real parameter accepts an Integer literal, as CDL parameter validation
-widens it; an Integer parameter refuses a Real literal.
+token has no fraction or exponent, `Real(f64)` otherwise, `Boolean`, `Text`, `EnumMember` (now
+`Member`; the member's type and name). A Real parameter accepts an Integer literal, as CDL
+parameter validation widens it; an Integer parameter refuses a Real literal.
+
+*Amended 2026-11-09 (issue #492, from the [importer note](importer.md#model-changes)):* three model
+changes. A sequence parameter's type is a `ParameterType`: `Real`, `Integer`, `Boolean` or
+`Enum(type_name)`, the enumeration's last segment (`SimpleController`, `EnergyStandard`), resolved
+through `oce_api::enumeration_types()`; a constant package is never a parameter type. Its value is a
+member of that type, and a block parameter of `ValueType::Enum(c)` may reference it only when the
+type resolves to class `c`. `EnumMember` became `Literal::Member(MemberRef { type_name, member })`,
+a member of a named type: an enumeration member, or an Integer constant of a library constant
+package (`OperationModes.occupied`), which fits an Integer parameter; the type name decides which,
+through `oce_api::enumerations()`, never the parameter's kind. A boundary carries optional `min`
+and `max`, each a `Bound`: an Integer or Real number literal, never a reference. A Real boundary
+takes either kind (an Integer widened, exactly up to 2^53), an Integer boundary an Integer, a
+Boolean boundary none. `nominal` and `unbounded` are not carried.
 
 ## Text form
 
@@ -73,12 +86,12 @@ parser (decision 1). One statement per line except a block's parameter list, whi
 | file | `sequence-stmt extends-stmt { param-stmt } { in-stmt } { out-stmt } { block-stmt } { connection }` |
 | sequence-stmt | `"sequence" name` |
 | extends-stmt | `"extends" ( "none" \| provenance-id )` |
-| param-stmt | `"param" name ":" type "=" literal` |
+| param-stmt | `"param" name ":" ( type \| name ) "=" literal` (a `name`: an enumeration type; amended 2026-11-09) |
 | in-stmt / out-stmt | `("in" \| "out") name ":" type { tag }` |
 | block-stmt | `"block" name "=" class-path [ "(" [ assign { "," assign } ] ")" ]` |
 | assign | `name "=" ( literal \| name \| enum-member \| list )` |
 | connection | `endpoint "->" endpoint`, endpoint = `name [ "." name ]` |
-| tag | `"@unit" atom \| "@quantity" atom \| "@displayUnit" atom \| "@brick" atom \| "@s223" atom \| "@qudt" atom \| "@haystack" atom \| "@name" string \| "@label" string \| "@provisional"` |
+| tag | `"@unit" atom \| "@quantity" atom \| "@displayUnit" atom \| "@min" number \| "@max" number \| "@brick" atom \| "@s223" atom \| "@qudt" atom \| "@haystack" atom \| "@name" string \| "@label" string \| "@provisional"` |
 | literal | `number [ unit-suffix ] \| "true" \| "false" \| string` |
 | list | `"[" [ item { "," item } ] "]"`, items literals or lists (vectors and matrices) |
 | comment | `#` to end of line, anywhere |
@@ -86,7 +99,11 @@ parser (decision 1). One statement per line except a block's parameter list, whi
 
 The `file` production is the canonical order; after `extends` the parser accepts the other
 statements in any order and `fmt` regroups them (decision 12). `type` is `Real`, `Integer` or
-`Boolean`. `class-path` is the catalog `class_path` verbatim
+`Boolean`. *Amended 2026-11-09 (issue #492):* a sequence parameter's type may also be any other
+word, an enumeration type name the validator resolves (the parser stays catalog-free); a boundary's
+type stays one of the three. `@min` and `@max` take one number token with no unit suffix and print
+right after `@displayUnit`. A `Type.Member` on the right of `=` is a member of an enumeration or of
+a library constant package (`OperationModes.occupied`). `class-path` is the catalog `class_path` verbatim
 (`CDL.Reals.Hysteresis`). An `enum-member` is `Type.Member` with `Type` the last segment of the
 enum class (`SimpleController.PI`); the catalog resolves it to the full member path. A bare `name`
 on the right of `=` is a reference to a sequence parameter. A string is double-quoted with `\"`,
@@ -235,7 +252,7 @@ tagged objects are closed, and the schema lists the five shapes under `anyOf`. C
   "extends": "",
   "params": [{ "name": "dTHys", "type": "Real", "value": 1 }],
   "inputs": [{ "name": "TOut", "type": "Real", "quantity": "ThermodynamicTemperature",
-               "display_unit": "degC",
+               "display_unit": "degC", "min": [], "max": [],
                "semantic": { "name": "", "label": "", "unit": "K", "brick": "", "s223": "",
                              "qudt": "", "haystack": [], "provisional": false } }],
   "outputs": [],
@@ -250,6 +267,16 @@ tagged objects are closed, and the schema lists the five shapes under `anyOf`. C
 is always text and never depends on the catalog: a reference or an enum member is written as its
 tagged object, so any parameter kind, String included, may take a reference (decision 11). An enum
 member uses the text form's `Type.Member` spelling, e.g. `{"member": "SimpleController.PI"}`.
+
+*Amended 2026-11-09 (issue #492):* a sequence parameter's `type` is `"Real"`, `"Integer"`,
+`"Boolean"` or an enumeration type name; the schema lists them in a `type` enum generated like the
+`class` enum (the three scalars and every enumeration row of `oce_api::enumeration_types()`, never a
+constant package, 17 values today), and the reader accepts any string for the validator to judge.
+The `{"member": …}` tag covers a library constant too (`{"member": "OperationModes.occupied"}`).
+Every boundary carries `"min"` and `"max"`, each `[]` (none) or a list of exactly one number; the
+strict profile cannot say "at most one item" (no `maxItems`), so the schema's description says it
+and the reader refuses a second item with `WireError::BoundListTooLong`. The worked example above
+gained `"min": [], "max": []` with this amendment.
 
 The JSON Schema is derived from the wire DTOs with `schemars`, a dependency of `oce-author` only,
 never of an engine crate. The `class` enum is generated from the non-reserved class paths of
@@ -300,12 +327,16 @@ pre-empt where one exists. The table is a test fixture: gate item 3 is a table-d
 | `parameter-out-of-range` | engine | `invalid-width` | 1 | — (catalog rules, widths included) |
 | `non-finite-parameter` | engine | — | 1 | — |
 | `unknown-enum-literal` | author-only (amended 2026-11-09) | — | 1 | `grounding-failed` |
+| `unknown-enum-type` | engine (added 2026-11-09, issue #492) | — | 1 | — (an unknown type name; a constant package as a type is refused by stage 1 alone, since the engine reads a package-typed parameter as Integer) |
 | `unknown-parameter-reference` | author-only | — | 1 | `grounding-failed` |
 | `malformed-connection` | author-only | `malformed-edge` | 1 | — |
 | `unknown-source` | author-only | `unknown-source` | 1 | `unresolved-reference` |
 | `unknown-target` | author-only | `unknown-destination` | 1 | `unresolved-reference` |
 | `unknown-port` | author-only | — | 1 | `unresolved-reference` (no such port node; amended 2026-11-09) |
 | `invalid-semantic-point` | author-only | — | 1 | — |
+| `invalid-bound` | author-only (added 2026-11-09, issue #492) | — | 1 | `malformed-document` (a bound on a Boolean boundary, a Real on an Integer boundary; also an Integer above 2^53 on a Real boundary). *Amended 2026-11-09, #493:* also an Integer bound on an Integer boundary outside `i32::MIN..=i32::MAX`, because the engine narrows it to `i32` without a warning (no engine code to pre-empt; a parity test pins the narrowing) |
+| `non-finite-bound` | engine (added 2026-11-09, issue #492) | — | 1 | — (the builder refuses it too) |
+| `crossed-bounds` | engine (added 2026-11-09, issue #492) | — | 1 | — (`min > max`) |
 | `invalid-provenance-id` | author-only | — | 1 | — |
 | `type-mismatch` | engine | `type-mismatch` | 2 | — |
 | `single-assignment` | author and engine (amended 2026-11-09: author for a target the connection list repeats, engine for the rest) | `multiply-driven`, `undriven` | 1 and 2 | `single-assignment` (stage 1 pre-empts the engine's own code for a repeated target) |
@@ -694,5 +725,15 @@ The architect pass on the draft (owner consulted on 11, 12 and 20) ruled:
   the empty list, `-0`, the `+1` / `01` refusal and the unit-suffix production are recorded; array
   regrouping is made precise (every element of the template in the block, at least two, a whole
   rectangle). Each is stated under "Round-trip properties".
+- 2026-11-09 (issue #492, from the importer note's decisions 1 to 6 and 10 and its rulings): the
+  model gained `ParameterType::Enum`, `Literal::Member` (enumeration members and library
+  constants, renamed from `EnumMember`) and boundary `min`/`max`; the wire form a sequence
+  parameter `type` enum and `"min"`/`"max"` lists of at most one number; the text form an
+  enumeration type name in `param` and the `@min`/`@max` tags; the finding-code table four stage-1
+  rows (`unknown-enum-type`, `invalid-bound`, `non-finite-bound`, `crossed-bounds`), each pinned
+  by the parity test. The emitter writes an enumeration parameter's class IRI and a constant's
+  package IRI as `isOfDataType` (importer note, ruling 9), and bounds as `S231:min`/`S231:max`
+  after `S231:displayUnit`. Constant members land here rather than in the importer PR (issue #492
+  as cut moved them; the importer note's ruling 10 had them in the importer PR).
 - 2026-11-08: the CLI exit-code rule was aligned with the diff and commissioning passes: 0 yes, 1
   no, 2 error, with a parse refusal and an I/O failure both 2 and no exit 3.
