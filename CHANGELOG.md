@@ -284,7 +284,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   imported document) are tested. Found on the way, and fixed by GitHub #477: a block input driven by
   both a block output and a boundary input loaded without a `single-assignment` refusal (#472);
   the parity test now pins the engine's refusal of it.
-- **`oce-author`: the text form, with an idempotent `fmt`** (GitHub #PRNUM, issue #482). The
+- **`oce-author`: the text form, with an idempotent `fmt`** (GitHub #485, issue #482). The
   authoring note's terse line grammar (decisions 1, 3, 12, 13 and 15) as a hand-written
   recursive-descent parser and a canonical printer: `parse_text` / `parse_text_bytes` /
   `print_text` / `fmt_text`, `fmt_text` being parse then print and idempotent. Parsing is bounded
