@@ -14,8 +14,11 @@
 #                 the core four; never add firmware/ to the docs or leverage allowlists).
 #   leverage      the leverage lane: any path under crates/leverage/, or `core` (an engine change
 #                 can break a crate built on the facade).
-#   gate_scripts  `gate (light)`, which executes .agents/gate.sh: the gate script itself, the CI
-#                 scripts, scripts/ outside scripts/docs, the workflows and .config/. Implies core.
+#   gate_scripts  the gate's own definition changed: the gate script itself, the CI scripts,
+#                 scripts/ outside scripts/docs, the workflows and .config/. Implies core, so such
+#                 a change runs the whole determinism lane. Informational since issue #502: no job
+#                 is gated on it (`gate (light)` was; release-gate.yml's `gate (full)` executes
+#                 .agents/gate.sh on every merge into `development` instead).
 #   docs_only     every path is a documentation path (informational; nothing is gated on it).
 #
 # FAIL-CLOSED. A path that matches no allowlist counts as core. Empty input (a diff that could not

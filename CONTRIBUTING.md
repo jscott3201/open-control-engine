@@ -33,6 +33,12 @@ the architecture and invariants are the design of record.
   published yet; actual publication remains separately owner-authorized.
 - **Every PR runs the full per-PR gate**, including work-in-progress PRs. Confirm the checks
   actually ran and that `CI OK` is green before asking for review.
+- **The release gate runs on the merge commit.** Merging into `development` starts
+  [`.github/workflows/release-gate.yml`](.github/workflows/release-gate.yml): the full workspace
+  suite, the determinism subset under release codegen on x86_64 and arm64 with its
+  debug-against-release comparisons, the Windows cell and the executed gate script. The per-PR gate
+  runs none of those four. A red run there is fixed forward or reverted before the next engine
+  change merges ([what runs after the merge](docs/ci-and-the-gate.md#what-runs-after-the-merge)).
 - Keep changes scoped to the crate or subsystem that owns the behavior, and add or update tests
   when you change behavior.
 
@@ -114,12 +120,16 @@ That runs the per-PR gate in CI's exact command form — formatting, the file-si
 scan, the database-free and golden-gen invariant checks, the closed package/feature/publication
 contract and its hostile controls, the gate fixtures, `cargo machete`, clippy, build, rustdoc,
 cargo-deny, and the `oce-api`/`oce-blocks`/`oce-expr` determinism subset in debug and release
-codegen, plus the scoped strict-bit conformance subset in both codegen profiles.
+codegen, plus the scoped strict-bit conformance subset in both codegen profiles. The release-codegen
+run of the determinism subset is the script's alone before a merge: the per-PR gate runs that
+subset in debug codegen on x86_64 and arm64, and its release-codegen cells run in the release gate
+on the merge commit. Paste the tail of your run into the PR; it is the pre-merge release-codegen
+evidence.
 
-CI also runs this script directly: as the `gate (light)` job in `.github/workflows/pr-gate.yml` on
-any PR that changes a gate script, workflow or tool config, and as `gate (full)` in
-`.github/workflows/release-gate.yml` daily. So the commands here gate any PR that could make a
-workflow job diverge from them — but that is coverage, not proof that the script and the workflows
+CI also runs this script directly, as `gate (full)` in `.github/workflows/release-gate.yml`: on
+every merge into `development` and daily. No per-PR job executes it, so a change to the script, a
+CI script or a workflow is first executed by CI on its merge commit, and before that only by your
+own run. That is coverage, not proof that the script and the workflows
 still agree. Which `pr-gate.yml` jobs a PR runs depends on the paths it changes; see
 [the lanes](docs/ci-and-the-gate.md#lanes-what-a-pr-runs). `bash .agents/gate.sh leverage` mirrors
 a PR confined to `crates/leverage/`.
@@ -143,8 +153,10 @@ cells in `pr-gate.yml` ([strict-bit evidence](docs/strict-bit-evidence.md)), so 
 and `.config/nextest.toml` are ordinary files again: change them like any other gate change,
 `pr-gate.yml` first.
 
-CI is Linux-only. There is no macOS or Windows CI leg, and there never was one; macOS observations
-are local and are not qualification evidence.
+Qualification is Linux-only. The macOS arm64 cell (per PR) and the Windows cell (in the release
+gate, after each merge) are observations of those platforms, not qualification evidence
+([platform cells](docs/ci-and-the-gate.md#platform-cells-macos-and-windows)); neither runs a
+strict-bit suite.
 
 ## Invariants a change must not violate
 

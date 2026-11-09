@@ -10,7 +10,11 @@ Reads two environment variables the `ci-ok` job sets:
   ``check-workflow-gates.sh`` asserts that this list matches the jobs' ``if:`` lines exactly.
 
 A job passes when its result is ``success``. A job may instead be ``skipped`` only when it is in
-``JOB_LANES`` and its lane output is exactly ``false``: the filter skipped it. Anything else fails
+``JOB_LANES`` and its lane output is exactly ``false``: the filter skipped it. Only ``core`` and
+``leverage`` are filter lanes. ``gate_scripts`` and ``docs_only`` are classifier outputs no job is
+filtered on (``gate (light)``, the one job ``gate_scripts`` gated, was retired by issue #502), so a
+``JOB_LANES`` entry naming either is refused; both must still be reported and consistent with the
+filter lanes. Anything else fails
 -- ``failure``, ``cancelled``, a skip while its lane output was ``true`` (a job that did not start
 although its lane ran, e.g. because a job it needs failed), a skip of an unfiltered job, or an
 absent, malformed or inconsistent ``changes`` result, and a ``NEEDS_JSON`` that is not a JSON
@@ -24,7 +28,7 @@ import os
 import sys
 
 LANES = ("core", "leverage", "gate_scripts", "docs_only")
-FILTERS = ("core", "leverage", "gate_scripts")
+FILTERS = ("core", "leverage")
 
 
 class CheckError(Exception):

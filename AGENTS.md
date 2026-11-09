@@ -64,7 +64,10 @@ scope; a fix you notice elsewhere is a new issue, not a drive-by.
 
 **Prove.** Before opening the PR run `bash .agents/gate.sh full` first-hand and **paste the tail of
 the real output** into the PR description. A summary of a gate is a claim about a gate, and this
-engine controls physical equipment. Then confirm the 46 fixture goldens and 422 provenance goldens
+engine controls physical equipment. That run is also the **pre-merge release-codegen evidence**:
+`bash .agents/gate.sh` runs the determinism subset under release codegen on your machine, and no
+per-PR CI job does (the per-PR determinism matrix is debug codegen on both architectures; the
+release-codegen cells run after the merge). Then confirm the 46 fixture goldens and 422 provenance goldens
 are byte-identical (`git status --porcelain -- tools/golden-gen/goldens` prints nothing) unless the
 issue says the PR exists to regenerate them — then the description says why and which.
 
@@ -77,9 +80,14 @@ the **same branch**; never a second PR for the same work.
 **Merge.** `CI OK` is the one required status; confirm it **reported**, not merely that nothing is
 red (a PR with no checks looks like a PR with no failing checks). Squash-merge into `development`
 once CI OK is green on a branch that is up to date with `development` (branch protection requires
-both; the merge itself runs no gate) and any requested review is addressed. Branches delete on
-merge. Release PRs go `development → main` through `release-gate.yml` and are tagged `v0.x` at the
-end of each milestone.
+both) and any requested review is addressed. The merge is a push to `development`, which starts
+`release-gate.yml` on the merge commit: the determinism matrix in all four cells with its
+debug-against-release comparisons, the Windows cell, the full suite and `gate (full)`. **After
+merging a change that runs the determinism lane, watch that release-gate run**; a red run is
+fixed forward or reverted before the next determinism-lane merge. (A run still waiting when a later
+merge lands shows as cancelled: the later run, whose commit contains it, is the evidence.)
+Branches delete on merge. Release PRs go `development → main` through `release-gate.yml` and are
+tagged `v0.x` at the end of each milestone.
 
 **Standing rules for every PR**
 
@@ -112,11 +120,13 @@ end of each milestone.
   issues, milestones, reviews and CI live there. Use `gh` for PR and issue operations. (Pull
   requests merged on the previous host before the October 2026 move share numbers with GitHub
   PRs, so cite PRs merged on GitHub as `(GitHub #N)`.)
-- **CI is GitHub Actions** in `.github/workflows/`, on Linux runners plus two `pr-gate.yml`
-  platform observation cells (macOS arm64 portable snapshot, Windows std build and nextest). The single required status is `CI OK`: from
+- **CI is GitHub Actions** in `.github/workflows/`, on Linux runners plus two platform observation
+  cells: the macOS arm64 portable snapshot in `pr-gate.yml` and the Windows std build and nextest
+  in `release-gate.yml`. The single required status is `CI OK`: from
   `pr-gate.yml` into `development`, from `release-gate.yml` into `main`. `pr-gate.yml` runs once
-  per change, on the PR; a merge into `development` runs no gate, and the daily `release-gate.yml`
-  run on the `development` tip is the safety net. `advisories.yml` runs
+  per change, on the PR. A merge into `development` then runs `release-gate.yml` on the merge
+  commit — the heavy gate, not a required status there, so a red run is fixed forward or reverted —
+  and the daily `release-gate.yml` run on the `development` tip stays. `advisories.yml` runs
   daily, `docs-pages.yml` validates docs and publishes `main` to GitHub Pages, `release.yml` keeps
   its tag-verify / manual-publish split, and the two OpenModelica evidence workflows run on native
   arm64 by hand.
@@ -124,16 +134,20 @@ end of each milestone.
   (`scripts/ci/classify-changes.sh`, fail-closed). Anything outside the docs and `crates/leverage/`
   runs the **determinism lane** (every compiling job); `crates/leverage/**` runs the **leverage
   lane** (fmt, clippy, rustdoc, nextest and the `oce-api`-only rule per leverage crate) and so does
-  every engine change; a docs-only PR runs only the always-on checks. `gate (light)` runs only when
-  a gate script, workflow or tool config changes, and such a change runs everything. `CI OK`
+  every engine change; a docs-only PR runs only the always-on checks. A gate script, workflow or
+  tool-config change counts as an engine change and runs both lanes. No per-PR job executes
+  `.agents/gate.sh`: `gate (full)` in `release-gate.yml` does, after the merge. `CI OK`
   accepts a skipped job only when its lane filter skipped it. `bash .agents/gate.sh leverage` is
   the local mirror of a leverage-only PR; [`docs/ci-and-the-gate.md`](docs/ci-and-the-gate.md#lanes-what-a-pr-runs)
   has the trigger table.
 - **`ci.yml` is not the CI.** It is the frozen GitHub-era gate that produced the retained native
   strict-bit capture archives; it is disabled in the Actions settings and stays byte-identical.
 - **The determinism and strict-bit matrices run natively**: x86_64 on `ubuntu-latest` and aarch64
-  on `ubuntu-24.04-arm`, debug and release, four cells each, with fan-in jobs for the cross-cell
-  comparisons. Nothing is emulated; an unavailable runner leaves `CI OK` unreported (no merge).
+  on `ubuntu-24.04-arm`, with fan-in jobs for the cross-cell comparisons. Per PR the strict-bit
+  matrix runs four cells (debug and release) and the determinism matrix two (debug); the
+  determinism matrix's release-codegen cells and its debug-against-release comparisons run in
+  `release-gate.yml` on every merge into `development`. Nothing is emulated; an unavailable runner
+  leaves `CI OK` unreported (no merge).
 - **CI is dev-light / release-heavy.** A green PR is not evidence that a change's own tests pass.
   Which crates' suites run per PR, which only in the release gate, and which commands are CI-only
   for now is spelled out in [`.agents/project-facts.md`](.agents/project-facts.md) and
@@ -166,7 +180,9 @@ directories — that is expected, and `git add -A` silently stages nothing under
 - **Testing standard (safety-critical):** a wrong result is a physical hazard. Every PR ships
   edge-case tests, golden tests compared bit-exactly, oracle cross-checks and determinism goldens
   per `TESTING.md`. Thin coverage is a **blocking review defect**.
-- **The gate:** `bash .agents/gate.sh` mirrors the per-PR gate; `bash .agents/gate.sh full` adds
+- **The gate:** `bash .agents/gate.sh` mirrors the per-PR gate and also runs the determinism
+  subset under release codegen, which CI runs only after the merge, so its tail is the pre-merge
+  release-codegen evidence; `bash .agents/gate.sh full` adds
   the workspace suite and doctests. The script is the single source of truth for gate commands —
   do not restate them anywhere; its closing report names what it cannot cover locally, and a green
   local run is not a green CI. Prose copies of the command list have diverged in both directions

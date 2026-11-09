@@ -7,7 +7,11 @@
 # `continue-on-error` or a step-level `if:` that is not a static matrix selector, and a macOS or
 # Windows platform cell that loses its runner, its lane, its comparison or its strict-bit exclusion,
 # and a blob round trip that loses a leg, its recording, its comparison or its pinned wasmtime, fail
-# closed.
+# closed. Since issue #502 the determinism matrix is split across the two workflows, and the
+# fixtures follow it: pr-gate.yml must hold exactly the two debug cells and the cross-architecture
+# comparisons, and release-gate.yml all four cells, the cross-codegen comparisons, the Windows
+# cell, the push-to-development trigger, a pinned checkout ref and a concurrency group that never
+# cancels a push run in progress.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -93,12 +97,6 @@ jobs:
     if: needs.changes.outputs.leverage == 'true'
     steps:
       - run: bash scripts/ci/leverage-members.sh lane
-  gate:
-    needs: changes
-    if: needs.changes.outputs.gate_scripts == 'true'
-    steps:
-      - run: rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown
-      - run: bash .agents/gate.sh
   default-no-db:
     needs: changes
     if: needs.changes.outputs.core == 'true'
@@ -186,7 +184,7 @@ jobs:
       fail-fast: false
       matrix:
         runner: [ubuntu-latest, ubuntu-24.04-arm]
-        codegen: [debug, release]
+        codegen: [debug]
         include:
           - runner: ubuntu-latest
             arch: x86_64
@@ -203,30 +201,18 @@ jobs:
         run: >-
           rm -rf target/nextest/{ci,ci-release}/junit.xml
           target/{portable,target}-state-{debug,release}.bin
-      - if: matrix.codegen == 'debug'
-        run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
+      - run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
         env:
           OCE_PORTABLE_STATE_OUT: target/portable-state-debug.bin
           OCE_TARGET_STATE_OUT: target/target-state-debug.bin
-      - if: matrix.codegen == 'release'
-        run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
-        env:
-          OCE_PORTABLE_STATE_OUT: target/portable-state-release.bin
-          OCE_TARGET_STATE_OUT: target/target-state-release.bin
-      - if: matrix.codegen == 'debug'
-        env:
+      - env:
           OCE_ROUND_TRIP_OUT: target/determinism/round-trip
         run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci --no-tests=fail
-      - if: matrix.codegen == 'release'
-        env:
-          OCE_ROUND_TRIP_OUT: target/determinism/round-trip
-        run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci-release --cargo-profile release --no-tests=fail
       - run: |
-          test -s "target/nextest/$profile/junit.xml"
-          test -s "target/portable-state-$CELL_CODEGEN.bin"
+          test -s target/nextest/ci/junit.xml
+          test -s target/portable-state-debug.bin
           test "$(ls target/determinism/round-trip | wc -l | tr -d ' ')" = 92
-      - if: matrix.codegen == 'debug'
-        run: |
+      - run: |
           cargo nextest archive -p oce-conformance --test blob_round_trip --locked --archive-file target/determinism/blob-round-trip.tar.zst
       - uses: actions/upload-artifact@0123456789abcdef0123456789abcdef01234567 # v7
         with:
@@ -250,13 +236,16 @@ jobs:
         with:
           tool: nextest@0.9.143
       - run: >-
-          cmp determinism-x86_64-debug/portable-state-debug.bin determinism-x86_64-release/portable-state-release.bin &&
-          cmp determinism-x86_64-debug/target-state-debug.bin determinism-x86_64-release/target-state-release.bin &&
-          cmp determinism-aarch64-debug/portable-state-debug.bin determinism-aarch64-release/portable-state-release.bin &&
-          cmp determinism-aarch64-debug/target-state-debug.bin determinism-aarch64-release/target-state-release.bin
-      - run: >-
           cmp determinism-x86_64-debug/portable-state-debug.bin determinism-aarch64-debug/portable-state-debug.bin &&
           ! cmp -s determinism-x86_64-debug/target-state-debug.bin determinism-aarch64-debug/target-state-debug.bin
+      - run: |
+          for file in determinism-{x86_64,aarch64}-debug/blobs-debug.bin; do
+            size="$(wc -c < "$file" | tr -d ' ')"
+            if [ "$size" != 123329 ]; then
+              exit 1
+            fi
+          done
+          cmp determinism-x86_64-debug/blobs-debug.bin determinism-aarch64-debug/blobs-debug.bin
       - run: |
           test "$CELL_ARCH" != "$FOREIGN_ARCH"
           export OCE_FOREIGN_TARGET_STATE_IN="$PWD/target/determinism/determinism-$FOREIGN_ARCH-debug/target-state-debug.bin"
@@ -264,9 +253,7 @@ jobs:
             --workspace-remap . --profile ci --no-tests=fail \
             -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
       - run: |
-          diff -rq determinism-x86_64-debug/round-trip determinism-x86_64-release/round-trip
           diff -rq determinism-x86_64-debug/round-trip determinism-aarch64-debug/round-trip
-          diff -rq determinism-x86_64-debug/round-trip determinism-aarch64-release/round-trip
       - run: |
           export OCE_ROUND_TRIP_EXPECT="$PWD/target/determinism/determinism-x86_64-debug/round-trip"
           cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/blob-round-trip.tar.zst" \
@@ -325,19 +312,6 @@ jobs:
               exit 1
             fi
           done
-  std-build-windows:
-    needs: changes
-    if: needs.changes.outputs.core == 'true'
-    runs-on: windows-latest
-    steps:
-      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
-        with:
-          tool: nextest@0.9.143
-      - run: cargo build --workspace --locked
-      - run: >-
-          cargo nextest run --workspace --locked --profile ci --no-tests=fail
-          -E 'not (binary_id(oce-conformance::strict_bits) | binary_id(oce-conformance::per_block_reals_transcendental) | binary_id(oce-conformance::per_block_reals_sources_transcendental) | binary_id(oce-conformance::per_block_psychrometrics) | binary_id(oce-conformance::per_block_utilities))'
-      - run: test -s target/nextest/ci/junit.xml
   crate-tests:
     needs: changes
     if: needs.changes.outputs.core == 'true'
@@ -394,7 +368,6 @@ jobs:
       - deny
       - facade-contract
       - leverage-lane
-      - gate
       - default-no-db
       - unused-deps
       - gate-fixtures
@@ -407,7 +380,6 @@ jobs:
       - blob-round-trip-wasm
       - portable-snapshot-macos
       - portable-snapshot-compare
-      - std-build-windows
       - crate-tests
       - no-std-build
       - docs
@@ -416,11 +388,11 @@ jobs:
           NEEDS_JSON: ${{ toJSON(needs) }}
           JOB_LANES: >-
             golden-gen-hygiene=core build=core clippy=core rustdoc=core deny=core
-            facade-contract=core leverage-lane=leverage gate=gate_scripts
+            facade-contract=core leverage-lane=leverage
             default-no-db=core unused-deps=core golden-gen-firewall=core
             strict-bit-matrix=core strict-bit-compare=core
             determinism-matrix=core determinism-compare=core crate-tests=core
-            portable-snapshot-macos=core portable-snapshot-compare=core std-build-windows=core
+            portable-snapshot-macos=core portable-snapshot-compare=core
             no-std-build=core
             blob-round-trip-wasm=core
         run: python3 scripts/ci/ci_ok.py
@@ -440,15 +412,24 @@ jobs:
 EOF
   cat > "$dir/release-gate.yml" <<'EOF'
 on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, development]
   schedule:
     - cron: "17 8 * * *"
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+env:
+  CHECKOUT_REF: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'development' || github.event_name == 'push' && github.sha || github.ref }}
 jobs:
   test-suite:
     steps:
       - uses: actions/checkout@89abcdef0123456789abcdef0123456789abcdef # v4
         with:
-          ref: ${{ github.event_name == 'schedule' && 'development' || github.ref }}
+          ref: ${{ env.CHECKOUT_REF }}
       - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
         with:
           tool: nextest@0.9.143
@@ -486,10 +467,125 @@ jobs:
           rustup target add wasm32-wasip1
           bash scripts/ci/install-wasmtime.sh target/wasmtime-bin
       - run: bash .agents/gate.sh full
+  determinism-matrix:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+        codegen: [debug, release]
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    steps:
+      - uses: actions/checkout@89abcdef0123456789abcdef0123456789abcdef # v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
+        with:
+          tool: nextest@0.9.143
+      - env:
+          CELL_ARCH: ${{ matrix.arch }}
+        run: test "$(uname -m)" = "$CELL_ARCH"
+      - name: Clear cached reports and state vectors
+        run: >-
+          rm -rf target/nextest/{ci,ci-release}/junit.xml
+          target/{portable,target}-state-{debug,release}.bin
+      - if: matrix.codegen == 'debug'
+        run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
+        env:
+          OCE_PORTABLE_STATE_OUT: target/portable-state-debug.bin
+          OCE_TARGET_STATE_OUT: target/target-state-debug.bin
+      - if: matrix.codegen == 'release'
+        run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
+        env:
+          OCE_PORTABLE_STATE_OUT: target/portable-state-release.bin
+          OCE_TARGET_STATE_OUT: target/target-state-release.bin
+      - if: matrix.codegen == 'debug'
+        env:
+          OCE_ROUND_TRIP_OUT: target/determinism/round-trip
+        run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci --no-tests=fail
+      - if: matrix.codegen == 'release'
+        env:
+          OCE_ROUND_TRIP_OUT: target/determinism/round-trip
+        run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci-release --cargo-profile release --no-tests=fail
+      - run: |
+          test -s "target/nextest/$profile/junit.xml"
+          test -s "target/portable-state-$CELL_CODEGEN.bin"
+          test "$(ls target/determinism/round-trip | wc -l | tr -d ' ')" = 92
+      - if: matrix.codegen == 'debug'
+        run: |
+          cargo nextest archive -p oce-conformance --test blob_round_trip --locked --archive-file target/determinism/blob-round-trip.tar.zst
+      - uses: actions/upload-artifact@0123456789abcdef0123456789abcdef01234567 # v7
+        with:
+          name: determinism-${{ matrix.arch }}-${{ matrix.codegen }}
+          path: target/determinism/
+          if-no-files-found: error
+  determinism-compare:
+    needs: determinism-matrix
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+            foreign: aarch64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+            foreign: x86_64
+    steps:
+      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
+        with:
+          tool: nextest@0.9.143
+      - run: >-
+          cmp determinism-x86_64-debug/portable-state-debug.bin determinism-x86_64-release/portable-state-release.bin &&
+          cmp determinism-x86_64-debug/target-state-debug.bin determinism-x86_64-release/target-state-release.bin &&
+          cmp determinism-aarch64-debug/portable-state-debug.bin determinism-aarch64-release/portable-state-release.bin &&
+          cmp determinism-aarch64-debug/target-state-debug.bin determinism-aarch64-release/target-state-release.bin
+      - run: >-
+          cmp determinism-x86_64-debug/portable-state-debug.bin determinism-aarch64-debug/portable-state-debug.bin &&
+          ! cmp -s determinism-x86_64-debug/target-state-debug.bin determinism-aarch64-debug/target-state-debug.bin
+      - run: |
+          for file in determinism-{x86_64,aarch64}-{debug,release}/blobs-*.bin; do
+            size="$(wc -c < "$file" | tr -d ' ')"
+            if [ "$size" != 123329 ]; then
+              exit 1
+            fi
+          done
+          test "$(ls determinism-*/blobs-*.bin | wc -l | tr -d ' ')" = 4
+          cmp determinism-x86_64-debug/blobs-debug.bin determinism-x86_64-release/blobs-release.bin
+          cmp determinism-aarch64-debug/blobs-debug.bin determinism-aarch64-release/blobs-release.bin
+          cmp determinism-x86_64-debug/blobs-debug.bin determinism-aarch64-debug/blobs-debug.bin
+      - run: |
+          test "$CELL_ARCH" != "$FOREIGN_ARCH"
+          export OCE_FOREIGN_TARGET_STATE_IN="$PWD/target/determinism/determinism-$FOREIGN_ARCH-debug/target-state-debug.bin"
+          cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/oce-api-lib.tar.zst" \
+            --workspace-remap . --profile ci --no-tests=fail \
+            -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
+      - run: |
+          diff -rq determinism-x86_64-debug/round-trip determinism-x86_64-release/round-trip
+          diff -rq determinism-x86_64-debug/round-trip determinism-aarch64-debug/round-trip
+          diff -rq determinism-x86_64-debug/round-trip determinism-aarch64-release/round-trip
+      - run: |
+          export OCE_ROUND_TRIP_EXPECT="$PWD/target/determinism/determinism-x86_64-debug/round-trip"
+          cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/blob-round-trip.tar.zst" \
+            --workspace-remap . --profile ci --no-tests=fail
+  std-build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
+        with:
+          tool: nextest@0.9.143
+      - run: cargo build --workspace --locked
+      - run: >-
+          cargo nextest run --workspace --locked --profile ci --no-tests=fail
+          -E 'not (binary_id(oce-conformance::strict_bits) | binary_id(oce-conformance::per_block_reals_transcendental) | binary_id(oce-conformance::per_block_reals_sources_transcendental) | binary_id(oce-conformance::per_block_psychrometrics) | binary_id(oce-conformance::per_block_utilities))'
+      - run: test -s target/nextest/ci/junit.xml
   ci-ok:
     name: CI OK
     if: always()
-    needs: [test-suite, default-no-db, unused-deps, gate-fixtures, golden-gen-firewall, gate]
+    needs: [test-suite, default-no-db, unused-deps, gate-fixtures, golden-gen-firewall, gate, determinism-matrix, determinism-compare, std-build-windows]
     steps:
       - env:
           NEEDS_JSON: ${{ toJSON(needs) }}
@@ -623,11 +719,18 @@ noop() {
   _deny="$2"
 }
 
-remove_release_nextest() {
+# `sed` over the fixture's release-gate.yml (edit_pr_gate, further down, is its pr-gate.yml twin).
+edit_release_gate() {
   dir="$1"
-  _deny="$2"
-  grep -v -- '--cargo-profile release' "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  shift
+  sed "$@" "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
   mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+}
+
+# Only the full suite's release-codegen run goes; the determinism cells keep theirs, which must not
+# stand in for it.
+remove_release_nextest() {
+  edit_release_gate "$1" '/^  test-suite:$/,/^  [^ ]/ {/--cargo-profile release/d;}'
 }
 
 seed_advisory_ignore() {
@@ -801,11 +904,108 @@ swap_aarch64_runner() {
   mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
-drop_release_codegen() {
-  dir="$1"
-  sed 's/^        codegen: \[debug, release\]$/        codegen: [debug]/' \
-    "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
-  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+# The per-PR strict-bit matrix keeps its release cells (issue #502 moved only the determinism ones).
+drop_strict_bit_release_codegen() {
+  edit_pr_gate "$1" 's/^        codegen: \[debug, release\]$/        codegen: [debug]/'
+}
+
+# The split of the determinism matrix (issue #502), in both directions: pr-gate.yml must not grow
+# its release-codegen cells back, and release-gate.yml must not lose them.
+restore_per_pr_release_codegen() {
+  edit_pr_gate "$1" 's/^        codegen: \[debug\]$/        codegen: [debug, release]/'
+}
+
+drop_release_gate_release_codegen() {
+  edit_release_gate "$1" 's/^        codegen: \[debug, release\]$/        codegen: [debug]/'
+}
+
+drop_release_gate_aarch64_runner() {
+  edit_release_gate "$1" 's/^        runner: \[ubuntu-latest, ubuntu-24\.04-arm\]$/        runner: [ubuntu-latest]/'
+}
+
+release_gate_fail_fast() {
+  edit_release_gate "$1" 's/^      fail-fast: false$/      fail-fast: true/'
+}
+
+drop_release_gate_determinism_matrix() {
+  edit_release_gate "$1" \
+    -e '/^  determinism-matrix:$/,/^  determinism-compare:$/ { /^  determinism-compare:$/!d; }' \
+    -e 's/^    needs: determinism-matrix$/    needs: test-suite/' \
+    -e 's/, determinism-matrix, determinism-compare, /, determinism-compare, /'
+}
+
+drop_release_gate_release_subset() {
+  edit_release_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/-p oce-expr --locked --profile ci-release --cargo-profile release/d;}'
+}
+
+drop_release_gate_release_round_trip() {
+  edit_release_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/--test blob_round_trip --locked --profile ci-release/d;}'
+}
+
+drop_release_gate_cell_report_requirement() {
+  edit_release_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/test -s "target\/nextest\/\$profile\/junit.xml"/d;}'
+}
+
+detach_release_gate_fan_in() {
+  edit_release_gate "$1" 's/^    needs: determinism-matrix$/    needs: test-suite/'
+}
+
+release_gate_fan_in_out_of_ci_ok() {
+  edit_release_gate "$1" 's/, determinism-compare, std-build-windows\]$/, std-build-windows]/'
+}
+
+drop_cross_codegen_state_comparison() {
+  edit_release_gate "$1" '/cmp determinism-aarch64-debug\/target-state-debug.bin determinism-aarch64-release\/target-state-release.bin$/d'
+}
+
+drop_cross_codegen_blob_comparison() {
+  edit_release_gate "$1" '/cmp determinism-aarch64-debug\/blobs-debug.bin determinism-aarch64-release\/blobs-release.bin$/d'
+}
+
+drop_cross_codegen_round_trip_comparison() {
+  edit_release_gate "$1" '/diff -rq determinism-x86_64-debug\/round-trip determinism-x86_64-release\/round-trip$/d'
+}
+
+release_gate_fan_in_over_two_cells() {
+  edit_release_gate "$1" "s/^          test \"\$(ls determinism-\\*\/blobs-\\*.bin | wc -l | tr -d ' ')\" = 4$/          test \"\$(ls determinism-*\/blobs-*.bin | wc -l | tr -d ' ')\" = 2/"
+}
+
+drop_release_gate_cross_architecture_comparison() {
+  edit_release_gate "$1" '/cmp -s determinism-x86_64-debug\/target-state-debug.bin/d'
+}
+
+drop_blob_architecture_comparison() {
+  edit_pr_gate "$1" '/^          cmp determinism-x86_64-debug\/blobs-debug.bin determinism-aarch64-debug\/blobs-debug.bin$/d'
+}
+
+drop_blob_size_requirement() {
+  edit_pr_gate "$1" '/if \[ "\$size" != 123329 \]; then/d'
+}
+
+# The run after each merge (issue #502): the trigger, the commit a push run tests, the pinned ref
+# of every checkout, and a concurrency group that queues pushes without cancelling one in progress.
+release_gate_without_development_push() {
+  edit_release_gate "$1" 's/^    branches: \[main, development\]$/    branches: [main]/'
+}
+
+release_gate_without_push_trigger() {
+  edit_release_gate "$1" '/^  push:$/,/^    branches:/d'
+}
+
+release_push_checks_out_the_moving_ref() {
+  edit_release_gate "$1" "s/ || github.event_name == 'push' \&\& github.sha || github.ref }}\$/ || github.ref }}/"
+}
+
+release_checkout_without_the_pinned_ref() {
+  edit_release_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/^          ref: \${{ env.CHECKOUT_REF }}$/d;}'
+}
+
+release_push_cancels_a_run_in_progress() {
+  edit_release_gate "$1" 's/^  cancel-in-progress: .*$/  cancel-in-progress: true/'
+}
+
+release_runs_share_no_concurrency_group() {
+  edit_release_gate "$1" 's/^  group: .*$/  group: ${{ github.workflow }}-${{ github.run_id }}/'
 }
 
 enable_fail_fast() {
@@ -871,11 +1071,8 @@ drop_receipt_candidate_requirement() {
   mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
 }
 
-remove_arm_state_vector() {
-  dir="$1"
-  _deny="$2"
-  grep -v 'OCE_PORTABLE_STATE_OUT: target/portable-state-release.bin' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
-  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+remove_release_state_vector() {
+  edit_release_gate "$1" '/OCE_PORTABLE_STATE_OUT: target\/portable-state-release.bin/d'
 }
 
 conditional_ci_ok() {
@@ -900,11 +1097,7 @@ omit_ci_ok_need() {
 }
 
 omit_release_ci_ok_need() {
-  dir="$1"
-  _deny="$2"
-  sed 's/^    needs: \[test-suite, default-no-db, /    needs: [test-suite, /' \
-    "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
-  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+  edit_release_gate "$1" 's/^    needs: \[test-suite, default-no-db, /    needs: [test-suite, /'
 }
 
 restore_development_push_trigger() {
@@ -1017,6 +1210,13 @@ edit_pr_gate() {
   shift
   sed "$@" "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
   mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+# gate_scripts stays a classifier output but is no longer a lane a job may be filtered on.
+lane_filter_on_gate_scripts_output() {
+  edit_pr_gate "$1" \
+    -e '/^  facade-contract:$/,/^    if:/ s/outputs.core/outputs.gate_scripts/' \
+    -e 's/facade-contract=core/facade-contract=gate_scripts/'
 }
 
 delete_ci_ok_result_check() {
@@ -1137,13 +1337,11 @@ remove_nextest_report_cleanup() {
 }
 
 remove_nextest_report_requirements() {
-  dir="$1"
-  _deny="$2"
-  for workflow in "$dir/pr-gate.yml" "$dir/release-gate.yml"; do
-    grep -v -E 'for profile in|test -s.*\$profile|^[[:space:]]*done[[:space:]]*$' \
-      "$workflow" > "$workflow.tmp"
-    mv "$workflow.tmp" "$workflow"
-  done
+  edit_pr_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/test -s target\/nextest\/ci\/junit.xml$/d;}'
+}
+
+remove_release_nextest_report_requirements() {
+  edit_release_gate "$1" '/^  test-suite:$/,/^  [^ ]/ {/for profile in/d; /test -s.*\$profile/d; /^[[:space:]]*done[[:space:]]*$/d;}'
 }
 
 downgrade_nextest_pin() {
@@ -1240,11 +1438,24 @@ remove_crate_lib_files() {
 # Platform cells (issue #394) and the #418-review hardening: no continue-on-error anywhere, and no
 # step-level if: beyond a static matrix selector or !cancelled().
 job_continue_on_error() {
-  edit_pr_gate "$1" 's/^  std-build-windows:$/  std-build-windows:\n    continue-on-error: true/'
+  edit_pr_gate "$1" 's/^  portable-snapshot-macos:$/  portable-snapshot-macos:\n    continue-on-error: true/'
 }
 
 step_continue_on_error() {
-  edit_pr_gate "$1" '/^  std-build-windows:$/,/^  [^ ]/ s/^      - run: cargo build --workspace --locked$/&\n        continue-on-error: true/'
+  edit_pr_gate "$1" '/^  build:$/,/^  [^ ]/ s/^      - run: cargo build --workspace --locked$/&\n        continue-on-error: true/'
+}
+
+release_job_continue_on_error() {
+  edit_release_gate "$1" 's/^  std-build-windows:$/  std-build-windows:\n    continue-on-error: true/'
+}
+
+release_step_continue_on_error() {
+  edit_release_gate "$1" '/^  std-build-windows:$/,/^  [^ ]/ s/^      - run: cargo build --workspace --locked$/&\n        continue-on-error: true/'
+}
+
+release_step_condition_on_event() {
+  edit_release_gate "$1" \
+    "s/^      - run: cargo test --workspace --doc --locked$/      - if: github.event_name != 'push'\n        run: cargo test --workspace --doc --locked/"
 }
 
 step_condition_on_lane_output() {
@@ -1268,7 +1479,7 @@ step_condition_always() {
 }
 
 matrix_selector_widened_by_or() {
-  edit_pr_gate "$1" \
+  edit_release_gate "$1" \
     "s/^      - if: matrix.codegen == 'debug'$/      - if: matrix.codegen == 'debug' || github.event_name == 'schedule'/"
 }
 
@@ -1298,20 +1509,40 @@ macos_portable_comparison_dropped() {
   edit_pr_gate "$1" '/^          cmp linux-x86_64\/portable-state-debug.bin macos-arm64\/portable-state-debug.bin$/d'
 }
 
+# The Windows cell lives in release-gate.yml (issue #502).
 windows_strict_exclusion_dropped() {
-  edit_pr_gate "$1" "/^          -E 'not (binary_id(oce-conformance::strict_bits)/d"
+  edit_release_gate "$1" "/^          -E 'not (binary_id(oce-conformance::strict_bits)/d"
 }
 
 windows_excludes_whole_conformance_crate() {
-  edit_pr_gate "$1" "s/^          -E 'not (binary_id(oce-conformance::strict_bits).*/          -E 'not package(oce-conformance)'/"
+  edit_release_gate "$1" "s/^          -E 'not (binary_id(oce-conformance::strict_bits).*/          -E 'not package(oce-conformance)'/"
 }
 
 windows_on_linux_runner() {
-  edit_pr_gate "$1" 's/^    runs-on: windows-latest$/    runs-on: ubuntu-latest/'
+  edit_release_gate "$1" 's/^    runs-on: windows-latest$/    runs-on: ubuntu-latest/'
 }
 
-windows_out_of_lane_map() {
-  edit_pr_gate "$1" 's/ std-build-windows=core$//'
+windows_build_dropped() {
+  edit_release_gate "$1" '/^  std-build-windows:$/,/^  [^ ]/ {/^      - run: cargo build --workspace --locked$/d;}'
+}
+
+windows_report_requirement_dropped() {
+  edit_release_gate "$1" '/^  std-build-windows:$/,/^  [^ ]/ {/^      - run: test -s target\/nextest\/ci\/junit.xml$/d;}'
+}
+
+windows_out_of_release_ci_ok() {
+  edit_release_gate "$1" 's/, determinism-compare, std-build-windows\]$/, determinism-compare]/'
+}
+
+windows_cell_removed() {
+  edit_release_gate "$1" \
+    -e '/^  std-build-windows:$/,/^  ci-ok:$/ { /^  ci-ok:$/!d; }' \
+    -e 's/, determinism-compare, std-build-windows\]$/, determinism-compare]/'
+}
+
+# The Windows cell's suite line must not vouch for the full suite's.
+release_full_suite_debug_run_dropped() {
+  edit_release_gate "$1" '/^  test-suite:$/,/^  [^ ]/ {/^      - run: cargo nextest run --workspace --locked --profile ci --no-tests=fail$/d;}'
 }
 
 # The bare-metal cell (issues #397, #402).
@@ -1354,10 +1585,6 @@ firmware_host_run_dropped() {
 
 no_std_build_out_of_lane_map() {
   edit_pr_gate "$1" '/^            no-std-build=core$/d'
-}
-
-gate_job_without_no_std_targets() {
-  edit_pr_gate "$1" '/^  gate:$/,/^  [^ ]/ {/rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown$/d;}'
 }
 
 release_gate_without_no_std_targets() {
@@ -1537,8 +1764,54 @@ run_case missing-aarch64-runner fail remove_aarch64_leg \
   "determinism-matrix runs native x86_64 and aarch64 runners"
 run_case aarch64-on-x86-runner fail swap_aarch64_runner \
   "does not map x86_64 to ubuntu-latest and aarch64 to ubuntu-24.04-arm"
-run_case missing-release-codegen-cells fail drop_release_codegen \
-  "determinism-matrix runs debug and release codegen"
+run_case strict-bit-release-codegen-dropped fail drop_strict_bit_release_codegen \
+  "strict-bit-matrix runs debug and release codegen"
+run_case per-pr-release-codegen-cells-restored fail restore_per_pr_release_codegen \
+  "pr-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix runs debug codegen only"
+run_case missing-release-codegen-cells fail drop_release_gate_release_codegen \
+  "release-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix runs debug and release codegen"
+run_case release-gate-missing-aarch64-runner fail drop_release_gate_aarch64_runner \
+  "release-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix runs native x86_64 and aarch64 runners"
+run_case release-gate-fail-fast-cells fail release_gate_fail_fast \
+  "release-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix reports every failing cell (fail-fast: false)"
+run_case release-gate-without-determinism-matrix fail drop_release_gate_determinism_matrix \
+  "release-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix runs on the matrix runner"
+run_case release-gate-missing-release-subset fail drop_release_gate_release_subset \
+  "release-gate.yml job determinism-matrix is missing required gate pattern: release determinism subset with hard-fail-on-zero-tests"
+run_case release-gate-missing-release-round-trip fail drop_release_gate_release_round_trip \
+  "release-gate.yml job determinism-matrix is missing required gate pattern: record the release blob round trip in every determinism cell"
+run_case release-gate-cell-report-unchecked fail drop_release_gate_cell_report_requirement \
+  "release-gate.yml job determinism-matrix is missing required gate pattern: refuse an absent or empty nextest determinism report"
+run_case release-gate-detached-determinism-fan-in fail detach_release_gate_fan_in \
+  "release-gate.yml job determinism-compare does not need determinism-matrix"
+run_case release-gate-fan-in-out-of-ci-ok fail release_gate_fan_in_out_of_ci_ok \
+  "release-gate.yml CI OK needs does not match the workflow's jobs"
+run_case cross-codegen-state-comparison-dropped fail drop_cross_codegen_state_comparison \
+  "release-gate.yml job determinism-compare is missing required gate pattern: compare aarch64 target-bound state bytes across codegen profiles"
+run_case cross-codegen-blob-comparison-dropped fail drop_cross_codegen_blob_comparison \
+  "release-gate.yml job determinism-compare is missing required gate pattern: compare aarch64 compiled-schedule blob bytes across codegen profiles"
+run_case cross-codegen-round-trip-comparison-dropped fail drop_cross_codegen_round_trip_comparison \
+  "release-gate.yml job determinism-compare is missing required gate pattern: compare the determinism-x86_64-debug and determinism-x86_64-release round-trip recordings"
+run_case release-gate-fan-in-over-two-cells fail release_gate_fan_in_over_two_cells \
+  "release-gate.yml job determinism-compare is missing required gate pattern: the fan-in holds the compiled-schedule blobs of all four cells"
+run_case release-gate-cross-architecture-comparison-dropped fail drop_release_gate_cross_architecture_comparison \
+  "release-gate.yml job determinism-compare is missing required gate pattern: require target-bound state bytes to differ across architectures"
+run_case blob-architecture-comparison-dropped fail drop_blob_architecture_comparison \
+  "pr-gate.yml job determinism-compare is missing required gate pattern: compare compiled-schedule blob bytes across architectures"
+run_case blob-size-unchecked fail drop_blob_size_requirement \
+  "refuse a compiled-schedule blob artifact that is not the 123329 bytes of the goldens"
+run_case release-gate-without-development-push fail release_gate_without_development_push \
+  "release-gate.yml push trigger does not name branches [main, development] (got: [main])"
+run_case release-gate-without-push-trigger fail release_gate_without_push_trigger \
+  "release-gate.yml push trigger does not name branches [main, development] (got: none)"
+run_case release-push-checks-out-the-moving-ref fail release_push_checks_out_the_moving_ref \
+  "a push run checks out the pushed commit in every job"
+run_case release-checkout-without-the-pinned-ref fail release_checkout_without_the_pinned_ref \
+  "release-gate.yml has a checkout that does not pin ref:"
+run_case release-push-cancels-a-run-in-progress fail release_push_cancels_a_run_in_progress \
+  "only a superseded release-PR run is cancelled; a push run in progress always finishes"
+run_case release-runs-share-no-concurrency-group fail release_runs_share_no_concurrency_group \
+  "one concurrency group per event and ref, so pushes to development queue behind each other"
 run_case fail-fast-cells fail enable_fail_fast \
   "determinism-matrix reports every failing cell (fail-fast: false)"
 run_case reinstalled-qemu fail reinstall_qemu \
@@ -1557,8 +1830,8 @@ run_case unrun-matrix-comparison fail skip_ignored_matrix_comparison \
   "the eight-capture comparison hard-fails when its test is absent"
 run_case missing-receipt-candidate fail drop_receipt_candidate_requirement \
   "a green comparison writes the candidate receipt-log record"
-run_case missing-release-state-vector fail remove_arm_state_vector \
-  "emit the release portable state vector in every determinism cell"
+run_case missing-release-state-vector fail remove_release_state_vector \
+  "release-gate.yml job determinism-matrix is missing required gate pattern: emit the release portable state vector in every determinism cell"
 run_case conditional-ci-ok fail conditional_ci_ok \
   "CI OK aggregate reports on every run"
 run_case blind-release-ci-ok fail blind_release_ci_ok \
@@ -1597,6 +1870,8 @@ run_case lane-filter-on-docs-only-output fail lane_filter_on_docs_only_output \
   "job leverage-lane has a job-level if: that is not a lane filter"
 run_case negated-lane-filter fail negated_lane_filter \
   "job build has a job-level if: that is not a lane filter"
+run_case lane-filter-on-gate-scripts-output fail lane_filter_on_gate_scripts_output \
+  "job facade-contract has a job-level if: that is not a lane filter: needs.changes.outputs.gate_scripts == 'true'"
 run_case removed-leverage-lane fail removed_lane_job \
   "is missing the leverage-lane job"
 run_case leverage-crate-without-lints fail leverage_crate_without_lints \
@@ -1625,7 +1900,11 @@ run_case hardcoded-strict-cell fail hardcode_strict_cell_architecture \
 run_case missing-nextest-report-cleanup fail remove_nextest_report_cleanup \
   "clear cached nextest JUnit reports"
 run_case missing-nextest-report-requirements fail remove_nextest_report_requirements \
-  "refuse an absent or empty nextest determinism report"
+  "pr-gate.yml job determinism-matrix is missing required gate pattern: refuse an absent or empty nextest determinism report"
+run_case missing-release-nextest-report-requirements fail remove_release_nextest_report_requirements \
+  "release gate requires the complete nextest report set"
+run_case release-full-suite-debug-run-dropped fail release_full_suite_debug_run_dropped \
+  "release-gate.yml job test-suite is missing required gate pattern: debug nextest with hard-fail-on-zero-tests"
 run_case stale-nextest-pin fail downgrade_nextest_pin \
   "pinned cargo-nextest 0.9.143 install"
 run_case tag-referenced-action fail unpin_action \
@@ -1655,6 +1934,12 @@ run_case job-continue-on-error fail job_continue_on_error \
   "contains a refused gate pattern: continue-on-error"
 run_case step-continue-on-error fail step_continue_on_error \
   "contains a refused gate pattern: continue-on-error"
+run_case release-job-continue-on-error fail release_job_continue_on_error \
+  "release-gate.yml contains a refused gate pattern: continue-on-error"
+run_case release-step-continue-on-error fail release_step_continue_on_error \
+  "release-gate.yml contains a refused gate pattern: continue-on-error"
+run_case release-step-condition-on-event fail release_step_condition_on_event \
+  "test-suite: github.event_name != 'push'"
 run_case step-condition-on-lane-output fail step_condition_on_lane_output \
   "gate-fixtures: needs.changes.outputs.core == 'true'"
 run_case step-condition-false fail step_condition_false \
@@ -1683,8 +1968,14 @@ run_case windows-excludes-whole-conformance-crate fail windows_excludes_whole_co
   "the Windows cell excludes exactly the strict-bit binaries"
 run_case windows-on-linux-runner fail windows_on_linux_runner \
   "the Windows cell runs on windows-latest"
-run_case windows-out-of-lane-map fail windows_out_of_lane_map \
-  "CI OK JOB_LANES does not match the lane-filtered jobs' if: lines"
+run_case windows-build-dropped fail windows_build_dropped \
+  "the Windows cell builds the workspace"
+run_case windows-report-requirement-dropped fail windows_report_requirement_dropped \
+  "the Windows cell refuses an absent or empty nextest report"
+run_case windows-out-of-release-ci-ok fail windows_out_of_release_ci_ok \
+  "release-gate.yml CI OK needs does not match the workflow's jobs"
+run_case windows-cell-removed fail windows_cell_removed \
+  "release-gate.yml job std-build-windows is missing required gate pattern: the Windows cell runs on windows-latest"
 run_case no-std-check-script-dropped fail no_std_check_script_dropped \
   "build, lint and graph-scan the core four no_std + alloc on every target"
 run_case no-std-controls-dropped fail no_std_controls_dropped \
@@ -1722,8 +2013,6 @@ run_case no-std-build-out-of-lane-map fail no_std_build_out_of_lane_map \
   "CI OK JOB_LANES does not match the lane-filtered jobs' if: lines"
 run_case no-std-build-out-of-ci-ok fail no_std_build_out_of_ci_ok \
   "pr-gate.yml CI OK needs does not match the workflow's jobs"
-run_case gate-job-without-no-std-targets fail gate_job_without_no_std_targets \
-  "the executed gate script has the no_std targets it builds for"
 run_case release-gate-without-no-std-targets fail release_gate_without_no_std_targets \
   "the executed full gate script has the no_std targets it builds for"
 run_case release-gate-installs-targets-after-the-script fail release_gate_installs_targets_after_the_script \
