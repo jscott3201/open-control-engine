@@ -461,7 +461,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
   The note's text-form section is amended (dated) with each of these.
 
-- **The `oce` command-line tool** (GitHub #PRNUM, issue #489). `crates/leverage/oce-cli` (package
+- **The `oce` command-line tool** (GitHub #491, issue #489). `crates/leverage/oce-cli` (package
   `oce-cli`, binary `oce`, `publish = false`) is M2 item 4 and the first binary above the facade:
   `docs/architecture.md`'s no-binaries rule now covers the engine crates only (authoring note
   decision 9). `oce emit` validates both stages and writes flat CXF to stdout or atomically to `-o`
