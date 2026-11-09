@@ -5,7 +5,7 @@ mod support;
 
 use oce_author::{
     Boundary, BuildError, Identifier, IdentifierError, Literal, ProvenanceIdError, SequenceBuilder,
-    SignalType, validate,
+    SignalType, validate, validate_author_side,
 };
 
 use support::{codes, econ_enable};
@@ -182,7 +182,7 @@ fn array_element_names_are_checked_against_the_class_templates() {
             Literal::Real(1.0),
         ));
         s.blocks.push(sum);
-        codes(&validate(&s))
+        codes(&validate_author_side(&s))
     };
     assert_eq!(with("k_2"), vec![]);
     for unknown in ["k_0", "k_02", "k", "k_", "k_1_1", "K_1"] {

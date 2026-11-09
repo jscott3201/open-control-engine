@@ -4,8 +4,9 @@
 //! the model against the catalog alone: names, the sequence shape, connection syntax and
 //! endpoints, class and parameter lookup, parameter kinds and catalog rules, references, arity
 //! and port names, duplicates, `SemanticPoint` and `extends` syntax. **Stage 2**
-//! ([`Stage::Engine`]: emit, load in a throwaway engine, map each diagnostic back) arrives with the
-//! emitter; until then [`validate()`] runs stage 1 only.
+//! ([`Stage::Engine`], the `engine` module) runs only when stage 1 found no error: emit, load in a
+//! throwaway engine and map each engine diagnostic back onto the model, every engine warning
+//! becoming an error finding (decision 14). [`validate()`] runs both stages.
 //!
 //! Every finding carries an exact code string. [`STAGE_ONE_CODES`] lists the twenty stage-1 codes;
 //! a code the engine also uses has the engine's [`oce_api::DiagCode`] spelling. The returned list is
@@ -13,16 +14,20 @@
 //! a pure function of the model.
 
 mod blocks;
-mod catalog;
+pub(crate) mod catalog;
 mod connections;
+mod engine;
 mod index;
 mod names;
 mod semantic;
 
+pub use engine::{DOCUMENT_TOO_LARGE, LOAD_FAILED};
 pub use semantic::MAX_SEMANTIC_FIELD_BYTES;
 pub(crate) use semantic::boundary_problems as boundary_syntax_problems;
 
 use std::fmt;
+
+use oce_api::ClassPorts;
 
 use crate::location::Location;
 use crate::model::Sequence;
@@ -46,7 +51,8 @@ mod codes {
     pub const UNKNOWN_PARAMETER: &str = "unknown-parameter";
     /// An assignment names a parameter no author may set (reserved classes only).
     pub const PARAMETER_NOT_SETTABLE: &str = "parameter-not-settable";
-    /// A block assigns one parameter twice (the engine's code).
+    /// A block assigns one parameter twice (the class rules' code; in an emitted document the engine
+    /// sees the repeated node as `duplicate-id`).
     pub const DUPLICATE_PARAMETER: &str = "duplicate-parameter";
     /// A required parameter is not assigned (the engine's code).
     pub const MISSING_REQUIRED_PARAMETER: &str = "missing-required-parameter";
@@ -56,7 +62,8 @@ mod codes {
     pub const PARAMETER_OUT_OF_RANGE: &str = "parameter-out-of-range";
     /// A Real value is NaN or infinite (the engine's code).
     pub const NON_FINITE_PARAMETER: &str = "non-finite-parameter";
-    /// An enumeration member is not a member of the parameter's type (the engine's code).
+    /// An enumeration member is not a member of the parameter's type (the engine refuses the same
+    /// value as `grounding-failed`).
     pub const UNKNOWN_ENUM_LITERAL: &str = "unknown-enum-literal";
     /// A reference names no sequence parameter.
     pub const UNKNOWN_PARAMETER_REFERENCE: &str = "unknown-parameter-reference";
@@ -104,8 +111,8 @@ mod codes {
 pub enum Stage {
     /// Stage 1: the model and the catalog alone ([`validate_author_side`]).
     Author,
-    /// Stage 2: emit, load in a throwaway engine and map the diagnostics back. Not yet
-    /// implemented; it arrives with the emitter.
+    /// Stage 2: emit, load in a throwaway engine and map the diagnostics back
+    /// ([`validate()`]; findings with [`Origin::Engine`]).
     Engine,
 }
 
@@ -134,7 +141,9 @@ pub enum Origin {
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Finding {
-    /// The exact code (`duplicate-name`, …); see [`STAGE_ONE_CODES`].
+    /// The exact code (`duplicate-name`, …): a stage-1 code ([`STAGE_ONE_CODES`]), an engine
+    /// `DiagCode` spelling passed through verbatim by stage 2, or [`LOAD_FAILED`] /
+    /// [`DOCUMENT_TOO_LARGE`].
     pub code: &'static str,
     /// Its severity.
     pub severity: Severity,
@@ -196,6 +205,11 @@ impl Findings {
         ));
     }
 
+    /// Record a finding as it is.
+    pub(crate) fn push(&mut self, position: Anchor, finding: Finding) {
+        self.items.push((position, finding));
+    }
+
     fn finish(mut self) -> Vec<Finding> {
         self.items.sort_by(|(pa, fa), (pb, fb)| {
             (pa, fa.code, &fa.detail, &fa.subject).cmp(&(pb, fb.code, &fb.detail, &fb.subject))
@@ -205,21 +219,42 @@ impl Findings {
     }
 }
 
-/// Validate a sequence. Today this is stage 1 ([`validate_author_side`]); stage 2 joins it with
-/// the emitter, and runs only when stage 1 found no error.
+/// Validate a sequence: stage 1 ([`validate_author_side`]), then, only when stage 1 found no
+/// error, stage 2 — emit, load in a throwaway engine and map every engine diagnostic back onto the
+/// model ([`Stage::Engine`]). Deterministic; the result is sorted by authored position, then code,
+/// then detail, and deduplicated. Never panics and never touches an engine the caller owns.
 #[must_use]
 pub fn validate(sequence: &Sequence) -> Vec<Finding> {
-    validate_author_side(sequence)
+    let (findings, ports) = author_side_with_ports(sequence);
+    if findings.iter().any(|f| f.severity == Severity::Error) {
+        return findings;
+    }
+    let mut all = findings;
+    all.extend(engine::check(sequence, &ports));
+    all
 }
 
 /// Stage 1: judge the model against the catalog alone. Pure, deterministic and panic-free; the
 /// result is sorted by authored position, then code, then detail, and deduplicated.
 #[must_use]
 pub fn validate_author_side(sequence: &Sequence) -> Vec<Finding> {
+    author_side_with_ports(sequence).0
+}
+
+/// Stage 1, also returning each block's resolved ports: `Some` where the class and every
+/// assignment passed the author-side checks, `None` otherwise. The emitter names port nodes from
+/// these, so it never resolves a block's interface by a second route.
+pub(crate) fn author_side_with_ports(
+    sequence: &Sequence,
+) -> (Vec<Finding>, Vec<Option<ClassPorts>>) {
     let mut findings = Findings::default();
     let declared = index::Declared::new(sequence);
     names::check(sequence, &mut findings);
     let ports = blocks::check(sequence, &declared, &mut findings);
     connections::check(sequence, &declared, &ports, &mut findings);
-    findings.finish()
+    let resolved = ports
+        .into_iter()
+        .map(|p| p.map(|ports| ports.resolved))
+        .collect();
+    (findings.finish(), resolved)
 }

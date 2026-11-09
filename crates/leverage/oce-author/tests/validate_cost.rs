@@ -1,4 +1,4 @@
-//! Validation cost stays near-linear in the document: a chain of blocks filling most of the
+//! Stage-1 validation cost stays near-linear in the document: a chain of blocks filling most of the
 //! 4 MiB wire bound validates clean, and quadrupling the chain costs well under the sixteen-fold
 //! a per-endpoint scan would (the issue #463 review measured 3.4 s for 30,000 blocks before the
 //! name indexes).
@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 
 use oce_author::{
     Block, Boundary, Connection, Endpoint, MAX_WIRE_BYTES, Sequence, SignalType, from_wire_str,
-    to_wire_string, validate,
+    to_wire_string, validate_author_side,
 };
 
 use support::id;
@@ -43,7 +43,7 @@ fn fastest_validation(sequence: &Sequence) -> Duration {
     (0..3)
         .map(|_| {
             let start = Instant::now();
-            assert!(validate(sequence).is_empty());
+            assert!(validate_author_side(sequence).is_empty());
             start.elapsed()
         })
         .min()
@@ -61,7 +61,7 @@ fn a_document_at_the_wire_bound_validates_clean() {
         text.len()
     );
     let model = from_wire_str(&text).expect("reads");
-    assert!(validate(&model).is_empty());
+    assert!(validate_author_side(&model).is_empty());
 }
 
 #[test]

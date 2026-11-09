@@ -1,8 +1,9 @@
 # oce-author
 
 The authoring layer's library (M2; design note [`docs/design/authoring-layer.md`](../../../docs/design/authoring-layer.md),
-issue #463). A leverage crate: it depends on `oce-api` only, never evaluates an expression and never
-loads an engine. `publish = false`.
+issues #463 and #464). A leverage crate: it depends on `oce-api` only, never evaluates an expression,
+and loads only throwaway engines of its own (validation stage 2), never one a host runs.
+`publish = false`.
 
 | Surface | What it is |
 | --- | --- |
@@ -10,7 +11,13 @@ loads an engine. `publish = false`.
 | `SequenceBuilder` | A checked builder; refuses with a typed `BuildError` what it can see without the catalog. |
 | `from_wire_str`, `from_wire_bytes`, `to_wire_string` | The strict-JSON wire form: closed objects, every key required, absent values `""`/`[]`/`false`, connections as `"a.y -> b.u"`. Reads are bounded (4 MiB, depth 8, 65,536 entries per list, 4,096-byte strings) and refuse hostile input with a typed `WireError`; writes are canonical and byte-stable. |
 | `WIRE_SCHEMA`, `wire_schema()` | The JSON Schema (draft 2020-12) derived from the wire DTOs with `schemars`, published at [`schema/sequence.schema.json`](schema/sequence.schema.json) and pinned byte for byte; the `class` enum is the catalog's authorable class paths. Strict profile: closed objects, all required, `anyOf` only over the value shapes. |
-| `validate`, `validate_author_side`, `Finding` | The stage-1 validator: twenty finding codes (`STAGE_ONE_CODES`), sorted by authored position, code and detail. The engine-side stage arrives with the emitter. |
+| `validate`, `validate_author_side`, `Finding` | The two-stage validator. Stage 1 (`validate_author_side`): twenty finding codes (`STAGE_ONE_CODES`) from the model and the catalog. Stage 2, only when stage 1 is clean: emit, load in a throwaway `Engine::new()` and map every engine diagnostic back through the IRI scheme — every warning is an error finding with the engine's code (decision 14), `origin = engine`; a subject the scheme cannot name is attached to `sequence` with the raw subject in `detail`. Findings are sorted by authored position, code and detail. |
+| `emit`, `EmitOptions`, `EmitError` | The emitter to flat CXF: authored order, never sorted; IRIs `{namespace}{sequence}.{local}` (default `urn:oce:author:`, an override must end in `#`, `/` or `:`); block `@type` under the fixed class base `http://example.org#Buildings.Controls.OBC.`; only the assignments the author wrote; arrays in the CXF array form (element by element under the flattened names when the author left a gap); boundary `unit`, `quantity` and `displayUnit` and no semantic record; a canonical writer (fixed key order, two-space indentation, ASCII, shortest round-trip reals); refuses stage-1 errors and anything above `oce_api::MAX_CXF_BYTES`. |
+| `import_cxf`, `ImportError` | A minimal importer for the flat corpus dialect (gate item 1), refusing everything outside the authoring subset with a typed error: nested composites, `hasInstance`, `hasConstant`, conditionals, `min`/`max` on connectors, library enumerations, expressions. The full importer (with the prototype's v0 JSON) is a later M2 item with its own note. |
+
+The stage-1 / engine parity table, the library round-trip table and the permutation classes are
+in the tests (`src/validate/engine_tests.rs`, `tests/library_round_trip.rs`,
+`tests/emit_permutations.rs`); emitted byte goldens are under `tests/fixtures/emit/`.
 
 A block parameter `value` takes one of five shapes on the wire:
 

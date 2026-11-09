@@ -131,7 +131,7 @@ fn every_stage_one_finding_is_an_author_error_without_a_span() {
     assert_eq!(
         validate(&s),
         findings,
-        "validate runs stage 1 until stage 2 lands"
+        "stage 2 runs only when stage 1 found no error"
     );
 }
 
@@ -513,9 +513,9 @@ fn unknown_port_follows_the_configured_width() {
         ));
         s
     };
-    assert_eq!(codes(&validate(&sum(3))), vec![]);
+    assert_eq!(codes(&validate_author_side(&sum(3))), vec![]);
     assert_eq!(
-        codes(&validate(&sum(2))),
+        codes(&validate_author_side(&sum(2))),
         vec![pair("unknown-port", "connection[1]")]
     );
 }

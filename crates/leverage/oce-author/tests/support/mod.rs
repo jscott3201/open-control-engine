@@ -2,6 +2,8 @@
 // Each test binary uses a different subset of these helpers.
 #![allow(dead_code)]
 
+pub mod cxf;
+
 use std::path::PathBuf;
 
 use oce_author::{
