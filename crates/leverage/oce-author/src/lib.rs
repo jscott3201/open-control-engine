@@ -13,7 +13,7 @@
 //! - the two-stage **validator** ([`validate()`], [`Finding`]): stage 1 judges the model against
 //!   the catalog `oce-api` publishes ([`validate_author_side`]); stage 2 emits, loads the bytes in
 //!   a throwaway engine and maps every engine diagnostic back onto the model;
-//! - the **emitter** ([`emit`], [`EmitOptions`]): one deterministic, canonical path from the model
+//! - the **emitter** ([`emit()`], [`EmitOptions`]): one deterministic, canonical path from the model
 //!   to flat CXF, in authored order, refusing any model stage 1 refuses;
 //! - a minimal **importer** ([`import_cxf`]) from flat CXF back to the model, sized to the
 //!   library round trip (gate item 1).

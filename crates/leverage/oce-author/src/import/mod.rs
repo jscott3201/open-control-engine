@@ -1,5 +1,5 @@
 //! A minimal CXF importer for the flat dialect (authoring note, "Library round trip"; gate item
-//! 1), the inverse of [`crate::emit`] over the authoring subset.
+//! 1), the inverse of [`crate::emit()`] over the authoring subset.
 //!
 //! [`import_cxf`] reads one flat, single-root document — leaf blocks, boundary inputs and
 //! outputs, sequence and block parameters (array parameters included), connections, and the
