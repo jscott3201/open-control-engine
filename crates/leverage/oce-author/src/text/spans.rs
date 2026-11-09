@@ -5,7 +5,8 @@
 //! or `connection[N]`. The map resolves the path to the model elements it can mean, in authored
 //! model order (parameters, inputs, outputs, blocks), and takes the first. A duplicate is the one
 //! case where a path means several elements: the validator reports the k-th `duplicate-name` or
-//! `duplicate-parameter` of a subject at its (k+1)-th declaration, so the map does the same.
+//! `duplicate-parameter` of a subject at its (k+1)-th declaration in model section order, so the
+//! map does the same. The subject index is a `BTreeMap` built once per [`SourceMap::apply`].
 
 use std::collections::BTreeMap;
 
@@ -43,73 +44,27 @@ impl SourceMap {
 
     /// Every location `subject` can mean in `sequence`, in model order: the `sequence` keyword's
     /// name, the `extends` operand, a declaration's name, an assignment's name (an array element's
-    /// value) or a connection's source. Empty when the subject names nothing in the map.
+    /// value) or a connection's source. Empty when the subject names nothing in the map. Builds
+    /// the subject index each call; [`SourceMap::apply`] builds it once for a whole finding list.
     #[must_use]
     pub fn locations(&self, sequence: &Sequence, subject: &str) -> Vec<Location> {
-        match subject {
-            "sequence" => return vec![self.sequence],
-            "extends" => return vec![self.extends],
-            _ => {}
-        }
-        if let Some(index) = subject
-            .strip_prefix("connection[")
-            .and_then(|rest| rest.strip_suffix(']'))
-            .and_then(|digits| digits.parse::<usize>().ok())
-        {
-            return self.connections.get(index).copied().into_iter().collect();
-        }
-        if let Some((block, param)) = subject.split_once('.') {
-            let mut found = Vec::new();
-            for (i, b) in sequence.blocks.iter().enumerate() {
-                if b.name.as_str() != block {
-                    continue;
-                }
-                for (j, a) in b.assignments.iter().enumerate() {
-                    if a.name.as_str() == param
-                        && let Some(at) = self.assignments.get(i).and_then(|v| v.get(j))
-                    {
-                        found.push(*at);
-                    }
-                }
-            }
-            return found;
-        }
-        let named = |names: Vec<&str>, at: &[Location]| -> Vec<Location> {
-            names
-                .into_iter()
-                .zip(at)
-                .filter(|(name, _)| *name == subject)
-                .map(|(_, at)| *at)
-                .collect()
-        };
-        let mut found = named(
-            sequence.params.iter().map(|p| p.name.as_str()).collect(),
-            &self.params,
-        );
-        found.extend(named(
-            sequence.inputs.iter().map(|b| b.name.as_str()).collect(),
-            &self.inputs,
-        ));
-        found.extend(named(
-            sequence.outputs.iter().map(|b| b.name.as_str()).collect(),
-            &self.outputs,
-        ));
-        found.extend(named(
-            sequence.blocks.iter().map(|b| b.name.as_str()).collect(),
-            &self.blocks,
-        ));
-        found
+        Index::new(self, sequence).lookup(subject).to_vec()
     }
 
     /// Set [`Finding::span`] on each finding of `sequence` (the model this map was parsed with):
     /// the first location of its subject, or, for the k-th `duplicate-name` /
-    /// `duplicate-parameter` finding of a subject, its (k+1)-th. A subject the map cannot place
-    /// keeps `None`.
+    /// `duplicate-parameter` finding of a subject, its (k+1)-th declaration in model section
+    /// order (parameters, inputs, outputs, blocks) — the later declaration, as the validator
+    /// reports it. A subject the map cannot place (an engine subject no statement names) keeps
+    /// `None`. The subject index is built once, so the cost is linear in the findings and the
+    /// declarations.
     pub fn apply(&self, sequence: &Sequence, findings: &mut [Finding]) {
+        let index = Index::new(self, sequence);
         let mut repeats: BTreeMap<(&'static str, String), usize> = BTreeMap::new();
         for finding in findings.iter_mut() {
-            let at = self.locations(sequence, &finding.subject);
-            let index = if finding.code == DUPLICATE_NAME || finding.code == DUPLICATE_PARAMETER {
+            let at = index.lookup(&finding.subject);
+            let position = if finding.code == DUPLICATE_NAME || finding.code == DUPLICATE_PARAMETER
+            {
                 let seen = repeats
                     .entry((finding.code, finding.subject.clone()))
                     .or_insert(0);
@@ -118,7 +73,46 @@ impl SourceMap {
             } else {
                 0
             };
-            finding.span = at.get(index).copied();
+            finding.span = at.get(position).copied();
         }
+    }
+}
+
+/// Subject → locations, in model order, built once per lookup batch: the fixed subjects
+/// (`sequence`, `extends`, `connection[N]`) first, then declarations, then `block.param`.
+struct Index {
+    subjects: BTreeMap<String, Vec<Location>>,
+}
+
+impl Index {
+    fn new(map: &SourceMap, sequence: &Sequence) -> Self {
+        let mut subjects: BTreeMap<String, Vec<Location>> = BTreeMap::new();
+        let mut add = |subject: String, at: Location| subjects.entry(subject).or_default().push(at);
+        add("sequence".to_owned(), map.sequence);
+        add("extends".to_owned(), map.extends);
+        for (i, at) in map.connections.iter().enumerate() {
+            add(format!("connection[{i}]"), *at);
+        }
+        let declared = sequence
+            .params
+            .iter()
+            .map(|p| &p.name)
+            .zip(&map.params)
+            .chain(sequence.inputs.iter().map(|b| &b.name).zip(&map.inputs))
+            .chain(sequence.outputs.iter().map(|b| &b.name).zip(&map.outputs))
+            .chain(sequence.blocks.iter().map(|b| &b.name).zip(&map.blocks));
+        for (name, at) in declared {
+            add(name.as_str().to_owned(), *at);
+        }
+        for (block, spans) in sequence.blocks.iter().zip(&map.assignments) {
+            for (a, at) in block.assignments.iter().zip(spans) {
+                add(format!("{}.{}", block.name, a.name), *at);
+            }
+        }
+        Self { subjects }
+    }
+
+    fn lookup(&self, subject: &str) -> &[Location] {
+        self.subjects.get(subject).map_or(&[], Vec::as_slice)
     }
 }

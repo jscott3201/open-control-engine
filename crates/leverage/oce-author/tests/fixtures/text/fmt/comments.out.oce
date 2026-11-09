@@ -25,7 +25,7 @@ block hys = CDL.Reals.Hysteresis(
 )
 block sum3 = CDL.Reals.MultiSum(
   # inside the list, before its first item
-  k = [1.0],
+  k_1 = 1.0,
   # above the second element: the list prints flat
   k_2 = 2.0
 )

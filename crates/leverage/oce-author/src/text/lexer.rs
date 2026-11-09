@@ -12,9 +12,10 @@ use crate::location::Location;
 
 use super::ParseError;
 use super::codes::{
-    BAD_ESCAPE, BYTE_ORDER_MARK, CONTROL_CHARACTER, INPUT_TOO_LARGE, LINE_TOO_LONG, MAX_LINE_BYTES,
-    MAX_STRING_BYTES, MAX_TEXT_BYTES, MAX_TEXT_LINES, MAX_TOKEN_BYTES, STRAY_TOKEN,
-    STRING_TOO_LONG, TOKEN_TOO_LONG, TOO_MANY_LINES, UNTERMINATED_STRING,
+    BAD_ESCAPE, BYTE_ORDER_MARK, COMMENT_TOO_LONG, CONTROL_CHARACTER, INPUT_TOO_LARGE,
+    LINE_TOO_LONG, MAX_COMMENT_BYTES, MAX_LINE_BYTES, MAX_STRING_BYTES, MAX_TEXT_BYTES,
+    MAX_TEXT_LINES, MAX_TOKEN_BYTES, STRAY_TOKEN, STRING_TOO_LONG, TOKEN_TOO_LONG, TOO_MANY_LINES,
+    UNTERMINATED_STRING,
 };
 
 /// Refuse what no grammar position may hold, in document order.
@@ -61,9 +62,20 @@ pub(super) fn prescan(text: &str) -> Result<(), ParseError> {
             ));
         }
         let c1 = byte == 0xC2 && bytes.get(at + 1).is_some_and(|b| (0x80..=0x9F).contains(b));
-        if byte < 0x20 || byte == 0x7F || c1 {
+        // U+202A..U+202E are E2 80 AA..AE; U+2066..U+2069 are E2 81 A6..A9.
+        let bidi = byte == 0xE2
+            && match (bytes.get(at + 1), bytes.get(at + 2)) {
+                (Some(0x80), Some(b)) => (0xAA..=0xAE).contains(b),
+                (Some(0x81), Some(b)) => (0xA6..=0xA9).contains(b),
+                _ => false,
+            };
+        if byte < 0x20 || byte == 0x7F || c1 || bidi {
             let code = if c1 {
                 u32::from(bytes[at + 1])
+            } else if bidi {
+                text.get(at..)
+                    .and_then(|s| s.chars().next())
+                    .map_or(0, u32::from)
             } else {
                 u32::from(byte)
             };
@@ -211,6 +223,16 @@ impl<'a> Lexer<'a> {
                     .iter()
                     .position(|&b| b == b'\n')
                     .map_or(self.bytes.len(), |n| start + n);
+                if end - start - 1 > MAX_COMMENT_BYTES {
+                    return Err(ParseError::new(
+                        COMMENT_TOO_LONG,
+                        at,
+                        format!(
+                            "the comment is {} bytes after its `#`; at most {MAX_COMMENT_BYTES} are allowed",
+                            end - start - 1
+                        ),
+                    ));
+                }
                 let text = self.src.get(start + 1..end).unwrap_or("");
                 Ok(token(
                     Tok::Comment {

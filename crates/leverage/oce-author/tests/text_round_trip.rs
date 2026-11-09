@@ -8,11 +8,11 @@
 mod support;
 
 use oce_author::{
-    EmitOptions, Literal, ParamValue, STRAY_TOKEN, Sequence, WIRE_SCHEMA, emit, from_wire_str,
+    EmitOptions, Literal, ParamValue, PrintError, Sequence, WIRE_SCHEMA, emit, from_wire_str,
     parse_text, print_text, to_wire_string, wire_schema,
 };
 
-use support::text::{bundle_model, bundles, enumerated_models, note_text_example};
+use support::text::{bundle_model, bundles, enumerated_models, note_text_example, print};
 use support::{compare_or_bless, econ_enable, fixture};
 
 /// The model with every text-only fact removed: annotations, suffixes, header and trailing
@@ -45,7 +45,7 @@ fn without_text_facts(sequence: &Sequence) -> Sequence {
 fn every_bundle_prints_to_its_checked_in_canonical_text() {
     for (name, wire) in bundles() {
         let model = bundle_model(&wire);
-        let text = print_text(&model);
+        let text = print(&model);
         compare_or_bless(&fixture(&format!("text/{name}.oce")), &text);
         let golden = std::fs::read_to_string(fixture(&format!("text/{name}.oce"))).expect("golden");
         let parsed = parse_text(&golden).unwrap_or_else(|e| panic!("{name}: {e}"));
@@ -54,7 +54,7 @@ fn every_bundle_prints_to_its_checked_in_canonical_text() {
             "{name}: canonical text → model loses nothing"
         );
         assert_eq!(
-            print_text(&parsed),
+            print(&parsed),
             golden,
             "{name}: text → model → text is byte-stable"
         );
@@ -71,7 +71,7 @@ fn wire_to_text_to_wire_is_byte_identical_for_every_bundle() {
         "three wire bundles and four imported corpus fixtures"
     );
     for (name, wire) in all {
-        let text = print_text(&from_wire_str(&wire).expect("reads"));
+        let text = print(&from_wire_str(&wire).expect("reads"));
         let back = parse_text(&text).unwrap_or_else(|e| panic!("{name}: {e}\n{text}"));
         assert_eq!(to_wire_string(&back), wire, "{name}");
     }
@@ -79,24 +79,23 @@ fn wire_to_text_to_wire_is_byte_identical_for_every_bundle() {
 
 #[test]
 fn the_defects_bundle_carries_values_no_text_spelling_has() {
-    // `defects.json` holds a `unit` atom with a space (`deg C`), which stage 1 refuses. Its text
-    // is refused at that atom with a typed error, never a panic and never a silent change.
+    // `defects.json` holds a `unit` atom with a space (`deg C`) and a class path that is not
+    // dotted words (`urn:oce:lowering#PassThrough.Real`), both refused by stage 1. Printing it is
+    // refused with a typed error naming the first, never a panic and never a silent change.
     let wire = std::fs::read_to_string(fixture("wire/defects.json")).expect("defects");
-    let text = print_text(&from_wire_str(&wire).expect("reads"));
-    let error = parse_text(&text).expect_err("not text-representable");
-    assert_eq!(error.code, STRAY_TOKEN, "{error}");
-    let line = text
-        .lines()
-        .nth(error.location.line as usize - 1)
-        .expect("line");
-    assert!(line.starts_with("in TOut : Real @unit deg C"), "{line}");
+    let error = print_text(&from_wire_str(&wire).expect("reads")).expect_err("unspellable");
+    let PrintError::Unspellable { subject, detail } = &error else {
+        panic!("{error}");
+    };
+    assert_eq!(subject, "TOut");
+    assert!(detail.contains("deg C"), "{detail}");
 }
 
 #[test]
 fn the_worked_text_example_is_canonical() {
     let text = note_text_example();
     let model = parse_text(&text).expect("the note's example parses");
-    assert_eq!(print_text(&model), text);
+    assert_eq!(print(&model), text);
     assert_eq!(
         model.annotations.comments,
         vec![" Economizer enable on outdoor-air temperature with a deadband.".to_owned()]
@@ -136,26 +135,27 @@ fn every_enumerated_model_survives_print_then_parse() {
     let models = enumerated_models();
     assert_eq!(models.len(), 48);
     for model in models {
-        let text = print_text(&model);
+        let text = print(&model);
         let parsed = parse_text(&text).unwrap_or_else(|e| panic!("{e}\n{text}"));
         assert_eq!(parsed, model, "model → text → model\n{text}");
-        assert_eq!(print_text(&parsed), text, "text → model → text\n{text}");
+        assert_eq!(print(&parsed), text, "text → model → text\n{text}");
         assert_eq!(to_wire_string(&parsed), to_wire_string(&model));
     }
 }
 
 #[test]
 fn enumerated_models_exercise_both_array_spellings_and_both_block_layouts() {
-    let texts: Vec<String> = enumerated_models().iter().map(print_text).collect();
+    let texts: Vec<String> = enumerated_models().iter().map(print).collect();
     let all = texts.concat();
     for needle in [
         "k = [1.0 K, -2 K, 1e-7]",
-        // A lone first element is a complete run of one; what follows a gap stays flat.
-        "k = [1.0], k_3 = 3.0",
-        "k_2 = 2.0, k = [1.0]",
-        "k = [1.0, 2.0],\n  nin = n,\n  k = [5.0]\n",
+        // A gap, another order, or an element elsewhere in the block: flat.
+        "k_1 = 1.0, k_3 = 3.0",
+        "k_2 = 2.0, k_1 = 1.0",
+        "k_1 = 1.0,\n  k_2 = 2.0,\n  nin = n,\n  k_1 = 5.0\n",
         "  # one comment\n  k = [",
-        "K = [[0.5, 0.5, 0.25], [1.5, -1.5, 0.0]]",
+        // A matrix with an incomplete third row is not a rectangle: flat.
+        "K_1_3 = 0.25,\n  K_2_1 = 1.5,",
         "K_3_1 = 9.0",
         "k = [p0, p1]",
         "block sub = CDL.Reals.Subtract\n",

@@ -6,9 +6,13 @@
 //! unprefixed SI unit ([`BASE_UNIT_SYMBOLS`]); `1 h`, `20 degC` and `3 kPa` are refused with
 //! [`UNIT_NOT_BASE`] rather than read as a value the author did not mean.
 //!
-//! The grammar is Modelica's unit-expression syntax without parentheses:
+//! The grammar is a subset of Modelica's unit-expression syntax:
 //! `suffix = numerator [ "/" factors ]`, `numerator = "1" | factors` (`1` only before `/`),
-//! `factors = factor { "." factor }`, `factor = symbol [ [ "-" ] digits ]` (`m2`, `s-1`).
+//! `factors = factor { "." factor }`, `factor = symbol [ [ "-" ] digits ]` with a non-zero
+//! exponent (`m2`, `s-1`; `K0` and `m-0` are refused). There are no parentheses, and there is
+//! at most one `/`, whose right-hand side is the whole denominator: `kg/m.s2` reads as
+//! kg/(m·s²). That is a deliberate deviation from Modelica's left-to-right reading
+//! ((kg/m)·s²), chosen so a suffix reads as an engineer writes a quotient (issue #482).
 
 use super::codes::{MALFORMED_SUFFIX, UNIT_NOT_BASE};
 
@@ -70,6 +74,9 @@ fn factors<'a>(text: &'a str, symbols: &mut Vec<&'a str>) -> Result<(), &'static
             || (exponent.len() > digits.len() && digits.is_empty())
         {
             return Err("an exponent is an optional `-` and digits after the symbol");
+        }
+        if !digits.is_empty() && digits.bytes().all(|b| b == b'0') {
+            return Err("an exponent is not zero");
         }
         symbols.push(&factor[..letters]);
     }

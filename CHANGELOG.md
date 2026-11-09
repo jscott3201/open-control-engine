@@ -284,29 +284,79 @@ and a gate that accepted any text would restore exactly the false assurance desc
   imported document) are tested. Found on the way, and fixed by GitHub #477: a block input driven by
   both a block output and a boundary input loaded without a `single-assignment` refusal (#472);
   the parity test now pins the engine's refusal of it.
-- **`oce-author`: the text form, with an idempotent `fmt`** (GitHub #485, issue #482). The
-  authoring note's terse line grammar (decisions 1, 3, 12, 13 and 15) as a hand-written
-  recursive-descent parser and a canonical printer: `parse_text` / `parse_text_bytes` /
-  `print_text` / `fmt_text`, `fmt_text` being parse then print and idempotent. Parsing is bounded
-  (4 MiB, 100,000 lines, 8,192-byte lines, 256-byte tokens, 4,096-byte strings, list depth 2,
-  65,536 statements of one kind) and refuses each malformed construct with one typed
-  `ParseError { code, location, detail }` among twenty-nine codes (`PARSE_CODES`), never a panic;
-  semantic defects stay the validator's. Unit suffixes are base units only (`1 h` is refused as
-  `unit-not-base`, naming vocabulary v1); lists lower to the catalog's element names and complete,
-  consecutive, uncommented runs print back as `[..]`; Reals print in the shortest round-trip
-  spelling, Integers keep theirs, and a leading `+` or zero is refused. Comments and blank lines
-  travel through the model's annotations, an end-of-line comment moving above its statement.
-  `validate_text` fills `Finding::span` for both stages from a `SourceMap`, a duplicate placed on
-  its repeat. **The one model change the text form required:** `Sequence::annotations` (header
-  comments) and `Sequence::trailing_comments`, which the wire form, the schema and the emitter
-  ignore (the note's worked example opens with a header comment). Gate item 2 holds: wire → text →
-  wire is byte-identical for the three wire bundles and the four imported corpus fixtures, and the
-  note's worked text example parses to its wire bundle. Tests: canonical bundle texts and `fmt`
-  comment goldens (`OCE_BLESS_AUTHOR`), 48 enumerated models through print and parse, one test per
-  refusal code with its exact location, every bound at its boundary, finding spans, and a
-  deterministic mutation sweep (more than 25,000 mutants, `catch_unwind` naming each) that also requires
-  every mutant that parses to print and parse back unchanged. The note's line bound and error shape
-  are amended (dated).
+- **`oce-author`: the text form, with an idempotent `fmt`** (GitHub #485, issue #482).
+
+  **What it is.** The authoring note's terse line grammar (decisions 1, 3, 12, 13 and 15): a
+  hand-written recursive-descent parser and a canonical printer.
+  - `parse_text` / `parse_text_bytes` / `fmt_text` return `Result<_, ParseError>`; `print_text`
+    returns `Result<String, PrintError>`.
+  - `fmt_text` is parse then print, and it is idempotent. It keeps every comment: an end-of-line
+    comment moves above its statement, and a comment after the last item of a list or block is
+    refused.
+  - Parsing is bounded: 4 MiB, 100,000 lines, 8,192-byte lines, 256-byte tokens, 4,096-byte
+    strings, 8,189-byte comments, list depth 2, 65,536 statements of one kind.
+  - Each malformed construct gets one typed `ParseError { code, location, detail }`, never a
+    panic. The thirty-one codes of `PARSE_CODES` are pinned in order, as `STAGE_ONE_CODES` is.
+  - Semantic defects stay the validator's.
+  - Unit suffixes are base units only: `1 h` is refused as `unit-not-base`, naming vocabulary v1.
+  - Lists lower to the catalog's element names.
+  - Reals print in the shortest round-trip spelling, and an Integer never becomes a Real.
+  - `validate_text` fills `Finding::span` for both stages. A `SourceMap` indexes the subjects once,
+    so a document at the statement cap places its findings in linear time. A duplicate is placed
+    on the later declaration in model section order; a subject the text does not name keeps
+    `None`.
+
+  **The one model change the text form required:** `Sequence::annotations` (header comments) and
+  `Sequence::trailing_comments`. The wire form, the schema and the emitter ignore both. The note's
+  worked example opens with a header comment, and statement annotations could not hold it.
+
+  **Stage 1 additions** that make every clean model printable:
+  - `nan`, `inf` and `infinity` (any case) are refused as declared names (`invalid-name`);
+  - a boundary carries at most 16 `@haystack` tags (`MAX_HAYSTACK_TAGS`), so a clean boundary fits
+    on one line;
+  - strings, `@name` and `@label` with a bidirectional override or isolate are refused.
+
+  **Gate item 2 holds:** wire → text → wire is byte-identical for the three wire bundles and the
+  four imported corpus fixtures. The note's worked text example parses to its wire bundle.
+
+  **Deviations from the note and the issue:**
+  - The functions are named `parse_text` / `print_text` / `fmt_text`, not `parse` / `print` /
+    `fmt`, after `from_wire_str` / `to_wire_string`.
+  - The line bound is 8,192 bytes, not 4,096, so the longest string the wire form carries
+    (4,096 bytes as written) fits on one line with its assignment.
+  - `print_text` is total or refusing. A name, class path, atom, suffix, string, value or
+    `extends` id the lexer could not read back is `PrintError::Unspellable`, never text that parses
+    to a different model.
+  - `tests/fixtures/wire/defects.json` is excluded from wire → text → wire. It holds a `unit` atom
+    with a space and a non-path class, which stage 1 refuses and which `print_text` refuses as
+    unspellable.
+  - Long arrays print one element or row per line, and a long row one cell per line.
+  - Array elements regroup into `[..]` only when the run is every element of the template the block
+    assigns: consecutive, from index 1, at least two, a matrix a whole rectangle. Anything else
+    prints flattened.
+  - `NaN`, `inf` and `Infinity` are refused as values (`non-finite-number`).
+  - `-0` reads as the Integer `0`, and a leading `+` or zero is refused rather than normalized
+    (stricter than decision 12).
+  - `comment-before-close` refuses a comment after the last item of a `(...)` or `[...]`.
+  - The empty list is refused (`malformed-list`).
+  - The unit-suffix grammar is a Modelica subset: exponents other than zero, a single `/` whose
+    right-hand side is the whole denominator (`kg/m.s2` is kg/(m·s²)), no parentheses.
+  - Atoms are checked as printable ASCII at parse (`malformed-atom`).
+  - Bidirectional overrides and isolates are refused anywhere.
+  - A dotted name has no space around its dots.
+
+  **Tests:**
+  - canonical bundle texts and `fmt` comment goldens (`OCE_BLESS_AUTHOR`);
+  - 48 enumerated models through print and parse;
+  - every stage-1-clean fixture and a set of clean models at their field bounds printing within the
+    line bound and reading back equal;
+  - one test per unspellable value;
+  - one test per refusal code with its exact location, and every bound at its boundary;
+  - finding spans and a span-cost test at the statement cap;
+  - a deterministic mutation sweep of more than 25,000 mutants, with `catch_unwind` naming each,
+    that also requires every mutant that parses to print and parse back unchanged.
+
+  The note's text-form section is amended (dated) with each of these.
 
 ### Documentation
 

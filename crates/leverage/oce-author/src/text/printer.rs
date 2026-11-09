@@ -10,12 +10,17 @@
 //! line feed.
 //!
 //! Arrays. The model holds an array as one assignment per element (decision 15), so the printer
-//! regroups a run into `[..]` through the catalog: a consecutive run of elements of one array
-//! template, starting at index 1, in row-major order, filling a vector or whole matrix rows, with no
-//! annotations after the first element. Anything else (a gap, another order, an annotated element,
-//! an unknown class) prints one assignment per element under its flattened name. A regrouped array
-//! that does not fit in [`MAX_ONE_LINE_COLUMNS`] at its indent prints one element (a vector) or one
-//! row (a matrix) per line, so formatting a long table never produces a line past the bound.
+//! regroups a run into `[..]` through the catalog, but only when the run is exactly what the block
+//! assigns of that array: every element of the template in the block, consecutive, starting at
+//! index 1, in row-major order, at least two elements, a matrix a whole rectangle, and no comment or
+//! blank line before any element but the first. Anything else (a lone first element, a gap,
+//! another order, an element elsewhere in the block, an annotated element, an unknown class)
+//! prints one assignment per element under its flattened name. A regrouped array that does not fit
+//! in [`MAX_ONE_LINE_COLUMNS`] at its indent prints one element or row per line, and a row that
+//! does not fit one cell per line, so formatting never produces a line past the bound.
+//!
+//! Before printing, [`super::spell::check`] refuses a model the text cannot spell, so what this
+//! module writes always parses back to the model it was given (up to the comment normalizations).
 
 use crate::model::{Annotations, Assignment, Block, Boundary, Literal, ParamValue, Sequence};
 use crate::validate::catalog::{is_template, lookup_class, lookup_parameter, match_template};
@@ -64,11 +69,13 @@ pub(super) fn print(sequence: &Sequence) -> String {
     out
 }
 
+/// Comment lines, each split at its line feeds and without trailing spaces (the two comment
+/// normalizations; the parser stores comments the same way).
 fn comments(out: &mut String, lines: &[String], indent: &str) {
-    for line in lines {
+    for line in lines.iter().flat_map(|line| line.split('\n')) {
         out.push_str(indent);
         out.push('#');
-        out.push_str(line);
+        out.push_str(line.trim_end_matches(' '));
         out.push('\n');
     }
 }
@@ -220,21 +227,55 @@ fn items(block: &Block) -> Vec<Item<'_>> {
     items
 }
 
-/// `base = [..]` on one line when it fits in [`MAX_ONE_LINE_COLUMNS`] at its two-space indent;
-/// otherwise one part (a vector element or a matrix row) per line, indented by four spaces, so a
-/// long array never formats past the line bound.
-fn list_text(base: &str, parts: &[String]) -> String {
-    let one = format!("{base} = [{}]", parts.join(", "));
-    if one.chars().count() + 2 <= MAX_ONE_LINE_COLUMNS {
+/// The rendering of one regrouped array: the element texts of a vector, or the rows of cells of
+/// a matrix.
+enum Parts {
+    Vector(Vec<String>),
+    Matrix(Vec<Vec<String>>),
+}
+
+/// Whether `text` fits on a line of [`MAX_ONE_LINE_COLUMNS`] at `indent` spaces.
+fn fits_line(text: &str, indent: usize) -> bool {
+    text.chars().count() + indent <= MAX_ONE_LINE_COLUMNS
+}
+
+/// `base = [..]` on one line when it fits at its two-space indent; otherwise one vector element,
+/// or one matrix row, per line at four spaces, a row that does not fit at four spaces itself
+/// breaking into one cell per line at six. No line of a regrouped array is longer than its widest
+/// cell plus that indent, so formatting never pushes an array past the line bound.
+fn list_text(base: &str, parts: &Parts) -> String {
+    let row = |cells: &[String]| format!("[{}]", cells.join(", "));
+    let flat: Vec<String> = match parts {
+        Parts::Vector(cells) => cells.clone(),
+        Parts::Matrix(rows) => rows.iter().map(|cells| row(cells)).collect(),
+    };
+    let one = format!("{base} = [{}]", flat.join(", "));
+    if fits_line(&one, 3) {
         return one;
     }
-    format!("{base} = [\n    {}\n  ]", parts.join(",\n    "))
+    let lines: Vec<String> = match parts {
+        Parts::Vector(cells) => cells.clone(),
+        Parts::Matrix(rows) => rows
+            .iter()
+            .map(|cells| {
+                let one = row(cells);
+                if fits_line(&one, 5) {
+                    one
+                } else {
+                    format!("[\n      {}\n    ]", cells.join(",\n      "))
+                }
+            })
+            .collect(),
+    };
+    format!("{base} = [\n    {}\n  ]", lines.join(",\n    "))
 }
 
 /// The array run starting at assignment `j` of `block`, if any: how many assignments it covers,
-/// the array's base name, and its parts — the element texts of a vector, or the `[..]` row texts
-/// of a matrix (see the module documentation).
-fn array_run(block: &Block, j: usize) -> Option<(usize, &'static str, Vec<String>)> {
+/// the array's base name and its parts. A run regroups only when it is every element of its
+/// template the block assigns, starting at index 1, consecutive, in row-major order, at least two
+/// elements, a matrix a whole rectangle, and no element after the first annotated (see the module
+/// documentation).
+fn array_run(block: &Block, j: usize) -> Option<(usize, &'static str, Parts)> {
     let list = &block.assignments;
     let class = lookup_class(&block.class_path)?;
     let parameter = lookup_parameter(class.metadata, list[j].name.as_str())?;
@@ -246,6 +287,13 @@ fn array_run(block: &Block, j: usize) -> Option<(usize, &'static str, Vec<String
     if start.iter().any(|&i| i != 1) {
         return None;
     }
+    // Every element of this template the block assigns, wherever it stands.
+    let total = list
+        .iter()
+        .filter(|a| {
+            lookup_parameter(class.metadata, a.name.as_str()).is_some_and(|p| p.name == template)
+        })
+        .count();
     // Whether assignment `at` is element `indices` and carries no annotations (the first may).
     let fits = |at: usize, indices: &[usize]| -> bool {
         list.get(at).is_some_and(|a| {
@@ -258,10 +306,11 @@ fn array_run(block: &Block, j: usize) -> Option<(usize, &'static str, Vec<String
     match start.len() {
         1 => {
             let len = (0..).take_while(|&k| fits(j + k, &[k + 1])).count();
-            if len == 0 {
+            if len < 2 || len != total {
                 return None;
             }
-            Some((len, base, list[j..j + len].iter().map(element).collect()))
+            let cells = list[j..j + len].iter().map(element).collect();
+            Some((len, base, Parts::Vector(cells)))
         }
         2 => {
             let cols = (0..).take_while(|&c| fits(j + c, &[1, c + 1])).count();
@@ -272,16 +321,19 @@ fn array_run(block: &Block, j: usize) -> Option<(usize, &'static str, Vec<String
             while (0..cols).all(|c| fits(j + rows * cols + c, &[rows + 1, c + 1])) {
                 rows += 1;
             }
-            let text: Vec<String> = (0..rows)
+            let len = rows * cols;
+            if len < 2 || len != total {
+                return None;
+            }
+            let cells = (0..rows)
                 .map(|r| {
-                    let cells: Vec<String> = list[j + r * cols..j + (r + 1) * cols]
+                    list[j + r * cols..j + (r + 1) * cols]
                         .iter()
                         .map(element)
-                        .collect();
-                    format!("[{}]", cells.join(", "))
+                        .collect()
                 })
                 .collect();
-            Some((rows * cols, base, text))
+            Some((len, base, Parts::Matrix(cells)))
         }
         _ => None,
     }

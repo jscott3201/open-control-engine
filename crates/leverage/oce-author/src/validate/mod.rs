@@ -23,8 +23,8 @@ mod semantic;
 
 pub use engine::{DOCUMENT_TOO_LARGE, LOAD_FAILED};
 pub use names::MAX_EXACT_INTEGER;
-pub use semantic::MAX_SEMANTIC_FIELD_BYTES;
 pub(crate) use semantic::boundary_problems as boundary_syntax_problems;
+pub use semantic::{MAX_HAYSTACK_TAGS, MAX_SEMANTIC_FIELD_BYTES};
 
 use std::fmt;
 

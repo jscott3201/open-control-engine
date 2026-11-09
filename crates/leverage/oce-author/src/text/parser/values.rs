@@ -113,17 +113,48 @@ pub(super) fn number(text: &str, at: Location) -> Result<Literal, ParseError> {
 }
 
 impl Parser<'_> {
-    /// A dotted path `word { "." word }` (a class path, an enum member, an endpoint).
+    /// A dotted path `word { "." word }` (a class path, an enum member, an endpoint), with no
+    /// space on either side of a dot.
     pub(super) fn dotted(&mut self, what: &str) -> Result<(String, Location), ParseError> {
-        let (first, at) = self.name(what)?;
-        let mut path = first.as_str().to_owned();
-        while self.lx.peek()?.tok == Tok::Punct(b'.') {
-            self.lx.next()?;
-            let (part, _) = self.name("a name after `.`")?;
-            path.push('.');
-            path.push_str(part.as_str());
-        }
+        let first = self.lx.peek()?;
+        let (name, at) = self.name(what)?;
+        let mut path = name.as_str().to_owned();
+        self.path_rest(&mut path, first.end)?;
         Ok((path, at))
+    }
+
+    /// Continue a dotted path whose last word ended at byte `end`: each `.` and the word after it
+    /// must touch what precedes them.
+    fn path_rest(&mut self, path: &mut String, mut end: usize) -> Result<(), ParseError> {
+        loop {
+            let dot = self.lx.peek()?;
+            if dot.tok != Tok::Punct(b'.') {
+                return Ok(());
+            }
+            if dot.start != end {
+                return Err(ParseError::new(
+                    STRAY_TOKEN,
+                    dot.at,
+                    "a dotted name has no space before a `.`",
+                ));
+            }
+            self.lx.bump(&dot);
+            let word = self.lx.peek()?;
+            if word.tok != Tok::Word || word.start != dot.end {
+                return Err(ParseError::new(
+                    STRAY_TOKEN,
+                    word.at,
+                    format!(
+                        "expected a name right after `.`, found {}",
+                        word.describe(self.lx.src())
+                    ),
+                ));
+            }
+            self.lx.bump(&word);
+            path.push('.');
+            path.push_str(word.text(self.lx.src()));
+            end = word.end;
+        }
     }
 
     /// An optional unit suffix after a number (decision 13).
@@ -192,12 +223,7 @@ impl Parser<'_> {
                     "false" => ParamValue::Literal(Literal::Boolean(false)),
                     _ => {
                         let mut path = word.to_owned();
-                        while self.lx.peek()?.tok == Tok::Punct(b'.') {
-                            self.lx.next()?;
-                            let (part, _) = self.name("a member name after `.`")?;
-                            path.push('.');
-                            path.push_str(part.as_str());
-                        }
+                        self.path_rest(&mut path, token.end)?;
                         if path.contains('.') {
                             ParamValue::Literal(Literal::EnumMember(EnumMember::parse(&path)))
                         } else {
@@ -248,9 +274,16 @@ impl Parser<'_> {
                     }
                     self.lx.bump(&token);
                 }
-                Tok::Comment { text, .. } => {
-                    pending_at.get_or_insert(token.at);
-                    pending.comments.push(text.clone());
+                Tok::Comment { text, eol } => {
+                    // An end-of-line comment belongs to the element before it on its line, as a
+                    // statement's does; any other comment waits for the next element.
+                    match last_scalar(&mut items).filter(|_| *eol) {
+                        Some(scalar) => scalar.annotations.comments.push(text.clone()),
+                        None => {
+                            pending_at.get_or_insert(token.at);
+                            pending.comments.push(text.clone());
+                        }
+                    }
                     self.lx.bump(&token);
                 }
                 Tok::Punct(b']') => {
@@ -346,6 +379,14 @@ impl Parser<'_> {
         block.assignments.push(assignment);
         self.spans.assignments[index].push(at);
         Ok(())
+    }
+}
+
+/// The last scalar of a list read so far (the last cell of its last row).
+fn last_scalar(items: &mut [Value]) -> Option<&mut Scalar> {
+    match items.last_mut()? {
+        Value::Scalar(scalar) => Some(scalar),
+        Value::List(_, cells) => last_scalar(cells),
     }
 }
 

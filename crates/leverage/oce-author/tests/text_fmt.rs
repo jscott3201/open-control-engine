@@ -4,11 +4,9 @@
 
 mod support;
 
-use oce_author::{
-    Literal, MALFORMED_NUMBER, ParamValue, fmt_text, parse_text, print_text, to_wire_string,
-};
+use oce_author::{Literal, MALFORMED_NUMBER, ParamValue, fmt_text, parse_text, to_wire_string};
 
-use support::text::{bundle_model, bundles, enumerated_models, note_text_example};
+use support::text::{bundle_model, bundles, enumerated_models, note_text_example, print};
 use support::{compare_or_bless, fixture};
 
 /// The hand-written `fmt` inputs under `tests/fixtures/text/fmt/`, each with a blessed output.
@@ -42,8 +40,8 @@ fn comment_and_layout_goldens() {
 fn fmt_is_idempotent_over_every_text_the_tests_hold() {
     let mut inputs: Vec<String> = FMT_CASES.iter().map(|c| fmt_input(c)).collect();
     inputs.push(note_text_example());
-    inputs.extend(bundles().iter().map(|(_, w)| print_text(&bundle_model(w))));
-    inputs.extend(enumerated_models().iter().map(print_text));
+    inputs.extend(bundles().iter().map(|(_, w)| print(&bundle_model(w))));
+    inputs.extend(enumerated_models().iter().map(print));
     for text in inputs {
         fmt_once(&text);
     }
@@ -220,19 +218,28 @@ fn arrays_regroup_only_complete_consecutive_uncommented_runs() {
     let out = fmt_once(&fmt_input("arrays"));
     for expected in [
         "block sum3 = CDL.Reals.MultiSum(nin = 3, k = [1, 2, 3])\n",
-        "block sum4 = CDL.Reals.MultiSum(k = [1], k_3 = 3)\n",
+        // A gap: flat, the lone first element included.
+        "block sum4 = CDL.Reals.MultiSum(k_1 = 1, k_3 = 3)\n",
         "block sum5 = CDL.Reals.MultiSum(k = [1 K, 2 K, 3 K])\n",
         "block gain = CDL.Reals.MatrixGain(K = [[0.5, 0.5], [1.5, -1.5]])\n",
         "block gain2 = CDL.Reals.MatrixGain(K = [[1.0, 0.0], [0.0, 1.0]])\n",
-        "block gain3 = CDL.Reals.MatrixGain(K_2_1 = 1.0, K = [[2.0]])\n",
+        // Another order: flat.
+        "block gain3 = CDL.Reals.MatrixGain(K_2_1 = 1.0, K_1_1 = 2.0)\n",
         "block odd = CDL.Reals.Nope(x_1 = 1, x_2 = 2)\n",
+        // An element of the array elsewhere in the block: flat.
+        "block sum6 = CDL.Reals.MultiSum(\n  k_1 = 1,\n  nin = 2,\n  k_2 = 2\n)\n",
+        // A partial matrix: flat.
+        "block gain4 = CDL.Reals.MatrixGain(\n  K_1_1 = 1.0,\n  K_1_2 = 2.0,\n  K_2_1 = 3.0\n)\n",
+        // An end-of-line comment inside a list belongs to the element before it, so the list
+        // prints flat with the comment above that element.
+        "block sum7 = CDL.Reals.MultiSum(\n  k_1 = 1,\n  # on the second element\n  k_2 = 2,\n  k_3 = 3\n)\n",
     ] {
         assert!(out.contains(expected), "missing {expected:?}\n{out}");
     }
     let commented = fmt_once(&fmt_input("comments"));
     assert!(
-        // The first element alone is a complete run of one; the commented second stays flat.
-        commented.contains("  # inside the list, before its first item\n  k = [1.0],\n  # above the second element: the list prints flat\n  k_2 = 2.0\n"),
+        // A commented second element keeps the whole list flat.
+        commented.contains("  # inside the list, before its first item\n  k_1 = 1.0,\n  # above the second element: the list prints flat\n  k_2 = 2.0\n"),
         "{commented}"
     );
 }

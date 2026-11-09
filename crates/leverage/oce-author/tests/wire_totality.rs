@@ -142,8 +142,10 @@ fn annotations_and_suffixes_never_reach_the_wire() {
 
 #[test]
 fn too_many_haystack_tags_are_flagged() {
+    // At most `MAX_HAYSTACK_TAGS` (16, amended 2026-11-09 for the text form's line bound, issue
+    // #482).
     let mut s = support::econ_enable();
-    s.inputs[0].semantic.haystack = vec!["t".to_owned(); oce_author::MAX_WIRE_LIST_LEN];
+    s.inputs[0].semantic.haystack = vec!["t".to_owned(); oce_author::MAX_HAYSTACK_TAGS];
     assert!(validate(&s).is_empty(), "accepted at the limit");
     round_trips(&s);
     s.inputs[0].semantic.haystack.push("t".to_owned());

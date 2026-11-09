@@ -2,9 +2,10 @@
 //! accepted at the limit, refused one past it with its typed code at the exact location.
 
 use oce_author::{
-    INPUT_TOO_LARGE, LINE_TOO_LONG, MAX_LINE_BYTES, MAX_STATEMENTS_PER_KIND, MAX_STRING_BYTES,
-    MAX_TEXT_BYTES, MAX_TEXT_LINES, MAX_TOKEN_BYTES, NESTING_TOO_DEEP, STRING_TOO_LONG,
-    TOKEN_TOO_LONG, TOO_MANY_LINES, TOO_MANY_STATEMENTS, parse_text,
+    COMMENT_TOO_LONG, INPUT_TOO_LARGE, LINE_TOO_LONG, MAX_COMMENT_BYTES, MAX_LINE_BYTES,
+    MAX_STATEMENTS_PER_KIND, MAX_STRING_BYTES, MAX_TEXT_BYTES, MAX_TEXT_LINES, MAX_TOKEN_BYTES,
+    NESTING_TOO_DEEP, STRING_TOO_LONG, TOKEN_TOO_LONG, TOO_MANY_LINES, TOO_MANY_STATEMENTS,
+    fmt_text, parse_text,
 };
 
 const HEAD: &str = "sequence s\nextends none\n";
@@ -55,14 +56,41 @@ fn the_line_count_is_pinned() {
 
 #[test]
 fn the_line_length_is_pinned() {
-    let at_limit = format!("{HEAD}#{}\n", "x".repeat(MAX_LINE_BYTES - 1));
-    parse_text(&at_limit).expect("a line at the limit is accepted");
+    // A block line of two strings, padded to exactly the bound.
+    let line = |len: usize| {
+        let head = format!(
+            "block a = C(m = \"{}\", n = \"",
+            "x".repeat(MAX_STRING_BYTES)
+        );
+        let pad = len - head.len() - 2;
+        format!("{HEAD}{head}{}\")\n", "y".repeat(pad))
+    };
+    parse_text(&line(MAX_LINE_BYTES)).expect("a line at the limit is accepted");
     let column = u32::try_from(MAX_LINE_BYTES + 1).expect("fits");
+    refused_at(&line(MAX_LINE_BYTES + 1), LINE_TOO_LONG, 3, column);
+}
+
+#[test]
+fn the_comment_length_reserves_the_deepest_indent() {
+    // A comment may be the line bound less its `#` and the two-space indent the printer gives it
+    // inside a block, so formatting never pushes it past the line bound.
+    assert_eq!(MAX_COMMENT_BYTES, MAX_LINE_BYTES - 3);
+    let at_limit = format!(
+        "{HEAD}block b = CDL.Reals.Hysteresis(\n#{}\n  uLow = 0.0,\n  uHigh = 1.0\n)\n",
+        "x".repeat(MAX_COMMENT_BYTES)
+    );
+    let out = fmt_text(&at_limit).expect("a comment at the limit formats");
+    assert!(out.lines().all(|l| l.len() <= MAX_LINE_BYTES));
+    assert!(
+        out.lines().any(|l| l.len() == MAX_LINE_BYTES),
+        "re-indented to exactly the bound"
+    );
+    parse_text(&out).expect("and reads back");
     refused_at(
-        &format!("{HEAD}#{}\n", "x".repeat(MAX_LINE_BYTES)),
-        LINE_TOO_LONG,
+        &format!("{HEAD}#{}\n", "x".repeat(MAX_COMMENT_BYTES + 1)),
+        COMMENT_TOO_LONG,
         3,
-        column,
+        1,
     );
 }
 

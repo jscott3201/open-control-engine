@@ -7,7 +7,8 @@
 pub const NOT_UTF8: &str = "not-utf8";
 /// The input starts with a byte-order mark.
 pub const BYTE_ORDER_MARK: &str = "byte-order-mark";
-/// A control character: C0 other than line feed (tab and carriage return included), DEL or C1.
+/// A control character: C0 other than line feed (tab and carriage return included), DEL, C1, or a
+/// bidirectional override or isolate (U+202A to U+202E, U+2066 to U+2069), anywhere.
 pub const CONTROL_CHARACTER: &str = "control-character";
 /// The input is larger than [`MAX_TEXT_BYTES`].
 pub const INPUT_TOO_LARGE: &str = "input-too-large";
@@ -19,6 +20,8 @@ pub const LINE_TOO_LONG: &str = "line-too-long";
 pub const TOKEN_TOO_LONG: &str = "token-too-long";
 /// A string is longer than [`MAX_STRING_BYTES`] as written.
 pub const STRING_TOO_LONG: &str = "string-too-long";
+/// A comment is longer than [`MAX_COMMENT_BYTES`] after its `#`.
+pub const COMMENT_TOO_LONG: &str = "comment-too-long";
 /// Lists nest deeper than [`MAX_LIST_DEPTH`].
 pub const NESTING_TOO_DEEP: &str = "nesting-too-deep";
 /// More than [`MAX_STATEMENTS_PER_KIND`] statements of one kind, or assignments in one block.
@@ -39,6 +42,9 @@ pub const NON_FINITE_NUMBER: &str = "non-finite-number";
 pub const MALFORMED_SUFFIX: &str = "malformed-suffix";
 /// A well-formed unit suffix that is not a base unit (`h`, `degC`, `kPa`; decision 13).
 pub const UNIT_NOT_BASE: &str = "unit-not-base";
+/// A tag's atom or the `extends` provenance id holds a byte other than printable ASCII (`!` to
+/// `~`). An atom stops at `#`; a provenance id may contain one (decision 5's grammar).
+pub const MALFORMED_ATOM: &str = "malformed-atom";
 /// A token where the grammar allows none, or a missing one (`expected ... found ...`).
 pub const STRAY_TOKEN: &str = "stray-token";
 /// A line starts with a word that is not a statement keyword and is not a connection.
@@ -77,6 +83,7 @@ pub const PARSE_CODES: &[&str] = &[
     LINE_TOO_LONG,
     TOKEN_TOO_LONG,
     STRING_TOO_LONG,
+    COMMENT_TOO_LONG,
     NESTING_TOO_DEEP,
     TOO_MANY_STATEMENTS,
     UNTERMINATED_STRING,
@@ -86,6 +93,7 @@ pub const PARSE_CODES: &[&str] = &[
     NON_FINITE_NUMBER,
     MALFORMED_SUFFIX,
     UNIT_NOT_BASE,
+    MALFORMED_ATOM,
     STRAY_TOKEN,
     UNKNOWN_KEYWORD,
     UNKNOWN_TAG,
@@ -112,6 +120,9 @@ pub const MAX_TOKEN_BYTES: usize = 256;
 /// The longest string, in bytes as written between its quotes (escapes counted as written), as
 /// the wire form's [`crate::MAX_WIRE_STRING_BYTES`].
 pub const MAX_STRING_BYTES: usize = 4_096;
+/// The longest comment, in bytes after its `#`: the line bound less the `#` and the deepest
+/// indent the printer gives a comment (two spaces), so a comment never formats past the line bound.
+pub const MAX_COMMENT_BYTES: usize = MAX_LINE_BYTES - 3;
 /// The deepest list nesting: vectors and matrices.
 pub const MAX_LIST_DEPTH: usize = 2;
 /// The most statements of one kind (parameters, inputs, outputs, blocks, connections), and the

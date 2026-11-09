@@ -5,7 +5,7 @@
 
 use oce_author::{
     BAD_ESCAPE, BYTE_ORDER_MARK, COMMENT_BEFORE_CLOSE, CONTROL_CHARACTER, DUPLICATE_NAME,
-    DUPLICATE_TAG, INTEGER_OUT_OF_RANGE, Literal, MALFORMED_LIST, MALFORMED_NUMBER,
+    DUPLICATE_TAG, INTEGER_OUT_OF_RANGE, Literal, MALFORMED_ATOM, MALFORMED_LIST, MALFORMED_NUMBER,
     MALFORMED_SUFFIX, MISPLACED_STATEMENT, MISPLACED_VALUE, MISSING_EXTENDS, MISSING_SEQUENCE,
     NESTING_TOO_DEEP, NON_FINITE_NUMBER, NOT_UTF8, PARSE_CODES, STRAY_TOKEN, UNCLOSED_BRACKET,
     UNIT_NOT_BASE, UNKNOWN_KEYWORD, UNKNOWN_TAG, UNKNOWN_TYPE, UNTERMINATED_STRING, parse_text,
@@ -32,12 +32,45 @@ fn body(text: &str) -> String {
 }
 
 #[test]
-fn every_refusal_code_is_distinct_and_named_in_the_list() {
-    let mut codes = PARSE_CODES.to_vec();
-    codes.sort_unstable();
-    codes.dedup();
-    assert_eq!(codes.len(), PARSE_CODES.len());
-    assert_eq!(PARSE_CODES.len(), 29);
+fn the_refusal_codes_are_pinned_in_order() {
+    // The list is a contract like `STAGE_ONE_CODES`: a code added, removed, renamed or reordered
+    // moves this test.
+    assert_eq!(
+        PARSE_CODES,
+        [
+            "not-utf8",
+            "byte-order-mark",
+            "control-character",
+            "input-too-large",
+            "too-many-lines",
+            "line-too-long",
+            "token-too-long",
+            "string-too-long",
+            "comment-too-long",
+            "nesting-too-deep",
+            "too-many-statements",
+            "unterminated-string",
+            "bad-escape",
+            "malformed-number",
+            "integer-out-of-range",
+            "non-finite-number",
+            "malformed-suffix",
+            "unit-not-base",
+            "malformed-atom",
+            "stray-token",
+            "unknown-keyword",
+            "unknown-tag",
+            "duplicate-tag",
+            "unknown-type",
+            "missing-sequence",
+            "missing-extends",
+            "misplaced-statement",
+            "misplaced-value",
+            "malformed-list",
+            "unclosed-bracket",
+            "comment-before-close",
+        ]
+    );
 }
 
 #[test]
@@ -374,4 +407,85 @@ fn duplicate_names_and_unknown_classes_are_the_validators_not_the_parsers() {
     assert!(codes.contains(&DUPLICATE_NAME), "{codes:?}");
     assert!(codes.contains(&"class-not-found"), "{codes:?}");
     assert!(codes.contains(&"invalid-name"), "{codes:?}");
+}
+
+#[test]
+fn a_dotted_name_has_no_space_around_its_dots() {
+    refused(&body("block h = CDL .Reals.Abs\n"), STRAY_TOKEN, 3, 15);
+    refused(&body("block h = CDL. Reals.Abs\n"), STRAY_TOKEN, 3, 16);
+    refused(&body("a .y -> b.u\n"), STRAY_TOKEN, 3, 3);
+    refused(&body("a.y -> b. u\n"), STRAY_TOKEN, 3, 11);
+    refused(
+        &body("block p = CDL.Reals.PID(controllerType = SimpleController .PI)\n"),
+        STRAY_TOKEN,
+        3,
+        59,
+    );
+}
+
+#[test]
+fn an_atom_is_printable_ascii_and_stops_at_a_hash() {
+    refused(&body("in u : Real @unit d\u{e9}g\n"), MALFORMED_ATOM, 3, 19);
+    refused(
+        &body("in u : Real @haystack \u{1f321}\n"),
+        MALFORMED_ATOM,
+        3,
+        23,
+    );
+    refused("sequence s\nextends cxf:\u{e9}\n", MALFORMED_ATOM, 2, 9);
+    // `#` ends an atom (the rest is a comment) but belongs to a provenance id (decision 5).
+    let model =
+        parse_text("sequence s\nextends cxf:a#b # c\nin u : Real @unit K#c\n").expect("parses");
+    assert_eq!(
+        model.extends.as_ref().map(|id| id.as_str()),
+        Some("cxf:a#b")
+    );
+    assert_eq!(model.inputs[0].semantic.unit.as_deref(), Some("K"));
+    assert_eq!(model.inputs[0].annotations.comments, ["c"]);
+}
+
+#[test]
+fn bidirectional_overrides_and_isolates_are_refused_in_comments_and_strings() {
+    for ch in [
+        '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}', '\u{202e}', '\u{2066}', '\u{2067}',
+        '\u{2068}', '\u{2069}',
+    ] {
+        refused(&body(&format!("# a{ch}b\n")), CONTROL_CHARACTER, 3, 4);
+        refused(
+            &body(&format!("in u : Real @name \"a{ch}b\"\n")),
+            CONTROL_CHARACTER,
+            3,
+            21,
+        );
+    }
+    // Neighbours are not refused.
+    parse_text(&body("# \u{2029}\u{2065}\u{206a}\u{2028}\n")).expect("parses");
+}
+
+#[test]
+fn the_suffix_denominator_and_exponent_edges() {
+    // One `/`, whose right-hand side is the whole denominator: `kg/m.s2` is kg/(m·s²).
+    for suffix in [
+        "kg/m.s2",
+        "m.s-2",
+        "W/m2.K",
+        "1/s",
+        "J.kg-1.K-1",
+        "m-3",
+        "H",
+        "K10",
+    ] {
+        let model = parse_text(&body(&format!("param p : Real = 1 {suffix}\n"))).expect(suffix);
+        assert_eq!(model.params[0].suffix.as_deref(), Some(suffix));
+    }
+    for suffix in [
+        "K0", "m-0", "m00", "kg/m/s", "m/", "/m", "1", "m2.", ".m", "m-", "m--2", "m+2",
+    ] {
+        refused(
+            &body(&format!("param p : Real = 1 {suffix}\n")),
+            MALFORMED_SUFFIX,
+            3,
+            20,
+        );
+    }
 }

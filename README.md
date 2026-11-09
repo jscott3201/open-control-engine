@@ -219,7 +219,8 @@ and now the deterministic emitter to flat CXF, the engine-side validation stage 
 emitted bytes in a throwaway engine and maps every diagnostic back onto the model, a minimal
 importer that round-trips the corpus fixtures the flat authoring subset covers, and the text form:
 a hand-written parser with one typed refusal per malformed construct, a canonical printer and an
-idempotent `fmt` that keeps every comment.
+idempotent `fmt` that keeps every comment (an end-of-line comment moves above its statement; a
+comment after the last item of a list or block is refused).
 See [CHANGELOG.md](CHANGELOG.md).
 
 Work is planned as GitHub milestones and cut into issues. Each milestone has a tracking issue that

@@ -9,3 +9,7 @@ block gain2 = CDL.Reals.MatrixGain(K = [[1.0, 0.0],
 block gain3 = CDL.Reals.MatrixGain(K_2_1 = 1.0, K_1_1 = 2.0)
 block tab = CDL.Reals.Sources.TimeTable(table = [[0.0, 1.0], [3600.0, 2.0]], smoothness = Smoothness.ConstantSegments)
 block odd = CDL.Reals.Nope(x = [1, 2])
+block sum6 = CDL.Reals.MultiSum(k_1 = 1, nin = 2, k_2 = 2)
+block gain4 = CDL.Reals.MatrixGain(K_1_1 = 1.0, K_1_2 = 2.0, K_2_1 = 3.0)
+block sum7 = CDL.Reals.MultiSum(k = [1, 2, # on the second element
+  3])

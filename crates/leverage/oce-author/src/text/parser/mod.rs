@@ -21,8 +21,8 @@ use crate::model::{Annotations, Sequence};
 
 use super::ParseError;
 use super::codes::{
-    MAX_STATEMENTS_PER_KIND, MISPLACED_STATEMENT, MISSING_EXTENDS, MISSING_SEQUENCE, STRAY_TOKEN,
-    TOO_MANY_STATEMENTS,
+    MALFORMED_ATOM, MAX_STATEMENTS_PER_KIND, MISPLACED_STATEMENT, MISSING_EXTENDS,
+    MISSING_SEQUENCE, STRAY_TOKEN, TOO_MANY_STATEMENTS,
 };
 use super::lexer::{Lexer, Tok, Token};
 use super::spans::SourceMap;
@@ -120,6 +120,15 @@ impl<'a> Parser<'a> {
                 "expected `none` or a provenance id after `extends`",
             ));
         };
+        if let Some(bad) = id.bytes().position(|b| !(b'!'..=b'~').contains(&b)) {
+            return Err(ParseError::new(
+                MALFORMED_ATOM,
+                at,
+                format!(
+                    "the provenance id `{id}` has a byte other than printable ASCII at byte {bad}"
+                ),
+            ));
+        }
         self.spans.extends = at;
         self.sequence.extends = (id != "none").then(|| ProvenanceId::unchecked(id));
         self.end_header_statement()

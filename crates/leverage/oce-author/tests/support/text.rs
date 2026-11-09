@@ -277,3 +277,8 @@ pub fn enumerated_models() -> Vec<Sequence> {
     }
     out
 }
+
+/// Print a model the text form can spell.
+pub fn print(sequence: &Sequence) -> String {
+    oce_author::print_text(sequence).unwrap_or_else(|e| panic!("{e}"))
+}

@@ -1,7 +1,7 @@
 # oce-author
 
 The authoring layer's library (M2; design note [`docs/design/authoring-layer.md`](../../../docs/design/authoring-layer.md),
-issues #463 and #464). A leverage crate: it depends on `oce-api` only, never evaluates an expression,
+issues #463, #464 and #482). A leverage crate: it depends on `oce-api` only, never evaluates an expression,
 and loads only throwaway engines of its own (validation stage 2), never one a host runs.
 `publish = false`.
 
@@ -14,7 +14,7 @@ and loads only throwaway engines of its own (validation stage 2), never one a ho
 | `validate`, `validate_author_side`, `Finding` | The two-stage validator. Stage 1 (`validate_author_side`): twenty-one finding codes (`STAGE_ONE_CODES`) from the model and the catalog, a repeated connection target (`single-assignment`) and an Integer above 2^53 on a Real parameter included. Stage 2, only when stage 1 is clean: emit, load in a throwaway `Engine::new()` and map every engine diagnostic back through the IRI scheme — every warning is an error finding with the engine's code (decision 14), `origin = engine`; a subject the scheme cannot name is attached to `sequence` with the raw subject in `detail`. Findings are sorted by authored position, code and detail. |
 | `emit`, `EmitOptions`, `EmitError` | The emitter to flat CXF: authored order, never sorted; IRIs `{namespace}{sequence}.{local}` (default `urn:oce:author:`, an override must end in `#`, `/` or `:`); block `@type` under the fixed class base `http://example.org#Buildings.Controls.OBC.`; only the assignments the author wrote; arrays in the CXF array form (element by element under the flattened names when the author left a gap); boundary `unit`, `quantity` and `displayUnit` and no semantic record; a canonical writer (fixed key order, two-space indentation, ASCII, shortest round-trip reals); refuses stage-1 errors (`EmitError::Invalid`), a malformed namespace (`EmitError::InvalidNamespace`) and anything above `oce_api::MAX_CXF_BYTES` (`EmitError::TooLarge`). |
 | `import_cxf`, `ImportError` | A minimal importer for the flat corpus dialect (gate item 1); see below. |
-| `parse_text`, `print_text`, `fmt_text`, `ParseError` | The text form (issue #482): a hand-written recursive-descent parser, bounded at parse, refusing each malformed construct with one typed `ParseError { code, location, detail }` (`PARSE_CODES`, twenty-nine codes); a canonical printer; `fmt_text` = parse then print, idempotent. See below. |
+| `parse_text`, `parse_text_bytes`, `print_text`, `fmt_text`, `ParseError`, `PrintError` | The text form (issue #482): a hand-written recursive-descent parser over `&str` or raw bytes, bounded at parse, refusing each malformed construct with one typed `ParseError { code, location, detail }` (`PARSE_CODES`, thirty-one codes, pinned in order); a canonical printer that is total or refusing (`PrintError::Unspellable`); `fmt_text` = parse then print, idempotent. See below. |
 | `validate_text`, `parse_text_with_spans`, `SourceMap` | Validation of a text document: both stages, with every finding's `span` set to its subject's line and column. |
 
 ## The minimal importer
@@ -102,34 +102,48 @@ tag         = "@unit" atom | "@quantity" atom | "@displayUnit" atom | "@brick" a
 type        = "Real" | "Integer" | "Boolean"
 path        = name { "." name }
 number      = [ "-" ] ( "0" | [1-9][0-9]* ) [ "." [0-9]+ ] [ ( "e" | "E" ) [ "+" | "-" ] [0-9]+ ]
-suffix      = ( "1" "/" factors ) | factors [ "/" factors ]
-factors     = factor { "." factor }, factor = symbol [ [ "-" ] digits ]
+suffix      = ( "1" "/" factors ) | factors [ "/" factors ]      (at most one "/")
+factors     = factor { "." factor }, factor = symbol [ [ "-" ] digits ]   (exponent not zero)
+atom        = 1 to 256 bytes of printable ASCII ("!" to "~") without "#"
+provenance-id = 1 to 256 bytes of printable ASCII (may contain "#", decision 5)
 string      = '"' { character | '\"' | '\\' | '\n' } '"'
 comment     = "#" to the end of the line, anywhere
 ```
 
 - One statement per line, except a block's `(...)` list and the lists inside it, which may span
-  lines. Spaces separate tokens; tabs, carriage returns and other control characters are refused.
+  lines. Spaces separate tokens; tabs, carriage returns and other control characters are refused,
+  and so are bidirectional overrides and isolates (U+202A to U+202E, U+2066 to U+2069) anywhere,
+  comments and strings included (`control-character`).
 - A `name` is any word `[A-Za-z_][A-Za-z0-9_]*`; whether it is a valid declared name (not a keyword
   or reserved word, at most 64 bytes, unique) is the validator's judgement, never the parser's.
-  An `atom` and a provenance id run to the next space (an atom also stops at `#`).
+  A dotted name (`CDL.Reals.Abs`, `hys.y`, `SimpleController.PI`) has no space on either side of a
+  dot (`stray-token`).
+- An `atom` runs to the next space or `#` and must be printable ASCII (`malformed-atom`). A
+  provenance id runs to the next space and may contain `#`, as decision 5's grammar allows; it too
+  must be printable ASCII.
 - On the right of `=` in a block, a bare `name` is a reference to a sequence parameter and a
   dotted `Type.Member` an enumeration member. A sequence parameter takes a literal or a member,
   never a reference or a list (`misplaced-value`). `NaN`, `inf` and `Infinity` in any case are
-  refused as values (`non-finite-number`), so no parameter so named can be referenced from text.
+  refused as values (`non-finite-number`), and stage 1 refuses them as declared names
+  (`invalid-name`, `NON_FINITE_WORDS`), so every reference a clean model holds is spellable.
 - An integer token is a `Literal::Integer` and never becomes a Real; a token with a fraction or an
   exponent is a `Literal::Real`. A leading `+` or a leading zero is **refused**
   (`malformed-number`), not normalized; `-0` reads as the Integer `0`, as on the wire.
 - **Unit suffixes are base units only** (decision 13): every factor must be a coherent, unprefixed
   SI symbol (`BASE_UNIT_SYMBOLS`: `m kg s A K mol cd rad sr Hz N Pa J W C V F Ohm S Wb T H lm lx
   Bq Gy Sv kat`), so `86400 s`, `1 m3/s` and `4180 J.kg-1.K-1` are accepted and `1 h`, `20 degC`
-  and `3 kPa` are refused (`unit-not-base`) until vocabulary v1. Parentheses are not accepted. The
-  suffix is kept on the model as a text-only annotation; whatever follows a number on its line,
-  up to `,`, `)`, `]` or `#`, is read as its suffix.
+  and `3 kPa` are refused (`unit-not-base`) until vocabulary v1. The grammar is a subset of
+  Modelica's unit syntax: a symbol with an optional non-zero integer exponent (`m2`, `s-1`; `K0` and
+  `m-0` are refused), `.` for products, at most one `/` whose right-hand side is the whole
+  denominator, and no parentheses. So `kg/m.s2` reads as kg/(m·s²), a deliberate deviation from
+  Modelica's left-to-right reading. The suffix is kept on the model as a text-only annotation;
+  whatever follows a number on its line, up to `,`, `)`, `]` or `#`, is read as its suffix.
 - A list lowers to one assignment per element under the catalog's element names
   (`oce_api::param_element_name`: `k = [1, 2]` is `k_1`, `k_2`; `K = [[1, 0], [0, 1]]` is
   `K_1_1` … `K_2_2`, row-major). For an unknown class or parameter the same shape is used, so the
-  validator names the elements. A list nests at most two deep and is never empty or ragged.
+  validator names the elements. A list nests at most two deep and is never empty or ragged
+  (`malformed-list`; the note's `list` production allowed an empty one). Inside a list, an
+  end-of-line comment belongs to the element before it, as a statement's does.
 
 ### The canonical printer and `fmt`
 
@@ -149,20 +163,36 @@ comment     = "#" to the end of the line, anywhere
   a block's list, above its assignment; after `(` or `)`, above the block). Comments before
   `sequence` or between `sequence` and `extends` print above `sequence`; comments after the last
   statement print last, after one blank line. A comment after the last item of a `(...)` or
-  `[...]` is refused (`comment-before-close`). Trailing spaces in a comment are dropped.
-- **Arrays regroup through the catalog**: a complete, consecutive run of one array parameter's
-  elements — starting at index 1, in row-major order, filling a vector or whole matrix rows, with
-  no comment or blank line before any element but the first — prints as `name = [..]` (one element
-  or row per line when it does not fit in 100 columns). Anything partial, out of order, commented
-  or on an unknown class prints flattened (`k_1 = 1, k_3 = 3`). A lone first element is a run of
-  one (`k = [1]`).
+  `[...]` is refused (`comment-before-close`). Trailing spaces in a comment are dropped. A comment
+  is at most `MAX_COMMENT_BYTES` (8,189) bytes after its `#`, the line bound less the `#` and the
+  two-space indent the printer may give it (`comment-too-long`).
+- **Arrays regroup through the catalog** only when the run is exactly what the block assigns of
+  that array: every element of the template the block holds, consecutive, starting at index 1, in
+  row-major order, at least two elements, a matrix a whole rectangle, and no comment or blank line
+  before any element but the first. It prints as `name = [..]`, one element or row per line when it
+  does not fit in 100 columns, and one cell per line for a row that does not. Anything else prints
+  flattened: a gap (`k_1 = 1, k_3 = 3`), another order (`k_2 = 2, k_1 = 1`), an element elsewhere
+  in the block (`k_1 = 1, nin = 2, k_2 = 2`), a partial matrix, a lone first element, a commented
+  element or an unknown class.
 
-`parse_text(&print_text(m)) == m` for every model `parse_text` returns. A model the wire form or
-the builder made prints to text that parses back to it when its names are words, its class paths
-dotted words, its atoms free of spaces and `#`, and its Reals finite — every model stage 1
-accepts (gate item 2: wire → text → wire is byte-identical for every bundle). Formatting can
-lengthen a line by a few bytes and a block by a few lines, so a document within a few bytes of a
-bound can format past it.
+**Total or refusing.** `print_text` returns `Result<String, PrintError>` and never emits text that
+parses to a different model. A name, class path, atom, suffix, string, value or `extends` id the
+lexer would not read back as the same value — a space or line feed in a name, `#` in an atom, a
+non-path class, a suffix that is not a base unit, `extends none` as an id, a reference named
+`true` or `inf`, a member with no `Type.`, a non-finite Real, a control character or bidirectional
+override in a string — is refused with `PrintError::Unspellable { subject, detail }`. The only
+normalizations are the parser's own: a comment with a line feed prints as several comment lines,
+trailing spaces in a comment are dropped, and the header's `blank_line_before` is not printed.
+
+**The round-trip property.** For every model `m` that `parse_text` returns, and for every model
+stage 1 accepts whose comments and suffixes are spellable, `print_text(m)` succeeds, no line it
+writes is longer than 8,192 bytes, and `parse_text(&print_text(m)?) == m`; for every text `t`
+that parses, `fmt_text(&fmt_text(t)?) == fmt_text(t)`. Stage 1 makes the per-line bound hold: at
+most 16 `@haystack` tags (`MAX_HAYSTACK_TAGS`), 256-byte atoms and labels, 4,096-byte strings, and
+no non-finite word or bidirectional override where text would refuse it. The document-level
+bounds (4 MiB, 100,000 lines, 65,536 statements of one kind) are the one thing re-spacing can
+reach: a document already at one may print past it. Gate item 2: wire → text → wire is
+byte-identical for every bundle.
 
 ### Bounds
 
@@ -171,8 +201,9 @@ Each refused one past its limit with its own code, and accepted at it: 4 MiB (`i
 so the longest wire string fits on one line), 256 bytes per name, number, suffix, atom or
 provenance id (`token-too-long`), 4,096 bytes per string as written (`string-too-long`), list
 nesting 2 (`nesting-too-deep`), and 65,536 statements of one kind or assignments in one block
-(`too-many-statements`). Non-UTF-8 (`parse_text_bytes`), a byte-order mark and control characters
-are refused before a token is read. Nothing in the parser panics or recurses past the list depth.
+(`too-many-statements`), and 8,189 bytes per comment (`comment-too-long`). Non-UTF-8
+(`parse_text_bytes`), a byte-order mark, control characters and bidirectional overrides are
+refused before a token is read. Nothing in the parser panics or recurses past the list depth.
 
 ### Spans
 
@@ -180,7 +211,10 @@ are refused before a token is read. Nothing in the parser panics or recurses pas
 while parsing: `sequence` is the sequence name, `extends` its operand, a declared name its
 declaration's name, `block.param` the assignment's name (an array element's value), and
 `connection[N]` the connection's source. A `duplicate-name` or `duplicate-parameter` finding is
-placed on the repeat, not the first declaration. Wire-form findings keep `None`.
+placed on the later declaration in model section order (parameters, inputs, outputs, blocks), as
+the validator reports it. A subject no statement names (an engine `connector#N` stage 2 could not
+map) keeps `None`, as do wire-form findings. The subject index is built once per document, so
+placing the findings of a document at the statement cap costs about what validating it does.
 
 The bundle texts (`tests/fixtures/text/*.oce`) and the `fmt` goldens
 (`tests/fixtures/text/fmt/*.out.oce`) regenerate with `OCE_BLESS_AUTHOR=1`, like the other goldens.

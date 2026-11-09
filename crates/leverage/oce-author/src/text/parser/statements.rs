@@ -6,8 +6,8 @@ use crate::model::{Annotations, Block, Boundary, SequenceParameter, SignalType};
 
 use super::super::ParseError;
 use super::super::codes::{
-    COMMENT_BEFORE_CLOSE, DUPLICATE_TAG, MISPLACED_VALUE, STRAY_TOKEN, UNCLOSED_BRACKET,
-    UNKNOWN_TAG, UNKNOWN_TYPE,
+    COMMENT_BEFORE_CLOSE, DUPLICATE_TAG, MALFORMED_ATOM, MISPLACED_VALUE, STRAY_TOKEN,
+    UNCLOSED_BRACKET, UNKNOWN_TAG, UNKNOWN_TYPE,
 };
 use super::super::lexer::Tok;
 use super::values::Value;
@@ -173,7 +173,7 @@ impl Parser<'_> {
                 }
             }
             _ => {
-                let Some((atom, _)) = self.lx.raw_run(b"#")? else {
+                let Some((atom, at)) = self.lx.raw_run(b"#")? else {
                     let token = self.lx.peek()?;
                     return Err(ParseError::new(
                         STRAY_TOKEN,
@@ -184,6 +184,15 @@ impl Parser<'_> {
                         ),
                     ));
                 };
+                if let Some(bad) = atom.bytes().position(|b| !(b'!'..=b'~').contains(&b)) {
+                    return Err(ParseError::new(
+                        MALFORMED_ATOM,
+                        at,
+                        format!(
+                            "the `@{tag}` atom `{atom}` has a byte other than printable ASCII at byte {bad}"
+                        ),
+                    ));
+                }
                 match tag {
                     "unit" => semantic.unit = Some(atom),
                     "quantity" => boundary.quantity = Some(atom),

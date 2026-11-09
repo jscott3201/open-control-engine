@@ -17,6 +17,7 @@ mod lexer;
 mod parser;
 mod printer;
 mod spans;
+mod spell;
 mod units;
 
 use std::fmt;
@@ -28,6 +29,7 @@ use crate::validate::{Finding, validate, validate_author_side};
 pub use codes::*;
 pub use printer::MAX_ONE_LINE_COLUMNS;
 pub use spans::SourceMap;
+pub use spell::PrintError;
 pub use units::BASE_UNIT_SYMBOLS;
 
 /// Why a text document was refused: one exact `code` from [`PARSE_CODES`], where, and what.
@@ -40,6 +42,13 @@ pub struct ParseError {
     pub location: Location,
     /// What is wrong, in the author's terms.
     pub detail: String,
+}
+
+/// Whether `c` is a bidirectional override or isolate (U+202A to U+202E, U+2066 to U+2069). The
+/// text form refuses them anywhere, and stage 1 refuses them in strings, so no text can display
+/// in an order other than the order it parses in.
+pub(crate) fn is_bidi_control(c: char) -> bool {
+    matches!(c, '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
 }
 
 impl ParseError {
@@ -107,11 +116,24 @@ pub fn parse_text_with_spans(text: &str) -> Result<(Sequence, SourceMap), ParseE
 /// then parameters, inputs, outputs, blocks and connections in that section order with authored
 /// order kept inside each section (decision 12), Reals in the shortest round-trip spelling,
 /// Integers bare, suffixes re-emitted, comments and blank lines from the annotations, two-space
-/// indentation and one trailing line feed. Infallible; for every model [`parse_text`] returns,
-/// `parse_text(&print_text(m)) == m`.
-#[must_use]
-pub fn print_text(sequence: &Sequence) -> String {
-    printer::print(sequence)
+/// indentation and one trailing line feed.
+///
+/// **Total or refusing** (issue #482 review): it never emits text that parses to a different
+/// model. A model the text cannot spell — a name, class path, atom, suffix, string, value or
+/// `extends` id the lexer would not read back as the same value — is refused with
+/// [`PrintError::Unspellable`], naming the subject. Three normalizations are the only exceptions,
+/// each one the parser applies itself: a comment with a line feed prints as several comment lines,
+/// a comment loses its trailing spaces, and the header's `blank_line_before` (meaningless at the
+/// top of a file) is not printed. So `parse_text(&print_text(m)?) == m` for every model
+/// `parse_text` returns, and for every model stage 1 accepts whose comments and suffixes are
+/// spellable, provided the document stays within the 4 MiB and 100,000-line bounds.
+///
+/// # Errors
+///
+/// [`PrintError::Unspellable`] for a model the text form cannot spell.
+pub fn print_text(sequence: &Sequence) -> Result<String, PrintError> {
+    spell::check(sequence)?;
+    Ok(printer::print(sequence))
 }
 
 /// Parse then print: the canonical spelling of a text document. Idempotent:
@@ -119,9 +141,17 @@ pub fn print_text(sequence: &Sequence) -> String {
 ///
 /// # Errors
 ///
-/// As [`parse_text`].
+/// As [`parse_text`]. A parsed model is always spellable; should printing ever refuse one, the
+/// refusal is returned as a [`STRAY_TOKEN`] error at line 1 naming the subject, never a panic.
 pub fn fmt_text(text: &str) -> Result<String, ParseError> {
-    parse_text(text).map(|sequence| print_text(&sequence))
+    let sequence = parse_text(text)?;
+    print_text(&sequence).map_err(|error| {
+        ParseError::new(
+            STRAY_TOKEN,
+            Location::new(1, 1),
+            format!("the parsed document cannot be printed: {error}"),
+        )
+    })
 }
 
 /// Parse, then both validator stages ([`crate::validate()`]), with every finding's

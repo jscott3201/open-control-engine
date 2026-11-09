@@ -365,12 +365,16 @@ fn judge(
     }
 }
 
-/// Why a String value cannot be carried by the wire form, if it cannot: a control character
-/// other than line feed, or more than [`MAX_WIRE_STRING_BYTES`] bytes as written (escapes
-/// counted). A validate-clean model therefore always reads back from its own wire bytes.
+/// Why a String value cannot be carried by the wire form or the text form, if it cannot: a
+/// control character other than line feed, a bidirectional override or isolate (the text form
+/// refuses them, issue #482), or more than [`MAX_WIRE_STRING_BYTES`] bytes as written (escapes
+/// counted). A validate-clean model therefore always reads back from its own wire bytes and text.
 fn text_problem(text: &str) -> Option<String> {
     if text.chars().any(|c| c.is_control() && c != '\n') {
         return Some("carries a control character other than a line feed".to_owned());
+    }
+    if text.chars().any(crate::text::is_bidi_control) {
+        return Some("carries a bidirectional override or isolate".to_owned());
     }
     let written = wire_string_len(text);
     (written > MAX_WIRE_STRING_BYTES).then(|| {

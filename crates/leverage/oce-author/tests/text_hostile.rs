@@ -9,9 +9,10 @@ mod support;
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
-use oce_author::{PARSE_CODES, parse_text, parse_text_bytes, print_text};
+use oce_author::{PARSE_CODES, parse_text, parse_text_bytes};
 
 use support::fixture;
+use support::text::print;
 
 /// Every text fixture: the bundle goldens, the note's example, the `fmt` inputs and outputs.
 fn documents() -> Vec<(String, Vec<u8>)> {
@@ -85,15 +86,11 @@ fn check(bytes: &[u8], document: &str, at: usize, mutation: &str) -> bool {
                 return false;
             }
         };
-        let printed = print_text(&model);
+        let printed = print(&model);
         let again =
             parse_text(&printed).unwrap_or_else(|e| panic!("print does not parse: {e}\n{printed}"));
         assert_eq!(again, model, "print → parse changed the model\n{printed}");
-        assert_eq!(
-            print_text(&again),
-            printed,
-            "fmt is not idempotent\n{printed}"
-        );
+        assert_eq!(print(&again), printed, "fmt is not idempotent\n{printed}");
         true
     }));
     match outcome {
@@ -194,7 +191,7 @@ fn giant_statements_parse_or_refuse_in_bounded_time() {
     text.push_str("  last = 0\n)\n");
     let model = parse_text(&text).expect("parses");
     assert_eq!(model.blocks[0].assignments.len(), 20_001);
-    assert_eq!(parse_text(&print_text(&model)).expect("parses"), model);
+    assert_eq!(parse_text(&print(&model)).expect("parses"), model);
 
     let items: Vec<String> = (0..400).map(|i| format!("a{i} = 1")).collect();
     let line = format!(
@@ -223,7 +220,7 @@ fn giant_statements_parse_or_refuse_in_bounded_time() {
     let model = parse_text(&list).expect("parses");
     assert_eq!(model.blocks[0].assignments.len(), 4_000);
     assert_eq!(model.blocks[0].assignments[3_999].name.as_str(), "k_4000");
-    let printed = print_text(&model);
+    let printed = print(&model);
     assert!(
         printed.contains("  k = [\n    1,\n    1,\n"),
         "the complete run regroups, one element per line past the one-line width"

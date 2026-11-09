@@ -147,9 +147,14 @@ fn wire_findings_keep_no_span() {
     let model = from_wire_str(&wire).expect("reads");
     assert!(validate(&model).iter().all(|f| f.span.is_none()));
     // The same model through the text form (where it can be spelled) gains spans, nothing else.
-    let text = print_text(&model)
-        .replace("@unit deg C", "@unit degC")
-        .replace("urn:oce:lowering#PassThrough.Real", "CDL.Reals.Abs");
+    let mut spellable = model.clone();
+    spellable.inputs[0].semantic.unit = Some("degC".to_owned());
+    for block in &mut spellable.blocks {
+        if block.class_path.starts_with("urn:") {
+            block.class_path = "CDL.Reals.Abs".to_owned();
+        }
+    }
+    let text = print_text(&spellable).expect("spellable");
     let spanned = validate_text_author_side(&text).expect("parses");
     let mut stripped = spanned.clone();
     for f in &mut stripped {
@@ -161,4 +166,19 @@ fn wire_findings_keep_no_span() {
         f.span = None;
     }
     assert_eq!(stripped, expected);
+}
+
+#[test]
+fn a_subject_the_text_does_not_name_keeps_no_span() {
+    // An engine subject no statement names (a `connector#N` the stage-2 mapping could not
+    // place), and a path to nothing: `apply` leaves `None` rather than guessing.
+    let (model, spans) = parse_text_with_spans(&note_text_example()).expect("parses");
+    let text = note_text_example().replace("uHigh = dTHys", "uHigh = dTHysX");
+    let mut findings = validate_text(&text).expect("parses");
+    assert!(findings[0].span.is_some());
+    for subject in ["connector#3", "nothing.here", "connection[99]", ""] {
+        findings[0].subject = subject.to_owned();
+        spans.apply(&model, &mut findings[..1]);
+        assert_eq!(findings[0].span, None, "{subject}");
+    }
 }
