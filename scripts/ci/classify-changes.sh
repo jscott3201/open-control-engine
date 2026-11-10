@@ -42,6 +42,7 @@ set -euo pipefail
 # path constructions that read documentation and fails if one is missing here.
 TEST_READ_DOCS=(
   docs/cxf-composite-subset.md   # crates/oce-cxf/tests/composite_contract_doc.rs include_str!s it
+  docs/design/vectors.md         # crates/leverage/oce-verify/tests/closed_objects.rs include_str!s it
 )
 
 # The root README has a lane of its own (issue #503). A test byte-pins its Quickstart, so it is not

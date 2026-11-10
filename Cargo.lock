@@ -407,6 +407,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "oce-verify"
+version = "0.5.0"
+dependencies = [
+ "allocation-counter",
+ "oce-bless",
+ "schemars",
+ "serde_json",
+]
+
+[[package]]
 name = "oce-vocab"
 version = "0.5.0"
 dependencies = [

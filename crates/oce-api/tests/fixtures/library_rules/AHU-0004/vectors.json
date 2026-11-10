@@ -1,5 +1,5 @@
 {
-  "schema": "cxf-library/vectors/v1",
+  "schema": "oce/vectors/v1",
   "clock": { "step_s": 300, "horizon_s": 14400 },
   "scenarios": [
     {

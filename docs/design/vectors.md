@@ -7,7 +7,8 @@ through [`oce-replay`](replay.md), the vector receipt under the header it shares
 Every decision below was made while drafting, checked by an independent review and ruled on by
 the owner on 2026-11-09 (see [Review rulings](#review-rulings)); the note is amended to match.
 Decisions 1 to 19 answer the format half of the issue's outline in its order, decisions 20 to 37
-the replayer half (outline item *n* is decision 19 + *n*). Nothing here is built.
+the replayer half (outline item *n* is decision 19 + *n*). Nothing here is built. *(2026-11-09:
+part 1 of 4, the format, landed in GitHub #541.)*
 
 **The version rule, in one sentence.** The format is `oce/vectors/v1` and stays `v1` until 1.0.0: a
 change is made in place, in the PR that rewrites every in-repo fixture and golden, and nothing
@@ -132,7 +133,7 @@ block, so the `diagnostic` line shows the form only.
 | `clock.step_s`, `clock.horizon_s` | yes | the set's grid: ticks `k * step_s` for `k = 0..=N`, where `N * step_s == horizon_s` |
 | `params` | no | parameter path → value, applied to every scenario before its first frame |
 | `mutants[]` | no | `path` (relative to this file) and an optional `description`; the key is added in place by part 3 and is `unknown-key` before it |
-| `scenarios[]` | yes | `name` (unique in the set), optional `description`, optional `params`, `inputs`, `expect` |
+| `scenarios[]` | yes | `name` (not empty, unique in the set), optional `description`, optional `params`, `inputs`, `expect` |
 | `inputs` | yes | input name → a constant, or a step list `[{ "t", "value" }]` starting at `t = 0` |
 | `expect[]` | yes | either a window (`output`, `from_s`, `to_s`, `equals`) or an instant (`diagnostic`, `at_s`) |
 
@@ -143,12 +144,22 @@ testing `q - 1`, `q` and `q + 1`; inside the tick bound at most one of them can 
 is never floored: `floor(4.3 / 0.1)` is 42, while `43 * 0.1 == 4.3` exactly. `horizon_s` must be
 on the cadence and its `k` is `N`; tick `k` is `(k as f64) * step_s` for `k = 0..=N`, by multiply.
 `N + 1` may not exceed 16,777,216 ticks, and a quotient past that bound is refused before any
-candidate is tested.
+candidate is tested. *(Amended 2026-11-10, with GitHub #541:)* a time is a binary64, so in every
+time position (`step_s`, `horizon_s`, a step's `t`, `from_s`, `to_s`, `at_s`) an integer token
+must lie within ±2^53, the range in which every integer is a binary64 exactly; one beyond it is
+`integer-out-of-range` at load, so an integer token never names a time other than the one it
+spells. A larger time is written as a real (`1e16`), which rounds to the nearest binary64 as
+every real does.
 
 **Inputs.** A constant is a one-step list at `t = 0`. In a step list, `t` is finite, strictly
 increasing, starts at exactly `0` and never exceeds `horizon_s`; a step time need not be a tick,
 and takes effect at the first tick at or after it (zero-order hold). Every engine input has
 exactly one entry.
+
+**Names.** *(Amended 2026-11-10, with GitHub #541:)* no name is empty: an empty scenario name,
+input name, parameter path, output name or `diagnostic.block` is `empty-name` at load, so an
+empty name never reaches binding, where a suffix rule would have to give it a meaning. A
+`description` and a diagnostic `message` may be empty.
 
 **Windows.** `0 <= from_s <= to_s <= horizon_s`, inclusive at both ends. Tick `k` is in the window
 when `from_s <= k * step_s <= to_s`, compared on the tick's value. Every tick in the window is
@@ -172,12 +183,20 @@ The loaded set remembers whether each number was an integer token or a real.
 - An integer token is written as a decimal integer. `-0` is the integer zero and is written `0`.
 - A real is written with the shortest digits that read back to the same bits: in plain decimal
   with at least one fractional digit when it is zero or `1e-4 <= |x| < 1e16`, otherwise as
-  `d[.ddd]e[-]N` with a lowercase `e`, no `+` and no leading zero. `-0.0` is written `-0.0`.
-  **To be confirmed against the implementation in the format PR (part 1 of 4): the two thresholds
-  and the exponent spelling were written from memory of what Rust's `{:?}` prints for an `f64`,
-  and are not normative until then. Where they differ, the code's behaviour is written back into
-  this note in that PR.** Goldens at both thresholds then pin the spelling, so a toolchain change
-  cannot move it unseen.
+  `d[.ddd]e[-]N` with a lowercase `e`, no `+` and no leading zero in the exponent. `-0.0` is
+  written `-0.0`. *(Amended 2026-11-10:)* "shortest" alone does not pick one string: `3e-324`
+  through `7e-324` all read back to the smallest subnormal. Of the shortest strings that read
+  back, the writer takes the one closest to the exact binary value, here `5e-324` (the value is
+  4.94…e-324), and likewise `1e-323` and `1.5e-323` for the next two subnormals. So: `0.1`, `60.0`, `0.0001` (the lower threshold) and `9.999999999999999e-5`
+  (the binary64 just below it), `9999999999999998.0` (the binary64 just below the upper
+  threshold) and `1e16`, `1.2345678901234568e17`, `5e-324` (the smallest subnormal) and
+  `1.7976931348623157e308`. The rule is normative as written: it was confirmed against the
+  implementation in the format PR (part 1 of 4, GitHub #541), where the layout is decided by
+  `oce-verify`'s own code from the decimal exponent of the shortest digits (plain decimal for an
+  exponent from -4 to 15), so no formatter's threshold decides a hashed byte. Goldens derived
+  outside the crate pin the bytes at both thresholds, at `-0`, `-0.0` and a subnormal, and a test
+  compares the result with Rust's `{:?}` for an `f64`, which follows the same rule, so a
+  toolchain change cannot move the spelling unseen.
 
 `spec_id` is `spec:fnv1a128:<32 hex>` over those bytes. A file need not be canonical to load.
 
@@ -411,12 +430,12 @@ receipt.
 | `not-utf8`, `byte-order-mark`, `json-syntax` | load | bytes that are not one strict JSON document |
 | `input-too-large`, `nesting-too-deep`, `list-too-long`, `string-too-long` | load | a read bound (a step list past 65,536 steps is `list-too-long`) |
 | `duplicate-key`, `unknown-key`, `missing-key`, `wrong-type` | load | a closed object's shape; `within`, `when` and, before part 3, `mutants` are `unknown-key` |
-| `non-finite-number`, `integer-out-of-range`, `control-character` | load | a lexical refusal |
+| `non-finite-number`, `integer-out-of-range`, `control-character` | load | a lexical refusal; `integer-out-of-range` is also an integer token beyond ±2^53 in a time position *(amended 2026-11-10)* |
 | `unknown-schema` | load | a `schema` other than `oce/vectors/v1`, the two older tags included |
 | `invalid-clock` | load | `step_s` not finite and positive, `horizon_s` not finite or negative |
 | `horizon-off-cadence`, `too-many-ticks` | load | a horizon no integer `k` reaches; more than 16,777,216 ticks |
 | `too-many-scenarios`, `too-many-expectations`, `too-many-mutants`, `too-many-parameters` | load | a set bound |
-| `duplicate-scenario`, `empty-name` | load | scenario names |
+| `duplicate-scenario`, `empty-name` | load | scenario names; `empty-name` is also an empty input name, parameter path, output name or `diagnostic.block` *(amended 2026-11-10)* |
 | `step-list-empty`, `step-list-not-from-zero`, `step-times-not-increasing`, `step-after-horizon` | load | a step list |
 | `invalid-window`, `window-outside-clock`, `window-uncovered` | load | a window (the last also after a run with no refused frame) |
 | `ambiguous-expectation` | load | an expectation that is not exactly one of the two forms |
@@ -530,6 +549,7 @@ match.
 ## Fixtures
 
 **What is rewritten, in the part 1 PR.** Not imported: there is no reader of the old shape.
+*(Landed in GitHub #541.)*
 
 - `crates/oce-api/tests/fixtures/library_rules/AHU-0016/vectors.json` and
   `AHU-0004/vectors.json`: the `schema` line only. Every other byte already satisfies the format
@@ -878,6 +898,7 @@ The content id it was also to print has its own verb, `oce id` (#513).
 3. **Part 1 of 4, the format.** The `oce-verify` scaffold, strict reader, canonical writer,
    `spec_id`, limits, error codes, pinned schema, and the in-repo rewrite. `mutants` is not yet a
    key. It touches `crates/oce-api/tests` and `Cargo.lock`, so it runs the determinism lane.
+   *(Landed in GitHub #541.)*
 4. **Part 2 of 4, replayer and receipts.** Binding, the public name rule in `oce-replay`,
    parameter edits, the run, exact comparison, the header and vector body, `receipt_id`, golden
    receipts for pass, fail and `no_data`, chunk-size independence.
@@ -991,5 +1012,6 @@ decided as recommended, the review's amendments included.
   documented limitation with the code `param-refused` (decision 14).
 - The canonical real spelling's thresholds were written from memory of Rust's formatter. The
   paragraph is marked to be confirmed against the implementation, and the code's behaviour is
-  written back into this note in that PR (decision 16).
+  written back into this note in that PR (decision 16). *(Confirmed in GitHub #541: both
+  thresholds and the exponent spelling stand as written; the paragraph now says so.)*
 - 256 parameters per map stands.

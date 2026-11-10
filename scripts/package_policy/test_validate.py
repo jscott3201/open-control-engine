@@ -35,11 +35,12 @@ EXPECTED_PRIVATE = {
     "oce-conformance",
     "oce-firmware-link",
     "oce-replay",
+    "oce-verify",
     "oce-vocab",
 }
 
 
-# Independent raw-byte golden from release.yml as re-pinned for issue #499, not read from the
+# Independent raw-byte golden from release.yml as re-pinned for issue #519, not read from the
 # candidate or checker.
 # Non-ASCII bytes are escaped explicitly; line endings and the final LF are pinned.
 APPROVED_WORKFLOW = b"""# release \xe2\x80\x94 the crates.io publish gate.
@@ -60,13 +61,13 @@ APPROVED_WORKFLOW = b"""# release \xe2\x80\x94 the crates.io publish gate.
 # release). Enabling "Required reviewers" there adds a second human gate.
 #
 # All 10 publishable members ship in one dependency-ordered
-# `cargo publish --workspace` (Rust 1.90+). Seven private members are skipped
+# `cargo publish --workspace` (Rust 1.90+). Eight private members are skipped
 # by their own `publish = false`: `oce-bless`, `oce-conformance`, the
 # firmware image `oce-firmware-link` (GitHub #449) and the leverage crates
 # `oce-replay` (issue #445), `oce-author` (issue #463), `oce-cli`
-# (issue #489) and `oce-vocab` (issue #499). crates.io
-# rejects re-publishing an existing version, so a repeat dispatch is a
-# no-op-or-fail, never a clobber.
+# (issue #489), `oce-vocab` (issue #499) and `oce-verify` (issue #519).
+# crates.io rejects re-publishing an existing version, so a repeat dispatch
+# is a no-op-or-fail, never a clobber.
 #
 # Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
 # No crate is published yet; actual publication remains deferred until explicit
@@ -117,7 +118,7 @@ jobs:
       - name: tests
         run: cargo test --workspace --locked
 
-      - name: package, feature, and publication contract (10 publishable, 7 private)
+      - name: package, feature, and publication contract (10 publishable, 8 private)
         run: python3 scripts/package_policy/validate.py
 
       - name: publish dry-run (workspace, dependency-ordered)
@@ -406,7 +407,7 @@ class WorkflowApprovalControls(unittest.TestCase):
             report = self.run_policy(workflow)
             self.assertEqual(report[0], 0)
             self.assertEqual(report[2], "")
-            self.assertIn("PASS (17 members; 10 publishable; 7 private)", report[1])
+            self.assertIn("PASS (18 members; 10 publishable; 8 private)", report[1])
             reports.append(report)
         self.assertEqual(reports, [reports[0]] * 3)
 

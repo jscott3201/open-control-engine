@@ -1,0 +1,225 @@
+{
+  "$defs": {
+    "Clock": {
+      "additionalProperties": false,
+      "description": "The set's clock: ticks at k * step_s for k = 0..=N, where N * step_s equals horizon_s\nexactly in binary64. At most 16,777,216 ticks.",
+      "properties": {
+        "horizon_s": {
+          "description": "The last tick, in seconds: not negative, and a whole number of steps.",
+          "type": "number"
+        },
+        "step_s": {
+          "description": "Seconds between ticks: positive.",
+          "type": "number"
+        }
+      },
+      "required": [
+        "step_s",
+        "horizon_s"
+      ],
+      "type": "object"
+    },
+    "Diagnostic": {
+      "additionalProperties": false,
+      "description": "A run-time warning to expect.",
+      "properties": {
+        "block": {
+          "description": "The class path of the block that warns, for example \"CDL.Utilities.Assert\". A class, not\nan instance.",
+          "type": "string"
+        },
+        "message": {
+          "description": "The warning's message, matched byte for byte when present.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "block"
+      ],
+      "type": "object"
+    },
+    "Expectation": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Window"
+        },
+        {
+          "$ref": "#/$defs/Instant"
+        }
+      ],
+      "description": "One expectation, in exactly one of two forms: a window (output, from_s, to_s, equals) or an instant (diagnostic, at_s)."
+    },
+    "Input": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/Step"
+          },
+          "type": "array"
+        }
+      ],
+      "description": "What an input holds over the clock: one value for the whole run, or a step list of at least one step (at most 65,536) starting at t = 0."
+    },
+    "Instant": {
+      "additionalProperties": false,
+      "description": "An instant expectation: the frame at at_s emitted the diagnostic.",
+      "properties": {
+        "at_s": {
+          "description": "The time of the frame, in seconds: a tick of the clock.",
+          "type": "number"
+        },
+        "diagnostic": {
+          "$ref": "#/$defs/Diagnostic",
+          "description": "The run-time warning expected at at_s."
+        }
+      },
+      "required": [
+        "diagnostic",
+        "at_s"
+      ],
+      "type": "object"
+    },
+    "Scenario": {
+      "additionalProperties": false,
+      "description": "One scenario: what every input holds over the clock, and what is expected of the outputs.",
+      "properties": {
+        "description": {
+          "description": "What the scenario shows, for people.",
+          "type": "string"
+        },
+        "expect": {
+          "description": "The expectations, in order. At most 4,096.",
+          "items": {
+            "$ref": "#/$defs/Expectation"
+          },
+          "type": "array"
+        },
+        "inputs": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Input"
+          },
+          "description": "Input name to what it holds: a constant, or a step list. Every input of the sequence has\nexactly one entry.",
+          "type": "object"
+        },
+        "name": {
+          "description": "The scenario name: not empty, unique in the set.",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Value"
+          },
+          "description": "Parameter edits for this scenario only: parameter path to value. At most 256 entries.",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "inputs",
+        "expect"
+      ],
+      "type": "object"
+    },
+    "Step": {
+      "additionalProperties": false,
+      "description": "One step of a step list: from time t on, the input holds value (zero-order hold).",
+      "properties": {
+        "t": {
+          "description": "The time in seconds from which the value holds. The first step is at 0, each later one is\nafter the one before it, and none is after horizon_s. It need not be a tick: it takes\neffect at the first tick at or after it.",
+          "type": "number"
+        },
+        "value": {
+          "$ref": "#/$defs/Value",
+          "description": "The value held from t."
+        }
+      },
+      "required": [
+        "t",
+        "value"
+      ],
+      "type": "object"
+    },
+    "Value": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        }
+      ],
+      "description": "A value: a number or a boolean. A number written without a fraction or exponent is an integer token, and only an integer token is taken by an Integer port or parameter; a Real takes any number."
+    },
+    "Window": {
+      "additionalProperties": false,
+      "description": "A window expectation: the output equals the value at every tick from from_s to to_s, both\nends included.",
+      "properties": {
+        "equals": {
+          "$ref": "#/$defs/Value",
+          "description": "The value the output must equal, exactly; a Real is compared by its bits."
+        },
+        "from_s": {
+          "description": "The first second of the window: not negative, not after to_s.",
+          "type": "number"
+        },
+        "output": {
+          "description": "The output name.",
+          "type": "string"
+        },
+        "to_s": {
+          "description": "The last second of the window: not after horizon_s. The window must hold at least one\ntick.",
+          "type": "number"
+        }
+      },
+      "required": [
+        "output",
+        "from_s",
+        "to_s",
+        "equals"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A vector set: scenarios (inputs over one clock, expectations over windows of it) to check\nagainst one loaded control sequence. Strict JSON: every object is closed, no key repeats, and\na key this schema does not define is refused, never ignored.",
+  "properties": {
+    "clock": {
+      "$ref": "#/$defs/Clock",
+      "description": "The set's clock. Every scenario runs on it."
+    },
+    "params": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Value"
+      },
+      "description": "Parameter edits applied to every scenario before its first frame: parameter path to\nvalue. At most 256 entries. A scenario's own params override these.",
+      "type": "object"
+    },
+    "scenarios": {
+      "description": "The scenarios, in order. At most 4,096; each runs on a freshly loaded sequence.",
+      "items": {
+        "$ref": "#/$defs/Scenario"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "description": "The format tag: exactly \"oce/vectors/v1\".",
+      "enum": [
+        "oce/vectors/v1"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "clock",
+    "scenarios"
+  ],
+  "title": "VectorSet",
+  "type": "object"
+}

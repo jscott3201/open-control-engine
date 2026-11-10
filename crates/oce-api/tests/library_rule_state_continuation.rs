@@ -2,8 +2,10 @@
 //!
 //! AHU-0016 holds a `Logical.TrueDelay` persistence timer (900 s); AHU-0004 holds a
 //! `Reals.MovingAverage` trailing window (3600 s) feeding another `TrueDelay` (3600 s). Both CXF
-//! graphs and their scenario vectors are byte-copied from the Library (see
-//! `fixtures/library_rules/README.md`), never edited.
+//! graphs are byte-copied from the Library, never edited; their scenario vectors are the
+//! Library's in the `oce/vectors/v1` format (see `fixtures/library_rules/README.md`). An engine
+//! crate cannot depend on the leverage crate that owns that format (`oce-verify`), so this test
+//! keeps its own small reader of the shape.
 //!
 //! Run A drives one engine uninterrupted across each scenario. Run B captures
 //! `Engine::state_snapshot` partway, takes the bytes through a host-envelope stand-in, parses them
@@ -126,10 +128,11 @@ fn json_value(json: &serde_json::Value, want: &ValueType) -> Value {
     }
 }
 
-/// Resolve a Library point name to the one engine path ending in `.<name>` or `#<name>`.
+/// Resolve a point name to the one engine path ending in `.<name>`: the vector format's name
+/// rule, a unique suffix at a `.` boundary.
 fn resolve<'a>(paths: impl Iterator<Item = &'a str>, name: &str) -> String {
     let hits: Vec<_> = paths
-        .filter(|path| path.ends_with(&format!(".{name}")) || path.ends_with(&format!("#{name}")))
+        .filter(|path| path.ends_with(&format!(".{name}")))
         .collect();
     assert_eq!(hits.len(), 1, "point `{name}` must resolve once: {hits:?}");
     hits[0].to_owned()
@@ -137,7 +140,7 @@ fn resolve<'a>(paths: impl Iterator<Item = &'a str>, name: &str) -> String {
 
 fn scenarios(rule: &Rule) -> Vec<Scenario> {
     let doc: serde_json::Value = serde_json::from_str(rule.vectors).unwrap();
-    assert_eq!(doc["schema"], "cxf-library/vectors/v1");
+    assert_eq!(doc["schema"], "oce/vectors/v1");
     let step = doc["clock"]["step_s"].as_f64().unwrap();
     let horizon = doc["clock"]["horizon_s"].as_f64().unwrap();
     let ticks = (horizon / step).floor() as u64;

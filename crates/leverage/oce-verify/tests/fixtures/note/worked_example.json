@@ -1,0 +1,33 @@
+{
+  "schema": "oce/vectors/v1",
+  "clock": { "step_s": 60, "horizon_s": 1800 },
+  "params": {},
+  "mutants": [
+    { "path": "mutants/threshold_inclusive.cxf.json",
+      "description": "Both thresholds read >= 5 instead of > 5." }
+  ],
+  "scenarios": [
+    {
+      "name": "transient_overlap",
+      "description": "Overlap shorter than the delay never alarms.",
+      "inputs": {
+        "htg_vlv_cmd": 20.0,
+        "clg_vlv_cmd": [ { "t": 0, "value": 30.0 }, { "t": 600, "value": 0.0 } ]
+      },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 1800, "equals": false }
+      ]
+    },
+    {
+      "name": "short_delay",
+      "params": { "persist.delayTime": 300.0 },
+      "inputs": { "htg_vlv_cmd": 20.0, "clg_vlv_cmd": 30.0 },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 240, "equals": false },
+        { "output": "yFault", "from_s": 360, "to_s": 1800, "equals": true },
+        { "diagnostic": { "block": "CDL.Utilities.Assert", "message": "Both valves open." },
+          "at_s": 360 }
+      ]
+    }
+  ]
+}

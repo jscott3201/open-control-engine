@@ -237,7 +237,8 @@ between those threads, so the comparison cannot pass by reusing one seed.
 `tests/library_rule_state_continuation.rs` runs two fault rules from open-control-library through
 the durable path exactly as a host would: `state_snapshot`, a host-envelope approval stand-in,
 `EngineStateSnapshot::from_bytes`, a freshly loaded engine and `restore_state` inside the startup
-window. The CXF graphs and vectors are unedited copies (`tests/fixtures/library_rules/`):
+window. The CXF graphs are unedited copies and the vectors are the Library's scenarios in the
+`oce/vectors/v1` format (`tests/fixtures/library_rules/`):
 
 - **AHU-0016** (simultaneous heating and cooling): a `Logical.TrueDelay` persistence timer of 900 s.
 - **AHU-0004** (excessive operating-state changes): `Integers.Change`, a 3600 s
