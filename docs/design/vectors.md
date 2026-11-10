@@ -8,7 +8,7 @@ Every decision below was made while drafting, checked by an independent review a
 the owner on 2026-11-09 (see [Review rulings](#review-rulings)); the note is amended to match.
 Decisions 1 to 19 answer the format half of the issue's outline in its order, decisions 20 to 37
 the replayer half (outline item *n* is decision 19 + *n*). Nothing here is built. *(2026-11-09:
-part 1 of 4, the format, landed in GitHub #PRNUM.)*
+part 1 of 4, the format, landed in GitHub #541.)*
 
 **The version rule, in one sentence.** The format is `oce/vectors/v1` and stays `v1` until 1.0.0: a
 change is made in place, in the PR that rewrites every in-repo fixture and golden, and nothing
@@ -178,7 +178,7 @@ The loaded set remembers whether each number was an integer token or a real.
   (the binary64 just below it), `9999999999999998.0` (the binary64 just below the upper
   threshold) and `1e16`, `1.2345678901234568e17`, `5e-324` (the smallest subnormal) and
   `1.7976931348623157e308`. The rule is normative as written: it was confirmed against the
-  implementation in the format PR (part 1 of 4, GitHub #PRNUM), where the layout is decided by
+  implementation in the format PR (part 1 of 4, GitHub #541), where the layout is decided by
   `oce-verify`'s own code from the decimal exponent of the shortest digits (plain decimal for an
   exponent from -4 to 15), so no formatter's threshold decides a hashed byte. Goldens derived
   outside the crate pin the bytes at both thresholds, at `-0`, `-0.0` and a subnormal, and a test
@@ -536,7 +536,7 @@ match.
 ## Fixtures
 
 **What is rewritten, in the part 1 PR.** Not imported: there is no reader of the old shape.
-*(Landed in GitHub #PRNUM.)*
+*(Landed in GitHub #541.)*
 
 - `crates/oce-api/tests/fixtures/library_rules/AHU-0016/vectors.json` and
   `AHU-0004/vectors.json`: the `schema` line only. Every other byte already satisfies the format
@@ -885,7 +885,7 @@ The content id it was also to print has its own verb, `oce id` (#513).
 3. **Part 1 of 4, the format.** The `oce-verify` scaffold, strict reader, canonical writer,
    `spec_id`, limits, error codes, pinned schema, and the in-repo rewrite. `mutants` is not yet a
    key. It touches `crates/oce-api/tests` and `Cargo.lock`, so it runs the determinism lane.
-   *(Landed in GitHub #PRNUM.)*
+   *(Landed in GitHub #541.)*
 4. **Part 2 of 4, replayer and receipts.** Binding, the public name rule in `oce-replay`,
    parameter edits, the run, exact comparison, the header and vector body, `receipt_id`, golden
    receipts for pass, fail and `no_data`, chunk-size independence.
@@ -999,6 +999,6 @@ decided as recommended, the review's amendments included.
   documented limitation with the code `param-refused` (decision 14).
 - The canonical real spelling's thresholds were written from memory of Rust's formatter. The
   paragraph is marked to be confirmed against the implementation, and the code's behaviour is
-  written back into this note in that PR (decision 16). *(Confirmed in GitHub #PRNUM: both
+  written back into this note in that PR (decision 16). *(Confirmed in GitHub #541: both
   thresholds and the exponent spelling stand as written; the paragraph now says so.)*
 - 256 parameters per map stands.

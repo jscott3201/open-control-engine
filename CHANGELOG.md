@@ -403,7 +403,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Leverage
 
 - **Vectors, part 1 of 4: the `oce-verify` crate and the one vector format, `oce/vectors/v1`**
-  (GitHub #PRNUM, issue #519; [vectors note](docs/design/vectors.md) decisions 1 to 5, 8 to 12,
+  (GitHub #541, issue #519; [vectors note](docs/design/vectors.md) decisions 1 to 5, 8 to 12,
   16 to 18 and 35). A new leverage crate, `crates/leverage/oce-verify` (`publish = false`;
   `schemars` and `serde_json`, with `oce-bless` and `allocation-counter` as dev-dependencies). It
   holds the format and nothing that runs: it loads no engine, replays nothing and writes no
