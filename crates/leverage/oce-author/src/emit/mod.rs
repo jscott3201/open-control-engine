@@ -108,10 +108,16 @@ impl std::error::Error for EmitError {}
 
 /// Emit `sequence` as flat CXF bytes after stage-1 validation.
 ///
+/// The root node carries the translation-software label, `S231:translationSoftware`
+/// (`open-control-engine`) and `S231:translationSoftwareVersion` (this crate's version, the
+/// workspace version), so the bytes of one sequence differ between versions. The canonical
+/// content id an engine mints for the loaded document does not: no importer reads the label back.
+///
 /// # Errors
 ///
 /// [`EmitError::Invalid`] when stage 1 finds an error, [`EmitError::InvalidNamespace`] for a
-/// malformed namespace and [`EmitError::TooLarge`] for a document above [`oce_api::MAX_CXF_BYTES`]. Never panics.
+/// malformed namespace and [`EmitError::TooLarge`] for a document above
+/// [`oce_api::MAX_CXF_BYTES`]. Never panics.
 pub fn emit(sequence: &Sequence, options: &EmitOptions) -> Result<Vec<u8>, EmitError> {
     check_namespace(options)?;
     let (findings, ports) = author_side_with_ports(sequence);

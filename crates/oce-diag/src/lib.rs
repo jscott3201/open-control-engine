@@ -141,10 +141,13 @@ pub enum DiagCode {
     RelativeIri,
     /// The document spells the S231 vocabulary in a namespace other than the one this engine
     /// reads, `http://data.ashrae.org/S231#`: its `@context` binds the `S231` prefix to another
-    /// IRI, binds any prefix to the namespace this engine wrote before release 0.5.0, or a node
-    /// keys a modeled property by its full IRI in such a namespace. The message names the IRI
-    /// found and the IRI expected (subject = the `@context` term, or the node carrying the key).
-    /// Refused at load: nothing reads a document in another namespace.
+    /// IRI, binds any prefix to the namespace this engine wrote before release 0.5.0, a node keys
+    /// a modeled property by its full IRI in that namespace or in the `https:` spelling of either,
+    /// or a node's `@type` or `isOfDataType` is a full IRI in that earlier namespace (a type is
+    /// otherwise read by its trailing term, so it would be read through the namespace). The
+    /// message names the IRI found and the IRI expected (subject = the `@context` term, or the
+    /// node carrying the key or the type). Refused at load: nothing reads a document in another
+    /// namespace.
     VocabularyNamespaceMismatch,
 
     // --- Validate-time `shall`-errors (oce-validate, the deep gate) ---

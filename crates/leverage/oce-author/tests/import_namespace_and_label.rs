@@ -176,6 +176,25 @@ fn spellings_outside_the_strict_dialect_keep_their_own_refusals() {
     assert_eq!(error.kind, ImportErrorKind::DatatypeMismatch);
     assert_eq!(error.subject, boundary);
 
+    // The `https:` spelling of the retired namespace is no different: a key in it is unknown, a
+    // term bound to it is unknown, and `S231` bound to it is a namespace mismatch.
+    let https_retired = "https://data.ashrae.org/S231P#";
+    let keyed = econ()
+        .put(&boundary, &format!("{https_retired}max"), json!(1.0))
+        .bytes();
+    let error = import(&keyed).map(|_| ()).expect_err("refused");
+    assert_eq!(error.code(), "unknown-key");
+    let bound = with_context(&format!(
+        "\"S231\": \"{PUBLISHED}\", \"other\": \"{https_retired}\""
+    ));
+    let error = import(&bound).map(|_| ()).expect_err("refused");
+    assert_eq!(
+        error.kind,
+        ImportErrorKind::UnknownKey {
+            key: "other".to_owned()
+        }
+    );
+
     let declared = econ()
         .put(
             &boundary,
@@ -185,6 +204,27 @@ fn spellings_outside_the_strict_dialect_keep_their_own_refusals() {
         .bytes();
     let error = import(&declared).map(|_| ()).expect_err("refused");
     assert_eq!(error.code(), "unknown-datatype");
+}
+
+#[test]
+fn the_first_offending_context_term_in_key_order_is_the_one_reported() {
+    // One refusal per import. Terms are read in key order, so an unknown term that sorts before
+    // `S231` is reported instead of the namespace, and the namespace instead of a later term.
+    let earlier = with_context(&format!("\"A\": \"urn:x:\", \"S231\": \"{RETIRED}\""));
+    let error = import(&earlier).map(|_| ()).expect_err("refused");
+    assert_eq!(
+        error.kind,
+        ImportErrorKind::UnknownKey {
+            key: "A".to_owned()
+        }
+    );
+    let later = with_context(&format!("\"S231\": \"{RETIRED}\", \"z\": \"urn:x:\""));
+    let error = import(&later).map(|_| ()).expect_err("refused");
+    assert_eq!(error.kind, mismatch("S231", RETIRED));
+    // Authored order does not change that.
+    let reordered = with_context(&format!("\"z\": \"urn:x:\", \"S231\": \"{RETIRED}\""));
+    let error = import(&reordered).map(|_| ()).expect_err("refused");
+    assert_eq!(error.kind, mismatch("S231", RETIRED));
 }
 
 #[test]

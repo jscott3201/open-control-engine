@@ -435,8 +435,8 @@ and the message names the IRI found and the IRI expected:
 - Any prefix bound to `http://data.ashrae.org/S231P#`. The engine wrote that IRI through release
   0.4.0. No importer, alias or second spelling reads a document of that layout: export it again
   with a current engine or tool.
-- A modeled term keyed by its full IRI in that namespace or in the `https:` spelling of the
-  current one, and a `@type` or `isOfDataType` value in the retired namespace.
+- A modeled term keyed by its full IRI in that namespace or in the `https:` spelling of either
+  namespace, and a `@type` or `isOfDataType` value in the retired namespace.
 
 In a list of context maps only the binding in force is judged (a later map replaces an earlier
 one). Another prefix bound to the published IRI is the same namespace under another name and is

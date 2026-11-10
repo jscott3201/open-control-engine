@@ -19,10 +19,10 @@
 //!   pass runs). A document that binds no `S231` has compact keys with no IRI at all; they are
 //!   read in the same namespace.
 //! - **A modeled term in a foreign namespace is refused** (`vocabulary-namespace-mismatch`): the
-//!   namespace this engine wrote through release 0.4.0 and the `https:` spelling of the current
-//!   one ([`super::vocabulary_namespace::FOREIGN_NAMESPACES`]). It is not the document's property,
-//!   and passing it through would drop it silently again; the message names the namespace found
-//!   and the one expected.
+//!   namespace this engine wrote through release 0.4.0, the current one's `https:` spelling, and
+//!   the retired one's ([`super::vocabulary_namespace::FOREIGN_NAMESPACES`]). It is not the
+//!   document's property, and passing it through would drop it silently again; the message names
+//!   the namespace found and the one expected.
 //! - **Two spellings of one property on one node** — compact plus expanded, or two expanded — are
 //!   refused (`malformed-document`) rather than one being chosen. A compact key the DTO cannot
 //!   represent (an explicit `null` or `[]`) counts: it is read from the authored JSON.

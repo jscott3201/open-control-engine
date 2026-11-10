@@ -338,8 +338,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
   **Breaking, in place:** the importer reads the vocabulary in no other namespace. `S231` bound to
   any other IRI (the `https:` spelling included), any prefix bound to
   `http://data.ashrae.org/S231P#` (the IRI the engine wrote through release 0.4.0), a modeled
-  property keyed by its full IRI in that namespace or in the `https:` spelling, and a `@type` or
-  `isOfDataType` value in that namespace are each refused with the new diagnostic code
+  property keyed by its full IRI in that namespace or in the `https:` spelling of either, and a
+  `@type` or `isOfDataType` value in that namespace are each refused with the new diagnostic code
   `vocabulary-namespace-mismatch` (`DiagCode::VocabularyNamespaceMismatch`), whose message names
   the IRI found and the IRI expected. A foreign-namespace key was `non-subset-construct` before;
   a document that bound `S231` anywhere else used to load. The authoring importer refuses the same

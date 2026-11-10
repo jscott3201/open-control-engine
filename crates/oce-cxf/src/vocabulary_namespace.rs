@@ -38,9 +38,14 @@ pub(super) const RETIRED_NAMESPACE: &str = "http://data.ashrae.org/S231P#";
 /// one.
 const HTTPS_NEAR_MISS: &str = "https://data.ashrae.org/S231#";
 
+/// The `https:` spelling of [`RETIRED_NAMESPACE`]. Nothing wrote it; it is listed so that a
+/// modeled key spelled in it keeps the refusal it has had since issue #383.
+const HTTPS_RETIRED_NEAR_MISS: &str = "https://data.ashrae.org/S231P#";
+
 /// Namespaces a modeled term may be keyed in by mistake. A modeled term spelled in one of them is
 /// refused, never passed through: passing it through would drop the property silently.
-pub(super) const FOREIGN_NAMESPACES: [&str; 2] = [RETIRED_NAMESPACE, HTTPS_NEAR_MISS];
+pub(super) const FOREIGN_NAMESPACES: [&str; 3] =
+    [RETIRED_NAMESPACE, HTTPS_NEAR_MISS, HTTPS_RETIRED_NEAR_MISS];
 
 /// Refuse every `@context` binding that spells the S231 vocabulary in another namespace, in term
 /// order (the table is sorted, so the refusal list is deterministic).
@@ -187,5 +192,6 @@ mod tests {
         // Its modeled keys are refused one by one in `property_keys`; an unrelated use of the
         // IRI is not this engine's to judge.
         assert!(refusals(&[("x", HTTPS_NEAR_MISS)]).is_empty());
+        assert!(refusals(&[("x", HTTPS_RETIRED_NEAR_MISS)]).is_empty());
     }
 }

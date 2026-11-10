@@ -51,6 +51,11 @@ impl ExportReport {
 impl Engine {
     /// Export the current resolved model as deterministic CXF bytes.
     ///
+    /// The document's root node carries the translation-software label, `S231:translationSoftware`
+    /// (`open-control-engine`) and `S231:translationSoftwareVersion` (this engine's version), so
+    /// the bytes of one model differ between engine versions. The canonical content id
+    /// ([`Engine::content_id`]) does not: no importer reads the label back.
+    ///
     /// # Errors
     /// Returns [`OcError::Cxf`] when the model cannot be exported, including an unloaded engine.
     /// Never panics for an unloaded engine.

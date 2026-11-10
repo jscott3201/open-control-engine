@@ -226,7 +226,7 @@ fn nominal_in_full_iri_form_grounds_and_round_trips_like_the_compact_key() {
         let text = String::from_utf8(exported).unwrap();
         assert!(text.contains(r#""S231:nominal":1.5"#), "{text}");
         assert!(
-            !text.contains("S231_NS#nominal"),
+            !text.contains(&format!("{S231_NS}nominal")),
             "export writes the compact key: {text}"
         );
     }
@@ -410,6 +410,10 @@ fn assert_foreign_refusal(doc: &Json, namespace: &str) {
 const RETIRED_NS: &str = "http://data.ashrae.org/S231P#";
 /// The `https:` spelling of the namespace: a different IRI.
 const HTTPS_NEAR_MISS: &str = "https://data.ashrae.org/S231#";
+/// The `https:` spelling of the retired namespace.
+const HTTPS_RETIRED_NS: &str = "https://data.ashrae.org/S231P#";
+/// Every namespace a modeled key is refused in.
+const FOREIGN: [&str; 3] = [RETIRED_NS, HTTPS_NEAR_MISS, HTTPS_RETIRED_NS];
 
 #[test]
 fn only_the_published_namespace_normalizes_and_a_foreign_one_is_refused() {
@@ -424,7 +428,7 @@ fn only_the_published_namespace_normalizes_and_a_foreign_one_is_refused() {
         respell(&mut same, SOURCE_PORT, "min", &|t| format!("{S231_NS}{t}"));
         assert_eq!(outcome(&bytes(&same)), baseline, "{binding:?}");
         // A modeled term in a foreign namespace is refused, never dropped.
-        for foreign in [RETIRED_NS, HTTPS_NEAR_MISS] {
+        for foreign in FOREIGN {
             assert_foreign_refusal(&doc, foreign);
         }
     }
@@ -445,6 +449,51 @@ fn only_the_published_namespace_normalizes_and_a_foreign_one_is_refused() {
             )
         );
     }
+}
+
+#[test]
+fn a_bound_keyed_in_a_foreign_namespace_is_refused_never_dropped() {
+    // The hazard issue #383 closed: a bound in a pass-through key is neither validated, enforced
+    // nor exported. In each foreign namespace, as a full IRI and through a prefix bound to it, a
+    // `max` on the boundary output refuses the load; a prefix bound to the retired namespace is
+    // refused at the binding, before the key is read.
+    let baseline = outcome(&bytes(&fixture()));
+    assert!(baseline.starts_with("ok "), "{baseline}");
+    for foreign in FOREIGN {
+        let mut full = fixture();
+        node_mut(&mut full, BOUNDARY_OUTPUT).insert(format!("{foreign}max"), json!(1.0));
+        let diags = refusal(&bytes(&full));
+        assert_eq!(diags.len(), 1, "{foreign}: {diags:?}");
+        assert_eq!(diags[0].code, DiagCode::VocabularyNamespaceMismatch);
+        assert_eq!(diags[0].subject.as_deref(), Some(BOUNDARY_OUTPUT));
+        assert!(diags[0].message.contains(&format!("`{foreign}max`")));
+
+        let mut prefixed = fixture();
+        prefixed["@context"]["other"] = json!(foreign);
+        node_mut(&mut prefixed, BOUNDARY_OUTPUT).insert("other:max".into(), json!(1.0));
+        let diags = refusal(&bytes(&prefixed));
+        assert_eq!(diags.len(), 1, "{foreign}: {diags:?}");
+        assert_eq!(diags[0].code, DiagCode::VocabularyNamespaceMismatch);
+        let subject = if foreign == RETIRED_NS {
+            "other"
+        } else {
+            BOUNDARY_OUTPUT
+        };
+        assert_eq!(diags[0].subject.as_deref(), Some(subject), "{foreign}");
+        assert!(diags[0].message.contains(foreign), "{}", diags[0].message);
+    }
+    // The same bound in the published namespace is read: the document still loads, and the
+    // exported boundary output carries it under the compact key.
+    let mut published = fixture();
+    node_mut(&mut published, BOUNDARY_OUTPUT).insert(format!("{S231_NS}max"), json!(300.0));
+    let exported = String::from_utf8(export(&import(&bytes(&published))).unwrap()).unwrap();
+    assert_eq!(
+        exported.matches(r#""S231:max":300.0"#).count(),
+        1,
+        "{exported}"
+    );
+    let unkeyed = String::from_utf8(export(&import(&bytes(&fixture()))).unwrap()).unwrap();
+    assert!(!unkeyed.contains(r#""S231:max":300.0"#), "{unkeyed}");
 }
 
 #[test]

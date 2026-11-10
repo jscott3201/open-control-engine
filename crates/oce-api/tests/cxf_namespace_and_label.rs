@@ -154,3 +154,39 @@ fn the_facade_export_carries_the_label_and_reloads_to_the_same_identities() {
     // The instance namespace of every name is unchanged by export, so the id is too.
     assert_eq!(identities(&exported.bytes), baseline);
 }
+
+#[test]
+fn the_exported_label_names_the_engine_version_the_blob_header_records() {
+    // Three crates read the workspace version on their own: the exporter and the emitter for the
+    // label, `oce-graph` for the blob and snapshot headers (which
+    // `state_engine_version.rs` ties to each other). The label carries the full version string,
+    // the headers its `major.minor.patch`; they must name one version.
+    let mut engine = Engine::new();
+    engine.load_cxf(MINIMAL_LOOP.as_bytes()).expect("loads");
+    let exported = engine.export_cxf().expect("exports");
+    let document: Json = serde_json::from_slice(&exported.bytes).expect("export is JSON");
+    let label = document["@graph"][0]["S231:translationSoftwareVersion"]
+        .as_str()
+        .expect("the label version is a string");
+    let release = label.split(['-', '+']).next().expect("a version");
+    let numbers: Vec<u16> = release
+        .split('.')
+        .map(|part| part.parse().expect("a numeric version component"))
+        .collect();
+    assert_eq!(numbers.len(), 3, "{label}");
+
+    let recorded = oce_graph::blob::ENGINE_VERSION;
+    assert_eq!(
+        numbers,
+        [recorded.major, recorded.minor, recorded.patch],
+        "{label}"
+    );
+    // The blob header is the magic, the format and the profile, then the version at bytes 8..14.
+    let blob = engine.compile_blob().expect("blob").bytes;
+    assert_eq!(&blob[..4], b"OCEB");
+    let header: Vec<u16> = blob[8..14]
+        .chunks_exact(2)
+        .map(|pair| u16::from_le_bytes([pair[0], pair[1]]))
+        .collect();
+    assert_eq!(numbers, header, "{label}");
+}

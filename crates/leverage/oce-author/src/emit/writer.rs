@@ -1,13 +1,13 @@
 //! The document layout and canonical writer (authoring note, "Layout" and "Writer").
 //!
 //! Fixed layout: the root, ending in the translation-software label (`S231:translationSoftware`,
-//! `S231:translationSoftwareVersion`; OBC §8.4); the sequence parameters in authored order; each block in authored
-//! order, followed by its parameter nodes in authored order and then its port nodes, inputs then
-//! outputs, in catalog order; then the boundary inputs, then the boundary outputs, each in
-//! authored order. `isConnectedTo` hangs on the source node with its targets in authored
-//! connection order. Nothing is sorted. Each node kind has one fixed key order; relation lists
-//! are always arrays (decision 17) and an empty relation is left out. The bytes come from the
-//! crate's canonical JSON writer: two-space indentation, one entry per line, ASCII-only with
+//! `S231:translationSoftwareVersion`; OBC §8.4); the sequence parameters in authored order; each
+//! block in authored order, followed by its parameter nodes in authored order and then its port
+//! nodes, inputs then outputs, in catalog order; then the boundary inputs, then the boundary
+//! outputs, each in authored order. `isConnectedTo` hangs on the source node with its targets in
+//! authored connection order. Nothing is sorted. Each node kind has one fixed key order; relation
+//! lists are always arrays (decision 17) and an empty relation is left out. The bytes come from
+//! the crate's canonical JSON writer: two-space indentation, one entry per line, ASCII-only with
 //! `\uXXXX` escapes, one trailing newline.
 
 use std::collections::BTreeMap;
