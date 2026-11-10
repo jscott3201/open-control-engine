@@ -39,6 +39,27 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Facade
 
+- **A state snapshot names the engine version that wrote it, and only that version restores it**
+  (GitHub #530; owner rulings of 2026-11-09). The fixed header gains six bytes after the
+  execution-state ABI revision: major, minor and patch as little-endian `u16`, from the constant
+  a compiled-schedule blob records (`oce_graph::blob::ENGINE_VERSION`; neither records a
+  pre-release suffix). The header is now 30 bytes and every snapshot is six bytes longer.
+  `EngineStateSnapshot::from_bytes` refuses any other version with the new
+  `EngineStateError::EngineVersionMismatch { found, expected }`, checked after the magic and the
+  format revision and before the body length, the trailer or the body is read, so
+  `Engine::restore_state` never receives such a snapshot. The execution fingerprint now covers
+  the version bytes, as the trailer already covered the header: a snapshot edited to claim this
+  build's version fails its trailer, and with the trailer recomputed, its fingerprint.
+  **Breaking, in place:** the format and ABI revisions stay 1 and there is no reader for a header
+  without the field. `development` wrote that header between GitHub #518 and this change and no
+  release did, so no version bump accompanies it; one such snapshot is kept as a refused fixture
+  (`fixtures/state_unstamped.hex`, `tests/state_old_layout.rs`), and the older empty-model
+  vector, and the release snapshot once its numbers are edited, are now refused at the version
+  field as well. The three inline state pins are re-blessed and from here on move with a
+  workspace version bump; blob goldens, canonical content ids and
+  `tools/golden-gen/goldens` are unchanged. The engine version is not a build token: the host
+  envelope still binds a snapshot to its model, build and deployment
+  ([state continuation](docs/state-compatibility.md#wire-revision-and-integrity)).
 - **Output types in slot order** (GitHub #525, issue #460). `FrameSlots::output_types()` returns
   one `ValueType` per output slot, parallel to `outputs()`: the declared type of the connector that
   drives each boundary output (for a pass-through declared output, the type of the input it
@@ -250,6 +271,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   refused by structure. That is one shape, not a proof for every snapshot of that layout, and from
   here on the host envelope is what binds snapshot bytes to a build
   ([state continuation](docs/state-compatibility.md#wire-revision-and-integrity)).
+  GitHub #530 (under Facade above) has since stamped the engine version into the snapshot header:
+  the release snapshot with edited numbers and the empty-model vector are now refused at that
+  field.
   Re-blessed: the 46 blob goldens (format field, engine-version bytes and CRC only; 123,329 bytes
   in all, unchanged), `compatibility.txt` and `compatibility_export.txt`, the two pinned state
   vectors in `state_tests.rs` and `state_format_golden_tests.rs`, and `restamp.tsv`, which loses

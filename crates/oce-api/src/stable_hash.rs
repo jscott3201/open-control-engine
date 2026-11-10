@@ -54,6 +54,10 @@ impl StableHash {
         self.write_u64(value as u64);
     }
 
+    pub(crate) fn write_u16(&mut self, value: u16) {
+        self.write_bytes(&value.to_le_bytes());
+    }
+
     pub(crate) fn write_u32(&mut self, value: u32) {
         self.write_bytes(&value.to_le_bytes());
     }

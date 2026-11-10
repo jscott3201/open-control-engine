@@ -238,18 +238,24 @@ your policy. Nothing you persist is read back by a frame.
 not write them anywhere. `Engine::checkpoint`, `state_snapshot`, `restore_checkpoint`, and
 `restore_state` call no storage port. The [state contract](state-compatibility.md) defines the
 same-loaded-executable guarantee, typed refusals and portability limits. The host owns durable
-storage and an authenticated sealed envelope binding **exact snapshot bytes** to its approved
-compiled-build/deployment qualifier, freshness and generation. Verify that envelope **before**
-`EngineStateSnapshot::from_bytes`, then pass only the OCE bytes. OCE emits, accepts, stores and
-enforces no build token; equal ABI/manifest, package or catalog facts do not authenticate a build.
+storage and an authenticated sealed envelope binding **exact snapshot bytes** to its model, its
+approved compiled-build/deployment qualifier, freshness and generation. Verify that envelope
+**before** `EngineStateSnapshot::from_bytes`, then pass only the OCE bytes. The engine refuses a
+snapshot another engine version wrote (`EngineStateError::EngineVersionMismatch`, at
+`from_bytes`); that is all it checks about the bytes' origin. OCE emits, accepts, stores and
+enforces no build token: an equal engine version, ABI/manifest, package or catalog fact does not
+authenticate a build.
 
 Capture only after a model has loaded successfully and while no parameter edits are pending. A
 durable capture also requires authored stable identities and registered state contracts for every
 stateful block. The decoder enforces a 64 MiB limit, validates canonical ordering and manifest
 self-consistency, and checks an integrity trailer. Capture runs this same bounded decoder before
 returning a successful artifact. Format and execution ABI are revision 1 and stay 1 until 1.0.0;
-a snapshot carries no engine version, so the sealed envelope is what binds bytes to the build that
-wrote them ([wire revision](state-compatibility.md#wire-revision-and-integrity)).
+the header also names the engine version that wrote the snapshot, and only that version restores
+it, so plan a version upgrade as a cold start or a restart on the prior qualified build. Two
+builds of one version are not told apart: the sealed envelope is still what binds bytes to the
+model, the build and the deployment that wrote them
+([wire revision](state-compatibility.md#wire-revision-and-integrity)).
 Class-specific block-state invariants are checked during restore, when a target engine is available.
 The trailer detects accidental corruption; it is not an authenticity or freshness proof. Protect
 snapshot bytes according to the trust boundary of the host that consumes them.
@@ -261,8 +267,10 @@ Durable continuation has a narrow restore window:
    partial writes; authenticate the exact payload and build/deployment qualifier, freshness,
    rollback/replay policy and deployment generation before decoding. Package version or an FNV tag
    is insufficient. Refuse a mismatched build/deployment here, outside OCE.
-3. Parse only approved OCE bytes with `EngineStateSnapshot::from_bytes`. Inspect `portability()`
-   for placement, without treating it as build or numerical qualification.
+3. Parse only approved OCE bytes with `EngineStateSnapshot::from_bytes`. `EngineVersionMismatch`
+   means another engine version wrote them: do not edit the header; restore on that version or
+   cold start. Inspect `portability()` for placement, without treating it as build or numerical
+   qualification.
 4. Load the exact compatible executable/parameters into a fresh target. Load has no external
    effects; anything your host persisted around a load is yours to reconcile.
 5. Call `restore_state` before any accepted frame, dirty-parameter resume or either earlier restore.

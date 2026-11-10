@@ -231,10 +231,16 @@ the compatibility descriptor, every contract descriptor under `crates/oce-api/co
 replay record and trace, `OCECANON` and its id tag `oce:canon1:`, and each stateful class's
 `state_contract_revision`. A format changes in place and its goldens are re-blessed.
 
-That makes the engine version the only field that tells two layouts apart. The blob header and
-the descriptor's `oce-api-version` line carry it. Known gap: a state snapshot header carries no
-engine version yet, so released snapshots are refused today only because they carry format
-revision 2; GitHub #530 stamps the version before `v0.5.0` is tagged. So the first PR after a
+That makes the engine version the only field that tells two layouts apart. The blob header, the
+state snapshot header and the descriptor's `oce-api-version` line carry it. A blob and a snapshot
+are each accepted only by the engine version that wrote them (issue #530): both headers hold the
+major, minor and patch of one constant, `oce_graph::blob::ENGINE_VERSION` (a pre-release suffix
+is not recorded, so `0.5.0-rc.1` and `0.5.0` write and accept the same bytes), and a decoder
+refuses any other with `EngineVersionMismatch`, on `BlobError` and on `EngineStateError`. The
+snapshot decoder makes that check straight after its two revision fields and reads nothing
+further from another version's bytes; the snapshot's fingerprint and trailer both cover the
+field. `state_contract_revision` and the `oce:canon1:` tag stay at 1 like every other revision, so
+the engine version separates their meanings too. So the first PR after a
 release tag that changes a format's bytes or meaning does three things: it bumps
 `workspace.package.version` on `development` to the next milestone's version, if it is not bumped
 already; it re-blesses; and it includes a test that an artefact of the previous layout is refused
@@ -244,7 +250,14 @@ and leaves `CHANGELOG.md`'s unreleased section open. It moves the 46 blob golden
 and CRC), `compatibility.txt` and `compatibility_export.txt`, the `restamp.tsv` header line, the
 worked hex in `docs/design/compiled-schedule-blob.md`, and the version literals in
 `blob_goldens.rs`, `compatibility.rs`, `compatibility_tests.rs`, `replay_codec.rs`,
-`scripts/ci/test-check-no-std.sh` and `scripts/ci/test-leverage-members.sh`.
+`scripts/ci/test-check-no-std.sh` and `scripts/ci/test-leverage-members.sh`. It also moves the
+three inline state pins in `crates/oce-api/src/tests/`, because a snapshot's header, fingerprint
+and trailer carry the version: the empty-model bytes and fingerprint in `state_tests.rs` and the
+portable-vector checksum in `state_format_golden_tests.rs`. Each failing assertion prints the new
+value; the vectors beside the checksum are built there without the codec, so copy the values in
+and run the tests again. The snapshot fixtures under `crates/oce-api/tests/fixtures/`
+(`state_unstamped.hex`, `state_revision_two.hex`, `state_legacy.hex`) are artefacts of earlier
+layouts and never move.
 
 ## The class-ports golden moves with port names, descriptions and parameters
 

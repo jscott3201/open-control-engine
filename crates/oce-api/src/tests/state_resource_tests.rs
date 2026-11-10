@@ -156,7 +156,11 @@ fn target_domain_diagnostics_bound_hostile_descriptor_strings() {
     *arch = "x".repeat(1024 * 1024);
     *os = "foreign-os".into();
     let manifest = crate::state_manifest_codec::encode_manifest(&image.manifest, false).unwrap();
-    image.fingerprint = crate::state_manifest::fingerprint(image.execution_revision, &manifest);
+    image.fingerprint = crate::state_manifest::fingerprint(
+        image.execution_revision,
+        oce_graph::blob::ENGINE_VERSION,
+        &manifest,
+    );
     let bytes = crate::state_codec::encode_snapshot(&image, false).unwrap();
     let snapshot = EngineStateSnapshot::from_bytes(&bytes).unwrap();
 
@@ -192,7 +196,11 @@ fn malformed_diagnostics_bound_hostile_enum_class_paths() {
     });
     image.manifest.connectors[0].value_type = crate::state::WireValueType::Enum(class_path);
     let manifest = crate::state_manifest_codec::encode_manifest(&image.manifest, false).unwrap();
-    image.fingerprint = crate::state_manifest::fingerprint(image.execution_revision, &manifest);
+    image.fingerprint = crate::state_manifest::fingerprint(
+        image.execution_revision,
+        oce_graph::blob::ENGINE_VERSION,
+        &manifest,
+    );
     let bytes = crate::state_codec::encode_snapshot(&image, false).unwrap();
 
     let EngineStateError::MalformedSnapshot { detail, .. } =

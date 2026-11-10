@@ -154,7 +154,11 @@ fn enum_member_identity_change_is_incompatible() {
     let mut image = (*snapshot.image).clone();
     image.manifest.enums[0].members.swap(0, 1);
     let manifest = crate::state_manifest_codec::encode_manifest(&image.manifest, false).unwrap();
-    image.fingerprint = crate::state_manifest::fingerprint(image.execution_revision, &manifest);
+    image.fingerprint = crate::state_manifest::fingerprint(
+        image.execution_revision,
+        oce_graph::blob::ENGINE_VERSION,
+        &manifest,
+    );
     let bytes = crate::state_codec::encode_snapshot(&image, false).unwrap();
     let snapshot = EngineStateSnapshot::from_bytes(&bytes).unwrap();
     let mut target = Engine::new();

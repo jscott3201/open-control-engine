@@ -29,10 +29,16 @@ pub enum StatePortability {
 impl EngineStateSnapshot {
     /// Parse one bounded canonical snapshot after the host has verified its sealed envelope.
     ///
-    /// Checks the 64 MiB cap, header/format, corruption checksum, canonical encoding, manifest
-    /// self-consistency and fingerprint. It neither authenticates bytes nor admits a build.
-    /// Unknown execution ABI revisions can parse; target compatibility and class-specific state
-    /// invariants are checked only by [`crate::Engine::restore_state`] before mutation.
+    /// Checks, in this order: the 64 MiB cap, the shortest possible length, the magic, the format
+    /// revision, the engine version, the total length, the corruption checksum, then canonical
+    /// encoding, manifest self-consistency and fingerprint. Bytes written by another engine
+    /// version return [`EngineStateError::EngineVersionMismatch`] before anything after the
+    /// version field is read, so [`crate::Engine::restore_state`] never sees them. The field is the
+    /// major, minor and patch of the workspace version, like a compiled-schedule blob's; a
+    /// pre-release suffix is not recorded. It neither authenticates bytes nor admits a build:
+    /// two builds of one version are not told apart. Unknown execution ABI revisions can parse;
+    /// target compatibility and class-specific state invariants are checked only by
+    /// [`crate::Engine::restore_state`] before mutation.
     ///
     /// Allocates owned bytes and a decoded image with bounded decoder workspaces. The byte cap
     /// is not a process peak-memory guarantee. Malformed input returns [`EngineStateError`], not

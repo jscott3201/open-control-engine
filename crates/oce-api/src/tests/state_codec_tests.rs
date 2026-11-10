@@ -1,7 +1,18 @@
 //! Adversarial byte-level tests for the durable snapshot decoder.
 
+use oce_graph::blob::{ENGINE_VERSION, EngineVersion};
+
 use crate::state::{BlockKey, ConnectorKey, WireDir};
 use crate::{Engine, EngineStateError, EngineStateSnapshot};
+
+/// The engine-version field of the fixed header: major, minor, patch as little-endian `u16`.
+const VERSION_FIELD: std::ops::Range<usize> = 16..22;
+/// Offset of the body-length field, which every length refusal names.
+const BODY_LENGTH: usize = 22;
+/// Bytes in the fixed header; the body starts here with the 16-byte fingerprint.
+const HEADER: usize = 30;
+/// Bytes in the trailer.
+const TRAILER: usize = 16;
 
 const MINIMAL_LOOP: &[u8] = include_bytes!("../../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
 
@@ -50,8 +61,8 @@ struct Offsets {
 }
 
 fn offsets(bytes: &[u8]) -> Offsets {
-    let model_length = u32_at(bytes, 40) as usize;
-    let model_bytes = 44..44 + model_length;
+    let model_length = u32_at(bytes, HEADER + 16) as usize;
+    let model_bytes = HEADER + 20..HEADER + 20 + model_length;
     let state_t = model_bytes.end;
     let prev_tag = state_t + 8;
     let manifest_length = prev_tag + 1 + usize::from(bytes[prev_tag] == 1) * 8;
@@ -98,7 +109,7 @@ fn every_truncation_boundary_is_a_typed_refusal() {
         let error = EngineStateSnapshot::from_bytes(&bytes[..length]).unwrap_err();
         assert!(
             matches!(error, EngineStateError::MalformedSnapshot { offset, .. }
-            if offset == if length < 40 { 0 } else { 16 }),
+            if offset == if length < HEADER + TRAILER { 0 } else { BODY_LENGTH as u64 }),
             "length {length}: {error:?}"
         );
     }
@@ -126,8 +137,72 @@ fn fixed_header_refusals_follow_the_pinned_precedence() {
     trailing.push(0);
     assert!(matches!(
         EngineStateSnapshot::from_bytes(&trailing),
-        Err(EngineStateError::MalformedSnapshot { offset: 16, .. })
+        Err(EngineStateError::MalformedSnapshot { offset, .. }) if offset == BODY_LENGTH as u64
     ));
+
+    // The engine version sits between the format and the length: a wrong magic or format wins
+    // over it, and it wins over a wrong length, a wrong trailer and a wrong body.
+    let other = EngineVersion {
+        patch: ENGINE_VERSION.patch.wrapping_add(1),
+        ..ENGINE_VERSION
+    };
+    let mut other_version = bytes.clone();
+    other_version[VERSION_FIELD.end - 2..VERSION_FIELD.end]
+        .copy_from_slice(&other.patch.to_le_bytes());
+    let edits: [fn(&mut Vec<u8>); 5] = [
+        |_| {},
+        |bytes| bytes.push(0),
+        |bytes| bytes.truncate(bytes.len() - 1),
+        |bytes| bytes[HEADER] ^= 1,
+        |bytes| bytes[BODY_LENGTH..HEADER].fill(0xff),
+    ];
+    for edit in edits {
+        let mut edited = other_version.clone();
+        edit(&mut edited);
+        assert!(matches!(
+            EngineStateSnapshot::from_bytes(&edited),
+            Err(EngineStateError::EngineVersionMismatch { found, expected })
+                if found == other && expected == ENGINE_VERSION
+        ));
+    }
+    let mut bad_magic = other_version.clone();
+    bad_magic[7] ^= 1;
+    assert!(matches!(
+        EngineStateSnapshot::from_bytes(&bad_magic),
+        Err(EngineStateError::MalformedSnapshot { offset: 0, .. })
+    ));
+    let mut unsupported = other_version;
+    unsupported[8..12].copy_from_slice(&0u32.to_le_bytes());
+    assert!(matches!(
+        EngineStateSnapshot::from_bytes(&unsupported),
+        Err(EngineStateError::UnsupportedFormat { revision: 0 })
+    ));
+}
+
+#[test]
+fn a_header_cut_inside_the_version_field_is_too_short_or_another_version() {
+    // Every prefix that ends inside the version field, alone and padded out to the shortest
+    // length the decoder inspects: the first is shorter than a header and trailer, the second
+    // reads a version the padding completed and refuses it as another engine's.
+    let bytes = snapshot_bytes();
+    for cut in VERSION_FIELD.start..VERSION_FIELD.end {
+        assert!(matches!(
+            EngineStateSnapshot::from_bytes(&bytes[..cut]),
+            Err(EngineStateError::MalformedSnapshot { offset: 0, .. })
+        ));
+        let mut padded = bytes[..cut].to_vec();
+        padded.resize(HEADER + TRAILER, 0xff);
+        match EngineStateSnapshot::from_bytes(&padded) {
+            Err(EngineStateError::EngineVersionMismatch { found, expected }) => {
+                assert_eq!(expected, ENGINE_VERSION);
+                assert_eq!(
+                    [found.major, found.minor, found.patch],
+                    [0, 2, 4].map(|at| u16::from_le_bytes([padded[16 + at], padded[17 + at]]))
+                );
+            }
+            other => panic!("cut {cut}: {:?}", other.map(|_| ())),
+        }
+    }
 }
 
 #[test]
@@ -183,7 +258,7 @@ fn self_consistency_and_value_type_corruption_refuse() {
     let layout = offsets(&bytes);
 
     let mut fingerprint = bytes.clone();
-    fingerprint[24] ^= 1;
+    fingerprint[HEADER] ^= 1;
     resign(&mut fingerprint);
     assert!(matches!(
         EngineStateSnapshot::from_bytes(&fingerprint),
@@ -215,7 +290,7 @@ fn self_consistency_and_value_type_corruption_refuse() {
 #[test]
 fn integrity_mismatch_reports_recomputed_and_carried_values() {
     let mut bytes = snapshot_bytes();
-    bytes[24] ^= 1;
+    bytes[HEADER] ^= 1;
     let expected = fnv(&bytes[..bytes.len() - 16]);
     let found = u128::from_le_bytes(bytes[bytes.len() - 16..].try_into().unwrap());
     assert!(matches!(

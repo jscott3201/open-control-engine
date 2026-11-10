@@ -1,6 +1,16 @@
 //! Canonical state-snapshot encoder and bounded decoder (format revision 1).
+//!
+//! The fixed header is the magic, the format revision, the execution-state ABI revision, the
+//! engine version that wrote the snapshot and the body length. The engine version is the same
+//! constant a compiled-schedule blob records ([`oce_graph::blob::ENGINE_VERSION`]: major, minor
+//! and patch of the workspace version, a pre-release suffix not recorded), and the decoder
+//! accepts only its own. It is checked straight after the two revision fields, before the body
+//! length, the trailer or any body byte is read: both revisions stay 1 until 1.0.0, so the
+//! version is the only field that tells this build's layout from another's.
 
 use std::collections::{BTreeMap, BTreeSet};
+
+use oce_graph::blob::{ENGINE_VERSION, EngineVersion};
 
 use crate::stable_hash::StableHash;
 use crate::state::{
@@ -13,7 +23,11 @@ use crate::state_manifest_codec::{
 use crate::state_wire::{DecodeBudget, Reader, Writer};
 
 const MAGIC: &[u8; 8] = b"OCESTAT\0";
-const HEADER_BYTES: usize = 8 + 4 + 4 + 8;
+/// Bytes in the engine-version field: major, minor and patch, each a little-endian `u16`.
+const ENGINE_VERSION_BYTES: usize = 6;
+/// Offset of the body-length field: after the magic, both revisions and the engine version.
+const BODY_LENGTH_OFFSET: usize = 8 + 4 + 4 + ENGINE_VERSION_BYTES;
+const HEADER_BYTES: usize = BODY_LENGTH_OFFSET + 8;
 const TRAILER_BYTES: usize = 16;
 
 pub(crate) fn encode_snapshot(
@@ -53,6 +67,9 @@ fn write_snapshot(
     writer.bytes(MAGIC);
     writer.u32(FORMAT_REVISION);
     writer.u32(image.execution_revision);
+    writer.u16(ENGINE_VERSION.major);
+    writer.u16(ENGINE_VERSION.minor);
+    writer.u16(ENGINE_VERSION.patch);
     let body_length_offset = writer.position();
     writer.u64(0);
     let body_start = writer.position();
@@ -115,22 +132,35 @@ pub(crate) fn decode_snapshot(bytes: &[u8]) -> Result<StateImage, EngineStateErr
         });
     }
     let execution_revision = header.u32()?;
+    let engine_version = EngineVersion {
+        major: header.u16()?,
+        minor: header.u16()?,
+        patch: header.u16()?,
+    };
+    // Nothing after this field is read from a snapshot another engine version wrote: its length
+    // field, trailer and body may all be laid out differently under the same revision numbers.
+    if engine_version != ENGINE_VERSION {
+        return Err(EngineStateError::EngineVersionMismatch {
+            found: engine_version,
+            expected: ENGINE_VERSION,
+        });
+    }
     let body_length = header.u64()?;
     let body_length_usize =
         usize::try_from(body_length).map_err(|_| EngineStateError::MalformedSnapshot {
-            offset: 16,
+            offset: BODY_LENGTH_OFFSET as u64,
             detail: "body length does not fit usize".into(),
         })?;
     let expected_length = HEADER_BYTES
         .checked_add(body_length_usize)
         .and_then(|length| length.checked_add(TRAILER_BYTES))
         .ok_or_else(|| EngineStateError::MalformedSnapshot {
-            offset: 16,
+            offset: BODY_LENGTH_OFFSET as u64,
             detail: "total snapshot length overflows".into(),
         })?;
     if expected_length != bytes.len() {
         return malformed(
-            16,
+            BODY_LENGTH_OFFSET as u64,
             format!(
                 "body length names {expected_length} total bytes, found {}",
                 bytes.len()
@@ -181,7 +211,7 @@ pub(crate) fn decode_snapshot(bytes: &[u8]) -> Result<StateImage, EngineStateErr
     let manifest_bytes = reader.slice(manifest_length)?;
     let manifest = decode_manifest(manifest_bytes, manifest_offset, execution_revision, budget)?;
     let expected_fingerprint =
-        crate::state_manifest::fingerprint(execution_revision, manifest_bytes);
+        crate::state_manifest::fingerprint(execution_revision, engine_version, manifest_bytes);
     if fingerprint != expected_fingerprint {
         return malformed(
             HEADER_BYTES as u64,

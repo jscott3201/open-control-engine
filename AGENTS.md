@@ -118,9 +118,13 @@ tagged `v0.x` at the end of each milestone.
     another: the first PR after a release tag that changes a format's bytes or meaning bumps the
     workspace version on `development` to the next milestone's version (unless it is already
     bumped), re-blesses, and includes a test that an artefact of the previous layout is refused
-    with a typed error. Known gap: a state snapshot header carries no engine version yet, so
-    released snapshots are refused today only because they carry format revision 2; GitHub #530
-    stamps the version before `v0.5.0` is tagged.
+    with a typed error. A compiled-schedule blob and a state snapshot each carry the engine
+    version in their header (major, minor and patch from one constant,
+    `oce_graph::blob::ENGINE_VERSION`; a pre-release suffix is not recorded) and are accepted
+    only by the version that wrote them: any other is `EngineVersionMismatch`, on `BlobError`
+    and on `EngineStateError` (GitHub #530). The `oce:canon1:` tag and each class's
+    `state_contract_revision` stay at 1 with the rest (rule 9), so the same version is what
+    separates their meanings.
 
 ---
 
