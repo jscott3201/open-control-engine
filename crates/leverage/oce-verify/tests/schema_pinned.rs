@@ -30,14 +30,20 @@ fn schema_generation_is_deterministic() {
 
 #[test]
 fn the_comparison_fails_on_one_changed_byte() {
-    // The control for the byte comparison above: an edited description is a different document.
-    let generated = vectors_json_schema();
-    let edited = generated.replacen("Seconds between ticks", "Seconds between two ticks", 1);
-    assert_ne!(
-        edited, generated,
-        "the schema carries the reader's documentation"
+    // The control for the byte comparison above: the same check, given the generated schema with
+    // one space more, must fail. Under the bless switch that check writes instead of comparing,
+    // so there is nothing to control.
+    if oce_bless::enabled(support::BLESS_SWITCH) {
+        return;
+    }
+    let mut edited = vectors_json_schema();
+    edited.insert(1, ' ');
+    let path = crate_dir().join("schema/vectors.schema.json");
+    let outcome = std::panic::catch_unwind(|| compare_or_bless(&path, &edited));
+    assert!(
+        outcome.is_err(),
+        "a one-byte difference fails the comparison"
     );
-    assert_ne!(edited, VECTORS_JSON_SCHEMA);
 }
 
 fn published() -> Value {
