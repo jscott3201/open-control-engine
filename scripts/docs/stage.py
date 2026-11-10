@@ -198,7 +198,6 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 - [Compiled-schedule blob](docs/compiled-schedule-blob.md)
 - [Canonical replay record](docs/replay-record.md)
 - [Authority claims and supersession](docs/authority-claims.md)
-- [Facade migration](docs/facade-migration.md)
 - [Versioned facade contracts](docs/facade-contracts.md)
 - [Architecture](docs/architecture.md)
 - [Execution profile](docs/execution-profile.md)

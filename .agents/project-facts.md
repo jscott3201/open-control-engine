@@ -204,7 +204,7 @@ deliberately:
   earlier layout. `tests/blob_old_layout.rs` keeps one release-0.4.0 blob unblessed to prove it.
 - **A canonical content id change.** The header carries the loaded model's `oce:canon1:` digest
   (GitHub #470), so a change to the id's encoding or meaning (a new graph record, say) or to
-  anything it covers moves every affected blob header and `restamp.tsv` together. The tag stays
+  anything it covers moves every affected blob header and the content-id pin together. The tag stays
   `oce:canon1:` before 1.0.0: an encoding change re-stamps the ids in place, and the engine version
   tells the layouts apart.
 
@@ -214,12 +214,12 @@ without the switch, and say in the PR which files moved and why. The blob decode
 
 ## The content-id pin moves with the canonical ids
 
-`crates/oce-api/tests/fixtures/content_id/restamp.tsv` pins the canonical content id of every G36
-corpus document (GitHub #470), one `<content id> TAB <source path>` line each. It holds current ids
+`crates/oce-api/tests/fixtures/content_id/pin.tsv` pins the canonical content id of each of the 47
+corpus documents (GitHub #470), one `<content id> TAB <source path>` line each. It holds current ids
 only: the retired-id column went with issue #509, and nothing in this repo maps one id scheme to
-another. Its owner test, `crates/oce-api/tests/content_id_restamp.rs`, regenerates the whole file
+another. Its owner test, `crates/oce-api/tests/content_id_pin.rs`, regenerates the whole file
 and compares it; regenerate with
-`OCE_BLESS=1 cargo nextest run -p oce-api --test content_id_restamp`, run it again without the
+`OCE_BLESS=1 cargo nextest run -p oce-api --test content_id_pin`, run it again without the
 switch, and say in the PR which ids moved and why. Its `# Engine version:` line moves with a
 workspace version bump.
 
@@ -246,9 +246,13 @@ release tag that changes a format's bytes or meaning does three things: it bumps
 already; it re-blesses; and it includes a test that an artefact of the previous layout is refused
 with a typed error (`tests/blob_old_layout.rs` and `tests/state_old_layout.rs` are the pattern).
 A version bump is not a release: it cuts no tag
-and leaves `CHANGELOG.md`'s unreleased section open. It moves the 46 blob goldens (version bytes
-and CRC), `compatibility.txt` and `compatibility_export.txt`, the `restamp.tsv` header line, the
-worked hex in `docs/design/compiled-schedule-blob.md`, and the version literals in
+and leaves `CHANGELOG.md`'s unreleased section open. It moves `Cargo.toml`
+(`workspace.package.version` and the `version` of each of the 11 workspace crates under
+`[workspace.dependencies]`) and `Cargo.lock`, the 46 blob goldens (version bytes
+and CRC), `compatibility.txt` and `compatibility_export.txt`, the content-id pin's
+`# Engine version:` line (`content_id/pin.tsv`), the header table's engine-version row and the
+worked hex in `docs/design/compiled-schedule-blob.md`, the sentence in the root `README.md` that
+names the version `development` carries, and the version literals in
 `blob_goldens.rs`, `compatibility.rs`, `compatibility_tests.rs`, `replay_codec.rs`,
 `scripts/ci/test-check-no-std.sh` and `scripts/ci/test-leverage-members.sh`. It also moves the
 three inline state pins in `crates/oce-api/src/tests/`, because a snapshot's header, fingerprint

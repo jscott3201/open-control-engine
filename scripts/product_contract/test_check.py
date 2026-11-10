@@ -22,7 +22,7 @@ import check
 ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = (
     "product contract: OK\n"
-    "Document revision: 26\n"
+    "Document revision: 27\n"
     "Grounding SHA: e81480b02271456719d55cbe1e5090b0dea6d63c\n"
     "Requirements: 41\n"
     "CURRENT: 36\n"
@@ -203,9 +203,9 @@ class TraceabilityTests(unittest.TestCase):
 
     def test_revision_grounding_and_change_record_are_required(self):
         for old, new, message in (
-            ("Document revision: 26", "Document revision: 0", "metadata:"),
-            ("Document revision: 26", "Document revision: 27", "current revision change record"),
-            ("Document revision: 26", "Document revision: 26\nDocument revision: 26", "metadata:"),
+            ("Document revision: 27", "Document revision: 0", "metadata:"),
+            ("Document revision: 27", "Document revision: 28", "current revision change record"),
+            ("Document revision: 27", "Document revision: 27\nDocument revision: 27", "metadata:"),
             ("Grounding SHA: e81480b02271456719d55cbe1e5090b0dea6d63c", "Grounding SHA: d2111be", "metadata:"),
             ("## Change record", "## History", "change record required"),
         ):
@@ -410,7 +410,7 @@ class TraceabilityTests(unittest.TestCase):
     def test_pending_transition_paths_are_exact_and_still_require_regular_nonignored_files(self):
         self.assertEqual(check.PENDING, frozenset((
             "docs/product-contract.md", "scripts/product_contract/check.py",
-            "scripts/product_contract/test_check.py", "docs/facade-migration.md",
+            "scripts/product_contract/test_check.py",
             "crates/oce-api/tests/frame_assertions.rs",
             "crates/oce-api/src/admission.rs", "crates/oce-api/src/tests/reload_tests.rs",
             "crates/oce-api/tests/cxf_admission.rs",
@@ -435,7 +435,7 @@ class TraceabilityTests(unittest.TestCase):
             "crates/oce-api/src/replay_capture_tests.rs",
             "crates/oce-api/tests/release_fallback.rs",
         )))
-        for path in ("docs/facade-migration.md", "crates/oce-api/tests/frame_assertions.rs",
+        for path in ("crates/oce-api/tests/frame_assertions.rs",
                      "crates/oce-api/src/admission.rs", "crates/oce-api/src/tests/reload_tests.rs",
                      "crates/oce-api/tests/cxf_admission.rs", "docs/complete-frame-contract.md",
                      "crates/oce-api/tests/frame_refusals.rs", "crates/oce-api/src/frame.rs",
@@ -483,8 +483,7 @@ class TraceabilityTests(unittest.TestCase):
             "- **Two stable loader signatures are placeholders.** `load_from_semantic` and `load_modelica`\n"
             "  always return `OcError::Load`; use `load_cxf` for working ingest today.\n",
             "- **Deferred loader signatures have been removed.** `load_from_semantic` and `load_modelica`\n"
-            "  are no longer callable; prepare supported CXF externally and use `load_cxf`.\n"
-            "  See [facade migration](docs/facade-migration.md) for the pre-release source break.\n",
+            "  are no longer callable; prepare supported CXF externally and use `load_cxf`.\n",
             "\n## Migration history\n\n"
             "- Previously, `load_from_semantic` and `load_modelica` always returned `OcError::Load`.\n"
             "  Both placeholder signatures have been removed; `load_cxf` remains available.\n",
@@ -497,7 +496,7 @@ class TraceabilityTests(unittest.TestCase):
             "  stability, the engine never produces it; hosts must not build escalation logic on that variant.\n",
             "- **Assertion events and `AssertLevel` are Warning-only.** `AssertLevel::default()` is now\n"
             "  `Warning`; the never-emitted `AssertLevel::Error` variant was removed. This adds no escalation\n"
-            "  or safety policy. See [facade migration](docs/facade-migration.md).\n",
+            "  or safety policy.\n",
             "\n## Migration history\n\n"
             "- Previously, `AssertLevel::Error` was public but never emitted; its removal intentionally\n"
             "  changes `AssertLevel::default()` from Error to Warning. No escalation is added.\n",
@@ -540,7 +539,7 @@ class TraceabilityTests(unittest.TestCase):
     def test_contraction_is_current_at_the_accepted_document_revision(self):
         self.change_cell("PC-035", 1, "HOST-OBLIGATION")
         self.rejects("frame-only: contraction is current")
-        self.write_document(self.document.replace("Document revision: 26", "Document revision: 25"))
+        self.write_document(self.document.replace("Document revision: 27", "Document revision: 26"))
         self.rejects("frame-only: document revision")
 
     def test_retired_current_claims_are_not_hidden_by_valid_evidence_links(self):

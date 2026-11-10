@@ -928,6 +928,27 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
+- **The facade migration page is retired, with the other prose the format reset made false**
+  (issue #531). `docs/facade-migration.md` is deleted: nothing was published to migrate from, and
+  its rows still stated diagnostics schema revisions 2 and 3, descriptor revisions advancing to 2
+  and an execution-profile schema "revision 2" after every format and schema went back to 1
+  (GitHub #518). Its links are repointed at the pages that own the current facts: the README's two
+  bullets and its documentation table, `docs/README.md`, the book summary,
+  `docs/facade-contracts.md` (serialized admission and load replacement now link to
+  `docs/host-responsibilities.md`) and `docs/host-responsibilities.md`. The product contract moves
+  to revision 27, traceability and editorial only: PC-003, PC-028 and PC-029 ground on the compiler
+  controls, the package validator and the producer-evidence section in place of the retired page,
+  and its fulfilled-contraction section now states the source inspection itself, corrected to the
+  tree (the only `unreachable!` arms in engine source outside tests are three invariant arms in
+  `oce-blocks`; the two the retired page listed in the CXF resolver no longer exist). The
+  content-id pin is renamed for what it is: `tests/fixtures/content_id/restamp.tsv` becomes
+  `pin.tsv` and its owner test `content_id_restamp.rs` becomes `content_id_pin.rs` (the file's
+  `# Owner test:` line moves with the name; all 47 ids are unchanged), and decision 17 of
+  `docs/design/content-id.md` is struck with the ruling. `docs/design/vectors.md` decision 33
+  states the version rule in place of "`0.4.0` in the tree today", an `oce-author` test comment
+  drops "format 2", and `.agents/project-facts.md` lists everything a workspace version bump
+  moves (`Cargo.toml`'s workspace dependency versions, `Cargo.lock`, the README sentence and the
+  blob note's header table were missing). No behaviour, signature, golden or content id changes.
 - **Design note for the canonical content id** (GitHub #471, issue #470).
   `docs/design/content-id.md` fixes, before any code, the one content id that replaces the
   order-bearing `cxf:fnv1a128:` export tag: SHA-256 (via `sha2`) over an `OCECANON` version 1

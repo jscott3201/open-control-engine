@@ -164,7 +164,8 @@ they do not promise new JSON wire codecs or schema-driven runtime validation.
 Every completed frame retains warnings. There is no public no-op-sink execution profile or engine
 write-back route. Load has no external side effect and commit ordering is unchanged. These descriptors add no rollback,
 warn-once, escalation, scheduler, equipment policy or safety guarantee. The separately documented
-[serialized admission and replacement policy](facade-migration.md#bounded-serialized-load-adoption)
+serialized [admission](host-responsibilities.md#ingest-resource-bounds) and
+[replacement](host-responsibilities.md#load-replacement-leaves-no-external-effect) policy
 uses `Import` for byte refusals without adding/reordering stages or changing descriptor bytes.
 
 ## Consumer migration boundary
@@ -175,8 +176,9 @@ catalog policy, diagnostic truncation and authored-target mapping. These are sep
 facade catalog content tag. No future OCE commit is embedded in the artifact, and this change
 advances no downstream source or pin. Coordinated companion removal remains later work.
 
-The [migration record](facade-migration.md#additive-contract-adoption) distinguishes this additive
-contract from the earlier facade contraction. Full local tests, exact public baselines and external
+This additive contract is separate from the earlier facade contraction, which the product contract
+records under [Fulfilled facade contraction](product-contract.md#fulfilled-facade-contraction).
+Full local tests, exact public baselines and external
 compiler fixtures establish bounded implementation evidence; hosted cross-architecture checks and
 actual downstream qualification remain separate evidence.
 
