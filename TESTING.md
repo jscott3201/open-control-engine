@@ -62,7 +62,8 @@ Enumerate the input domain and hit every boundary and degenerate case:
 
 ### 2. Golden tests — checked-in expected outputs, compared bit-exactly
 
-The engine's core contract is **bit-identical determinism** (CDL §7.16). A golden test turns that
+The engine's core contract is **bit-identical determinism** (CDL's model of computation, §7.16 of
+the OpenBuildingControl (OBC) specification). A golden test turns that
 contract into an executable tripwire: a checked-in fixture, a checked-in expected output, and a
 comparison that fails if even one bit differs.
 

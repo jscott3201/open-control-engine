@@ -1001,6 +1001,37 @@ and a gate that accepted any text would restore exactly the false assurance desc
   wording in `docs/design/replay.md`, `docs/design/commissioning.md` and the README's M3 roadmap
   row becomes "the vector format". Nothing is implemented. It is registered in `docs/README.md`
   and the book.
+- **The published standard is named, its clauses are cited beside the OBC sections, and the
+  coverage claim says what the engine does not execute** (GitHub #539, issue #510; owner rulings
+  of 2026-11-09). CDL is published as ANSI/ASHRAE Standard 231-2026, and the README, the
+  architecture page and `docs/cdl-coverage.md` now say so. This project has read the standard's
+  published table of contents, not its text, and claims no conformance to it: every clause number
+  of the standard in the documentation comes from that table, and what the documentation says a
+  section says is quoted from the public OpenBuildingControl (OBC) specification. Where a page
+  cited "CDL §7.17" for the metadata seam it now cites OBC §7.17 beside clause 5.13 of the
+  standard, and says the engine applies that section's rule (none of the metadata affects the
+  computation of a control signal) to point lists, trends, tags and semantic records. The
+  commissioning verifier follows OBC §12; the standard's table of contents lists no verification
+  or conformance clause. The architecture page's seam heading and the diagram's label drop the
+  bare section number (the heading's anchor changes; the three design notes that link to it
+  follow). The README's "CDL §7.1 resolver" loses a number that was never CDL's, and "CDL §7.7.2"
+  and "CDL §7.16" on the architecture and facade-contracts pages become OBC citations.
+  `docs/cdl-coverage.md` gains two sections. The first records the clauses, that the standard's
+  public page (`data.ashrae.org/standard231`, read 2026-11-09) bases its normative elementary
+  blocks on Modelica Buildings Library v12.1.0, that the file list under
+  `Buildings/Controls/OBC/CDL` is identical at tag `v12.1.0` and at the vendored pin `a131864`
+  (checked 2026-11-09; contents not compared), and that the standard's CXF namespace is
+  `http://data.ashrae.org/S231#` on the evidence of OBC §11.3 and modelica-json's
+  `CXF-Core.jsonld`, while the `oce-cxf` exporter and the `oce-author` emitter still bind
+  `http://data.ashrae.org/S231P#` until issue #527. The second states that the engine executes
+  elementary and composite blocks only: an extension block is implemented by an FMU (OBC §7.13
+  and §8.7; clauses 5.9 and 6.7 of the standard), FMI is out of scope before 1.0, and an instance
+  of an unregistered class with no children is refused with `class-not-found` (read from the
+  resolver; no fixture exercises an extension block, and a dedicated refusal code with fixtures
+  is issue #537). Documentation only: no behaviour, signature, fixture or golden changes. Left
+  for issue #527: `docs/cxf-composite-subset.md` (an engine test reads it), the bare §7.10,
+  §7.4.1 and §8.2 citations on other pages, and the citations in crate rustdoc, `Cargo.toml` and
+  `AGENTS.md`.
 
 ## 0.4.0
 

@@ -423,7 +423,12 @@ of the `S231:` terms the importer reads — is the same property whether it is k
 (`S231:min`), by its full IRI in the document's own S231 namespace, by another prefix bound to
 that namespace, or by a declared term. The own namespace is the document's `S231` binding; a
 document that binds no `S231` is read in the S231P namespace (`http://data.ashrae.org/S231P#`), the
-one the exporter binds. A modeled term spelled in any other known S231 namespace — S231P, the
+one the exporter binds. (`S231P` is the literal the exporter still emits: on the public evidence
+the published standard, ANSI/ASHRAE 231-2026, uses `http://data.ashrae.org/S231#`, and GitHub
+issue #527 switches the exporter to it; see
+[The standard this page measures against](cdl-coverage.md#the-standard-this-page-measures-against)
+on the CDL coverage page.)
+A modeled term spelled in any other known S231 namespace — S231P, the
 `http://data.ashrae.org/S231#` namespace upstream modelica-json emits, or the `https:` spelling of
 either — is refused as `non-subset-construct`, in both directions, and the message names the
 namespace the document reads modeled keys in. A node that writes one property in two spellings

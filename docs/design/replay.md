@@ -29,7 +29,8 @@ with "no hold-last, zero/false seed or stored-sample fill-in", and
 nor qualifies a host's substitution policy". Replay is that host policy applied offline, made
 explicit and written down frame by frame. It adds nothing to `oce-api`, it runs no thread, async
 runtime, clock, file system walk or network listener, and it never touches
-[the §7.17 seam](../architecture.md#the-organising-idea-the-cdl-717-non-computational-seam). Reading
+[the metadata seam](../architecture.md#the-organising-idea-the-non-computational-metadata-seam)
+(§7.17 of the OpenBuildingControl (OBC) specification; ANSI/ASHRAE 231-2026 §5.13). Reading
 a CSV file from a path is the caller's job; the CSV adapter takes a byte reader.
 
 ## Frame sources
@@ -84,8 +85,8 @@ Rows must have nondecreasing time; a decrease is a typed `SourceError::TimeRegre
 engine sees anything. A row whose time is missing is refused, never substituted. Equal times follow
 the `DuplicateTime` policy: `Refuse` by default, `Allow` as an explicit opt-in. The contract says an
 equal timestamp "is neither a read nor an idempotent retry": it is a legal HostTick transition with
-zero elapsed time, and CDL §12 verification data can carry equal-time samples. Under `Allow` each
-equal-time row is its own frame and its own trace row; replay never collapses rows.
+zero elapsed time, and OBC §12 verification data can carry equal-time samples. Under
+`Allow` each equal-time row is its own frame and its own trace row; replay never collapses rows.
 
 **Bounds.** Every adapter is bounded at construction or while reading, with a typed error and never
 a panic: rows, columns, bytes, cell length and step-list length (decision 8; numbers, decision 19).
@@ -400,7 +401,7 @@ multiply, never accumulated; `Recorded` passes sample times through unchanged; `
 policy, `Refuse` by default and `Allow` as an explicit opt-in, with each equal-time frame its own
 trace row; a reference on a different time base is resampled by the consumer, never by replay.
 Rejected: accumulating ticks (drift); collapsing equal times (first-wins or last-wins); a fixed
-refusal (CDL §12 data carries equal-time samples). Why: an equal-time resubmission is a real, legal
+refusal (OBC §12 data carries equal-time samples). Why: an equal-time resubmission is a real, legal
 HostTick transition, so it is the caller's decision, recorded. (`Allow` and consumer-side
 resampling were added by the orchestrator from the #436 research.)
 

@@ -317,7 +317,8 @@ reuses that encoding. The decoder checks four things:
 
 The non-finite input policy is host configuration, not blob content.
 
-`SemanticPoint` payloads are non-computational under CDL §7.17 (the seam in
+`SemanticPoint` payloads are non-computational under the metadata section of the
+OpenBuildingControl (OBC) specification (OBC §7.17; ANSI/ASHRAE 231-2026 §5.13; the seam in
 [architecture](../architecture.md)). The decoder bounds each one by its length, skips it, and never
 reads, stores or forwards it. No `SemanticPoint` type exists yet, so the v1 encoder writes empty
 payloads. A test in the style of `crates/oce-api/tests/frame_purity.rs` proves the seam (see the
@@ -367,7 +368,7 @@ Additive or skippable sections are not allowed in v1. A decoder that skips what 
 understand would execute a model differently from what its encoder meant, for example by
 ignoring a future override section. In a format that commands equipment, every byte that can
 affect computation must be understood or refused. The only skipped bytes are `SemanticPoint`
-payloads, and §7.17 makes those non-computational.
+payloads, and OBC §7.17 makes those non-computational.
 
 **7. Integrity.** The trailer is CRC-32C, the Castagnoli polynomial (reflected `0x82F63B78`,
 initial value and final XOR `0xFFFFFFFF`; the check value of `"123456789"` is `0xE3069283`). It
@@ -639,8 +640,8 @@ What #400, #401 and #403 must prove:
   out-of-range ordinal.
 - **One frame driver.** For every fixture's frame sequence, the facade's `execute_frame` and the
   core driver produce identical outputs, refusals and state (decision 11).
-- **§7.17 seam.** A `frame_purity`-style test fills and mutates every `SemanticPoint` payload byte
-  and requires an identical decoded executable and identical outputs.
+- **Metadata seam.** A `frame_purity`-style test fills and mutates every `SemanticPoint` payload
+  byte and requires an identical decoded executable and identical outputs.
 
 ## Review rulings
 

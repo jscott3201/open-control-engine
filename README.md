@@ -1,8 +1,8 @@
 # Open Control Engine
 
 **Open Control Engine runs building control sequences written in the OBC / LBL
-[Control Description Language (CDL)](https://obc.lbl.gov/specification/cdl.html), as a Rust
-library you embed in your own application.**
+[Control Description Language (CDL)](https://obc.lbl.gov/specification/cdl.html), published as
+ANSI/ASHRAE Standard 231-2026, as a Rust library you embed in your own application.**
 
 [![License: Apache-2.0 OR MIT](https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg)](#license)
 [![Rust 1.97.0 MSRV · edition 2024](https://img.shields.io/badge/rust-1.97.0%20MSRV%20%C2%B7%20edition%202024-orange.svg)](docs/architecture.md#embeddability-posture)
@@ -17,8 +17,10 @@ every pull request.
 
 It is a library and nothing else: no `main`, no daemon, no network listener, no async runtime, and
 no database. Everything non-computational — points, trends, tags, durability — sits behind a
-storage port your application implements. That split is not a design preference; it is CDL §7.17,
-which states that such metadata does not affect the computation of a control signal.
+storage port your application implements. That split is not a design preference. The
+OpenBuildingControl (OBC) specification's metadata section (OBC §7.17; clause 5.13 in the table of
+contents of ANSI/ASHRAE Standard 231-2026) says of that metadata that none of it affects the
+computation of a control signal, and the engine applies that rule to everything non-computational.
 
 Its four execution-core crates build `#![no_std]` on `core` and `alloc` alone, and the work in
 progress lets a verified sequence leave a `std` host as a compiled-schedule blob that a bare-metal
@@ -124,9 +126,9 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
 
 ## What it does today
 
-- Imports CXF via the CDL §7.1 resolver, and **exports** back to CXF under a round-trip contract
-  where re-importing the emitted bytes renders bit-identically — Reals compared by IEEE-754 bits,
-  not by epsilon. See [CXF round trip](docs/cxf-round-trip.md).
+- Imports CXF through the `oce-cxf` resolver, and **exports** back to CXF under a round-trip
+  contract where re-importing the emitted bytes renders bit-identically — Reals compared by
+  IEEE-754 bits, not by epsilon. See [CXF round trip](docs/cxf-round-trip.md).
 - Executes a registry of **133 CDL elementary block classes** plus 3 reserved internal lowering
   classes, enumerable at runtime via `oce_api::catalog()` with per-class ports, parameter rules,
   and honest parameter defaults. See [CDL coverage](docs/cdl-coverage.md).
@@ -173,6 +175,9 @@ Stating this plainly is more useful than a feature list.
 
 - **It does not parse or flatten Modelica `.mo` sources.** It executes the block graph a CXF
   document hands it; the `oce-cxf` resolver lowers that document and nothing elaborates it further.
+- **It does not execute CDL extension blocks.** It executes elementary and composite blocks. An
+  extension block is implemented by a Functional Mockup Unit, and FMI is out of scope before 1.0.
+  [What the engine does not execute](docs/cdl-coverage.md#what-the-engine-does-not-execute).
 - **It is not general ASHRAE G36 support.** The supported set is explicitly
   *selected-explicit-cxf-variants-supported*: pre-flattened CXF at specific parameterizations, not
   other G36 composites. [What "supported" means](docs/cdl-coverage.md).
@@ -276,7 +281,8 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 
 The three one-page design passes M3 waits on are written: the
 [historical replay API](docs/design/replay.md) (built as `crates/leverage/oce-replay`), the
-[CDL §12 commissioning verifier](docs/design/commissioning.md) and
+[commissioning verifier](docs/design/commissioning.md) (it follows OBC §12, Verification; the
+standard's table of contents lists no verification clause) and
 [`oce-diff`](docs/design/diff.md), beside the [M2 authoring layer](docs/design/authoring-layer.md).
 M2's engine prerequisite is in: `oce_api::class_ports` names every port of a configured block, and
 `oce_api::class_metadata` gives each class a description and each parameter a settable flag
@@ -308,10 +314,12 @@ anything to a physical output.
 
 ## Architecture
 
-CDL §7.17 states that point lists, trends, display units, tags, and Brick / Haystack / ASHRAE 223P
-semantics do not affect the computation of a control signal. That one rule is the seam the whole
-system is built around: an execution core that sees only blocks, typed connections, and values, and
-a storage port for everything else, which the host reaches and the engine never does.
+OBC §7.17 (clause 5.13 in the table of contents of ANSI/ASHRAE Standard 231-2026) says of CDL's
+metadata that none of it affects the computation of a control signal. The engine applies that rule
+to point lists, trends, display units, tags, and Brick / Haystack / ASHRAE 223P semantics. That one
+rule is the seam the whole system is built around: an execution core that sees only blocks, typed
+connections, and values, and a storage port for everything else, which the host reaches and the
+engine never does.
 
 ![The execution core sees only blocks, connections, and values and has no database; everything non-computational sits behind the oce-store port, which only the host reaches](docs/diagrams/architecture-seam.svg)
 
@@ -367,7 +375,7 @@ repository is the newer copy.
 
 | Page | For |
 | --- | --- |
-| [Architecture](docs/architecture.md) | Layers, the §7.17 seam, the crate map, platform and MSRV |
+| [Architecture](docs/architecture.md) | Layers, the metadata seam (OBC §7.17; ANSI/ASHRAE 231-2026 §5.13), the crate map, platform and MSRV |
 | [Execution profile](docs/execution-profile.md) | HostTick semantics and the `CDL.Logical.Pre` conformance boundary |
 | [Verification and evidence](docs/verification-evidence.md) | What has been proven, and what has not |
 | [CDL coverage](docs/cdl-coverage.md) | Which classes and sequences run, and what "supported" means |

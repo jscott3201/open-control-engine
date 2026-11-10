@@ -7,17 +7,19 @@ crates owns, and what this engine will never do for you.
 The [product contract](product-contract.md) owns the aggregate requirement/evidence map and delegates
 domain semantics without turning future acceptance outcomes into current behavior.
 
-## The organising idea: the CDL §7.17 non-computational seam
+## The organising idea: the non-computational metadata seam
 
-CDL §7.17 states that point lists, trends, display units, tags, and all Brick / Haystack / ASHRAE
-223P semantics **do not affect the computation of a control signal**. That is the cleanest seam
-available in this problem domain, and the engine is built along it rather than around it.
+The OpenBuildingControl (OBC) specification's metadata section (OBC §7.17; clause 5.13 in the table
+of contents of ANSI/ASHRAE Standard 231-2026) says of that metadata that **none of it affects the
+computation of a control signal**. The engine applies that rule to point lists, trends, display
+units, tags, and all Brick / Haystack / ASHRAE 223P semantics. That is the cleanest seam available
+in this problem domain, and the engine is built along it rather than around it.
 
 ![Architecture diagram. A host application drives the engine through the oce-api facade, which is
 pure: plain data in, plain data out. Below it, a deterministic execution core labelled Group A
 contains oce-model, oce-expr, oce-blocks, oce-validate, oce-graph, oce-cxf, oce-semantics and
 oce-diag; it sees only blocks, connections and values, evaluates a frozen Kahn schedule over flat
-arrays, and has no database. A line marked "CDL §7.17 seam" separates it from the storage side,
+arrays, and has no database. A line marked "metadata seam" separates it from the storage side,
 where the oce-store port publishes the ModelStore, PointStore and SemanticStore traits, served
 either by its in-memory MemStore (the default mem feature) or by an app-side adapter over a graph
 DB, SQL or time-series backend. Only the host reaches the storage side; the facade never does. The library
@@ -218,7 +220,7 @@ crate is registry closure for the facade, not an independently supported host AP
 | Crate | Responsibility |
 | --- | --- |
 | `oce-model` | Pure value/connector/instance/connection types; the `Value` enum (Real/Integer/Boolean/String/Enum) and the flattened model graph — the shared executable truth. Also the plain-data resolved-model DTOs (`resolved_model`) that `oce-api` returns from a load and `oce-store` re-exports, so neither of those crates depends on the other. |
-| `oce-expr` | The CDL §7.7.2 binding-expression parser and evaluator (closed-world, pure). Bounded on structure: input deeper than `MAX_NESTING_DEPTH` (64) or wider than `MAX_EXPR_NODES` (4096) is a typed error, not a stack overflow (`crates/oce-expr/src/lib.rs`). Depth counts real nesting only; a left-associative chain such as `a+b+…` is bounded by the node cap and evaluated iteratively. |
+| `oce-expr` | The binding-expression parser and evaluator for parameter assignments (OBC §7.7.2; closed-world, pure). Bounded on structure: input deeper than `MAX_NESTING_DEPTH` (64) or wider than `MAX_EXPR_NODES` (4096) is a typed error, not a stack overflow (`crates/oce-expr/src/lib.rs`). Depth counts real nesting only; a left-associative chain such as `a+b+…` is bounded by the node cap and evaluated iteratively. |
 | `oce-blocks` | The `Block` trait and the native CDL elementary-block library, publicly enumerable at runtime via `catalog()` (`crates/oce-blocks/src/catalog.rs`; `std` builds only) with ports, parameter rules, honest parameter defaults, the class signature hash and the target-bound flag per class. |
 | `oce-validate` | Loader conformance: subset rejection, single-assignment, type and attribute unification, parameter rules. |
 | `oce-graph` | The deterministic scheduler and executor: direct-feedthrough DAG, algebraic-loop rejection, its own Kahn topological sort, the tick loop, and the slot-indexed HostTick v1 frame driver around it (`oce_graph::frame`) that the facade and the blob entry both call. Also the `OCEB` [compiled-schedule blob](compiled-schedule-blob.md) codec (`oce_graph::blob`): the decoder and the execution entry (`blob::Executable`) a `no_std + alloc` target runs, and the byte writer the facade encodes with. |
