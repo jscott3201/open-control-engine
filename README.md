@@ -210,7 +210,8 @@ bit for bit on x86_64, arm64 and `wasm32-wasip1`. v0.3.0 (M1a) made the engine p
 per-PR gate to native x86_64 and arm64 cells under one required `CI OK` status. `development`
 carries the next version, 0.5.0, which is not released: every format and schema stays at revision
 1 until 1.0.0 and changes in place, so the engine version is what separates one layout from
-another. Next come M2 (the
+another, and a compiled blob and a state snapshot each carry it and are accepted only by the
+version that wrote them. Next come M2 (the
 authoring layer) and M3 (the verification product), in parallel; M3's first engine change, the
 facade's slot-indexed execute entry, is in, and so is the first leverage crate built on it:
 `oce-replay`, which drives the engine frame by frame from recorded or scripted inputs (columnar

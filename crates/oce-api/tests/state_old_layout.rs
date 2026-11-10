@@ -11,9 +11,9 @@
 //!   version. Captured on `development` at commit `4c89577`, the parent of that change, with the
 //!   recipe below. No release wrote this layout.
 //! - `fixtures/state_revision_two.hex`: the same state as releases 0.2.0 to 0.4.0 wrote it, which
-//!   numbered their snapshots format revision 2 and execution-state ABI revision 2. Captured with
-//!   the same recipe on the build before the format reset (state codec of release 0.4.0), so it
-//!   refuses by its format field first.
+//!   numbered their snapshots format revision 2 and execution-state ABI revision 2, so it refuses
+//!   by its format field first. Added by GitHub #518; the recipe below, run on commit `b5d4f4b`
+//!   (the parent of the format reset, workspace version 0.4.0), reproduces it byte for byte.
 //! - `fixtures/state_legacy.hex`: the empty-authored-model vector (an in-memory model with no
 //!   blocks, id `urn:test:empty-model`, before any frame) of a layout that predates the first
 //!   release with a snapshot API. Its header carries revision 1 twice.
@@ -23,9 +23,9 @@
 //! accept two complete frames, at model time 0.0 and then 1.0, each with `urn:frame:a` = 0.5 and
 //! `urn:frame:b` = 2.0; take `state_snapshot()` and write its bytes as one line of lowercase hex.
 //! The state is then model time 1.0, `add.y` and `delay.y` 2.5 and five `UnitDelay` words. To
-//! regenerate a fixture, run that recipe on the commit named for it.
-//! `populated_fixtures_hold_one_state_under_two_numberings` checks that the two captures are the
-//! same state.
+//! regenerate a fixture, run that recipe on the commit named for it; both were regenerated that
+//! way when the recipe was recorded. `populated_fixtures_hold_one_state_under_two_numberings`
+//! checks, on every run, that the two captures are the same state.
 
 #[path = "support/snapshot_bytes.rs"]
 mod snapshot_bytes;
