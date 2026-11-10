@@ -85,7 +85,7 @@ fn shared_boundary_continuation_preserves_distinct_source_drives() {
         ]);
     }
     let document = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" }, "@graph": graph
+        "@context": { "S231": "http://data.ashrae.org/S231#" }, "@graph": graph
     });
     let diagnostics = import(&document).expect_err("two drives must reject");
     assert!(diagnostics.iter().any(|diagnostic| {
@@ -98,7 +98,7 @@ fn shared_boundary_continuation_preserves_distinct_source_drives() {
 fn repeated_nested_continuation_remains_a_deterministic_double_drive() {
     let model = "http://example.org#repeated-boundary";
     let document = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             {
                 "@id": model, "@type": "S231:Block",
@@ -174,7 +174,7 @@ fn repeated_nested_continuation_remains_a_deterministic_double_drive() {
 fn accepted_nested_fanout_follows_target_graph_order() {
     let model = "http://example.org#ordered-boundary";
     let document = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             {
                 "@id": model, "@type": "S231:Block",

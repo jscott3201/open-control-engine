@@ -1,5 +1,5 @@
 {
-  "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+  "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
   "@graph": [
     { "@id": "http://example.org#M", "@type": "S231:Block",
       "S231:hasParameter": { "@id": "http://example.org#M.p" },

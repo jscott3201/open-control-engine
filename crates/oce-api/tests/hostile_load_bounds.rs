@@ -36,7 +36,7 @@ fn head(root_children: &[String]) -> String {
 
 fn document(nodes: &[String]) -> Vec<u8> {
     format!(
-        r#"{{ "@context": {{ "S231": "http://data.ashrae.org/S231P#" }}, "@graph": [ {} ] }}"#,
+        r#"{{ "@context": {{ "S231": "http://data.ashrae.org/S231#" }}, "@graph": [ {} ] }}"#,
         nodes.join(",\n")
     )
     .into_bytes()

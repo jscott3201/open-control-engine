@@ -6,7 +6,7 @@ use serde_json::{Value as JsonValue, json};
 
 fn document() -> JsonValue {
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
               "S231:containsBlock": [
@@ -139,7 +139,7 @@ fn array_connector_typed_as_parameter_still_rejects() {
 #[test]
 fn absolute_iri_is_array_marker_on_a_connector_rejects() {
     let mut doc = document();
-    node_mut(&mut doc, "M.c2.u")["http://data.ashrae.org/S231P#isArray"] = json!(true);
+    node_mut(&mut doc, "M.c2.u")["http://data.ashrae.org/S231#isArray"] = json!(true);
     assert_eq!(
         reject(&doc),
         vec![array_connector_rejection("http://example.org#M.c2.u")]
@@ -149,7 +149,7 @@ fn absolute_iri_is_array_marker_on_a_connector_rejects() {
 #[test]
 fn absolute_iri_size_of_dimensions_marker_on_an_instance_rejects() {
     let mut doc = document();
-    node_mut(&mut doc, "M.c2")["http://data.ashrae.org/S231P#sizeOfDimensions"] = json!("(2)");
+    node_mut(&mut doc, "M.c2")["http://data.ashrae.org/S231#sizeOfDimensions"] = json!("(2)");
     assert_eq!(
         reject(&doc),
         vec![tagged(

@@ -17,7 +17,7 @@ pub(crate) fn attr_input_document(kind: &str, class_path: &str, attrs: JsonValue
     let output_type = format!("S231:{kind}Output");
     let data_type = format!("S231:{kind}");
     let mut document = serde_json::json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             {
                 "@id": "http://example.org#AttrInput",

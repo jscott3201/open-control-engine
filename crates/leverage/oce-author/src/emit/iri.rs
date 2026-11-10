@@ -21,7 +21,7 @@ pub const CLASS_BASE: &str = "http://example.org#Buildings.Controls.OBC.";
 pub(crate) const MODELICA_PACKAGE: &str = "Buildings.Controls.OBC.";
 
 /// The `S231` context IRI.
-pub(crate) const S231_IRI: &str = "http://data.ashrae.org/S231P#";
+pub(crate) const S231_IRI: &str = "http://data.ashrae.org/S231#";
 
 /// The XML Schema double datatype IRI a Real literal is typed with.
 pub(crate) const XSD_DOUBLE: &str = "http://www.w3.org/2001/XMLSchema#double";

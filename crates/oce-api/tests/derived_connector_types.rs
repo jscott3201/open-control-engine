@@ -34,7 +34,7 @@ fn equal_doc(u1_type: &JsonValue, boundary1: &JsonValue) -> JsonValue {
         b1[k] = v.clone();
     }
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": [
             {
                 "@id": format!("{EX}M"), "@type": "S231:Block",

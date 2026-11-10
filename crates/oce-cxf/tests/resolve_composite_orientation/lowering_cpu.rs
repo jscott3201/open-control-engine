@@ -60,7 +60,7 @@ fn flat_fanout(shape: Shape, padding: usize, fanout: usize) -> (Vec<u8>, String)
     };
     let real = r#""S231:isOfDataType":{"@id":"S231:Real"}"#;
     let mut out = String::with_capacity(8 * padding + fanout * (MODEL.len() + 12) + 1024);
-    out.push_str(r#"{"@context":{"S231":"http://data.ashrae.org/S231P#"},"@graph":["#);
+    out.push_str(r#"{"@context":{"S231":"http://data.ashrae.org/S231#"},"@graph":["#);
     out.push_str(&format!(
         r#"{{"@id":"{MODEL}","@type":"S231:Block","S231:containsBlock":{{"@id":"{leaf}"}},"S231:hasInput":{{"@id":"{MODEL}.ub"}},"S231:hasOutput":{{"@id":"{MODEL}.yb"}}}},"#
     ));

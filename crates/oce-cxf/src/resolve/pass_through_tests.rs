@@ -12,7 +12,7 @@ use crate::dto::CxfDocument;
 /// when the pass-through edge is seen.
 fn document(output: &str) -> CxfDocument {
     serde_json::from_value(json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             { "@id": "urn:top:u", "@type": "S231:StringInput",
               "S231:isOfDataType": { "@id": "S231:String" } },

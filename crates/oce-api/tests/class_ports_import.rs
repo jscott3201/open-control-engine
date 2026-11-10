@@ -114,7 +114,7 @@ fn document(
         ));
     }
     format!(
-        "{{ \"@context\": {{ \"S231\": \"http://data.ashrae.org/S231P#\" }}, \"@graph\": [\
+        "{{ \"@context\": {{ \"S231\": \"http://data.ashrae.org/S231#\" }}, \"@graph\": [\
          {{ \"@id\": \"{BASE}\", \"@type\": \"S231:Block\", \"S231:containsBlock\": [{}] }}, \
          {{ \"@id\": \"{BASE}.blk\", \
             \"@type\": \"http://example.org#Buildings.Controls.OBC.{class}\", \

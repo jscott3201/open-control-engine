@@ -14,7 +14,7 @@ use serde_json::{Value, json};
 /// A minimal valid single-composite model: `c1 = Constant(k=1.0)` whose output drives
 /// `c2 = MultiplyByParameter(k=2.0)`'s input. No boundary ports. Resolves with zero diagnostics.
 const BASE: &str = r#"{
-  "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+  "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
   "@graph": [
     { "@id": "http://example.org#M", "@type": "S231:Block",
       "S231:containsBlock": [ { "@id": "http://example.org#M.c1" }, { "@id": "http://example.org#M.c2" } ] },
@@ -454,7 +454,7 @@ fn garbage_double_literal_is_grounding_failure() {
 
 #[test]
 fn empty_graph_is_malformed_document() {
-    let doc = json!({ "@context": { "S231": "http://data.ashrae.org/S231P#" }, "@graph": [] });
+    let doc = json!({ "@context": { "S231": "http://data.ashrae.org/S231#" }, "@graph": [] });
     assert_error_code(&doc, DiagCode::MalformedDocument);
 }
 
@@ -650,7 +650,7 @@ fn structural_diagnostics_sort_by_ascending_connector_id() {
             "S231:isOfDataType": { "@id": "S231:Real" }
         }));
     }
-    let doc = json!({ "@context": { "S231": "http://data.ashrae.org/S231P#" }, "@graph": graph });
+    let doc = json!({ "@context": { "S231": "http://data.ashrae.org/S231#" }, "@graph": graph });
     let CxfError::Validation(diags) = import(&doc).unwrap_err() else {
         panic!("expected Validation");
     };
@@ -825,7 +825,7 @@ fn modelica_key_ban_matches_bare_and_iri_prefixed_forms() {
     assert_error_code(&doc, DiagCode::NonSubsetConstruct);
 
     let mut doc = base();
-    node_mut(&mut doc, ".c1")["http://data.ashrae.org/S231P#redeclare"] = json!({});
+    node_mut(&mut doc, ".c1")["http://data.ashrae.org/S231#redeclare"] = json!({});
     assert_error_code(&doc, DiagCode::NonSubsetConstruct);
 }
 

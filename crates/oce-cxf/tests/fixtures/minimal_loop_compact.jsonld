@@ -1,7 +1,7 @@
 {
   "comment": "Compact-spelling twin of minimal_loop.jsonld: the same graph written the way real emitters write — CURIE subjects and references, compact @type, compact isOfDataType. Construction requirement: every prefix binding expands to a byte-identical IRI to the original's (ex -> http://example.org# WITH the trailing #), so import must produce a bit-identical ModelGraph render to minimal_loop.jsonld. Consumed by resolve_context_expansion.rs and oce-api's context_expansion_identity.rs.",
   "@context": {
-    "S231": "http://data.ashrae.org/S231P#",
+    "S231": "http://data.ashrae.org/S231#",
     "ex": "http://example.org#"
   },
   "@graph": [

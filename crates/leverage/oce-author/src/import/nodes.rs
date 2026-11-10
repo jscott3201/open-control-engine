@@ -11,7 +11,7 @@ use crate::model::SignalType;
 use super::error::{ImportError, ImportErrorKind as Kind, SourceForm};
 
 /// The `S231` context IRI a document must bind.
-pub(super) const S231_IRI: &str = "http://data.ashrae.org/S231P#";
+pub(super) const S231_IRI: &str = "http://data.ashrae.org/S231#";
 
 /// The package every block class and named type sits under, after the class IRI's `#`.
 pub(super) const OBC_PACKAGE: &str = "Buildings.Controls.OBC.";

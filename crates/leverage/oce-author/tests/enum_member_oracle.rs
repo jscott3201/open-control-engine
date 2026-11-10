@@ -17,7 +17,7 @@ use oce_author::{Block, Literal, ParamValue, validate_author_side};
 fn pid_document(member: &str) -> Vec<u8> {
     let base = "http://example.org#";
     serde_json::json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             {
                 "@id": format!("{base}S"), "@type": "S231:Block",

@@ -405,7 +405,7 @@ fn discriminator_document(outputs: [&str; 2], graph_order: [&str; 2]) -> Vec<u8>
     };
     format!(
         r##"{{
-          "@context": {{ "S231": "http://data.ashrae.org/S231P#" }},
+          "@context": {{ "S231": "http://data.ashrae.org/S231#" }},
           "@graph": [
             {{ "@id": "{root}", "@type": "S231:Block",
               "S231:containsBlock": [

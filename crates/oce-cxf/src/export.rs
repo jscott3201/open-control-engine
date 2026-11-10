@@ -104,7 +104,7 @@ mod single_assignment;
 pub(crate) const EXPORT_ROOT_IRI: &str = "urn:open-control:cxf-export:root";
 
 /// The `S231` prefix binding emitted in `@context` (matches the import fixtures).
-pub(crate) const S231_CONTEXT_IRI: &str = "http://data.ashrae.org/S231P#";
+pub(crate) const S231_CONTEXT_IRI: &str = "http://data.ashrae.org/S231#";
 
 /// Base IRI for emitted instance `@type`s: `<base>Buildings.Controls.OBC.<class_path>` — the
 /// inverse of [`bridge::class_path_of`], using the same base the import fixtures use. The

@@ -308,7 +308,7 @@ fn guarded_child_doc(param_order: [&str; 2]) -> Json {
         .map(|name| json!({ "@id": format!("http://example.org#R.{name}") }))
         .collect();
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": [
             { "@id": "http://example.org#R", "@type": "S231:Block", "S231:label": "R",
               "S231:hasParameter": refs,
@@ -368,7 +368,7 @@ fn shadowed_forward_reference_doc(param_order: [&str; 2]) -> Json {
         .map(|name| json!({ "@id": format!("http://example.org#M.sub.{name}") }))
         .collect();
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
               "S231:hasParameter": { "@id": "http://example.org#M.k" },
@@ -418,7 +418,7 @@ fn own_declaration_shadows_enclosing_binding_for_sibling_references_in_both_orde
 #[test]
 fn unknown_and_cycle_refused_identifiers_stay_loud_grounding_failures() {
     let doc = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
               "S231:hasParameter": [
@@ -502,7 +502,7 @@ fn sibling_cycle_and_self_reference_refuse_through_the_corpus_fixtures() {
 #[test]
 fn cycle_refused_own_name_still_masks_the_enclosing_binding() {
     let doc = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
               "S231:hasParameter": { "@id": "http://example.org#M.a" },
@@ -565,7 +565,7 @@ fn builtin_call_head_beside_a_same_named_sibling_grounds_clean_in_both_orders() 
             .map(|name| json!({ "@id": format!("http://example.org#M.{name}") }))
             .collect();
         let doc = json!({
-            "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+            "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
             "@graph": [
                 { "@id": "http://example.org#M", "@type": "S231:Block",
                   "S231:hasParameter": refs,
@@ -601,7 +601,7 @@ fn parameter_reads_sibling_constant_under_both_orders() {
             .map(|name| json!({ "@id": format!("http://example.org#M.{name}") }))
             .collect();
         let doc = json!({
-            "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+            "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
             "@graph": [
                 { "@id": "http://example.org#M", "@type": "S231:Block",
                   "S231:hasParameter": refs,
@@ -641,7 +641,7 @@ fn dims_consumers_of_the_composite_scope_refuse_identically_under_both_orders() 
             .map(|name| json!({ "@id": format!("http://example.org#M.sub.{name}") }))
             .collect();
         let doc = json!({
-            "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+            "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
             "@graph": [
                 { "@id": "http://example.org#M", "@type": "S231:Block",
                   "S231:hasParameter": { "@id": "http://example.org#M.n" },

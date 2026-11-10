@@ -76,7 +76,7 @@ pub(super) fn derived_output_document(node_bearing: bool, listed_output: bool) -
         }));
     }
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph
     })
 }
@@ -164,7 +164,7 @@ fn sidecar_order_document() -> Value {
         }),
     ]);
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph
     })
 }

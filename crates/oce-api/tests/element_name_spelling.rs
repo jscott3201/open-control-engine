@@ -61,7 +61,7 @@ fn document(class: &str, params: &[(&str, f64)], inputs: &[&str], outputs: &[&st
     }
     let list = |names: Vec<String>| names.join(", ");
     format!(
-        "{{ \"@context\": {{ \"S231\": \"http://data.ashrae.org/S231P#\" }}, \"@graph\": [\
+        "{{ \"@context\": {{ \"S231\": \"http://data.ashrae.org/S231#\" }}, \"@graph\": [\
          {{ \"@id\": \"{BASE}\", \"@type\": \"S231:Block\", \"S231:containsBlock\": [{}] }}, \
          {{ \"@id\": \"{BASE}.blk\", \
             \"@type\": \"http://example.org#Buildings.Controls.OBC.{class}\", \

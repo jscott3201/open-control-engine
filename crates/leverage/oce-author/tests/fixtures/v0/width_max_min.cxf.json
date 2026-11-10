@@ -1,6 +1,6 @@
 {
   "@context": {
-    "S231": "http://data.ashrae.org/S231P#",
+    "S231": "http://data.ashrae.org/S231#",
     "base": "urn:mechanical-muse:width_max_min#"
   },
   "@graph": [

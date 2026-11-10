@@ -1,5 +1,5 @@
 {
-  "@context": {"S231": "http://data.ashrae.org/S231P#"},
+  "@context": {"S231": "http://data.ashrae.org/S231#"},
   "@graph": [
     {"@id":"urn:pre:model","@type":"S231:Block","S231:containsBlock":[{"@id":"urn:pre:memory"},{"@id":"urn:pre:not"}],"S231:hasOutput":[{"@id":"urn:pre:z"},{"@id":"urn:pre:a"}]},
     {"@id":"urn:pre:memory","@type":"CDL.Logical.Pre","S231:hasInput":{"@id":"urn:pre:memory.u"},"S231:hasOutput":{"@id":"urn:pre:memory.y"}},

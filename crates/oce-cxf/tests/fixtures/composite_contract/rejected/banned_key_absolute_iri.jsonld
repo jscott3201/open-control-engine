@@ -1,5 +1,5 @@
 {
-  "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+  "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
   "@graph": [
     { "@id": "http://example.org#M", "@type": "S231:Block",
       "S231:containsBlock": [ { "@id": "http://example.org#M.c1" }, { "@id": "http://example.org#M.c2" } ] },
@@ -16,7 +16,7 @@
 
     { "@id": "http://example.org#M.c2",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
-      "http://data.ashrae.org/S231P#moSource": "within Some.Package;",
+      "http://data.ashrae.org/S231#moSource": "within Some.Package;",
       "S231:hasParameter": { "@id": "http://example.org#M.c2.k" },
       "S231:hasInput": { "@id": "http://example.org#M.c2.u" },
       "S231:hasOutput": { "@id": "http://example.org#M.c2.y2" } },

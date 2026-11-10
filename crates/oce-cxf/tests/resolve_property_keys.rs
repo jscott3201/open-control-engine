@@ -17,7 +17,7 @@ use oce_model::ModelGraph;
 use serde_json::{Map, Value as Json, json};
 
 const CONNECTOR_ATTRS: &str = include_str!("fixtures/connector_attrs.jsonld");
-const S231P: &str = "http://data.ashrae.org/S231P#";
+const S231P: &str = "http://data.ashrae.org/S231#";
 const SOURCE_PORT: &str = "http://example.org#A.con.y";
 const BOUNDARY_OUTPUT: &str = "http://example.org#A.yOut";
 const DOUBLE: &str = "http://www.w3.org/2001/XMLSchema#double";
@@ -523,13 +523,10 @@ fn unrelated_full_iri_properties_still_pass_through_losslessly() {
         ("http://example.org#min", json!(-1000.0)),
         ("http://example.org/vocab/unit", json!("degF")),
         (
-            concat!("http://data.ashrae.org/S231P#", "documentation"),
+            concat!("http://data.ashrae.org/S231#", "documentation"),
             json!("doc"),
         ),
-        (
-            concat!("http://data.ashrae.org/S231P#", "minimum"),
-            json!(1),
-        ),
+        (concat!("http://data.ashrae.org/S231#", "minimum"), json!(1)),
         ("qudt:min", json!(5)),
         ("cdlLineNumStart", json!(12)),
     ];

@@ -457,7 +457,7 @@ mod tests {
         reverse_first: bool,
     ) -> HashMap<String, Vec<String>> {
         let mut value = serde_json::json!({
-            "@context": { "S231": "http://data.ashrae.org/S231P#" },
+            "@context": { "S231": "http://data.ashrae.org/S231#" },
             "@graph": [
                 { "@id": "root", "@type": "S231:Block",
                   "S231:containsBlock": { "@id": "sub" } },
@@ -553,7 +553,7 @@ mod tests {
     #[test]
     fn authored_and_reanchored_targets_follow_authoring_node_order() {
         let value = serde_json::json!({
-            "@context": { "S231": "http://data.ashrae.org/S231P#" },
+            "@context": { "S231": "http://data.ashrae.org/S231#" },
             "@graph": [
                 { "@id": "root", "@type": "S231:Block",
                   "S231:containsBlock": { "@id": "sub" } },
@@ -590,7 +590,7 @@ mod tests {
     #[test]
     fn canonicalizing_canonical_adjacency_is_idempotent() {
         let mut value = serde_json::json!({
-            "@context": { "S231": "http://data.ashrae.org/S231P#" },
+            "@context": { "S231": "http://data.ashrae.org/S231#" },
             "@graph": [
                 { "@id": "root", "@type": "S231:Block",
                   "S231:containsBlock": { "@id": "sub" } },

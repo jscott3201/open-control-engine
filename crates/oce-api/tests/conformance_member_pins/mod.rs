@@ -155,7 +155,7 @@ pub(crate) const MEMBER_REJECTIONS: [CompositeRejection; 22] = [
         None,
         &[(
             DiagCode::UnresolvedReference,
-            Some("http://data.ashrae.org/S231P#Bogus"),
+            Some("http://data.ashrae.org/S231#Bogus"),
             "unresolved isOfDataType",
         )],
     ),

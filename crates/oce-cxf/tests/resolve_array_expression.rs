@@ -174,7 +174,7 @@ fn constant_doc(param_refs: Json, param_nodes: &[Json]) -> Json {
                        "S231:isOfDataType": { "@id": "S231:Real" } }),
     );
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": graph
     })
 }

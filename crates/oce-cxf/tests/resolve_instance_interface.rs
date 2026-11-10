@@ -21,7 +21,7 @@ use serde_json::{Value as JsonValue, json};
 const EX: &str = "http://example.org#";
 
 fn ctx() -> JsonValue {
-    json!({ "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" })
+    json!({ "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" })
 }
 
 fn iri(suffix: &str) -> String {

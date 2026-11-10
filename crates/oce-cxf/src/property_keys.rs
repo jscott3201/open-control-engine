@@ -2,7 +2,7 @@
 //!
 //! The Layer-A [`Node`] DTO matches its modeled properties by the literal compact key
 //! (`#[serde(rename = "S231:min")]`, …). JSON-LD lets a document write the same property as its
-//! full IRI (`"http://data.ashrae.org/S231P#min"`), through another prefix bound to the same
+//! full IRI (`"http://data.ashrae.org/S231#min"`), through another prefix bound to the same
 //! namespace (`"s231:min"`), or as a declared `@context` term. Those spellings used to land in the
 //! opaque pass-through map, so the value was neither validated nor enforced nor exported — a
 //! silent drop.
@@ -55,7 +55,7 @@ use crate::export::S231_CONTEXT_IRI;
 /// (upstream modelica-json's), and the `https:` spelling of each. Only the document's own
 /// namespace normalizes; a modeled term in any other of these is refused, never passed through.
 const KNOWN_NAMESPACES: [&str; 4] = [
-    "http://data.ashrae.org/S231P#",
+    "http://data.ashrae.org/S231#",
     "http://data.ashrae.org/S231#",
     "https://data.ashrae.org/S231P#",
     "https://data.ashrae.org/S231#",
@@ -425,7 +425,7 @@ mod tests {
 
     #[test]
     fn modeled_term_matches_only_whole_terms_after_the_namespace() {
-        let ns = "http://data.ashrae.org/S231P#";
+        let ns = "http://data.ashrae.org/S231#";
         assert_eq!(modeled_term(&format!("{ns}min"), ns), Some("min"));
         assert_eq!(modeled_term(&format!("{ns}minimum"), ns), None);
         assert_eq!(modeled_term(&format!("{ns}Min"), ns), None);

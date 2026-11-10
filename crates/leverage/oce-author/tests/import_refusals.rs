@@ -107,13 +107,13 @@ fn a_repeated_id_is_refused() {
 fn context_and_top_level_keys_outside_the_dialect_are_refused() {
     for (from, to, key) in [
         (
-            "\"S231\": \"http://data.ashrae.org/S231P#\"",
+            "\"S231\": \"http://data.ashrae.org/S231#\"",
             "\"S231\": \"http://data.ashrae.org/S231#\"",
             "S231",
         ),
         (
-            "\"S231\": \"http://data.ashrae.org/S231P#\"",
-            "\"S231\": \"http://data.ashrae.org/S231P#\", \"ex\": \"urn:x:\"",
+            "\"S231\": \"http://data.ashrae.org/S231#\"",
+            "\"S231\": \"http://data.ashrae.org/S231#\", \"ex\": \"urn:x:\"",
             "ex",
         ),
         ("\"@graph\": [", "\"@id\": \"urn:x\", \"@graph\": [", "@id"),

@@ -182,7 +182,7 @@ fn a_warning_bearing_export_is_incomplete_while_the_content_id_stays_defined() {
 /// node before the `m.abs.y` port node. Document B swaps exactly those two `@graph` entries; every
 /// node body and edge is unchanged.
 fn abs_document(abs_output_node_first: bool) -> String {
-    const HEAD: &str = r#"{"@context":{"S231":"http://data.ashrae.org/S231P#","base":"urn:example:m#"},"@graph":[
+    const HEAD: &str = r#"{"@context":{"S231":"http://data.ashrae.org/S231#","base":"urn:example:m#"},"@graph":[
 {"@id":"urn:example:m#m","@type":"S231:Block","S231:label":"m",
  "S231:containsBlock":[{"@id":"urn:example:m#m.abs"}],
  "S231:hasInput":[{"@id":"urn:example:m#m.u"}],"S231:hasOutput":[{"@id":"urn:example:m#m.y"}]},

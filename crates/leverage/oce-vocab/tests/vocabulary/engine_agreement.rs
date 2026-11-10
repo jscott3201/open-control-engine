@@ -127,7 +127,7 @@ pub fn one_block(
         "S231:containsBlock": [{"@id": format!("{ROOT}.blk")}],
     }));
     let document = json!({
-        "@context": {"S231": "http://data.ashrae.org/S231P#"},
+        "@context": {"S231": "http://data.ashrae.org/S231#"},
         "@graph": graph,
     });
     serde_json::to_vec(&document).expect("serialize")
