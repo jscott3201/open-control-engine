@@ -301,7 +301,11 @@ text, a catalog or vocabulary listing) and stderr (clap's message, or the `--ren
 rendering), one transcript per subcommand and outcome class, plus `--help` of every command. They
 read the `oce-author` fixtures in place, so anything that moves an `oce-author` golden, a finding or
 parse message, a catalog description, parameter or port name (`catalog_list`, `catalog_class*`), a
-`clap` upgrade or a flag's doc comment (the `help_*` transcripts) moves them too. Regenerate with
+`clap` upgrade or a flag's doc comment (the `help_*` transcripts) moves them too. Since issue #500
+`oce catalog CLASS` also prints the block vocabulary, so the `catalog_*` transcripts of a described
+class move with `oce-vocab`'s two data files (a description, a unit, a note), with a catalog
+parameter rule (the `range` lines are rendered from `param_rules`) and with the pinned Buildings
+commit (the links); `vocab_text` and `vocab_json` move with `oce_vocab::SCALE_FACTORS`. Regenerate with
 `OCE_BLESS_CLI=1 cargo nextest run -p oce-cli`, run it again without the switch, and say in the PR
 which transcripts moved and why. `tests/report_shape.rs` holds every report transcript to the
 README's contract (sorted keys, `ok` iff exit 0, `errors` iff exit 2, no absolute path), so a
@@ -319,7 +323,10 @@ changes an upstream description or unit. Regenerate with
 which entries moved and why. `data/curated.json` is written by hand and never blessed; the reader
 refuses it unless it is in the canonical spelling. A new width-driven or positional class needs a
 row in `tests/vocabulary/widths.rs`, and a new `loop`, `port-order`, `convention` or `pitfall`
-note needs its case in `tests/vocabulary/engine_agreement.rs`. Vendoring a new `CXF-Core.jsonld`
+note needs its case in `tests/vocabulary/engine_agreement.rs`. A new `CatalogRule` kind does not
+compile in `oce-vocab` until `src/range.rs` renders it or lists it as type, shape or structure,
+and it needs its row in `tests/vocabulary/ranges.rs` (which also pins how many parameters have a
+range, so a new bound on any class moves that count). Vendoring a new `CXF-Core.jsonld`
 is a pin advance: it also moves the vendored README's digest row, the hash manifest and its
 tree-SHA constant, and `oce-cxf`'s `fixture_corpus_import.txt` line for the file.
 

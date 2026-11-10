@@ -232,7 +232,9 @@ pub(crate) const PARSE_MEANINGS: &[(&str, &str)] = &[
     ),
     (
         "unit-not-base",
-        "a unit suffix that is not built from base SI units",
+        // The scaled symbols are named until the text form reads the scale-factor table (issue
+        // #501); `tests/vocabulary.rs` fails when it does, and this clause goes then.
+        "a unit suffix that is not built from base SI units; the scaled symbols min, h and d are not accepted yet",
     ),
     (
         "malformed-atom",

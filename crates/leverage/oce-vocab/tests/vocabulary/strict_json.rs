@@ -1,10 +1,10 @@
 //! Both data files are strict JSON under the authoring wire profile: a closed shape, sorted
 //! keys, one canonical spelling, inside the wire reader's bounds. Every refusal is a typed
-//! [`VocabError`].
+//! [`VocabError`]. What bounds a read (bytes, list length, nesting) is in `reader_bounds.rs`.
 
 use oce_vocab::{
-    CURATED_JSON, CuratedDescription, CuratedVocabulary, GENERATED_JSON, GeneratedVocabulary,
-    MAX_VOCAB_BYTES, MAX_VOCAB_STRING_BYTES, VocabError,
+    CURATED_JSON, CuratedVocabulary, GENERATED_JSON, GeneratedVocabulary, MAX_VOCAB_BYTES,
+    MAX_VOCAB_STRING_BYTES, VocabError,
 };
 
 /// The wire reader's bounds (`oce-author`, `src/wire/mod.rs`), restated because this crate sits
@@ -498,49 +498,4 @@ fn a_curated_entry_needs_a_subject_text_and_evidence() {
             }
         );
     }
-}
-
-#[test]
-fn the_document_size_bound_is_checked_before_anything_is_parsed() {
-    let oversized = " ".repeat(MAX_VOCAB_BYTES + 1);
-    let expected = VocabError::TooLarge {
-        bytes: MAX_VOCAB_BYTES + 1,
-        limit: MAX_VOCAB_BYTES,
-    };
-    assert_eq!(generated_error(&oversized), expected);
-    assert_eq!(curated_error(&oversized), expected);
-    // At the limit the size check passes and the content is what is refused.
-    let at_limit = " ".repeat(MAX_VOCAB_BYTES);
-    assert!(matches!(
-        generated_error(&at_limit),
-        VocabError::Json { .. }
-    ));
-}
-
-#[test]
-fn the_byte_bound_refuses_a_list_before_it_can_reach_the_wire_readers_list_bound() {
-    // The smallest list item the canonical spelling can write: a curated description whose
-    // three fields are one character each.
-    let smallest = CuratedDescription {
-        evidence: "e".to_owned(),
-        subject: "s".to_owned(),
-        text: "t".to_owned(),
-    };
-    let mut curated = CuratedVocabulary::from_json(&small_curated()).expect("curated");
-    curated.classes[0].notes.clear();
-    curated.classes[0].descriptions = vec![smallest.clone()];
-    let one = curated.to_json().len();
-    curated.classes[0].descriptions.push(smallest.clone());
-    let per_item = curated.to_json().len() - one;
-    assert_eq!(per_item, 96);
-    assert!(per_item * WIRE_LIST_LEN > MAX_VOCAB_BYTES);
-    curated.classes[0].descriptions = vec![smallest; WIRE_LIST_LEN + 1];
-    let text = curated.to_json();
-    assert_eq!(
-        curated_error(&text),
-        VocabError::TooLarge {
-            bytes: text.len(),
-            limit: MAX_VOCAB_BYTES,
-        }
-    );
 }

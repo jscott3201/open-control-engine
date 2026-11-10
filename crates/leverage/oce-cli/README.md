@@ -2,18 +2,25 @@
 
 The `oce` command-line tool (M2; design note [`docs/design/authoring-layer.md`](../../../docs/design/authoring-layer.md),
 "CLI", decisions 9 and 20; issue #489): `emit`, `validate`, `fmt`, `catalog` and `vocab` over
-[`oce-author`](../oce-author/README.md) and the facade. A leverage crate and the first binary above
-the facade (the engine crates ship none); it depends on `oce-api` and `oce-author` only, opens no
-listener, and every engine it loads is a throwaway of the validator's own. Package `oce-cli`,
-binary `oce`, `publish = false`. Arguments are parsed with `clap` (derive, no colour).
+[`oce-author`](../oce-author/README.md), [`oce-vocab`](../oce-vocab/README.md) and the facade. A
+leverage crate and the first binary above the facade (the engine crates ship none); it depends on
+`oce-api` and the leverage crates `oce-author` and `oce-vocab` only, opens no listener, and every
+engine it loads is a throwaway of the validator's own. Package `oce-cli`, binary `oce`,
+`publish = false`. Arguments are parsed with `clap` (derive, no colour).
 
 ```text
 oce emit <FILE> [--namespace <NS>] [-o <OUT>]    validate both stages, then flat CXF
 oce validate <FILE> [--author-side]              findings as a JSON report
 oce fmt <FILE> [--check | --write]               canonical text (wire input becomes text)
-oce catalog [<CLASS>] [--json] [--param N=V ...] classes, parameters, resolved ports
-oce vocab [--json]                               keywords, tags, units, enumerations, codes
+oce catalog [<CLASS>] [--json] [--param N=V ...] classes; one class with its block vocabulary
+oce vocab [--json]                               keywords, tags, units, scale factors, codes
 ```
+
+`catalog` answers "what does this block take": the engine's facts (parameters, resolved ports)
+joined with the block vocabulary (what each one means, its declared unit and quantity, its range,
+the notes, the upstream links; [vocabulary note](../../../docs/design/vocabulary.md), decision 12,
+issue #500). `vocab` answers "what can I write": the text form's own words, the unit scale
+factors and every code the tool reports.
 
 `FILE` is a `.oce` (text form) or `.json` (wire form) file, or `-` for stdin; `--from text|wire`
 overrides the extension and is **required** for stdin. Every command takes `--render
@@ -30,7 +37,42 @@ oce emit econ_enable.oce -o econ_enable.json # writes the CXF atomically, report
 oce fmt --check econ_enable.oce              # exit 1 when not canonical
 oce fmt econ_enable.json > econ_enable.oce   # wire to text
 oce catalog CDL.Reals.MultiSum --param nin=3 # ports u1, u2, u3
+oce catalog CDL.Logical.TrueDelay --param delayTime=5
 ```
+
+The last one prints (the two `links:` lines are shortened here):
+
+```text
+CDL.Logical.TrueDelay
+  Delay a rising edge of the input, but do not delay a falling edge
+
+parameters:
+  delayTime : Real (required)
+      Delay time
+      unit: s; quantity: Time
+  delayOnInit : Boolean = false
+      Set to true to delay initial true input
+
+inputs:
+  u : Boolean
+      Input signal to be delayed when it switches to true
+
+outputs:
+  y : Boolean
+      Output with delayed input signal after it switched to true
+
+notes:
+  convention (delayOnInit): The open-control-library sets delayOnInit = true on every TrueDelay, …
+  loop: Passes the current input through: a feedback loop through TrueDelay alone is an algebraic loop …
+
+links:
+  source at the pinned Buildings commit: https://github.com/lbl-srg/modelica-buildings/blob/…/TrueDelay.mo
+  help in the latest Buildings release (may drift from the pin): https://simulationresearch.lbl.gov/…
+```
+
+Under each parameter and port: its description, then the declared `unit` and `quantity` where
+the CDL source declares one, then (parameters only) `range:` with the catalog's value rules
+joined by `; `. A section with nothing in it prints `(none)`. Lines are never wrapped.
 
 ## Exit codes
 
@@ -90,8 +132,8 @@ Command keys:
 | `validate` | `stages`: the stages that ran, `["author"]` or `["author", "engine"]` (`[]` after a read or parse refusal); stage 2 runs only when stage 1 found no error and `--author-side` is absent |
 | `emit` | `stages` as for `validate`; with `-o`, only once the write succeeded, `output` (the path as given) and `bytes` (absent from a failed write's report) |
 | `fmt` | `form` (`text`, `wire`, or `null` before the form is known); with `--check`, `canonical` (whether the input is already canonical **in its own form**: text against `fmt`, wire against the canonical wire writer); with `--write`, only once the file is known canonical on disk (unchanged, or rewritten), `changed` and `output` (absent from a failed write's report) |
-| `catalog` | without a class, `classes`; with one, `class` (`null` when the class is unknown or a `--param` is malformed) and `params` (the `--param` strings as given). A class is `{ "class_path", "description", "reserved", "parameters", "inputs", "outputs" }`; a parameter `{ "name", "type", "default": { "kind", "value" }, "settable", "enumeration" }`, `kind` one of `real`, `integer`, `boolean`, `string`, `member`, `derived` (value: the formula) or `required` (value `null`); a port `{ "name", "kind" }`; `inputs`/`outputs` are `null` where the ports do not resolve (a required parameter at the default table) |
-| `vocab` | `keywords`, `types`, `tags`, `base_units`, `parse_codes`, `finding_codes` (each with `stage`), `wire_codes`, `error_codes`, `exit_codes` (each `{ "code", "meaning" }`), `enumerations` (below) |
+| `catalog` | without a class, `classes`; with one, `class` (`null` when the class is unknown or a `--param` is malformed) and `params` (the `--param` strings as given). A class is one closed object, the same in both ([below](#a-catalog-class)) |
+| `vocab` | `keywords`, `types`, `tags`, `base_units`, `scale_factors` ([below](#scale-factors)), `parse_codes`, `finding_codes` (each with `stage`), `wire_codes`, `error_codes`, `exit_codes` (each `{ "code", "meaning" }`), `enumerations` (below) |
 
 The tool's own error codes: `missing-from`, `unknown-form`, `not-found`, `not-a-file`,
 `read-failed`, `input-too-large`, `invalid-namespace`, `unspellable`, `write-failed`,
@@ -102,6 +144,63 @@ The tool's own error codes: `missing-from`, `unknown-form`, `not-found`, `not-a-
 `control-character`, `unknown-key`, `missing-key`, `wrong-type`, `json-syntax`,
 `bound-list-too-long`, `malformed-connection`, `wire-refused`) are listed with their meanings by `oce vocab --json` under
 `wire_codes`.
+
+### A catalog class
+
+Every class object has exactly these keys, in `classes` and as `class`. The engine's facts come
+from the facade's catalog; the meanings come from the block vocabulary
+([`oce-vocab`](../oce-vocab/README.md)).
+
+| Key | Type | From |
+| --- | --- | --- |
+| `class_path`, `description`, `reserved` | string, string, boolean | the catalog (`description` is the class one-liner) |
+| `parameters` | array | each `{ "name", "type", "default": { "kind", "value" }, "settable", "enumeration", "description", "unit", "quantity", "range" }` |
+| `inputs`, `outputs` | array, or `null` where the ports do not resolve (a required parameter at the default table) | each `{ "name", "kind", "description", "unit", "quantity" }`, resolved at the `--param` table |
+| `notes` | array | each `{ "kind", "subject", "text" }` |
+| `links` | object or `null` | `{ "pinned_source", "latest_help" }` |
+
+- A parameter's `default.kind` is one of `real`, `integer`, `boolean`, `string`, `member`,
+  `derived` (value: the formula) or `required` (value `null`).
+- **`description`** is what the parameter or port means, **`unit`** and **`quantity`** what the CDL
+  source declares, in Modelica spelling (`s`, `K`, `1`; `Time`). `unit` and `quantity` are `""`
+  where the source declares none, which is most ports. A port's text is its connector's: `u1`,
+  `u2` and `u3` of a `MultiSum` all carry the vector connector `u`'s.
+- **`range`** is a list of strings, one per catalog rule that constrains the parameter's value,
+  `[]` when there is none: a bound (`Ti >= 1e-13`), a relation, listed for both parameters
+  (`uLow <= uHigh`), a relation the engine only warns about (`uLow == uHigh warns`; `validate`
+  reports every engine warning as an error) and an element bound (`1 <= extract_<i> <= nin`). It
+  is rendered from the catalog's rules on every run, never read from the vocabulary's data, so
+  it cannot drift from what a load enforces. Ports have no `range`: the catalog has no rule
+  about a port's value.
+- **`notes`** are the curated notes: `kind` is `convention`, `pitfall`, `port-order`, `loop` or
+  `units`; `subject` names a parameter or connector, or is `""` for the class; `text` is the
+  note. A note's `evidence` (where the claim comes from) is for reviewers and is **never
+  printed**, in text or JSON.
+- **`links`**: `pinned_source` is the class's Modelica source at the Buildings commit the
+  vocabulary was generated from; `latest_help` is its page in the latest Buildings release, which
+  **may drift from the pin**. `null` for a class upstream does not have
+  (`CDL.Logical.TrueHoldWithReset`).
+- A **reserved** lowering identity has no vocabulary: its strings are `""`, its `notes` `[]` and
+  its `links` `null`.
+
+The report schema is still `oce-report/1`: these keys were added (issue #500) and none was
+removed or changed, so a reader of the earlier shape still reads this one.
+
+### Scale factors
+
+`vocab`'s `scale_factors` is the vocabulary's table of unit symbols that are an exact integer
+multiple of a base unit (`oce_vocab::SCALE_FACTORS`), in table order, each
+`{ "symbol", "base", "factor" }` with `factor` a JSON integer: `min` 60, `h` 3600 and `d` 86400,
+all of `s`. It is time only: `degC`, `%` and prefixed SI units are not in it. Every `base` is one
+of `base_units` and no `symbol` is.
+
+The table is printed before the text form reads it: until issue #501 lands, a suffix such as
+`1 h` is still refused with `unit-not-base`, and the output says so itself. The text listing's
+heading reads "not accepted as a unit suffix yet, the text form refuses them with
+unit-not-base", and the meaning of `unit-not-base` under `parse_codes`, in the text and in the
+JSON, names `min`, `h` and `d` as not accepted yet. The JSON carries it there because the
+table's rows have no place for prose. A test fails when the text form starts accepting a scaled
+suffix, which is when that wording goes.
 
 ### Enumerations
 
@@ -122,6 +221,15 @@ and every read, stdin included, stops one byte past the limit. Stdin is bounded 
 time: a pipe that never closes keeps `oce` waiting. Non-UTF-8, binary junk, an empty file, a
 directory and a missing path each get one typed error code. Nothing panics.
 
+`catalog` reads no file, and **its output has no cap of its own**. What bounds it is the
+catalog's width rules: a width parameter is at most 1,048,576, so one class resolves to about
+2^21 ports at most, and every port carries its connector's description. The widest case,
+`oce catalog CDL.Routing.RealExtractSignal --param nin=1048576 --param nout=1048576 --json`,
+wrote 416 MB and peaked at 3.1 GB of memory; `CDL.Reals.MultiSum` at `nin=1048576` is about
+189 MB. The whole report is built in memory before a byte is written, and the text listing
+builds it too, so asking for text does not make a wide class cheaper. Ask for the width you
+mean; a cap on the output is a separate change.
+
 `fmt --write` and `emit -o` write a uniquely named temporary file beside the target
 (`.NAME.<pid>.<counter>.oce-tmp`), opened with `create_new` so it never follows a link or
 truncates a file already there, sync it, give it the target's permissions (Unix mode bits) and
@@ -139,7 +247,12 @@ text changes.
 `tests/runs.rs` runs the built binary (`CARGO_BIN_EXE_oce`) for every subcommand and outcome
 class and pins each run's exit status, stdout and stderr as one transcript in
 `tests/fixtures/runs/*.txt` (`--help` of every command included, so flag drift is visible);
-`tests/report_shape.rs` holds every report to the contract above; `tests/files.rs` covers `fmt`
+`tests/report_shape.rs` holds every report to the contract above; `tests/vocabulary.rs` holds
+the block vocabulary over every class (the closed class shape, the vocabulary's own text and the
+catalog's ranges, no `evidence` and no markup anywhere, the same bytes on a second run) and the
+scale-factor table; `tests/catalog_text.rs` writes the text listing it expects from each
+class's JSON report and requires the binary's text to be exactly that, for the 133 classes that
+resolve at a table of plain values (every port's and parameter's `unit:` line included); `tests/files.rs` covers `fmt`
 over the `oce-author` text fixtures (referenced in place), `--write`, `-o` and a warning-free
 engine load of every emitted bundle; `tests/atomic_writes.rs` the write hardening (a planted link
 or file at the temporary name, permissions, a link target, a failed write's report);

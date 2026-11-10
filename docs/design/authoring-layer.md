@@ -434,6 +434,9 @@ golden must load warning-free, and the emitted goldens are checked in and compar
 
 `oce` lives in its own leverage crate, links `oce-author` and `oce-api`, and parses its arguments
 with `clap` (derive) for consistent `--help`, suggestions and shell completions (decision 20).
+*Amended 2026-11-09 (#500):* it also links the leverage crate `oce-vocab`, whose block vocabulary
+`oce catalog` serves and whose unit scale-factor table `oce vocab` prints
+([vocabulary note](vocabulary.md), decisions 10 and 12).
 
 | Command | Does |
 | --- | --- |

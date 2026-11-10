@@ -1,6 +1,6 @@
 exit: 0
 --- stdout
-Print the text-form vocabulary and every code oce reports
+Print the text-form vocabulary, the unit scale factors and every code oce reports
 
 Usage: oce vocab [OPTIONS]
 

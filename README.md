@@ -239,16 +239,21 @@ cargo run -p oce-cli -- validate econ_enable.oce        # findings as JSON; exit
 cargo run -p oce-cli -- emit econ_enable.oce -o out.json # validate, then write flat CXF
 cargo run -p oce-cli -- fmt --check econ_enable.oce     # exit 1 when not canonical
 cargo run -p oce-cli -- catalog CDL.Reals.MultiSum --param nin=3
+cargo run -p oce-cli -- catalog CDL.Reals.PID           # what each port and parameter means
 ```
 
-Vocabulary v1 has started with its data: `oce-vocab` (`crates/leverage/oce-vocab`,
-[README](crates/leverage/oce-vocab/README.md)) carries, for each of the 133 authorable classes, a
-description of every connector and parameter with the unit and quantity the CDL source declares,
+Vocabulary v1 is the reference text behind `oce catalog`: `oce-vocab`
+(`crates/leverage/oce-vocab`, [README](crates/leverage/oce-vocab/README.md)) carries, for each of
+the 133 authorable classes, a description of every connector and parameter with the unit and quantity the CDL source declares,
 generated from modelica-json's CXF-Core output (vendored under `third_party/` and regenerated and
 compared byte for byte by a test), plus hand-written notes an agent needs and the catalog cannot
 say: which input is the minuend, which classes break an algebraic loop, the library's
-`delayOnInit` convention. `class_vocab()` joins it with the catalog; serving it through
-`oce catalog` and accepting time-unit suffixes in the text form are the next two steps.
+`delayOnInit` convention. `class_vocab()` joins it with the catalog, and `oce catalog CLASS`
+prints the result as text or JSON: for every parameter and port its meaning and declared unit,
+for every parameter its range (rendered from the catalog's own rules, such as `Ti >= 1e-13` and
+`uLow <= uHigh`, never stored), then the notes and the upstream links. `oce vocab` lists the unit
+scale factors (`min`, `h` and `d`, exact multiples of `s`); accepting those suffixes in the text
+form is the next step (#501).
 
 See [CHANGELOG.md](CHANGELOG.md).
 
@@ -259,7 +264,7 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 | --- | --- | --- |
 | **M1a** Portable core: cleanup | Pure `Engine`, dead crates and ledgers removed, two CI lanes, native determinism and strict-bit matrices | Released as v0.3.0 |
 | **M1b** Portable core: `no_std` | Core four build `no_std + alloc`; math through `libm`; hash-free core; the **OCEB** compiled-schedule blob (encoder in `oce-api`, decoder in `oce-graph`, byte-stable across architectures); a `no_std` execution entry that never links `oce-cxf` or `oce-api`; a bare-metal gate cell with a size budget over `thumbv7em`, `riscv32imac` and `wasm32`; QEMU execution nightly | Released as v0.4.0 |
-| **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | In progress: `oce-author`'s model, wire form, schema, two-stage validator, emitter, text form and importer are in, and so are the `oce` CLI (`emit`, `validate`, `fmt`, `catalog`, `vocab`) and vocabulary v1's data crate `oce-vocab`; serving the vocabulary through `oce catalog` and time-unit suffixes next; in parallel with M3 |
+| **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | In progress: `oce-author`'s model, wire form, schema, two-stage validator, emitter, text form and importer are in, and so are the `oce` CLI (`emit`, `validate`, `fmt`, `catalog`, `vocab`) and vocabulary v1's data crate `oce-vocab`, served through `oce catalog` (descriptions, units, ranges, notes) with the unit scale-factor table in `oce vocab`; time-unit suffixes in the text form next; in parallel with M3 |
 | **M3** Verification product | Canonical content id, the vector format, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode, on the `oce-replay` historical replay crate | In progress: `oce-replay`, the canonical content id (`Engine::content_id`, `oce:canon1:` over the loaded graph) and output types in slot order before the first frame (`FrameSlots::output_types()`, the first step of `oce-verify`) are in; the vector format and the replayer next; in parallel with M2 |
 | **M4** WASM | `oce-wasm` over `oce-api`, a TypeScript package, a browser demo that replays vectors without a server, a tracked `.wasm` size budget | Planned, in parallel with M5 |
 | **M5** Python | `oce-py` wheels (PyO3, abi3) over the same surface; replay and receipts from a notebook | Planned, in parallel with M4 |

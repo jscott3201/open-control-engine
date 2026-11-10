@@ -5,6 +5,11 @@ exit: 1
     "class_path": "CDL.Reals.MultiSum",
     "description": "Sum of Reals, y = k[1]*u[1] + k[2]*u[2] + ... + k[n]*u[n]",
     "inputs": null,
+    "links": {
+      "latest_help": "https://simulationresearch.lbl.gov/modelica/releases/latest/help/Buildings_Controls_OBC_CDL_Reals.html#Buildings.Controls.OBC.CDL.Reals.MultiSum",
+      "pinned_source": "https://github.com/lbl-srg/modelica-buildings/blob/a131864e4c4df22ebcd52bb8da439de0087ac365/Buildings/Controls/OBC/CDL/Reals/MultiSum.mo"
+    },
+    "notes": [],
     "outputs": null,
     "parameters": [
       {
@@ -12,20 +17,31 @@ exit: 1
           "kind": "integer",
           "value": 0
         },
+        "description": "Number of input signals",
         "enumeration": null,
         "name": "nin",
+        "quantity": "",
+        "range": [
+          "nin >= 0",
+          "nin <= 1048576"
+        ],
         "settable": true,
-        "type": "Integer"
+        "type": "Integer",
+        "unit": ""
       },
       {
         "default": {
           "kind": "real",
           "value": 1.0
         },
+        "description": "Input gains",
         "enumeration": null,
         "name": "k_<i>",
+        "quantity": "",
+        "range": [],
         "settable": true,
-        "type": "Real"
+        "type": "Real",
+        "unit": ""
       }
     ],
     "reserved": false

@@ -4,7 +4,8 @@ The block vocabulary: reference text and unit facts about the 133 authorable blo
 served beside the engine's catalog. For each class it has the upstream links; for each connector
 and parameter a meaning and the unit and quantity the CDL source declares; and curated notes
 written for agents. Design note: [`docs/design/vocabulary.md`](../../../docs/design/vocabulary.md)
-(issue #499 is part 1 of 3: the data and this crate).
+(issue #499 is part 1 of 3: the data and this crate; issue #500, part 2, serves it through
+[`oce catalog`](../oce-cli/README.md) and adds the rendered ranges and the scale-factor table).
 
 It is a leverage crate: it depends on `oce-api` only, loads no engine and is not published. It is
 **not engine behaviour**. Nothing on the load path, the emitter, the compiled-schedule blob, the
@@ -29,6 +30,21 @@ Both live in [`data/`](data/), are embedded with `include_str!` and are parsed o
 present, absent is `""` or `[]`, no `null`, keys sorted, two-space indentation, LF, one trailing
 newline, ASCII only. A read is bounded like a wire document (4 MiB, 4,096-byte strings) and
 refuses anything that is not the canonical spelling of what it says, with a typed `VocabError`.
+
+Hostile input is bounded in work as well as in bytes (`tests/vocabulary/reader_bounds.rs`,
+`src/vocabulary_tests.rs`):
+
+- the **byte bound** is checked before anything is parsed, and it is the reader's only size bound.
+  There is no separate list bound: an accepted document cannot hold the wire reader's 65,536 list
+  items (the smallest item is 96 bytes in the canonical spelling), but a compact one fits about
+  95,000 under the byte bound, and it is parsed and checked in full before it is refused as
+  `NotCanonical`;
+- the **closed shape** stops nesting: it is five levels deep, and a document nested a million
+  deep is refused at the first level the shape does not have, never scanned to its end;
+- the **join** of the two files is `n log n` in their entries: each curated class indexes its
+  class's connectors and parameters once, and each curated description and note is one binary
+  search. One class with 24,000 connectors and 32,000 notes naming the last one costs about 0.83
+  million name comparisons; a scan per note is 498 million. The test asserts the count, not time.
 
 ### `generated.json`: never edited by hand
 
@@ -90,7 +106,9 @@ Curation is **additive** in v1:
   (`VocabError::CuratedReplacesGenerated`); an override with a required reason is v2;
 - a **note** names its class (`subject` `""`), a connector or a parameter, and has a `kind`;
 - every description and note carries **`evidence`**: where the claim comes from. It is for
-  reviewers and is not shown to agents;
+  reviewers and is not shown to agents. The data types carry it (`Note::evidence`,
+  `Vocabulary::curated()`), so a surface that serves agents prints a note's `kind`, `subject`
+  and `text` only; `oce catalog` does, and its tests hold that over every class;
 - classes are in catalog order, and a class with nothing curated is absent.
 
 ## Note kinds
@@ -124,6 +142,7 @@ class joined with it (`ClassVocab`):
 | `links` | derived from the class path and the pinned Buildings commit |
 | `connectors`: name, side, dims, description, unit, quantity | the two files; `origin` says which supplied the description |
 | `parameters`: the same, plus `catalog` (type, default, settable) | the two files and `class_metadata()` |
+| `parameters[].range` | rendered from `oce_api::catalog()`'s rules, never stored (below) |
 | `notes` | `curated.json` |
 
 `links.pinned_source` is the class's Modelica source on GitHub at the pinned commit.
@@ -134,6 +153,54 @@ upstream releases and **may drift from the pin**, so label it that way wherever 
 class's parameters and each named class's connectors must be exactly the catalog's, in its order,
 and every connector and parameter must have a description after the merge. A build whose embedded
 files break a rule panics on the first `vocabulary()` call; the tests prove they do not.
+
+## Ranges
+
+A parameter's range is **rendered from the catalog's rules every time a view is built**
+(`parameter_range(rules, name)`, `ParameterVocab::range`); neither data file holds a bound. It is
+one line of plain text per rule that constrains the parameter's *value*, in the rules' order:
+
+| Rule kind | Line | Listed for |
+| --- | --- | --- |
+| `RealGreaterOrEqual`, `RealLessOrEqualConstant` | `Ti >= 1e-13`, `width <= 1.0` | the parameter |
+| `RealGreaterThan`, `RealFiniteGreaterThan`, `RealFinite` | `delta > 0.0`, `pAtm > 0.0 and finite`, `shift is finite` | the parameter |
+| `IntegerGreaterOrEqual`, `IntegerLessOrEqualConstant` | `nin >= 0`, `nin <= 1048576` | the parameter |
+| `RealLessOrEqual` | `uLow <= uHigh` | both |
+| `RealTimesIntegerInclusiveRange`, `IntegerProductLessOrEqualConstant` | `0.001 <= h * n <= 0.5`, `nout * nin <= 1048576` | both |
+| `RealEqualWarning`, `RealLessOrEqualWarning`, `RealGreaterOrEqualScaledWarning` | `uLow == uHigh warns`, `debounce > feedbackDelay warns`, `period < 2.0 * minTruFalHol warns` | both |
+| `IntegerArrayElementsInRange` | `1 <= extract_<i> <= nin` | the array |
+| `BooleanArrayTrueCountEquals` | `the number of true msk_<i> == nout` | the array and the count |
+
+A `warns` line names the case the engine warns about and still loads; the authoring validator
+reports every engine warning as an error. A Real bound is spelled as Rust prints the `f64`, which
+reads back to the same bits. The twelve rule kinds about a value's type (`Required`, `Boolean`,
+`Real`, `EnumMembers`), an array's shape (`IntegerArrayElements`, `RealArrayElements`,
+`BooleanArrayElements`, `RealMatrixElements`, `TimeTableMatrix`, `TimeTableOffset`) and port
+structure (`Structural`, `StructuralArrayElements`) render nothing: the type, the default, the
+template name (`k_<i>`) and the resolved ports say that. Ports have no range: the catalog has no
+rule about a port's value.
+
+Every `CatalogRule` is named in one total `match`, so a new rule kind does not compile until it
+is rendered or listed with the twelve. `tests/vocabulary/ranges.rs` pins one catalog example per
+kind and checks every kind of line against the engine at its boundary: `class_ports` accepts the
+bound and refuses the next `f64` past it, and a load warns exactly where a `warns` line says.
+101 of the 189 parameters have a range.
+
+## Unit scale factors
+
+`SCALE_FACTORS` is the closed table of unit symbols that are an exact positive integer multiple
+of a base unit, with no offset (design note decision 14); `scale_factor(symbol)` looks one up.
+v1 is time only:
+
+| Symbol | Base | Factor |
+| --- | --- | --- |
+| `min` | `s` | 60 |
+| `h` | `s` | 3600 |
+| `d` | `s` | 86400 |
+
+`degC` and `degF` (affine), `%` and prefixed SI units (`kPa`) are not in it, by ruling. The crate
+states the table; scaling a written literal and checking a suffix against a declared unit belong
+to the text form that reads the suffix (`oce-author`, issue #501). `oce vocab` prints it.
 
 ## Regenerating `generated.json`
 

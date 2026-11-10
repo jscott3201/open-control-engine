@@ -7,6 +7,7 @@
 
 mod atomic_write;
 pub(crate) mod catalog;
+mod catalog_params;
 pub(crate) mod emit;
 pub(crate) mod fmt;
 pub(crate) mod validate;

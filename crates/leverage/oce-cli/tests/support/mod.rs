@@ -11,6 +11,8 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
+use oce_api::{CatalogDefault, ClassMetadata, ValueType};
+
 /// The golden switch.
 pub const BLESS_VAR: &str = "OCE_BLESS_CLI";
 
@@ -107,6 +109,53 @@ pub fn compare_or_bless(relative: &str, actual: &str) {
         actual, expected,
         "golden {relative} differs; bless with {BLESS_VAR}=1"
     );
+}
+
+/// Run one golden case in the crate directory: check its exit status, then compare its
+/// transcript with `tests/fixtures/runs/<name>.txt` (or write it when blessing).
+pub fn case(name: &str, expected_exit: i32, args: &[&str], stdin: &[u8]) {
+    let run = oce(args, stdin);
+    assert_eq!(
+        run.code,
+        expected_exit,
+        "{name}: exit status\n{}",
+        run.transcript()
+    );
+    compare_or_bless(&format!("runs/{name}.txt"), &run.transcript());
+}
+
+/// `--param` arguments that give every required scalar parameter of the class a value of its
+/// type (1, `true`, a one-letter string, an enumeration's first member), so that the class
+/// resolves wherever such a table satisfies its rules. A required array (the `TimeTable`
+/// sources' `table_<row>_<col>`) is left out, and such a class does not resolve.
+pub fn required_params(meta: &ClassMetadata) -> Vec<String> {
+    meta.parameters
+        .iter()
+        .filter(|parameter| parameter.default == CatalogDefault::Required)
+        .filter(|parameter| !parameter.name.contains('<'))
+        .filter_map(|parameter| {
+            let value = match parameter.value_type {
+                ValueType::Real | ValueType::Integer => "1",
+                ValueType::Boolean => "true",
+                ValueType::String => "x",
+                ValueType::Enum(id) => oce_api::enumeration_by_id(id)?.members.first()?,
+            };
+            Some(format!("{}={value}", parameter.name))
+        })
+        .collect()
+}
+
+/// `oce catalog CLASS` at [`required_params`], as text or as JSON.
+pub fn describe(meta: &ClassMetadata, json: bool) -> Run {
+    let params = required_params(meta);
+    let mut args = vec!["catalog", meta.class_path];
+    for param in &params {
+        args.extend(["--param", param.as_str()]);
+    }
+    if json {
+        args.push("--json");
+    }
+    oce(&args, b"")
 }
 
 /// A fresh scratch directory for one test, under cargo's per-crate temporary directory.

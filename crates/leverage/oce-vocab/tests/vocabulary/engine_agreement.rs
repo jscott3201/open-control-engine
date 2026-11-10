@@ -61,7 +61,7 @@ fn parameter(id: String, value: &Value) -> Json {
 /// fed by a boundary input of the same name, every block output drives a boundary output named
 /// `<port>Out`, and `feedback` additionally wires one block output to one block input (which
 /// then has no boundary input).
-fn one_block(
+pub fn one_block(
     class_path: &str,
     parameters: &[(&str, Value)],
     feedback: Option<(&str, &str)>,

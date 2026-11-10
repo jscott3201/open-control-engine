@@ -5,12 +5,26 @@ CDL.Reals.Hysteresis
 
 parameters:
   uLow : Real (required)
+      if y=true and u<uLow, switch to y=false
+      range: uLow <= uHigh; uLow == uHigh warns
   uHigh : Real (required)
+      if y=false and u>uHigh, switch to y=true
+      range: uLow <= uHigh; uLow == uHigh warns
   pre_y_start : Boolean = false
+      Value of pre(y) at initial time
 
 inputs:
   u : Real
+      Input to be compared against hysteresis values
 
 outputs:
   y : Boolean
+      Output value of comparison
+
+notes:
+  (none)
+
+links:
+  source at the pinned Buildings commit: https://github.com/lbl-srg/modelica-buildings/blob/a131864e4c4df22ebcd52bb8da439de0087ac365/Buildings/Controls/OBC/CDL/Reals/Hysteresis.mo
+  help in the latest Buildings release (may drift from the pin): https://simulationresearch.lbl.gov/modelica/releases/latest/help/Buildings_Controls_OBC_CDL_Reals.html#Buildings.Controls.OBC.CDL.Reals.Hysteresis
 --- stderr

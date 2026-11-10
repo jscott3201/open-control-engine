@@ -5,6 +5,11 @@ exit: 1
     "class_path": "CDL.Reals.Limiter",
     "description": "Limit the range of a signal",
     "inputs": null,
+    "links": {
+      "latest_help": "https://simulationresearch.lbl.gov/modelica/releases/latest/help/Buildings_Controls_OBC_CDL_Reals.html#Buildings.Controls.OBC.CDL.Reals.Limiter",
+      "pinned_source": "https://github.com/lbl-srg/modelica-buildings/blob/a131864e4c4df22ebcd52bb8da439de0087ac365/Buildings/Controls/OBC/CDL/Reals/Limiter.mo"
+    },
+    "notes": [],
     "outputs": null,
     "parameters": [
       {
@@ -12,20 +17,34 @@ exit: 1
           "kind": "required",
           "value": null
         },
+        "description": "Lower limit of input signal",
         "enumeration": null,
         "name": "uMin",
+        "quantity": "",
+        "range": [
+          "uMin <= uMax",
+          "uMin == uMax warns"
+        ],
         "settable": true,
-        "type": "Real"
+        "type": "Real",
+        "unit": ""
       },
       {
         "default": {
           "kind": "required",
           "value": null
         },
+        "description": "Upper limit of input signal",
         "enumeration": null,
         "name": "uMax",
+        "quantity": "",
+        "range": [
+          "uMin <= uMax",
+          "uMin == uMax warns"
+        ],
         "settable": true,
-        "type": "Real"
+        "type": "Real",
+        "unit": ""
       }
     ],
     "reserved": false

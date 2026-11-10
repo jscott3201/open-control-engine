@@ -1,6 +1,6 @@
 exit: 0
 --- stdout
-List the block classes, or describe one with its resolved ports
+List the block classes, or describe one: its ports, parameters, units, ranges and notes
 
 Usage: oce catalog [OPTIONS] [CLASS]
 

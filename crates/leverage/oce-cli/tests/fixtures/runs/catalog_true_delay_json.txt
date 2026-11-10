@@ -1,0 +1,84 @@
+exit: 0
+--- stdout
+{
+  "class": {
+    "class_path": "CDL.Logical.TrueDelay",
+    "description": "Delay a rising edge of the input, but do not delay a falling edge",
+    "inputs": [
+      {
+        "description": "Input signal to be delayed when it switches to true",
+        "kind": "Boolean",
+        "name": "u",
+        "quantity": "",
+        "unit": ""
+      }
+    ],
+    "links": {
+      "latest_help": "https://simulationresearch.lbl.gov/modelica/releases/latest/help/Buildings_Controls_OBC_CDL_Logical.html#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "pinned_source": "https://github.com/lbl-srg/modelica-buildings/blob/a131864e4c4df22ebcd52bb8da439de0087ac365/Buildings/Controls/OBC/CDL/Logical/TrueDelay.mo"
+    },
+    "notes": [
+      {
+        "kind": "convention",
+        "subject": "delayOnInit",
+        "text": "The open-control-library sets delayOnInit = true on every TrueDelay, against the CDL default false, so a condition that is already true at start-up must still persist for the full delay. The emitter never fills a default: write it."
+      },
+      {
+        "kind": "loop",
+        "subject": "",
+        "text": "Passes the current input through: a feedback loop through TrueDelay alone is an algebraic loop and the engine refuses it. Break the loop with Logical.Pre."
+      }
+    ],
+    "outputs": [
+      {
+        "description": "Output with delayed input signal after it switched to true",
+        "kind": "Boolean",
+        "name": "y",
+        "quantity": "",
+        "unit": ""
+      }
+    ],
+    "parameters": [
+      {
+        "default": {
+          "kind": "required",
+          "value": null
+        },
+        "description": "Delay time",
+        "enumeration": null,
+        "name": "delayTime",
+        "quantity": "Time",
+        "range": [],
+        "settable": true,
+        "type": "Real",
+        "unit": "s"
+      },
+      {
+        "default": {
+          "kind": "boolean",
+          "value": false
+        },
+        "description": "Set to true to delay initial true input",
+        "enumeration": null,
+        "name": "delayOnInit",
+        "quantity": "",
+        "range": [],
+        "settable": true,
+        "type": "Boolean",
+        "unit": ""
+      }
+    ],
+    "reserved": false
+  },
+  "command": "catalog",
+  "errors": [],
+  "findings": [],
+  "input": null,
+  "ok": true,
+  "params": [
+    "delayTime=5"
+  ],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

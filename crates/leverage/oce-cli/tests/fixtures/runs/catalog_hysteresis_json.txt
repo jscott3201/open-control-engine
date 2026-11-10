@@ -1,0 +1,94 @@
+exit: 0
+--- stdout
+{
+  "class": {
+    "class_path": "CDL.Reals.Hysteresis",
+    "description": "Transform Real to Boolean signal with Hysteresis",
+    "inputs": [
+      {
+        "description": "Input to be compared against hysteresis values",
+        "kind": "Real",
+        "name": "u",
+        "quantity": "",
+        "unit": ""
+      }
+    ],
+    "links": {
+      "latest_help": "https://simulationresearch.lbl.gov/modelica/releases/latest/help/Buildings_Controls_OBC_CDL_Reals.html#Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "pinned_source": "https://github.com/lbl-srg/modelica-buildings/blob/a131864e4c4df22ebcd52bb8da439de0087ac365/Buildings/Controls/OBC/CDL/Reals/Hysteresis.mo"
+    },
+    "notes": [],
+    "outputs": [
+      {
+        "description": "Output value of comparison",
+        "kind": "Boolean",
+        "name": "y",
+        "quantity": "",
+        "unit": ""
+      }
+    ],
+    "parameters": [
+      {
+        "default": {
+          "kind": "required",
+          "value": null
+        },
+        "description": "if y=true and u<uLow, switch to y=false",
+        "enumeration": null,
+        "name": "uLow",
+        "quantity": "",
+        "range": [
+          "uLow <= uHigh",
+          "uLow == uHigh warns"
+        ],
+        "settable": true,
+        "type": "Real",
+        "unit": ""
+      },
+      {
+        "default": {
+          "kind": "required",
+          "value": null
+        },
+        "description": "if y=false and u>uHigh, switch to y=true",
+        "enumeration": null,
+        "name": "uHigh",
+        "quantity": "",
+        "range": [
+          "uLow <= uHigh",
+          "uLow == uHigh warns"
+        ],
+        "settable": true,
+        "type": "Real",
+        "unit": ""
+      },
+      {
+        "default": {
+          "kind": "boolean",
+          "value": false
+        },
+        "description": "Value of pre(y) at initial time",
+        "enumeration": null,
+        "name": "pre_y_start",
+        "quantity": "",
+        "range": [],
+        "settable": true,
+        "type": "Boolean",
+        "unit": ""
+      }
+    ],
+    "reserved": false
+  },
+  "command": "catalog",
+  "errors": [],
+  "findings": [],
+  "input": null,
+  "ok": true,
+  "params": [
+    "uLow=-0.5",
+    "uHigh=0.5"
+  ],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

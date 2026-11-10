@@ -1,0 +1,28 @@
+exit: 0
+--- stdout
+CDL.Logical.TrueDelay
+  Delay a rising edge of the input, but do not delay a falling edge
+
+parameters:
+  delayTime : Real (required)
+      Delay time
+      unit: s; quantity: Time
+  delayOnInit : Boolean = false
+      Set to true to delay initial true input
+
+inputs:
+  u : Boolean
+      Input signal to be delayed when it switches to true
+
+outputs:
+  y : Boolean
+      Output with delayed input signal after it switched to true
+
+notes:
+  convention (delayOnInit): The open-control-library sets delayOnInit = true on every TrueDelay, against the CDL default false, so a condition that is already true at start-up must still persist for the full delay. The emitter never fills a default: write it.
+  loop: Passes the current input through: a feedback loop through TrueDelay alone is an algebraic loop and the engine refuses it. Break the loop with Logical.Pre.
+
+links:
+  source at the pinned Buildings commit: https://github.com/lbl-srg/modelica-buildings/blob/a131864e4c4df22ebcd52bb8da439de0087ac365/Buildings/Controls/OBC/CDL/Logical/TrueDelay.mo
+  help in the latest Buildings release (may drift from the pin): https://simulationresearch.lbl.gov/modelica/releases/latest/help/Buildings_Controls_OBC_CDL_Logical.html#Buildings.Controls.OBC.CDL.Logical.TrueDelay
+--- stderr

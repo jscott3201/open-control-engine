@@ -3,12 +3,18 @@
 //! Both are strict JSON under the authoring wire profile (design note `docs/design/vocabulary.md`,
 //! "The data"): closed objects, every key present, absent is `""` or `[]`, no `null`, and one
 //! canonical spelling (see [`GeneratedVocabulary::to_json`]). A read is bounded like a wire
-//! document: [`MAX_VOCAB_BYTES`] and [`MAX_VOCAB_STRING_BYTES`] are the wire reader's limits, the
-//! closed shape fixes the nesting depth at five (inside its eight), and its list bound of 65,536
-//! items cannot be reached, because the smallest list item is 96 bytes in the canonical spelling
-//! and the byte bound allows 64 per item. A read also refuses anything that is not the canonical
-//! bytes of what it parsed, so a hand edit with a misplaced key, a stray space or a `\r\n` line
-//! ending fails with the line it starts on.
+//! document: [`MAX_VOCAB_BYTES`] and [`MAX_VOCAB_STRING_BYTES`] are the wire reader's limits, and
+//! the closed shape fixes the nesting depth at five (inside its eight): deeper input is refused
+//! at the first level the shape does not have. A read also refuses anything that is not the
+//! canonical bytes of what it parsed, so a hand edit with a misplaced key, a stray space or a
+//! `\r\n` line ending fails with the line it starts on.
+//!
+//! There is no separate list bound; the byte bound is what limits the work of a read. An
+//! *accepted* document cannot hold the wire reader's 65,536 list items, because the smallest
+//! item is 96 bytes in the canonical spelling and the byte bound allows 64 per item. A document
+//! that is not canonical can carry more (a compact spelling fits about 95,000 items under the
+//! byte bound): it is parsed and checked in full, and then refused as
+//! [`VocabError::NotCanonical`].
 
 use serde::Deserialize;
 

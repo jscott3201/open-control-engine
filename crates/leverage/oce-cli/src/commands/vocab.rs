@@ -5,12 +5,21 @@
 //! finding codes (`oce_author::STAGE_ONE_CODES`), the stage-2 codes, the wire codes and the tool's
 //! own error codes, each with one line of meaning; and the exit statuses.
 //!
+//! `scale_factors` is the vocabulary's unit scale-factor table (`oce_vocab::SCALE_FACTORS`,
+//! vocabulary note decision 14, GitHub issue #500), in table order: the symbols that are an
+//! exact integer multiple of a base unit, time only (`min`, `h`, `d`). It states the table; a
+//! reader of unit suffixes does the scaling. Until the text form reads it (issue #501) a scaled
+//! suffix is still refused, and the output says so where an agent reads it: in the text
+//! heading, and in the meaning of `unit-not-base` under `parse_codes`, which is in both the text
+//! and the JSON (the table's rows have no place for prose).
+//!
 //! `enumerations` is the facade's enumeration and Integer constant-package table
 //! (`oce_api::enumerations()`, GitHub #488), in table order: each row's authoring class path, kind
 //! (`enumeration` or `constant-package`) and members with the value each stands for (an
 //! enumeration's 1-based ordinal, a package's Integer).
 
 use oce_api::{EnumerationKind, MemberValue, enumerations};
+use oce_vocab::SCALE_FACTORS;
 use serde_json::{Value, json};
 
 use super::Outcome;
@@ -30,6 +39,7 @@ pub(crate) fn run(json: bool) -> Outcome {
     report.set("types", strings(TYPES));
     report.set("tags", strings(TEXT_FORM_TAGS));
     report.set("base_units", strings(oce_author::BASE_UNIT_SYMBOLS));
+    report.set("scale_factors", scale_factors_json());
     report.set("parse_codes", table(PARSE_MEANINGS));
     report.set("finding_codes", finding_codes());
     report.set("wire_codes", table(WIRE_CODES));
@@ -50,6 +60,16 @@ pub(crate) fn run(json: bool) -> Outcome {
     }
     let text = render_text();
     Outcome::document(report, text.into_bytes())
+}
+
+/// The scale-factor table as JSON rows: one `symbol` is exactly `factor` of `base`.
+fn scale_factors_json() -> Value {
+    Value::Array(
+        SCALE_FACTORS
+            .iter()
+            .map(|row| json!({ "base": row.base, "factor": row.factor, "symbol": row.symbol }))
+            .collect(),
+    )
 }
 
 /// The enumeration table as JSON rows.
@@ -123,6 +143,23 @@ fn render_text() -> String {
     list(&mut out, "types", TYPES);
     list(&mut out, "tags", TEXT_FORM_TAGS);
     list(&mut out, "base units", oce_author::BASE_UNIT_SYMBOLS);
+    // The second clause holds until the text form reads the table (issue #501).
+    out.push_str(
+        "scale factors (time only; one symbol is exactly this many base units; not accepted as \
+         a unit suffix yet, the text form refuses them with unit-not-base):\n",
+    );
+    let width = SCALE_FACTORS
+        .iter()
+        .map(|row| row.symbol.len())
+        .max()
+        .unwrap_or(0);
+    for row in SCALE_FACTORS {
+        out.push_str(&format!(
+            "  {:<width$}  {} {}\n",
+            row.symbol, row.factor, row.base
+        ));
+    }
+    out.push('\n');
     let rows = |out: &mut String, title: &str, rows: &[(&str, &str)]| {
         out.push_str(title);
         out.push_str(":\n");
