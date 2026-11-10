@@ -14,7 +14,7 @@ execution fingerprint as build authority. Neither snapshot format nor execution 
 
 State is current/current only, with no N-1 support or cross-build state migration (see the
 [host fallback checklist](host-responsibilities.md)). The historical v0.1.0 source pin has no
-snapshot API; its absence is not the revision-1 wire refusal described below.
+snapshot API.
 
 “Same-build” is a **mandatory host-envelope precondition**, not an OCE comparison. Before calling
 `EngineStateSnapshot::from_bytes`, the host authenticates a sealed envelope binding the exact
@@ -93,11 +93,29 @@ restore incompatibility/state diagnostics is bounded. Do not match error prose t
 
 ## Wire revision and integrity
 
-Current **format revision 2 / execution-state ABI revision 2** retains fixed **HostTick v1**.
-Revision 2 adds connector computation unit/quantity and effective input definitions. Revision-1
-bytes lacked those compatibility determinants and now return `UnsupportedFormat { revision: 1 }`.
-There is no fallback, silent upgrade or migration. Rollback uses the prior qualified build and its
-own authenticated state, or a host-approved cold start—not a header edit.
+The wire is **format revision 1 / execution-state ABI revision 1**, on fixed **HostTick v1**. Both
+numbers stay 1 until 1.0.0 (issue #509): a change to the layout is made in place and the vectors
+are re-blessed, with no fallback, silent upgrade, migration or decoder that reads two layouts. Any
+other format revision returns `UnsupportedFormat`, and any other execution-state ABI revision
+refuses at restore. Rollback uses the prior qualified build and its own authenticated state, or a
+host-approved cold start—not a header edit.
+
+**The revision numbers do not tell one build's layout from another's.** A snapshot carries no
+engine version and no build token, so bytes written by a build with a different layout under the
+same numbers are separated only by the mandatory host envelope above and, failing that, by the
+decoder's structure, fingerprint and manifest checks. What is pinned today
+(`tests/state_old_layout.rs`, both fixtures kept unblessed):
+
+- Releases 0.2.0 to 0.4.0 numbered their snapshots differently (release 0.4.0 with this same
+  layout). A populated snapshot carrying those numbers is refused with `UnsupportedFormat`. With
+  only its format field edited
+  it parses and refuses at restore (`IncompatibleExecution`, subject
+  `execution-state ABI revision`); with both numbers edited it fails its execution fingerprint,
+  which covers the ABI revision.
+- An empty-model vector of the layout before those releases carries today's numbers, a consistent
+  length and a valid trailer. It is refused by structure (`MalformedSnapshot`, the manifest ends
+  before the input-definition count). This is one shape, not a proof for every populated snapshot
+  of that layout.
 
 The byte cap is 67,108,864 inclusive. It bounds the whole snapshot, so it also bounds the state
 words a capturable model may hold. Most classes hold a few words, but `CDL.Reals.MovingAverage`
@@ -114,7 +132,7 @@ permutable. Connection vector order is canonicalized; duplicate connections are 
 The fixed header is `OCESTAT\0`, u32 format, u32 execution ABI, u64 body length. The body contains
 u128 execution fingerprint, model ID, model time bits, optional prior-time bits, length-prefixed
 manifest, keyed connector values, state words and zero reserved flags. A 16-byte trailer follows.
-Revision-2 connector records append optional unit and quantity (0 = absent; 1 plus string = present).
+Connector records end with optional unit and quantity (0 = absent; 1 plus string = present).
 After boundary outputs, the manifest appends a u32 input-definition count; each entry is path,
 native type, optional typed min and optional typed max (0 = absent; 1 plus value = present).
 
@@ -200,8 +218,10 @@ or a host `NO_EVAL` window, is host frame policy.
 
 ## Evidence map
 
-- `tests/state_contract.rs`: public inspection, changed bounds/units/quantities, historical wire
-  refusal and signed-zero/equal-time continuation against a hand-derived Boolean recurrence.
+- `tests/state_contract.rs`: public inspection, changed bounds/units/quantities and
+  signed-zero/equal-time continuation against a hand-derived Boolean recurrence.
+- `tests/state_old_layout.rs`: snapshots earlier builds wrote, refused by format revision, by
+  execution-state ABI revision, by fingerprint and by structure.
 - `src/tests/state_manifest_refusal_tests.rs`: rechecksummed field mutation corpus, repeat typed
   diagnostics, full snapshot/checkpoint before/after images and retained lifecycle fences; capture refuses a deliberately injected noncanonical producer image.
 - `src/tests/state_format_golden_tests.rs`, `state_tests.rs`, `state_io.rs`: independent full

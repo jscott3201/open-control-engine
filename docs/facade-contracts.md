@@ -118,7 +118,7 @@ error carries no such records.
 An unloaded export retains its existing `export-unsupported` diagnostic. A partial export still
 succeeds with warnings; use the legacy report's completeness check for emitted-document identity.
 
-Producer stages are explicit boundary labels, not inferred from codes. Revision-3 ranks are:
+Producer stages are explicit boundary labels, not inferred from codes. The ranks are:
 
 | Rank | Stage |
 | --- | --- |
@@ -131,10 +131,8 @@ Producer stages are explicit boundary labels, not inferred from codes. Revision-
 | 6 | Projection: the plain-data resolved-model projection returned in `LoadedModel` |
 | 7 | Export |
 
-Revision 2 removed the revision-1 `Flatten` stage (rank 1), an identity pass that never produced
-evidence. Revision 3 removed the `StoreRecovery`, `StoreSave` and `StoreInputs` stages (ranks 7 to
-9), because load no longer calls a storage port (GitHub #390). The relative order of every
-remaining stage is unchanged.
+The diagnostics schema is revision 1, like every other contract descriptor here, and stays 1
+until 1.0.0: a change to the stages or the ordering is made in place (issue #509).
 
 The ordering is stage rank, subject category/presence and exact UTF-8 subject text, code string,
 then severity rank (`Error=0`, `Warning=1`, `Info=2`). `Absent` sorts before `Opaque`; an empty
@@ -159,8 +157,8 @@ they do not promise new JSON wire codecs or schema-driven runtime validation.
 | [Values](../crates/oce-api/contracts/values.schema.json) | Existing `Value`, `ValueType` and `ConnectorId` aliases remain. Real values use bit-preserving binary64; enums retain class and ordinal. Constructor representability does not establish operation-specific validity. Connector IDs are model-local indices. |
 | [IO](../crates/oce-api/contracts/io.schema.json) | Existing point fields and declared static attributes; enums project to `Int`, strings are omitted. Current inventory classification/defaults are explicit. |
 | [Parameters](../crates/oce-api/contracts/parameters.schema.json) | Existing tune-at-rest rows and available static bounds. Absent bounds do not establish freedom from cross-parameter rules. Unit/quantity provenance is currently absent. |
-| [Assertions](../crates/oce-api/contracts/assertions.schema.json) | Revision 2: `CompletedFrame::diagnostics` retains all block warnings, including Assert and other classes. Sources are currently class-level, not guaranteed instances. Repeated false Assert inputs warn each evaluation; true is silent. |
-| [Execution profile](../crates/oce-api/contracts/execution-profile.schema.json) | Descriptor revision 2, still fixed HostTick v1: one advance per accepted complete frame, including equal timestamps; no Modelica same-time event iteration. Descriptive, not a runtime selector or snapshot revision. |
+| [Assertions](../crates/oce-api/contracts/assertions.schema.json) | `CompletedFrame::diagnostics` retains all block warnings, including Assert and other classes. Sources are currently class-level, not guaranteed instances. Repeated false Assert inputs warn each evaluation; true is silent. |
+| [Execution profile](../crates/oce-api/contracts/execution-profile.schema.json) | Fixed HostTick v1: one advance per accepted complete frame, including equal timestamps; no Modelica same-time event iteration. Descriptive, not a runtime selector or snapshot revision. |
 
 Every completed frame retains warnings. There is no public no-op-sink execution profile or engine
 write-back route. Load has no external side effect and commit ordering is unchanged. These descriptors add no rollback,
@@ -198,25 +196,27 @@ Capture neither observes nor changes run state.
 
 ### Canonical bytes and comparison
 
-`Display` / `to_string()` is the complete revision-2 artifact, not Debug output. UTF-8 lines occur
+`Display` / `to_string()` is the complete revision-1 artifact, not Debug output. UTF-8 lines occur
 in exactly this order, with no spaces, BOM or CR, decimal revisions without leading zeros, and one
 LF after every line, including the last:
 
 | Label | Covered value |
 | --- | --- |
-| `oce-compatibility` | Descriptor revision, exactly `2`. |
+| `oce-compatibility` | Descriptor revision, exactly `1`. |
 | `catalog-schema` | Current public catalog schema revision. |
 | `catalog` | Verbatim current facade catalog content tag. |
 | `io-schema` | Public IO inventory contract revision, not a loaded input-definition digest. |
 | `value-schema` | Public value contract revision, not a new value codec. |
 | `parameter-schema` | Public parameter metadata contract revision, not instance parameter values. |
 | `execution-profile` | Exactly `HostTick-v1`, the canonical label for fixed HostTick v1. |
-| `execution-profile-schema` | Public execution-profile descriptor revision (currently 2). |
+| `execution-profile-schema` | Public execution-profile descriptor revision (1). |
 | `oce-api-version` | Exact Cargo package version, including any pre-release/build suffix. |
 | `content` | Verbatim `oce:canon1:` canonical content id, or exactly `none` if none was supplied. |
 
-Revision 1 carried an `export` line holding the retired `cxf:fnv1a128:` export tag; revision 2
-replaces it with `content` (GitHub #470), and a revision-1 receipt is refused.
+Every revision above stays 1 until 1.0.0 and a line changes in place (issue #509), so
+`oce-api-version` is the line that tells a receipt of one layout from another: a receipt from
+another package version never compares equal. The `export` line release 0.4.0 wrote in place of
+`content` is outside the grammar and is refused where a persisted descriptor is parsed.
 The [absent-content golden](../crates/oce-api/tests/fixtures/compatibility.txt) and
 [content golden](../crates/oce-api/tests/fixtures/compatibility_export.txt) are hand-assembled
 from those fields, public revisions/version and the independently checked tag goldens (the content
@@ -278,7 +278,7 @@ The [public tests](../crates/oce-api/tests/prepare_frame.rs),
 [stateful preservation matrix](../crates/oce-api/tests/prepare_frame_preservation.rs), and
 [private plan/lifecycle census](../crates/oce-api/src/frame_tests.rs) establish the bounded current
 preparation evidence. Execution, shared-core and frame-only contraction evidence make PC-033 through
-PC-035 current. The assertion and execution descriptors are now revision 2; other descriptors,
+PC-035 current. Descriptors,
 catalog identity, state formats, HostTick v1, stable-release status and downstream pins are unchanged.
 
 ## Complete-frame execution adoption

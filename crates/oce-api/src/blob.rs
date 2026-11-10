@@ -11,7 +11,7 @@ use crate::{ContentId, ContentIdError, Engine, OcError};
 
 /// A compiled-schedule blob for the loaded executable, and the content id it records.
 ///
-/// `bytes` is the canonical `OCEB` format-2 encoding: identical for one loaded executable on every
+/// `bytes` is the canonical `OCEB` encoding: identical for one loaded executable on every
 /// architecture and codegen profile, decoded by `oce_graph::blob::decode` on a `no_std + alloc`
 /// target built from the same engine version. It carries no run state, no host or architecture
 /// field and no signature; authenticating and transporting it is the host's job.

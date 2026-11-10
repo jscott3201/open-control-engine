@@ -247,8 +247,9 @@ Capture only after a model has loaded successfully and while no parameter edits 
 durable capture also requires authored stable identities and registered state contracts for every
 stateful block. The decoder enforces a 64 MiB limit, validates canonical ordering and manifest
 self-consistency, and checks an integrity trailer. Capture runs this same bounded decoder before
-returning a successful artifact. Format and execution ABI are now revision 2; revision-1 bytes
-refuse without migration because their manifest omitted executable input-domain/unit facts.
+returning a successful artifact. Format and execution ABI are revision 1 and stay 1 until 1.0.0;
+a snapshot carries no engine version, so the sealed envelope is what binds bytes to the build that
+wrote them ([wire revision](state-compatibility.md#wire-revision-and-integrity)).
 Class-specific block-state invariants are checked during restore, when a target engine is available.
 The trailer detects accidental corruption; it is not an authenticity or freshness proof. Protect
 snapshot bytes according to the trust boundary of the host that consumes them.

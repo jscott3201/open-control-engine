@@ -420,7 +420,7 @@ runs the state-determinism subset for **`oce-api`, `oce-blocks`, and `oce-expr`*
 `determinism-matrix` job in `.github/workflows/pr-gate.yml`: two
 native cells, x86_64 on `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm`, in debug codegen. Each
 cell refuses a runner of the wrong architecture, runs the three-crate
-subset and emits populated revision-2 portable and target-bound state vectors. The
+subset and emits populated portable and target-bound state vectors. The
 `determinism-compare` fan-in (one leg per architecture) downloads both cells' vectors,
 requires portable bytes to match across architectures and target-bound bytes to differ, and then
 parses the **other** architecture's target-bound snapshot and refuses it through the public restore path

@@ -111,6 +111,16 @@ tagged `v0.x` at the end of each milestone.
 7. Sequences, routines and faults live in `open-control-library`, never here; this repo keeps only
    the minimal conformance corpus.
 8. `cargo clean` the tree at every merge boundary; never while a build is running in it.
+9. Every format and schema this project defines stays at revision 1 until 1.0.0, the content-id
+   tag `oce:canon1:` and each stateful class's `state_contract_revision` included: change it in
+   place and re-bless its fixtures and goldens, with no importer, mapping table or dual-read path.
+10. Because those revisions stay at 1, the engine version is what tells artefacts of one layout from
+    another: the first PR after a release tag that changes a format's bytes or meaning bumps the
+    workspace version on `development` to the next milestone's version (unless it is already
+    bumped), re-blesses, and includes a test that an artefact of the previous layout is refused
+    with a typed error. Known gap: a state snapshot header carries no engine version yet, so
+    released snapshots are refused today only because they carry format revision 2; GitHub #530
+    stamps the version before `v0.5.0` is tagged.
 
 ---
 

@@ -208,8 +208,9 @@ not an `unwrap`.
 ## Hash and id format
 
 The id is **SHA-256** over the canonical bytes, written `oce:canon1:` followed by the 64 lowercase
-hex digits of the digest in output order. `canon1` is the encoding version; changing the encoding
-or the hash is `canon2`, never a silent change under `canon1`.
+hex digits of the digest in output order. `canon1` names the encoding and the hash. *Amended
+2026-11-09 (owner ruling on issue #509):* the tag stays `oce:canon1:` before 1.0.0. A change to the
+encoding or the hash re-stamps ids in place, and the engine version tells the layouts apart.
 
 FNV-1a-128 is what the repo uses for every other tag, and it is documented as "non-cryptographic
 and collision-prone in adversarial use". That was acceptable for an integrity tag over bytes the
@@ -649,12 +650,12 @@ The old id is `-` where none existed (the export was partial). The source path i
 repository root, with `/` separators. Lines starting with `#` are comments and come first: the
 format line, the engine version the new ids were computed with and the owner test.
 
-**In this repo** the table is `crates/oce-api/tests/fixtures/content_id/restamp.tsv`, one line per
-G36 catalog fixture (46). Its owner test recomputes the new id of every fixture and compares the
-whole file byte for byte; `OCE_BLESS=1` regenerates it. The old column is copied once from
-`crates/oce-cxf/tests/fixtures/expectations/g36_export_content.txt`, which pins today's export
-hashes and keeps doing so. It is a migration record, so after the first bless it only changes when
-a new id moves.
+**In this repo** the file is `crates/oce-api/tests/fixtures/content_id/restamp.tsv`, one line per
+corpus document. Its owner test recomputes the id of every document and compares the whole file
+byte for byte; `OCE_BLESS=1` regenerates it. *Amended 2026-11-09 (issue #509):* the old-id column
+is dropped here. The owner ruled that formats change in place before 1.0.0 with no importer,
+mapping table or dual-read path, so this repo keeps the file as a plain pin of current ids,
+`<content id><TAB><source path>`, and holds no retired id.
 
 **In the library** (track L3) the same format is produced by the library's own tooling: for every
 card, its stored old id and its source path, and the new id from `oce id <file>` (a one-line `oce`
@@ -759,6 +760,13 @@ meaning bumps the version, and a host comparing two blobs' ids must not compare 
 `export` at revision 1 with a new tag grammar (a persisted receipt would change meaning without a
 revision). Why: the descriptor's contract is exact-byte comparison and refusal of unknown
 revisions.
+
+*Amended 2026-11-09 (issue #509): decisions 15 and 16 are superseded on the numbers, not on the
+bytes.* The owner ruled that every format and schema stays at revision 1 until 1.0.0 and changes in
+place. The blob field still holds the digest and the descriptor still has its `content` line, but
+`FORMAT_VERSION` and the descriptor revision are both 1. What keeps a host from comparing across
+meanings is the engine version: the blob header and the descriptor's `oce-api-version` line carry
+it, and the workspace version moved to 0.5.0 with the reset.
 
 **17. The mapping table is plain TSV, sorted, with `-` for a missing old id**, owned by a test in
 this repo and produced by the library's own tooling for its cards. Rejected: JSON (no gain for
@@ -886,10 +894,10 @@ The orchestrator's review of the draft PR ruled on the eleven questions it raise
 6. **Ports:** indices; the class signature hash pins names and kinds.
 7. **Defaults:** presence is the evaluated-or-not flag, and binding a default moves the id; the
    second worked example was added to show it.
-8. **Blob:** `FORMAT_VERSION` 2, the digest fills the 32-byte field, present for the 13
-   partial-export fixtures; both blob dumps regenerate.
-9. **Descriptor:** revision 2 with a `content` line; `check_compatible` requires revision 2, and
-   the `Export*` mismatch variants are renamed.
+8. **Blob:** the digest fills the 32-byte field, present for the 13 partial-export fixtures; both
+   blob dumps regenerate. (`FORMAT_VERSION` went to 2 here and was reset to 1 by issue #509.)
+9. **Descriptor:** a `content` line, and the `Export*` mismatch variants are renamed. (The
+   descriptor revision went to 2 here and was reset to 1 by issue #509.)
 10. **`ExportReport`:** both id methods are dropped; the id comes only from `Engine::content_id`,
     and `ExportReport` keeps `complete() -> Result<(), ExportIncomplete>` (decision 14 rewritten).
 11. **`oce-diff` and the other notes:** decision 8 narrowed, the "Relation to content ids" section

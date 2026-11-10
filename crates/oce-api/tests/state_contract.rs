@@ -6,20 +6,6 @@ use oce_api::{Engine, EngineStateError, EngineStateSnapshot, OcError, StatePorta
 const MODEL: &[u8] = include_bytes!("fixtures/legacy_frame_add.jsonld");
 
 #[test]
-fn historical_revision_one_vector_refuses_without_a_migration_fallback() {
-    // Unchanged empty-authored-model golden from the preceding wire contract, not re-blessed.
-    let hex = include_str!("fixtures/state_legacy.hex").trim();
-    let bytes: Vec<_> = (0..hex.len())
-        .step_by(2)
-        .map(|index| u8::from_str_radix(&hex[index..index + 2], 16).unwrap())
-        .collect();
-    assert!(matches!(
-        EngineStateSnapshot::from_bytes(&bytes),
-        Err(EngineStateError::UnsupportedFormat { revision: 1 })
-    ));
-}
-
-#[test]
 fn portable_policy_is_public_owned_inspection_not_restore_authority() {
     let mut engine = Engine::new();
     engine.load_cxf(MODEL).unwrap();

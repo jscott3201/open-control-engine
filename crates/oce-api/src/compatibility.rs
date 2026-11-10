@@ -39,7 +39,7 @@ impl fmt::Display for CatalogContentId {
     }
 }
 
-/// Closed, owned revision-2 host compatibility facts, independent of any engine lifetime.
+/// Closed, owned revision-1 host compatibility facts, independent of any engine lifetime.
 ///
 /// [`Self::current`] captures only public catalog and contract revisions, fixed HostTick v1,
 /// `oce-api`'s Cargo package version, and optionally a canonical content id. No executable
@@ -55,17 +55,18 @@ impl fmt::Display for CatalogContentId {
 /// ```
 /// let receipt = oce_api::CompatibilityDescriptor::current(None);
 /// let bytes = receipt.to_string();
-/// assert!(bytes.starts_with("oce-compatibility:2\ncatalog-schema:1\n"));
-/// assert!(bytes.ends_with("oce-api-version:0.4.0\ncontent:none\n"));
+/// assert!(bytes.starts_with("oce-compatibility:1\ncatalog-schema:1\n"));
+/// assert!(bytes.ends_with("oce-api-version:0.5.0\ncontent:none\n"));
 /// receipt.check_compatible(&receipt)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 ///
 /// The fields are `oce-compatibility`, `catalog-schema`, `catalog`, `io-schema`, `value-schema`,
 /// `parameter-schema`, `execution-profile`, `execution-profile-schema`, `oce-api-version`, `content`.
-/// `content` is `none` or the `oce:canon1:` id ([`ContentId`]); revision 1 carried an `export`
-/// line with an FNV-1a-128 export tag there instead, and is refused.
-/// `execution-profile` is exactly `HostTick-v1`; its separate descriptor revision is currently 2.
+/// `content` is `none` or the `oce:canon1:` id ([`ContentId`]).
+/// `execution-profile` is exactly `HostTick-v1`; its separate descriptor revision is 1.
+/// Every revision here stays 1 until 1.0.0 and a field changes in place, so `oce-api-version` is
+/// the line that tells a descriptor of one layout from another.
 /// `oce-api-version` includes the exact Cargo version, including any pre-release/build suffix.
 /// `oce-api` declares no cargo features, so there is no feature selection to distinguish.
 /// Package version is NOT a source/dependency-lock/compiler/target/codegen/binary identity. Equal
@@ -119,7 +120,7 @@ impl CompatibilityDescriptor {
                 .revision
         };
         Self {
-            revision: 2,
+            revision: 1,
             catalog_schema: revision(ContractDomain::Catalog),
             catalog,
             io_schema: revision(ContractDomain::Io),
@@ -132,7 +133,7 @@ impl CompatibilityDescriptor {
         }
     }
 
-    /// Canonical descriptor revision, currently 2; independent of every domain/state revision.
+    /// Canonical descriptor revision, 1 until 1.0.0; independent of every domain/state revision.
     #[must_use]
     pub fn revision(&self) -> u32 {
         self.revision
@@ -199,14 +200,14 @@ impl CompatibilityDescriptor {
     /// identity separately require `content_id().is_some()` even when this check succeeds.
     ///
     /// # Errors
-    /// Returns the first mismatch in canonical field order. Both descriptor revisions must be 2.
+    /// Returns the first mismatch in canonical field order. Both descriptor revisions must be 1.
     /// Profile label/revision share `ExecutionProfile`; content presence precedes content id.
     /// No public parsing of persisted/untrusted receipts is implied by this in-memory comparison.
     pub fn check_compatible(&self, other: &Self) -> Result<(), CompatibilityMismatch> {
         use CompatibilityMismatch as M;
         let checks = [
             (
-                self.revision == 2 && other.revision == 2,
+                self.revision == 1 && other.revision == 1,
                 M::DescriptorRevision,
             ),
             (
@@ -266,7 +267,7 @@ impl fmt::Display for CompatibilityDescriptor {
 /// only; they are not state restore errors or security decisions. Display text is explanatory.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CompatibilityMismatch {
-    /// Either descriptor revision is unsupported (not 2).
+    /// Either descriptor revision is unsupported (not 1).
     DescriptorRevision,
     /// Canonical catalog schema revisions differ.
     CatalogSchema,

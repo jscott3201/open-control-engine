@@ -116,10 +116,10 @@ fn fixed_header_refusals_follow_the_pinned_precedence() {
     ));
 
     let mut unsupported = bytes.clone();
-    unsupported[8..12].copy_from_slice(&1u32.to_le_bytes());
+    unsupported[8..12].copy_from_slice(&2u32.to_le_bytes());
     assert!(matches!(
         EngineStateSnapshot::from_bytes(&unsupported),
-        Err(EngineStateError::UnsupportedFormat { revision: 1 })
+        Err(EngineStateError::UnsupportedFormat { revision: 2 })
     ));
 
     let mut trailing = bytes.clone();

@@ -7,7 +7,8 @@ use std::str::FromStr;
 use sha2::{Digest, Sha256};
 
 /// The text every canonical content id starts with. `canon1` names the `OCECANON` encoding
-/// version 1 and SHA-256 together; changing either is `canon2`, never a silent change here.
+/// version 1 and SHA-256 together. The tag stays `oce:canon1:` before 1.0.0: a change to either
+/// re-stamps ids in place, and the engine version tells the layouts apart.
 pub(crate) const PREFIX: &str = "oce:canon1:";
 
 /// SHA-256 of `bytes`, in digest output order. A pure function: the `sha2` backend choice
@@ -97,8 +98,8 @@ impl ContentId {
         &self.text
     }
 
-    /// The 32 SHA-256 digest bytes in output order: the bytes a format-2 compiled-schedule blob
-    /// carries in its header. No allocation or panic.
+    /// The 32 SHA-256 digest bytes in output order: the bytes a compiled-schedule blob carries
+    /// in its header. No allocation or panic.
     #[must_use]
     pub fn digest(&self) -> &[u8; 32] {
         &self.digest

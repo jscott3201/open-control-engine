@@ -192,6 +192,43 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Execution core
 
+- **Every format and schema revision is 1 until 1.0.0, and `development` carries version 0.5.0**
+  (GitHub #518, issue #509; owner rulings of 2026-11-09). There is no backwards compatibility
+  before 1.0.0: a format changes in place and its fixtures and goldens are re-blessed, with no
+  importer, mapping table or dual-read path. Six numbers that had moved are reset to 1, with no
+  layout change: the `OCEB` blob format (`oce_graph::blob::FORMAT_VERSION`, was 2), the state
+  snapshot format and execution-state ABI revisions (were 2), the compatibility descriptor
+  (`oce-compatibility:1`, was 2), and the diagnostics (`DIAGNOSTIC_SCHEMA_REVISION`, was 3),
+  assertions and execution-profile contract revisions (were 2;
+  `execution-profile-schema:1` in the descriptor). A wrong number is still refused with the same
+  typed errors (`BlobError::UnsupportedFormat`, `EngineStateError::UnsupportedFormat`,
+  `CompatibilityMismatch::DescriptorRevision`).
+  **The workspace version moves to 0.5.0 in the same change, without a release or a tag.** With
+  the numbers reset and the version still 0.4.0, every one of release 0.4.0's 46 blobs decoded and
+  built an executable (same sections, class hashes and a valid CRC), and 33 of them presented the
+  retired `cxf:fnv1a128:` export tag as a canonical content id. The engine version in the blob
+  header and the descriptor's `oce-api-version` line now separate the layouts: a release-0.4.0
+  blob is refused with `BlobError::EngineVersionMismatch` (`tests/blob_old_layout.rs`, one such
+  blob kept unblessed as `fixtures/blob_legacy.oceb`). The rule that follows is in `AGENTS.md`:
+  the first PR after a release tag that changes a format's bytes or meaning bumps the workspace
+  version.
+  A state snapshot carries no engine version, by contract. Releases 0.2.0 to 0.4.0 numbered their
+  snapshots 2, so a populated snapshot from them is refused by number, by ABI revision if only the
+  format field is edited, and by the execution fingerprint if both are
+  (`tests/state_old_layout.rs`, `fixtures/state_revision_two.hex`); the empty-model vector of the
+  layout before those releases (`fixtures/state_legacy.hex`) now shares today's numbers and is
+  refused by structure. That is one shape, not a proof for every snapshot of that layout, and from
+  here on the host envelope is what binds snapshot bytes to a build
+  ([state continuation](docs/state-compatibility.md#wire-revision-and-integrity)).
+  Re-blessed: the 46 blob goldens (format field, engine-version bytes and CRC only; 123,329 bytes
+  in all, unchanged), `compatibility.txt` and `compatibility_export.txt`, the two pinned state
+  vectors in `state_tests.rs` and `state_format_golden_tests.rs`, and `restamp.tsv`, which loses
+  its retired-id column and becomes a plain pin of the 47 canonical content ids (all 47 unchanged).
+  The catalog content id, every class signature hash, the run digests, the determinism state
+  vectors' sizes and `tools/golden-gen/goldens` do not move. `DiagnosticStage::rank` and the
+  three contract schema files change only their revision number; the product contract advances to
+  revision 25.
+
 - **One enumeration table in `oce-model`** (GitHub #488, issue #468). The enum facts that lived in
   hand-written `match` arms and member constants in `oce-model/src/types.rs` are now one static
   table, `oce_model::enumerations` (`no_std`, plain `&'static` data, linear lookups with no
