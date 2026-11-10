@@ -410,21 +410,33 @@ and a gate that accepted any text would restore exactly the false assurance desc
   - **`oce vocab`** adds `scale_factors`, in text and JSON: `min` 60, `h` 3600 and `d` 86400, each
     an exact multiple of `s`. The table is `oce_vocab::SCALE_FACTORS` (with `scale_factor(symbol)`),
     time only; `degC`, `%` and prefixed SI units are not in it. It states the table: the text form
-    still refuses `1 h` (`unit-not-base`) until part 3 (#501) reads it.
+    still refuses `1 h` (`unit-not-base`) until part 3 (#501) reads it, and the output says so
+    where an agent reads it: the text heading reads "not accepted as a unit suffix yet", and the
+    meaning of `unit-not-base` under `parse_codes`, in text and JSON, names `min`, `h` and `d` as
+    not accepted yet. A test fails when the text form starts accepting one.
+  - **The text listing is held to the JSON line for line.** `tests/catalog_text.rs` writes the
+    text it expects from each class's JSON report and requires the binary's text to be exactly
+    that, for the 133 classes that resolve at a table of plain values, so a `unit:` line dropped
+    under a port fails for every port that declares one (21 do).
+  - **No output cap.** `oce catalog` builds the whole report in memory, for text as for JSON, and
+    the catalog's width rules allow one class about 2^21 ports:
+    `CDL.Routing.RealExtractSignal` at `nin=1048576` and `nout=1048576` wrote 416 MB and peaked at
+    3.1 GB. The README states it; a cap is a separate change.
   - **Carried in from the review of GitHub #511, in `oce-vocab`:** the curated join no longer
     scans a class once per curated entry. Each curated class indexes its subjects once and every
     description and note is a binary search, so the reviewer's pair (one class with 24,000
     connectors, 32,000 notes naming the last) costs about 0.83 million name comparisons where the
     scan made 498 million; a test holds the join to `n log n` in name comparisons, not wall-clock
-    time, and the resolved positions are kept so a view searches nothing. The reader's comment and test no
-    longer say the list bound "cannot be reached": that holds for an accepted document only, and
+    time, and the resolved positions are kept so a view searches nothing. The reader's comment
+    and test no longer say the list bound "cannot be reached": that holds for an accepted document only, and
     a compact 95,000-item document under the byte bound is read, checked and then refused
     `NotCanonical` (now pinned). A 1,000,000-deep nest is refused where the closed shape ends, in
     both readers, with a typed `VocabError::Json` (now pinned; an open shape would have scanned the
     whole document). The design note says 189 parameters and gives the regeneration command with
     `-p`.
-  - Transcripts: seven new (`catalog_true_delay`, `catalog_true_hold_with_reset`, each as text and
-    `_json`; `catalog_pid`, `catalog_hysteresis_json`, `catalog_multisum`) and eleven re-blessed
+  - Transcripts: nine new (`catalog_true_delay`, `catalog_true_hold_with_reset` and
+    `catalog_dew_point`, each as text and `_json`; `catalog_pid`, `catalog_hysteresis_json`,
+    `catalog_multisum`) and eleven re-blessed
     (`catalog_class`, `catalog_class_params_json`, `catalog_enum_param`, `catalog_rule_refusal`,
     `catalog_unresolved`, `vocab_text`, `vocab_json`, `help_oce`, `help_catalog`, `help_vocab`,
     `usage_no_arguments`). `oce-api`, the core four, `oce-cxf`, `oce-author` and both vocabulary

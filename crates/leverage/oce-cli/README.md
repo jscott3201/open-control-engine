@@ -192,8 +192,15 @@ removed or changed, so a reader of the earlier shape still reads this one.
 multiple of a base unit (`oce_vocab::SCALE_FACTORS`), in table order, each
 `{ "symbol", "base", "factor" }` with `factor` a JSON integer: `min` 60, `h` 3600 and `d` 86400,
 all of `s`. It is time only: `degC`, `%` and prefixed SI units are not in it. Every `base` is one
-of `base_units` and no `symbol` is. The table is stated here before the text form reads it: until
-issue #501 lands, a suffix such as `1 h` is still refused with `unit-not-base`.
+of `base_units` and no `symbol` is.
+
+The table is printed before the text form reads it: until issue #501 lands, a suffix such as
+`1 h` is still refused with `unit-not-base`, and the output says so itself. The text listing's
+heading reads "not accepted as a unit suffix yet, the text form refuses them with
+unit-not-base", and the meaning of `unit-not-base` under `parse_codes`, in the text and in the
+JSON, names `min`, `h` and `d` as not accepted yet. The JSON carries it there because the
+table's rows have no place for prose. A test fails when the text form starts accepting a scaled
+suffix, which is when that wording goes.
 
 ### Enumerations
 
@@ -214,10 +221,14 @@ and every read, stdin included, stops one byte past the limit. Stdin is bounded 
 time: a pipe that never closes keeps `oce` waiting. Non-UTF-8, binary junk, an empty file, a
 directory and a missing path each get one typed error code. Nothing panics.
 
-`catalog` reads no file. Its output is bounded by the catalog's own rules: a width parameter is
-at most 1,048,576, and at that width one class is a large report (`CDL.Reals.MultiSum` at
-`nin=1048576` as JSON is about 189 MB, built in memory, since every port carries its
-connector's description). Ask for the width you mean.
+`catalog` reads no file, and **its output has no cap of its own**. What bounds it is the
+catalog's width rules: a width parameter is at most 1,048,576, so one class resolves to about
+2^21 ports at most, and every port carries its connector's description. The widest case,
+`oce catalog CDL.Routing.RealExtractSignal --param nin=1048576 --param nout=1048576 --json`,
+wrote 416 MB and peaked at 3.1 GB of memory; `CDL.Reals.MultiSum` at `nin=1048576` is about
+189 MB. The whole report is built in memory before a byte is written, and the text listing
+builds it too, so asking for text does not make a wide class cheaper. Ask for the width you
+mean; a cap on the output is a separate change.
 
 `fmt --write` and `emit -o` write a uniquely named temporary file beside the target
 (`.NAME.<pid>.<counter>.oce-tmp`), opened with `create_new` so it never follows a link or
@@ -238,8 +249,10 @@ class and pins each run's exit status, stdout and stderr as one transcript in
 `tests/fixtures/runs/*.txt` (`--help` of every command included, so flag drift is visible);
 `tests/report_shape.rs` holds every report to the contract above; `tests/vocabulary.rs` holds
 the block vocabulary over every class (the closed class shape, the vocabulary's own text and the
-catalog's ranges, no `evidence` and no markup anywhere, text and JSON saying the same things, the
-same bytes on a second run) and the scale-factor table; `tests/files.rs` covers `fmt`
+catalog's ranges, no `evidence` and no markup anywhere, the same bytes on a second run) and the
+scale-factor table; `tests/catalog_text.rs` writes the text listing it expects from each
+class's JSON report and requires the binary's text to be exactly that, for the 133 classes that
+resolve at a table of plain values (every port's and parameter's `unit:` line included); `tests/files.rs` covers `fmt`
 over the `oce-author` text fixtures (referenced in place), `--write`, `-o` and a warning-free
 engine load of every emitted bundle; `tests/atomic_writes.rs` the write hardening (a planted link
 or file at the temporary name, permissions, a link target, a failed write's report);

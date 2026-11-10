@@ -996,7 +996,7 @@ exit: 0
     },
     {
       "code": "unit-not-base",
-      "meaning": "a unit suffix that is not built from base SI units"
+      "meaning": "a unit suffix that is not built from base SI units; the scaled symbols min, h and d are not accepted yet"
     },
     {
       "code": "malformed-atom",

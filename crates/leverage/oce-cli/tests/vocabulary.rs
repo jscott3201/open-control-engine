@@ -2,15 +2,16 @@
 //! (vocabulary note decisions 12 and 14, GitHub issue #500): golden transcripts of the classes
 //! the note names, and the properties over every class: a closed JSON shape, the vocabulary's
 //! own text and the catalog's ranges, no `evidence`, no HTML, and the same bytes on every run.
+//! `catalog_text.rs` holds the text listing to the JSON, line for line.
 
 mod support;
 
 use std::collections::BTreeSet;
 
-use oce_api::{CatalogDefault, ClassMetadata, ValueType, class_metadata, class_ports};
+use oce_api::{class_metadata, class_ports};
 use oce_vocab::{SCALE_FACTORS, class_vocab, vocabulary};
 use serde_json::{Value, json};
-use support::{Run, case, oce};
+use support::{Run, case, describe, oce};
 
 // --- golden transcripts (the note's "Serving" list) ---
 
@@ -60,37 +61,6 @@ fn catalog_describes_every_port_of_a_vector_connector() {
 }
 
 // --- every class ---
-
-/// `--param` arguments that give every required parameter of the class a value of its type, so
-/// that the class resolves wherever such a table satisfies its rules.
-fn required_params(meta: &ClassMetadata) -> Vec<String> {
-    meta.parameters
-        .iter()
-        .filter(|parameter| parameter.default == CatalogDefault::Required)
-        .filter(|parameter| !parameter.name.contains('<'))
-        .filter_map(|parameter| {
-            let value = match parameter.value_type {
-                ValueType::Real | ValueType::Integer => "1",
-                ValueType::Boolean => "true",
-                _ => return None,
-            };
-            Some(format!("{}={value}", parameter.name))
-        })
-        .collect()
-}
-
-/// `oce catalog CLASS` at [`required_params`], as text or as JSON.
-fn describe(meta: &ClassMetadata, json: bool) -> Run {
-    let params = required_params(meta);
-    let mut args = vec!["catalog", meta.class_path];
-    for param in &params {
-        args.extend(["--param", param.as_str()]);
-    }
-    if json {
-        args.push("--json");
-    }
-    oce(&args, b"")
-}
 
 /// Every object key in `value`, at any depth.
 fn keys_of(value: &Value, keys: &mut BTreeSet<String>) {
@@ -393,77 +363,6 @@ fn every_class_prints_plain_text_without_markup_or_host_paths() {
 }
 
 #[test]
-fn the_text_and_the_json_of_a_class_say_the_same_things() {
-    for meta in class_metadata() {
-        let text = describe(meta, false);
-        if text.code != 0 {
-            continue;
-        }
-        let text = text.stdout_text().to_owned();
-        let class = describe(meta, true).report()["class"].clone();
-        let path = meta.class_path;
-        assert!(text.starts_with(&format!("{path}\n  {}\n", meta.description)));
-        for parameter in class["parameters"].as_array().unwrap() {
-            let name = parameter["name"].as_str().unwrap();
-            assert!(text.contains(&format!("\n  {name} : ")), "{path} {name}");
-            for key in ["description", "unit", "quantity"] {
-                let value = parameter[key].as_str().unwrap();
-                assert!(text.contains(value), "{path} {name} {key}");
-            }
-            let range: Vec<&str> = parameter["range"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|line| line.as_str().unwrap())
-                .collect();
-            if !range.is_empty() {
-                let line = format!("\n      range: {}\n", range.join("; "));
-                assert!(text.contains(&line), "{path} {name}: {line}");
-            }
-        }
-        for side in ["inputs", "outputs"] {
-            for port in class[side].as_array().unwrap() {
-                let (name, kind) = (
-                    port["name"].as_str().unwrap(),
-                    port["kind"].as_str().unwrap(),
-                );
-                let mut entry = format!("\n  {name} : {kind}\n");
-                let description = port["description"].as_str().unwrap();
-                if !description.is_empty() {
-                    entry.push_str(&format!("      {description}\n"));
-                }
-                assert!(text.contains(&entry), "{path} {name}");
-            }
-        }
-        for note in class["notes"].as_array().unwrap() {
-            let (kind, subject) = (
-                note["kind"].as_str().unwrap(),
-                note["subject"].as_str().unwrap(),
-            );
-            let label = if subject.is_empty() {
-                kind.to_owned()
-            } else {
-                format!("{kind} ({subject})")
-            };
-            let line = format!("\n  {label}: {}\n", note["text"].as_str().unwrap());
-            assert!(text.contains(&line), "{path}: {line}");
-        }
-        if class["notes"].as_array().unwrap().is_empty() {
-            assert!(text.contains("\nnotes:\n  (none)\n"), "{path}");
-        }
-        match class["links"].as_object() {
-            Some(links) => {
-                for link in links.values() {
-                    assert!(text.contains(link.as_str().unwrap()), "{path}");
-                }
-                assert!(text.contains("(may drift from the pin)"), "{path}");
-            }
-            None => assert!(text.ends_with("\nlinks:\n  (none)\n"), "{path}"),
-        }
-    }
-}
-
-#[test]
 fn the_class_list_stays_one_line_per_class() {
     let run = oce(&["catalog"], b"");
     assert_eq!(run.code, 0);
@@ -540,9 +439,60 @@ fn vocab_lists_the_scale_factor_table_exactly() {
     let text = oce(&["vocab"], b"");
     assert_eq!(text.code, 0);
     assert!(text.stdout_text().contains(
-        "\nscale factors (time only; one symbol is exactly this many base units):\n  \
+        "\nscale factors (time only; one symbol is exactly this many base units; not accepted \
+         as a unit suffix yet, the text form refuses them with unit-not-base):\n  \
          min  60 s\n  h    3600 s\n  d    86400 s\n\n"
     ));
+}
+
+/// The table is printed before the text form reads it (issue #501), so the output must not let
+/// a reader think `1 h` can be written today. When the text form accepts a scaled suffix this
+/// test fails at its first assertion: remove the "not accepted yet" wording from the heading
+/// (`commands/vocab.rs`) and from the meaning of `unit-not-base` (`codes.rs`) in that change.
+#[test]
+fn vocab_says_the_scaled_suffixes_are_refused_for_as_long_as_they_are() {
+    for row in SCALE_FACTORS {
+        let written = format!(
+            "sequence s\nextends none\nparam p : Real = 1 {}\n",
+            row.symbol
+        );
+        let refusal = oce_author::parse_text(&written).expect_err("a scaled suffix is refused");
+        assert_eq!(refusal.code, "unit-not-base", "{}", row.symbol);
+    }
+    // A base unit is accepted, so the refusal above is about the symbol, not the statement.
+    assert!(oce_author::parse_text("sequence s\nextends none\nparam p : Real = 1 s\n").is_ok());
+
+    let text = oce(&["vocab"], b"");
+    let heading = text
+        .stdout_text()
+        .lines()
+        .find(|line| line.starts_with("scale factors"))
+        .expect("the scale-factor heading");
+    assert!(
+        heading.contains("not accepted as a unit suffix yet"),
+        "{heading}"
+    );
+    assert!(heading.contains("unit-not-base"), "{heading}");
+
+    // The JSON says it where it explains the refusal, and the text table says the same.
+    let report = oce(&["vocab", "--json"], b"").report();
+    let meaning = report["parse_codes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["code"] == "unit-not-base")
+        .expect("the code is listed")["meaning"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    for row in SCALE_FACTORS {
+        let named = meaning
+            .split(|c: char| !c.is_ascii_alphanumeric())
+            .any(|word| word == row.symbol);
+        assert!(named, "{meaning}: no {}", row.symbol);
+    }
+    assert!(meaning.contains("not accepted yet"), "{meaning}");
+    assert!(text.stdout_text().contains(&format!("  {meaning}\n")));
 }
 
 // --- determinism ---

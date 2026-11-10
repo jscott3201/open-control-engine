@@ -1,0 +1,49 @@
+exit: 0
+--- stdout
+{
+  "class": {
+    "class_path": "CDL.Psychrometrics.DewPoint_TDryBulPhi",
+    "description": "Block to compute the dew point temperature based on relative humidity",
+    "inputs": [
+      {
+        "description": "Dry bulb temperature",
+        "kind": "Real",
+        "name": "TDryBul",
+        "quantity": "ThermodynamicTemperature",
+        "unit": "K"
+      },
+      {
+        "description": "Relative air humidity",
+        "kind": "Real",
+        "name": "phi",
+        "quantity": "",
+        "unit": "1"
+      }
+    ],
+    "links": {
+      "latest_help": "https://simulationresearch.lbl.gov/modelica/releases/latest/help/Buildings_Controls_OBC_CDL_Psychrometrics.html#Buildings.Controls.OBC.CDL.Psychrometrics.DewPoint_TDryBulPhi",
+      "pinned_source": "https://github.com/lbl-srg/modelica-buildings/blob/a131864e4c4df22ebcd52bb8da439de0087ac365/Buildings/Controls/OBC/CDL/Psychrometrics/DewPoint_TDryBulPhi.mo"
+    },
+    "notes": [],
+    "outputs": [
+      {
+        "description": "Dew point temperature",
+        "kind": "Real",
+        "name": "TDewPoi",
+        "quantity": "ThermodynamicTemperature",
+        "unit": "K"
+      }
+    ],
+    "parameters": [],
+    "reserved": false
+  },
+  "command": "catalog",
+  "errors": [],
+  "findings": [],
+  "input": null,
+  "ok": true,
+  "params": [],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr
