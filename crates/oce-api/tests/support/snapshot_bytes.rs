@@ -10,7 +10,7 @@
 
 use std::ops::Range;
 
-use oce_api::{Engine, EngineVersion, Value};
+use oce_api::{Engine, EngineStateSnapshot, EngineVersion, OcError, Value};
 
 /// The format-revision field, a little-endian `u32`.
 pub(crate) const FORMAT_FIELD: Range<usize> = 8..12;
@@ -172,4 +172,79 @@ pub(crate) fn restamp(bytes: &[u8], version: EngineVersion) -> Vec<u8> {
     stamped[HEADER_BYTES..HEADER_BYTES + 16].copy_from_slice(&fingerprint.to_le_bytes());
     reseal(&mut stamped);
     stamped
+}
+
+/// What a host does with snapshot bytes its envelope has approved: decode them, then restore into
+/// the target. A decode refusal returns before `restore_state` is called.
+pub(crate) fn restore_from_bytes(target: &mut Engine, bytes: &[u8]) -> Result<(), OcError> {
+    let snapshot = EngineStateSnapshot::from_bytes(bytes)?;
+    target.restore_state(&snapshot)
+}
+
+/// One connector value of a snapshot of [`DELAY_MODEL`]: the owning block, the direction (0 in,
+/// 1 out), the port index and the Real value's bits.
+pub(crate) type ConnectorReal = (String, u8, u32, u64);
+
+/// The part of a [`DELAY_MODEL`] snapshot that follows the manifest, read by hand: the keyed
+/// connector values, then the state words. Every key of that model is an authored block key and
+/// every value a Real; anything else, nonzero reserved flags or bytes left over before the
+/// trailer fail the test.
+pub(crate) fn delay_payload(bytes: &[u8], header_bytes: usize) -> (Vec<ConnectorReal>, Vec<u64>) {
+    let u32_at = |at: usize| u32::from_le_bytes(bytes[at..at + 4].try_into().unwrap());
+    let u64_at = |at: usize| u64::from_le_bytes(bytes[at..at + 8].try_into().unwrap());
+    let mut at = manifest_range(bytes, header_bytes).end;
+    let value_count = u32_at(at);
+    at += 4;
+    let mut values = Vec::new();
+    for _ in 0..value_count {
+        assert_eq!(bytes[at], 0, "an authored block key");
+        let owner_len = usize::try_from(u32_at(at + 1)).unwrap();
+        let owner = std::str::from_utf8(&bytes[at + 5..at + 5 + owner_len]).unwrap();
+        at += 5 + owner_len;
+        let (direction, port) = (bytes[at], u32_at(at + 1));
+        assert_eq!(bytes[at + 5], 0, "a Real value");
+        values.push((owner.to_owned(), direction, port, u64_at(at + 6)));
+        at += 14;
+    }
+    let word_count = usize::try_from(u64_at(at)).unwrap();
+    at += 8;
+    let words = (0..word_count)
+        .map(|index| u64_at(at + index * 8))
+        .collect();
+    at += word_count * 8;
+    assert_eq!(u32_at(at), 0, "reserved flags");
+    assert_eq!(
+        at + 4,
+        bytes.len() - TRAILER_BYTES,
+        "nothing after the flags"
+    );
+    (values, words)
+}
+
+/// The connector values the capture recipe leaves, in the snapshot's key order: the second
+/// frame's inputs on the `Add` (0.5 and 2.0), its sum 2.5, the `UnitDelay` input connector (0.0
+/// in every capture, on every commit the recipe was run on) and the delayed output 2.5, the first
+/// frame's sum.
+pub(crate) fn delay_recipe_values() -> Vec<ConnectorReal> {
+    [
+        ("urn:frame:add", 0, 0, 0.5f64),
+        ("urn:frame:add", 0, 1, 2.0),
+        ("urn:frame:add", 1, 0, 2.5),
+        ("urn:frame:delay", 0, 0, 0.0),
+        ("urn:frame:delay", 1, 0, 2.5),
+    ]
+    .map(|(owner, direction, port, value)| (owner.to_owned(), direction, port, value.to_bits()))
+    .to_vec()
+}
+
+/// The five `UnitDelay` state words the capture recipe leaves: 2.5 twice, negative zero, and two
+/// words equal to 1. Pinned from the captures, not derived here from the block's state layout.
+pub(crate) fn delay_recipe_words() -> Vec<u64> {
+    vec![
+        2.5f64.to_bits(),
+        2.5f64.to_bits(),
+        (-0.0f64).to_bits(),
+        1,
+        1,
+    ]
 }

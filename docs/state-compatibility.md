@@ -16,7 +16,7 @@ State is current/current only, with no N-1 support or cross-build state migratio
 [host fallback checklist](host-responsibilities.md)). The historical v0.1.0 source pin has no
 snapshot API.
 
-**A snapshot restores only on the engine version that wrote it** (GitHub #530). Its header names
+**A snapshot restores only on the engine version that wrote it** (issue #530). Its header names
 that version, and `EngineStateSnapshot::from_bytes` refuses any other with
 `EngineVersionMismatch` before it reads anything further, so `restore_state` never sees such
 bytes. This is the one comparison OCE makes about where bytes came from, and it is a release
@@ -135,7 +135,7 @@ a version field: its body length sits at bytes 16..24, so this build reads the l
 that length as a version and refuses it.
 
 - `state_unstamped.hex`: revision 1 without the version field, as `development` wrote it between
-  the format reset and GitHub #530; no release did. Refused with `EngineVersionMismatch` (found
+  the format reset and issue #530; no release did. Refused with `EngineVersionMismatch` (found
   1462.0.0, its body length). Given the six version bytes by hand it fails its trailer, and with
   a recomputed trailer its fingerprint.
 - `state_revision_two.hex`: the same state as releases 0.2.0 to 0.4.0 wrote it, numbered format 2
@@ -267,9 +267,11 @@ or a host `NO_EVAL` window, is host frame policy.
   the blob header; byte-identical capture and restore on the same version; refusal of a
   consistent snapshot that differs by patch, minor or major only; a patched version field failing
   the trailer and then the fingerprint; every bit of the field, every truncation and the
-  precedence against magic, format, length, trailer and body; no input-sized allocation on refusal.
+  precedence against magic, format, length, trailer and body; no input-sized allocation on
+  refusal; the host's decode-then-restore path stopping at decode, with a restoring control.
 - `tests/state_old_layout.rs`: three snapshots earlier layouts wrote, none with a version field,
-  refused at that field or by format revision; the capture recipe of the two populated ones.
+  refused at that field or by format revision; the repeatable capture recipe of the two
+  populated ones, and the connector values and state words it leaves, read out of both.
 - `src/tests/state_manifest_refusal_tests.rs`: rechecksummed field mutation corpus, repeat typed
   diagnostics, full snapshot/checkpoint before/after images and retained lifecycle fences; capture refuses a deliberately injected noncanonical producer image.
 - `src/tests/state_format_golden_tests.rs`, `state_tests.rs`, `state_io.rs`: independent full

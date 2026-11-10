@@ -1,4 +1,4 @@
-//! The engine version in the state snapshot header (GitHub #530).
+//! The engine version in the state snapshot header (issue #530).
 //!
 //! The format revision and the execution-state ABI revision stay 1 until 1.0.0, so the six bytes
 //! after them are what tell one build's layout from another's: major, minor and patch of the
@@ -21,8 +21,9 @@ use oce_api::{EngineStateError, EngineStateSnapshot, EngineVersion, OcError};
 use oce_graph::blob::ENGINE_VERSION;
 use snapshot_bytes::{
     ABI_FIELD, BODY_LENGTH_FIELD, FORMAT_FIELD, HEADER_BYTES, SHORTEST_INSPECTED, TRAILER_BYTES,
-    VERSION_FIELD, computed_trailer, delay_after_two_frames, delay_frame, delay_target,
-    fingerprint, manifest_range, reseal, restamp, stamped_version, trailer, version_field,
+    VERSION_FIELD, computed_trailer, delay_after_two_frames, delay_frame, delay_payload,
+    delay_recipe_values, delay_recipe_words, delay_target, fingerprint, manifest_range, reseal,
+    restamp, restore_from_bytes, stamped_version, trailer, version_field,
 };
 
 /// This build's populated snapshot: the delay model after the two recipe frames.
@@ -145,6 +146,16 @@ fn capture_then_restore_on_the_same_version_is_byte_identical() {
 }
 
 #[test]
+fn capture_recipe_on_this_build_holds_the_recorded_values_and_words() {
+    // The recipe the old-layout fixtures were captured with, run on this build and read back by
+    // hand: five connector values and five `UnitDelay` words. `state_old_layout.rs` holds the
+    // fixtures to the same expectation.
+    let (values, words) = delay_payload(&captured(), HEADER_BYTES);
+    assert_eq!(values, delay_recipe_values());
+    assert_eq!(words, delay_recipe_words());
+}
+
+#[test]
 fn snapshot_differing_by_patch_only_is_refused() {
     let found = patch_differs();
     let bytes = restamp(&captured(), found);
@@ -227,21 +238,34 @@ fn version_refusal_names_both_versions_and_wraps_into_the_facade_error() {
 }
 
 #[test]
-fn refusal_leaves_a_restore_target_untouched_and_still_restorable() {
-    // A refused snapshot never becomes an `EngineStateSnapshot`, so there is nothing to hand to
-    // `restore_state`: the target keeps its state and its durable restore window.
+fn host_restore_path_stops_at_decode_for_another_version_and_commits_this_one() {
+    // The path a host calls: decode approved bytes, then restore into a freshly loaded target.
+    // The target is at its load state, which is not the state the snapshots hold.
     let genuine = captured();
     let mut target = delay_target();
-    let before = target.state_snapshot().unwrap();
-    version_refusal(&restamp(&genuine, minor_differs()));
-    assert_eq!(
-        target.state_snapshot().unwrap().as_bytes(),
-        before.as_bytes()
-    );
-    target
-        .restore_state(&EngineStateSnapshot::from_bytes(&genuine).unwrap())
-        .unwrap();
+    let loaded = target.state_snapshot().unwrap().into_bytes();
+    assert_ne!(loaded, genuine);
+
+    for found in [patch_differs(), minor_differs(), major_differs()] {
+        match restore_from_bytes(&mut target, &restamp(&genuine, found)) {
+            Err(OcError::State(EngineStateError::EngineVersionMismatch {
+                found: named,
+                expected,
+            })) => assert_eq!((named, expected), (found, ENGINE_VERSION)),
+            other => panic!("expected EngineVersionMismatch, got {other:?}"),
+        }
+        assert_eq!(target.state_snapshot().unwrap().as_bytes(), loaded);
+    }
+
+    // The control: the same path with this build's bytes moves the target to the captured state,
+    // so the comparison above is one a restore would have changed. It also shows the three
+    // refusals left the durable restore window open; a second restore finds it closed.
+    restore_from_bytes(&mut target, &genuine).unwrap();
     assert_eq!(target.state_snapshot().unwrap().as_bytes(), genuine);
+    assert!(matches!(
+        restore_from_bytes(&mut target, &genuine),
+        Err(OcError::State(EngineStateError::DurableTargetAdvanced))
+    ));
 }
 
 #[test]

@@ -122,7 +122,7 @@ tagged `v0.x` at the end of each milestone.
     version in their header (major, minor and patch from one constant,
     `oce_graph::blob::ENGINE_VERSION`; a pre-release suffix is not recorded) and are accepted
     only by the version that wrote them: any other is `EngineVersionMismatch`, on `BlobError`
-    and on `EngineStateError` (GitHub #530). The `oce:canon1:` tag and each class's
+    and on `EngineStateError` (issue #530). The `oce:canon1:` tag and each class's
     `state_contract_revision` stay at 1 with the rest (rule 9), so the same version is what
     separates their meanings.
 

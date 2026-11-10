@@ -263,17 +263,13 @@ and a gate that accepted any text would restore exactly the false assurance desc
   blob kept unblessed as `fixtures/blob_legacy.oceb`). The rule that follows is in `AGENTS.md`:
   the first PR after a release tag that changes a format's bytes or meaning bumps the workspace
   version.
-  A state snapshot carries no engine version, by contract. Releases 0.2.0 to 0.4.0 numbered their
-  snapshots 2, so a populated snapshot from them is refused by number, by ABI revision if only the
-  format field is edited, and by the execution fingerprint if both are
-  (`tests/state_old_layout.rs`, `fixtures/state_revision_two.hex`); the empty-model vector of the
-  layout before those releases (`fixtures/state_legacy.hex`) now shares today's numbers and is
-  refused by structure. That is one shape, not a proof for every snapshot of that layout, and from
-  here on the host envelope is what binds snapshot bytes to a build
+  A state snapshot header had no engine version at this change; the entry under Facade above
+  (issue #530) adds it. Releases 0.2.0 to 0.4.0 numbered their snapshots 2, so a populated
+  snapshot from them is refused by number (`tests/state_old_layout.rs`,
+  `fixtures/state_revision_two.hex`). The same snapshot with its numbers edited to 1, and the
+  empty-model vector of the layout before those releases (`fixtures/state_legacy.hex`), which
+  shares today's numbers, are refused for the version field they lack
   ([state continuation](docs/state-compatibility.md#wire-revision-and-integrity)).
-  GitHub #530 (under Facade above) has since stamped the engine version into the snapshot header:
-  the release snapshot with edited numbers and the empty-model vector are now refused at that
-  field.
   Re-blessed: the 46 blob goldens (format field, engine-version bytes and CRC only; 123,329 bytes
   in all, unchanged), `compatibility.txt` and `compatibility_export.txt`, the two pinned state
   vectors in `state_tests.rs` and `state_format_golden_tests.rs`, and `restamp.tsv`, which loses

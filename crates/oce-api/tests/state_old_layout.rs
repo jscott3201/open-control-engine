@@ -8,34 +8,65 @@
 //!
 //! - `fixtures/state_unstamped.hex`: revision 1 without the version field, the layout
 //!   `development` wrote between the format reset (GitHub #518) and the change that stamped the
-//!   version. Captured on `development` at commit `4c89577`, the parent of that change, with the
-//!   recipe below. No release wrote this layout.
+//!   version (issue #530). Captured with the recipe below on the format reset itself, GitHub #518
+//!   (commit `4c89577` on `development`, workspace version 0.5.0). No release wrote this layout.
 //! - `fixtures/state_revision_two.hex`: the same state as releases 0.2.0 to 0.4.0 wrote it, which
 //!   numbered their snapshots format revision 2 and execution-state ABI revision 2, so it refuses
-//!   by its format field first. Added by GitHub #518; the recipe below, run on commit `b5d4f4b`
-//!   (the parent of the format reset, workspace version 0.4.0), reproduces it byte for byte.
+//!   by its format field first. Added by GitHub #518; the recipe below, run on the commit before
+//!   the format reset (`b5d4f4b` on `development`, GitHub #512, workspace version 0.4.0),
+//!   reproduces it byte for byte.
 //! - `fixtures/state_legacy.hex`: the empty-authored-model vector (an in-memory model with no
 //!   blocks, id `urn:test:empty-model`, before any frame) of a layout that predates the first
 //!   release with a snapshot API. Its header carries revision 1 twice.
 //!
-//! **Capture recipe** of the two populated fixtures (`support/snapshot_bytes.rs` holds it as
-//! code): load `fixtures/frame_delay.jsonld` (an `Add` into a `UnitDelay`, sample period 1 s);
-//! accept two complete frames, at model time 0.0 and then 1.0, each with `urn:frame:a` = 0.5 and
-//! `urn:frame:b` = 2.0; take `state_snapshot()` and write its bytes as one line of lowercase hex.
-//! The state is then model time 1.0, `add.y` and `delay.y` 2.5 and five `UnitDelay` words. To
-//! regenerate a fixture, run that recipe on the commit named for it; both were regenerated that
-//! way when the recipe was recorded. `populated_fixtures_hold_one_state_under_two_numberings`
-//! checks, on every run, that the two captures are the same state.
+//! **Capture recipe** of the two populated fixtures. On the commit named for the fixture, save
+//! the test below as `crates/oce-api/tests/snapshot_capture.rs` (it uses only calls both commits
+//! have) and run
+//! `OCE_CAPTURE_OUT=<file> cargo test -p oce-api --test snapshot_capture --locked`.
+//! The file it writes, plus a final newline, is the fixture. Both fixtures were regenerated this
+//! way, byte for byte, when the recipe was recorded. Give that checkout its own `target`
+//! directory: cargo reuses artefacts across checkouts of one workspace version that share one,
+//! and the capture then comes from the wrong codec.
+//!
+//! ```text
+//! //! Capture recipe of the old-layout snapshot fixtures. Scratch: never committed.
+//! use oce_api::{Engine, Value};
+//!
+//! #[test]
+//! fn write_the_capture() {
+//!     // Model: an `Add` into a `UnitDelay` with a sample period of 1 s.
+//!     let mut engine = Engine::new();
+//!     engine.load_cxf(include_bytes!("fixtures/frame_delay.jsonld")).unwrap();
+//!     // Two accepted frames, at model time 0.0 and then 1.0, with the same inputs.
+//!     for time in [0.0, 1.0] {
+//!         let inputs = [("urn:frame:a", Value::Real(0.5)), ("urn:frame:b", Value::Real(2.0))];
+//!         let frame = engine.prepare_frame(time, &inputs).unwrap();
+//!         engine.execute_frame(frame).unwrap();
+//!     }
+//!     // The bytes are `Engine::state_snapshot`'s, written as one line of lowercase hex.
+//!     let bytes = engine.state_snapshot().unwrap().into_bytes();
+//!     let hex: String = bytes.iter().map(|byte| format!("{byte:02x}")).collect();
+//!     std::fs::write(std::env::var("OCE_CAPTURE_OUT").unwrap(), hex).unwrap();
+//! }
+//! ```
+//!
+//! `support/snapshot_bytes.rs` holds the same recipe for this build
+//! (`delay_after_two_frames`). The state it leaves is model time 1.0 with an equal prior time,
+//! five connector values (`add.u1` 0.5, `add.u2` 2.0, `add.y` 2.5, `delay.u` 0.0, `delay.y` 2.5)
+//! and five `UnitDelay` state words. `populated_fixtures_hold_the_recorded_recipe_state` reads
+//! exactly that out of both fixtures on every run, and `state_engine_version.rs` out of this
+//! build's capture.
 
 #[path = "support/snapshot_bytes.rs"]
 mod snapshot_bytes;
 
-use oce_api::{EngineStateError, EngineStateSnapshot, EngineVersion};
+use oce_api::{EngineStateError, EngineStateSnapshot, EngineVersion, OcError};
 use oce_graph::blob::ENGINE_VERSION;
 use snapshot_bytes::{
     ABI_FIELD, BODY_LENGTH_FIELD, FORMAT_FIELD, HEADER_BYTES, TRAILER_BYTES,
-    UNSTAMPED_HEADER_BYTES, VERSION_FIELD, computed_trailer, delay_target, manifest_range, reseal,
-    trailer, unhex, unstamped_fingerprint, version_field,
+    UNSTAMPED_HEADER_BYTES, VERSION_FIELD, computed_trailer, delay_after_two_frames, delay_payload,
+    delay_recipe_values, delay_recipe_words, delay_target, manifest_range, reseal,
+    restore_from_bytes, trailer, unhex, unstamped_fingerprint, version_field,
 };
 
 /// What this build reads at the version field of the populated fixtures: their body length is
@@ -131,16 +162,29 @@ fn unstamped_revision_one_snapshot_is_refused_at_the_version_field() {
 }
 
 #[test]
-fn unstamped_snapshot_never_reaches_a_restore_target() {
-    // A target that the fixture's state would fit exactly keeps its own state: the refusal
-    // happens at parse, so there is no snapshot to restore.
-    let target = delay_target();
-    let before = target.state_snapshot().unwrap();
-    version_refusal(&unstamped_snapshot());
-    assert_eq!(
-        target.state_snapshot().unwrap().as_bytes(),
-        before.as_bytes()
-    );
+fn host_restore_path_stops_at_decode_for_the_unstamped_snapshot() {
+    // The path a host calls, into a freshly loaded target the fixture's state would fit exactly.
+    // Decode refuses, so `restore_state` is not reached and the target keeps its load state.
+    let mut target = delay_target();
+    let loaded = target.state_snapshot().unwrap().into_bytes();
+    match restore_from_bytes(&mut target, &unstamped_snapshot()) {
+        Err(OcError::State(EngineStateError::EngineVersionMismatch { found, expected })) => {
+            assert_eq!((found, expected), (POPULATED_READS_AS, ENGINE_VERSION));
+        }
+        other => panic!("expected EngineVersionMismatch, got {other:?}"),
+    }
+    assert_eq!(target.state_snapshot().unwrap().as_bytes(), loaded);
+
+    // The control: the same state captured by this build goes through the same path and moves
+    // the target, so the comparison above is one a restore would have changed, and the refusal
+    // left the durable restore window open.
+    let stamped = delay_after_two_frames()
+        .state_snapshot()
+        .unwrap()
+        .into_bytes();
+    assert_ne!(stamped, loaded);
+    restore_from_bytes(&mut target, &stamped).unwrap();
+    assert_eq!(target.state_snapshot().unwrap().as_bytes(), stamped);
 }
 
 #[test]
@@ -255,10 +299,10 @@ fn pre_release_layout_vector_is_refused_at_the_version_field() {
 }
 
 #[test]
-fn populated_fixtures_hold_one_state_under_two_numberings() {
-    // The recipe check: the two populated fixtures were captured from the same state by builds
-    // whose layouts differ only in the two revision numbers, so they differ in exactly those two
-    // fields, the fingerprint (which covers the ABI revision) and the trailer.
+fn populated_fixtures_hold_the_recorded_recipe_state() {
+    // The recipe check. First, the two populated fixtures were captured from the same state by
+    // builds whose layouts differ only in the two revision numbers, so they differ in exactly
+    // those two fields, the fingerprint (which covers the ABI revision) and the trailer.
     let unstamped = unstamped_snapshot();
     let release = release_snapshot();
     assert_eq!(unstamped.len(), release.len());
@@ -286,4 +330,13 @@ fn populated_fixtures_hold_one_state_under_two_numberings() {
         unstamped[time + 9..time + 17],
         1.0f64.to_bits().to_le_bytes()
     );
+    // And after the manifest, read by hand out of each fixture: the five connector values
+    // (0.5 + 2.0 = 2.5 on the `Add`, 2.5 delayed by one sample) and the five `UnitDelay` words.
+    for fixture in [&unstamped, &release] {
+        let (values, words) = delay_payload(fixture, UNSTAMPED_HEADER_BYTES);
+        assert_eq!(values.len(), 5);
+        assert_eq!(values, delay_recipe_values());
+        assert_eq!(words.len(), 5);
+        assert_eq!(words, delay_recipe_words());
+    }
 }
