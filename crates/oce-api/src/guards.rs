@@ -67,6 +67,8 @@ fn _assert_complete_frame_shapes() {
     ) -> Result<crate::SlotFrame<'a>, OcError> = Engine::execute_slots;
     let _: fn(&crate::FrameSlots) -> &[crate::InputDefinition] = crate::FrameSlots::inputs;
     let _: fn(&crate::FrameSlots) -> &[String] = crate::FrameSlots::outputs;
+    // Output types in slot order, known before the first frame (issue #460): a borrowed slice.
+    let _: fn(&crate::FrameSlots) -> &[ValueType] = crate::FrameSlots::output_types;
 }
 
 // ---- R-API-PY-1 — no generic `#[pyclass]`: the binding wraps the concrete `Engine` ----

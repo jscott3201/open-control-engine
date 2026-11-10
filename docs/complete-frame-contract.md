@@ -390,11 +390,24 @@ order, so one host-side name→slot table drives the facade and a `no_std` targe
 `FrameSlots::inputs()` returns the definitions in slot order, `outputs()` the output identities,
 and `input_slot(path)` / `output_slot(path)` resolve a canonical identity (exact bytes, no aliases).
 
+**Output types.** `FrameSlots::output_types() -> &[ValueType]` is parallel to `outputs()`: entry
+`j` is the exact native type of output slot `j`, the declared type of the connector that drives it
+(for a pass-through declared output, the type of the boundary input it copies), fixed at load
+(issue #460). It is the type alone, as `InputDefinition::value_type` is for an input: no unit or
+bound, and an Enum output is `ValueType::Enum` with its class identity, never the `Int` the point
+projection carries. For every frame accepted in the load the map was built from, through either
+entry, the `j`-th output value has exactly that type, so a host types a comparison, a trace column
+or a second executable's boundary before the first frame runs instead of probing one. An executable with no boundary output gives an
+empty slice. Reading it does not allocate.
+
 **Incarnation.** The map carries the same process-local load/rebuild fence as a prepared plan:
 every successful reload (identical bytes included) and every dirty resume supersedes it, and
 `execute_slots` then refuses with `StalePreparedFrame` rather than binding old positions to a new
 schema. A map from another engine is stale too. Clean resume, compatible restore and a failed load
 keep it. Building a map requires a loaded engine without pending edits, like `input_definitions()`.
+The output types belong to the same incarnation as the paths: a superseded map still returns the
+types it was built with and is still refused, so a boundary is compared between maps built from
+the loads being compared.
 
 **Refusal order.** First cause, every one before any mutation:
 
@@ -450,6 +463,14 @@ of the engine allocates.
 - [Census](../crates/oce-api/tests/slot_frames.rs): every frame of the 46 fixtures measured on its
   own with a positive control; zero allocations on all 7,357 frames that grow no warning record,
   and the three that do are reported.
+- [Output types](../crates/oce-api/tests/slot_output_types.rs): for the 46 fixtures and the two
+  library rules, each of the 134 output slots is typed before any frame as its document node
+  declares it (a `serde_json` walk that shares no engine helper, with a transposition control on the
+  ten mixed-type boundaries), and all 21,440 output values of the 160-frame schedule, and the named
+  path's first frame, have their slot's type. An empty boundary, pass-through outputs of each
+  CXF-reachable type, a reload of identical bytes, a dirty parameter resume, a failed load and an
+  allocation-free read are covered there; an Enum and a String output, which no CXF can declare,
+  on a hand-built boundary in the [private controls](../crates/oce-api/src/frame_slots_tests.rs).
 
 Compile-fail rustdoc pins nonserialization and single-use preparation. Exact public baselines and
 shape guards cover the frame-only API. Hosted architecture qualification and actual downstream host

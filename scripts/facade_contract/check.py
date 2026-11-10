@@ -94,6 +94,7 @@ fn supported(bytes: &[u8]) -> Result<(), oce_api::OcError> {
     let completed = engine.execute_frame(prepared)?;
     let _ = (completed.time(), completed.sequence(), completed.outputs(), completed.diagnostics());
     let slots: oce_api::FrameSlots = engine.frame_slots()?;
+    let _: &[oce_api::ValueType] = slots.output_types();
     let frame: oce_api::SlotFrame<'_> = engine.execute_slots(&slots, 1.0, &[Value::Real(1.0)])?;
     let _ = (frame.time(), frame.sequence(), frame.outputs().count(), frame.diagnostics());
     let _ = engine.get_output("y")?;
