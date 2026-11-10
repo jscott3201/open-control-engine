@@ -40,8 +40,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Facade
 
 - **A state snapshot names the engine version that wrote it, and only that version restores it**
-  (GitHub #530; owner rulings of 2026-11-09). The fixed header gains six bytes after the
-  execution-state ABI revision: major, minor and patch as little-endian `u16`, from the constant
+  (GitHub #540, issue #530; owner rulings of 2026-11-09). The fixed header gains six bytes after
+  the execution-state ABI revision: major, minor and patch as little-endian `u16`, from the constant
   a compiled-schedule blob records (`oce_graph::blob::ENGINE_VERSION`; neither records a
   pre-release suffix). The header is now 30 bytes and every snapshot is six bytes longer.
   `EngineStateSnapshot::from_bytes` refuses any other version with the new
@@ -264,8 +264,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
   the first PR after a release tag that changes a format's bytes or meaning bumps the workspace
   version.
   A state snapshot header had no engine version at this change; the entry under Facade above
-  (issue #530) adds it. Releases 0.2.0 to 0.4.0 numbered their snapshots 2, so a populated
-  snapshot from them is refused by number (`tests/state_old_layout.rs`,
+  (GitHub #540, issue #530) adds it. Releases 0.2.0 to 0.4.0 numbered their snapshots 2, so a
+  populated snapshot from them is refused by number (`tests/state_old_layout.rs`,
   `fixtures/state_revision_two.hex`). The same snapshot with its numbers edited to 1, and the
   empty-model vector of the layout before those releases (`fixtures/state_legacy.hex`), which
   shares today's numbers, are refused for the version field they lack
