@@ -1,5 +1,9 @@
 //! Independent byte and fingerprint vector for the current wire format. No numerical oracle
 //! applies to this codec.
+//!
+//! The header's engine-version field and the fingerprint's version bytes are derived here from
+//! this crate's version string, not from the codec's constant, so the pinned checksum below moves
+//! with every workspace version bump (see `.agents/project-facts.md`).
 
 use crate::state::{
     BlockKey, BlockManifestEntry, ConnectorKey, ConnectorManifestEntry, EnumManifestEntry,
@@ -347,6 +351,28 @@ fn fnv(bytes: &[u8]) -> u128 {
         })
 }
 
+/// The six header bytes that name this build's engine version: major, minor and patch of the
+/// package version as little-endian `u16`, a pre-release or build suffix dropped.
+fn engine_version_field() -> [u8; 6] {
+    let release = env!("CARGO_PKG_VERSION").split(['-', '+']).next().unwrap();
+    let mut components = release.split('.').map(|part| part.parse::<u16>().unwrap());
+    let mut field = [0u8; 6];
+    for pair in field.chunks_exact_mut(2) {
+        pair.copy_from_slice(&components.next().unwrap().to_le_bytes());
+    }
+    assert_eq!(components.next(), None, "major.minor.patch only");
+    field
+}
+
+/// The execution fingerprint of `manifest`: FNV-1a-128 over the ABI revision, the engine-version
+/// field and the canonical manifest bytes.
+fn expected_fingerprint(manifest: &[u8]) -> u128 {
+    let mut preimage = 1u32.to_le_bytes().to_vec();
+    preimage.extend_from_slice(&engine_version_field());
+    preimage.extend_from_slice(manifest);
+    fnv(&preimage)
+}
+
 fn expected_snapshot(image: &StateImage, manifest: &[u8], fingerprint: u128) -> Vec<u8> {
     let mut body = ExpectedWriter(Vec::new());
     body.u128(fingerprint);
@@ -371,6 +397,7 @@ fn expected_snapshot(image: &StateImage, manifest: &[u8], fingerprint: u128) -> 
     bytes.0.extend_from_slice(b"OCESTAT\0");
     bytes.u32(1);
     bytes.u32(1);
+    bytes.0.extend_from_slice(&engine_version_field());
     bytes.u64(body.0.len() as u64);
     bytes.0.extend_from_slice(&body.0);
     let checksum = fnv(&bytes.0);
@@ -382,9 +409,7 @@ fn expected_snapshot(image: &StateImage, manifest: &[u8], fingerprint: u128) -> 
 fn production_codec_matches_the_independent_complete_vector() {
     let mut image = vector_image();
     let manifest = expected_manifest(&image.manifest);
-    let mut fingerprint_preimage = 1u32.to_le_bytes().to_vec();
-    fingerprint_preimage.extend_from_slice(&manifest);
-    image.fingerprint = fnv(&fingerprint_preimage);
+    image.fingerprint = expected_fingerprint(&manifest);
     let expected = expected_snapshot(&image, &manifest, image.fingerprint);
     let actual = state_codec::encode_snapshot(&image, false).unwrap();
     assert_eq!(actual, expected);
@@ -398,24 +423,20 @@ fn populated_portable_vector_is_target_independent() {
     image.manifest.portability = Portability::Portable;
     image.manifest.blocks[0].class_path = "CDL.Reals.Add".into();
     let manifest = expected_manifest(&image.manifest);
-    let mut fingerprint_preimage = 1u32.to_le_bytes().to_vec();
-    fingerprint_preimage.extend_from_slice(&manifest);
-    image.fingerprint = fnv(&fingerprint_preimage);
+    image.fingerprint = expected_fingerprint(&manifest);
     let expected = expected_snapshot(&image, &manifest, image.fingerprint);
     let actual = state_codec::encode_snapshot(&image, false).unwrap();
     assert_eq!(actual, expected);
     assert_eq!(
         fnv(&actual),
-        200_433_802_359_411_970_882_540_475_153_470_569_876
+        221_504_633_131_550_149_303_491_069_061_102_061_802
     );
     EngineStateSnapshot::from_bytes(&actual).unwrap();
 }
 
 fn encoded_vector(mut image: StateImage) -> Vec<u8> {
     let manifest = expected_manifest(&image.manifest);
-    let mut fingerprint_preimage = 1u32.to_le_bytes().to_vec();
-    fingerprint_preimage.extend_from_slice(&manifest);
-    image.fingerprint = fnv(&fingerprint_preimage);
+    image.fingerprint = expected_fingerprint(&manifest);
     expected_snapshot(&image, &manifest, image.fingerprint)
 }
 
@@ -451,7 +472,11 @@ fn unknown_execution_revision_retains_future_catalog_descriptors_for_restore() {
     image.manifest.portability = Portability::Portable;
     image.manifest.enums[0].members.swap(0, 1);
     let manifest = crate::state_manifest_codec::encode_manifest(&image.manifest, false).unwrap();
-    image.fingerprint = crate::state_manifest::fingerprint(image.execution_revision, &manifest);
+    image.fingerprint = crate::state_manifest::fingerprint(
+        image.execution_revision,
+        oce_graph::blob::ENGINE_VERSION,
+        &manifest,
+    );
     let bytes = state_codec::encode_snapshot(&image, false).unwrap();
     let snapshot = EngineStateSnapshot::from_bytes(&bytes).unwrap();
 
@@ -479,7 +504,11 @@ fn large_unique_future_enum_descriptor_decodes_without_quadratic_duplicate_scann
         .map(|ordinal| std::sync::Arc::from(format!("member-{ordinal:05}")))
         .collect();
     let manifest = crate::state_manifest_codec::encode_manifest(&image.manifest, false).unwrap();
-    image.fingerprint = crate::state_manifest::fingerprint(image.execution_revision, &manifest);
+    image.fingerprint = crate::state_manifest::fingerprint(
+        image.execution_revision,
+        oce_graph::blob::ENGINE_VERSION,
+        &manifest,
+    );
     let bytes = state_codec::encode_snapshot(&image, false).unwrap();
     EngineStateSnapshot::from_bytes(&bytes).unwrap();
 }

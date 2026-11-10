@@ -182,8 +182,11 @@ fn every_target_bound_class_round_trips_policy_and_refuses_each_foreign_target_c
             let expected_os = os.clone();
             let manifest =
                 crate::state_manifest_codec::encode_manifest(&image.manifest, false).unwrap();
-            image.fingerprint =
-                crate::state_manifest::fingerprint(image.execution_revision, &manifest);
+            image.fingerprint = crate::state_manifest::fingerprint(
+                image.execution_revision,
+                oce_graph::blob::ENGINE_VERSION,
+                &manifest,
+            );
             let bytes = crate::state_codec::encode_snapshot(&image, false).unwrap();
             let parsed = EngineStateSnapshot::from_bytes(&bytes).unwrap();
             assert_eq!(parsed.portability(), &image.manifest.portability);

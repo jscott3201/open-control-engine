@@ -16,13 +16,21 @@ State is current/current only, with no N-1 support or cross-build state migratio
 [host fallback checklist](host-responsibilities.md)). The historical v0.1.0 source pin has no
 snapshot API.
 
-“Same-build” is a **mandatory host-envelope precondition**, not an OCE comparison. Before calling
-`EngineStateSnapshot::from_bytes`, the host authenticates a sealed envelope binding the exact
-snapshot bytes to its approved compiled-build/deployment qualifier and checks freshness and
-generation. That qualifier can cover source/dependency lock, compiler, features, target and
-codegen qualification. OCE emits, accepts, stores and enforces **no build token**. Pass only the
-OCE snapshot bytes after approval. A compatible manifest from a differently compiled implementation
-can pass OCE checks; that is not build qualification. See the [restart checklist](host-responsibilities.md#persist-engine-state-outside-the-engine).
+**A snapshot restores only on the engine version that wrote it** (issue #530). Its header names
+that version, and `EngineStateSnapshot::from_bytes` refuses any other with
+`EngineVersionMismatch` before it reads anything further, so `restore_state` never sees such
+bytes. This is the one comparison OCE makes about where bytes came from, and it is a release
+version, not a build identity: two builds of one version, from different compilers, features,
+targets or dependency locks, write and accept the same version bytes.
+
+“Same-build” therefore remains a **mandatory host-envelope precondition**, not an OCE comparison.
+Before calling `EngineStateSnapshot::from_bytes`, the host authenticates a sealed envelope binding
+the exact snapshot bytes to its model, its approved compiled-build/deployment qualifier, freshness
+and generation. That qualifier can cover source/dependency lock, compiler, features, target and
+codegen qualification. OCE emits, accepts, stores and enforces **no build token**; the engine
+version in the header is not one. Pass only the OCE snapshot bytes after approval. A compatible
+manifest from a differently compiled implementation of the same version can pass OCE checks; that
+is not build qualification. See the [restart checklist](host-responsibilities.md#persist-engine-state-outside-the-engine).
 
 `CompatibilityDescriptor`, package version, catalog metadata tag, diagnostic model ID and canonical
 content id are not substitutes for either the host envelope or the state manifest. No universal
@@ -35,7 +43,7 @@ changes to implementation code with unchanged descriptors belong to host build q
 | --- | --- |
 | `checkpoint` | Owned process-local image; compatible restore can rewind. No persistence format or external authority. |
 | `state_snapshot` | Validate loaded state, stable authored identities and registered state contracts; encode and run the bounded canonical decoder before returning. Every success can be parsed by this build. No evaluation or storage calls. |
-| `from_bytes` | Validate wire structure and manifest self-consistency, not compatibility with a loaded target or every class-specific state invariant. Unknown execution ABI can parse but cannot restore. |
+| `from_bytes` | Refuse bytes another engine version wrote, then validate wire structure and manifest self-consistency, not compatibility with a loaded target or every class-specific state invariant. Unknown execution ABI can parse but cannot restore. |
 | `restore_state` | Check readiness, target domain, execution ABI, full manifest/fingerprint and payload before one in-memory commit. No evaluation or storage calls. |
 | `restore_checkpoint` | Same prepare/commit discipline, without the startup-window restriction. Not a durable-byte bypass. |
 
@@ -63,8 +71,10 @@ catalog/profile/executable/IO/state/target facts refuse at parse or restore as f
 | Check / first-cause order | Typed evidence |
 | --- | --- |
 | Supplied bytes above 64 MiB, before header inspection | `SnapshotTooLarge` with actual and maximum counts |
-| Short/invalid header; unsupported format; inconsistent total length | `MalformedSnapshot` / `UnsupportedFormat` |
-| Corrupted body/trailer after valid header and length | `IntegrityMismatch` with computed and carried checksums |
+| Input shorter than a header and trailer; invalid magic; unsupported format | `MalformedSnapshot` / `UnsupportedFormat` |
+| Header naming another engine version, before the length, trailer or body is read | `EngineVersionMismatch` with the found and expected versions |
+| Inconsistent total length | `MalformedSnapshot` at the body-length field (offset 22) |
+| Corrupted header, body or trailer after a valid version and length | `IntegrityMismatch` with computed and carried checksums |
 | Invalid tags/UTF-8/counts, duplicate or unordered sections, inconsistent references, fingerprint, flags or payload shape | `MalformedSnapshot` with deterministic offset/detail |
 | Restore without a successful load; pending edits; advanced durable target | `NoLoadedModel`, `PendingParameterEdits`, `DurableTargetAdvanced`, in that order |
 | Foreign target-bound architecture or OS | `TargetDomainMismatch` before execution compatibility |
@@ -100,22 +110,44 @@ other format revision returns `UnsupportedFormat`, and any other execution-state
 refuses at restore. Rollback uses the prior qualified build and its own authenticated state, or a
 host-approved cold start—not a header edit.
 
-**The revision numbers do not tell one build's layout from another's.** A snapshot carries no
-engine version and no build token, so bytes written by a build with a different layout under the
-same numbers are separated only by the mandatory host envelope above and, failing that, by the
-decoder's structure, fingerprint and manifest checks. What is pinned today
-(`tests/state_old_layout.rs`, both fixtures kept unblessed):
+**The revision numbers do not tell one layout from another; the engine version does.** The header
+carries the major, minor and patch of the engine that wrote the snapshot, each a little-endian
+`u16`, from the same constant a [compiled-schedule blob](compiled-schedule-blob.md) records
+(`oce_graph::blob::ENGINE_VERSION`). A pre-release or build suffix is not recorded, for blobs and
+snapshots alike: `0.5.0-rc.1` and `0.5.0` write and accept the same bytes. The decoder accepts
+exactly its own version and returns `EngineVersionMismatch { found, expected }` for any other.
+It makes that check straight after the two revision fields and before the body length, the
+trailer or any body byte, because another version may lay all of those out differently; a
+corrupted version field therefore reports the version it now spells, not an integrity failure.
+Nothing relaxes the rule before 1.0.0: there is no range of accepted versions, no optional form of
+the field and no reader for a header without it. A version is not a build token, and the host
+envelope above still binds bytes to a model, a build and a deployment.
 
-- Releases 0.2.0 to 0.4.0 numbered their snapshots differently (release 0.4.0 with this same
-  layout). A populated snapshot carrying those numbers is refused with `UnsupportedFormat`. With
-  only its format field edited
-  it parses and refuses at restore (`IncompatibleExecution`, subject
-  `execution-state ABI revision`); with both numbers edited it fails its execution fingerprint,
-  which covers the ABI revision.
-- An empty-model vector of the layout before those releases carries today's numbers, a consistent
-  length and a valid trailer. It is refused by structure (`MalformedSnapshot`, the manifest ends
-  before the input-definition count). This is one shape, not a proof for every populated snapshot
-  of that layout.
+Both integrity values cover the field. The trailer covers every header byte, and the execution
+fingerprint is taken over the version bytes as well as the ABI revision and the manifest. A
+snapshot another version wrote, with only its version bytes rewritten to this build's, fails its
+trailer (`IntegrityMismatch`); with the trailer recomputed too it fails its fingerprint
+(`MalformedSnapshot` at offset 30). Both values are FNV, not authentication: rewriting all three
+yields well-formed bytes, which is what the host envelope is for.
+
+Snapshots of earlier layouts, kept unblessed (`tests/state_old_layout.rs`). None of the three has
+a version field: its body length sits at bytes 16..24, so this build reads the low six bytes of
+that length as a version and refuses it.
+
+- `state_unstamped.hex`: revision 1 without the version field, as `development` wrote it between
+  the format reset and issue #530; no release did. Refused with `EngineVersionMismatch` (found
+  1462.0.0, its body length). Given the six version bytes by hand it fails its trailer, and with
+  a recomputed trailer its fingerprint.
+- `state_revision_two.hex`: the same state as releases 0.2.0 to 0.4.0 wrote it, numbered format 2
+  and ABI 2. Refused with `UnsupportedFormat`; with its format field, or both numbers, edited to 1
+  and the trailer recomputed, it is an unstamped header and refuses the same way.
+- `state_legacy.hex`: an empty-model vector of the layout before those releases, carrying
+  today's two numbers. Refused with `EngineVersionMismatch` (found 114.0.0).
+
+One unstamped header passes the version check: a body whose length, in its low six bytes, spells
+this build's version (327,680 bytes for 0.5.0, and none under the byte cap once the patch is above
+zero). The body-length field then reads bytes that cannot be the true length, and the decoder
+refuses it there (`MalformedSnapshot` at offset 22).
 
 The byte cap is 67,108,864 inclusive. It bounds the whole snapshot, so it also bounds the state
 words a capturable model may hold. Most classes hold a few words, but `CDL.Reals.MovingAverage`
@@ -129,7 +161,17 @@ Rust numeric or natural string ordering. Named parameter and input-definition pa
 lexical order. Schedules and state-slot layout retain execution order/offsets; they are not freely
 permutable. Connection vector order is canonicalized; duplicate connections are noncanonical.
 
-The fixed header is `OCESTAT\0`, u32 format, u32 execution ABI, u64 body length. The body contains
+The fixed header is 30 bytes:
+
+| Offset | Bytes | Field |
+| --- | --- | --- |
+| 0 | 8 | Magic `OCESTAT\0` |
+| 8 | 4 | `u32` format revision, 1 |
+| 12 | 4 | `u32` execution-state ABI revision, 1 |
+| 16 | 6 | Engine version: major, minor, patch, each a `u16` |
+| 22 | 8 | `u64` body length |
+
+The body contains
 u128 execution fingerprint, model ID, model time bits, optional prior-time bits, length-prefixed
 manifest, keyed connector values, state words and zero reserved flags. A 16-byte trailer follows.
 Connector records end with optional unit and quantity (0 = absent; 1 plus string = present).
@@ -138,7 +180,8 @@ native type, optional typed min and optional typed max (0 = absent; 1 plus value
 
 Both fingerprint and trailer use FNV-1a-128: offset `0x6c62272e07bb014262b821756295c58d`, XOR each
 byte and multiply by `0x0000000001000000000000000000013b` modulo 2^128. The fingerprint covers
-little-endian execution ABI followed by canonical manifest bytes. The trailer covers all preceding
+the little-endian execution ABI, the six engine-version bytes as the header writes them, then the
+canonical manifest bytes. The trailer covers all preceding
 snapshot bytes. These are **accidental-corruption checks, not cryptographic authenticity, freshness
 or adversarial collision protection**. Recomputing both can produce well-formed forged bytes.
 Host authentication binds exact bytes, not these FNV values.
@@ -220,8 +263,15 @@ or a host `NO_EVAL` window, is host frame policy.
 
 - `tests/state_contract.rs`: public inspection, changed bounds/units/quantities and
   signed-zero/equal-time continuation against a hand-derived Boolean recurrence.
-- `tests/state_old_layout.rs`: snapshots earlier builds wrote, refused by format revision, by
-  execution-state ABI revision, by fingerprint and by structure.
+- `tests/state_engine_version.rs`: the header's version field against the package version and
+  the blob header; byte-identical capture and restore on the same version; refusal of a
+  consistent snapshot that differs by patch, minor or major only; a patched version field failing
+  the trailer and then the fingerprint; every bit of the field, every truncation and the
+  precedence against magic, format, length, trailer and body; no input-sized allocation on
+  refusal; the host's decode-then-restore path stopping at decode, with a restoring control.
+- `tests/state_old_layout.rs`: three snapshots earlier layouts wrote, none with a version field,
+  refused at that field or by format revision; the repeatable capture recipe of the two
+  populated ones, and the connector values and state words it leaves, read out of both.
 - `src/tests/state_manifest_refusal_tests.rs`: rechecksummed field mutation corpus, repeat typed
   diagnostics, full snapshot/checkpoint before/after images and retained lifecycle fences; capture refuses a deliberately injected noncanonical producer image.
 - `src/tests/state_format_golden_tests.rs`, `state_tests.rs`, `state_io.rs`: independent full

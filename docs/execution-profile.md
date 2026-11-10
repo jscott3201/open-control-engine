@@ -124,7 +124,9 @@ and codec. It must not consume HostTick v1 snapshots as semantically equivalent 
 The state manifest holds the exact executable IO acceptance domain. The format and ABI revisions
 both stay 1 until 1.0.0; see the [state compatibility contract](state-compatibility.md).
 Build/deployment authentication is a mandatory host-envelope precondition before byte decoding;
-OCE carries no build token. State compatibility does not authenticate a build or authorize actuation.
+OCE carries no build token. A snapshot names the engine version that wrote it and restores only on
+that version, which is not a build identity. State compatibility does not authenticate a build or
+authorize actuation.
 
 ## Conformance boundary
 

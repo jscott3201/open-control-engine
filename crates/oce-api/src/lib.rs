@@ -127,6 +127,8 @@ pub use loading::{LoadReport, LoadedModel};
 pub use observations::{AssertEvent, AssertLevel};
 /// Re-export of the compiled-schedule blob refusal type and its fault vocabularies, so a host
 /// matches [`OcError::Blob`] without a direct `oce-graph` dependency (GitHub #400).
+/// [`EngineVersion`] is also what [`EngineStateError::EngineVersionMismatch`] reports: a blob and a
+/// state snapshot record the same version and each is accepted only by the engine that wrote it.
 pub use oce_graph::blob::{
     BlobError, ConnectionFault, ConnectorFault, EncodeFault, EngineVersion, InputFault,
     InstanceField, MalformedFault, OutputFault, ScheduleFault,

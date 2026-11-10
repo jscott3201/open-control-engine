@@ -563,6 +563,11 @@ The primitives are duplicated in `oce-graph`, about 100 lines, rather than moved
 Moving them is a separate refactor that would have to prove snapshot goldens byte-identical.
 **Snapshot bytes and code are unchanged by M1b.**
 
+Since issue #530 the two do share the engine version: the snapshot header carries the same
+`u16`×3 field from the same constant (`oce_graph::blob::ENGINE_VERSION`), and its decoder refuses
+another version with its own `EngineVersionMismatch`
+([state contract](../state-compatibility.md#wire-revision-and-integrity)).
+
 ## Size budget
 
 | Item | Bytes |
