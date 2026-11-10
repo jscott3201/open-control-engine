@@ -15,7 +15,6 @@
 //!   are read in [`S231_CONTEXT_IRI`], as before.
 //! - **Another prefix bound to [`S231_CONTEXT_IRI`]** (`"s231"`, say) is the same namespace under
 //!   another name and stays accepted; [`super::property_keys`] normalizes keys written through it.
-//!
 //! - **A typing token in [`RETIRED_NAMESPACE`]** (a `@type` value or an `isOfDataType` reference
 //!   written as a full IRI) is refused. Types are otherwise read by their trailing term in any
 //!   namespace, which is unchanged.

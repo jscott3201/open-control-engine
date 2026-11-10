@@ -139,6 +139,55 @@ fn the_retired_namespace_is_refused_under_any_term_beside_the_right_binding() {
 }
 
 #[test]
+fn spellings_outside_the_strict_dialect_keep_their_own_refusals() {
+    // The dialect reads compact `S231:` keys and types and one inline context map. The retired
+    // namespace reaches a document in other ways too; each is refused by the rule that already
+    // covered it, never read.
+    let listed = golden().replacen(
+        &format!("{{\n    \"S231\": \"{PUBLISHED}\"\n  }}"),
+        &format!("[{{\"S231\": \"{RETIRED}\"}}, {{\"S231\": \"{PUBLISHED}\"}}]"),
+        1,
+    );
+    assert_ne!(listed, golden());
+    let error = import(listed.as_bytes()).map(|_| ()).expect_err("refused");
+    assert_eq!(
+        error.kind,
+        ImportErrorKind::WrongShape {
+            key: "@context".to_owned()
+        }
+    );
+
+    let boundary = econ().first("S231:hasInput");
+    let keyed = econ()
+        .put(&boundary, &format!("{RETIRED}min"), json!(0.0))
+        .bytes();
+    let error = import(&keyed).map(|_| ()).expect_err("refused");
+    assert_eq!(
+        error.kind,
+        ImportErrorKind::UnknownKey {
+            key: format!("{RETIRED}min")
+        }
+    );
+
+    let typed = econ()
+        .put(&boundary, "@type", json!(format!("{RETIRED}RealInput")))
+        .bytes();
+    let error = import(&typed).map(|_| ()).expect_err("refused");
+    assert_eq!(error.kind, ImportErrorKind::DatatypeMismatch);
+    assert_eq!(error.subject, boundary);
+
+    let declared = econ()
+        .put(
+            &boundary,
+            "S231:isOfDataType",
+            json!({ "@id": format!("{RETIRED}Real") }),
+        )
+        .bytes();
+    let error = import(&declared).map(|_| ()).expect_err("refused");
+    assert_eq!(error.code(), "unknown-datatype");
+}
+
+#[test]
 fn a_document_without_an_s231_binding_imports_the_same_sequence() {
     let baseline = import(golden().as_bytes()).expect("the golden imports");
     assert!(baseline.report.is_empty());
