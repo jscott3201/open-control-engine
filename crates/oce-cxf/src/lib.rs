@@ -52,6 +52,7 @@ mod scope_chain;
 mod scope_chain_tests;
 #[cfg(test)]
 mod tests;
+mod translation_software;
 
 pub use dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany, TermAttr};
 pub use resolve::{ImportMode, ResolveOptions, ValidationReport};

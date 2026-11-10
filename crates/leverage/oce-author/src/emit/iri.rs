@@ -20,8 +20,23 @@ pub const CLASS_BASE: &str = "http://example.org#Buildings.Controls.OBC.";
 /// The prefix of a full enumeration member or enumeration class path in CXF.
 pub(crate) const MODELICA_PACKAGE: &str = "Buildings.Controls.OBC.";
 
-/// The `S231` context IRI.
+/// The `S231` context IRI: the namespace the engine's exporter binds and its importer reads.
 pub(crate) const S231_IRI: &str = "http://data.ashrae.org/S231#";
+
+/// The property naming the software that wrote a document (OBC §8.4; `CXF-Core.jsonld` declares
+/// it with domain `S231:Block` and range `S231:String`).
+pub(crate) const TRANSLATION_SOFTWARE_KEY: &str = "S231:translationSoftware";
+
+/// The property naming that software's version.
+pub(crate) const TRANSLATION_SOFTWARE_VERSION_KEY: &str = "S231:translationSoftwareVersion";
+
+/// The software name the emitter writes on the root node, the same name the engine's exporter
+/// writes.
+pub(crate) const TRANSLATION_SOFTWARE: &str = "open-control-engine";
+
+/// The software version the emitter writes: this crate's package version, which is the workspace
+/// version. Every emitted document changes when it does.
+pub(crate) const TRANSLATION_SOFTWARE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// The XML Schema double datatype IRI a Real literal is typed with.
 pub(crate) const XSD_DOUBLE: &str = "http://www.w3.org/2001/XMLSchema#double";

@@ -47,6 +47,10 @@
 //! `None`) and a non-finite Real `min`/`max`/`nominal` (which serialize as JSON `null`) are
 //! rejected, not emitted — see [`classify_attrs`].
 //!
+//! ## Translation-software label
+//! The root node names the software that wrote the document and its version, as OBC §8.4 allows
+//! ([`crate::translation_software`]). The importer reads neither property back.
+//!
 //! ## Determinism
 //! Emission order derives from the `ModelGraph` vectors alone: root, then blocks in `BlockId`
 //! order (each followed by its parameter nodes in `ParamTable` order), then one port node per
@@ -103,7 +107,9 @@ mod single_assignment;
 /// `instance_iri` equals it would surface as a loud `DuplicateId` on re-import, never silently.
 pub(crate) const EXPORT_ROOT_IRI: &str = "urn:open-control:cxf-export:root";
 
-/// The `S231` prefix binding emitted in `@context` (matches the import fixtures).
+/// The `S231` prefix binding emitted in `@context`, and the only namespace the importer reads the
+/// vocabulary in: the one the OpenBuildingControl (OBC) specification lists (OBC §11.3) and
+/// modelica-json's `CXF-Core.jsonld` binds (GitHub #527).
 pub(crate) const S231_CONTEXT_IRI: &str = "http://data.ashrae.org/S231#";
 
 /// Base IRI for emitted instance `@type`s: `<base>Buildings.Controls.OBC.<class_path>` — the
@@ -957,6 +963,7 @@ fn build(plan: Plan) -> CxfDocument {
             .collect(),
     );
     root.contains_block = refs(plan.blocks.iter().map(|b| b.iri.clone()).collect());
+    crate::translation_software::stamp(&mut root);
     graph.push(root);
 
     for b in plan.blocks {

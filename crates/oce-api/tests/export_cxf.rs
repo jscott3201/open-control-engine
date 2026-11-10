@@ -67,7 +67,7 @@ fn export_bytes_are_unchanged_by_the_canonical_id() {
     let exported = engine.export_cxf().expect("fixture exports");
     assert_eq!(
         independent_fnv1a128(&exported.bytes),
-        0xde3a_e320_8d30_4eb9_b830_0520_e730_fed7
+        0x1291_31e1_e9e1_beaf_4001_9e56_fe1c_b285
     );
 }
 
@@ -236,11 +236,11 @@ fn content_id_is_independent_of_authored_graph_order() {
     // exactly as the retired order-bearing export tags did (issue #338).
     assert_eq!(
         independent_fnv1a128(&export_a),
-        0x9308_541e_7a1b_11b6_7c01_10d1_238b_23bf
+        0xd282_8dca_c6fd_b609_2a77_0b7f_5aec_e499
     );
     assert_eq!(
         independent_fnv1a128(&export_b),
-        0x8bb1_a1f9_d623_6207_e65a_a9c3_fd7b_9577
+        0x6f68_fd0f_2321_3d72_261d_8a28_2e96_2a71
     );
     // The canonical id names the loaded graph, so authored order no longer moves it.
     assert_eq!(id_a, id_b);

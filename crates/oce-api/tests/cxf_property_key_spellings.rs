@@ -10,7 +10,7 @@ use oce_api::{Engine, OcError, Value};
 use serde_json::json;
 
 const MODEL: &[u8] = include_bytes!("fixtures/legacy_frame_add.jsonld");
-const S231P: &str = "http://data.ashrae.org/S231#";
+const S231_NS: &str = "http://data.ashrae.org/S231#";
 const A: &str = "urn:legacy-frame:a";
 const B: &str = "urn:legacy-frame:b";
 const XSD_DOUBLE: &str = "http://www.w3.org/2001/XMLSchema#double";
@@ -35,7 +35,7 @@ fn compact(term: &str) -> String {
 }
 
 fn full_iri(term: &str) -> String {
-    format!("{S231P}{term}")
+    format!("{S231_NS}{term}")
 }
 
 fn refusals(error: &OcError) -> Vec<(String, Option<String>, String)> {

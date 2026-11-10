@@ -91,7 +91,9 @@
         {
           "@id": "urn:oce:author:every_element.modMax"
         }
-      ]
+      ],
+      "S231:translationSoftware": "open-control-engine",
+      "S231:translationSoftwareVersion": "0.5.0"
     },
     {
       "@id": "urn:oce:author:every_element.kGain",

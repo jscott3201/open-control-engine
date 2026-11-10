@@ -27,7 +27,9 @@
 //!   expansion, **best-effort**. Whatever does not expand stays verbatim and is never refused
 //!   here — the downstream `ClassNotFound` / `UnresolvedReference` no-match diagnostics are the
 //!   pinned behavior for junk typing tokens (`resolve_errors.rs` pins `@type: "NotAnIri"` →
-//!   `ClassNotFound`).
+//!   `ClassNotFound`). One exception: a typing token in the namespace written through release
+//!   0.4.0 is refused as `VocabularyNamespaceMismatch` ([`vocabulary_namespace`]), because a
+//!   type is read by its trailing term and would otherwise be read through that namespace.
 //!
 //! Deliberately excluded from expansion: the [`crate::dto::TermAttr::Iri`] arm (`unit`/`quantity`/
 //! `displayUnit` are lexical terms consumed verbatim by attribute parsing), the `@type` annotation
@@ -58,6 +60,10 @@
 //! author and engine assign different identities or datatypes to the same semantic value.
 //! Context-shape validation runs BEFORE slot expansion and its refusals return alone, so a
 //! `RelativeIri` refusal's "declares no @base" clause is literally true whenever it fires.
+//!
+//! A well-formed context is then held to the one S231 namespace this engine reads
+//! ([`vocabulary_namespace`]): `S231` bound to any other IRI, or any prefix bound to the namespace
+//! written through release 0.4.0, is refused as `VocabularyNamespaceMismatch`.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -69,6 +75,8 @@ use crate::dto::{Context, CxfDocument, IriRef, Node, OneOrMany};
 mod context_scope;
 #[path = "property_keys.rs"]
 mod property_keys;
+#[path = "vocabulary_namespace.rs"]
+mod vocabulary_namespace;
 
 /// Declared `@context` prefix/term substitutions: term → IRI.
 type PrefixTable = BTreeMap<String, String>;
@@ -91,6 +99,12 @@ pub(crate) fn expand_document(
     let mut context_diags = Vec::new();
     let table = prefix_table(&doc.context, &mut context_diags);
     let mut expanded = doc.clone();
+    // A well-formed `@context` must spell the S231 vocabulary in the one namespace this engine
+    // reads (GitHub #527). The check needs the whole prefix table, so a document whose context
+    // shape is already refused reports only those refusals.
+    if context_diags.is_empty() {
+        vocabulary_namespace::check_bindings(&table, &mut context_diags);
+    }
     // Non-compact spellings of modeled properties move into their typed fields first, so the
     // scoped-context refusal and every later stage read one spelling (issue #383). A document
     // whose `@context` is already refused is not normalized: its prefix table may be partial,
@@ -430,10 +444,14 @@ fn expand_node(node: &mut Node, table: &PrefixTable, diags: &mut Vec<Diagnostic>
     expand_refs("S231:hasInstance", &mut node.has_instance);
     expand_refs("S231:isConnectedTo", &mut node.is_connected_to);
     if let Some(types) = &mut node.r#type {
-        each_mut(types, |value: &mut String| expand_typing(value, table));
+        each_mut(types, |value: &mut String| {
+            expand_typing(value, table);
+            vocabulary_namespace::check_typing(value, "@type", &owner, diags);
+        });
     }
     if let Some(datatype) = &mut node.is_of_data_type {
         expand_typing(&mut datatype.id, table);
+        vocabulary_namespace::check_typing(&datatype.id, "S231:isOfDataType", &owner, diags);
     }
 }
 

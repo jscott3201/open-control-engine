@@ -106,7 +106,9 @@
         {
           "@id": "urn:oce:author:generic_time_suppression.con1"
         }
-      ]
+      ],
+      "S231:translationSoftware": "open-control-engine",
+      "S231:translationSoftwareVersion": "0.5.0"
     },
     {
       "@id": "urn:oce:author:generic_time_suppression.chaRat",

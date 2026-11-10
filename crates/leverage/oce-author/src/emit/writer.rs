@@ -1,6 +1,7 @@
 //! The document layout and canonical writer (authoring note, "Layout" and "Writer").
 //!
-//! Fixed layout: the root; the sequence parameters in authored order; each block in authored
+//! Fixed layout: the root, ending in the translation-software label (`S231:translationSoftware`,
+//! `S231:translationSoftwareVersion`; OBC §8.4); the sequence parameters in authored order; each block in authored
 //! order, followed by its parameter nodes in authored order and then its port nodes, inputs then
 //! outputs, in catalog order; then the boundary inputs, then the boundary outputs, each in
 //! authored order. `isConnectedTo` hangs on the source node with its targets in authored
@@ -17,7 +18,10 @@ use crate::json::Json;
 use crate::model::{Boundary, Endpoint, Sequence};
 
 use super::EmitError;
-use super::iri::{S231_IRI, Scheme, class_iri};
+use super::iri::{
+    S231_IRI, Scheme, TRANSLATION_SOFTWARE, TRANSLATION_SOFTWARE_KEY, TRANSLATION_SOFTWARE_VERSION,
+    TRANSLATION_SOFTWARE_VERSION_KEY, class_iri,
+};
 use super::params::{
     ParamNode, block_parameters, bound_value, sequence_data_type, sequence_value, signal_data_type,
 };
@@ -189,6 +193,15 @@ fn root(sequence: &Sequence, scheme: &Scheme) -> Json {
         "S231:containsBlock",
         &names(&mut sequence.blocks.iter().map(|b| b.name.as_str())),
     );
+    // The translation-software label (OBC §8.4): provenance the importers never read back.
+    entries.push((
+        TRANSLATION_SOFTWARE_KEY.to_owned(),
+        Json::str(TRANSLATION_SOFTWARE),
+    ));
+    entries.push((
+        TRANSLATION_SOFTWARE_VERSION_KEY.to_owned(),
+        Json::str(TRANSLATION_SOFTWARE_VERSION),
+    ));
     Json::Obj(entries)
 }
 

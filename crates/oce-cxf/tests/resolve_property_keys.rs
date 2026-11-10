@@ -17,7 +17,7 @@ use oce_model::ModelGraph;
 use serde_json::{Map, Value as Json, json};
 
 const CONNECTOR_ATTRS: &str = include_str!("fixtures/connector_attrs.jsonld");
-const S231P: &str = "http://data.ashrae.org/S231#";
+const S231_NS: &str = "http://data.ashrae.org/S231#";
 const SOURCE_PORT: &str = "http://example.org#A.con.y";
 const BOUNDARY_OUTPUT: &str = "http://example.org#A.yOut";
 const DOUBLE: &str = "http://www.w3.org/2001/XMLSchema#double";
@@ -112,7 +112,7 @@ fn s231_namespace(doc: &Json) -> String {
     maps.iter()
         .rev()
         .find_map(|map| map.get("S231").and_then(Json::as_str))
-        .unwrap_or(S231P)
+        .unwrap_or(S231_NS)
         .to_owned()
 }
 
@@ -173,8 +173,8 @@ fn each_connector_attribute_imports_and_exports_identically_in_every_spelling() 
     let baseline_export = export(&import(&compact)).expect("baseline exports");
 
     let spellings: [(&str, &Spelling); 3] = [
-        ("full IRI", &|term| format!("{S231P}{term}")),
-        ("alternate prefix", &|term| format!("s231p:{term}")),
+        ("full IRI", &|term| format!("{S231_NS}{term}")),
+        ("alternate prefix", &|term| format!("s231:{term}")),
         ("declared term", &|term| format!("attr_{term}")),
     ];
     for term in [
@@ -188,8 +188,8 @@ fn each_connector_attribute_imports_and_exports_identically_in_every_spelling() 
         for (label, spelling) in &spellings {
             let mut doc = fixture();
             let context = doc["@context"].as_object_mut().unwrap();
-            context.insert("s231p".into(), json!(S231P));
-            context.insert(format!("attr_{term}"), json!(format!("{S231P}{term}")));
+            context.insert("s231".into(), json!(S231_NS));
+            context.insert(format!("attr_{term}"), json!(format!("{S231_NS}{term}")));
             respell(&mut doc, SOURCE_PORT, term, *spelling);
             let doc = bytes(&doc);
             assert_eq!(outcome(&doc), baseline, "{term} as {label}");
@@ -213,8 +213,8 @@ fn nominal_in_full_iri_form_grounds_and_round_trips_like_the_compact_key() {
         node_mut(&mut compact, SOURCE_PORT).insert("S231:nominal".into(), value.clone());
         node_mut(&mut compact, BOUNDARY_OUTPUT).insert("S231:nominal".into(), json!(1.5));
         let mut full = fixture();
-        node_mut(&mut full, SOURCE_PORT).insert(format!("{S231P}nominal"), value.clone());
-        node_mut(&mut full, BOUNDARY_OUTPUT).insert(format!("{S231P}nominal"), json!(1.5));
+        node_mut(&mut full, SOURCE_PORT).insert(format!("{S231_NS}nominal"), value.clone());
+        node_mut(&mut full, BOUNDARY_OUTPUT).insert(format!("{S231_NS}nominal"), json!(1.5));
         let (compact, full) = (bytes(&compact), bytes(&full));
         assert_eq!(outcome(&full), outcome(&compact), "nominal={value}");
         let exported = export(&import(&full)).expect("exports");
@@ -226,7 +226,7 @@ fn nominal_in_full_iri_form_grounds_and_round_trips_like_the_compact_key() {
         let text = String::from_utf8(exported).unwrap();
         assert!(text.contains(r#""S231:nominal":1.5"#), "{text}");
         assert!(
-            !text.contains("S231P#nominal"),
+            !text.contains("S231_NS#nominal"),
             "export writes the compact key: {text}"
         );
     }
@@ -240,8 +240,8 @@ fn full_iri_bounds_are_validated_exactly_like_compact_bounds() {
     let mut compact = fixture();
     node_mut(&mut compact, SOURCE_PORT).insert("S231:min".into(), json!(400.0));
     let mut full = compact.clone();
-    respell(&mut full, SOURCE_PORT, "min", &|t| format!("{S231P}{t}"));
-    respell(&mut full, SOURCE_PORT, "max", &|t| format!("{S231P}{t}"));
+    respell(&mut full, SOURCE_PORT, "min", &|t| format!("{S231_NS}{t}"));
+    respell(&mut full, SOURCE_PORT, "max", &|t| format!("{S231_NS}{t}"));
     let (compact, full) = (bytes(&compact), bytes(&full));
     assert_eq!(outcome(&full), outcome(&compact));
     let real = |graph: &ModelGraph| {
@@ -262,7 +262,7 @@ fn full_iri_bounds_are_validated_exactly_like_compact_bounds() {
     // An ungroundable full-IRI bound is a typed grounding refusal, not a silent drop.
     let mut full = fixture();
     node_mut(&mut full, SOURCE_PORT).remove("S231:min");
-    node_mut(&mut full, SOURCE_PORT).insert(format!("{S231P}min"), json!("noSuchSymbol"));
+    node_mut(&mut full, SOURCE_PORT).insert(format!("{S231_NS}min"), json!("noSuchSymbol"));
     let diags = refusal(&bytes(&full));
     assert_eq!(diags.len(), 1, "{diags:?}");
     assert_eq!(diags[0].code, DiagCode::GroundingFailed);
@@ -272,7 +272,7 @@ fn full_iri_bounds_are_validated_exactly_like_compact_bounds() {
     let mut full = fixture();
     node_mut(&mut full, SOURCE_PORT).remove("S231:min");
     node_mut(&mut full, SOURCE_PORT).insert(
-        format!("{S231P}min"),
+        format!("{S231_NS}min"),
         json!({"@value": "NaN", "@type": DOUBLE}),
     );
     let graph = import(&bytes(&full));
@@ -330,7 +330,7 @@ fn every_modeled_key_of_every_tracked_fixture_spelled_as_a_full_iri_imports_iden
 fn a_property_written_twice_is_refused_naming_both_spellings() {
     // Compact plus full IRI.
     let mut doc = fixture();
-    node_mut(&mut doc, SOURCE_PORT).insert(format!("{S231P}max"), json!(10.0));
+    node_mut(&mut doc, SOURCE_PORT).insert(format!("{S231_NS}max"), json!(10.0));
     let diags = refusal(&bytes(&doc));
     assert_eq!(diags.len(), 1, "{diags:?}");
     assert_eq!(diags[0].code, DiagCode::MalformedDocument);
@@ -339,32 +339,34 @@ fn a_property_written_twice_is_refused_naming_both_spellings() {
         diags[0].message,
         format!(
             "node `{SOURCE_PORT}` writes `S231:max` twice, as `S231:max` and as \
-             `{S231P}max`; a property must have exactly one spelling"
+             `{S231_NS}max`; a property must have exactly one spelling"
         )
     );
 
     // Two expanded spellings, no compact key — even with the same value.
     let mut doc = fixture();
-    doc["@context"]["s231p"] = json!(S231P);
+    doc["@context"]["s231"] = json!(S231_NS);
     let node = node_mut(&mut doc, SOURCE_PORT);
     node.remove("S231:unit");
-    node.insert(format!("{S231P}unit"), json!("K"));
-    node.insert("s231p:unit".into(), json!("K"));
+    node.insert(format!("{S231_NS}unit"), json!("K"));
+    node.insert("s231:unit".into(), json!("K"));
     let diags = refusal(&bytes(&doc));
     assert_eq!(diags.len(), 1, "{diags:?}");
     assert_eq!(diags[0].code, DiagCode::MalformedDocument);
     assert_eq!(
         diags[0].message,
         format!(
-            "node `{SOURCE_PORT}` writes `S231:unit` twice, as `{S231P}unit` and as \
-             `s231p:unit`; a property must have exactly one spelling"
+            "node `{SOURCE_PORT}` writes `S231:unit` twice, as `{S231_NS}unit` and as \
+             `s231:unit`; a property must have exactly one spelling"
         )
     );
 
     // A structural edge too: a second hasOutput spelling on the root is not merged.
     let mut doc = fixture();
-    node_mut(&mut doc, "http://example.org#A")
-        .insert(format!("{S231P}hasOutput"), json!({"@id": BOUNDARY_OUTPUT}));
+    node_mut(&mut doc, "http://example.org#A").insert(
+        format!("{S231_NS}hasOutput"),
+        json!({"@id": BOUNDARY_OUTPUT}),
+    );
     let diags = refusal(&bytes(&doc));
     assert_eq!(diags.len(), 1, "{diags:?}");
     assert_eq!(diags[0].code, DiagCode::MalformedDocument);
@@ -383,59 +385,65 @@ fn bound_to(namespace: Option<&str>) -> Json {
 }
 
 /// The single foreign-namespace refusal for `min` spelled in `namespace`.
-fn assert_foreign_refusal(doc: &Json, namespace: &str, binding: &str) {
+fn assert_foreign_refusal(doc: &Json, namespace: &str) {
     let mut doc = doc.clone();
     respell(&mut doc, SOURCE_PORT, "min", &|t| format!("{namespace}{t}"));
     let diags = refusal(&bytes(&doc));
     assert_eq!(diags.len(), 1, "{namespace}: {diags:?}");
-    assert_eq!(diags[0].code, DiagCode::NonSubsetConstruct, "{namespace}");
+    assert_eq!(
+        diags[0].code,
+        DiagCode::VocabularyNamespaceMismatch,
+        "{namespace}"
+    );
     assert_eq!(diags[0].subject.as_deref(), Some(SOURCE_PORT));
     assert_eq!(
         diags[0].message,
         format!(
             "property `{namespace}min` on node `{SOURCE_PORT}` names the modeled term `min` in \
-             `{namespace}`, but the document {binding}; write it as `S231:min`"
+             `{namespace}`; the S231 vocabulary is read only in `{S231_NS}`; write it as \
+             `S231:min`"
         )
     );
 }
 
-const S231_LEGACY: &str = "http://data.ashrae.org/S231#";
-const HTTPS_S231P: &str = "https://data.ashrae.org/S231P#";
-const HTTPS_S231_LEGACY: &str = "https://data.ashrae.org/S231#";
+/// The namespace this engine bound through release 0.4.0: refused, never read.
+const RETIRED_NS: &str = "http://data.ashrae.org/S231P#";
+/// The `https:` spelling of the namespace: a different IRI.
+const HTTPS_NEAR_MISS: &str = "https://data.ashrae.org/S231#";
 
 #[test]
-fn only_the_documents_own_s231_namespace_normalizes_in_either_direction() {
-    // (binding, own namespace, the binding as the refusal message states it)
-    let unbound = format!("binds no `S231`, so its modeled keys are read in `{S231P}`");
-    let cases = [
-        (Some(S231P), S231P, format!("binds `S231` to `{S231P}`")),
-        (
-            Some(S231_LEGACY),
-            S231_LEGACY,
-            format!("binds `S231` to `{S231_LEGACY}`"),
-        ),
-        (None, S231P, unbound),
-    ];
-    for (binding, own, stated) in cases {
+fn only_the_published_namespace_normalizes_and_a_foreign_one_is_refused() {
+    // A document that binds `S231` to the published namespace, and one that binds no `S231`,
+    // read modeled keys in the same namespace.
+    for binding in [Some(S231_NS), None] {
         let doc = bound_to(binding);
         let baseline = outcome(&bytes(&doc));
         assert!(baseline.starts_with("ok "), "{binding:?}: {baseline}");
-        // The own namespace normalizes to exactly the compact outcome.
+        // The full IRI in the published namespace normalizes to exactly the compact outcome.
         let mut same = doc.clone();
-        respell(&mut same, SOURCE_PORT, "min", &|t| format!("{own}{t}"));
+        respell(&mut same, SOURCE_PORT, "min", &|t| format!("{S231_NS}{t}"));
         assert_eq!(outcome(&bytes(&same)), baseline, "{binding:?}");
-        // Every other known namespace is refused, never dropped.
-        for foreign in [S231P, S231_LEGACY, HTTPS_S231P, HTTPS_S231_LEGACY] {
-            if foreign != own {
-                assert_foreign_refusal(&doc, foreign, &stated);
-            }
+        // A modeled term in a foreign namespace is refused, never dropped.
+        for foreign in [RETIRED_NS, HTTPS_NEAR_MISS] {
+            assert_foreign_refusal(&doc, foreign);
         }
     }
-    // A document bound to an unrelated namespace refuses both known namespaces.
-    let custom = "http://example.org/s231#";
-    let doc = bound_to(Some(custom));
-    for foreign in [S231P, S231_LEGACY] {
-        assert_foreign_refusal(&doc, foreign, &format!("binds `S231` to `{custom}`"));
+    // A document that binds `S231` anywhere else is refused at the binding, before any key is
+    // read: one diagnostic on the `@context` term, whatever its nodes spell.
+    for other in [RETIRED_NS, HTTPS_NEAR_MISS, "http://example.org/s231#"] {
+        let mut doc = bound_to(Some(other));
+        respell(&mut doc, SOURCE_PORT, "min", &|t| format!("{other}{t}"));
+        let diags = refusal(&bytes(&doc));
+        assert_eq!(diags.len(), 1, "{other}: {diags:?}");
+        assert_eq!(diags[0].code, DiagCode::VocabularyNamespaceMismatch);
+        assert_eq!(diags[0].subject.as_deref(), Some("S231"));
+        assert_eq!(
+            diags[0].message,
+            format!(
+                "@context term `S231` binds `{other}`; the S231 vocabulary is read only in \
+                 `{S231_NS}`"
+            )
+        );
     }
 }
 
@@ -445,8 +453,8 @@ fn a_key_that_names_a_modeled_property_only_after_trimming_is_refused() {
     for key in [
         "S231:max ".to_owned(),
         " S231:max".to_owned(),
-        format!("{S231P}max\t"),
-        format!(" {S231_LEGACY}max"),
+        format!("{S231_NS}max\t"),
+        format!(" {RETIRED_NS}max"),
     ] {
         let mut doc = fixture();
         node_mut(&mut doc, SOURCE_PORT).insert(key.clone(), json!(1.0));
@@ -474,14 +482,14 @@ fn an_explicit_null_or_empty_compact_key_still_counts_as_a_spelling() {
     let mut doc = fixture();
     let port = node_mut(&mut doc, SOURCE_PORT);
     port.insert("S231:min".into(), Json::Null);
-    port.insert(format!("{S231P}min"), json!(3.0));
+    port.insert(format!("{S231_NS}min"), json!(3.0));
     let diags = refusal(&bytes(&doc));
     assert_eq!(diags.len(), 1, "{diags:?}");
     assert_eq!(diags[0].code, DiagCode::MalformedDocument);
     assert_eq!(
         diags[0].message,
         format!(
-            "node `{SOURCE_PORT}` writes `S231:min` twice, as `S231:min` and as `{S231P}min`; \
+            "node `{SOURCE_PORT}` writes `S231:min` twice, as `S231:min` and as `{S231_NS}min`; \
              a property must have exactly one spelling"
         )
     );
@@ -489,7 +497,10 @@ fn an_explicit_null_or_empty_compact_key_still_counts_as_a_spelling() {
     let mut doc = fixture();
     let root = node_mut(&mut doc, "http://example.org#A");
     root.insert("S231:hasOutput".into(), json!([]));
-    root.insert(format!("{S231P}hasOutput"), json!({"@id": BOUNDARY_OUTPUT}));
+    root.insert(
+        format!("{S231_NS}hasOutput"),
+        json!({"@id": BOUNDARY_OUTPUT}),
+    );
     let diags = refusal(&bytes(&doc));
     assert_eq!(diags.len(), 1, "{diags:?}");
     assert_eq!(diags[0].code, DiagCode::MalformedDocument);
@@ -506,8 +517,8 @@ fn a_document_with_a_refused_context_reports_only_the_context_refusal() {
     let mut doc = fixture();
     doc["@context"]["@base"] = json!("http://example.org/");
     let only_context = refusal(&bytes(&doc));
-    node_mut(&mut doc, SOURCE_PORT).insert(format!("{S231P}max"), json!(1.0));
-    node_mut(&mut doc, SOURCE_PORT).insert(format!("{S231_LEGACY}min"), json!(1.0));
+    node_mut(&mut doc, SOURCE_PORT).insert(format!("{S231_NS}max"), json!(1.0));
+    node_mut(&mut doc, SOURCE_PORT).insert(format!("{RETIRED_NS}min"), json!(1.0));
     assert_eq!(refusal(&bytes(&doc)), only_context);
     assert_eq!(only_context.len(), 1, "{only_context:?}");
     assert_eq!(only_context[0].code, DiagCode::NonSubsetConstruct);
@@ -539,14 +550,14 @@ fn unrelated_full_iri_properties_still_pass_through_losslessly() {
     // Layer A keeps every unrelated key — and a modeled full-IRI key — verbatim (RT-1).
     let mut with_modeled: Json = serde_json::from_slice(&doc).unwrap();
     respell(&mut with_modeled, SOURCE_PORT, "max", &|t| {
-        format!("{S231P}{t}")
+        format!("{S231_NS}{t}")
     });
     let parsed = parse_document(&bytes(&with_modeled)).unwrap();
     let port = parsed.graph.iter().find(|n| n.id == SOURCE_PORT).unwrap();
     for (key, _) in &unrelated {
         assert!(port.other.contains_key(*key), "{key} kept");
     }
-    assert!(port.other.contains_key(&format!("{S231P}max")));
+    assert!(port.other.contains_key(&format!("{S231_NS}max")));
     assert!(port.max.is_none(), "Layer A never rewrites keys");
     let written: Json = serde_json::from_slice(&write_document(&parsed).unwrap()).unwrap();
     assert_eq!(written, with_modeled, "Layer A round trip is lossless");
@@ -561,14 +572,14 @@ fn a_full_iri_value_of_the_wrong_shape_is_refused_like_the_compact_parse_error()
         Err(CxfError::Json(_))
     ));
     let mut full = fixture();
-    node_mut(&mut full, SOURCE_PORT).insert(format!("{S231P}isArray"), json!("yes"));
+    node_mut(&mut full, SOURCE_PORT).insert(format!("{S231_NS}isArray"), json!("yes"));
     let diags = refusal(&bytes(&full));
     assert_eq!(diags.len(), 1, "{diags:?}");
     assert_eq!(diags[0].code, DiagCode::MalformedDocument);
     assert_eq!(diags[0].subject.as_deref(), Some(SOURCE_PORT));
     assert!(
         diags[0].message.starts_with(&format!(
-            "node `{SOURCE_PORT}` carries a modeled property written as `{S231P}isArray` whose \
+            "node `{SOURCE_PORT}` carries a modeled property written as `{S231_NS}isArray` whose \
              value does not fit the modeled field: "
         )),
         "{}",
@@ -581,7 +592,7 @@ fn a_scoped_context_inside_a_full_iri_value_is_still_refused() {
     let mut doc = fixture();
     node_mut(&mut doc, SOURCE_PORT).remove("S231:min");
     node_mut(&mut doc, SOURCE_PORT).insert(
-        format!("{S231P}min"),
+        format!("{S231_NS}min"),
         json!({"@value": "1", "@type": DOUBLE, "@context": {"x": "urn:x"}}),
     );
     let diags = refusal(&bytes(&doc));
@@ -650,7 +661,7 @@ fn repeated_key_message(key: &str, count: usize) -> String {
 
 #[test]
 fn a_repeated_expanded_key_is_refused_rather_than_keeping_one_value() {
-    let key = format!("{S231P}max");
+    let key = format!("{S231_NS}max");
     for (members, count) in [
         (format!(r#""{key}":9,"{key}":350.0"#), 2),
         (format!(r#""{key}":350.0,"{key}":9"#), 2),
@@ -694,7 +705,7 @@ fn compact_spellings_repeated_or_mixed_with_an_expanded_one_are_refused() {
         other => panic!("expected a parse refusal, got {other:?}"),
     }
     // Compact plus expanded: one property in two spellings.
-    let doc = with_raw_members(&format!(r#""S231:nominal":1,"{S231P}nominal":1"#));
+    let doc = with_raw_members(&format!(r#""S231:nominal":1,"{S231_NS}nominal":1"#));
     let diags = refusal(&doc);
     assert_eq!(diags.len(), 1, "{diags:?}");
     assert_eq!(diags[0].code, DiagCode::MalformedDocument);
@@ -702,7 +713,7 @@ fn compact_spellings_repeated_or_mixed_with_an_expanded_one_are_refused() {
         diags[0].message,
         format!(
             "node `{SOURCE_PORT}` writes `S231:nominal` twice, as `S231:nominal` and as \
-             `{S231P}nominal`; a property must have exactly one spelling"
+             `{S231_NS}nominal`; a property must have exactly one spelling"
         )
     );
 }

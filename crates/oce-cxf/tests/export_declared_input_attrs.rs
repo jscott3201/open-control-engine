@@ -34,7 +34,9 @@ const DECLARED_INPUT_ATTRS: &str = include_str!("fixtures/declared_input_attrs.j
 const NORMALIZED_EXPORT_HEADER: &[u8] = b"\
 # Declared boundary-input allowed-delta expectations.
 # Owner test: crates/oce-cxf/tests/export_declared_input_attrs.rs.
-# First generated at development@f88b2a3 before #243 behavior.
+# First generated at development@f88b2a3 before #243 behavior. Regenerated under GitHub #527,
+# which rebound the S231 context IRI and added the two translation-software members to the root
+# node: each record equals its pre-#243 record except for those two things.
 # Each record contains canonical exported bytes after removing only the five scoped attributes
 # from root boundary-input nodes. Post-#243 output must reduce to these exact bytes.
 # Format: <fixture stem> <byte length>, newline, canonical CXF bytes, newline.

@@ -547,7 +547,7 @@ fn read_native_runs(directory: &std::path::Path) -> BTreeMap<String, Corpus> {
 fn pinned_report(runs: &BTreeMap<String, Corpus>, archive: &Archive) -> Result<Vec<u8>, String> {
     let retained = evidence::read_retained();
     for run in runs.values() {
-        evidence::same_reference_inventory(&retained, run)?;
+        evidence::same_archived_inventory(&retained, run)?;
     }
     let baseline = runs
         .get("linux-x86_64-debug-first")
@@ -599,6 +599,42 @@ fn native_receipt_refuses_relabeling_and_raw_payload_reblessing() {
         pinned_report(&changed, archive).unwrap_err(),
         "accepted native matrix digest changed"
     );
+}
+
+#[test]
+fn an_archive_keeps_its_harness_document_digests_but_not_another_reference_inventory() {
+    let archive = &receipts().archives[1];
+    let runs = read_native_runs(&evidence::root().join(FIXTURES).join(&archive.directory));
+    let retained = evidence::read_retained();
+    // The archives predate the namespace the harness documents bind today (GitHub #527): every
+    // recorded document digest differs from the corpus, and the archive still reconstructs.
+    for run in runs.values() {
+        assert_eq!(run.signals.len(), retained.signals.len());
+        for (archived, current) in run.signals.iter().zip(&retained.signals) {
+            assert_eq!(archived.id, current.id);
+            assert_ne!(archived.cxf_sha256, current.cxf_sha256, "{}", current.id);
+        }
+        assert_eq!(
+            evidence::same_reference_inventory(&retained, run).unwrap_err(),
+            "reference/input inventory changed: explicit review required"
+        );
+        evidence::same_archived_inventory(&retained, run).unwrap();
+    }
+    pinned_report(&runs, archive).unwrap();
+    // Only that one field is history. Any other inventory field still has to equal the corpus.
+    for field in ["reference_sha256", "provenance_sha256"] {
+        let mut changed = runs.clone();
+        for run in changed.values_mut() {
+            let mut json = serde_json::to_value(&*run).unwrap();
+            json["signals"][0][field] = "0".repeat(64).into();
+            *run = serde_json::from_value(json).unwrap();
+        }
+        assert_eq!(
+            pinned_report(&changed, archive).unwrap_err(),
+            "reference/input inventory changed: explicit review required",
+            "{field}"
+        );
+    }
 }
 
 #[test]

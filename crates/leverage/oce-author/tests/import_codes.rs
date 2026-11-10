@@ -74,6 +74,13 @@ fn cases() -> Vec<(&'static str, Case)> {
             cxf(econ().put(ROOT, "S231:isConnectedTo", json!([]))),
         ),
         (
+            "namespace-mismatch",
+            Case::Cxf(
+                std::fs::read(fixture("previous_layout/reheat_overrides.cxf.json"))
+                    .expect("previous-layout fixture"),
+            ),
+        ),
+        (
             "missing-key",
             cxf(econ().remove(&id("hys.uLow"), "S231:value")),
         ),
@@ -191,7 +198,7 @@ fn every_import_error_code_is_produced_by_a_case() {
     }
     let listed: BTreeSet<&str> = IMPORT_ERROR_CODES.iter().copied().collect();
     assert_eq!(produced, listed);
-    assert_eq!(IMPORT_ERROR_CODES.len(), 29);
+    assert_eq!(IMPORT_ERROR_CODES.len(), 30);
 }
 
 #[test]
