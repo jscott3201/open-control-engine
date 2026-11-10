@@ -229,7 +229,7 @@ pub enum DiagCode {
 
     // --- Advisory `should`-warnings (doc 04 §9) ---
     /// Connected cluster members declared divergent `displayUnit`s — non-computational, warning only
-    /// (§7.17).
+    /// (OBC §7.17).
     DisplayUnitDivergence,
     /// An `S231:Analog*` connector was coerced to `Real` (§8.2 coercion policy) — advisory.
     AnalogCoercedToReal,

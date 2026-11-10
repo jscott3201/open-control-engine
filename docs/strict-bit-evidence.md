@@ -86,6 +86,20 @@ Git revision, sample count, reference inventory and zero mismatches;
 rewritten NaN payload refuses. Their captures carry the selected-source digest maps of their time
 (17 and 35 entries); those maps are kept verbatim and are no longer compared with anything.
 
+Each capture also records, per signal, the SHA-256 of the CXF document the conformance harness
+built for it (`cxf_sha256`). Those documents bind the `S231` prefix in their `@context`, and
+GitHub #527 changed the IRI the engine binds, so each of the 21 documents changed by that one
+string. The corpus's 21 `cxf_sha256` values were rewritten with the ones a fresh capture by the
+suite's own code recorded; no other field of `corpus.json` changed (no reference bit, input, time or signal name).
+The archives were not touched: their `cxf_sha256` values are kept verbatim and are no longer
+compared with the corpus, like their source maps, so both recorded matrix digests still
+reconstruct. Every other inventory field of an archive still has to equal the corpus
+(`an_archive_keeps_its_harness_document_digests_but_not_another_reference_inventory`). A fresh
+collection and the eight per-PR captures are still compared with the corpus on `cxf_sha256`, so a
+changed harness document cannot pass as the pinned input. The pull request that made the change
+shows, for all 21 signals, that the SHA-256 of today's harness document with the IRI spelled the
+earlier way equals the value both archives record.
+
 ### Run 37382761120 (`qualified-linux/`)
 
 - [GitHub Actions run 37382761120](https://github.com/jscott3201/open-control-engine/actions/runs/37382761120)

@@ -128,7 +128,10 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
 
 - Imports CXF through the `oce-cxf` resolver, and **exports** back to CXF under a round-trip
   contract where re-importing the emitted bytes renders bit-identically — Reals compared by
-  IEEE-754 bits, not by epsilon. See [CXF round trip](docs/cxf-round-trip.md).
+  IEEE-754 bits, not by epsilon. See [CXF round trip](docs/cxf-round-trip.md). Both directions use
+  one vocabulary namespace, `http://data.ashrae.org/S231#`: a document bound to another is refused
+  with a typed diagnostic, and every exported document names the software and version that wrote
+  it.
 - Executes a registry of **133 CDL elementary block classes** plus 3 reserved internal lowering
   classes, enumerable at runtime via `oce_api::catalog()` with per-class ports, parameter rules,
   and honest parameter defaults. See [CDL coverage](docs/cdl-coverage.md).

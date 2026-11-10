@@ -169,14 +169,15 @@ pub struct Node {
     /// `S231:unit` — the connector/variable **computation** unit (§7.4.1). Carried onto
     /// `Connector.attrs` by the resolver so the §7.10 deep gate (oce-validate) can unify it; never
     /// read on the tick (R1). A [`TermAttr`] so all three legal JSON-LD wire shapes deserialize —
-    /// bare string `"K"`, typed literal `{"@value":"K","@type":…}`, or the S231P-canonical IRI node
+    /// bare string `"K"`, typed literal `{"@value":"K","@type":…}`, or the IRI node `CXF-Core.jsonld` ranges it over,
     /// `{"@id":"unit:K"}` (sh:class qudt:Unit) — rather than a bare `String` that would hard-fail the
     /// whole document on the non-string forms. Previously fell through `other`, defeating
     /// unit unification on CXF.
     #[serde(rename = "S231:unit", default, skip_serializing_if = "Option::is_none")]
     pub unit: Option<TermAttr>,
     /// `S231:quantity` — the physical quantity kind (§7.4.1), e.g. `"ThermodynamicTemperature"` or
-    /// the S231P-canonical IRI node `{"@id":"…QuantityKind"}` (sh:class qudt:QuantityKind). A
+    /// the IRI node `CXF-Core.jsonld` ranges it over, `{"@id":"…QuantityKind"}` (sh:class
+    /// qudt:QuantityKind). A
     /// [`TermAttr`] for the same wire-shape-tolerance reason as [`Node::unit`].
     #[serde(
         rename = "S231:quantity",
@@ -184,7 +185,7 @@ pub struct Node {
         skip_serializing_if = "Option::is_none"
     )]
     pub quantity: Option<TermAttr>,
-    /// `S231:displayUnit` — the **presentation** unit (§7.4.1 / §7.17); divergence is a should-warning
+    /// `S231:displayUnit` — the **presentation** unit (OBC §7.4.1 / §7.17); divergence is a should-warning
     /// only and it **never** affects computation. A [`TermAttr`] (see [`Node::unit`]).
     #[serde(
         rename = "S231:displayUnit",
@@ -406,7 +407,7 @@ pub enum CxfValue {
 /// ingest must accept **all** of them rather than hard-fail the entire document on an
 /// unexpected-but-legal shape: a bare string (`"K"`), a typed literal
 /// (`{"@value":"K","@type":"…#string"}`), or an IRI-node reference (`{"@id":"unit:K"}` — the
-/// S231P SHACL range for unit/displayUnit is `sh:class qudt:Unit` and for quantity
+/// SHACL range `CXF-Core.jsonld` gives unit/displayUnit is `sh:class qudt:Unit` and for quantity
 /// `sh:class qudt:QuantityKind`, i.e. an IRI node). The lexical term is recovered with [`as_term`]
 /// (which returns `None` for the `Other` arm).
 ///
@@ -417,7 +418,7 @@ pub enum CxfValue {
 ///
 /// `Other` is a **last-resort catch-all** (it matches any JSON, so it must be the final arm): a
 /// `unit`/`quantity`/`displayUnit` in some other shape (a bare number, an array, or a partial object
-/// like `{"@value":"K"}` missing `@type`) is malformed per S231P, but it must **not** sink the whole
+/// like `{"@value":"K"}` missing `@type`) is malformed against that range, but it must **not** sink the whole
 /// document with a coarse `serde` error — it deserializes into `Other` (round-tripping verbatim, R-8)
 /// and the resolver turns the missing term into a *targeted* `MalformedDocument` carrying the
 /// connector IRI (the same NO-SILENT-FAILURE discipline as a malformed bound).
@@ -441,7 +442,7 @@ pub enum TermAttr {
         #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
         extra: BTreeMap<String, serde_json::Value>,
     },
-    /// An IRI-node reference `{"@id": "..."}` (the S231P-canonical qudt:Unit / qudt:QuantityKind form).
+    /// An IRI-node reference `{"@id": "..."}` (the qudt:Unit / qudt:QuantityKind form `CXF-Core.jsonld` declares).
     Iri {
         /// The referenced IRI — used verbatim as the lexical term. Deliberately excluded from
         /// the resolver's `@context` expansion, permanently: unit/quantity/displayUnit are
@@ -453,7 +454,7 @@ pub enum TermAttr {
         #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
         extra: BTreeMap<String, serde_json::Value>,
     },
-    /// Any other (malformed-per-S231P) JSON shape — a number/array/bool or a partial object. Kept
+    /// Any other (malformed) JSON shape — a number/array/bool or a partial object. Kept
     /// verbatim for lossless round-trip (R-8); [`as_term`](TermAttr::as_term) returns `None` and the
     /// resolver surfaces a targeted `MalformedDocument`. A direct `@context` on an object in this
     /// arm is refused first as an unsupported scoped context. **Must be the last arm** (it matches

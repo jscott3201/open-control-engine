@@ -1,10 +1,11 @@
 # Open Control Engine — workspace root.
 #
 # A high-performance, embeddable Rust control engine that natively executes the
-# OBC/LBL Control Description Language (CDL) for smart-building equipment.
+# Control Description Language (CDL), published as ANSI/ASHRAE Standard 231-2026,
+# for smart-building equipment.
 #
-# The dependency direction is intentional and acyclic, organized around the CDL
-# §7.17 non-computational seam:
+# The dependency direction is intentional and acyclic, organized around the
+# non-computational metadata seam (OBC §7.17; ANSI/ASHRAE 231-2026 §5.13):
 #   GROUP A — execution core (NO store, NO database):
 #     oce-model -> {oce-expr, oce-blocks, oce-validate, oce-graph, oce-cxf,
 #                   oce-semantics}

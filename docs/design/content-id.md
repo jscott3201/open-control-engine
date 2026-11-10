@@ -167,8 +167,9 @@ connector node's IRI and not the synthesized port name (decision 7).
 
 - `SemanticPoint` records, `extends`, comments, annotations, `@context` spelling and every authored
   order: `@graph`, `containsBlock`, `isConnectedTo`, `hasParameter` (decision 3).
-- The root composite's `@type`, `S231:label`, and any composite parameter no leaf references: none
-  of them survives flattening.
+- The root composite's `@type`, `S231:label`, the translation-software label
+  (`S231:translationSoftware`, `S231:translationSoftwareVersion`), and any composite parameter no
+  leaf references: none of them survives flattening.
 - Internal connector node IRIs and internal connector attributes, except through an input's
   effective domain. Output `min`/`max`, `nominal` and `unbounded`: the engine enforces none of them
   and the exporter emits only `unit`, `quantity`, `displayUnit`, `min` and `max` (decision 10).
@@ -240,7 +241,7 @@ with no warnings and exports completely):
 
 ```json
 {
-  "@context": { "S231": "http://data.ashrae.org/S231P#" },
+  "@context": { "S231": "http://data.ashrae.org/S231#" },
   "@graph": [
     { "@id": "http://example.org#ex.offset_gain", "@type": "S231:Block",
       "S231:hasInput": [{ "@id": "http://example.org#ex.offset_gain.TOut" }],
@@ -396,7 +397,7 @@ them in as `true_delay.jsonld` and `true_delay_default.jsonld` beside the first 
 
 ```json
 {
-  "@context": { "S231": "http://data.ashrae.org/S231P#" },
+  "@context": { "S231": "http://data.ashrae.org/S231#" },
   "@graph": [
     { "@id": "http://example.org#ex.true_delay", "@type": "S231:Block",
       "S231:hasInput": [{ "@id": "http://example.org#ex.true_delay.u" }],
@@ -488,7 +489,8 @@ B's `delayOnInit` sorts before `delayTime` because `O` (0x4f) precedes `T` (0x54
 - re-serialization: JSON whitespace and key order, compact against expanded IRIs, singleton
   relation spellings, and load → export → load of a complete export;
 - the instance namespace changed, for IRIs in form 0;
-- `SemanticPoint` records, `extends`, comments, `S231:label`, the root's `@type`, unreferenced
+- `SemanticPoint` records, `extends`, comments, `S231:label`, the root's `@type`, the
+  translation-software label (present, absent or another tool's), unreferenced
   composite parameters, output `min`/`max`, `nominal`, `unbounded`.
 
 **Different id:**

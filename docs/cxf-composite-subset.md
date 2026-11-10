@@ -92,7 +92,7 @@ and look the remainder up in the native block registry (published as
 `http://example.org#Buildings.Controls.OBC.CDL.Reals.Add` — or the compact
 `ex:Buildings.Controls.OBC.CDL.Reals.Add` under `"ex": "http://example.org#"` — resolves to the
 registered class `CDL.Reals.Add` and is a leaf; `S231:Block` (expanded,
-`http://data.ashrae.org/S231P#Block`) or a vendor class path resolves to nothing and — with
+`http://data.ashrae.org/S231#Block`) or a vendor class path resolves to nothing and — with
 children — is a composite. Note the contrast with rule 7: **identities and typing tokens
 expand; property KEYS match by suffix** — the banned-key and array-marker matching below stays
 on the term after the last `:`, `#`, or `/`, whatever the spelling.
@@ -144,9 +144,9 @@ lowers `…#M.sub`'s leaves (depth-first) before `…#M.post`.
 ### Ordering and identity contract
 
 This table is the OCE executable profile, not a general JSON-LD ordering guarantee.
-[OBC CXF §8.2](https://obc.lbl.gov/specification/cxf.html#classes-and-properties) defines
+The [OpenBuildingControl (OBC) specification, OBC §8.2](https://obc.lbl.gov/specification/cxf.html#classes-and-properties), defines
 `containsBlock` as a relation between blocks; it does not define the executable array-order
-semantics below. The [OBC code-generation example (§11.3)](https://obc.lbl.gov/specification/codeGeneration.html#translation-of-a-control-sequence-using-a-intermediate-cxf-json-ld-format)
+semantics below. The [OBC code-generation example (OBC §11.3)](https://obc.lbl.gov/specification/codeGeneration.html#translation-of-a-control-sequence-using-a-intermediate-cxf-json-ld-format)
 shows authored arrays and describes modelica-json recursively flattening composites to elementary
 blocks. Neither that example nor its displayed order establishes a general producer-order guarantee.
 
@@ -327,7 +327,7 @@ leaf parameter `"S231:value": "kInner"` grounds the chain's end — the
 > endpoints or missing boundary nodes (`UnresolvedReference`), and boundary datatype declarations
 > that cannot be derived (`MalformedDocument`).
 
-CXF §8.2 permits either endpoint of a connection to carry `S231:isConnectedTo`; subject position
+OBC §8.2 permits either endpoint of a connection to carry `S231:isConnectedTo`; subject position
 does not encode signal direction. Before boundary elision, the importer therefore derives each
 endpoint's source/sink role from its owning block, its port direction, and the peer's location
 inside or outside that owning composite, then re-anchors reverse-spelled edges on their canonical
@@ -377,7 +377,7 @@ imports as one external input feeding `…#M.sub.gain.u` directly; `…#M.sub.u`
 > Six Modelica construct keys are banned on any active node: `redeclare`, `constrainedby`,
 > `extends`, `extendsFrom`, `moSource`, `modelicaSource`. Matching is on the term after the last
 > `:`, `#`, or `/` in the key, so the bare (`extends`), prefixed (`S231:extends`), and
-> absolute-IRI (`http://data.ashrae.org/S231P#extends`) spellings all reject. A banned key
+> absolute-IRI (`http://data.ashrae.org/S231#extends`) spellings all reject. A banned key
 > rejects with `composite/banned-modelica-key` (DiagCode `non-subset-construct`); the subject is
 > the owning node and the message names the key exactly as authored.
 >
@@ -503,7 +503,7 @@ in the same sense — untagged, no catalog entry.
 
 ### Single assignment: the double-driver shapes
 
-CDL §7.10 gives every block input exactly one driver: a block output (a connection) or a root
+OBC §7.10 gives every block input exactly one driver: a block output (a connection) or a root
 boundary input (elided into the frame contract). A second driver of either kind refuses the
 document with the untagged `single-assignment` code, subject the driven input's authored IRI,
 one refusal per input:
@@ -534,6 +534,10 @@ loads warning-free:
 3. Every leaf `@type` resolves to a registered block class (else `class-not-found`).
 4. Accepted means **warning-free**: the corpus drivers assert an empty diagnostic report, not
    merely a non-error one.
+5. The S231 vocabulary is spelled in `http://data.ashrae.org/S231#`. A document binds the `S231`
+   prefix to exactly that IRI, or binds no `S231` at all; any other binding is refused with
+   `vocabulary-namespace-mismatch` before a node is read (see
+   [host responsibilities](host-responsibilities.md#cxf-point-identities-are-the-authored-ids)).
 
 ## Testing your emitter
 

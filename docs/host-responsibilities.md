@@ -419,18 +419,28 @@ for every document that loads at all.
 Property keys are expanded against the same `@context` (issue #383). A modeled property — `min`,
 `max`, `nominal`, `unit`, `quantity`, `displayUnit`, `value`, the structural edges, and the rest
 of the `S231:` terms the importer reads — is the same property whether it is keyed compactly
-(`S231:min`), by its full IRI in the document's own S231 namespace, by another prefix bound to
-that namespace, or by a declared term. The own namespace is the document's `S231` binding; a
-document that binds no `S231` is read in the S231P namespace (`http://data.ashrae.org/S231P#`), the
-one the exporter binds. (`S231P` is the literal the exporter still emits: on the public evidence
-the published standard, ANSI/ASHRAE 231-2026, uses `http://data.ashrae.org/S231#`, and GitHub
-issue #527 switches the exporter to it; see
-[The standard this page measures against](cdl-coverage.md#the-standard-this-page-measures-against)
-on the CDL coverage page.)
-A modeled term spelled in any other known S231 namespace — S231P, the
-`http://data.ashrae.org/S231#` namespace upstream modelica-json emits, or the `https:` spelling of
-either — is refused as `non-subset-construct`, in both directions, and the message names the
-namespace the document reads modeled keys in. A node that writes one property in two spellings
+(`S231:min`), by its full IRI in the S231 namespace, by another prefix bound to that namespace, or
+by a declared term.
+
+The importer reads the S231 vocabulary in one namespace, `http://data.ashrae.org/S231#`: the one
+the exporter binds, the OpenBuildingControl (OBC) specification lists (OBC §11.3) and
+modelica-json emits (GitHub #527; the evidence is on the
+[CDL coverage page](cdl-coverage.md#the-standard-this-page-measures-against)). A document either
+binds `S231` to exactly that IRI or binds no `S231` at all, in which case its compact keys are
+read in the same namespace. Every other spelling is refused with `vocabulary-namespace-mismatch`,
+and the message names the IRI found and the IRI expected:
+
+- `S231` bound to any other IRI. An IRI is compared as a string, so the `https:` spelling of the
+  same host and path is another IRI and is refused too.
+- Any prefix bound to `http://data.ashrae.org/S231P#`. The engine wrote that IRI through release
+  0.4.0. No importer, alias or second spelling reads a document of that layout: export it again
+  with a current engine or tool.
+- A modeled term keyed by its full IRI in that namespace or in the `https:` spelling of the
+  current one, and a `@type` or `isOfDataType` value in the retired namespace.
+
+In a list of context maps only the binding in force is judged (a later map replaces an earlier
+one). Another prefix bound to the published IRI is the same namespace under another name and is
+accepted. A node that writes one property in two spellings
 (an explicit `null` or `[]` compact key counts) and a key that names a modeled property only after
 trimming surrounding whitespace are refused as `malformed-document`, as is any key — modeled or
 not — written more than once on one `@graph` node, since JSON parsing would silently keep only one

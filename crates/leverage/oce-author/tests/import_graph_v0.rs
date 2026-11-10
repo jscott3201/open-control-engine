@@ -1,7 +1,8 @@
 //! The v0 graph JSON importer (importer note, "The v0 graph JSON importer"; decisions 17 and 18;
 //! issue #496) over the prototype's three vendored golden pairs (`tests/fixtures/v0/`, see its
 //! `PROVENANCE.md`): each graph imports; emitting it with the default namespace and loading it
-//! gives the same canonical content id as loading the CXF the prototype wrote (no re-stamp:
+//! gives the same canonical content id as loading the CXF the prototype wrote, with its `S231`
+//! context IRI rebound in the fixture (GitHub #527; no re-stamp:
 //! `urn:mechanical-muse:<name>#` strips to the same names); the comment annotations and the
 //! report match a golden; v0 to model to wire to model is identity; and the comment rules keep
 //! any v0 text printable, parseable and `fmt`-stable.

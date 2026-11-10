@@ -37,10 +37,9 @@ contents of the files were not compared.
 `http://data.ashrae.org/S231#`: OBC §11.3 and modelica-json's `CXF-Core.jsonld` (vendored at
 `third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld`) both bind it. This project has not
 read the standard's CXF clause (§6), so that rests on those two sources and not on the standard's
-text. The engine's exporter (`oce-cxf`) and the authoring emitter (`oce-author`) both still bind
-`http://data.ashrae.org/S231P#`, spelled with the proposed standard's designation (231P); GitHub
-issue #527 switches the namespace. `S231P` appears in this documentation only as that literal
-identifier. The spellings the importer accepts and refuses today are listed under
+text. The engine's exporter (`oce-cxf`) and the authoring emitter (`oce-author`) both bind that
+namespace, and both importers read the vocabulary in no other (GitHub #527). The spellings the
+importer accepts and refuses are listed under
 [host responsibilities](host-responsibilities.md#cxf-point-identities-are-the-authored-ids).
 
 ## What the engine does not execute

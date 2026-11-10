@@ -15,7 +15,7 @@
 //! [`Block::update_state`] (advance state after) is what lets `oce-graph` evaluate a tick in
 //! topological order and cut algebraic loops at non-feedthrough stateful blocks. This crate is
 //! **Group A**: no store, no database (D-OWNER-1); a block carries behavior only — never per-tick
-//! state in the struct, never non-computational metadata (CDL §7.17). The host-facing metadata the
+//! state in the struct, never non-computational metadata (OBC §7.17). The host-facing metadata the
 //! registry publishes beside the blocks (the catalog, contract port names, class descriptions and
 //! settable flags; GitHub #440) lives in static tables no block reads.
 //!
@@ -187,7 +187,7 @@ pub enum PortKind {
 /// Static interface descriptor for an elementary block class. Fixed-width blocks use this directly
 /// for their BUILD-time port contract. Parameter-width blocks publish their default-width class
 /// descriptor here and override [`Block::resolved_signature`] for the authoritative instance
-/// signature. Carries no non-computational metadata (§7.17).
+/// signature. Carries no non-computational metadata (OBC §7.17).
 #[derive(Clone, Copy, Debug)]
 pub struct BlockSignature {
     /// Canonical class path, e.g. `"CDL.Reals.PID"`.

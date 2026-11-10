@@ -4,7 +4,7 @@ For an integrator writing or consuming CXF documents against the Open Control En
 one question: when `export` returns `Ok`, what is actually in those bytes — and what is quietly
 not?
 
-CXF is bidirectional here. `oce-cxf` imports through the §7.1 resolver
+CXF is bidirectional here. `oce-cxf` imports through the resolver
 (`crates/oce-cxf/src/resolve/mod.rs`, reached via `oce_cxf::import_cxf` in
 `crates/oce-cxf/src/lib.rs`) and exports through a separate, deliberately smaller path
 (`oce_cxf::export` in `crates/oce-cxf/src/lib.rs`). Import and export do **not** cover the same
@@ -20,6 +20,17 @@ IEEE-754 bit patterns, never by an epsilon
 `crates/oce-cxf/tests/export_roundtrip.rs`, which compares through a hand-written renderer using
 `f64::to_bits`). Emission order derives from the `ModelGraph` vectors alone, so repeated exports of
 the same graph are byte-identical (`crates/oce-cxf/src/export.rs`).
+
+Two things in every exported document are the exporter's own and not the graph's (GitHub #527).
+Its `@context` binds `S231` to `http://data.ashrae.org/S231#`, the only namespace the importer
+reads the vocabulary in ([host responsibilities](host-responsibilities.md#cxf-point-identities-are-the-authored-ids)).
+Its root node ends with the translation-software label the OpenBuildingControl (OBC)
+specification allows (OBC §8.4): `S231:translationSoftware`, the string `open-control-engine`,
+and `S231:translationSoftwareVersion`, the workspace version. The importer reads neither label
+property back, on any node and with any value, so a document carrying another tool's label, a
+malformed one or none imports to the same graph and the same canonical content id, and
+re-exporting it writes this engine's label. Because the version is in the bytes, the export of
+one graph differs between engine versions; the fixpoint holds within a version.
 
 The carve-out belongs right here rather than in a footnote: **bit-identity holds over the survivor
 cone, not necessarily over the whole input graph.** When nothing is deferred the survivor cone *is*
