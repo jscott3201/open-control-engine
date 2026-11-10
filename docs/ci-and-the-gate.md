@@ -85,8 +85,9 @@ nor the leverage allowlist, and is not the root README, counts as an engine chan
 
 - **docs-only** paths: `docs/**`, `site/**`, `scripts/docs/**`, a root-level `*.md`,
   `.agents/project-facts.md`, `.github/ISSUE_TEMPLATE/**` and `.github/pull_request_template.md` —
-  except the root `README.md` (next) and documentation an engine test reads
-  (`docs/cxf-composite-subset.md`), which counts as an engine change. A fixture scans the crates for
+  except the root `README.md` (next) and documentation a test reads
+  (`docs/cxf-composite-subset.md`, read by an `oce-cxf` test, and `docs/design/vectors.md`, whose
+  worked example an `oce-verify` test compares with its fixture), which counts as an engine change. A fixture scans the crates for
   documentation reads so the exception list cannot fall behind.
 - **the root `README.md`**, and only that file (`crates/*/README.md` is an engine path,
   `crates/leverage/**/README.md` a leverage path, `docs/README.md` docs-only): it selects the README

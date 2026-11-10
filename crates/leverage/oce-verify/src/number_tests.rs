@@ -45,6 +45,10 @@ const REAL_GOLDENS: &[(u64, &str)] = &[
     (0x7fef_ffff_ffff_ffff, "1.7976931348623157e308"),
     (0xffef_ffff_ffff_ffff, "-1.7976931348623157e308"),
     (0x8000_0000_0000_0001, "-5e-324"),
+    // The next two subnormals: several strings of the shortest length read back to each (see
+    // `of_the_shortest_strings_that_read_back_the_closest_is_written`).
+    (0x0000_0000_0000_0002, "1e-323"),
+    (0x0000_0000_0000_0003, "1.5e-323"),
 ];
 
 #[test]
@@ -80,6 +84,110 @@ fn a_real_always_carries_a_fraction_or_an_exponent() {
             "{spelling}"
         );
     }
+}
+
+#[test]
+fn of_the_shortest_strings_that_read_back_the_closest_is_written() {
+    // "Shortest digits that read back" is not one string. Each row: the bits of a subnormal,
+    // every string of the shortest length that reads back to it, and the one the writer takes,
+    // which is the one closest to the exact value (n * 2^-1074, worked out with exact rationals
+    // outside this crate: 4.94e-324, 9.88e-324 and 1.482e-323).
+    let rows: [(u64, &[&str], &str); 3] = [
+        (
+            1,
+            &["3e-324", "4e-324", "5e-324", "6e-324", "7e-324"],
+            "5e-324",
+        ),
+        (2, &["8e-324", "9e-324", "1e-323"], "1e-323"),
+        (
+            3,
+            &["1.3e-323", "1.4e-323", "1.5e-323", "1.6e-323", "1.7e-323"],
+            "1.5e-323",
+        ),
+    ];
+    for (bits, candidates, written) in rows {
+        for candidate in candidates {
+            let read: f64 = candidate.parse().expect("a number");
+            assert_eq!(read.to_bits(), bits, "{candidate} reads back");
+        }
+        assert!(candidates.contains(&written));
+        assert_eq!(canonical_real(f64::from_bits(bits)), written);
+    }
+    // One step outside each list reads back to a neighbour, so the lists are whole.
+    for (outside, bits) in [
+        ("2e-324", 0),
+        ("8e-324", 2),
+        ("7e-324", 1),
+        ("1.1e-323", 2),
+        ("1.2e-323", 2),
+        ("1.8e-323", 4),
+    ] {
+        let read: f64 = outside.parse().expect("a number");
+        assert_eq!(read.to_bits(), bits, "{outside}");
+    }
+}
+
+/// `text` read as a binary64, by its bits.
+fn bits_of(text: &str) -> u64 {
+    text.parse::<f64>().expect("a number").to_bits()
+}
+
+#[test]
+fn the_digits_are_the_shortest_that_read_back_and_the_closest_of_those() {
+    // Checked with exact integers, where it can be: a binary64 of magnitude 2^53 or more is an
+    // integer `m * 2^shift`, so its distance to a decimal `digits * 10^power` is exact in `u128`.
+    let mut ties_broken = 0_u32;
+    let mut patterns = bit_patterns(6_000);
+    for round in 0..6_000_u32 {
+        let pattern = patterns.next().expect("a pattern");
+        let mantissa = (1_u64 << 52) | (pattern >> 12);
+        let shift = 1 + (round % 60);
+        let exact = u128::from(mantissa) << shift;
+        let value =
+            f64::from_bits((u64::from(1023 + 52 + shift) << 52) | (mantissa & ((1 << 52) - 1)));
+        let (digits, exponent) = shortest_digits(value);
+        let power = u32::try_from(exponent).expect("positive") + 1
+            - u32::try_from(digits.len()).expect("fits");
+        let scale = 10_u128.pow(power);
+        let written: u128 = digits.parse().expect("digits");
+        let spell = |candidate: u128, power: u32| format!("{candidate}e{power}");
+        assert_eq!(
+            bits_of(&spell(written, power)),
+            value.to_bits(),
+            "{digits}e{power}"
+        );
+        // Closest: no other string of this length that reads back is nearer the exact value.
+        let distance = (written * scale).abs_diff(exact);
+        let (low, high) = (
+            10_u128.pow(u32::try_from(digits.len()).expect("fits") - 1),
+            10_u128.pow(u32::try_from(digits.len()).expect("fits")),
+        );
+        for other in (written.saturating_sub(30)..=written + 30).filter(|d| (low..high).contains(d))
+        {
+            if other != written && bits_of(&spell(other, power)) == value.to_bits() {
+                assert!(
+                    (other * scale).abs_diff(exact) >= distance,
+                    "{other}e{power} reads back and is nearer than {written}e{power}"
+                );
+                ties_broken += 1;
+            }
+        }
+        // Shortest: the two strings one digit shorter that bracket the value do not read back
+        // (the strings that read back form one interval around it, so no shorter one does).
+        if digits.len() > 1 {
+            let below = exact / (scale * 10);
+            for shorter in [below, below + 1] {
+                assert_ne!(
+                    bits_of(&spell(shorter, power + 1)),
+                    value.to_bits(),
+                    "{shorter}e{} is shorter than {digits}e{power} and reads back",
+                    power + 1
+                );
+            }
+        }
+    }
+    // Other strings of the same length did read back, often: the closest-of rule was exercised.
+    assert!(ties_broken > 1_000, "{ties_broken}");
 }
 
 /// A deterministic walk over bit patterns: a 64-bit linear congruential step (Knuth's MMIX

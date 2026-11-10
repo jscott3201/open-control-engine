@@ -5,7 +5,7 @@
 | `sets/every_field.json` | A hand-written vector set that uses every key of the format in an awkward spelling: members out of order, tabs and odd spacing, `\u` escapes in keys and strings, raw non-ASCII and astral characters, numbers at the canonical form's thresholds (`1e-4`, `0.00001`, `9999999999999998.0`, `1E16`), `-0`, `-0.0`, a subnormal, the largest finite real and the ends of `i64`, on the clock `{ step_s: 0.1, horizon_s: 4.3 }`. | nobody: edit it by hand |
 | `canonical/every_field.json` | The canonical form of that set. | `derive_canonical.py`, by hand |
 | `canonical/AHU-0016.json`, `canonical/AHU-0004.json` | The canonical forms of the two in-repo library rules' vector files (`crates/oce-api/tests/fixtures/library_rules/<rule>/vectors.json`, read in place by the tests). | `derive_canonical.py`, by hand |
-| `note/worked_example.json` | The JSON block of the design note's "The vector format" section (`docs/design/vectors.md`), copied verbatim. It lists `mutants`, which the format does not have yet, so the test expects `unknown-key` for it and loads the rest. | copy the block again by hand when the note changes |
+| `note/worked_example.json` | The JSON block of the design note's "The vector format" section (`docs/design/vectors.md`), copied verbatim; `tests/closed_objects.rs` reads the note and fails when the two differ. It lists `mutants`, which the format does not have yet, so the test expects `unknown-key` for it and loads the rest. | copy the block again when the test says the note changed |
 | `derive_canonical.py` | The independent derivation of the canonical goldens and their ids. | nobody: it is the reference |
 
 ## The canonical goldens are not blessed

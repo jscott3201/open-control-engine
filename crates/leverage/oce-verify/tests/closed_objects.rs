@@ -92,6 +92,36 @@ fn the_keys_the_format_does_not_have_yet_are_refused_never_ignored() {
     assert_eq!(code_of(&full()), "loaded");
 }
 
+/// The design note, read in place. `scripts/ci/classify-changes.sh` lists it as a document a
+/// test reads, so a change to the note runs this crate's suite.
+const VECTORS_NOTE: &str = include_str!("../../../../docs/design/vectors.md");
+
+/// The first `json` block after the note's "The vector format" heading: its worked example.
+fn worked_example_in_the_note() -> &'static str {
+    let section = VECTORS_NOTE
+        .split_once("\n## The vector format\n")
+        .expect("the note has a section named The vector format")
+        .1;
+    let block = section
+        .split_once("\n```json\n")
+        .expect("the section has a json block")
+        .1;
+    let end = block.find("\n```\n").expect("the json block is closed");
+    &block[..=end]
+}
+
+#[test]
+fn the_worked_example_fixture_is_the_notes_block_byte_for_byte() {
+    let fixture = String::from_utf8(fixture_bytes("note/worked_example.json")).expect("UTF-8");
+    let noted = worked_example_in_the_note();
+    assert!(noted.starts_with("{\n  \"schema\": \"oce/vectors/v1\",\n"));
+    assert!(noted.ends_with("\n}\n"));
+    assert!(
+        fixture == noted,
+        "tests/fixtures/note/worked_example.json is no longer the worked example of docs/design/vectors.md; copy the block again\n--- note\n{noted}\n--- fixture\n{fixture}"
+    );
+}
+
 #[test]
 fn the_notes_worked_example_is_refused_for_its_mutants_and_loads_without_them() {
     let text = String::from_utf8(fixture_bytes("note/worked_example.json")).expect("UTF-8");

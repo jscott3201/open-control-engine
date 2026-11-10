@@ -44,8 +44,9 @@ compiles the engine — and so does any change to a gate script, workflow or too
 job executes `.agents/gate.sh` any more (`gate (light)` did; `gate (full)` in `release-gate.yml`
 runs it after the merge). A `crates/leverage/**` change runs only the `leverage lane` job beside the
 always-on checks (fmt, file-size, no-secret, docs, gate fixtures, the package/authority/product
-contract); an engine change runs it too. A docs-only PR compiles nothing, and documentation an
-engine test reads (`docs/cxf-composite-subset.md`) is not docs-only: it is an engine change.
+contract); an engine change runs it too. A docs-only PR compiles nothing, and documentation a
+test reads (`docs/cxf-composite-subset.md`, and `docs/design/vectors.md` since issue #519) is not
+docs-only: it is an engine change.
 
 The root `README.md` is its own lane (issue #503), so updating it in a landing PR no longer costs
 the determinism lane. It runs one job, `facade contract and Quickstart`, which holds the two README
@@ -369,7 +370,9 @@ a change to it rewrites those two `vectors.json` files, their SHA-256 rows in th
 README and these goldens in the same PR; `crates/oce-api/tests/library_rule_state_continuation.rs`
 keeps its own small reader of the shape, because an engine crate cannot depend on a leverage crate.
 `tests/fixtures/note/worked_example.json` is the JSON block of the vectors note's "The vector
-format" section copied by hand; copy it again when that block changes. A new `VectorErrorKind`
+format" section, and `tests/closed_objects.rs` reads the note and holds the two equal byte for
+byte, which is why `scripts/ci/classify-changes.sh` lists `docs/design/vectors.md` as a document a
+test reads (an edit to the note runs the determinism lane); copy the block again when it changes. A new `VectorErrorKind`
 does not build until `VECTOR_ERROR_CODES` lists its code in order, and needs its case in
 `tests/error_codes.rs`.
 

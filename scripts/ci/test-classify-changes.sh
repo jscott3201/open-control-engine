@@ -63,6 +63,7 @@ expect readme-quoted-by-git "$core" '"README.md"'
 expect readme-in-a-directory "$core" 'crates/README.md'
 # Documentation that a determinism-lane test reads is engine input, not docs.
 expect composite-contract-doc "$core" 'docs/cxf-composite-subset.md'
+expect vectors-note "$core" 'docs/design/vectors.md'
 # Engine paths: every one runs the determinism lane, and with it the leverage and README lanes.
 expect core-four "$core" 'crates/oce-blocks/src/lib.rs'
 # Firmware images (issue #402) link the core: engine lane, with or without docs beside them.

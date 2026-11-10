@@ -427,7 +427,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
     inside the clock and must hold a tick, decided from tick values (a loaded `Window` carries its
     first and last tick). A diagnostic `at_s` is a tick. An integer token in a time position must
     be within ±2^53 (`MAX_TIME_INTEGER`), where every integer is a binary64, or it is
-    `integer-out-of-range`; a larger time is written as a real.
+    `integer-out-of-range`; a larger time is written as a real. No name is empty: `empty-name`
+    covers a scenario name, an input name, a parameter path, an output name and a diagnostic's
+    `block`. The note is amended with both rules, dated 2026-11-10 (review ruling).
   - **Bounds**: `VerifyLimits` (4 MiB, 16,777,216 ticks, 4,096 scenarios, 4,096 expectations per
     scenario, 256 parameters per map), each a typed refusal one past its value, lowerable to zero
     and never raisable (a value above the maximum is read as the maximum). Nothing is materialised
@@ -441,15 +443,18 @@ and a gate that accepted any text would restore exactly the false assurance desc
     the shortest round-trip digits, in plain decimal for zero and `1e-4 <= |x| < 1e16`, otherwise
     `d[.ddd]e[-]N` (`0.0001` and `9.999999999999999e-5`, `9999999999999998.0` and `1e16`, `-0.0`,
     `5e-324`). The thresholds and the exponent spelling stand as the note had them; the layout is
-    the crate's own code, compared with Rust's `{:?}` over more than 23,000 values. The canonical goldens
+    the crate's own code, compared with Rust's `{:?}` over more than 23,000 values. The note and
+    the rustdoc now also state the tiebreak: of the shortest strings that read back (`3e-324`
+    through `7e-324` all read back to the smallest subnormal) the one closest to the exact value
+    is written, pinned by goldens at the three smallest subnormals and by an exact-integer check
+    over 6,000 values. The canonical goldens
     and the `spec_id` literals are derived by a second implementation in Python
     (`tests/fixtures/derive_canonical.py`), never blessed from the code they check.
   - **Errors**: `VectorError` with a closed, `#[non_exhaustive]` `VectorErrorKind`, a kebab-case
     `code()` per kind and `VECTOR_ERROR_CODES` (32 codes, checked against the kinds at compile
     time and pinned by a test that produces each one from a document). They are the note's load
     rows without the three mutant rows (`too-many-mutants`, `mutant-path-invalid`,
-    `duplicate-mutant`), which arrive with the `mutants` key in part 3. `empty-name` covers every
-    name position (scenario, input, parameter path, output, diagnostic block).
+    `duplicate-mutant`), which arrive with the `mutants` key in part 3.
   - **The schema**: `schema/vectors.schema.json` (`VECTORS_JSON_SCHEMA`), derived with `schemars`
     from the reader's shapes, regenerated and compared byte for byte (`OCE_BLESS_VERIFY`), walked
     for keywords outside the strict profile, and held to the reader key by key.
@@ -458,10 +463,12 @@ and a gate that accepted any text would restore exactly the false assurance desc
     `AHU-0004/vectors.json` change their `schema` line and nothing else, their two SHA-256 rows in
     that directory's README move, and `library_rule_state_continuation.rs` asserts the new tag and
     resolves names at a `.` boundary only. It runs the same scenarios, windows and restart sweep.
-  - Tests: 152 in the crate, among them the strict cursor against `serde_json` as a syntax oracle
+  - Tests: 155 in the crate, among them the strict cursor against `serde_json` as a syntax oracle
     over 20,000 mutated documents, the cadence rule against a search over every tick product, a
     10,000-document byte-mutation sweep through the whole load, and every bound at its limit and
-    one past it.
+    one past it. One of them reads `docs/design/vectors.md` and holds the note's worked example
+    equal to its fixture byte for byte, so `scripts/ci/classify-changes.sh` now lists the note as
+    a document a test reads: an edit to it runs the determinism and leverage lanes.
   - The workspace has 18 members (10 publishable, eight private); `release.yml`'s comment and step
     name, its digest and byte golden in `scripts/package_policy/` are re-pinned for the new
     private member. The 46 fixture goldens and 422 provenance goldens are byte-identical.

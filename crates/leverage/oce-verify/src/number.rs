@@ -11,11 +11,16 @@
 //!   `1e-4` and below `1e16`, and otherwise as `d[.ddd]e[-]N` with a lowercase `e`, no `+` and no
 //!   leading zero in the exponent. `-0.0` is written `-0.0`.
 //!
-//! The layout is decided here, from the decimal exponent of the shortest digits, so no formatter's
+//! "Shortest" alone does not pick one string: `3e-324` through `7e-324` all read back to the
+//! smallest subnormal. Of the shortest strings that read back, the one written is the one closest
+//! to the exact binary value (`5e-324`: the value is 4.94…e-324).
+//!
+//! The layout is decided here, from the decimal exponent of those digits, so no formatter's
 //! choice of threshold decides a hashed byte; the digits themselves are the standard library's
-//! shortest round-trip digits (`{:e}`), which are unique for a binary64. A test compares the
-//! result with Rust's own `{:?}` spelling, which follows the same rule, and goldens pin the bytes
-//! at both thresholds.
+//! shortest round-trip digits (`{:e}`). The tests pin both halves: goldens at both thresholds and
+//! at the subnormals where several strings read back, a comparison with Rust's own `{:?}`
+//! spelling, which follows the same layout rule, and an exact-integer check that the digits are
+//! the shortest that read back and the closest of those.
 
 /// A JSON number, with the kind it was written as.
 #[derive(Clone, Copy, Debug)]
@@ -171,8 +176,9 @@ pub(crate) fn canonical_real(value: f64) -> String {
     out
 }
 
-/// The shortest decimal digits that read back to `magnitude` (finite, positive), and the decimal
-/// exponent of the first digit: `magnitude` is `d.ddd × 10^exponent`.
+/// The shortest decimal digits that read back to `magnitude` (finite, positive), the closest to
+/// its exact value where several strings of that length read back, and the decimal exponent of
+/// the first digit: `magnitude` is `d.ddd × 10^exponent`.
 fn shortest_digits(magnitude: f64) -> (String, i32) {
     // `{:e}` writes the shortest round-trip digits as `d[.ddd]e[-]N`.
     let scientific = format!("{magnitude:e}");

@@ -155,9 +155,13 @@ Numbers:
   decimal with at least one fractional digit when it is zero or `1e-4 <= |x| < 1e16`, otherwise as
   `d[.ddd]e[-]N` with a lowercase `e`, no `+` and no leading zero in the exponent. So `0.0001`,
   `9.999999999999999e-5`, `9999999999999998.0`, `1e16`, `-0.0`, `5e-324`,
-  `1.7976931348623157e308`. The layout is decided in this crate from the decimal exponent of the
-  shortest digits; goldens pin the bytes at both thresholds and a test compares the result with
-  Rust's own `{:?}` spelling, which follows the same rule.
+  `1.7976931348623157e308`. "Shortest" alone does not pick one string (`3e-324` through `7e-324`
+  all read back to the smallest subnormal): of the shortest strings that read back, the one
+  written is the closest to the exact binary value, `5e-324`. The layout is decided in this crate
+  from the decimal exponent of those digits; goldens pin the bytes at both thresholds and at the
+  subnormals, a test compares the result with Rust's own `{:?}` spelling, which follows the same
+  layout rule, and another checks with exact integers that the digits are the shortest that read
+  back and the closest of those.
 
 `spec_id` is `spec:fnv1a128:` and the 32 lowercase hex digits of FNV-1a-128 over those bytes. Two
 documents that differ only in spelling have one id; two that differ in the kind of a number (`60`
@@ -222,5 +226,6 @@ switch, and say in the pull request why it moved (a shape, or a doc comment in `
   are their FNV-1a-128 hashes. They were derived outside this crate and **are never blessed**:
   [`tests/fixtures/README.md`](tests/fixtures/README.md) says how to derive them again.
 - `tests/fixtures/note/worked_example.json` is the JSON block of the design note's "The vector
-  format" section copied verbatim (a test that read `docs/design/` would put the note on the
-  classifier's test-read list); when that block changes, copy it again by hand.
+  format" section. `tests/closed_objects.rs` reads the note and requires the two to be equal byte
+  for byte, so the note is on the classifier's test-read list (`scripts/ci/classify-changes.sh`)
+  and an edit to it runs this suite; when that block changes, copy it again.
