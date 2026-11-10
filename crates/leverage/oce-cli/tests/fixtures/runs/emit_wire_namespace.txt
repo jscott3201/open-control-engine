@@ -2,7 +2,7 @@ exit: 0
 --- stdout
 {
   "@context": {
-    "S231": "http://data.ashrae.org/S231P#"
+    "S231": "http://data.ashrae.org/S231#"
   },
   "@graph": [
     {
@@ -33,7 +33,9 @@ exit: 0
         {
           "@id": "https://example.org/plant#econ_enable.hys"
         }
-      ]
+      ],
+      "S231:translationSoftware": "open-control-engine",
+      "S231:translationSoftwareVersion": "0.5.0"
     },
     {
       "@id": "https://example.org/plant#econ_enable.dTHys",

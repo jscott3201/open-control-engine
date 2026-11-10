@@ -5,7 +5,10 @@
 engine** for smart-building equipment. Crates use the **`oce-*`** prefix; the embeddable host
 facade is the package **`oce-api`**. **Nothing is published to crates.io yet** —
 `open-control-engine` is a reserved umbrella name, not a current alias. Its north-star
-specification is the **OBC / LBL Control Description Language (CDL)**:
+specification is the **Control Description Language (CDL)**, published as **ANSI/ASHRAE Standard
+231-2026**. The project reads the public OpenBuildingControl (OBC) specification, the informal
+text of the same language, and the Modelica Buildings Library; it has read the standard's table of
+contents, not its text:
 
 - https://obc.lbl.gov/specification/cdl.html
 - https://obc.lbl.gov/specification/index.html
@@ -27,7 +30,7 @@ Read in this order, every session, before the first change:
 1. This file.
 2. [`.agents/project-facts.md`](.agents/project-facts.md) — the gate, what CI does and does not run,
    the conventions this repo enforces mechanically.
-3. [`docs/architecture.md`](docs/architecture.md) — the layers, the CDL §7.17 seam, what the engine
+3. [`docs/architecture.md`](docs/architecture.md) — the layers, the OBC §7.17 seam, what the engine
    will never do.
 4. [`TESTING.md`](TESTING.md) — the four pillars; thin coverage is a blocking defect.
 5. The GitHub issue you are assigned, then its milestone's tracking issue.

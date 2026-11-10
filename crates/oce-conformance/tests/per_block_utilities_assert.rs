@@ -27,7 +27,7 @@ fn assert_cxf(message: &str) -> String {
     let literal = serde_json::to_string(&format!("\"{message}\"")).unwrap();
     format!(
         r#"{{
-  "@context": {{"S231": "http://data.ashrae.org/S231P#"}},
+  "@context": {{"S231": "http://data.ashrae.org/S231#"}},
   "@graph": [
     {{"@id": "http://example.org#utilities_assert", "@type": "S231:Block",
      "S231:containsBlock": {{"@id": "http://example.org#utilities_assert.block"}},

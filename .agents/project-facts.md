@@ -264,6 +264,29 @@ and run the tests again. The snapshot fixtures under `crates/oce-api/tests/fixtu
 (`state_unstamped.hex`, `state_revision_two.hex`, `state_legacy.hex`) are artefacts of earlier
 layouts and never move.
 
+Every exported and emitted CXF document carries the workspace version too, in the
+translation-software label on its root node (`S231:translationSoftwareVersion`, GitHub #527), so
+a version bump also moves every pin of exported or emitted bytes:
+
+- the nine export goldens under `crates/oce-cxf/tests/fixtures/export/`
+  (`OCE_BLESS=1 cargo nextest run -p oce-cxf --test export_golden`);
+- `crates/oce-cxf/tests/fixtures/expectations/g36_boundary_input_allowed_delta.golden`
+  (`OCE_BLESS=1 cargo nextest run -p oce-cxf --test export_declared_input_attrs`) and
+  `g36_export_content.txt` beside it
+  (`OCE_BLESS=1 cargo nextest run -p oce-api --test export_content_oracle`), all 47 records each;
+- the three inline export digests in `crates/oce-api/tests/export_cxf.rs` (each failing assertion
+  prints the new value);
+- the six emit goldens under `crates/leverage/oce-author/tests/fixtures/emit/`
+  (`OCE_BLESS_AUTHOR=1 cargo nextest run -p oce-author`);
+- the `emit_text_stdout` and `emit_wire_namespace` CLI transcripts
+  (`OCE_BLESS_CLI=1 cargo nextest run -p oce-cli`).
+
+Run each again without the switch. Only the version string moves in them. No content id and no
+blob golden moves for this reason: nothing reads the label back. The two unblessed documents
+under `crates/oce-cxf/tests/fixtures/previous_layout/` and
+`crates/leverage/oce-author/tests/fixtures/previous_layout/` are release-0.4.0 artefacts bound to
+the namespace the engine wrote then, kept to prove they are refused; they never move.
+
 ## The class-ports golden moves with port names, descriptions and parameters
 
 `crates/oce-blocks/tests/fixtures/class_ports.golden.txt` pins the contract port names of every
@@ -301,7 +324,9 @@ spelling, a catalog change to an array template or a bundle moves them, and the 
 `OCE_BLESS_AUTHOR` switch regenerates them (the `*.in.oce` inputs are hand-written, never blessed).
 `tests/fixtures/v0/` holds the frozen prototype's three v0 golden pairs (`*.graph.json`,
 `*.cxf.json`), copied verbatim from its repository at a pinned commit (`PROVENANCE.md` there):
-never blessed and never edited; the prototype's `.cxf.jsonld` files are renamed `.cxf.json` for the
+never blessed and never edited, with one recorded exception: the `S231` context IRI of the three
+CXF files was rebound when the engine stopped reading the earlier namespace (GitHub #527;
+`PROVENANCE.md` has the source digest beside the new one). The prototype's `.cxf.jsonld` files are renamed `.cxf.json` for the
 same census reason as the emit goldens; re-copy them only with the provenance record. The `*.import.txt`
 beside them are this crate's goldens of what `import_graph_v0` makes of each graph (the report and
 the canonical text) and regenerate with the same switch.

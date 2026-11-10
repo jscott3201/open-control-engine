@@ -2,7 +2,7 @@
 //!
 //! The Layer-A [`Node`] DTO matches its modeled properties by the literal compact key
 //! (`#[serde(rename = "S231:min")]`, …). JSON-LD lets a document write the same property as its
-//! full IRI (`"http://data.ashrae.org/S231P#min"`), through another prefix bound to the same
+//! full IRI (`"http://data.ashrae.org/S231#min"`), through another prefix bound to the same
 //! namespace (`"s231:min"`), or as a declared `@context` term. Those spellings used to land in the
 //! opaque pass-through map, so the value was neither validated nor enforced nor exported — a
 //! silent drop.
@@ -10,20 +10,19 @@
 //! This pass runs on the resolver's working clone, before scoped-context refusal and identity
 //! expansion, so every later stage sees one spelling:
 //!
-//! - **The document's own namespace normalizes.** Each pass-through key is expanded against the
-//!   document `@context` with the same [`super::expand_token`] the identity slots use. A key that
-//!   expands to `<own namespace><term>` for a term the DTO models ([`MODELED_TERMS`]) moves into
-//!   that modeled field, read through the field's own serde shape. The own namespace is the
-//!   document's `S231` binding. A document that binds no `S231` has compact keys with no IRI at
-//!   all; it is read in [`crate::export::S231_CONTEXT_IRI`] (S231P), the namespace the exporter
-//!   binds, so S231P full IRIs normalize there. Compact `S231:` keys keep their meaning whatever
-//!   the binding.
-//! - **Any other S231 namespace is refused** (`non-subset-construct`), in both directions. The
-//!   known namespaces are S231P (`…/S231P#`, the exporter's) and S231 (`…/S231#`, what upstream
-//!   modelica-json emits), plus their `https:` near-miss spellings ([`KNOWN_NAMESPACES`]). A
-//!   modeled term in one of them other than the document's own is not literally the document's
-//!   property, and passing it through would drop it silently again; the message names the
-//!   namespace the document reads modeled keys in.
+//! - **The S231 namespace normalizes.** Each pass-through key is expanded against the document
+//!   `@context` with the same [`super::expand_token`] the identity slots use. A key that expands
+//!   to `<namespace><term>` for a term the DTO models ([`MODELED_TERMS`]) moves into that modeled
+//!   field, read through the field's own serde shape. The namespace is
+//!   [`crate::export::S231_CONTEXT_IRI`], the one the exporter binds and the only one a document
+//!   may bind `S231` to ([`super::vocabulary_namespace`] refuses any other binding before this
+//!   pass runs). A document that binds no `S231` has compact keys with no IRI at all; they are
+//!   read in the same namespace.
+//! - **A modeled term in a foreign namespace is refused** (`vocabulary-namespace-mismatch`): the
+//!   namespace this engine wrote through release 0.4.0, the current one's `https:` spelling, and
+//!   the retired one's ([`super::vocabulary_namespace::FOREIGN_NAMESPACES`]). It is not the
+//!   document's property, and passing it through would drop it silently again; the message names
+//!   the namespace found and the one expected.
 //! - **Two spellings of one property on one node** — compact plus expanded, or two expanded — are
 //!   refused (`malformed-document`) rather than one being chosen. A compact key the DTO cannot
 //!   represent (an explicit `null` or `[]`) counts: it is read from the authored JSON.
@@ -35,9 +34,10 @@
 //! - A value that does not fit the modeled field's shape is refused (`malformed-document`), the
 //!   resolver-side twin of the parse error the compact spelling raises.
 //!
-//! Every other key — unmodeled `S231:` terms, other vocabularies, keys that do not expand — stays
-//! in the pass-through map unchanged. The Layer-A DTO itself is never rewritten: `parse_document`
-//! and `write_document` stay lossless (RT-1), and export always writes the compact spelling.
+//! Every other key — unmodeled `S231:` terms (the translation-software label among them), other
+//! vocabularies, keys that do not expand — stays in the pass-through map unchanged. The Layer-A
+//! DTO itself is never rewritten: `parse_document` and `write_document` stay lossless (RT-1), and
+//! export always writes the compact spelling.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -47,19 +47,10 @@ use serde::de::{IgnoredAny, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use serde_json::{Map, Value as Json};
 
+use super::vocabulary_namespace::{FOREIGN_NAMESPACES, foreign_key};
 use super::{Expansion, PrefixTable, expand_token};
 use crate::dto::{CxfDocument, Node};
 use crate::export::S231_CONTEXT_IRI;
-
-/// Every S231 namespace a modeled term can plausibly be spelled in: S231P (the exporter's), S231
-/// (upstream modelica-json's), and the `https:` spelling of each. Only the document's own
-/// namespace normalizes; a modeled term in any other of these is refused, never passed through.
-const KNOWN_NAMESPACES: [&str; 4] = [
-    "http://data.ashrae.org/S231P#",
-    "http://data.ashrae.org/S231#",
-    "https://data.ashrae.org/S231P#",
-    "https://data.ashrae.org/S231#",
-];
 
 /// Every property term the [`Node`] DTO models as a typed field, i.e. every `S231:<term>` serde
 /// rename. A unit test pins this list against the DTO in both directions.
@@ -160,11 +151,6 @@ pub(super) fn normalize(
     raw: Option<&[u8]>,
     diags: &mut Vec<Diagnostic>,
 ) {
-    let own = table.get("S231").map_or(S231_CONTEXT_IRI, String::as_str);
-    let binding = match table.get("S231") {
-        Some(iri) => format!("binds `S231` to `{iri}`"),
-        None => format!("binds no `S231`, so its modeled keys are read in `{S231_CONTEXT_IRI}`"),
-    };
     let authored = authored_keys(raw);
     for (index, node) in doc.graph.iter_mut().enumerate() {
         let subject = if node.id.is_empty() {
@@ -190,8 +176,6 @@ pub(super) fn normalize(
             continue;
         }
         let scope = KeyScope {
-            own,
-            binding: &binding,
             table,
             subject: &subject,
         };
@@ -212,20 +196,18 @@ fn modeled_term(iri: &str, namespace: &str) -> Option<&'static str> {
         .find(|modeled| *modeled == term)
 }
 
-/// What a key means against one document: its own namespace, how it binds `S231`, its prefix
-/// table, and the node being read (for messages).
+/// What a key means against one document: its prefix table, and the node being read (for
+/// messages).
 struct KeyScope<'a> {
-    own: &'a str,
-    binding: &'a str,
     table: &'a PrefixTable,
     subject: &'a str,
 }
 
 /// How one pass-through key relates to the modeled properties.
 enum KeyMeaning {
-    /// A modeled term in the document's own namespace.
+    /// A modeled term in the S231 namespace.
     Own(&'static str),
-    /// A modeled term in another known S231 namespace.
+    /// A modeled term in a foreign namespace.
     Foreign(&'static str, &'static str),
     /// Anything else.
     Unrelated,
@@ -242,16 +224,16 @@ impl KeyScope<'_> {
             Expansion::Verbatim => key.to_owned(),
             Expansion::Relative => return KeyMeaning::Unrelated,
         };
-        if let Some(term) = modeled_term(&iri, self.own) {
+        if let Some(term) = modeled_term(&iri, S231_CONTEXT_IRI) {
             return KeyMeaning::Own(term);
         }
-        KNOWN_NAMESPACES
+        FOREIGN_NAMESPACES
             .iter()
             .find_map(|ns| modeled_term(&iri, ns).map(|term| KeyMeaning::Foreign(term, ns)))
             .unwrap_or(KeyMeaning::Unrelated)
     }
 
-    /// Collect the pass-through keys of `node` that name a modeled property in the document's own
+    /// Collect the pass-through keys of `node` that name a modeled property in the S231
     /// namespace, refusing foreign-namespace and whitespace near-miss spellings.
     fn aliases_of(&self, node: &Node, diags: &mut Vec<Diagnostic>) -> Vec<Alias> {
         let subject = self.subject;
@@ -277,18 +259,9 @@ impl KeyScope<'_> {
                     key: key.clone(),
                     term,
                 }),
-                KeyMeaning::Foreign(term, namespace) => diags.push(
-                    Diagnostic::error(
-                        DiagCode::NonSubsetConstruct,
-                        format!(
-                            "property `{key}` on node `{subject}` names the modeled term \
-                             `{term}` in `{namespace}`, but the document {}; write it as \
-                             `S231:{term}`",
-                            self.binding
-                        ),
-                    )
-                    .with_subject(subject.to_owned()),
-                ),
+                KeyMeaning::Foreign(term, namespace) => {
+                    diags.push(foreign_key(key, subject, term, namespace));
+                }
                 KeyMeaning::Unrelated => {}
             }
         }
@@ -425,7 +398,7 @@ mod tests {
 
     #[test]
     fn modeled_term_matches_only_whole_terms_after_the_namespace() {
-        let ns = "http://data.ashrae.org/S231P#";
+        let ns = S231_CONTEXT_IRI;
         assert_eq!(modeled_term(&format!("{ns}min"), ns), Some("min"));
         assert_eq!(modeled_term(&format!("{ns}minimum"), ns), None);
         assert_eq!(modeled_term(&format!("{ns}Min"), ns), None);

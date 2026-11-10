@@ -12,7 +12,7 @@ use crate::resolve::specialize::Specialization;
 /// input, so its expansion reaches a SINK: the verdict differs between the two polarities.
 fn document() -> CxfDocument {
     serde_json::from_value(json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             { "@id": "root", "@type": "S231:Block",
               "S231:containsBlock": { "@id": "sub" },

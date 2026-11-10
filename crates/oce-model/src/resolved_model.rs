@@ -136,7 +136,7 @@ pub struct BlockInstanceDto {
 }
 
 /// A resolved point (connector) DTO carrying effective (post-propagation) metadata, resolved
-/// once at ingest (§7.7.5/§7.11/§7.17.1).
+/// once at ingest (OBC §7.7.5/§7.11/§7.17.1).
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PointDto {
     /// The connector dotted-path identity.
@@ -155,7 +155,7 @@ pub struct PointDto {
     pub trend_interval_s: TrendInterval,
     /// §7.11 trend enable.
     pub trend_enable: bool,
-    /// §7.17.1 physical quantity.
+    /// OBC §7.17.1 physical quantity.
     pub quantity: Option<String>,
     /// SI computation unit.
     pub unit: Option<String>,

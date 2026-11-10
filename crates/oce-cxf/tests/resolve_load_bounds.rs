@@ -58,7 +58,7 @@ fn composite(local: &str, children: &[&str]) -> Json {
 }
 
 fn doc(nodes: Vec<Json>) -> Json {
-    json!({ "@context": { "S231": "http://data.ashrae.org/S231P#" }, "@graph": nodes })
+    json!({ "@context": { "S231": "http://data.ashrae.org/S231#" }, "@graph": nodes })
 }
 
 #[test]

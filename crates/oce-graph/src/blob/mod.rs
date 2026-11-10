@@ -181,7 +181,7 @@ pub struct BlobInput<'a> {
     /// Fan-out target input connectors, at least one. The decoder returns them strictly
     /// increasing; the encoder sorts them.
     pub targets: Vec<ConnectorId>,
-    /// The non-computational `SemanticPoint` payload (CDL §7.17), opaque: the decoder bounds it by
+    /// The non-computational `SemanticPoint` payload (OBC §7.17), opaque: the decoder bounds it by
     /// its length and never interprets it. The v1 facade encoder writes it empty.
     pub semantic_point: &'a [u8],
 }

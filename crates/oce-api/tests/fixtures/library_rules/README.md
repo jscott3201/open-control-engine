@@ -4,9 +4,10 @@ Two published fault rules from
 [open-control-library](https://github.com/jscott3201/open-control-library), used as inputs by
 `crates/oce-api/tests/library_rule_state_continuation.rs` (and, for the CXF graphs alone, by
 `crates/oce-api/tests/slot_output_types.rs`); `crates/leverage/oce-verify` reads the two
-`vectors.json` files in place as well. The two `rule.cxf.jsonld` files are byte-for-byte copies of
-the Library's and are **data**, never edited here: a rule change goes to the Library as its own
-pull request, then a fresh copy lands here with this table updated. The two `vectors.json` files
+`vectors.json` files in place as well. The two `rule.cxf.jsonld` files are copies of the Library's,
+byte for byte except the `S231` context IRI (recorded below the table), and are **data**, never
+edited here otherwise: a rule change goes to the Library as its own pull request, then a fresh copy
+lands here with this table updated. The two `vectors.json` files
 are the Library's scenarios in this repository's one vector format, `oce/vectors/v1`
 ([design note](../../../../../docs/design/vectors.md)): each is the Library's file with its
 `schema` line naming that format, and every other byte as the Library wrote it. The format changes
@@ -25,6 +26,15 @@ in place, so a change to it rewrites these two files and their rows below in the
   (#325), so the Library verifier's `Engine::tick` / `set_input` driver does not build against this
   tree. The test drives the same zero-order-hold schedule through `prepare_frame` /
   `execute_frame` and re-checks every Library expectation window on the uninterrupted run.
+- **The two `rule.cxf.jsonld` copies differ from the Library's bytes in one string.** GitHub #527
+  rebound the `S231` context IRI in each (one occurrence per file, nothing else), because the
+  engine reads the vocabulary only in `http://data.ashrae.org/S231#` and the Library still binds
+  the earlier IRI at the pinned commit. The table gives the Library's digest of each file; the
+  copies here are `AHU-0016/rule.cxf.jsonld`
+  `19f5db3d04e2bd394be7c76fb1fea2303e1c404330134559a40e617250210840` and
+  `AHU-0004/rule.cxf.jsonld`
+  `08d8c3e4b492c83623ed872aa02f68036244b05b0fdf985d65bac2de05692aec`. A fresh copy replaces both
+  when the Library converts its corpus.
 - **License:** open-control-library is dual-licensed MIT OR Apache-2.0, the same terms as this
   repository. The copies keep those terms.
 

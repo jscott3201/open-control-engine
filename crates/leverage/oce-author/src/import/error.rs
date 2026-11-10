@@ -126,6 +126,17 @@ pub enum ImportErrorKind {
         /// The key.
         key: String,
     },
+    /// A CXF `@context` that spells the S231 vocabulary in a namespace other than the one the
+    /// engine reads: `S231` bound to another IRI, or any term bound to the namespace written
+    /// through release 0.4.0.
+    NamespaceMismatch {
+        /// The `@context` term.
+        term: String,
+        /// The IRI the document binds.
+        found: String,
+        /// The IRI the engine reads the vocabulary in.
+        expected: &'static str,
+    },
     /// A required key is absent (a v0 key, a value-less parameter, a node without `@id`).
     MissingKey {
         /// The key.
@@ -203,6 +214,7 @@ pub const IMPORT_ERROR_CODES: &[&str] = &[
     "not-strict-json",
     "limit-exceeded",
     "unknown-key",
+    "namespace-mismatch",
     "missing-key",
     "wrong-shape",
     "no-root",
@@ -239,6 +251,7 @@ impl ImportErrorKind {
             Self::NotStrictJson(_) => "not-strict-json",
             Self::LimitExceeded(_) => "limit-exceeded",
             Self::UnknownKey { .. } => "unknown-key",
+            Self::NamespaceMismatch { .. } => "namespace-mismatch",
             Self::MissingKey { .. } => "missing-key",
             Self::WrongShape { .. } => "wrong-shape",
             Self::NoRoot => "no-root",
@@ -277,6 +290,15 @@ impl fmt::Display for ImportErrorKind {
             Self::NotStrictJson(why) => write!(f, "not strict JSON: {why}"),
             Self::LimitExceeded(limit) => write!(f, "over a read bound: {limit}"),
             Self::UnknownKey { key } => write!(f, "`{key}` is not defined here"),
+            Self::NamespaceMismatch {
+                term,
+                found,
+                expected,
+            } => write!(
+                f,
+                "the `@context` term `{term}` binds `{found}`; the S231 vocabulary is read only \
+                 in `{expected}`"
+            ),
             Self::MissingKey { key } => write!(f, "`{key}` is required here"),
             Self::WrongShape { key } => write!(f, "`{key}` has the wrong shape"),
             Self::NoRoot => f.write_str("no node contains blocks; there is no root"),
@@ -400,6 +422,11 @@ mod tests {
             }),
             ImportErrorKind::LimitExceeded(Limit::Depth { limit: 8 }),
             ImportErrorKind::UnknownKey { key: String::new() },
+            ImportErrorKind::NamespaceMismatch {
+                term: String::new(),
+                found: String::new(),
+                expected: "",
+            },
             ImportErrorKind::MissingKey { key: String::new() },
             ImportErrorKind::WrongShape { key: String::new() },
             ImportErrorKind::NoRoot,
@@ -438,6 +465,7 @@ mod tests {
                 | ImportErrorKind::NotStrictJson(_)
                 | ImportErrorKind::LimitExceeded(_)
                 | ImportErrorKind::UnknownKey { .. }
+                | ImportErrorKind::NamespaceMismatch { .. }
                 | ImportErrorKind::MissingKey { .. }
                 | ImportErrorKind::WrongShape { .. }
                 | ImportErrorKind::NoRoot
@@ -476,6 +504,7 @@ mod tests {
             "not-strict-json",
             "limit-exceeded",
             "unknown-key",
+            "namespace-mismatch",
             "missing-key",
             "wrong-shape",
             "no-root",

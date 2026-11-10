@@ -166,7 +166,7 @@ fn modelica_json_style_document_loads_clean_with_expanded_identities() {
 fn compact_and_absolute_spellings_of_one_subject_collide_as_duplicate_id() {
     let document = json!({
         "@context": {
-            "S231": "http://data.ashrae.org/S231P#",
+            "S231": "http://data.ashrae.org/S231#",
             "ex": "http://example.org#"
         },
         "@graph": [
@@ -187,7 +187,7 @@ fn compact_and_absolute_spellings_of_one_subject_collide_as_duplicate_id() {
 #[test]
 fn relative_node_id_is_refused_with_a_typed_diagnostic() {
     let document = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [ { "@id": "MinLoop", "@type": "S231:Block" } ]
     });
     let diags = import_value(&document).expect_err("relative @id must reject");
@@ -204,7 +204,7 @@ fn relative_node_id_is_refused_with_a_typed_diagnostic() {
 #[test]
 fn relative_structural_reference_is_refused_naming_slot_owner_and_token() {
     let document = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [ {
             "@id": "http://example.org#M",
             "@type": "S231:Block",
@@ -232,7 +232,7 @@ fn scheme_invalid_node_id_is_refused_like_a_colon_free_relative() {
     // the same diagnostic shape as `MinLoop` above.
     for id in ["2024:MinLoop.con.y", ":MinLoop.con.y"] {
         let document = json!({
-            "@context": { "S231": "http://data.ashrae.org/S231P#" },
+            "@context": { "S231": "http://data.ashrae.org/S231#" },
             "@graph": [ { "@id": id, "@type": "S231:Block" } ]
         });
         let diags = import_value(&document).expect_err("non-absolute @id must reject");
@@ -250,7 +250,7 @@ fn scheme_invalid_node_id_is_refused_like_a_colon_free_relative() {
 #[test]
 fn scheme_invalid_structural_reference_is_refused_naming_slot_owner_and_token() {
     let document = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [ {
             "@id": "http://example.org#M",
             "@type": "S231:Block",
@@ -276,7 +276,7 @@ fn scheme_invalid_class_token_is_class_not_found_not_relative_iri() {
     // as an @id (`2024:` is not an RFC 3986 scheme) passes through verbatim in a @type slot
     // and fails class lookup downstream instead.
     let document = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
               "S231:containsBlock": { "@id": "http://example.org#M.c1" } },
@@ -315,7 +315,7 @@ fn double_slash_node_id_without_a_valid_scheme_is_refused_like_a_colon_free_rela
         "http ://x",
     ] {
         let document = json!({
-            "@context": { "S231": "http://data.ashrae.org/S231P#" },
+            "@context": { "S231": "http://data.ashrae.org/S231#" },
             "@graph": [ { "@id": id, "@type": "S231:Block" } ]
         });
         let diags = import_value(&document).expect_err("scheme-invalid `//` @id must reject");
@@ -333,7 +333,7 @@ fn double_slash_node_id_without_a_valid_scheme_is_refused_like_a_colon_free_rela
 #[test]
 fn double_slash_structural_reference_without_a_valid_scheme_names_slot_owner_and_token() {
     let document = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [ {
             "@id": "http://example.org#M",
             "@type": "S231:Block",
@@ -358,7 +358,7 @@ fn double_slash_class_token_without_a_valid_scheme_is_class_not_found_not_relati
     // Typing stays best-effort under the guarded `//` arm: the spelling that refuses as an
     // @id passes through verbatim in a @type slot and fails class lookup downstream.
     let document = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
               "S231:containsBlock": { "@id": "http://example.org#M.c1" } },
@@ -410,7 +410,7 @@ fn bare_scheme_node_id_is_refused_even_though_its_scheme_is_rfc_valid() {
     // about what follows the colon — nothing, or whitespace — never the scheme itself.
     for id in ["ab:", "ab:c d", "ab:c\nd"] {
         let document = json!({
-            "@context": { "S231": "http://data.ashrae.org/S231P#" },
+            "@context": { "S231": "http://data.ashrae.org/S231#" },
             "@graph": [ { "@id": id, "@type": "S231:Block" } ]
         });
         let diags = import_value(&document).expect_err("empty/whitespace remainder must reject");
@@ -514,7 +514,7 @@ fn valid_scheme_double_slash_and_urn_root_ids_load_clean_and_verbatim() {
 fn non_string_context_term_is_refused_as_malformed_document() {
     let document = json!({
         "@context": {
-            "S231": { "@id": "http://data.ashrae.org/S231P#" }
+            "S231": { "@id": "http://data.ashrae.org/S231#" }
         },
         "@graph": [ { "@id": "http://example.org#M" } ]
     });
@@ -594,7 +594,7 @@ fn context_base_and_vocab_declarations_are_refused_as_non_subset() {
 fn compact_enum_document(literal: &str) -> Value {
     json!({
         "@context": {
-            "S231": "http://data.ashrae.org/S231P#",
+            "S231": "http://data.ashrae.org/S231#",
             "base": "http://example.org#"
         },
         "@graph": [

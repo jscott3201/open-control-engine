@@ -180,8 +180,8 @@ fn submitted_keys_are_not_reexpanded_or_rebound_to_elided_child_names() {
     let original = std::str::from_utf8(MODEL).unwrap();
     let compact = original
         .replace(
-            "\"S231\": \"http://data.ashrae.org/S231P#\"",
-            "\"S231\": \"http://data.ashrae.org/S231P#\", \"base\": \"urn:legacy-frame:\"",
+            "\"S231\": \"http://data.ashrae.org/S231#\"",
+            "\"S231\": \"http://data.ashrae.org/S231#\", \"base\": \"urn:legacy-frame:\"",
         )
         .replace("\"urn:legacy-frame:a\"", "\"base:a\"");
     engine.load_cxf(compact.as_bytes()).unwrap();

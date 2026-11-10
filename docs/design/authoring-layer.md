@@ -220,7 +220,7 @@ With the default namespace the emitter writes these `@graph` nodes, in this orde
 
 | # | `@id` (after `urn:oce:author:econ_enable`) | Node |
 | --- | --- | --- |
-| 1 | (root) | `S231:Block`: `hasParameter [dTHys]`, `hasInput [TOut, TOutCut]`, `hasOutput [ecoEna]`, `containsBlock [sub, hys]` |
+| 1 | (root) | `S231:Block`: `hasParameter [dTHys]`, `hasInput [TOut, TOutCut]`, `hasOutput [ecoEna]`, `containsBlock [sub, hys]`, then `translationSoftware` and `translationSoftwareVersion` |
 | 2 | `.dTHys` | `S231:Parameter`, `S231:value` typed `xsd:double` `1.0` |
 | 3 | `.sub` | `http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract`, `hasInput [u1, u2]`, `hasOutput [y]` |
 | 4–6 | `.sub.u1`, `.sub.u2`, `.sub.y` | port nodes in catalog order; `.sub.y` `isConnectedTo [hys.u]` |
@@ -402,7 +402,12 @@ hangs on the source node, with targets in authored connection order. Nothing is 
 a host path or a UUID-shaped value, and must end in `#`, `/` or `:` so the canonical content id's
 last-delimiter rule (GitHub #471) strips exactly the namespace. Block `@type` is the exporter's class base
 `http://example.org#Buildings.Controls.OBC.` followed by the catalog class path (decision 10). The
-context is `{"S231": "http://data.ashrae.org/S231P#"}`.
+context is `{"S231": "http://data.ashrae.org/S231#"}`, the namespace the engine's exporter binds
+and the only one either importer reads (GitHub #527). The root node ends with the
+translation-software label the OpenBuildingControl (OBC) specification allows (OBC §8.4):
+`S231:translationSoftware` `"open-control-engine"` and `S231:translationSoftwareVersion`, the
+workspace version, as two JSON strings. The exporter writes the same two values; no importer reads
+them back, so they are in no content id.
 
 **Values.** A Real is a typed literal (`{"@value": "<shortest round-trip>", "@type": xsd:double}`),
 an Integer a bare JSON integer, a Boolean a JSON boolean, an enum member its full member path with

@@ -1,4 +1,4 @@
-//! The CDL §7.17 seam (authoring note, test plan; decisions 2 and 21): filling and mutating every
+//! The OBC §7.17 seam (authoring note, test plan; decisions 2 and 21): filling and mutating every
 //! `SemanticPoint` field changes the emitted bytes only in the boundary `unit` attribute, and the
 //! loaded executable — the compiled-schedule blob, apart from the canonical content id it records —
 //! is identical, so semantics never reach execution.

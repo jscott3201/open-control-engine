@@ -331,7 +331,7 @@ fn unwired_string_boundaries_keep_their_ordinary_rejections() {
             // working clone, and canonical form on every resolved surface is the ratified
             // cycle-54 normalization intent. The pin stays byte-exact — on the new truth.
             diagnostic.code == DiagCode::UnresolvedReference
-                && diagnostic.subject.as_deref() == Some("http://data.ashrae.org/S231P#String")
+                && diagnostic.subject.as_deref() == Some("http://data.ashrae.org/S231#String")
         }),
         "{diagnostics:?}"
     );

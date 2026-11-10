@@ -32,7 +32,7 @@ fn refs(suffixes: &[&str]) -> JsonValue {
 
 fn document(graph: Vec<JsonValue>) -> JsonValue {
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": EX },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": EX },
         "@graph": graph,
     })
 }

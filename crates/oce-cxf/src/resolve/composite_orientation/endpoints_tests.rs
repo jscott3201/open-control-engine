@@ -48,7 +48,7 @@ fn document() -> CxfDocument {
     graph.push(json!({ "@id": "post.u", "@type": "S231:RealInput",
                        "S231:isConnectedTo": [ { "@id": "root.u" }, { "@id": "root.u" } ] }));
     serde_json::from_value(json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph
     }))
     .expect("document")

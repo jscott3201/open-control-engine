@@ -16,10 +16,12 @@
 //! code existed. It was regenerated under the #233 ruling when declared boundary outputs began
 //! exporting their authored attributes, then under #273 when §7.10 propagation began joining those
 //! attributes to their source connectors, then under #243 when surviving boundary inputs began
-//! exporting their declaration-local attributes. The checked-in file is therefore a post-#243
-//! current-engine snapshot. Direct validator tests pin output propagation and conflict rules;
-//! `export_declared_input_attrs.rs` independently proves that removing only #243's five scoped keys
-//! recovers every pre-#243 export. Regenerating the file (`OCE_BLESS=1`) replaces its evidence with
+//! exporting their declaration-local attributes, then under GitHub #527 when the exporter rebound
+//! the `S231` context IRI and began writing the translation-software label on the root node. The
+//! checked-in file is therefore a post-#527 current-engine snapshot. Direct validator tests pin
+//! output propagation and conflict rules; `export_declared_input_attrs.rs` independently proves
+//! that removing only #243's five scoped keys recovers every pre-#243 export as #527 respelled
+//! it. Regenerating the file (`OCE_BLESS=1`) replaces its evidence with
 //! another current-engine snapshot, so do so only for a ratified behavior change and record why.
 
 use std::fmt::Write as _;
@@ -37,8 +39,10 @@ const FILE_HEADER: &str = "\
 # Honesty sequence: first generated at development@c06a657, before @context expansion;
 # regenerated under #233 for authored declared-output attrs, then under #273 when section-7.10
 # propagation joined those attrs to their source connectors, then under #243 for declaration-local
-# boundary-input attrs. This is a post-#243 current-engine snapshot; export_declared_input_attrs.rs
-# proves that stripping only #243's five scoped keys recovers every pre-#243 corpus export.
+# boundary-input attrs, then under GitHub #527 for the rebound S231 context IRI and the
+# translation-software label. This is a post-#527 current-engine snapshot;
+# export_declared_input_attrs.rs proves that stripping only #243's five scoped keys recovers every
+# pre-#243 corpus export as #527 respelled it.
 # Format: <fixture stem> <fnv1a128 hex over ExportReport::bytes> ok|incomplete:<warnings>
 ";
 

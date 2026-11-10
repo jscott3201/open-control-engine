@@ -59,7 +59,7 @@ fn node_scoped_context_shapes_refuse_before_identity_expansion() {
 #[test]
 fn node_scoped_context_on_missing_id_precedes_missing_id_validation() {
     let document = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [ { "@context": {} } ]
     });
     let diags = import_value(&document).expect_err("scoped context must refuse first");

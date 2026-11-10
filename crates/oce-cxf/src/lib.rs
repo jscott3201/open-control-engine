@@ -9,7 +9,7 @@
 //! is **Group A** (no store, no database); it depends on `serde`/`serde_json`/`oce-diag` plus
 //! `oce-blocks` (the registry, for class resolution) and `oce-expr` (Ground-mode bindings).
 //!
-//! The lossless Layer-A DTO ([`dto`]), [`parse_document`], the §7.1 resolver ([`import_cxf`]),
+//! The lossless Layer-A DTO ([`dto`]), [`parse_document`], the resolver ([`import_cxf`]),
 //! and the minimal RT-2 exporter ([`export()`]) are implemented. The exporter covers the flat,
 //! ground, single-root, scalar-parameter subset — exactly what the resolver produces for that
 //! shape of document — plus the in-subset §7.4.1 connector attributes. Content outside that
@@ -52,6 +52,7 @@ mod scope_chain;
 mod scope_chain_tests;
 #[cfg(test)]
 mod tests;
+mod translation_software;
 
 pub use dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany, TermAttr};
 pub use resolve::{ImportMode, ResolveOptions, ValidationReport};
@@ -113,7 +114,7 @@ pub fn write_document(doc: &CxfDocument) -> Result<Vec<u8>, CxfError> {
 pub const MAX_DOCUMENT_EVAL_FUEL: u64 = 1 << 26;
 
 /// Import a CXF JSON-LD document into the flat [`ModelGraph`] (D1's executable truth), lowering the
-/// lossless Layer-A DTO directly via the §7.1 resolver. Ground mode evaluates every parameter
+/// lossless Layer-A DTO directly via the resolver. Ground mode evaluates every parameter
 /// binding to a ground literal.
 ///
 /// Returns `Ok((graph, report))` where `report` carries the top-composite model `@id` plus

@@ -1,5 +1,5 @@
 //! The typed IO / point inventory (`08` §6). Built once at load from the flat model connectors;
-//! **the tick never reads it** (CDL §7.17). It is the host's metadata surface for point-schedule
+//! **the tick never reads it** (OBC §7.17). It is the host's metadata surface for point-schedule
 //! export (use case 4.2.1), complete-frame bindings and latest-state output name resolution.
 //!
 //! The inventory derives every field that is structurally available from `oce-model` connectors
@@ -123,9 +123,9 @@ pub struct PointInfo {
     pub physical: PhysicalKind,
     /// Physical quantity (e.g. `"ThermodynamicTemperature"`); `None` if unset (CDL §7.4.1).
     pub quantity: Option<String>,
-    /// SI computation unit; `None` if unset (CDL §7.17.1).
+    /// SI computation unit; `None` if unset (OBC §7.17.1).
     pub unit: Option<String>,
-    /// UI-only display unit; **never** affects computation (CDL §7.4.1 / §7.17).
+    /// UI-only display unit; **never** affects computation (OBC §7.4.1 / §7.17).
     pub display_unit: Option<String>,
     /// Lower validation bound, if declared.
     pub min: Option<f64>,

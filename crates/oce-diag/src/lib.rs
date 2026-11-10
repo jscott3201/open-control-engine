@@ -139,6 +139,16 @@ pub enum DiagCode {
     /// tokens (`@type`, `isOfDataType`) are never refused with this code: their no-match paths
     /// ([`DiagCode::ClassNotFound`], [`DiagCode::UnresolvedReference`]) own junk there.
     RelativeIri,
+    /// The document spells the S231 vocabulary in a namespace other than the one this engine
+    /// reads, `http://data.ashrae.org/S231#`: its `@context` binds the `S231` prefix to another
+    /// IRI, binds any prefix to the namespace this engine wrote before release 0.5.0, a node keys
+    /// a modeled property by its full IRI in that namespace or in the `https:` spelling of either,
+    /// or a node's `@type` or `isOfDataType` is a full IRI in that earlier namespace (a type is
+    /// otherwise read by its trailing term, so it would be read through the namespace). The
+    /// message names the IRI found and the IRI expected (subject = the `@context` term, or the
+    /// node carrying the key or the type). Refused at load: nothing reads a document in another
+    /// namespace.
+    VocabularyNamespaceMismatch,
 
     // --- Validate-time `shall`-errors (oce-validate, the deep gate) ---
     /// An input's in-degree was not exactly 1 and it is not an external boundary input
@@ -222,7 +232,7 @@ pub enum DiagCode {
 
     // --- Advisory `should`-warnings (doc 04 §9) ---
     /// Connected cluster members declared divergent `displayUnit`s — non-computational, warning only
-    /// (§7.17).
+    /// (OBC §7.17).
     DisplayUnitDivergence,
     /// An `S231:Analog*` connector was coerced to `Real` (§8.2 coercion policy) — advisory.
     AnalogCoercedToReal,
@@ -278,6 +288,7 @@ impl DiagCode {
             DiagCode::ConflictingInterfaceDeclaration => "conflicting-interface-declaration",
             DiagCode::BoundaryOutputShadowsConnector => "boundary-output-shadows-connector",
             DiagCode::RelativeIri => "relative-iri",
+            DiagCode::VocabularyNamespaceMismatch => "vocabulary-namespace-mismatch",
             DiagCode::SingleAssignment => "single-assignment",
             DiagCode::DirectionMismatch => "direction-mismatch",
             DiagCode::TypeMismatch => "type-mismatch",
@@ -445,6 +456,7 @@ mod tests {
         ConflictingInterfaceDeclaration => "conflicting-interface-declaration",
         BoundaryOutputShadowsConnector => "boundary-output-shadows-connector",
         RelativeIri => "relative-iri",
+        VocabularyNamespaceMismatch => "vocabulary-namespace-mismatch",
         SingleAssignment => "single-assignment",
         DirectionMismatch => "direction-mismatch",
         TypeMismatch => "type-mismatch",

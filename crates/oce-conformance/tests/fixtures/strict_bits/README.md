@@ -52,3 +52,10 @@ byte for byte and checks their digests, revisions, sample counts, reference inve
 mismatches; `native_receipt_refuses_relabeling_and_raw_payload_reblessing` is its hostile control.
 No capture bytes, revisions, labels or source maps are rewritten. The source maps are kept
 verbatim and are no longer compared with the checkout.
+
+The same holds for each capture's 21 `cxf_sha256` values since GitHub #527. They are the digests
+of the harness documents as those bound the `S231` prefix when the runs were captured; the engine
+binds another IRI now, so the documents differ by that one string. `corpus.json` carries the
+digests of today's documents (those 21 values were rewritten from a fresh collection, and nothing
+else in the file changed), and the archives are compared with the corpus on every inventory field
+except that one. A fresh collection and the per-PR captures are still compared on it.

@@ -37,7 +37,7 @@ impl Engine {
     ///
     /// let cxf = br##"{
     ///   "@context": {
-    ///     "S231": "http://data.ashrae.org/S231P#",
+    ///     "S231": "http://data.ashrae.org/S231#",
     ///     "base": "http://example.org#"
     ///   },
     ///   "@graph": [

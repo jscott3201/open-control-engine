@@ -4,7 +4,7 @@
 use serde_json::Value;
 
 pub const COMPACT: &str = r#"{
-  "@context": {"m":"urn:order:", "cdl":"http://example.org#Buildings.Controls.OBC.CDL.", "S231":"http://data.ashrae.org/S231P#"},
+  "@context": {"m":"urn:order:", "cdl":"http://example.org#Buildings.Controls.OBC.CDL.", "S231":"http://data.ashrae.org/S231#"},
   "@graph": [
     {"@id":"m:M", "@type":"S231:Block",
      "S231:containsBlock":[{"@id":"m:M.branch"},{"@id":"m:M.off"},{"@id":"m:M.tail"}],
@@ -42,29 +42,29 @@ pub const EXPANDED: &str = r#"{
      "S231:hasConstant":[{"@id":"urn:order:M.shift"},{"@id":"urn:order:M.unused"}],
      "S231:hasParameter":[{"@id":"urn:order:M.gain"},{"@id":"urn:order:M.base"}],
      "S231:containsBlock":[{"@id":"urn:order:M.branch"},{"@id":"urn:order:M.off"},{"@id":"urn:order:M.tail"}],
-     "@type":["http://data.ashrae.org/S231P#Block"], "@id":"urn:order:M"},
-    {"S231:containsBlock":[{"@id":"urn:order:M.branch.zSource"},{"@id":"urn:order:M.branch.aSum"}], "@type":"http://data.ashrae.org/S231P#Block", "@id":"urn:order:M.branch"},
+     "@type":["http://data.ashrae.org/S231#Block"], "@id":"urn:order:M"},
+    {"S231:containsBlock":[{"@id":"urn:order:M.branch.zSource"},{"@id":"urn:order:M.branch.aSum"}], "@type":"http://data.ashrae.org/S231#Block", "@id":"urn:order:M.branch"},
     {"S231:hasOutput":[{"@id":"urn:order:M.tail.y"}], "S231:hasInput":[{"@id":"urn:order:M.tail.u2"},{"@id":"urn:order:M.tail.u1"}], "@type":"http://example.org#Buildings.Controls.OBC.CDL.Reals.Add", "@id":"urn:order:M.tail"},
     {"S231:hasOutput":[{"@id":"urn:order:M.branch.aSum.y"}], "S231:hasInput":[{"@id":"urn:order:M.branch.aSum.u2"},{"@id":"urn:order:M.branch.aSum.u1"}], "@type":"http://example.org#Buildings.Controls.OBC.CDL.Reals.Add", "@id":"urn:order:M.branch.aSum"},
     {"S231:hasParameter":[{"@id":"urn:order:M.branch.zSource.k"}], "S231:hasOutput":[{"@id":"urn:order:M.branch.zSource.y"}], "@type":"http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant", "@id":"urn:order:M.branch.zSource"},
-    {"@type":"http://data.ashrae.org/S231P#RealInput", "@id":"urn:order:M.branch.aSum.u2"},
-    {"S231:isConnectedTo":[{"@id":"urn:order:M.outTail"}], "@type":"http://data.ashrae.org/S231P#RealOutput", "@id":"urn:order:M.tail.y"},
-    {"S231:isConnectedTo":[{"@id":"urn:order:M.tail.u2"},{"@id":"urn:order:M.branch.aSum.u1"},{"@id":"urn:order:M.tail.u1"},{"@id":"urn:order:M.branch.aSum.u2"}], "@type":"http://data.ashrae.org/S231P#RealOutput", "@id":"urn:order:M.branch.zSource.y"},
-    {"@type":"http://data.ashrae.org/S231P#RealInput", "@id":"urn:order:M.tail.u1"},
-    {"S231:isConnectedTo":[{"@id":"urn:order:M.outSum"}], "@type":"http://data.ashrae.org/S231P#RealOutput", "@id":"urn:order:M.branch.aSum.y"},
-    {"@type":"http://data.ashrae.org/S231P#RealInput", "@id":"urn:order:M.branch.aSum.u1"},
-    {"@type":"http://data.ashrae.org/S231P#RealInput", "@id":"urn:order:M.tail.u2"},
-    {"@type":"http://data.ashrae.org/S231P#RealOutput", "@id":"urn:order:M.outTail"},
-    {"@type":"http://data.ashrae.org/S231P#RealOutput", "@id":"urn:order:M.outSum"},
+    {"@type":"http://data.ashrae.org/S231#RealInput", "@id":"urn:order:M.branch.aSum.u2"},
+    {"S231:isConnectedTo":[{"@id":"urn:order:M.outTail"}], "@type":"http://data.ashrae.org/S231#RealOutput", "@id":"urn:order:M.tail.y"},
+    {"S231:isConnectedTo":[{"@id":"urn:order:M.tail.u2"},{"@id":"urn:order:M.branch.aSum.u1"},{"@id":"urn:order:M.tail.u1"},{"@id":"urn:order:M.branch.aSum.u2"}], "@type":"http://data.ashrae.org/S231#RealOutput", "@id":"urn:order:M.branch.zSource.y"},
+    {"@type":"http://data.ashrae.org/S231#RealInput", "@id":"urn:order:M.tail.u1"},
+    {"S231:isConnectedTo":[{"@id":"urn:order:M.outSum"}], "@type":"http://data.ashrae.org/S231#RealOutput", "@id":"urn:order:M.branch.aSum.y"},
+    {"@type":"http://data.ashrae.org/S231#RealInput", "@id":"urn:order:M.branch.aSum.u1"},
+    {"@type":"http://data.ashrae.org/S231#RealInput", "@id":"urn:order:M.tail.u2"},
+    {"@type":"http://data.ashrae.org/S231#RealOutput", "@id":"urn:order:M.outTail"},
+    {"@type":"http://data.ashrae.org/S231#RealOutput", "@id":"urn:order:M.outSum"},
     {"S231:value":"base + shift", "@id":"urn:order:M.gain"},
     {"S231:value":1.0, "@id":"urn:order:M.base"},
     {"S231:value":1.0, "@id":"urn:order:M.shift"},
     {"S231:value":false, "@id":"urn:order:M.unused"},
     {"S231:value":"gain", "@id":"urn:order:M.branch.zSource.k"},
-    {"S231:containsBlock":[{"@id":"urn:order:M.off.bad"}], "S231:conditionalExpression":"unused", "S231:isConditionalComponent":true, "@type":"http://data.ashrae.org/S231P#Block", "@id":"urn:order:M.off"},
+    {"S231:containsBlock":[{"@id":"urn:order:M.off.bad"}], "S231:conditionalExpression":"unused", "S231:isConditionalComponent":true, "@type":"http://data.ashrae.org/S231#Block", "@id":"urn:order:M.off"},
     {"S231:isReplaceable":true, "@type":"http://example.org#Buildings.Controls.OBC.CDL.NotRegistered", "@id":"urn:order:M.off.bad"}
   ],
-  "@context": [{"S231":"http://data.ashrae.org/S231P#"}, {"m":"urn:order:"}]
+  "@context": [{"S231":"http://data.ashrae.org/S231#"}, {"m":"urn:order:"}]
 }"#;
 
 pub fn node_mut<'a>(doc: &'a mut Value, id: &str) -> &'a mut Value {

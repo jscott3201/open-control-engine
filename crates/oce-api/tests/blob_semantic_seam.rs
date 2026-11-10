@@ -1,4 +1,4 @@
-//! The CDL §7.17 seam in the compiled-schedule blob (GitHub #400): `SemanticPoint` payloads are
+//! The OBC §7.17 seam in the compiled-schedule blob (GitHub #400): `SemanticPoint` payloads are
 //! non-computational, so filling them and mutating every payload byte must leave the decoded
 //! executable and its outputs identical.
 //!

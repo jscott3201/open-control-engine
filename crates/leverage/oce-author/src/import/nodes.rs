@@ -10,8 +10,19 @@ use crate::model::SignalType;
 
 use super::error::{ImportError, ImportErrorKind as Kind, SourceForm};
 
-/// The `S231` context IRI a document must bind.
-pub(super) const S231_IRI: &str = "http://data.ashrae.org/S231P#";
+/// The `S231` context IRI: the only one a document may bind `S231` to.
+pub(super) const S231_IRI: &str = "http://data.ashrae.org/S231#";
+
+/// The namespace IRI the emitter and the engine wrote through release 0.4.0. Kept only to refuse
+/// a document that binds it, under any prefix.
+pub(super) const RETIRED_S231_IRI: &str = "http://data.ashrae.org/S231P#";
+
+/// The translation-software label (OBC §8.4). A block node may carry it; the importer reads
+/// neither value, and the emitter writes its own on the root.
+const TRANSLATION_SOFTWARE_KEYS: [&str; 2] = [
+    "S231:translationSoftware",
+    "S231:translationSoftwareVersion",
+];
 
 /// The package every block class and named type sits under, after the class IRI's `#`.
 pub(super) const OBC_PACKAGE: &str = "Buildings.Controls.OBC.";
@@ -75,8 +86,16 @@ impl NodeKind {
                 "S231:hasInput",
                 "S231:hasOutput",
                 "S231:containsBlock",
+                TRANSLATION_SOFTWARE_KEYS[0],
+                TRANSLATION_SOFTWARE_KEYS[1],
             ],
-            Self::Block => &["S231:hasParameter", "S231:hasInput", "S231:hasOutput"],
+            Self::Block => &[
+                "S231:hasParameter",
+                "S231:hasInput",
+                "S231:hasOutput",
+                TRANSLATION_SOFTWARE_KEYS[0],
+                TRANSLATION_SOFTWARE_KEYS[1],
+            ],
             Self::SequenceParameter => &[
                 "S231:isOfDataType",
                 "S231:value",

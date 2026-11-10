@@ -234,7 +234,7 @@ fn fixture_record_mut<'a>(catalog: &'a mut Value, name: &str) -> &'a mut Value {
 
 const PARAMETER_GATED_UNKNOWN_PARAMETER: &str = r#"{
   "@context": {
-    "S231": "http://data.ashrae.org/S231P#",
+    "S231": "http://data.ashrae.org/S231#",
     "base": "http://example.org#"
   },
   "@graph": [

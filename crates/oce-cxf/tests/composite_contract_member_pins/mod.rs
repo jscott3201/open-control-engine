@@ -196,7 +196,7 @@ pub(crate) fn rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
             "rejected/member_isofdatatype_unresolved.jsonld",
             vec![error_with_subject(
                 DiagCode::UnresolvedReference,
-                "http://data.ashrae.org/S231P#Bogus",
+                "http://data.ashrae.org/S231#Bogus",
                 "unresolved isOfDataType",
             )],
         ),

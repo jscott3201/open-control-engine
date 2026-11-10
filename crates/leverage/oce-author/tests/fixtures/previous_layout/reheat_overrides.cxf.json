@@ -1,0 +1,281 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.Reheat.Subsequences.Overrides",
+      "S231:label": "reheat_overrides",
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.source.reheat_overrides.conInt3" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.intEqu3" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.intEqu4" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.conInt4" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.cloDam" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.opeDam" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.add3" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.or2" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.swi1" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.pro" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.booToRea" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.reheat_overrides.oveDamPos" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.uDam" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.uHeaOff" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.uVal" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.source.reheat_overrides.yDam" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.yVal" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.oveDamPos",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.reheat_overrides.intEqu3.u1" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.intEqu4.u1" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.uDam",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.reheat_overrides.swi1.u3" }
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.uHeaOff",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.reheat_overrides.booToRea.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.uVal",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.reheat_overrides.pro.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.yDam",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1"
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.yVal",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1"
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.conInt3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt3",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.reheat_overrides.conInt3.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.reheat_overrides.conInt3.y" }
+    },
+    { "@id": "http://example.org#g36.source.reheat_overrides.conInt3.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 1 },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.conInt3.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.reheat_overrides.intEqu3.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.intEqu3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:label": "intEqu3",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.reheat_overrides.intEqu3.u1" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.intEqu3.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.reheat_overrides.intEqu3.y" }
+    },
+    { "@id": "http://example.org#g36.source.reheat_overrides.intEqu3.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.reheat_overrides.intEqu3.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.intEqu3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.reheat_overrides.cloDam.u" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.or2.u1" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.intEqu4",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:label": "intEqu4",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.reheat_overrides.intEqu4.u1" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.intEqu4.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.reheat_overrides.intEqu4.y" }
+    },
+    { "@id": "http://example.org#g36.source.reheat_overrides.intEqu4.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.reheat_overrides.intEqu4.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.intEqu4.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.reheat_overrides.opeDam.u" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.or2.u2" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.conInt4",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt4",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.reheat_overrides.conInt4.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.reheat_overrides.conInt4.y" }
+    },
+    { "@id": "http://example.org#g36.source.reheat_overrides.conInt4.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 2 },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.conInt4.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.reheat_overrides.intEqu4.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.cloDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:label": "cloDam",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.reheat_overrides.cloDam.realTrue" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.cloDam.realFalse" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.reheat_overrides.cloDam.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.reheat_overrides.cloDam.y" }
+    },
+    { "@id": "http://example.org#g36.source.reheat_overrides.cloDam.realTrue", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.reheat_overrides.cloDam.realFalse", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.reheat_overrides.cloDam.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.cloDam.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.reheat_overrides.add3.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.opeDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:label": "opeDam",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.reheat_overrides.opeDam.realTrue" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.opeDam.realFalse" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.reheat_overrides.opeDam.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.reheat_overrides.opeDam.y" }
+    },
+    { "@id": "http://example.org#g36.source.reheat_overrides.opeDam.realTrue", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.reheat_overrides.opeDam.realFalse", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.reheat_overrides.opeDam.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.opeDam.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.reheat_overrides.add3.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.add3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:label": "add3",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.reheat_overrides.add3.u1" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.add3.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.reheat_overrides.add3.y" }
+    },
+    { "@id": "http://example.org#g36.source.reheat_overrides.add3.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.reheat_overrides.add3.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.add3.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.reheat_overrides.swi1.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.or2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:label": "or2",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.reheat_overrides.or2.u1" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.or2.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.reheat_overrides.or2.y" }
+    },
+    { "@id": "http://example.org#g36.source.reheat_overrides.or2.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.reheat_overrides.or2.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.or2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.reheat_overrides.swi1.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.swi1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "swi1",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.reheat_overrides.swi1.u1" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.swi1.u2" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.swi1.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.reheat_overrides.swi1.y" }
+    },
+    { "@id": "http://example.org#g36.source.reheat_overrides.swi1.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.reheat_overrides.swi1.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.reheat_overrides.swi1.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.swi1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.reheat_overrides.yDam" }
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.pro",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:label": "pro",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.reheat_overrides.pro.u1" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.pro.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.reheat_overrides.pro.y" }
+    },
+    { "@id": "http://example.org#g36.source.reheat_overrides.pro.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.reheat_overrides.pro.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.pro.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.reheat_overrides.yVal" }
+    },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.booToRea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:label": "booToRea",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.reheat_overrides.booToRea.realTrue" },
+        { "@id": "http://example.org#g36.source.reheat_overrides.booToRea.realFalse" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.reheat_overrides.booToRea.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.reheat_overrides.booToRea.y" }
+    },
+    { "@id": "http://example.org#g36.source.reheat_overrides.booToRea.realTrue", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.reheat_overrides.booToRea.realFalse", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.reheat_overrides.booToRea.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.reheat_overrides.booToRea.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.reheat_overrides.pro.u1" }
+    }
+  ]
+}

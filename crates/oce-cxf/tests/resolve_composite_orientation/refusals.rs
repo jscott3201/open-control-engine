@@ -128,7 +128,7 @@ fn contradictory_boundary_target_cannot_disappear_at_empty_boundary() {
     })];
     graph.extend(constant_composite(model, "sub", false));
     let mut document = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph
     });
     set_absolute_targets(&mut document, ".sub.src.y", &[&format!("{model}.sub.u")]);
@@ -223,7 +223,7 @@ fn inactive_boundary_target_document(target: &str, repeats: usize) -> Value {
     let model = "http://example.org#inactive_boundary_target";
     let targets = std::iter::repeat_n(json!({ "@id": target }), repeats).collect::<Vec<_>>();
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             {
                 "@id": model,

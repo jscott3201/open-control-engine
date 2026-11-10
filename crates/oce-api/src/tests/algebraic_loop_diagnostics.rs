@@ -86,7 +86,7 @@ fn add_network<A: AsRef<str>, W: AsRef<str>>(adds: &[A], wires: &[(W, W)]) -> Ve
         graph.push(connector(&format!("{add}.y"), "S231:RealOutput"));
     }
     serde_json::to_vec(&json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph,
     }))
     .expect("serialize document")
@@ -223,7 +223,7 @@ fn extract_ring(count: usize) -> Vec<u8> {
         ));
     }
     serde_json::to_vec(&json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph,
     }))
     .expect("serialize document")

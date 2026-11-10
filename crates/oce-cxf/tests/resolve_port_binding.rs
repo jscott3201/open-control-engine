@@ -24,7 +24,7 @@ use serde_json::{Value, json};
 fn document(names: [&str; 2], order: [usize; 2]) -> Value {
     let port = |n: &str| format!("http://example.org#M.ctl.{n}");
     json!({
-      "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+      "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
       "@graph": [
         { "@id": "http://example.org#M", "@type": "S231:Block",
           "S231:containsBlock": [
@@ -265,7 +265,7 @@ fn permuting_an_output_array_resolves_to_the_same_model() {
     let doc = |order: [&str; 3]| {
         let port = |n: &str| format!("http://example.org#M.chg.{n}");
         json!({
-          "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+          "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
           "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
               "S231:containsBlock": [

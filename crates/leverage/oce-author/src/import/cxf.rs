@@ -23,8 +23,8 @@ use crate::validate::catalog::{is_template, lookup_class};
 
 use super::error::{ImportError, ImportErrorKind as Kind, SourceForm};
 use super::nodes::{
-    DataType, Names, NodeKind, OBC_PACKAGE, PARAMETER_ATTRIBUTES, S231_IRI, check_keys,
-    check_parameter_type, connector_type, data_type, declared_type, references, refuse,
+    DataType, Names, NodeKind, OBC_PACKAGE, PARAMETER_ATTRIBUTES, RETIRED_S231_IRI, S231_IRI,
+    check_keys, check_parameter_type, connector_type, data_type, declared_type, references, refuse,
     sequence_name, spelled, text_attribute,
 };
 use super::precedence::{self, Graph};
@@ -128,7 +128,10 @@ pub(super) fn import(bytes: &[u8], options: &ImportOptions) -> Result<Imported, 
     Ok(imported)
 }
 
-/// Accept only the `S231` binding the engine reads (and the corpus's inert `base`).
+/// Accept only the `S231` binding the engine reads (and the corpus's inert `base`). `S231` bound
+/// to any other IRI, and any term bound to the namespace written through release 0.4.0, is a
+/// [`Kind::NamespaceMismatch`] naming the IRI found and the IRI expected; any other term is an
+/// unknown key.
 fn check_context(top: &Map<String, Value>) -> Result<(), ImportError> {
     if let Some(key) = top.keys().find(|k| *k != "@context" && *k != "@graph") {
         return Err(refuse("document", Kind::UnknownKey { key: key.clone() }));
@@ -139,6 +142,10 @@ fn check_context(top: &Map<String, Value>) -> Result<(), ImportError> {
             for (term, value) in context {
                 match (term.as_str(), value) {
                     ("S231", Value::String(iri)) if iri == S231_IRI => {}
+                    ("S231", Value::String(iri)) => return Err(wrong_namespace(term, iri)),
+                    (_, Value::String(iri)) if iri == RETIRED_S231_IRI => {
+                        return Err(wrong_namespace(term, iri));
+                    }
                     ("base", Value::String(_)) => {}
                     _ => return Err(refuse("document", Kind::UnknownKey { key: term.clone() })),
                 }
@@ -152,6 +159,18 @@ fn check_context(top: &Map<String, Value>) -> Result<(), ImportError> {
             },
         )),
     }
+}
+
+/// The refusal for a `@context` term that spells the S231 vocabulary in another namespace.
+fn wrong_namespace(term: &str, found: &str) -> ImportError {
+    refuse(
+        "document",
+        Kind::NamespaceMismatch {
+            term: term.to_owned(),
+            found: found.to_owned(),
+            expected: S231_IRI,
+        },
+    )
 }
 
 /// One import in progress.

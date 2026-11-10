@@ -119,7 +119,7 @@ fn reduction_feedback(
         }));
     }
     serde_json::to_vec(&json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph,
     }))
     .expect("serialize document")

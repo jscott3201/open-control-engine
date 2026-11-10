@@ -107,14 +107,21 @@ fn a_repeated_id_is_refused() {
 fn context_and_top_level_keys_outside_the_dialect_are_refused() {
     for (from, to, key) in [
         (
-            "\"S231\": \"http://data.ashrae.org/S231P#\"",
             "\"S231\": \"http://data.ashrae.org/S231#\"",
-            "S231",
+            "\"S231\": \"http://data.ashrae.org/S231#\", \"ex\": \"urn:x:\"",
+            "ex",
+        ),
+        // The strict dialect reads compact `S231:` keys only, so a second name for the namespace
+        // is a term it does not define, not a namespace refusal.
+        (
+            "\"S231\": \"http://data.ashrae.org/S231#\"",
+            "\"S231\": \"http://data.ashrae.org/S231#\", \"cdl\": \"http://data.ashrae.org/S231#\"",
+            "cdl",
         ),
         (
-            "\"S231\": \"http://data.ashrae.org/S231P#\"",
-            "\"S231\": \"http://data.ashrae.org/S231P#\", \"ex\": \"urn:x:\"",
-            "ex",
+            "\"S231\": \"http://data.ashrae.org/S231#\"",
+            "\"S231\": 7",
+            "S231",
         ),
         ("\"@graph\": [", "\"@id\": \"urn:x\", \"@graph\": [", "@id"),
     ] {

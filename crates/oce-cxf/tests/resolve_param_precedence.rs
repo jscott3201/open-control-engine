@@ -60,7 +60,7 @@ fn hysteresis_doc(member_order: [&str; 2]) -> Json {
         .map(|name| json!({ "@id": format!("http://example.org#Z.hys.{name}") }))
         .collect();
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": [
             { "@id": "http://example.org#Z", "@type": "S231:Block", "S231:label": "Z",
               "S231:hasParameter": [ { "@id": "http://example.org#Z.uLow" } ],
@@ -136,7 +136,7 @@ fn constant_doc(root_params: &[(&str, Json)], members: &[(&str, Json)]) -> Json 
                        "S231:isOfDataType": { "@id": "S231:Real" } }),
     );
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": graph
     })
 }
@@ -147,7 +147,7 @@ fn constant_doc(root_params: &[(&str, Json)], members: &[(&str, Json)]) -> Json 
 /// reads the innermost composite's binding — a forward scan reads the root's.
 fn two_level_gain_doc() -> Json {
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": [
             { "@id": "http://example.org#N", "@type": "S231:Block", "S231:label": "N",
               "S231:hasParameter": [ { "@id": "http://example.org#N.g" } ],

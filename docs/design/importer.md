@@ -240,8 +240,15 @@ boundary typed by a constant package becomes an Integer boundary (decision 21).
 
 **Refused, never guessed** (each a typed kind, see [`ImportError`](#importerror)): every construct in
 the authoring note's out-of-scope list, an expression value, a block-port attribute, `nominal` and
-`unbounded`, an unknown key or `@context` term, a value whose shape disagrees with its
-`isOfDataType`, and an unknown named type.
+`unbounded`, an unknown key or `@context` term, a `@context` that binds the S231 vocabulary in
+another namespace, a value whose shape disagrees with its `isOfDataType`, and an unknown named
+type.
+
+**Read and not carried, with no report entry:** the translation-software label
+(`S231:translationSoftware`, `S231:translationSoftwareVersion`; OBC §8.4) on the root or on a
+block node, whatever its value. The emitter writes its own on the root, so an emitted document
+still re-imports with an empty report and to the same bytes. On any other node the two keys are
+unknown keys.
 
 ## The v0 graph JSON importer
 
@@ -353,6 +360,7 @@ impl ImportErrorKind { pub fn code(&self) -> &'static str }   // stable kebab-ca
 | `NotStrictJson(StrictJson)` | `not-strict-json` | syntax, a duplicate key, an integer outside `i64`, non-UTF-8 |
 | `LimitExceeded(Limit)` | `limit-exceeded` | v0 depth, list length or string length |
 | `UnknownKey { key }` | `unknown-key` | a property, top-level key or `@context` term the form does not define |
+| `NamespaceMismatch { term, found, expected }` | `namespace-mismatch` | a CXF `@context` that binds `S231` to any IRI but `http://data.ashrae.org/S231#`, or binds any term to the namespace written through release 0.4.0 (GitHub #527) |
 | `MissingKey { key }` | `missing-key` | a required v0 key, a value-less parameter |
 | `WrongShape { key }` | `wrong-shape` | a relation that is not references, a label that is not a string, a v0 value that is null, an object or an array |
 | `NoRoot` | `no-root` | no node contains blocks |
@@ -582,7 +590,9 @@ not a point label, and M8 owns the record). *(Landed in GitHub #498, 2026-11-09.
 
 **18. v0 fixtures are the prototype's three golden pairs, vendored verbatim.** Rejected: the five
 benchmark graphs (#457 decides where they live); regenerating pairs here (the point is the
-prototype's own emitter output). *(Landed in GitHub #498, 2026-11-09.)*
+prototype's own emitter output). *(Landed in GitHub #498, 2026-11-09. GitHub #527 rebound the
+`S231` context IRI in the three CXF files, the one string in which they now differ from the
+prototype's bytes; `PROVENANCE.md` records both digests.)*
 
 **19. #468, then the model PR, then the importer PR.** Rejected: one PR, and a model PR that does not
 wait for #485; see [Dependencies and sequencing](#dependencies-and-sequencing).
@@ -664,8 +674,9 @@ the gate-item-1 rebase note.
 GitHub #498 (issue #496, 2026-11-09) implements the importer as specified; where the note left a
 choice open, or the implementation reads a rule more narrowly, the choice is recorded here.
 
-- **29 kinds.** `ImportErrorKind` has the 29 rows of the [`ImportError`](#importerror) table, one
+- **29 kinds.** `ImportErrorKind` had the 29 rows of the [`ImportError`](#importerror) table, one
   code each, in table order (`IMPORT_ERROR_CODES`); the issue's "30-row" count was off by one.
+  GitHub #527 added the thirtieth, `namespace-mismatch`.
 - **Kinds for cases the table leaves open.** A bound written as a string is `expression-value`; a
   bound on a Boolean boundary, a Real literal on an Integer boundary and a typed Boolean bound are
   `datatype-mismatch` at import (the validator's `invalid-bound` stays for models built in the

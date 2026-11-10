@@ -39,7 +39,7 @@ fn import_clean(doc: &Json) -> ModelGraph {
 #[test]
 fn cycle_chain_visited_by_both_passes_emits_exactly_one_tagged_diagnostic() {
     let doc = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": [
             { "@id": "http://example.org#R", "@type": "S231:Block",
               "S231:hasParameter": [
@@ -96,7 +96,7 @@ fn cycle_chain_visited_by_both_passes_emits_exactly_one_tagged_diagnostic() {
 #[test]
 fn withheld_findings_release_when_root_classification_leaves_no_chain_evaluated() {
     let doc = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
               "S231:hasParameter": { "@id": "http://example.org#M.x" },
@@ -139,7 +139,7 @@ fn withheld_findings_release_when_root_classification_leaves_no_chain_evaluated(
 #[test]
 fn pruned_composite_chain_cycle_still_surfaces_its_tagged_finding() {
     let doc = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
               "S231:hasParameter": { "@id": "http://example.org#M.have_sub" },
@@ -202,7 +202,7 @@ fn pruned_composite_chain_cycle_still_surfaces_its_tagged_finding() {
 #[test]
 fn leaf_chain_cycle_stays_untagged_and_refuses_through_member_level_grounding_failures() {
     let doc = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
               "S231:containsBlock": [ { "@id": "http://example.org#M.con" } ] },
@@ -258,7 +258,7 @@ fn leaf_chain_cycle_stays_untagged_and_refuses_through_member_level_grounding_fa
 #[test]
 fn leaf_chain_duplicate_declaration_stays_untagged_and_the_document_loads() {
     let doc = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
               "S231:containsBlock": [ { "@id": "http://example.org#M.con" } ] },

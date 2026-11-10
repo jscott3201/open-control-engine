@@ -394,7 +394,7 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 22] = [
             DiagCode::NonSubsetConstruct,
             Some("http://example.org#M.c2"),
             "composite/banned-modelica-key: unsupported Modelica construct \
-             `http://data.ashrae.org/S231P#moSource` survived CXF lowering",
+             `http://data.ashrae.org/S231#moSource` survived CXF lowering",
         )],
     ),
     (
