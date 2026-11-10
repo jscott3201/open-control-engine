@@ -929,7 +929,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Documentation
 
 - **The facade migration page is retired, with the other prose the format reset made false**
-  (issue #531). `docs/facade-migration.md` is deleted: nothing was published to migrate from, and
+  (GitHub #542, issue #531). `docs/facade-migration.md` is deleted: nothing was published to migrate from, and
   its rows still stated diagnostics schema revisions 2 and 3, descriptor revisions advancing to 2
   and an execution-profile schema "revision 2" after every format and schema went back to 1
   (GitHub #518). Its links are repointed at the pages that own the current facts: the README's two
