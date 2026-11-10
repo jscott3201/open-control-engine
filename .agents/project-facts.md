@@ -347,6 +347,32 @@ range, so a new bound on any class moves that count). Vendoring a new `CXF-Core.
 is a pin advance: it also moves the vendored README's digest row, the hash manifest and its
 tree-SHA constant, and `oce-cxf`'s `fixture_corpus_import.txt` line for the file.
 
+## The `oce-verify` schema is blessed; its canonical goldens are derived by hand
+
+`crates/leverage/oce-verify/schema/vectors.schema.json` is the published JSON Schema of the vector
+format `oce/vectors/v1` (issue #519), derived with `schemars` from the reader's shapes in
+`src/dto.rs`. `tests/schema_pinned.rs` regenerates it and compares byte for byte, and walks it for
+keywords outside the strict profile; `tests/schema_conformance.rs` holds each closed object's keys
+to the keys the reader knows, so a key added to a shape needs its arm in `src/decode.rs` and its
+row in that test's `OBJECTS` table. A shape or a doc comment in `src/dto.rs` moves the schema.
+Regenerate with `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`, run it again without the
+switch, and say in the PR what moved and why. That switch rewrites the schema and nothing else.
+
+`tests/fixtures/canonical/*.json` (the canonical forms of the two in-repo library rules' vector
+files and of `tests/fixtures/sets/every_field.json`) and the `spec_id` literals in
+`tests/canonical_form.rs` are **never blessed**: they come from
+`tests/fixtures/derive_canonical.py`, a second implementation of the canonical form and of
+FNV-1a-128 that shares no code with the crate, run by hand (the fixtures README has the three
+commands). The canonical writer or number spelling, or either `vectors.json` under
+`crates/oce-api/tests/fixtures/library_rules/`, moves them. The format stays `v1` until 1.0.0, so
+a change to it rewrites those two `vectors.json` files, their SHA-256 rows in that directory's
+README and these goldens in the same PR; `crates/oce-api/tests/library_rule_state_continuation.rs`
+keeps its own small reader of the shape, because an engine crate cannot depend on a leverage crate.
+`tests/fixtures/note/worked_example.json` is the JSON block of the vectors note's "The vector
+format" section copied by hand; copy it again when that block changes. A new `VectorErrorKind`
+does not build until `VECTOR_ERROR_CODES` lists its code in order, and needs its case in
+`tests/error_codes.rs`.
+
 ## The frame driver lives in `oce-graph`, and its run digests move with behaviour
 
 The HostTick v1 frame driver (time checks, per-slot input checks, the non-finite policy, the

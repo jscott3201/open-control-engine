@@ -1,0 +1,36 @@
+# Verification over vectors, above the facade (design note docs/design/vectors.md, issue #519):
+# the `oce/vectors/v1` format first: a strict bounded reader, the canonical writer, `spec_id`,
+# the load-stage error codes and the pinned JSON Schema. Among `oce-*` packages it may depend on
+# `oce-api` and the leverage crate `oce-replay` only (crates/leverage/README.md); this first part
+# loads no engine and replays nothing, so it names neither yet and the binder adds both.
+# `oce-bless` is its one `oce-*` edge today, as a dev-dependency for the golden switch (authoring
+# note decision 19).
+[package]
+name = "oce-verify"
+description = "Vector verification for Open Control Engine sequences: the oce/vectors/v1 format with a strict bounded reader, a canonical writer, spec ids and a pinned JSON Schema."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+# Nothing above the facade is published yet (authoring note decision 20).
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+# The JSON Schema of the format is derived from the reader's own types (vectors note decision 17);
+# the same crate and exact version as `oce-author`, so the lockfile gains no package.
+schemars = { version = "=1.2.3", default-features = false, features = ["derive", "std"] }
+# `schemars` hands the derived schema over as a `serde_json::Value`, which the canonical writer
+# walks. Nothing here parses with it: the reader is this crate's own strict cursor.
+serde_json = { workspace = true }
+
+[dev-dependencies]
+oce-bless = { workspace = true }
+# The load-cost test measures allocations on the reading thread; the crate and version
+# `oce-replay` already uses.
+allocation-counter = "0.8.1"

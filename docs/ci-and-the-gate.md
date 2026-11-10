@@ -70,7 +70,7 @@ layout and `oce-api`-only dependency rule (`oce-bless` is allowed as a dev-depen
 golden switch; normal and build edges and dev edges are read separately), then fmt, clippy
 `-D warnings`, rustdoc `-D warnings`, nextest and cargo-machete per member
 (`scripts/ci/leverage-members.sh lane`; with no members it prints `no leverage crates yet`). The
-members are `oce-replay`, `oce-author`, `oce-cli` (the `oce` binary) and `oce-vocab`.
+members are `oce-replay`, `oce-author`, `oce-cli` (the `oce` binary), `oce-vocab` and `oce-verify`.
 The **README lane** is one job, `facade contract and Quickstart` (issue #503). It runs when the
 root `README.md` changes and for every engine change, and it holds the two checks of the README's
 Quickstart that no always-on job runs: the `readme_quickstart` test, which requires the README's
@@ -647,9 +647,9 @@ tag/version match, fmt, clippy, a workspace `cargo test`, the package validator 
 `cargo publish --workspace --locked --dry-run` — with no token and no publish, so a tag can be
 re-cut safely (see [release.yml](../.github/workflows/release.yml), `verify` job). Publishing is a
 separate manual `workflow_dispatch` into the `release` GitHub Environment. Cargo's workspace
-selection includes the 10 publishable members and skips the seven members with `publish = false`:
+selection includes the 10 publishable members and skips the eight members with `publish = false`:
 `oce-bless`, `oce-conformance`, the firmware image `oce-firmware-link` and the leverage crates
-`oce-replay`, `oce-author`, `oce-cli` and `oce-vocab`.
+`oce-replay`, `oce-author`, `oce-cli`, `oce-vocab` and `oce-verify`.
 No checked-in record pins those sets any more: the guards are each crate's `publish` flag, the
 byte pin on `release.yml` (whose comment names the split) and review.
 

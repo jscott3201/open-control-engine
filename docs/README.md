@@ -9,7 +9,7 @@ front door; these pages are the detail behind it.
 | --- | --- |
 | [Product contract](product-contract.md) | Versioned executable-CXF/HostTick requirements, domain-owner delegations, limitations, evidence and explicitly future outcomes |
 | [Authority claims and supersession](authority-claims.md) | The generated cross-domain summary, checked versus review-only boundaries, source-owner update procedure, and non-exhaustive supersession map, from the [index](authority-claims.json) |
-| [Architecture](architecture.md) | How the engine is layered, where the metadata seam (§7.17 of the OpenBuildingControl (OBC) specification; ANSI/ASHRAE 231-2026 §5.13) sits, what each of the 12 engine crates, the firmware image and the leverage crates (the `oce` CLI and the block vocabulary included) owns, and the platform and MSRV policy |
+| [Architecture](architecture.md) | How the engine is layered, where the metadata seam (§7.17 of the OpenBuildingControl (OBC) specification; ANSI/ASHRAE 231-2026 §5.13) sits, what each of the 12 engine crates, the firmware image and the leverage crates (the `oce` CLI, the block vocabulary and the vector format included) owns, and the platform and MSRV policy |
 | [Compiled-schedule blob](compiled-schedule-blob.md) | What an `OCEB` blob carries from a `std` host to a `no_std` target, what it leaves behind, how it is versioned, and what the decoder trusts and refuses |
 | [Execution profile](execution-profile.md) | Why each host tick is one state transition, and where `CDL.Logical.Pre` differs from Modelica same-time event iteration |
 | [Canonical replay record](replay-record.md) | Bounded per-accepted-frame exact bytes, typed refusals and host-owned ordered replay with separate snapshot sidecars |
@@ -49,6 +49,7 @@ questions its reviewer ruled on; the contracts above remain the authority for sh
 | [`SECURITY.md`](../SECURITY.md) | Reporting, threat model, and the known hardening limit |
 | [`oce` CLI](../crates/leverage/oce-cli/README.md) | The `oce` command-line tool: its commands, the exit codes and the JSON report contract an agent can branch on |
 | [`oce-vocab`](../crates/leverage/oce-vocab/README.md) | The block vocabulary: the generated and curated data files, the note kinds, the joined view and how to regenerate and curate |
+| [`oce-verify`](../crates/leverage/oce-verify/README.md) | The vector format `oce/vectors/v1` as built: what a load checks and in what order, the bounds, the canonical form and `spec_id`, the error codes and the pinned JSON Schema |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Notable changes |
 
 ## Two pages worth reading even if you are only evaluating

@@ -402,6 +402,69 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
+- **Vectors, part 1 of 4: the `oce-verify` crate and the one vector format, `oce/vectors/v1`**
+  (GitHub #PRNUM, issue #519; [vectors note](docs/design/vectors.md) decisions 1 to 5, 8 to 12,
+  16 to 18 and 35). A new leverage crate, `crates/leverage/oce-verify` (`publish = false`;
+  `schemars` and `serde_json`, with `oce-bless` and `allocation-counter` as dev-dependencies). It
+  holds the format and nothing that runs: it loads no engine, replays nothing and writes no
+  receipt, so it names neither `oce-api` nor `oce-replay` yet; binding, the run, receipts,
+  mutants and the `oce verify` verb are parts 2 to 4.
+  - **The reader**, `VectorSet::from_json_bytes(bytes, &VerifyLimits)`: strict JSON under the
+    authoring wire profile (nesting 8, lists 65,536, strings 4,096 bytes, no repeated key, no
+    control character, no non-finite number, integer tokens within `i64`), read by the crate's own
+    cursor with a line and column on every refusal. Every object is closed: a key the format does
+    not define is `unknown-key` and is never skipped, which covers `within`, `of`, `when` and
+    `mutants` until the format gains them; `null` is never a value and a list is never read as an
+    object's members. A root `schema` other than `oce/vectors/v1` is `unknown-schema` before the
+    shape is judged, `cxf-library/vectors/v1` included: there is one format and no reader of
+    another. A value is a number or a boolean and keeps the kind it was written as (`Literal`:
+    `1` is not `1.0`, `-0` is the integer zero); typing waits for the binder.
+  - **The rules a shape cannot say**, checked at load. The clock's cadence is decided by
+    multiplication (`Clock`): a time is a tick when some integer `k` gives `k * step_s` exactly,
+    found by rounding the quotient and testing its neighbours, never by flooring it, so
+    `{ step_s: 0.1, horizon_s: 4.3 }` loads and a horizon one ulp away does not. Step lists start
+    at exactly `t = 0`, increase strictly and never pass the horizon. Windows are inclusive, lie
+    inside the clock and must hold a tick, decided from tick values (a loaded `Window` carries its
+    first and last tick). A diagnostic `at_s` is a tick. An integer token in a time position must
+    be within ±2^53 (`MAX_TIME_INTEGER`), where every integer is a binary64, or it is
+    `integer-out-of-range`; a larger time is written as a real.
+  - **Bounds**: `VerifyLimits` (4 MiB, 16,777,216 ticks, 4,096 scenarios, 4,096 expectations per
+    scenario, 256 parameters per map), each a typed refusal one past its value, lowerable to zero
+    and never raisable (a value above the maximum is read as the maximum). Nothing is materialised
+    per tick, and `tests/load_cost.rs` pins the memory a load holds with `allocation-counter`: at
+    most 24 bytes per document byte for the densest shape, 4 for step lists and windows.
+  - **The canonical form and `spec_id`**: `to_canonical_json` (keys sorted by UTF-8 bytes at every
+    depth, two-space indentation, ASCII only, one final line feed) and
+    `spec_id() = spec:fnv1a128:<32 hex>` over it, with FNV-1a-128 implemented in the crate.
+    **The number-formatting rule is confirmed and written back into the note**, which had marked
+    it as recalled from memory: an integer token as a decimal integer (`-0` as `0`); a real with
+    the shortest round-trip digits, in plain decimal for zero and `1e-4 <= |x| < 1e16`, otherwise
+    `d[.ddd]e[-]N` (`0.0001` and `9.999999999999999e-5`, `9999999999999998.0` and `1e16`, `-0.0`,
+    `5e-324`). The thresholds and the exponent spelling stand as the note had them; the layout is
+    the crate's own code, compared with Rust's `{:?}` over more than 23,000 values. The canonical goldens
+    and the `spec_id` literals are derived by a second implementation in Python
+    (`tests/fixtures/derive_canonical.py`), never blessed from the code they check.
+  - **Errors**: `VectorError` with a closed, `#[non_exhaustive]` `VectorErrorKind`, a kebab-case
+    `code()` per kind and `VECTOR_ERROR_CODES` (32 codes, checked against the kinds at compile
+    time and pinned by a test that produces each one from a document). They are the note's load
+    rows without the three mutant rows (`too-many-mutants`, `mutant-path-invalid`,
+    `duplicate-mutant`), which arrive with the `mutants` key in part 3. `empty-name` covers every
+    name position (scenario, input, parameter path, output, diagnostic block).
+  - **The schema**: `schema/vectors.schema.json` (`VECTORS_JSON_SCHEMA`), derived with `schemars`
+    from the reader's shapes, regenerated and compared byte for byte (`OCE_BLESS_VERIFY`), walked
+    for keywords outside the strict profile, and held to the reader key by key.
+  - **The two in-repo vector files are rewritten in place** to the format:
+    `crates/oce-api/tests/fixtures/library_rules/AHU-0016/vectors.json` and
+    `AHU-0004/vectors.json` change their `schema` line and nothing else, their two SHA-256 rows in
+    that directory's README move, and `library_rule_state_continuation.rs` asserts the new tag and
+    resolves names at a `.` boundary only. It runs the same scenarios, windows and restart sweep.
+  - Tests: 152 in the crate, among them the strict cursor against `serde_json` as a syntax oracle
+    over 20,000 mutated documents, the cadence rule against a search over every tick product, a
+    10,000-document byte-mutation sweep through the whole load, and every bound at its limit and
+    one past it.
+  - The workspace has 18 members (10 publishable, eight private); `release.yml`'s comment and step
+    name, its digest and byte golden in `scripts/package_policy/` are re-pinned for the new
+    private member. The 46 fixture goldens and 422 provenance goldens are byte-identical.
 - **Vocabulary v1, part 2: `oce catalog` serves the block vocabulary and `oce vocab` the unit
   scale-factor table** (GitHub #526, issue #500; vocabulary note decisions 12 and 14). `oce-cli`
   now depends on `oce-vocab` (a leverage crate, so the `oce-api`-only rule holds as written).

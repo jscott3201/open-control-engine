@@ -1,0 +1,217 @@
+//! The canonical number spelling: goldens at both thresholds, at the zeros and at the ends of
+//! binary64, a comparison with Rust's own shortest spelling, and the read-back property.
+
+use super::*;
+
+/// Goldens: a value by its bits, and the bytes the canonical form writes. Each row was derived
+/// outside this crate (the bits with Python's `struct`, the digits from Python's shortest
+/// `repr`, its `e-05` and `e+16` exponents respelled by the rule in the module documentation),
+/// so no row comes from the function under test. The comments give the values.
+const REAL_GOLDENS: &[(u64, &str)] = &[
+    // +0.0 and -0.0
+    (0x0000_0000_0000_0000, "0.0"),
+    (0x8000_0000_0000_0000, "-0.0"),
+    // 1.0, -1.0, 60.0, 0.5, 0.1, 1/3
+    (0x3ff0_0000_0000_0000, "1.0"),
+    (0xbff0_0000_0000_0000, "-1.0"),
+    (0x404e_0000_0000_0000, "60.0"),
+    (0x3fe0_0000_0000_0000, "0.5"),
+    (0x3fb9_9999_9999_999a, "0.1"),
+    (0x3fd5_5555_5555_5555, "0.3333333333333333"),
+    // The lower threshold: 1e-4 is plain decimal, the binary64 just below it is not.
+    (0x3f1a_36e2_eb1c_432d, "0.0001"),
+    (0x3f1a_36e2_eb1c_432c, "9.999999999999999e-5"),
+    (0xbf1a_36e2_eb1c_432d, "-0.0001"),
+    (0xbf1a_36e2_eb1c_432c, "-9.999999999999999e-5"),
+    // 1e-5 and 1.5e-7
+    (0x3ee4_f8b5_88e3_68f1, "1e-5"),
+    (0x3e84_21f5_f40d_8376, "1.5e-7"),
+    // The upper threshold: the binary64 just below 1e16 is plain decimal, 1e16 is not.
+    (0x4341_c379_37e0_7fff, "9999999999999998.0"),
+    (0x4341_c379_37e0_8000, "1e16"),
+    (0xc341_c379_37e0_7fff, "-9999999999999998.0"),
+    (0xc341_c379_37e0_8000, "-1e16"),
+    // 1e15, 2^53, 2^53 + 2, 1.2345678901234568e17, 1e21, 1e22
+    (0x430c_6bf5_2634_0000, "1000000000000000.0"),
+    (0x4340_0000_0000_0000, "9007199254740992.0"),
+    (0x4340_0000_0000_0001, "9007199254740994.0"),
+    (0x437b_69b4_ba63_0f35, "1.2345678901234568e17"),
+    (0x444b_1ae4_d6e2_ef50, "1e21"),
+    (0x4480_f0cf_064d_d592, "1e22"),
+    // The smallest subnormal, the largest subnormal, the smallest normal, the largest finite.
+    (0x0000_0000_0000_0001, "5e-324"),
+    (0x000f_ffff_ffff_ffff, "2.225073858507201e-308"),
+    (0x0010_0000_0000_0000, "2.2250738585072014e-308"),
+    (0x7fef_ffff_ffff_ffff, "1.7976931348623157e308"),
+    (0xffef_ffff_ffff_ffff, "-1.7976931348623157e308"),
+    (0x8000_0000_0000_0001, "-5e-324"),
+];
+
+#[test]
+fn a_real_is_written_as_its_golden_at_the_thresholds_the_zeros_and_the_ends() {
+    for (bits, expected) in REAL_GOLDENS {
+        let value = f64::from_bits(*bits);
+        assert_eq!(canonical_real(value), *expected, "{bits:#018x}");
+    }
+}
+
+#[test]
+fn every_golden_reads_back_to_the_bits_it_was_written_from() {
+    for (bits, spelling) in REAL_GOLDENS {
+        let read: f64 = spelling.parse().expect("a golden is a number");
+        assert_eq!(read.to_bits(), *bits, "{spelling}");
+    }
+}
+
+#[test]
+fn a_real_always_carries_a_fraction_or_an_exponent() {
+    for (bits, _) in REAL_GOLDENS {
+        let spelling = canonical_real(f64::from_bits(*bits));
+        assert!(
+            spelling.contains('.') || spelling.contains('e'),
+            "{spelling} would read back as an integer token"
+        );
+        assert!(
+            !spelling.contains('+') && !spelling.contains('E'),
+            "{spelling}"
+        );
+        assert!(
+            !spelling.contains("e0") && !spelling.contains("e-0"),
+            "{spelling}"
+        );
+    }
+}
+
+/// A deterministic walk over bit patterns: a 64-bit linear congruential step (Knuth's MMIX
+/// constants), so the sweep is the same on every run and host.
+fn bit_patterns(count: usize) -> impl Iterator<Item = u64> {
+    let mut state = 0x9e37_79b9_7f4a_7c15_u64;
+    std::iter::repeat_with(move || {
+        state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        state
+    })
+    .take(count)
+}
+
+/// Values worth asking about: every power of ten binary64 can hold, each with its neighbours,
+/// and a sweep of arbitrary bit patterns.
+fn probes() -> Vec<f64> {
+    let mut values = Vec::new();
+    for exponent in -323..=308 {
+        let power: f64 = format!("1e{exponent}").parse().expect("a power of ten");
+        for value in [power.next_down(), power, power.next_up()] {
+            values.push(value);
+            values.push(-value);
+        }
+    }
+    values.extend(bit_patterns(20_000).map(f64::from_bits));
+    values.retain(|value| value.is_finite());
+    values
+}
+
+#[test]
+fn the_spelling_agrees_with_rusts_shortest_debug_spelling() {
+    // An oracle, not the implementation: `canonical_real` lays the digits out itself, and Rust's
+    // `{:?}` for an `f64` follows the same rule (plain decimal for zero and for a magnitude in
+    // [1e-4, 1e16), otherwise `d[.ddd]e[-]N`). If a toolchain ever moved that rule this test
+    // would say so, and the goldens above would still pin this crate's bytes.
+    let probes = probes();
+    assert!(probes.len() > 20_000, "{}", probes.len());
+    for value in probes {
+        assert_eq!(
+            canonical_real(value),
+            format!("{value:?}"),
+            "{:#018x}",
+            value.to_bits()
+        );
+    }
+}
+
+#[test]
+fn every_spelling_reads_back_to_the_same_bits() {
+    for value in probes() {
+        let spelling = canonical_real(value);
+        let read: f64 = spelling.parse().expect("a canonical real is a number");
+        assert_eq!(read.to_bits(), value.to_bits(), "{spelling}");
+    }
+}
+
+#[test]
+fn the_layout_changes_exactly_at_the_two_thresholds() {
+    let low: f64 = 1e-4;
+    let high: f64 = 1e16;
+    assert!(!canonical_real(low).contains('e'));
+    assert!(canonical_real(low.next_down()).contains('e'));
+    assert!(canonical_real(high).contains('e'));
+    assert!(!canonical_real(high.next_down()).contains('e'));
+    // Inside the plain range nothing is written with an exponent.
+    for value in [0.000_123, 1.0, 123.456, 1e15, 9.007_199_254_740_993e15] {
+        assert!(!canonical_real(value).contains('e'), "{value}");
+    }
+}
+
+#[test]
+fn a_non_finite_real_has_no_spelling_and_is_written_null() {
+    for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert_eq!(canonical_real(value), "null");
+    }
+}
+
+#[test]
+fn an_integer_token_is_written_as_a_decimal_integer() {
+    for (value, expected) in [
+        (0_i64, "0"),
+        (1, "1"),
+        (-1, "-1"),
+        (60, "60"),
+        (9_007_199_254_740_993, "9007199254740993"),
+        (i64::MAX, "9223372036854775807"),
+        (i64::MIN, "-9223372036854775808"),
+    ] {
+        assert_eq!(Number::Integer(value).canonical(), expected);
+        assert_eq!(Literal::Integer(value).canonical(), expected);
+    }
+    assert_eq!(Literal::Boolean(true).canonical(), "true");
+    assert_eq!(Literal::Boolean(false).canonical(), "false");
+    assert_eq!(Literal::Real(-0.0).canonical(), "-0.0");
+}
+
+#[test]
+fn a_time_reads_negative_zero_as_zero_and_an_integer_exactly() {
+    assert_eq!(Number::Real(-0.0).seconds().to_bits(), 0.0_f64.to_bits());
+    assert_eq!(Number::Real(0.0).seconds().to_bits(), 0.0_f64.to_bits());
+    assert_eq!(Number::Integer(0).seconds().to_bits(), 0.0_f64.to_bits());
+    assert_eq!(Number::Real(-1.5).seconds().to_bits(), (-1.5_f64).to_bits());
+    assert_eq!(
+        Number::Integer(crate::MAX_TIME_INTEGER).seconds().to_bits(),
+        0x4340_0000_0000_0000,
+        "2^53 is exact"
+    );
+    assert_eq!(
+        Number::Integer(-crate::MAX_TIME_INTEGER)
+            .seconds()
+            .to_bits(),
+        0xc340_0000_0000_0000
+    );
+    // The written spelling keeps the sign a time drops.
+    assert_eq!(Number::Real(-0.0).canonical(), "-0.0");
+}
+
+#[test]
+fn values_compare_by_kind_and_a_real_by_its_bits() {
+    assert_eq!(Literal::Real(0.0), Literal::Real(0.0));
+    assert_ne!(Literal::Real(0.0), Literal::Real(-0.0));
+    assert_ne!(Literal::Integer(1), Literal::Real(1.0));
+    assert_ne!(Literal::Boolean(true), Literal::Integer(1));
+    assert_eq!(Number::Integer(7), Number::Integer(7));
+    assert_ne!(Number::Integer(0), Number::Real(0.0));
+    assert_ne!(Number::Real(0.0), Number::Real(-0.0));
+    assert_eq!(
+        Literal::from(Number::Real(2.5)),
+        Literal::Real(2.5),
+        "a number keeps its kind as a value"
+    );
+    assert_eq!(Literal::from(Number::Integer(-3)), Literal::Integer(-3));
+}
