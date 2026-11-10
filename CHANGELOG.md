@@ -1001,6 +1001,26 @@ and a gate that accepted any text would restore exactly the false assurance desc
   wording in `docs/design/replay.md`, `docs/design/commissioning.md` and the README's M3 roadmap
   row becomes "the vector format". Nothing is implemented. It is registered in `docs/README.md`
   and the book.
+- **The published standard is named, cited by its own clauses, and the coverage claim says what the
+  engine does not execute** (issue #510; owner rulings of 2026-11-09). CDL is published as
+  ANSI/ASHRAE Standard 231-2026, and the README, the architecture page and `docs/cdl-coverage.md`
+  now say so. Where the documentation cited "CDL §7.17" for the metadata seam it names both
+  numberings (ANSI/ASHRAE 231-2026 §5.13; OBC specification §7.17), and the commissioning
+  verifier is described as following the OpenBuildingControl specification's §12, which is not
+  part of the standard: the standard has no verification or conformance clause. The architecture
+  page's seam heading and the diagram's label drop the bare section number (the heading's anchor
+  changes; the three design notes that link to it follow). `docs/cdl-coverage.md` gains two
+  sections. The first records the standard's clauses, that its normative elementary blocks are
+  based on Modelica Buildings Library v12.1.0 and that the file list under
+  `Buildings/Controls/OBC/CDL` is identical at tag `v12.1.0` and at the vendored pin `a131864`
+  (checked 2026-11-09; contents not compared), and that the standard's CXF namespace is
+  `http://data.ashrae.org/S231#` on the evidence of the OBC specification §11.3 and modelica-json's
+  `CXF-Core.jsonld`, while the exporter still binds `http://data.ashrae.org/S231P#` until issue
+  #527. The second states that the engine executes elementary and composite blocks only: an
+  extension block is implemented by an FMU (OBC specification §7.13, §8.7), FMI is out of scope
+  before 1.0, and an instance of an unregistered class with no children is refused with
+  `class-not-found`. Documentation only: no behaviour, signature, fixture or golden changes, and
+  the rustdoc citations in the crates are not yet renamed.
 
 ## 0.4.0
 

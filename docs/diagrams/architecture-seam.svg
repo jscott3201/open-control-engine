@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 490" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
-  <title id="title">Open Control Engine architecture: the CDL §7.17 non-computational seam</title>
+  <title id="title">Open Control Engine architecture: the non-computational metadata seam (ANSI/ASHRAE 231-2026 §5.13; OBC specification §7.17)</title>
   <desc id="desc">A host application drives the engine through the oce-api facade. The engine is pure: plain data in, plain data out. The deterministic execution core (Group A) sees only blocks, connections, and values and has no database. Everything non-computational — topology, points, parameters, trends, semantics, and durability — sits behind the oce-store port, reached by the host only, through traits, with an in-memory default and app-side adapters. The facade never reaches the store.</desc>
 
   <rect width="960" height="490" fill="#ffffff"/>
@@ -38,7 +38,7 @@
 
   <!-- the seam -->
   <line x1="592" y1="188" x2="592" y2="464" stroke="#5f6368" stroke-width="1.5" stroke-dasharray="6 5"/>
-  <text x="592" y="176" text-anchor="middle" font-size="11.5" font-weight="600" fill="#5f6368">CDL §7.17 seam</text>
+  <text x="592" y="176" text-anchor="middle" font-size="11.5" font-weight="600" fill="#5f6368">metadata seam</text>
 
   <!-- Storage port -->
   <rect x="604" y="180" width="336" height="290" rx="10" fill="#e6f4ea" stroke="#137333" stroke-width="2"/>

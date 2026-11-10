@@ -678,7 +678,8 @@ a safety engine, with its worst cases and its subtle bugs. A later `structural_i
 without moving this one.
 
 **3. `SemanticPoint` records, `extends`, comments, annotations, `@context` and authored order
-never enter the id** (owner). Why: the §7.17 seam keeps semantic records non-computational, and
+never enter the id** (owner). Why: the metadata seam (ANSI/ASHRAE 231-2026 §5.13; OBC
+specification §7.17) keeps semantic records non-computational, and
 authoring decisions 2, 5 and 6 keep `extends` as opaque provenance and order as presentation.
 Rejected: hashing the `SemanticPoint` slot too (it would make M8's record shape, not yet designed,
 part of every id); keeping authored order (that is the order-bearing id being replaced).

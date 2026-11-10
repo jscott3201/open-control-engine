@@ -4,6 +4,55 @@ For anyone asking "does this run *my* sequence?" This page states which CDL clas
 implements, what the 46 conformance fixtures actually are, and — the part that matters most —
 what the word "supported" is doing in each of those sentences.
 
+## The standard this page measures against
+
+CDL is published as **ANSI/ASHRAE Standard 231-2026**, *A Control Description Language for
+Building Environmental Control Sequences*. Where this documentation cites the standard it uses the
+standard's own clauses: metadata is §5.13, the Control Exchange Format (CXF) is §6 and the
+elementary blocks are §7. The
+[OpenBuildingControl specification](https://obc.lbl.gov/specification/index.html) is the public,
+informal text of the same language and numbers its sections differently: metadata is its §7.17
+and CXF its §8. A page that cites the metadata rule names both (ANSI/ASHRAE 231-2026 §5.13; OBC
+specification §7.17).
+
+The standard has no verification, conformance or code-generation clause. Checking a real
+controller against a sequence is the OpenBuildingControl specification's §12, which is not part of
+the standard; the [commissioning verifier](design/commissioning.md) follows that section.
+
+**Elementary blocks.** The standard's normative elementary blocks are based on the Modelica
+Buildings Library v12.1.0 (recorded in GitHub issue #510). The registry and the vendored sources
+are pinned at Buildings commit `a131864` (`third_party/modelica-buildings-cdl/README.md`). No CDL
+block is added or removed between the two: the file list under `Buildings/Controls/OBC/CDL` is
+the same at tag `v12.1.0` and at the pin, 343 files of which 318 are `.mo` (checked 2026-11-09).
+The two trees are not byte-identical, and the contents of the files were not compared.
+
+**CXF namespace.** On the public evidence the namespace of the standard's CXF vocabulary is
+`http://data.ashrae.org/S231#`: the OpenBuildingControl specification's §11.3 and modelica-json's
+`CXF-Core.jsonld` (vendored at `third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld`) both
+bind it. This project has not read §6.2 of the standard, so that rests on those two sources and
+not on the standard's text. The engine's exporter still binds `http://data.ashrae.org/S231P#`,
+spelled with the proposed standard's designation (231P), until GitHub issue #527 switches it;
+`S231P` appears in this documentation only as that literal identifier. The spellings the importer
+accepts and refuses today are listed under
+[host responsibilities](host-responsibilities.md#cxf-point-identities-are-the-authored-ids).
+
+## What the engine does not execute
+
+CDL has three kinds of block. The engine executes two: **elementary blocks**, the registered
+classes in the next section, and **composite blocks**, which the CXF resolver lowers to elementary
+blocks at load ([CXF composite subset](cxf-composite-subset.md)). It does not execute an
+**extension block**. An extension block is implemented by a Functional Mockup Unit (OBC
+specification §7.13) that its CXF form names with `S231:hasFmuPath` (OBC specification §8.7), and
+the engine has no FMI import: FMI is out of scope before 1.0 (owner ruling, 2026-11-09, GitHub
+issue #510). Every count on this page, and every use of "supported", is a claim about elementary
+and composite blocks. Extension blocks are outside it.
+
+At load an extension block is not a special case. The importer reads `S231:hasFmuPath` as a
+modeled property and nothing consumes it. An instance whose class is not in the registry and that
+contains no blocks is refused with `class-not-found`, like any other unregistered leaf
+([acceptance preconditions](cxf-composite-subset.md#acceptance-preconditions)). The diagnostic
+vocabulary reserves an advisory code, `missing-fmu-path`, that nothing emits today.
+
 ## The elementary-block registry
 
 The engine registers **136 block classes**: 133 CDL elementary classes plus 3 reserved internal

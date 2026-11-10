@@ -1,4 +1,4 @@
-# Commissioning verifier (CDL §12)
+# Commissioning verifier (OBC specification §12)
 
 **Design note, written before any verifier code.** It fixes what the commissioning verifier is, its
 test-spec and point-mapping files, unit conversion, the envelope, indicators, time handling, the
@@ -8,8 +8,11 @@ technical recommendations the orchestrator accepted; both are stated here, not r
 replaced 17 and 21 (see [Review rulings](#review-rulings)). It answers GitHub #436 and drives
 [the replay API](replay.md) (GitHub #435, merged as GitHub #443; the crate is #445).
 
-CDL §12.7.1 states the product: "a report that describes whether the real implementation conforms
-to the CDL implementation within a user-specified error tolerance."
+The OpenBuildingControl specification's §12.7.1 states the product: "a report that describes
+whether the real implementation conforms to the CDL implementation within a user-specified error
+tolerance." Every §12 citation in this note is a section of that specification's
+[Verification chapter](https://obc.lbl.gov/specification/verification.html). Verification is not
+part of ANSI/ASHRAE 231-2026, which has no verification or conformance clause.
 
 ## What the verifier is, and is not
 
@@ -17,13 +20,14 @@ It is the **tolerance mode of `oce-verify`** (M3), a leverage crate above the fa
 `oce-api` and `oce-replay` only. Given a test spec, it loads the CDL sequence's CXF into an
 `Engine`, applies the spec's parameters, feeds the trended inputs of a real controller (or a
 simulation's inputs) through the replay API, and compares the engine's outputs with the trended
-outputs, per CDL §12.4: "the CDL runs on trended inputs and is compared with trended outputs."
+outputs, per OBC §12.4: "the CDL runs on trended inputs and is compared with trended outputs."
 
 - It is **never the default comparison**. `oce-verify`'s default is exact; tolerance mode is chosen
   by the spec, and every receipt names the comparison mode and the envelope.
 - It **never changes the engine**. It adds nothing to `oce-api`, sets parameters only through the
   facade's halt / `set_param` / resume path, and the engine keeps its
-  [§7.17 seam](../architecture.md#the-organising-idea-the-cdl-717-non-computational-seam).
+  [metadata seam](../architecture.md#the-organising-idea-the-non-computational-metadata-seam)
+  (ANSI/ASHRAE 231-2026 §5.13; OBC specification §7.17).
 - **Unit conversion and point mapping happen outside the engine**, in the verifier's source adapter,
   as §12.7 requires: conversion "will need to be done by the tool that reads the CSV files", because
   "CDL provides all required unit information, but this is not the case in general for a building

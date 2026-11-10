@@ -435,7 +435,7 @@ the exclusion table, which names one kind per fixture, tests the order.
   (stage 1 bypassed, engine code as the table says). Emitter: byte goldens for an enumeration
   parameter, both bounds on both boundary kinds, a one-sided bound and a constant member; each loads
   warning-free; a bound moves the content id of an input and not of an output, as the content-id
-  note says; the §7.17 seam test still passes.
+  note says; the metadata seam test still passes.
 - **Goldens re-blessed, named.** `crates/leverage/oce-author/schema/sequence.schema.json`,
   `tests/fixtures/emit/every_element.cxf.json` (gains bounds, an enumeration parameter and a constant
   member) and the finding goldens that list stage-1 codes. Engine goldens are untouched: the 46

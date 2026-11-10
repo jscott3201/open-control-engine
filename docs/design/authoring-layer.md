@@ -33,7 +33,8 @@ It is **not** a second engine. It never evaluates an expression, never schedules
 single assignment or an algebraic loop, and never opens a network listener. The only path from an
 authored sequence to the engine is CXF bytes imported by `oce-cxf` through `Engine::load_cxf`. The
 engine judges the result; the authoring layer reports that judgement in the author's terms. Nothing
-here changes [the §7.17 seam](../architecture.md#the-organising-idea-the-cdl-717-non-computational-seam)
+here changes [the metadata seam](../architecture.md#the-organising-idea-the-non-computational-metadata-seam)
+(ANSI/ASHRAE 231-2026 §5.13; OBC specification §7.17)
 or anything the engine will never do; the binary carve-out is in decision 9.
 
 ## The authoring model
@@ -411,8 +412,8 @@ reference the bare parameter name. Array parameters use the `isArray` / `numberD
 author assigned and never fills a default (decision 16).
 
 **Semantics.** Boundary nodes carry `S231:unit` (from `SemanticPoint.unit`), `S231:quantity` and
-`S231:displayUnit` where authored, and nothing else, until M8 fixes the CDL §7.17.2 record shape.
-No Brick, 223P, QUDT or Haystack record is written.
+`S231:displayUnit` where authored, and nothing else, until M8 fixes the record shape of the OBC
+specification's §7.17.2. No Brick, 223P, QUDT or Haystack record is written.
 
 **Writer.** The emitter owns a canonical writer: objects are ordered vectors with a fixed key order
 per node kind, two-space indentation, one trailing newline, ASCII-only output with `\uXXXX`
@@ -489,7 +490,7 @@ discipline are easier to own than to inherit.
 (`name`, `label`, `unit`, `brick`, `s223`, `qudt`, `haystack`, `provisional`) in the model and both
 forms; the validator checks syntax only; the emitter writes today's `unit`, `quantity` and
 `displayUnit` attributes and no semantic records; `provisional` marks an unfilled slot. Rejected:
-inventing a `semantic` JSON-LD shape now; leaving the slot out. Why: the §7.17.2 shape belongs to
+inventing a `semantic` JSON-LD shape now; leaving the slot out. Why: the OBC §7.17.2 shape belongs to
 M8, and the engine must round-trip it. The library CXF has no records, so "required" means "the
 slot exists, and is validated if present".
 
@@ -648,7 +649,7 @@ without moving them.
   M3 also gives `extends` its resolution and diff. Four library rules are known to differ in node
   order from the emitter's layout; library bundle v2 regenerates them with the emitter, or the gate
   compares loaded models for them.
-- **M8 (semantics)** fixes the §7.17.2 record shape. The emitter then writes `SemanticPoint`
+- **M8 (semantics)** fixes the OBC §7.17.2 record shape. The emitter then writes `SemanticPoint`
   records with no change to the model, either form or the schema.
 - **Vocabulary v1** (from `modelica-json -o doc` over `third_party/`) supplies units, descriptions
   and agent notes; the plan's type and unit checks wait for it.
@@ -685,7 +686,7 @@ without moving them.
   canonical content id, and the 3 with block-port bounds are refused (`port-attribute`, importer
   note decision 8).
 - **CLI.** Golden JSON reports for each command and exit-code tests for each outcome class.
-- **§7.17 seam.** Filling and mutating every `SemanticPoint` field leaves emitted bytes unchanged
+- **Metadata seam.** Filling and mutating every `SemanticPoint` field leaves emitted bytes unchanged
   except `unit`, and leaves the loaded executable identical.
 
 ## Out of scope for M2

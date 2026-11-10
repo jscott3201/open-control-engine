@@ -7,9 +7,10 @@ crates owns, and what this engine will never do for you.
 The [product contract](product-contract.md) owns the aggregate requirement/evidence map and delegates
 domain semantics without turning future acceptance outcomes into current behavior.
 
-## The organising idea: the CDL §7.17 non-computational seam
+## The organising idea: the non-computational metadata seam
 
-CDL §7.17 states that point lists, trends, display units, tags, and all Brick / Haystack / ASHRAE
+CDL's metadata clause (ANSI/ASHRAE 231-2026 §5.13; OBC specification §7.17) states
+that point lists, trends, display units, tags, and all Brick / Haystack / ASHRAE
 223P semantics **do not affect the computation of a control signal**. That is the cleanest seam
 available in this problem domain, and the engine is built along it rather than around it.
 
@@ -17,7 +18,7 @@ available in this problem domain, and the engine is built along it rather than a
 pure: plain data in, plain data out. Below it, a deterministic execution core labelled Group A
 contains oce-model, oce-expr, oce-blocks, oce-validate, oce-graph, oce-cxf, oce-semantics and
 oce-diag; it sees only blocks, connections and values, evaluates a frozen Kahn schedule over flat
-arrays, and has no database. A line marked "CDL §7.17 seam" separates it from the storage side,
+arrays, and has no database. A line marked "metadata seam" separates it from the storage side,
 where the oce-store port publishes the ModelStore, PointStore and SemanticStore traits, served
 either by its in-memory MemStore (the default mem feature) or by an app-side adapter over a graph
 DB, SQL or time-series backend. Only the host reaches the storage side; the facade never does. The library
