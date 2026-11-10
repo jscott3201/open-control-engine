@@ -1002,7 +1002,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   row becomes "the vector format". Nothing is implemented. It is registered in `docs/README.md`
   and the book.
 - **The published standard is named, cited by its own clauses, and the coverage claim says what the
-  engine does not execute** (issue #510; owner rulings of 2026-11-09). CDL is published as
+  engine does not execute** (GitHub #539, issue #510; owner rulings of 2026-11-09). CDL is published as
   ANSI/ASHRAE Standard 231-2026, and the README, the architecture page and `docs/cdl-coverage.md`
   now say so. Where the documentation cited "CDL §7.17" for the metadata seam it names both
   numberings (ANSI/ASHRAE 231-2026 §5.13; OBC specification §7.17), and the commissioning
@@ -1020,7 +1020,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   extension block is implemented by an FMU (ANSI/ASHRAE 231-2026 §5.9 and §6.7; OBC specification
   §7.13 and §8.7), FMI is out of scope before 1.0, and an instance of an unregistered class with
   no children is refused with `class-not-found` (read from the resolver; no fixture exercises an
-  extension block). The standard's clause numbers come from its published table of contents, not
+  extension block, and a dedicated refusal code with fixtures is issue #537). The standard's clause numbers come from its published table of contents, not
   its text. Documentation only: no behaviour, signature, fixture or golden changes, and
   the rustdoc citations in the crates are not yet renamed.
 

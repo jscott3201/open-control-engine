@@ -49,7 +49,8 @@ issue #510). Every count on this page, and every use of "supported", is a claim 
 and composite blocks. Extension blocks are outside it.
 
 At load an extension block is not a special case. This paragraph was read from the resolver's
-source; no fixture or test exercises an extension block. The importer reads `S231:hasFmuPath` as a
+source; no fixture or test exercises an extension block, and a dedicated refusal code with
+fixtures is GitHub issue #537. The importer reads `S231:hasFmuPath` as a
 modeled property and nothing consumes it. An instance whose class is not in the registry and that
 contains no blocks is refused with `class-not-found`, like any other unregistered leaf
 ([acceptance preconditions](cxf-composite-subset.md#acceptance-preconditions)). The diagnostic
