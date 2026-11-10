@@ -111,7 +111,7 @@ pub fn identity(engine: &Engine) -> String {
 }
 
 /// The loaded executable as compiled-schedule blob bytes with the content-id field (header bytes
-/// 20..52, format 2) and the CRC-32C trailer that covers it zeroed, so two executables compare
+/// 20..52) and the CRC-32C trailer that covers it zeroed, so two executables compare
 /// without their content id. Like [`identity`], the one place the id's position is known.
 pub fn executable(engine: &Engine) -> Vec<u8> {
     let blob = engine.compile_blob().expect("blob");

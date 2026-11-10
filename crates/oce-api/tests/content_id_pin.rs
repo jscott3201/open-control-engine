@@ -1,4 +1,4 @@
-//! The canonical content id pin: `tests/fixtures/content_id/restamp.tsv` holds the
+//! The canonical content id pin: `tests/fixtures/content_id/pin.tsv` holds the
 //! `Engine::content_id` of every corpus document, one line per document. This test regenerates
 //! the whole file and compares it byte for byte; `OCE_BLESS=1` rewrites it. Any change to an id
 //! shows in review as a one-line diff.
@@ -15,7 +15,7 @@ use std::path::PathBuf;
 use corpus::*;
 
 fn table_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/content_id/restamp.tsv")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/content_id/pin.tsv")
 }
 
 fn rendered() -> String {
@@ -25,7 +25,7 @@ fn rendered() -> String {
     );
     writeln!(out, "# Engine version: {}", env!("CARGO_PKG_VERSION")).unwrap();
     out.push_str(
-        "# Owner test: crates/oce-api/tests/content_id_restamp.rs (regenerate with OCE_BLESS=1).\n",
+        "# Owner test: crates/oce-api/tests/content_id_pin.rs (regenerate with OCE_BLESS=1).\n",
     );
     let mut rows: Vec<(String, String)> = corpus()
         .into_iter()
@@ -48,7 +48,7 @@ fn the_pin_matches_every_documents_current_id() {
         std::fs::write(table_path(), &rendered).unwrap();
         return;
     }
-    let checked_in = std::fs::read_to_string(table_path()).expect("read restamp.tsv");
+    let checked_in = std::fs::read_to_string(table_path()).expect("read pin.tsv");
     assert_eq!(
         checked_in, rendered,
         "a canonical content id moved; bless deliberately with OCE_BLESS=1"

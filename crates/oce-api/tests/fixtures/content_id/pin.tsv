@@ -1,7 +1,7 @@
 # Canonical content id pin: <content id> TAB <source path>, sorted by path.
 # The id is Engine::content_id (oce:canon1, SHA-256) of the loaded document.
 # Engine version: 0.5.0
-# Owner test: crates/oce-api/tests/content_id_restamp.rs (regenerate with OCE_BLESS=1).
+# Owner test: crates/oce-api/tests/content_id_pin.rs (regenerate with OCE_BLESS=1).
 oce:canon1:24a5b85676ff08f35ede152e6f795a6ba0da8289d7d668580f61a7eeeea0a56f	crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld
 oce:canon1:8abbfc5c1ed1ba9cdbb68105de5554acb331986ce924e7882ab59e24cf23b0b1	crates/oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld
 oce:canon1:913f05335f3f184916ba33e5a86bf32bb00c27d15cbbc7584a2f597659437559	crates/oce-cxf/tests/fixtures/g36/cooling_only_active_air_flow.jsonld

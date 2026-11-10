@@ -626,7 +626,8 @@ hand-built model's "no id", and `compile_blob` refuses on any other. `ContentId`
 
 **Docs in this repo.** The identity glossary in `facade-contracts.md` replaces "Complete export
 content identity … No order-independent model identity is provided" with the canonical id;
-`facade-migration.md` (line 143, the `content_id_complete()` row); `cxf-round-trip.md`'s
+`facade-migration.md` (line 143, the `content_id_complete()` row; the page was retired with issue
+#531); `cxf-round-trip.md`'s
 "`content_id_complete`: a checked integrity tag, not a digest" section (~lines 174 to 198); the
 "Dense IDs versus authored identity" row of `cxf-composite-subset.md`; `compiled-schedule-blob.md`;
 `replay-record.md`; and the M3 status row of `README.md` (the README has no other content-id
@@ -650,12 +651,14 @@ The old id is `-` where none existed (the export was partial). The source path i
 repository root, with `/` separators. Lines starting with `#` are comments and come first: the
 format line, the engine version the new ids were computed with and the owner test.
 
-**In this repo** the file is `crates/oce-api/tests/fixtures/content_id/restamp.tsv`, one line per
-corpus document. Its owner test recomputes the id of every document and compares the whole file
-byte for byte; `OCE_BLESS=1` regenerates it. *Amended 2026-11-09 (issue #509):* the old-id column
-is dropped here. The owner ruled that formats change in place before 1.0.0 with no importer,
-mapping table or dual-read path, so this repo keeps the file as a plain pin of current ids,
-`<content id><TAB><source path>`, and holds no retired id.
+**In this repo** the file is `crates/oce-api/tests/fixtures/content_id/pin.tsv`, one line per
+corpus document. Its owner test (`crates/oce-api/tests/content_id_pin.rs`) recomputes the id of
+every document and compares the whole file byte for byte; `OCE_BLESS=1` regenerates it. *Amended
+2026-11-09 (issue #509):* the old-id column is dropped here. The owner ruled that formats change in
+place before 1.0.0 with no importer, mapping table or dual-read path, so this repo keeps the file
+as a plain pin of current ids, `<content id><TAB><source path>`, and holds no retired id. The file
+and its test were first named `restamp.tsv` and `content_id_restamp.rs`, for the job the old-id
+column served; they were renamed with issue #531.
 
 **In the library** (track L3) the same format is produced by the library's own tooling: for every
 card, its stored old id and its source path, and the new id from `oce id <file>` (a one-line `oce`
@@ -757,10 +760,10 @@ wants the id of a completely exportable model asks `Engine::content_id` and
 1 because the decoder ignores the field (the blob note's decision 6 says a change of the field's
 meaning bumps the version, and a host comparing two blobs' ids must not compare across meanings).
 
-**16. The compatibility descriptor goes to revision 2 with a `content` line.** Rejected: keeping
-`export` at revision 1 with a new tag grammar (a persisted receipt would change meaning without a
-revision). Why: the descriptor's contract is exact-byte comparison and refusal of unknown
-revisions.
+**16. The compatibility descriptor gets a `content` line and a new revision number.** Rejected:
+keeping `export` at revision 1 with a new tag grammar (a persisted receipt would change meaning
+without a revision). Why: the descriptor's contract is exact-byte comparison and refusal of
+unknown revisions.
 
 *Amended 2026-11-09 (issue #509): decisions 15 and 16 are superseded on the numbers, not on the
 bytes.* The owner ruled that every format and schema stays at revision 1 until 1.0.0 and changes in
@@ -769,11 +772,15 @@ place. The blob field still holds the digest and the descriptor still has its `c
 meanings is the engine version: the blob header and the descriptor's `oce-api-version` line carry
 it, and the workspace version moved to 0.5.0 with the reset.
 
-**17. The mapping table is plain TSV, sorted, with `-` for a missing old id**, owned by a test in
-this repo and produced by the library's own tooling for its cards. Rejected: JSON (no gain for
-three string fields, and a noisier diff); keying the table by old id alone (13 fixtures have
-none). Why: one line per document diffs and greps cleanly, and the re-stamp refuses rather than
-guesses.
+**17. Struck 2026-11-09 (issue #509).** As decided, the mapping table was plain TSV, sorted, with
+`-` for a missing old id, owned by a test in this repo and produced by the library's own tooling
+for its cards; JSON and a table keyed by old id alone were rejected. The owner then ruled that
+formats change in place before 1.0.0 with no importer, mapping table or dual-read path, so this
+repo owns no mapping table and nothing in it maps one id scheme to another. What it keeps is a
+pin: `crates/oce-api/tests/fixtures/content_id/pin.tsv` holds the current id of each of the 47
+corpus documents, `<content id><TAB><source path>`, sorted by path, regenerated and compared by
+`crates/oce-api/tests/content_id_pin.rs`. One line per document still diffs and greps cleanly,
+which is all that survives of the decision.
 
 ## Relation to other work
 
@@ -823,7 +830,8 @@ What the core PR must prove:
 - **Worked examples.** The three documents above are checked in; their canonical bytes equal the
   dumps byte for byte and their ids equal the ones printed, and the two `TrueDelay` documents have
   different ids. A hand-assembled byte vector in the test, not the encoder, is the oracle.
-- **Mapping table.** `restamp.tsv` pins the new id of all 46 fixtures; any change shows in review.
+- **Mapping table.** `restamp.tsv` (now `pin.tsv`, the content-id pin) pins the new id of all 46
+  fixtures; any change shows in review.
 - **Permutation classes, over all 46 fixtures**, enumerated, no RNG: `@graph` reversed and rotated;
   `containsBlock`, `isConnectedTo`, `hasInput`/`hasOutput` and `hasParameter` arrays reversed where
   the document still loads to the same ground values; compact and expanded IRIs; the namespace

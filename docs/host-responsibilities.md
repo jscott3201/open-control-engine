@@ -388,7 +388,6 @@ Hosts prepare supported CXF outside the engine. Likewise, hosts decode CSV/table
 facade and provide complete `prepare_frame` observations. `AssertLevel` contains only `Warning`,
 which is now also its default; assertion reports neither escalate nor stop equipment. The collector
 preserves the block's diagnostic source (currently the Assert class path, not an instance identity).
-See [facade migration](facade-migration.md) for the intentional pre-release source/default break.
 
 `point_list(None)` still returns the engine's own effective inventory. Its existing argument remains,
 but device filtering is outside support: every `Some` returns `OcError::Load` directly, without

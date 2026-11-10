@@ -20,7 +20,6 @@ front door; these pages are the detail behind it.
 | [Host responsibilities](host-responsibilities.md) | What safety behavior you must implement yourself, before wiring the engine to equipment |
 | [CI and the gate](ci-and-the-gate.md) | What runs when, and what a green check does and does not prove |
 | [Benchmarks](benchmarks.md) | Current complete-frame allocation/latency harness and historical throughput, qualified by the commit and host that produced it |
-| [Facade migration](facade-migration.md) | Frame-only execution migration, removed pre-release names, Warning-only diagnostics and preserved host boundaries |
 
 ## Design notes
 

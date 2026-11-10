@@ -803,8 +803,9 @@ library (a clock in a crate that runs none). *(Ruled 2026-11-09: accepted.)*
 **32. Exact mode is `{ "mode": "exact" }`.** No envelope fields.
 
 **33. `engine_version` is `CompatibilityDescriptor::current(None).oce_api_version()`, and it is
-hashed.** The facade's Cargo version: `0.4.0` in the tree today, `0.5.0` once #509 lands; by that
-accessor's own words not a build identity. It stays inside `receipt_id`, so a version bump
+hashed.** The facade's Cargo version, which is the workspace version: the first PR after a release
+tag that changes a format's bytes or meaning bumps it on `development` to the next milestone's
+version (#509); by that accessor's own words not a build identity. It stays inside `receipt_id`, so a version bump
 re-blesses every golden receipt. Rejected: leaving it out of the hashed part (two engine versions
 could then issue one receipt id).
 
@@ -929,8 +930,9 @@ The content id it was also to print has its own verb, `oce id` (#513).
 - Expected state; a run-time warning code; any change to `oce-api` other than #460.
 - Writing traces to disk (`Trace::canonical_bytes` is not a published format) and a resumable
   `run_vectors` for the browser (M4).
-- `restamp.tsv`'s old-id column and the "library bundle v2" wording in the authoring, importer
-  and content-id notes: the issue lists them, and they belong to #509 and M3b.
+- The old-id column of the content-id pin (`restamp.tsv` then, `pin.tsv` now) and the "library
+  bundle v2" wording in the authoring, importer and content-id notes: the issue lists them, and
+  they belong to #509 and M3b.
 
 ## Review rulings
 

@@ -197,10 +197,9 @@ Stating this plainly is more useful than a feature list.
   `set_param` is accepted; complete-frame execution can continue while halted with no pending edits.
 - **Deferred loader signatures have been removed.** `load_from_semantic` and `load_modelica`
   are no longer callable; prepare supported CXF externally and use `load_cxf`.
-  See [facade migration](docs/facade-migration.md) for the pre-release source break.
 - **Assertion events and `AssertLevel` are Warning-only.** `AssertLevel::default()` is now
   `Warning`; the never-emitted `AssertLevel::Error` variant was removed. This adds no escalation
-  or safety policy. See [facade migration](docs/facade-migration.md).
+  or safety policy.
 
 ---
 
@@ -385,7 +384,6 @@ repository is the newer copy.
 | [Product contract](docs/product-contract.md) | The versioned executable-CXF / HostTick boundary and its evidence map |
 | [State compatibility](docs/state-compatibility.md) | Snapshot and checkpoint bytes: what is portable, what is target-bound |
 | [Strict-bit evidence](docs/strict-bit-evidence.md) | What the per-PR native matrix proves about exact Real results |
-| [Facade migration](docs/facade-migration.md) | Pre-1.0 source breaks and how to move across them |
 | [Compiled-schedule blob](docs/compiled-schedule-blob.md) | What travels in an OCEB blob, what does not, versioning and the trust model |
 | [Design notes](docs/design/compiled-schedule-blob.md) | One-page decisions written before thinly specified work; currently the OCEB blob format |
 | [CI and the gate](docs/ci-and-the-gate.md) | What runs when, and what a green check proves |
