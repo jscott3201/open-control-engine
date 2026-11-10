@@ -1017,9 +1017,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `http://data.ashrae.org/S231#` on the evidence of the OBC specification §11.3 and modelica-json's
   `CXF-Core.jsonld`, while the exporter still binds `http://data.ashrae.org/S231P#` until issue
   #527. The second states that the engine executes elementary and composite blocks only: an
-  extension block is implemented by an FMU (OBC specification §7.13, §8.7), FMI is out of scope
-  before 1.0, and an instance of an unregistered class with no children is refused with
-  `class-not-found`. Documentation only: no behaviour, signature, fixture or golden changes, and
+  extension block is implemented by an FMU (ANSI/ASHRAE 231-2026 §5.9 and §6.7; OBC specification
+  §7.13 and §8.7), FMI is out of scope before 1.0, and an instance of an unregistered class with
+  no children is refused with `class-not-found` (read from the resolver; no fixture exercises an
+  extension block). The standard's clause numbers come from its published table of contents, not
+  its text. Documentation only: no behaviour, signature, fixture or golden changes, and
   the rustdoc citations in the crates are not yet renamed.
 
 ## 0.4.0

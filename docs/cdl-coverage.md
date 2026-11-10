@@ -13,7 +13,8 @@ elementary blocks are §7. The
 [OpenBuildingControl specification](https://obc.lbl.gov/specification/index.html) is the public,
 informal text of the same language and numbers its sections differently: metadata is its §7.17
 and CXF its §8. A page that cites the metadata rule names both (ANSI/ASHRAE 231-2026 §5.13; OBC
-specification §7.17).
+specification §7.17). The standard's clause numbers on this page are taken from its published
+table of contents, not from its text.
 
 The standard has no verification, conformance or code-generation clause. Checking a real
 controller against a sequence is the OpenBuildingControl specification's §12, which is not part of
@@ -41,13 +42,14 @@ accepts and refuses today are listed under
 CDL has three kinds of block. The engine executes two: **elementary blocks**, the registered
 classes in the next section, and **composite blocks**, which the CXF resolver lowers to elementary
 blocks at load ([CXF composite subset](cxf-composite-subset.md)). It does not execute an
-**extension block**. An extension block is implemented by a Functional Mockup Unit (OBC
-specification §7.13) that its CXF form names with `S231:hasFmuPath` (OBC specification §8.7), and
-the engine has no FMI import: FMI is out of scope before 1.0 (owner ruling, 2026-11-09, GitHub
+**extension block**. An extension block is implemented by a Functional Mockup Unit (ANSI/ASHRAE
+231-2026 §5.9; OBC specification §7.13) that its CXF form names with `S231:hasFmuPath`
+(ANSI/ASHRAE 231-2026 §6.7; OBC specification §8.7), and the engine has no FMI import: FMI is out of scope before 1.0 (owner ruling, 2026-11-09, GitHub
 issue #510). Every count on this page, and every use of "supported", is a claim about elementary
 and composite blocks. Extension blocks are outside it.
 
-At load an extension block is not a special case. The importer reads `S231:hasFmuPath` as a
+At load an extension block is not a special case. This paragraph was read from the resolver's
+source; no fixture or test exercises an extension block. The importer reads `S231:hasFmuPath` as a
 modeled property and nothing consumes it. An instance whose class is not in the registry and that
 contains no blocks is refused with `class-not-found`, like any other unregistered leaf
 ([acceptance preconditions](cxf-composite-subset.md#acceptance-preconditions)). The diagnostic
@@ -305,7 +307,8 @@ every block that drives an input it reads at that call. An algebraic block reads
 when it fires. A stateful block reads every input that feeds through to any of its outputs. The
 refusal happens when a path leaves one output of a block and comes back into an input that the
 block reads when it fires, but that the output does not depend on under CDL. The connector graph
-then has no cycle, so CDL §7.16 is satisfied, but there is no single point at which the block can
+then has no cycle, so CDL's model of computation (ANSI/ASHRAE 231-2026 §5.12; OBC specification
+§7.16) is satisfied, but there is no single point at which the block can
 fire all its outputs.
 
 The reproduction is `CDL.Routing.RealExtractSignal` with `nin = nout = 2`, so `y1 = u1` and
