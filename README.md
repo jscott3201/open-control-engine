@@ -17,9 +17,10 @@ every pull request.
 
 It is a library and nothing else: no `main`, no daemon, no network listener, no async runtime, and
 no database. Everything non-computational — points, trends, tags, durability — sits behind a
-storage port your application implements. That split is not a design preference; it is CDL's
-metadata clause (ANSI/ASHRAE 231-2026 §5.13; OBC specification §7.17): such metadata does
-not affect the computation of a control signal.
+storage port your application implements. That split is not a design preference. The
+OpenBuildingControl (OBC) specification's metadata section (OBC §7.17; clause 5.13 in the table of
+contents of ANSI/ASHRAE Standard 231-2026) says of that metadata that none of it affects the
+computation of a control signal, and the engine applies that rule to everything non-computational.
 
 Its four execution-core crates build `#![no_std]` on `core` and `alloc` alone, and the work in
 progress lets a verified sequence leave a `std` host as a compiled-schedule blob that a bare-metal
@@ -125,9 +126,9 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
 
 ## What it does today
 
-- Imports CXF via the CDL §7.1 resolver, and **exports** back to CXF under a round-trip contract
-  where re-importing the emitted bytes renders bit-identically — Reals compared by IEEE-754 bits,
-  not by epsilon. See [CXF round trip](docs/cxf-round-trip.md).
+- Imports CXF through the `oce-cxf` resolver, and **exports** back to CXF under a round-trip
+  contract where re-importing the emitted bytes renders bit-identically — Reals compared by
+  IEEE-754 bits, not by epsilon. See [CXF round trip](docs/cxf-round-trip.md).
 - Executes a registry of **133 CDL elementary block classes** plus 3 reserved internal lowering
   classes, enumerable at runtime via `oce_api::catalog()` with per-class ports, parameter rules,
   and honest parameter defaults. See [CDL coverage](docs/cdl-coverage.md).
@@ -280,8 +281,8 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 
 The three one-page design passes M3 waits on are written: the
 [historical replay API](docs/design/replay.md) (built as `crates/leverage/oce-replay`), the
-[commissioning verifier](docs/design/commissioning.md) (it follows the OpenBuildingControl
-specification's §12, which is not part of the standard) and
+[commissioning verifier](docs/design/commissioning.md) (it follows OBC §12, Verification; the
+standard's table of contents lists no verification clause) and
 [`oce-diff`](docs/design/diff.md), beside the [M2 authoring layer](docs/design/authoring-layer.md).
 M2's engine prerequisite is in: `oce_api::class_ports` names every port of a configured block, and
 `oce_api::class_metadata` gives each class a description and each parameter a settable flag
@@ -313,11 +314,12 @@ anything to a physical output.
 
 ## Architecture
 
-CDL's metadata clause (ANSI/ASHRAE 231-2026 §5.13; OBC specification §7.17) states
-that point lists, trends, display units, tags, and Brick / Haystack / ASHRAE 223P
-semantics do not affect the computation of a control signal. That one rule is the seam the whole
-system is built around: an execution core that sees only blocks, typed connections, and values, and
-a storage port for everything else, which the host reaches and the engine never does.
+OBC §7.17 (clause 5.13 in the table of contents of ANSI/ASHRAE Standard 231-2026) says of CDL's
+metadata that none of it affects the computation of a control signal. The engine applies that rule
+to point lists, trends, display units, tags, and Brick / Haystack / ASHRAE 223P semantics. That one
+rule is the seam the whole system is built around: an execution core that sees only blocks, typed
+connections, and values, and a storage port for everything else, which the host reaches and the
+engine never does.
 
 ![The execution core sees only blocks, connections, and values and has no database; everything non-computational sits behind the oce-store port, which only the host reaches](docs/diagrams/architecture-seam.svg)
 
@@ -373,7 +375,7 @@ repository is the newer copy.
 
 | Page | For |
 | --- | --- |
-| [Architecture](docs/architecture.md) | Layers, the metadata seam (231 §5.13; OBC §7.17), the crate map, platform and MSRV |
+| [Architecture](docs/architecture.md) | Layers, the metadata seam (OBC §7.17; ANSI/ASHRAE 231-2026 §5.13), the crate map, platform and MSRV |
 | [Execution profile](docs/execution-profile.md) | HostTick semantics and the `CDL.Logical.Pre` conformance boundary |
 | [Verification and evidence](docs/verification-evidence.md) | What has been proven, and what has not |
 | [CDL coverage](docs/cdl-coverage.md) | Which classes and sequences run, and what "supported" means |

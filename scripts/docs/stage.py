@@ -216,7 +216,7 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 - [Compiled-schedule blob (OCEB)](docs/design/compiled-schedule-blob.md)
 - [Authoring layer (M2)](docs/design/authoring-layer.md)
 - [Historical replay API](docs/design/replay.md)
-- [Commissioning verifier (OBC specification §12)](docs/design/commissioning.md)
+- [Commissioning verifier (OBC §12)](docs/design/commissioning.md)
 - [Structural diff (oce-diff)](docs/design/diff.md)
 - [Canonical content id](docs/design/content-id.md)
 - [Importer (oce-author)](docs/design/importer.md)

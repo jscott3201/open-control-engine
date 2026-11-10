@@ -62,8 +62,8 @@ never by the run-local class id. Reals travel as their IEEE-754 bits.
   a target is not supported in v1.
 - **Authored identities beyond the I/O paths.** Instance and connector IRIs, units, quantities,
   display units, point-list, trend and semantic metadata stay on the host; they are
-  non-computational (ANSI/ASHRAE 231-2026 §5.13; OBC specification §7.17). The `SemanticPoint`
-  payload slots exist for them and the decoder never reads them.
+  non-computational (§7.17 of the OpenBuildingControl (OBC) specification; ANSI/ASHRAE 231-2026
+  §5.13). The `SemanticPoint` payload slots exist for them and the decoder never reads them.
 - **The CXF document and its parameter expressions.** Bindings are already evaluated.
 - **Host policy.** The non-finite input policy, diagnostics handling, cadence and every
   [host responsibility](host-responsibilities.md) stay with the host.

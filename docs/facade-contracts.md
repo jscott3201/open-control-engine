@@ -99,8 +99,9 @@ diagnostics; terminal stage and error context still explain failure. No engine c
 An algebraic-loop refusal records one `Error` per member of one concrete cycle at stage `Schedule`:
 `algebraic-loop` for a connector-level feedthrough cycle (subjects are member connector identities)
 and `block-algebraic-loop` for a block-granularity cycle that atomic firing cannot order (subjects
-are member block identities). A `block-algebraic-loop` refusal does not mean the model breaks CDL
-§7.16. No connector-level cycle exists, so the model may be CDL-legal, and the refusal is a
+are member block identities). A `block-algebraic-loop` refusal does not mean the model breaks CDL's
+model of computation (§7.16 of the OpenBuildingControl (OBC) specification). No connector-level
+cycle exists, so the model may be CDL-legal, and the refusal is a
 fail-closed engine coverage limit. The message says so and suggests splitting the block. The block
 shapes that can trigger it and the remedies are listed under
 [Atomic block firing refuses some CDL-legal feedback](cdl-coverage.md#atomic-block-firing-refuses-some-cdl-legal-feedback),

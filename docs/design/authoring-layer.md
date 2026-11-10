@@ -34,7 +34,7 @@ single assignment or an algebraic loop, and never opens a network listener. The 
 authored sequence to the engine is CXF bytes imported by `oce-cxf` through `Engine::load_cxf`. The
 engine judges the result; the authoring layer reports that judgement in the author's terms. Nothing
 here changes [the metadata seam](../architecture.md#the-organising-idea-the-non-computational-metadata-seam)
-(ANSI/ASHRAE 231-2026 §5.13; OBC specification §7.17)
+(§7.17 of the OpenBuildingControl (OBC) specification; ANSI/ASHRAE 231-2026 §5.13)
 or anything the engine will never do; the binary carve-out is in decision 9.
 
 ## The authoring model
@@ -412,8 +412,8 @@ reference the bare parameter name. Array parameters use the `isArray` / `numberD
 author assigned and never fills a default (decision 16).
 
 **Semantics.** Boundary nodes carry `S231:unit` (from `SemanticPoint.unit`), `S231:quantity` and
-`S231:displayUnit` where authored, and nothing else, until M8 fixes the record shape of the OBC
-specification's §7.17.2. No Brick, 223P, QUDT or Haystack record is written.
+`S231:displayUnit` where authored, and nothing else, until M8 fixes the record shape of OBC
+§7.17.2. No Brick, 223P, QUDT or Haystack record is written.
 
 **Writer.** The emitter owns a canonical writer: objects are ordered vectors with a fixed key order
 per node kind, two-space indentation, one trailing newline, ASCII-only output with `\uXXXX`
@@ -490,8 +490,8 @@ discipline are easier to own than to inherit.
 (`name`, `label`, `unit`, `brick`, `s223`, `qudt`, `haystack`, `provisional`) in the model and both
 forms; the validator checks syntax only; the emitter writes today's `unit`, `quantity` and
 `displayUnit` attributes and no semantic records; `provisional` marks an unfilled slot. Rejected:
-inventing a `semantic` JSON-LD shape now; leaving the slot out. Why: the OBC §7.17.2 shape belongs to
-M8, and the engine must round-trip it. The library CXF has no records, so "required" means "the
+inventing a `semantic` JSON-LD shape now; leaving the slot out. Why: the OBC §7.17.2 shape belongs
+to M8, and the engine must round-trip it. The library CXF has no records, so "required" means "the
 slot exists, and is validated if present".
 
 **3. Parameter values: a literal or a named reference, never evaluated.** A reference names a

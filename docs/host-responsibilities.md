@@ -426,7 +426,8 @@ document that binds no `S231` is read in the S231P namespace (`http://data.ashra
 one the exporter binds. (`S231P` is the literal the exporter still emits: on the public evidence
 the published standard, ANSI/ASHRAE 231-2026, uses `http://data.ashrae.org/S231#`, and GitHub
 issue #527 switches the exporter to it; see
-[the standard this engine measures against](cdl-coverage.md#the-standard-this-page-measures-against).)
+[The standard this page measures against](cdl-coverage.md#the-standard-this-page-measures-against)
+on the CDL coverage page.)
 A modeled term spelled in any other known S231 namespace — S231P, the
 `http://data.ashrae.org/S231#` namespace upstream modelica-json emits, or the `https:` spelling of
 either — is refused as `non-subset-construct`, in both directions, and the message names the
