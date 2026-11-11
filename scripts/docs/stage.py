@@ -221,6 +221,7 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 - [Importer (oce-author)](docs/design/importer.md)
 - [Vocabulary v1](docs/design/vocabulary.md)
 - [Vectors, the verify replayer and receipts](docs/design/vectors.md)
+- [Bounding a vector run's work](docs/design/vector-work-budget.md)
 """
     (source / "SUMMARY.md").write_text(summary, encoding="utf-8")
 
