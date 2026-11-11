@@ -1,4 +1,5 @@
-//! The bounds a vector set is read and run under (vectors note, "Bounds"; decision 35).
+//! The bounds a vector set is read and run under (vectors note, "Bounds"; decision 35; the
+//! work-budget note, `docs/design/vector-work-budget.md`, for the four products a run is held to).
 //!
 //! Three are fixed by the strict profile and shared with the authoring wire form: nesting
 //! ([`MAX_DEPTH`]), list length ([`MAX_LIST_LEN`]) and string length ([`MAX_STRING_BYTES`]); one
@@ -65,9 +66,23 @@ pub struct VerifyLimits {
     /// Unmatched run-time warnings a scenario's receipt lists. Maximum 16; past it the list stops
     /// and `warnings_total` keeps the count.
     pub max_recorded_warnings: u32,
-    /// Frames one run may execute, `(N + 1) * scenarios`. Maximum 16,777,216; past it the refusal
-    /// is `too-many-frames`, decided at bind before any frame runs.
+    /// Frames one run may execute, `(N + 1) * scenarios * (1 + mutants)`, every mutant counted as
+    /// if it ran every scenario. Maximum 2^24 = 16,777,216; past it the refusal is
+    /// `too-many-frames`, decided at bind's budget step (the work-budget note).
     pub max_total_frames: u64,
+    /// Instants one run may compare, `(1 + mutants)` times the sum over the scenarios of the ticks
+    /// inside each window plus one per diagnostic expectation. Maximum 2^28 = 268,435,456; past it
+    /// the refusal is `too-many-instants`, decided at bind's budget step.
+    pub max_total_instants: u64,
+    /// Bytes one run may load into an engine, `D * (1 + e + s)`: `D` the subject's bytes and every
+    /// supplied mutant's together, `e` the distinct non-empty effective edit lists, `s` the
+    /// scenarios. Maximum 2^30 = 1,073,741,824; past it the refusal is `too-many-load-bytes`,
+    /// decided at bind's budget step, before any load but the subject's first.
+    pub max_total_load_bytes: u64,
+    /// Byte-frames one run may execute, `(N + 1) * s * D`: each frame weighted by the bytes of
+    /// the document that runs it. Maximum 2^40 = 1,099,511,627,776; past it the refusal is
+    /// `too-many-frame-bytes`, decided at bind's budget step.
+    pub max_total_frame_bytes: u64,
     /// The limits each scenario's replay runs under ([`oce_replay::ReplayLimits`]); each field is
     /// lowered to that crate's documented maximum, never raised. A scenario whose `N + 1` ticks
     /// pass its `max_frames` is `too-many-frames` at bind; a replay stopped by another of them is
@@ -87,7 +102,10 @@ impl VerifyLimits {
         max_mutant_bytes: 64 * 1024 * 1024,
         max_recorded_failures: 16,
         max_recorded_warnings: 16,
-        max_total_frames: 16_777_216,
+        max_total_frames: 1 << 24,
+        max_total_instants: 1 << 28,
+        max_total_load_bytes: 1 << 30,
+        max_total_frame_bytes: 1 << 40,
         replay: ReplayLimits::MAX,
     };
 
@@ -107,6 +125,9 @@ impl VerifyLimits {
             max_recorded_failures: self.max_recorded_failures.min(max.max_recorded_failures),
             max_recorded_warnings: self.max_recorded_warnings.min(max.max_recorded_warnings),
             max_total_frames: self.max_total_frames.min(max.max_total_frames),
+            max_total_instants: self.max_total_instants.min(max.max_total_instants),
+            max_total_load_bytes: self.max_total_load_bytes.min(max.max_total_load_bytes),
+            max_total_frame_bytes: self.max_total_frame_bytes.min(max.max_total_frame_bytes),
             replay: lowered(&self.replay),
         }
     }
@@ -151,6 +172,9 @@ mod tests {
         assert_eq!(limits.max_recorded_failures, 16);
         assert_eq!(limits.max_recorded_warnings, 16);
         assert_eq!(limits.max_total_frames, 16_777_216);
+        assert_eq!(limits.max_total_instants, 268_435_456);
+        assert_eq!(limits.max_total_load_bytes, 1_073_741_824);
+        assert_eq!(limits.max_total_frame_bytes, 1_099_511_627_776);
         assert_eq!(limits.replay, ReplayLimits::MAX);
         assert_eq!(MAX_LOAD_WARNINGS, 64);
         assert_eq!(MAX_DEPTH, 8);
@@ -172,6 +196,9 @@ mod tests {
             max_recorded_failures: 0,
             max_recorded_warnings: 1,
             max_total_frames: 5,
+            max_total_instants: 8,
+            max_total_load_bytes: 9,
+            max_total_frame_bytes: 0,
             replay: ReplayLimits {
                 max_rows: 7,
                 max_columns: 0,
@@ -194,6 +221,9 @@ mod tests {
             max_recorded_failures: u32::MAX,
             max_recorded_warnings: u32::MAX,
             max_total_frames: u64::MAX,
+            max_total_instants: u64::MAX,
+            max_total_load_bytes: u64::MAX,
+            max_total_frame_bytes: u64::MAX,
             replay: ReplayLimits {
                 max_rows: u64::MAX,
                 max_columns: u32::MAX,
@@ -219,6 +249,9 @@ mod tests {
             max_recorded_failures: max.max_recorded_failures + 1,
             max_recorded_warnings: max.max_recorded_warnings + 1,
             max_total_frames: max.max_total_frames + 1,
+            max_total_instants: max.max_total_instants + 1,
+            max_total_load_bytes: max.max_total_load_bytes + 1,
+            max_total_frame_bytes: max.max_total_frame_bytes + 1,
             replay: ReplayLimits {
                 max_rows: max.replay.max_rows + 1,
                 max_columns: max.replay.max_columns + 1,

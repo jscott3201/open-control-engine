@@ -10,7 +10,12 @@
 //! every code in declaration order and a test pins it. Every one is exit 2 with no receipt: a
 //! failed expectation is never an error, it is a failed scenario inside a receipt.
 //!
-//! The mutant rows (`mutant-missing` and the five after it) are bind codes: an invalid or
+//! The four budget rows (`too-many-frames`, `too-many-instants`, `too-many-load-bytes`,
+//! `too-many-frame-bytes`) are bind codes from one step, after the subject's first load and its
+//! names and before every other load (the work-budget note, rulings 6 and 8): each refuses a run
+//! whose work, counted as an upper bound, passes its limit.
+//!
+//! The mutant rows (`mutant-missing` and the seven after it) are bind codes: an invalid or
 //! missing mutant is an error with no receipt, never a score.
 
 use std::fmt;
@@ -60,8 +65,17 @@ pub enum VerifyErrorKind {
     UnsupportedPortType,
     /// The frames the set may need, `(N + 1) * scenarios * (1 + mutants)`, are more than
     /// [`crate::VerifyLimits::max_total_frames`], or one scenario's `N + 1` more than the replay
-    /// limits' `max_frames`.
+    /// limits' `max_frames`. The first budget checked.
     TooManyFrames,
+    /// The instants the set may compare, `(1 + mutants)` times its scenarios' window ticks and
+    /// diagnostic expectations, are more than [`crate::VerifyLimits::max_total_instants`].
+    TooManyInstants,
+    /// The bytes the run may load, the subject's and the supplied mutants' together times
+    /// `1 + e + s`, are more than [`crate::VerifyLimits::max_total_load_bytes`].
+    TooManyLoadBytes,
+    /// The byte-frames the run may execute, `(N + 1) * s` times the subject's and the supplied
+    /// mutants' bytes, are more than [`crate::VerifyLimits::max_total_frame_bytes`].
+    TooManyFrameBytes,
     /// A mutant the set lists whose bytes the run was not given.
     MutantMissing,
     /// Mutant bytes the run was given under a path the set does not list.
@@ -117,6 +131,9 @@ impl VerifyErrorKind {
         Self::EnumPortUnsupported,
         Self::UnsupportedPortType,
         Self::TooManyFrames,
+        Self::TooManyInstants,
+        Self::TooManyLoadBytes,
+        Self::TooManyFrameBytes,
         Self::MutantMissing,
         Self::MutantUnlisted,
         Self::DuplicateMutant,
@@ -150,6 +167,9 @@ impl VerifyErrorKind {
             Self::EnumPortUnsupported => "enum-port-unsupported",
             Self::UnsupportedPortType => "unsupported-port-type",
             Self::TooManyFrames => "too-many-frames",
+            Self::TooManyInstants => "too-many-instants",
+            Self::TooManyLoadBytes => "too-many-load-bytes",
+            Self::TooManyFrameBytes => "too-many-frame-bytes",
             Self::MutantMissing => "mutant-missing",
             Self::MutantUnlisted => "mutant-unlisted",
             Self::DuplicateMutant => "duplicate-mutant",
@@ -183,6 +203,9 @@ pub const VERIFY_ERROR_CODES: &[&str] = &[
     "enum-port-unsupported",
     "unsupported-port-type",
     "too-many-frames",
+    "too-many-instants",
+    "too-many-load-bytes",
+    "too-many-frame-bytes",
     "mutant-missing",
     "mutant-unlisted",
     "duplicate-mutant",

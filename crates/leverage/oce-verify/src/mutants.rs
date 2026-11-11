@@ -4,10 +4,10 @@
 //! subject. The set lists each by path ([`crate::Mutant`]); the caller hands the run each one's
 //! bytes under that path ([`crate::VectorInputs::with_mutants`]); `oce-verify` opens no file.
 //!
-//! **Validation**, at bind, after the subject's parameter edits are tried and the frame budget is
-//! checked (owner ruling of 2026-11-11: the budget is arithmetic on the listed count, so no
-//! mutant is loaded for a set that is over it), and before any frame runs. In this order, the
-//! first refusal winning:
+//! **Validation**, at bind, after the work budgets are checked ([`crate::budget`]: arithmetic on
+//! the listed count and the supplied bytes, so no mutant is loaded for a set that is over one) and
+//! the subject's parameter edits are tried, and before any frame runs. In this order, the first
+//! refusal winning:
 //!
 //! 1. the bytes supplied, in the order given: a path the set does not list is `mutant-unlisted`,
 //!    a path given twice `duplicate-mutant`;
@@ -20,8 +20,9 @@
 //!    (`FrameSlots::outputs`, `output_types`), input bounds not compared:
 //!    `mutant-boundary-differs` naming the first port that differs; then its canonical content
 //!    id against the subject's as loaded: `mutant-identical` when they are equal; then the
-//!    scenarios' parameter edits (owner ruling of 2026-11-11): each distinct effective edit list,
-//!    in the order of the first scenario that has it, is applied to a fresh engine of the mutant
+//!    scenarios' parameter edits (owner ruling of 2026-11-11): each distinct effective edit list
+//!    ([`crate::edit_lists`]), in the order of the first scenario that has it, is applied to a
+//!    fresh engine of the mutant
 //!    by decision 14's passes, so a mutant that refuses an edit the subject admits (its class
 //!    rules refuse the value, or it lacks the parameter, or has it with another type, or as a
 //!    structural parameter) is `mutant-param-refused`. A set with no edits loads no mutant twice.
@@ -41,6 +42,7 @@ use oce_api::{Engine, InputDefinition, ValueType};
 
 use crate::bind::{self, BoundScenario};
 use crate::compare::{self, Caps};
+use crate::edit_lists::EditList;
 use crate::limits::VerifyLimits;
 use crate::model::Mutant;
 use crate::parameters;
@@ -88,7 +90,7 @@ pub(crate) fn validate<'a>(
     supplied: &[(&'a str, &'a [u8])],
     subject: &SubjectBoundary<'_>,
     set: &VectorSet,
-    scenarios: &[BoundScenario],
+    edit_lists: &[EditList<'_>],
     limits: &VerifyLimits,
 ) -> Result<Vec<BoundMutant<'a>>, VerifyError> {
     for (index, (path, _)) in supplied.iter().enumerate() {
@@ -131,40 +133,16 @@ pub(crate) fn validate<'a>(
             ),
         ));
     }
-    let edit_lists = distinct_edits(set, scenarios);
     let mut bound = Vec::with_capacity(listed.len());
     for (index, (mutant, bytes)) in listed.iter().zip(bytes_of).enumerate() {
         let valid = validate_one(index, mutant, bytes, subject)?;
-        for (scenario, edits) in &edit_lists {
-            try_edits(index, &valid, scenario, edits)?;
+        for list in edit_lists {
+            let scenario = set.scenarios()[list.first].name();
+            try_edits(index, &valid, scenario, list.edits)?;
         }
         bound.push(valid);
     }
     Ok(bound)
-}
-
-/// Every distinct non-empty effective edit list of the scenarios, in the order of the first
-/// scenario that has it, with that scenario's name. Two lists are one when they name the same
-/// paths in the same order with values of the same kind and bits.
-fn distinct_edits<'s>(
-    set: &'s VectorSet,
-    scenarios: &'s [BoundScenario],
-) -> Vec<(&'s str, &'s [(String, ReceiptValue)])> {
-    let mut lists: Vec<(&str, &[(String, ReceiptValue)])> = Vec::new();
-    for (scenario, bound) in set.scenarios().iter().zip(scenarios) {
-        let edits = bound.edits.as_slice();
-        let seen = lists.iter().any(|(_, list)| {
-            list.len() == edits.len()
-                && list
-                    .iter()
-                    .zip(edits)
-                    .all(|((a, x), (b, y))| a == b && x.bit_eq(y))
-        });
-        if !edits.is_empty() && !seen {
-            lists.push((scenario.name(), edits));
-        }
-    }
-    lists
 }
 
 /// Apply one edit list to a fresh engine of a validated mutant.

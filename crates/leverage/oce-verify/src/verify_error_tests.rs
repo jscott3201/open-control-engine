@@ -23,23 +23,26 @@ fn declared_index(kind: VerifyErrorKind) -> usize {
         K::EnumPortUnsupported => 13,
         K::UnsupportedPortType => 14,
         K::TooManyFrames => 15,
-        K::MutantMissing => 16,
-        K::MutantUnlisted => 17,
-        K::DuplicateMutant => 18,
-        K::TooManyMutantBytes => 19,
-        K::MutantLoadFailed => 20,
-        K::MutantBoundaryDiffers => 21,
-        K::MutantIdentical => 22,
-        K::MutantParamRefused => 23,
-        K::RunRefused => 24,
-        K::ReplayFailed => 25,
-        K::WindowUncovered => 26,
+        K::TooManyInstants => 16,
+        K::TooManyLoadBytes => 17,
+        K::TooManyFrameBytes => 18,
+        K::MutantMissing => 19,
+        K::MutantUnlisted => 20,
+        K::DuplicateMutant => 21,
+        K::TooManyMutantBytes => 22,
+        K::MutantLoadFailed => 23,
+        K::MutantBoundaryDiffers => 24,
+        K::MutantIdentical => 25,
+        K::MutantParamRefused => 26,
+        K::RunRefused => 27,
+        K::ReplayFailed => 28,
+        K::WindowUncovered => 29,
     }
 }
 
 #[test]
 fn the_code_list_is_every_kind_in_declaration_order() {
-    assert_eq!(VerifyErrorKind::ALL.len(), 27);
+    assert_eq!(VerifyErrorKind::ALL.len(), 30);
     for (index, kind) in VerifyErrorKind::ALL.iter().enumerate() {
         assert_eq!(declared_index(*kind), index, "{kind:?}");
     }

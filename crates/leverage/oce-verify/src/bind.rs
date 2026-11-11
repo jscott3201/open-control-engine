@@ -17,19 +17,21 @@
 //!    against `Engine::params()` sorted by path. Every value is typed by what it lands on
 //!    ([`crate::typing`]): an input by `InputDefinition::value_type`, an `equals` literal by
 //!    `FrameSlots::output_types()`, a parameter by its declared type.
-//! 4. **The parameter edits.** Each scenario's effective edits (decision 14: a scenario's map
-//!    overrides the set's by resolved path) are tried, in file order of the scenarios, on a
-//!    freshly loaded engine by the passes of [`crate::parameters`], so an edit no pass admits is
-//!    `param-refused` here, before any frame of any scenario runs (owner ruling of 2026-11-10;
-//!    the note's table puts the code at bind). The run applies the same edits to its own fresh
+//! 4. **The work budgets** ([`crate::budget`]): frames, compared instants, bytes loaded and
+//!    byte-frames, in that order, each an upper bound on what the run may ask for. They are
+//!    arithmetic on what steps 1 to 3 found, so they are checked before every load but the
+//!    subject's first (the work-budget note, ruling 6): an over-budget set is refused even when
+//!    its edits would be.
+//! 5. **The parameter edits.** Each distinct effective edit list (decision 14: a scenario's map
+//!    overrides the set's by resolved path; [`crate::edit_lists`]) is tried once, in the order of
+//!    the first scenario that has it, on a freshly loaded engine by the passes of
+//!    [`crate::parameters`], so an edit no pass admits is `param-refused` here, at the first
+//!    scenario holding it, before any frame of any scenario runs (owner rulings of 2026-11-10,
+//!    and of 2026-11-11 for trying a list once). The run applies the same edits to its own fresh
 //!    engine again, by the same deterministic passes.
-//! 5. **The frame budget.** `(N + 1) * scenarios * (1 + mutants)` against
-//!    [`VerifyLimits::max_total_frames`], and `N + 1` against the replay limits' `max_frames`:
-//!    arithmetic on the listed count, so it runs before any mutant is loaded or has an edit tried
-//!    (owner ruling of 2026-11-11).
 //! 6. **The mutants** ([`crate::mutants`]): the bytes supplied against the set's listing and the
 //!    byte bound, then each listed mutant in file order loaded, held to the subject's boundary and
-//!    content id, and given every distinct edit list of the scenarios.
+//!    content id, and given every distinct edit list.
 //!
 //! Every refusal is a [`VerifyError`], never a failed scenario.
 
@@ -180,13 +182,14 @@ pub(crate) fn bind<'a>(
     for (index, scenario) in set.scenarios().iter().enumerate() {
         scenarios.push(bind_scenario(index, scenario, &boundary, &set_edits)?);
     }
-    for (index, scenario) in scenarios.iter().enumerate() {
-        try_edits(subject, &scenario.edits, &format!("scenarios[{index}]"))?;
+    let edit_lists = crate::edit_lists::distinct(&scenarios);
+    let work = crate::budget::Work::of(set, &scenarios, edit_lists.len(), subject, supplied);
+    crate::budget::check(&work, limits)?;
+    for list in &edit_lists {
+        try_edits(subject, list.edits, &format!("scenarios[{}]", list.first))?;
     }
-    let listed = set.mutants().unwrap_or_default();
-    frame_budget(set, listed.len(), limits)?;
     let mutants = crate::mutants::validate(
-        listed,
+        set.mutants().unwrap_or_default(),
         supplied,
         &SubjectBoundary {
             inputs: &inputs,
@@ -195,7 +198,7 @@ pub(crate) fn bind<'a>(
             content_id: &content_id,
         },
         set,
-        &scenarios,
+        &edit_lists,
         limits,
     )?;
     Ok(Bound {
@@ -216,7 +219,7 @@ pub(crate) fn bind<'a>(
 }
 
 /// Try `edits` on a freshly loaded engine by the passes the run applies them with, so a refusal
-/// is found at bind (step 4). Nothing is loaded for a scenario with no edits.
+/// is found at bind (step 5). Nothing is loaded for an empty list.
 ///
 /// # Errors
 /// `param-refused`, or `replay-failed` with the cause `engine-setup` for a facade refusal that is
@@ -528,39 +531,6 @@ fn bind_inputs(
         lists.push(steps);
     }
     Ok(lists)
-}
-
-/// The frame budget (bind step 5): every scenario runs `N + 1` frames, on the subject and on
-/// each mutant at most (a mutant's run stops at its first failing scenario, and none runs against
-/// a subject that did not pass, so the budget is the bound, not the count).
-fn frame_budget(set: &VectorSet, mutants: usize, limits: &VerifyLimits) -> Result<(), VerifyError> {
-    let ticks = set.clock().tick_count();
-    let scenarios = u64::try_from(set.scenarios().len()).unwrap_or(u64::MAX);
-    let runs = u64::try_from(mutants).unwrap_or(u64::MAX).saturating_add(1);
-    if scenarios > 0 && ticks > limits.replay.max_frames {
-        return Err(VerifyError::new(
-            Kind::TooManyFrames,
-            "clock",
-            format!(
-                "each scenario runs {ticks} frames; the replay limits allow {}",
-                limits.replay.max_frames
-            ),
-        ));
-    }
-    let total = ticks
-        .checked_mul(scenarios)
-        .and_then(|frames| frames.checked_mul(runs));
-    if total.is_none_or(|total| total > limits.max_total_frames) {
-        return Err(VerifyError::new(
-            Kind::TooManyFrames,
-            "scenarios",
-            format!(
-                "{scenarios} scenarios of {ticks} frames on the subject and {mutants} mutants are more than the {} frames allowed",
-                limits.max_total_frames
-            ),
-        ));
-    }
-    Ok(())
 }
 
 #[cfg(test)]
