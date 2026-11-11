@@ -57,9 +57,10 @@ impl Engine {
     /// `quantity`, `unit`, `displayUnit`, each input's effective acceptance domain and fan-out),
     /// non-reserved blocks (name, class path, class signature hash, bound parameters sorted by
     /// name) and connections by port index. Instance IRIs enter without their namespace (the IRI
-    /// up to its last `#`, `/` or `:`). Authored order, `SemanticPoint` records, `extends`,
-    /// comments, the root `@type` and label, internal connector IRIs and attributes, output
-    /// bounds, `nominal`, `unbounded`, dense ids and the schedule never enter it.
+    /// up to its last `#`, `/` or `:`). Authored order, `SemanticPoint` records, an authoring
+    /// tool's provenance id (`derived_from`), comments, the root `@type` and label, internal
+    /// connector IRIs and attributes, output bounds, `nominal`, `unbounded`, dense ids and the
+    /// schedule never enter it.
     ///
     /// Equal ids from one engine build promise the same outputs and per-block state for every
     /// successful frame given the same named inputs, and the same refusals; they do not promise
