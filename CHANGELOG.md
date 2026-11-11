@@ -39,6 +39,22 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Facade
 
+- **`oce_api::ENGINE_VERSION` names the engine version this build stamps and accepts** (GitHub
+  #592, issue #536). It re-exports `oce_graph::blob::ENGINE_VERSION`, an `EngineVersion` holding
+  the major, minor and patch of the workspace version, with any pre-release or build suffix
+  dropped. Every compiled-schedule blob and state snapshot this build writes carries it in its
+  header, and either `EngineVersionMismatch` names it as `expected`. A host's storage envelope,
+  an `oce-verify` receipt or an `oce-replay` envelope can now record "written by engine X" from a
+  named facade item, without a direct `oce-graph` dependency and without parsing a header, an
+  error or a version string. It is a release version, not a build identity. It is not the
+  compatibility descriptor's `oce-api-version`, which keeps the suffix. Tests in
+  `tests/state_engine_version.rs` hold it equal to `oce-api`'s own package version and to the
+  bytes of a freshly written blob and snapshot, after frames and straight after load. They also
+  check that both refusals name it as `expected`. The facade-contract check's positive control now
+  compiles a host-side use of it, and fails with E0425 without the re-export. Documented in the
+  [identity glossary](docs/facade-contracts.md#identity-glossary) and in
+  [host responsibilities](docs/host-responsibilities.md#persist-engine-state-outside-the-engine).
+  No behaviour, format or golden changes.
 - **A state snapshot names the engine version that wrote it, and only that version restores it**
   (GitHub #540, issue #530; owner rulings of 2026-11-09). The fixed header gains six bytes after
   the execution-state ABI revision: major, minor and patch as little-endian `u16`, from the constant
