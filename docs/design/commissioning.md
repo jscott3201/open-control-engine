@@ -371,7 +371,7 @@ pub struct ReceiptHeader { pub schema: String, pub kind: ReceiptKind, pub conten
                            pub receipt_id: String, pub timings: Timings }
 ```
 
-*(Amended 2026-11-10, with issue #520:)* `Receipt.body` is `ReceiptBody`, the one closed enum the
+*(Amended 2026-11-10, with GitHub #558, issue #520:)* `Receipt.body` is `ReceiptBody`, the one closed enum the
 [vectors note](vectors.md) decides (decision 21), not `CommissioningBody`: there is one `Receipt`
 type and one writer of the shared header. `oce-verify` builds it with the `Vectors` variant only
 (`#[non_exhaustive]`); the commissioning PR adds the `Commissioning` variant and its `ReceiptKind`

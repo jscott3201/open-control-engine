@@ -454,7 +454,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Leverage
 
 - **Vectors, part 2 of 4: bind, replay and compare a vector set, and issue the receipt**
-  (GitHub #PRNUMBER, issue #520; [vectors note](docs/design/vectors.md) decisions 3, 6 to 8, 11,
+  (GitHub #558, issue #520; [vectors note](docs/design/vectors.md) decisions 3, 6 to 8, 11,
   12, 14, 15, 18 to 26, 31 to 33 and 37). `oce-verify` now depends on `oce-api` and `oce-replay`
   (the leverage rule holds as written) and runs a set: `run_vectors(&set,
   &VectorInputs::new(&cxf), &VerifyOptions)` returns a `VectorRun` with its `Receipt`, or a

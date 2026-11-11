@@ -8,7 +8,8 @@ Every decision below was made while drafting, checked by an independent review a
 the owner on 2026-11-09 (see [Review rulings](#review-rulings)); the note is amended to match.
 Decisions 1 to 19 answer the format half of the issue's outline in its order, decisions 20 to 37
 the replayer half (outline item *n* is decision 19 + *n*). Nothing here is built. *(2026-11-09:
-part 1 of 4, the format, landed in GitHub #541.)*
+part 1 of 4, the format, landed in GitHub #541. 2026-11-10: part 2 of 4, binding, the run and the
+receipt, landed in GitHub #558.)*
 
 **The version rule, in one sentence.** The format is `oce/vectors/v1` and stays `v1` until 1.0.0: a
 change is made in place, in the PR that rewrites every in-repo fixture and golden, and nothing
@@ -902,6 +903,7 @@ The content id it was also to print has its own verb, `oce id` (#513).
 4. **Part 2 of 4, replayer and receipts.** Binding, the public name rule in `oce-replay`,
    parameter edits, the run, exact comparison, the header and vector body, `receipt_id`, golden
    receipts for pass, fail and `no_data`, chunk-size independence.
+   *(Landed in GitHub #558.)*
 5. **Part 3 of 4, mutant mode.** The `mutants` key in place, validation, the score, the receipt
    section, the AHU-0016 fixtures. Between parts 2 and 3 a set that lists mutants is refused, not
    replayed without them.
