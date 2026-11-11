@@ -10,7 +10,8 @@
 //! It holds four things:
 //!
 //! - **Frame sources** ([`FrameSource`]): rows by slot, `(t, &[Option<Value>])`, after a one-time
-//!   name→slot mapping ([`InputMap::resolve`]); three adapters — [`ColumnarSource`] (owned typed
+//!   name→slot mapping ([`InputMap::resolve`], by the one name rule [`resolve_path`], which
+//!   [`PathIndex`] answers for many names at once); three adapters — [`ColumnarSource`] (owned typed
 //!   columns, the numpy and pandas shape), [`CsvSource`] (a bounded byte reader with a column map
 //!   and a time origin) and [`StepSource`] (per-input change lists).
 //! - **Missing-sample policy** ([`MissingPolicy`], [`OnRefusal`], [`DuplicateTime`], [`TimeBase`]):
@@ -67,6 +68,7 @@ mod error;
 mod frame;
 mod limits;
 mod map;
+mod path_index;
 mod policy;
 mod replay;
 mod source;
@@ -80,6 +82,7 @@ pub use csv_source::{CsvFormat, CsvSource, CsvTime};
 pub use error::{MapError, ReplayError, SourceError};
 pub use limits::{LimitError, ReplayLimits};
 pub use map::{ColumnKind, ColumnMap, ColumnSpec, InputMap, MapId, resolve_path};
+pub use path_index::PathIndex;
 pub use policy::{DuplicateTime, FrameStatus, MissingPolicy, OnRefusal, SourceKind, TimeBase};
 pub use replay::{Progress, Replay, ReplayOptions, TraceOptions};
 pub use source::{FrameSource, Row};

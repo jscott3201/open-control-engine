@@ -5,11 +5,12 @@
 //! is also `FrameSlots::inputs()` order and the compiled-schedule blob's input order. After
 //! [`InputMap::resolve`] no frame touches a string.
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use oce_api::{InputDefinition, Value, ValueType};
 
-use crate::{MapError, MissingPolicy};
+use crate::{MapError, MissingPolicy, PathIndex};
 
 /// The kind of a source column. An Enum column names its class path, which the trace records in
 /// its metadata. That path is a **source-declared, unverified label**: the facade exposes no
@@ -146,23 +147,27 @@ impl InputMap {
                 path: input.path.clone(),
             });
         }
+        // Column names by position, the first column that has each: a name met again is the
+        // repeat refused, so every lookup below finds the one column of its name.
+        let mut column_of: BTreeMap<&str, usize> = BTreeMap::new();
         for (index, column) in columns.iter().enumerate() {
-            if columns[..index].iter().any(|c| c.name == column.name) {
+            if column_of.insert(column.name.as_str(), index).is_some() {
                 return Err(MapError::DuplicateColumn {
                     column: column.name.clone(),
                 });
             }
         }
         let paths: Vec<&str> = inputs.iter().map(|d| d.path.as_str()).collect();
+        let index = PathIndex::new(&paths);
         let mut slot_column: Vec<Option<usize>> = vec![None; inputs.len()];
         let mut named = vec![false; columns.len()];
         for (column_name, target) in &map.entries {
-            let Some(column) = columns.iter().position(|c| &c.name == column_name) else {
+            let Some(&column) = column_of.get(column_name.as_str()) else {
                 return Err(MapError::UnknownColumn {
                     column: column_name.clone(),
                 });
             };
-            let slot = resolve_path(&paths, target).map_err(|candidates| {
+            let slot = index.resolve(target).map_err(|candidates| {
                 if candidates.is_empty() {
                     MapError::UnknownTarget {
                         column: column_name.clone(),
@@ -301,8 +306,9 @@ impl InputMap {
 /// matches a path when the path is the suffix with something before it that ends in `.`:
 /// `uDam` and `ahu.uDam` match `urn:x#top.ahu.uDam`, while `Dam` does not, and neither does
 /// `top.ahu.uDam` (a `#` is not a boundary). An empty `name` matches only an empty path, never by
-/// suffix. [`InputMap::resolve`] resolves every column target and every policy override with it,
-/// and `oce-verify` resolves a vector set's inputs, outputs and parameter paths with it, so one
+/// suffix. [`InputMap::resolve`] resolves every column target and every policy override by it,
+/// and `oce-verify` resolves a vector set's inputs, outputs and parameter paths by it, both
+/// through [`PathIndex`], which gives this function's answers for many names at once, so one
 /// rule names one thing everywhere.
 ///
 /// Pure, and never panics. An exact match allocates nothing; a suffix match collects the indexes
@@ -372,10 +378,11 @@ fn resolve_policies(
         return Err(MapError::InvalidMaxAge { input: None });
     }
     let paths: Vec<&str> = inputs.iter().map(|d| d.path.as_str()).collect();
+    let index = PathIndex::new(&paths);
     let mut policies = vec![missing.clone(); inputs.len()];
     let mut overridden = vec![false; inputs.len()];
     for (target, policy) in overrides {
-        let slot = resolve_path(&paths, target).map_err(|candidates| {
+        let slot = index.resolve(target).map_err(|candidates| {
             if candidates.is_empty() {
                 MapError::UnknownTarget {
                     column: String::new(),
