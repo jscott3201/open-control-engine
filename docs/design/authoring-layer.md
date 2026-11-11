@@ -475,7 +475,10 @@ error (a usage error, input that cannot be parsed or loaded, an I/O failure).
 
 *Amended 2026-11-09 (#489):* `oce check` is deferred, not dropped: it returns when the M3 receipts
 work defines the load report it would print, so M2 ships `emit`, `validate`, `fmt`, `catalog` and
-`vocab`.
+`vocab`. *(Amended 2026-11-11, GitHub #573, issue #522:)* M3 adds `verify` ([vectors
+note](vectors.md), "CLI"). `oce check` stays deferred (vectors note decision 36): the receipt
+defines no load report. What binding needs (inputs with types and bounds, outputs, parameters) is
+what `oce check` should print, so it is cut as its own follow-up, #574.
 
 **Binaries above the facade.** The architecture page says the engine is library-only, with no binary
 target in `crates/`. The PR that adds this note narrows that sentence to the engine crates: leverage

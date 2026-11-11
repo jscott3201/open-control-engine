@@ -281,7 +281,11 @@ mutants: two caught, and one deliberate survivor that shows a real gap in its ve
 is held to four work budgets, checked at bind before any load but the subject's first: frames,
 compared instants, bytes loaded, and frames weighted by the bytes of the document that runs them
 ([work-budget note](docs/design/vector-work-budget.md)). The worst a set can ask for is then about
-a minute in `release`, not hours. The `oce verify` verb is next (#522).
+a minute in `release`, not hours. `oce verify <VECTORS> --subject <FILE>` runs it all from the
+command line: the receipt on stdout, exit 0 when every scenario passed, 1 when one failed, 2 when
+no verdict could be reached. Mutant paths are resolved and kept inside the vector file's
+directory. The in-repo replay gate runs that binary over both library rules on every PR, against
+their golden receipts.
 
 See [CHANGELOG.md](CHANGELOG.md).
 
@@ -293,7 +297,7 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 | **M1a** Portable core: cleanup | Pure `Engine`, dead crates and ledgers removed, two CI lanes, native determinism and strict-bit matrices | Released as v0.3.0 |
 | **M1b** Portable core: `no_std` | Core four build `no_std + alloc`; math through `libm`; hash-free core; the **OCEB** compiled-schedule blob (encoder in `oce-api`, decoder in `oce-graph`, byte-stable across architectures); a `no_std` execution entry that never links `oce-cxf` or `oce-api`; a bare-metal gate cell with a size budget over `thumbv7em`, `riscv32imac` and `wasm32`; QEMU execution nightly | Released as v0.4.0 |
 | **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | In progress: `oce-author`'s model, wire form, schema, two-stage validator, emitter, text form and importer are in, and so are the `oce` CLI (`emit`, `validate`, `fmt`, `catalog`, `vocab`) and vocabulary v1's data crate `oce-vocab`, served through `oce catalog` (descriptions, units, ranges, notes) with the unit scale-factor table in `oce vocab`; time-unit suffixes in the text form next; in parallel with M3 |
-| **M3** Verification product | Canonical content id, the vector format, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode, on the `oce-replay` historical replay crate | In progress: `oce-replay`, the canonical content id (`Engine::content_id`, `oce:canon1:` over the loaded graph), output types in slot order before the first frame (`FrameSlots::output_types()`), the vector format (`oce-verify`: `oce/vectors/v1` with a strict bounded reader, a canonical form with a `spec_id`, and a pinned JSON Schema), the replayer with its receipts (`run_vectors`, `oce/receipt/v1`), mutant mode with its catch score and the four work budgets on a run are in; `oce verify` next; in parallel with M2 |
+| **M3** Verification product | Canonical content id, the vector format, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode, on the `oce-replay` historical replay crate | In progress: `oce-replay`, the canonical content id (`Engine::content_id`, `oce:canon1:` over the loaded graph), output types in slot order before the first frame (`FrameSlots::output_types()`), the vector format (`oce-verify`: `oce/vectors/v1` with a strict bounded reader, a canonical form with a `spec_id`, and a pinned JSON Schema), the replayer with its receipts (`run_vectors`, `oce/receipt/v1`), mutant mode with its catch score, the four work budgets on a run, and the `oce verify` verb with the in-repo replay gate are in; the tolerance mode next; in parallel with M2 |
 | **M4** WASM | `oce-wasm` over `oce-api`, a TypeScript package, a browser demo that replays vectors without a server, a tracked `.wasm` size budget | Planned, in parallel with M5 |
 | **M5** Python | `oce-py` wheels (PyO3, abi3) over the same surface; replay and receipts from a notebook | Planned, in parallel with M4 |
 | **M6** Reference host | `oce-host`: cadence, staleness limits, the non-finite policy, degraded mode and safe-state outputs as tested code; BOPTEST client and a Docker runtime | Planned, in parallel with M7 |

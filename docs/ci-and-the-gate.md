@@ -81,6 +81,11 @@ golden switch; normal and build edges and dev edges are read separately), then f
 `-D warnings`, rustdoc `-D warnings`, nextest and cargo-machete per member
 (`scripts/ci/leverage-members.sh lane`; with no members it prints `no leverage crates yet`). The
 members are `oce-replay`, `oce-author`, `oce-cli` (the `oce` binary), `oce-vocab` and `oce-verify`.
+The lane's `oce-cli` suite holds the M3 **"In-repo rules replay"** evidence (vectors note decision
+19; GitHub #573). `crates/leverage/oce-cli/tests/replay_gate.rs` runs the built `oce verify` over
+both in-repo library rules, read in place under `crates/oce-api/tests/fixtures/library_rules/`. It
+requires exit 0 and stdout byte-equal to `oce-verify`'s golden receipts, so every leverage and
+engine PR runs it.
 The **README lane** is one job, `facade contract and Quickstart` (issue #503). It runs when the
 root `README.md` changes and for every engine change, and it holds the two checks of the README's
 Quickstart that no always-on job runs: the `readme_quickstart` test, which requires the README's
