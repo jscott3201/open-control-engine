@@ -6,7 +6,7 @@
 # two of them materially weaker than CI, so prose copies are the failure mode
 # this file exists to remove.
 #
-# FOUR PROOF MODES, one per row of the lane-matched local proof (issue #545; the table and the
+# FIVE PROOF MODES, one per row of the lane-matched local proof (issue #545; the table and the
 # rules around it are in docs/ci-and-the-gate.md, "The local proof"). Each runs everything the
 # one above it runs, so a heavier run satisfies a lighter row. An author runs the row the change
 # needs, first-hand, on the final head, and pastes the tail into the pull request;
@@ -25,17 +25,22 @@
 #                                    #               plus everything that compiles the engine, in
 #                                    #               debug codegen only
 #   bash .agents/gate.sh determinism # determinism — a change to the core four (oce-model,
-#                                    #               oce-expr, oce-blocks, oce-graph) or oce-cxf:
-#                                    #               `light` plus the determinism subset and the
-#                                    #               strict-bit step under release codegen, which
-#                                    #               no per-PR CI job runs
-#
-# ONE MODE CI EXECUTES, and no author has to run per PR:
-#
-#   bash .agents/gate.sh full        # full        — `determinism` plus the workspace suite in
-#                                    #               debug and release codegen, the doctests, the
-#                                    #               blob matrix artifact and the blob round trip
-#                                    #               (release-gate.yml's `gate (full)`, nightly)
+#                                    #               oce-expr, oce-blocks, oce-graph), oce-cxf or
+#                                    #               oce-api, or to Cargo.lock, the root
+#                                    #               Cargo.toml, rust-toolchain.toml or
+#                                    #               .cargo/config.toml: `light` plus the
+#                                    #               determinism subset and the strict-bit step
+#                                    #               under release codegen, which no per-PR CI job
+#                                    #               runs for the subset
+#   bash .agents/gate.sh full        # full        — a pin advance (third_party/**, the reference
+#                                    #               catalog's pin records, the two files holding
+#                                    #               the pinned commits) or a change to this
+#                                    #               script: `determinism` plus the workspace
+#                                    #               suite in debug and release codegen, the
+#                                    #               doctests, the blob matrix artifact and the
+#                                    #               blob round trip. It is also the mode CI
+#                                    #               executes (release-gate.yml's `gate (full)`,
+#                                    #               nightly); no other change owes it.
 #
 # THREE FOCUSED MODES, each one cell and not a proof row:
 #
@@ -52,7 +57,8 @@
 #                                    #               blob-round-trip-wasm): record on the host, then
 #                                    #               replay the recording on the host and on
 #                                    #               wasm32-wasip1 under wasmtime; needs the
-#                                    #               wasm32-wasip1 target and the pinned wasmtime
+#                                    #               wasm32-wasip1 target, and installs or
+#                                    #               re-verifies the pinned wasmtime
 #                                    #               (scripts/ci/install-wasmtime.sh); full runs it
 #                                    #               too
 #
@@ -185,22 +191,25 @@ round_trip_replay_host() {
     OCE_ROUND_TRIP_EXPECT="$ROUND_TRIP_DIR" cargo nextest run -p oce-conformance \
       --test blob_round_trip --locked --profile ci --no-tests=fail
 }
-# wasmtime is looked for in the installer's default destination, a user cache directory outside
-# `target/` (so `cargo clean` does not delete it; issue #545), then on PATH. The installer owns
-# that path and prints it; this script installs nothing.
+# wasmtime comes from the installer, never from whatever `wasmtime` PATH holds: the installer
+# keeps a binary already at its default destination only if its SHA-256 is the pinned one, and
+# otherwise downloads the pinned release and verifies it (issue #545). That destination is a user
+# cache directory outside `target/`, so `cargo clean` does not delete it. The rustup target is
+# still the author's to add.
 round_trip_replay_wasm() {
   local tools
   tools="$(bash scripts/ci/install-wasmtime.sh --print-destination)" || return 1
+  bash scripts/ci/install-wasmtime.sh || return 1
   if ! rustup target list --installed | grep -qx wasm32-wasip1; then
     echo 'the wasm32-wasip1 target is not installed: rustup target add wasm32-wasip1' >&2
     return 1
   fi
-  if ! PATH="$tools:$PATH" command -v wasmtime >/dev/null 2>&1; then
-    echo "wasmtime is not installed: bash scripts/ci/install-wasmtime.sh (the pinned release, into $tools)" >&2
+  if [ ! -x "$tools/wasmtime" ]; then
+    echo "the pinned wasmtime is not at $tools: bash scripts/ci/install-wasmtime.sh" >&2
     return 1
   fi
   test -d "$ROUND_TRIP_DIR" &&
-    PATH="$tools:$PATH" wasmtime --version &&
+    "$tools/wasmtime" --version &&
     PATH="$tools:$PATH" OCE_ROUND_TRIP_EXPECT="$ROUND_TRIP_DIR" cargo nextest run \
       -p oce-conformance --test blob_round_trip --target wasm32-wasip1 --locked --profile ci \
       --no-tests=fail
@@ -256,7 +265,8 @@ compiled_lanes() { [ "$MODE" != docs ]; }
 # The release-codegen steps (issue #545): the determinism subset and the strict-bit step under
 # `--cargo-profile release`. pr-gate.yml runs neither for the subset (its release cells are
 # merge-gate.yml's, after the merge), so these are the pre-merge release-codegen evidence, and
-# they are owed by a change to the core four or oce-cxf. `light` leaves them out: on an idle
+# they are owed by a change to what that subset builds (proof-row.sh has the list: the core
+# four, oce-cxf, oce-api and the four files that set how they compile). `light` leaves them out: on an idle
 # 10-core arm64 Mac they are 5.6 minutes of a cold run, nearly all of it building the release
 # test binaries, and the table does not ask them of any other change.
 release_codegen() { [ "$MODE" = determinism ] || [ "$MODE" = full ]; }
@@ -301,6 +311,8 @@ step 'lane classifier fixtures' bash scripts/ci/test-classify-changes.sh
 step 'CI OK result-check controls' python3 scripts/ci/test_ci_ok.py
 step 'leverage dependency-rule fixtures' bash scripts/ci/test-leverage-members.sh
 step 'local proof-row fixtures' bash scripts/ci/test-proof-row.sh
+step 'gate-mode nesting fixtures' bash scripts/ci/test-gate-modes.sh
+step 'wasmtime installer destination fixtures' bash scripts/ci/test-install-wasmtime.sh
 
 # ── Documentation checks ─────────────────────────────────────────────────────
 # pr-gate.yml's always-on `docs` job, step for step (issue #545: they were CI-only until the
@@ -408,8 +420,8 @@ step 'strict-bit corpus and controls' \
 # The release-codegen run of the subset is this script's alone before a merge (issue #502):
 # pr-gate.yml runs the subset in debug codegen on both architectures, and the release-codegen
 # cells run in merge-gate.yml on the merge commit. Run on the final head, these two steps are the
-# pre-merge release-codegen evidence for a change to the core four or oce-cxf, on one host
-# (issue #545: a change that touches neither does not owe them, and `light` does not run them).
+# pre-merge release-codegen evidence for a change the `determinism` row names, on one host
+# (issue #545: no other change owes them, and `light` does not run them).
 if release_codegen; then
   step 'determinism subset (release codegen)' \
     cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release \
@@ -456,14 +468,17 @@ fi # engine_lane
 # ── Full suite (release-gate.yml) ────────────────────────────────────────────
 # The release-codegen workspace run is CI's only one (issue #545): release-gate.yml's `test-suite`
 # job runs the debug suite and the doctests, and `gate (full)` executes this block and then
-# requires the `ci-release` JUnit report. Keep the release run the LAST `ci-release` invocation
-# in this script, so that report is its report, and keep each command on one line:
-# check-workflow-gates.sh pins the three lines below.
+# requires the JUnit report of the nextest profile `ci-release-workspace`. That profile is this
+# one command's: the release determinism subset and strict-bit step above write `ci-release`'s
+# report, so only a profile of its own lets the job tell that this run happened. Use it nowhere
+# else. check-workflow-gates.sh pins the five lines after the `if` below exactly, comments
+# aside, so a step cannot be dropped, wrapped in a condition or moved out of the block unseen;
+# keep each command on one line.
 if [ "$MODE" = full ]; then
   step 'nextest — workspace' \
     cargo nextest run --workspace --locked --profile ci --no-tests=fail
   step 'nextest — workspace (release codegen)' \
-    cargo nextest run --workspace --locked --profile ci-release --cargo-profile release --no-tests=fail
+    cargo nextest run --workspace --locked --profile ci-release-workspace --cargo-profile release --no-tests=fail
   # nextest cannot run doctests; this step is not optional.
   step 'doctests' cargo test --workspace --doc --locked
   # The determinism cells write the 46 compiled-schedule blobs to OCE_BLOB_OUT as a path relative
@@ -514,17 +529,18 @@ proof_row_report() {
       ;;
     light)
       echo '  · this run: `light`, the engine-lane proof WITHOUT release codegen, for a change'
-      echo '    that touches neither the core four nor oce-cxf. It also covers the `docs` and'
+      echo '    that the `determinism` and `full` rows do not name. It also covers the `docs` and'
       echo '    `leverage` rows.'
       ;;
     determinism)
       echo '  · this run: `determinism`, the engine-lane proof PLUS the determinism subset and'
-      echo '    the strict-bit step under release codegen, for a change to the core four or'
-      echo '    oce-cxf. It covers every row.'
+      echo '    the strict-bit step under release codegen, for a change to the core four,'
+      echo '    oce-cxf, oce-api, Cargo.lock, the root Cargo.toml, rust-toolchain.toml or'
+      echo '    .cargo/config.toml. It covers every row but `full`.'
       ;;
     full)
-      echo '  · this run: `full`, what CI executes nightly. It covers every row; no row asks'
-      echo '    for it.'
+      echo '  · this run: `full`, the proof for a pin advance or a change to this script, and'
+      echo '    what CI executes nightly. It covers every row.'
       ;;
   esac
   if ! base="$(git merge-base HEAD origin/development 2>/dev/null)"; then
@@ -576,7 +592,7 @@ NOT COVERED BY THIS SCRIPT — a green run here does not prove these pass:
     CI is the only place they run. What `determinism` and `full` DO run is
     the determinism subset under release codegen on this host. No per-PR CI
     job runs it, so that step, run on the final head, is the pre-merge
-    release-codegen evidence for a change to the core four or oce-cxf.
+    release-codegen evidence for a change the `determinism` row names.
   · the blob round trip's aarch64 leg and the comparison of the cells'
     recordings (determinism-compare). `full` and `roundtrip` record on this
     host and replay here and on wasm32-wasip1; the other architecture is CI's.
@@ -637,7 +653,7 @@ if ! release_codegen; then
   · release codegen, of anything. This run built and tested in debug codegen
     only. The determinism subset and the strict-bit step under release
     codegen are `bash .agents/gate.sh determinism`: owed before the merge by
-    a change to the core four or oce-cxf, and observed for every other
+    a change the `determinism` row names, and observed for every other
     change by merge-gate.yml on its merge commit.
 DEBUG_ONLY
 fi

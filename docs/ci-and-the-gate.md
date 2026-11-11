@@ -51,8 +51,8 @@ The per-PR gate runs **once per change**, on the pull request:
   no `push` trigger: the merged tree is the one the PR already tested, so that would repeat the
   per-PR gate for no new evidence, and `check-workflow-gates.sh` refuses any `push` trigger in
   `pr-gate.yml`, so the duplicate run cannot return unnoticed.
-- **Nightly**, and on manual dispatch, `release-gate.yml`, the heavy gate, runs against the
-  `development` tip: the workspace suite in debug and release codegen, the doctests, the executed
+- **Nightly**, `release-gate.yml`, the heavy gate, runs against the `development` tip (a manual
+  dispatch runs it against the ref it is dispatched on): the workspace suite in debug and release codegen, the doctests, the executed
   gate script, cargo-deny with advisories, the light gates again, and the same three jobs the
   merge gate runs. It is where every crate's own tests run, and the safety net for what a run on
   a merge commit can miss: a run that was replaced while it waited, an advisory published since,
@@ -159,6 +159,13 @@ debug codegen and the whole strict-bit matrix.
 | `std build and nextest (Windows x86_64, debug)` | 251–450 s | nothing on Windows | the same cell | the same cell |
 | `gate (light)` | 1540–1600 s, on a gate-script change | the jobs the script mirrors, each as its own job | nothing | `gate (full)`, which executes the script in `full` mode |
 
+**How long the merge gate takes.** One measured run so far: 19.0 minutes from push to
+`Merge gate OK` (run 42935095468, 2026-11-11, on this workflow's first commit), of which the
+x86_64 release cell was 18.5 minutes, the aarch64 release cell 11.9, Windows 8.1, the debug cells
+about 2 and the two comparison legs under half a minute. The issue's target was about 15. That
+run predates GitHub #546 and #551, which cut the number of release test binaries the cells link;
+update this paragraph, and only this one, when a run on a merge commit gives a newer figure.
+
 **Why the split.** In run 42767547196 (2026-11-10, on the merge of GitHub #543) the jobs started
 43 minutes after the push, queued behind the previous merge's run, and then took 1 h 29 min:
 `gate (full)` 88.7 minutes, of which the release-codegen workspace step was 55.7 minutes for 58
@@ -190,7 +197,7 @@ on the event is refused for the reason given under
 
 **Before the merge, the release-codegen evidence is the author's gate run**, for the changes
 that owe one. `bash .agents/gate.sh determinism` runs the determinism subset under release codegen
-on one host, and its tail goes in the PR description of a change to the core four or `oce-cxf`
+on one host, and its tail goes in the PR description of a change the `determinism` row names
 ([the local proof](#the-local-proof)). It cannot compare a debug artifact with a release one
 across cells, and it cannot run the other architecture; those are first observed on the merge
 commit. Every other change is first observed under release codegen on its merge commit.
@@ -199,8 +206,14 @@ commit. Every other change is first observed under release codegen on its merge 
 landed. After merging a change that runs the determinism lane, watch the merge-gate run on the
 merge commit; a red run is fixed forward or reverted before the next determinism-lane merge, so a
 second change is never built on a tree the determinism cells have refused. **A red nightly** is
-fixed forward or reverted before the next engine-lane merge. It names the `development` tip it
-tested, not one merge: every merge since the last green nightly is a candidate.
+fixed forward or reverted before the next determinism-lane merge. It names the `development` tip it
+tested, not one merge: every merge since the last green nightly is a candidate. So the latest
+nightly is a condition of a determinism-lane merge: it must not be red, or its failure must
+already be being fixed forward.
+
+```
+gh run list --workflow release-gate.yml --branch development --event schedule --limit 1
+```
 
 **Several merges in an hour do not starve it.** Merge-gate runs are grouped by event and ref and
 never cancelled in progress. For pushes to `development` GitHub keeps the run in progress and one
@@ -211,7 +224,12 @@ merge-gate run checks out the commit its event names in every job (`github.sha`)
 its fan-in build one tree even when another merge lands meanwhile. So do a push run and a
 dispatched run of `release-gate.yml`: `gh workflow run release-gate.yml --ref <branch>` tests that
 branch's head with that branch's workflow file, which is how a PR that changes the release gate
-shows it green before it merges. A scheduled run checks out the `development` tip as each job
+shows it green before it merges. Such a run posts a check named `CI OK` on that head, from the
+heavy set, which does not include the strict-bit matrix or the macOS cell; a manual dispatch of
+`pr-gate.yml` posts one too. The `CI OK` that decides a merge into `development` is the one from
+the `pr-gate` run on the pull request's head SHA: name the workflow when checking
+(`gh pr checks <N>` prints each check's run). That is a procedure, not a control; GitHub #552
+tracks making it one. A scheduled run checks out the `development` tip as each job
 starts; a merge landing during such a run can hand the fan-in cells built from two commits, which
 fails the comparison instead of passing it. `check-workflow-gates.sh` pins the triggers, the
 checkout refs and both concurrency lines of both files.
@@ -242,9 +260,12 @@ of a docs-only PR: the always-on checks alone, with no cargo build. `bash .agent
 every lane ([the local proof](#the-local-proof) says which a PR owes).
 
 **Cache.** PR runs save `Swatinem/rust-cache` entries into their own PR scope only, so nothing a
-PR does seeds the cache scope other PRs read. The `merge-gate.yml` runs on `development` do,
-after each merge, and so does the nightly `release-gate.yml` run: they execute on the default
-branch, whose cache scope every PR into `development` can read. Jobs that build the same thing in
+PR does seeds the cache scope other PRs read. Runs on `development` do, since they execute on the
+default branch, whose cache scope every PR into `development` can read: the `merge-gate.yml` run
+after each merge saves the arm64 determinism cells' entry and the Windows cell's, and nothing
+else (its x86_64 cells only restore), and the nightly `release-gate.yml` run saves every other
+entry, the x86_64 `nextest` one included. After a `Cargo.lock` change the x86_64 cells therefore
+build their dependencies cold until the next nightly. Jobs that build the same thing in
 those workflows therefore share one rust-cache `shared-key` (the key replaces rust-cache's per-job component; the
 rustc host triple, the `CARGO_*`/`RUST*` environment and `Cargo.lock` still separate entries, so
 x86_64 and arm64 never share one):
@@ -375,22 +396,42 @@ building release-codegen test binaries, about three times per PR.
 | docs only | `bash .agents/gate.sh docs` | fmt, the file-size cap, the no-secret scan, the package/authority/product contract and its controls, the gate fixtures and the documentation checks (staging, mdBook build, links): the always-on jobs of `pr-gate.yml`. Nothing is compiled. |
 | `crates/leverage/**`, docs, the root `README.md` | `bash .agents/gate.sh leverage` | the leverage lane (each member's fmt, clippy, rustdoc, nextest and cargo-machete) and the README lane (the Quickstart byte-pin and its execution) |
 | anything else (the engine lane) | `bash .agents/gate.sh` | everything that compiles the engine, in debug codegen: the database-free check, the golden-gen firewall, the facade compiler contract, cargo-machete, clippy, build, the bare-metal cell, rustdoc, cargo-deny, the determinism subset, the strict-bit corpus and the two input-hygiene audits |
-| the core four (`oce-model`, `oce-expr`, `oce-blocks`, `oce-graph`) or `oce-cxf` | `bash .agents/gate.sh determinism` | the determinism subset and the strict-bit step under release codegen |
+| the core four (`oce-model`, `oce-expr`, `oce-blocks`, `oce-graph`), `oce-cxf`, `oce-api`, `Cargo.lock`, the root `Cargo.toml`, `rust-toolchain.toml` or `.cargo/config.toml` | `bash .agents/gate.sh determinism` | the determinism subset and the strict-bit step under release codegen |
+| a pin advance (`third_party/**`, `tools/reference-catalog/**`, or either file that holds a pinned upstream commit) or `.agents/gate.sh` itself | `bash .agents/gate.sh full` | the workspace suite in debug and release codegen, the doctests, the blob matrix artifact and the blob round trip |
+
+The first three rows and the core four and `oce-cxf` in the fourth are the owner's table
+(issue #545). The rest of the fourth row and the whole fifth are coordinator decisions of
+2026-11-10 from the review of GitHub #547, to be confirmed by the owner: `oce-api` is there
+because the release determinism subset executes its test binaries; `Cargo.lock`, the root
+`Cargo.toml`, `rust-toolchain.toml` and `.cargo/config.toml` because they move release codegen of
+everything the subset builds as surely as a source edit; and the fifth row because the G36 half
+of the pin guard runs only in the workspace suite and the script's `full`-only steps run in no
+lighter mode.
 
 - **Which row.** The lane boundaries are the classifier's ([Lanes](#lanes-what-a-pr-runs)):
   documentation a test reads, a gate script, a workflow and a tool config are engine changes.
   `scripts/ci/proof-row.sh` reads changed paths on stdin and prints the row
   (`git diff --no-renames --name-only origin/development... | bash scripts/ci/proof-row.sh`); it
-  names the heaviest row for a path under `crates/oce-model/`, `crates/oce-expr/`,
-  `crates/oce-blocks/`, `crates/oce-graph/` or `crates/oce-cxf/`, tests and fixtures included, and
-  for a diff it cannot read. Its fixtures (`scripts/ci/test-proof-row.sh`) run on every PR.
+  holds the exact path lists of the fourth and fifth rows (a crate's tests and fixtures count as
+  the crate; the fifth row's two source files are `crates/oce-cxf/tests/third_party_manifest/` and
+  `crates/oce-blocks/src/registry/catalog_guard_support.rs`, where the pinned upstream commits are
+  written), and names the heaviest row for a diff it cannot read. Its fixtures
+  (`scripts/ci/test-proof-row.sh`) run on every PR and fail if a listed path stops existing or a
+  pin constant leaves its file.
 - **The script says which row a run was.** Every gate run ends with a `LOCAL PROOF` block: the row
   the run covered, and the row the checkout needs, from the paths that differ from the merge base
   with `origin/development` (uncommitted and untracked files included). When the mode is lighter
   than the row, the block says so in the tail the author pastes. It is advice and never changes
   the exit status: a CI checkout has no `origin/development`, and a stale one must not fail a gate.
 - **A heavier row always satisfies a lighter one**, because each mode runs everything the modes
-  before it run.
+  before it run. `scripts/ci/test-gate-modes.sh` holds that: it executes the script in each of the
+  five modes with its expensive children stubbed, reads which steps each mode reaches, and fails
+  unless every mode runs all of the one before it and more; four mutated copies prove it can fail.
+- **A change to `release-gate.yml`, or to anything else only `full` or the nightly run
+  executes, is not covered by any row.** Dispatch the workflow on the branch
+  (`gh workflow run release-gate.yml --ref <branch>`) and wait for it to finish green before the
+  PR merges. The `CI OK` that run posts is not the one that decides the merge
+  ([above](#what-runs-after-the-merge)).
 - **A rebase onto `development` with no conflicts** needs `CI OK` reported on the new head, not a
   local re-run. **A rebase with conflicts, or a fix round,** re-runs the row's proof.
 - **No row runs every crate's suite.** The author still runs the tests of the crates the PR
@@ -399,9 +440,10 @@ building release-codegen test binaries, about three times per PR.
   `oce-blocks` and `oce-expr` suites and the scoped strict-bit binaries; CI adds `oce-graph`,
   `oce-validate`, `oce-model`, `oce-cxf` and `oce-store` per PR; every other crate's suite first
   runs in CI in the nightly release gate.
-- **`full` is what CI executes nightly**, and no PR's requirement. One exception stands: a pin
-  advance under `third_party/` still runs it, because the G36 half of the pin guard runs only in
-  the workspace suite (the vendored README's pin-advance policy).
+- **`full` is also what CI executes nightly.** Only the fifth row owes it: a pin advance,
+  because the G36 half of the pin guard runs only in the workspace suite (the vendored README's
+  pin-advance policy), and a change to the script, because nothing else runs its `full` block
+  before the merge.
 
 What the rows cost, cold (`cargo clean` first, `target/` empty), on a 10-core arm64 Mac,
 measured on 2026-11-10 at the head that introduced them:
@@ -411,8 +453,8 @@ measured on 2026-11-10 at the head that introduced them:
 | docs | `bash .agents/gate.sh docs` | 4.8 min (285 s) | with two unrelated builds running on the machine (load average 5 to 26); nothing is compiled, and mdBook was already installed |
 | leverage | `bash .agents/gate.sh leverage` | 5.9 min (352 s) | under the same load |
 | engine | `bash .agents/gate.sh` | 7.1 min (423 s) | under the same load |
-| core four or `oce-cxf` | `bash .agents/gate.sh determinism` | the engine row plus 5.6 min: 5.2 min for the determinism subset under release codegen and 0.4 min for the strict-bit step | those two steps on an idle machine, on `fdd70c0` |
-| (not a row) | `bash .agents/gate.sh full` | 30.1 min | idle, on `fdd70c0`: 15.9 min of it the release-codegen workspace suite |
+| determinism | `bash .agents/gate.sh determinism` | the engine row plus 5.6 min: 5.2 min for the determinism subset under release codegen and 0.4 min for the strict-bit step | those two steps on an idle machine, on `fdd70c0`, before GitHub #546 and #551 cut the release test binaries |
+| full | `bash .agents/gate.sh full` | 30.1 min | idle, on `fdd70c0`: 15.9 min of it the release-codegen workspace suite, likewise before #546 and #551 |
 
 The first three are upper bounds, since the machine was busy. About three minutes of each is the
 gate's own fixture suites, which run in every mode (`test-workflow-gates.sh` alone took 3 min 22 s
@@ -557,7 +599,7 @@ merge into `development` (and `release-gate.yml` runs the same job nightly), and
 and target-bound bytes equal across codegen within each architecture, the blobs identical in all
 four cells, and the four round-trip recordings identical. A release cell was the per-PR long pole,
 11 to 18 minutes of which the tests ran for under half a minute, so a pull request does not wait
-for it. What a pull request that changes the core four or `oce-cxf` has before it merges is the
+for it. What a pull request the `determinism` row names has before it merges is the
 author's `bash .agents/gate.sh determinism`, which runs the subset under release codegen on one
 host: one architecture, and no comparison between a debug and a release artifact; any other pull
 request has no release-codegen run before it merges ([the local proof](#the-local-proof)). A divergence that needs the other architecture or that comparison is found
@@ -610,8 +652,9 @@ Every leg also compares the facade with the entry on its own target, the blob by
 checked-in goldens and the entry's run with the pinned run digests. `wasm32-unknown-unknown` stays a
 build-only target in the [bare-metal cell](#the-bare-metal-cell); a headless-browser run belongs to
 the `oce-wasm` crate (M4). `bash .agents/gate.sh roundtrip` (and `full`) records on the local host
-and replays the recording there and on `wasm32-wasip1`; it fails, naming the install command, when
-the target or wasmtime is missing. The second native architecture is CI's alone.
+and replays the recording there and on `wasm32-wasip1`; it fails, naming the `rustup` command,
+when the target is missing, and it runs the wasmtime installer itself, which keeps an installed
+binary only if its digest is the pinned one, so a different `wasmtime` on PATH is never used. The second native architecture is CI's alone.
 
 ## Every pull request runs the gate
 
@@ -664,18 +707,24 @@ the tip it tests and adds six things, the last three moved out of the per-PR gat
 | workspace nextest | every unit and integration test in the workspace | `release-gate.yml`, `test-suite` job, unit + integration step |
 | `cargo test --doc` | doctests — nextest cannot run them, so this is a separate step | `release-gate.yml`, `test-suite` job, doctest step |
 | the executed gate script | `bash .agents/gate.sh full`, the only CI execution of the script | `release-gate.yml`, `gate` job |
-| workspace nextest, release codegen | release panic-freedom, `debug_assert` paths stripped; inherited `ci-release` runner policy | `release-gate.yml`, `gate` job: the script's `full` mode runs it, and the job requires the `ci-release` JUnit report afterwards |
+| workspace nextest, release codegen | release panic-freedom, `debug_assert` paths stripped; the `ci` runner policy, inherited by the `ci-release-workspace` profile | `release-gate.yml`, `gate` job: the script's `full` mode runs it, and the job requires the `ci-release-workspace` JUnit report afterwards |
 | determinism matrix, four native cells | the three-crate subset and the blob round trip under release codegen on x86_64 and aarch64, beside the debug cells; the fan-in compares debug against release (portable and target-bound bytes, blobs, round-trip recordings) and repeats the cross-architecture checks | `merge-gate.yml` and `release-gate.yml`, `determinism-matrix` and `determinism-compare` jobs |
 | Windows cell | the workspace build and suite on Windows, without the strict-bit binaries | `merge-gate.yml` and `release-gate.yml`, `std-build-windows` job |
 
 The release-codegen workspace suite has one build, not two (issue #545). `test-suite` used to run
 it and `gate (full)` ran it again inside the script, each compiling the whole workspace under the
 release profile: 55.7 minutes of `gate (full)` in run 42767547196. `test-suite` now runs the debug
-suite and the doctests and requires the `ci` JUnit report; `gate (full)` clears the `ci-release`
-report, executes the script and then requires the report the script's release-codegen workspace
-run wrote. `check-workflow-gates.sh` pins those three steps in that order and the three
-full-suite commands inside `.agents/gate.sh`, since no workflow line names the release run any
-more.
+suite and the doctests and requires the `ci` JUnit report; `gate (full)` clears the
+`ci-release-workspace` report, executes the script and then requires that report. The profile
+exists for that one run. `full` mode also runs the determinism subset and the strict-bit step
+under release codegen, which write the `ci-release` report, so a requirement on that file was
+met with the workspace run removed from the script (found in the review of GitHub #547, by making
+the step unreachable in a copy). `check-workflow-gates.sh` pins the three job steps in order; the
+`full` block of `.agents/gate.sh`, whose first five lines after the `if`, comments aside, must be
+exactly the debug suite, the release suite under that profile and the doctests, so a step that is
+dropped, wrapped in a condition or prefixed with one fails; and that no other line of the script
+or of any gating workflow names the profile. What a report proves is narrow: the command started
+and nextest wrote a report. The script's exit status is what says the suite passed.
 
 `--no-tests=fail` is explicit on the nextest steps: a run that discovers zero tests hard-fails
 rather than passing, which catches tests that silently stop compiling or being found.
@@ -685,8 +734,9 @@ rather than passing, which catches tests that silently stop compiling or being f
 Local setup and CI pin cargo-nextest `0.9.143`; `.config/nextest.toml` also declares that version as
 both required and recommended, so an older local binary exits before testing. The `default` profile
 is fail-fast. Automated debug runs use `ci`; release-codegen runs use `ci-release`, which inherits
-the same retries, timeout, leak, and reporter policy instead of copying it. Those three are the
-only profiles.
+the same retries, timeout, leak, and reporter policy instead of copying it, and the one
+release-codegen run of the whole workspace uses `ci-release-workspace`, which inherits it too and
+differs only in where its report goes. Those four are the only profiles.
 
 Retries are zero and a flaky pass is still a failure. Ordinary tests terminate after 120 seconds. A
 run stops
@@ -735,7 +785,7 @@ in every per-PR build, are the only pinned surface.
   codegen or doctests on macOS or Windows, and no strict-bit result is observed on either.
 - **Release codegen, Windows and the executed gate script, before a merge.** No per-PR job runs
   the determinism subset under release codegen, compares a debug artifact with a release one,
-  builds on Windows or executes `.agents/gate.sh`. For a change to the core four or `oce-cxf` the
+  builds on Windows or executes `.agents/gate.sh`. For a change the `determinism` row names the
   author's own `determinism` run covers release codegen on one host; for every other change, and
   for the comparison and Windows, the merge commit is the first observation, by a run that does
   not block the merge it reports on.

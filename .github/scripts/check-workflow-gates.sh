@@ -23,6 +23,7 @@ ROOT_CARGO_TOML="${OCE_ROOT_CARGO_TOML:-Cargo.toml}"
 CRATES_DIR="${OCE_CRATES_DIR:-crates}"
 FIRMWARE_DIR="${OCE_FIRMWARE_DIR:-firmware}"
 GATE_SCRIPT="${OCE_GATE_SCRIPT:-.agents/gate.sh}"
+NEXTEST_CONFIG="${OCE_NEXTEST_CONFIG:-.config/nextest.toml}"
 
 require_file() {
   path="$1"
@@ -59,10 +60,11 @@ require_job_pattern() {
   job="$2"
   pattern="$3"
   label="$4"
+  # Comment lines never count: a required command that survives only in a comment is not run.
   job_body="$(awk -v header="  $job:" '
     $0 == header { found = 1; next }
     found && /^  [^ ]/ { exit }
-    found { print }
+    found && !/^[[:space:]]*#/ { print }
   ' "$path")"
   if ! grep -Eq -- "$pattern" <<< "$job_body"; then
     echo "FAIL: $path job $job is missing required gate pattern: $label"
@@ -398,6 +400,78 @@ require_event_branches() {
     echo "FAIL: $path $event trigger does not name branches $expected (got: ${branches:-none}); $reason"
     exit 1
   fi
+  # `branches:` is the event's only filter. A `paths:`, `paths-ignore:`, `branches-ignore:` or
+  # `tags:` key beside it would let the event skip commits the branch list says it runs on.
+  local filters
+  filters="$(awk -v header="  $event:" '
+    /^on:[[:space:]]*$/ { in_on = 1; next }
+    in_on && /^[^[:space:]#]/ { in_on = 0 }
+    !in_on || /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+    /^  [A-Za-z_]+:/ { line = $0; sub(/[[:space:]]+$/, "", line); in_event = (line == header); next }
+    in_event && /^    [^[:space:]]/ { key = $0; sub(/^    /, "", key); sub(/:.*/, "", key); print key }
+  ' "$path" | sort | tr '\n' ' ')"
+  if [ "$filters" != 'branches ' ]; then
+    echo "FAIL: $path $event trigger carries a filter other than branches: (got: $filters); $reason"
+    exit 1
+  fi
+}
+
+# The lines under `schedule:` in a workflow's block-map `on:`, exactly one cron entry with the
+# given expression. The nightly run is where the heavy set executes (issue #545), and a cron that
+# is present but never fires (`0 0 31 2 *`) would end it as surely as a deleted trigger, so the
+# expression is pinned to the string, not to its shape.
+require_schedule() {
+  path="$1"
+  expected="$2"
+  local entries
+  entries="$(awk '
+    /^on:[[:space:]]*$/ { in_on = 1; next }
+    in_on && /^[^[:space:]#]/ { in_on = 0 }
+    !in_on || /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+    /^  [A-Za-z_]+:/ { in_schedule = ($0 ~ /^  schedule:[[:space:]]*$/); next }
+    in_schedule { line = $0; sub(/^[[:space:]]+/, "", line); sub(/[[:space:]]+(#.*)?$/, "", line); print line }
+  ' "$path")"
+  if [ "$entries" != "- cron: \"$expected\"" ]; then
+    echo "FAIL: $path schedule is not exactly the one cron entry \"$expected\" (got: ${entries:-none})"
+    exit 1
+  fi
+}
+
+# The `full` block of the gate script (issue #545). release-gate.yml reaches the workspace suite
+# under release codegen only by executing the script, so the script's shape is part of the gate:
+# after `if [ "$MODE" = full ]; then`, comment lines aside, come exactly the debug workspace step,
+# the release-codegen workspace step under its own nextest profile, and the doctests, each a plain
+# `step` at the block's own indent. A step that is dropped, prefixed with a condition
+# (`[ -n "$X" ] || step ...`), wrapped in an inner `if`, or moved elsewhere changes those five
+# lines. What this cannot see: an enclosing condition above the block, a redefined `step`, or an
+# early exit before it; the executed job's report requirement and test-gate-modes.sh, which runs
+# the script in `full` mode with stubbed children and reads which steps it reaches, cover those.
+require_gate_full_block() {
+  path="$1"
+  local expected actual
+  expected="$(cat <<'BLOCK'
+  step 'nextest — workspace' \
+    cargo nextest run --workspace --locked --profile ci --no-tests=fail
+  step 'nextest — workspace (release codegen)' \
+    cargo nextest run --workspace --locked --profile ci-release-workspace --cargo-profile release --no-tests=fail
+  step 'doctests' cargo test --workspace --doc --locked
+BLOCK
+)"
+  actual="$(awk '
+    /^[[:space:]]*#/ { next }
+    $0 == "if [ \"$MODE\" = full ]; then" { blocks++; taken = 0; inside = (blocks == 1); next }
+    inside && taken < 5 { print; taken++ }
+  ' "$path")"
+  if [ "$(grep -c '^if \[ "\$MODE" = full \]; then$' "$path")" != 1 ] || [ "$expected" != "$actual" ]; then
+    echo "FAIL: $path full block does not open with exactly the workspace suite, the release-codegen workspace suite under profile ci-release-workspace, and the doctests"
+    diff <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") | sed 's/^/  /' || true
+    exit 1
+  fi
+}
+
+# How many non-comment lines of a file name a fixed string.
+count_code_lines() {
+  grep -Ev '^[[:space:]]*#' "$1" | grep -cF -- "$2" || true
 }
 
 # Every checkout in merge-gate.yml and release-gate.yml pins `ref: ${{ env.CHECKOUT_REF }}`: a job
@@ -1076,6 +1150,10 @@ require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/c
   'run the lane classifier fixtures on every PR'
 require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/ci/test-proof-row\.sh$' \
   'run the local proof-row fixtures on every PR'
+require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/ci/test-gate-modes\.sh$' \
+  'run the gate-mode nesting fixtures on every PR'
+require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/ci/test-install-wasmtime\.sh$' \
+  'run the wasmtime installer destination fixtures on every PR'
 require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: python3 scripts/ci/test_ci_ok\.py$' \
   'run the CI OK result-check controls on every PR'
 require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/ci/test-leverage-members\.sh$' \
@@ -1168,7 +1246,7 @@ require_event_branches "$release" pull_request '[main]' \
   'the release PR into main must run the heavy set, and no other pull request may'
 require_event_branches "$release" push '[main]' \
   'the heavy set runs on the merged release only; a merge into development runs merge-gate.yml'
-require_pattern "$release" '^    - cron:' 'nightly heavy gate'
+require_schedule "$release" '17 8 * * *'
 # A scheduled run checks out the development tip; a push run and a dispatched run check out the
 # commit the event names, the same one in every job; a release PR checks out its merge ref. Every
 # checkout takes that one pinned ref, and the concurrency group cancels only a superseded release-PR
@@ -1261,24 +1339,41 @@ require_job_order "$release" 'gate' 'bash scripts/ci/install-wasmtime.sh' \
   'run: bash .agents/gate.sh full' \
   'the executed full gate script has the pinned wasmtime its round trip runs under'
 # The workspace suite under release codegen runs in this job only (issue #545: `test-suite` and
-# `gate (full)` each built the release workspace). The job clears the `ci-release` report, executes
-# the script, then requires the report; the script must hold the three full-suite commands, each on
-# one line, since no workflow line names the release run any more. A command inside a dead branch
-# of the script would still satisfy this; the executed job and its report are what show it ran.
-require_job_order "$release" 'gate' 'run: rm -f target/nextest/ci-release/junit.xml' \
+# `gate (full)` each built the release workspace), and only through the executed script, under a
+# nextest profile that nothing else uses. The profile is what makes the report requirement mean
+# something: `full` mode also runs the determinism subset and the strict-bit step under release
+# codegen, which write the `ci-release` report, so a requirement on that file is met with the
+# workspace run removed. The job clears the `ci-release-workspace` report, executes the script,
+# then requires the report. A report says the command started and nextest wrote one; the script's
+# exit status is what says the suite passed.
+require_pattern "$NEXTEST_CONFIG" '^\[profile\.ci-release-workspace\]$' \
+  'a nextest profile of its own for the release-codegen workspace run'
+require_pattern "$NEXTEST_CONFIG" '^\[profile\.ci-release-workspace\.junit\]$' \
+  'a JUnit report of its own for the release-codegen workspace run'
+require_job_order "$release" 'gate' 'run: rm -f target/nextest/ci-release-workspace/junit.xml' \
   'run: bash .agents/gate.sh full' \
-  'the release-codegen nextest report is cleared before the gate script runs'
+  'the release-codegen workspace report is cleared before the gate script runs'
 require_job_order "$release" 'gate' 'run: bash .agents/gate.sh full' \
-  'run: test -s target/nextest/ci-release/junit.xml' \
+  'run: test -s target/nextest/ci-release-workspace/junit.xml' \
   'the gate job requires the release-codegen workspace suite report after the script'
-require_pattern "$GATE_SCRIPT" \
-  '^[[:space:]]*cargo nextest run --workspace --locked --profile ci --no-tests=fail$' \
-  'full mode runs the workspace suite with hard-fail-on-zero-tests'
-require_pattern "$GATE_SCRIPT" \
-  '^[[:space:]]*cargo nextest run --workspace --locked --profile ci-release --cargo-profile release --no-tests=fail$' \
-  'full mode runs the workspace suite under release codegen with hard-fail-on-zero-tests'
-require_pattern "$GATE_SCRIPT" "^[[:space:]]*step 'doctests' cargo test --workspace --doc --locked\$" \
-  'full mode runs the doctests'
+require_gate_full_block "$GATE_SCRIPT"
+# Exactly one command anywhere may write that report: the script's workspace run. A second user in
+# the script, or any in a workflow other than the gate job's clear and requirement, would let the
+# report exist without that run.
+if [ "$(count_code_lines "$GATE_SCRIPT" 'ci-release-workspace')" != 1 ]; then
+  echo "FAIL: $GATE_SCRIPT names the nextest profile ci-release-workspace on other than exactly one line; only the release-codegen workspace run may use it"
+  exit 1
+fi
+if [ "$(count_code_lines "$release" 'ci-release-workspace')" != 2 ]; then
+  echo "FAIL: $release names ci-release-workspace outside the gate job's report clear and requirement"
+  exit 1
+fi
+for other in "$ci" "$merge"; do
+  if [ "$(count_code_lines "$other" 'ci-release-workspace')" != 0 ]; then
+    echo "FAIL: $other names the nextest profile ci-release-workspace; only the release-codegen workspace run in $GATE_SCRIPT may use it"
+    exit 1
+  fi
+done
 
 # The emulation check (issue #402): nightly and on dispatch, never on a pull request or a push (it
 # is not part of CI OK), its actions pinned, and it runs the emulation script.

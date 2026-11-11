@@ -9,6 +9,12 @@
 #   default — local dev: fast, fail-fast feedback (`cargo nextest run`).
 #   ci      — local gate + CI debug-codegen runs: no fail-fast, no retries, JUnit output.
 #   ci-release — inherits `ci` for release-codegen runs and writes a separate JUnit report.
+#   ci-release-workspace — inherits `ci` for ONE run, the whole workspace suite under release
+#                 codegen (`bash .agents/gate.sh full`, executed by release-gate.yml's `gate (full)`
+#                 job). It exists for its report path: the determinism subset and the strict-bit
+#                 step also run under release codegen in that mode and write `ci-release`'s
+#                 report, so a requirement on that file could not tell whether the workspace run
+#                 happened (issue #545). Nothing else may use this profile.
 #
 # For a deterministic, safety-critical control engine the gate must be reproducible: no
 # retries, no flake-tolerance, hard-fail if zero tests are discovered (see release-gate.yml's
@@ -70,3 +76,9 @@ inherits = "ci"
 
 [profile.ci-release.junit]
 report-name = "open-control-ci-release"
+
+[profile.ci-release-workspace]
+inherits = "ci"
+
+[profile.ci-release-workspace.junit]
+report-name = "open-control-ci-release-workspace"

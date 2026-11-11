@@ -8,8 +8,10 @@ Things worth knowing before you change this repo that the code does not tell you
 bash .agents/gate.sh docs         # a docs-only PR: the always-on checks, no cargo build
 bash .agents/gate.sh leverage     # crates/leverage/**, docs, the root README.md
 bash .agents/gate.sh              # any other change: the engine lane, debug codegen
-bash .agents/gate.sh determinism  # the core four or oce-cxf: adds the release-codegen subset
-bash .agents/gate.sh full         # what CI executes nightly: adds the workspace suite and doctests
+bash .agents/gate.sh determinism  # the core four, oce-cxf, oce-api, Cargo.lock, the root Cargo.toml,
+                                  # rust-toolchain.toml, .cargo/config.toml: adds the release-codegen subset
+bash .agents/gate.sh full         # a pin advance or .agents/gate.sh itself: adds the workspace suite
+                                  # and doctests; also what CI executes nightly
 ```
 
 That script is the single source of truth for gate commands. Every other document
@@ -17,18 +19,30 @@ points at it. Run it in the form above and read the real output — a summary of
 gate is a claim about a gate, and this engine controls physical equipment.
 
 **Run the row your PR's paths select, on the final head, and paste its tail** (issue #545, owner
-decision of 2026-11-10; before it every PR owed `full`, 30 minutes cold). The first four lines
-above are the four rows, lightest first, and each runs everything the one before it runs.
-`scripts/ci/proof-row.sh` maps changed paths to a row using the lane classifier, and every gate
-run ends by printing the row the checkout needs beside the row it covered, so a tail that is too
-light says so. Three rules go with the table:
+decision of 2026-11-10; before it every PR owed `full`, 30 minutes cold). The five lines above
+are the five rows, lightest first, and each runs everything the one before it runs.
+`scripts/ci/proof-row.sh` maps changed paths to a row using the lane classifier and holds the
+exact path lists, and every gate run ends by printing the row the checkout needs beside the row
+it covered, so a tail that is too light says so. The `determinism` row is what the
+release-codegen determinism subset builds and runs (the core four, `oce-cxf`, `oce-api`) and the
+four files that set how all of it is compiled; the `full` row is a pin advance (`third_party/**`,
+`tools/reference-catalog/**`, `crates/oce-cxf/tests/third_party_manifest/**` and
+`crates/oce-blocks/src/registry/catalog_guard_support.rs`, the two places a pinned upstream
+commit is written) and `.agents/gate.sh`, whose `full`-only steps no lighter mode executes. Rows
+four and five beyond the issue's own table are coordinator decisions of 2026-11-10, to be
+confirmed by the owner. Four rules go with the table:
 
 - A rebase onto `development` with no conflicts needs `CI OK` reported on the new head, not a
   local re-run. A rebase with conflicts, or a fix round, re-runs the row.
 - No row runs every crate's suite. Run the tests of each crate the PR changes:
   `cargo nextest run -p <crate> --locked --profile ci --no-tests=fail`, and
   `cargo test -p <crate> --doc --locked` for its doctests.
-- `full` is no PR's requirement, with one exception: a pin advance (below).
+- `full` is owed only by the fifth row. It is also what CI executes nightly.
+- A change to `release-gate.yml`, or to anything else only `full` or the nightly run executes,
+  also dispatches the workflow on its branch (`gh workflow run release-gate.yml --ref <branch>`)
+  and waits for a green run before merging. That run posts a `CI OK` of its own on the head,
+  without the strict-bit matrix; read `CI OK` for the merge from the `pr-gate` run on the head
+  SHA (`gh pr checks <N>` names the workflow of each check).
 
 Change a command by changing [`.github/workflows/pr-gate.yml`](../.github/workflows/pr-gate.yml)
 first, then the script.
@@ -48,7 +62,8 @@ The per-PR gate runs once per change, on the PR: `pr-gate.yml` has no `push` tri
 merge commit instead (issues #502 and #545), beside the path-filtered `docs-pages.yml`. That run
 holds what the per-PR gate does not and a merge cannot wait a night for: the determinism subset
 under release codegen on both architectures with the debug-against-release comparisons, and the
-Windows cell, about 13 minutes in all. Its aggregate is `Merge gate OK`, deliberately not `CI OK`,
+Windows cell (the measured time is in
+[CI and the gate](../docs/ci-and-the-gate.md#what-runs-after-the-merge)). Its aggregate is `Merge gate OK`, deliberately not `CI OK`,
 and it is not a required status — the commit has landed — so after merging a change that runs the
 determinism lane, watch it: a red run is fixed forward or reverted before the next
 determinism-lane merge. Pushes queue: a run in progress finishes and only the newest waiting run
@@ -58,8 +73,11 @@ The heavy set runs nightly, not per merge (issue #545): `release-gate.yml` runs 
 suite in debug and release codegen, the doctests, the executed gate script (`gate (full)`),
 cargo-deny with advisories, the light gates again and the same three merge-gate jobs, against the
 `development` tip every night, on manual dispatch, on every `development` → `main` release PR and
-on pushes to `main`. It took about two hours per merge when it ran on each one. A red nightly is
-fixed forward or reverted before the next engine-lane merge. `check-workflow-gates.sh` pins each
+on pushes to `main`. It took about two hours per merge when it ran on each one. Before a
+determinism-lane merge, check the latest nightly with
+`gh run list --workflow release-gate.yml --branch development --event schedule --limit 1`:
+the merge needs it not red, or its failure already being fixed forward; otherwise the red nightly
+is fixed forward or reverted first. `check-workflow-gates.sh` pins each
 workflow's events, branches and exact job set, and requires the three shared jobs to be identical
 in both files. See [CI and the gate](../docs/ci-and-the-gate.md#what-runs-when).
 
@@ -127,7 +145,7 @@ The release-codegen cells of that matrix do not run per PR (issue #502): `merge-
 all four cells on every merge into `development`, and its fan-in adds the checks that portable and
 target-bound bytes, the blobs and the round-trip recordings match across debug/release codegen.
 Before the merge, `bash .agents/gate.sh determinism` runs the subset under release codegen on your
-machine; that run is the release-codegen evidence a PR to the core four or `oce-cxf` has, and the
+machine; that run is the release-codegen evidence a PR the `determinism` row names has, and the
 only kind of PR that owes it.
 The blob round trip (issue #403) rides on the same cells: each records
 `crates/oce-conformance/tests/blob_round_trip.rs` (facade against the `no_std` entry, every output,
@@ -138,7 +156,9 @@ through the aarch64 debug cell's archived suite, and `blob round trip (wasm32-wa
 `wasm32-wasip1` under the wasmtime pinned in `scripts/ci/install-wasmtime.sh`. Locally,
 `bash .agents/gate.sh roundtrip` (also in `full`) records and replays on the host and on
 `wasm32-wasip1`; it needs `rustup target add wasm32-wasip1` and `bash scripts/ci/install-wasmtime.sh`
-and fails, not skips, without them. The installer puts wasmtime in a user cache directory
+and fails, not skips, without the target; it runs the installer itself, which keeps a binary
+already installed only if its SHA-256 is the pinned one, and never uses another `wasmtime` from
+PATH. The installer puts wasmtime in a user cache directory
 (`$OCE_WASMTIME_DIR`, else `${XDG_CACHE_HOME:-$HOME/.cache}/open-control-engine/wasmtime-bin`), not
 under `target/`, so the `cargo clean` at a merge boundary no longer deletes it and every worktree
 shares one copy (issue #545). A behaviour change that moves a run digest moves the recording
@@ -161,9 +181,9 @@ Before claiming your tests pass, run the suites of the crates you changed
 
 Pin-advance PRs — any change under `third_party/**` or to the pin constants — still run
 `bash .agents/gate.sh full` first-hand; see the vendored README's
-`## Pin-advance policy` section. It is the one exception to the lane-matched proof: the G36 half
-of the pin guard runs only in the workspace suite, which CI now runs nightly, after the advance
-would have landed.
+`## Pin-advance policy` section. It is the `full` row of the local proof, and `proof-row.sh` names
+it for every path a pin advance moves: the G36 half of the pin guard runs only in the workspace
+suite, which CI now runs nightly, after the advance would have landed.
 
 **Confirm the checks ran.** GitHub Actions runs the whole per-PR gate on every PR, drafts
 included, and `CI OK` is the one status that summarizes it. A PR with no checks is easy to

@@ -36,12 +36,13 @@ the architecture and invariants are the design of record.
 - **The merge gate runs on the merge commit, and the release gate nightly.** Merging into
   `development` starts [`.github/workflows/merge-gate.yml`](.github/workflows/merge-gate.yml): the
   determinism subset under release codegen on x86_64 and arm64 with its debug-against-release
-  comparisons, and the Windows cell, in about a quarter of an hour. Every night
+  comparisons, and the Windows cell. Every night
   [`.github/workflows/release-gate.yml`](.github/workflows/release-gate.yml) runs the heavy set on
   the `development` tip: the full workspace suite in debug and release codegen, the doctests, the
   executed gate script and cargo-deny with advisories. The per-PR gate runs none of those. A red
-  merge-gate run is fixed forward or reverted before the next determinism-lane merge, and a red
-  nightly before the next engine change merges
+  merge-gate run is fixed forward or reverted before the next determinism-lane merge, and a
+  determinism-lane merge also needs the latest nightly not red, or its failure already being
+  fixed forward
   ([what runs after the merge](docs/ci-and-the-gate.md#what-runs-after-the-merge)).
 - Keep changes scoped to the crate or subsystem that owns the behavior, and add or update tests
   when you change behavior.
@@ -124,16 +125,22 @@ the tail of its output into the PR:
 | docs only | `bash .agents/gate.sh docs` |
 | `crates/leverage/**`, docs, the root `README.md` | `bash .agents/gate.sh leverage` |
 | anything else (the engine lane) | `bash .agents/gate.sh` |
-| the core four (`oce-model`, `oce-expr`, `oce-blocks`, `oce-graph`) or `oce-cxf` | `bash .agents/gate.sh determinism` |
+| the core four (`oce-model`, `oce-expr`, `oce-blocks`, `oce-graph`), `oce-cxf`, `oce-api`, `Cargo.lock`, the root `Cargo.toml`, `rust-toolchain.toml` or `.cargo/config.toml` | `bash .agents/gate.sh determinism` |
+| a pin advance (`third_party/**`, `tools/reference-catalog/**`, or either file that holds a pinned upstream commit) or `.agents/gate.sh` itself | `bash .agents/gate.sh full` |
 
 `git diff --no-renames --name-only origin/development... | bash scripts/ci/proof-row.sh` names
 your row, and every gate run ends by printing the row your checkout needs beside the row it
 covered. Each row runs everything the rows above it run, in CI's exact command form; what each
 mode runs, the rules for a rebase and a fix round, and measured timings are in
-[the local proof](docs/ci-and-the-gate.md#the-local-proof). The last row adds the determinism
+[the local proof](docs/ci-and-the-gate.md#the-local-proof). The fourth row adds the determinism
 subset and the strict-bit step under release codegen: no per-PR CI job runs that subset under
 release codegen (its release cells run in the merge gate, on the merge commit), so for a change to
-those five crates the tail you paste is the pre-merge release-codegen evidence.
+what the subset builds the tail you paste is the pre-merge release-codegen evidence. The fifth
+adds the workspace suite and the doctests, for the two kinds of change nothing lighter checks. If
+you change `.github/workflows/release-gate.yml`, or anything else only `full` or the nightly run
+executes, also run `gh workflow run release-gate.yml --ref <your branch>` and wait for it to
+finish green before the PR merges; the `CI OK` that decides the merge is still the one from the
+`pr-gate` run on your head commit.
 
 No row runs every crate's tests. If your change falls outside the suites the per-PR gate names, a
 green PR need not have run its tests, so run the suites of the crates you changed as well:
@@ -144,9 +151,7 @@ cargo test -p <crate> --doc --locked
 ```
 
 CI also runs the script directly, as `gate (full)` in `.github/workflows/release-gate.yml`: nightly
-on the `development` tip, on release PRs and on dispatch. `full` adds the workspace suite in debug
-and release codegen and the doctests to the last row; no PR owes it (a pin advance under
-`third_party/` is the one exception, see its README). No per-PR job executes the script, so a
+on the `development` tip, on release PRs and on dispatch. No per-PR job executes the script, so a
 change to it, a CI script or a workflow is first executed by CI on the night after it merges, and
 before that only by your own run. That is coverage, not proof that the script and the workflows
 still agree: nothing verifies that mechanically; change a command in CI first, then here. Which

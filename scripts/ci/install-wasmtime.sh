@@ -25,9 +25,19 @@ set -euo pipefail
 
 version="50.0.1"
 
+# Each variable is read only when the one before it is unset or empty, so `OCE_WASMTIME_DIR`
+# alone is enough on a host with no HOME (scripts/ci/test-install-wasmtime.sh holds the order).
 default_destination() {
-  local cache="${XDG_CACHE_HOME:-${HOME:?HOME is unset, so there is no default wasmtime directory; pass a destination or set OCE_WASMTIME_DIR}/.cache}"
-  printf '%s\n' "${OCE_WASMTIME_DIR:-$cache/open-control-engine/wasmtime-bin}"
+  if [ -n "${OCE_WASMTIME_DIR:-}" ]; then
+    printf '%s\n' "$OCE_WASMTIME_DIR"
+  elif [ -n "${XDG_CACHE_HOME:-}" ]; then
+    printf '%s\n' "$XDG_CACHE_HOME/open-control-engine/wasmtime-bin"
+  elif [ -n "${HOME:-}" ]; then
+    printf '%s\n' "$HOME/.cache/open-control-engine/wasmtime-bin"
+  else
+    echo "install-wasmtime: HOME, XDG_CACHE_HOME and OCE_WASMTIME_DIR are all unset, so there is no default directory; pass a destination or set OCE_WASMTIME_DIR" >&2
+    return 1
+  fi
 }
 if [ "${1:-}" = "--print-destination" ]; then
   default_destination
@@ -75,7 +85,11 @@ sha256_of() {
   fi
 }
 
-destination=${1:-"$(default_destination)"}
+if [ -n "${1:-}" ]; then
+  destination="$1"
+else
+  destination="$(default_destination)"
+fi
 
 if [ -f "$destination/wasmtime" ] && [ "$(sha256_of "$destination/wasmtime")" = "$binary_sha" ]; then
   echo "wasmtime $version already present and verified"

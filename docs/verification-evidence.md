@@ -412,7 +412,7 @@ run here does not prove these pass`, listing:
   debug-against-release comparisons as well. One machine cannot reproduce either; CI is the only
   place they run. In its `determinism` and `full` modes the script does run the subset under
   release codegen on the local host, and says that this run, on the final head, is the
-  release-codegen evidence a change to the core four or `oce-cxf` has before it merges.
+  release-codegen evidence a change the `determinism` row names has before it merges.
 - **The strict-bit raw-output matrix** over four native cells on every PR (both architectures,
   debug and release), two captures each, and its
   eight-capture comparison. Local synthetic controls and macOS observations are not native Linux
@@ -446,9 +446,12 @@ requires `restore_state` to return the target-domain refusal.
 The release-codegen cells of that matrix, and the requirement that portable and target-bound bytes
 match across debug and release codegen, are not per-PR evidence (issue #502). They run in the
 merge gate on every merge into `development`, in four native cells with the full fan-in, and
-again nightly in the release gate. Before a merge, the release-codegen evidence is the author's
-local `bash .agents/gate.sh determinism` run on one host, pasted into the pull request, for a
-change to the core four or `oce-cxf`; no other change has any before it merges (issue #545); a divergence that needs the other architecture, or a debug-against-release artifact
+again nightly in the release gate. Before a merge, the release-codegen evidence for this subset
+is the author's local `bash .agents/gate.sh determinism` run on one host, pasted into the pull
+request, for a change the `determinism` row of the
+[local proof](ci-and-the-gate.md#the-local-proof) names; for any other change the subset first
+runs under release codegen on the merge commit (issue #545). The strict-bit matrix is separate
+and does run under release codegen on every pull request, in two of its four cells. A divergence that needs the other architecture, or a debug-against-release artifact
 comparison, is found on the merge commit.
 
 Separately, the scoped **`oce-conformance` strict-bit subset runs per-PR**: `strict_bits` and the

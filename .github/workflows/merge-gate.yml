@@ -1,5 +1,5 @@
 # Merge gate for open-control (the Open Control Engine): what must be reported after each merge
-# into `development`, in about a quarter of an hour. It runs on GitHub Actions on every push to
+# into `development`, without waiting for the heavy set. It runs on GitHub Actions on every push to
 # `development` (each merged PR, on its merge commit) and on manual dispatch.
 #
 # WHAT IT RUNS (issue #545, owner decision of 2026-11-10). Three jobs, the ones issue #502 moved
@@ -9,7 +9,8 @@
 #   * its fan-in, with the debug-against-release and the cross-architecture comparisons, and
 #   * the Windows std build and nextest cell.
 # They took under 13 minutes together in run 42767547196, where the whole release gate took about
-# two hours. Everything else release-gate.yml runs (the workspace suite in debug and release
+# two hours, and 19.0 minutes in this workflow's first run (42935095468; docs/ci-and-the-gate.md
+# keeps the current figure). Everything else release-gate.yml runs (the workspace suite in debug and release
 # codegen, the doctests, the executed gate script, cargo-deny with advisories and the light gates
 # re-run) is the HEAVY set: nightly on the `development` tip, on dispatch, on release PRs and on
 # pushes to `main`. This file never runs it.
@@ -41,8 +42,9 @@
 # No job carries a job-level `if:`, no job or step sets `continue-on-error`, and the only
 # step-level `if:` shapes are a static matrix selector and `${{ !cancelled() }}` on an evidence
 # upload (check-workflow-gates.sh). The cells share pr-gate.yml's rust-cache `shared-key`, and
-# these runs execute on `development` (the default branch), so they seed the cache scope every PR
-# into `development` can read.
+# these runs execute on `development` (the default branch), whose cache scope every PR into
+# `development` can read. Only the aarch64 cells and the Windows cell save an entry here; the
+# x86_64 cells restore the one release-gate.yml's `test-suite` saves, nightly.
 #
 # Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
 

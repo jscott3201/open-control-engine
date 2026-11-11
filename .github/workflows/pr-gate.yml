@@ -25,7 +25,7 @@
 # in merge-gate.yml on every merge into `development` (issue #502), and the remaining crates'
 # suites and the executed gate script in release-gate.yml, nightly (issue #545). Before a merge,
 # `bash .agents/gate.sh determinism` run locally is the release-codegen determinism evidence for
-# a change to the core four or oce-cxf: it runs the subset under release codegen on one host.
+# a change the `determinism` proof row names: it runs the subset under release codegen on one host.
 #
 # Lanes (issue #393). The `changes` job classifies the PR's changed paths
 # (scripts/ci/classify-changes.sh, fail-closed: a path no allowlist matches counts as engine):
@@ -315,6 +315,10 @@ jobs:
         run: bash scripts/ci/test-classify-changes.sh
       - name: local proof-row fixtures
         run: bash scripts/ci/test-proof-row.sh
+      - name: gate-mode nesting fixtures
+        run: bash scripts/ci/test-gate-modes.sh
+      - name: wasmtime installer destination fixtures
+        run: bash scripts/ci/test-install-wasmtime.sh
       - name: CI OK result-check controls
         run: python3 scripts/ci/test_ci_ok.py
       - name: leverage dependency-rule fixtures

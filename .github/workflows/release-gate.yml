@@ -18,7 +18,7 @@
 # their comparisons and the Windows cell together. Those short jobs are what a merge needs
 # reported before the next one, so they are merge-gate.yml; everything here still runs every
 # night on the `development` tip and on the release PR, whose `CI OK` is the required status on
-# `main`. A red nightly is fixed forward or reverted before the next engine-lane merge
+# `main`. A red nightly is fixed forward or reverted before the next determinism-lane merge
 # (AGENTS.md, "Merge").
 #
 # WHAT EACH RUN CHECKS OUT. A scheduled run checks out the `development` tip (schedules fire on
@@ -52,8 +52,9 @@
 #       - `cargo nextest run` for every unit + integration test in the workspace (`test-suite`),
 #       - `cargo test --doc` for doctests, which nextest cannot run (`test-suite`),
 #       - the same suite under release codegen, for release panic-freedom regressions. That run
-#         is `gate (full)`'s: .agents/gate.sh in `full` mode executes it, and the job requires its
-#         `ci-release` JUnit report afterwards. `test-suite` no longer repeats it (issue #545):
+#         is `gate (full)`'s: .agents/gate.sh in `full` mode executes it under the nextest
+#         profile `ci-release-workspace`, which no other run uses, and the job requires that
+#         profile's JUnit report afterwards. `test-suite` no longer repeats it (issue #545):
 #         the two jobs each built the release workspace, 55.7 minutes of `gate (full)` for 58
 #         seconds of tests, and one build is enough. check-workflow-gates.sh pins the command in
 #         the script and the report requirement in the job.
@@ -330,11 +331,16 @@ jobs:
   # (docs/ci-and-the-gate.md, "The local proof").
   #
   # It is also the one job that builds and runs the WORKSPACE SUITE UNDER RELEASE CODEGEN
-  # (issue #545): `full` mode runs it, and the last step requires the `ci-release` JUnit report
-  # that run writes. The report is cleared before the script starts, and the workspace run is the
-  # last `ci-release` invocation in the script, so the report this job requires is that run's.
-  # check-workflow-gates.sh pins the clear, the script and the requirement in that order, and
-  # pins the workspace commands inside .agents/gate.sh.
+  # (issue #545): `full` mode runs it under its own nextest profile, `ci-release-workspace`, and
+  # the last step requires that profile's JUnit report. The profile is the point: `full` also
+  # runs the determinism subset and the strict-bit step under release codegen, and those write
+  # `ci-release`'s report, so a requirement on that file would be met with the workspace run
+  # removed. The report is cleared before the script starts, and nothing else writes it, so its
+  # presence afterwards says the workspace command started and nextest wrote a report; the
+  # script's own exit status, not the report, says the suite passed.
+  # check-workflow-gates.sh pins the clear, the script and the requirement in that order, the
+  # shape of the script's `full` block, and that no other line of the script, this file or
+  # pr-gate.yml names the profile.
   #
   # This job is the nightly long pole (88.7 minutes in run 42767547196, 55.7 of them the release
   # workspace build). Nothing waits on it: a merge is reported by merge-gate.yml.
@@ -360,17 +366,18 @@ jobs:
       - name: Install the no_std targets
         run: rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown
       # `full` includes the blob round trip, whose wasm32 leg runs under wasmtime and fails closed
-      # without it (issue #403). The script installs nothing; the installer's default destination
-      # (no argument) is the directory gate.sh looks in, outside `target/`.
+      # without it (issue #403). The round trip runs the installer itself, which only re-verifies
+      # the digest of a binary already there; this step keeps the download out of the script's
+      # log and fails early. The default destination (no argument) is outside `target/`.
       - name: Install the round trip's wasm32-wasip1 target and pinned wasmtime
         run: |
           rustup target add wasm32-wasip1
           bash scripts/ci/install-wasmtime.sh
-      - name: Clear the cached release-codegen nextest report
-        run: rm -f target/nextest/ci-release/junit.xml
+      - name: Clear the cached release-codegen workspace report
+        run: rm -f target/nextest/ci-release-workspace/junit.xml
       - run: bash .agents/gate.sh full
       - name: Require the release-codegen workspace suite's nextest JUnit report
-        run: test -s target/nextest/ci-release/junit.xml
+        run: test -s target/nextest/ci-release-workspace/junit.xml
 
   # The determinism matrix in all four native cells (issue #502): (x86_64 on ubuntu-latest, aarch64
   # on ubuntu-24.04-arm) x (debug, release). pr-gate.yml runs the two debug cells on every PR; the
