@@ -133,8 +133,10 @@ pub use observations::{AssertEvent, AssertLevel};
 /// this build writes carries this value in its header. Each decoder accepts only this value: a blob
 /// or snapshot with any other version is refused with [`BlobError::EngineVersionMismatch`] or
 /// [`EngineStateError::EngineVersionMismatch`], whose `expected` field is this constant. A host
-/// that stores either artefact can record this value beside it, to know which engine version will
-/// accept the bytes, without parsing it out of a header, an error or a version string.
+/// that stores either artefact can record this value's three fields beside it. That tells, without
+/// parsing a header, an error or a version string, which stored bytes this build will refuse by
+/// version. A match predicts only that check: the integrity, fingerprint and restore checks can
+/// still refuse the bytes.
 ///
 /// It is a release version, not a build identity: two builds of one version, from different
 /// compilers, features or targets, carry the same value. It is also not the compatibility

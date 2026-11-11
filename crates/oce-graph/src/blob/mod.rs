@@ -130,7 +130,8 @@ pub struct EngineVersion {
     pub patch: u16,
 }
 
-/// This build's engine version, from the crate's own package version.
+/// This build's engine version, read at compile time from the workspace package version
+/// (`workspace.package.version`) that the core crates and `oce-api` share.
 pub const ENGINE_VERSION: EngineVersion = EngineVersion {
     major: parse_u16(env!("CARGO_PKG_VERSION_MAJOR")),
     minor: parse_u16(env!("CARGO_PKG_VERSION_MINOR")),

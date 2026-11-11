@@ -30,8 +30,11 @@ the [product contract](product-contract.md) and pre-1.0 change control still app
   compiled-schedule blob and state snapshot this build writes carries it in its header. Each
   decoder accepts only this value, and `EngineVersionMismatch` names it as `expected`
   ([state contract](state-compatibility.md#wire-revision-and-integrity),
-  [blob refusals](compiled-schedule-blob.md#which-refusal-wins)). It tells which engine version
-  will accept stored bytes. It is a release version, not a host build identity. It is also not the
+  [blob refusals](compiled-schedule-blob.md#which-refusal-wins)). Recorded beside stored bytes, it
+  tells which of them this build will refuse by version. A match predicts only that check: the
+  integrity, fingerprint and restore checks still apply. `EngineVersion` has no `Display`, `Hash`,
+  `Ord` or serde, so a host keys by its three fields. It is a release version, not a host build
+  identity. It is also not the
   descriptor's `oce-api-version`, which keeps the suffix. The facade-contract check compiles a
   host-side use of it from `oce-api` alone.
 - **Canonical content identity** is `ContentId` (`oce:canon1:` and a SHA-256 digest), minted only
