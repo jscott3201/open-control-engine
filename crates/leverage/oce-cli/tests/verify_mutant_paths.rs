@@ -12,8 +12,13 @@
 //! - a trailing dot or space, and a drive prefix such as `C:`, mean something only on Windows;
 //!   elsewhere they are ordinary names.
 //!
-//! Windows device names (`NUL`, `CON`) are not tested: they open no regular file, so resolution
-//! refuses them as `not-a-file` or `not-found` like any other non-file.
+//! A listing that is not a regular file is refused from its metadata **before** it is opened, so
+//! a named pipe, which would block an open for reading until a writer came, cannot hang the run;
+//! the named-pipe and socket tests are Unix-only (Windows has neither as a file in a directory).
+//! Device nodes need a privilege to create and are not tested; they are refused by the same
+//! metadata check. Windows device names (`NUL`, `CON`) are not tested either: they open no
+//! regular file, so resolution refuses them as `not-a-file` or `not-found` like any other
+//! non-file.
 
 mod support;
 
@@ -21,7 +26,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
-use support::{crate_dir, oce_in, scratch};
+use support::{crate_dir, oce_in, oce_in_guarded, scratch};
 
 /// A scratch directory holding `set/rule.cxf.jsonld` (AHU-0016's rule) and returning the `set`
 /// directory, where the vector file goes.
@@ -43,8 +48,8 @@ fn mutant_bytes() -> Vec<u8> {
         .expect("the late-alarm mutant")
 }
 
-/// Write a one-scenario set listing `paths` into `set/vectors.json` and run it from `root`.
-fn verify(root: &Path, set: &Path, paths: &[&str]) -> (i32, Value) {
+/// Write a one-scenario set listing `paths` into `set/vectors.json`.
+fn write_set(set: &Path, paths: &[&str]) {
     let listed: Vec<Value> = paths
         .iter()
         .map(|path| serde_json::json!({ "path": path }))
@@ -60,6 +65,11 @@ fn verify(root: &Path, set: &Path, paths: &[&str]) -> (i32, Value) {
         }]
     });
     fs::write(set.join("vectors.json"), document.to_string()).expect("write the set");
+}
+
+/// Write a one-scenario set listing `paths` into `set/vectors.json` and run it from `root`.
+fn verify(root: &Path, set: &Path, paths: &[&str]) -> (i32, Value) {
+    write_set(set, paths);
     let run = oce_in(
         root,
         &[
@@ -262,4 +272,41 @@ fn a_dot_dot_segment_never_reaches_resolution() {
         (code, refusal(&report)),
         (2, pair("mutant-path-invalid", "mutants[0].path"))
     );
+}
+
+#[cfg(unix)]
+#[test]
+fn a_named_pipe_or_a_socket_is_not_a_file_and_never_opened() {
+    let (root, set) = prepared("paths_fifo");
+    fs::write(set.join("ok.cxf.json"), mutant_bytes()).expect("a mutant");
+    let made = std::process::Command::new("mkfifo")
+        .arg(set.join("pipe.cxf.json"))
+        .status()
+        .expect("mkfifo runs");
+    assert!(made.success(), "mkfifo made the pipe");
+    let _listener = std::os::unix::net::UnixListener::bind(set.join("socket.cxf.json"))
+        .expect("a socket in the directory");
+    for (listing, place) in [
+        (vec!["pipe.cxf.json"], "mutants[0]"),
+        (vec!["ok.cxf.json", "socket.cxf.json"], "mutants[1]"),
+    ] {
+        write_set(&set, &listing);
+        // The guard is a hang guard: opening the pipe for reading would block for ever, and a
+        // regression must fail the test, not stall it. It asserts nothing about speed.
+        let run = oce_in_guarded(
+            &root,
+            &[
+                "verify",
+                "set/vectors.json",
+                "--subject",
+                "set/rule.cxf.jsonld",
+            ],
+            std::time::Duration::from_secs(120),
+        );
+        assert_eq!(
+            (run.code, refusal(&run.report())),
+            (2, pair("not-a-file", place)),
+            "{listing:?}"
+        );
+    }
 }

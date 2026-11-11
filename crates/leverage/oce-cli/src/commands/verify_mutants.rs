@@ -9,18 +9,24 @@
 //!    canonicalized, following every symbolic link;
 //! 2. the canonical path must lie inside the canonical directory, or the refusal is
 //!    `mutant-outside-directory` (a link out, or a Windows drive prefix such as `C:`);
-//! 3. the canonical path is opened **once**, and its identity, its size and its bytes all come
-//!    from that one handle: a non-file is `not-a-file`, a file over `oce_api::MAX_CXF_BYTES` is
-//!    `input-too-large`, and a running total over `VerifyLimits::max_mutant_bytes` (64 MiB) is
-//!    `too-many-mutant-bytes`, each decided from the handle's metadata before its bytes are read;
+//! 3. the canonical path's metadata must be a regular file before it is opened, or the refusal
+//!    is `not-a-file`: opening a named pipe for reading blocks until a writer comes, and a socket
+//!    or a device is no mutant. The path is then opened **once**; the handle must be a regular
+//!    file with the identity that was checked (`read-failed` otherwise: the path changed between
+//!    the check and the open), and its size and bytes come from that one handle: a file over
+//!    `oce_api::MAX_CXF_BYTES` is `input-too-large`, and a running total over
+//!    `VerifyLimits::max_mutant_bytes` (64 MiB) is `too-many-mutant-bytes`, each decided from the
+//!    handle's metadata before its bytes are read;
 //! 4. two listings that are one file are `duplicate-mutant`: one file is one (device, inode) on
 //!    Unix, so case twins, normalization twins and hard links are caught where the file system
 //!    folds them, and one canonical path on Windows, whose final path folds case and trailing
 //!    dots and spaces (std has no stable file index there, so hard links are not caught).
 //!
 //! What stays racy: between the canonicalization (1) and the open (3) another writer in the
-//! directory can swap a component for a link, which the open then follows; std offers no
-//! component-by-component no-follow open. A file that grows after its metadata is read is still
+//! directory can swap a component for a link, which the open then follows, or swap the file for a
+//! named pipe, which the open then waits on; std offers no component-by-component no-follow open
+//! and no non-blocking open. A hard link inside the directory to a file outside it is read: a
+//! hard link has no other path to resolve. A file that grows after its metadata is read is still
 //! bounded: the read stops one byte past the size allowed and refuses.
 //!
 //! Every refusal names the mutant (`mutants[i]` and its listed path), never a host path.
@@ -60,6 +66,14 @@ type Identity = (u64, u64);
 /// What makes two listings one file: the canonical path, the final path Windows gives.
 #[cfg(not(unix))]
 type Identity = PathBuf;
+
+/// The refusal of a path that is not a regular file.
+fn not_a_file() -> (&'static str, String) {
+    (
+        codes::NOT_A_FILE,
+        "the path is not a regular file".to_owned(),
+    )
+}
 
 #[cfg(unix)]
 fn identity(_canonical: &Path, metadata: &std::fs::Metadata) -> Identity {
@@ -117,22 +131,34 @@ pub(crate) fn read(set: &VectorSet, vectors: &Path) -> Result<Vec<Read>, Refused
                 ),
             ));
         }
+        // A regular file, judged from the path's metadata **before** the open: opening a named
+        // pipe for reading blocks until a writer comes, and a socket or a device is no mutant.
+        let checked = std::fs::metadata(&canonical)
+            .map_err(|error| refuse(index, path, io_refusal(error)))?;
+        if !checked.is_file() {
+            return Err(refuse(index, path, not_a_file()));
+        }
         let file =
             File::open(&canonical).map_err(|error| refuse(index, path, io_refusal(error)))?;
         let metadata = file
             .metadata()
             .map_err(|error| refuse(index, path, io_refusal(error)))?;
+        // The handle must be the file that was checked: anything else is the path changing
+        // between the check and the open, and is refused, never read.
         if !metadata.is_file() {
+            return Err(refuse(index, path, not_a_file()));
+        }
+        let this = identity(&canonical, &metadata);
+        if this != identity(&canonical, &checked) {
             return Err(refuse(
                 index,
                 path,
                 (
-                    codes::NOT_A_FILE,
-                    "the path is not a regular file".to_owned(),
+                    codes::READ_FAILED,
+                    "the file changed between its check and its open".to_owned(),
                 ),
             ));
         }
-        let this = identity(&canonical, &metadata);
         if let Some((_, first)) = seen.iter().find(|(other, _)| *other == this) {
             return Err(refuse(
                 index,

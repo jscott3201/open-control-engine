@@ -14,7 +14,7 @@ use std::fs;
 use std::path::Path;
 
 use serde_json::Value;
-use support::{case_in, crate_dir, oce, oce_in, scratch};
+use support::{case_in, crate_dir, oce, oce_in, oce_in_guarded, scratch};
 
 const AHU: &str = "../../oce-api/tests/fixtures/library_rules/AHU-0016";
 
@@ -360,4 +360,50 @@ fn the_crate_directory_run_needs_no_scratch() {
     let dir = scratch("verify_same_bytes");
     ahu_into(&dir);
     assert_eq!(here.stdout, receipt_of(&dir));
+}
+
+#[cfg(unix)]
+#[test]
+fn a_named_pipe_is_never_opened_as_the_vector_file_the_subject_or_the_receipt() {
+    // A named pipe blocks an open for reading until a writer comes. Each file `verify` reads is
+    // judged a regular file from its metadata first, and `--out` writes a fresh temporary file
+    // and renames it over the target, so a pipe at `receipt.json` is replaced, never opened. The
+    // guard is a hang guard, not an assertion on speed.
+    let dir = scratch("verify_named_pipes");
+    ahu_into(&dir);
+    fs::create_dir(dir.join("out")).expect("out");
+    for name in ["pipe.json", "pipe.cxf.json", "out/receipt.json"] {
+        let made = std::process::Command::new("mkfifo")
+            .arg(dir.join(name))
+            .status()
+            .expect("mkfifo runs");
+        assert!(made.success(), "{name}");
+    }
+    let guard = std::time::Duration::from_secs(120);
+    let run = |args: &[&str]| oce_in_guarded(&dir, args, guard);
+    let vectors = run(&["verify", "pipe.json", "--subject", "rule.cxf.jsonld"]);
+    assert_eq!(vectors.code, 2);
+    assert_eq!(vectors.report()["errors"][0]["code"], "not-a-file");
+    let subject = run(&["verify", "vectors.json", "--subject", "pipe.cxf.json"]);
+    assert_eq!(subject.code, 2);
+    let error = &subject.report()["errors"][0];
+    assert_eq!(
+        (error["code"].as_str(), error["subject"].as_str()),
+        (Some("not-a-file"), Some("subject"))
+    );
+    let out = run(&[
+        "verify",
+        "vectors.json",
+        "--subject",
+        "rule.cxf.jsonld",
+        "--out",
+        "out",
+    ]);
+    assert_eq!(out.code, 0, "{}", out.transcript());
+    let written = fs::symlink_metadata(dir.join("out/receipt.json")).expect("the receipt");
+    assert!(written.is_file(), "the pipe was replaced by the receipt");
+    assert_eq!(
+        fs::read(dir.join("out/receipt.json")).expect("read"),
+        receipt_of(&dir)
+    );
 }

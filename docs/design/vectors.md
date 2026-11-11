@@ -1263,12 +1263,26 @@ Unix and one canonical path on Windows.
   there, so hard links are not caught on Windows, a limit the test states.
 - No dependency is added.
 
-Each mutant is opened once, after its canonical path is checked against the canonical directory,
-and its identity, size and bytes all come from that one handle. One race remains: between the
-canonicalization and the open, another writer in the directory can swap a component for a link,
-which the open then follows. std offers no component-by-component open that refuses links. A
-file that grows after its metadata is read is still bounded: the read stops one byte past the
-size allowed, and refuses.
+Each mutant is opened once:
+- its canonical path is first checked against the canonical directory;
+- its metadata is checked to be a regular file *before* the open, because opening a named pipe
+  for reading blocks until a writer comes, and a socket or a device is no mutant *(amended
+  2026-11-11, review of GitHub #573)*;
+- after the open, the handle must be a regular file with the identity that was checked;
+- its size and bytes then come from that one handle.
+
+What remains:
+- **A swap between the checks and the open.** Another writer in the directory can swap a path
+  component for a link, which the open then follows, or the file for a named pipe, which the
+  open then waits on. std offers no component-by-component open that refuses links, and no open
+  that will not block.
+- **A hard link inside the directory to a file outside it** on the same file system is read. A
+  hard link has no other path to resolve against the directory, so it is inside by every test
+  the CLI can make *(added 2026-11-11, review of GitHub #573)*.
+- **The vector file and the subject** are checked by metadata and then opened by path, the same
+  window every `oce` command has. The same named-pipe swap applies there *(added 2026-11-11)*.
+- **A file that grows** after its metadata is read is still bounded: the read stops one byte past
+  the size allowed, and refuses.
 
 **Smaller readings.** Each says whether overruling it would change behaviour.
 1. **`--out DIR` must exist** and is never created. A missing directory is `write-failed`, and an
@@ -1281,7 +1295,17 @@ size allowed, and refuses.
 4. **`--require-mutants-caught` passes when no mutant survived.** That includes a set that lists
    none, and a `not_run` section, where the subject's own verdict decides *(changes behaviour)*.
 5. **Check order:** the vector file, then the subject, then each mutant in file order, then
-   `run_vectors`. Within one mutant the order is: resolution, inside the directory, open, regular
-   file, one file, size, the running total, then the read *(changes which code wins)*.
+   `run_vectors`. Within one mutant the order is *(amended 2026-11-11, review of GitHub #573)*:
+   1. resolution;
+   2. inside the directory;
+   3. a regular file, from the path's metadata;
+   4. the open;
+   5. a regular file with the checked identity, from the handle;
+   6. one file;
+   7. size;
+   8. the running total;
+   9. the read.
+
+   *(Changes which code wins.)*
 6. **The report carries the subject's path as given** under `subject`, beside `input`, which is
    the vector file's *(naming only)*.

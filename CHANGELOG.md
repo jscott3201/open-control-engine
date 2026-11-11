@@ -468,7 +468,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   - **Mutant paths, per the owner's ruling.** Each path is resolved against the vector file's
     directory, following links. A path that leaves it is the new `mutant-outside-directory`, and
     two listings that are one file are `duplicate-mutant`. One file is one (device, inode) on Unix
-    and one canonical path on Windows. Each mutant is opened once, and its identity, size and
+    and one canonical path on Windows. Each mutant must be a regular file by its metadata before
+    it is opened, so a named pipe or a socket is `not-a-file` and never blocks the run (review of
+    GitHub #573). It is then opened once, the handle must be the file checked, and its size and
     bytes come from that handle.
   - **Output.** The receipt is stdout for a verdict, exit 0 or 1: the CLI's one exception to "exit
     1 prints the report". Exit 2 prints the `oce-report/1` report. `--out DIR` writes

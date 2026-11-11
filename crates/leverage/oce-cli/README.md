@@ -98,15 +98,19 @@ note](../../../docs/design/vectors.md), "CLI"; the owner's rulings in "Part 4's 
   canonicalized, following links. A path that resolves outside that directory is
   `mutant-outside-directory`, and two listings that are one file are `duplicate-mutant`. One file
   is one (device, inode) on Unix, which catches case twins, normalization twins and hard links
-  where the file system folds them, and one canonical path on Windows. Each mutant is opened
-  once, and its identity, size and bytes come from that handle.
+  where the file system folds them, and one canonical path on Windows. Each mutant must be a
+  regular file by its metadata before it is opened, so a named pipe or socket is `not-a-file`
+  and never blocks the run. It is then opened once, and its identity, size and bytes come from
+  that handle.
 - **Stdout** carries one document. When the run reaches a verdict it is the receipt
   (`oce/receipt/v1`, exactly `oce-verify`'s canonical bytes), for exit `0` and for exit `1`.
   Otherwise it is the JSON report, exit `2`.
 - **With `--out DIR`** the receipt is written atomically to `DIR/receipt.json`: a fresh temporary
   file beside it, synced, then renamed over it, so no reader ever sees part of a receipt. Stdout
   is the report, with `passed`, `status`, `receipt_id` and `output`. `DIR` must exist. On exit `2`
-  nothing is written.
+  nothing is written. A `receipt.json` that is a symbolic link is written through to its target,
+  as `emit -o` writes through its own target. Any other non-file there is replaced by the
+  receipt, a named pipe included, and is never opened.
 - **Exit-only flags.** These never change a receipt byte:
   - `--require-mutants-caught` makes a surviving mutant exit `1`;
   - `--deny-warnings` makes exit `1` when `load_warnings_total` or `totals.warnings` is not zero.
