@@ -181,6 +181,8 @@ OTHER_READMES=(
   crates/oce-cxf/tests/composite_contract_corpus.rs   # read_fixture: the composite corpus index
   crates/oce-cxf/tests/third_party_manifest/mod.rs    # the vendored tree's README
   scripts/ci/classify-changes.sh                      # classifies the path; opens nothing
+  scripts/ci/proof-row.sh                             # names the path in a comment; opens nothing
+  scripts/ci/test-proof-row.sh                        # feeds the path to proof-row.sh
   scripts/ci/test-classify-changes.sh                 # this file
   scripts/ci/test_ci_ok.py                            # feeds the path to the classifier
 )

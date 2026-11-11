@@ -9,7 +9,10 @@ Closes #
 ## Gate
 
 ```text
-<!-- Paste the TAIL of `bash .agents/gate.sh full`, run first-hand. Not a summary. -->
+<!-- Paste the TAIL of the local proof for this PR's row, run first-hand on the final head. Not a
+     summary. docs only: `bash .agents/gate.sh docs`. crates/leverage/**, docs, root README.md:
+     `bash .agents/gate.sh leverage`. Anything else: `bash .agents/gate.sh`. The core four or
+     oce-cxf: `bash .agents/gate.sh determinism`. The tail names the row the checkout needs. -->
 ```
 
 Goldens: `git status --porcelain -- tools/golden-gen/goldens` → <!-- "prints nothing", or which goldens changed and why this PR exists to change them -->

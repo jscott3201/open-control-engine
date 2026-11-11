@@ -410,8 +410,9 @@ run here does not prove these pass`, listing:
   on `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm`, with a fan-in comparison; after each merge
   into `development`, the same matrix in four cells, debug and release, with the
   debug-against-release comparisons as well. One machine cannot reproduce either; CI is the only
-  place they run. The script does run the subset under release codegen on the local host, and says
-  that this run, on the final head, is the release-codegen evidence a change has before it merges.
+  place they run. In its `determinism` and `full` modes the script does run the subset under
+  release codegen on the local host, and says that this run, on the final head, is the
+  release-codegen evidence a change to the core four or `oce-cxf` has before it merges.
 - **The strict-bit raw-output matrix** over four native cells on every PR (both architectures,
   debug and release), two captures each, and its
   eight-capture comparison. Local synthetic controls and macOS observations are not native Linux
@@ -422,12 +423,14 @@ run here does not prove these pass`, listing:
   made and withdrawn; the dormant `.github/workflows/ci.yml:293-321` records why — every design either compared
   argv strings, which `RUSTFLAGS=--cap-lints=allow` leaves byte-identical while neutering clippy, or
   reimplemented enough of `if:` / `needs:` / matrix semantics to become its own untested gate. CI
-  does *execute* the script, but only after a merge: `gate (full)` in the release gate, on every
-  merge into `development` and daily. No per-PR job runs it, so before a merge the author's own
-  run is the only one; the script says outright that the CI run is coverage, not parity.
+  does *execute* the script, but only after a merge: `gate (full)` in the release gate, nightly on
+  the `development` tip and on release PRs. No per-PR job runs it, so before a merge the author's
+  own run is the only one; the script says outright that the CI run is coverage, not parity.
 
-A `light` run adds a fifth line: it did not run the workspace test suite or the doctests, because
-the per-PR gate does not run them either.
+Every run but a `full` one adds further lines: it did not run the workspace test suite or the
+doctests, because the per-PR gate does not run them either, and a `docs`, `leverage` or `light`
+run ran nothing under release codegen. The report also names which row of the
+[lane-matched local proof](ci-and-the-gate.md#the-local-proof) the run was.
 
 ### The CI split, read in the dangerous direction
 
@@ -442,9 +445,10 @@ requires `restore_state` to return the target-domain refusal.
 
 The release-codegen cells of that matrix, and the requirement that portable and target-bound bytes
 match across debug and release codegen, are not per-PR evidence (issue #502). They run in the
-release gate on every merge into `development`, in four native cells with the full fan-in. Before
-a merge, the release-codegen evidence is the author's local gate run on one host, pasted into the
-pull request; a divergence that needs the other architecture, or a debug-against-release artifact
+merge gate on every merge into `development`, in four native cells with the full fan-in, and
+again nightly in the release gate. Before a merge, the release-codegen evidence is the author's
+local `bash .agents/gate.sh determinism` run on one host, pasted into the pull request, for a
+change to the core four or `oce-cxf`; no other change has any before it merges (issue #545); a divergence that needs the other architecture, or a debug-against-release artifact
 comparison, is found on the merge commit.
 
 Separately, the scoped **`oce-conformance` strict-bit subset runs per-PR**: `strict_bits` and the
@@ -455,9 +459,9 @@ covers the 21 formerly banded Real cases; Linux exact comparison is not a macOS 
 
 The remainder of `oce-conformance` still follows release/full-gate coverage. The complete set of
 420 reference comparisons — 399 existing exact plus 21 exact on qualified Linux, unchanged 1e-12
-aligned elsewhere — runs in the full local gate and release workflow (every merge into
-`development`, release PRs, daily cron
-against `development`, and manual dispatch). Two `oce-cxf` input-hygiene audits also run per-PR:
+aligned elsewhere — runs in the full local gate and release workflow (nightly against
+`development`, release PRs, pushes to `main`, and manual dispatch; not on each merge since
+issue #545). Two `oce-cxf` input-hygiene audits also run per-PR:
 fixture port order and the structural oracle, including the vendored-tree and Tier-2 digest guards.
 **A change outside these named subsets can show every check green without running its own tests.**
 A green PR is not evidence that the rest of a changed crate passed.
@@ -501,7 +505,7 @@ If you are evaluating this engine, the defensible summary is:
 
 - Determinism is **tested**, on two architectures, per PR, against committed goldens (in debug
   codegen per PR; under release codegen on both architectures, with debug compared against
-  release, in the release gate on every merge into `development`).
+  release, in the merge gate on every merge into `development`).
 - Agreement with CDL / Buildings **source semantics** is bounded by 398 oracle comparisons: 377
   existing exact plus 21 exact on qualified Linux and at the unchanged 1e-12 aligned band on
   unqualified targets. The [retained strict-bit evidence](strict-bit-evidence.md) applies only to

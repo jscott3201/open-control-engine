@@ -33,12 +33,16 @@ the architecture and invariants are the design of record.
   published yet; actual publication remains separately owner-authorized.
 - **Every PR runs the full per-PR gate**, including work-in-progress PRs. Confirm the checks
   actually ran and that `CI OK` is green before asking for review.
-- **The release gate runs on the merge commit.** Merging into `development` starts
-  [`.github/workflows/release-gate.yml`](.github/workflows/release-gate.yml): the full workspace
-  suite, the determinism subset under release codegen on x86_64 and arm64 with its
-  debug-against-release comparisons, the Windows cell and the executed gate script. The per-PR gate
-  runs none of those four. A red run there is fixed forward or reverted before the next engine
-  change merges ([what runs after the merge](docs/ci-and-the-gate.md#what-runs-after-the-merge)).
+- **The merge gate runs on the merge commit, and the release gate nightly.** Merging into
+  `development` starts [`.github/workflows/merge-gate.yml`](.github/workflows/merge-gate.yml): the
+  determinism subset under release codegen on x86_64 and arm64 with its debug-against-release
+  comparisons, and the Windows cell, in about a quarter of an hour. Every night
+  [`.github/workflows/release-gate.yml`](.github/workflows/release-gate.yml) runs the heavy set on
+  the `development` tip: the full workspace suite in debug and release codegen, the doctests, the
+  executed gate script and cargo-deny with advisories. The per-PR gate runs none of those. A red
+  merge-gate run is fixed forward or reverted before the next determinism-lane merge, and a red
+  nightly before the next engine change merges
+  ([what runs after the merge](docs/ci-and-the-gate.md#what-runs-after-the-merge)).
 - Keep changes scoped to the crate or subsystem that owns the behavior, and add or update tests
   when you change behavior.
 
@@ -84,7 +88,7 @@ cargo nextest show-config version                         # must report required
 
 The installed version matches CI; [`.config/nextest.toml`](.config/nextest.toml) rejects older
 versions while allowing a newer compatible local runner.
-Only `--target wasm32-wasip1` runs (the blob round trip's wasm32 leg, `bash .agents/gate.sh roundtrip` and `full`) need `rustup target add wasm32-wasip1` and wasmtime on PATH or in `target/wasmtime-bin` (`bash scripts/ci/install-wasmtime.sh`); without wasmtime the cargo runner exits with that install hint.
+Only `--target wasm32-wasip1` runs (the blob round trip's wasm32 leg, `bash .agents/gate.sh roundtrip` and `full`) need `rustup target add wasm32-wasip1` and wasmtime on PATH or where `bash scripts/ci/install-wasmtime.sh` puts it (a user cache directory outside `target/`, so `cargo clean` leaves it alone; the script prints the path); without wasmtime the cargo runner exits with that install hint.
 The command above builds nextest from source; CI uses its pre-built binary through
 `taiki-e/install-action`. On macOS, if even trivial nextest cases take more than about 0.2 seconds,
 follow nextest's [XProtect guidance](https://nexte.st/docs/installation/macos/): enable your terminal
@@ -112,34 +116,42 @@ For indexed claims, follow the [source-owner update procedure](docs/authority-cl
 The generated summary is not a replacement policy; native and delegated verifiers remain separate
 from its fast schema/projection check. Regeneration is always explicit, never part of the gate.
 
-```bash
-bash .agents/gate.sh
-```
+Run the local proof that matches the lane your PR runs, first-hand, on the final head, and paste
+the tail of its output into the PR:
 
-That runs the per-PR gate in CI's exact command form — formatting, the file-size cap, the no-secret
-scan, the database-free and golden-gen invariant checks, the closed package/feature/publication
-contract and its hostile controls, the gate fixtures, `cargo machete`, clippy, build, rustdoc,
-cargo-deny, and the `oce-api`/`oce-blocks`/`oce-expr` determinism subset in debug and release
-codegen, plus the scoped strict-bit conformance subset in both codegen profiles. The release-codegen
-run of the determinism subset is the script's alone before a merge: the per-PR gate runs that
-subset in debug codegen on x86_64 and arm64, and its release-codegen cells run in the release gate
-on the merge commit. Paste the tail of your run into the PR; it is the pre-merge release-codegen
-evidence.
+| The PR's changed paths | Local proof |
+| --- | --- |
+| docs only | `bash .agents/gate.sh docs` |
+| `crates/leverage/**`, docs, the root `README.md` | `bash .agents/gate.sh leverage` |
+| anything else (the engine lane) | `bash .agents/gate.sh` |
+| the core four (`oce-model`, `oce-expr`, `oce-blocks`, `oce-graph`) or `oce-cxf` | `bash .agents/gate.sh determinism` |
 
-CI also runs this script directly, as `gate (full)` in `.github/workflows/release-gate.yml`: on
-every merge into `development` and daily. No per-PR job executes it, so a change to the script, a
-CI script or a workflow is first executed by CI on its merge commit, and before that only by your
-own run. That is coverage, not proof that the script and the workflows
-still agree. Which `pr-gate.yml` jobs a PR runs depends on the paths it changes; see
-[the lanes](docs/ci-and-the-gate.md#lanes-what-a-pr-runs). `bash .agents/gate.sh leverage` mirrors
-a PR confined to `crates/leverage/`, the documentation and the root `README.md`.
-Nothing verifies that mechanically; change a command in CI first, then here.
+`git diff --no-renames --name-only origin/development... | bash scripts/ci/proof-row.sh` names
+your row, and every gate run ends by printing the row your checkout needs beside the row it
+covered. Each row runs everything the rows above it run, in CI's exact command form; what each
+mode runs, the rules for a rebase and a fix round, and measured timings are in
+[the local proof](docs/ci-and-the-gate.md#the-local-proof). The last row adds the determinism
+subset and the strict-bit step under release codegen: no per-PR CI job runs that subset under
+release codegen (its release cells run in the merge gate, on the merge commit), so for a change to
+those five crates the tail you paste is the pre-merge release-codegen evidence.
 
-If your change falls outside those named subsets, a green PR need not have run its tests. Add `full`:
+No row runs every crate's tests. If your change falls outside the suites the per-PR gate names, a
+green PR need not have run its tests, so run the suites of the crates you changed as well:
 
 ```bash
-bash .agents/gate.sh full
+cargo nextest run -p <crate> --locked --profile ci --no-tests=fail
+cargo test -p <crate> --doc --locked
 ```
+
+CI also runs the script directly, as `gate (full)` in `.github/workflows/release-gate.yml`: nightly
+on the `development` tip, on release PRs and on dispatch. `full` adds the workspace suite in debug
+and release codegen and the doctests to the last row; no PR owes it (a pin advance under
+`third_party/` is the one exception, see its README). No per-PR job executes the script, so a
+change to it, a CI script or a workflow is first executed by CI on the night after it merges, and
+before that only by your own run. That is coverage, not proof that the script and the workflows
+still agree: nothing verifies that mechanically; change a command in CI first, then here. Which
+`pr-gate.yml` jobs a PR runs depends on the paths it changes; see
+[the lanes](docs/ci-and-the-gate.md#lanes-what-a-pr-runs).
 
 [`.agents/gate.sh`](.agents/gate.sh) is the single source of truth for these commands, and it
 prints what it cannot cover locally. Earlier revisions of this file listed the commands inline
@@ -153,7 +165,7 @@ cells in `pr-gate.yml` ([strict-bit evidence](docs/strict-bit-evidence.md)), so 
 and `.config/nextest.toml` are ordinary files again: change them like any other gate change,
 `pr-gate.yml` first.
 
-Qualification is Linux-only. The macOS arm64 cell (per PR) and the Windows cell (in the release
+Qualification is Linux-only. The macOS arm64 cell (per PR) and the Windows cell (in the merge
 gate, after each merge) are observations of those platforms, not qualification evidence
 ([platform cells](docs/ci-and-the-gate.md#platform-cells-macos-and-windows)); neither runs a
 strict-bit suite.

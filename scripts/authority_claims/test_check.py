@@ -422,10 +422,15 @@ class WiringTests(unittest.TestCase):
             (root / ".agents").mkdir()
             gate = (ROOT / ".agents/gate.sh").read_text()
             (root / ".agents/gate.sh").write_text(gate)
+            # The docs steps run the installed mdBook by path, which no shell function can stand in for.
+            (root / "target/mdbook-bin").mkdir(parents=True)
+            (root / "target/mdbook-bin/mdbook").write_text("#!/bin/sh\nexit 0\n")
+            (root / "target/mdbook-bin/mdbook").chmod(0o755)
             environment = root / "environment.sh"
             environment.write_text('''cargo() { return 0; }
 bash() { return 0; }
 env() { return 0; }
+git() { return 0; }
 python3() {
   case "$*" in
     "scripts/authority_claims/check.py --check") return "${CLAIM_STATUS:-0}" ;;

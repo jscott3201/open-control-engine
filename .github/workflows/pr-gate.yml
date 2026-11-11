@@ -1,9 +1,10 @@
 # Per-PR gate for open-control (the Open Control Engine) — runs on GitHub Actions for PRs into
 # `development` (and on manual dispatch). It runs once per change: there is no `push` trigger, so a
 # merge into `development` does not re-run it on the tree the PR already proved. Branch protection
-# requires `CI OK` with the branch up to date with `development`. release-gate.yml runs on that
-# merge instead (and daily on the `development` tip): the heavy gate, with the release-codegen
-# determinism cells, the cross-codegen comparisons, the Windows cell and `gate (full)`.
+# requires `CI OK` with the branch up to date with `development`. merge-gate.yml runs on that
+# merge instead: the release-codegen determinism cells, the cross-codegen comparisons and the
+# Windows cell. release-gate.yml, the heavy gate, runs nightly on the `development` tip and on
+# release PRs: the same three, the workspace suite and `gate (full)` (issue #545).
 # check-workflow-gates.sh refuses a `push` trigger here.
 #
 # Workflow model: every logical change opens a PR into `development` behind this gate; releases
@@ -19,11 +20,12 @@
 # x86_64 debug suites of oce-graph/oce-validate/oce-model/oce-cxf, the documentation checks
 # (staging, mdBook build, links), the scoped strict-bit matrix, the facade contract and Quickstart,
 # and the leverage lane. It does NOT run the full workspace test suite, the determinism subset
-# under release codegen, the Windows cell or `bash .agents/gate.sh`: the remaining crates, the
-# release-codegen determinism cells and their cross-codegen comparisons, the Windows std
-# build/nextest cell and the executed gate script live in release-gate.yml, which runs on every
-# merge into `development` (issue #502). Before a merge, `bash .agents/gate.sh` run locally is the
-# release-codegen determinism evidence: it runs the subset under release codegen on one host.
+# under release codegen, the Windows cell or `bash .agents/gate.sh`: the release-codegen
+# determinism cells, their cross-codegen comparisons and the Windows std build/nextest cell run
+# in merge-gate.yml on every merge into `development` (issue #502), and the remaining crates'
+# suites and the executed gate script in release-gate.yml, nightly (issue #545). Before a merge,
+# `bash .agents/gate.sh determinism` run locally is the release-codegen determinism evidence for
+# a change to the core four or oce-cxf: it runs the subset under release codegen on one host.
 #
 # Lanes (issue #393). The `changes` job classifies the PR's changed paths
 # (scripts/ci/classify-changes.sh, fail-closed: a path no allowlist matches counts as engine):
@@ -51,7 +53,7 @@
 #     run in fan-in jobs (determinism-compare, strict-bit-compare) over artifacts the cells upload.
 #     The per-PR native strict-bit matrix is the standing native evidence; no retained receipt
 #     admits or skips any check. The release-codegen determinism cells and the debug-against-release
-#     comparisons run in release-gate.yml, after the merge.
+#     comparisons run in merge-gate.yml, after the merge.
 #   * The blob round trip (issue #403) has three legs and one recorded artifact: every determinism
 #     cell runs the suite natively and records its blobs and expected results, the x86_64 debug
 #     cell's recording is the artifact, determinism-compare requires both recordings equal and
@@ -62,7 +64,7 @@
 #     that its portable snapshot equals the Linux cells' byte for byte and its target-bound
 #     snapshot differs. It does not qualify its platform: strict bits stay Linux-only. It is in
 #     this file because a job in another workflow cannot feed CI OK. The Windows cell
-#     (`std-build-windows`) is in release-gate.yml.
+#     (`std-build-windows`) is in merge-gate.yml and release-gate.yml.
 #   * No job or step sets `continue-on-error`, and the only step-level `if:` shapes are a static
 #     matrix selector and `${{ !cancelled() }}` on an evidence upload (check-workflow-gates.sh).
 #   * A runner type that is unavailable leaves its cells queued, so `CI OK` never reports and the
@@ -70,9 +72,10 @@
 #   * Every job has `timeout-minutes: 45`, so a stalled download or hung step fails the job instead
 #     of waiting for the platform's six-hour limit. Artifact uploads set `overwrite: true`, so a
 #     re-run of all jobs re-uploads the same names into the same run.
-#   * Jobs with the same build shape in this file and release-gate.yml share a rust-cache
-#     `shared-key`, so the daily release-gate run on the `development` tip seeds the default-branch
-#     cache scope that every PR can read (PR runs save only into their own scope).
+#   * Jobs with the same build shape in this file, merge-gate.yml and release-gate.yml share a
+#     rust-cache `shared-key`, so the merge-gate run on each merge commit and the nightly
+#     release-gate run on the `development` tip seed the default-branch cache scope that every PR
+#     can read (PR runs save only into their own scope).
 #   * Every PR runs this workflow, drafts included. A job is skipped only by its lane filter, and
 #     `CI OK` accepts that skip only when the `changes` output gating it is 'false'
 #     (scripts/ci/ci_ok.py); any other skip reads as a failure. cargo-deny `bans licenses sources`
@@ -310,6 +313,8 @@ jobs:
         run: bash .github/scripts/test-check-gate-script-coverage.sh
       - name: lane classifier fixtures
         run: bash scripts/ci/test-classify-changes.sh
+      - name: local proof-row fixtures
+        run: bash scripts/ci/test-proof-row.sh
       - name: CI OK result-check controls
         run: python3 scripts/ci/test_ci_ok.py
       - name: leverage dependency-rule fixtures
@@ -336,7 +341,7 @@ jobs:
   # portable and target-bound state vectors; determinism-compare fans the vectors in. No cell is
   # emulated, and none is skipped: a runner type that is unavailable leaves its cell queued and
   # `CI OK` unreported, which blocks the merge rather than passing it. The release-codegen cells
-  # of this matrix run in release-gate.yml on the merge commit (issue #502); a release cell was
+  # of this matrix run in merge-gate.yml on the merge commit (issue #502); a release cell was
   # the per-PR long pole at 11 to 18 minutes, nearly all of it compiling the test binaries.
   # check-workflow-gates.sh holds this job to `codegen: [debug]` and that one to both.
   determinism-matrix:
@@ -428,7 +433,7 @@ jobs:
   # compiled-schedule blobs equal and the round-trip recordings equal); each leg then parses the
   # OTHER architecture's target-bound snapshot and refuses it through the public restore path,
   # natively, with the oce-api unit tests its own architecture's cell built. The comparisons of
-  # debug against release codegen run in release-gate.yml's determinism-compare (issue #502).
+  # debug against release codegen run in merge-gate.yml's determinism-compare (issue #502).
   determinism-compare:
     name: determinism cross-cell comparison (${{ matrix.arch }} restores ${{ matrix.foreign }})
     needs: [changes, determinism-matrix]
@@ -582,7 +587,7 @@ jobs:
   # Linux-qualified, and macOS keeps the 1e-12 aligned band (docs/strict-bit-evidence.md). It lives
   # in this file, not a separate platforms workflow, because CI OK is the one required status and
   # a job in another workflow cannot be in its needs. The Windows x86_64 cell runs in
-  # release-gate.yml, on every merge into `development` (issue #502).
+  # merge-gate.yml, on every merge into `development` (issue #502).
   #
   # macOS arm64, debug codegen only: the same three-crate subset as a determinism cell, emitting
   # populated portable and target-bound state vectors that portable-snapshot-compare checks against

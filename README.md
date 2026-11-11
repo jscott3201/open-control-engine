@@ -359,7 +359,7 @@ captures and a cross-cell comparison, and no source file is bound to a stored re
 ([strict-bit evidence](docs/strict-bit-evidence.md)). It bounds the claim to the pinned
 corpus, rustc and libm; it is not mathematical correctness or arbitrary-input proof. The
 state-determinism subset runs per-PR on both architectures in debug codegen; its release-codegen
-cells and the debug-against-release comparison run in the release gate on every merge into
+cells and the debug-against-release comparison run in the merge gate on every merge into
 `development` ([CI and the gate](docs/ci-and-the-gate.md#what-runs-after-the-merge)). The blob round
 trip in `oce-conformance` also runs per-PR, from one recorded x86_64 artifact replayed natively on
 arm64 and under wasmtime on `wasm32-wasip1`
@@ -408,8 +408,9 @@ repository is the newer copy.
 ## Contributing
 
 Changes land via pull requests into `development`. Install the shared git hooks once after cloning
-with `bash scripts/install-hooks.sh`, and run `bash .agents/gate.sh` before opening a PR — that
-script is the single source of truth for what CI runs.
+with `bash scripts/install-hooks.sh`, and run the `bash .agents/gate.sh` mode that matches your
+change before opening a PR ([CONTRIBUTING.md](CONTRIBUTING.md#before-you-open-a-pr) has the
+table) — that script is the single source of truth for what CI runs.
 
 Read **[CONTRIBUTING.md](CONTRIBUTING.md)** first, and **[TESTING.md](TESTING.md)** before writing a
 test. Notable changes are in **[CHANGELOG.md](CHANGELOG.md)**. Coding agents start from
