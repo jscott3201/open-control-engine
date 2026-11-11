@@ -17,12 +17,16 @@
 //!    against `Engine::params()` sorted by path. Every value is typed by what it lands on
 //!    ([`crate::typing`]): an input by `InputDefinition::value_type`, an `equals` literal by
 //!    `FrameSlots::output_types()`, a parameter by its declared type.
-//! 4. **The frame budget.** `(N + 1) * scenarios` against
+//! 4. **The parameter edits.** Each scenario's effective edits (decision 14: a scenario's map
+//!    overrides the set's by resolved path) are tried, in file order of the scenarios, on a
+//!    freshly loaded engine by the passes of [`crate::parameters`], so an edit no pass admits is
+//!    `param-refused` here, before any frame of any scenario runs (owner ruling of 2026-11-10;
+//!    the note's table puts the code at bind). The run applies the same edits to its own fresh
+//!    engine again, by the same deterministic passes.
+//! 5. **The frame budget.** `(N + 1) * scenarios` against
 //!    [`VerifyLimits::max_total_frames`], and `N + 1` against the replay limits' `max_frames`.
 //!
-//! A scenario's parameter edits are resolved and merged here (decision 14: a scenario's map
-//! overrides the set's by resolved path) and applied on the scenario's own fresh engine when it
-//! runs ([`crate::parameters`]). Every refusal is a [`VerifyError`], never a failed scenario.
+//! Every refusal is a [`VerifyError`], never a failed scenario.
 
 use std::collections::BTreeMap;
 
@@ -167,6 +171,9 @@ pub(crate) fn bind(
     for (index, scenario) in set.scenarios().iter().enumerate() {
         scenarios.push(bind_scenario(index, scenario, &boundary, &set_edits)?);
     }
+    for (index, scenario) in scenarios.iter().enumerate() {
+        try_edits(subject, &scenario.edits, &format!("scenarios[{index}]"))?;
+    }
     frame_budget(set, limits)?;
     Ok(Bound {
         content_id,
@@ -182,6 +189,24 @@ pub(crate) fn bind(
         outputs,
         scenarios,
     })
+}
+
+/// Try `edits` on a freshly loaded engine by the passes the run applies them with, so a refusal
+/// is found at bind (step 4). Nothing is loaded for a scenario with no edits.
+///
+/// # Errors
+/// `param-refused`, or `replay-failed` with the cause `engine-setup` for a facade refusal that is
+/// not about an edit's value ([`crate::parameters::apply`]).
+fn try_edits(
+    subject: &[u8],
+    edits: &[(String, ReceiptValue)],
+    place: &str,
+) -> Result<(), VerifyError> {
+    if edits.is_empty() {
+        return Ok(());
+    }
+    let (mut engine, _) = load(subject)?;
+    crate::parameters::apply(&mut engine, edits, place)
 }
 
 /// Refuse a boundary a vector cannot drive or check: an Enum port (until #465) or a String

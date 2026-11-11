@@ -139,13 +139,20 @@ included, and never raised: a value above its maximum is read as the maximum
 (`VerifyLimits::effective`). The load bounds apply when a set is read; `run_vectors` applies the
 run's, from `VerifyOptions::limits`.
 
-Memory and work are linear in the document: nothing is materialised per tick (a clock at the tick
-bound costs what a clock of two ticks costs), a refusal stops where it is found, and
-`tests/load_cost.rs` pins the factor with `allocation-counter`: at most 24 bytes held per document
-byte for the densest shape the format has (a map of one-byte constants), 4 for step lists and
-windows. A run holds one scenario's trace at a time (unless `keep_traces` asks for all of them),
-and each expectation keeps at most the cap of its own earliest failure records, so the receipt's
-size is bounded by the caps, not by the number of ticks checked.
+**Loading** a set costs memory and work linear in the document: nothing is materialised per
+tick (a clock at the tick bound costs what a clock of two ticks costs), a refusal stops where it
+is found, and `tests/load_cost.rs` pins the factor with `allocation-counter`: at most 24 bytes
+held per document byte for the densest shape the format has (a map of one-byte constants), 4 for
+step lists and windows.
+
+**Running** a set is not linear in the document. Its work grows with the frames it executes
+(bounded by `max_total_frames`), with the instants it compares (each window's ticks and each
+diagnostic, up to the frames of a scenario times its expectations, which no limit bounds yet) and
+with the subject loads (one at bind, one per scenario with parameter edits to try them, one per
+scenario to run it). #561 tracks a bound on that total work. Its memory is bounded: a run holds one
+scenario's trace at a time (unless `keep_traces` asks for all of them), and each expectation keeps
+at most the cap of its own earliest failure records, so the receipt's size is bounded by the caps,
+not by the number of ticks checked.
 
 ## The canonical form and `spec_id`
 
@@ -227,7 +234,10 @@ In order, the first refusal winning:
    `+0.0`, `-0.0` with its sign), an Integer an integer token only (`1.0` is refused), a Boolean
    `true` or `false`, a String or Enum parameter nothing. A scenario's `params` override the set's
    by resolved path, whatever either spelling was.
-4. **The frame budget**: `(N + 1) * scenarios` frames against `VerifyLimits::max_total_frames`,
+4. **The parameter edits**: each scenario's effective edits are tried on a freshly loaded engine
+   by the passes the run uses (below), so an edit no pass admits is `param-refused` here, before
+   any frame of any scenario runs.
+5. **The frame budget**: `(N + 1) * scenarios` frames against `VerifyLimits::max_total_frames`,
    and `N + 1` against the replay limits' `max_frames`.
 
 ## The run
@@ -235,7 +245,8 @@ In order, the first refusal winning:
 Each scenario runs on a freshly loaded engine. Its parameter edits are applied inside one halt in
 passes: each pass tries the edits still waiting in ascending path order, a refused edit waits for
 the next pass, and a pass that applies nothing is `param-refused` with the facade's class
-(`param-range`, `param-type`, `param-structural`). So lowering both `Reals.Hysteresis` thresholds
+(`param-range`, `param-type`, `param-structural`). Binding has already tried the same edits by the
+same passes, so a run never meets that refusal. So lowering both `Reals.Hysteresis` thresholds
 takes two passes and raising them one. A table that only another order of edits reaches is refused
 too: that limitation is the note's, kept on purpose.
 
@@ -256,8 +267,12 @@ never change a receipt byte. After the run, in order:
 4. every tick of every window and every diagnostic instant is compared. `equals` is exact for every
    type, a Real by its bits (`0` on a Real output is `+0.0` and does not equal `-0.0`; nothing
    equals a NaN). A diagnostic expectation matches the class path in `block` and, when given, the
-   `message` byte for byte, at its tick, and is one instant. Warnings no diagnostic expectation
-   matched are listed and never change a verdict.
+   `message` byte for byte, at its tick, and is one instant. Matching is one to one: each
+   expectation takes one warning, so where two instances of a class warn at one tick, one
+   expectation leaves the second warning unmatched and two expectations take one each. Within a
+   tick the expectations that name a message pair first, then the block-only ones, each in
+   expectation order taking the earliest free warning it matches. Warnings no expectation took are
+   listed (at most 16, with `warnings_total`) and never change a verdict.
 
 A replay that ends in an error is `replay-failed` with a cause from a closed table
 (`REPLAY_FAILURE_CAUSES`: `trace-too-large`, `output-set-changed`, `grid-not-increasing`,
@@ -293,8 +308,9 @@ facade's `engine_version`, the set's `spec_id`, `comparison` (`{ "mode": "exact"
 totals, and one object per scenario: its verdict, its effective parameter edits by canonical path
 with the `content_id` of what ran when it has any, frame and instant counts, failure records
 (`value-mismatch`, `diagnostic-missing`, `frame-refused`, each shaped by its code, by tick then by
-expectation, at most 16 with `failures_total`) and unmatched warnings (at most 16 with
-`warnings_total`).
+expectation, at most 16 with `failures_total`; when a frame was refused the last slot is kept for
+its `frame-refused` record, so earlier mismatches never push it out) and unmatched warnings (at
+most 16 with `warnings_total`).
 
 Values are exact: a Boolean is `true` or `false`, an Integer a JSON integer, a finite Real other
 than negative zero a number in the canonical real spelling, and negative zero, a NaN or an

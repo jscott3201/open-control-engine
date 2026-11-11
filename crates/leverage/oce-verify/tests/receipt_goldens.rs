@@ -363,10 +363,10 @@ fn the_hashed_part_covers_the_engine_version_and_never_the_timings() {
         other_version.computed_receipt_id(),
         issued.header.receipt_id
     );
-    let mut other_subject = issued.clone();
-    other_subject.header.passed = !other_subject.header.passed;
+    let mut other_verdict = issued.clone();
+    other_verdict.header.passed = !other_verdict.header.passed;
     assert_ne!(
-        other_subject.computed_receipt_id(),
+        other_verdict.computed_receipt_id(),
         issued.header.receipt_id
     );
 }

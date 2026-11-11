@@ -14,6 +14,7 @@
 | `receipts/empty_expect.receipt.json` | Its receipt against AHU-0016: the `no_data` golden. | `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify` |
 | `subjects/signals.cxf.json` | A subject for the run's tests: Real, Integer and Boolean inputs, two inputs ending in `T` and two outputs ending in `y` (ambiguous suffixes), an input bounded to `[0, 10]`, an unused input (one load warning), a `CDL.Utilities.Assert`, a `CDL.Reals.Divide` (a NaN from `0 / 0`) and pass-through outputs (a `-0.0` reaches an output with its sign). Named `.cxf.json` so the workspace's `.jsonld` census does not move. | nobody: edit it by hand |
 | `subjects/hysteresis.cxf.json` | One `CDL.Reals.Hysteresis` (`uLow` 1, `uHigh` 2), for the parameter passes. | nobody: edit it by hand |
+| `subjects/twin_asserts.cxf.json` | Two `CDL.Utilities.Assert` instances on one Boolean input, both with the message `b is false`, so a frame with the input false emits two equal warnings: the one-to-one pairing of diagnostic expectations with warnings. | nobody: edit it by hand |
 
 ## The golden receipts are blessed
 

@@ -63,13 +63,16 @@ fn a_scenario_with_only_a_diagnostic_expectation_is_not_no_data() {
 
 #[test]
 fn a_diagnostic_the_frame_did_not_emit_fails_with_its_record() {
-    for (inputs, message) in [
-        (SIGNALS_INPUTS, Some("b is false")),
-        (B_FALSE, Some("b is not false")),
+    // With `b` true nothing warns; with `b` false every frame warns `b is false`, which does not
+    // equal the expected text, so all 31 warnings stay unmatched.
+    for (inputs, message, unmatched) in [
+        (SIGNALS_INPUTS, Some("b is false"), 0),
+        (B_FALSE, Some("b is not false"), 31),
     ] {
         let receipt = receipt(&one(inputs, &diagnostic(60, message)), &signals());
         let scenario = only_scenario(&receipt);
         assert_eq!(scenario.status, ScenarioStatus::Fail);
+        assert_eq!(scenario.warnings_total, unmatched);
         assert_eq!(
             (scenario.instants.checked, scenario.instants.failed),
             (1, 1)
@@ -388,4 +391,129 @@ fn reverse_scenarios(canonical: &str) -> String {
         .expect("a scenario list");
     scenarios.reverse();
     serde_json::to_string(&document).expect("JSON")
+}
+
+/// The `twin_asserts` subject: two `CDL.Utilities.Assert` instances on one input `b`, both with
+/// the message `b is false`, so a frame with `b` false emits two equal warnings.
+fn twins() -> Vec<u8> {
+    subject("twin_asserts")
+}
+
+#[test]
+fn one_expectation_matches_one_of_two_equal_warnings_and_the_other_stays_unmatched() {
+    // 31 frames with `b` false: 62 warnings, two at 60 s.
+    for expectation in [diagnostic(60, Some("b is false")), diagnostic(60, None)] {
+        let receipt = receipt(&one(r#""b": false"#, &expectation), &twins());
+        let scenario = only_scenario(&receipt);
+        assert_eq!(scenario.status, ScenarioStatus::Pass);
+        assert_eq!(scenario.instants.checked, 1);
+        // One warning at 60 s was taken; the second instance's is unmatched with the rest.
+        assert_eq!(scenario.warnings_total, 61, "{expectation}");
+        let at_sixty = scenario
+            .warnings
+            .iter()
+            .filter(|warning| warning.t.to_bits() == 60.0_f64.to_bits())
+            .count();
+        assert_eq!(at_sixty, 1, "the second warning at 60 s is listed");
+        assert_eq!(body(&receipt).totals.warnings, 61);
+    }
+}
+
+#[test]
+fn two_expectations_take_the_two_equal_warnings_of_their_tick_one_each() {
+    let expect = [
+        diagnostic(60, Some("b is false")),
+        diagnostic(60, Some("b is false")),
+    ]
+    .join(", ");
+    let receipt = receipt(&one(r#""b": false"#, &expect), &twins());
+    let scenario = only_scenario(&receipt);
+    assert_eq!(scenario.status, ScenarioStatus::Pass);
+    assert_eq!(
+        (scenario.instants.checked, scenario.instants.passed),
+        (2, 2)
+    );
+    assert_eq!(scenario.warnings_total, 60);
+    assert!(
+        scenario
+            .warnings
+            .iter()
+            .all(|warning| warning.t.to_bits() != 60.0_f64.to_bits())
+    );
+    // A third expectation at that tick has no warning left: the later expectation fails.
+    let expect = [
+        diagnostic(60, None),
+        diagnostic(60, Some("b is false")),
+        diagnostic(60, Some("b is false")),
+    ]
+    .join(", ");
+    let receipt = support::receipt(&one(r#""b": false"#, &expect), &twins());
+    let scenario = only_scenario(&receipt);
+    assert_eq!(scenario.status, ScenarioStatus::Fail);
+    assert_eq!(
+        (scenario.instants.checked, scenario.instants.failed),
+        (3, 1)
+    );
+    // The two that name the message are paired first; the block-only one, first in the file,
+    // finds nothing left.
+    assert!(matches!(
+        scenario.failures[..],
+        [Failure::DiagnosticMissing {
+            expectation: 0,
+            message: None,
+            ..
+        }]
+    ));
+    assert_eq!(scenario.warnings_total, 60);
+}
+
+#[test]
+fn a_refused_frame_keeps_its_record_when_earlier_mismatches_fill_the_list() {
+    // `bOut` is true while the window expects false: one mismatch on each of the 20 ticks before
+    // `lim` steps out of its bounds at 1200 s, which the engine refuses.
+    let inputs = r#""ahu.T": 1.0, "zone.T": 2.0, "n": 3, "b": true, "lim": [{"t": 0, "value": 5.0}, {"t": 1200, "value": 11.0}]"#;
+    let set = one(inputs, &window("bOut", 0, 1800, "false"));
+    let receipt = receipt(&set, &signals());
+    let scenario = only_scenario(&receipt);
+    assert_eq!(scenario.failures_total, 21, "20 mismatches and the refusal");
+    assert_eq!(scenario.failures.len(), 16);
+    // The last slot is the refusal's, so 15 mismatches are listed before it.
+    let mismatches = scenario
+        .failures
+        .iter()
+        .take(15)
+        .filter(|failure| matches!(failure, Failure::ValueMismatch { .. }))
+        .count();
+    assert_eq!(mismatches, 15);
+    assert!(matches!(
+        scenario.failures[15],
+        Failure::FrameRefused { t, refusal: EngineRefusal::InputDomain } if t.to_bits() == 1200.0_f64.to_bits()
+    ));
+    assert_eq!(scenario.frames.refused, 1);
+    // A cap of one lists the refusal alone; a cap of zero lists nothing; the total never moves.
+    for (cap, listed) in [(1, 1), (0, 0)] {
+        let options = VerifyOptions {
+            limits: VerifyLimits {
+                max_recorded_failures: cap,
+                ..VerifyLimits::MAX
+            },
+            ..VerifyOptions::default()
+        };
+        let receipt = run_with(&set, &signals(), &options)
+            .expect("a receipt")
+            .receipt;
+        let scenario = only_scenario(&receipt);
+        assert_eq!(scenario.failures.len(), listed, "cap {cap}");
+        assert_eq!(scenario.failures_total, 21, "cap {cap}");
+        if listed == 1 {
+            assert!(matches!(scenario.failures[0], Failure::FrameRefused { .. }));
+        }
+    }
+    // Without a refusal every slot goes to the earliest failures.
+    let receipt = support::receipt(
+        &one(SIGNALS_INPUTS, &window("bOut", 0, 1800, "false")),
+        &signals(),
+    );
+    let scenario = only_scenario(&receipt);
+    assert_eq!((scenario.failures.len(), scenario.failures_total), (16, 31));
 }

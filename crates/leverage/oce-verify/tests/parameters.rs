@@ -316,3 +316,34 @@ fn a_parameter_value_is_typed_by_the_parameters_declared_type() {
         ReceiptValue::Boolean(false)
     ));
 }
+
+#[test]
+fn an_edit_no_pass_admits_is_refused_at_bind_before_any_frame_of_any_scenario_runs() {
+    // A trace bound of zero bytes would fail the first replay to run, so a `param-refused` that
+    // arrives under it was found before any scenario ran, even one that comes before it.
+    let options = oce_verify::VerifyOptions {
+        limits: oce_verify::VerifyLimits {
+            replay: oce_replay::ReplayLimits {
+                max_trace_bytes: 0,
+                ..oce_replay::ReplayLimits::MAX
+            },
+            ..oce_verify::VerifyLimits::MAX
+        },
+        ..oce_verify::VerifyOptions::default()
+    };
+    let plain = support::named("first", r#""u": 0.0"#, &window("y", 0, 1800, "false"));
+    let refused_edit = with_params("second", r#""uLow": 5.0, "uHigh": 3.0"#, r#""u": 0.0"#, "");
+    let set = support::set_of(&[plain.clone(), refused_edit].join(", "));
+    let error =
+        support::run_with(&set, &subject("hysteresis"), &options).expect_err("refused at bind");
+    assert_eq!(error.code(), "param-refused");
+    assert_eq!(error.subject(), "scenarios[1]");
+    assert_eq!(error.cause(), Some("param-range"));
+    // The control: without the refused edit, the same options fail the first replay.
+    let error = support::run_with(&support::set_of(&plain), &subject("hysteresis"), &options)
+        .expect_err("the replay fails");
+    assert_eq!(
+        (error.code(), error.cause()),
+        ("replay-failed", Some("trace-too-large"))
+    );
+}

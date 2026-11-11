@@ -1,9 +1,10 @@
 //! Running a vector set and issuing its receipt (vectors note, "Binding and running", "After a
 //! scenario's run"; decisions 3, 11, 15, 19, 26 and 31 to 33).
 //!
-//! [`run_vectors`] binds the set to its subject once ([`crate::bind`]), then runs each scenario
-//! on a **freshly loaded engine** (decision 15): load, apply the scenario's parameter edits
-//! ([`crate::parameters`]), then one [`Replay`] over a [`StepSource`] built with the horizon as an
+//! [`run_vectors`] binds the set to its subject once ([`crate::bind`], which also tries every
+//! scenario's parameter edits, so `param-refused` is found before any frame runs), then runs each
+//! scenario on a **freshly loaded engine** (decision 15): load, apply the scenario's parameter
+//! edits ([`crate::parameters`]), then one [`Replay`] over a [`StepSource`] built with the horizon as an
 //! instant, on `TimeBase::Grid { t0: 0, step: step_s }`, with replay's defaults
 //! (`MissingPolicy::Refuse`, `OnRefusal::Stop`, `DuplicateTime::Refuse`,
 //! `NonFiniteInputPolicy::Refuse`, outputs only), driven by `Replay::advance(chunk_frames)`. The

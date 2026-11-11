@@ -469,7 +469,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
     `+0.0`; `9007199254740993` is `value-not-representable`), an Integer refuses `1.0`, a Boolean
     refuses `0` and `1`. A scenario's `params` override the set's by resolved path whatever either
     spelling, two keys of one map on one parameter are `param-path-duplicate`, and the frame
-    budget, `(N + 1) * scenarios`, is held to `VerifyLimits::max_total_frames`.
+    budget, `(N + 1) * scenarios`, is held to `VerifyLimits::max_total_frames`. Every scenario's
+    effective edits are also tried at bind on a freshly loaded engine, so an edit no pass admits is
+    `param-refused` before any frame of any scenario runs (owner ruling).
   - **The run**: each scenario on a freshly loaded engine, its parameter edits applied inside one
     halt in passes in ascending path order (lowering both `Reals.Hysteresis` thresholds takes two
     passes; a pass that applies nothing is `param-refused` with the class `param-range`,
@@ -478,12 +480,17 @@ and a gate that accepted any text would restore exactly the false assurance desc
     it, in order: a run-class engine refusal is `run-refused`; any other refused frame fails the
     scenario with one `frame-refused` record (later ticks uncounted, coverage not checked);
     otherwise coverage, then the exact comparison: a Real by its bits, a diagnostic by its class
-    path and optional message at its tick, unmatched warnings listed (16, with the total) and
-    never failing. A replay error is `replay-failed` with a cause from a closed table
+    path and optional message at its tick. Diagnostic expectations match warnings one to one
+    (owner ruling): within a tick, the expectations that name a message pair first, then the
+    block-only ones, each taking the earliest free warning it matches, so a second instance's
+    equal warning stays unmatched. Unmatched warnings are listed (16, with the total) and never
+    fail a scenario. A replay error is `replay-failed` with a cause from a closed table
     (`trace-too-large`, `output-set-changed`, `grid-not-increasing`, `engine-setup`, `source`).
   - **The receipt**: `Receipt { header, body: ReceiptBody }`, `ReceiptBody` closed and
     `#[non_exhaustive]` with its one `Vectors` variant; every field of the note's header, body,
-    scenario and failure-record tables, written canonically by `Receipt::to_canonical_json`.
+    scenario and failure-record tables, written canonically by `Receipt::to_canonical_json`. A
+    `frame-refused` record always keeps the list's last slot, so earlier mismatches cannot push it
+    out (owner ruling).
     Values are exact (`-0.0`, a NaN and the infinities as `"0x"` and their 16 hex digits),
     `engine_version` is `CompatibilityDescriptor::oce_api_version`, `timings` are zeros unless the
     caller passes them, and `receipt_id` is `receipt:fnv1a128:` over the canonical receipt with
@@ -508,8 +515,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
     FNV-1a-128 over the golden's text, and is one across two runs, chunk sizes 1, 7 and the whole
     run, and with caller timings. They embed the engine version, so a workspace version bump
     re-blesses them (`.agents/project-facts.md`).
-  - The commissioning note's API sketch is amended: `Receipt.body` is `ReceiptBody`. The 46
-    fixture goldens and 422 provenance goldens are byte-identical.
+  - The commissioning note's API sketch is amended: `Receipt.body` is `ReceiptBody`. The vectors
+    note records part 2's ten readings as ruled ("Part 2's readings"). Follow-ups: #561 (bound a
+    run's total work, before part 4) and #563 (record the caps a receipt was written under). The
+    46 fixture goldens and 422 provenance goldens are byte-identical.
 - **The authoring wire reader refuses a list, or any other type, where an object belongs**
   (GitHub #544). `oce-author`'s `from_wire_str` read a JSON list where the wire form defines an
   object: `serde_json` reads a `serde`-derived struct from a list as well as from an object, taking

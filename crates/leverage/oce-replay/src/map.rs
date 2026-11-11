@@ -305,7 +305,8 @@ impl InputMap {
 /// and `oce-verify` resolves a vector set's inputs, outputs and parameter paths with it, so one
 /// rule names one thing everywhere.
 ///
-/// Pure: it allocates only for the candidates of a refusal, and never panics.
+/// Pure, and never panics. An exact match allocates nothing; a suffix match collects the indexes
+/// of the paths it matches, and a refusal returns their paths.
 ///
 /// # Errors
 /// Every path `name` matches by suffix, in list order, when there is no exact match and more

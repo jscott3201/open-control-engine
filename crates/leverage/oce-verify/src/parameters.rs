@@ -1,5 +1,6 @@
-//! A scenario's parameter edits applied on its fresh engine, in passes (vectors note, decision
-//! 14).
+//! A scenario's parameter edits applied on a fresh engine, in passes (vectors note, decision 14):
+//! tried at bind for every scenario before any frame runs, then applied again to the scenario's
+//! own engine when it runs, by the same deterministic passes.
 //!
 //! `set_param` checks each class's rules against the table as it stands (`Reals.Hysteresis`
 //! requires `uLow <= uHigh`), so the result of a list of edits depends on their order. The edits

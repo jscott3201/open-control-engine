@@ -169,7 +169,10 @@ checked, and a window that contains no tick is refused.
 **Diagnostic at an instant.** `at_s` must be on the cadence, by the rule above, and not after the
 horizon. The expectation holds when the frame at that tick emitted at least one warning whose
 `block` equals the given class path and, when `message` is present, whose `message` equals it byte
-for byte.
+for byte. *(Amended 2026-11-10, owner ruling with GitHub #558:)* matching is one to one: an
+expectation takes one warning and a warning is taken by at most one expectation, in the order
+[part 2's readings](#part-2s-readings) give (reading 7), and every warning no expectation took is
+unmatched.
 
 **Bounds.** Fixed by the strict profile: nesting 8, strings 4,096 bytes, lists 65,536 entries
 (which bounds a step list). Set by `VerifyLimits`, each lowerable and never raisable: 4 MiB per
@@ -220,6 +223,9 @@ scenario runs. Any failure is an error (exit 2, no receipt), never a failed scen
    type exists only after the first accepted frame, which is why #460 moves into M3. *(2026-11-09:
    the accessor landed in GitHub #525.)*
 4. **Parameters.** Each scenario's effective edits are resolved and ordered (decision 14).
+   *(Amended 2026-11-10, owner ruling with GitHub #558:)* and tried, on a freshly loaded engine
+   per scenario, by the passes of decision 14, so `param-refused` is found here, before any frame
+   of any scenario runs (reading 8).
 5. **Mutants.** Every listed mutant is loaded and validated ([Mutant mode](#mutant-mode)).
 6. **Frames.** `(N + 1) * scenarios * (1 + mutants)` must fit `VerifyLimits::max_total_frames`.
 
@@ -292,7 +298,7 @@ vector file's rules. Arrays keep the order each row states.
 | `frames` | object | always | `executed`, `substituted`, `refused` |
 | `expectations` | integer | always | the number of `expect` entries |
 | `instants` | object | always | `checked`, `passed`, `failed`, `masked`; `checked == passed + failed` |
-| `failures` | array | always | by tick, then by expectation index; at most `max_recorded_failures` (16) |
+| `failures` | array | always | by tick, then by expectation index; at most `max_recorded_failures` (16); when a frame was refused, the last slot is kept for its `frame-refused` record *(amended 2026-11-10, owner ruling with GitHub #558)* |
 | `failures_total` | integer | always | the count before the cap |
 | `warnings` | array | always | unmatched run-time warnings as `{ "t", "block", "message" }`, in row then emission order; at most 16 |
 | `warnings_total` | integer | always | the count before the cap |
@@ -446,14 +452,14 @@ receipt.
 | `unknown-input`, `ambiguous-input`, `duplicate-input`, `input-not-supplied` | bind | input names |
 | `unknown-output`, `ambiguous-output` | bind | output names |
 | `param-path-unknown`, `param-path-ambiguous`, `param-path-duplicate` | bind | a parameter key that matches nothing, matches several, or resolves to the parameter another key of the same map names |
-| `param-refused` | bind | an edit the engine still refuses when a pass applies nothing (decision 14), with the `OcError` class |
+| `param-refused` | bind | an edit the engine still refuses when a pass applies nothing (decision 14), with the `OcError` class: `param-range`, `param-type` or `param-structural` *(amended 2026-11-10, reading 2)* |
 | `value-type-mismatch`, `value-not-representable` | bind | a JSON value its port or parameter type cannot take |
 | `enum-port-unsupported`, `unsupported-port-type` | bind | an Enum boundary input or output (until #465), a String port |
 | `too-many-frames` | bind | the total frame budget |
 | `mutant-missing`, `mutant-unlisted`, `too-many-mutant-bytes` | bind | mutant bytes not supplied, supplied without a listing, or past the total byte bound |
 | `mutant-load-failed`, `mutant-boundary-differs`, `mutant-identical` | bind | an invalid mutant |
 | `run-refused` | run | an `EngineRefusal::Run` refusal: about the run, not a frame |
-| `replay-failed` | run | any other `ReplayError`, with `cause` from a closed kebab-case table `oce-verify` owns and pins (`trace-too-large`, `output-set-changed`, `grid-not-increasing`, `engine-setup`, `source`), never a Rust variant name |
+| `replay-failed` | run | any other `ReplayError`, with `cause` from a closed kebab-case table `oce-verify` owns and pins (`trace-too-large`, `output-set-changed`, `grid-not-increasing`, `engine-setup`, `source`), never a Rust variant name; `engine-setup` also covers every replay error the table does not name *(amended 2026-11-10, reading 1)* |
 
 The first four rows reuse the spellings `oce-cli` already prints for the wire form, so `oce vocab`
 has one word per refusal. The parameter codes are spelled `param-path-…` because
@@ -1017,3 +1023,63 @@ decided as recommended, the review's amendments included.
   written back into this note in that PR (decision 16). *(Confirmed in GitHub #541: both
   thresholds and the exponent spelling stand as written; the paragraph now says so.)*
 - 256 parameters per map stands.
+
+### Part 2's readings
+
+*(Added 2026-11-10, with GitHub #558, issue #520.)* Building the run (part 2) needed ten
+readings where this note was silent. The owner ruled on readings 2, 7 and 8 and on the
+refusal-slot question below; the independent review of GitHub #558 found the other seven
+consistent with the note. They are normative from here, so parts 3 and 4 inherit them.
+
+1. **`replay-failed` causes.** The table's five causes stand. `source` is `ReplayError::Source`.
+   `engine-setup` is everything `Replay::new` refuses, every facade setup call that fails after a
+   successful load (a scenario's fresh load, `content_id`, `input_definitions`, `frame_slots`, the
+   parameter `halt` and `resume`, a `set_param` refusal that is not about the edit's value), and
+   every replay error the table does not name.
+2. **`param-refused`'s class** *(confirmed by the owner).* The closed table `param-range`
+   (`OcError::ParamRange`: outside the declared bounds, or a class rule such as `uLow <= uHigh`),
+   `param-type` (`OcError::ParamType`) and `param-structural` (`OcError::ParamStructural`), carried
+   as the refusal's cause. Any other refusal of `set_param` is `replay-failed` with `engine-setup`.
+3. **A frame replay refused for a missing input** (`RefusalCause::MissingInput`) has no
+   `EngineRefusal` class for a `frame-refused` record. It cannot happen: every vector input is a
+   step list from `t = 0`, which is always current. If it did, it is `replay-failed` with the cause
+   `source`, never a verdict.
+4. **One scenario's ticks past the replay limits.** A scenario whose `N + 1` ticks pass the replay
+   limits' `max_frames` is `too-many-frames` at bind, beside the total budget, since
+   `ReplayError::TooManyFrames` has no cause in the table.
+5. **`window-uncovered` is also a bind-and-run code**: the one word the two code lists share, for
+   one refusal whichever stage finds it.
+6. **`VectorInputs` has no `mutants` field until mutant mode.** Supplying a mutant without a
+   listing is `mutant-unlisted`, a part-3 code, so part 3 adds the field in place.
+7. **Warnings match one to one** *(ruled by the owner).* A diagnostic expectation takes one
+   warning, and a warning is taken by at most one expectation. Every warning no expectation took is
+   unmatched: it is listed, counts in `warnings_total`, and `--deny-warnings` counts it. The
+   pairing order is fixed. Tick by tick, within a tick, first every expectation that names a
+   `message`, in expectation order, then every block-only expectation, in expectation order. Each
+   takes the earliest warning of its tick, in emission order, that it matches and that no
+   expectation has taken. Pairing the message-bearing expectations first matches as many
+   expectations as any pairing can. When fewer warnings can be matched than there are
+   expectations, the later expectations of each group fail with `diagnostic-missing`. So one
+   expectation at a tick where two instances of a class warn leaves the second warning unmatched,
+   and two expectations take one each.
+8. **`param-refused` is found at bind** *(ruled by the owner).* Binding tries every scenario's
+   effective edits, in file order, on a freshly loaded engine by decision 14's passes, before any
+   frame of any scenario runs. The run applies the same edits to the scenario's own fresh engine
+   by the same passes. For part 3: a mutant's run applies the same edits; a mutant whose class
+   rules refuse an edit the subject admits is for part 3 to rule on.
+9. **Bind order.** Load, then the boundary ports (an Enum or String port, judged before any name
+   because it is a property of the subject alone), then the set's `params`, then each scenario in
+   file order (its inputs, the inputs it does not supply, its expectations, its `params`), then
+   the parameter trial (reading 8), then the frame budget. The first refusal wins.
+10. **API beyond the sketch.** `Receipt::computed_receipt_id`, the closed `ReceiptValue`
+    (Real, Integer or Boolean) a receipt records, `ENGINE_REFUSAL_CLASSES` and
+    `engine_refusal_class`, `MAX_LOAD_WARNINGS`, and `VerifyError`'s `path`, `candidates`, `cause`
+    and `diagnostic_codes`. A `chunk_frames` of zero is read as one.
+
+**The refusal's slot** *(ruled by the owner).* A `frame-refused` record is always kept. When a
+frame was refused, the failure list keeps its last slot for that record, so earlier mismatches
+never push it out; `failures_total` is unchanged. With a cap of zero no record is listed.
+
+Two points the review raised are left as they are and tracked: the receipt does not record the
+caps it was written under (#563), and nothing bounds the total work of a run, instants and subject
+loads included (#561, which part 4 waits for).

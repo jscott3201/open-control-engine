@@ -43,7 +43,8 @@ pub enum VerifyErrorKind {
     ParamPathAmbiguous,
     /// Two keys of one `params` map resolve to the same parameter.
     ParamPathDuplicate,
-    /// A parameter edit the engine still refused when a pass applied nothing (decision 14);
+    /// A parameter edit the engine still refused when a pass applied nothing (decision 14),
+    /// found at bind, where every scenario's edits are tried before any frame runs;
     /// [`VerifyError::cause`] is the refusal's class from [`PARAM_REFUSAL_CLASSES`].
     ParamRefused,
     /// A value whose JSON kind its port's or parameter's declared type does not take: a real or

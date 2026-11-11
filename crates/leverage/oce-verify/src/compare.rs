@@ -4,26 +4,28 @@
 //! - **Windows** are exact for every type: an Integer or a Boolean by value, a Real by its bits,
 //!   so `0` on a Real output is `+0.0` and does not equal `-0.0`, and no finite literal equals a
 //!   NaN. One window tick is one instant.
-//! - **A diagnostic expectation** holds when the frame at its tick emitted at least one warning
-//!   whose `block` equals the expectation's and, when it gives one, whose `message` equals it
-//!   byte for byte. It is one instant.
+//! - **A diagnostic expectation** holds when it is paired with a warning of the frame at its
+//!   tick whose `block` equals the expectation's and, when it gives one, whose `message` equals it
+//!   byte for byte. Pairing is one to one, in the order [`crate::pairing`] gives. It is one
+//!   instant.
 //! - **A refused frame** stops the scenario's run: instants before its tick are compared and
 //!   counted, instants at and after it are not, and the refusal is one `frame-refused` failure.
 //!   It is not an instant.
-//! - **Warnings** no diagnostic expectation matched are listed and never change a verdict: a
-//!   warning is matched when some diagnostic expectation of the scenario at its tick matches it.
+//! - **Warnings** no diagnostic expectation took are listed and never change a verdict.
 //!
 //! Failures are recorded by tick, then by expectation index, at most
-//! [`crate::VerifyLimits::max_recorded_failures`], with the total kept; unmatched warnings in row
-//! then emission order, at most [`crate::VerifyLimits::max_recorded_warnings`], with the total
-//! kept. Memory is bounded by the caps, not by the run: each expectation keeps at most the cap of
-//! its own earliest failures, which holds every record the scenario's first records can be.
-
-use std::collections::BTreeMap;
+//! [`crate::VerifyLimits::max_recorded_failures`], with the total kept. A `frame-refused` record
+//! is always kept (owner ruling of 2026-11-10): when a frame was refused, the last slot of the
+//! list is reserved for it, so earlier mismatches never push it out; with a cap of zero no record
+//! is listed. Unmatched warnings are listed in row then emission order, at most
+//! [`crate::VerifyLimits::max_recorded_warnings`], with the total kept. Memory is bounded by the
+//! caps, not by the run: each expectation keeps at most the cap of its own earliest failures,
+//! which holds every record the scenario's first records can be.
 
 use oce_replay::{DiagnosticRow, EngineRefusal, Trace, TraceColumn};
 
 use crate::bind::{BoundDiagnostic, BoundExpectation, BoundWindow};
+use crate::pairing::{Pairing, pair};
 use crate::receipt::{Failure, InstantCounts, ReceiptValue, UnmatchedWarning};
 use crate::verify_error::{VerifyError, VerifyErrorKind};
 
@@ -62,8 +64,9 @@ struct Keyed {
 /// scenario in a refusal.
 ///
 /// # Errors
-/// `replay-failed` with the cause `output-set-changed` when the trace's output columns are not
-/// the slot map's (a defence: replay fixes its columns from the same map).
+/// `replay-failed` with the cause `output-set-changed` when the trace's columns are not the slot
+/// map's or lack a row binding reached (a defence: replay fixes its columns from the same map and
+/// writes one row per tick).
 pub(crate) fn compare(
     trace: &Trace,
     refused: Option<(u64, EngineRefusal)>,
@@ -75,6 +78,7 @@ pub(crate) fn compare(
     let rows = u64::try_from(trace.rows()).unwrap_or(u64::MAX);
     // The ticks that are compared: every row before the refused one, or every row.
     let compared = refused.map_or(rows, |(row, _)| row.min(rows));
+    let pairing = pair(trace.diagnostics(), expectations, compared);
     let mut instants = InstantCounts::default();
     let mut kept: Vec<Keyed> = Vec::new();
     let mut failures_total = 0_u64;
@@ -84,7 +88,7 @@ pub(crate) fn compare(
                 compare_window(trace, window, expectation, compared, outputs, caps, subject)?
             }
             BoundExpectation::Diagnostic(diagnostic) => {
-                compare_diagnostic(trace, diagnostic, expectation, compared)
+                compare_diagnostic(trace, diagnostic, expectation, compared, &pairing, subject)?
             }
         };
         instants.checked += checked;
@@ -94,21 +98,27 @@ pub(crate) fn compare(
     }
     instants.passed = instants.checked - instants.failed;
     kept.sort_by_key(|keyed| (keyed.tick, keyed.expectation));
+    // The refusal's record is always kept: when a frame was refused, the earlier records leave
+    // the last slot for it.
+    let room = match refused {
+        Some(_) => caps.failures.saturating_sub(1),
+        None => caps.failures,
+    };
     let mut failures: Vec<Failure> = kept
         .into_iter()
-        .take(caps.failures)
+        .take(room)
         .map(|keyed| keyed.failure)
         .collect();
     if let Some((row, refusal)) = refused {
         failures_total += 1;
-        if failures.len() < caps.failures {
+        if caps.failures > 0 {
             failures.push(Failure::FrameRefused {
-                t: time_of(trace, row),
+                t: time_of(trace, row, subject)?,
                 refusal,
             });
         }
     }
-    let (warnings, warnings_total) = unmatched(trace.diagnostics(), expectations, caps.warnings);
+    let (warnings, warnings_total) = unmatched(trace.diagnostics(), &pairing, caps.warnings);
     Ok(Compared {
         instants,
         failures,
@@ -118,13 +128,28 @@ pub(crate) fn compare(
     })
 }
 
-/// The time of trace row `row`, seconds; `0.0` past the end, which no caller asks for.
-fn time_of(trace: &Trace, row: u64) -> f64 {
+/// The time of trace row `row`, seconds.
+///
+/// # Errors
+/// `replay-failed` with the cause `output-set-changed` for a row the trace does not have: every
+/// caller asks for a row the run wrote, so that is a trace that is not the one binding expects,
+/// and a time is never made up for it.
+fn time_of(trace: &Trace, row: u64, subject: &str) -> Result<f64, VerifyError> {
     usize::try_from(row)
         .ok()
         .and_then(|row| trace.times().get(row))
         .copied()
-        .unwrap_or(0.0)
+        .ok_or_else(|| {
+            VerifyError::new(
+                VerifyErrorKind::ReplayFailed,
+                subject,
+                format!(
+                    "the trace has {} rows and no row {row}",
+                    trace.times().len()
+                ),
+            )
+            .with_cause("output-set-changed")
+        })
 }
 
 /// The output column of slot `slot`, checked against the slot map's path.
@@ -208,7 +233,7 @@ fn compare_window(
                 failure: Failure::ValueMismatch {
                     expectation: u64::try_from(expectation).unwrap_or(u64::MAX),
                     output: outputs[window.output].clone(),
-                    t: time_of(trace, tick),
+                    t: time_of(trace, tick, subject)?,
                     expected: window.equals,
                     actual,
                 },
@@ -218,47 +243,29 @@ fn compare_window(
     Ok((checked, failed, earliest))
 }
 
-/// Whether `row` matches `diagnostic`: the block, and the message when the expectation gives one.
-fn matches(row: &DiagnosticRow, diagnostic: &BoundDiagnostic) -> bool {
-    row.frame == diagnostic.tick
-        && row.block == diagnostic.block
-        && diagnostic
-            .message
-            .as_ref()
-            .is_none_or(|message| *message == row.message)
-}
-
-/// The warnings of trace row `frame`.
-fn warnings_at(trace: &Trace, frame: u64) -> &[DiagnosticRow] {
-    let rows = trace.diagnostics();
-    let start = rows.partition_point(|row| row.frame < frame);
-    let end = rows.partition_point(|row| row.frame <= frame);
-    &rows[start..end]
-}
-
-/// One diagnostic expectation: one instant when its tick ran, and its failure record.
+/// One diagnostic expectation: one instant when its tick ran, passed when the pairing gave it a
+/// warning, and its failure record otherwise.
 fn compare_diagnostic(
     trace: &Trace,
     diagnostic: &BoundDiagnostic,
     expectation: usize,
     compared: u64,
-) -> (u64, u64, Vec<Keyed>) {
+    pairing: &Pairing,
+    subject: &str,
+) -> Result<(u64, u64, Vec<Keyed>), VerifyError> {
     if diagnostic.tick >= compared {
-        return (0, 0, Vec::new());
+        return Ok((0, 0, Vec::new()));
     }
-    if warnings_at(trace, diagnostic.tick)
-        .iter()
-        .any(|row| matches(row, diagnostic))
-    {
-        return (1, 0, Vec::new());
+    if pairing.matched.get(expectation).copied().unwrap_or(false) {
+        return Ok((1, 0, Vec::new()));
     }
     let failure = Failure::DiagnosticMissing {
         expectation: u64::try_from(expectation).unwrap_or(u64::MAX),
-        t: time_of(trace, diagnostic.tick),
+        t: time_of(trace, diagnostic.tick, subject)?,
         block: diagnostic.block.clone(),
         message: diagnostic.message.clone(),
     };
-    (
+    Ok((
         1,
         1,
         vec![Keyed {
@@ -266,28 +273,20 @@ fn compare_diagnostic(
             expectation,
             failure,
         }],
-    )
+    ))
 }
 
-/// The warnings no diagnostic expectation matched: the first `cap` and the total.
+/// The warnings no diagnostic expectation took, in row then emission order: the first `cap` and
+/// the total.
 fn unmatched(
     rows: &[DiagnosticRow],
-    expectations: &[BoundExpectation],
+    pairing: &Pairing,
     cap: usize,
 ) -> (Vec<UnmatchedWarning>, u64) {
-    let mut by_tick: BTreeMap<u64, Vec<&BoundDiagnostic>> = BTreeMap::new();
-    for expectation in expectations {
-        if let BoundExpectation::Diagnostic(diagnostic) = expectation {
-            by_tick.entry(diagnostic.tick).or_default().push(diagnostic);
-        }
-    }
     let mut warnings = Vec::new();
     let mut total = 0_u64;
-    for row in rows {
-        let matched = by_tick
-            .get(&row.frame)
-            .is_some_and(|diagnostics| diagnostics.iter().any(|d| matches(row, d)));
-        if matched {
+    for (index, row) in rows.iter().enumerate() {
+        if pairing.taken.get(index).copied().unwrap_or(false) {
             continue;
         }
         total += 1;
@@ -301,7 +300,3 @@ fn unmatched(
     }
     (warnings, total)
 }
-
-#[cfg(test)]
-#[path = "compare_tests.rs"]
-mod tests;
