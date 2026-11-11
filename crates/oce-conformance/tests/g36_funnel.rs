@@ -9,8 +9,8 @@ use oce_conformance::{
 };
 use serde_json::Value;
 
-#[path = "g36_funnel_band/sequences.rs"]
-mod sequences;
+// Shared helper `g36_funnel_band/sequences.rs`, declared once in the root `conformance.rs`.
+use crate::sequences;
 use sequences::*;
 
 #[test]

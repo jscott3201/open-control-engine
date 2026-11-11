@@ -1,6 +1,6 @@
 //! Tier-1 exact conformance for CDL.Reals vector-reduction blocks.
 
-mod block_harness;
+use crate::block_harness; // Shared helper, declared once in the root `conformance.rs`.
 
 use block_harness::{BlockCase, Param, ParamValue, Port, R, assert_cases_match_exact_oracle, case};
 
