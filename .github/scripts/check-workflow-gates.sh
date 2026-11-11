@@ -733,32 +733,46 @@ require_same_workflow_env() {
   fi
 }
 
-# No line of a gating workflow may throw a command's failure away (issue #555). The same edit
-# made to both copies of a shared job keeps the two copies equal, and a whole-line presence rule
-# only guards the lines it names, so these are refused on every non-comment line, with
-# `${{ ... }}` expressions removed first (they are the only place `||` appears today):
-#   * `||` in any form: `|| true`, `|| :`, `|| /bin/true`, `|| echo`, `|| exit 0`, `|| { true; }`,
-#     `|| (true)`, `|| "true"`. No gating step has a use for a fallback command.
-#   * a trailing `; true`, `; :` or `; exit 0`, and a command sent to the background with a
-#     trailing `&`, whose status the step never sees;
-#   * `set +` in any form (`set +e`, `set +eu`, `set +euo pipefail`, `set +o errexit`): nothing
-#     here turns a shell option off.
-# And every `shell:` must be exactly `bash`. GitHub runs that as `bash --noprofile --norc -eo
-# pipefail {0}`; a custom template such as `bash {0}` drops `-e` and `pipefail` for every step
-# under it, at step, job or workflow `defaults:` level.
-# What this does not see, and a follow-up issue tracks: a bare `exit 0` on a line of its own, and
-# a failure masked inside a script the workflow calls.
+# A tripwire for masked failures in the gating workflows (issue #555). It is NOT a proof that no
+# step discards a failure: shell has more ways to do that than a line scan can list, and the
+# known ones it does not catch are named at the end. It exists because the same edit made to both
+# copies of a shared job keeps the two copies equal, and a whole-line presence rule only guards
+# the lines it names. On every non-comment line it refuses:
+#   * inside a `${{ ... }}` expression, a quoted literal that contains `|`, `&`, `;` or `+`, which
+#     is how an operator or a `set` option could be spelled out of sight of the rules below (no
+#     expression here has such a literal);
+# and then, with the expressions removed (their own `||` and `&&` are the only ones today):
+#   * `||`: `|| true`, `|| :`, `|| /bin/true`, `|| echo`, `|| exit 0`, `|| { true; }`,
+#     `|| (true)`, `|| "true"`. No gating step has a use for a fallback command;
+#   * a line that ends in `|\` or starts with `|`, which is the same operator split over a
+#     continuation;
+#   * a trailing `; true`, `; :` or `; exit 0`, and a trailing `&`;
+#   * `set` with a `+` option among its arguments (`set +e`, `set +eu`, `set +o errexit`,
+#     `set -o pipefail +e`, `set -x +e`), and `shopt -u`: nothing here turns a shell option off.
+# And every `shell` key, in block or flow style and with or without quotes, must be the line
+# `shell: bash`. GitHub runs that as `bash --noprofile --norc -eo pipefail {0}`; a custom template
+# such as `bash {0}` drops `-e` and `pipefail` for every step under it.
+# Known to pass, tracked in GitHub #566: a bare `exit 0` on a line of its own; `cmd && true` or
+# `cmd && :` on a line that is not the last of its step; `cmd & wait`; `(cmd &)`; and anything
+# inside a script the workflow calls.
 refuse_failure_masks() {
   path="$1"
-  local code bad
-  code="$(grep -Ev '^[[:space:]]*#' "$path" | sed -E 's/\$\{\{[^}]*\}\}//g')"
-  bad="$(grep -En '\|\||;[[:space:]]*(true|:|exit[[:space:]]+0+)[[:space:]]*$|(^|[^&])&[[:space:]]*$|(^|[^[:alnum:]_-])set[[:space:]]+(-[[:alnum:]]+[[:space:]]+)*\+' <<< "$code" || true)"
+  local lines code bad
+  lines="$(grep -Ev '^[[:space:]]*#' "$path")"
+  bad="$(grep -Eo '\$\{\{[^}]*\}\}' <<< "$lines" | grep -Eo "'[^']*'|\"[^\"]*\"" | grep -E '[|&;+]' || true)"
   if [ -n "$bad" ]; then
-    echo "FAIL: $path contains a refused gate pattern: a masked failure (||, a trailing ; true or ; exit 0, a trailing &, or set +...), which lets a failing command read as green"
+    echo "FAIL: $path contains a refused gate pattern: a masked failure (an expression literal that spells a shell operator or option)"
     printf '%s\n' "$bad" | head -n 5 | sed 's/^/  /'
     exit 1
   fi
-  bad="$(grep -E '^[[:space:]]*(- )?shell:' <<< "$code" | grep -Ev '^[[:space:]]*(- )?shell: bash[[:space:]]*$' || true)"
+  code="$(sed -E 's/\$\{\{[^}]*\}\}//g' <<< "$lines")"
+  bad="$(grep -En '\|\||\|[[:space:]]*\\$|^[[:space:]]*\||;[[:space:]]*(true|:|exit[[:space:]]+0+)[[:space:]]*$|(^|[^&])&[[:space:]]*$|(^|[^[:alnum:]_-])set([[:space:]]+[^;&|#]*)?[[:space:]]\+|(^|[^[:alnum:]_-])shopt[[:space:]]+([^;&|#]*[[:space:]])?-[[:alnum:]]*u' <<< "$code" || true)"
+  if [ -n "$bad" ]; then
+    echo "FAIL: $path contains a refused gate pattern: a masked failure (||, a split |, a trailing ; true, ; exit 0 or &, set with a + option, or shopt -u), which lets a failing command read as green"
+    printf '%s\n' "$bad" | head -n 5 | sed 's/^/  /'
+    exit 1
+  fi
+  bad="$(grep -E "(^|[[:space:]{,\"'-])[\"']?shell[\"']?[[:space:]]*:" <<< "$code" | grep -Ev '^[[:space:]]*(- )?shell: bash[[:space:]]*$' || true)"
   if [ -n "$bad" ]; then
     echo "FAIL: $path sets a shell other than exactly \`shell: bash\`, which can drop errexit and pipefail"
     printf '%s\n' "$bad" | head -n 5 | sed 's/^/  /'

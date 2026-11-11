@@ -1120,12 +1120,16 @@ and a gate that accepted any text would restore exactly the false assurance desc
   workflow-level `env:` of `pr-gate.yml`, `merge-gate.yml` and `release-gate.yml`, `CHECKOUT_REF`
   aside; (4) end-anchors the presence rules for the determinism cells, their fan-in and the
   Windows cell (new `require_job_line`), so `<command> || true` or a trailing argument added to
-  both copies of a shared step fails, and refuses, on every line of the three gating workflows,
-  `||` in any form outside a `${{ }}` expression, a trailing `; true`, `; exit 0` or `&`, any
-  `set +...`, and any `shell:` other than exactly `bash` (a template such as `bash {0}` drops
-  errexit and pipefail); (5) pins the release gate's
-  `save-if: matrix.arch == 'aarch64'`. Thirty-nine hostile fixtures, each of which the checker as
-  it stood let through, and one positive (291 cases).
+  both copies of a shared step fails; (5) pins the release gate's
+  `save-if: matrix.arch == 'aarch64'`. It also gains a tripwire, `refuse_failure_masks`, on every
+  non-comment line of the three gating workflows: `||` outside a `${{ }}` expression, a line
+  ending in `|\` or starting with `|`, a trailing `; true`, `; exit 0` or `&`, `set` with a `+`
+  option among its arguments, `shopt -u`, a quoted literal containing `|`, `&`, `;` or `+` inside
+  an expression, and a `shell` key in block or flow style that is not the line `shell: bash` (a
+  template such as `bash {0}` drops errexit and pipefail). The tripwire is not a proof that no
+  step discards a failure: a bare `exit 0`, `cmd && true` on a non-final line, `cmd & wait` and
+  `(cmd &)` still pass, and GitHub #566 tracks them. 52 hostile fixtures, each of which the
+  checker let through before the rule that refuses it, and 2 positive ones (305 cases).
   **Pin advance.** The `full` row stays. Its stated reason is corrected in `AGENTS.md`,
   `.agents/project-facts.md`, `docs/ci-and-the-gate.md` and `scripts/ci/proof-row.sh`: the
   pin-guard tests already run per PR (`oce-cxf`'s `g36_catalog_tests` in `crate tests`,

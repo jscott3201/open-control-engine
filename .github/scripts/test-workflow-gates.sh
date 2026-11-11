@@ -1033,6 +1033,62 @@ workflow_shell_sh() {
   edit_pr_gate "$1" 's/^jobs:$/defaults:\n  run:\n    shell: sh\njobs:/'
 }
 
+# The same template in spellings a block-style scan does not see.
+flow_style_shell_template() {
+  edit_merge_gate "$1" "s/^jobs:\$/defaults: {run: {shell: 'bash {0}'}}\njobs:/"
+}
+
+quoted_shell_key() {
+  edit_pr_gate "$1" 's/^      - run: cargo build --workspace --locked$/&\n        "shell": bash {0}/'
+}
+
+single_quoted_shell_key_in_a_flow_map() {
+  edit_release_gate "$1" "s/^  test-suite:\$/&\n    defaults: {run: {'shell': sh}}/"
+}
+
+# A `+` option after a `-` flag, and the other builtin that turns an option off.
+errexit_turned_off_after_an_option_flag() { set_plus_in_the_gate_step "$1" 'set -o pipefail +e'; }
+errexit_turned_off_by_name_after_an_option_flag() { set_plus_in_the_gate_step "$1" 'set -o pipefail +o errexit'; }
+errexit_turned_off_with_shopt() { set_plus_in_the_gate_step "$1" 'shopt -u -o errexit'; }
+errexit_turned_off_with_shopt_combined_flags() { set_plus_in_the_gate_step "$1" 'shopt -uo errexit'; }
+
+# What must stay allowed: turning options on.
+options_turned_on() {
+  set_plus_in_the_gate_step "$1" 'set -euo pipefail'
+  edit_pr_gate "$1" 's/^      - run: cargo build --workspace --locked$/      - run: |\n          shopt -s nullglob\n          set -x\n          cargo build --workspace --locked/'
+}
+
+# An operator or an option spelled by an expression, where the line scan cannot read it.
+fallback_spelled_by_an_expression() {
+  unpinned_line_suffix "$1" " \${{ '|| true' }}"
+}
+
+operator_spelled_by_an_expression() {
+  unpinned_line_suffix "$1" " \${{ '||' }} true"
+}
+
+double_quoted_operator_spelled_by_an_expression() {
+  unpinned_line_suffix "$1" ' ${{ "||" }} true'
+}
+
+set_option_spelled_by_an_expression() { set_plus_in_the_gate_step "$1" "set \${{ '+e' }}"; }
+
+# The operator split over a continuation, in both directions.
+split_fallback() {
+  dir="$1"
+  for workflow in "$dir/pr-gate.yml" "$dir/release-gate.yml"; do
+    awk -v first="$2" -v second="$3" '
+      /^  determinism-compare:$/ { inside = 1 }
+      inside && /^          export OCE_FOREIGN_TARGET_STATE_IN=/ { print $0 first; print "          " second; next }
+      { print }
+    ' "$workflow" > "$workflow.tmp"
+    mv "$workflow.tmp" "$workflow"
+  done
+}
+
+fallback_split_after_the_first_pipe() { split_fallback "$1" ' |\' '| true'; }
+fallback_on_a_line_of_its_own() { split_fallback "$1" ' \' '| true'; }
+
 # `shell: bash` itself stays allowed at every level.
 plain_bash_shell_everywhere() {
   edit_pr_gate "$1" -e 's/^jobs:$/defaults:\n  run:\n    shell: bash\njobs:/' \
@@ -2534,6 +2590,33 @@ run_case workflow-shell-template fail workflow_shell_template \
   "sets a shell other than exactly"
 run_case workflow-shell-sh fail workflow_shell_sh \
   "sets a shell other than exactly"
+run_case flow-style-shell-template fail flow_style_shell_template \
+  "sets a shell other than exactly"
+run_case quoted-shell-key fail quoted_shell_key \
+  "sets a shell other than exactly"
+run_case single-quoted-shell-key-in-a-flow-map fail single_quoted_shell_key_in_a_flow_map \
+  "sets a shell other than exactly"
+run_case errexit-turned-off-after-an-option-flag fail errexit_turned_off_after_an_option_flag \
+  "contains a refused gate pattern: a masked failure"
+run_case errexit-turned-off-by-name-after-an-option-flag fail errexit_turned_off_by_name_after_an_option_flag \
+  "contains a refused gate pattern: a masked failure"
+run_case errexit-turned-off-with-shopt fail errexit_turned_off_with_shopt \
+  "contains a refused gate pattern: a masked failure"
+run_case errexit-turned-off-with-shopt-combined-flags fail errexit_turned_off_with_shopt_combined_flags \
+  "contains a refused gate pattern: a masked failure"
+run_case fallback-spelled-by-an-expression fail fallback_spelled_by_an_expression \
+  "contains a refused gate pattern: a masked failure"
+run_case operator-spelled-by-an-expression fail operator_spelled_by_an_expression \
+  "contains a refused gate pattern: a masked failure"
+run_case double-quoted-operator-spelled-by-an-expression fail double_quoted_operator_spelled_by_an_expression \
+  "contains a refused gate pattern: a masked failure"
+run_case set-option-spelled-by-an-expression fail set_option_spelled_by_an_expression \
+  "contains a refused gate pattern: a masked failure"
+run_case fallback-split-after-the-first-pipe fail fallback_split_after_the_first_pipe \
+  "contains a refused gate pattern: a masked failure"
+run_case fallback-on-a-line-of-its-own fail fallback_on_a_line_of_its_own \
+  "contains a refused gate pattern: a masked failure"
+run_case options-turned-on pass options_turned_on
 run_case plain-bash-shell-everywhere pass plain_bash_shell_everywhere
 run_case release-gate-save-if-dropped fail release_gate_save_if_dropped \
   "release-gate.yml job determinism-matrix is missing required gate pattern: only the aarch64 determinism cells of the release gate save the shared rust-cache entry"
