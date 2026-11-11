@@ -4,13 +4,13 @@ exit: 2
   "command": "verify",
   "errors": [
     {
+      "at": "subject",
       "code": "subject-load-failed",
       "detail": "the engine refused to load the subject: CXF ingest error: CXF validation failed with 1 diagnostic(s)",
       "diagnostic_codes": [
         "class-not-found"
       ],
-      "span": null,
-      "subject": "subject"
+      "span": null
     }
   ],
   "findings": [],

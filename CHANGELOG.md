@@ -464,7 +464,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
     is text. A text or wire subject is validated and emitted with the default options first.
     Anything else is the new code `unknown-subject-form`.
   - **Reads.** Every size is checked from metadata before a byte is read: the vector file at 4 MiB,
-    a CXF subject and each mutant at 8 MiB, the mutants together at 64 MiB.
+    a CXF subject and each mutant at 8 MiB, a text or wire subject at its form's 4 MiB (owner
+    ruling), and the mutants together at 64 MiB.
   - **Mutant paths, per the owner's ruling.** Each path is resolved against the vector file's
     directory, following links. A path that leaves it is the new `mutant-outside-directory`, and
     two listings that are one file are `duplicate-mutant`. One file is one (device, inode) on Unix
@@ -476,11 +477,13 @@ and a gate that accepted any text would restore exactly the false assurance desc
     1 prints the report". Exit 2 prints the `oce-report/1` report. `--out DIR` writes
     `DIR/receipt.json` atomically and prints the report with `passed`, `status`, `receipt_id` and
     `output`; on exit 2 nothing is written.
-  - **Report errors** gain the optional keys `subject`, `path`, `candidates`, `cause` and
+  - **Report errors** gain the optional keys `at` (the place), `path`, `candidates`, `cause` and
     `diagnostic_codes`, written only with a value. The schema is changed in place and stays
-    `oce-report/1`.
+    `oce-report/1`. The place was first built as `subject`; the owner ruled `at`, because a
+    `verify` report's top-level `subject` is the subject file.
   - **Exit-only flags.** `--require-mutants-caught` and `--deny-warnings` flip the exit status over
-    the same receipt bytes.
+    the same receipt bytes. By owner ruling, `--require-mutants-caught` also fails a set that
+    lists no mutant (no `mutants` key, or an empty list).
   - **`--timings`** fills `load_ms` (reading and emitting) and `run_ms` (the whole `run_vectors`
     call). `compare_ms` stays 0, and `receipt_id` never moves.
   - **Vocabulary.** `oce vocab` lists `oce-verify`'s 35 load codes and 30 bind and run codes, pinned
@@ -489,7 +492,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
     binary over both in-repo library rules in place and requires exit 0 and stdout byte-equal to
     `oce-verify`'s golden receipts. It runs in the leverage lane, and an edited expectation fails
     it.
-  - **Transcripts.** New: 22 `verify_*` transcripts and `help_verify`. Re-blessed: `help_oce` and
+  - **Transcripts.** New: 23 `verify_*` transcripts and `help_verify`. Re-blessed: `help_oce` and
     `usage_no_arguments` (the new subcommand line), `vocab_text` and `vocab_json` (the new tables,
     and the widened exit and `input-too-large` meanings). No `oce-verify` golden moves.
   - **Docs.**

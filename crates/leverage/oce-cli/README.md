@@ -112,7 +112,8 @@ note](../../../docs/design/vectors.md), "CLI"; the owner's rulings in "Part 4's 
   as `emit -o` writes through its own target. Any other non-file there is replaced by the
   receipt, a named pipe included, and is never opened.
 - **Exit-only flags.** These never change a receipt byte:
-  - `--require-mutants-caught` makes a surviving mutant exit `1`;
+  - `--require-mutants-caught` makes exit `1` when a mutant survived or the set lists none (owner
+    ruling of 2026-11-11);
   - `--deny-warnings` makes exit `1` when `load_warnings_total` or `totals.warnings` is not zero.
 - **`--timings`** fills the header's `timings`, which `receipt_id` never covers:
   - `load_ms`: reading the files and emitting a text or wire subject;
@@ -127,8 +128,8 @@ note](../../../docs/design/vectors.md), "CLI"; the owner's rulings in "Part 4's 
 
 | Exit | Meaning | When |
 | --- | --- | --- |
-| `0` | yes | `validate` and `emit`: no error finding; `fmt --check`: canonical; `catalog`: the ports resolve; `verify`: every scenario passed, no mutant survived under `--require-mutants-caught`, no warning under `--deny-warnings`; `fmt`, `fmt --write`, `vocab`, `--help`, `--version` |
-| `1` | no | an error finding (`validate`, `emit`, which then writes nothing); `fmt --check`: not canonical; `catalog`: an unknown class, or the class rules refuse the parameter table (including a required parameter with no default); `verify`: a scenario failed or the set is `no_data`, or, under their flags, a surviving mutant or a warning |
+| `0` | yes | `validate` and `emit`: no error finding; `fmt --check`: canonical; `catalog`: the ports resolve; `verify`: every scenario passed, under `--require-mutants-caught` the set lists a mutant and none survived, under `--deny-warnings` no warning; `fmt`, `fmt --write`, `vocab`, `--help`, `--version` |
+| `1` | no | an error finding (`validate`, `emit`, which then writes nothing); `fmt --check`: not canonical; `catalog`: an unknown class, or the class rules refuse the parameter table (including a required parameter with no default); `verify`: a scenario failed or the set is `no_data`, or, under their flags, a surviving mutant, a set that lists no mutant, or a warning |
 | `2` | error | the question could not be answered: a usage error (clap), stdin without `--from`, an unknown extension, a missing path or a directory, an unreadable or over-size input, a parse refusal, a malformed `--namespace` or `--param`, `--write` on stdin or a wire file, a failed write, or a stdout that cannot be written; for `verify`, also a refused vector file, a subject that does not load, an unresolved name, an uncovered window, an invalid or unreadable mutant, or a run refusal |
 
 ## Output
@@ -175,10 +176,10 @@ validator's order (authored position, code, detail).
 An **error** is `{ "code", "detail", "span" }`: a text-form parse code (`oce_author::PARSE_CODES`,
 with the refusal's span), a wire-form code (with the refusal's span where it has one), or one of
 the tool's own codes (`span` `null`). `oce vocab` lists every code with one line of meaning. A
-`verify` refusal adds optional keys, each written only when it has a value (owner ruling of
+`verify` refusal adds optional keys, each written only when it has a value (owner rulings of
 2026-11-11; pinned by `tests/report_shape.rs`):
-- `subject`: the place, such as `scenarios[0].inputs.u`, `mutants[2]`, `subject` or `line 2
-  column 1`;
+- `at`: the place, such as `scenarios[0].inputs.u`, `mutants[2]`, `subject` or `line 2 column 1`
+  (never `subject`, which is the report's subject file);
 - `path`: the canonical path it concerns;
 - `candidates`: an ambiguous name's matches, in order;
 - `cause`: from one of `oce-verify`'s closed tables;

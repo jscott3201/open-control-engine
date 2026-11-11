@@ -4,10 +4,10 @@ exit: 2
   "command": "verify",
   "errors": [
     {
+      "at": "subject",
       "code": "unknown-subject-form",
       "detail": "the subject's name ends in none of .jsonld, .cxf.json (CXF), .oce (text) and .json (wire); pass --subject-form cxf, text or wire",
-      "span": null,
-      "subject": "subject"
+      "span": null
     }
   ],
   "findings": [],

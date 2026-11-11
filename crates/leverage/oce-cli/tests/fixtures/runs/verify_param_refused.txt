@@ -4,12 +4,12 @@ exit: 2
   "command": "verify",
   "errors": [
     {
+      "at": "scenarios[0]",
       "cause": "param-range",
       "code": "param-refused",
       "detail": "no pass admits the edit of urn:verify:hysteresis#top.hys.uHigh: parameter 'urn:verify:hysteresis#top.hys.uHigh' value out of declared [min,max] (CDL §7.4.1); the edits are applied in passes in path order (decision 14)",
       "path": "urn:verify:hysteresis#top.hys.uHigh",
-      "span": null,
-      "subject": "scenarios[0]"
+      "span": null
     }
   ],
   "findings": [],

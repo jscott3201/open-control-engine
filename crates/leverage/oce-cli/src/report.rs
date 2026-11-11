@@ -12,8 +12,9 @@
 //! the exit `1`; `errors` are why a question could not be answered and make it `2`.
 //!
 //! An error is `{ "code", "detail", "span" }`. A `verify` refusal adds, each only when it has a
-//! value (owner ruling of 2026-11-11, vectors note "Part 4's readings"): `subject`, the place it
-//! is about (`scenarios[0].inputs.u`, `mutants[2]`, `line 3 column 7`); `path`, the canonical path
+//! value (owner rulings of 2026-11-11, vectors note "Part 4's readings"): `at`, the place it is
+//! about (`scenarios[0].inputs.u`, `mutants[2]`, `subject`, `line 3 column 7`); `path`, the
+//! canonical path
 //! it concerns; `candidates`, an ambiguous name's matches in their order; `cause`, a value from a
 //! closed table `oce-verify` owns; `diagnostic_codes`, the engine's codes of a subject that did not
 //! load.
@@ -88,20 +89,20 @@ impl Report {
         }));
     }
 
-    /// Record a refusal about one place (`subject`), with the optional facts a `verify` refusal
+    /// Record a refusal about one place (`at`), with the optional facts a `verify` refusal
     /// carries. Each optional key is written only when it has a value.
     pub(crate) fn error_at(
         &mut self,
         code: &str,
         detail: impl Into<String>,
-        at: Option<Location>,
+        location: Option<Location>,
         facts: &Facts<'_>,
     ) {
         let mut entry = Map::new();
+        entry.insert("at".into(), Value::from(facts.at));
         entry.insert("code".into(), Value::from(code));
         entry.insert("detail".into(), Value::from(detail.into()));
-        entry.insert("span".into(), span(at));
-        entry.insert("subject".into(), Value::from(facts.subject));
+        entry.insert("span".into(), span(location));
         if let Some(path) = facts.path {
             entry.insert("path".into(), Value::from(path));
         }
@@ -136,7 +137,7 @@ impl Report {
     pub(crate) fn verify_error(&mut self, error: &VerifyError) {
         let candidates: Vec<&str> = error.candidates().iter().map(String::as_str).collect();
         let facts = Facts {
-            subject: error.subject(),
+            at: error.subject(),
             path: error.path(),
             candidates: &candidates,
             cause: error.cause(),
@@ -227,8 +228,9 @@ impl Report {
 
 /// The place a refusal is about and the optional facts it carries ([`Report::error_at`]).
 pub(crate) struct Facts<'a> {
-    /// The place: a path into the vector set, `subject`, `mutants[i]`.
-    pub(crate) subject: &'a str,
+    /// The place, written as the error's `at`: a path into the vector set, `subject`,
+    /// `mutants[i]`.
+    pub(crate) at: &'a str,
     /// The canonical path the refusal concerns.
     pub(crate) path: Option<&'a str>,
     /// An ambiguous name's matches, in their order.
@@ -241,9 +243,9 @@ pub(crate) struct Facts<'a> {
 
 impl<'a> Facts<'a> {
     /// A place and nothing more.
-    pub(crate) fn about(subject: &'a str) -> Self {
+    pub(crate) fn about(at: &'a str) -> Self {
         Self {
-            subject,
+            at,
             path: None,
             candidates: &[],
             cause: None,

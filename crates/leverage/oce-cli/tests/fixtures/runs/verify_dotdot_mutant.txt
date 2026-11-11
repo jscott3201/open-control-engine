@@ -4,10 +4,10 @@ exit: 2
   "command": "verify",
   "errors": [
     {
+      "at": "mutants[0].path",
       "code": "mutant-path-invalid",
       "detail": "the mutant path `../identical_mutant/copy.cxf.json` has a `..` segment; it must stay inside the vector file's directory",
-      "span": null,
-      "subject": "mutants[0].path"
+      "span": null
     }
   ],
   "findings": [],

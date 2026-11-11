@@ -253,7 +253,7 @@ fn an_over_size_subject_is_refused_from_its_metadata() {
     assert_eq!(run.code, 2, "{}", run.transcript());
     let error = &run.report()["errors"][0];
     assert_eq!(error["code"], "input-too-large");
-    assert_eq!(error["subject"], "subject");
+    assert_eq!(error["at"], "subject");
     // The metadata's refusal names the size; a refused read could only say "larger than".
     assert!(
         error["detail"]
@@ -335,7 +335,7 @@ fn the_mutants_total_is_bounded_from_their_metadata_at_its_boundary() {
     assert_eq!(past.code, 2);
     let error = &past.report()["errors"][0];
     assert_eq!(error["code"], "too-many-mutant-bytes");
-    assert_eq!(error["subject"], "mutants[8]");
+    assert_eq!(error["at"], "mutants[8]");
     // One mutant over 8 MiB is refused as over-size on its own.
     sparse("m0.cxf.json", eight_mib + 1);
     let one = oce_in(
@@ -345,7 +345,7 @@ fn the_mutants_total_is_bounded_from_their_metadata_at_its_boundary() {
     );
     let error = &one.report()["errors"][0];
     assert_eq!(
-        (error["code"].as_str(), error["subject"].as_str()),
+        (error["code"].as_str(), error["at"].as_str()),
         (Some("input-too-large"), Some("mutants[0]"))
     );
 }
@@ -388,7 +388,7 @@ fn a_named_pipe_is_never_opened_as_the_vector_file_the_subject_or_the_receipt() 
     assert_eq!(subject.code, 2);
     let error = &subject.report()["errors"][0];
     assert_eq!(
-        (error["code"].as_str(), error["subject"].as_str()),
+        (error["code"].as_str(), error["at"].as_str()),
         (Some("not-a-file"), Some("subject"))
     );
     let out = run(&[

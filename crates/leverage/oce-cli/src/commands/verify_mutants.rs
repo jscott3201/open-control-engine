@@ -44,8 +44,8 @@ pub(crate) type Read = (String, Vec<u8>);
 
 /// A refusal of one mutant: the place, the code and a detail naming the listing.
 pub(crate) struct Refused {
-    /// `mutants[i]`.
-    pub(crate) subject: String,
+    /// `mutants[i]`, written as the error's `at`.
+    pub(crate) at: String,
     /// The code.
     pub(crate) code: &'static str,
     /// The sentence, naming the listed path.
@@ -97,14 +97,14 @@ pub(crate) fn read(set: &VectorSet, vectors: &Path) -> Result<Vec<Read>, Refused
         _ => PathBuf::from("."),
     };
     let refuse = |index: usize, path: &str, (code, why): (&'static str, String)| Refused {
-        subject: format!("mutants[{index}]"),
+        at: format!("mutants[{index}]"),
         code,
         detail: format!("mutant `{path}`: {why}"),
     };
     let root = std::fs::canonicalize(&directory).map_err(|error| {
         let (code, why) = io_refusal(error);
         Refused {
-            subject: "mutants".to_owned(),
+            at: "mutants".to_owned(),
             code,
             detail: format!("the vector file's directory: {why}"),
         }

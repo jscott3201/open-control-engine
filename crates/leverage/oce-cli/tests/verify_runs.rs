@@ -135,6 +135,45 @@ fn require_mutants_caught_flips_a_surviving_mutant_to_no_with_the_same_receipt()
 }
 
 #[test]
+fn require_mutants_caught_fails_a_set_that_lists_no_mutant_with_the_same_receipt() {
+    // Owner ruling of 2026-11-11: a set with no `mutants` key, or an empty list, cannot show its
+    // mutants caught, so the flag answers no; without the flag the same set answers yes.
+    for (vectors, subject) in [
+        (format!("{LIBRARY}/AHU-0016/vectors.json"), ahu_rule()),
+        (input("empty_mutants.json"), subject("hysteresis")),
+    ] {
+        let without = oce(&["verify", &vectors, "--subject", &subject], b"");
+        let with = oce(
+            &[
+                "verify",
+                &vectors,
+                "--subject",
+                &subject,
+                "--require-mutants-caught",
+            ],
+            b"",
+        );
+        assert_eq!((without.code, with.code), (0, 1), "{vectors}");
+        assert_eq!(
+            with.stdout, without.stdout,
+            "{vectors}: the receipt bytes do not change"
+        );
+    }
+    case(
+        "verify_require_mutants_caught_none_listed",
+        1,
+        &[
+            "verify",
+            &input("empty_mutants.json"),
+            "--subject",
+            &subject("hysteresis"),
+            "--require-mutants-caught",
+        ],
+        b"",
+    );
+}
+
+#[test]
 fn deny_warnings_flips_an_unmatched_warning_to_no_with_the_same_receipt() {
     let args = |deny: bool| {
         let mut args = vec![

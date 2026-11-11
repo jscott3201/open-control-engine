@@ -4,10 +4,10 @@ exit: 2
   "command": "verify",
   "errors": [
     {
+      "at": "scenarios[0].inputs.v",
       "code": "unknown-input",
       "detail": "`v` matches no boundary input, by exact path or by suffix",
-      "span": null,
-      "subject": "scenarios[0].inputs.v"
+      "span": null
     }
   ],
   "findings": [],

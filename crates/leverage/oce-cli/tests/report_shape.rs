@@ -2,7 +2,8 @@
 //! sorted at every depth, LF line endings and one final line feed, `ok` true exactly when the
 //! exit is 0, `errors` non-empty exactly when it is 2, and no absolute path anywhere. Every error
 //! is `code`, `detail` and `span`, plus the optional keys a `verify` refusal carries, each only
-//! with a value (owner ruling of 2026-11-11). A `verify` receipt on stdout is a document, not a
+//! with a value (owner rulings of 2026-11-11: the place is `at`, never `subject`, which in a
+//! `verify` report is the subject file). A `verify` receipt on stdout is a document, not a
 //! report, and is skipped like CXF.
 
 mod support;
@@ -106,8 +107,7 @@ fn every_golden_report_keeps_the_contract() {
 }
 
 /// The keys an error may carry beside `code`, `detail` and `span`.
-const OPTIONAL_ERROR_KEYS: [&str; 5] =
-    ["candidates", "cause", "diagnostic_codes", "path", "subject"];
+const OPTIONAL_ERROR_KEYS: [&str; 5] = ["at", "candidates", "cause", "diagnostic_codes", "path"];
 
 /// One error object: the three fixed keys, and optional keys only from the pinned set, each with
 /// a value of its type (a list is never empty, a string never empty).
@@ -120,7 +120,7 @@ fn error_shape(name: &str, error: &Value) {
         match key.as_str() {
             "code" | "detail" => assert!(value.is_string(), "{name}: {key}"),
             "span" => assert!(value.is_null() || value.is_object(), "{name}: span"),
-            "subject" | "path" | "cause" => assert!(
+            "at" | "path" | "cause" => assert!(
                 value.as_str().is_some_and(|text| !text.is_empty()),
                 "{name}: {key} is a non-empty string"
             ),
@@ -155,13 +155,13 @@ fn each_optional_error_key_is_written_when_its_refusal_has_a_value() {
         keys.sort();
         keys
     };
-    // `subject` alone: an unresolved input name names its place and nothing else.
+    // `at` alone: an unresolved input name names its place and nothing else.
     let unknown = error("verify_unknown_input");
-    assert_eq!(keys(&unknown), ["subject"]);
-    assert_eq!(unknown["subject"], "scenarios[0].inputs.v");
+    assert_eq!(keys(&unknown), ["at"]);
+    assert_eq!(unknown["at"], "scenarios[0].inputs.v");
     // `candidates`, in their order.
     let ambiguous = error("verify_ambiguous_input");
-    assert_eq!(keys(&ambiguous), ["candidates", "subject"]);
+    assert_eq!(keys(&ambiguous), ["at", "candidates"]);
     assert_eq!(
         ambiguous["candidates"],
         serde_json::json!([
@@ -171,19 +171,19 @@ fn each_optional_error_key_is_written_when_its_refusal_has_a_value() {
     );
     // `path` and `cause`.
     let refused = error("verify_param_refused");
-    assert_eq!(keys(&refused), ["cause", "path", "subject"]);
+    assert_eq!(keys(&refused), ["at", "cause", "path"]);
     assert_eq!(refused["cause"], "param-range");
     assert_eq!(refused["path"], "urn:verify:hysteresis#top.hys.uHigh");
     // `diagnostic_codes`.
     let not_loading = error("verify_subject_not_loading");
-    assert_eq!(keys(&not_loading), ["diagnostic_codes", "subject"]);
+    assert_eq!(keys(&not_loading), ["at", "diagnostic_codes"]);
     assert_eq!(
         not_loading["diagnostic_codes"],
         serde_json::json!(["class-not-found"])
     );
     // A vector file's refusal found in the text carries its place and its span.
     let malformed = error("verify_malformed_vectors");
-    assert_eq!(keys(&malformed), ["subject"]);
+    assert_eq!(keys(&malformed), ["at"]);
     assert!(malformed["span"].is_object(), "{malformed}");
     // Every other command's errors carry none of them.
     assert!(keys(&error("validate_missing_file")).is_empty());

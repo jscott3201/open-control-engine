@@ -141,7 +141,7 @@ pub(crate) struct VerifyArgs {
     /// Write the receipt to DIR/receipt.json (atomically) and print the report on stdout.
     #[arg(long, value_name = "DIR")]
     pub(crate) out: Option<OsString>,
-    /// Exit 1 when a mutant survived; no receipt byte changes.
+    /// Exit 1 when a mutant survived or the set lists none; no receipt byte changes.
     #[arg(long)]
     pub(crate) require_mutants_caught: bool,
     /// Exit 1 when the subject warned at load or a scenario left a warning unmatched; no receipt

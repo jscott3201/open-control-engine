@@ -29,7 +29,7 @@ Options:
           Write the receipt to DIR/receipt.json (atomically) and print the report on stdout
 
       --require-mutants-caught
-          Exit 1 when a mutant survived; no receipt byte changes
+          Exit 1 when a mutant survived or the set lists none; no receipt byte changes
 
       --deny-warnings
           Exit 1 when the subject warned at load or a scenario left a warning unmatched; no receipt byte changes

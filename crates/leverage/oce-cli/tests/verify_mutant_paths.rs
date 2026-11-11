@@ -95,7 +95,7 @@ fn refusal(report: &Value) -> (String, String) {
     let error = &report["errors"][0];
     (
         error["code"].as_str().unwrap_or_default().to_owned(),
-        error["subject"].as_str().unwrap_or_default().to_owned(),
+        error["at"].as_str().unwrap_or_default().to_owned(),
     )
 }
 

@@ -4,10 +4,10 @@ exit: 2
   "command": "verify",
   "errors": [
     {
+      "at": "mutants[0]",
       "code": "mutant-identical",
       "detail": "mutant `copy.cxf.json` has the subject's content id oce:canon1:f4c4aaff330f0d99a457ef62738d9670238c0680d9ecd25b63f034ade47e9f95: it promises the subject's outputs",
-      "span": null,
-      "subject": "mutants[0]"
+      "span": null
     }
   ],
   "findings": [],

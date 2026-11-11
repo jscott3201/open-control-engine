@@ -4,14 +4,14 @@ exit: 2
   "command": "verify",
   "errors": [
     {
+      "at": "scenarios[0].inputs.T",
       "candidates": [
         "urn:verify:signals#top.ahu.T",
         "urn:verify:signals#top.zone.T"
       ],
       "code": "ambiguous-input",
       "detail": "`T` matches 2 boundary inputs: urn:verify:signals#top.ahu.T, urn:verify:signals#top.zone.T",
-      "span": null,
-      "subject": "scenarios[0].inputs.T"
+      "span": null
     }
   ],
   "findings": [],

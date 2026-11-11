@@ -555,7 +555,10 @@ hand-written routine graphs verify like any other. A mutant is always CXF, whate
 **Reads.** The vector file is bounded at 4 MiB, the subject and each mutant at
 `oce_api::MAX_CXF_BYTES` (8 MiB), and the mutants together at 64 MiB
 (`VerifyLimits::max_mutant_bytes`), so 256 mutants are never 2 GiB in memory. Each size is checked
-from metadata before a byte is read, as every `oce` command does.
+from metadata before a byte is read, as every `oce` command does. *(Amended 2026-11-11, owner
+ruling with part 4: the subject's bound is its form's. A CXF subject is bounded at 8 MiB, and a
+text or wire subject at its form's own 4 MiB, as `oce emit` reads it. Each mutant, always CXF, is
+bounded at 8 MiB.)*
 
 **Output.** Stdout carries one document: the receipt when a verdict exists (exit 0 or 1), the
 `oce-report/1` report otherwise (exit 2, with the refusal in `errors[]`). With `--out`, the
@@ -564,8 +567,8 @@ receipt is written atomically to `<DIR>/receipt.json` and stdout is the report, 
 
 | Exit | When |
 | --- | --- |
-| 0 | every scenario passed, no mutant survived under `--require-mutants-caught`, and no warning under `--deny-warnings` |
-| 1 | a scenario failed, or the set is `no_data`; under their flags, a surviving mutant or a warning |
+| 0 | every scenario passed; under `--require-mutants-caught`, the set lists a mutant and none survived; under `--deny-warnings`, no warning |
+| 1 | a scenario failed, or the set is `no_data`; under their flags, a surviving mutant, a set that lists no mutant *(owner ruling, 2026-11-11)*, or a warning |
 | 2 | usage, an unreadable or refused vector file, a subject that does not load, an unresolved name, an uncovered window, an invalid mutant, a run refusal, an I/O failure |
 
 The two flags change the exit code only; no receipt byte depends on them. `--deny-warnings` counts
@@ -1231,8 +1234,10 @@ times the phases inside `oce-verify` would be a later change to decision 31.
 **A refusal in the report** *(ruled by the owner, 2026-11-11).* An `oce-report/1` error is
 `{ "code", "detail", "span" }`. A `verify` refusal adds optional keys, each written only when it
 has a value:
-- `subject`: the place it is about, such as `scenarios[0].inputs.u`, `mutants[2]` or `line 2
-  column 1`;
+- `at`: the place it is about, such as `scenarios[0].inputs.u`, `mutants[2]`, `subject` or `line
+  2 column 1`. *(Amended 2026-11-11, owner ruling on the review of GitHub #573: the key was first
+  built as `subject`; it is `at`. In a `verify` report the top-level `subject` is the subject
+  file's path, so one key means one thing.)*
 - `path`: the canonical path it concerns;
 - `candidates`: an ambiguous name's matches, in their order;
 - `cause`: a value from one of `oce-verify`'s closed tables;
@@ -1291,9 +1296,14 @@ What remains:
 2. **`-` is not stdin** for either path. A mutant path needs a directory to resolve against, so
    `verify` reads files only, and a file named `-` is just a file *(changes behaviour)*.
 3. **A text or wire subject is bounded at its form's 4 MiB limit,** as `emit` reads it. A CXF
-   subject is bounded at 8 MiB *(changes the limit in a refusal's detail)*.
-4. **`--require-mutants-caught` passes when no mutant survived.** That includes a set that lists
-   none, and a `not_run` section, where the subject's own verdict decides *(changes behaviour)*.
+   subject is bounded at 8 MiB *(ruled by the owner, 2026-11-11: the per-form bound stands; see
+   "Reads")*.
+4. **`--require-mutants-caught` fails a set that lists no mutant** *(ruled by the owner,
+   2026-11-11, on the review of GitHub #573)*. A set with no `mutants` key, or an empty list,
+   exits `1` under the flag, so a gate that relies on the flag cannot pass because its mutants
+   were deleted. A survivor still exits `1`. Without the flag, the same set exits as its
+   verdict says, and no receipt byte changes either way. A `not_run` section cannot pass: the
+   subject's own verdict is already exit `1`.
 5. **Check order:** the vector file, then the subject, then each mutant in file order, then
    `run_vectors`. Within one mutant the order is *(amended 2026-11-11, review of GitHub #573)*:
    1. resolution;
@@ -1307,5 +1317,6 @@ What remains:
    9. the read.
 
    *(Changes which code wins.)*
-6. **The report carries the subject's path as given** under `subject`, beside `input`, which is
-   the vector file's *(naming only)*.
+6. **The report carries the subject's path as given** under the top-level `subject`, beside
+   `input`, which is the vector file's. An error's place is `at`, never `subject` *(ruled by the
+   owner, 2026-11-11)*.

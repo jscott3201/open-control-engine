@@ -4,10 +4,10 @@ exit: 2
   "command": "verify",
   "errors": [
     {
+      "at": "subject",
       "code": "not-found",
       "detail": "no such file",
-      "span": null,
-      "subject": "subject"
+      "span": null
     }
   ],
   "findings": [],

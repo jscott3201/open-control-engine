@@ -19,8 +19,9 @@
 //! `DIR` must exist: it is never created.
 //!
 //! The two exit-only flags change the exit status and never a receipt byte (decisions 12 and 30):
-//! `--require-mutants-caught` makes a surviving mutant exit `1`, and `--deny-warnings` makes exit
-//! `1` when the subject warned at load or a scenario left a warning unmatched.
+//! `--require-mutants-caught` makes exit `1` when a mutant survived or the set lists none (owner
+//! ruling of 2026-11-11), and `--deny-warnings` makes exit `1` when the subject warned at load or a
+//! scenario left a warning unmatched.
 //!
 //! `--timings` (decision 31; owner ruling of 2026-11-11) fills the header's timings, which
 //! `receipt_id` never covers: `load_ms` is reading every file and emitting a text or wire subject,
@@ -73,7 +74,7 @@ pub(crate) fn run(args: &VerifyArgs) -> Outcome {
                 refusal.code,
                 refusal.detail,
                 None,
-                &Facts::about(&refusal.subject),
+                &Facts::about(&refusal.at),
             );
             return refused(report, "a mutant could not be read");
         }
@@ -148,13 +149,14 @@ fn verdict(args: &VerifyArgs, receipt: &Receipt) -> (&'static str, Exit) {
         ScenarioStatus::NoData => "no_data",
     };
     let warned = body.load_warnings_total > 0 || body.totals.warnings > 0;
-    let survived = body
+    // Owner ruling of 2026-11-11: a set that lists no mutant cannot show its mutants caught.
+    let uncaught = body
         .mutants
         .as_ref()
-        .is_some_and(|section| section.survived > 0);
+        .is_none_or(|section| section.survived > 0);
     let exit = if !receipt.header.passed
         || (args.deny_warnings && warned)
-        || (args.require_mutants_caught && survived)
+        || (args.require_mutants_caught && uncaught)
     {
         Exit::No
     } else {

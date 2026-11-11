@@ -4,13 +4,13 @@ exit: 2
   "command": "verify",
   "errors": [
     {
+      "at": "line 2 column 1",
       "code": "json-syntax",
       "detail": "expected a key",
       "span": {
         "column": 1,
         "line": 2
-      },
-      "subject": "line 2 column 1"
+      }
     }
   ],
   "findings": [],
