@@ -10,8 +10,8 @@
 //! every code in declaration order and a test pins it. Every one is exit 2 with no receipt: a
 //! failed expectation is never an error, it is a failed scenario inside a receipt.
 //!
-//! The kinds of the mutant rows (`mutant-missing` and the five after it) arrive with mutant mode,
-//! in place.
+//! The mutant rows (`mutant-missing` and the five after it) are bind codes: an invalid or
+//! missing mutant is an error with no receipt, never a score.
 
 use std::fmt;
 
@@ -58,10 +58,34 @@ pub enum VerifyErrorKind {
     EnumPortUnsupported,
     /// The subject has a String boundary input or output: a String is metadata, never a signal.
     UnsupportedPortType,
-    /// The frames the set needs, `(N + 1) * scenarios`, are more than
+    /// The frames the set may need, `(N + 1) * scenarios * (1 + mutants)`, are more than
     /// [`crate::VerifyLimits::max_total_frames`], or one scenario's `N + 1` more than the replay
     /// limits' `max_frames`.
     TooManyFrames,
+    /// A mutant the set lists whose bytes the run was not given.
+    MutantMissing,
+    /// Mutant bytes the run was given under a path the set does not list.
+    MutantUnlisted,
+    /// Mutant bytes given twice under one path: one refusal, spelled as the load code for a path
+    /// the set lists twice.
+    DuplicateMutant,
+    /// The mutants' bytes together pass [`crate::VerifyLimits::max_mutant_bytes`].
+    TooManyMutantBytes,
+    /// The engine refused to load a mutant. [`VerifyError::diagnostic_codes`] lists the
+    /// `DiagCode` spellings of the refusal, as for `subject-load-failed`.
+    MutantLoadFailed,
+    /// A mutant's boundary differs from the subject's: an input path or type, or an output path
+    /// or type (input bounds are not compared). [`VerifyError::path`] is the first port that
+    /// differs.
+    MutantBoundaryDiffers,
+    /// A mutant has the subject's canonical content id: it promises the subject's outputs, so it
+    /// proves nothing.
+    MutantIdentical,
+    /// A mutant refuses a parameter edit the subject admits, so a scenario could not run on it
+    /// (owner ruling of 2026-11-11): found at bind, where every distinct edit list is tried on
+    /// each mutant. [`VerifyError::path`] is the parameter, [`VerifyError::cause`] one of
+    /// [`MUTANT_PARAM_REFUSAL_CAUSES`].
+    MutantParamRefused,
     /// The engine refused a frame for a reason about the run rather than the frame
     /// (`EngineRefusal::Run`): later frames would be refused the same way.
     RunRefused,
@@ -93,6 +117,14 @@ impl VerifyErrorKind {
         Self::EnumPortUnsupported,
         Self::UnsupportedPortType,
         Self::TooManyFrames,
+        Self::MutantMissing,
+        Self::MutantUnlisted,
+        Self::DuplicateMutant,
+        Self::TooManyMutantBytes,
+        Self::MutantLoadFailed,
+        Self::MutantBoundaryDiffers,
+        Self::MutantIdentical,
+        Self::MutantParamRefused,
         Self::RunRefused,
         Self::ReplayFailed,
         Self::WindowUncovered,
@@ -118,6 +150,14 @@ impl VerifyErrorKind {
             Self::EnumPortUnsupported => "enum-port-unsupported",
             Self::UnsupportedPortType => "unsupported-port-type",
             Self::TooManyFrames => "too-many-frames",
+            Self::MutantMissing => "mutant-missing",
+            Self::MutantUnlisted => "mutant-unlisted",
+            Self::DuplicateMutant => "duplicate-mutant",
+            Self::TooManyMutantBytes => "too-many-mutant-bytes",
+            Self::MutantLoadFailed => "mutant-load-failed",
+            Self::MutantBoundaryDiffers => "mutant-boundary-differs",
+            Self::MutantIdentical => "mutant-identical",
+            Self::MutantParamRefused => "mutant-param-refused",
             Self::RunRefused => "run-refused",
             Self::ReplayFailed => "replay-failed",
             Self::WindowUncovered => "window-uncovered",
@@ -143,6 +183,14 @@ pub const VERIFY_ERROR_CODES: &[&str] = &[
     "enum-port-unsupported",
     "unsupported-port-type",
     "too-many-frames",
+    "mutant-missing",
+    "mutant-unlisted",
+    "duplicate-mutant",
+    "too-many-mutant-bytes",
+    "mutant-load-failed",
+    "mutant-boundary-differs",
+    "mutant-identical",
+    "mutant-param-refused",
     "run-refused",
     "replay-failed",
     "window-uncovered",
@@ -173,6 +221,16 @@ pub const REPLAY_FAILURE_CAUSES: &[&str] = &[
 /// parameter, which needs a reload). Any other refusal of `set_param` is not about the edit's
 /// value and is `replay-failed` with the cause `engine-setup`.
 pub const PARAM_REFUSAL_CLASSES: &[&str] = &["param-range", "param-type", "param-structural"];
+
+/// The causes a `mutant-param-refused` refusal carries ([`VerifyError::cause`]): the three
+/// [`PARAM_REFUSAL_CLASSES`], and `param-path-unknown` for a parameter the subject has and the
+/// mutant does not (`OcError::UnknownPoint`).
+pub const MUTANT_PARAM_REFUSAL_CAUSES: &[&str] = &[
+    "param-range",
+    "param-type",
+    "param-structural",
+    "param-path-unknown",
+];
 
 /// Whether two strings are the same bytes, in a constant context.
 const fn same(left: &str, right: &str) -> bool {
@@ -306,8 +364,9 @@ impl VerifyError {
         &self.details.candidates
     }
 
-    /// The cause of `replay-failed` (one of [`REPLAY_FAILURE_CAUSES`]) or the class of
-    /// `param-refused` (one of [`PARAM_REFUSAL_CLASSES`]); `None` for every other kind.
+    /// The cause of `replay-failed` (one of [`REPLAY_FAILURE_CAUSES`]), the class of
+    /// `param-refused` (one of [`PARAM_REFUSAL_CLASSES`]) or the cause of `mutant-param-refused`
+    /// (one of [`MUTANT_PARAM_REFUSAL_CAUSES`]); `None` for every other kind.
     #[must_use]
     pub fn cause(&self) -> Option<&'static str> {
         self.details.cause

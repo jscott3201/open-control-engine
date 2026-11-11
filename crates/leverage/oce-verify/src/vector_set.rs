@@ -24,7 +24,7 @@ use crate::decode;
 use crate::error::{VectorError, VectorErrorKind};
 use crate::fnv;
 use crate::limits::VerifyLimits;
-use crate::model::{Parameter, Scenario};
+use crate::model::{Mutant, Parameter, Scenario};
 use crate::strict;
 use crate::validate;
 
@@ -39,6 +39,7 @@ use crate::validate;
 pub struct VectorSet {
     clock: Clock,
     params: Option<Vec<Parameter>>,
+    mutants: Option<Vec<Mutant>>,
     scenarios: Vec<Scenario>,
 }
 
@@ -96,11 +97,13 @@ impl VectorSet {
     pub(crate) fn assemble(
         clock: Clock,
         params: Option<Vec<Parameter>>,
+        mutants: Option<Vec<Mutant>>,
         scenarios: Vec<Scenario>,
     ) -> Self {
         Self {
             clock,
             params,
+            mutants,
             scenarios,
         }
     }
@@ -116,6 +119,13 @@ impl VectorSet {
     #[must_use]
     pub fn params(&self) -> Option<&[Parameter]> {
         self.params.as_deref()
+    }
+
+    /// The mutants the set lists, in file order; no path repeats. `None` when the set has no
+    /// `mutants` key (an empty list is `Some` and empty).
+    #[must_use]
+    pub fn mutants(&self) -> Option<&[Mutant]> {
+        self.mutants.as_deref()
     }
 
     /// The scenarios, in file order; no name repeats. May be empty.
@@ -136,7 +146,7 @@ impl VectorSet {
     /// bound may canonicalise past it.
     #[must_use]
     pub fn to_canonical_json(&self) -> String {
-        canonical::vector_set(&self.clock, self.params(), &self.scenarios)
+        canonical::vector_set(&self.clock, self.params(), self.mutants(), &self.scenarios)
     }
 
     /// The identity of this set: `spec:fnv1a128:` and the 32 lowercase hex digits of the

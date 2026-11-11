@@ -32,8 +32,24 @@ pub(crate) struct VectorSetDto {
     /// value. At most 256 entries. A scenario's own params override these.
     #[schemars(default)]
     pub(crate) params: Optional<Entries<ValueDto>>,
+    /// Mutants: CXF documents that should fail the vectors, each a deliberate defect in the
+    /// sequence, scored only when the sequence itself passes. At most 256, in order.
+    #[schemars(default)]
+    pub(crate) mutants: Optional<Vec<MutantDto>>,
     /// The scenarios, in order. At most 4,096; each runs on a freshly loaded sequence.
     pub(crate) scenarios: Vec<ScenarioDto>,
+}
+
+/// One mutant: where its CXF document is, relative to this file, and what defect it carries.
+#[derive(Debug, JsonSchema)]
+#[schemars(rename = "Mutant", deny_unknown_fields)]
+pub(crate) struct MutantDto {
+    /// The mutant's CXF document: a path inside this file's directory, its segments separated by
+    /// a slash, none empty, "." or "..", and no backslash. Unique in the set.
+    pub(crate) path: String,
+    /// What the mutant changes, for people.
+    #[schemars(default)]
+    pub(crate) description: Optional<String>,
 }
 
 /// The set's clock: ticks at k * step_s for k = 0..=N, where N * step_s equals horizon_s

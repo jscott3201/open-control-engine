@@ -5,10 +5,12 @@ over one clock, and expectations over windows of it) to check against one loaded
 the **subject**. Design note: [`docs/design/vectors.md`](../../../docs/design/vectors.md), which is
 the specification of everything here.
 
-Two of four parts are in. **The format** (issue #519): the crate reads a vector set, checks every
-rule that needs no engine, writes its canonical form and names it with a `spec_id`. **The run**
-(issue #520): it binds a set to a subject, replays each scenario through `oce-replay`, compares
-exactly and issues the receipt. Mutant mode and the `oce verify` verb build on it.
+Three of four parts are in. **The format** (issue #519): the crate reads a vector set, checks
+every rule that needs no engine, writes its canonical form and names it with a `spec_id`. **The
+run** (issue #520): it binds a set to a subject, replays each scenario through `oce-replay`,
+compares exactly and issues the receipt. **Mutant mode** (issue #521): it validates the
+deliberately broken copies of the subject a set lists and scores which ones the vectors catch. The
+`oce verify` verb builds on it.
 
 It is a leverage crate: among `oce-*` packages it depends on `oce-api` and `oce-replay` only. It
 opens no file, runs no clock, measures nothing and is not published.
@@ -17,7 +19,9 @@ opens no file, runs no clock, measures nothing and is not published.
 use oce_verify::{VectorInputs, VectorSet, VerifyLimits, VerifyOptions, run_vectors};
 
 let set = VectorSet::from_json_bytes(&vectors, &VerifyLimits::default())?;
-let run = run_vectors(&set, &VectorInputs::new(&cxf), &VerifyOptions::default())?;
+let mutants = [("mutants/late_alarm.cxf.json", late_alarm.as_slice())];
+let inputs = VectorInputs::new(&cxf).with_mutants(&mutants);
+let run = run_vectors(&set, &inputs, &VerifyOptions::default())?;
 println!("{}", run.receipt.to_canonical_json()); // `passed`, the body, `receipt_id`
 ```
 
@@ -59,13 +63,15 @@ println!("{}", run.receipt.to_canonical_json()); // `passed`, the body, `receipt
 | `schema` | yes | exactly `oce/vectors/v1`; any other tag is `unknown-schema` |
 | `clock.step_s`, `clock.horizon_s` | yes | ticks at `k * step_s` for `k = 0..=N`, where `N * step_s == horizon_s` exactly |
 | `params` | no | parameter path to value, for every scenario; at most 256 entries |
+| `mutants[]` | no | `path` (relative to this file: `/`-separated, no empty, `.` or `..` segment, no backslash, unique) and an optional `description`; at most 256 |
 | `scenarios[]` | yes | `name` (not empty, unique), optional `description`, optional `params`, `inputs`, `expect` |
 | `inputs` | yes | input name to a constant, or to a step list `[{ "t", "value" }]` from `t = 0` |
 | `expect[]` | yes | a window (`output`, `from_s`, `to_s`, `equals`) or an instant (`diagnostic { block, message? }`, `at_s`) |
 
 The format stays `v1` until 1.0.0 and changes in place. Keys it does not have yet (`within`, `of`,
-`when`, `mutants`) are `unknown-key`: refused, never ignored, so no set is ever checked with part
-of it skipped.
+`when`) are `unknown-key`: refused, never ignored, so no set is ever checked with part of it
+skipped. `mutants` arrived in place with mutant mode; it belongs to the set and to no other
+object.
 
 **A value** is a number or a boolean, and keeps the kind it was written as: `1` is an integer
 token, `1.0` and `1e0` are reals, `-0` is the integer zero and `-0.0` keeps its sign
@@ -126,6 +132,8 @@ measured against.
 | `VerifyLimits::max_scenarios` | 4,096 | `too-many-scenarios` | the bound on the receipt's scenario list; the library's largest set has 28 |
 | `VerifyLimits::max_expectations` | 4,096 per scenario | `too-many-expectations` | the library's largest scenario has 12 |
 | `VerifyLimits::max_parameters` | 256 per map | `too-many-parameters` | it bounds the passes that order parameter edits (note decision 14) |
+| `VerifyLimits::max_mutants` | 256 | `too-many-mutants` | the bound on the receipt's mutant entries |
+| `VerifyLimits::max_mutant_bytes` | 64 MiB, all mutants together | `too-many-mutant-bytes`, at bind, before any mutant loads | 256 mutants are never 2 GiB in memory; each one is also held to the engine's own `MAX_CXF_BYTES` |
 | `VerifyLimits::max_total_frames` | 16,777,216 | `too-many-frames` | `(N + 1) * scenarios` for the whole run, decided at bind before any frame runs |
 | `VerifyLimits::replay` | `ReplayLimits::MAX` | `too-many-frames` (its `max_frames` against one scenario's `N + 1`, at bind), else `replay-failed` | the limits each scenario's replay runs under |
 | `VerifyLimits::max_recorded_failures` | 16 per scenario | none: the list stops, `failures_total` keeps the count | the note's failure-record cap |
@@ -203,15 +211,16 @@ says where: a line and column for a refusal found in the text, a path such as
 | `non-finite-number`, `integer-out-of-range`, `control-character` | a lexical refusal; the second also an integer time beyond ±2^53 |
 | `unknown-schema` | a `schema` other than `oce/vectors/v1` |
 | `invalid-clock`, `horizon-off-cadence`, `too-many-ticks` | the clock |
-| `too-many-scenarios`, `too-many-expectations`, `too-many-parameters` | a set bound |
+| `too-many-scenarios`, `too-many-expectations`, `too-many-mutants`, `too-many-parameters` | a set bound |
 | `duplicate-scenario`, `empty-name` | scenario names; an empty name in any name position |
 | `step-list-empty`, `step-list-not-from-zero`, `step-times-not-increasing`, `step-after-horizon` | a step list |
 | `invalid-window`, `window-outside-clock`, `window-uncovered` | a window |
 | `ambiguous-expectation` | an expectation that is not exactly one of the two forms |
 | `instant-off-cadence` | a diagnostic `at_s` that is not a tick |
+| `mutant-path-invalid`, `duplicate-mutant` | a mutant path that is absolute, has an empty, `.` or `..` segment or a backslash; a path listed twice |
 
 The first fourteen are spelled as the authoring wire form's refusals are, so one word names one
-refusal across the tools. The codes of the `mutants` key arrive with the key.
+refusal across the tools.
 
 ## Binding a set to a subject
 
@@ -237,8 +246,11 @@ In order, the first refusal winning:
 4. **The parameter edits**: each scenario's effective edits are tried on a freshly loaded engine
    by the passes the run uses (below), so an edit no pass admits is `param-refused` here, before
    any frame of any scenario runs.
-5. **The frame budget**: `(N + 1) * scenarios` frames against `VerifyLimits::max_total_frames`,
-   and `N + 1` against the replay limits' `max_frames`.
+5. **The frame budget**: `(N + 1) * scenarios * (1 + mutants)` frames against
+   `VerifyLimits::max_total_frames`, and `N + 1` against the replay limits' `max_frames`. It is
+   arithmetic on the listed count, so a set over it loads no mutant (owner ruling, 2026-11-11).
+6. **The mutants** ([below](#mutant-mode)): each one supplied, within the byte bound, loaded,
+   held to the subject's boundary and content id, and given every edit list.
 
 ## The run
 
@@ -288,6 +300,10 @@ A replay that ends in an error is `replay-failed` with a cause from a closed tab
 | `value-type-mismatch`, `value-not-representable` | a value its port or parameter type cannot take |
 | `enum-port-unsupported`, `unsupported-port-type` | an Enum or a String boundary port |
 | `too-many-frames` | the frame budget |
+| `mutant-missing`, `mutant-unlisted`, `duplicate-mutant` | mutant bytes not given, given for a path the set does not list, or given twice |
+| `too-many-mutant-bytes` | the mutants' bytes together |
+| `mutant-load-failed`, `mutant-boundary-differs`, `mutant-identical` | an invalid mutant: refused by the engine, another boundary, or the subject's content id |
+| `mutant-param-refused` | a mutant that refuses an edit the subject admits, with its cause (`MUTANT_PARAM_REFUSAL_CAUSES`) |
 | `run-refused` | a run-class engine refusal |
 | `replay-failed` | any other replay error, with its cause |
 | `window-uncovered` | a window with no executed tick after a run that refused no frame |
@@ -296,6 +312,47 @@ A replay that ends in an error is `replay-failed` with a cause from a closed tab
 `tests/run_error_codes.rs` pins the list and produces each code from a run, except the four no
 run reaches today (the two port codes, `run-refused` and `window-uncovered`), which unit tests in
 `src/bind_tests.rs` and `src/run_tests.rs` produce from the cause replay would hand back.
+
+## Mutant mode
+
+A **mutant** is a CXF document that should fail the vectors: a deliberate defect in the subject.
+The set lists each by a path relative to the vector file; the caller resolves the paths and hands
+the bytes in (`VectorInputs::with_mutants`), so `oce-verify` still opens no file. A caller that
+reads files resolves each path, keeps it inside the vector file's directory and refuses two
+listings that resolve to one file (owner ruling of 2026-11-11, for part 4's CLI): the format's
+lexical path rule cannot see every alias.
+
+**Validation**, at bind, after the frame budget and before any frame runs. An invalid mutant is an
+error with no receipt; there is no `invalid` status. In this order:
+
+1. every path given is listed, and given once (`mutant-unlisted`, `duplicate-mutant`);
+2. every listed mutant is given (`mutant-missing`);
+3. the bytes together fit `max_mutant_bytes` (`too-many-mutant-bytes`);
+4. each listed mutant in file order:
+   - it loads (`mutant-load-failed`, with the engine's codes);
+   - its input paths and types and its output paths and types are the subject's
+     (`mutant-boundary-differs`, naming the first port that differs; input bounds are not
+     compared);
+   - its content id is not the subject's (`mutant-identical`);
+   - it admits every distinct edit list of the scenarios, each tried once on a fresh engine of it,
+     in the order of the first scenario that has it (`mutant-param-refused`, owner ruling of
+     2026-11-11).
+
+**Scoring**, after the subject's scenarios, and only when the subject passed:
+- each mutant runs the scenarios in file order, on fresh engines with the scenarios' edits, as the
+  subject did, and stops at the first that fails on it;
+- that mutant is `caught`, and the receipt names the scenario and its first failure;
+- a frame refused on a mutant fails the scenario as it would for the subject, so a mutant that
+  narrows an input bound is caught, not an error;
+- a mutant no scenario fails on `survived`;
+- against a subject that failed or checked nothing, the section is `not_run`.
+
+The score is `caught` and `total`, with `survived`, never a ratio, and it never changes `passed`.
+
+**Cost.** Mutant mode multiplies the work #561 describes:
+- validation loads each mutant once, plus once per distinct edit list;
+- scoring runs up to every scenario on every mutant: `(N + 1) * scenarios * mutants` more frames,
+  and as many fresh loads, inside the one frame budget.
 
 ## The receipt
 
@@ -310,7 +367,12 @@ with the `content_id` of what ran when it has any, frame and instant counts, fai
 (`value-mismatch`, `diagnostic-missing`, `frame-refused`, each shaped by its code, by tick then by
 expectation, at most 16 with `failures_total`; when a frame was refused the last slot is kept for
 its `frame-refused` record, so earlier mismatches never push it out) and unmatched warnings (at
-most 16 with `warnings_total`).
+most 16 with `warnings_total`). When the set lists a mutant, the body has a `mutants` section:
+- its `status` (`scored`, or `not_run` when the subject did not pass);
+- `total`, `caught` and `survived`;
+- one entry per listed mutant in file order, each with its `path`, its `digest`
+  (`fnv1a128:<32 hex>` of the bytes given, since `spec_id` covers only the path), its
+  `content_id` and its `status`, plus, when caught, the `scenario` and its first `failure`.
 
 Values are exact: a Boolean is `true` or `false`, an Integer a JSON integer, a finite Real other
 than negative zero a number in the canonical real spelling, and negative zero, a NaN or an
@@ -355,11 +417,27 @@ same switch rewrites the golden receipts.
   them, and so does #517 when it re-vendors the rules. Regenerate with
   `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`, run it again without the switch, and say in
   the pull request which receipts moved and why.
-- `tests/fixtures/subjects/*.cxf.json` are two small subjects written for the run's tests: `signals`
-  (inputs of every type, two pairs of names that share a last segment, a bounded input, an
-  assertion, a divider and pass-through outputs) and `hysteresis` (one `Reals.Hysteresis`). They
-  are named `.cxf.json`, not `.jsonld`, because `oce-cxf`'s `parameter_grounding_corpus` test pins
-  the count of every tracked `.jsonld` file.
+- `tests/fixtures/receipts/AHU-0016.mutants.receipt.json` is the golden receipt of AHU-0016 with
+  its three mutants.
+- `tests/fixtures/AHU-0016/` holds the mutants:
+  - `vectors.json` is AHU-0016's set plus the `mutants` list; `tests/mutant_mode.rs` holds its
+    clock and scenarios equal to the facade's copy, which lists no mutant;
+  - `mutants/` holds three hand edits of the rule's CXF, each with a provenance line in its
+    listing's `description`. `threshold_inclusive` (both thresholds read `u >= 5`, a `Not` over
+    `Reals.LessThreshold`) is caught by `threshold_edge`. `no_persistence` (`persist.delayTime`
+    900 to 0) is caught by `both_open`. `late_alarm` (900 to 930) survives by design: no window
+    asserts the tick at 900 s;
+  - the directory holds its own `vectors.json` because a mutant path cannot leave the vector
+    file's directory; the subject is read in place.
+- `tests/fixtures/subjects/*.cxf.json` are small subjects written for the run's tests:
+  - `signals`: inputs of every type, two pairs of names that share a last segment, a bounded
+    input, an assertion, a divider and pass-through outputs;
+  - `hysteresis`: one `Reals.Hysteresis`;
+  - `twin_asserts`: two assertions on one input;
+  - `threshold` and `threshold_integer`: a Real threshold, and a mutant of it through an Integer
+    threshold.
+- Every subject and mutant is named `.cxf.json`, not `.jsonld`, because `oce-cxf`'s
+  `parameter_grounding_corpus` test pins the count of every tracked `.jsonld` file.
 - `tests/fixtures/canonical/*.json` are the canonical forms of the two rules' vector files and of
   `tests/fixtures/sets/every_field.json`, and the `spec_id` literals in `tests/canonical_form.rs`
   are their FNV-1a-128 hashes. They were derived outside this crate and **are never blessed**:

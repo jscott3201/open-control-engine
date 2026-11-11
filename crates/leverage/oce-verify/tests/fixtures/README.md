@@ -5,7 +5,7 @@
 | `sets/every_field.json` | A hand-written vector set that uses every key of the format in an awkward spelling: members out of order, tabs and odd spacing, `\u` escapes in keys and strings, raw non-ASCII and astral characters, numbers at the canonical form's thresholds (`1e-4`, `0.00001`, `9999999999999998.0`, `1E16`), `-0`, `-0.0`, a subnormal, the largest finite real and the ends of `i64`, on the clock `{ step_s: 0.1, horizon_s: 4.3 }`. | nobody: edit it by hand |
 | `canonical/every_field.json` | The canonical form of that set. | `derive_canonical.py`, by hand |
 | `canonical/AHU-0016.json`, `canonical/AHU-0004.json` | The canonical forms of the two in-repo library rules' vector files (`crates/oce-api/tests/fixtures/library_rules/<rule>/vectors.json`, read in place by the tests). | `derive_canonical.py`, by hand |
-| `note/worked_example.json` | The JSON block of the design note's "The vector format" section (`docs/design/vectors.md`), copied verbatim; `tests/closed_objects.rs` reads the note and fails when the two differ. It lists `mutants`, which the format does not have yet, so the test expects `unknown-key` for it and loads the rest. | copy the block again when the test says the note changed |
+| `note/worked_example.json` | The JSON block of the design note's "The vector format" section (`docs/design/vectors.md`), copied verbatim; `tests/closed_objects.rs` reads the note and fails when the two differ, and loads it whole, its one mutant included. | copy the block again when the test says the note changed |
 | `derive_canonical.py` | The independent derivation of the canonical goldens and their ids. | nobody: it is the reference |
 | `receipts/AHU-0016.receipt.json`, `receipts/AHU-0004.receipt.json` | The pass receipts of the two in-repo library rules, run in place (the vector files and the `rule.cxf.jsonld` subjects under `crates/oce-api/tests/fixtures/library_rules/`). | `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify` |
 | `receipts/both_open_900.vectors.json` | AHU-0016's vector file with one edit: `both_open`'s first window ends at 900 s instead of 840 s, the tick at which the persistence timer fires. `tests/receipt_goldens.rs` holds it equal to the in-place file in every other respect. | nobody: edit it by hand |
@@ -14,14 +14,22 @@
 | `receipts/empty_expect.receipt.json` | Its receipt against AHU-0016: the `no_data` golden. | `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify` |
 | `subjects/signals.cxf.json` | A subject for the run's tests: Real, Integer and Boolean inputs, two inputs ending in `T` and two outputs ending in `y` (ambiguous suffixes), an input bounded to `[0, 10]`, an unused input (one load warning), a `CDL.Utilities.Assert`, a `CDL.Reals.Divide` (a NaN from `0 / 0`) and pass-through outputs (a `-0.0` reaches an output with its sign). Named `.cxf.json` so the workspace's `.jsonld` census does not move. | nobody: edit it by hand |
 | `subjects/hysteresis.cxf.json` | One `CDL.Reals.Hysteresis` (`uLow` 1, `uHigh` 2), for the parameter passes. | nobody: edit it by hand |
+| `receipts/AHU-0016.mutants.receipt.json` | The receipt of `AHU-0016/vectors.json` against AHU-0016 with its three mutants: two caught, one survivor. | `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify` |
+| `AHU-0016/vectors.json` | AHU-0016's vector file plus its `mutants` list. `tests/mutant_mode.rs` holds its clock and scenarios equal to the facade's in-place copy, which lists no mutant. | nobody: edit it by hand |
+| `AHU-0016/mutants/threshold_inclusive.cxf.json` | AHU-0016's rule with each `Reals.GreaterThreshold` (`u > 5`) replaced by a `Not` over a `Reals.LessThreshold` (`u >= 5`). Caught by `threshold_edge`. | nobody: a hand edit of the rule |
+| `AHU-0016/mutants/no_persistence.cxf.json` | AHU-0016's rule with `persist.delayTime` 900 s to 0 s. Caught by `both_open`. | nobody: a hand edit of the rule |
+| `AHU-0016/mutants/late_alarm.cxf.json` | AHU-0016's rule with `persist.delayTime` 900 s to 930 s. Survives by design: no window asserts the tick at 900 s. | nobody: a hand edit of the rule |
+| `subjects/gate.cxf.json`, `subjects/gate_multiand.cxf.json` | A `Reals.GreaterThreshold` into a `Logical.Not` that carries an Integer parameter `nin` its class does not declare, which the subject admits as settable, and a mutant of it whose `gate` is a `Logical.MultiAnd`, where `nin` is structural: `mutant-param-refused` with the cause `param-structural`. | nobody: edit it by hand |
+| `subjects/threshold.cxf.json`, `subjects/threshold_integer.cxf.json` | A `Reals.GreaterThreshold` on one Real input, and a mutant of it reading the same input through `Conversions.RealToInteger` and an `Integers.GreaterThreshold`, whose `cmp.t` is an Integer: `mutant-param-refused` with the cause `param-type`. | nobody: edit it by hand |
 | `subjects/twin_asserts.cxf.json` | Two `CDL.Utilities.Assert` instances on one Boolean input, both with the message `b is false`, so a frame with the input false emits two equal warnings: the one-to-one pairing of diagnostic expectations with warnings. | nobody: edit it by hand |
 
 ## The golden receipts are blessed
 
-Unlike the canonical goldens, a receipt can only be produced by running the engine, so the four
+Unlike the canonical goldens, a receipt can only be produced by running the engine, so the five
 `*.receipt.json` goldens are written by the crate's bless switch and reviewed. Each embeds the
 engine version (inside its `receipt_id`) and its subject's content id, so a workspace version
-bump re-blesses all four, and so does re-vendoring either rule (#517). Their `receipt_id` is not
+bump re-blesses all five, and so does re-vendoring either rule (#517), which also re-makes the
+three mutants. Their `receipt_id` is not
 taken on trust: `tests/receipt_goldens.rs` cuts the `receipt_id` line and the `timings` block out
 of each golden's text and hashes the rest with a second FNV-1a-128, which must give the id the
 golden holds.

@@ -49,7 +49,7 @@ questions its reviewer ruled on; the contracts above remain the authority for sh
 | [`SECURITY.md`](../SECURITY.md) | Reporting, threat model, and the known hardening limit |
 | [`oce` CLI](../crates/leverage/oce-cli/README.md) | The `oce` command-line tool: its commands, the exit codes and the JSON report contract an agent can branch on |
 | [`oce-vocab`](../crates/leverage/oce-vocab/README.md) | The block vocabulary: the generated and curated data files, the note kinds, the joined view and how to regenerate and curate |
-| [`oce-verify`](../crates/leverage/oce-verify/README.md) | The vector format `oce/vectors/v1` and the run as built: what a load checks and in what order, the bounds, the canonical form and `spec_id`, how a set is bound to a subject and each scenario replayed and compared, the receipt and its `receipt_id`, the error codes and the pinned JSON Schema |
+| [`oce-verify`](../crates/leverage/oce-verify/README.md) | The vector format `oce/vectors/v1` and the run as built: what a load checks and in what order, the bounds, the canonical form and `spec_id`, how a set is bound to a subject and each scenario replayed and compared, mutant mode and its score, the receipt and its `receipt_id`, the error codes and the pinned JSON Schema |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Notable changes |
 
 ## Two pages worth reading even if you are only evaluating

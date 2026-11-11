@@ -23,15 +23,23 @@ fn declared_index(kind: VerifyErrorKind) -> usize {
         K::EnumPortUnsupported => 13,
         K::UnsupportedPortType => 14,
         K::TooManyFrames => 15,
-        K::RunRefused => 16,
-        K::ReplayFailed => 17,
-        K::WindowUncovered => 18,
+        K::MutantMissing => 16,
+        K::MutantUnlisted => 17,
+        K::DuplicateMutant => 18,
+        K::TooManyMutantBytes => 19,
+        K::MutantLoadFailed => 20,
+        K::MutantBoundaryDiffers => 21,
+        K::MutantIdentical => 22,
+        K::MutantParamRefused => 23,
+        K::RunRefused => 24,
+        K::ReplayFailed => 25,
+        K::WindowUncovered => 26,
     }
 }
 
 #[test]
 fn the_code_list_is_every_kind_in_declaration_order() {
-    assert_eq!(VerifyErrorKind::ALL.len(), 19);
+    assert_eq!(VerifyErrorKind::ALL.len(), 27);
     for (index, kind) in VerifyErrorKind::ALL.iter().enumerate() {
         assert_eq!(declared_index(*kind), index, "{kind:?}");
     }
@@ -45,6 +53,7 @@ fn every_table_is_unique_lowercase_kebab_case() {
         VERIFY_ERROR_CODES,
         REPLAY_FAILURE_CAUSES,
         PARAM_REFUSAL_CLASSES,
+        MUTANT_PARAM_REFUSAL_CAUSES,
         crate::ENGINE_REFUSAL_CLASSES,
     ] {
         let mut seen = BTreeSet::new();
@@ -61,7 +70,7 @@ fn every_table_is_unique_lowercase_kebab_case() {
 }
 
 #[test]
-fn the_replay_causes_and_parameter_classes_are_the_notes_tables() {
+fn the_replay_causes_and_the_parameter_tables_are_the_notes() {
     assert_eq!(
         REPLAY_FAILURE_CAUSES,
         [
@@ -76,19 +85,31 @@ fn the_replay_causes_and_parameter_classes_are_the_notes_tables() {
         PARAM_REFUSAL_CLASSES,
         ["param-range", "param-type", "param-structural"]
     );
+    // The note's mutant causes (owner ruling of 2026-11-11): the three classes, then a parameter
+    // the mutant lacks.
+    assert_eq!(
+        MUTANT_PARAM_REFUSAL_CAUSES,
+        [
+            "param-range",
+            "param-type",
+            "param-structural",
+            "param-path-unknown"
+        ]
+    );
 }
 
 #[test]
-fn the_window_code_is_the_load_code_of_the_same_refusal() {
-    // A window with no executed tick is one refusal whether load or the run finds it, so it has
-    // one word in both lists, and it is the only word the two lists share.
+fn a_code_shared_with_the_load_list_names_the_same_refusal() {
+    // A window with no executed tick, and one mutant path twice, are each one refusal whether
+    // load or the run finds it, so each has one word in both lists; they are the only two.
     assert_eq!(VerifyErrorKind::WindowUncovered.code(), "window-uncovered");
+    assert_eq!(VerifyErrorKind::DuplicateMutant.code(), "duplicate-mutant");
     let shared: Vec<&str> = VERIFY_ERROR_CODES
         .iter()
         .copied()
         .filter(|code| crate::VECTOR_ERROR_CODES.contains(code))
         .collect();
-    assert_eq!(shared, ["window-uncovered"]);
+    assert_eq!(shared, ["duplicate-mutant", "window-uncovered"]);
 }
 
 #[test]

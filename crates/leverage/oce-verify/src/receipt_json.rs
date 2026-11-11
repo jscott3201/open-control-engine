@@ -4,7 +4,8 @@
 //! at every depth, so the field order of the note's tables is a reading order, not a byte order.
 //! Every field the tables mark "always" is written, absent optional ones are left out (a
 //! scenario's `content_id` with no edits, a `diagnostic-missing` record's `message`, the body's
-//! `mutants` until mutant mode exists), and arrays keep the order each field states.
+//! `mutants` when the set lists none, a mutant entry's `scenario` and `failure` unless it was
+//! caught), and arrays keep the order each field states.
 //!
 //! Numbers: a count is a JSON integer; a time and a Real value are spelled by
 //! [`value`], so a negative zero, a NaN or an infinity is never a JSON number that a reader could
@@ -13,8 +14,9 @@
 use crate::canonical::Json;
 use crate::number::canonical_real;
 use crate::receipt::{
-    Failure, FrameCounts, InstantCounts, Receipt, ReceiptBody, ReceiptHeader, ReceiptValue,
-    ScenarioCounts, ScenarioReceipt, Totals, UnmatchedWarning, VectorBody,
+    Failure, FrameCounts, InstantCounts, MutantEntry, MutantSection, Receipt, ReceiptBody,
+    ReceiptHeader, ReceiptValue, ScenarioCounts, ScenarioReceipt, Totals, UnmatchedWarning,
+    VectorBody,
 };
 use crate::refusal_classes::engine_refusal_class;
 
@@ -87,7 +89,7 @@ fn body(body: &ReceiptBody) -> Json {
 }
 
 fn vector_body(body: &VectorBody) -> Json {
-    Json::object([
+    let mut entries = vec![
         entry("status", Json::str(body.status.as_str())),
         entry(
             "clock",
@@ -114,7 +116,38 @@ fn vector_body(body: &VectorBody) -> Json {
             "scenarios",
             Json::List(body.scenarios.iter().map(scenario).collect()),
         ),
+    ];
+    if let Some(mutants) = &body.mutants {
+        entries.push(entry("mutants", mutant_section(mutants)));
+    }
+    Json::object(entries)
+}
+
+fn mutant_section(section: &MutantSection) -> Json {
+    Json::object([
+        entry("status", Json::str(section.status.as_str())),
+        entry("total", count(section.total)),
+        entry("caught", count(section.caught)),
+        entry("survived", count(section.survived)),
+        entry(
+            "entries",
+            Json::List(section.entries.iter().map(mutant_entry).collect()),
+        ),
     ])
+}
+
+fn mutant_entry(mutant: &MutantEntry) -> Json {
+    let mut entries = vec![
+        entry("path", Json::str(&mutant.path)),
+        entry("digest", Json::str(&mutant.digest)),
+        entry("content_id", Json::str(&mutant.content_id)),
+        entry("status", Json::str(mutant.status.as_str())),
+    ];
+    if let Some(caught) = &mutant.caught_by {
+        entries.push(entry("scenario", Json::str(&caught.scenario)));
+        entries.push(entry("failure", failure(&caught.failure)));
+    }
+    Json::object(entries)
 }
 
 fn scenario_counts(counts: &ScenarioCounts) -> Json {

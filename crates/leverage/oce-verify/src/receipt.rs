@@ -12,8 +12,8 @@
 //! records are typed by the port or parameter they belong to ([`ReceiptValue`]) and spelled
 //! exactly, a negative zero, a NaN or an infinity as the bits of the binary64.
 //!
-//! The types are `#[non_exhaustive]` so the mutant section and the commissioning body can arrive
-//! in place; they are built only by [`crate::run_vectors`] and read by everyone.
+//! The types are `#[non_exhaustive]` so the commissioning body can arrive in place; they are
+//! built only by [`crate::run_vectors`] and read by everyone.
 
 use oce_replay::EngineRefusal;
 
@@ -344,6 +344,96 @@ pub struct ScenarioReceipt {
     pub warnings_total: u64,
 }
 
+/// What happened to one mutant (decisions 27 and 29).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum MutantStatus {
+    /// A scenario failed on the mutant: the vectors noticed the defect.
+    Caught,
+    /// Every scenario passed on the mutant (or checked nothing): the vectors missed the defect.
+    Survived,
+    /// The mutant was not run, because the subject did not pass.
+    NotRun,
+}
+
+impl MutantStatus {
+    /// The spelling in a receipt: `caught`, `survived` or `not_run`.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Caught => "caught",
+            Self::Survived => "survived",
+            Self::NotRun => "not_run",
+        }
+    }
+}
+
+/// Whether the mutants were scored: only when the subject passed (decision 29).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ScoreStatus {
+    /// The subject passed and every mutant was run.
+    Scored,
+    /// The subject did not pass, so no mutant was run: a mutant that fails the scenario the
+    /// subject fails proves nothing.
+    NotRun,
+}
+
+impl ScoreStatus {
+    /// The spelling in a receipt: `scored` or `not_run`.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Scored => "scored",
+            Self::NotRun => "not_run",
+        }
+    }
+}
+
+/// The scenario that caught a mutant, and that scenario's first failure on it.
+#[non_exhaustive]
+#[derive(Clone, Debug)]
+pub struct MutantCatch {
+    /// The first scenario, in file order, that failed on the mutant.
+    pub scenario: String,
+    /// That scenario's first failure on the mutant, by tick then expectation index, shaped as a
+    /// scenario's failure records are.
+    pub failure: Failure,
+}
+
+/// One listed mutant in a receipt.
+#[non_exhaustive]
+#[derive(Clone, Debug)]
+pub struct MutantEntry {
+    /// The path, as the set writes it.
+    pub path: String,
+    /// `fnv1a128:<32 hex>` of the bytes the run was given for it: which document was scored,
+    /// where the set's `spec_id` covers only its path.
+    pub digest: String,
+    /// The mutant's canonical content id as loaded (every listed mutant loaded, or there is no
+    /// receipt).
+    pub content_id: String,
+    /// What happened to it.
+    pub status: MutantStatus,
+    /// The scenario that caught it and its first failure, when it was caught.
+    pub caught_by: Option<MutantCatch>,
+}
+
+/// The body's `mutants` section, present when the set lists a mutant. The score is two integers,
+/// never a ratio (decision 29), and it never changes `passed` (decision 30).
+#[non_exhaustive]
+#[derive(Clone, Debug)]
+pub struct MutantSection {
+    /// Whether the mutants were scored.
+    pub status: ScoreStatus,
+    /// The number of mutants the set lists.
+    pub total: u64,
+    /// The mutants caught; zero when not run.
+    pub caught: u64,
+    /// The mutants that survived; zero when not run.
+    pub survived: u64,
+    /// One entry per listed mutant, in file order.
+    pub entries: Vec<MutantEntry>,
+}
+
 /// The body of a vector receipt: the field table of the note, in its order.
 #[non_exhaustive]
 #[derive(Clone, Debug)]
@@ -361,6 +451,8 @@ pub struct VectorBody {
     pub totals: Totals,
     /// One entry per scenario, in file order.
     pub scenarios: Vec<ScenarioReceipt>,
+    /// The mutant score, when the set lists at least one mutant.
+    pub mutants: Option<MutantSection>,
 }
 
 /// The body of a receipt, by kind: a closed enum (decision 21). The commissioning verifier adds

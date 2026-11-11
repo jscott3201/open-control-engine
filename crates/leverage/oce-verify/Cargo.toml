@@ -1,13 +1,14 @@
 # Verification over vectors, above the facade (design note docs/design/vectors.md, issues #519 and
-# #520): the `oce/vectors/v1` format (a strict bounded reader, the canonical writer, `spec_id`, the
-# load-stage error codes and the pinned JSON Schema), and the run: binding a set to a subject,
-# replaying each scenario through `oce-replay`, the exact comparison and the receipt. Among `oce-*`
+# #520, #521): the `oce/vectors/v1` format (a strict bounded reader, the canonical writer,
+# `spec_id`, the load-stage error codes and the pinned JSON Schema), the run (binding a set to a
+# subject, replaying each scenario through `oce-replay`, the exact comparison and the receipt) and
+# mutant mode. Among `oce-*`
 # packages it depends on `oce-api` and the leverage crate `oce-replay` only
 # (crates/leverage/README.md), with `oce-bless` as a dev-dependency for the golden switch
 # (authoring note decision 19).
 [package]
 name = "oce-verify"
-description = "Vector verification for Open Control Engine sequences: the oce/vectors/v1 format with a strict bounded reader, a canonical writer, spec ids and a pinned JSON Schema, and exact replay of a set against a sequence with receipts."
+description = "Vector verification for Open Control Engine sequences: the oce/vectors/v1 format with a strict bounded reader, a canonical writer, spec ids and a pinned JSON Schema, exact replay of a set against a sequence with receipts, and a mutant catch score."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

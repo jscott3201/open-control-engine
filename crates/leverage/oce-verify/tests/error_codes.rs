@@ -13,9 +13,8 @@ use oce_verify::{
 
 use support::{one, scenario, set_of, set_on};
 
-/// The note's load rows, in the order `VectorErrorKind` declares them. The three mutant rows
-/// (`too-many-mutants`, `mutant-path-invalid`, `duplicate-mutant`) arrive with the `mutants`
-/// key; until then that key is `unknown-key`.
+/// The note's load rows, in the order `VectorErrorKind` declares them: the table's order, with
+/// the two rows of the mutant list's paths last.
 const PINNED: &[&str] = &[
     "not-utf8",
     "byte-order-mark",
@@ -37,6 +36,7 @@ const PINNED: &[&str] = &[
     "too-many-ticks",
     "too-many-scenarios",
     "too-many-expectations",
+    "too-many-mutants",
     "too-many-parameters",
     "duplicate-scenario",
     "empty-name",
@@ -49,6 +49,8 @@ const PINNED: &[&str] = &[
     "window-uncovered",
     "ambiguous-expectation",
     "instant-off-cadence",
+    "mutant-path-invalid",
+    "duplicate-mutant",
 ];
 
 #[test]
@@ -117,7 +119,7 @@ fn cases() -> Vec<(&'static str, String, Vec<u8>)> {
             "unknown-key",
             "line 1 column 132",
             format!(
-                "{{\"schema\": \"oce/vectors/v1\", \"clock\": {{\"step_s\": 60, \"horizon_s\": 1800}}, \"scenarios\": [{}], \"mutants\": []}}",
+                "{{\"schema\": \"oce/vectors/v1\", \"clock\": {{\"step_s\": 60, \"horizon_s\": 1800}}, \"scenarios\": [{}], \"within\": []}}",
                 scenario("", "")
             ),
         ),
@@ -168,6 +170,14 @@ fn cases() -> Vec<(&'static str, String, Vec<u8>)> {
             "too-many-expectations",
             "line 1 column 245887",
             one("", &many(WINDOW, 4_097)),
+        ),
+        text(
+            "too-many-mutants",
+            &format!(
+                "line 1 column {}",
+                nth_start(&mutants(257), "{\"path\"", 257)
+            ),
+            mutants(257),
         ),
         text(
             "too-many-parameters",
@@ -252,7 +262,46 @@ fn cases() -> Vec<(&'static str, String, Vec<u8>)> {
             "scenarios[0].expect[0].at_s",
             one("", r#"{"diagnostic": {"block": "B"}, "at_s": 90}"#),
         ),
+        text(
+            "mutant-path-invalid",
+            "mutants[1].path",
+            listing(&["m/a.cxf.json", "m/../a.cxf.json"]),
+        ),
+        text(
+            "duplicate-mutant",
+            "mutants[2].path",
+            listing(&["m/a.cxf.json", "m/b.cxf.json", "m/a.cxf.json"]),
+        ),
     ]
+}
+
+/// A set with no scenario listing `count` mutants, `m000.cxf.json` and up.
+fn mutants(count: usize) -> String {
+    let paths: Vec<String> = (0..count)
+        .map(|index| format!("m{index:03}.cxf.json"))
+        .collect();
+    let paths: Vec<&str> = paths.iter().map(String::as_str).collect();
+    listing(&paths)
+}
+
+/// A set with no scenario listing mutants at `paths`, in order.
+fn listing(paths: &[&str]) -> String {
+    let entries: Vec<String> = paths
+        .iter()
+        .map(|path| format!("{{\"path\": \"{path}\"}}"))
+        .collect();
+    format!(
+        "{{\"schema\": \"oce/vectors/v1\", \"clock\": {{\"step_s\": 60, \"horizon_s\": 1800}}, \"mutants\": [{}], \"scenarios\": []}}",
+        entries.join(", ")
+    )
+}
+
+/// The 1-based column at which the `n`th occurrence of `needle` starts in one-line `text`.
+fn nth_start(text: &str, needle: &str, n: usize) -> usize {
+    text.match_indices(needle)
+        .nth(n - 1)
+        .map(|(at, _)| at + 1)
+        .expect("enough occurrences")
 }
 
 #[test]
@@ -279,6 +328,45 @@ fn every_code_is_produced_by_its_case_at_the_place_it_names() {
             format!("{subject}: {}", refused.detail())
         );
     }
+}
+
+#[test]
+fn every_mutant_path_rule_refuses_its_own_defect() {
+    // Each rule of decision 28 on its own, the reason in the detail: a path that could leave the
+    // vector file's directory or name a file two ways. A backslash is written `\\\\` here: the
+    // JSON escape of one.
+    for (path, reason) in [
+        ("/m/a.cxf.json", "is absolute"),
+        ("", "has an empty segment"),
+        ("m/", "has an empty segment"),
+        ("m//a.cxf.json", "has an empty segment"),
+        ("./a.cxf.json", "has a `.` segment"),
+        ("m/./a.cxf.json", "has a `.` segment"),
+        ("..", "has a `..` segment"),
+        ("m/../a.cxf.json", "has a `..` segment"),
+        ("m\\\\a.cxf.json", "holds a backslash"),
+        ("/m\\\\a.cxf.json", "holds a backslash"),
+    ] {
+        let refused = VectorSet::from_json_bytes(
+            listing(&["m/ok.cxf.json", path]).as_bytes(),
+            &VerifyLimits::default(),
+        )
+        .expect_err(path);
+        assert_eq!(refused.code(), "mutant-path-invalid", "{path}");
+        assert_eq!(refused.subject(), "mutants[1].path", "{path}");
+        assert!(refused.detail().contains(reason), "{path}: {refused}");
+    }
+    // A dot that is not a whole segment is a name: these load.
+    let names = [
+        "a.cxf.json",
+        "m/a.cxf.json",
+        "...",
+        "m/.../a",
+        ".hidden",
+        "a..b",
+        "m/a.",
+    ];
+    assert_eq!(support::code_of(&listing(&names)), "loaded");
 }
 
 #[test]

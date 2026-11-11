@@ -33,6 +33,30 @@ impl Parameter {
     }
 }
 
+/// One mutant the set lists: the path of its CXF document, relative to the vector file, and what
+/// it changes.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Mutant {
+    pub(crate) path: String,
+    pub(crate) description: Option<String>,
+}
+
+impl Mutant {
+    /// The path as written: `/`-separated, inside the vector file's directory, with no empty,
+    /// `.` or `..` segment and no backslash; unique in its set. A run is handed each mutant's
+    /// bytes under this path ([`crate::VectorInputs::with_mutants`]).
+    #[must_use]
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+
+    /// The description, when the set gives one.
+    #[must_use]
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+}
+
 /// One step of an input: from `time_s()` on, the input holds `value()` (zero-order hold).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Step {

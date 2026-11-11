@@ -1,7 +1,8 @@
-//! Every bind and run code of the vectors note's table, pinned, and produced by a run (the
-//! mutant rows arrive with mutant mode). Four codes are refusals no loadable subject or loaded set
-//! reaches through a run today, so their cases live beside the code that makes them, each with
-//! the reason; this file holds the two lists to cover the pinned list exactly between them.
+//! Every bind and run code of the vectors note's table, pinned, and produced by a run, the mutant
+//! rows included (`tests/mutant_validation.rs` pins each of those in depth). Four codes are
+//! refusals no loadable subject or loaded set reaches through a run today, so their cases live
+//! beside the code that makes them, each with the reason; this file holds the two lists to cover
+//! the pinned list exactly between them.
 //!
 //! The frame budget is pinned at its bound: at the limit a run is accepted, one frame past it is
 //! refused before any frame runs.
@@ -14,7 +15,8 @@ use oce_replay::ReplayLimits;
 use oce_verify::{VERIFY_ERROR_CODES, VerifyError, VerifyLimits, VerifyOptions};
 
 use support::{
-    SIGNALS, SIGNALS_INPUTS, library_subject, library_vectors, one, run_with, set_of, subject,
+    SIGNALS, SIGNALS_INPUTS, ahu_mutants, edited, library_subject, library_vectors, mutant,
+    mutant_set, one, run_mutants, run_mutants_with, run_with, set_of, subject,
 };
 
 /// The note's bind and run rows, in the order `VerifyErrorKind` declares them.
@@ -35,6 +37,14 @@ const PINNED: &[&str] = &[
     "enum-port-unsupported",
     "unsupported-port-type",
     "too-many-frames",
+    "mutant-missing",
+    "mutant-unlisted",
+    "duplicate-mutant",
+    "too-many-mutant-bytes",
+    "mutant-load-failed",
+    "mutant-boundary-differs",
+    "mutant-identical",
+    "mutant-param-refused",
     "run-refused",
     "replay-failed",
     "window-uncovered",
@@ -205,6 +215,109 @@ fn cases() -> Vec<(
             ),
         ),
         (
+            "mutant-missing",
+            "mutants[2]".to_owned(),
+            run_mutants(&mutant_set(), &ahu, &ahu_mutants()[..2]),
+        ),
+        (
+            "mutant-unlisted",
+            "mutants".to_owned(),
+            run_mutants(
+                &mutant_set(),
+                &ahu,
+                &[
+                    ahu_mutants(),
+                    vec![("mutants/extra.cxf.json".to_owned(), mutant("late_alarm"))],
+                ]
+                .concat(),
+            ),
+        ),
+        (
+            "duplicate-mutant",
+            "mutants".to_owned(),
+            run_mutants(
+                &mutant_set(),
+                &ahu,
+                &[ahu_mutants(), ahu_mutants()[..1].to_vec()].concat(),
+            ),
+        ),
+        (
+            "too-many-mutant-bytes",
+            "mutants".to_owned(),
+            run_mutants_with(
+                &mutant_set(),
+                &ahu,
+                &ahu_mutants(),
+                &with_limits(VerifyLimits {
+                    max_mutant_bytes: 1024,
+                    ..VerifyLimits::MAX
+                }),
+            ),
+        ),
+        (
+            "mutant-load-failed",
+            "mutants[0]".to_owned(),
+            run_mutants(
+                &mutant_set(),
+                &ahu,
+                &[
+                    vec![(
+                        "mutants/threshold_inclusive.cxf.json".to_owned(),
+                        b"[]".to_vec(),
+                    )],
+                    ahu_mutants()[1..].to_vec(),
+                ]
+                .concat(),
+            ),
+        ),
+        (
+            "mutant-boundary-differs",
+            "mutants[1]".to_owned(),
+            run_mutants(
+                &mutant_set(),
+                &ahu,
+                &[
+                    ahu_mutants()[..1].to_vec(),
+                    vec![(
+                        "mutants/no_persistence.cxf.json".to_owned(),
+                        edited(&ahu, &[("ahu_fc_050.clg_vlv_cmd", "ahu_fc_050.clg_valve")]),
+                    )],
+                    ahu_mutants()[2..].to_vec(),
+                ]
+                .concat(),
+            ),
+        ),
+        (
+            "mutant-identical",
+            "mutants[2]".to_owned(),
+            run_mutants(
+                &mutant_set(),
+                &ahu,
+                &[
+                    ahu_mutants()[..2].to_vec(),
+                    vec![("mutants/late_alarm.cxf.json".to_owned(), ahu.clone())],
+                ]
+                .concat(),
+            ),
+        ),
+        (
+            "mutant-param-refused",
+            "mutants[0]".to_owned(),
+            run_mutants(
+                r#"{"schema": "oce/vectors/v1", "clock": {"step_s": 60, "horizon_s": 1800},
+                    "mutants": [{"path": "m.cxf.json"}],
+                    "scenarios": [{"name": "s", "params": {"uHigh": 1.5}, "inputs": {"u": 0.0}, "expect": []}]}"#,
+                &subject("hysteresis"),
+                &[(
+                    "m.cxf.json".to_owned(),
+                    edited(
+                        &subject("hysteresis"),
+                        &[(r#""@value": "1.0""#, r#""@value": "1.8""#)],
+                    ),
+                )],
+            ),
+        ),
+        (
             "replay-failed",
             "scenarios[0]".to_owned(),
             run_with(
@@ -246,6 +359,11 @@ fn every_reachable_code_is_produced_by_its_case_at_the_place_it_names() {
             (
                 "input-not-supplied",
                 error.path() == Some(&format!("{SIGNALS}lim")[..]),
+            ),
+            ("mutant-param-refused", error.cause() == Some("param-range")),
+            (
+                "mutant-boundary-differs",
+                error.path() == Some("urn:cxf-library:ahu-fc-050#ahu_fc_050.clg_valve"),
             ),
         ];
         for (kind, holds) in detailed_kinds {

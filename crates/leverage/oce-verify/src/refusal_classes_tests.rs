@@ -139,3 +139,39 @@ fn a_parameter_refusal_has_a_class_only_when_it_is_about_the_value() {
         assert_eq!(param_refusal_class(&other), None, "{other:?}");
     }
 }
+
+#[test]
+fn a_mutants_refusal_of_an_edit_has_a_cause_from_the_closed_table() {
+    use super::mutant_param_refusal_cause;
+    let path = || "urn:x#top.gate.nin".to_owned();
+    let causes: Vec<Option<&str>> = [
+        OcError::ParamRange { path: path() },
+        OcError::ParamType { path: path() },
+        OcError::ParamStructural { path: path() },
+        OcError::UnknownPoint(path()),
+    ]
+    .iter()
+    .map(mutant_param_refusal_cause)
+    .collect();
+    assert_eq!(
+        causes,
+        [
+            Some("param-range"),
+            Some("param-type"),
+            Some("param-structural"),
+            Some("param-path-unknown")
+        ]
+    );
+    let flattened: Vec<&str> = causes.into_iter().flatten().collect();
+    assert_eq!(flattened, crate::MUTANT_PARAM_REFUSAL_CAUSES);
+    // A refusal that is not about the edit's value is none of them (`engine-setup`).
+    for other in [
+        OcError::ParamWhileRunning { path: path() },
+        OcError::StalePreparedFrame,
+    ] {
+        assert_eq!(mutant_param_refusal_cause(&other), None, "{other:?}");
+    }
+    // The subject's own table keeps its three classes: the subject's edits are resolved against
+    // its own parameters, so a parameter it lacks is the key's bind error, never an edit's.
+    assert_eq!(param_refusal_class(&OcError::UnknownPoint(path())), None);
+}

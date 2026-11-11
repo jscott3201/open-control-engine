@@ -35,6 +35,8 @@
   { "inputs": { "u": [ { "t": 0, "value": 0 } ] }, "name": "a constant written as a list", "expect": [] }
 ],
   "params": { "persist.delayTime": 300.0, "gain.k": 2 },
+  "mutants" :[ { "description": "Both thresholds read \u003e= 5 · \u00e9", "path": "mutants\/threshold_inclusive.cxf.json" },
+	{"path":"m/late_alarm.cxf.json"} ],
   "clock" : { "horizon_s" : 4.3 , "step_s" : 1e-1 } ,
   "schema": "oce\/vectors\/v1"
 }

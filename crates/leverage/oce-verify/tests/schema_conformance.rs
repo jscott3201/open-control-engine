@@ -74,6 +74,7 @@ const FULL: &str = r#"{
   "schema": "oce/vectors/v1",
   "clock": { "step_s": 60, "horizon_s": 1800 },
   "params": { "a.k": 1 },
+  "mutants": [ { "path": "m/a.cxf.json", "description": "e" } ],
   "scenarios": [
     {
       "name": "s",
@@ -119,6 +120,7 @@ fn every_document_the_reader_loads_conforms_to_the_schema() {
 const OBJECTS: &[(&str, &str)] = &[
     ("#", ""),
     ("Clock", "/clock"),
+    ("Mutant", "/mutants/0"),
     ("Scenario", "/scenarios/0"),
     ("Step", "/scenarios/0/inputs/u/0"),
     ("Window", "/scenarios/0/expect/0"),

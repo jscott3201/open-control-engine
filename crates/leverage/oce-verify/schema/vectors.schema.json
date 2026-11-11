@@ -84,6 +84,24 @@
       ],
       "type": "object"
     },
+    "Mutant": {
+      "additionalProperties": false,
+      "description": "One mutant: where its CXF document is, relative to this file, and what defect it carries.",
+      "properties": {
+        "description": {
+          "description": "What the mutant changes, for people.",
+          "type": "string"
+        },
+        "path": {
+          "description": "The mutant's CXF document: a path inside this file's directory, its segments separated by\na slash, none empty, \".\" or \"..\", and no backslash. Unique in the set.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
     "Scenario": {
       "additionalProperties": false,
       "description": "One scenario: what every input holds over the clock, and what is expected of the outputs.",
@@ -192,6 +210,13 @@
     "clock": {
       "$ref": "#/$defs/Clock",
       "description": "The set's clock. Every scenario runs on it."
+    },
+    "mutants": {
+      "description": "Mutants: CXF documents that should fail the vectors, each a deliberate defect in the\nsequence, scored only when the sequence itself passes. At most 256, in order.",
+      "items": {
+        "$ref": "#/$defs/Mutant"
+      },
+      "type": "array"
     },
     "params": {
       "additionalProperties": {

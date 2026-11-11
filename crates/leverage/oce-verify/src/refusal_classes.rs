@@ -56,14 +56,26 @@ pub(crate) fn replay_failure_cause(error: &ReplayError) -> &'static str {
     }
 }
 
-/// The class of a refused parameter edit, from [`crate::PARAM_REFUSAL_CLASSES`], or `None` for
-/// a refusal of `set_param` that is not about the edit's value (it is then `engine-setup`).
+/// The class of a refused parameter edit of the subject, from [`crate::PARAM_REFUSAL_CLASSES`],
+/// or `None` for a refusal of `set_param` that is not about the edit's value (it is then
+/// `engine-setup`).
 pub(crate) fn param_refusal_class(error: &OcError) -> Option<&'static str> {
     match error {
         OcError::ParamRange { .. } => Some("param-range"),
         OcError::ParamType { .. } => Some("param-type"),
         OcError::ParamStructural { .. } => Some("param-structural"),
         _ => None,
+    }
+}
+
+/// The cause of a mutant's refusal of an edit the subject admits, from
+/// [`crate::MUTANT_PARAM_REFUSAL_CAUSES`] (owner ruling of 2026-11-11): the subject's three
+/// classes, and `param-path-unknown` for a parameter the mutant does not have, spelled as the bind
+/// code for a key that names no parameter. `None` for any other refusal (`engine-setup`).
+pub(crate) fn mutant_param_refusal_cause(error: &OcError) -> Option<&'static str> {
+    match error {
+        OcError::UnknownPoint(_) => Some("param-path-unknown"),
+        other => param_refusal_class(other),
     }
 }
 

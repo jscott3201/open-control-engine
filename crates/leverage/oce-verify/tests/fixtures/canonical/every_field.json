@@ -3,6 +3,15 @@
     "horizon_s": 4.3,
     "step_s": 0.1
   },
+  "mutants": [
+    {
+      "description": "Both thresholds read >= 5 \u00b7 \u00e9",
+      "path": "mutants/threshold_inclusive.cxf.json"
+    },
+    {
+      "path": "m/late_alarm.cxf.json"
+    }
+  ],
   "params": {
     "gain.k": 2,
     "persist.delayTime": 300.0

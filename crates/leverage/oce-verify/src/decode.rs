@@ -12,8 +12,8 @@
 //! and a repeated key is still refused, so this reader is strict standing alone.
 
 use crate::dto::{
-    ClockDto, DiagnosticDto, Entries, ExpectationDto, InputDto, InstantDto, Optional, ScenarioDto,
-    Seconds, StepDto, ValueDto, VectorSetDto, WindowDto,
+    ClockDto, DiagnosticDto, Entries, ExpectationDto, InputDto, InstantDto, MutantDto, Optional,
+    ScenarioDto, Seconds, StepDto, ValueDto, VectorSetDto, WindowDto,
 };
 use crate::error::{Location, VectorErrorKind};
 use crate::limits::{MAX_TIME_INTEGER, VerifyLimits};
@@ -75,6 +75,7 @@ fn vector_set(cursor: &mut Cursor<'_>, limits: &VerifyLimits) -> Read<VectorSetD
     let mut object = cursor.open_object()?;
     let (mut schema, mut clock_value, mut params_value, mut scenarios_value) =
         (None, None, None, None);
+    let mut mutants_value = None;
     while let Some((key, at)) = cursor.next_key(&mut object)? {
         match key.as_str() {
             "schema" => {
@@ -83,6 +84,7 @@ fn vector_set(cursor: &mut Cursor<'_>, limits: &VerifyLimits) -> Read<VectorSetD
             }
             "clock" => put(&mut clock_value, clock(cursor)?, &key, at)?,
             "params" => put(&mut params_value, params(cursor, limits)?, &key, at)?,
+            "mutants" => put(&mut mutants_value, mutants(cursor, limits)?, &key, at)?,
             "scenarios" => put(&mut scenarios_value, scenarios(cursor, limits)?, &key, at)?,
             _ => return Err(unknown_key(&key, at)),
         }
@@ -92,7 +94,44 @@ fn vector_set(cursor: &mut Cursor<'_>, limits: &VerifyLimits) -> Read<VectorSetD
         schema: required(schema, "schema", opened)?,
         clock: required(clock_value, "clock", opened)?,
         params: Optional(params_value),
+        mutants: Optional(mutants_value),
         scenarios: required(scenarios_value, "scenarios", opened)?,
+    })
+}
+
+fn mutants(cursor: &mut Cursor<'_>, limits: &VerifyLimits) -> Read<Vec<MutantDto>> {
+    cursor.expect(Kind::Array, "the mutants, a list")?;
+    let mut list = cursor.open_list()?;
+    let mut all = Vec::new();
+    while cursor.next_item(&mut list)? {
+        let (_, at) = cursor.peek()?;
+        if exceeds(all.len() + 1, limits.max_mutants) {
+            return Err(too_many(
+                VectorErrorKind::TooManyMutants,
+                at,
+                "mutants",
+                limits.max_mutants,
+            ));
+        }
+        all.push(mutant(cursor)?);
+    }
+    Ok(all)
+}
+
+fn mutant(cursor: &mut Cursor<'_>) -> Read<MutantDto> {
+    cursor.expect(Kind::Object, "a mutant, an object")?;
+    let mut object = cursor.open_object()?;
+    let (mut path, mut description) = (None, None);
+    while let Some((key, at)) = cursor.next_key(&mut object)? {
+        match key.as_str() {
+            "path" => put(&mut path, text(cursor, "the mutant path")?, &key, at)?,
+            "description" => put(&mut description, text(cursor, "the description")?, &key, at)?,
+            _ => return Err(unknown_key(&key, at)),
+        }
+    }
+    Ok(MutantDto {
+        path: required(path, "path", object.opened())?,
+        description: Optional(description),
     })
 }
 

@@ -228,7 +228,10 @@ fn the_root_is_the_vector_set_with_its_one_schema_tag() {
         .keys()
         .map(String::as_str)
         .collect();
-    assert_eq!(properties, ["clock", "params", "scenarios", "schema"]);
+    assert_eq!(
+        properties,
+        ["clock", "mutants", "params", "scenarios", "schema"]
+    );
     assert_eq!(schema["properties"]["schema"]["type"], "string");
     assert_eq!(
         schema["properties"]["schema"]["enum"],
@@ -236,7 +239,7 @@ fn the_root_is_the_vector_set_with_its_one_schema_tag() {
     );
     assert_eq!(VECTORS_SCHEMA, "oce/vectors/v1");
     // No key the format does not have yet.
-    for absent in ["mutants", "within", "of", "when", "tolerance"] {
+    for absent in ["within", "of", "when", "tolerance"] {
         assert!(
             !VECTORS_JSON_SCHEMA.contains(&format!("\"{absent}\"")),
             "{absent}"
@@ -256,6 +259,7 @@ fn every_definition_has_the_keys_the_format_gives_it() {
             "Expectation",
             "Input",
             "Instant",
+            "Mutant",
             "Scenario",
             "Step",
             "Value",
@@ -263,10 +267,11 @@ fn every_definition_has_the_keys_the_format_gives_it() {
         ]
     );
     // (definition, every property, the required ones in declaration order)
-    let objects: [(&str, &[&str], &[&str]); 6] = [
+    let objects: [(&str, &[&str], &[&str]); 7] = [
         ("Clock", &["horizon_s", "step_s"], &["step_s", "horizon_s"]),
         ("Diagnostic", &["block", "message"], &["block"]),
         ("Instant", &["at_s", "diagnostic"], &["diagnostic", "at_s"]),
+        ("Mutant", &["description", "path"], &["path"]),
         (
             "Scenario",
             &["description", "expect", "inputs", "name", "params"],
@@ -319,9 +324,10 @@ fn any_of_appears_only_over_values_inputs_and_expectations() {
         defs["Expectation"]["anyOf"],
         json!([{"$ref": "#/$defs/Window"}, {"$ref": "#/$defs/Instant"}])
     );
-    // Six strings (the tag, a scenario's name and description, an output, a diagnostic's block
-    // and message), none of them a value; and no null or integer type anywhere.
-    for (name, count) in [("string", 6), ("null", 0), ("integer", 0)] {
+    // Eight strings (the tag, a mutant's path and description, a scenario's name and
+    // description, an output, a diagnostic's block and message), none of them a value; and no
+    // null or integer type anywhere.
+    for (name, count) in [("string", 8), ("null", 0), ("integer", 0)] {
         let in_types = VECTORS_JSON_SCHEMA
             .matches(&format!("\"type\": \"{name}\""))
             .count();

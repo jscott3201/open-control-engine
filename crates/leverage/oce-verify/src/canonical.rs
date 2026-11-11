@@ -11,7 +11,7 @@
 //! order a builder happened to use.
 
 use crate::clock::Clock;
-use crate::model::{Expectation, Held, Input, Parameter, Scenario};
+use crate::model::{Expectation, Held, Input, Mutant, Parameter, Scenario};
 use crate::number::Literal;
 
 /// A JSON value ready to be written.
@@ -203,10 +203,20 @@ fn scenario(scenario: &Scenario) -> Json {
     Json::object(entries)
 }
 
-/// The canonical document of a vector set: its tag, clock, optional set parameters and scenarios.
+fn mutant(mutant: &Mutant) -> Json {
+    let mut entries = vec![entry("path", Json::str(&mutant.path))];
+    if let Some(description) = &mutant.description {
+        entries.push(entry("description", Json::str(description)));
+    }
+    Json::object(entries)
+}
+
+/// The canonical document of a vector set: its tag, clock, optional set parameters, optional
+/// mutants (in file order) and scenarios.
 pub(crate) fn vector_set(
     clock: &Clock,
     params: Option<&[Parameter]>,
+    mutants: Option<&[Mutant]>,
     scenarios: &[Scenario],
 ) -> String {
     let mut entries = vec![
@@ -225,6 +235,12 @@ pub(crate) fn vector_set(
     ];
     if let Some(params) = params {
         entries.push(entry("params", parameters(params)));
+    }
+    if let Some(mutants) = mutants {
+        entries.push(entry(
+            "mutants",
+            Json::List(mutants.iter().map(mutant).collect()),
+        ));
     }
     Json::object(entries).to_document()
 }

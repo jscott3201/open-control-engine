@@ -46,20 +46,33 @@ use crate::verify_error::{VerifyError, VerifyErrorKind};
 
 /// The bytes a run reads, supplied by the caller: `oce-verify` opens no file (decision 20).
 ///
-/// The subject is CXF; a caller with an authored subject emits it first. Mutant mode adds the
-/// mutants' bytes here in place.
+/// The subject and every mutant are CXF; a caller with an authored subject emits it first. A
+/// caller resolves each mutant path the set lists relative to the vector file, as `oce verify`
+/// does, and hands the bytes in under the path as written.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug)]
 pub struct VectorInputs<'a> {
     /// The subject's CXF bytes.
     pub subject: &'a [u8],
+    /// Each listed mutant's path, as the set writes it, paired with its CXF bytes. Every path the
+    /// set lists must be given once, and no other.
+    pub mutants: &'a [(&'a str, &'a [u8])],
 }
 
 impl<'a> VectorInputs<'a> {
-    /// The inputs of a run against the subject in `subject`.
+    /// The inputs of a run against the subject in `subject`, with no mutant.
     #[must_use]
     pub fn new(subject: &'a [u8]) -> Self {
-        Self { subject }
+        Self {
+            subject,
+            mutants: &[],
+        }
+    }
+
+    /// These inputs with the mutants' bytes: `(path, CXF)` for each mutant the set lists.
+    #[must_use]
+    pub fn with_mutants(self, mutants: &'a [(&'a str, &'a [u8])]) -> Self {
+        Self { mutants, ..self }
     }
 }
 
@@ -116,7 +129,7 @@ pub fn run_vectors(
     options: &VerifyOptions,
 ) -> Result<VectorRun, VerifyError> {
     let limits = options.limits.effective();
-    let bound = bind::bind(set, inputs.subject, &limits)?;
+    let bound = bind::bind(set, inputs.subject, inputs.mutants, &limits)?;
     let caps = Caps {
         failures: usize::try_from(limits.max_recorded_failures).unwrap_or(usize::MAX),
         warnings: usize::try_from(limits.max_recorded_warnings).unwrap_or(usize::MAX),
@@ -156,7 +169,22 @@ pub fn run_vectors(
             traces.push((scenario.name().to_owned(), ran.trace));
         }
     }
-    let body = vector_body(set, &bound, scenarios);
+    let mut body = vector_body(set, &bound, scenarios);
+    if set.mutants().is_some_and(|listed| !listed.is_empty()) {
+        let runs = crate::mutants::Runs {
+            set,
+            inputs: &bound.inputs,
+            outputs: &bound.outputs,
+            scenarios: &bound.scenarios,
+            limits: &limits,
+            chunk,
+        };
+        body.mutants = Some(crate::mutants::score(
+            &runs,
+            &bound.mutants,
+            body.status == ScenarioStatus::Pass,
+        )?);
+    }
     let mut receipt = Receipt {
         header: ReceiptHeader {
             schema: RECEIPT_SCHEMA.to_owned(),
@@ -179,9 +207,9 @@ pub fn run_vectors(
 
 /// One scenario's run: its trace, its refused frame when one stopped it, and the content id of
 /// what ran when it has edits.
-struct Ran {
-    trace: Trace,
-    refused: Option<(u64, EngineRefusal)>,
+pub(crate) struct Ran {
+    pub(crate) trace: Trace,
+    pub(crate) refused: Option<(u64, EngineRefusal)>,
     content_id: Option<String>,
 }
 
@@ -214,7 +242,8 @@ fn same_boundary(left: &[InputDefinition], right: &[InputDefinition]) -> bool {
             .all(|(a, b)| a.path == b.path && a.value_type == b.value_type)
 }
 
-fn run_scenario(
+/// One scenario's run on a freshly loaded engine of `cxf` (the subject's or a mutant's bytes).
+pub(crate) fn run_scenario(
     set: &VectorSet,
     subject: &str,
     cxf: &[u8],
@@ -489,6 +518,7 @@ fn vector_body(
         load_warnings_total: bound.load_warnings_total,
         totals,
         scenarios,
+        mutants: None,
     }
 }
 
