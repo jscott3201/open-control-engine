@@ -555,7 +555,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Leverage
 
 - **M2 gate item 2 holds over every imported corpus fixture, not only the seven bundles**
-  (GitHub #PRNUM, issue #603). `text_round_trip::wire_to_text_to_wire_is_byte_identical_for_every_imported_corpus_fixture`
+  (GitHub #606, issue #603). `text_round_trip::wire_to_text_to_wire_is_byte_identical_for_every_imported_corpus_fixture`
   takes each of the 31 fixtures `library_round_trip` imports (`support::cxf::IMPORTED`, which that
   file's partition test holds to the 46 corpus files; the count is asserted here too) wire → text
   → wire, compared byte for byte, and requires `fmt` to leave the printed text as it is. A failure
