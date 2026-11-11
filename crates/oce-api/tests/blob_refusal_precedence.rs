@@ -8,9 +8,10 @@
 //!
 //! Each defect here is an edit of its own header bytes, written from the header table in
 //! `docs/design/compiled-schedule-blob.md`. `with_defects` applies any set of them to a golden so
-//! that every one is present at once, and `present` re-reads the bytes to prove it, so a pair
-//! test cannot pass because one edit undid the other. The expected refusals are spelled out from
-//! the table, not read back from the decoder.
+//! that every one is present at once. `present` re-reads the bytes to prove it, so a pair test
+//! cannot pass because one edit undid the other. The exception is the length and CRC on a short
+//! input, which `present` cannot tell apart (see its doc). The expected refusals are spelled out
+//! from the table, not read back from the decoder.
 
 // Shared helpers, declared once for this binary in its root `facade.rs`.
 use crate::blob_corpus;
@@ -146,6 +147,12 @@ fn with_defects(valid: &[u8], defects: &[Defect]) -> Vec<u8> {
 
 /// Whether `bytes` carry `defect`, read from the header table without the decoder. Not asked of
 /// an oversized input, whose trailer would cost a 64 MiB CRC to inspect.
+///
+/// On a `Short` input it cannot tell whether the `Length` and `Crc` edits were applied. No input
+/// that short matches its total length, and its last four bytes are not a trailer, so both read
+/// as present either way. A pair of `Short` with either of them therefore shows only that
+/// `Truncated` wins. That needs nothing more, because the size is checked before the length and
+/// the CRC.
 fn present(defect: Defect, bytes: &[u8]) -> bool {
     assert!(
         bytes.len() <= MAX_BLOB_BYTES,

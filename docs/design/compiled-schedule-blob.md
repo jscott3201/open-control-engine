@@ -497,10 +497,12 @@ checked straight after the format, as the state snapshot decoder has done since 
 format before the length. The reason is decision 6 as amended: every format stays at revision 1
 and changes in place, so another version may lay out the length field, the trailer and the body
 differently under the same format number, and none of them can be read until the version is known
-to match. The rule relies on the magic, format and version fields keeping their offsets in every
-layout, as the snapshot's do. A corrupted
-version field now reports the version it spells, not an integrity failure; the profile and the
-flags stay behind the CRC. No byte of the format changed, so the 46 goldens did not move.
+to match. The version refusal is certain only while the magic, format and version fields sit
+where this layout puts them. Rule 9 of `AGENTS.md` (decision 6 as amended) still lets a later
+layout move them in place. A blob from before such a move is then still refused with a typed
+error, though not necessarily `EngineVersionMismatch`. A corrupted version field now reports the
+version it spells, not an integrity failure; the profile and the flags stay behind the CRC. No
+byte of the format changed, so the 46 goldens did not move.
 [Which refusal wins](../compiled-schedule-blob.md#which-refusal-wins) states the rule for the blob
 and the snapshot together.
 

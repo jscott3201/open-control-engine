@@ -373,7 +373,10 @@ enum Defect {
     BodyLength,
     /// A trailer that does not match the bytes before it.
     Trailer,
-    /// A fingerprint that does not match the manifest, the first check of the body.
+    /// A fingerprint that does not match the manifest. The decoder compares the two only after it
+    /// has read the model id, checked that the model time is finite, read the previous-time tag
+    /// and decoded the whole manifest. The rest of this body is valid, so the comparison is the
+    /// first body check to fail. The matrix pairs it only with header defects.
     Fingerprint,
 }
 
@@ -442,6 +445,12 @@ fn with_defects(valid: &[u8], defects: &[Defect]) -> Vec<u8> {
 
 /// Whether `bytes` carry `defect`, read without the codec; `valid` is the snapshot they were
 /// edited from. Not asked of an oversized input, whose trailer would cost a 64 MiB hash.
+///
+/// On a `Short` input it cannot tell whether the `BodyLength` and `Trailer` edits were applied.
+/// No input that short matches its body length, and its last sixteen bytes are not a trailer, so
+/// both read as present either way. A pair of `Short` with either of them therefore shows only
+/// that the short-input refusal wins. That needs nothing more, because the size is checked before
+/// the body length and the trailer.
 fn present(defect: Defect, bytes: &[u8], valid: &[u8]) -> bool {
     assert!(
         bytes.len() <= snapshot_cap(),

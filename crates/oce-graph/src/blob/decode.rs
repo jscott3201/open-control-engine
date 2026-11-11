@@ -41,9 +41,11 @@ use crate::{MAX_STATE_WORDS, Schedule, allocate_state, build_driver_of};
 /// 5. the execution profile is this build's and the reserved flags are zero;
 /// 6. structure, each with a byte offset: section order and lengths, bounded counts, UTF-8, tags,
 ///    canonical list order and exact consumption ([`BlobError::Malformed`]);
-/// 7. classes (registered, same signature hash, each used) and instances (class index, unique
-///    parameter names, finite Reals, known enum classes and ordinals, then the constructed block's
-///    kind, state length and arity, and every connector id exactly once);
+/// 7. each class in turn (registered, same signature hash); then each block in turn (class index,
+///    unique parameter names, each parameter in order a finite Real or a known enum class and
+///    ordinal, then the constructed block's kind, state length and arity, and each of its
+///    connector ids in range and not already claimed); then every class used and every connector
+///    id claimed;
 /// 8. boundary inputs, connections (direction, kind, distinct blocks, not an input target, one
 ///    driver), undriven inputs and boundary outputs;
 /// 9. the schedule: a permutation that respects emit-before under this build's `feeds_through`;

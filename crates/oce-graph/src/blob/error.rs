@@ -7,13 +7,18 @@ use super::EngineVersion;
 /// Why [`decode()`](super::decode()) refused a blob, or [`encode()`](super::encode()) refused a
 /// source.
 ///
-/// Variants are listed in the decoder's refusal order: a blob with several defects reports the
-/// first one in this order. The one exception is [`Malformed`](Self::Malformed), listed once
-/// although the decoder finds its faults at three points: a short input or a wrong magic before
-/// the format, a total length that differs from the input after the engine version, and every
-/// structural fault after the flags ([`decode()`](super::decode()) lists the steps). Indices are
-/// positions in the blob's own lists (class, block, connection, input, output, schedule
-/// position); offsets are absolute byte offsets into the blob.
+/// The variants up to [`NonzeroFlags`](Self::NonzeroFlags) are listed in the decoder's refusal
+/// order, so a blob with several header defects reports the first of them in this list.
+/// [`Malformed`](Self::Malformed) is listed once although its faults are found at three points:
+/// a short input or a wrong magic before the format, a total length that differs from the input
+/// after the engine version, and every structural fault after the flags. From
+/// [`UnknownClass`](Self::UnknownClass) on, variants are grouped by the
+/// [`decode()`](super::decode()) step that raises them (steps 7 to 10), not ordered within a step.
+/// Step 7 checks classes one at a time and then blocks one at a time, so of two faults there the
+/// one met first wins, whichever is listed first. For example, a duplicated parameter in any
+/// block wins over an unused class, which is checked after the last block. Indices are positions
+/// in the blob's own lists (class, block, connection, input, output, schedule position); offsets
+/// are absolute byte offsets into the blob.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum BlobError {

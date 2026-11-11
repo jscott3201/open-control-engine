@@ -169,9 +169,10 @@ trailer's worth of bytes and the magic; format version, then engine version; tot
 the CRC; profile and flags; structure
 (section order and lengths, bounded counts, port lists no longer than any class resolves, UTF-8,
 tags, canonical list order, no trailing bytes);
-classes (registered, same hash, each used) and instances (class index, unique parameter names,
-finite Reals, known enum classes and in-range ordinals, the constructed block's kind, state length
-and arity, every connector exactly once); boundary inputs (not Enum-typed, typed targets used once,
+each class (registered, same hash), then each instance in turn (class index, unique parameter
+names, finite Reals, known enum classes and in-range ordinals, the constructed block's kind, state
+length and arity, connectors in range and not already claimed), then every class used and every
+connector claimed; boundary inputs (not Enum-typed, typed targets used once,
 typed, finite and uncrossed bounds), connections (output to input, equal kinds, distinct blocks, never into a boundary
 input, one driver per input), undriven inputs and boundary outputs (output sources, unique paths);
 the schedule (a permutation that respects emit-before under the target's own feedthrough); the state
@@ -200,7 +201,11 @@ length, its trailer algorithm, its body) cannot be read until the version is kno
 
 So an artefact another engine version wrote reports `EngineVersionMismatch` however else it is
 damaged, unless it is over the size limit, too short to hold a header, not of its kind or of
-another format revision. A corrupted version field therefore reports the version it now spells,
+another format revision. That holds while its magic, format and version fields sit where this
+layout puts them. A layout that put them elsewhere is still refused with a typed error, though
+not necessarily this one: the [state contract](state-compatibility.md#wire-revision-and-integrity)
+shows this for snapshots written before the version field existed. Because the version comes
+first, a corrupted version field reports the version it now spells,
 not an integrity failure; the trailer still covers the field, so a version field rewritten to
 this build's fails the trailer. The fields between the format and the version (the blob's
 execution profile, the snapshot's execution-state ABI revision) are read on the way and checked
