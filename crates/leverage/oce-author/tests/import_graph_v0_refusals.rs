@@ -3,8 +3,6 @@
 //! bounds pinned at the limit and one past it, duplicate keys, unknown and missing keys, a type
 //! other than the three, a string, `null`, object or list value, and a malformed connection.
 
-use crate::support;
-
 use oce_author::{
     ImportError, ImportErrorKind, ImportOptions, Imported, Limit, Literal, MAX_WIRE_BYTES,
     MAX_WIRE_DEPTH, MAX_WIRE_LIST_LEN, MAX_WIRE_STRING_BYTES, ParamValue, SourceForm, StrictJson,

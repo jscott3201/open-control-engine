@@ -1074,9 +1074,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `crates/leverage/oce-author/Cargo.toml` sets `autotests = false` and lists one target,
   `authoring`, of which every file under `tests/` is a module. No file needs a binary of its own:
   the crate's bless command names the package, and nothing in `.agents/`, `.github/`, `scripts/`,
-  `docs/` or the tests selects a test binary of this crate by name. The 37 files that declared
-  `mod support;` now say `use crate::support;` on the same line, with the helper declared once in
-  `tests/authoring.rs`, and no test body changed. A test in a merged file is now
+  `docs/` or the tests selects a test binary of this crate by name. Of the 37 files that
+  declared `mod support;`, 36 now say `use crate::support;` on the same line, with the helper
+  declared once in `tests/authoring.rs`, and `import_graph_v0_refusals.rs`, which never used it,
+  drops the line; no test body changed. A test in a merged file is now
   `oce-author::authoring <file>::<test>`; select one file with `-E 'test(/^<file>::/)'`.
   `tests/authoring.rs` checks that every file under `tests/` is compiled into exactly one binary,
   reading the root's declarations as the compiler does: `pub mod`, a comment after the semicolon,
