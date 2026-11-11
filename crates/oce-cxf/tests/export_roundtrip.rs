@@ -8,7 +8,7 @@
 //! parameter values, connector types, boundary reconstruction) explicitly, independent of the
 //! render string.
 
-mod render;
+use crate::render;
 
 use oce_cxf::{ResolveOptions, export, export_with_report, import_cxf};
 use oce_diag::{DiagCode, Diagnostic, Severity, has_errors};

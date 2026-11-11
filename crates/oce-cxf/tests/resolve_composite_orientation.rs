@@ -5,14 +5,14 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_model::ModelGraph;
 use serde_json::{Value, json};
 
-mod bless;
+use crate::bless;
 #[path = "resolve_composite_orientation/diagnostics.rs"]
 mod diagnostics;
 #[path = "resolve_composite_orientation/fanout_cpu.rs"]
 mod fanout_cpu;
 #[path = "resolve_composite_orientation/lowering_cpu.rs"]
 mod lowering_cpu;
-mod render;
+use crate::render;
 
 #[path = "resolve_composite_orientation/multiplicity.rs"]
 mod multiplicity;

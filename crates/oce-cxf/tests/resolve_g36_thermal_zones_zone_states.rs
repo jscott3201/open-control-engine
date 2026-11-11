@@ -9,7 +9,7 @@
 //! bound at `BooleanToInteger.integerTrue` must ground position-independently to Integer values
 //! 1, 2, and 3.
 
-mod bless;
+use crate::bless;
 
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
