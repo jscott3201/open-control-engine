@@ -6,10 +6,11 @@
 //!
 //! A model from the wire form or the builder can hold values the lexer cannot read back: a name
 //! with a space or a line feed, an atom with a `#`, a class path that is not dotted words, a
-//! suffix that is not a base unit, a `derived_from` id of `none`, a reference named `true`, an
-//! enumeration member with no type, an enumeration type spelled as a scalar type or not as one
-//! word, a non-finite Real or bound, a string with a control character or a
-//! bidirectional override. Each is refused here, naming the subject by the validator's model
+//! suffix that is neither a base unit nor a scaled one, a scaled suffix whose written number does
+//! not scale to the value bit for bit ([`crate::Assignment::scaled_from`]), a `derived_from` id of
+//! `none`, a reference named `true`, an enumeration member with no type, an enumeration type
+//! spelled as a scalar type or not as one word, a non-finite Real or bound, a string with a
+//! control character or a bidirectional override. Each is refused here, naming the subject by the validator's model
 //! path. Comments are the exception: a line feed in a comment splits it into several comment
 //! lines and trailing spaces are dropped, the two normalizations the parser applies itself; a
 //! comment piece the lexer would refuse is refused here.
@@ -23,7 +24,7 @@ use crate::model::{
 
 use super::codes::{MAX_COMMENT_BYTES, MAX_STATEMENTS_PER_KIND, MAX_STRING_BYTES, MAX_TOKEN_BYTES};
 use super::is_bidi_control;
-use super::units::check_suffix;
+use super::units::agreement;
 
 /// Why a model has no text spelling. Never a panic.
 #[non_exhaustive]
@@ -183,22 +184,11 @@ fn bounds(b: &Boundary) -> Checked {
     Ok(())
 }
 
-fn suffix(value: &ParamValue, suffix: Option<&String>) -> Checked {
-    let Some(suffix) = suffix else {
-        return Ok(());
-    };
-    if !matches!(
-        value,
-        ParamValue::Literal(Literal::Integer(_) | Literal::Real(_))
-    ) {
-        return Err(format!(
-            "the suffix `{suffix}` follows a value that is not a number"
-        ));
-    }
-    if suffix.len() > MAX_TOKEN_BYTES {
-        return Err(format!("the suffix is longer than {MAX_TOKEN_BYTES} bytes"));
-    }
-    check_suffix(suffix).map_err(|(_, detail)| detail)
+/// A suffix's agreement with the value and the written number a scaled suffix keeps, its token
+/// bound included ([`super::units::agreement`], which stage 1 runs too, so no suffix stops a
+/// model stage 1 accepts from printing).
+fn suffix(value: &ParamValue, suffix: Option<&String>, scaled_from: Option<&Literal>) -> Checked {
+    agreement(value, suffix.map(String::as_str), scaled_from)
 }
 
 fn comment_lines(lines: &[String]) -> Checked {
@@ -302,7 +292,13 @@ pub(super) fn check(s: &Sequence) -> Result<(), PrintError> {
         word(name)
             .and_then(|()| parameter_type(&p.value_type))
             .and_then(|()| literal(&p.value))
-            .and_then(|()| suffix(&ParamValue::Literal(p.value.clone()), p.suffix.as_ref()))
+            .and_then(|()| {
+                suffix(
+                    &ParamValue::Literal(p.value.clone()),
+                    p.suffix.as_ref(),
+                    p.scaled_from.as_ref(),
+                )
+            })
             .and_then(|()| annotations(&p.annotations))
             .map_err(at(name))?;
     }
@@ -327,7 +323,7 @@ pub(super) fn check(s: &Sequence) -> Result<(), PrintError> {
                     ParamValue::Literal(l) => literal(l),
                     ParamValue::Ref(r) => reference(r.as_str()),
                 })
-                .and_then(|()| suffix(&a.value, a.suffix.as_ref()))
+                .and_then(|()| suffix(&a.value, a.suffix.as_ref(), a.scaled_from.as_ref()))
                 .and_then(|()| annotations(&a.annotations))
                 .map_err(at(&path))?;
         }

@@ -200,7 +200,8 @@ v1 is time only:
 
 `degC` and `degF` (affine), `%` and prefixed SI units (`kPa`) are not in it, by ruling. The crate
 states the table; scaling a written literal and checking a suffix against a declared unit belong
-to the text form that reads the suffix (`oce-author`, issue #501). `oce vocab` prints it.
+to the text form that reads the suffix: `oce-author` does both (issue #501), reading this table
+and each parameter's declared `unit`. `oce vocab` prints it.
 
 ## Regenerating `generated.json`
 

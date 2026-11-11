@@ -197,14 +197,19 @@ fn a_malformed_suffix_is_refused_at_the_suffix() {
 }
 
 #[test]
-fn a_suffix_that_is_not_a_base_unit_is_refused_naming_vocabulary_v1() {
-    // Decision 13: `1 h` is refused until vocabulary v1 supplies scale factors.
-    let detail = refused(&body("param p : Real = 1 h\n"), UNIT_NOT_BASE, 3, 20);
+fn a_suffix_that_is_neither_a_base_unit_nor_a_scaled_one_alone_is_refused() {
+    // Decision 13 as amended by the vocabulary note's decision 14 (issue #501): base units, or
+    // `min`, `h` and `d` alone; an affine, prefixed or other scaled unit is refused.
+    let detail = refused(&body("param p : Real = 1 degC\n"), UNIT_NOT_BASE, 3, 20);
     assert!(
-        detail.contains("`h`") && detail.contains("vocabulary v1"),
+        detail.contains("`degC`") && detail.contains("`min`, `h` and `d` alone"),
         "{detail}"
     );
-    for suffix in ["degC", "kPa", "min", "g", "l/s", "W/m2.h"] {
+    let detail = refused(&body("param p : Real = 1 m3/h\n"), UNIT_NOT_BASE, 3, 20);
+    assert!(detail.contains("only as the whole suffix"), "{detail}");
+    for suffix in [
+        "degF", "kPa", "g", "l/s", "W/m2.h", "1/h", "h2", "hh", "hr", "Min", "day", "ms",
+    ] {
         refused(
             &body(&format!("param p : Real = 1 {suffix}\n")),
             UNIT_NOT_BASE,
@@ -344,7 +349,7 @@ fn every_text_fixture_in_the_earlier_spelling_is_refused() {
         }
     }
     paths.sort();
-    assert_eq!(paths.len(), 14, "{paths:#?}");
+    assert_eq!(paths.len(), 16, "{paths:#?}");
     for path in &paths {
         let shown = path.display().to_string();
         let text = std::fs::read_to_string(path).expect("read");
@@ -636,7 +641,10 @@ fn every_parse_code_is_produced_by_some_input() {
             body("param p : Real = 1 m^2\n").into_bytes(),
             MALFORMED_SUFFIX,
         ),
-        (body("param p : Real = 1 h\n").into_bytes(), UNIT_NOT_BASE),
+        (
+            body("param p : Real = 1 degC\n").into_bytes(),
+            UNIT_NOT_BASE,
+        ),
         (
             body("in u : Real @unit d\u{e9}g\n").into_bytes(),
             MALFORMED_ATOM,
