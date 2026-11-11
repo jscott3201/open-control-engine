@@ -330,7 +330,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### CXF import and export
 
 - **A CDL extension block is refused at load with its own code, `extension-block-unsupported`,
-  and the dead `missing-fmu-path` code is removed** (GitHub #PRNUM, issue #537). An extension
+  and the dead `missing-fmu-path` code is removed** (GitHub #582, issue #537). An extension
   block's behaviour is a Functional Mockup Unit (OBC §7.13 and §8.7), and FMI is out of scope
   before 1.0. Before composite lowering, the resolver now refuses every active node typed
   `S231:ExtensionBlock` (at any position of its `@type` list, in any spelling of the namespace),

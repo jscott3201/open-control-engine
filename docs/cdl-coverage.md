@@ -54,7 +54,7 @@ ANSI/ASHRAE 231-2026 §5.9) that its CXF form names with `S231:hasFmuPath` (OBC 
 about elementary and composite blocks. Extension blocks are outside it.
 
 A document that contains an extension block is refused at load with its own code,
-`extension-block-unsupported` (GitHub #PRNUM, issue #537). A node is an extension block when one
+`extension-block-unsupported` (GitHub #582, issue #537). A node is an extension block when one
 of its `@type` values is `S231:ExtensionBlock` (at any position of the list, in any spelling of
 the namespace), when it carries `S231:hasFmuPath`, whose domain is `ExtensionBlock` (OBC §8.7),
 or when its `@type` names such a node of the same document. The refusal covers every active node
