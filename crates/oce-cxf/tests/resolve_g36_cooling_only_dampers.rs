@@ -4,7 +4,7 @@
 //! import. These tests pin the complete source-instance census, all load-bearing controller and
 //! override constants, and the connector graph consumed by the facade and conformance suites.
 
-mod bless;
+use crate::bless;
 
 use std::fmt::Write as _;
 use std::path::PathBuf;

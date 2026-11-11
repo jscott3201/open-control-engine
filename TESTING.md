@@ -263,7 +263,11 @@ case" is itself a finding to resolve, not a pass.
   builds `tests/*.rs` as one binary (`autotests = false`, GitHub #548): register a new test file
   there as `mod <file>;` in `tests/authoring.rs` (with `use crate::support;` for the shared
   helpers), or give it its own `[[test]]` in `Cargo.toml`, with the reason, when something selects
-  it by name; a layout test fails on a file compiled into no binary or into two.
+  it by name; a layout test fails on a file compiled into no binary or into two. `oce-cxf` builds
+  them as `exchange` plus the eleven binaries something selects by name (GitHub #549): register a
+  new test file as `mod <file>;` in `tests/exchange.rs` (with `use crate::bless;` or
+  `use crate::render;` for the shared helpers), or as its own `[[test]]`, with the reason, when
+  something selects it by name; its layout test also refuses a declaration it cannot place.
 - **Float comparison:** `Value::bit_eq` (or `f64::to_bits`) — **never** `==` or `(a-b).abs() < ε`
   in an engine assertion. Sole exception: the 21 transcendental, psychrometric, and solar Real
   signal goldens, whose libm-dependent outputs retain the existing aligned-tolerance band on

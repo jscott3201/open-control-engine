@@ -1,6 +1,6 @@
 //! Nested composite import tests for the restricted G36 CXF profile subset.
 
-mod bless;
+use crate::bless;
 
 use std::fmt::Write as _;
 use std::path::PathBuf;

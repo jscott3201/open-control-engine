@@ -6,7 +6,7 @@
 //! `0.8*looHys`, pre-grounded here to `0.008`. The reset targets and both Boolean-to-Real pairs
 //! use typed Real whole-number literals so their exact IEEE-754 encodings remain observable.
 
-mod bless;
+use crate::bless;
 
 use std::collections::BTreeSet;
 use std::fmt::Write as _;

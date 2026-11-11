@@ -1,6 +1,6 @@
 //! Source-verified G36 OutdoorAirFlow ASHRAE 62.1 AHU composite import tests.
 
-mod bless;
+use crate::bless;
 
 use std::fmt::Write as _;
 use std::path::PathBuf;

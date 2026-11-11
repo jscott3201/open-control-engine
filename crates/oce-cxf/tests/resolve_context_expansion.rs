@@ -1,7 +1,7 @@
 //! `@context` expansion at resolve: compact and expanded spellings key the same model, and an
 //! identity token the document cannot canonicalize is a typed refusal, never a silent miskey.
 
-mod render;
+use crate::render;
 
 use oce_cxf::{CxfError, ResolveOptions, import_cxf};
 use oce_diag::{DiagCode, Diagnostic};

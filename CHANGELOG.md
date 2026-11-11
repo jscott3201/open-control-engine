@@ -1091,6 +1091,36 @@ and a gate that accepted any text would restore exactly the false assurance desc
   listed before are all listed after under the same file and test names, plus the six layout
   tests. No source, fixture or golden changed.
 
+- **`oce-cxf`'s integration tests build as 12 binaries instead of 79, and its release test build
+  takes about a third of the time** (GitHub #549, issue #504; the third crate after `oce-api` and
+  `oce-author`). `crates/oce-cxf/Cargo.toml` sets `autotests = false` and lists the targets:
+  `exchange` holds 68 files as modules, and `fixture_port_order`, `fixture_structural_oracle`,
+  `export_golden`, `export_declared_input_attrs`, `composite_contract_corpus`,
+  `composite_contract_doc`, `resolve_golden`, `resolve_array`, `resolve_array_expression`,
+  `vendored_corpus_delta` and `parameter_grounding_corpus` stay their own binaries, because
+  `.agents/gate.sh` (`binary(..)`), a document, a recorded command or the file's own bless command
+  selects each by name. No selector changed. Of the 38 files that declared `mod bless;`, the 29 now
+  in `exchange` say `use crate::bless;` on the same line, and the four that declared `mod render;`
+  say `use crate::render;`, with both helpers declared once in `tests/exchange.rs`; no line moved,
+  so the line anchors into this crate's tests still hold, and no test body changed.
+  `open_modelica_reliefs_windows_boundary.rs` keeps its `#![cfg(windows)]`, which now gates the
+  module: it compiles into `exchange` on Windows only, and the Windows cell in `release-gate.yml`
+  runs that binary. A test in a merged file is now `oce-cxf::exchange <file>::<test>`; select one
+  file with `-E 'test(/^<file>::/)'`. The layout check (`tests/binary_layout/`) is adapted from
+  GitHub #551's and closes the gaps its review found: it follows the helper directories a
+  declaration reaches, resolves a plain `mod` in a `#[path]` file as the compiler does, refuses a
+  `cfg_attr` path and a declaration inside braces instead of guessing, counts a `cfg`-gated
+  declaration as compiled on purpose, and accepts only `autotests = false` exactly. No test sets a
+  global allocator, an environment variable, a static or the working directory; each golden a
+  bless run writes is written by one file and read by no other, the one temporary directory is
+  named for the process and used by one test, and the `git ls-files` call only reads, so none
+  changes meaning in a shared binary or under plain `cargo test`, and an `OCE_BLESS=1` run of the
+  merged binary rewrites every golden byte-identically. Measured on one 10-core arm64 Mac from a
+  removed `target/`, `cargo nextest run -p oce-cxf --locked --no-run`: release 191 s to 60 s wall
+  (1,424 s to 298 s of CPU) and `target/` 276 MiB to 123 MiB; debug 15.8 s to 8.3 s and
+  1.32 GiB to 642 MiB. The 1,001 tests listed before are all listed after under the same file and
+  test names, plus the eight layout tests. No source, fixture or golden changed.
+
 ### Documentation
 
 - **The facade migration page is retired, with the other prose the format reset made false**

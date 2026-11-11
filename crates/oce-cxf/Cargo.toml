@@ -8,6 +8,9 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
+# The integration tests are twelve binaries instead of one per file; the `[[test]]` targets at the
+# end of this file name them (GitHub #504).
+autotests = false
 
 [lints]
 workspace = true
@@ -33,3 +36,68 @@ rustix = { workspace = true }
 
 [target.'cfg(windows)'.dev-dependencies]
 winapi-util = "0.1.11"
+
+# Integration-test binaries. Cargo's default builds every file under `tests/` as its own binary, and
+# under the release profile (`lto = "thin"`, `codegen-units = 1`) each one links the whole
+# dependency graph again (GitHub #504). Every file not named below is a module of `exchange`, and
+# `tests/exchange.rs` fails when a file is in no binary or in two.
+[[test]]
+name = "exchange"
+path = "tests/exchange.rs"
+
+# The binaries below are selected by name and stay their own.
+
+# `.agents/gate.sh` runs `binary(fixture_port_order)`, and `TESTING.md` gives the same selector.
+[[test]]
+name = "fixture_port_order"
+path = "tests/fixture_port_order.rs"
+
+# `.agents/gate.sh` runs `binary(fixture_structural_oracle)`; the recorded NAND mutation log
+# (`crates/oce-conformance/tests/fixtures/open_modelica/logical_nand/projection-mutation.log`, a
+# fixture), `tools/reference-catalog/README.md` and the binary's own failure messages give
+# `--test fixture_structural_oracle`.
+[[test]]
+name = "fixture_structural_oracle"
+path = "tests/fixture_structural_oracle.rs"
+
+# `.agents/project-facts.md` gives the bless command of each of these two by binary name.
+[[test]]
+name = "export_golden"
+path = "tests/export_golden.rs"
+
+[[test]]
+name = "export_declared_input_attrs"
+path = "tests/export_declared_input_attrs.rs"
+
+# `docs/cxf-composite-subset.md` and `tests/fixtures/composite_contract/README.md` give
+# `--test composite_contract_corpus`, and `composite_contract_doc` pins that command.
+[[test]]
+name = "composite_contract_corpus"
+path = "tests/composite_contract_corpus.rs"
+
+# `docs/cxf-composite-subset.md` gives `--test composite_contract_doc`.
+[[test]]
+name = "composite_contract_doc"
+path = "tests/composite_contract_doc.rs"
+
+# The file's own header gives the bless command of each of these by binary name (`resolve_golden`
+# also in a test's comment, and `vendored_corpus_delta` in the expectations module it generates).
+[[test]]
+name = "resolve_golden"
+path = "tests/resolve_golden.rs"
+
+[[test]]
+name = "resolve_array"
+path = "tests/resolve_array.rs"
+
+[[test]]
+name = "resolve_array_expression"
+path = "tests/resolve_array_expression.rs"
+
+[[test]]
+name = "vendored_corpus_delta"
+path = "tests/vendored_corpus_delta.rs"
+
+[[test]]
+name = "parameter_grounding_corpus"
+path = "tests/parameter_grounding_corpus.rs"

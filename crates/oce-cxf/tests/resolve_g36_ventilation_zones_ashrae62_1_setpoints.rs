@@ -5,7 +5,7 @@
 //! the 34 active source blocks and 61 active source connections. Whole-number Real bindings stay
 //! explicitly typed so resolver grounding cannot silently turn them into Integers.
 
-mod bless;
+use crate::bless;
 
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
