@@ -21,12 +21,12 @@
 
 #![allow(clippy::print_stdout)] // The census table is the evidence the PR pastes.
 
-#[path = "support/blob_corpus.rs"]
-mod blob_corpus;
-#[path = "support/dual_entry.rs"]
-mod dual_entry;
-#[path = "../../oce-graph/tests/support/frame_schedule.rs"]
-mod frame_schedule;
+// Shared helpers, declared once for this binary in its root `facade_allocation_census.rs`:
+// `support/blob_corpus.rs`, `support/dual_entry.rs`
+// and `../../oce-graph/tests/support/frame_schedule.rs`.
+use crate::blob_corpus;
+use crate::dual_entry;
+use crate::frame_schedule;
 
 use std::hint::black_box;
 

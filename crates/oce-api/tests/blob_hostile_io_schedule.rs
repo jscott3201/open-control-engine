@@ -2,10 +2,10 @@
 //! outputs, bounds, emit-before (including a stateful block that feeds through), initial-state
 //! CRCs, the state budget, and the target-bound flag. Every defect is a typed refusal.
 
-#[path = "support/blob_image.rs"]
-mod blob_image;
-#[path = "support/blob_models.rs"]
-mod blob_models;
+// Shared helpers, declared once for this binary in its root `facade.rs`:
+// `support/blob_image.rs` and `support/blob_models.rs`.
+use crate::blob_image;
+use crate::blob_models;
 
 use std::sync::Arc;
 

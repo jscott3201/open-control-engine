@@ -1,6 +1,6 @@
 //! Public-only host composition of accepted-frame replay records. No implementation crate access.
 
-mod replay_oracle;
+use crate::replay_oracle; // Shared helper, declared once in the binary root.
 
 use allocation_counter::measure;
 use oce_api::{

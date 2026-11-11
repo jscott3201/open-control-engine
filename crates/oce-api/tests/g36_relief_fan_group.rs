@@ -1,8 +1,8 @@
 //! ASHRAE G36 ReliefFanGroup HostTick v1 replay through the frozen facade.
 
 use oce_api::{Engine, Value};
-#[path = "support/frame_trace.rs"]
-mod frame_trace;
+// Shared helper, declared once for this binary in its root `facade.rs`.
+use crate::frame_trace;
 use frame_trace::FrameRun;
 
 const RELIEF_FAN_GROUP: &str =

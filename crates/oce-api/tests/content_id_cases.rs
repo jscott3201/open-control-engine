@@ -2,8 +2,8 @@
 //! output, names that collide or end in a delimiter, a boundary type change, the refusals, and
 //! the largest corpus encoding.
 
-#[path = "support/content_id_corpus.rs"]
-mod corpus;
+// Shared helper, declared once for this binary in its root `facade.rs`.
+use crate::content_id_corpus as corpus;
 
 use corpus::*;
 use oce_api::{Engine, EngineStateError, OcError, Value};

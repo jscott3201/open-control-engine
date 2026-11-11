@@ -1,6 +1,6 @@
 //! Independent wire corpus and deterministic allocation-free rejection of hostile records.
 
-mod replay_oracle;
+use crate::replay_oracle; // Shared helper, declared once in the binary root.
 
 use allocation_counter::measure;
 use oce_api::{

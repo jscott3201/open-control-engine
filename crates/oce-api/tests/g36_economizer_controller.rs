@@ -1,8 +1,8 @@
 //! Source-verified ASHRAE G36 Economizers.Controller restricted variant through the frozen facade.
 
 use oce_api::{Engine, Value};
-#[path = "support/frame_trace.rs"]
-mod frame_trace;
+// Shared helper, declared once for this binary in its root `facade.rs`.
+use crate::frame_trace;
 use frame_trace::FrameRun;
 
 const ECONOMIZER_CONTROLLER: &str = include_str!(

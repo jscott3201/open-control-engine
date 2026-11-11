@@ -3,10 +3,10 @@
 //! refuse. Every one is a typed refusal naming the index it concerns; positive controls show each
 //! hand-built model decodes when correct.
 
-#[path = "support/blob_image.rs"]
-mod blob_image;
-#[path = "support/blob_models.rs"]
-mod blob_models;
+// Shared helpers, declared once for this binary in its root `facade.rs`:
+// `support/blob_image.rs` and `support/blob_models.rs`.
+use crate::blob_image;
+use crate::blob_models;
 
 use blob_image::{Image, VType, Val};
 use blob_models::{adder, chain, class, delay, input, inst, refusal};

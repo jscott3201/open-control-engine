@@ -7,10 +7,10 @@
 //! re-encoded and must decode again. `OCE_BLOB_FUZZ_CASES` overrides the case count (default
 //! 10,000) and `OCE_BLOB_FUZZ_SEED` the seed.
 
-#[path = "support/blob_corpus.rs"]
-mod blob_corpus;
-#[path = "support/blob_image.rs"]
-mod blob_image;
+// Shared helpers, declared once for this binary in its root `facade.rs`:
+// `support/blob_corpus.rs` and `support/blob_image.rs`.
+use crate::blob_corpus;
+use crate::blob_image;
 
 use blob_corpus::{FIXTURES, golden};
 use blob_image::rechecksum;

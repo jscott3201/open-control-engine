@@ -5,8 +5,8 @@
 //! input bound tightened and a parameter binding removed each move the canonical content id, and
 //! no two variants of one document share an id.
 
-#[path = "support/content_id_corpus.rs"]
-mod corpus;
+// Shared helper, declared once for this binary in its root `facade.rs`.
+use crate::content_id_corpus as corpus;
 
 use std::collections::{BTreeMap, BTreeSet};
 

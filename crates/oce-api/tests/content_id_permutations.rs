@@ -3,8 +3,8 @@
 //! `member_list_interface`) that loads to the same ground values keeps the canonical content id,
 //! and a complete export round-trips to byte-identical canonical bytes. No RNG.
 
-#[path = "support/content_id_corpus.rs"]
-mod corpus;
+// Shared helper, declared once for this binary in its root `facade.rs`.
+use crate::content_id_corpus as corpus;
 
 use std::collections::{BTreeMap, BTreeSet};
 
