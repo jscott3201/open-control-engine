@@ -5,7 +5,8 @@
 //! the pinned list exactly between them.
 //!
 //! The frame budget is pinned at its bound: at the limit a run is accepted, one frame past it is
-//! refused before any frame runs.
+//! refused before any frame runs. The other three budgets are pinned at their bounds in
+//! `tests/work_budgets.rs`.
 
 mod support;
 
@@ -37,6 +38,9 @@ const PINNED: &[&str] = &[
     "enum-port-unsupported",
     "unsupported-port-type",
     "too-many-frames",
+    "too-many-instants",
+    "too-many-load-bytes",
+    "too-many-frame-bytes",
     "mutant-missing",
     "mutant-unlisted",
     "duplicate-mutant",
@@ -210,6 +214,45 @@ fn cases() -> Vec<(
                 &ahu,
                 &with_limits(VerifyLimits {
                     max_total_frames: 216,
+                    ..VerifyLimits::MAX
+                }),
+            ),
+        ),
+        // AHU-0016's set compares 216 instants and loads its 5,985-byte rule 8 times (47,880
+        // bytes) for 217 frames (1,298,745 byte-frames); `tests/work_budgets.rs` pins each budget
+        // at its bound.
+        (
+            "too-many-instants",
+            "scenarios".to_owned(),
+            run_with(
+                &String::from_utf8(library_vectors("AHU-0016")).expect("UTF-8"),
+                &ahu,
+                &with_limits(VerifyLimits {
+                    max_total_instants: 215,
+                    ..VerifyLimits::MAX
+                }),
+            ),
+        ),
+        (
+            "too-many-load-bytes",
+            "scenarios".to_owned(),
+            run_with(
+                &String::from_utf8(library_vectors("AHU-0016")).expect("UTF-8"),
+                &ahu,
+                &with_limits(VerifyLimits {
+                    max_total_load_bytes: 47_879,
+                    ..VerifyLimits::MAX
+                }),
+            ),
+        ),
+        (
+            "too-many-frame-bytes",
+            "scenarios".to_owned(),
+            run_with(
+                &String::from_utf8(library_vectors("AHU-0016")).expect("UTF-8"),
+                &ahu,
+                &with_limits(VerifyLimits {
+                    max_total_frame_bytes: 1_298_744,
                     ..VerifyLimits::MAX
                 }),
             ),

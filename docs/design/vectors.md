@@ -9,7 +9,8 @@ the owner on 2026-11-09 (see [Review rulings](#review-rulings)); the note is ame
 Decisions 1 to 19 answer the format half of the issue's outline in its order, decisions 20 to 37
 the replayer half (outline item *n* is decision 19 + *n*). Nothing here is built. *(2026-11-09:
 part 1 of 4, the format, landed in GitHub #541. 2026-11-10: part 2 of 4, binding, the run and the
-receipt, landed in GitHub #558. 2026-11-11: part 3 of 4, mutant mode, landed in GitHub #565.)*
+receipt, landed in GitHub #558. 2026-11-11: part 3 of 4, mutant mode, landed in GitHub #565, and
+the work budgets of the [work-budget note](vector-work-budget.md) (#561) in GitHub #570.)*
 
 **The version rule, in one sentence.** The format is `oce/vectors/v1` and stays `v1` until 1.0.0: a
 change is made in place, in the PR that rewrites every in-repo fixture and golden, and nothing
@@ -222,12 +223,19 @@ scenario runs. Any failure is an error (exit 2, no receipt), never a failed scen
    `FrameSlots::output_types()`. That last accessor is #460; today `outputs()` is paths only and a
    type exists only after the first accepted frame, which is why #460 moves into M3. *(2026-11-09:
    the accessor landed in GitHub #525.)*
-4. **Parameters.** Each scenario's effective edits are resolved and ordered (decision 14).
-   *(Amended 2026-11-10, owner ruling with GitHub #558:)* and tried, on a freshly loaded engine
-   per scenario, by the passes of decision 14, so `param-refused` is found here, before any frame
-   of any scenario runs (reading 8).
-5. **Mutants.** Every listed mutant is loaded and validated ([Mutant mode](#mutant-mode)).
-6. **Frames.** `(N + 1) * scenarios * (1 + mutants)` must fit `VerifyLimits::max_total_frames`.
+4. **Budgets.** *(Amended 2026-11-11, the [work-budget note](vector-work-budget.md), GitHub
+   #570.)* Four products must fit their `VerifyLimits` fields, checked in this order: frames
+   `(N + 1) * scenarios * (1 + mutants)` (`max_total_frames`), compared instants
+   (`max_total_instants`), bytes loaded (`max_total_load_bytes`) and byte-frames
+   (`max_total_frame_bytes`). They are arithmetic on steps 1 to 3, so they come before every load
+   but the subject's first, and before the parameter trial.
+5. **Parameters.** Each scenario's effective edits are resolved and ordered (decision 14).
+   *(Amended 2026-11-10, owner ruling with GitHub #558:)* and tried, on a freshly loaded engine,
+   by the passes of decision 14, so `param-refused` is found here, before any frame of any
+   scenario runs (reading 8). *(Amended 2026-11-11, work-budget ruling 7:)* each distinct effective
+   edit list is tried once, in the order of the first scenario that has it, and a refusal names
+   that scenario.
+6. **Mutants.** Every listed mutant is loaded and validated ([Mutant mode](#mutant-mode)).
 
 Each scenario then runs on a **freshly loaded engine**: load, apply its parameter edits, then one
 `Replay` over a `StepSource` built with
@@ -460,6 +468,7 @@ receipt.
 | `value-type-mismatch`, `value-not-representable` | bind | a JSON value its port or parameter type cannot take |
 | `enum-port-unsupported`, `unsupported-port-type` | bind | an Enum boundary input or output (until #465), a String port |
 | `too-many-frames` | bind | the total frame budget |
+| `too-many-instants`, `too-many-load-bytes`, `too-many-frame-bytes` | bind | the compared-instant, load-byte and byte-frame budgets, checked after the frame budget in that order *(added 2026-11-11, [work-budget note](vector-work-budget.md))* |
 | `mutant-missing`, `mutant-unlisted`, `too-many-mutant-bytes` | bind | mutant bytes not supplied, supplied without a listing, or past the total byte bound |
 | `mutant-load-failed`, `mutant-boundary-differs`, `mutant-identical` | bind | an invalid mutant |
 | `mutant-param-refused` | bind | a mutant that refuses a parameter edit the subject admits, with the cause `param-range`, `param-type`, `param-structural` or `param-path-unknown` *(added 2026-11-11, owner ruling with part 3)* |
@@ -499,7 +508,9 @@ pub struct VerifyLimits { pub max_bytes: u64, pub max_ticks: u64, pub max_scenar
                           pub max_expectations: u32, pub max_parameters: u32,
                           pub max_mutants: u32, pub max_mutant_bytes: u64,
                           pub max_recorded_failures: u32, pub max_recorded_warnings: u32,
-                          pub max_total_frames: u64, pub replay: oce_replay::ReplayLimits }
+                          pub max_total_frames: u64, pub max_total_instants: u64,
+                          pub max_total_load_bytes: u64, pub max_total_frame_bytes: u64,
+                          pub replay: oce_replay::ReplayLimits }
 
 /// `Err` for every load, bind and run refusal, an invalid mutant included; then no receipt.
 pub fn run_vectors(set: &VectorSet, inputs: &VectorInputs<'_>, options: &VerifyOptions)
@@ -858,6 +869,9 @@ rule.)*
 bytes, ticks, scenarios, expectations, parameters, mutants, mutant bytes, recorded failures and
 warnings, and `max_total_frames` 16,777,216 across scenarios and mutants. Lower-only, each a typed
 error pinned at its boundary; the tick bound is checked at load, before any engine exists.
+*(Amended 2026-11-11, the [work-budget note](vector-work-budget.md):)* beside the frame budget,
+`max_total_instants` 2^28, `max_total_load_bytes` 2^30 and `max_total_frame_bytes` 2^40, each
+also lower-only.
 
 **36. `oce check` does not return in part 4.** The receipt defines no load report. What binding
 needs (inputs with types and bounds, outputs, parameters) is what `oce check` should print, so it
@@ -1073,16 +1087,20 @@ consistent with the note. They are normative from here, so parts 3 and 4 inherit
    and two expectations take one each.
 8. **`param-refused` is found at bind** *(ruled by the owner).* Binding tries every scenario's
    effective edits, in file order, on a freshly loaded engine by decision 14's passes, before any
-   frame of any scenario runs. The run applies the same edits to the scenario's own fresh engine
-   by the same passes. For part 3: a mutant's run applies the same edits; a mutant whose class
-   rules refuse an edit the subject admits is an invalid mutant, found at bind *(ruled
-   2026-11-11; [part 3's readings](#part-3s-readings))*.
+   frame of any scenario runs. *(Amended 2026-11-11, work-budget ruling 7: each distinct effective
+   edit list is tried once, in the order of the first scenario that has it. That scenario is the
+   one a refusal names either way, so no refusal or receipt byte changes.)* The run applies the
+   same edits to the scenario's own fresh engine by the same passes. For part 3: a mutant's run
+   applies the same edits; a mutant whose class rules refuse an edit the subject admits is an
+   invalid mutant, found at bind *(ruled 2026-11-11; [part 3's readings](#part-3s-readings))*.
 9. **Bind order.** Load, then the boundary ports (an Enum or String port, judged before any name
    because it is a property of the subject alone), then the set's `params`, then each scenario in
    file order (its inputs, the inputs it does not supply, its expectations, its `params`), then
    the parameter trial (reading 8), then the frame budget. The first refusal wins. *(2026-11-11,
    owner ruling with part 3: the mutants are validated after the frame budget; see
-   [part 3's readings](#part-3s-readings).)*
+   [part 3's readings](#part-3s-readings). Amended 2026-11-11, work-budget ruling 6: the four
+   budgets, the frame budget first, come after the names and values and before the parameter
+   trial, so an over-budget set is refused even when the subject would refuse its edits.)*
 10. **API beyond the sketch.** `Receipt::computed_receipt_id`, the closed `ReceiptValue`
     (Real, Integer or Boolean) a receipt records, `ENGINE_REFUSAL_CLASSES` and
     `engine_refusal_class`, `MAX_LOAD_WARNINGS`, and `VerifyError`'s `path`, `candidates`, `cause`
@@ -1094,7 +1112,8 @@ never push it out; `failures_total` is unchanged. With a cap of zero no record i
 
 Two points the review raised are left as they are and tracked: the receipt does not record the
 caps it was written under (#563), and nothing bounds the total work of a run, instants and subject
-loads included (#561, which part 4 waits for).
+loads included (#561, which part 4 waits for). *(2026-11-11: the second is closed by the
+[work-budget note](vector-work-budget.md), built in GitHub #570.)*
 
 ### Part 3's readings
 
@@ -1126,7 +1145,9 @@ arithmetic on the listed count, `(N + 1) * scenarios * (1 + mutants)`, so it is 
 any mutant's bytes are judged, loaded or given an edit: a set over the budget is
 `too-many-frames` whatever its mutants hold, and loads none of them. Bind order (part 2's
 reading 9) becomes: load, the boundary ports, the names and values, the parameter trial, the
-frame budget, then the mutants (reading 1).
+frame budget, then the mutants (reading 1). *(Amended 2026-11-11, work-budget ruling 6: the four
+budgets, the frame budget first, now come before the parameter trial, and the mutants after
+both.)*
 
 **Mutant paths that alias one file** *(ruled by the owner, 2026-11-11).* The format's path rule
 stays as it is (decision 28: `/`-separated, no empty, `.` or `..` segment, no backslash). Part 4's
@@ -1138,7 +1159,8 @@ all pass it. Issue #522 carries the requirement.
 
 1. **Validation order** *(for confirmation; changes which code wins when a run has several
    defects).* After the subject's own checks, its `param-refused` included, and the frame budget
-   (the ruling above):
+   (the ruling above). *(Amended 2026-11-11: after the four work budgets and then the subject's
+   `param-refused`; [work-budget note](vector-work-budget.md), ruling 6.)*
    - The bytes given, in the order given: a path the set does not list is `mutant-unlisted`, a
      path given twice `duplicate-mutant` (reading 2). Of two such defects, the one given first
      wins.
@@ -1164,7 +1186,8 @@ all pass it. Issue #522 carries the requirement.
    - a scenario that checks nothing on a mutant is not a failure;
    - `"mutants": []` writes no section;
    - a mutant's warnings and frames are not recorded;
-   - the frame budget counts every mutant as if it ran every scenario;
+   - the frame budget counts every mutant as if it ran every scenario *(2026-11-11: so do the
+     instant, load-byte and byte-frame budgets, which also count every supplied mutant's bytes)*;
    - *(2026-11-11)* a mutant that differs from the subject only where the set's own edits
      overwrite it (the edited value baked into the mutant) is valid, since its content id
      differs, and survives, since every scenario runs it with the subject's values: the vectors

@@ -134,7 +134,10 @@ measured against.
 | `VerifyLimits::max_parameters` | 256 per map | `too-many-parameters` | it bounds the passes that order parameter edits (note decision 14) |
 | `VerifyLimits::max_mutants` | 256 | `too-many-mutants` | the bound on the receipt's mutant entries |
 | `VerifyLimits::max_mutant_bytes` | 64 MiB, all mutants together | `too-many-mutant-bytes`, at bind, before any mutant loads | 256 mutants are never 2 GiB in memory; each one is also held to the engine's own `MAX_CXF_BYTES` |
-| `VerifyLimits::max_total_frames` | 16,777,216 | `too-many-frames` | `(N + 1) * scenarios` for the whole run, decided at bind before any frame runs |
+| `VerifyLimits::max_total_frames` | 2^24 = 16,777,216 | `too-many-frames` | `(N + 1) * scenarios * (1 + mutants)` for the whole run, at bind's budget step; the library's largest set runs 23,337 |
+| `VerifyLimits::max_total_instants` | 2^28 = 268,435,456 | `too-many-instants` | `(1 + mutants)` times every window's ticks and every diagnostic, at the budget step; the library's largest set compares 41,488 (the work-budget note) |
+| `VerifyLimits::max_total_load_bytes` | 2^30 = 1,073,741,824 | `too-many-load-bytes` | the subject's and the supplied mutants' bytes times `1 + e + s` (`e` distinct edit lists, `s` scenarios), at the budget step; the library's largest is 847,757 |
+| `VerifyLimits::max_total_frame_bytes` | 2^40 = 1,099,511,627,776 | `too-many-frame-bytes` | `(N + 1) * s` times the same bytes, a frame weighted by the document that runs it, at the budget step; the library's largest is 426,133,620 |
 | `VerifyLimits::replay` | `ReplayLimits::MAX` | `too-many-frames` (its `max_frames` against one scenario's `N + 1`, at bind), else `replay-failed` | the limits each scenario's replay runs under |
 | `VerifyLimits::max_recorded_failures` | 16 per scenario | none: the list stops, `failures_total` keeps the count | the note's failure-record cap |
 | `VerifyLimits::max_recorded_warnings` | 16 per scenario | none: the list stops, `warnings_total` keeps the count | the note's warning-row cap |
@@ -153,11 +156,14 @@ is found, and `tests/load_cost.rs` pins the factor with `allocation-counter`: at
 held per document byte for the densest shape the format has (a map of one-byte constants), 4 for
 step lists and windows.
 
-**Running** a set is not linear in the document. Its work grows with the frames it executes
-(bounded by `max_total_frames`), with the instants it compares (each window's ticks and each
-diagnostic, up to the frames of a scenario times its expectations, which no limit bounds yet) and
-with the subject loads (one at bind, one per scenario with parameter edits to try them, one per
-scenario to run it). #561 tracks a bound on that total work. Its memory is bounded: a run holds one
+**Running** a set is not linear in the document. Its work grows with the frames it executes,
+weighted by the bytes of the document that runs them, with the instants it compares and with the
+loads it makes: one at bind, one per distinct edit list to try it, one per scenario to run it, on
+the subject and on each mutant. The four budgets bound each of these as an upper bound, checked in
+one step at bind before any load but the subject's first (the
+[work-budget note](../../../docs/design/vector-work-budget.md)). At the defaults the worst a set
+can ask for is about a minute in `release` on an Apple M5, against hours before #561; the
+library's sets sit 700x to 6,500x under every default. Its memory is bounded: a run holds one
 scenario's trace at a time (unless `keep_traces` asks for all of them), and each expectation keeps
 at most the cap of its own earliest failure records, so the receipt's size is bounded by the caps,
 not by the number of ticks checked.
@@ -243,12 +249,25 @@ In order, the first refusal winning:
    `+0.0`, `-0.0` with its sign), an Integer an integer token only (`1.0` is refused), a Boolean
    `true` or `false`, a String or Enum parameter nothing. A scenario's `params` override the set's
    by resolved path, whatever either spelling was.
-4. **The parameter edits**: each scenario's effective edits are tried on a freshly loaded engine
-   by the passes the run uses (below), so an edit no pass admits is `param-refused` here, before
-   any frame of any scenario runs.
-5. **The frame budget**: `(N + 1) * scenarios * (1 + mutants)` frames against
-   `VerifyLimits::max_total_frames`, and `N + 1` against the replay limits' `max_frames`. It is
-   arithmetic on the listed count, so a set over it loads no mutant (owner ruling, 2026-11-11).
+4. **The work budgets** (the [work-budget note](../../../docs/design/vector-work-budget.md)), in
+   this order, the first exceeded winning; each counts every mutant as if it ran every scenario:
+   - frames, `(N + 1) * scenarios * (1 + mutants)`, against `max_total_frames`, after one
+     scenario's `N + 1` against the replay limits' `max_frames`;
+   - compared instants, `(1 + mutants)` times every window's ticks and every diagnostic, against
+     `max_total_instants`;
+   - bytes loaded, `D * (1 + e + s)`, against `max_total_load_bytes`, with `D` the subject's and
+     every supplied mutant's bytes, `e` the distinct non-empty edit lists and `s` the scenarios;
+   - byte-frames, `(N + 1) * s * D`, against `max_total_frame_bytes`.
+
+   Each product is taken in `u128` with checked multiplication, so a hostile count refuses and
+   never wraps. The step is arithmetic on steps 1 to 3, so it runs before every other load: an
+   over-budget set is refused even when the subject would refuse its edits, and it loads no
+   mutant.
+5. **The parameter edits**: each distinct effective edit list is tried once, in the order of the
+   first scenario that has it, on a freshly loaded engine by the passes the run uses (below), so
+   an edit no pass admits is `param-refused` here, at the first scenario holding it, before any
+   frame of any scenario runs. No class chains more than two parameters through its rules, so a
+   list takes at most two passes (`tests/parameter_trials.rs` pins it against the catalog).
 6. **The mutants** ([below](#mutant-mode)): each one supplied, within the byte bound, loaded,
    held to the subject's boundary and content id, and given every edit list.
 
@@ -299,7 +318,8 @@ A replay that ends in an error is `replay-failed` with a cause from a closed tab
 | `param-refused` | an edit no pass admits, with its class in `VerifyError::cause` |
 | `value-type-mismatch`, `value-not-representable` | a value its port or parameter type cannot take |
 | `enum-port-unsupported`, `unsupported-port-type` | an Enum or a String boundary port |
-| `too-many-frames` | the frame budget |
+| `too-many-frames` | the frame budget, or one scenario's `N + 1` past the replay limits |
+| `too-many-instants`, `too-many-load-bytes`, `too-many-frame-bytes` | the compared-instant, load-byte and byte-frame budgets |
 | `mutant-missing`, `mutant-unlisted`, `duplicate-mutant` | mutant bytes not given, given for a path the set does not list, or given twice |
 | `too-many-mutant-bytes` | the mutants' bytes together |
 | `mutant-load-failed`, `mutant-boundary-differs`, `mutant-identical` | an invalid mutant: refused by the engine, another boundary, or the subject's content id |
@@ -322,8 +342,9 @@ reads files resolves each path, keeps it inside the vector file's directory and 
 listings that resolve to one file (owner ruling of 2026-11-11, for part 4's CLI): the format's
 lexical path rule cannot see every alias.
 
-**Validation**, at bind, after the frame budget and before any frame runs. An invalid mutant is an
-error with no receipt; there is no `invalid` status. In this order:
+**Validation**, at bind, after the work budgets and the subject's parameter trials and before any
+frame runs. An invalid mutant is an error with no receipt; there is no `invalid` status. In this
+order:
 
 1. every path given is listed, and given once (`mutant-unlisted`, `duplicate-mutant`);
 2. every listed mutant is given (`mutant-missing`);
@@ -349,10 +370,11 @@ error with no receipt; there is no `invalid` status. In this order:
 
 The score is `caught` and `total`, with `survived`, never a ratio, and it never changes `passed`.
 
-**Cost.** Mutant mode multiplies the work #561 describes:
+**Cost.** Mutant mode multiplies a run's work, and the four budgets count it all:
 - validation loads each mutant once, plus once per distinct edit list;
 - scoring runs up to every scenario on every mutant: `(N + 1) * scenarios * mutants` more frames,
-  and as many fresh loads, inside the one frame budget.
+  and as many fresh loads, each weighted by the mutant's bytes in the load-byte and byte-frame
+  budgets.
 
 ## The receipt
 
