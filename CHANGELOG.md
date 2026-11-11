@@ -453,7 +453,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
-- **The authoring provenance statement is `derived_from`, no longer `extends`** (GitHub #PRNUM,
+- **The authoring provenance statement is `derived_from`, no longer `extends`** (GitHub #580,
   issue #529; [authoring note](docs/design/authoring-layer.md), decision 5 as amended; owner
   ruling of 2026-11-09). CDL uses `extends` for inheritance of a composite block with
   modifications (OBC specification §7.15), which M7's composite instantiation needs, so the word
