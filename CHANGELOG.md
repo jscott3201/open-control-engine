@@ -1448,6 +1448,24 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Documentation
 
+- **Design note for bounding a vector run's work** (GitHub #568, issue #561), ruled by the owner
+  on 2026-11-11, with no code. `docs/design/vector-work-budget.md` bounds one `run_vectors` call
+  with four budgets, each a simple product:
+  - frames (`max_total_frames`, kept at 2^24);
+  - compared instants (`max_total_instants`, 2^28);
+  - bytes loaded at bind and while scoring mutants (`max_total_load_bytes`, 2^30);
+  - frames weighted by document bytes (`max_total_frame_bytes`, 2^40).
+
+  The budgets are checked in one step at bind, after the subject's first load and its name
+  resolution and before every other load, so `too-many-frames` now wins over `param-refused`. Each
+  refuses with its own code. They are lower-only, as decision 35 states for every limit, and the
+  receipt records none of them. The subject's parameter trials are deduplicated by distinct edit
+  list. Measured on 139 library and in-repo sets and on synthetic documents up to 8 MiB, today's
+  worst case is over 5 hours in `release`. At these defaults it is about one minute, and the
+  corpus sits 700x to 6,500x under them. The rejected alternatives are recorded with the ten
+  rulings; engine reuse through checkpoints is the follow-up #569, after part 4. The note is
+  registered in `docs/README.md` and the book. `docs/design/vectors.md` is amended by the
+  implementing PR, which closes #561, because a test reads it.
 - **The facade migration page is retired, with the other prose the format reset made false**
   (GitHub #542, issue #531). `docs/facade-migration.md` is deleted: nothing was published to migrate from, and
   its rows still stated diagnostics schema revisions 2 and 3, descriptor revisions advancing to 2
