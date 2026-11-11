@@ -60,6 +60,7 @@ mod declaration_scope;
 #[cfg(test)]
 mod declaration_scope_tests;
 mod diags;
+mod extension_blocks;
 mod instance_interface;
 mod instance_params;
 mod pass_through;
@@ -188,6 +189,12 @@ pub(crate) fn resolve(
         .map(|(id, (_, node))| (id, node))
         .collect();
     let (specialization, withheld) = specialize(doc, &by_id, &mut diags);
+    // --- Step 1b: an active extension block refuses the document before lowering reads its
+    // structure (see `extension_blocks`); the withheld findings are released on this path too.
+    if extension_blocks::refuse(doc, &specialization, &mut diags) {
+        withheld.emit_unvisited(&HashSet::new(), &mut diags);
+        return Err(CxfError::Validation(finalize_diags(diags, &HashMap::new())));
+    }
     array_nodes::reject_unsupported(doc, &specialization, &mut diags);
     let lowered = lower(doc, &by_id, &specialization, withheld, &mut diags);
     let doc = &lowered.doc;
@@ -266,7 +273,8 @@ pub(crate) fn resolve(
         };
         let id = BlockId(k as u32);
         block_of_iri.insert(child, id);
-        // IRI → class_path bridge + registry existence (ClassNotFound covers non-subset, e.g. PID).
+        // IRI → class_path bridge + registry existence (ClassNotFound covers non-subset, e.g. PID;
+        // an extension block never reaches here — Step 1b refused it).
         let class_path = match first_type(node) {
             Some(t) => bridge::class_path_of(t),
             None => {

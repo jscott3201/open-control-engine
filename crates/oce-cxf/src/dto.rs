@@ -222,7 +222,12 @@ pub struct Node {
         skip_serializing_if = "Option::is_none"
     )]
     pub size_dims: Option<String>,
-    /// `S231:hasFmuPath` — the FMU reference of an `ExtensionBlock` (§3.7).
+    /// `S231:hasFmuPath` — the path of the Functional Mockup Unit that implements an
+    /// `ExtensionBlock` (OBC §8.7; the property's domain is `ExtensionBlock` and its range a
+    /// string). The resolver reads only its presence: a node carrying it is an extension block,
+    /// and the import is refused with `extension-block-unsupported`. A value that is not a JSON
+    /// string fails [`crate::parse_document`], like any other modeled string property; JSON
+    /// `null` reads as absent.
     #[serde(
         rename = "S231:hasFmuPath",
         default,

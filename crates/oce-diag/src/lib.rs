@@ -75,9 +75,24 @@ pub enum DiagCode {
     /// An `@id` referenced by an edge / `hasInstance` / `containsBlock` / `isConnectedTo` /
     /// `isOfDataType` is absent from both the document and the libraries (§9.1.2).
     UnresolvedReference,
-    /// An instance's class IRI did not resolve to a registered block class, and it is not an
-    /// `ExtensionBlock` (§9.1.3).
+    /// An instance's class IRI did not resolve to a registered block class (§9.1.3): a class the
+    /// engine does not implement, such as `CDL.Reals.PID`, or one it cannot tell from the
+    /// document. An instance of an extension-block class whose definition the document does not
+    /// carry is such a class. A node the document itself marks as an extension block never
+    /// reaches the class lookup: it is refused first, with
+    /// [`DiagCode::ExtensionBlockUnsupported`].
     ClassNotFound,
+    /// The document contains a CDL extension block (OBC §7.13 and §8.7), whose behaviour is a
+    /// Functional Mockup Unit; the engine does not execute FMUs, and FMI is out of scope before
+    /// 1.0. Raised by the `oce-cxf` resolver, before composite lowering, for every active node
+    /// that is typed `S231:ExtensionBlock` (at any position of its `@type` list), carries
+    /// `S231:hasFmuPath` (whose domain is `ExtensionBlock`), or whose `@type` names such a node of
+    /// the same document, wherever it sits: the root, a child at any depth, or a node no
+    /// `containsBlock` edge reaches. Subject = the node's `@id`. It replaces the follow-on
+    /// diagnostics lowering would otherwise raise for the same node: `class-not-found` for a leaf,
+    /// `composite/root-count` for an extension-block root. A node pruned by a false conditional
+    /// guard is not refused.
+    ExtensionBlockUnsupported,
     /// An overlay node's trailing `.member` did not match a member of the owning instance (§9.1.4).
     OverlayTargetNotFound,
     /// A flattened array name (e.g. `A_1`) collided with an existing instance name (§9.1.7).
@@ -236,8 +251,6 @@ pub enum DiagCode {
     DisplayUnitDivergence,
     /// An `S231:Analog*` connector was coerced to `Real` (§8.2 coercion policy) — advisory.
     AnalogCoercedToReal,
-    /// An `ExtensionBlock` carried no `hasFmuPath` (§3.7, R-6) — advisory.
-    MissingFmuPath,
     /// An unknown `S231:` property key was preserved for forward-compatibility (§9) — advisory.
     UnknownProperty,
     /// A root-declared boundary output's node exists but no internal connector or boundary
@@ -272,6 +285,7 @@ impl DiagCode {
             DiagCode::MissingConnectorId => "missing-connector-id",
             DiagCode::UnresolvedReference => "unresolved-reference",
             DiagCode::ClassNotFound => "class-not-found",
+            DiagCode::ExtensionBlockUnsupported => "extension-block-unsupported",
             DiagCode::OverlayTargetNotFound => "overlay-target-not-found",
             DiagCode::ArrayFlattenCollision => "array-flatten-collision",
             DiagCode::GroundingFailed => "grounding-failed",
@@ -310,7 +324,6 @@ impl DiagCode {
             DiagCode::SharedInstance => "shared-instance",
             DiagCode::DisplayUnitDivergence => "display-unit-divergence",
             DiagCode::AnalogCoercedToReal => "analog-coerced-to-real",
-            DiagCode::MissingFmuPath => "missing-fmu-path",
             DiagCode::UnknownProperty => "unknown-property",
             DiagCode::UndrivenBoundaryOutput => "undriven-boundary-output",
             DiagCode::UnusedBoundaryInput => "unused-boundary-input",
@@ -439,6 +452,7 @@ mod tests {
         MissingConnectorId => "missing-connector-id",
         UnresolvedReference => "unresolved-reference",
         ClassNotFound => "class-not-found",
+        ExtensionBlockUnsupported => "extension-block-unsupported",
         OverlayTargetNotFound => "overlay-target-not-found",
         ArrayFlattenCollision => "array-flatten-collision",
         GroundingFailed => "grounding-failed",
@@ -477,7 +491,6 @@ mod tests {
         SharedInstance => "shared-instance",
         DisplayUnitDivergence => "display-unit-divergence",
         AnalogCoercedToReal => "analog-coerced-to-real",
-        MissingFmuPath => "missing-fmu-path",
         UnknownProperty => "unknown-property",
         UndrivenBoundaryOutput => "undriven-boundary-output",
         UnusedBoundaryInput => "unused-boundary-input",

@@ -53,13 +53,30 @@ ANSI/ASHRAE 231-2026 §5.9) that its CXF form names with `S231:hasFmuPath` (OBC 
 2026-11-09, GitHub issue #510). Every count on this page, and every use of "supported", is a claim
 about elementary and composite blocks. Extension blocks are outside it.
 
-At load an extension block is not a special case. This paragraph was read from the resolver's
-source; no fixture or test exercises an extension block, and a dedicated refusal code with
-fixtures is GitHub issue #537. The importer reads `S231:hasFmuPath` as a modeled property and
-nothing consumes it. An instance whose class is not in the registry and that contains no blocks is
-refused with `class-not-found`, like any other unregistered leaf
-([acceptance preconditions](cxf-composite-subset.md#acceptance-preconditions)). The diagnostic
-vocabulary reserves an advisory code, `missing-fmu-path`, that nothing emits today.
+A document that contains an extension block is refused at load with its own code,
+`extension-block-unsupported` (GitHub #PRNUM, issue #537). A node is an extension block when one
+of its `@type` values is `S231:ExtensionBlock` (at any position of the list, in any spelling of
+the namespace), when it carries `S231:hasFmuPath`, whose domain is `ExtensionBlock` (OBC §8.7),
+or when its `@type` names such a node of the same document. The refusal covers every active node
+wherever it sits: the root, a child at any depth, an extension block that lists children of its
+own, and a node no `containsBlock` edge reaches. It comes before composite lowering, so the
+document gets one error per extension block, subject the block's `@id`, and nothing else is
+reported for that block. A node pruned by a false conditional guard is not part of the schedule
+and is not refused ([active nodes](cxf-composite-subset.md#active-nodes)). An instance of an
+extension-block class whose definition the document does not carry cannot be told from any other
+unknown class and is still refused with `class-not-found`
+([acceptance preconditions](cxf-composite-subset.md#acceptance-preconditions)).
+
+Before the code, a leaf extension block was refused as `class-not-found` and an extension-block
+root with no children as `composite/root-count`, and four shapes loaded. An extension block that
+listed children, as the root or nested, was lowered as a composite, so those children ran in place
+of its FMU; an extension block that no `containsBlock` edge reached was ignored; a node typed
+`[<registered class>, S231:ExtensionBlock]` ran the registered class; and `S231:hasFmuPath` on a
+registered class was never read. The two fixtures are
+`crates/oce-cxf/tests/fixtures/invalid/extension_block_with_fmu_path.jsonld` and
+`extension_block_without_fmu_path.jsonld` beside it, and
+`crates/oce-cxf/tests/resolve_extension_blocks.rs` pins each position. The advisory code
+`missing-fmu-path`, which nothing ever emitted, is removed.
 
 ## The elementary-block registry
 

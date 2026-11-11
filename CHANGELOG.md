@@ -329,6 +329,31 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### CXF import and export
 
+- **A CDL extension block is refused at load with its own code, `extension-block-unsupported`,
+  and the dead `missing-fmu-path` code is removed** (GitHub #PRNUM, issue #537). An extension
+  block's behaviour is a Functional Mockup Unit (OBC §7.13 and §8.7), and FMI is out of scope
+  before 1.0. Before composite lowering, the resolver now refuses every active node typed
+  `S231:ExtensionBlock` (at any position of its `@type` list, in any spelling of the namespace),
+  carrying `S231:hasFmuPath` (whose domain is `ExtensionBlock`), or whose `@type` names such a
+  node of the same document, wherever it sits: the root, a child at any depth, an extension block
+  that lists children of its own, and a node no `containsBlock` edge reaches. Each gets one error
+  under the new `DiagCode::ExtensionBlockUnsupported`, subject its `@id`, and no follow-on
+  diagnostic; a node pruned by a false conditional guard is not refused, and the declaration
+  findings the specialize pass withheld are still reported on this path. **Breaking, in place:**
+  four shapes loaded before. An extension block that listed children, as the root or nested, was
+  lowered as a composite and its children ran in place of its FMU; one that no `containsBlock`
+  edge reached was ignored; `@type: [<registered class>, S231:ExtensionBlock]` ran the registered
+  class; and `S231:hasFmuPath` on a registered class was never read. A leaf extension block was
+  `class-not-found` and an extension-block root without children `composite/root-count`. An
+  instance of an extension-block class whose definition the document does not carry is still
+  `class-not-found`. `DiagCode::MissingFmuPath` (`missing-fmu-path`), an advisory that nothing
+  ever constructed, is removed (the workspace builds without the variant), the `ClassNotFound`
+  rustdoc no longer describes an `ExtensionBlock` check that no code made, and `Node::fmu_path`
+  gains its one reader. Two fixtures under `crates/oce-cxf/tests/fixtures/invalid/` and
+  `tests/resolve_extension_blocks.rs` pin each position, and `oce-api`'s conformance harness drives
+  both fixtures through `Engine::load_cxf`. Re-blessed: `fixture_corpus_import.txt` gains the two
+  fixtures' lines and its pinned count goes from 223 to 225; none of its existing 223 lines moved.
+  `tools/golden-gen/goldens`, the blob goldens and the content-id pin are unchanged.
 - **CXF is read and written in one vocabulary namespace, `http://data.ashrae.org/S231#`, and
   every exported document names the software that wrote it** (GitHub #543, issue #527; owner
   rulings of 2026-11-09 and 2026-11-10). The evidence for the namespace is public: the

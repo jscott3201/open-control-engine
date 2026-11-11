@@ -65,6 +65,7 @@ mod resolve_declaration_scope;
 mod resolve_declaration_scope_emission;
 mod resolve_declaration_strings;
 mod resolve_errors;
+mod resolve_extension_blocks;
 mod resolve_external_input_order;
 mod resolve_g36_air_economizer_high_limits;
 mod resolve_g36_cooling_only_active_air_flow;
