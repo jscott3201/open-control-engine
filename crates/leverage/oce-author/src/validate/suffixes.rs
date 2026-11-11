@@ -9,10 +9,12 @@
 //! unit, and on a sequence parameter (which never declares one), a base-unit suffix stays an
 //! annotation, as in M2, and a scaled one is refused, because nothing says what it scales to.
 //!
-//! Three things only a model built in code can hold are refused the same way, so a model stage 1
-//! accepts always prints and its annotation matches what is emitted: a suffix that is no unit
-//! expression, a suffix after a value that is not a number, and a scaled suffix, written number
-//! and value that do not agree (`delayTime = 1 h` with the value edited to `1.0`).
+//! Four things only a model built in code can hold are refused the same way, through the check
+//! the text printer runs ([`crate::text::agreement`]), so no suffix stops a model stage 1 accepts
+//! from printing and its annotation always matches what is emitted: a suffix longer than the
+//! 256-byte token bound, a suffix that is no unit expression, a suffix after a value that is not a
+//! number, and a scaled suffix, written number and value that do not agree (`delayTime = 1 h` with
+//! the value edited to `1.0`).
 
 use std::collections::BTreeMap;
 use std::sync::OnceLock;

@@ -184,14 +184,10 @@ fn bounds(b: &Boundary) -> Checked {
     Ok(())
 }
 
-/// A suffix within the token bound, and its agreement with the value and the written number a
-/// scaled suffix keeps ([`super::units::agreement`], which stage 1 runs too).
+/// A suffix's agreement with the value and the written number a scaled suffix keeps, its token
+/// bound included ([`super::units::agreement`], which stage 1 runs too, so no suffix stops a
+/// model stage 1 accepts from printing).
 fn suffix(value: &ParamValue, suffix: Option<&String>, scaled_from: Option<&Literal>) -> Checked {
-    if let Some(suffix) = suffix
-        && suffix.len() > MAX_TOKEN_BYTES
-    {
-        return Err(format!("the suffix is longer than {MAX_TOKEN_BYTES} bytes"));
-    }
     agreement(value, suffix.map(String::as_str), scaled_from)
 }
 

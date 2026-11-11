@@ -24,7 +24,7 @@ use oce_vocab::{ScaleFactor, scale_factor};
 
 use crate::model::{Literal, ParamValue};
 
-use super::codes::{MALFORMED_SUFFIX, UNIT_NOT_BASE};
+use super::codes::{MALFORMED_SUFFIX, MAX_TOKEN_BYTES, UNIT_NOT_BASE};
 
 /// The unit symbols a suffix may use: the SI base units and the coherent derived units with
 /// special names, none prefixed (`kg` is the base unit of mass).
@@ -121,8 +121,9 @@ fn factors<'a>(text: &'a str, symbols: &mut Vec<&'a str>) -> Result<(), &'static
 }
 
 /// Whether a value, its unit suffix and the written number a scaled suffix keeps agree, so the
-/// text form reads the printed value back as the same model: a suffix follows a number and is
-/// well formed; a base-unit suffix keeps no written number; a scaled suffix keeps a written
+/// text form reads the printed value back as the same model: a suffix is at most
+/// [`MAX_TOKEN_BYTES`] bytes (the lexer's token bound), follows a number and is well formed; a
+/// base-unit suffix keeps no written number; a scaled suffix keeps a written
 /// number that [`scale`]s to exactly the value, a Real, bit for bit; and no written number stands
 /// without its scaled suffix. The text printer refuses a model that breaks one
 /// ([`crate::PrintError::Unspellable`]) and stage 1 reports it as `unit-suffix-mismatch`, so a
@@ -142,6 +143,12 @@ pub(crate) fn agreement(
             None => Ok(()),
         };
     };
+    if suffix.len() > MAX_TOKEN_BYTES {
+        return Err(format!(
+            "the suffix is {} bytes; a token is at most {MAX_TOKEN_BYTES}",
+            suffix.len()
+        ));
+    }
     if !matches!(
         value,
         ParamValue::Literal(Literal::Integer(_) | Literal::Real(_))
@@ -224,7 +231,10 @@ fn spelling(literal: &Literal) -> String {
 /// number past 2^53 scale differently: `9007199254740993 min` is `540431955284459584.0` s, while
 /// `9007199254740993.0 min` parses to 2^53 first and is `540431955284459520.0` s. A scaled Integer
 /// past 2^53 is accepted although the same Integer unscaled on a Real parameter is
-/// `parameter-out-of-range`, because a scaled value is a rounded Real by construction.
+/// `parameter-out-of-range`, because a scaled value is a rounded Real by construction. At the top
+/// of the range the double rounding can refuse a value: a literal whose typed digits' exact
+/// product rounds to `f64::MAX` can scale, through its shortest decimal, past it, and is then
+/// `non-finite-number` (`2.99615522477052631e306 min`).
 ///
 /// The sign is kept, so `-0.0 h` is `-0.0`.
 ///

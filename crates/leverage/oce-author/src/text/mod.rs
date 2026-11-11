@@ -129,7 +129,8 @@ pub fn parse_text_with_spans(text: &str) -> Result<(Sequence, SourceMap), ParseE
 /// a comment loses its trailing spaces, and the header's `blank_line_before` (meaningless at the
 /// top of a file) is not printed. So for every `m` with `print_text(m) == Ok(t)`,
 /// `parse_text(&t) == Ok(m)` up to those normalizations. It succeeds for every model `parse_text`
-/// returns and every model stage 1 accepts whose comments and suffixes are spellable, except when
+/// returns and every model stage 1 accepts whose comments are spellable (stage 1 refuses an
+/// unspellable suffix as `unit-suffix-mismatch` since issue #501), except when
 /// the printed document would pass 4 MiB or 100,000 lines (re-spacing a document already at a
 /// bound, or comments alone), which it refuses rather than emits. Stage 1 bounds every other
 /// field, so no clean statement exceeds the line bound.

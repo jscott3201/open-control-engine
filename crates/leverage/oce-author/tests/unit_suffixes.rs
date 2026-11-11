@@ -388,3 +388,73 @@ fn a_scaled_literal_at_the_token_bound_is_read_and_one_past_it_is_refused() {
         (oce_author::TOKEN_TOO_LONG, 5, 47)
     );
 }
+
+/// The token bound holds for a suffix in stage 1 as in the printer (one shared check): a
+/// well-formed base-unit suffix of 256 bytes is read, validates clean in both stages, prints and
+/// reads back equal; one of 257 bytes, which only a model built in code can hold, is
+/// `unit-suffix-mismatch` on a block assignment and on a sequence parameter, and `emit` and
+/// `print_text` both refuse it.
+#[test]
+fn a_suffix_at_the_token_bound_prints_and_one_past_it_is_flagged() {
+    let at_bound = format!("kg{}", ".m".repeat(127));
+    let past = format!("{at_bound}2");
+    assert_eq!(at_bound.len(), oce_author::MAX_TOKEN_BYTES);
+    assert_eq!(past.len(), oce_author::MAX_TOKEN_BYTES + 1);
+    let text = format!(
+        "{HEAD}param dT : Real = 1 {at_bound}\nin x : Real\nout y : Boolean\nblock hys = CDL.Reals.Hysteresis(uLow = 0.0 {at_bound}, uHigh = dT)\nx -> hys.u\nhys.y -> y\n"
+    );
+    let model = parse_text(&text).expect("at the bound");
+    assert_eq!(validate(&model), vec![]);
+    let printed = print_text(&model).expect("prints");
+    assert_eq!(parse_text(&printed).expect("reads back"), model);
+    assert!(emit(&model, &EmitOptions::default()).is_ok());
+
+    let detail = "the suffix is 257 bytes; a token is at most 256";
+    let mut on_block = model.clone();
+    on_block.blocks[0].assignments[0].suffix = Some(past.clone());
+    let mut on_param = model.clone();
+    on_param.params[0].suffix = Some(past.clone());
+    for (model, subject, what) in [
+        (
+            &on_block,
+            "hys.uLow",
+            "parameter `uLow` of `CDL.Reals.Hysteresis`",
+        ),
+        (&on_param, "dT", "sequence parameter `dT`"),
+    ] {
+        let findings = validate(model);
+        let on_subject: Vec<(&str, &str)> = findings
+            .iter()
+            .filter(|f| f.subject == subject)
+            .map(|f| (f.code, f.detail.as_str()))
+            .collect();
+        assert_eq!(
+            on_subject,
+            [(UNIT_SUFFIX_MISMATCH, format!("{what}: {detail}").as_str())],
+            "{findings:#?}"
+        );
+        assert!(emit(model, &EmitOptions::default()).is_err(), "{subject}");
+        match print_text(model) {
+            Err(PrintError::Unspellable {
+                subject: refused,
+                detail: why,
+            }) => {
+                assert_eq!(refused, subject);
+                assert_eq!(why, detail);
+            }
+            other => panic!("{subject}: {other:?}"),
+        }
+    }
+}
+
+/// The double rounding at the top of the range: the exact product of these typed digits rounds to
+/// `f64::MAX`, but the binary64 they parse to scales, through its shortest decimal, past it, so
+/// the literal is refused as `non-finite-number` (the `scale` rustdoc states this).
+#[test]
+fn a_real_at_the_overflow_edge_can_be_refused_where_its_typed_digits_would_fit() {
+    let error = parse_text(&delay("2.99615522477052631e306 min")).expect_err("past binary64");
+    assert_eq!(
+        (error.code, error.location.line, error.location.column),
+        (NON_FINITE_NUMBER, 5, 47)
+    );
+}

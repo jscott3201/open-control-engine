@@ -21,8 +21,9 @@
 //! index over the embedded vocabulary, keyed by catalog class path and parameter name, the scan
 //! of the three-row `oce_vocab::SCALE_FACTORS` and of `BASE_UNIT_SYMBOLS`, and the agreement of
 //! one assignment's suffix, written number and value, each a lookup per suffixed assignment
-//! bounded by the catalog or a fixed table and a suffix of at most 256 bytes. The removal of adjacent equal findings after the sort compares each neighbouring
-//! pair once with `==`, which is linear and not counted either. A lookup over the document that
+//! bounded by the catalog or a fixed table and a suffix of at most 256 bytes (the agreement
+//! checks the length first). The removal of adjacent equal findings after the sort compares each
+//! neighbouring pair once with `==`, which is linear and not counted either. A lookup over the document that
 //! compares names with a plain `==` would be invisible in the same way, so a new one is keyed by
 //! [`Counted`].
 

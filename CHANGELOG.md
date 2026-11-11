@@ -533,8 +533,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
     the binary64 it parses to, through its shortest round-trip decimal (the spelling `fmt`
     prints), not from the digits as typed. So `1.1 h` is `3960.0` (multiplying the parsed `f64`
     gives `3960.0000000000005`), and `fmt` never moves a value. Two consequences: a Real typed
-    with more digits than binary64 holds can scale to about an ulp from the exact product of its
-    typed digits (`1.10000000000000009 h` is `3960.0`), and an Integer and a Real spelling past
+    with more digits than binary64 holds can scale to about an ulp (more for a subnormal) from the
+    exact product of its typed digits (`1.10000000000000009 h` is `3960.0`), and an Integer and a Real spelling past
     2^53 scale differently (`9007199254740993 min` is `540431955284459584.0` s,
     `9007199254740993.0 min` is `540431955284459520.0` s). A scaled Integer past 2^53 is
     accepted, though the same Integer unscaled on a Real parameter is `parameter-out-of-range`. The
@@ -550,9 +550,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
     parameter that declares no unit or on a sequence parameter. A base-unit suffix where no unit
     is declared stays an annotation. The parity test pins it as silent in the engine.
   - **A disagreeing annotation is caught.** A model built in code whose suffix, written number
-    and value disagree (a tool that set `delayTime` to `1.0` and left `1 h` in place) is
-    `unit-suffix-mismatch` in stage 1, so `emit` refuses it, and the printer refuses it too
-    (`PrintError::Unspellable`): a model that validates clean always prints, and one that prints
+    and value disagree (a tool that set `delayTime` to `1.0` and left `1 h` in place), or whose
+    suffix is longer than the 256-byte token bound, is `unit-suffix-mismatch` in stage 1, so
+    `emit` refuses it, and the printer refuses it too (`PrintError::Unspellable`) through the same
+    shared check: no suffix stops a model that validates clean from printing, and one that prints
     parses back equal.
   - **Dependencies:** `oce-author` now depends on the leverage crate `oce-vocab` (the table and
     the declared units), which moves `Cargo.lock`.

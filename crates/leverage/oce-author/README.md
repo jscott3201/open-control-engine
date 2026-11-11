@@ -220,9 +220,10 @@ comment     = "#" to the end of the line, anywhere
   from the binary64 it parses to, through that value's shortest round-trip decimal (the spelling
   `fmt` prints), not from the digits as typed (`1.1 h` is `3960.0`). That is why `fmt` never moves
   a value, and it has two consequences: a Real typed with more digits than binary64 holds can
-  scale to about an ulp from the exact product of its typed digits (`1.10000000000000009 h` is
-  `3960.0`), and an Integer and a Real spelling past 2^53 scale differently (`9007199254740993 min`
-  is `540431955284459584.0` s, `9007199254740993.0 min` is `540431955284459520.0` s). A scaled
+  scale to about an ulp (more for a subnormal) from the exact product of its typed digits
+  (`1.10000000000000009 h` is `3960.0`), and an Integer and a Real spelling past 2^53 scale
+  differently (`9007199254740993 min` is `540431955284459584.0` s, `9007199254740993.0 min` is
+  `540431955284459520.0` s). A scaled
   Integer past 2^53 is accepted, though the same Integer unscaled on a Real parameter is
   `parameter-out-of-range`. A scaled value past binary64 is `non-finite-number`. `20 degC`, `3 kPa`, `1 m3/h` (a scaled symbol in a
   compound) and `1 hr` are refused (`unit-not-base`). Whether the suffix fits its parameter is
@@ -283,8 +284,9 @@ with no `Type.`, an enumeration type spelled as a scalar type or not as one word
 Real or bound, a control character or bidirectional override in a string — is refused with
 `PrintError::Unspellable { subject, detail }`, and so is a statement whose printed line would
 pass 8,192 bytes (a dotted name or a tag list too long for one line) and a document that would
-pass 4 MiB, 100,000 lines or 65,536 statements of one kind. Stage 1 reports the suffix
-disagreements as `unit-suffix-mismatch` too, so a model that validates clean prints. The only
+pass 4 MiB, 100,000 lines or 65,536 statements of one kind. Stage 1 runs the same suffix check
+(the agreement and the 256-byte token bound) and reports a failure as `unit-suffix-mismatch`, so
+no suffix stops a model that validates clean from printing. The only
 normalizations are the parser's own: a comment with a line feed prints as several comment lines,
 trailing spaces in a comment are dropped, and the header's `blank_line_before` is not printed.
 
