@@ -124,7 +124,7 @@ the tail of its output into the PR:
 | docs only | `bash .agents/gate.sh docs` |
 | `crates/leverage/**`, docs, the root `README.md` | `bash .agents/gate.sh leverage` |
 | anything else (the engine lane), the core four, `oce-cxf` and `oce-api` included | `bash .agents/gate.sh` |
-| a pin advance (`third_party/**`, `tools/reference-catalog/**`, or either of the two pin-guard files `scripts/ci/proof-row.sh` lists) or `.agents/gate.sh` itself | `bash .agents/gate.sh full` |
+| a pin advance (`third_party/**`, `tools/reference-catalog/**`, or either of the two pin-guard files `scripts/ci/proof-row.sh` lists), `.agents/gate.sh` itself, `.config/nextest.toml` or `scripts/ci/install-wasmtime.sh` | `bash .agents/gate.sh full` |
 
 `git diff --no-renames --name-only origin/development... | bash scripts/ci/proof-row.sh` names
 your row, and every gate run ends by printing the row your checkout needs beside the row it

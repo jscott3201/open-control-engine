@@ -27,7 +27,9 @@
 #   bash .agents/gate.sh full        # full        — a pin advance (third_party/**, the reference
 #                                    #               catalog's pin records, the two pin-guard
 #                                    #               files proof-row.sh lists) or a change to this
-#                                    #               script: `determinism` (below) plus the
+#                                    #               script, .config/nextest.toml or
+#                                    #               scripts/ci/install-wasmtime.sh:
+#                                    #               `determinism` (below) plus the
 #                                    #               workspace suite in debug and release codegen,
 #                                    #               the doctests, the blob matrix artifact and
 #                                    #               the blob round trip. It is also the mode CI

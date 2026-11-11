@@ -972,6 +972,75 @@ errexit_turned_off() {
   edit_release_gate "$1" 's/^      - run: cargo test --workspace --doc --locked$/      - run: |\n          set +e\n          cargo test --workspace --doc --locked/'
 }
 
+# The foreign-restore line is the last line of its command, so anything after it is a suffix to
+# the whole `cargo nextest run`: a fallback, a discarded status, or a background job.
+foreign_restore_suffix() {
+  dir="$1"
+  suffix="$2"
+  for workflow in "$dir/pr-gate.yml" "$dir/release-gate.yml"; do
+    awk -v suffix="$suffix" '
+      /foreign_matrix_target_snapshot_refuses_restore_when_supplied\)\x27$/ { print $0 suffix; next }
+      { print }
+    ' "$workflow" > "$workflow.tmp"
+    mv "$workflow.tmp" "$workflow"
+  done
+}
+
+foreign_restore_with_a_fallback_binary() { foreign_restore_suffix "$1" ' || /bin/true'; }
+foreign_restore_with_an_echo_fallback() { foreign_restore_suffix "$1" ' || echo refused'; }
+foreign_restore_then_exit_zero() { foreign_restore_suffix "$1" '; exit 0'; }
+foreign_restore_in_the_background() { foreign_restore_suffix "$1" ' &'; }
+foreign_restore_with_a_padded_exit_code() { foreign_restore_suffix "$1" ' || exit 00'; }
+foreign_restore_with_a_braced_fallback() { foreign_restore_suffix "$1" ' || { true; }'; }
+foreign_restore_with_a_subshell_fallback() { foreign_restore_suffix "$1" ' || (true)'; }
+foreign_restore_with_a_quoted_fallback() { foreign_restore_suffix "$1" ' || "true"'; }
+
+# The same suffixes on a line no presence rule names, where only the general refusal can see them.
+unpinned_line_suffix() {
+  both_edit "$1" "/^  determinism-compare:\$/,/^  [^ ]/ s/^\\(          export OCE_FOREIGN_TARGET_STATE_IN=.*\\)\$/\\1$2/"
+}
+
+unpinned_line_with_a_fallback_binary() { unpinned_line_suffix "$1" ' || \/bin\/true'; }
+unpinned_line_with_a_braced_fallback() { unpinned_line_suffix "$1" ' || { true; }'; }
+unpinned_line_with_a_quoted_fallback() { unpinned_line_suffix "$1" ' || "true"'; }
+unpinned_line_then_exit_zero() { unpinned_line_suffix "$1" '; exit 0'; }
+unpinned_line_in_the_background() { unpinned_line_suffix "$1" ' \&'; }
+
+# Every way of turning errexit off inside a step.
+set_plus_in_the_gate_step() {
+  edit_release_gate "$1" "s/^      - run: cargo test --workspace --doc --locked\$/      - run: |\n          $2\n          cargo test --workspace --doc --locked/"
+}
+
+errexit_and_nounset_turned_off() { set_plus_in_the_gate_step "$1" 'set +eu'; }
+errexit_nounset_and_pipefail_turned_off() { set_plus_in_the_gate_step "$1" 'set +euo pipefail'; }
+errexit_turned_off_by_name() { set_plus_in_the_gate_step "$1" 'set +o errexit'; }
+errexit_turned_off_beside_an_option_turned_on() { set_plus_in_the_gate_step "$1" 'set -x +e'; }
+
+# A custom shell template drops `-e` and `pipefail` for every step under it.
+step_shell_template() {
+  edit_pr_gate "$1" 's/^      - run: cargo build --workspace --locked$/&\n        shell: bash {0}/'
+}
+
+job_shell_template() {
+  edit_release_gate "$1" 's/^  test-suite:$/&\n    defaults:\n      run:\n        shell: bash --noprofile --norc {0}/'
+}
+
+workflow_shell_template() {
+  edit_merge_gate "$1" 's/^jobs:$/defaults:\n  run:\n    shell: bash {0}\njobs:/'
+}
+
+workflow_shell_sh() {
+  edit_pr_gate "$1" 's/^jobs:$/defaults:\n  run:\n    shell: sh\njobs:/'
+}
+
+# `shell: bash` itself stays allowed at every level.
+plain_bash_shell_everywhere() {
+  edit_pr_gate "$1" -e 's/^jobs:$/defaults:\n  run:\n    shell: bash\njobs:/' \
+    -e 's/^      - run: cargo build --workspace --locked$/&\n        shell: bash/'
+  edit_release_gate "$1" 's/^jobs:$/defaults:\n  run:\n    shell: bash\njobs:/'
+  edit_merge_gate "$1" 's/^jobs:$/defaults:\n  run:\n    shell: bash\njobs:/'
+}
+
 # The release gate's side of the save-if exception.
 release_gate_save_if_dropped() {
   edit_release_gate "$1" '/^          save-if: /d'
@@ -2423,6 +2492,49 @@ run_case build-failure-masked fail build_failure_masked \
   "pr-gate.yml contains a refused gate pattern: a masked failure"
 run_case errexit-turned-off fail errexit_turned_off \
   "release-gate.yml contains a refused gate pattern: a masked failure"
+run_case foreign-restore-with-a-fallback-binary fail foreign_restore_with_a_fallback_binary \
+  "job determinism-compare is missing required gate pattern: restore and refuse the foreign target-bound snapshot"
+run_case foreign-restore-with-an-echo-fallback fail foreign_restore_with_an_echo_fallback \
+  "job determinism-compare is missing required gate pattern: restore and refuse the foreign target-bound snapshot"
+run_case foreign-restore-then-exit-zero fail foreign_restore_then_exit_zero \
+  "job determinism-compare is missing required gate pattern: restore and refuse the foreign target-bound snapshot"
+run_case foreign-restore-in-the-background fail foreign_restore_in_the_background \
+  "job determinism-compare is missing required gate pattern: restore and refuse the foreign target-bound snapshot"
+run_case foreign-restore-with-a-padded-exit-code fail foreign_restore_with_a_padded_exit_code \
+  "job determinism-compare is missing required gate pattern: restore and refuse the foreign target-bound snapshot"
+run_case foreign-restore-with-a-braced-fallback fail foreign_restore_with_a_braced_fallback \
+  "job determinism-compare is missing required gate pattern: restore and refuse the foreign target-bound snapshot"
+run_case foreign-restore-with-a-subshell-fallback fail foreign_restore_with_a_subshell_fallback \
+  "job determinism-compare is missing required gate pattern: restore and refuse the foreign target-bound snapshot"
+run_case foreign-restore-with-a-quoted-fallback fail foreign_restore_with_a_quoted_fallback \
+  "job determinism-compare is missing required gate pattern: restore and refuse the foreign target-bound snapshot"
+run_case unpinned-line-with-a-fallback-binary fail unpinned_line_with_a_fallback_binary \
+  "contains a refused gate pattern: a masked failure"
+run_case unpinned-line-with-a-braced-fallback fail unpinned_line_with_a_braced_fallback \
+  "contains a refused gate pattern: a masked failure"
+run_case unpinned-line-with-a-quoted-fallback fail unpinned_line_with_a_quoted_fallback \
+  "contains a refused gate pattern: a masked failure"
+run_case unpinned-line-then-exit-zero fail unpinned_line_then_exit_zero \
+  "contains a refused gate pattern: a masked failure"
+run_case unpinned-line-in-the-background fail unpinned_line_in_the_background \
+  "contains a refused gate pattern: a masked failure"
+run_case errexit-and-nounset-turned-off fail errexit_and_nounset_turned_off \
+  "contains a refused gate pattern: a masked failure"
+run_case errexit-nounset-and-pipefail-turned-off fail errexit_nounset_and_pipefail_turned_off \
+  "contains a refused gate pattern: a masked failure"
+run_case errexit-turned-off-by-name fail errexit_turned_off_by_name \
+  "contains a refused gate pattern: a masked failure"
+run_case errexit-turned-off-beside-an-option-turned-on fail errexit_turned_off_beside_an_option_turned_on \
+  "contains a refused gate pattern: a masked failure"
+run_case step-shell-template fail step_shell_template \
+  "sets a shell other than exactly"
+run_case job-shell-template fail job_shell_template \
+  "sets a shell other than exactly"
+run_case workflow-shell-template fail workflow_shell_template \
+  "sets a shell other than exactly"
+run_case workflow-shell-sh fail workflow_shell_sh \
+  "sets a shell other than exactly"
+run_case plain-bash-shell-everywhere pass plain_bash_shell_everywhere
 run_case release-gate-save-if-dropped fail release_gate_save_if_dropped \
   "release-gate.yml job determinism-matrix is missing required gate pattern: only the aarch64 determinism cells of the release gate save the shared rust-cache entry"
 run_case release-gate-cells-never-save fail release_gate_cells_never_save \

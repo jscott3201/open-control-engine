@@ -40,7 +40,7 @@ expect workflow light '.github/workflows/merge-gate.yml'
 expect release-workflow light '.github/workflows/release-gate.yml'
 expect ci-script light 'scripts/ci/proof-row.sh'
 expect checker light '.github/scripts/check-workflow-gates.sh'
-expect tool-config light '.config/nextest.toml'
+expect other-tool-config light '.config/other.toml'
 expect firmware-image light 'firmware/link/src/lib.rs'
 expect other-engine-crates light $'crates/oce-validate/src/lib.rs\ncrates/oce-store/src/lib.rs\ncrates/oce-conformance/tests/strict_bits/main.rs'
 expect golden-generator light 'tools/golden-gen/src/main.rs'
@@ -80,6 +80,9 @@ expect g36-provenance-record full 'tools/reference-catalog/Buildings.Controls.OB
 expect manifest-pin-constants full 'crates/oce-cxf/tests/third_party_manifest/mod.rs'
 expect reference-commit-constant full 'crates/oce-blocks/src/registry/catalog_guard_support.rs'
 expect gate-script full '.agents/gate.sh'
+expect nextest-config full '.config/nextest.toml'
+expect wasmtime-installer full 'scripts/ci/install-wasmtime.sh'
+expect wasmtime-installer-beside-leverage full $'crates/leverage/oce-cli/src/lib.rs\nscripts/ci/install-wasmtime.sh'
 expect gate-script-beside-docs full $'docs/ci-and-the-gate.md\n.agents/gate.sh'
 expect vendored-beside-core full $'crates/oce-cxf/src/lib.rs\nthird_party/modelica-buildings-cdl/cxf/a.json'
 expect vendored-listed-last full $'CHANGELOG.md\ncrates/leverage/oce-vocab/data/generated.json\nthird_party/modelica-buildings-cdl/README.md'
@@ -95,6 +98,9 @@ expect nested-manifest light 'crates/oce-validate/Cargo.toml'
 expect golden-gen-lockfile light 'tools/golden-gen/Cargo.lock'
 expect leverage-manifest leverage 'crates/leverage/oce-cli/Cargo.toml'
 expect other-agents-file docs '.agents/project-facts.md'
+expect wasmtime-runner light 'scripts/ci/wasmtime-runner.sh'
+expect wasmtime-installer-fixtures light 'scripts/ci/test-install-wasmtime.sh'
+expect golden-gen-nextest-config light 'tools/golden-gen/.config/nextest.toml'
 expect vendored-name-in-docs docs 'docs/third_party/notes.md'
 expect other-tools-directory light 'tools/reference-catalogue/a.json'
 expect other-registry-file light 'crates/oce-blocks/src/registry/mod.rs'
@@ -132,9 +138,10 @@ expect_list() {
   fi
 }
 expect_list FULL_PREFIXES 'third_party/ tools/reference-catalog/ crates/oce-cxf/tests/third_party_manifest/'
-expect_list FULL_FILES 'crates/oce-blocks/src/registry/catalog_guard_support.rs .agents/gate.sh'
+expect_list FULL_FILES 'crates/oce-blocks/src/registry/catalog_guard_support.rs .agents/gate.sh .config/nextest.toml scripts/ci/install-wasmtime.sh'
 for path in third_party tools/reference-catalog crates/oce-cxf/tests/third_party_manifest \
-  crates/oce-blocks/src/registry/catalog_guard_support.rs .agents/gate.sh; do
+  crates/oce-blocks/src/registry/catalog_guard_support.rs .agents/gate.sh \
+  .config/nextest.toml scripts/ci/install-wasmtime.sh; do
   if [ ! -e "$path" ]; then
     echo "FAIL: proof-row names $path, which does not exist"
     failures=$((failures + 1))

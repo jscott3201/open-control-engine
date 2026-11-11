@@ -8,7 +8,8 @@ Things worth knowing before you change this repo that the code does not tell you
 bash .agents/gate.sh docs         # a docs-only PR: the always-on checks, no cargo build
 bash .agents/gate.sh leverage     # crates/leverage/**, docs, the root README.md
 bash .agents/gate.sh              # any other change: the engine lane, debug codegen
-bash .agents/gate.sh full         # a pin advance or .agents/gate.sh itself: adds the release-codegen
+bash .agents/gate.sh full         # a pin advance, .agents/gate.sh, .config/nextest.toml or
+                                  # scripts/ci/install-wasmtime.sh: adds the release-codegen
                                   # subset, the workspace suite and doctests; also what CI executes nightly
 
 bash .agents/gate.sh determinism  # not a row: the engine lane plus the release-codegen subset, to
@@ -26,8 +27,9 @@ above are the four rows, lightest first, and each runs everything the one before
 exact path lists, and every gate run ends by printing the row the checkout needs beside the row
 it covered, so a tail that is too light says so. The `full` row is a pin advance (`third_party/**`,
 `tools/reference-catalog/**`, and two pin-guard files, `crates/oce-cxf/tests/third_party_manifest/**`
-and `crates/oce-blocks/src/registry/catalog_guard_support.rs`) and `.agents/gate.sh`, whose
-`full`-only steps no lighter mode executes. Those two are not the only files that write a pinned
+and `crates/oce-blocks/src/registry/catalog_guard_support.rs`), `.agents/gate.sh`, whose
+`full`-only steps no lighter mode executes, and the two files only those steps exercise,
+`.config/nextest.toml` and `scripts/ci/install-wasmtime.sh` (owner ruling of 2026-11-11). Those two are not the only files that write a pinned
 upstream commit: `crates/oce-cxf/src/g36_catalog_guard_data.rs`, five files under
 `tools/golden-gen/src/` and the `oce-vocab` generator do too (`scripts/ci/test-proof-row.sh`
 holds the full list and fails when it changes). The row does not need them, because a pin advance
@@ -50,12 +52,14 @@ for reproducing a red release cell locally. Four rules go with the table:
   also dispatches the workflow on its branch (`gh workflow run release-gate.yml --ref <branch>`)
   and waits for a green run before merging. That run posts a `CI OK` of its own on the head,
   without the strict-bit matrix; read `CI OK` for the merge from the `pr-gate` run on the head
-  SHA (`gh pr checks <N>` names the workflow of each check). Named, so that "anything else" is not left to the reader: the
-  `ci-release-workspace` profile in `.config/nextest.toml` and the default destination of
-  `scripts/ci/install-wasmtime.sh` run only in `full` (and `roundtrip`, for the installer) and in
-  the nightly `gate (full)`; `qemu.yml` and `scripts/ci/emulate-firmware.sh` run only nightly, in a
-  workflow of their own, so a change to them runs `bash .agents/gate.sh qemu` or dispatches
-  `qemu.yml`; `merge-gate.yml` cannot run before the merge at all.
+  SHA (`gh pr checks <N>` names the workflow of each check). Named, so that "anything else" is not left to the reader:
+  `qemu.yml` and `scripts/ci/emulate-firmware.sh` run only nightly, in a workflow of their own,
+  so a change to them runs `bash .agents/gate.sh qemu` or dispatches `qemu.yml`. `merge-gate.yml`
+  can be dispatched but need not run before the merge: its one job is byte-identical to the
+  Windows cell a dispatched `release-gate.yml` runs, and the checker holds that. Two files that
+  only `full` exercises are in the `full` row instead (owner ruling of 2026-11-11): the
+  `ci-release-workspace` profile lives in `.config/nextest.toml`, and the default destination of
+  `scripts/ci/install-wasmtime.sh` is used only by `full` and `roundtrip`.
 
 Change a command by changing [`.github/workflows/pr-gate.yml`](../.github/workflows/pr-gate.yml)
 first, then the script.

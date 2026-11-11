@@ -299,8 +299,8 @@ require_determinism_fan_in() {
     'supply the other architecture target-bound snapshot to the restore test'
   require_job_pattern "$path" 'determinism-compare' 'test "\$CELL_ARCH" != "\$FOREIGN_ARCH"$' \
     'the restoring architecture differs from the snapshot architecture'
-  require_job_pattern "$path" 'determinism-compare' \
-    "test\\(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied\\)'" \
+  require_job_line "$path" 'determinism-compare' \
+    "-E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'" \
     'restore and refuse the foreign target-bound snapshot'
   require_job_pattern "$path" 'determinism-compare' '--profile ci --no-tests=fail \\$' \
     'foreign target-bound restore hard-fails when its test is absent'
@@ -733,14 +733,37 @@ require_same_workflow_env() {
   fi
 }
 
-# No line of a gating workflow may throw a command's failure away. `cmd || true`, `cmd || :`,
-# `cmd || exit 0`, a trailing `; true` and `set +e` each turn a red step green, and the same edit
-# made to both copies of a shared job keeps the two copies equal (issue #555). The end-anchored
-# presence rules catch this on the lines they name; this catches it on every other line.
+# No line of a gating workflow may throw a command's failure away (issue #555). The same edit
+# made to both copies of a shared job keeps the two copies equal, and a whole-line presence rule
+# only guards the lines it names, so these are refused on every non-comment line, with
+# `${{ ... }}` expressions removed first (they are the only place `||` appears today):
+#   * `||` in any form: `|| true`, `|| :`, `|| /bin/true`, `|| echo`, `|| exit 0`, `|| { true; }`,
+#     `|| (true)`, `|| "true"`. No gating step has a use for a fallback command.
+#   * a trailing `; true`, `; :` or `; exit 0`, and a command sent to the background with a
+#     trailing `&`, whose status the step never sees;
+#   * `set +` in any form (`set +e`, `set +eu`, `set +euo pipefail`, `set +o errexit`): nothing
+#     here turns a shell option off.
+# And every `shell:` must be exactly `bash`. GitHub runs that as `bash --noprofile --norc -eo
+# pipefail {0}`; a custom template such as `bash {0}` drops `-e` and `pipefail` for every step
+# under it, at step, job or workflow `defaults:` level.
+# What this does not see, and a follow-up issue tracks: a bare `exit 0` on a line of its own, and
+# a failure masked inside a script the workflow calls.
 refuse_failure_masks() {
   path="$1"
-  refuse_pattern "$path" '\|\|[[:space:]]*(true|:|exit[[:space:]]+0)([[:space:];)]|$)|;[[:space:]]*true[[:space:]]*$|(^|[[:space:];])set[[:space:]]+\+e([[:space:];]|$)' \
-    'a masked failure (|| true, || :, || exit 0, ; true or set +e), which lets a failing command read as green'
+  local code bad
+  code="$(grep -Ev '^[[:space:]]*#' "$path" | sed -E 's/\$\{\{[^}]*\}\}//g')"
+  bad="$(grep -En '\|\||;[[:space:]]*(true|:|exit[[:space:]]+0+)[[:space:]]*$|(^|[^&])&[[:space:]]*$|(^|[^[:alnum:]_-])set[[:space:]]+(-[[:alnum:]]+[[:space:]]+)*\+' <<< "$code" || true)"
+  if [ -n "$bad" ]; then
+    echo "FAIL: $path contains a refused gate pattern: a masked failure (||, a trailing ; true or ; exit 0, a trailing &, or set +...), which lets a failing command read as green"
+    printf '%s\n' "$bad" | head -n 5 | sed 's/^/  /'
+    exit 1
+  fi
+  bad="$(grep -E '^[[:space:]]*(- )?shell:' <<< "$code" | grep -Ev '^[[:space:]]*(- )?shell: bash[[:space:]]*$' || true)"
+  if [ -n "$bad" ]; then
+    echo "FAIL: $path sets a shell other than exactly \`shell: bash\`, which can drop errexit and pipefail"
+    printf '%s\n' "$bad" | head -n 5 | sed 's/^/  /'
+    exit 1
+  fi
 }
 
 # The body of one TOML table, exactly: its non-comment, non-blank lines up to the next table

@@ -1109,8 +1109,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 - **The workflow checker closes five gaps, and the pin-advance row states its real reason**
   (GitHub #564, issue #555; follow-ups from the reviews of GitHub #547 and #557, and an owner
-  ruling of 2026-11-10 that a pin advance keeps the `full` row). No workflow, gate command or
-  proof row changed.
+  rulings of 2026-11-10 and 2026-11-11). No workflow or gate command changed; the `full` proof
+  row gains two files.
   **Checker.** `check-workflow-gates.sh` now (1) pins the body of `[profile.ci-release-workspace]`
   and of its `.junit` table in `.config/nextest.toml` to the line, so a `default-filter` or any
   other key added to the profile fails instead of narrowing the nightly's one release-codegen
@@ -1120,10 +1120,12 @@ and a gate that accepted any text would restore exactly the false assurance desc
   workflow-level `env:` of `pr-gate.yml`, `merge-gate.yml` and `release-gate.yml`, `CHECKOUT_REF`
   aside; (4) end-anchors the presence rules for the determinism cells, their fan-in and the
   Windows cell (new `require_job_line`), so `<command> || true` or a trailing argument added to
-  both copies of a shared step fails, and refuses `|| true`, `|| :`, `|| exit 0`, `; true` and
-  `set +e` on every line of the three gating workflows; (5) pins the release gate's
-  `save-if: matrix.arch == 'aarch64'`. Eighteen hostile fixtures, each of which the checker as
-  it stood let through (269 cases).
+  both copies of a shared step fails, and refuses, on every line of the three gating workflows,
+  `||` in any form outside a `${{ }}` expression, a trailing `; true`, `; exit 0` or `&`, any
+  `set +...`, and any `shell:` other than exactly `bash` (a template such as `bash {0}` drops
+  errexit and pipefail); (5) pins the release gate's
+  `save-if: matrix.arch == 'aarch64'`. Thirty-nine hostile fixtures, each of which the checker as
+  it stood let through, and one positive (291 cases).
   **Pin advance.** The `full` row stays. Its stated reason is corrected in `AGENTS.md`,
   `.agents/project-facts.md`, `docs/ci-and-the-gate.md` and `scripts/ci/proof-row.sh`: the
   pin-guard tests already run per PR (`oce-cxf`'s `g36_catalog_tests` in `crate tests`,
@@ -1134,9 +1136,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
   the doctests. "The two files that hold a pinned upstream commit" was false and is reworded:
   nine files write one, the row lists two pin-guard files, and `scripts/ci/test-proof-row.sh`
   now holds the full list and fails when it changes.
-  **Prose.** The paths whose only executor is `full` or a nightly run are named under the
-  dispatch rule (the `ci-release-workspace` profile, `install-wasmtime.sh`'s default
-  destination, `qemu.yml` with `emulate-firmware.sh`, and `merge-gate.yml`), and
+  **Proof row.** `.config/nextest.toml` (for its `ci-release-workspace` profile) and
+  `scripts/ci/install-wasmtime.sh` (for its default destination) join the `full` row in
+  `scripts/ci/proof-row.sh`: only the script's `full` block exercises them (owner ruling of
+  2026-11-11). `qemu.yml` and `emulate-firmware.sh`, which have a nightly workflow of their own,
+  are named in prose under the dispatch rule, and
   `crates/oce-conformance/Cargo.toml` no longer names `merge-gate.yml` as a runner of
   `--test blob_round_trip`.
 
