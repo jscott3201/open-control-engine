@@ -4,6 +4,7 @@
 
 pub mod cxf;
 pub mod edit;
+pub mod spans;
 pub mod text;
 
 use std::path::PathBuf;

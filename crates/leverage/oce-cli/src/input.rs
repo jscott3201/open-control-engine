@@ -274,6 +274,7 @@ mod tests {
             (
                 WireError::WrongType {
                     detail: "d".into(),
+                    path: "inputs[0].semantic".into(),
                     at,
                 },
                 Some(at),

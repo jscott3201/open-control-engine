@@ -453,6 +453,36 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
+- **The authoring wire reader refuses a list, or any other type, where an object belongs**
+  (GitHub #544). `oce-author`'s `from_wire_str` read a JSON list where the wire form defines an
+  object: `serde_json` reads a `serde`-derived struct from a list as well as from an object, taking
+  the list positionally as the struct's fields, and the strict scan in front of `serde` checks
+  syntax, depth, repeated keys and sizes, not shapes. So `"semantic": ["", "", "K", "", "", "", [],
+  false]` loaded as the slot it abbreviates and `oce validate` answered `"ok": true`; on
+  `development`, 1,765 of the 1,948 objects the new sweep replaces loaded that way (every root,
+  sequence parameter, boundary, semantic slot, block and assignment it reaches; the 183
+  `{"ref": …}` and `{"member": …}` values were already refused), and a boundary's `type` read
+  `{"Real": null}` as `"Real"`. The typed parse now runs through a closed-shape adapter that wraps
+  `serde_json`'s deserializer at every depth (`src/wire/closed.rs`): a struct is read from an
+  object only, an enum from a string only, and an option never reads `null` as absent, so a struct
+  added to the form later is closed without a change to the reader. Each refusal is
+  `WireError::WrongType` (`wrong-type` in `oce`), which gains a `path` field naming the offending
+  value (`inputs[0].semantic`, `document` for the root) and prints it
+  (`invalid type: sequence, expected a SemanticPoint object at inputs[0].semantic, line 19 column
+  18`); a boundary `type` of `null`, a number, a boolean, a list or an object, refused as
+  `json-syntax` before, is `wrong-type` too. `null` stays refused at every position, since the
+  form has no nullable value; the [authoring note](docs/design/authoring-layer.md#wire-form) now
+  says so. New sweeps over every wire fixture, the note's example and the 31 importable corpus
+  fixtures in the wire form replace each object by the list of its values and each value by every
+  JSON type its position does not take, read the allowed types from the published schema, and
+  fail if a schema object appears in no fixture; a source scan allows only `deny_unknown_fields`
+  and `rename` on the DTOs, because serde's buffered-content attributes (`untagged`, `tag`,
+  `content`) would read a struct past the adapter. The importers (`import_cxf`,
+  `import_graph_v0`) read a `serde_json::Value` and never fill a derived struct, so they never had
+  the hole; sweeps now hold that, and `oce validate`, `emit` and `fmt` refuse each mutant at its
+  path. Breaking for pre-1.0 code that builds `WireError::WrongType`, which gains `path`. The
+  format stays at revision 1: no fixture, golden or schema byte moves.
+
 - **Vectors, part 1 of 4: the `oce-verify` crate and the one vector format, `oce/vectors/v1`**
   (GitHub #541, issue #519; [vectors note](docs/design/vectors.md) decisions 1 to 5, 8 to 12,
   16 to 18 and 35). A new leverage crate, `crates/leverage/oce-verify` (`publish = false`;

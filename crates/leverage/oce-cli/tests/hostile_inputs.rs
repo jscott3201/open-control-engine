@@ -1,14 +1,15 @@
 //! Hostile inputs through the built binary: binary junk, bad UTF-8, an over-size file refused
 //! from its metadata before a byte is read, an over-size stdin cut off one byte past the bound,
-//! a directory, a missing path. Every one is exit 2 with one typed error code, a well-formed JSON
-//! report on stdout, nothing on stderr and no panic.
+//! a directory, a missing path, a wire object written as the list of its values (GitHub #544).
+//! Every one is exit 2 with one typed error code, a well-formed JSON report on stdout, nothing on
+//! stderr and no panic.
 
 mod support;
 
 use std::fs::File;
 
 use oce_author::{MAX_TEXT_BYTES, MAX_WIRE_BYTES};
-use support::{Run, oce_in, scratch};
+use support::{Run, crate_dir, oce_in, scratch};
 
 /// The single error code of a refused run, after checking the run's shape.
 fn refusal(run: &Run) -> String {
@@ -166,4 +167,74 @@ fn an_empty_input_is_a_parse_refusal_not_a_panic() {
         refusal(&oce_in(&dir, &["validate", "empty.json"], b"")),
         "json-syntax"
     );
+}
+
+#[test]
+fn an_object_spelled_another_way_is_refused_by_every_reading_command_at_its_path() {
+    // GitHub #544: the wire reader read a list positionally as the object it abbreviates, and a
+    // signal type's map form `{"Real": null}` as the string. Each of the econ_enable bundle's
+    // mutants below loaded before the fix; `validate` answered `"ok": true` for the first.
+    let dir = scratch("closed_objects");
+    let bundle = std::fs::read_to_string(
+        crate_dir().join("../oce-author/tests/fixtures/wire/econ_enable.json"),
+    )
+    .expect("the econ_enable bundle");
+    let semantic = "{\n        \"name\": \"\",\n        \"label\": \"\",\n        \"unit\": \"K\",\n        \
+                    \"brick\": \"\",\n        \"s223\": \"\",\n        \"qudt\": \"\",\n        \
+                    \"haystack\": [],\n        \"provisional\": false\n      }";
+    assert!(
+        bundle.contains(semantic),
+        "the first boundary's semantic slot"
+    );
+    let cases = [
+        (
+            "semantic.json",
+            bundle.replacen(semantic, r#"["", "", "K", "", "", "", [], false]"#, 1),
+            "inputs[0].semantic",
+            19,
+        ),
+        (
+            "type.json",
+            bundle.replacen(
+                "\"type\": \"Real\",\n      \"quantity\"",
+                "\"type\": {\"Real\": null},\n      \"quantity\"",
+                1,
+            ),
+            "inputs[0].type",
+            14,
+        ),
+        (
+            "root.json",
+            r#"["econ_enable", "", [], [], [], [], []]"#.to_owned(),
+            "document",
+            1,
+        ),
+    ];
+    for (name, document, path, line) in &cases {
+        assert_ne!(document, &bundle, "{name} changed the bundle");
+        std::fs::write(dir.join(name), document).expect("write");
+        let runs = [
+            oce_in(&dir, &["validate", name], b""),
+            oce_in(&dir, &["validate", "--author-side", name], b""),
+            oce_in(&dir, &["emit", name], b""),
+            oce_in(&dir, &["fmt", name], b""),
+            oce_in(&dir, &["fmt", "--check", name], b""),
+            oce_in(
+                &dir,
+                &["validate", "-", "--from", "wire"],
+                document.as_bytes(),
+            ),
+            oce_in(&dir, &["emit", "-", "--from", "wire"], document.as_bytes()),
+        ];
+        for run in &runs {
+            assert_eq!(refusal(run), "wrong-type", "{name}: {}", run.transcript());
+            let error = &run.report()["errors"][0];
+            let detail = error["detail"].as_str().expect("detail");
+            assert!(
+                detail.contains(&format!(" at {path}, line {line} ")),
+                "{name}: {detail}"
+            );
+            assert_eq!(error["span"]["line"], *line, "{name}");
+        }
+    }
 }
