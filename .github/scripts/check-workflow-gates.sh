@@ -8,8 +8,8 @@
 #
 # Three gating workflows, each held to its own shape (issue #545 split the third from the second):
 #   pr-gate.yml       per PR into `development`: the lane-filtered light gate.
-#   merge-gate.yml    after each merge into `development`: exactly the four determinism cells, their
-#                     fan-in and the Windows cell.
+#   merge-gate.yml    after each merge into `development`: exactly the Windows cell, the one job no
+#                     pull request runs (issue #556 returned the determinism cells to pr-gate.yml).
 #   release-gate.yml  nightly, on dispatch, on release PRs and on pushes to `main`: the heavy set,
 #                     whose exact job list is pinned below so that none can be dropped.
 # The three jobs the last two share must be byte-identical in both files.
@@ -151,11 +151,10 @@ refuse_emulation() {
   fi
 }
 
-# A native cell matrix: x86_64 on ubuntu-latest and aarch64 on ubuntu-24.04-arm, in exactly the
-# codegen modes named (`debug, release`, or `debug` alone), without fail-fast, so one run reports
-# every failing cell. The codegen list is exact in both directions (issue #502): pr-gate.yml's
-# determinism matrix is debug only, because its release-codegen cells run in merge-gate.yml and
-# release-gate.yml, and theirs must name both.
+# A native cell matrix: x86_64 on ubuntu-latest and aarch64 on ubuntu-24.04-arm, in debug and
+# release codegen, without fail-fast, so one run reports every failing cell. Every matrix is all
+# four cells since issue #556: the per-PR determinism matrix was debug only from issue #502 until
+# then, and a `codegen: [debug]` there now fails like a dropped cell anywhere else.
 require_native_cell_matrix() {
   path="$1"
   job="$2"
@@ -164,10 +163,6 @@ require_native_cell_matrix() {
     'debug, release')
       codegen_pattern='\[debug,[[:space:]]*release\]'
       codegen_label="$job runs debug and release codegen"
-      ;;
-    'debug')
-      codegen_pattern='\[debug\]'
-      codegen_label="$job runs debug codegen only (its release-codegen cells belong to merge-gate.yml and release-gate.yml)"
       ;;
     *)
       echo "BUG: require_native_cell_matrix: unknown codegen list '$3'"
@@ -195,8 +190,7 @@ require_native_cell_matrix() {
   fi
 }
 
-# The determinism cells, in every workflow (issue #502 split the matrix: pr-gate.yml runs the two
-# debug cells per PR; merge-gate.yml runs all four after the merge and release-gate.yml nightly). Every cell refuses a runner
+# The determinism cells, in pr-gate.yml (per PR, issue #556) and release-gate.yml (nightly). Every cell refuses a runner
 # of the wrong architecture, records the blob round trip (issue #403), runs the debug subset with
 # hard-fail-on-zero-tests, emits both state vectors, archives its round-trip suite for the fan-in
 # and uploads under its own name.
@@ -234,7 +228,7 @@ require_determinism_cells() {
     'archive each architecture'"'"'s debug blob round trip for the fan-in'
 }
 
-# The release-codegen determinism cells (merge-gate.yml and release-gate.yml): the subset and the blob round trip
+# The release-codegen determinism cells (pr-gate.yml and release-gate.yml): the subset and the blob round trip
 # under `--cargo-profile release`, their state vectors, and the report and vector checks that follow
 # the cell's codegen so a matrix edit cannot leave a release cell a green no-op.
 require_release_codegen_determinism_cells() {
@@ -300,7 +294,7 @@ require_determinism_fan_in() {
     'the round-trip replay hard-fails when its suite is absent'
 }
 
-# The determinism fan-in's cross-codegen half (merge-gate.yml and release-gate.yml, issue #502): debug against
+# The determinism fan-in's cross-codegen half (pr-gate.yml and release-gate.yml): debug against
 # release within each architecture, for the portable and target-bound state bytes, the
 # compiled-schedule blobs and the round-trip recordings, over all four cells' artifacts.
 require_cross_codegen_fan_in() {
@@ -627,10 +621,10 @@ job_definition() {
   ' "$1"
 }
 
-# A job that two workflows both run must be the same job in both (issue #545): the determinism
-# cells, their fan-in and the Windows cell run after each merge from merge-gate.yml and nightly
-# and on release PRs from release-gate.yml. Byte equality, comments inside the job included, is the
-# whole rule: a cell or a comparison cannot be weakened in one file while the other keeps it.
+# A job that two workflows both run must be the same job in both (issue #545): the Windows cell
+# runs after each merge from merge-gate.yml and nightly and on release PRs from release-gate.yml.
+# Byte equality, comments inside the job included, is the whole rule: the cell cannot be weakened
+# in one file while the other keeps it.
 require_identical_job() {
   first="$1"
   second="$2"
@@ -640,6 +634,39 @@ require_identical_job() {
   two="$(job_definition "$second" "$job")"
   if [ -z "$one" ] || [ "$one" != "$two" ]; then
     echo "FAIL: job $job is not defined identically in $first and $second"
+    diff <(printf '%s\n' "$one") <(printf '%s\n' "$two") | head -n 20 | sed 's/^/  /' || true
+    exit 1
+  fi
+}
+
+# One job, the lines of it that do work: comment lines dropped, and the four kinds of line that
+# legitimately differ between the per-PR and the release definition of a determinism job. Those
+# are the lane filter (`needs:` and the job-level `if:`), the pinned checkout ref the release gate
+# adds, and the rust-cache `save-if:`, each of which has a rule of its own in this script.
+job_commands() {
+  job_definition "$1" "$2" | awk '
+    /^[[:space:]]*#/ { next }
+    /^    needs:/ || /^    if: needs\.changes\.outputs\./ { next }
+    /^          ref: \$\{\{ env\.CHECKOUT_REF \}\}[[:space:]]*$/ { next }
+    /^          save-if:/ { next }
+    { print }
+  '
+}
+
+# The determinism cells and their fan-in run per PR from pr-gate.yml and nightly from
+# release-gate.yml (issue #556). Every step, command, environment variable, matrix entry and
+# step condition must be the same in both: a cell, a codegen mode or a comparison cannot be
+# dropped or weakened per PR while the nightly definition keeps it, or the reverse. Comments may
+# differ, and so may the four kinds of line job_commands sets aside.
+require_same_job_commands() {
+  first="$1"
+  second="$2"
+  job="$3"
+  local one two
+  one="$(job_commands "$first" "$job")"
+  two="$(job_commands "$second" "$job")"
+  if [ -z "$one" ] || [ "$one" != "$two" ]; then
+    echo "FAIL: job $job does not run the same steps in $first and $second"
     diff <(printf '%s\n' "$one") <(printf '%s\n' "$two") | head -n 20 | sed 's/^/  /' || true
     exit 1
   fi
@@ -1008,21 +1035,27 @@ require_pattern "$ci" 'determinism-matrix' 'targeted cross-arch determinism matr
 refuse_emulation "$ci"
 refuse_emulation "$merge"
 refuse_emulation "$release"
-# Per PR the determinism matrix is two native cells in debug codegen, and its fan-in compares
-# across architectures; the strict-bit matrix keeps all four cells (issue #502).
-require_native_cell_matrix "$ci" 'determinism-matrix' 'debug'
+# Per PR the determinism matrix is all four native cells, debug and release codegen on both
+# architectures, and its fan-in compares across codegen as well as across architectures
+# (issue #556: the release cells and the cross-codegen comparisons ran after the merge from
+# issue #502 until the release build of the subset fell to about three minutes). The strict-bit
+# matrix has been four cells throughout.
+require_native_cell_matrix "$ci" 'determinism-matrix' 'debug, release'
 require_native_cell_matrix "$ci" 'strict-bit-matrix' 'debug, release'
 require_pattern "$ci" 'nextest@0\.9\.143' 'pinned cargo-nextest 0.9.143 install'
 require_determinism_cells "$ci"
-require_job_pattern "$ci" 'determinism-matrix' 'test -s target/nextest/ci/junit\.xml$' \
-  'refuse an absent or empty nextest determinism report'
-require_job_pattern "$ci" 'determinism-matrix' 'test -s target/portable-state-debug\.bin$' \
-  'refuse a determinism cell that emitted no portable state vector'
+require_release_codegen_determinism_cells "$ci"
+# A release cell never writes the rust-cache entry the debug cells, the crate suites and the
+# strict-bit cells restore: rust-cache writes a key once, on the first job to finish, and a
+# dispatch of this workflow on the default branch saves into the scope every PR reads.
+require_job_pattern "$ci" 'determinism-matrix' "^          save-if: \\\$\\{\\{ matrix\\.codegen == 'debug' \\}\\}\$" \
+  'only the debug determinism cells save the shared rust-cache entry'
 # The blob round trip (issue #403): three legs, one recorded artifact. Every determinism cell
 # records the suite natively, the fan-in requires the recordings equal and replays the x86_64
 # debug recording through each architecture's archived suite, and the wasm32-wasip1 leg replays it
 # under the checksum-pinned wasmtime.
 require_determinism_fan_in "$ci"
+require_cross_codegen_fan_in "$ci"
 require_job_needs "$ci" 'blob-round-trip-wasm' 'determinism-matrix'
 require_job_pattern "$ci" 'blob-round-trip-wasm' '^    runs-on:[[:space:]]*ubuntu-latest[[:space:]]*$' \
   'the wasm32 leg runs on the x86_64 runner'
@@ -1200,10 +1233,11 @@ require_job_pattern "$ci" 'strict-bit-compare' 'test -s target/strict-bits/recei
 require_pattern "scripts/ci/strict-bits-cell.sh" 'uname -m' \
   'strict-bit cells refuse a host of the wrong architecture'
 
-# ── merge-gate.yml: after each merge into `development` (issue #545) ──────────────────────────
-# Exactly the four determinism cells, their fan-in and the Windows cell, on every push to
-# `development` and on dispatch, on the commit the event names, never cancelled in progress, under
-# an aggregate that is not called `CI OK`.
+# ── merge-gate.yml: after each merge into `development` (issues #545 and #556) ───────────────
+# Exactly the Windows cell, the one job no pull request runs, on every push to `development` and
+# on dispatch, on the commit the event names, never cancelled in progress, under an aggregate
+# that is not called `CI OK`. A determinism job back in this file fails the job set: those cells
+# gate the pull request now, and a copy here would only repeat them on the tree the PR proved.
 require_workflow_events "$merge" 'push workflow_dispatch'
 require_event_branches "$merge" push '[development]' \
   'the merge gate must run on every merge into development, and only there'
@@ -1214,12 +1248,7 @@ require_pattern "$merge" '^  group: \$\{\{ github\.workflow \}\}-\$\{\{ github\.
   'one concurrency group per event and ref, so pushes to development queue behind each other'
 require_pattern "$merge" '^  cancel-in-progress: false$' \
   'a merge-gate run in progress always finishes'
-require_job_set "$merge" 'determinism-matrix determinism-compare std-build-windows merge-gate-ok'
-require_native_cell_matrix "$merge" 'determinism-matrix' 'debug, release'
-require_determinism_cells "$merge"
-require_release_codegen_determinism_cells "$merge"
-require_determinism_fan_in "$merge"
-require_cross_codegen_fan_in "$merge"
+require_job_set "$merge" 'std-build-windows merge-gate-ok'
 require_windows_cell "$merge"
 require_job_pattern "$merge" 'merge-gate-ok' '^[[:space:]]*if:[[:space:]]*always\(\)' \
   'the merge-gate aggregate reports on every run'
@@ -1321,9 +1350,11 @@ require_release_codegen_determinism_cells "$release"
 require_determinism_fan_in "$release"
 require_cross_codegen_fan_in "$release"
 require_windows_cell "$release"
-# The three jobs both workflows run are one definition (issue #545).
-for shared in determinism-matrix determinism-compare std-build-windows; do
-  require_identical_job "$merge" "$release" "$shared"
+# The Windows cell is one definition in the two workflows that run it (issue #545), and the
+# determinism cells and their fan-in run the same steps per PR and nightly (issue #556).
+require_identical_job "$merge" "$release" 'std-build-windows'
+for shared in determinism-matrix determinism-compare; do
+  require_same_job_commands "$ci" "$release" "$shared"
 done
 require_job_pattern "$release" 'gate' '^[[:space:]]*(- )?run: bash \.agents/gate\.sh full$' \
   'the release gate executes the gate script in full mode'

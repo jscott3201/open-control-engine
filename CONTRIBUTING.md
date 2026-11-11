@@ -35,8 +35,7 @@ the architecture and invariants are the design of record.
   actually ran and that `CI OK` is green before asking for review.
 - **The merge gate runs on the merge commit, and the release gate nightly.** Merging into
   `development` starts [`.github/workflows/merge-gate.yml`](.github/workflows/merge-gate.yml): the
-  determinism subset under release codegen on x86_64 and arm64 with its debug-against-release
-  comparisons, and the Windows cell. Every night
+  Windows cell, the one job no pull request runs. Every night
   [`.github/workflows/release-gate.yml`](.github/workflows/release-gate.yml) runs the heavy set on
   the `development` tip: the full workspace suite in debug and release codegen, the doctests, the
   executed gate script and cargo-deny with advisories. The per-PR gate runs none of those. A red
@@ -124,19 +123,18 @@ the tail of its output into the PR:
 | --- | --- |
 | docs only | `bash .agents/gate.sh docs` |
 | `crates/leverage/**`, docs, the root `README.md` | `bash .agents/gate.sh leverage` |
-| anything else (the engine lane) | `bash .agents/gate.sh` |
-| the core four (`oce-model`, `oce-expr`, `oce-blocks`, `oce-graph`), `oce-cxf`, `oce-api`, `Cargo.lock`, the root `Cargo.toml`, `rust-toolchain.toml` or `.cargo/config.toml` | `bash .agents/gate.sh determinism` |
+| anything else (the engine lane), the core four, `oce-cxf` and `oce-api` included | `bash .agents/gate.sh` |
 | a pin advance (`third_party/**`, `tools/reference-catalog/**`, or either file that holds a pinned upstream commit) or `.agents/gate.sh` itself | `bash .agents/gate.sh full` |
 
 `git diff --no-renames --name-only origin/development... | bash scripts/ci/proof-row.sh` names
 your row, and every gate run ends by printing the row your checkout needs beside the row it
 covered. Each row runs everything the rows above it run, in CI's exact command form; what each
 mode runs, the rules for a rebase and a fix round, and measured timings are in
-[the local proof](docs/ci-and-the-gate.md#the-local-proof). The fourth row adds the determinism
-subset and the strict-bit step under release codegen: no per-PR CI job runs that subset under
-release codegen (its release cells run in the merge gate, on the merge commit), so for a change to
-what the subset builds the tail you paste is the pre-merge release-codegen evidence. The fifth
-adds the workspace suite and the doctests, for the two kinds of change nothing lighter checks. If
+[the local proof](docs/ci-and-the-gate.md#the-local-proof). No row asks for a release-codegen
+run: the per-PR gate runs the determinism subset under release codegen itself, on x86_64 and
+arm64, and compares it with the debug cells (`bash .agents/gate.sh determinism` reproduces a red
+release cell on your machine). The last row adds that, the workspace suite and the doctests, for
+the two kinds of change nothing lighter checks. If
 you change `.github/workflows/release-gate.yml`, or anything else only `full` or the nightly run
 executes, also run `gh workflow run release-gate.yml --ref <your branch>` and wait for it to
 finish green before the PR merges; the `CI OK` that decides the merge is still the one from the

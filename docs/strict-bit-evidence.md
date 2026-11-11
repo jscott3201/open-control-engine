@@ -241,9 +241,10 @@ synthetic fixtures are never native evidence.
 
 The gate script runs the scoped tests in both codegen profiles locally, but cannot reproduce a
 cross-architecture result on one machine. The hosted matrix is separate from the state-artifact
-determinism matrix; neither substitutes for the other. That matrix runs two debug cells per PR and
-all four cells in the merge gate after each merge (issues #502 and #545). The strict-bit matrix did not
-move: all four of its cells and the eight-capture comparison run on every pull request.
+determinism matrix; neither substitutes for the other. That matrix also runs four native cells per
+PR, debug and release codegen on both architectures (its release cells ran after the merge from
+issue #502 until issue #556). The strict-bit matrix never moved: all four of its cells and the
+eight-capture comparison have run on every pull request throughout.
 
 ## Downstream notice
 

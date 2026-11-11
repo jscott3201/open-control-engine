@@ -197,8 +197,8 @@ model partial durable bytes, not device power-loss resilience or atomic file pub
 
 | Policy | Placement check | Evidence boundary |
 | --- | --- | --- |
-| `Portable` | No architecture/OS restriction in the current class policy; all other checks still apply. | Native Linux x86_64/aarch64 CI compares a populated portable state vector: across architectures per PR in debug codegen, and across debug/release codegen in the merge gate on every merge into `development`. This is bounded execution evidence, not every input/program/target. |
-| `TargetBound { arch, os }` | Exact capture architecture and OS labels required. | Per PR, CI requires cross-architecture bytes to differ and exercises foreign-target public restore refusal; the merge gate, on every merge into `development`, also compares same-target debug/release bytes. Same target does not mean same build. |
+| `Portable` | No architecture/OS restriction in the current class policy; all other checks still apply. | Native Linux x86_64/aarch64 CI compares a populated portable state vector: across architectures and across debug/release codegen, per PR. This is bounded execution evidence, not every input/program/target. |
+| `TargetBound { arch, os }` | Exact capture architecture and OS labels required. | Per PR, CI requires cross-architecture bytes to differ, exercises foreign-target public restore refusal, and compares same-target debug/release bytes. Same target does not mean same build. |
 
 Inspection is not admission: an unknown execution ABI may expose a parsed placement tag but still
 refuses restore. Hosts keep encoded bytes intact and never rewrite the tag to move state.

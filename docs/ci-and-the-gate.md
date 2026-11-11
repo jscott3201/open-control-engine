@@ -44,8 +44,8 @@ The per-PR gate runs **once per change**, on the pull request:
 - **A PR into `development`** runs `pr-gate.yml` (and `docs-pages.yml` when it touches the docs
   paths below). Which of its jobs run depends on the paths the PR changes — see
   [Lanes](#lanes-what-a-pr-runs). A new push to the PR branch cancels the superseded run.
-- **A merge into `development`** runs `merge-gate.yml` on the merge commit: the four determinism
-  cells, their comparisons and the Windows cell (issues #502 and #545;
+- **A merge into `development`** runs `merge-gate.yml` on the merge commit: the Windows cell,
+  the one job no pull request runs (issues #502, #545 and #556;
   [what runs after the merge](#what-runs-after-the-merge)), and the path-filtered
   `docs-pages.yml` when the merge touches its paths. It does not re-run `pr-gate.yml`, which has
   no `push` trigger: the merged tree is the one the PR already tested, so that would repeat the
@@ -53,8 +53,8 @@ The per-PR gate runs **once per change**, on the pull request:
   `pr-gate.yml`, so the duplicate run cannot return unnoticed.
 - **Nightly**, `release-gate.yml`, the heavy gate, runs against the `development` tip (a manual
   dispatch runs it against the ref it is dispatched on): the workspace suite in debug and release codegen, the doctests, the executed
-  gate script, cargo-deny with advisories, the light gates again, and the same three jobs the
-  merge gate runs. It is where every crate's own tests run, and the safety net for what a run on
+  gate script, cargo-deny with advisories, the light gates again, the determinism matrix in all
+  four cells and the Windows cell. It is where every crate's own tests run, and the safety net for what a run on
   a merge commit can miss: a run that was replaced while it waited, an advisory published since,
   or a runner image that changed under an unchanged tree.
 - **A PR into `main`, or a push to `main`,** runs `release-gate.yml`, the whole heavy set.
@@ -71,8 +71,9 @@ suites, clippy, build, the [bare-metal cell](#the-bare-metal-cell), rustdoc,
 cargo-deny, cargo-machete, the database-free check, the golden-gen firewall and hygiene jobs, and
 the macOS
 [platform cell](#platform-cells-macos-and-windows) — `portable snapshot (macOS arm64, debug)` and
-its `portable snapshot comparison` fan-in. The determinism matrix is two cells per PR (x86_64 and
-aarch64, debug codegen) and the strict-bit matrix four (both architectures, debug and release).
+its `portable snapshot comparison` fan-in. The determinism matrix and the strict-bit matrix are each four cells per PR (x86_64 and
+aarch64, debug and release codegen; the determinism matrix's release cells ran after the merge
+from issue #502 until issue #556).
 The **leverage lane** is one job,
 `leverage lane`, for the crates under [`crates/leverage/`](../crates/leverage/README.md): the
 layout and `oce-api`-only dependency rule (`oce-bless` is allowed as a dev-dependency only, for the
@@ -146,35 +147,31 @@ coverage check and its fixtures are in `gate behavior fixtures`.
 
 ### What runs after the merge
 
-Three long jobs moved out of `pr-gate.yml` with issue #502 (owner decision of 2026-11-09), into
-`release-gate.yml`, which then ran in full on every push to `development`. Issue #545 (owner
-decision of 2026-11-10) split that: `merge-gate.yml` runs on every push to `development`, which
-is every merged PR, and holds only the jobs a merge needs reported before the next one;
-`release-gate.yml` keeps everything and runs nightly. The per-PR gate keeps both architectures in
-debug codegen and the whole strict-bit matrix.
+One job: the Windows cell, in `merge-gate.yml`, on every push to `development`, which is every
+merged PR. The history is three decisions. Issue #502 (2026-11-09) moved three long jobs out of
+`pr-gate.yml` into `release-gate.yml`, which then ran in full after every merge. Issue #545
+(2026-11-10) split that: `merge-gate.yml` took the jobs a merge needed reported before the next
+one, and `release-gate.yml` kept everything and became nightly. Issue #556 (2026-11-10) returned
+the determinism cells to the per-PR gate, because the reason they had left was gone.
 
-| Moved out of the per-PR gate | Per-PR wall-clock on 2026-11-09 | What still runs per PR | After each merge (`merge-gate.yml`) | Nightly and on release PRs (`release-gate.yml`) |
-| --- | --- | --- | --- | --- |
-| the release-codegen determinism cells | 809–1101 s (x86_64) and 653–671 s (aarch64): 15m47s compiling 105 release test binaries, 26 s running 1,281 tests | the two debug cells and the cross-architecture comparisons | all four cells, and the fan-in with every comparison: portable and target-bound bytes, blobs and round-trip recordings across debug and release as well as across architectures | the same jobs |
-| `std build and nextest (Windows x86_64, debug)` | 251–450 s | nothing on Windows | the same cell | the same cell |
-| `gate (light)` | 1540–1600 s, on a gate-script change | the jobs the script mirrors, each as its own job | nothing | `gate (full)`, which executes the script in `full` mode |
+| Moved out of the per-PR gate by issue #502 | Per-PR wall-clock on 2026-11-09 | Where it runs now |
+| --- | --- | --- |
+| the release-codegen determinism cells and the debug-against-release comparisons | 809–1101 s (x86_64) and 653–671 s (aarch64): 15m47s compiling 105 release test binaries, 26 s running 1,281 tests | **per PR again** (issue #556), and nightly in `release-gate.yml`. In `merge-gate.yml` run 42948818576, the first on a merge commit after the integration tests of `oce-api`, `oce-author`, `oce-cxf` and `oce-conformance` were built as a few binaries each (GitHub #546, #551, #553, #554), the cells took 174 s (x86_64) and 181 s (aarch64), whole job, and each comparison leg about 20 s |
+| `std build and nextest (Windows x86_64, debug)` | 251–450 s | `merge-gate.yml`, after each merge, and `release-gate.yml`, nightly; 333 s in run 42948818576 |
+| `gate (light)` | 1540–1600 s, on a gate-script change | nowhere; `gate (full)` in `release-gate.yml` executes the script in `full` mode, nightly |
 
-**How long the merge gate takes.** One measured run so far: 19.0 minutes from push to
-`Merge gate OK` (run 42935095468, 2026-11-11, on this workflow's first commit), of which the
-x86_64 release cell was 18.5 minutes, the aarch64 release cell 11.9, Windows 8.1, the debug cells
-about 2 and the two comparison legs under half a minute. The issue's target was about 15. That
-run predates GitHub #546 and #551, which cut the number of release test binaries the cells link;
-update this paragraph, and only this one, when a run on a merge commit gives a newer figure.
+**How long the merge gate takes.** 5 min 41 s from push to `Merge gate OK` in run 42948818576
+(2026-11-11, commit `c9a3409`), when it still ran the four determinism cells; the Windows cell
+was the long pole at 5 min 33 s, so the one-job workflow should take about the same. Update this
+paragraph, and only this one, when a run gives a newer figure. (Its first run, 42935095468,
+before those consolidations, took 19.0 minutes, 18.5 of them the x86_64 release cell.)
 
-**Why the split.** In run 42767547196 (2026-11-10, on the merge of GitHub #543) the jobs started
-43 minutes after the push, queued behind the previous merge's run, and then took 1 h 29 min:
-`gate (full)` 88.7 minutes, of which the release-codegen workspace step was 55.7 minutes for 58
-seconds of tests, and the full test suite 41.8 minutes. The four determinism cells, both
-comparison legs and the Windows cell finished in under 13 minutes of that run. So a merge was
-reported about two hours later, and the rule below ("watch the run before the next
-determinism-lane merge") made that the interval between merges. The three short jobs are the ones
-that observe what no pull request can: the other codegen and the comparison against it, on both
-architectures, and Windows.
+**Why the heavy set is nightly.** In run 42767547196 (2026-11-10, on the merge of GitHub #543)
+the jobs started 43 minutes after the push, queued behind the previous merge's run, and then took
+1 h 29 min: `gate (full)` 88.7 minutes, of which the release-codegen workspace step was 55.7
+minutes for 58 seconds of tests, and the full test suite 41.8 minutes. So a merge was reported
+about two hours later, and the rule below ("watch the run before the next determinism-lane
+merge") made that the interval between merges.
 
 | Runs | `merge-gate.yml` | `release-gate.yml` |
 | --- | --- | --- |
@@ -183,29 +180,32 @@ architectures, and Windows.
 | on manual dispatch | yes, on the dispatched ref | yes, on the dispatched ref |
 | on a `development` → `main` release PR | no | yes |
 | on a push to `main` | no | yes |
-| jobs | the four determinism cells, `determinism cross-cell comparison` (two legs), `std build and nextest (Windows x86_64, debug)`, `Merge gate OK` | those three, the workspace suite in debug codegen with the doctests, `gate (full)` (which runs the workspace suite in release codegen), cargo-deny with advisories, fmt, file-size cap, no-secret scan, the database-free check, the golden-gen firewall, clippy, build, rustdoc, cargo-machete, the gate fixtures, `CI OK` |
+| jobs | `std build and nextest (Windows x86_64, debug)`, `Merge gate OK` | that cell, the four determinism cells and `determinism cross-cell comparison` (two legs), the workspace suite in debug codegen with the doctests, `gate (full)` (which runs the workspace suite in release codegen), cargo-deny with advisories, fmt, file-size cap, no-secret scan, the database-free check, the golden-gen firewall, clippy, build, rustdoc, cargo-machete, the gate fixtures, `CI OK` |
 | required status | no | `CI OK`, on `main` |
 
 `check-workflow-gates.sh` pins that table: each workflow's events and branch filters exactly, each
 workflow's job ids exactly (a heavy job deleted from `release-gate.yml` with its `needs:` entry
-fails, as does a determinism cell, a comparison or the Windows cell leaving `merge-gate.yml`, or a
-heavy job entering it), and the three shared job definitions byte for byte between the two files.
-No job in either may carry a job-level `if:`, which is why the split is two files and not a
-condition on the event: `CI OK` would read a skipped job as a failure, and a step-level condition
-on the event is refused for the reason given under
+fails, as does the Windows cell leaving `merge-gate.yml` or any other job entering it, the
+determinism cells included), and the Windows job definition byte for byte between the two files.
+The determinism cells and their fan-in are held the same way between `pr-gate.yml` and
+`release-gate.yml`: every step, command, environment variable, matrix entry and step condition
+must be equal, apart from the lane filter, the pinned checkout ref and the cache `save-if`, so a
+cell, a codegen mode or a comparison cannot be dropped per PR while the nightly keeps it.
+No job in `merge-gate.yml` or `release-gate.yml` may carry a job-level `if:`, which is why the
+split is two files and not a condition on the event: `CI OK` would read a skipped job as a
+failure, and a step-level condition on the event is refused for the reason given under
 [the step-condition rule](#every-pull-request-runs-the-gate).
 
-**Before the merge, the release-codegen evidence is the author's gate run**, for the changes
-that owe one. `bash .agents/gate.sh determinism` runs the determinism subset under release codegen
-on one host, and its tail goes in the PR description of a change the `determinism` row names
-([the local proof](#the-local-proof)). It cannot compare a debug artifact with a release one
-across cells, and it cannot run the other architecture; those are first observed on the merge
-commit. Every other change is first observed under release codegen on its merge commit.
+**Before the merge, release codegen is CI's.** The pull request's own run executes the
+determinism subset under release codegen on both architectures and compares it with the debug
+cells, so no author owes a local release-codegen run. `bash .agents/gate.sh determinism` runs the
+subset under release codegen on one host, for reproducing a red release cell; it cannot compare
+across cells or run the other architecture.
 
 **After the merge, watch the run.** `Merge gate OK` is not a required status: the commit has
 landed. After merging a change that runs the determinism lane, watch the merge-gate run on the
 merge commit; a red run is fixed forward or reverted before the next determinism-lane merge, so a
-second change is never built on a tree the determinism cells have refused. **A red nightly** is
+second change is never built on a tree that does not build or pass on Windows. **A red nightly** is
 fixed forward or reverted before the next determinism-lane merge. It names the `development` tip it
 tested, not one merge: every merge since the last green nightly is a candidate. So the latest
 nightly is a condition of a determinism-lane merge: it must not be red, or its failure must
@@ -220,9 +220,9 @@ never cancelled in progress. For pushes to `development` GitHub keeps the run in
 waiting run: a newer push replaces the waiting one, which then shows as cancelled on its merge
 commit. The run that replaced it tests a commit that contains the earlier merge, so it is the
 evidence for both; a red result there does not say which of the merges it covers caused it. A
-merge-gate run checks out the commit its event names in every job (`github.sha`), so its cells and
-its fan-in build one tree even when another merge lands meanwhile. So do a push run and a
-dispatched run of `release-gate.yml`: `gh workflow run release-gate.yml --ref <branch>` tests that
+merge-gate run checks out the commit its event names (`github.sha`). So do a push run and a
+dispatched run of `release-gate.yml`, in every job, so their cells and fan-in build one tree even
+when another merge lands meanwhile: `gh workflow run release-gate.yml --ref <branch>` tests that
 branch's head with that branch's workflow file, which is how a PR that changes the release gate
 shows it green before it merges. Such a run posts a check named `CI OK` on that head, from the
 heavy set, which does not include the strict-bit matrix or the macOS cell; a manual dispatch of
@@ -262,17 +262,18 @@ every lane ([the local proof](#the-local-proof) says which a PR owes).
 **Cache.** PR runs save `Swatinem/rust-cache` entries into their own PR scope only, so nothing a
 PR does seeds the cache scope other PRs read. Runs on `development` do, since they execute on the
 default branch, whose cache scope every PR into `development` can read: the `merge-gate.yml` run
-after each merge saves the arm64 determinism cells' entry and the Windows cell's, and nothing
-else (its x86_64 cells only restore), and the nightly `release-gate.yml` run saves every other
-entry, the x86_64 `nextest` one included. After a `Cargo.lock` change the x86_64 cells therefore
-build their dependencies cold until the next nightly. Jobs that build the same thing in
+after each merge saves the Windows cell's entry and nothing else, and the nightly
+`release-gate.yml` run saves every other entry, the `nextest` ones for both architectures
+included. After a `Cargo.lock` change the determinism, strict-bit and crate-suite cells therefore
+build their dependencies cold, in every PR, until the next nightly (issue #556 removed the
+arm64 save that `merge-gate.yml` made after each merge). Jobs that build the same thing in
 those workflows therefore share one rust-cache `shared-key` (the key replaces rust-cache's per-job component; the
 rustc host triple, the `CARGO_*`/`RUST*` environment and `Cargo.lock` still separate entries, so
 x86_64 and arm64 never share one):
 
 | `shared-key` | `pr-gate.yml` jobs | `merge-gate.yml` and `release-gate.yml` jobs |
 | --- | --- | --- |
-| `nextest` | the six determinism and strict-bit cells, `crate-tests` | `test-suite` (debug, whole workspace; release gate only) and the four determinism cells (both) |
+| `nextest` | the eight determinism and strict-bit cells, `crate-tests` | `test-suite` (debug, whole workspace) and the four determinism cells, in the release gate |
 | `gate` | — | `gate (full)` |
 | `clippy`, `build`, `rustdoc`, `default-no-db` | the job of that name | the job of that name |
 | `facade-contract`, `leverage` | `facade contract and Quickstart`, `leverage lane` | — |
@@ -283,11 +284,15 @@ x86_64 and arm64 never share one):
 For the like-named pairs this only makes explicit what their identical job ids already did
 (rust-cache's default key component is the job id); the `nextest` key is the new link. The release-gate `test-suite` entry is a superset in debug codegen (the whole workspace's dependency set; its release-codegen run moved into `gate (full)` with issue #545, so the entry no longer holds release dependencies), which
 restores as a warm start for the narrower PR cells; rust-cache never caches workspace crates, so a hit saves
-dependency compile time only, and a release determinism cell spends nearly all its time on workspace crates (11.5 minutes on aarch64 without release dependencies in its entry against 11.7 on x86_64 with them, run 42767547196). The x86_64 determinism cells of both workflows share that key but only
-restore it (`save-if`), so a fast debug cell cannot write the key before `test-suite` does. The
+dependency compile time only, and a release determinism cell spends nearly all its time on workspace crates (11.5 minutes on aarch64 without release dependencies in its entry against 11.7 on x86_64 with them, run 42767547196). The release gate's x86_64 determinism cells share that key but only
+restore it (`save-if`), so a fast debug cell cannot write the key before `test-suite` does. Its
 arm64 determinism cells do save, because no other job builds on arm64: that entry is
 what a new PR's arm64 cells warm-start from (the debug cell finishes first, so it is normally the
-debug dependency set, and the arm64 release strict-bit cells still build their dependencies cold).
+debug dependency set, and the arm64 release cells still build their dependencies cold). In
+`pr-gate.yml` only the debug determinism cells save (`save-if: matrix.codegen == 'debug'`,
+pinned by the checker): a PR run saves into its own scope, which no other PR reads, but the
+workflow can be dispatched on `development`, and there a release cell that wrote the key first
+would leave every PR restoring release dependencies its debug cells cannot use.
 The macOS cell has no release-gate
 counterpart: it reuses what an earlier run of the same PR saved, and builds cold on a new PR. rust-cache saves only on an
 exact-key miss, so under a shared key the first job to finish writes the entry, and its profile's
@@ -345,7 +350,8 @@ deploys the site to GitHub Pages.
 
 Two cells run outside Linux (issue #394). The macOS cell runs per PR, with the determinism lane,
 under `pr-gate.yml`'s `CI OK`. The Windows cell runs in `merge-gate.yml`, on every merge into
-`development`, and in `release-gate.yml`, nightly and on release PRs (issues #502 and #545). They
+`development`, where it is now the only job, and in `release-gate.yml`, nightly and on release
+PRs (issues #502, #545 and #556). They
 are observations of the platform, not qualification of it.
 
 | Cell | Runner | What runs | What it proves | What it does not prove |
@@ -358,7 +364,9 @@ required status and a job in another workflow cannot appear in its `needs:`; a s
 would either be unrequired or add a second required status. It runs only on a PR that changes the
 engine, a gate script or a workflow, and has no schedule of its own. The Windows cell moved out of
 the per-PR gate with issue #502: at four to eight minutes it was the longest per-PR job after
-the release determinism cells, and it makes no determinism claim. A change that breaks only on
+the release determinism cells, and it makes no determinism claim. It stayed out when those cells
+came back (issue #556): at 5 min 33 s in run 42948818576 it would be the per-PR long pole, and
+whether it returns is a separate decision. A change that breaks only on
 Windows is therefore found on its merge commit, not on the PR. `.agents/gate.sh` cannot run either
 cell (wrong operating system) and says so in its closing report.
 
@@ -367,15 +375,16 @@ cell (wrong operating system) and says so in its closing report.
 [`.agents/gate.sh`](../.agents/gate.sh) is the only place the gate's command list is written down.
 Every other document in this repo — including this page — points at it rather than restating it,
 because nine divergent prose copies existed before the script was written and two of them were
-materially weaker than CI (see the script's header). There are five gate modes and three focused
-ones:
+materially weaker than CI (see the script's header). There are five gate modes, four of them
+rows of the local proof, and three focused ones:
 
 ```
 bash .agents/gate.sh docs         # docs        — a docs-only PR: the always-on checks, no cargo build
 bash .agents/gate.sh leverage     # leverage    — adds the leverage lane and the README lane
 bash .agents/gate.sh              # light       — adds the engine lane, in debug codegen
 bash .agents/gate.sh determinism  # determinism — adds the determinism subset and the strict-bit
-                                  #               step under release codegen
+                                  #               step under release codegen; not a row, a way to
+                                  #               reproduce a red release cell
 bash .agents/gate.sh full         # full        — adds the workspace suite (debug and release), the
                                   #               doctests and the blob round trip; CI runs it nightly
 bash .agents/gate.sh nostd        # nostd       — the bare-metal cell alone (light and up run it too)
@@ -395,25 +404,26 @@ building release-codegen test binaries, about three times per PR.
 | --- | --- | --- |
 | docs only | `bash .agents/gate.sh docs` | fmt, the file-size cap, the no-secret scan, the package/authority/product contract and its controls, the gate fixtures and the documentation checks (staging, mdBook build, links): the always-on jobs of `pr-gate.yml`. Nothing is compiled. |
 | `crates/leverage/**`, docs, the root `README.md` | `bash .agents/gate.sh leverage` | the leverage lane (each member's fmt, clippy, rustdoc, nextest and cargo-machete) and the README lane (the Quickstart byte-pin and its execution) |
-| anything else (the engine lane) | `bash .agents/gate.sh` | everything that compiles the engine, in debug codegen: the database-free check, the golden-gen firewall, the facade compiler contract, cargo-machete, clippy, build, the bare-metal cell, rustdoc, cargo-deny, the determinism subset, the strict-bit corpus and the two input-hygiene audits |
-| the core four (`oce-model`, `oce-expr`, `oce-blocks`, `oce-graph`), `oce-cxf`, `oce-api`, `Cargo.lock`, the root `Cargo.toml`, `rust-toolchain.toml` or `.cargo/config.toml` | `bash .agents/gate.sh determinism` | the determinism subset and the strict-bit step under release codegen |
-| a pin advance (`third_party/**`, `tools/reference-catalog/**`, or either file that holds a pinned upstream commit) or `.agents/gate.sh` itself | `bash .agents/gate.sh full` | the workspace suite in debug and release codegen, the doctests, the blob matrix artifact and the blob round trip |
+| anything else (the engine lane), the core four, `oce-cxf` and `oce-api` included | `bash .agents/gate.sh` | everything that compiles the engine, in debug codegen: the database-free check, the golden-gen firewall, the facade compiler contract, cargo-machete, clippy, build, the bare-metal cell, rustdoc, cargo-deny, the determinism subset, the strict-bit corpus and the two input-hygiene audits |
+| a pin advance (`third_party/**`, `tools/reference-catalog/**`, or either file that holds a pinned upstream commit) or `.agents/gate.sh` itself | `bash .agents/gate.sh full` | the determinism subset and the strict-bit step under release codegen, the workspace suite in debug and release codegen, the doctests, the blob matrix artifact and the blob round trip |
 
-The first three rows and the core four and `oce-cxf` in the fourth are the owner's table
-(issue #545). The rest of the fourth row and the whole fifth are coordinator decisions of
-2026-11-10 from the review of GitHub #547, to be confirmed by the owner: `oce-api` is there
-because the release determinism subset executes its test binaries; `Cargo.lock`, the root
-`Cargo.toml`, `rust-toolchain.toml` and `.cargo/config.toml` because they move release codegen of
-everything the subset builds as surely as a source edit; and the fifth row because the G36 half
-of the pin guard runs only in the workspace suite and the script's `full`-only steps run in no
-lighter mode.
+The first three rows are the owner's table (issue #545). The last is the owner's too: confirmed
+on 2026-11-10 (comment on #545), with the dispatch rule below, after the review of GitHub #547
+proposed it. It exists because the G36 half of the pin guard runs only in the workspace suite and
+the script's `full`-only steps run in no lighter mode.
+
+**There is no release-codegen row** (issue #556, owner decision of 2026-11-10). From issue #545
+until then a fourth row, `bash .agents/gate.sh determinism`, was owed by a change to the core
+four, `oce-cxf`, `oce-api`, `Cargo.lock`, the root `Cargo.toml`, `rust-toolchain.toml` or
+`.cargo/config.toml`, because no per-PR job ran the determinism subset under release codegen.
+`pr-gate.yml` runs it in all four native cells again, so those changes owe the engine row and
+nothing more, and `proof-row.sh` never names `determinism`. The mode remains.
 
 - **Which row.** The lane boundaries are the classifier's ([Lanes](#lanes-what-a-pr-runs)):
   documentation a test reads, a gate script, a workflow and a tool config are engine changes.
   `scripts/ci/proof-row.sh` reads changed paths on stdin and prints the row
   (`git diff --no-renames --name-only origin/development... | bash scripts/ci/proof-row.sh`); it
-  holds the exact path lists of the fourth and fifth rows (a crate's tests and fixtures count as
-  the crate; the fifth row's two source files are `crates/oce-cxf/tests/third_party_manifest/` and
+  holds the exact path list of the last row (its two source files are `crates/oce-cxf/tests/third_party_manifest/` and
   `crates/oce-blocks/src/registry/catalog_guard_support.rs`, where the pinned upstream commits are
   written), and names the heaviest row for a diff it cannot read. Its fixtures
   (`scripts/ci/test-proof-row.sh`) run on every PR and fail if a listed path stops existing or a
@@ -440,7 +450,7 @@ lighter mode.
   `oce-blocks` and `oce-expr` suites and the scoped strict-bit binaries; CI adds `oce-graph`,
   `oce-validate`, `oce-model`, `oce-cxf` and `oce-store` per PR; every other crate's suite first
   runs in CI in the nightly release gate.
-- **`full` is also what CI executes nightly.** Only the fifth row owes it: a pin advance,
+- **`full` is also what CI executes nightly.** Only the last row owes it: a pin advance,
   because the G36 half of the pin guard runs only in the workspace suite (the vendored README's
   pin-advance policy), and a change to the script, because nothing else runs its `full` block
   before the merge.
@@ -453,8 +463,7 @@ measured on 2026-11-10 at the head that introduced them:
 | docs | `bash .agents/gate.sh docs` | 4.8 min (285 s) | with two unrelated builds running on the machine (load average 5 to 26); nothing is compiled, and mdBook was already installed |
 | leverage | `bash .agents/gate.sh leverage` | 5.9 min (352 s) | under the same load |
 | engine | `bash .agents/gate.sh` | 7.1 min (423 s) | under the same load |
-| determinism | `bash .agents/gate.sh determinism` | the engine row plus 5.6 min: 5.2 min for the determinism subset under release codegen and 0.4 min for the strict-bit step | those two steps on an idle machine, on `fdd70c0`, before GitHub #546 and #551 cut the release test binaries |
-| full | `bash .agents/gate.sh full` | 30.1 min | idle, on `fdd70c0`: 15.9 min of it the release-codegen workspace suite, likewise before #546 and #551 |
+| full | `bash .agents/gate.sh full` | 30.1 min | idle, on `fdd70c0`: 15.9 min of it the release-codegen workspace suite and 5.6 the release determinism subset and strict-bit step, before GitHub #546, #551, #553 and #554 cut the release test binaries; not re-measured cold since |
 
 The first three are upper bounds, since the machine was busy. About three minutes of each is the
 gate's own fixture suites, which run in every mode (`test-workflow-gates.sh` alone took 3 min 22 s
@@ -484,8 +493,7 @@ own output as the oracle; package, feature, and publication selection is closed)
 for those gates, because a gate that cannot fail is not a gate; the documentation checks; the
 leverage and README lanes; build, clippy and rustdoc under
 `-D warnings`; supply-chain checks; the determinism subset, in debug and, in `determinism` and
-`full`, in release codegen (the release run is the pre-merge release-codegen evidence, since no
-per-PR job runs it); and two fixture input-hygiene audits. A
+`full`, in release codegen; and two fixture input-hygiene audits. A
 failing step never aborts the run, so one round trip reports every problem instead of the first
 (see the script's `step` function).
 
@@ -577,33 +585,35 @@ rusty-bacnet, whose image layout and QEMU invocation this follows, runs its emul
 
 On every engine change (see [Lanes](#lanes-what-a-pr-runs)), the per-PR gate into `development`
 runs the state-determinism subset for **`oce-api`, `oce-blocks`, and `oce-expr`**. That is the
-`determinism-matrix` job in `.github/workflows/pr-gate.yml`: two
-native cells, x86_64 on `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm`, in debug codegen. Each
+`determinism-matrix` job in `.github/workflows/pr-gate.yml`: four
+native cells, x86_64 on `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm`, each in debug and
+release codegen. Each
 cell refuses a runner of the wrong architecture, runs the three-crate
 subset and emits populated portable and target-bound state vectors. The
-`determinism-compare` fan-in (one leg per architecture) downloads both cells' vectors,
-requires portable bytes to match across architectures and target-bound bytes to differ, and then
+`determinism-compare` fan-in (one leg per architecture) downloads all four cells' vectors,
+requires portable bytes to match across architectures and target-bound bytes to differ, both to
+match across debug and release codegen within an architecture, and then
 parses the **other** architecture's target-bound snapshot and refuses it through the public restore path
 — x86_64 refuses aarch64's, aarch64 refuses x86_64's — natively, from the oce-api unit-test binary
 its own cell built and archived. Each cell also writes the 46 compiled-schedule blobs it
 encodes (`OCE_BLOB_OUT`, after its `blob_goldens` test has compared them with the checked-in
-goldens), and the fan-in requires those bytes identical in both cells
+goldens), and the fan-in requires those bytes identical in all four cells
 and each file 123,329 bytes, the goldens' total, so a truncated
 artifact cannot pass ([compiled-schedule blob](compiled-schedule-blob.md), GitHub #400).
 `bash .agents/gate.sh full` writes the artifact the same way and checks its size.
 Nothing is emulated; every test in the subset runs in every cell.
 
-**Release codegen runs after the merge** (issue #502). The job of the same name in
-`merge-gate.yml` runs four cells — both architectures, debug and release codegen — on every
-merge into `development` (and `release-gate.yml` runs the same job nightly), and its fan-in adds the comparisons a per-PR run no longer has: portable
-and target-bound bytes equal across codegen within each architecture, the blobs identical in all
-four cells, and the four round-trip recordings identical. A release cell was the per-PR long pole,
-11 to 18 minutes of which the tests ran for under half a minute, so a pull request does not wait
-for it. What a pull request the `determinism` row names has before it merges is the
-author's `bash .agents/gate.sh determinism`, which runs the subset under release codegen on one
-host: one architecture, and no comparison between a debug and a release artifact; any other pull
-request has no release-codegen run before it merges ([the local proof](#the-local-proof)). A divergence that needs the other architecture or that comparison is found
-on the merge commit ([what runs after the merge](#what-runs-after-the-merge)).
+**Release codegen is per-PR again** (issue #556). From issue #502 the release cells of this
+matrix and the debug-against-release comparisons ran only after the merge: a release cell was the
+per-PR long pole, 11 to 18 minutes of which the tests ran for under half a minute, because every
+integration-test file was its own release binary and each one linked the whole dependency graph.
+GitHub #546, #551, #553 and #554 built those files as a few binaries per crate, the cells fell to
+174 s and 181 s (run 42948818576), and they came back. So a pull request now observes, before it
+merges, portable and target-bound bytes equal across codegen within each architecture, the blobs
+identical in all four cells and the four round-trip recordings identical; nothing about
+determinism is left to the merge commit. `release-gate.yml` runs the same four cells nightly.
+`bash .agents/gate.sh determinism` runs the subset under release codegen on one host, to
+reproduce a failure: one architecture, and no comparison between a debug and a release artifact.
 
 The gate script runs the test commands locally and adds two named
 `oce-cxf` test binaries, which are input hygiene rather than
@@ -645,7 +655,7 @@ one recorded artifact, all under `CI OK`:
 | Leg | Where | What it does |
 | --- | --- | --- |
 | x86_64 (records) | every `determinism-matrix` cell, before the subset; the x86_64 debug cell's recording is the artifact | runs the suite natively with `OCE_ROUND_TRIP_OUT=target/determinism/round-trip`: 46 blobs and 46 traces, uploaded with the cell's vectors |
-| aarch64 (replays) | `determinism-compare`, aarch64 leg | requires the cells' recordings identical (`diff -rq`, 92 files each: the two debug cells per PR, all four cells in `merge-gate.yml` after the merge), then runs the suite its own debug cell archived with `OCE_ROUND_TRIP_EXPECT` pointing at the x86_64 debug recording: it decodes the blobs x86_64 encoded and compares its run with the recorded one. The x86_64 leg runs the same replay. |
+| aarch64 (replays) | `determinism-compare`, aarch64 leg | requires the cells' recordings identical (`diff -rq`, 92 files each, all four cells), then runs the suite its own debug cell archived with `OCE_ROUND_TRIP_EXPECT` pointing at the x86_64 debug recording: it decodes the blobs x86_64 encoded and compares its run with the recorded one. The x86_64 leg runs the same replay. |
 | wasm32 (replays) | `blob round trip (wasm32-wasip1 under wasmtime)`, on `ubuntu-latest` after the matrix | compiles the suite for `wasm32-wasip1` and runs it under the pinned wasmtime through the cargo target runner in `.cargo/config.toml` (`scripts/ci/wasmtime-runner.sh`, which shows the guest the workspace at its host path and passes only the two round-trip variables and `RUST_BACKTRACE`), against the same recording |
 
 Every leg also compares the facade with the entry on its own target, the blob bytes with the
@@ -697,10 +707,10 @@ is caught by the next scheduled run, not by its own gate.
 
 `release-gate.yml` fires nightly against the `development` tip, on manual dispatch, on
 `development` → `main` PRs and on pushes to `main` (see its trigger block). It does not fire on a
-push to `development`: `merge-gate.yml` does, with three of the jobs below
+push to `development`: `merge-gate.yml` does, with the Windows cell
 ([what runs after the merge](#what-runs-after-the-merge)). The three workflows are disjoint by
 event and base branch, so no two fire on one event. It re-runs the light correctness gates against
-the tip it tests and adds six things, the last three moved out of the per-PR gate by issue #502:
+the tip it tests, runs the determinism matrix again, and adds five things no pull request runs:
 
 | Step | What it covers | Where |
 | --- | --- | --- |
@@ -708,7 +718,7 @@ the tip it tests and adds six things, the last three moved out of the per-PR gat
 | `cargo test --doc` | doctests — nextest cannot run them, so this is a separate step | `release-gate.yml`, `test-suite` job, doctest step |
 | the executed gate script | `bash .agents/gate.sh full`, the only CI execution of the script | `release-gate.yml`, `gate` job |
 | workspace nextest, release codegen | release panic-freedom, `debug_assert` paths stripped; the `ci` runner policy, inherited by the `ci-release-workspace` profile | `release-gate.yml`, `gate` job: the script's `full` mode runs it, and the job requires the `ci-release-workspace` JUnit report afterwards |
-| determinism matrix, four native cells | the three-crate subset and the blob round trip under release codegen on x86_64 and aarch64, beside the debug cells; the fan-in compares debug against release (portable and target-bound bytes, blobs, round-trip recordings) and repeats the cross-architecture checks | `merge-gate.yml` and `release-gate.yml`, `determinism-matrix` and `determinism-compare` jobs |
+| determinism matrix, four native cells | the three-crate subset and the blob round trip under release codegen on x86_64 and aarch64, beside the debug cells; the fan-in compares debug against release (portable and target-bound bytes, blobs, round-trip recordings) and repeats the cross-architecture checks | `pr-gate.yml` (per PR) and `release-gate.yml`, `determinism-matrix` and `determinism-compare` jobs |
 | Windows cell | the workspace build and suite on Windows, without the strict-bit binaries | `merge-gate.yml` and `release-gate.yml`, `std-build-windows` job |
 
 The release-codegen workspace suite has one build, not two (issue #545). `test-suite` used to run
@@ -746,8 +756,8 @@ requires every expected report to exist and be non-empty; the reports are no lon
 artifacts. Every cell, both architectures, uses `.config/nextest.toml`.
 
 Partitioning is deliberately off: compilation dominates and test execution takes seconds. In run
-42462665456 the x86_64 release determinism cell, then the per-PR long pole and since issue #502 a
-job that runs after the merge, spent 13m05s in its nextest
+42462665456 the x86_64 release determinism cell, then the per-PR long pole (and for that reason a
+post-merge job from issue #502 until issue #556), spent 13m05s in its nextest
 step of which the 1,089 tests ran for under ten seconds; the rest was building the `oce-api` test
 binaries under the release profile (thin LTO, one codegen unit). nextest's `--partition` splits test
 execution, not the build, so it would not shorten that cell, and each determinism cell must execute
@@ -776,19 +786,17 @@ in every per-PR build, are the only pinned surface.
   `merge-gate.yml`, `release-gate.yml`, `advisories.yml`, and `docs-pages.yml` (per-PR on `docs/**`, `README.md`, `scripts/docs/**`,
   `scripts/authority_claims/**`, and `site/**`) — runs on GitHub-hosted Linux runners.
   Cross-*architecture* is covered natively for the determinism and strict-bit subsets — x86_64 on
-  `ubuntu-latest`, aarch64 on `ubuntu-24.04-arm`, debug and release (the determinism subset's
-  release-codegen cells in the merge gate, after the merge). The exceptions are the two
+  `ubuntu-latest`, aarch64 on `ubuntu-24.04-arm`, debug and release, per PR. The exceptions are the two
   [platform cells](#platform-cells-macos-and-windows): the determinism subset in debug on macOS
   arm64 (per PR), and the workspace build and suite (without the strict-bit binaries) in debug on
   Windows (in the merge gate).
   Every other job runs on Linux x86_64 only: nothing runs release
   codegen or doctests on macOS or Windows, and no strict-bit result is observed on either.
-- **Release codegen, Windows and the executed gate script, before a merge.** No per-PR job runs
-  the determinism subset under release codegen, compares a debug artifact with a release one,
-  builds on Windows or executes `.agents/gate.sh`. For a change the `determinism` row names the
-  author's own `determinism` run covers release codegen on one host; for every other change, and
-  for the comparison and Windows, the merge commit is the first observation, by a run that does
-  not block the merge it reports on.
+- **Windows and the executed gate script, before a merge.** No per-PR job builds on Windows or
+  executes `.agents/gate.sh`. For Windows the merge commit is the first observation, by a run
+  that does not block the merge it reports on; the script is first executed by CI the following
+  night. (Release codegen of the determinism subset was on this list from issue #502 until
+  issue #556 returned its cells to the per-PR gate.)
 - **The workspace suite, on the day of a merge.** Every crate's own tests, the doctests, the
   release-codegen workspace suite and the executed gate script run nightly (issue #545), so a
   merge that breaks a suite the per-PR gate does not name is found the following night unless
@@ -817,7 +825,7 @@ The script says the rest itself, in its closing report: a green local run
 does **not** prove the native cross-arch determinism or strict-bit matrices pass (one machine
 cannot reproduce them), does not prove `cargo deny check advisories` passes, and does not prove
 that the script and `pr-gate.yml` still agree. Any run but `full` additionally does not prove the workspace suite or doctests pass, because the
-per-PR gate does not run them, and a `docs`, `leverage` or `light` run proves nothing about release codegen.
+per-PR gate does not run them, and a `docs`, `leverage` or `light` run built nothing under release codegen.
 
 ## Publishing
 

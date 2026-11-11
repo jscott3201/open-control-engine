@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The five proof modes of .agents/gate.sh nest (issue #545): docs, leverage, light, determinism,
+# The five gate modes of .agents/gate.sh nest (issues #545 and #556): docs, leverage, light, determinism,
 # full, each running every step of the one before it and at least one more. The local proof rests
 # on that: a row is satisfied by any heavier mode, and scripts/ci/proof-row.sh only ever names the
 # lightest sufficient one.
