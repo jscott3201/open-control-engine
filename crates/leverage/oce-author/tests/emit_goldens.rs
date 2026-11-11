@@ -5,7 +5,7 @@
 //! warning-free (acceptance precondition 4), emits twice to the same bytes and loads under an
 //! overridden namespace too.
 
-mod support;
+use crate::support;
 
 use oce_author::{EmitOptions, Sequence, emit};
 

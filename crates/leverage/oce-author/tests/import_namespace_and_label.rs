@@ -10,7 +10,7 @@
 //! emitted document of that layout to keep; this is a document the importer reads in today's
 //! layout.
 
-mod support;
+use crate::support;
 
 use oce_api::{DiagCode, Engine, OcError};
 use oce_author::{

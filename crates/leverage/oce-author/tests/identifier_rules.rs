@@ -1,7 +1,7 @@
 //! Identifier and provenance-id rules: syntax, the 64-byte limit at its boundary, reserved words
 //! and text-form keywords, uniqueness across declaration kinds, and the decision-5 grammar.
 
-mod support;
+use crate::support;
 
 use oce_author::{
     Boundary, Identifier, IdentifierError, MAX_IDENTIFIER_BYTES, MAX_PROVENANCE_ID_BYTES,

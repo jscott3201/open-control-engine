@@ -6,7 +6,7 @@
 //! Boolean one refused. Edits go through `support::edit` on the every-element golden, which
 //! carries every element the model has.
 
-mod support;
+use crate::support;
 
 use oce_author::{
     Bound, EmitOptions, ImportError, ImportOptions, Imported, Literal, ParamValue, SignalType,

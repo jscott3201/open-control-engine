@@ -8,7 +8,7 @@
 //! refuses an unknown member as `grounding-failed`, while stage 1 reports `unknown-enum-literal`
 //! (the note's table). The test pins what the engine says today so the parity test sees it.
 
-mod support;
+use crate::support;
 
 use oce_api::{DiagCode, Engine, Value};
 use oce_author::{Block, Literal, ParamValue, validate_author_side};

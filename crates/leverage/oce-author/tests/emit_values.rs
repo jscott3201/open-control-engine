@@ -3,7 +3,7 @@
 //! topology bit for bit — Reals by their bits (`-0.0` stays negative), Integer literals widened on
 //! Real parameters, array elements under their flattened names, enumeration ordinals and strings.
 
-mod support;
+use crate::support;
 
 use oce_api::Value;
 use oce_author::{EmitOptions, Literal, ParamValue, Sequence, emit};

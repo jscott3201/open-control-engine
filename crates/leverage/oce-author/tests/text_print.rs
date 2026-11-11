@@ -3,7 +3,7 @@
 //! printed as text that parses to a different model; and every model stage 1 accepts prints to
 //! text within every line bound that parses back equal and is its own `fmt`.
 
-mod support;
+use crate::support;
 
 use oce_author::{
     Endpoint, Identifier, Literal, MAX_COMMENT_BYTES, MAX_HAYSTACK_TAGS, MAX_IDENTIFIER_BYTES,

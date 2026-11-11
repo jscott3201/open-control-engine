@@ -4,7 +4,7 @@
 //! the bytes; the canonical content id (GitHub #470) is independent of authored order, so no
 //! permutation here moves it.
 
-mod support;
+use crate::support;
 
 use oce_api::Engine;
 use oce_author::{EmitOptions, Sequence, emit};

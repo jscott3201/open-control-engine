@@ -4,7 +4,7 @@
 //! (`catch_unwind` names the mutant). The sweep is split by document family so the runner spreads
 //! it over its threads; each family stays well inside the per-test time bound in a debug build.
 
-mod support;
+use crate::support;
 
 use oce_author::{ImportError, ImportOptions, Imported, import_cxf, import_graph_v0};
 

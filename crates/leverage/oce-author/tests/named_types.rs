@@ -5,7 +5,7 @@
 //! loads warning-free; a reference type-checks by enumeration class; and each refusal has its
 //! exact code.
 
-mod support;
+use crate::support;
 
 use oce_api::{EnumerationClass, EnumerationKind, MemberValue, Value, ValueType, enumerations};
 use oce_author::{

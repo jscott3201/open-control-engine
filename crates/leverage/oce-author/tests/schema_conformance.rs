@@ -3,7 +3,7 @@
 //! `items`, `enum`, `anyOf`, `$ref`) accepts every bundle fixture, and for each value shape the
 //! schema and `from_wire_str` accept and refuse the same values.
 
-mod support;
+use crate::support;
 
 use oce_author::{WIRE_SCHEMA, from_wire_str};
 use serde_json::{Value, json};

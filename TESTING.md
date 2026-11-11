@@ -259,7 +259,11 @@ case" is itself a finding to resolve, not a pass.
 ## Conventions
 
 - **Test location:** inline `#[cfg(test)] mod tests;` for unit tests; `crates/<crate>/tests/` for
-  integration tests; `crates/<crate>/tests/fixtures/` for input + golden files.
+  integration tests; `crates/<crate>/tests/fixtures/` for input + golden files. `oce-author`
+  builds `tests/*.rs` as one binary (`autotests = false`, GitHub #548): register a new test file
+  there as `mod <file>;` in `tests/authoring.rs` (with `use crate::support;` for the shared
+  helpers), or give it its own `[[test]]` in `Cargo.toml`, with the reason, when something selects
+  it by name; a layout test fails on a file compiled into no binary or into two.
 - **Float comparison:** `Value::bit_eq` (or `f64::to_bits`) — **never** `==` or `(a-b).abs() < ε`
   in an engine assertion. Sole exception: the 21 transcendental, psychrometric, and solar Real
   signal goldens, whose libm-dependent outputs retain the existing aligned-tolerance band on

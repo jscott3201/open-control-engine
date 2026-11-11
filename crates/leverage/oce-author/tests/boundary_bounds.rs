@@ -5,7 +5,7 @@
 //! text spelling converts exactly as the loader does; and each refusal has its exact code, in the
 //! wire reader, the text parser, the builder and the validator.
 
-mod support;
+use crate::support;
 
 use oce_api::{PointDirection, Value};
 use oce_author::{

@@ -3,7 +3,7 @@
 //! case table and [`oce_author::IMPORT_ERROR_CODES`] must cover each other, so a new kind needs a
 //! case here before the suite passes.
 
-mod support;
+use crate::support;
 
 use std::collections::BTreeSet;
 

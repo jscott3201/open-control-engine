@@ -3,7 +3,7 @@
 //! loaded executable — the compiled-schedule blob, apart from the canonical content id it records —
 //! is identical, so semantics never reach execution.
 
-mod support;
+use crate::support;
 
 use oce_author::{EmitOptions, Sequence, emit};
 

@@ -2,7 +2,7 @@
 //! a pure function of the model, so permuting the model permutes the findings with it and nothing
 //! else.
 
-mod support;
+use crate::support;
 
 use oce_author::{
     Boundary, Endpoint, Finding, Identifier, Literal, ParamValue, ProvenanceId, Sequence,

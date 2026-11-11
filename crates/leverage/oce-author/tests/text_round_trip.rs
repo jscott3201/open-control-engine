@@ -5,7 +5,7 @@
 //! comments the text form added to the model never reaching the wire form, the schema or the
 //! emitter.
 
-mod support;
+use crate::support;
 
 use oce_author::{
     EmitOptions, Literal, ParamValue, PrintError, Sequence, WIRE_SCHEMA, emit, from_wire_str,

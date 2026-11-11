@@ -1069,6 +1069,27 @@ and a gate that accepted any text would restore exactly the false assurance desc
   2.0 GiB to 819 MiB. The 718 tests listed before are all listed after under the same module paths,
   plus the two layout tests. No engine source, fixture or golden changed.
 
+- **`oce-author`'s integration tests build as one binary instead of 40, and its release test build
+  takes a quarter of the time** (GitHub #548, issue #504; the second crate after `oce-api`).
+  `crates/leverage/oce-author/Cargo.toml` sets `autotests = false` and lists one target,
+  `authoring`, of which every file under `tests/` is a module. No file needs a binary of its own:
+  the crate's bless command names the package, and nothing in `.agents/`, `.github/`, `scripts/`,
+  `docs/` or the tests selects a test binary of this crate by name. The 37 files that declared
+  `mod support;` now say `use crate::support;` on the same line, with the helper declared once in
+  `tests/authoring.rs`, and no test body changed. A test in a merged file is now
+  `oce-author::authoring <file>::<test>`; select one file with `-E 'test(/^<file>::/)'`.
+  `tests/authoring.rs` checks that every file under `tests/` is compiled into exactly one binary,
+  reading the root's declarations as the compiler does: `pub mod`, a comment after the semicolon,
+  `mod` inside a block comment or a string, a `#[path]` module counted when it names a file under
+  `tests/`, and a file named by two roots or by a root and a target, with controls for each, for a
+  file in no binary and for discovery left on. No test sets a global allocator, an environment
+  variable, a static, the working directory or a temporary file, so none changes meaning in a
+  shared binary. Measured on one 10-core arm64 Mac from a clean `target/`, `cargo nextest run
+  -p oce-author --locked --no-run`: release 166 s to 41.5 s wall (933 s to 132 s of CPU) and
+  `target/` 219 MiB to 122 MiB; debug 15.0 s to 12.2 s and 1.0 GiB to 469 MiB. The 358 tests
+  listed before are all listed after under the same file and test names, plus the six layout
+  tests. No source, fixture or golden changed.
+
 ### Documentation
 
 - **The facade migration page is retired, with the other prose the format reset made false**
