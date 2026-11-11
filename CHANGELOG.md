@@ -453,6 +453,52 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
+- **Vectors, part 3 of 4: mutant mode, the catch score and the in-repo AHU-0016 mutants**
+  (GitHub #PRNUMBER, issue #521; [vectors note](docs/design/vectors.md) decisions 27 to 30, the
+  owner's ruling of 2026-11-11 and "Part 3's readings").
+  - **The format, in place.** `mutants` is a list of `{ "path", "description"? }`, at most 256
+    (`too-many-mutants`). A path is `/`-separated with no empty, `.` or `..` segment and no
+    backslash (`mutant-path-invalid`), and is unique (`duplicate-mutant`). The canonical writer and
+    `spec_id` cover it, and the pinned schema gains the `Mutant` object (re-blessed). The load
+    codes go from 32 to 35.
+  - **The mutants' bytes.** `VectorInputs::with_mutants` hands them in under their listed paths;
+    `oce-verify` still opens no file. `VerifyLimits` gains `max_mutants` (256) and
+    `max_mutant_bytes` (64 MiB, all mutants together).
+  - **Validation at bind**, before any frame runs, the first refusal winning:
+    - the bytes given are listed, and given once (`mutant-unlisted`, `duplicate-mutant`);
+    - each listed mutant is given (`mutant-missing`);
+    - the bytes fit their bound (`too-many-mutant-bytes`);
+    - each mutant in file order loads (`mutant-load-failed`, with the engine's codes), has the
+      subject's input and output paths and types, input bounds not compared
+      (`mutant-boundary-differs`, naming the first port that differs), and has another content id
+      than the subject (`mutant-identical`);
+    - each mutant admits every distinct effective edit list, each tried once on a fresh engine of
+      it in the order of the first scenario that has it (`mutant-param-refused` with the cause
+      `param-range`, `param-type`, `param-structural` or `param-path-unknown`, owner ruling).
+    - An invalid mutant is an error with no receipt. The frame budget counts
+      `(N + 1) * scenarios * (1 + mutants)`.
+  - **Scoring**, only when the subject passes. Each mutant runs the scenarios in file order, as
+    the subject did, and stops at the first that fails on it. A frame-class refusal fails it, so a
+    mutant that narrows an input bound is caught, not an error.
+  - **The receipt** gains the body's `mutants` section, written when the set lists a mutant:
+    - `status` (`scored` or `not_run`), `total`, `caught` and `survived`;
+    - one entry per mutant with its `path`, its `digest` (`fnv1a128:` of the bytes given), its
+      `content_id` and its `status`, plus, when caught, the `scenario` and its first `failure`;
+    - the score never changes `passed`. The bind codes go from 19 to 27.
+  - **Fixtures** under `crates/leverage/oce-verify/tests/fixtures/AHU-0016/`: AHU-0016's set plus
+    the `mutants` list (its clock and scenarios held equal to the facade's copy, which lists none)
+    and three hand edits of the rule, named `.cxf.json`. The run agrees with the note's table:
+    - `threshold_inclusive` is caught by `threshold_edge`, `value-mismatch` at 900 s;
+    - `no_persistence` is caught by `both_open` at 0 s;
+    - `late_alarm` survives, as designed.
+  - **Goldens:** the fifth golden receipt, `receipts/AHU-0016.mutants.receipt.json`, compared byte
+    for byte. The four earlier receipts are byte-identical. `sets/every_field.json` gains a
+    `mutants` list, so its canonical golden and `spec_id` are re-derived by the independent Python
+    script.
+  - **Docs:** the note records the owner's ruling, part 3's readings (for confirmation) and the
+    mutant table confirmed by the run. Mutant mode multiplies the loads and frames #561 describes;
+    the issue now counts them. The 46 fixture goldens and 422 provenance goldens are
+    byte-identical.
 - **Vectors, part 2 of 4: bind, replay and compare a vector set, and issue the receipt**
   (GitHub #558, issue #520; [vectors note](docs/design/vectors.md) decisions 3, 6 to 8, 11,
   12, 14, 15, 18 to 26, 31 to 33 and 37). `oce-verify` now depends on `oce-api` and `oce-replay`

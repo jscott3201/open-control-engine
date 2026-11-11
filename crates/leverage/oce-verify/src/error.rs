@@ -58,8 +58,8 @@ pub enum VectorErrorKind {
     StringTooLong,
     /// An object writes one key twice.
     DuplicateKey,
-    /// An object carries a key the format does not define. `within`, `of`, `when` and `mutants`
-    /// are such keys: refused, never ignored.
+    /// An object carries a key the format does not define. `within`, `of` and `when` are such
+    /// keys: refused, never ignored.
     UnknownKey,
     /// An object lacks a required key.
     MissingKey,
@@ -86,6 +86,8 @@ pub enum VectorErrorKind {
     TooManyScenarios,
     /// A scenario has more expectations than [`crate::VerifyLimits::max_expectations`].
     TooManyExpectations,
+    /// More mutants than [`crate::VerifyLimits::max_mutants`].
+    TooManyMutants,
     /// A `params` map has more entries than [`crate::VerifyLimits::max_parameters`].
     TooManyParameters,
     /// Two scenarios share a name.
@@ -110,6 +112,11 @@ pub enum VectorErrorKind {
     AmbiguousExpectation,
     /// A diagnostic `at_s` is not a tick of the clock.
     InstantOffCadence,
+    /// A mutant path that is absolute, has an empty, `.` or `..` segment, or holds a backslash:
+    /// a path that could leave the vector file's directory, or name one file two ways.
+    MutantPathInvalid,
+    /// Two mutants share a path.
+    DuplicateMutant,
 }
 
 impl VectorErrorKind {
@@ -135,6 +142,7 @@ impl VectorErrorKind {
         Self::TooManyTicks,
         Self::TooManyScenarios,
         Self::TooManyExpectations,
+        Self::TooManyMutants,
         Self::TooManyParameters,
         Self::DuplicateScenario,
         Self::EmptyName,
@@ -147,6 +155,8 @@ impl VectorErrorKind {
         Self::WindowUncovered,
         Self::AmbiguousExpectation,
         Self::InstantOffCadence,
+        Self::MutantPathInvalid,
+        Self::DuplicateMutant,
     ];
 
     /// The stable kebab-case code of this kind: the contract a caller branches on.
@@ -173,6 +183,7 @@ impl VectorErrorKind {
             Self::TooManyTicks => "too-many-ticks",
             Self::TooManyScenarios => "too-many-scenarios",
             Self::TooManyExpectations => "too-many-expectations",
+            Self::TooManyMutants => "too-many-mutants",
             Self::TooManyParameters => "too-many-parameters",
             Self::DuplicateScenario => "duplicate-scenario",
             Self::EmptyName => "empty-name",
@@ -185,6 +196,8 @@ impl VectorErrorKind {
             Self::WindowUncovered => "window-uncovered",
             Self::AmbiguousExpectation => "ambiguous-expectation",
             Self::InstantOffCadence => "instant-off-cadence",
+            Self::MutantPathInvalid => "mutant-path-invalid",
+            Self::DuplicateMutant => "duplicate-mutant",
         }
     }
 }
@@ -211,6 +224,7 @@ pub const VECTOR_ERROR_CODES: &[&str] = &[
     "too-many-ticks",
     "too-many-scenarios",
     "too-many-expectations",
+    "too-many-mutants",
     "too-many-parameters",
     "duplicate-scenario",
     "empty-name",
@@ -223,6 +237,8 @@ pub const VECTOR_ERROR_CODES: &[&str] = &[
     "window-uncovered",
     "ambiguous-expectation",
     "instant-off-cadence",
+    "mutant-path-invalid",
+    "duplicate-mutant",
 ];
 
 /// Whether two strings are the same bytes, in a constant context.
@@ -361,24 +377,27 @@ mod tests {
             K::TooManyTicks => 17,
             K::TooManyScenarios => 18,
             K::TooManyExpectations => 19,
-            K::TooManyParameters => 20,
-            K::DuplicateScenario => 21,
-            K::EmptyName => 22,
-            K::StepListEmpty => 23,
-            K::StepListNotFromZero => 24,
-            K::StepTimesNotIncreasing => 25,
-            K::StepAfterHorizon => 26,
-            K::InvalidWindow => 27,
-            K::WindowOutsideClock => 28,
-            K::WindowUncovered => 29,
-            K::AmbiguousExpectation => 30,
-            K::InstantOffCadence => 31,
+            K::TooManyMutants => 20,
+            K::TooManyParameters => 21,
+            K::DuplicateScenario => 22,
+            K::EmptyName => 23,
+            K::StepListEmpty => 24,
+            K::StepListNotFromZero => 25,
+            K::StepTimesNotIncreasing => 26,
+            K::StepAfterHorizon => 27,
+            K::InvalidWindow => 28,
+            K::WindowOutsideClock => 29,
+            K::WindowUncovered => 30,
+            K::AmbiguousExpectation => 31,
+            K::InstantOffCadence => 32,
+            K::MutantPathInvalid => 33,
+            K::DuplicateMutant => 34,
         }
     }
 
     #[test]
     fn the_code_list_is_every_kind_in_declaration_order() {
-        assert_eq!(VectorErrorKind::ALL.len(), 32);
+        assert_eq!(VectorErrorKind::ALL.len(), 35);
         for (index, kind) in VectorErrorKind::ALL.iter().enumerate() {
             assert_eq!(declared_index(*kind), index, "{kind:?}");
         }

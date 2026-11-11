@@ -13,6 +13,9 @@ use oce_verify::{
 /// The golden switch for this crate (see `.agents/project-facts.md`). It rewrites the published
 /// schema and the golden receipts under `tests/fixtures/receipts/`; the canonical goldens are
 /// derived outside the crate and are never blessed.
+///
+/// The mutant set and its mutants under `tests/fixtures/AHU-0016/` are hand-written, never
+/// blessed.
 pub const BLESS_SWITCH: &str = "OCE_BLESS_VERIFY";
 
 /// The crate root.
@@ -72,6 +75,127 @@ pub const HYSTERESIS: &str = "urn:verify:hysteresis#top.";
 
 /// The canonical path prefix of AHU-0016's root.
 pub const AHU_0016: &str = "urn:cxf-library:ahu-fc-050#ahu_fc_050.";
+
+/// The AHU-0016 vector set with its three mutants (`tests/fixtures/AHU-0016/vectors.json`).
+pub fn mutant_set() -> String {
+    String::from_utf8(fixture_bytes("AHU-0016/vectors.json")).expect("UTF-8")
+}
+
+/// The bytes of one of AHU-0016's three mutants, by name (`threshold_inclusive`,
+/// `no_persistence`, `late_alarm`).
+pub fn mutant(name: &str) -> Vec<u8> {
+    fixture_bytes(&format!("AHU-0016/mutants/{name}.cxf.json"))
+}
+
+/// The three mutants' listed paths and bytes, in the set's order.
+pub fn ahu_mutants() -> Vec<(String, Vec<u8>)> {
+    ["threshold_inclusive", "no_persistence", "late_alarm"]
+        .into_iter()
+        .map(|name| (format!("mutants/{name}.cxf.json"), mutant(name)))
+        .collect()
+}
+
+/// `bytes` with every occurrence of each `(old, new)` pair replaced, in order: a mutant written
+/// as an edit of a subject. Panics when an `old` does not occur, so an edit never silently does
+/// nothing.
+pub fn edited(bytes: &[u8], edits: &[(&str, &str)]) -> Vec<u8> {
+    let mut text = String::from_utf8(bytes.to_vec()).expect("UTF-8");
+    for (old, new) in edits {
+        assert!(
+            text.contains(old),
+            "the edit's text `{old}` is in the document"
+        );
+        text = text.replace(old, new);
+    }
+    text.into_bytes()
+}
+
+/// AHU-0016's rule with its fault output's driver turned into a Real: a `BooleanToReal` between
+/// the persistence timer and `yFault`, which becomes a `RealOutput` at the same path.
+pub fn ahu_real_fault() -> Vec<u8> {
+    let ns = "urn:cxf-library:ahu-fc-050#ahu_fc_050";
+    edited(
+        &library_subject("AHU-0016"),
+        &[
+            (
+                &format!(r#"{{ "@id": "{ns}.persist" }}"#),
+                &format!(
+                    r#"{{ "@id": "{ns}.persist" }},
+        {{ "@id": "{ns}.toReal" }}"#
+                ),
+            ),
+            (
+                &format!(
+                    r#""S231:isConnectedTo": {{ "@id": "{ns}.yFault" }}
+    }},"#
+                ),
+                &format!(
+                    r#""S231:isConnectedTo": {{ "@id": "{ns}.toReal.u" }}
+    }},
+    {{
+      "@id": "{ns}.toReal",
+      "@type": "urn:cxf-library:ahu-fc-050#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:label": "toReal",
+      "S231:hasInput": {{ "@id": "{ns}.toReal.u" }},
+      "S231:hasOutput": {{ "@id": "{ns}.toReal.y" }}
+    }},
+    {{
+      "@id": "{ns}.toReal.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {{ "@id": "S231:Boolean" }}
+    }},
+    {{
+      "@id": "{ns}.toReal.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {{ "@id": "S231:Real" }},
+      "S231:isConnectedTo": {{ "@id": "{ns}.yFault" }}
+    }},"#
+                ),
+            ),
+            (
+                &format!(
+                    r#""@id": "{ns}.yFault",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {{ "@id": "S231:Boolean" }}"#
+                ),
+                &format!(
+                    r#""@id": "{ns}.yFault",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {{ "@id": "S231:Real" }}"#
+                ),
+            ),
+        ],
+    )
+}
+
+/// Run the set `text` against `subject` and the mutants `mutants` (path and bytes) with
+/// `options`.
+pub fn run_mutants_with(
+    text: &str,
+    subject: &[u8],
+    mutants: &[(String, Vec<u8>)],
+    options: &VerifyOptions,
+) -> Result<VectorRun, VerifyError> {
+    let set = load(text).unwrap_or_else(|error| panic!("the set loads: {error}\n{text}"));
+    let pairs: Vec<(&str, &[u8])> = mutants
+        .iter()
+        .map(|(path, bytes)| (path.as_str(), bytes.as_slice()))
+        .collect();
+    run_vectors(
+        &set,
+        &VectorInputs::new(subject).with_mutants(&pairs),
+        options,
+    )
+}
+
+/// Run the set `text` against `subject` and the mutants `mutants` with the default options.
+pub fn run_mutants(
+    text: &str,
+    subject: &[u8],
+    mutants: &[(String, Vec<u8>)],
+) -> Result<VectorRun, VerifyError> {
+    run_mutants_with(text, subject, mutants, &VerifyOptions::default())
+}
 
 /// Run the set `text` against `subject` with `options`.
 pub fn run_with(

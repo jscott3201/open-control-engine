@@ -2,7 +2,7 @@
 //! "Clock", "Inputs", "Windows", "Diagnostic at an instant").
 //!
 //! The checks run in one fixed order, and the first refusal wins: the clock, the set's `params`,
-//! then each scenario in file order (its name, its `params`, its inputs in file order, its
+//! the set's `mutants` in file order (each path, then repeats), then each scenario in file order (its name, its `params`, its inputs in file order, its
 //! expectations in file order). Each refusal names the place by a path into the set, with
 //! indexes counted from zero in file order. Every check is arithmetic on the values at hand:
 //! nothing iterates over ticks, so a clock at the tick bound costs no more than a clock of two
@@ -11,11 +11,13 @@
 use std::collections::BTreeSet;
 
 use crate::clock::Clock;
-use crate::dto::{Entries, ExpectationDto, InputDto, ScenarioDto, StepDto, ValueDto, VectorSetDto};
+use crate::dto::{
+    Entries, ExpectationDto, InputDto, MutantDto, ScenarioDto, StepDto, ValueDto, VectorSetDto,
+};
 use crate::error::{VectorError, VectorErrorKind};
 use crate::limits::VerifyLimits;
 use crate::model::{
-    DiagnosticInstant, Expectation, Held, Input, Parameter, Scenario, Step, Window,
+    DiagnosticInstant, Expectation, Held, Input, Mutant, Parameter, Scenario, Step, Window,
 };
 use crate::number::{Literal, Number};
 use crate::vector_set::VectorSet;
@@ -37,6 +39,7 @@ pub(crate) fn vector_set(
         .0
         .map(|entries| parameters(entries, "params"))
         .transpose()?;
+    let mutants = dto.mutants.0.map(mutant_list).transpose()?;
     let mut names = BTreeSet::new();
     let mut scenarios = Vec::with_capacity(dto.scenarios.len());
     for (index, written) in dto.scenarios.into_iter().enumerate() {
@@ -53,7 +56,53 @@ pub(crate) fn vector_set(
         }
         scenarios.push(scenario(written, &place, &clock)?);
     }
-    Ok(VectorSet::assemble(clock, params, scenarios))
+    Ok(VectorSet::assemble(clock, params, mutants, scenarios))
+}
+
+/// The mutant listing, in file order: every path inside the vector file's directory (decision
+/// 28), and no path twice.
+fn mutant_list(written: Vec<MutantDto>) -> Result<Vec<Mutant>, VectorError> {
+    let mut paths = BTreeSet::new();
+    let mut mutants = Vec::with_capacity(written.len());
+    for (index, mutant) in written.into_iter().enumerate() {
+        let place = format!("mutants[{index}].path");
+        if let Some(why) = path_defect(&mutant.path) {
+            return Err(VectorError::on(
+                VectorErrorKind::MutantPathInvalid,
+                place,
+                format!("the mutant path `{}` {why}", mutant.path),
+            ));
+        }
+        if !paths.insert(mutant.path.clone()) {
+            return Err(VectorError::on(
+                VectorErrorKind::DuplicateMutant,
+                place,
+                format!("an earlier mutant already has the path `{}`", mutant.path),
+            ));
+        }
+        mutants.push(Mutant {
+            path: mutant.path,
+            description: mutant.description.0,
+        });
+    }
+    Ok(mutants)
+}
+
+/// Why `path` could leave the vector file's directory or name a file two ways, or `None`: an
+/// absolute path, an empty, `.` or `..` segment, or a backslash.
+fn path_defect(path: &str) -> Option<&'static str> {
+    if path.contains('\\') {
+        return Some("holds a backslash; segments are separated by `/` only");
+    }
+    if path.starts_with('/') {
+        return Some("is absolute; it must be relative to the vector file");
+    }
+    path.split('/').find_map(|segment| match segment {
+        "" => Some("has an empty segment"),
+        "." => Some("has a `.` segment"),
+        ".." => Some("has a `..` segment; it must stay inside the vector file's directory"),
+        _ => None,
+    })
 }
 
 fn empty_name(subject: String, what: &str) -> VectorError {

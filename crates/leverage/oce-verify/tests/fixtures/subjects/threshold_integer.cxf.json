@@ -1,0 +1,27 @@
+{
+  "@context": {"S231": "http://data.ashrae.org/S231#"},
+  "@graph": [
+    {"@id": "urn:verify:threshold#top", "@type": "S231:Block",
+     "S231:containsBlock": [{"@id": "urn:verify:threshold#top.conv"}, {"@id": "urn:verify:threshold#top.cmp"}],
+     "S231:hasInput": [{"@id": "urn:verify:threshold#top.u"}],
+     "S231:hasOutput": [{"@id": "urn:verify:threshold#top.y"}]},
+    {"@id": "urn:verify:threshold#top.conv", "@type": "CDL.Conversions.RealToInteger",
+     "S231:hasInput": {"@id": "urn:verify:threshold#top.conv.u"},
+     "S231:hasOutput": {"@id": "urn:verify:threshold#top.conv.y"}},
+    {"@id": "urn:verify:threshold#top.conv.u", "@type": "S231:RealInput", "S231:isOfDataType": {"@id": "S231:Real"}},
+    {"@id": "urn:verify:threshold#top.conv.y", "@type": "S231:IntegerOutput", "S231:isOfDataType": {"@id": "S231:Integer"},
+     "S231:isConnectedTo": {"@id": "urn:verify:threshold#top.cmp.u"}},
+    {"@id": "urn:verify:threshold#top.cmp", "@type": "CDL.Integers.GreaterThreshold",
+     "S231:hasParameter": {"@id": "urn:verify:threshold#top.cmp.t"},
+     "S231:hasInput": {"@id": "urn:verify:threshold#top.cmp.u"},
+     "S231:hasOutput": {"@id": "urn:verify:threshold#top.cmp.y"}},
+    {"@id": "urn:verify:threshold#top.cmp.t",
+     "S231:value": {"@value": "5", "@type": "http://www.w3.org/2001/XMLSchema#integer"}},
+    {"@id": "urn:verify:threshold#top.cmp.u", "@type": "S231:IntegerInput", "S231:isOfDataType": {"@id": "S231:Integer"}},
+    {"@id": "urn:verify:threshold#top.cmp.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": {"@id": "S231:Boolean"},
+     "S231:isConnectedTo": {"@id": "urn:verify:threshold#top.y"}},
+    {"@id": "urn:verify:threshold#top.u", "@type": "S231:RealInput", "S231:isOfDataType": {"@id": "S231:Real"},
+     "S231:isConnectedTo": {"@id": "urn:verify:threshold#top.conv.u"}},
+    {"@id": "urn:verify:threshold#top.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": {"@id": "S231:Boolean"}}
+  ]
+}

@@ -1,5 +1,5 @@
 //! Every object of the format is closed: an unknown key is refused at every level (the keys the
-//! format does not have yet among them), a required key cannot be absent, a value of another
+//! format does not have yet among them, and `mutants` anywhere but the set), a required key cannot be absent, a value of another
 //! JSON type is refused, an expectation is exactly one of its two forms, and any tag but
 //! `oce/vectors/v1` is refused by name before the shape is judged.
 
@@ -16,7 +16,7 @@ const INSTANT: &str =
 /// A set with every optional key present, so each object can gain or lose a key.
 fn full() -> String {
     format!(
-        "{{\"schema\": \"oce/vectors/v1\", \"clock\": {{\"step_s\": 60, \"horizon_s\": 1800}}, \"params\": {{\"a.k\": 1}}, \"scenarios\": [{{\"name\": \"s\", \"description\": \"d\", \"params\": {{\"b.k\": 2.5}}, \"inputs\": {{\"u\": [{{\"t\": 0, \"value\": 1}}], \"v\": true}}, \"expect\": [{WINDOW}, {INSTANT}]}}]}}"
+        "{{\"schema\": \"oce/vectors/v1\", \"clock\": {{\"step_s\": 60, \"horizon_s\": 1800}}, \"params\": {{\"a.k\": 1}}, \"mutants\": [{{\"path\": \"m/a.cxf.json\", \"description\": \"e\"}}], \"scenarios\": [{{\"name\": \"s\", \"description\": \"d\", \"params\": {{\"b.k\": 2.5}}, \"inputs\": {{\"u\": [{{\"t\": 0, \"value\": 1}}], \"v\": true}}, \"expect\": [{WINDOW}, {INSTANT}]}}]}}"
     )
 }
 
@@ -31,6 +31,11 @@ fn with_member(document: &str, anchor: &str, addition: &str) -> String {
 fn the_full_document_loads_with_every_optional_key() {
     let set = load(&full()).expect("loads");
     assert_eq!(set.params().map(<[_]>::len), Some(1));
+    let mutants = set.mutants().expect("listed");
+    assert_eq!(
+        (mutants[0].path(), mutants[0].description()),
+        ("m/a.cxf.json", Some("e"))
+    );
     let scenario = &set.scenarios()[0];
     assert_eq!(scenario.description(), Some("d"));
     assert_eq!(scenario.params().map(<[_]>::len), Some(1));
@@ -49,6 +54,7 @@ fn an_unknown_key_is_refused_in_every_object() {
         ("{\"output\"", "tolerance"),
         ("{\"diagnostic\"", "code"),
         ("{\"block\"", "instance"),
+        ("{\"path\"", "digest"),
     ];
     for (anchor, key) in objects {
         let document = with_member(&full(), anchor, &format!("\"{key}\": 1"));
@@ -70,20 +76,17 @@ fn an_unknown_key_is_refused_in_every_object() {
 
 #[test]
 fn the_keys_the_format_does_not_have_yet_are_refused_never_ignored() {
-    // `within`, `of` and `when` belong to an expectation, `mutants` to the set: each is an
-    // unknown key today, in the object it will belong to and anywhere else.
+    // `within`, `of` and `when` will belong to an expectation: each is an unknown key today, in
+    // the object it will belong to and anywhere else. `mutants` belongs to the set and to no
+    // other object.
     for (anchor, member) in [
-        ("{\"schema\"", r#""mutants": []"#),
-        (
-            "{\"schema\"",
-            r#""mutants": [{"path": "mutants/late_alarm.cxf.json"}]"#,
-        ),
         ("{\"output\"", r#""within": {"atoly": 0.5}"#),
         ("{\"output\"", r#""of": "yRef""#),
         ("{\"output\"", r#""when": ["occupied"]"#),
         ("{\"diagnostic\"", r#""when": ["occupied"]"#),
         ("{\"name\"", r#""when": ["occupied"]"#),
         ("{\"name\"", r#""mutants": []"#),
+        ("{\"step_s\"", r#""mutants": []"#),
         ("{\"output\"", r#""tolerance": 1e-9"#),
     ] {
         let document = with_member(&full(), anchor, member);
@@ -123,17 +126,16 @@ fn the_worked_example_fixture_is_the_notes_block_byte_for_byte() {
 }
 
 #[test]
-fn the_notes_worked_example_is_refused_for_its_mutants_and_loads_without_them() {
+fn the_notes_worked_example_loads_whole_with_its_mutant() {
     let text = String::from_utf8(fixture_bytes("note/worked_example.json")).expect("UTF-8");
-    let refused = load(&text).expect_err("the example lists mutants");
-    assert_eq!(refused.code(), "unknown-key");
-    assert_eq!(refused.detail(), "unknown key `mutants`");
-    assert_eq!(refused.subject(), "line 5 column 3");
-
-    let start = text.find("  \"mutants\"").expect("the mutants member");
-    let end = text.find("  \"scenarios\"").expect("the scenarios member");
-    let without = format!("{}{}", &text[..start], &text[end..]);
-    let set = load(&without).expect("the rest of the example is the format");
+    let set = load(&text).expect("the worked example is the format");
+    let mutants = set.mutants().expect("the example lists a mutant");
+    assert_eq!(mutants.len(), 1);
+    assert_eq!(mutants[0].path(), "mutants/threshold_inclusive.cxf.json");
+    assert_eq!(
+        mutants[0].description(),
+        Some("Both thresholds read >= 5 instead of > 5.")
+    );
     assert_eq!(set.clock().tick_count(), 31);
     assert_eq!(
         set.params().map(<[_]>::len),
@@ -190,11 +192,11 @@ fn without_member(document: &str, anchor: &str, key: &str) -> String {
 #[test]
 fn a_required_key_cannot_be_absent_and_an_optional_one_can() {
     // (the object's first bytes, its required keys, its optional keys)
-    let objects: [(&str, &[&str], &[&str]); 7] = [
+    let objects: [(&str, &[&str], &[&str]); 8] = [
         (
             "{\"schema\"",
             &["schema", "clock", "scenarios"],
-            &["params"],
+            &["params", "mutants"],
         ),
         ("{\"step_s\"", &["step_s", "horizon_s"], &[]),
         (
@@ -206,6 +208,7 @@ fn a_required_key_cannot_be_absent_and_an_optional_one_can() {
         ("{\"output\"", &["output", "from_s", "to_s", "equals"], &[]),
         ("{\"diagnostic\"", &["diagnostic", "at_s"], &[]),
         ("{\"block\"", &["block"], &["message"]),
+        ("{\"path\"", &["path"], &["description"]),
     ];
     for (anchor, required, optional) in objects {
         for key in required {
@@ -566,6 +569,7 @@ fn member_order_is_free_and_changes_nothing() {
                 {"at_s": 60, "diagnostic": {"message": "m", "block": "CDL.Utilities.Assert"}}],
               "inputs": {"v": true, "u": [{"value": 1, "t": 0}]}, "params": {"b.k": 2.5},
               "description": "d", "name": "s"}],
+            "mutants": [{"description": "e", "path": "m/a.cxf.json"}],
             "params": {"a.k": 1}, "clock": {"horizon_s": 1800, "step_s": 60},
             "schema": "oce/vectors/v1"}"#,
     )

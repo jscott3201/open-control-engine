@@ -18,16 +18,16 @@
 //! would not. That is `param-refused` too. It is kept, not worked around: such a vector splits
 //! the edits across scenarios, or the subject is emitted with the values.
 
-use oce_api::Engine;
+use oce_api::{Engine, OcError};
 
 use crate::bind::setup_failed;
 use crate::receipt::ReceiptValue;
-use crate::refusal_classes::param_refusal_class;
+use crate::refusal_classes::{mutant_param_refusal_cause, param_refusal_class};
 use crate::verify_error::{VerifyError, VerifyErrorKind};
 
-/// Apply `edits` (canonical path and typed value, sorted by path bytes) to `engine` by the passes
-/// in the module documentation; nothing happens for no edits. `subject` names the scenario in a
-/// refusal.
+/// Apply `edits` (canonical path and typed value, sorted by path bytes) to the subject's
+/// `engine` by the passes in the module documentation; nothing happens for no edits. `subject`
+/// names the scenario in a refusal.
 ///
 /// # Errors
 /// `param-refused` with the class of the first waiting edit's last refusal when a pass applies
@@ -38,54 +38,119 @@ pub(crate) fn apply(
     edits: &[(String, ReceiptValue)],
     subject: &str,
 ) -> Result<(), VerifyError> {
+    passes(engine, edits, subject, param_refusal_class).map_err(|refusal| match refusal {
+        Refusal::Setup(error) => error,
+        Refusal::Edit {
+            path,
+            cause,
+            detail,
+        } => VerifyError::new(
+            VerifyErrorKind::ParamRefused,
+            subject,
+            format!(
+                "no pass admits the edit of {path}: {detail}; the edits are applied in passes in path order (decision 14)"
+            ),
+        )
+        .with_path(path)
+        .with_cause(cause),
+    })
+}
+
+/// Apply `edits`, the effective edits of the scenario `scenario`, to the `engine` of the mutant
+/// `mutant` (its listed path) by the same passes. The edits were resolved against the subject's
+/// parameters, so the mutant may lack one: that is a refusal too.
+///
+/// # Errors
+/// `mutant-param-refused` with the cause of the first waiting edit's last refusal (one of
+/// [`crate::MUTANT_PARAM_REFUSAL_CAUSES`]) when a pass applies nothing; `replay-failed` with the
+/// cause `engine-setup` as for [`apply`].
+pub(crate) fn apply_to_mutant(
+    engine: &mut Engine,
+    edits: &[(String, ReceiptValue)],
+    subject: &str,
+    mutant: &str,
+    scenario: &str,
+) -> Result<(), VerifyError> {
+    passes(engine, edits, subject, mutant_param_refusal_cause).map_err(|refusal| match refusal {
+        Refusal::Setup(error) => error,
+        Refusal::Edit {
+            path,
+            cause,
+            detail,
+        } => VerifyError::new(
+            VerifyErrorKind::MutantParamRefused,
+            subject,
+            format!(
+                "mutant `{mutant}` refuses the edit of {path} in every pass, where the subject admits it (scenario `{scenario}`): {detail}"
+            ),
+        )
+        .with_path(path)
+        .with_cause(cause),
+    })
+}
+
+/// Why the passes stopped short.
+enum Refusal {
+    /// A pass applied nothing; the first edit still waiting, the class of its last refusal and
+    /// the facade's sentence.
+    Edit {
+        path: String,
+        cause: &'static str,
+        detail: String,
+    },
+    /// A facade call refused for a reason that is not about an edit.
+    Setup(VerifyError),
+}
+
+/// The passes of the module documentation. `classify` names a refusal of `set_param` that is
+/// about the edit, which then waits for the next pass; any other refusal stops them as `Setup`.
+fn passes(
+    engine: &mut Engine,
+    edits: &[(String, ReceiptValue)],
+    subject: &str,
+    classify: fn(&OcError) -> Option<&'static str>,
+) -> Result<(), Refusal> {
     if edits.is_empty() {
         return Ok(());
     }
     engine
         .halt()
-        .map_err(|error| setup_failed(subject, "the parameter halt", &error))?;
+        .map_err(|error| Refusal::Setup(setup_failed(subject, "the parameter halt", &error)))?;
     let mut waiting: Vec<&(String, ReceiptValue)> = edits.iter().collect();
     loop {
         let mut refused = Vec::new();
         let mut first_refusal = None;
         for edit in &waiting {
             let (path, value) = *edit;
-            match engine.set_param(path, value.engine_value()) {
-                Ok(()) => {}
-                Err(error) => {
-                    let Some(class) = param_refusal_class(&error) else {
-                        return Err(setup_failed(
-                            subject,
-                            &format!("the edit of {path}"),
-                            &error,
-                        ));
-                    };
-                    if first_refusal.is_none() {
-                        first_refusal = Some((path, class, error.to_string()));
-                    }
-                    refused.push(*edit);
+            if let Err(error) = engine.set_param(path, value.engine_value()) {
+                let Some(cause) = classify(&error) else {
+                    return Err(Refusal::Setup(setup_failed(
+                        subject,
+                        &format!("the edit of {path}"),
+                        &error,
+                    )));
+                };
+                if first_refusal.is_none() {
+                    first_refusal = Some((path, cause, error.to_string()));
                 }
+                refused.push(*edit);
             }
         }
         if refused.is_empty() {
             break;
         }
         if refused.len() == waiting.len()
-            && let Some((path, class, detail)) = first_refusal
+            && let Some((path, cause, detail)) = first_refusal
         {
-            return Err(VerifyError::new(
-                VerifyErrorKind::ParamRefused,
-                subject,
-                format!(
-                    "no pass admits the edit of {path}: {detail}; the edits are applied in passes in path order (decision 14)"
-                ),
-            )
-            .with_path(path.clone())
-            .with_cause(class));
+            return Err(Refusal::Edit {
+                path: path.clone(),
+                cause,
+                detail,
+            });
         }
         waiting = refused;
     }
     engine
         .resume()
-        .map_err(|error| setup_failed(subject, "the parameter resume", &error))
+        .map_err(|error| Refusal::Setup(setup_failed(subject, "the parameter resume", &error)))
 }

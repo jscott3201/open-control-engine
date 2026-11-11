@@ -1,7 +1,8 @@
 //! The golden receipts (vectors note decision 19, "Fixtures"): the two in-repo library rules'
 //! pass receipts, read in place from the facade's fixtures, a fail receipt (AHU-0016's
 //! `both_open` with its first window ending at 900 s, where the delay fires) and a `no_data`
-//! receipt (a scenario whose `expect` is empty), each compared byte for byte. They regenerate
+//! receipt (a scenario whose `expect` is empty), and AHU-0016's set with its three mutants
+//! (`tests/fixtures/AHU-0016/`: two caught, one survivor), each compared byte for byte. They regenerate
 //! only through the crate's bless switch (`OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`);
 //! every receipt embeds the engine version, so a workspace version bump re-blesses them, and so
 //! does #517 when it re-vendors the two rules.
@@ -20,7 +21,8 @@ use oce_verify::{
 };
 
 use support::{
-    AHU_0016, body, compare_or_bless, fixture, fixture_bytes, library_subject, library_vectors,
+    AHU_0016, ahu_mutants, body, compare_or_bless, fixture, fixture_bytes, library_subject,
+    library_vectors,
 };
 
 /// One golden: a set's bytes, its subject's bytes and the golden receipt's file.
@@ -28,7 +30,18 @@ struct Golden {
     name: &'static str,
     set: Vec<u8>,
     subject: Vec<u8>,
+    mutants: Vec<(String, Vec<u8>)>,
     receipt: &'static str,
+}
+
+impl Golden {
+    /// The mutants as the run takes them.
+    fn mutant_inputs(&self) -> Vec<(&str, &[u8])> {
+        self.mutants
+            .iter()
+            .map(|(path, bytes)| (path.as_str(), bytes.as_slice()))
+            .collect()
+    }
 }
 
 fn goldens() -> Vec<Golden> {
@@ -37,25 +50,36 @@ fn goldens() -> Vec<Golden> {
             name: "AHU-0016",
             set: library_vectors("AHU-0016"),
             subject: library_subject("AHU-0016"),
+            mutants: Vec::new(),
             receipt: "receipts/AHU-0016.receipt.json",
         },
         Golden {
             name: "AHU-0004",
             set: library_vectors("AHU-0004"),
             subject: library_subject("AHU-0004"),
+            mutants: Vec::new(),
             receipt: "receipts/AHU-0004.receipt.json",
         },
         Golden {
             name: "both_open_900",
             set: fixture_bytes("receipts/both_open_900.vectors.json"),
             subject: library_subject("AHU-0016"),
+            mutants: Vec::new(),
             receipt: "receipts/both_open_900.receipt.json",
         },
         Golden {
             name: "empty_expect",
             set: fixture_bytes("receipts/empty_expect.vectors.json"),
             subject: library_subject("AHU-0016"),
+            mutants: Vec::new(),
             receipt: "receipts/empty_expect.receipt.json",
+        },
+        Golden {
+            name: "AHU-0016 with its mutants",
+            set: fixture_bytes("AHU-0016/vectors.json"),
+            subject: library_subject("AHU-0016"),
+            mutants: ahu_mutants(),
+            receipt: "receipts/AHU-0016.mutants.receipt.json",
         },
     ]
 }
@@ -68,7 +92,7 @@ fn set_of(golden: &Golden) -> VectorSet {
 fn run(golden: &Golden, options: &VerifyOptions) -> oce_verify::Receipt {
     run_vectors(
         &set_of(golden),
-        &VectorInputs::new(&golden.subject),
+        &VectorInputs::new(&golden.subject).with_mutants(&golden.mutant_inputs()),
         options,
     )
     .unwrap_or_else(|error| {
@@ -377,7 +401,7 @@ fn kept_traces_are_one_per_scenario_in_file_order_and_change_no_receipt_byte() {
     let set = set_of(golden);
     let kept = run_vectors(
         &set,
-        &VectorInputs::new(&golden.subject),
+        &VectorInputs::new(&golden.subject).with_mutants(&golden.mutant_inputs()),
         &VerifyOptions {
             keep_traces: true,
             ..VerifyOptions::default()
@@ -399,7 +423,7 @@ fn kept_traces_are_one_per_scenario_in_file_order_and_change_no_receipt_byte() {
     assert!(
         run_vectors(
             &set,
-            &VectorInputs::new(&golden.subject),
+            &VectorInputs::new(&golden.subject).with_mutants(&golden.mutant_inputs()),
             &VerifyOptions::default()
         )
         .expect("a receipt")

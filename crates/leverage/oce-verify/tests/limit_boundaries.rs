@@ -377,3 +377,31 @@ fn the_profile_bounds_do_not_move_with_the_limits() {
     assert_eq!(code_under("[[[[[[[[1]]]]]]]]", &zero), "wrong-type");
     assert_eq!(code_under(&set_of(""), &zero), "too-many-ticks");
 }
+
+#[test]
+fn the_mutant_bound_is_accepted_at_the_limit_and_refused_one_past() {
+    let listing = |count: usize| {
+        let entries: Vec<String> = (0..count)
+            .map(|index| format!("{{\"path\": \"m{index:03}.cxf.json\"}}"))
+            .collect();
+        format!(
+            "{{\"schema\": \"oce/vectors/v1\", \"clock\": {{\"step_s\": 60, \"horizon_s\": 1800}}, \"mutants\": [{}], \"scenarios\": []}}",
+            entries.join(", ")
+        )
+    };
+    let at_limit = load_under(&listing(256), &MAX).expect("256 mutants");
+    assert_eq!(at_limit.mutants().map(<[_]>::len), Some(256));
+    assert_eq!(code_under(&listing(257), &MAX), "too-many-mutants");
+    let two = VerifyLimits {
+        max_mutants: 2,
+        ..MAX
+    };
+    assert_eq!(code_under(&listing(2), &two), "loaded");
+    assert_eq!(code_under(&listing(3), &two), "too-many-mutants");
+    let none = VerifyLimits {
+        max_mutants: 0,
+        ..MAX
+    };
+    assert_eq!(code_under(&listing(0), &none), "loaded");
+    assert_eq!(code_under(&listing(1), &none), "too-many-mutants");
+}

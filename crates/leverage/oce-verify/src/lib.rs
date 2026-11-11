@@ -1,10 +1,10 @@
 #![forbid(unsafe_code)]
 //! Verification over vectors for Open Control Engine sequences (design note
-//! `docs/design/vectors.md`, issues #519 and #520).
+//! `docs/design/vectors.md`, issues #519 to #521).
 //!
-//! Status: two of the four parts of the verification product (M3): the one vector format,
-//! `oce/vectors/v1`, and the run that checks a set against a sequence and issues the receipt.
-//! Mutant mode and the `oce verify` verb build on it.
+//! Status: three of the four parts of the verification product (M3): the one vector format,
+//! `oce/vectors/v1`, the run that checks a set against a sequence and issues the receipt, and
+//! mutant mode. The `oce verify` verb builds on it.
 //!
 //! A **vector set** is a strict-JSON document of scenarios, each a schedule of inputs over one
 //! clock and expectations over windows of it, to be checked against one loaded sequence, the
@@ -14,8 +14,8 @@
 //!   UTF-8 JSON value under the authoring wire form's profile ([`MAX_DEPTH`], [`MAX_LIST_LEN`],
 //!   [`MAX_STRING_BYTES`], no repeated key, no control character, no non-finite number) and the
 //!   lowerable [`VerifyLimits`]; every object is closed, so a key the format does not define
-//!   (`within`, `of`, `when` and `mutants` among them, until the format gains them) is refused,
-//!   never ignored. It takes bytes, opens nothing and never panics.
+//!   (`within`, `of` and `when` among them, until the format gains them) is refused, never
+//!   ignored. It takes bytes, opens nothing and never panics.
 //! - **The rules** a shape cannot say, checked at load: the clock's cadence, decided by
 //!   multiplication ([`Clock`]); step lists from `t = 0`, strictly increasing, never past the
 //!   horizon; windows inside the clock that hold at least one tick; a diagnostic instant on a
@@ -37,6 +37,9 @@
 //!   inside one halt, then one replay on the set's grid, compared exactly (a Real by its bits).
 //! - **The receipt** ([`Receipt`]): the header shared with the commissioning verifier and the
 //!   vector body, written canonically ([`Receipt::to_canonical_json`]) and named by `receipt_id`.
+//! - **Mutant mode**: the deliberately broken copies of the subject a set lists ([`Mutant`]),
+//!   handed in by the caller ([`VectorInputs::with_mutants`]), validated at bind and, when the
+//!   subject passes, scored in the receipt as `caught` of `total` ([`MutantSection`]).
 //! - **Typed refusals** ([`VerifyError`], [`VerifyErrorKind`], [`VERIFY_ERROR_CODES`]): every bind
 //!   and run refusal is an error with no receipt; a failed expectation is a failed scenario
 //!   inside one.
@@ -68,7 +71,7 @@
 //!
 //! // A key the format does not define is refused by its code, never ignored.
 //! let refused = VectorSet::from_json_bytes(
-//!     br#"{"schema": "oce/vectors/v1", "mutants": []}"#,
+//!     br#"{"schema": "oce/vectors/v1", "within": []}"#,
 //!     &VerifyLimits::default(),
 //! );
 //! assert_eq!(refused.unwrap_err().code(), "unknown-key");
@@ -127,6 +130,7 @@ mod error;
 mod fnv;
 mod limits;
 mod model;
+mod mutants;
 mod number;
 mod pairing;
 mod parameters;
@@ -146,19 +150,21 @@ pub use error::{Location, VECTOR_ERROR_CODES, VectorError, VectorErrorKind};
 pub use limits::{
     MAX_DEPTH, MAX_LIST_LEN, MAX_LOAD_WARNINGS, MAX_STRING_BYTES, MAX_TIME_INTEGER, VerifyLimits,
 };
-pub use model::{DiagnosticInstant, Expectation, Input, Parameter, Scenario, Step, Window};
+pub use model::{DiagnosticInstant, Expectation, Input, Mutant, Parameter, Scenario, Step, Window};
 pub use number::Literal;
 pub use receipt::{
-    Comparison, ComparisonMode, Failure, FrameCounts, InstantCounts, ParamEdit, RECEIPT_SCHEMA,
-    Receipt, ReceiptBody, ReceiptHeader, ReceiptKind, ReceiptValue, ScenarioCounts,
-    ScenarioReceipt, ScenarioStatus, Timings, Totals, UnmatchedWarning, VectorBody,
+    Comparison, ComparisonMode, Failure, FrameCounts, InstantCounts, MutantCatch, MutantEntry,
+    MutantSection, MutantStatus, ParamEdit, RECEIPT_SCHEMA, Receipt, ReceiptBody, ReceiptHeader,
+    ReceiptKind, ReceiptValue, ScenarioCounts, ScenarioReceipt, ScenarioStatus, ScoreStatus,
+    Timings, Totals, UnmatchedWarning, VectorBody,
 };
 pub use refusal_classes::{ENGINE_REFUSAL_CLASSES, engine_refusal_class};
 pub use run::{VectorInputs, VectorRun, VerifyOptions, run_vectors};
 pub use schema::{SCHEMA_PROFILE_KEYWORDS, VECTORS_JSON_SCHEMA, vectors_json_schema};
 pub use vector_set::VectorSet;
 pub use verify_error::{
-    PARAM_REFUSAL_CLASSES, REPLAY_FAILURE_CAUSES, VERIFY_ERROR_CODES, VerifyError, VerifyErrorKind,
+    MUTANT_PARAM_REFUSAL_CAUSES, PARAM_REFUSAL_CLASSES, REPLAY_FAILURE_CAUSES, VERIFY_ERROR_CODES,
+    VerifyError, VerifyErrorKind,
 };
 
 /// The format tag a vector set carries in its `schema` key. Any other tag is refused as

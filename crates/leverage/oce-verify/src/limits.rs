@@ -53,6 +53,12 @@ pub struct VerifyLimits {
     /// Entries in one `params` map, the set's or a scenario's. Maximum 256; past it the refusal
     /// is `too-many-parameters`.
     pub max_parameters: u32,
+    /// Mutants the set lists. Maximum 256; past it the refusal is `too-many-mutants`, at load.
+    pub max_mutants: u32,
+    /// Bytes of every mutant supplied to a run, together. Maximum 64 MiB; past it the refusal is
+    /// `too-many-mutant-bytes`, at bind, before any mutant is loaded. Each mutant is also held to
+    /// the engine's own CXF byte limit (`oce_api::MAX_CXF_BYTES`), as the subject is.
+    pub max_mutant_bytes: u64,
     /// Failure records a scenario's receipt lists. Maximum 16; past it the list stops and
     /// `failures_total` keeps the count.
     pub max_recorded_failures: u32,
@@ -77,6 +83,8 @@ impl VerifyLimits {
         max_scenarios: 4_096,
         max_expectations: 4_096,
         max_parameters: 256,
+        max_mutants: 256,
+        max_mutant_bytes: 64 * 1024 * 1024,
         max_recorded_failures: 16,
         max_recorded_warnings: 16,
         max_total_frames: 16_777_216,
@@ -94,6 +102,8 @@ impl VerifyLimits {
             max_scenarios: self.max_scenarios.min(max.max_scenarios),
             max_expectations: self.max_expectations.min(max.max_expectations),
             max_parameters: self.max_parameters.min(max.max_parameters),
+            max_mutants: self.max_mutants.min(max.max_mutants),
+            max_mutant_bytes: self.max_mutant_bytes.min(max.max_mutant_bytes),
             max_recorded_failures: self.max_recorded_failures.min(max.max_recorded_failures),
             max_recorded_warnings: self.max_recorded_warnings.min(max.max_recorded_warnings),
             max_total_frames: self.max_total_frames.min(max.max_total_frames),
@@ -136,6 +146,8 @@ mod tests {
         assert_eq!(limits.max_scenarios, 4_096);
         assert_eq!(limits.max_expectations, 4_096);
         assert_eq!(limits.max_parameters, 256);
+        assert_eq!(limits.max_mutants, 256);
+        assert_eq!(limits.max_mutant_bytes, 67_108_864);
         assert_eq!(limits.max_recorded_failures, 16);
         assert_eq!(limits.max_recorded_warnings, 16);
         assert_eq!(limits.max_total_frames, 16_777_216);
@@ -155,6 +167,8 @@ mod tests {
             max_scenarios: 1,
             max_expectations: 2,
             max_parameters: 3,
+            max_mutants: 4,
+            max_mutant_bytes: 6,
             max_recorded_failures: 0,
             max_recorded_warnings: 1,
             max_total_frames: 5,
@@ -175,6 +189,8 @@ mod tests {
             max_scenarios: u32::MAX,
             max_expectations: u32::MAX,
             max_parameters: u32::MAX,
+            max_mutants: u32::MAX,
+            max_mutant_bytes: u64::MAX,
             max_recorded_failures: u32::MAX,
             max_recorded_warnings: u32::MAX,
             max_total_frames: u64::MAX,
@@ -198,6 +214,8 @@ mod tests {
             max_scenarios: max.max_scenarios + 1,
             max_expectations: max.max_expectations + 1,
             max_parameters: max.max_parameters + 1,
+            max_mutants: max.max_mutants + 1,
+            max_mutant_bytes: max.max_mutant_bytes + 1,
             max_recorded_failures: max.max_recorded_failures + 1,
             max_recorded_warnings: max.max_recorded_warnings + 1,
             max_total_frames: max.max_total_frames + 1,

@@ -39,7 +39,7 @@ fn goldens() -> Vec<Golden> {
             name: "every_field",
             source: fixture_bytes("sets/every_field.json"),
             canonical: "canonical/every_field.json",
-            spec_id: "spec:fnv1a128:691f5b7167e4dbdaa7f1447f1bac4640",
+            spec_id: "spec:fnv1a128:ee654a0cb554fd824490e4a43fe5afd7",
         },
     ]
 }

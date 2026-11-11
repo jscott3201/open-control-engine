@@ -316,7 +316,7 @@ portable-vector checksum in `state_format_golden_tests.rs`. Each failing asserti
 value; the vectors beside the checksum are built there without the codec, so copy the values in
 and run the tests again. The snapshot fixtures under `crates/oce-api/tests/fixtures/`
 (`state_unstamped.hex`, `state_revision_two.hex`, `state_legacy.hex`) are artefacts of earlier
-layouts and never move. It also moves the four golden receipts under
+layouts and never move. It also moves the five golden receipts under
 `crates/leverage/oce-verify/tests/fixtures/receipts/`, whose `engine_version` is inside the hashed
 part of every `receipt_id` (vectors note decision 33):
 `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`, then again without the switch.
@@ -445,11 +445,20 @@ receipts, and nothing else.
 `tests/fixtures/receipts/*.receipt.json` are the golden receipts (issue #520): the pass receipts of
 the two in-repo library rules (vector files and `rule.cxf.jsonld` subjects read in place from
 `crates/oce-api/tests/fixtures/library_rules/`), a fail receipt and a `no_data` receipt from the
-hand-edited sets beside them. `tests/receipt_goldens.rs` compares them byte for byte and checks
-each `receipt_id` against a second FNV-1a-128 over the golden's own text. A receipt embeds the
-engine version and its subject's content id, so the same switch re-blesses all four after a
-workspace version bump, a change to either rule's CXF (#517 re-vendors them), a change to the
-receipt's writer or fields, or any engine change that moves either rule's outputs.
+hand-edited sets beside them, and AHU-0016's receipt with its three mutants (issue #521).
+`tests/receipt_goldens.rs` compares them byte for byte and checks each `receipt_id` against a
+second FNV-1a-128 over the golden's own text. A receipt embeds the engine version and its
+subject's content id, and the mutant receipt each mutant's digest and content id, so the same
+switch re-blesses all five in these cases:
+- a workspace version bump;
+- a change to either rule's CXF (#517 re-vendors them);
+- a change to the receipt's writer or fields;
+- any engine change that moves either rule's outputs or a mutant's.
+
+`tests/fixtures/AHU-0016/` (that set with its `mutants` list, and the three mutants, hand edits
+of the rule's CXF named `.cxf.json`) is written by hand and never blessed. `tests/mutant_mode.rs`
+holds the set's clock and scenarios equal to the facade's copy, so a change to that copy fails
+the suite until the fixture follows. #517 re-makes the three mutants with the rule.
 
 `tests/fixtures/canonical/*.json` (the canonical forms of the two in-repo library rules' vector
 files and of `tests/fixtures/sets/every_field.json`) and the `spec_id` literals in

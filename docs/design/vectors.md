@@ -9,7 +9,7 @@ the owner on 2026-11-09 (see [Review rulings](#review-rulings)); the note is ame
 Decisions 1 to 19 answer the format half of the issue's outline in its order, decisions 20 to 37
 the replayer half (outline item *n* is decision 19 + *n*). Nothing here is built. *(2026-11-09:
 part 1 of 4, the format, landed in GitHub #541. 2026-11-10: part 2 of 4, binding, the run and the
-receipt, landed in GitHub #558.)*
+receipt, landed in GitHub #558. 2026-11-11: part 3 of 4, mutant mode, issue #521.)*
 
 **The version rule, in one sentence.** The format is `oce/vectors/v1` and stays `v1` until 1.0.0: a
 change is made in place, in the PR that rewrites every in-repo fixture and golden, and nothing
@@ -413,9 +413,12 @@ The set names its mutants; the caller supplies each one's bytes.
   when it loads, its input paths and types equal the subject's (`Engine::input_definitions()`),
   its output paths and types equal the subject's (`FrameSlots::outputs()` and `output_types()`,
   #460), and its content id differs from the subject's. Input bounds are not compared.
+  *(Amended 2026-11-11, owner ruling with part 3:)* and it admits every parameter edit the
+  subject admits: each distinct effective edit list is tried on a fresh engine of the mutant
+  ([part 3's readings](#part-3s-readings)).
 - **An invalid mutant is an error, in one place.** `run_vectors` returns `Err` naming the first
-  invalid mutant in file order with `mutant-load-failed`, `mutant-boundary-differs` or
-  `mutant-identical`. No receipt exists, so `--out` writes nothing; the CLI prints the report and
+  invalid mutant in file order with `mutant-load-failed`, `mutant-boundary-differs`,
+  `mutant-identical` or *(amended 2026-11-11)* `mutant-param-refused`. No receipt exists, so `--out` writes nothing; the CLI prints the report and
   exits 2, whatever the subject's verdict would have been.
 - **Scored only when the subject passes.** Against a failing subject the section is
   `"status": "not_run"`: a mutant that fails the scenario the subject fails proves nothing.
@@ -458,6 +461,7 @@ receipt.
 | `too-many-frames` | bind | the total frame budget |
 | `mutant-missing`, `mutant-unlisted`, `too-many-mutant-bytes` | bind | mutant bytes not supplied, supplied without a listing, or past the total byte bound |
 | `mutant-load-failed`, `mutant-boundary-differs`, `mutant-identical` | bind | an invalid mutant |
+| `mutant-param-refused` | bind | a mutant that refuses a parameter edit the subject admits, with the cause `param-range`, `param-type`, `param-structural` or `param-path-unknown` *(added 2026-11-11, owner ruling with part 3)* |
 | `run-refused` | run | an `EngineRefusal::Run` refusal: about the run, not a frame |
 | `replay-failed` | run | any other `ReplayError`, with `cause` from a closed kebab-case table `oce-verify` owns and pins (`trace-too-large`, `output-set-changed`, `grid-not-increasing`, `engine-setup`, `source`), never a Rust variant name; `engine-setup` also covers every replay error the table does not name *(amended 2026-11-10, reading 1)* |
 
@@ -599,7 +603,9 @@ with a provenance line in its `description`:
 | `late_alarm` | `persist.delayTime` 900 → 930 | survives: no window asserts the tick at 900 s |
 
 The expectations are read off the rule and its vectors, not run; part 3's goldens are the
-evidence. `late_alarm` survives by design of the library's own contract ("leave ≥ one step of
+evidence. *(2026-11-11: the engine agrees. Part 3's golden receipt records `threshold_inclusive`
+caught by `threshold_edge` with the worked record above, `value-mismatch` at 900 s,
+`no_persistence` caught by `both_open` at 0 s, and `late_alarm` surviving.)* `late_alarm` survives by design of the library's own contract ("leave ≥ one step of
 margin around an `alarm_delay` edge"), so the fixture shows a score reporting a real gap. Two
 constraints from the tree shape the layout. Mutant paths cannot leave the vector file's directory
 (decision 28), so that directory holds its own `vectors.json`: the AHU-0016 scenarios plus the
@@ -1066,7 +1072,8 @@ consistent with the note. They are normative from here, so parts 3 and 4 inherit
    effective edits, in file order, on a freshly loaded engine by decision 14's passes, before any
    frame of any scenario runs. The run applies the same edits to the scenario's own fresh engine
    by the same passes. For part 3: a mutant's run applies the same edits; a mutant whose class
-   rules refuse an edit the subject admits is for part 3 to rule on.
+   rules refuse an edit the subject admits is an invalid mutant, found at bind *(ruled
+   2026-11-11; [part 3's readings](#part-3s-readings))*.
 9. **Bind order.** Load, then the boundary ports (an Enum or String port, judged before any name
    because it is a property of the subject alone), then the set's `params`, then each scenario in
    file order (its inputs, the inputs it does not supply, its expectations, its `params`), then
@@ -1083,3 +1090,56 @@ never push it out; `failures_total` is unchanged. With a cap of zero no record i
 Two points the review raised are left as they are and tracked: the receipt does not record the
 caps it was written under (#563), and nothing bounds the total work of a run, instants and subject
 loads included (#561, which part 4 waits for).
+
+### Part 3's readings
+
+*(Added 2026-11-11, with part 3, issue #521.)* Mutant mode needed one owner ruling and some
+readings where this note was silent. The ruling is normative. The readings are marked for the
+owner to confirm, and each says whether overruling it would change behaviour.
+
+**A mutant that refuses a parameter edit the subject admits** *(ruled by the owner, 2026-11-11).*
+It is an **invalid mutant**, found **at bind**, before any frame runs: an error with no receipt,
+`mutant-param-refused`. The error carries the mutant (its subject is `mutants[i]`), the
+parameter's canonical path, and a cause: `param-range` (its class rules refuse the value),
+`param-type` (it has the parameter with another type), `param-structural` (structural in the
+mutant) or `param-path-unknown` (it lacks the parameter). Each distinct effective edit list is
+tried once per mutant on a fresh engine of it, by decision 14's passes. The order is fixed:
+mutants in file order, after each one's load, boundary and content id; for each mutant, the
+lists in the order of the first scenario that has each. Two lists are one when they name the
+same paths in the same order with values of the same kind and bits. A set with no edit loads no
+mutant twice. No loadable pair reaches `param-structural`: no parameter name is structural in
+one class and settable in another, and the subject's own trial refuses a structural edit first.
+It is pinned by a unit test. The spelling `param-path-unknown` reuses the bind code for a key
+that names no parameter, and is for the owner to confirm.
+
+1. **Validation order** *(for confirmation; changes which code wins when a run has several
+   defects).*
+   - The bytes given, in the order given: a path the set does not list is `mutant-unlisted`, a
+     path given twice `duplicate-mutant` (reading 2).
+   - The mutants listed, in file order: one with no bytes is `mutant-missing`.
+   - The bytes together, against `max_mutant_bytes`, before any mutant loads.
+   - Each mutant in file order: load, boundary (first differing port named), content id, then
+     the edit lists.
+2. **Bytes given twice under one path** are `duplicate-mutant`, the load code's word for the
+   same refusal *(for confirmation; changes the code a misuse gets)*.
+3. **A caught mutant's `failure`** is the catching scenario's first failure in record order,
+   whatever `max_recorded_failures` is *(for confirmation; changes the receipt only under a
+   lowered cap)*. It is computed with two slots, so a refused frame's reserved slot never hides
+   an earlier mismatch.
+4. **Error subjects.** `mutants[i]` names a listed mutant, `mutants` the bytes as a whole, and
+   `mutants[i].scenarios[j]` a run refusal on a mutant *(naming only)*.
+5. **The load codes' order.** `too-many-mutants` sits after `too-many-expectations`, the table's
+   order, and the two path codes come last. That moves later codes in `VECTOR_ERROR_CODES`, which
+   `oce vocab` (part 4) will list *(order only)*.
+6. **Settled by this note, recorded for parts 4 and on:**
+   - a `no_data` subject is not a pass, so its section is `not_run`;
+   - a scenario that checks nothing on a mutant is not a failure;
+   - `"mutants": []` writes no section;
+   - a mutant's warnings and frames are not recorded;
+   - the frame budget counts every mutant as if it ran every scenario.
+7. **Left to part 4's CLI, which resolves the paths** *(not built here; `oce-verify` opens no
+   file)*.
+   - A path segment holding `:` (a Windows drive prefix such as `C:`) passes the load rules.
+   - Two paths that differ only in case are two mutants, and may name one file on a
+     case-insensitive file system.
+   - The CLI should refuse both, or the format should, by ruling.

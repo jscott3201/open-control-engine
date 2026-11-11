@@ -23,7 +23,10 @@
 //!    `param-refused` here, before any frame of any scenario runs (owner ruling of 2026-11-10;
 //!    the note's table puts the code at bind). The run applies the same edits to its own fresh
 //!    engine again, by the same deterministic passes.
-//! 5. **The frame budget.** `(N + 1) * scenarios` against
+//! 5. **The mutants** ([`crate::mutants`]): the bytes supplied against the set's listing and the
+//!    byte bound, then each listed mutant in file order loaded, held to the subject's boundary and
+//!    content id, and given every distinct edit list of the scenarios.
+//! 6. **The frame budget.** `(N + 1) * scenarios * (1 + mutants)` against
 //!    [`VerifyLimits::max_total_frames`], and `N + 1` against the replay limits' `max_frames`.
 //!
 //! Every refusal is a [`VerifyError`], never a failed scenario.
@@ -37,15 +40,16 @@ use oce_replay::resolve_path;
 
 use crate::limits::{MAX_LOAD_WARNINGS, VerifyLimits};
 use crate::model::{Expectation, Parameter, Scenario};
+use crate::mutants::{BoundMutant, SubjectBoundary};
 use crate::number::Literal;
 use crate::receipt::ReceiptValue;
 use crate::typing::{Untyped, literal_name, type_name, typed};
 use crate::vector_set::VectorSet;
 use crate::verify_error::{VerifyError, VerifyErrorKind as Kind};
 
-/// What binding learned: the subject's identity and boundary, and every scenario resolved and
-/// typed.
-pub(crate) struct Bound {
+/// What binding learned: the subject's identity and boundary, every scenario resolved and typed,
+/// and every listed mutant validated.
+pub(crate) struct Bound<'a> {
     /// The subject's content id as loaded, before any parameter edit.
     pub(crate) content_id: String,
     /// The facade's Cargo version.
@@ -60,6 +64,8 @@ pub(crate) struct Bound {
     pub(crate) outputs: Vec<String>,
     /// One per scenario, in file order.
     pub(crate) scenarios: Vec<BoundScenario>,
+    /// One per listed mutant, in file order.
+    pub(crate) mutants: Vec<BoundMutant<'a>>,
 }
 
 /// One scenario, resolved and typed.
@@ -137,11 +143,12 @@ pub(crate) fn setup_failed(subject: impl Into<String>, call: &str, error: &OcErr
 ///
 /// # Errors
 /// The first refusal in the order the module documentation gives.
-pub(crate) fn bind(
+pub(crate) fn bind<'a>(
     set: &VectorSet,
     subject: &[u8],
+    supplied: &[(&'a str, &'a [u8])],
     limits: &VerifyLimits,
-) -> Result<Bound, VerifyError> {
+) -> Result<Bound<'a>, VerifyError> {
     let (engine, report) = load(subject)?;
     let content_id = engine
         .content_id()
@@ -174,7 +181,20 @@ pub(crate) fn bind(
     for (index, scenario) in scenarios.iter().enumerate() {
         try_edits(subject, &scenario.edits, &format!("scenarios[{index}]"))?;
     }
-    frame_budget(set, limits)?;
+    let mutants = crate::mutants::validate(
+        set.mutants().unwrap_or_default(),
+        supplied,
+        &SubjectBoundary {
+            inputs: &inputs,
+            outputs: &outputs,
+            output_types: &output_types,
+            content_id: &content_id,
+        },
+        set,
+        &scenarios,
+        limits,
+    )?;
+    frame_budget(set, mutants.len(), limits)?;
     Ok(Bound {
         content_id,
         engine_version: CompatibilityDescriptor::current(None).oce_api_version(),
@@ -188,6 +208,7 @@ pub(crate) fn bind(
         inputs,
         outputs,
         scenarios,
+        mutants,
     })
 }
 
@@ -506,10 +527,13 @@ fn bind_inputs(
     Ok(lists)
 }
 
-/// The frame budget (bind step 6): every scenario runs `N + 1` frames.
-fn frame_budget(set: &VectorSet, limits: &VerifyLimits) -> Result<(), VerifyError> {
+/// The frame budget (bind step 6): every scenario runs `N + 1` frames, on the subject and on
+/// each mutant at most (a mutant's run stops at its first failing scenario, and none runs against
+/// a subject that did not pass, so the budget is the bound, not the count).
+fn frame_budget(set: &VectorSet, mutants: usize, limits: &VerifyLimits) -> Result<(), VerifyError> {
     let ticks = set.clock().tick_count();
     let scenarios = u64::try_from(set.scenarios().len()).unwrap_or(u64::MAX);
+    let runs = u64::try_from(mutants).unwrap_or(u64::MAX).saturating_add(1);
     if scenarios > 0 && ticks > limits.replay.max_frames {
         return Err(VerifyError::new(
             Kind::TooManyFrames,
@@ -520,13 +544,15 @@ fn frame_budget(set: &VectorSet, limits: &VerifyLimits) -> Result<(), VerifyErro
             ),
         ));
     }
-    let total = ticks.checked_mul(scenarios);
+    let total = ticks
+        .checked_mul(scenarios)
+        .and_then(|frames| frames.checked_mul(runs));
     if total.is_none_or(|total| total > limits.max_total_frames) {
         return Err(VerifyError::new(
             Kind::TooManyFrames,
             "scenarios",
             format!(
-                "{scenarios} scenarios of {ticks} frames are more than the {} frames allowed",
+                "{scenarios} scenarios of {ticks} frames on the subject and {mutants} mutants are more than the {} frames allowed",
                 limits.max_total_frames
             ),
         ));
