@@ -3,6 +3,7 @@
 
 use std::collections::BTreeMap;
 
+use crate::counted::Counted;
 use crate::model::Sequence;
 
 use super::bounds::boundary_bound_problems;
@@ -86,7 +87,7 @@ pub(super) fn check(sequence: &Sequence, findings: &mut Findings) {
                 .enumerate()
                 .map(|(i, b)| (Anchor::Block(i, None), "block", &b.name)),
         );
-    let mut first_seen: BTreeMap<&str, &str> = BTreeMap::new();
+    let mut first_seen: BTreeMap<Counted<&str>, &str> = BTreeMap::new();
     for (position, kind, name) in declared {
         if let Err(error) = name.check() {
             findings.error(
@@ -96,7 +97,7 @@ pub(super) fn check(sequence: &Sequence, findings: &mut Findings) {
                 format!("{kind} name `{name}`: {error}"),
             );
         }
-        if let Some(earlier) = first_seen.get(name.as_str()) {
+        if let Some(earlier) = first_seen.get(&Counted(name.as_str())) {
             findings.error(
                 position,
                 DUPLICATE_NAME,
@@ -106,7 +107,7 @@ pub(super) fn check(sequence: &Sequence, findings: &mut Findings) {
                 ),
             );
         } else {
-            first_seen.insert(name.as_str(), kind);
+            first_seen.insert(Counted(name.as_str()), kind);
         }
     }
 

@@ -12,14 +12,15 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use oce_api::{ClassPortsError, Diagnostic, Value, ValueType, class_ports};
+use oce_api::{ClassPorts, ClassPortsError, Diagnostic, Value, ValueType, class_ports};
 
+use crate::counted::Counted;
 use crate::json::wire_string_len;
 use crate::model::{Block, Literal, ParamValue, ParameterType, Sequence};
 use crate::wire::MAX_WIRE_STRING_BYTES;
 
 use super::catalog::{ClassView, enum_type, lookup_class, lookup_parameter};
-use super::index::{Declared, Ports};
+use super::index::Declared;
 use super::members::{constant_member, enum_ordinal, parameter_enum, parameter_problem};
 use super::names::{exact_as_real, inexact_detail};
 use super::{
@@ -35,7 +36,7 @@ pub(super) fn check(
     sequence: &Sequence,
     declared: &Declared<'_>,
     findings: &mut Findings,
-) -> Vec<Option<Ports>> {
+) -> Vec<Option<ClassPorts>> {
     sequence
         .blocks
         .iter()
@@ -60,7 +61,7 @@ fn check_block(
     index: usize,
     block: &Block,
     findings: &mut Findings,
-) -> Option<Ports> {
+) -> Option<ClassPorts> {
     let block_position = Anchor::Block(index, None);
     let Some(class) = lookup_class(&block.class_path) else {
         findings.error(
@@ -91,7 +92,7 @@ fn check_block(
     let mut table: Vec<(&str, Value)> = Vec::new();
     for (j, assignment) in block.assignments.iter().enumerate() {
         let name = assignment.name.as_str();
-        let outcome = if seen.insert(name) {
+        let outcome = if seen.insert(Counted(name)) {
             judge(sequence, declared, &class, block, name, &assignment.value)
         } else {
             Err(refuse(
@@ -102,10 +103,10 @@ fn check_block(
         match outcome {
             Ok(Some(value)) => table.push((name, value)),
             Ok(None) => {
-                withheld.insert(name);
+                withheld.insert(Counted(name));
             }
             Err(refusal) => {
-                withheld.insert(name);
+                withheld.insert(Counted(name));
                 findings.error(
                     Anchor::Block(index, Some(j)),
                     refusal.code,
@@ -116,12 +117,14 @@ fn check_block(
         }
     }
 
-    let mut assigned: BTreeMap<&str, usize> = BTreeMap::new();
+    let mut assigned: BTreeMap<Counted<&str>, usize> = BTreeMap::new();
     for (j, assignment) in block.assignments.iter().enumerate() {
-        assigned.entry(assignment.name.as_str()).or_insert(j);
+        assigned
+            .entry(Counted(assignment.name.as_str()))
+            .or_insert(j);
     }
     match class_ports(class.entry.class_path, &table) {
-        Ok(ports) => withheld.is_empty().then(|| Ports::new(ports)),
+        Ok(ports) => withheld.is_empty().then_some(ports),
         Err(ClassPortsError::InvalidParameters { diagnostics, .. }) => {
             for diagnostic in &diagnostics {
                 if let Some(mapped) = engine_finding(block, index, &assigned, &withheld, diagnostic)
@@ -175,12 +178,15 @@ pub(super) struct EngineFinding {
 pub(super) fn engine_finding(
     block: &Block,
     index: usize,
-    assigned: &BTreeMap<&str, usize>,
-    withheld: &BTreeSet<&str>,
+    assigned: &BTreeMap<Counted<&str>, usize>,
+    withheld: &BTreeSet<Counted<&str>>,
     diagnostic: &Diagnostic,
 ) -> Option<EngineFinding> {
     let named = backticked(&diagnostic.message);
-    if named.iter().any(|token| withheld.contains(token)) {
+    if named
+        .iter()
+        .any(|token| withheld.contains(&Counted(*token)))
+    {
         return None;
     }
     let engine_code = diagnostic.code.as_str();
@@ -192,7 +198,10 @@ pub(super) fn engine_finding(
             format!("engine code `{engine_code}`: "),
         )
     };
-    let (anchor, subject) = match named.iter().find_map(|token| assigned.get(token)) {
+    let (anchor, subject) = match named
+        .iter()
+        .find_map(|token| assigned.get(&Counted(*token)))
+    {
         Some(&j) => (
             Anchor::Block(index, Some(j)),
             format!("{}.{}", block.name, block.assignments[j].name),
@@ -269,7 +278,7 @@ fn judge(
             let Some(param) = declared
                 .params
                 .get(target.as_str())
-                .map(|&i| &sequence.params[i])
+                .map(|i| &sequence.params[i])
             else {
                 return Err(refuse(
                     UNKNOWN_PARAMETER_REFERENCE,

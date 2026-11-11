@@ -33,6 +33,7 @@ use std::fmt;
 
 use oce_api::ClassPorts;
 
+use crate::counted::compared;
 use crate::location::Location;
 use crate::model::Sequence;
 
@@ -239,6 +240,7 @@ impl Findings {
 
     fn finish(mut self) -> Vec<Finding> {
         self.items.sort_by(|(pa, fa), (pb, fb)| {
+            compared();
             (pa, fa.code, &fa.detail, &fa.subject).cmp(&(pb, fb.code, &fb.detail, &fb.subject))
         });
         self.items.dedup();
@@ -277,11 +279,12 @@ pub(crate) fn author_side_with_ports(
     let mut findings = Findings::default();
     let declared = index::Declared::new(sequence);
     names::check(sequence, &mut findings);
-    let ports = blocks::check(sequence, &declared, &mut findings);
-    connections::check(sequence, &declared, &ports, &mut findings);
-    let resolved = ports
-        .into_iter()
-        .map(|p| p.map(|ports| ports.resolved))
+    let resolved = blocks::check(sequence, &declared, &mut findings);
+    let ports: Vec<Option<index::Ports<'_>>> = resolved
+        .iter()
+        .map(|ports| ports.as_ref().map(index::Ports::new))
         .collect();
+    connections::check(sequence, &declared, &ports, &mut findings);
+    drop(ports);
     (findings.finish(), resolved)
 }

@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use oce_api::{ClassPortsError, DiagCode, Diagnostic, Value, class_ports};
 
 use super::{EngineFinding, backticked, engine_finding};
+use crate::counted::Counted;
 use crate::identifier::Identifier;
 use crate::model::{Assignment, Block, Literal};
 use crate::validate::{Anchor, STAGE_ONE_CODES};
@@ -43,9 +44,9 @@ fn refusal(table: &[(&str, Value)]) -> Vec<Diagnostic> {
 fn map(block: &Block, withheld: &[&str], diagnostic: &Diagnostic) -> Option<EngineFinding> {
     let mut assigned = BTreeMap::new();
     for (j, a) in block.assignments.iter().enumerate() {
-        assigned.entry(a.name.as_str()).or_insert(j);
+        assigned.entry(Counted(a.name.as_str())).or_insert(j);
     }
-    let withheld: BTreeSet<&str> = withheld.iter().copied().collect();
+    let withheld: BTreeSet<Counted<&str>> = withheld.iter().copied().map(Counted).collect();
     engine_finding(block, 3, &assigned, &withheld, diagnostic)
 }
 

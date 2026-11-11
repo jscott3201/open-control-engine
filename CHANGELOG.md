@@ -453,6 +453,35 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
+- **`oce-author`'s validation cost is pinned in key comparisons, not in elapsed time** (GitHub
+  #584, issue #478).
+  - **What was wrong.** `validate_cost`'s ratio test failed on `development` because it timed two
+    document sizes and compared them. Stage 1 was never superlinear: run alone, 1,875 to 30,000
+    blocks (sixteen times) costs 16.6 times at the commit the issue names (debug codegen) and, on
+    `development` before this change, 16.7 times in debug and 17.9 times in release. Under sixteen
+    concurrent copies of the issue commit's test binary the smallest run still took 8.7 ms and the
+    largest 310 to 473 ms instead of 145 ms: the
+    best of several short runs escapes a busy machine and a long run does not, so the ratio
+    measured the host.
+  - **What replaces it.** Every ordered index of stage 1 and of the text placement
+    (`SourceMap::apply`) is keyed by a crate-private `Counted` wrapper, which orders as the value
+    it wraps and, in the library's own test build only, counts each comparison on the comparing
+    thread; the sort of the findings counts through the same counter. The unit tests of
+    `src/counted.rs` hold stage 1 (a clean chain, a chain whose every block is a finding, one
+    block of `n` ports resolved and misnamed, at 1,875 and 30,000) and the text placement (a
+    finding per block and one name repeated by every block, at 4,096 and 65,536) to
+    `24 * n * bits(n)` comparisons [measured: at most 16.2], and a control counts the scan per
+    lookup the indexes replaced: `n * (n + 1)`, seven times the bound at 1,875 blocks and eighty
+    times at 30,000.
+  - **Behaviour.** Unchanged: every finding, its order, its subject and its location. The port
+    sets and the text subject index now borrow their names where they copied them. The two
+    wall-clock ratio tests are removed from `tests/validate_cost.rs` and `tests/text_cost.rs`;
+    the tests there that validate a document at the wire bound and at the statement cap stay.
+  - **Not covered.** A lookup that compares names without `Counted` is invisible to the counter.
+    Two follow-ups are filed: stage 2 maps each engine diagnostic by scanning the model, a cost
+    of diagnostics times blocks inside the 8 MiB emission bound (#577), and
+    `import_hostile.rs` still asserts a 60 s ceiling on elapsed time (#578).
+
 - **The authoring provenance statement is `derived_from`, no longer `extends`** (GitHub #580,
   issue #529; [authoring note](docs/design/authoring-layer.md), decision 5 as amended; owner
   ruling of 2026-11-09). CDL uses `extends` for inheritance of a composite block with

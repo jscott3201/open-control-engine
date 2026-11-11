@@ -29,6 +29,7 @@
 //! engines of its own (stage 2), never one a host runs.
 
 mod builder;
+mod counted;
 mod emit;
 mod identifier;
 mod import;
