@@ -1,13 +1,13 @@
 # Bounding a vector run's work
 
-**Design note for issue #561, written before any code. It is a proposal: every point the owner
-must rule on is a numbered question at the end, with a recommendation.** It bounds the total work
+**Design note for issue #561, written before any code, and ruled by the owner on 2026-11-11 (see
+[Rulings](#rulings)).** It bounds the total work
 one `run_vectors` call does: the instants it compares, the engine loads it makes at bind and while
 scoring mutants, and the frames it runs, weighted by the size of the document that runs them. Part
 4 (the `oce verify` verb, #522) is blocked on it, because the verb puts the run in front of files
-fetched from elsewhere. The [vectors note](vectors.md) is the format and run this note bounds; it
-is amended when the questions are ruled. Its text is read by a test, so its amendment ships with
-the implementing PR and this PR stays documentation only. Nothing here is built.
+fetched from elsewhere. The [vectors note](vectors.md) is the format and run this note bounds. A
+test reads its text, so its amendment ships with the implementing PR, which closes #561; this note
+stays documentation only. Nothing here is built.
 
 ## What is bounded today, and what is not
 
@@ -78,7 +78,7 @@ that the mutants are scored, needs only one checked tick a scenario.
 | Frame bytes | 16,777,216 frames, each on an 8 MiB document: 1.4 x 10^14 | 52 min | 5.2 h |
 | Frames | 16,777,216 on a 6 KB rule | 1.5 s | 12 s |
 
-## The proposal
+## The design
 
 **Four budgets, each in its natural unit, each one product, each arithmetic on what binding
 already knows.** The frame budget stays. Three join it:
@@ -102,7 +102,7 @@ already knows.** The frame budget stays. Three join it:
   checked later with the other mutant checks.
 - **Load bytes, term by term:** `D * (1 + e + s)` is the subject's and each mutant's bind load,
   their trials and their scenario runs. It assumes the subject's trials are made once per distinct
-  list, as the mutants' already are (question 7). Without that change, the count is
+  list, as the mutants' already are (ruling 7). Before that change, the count was
   `S * (1 + w + s) + M * (1 + e + s)`.
 
 **Where they are checked: one budget step at bind, before any load but the subject's first.**
@@ -118,7 +118,7 @@ bind load and its names resolve. That one load is already bounded by the 8 MiB d
 
 This moves the frame budget ahead of the subject's trials. Since the owner's ruling of 2026-11-11 it
 runs after them and before the mutants. An over-budget set whose edits the subject also refuses
-then gets `too-many-frames`, not `param-refused` (question 6).
+then gets `too-many-frames`, not `param-refused` (ruling 6).
 
 **The refusal.** Each budget is its own `VerifyErrorKind`, inserted after `TooManyFrames` in
 `VERIFY_ERROR_CODES`. Its subject is `scenarios` and its detail names the count and the limit,
@@ -133,7 +133,7 @@ frames and instants that ran (`totals.frames`, `totals.instants`).
 **Raise or lower.** As decision 35 states for every limit: a host may lower any budget, to zero
 included; a value above the default is read as the default, so no caller can raise one. The CLI
 exposes none of them, as it exposes no limit today. Raising a default is a source change, made in
-place before 1.0.0, with this note's arithmetic redone (question 5).
+place before 1.0.0, with this note's arithmetic redone (ruling 5).
 
 ## The defaults, against the corpus and the clock
 
@@ -192,7 +192,9 @@ run a hostile file would ask for.
 
 ## Alternatives
 
-- **A. Separate budgets in natural units** (proposed above).
+The record of why the design is shaped as it is. Each rejected alternative stays here.
+
+- **A. Separate budgets in natural units** (the design above; ruling 1).
 - **B. One work budget**, with each unit weighted by a cost constant: a nanosecond-equivalent
   score. Rejected: the constants are this machine's and this build's. Any engine speed-up would
   make them a stale contract, and a refusal would name a score rather than the dimension a writer
@@ -216,95 +218,49 @@ run a hostile file would ask for.
   This complements the budgets rather than replacing them: frames and instants still need bounds,
   and the vectors note's fresh load per scenario is its isolation guarantee. A rewound engine
   running bit-identically to a freshly loaded one, parameters included, is not a contract the
-  facade states today. Proposed as a follow-up issue (question 10).
+  facade states today. It is #569, after part 4 (ruling 10).
 
-## Questions for the owner
+## Rulings
 
-1. **The shape of the bound.**
-   - (a) Separate budgets in natural units (A).
-   - (b) One weighted work budget (B).
-   - (c) Bound nothing and state the worst case (F).
+The owner ruled on 2026-11-11, on GitHub #568. Questions 1, 3, 4, 6 and 8 were ruled directly. The
+rest were accepted as recommended, with no objection. Each ruling names what it rejected.
 
-   *Recommended: (a).* Each refusal names the dimension a writer can change, and no machine
-   constant becomes a contract.
-2. **The unit for loads.**
-   - (a) Bytes loaded, `max_total_load_bytes`.
-   - (b) A load count.
-   - (c) Both.
-
-   *Recommended: (a).* Cost is linear in bytes, with no per-load floor worth counting.
-3. **Frame cost and document size.**
-   - (a) Add `max_total_frame_bytes` beside `max_total_frames`.
-   - (b) Replace `max_total_frames` with it.
-   - (c) Leave frames unweighted.
-
-   *Recommended: (a).* The frame count still bounds the per-frame work that does not scale with
-   the document (trace rows, grid ticks), and (c) leaves a 52-minute `release` case.
-4. **The defaults.**
-   - (a) Instants 2^28, load bytes 2^30, frame bytes 2^40, frames unchanged at 2^24: about one
-     minute in `release` at worst.
-   - (b) Tighter: 2^26, 2^29, 2^38, about 25 s, with 2.5x left over 256 mutants of the corpus.
-   - (c) Looser: 2^30, 2^32, 2^42, about 4 min.
-
-   *Recommended: (a).* It leaves at least 4.9x over 256 mutants of the corpus's largest rule, and
-   700x or more for the corpus as it is.
-5. **Who may raise a budget.**
-   - (a) Nobody: lower-only, default equals maximum, as decision 35 states for every limit.
-   - (b) A separate `VerifyLimits::DEFAULT` under a higher `MAX`, so a trusted host may raise up to
-     the maximum.
-   - (c) An uncapped opt-out for trusted hosts.
-
-   *Recommended: (a).* It is consistent with every limit today, the corpus has room under it, and
-   a raise is a source change with this arithmetic redone.
-6. **Where the budgets are checked.**
-   - (a) One step after the subject's bind load and name resolution, before every other load. This
-     moves the frame budget ahead of the subject's trials, so it now beats the subject's
-     `param-refused`.
-   - (b) Before any load, counting written rather than resolved edit lists. This over-counts `e`,
-     and a set whose every scenario carries the set-level `params` counts `s` lists, not one.
-   - (c) Keep the frame budget where it was ruled, and put the new budgets beside it, after the
-     subject's trials. This leaves `1 + w` subject loads unbounded: 32 GiB, 17 min in `release`.
-
-   *Recommended: (a).*
-7. **Deduplicate the subject's trials.**
-   - (a) Try each distinct effective edit list once on the subject, as the mutants' trials already
-     are.
-   - (b) Keep one trial per scenario with edits.
-
-   *Recommended: (a).* The first scenario in file order that holds a refused list is the one named
-   either way, so no refusal or receipt changes. Loads at bind fall from `1 + w` to `1 + e`, and
-   the load-bytes formula becomes `D * (1 + e + s)`. This amends part 2's reading 8 ("tries every
-   scenario's effective edits").
-8. **The codes.**
-   - (a) One code per budget: `too-many-instants`, `too-many-load-bytes` and
-     `too-many-frame-bytes`, after `too-many-frames`.
-   - (b) One code, `too-much-work`, with a `cause` naming the budget.
-
-   *Recommended: (a).* It matches `too-many-frames` and the "one word per refusal" rule. The
-   positions of later codes move, which, as part 3's reading 5 records, nothing outside the crate
-   reads yet.
-9. **What the receipt records.**
-   - (a) Nothing.
-   - (b) The budgets in force.
-   - (c) The loads made.
-
-   *Recommended: (a).* A budget never changes a receipt's bytes, so recording it would only give
-   identical runs different ids. Loads are an implementation detail that G would change.
-10. **Engine reuse through checkpoints (G).**
-    - (a) File it as a follow-up, after part 4.
-    - (b) Fold it into the implementing PR.
-    - (c) Drop it.
-
-    *Recommended: (a).* It needs its own proof that a rewound engine runs bit-identically to a
-    fresh load, and the budgets are what part 4 waits for.
+1. **Separate budgets, each a simple product checked at bind** (A). Rejected: one weighted work
+   budget (B), whose constants would be one machine's contract; bounding nothing (F).
+2. **Loads are counted in bytes** (`max_total_load_bytes`). Rejected: a load count, alone or beside
+   the bytes (C), since load cost is linear in bytes with no fixed floor.
+3. **`max_total_frame_bytes` is added beside `max_total_frames`.** Rejected: replacing the frame
+   count, which still bounds the per-frame work that does not scale with the document; leaving
+   frames unweighted, a 52-minute case in `release`.
+4. **The defaults are 2^28 instants, 2^30 load bytes and 2^40 frame bytes,** with frames unchanged
+   at 2^24: about one minute in `release` at worst. Rejected: the tighter set (2^26, 2^29, 2^38,
+   about 25 s) and the looser one (2^30, 2^32, 2^42, about 4 min).
+5. **Lower-only, the default being the maximum,** as decision 35 states for every limit. Rejected:
+   a `VerifyLimits::DEFAULT` under a higher `MAX`, and an uncapped opt-out for trusted hosts.
+6. **One budget step, after the subject's first bind load and its name resolution, before every
+   other load.** `too-many-frames` therefore wins over `param-refused`. Rejected: checking before
+   any load, which over-counts edit lists written rather than resolved; and checking after the
+   subject's trials, which leaves 4,097 subject loads (32 GiB) unbounded.
+7. **The subject's trials are deduplicated** by distinct effective edit list, as the mutants'
+   already are. The first scenario in file order that holds a refused list is still the one named,
+   so no refusal or receipt changes. This amends part 2's reading 8 of the vectors note. Rejected:
+   one trial per scenario with edits.
+8. **One code per budget:** `too-many-instants`, `too-many-load-bytes` and `too-many-frame-bytes`,
+   after `too-many-frames` in `VERIFY_ERROR_CODES`. Rejected: one `too-much-work` code with a
+   `cause`.
+9. **The receipt records none of the budgets.** A budget never changes a receipt's bytes. Rejected:
+   recording the budgets in force, which would give identical runs different ids; recording the
+   loads made, an implementation detail that ruling 10's follow-up would change.
+10. **Engine reuse through checkpoints is a follow-up, after part 4:** #569. Rejected: folding it
+    into the implementing PR, or dropping it.
 
 ## What the implementing PR changes
 
-Once the questions are ruled, one PR in `crates/leverage/oce-verify` changes these, with nothing
-outside the crate but documents:
+One PR in `crates/leverage/oce-verify`, which closes #561, changes these, with nothing outside the
+crate but documents:
 - **Code:**
   - `src/limits.rs`: the three fields and their maxima;
-  - `src/bind.rs`: the budget step, and the deduplicated subject trials if question 7 is (a);
+  - `src/bind.rs`: the budget step, and the deduplicated subject trials (ruling 7);
   - `src/verify_error.rs`: three kinds, the code list and the module documentation.
 - **Tests:**
   - each budget accepted at its bound and refused one past it;
