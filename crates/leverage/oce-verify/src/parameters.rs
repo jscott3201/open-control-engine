@@ -35,7 +35,7 @@ use crate::verify_error::{VerifyError, VerifyErrorKind};
 /// `set_param` refusal not about the edit's value fails.
 pub(crate) fn apply(
     engine: &mut Engine,
-    edits: &[(String, ReceiptValue)],
+    edits: &[(&str, ReceiptValue)],
     subject: &str,
 ) -> Result<(), VerifyError> {
     passes(engine, edits, subject, param_refusal_class).map_err(|refusal| match refusal {
@@ -66,7 +66,7 @@ pub(crate) fn apply(
 /// cause `engine-setup` as for [`apply`].
 pub(crate) fn apply_to_mutant(
     engine: &mut Engine,
-    edits: &[(String, ReceiptValue)],
+    edits: &[(&str, ReceiptValue)],
     subject: &str,
     mutant: &str,
     scenario: &str,
@@ -106,7 +106,7 @@ enum Refusal {
 /// about the edit, which then waits for the next pass; any other refusal stops them as `Setup`.
 fn passes(
     engine: &mut Engine,
-    edits: &[(String, ReceiptValue)],
+    edits: &[(&str, ReceiptValue)],
     subject: &str,
     classify: fn(&OcError) -> Option<&'static str>,
 ) -> Result<(), Refusal> {
@@ -116,7 +116,7 @@ fn passes(
     engine
         .halt()
         .map_err(|error| Refusal::Setup(setup_failed(subject, "the parameter halt", &error)))?;
-    let mut waiting: Vec<&(String, ReceiptValue)> = edits.iter().collect();
+    let mut waiting: Vec<&(&str, ReceiptValue)> = edits.iter().collect();
     loop {
         let mut refused = Vec::new();
         let mut first_refusal = None;
@@ -143,7 +143,7 @@ fn passes(
             && let Some((path, cause, detail)) = first_refusal
         {
             return Err(Refusal::Edit {
-                path: path.clone(),
+                path: (*path).to_owned(),
                 cause,
                 detail,
             });

@@ -14,9 +14,12 @@
 //!    Every name resolves by replay's one rule ([`oce_replay::resolve_path`]: the exact canonical
 //!    path, or the one path the name ends at a `.` boundary): inputs against
 //!    `Engine::input_definitions()`, outputs against `FrameSlots::outputs()`, parameter keys
-//!    against `Engine::params()` sorted by path. Every value is typed by what it lands on
+//!    against `Engine::params()` sorted by path. Each of the three lists is indexed once
+//!    ([`oce_replay::PathIndex`], issue #571), so a name costs a binary search, not a scan of the
+//!    list, and every answer is `resolve_path`'s. Every value is typed by what it lands on
 //!    ([`crate::typing`]): an input by `InputDefinition::value_type`, an `equals` literal by
-//!    `FrameSlots::output_types()`, a parameter by its declared type.
+//!    `FrameSlots::output_types()`, a parameter by its declared type. The set's own `params` are
+//!    held once and every scenario keeps only its own map ([`crate::edit_lists`]).
 //! 4. **The work budgets** ([`crate::budget`]): frames, compared instants, bytes loaded and
 //!    byte-frames, in that order, each an upper bound on what the run may ask for. They are
 //!    arithmetic on what steps 1 to 3 found, so they are checked before every load but the
@@ -40,8 +43,9 @@ use std::collections::BTreeMap;
 use oce_api::{
     CompatibilityDescriptor, Engine, InputDefinition, LoadReport, OcError, Value, ValueType,
 };
-use oce_replay::resolve_path;
+use oce_replay::PathIndex;
 
+use crate::edit_lists::{Edit, Edits};
 use crate::limits::{MAX_LOAD_WARNINGS, VerifyLimits};
 use crate::model::{Expectation, Parameter, Scenario};
 use crate::mutants::{BoundMutant, SubjectBoundary};
@@ -66,6 +70,8 @@ pub(crate) struct Bound<'a> {
     pub(crate) inputs: Vec<InputDefinition>,
     /// The boundary outputs in output-slot order.
     pub(crate) outputs: Vec<String>,
+    /// The parameter paths and the set's own edits, which every scenario shares.
+    pub(crate) edits: Edits,
     /// One per scenario, in file order.
     pub(crate) scenarios: Vec<BoundScenario>,
     /// One per listed mutant, in file order.
@@ -76,8 +82,9 @@ pub(crate) struct Bound<'a> {
 pub(crate) struct BoundScenario {
     /// Per input slot, the typed steps in time order.
     pub(crate) steps: Vec<Vec<(f64, Value)>>,
-    /// The effective parameter edits by canonical path, sorted by path bytes.
-    pub(crate) edits: Vec<(String, ReceiptValue)>,
+    /// The scenario's own parameter edits, by row of the parameter table in ascending order; its
+    /// effective list is these over the set's ([`Edits::effective`]).
+    pub(crate) edits: Vec<Edit>,
     /// The expectations, in file order.
     pub(crate) expectations: Vec<BoundExpectation>,
 }
@@ -168,25 +175,39 @@ pub(crate) fn bind<'a>(
     let output_types = slots.output_types().to_vec();
     boundary(&inputs, &outputs, &output_types)?;
     let params = parameter_types(&engine);
-    let set_edits = match set.params() {
-        Some(written) => edits(written, "params", &params)?,
-        None => BTreeMap::new(),
+    let (set_edits, scenarios) = {
+        // Each list of names is indexed once, so a name costs a binary search, not a scan
+        // (issue #571).
+        let input_paths: Vec<&str> = inputs.iter().map(|d| d.path.as_str()).collect();
+        let param_paths: Vec<&str> = params.iter().map(|(path, _)| path.as_str()).collect();
+        let boundary = Boundary {
+            inputs: &inputs,
+            input_index: PathIndex::new(&input_paths),
+            output_index: PathIndex::new(&outputs),
+            outputs: &outputs,
+            output_types: &output_types,
+            params: &params,
+            param_index: PathIndex::new(&param_paths),
+        };
+        let set_edits = match set.params() {
+            Some(written) => edits(written, "params", &boundary)?,
+            None => Vec::new(),
+        };
+        let mut scenarios = Vec::with_capacity(set.scenarios().len());
+        for (index, scenario) in set.scenarios().iter().enumerate() {
+            scenarios.push(bind_scenario(index, scenario, &boundary)?);
+        }
+        (set_edits, scenarios)
     };
-    let boundary = Boundary {
-        inputs: &inputs,
-        outputs: &outputs,
-        output_types: &output_types,
-        params: &params,
+    let edits = Edits {
+        paths: params.into_iter().map(|(path, _)| path).collect(),
+        set: set_edits,
     };
-    let mut scenarios = Vec::with_capacity(set.scenarios().len());
-    for (index, scenario) in set.scenarios().iter().enumerate() {
-        scenarios.push(bind_scenario(index, scenario, &boundary, &set_edits)?);
-    }
-    let edit_lists = crate::edit_lists::distinct(&scenarios);
+    let edit_lists = crate::edit_lists::distinct(&edits, &scenarios);
     let work = crate::budget::Work::of(set, &scenarios, edit_lists.len(), subject, supplied);
     crate::budget::check(&work, limits)?;
-    for list in &edit_lists {
-        try_edits(subject, list.edits, &format!("scenarios[{}]", list.first))?;
+    for (first, list) in edit_lists.resolved() {
+        try_edits(subject, &list, &format!("scenarios[{first}]"))?;
     }
     let mutants = crate::mutants::validate(
         set.mutants().unwrap_or_default(),
@@ -213,6 +234,7 @@ pub(crate) fn bind<'a>(
         load_warnings_total: u64::try_from(report.warnings.len()).unwrap_or(u64::MAX),
         inputs,
         outputs,
+        edits,
         scenarios,
         mutants,
     })
@@ -226,7 +248,7 @@ pub(crate) fn bind<'a>(
 /// not about an edit's value ([`crate::parameters::apply`]).
 fn try_edits(
     subject: &[u8],
-    edits: &[(String, ReceiptValue)],
+    edits: &[(&str, ReceiptValue)],
     place: &str,
 ) -> Result<(), VerifyError> {
     if edits.is_empty() {
@@ -288,12 +310,16 @@ fn parameter_types(engine: &Engine) -> Vec<(String, ValueType)> {
     params
 }
 
-/// The subject's boundary and parameters, as every scenario binds against them.
+/// The subject's boundary and parameters, as every scenario binds against them, each list of
+/// names indexed once for the one name rule.
 struct Boundary<'a> {
     inputs: &'a [InputDefinition],
+    input_index: PathIndex<'a>,
     outputs: &'a [String],
+    output_index: PathIndex<'a>,
     output_types: &'a [ValueType],
     params: &'a [(String, ValueType)],
+    param_index: PathIndex<'a>,
 }
 
 /// The names of one kind of target, for the three refusals of the name rule.
@@ -321,14 +347,14 @@ const PARAMETERS: Names = Names {
     ambiguous: Kind::ParamPathAmbiguous,
 };
 
-/// Resolve `name` against `paths` by the one name rule, refusing at `subject`.
-fn resolve<P: AsRef<str>>(
-    paths: &[P],
+/// Resolve `name` against an indexed list by the one name rule, refusing at `subject`.
+fn resolve(
+    index: &PathIndex<'_>,
     name: &str,
     names: &Names,
     subject: &str,
 ) -> Result<usize, VerifyError> {
-    resolve_path(paths, name).map_err(|candidates| {
+    index.resolve(name).map_err(|candidates| {
         if candidates.is_empty() {
             VerifyError::new(
                 names.unknown,
@@ -382,20 +408,19 @@ fn typed_at(
     })
 }
 
-/// One `params` map resolved to canonical paths and typed, at `place` (`params` or
-/// `scenarios[i].params`).
+/// One `params` map resolved to rows of the parameter table and typed, at `place` (`params` or
+/// `scenarios[i].params`), by row in ascending order, which is path order.
 fn edits(
     written: &[Parameter],
     place: &str,
-    table: &[(String, ValueType)],
-) -> Result<BTreeMap<String, ReceiptValue>, VerifyError> {
-    let paths: Vec<&str> = table.iter().map(|(path, _)| path.as_str()).collect();
-    let mut resolved: BTreeMap<String, (ReceiptValue, &str)> = BTreeMap::new();
+    boundary: &Boundary<'_>,
+) -> Result<Vec<Edit>, VerifyError> {
+    let mut resolved: BTreeMap<usize, (ReceiptValue, &str)> = BTreeMap::new();
     for param in written {
         let subject = format!("{place}.{}", param.path());
-        let row = resolve(&paths, param.path(), &PARAMETERS, &subject)?;
-        let (path, value_type) = &table[row];
-        if let Some((_, first)) = resolved.get(path) {
+        let row = resolve(&boundary.param_index, param.path(), &PARAMETERS, &subject)?;
+        let (path, value_type) = &boundary.params[row];
+        if let Some((_, first)) = resolved.get(&row) {
             return Err(VerifyError::new(
                 Kind::ParamPathDuplicate,
                 subject,
@@ -407,11 +432,11 @@ fn edits(
             .with_path(path.clone()));
         }
         let value = typed_at(param.value(), *value_type, &subject, path)?;
-        resolved.insert(path.clone(), (value, param.path()));
+        resolved.insert(row, (value, param.path()));
     }
     Ok(resolved
         .into_iter()
-        .map(|(path, (value, _))| (path, value))
+        .map(|(row, (value, _))| (row, value))
         .collect())
 }
 
@@ -419,16 +444,15 @@ fn bind_scenario(
     index: usize,
     scenario: &Scenario,
     boundary: &Boundary<'_>,
-    set_edits: &BTreeMap<String, ReceiptValue>,
 ) -> Result<BoundScenario, VerifyError> {
-    let steps = bind_inputs(index, scenario, boundary.inputs)?;
+    let steps = bind_inputs(index, scenario, boundary)?;
     let mut expectations = Vec::with_capacity(scenario.expectations().len());
     for (position, expectation) in scenario.expectations().iter().enumerate() {
         let place = format!("scenarios[{index}].expect[{position}]");
         expectations.push(match expectation {
             Expectation::Window(window) => {
                 let slot = resolve(
-                    boundary.outputs,
+                    &boundary.output_index,
                     window.output(),
                     &OUTPUTS,
                     &format!("{place}.output"),
@@ -455,17 +479,13 @@ fn bind_scenario(
             }),
         });
     }
-    let mut effective = set_edits.clone();
-    if let Some(written) = scenario.params() {
-        effective.extend(edits(
-            written,
-            &format!("scenarios[{index}].params"),
-            boundary.params,
-        )?);
-    }
+    let own = match scenario.params() {
+        Some(written) => edits(written, &format!("scenarios[{index}].params"), boundary)?,
+        None => Vec::new(),
+    };
     Ok(BoundScenario {
         steps,
-        edits: effective.into_iter().collect(),
+        edits: own,
         expectations,
     })
 }
@@ -477,14 +497,14 @@ type Supplied<'a> = (&'a str, Vec<(f64, Value)>);
 fn bind_inputs(
     index: usize,
     scenario: &Scenario,
-    inputs: &[InputDefinition],
+    boundary: &Boundary<'_>,
 ) -> Result<Vec<Vec<(f64, Value)>>, VerifyError> {
-    let paths: Vec<&str> = inputs.iter().map(|d| d.path.as_str()).collect();
+    let inputs = boundary.inputs;
     // Per slot: the name that supplied it, and its typed steps.
     let mut by_slot: Vec<Option<Supplied<'_>>> = vec![None; inputs.len()];
     for input in scenario.inputs() {
         let place = format!("scenarios[{index}].inputs.{}", input.name());
-        let slot = resolve(&paths, input.name(), &INPUTS, &place)?;
+        let slot = resolve(&boundary.input_index, input.name(), &INPUTS, &place)?;
         let definition = &inputs[slot];
         if let Some((first, _)) = &by_slot[slot] {
             return Err(VerifyError::new(

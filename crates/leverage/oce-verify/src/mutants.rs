@@ -40,16 +40,16 @@
 
 use oce_api::{Engine, InputDefinition, ValueType};
 
-use crate::bind::{self, BoundScenario};
+use crate::bind;
 use crate::compare::{self, Caps};
-use crate::edit_lists::EditList;
+use crate::edit_lists::Lists;
 use crate::limits::VerifyLimits;
 use crate::model::Mutant;
 use crate::parameters;
 use crate::receipt::{
     MutantCatch, MutantEntry, MutantSection, MutantStatus, ReceiptValue, ScoreStatus,
 };
-use crate::run;
+use crate::run::{self, Runs};
 use crate::typing::type_name;
 use crate::vector_set::VectorSet;
 use crate::verify_error::{VerifyError, VerifyErrorKind as Kind};
@@ -90,7 +90,7 @@ pub(crate) fn validate<'a>(
     supplied: &[(&'a str, &'a [u8])],
     subject: &SubjectBoundary<'_>,
     set: &VectorSet,
-    edit_lists: &[EditList<'_>],
+    edit_lists: &Lists<'_>,
     limits: &VerifyLimits,
 ) -> Result<Vec<BoundMutant<'a>>, VerifyError> {
     for (index, (path, _)) in supplied.iter().enumerate() {
@@ -136,9 +136,9 @@ pub(crate) fn validate<'a>(
     let mut bound = Vec::with_capacity(listed.len());
     for (index, (mutant, bytes)) in listed.iter().zip(bytes_of).enumerate() {
         let valid = validate_one(index, mutant, bytes, subject)?;
-        for list in edit_lists {
-            let scenario = set.scenarios()[list.first].name();
-            try_edits(index, &valid, scenario, list.edits)?;
+        for (first, list) in edit_lists.resolved() {
+            let scenario = set.scenarios()[first].name();
+            try_edits(index, &valid, scenario, &list)?;
         }
         bound.push(valid);
     }
@@ -150,7 +150,7 @@ fn try_edits(
     index: usize,
     mutant: &BoundMutant<'_>,
     scenario: &str,
-    edits: &[(String, ReceiptValue)],
+    edits: &[(&str, ReceiptValue)],
 ) -> Result<(), VerifyError> {
     let place = format!("mutants[{index}]");
     let mut engine = Engine::new();
@@ -269,23 +269,6 @@ fn first_difference(
     })
 }
 
-/// What every mutant run shares with the subject's: the set, the subject's boundary and the
-/// bound scenarios, and the run's limits and chunk size.
-pub(crate) struct Runs<'r> {
-    /// The set.
-    pub(crate) set: &'r VectorSet,
-    /// The subject's boundary inputs, in slot order.
-    pub(crate) inputs: &'r [InputDefinition],
-    /// The subject's boundary outputs, in output-slot order.
-    pub(crate) outputs: &'r [String],
-    /// The scenarios, bound once against the subject.
-    pub(crate) scenarios: &'r [BoundScenario],
-    /// The run's limits, already effective.
-    pub(crate) limits: &'r VerifyLimits,
-    /// Frames per `Replay::advance`.
-    pub(crate) chunk: usize,
-}
-
 /// The section of a receipt for the bound mutants, scoring them when the subject passed.
 ///
 /// # Errors
@@ -352,15 +335,7 @@ fn first_catch(
     for (position, (scenario, bound)) in runs.set.scenarios().iter().zip(runs.scenarios).enumerate()
     {
         let subject = format!("mutants[{index}].scenarios[{position}]");
-        let ran = run::run_scenario(
-            runs.set,
-            &subject,
-            mutant.bytes,
-            runs.inputs,
-            bound,
-            runs.limits,
-            runs.chunk,
-        )?;
+        let ran = run::run_scenario(runs, &subject, mutant.bytes, bound)?;
         let compared = compare::compare(
             &ran.trace,
             ran.refused,

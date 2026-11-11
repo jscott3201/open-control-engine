@@ -33,12 +33,13 @@ use oce_replay::{
 
 use crate::bind::{self, BoundExpectation, BoundScenario};
 use crate::compare::{self, Caps, Compared};
+use crate::edit_lists::Edits;
 use crate::limits::VerifyLimits;
 use crate::parameters;
 use crate::receipt::{
     Comparison, ComparisonMode, FrameCounts, ParamEdit, RECEIPT_SCHEMA, Receipt, ReceiptBody,
-    ReceiptHeader, ReceiptKind, ScenarioCounts, ScenarioReceipt, ScenarioStatus, Timings, Totals,
-    VectorBody,
+    ReceiptHeader, ReceiptKind, ReceiptValue, ScenarioCounts, ScenarioReceipt, ScenarioStatus,
+    Timings, Totals, VectorBody,
 };
 use crate::refusal_classes::replay_failure_cause;
 use crate::vector_set::VectorSet;
@@ -135,21 +136,22 @@ pub fn run_vectors(
         warnings: usize::try_from(limits.max_recorded_warnings).unwrap_or(usize::MAX),
     };
     let chunk = options.chunk_frames.max(1);
+    let runs = Runs {
+        set,
+        inputs: &bound.inputs,
+        outputs: &bound.outputs,
+        edits: &bound.edits,
+        scenarios: &bound.scenarios,
+        limits: &limits,
+        chunk,
+    };
     let mut scenarios = Vec::with_capacity(bound.scenarios.len());
     let mut traces = Vec::new();
     for (index, (scenario, bound_scenario)) in
         set.scenarios().iter().zip(&bound.scenarios).enumerate()
     {
         let subject = format!("scenarios[{index}]");
-        let ran = run_scenario(
-            set,
-            &subject,
-            inputs.subject,
-            &bound.inputs,
-            bound_scenario,
-            &limits,
-            chunk,
-        )?;
+        let ran = run_scenario(&runs, &subject, inputs.subject, bound_scenario)?;
         let compared = compare::compare(
             &ran.trace,
             ran.refused,
@@ -160,7 +162,7 @@ pub fn run_vectors(
         )?;
         scenarios.push(scenario_receipt(
             scenario.name(),
-            bound_scenario,
+            &bound.edits.resolved(&bound_scenario.edits),
             &ran,
             compared,
             scenario.expectations().len(),
@@ -171,14 +173,6 @@ pub fn run_vectors(
     }
     let mut body = vector_body(set, &bound, scenarios);
     if set.mutants().is_some_and(|listed| !listed.is_empty()) {
-        let runs = crate::mutants::Runs {
-            set,
-            inputs: &bound.inputs,
-            outputs: &bound.outputs,
-            scenarios: &bound.scenarios,
-            limits: &limits,
-            chunk,
-        };
         body.mutants = Some(crate::mutants::score(
             &runs,
             &bound.mutants,
@@ -242,19 +236,36 @@ fn same_boundary(left: &[InputDefinition], right: &[InputDefinition]) -> bool {
             .all(|(a, b)| a.path == b.path && a.value_type == b.value_type)
 }
 
+/// What every run of a scenario shares, on the subject or on a mutant: the set, the subject's
+/// boundary, the parameter edits and the bound scenarios, and the run's limits and chunk size.
+pub(crate) struct Runs<'r> {
+    /// The set.
+    pub(crate) set: &'r VectorSet,
+    /// The subject's boundary inputs, in slot order.
+    pub(crate) inputs: &'r [InputDefinition],
+    /// The subject's boundary outputs, in output-slot order.
+    pub(crate) outputs: &'r [String],
+    /// The parameter paths and the set's own edits.
+    pub(crate) edits: &'r Edits,
+    /// The scenarios, bound once against the subject.
+    pub(crate) scenarios: &'r [BoundScenario],
+    /// The run's limits, already effective.
+    pub(crate) limits: &'r VerifyLimits,
+    /// Frames per `Replay::advance`.
+    pub(crate) chunk: usize,
+}
+
 /// One scenario's run on a freshly loaded engine of `cxf` (the subject's or a mutant's bytes).
 pub(crate) fn run_scenario(
-    set: &VectorSet,
+    runs: &Runs<'_>,
     subject: &str,
     cxf: &[u8],
-    bound_inputs: &[InputDefinition],
     scenario: &BoundScenario,
-    limits: &VerifyLimits,
-    chunk: usize,
 ) -> Result<Ran, VerifyError> {
     let (mut engine, _) = bind::load(cxf)?;
-    parameters::apply(&mut engine, &scenario.edits, subject)?;
-    let content_id = if scenario.edits.is_empty() {
+    let edits = runs.edits.resolved(&scenario.edits);
+    parameters::apply(&mut engine, &edits, subject)?;
+    let content_id = if edits.is_empty() {
         None
     } else {
         Some(
@@ -264,8 +275,15 @@ pub(crate) fn run_scenario(
                 .to_string(),
         )
     };
-    let replay = replay_of(engine, set, subject, bound_inputs, scenario, limits)?;
-    drive(replay, subject, &scenario.expectations, chunk).map(|(trace, refused)| Ran {
+    let replay = replay_of(
+        engine,
+        runs.set,
+        subject,
+        runs.inputs,
+        scenario,
+        runs.limits,
+    )?;
+    drive(replay, subject, &scenario.expectations, runs.chunk).map(|(trace, refused)| Ran {
         trace,
         refused,
         content_id,
@@ -443,7 +461,7 @@ fn frame_counts(trace: &Trace) -> FrameCounts {
 
 fn scenario_receipt(
     name: &str,
-    bound: &BoundScenario,
+    edits: &[(&str, ReceiptValue)],
     ran: &Ran,
     compared: Compared,
     expectations: usize,
@@ -458,11 +476,10 @@ fn scenario_receipt(
     ScenarioReceipt {
         name: name.to_owned(),
         status,
-        params: bound
-            .edits
+        params: edits
             .iter()
             .map(|(path, value)| ParamEdit {
-                path: path.clone(),
+                path: (*path).to_owned(),
                 value: *value,
             })
             .collect(),
