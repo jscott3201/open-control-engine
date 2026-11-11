@@ -302,6 +302,7 @@ without a panic, and a missing, foreign, swapped or oversized file.
 | Raw state words restore all or nothing | `crates/oce-graph/tests/blob_state_words.rs` |
 | Typed refusal, never a panic | `blob_hostile_bytes.rs` and `blob_hostile_model.rs` (one test per refusal), `blob_fuzz.rs` (10,000 seeded random mutations, re-checksummed) and `oce-blocks` `tests/hostile_parameters.rs` |
 | A blob of an earlier layout under the same format number is refused | `blob_old_layout.rs`: the release-0.4.0 encoding of one fixture, kept unblessed, is refused with `EngineVersionMismatch` by `decode` and by `Executable::from_blob` |
+| Which refusal wins is one rule for the blob and the snapshot | `blob_refusal_precedence.rs` and `oce-api`'s `src/tests/state_codec_tests.rs`: every pair of defects in each artefact reports the earlier check, every truncation of another version's blob below a header is `Truncated` and above it `EngineVersionMismatch`, and every flipped version bit is a version refusal; `blob_old_layout.rs`: the release-0.4.0 blob stays a version refusal with its length, trailer, profile or body damaged |
 | `SemanticPoint` payloads are non-computational | `blob_semantic_seam.rs` fills and mutates every payload byte and requires an identical executable and identical outputs |
 
 On a bare-metal target the blob runs in the firmware image (`firmware/link`, GitHub #449, issue
