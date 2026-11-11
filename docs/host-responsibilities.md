@@ -432,10 +432,22 @@ A parameter's `min`, `max`, `unit`, `quantity` and `displayUnit` are never used 
 their shape is checked where the parameter is read (GitHub #594, issue #559): a bound is one
 number, typed literal or expression string (modelica-json writes a bound over other parameters as
 an expression, `"yMin"`), and a term is a string, typed literal or IRI node, the shapes a
-connector's term takes. Anything else, a list or a boolean bound, a numeric or list term, is
-refused as `malformed-document`, subject the parameter; JSON `null` reads as absent. The value of
-a well-shaped attribute is still not read, and a parameter pruned by a false conditional guard is
-not read at all.
+connector's term takes. No string among them may be empty or whitespace-only: not the attribute
+itself, a typed literal's `@value` or an IRI node's `@id`. JSON `null` reads as absent. A
+malformed attribute is refused in one of two ways:
+
+- **`malformed-document`, subject the parameter**, once per malformed attribute however often the
+  parameter is read: a bound that is a list, a boolean or a blank string, or a typed literal with
+  a blank `@value`; and every malformed term (a number, a boolean, a list, an object that is no
+  typed literal or IRI node, or a blank string, `@value` or `@id`). Only a parameter that is read
+  gets it; one pruned by a false conditional guard, or listed by no node, is not checked.
+- **A parse failure of the whole document** (`CxfError::Json`; no code and no subject): a bound
+  that is an object but no typed literal with a string `@value` and `@type` (`{}`, `{"@id": …}`,
+  `{"@value": "30"}`, `{"@value": [1], …}`, `{"@list": …}`), or a list holding one. Such a bound
+  matches no shape the document reader knows, so the document fails to parse wherever the
+  parameter is, read, pruned or listed by no node, as a malformed `S231:value` does.
+
+The value of a well-shaped attribute is still not read.
 
 The importer reads the S231 vocabulary in one namespace, `http://data.ashrae.org/S231#`: the one
 the exporter binds, the OpenBuildingControl (OBC) specification lists (OBC §11.3) and

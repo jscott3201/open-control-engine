@@ -62,29 +62,32 @@ pub(super) const PARAMETER_ATTRIBUTES: [&str; 5] = [
 ];
 
 /// Refuse a descriptive parameter attribute of a malformed shape (GitHub issue #559; owner
-/// ruling of 2026-11-11), before it is dropped. The value is never read, but its shape is held
+/// rulings of 2026-11-11), before it is dropped. The value is never read, but its shape is held
 /// to what the engine's loader accepts there: a bound (`S231:min`, `S231:max`) is a JSON
 /// number, a typed literal or a string (an expression); a term (`S231:unit`, `S231:quantity`,
 /// `S231:displayUnit`) is a string, a typed literal or an IRI node. A typed literal here is an
 /// object of exactly `@value` and `@type`, both strings, and an IRI node one of exactly `@id`, a
-/// string: the strict shapes the rest of this reader accepts. Anything else, `null` and a list
-/// included, is `wrong-shape` naming the key.
+/// string: the strict shapes the rest of this reader accepts. No such string (the value itself, a
+/// typed literal's `@value`, an IRI node's `@id`) may be empty or whitespace-only, as
+/// [`str::trim`] reads whitespace. Anything else, `null` and a list included, is `wrong-shape`
+/// naming the key.
 pub(super) fn check_parameter_attribute(
     id: &str,
     key: &str,
     value: &Value,
 ) -> Result<(), ImportError> {
+    let filled = |text: &str| !text.trim().is_empty();
     let typed_literal = |map: &Map<String, Value>| {
         map.len() == 2
-            && matches!(map.get("@value"), Some(Value::String(_)))
+            && matches!(map.get("@value"), Some(Value::String(text)) if filled(text))
             && matches!(map.get("@type"), Some(Value::String(_)))
     };
     let iri_node = |map: &Map<String, Value>| {
-        map.len() == 1 && matches!(map.get("@id"), Some(Value::String(_)))
+        map.len() == 1 && matches!(map.get("@id"), Some(Value::String(text)) if filled(text))
     };
     let bound = matches!(key, "S231:min" | "S231:max");
     let legal = match value {
-        Value::String(_) => true,
+        Value::String(text) => filled(text),
         Value::Number(_) => bound,
         Value::Object(map) => typed_literal(map) || (!bound && iri_node(map)),
         Value::Null | Value::Bool(_) | Value::Array(_) => false,

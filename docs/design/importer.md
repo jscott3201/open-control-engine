@@ -235,13 +235,27 @@ node's local name; a parameter's descriptive `unit`, `quantity`, `displayUnit`, 
 engine uses none of these on a parameter node: only connector nodes reach
 `oce_cxf::resolve::attrs::connector_attrs`. Carrying parameter bounds would give the author a range
 the engine never enforces (decision 9). Both readers do check their shape before letting them go
-(GitHub #594, issue #559; owner ruling of 2026-11-11): a bound is a JSON number, a typed literal or a
-string (an expression, as modelica-json writes `"yMin"`), and a term is a string, a typed literal or
-an IRI node. Anything else is refused: `wrong-shape` naming the key here, where a typed literal is
-exactly `@value` and `@type` and an IRI node exactly `@id` and `null` is refused too, and
-`malformed-document` in the engine, where `null` reads as absent. In the in-subset corpus, root parameters carry `unit` in 16
-fixtures, `quantity` in 13 and `min`/`max` in 3. The report also lists one **normalisation**: a
-boundary typed by a constant package becomes an Integer boundary (decision 21).
+(GitHub #594, issue #559; owner rulings of 2026-11-11): a bound is a JSON number, a typed literal
+or a string (an expression, as modelica-json writes `"yMin"`), a term is a string, a typed literal
+or an IRI node, and no string among them (the attribute, a typed literal's `@value`, an IRI node's
+`@id`) is empty or whitespace-only. Anything else is refused: `wrong-shape` naming the key here,
+`malformed-document` subject the parameter in the engine. In the in-subset corpus, root
+parameters carry `unit` in 16 fixtures, `quantity` in 13 and `min`/`max` in 3. The report also
+lists one **normalisation**: a boundary typed by a constant package becomes an Integer boundary
+(decision 21).
+
+Where the two readers differ on these attributes, each follows a convention it already had. The
+review of GitHub #594 probed for an attribute the importer accepts and the engine refuses and found
+none: in every difference the engine is the more lenient, or both refuse with different codes.
+
+| Input | Engine | Importer |
+| --- | --- | --- |
+| `null` bound or term | absent, as on a connector | `wrong-shape`, as on a boundary |
+| typed literal or IRI-node term with extra keys (`@language`, any other) | accepted: kept for lossless round-trip (R-8) | `wrong-shape`: exact shapes only |
+| object bound that is no typed literal (`{}`, `{"@id": …}`, `{"@value": "30"}`) | the whole document fails to parse (`CxfError::Json`, no code or subject) | `wrong-shape` naming the key |
+| a well-shaped attribute under its full-IRI key | normalised, then checked | `unknown-key`: compact keys only |
+| typed literal carrying `@context` | `non-subset-construct` | `wrong-shape` |
+| integer outside `i64` | read as a float | `not-strict-json` |
 
 **Refused, never guessed** (each a typed kind, see [`ImportError`](#importerror)): every construct in
 the authoring note's out-of-scope list, an expression value, a block-port attribute, `nominal` and

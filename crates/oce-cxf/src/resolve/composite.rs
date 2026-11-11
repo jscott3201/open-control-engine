@@ -12,6 +12,7 @@ use super::composite_orientation::{
 };
 use super::composite_rules::{BANNED_MODELICA_KEY, REPLACEABLE, ROOT_COUNT};
 use super::declaration_scope::WithheldFindings;
+use super::parameter_attrs::CheckedParameters;
 use super::specialize::Specialization;
 use crate::scope_chain::ScopeFrame;
 use containment::Containment;
@@ -97,6 +98,7 @@ pub(super) fn lower(
     by_id: &HashMap<&str, &Node>,
     specialization: &Specialization,
     withheld: WithheldFindings,
+    checked: &mut CheckedParameters,
     diags: &mut Vec<Diagnostic>,
 ) -> LoweredCxf {
     let lowered = doc.clone();
@@ -109,7 +111,7 @@ pub(super) fn lower(
 
     reject_unsupported_constructs(doc, specialization, diags);
 
-    let mut walk = Containment::new(by_id, specialization, diags);
+    let mut walk = Containment::new(by_id, specialization, diags, checked);
     let nesting_exceeded = walk.walk_root(root);
     let Containment {
         leaf_order,

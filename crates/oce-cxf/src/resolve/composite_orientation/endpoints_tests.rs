@@ -10,6 +10,7 @@ use crate::dto::{CxfDocument, Node};
 use crate::resolve::composite::{LoweredCxf, lower};
 use crate::resolve::composite_orientation::CompositeOrientation;
 use crate::resolve::declaration_scope::WithheldFindings;
+use crate::resolve::parameter_attrs::CheckedParameters;
 use crate::resolve::specialize::Specialization;
 
 /// A top composite with a nested composite, a kept nested-input edge, a re-anchored top-input
@@ -68,6 +69,7 @@ fn lowered(doc: &CxfDocument) -> (LoweredCxf, Vec<oce_diag::Diagnostic>) {
         &by_id(doc),
         &Specialization::default(),
         WithheldFindings::default(),
+        &mut CheckedParameters::default(),
         &mut diags,
     );
     (lowered, diags)

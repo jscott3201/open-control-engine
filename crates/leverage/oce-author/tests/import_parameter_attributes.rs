@@ -2,9 +2,10 @@
 //! them (GitHub issue #559; owner ruling of 2026-11-11). `S231:min` and `S231:max` are a bound: a
 //! JSON number, a typed literal or a string. `S231:unit`, `S231:quantity` and `S231:displayUnit`
 //! are a term: a string, a typed literal or an IRI node. A typed literal is an object of exactly
-//! `@value` and `@type`, both strings; an IRI node one of exactly `@id`, a string. Anything else,
-//! `null` and a list included, is refused as `wrong-shape` naming the key. A legal one is still
-//! dropped unread and reported as written (importer note, decision 9).
+//! `@value` and `@type`, both strings; an IRI node one of exactly `@id`, a string. None of those
+//! strings may be empty or whitespace-only (owner ruling). Anything else, `null` and a list
+//! included, is refused as `wrong-shape` naming the key. A legal one is still dropped unread and
+//! reported as written (importer note, decision 9).
 //!
 //! Each case edits one node of a corpus fixture the importer reads: the sequence parameter
 //! `dpBuiSet`, and the block parameter `zerDam.k`.
@@ -68,7 +69,7 @@ fn is_bound(key: &str) -> bool {
 fn legal(key: &str) -> Vec<Value> {
     let mut shapes = vec![
         json!("k"),
-        json!(""),
+        json!(" k "),
         json!({ "@value": "30", "@type": DOUBLE }),
     ];
     if is_bound(key) {
@@ -92,6 +93,13 @@ fn malformed(key: &str) -> Vec<Value> {
         json!({ "@value": 30, "@type": DOUBLE }),
         json!({ "@value": "30", "@type": DOUBLE, "@language": "en" }),
         json!({ "@id": "unit:PA", "@type": DOUBLE }),
+        // Owner ruling: no string here is empty or whitespace-only.
+        json!(""),
+        json!("   "),
+        json!("\t"),
+        json!({ "@value": "", "@type": DOUBLE }),
+        json!({ "@value": " ", "@type": DOUBLE }),
+        json!({ "@id": "" }),
     ];
     if is_bound(key) {
         shapes.push(json!({ "@id": "unit:PA" }));

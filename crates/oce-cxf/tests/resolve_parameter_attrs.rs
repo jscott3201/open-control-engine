@@ -88,16 +88,20 @@ fn bound_refused(subject: &str, which: &str, found: &str) -> Diagnostic {
     .with_subject(subject)
 }
 
-fn term_refused(subject: &str, which: &str) -> Diagnostic {
+fn term_refused(subject: &str, which: &str, found: &str) -> Diagnostic {
     Diagnostic::error(
         DiagCode::MalformedDocument,
-        format!(
-            "S231:{which} on a parameter is not a string, typed literal, or IRI node — malformed \
-             term"
-        ),
+        format!("S231:{which} on a parameter is {found} — malformed term"),
     )
     .with_subject(subject)
 }
+
+/// What a term message calls a shape that is no string, typed literal or IRI node.
+const NOT_A_TERM: &str = "not a string, typed literal, or IRI node";
+/// What a message calls an empty or whitespace-only string.
+const BLANK: &str = "an empty or whitespace-only string";
+/// What a message calls a typed literal whose `@value` is one.
+const BLANK_VALUE: &str = "a typed literal whose @value is empty or whitespace-only";
 
 /// The legal bound shapes, the vendored translations' forms among them.
 fn legal_bounds() -> Vec<Json> {
@@ -110,7 +114,7 @@ fn legal_bounds() -> Vec<Json> {
         json!("k"),
         json!("100*1e-15"),
         json!("30"),
-        json!(""),
+        json!(" k "),
         Json::Null,
     ]
 }
@@ -125,6 +129,14 @@ fn malformed_bounds() -> Vec<(Json, &'static str)> {
         (json!([[1]]), "a list"),
         (json!(true), "a boolean"),
         (json!(false), "a boolean"),
+        // Owner ruling: no bound is an empty or whitespace-only string, as itself or as a typed
+        // literal's `@value`.
+        (json!(""), BLANK),
+        (json!("   "), BLANK),
+        (json!("\t\n"), BLANK),
+        (json!("\u{00a0}"), BLANK),
+        (json!({ "@value": "", "@type": DOUBLE }), BLANK_VALUE),
+        (json!({ "@value": " ", "@type": DOUBLE }), BLANK_VALUE),
     ]
 }
 
@@ -133,24 +145,36 @@ fn legal_terms() -> Vec<Json> {
     vec![
         json!("Pa"),
         json!("1"),
-        json!(""),
+        json!(" Pa "),
         json!({ "@value": "Pa", "@type": "http://www.w3.org/2001/XMLSchema#string" }),
         json!({ "@id": "unit:PA" }),
         Json::Null,
     ]
 }
 
-/// The malformed term shapes.
-fn malformed_terms() -> Vec<Json> {
+/// The malformed term shapes and what each message calls it.
+fn malformed_terms() -> Vec<(Json, &'static str)> {
     vec![
-        json!(5),
-        json!(1.5),
-        json!(true),
-        json!([]),
-        json!(["Pa"]),
-        json!({ "@value": "Pa" }),
-        json!({ "@id": 5 }),
-        json!({ "x": 1 }),
+        (json!(5), NOT_A_TERM),
+        (json!(1.5), NOT_A_TERM),
+        (json!(true), NOT_A_TERM),
+        (json!([]), NOT_A_TERM),
+        (json!(["Pa"]), NOT_A_TERM),
+        (json!({ "@value": "Pa" }), NOT_A_TERM),
+        (json!({ "@id": 5 }), NOT_A_TERM),
+        (json!({ "x": 1 }), NOT_A_TERM),
+        // Owner ruling: no term is empty or whitespace-only, as a string, a typed literal's
+        // `@value` or an IRI node's `@id` (the term's lexical form).
+        (json!(""), BLANK),
+        (json!("  "), BLANK),
+        (
+            json!({ "@value": "", "@type": "http://www.w3.org/2001/XMLSchema#string" }),
+            BLANK_VALUE,
+        ),
+        (
+            json!({ "@id": " " }),
+            "an IRI node whose @id is empty or whitespace-only",
+        ),
     ]
 }
 
@@ -245,11 +269,11 @@ fn every_legal_term_shape_loads_and_changes_nothing() {
 fn every_malformed_term_shape_is_refused() {
     for parameter in [ROOT_PARAMETER, LEAF_PARAMETER] {
         for key in TERM_KEYS {
-            for value in malformed_terms() {
+            for (value, found) in malformed_terms() {
                 let doc = with(RELIEF_DAMPER, parameter, key, value.clone());
                 assert_eq!(
                     refusal(&doc),
-                    vec![term_refused(parameter, key)],
+                    vec![term_refused(parameter, key, found)],
                     "{parameter} {key} = {value}"
                 );
             }
@@ -271,11 +295,11 @@ fn several_malformed_attributes_are_each_refused_in_one_order_whatever_the_node_
         node.insert(format!("S231:{key}"), value);
     }
     let expected = vec![
-        term_refused(ROOT_PARAMETER, "displayUnit"),
+        term_refused(ROOT_PARAMETER, "displayUnit", NOT_A_TERM),
         bound_refused(ROOT_PARAMETER, "max", "a boolean"),
         bound_refused(ROOT_PARAMETER, "min", "a list"),
-        term_refused(ROOT_PARAMETER, "quantity"),
-        term_refused(ROOT_PARAMETER, "unit"),
+        term_refused(ROOT_PARAMETER, "quantity", NOT_A_TERM),
+        term_refused(ROOT_PARAMETER, "unit", NOT_A_TERM),
     ];
     assert_eq!(refusal(&doc), expected);
 
@@ -367,4 +391,111 @@ fn a_pruned_parameter_is_not_read_and_not_checked() {
         refusal(&doc(true)),
         vec![bound_refused(&format!("{model}.opt.k"), "min", "a list")]
     );
+}
+
+/// A root `M` with two `Constant` leaves `a` and `b`. `root`, `a` and `b` name the parameter
+/// nodes each lists (local names under `M`); every named node is declared once, valued `1.0`,
+/// and `M.<shared>` carries `S231:min` = `min` when it is given.
+fn shared_parameter(
+    root: &[&str],
+    a: &[&str],
+    b: &[&str],
+    shared: &str,
+    min: Option<Json>,
+) -> Json {
+    let model = "http://example.org#M";
+    let refs = |names: &[&str]| -> Vec<Json> {
+        names
+            .iter()
+            .map(|name| json!({ "@id": format!("{model}.{name}") }))
+            .collect()
+    };
+    let mut graph = vec![json!({
+        "@id": model,
+        "@type": "S231:Block",
+        "S231:hasParameter": refs(root),
+        "S231:containsBlock": [{ "@id": format!("{model}.a") }, { "@id": format!("{model}.b") }]
+    })];
+    for (leaf, params) in [("a", a), ("b", b)] {
+        graph.push(json!({
+            "@id": format!("{model}.{leaf}"),
+            "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+            "S231:hasParameter": refs(params),
+            "S231:hasOutput": { "@id": format!("{model}.{leaf}.y") }
+        }));
+        graph.push(json!({
+            "@id": format!("{model}.{leaf}.y"),
+            "@type": "S231:RealOutput",
+            "S231:isOfDataType": { "@id": "S231:Real" }
+        }));
+    }
+    let mut declared: Vec<&str> = root.iter().chain(a).chain(b).copied().collect();
+    declared.sort_unstable();
+    declared.dedup();
+    for name in declared {
+        let mut node = json!({ "@id": format!("{model}.{name}"), "S231:value": 1.0 });
+        if let Some(min) = min.as_ref().filter(|_| name == shared) {
+            node["S231:min"] = min.clone();
+        }
+        graph.push(node);
+    }
+    json!({ "@context": { "S231": S231_NS }, "@graph": graph })
+}
+
+#[test]
+fn a_parameter_node_read_more_than_once_is_reported_once() {
+    // Review finding on GitHub #594: each read reported again, so a host saw one line twice.
+    // The shapes: two leaves listing one node, one leaf listing it twice, and a root declaration
+    // a leaf also lists (the two read sites share one set).
+    for (root, a, b, shared) in [
+        (&[][..], &["a.k"][..], &["a.k"][..], "a.k"),
+        (&[][..], &["a.k", "a.k"][..], &["b.k"][..], "a.k"),
+        (&["k"][..], &["k"][..], &["b.k"][..], "k"),
+    ] {
+        let clean = shared_parameter(root, a, b, shared, None);
+        assert!(outcome(&clean).starts_with("ok "), "{}", outcome(&clean));
+        let doc = shared_parameter(root, a, b, shared, Some(json!([1])));
+        assert_eq!(
+            refusal(&doc),
+            vec![bound_refused(
+                &format!("http://example.org#M.{shared}"),
+                "min",
+                "a list"
+            )],
+            "root {root:?}, a {a:?}, b {b:?}"
+        );
+    }
+}
+
+#[test]
+fn a_bound_object_that_is_no_typed_literal_fails_the_parse_wherever_it_is() {
+    // Review finding on GitHub #594: such a bound never reaches the shape check. It matches none of
+    // `CxfValue`'s arms, so the whole document fails to parse, with no code and no subject, even
+    // on a parameter nothing reads.
+    let objects = [
+        json!({}),
+        json!({ "@id": "x:y" }),
+        json!({ "@value": "30" }),
+        json!({ "@value": [1], "@type": DOUBLE }),
+        json!({ "@list": [1] }),
+        json!([{}]),
+    ];
+    let parse_failure = |doc: &Json| {
+        let bytes = serde_json::to_vec(doc).expect("serialize");
+        matches!(
+            import_cxf(&bytes, &ResolveOptions::default()),
+            Err(CxfError::Json(_))
+        )
+    };
+    for value in objects {
+        // A parameter that is read, and one no node lists.
+        let read = with(RELIEF_DAMPER, ROOT_PARAMETER, "min", value.clone());
+        assert!(parse_failure(&read), "{value}");
+        let mut orphan = parse(RELIEF_DAMPER);
+        orphan["@graph"]
+            .as_array_mut()
+            .expect("@graph array")
+            .push(json!({ "@id": "http://example.org#orphan.k", "S231:min": value.clone() }));
+        assert!(parse_failure(&orphan), "{value}");
+    }
 }

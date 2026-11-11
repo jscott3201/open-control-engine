@@ -197,7 +197,17 @@ pub(crate) fn resolve(
         return Err(CxfError::Validation(finalize_diags(diags, &HashMap::new())));
     }
     array_nodes::reject_unsupported(doc, &specialization, &mut diags);
-    let lowered = lower(doc, &by_id, &specialization, withheld, &mut diags);
+    // One set for the whole resolve: lowering's declarations and Step 7's leaf parameters both
+    // shape-check through it, so a parameter node read twice is reported once (issue #559).
+    let mut checked_parameters = parameter_attrs::CheckedParameters::default();
+    let lowered = lower(
+        doc,
+        &by_id,
+        &specialization,
+        withheld,
+        &mut checked_parameters,
+        &mut diags,
+    );
     let doc = &lowered.doc;
     let mut by_id: HashMap<&str, &Node> = HashMap::with_capacity(doc.graph.len());
     for node in &doc.graph {
@@ -476,7 +486,14 @@ pub(crate) fn resolve(
 
     // --- Step 7: ground parameters (Ground mode) — see `instance_params` for the order and
     // the #239 enclosing-wins split.
-    ground_instance_params(&insts, &derivation, &by_id, &mut blocks, &mut diags);
+    ground_instance_params(
+        &insts,
+        &derivation,
+        &by_id,
+        &mut blocks,
+        &mut checked_parameters,
+        &mut diags,
+    );
 
     // --- Step 8: interface agreement — arity, then port identity. Arity must match or the
     // engine's emit-by-port-index would later index past `inputs`/`outputs` and PANIC on the tick.
