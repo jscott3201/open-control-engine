@@ -9,8 +9,11 @@
 # `if` around it took any non-zero status for "no match", and `>/dev/null 2>&1` hid the error, so
 # a tracked private key passed this gate. `git grep` exits 0 on a match, 1 on no match and above
 # 1 when it could not search (128 outside a repository, 129 on a usage error). Only 1 is clean:
-# any other status fails the scan, and git's own error is left on stderr. Its fixtures,
-# test-check-no-secrets.sh, plant a match for every pattern below and put the defect back.
+# any other status fails the scan, and git's own error is left on stderr. `grep.fallbackToNoIndex`
+# is forced off, because when a config file, `git -c` or `GIT_CONFIG_COUNT` turns it on, `git grep`
+# outside a repository searches the directory instead of failing, and an empty one is "no match".
+# Its fixtures, test-check-no-secrets.sh, plant a match for every pattern below, a near miss beside
+# each, and put the defect back.
 #
 # Exit status: 0 clean, 1 a pattern matched, 2 a pattern could not be searched for. 2 wins over 1,
 # because a scan that did not run says nothing about the files it did not read.
@@ -25,7 +28,7 @@ scan() {
   local label="$2"
   local matches
   local status=0
-  matches="$(git grep -nE -e "$pattern")" || status=$?
+  matches="$(git -c grep.fallbackToNoIndex=false grep -nE -e "$pattern")" || status=$?
   case "$status" in
     0)
       echo "FAIL: matched $label pattern in tracked files:"
