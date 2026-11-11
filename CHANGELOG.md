@@ -963,7 +963,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Verification
 
 - **The local proof before a merge is matched to the lane a pull request runs, and the heavy
-  release gate runs nightly instead of after every merge** (GitHub #PRNUM, issue #545; owner
+  release gate runs nightly instead of after every merge** (GitHub #547, issue #545; owner
   decisions of 2026-11-10, which amend issue #502's "the release gate runs on every merge" and
   the standing "run `gate.sh full` before the PR"). Measured on `fdd70c0`: a cold
   `bash .agents/gate.sh full` took 30.1 minutes on an idle 10-core arm64 Mac, 21 of them building
