@@ -7,7 +7,7 @@ scoring mutants, and the frames it runs, weighted by the size of the document th
 4 (the `oce verify` verb, #522) is blocked on it, because the verb puts the run in front of files
 fetched from elsewhere. The [vectors note](vectors.md) is the format and run this note bounds. A
 test reads its text, so its amendment ships with the implementing PR, which closes #561; this note
-stays documentation only. Nothing here is built.
+stays documentation only. *(2026-11-11: built in GitHub #570, which amends the vectors note.)*
 
 ## What is bounded today, and what is not
 
@@ -173,15 +173,21 @@ run a hostile file would ask for.
   a pass that applies nothing refuses. The work per edit list stays within a constant of the load
   before it:
   - **An attempt is cheap.** `Engine::set_param` checks one edit against its class's
-    `param_rules()`. Each rule reads the edited value and, for the three cross-parameter rules
+    `param_rules()`. Each rule reads the edited value and, for the cross-parameter rules
     (`RealLessOrEqual`, `IntegerProductLessOrEqualConstant`, `RealTimesIntegerInclusiveRange`),
-    one other parameter of the same block. A table element is checked alone.
+    one other parameter of the same block. A table element is checked alone. *(Corrected
+    2026-11-11, GitHub #570: there are four cross-parameter rules. `IntegerArrayElementsInRange`
+    also holds an element to the block's `max` parameter. The other parameter is found by a
+    scan of the document's parameter table, so an attempt on such a rule costs time linear in
+    the document, as the load before it does.)*
   - **The edits are few.** An edit list names each parameter once (`param-path-duplicate`), and
     holds at most 512 edits: two maps of 256.
   - **The passes are few.** A later pass can only admit an edit that a cross-parameter rule ties to
     one admitted before it. So the passes number at most the longest chain of such rules in one
     class: two for `Reals.Hysteresis` (`uLow <= uHigh`). The implementing PR computes the catalog's
     longest chain from `param_rules()` and pins it with a test, rather than trusting this sentence.
+    *(2026-11-11: `tests/parameter_trials.rs` in `oce-verify` finds two, in 14 classes, counting
+    an array's elements as one parameter.)*
   - **One resume per apply.** The single resume that follows re-instantiates the blocks once.
 - **Diagnostic matching and trace memory.** Both are bounded per scenario by the replay's
   `max_trace_bytes`. A run holds one trace at a time unless the caller sets

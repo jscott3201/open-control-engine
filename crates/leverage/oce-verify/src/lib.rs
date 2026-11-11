@@ -31,8 +31,9 @@
 //! - **Binding**, once per set against a throwaway engine, before any scenario runs: the subject's
 //!   bytes loaded, every input, output and parameter name resolved by replay's one name rule
 //!   ([`oce_replay::resolve_path`]), every value typed by the port or parameter it lands on, an
-//!   Enum or String boundary port refused, every scenario's parameter edits tried on a fresh
-//!   engine, and the frame budget checked.
+//!   Enum or String boundary port refused, the four work budgets checked ([`VerifyLimits`]:
+//!   frames, compared instants, bytes loaded and byte-frames) before every other load, and each
+//!   distinct parameter-edit list tried once on a fresh engine.
 //! - **The run**: each scenario on a freshly loaded engine, its parameter edits applied in passes
 //!   inside one halt, then one replay on the set's grid, compared exactly (a Real by its bits).
 //! - **The receipt** ([`Receipt`]): the header shared with the commissioning verifier and the

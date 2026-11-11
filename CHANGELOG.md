@@ -453,6 +453,41 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
+- **Vectors: four work budgets bound one run, checked at bind** (GitHub #570, issue #561;
+  [work-budget note](docs/design/vector-work-budget.md), the owner's rulings of 2026-11-11).
+  - **The budgets.** `VerifyLimits` gains three fields beside `max_total_frames` (2^24, kept):
+    - `max_total_instants`, 2^28: `(1 + mutants)` times every window's ticks and every
+      diagnostic;
+    - `max_total_load_bytes`, 2^30: the subject's and every supplied mutant's bytes times
+      `1 + e + s` (`e` distinct edit lists, `s` scenarios);
+    - `max_total_frame_bytes`, 2^40: `(N + 1) * s` times the same bytes.
+
+    Each refuses with its own bind code, `too-many-instants`, `too-many-load-bytes` and
+    `too-many-frame-bytes`, placed after `too-many-frames`; the bind codes go from 27 to 30. Each
+    is lower-only, like every limit (decision 35).
+  - **One step, before every other load.** The four are checked in that order after the subject's
+    first load and its names and values, before the parameter trials and every mutant check. So
+    `too-many-frames` now wins over `param-refused`. Each product is an upper bound taken in `u128`
+    with checked multiplication, so a hostile count refuses and never wraps or panics.
+  - **The subject's parameter trials are deduplicated.** Each distinct effective edit list is
+    tried once, in the order of the first scenario that has it, as the mutants' already were. A
+    refusal still names the first scenario holding the refused list. A receipt pinned before the
+    change is byte-identical after it (`tests/parameter_trials.rs`). The distinct lists are now
+    found through an ordered set rather than by comparing every pair.
+  - **Tests.** `tests/work_budgets.rs` pins each budget at its bound and one past it, on AHU-0016's
+    set with and without its mutants (the receipt at the bound is byte-identical to the default's).
+    It also pins the order of the budgets, their precedence over `param-refused` and the mutant
+    codes, what the load bytes count, and that a host asking for `u64::MAX` gets the defaults.
+    `src/budget_tests.rs` pins the products at the `u64` and `u128` extremes.
+    `tests/parameter_trials.rs` pins the catalog's longest cross-parameter rule chain at two (14
+    classes), the bound on the passes an edit list takes.
+  - **Goldens.** The five golden receipts, the schema and the canonical goldens are unchanged; no
+    receipt byte moves. Formats stay at revision 1.
+  - **Docs.** `docs/design/vectors.md` is amended as the work-budget note lists: binding steps 4
+    to 6, the error-code table, decision 35, the API sketch, part 2's readings 8 and 9, and part
+    3's readings 1 and 6. The work-budget note records the build and two corrections: there are
+    four cross-parameter rules, not three, and each finds its partner by a scan that is linear in
+    the document. The crate README's bounds table, bind order, codes and costs are updated.
 - **Vectors, part 3 of 4: mutant mode, the catch score and the in-repo AHU-0016 mutants**
   (GitHub #565, issue #521; [vectors note](docs/design/vectors.md) decisions 27 to 30, the
   owner's ruling of 2026-11-11 and "Part 3's readings").
