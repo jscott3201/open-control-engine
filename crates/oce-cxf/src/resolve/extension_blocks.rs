@@ -8,10 +8,16 @@
 //!
 //! A node **is an extension block** when either holds:
 //!
-//! - one of its `@type` values, at any position in the list, has the trailing term
-//!   `ExtensionBlock`, the CXF class of OBC §8.7. Like every other type the resolver reads, the
-//!   term is matched after the last `:`, `#` or `/`, so the compact, absolute and re-prefixed
-//!   spellings are all recognised, and a dotted class path ending in `.ExtensionBlock` is not.
+//! - one of its `@type` values, at any position in the list, is the S231 class `ExtensionBlock`
+//!   (OBC §8.7), read the way a modeled property key is read: the `@context`-expanded type is
+//!   `http://data.ashrae.org/S231#ExtensionBlock` (written as that IRI, as `S231:ExtensionBlock`
+//!   under the published binding, through another prefix bound to the namespace, or as a
+//!   `@context` term that expands to it), or it is the compact `S231:ExtensionBlock` of a document
+//!   that binds no `S231`. A class of that name in any other namespace (`ex:ExtensionBlock`), and
+//!   a bare `ExtensionBlock` that no `@context` term expands, is an ordinary class: unknown as a
+//!   leaf (`class-not-found`) and lowered as a composite when it lists children, like a class of
+//!   any other name. The `https:` spellings of the namespace never reach here: the expansion pass
+//!   refuses them as `vocabulary-namespace-mismatch`, as it does a modeled key in them.
 //! - it carries `S231:hasFmuPath`, whatever its type. The property's domain is `ExtensionBlock`
 //!   (OBC §8.7), so a node that names an FMU claims an FMU's behaviour. Every key spelling of the
 //!   property reaches the one modeled field, [`crate::dto::Node::fmu_path`].
@@ -23,13 +29,16 @@
 //! a child of a nested composite, an extension block that lists `containsBlock` children of its
 //! own, and a node no `containsBlock` edge reaches. A node pruned by a false conditional guard is
 //! not part of the schedule and is not refused, the same tolerance an inactive node gets for a
-//! banned Modelica key or an array marker.
+//! banned Modelica key or an array marker. Only the node's own activity counts: a class
+//! definition carried in the document is refused even when every instance of it is pruned.
 //!
 //! It runs after specialization and before composite lowering, and a refusal ends the resolve
 //! there. Lowering would otherwise read an extension block that lists children as a composite
 //! and run those children in place of the FMU, choose an extension-block root as the top
 //! composite, or report the block as an unknown class (`class-not-found`). The refusal replaces
-//! all three: a document with an extension block is refused under this one code.
+//! all three, and it is the last thing reported for the whole document: nothing composite
+//! lowering or a later stage would find, for any node, is reported beside it. Findings made
+//! before it (the specialize pass's) still are.
 //!
 //! Messages are fixed text, so a refusal copies nothing from the document but the subject.
 
@@ -38,12 +47,22 @@ use std::collections::HashSet;
 use oce_diag::{DiagCode, Diagnostic};
 
 use crate::dto::{CxfDocument, Node};
+use crate::export::S231_CONTEXT_IRI;
 
 use super::specialize::Specialization;
-use super::value_types::term_of;
 
-/// The trailing term of the CXF extension-block class (OBC §8.7).
-const EXTENSION_BLOCK_TERM: &str = "ExtensionBlock";
+/// The term of the CXF extension-block class in the S231 namespace (OBC §8.7).
+pub(crate) const EXTENSION_BLOCK_TERM: &str = "ExtensionBlock";
+
+/// Whether an expanded `@type` value is the S231 class `ExtensionBlock`: its IRI, or the compact
+/// form that survives expansion only in a document that binds no `S231` (a document binding
+/// `S231` anywhere else was refused before this pass).
+fn is_s231_extension_block(type_iri: &str) -> bool {
+    let term = type_iri
+        .strip_prefix(S231_CONTEXT_IRI)
+        .or_else(|| type_iri.strip_prefix("S231:"));
+    term == Some(EXTENSION_BLOCK_TERM)
+}
 
 /// The end of every refusal message: why the block cannot be loaded.
 const UNSUPPORTED: &str = "its behaviour is a Functional Mockup Unit, and the engine does not \
@@ -87,7 +106,7 @@ fn own_marker(node: &Node) -> Option<Marker> {
     let typed = node
         .r#type
         .as_ref()
-        .is_some_and(|types| types.iter().any(|t| term_of(t) == EXTENSION_BLOCK_TERM));
+        .is_some_and(|types| types.iter().any(|t| is_s231_extension_block(t)));
     let fmu_path = node.fmu_path.is_some();
     match (typed, fmu_path) {
         (true, fmu_path) => Some(Marker::Typed { fmu_path }),

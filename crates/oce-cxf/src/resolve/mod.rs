@@ -60,7 +60,7 @@ mod declaration_scope;
 #[cfg(test)]
 mod declaration_scope_tests;
 mod diags;
-mod extension_blocks;
+pub(crate) mod extension_blocks;
 mod instance_interface;
 mod instance_params;
 mod pass_through;

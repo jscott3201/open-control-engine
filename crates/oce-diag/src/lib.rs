@@ -85,13 +85,18 @@ pub enum DiagCode {
     /// The document contains a CDL extension block (OBC §7.13 and §8.7), whose behaviour is a
     /// Functional Mockup Unit; the engine does not execute FMUs, and FMI is out of scope before
     /// 1.0. Raised by the `oce-cxf` resolver, before composite lowering, for every active node
-    /// that is typed `S231:ExtensionBlock` (at any position of its `@type` list), carries
+    /// that is typed `S231:ExtensionBlock` (at any position of its `@type` list; the class in the
+    /// S231 namespace only, `http://data.ashrae.org/S231#`, in any spelling that expands to it or
+    /// as the compact `S231:` form of a document that binds no `S231`), carries
     /// `S231:hasFmuPath` (whose domain is `ExtensionBlock`), or whose `@type` names such a node of
     /// the same document, wherever it sits: the root, a child at any depth, or a node no
-    /// `containsBlock` edge reaches. Subject = the node's `@id`. It replaces the follow-on
-    /// diagnostics lowering would otherwise raise for the same node: `class-not-found` for a leaf,
-    /// `composite/root-count` for an extension-block root. A node pruned by a false conditional
-    /// guard is not refused.
+    /// `containsBlock` edge reaches. A class named `ExtensionBlock` in another namespace is an
+    /// ordinary class. Subject = the node's `@id`. The resolve ends with this refusal, so it
+    /// replaces the follow-on diagnostics lowering would raise for the same node
+    /// (`class-not-found` for a leaf, `composite/root-count` for an extension-block root), and
+    /// nothing lowering or a later stage would find is reported for the document beside it. A
+    /// node pruned by a false conditional guard is not refused; a class definition the document
+    /// carries is, even when every instance of it is pruned.
     ExtensionBlockUnsupported,
     /// An overlay node's trailing `.member` did not match a member of the owning instance (§9.1.4).
     OverlayTargetNotFound,
@@ -158,8 +163,10 @@ pub enum DiagCode {
     /// reads, `http://data.ashrae.org/S231#`: its `@context` binds the `S231` prefix to another
     /// IRI, binds any prefix to the namespace this engine wrote before release 0.5.0, a node keys
     /// a modeled property by its full IRI in that namespace or in the `https:` spelling of either,
-    /// or a node's `@type` or `isOfDataType` is a full IRI in that earlier namespace (a type is
-    /// otherwise read by its trailing term, so it would be read through the namespace). The
+    /// a node's `@type` or `isOfDataType` is a full IRI in that earlier namespace (a type is
+    /// otherwise read by its trailing term, so it would be read through the namespace), or a
+    /// node's `@type` names the class `ExtensionBlock` in the `https:` spelling of either (that
+    /// class is read only in the S231 namespace, so it would be read as an ordinary class). The
     /// message names the IRI found and the IRI expected (subject = the `@context` term, or the
     /// node carrying the key or the type). Refused at load: nothing reads a document in another
     /// namespace.

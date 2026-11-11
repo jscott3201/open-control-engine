@@ -55,16 +55,33 @@ about elementary and composite blocks. Extension blocks are outside it.
 
 A document that contains an extension block is refused at load with its own code,
 `extension-block-unsupported` (GitHub #582, issue #537). A node is an extension block when one
-of its `@type` values is `S231:ExtensionBlock` (at any position of the list, in any spelling of
-the namespace), when it carries `S231:hasFmuPath`, whose domain is `ExtensionBlock` (OBC §8.7),
-or when its `@type` names such a node of the same document. The refusal covers every active node
-wherever it sits: the root, a child at any depth, an extension block that lists children of its
-own, and a node no `containsBlock` edge reaches. It comes before composite lowering, so the
-document gets one error per extension block, subject the block's `@id`, and nothing else is
-reported for that block. A node pruned by a false conditional guard is not part of the schedule
-and is not refused ([active nodes](cxf-composite-subset.md#active-nodes)). An instance of an
-extension-block class whose definition the document does not carry cannot be told from any other
-unknown class and is still refused with `class-not-found`
+of its `@type` values, at any position of the list, is the S231 class `ExtensionBlock`, when it
+carries `S231:hasFmuPath`, whose domain is `ExtensionBlock` (OBC §8.7), or when its `@type`
+names such a node of the same document. The class is read the way a modeled property key is
+read ([host responsibilities](host-responsibilities.md#cxf-point-identities-are-the-authored-ids)):
+its `@type` must expand to `http://data.ashrae.org/S231#ExtensionBlock`, written as that IRI, as
+`S231:ExtensionBlock` (under the published binding or, in a document that binds no `S231`, under
+none), through another prefix bound to that namespace, or as a `@context` term that expands to
+it. A bare `ExtensionBlock` is the S231 class only when a `@context` term expands it there. A class
+named `ExtensionBlock` in any other namespace (`http://example.org#ExtensionBlock`, `x:ExtensionBlock`
+with `x` bound elsewhere, an unexpanded bare `ExtensionBlock`) is an ordinary class and behaves as a
+class of any other name does: unknown as a leaf (`class-not-found`), lowered as a composite when it
+lists children, and ignored after a registered class in a type list. The class written in the
+`https:` spelling of either S231 namespace is refused as `vocabulary-namespace-mismatch`, as a
+modeled key in them is; the namespace the engine wrote through release 0.4.0 is refused that way
+for any type, and both refusals come first.
+
+The refusal covers every active node wherever it sits: the root, a child at any depth, an
+extension block that lists children of its own, and a node no `containsBlock` edge reaches. One
+error per extension block, subject the block's `@id`. It comes before composite lowering and ends
+the resolve, so nothing else that lowering or a later stage would find is reported for the
+document, about that block or any other node; findings of the earlier `@context` and
+specialization passes still are. A node pruned by a false conditional guard is not part of the
+schedule and is not refused ([active nodes](cxf-composite-subset.md#active-nodes)). Only a node's
+own activity counts: when the document carries an extension-block class's definition, the
+document is refused at that definition even if every instance of the class is pruned. An instance
+of an extension-block class whose definition the document does not carry cannot be told from any
+other unknown class and is still refused with `class-not-found`
 ([acceptance preconditions](cxf-composite-subset.md#acceptance-preconditions)).
 
 Before the code, a leaf extension block was refused as `class-not-found` and an extension-block

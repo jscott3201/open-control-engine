@@ -8,6 +8,11 @@
 //! named a registered class before `S231:ExtensionBlock`, or that carried `S231:hasFmuPath` beside
 //! a registered class, ran natively. Each test below names the shape it replaces.
 //!
+//! Only the S231 class is an extension block (owner ruling on GitHub #582): its type is read the
+//! way a modeled property key is, so a class named `ExtensionBlock` in any other namespace is
+//! pinned as an ordinary class, and the `https:` spellings of the S231 namespaces are refused as
+//! `vocabulary-namespace-mismatch`, as a modeled key in them is.
+//!
 //! Every refusal is pinned as the complete diagnostic list, stated by hand. Each document is the
 //! smallest that loads warning-free once its extension block is replaced by a registered class,
 //! and the controls prove it, so the refusal is the extension block's alone.
@@ -301,7 +306,7 @@ fn an_instance_of_an_extension_block_the_document_declares_is_refused_with_its_c
 #[test]
 fn a_conditionally_removed_extension_block_is_pruned_and_an_active_one_is_refused() {
     let (root, con, ext) = (format!("{EX}R"), format!("{EX}R.con"), format!("{EX}R.ext"));
-    let doc = |has_fdd: bool| {
+    let doc = |has_fdd: bool, class: &str, definition: Option<Json>| {
         let mut graph = vec![
             container(
                 &root,
@@ -320,19 +325,40 @@ fn a_conditionally_removed_extension_block_is_pruned_and_an_active_one_is_refuse
             }),
         ];
         graph.extend(source(&con, CONSTANT, &[]));
-        graph.extend(source(
-            &ext,
-            "S231:ExtensionBlock",
-            &[
-                fmu(),
-                ("S231:isConditionalComponent", json!(true)),
-                ("S231:conditionalExpression", json!("hasFdd")),
-            ],
-        ));
+        let marker = if definition.is_some() {
+            vec![]
+        } else {
+            vec![fmu()]
+        };
+        let mut extra = vec![
+            ("S231:isConditionalComponent", json!(true)),
+            ("S231:conditionalExpression", json!("hasFdd")),
+        ];
+        extra.extend(marker);
+        graph.extend(source(&ext, class, &extra));
+        graph.extend(definition);
         document(graph)
     };
-    assert_eq!(loads(&doc(false)), 1);
-    assert_eq!(refusal(&doc(true)), vec![refused(&ext, TYPED_WITH)]);
+    // Inline: the extension block is the conditional node itself.
+    assert_eq!(loads(&doc(false, "S231:ExtensionBlock", None)), 1);
+    assert_eq!(
+        refusal(&doc(true, "S231:ExtensionBlock", None)),
+        vec![refused(&ext, TYPED_WITH)]
+    );
+
+    // Spec form: the conditional node is an instance of a class the document defines. Only a
+    // node's own activity counts, so pruning the instance does not prune the definition, and
+    // the document is refused at the class alone.
+    let definition =
+        json!({ "@id": CLASS, "@type": "S231:ExtensionBlock", "S231:hasFmuPath": "a.fmu" });
+    assert_eq!(
+        refusal(&doc(false, CLASS, Some(definition.clone()))),
+        vec![refused(CLASS, TYPED_WITH)]
+    );
+    assert_eq!(
+        refusal(&doc(true, CLASS, Some(definition))),
+        vec![refused(CLASS, TYPED_WITH), refused(&ext, INSTANCE)]
+    );
 }
 
 #[test]
@@ -360,14 +386,15 @@ fn an_fmu_path_on_any_other_class_is_refused() {
 }
 
 #[test]
-fn every_spelling_of_the_type_and_the_fmu_path_is_refused_identically() {
+fn every_spelling_of_the_s231_type_and_the_fmu_path_is_refused_identically() {
+    // The S231 class is read the way a modeled key is: its IRI, the compact form under the
+    // published binding or under none, another prefix bound to the namespace, and a `@context`
+    // term (bare `ExtensionBlock` included) that expands to it.
     let compact = outcome(&parse(WITH_FMU_PATH));
     assert!(compact.starts_with("err Validation"), "{compact}");
-    let respelled = |key: &str, ty: &str, prefix: bool| {
+    let respelled = |key: &str, ty: &str, context: Json| {
         let mut doc = parse(WITH_FMU_PATH);
-        if prefix {
-            doc["@context"]["s231"] = json!(S231_NS);
-        }
+        doc["@context"] = context;
         let leaf = node_mut(&mut doc, LEAF);
         let path = leaf.remove("S231:hasFmuPath").expect("fixture carries it");
         leaf.insert(key.to_owned(), path);
@@ -376,13 +403,144 @@ fn every_spelling_of_the_type_and_the_fmu_path_is_refused_identically() {
     };
     let full_key = format!("{S231_NS}hasFmuPath");
     let full_type = format!("{S231_NS}ExtensionBlock");
-    for (key, ty, prefix) in [
-        (full_key.as_str(), "S231:ExtensionBlock", false),
-        ("S231:hasFmuPath", full_type.as_str(), false),
-        (full_key.as_str(), full_type.as_str(), false),
-        ("s231:hasFmuPath", "s231:ExtensionBlock", true),
-    ] {
-        assert_eq!(respelled(key, ty, prefix), compact, "{key} / {ty}");
+    let bound = json!({ "S231": S231_NS });
+    let cases = [
+        (full_key.as_str(), "S231:ExtensionBlock", bound.clone()),
+        ("S231:hasFmuPath", full_type.as_str(), bound.clone()),
+        (full_key.as_str(), full_type.as_str(), bound.clone()),
+        ("S231:hasFmuPath", "S231:ExtensionBlock", json!({})),
+        (
+            "s231:hasFmuPath",
+            "s231:ExtensionBlock",
+            json!({ "S231": S231_NS, "s231": S231_NS }),
+        ),
+        (
+            "S231:hasFmuPath",
+            "FaultBlock",
+            json!({ "S231": S231_NS, "FaultBlock": full_type }),
+        ),
+        (
+            "S231:hasFmuPath",
+            "ExtensionBlock",
+            json!({ "S231": S231_NS, "ExtensionBlock": full_type }),
+        ),
+    ];
+    for (key, ty, context) in cases {
+        assert_eq!(
+            respelled(key, ty, context.clone()),
+            compact,
+            "{key} / {ty} / {context}"
+        );
+    }
+}
+
+/// `@type` spellings of a class named `ExtensionBlock` that are not the S231 class, each with
+/// the `@context` it is written under and the class path the registry is asked for.
+fn other_namespace_classes() -> Vec<(&'static str, Json, &'static str)> {
+    let bound = |extra: Json| {
+        let mut context = json!({ "S231": S231_NS });
+        for (key, value) in extra.as_object().expect("bindings") {
+            context[key] = value.clone();
+        }
+        context
+    };
+    vec![
+        (
+            "http://example.org#ExtensionBlock",
+            bound(json!({})),
+            "ExtensionBlock",
+        ),
+        (
+            "http://other.org/vocab#ExtensionBlock",
+            bound(json!({})),
+            "ExtensionBlock",
+        ),
+        (
+            "http://example.org/lib/ExtensionBlock",
+            bound(json!({})),
+            "http://example.org/lib/ExtensionBlock",
+        ),
+        (
+            "x:ExtensionBlock",
+            bound(json!({ "x": "http://other.org/vocab#" })),
+            "ExtensionBlock",
+        ),
+        // A bare term no `@context` entry expands, and one that expands elsewhere.
+        ("ExtensionBlock", bound(json!({})), "ExtensionBlock"),
+        (
+            "ExtensionBlock",
+            bound(json!({ "ExtensionBlock": "http://example.org#ExtensionBlock" })),
+            "ExtensionBlock",
+        ),
+    ]
+}
+
+#[test]
+fn a_class_named_extension_block_in_another_namespace_is_an_ordinary_class() {
+    // Owner ruling on GitHub #582: only the S231 class is an extension block. Each spelling below
+    // behaves exactly as a class of any other name: lowered as a composite when it lists
+    // children (nested or as the root), `class-not-found` as a leaf, and ignored after a
+    // registered class in a type list.
+    let (root, sub, con) = (
+        format!("{EX}R"),
+        format!("{EX}R.sub"),
+        format!("{EX}R.sub.con"),
+    );
+    let nested = |class: &str, context: &Json| {
+        let mut graph = vec![
+            container(&root, "S231:Block", &[&sub], &[]),
+            container(&sub, class, &[&con], &[]),
+        ];
+        graph.extend(source(&con, CONSTANT, &[]));
+        let mut doc = document(graph);
+        doc["@context"] = context.clone();
+        doc
+    };
+    let rooted = |class: &str, context: &Json| {
+        let mut graph = vec![container(&root, class, &[&con], &[])];
+        graph.extend(source(&con, CONSTANT, &[]));
+        let mut doc = document(graph);
+        doc["@context"] = context.clone();
+        doc
+    };
+    let plain = json!({ "S231": S231_NS });
+    let nested_control = nested(&format!("{EX}Pkg.Sub"), &plain);
+    let rooted_control = rooted("S231:Block", &plain);
+    assert_eq!(loads(&nested_control), 1);
+    assert_eq!(loads(&rooted_control), 1);
+    let listed_control = outcome(&registered_leaf());
+    for (class, context, class_path) in other_namespace_classes() {
+        let case = format!("{class} under {context}");
+        assert_eq!(
+            outcome(&nested(class, &context)),
+            outcome(&nested_control),
+            "{case}"
+        );
+        assert_eq!(
+            outcome(&rooted(class, &context)),
+            outcome(&rooted_control),
+            "{case}"
+        );
+
+        let mut leaf = registered_leaf();
+        leaf["@context"] = context.clone();
+        node_mut(&mut leaf, LEAF).insert("@type".into(), json!(class));
+        assert_eq!(
+            refusal(&leaf),
+            vec![
+                Diagnostic::error(
+                    DiagCode::ClassNotFound,
+                    format!("no registered block class for `{class_path}`")
+                )
+                .with_subject(LEAF)
+            ],
+            "{case}"
+        );
+
+        let mut listed = registered_leaf();
+        listed["@context"] = context.clone();
+        node_mut(&mut listed, LEAF).insert("@type".into(), json!([ABS, class]));
+        assert_eq!(outcome(&listed), listed_control, "{case}");
     }
 }
 
@@ -390,15 +548,26 @@ fn every_spelling_of_the_type_and_the_fmu_path_is_refused_identically() {
 fn near_misses_are_not_extension_blocks() {
     // A class path whose last dotted segment is `ExtensionBlock`, and a term that only ends
     // with it, are unknown classes; a `hasFmuPath` key in another namespace passes through.
-    for class in [
-        "http://example.org#Buildings.Controls.OBC.Pkg.ExtensionBlock",
-        "http://example.org#MyExtensionBlock",
+    for (class, class_path) in [
+        (
+            "http://example.org#Buildings.Controls.OBC.Pkg.ExtensionBlock",
+            "Pkg.ExtensionBlock",
+        ),
+        ("http://example.org#MyExtensionBlock", "MyExtensionBlock"),
     ] {
         let mut doc = registered_leaf();
         node_mut(&mut doc, LEAF).insert("@type".into(), json!(class));
-        let diags = refusal(&doc);
-        assert_eq!(diags.len(), 1, "{diags:?}");
-        assert_eq!(diags[0].code, DiagCode::ClassNotFound, "{class}");
+        assert_eq!(
+            refusal(&doc),
+            vec![
+                Diagnostic::error(
+                    DiagCode::ClassNotFound,
+                    format!("no registered block class for `{class_path}`")
+                )
+                .with_subject(LEAF)
+            ],
+            "{class}"
+        );
     }
     let mut doc = registered_leaf();
     node_mut(&mut doc, LEAF).insert(format!("{EX}hasFmuPath"), json!("a.fmu"));
@@ -406,15 +575,76 @@ fn near_misses_are_not_extension_blocks() {
 }
 
 #[test]
-fn an_extension_block_type_in_the_retired_namespace_is_a_namespace_refusal() {
-    // The namespace check reads typing tokens first (GitHub #527), so the precedence is pinned.
+fn an_extension_block_type_in_a_foreign_s231_spelling_is_a_namespace_refusal() {
+    // The retired namespace is refused for any type (GitHub #527) and the `https:` spellings for
+    // this class, as a modeled key in them is: read as an ordinary class, an extension block
+    // with children would be lowered. The expansion pass refuses them before anything else.
+    let retired = "http://data.ashrae.org/S231P#ExtensionBlock";
     let mut doc = parse(WITH_FMU_PATH);
-    node_mut(&mut doc, LEAF).insert(
-        "@type".into(),
-        json!("http://data.ashrae.org/S231P#ExtensionBlock"),
+    node_mut(&mut doc, LEAF).insert("@type".into(), json!(retired));
+    assert_eq!(
+        refusal(&doc),
+        vec![
+            Diagnostic::error(
+                DiagCode::VocabularyNamespaceMismatch,
+                format!(
+                    "@type `{retired}` on node `{LEAF}` is in `http://data.ashrae.org/S231P#`; \
+                     the S231 vocabulary is read only in `{S231_NS}`"
+                ),
+            )
+            .with_subject(LEAF)
+        ]
     );
-    let codes: Vec<DiagCode> = refusal(&doc).iter().map(|d| d.code).collect();
-    assert_eq!(codes, vec![DiagCode::VocabularyNamespaceMismatch]);
+
+    let near_miss = |token: &str, namespace: &str| {
+        Diagnostic::error(
+            DiagCode::VocabularyNamespaceMismatch,
+            format!(
+                "@type `{token}` on node `{LEAF}` names the class `ExtensionBlock` in \
+                 `{namespace}`; the S231 vocabulary is read only in `{S231_NS}`; write it as \
+                 `S231:ExtensionBlock`"
+            ),
+        )
+        .with_subject(LEAF)
+    };
+    for namespace in [
+        "https://data.ashrae.org/S231#",
+        "https://data.ashrae.org/S231P#",
+    ] {
+        let token = format!("{namespace}ExtensionBlock");
+        let spellings = [
+            (json!(token), json!({ "S231": S231_NS })),
+            (json!([ABS, token]), json!({ "S231": S231_NS })),
+            (
+                json!("y:ExtensionBlock"),
+                json!({ "S231": S231_NS, "y": namespace }),
+            ),
+        ];
+        for (types, context) in spellings {
+            // As a leaf, and as a composite that lists a child.
+            let mut leaf = parse(WITH_FMU_PATH);
+            leaf["@context"] = context.clone();
+            node_mut(&mut leaf, LEAF).insert("@type".into(), types.clone());
+            assert_eq!(
+                refusal(&leaf),
+                vec![near_miss(&token, namespace)],
+                "{types}"
+            );
+
+            let mut composite = registered_leaf();
+            composite["@context"] = context;
+            node_mut(&mut composite, LEAF).insert("@type".into(), types.clone());
+            node_mut(&mut composite, LEAF).insert(
+                "S231:containsBlock".into(),
+                json!({ "@id": "http://example.org#Fdd.con" }),
+            );
+            assert_eq!(
+                refusal(&composite),
+                vec![near_miss(&token, namespace)],
+                "{types}"
+            );
+        }
+    }
 }
 
 #[test]
