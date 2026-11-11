@@ -469,7 +469,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
     makes 409,600,000.
   - **`oce-verify` binds through it**: each of the input, output and parameter lists is indexed
     once. 204,800 suffix keys against 8,000 parameters bound in 15.7 s in `dev` before and 1.4 s
-    now (`tests/name_resolution.rs`).
+    now, measured once on the shape `tests/name_resolution.rs` binds; that test asserts that every
+    key resolves, and no time.
   - **Set-level edits are held once.** An edit is a parameter-table row and its value. Each
     scenario keeps its own map, and the effective list is built for the trial, run or receipt
     that uses it. Distinct lists are found by sorting the scenarios by their merged lists rather

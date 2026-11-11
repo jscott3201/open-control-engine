@@ -1,16 +1,14 @@
-//! Name resolution at bind does not grow with keys times paths (issue #571). The reviewer's shape
-//! of GitHub #570, scaled to the vector file's 4 MiB bound: suffix-named parameter keys, 256 to a
+//! Name resolution at bind through the index, end to end (issue #571). The reviewer's shape of
+//! GitHub #570, scaled to the vector file's 4 MiB bound: suffix-named parameter keys, 256 to a
 //! scenario, against a subject of 4,000 `Reals.Hysteresis` blocks (8,000 parameters, each block's
-//! two named alike). Every key resolves; the run is then refused at the load-byte budget, so the
-//! time measured is the binding's.
+//! two named alike). Every key resolves, so the run reaches the budget step and is refused at the
+//! load-byte budget.
 //!
-//! `oce-replay`'s `path_index` unit tests count the comparisons the index makes, which is the
-//! deterministic proof; this test is the end-to-end guard, with a bound far above the indexed
-//! time and far below the linear scan's at this shape (both measured in the work-budget note).
+//! The scaling is pinned by `oce-replay`'s `path_index` unit tests, which count the comparisons
+//! the index makes; this test asserts no time (`TESTING.md`). The before-and-after timings of this
+//! shape are recorded in the work-budget note.
 
 mod support;
-
-use std::time::{Duration, Instant};
 
 /// `blocks` hysteresis blocks all fed from `top.u`, block 0 driving `top.y`.
 fn bank(blocks: usize) -> Vec<u8> {
@@ -86,17 +84,16 @@ fn suffix_keyed_set(scenarios: usize, blocks: usize) -> String {
 }
 
 #[test]
-fn suffix_keys_against_thousands_of_parameters_resolve_in_near_linear_time() {
+fn suffix_keys_against_thousands_of_parameters_all_resolve_before_the_budget_step() {
     let subject = bank(4_000);
     // 800 scenarios of 256 keys: 204,800 suffix keys in a set just under the 4 MiB bound.
     let set = suffix_keyed_set(800, 4_000);
     assert!(set.len() < 4 * 1024 * 1024, "{}", set.len());
-    let started = Instant::now();
+    // A key that did not resolve would be refused at its name, before the budget step.
     let error = support::refused(&set, &subject);
-    let elapsed = started.elapsed();
-    assert_eq!(error.code(), "too-many-load-bytes", "{error}");
-    assert!(
-        elapsed < Duration::from_secs(10),
-        "binding took {elapsed:?}: name resolution grows with keys times paths again"
+    assert_eq!(
+        (error.code(), error.subject()),
+        ("too-many-load-bytes", "scenarios"),
+        "{error}"
     );
 }
