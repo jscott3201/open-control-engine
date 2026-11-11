@@ -1,5 +1,5 @@
 sequence reordered
-extends cxf:fnv1a128:00ff
+derived_from cxf:fnv1a128:00ff
 param n : Integer = 0
 param dTHys : Real = 100000.0 s
 param big : Real = 1.2345678901234567e19

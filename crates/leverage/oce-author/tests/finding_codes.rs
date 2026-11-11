@@ -564,12 +564,12 @@ fn invalid_semantic_point() {
 #[test]
 fn invalid_provenance_id() {
     let mut s = econ_enable();
-    s.extends = Some(ProvenanceId::unchecked("CXF:abc"));
+    s.derived_from = Some(ProvenanceId::unchecked("CXF:abc"));
     assert_eq!(
         codes(&validate(&s)),
-        vec![pair("invalid-provenance-id", "extends")]
+        vec![pair("invalid-provenance-id", "derived_from")]
     );
-    s.extends = Some(ProvenanceId::unchecked("cxf:fnv1a128:0123abcd"));
+    s.derived_from = Some(ProvenanceId::unchecked("cxf:fnv1a128:0123abcd"));
     assert_eq!(codes(&validate(&s)), vec![]);
 }
 

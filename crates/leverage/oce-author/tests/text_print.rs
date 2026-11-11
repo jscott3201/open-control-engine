@@ -63,20 +63,20 @@ fn a_comment_with_a_line_feed_prints_as_comment_lines_and_injects_nothing() {
 #[test]
 fn every_value_the_lexer_cannot_read_back_is_refused_by_subject() {
     type Edit = fn(&mut Sequence);
-    let cases: [(Edit, &str, &str); 21] = [
+    let cases: [(Edit, &str, &str); 22] = [
         (
             |s| s.name = Identifier::unchecked("econ enable"),
             "sequence",
             "is not a word",
         ),
         (
-            |s| s.extends = Some(ProvenanceId::unchecked("none")),
-            "extends",
+            |s| s.derived_from = Some(ProvenanceId::unchecked("none")),
+            "derived_from",
             "other than `none`",
         ),
         (
-            |s| s.extends = Some(ProvenanceId::unchecked("cxf:a b")),
-            "extends",
+            |s| s.derived_from = Some(ProvenanceId::unchecked("cxf:a b")),
+            "derived_from",
             "printable ASCII",
         ),
         (
@@ -167,6 +167,11 @@ fn every_value_the_lexer_cannot_read_back_is_refused_by_subject() {
         ),
         (
             |s| s.connections[0].source = Endpoint::parse("param"),
+            "connection[0]",
+            "reads as a statement",
+        ),
+        (
+            |s| s.connections[0].source = Endpoint::parse("derived_from"),
             "connection[0]",
             "reads as a statement",
         ),
@@ -444,8 +449,8 @@ fn slots() -> Vec<(&'static str, Slot)> {
     }
     vec![
         ("sequence name", |s, v| s.name = id(v)),
-        ("extends", |s, v| {
-            s.extends = Some(ProvenanceId::unchecked(v))
+        ("derived_from", |s, v| {
+            s.derived_from = Some(ProvenanceId::unchecked(v))
         }),
         ("header comment", |s, v| {
             s.annotations.comments = vec![v.to_owned()]
@@ -541,8 +546,30 @@ fn every_string_slot_with_hostile_text_is_refused_or_reads_back_equal() {
     // text within the line bound that parses back to the same model (up to the comment
     // normalizations). Never text that parses to something else, never text the parser refuses.
     let hostile: Vec<String> = [
-        "->", "#", "\"", "\\", "\n", "\t", "\u{202e}", "param", "in", "block", "true", "nan",
-        "Inf", "Type.a.b", "a b", "K", "s-1", "cxf:a#", "none", "", "ok_word", "x\n# y  ",
+        "->",
+        "#",
+        "\"",
+        "\\",
+        "\n",
+        "\t",
+        "\u{202e}",
+        "param",
+        "in",
+        "block",
+        "true",
+        "nan",
+        "Inf",
+        "Type.a.b",
+        "a b",
+        "K",
+        "s-1",
+        "cxf:a#",
+        "none",
+        "",
+        "ok_word",
+        "x\n# y  ",
+        "derived_from",
+        "extends",
     ]
     .iter()
     .map(|s| (*s).to_owned())

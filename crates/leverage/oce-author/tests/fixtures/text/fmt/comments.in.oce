@@ -4,8 +4,8 @@
 #   indented header line
 
 sequence commented   # end-of-line on sequence
-# between sequence and extends
-extends none # end-of-line on extends
+# between sequence and derived_from
+derived_from none # end-of-line on derived_from
 
 
 

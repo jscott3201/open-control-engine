@@ -561,11 +561,12 @@ fn a_parameter_type_text_needs_a_word() {
             "stray-token",
         ),
     ] {
-        let source = format!("sequence s\nextends none\n{text}");
+        let source = format!("sequence s\nderived_from none\n{text}");
         let error = parse_text(&source).expect_err(text);
         assert_eq!(error.code, code, "{text}: {error}");
     }
-    let parsed = parse_text("sequence s\nextends none\nparam p : Foo = Foo.bar\n").expect("parses");
+    let parsed =
+        parse_text("sequence s\nderived_from none\nparam p : Foo = Foo.bar\n").expect("parses");
     assert_eq!(
         parsed.params[0].value_type,
         ParameterType::Enum("Foo".to_owned())

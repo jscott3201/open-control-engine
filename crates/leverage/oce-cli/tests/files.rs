@@ -109,7 +109,7 @@ fn fmt_write_leaves_a_malformed_file_untouched() {
     std::fs::write(dir.join("bad.oce"), bytes).expect("write");
     let run = oce_in(&dir, &["fmt", "--write", "bad.oce"], b"");
     assert_eq!(run.code, 2);
-    assert_eq!(run.report()["errors"][0]["code"], "missing-extends");
+    assert_eq!(run.report()["errors"][0]["code"], "missing-derived-from");
     assert_eq!(std::fs::read(dir.join("bad.oce")).expect("read"), bytes);
 }
 

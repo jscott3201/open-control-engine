@@ -1,5 +1,5 @@
 sequence unused_input
-extends none
+derived_from none
 
 in TOut : Real @unit K
 in TSpare : Real @unit K

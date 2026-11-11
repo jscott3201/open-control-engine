@@ -16,22 +16,23 @@ use super::error::SourceForm;
 #[non_exhaustive]
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ImportOptions {
-    /// The provenance id the imported sequence derives from, set on [`Sequence::extends`]; none
-    /// by default. The importer never derives one from the source (decision 15).
-    pub extends: Option<ProvenanceId>,
+    /// The provenance id the imported sequence derives from, set on
+    /// [`Sequence::derived_from`]; none by default. The importer never derives one from the source
+    /// (decision 15).
+    pub derived_from: Option<ProvenanceId>,
 }
 
 impl ImportOptions {
-    /// The default options: no `extends`.
+    /// The default options: no `derived_from`.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// These options with `extends` set.
+    /// These options with `derived_from` set.
     #[must_use]
-    pub fn with_extends(mut self, extends: ProvenanceId) -> Self {
-        self.extends = Some(extends);
+    pub fn with_derived_from(mut self, derived_from: ProvenanceId) -> Self {
+        self.derived_from = Some(derived_from);
         self
     }
 }

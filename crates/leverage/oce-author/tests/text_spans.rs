@@ -51,7 +51,7 @@ fn stage_two_findings_are_placed_too() {
 fn every_subject_kind_is_placed_on_its_statement() {
     let text = "\
 sequence end
-extends CXF:abc
+derived_from CXF:abc
 param p : Integer = 2.5
 in u : Real @unit deg
 out y : Real
@@ -68,7 +68,7 @@ u -> s.u9
     let findings = validate_text_author_side(text).expect("parses");
     for (code, subject, line, column) in [
         ("invalid-name", "sequence", 1, 10),
-        ("invalid-provenance-id", "extends", 2, 9),
+        ("invalid-provenance-id", "derived_from", 2, 14),
         ("parameter-kind-mismatch", "p", 3, 7),
         ("class-not-found", "b", 6, 7),
         ("unknown-parameter-reference", "h.uHigh", 9, 3),
@@ -89,7 +89,7 @@ u -> s.u9
 fn a_duplicate_is_placed_on_the_repeat_not_the_first() {
     let text = "\
 sequence s
-extends none
+derived_from none
 block x = CDL.Reals.Hysteresis(uLow = 0.0, uHigh = 1.0, uLow = 0.5)
 in x : Real
 out x : Real
@@ -119,8 +119,11 @@ fn the_source_map_lists_every_location_a_subject_can_mean() {
         }]
     );
     assert_eq!(
-        spans.locations(&model, "extends"),
-        [Location { line: 3, column: 9 }]
+        spans.locations(&model, "derived_from"),
+        [Location {
+            line: 3,
+            column: 14
+        }]
     );
     assert_eq!(
         spans.locations(&model, "dTHys"),

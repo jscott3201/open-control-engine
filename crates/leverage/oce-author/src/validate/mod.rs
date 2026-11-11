@@ -4,7 +4,7 @@
 //! the model against the catalog alone: names, the sequence shape, connection syntax and
 //! endpoints, class and parameter lookup, parameter kinds and catalog rules, references, arity
 //! and port names, duplicates, enumeration types and members, boundary bounds, `SemanticPoint` and
-//! `extends` syntax. **Stage 2**
+//! `derived_from` syntax. **Stage 2**
 //! ([`Stage::Engine`], the `engine` module) runs only when stage 1 found no error: emit, load in a
 //! throwaway engine and map each engine diagnostic back onto the model, every engine warning
 //! becoming an error finding (decision 14). [`validate()`] runs both stages.
@@ -92,7 +92,7 @@ mod codes {
     pub const NON_FINITE_BOUND: &str = "non-finite-bound";
     /// A boundary's `min` exceeds its `max` (the engine's code).
     pub const CROSSED_BOUNDS: &str = "crossed-bounds";
-    /// The `extends` provenance id is malformed.
+    /// The `derived_from` provenance id is malformed.
     pub const INVALID_PROVENANCE_ID: &str = "invalid-provenance-id";
     /// Two connections drive one block input or boundary output. Stage 1 refuses a target the
     /// connection list repeats; the engine's own `single-assignment` covers the rest in stage 2
@@ -171,8 +171,9 @@ pub struct Finding {
     pub code: &'static str,
     /// Its severity.
     pub severity: Severity,
-    /// The model path it concerns: `sequence` (the sequence itself), `extends`, a declared name
-    /// (`dTHys`, `TOut`, `hys`), an assignment (`hys.uHigh`) or a connection (`connection[2]`).
+    /// The model path it concerns: `sequence` (the sequence itself), `derived_from`, a declared
+    /// name (`dTHys`, `TOut`, `hys`), an assignment (`hys.uHigh`) or a connection
+    /// (`connection[2]`).
     pub subject: String,
     /// The text location, when the input was text. [`crate::validate_text`] fills it from the
     /// subject-to-location map built while parsing ([`crate::SourceMap`]); [`validate()`] on a
@@ -194,7 +195,7 @@ impl fmt::Display for Finding {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum Anchor {
     Sequence,
-    Extends,
+    DerivedFrom,
     Param(usize),
     Input(usize),
     Output(usize),

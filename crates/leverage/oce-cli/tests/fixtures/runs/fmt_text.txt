@@ -3,10 +3,10 @@ exit: 0
 # File header, line one.
 #   indented header line
 # end-of-line on sequence
-# between sequence and extends
-# end-of-line on extends
+# between sequence and derived_from
+# end-of-line on derived_from
 sequence commented
-extends none
+derived_from none
 
 # Comment above the parameter, after a blank run.
 # end-of-line on the parameter

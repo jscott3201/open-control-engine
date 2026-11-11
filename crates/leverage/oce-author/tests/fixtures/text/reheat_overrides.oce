@@ -1,5 +1,5 @@
 sequence reheat_overrides
-extends none
+derived_from none
 in oveDamPos : Integer
 in uDam : Real @unit 1
 in uHeaOff : Boolean

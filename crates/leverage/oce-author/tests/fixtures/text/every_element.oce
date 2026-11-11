@@ -1,5 +1,5 @@
 sequence every_element
-extends cxf:fnv1a128:00112233445566778899aabbccddeeff
+derived_from cxf:fnv1a128:00112233445566778899aabbccddeeff
 param kGain : Real = 0.25
 param nStages : Integer = 3
 param reverse : Boolean = false

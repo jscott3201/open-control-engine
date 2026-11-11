@@ -116,7 +116,7 @@ fn the_worked_text_example_carries_the_same_sequence_as_the_wire_form() {
     let abridged = std::fs::read_to_string(fixture("note/wire_example.json")).expect("example");
     let note = from_wire_str(&abridged).expect("the note's wire example reads");
     assert_eq!(note.name, text_model.name);
-    assert_eq!(note.extends, text_model.extends);
+    assert_eq!(note.derived_from, text_model.derived_from);
     let plain = without_text_facts(&text_model);
     assert_eq!(note.params, plain.params);
     assert_eq!(note.inputs[0], plain.inputs[0]);
@@ -177,7 +177,7 @@ fn enumerated_models_exercise_both_array_spellings_and_both_block_layouts() {
         "block odd = CDL.Reals.Nope(\n  x_1 = 1.0,\n",
         "  # one comment\n",
         "\n#  indented # with a hash\n",
-        "extends cxf:fnv1a128:0123#abc\n",
+        "derived_from cxf:fnv1a128:0123#abc\n",
         "\n# the end\n##\n",
         "@haystack air @haystack temp",
         "-9223372036854775808",

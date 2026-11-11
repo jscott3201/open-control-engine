@@ -97,7 +97,7 @@ pub fn econ_enable() -> Sequence {
         .build()
 }
 
-/// A sequence that uses every element of the model: `extends`, all three scalar parameter types,
+/// A sequence that uses every element of the model: `derived_from`, all three scalar parameter types,
 /// an enumeration-typed parameter referenced by a block and one referenced by nothing, an Integer
 /// parameter holding a library constant, every semantic field, Integer and Boolean boundaries,
 /// bounds on both boundary kinds (both sides, one side, Integer and Real literals), an enum
@@ -134,7 +134,7 @@ pub fn every_element() -> Sequence {
     let table_out = Boundary::new(id("yTab"), SignalType::Real);
     let control = Boundary::new(id("yCon"), SignalType::Real);
     SequenceBuilder::new("every_element")
-        .and_then(|b| b.extends("cxf:fnv1a128:00112233445566778899aabbccddeeff"))
+        .and_then(|b| b.derived_from("cxf:fnv1a128:00112233445566778899aabbccddeeff"))
         .and_then(|b| b.parameter("kGain", SignalType::Real, Literal::Real(0.25)))
         .and_then(|b| b.parameter("nStages", SignalType::Integer, Literal::Integer(3)))
         .and_then(|b| b.parameter("reverse", SignalType::Boolean, Literal::Boolean(false)))

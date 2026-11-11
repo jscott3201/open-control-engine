@@ -37,7 +37,7 @@ pub(crate) struct WireSequence {
     /// The sequence name: an identifier (`[A-Za-z_][A-Za-z0-9_]*`, at most 64 bytes).
     sequence: String,
     /// The provenance id this sequence derives from (`<format>:<id>`), or "" for none.
-    extends: String,
+    derived_from: String,
     /// Sequence-level parameters, in authored order; block parameters may reference them.
     params: Vec<WireSequenceParam>,
     /// Boundary inputs, in authored order.
@@ -467,7 +467,7 @@ impl WireSequence {
             .map(|(index, text)| connection_of(index, text))
             .collect::<Result<_, _>>()?;
         let mut sequence = Sequence::new(Identifier::unchecked(self.sequence));
-        sequence.extends = optional(self.extends).map(ProvenanceId::unchecked);
+        sequence.derived_from = optional(self.derived_from).map(ProvenanceId::unchecked);
         sequence.params = params;
         sequence.inputs = self.inputs.into_iter().map(WireBoundary::model).collect();
         sequence.outputs = self.outputs.into_iter().map(WireBoundary::model).collect();

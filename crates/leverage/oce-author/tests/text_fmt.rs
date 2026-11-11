@@ -17,7 +17,7 @@ fn fmt_input(case: &str) -> String {
 }
 
 fn header() -> &'static str {
-    "sequence s\nextends none\n"
+    "sequence s\nderived_from none\n"
 }
 
 /// `fmt`, asserting idempotence on the way.
@@ -78,8 +78,8 @@ fn fmt_keeps_every_comment_and_the_blank_lines_before_statements() {
             " File header, line one.",
             "   indented header line",
             " end-of-line on sequence",
-            " between sequence and extends",
-            " end-of-line on extends",
+            " between sequence and derived_from",
+            " end-of-line on derived_from",
         ]
     );
     assert_eq!(
@@ -89,9 +89,9 @@ fn fmt_keeps_every_comment_and_the_blank_lines_before_statements() {
             "Trailing comment two, after a blank."
         ]
     );
-    // The blank run after `extends` collapses to one blank line before the parameter's comment.
+    // The blank run after `derived_from` collapses to one blank line before the parameter's comment.
     assert!(out.contains(
-        "extends none\n\n# Comment above the parameter, after a blank run.\n# end-of-line on the parameter\nparam"
+        "derived_from none\n\n# Comment above the parameter, after a blank run.\n# end-of-line on the parameter\nparam"
     ));
     // The blank line inside the block's list stays before `uHigh`.
     assert!(

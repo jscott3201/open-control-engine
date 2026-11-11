@@ -1,5 +1,5 @@
 sequence arrays
-extends none
+derived_from none
 block sum3 = CDL.Reals.MultiSum(nin = 3, k_1 = 1, k_2 = 2, k_3 = 3)
 block sum4 = CDL.Reals.MultiSum(k_1 = 1, k_3 = 3)
 block sum5 = CDL.Reals.MultiSum(k = [1 K, 2 K, 3 K])

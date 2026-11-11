@@ -199,7 +199,7 @@ fn the_text_spelling_of_a_bound_converts_exactly_as_the_loader_does() {
         "123456789.123456789",
     ] {
         let source = format!(
-            "sequence bounded\nextends none\nin u : Real @max {spelling}\nout y : Real\nblock abs = CDL.Reals.Abs\nu -> abs.u\nabs.y -> y\n"
+            "sequence bounded\nderived_from none\nin u : Real @max {spelling}\nout y : Real\nblock abs = CDL.Reals.Abs\nu -> abs.u\nabs.y -> y\n"
         );
         let s = parse_text(&source).unwrap_or_else(|e| panic!("{spelling}: {e}"));
         let expected: f64 = spelling.parse().expect("f64");
@@ -553,7 +553,7 @@ fn the_wire_reader_refuses_every_malformed_bound_list() {
 
 #[test]
 fn the_text_parser_refuses_every_malformed_bound() {
-    let head = "sequence s\nextends none\n";
+    let head = "sequence s\nderived_from none\n";
     for (line, code) in [
         ("in u : Real @min\n", "stray-token"),
         ("in u : Real @min @max 1\n", "stray-token"),

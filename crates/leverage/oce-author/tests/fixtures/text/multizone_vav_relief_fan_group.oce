@@ -1,5 +1,5 @@
 sequence multizone_vav_relief_fan_group
-extends none
+derived_from none
 param nSupFan : Integer = 2
 param nRelFan : Integer = 4
 param relFanSpe_min : Real = 0.1

@@ -35,7 +35,7 @@ author's terms after import. It never evaluates an expression, never fills a def
 and never drops an attribute the engine reads.
 
 ```rust
-pub struct ImportOptions { pub extends: Option<ProvenanceId> }        // default: none
+pub struct ImportOptions { pub derived_from: Option<ProvenanceId> }   // default: none
 pub struct Imported { pub sequence: Sequence, pub report: ImportReport }
 pub struct ImportReport { pub source: SourceForm, pub dropped: Vec<Dropped> }
 pub enum SourceForm { Cxf, GraphV0 }
@@ -267,7 +267,7 @@ with five required keys and closed objects throughout:
 
 | v0 | Model |
 | --- | --- |
-| `name` | `Sequence.name`; `extends` none unless `ImportOptions` sets it |
+| `name` | `Sequence.name`; `derived_from` none unless `ImportOptions` sets it |
 | `inputs[]` / `outputs[]` `name`, `type` | boundaries; `bool`, `real`, `int` to `Boolean`, `Real`, `Integer` |
 | `inputs[].unit`, `*.description` | comment annotations on the boundary (see below) and a `Dropped` entry; never `SemanticPoint.unit` |
 | `blocks[].id`, `class` | block name; class path `CDL.` + `class` |
@@ -303,7 +303,7 @@ and requires the parse to succeed and `fmt` to be idempotent.
 **Provenance.** The importer adds one comment line naming the source form
 (`# imported from v0 graph JSON`) to `Sequence.annotations`, which the text-form PR (GitHub #485,
 issue #482) adds with `Sequence.trailing_comments`; it is not a model change of this note's. The
-caller may set `extends`. Nothing about provenance reaches the wire form or the emitter.
+caller may set `derived_from`. Nothing about provenance reaches the wire form or the emitter.
 
 **Fixtures (vendored in the importer PR, not now).** The prototype's three golden pairs, each a v0
 graph and the CXF its emitter wrote, copied verbatim into `crates/leverage/oce-author/tests/fixtures/v0/`
@@ -569,12 +569,12 @@ sequence would no longer name the library's blocks, and the content id holds nam
 **14. The library re-stamp stays until library bundle v2.** Rejected: an emitter namespace that does
 not end in a delimiter (refused by the content-id note's review ruling 2). v0 fixtures need none.
 
-**15. Provenance is a report and a comment, not `extends`.** `ImportReport` names the source form and
-every dropped property; one leading comment names the form; `extends` is none unless the caller sets
-it. Rejected: the root `@type` in `extends` (M3 owns its prefixes, and "translated from class X" is
-not "revision of Y"); the source's content id in `extends` (a CXF round trip makes it the sequence's
-own id, a self-loop); a `source` field on `Sequence` (metadata the engine never sees; M3's registry
-owns provenance). *(Landed in GitHub #498, 2026-11-09.)*
+**15. Provenance is a report and a comment, not `derived_from`.** `ImportReport` names the source
+form and every dropped property; one leading comment names the form; `derived_from` is none unless
+the caller sets it. Rejected: the root `@type` in `derived_from` (M3 owns its prefixes, and
+"translated from class X" is not "revision of Y"); the source's content id in `derived_from` (a CXF
+round trip makes it the sequence's own id, a self-loop); a `source` field on `Sequence` (metadata
+the engine never sees; M3's registry owns provenance). *(Landed in GitHub #498, 2026-11-09.)*
 
 **16. `ImportError` is a subject plus a typed kind with a stable code.** `ImportErrorKind` is
 `#[non_exhaustive]` (crate policy, GitHub #466) and its code list is pinned by an in-crate test;

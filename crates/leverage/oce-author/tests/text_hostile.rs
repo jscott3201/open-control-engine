@@ -172,7 +172,7 @@ fn a_bounded_mutation_sweep_over_every_text_fixture_never_panics() {
 fn deep_brackets_and_parentheses_are_refused_without_recursing() {
     for open in ["[", "(", "[(", "(["] {
         let text = format!(
-            "sequence s\nextends none\nblock b = C(k = {}\n",
+            "sequence s\nderived_from none\nblock b = C(k = {}\n",
             open.repeat(3_000)
         );
         let error = parse_text(&text).expect_err("refused");
@@ -184,7 +184,7 @@ fn deep_brackets_and_parentheses_are_refused_without_recursing() {
 fn giant_statements_parse_or_refuse_in_bounded_time() {
     // A block of 20,000 assignments on 20,000 lines, a line of 400 assignments, 50,000 comment
     // lines before one statement, and a list of 4,000 elements on one line.
-    let mut text = String::from("sequence s\nextends none\nblock b = CDL.Reals.MultiSum(\n");
+    let mut text = String::from("sequence s\nderived_from none\nblock b = CDL.Reals.MultiSum(\n");
     for i in 0..20_000 {
         text.push_str(&format!("  a{i} = {i},\n"));
     }
@@ -195,7 +195,7 @@ fn giant_statements_parse_or_refuse_in_bounded_time() {
 
     let items: Vec<String> = (0..400).map(|i| format!("a{i} = 1")).collect();
     let line = format!(
-        "sequence s\nextends none\nblock b = C({})\n",
+        "sequence s\nderived_from none\nblock b = C({})\n",
         items.join(", ")
     );
     assert!(line.len() < 8_192);
@@ -207,14 +207,14 @@ fn giant_statements_parse_or_refuse_in_bounded_time() {
     );
 
     let comments = format!(
-        "sequence s\nextends none\n{}in u : Real\n",
+        "sequence s\nderived_from none\n{}in u : Real\n",
         "# c\n".repeat(50_000)
     );
     let model = parse_text(&comments).expect("parses");
     assert_eq!(model.inputs[0].annotations.comments.len(), 50_000);
 
     let list = format!(
-        "sequence s\nextends none\nblock b = CDL.Reals.MultiSum(k = [{}])\n",
+        "sequence s\nderived_from none\nblock b = CDL.Reals.MultiSum(k = [{}])\n",
         vec!["1"; 4_000].join(",")
     );
     let model = parse_text(&list).expect("parses");
@@ -231,8 +231,7 @@ fn giant_statements_parse_or_refuse_in_bounded_time() {
 
 #[test]
 fn a_multi_byte_character_at_every_offset_of_a_statement_is_typed() {
-    let base =
-        "sequence s\nextends none\nblock hys = CDL.Reals.Hysteresis(uLow = 0.0 K, uHigh = dTHys)\n";
+    let base = "sequence s\nderived_from none\nblock hys = CDL.Reals.Hysteresis(uLow = 0.0 K, uHigh = dTHys)\n";
     for at in 0..=base.len() {
         if !base.is_char_boundary(at) {
             continue;
@@ -250,7 +249,7 @@ fn hostile_bounds_and_parameter_types_are_typed() {
     // Issue #492's syntax at its edges: a type name at and past the token bound, a bound at the
     // token bound, every tag repeated on one line, and every byte of a bounded statement replaced
     // or preceded by a multi-byte character.
-    let head = "sequence s\nextends none\n";
+    let head = "sequence s\nderived_from none\n";
     let at_bound = format!("T{}", "y".repeat(255));
     let s = parse_text(&format!("{head}param p : {at_bound} = {at_bound}.m\n")).expect("parses");
     assert_eq!(s.params[0].value_type.as_str(), at_bound);
@@ -266,7 +265,7 @@ fn hostile_bounds_and_parameter_types_are_typed() {
     let repeated = format!("{head}in u : Real{}\n", " @min 0".repeat(1_000));
     let error = parse_text(&repeated).expect_err("refused");
     assert_eq!(error.code, "duplicate-tag");
-    let base = "sequence s\nextends none\nparam c : SimpleController = SimpleController.PI\nin u : Real @min -1.5e3 @max 2\n";
+    let base = "sequence s\nderived_from none\nparam c : SimpleController = SimpleController.PI\nin u : Real @min -1.5e3 @max 2\n";
     for at in 0..=base.len() {
         if !base.is_char_boundary(at) {
             continue;

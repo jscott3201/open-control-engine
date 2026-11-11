@@ -124,7 +124,10 @@ pub(super) fn import(bytes: &[u8], options: &ImportOptions) -> Result<Imported, 
     let graph = Graph { nodes, order };
     precedence::check(&graph, root_id)?;
     let mut imported = Reader::new(&graph, root_id)?.read()?;
-    imported.sequence.extends.clone_from(&options.extends);
+    imported
+        .sequence
+        .derived_from
+        .clone_from(&options.derived_from);
     Ok(imported)
 }
 

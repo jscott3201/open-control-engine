@@ -1,4 +1,4 @@
 sequence malformed
-extends none
+derived_from none
 
 param label : Real = "a\q"

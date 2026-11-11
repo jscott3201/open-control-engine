@@ -1,5 +1,5 @@
 sequence econ_enable
-extends none
+derived_from none
 param dTHys : Real = 1
 in TOut : Real @unit K @quantity ThermodynamicTemperature @displayUnit degC
 block hys = CDL.Reals.Hysteresis(uLow = 0.0, uHigh = dTHys)

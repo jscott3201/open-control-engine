@@ -1,5 +1,5 @@
 sequence cooling_only_system_requests
-extends none
+derived_from none
 param thrTemDif : Real = 3.0
 param twoTemDif : Real = 2.0
 param durTimTem : Real = 120.0

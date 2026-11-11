@@ -9,7 +9,7 @@
 //!
 //! | v0 | Model |
 //! | --- | --- |
-//! | `name` | `Sequence.name`; `extends` from [`ImportOptions`] |
+//! | `name` | `Sequence.name`; `derived_from` from [`ImportOptions`] |
 //! | `inputs[]` / `outputs[]` `name`, `type` | boundaries; `bool`, `real`, `int` to `Boolean`, `Real`, `Integer` |
 //! | `inputs[].unit`, `*.description` | comment lines on the boundary and a [`Dropped`] entry |
 //! | `blocks[].id`, `class` | block name; class path `CDL.` + `class` |
@@ -128,7 +128,7 @@ pub(super) fn import(bytes: &[u8], options: &ImportOptions) -> Result<Imported, 
     )?;
     let mut report = ImportReport::new(SourceForm::GraphV0);
     let mut sequence = Sequence::new(Identifier::unchecked(text("document", top, "name")?));
-    sequence.extends.clone_from(&options.extends);
+    sequence.derived_from.clone_from(&options.derived_from);
     sequence
         .annotations
         .comments
