@@ -40,13 +40,23 @@ schemars = { version = "=1.2.3", default-features = false, features = ["derive",
 
 [dev-dependencies]
 oce-bless = { workspace = true }
+# The import-cost test measures allocations on the importing thread (issue #578); the crate and
+# version `oce-replay` and `oce-verify` already use, so the lockfile gains no package.
+allocation-counter = "0.8.1"
 
-# Integration-test binary. Cargo's default builds every file under `tests/` as its own binary, and
-# under the release profile (`lto = "thin"`, `codegen-units = 1`) each one links the whole
-# dependency graph again (GitHub #504). Every file is a module of `authoring`, and
-# `tests/authoring.rs` fails when a file is compiled into no binary or into two. Nothing in this
-# crate selects a test binary by name (its bless command names the package), so there is no other
-# target: a file that something selects by name gets its own `[[test]]` here, with the reason.
+# Integration-test binaries. Cargo's default builds every file under `tests/` as its own binary,
+# and under the release profile (`lto = "thin"`, `codegen-units = 1`) each one links the whole
+# dependency graph again (GitHub #504). Every file is a module of `authoring` except the one that
+# measures allocations, and `tests/authoring.rs` fails when a file is compiled into no binary or
+# into two. Nothing in this crate selects a test binary by name (its bless command names the
+# package); a file that something selects by name gets its own `[[test]]` here, with the reason.
 [[test]]
 name = "authoring"
 path = "tests/authoring.rs"
+
+# The file that calls `allocation_counter::measure`. Naming that crate links its counting global
+# allocator into the binary, so it stays apart from `authoring`, whose tests keep the allocator
+# they have always run under (the layout `oce-api` uses for `facade_allocation_census`).
+[[test]]
+name = "import_cost"
+path = "tests/import_cost.rs"
