@@ -8,17 +8,20 @@
 # Windows platform cell that loses its runner, its lane, its comparison or its strict-bit exclusion,
 # and a blob round trip that loses a leg, its recording, its comparison or its pinned wasmtime, and
 # a README lane (issue #503) whose job loses its lane-map entry, its lane, its classifier output or
-# its byte-pin step, fail closed. Since issue #502 the determinism matrix is split across the workflows, and the
-# fixtures follow it: pr-gate.yml must hold exactly the two debug cells and the cross-architecture
-# comparisons, and the workflows that run after the merge all four cells, the cross-codegen
-# comparisons, the Windows cell, a pinned checkout ref and a concurrency group that never cancels a
-# push run in progress. Since issue #545 there are two of those: merge-gate.yml, on every push to
-# `development`, must hold exactly those three jobs under an aggregate that is not `CI OK`, and
+# its byte-pin step, fail closed. The determinism matrix is all four cells in pr-gate.yml and in
+# release-gate.yml (issue #556; from issue #502 until then pr-gate.yml held the two debug cells
+# only), and the fixtures follow it: both files must hold both codegen modes, the release steps and
+# the cross-codegen as well as the cross-architecture comparisons, and must run the same steps as
+# each other; only the debug cells of pr-gate.yml may save the shared rust-cache entry. Two
+# workflows run outside a pull request (issue #545): merge-gate.yml, on every push to
+# `development`, must hold exactly the Windows cell under an aggregate that is not `CI OK`, with a
+# pinned checkout ref and a concurrency group that never cancels a run in progress, and
 # release-gate.yml, nightly, on dispatch, on release PRs and on pushes to `main`, must hold exactly
-# the heavy job set. The controls fail when a determinism cell or a comparison leaves the merge
-# gate, when a heavy job leaves the release gate (with or without its `needs:` entry), when either
-# workflow's events or branches change, when a shared job differs between the two files, and when
-# the gate script loses a workspace-suite command the release gate now runs only through it.
+# the heavy job set. The controls fail when a release cell or a comparison leaves pr-gate.yml,
+# when the Windows cell leaves the merge gate or any other job enters it, when a heavy job leaves
+# the release gate (with or without its `needs:` entry), when either workflow's events or branches
+# change, when the Windows job differs between the two files that run it, and when the gate
+# script loses a workspace-suite command the release gate now runs only through it.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -1011,8 +1014,8 @@ release_gate_dispatch_checks_out_development() {
   edit_release_gate "$1" "s/^  CHECKOUT_REF: .*\$/  CHECKOUT_REF: \${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') \&\& 'development' || github.event_name == 'push' \&\& github.sha || github.ref }}/"
 }
 
-# merge-gate.yml (issue #545): the post-merge set must keep every determinism cell, both halves of
-# the fan-in and the Windows cell, run on every push to `development`, and never pose as `CI OK`.
+# merge-gate.yml (issues #545 and #556): the post-merge set is the Windows cell alone; it must run
+# on every push to `development`, on the commit the event names, and never pose as `CI OK`.
 merge_gate_missing() {
   rm -f "$1/merge-gate.yml"
 }

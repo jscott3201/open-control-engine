@@ -376,12 +376,14 @@ jobs:
         with:
           shared-key: nextest
           cache-bin: false
-          # Only the debug cells save. A pull-request run saves into its own scope, which no
-          # other PR reads, so nothing here can reach the default-branch entry PRs warm-start
-          # from; but this workflow can also be dispatched on `development`, where a save does
-          # land in that scope, and rust-cache writes a key once, on the first job to finish.
-          # The entry must stay the debug dependency set the two debug cells, `crate-tests` and
-          # the strict-bit cells restore, so a release cell never writes it (issue #556).
+          # Only the debug cells of this matrix save. A pull-request run saves into its own
+          # scope, which no other PR reads, so nothing here can reach the default-branch entry
+          # PRs warm-start from; but this workflow can also be dispatched on `development`,
+          # where a save does land in that scope, and rust-cache writes a key once, on the first
+          # job to finish. A release determinism cell therefore never writes the key
+          # (issue #556). That narrows the risk without closing it: `crate-tests` and the
+          # strict-bit cells, release ones included, share the key with no `save-if`, so on such
+          # a dispatch whichever of those finishes first can still write it.
           save-if: ${{ matrix.codegen == 'debug' }}
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:

@@ -55,7 +55,7 @@ first, then the script.
 
 GitHub is the primary host: `origin` is `github.com/jscott3201/open-control-engine`, and branches,
 PRs, reviews, issues and CI live there. CI is GitHub Actions in `.github/workflows/` on GitHub-hosted Linux
-runners (plus the macOS platform cell in `pr-gate.yml` and the Windows one in `merge-gate.yml` and `release-gate.yml`): `pr-gate.yml` (per-PR, light), `merge-gate.yml` (every merge into `development`: the four determinism cells, their comparisons and the Windows cell), `release-gate.yml` (nightly against
+runners (plus the macOS platform cell in `pr-gate.yml` and the Windows one in `merge-gate.yml` and `release-gate.yml`): `pr-gate.yml` (per-PR, light), `merge-gate.yml` (every merge into `development`: the Windows cell, the one job no pull request runs), `release-gate.yml` (nightly against
 `development`, release PRs into `main`, pushes to `main`, dispatch; heavy), `advisories.yml` (daily), `docs-pages.yml` (docs validation and the Pages
 publish from `main`), `release.yml` (tag verify / manual crates.io publish) and the two manual
 native-arm64 OpenModelica evidence workflows. `ci.yml` there is byte-frozen and disabled in the

@@ -463,7 +463,7 @@ measured on 2026-11-10 at the head that introduced them:
 | docs | `bash .agents/gate.sh docs` | 4.8 min (285 s) | with two unrelated builds running on the machine (load average 5 to 26); nothing is compiled, and mdBook was already installed |
 | leverage | `bash .agents/gate.sh leverage` | 5.9 min (352 s) | under the same load |
 | engine | `bash .agents/gate.sh` | 7.1 min (423 s) | under the same load |
-| full | `bash .agents/gate.sh full` | 30.1 min | idle, on `fdd70c0`: 15.9 min of it the release-codegen workspace suite and 5.6 the release determinism subset and strict-bit step, before GitHub #546, #551, #553 and #554 cut the release test binaries; not re-measured cold since |
+| full | `bash .agents/gate.sh full` | 16.1 min (966 s) | on 2026-11-11, from an empty `target/` on an otherwise idle machine, at the head of GitHub #557, after GitHub #546, #551, #553 and #554 cut the release test binaries. The same mode took 30.1 min on `fdd70c0` before them, 15.9 min of it the release-codegen workspace suite |
 
 The first three are upper bounds, since the machine was busy. About three minutes of each is the
 gate's own fixture suites, which run in every mode (`test-workflow-gates.sh` alone took 3 min 22 s

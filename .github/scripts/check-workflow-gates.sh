@@ -12,7 +12,8 @@
 #                     pull request runs (issue #556 returned the determinism cells to pr-gate.yml).
 #   release-gate.yml  nightly, on dispatch, on release PRs and on pushes to `main`: the heavy set,
 #                     whose exact job list is pinned below so that none can be dropped.
-# The three jobs the last two share must be byte-identical in both files.
+# The one job the last two share, std-build-windows, must be byte-identical in both files; the
+# determinism cells and their fan-in must run the same steps in the first and the third.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
