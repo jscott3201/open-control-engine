@@ -99,6 +99,8 @@ fn supported(bytes: &[u8]) -> Result<(), oce_api::OcError> {
     let _ = (frame.time(), frame.sequence(), frame.outputs().count(), frame.diagnostics());
     let _ = engine.get_output("y")?;
     let _ = engine.watch(&["y"])?;
+    let version: oce_api::EngineVersion = oce_api::ENGINE_VERSION;
+    let _: (u16, u16, u16) = (version.major, version.minor, version.patch);
     Ok(())
 }
 """

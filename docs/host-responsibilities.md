@@ -252,9 +252,15 @@ stateful block. The decoder enforces a 64 MiB limit, validates canonical orderin
 self-consistency, and checks an integrity trailer. Capture runs this same bounded decoder before
 returning a successful artifact. Format and execution ABI are revision 1 and stay 1 until 1.0.0;
 the header also names the engine version that wrote the snapshot, and only that version restores
-it, so plan a version upgrade as a cold start or a restart on the prior qualified build. Two
-builds of one version are not told apart: the sealed envelope is still what binds bytes to the
-model, the build and the deployment that wrote them
+it, so plan a version upgrade as a cold start or a restart on the prior qualified build. To key
+stored snapshots and compiled-schedule blobs by that version, record the `major`, `minor` and
+`patch` fields of `oce_api::ENGINE_VERSION` in the envelope beside each one. `EngineVersion` has
+no `Display`, `Hash`, `Ord` or serde implementation, so the host spells out the three numbers
+itself. They are the value both headers carry and the `expected` of an `EngineVersionMismatch`, so
+before decoding the host can tell which stored bytes this build will refuse by version. A
+matching version predicts only that check: the trailer, the fingerprint and the restore checks
+can still refuse the bytes. Two builds of one version are not told apart: the sealed envelope is
+still what binds bytes to the model, the build and the deployment that wrote them
 ([wire revision](state-compatibility.md#wire-revision-and-integrity)).
 Class-specific block-state invariants are checked during restore, when a target engine is available.
 The trailer detects accidental corruption; it is not an authenticity or freshness proof. Protect

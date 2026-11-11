@@ -25,6 +25,18 @@ the [product contract](product-contract.md) and pre-1.0 change control still app
 - **Host build identity** remains consumer-owned and includes the host's source/build/features
   qualifications; catalog metadata alone cannot establish it. The compatibility descriptor's OCE
   package version is only a public build fact, not a unique build identity.
+- **Engine version** is `oce_api::ENGINE_VERSION`, an `EngineVersion` holding the major, minor and
+  patch of the workspace version; a pre-release or build suffix is dropped (issue #536). Every
+  compiled-schedule blob and state snapshot this build writes carries it in its header. Each
+  decoder accepts only this value, and `EngineVersionMismatch` names it as `expected`
+  ([state contract](state-compatibility.md#wire-revision-and-integrity),
+  [blob refusals](compiled-schedule-blob.md#which-refusal-wins)). Recorded beside stored bytes, it
+  tells which of them this build will refuse by version. A match predicts only that check: the
+  integrity, fingerprint and restore checks still apply. `EngineVersion` has no `Display`, `Hash`,
+  `Ord` or serde, so a host keys by its three fields. It is a release version, not a host build
+  identity. It is also not the
+  descriptor's `oce-api-version`, which keeps the suffix. The facade-contract check compiles a
+  host-side use of it from `oce-api` alone.
 - **Canonical content identity** is `ContentId` (`oce:canon1:` and a SHA-256 digest), minted only
   by `Engine::content_id` over the loaded flat graph (GitHub #470, [design
   note](design/content-id.md)). It is distinct from `CatalogContentId`, authored `DomainKey`,
