@@ -22,6 +22,7 @@ use crate::scope_chain::ScopeFrame;
 
 use super::super::composite_rules::CONTAINS_CYCLE;
 use super::super::declaration_scope::{Pass, evaluate_declarations};
+use super::super::parameter_attrs::CheckedParameters;
 use super::super::specialize::Specialization;
 use super::is_runtime_composite;
 
@@ -36,6 +37,8 @@ pub(super) struct Containment<'a, 'd> {
     by_id: &'a HashMap<&'a str, &'a Node>,
     specialization: &'a Specialization,
     diags: &'d mut Vec<Diagnostic>,
+    /// The parameter nodes already shape-checked in this resolve (issue #559).
+    checked: &'d mut CheckedParameters,
     /// O(1) membership for the current traversal spine (cycle detection).
     stack: HashSet<String>,
     /// The traversal spine in path order, so a detected cycle names every participant.
@@ -56,11 +59,13 @@ impl<'a, 'd> Containment<'a, 'd> {
         by_id: &'a HashMap<&'a str, &'a Node>,
         specialization: &'a Specialization,
         diags: &'d mut Vec<Diagnostic>,
+        checked: &'d mut CheckedParameters,
     ) -> Self {
         Self {
             by_id,
             specialization,
             diags,
+            checked,
             stack: HashSet::new(),
             path: Vec::new(),
             reached: HashSet::new(),
@@ -132,6 +137,7 @@ impl<'a, 'd> Containment<'a, 'd> {
             Pass::Lowering {
                 specialization: self.specialization,
                 diags: self.diags,
+                checked: self.checked,
             },
         )
         .scope;

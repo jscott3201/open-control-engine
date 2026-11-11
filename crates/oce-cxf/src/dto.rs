@@ -150,10 +150,15 @@ pub struct Node {
         skip_serializing_if = "Option::is_none"
     )]
     pub value: Option<CxfValue>,
-    /// `S231:min` — lower-bound binding.
+    /// `S231:min` — lower-bound binding. On a connector the resolver grounds it onto
+    /// `Connector.attrs`; on a parameter it is never used, but its shape is checked where the
+    /// parameter is read (one number, typed literal or expression string; a list, a boolean, a
+    /// blank string or a typed literal with a blank `@value` is refused as `malformed-document`,
+    /// issue #559). An object that is no typed literal matches no arm and fails
+    /// [`crate::parse_document`].
     #[serde(rename = "S231:min", default, skip_serializing_if = "Option::is_none")]
     pub min: Option<CxfValue>,
-    /// `S231:max` — upper-bound binding.
+    /// `S231:max` — upper-bound binding; read like [`Node::min`].
     #[serde(rename = "S231:max", default, skip_serializing_if = "Option::is_none")]
     pub max: Option<CxfValue>,
     /// `S231:nominal` — the §7.4.1 tolerance-scaling nominal of a Real connector or variable.
@@ -172,7 +177,9 @@ pub struct Node {
     /// bare string `"K"`, typed literal `{"@value":"K","@type":…}`, or the IRI node
     /// `CXF-Core.jsonld` ranges it over, `{"@id":"unit:K"}` (sh:class qudt:Unit) — rather than a
     /// bare `String` that would hard-fail the whole document on the non-string forms. Previously
-    /// fell through `other`, defeating unit unification on CXF.
+    /// fell through `other`, defeating unit unification on CXF. On a parameter node it, `quantity`
+    /// and `displayUnit` are never used, but the resolver refuses the [`TermAttr::Other`] arm there
+    /// as it does on a connector, and a blank term (issue #559).
     #[serde(rename = "S231:unit", default, skip_serializing_if = "Option::is_none")]
     pub unit: Option<TermAttr>,
     /// `S231:quantity` — the physical quantity kind (§7.4.1), e.g. `"ThermodynamicTemperature"` or

@@ -24,8 +24,8 @@ use crate::validate::catalog::{is_template, lookup_class};
 use super::error::{ImportError, ImportErrorKind as Kind, SourceForm};
 use super::nodes::{
     DataType, Names, NodeKind, OBC_PACKAGE, PARAMETER_ATTRIBUTES, RETIRED_S231_IRI, S231_IRI,
-    check_keys, check_parameter_type, connector_type, data_type, declared_type, references, refuse,
-    sequence_name, spelled, text_attribute,
+    check_keys, check_parameter_attribute, check_parameter_type, connector_type, data_type,
+    declared_type, references, refuse, sequence_name, spelled, text_attribute,
 };
 use super::precedence::{self, Graph};
 use super::report::{Dropped, DroppedProperty, ImportOptions, ImportReport, Imported, Normalised};
@@ -336,8 +336,13 @@ impl<'a> Reader<'a> {
         }
     }
 
-    /// Drop and report a parameter node's descriptive attributes (decision 9).
-    fn parameter_attributes(&mut self, iri: &str, node: &Map<String, Value>) {
+    /// Check the shape of a parameter node's descriptive attributes, then drop and report them
+    /// (decision 9; the shape check is GitHub issue #559).
+    fn parameter_attributes(
+        &mut self,
+        iri: &str,
+        node: &Map<String, Value>,
+    ) -> Result<(), ImportError> {
         let properties = [
             DroppedProperty::Unit,
             DroppedProperty::Quantity,
@@ -347,9 +352,11 @@ impl<'a> Reader<'a> {
         ];
         for (key, property) in PARAMETER_ATTRIBUTES.iter().zip(properties) {
             if let Some(value) = node.get(*key) {
+                check_parameter_attribute(iri, key, value)?;
                 self.drop(iri, property, value);
             }
         }
+        Ok(())
     }
 
     fn sequence_parameter(
@@ -387,7 +394,7 @@ impl<'a> Reader<'a> {
         })?;
         let literal = values::sequence_literal(iri, &value_type, package, value)?;
         self.label(iri, node, local)?;
-        self.parameter_attributes(iri, node);
+        self.parameter_attributes(iri, node)?;
         Ok(SequenceParameter::new(
             Identifier::unchecked(local),
             value_type,
@@ -507,7 +514,7 @@ impl<'a> Reader<'a> {
         let read = read_assignments(iri, node, class_path, local, params)?;
         values::check_value_shapes(iri, node, &read)?;
         self.label(iri, node, local)?;
-        self.parameter_attributes(iri, node);
+        self.parameter_attributes(iri, node)?;
         Ok(read)
     }
 }

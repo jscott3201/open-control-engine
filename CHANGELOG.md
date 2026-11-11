@@ -367,6 +367,35 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### CXF import and export
 
+- **A parameter's `min`, `max`, `unit`, `quantity` and `displayUnit` are shape-checked on both
+  readers** (GitHub #594, issue #559; owner rulings of 2026-11-11). Nothing read them on a
+  parameter, so a malformed one loaded in the engine and imported through `oce-author` unjudged:
+  `"S231:max": ["30", "…#double"]`, the list of a typed literal's values, among them. Their values
+  are still not used for control. The engine (`oce-cxf`) now checks them where a parameter is read
+  (a leaf's `hasParameter`, `hasConstant` and classified `hasInstance` parameter members, and every
+  declaration of an active composite in the lowering pass), once per parameter node however often
+  it is read. A bound is one number, typed literal or string, the last the expression form
+  modelica-json writes for a bound over other parameters (`"yMin"`, `"100*1e-15"`); a term is a
+  string, typed literal or IRI node, as on a connector; and no string among them (the attribute, a
+  typed literal's `@value`, an IRI node's `@id`) may be empty or whitespace-only. A list, boolean
+  or blank bound, a typed literal with a blank `@value`, and every malformed term are refused as
+  `malformed-document`, subject the parameter; JSON `null` reads as absent, and a pruned or
+  unreferenced parameter is not checked. A bound that is an object but no typed literal (`{}`,
+  `{"@id": …}`, `{"@value": "30"}`, `{"@list": …}`), or a list holding one, gets no such
+  diagnostic: it matches no shape the document reader knows, so the whole document fails to parse
+  (`CxfError::Json`, no code or subject) wherever the parameter is, as it already did. The authoring
+  importer (`oce_author::import_cxf`) checks the same shapes before it drops the attributes, in its
+  own strict reading (a typed literal is exactly `@value` and `@type`, an IRI node exactly `@id`,
+  and `null` is refused), with `wrong-shape` naming the key; the `DROPPED_ATTRIBUTES` exception of
+  its closed-shapes sweep is gone, so a list at those positions is held like a list anywhere else.
+  The importer note tabulates where the two readers differ. **Breaking, in place:** a document
+  carrying such a shape loaded or imported before. No tracked document does: a probe over every
+  tracked `.jsonld` (vendored translations and `CXF-Core.jsonld` included) and the current
+  library's 142 CXF documents moved no outcome, none carries a blank value in these attributes on
+  any node, and `fixture_corpus_import.txt` is byte-identical. A stricter rule that also refused a
+  string bound would have added a refusal to three vendored translations that are already refused
+  for other reasons (`Limits/Common`, `SetPoints/SupplyFan`, `Generic/TrimAndRespond`, whose bounds
+  are written `"yMin"`, `"minSpe"` and `"100*1e-15"`), so the expression string is a legal shape.
 - **A CDL extension block is refused at load with its own code, `extension-block-unsupported`,
   and the dead `missing-fmu-path` code is removed** (GitHub #582, issue #537). An extension
   block's behaviour is a Functional Mockup Unit (OBC §7.13 and §8.7), and FMI is out of scope

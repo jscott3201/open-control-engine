@@ -40,7 +40,8 @@ validates nor evaluates; names are carried, never repaired, for the validator to
 - **`ImportReport`** lists, in reading order, every `Dropped { subject, property, value }` (closed
   `DroppedProperty`: the CXF root's `@type` when it is not `S231:Block`, an `S231:label` that
   differs from the local name, a parameter's descriptive `unit`, `quantity`, `displayUnit`, `min`
-  and `max` — the engine reads none of them — and a v0 `unit` or `description`), every
+  and `max` — the engine uses none of them, and both readers refuse one of a malformed shape
+  (issue #559) — and a v0 `unit` or `description`), every
   `Normalised` connector (one typed by a constant package, `S231:IntegerInput` with
   `isOfDataType …G36.Types.OperationModes`, read as the Integer the engine reads; importer note,
   decision 21) and every `Truncated` v0 comment line. An emitted document re-imports with an empty

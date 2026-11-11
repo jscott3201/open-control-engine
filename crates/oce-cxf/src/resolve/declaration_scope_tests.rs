@@ -15,6 +15,7 @@ use crate::dto::Node;
 use crate::scope_chain::ScopeFrame;
 
 use super::declaration_scope::{Pass, evaluate_declarations, identifier_heads};
+use super::parameter_attrs::CheckedParameters;
 use super::specialize::Specialization;
 
 fn node(json: serde_json::Value) -> Node {
@@ -81,6 +82,7 @@ fn evaluate_root(
         Pass::Lowering {
             specialization: &Specialization::default(),
             diags: &mut diags,
+            checked: &mut CheckedParameters::default(),
         },
     );
     assert!(
@@ -163,6 +165,7 @@ fn own_name_masks_enclosing_binding_even_when_the_own_declaration_cannot_ground(
         Pass::Lowering {
             specialization: &Specialization::default(),
             diags: &mut diags,
+            checked: &mut CheckedParameters::default(),
         },
     );
     assert!(
@@ -255,6 +258,7 @@ fn self_reference_refuses_as_a_length_one_cycle_never_reading_the_enclosing_bind
         Pass::Lowering {
             specialization: &Specialization::default(),
             diags: &mut diags,
+            checked: &mut CheckedParameters::default(),
         },
     );
     assert_eq!(diags.len(), 1, "{diags:?}");

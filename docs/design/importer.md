@@ -232,11 +232,30 @@ for a member path) and at validation (`unknown-enum-type`, `unknown-enum-literal
 **Read and dropped, and reported** in `ImportReport.dropped` (closed `DroppedProperty`): the root's
 `@type` (the Modelica class the sequence was translated from); `S231:label` where it differs from the
 node's local name; a parameter's descriptive `unit`, `quantity`, `displayUnit`, `min` and `max`. The
-engine reads none of these on a parameter node: only connector nodes reach
+engine uses none of these on a parameter node: only connector nodes reach
 `oce_cxf::resolve::attrs::connector_attrs`. Carrying parameter bounds would give the author a range
-the engine never enforces (decision 9). In the in-subset corpus, root parameters carry `unit` in 16
-fixtures, `quantity` in 13 and `min`/`max` in 3. The report also lists one **normalisation**: a
-boundary typed by a constant package becomes an Integer boundary (decision 21).
+the engine never enforces (decision 9). Both readers do check their shape before letting them go
+(GitHub #594, issue #559; owner rulings of 2026-11-11): a bound is a JSON number, a typed literal
+or a string (an expression, as modelica-json writes `"yMin"`), a term is a string, a typed literal
+or an IRI node, and no string among them (the attribute, a typed literal's `@value`, an IRI node's
+`@id`) is empty or whitespace-only. Anything else is refused: `wrong-shape` naming the key here,
+`malformed-document` subject the parameter in the engine. In the in-subset corpus, root
+parameters carry `unit` in 16 fixtures, `quantity` in 13 and `min`/`max` in 3. The report also
+lists one **normalisation**: a boundary typed by a constant package becomes an Integer boundary
+(decision 21).
+
+Where the two readers differ on these attributes, each follows a convention it already had. The
+review of GitHub #594 probed for an attribute the importer accepts and the engine refuses and found
+none: in every difference the engine is the more lenient, or both refuse with different codes.
+
+| Input | Engine | Importer |
+| --- | --- | --- |
+| `null` bound or term | absent, as on a connector | `wrong-shape`, as on a boundary |
+| typed literal or IRI-node term with extra keys (`@language`, any other) | accepted: kept for lossless round-trip (R-8) | `wrong-shape`: exact shapes only |
+| object bound that is no typed literal (`{}`, `{"@id": …}`, `{"@value": "30"}`) | the whole document fails to parse (`CxfError::Json`, no code or subject) | `wrong-shape` naming the key |
+| a well-shaped attribute under its full-IRI key | normalised, then checked | `unknown-key`: compact keys only |
+| typed literal carrying `@context` | `non-subset-construct` | `wrong-shape` |
+| integer outside `i64` | read as a float | `not-strict-json` |
 
 **Refused, never guessed** (each a typed kind, see [`ImportError`](#importerror)): every construct in
 the authoring note's out-of-scope list, an expression value, a block-port attribute, `nominal` and
@@ -542,7 +561,9 @@ with an author-side range check (a second semantics the engine does not share, a
 `multizone_vav_relief_damper`; root-parameter `unit` and `quantity` appear in 16 and 13 in-subset
 fixtures, so refusing descriptive parameter attributes would block far more). Why: the engine reads
 no parameter `min`/`max` (verified in review: `connector_attrs` is reached only for connectors and
-boundaries); `ImportReport` makes the drop visible. *(Landed in GitHub #498, 2026-11-09.)*
+boundaries); `ImportReport` makes the drop visible. *(Landed in GitHub #498, 2026-11-09.)* The values
+stay unused, but a malformed shape is refused on both readers (GitHub #594, issue #559; owner ruling
+of 2026-11-11), so a list in place of a typed literal no longer imports.
 
 **10. Library constants are members.** `{"member": "OperationModes.occupied"}` covers enumeration
 members and Integer constants, resolved by the type name. Rejected: importing the ground Integer (the
@@ -650,8 +671,8 @@ The [review comment on GitHub #484](https://github.com/jscott3201/open-control-e
 3. **#468 widened** to one data table (4 CDL enumerations, 10 G36 enumerations, 4 G36 constant
    packages) replacing the hand-written `match` arms, rows marked enumeration or constant package,
    one class-path form relative to `Buildings.Controls.OBC.`; it lands before the model PR.
-4. **Sequence-parameter `min`/`max`:** dropped and listed in the `ImportReport`; the engine reads no
-   parameter bounds at load.
+4. **Sequence-parameter `min`/`max`:** dropped and listed in the `ImportReport`; the engine uses no
+   parameter bound at load and checks only its shape (issue #559).
 5. **Bounds on the wire** as a 0- or 1-item list: accepted; the reader refuses a second item and the
    schema `description` says so.
 6. **`ImportErrorKind`:** `#[non_exhaustive]` per crate policy, with the code list pinned by a test.
