@@ -249,7 +249,7 @@ fn each_defect_alone_earns_its_own_refusal() {
 fn of_every_two_defects_the_earlier_check_wins() {
     // Every pair, so every two adjacent checks among them. Two pairs cannot occur: an input is not
     // both larger than the limit and shorter than a header, and one shorter than a header and a
-    // trailer has no byte where the first section id would be.
+    // trailer holds only three of the four bytes of the first section id.
     let valid = golden(WORKED);
     for (index, &earlier) in REFUSAL_ORDER.iter().enumerate() {
         for &later in &REFUSAL_ORDER[index + 1..] {

@@ -312,11 +312,12 @@ is not recorded, so `0.5.0-rc.1` and `0.5.0` write and accept the same bytes), a
 refuses any other with `EngineVersionMismatch`, on `BlobError` and on `EngineStateError`. Both
 decoders make that check straight after the format revision (the blob reads its profile, and the
 snapshot its execution-state ABI revision, on the way without checking it) and check nothing
-further in another version's bytes, so a foreign artefact reports its version
-before any length or integrity fault (issue #535; [which refusal
-wins](../docs/compiled-schedule-blob.md#which-refusal-wins)); the snapshot's fingerprint and
-trailer both cover the field, as the blob's CRC does. `state_contract_revision` and the `oce:canon1:` tag stay at 1 like every other revision, so
-the engine version separates their meanings too. So the first PR after a
+further in another version's bytes, so a foreign artefact reports its version before any length
+or integrity fault (issue #535;
+[which refusal wins](../docs/compiled-schedule-blob.md#which-refusal-wins)). The snapshot's
+fingerprint and trailer both cover the field, as the blob's CRC does. `state_contract_revision`
+and the `oce:canon1:` tag stay at 1 like every other revision, so the engine version separates
+their meanings too. So the first PR after a
 release tag that changes a format's bytes or meaning does three things: it bumps
 `workspace.package.version` on `development` to the next milestone's version, if it is not bumped
 already; it re-blesses; and it includes a test that an artefact of the previous layout is refused
