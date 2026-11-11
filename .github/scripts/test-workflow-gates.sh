@@ -20,8 +20,9 @@
 # the heavy job set. The controls fail when a release cell or a comparison leaves pr-gate.yml,
 # when the Windows cell leaves the merge gate or any other job enters it, when a heavy job leaves
 # the release gate (with or without its `needs:` entry), when either workflow's events or branches
-# change, when the Windows job differs between the two files that run it, and when the gate
-# script loses a workspace-suite command the release gate now runs only through it. A job that
+# change, when the Windows job differs between the two files that run it, when the gate
+# script loses a workspace-suite command the release gate now runs only through it, and when the
+# no-secret scan's fixtures (issue #524) leave the fixtures job of either file. A job that
 # runs the oce-cxf or the workspace suite without first prefetching the tool workspaces its tests
 # build offline (issue #610), in any spelling of the command, the prefetch missing, late, masked,
 # commented out or in another job, and a gate script without it, fail; a Windows job, an archived
@@ -138,6 +139,7 @@ jobs:
     steps:
       - run: bash .github/scripts/test-check-default-no-db.sh
       - run: bash .github/scripts/test-check-golden-gen-anti-tautology.sh
+      - run: bash .github/scripts/test-check-no-secrets.sh
       - run: bash .github/scripts/test-check-stale-crate-status.sh
       - run: bash .github/scripts/check-stale-crate-status.sh
       - run: bash .github/scripts/check-workflow-gates.sh
@@ -420,6 +422,7 @@ jobs:
     steps:
       - run: bash .github/scripts/test-check-default-no-db.sh
       - run: bash .github/scripts/test-check-golden-gen-anti-tautology.sh
+      - run: bash .github/scripts/test-check-no-secrets.sh
       - run: bash .github/scripts/test-check-stale-crate-status.sh
       - run: bash .github/scripts/check-stale-crate-status.sh
   golden-gen-firewall:
@@ -1162,6 +1165,45 @@ drop_wasmtime_installer_fixtures() {
 # A required command that survives only in a comment is not run.
 required_command_only_in_a_comment() {
   edit_pr_gate "$1" 's/^      - run: bash scripts\/ci\/test-proof-row.sh$/      # - run: bash scripts\/ci\/test-proof-row.sh/'
+}
+
+# The no-secret scan's fixtures (issue #524) run in the fixtures job of both files, as the line
+# itself: not deleted, commented out, moved to another job, given an argument, masked, or replaced
+# by a script of the same name somewhere else.
+no_secret_fixture_line='^      - run: bash \.github\/scripts\/test-check-no-secrets\.sh$'
+no_secret_fixtures_dropped() {
+  edit_pr_gate "$1" "/$no_secret_fixture_line/d"
+}
+
+release_gate_no_secret_fixtures_dropped() {
+  edit_release_gate "$1" "/$no_secret_fixture_line/d"
+}
+
+no_secret_fixtures_only_in_a_comment() {
+  edit_pr_gate "$1" "s/$no_secret_fixture_line/      # - run: bash .github\/scripts\/test-check-no-secrets.sh/"
+}
+
+# Still in the file, in the always-on no-secret job, so a whole-file pattern would be satisfied.
+no_secret_fixtures_in_another_job() {
+  edit_pr_gate "$1" -e "/$no_secret_fixture_line/d" \
+    -e 's/^      - run: bash \.github\/scripts\/check-no-secrets\.sh$/&\n      - run: bash .github\/scripts\/test-check-no-secrets.sh/'
+}
+
+release_gate_no_secret_fixtures_in_another_job() {
+  edit_release_gate "$1" -e "/$no_secret_fixture_line/d" \
+    -e 's/^      - run: bash \.github\/scripts\/check-no-secrets\.sh$/&\n      - run: bash .github\/scripts\/test-check-no-secrets.sh/'
+}
+
+no_secret_fixtures_with_a_trailing_argument() {
+  edit_pr_gate "$1" "s/$no_secret_fixture_line/      - run: bash .github\/scripts\/test-check-no-secrets.sh --help/"
+}
+
+release_gate_no_secret_fixtures_masked() {
+  edit_release_gate "$1" "s/$no_secret_fixture_line/      - run: bash .github\/scripts\/test-check-no-secrets.sh || true/"
+}
+
+no_secret_fixtures_from_another_directory() {
+  edit_pr_gate "$1" "s/$no_secret_fixture_line/      - run: bash scripts\/ci\/test-check-no-secrets.sh/"
 }
 
 # An event filter beside `branches:` lets the event skip commits the branch list says it runs on,
@@ -2824,6 +2866,22 @@ run_case wasmtime-installer-fixtures-dropped fail drop_wasmtime_installer_fixtur
   "pr-gate.yml job gate-fixtures is missing required gate pattern: run the wasmtime installer destination fixtures on every PR"
 run_case required-command-only-in-a-comment fail required_command_only_in_a_comment \
   "pr-gate.yml job gate-fixtures is missing required gate pattern: run the local proof-row fixtures on every PR"
+run_case no-secret-fixtures-dropped fail no_secret_fixtures_dropped \
+  "pr-gate.yml job gate-fixtures is missing required gate pattern: run the no-secret scan fixtures on every PR"
+run_case no-secret-fixtures-only-in-a-comment fail no_secret_fixtures_only_in_a_comment \
+  "pr-gate.yml job gate-fixtures is missing required gate pattern: run the no-secret scan fixtures on every PR"
+run_case no-secret-fixtures-in-another-job fail no_secret_fixtures_in_another_job \
+  "pr-gate.yml job gate-fixtures is missing required gate pattern: run the no-secret scan fixtures on every PR"
+run_case no-secret-fixtures-with-a-trailing-argument fail no_secret_fixtures_with_a_trailing_argument \
+  "pr-gate.yml job gate-fixtures is missing required gate pattern: run the no-secret scan fixtures on every PR"
+run_case no-secret-fixtures-from-another-directory fail no_secret_fixtures_from_another_directory \
+  "pr-gate.yml job gate-fixtures is missing required gate pattern: run the no-secret scan fixtures on every PR"
+run_case release-gate-no-secret-fixtures-dropped fail release_gate_no_secret_fixtures_dropped \
+  "release-gate.yml job gate-fixtures is missing required gate pattern: release gate runs the no-secret scan fixtures"
+run_case release-gate-no-secret-fixtures-in-another-job fail release_gate_no_secret_fixtures_in_another_job \
+  "release-gate.yml job gate-fixtures is missing required gate pattern: release gate runs the no-secret scan fixtures"
+run_case release-gate-no-secret-fixtures-masked fail release_gate_no_secret_fixtures_masked \
+  "release-gate.yml job gate-fixtures is missing required gate pattern: release gate runs the no-secret scan fixtures"
 run_case merge-gate-push-with-a-paths-filter fail merge_gate_push_with_a_paths_filter \
   "merge-gate.yml push trigger carries a filter other than branches: (got: branches paths )"
 run_case merge-gate-push-with-paths-ignore fail merge_gate_push_with_paths_ignore \

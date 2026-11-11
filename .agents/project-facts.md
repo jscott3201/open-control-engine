@@ -596,6 +596,17 @@ be scrubbed from history rather than simply deleted.
 
 Keep absolute paths out of committed files, including scripts and doc examples.
 
+Until issue #524 the private-key pattern matched nothing: it begins with `-----`, so `git grep`
+read it as an option, exited 129, and the scan took that for a clean tree. Each pattern now goes
+after `-e`, and only `git grep`'s "no match" (exit 1) counts as clean: an error fails the scan
+with exit 2, naming the pattern and git's status, with git's own message left on stderr (so the
+scan also fails outside a repository). `.github/scripts/test-check-no-secrets.sh` plants a match
+for every pattern in a scratch repository and requires each to fail under its own label, holds
+its list of labels equal to the scan's, and puts the defect back in four copies of the scan,
+each of which must fail it. Its planted values are assembled at run time from fragments, so the
+fixture file itself holds no match; build any new one the same way. A new pattern needs a planted
+value there, or the fixture fails.
+
 ## Working directories are gitignored
 
 `.gitignore` excludes every top-level `_*/` directory, so `_spec/`, `_research/`,

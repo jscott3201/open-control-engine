@@ -1468,6 +1468,10 @@ require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: python3 script
   'run the CI OK result-check controls on every PR'
 require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/ci/test-leverage-members\.sh$' \
   'run the leverage dependency-rule fixtures on every PR'
+# The no-secret scan's fixtures (issue #524): its private-key pattern matched nothing until they
+# existed, and they are what fails if `-e` leaves its `git grep` again.
+require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash \.github/scripts/test-check-no-secrets\.sh$' \
+  'run the no-secret scan fixtures on every PR'
 require_job_pattern "$ci" 'leverage-lane' '^[[:space:]]*(- )?run: bash scripts/ci/leverage-members\.sh lane$' \
   'run the leverage lane'
 require_job_pattern "$ci" 'facade-contract' '^[[:space:]]*(- )?run: python3 scripts/facade_contract/check\.py$' \
@@ -1607,6 +1611,8 @@ require_pattern "$release" 'check-golden-gen-anti-tautology\.sh' \
 require_pattern "$release" 'test-check-stale-crate-status\.sh' \
   'release gate runs stale crate-status fixture tests'
 require_pattern "$release" 'check-stale-crate-status\.sh' 'release gate runs stale crate-status smoke'
+require_job_pattern "$release" 'gate-fixtures' '^[[:space:]]*(- )?run: bash \.github/scripts/test-check-no-secrets\.sh$' \
+  'release gate runs the no-secret scan fixtures'
 require_job_pattern "$release" 'ci-ok' '^[[:space:]]*if:[[:space:]]*always\(\)' \
   'release gate CI OK aggregate reports on every run'
 require_job_pattern "$release" 'ci-ok' 'toJSON\(needs\)' \

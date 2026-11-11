@@ -1545,6 +1545,29 @@ publishable and eight private. The fixture and Tier-A provenance goldens
   `tools/openmodelica-reliefs-reference/Cargo.lock` also pin rustix 1.1.4, but no workflow
   advisory-checks those workspaces, and each lockfile's SHA-256 is bound into recorded OpenModelica
   evidence that only the manual native-arm64 workflows can regenerate (GitHub issue #604).
+
+- **The no-secret scan catches a tracked private key, and a `git grep` that fails fails the scan**
+  (GitHub #PRNUM, issue #524). `.github/scripts/check-no-secrets.sh` passed its private-key
+  pattern to `git grep` without `-e`; the pattern begins with `-----`, so git read it as an
+  option, printed its usage and exited 129, the scan's `if` took that for "no match", and
+  `>/dev/null 2>&1` hid the message. A tracked private key passed the gate, in CI and in the
+  pre-commit hook, and so did a run outside any repository. Every pattern now follows `-e`; only
+  exit 1 counts as no match, and any status above it fails the scan with exit 2, a line naming
+  the pattern and git's status, and git's own error left on stderr. The patterns themselves are
+  unchanged, and a corrected scan of the tracked tree finds nothing. The new
+  `test-check-no-secrets.sh` runs in scratch repositories: a clean tree (holding copies of the
+  scan and the fixture) passes; each of 19 planted values, every alternative of the eight
+  patterns at the shortest length it accepts, fails under its own label naming the planted file,
+  and passes once removed; the planted labels must equal the scan's; a run outside a repository
+  and a git that exits 129 on the private-key pattern both fail, the second still reporting a
+  planted AWS key; and four copies of the scan with a defect put back (`-e` removed, git's error
+  sent to `/dev/null`, an error read as no match, and the scan as shipped) must each fail a named
+  check. The values are assembled at run time from fragments, so the fixture holds no match. It
+  runs in the `gate behavior fixtures` job of `pr-gate.yml` and `release-gate.yml` and in
+  `.agents/gate.sh`, and `check-workflow-gates.sh` requires it in both jobs as a whole line, with
+  eight hostile fixtures (deleted, commented out, moved to the no-secret job, given an argument,
+  masked, or run from another directory).
+
 - **The workflow checker closes five gaps, and the pin-advance row states its real reason**
   (GitHub #564, issue #555; follow-ups from the reviews of GitHub #547 and #557, and an owner
   rulings of 2026-11-10 and 2026-11-11). No workflow or gate command changed; the `full` proof
