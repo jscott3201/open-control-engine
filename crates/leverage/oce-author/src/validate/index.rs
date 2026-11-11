@@ -1,7 +1,9 @@
 //! Name indexes built once per validation run, so every lookup is logarithmic and a document at
 //! the wire bounds validates in time near-linear in its size (the issue #463 review measured a
-//! quadratic scan at 3.4 s for 30,000 blocks and 60,000 connections). Every index is keyed by
-//! [`Counted`], so the tests of `crate::counted` pin the number of comparisons a run makes.
+//! quadratic scan at 3.4 s for 30,000 blocks and 60,000 connections). Every index here is keyed by
+//! [`Counted`], so the tests of `crate::counted` bound the comparisons these lookups make; that
+//! module's header lists the lookups of stage 1 that are not counted (the catalog's and the fixed
+//! tables', none of which grows with the document).
 
 use std::collections::{BTreeMap, BTreeSet};
 

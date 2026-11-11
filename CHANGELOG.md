@@ -463,22 +463,26 @@ and a gate that accepted any text would restore exactly the false assurance desc
     largest 310 to 473 ms instead of 145 ms: the
     best of several short runs escapes a busy machine and a long run does not, so the ratio
     measured the host.
-  - **What replaces it.** Every ordered index of stage 1 and of the text placement
-    (`SourceMap::apply`) is keyed by a crate-private `Counted` wrapper, which orders as the value
+  - **What replaces it.** Every index stage 1 and the text placement (`SourceMap::apply`) build
+    over the document is keyed by a crate-private `Counted` wrapper, which orders as the value
     it wraps and, in the library's own test build only, counts each comparison on the comparing
     thread; the sort of the findings counts through the same counter. The unit tests of
     `src/counted.rs` hold stage 1 (a clean chain, a chain whose every block is a finding, one
-    block of `n` ports resolved and misnamed, at 1,875 and 30,000) and the text placement (a
+    block of `n` ports resolved, misnamed and with `n` assignments, and `n` referenced sequence
+    parameters, at 1,875 and 30,000) and the text placement (a
     finding per block and one name repeated by every block, at 4,096 and 65,536) to
-    `24 * n * bits(n)` comparisons [measured: at most 16.2], and a control counts the scan per
+    `24 * n * bits(n)` comparisons [measured: at most 19.9], and a control counts the scan per
     lookup the indexes replaced: `n * (n + 1)`, seven times the bound at 1,875 blocks and eighty
     times at 30,000.
   - **Behaviour.** Unchanged: every finding, its order, its subject and its location. The port
     sets and the text subject index now borrow their names where they copied them. The two
     wall-clock ratio tests are removed from `tests/validate_cost.rs` and `tests/text_cost.rs`;
     the tests there that validate a document at the wire bound and at the statement cap stay.
-  - **Not covered.** A lookup that compares names without `Counted` is invisible to the counter.
-    Two follow-ups are filed: stage 2 maps each engine diagnostic by scanning the model, a cost
+  - **Not covered.** A lookup that compares names without `Counted` is invisible to the counter;
+    the ones stage 1 has today (the class index, a class's parameters, the named types,
+    `STAGE_ONE_CODES`, `class_ports`) are bounded by the catalog, not the document. The cost of
+    parsing text is no longer pinned by any test: the removed ratio test timed it with the rest,
+    and the parser compares no counted key (#589). Two more follow-ups are filed: stage 2 maps each engine diagnostic by scanning the model, a cost
     of diagnostics times blocks inside the 8 MiB emission bound (#577), and
     `import_hostile.rs` still asserts a 60 s ceiling on elapsed time (#578).
 

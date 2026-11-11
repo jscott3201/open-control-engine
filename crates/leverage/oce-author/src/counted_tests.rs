@@ -9,9 +9,12 @@
 //! node a little differently does not fail the test; a scan is eighty times over the bound at
 //! the wire bound, so the headroom hides no quadratic lookup.
 //!
-//! What this cannot see: a lookup that compares names without going through
-//! [`Counted`] (a plain `==` over the declarations). Every ordered index of stage 1 and of the
-//! text placement is keyed by it; a new lookup must be too.
+//! What this cannot see: a lookup that compares names without going through [`Counted`] (a plain
+//! `==` over the declarations), and the lookups the header of `counted.rs` lists, which are
+//! bounded by the catalog. Nor does it pin the cost of parsing: the text cases run the parser, but
+//! the parser compares no key, so only stage 1 and the placement are counted there (issue #589).
+//! Every index stage 1 and the text placement build over the document is keyed by [`Counted`]; a
+//! new lookup must be too.
 
 use std::cell::Cell;
 use std::cmp::Ordering;
@@ -19,7 +22,8 @@ use std::cmp::Ordering;
 use super::Counted;
 use crate::identifier::Identifier;
 use crate::model::{
-    Assignment, Block, Boundary, Connection, Endpoint, Literal, Sequence, SignalType,
+    Assignment, Block, Boundary, Connection, Endpoint, Literal, ParamValue, Sequence,
+    SequenceParameter, SignalType,
 };
 use crate::text::validate_text_author_side;
 use crate::validate::{
@@ -40,8 +44,9 @@ fn comparisons<R>(run: impl FnOnce() -> R) -> (u64, R) {
 }
 
 /// The most comparisons a document of `statements` statements may cost: twenty-four for
-/// each statement and each bit of the statement count [measured: at most 16.2 for stage 1 and 8.6
-/// for text placement, over the shapes below].
+/// each statement and each bit of the statement count [measured: at most 19.9 for stage 1, on the
+/// block of `n` ports and `n` assignments at 30,000, and 8.6 for text placement, over the shapes
+/// below].
 fn bound(statements: usize) -> u64 {
     let bits = u64::from(usize::BITS - statements.leading_zeros());
     24 * u64::try_from(statements).expect("fits") * bits
@@ -104,6 +109,39 @@ fn fan_in(n: usize, misnamed: bool) -> Sequence {
         Endpoint::parse("sum.y"),
         Endpoint::parse("y"),
     ));
+    s
+}
+
+/// [`fan_in`] with the gain of every input assigned too (`k_1` to `k_n`): one block of `n` ports
+/// and `n + 1` assignments.
+fn weighted_fan_in(n: usize) -> Sequence {
+    let mut s = fan_in(n, false);
+    for i in 0..n {
+        s.blocks[0].assignments.push(Assignment::new(
+            id(&format!("k_{}", i + 1)),
+            Literal::Real(1.0),
+        ));
+    }
+    s
+}
+
+/// `n` Real sequence parameters, each referenced by the gain of a block of its own: `n`
+/// parameters, `n` blocks and no connection.
+fn referenced_parameters(n: usize) -> Sequence {
+    let mut s = Sequence::new(id("gains"));
+    for i in 0..n {
+        s.params.push(SequenceParameter::new(
+            id(&format!("p{i}")),
+            SignalType::Real,
+            Literal::Real(1.0),
+        ));
+        let mut gain = Block::new(id(&format!("g{i}")), "CDL.Reals.MultiplyByParameter");
+        gain.assignments.push(Assignment::new(
+            id("k"),
+            ParamValue::Ref(id(&format!("p{i}"))),
+        ));
+        s.blocks.push(gain);
+    }
     s
 }
 
@@ -206,6 +244,20 @@ fn stage_one_compares_names_near_linearly_in_the_document() {
         assert!(wide <= bound(n), "{n} ports: {wide} comparisons");
         let misnamed = stage_one(&fan_in(n, true), n, UNKNOWN_PORT);
         assert!(misnamed <= bound(n), "{n} ports: {misnamed} comparisons");
+        // The same block with a gain assigned for every port: the block's own assignment sets
+        // take the further lookups [377,750 and 8,911,022].
+        let weighted = stage_one(&weighted_fan_in(n), 0, "");
+        assert!(
+            weighted <= bound(n),
+            "{n} assignments: {weighted} comparisons"
+        );
+        // `n` sequence parameters, each referenced once: the parameter index takes the lookups
+        // [237,594 and 5,525,091].
+        let referenced = stage_one(&referenced_parameters(n), 0, "");
+        assert!(
+            referenced <= bound(n),
+            "{n} parameters: {referenced} comparisons"
+        );
     }
 }
 
@@ -256,6 +308,4 @@ fn a_scan_per_lookup_breaks_the_bound_the_indexes_keep() {
         2 * index_double <= 5 * index_small,
         "{index_small} then {index_double}"
     );
-    // At the wire bound a scan would make 900,030,000 comparisons, eighty times the bound.
-    assert!(30_000 * 30_001 > 80 * bound(30_000));
 }
