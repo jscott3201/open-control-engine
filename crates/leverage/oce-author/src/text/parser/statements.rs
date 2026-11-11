@@ -112,6 +112,7 @@ impl Parser<'_> {
         };
         let mut param = SequenceParameter::new(name, value_type, literal);
         param.suffix = value.suffix;
+        param.scaled_from = value.scaled_from;
         param.annotations = annotations;
         if let Some(comment) = self.end_statement()? {
             param.annotations.comments.push(comment);

@@ -2,8 +2,9 @@
 # the typed authoring model, a builder, the strict-JSON wire form with its pinned schema, the
 # two-stage validator, the CXF emitter (issue #464), the text form (issue #482) and the importer
 # for library CXF and the prototype's v0 graph JSON (issue #496). It depends on `oce-api` only
-# among the engine crates (crates/leverage/README.md); `oce-bless` is its one other `oce-*` edge,
-# as a dev-dependency for the golden switch (decision 19).
+# among the engine crates (crates/leverage/README.md), and on the leverage crate `oce-vocab` for
+# unit suffixes (issue #501); `oce-bless` is its one other `oce-*` edge, as a dev-dependency for
+# the golden switch (decision 19).
 [package]
 name = "oce-author"
 description = "Authoring model, text form, strict-JSON wire form, pinned JSON Schema, two-stage validator, CXF emitter and importer for Open Control Engine sequences."
@@ -25,6 +26,10 @@ workspace = true
 
 [dependencies]
 oce-api = { workspace = true }
+# The unit scale-factor table and each parameter's declared unit, which the text form scales a
+# time suffix by and stage 1 checks a suffix against (vocabulary note decision 14, issue #501).
+# A leverage crate; it depends on `oce-api` only.
+oce-vocab = { path = "../oce-vocab" }
 # The wire DTOs (decision 8). The workspace entries pin serde without default features for the
 # `no_std` core, so this crate names `std` itself.
 serde = { workspace = true, features = ["std"] }

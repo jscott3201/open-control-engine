@@ -257,6 +257,7 @@ version = "0.5.0"
 dependencies = [
  "oce-api",
  "oce-bless",
+ "oce-vocab",
  "schemars",
  "serde",
  "serde_json",

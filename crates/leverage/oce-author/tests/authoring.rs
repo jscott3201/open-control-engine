@@ -60,6 +60,7 @@ mod text_print;
 mod text_refusals;
 mod text_round_trip;
 mod text_spans;
+mod unit_suffixes;
 mod validate_cost;
 mod wire_closed_shapes;
 mod wire_refusals;

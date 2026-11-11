@@ -16,9 +16,14 @@
 //! Some lookups of stage 1 do not go through it and are not counted. Each is bounded by the
 //! catalog or by a fixed table, not by the document: the class index and the scan of one class's
 //! parameters (`validate::catalog`), the scan of the named types (`validate::members`), the
-//! membership test against `STAGE_ONE_CODES`, and whatever `oce_api::class_ports` does to resolve
-//! one block. The removal of adjacent equal findings after the sort compares each neighbouring
-//! pair once with `==`, which is linear and not counted either. A lookup over the document that
+//! membership test against `STAGE_ONE_CODES`, whatever `oce_api::class_ports` does to resolve
+//! one block, and a unit suffix's checks (`validate::suffixes`, issue #501): the declared-unit
+//! index over the embedded vocabulary, keyed by catalog class path and parameter name, the scan
+//! of the three-row `oce_vocab::SCALE_FACTORS` and of `BASE_UNIT_SYMBOLS`, and the agreement of
+//! one assignment's suffix, written number and value, each a lookup per suffixed assignment
+//! bounded by the catalog or a fixed table and a suffix of at most 256 bytes (the agreement
+//! checks the length first). The removal of adjacent equal findings after the sort compares each
+//! neighbouring pair once with `==`, which is linear and not counted either. A lookup over the document that
 //! compares names with a plain `==` would be invisible in the same way, so a new one is keyed by
 //! [`Counted`].
 

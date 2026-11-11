@@ -102,7 +102,7 @@ fn every_value_the_lexer_cannot_read_back_is_refused_by_subject() {
         (
             |s| s.params[0].suffix = Some("h".to_owned()),
             "dTHys",
-            "vocabulary v1",
+            "has no written number",
         ),
         (
             |s| s.params[0].value = Literal::Real(f64::NAN),

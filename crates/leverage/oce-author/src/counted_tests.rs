@@ -27,7 +27,8 @@ use crate::model::{
 };
 use crate::text::validate_text_author_side;
 use crate::validate::{
-    CLASS_NOT_FOUND, DUPLICATE_NAME, Finding, UNKNOWN_PORT, validate_author_side,
+    CLASS_NOT_FOUND, DUPLICATE_NAME, Finding, UNIT_SUFFIX_MISMATCH, UNKNOWN_PORT,
+    validate_author_side,
 };
 
 thread_local! {
@@ -121,6 +122,22 @@ fn weighted_fan_in(n: usize) -> Sequence {
             id(&format!("k_{}", i + 1)),
             Literal::Real(1.0),
         ));
+    }
+    s
+}
+
+/// [`chain`] of `CDL.Logical.TrueDelay` between Boolean boundaries, every `delayTime` carrying the
+/// value `base`, the unit suffix `suffix` and the written number `written` (issue #501): `n`
+/// blocks, `n` suffixed assignments and `n + 1` connections.
+fn suffixed_chain(n: usize, base: f64, suffix: &str, written: Option<Literal>) -> Sequence {
+    let mut s = chain(n, "CDL.Logical.TrueDelay");
+    s.inputs[0] = Boundary::new(id("u"), SignalType::Boolean);
+    s.outputs[0] = Boundary::new(id("y"), SignalType::Boolean);
+    for block in &mut s.blocks {
+        let mut delay_time = Assignment::new(id("delayTime"), Literal::Real(base));
+        delay_time.suffix = Some(suffix.to_owned());
+        delay_time.scaled_from.clone_from(&written);
+        block.assignments.push(delay_time);
     }
     s
 }
@@ -257,6 +274,34 @@ fn stage_one_compares_names_near_linearly_in_the_document() {
         assert!(
             referenced <= bound(n),
             "{n} parameters: {referenced} comparisons"
+        );
+        // A suffix on every block's `delayTime` (issue #501): the agreement check and the
+        // declared-unit lookup are per assignment and bounded by the catalog, so they add no
+        // counted comparison. Scaled suffixes that fit cost what the clean chain costs [259,363
+        // and 6,061,407]; base suffixes that do not fit, and scaled suffixes whose value
+        // disagrees, are one finding per block [191,971 and 4,457,992 each].
+        let scaled = stage_one(
+            &suffixed_chain(n, 3_600.0, "h", Some(Literal::Integer(1))),
+            0,
+            "",
+        );
+        assert!(
+            scaled <= bound(n),
+            "{n} scaled suffixes: {scaled} comparisons"
+        );
+        let mismatched = stage_one(&suffixed_chain(n, 5.0, "K", None), n, UNIT_SUFFIX_MISMATCH);
+        assert!(
+            mismatched <= bound(n),
+            "{n} mismatched suffixes: {mismatched} comparisons"
+        );
+        let disagreeing = stage_one(
+            &suffixed_chain(n, 1.0, "h", Some(Literal::Integer(1))),
+            n,
+            UNIT_SUFFIX_MISMATCH,
+        );
+        assert!(
+            disagreeing <= bound(n),
+            "{n} disagreeing suffixes: {disagreeing} comparisons"
         );
     }
 }
