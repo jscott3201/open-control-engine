@@ -31,6 +31,7 @@ pub use printer::MAX_ONE_LINE_COLUMNS;
 pub use spans::SourceMap;
 pub use spell::PrintError;
 pub use units::BASE_UNIT_SYMBOLS;
+pub(crate) use units::{SuffixKind, check_suffix};
 
 /// Why a text document was refused: one exact `code` from [`PARSE_CODES`], where, and what.
 #[non_exhaustive]

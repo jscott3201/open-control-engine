@@ -87,6 +87,7 @@ fn the_stage_one_code_table_is_the_notes() {
             "parameter-kind-mismatch",
             "parameter-out-of-range",
             "non-finite-parameter",
+            "unit-suffix-mismatch",
             "unknown-enum-literal",
             "unknown-enum-type",
             "unknown-parameter-reference",
@@ -347,6 +348,45 @@ fn non_finite_parameter() {
             pair("non-finite-parameter", "dTHys"),
             pair("non-finite-parameter", "hys.uLow")
         ]
+    );
+}
+
+#[test]
+fn unit_suffix_mismatch() {
+    // A suffix that is not the declared unit (TrueDelay's `delayTime` is in `s`), a scaled one
+    // where none is declared (Hysteresis's `uLow`), and a scaled one on a sequence parameter.
+    let mut s = econ_enable();
+    let mut delay = Block::new(id("del"), "CDL.Logical.TrueDelay");
+    let mut delay_time = oce_author::Assignment::new(id("delayTime"), real(5.0));
+    delay_time.suffix = Some("K".to_owned());
+    delay.assignments.push(delay_time);
+    s.blocks.push(delay);
+    let low = hys(&mut s)
+        .assignments
+        .iter_mut()
+        .find(|a| a.name.as_str() == "uLow")
+        .expect("uLow");
+    low.suffix = Some("min".to_owned());
+    low.scaled_from = Some(Literal::Integer(0));
+    s.params[0].suffix = Some("h".to_owned());
+    s.params[0].scaled_from = Some(Literal::Integer(1));
+    s.params[0].value = Literal::Real(3_600.0);
+    let findings = validate(&s);
+    assert_eq!(
+        codes(&findings),
+        vec![
+            pair("unit-suffix-mismatch", "dTHys"),
+            pair("unit-suffix-mismatch", "hys.uLow"),
+            pair("unit-suffix-mismatch", "del.delayTime"),
+        ]
+    );
+    assert!(findings.iter().all(|f| f.origin == Origin::Author));
+    // The block reading the broken `dTHys` is withheld, not reported twice: `hys.uHigh` has no
+    // finding of its own.
+    assert!(
+        findings[2].detail.contains("declared in `s`"),
+        "{}",
+        findings[2]
     );
 }
 

@@ -841,6 +841,11 @@ exit: 0
       "stage": 1
     },
     {
+      "code": "unit-suffix-mismatch",
+      "meaning": "a unit suffix that is not the parameter's declared unit, or a scaled one where none is declared",
+      "stage": 1
+    },
+    {
       "code": "unknown-enum-literal",
       "meaning": "an enumeration member is not a member of the parameter's type",
       "stage": 1
@@ -1004,7 +1009,7 @@ exit: 0
     },
     {
       "code": "unit-not-base",
-      "meaning": "a unit suffix that is not built from base SI units; the scaled symbols min, h and d are not accepted yet"
+      "meaning": "a unit suffix that is neither built from base SI units nor one of the scaled symbols min, h and d alone"
     },
     {
       "code": "malformed-atom",

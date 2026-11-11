@@ -5,6 +5,11 @@
 //! is kept: an Integer never becomes a Real, and `-0` reads as `0`, as on the wire); a token with a
 //! fraction or an exponent is a [`Literal::Real`]. A leading `+`, a leading zero, `1.`, `.5` and a
 //! letter glued to the digits are refused ([`MALFORMED_NUMBER`]), never normalized.
+//!
+//! Suffixes. A base-unit suffix is kept beside the number as written. A scaled time suffix (`1 h`)
+//! makes the value the base-unit Real ([`super::super::units::scale`]) and keeps the written
+//! number as [`crate::Assignment::scaled_from`]; a scaled value that overflows binary64 is
+//! [`NON_FINITE_NUMBER`], at the number (issue #501).
 
 use oce_api::{PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER};
 
@@ -19,13 +24,15 @@ use super::super::codes::{
     NESTING_TOO_DEEP, NON_FINITE_NUMBER, STRAY_TOKEN, UNCLOSED_BRACKET,
 };
 use super::super::lexer::Tok;
-use super::super::units::check_suffix;
+use super::super::units::{SuffixKind, check_suffix, scale};
 use super::{Parser, room};
 
 /// One scalar value as written.
 pub(super) struct Scalar {
     pub(super) value: ParamValue,
     pub(super) suffix: Option<String>,
+    /// The number as written, when a scaled suffix made `value` its base-unit value.
+    pub(super) scaled_from: Option<Literal>,
     pub(super) at: Location,
     pub(super) annotations: Annotations,
 }
@@ -157,16 +164,17 @@ impl Parser<'_> {
         }
     }
 
-    /// An optional unit suffix after a number (decision 13).
-    fn suffix(&mut self) -> Result<Option<String>, ParseError> {
+    /// An optional unit suffix after a number (decision 13), with its kind.
+    fn suffix(&mut self) -> Result<Option<(String, SuffixKind)>, ParseError> {
         if self.lx.at_value_end() {
             return Ok(None);
         }
         let Some((suffix, at)) = self.lx.raw_run(b"#,)]")? else {
             return Ok(None);
         };
-        check_suffix(&suffix).map_err(|(code, detail)| ParseError::new(code, at, detail))?;
-        Ok(Some(suffix))
+        let kind =
+            check_suffix(&suffix).map_err(|(code, detail)| ParseError::new(code, at, detail))?;
+        Ok(Some((suffix, kind)))
     }
 
     /// A value: `[` starts a list (at list depth `depth`), anything else is one scalar.
@@ -184,11 +192,29 @@ impl Parser<'_> {
         let src = self.lx.src();
         let value = match &token.tok {
             Tok::Number => {
-                let literal = number(token.text(src), token.at)?;
-                let suffix = self.suffix()?;
+                let text = token.text(src);
+                let literal = number(text, token.at)?;
+                let (value, suffix, scaled_from) = match self.suffix()? {
+                    None => (literal, None, None),
+                    Some((suffix, SuffixKind::Base)) => (literal, Some(suffix), None),
+                    Some((suffix, SuffixKind::Scaled(row))) => {
+                        let Some(base) = scale(&literal, row.factor) else {
+                            return Err(ParseError::new(
+                                NON_FINITE_NUMBER,
+                                token.at,
+                                format!(
+                                    "`{text} {suffix}` overflows binary64 once scaled to `{}`",
+                                    row.base
+                                ),
+                            ));
+                        };
+                        (Literal::Real(base), Some(suffix), Some(literal))
+                    }
+                };
                 return Ok(Value::Scalar(Scalar {
-                    value: ParamValue::Literal(literal),
+                    value: ParamValue::Literal(value),
                     suffix,
+                    scaled_from,
                     at: token.at,
                     annotations,
                 }));
@@ -243,6 +269,7 @@ impl Parser<'_> {
         Ok(Value::Scalar(Scalar {
             value,
             suffix: None,
+            scaled_from: None,
             at: token.at,
             annotations,
         }))
@@ -375,6 +402,7 @@ impl Parser<'_> {
         room(block.assignments.len(), at, "assignments in one block")?;
         let mut assignment = Assignment::new(name, scalar.value);
         assignment.suffix = scalar.suffix;
+        assignment.scaled_from = scalar.scaled_from;
         assignment.annotations = scalar.annotations;
         block.assignments.push(assignment);
         self.spans.assignments[index].push(at);

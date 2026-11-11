@@ -2,14 +2,15 @@
 //!
 //! Validation runs in two stages. **Stage 1** ([`Stage::Author`], [`validate_author_side`]) judges
 //! the model against the catalog alone: names, the sequence shape, connection syntax and
-//! endpoints, class and parameter lookup, parameter kinds and catalog rules, references, arity
-//! and port names, duplicates, enumeration types and members, boundary bounds, `SemanticPoint` and
-//! `derived_from` syntax. **Stage 2**
+//! endpoints, class and parameter lookup, parameter kinds and catalog rules, unit suffixes against
+//! declared units (through `oce-vocab`), references, arity and port names, duplicates,
+//! enumeration types and members, boundary bounds, `SemanticPoint` and `derived_from` syntax.
+//! **Stage 2**
 //! ([`Stage::Engine`], the `engine` module) runs only when stage 1 found no error: emit, load in a
 //! throwaway engine and map each engine diagnostic back onto the model, every engine warning
 //! becoming an error finding (decision 14). [`validate()`] runs both stages.
 //!
-//! Every finding carries an exact code string. [`STAGE_ONE_CODES`] lists the twenty-five stage-1 codes;
+//! Every finding carries an exact code string. [`STAGE_ONE_CODES`] lists the twenty-six stage-1 codes;
 //! a code the engine also uses has the engine's [`oce_api::DiagCode`] spelling. The returned list is
 //! sorted by the subject's authored position, then code, then detail, and deduplicated, so it is
 //! a pure function of the model.
@@ -23,6 +24,7 @@ mod index;
 pub(crate) mod members;
 mod names;
 mod semantic;
+mod suffixes;
 
 pub use engine::{DOCUMENT_TOO_LARGE, LOAD_FAILED};
 pub use names::MAX_EXACT_INTEGER;
@@ -67,6 +69,12 @@ mod codes {
     pub const PARAMETER_OUT_OF_RANGE: &str = "parameter-out-of-range";
     /// A Real value is NaN or infinite (the engine's code).
     pub const NON_FINITE_PARAMETER: &str = "non-finite-parameter";
+    /// A text-form unit suffix the parameter it is written on cannot take: one that does not
+    /// reduce to the block parameter's declared unit (`delayTime = 5 K`), a scaled one (`1 h`)
+    /// on a parameter that declares no unit or on a sequence parameter, or one that is no unit
+    /// expression. Author-only: the suffix never reaches the engine (vocabulary note decision
+    /// 14, ruling 6; issue #501).
+    pub const UNIT_SUFFIX_MISMATCH: &str = "unit-suffix-mismatch";
     /// An enumeration member is not a member of the parameter's type (the engine refuses the same
     /// value as `grounding-failed`).
     pub const UNKNOWN_ENUM_LITERAL: &str = "unknown-enum-literal";
@@ -114,6 +122,7 @@ mod codes {
         PARAMETER_KIND_MISMATCH,
         PARAMETER_OUT_OF_RANGE,
         NON_FINITE_PARAMETER,
+        UNIT_SUFFIX_MISMATCH,
         UNKNOWN_ENUM_LITERAL,
         UNKNOWN_ENUM_TYPE,
         UNKNOWN_PARAMETER_REFERENCE,

@@ -439,62 +439,68 @@ fn vocab_lists_the_scale_factor_table_exactly() {
     let text = oce(&["vocab"], b"");
     assert_eq!(text.code, 0);
     assert!(text.stdout_text().contains(
-        "\nscale factors (time only; one symbol is exactly this many base units; not accepted \
-         as a unit suffix yet, the text form refuses them with unit-not-base):\n  \
+        "\nscale factors (time only; one symbol is exactly this many base units; alone as a unit \
+         suffix on a parameter declared in the base unit, it scales the number exactly):\n  \
          min  60 s\n  h    3600 s\n  d    86400 s\n\n"
     ));
 }
 
-/// The table is printed before the text form reads it (issue #501), so the output must not let
-/// a reader think `1 h` can be written today. When the text form accepts a scaled suffix this
-/// test fails at its first assertion: remove the "not accepted yet" wording from the heading
-/// (`commands/vocab.rs`) and from the meaning of `unit-not-base` (`codes.rs`) in that change.
+/// The text form reads the table (issue #501): each symbol alone scales the number exactly on a
+/// parameter declared in its base unit, a scaled symbol inside a compound is still
+/// `unit-not-base`, and the scaled value is what stage 1 and the emitter see. The output names
+/// the symbols where it explains both codes.
 #[test]
-fn vocab_says_the_scaled_suffixes_are_refused_for_as_long_as_they_are() {
+fn vocab_says_how_the_text_form_reads_the_scaled_suffixes() {
     for row in SCALE_FACTORS {
         let written = format!(
-            "sequence s\nderived_from none\nparam p : Real = 1 {}\n",
+            "sequence s\nderived_from none\nout y : Boolean\nblock d = CDL.Logical.TrueDelay(delayTime = 2 {})\nblock c = CDL.Logical.Sources.Constant(k = true)\nc.y -> d.u\nd.y -> y\n",
             row.symbol
         );
-        let refusal = oce_author::parse_text(&written).expect_err("a scaled suffix is refused");
+        let model = oce_author::parse_text(&written).expect("a scaled suffix is read");
+        let assignment = &model.blocks[0].assignments[0];
+        assert_eq!(
+            assignment.value,
+            oce_author::ParamValue::Literal(oce_author::Literal::Real(f64::from(2 * row.factor))),
+            "{}",
+            row.symbol
+        );
+        assert_eq!(assignment.suffix.as_deref(), Some(row.symbol));
+        assert!(oce_author::validate(&model).is_empty(), "{}", row.symbol);
+        let compound = format!(
+            "sequence s\nderived_from none\nparam p : Real = 1 m/{}\n",
+            row.symbol
+        );
+        let refusal = oce_author::parse_text(&compound).expect_err("only alone");
         assert_eq!(refusal.code, "unit-not-base", "{}", row.symbol);
     }
-    // A base unit is accepted, so the refusal above is about the symbol, not the statement.
-    assert!(
-        oce_author::parse_text("sequence s\nderived_from none\nparam p : Real = 1 s\n").is_ok()
-    );
 
-    let text = oce(&["vocab"], b"");
-    let heading = text
-        .stdout_text()
-        .lines()
-        .find(|line| line.starts_with("scale factors"))
-        .expect("the scale-factor heading");
-    assert!(
-        heading.contains("not accepted as a unit suffix yet"),
-        "{heading}"
-    );
-    assert!(heading.contains("unit-not-base"), "{heading}");
-
-    // The JSON says it where it explains the refusal, and the text table says the same.
     let report = oce(&["vocab", "--json"], b"").report();
-    let meaning = report["parse_codes"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|row| row["code"] == "unit-not-base")
-        .expect("the code is listed")["meaning"]
-        .as_str()
-        .unwrap()
-        .to_owned();
+    let meaning = |table: &str, code: &str| {
+        report[table]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["code"] == code)
+            .unwrap_or_else(|| panic!("{code} is listed"))["meaning"]
+            .as_str()
+            .unwrap()
+            .to_owned()
+    };
+    let not_base = meaning("parse_codes", "unit-not-base");
     for row in SCALE_FACTORS {
-        let named = meaning
+        let named = not_base
             .split(|c: char| !c.is_ascii_alphanumeric())
             .any(|word| word == row.symbol);
-        assert!(named, "{meaning}: no {}", row.symbol);
+        assert!(named, "{not_base}: no {}", row.symbol);
     }
-    assert!(meaning.contains("not accepted yet"), "{meaning}");
-    assert!(text.stdout_text().contains(&format!("  {meaning}\n")));
+    assert!(not_base.contains("alone"), "{not_base}");
+    assert!(!not_base.contains("not accepted yet"), "{not_base}");
+    let mismatch = meaning("finding_codes", "unit-suffix-mismatch");
+    assert!(mismatch.contains("declared unit"), "{mismatch}");
+    let run = oce(&["vocab"], b"");
+    let text = run.stdout_text();
+    assert!(text.contains(&format!("  {not_base}\n")));
+    assert!(text.contains(&format!("  {mismatch}\n")));
 }
 
 // --- determinism ---

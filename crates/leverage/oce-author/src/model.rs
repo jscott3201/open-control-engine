@@ -10,8 +10,10 @@
 //! keeps so the text form's `fmt` loses nothing (decision 13). The sequence itself keeps the
 //! comments above its `sequence` line ([`Sequence::annotations`]) and those after its last statement
 //! ([`Sequence::trailing_comments`]); the text form needed both (issue #482). Assignments and
-//! sequence parameters also keep a text-only unit suffix. The wire form and the emitter ignore all
-//! of them; equality is structural and does compare them.
+//! sequence parameters also keep a text-only unit suffix and, when the suffix is a scaled unit
+//! (`1 h`), the number as written ([`Assignment::scaled_from`]); their value is the base-unit
+//! value (issue #501). The wire form and the emitter ignore all of them; equality is structural
+//! and does compare them.
 //!
 //! The model types are `#[non_exhaustive]`: build them through their constructors or
 //! [`crate::SequenceBuilder`], then set the public fields.
@@ -181,6 +183,10 @@ pub struct SequenceParameter {
     pub value: Literal,
     /// The text form's unit suffix on the value (`1 K`), text-only (decision 13).
     pub suffix: Option<String>,
+    /// The number as written before a scaled unit suffix converted it, text-only like
+    /// [`Self::suffix`]: see [`Assignment::scaled_from`]. A sequence parameter declares no unit,
+    /// so stage 1 refuses a scaled suffix on one (`unit-suffix-mismatch`).
+    pub scaled_from: Option<Literal>,
     /// Text-form annotations.
     pub annotations: Annotations,
 }
@@ -195,6 +201,7 @@ impl SequenceParameter {
             value_type: value_type.into(),
             value,
             suffix: None,
+            scaled_from: None,
             annotations: Annotations::default(),
         }
     }
@@ -347,8 +354,17 @@ pub struct Assignment {
     pub name: Identifier,
     /// The value.
     pub value: ParamValue,
-    /// The text form's unit suffix on a literal value (`86400 s`), text-only (decision 13).
+    /// The text form's unit suffix on a literal value (`86400 s`, `1 h`), text-only (decision
+    /// 13).
     pub suffix: Option<String>,
+    /// The number as written before a scaled unit suffix converted it, text-only like
+    /// [`Self::suffix`] (vocabulary note, "Units" and decision 14; issue #501). For
+    /// `delayTime = 1 h` the parser sets [`Self::value`] to the base-unit Real `3600.0`, the
+    /// value the wire form, the emitter and the validator read, `suffix` to `h` and this to the
+    /// Integer `1`, so `fmt` prints `1 h` again. `None` when there is no suffix or the suffix is a
+    /// base unit. The text printer refuses a model in which this, the suffix and the value do not
+    /// agree ([`crate::PrintError::Unspellable`]).
+    pub scaled_from: Option<Literal>,
     /// Text-form annotations.
     pub annotations: Annotations,
 }
@@ -361,6 +377,7 @@ impl Assignment {
             name,
             value: value.into(),
             suffix: None,
+            scaled_from: None,
             annotations: Annotations::default(),
         }
     }

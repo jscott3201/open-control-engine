@@ -525,6 +525,37 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
+- **Time unit suffixes scale from the vocabulary, and a suffix must fit its parameter**
+  (GitHub #PRNUM, issue #501; vocabulary v1, part 3 of 3; [vocabulary note](docs/design/vocabulary.md),
+  "Units", decision 14 and rulings 5 and 6; authoring decision 13 amended).
+  - **Scaled suffixes.** A suffix that is exactly `min`, `h` or `d` (`oce_vocab::SCALE_FACTORS`)
+    scales the number to seconds exactly, with one rounding: an Integer by its exact product, a
+    Real through its shortest round-trip decimal, so `1.1 h` is `3960.0` (multiplying the parsed
+    `f64` gives `3960.0000000000005`) and `9007199254740993 min` is `540431955284459584.0`. The
+    model's value is the base-unit Real, which is all the wire form, the emitter and the engine
+    see; the new text-only `Assignment::scaled_from` and `SequenceParameter::scaled_from` keep
+    the written number beside the suffix, so `fmt` prints `1 h` again and never moves a value. A
+    scaled value past binary64 is `non-finite-number`.
+  - **Still refused** (`unit-not-base`): `degC`/`degF`, `%`, prefixed SI units, any other symbol,
+    and a scaled symbol inside a compound (`m3/h`, `1/h`, `h2`). `1h` stays `malformed-number`.
+  - **`unit-suffix-mismatch`**, a new author-only stage-1 code (`STAGE_ONE_CODES` is
+    twenty-six): a suffix that does not reduce to the block parameter's declared unit from
+    `oce-vocab`, spelled alike (`delayTime = 5 K`, `delayTime = 1 Hz`), and a scaled suffix on a
+    parameter that declares no unit or on a sequence parameter. A base-unit suffix where no unit
+    is declared stays an annotation. The parity test pins it as silent in the engine.
+  - **The printer** refuses (`PrintError::Unspellable`) a model whose scaled suffix, written
+    number and value disagree, so a model it prints parses back equal.
+  - **Dependencies:** `oce-author` now depends on the leverage crate `oce-vocab` (the table and
+    the declared units), which moves `Cargo.lock`.
+  - **`oce vocab`** says how the text form reads the table, in its heading and in the meanings of
+    `unit-not-base` and the new `unit-suffix-mismatch`. Re-blessed: `vocab_text` and `vocab_json`
+    (those three lines and the new code's row). New golden: `tests/fixtures/text/fmt/scaled_suffixes.out.oce`
+    beside its hand-written input. No emit golden, schema, wire fixture or other transcript moves.
+  - **Docs.** The authoring note (decision 13 amended, the unit-literal paragraph and suffix
+    production, the stage-1 list, the finding-code table, out of scope, a ruling), the vocabulary
+    note (four implementation readings; step 4 landed), the `oce-author`, `oce-cli` and
+    `oce-vocab` READMEs and the root README's status.
+
 - **`oce-author`'s validation cost is pinned in key comparisons, not in elapsed time** (GitHub
   #584, issue #478).
   - **What was wrong.** `validate_cost`'s ratio test failed on `development` because it timed two

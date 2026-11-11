@@ -1,5 +1,5 @@
-//! Block checks: class lookup, parameter lookup, kinds, references and the catalog rules, then
-//! the block's resolved ports for the connection checks.
+//! Block checks: class lookup, parameter lookup, unit suffixes against declared units, kinds,
+//! references and the catalog rules, then the block's resolved ports for the connection checks.
 //!
 //! The catalog rules are not re-implemented: the assignments that pass the author-side checks
 //! are handed to [`oce_api::class_ports`], which runs the load gate's own parameter checks, and
@@ -23,10 +23,12 @@ use super::catalog::{ClassView, enum_type, lookup_class, lookup_parameter};
 use super::index::Declared;
 use super::members::{constant_member, enum_ordinal, parameter_enum, parameter_problem};
 use super::names::{exact_as_real, inexact_detail};
+use super::suffixes;
 use super::{
     Anchor, CLASS_NOT_AUTHORABLE, CLASS_NOT_FOUND, DUPLICATE_PARAMETER, Findings,
     NON_FINITE_PARAMETER, PARAMETER_KIND_MISMATCH, PARAMETER_NOT_SETTABLE, PARAMETER_OUT_OF_RANGE,
-    STAGE_ONE_CODES, UNKNOWN_ENUM_LITERAL, UNKNOWN_PARAMETER, UNKNOWN_PARAMETER_REFERENCE,
+    STAGE_ONE_CODES, UNIT_SUFFIX_MISMATCH, UNKNOWN_ENUM_LITERAL, UNKNOWN_PARAMETER,
+    UNKNOWN_PARAMETER_REFERENCE,
 };
 
 /// Check every block; return each block's resolved ports, or `None` where they are unknown (an
@@ -93,7 +95,15 @@ fn check_block(
     for (j, assignment) in block.assignments.iter().enumerate() {
         let name = assignment.name.as_str();
         let outcome = if seen.insert(Counted(name)) {
-            judge(sequence, declared, &class, block, name, &assignment.value)
+            judge(
+                sequence,
+                declared,
+                &class,
+                block,
+                name,
+                &assignment.value,
+                assignment.suffix.as_deref(),
+            )
         } else {
             Err(refuse(
                 DUPLICATE_PARAMETER,
@@ -223,7 +233,8 @@ fn backticked(message: &str) -> Vec<&str> {
 
 /// Judge one assignment. `Ok(Some(value))` passes it to the class rules; `Ok(None)` withholds it
 /// silently because a finding elsewhere already covers it (a broken sequence parameter it
-/// references); `Err` is a finding on the assignment.
+/// references); `Err` is a finding on the assignment. `suffix` is the text form's unit suffix on
+/// the value, judged against the parameter's declared unit before the value is.
 fn judge(
     sequence: &Sequence,
     declared: &Declared<'_>,
@@ -231,6 +242,7 @@ fn judge(
     block: &Block,
     name: &str,
     value: &ParamValue,
+    suffix: Option<&str>,
 ) -> Result<Option<Value>, Refusal> {
     // A reserved lowering identity takes no authored parameter at all (#440: `settable` is false
     // only there), so every assignment on one is unsettable, whether or not the name exists.
@@ -260,6 +272,15 @@ fn judge(
                 block.class_path
             ),
         ));
+    }
+    if let Some(suffix) = suffix
+        && let Some(detail) = suffixes::mismatch(
+            &format!("parameter `{name}` of `{}`", block.class_path),
+            suffixes::declared_unit(&block.class_path, parameter),
+            suffix,
+        )
+    {
+        return Err(refuse(UNIT_SUFFIX_MISMATCH, detail));
     }
     let expected = parameter.value_type;
     let mismatch = |found: &str| {

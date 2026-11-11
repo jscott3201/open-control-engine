@@ -1,7 +1,7 @@
 # oce-author
 
 The authoring layer's library (M2; design note [`docs/design/authoring-layer.md`](../../../docs/design/authoring-layer.md),
-issues #463, #464, #482, #492 and #496). A leverage crate: it depends on `oce-api` only, never evaluates an expression,
+issues #463, #464, #482, #492, #496 and #501). A leverage crate: among the `oce-*` packages it depends on `oce-api` and the leverage crate `oce-vocab` (for unit suffixes) only, never evaluates an expression,
 and loads only throwaway engines of its own (validation stage 2), never one a host runs.
 `publish = false`.
 
@@ -11,7 +11,7 @@ and loads only throwaway engines of its own (validation stage 2), never one a ho
 | `SequenceBuilder` | A checked builder; refuses with a typed `BuildError` what it can see without the catalog. |
 | `from_wire_str`, `from_wire_bytes`, `to_wire_string` | The strict-JSON wire form: closed objects, every key required, absent values `""`/`[]`/`false` (never `null`), an object read from a JSON object only (never from the list of its values; any other type is `WireError::WrongType` with the path of the value, GitHub #544), connections as `"a.y -> b.u"`, boundary bounds as a list of at most one number (`"min": []` or `[0]`; a second item is `WireError::BoundListTooLong`). Reads are bounded (4 MiB, depth 8, 65,536 entries per list, 4,096-byte strings) and refuse hostile input with a typed `WireError`; writes are canonical and byte-stable. |
 | `WIRE_SCHEMA`, `wire_schema()` | The JSON Schema (draft 2020-12) derived from the wire DTOs with `schemars`, published at [`schema/sequence.schema.json`](schema/sequence.schema.json) and pinned byte for byte; the `class` enum is the catalog's authorable class paths and a sequence parameter's `type` enum is `parameter_type_names()` (`Real`, `Integer`, `Boolean` and every enumeration of `oce_api::enumeration_types()`, never a constant package). Strict profile: closed objects, all required, `anyOf` only over the value shapes. |
-| `validate`, `validate_author_side`, `Finding` | The two-stage validator. Stage 1 (`validate_author_side`): twenty-five finding codes (`STAGE_ONE_CODES`) from the model and the catalog, a repeated connection target (`single-assignment`), an Integer above 2^53 on a Real parameter, enumeration types and members (`unknown-enum-type`, `unknown-enum-literal`) and boundary bounds (`invalid-bound`, `non-finite-bound`, `crossed-bounds`) included. Stage 2, only when stage 1 is clean: emit, load in a throwaway `Engine::new()` and map every engine diagnostic back through the IRI scheme — every warning is an error finding with the engine's code (decision 14), `origin = engine`; a subject the scheme cannot name is attached to `sequence` with the raw subject in `detail`. Findings are sorted by authored position, code and detail. |
+| `validate`, `validate_author_side`, `Finding` | The two-stage validator. Stage 1 (`validate_author_side`): twenty-six finding codes (`STAGE_ONE_CODES`) from the model and the catalog, a repeated connection target (`single-assignment`), a unit suffix against the parameter's declared unit (`unit-suffix-mismatch`, through `oce-vocab`), an Integer above 2^53 on a Real parameter, enumeration types and members (`unknown-enum-type`, `unknown-enum-literal`) and boundary bounds (`invalid-bound`, `non-finite-bound`, `crossed-bounds`) included. Stage 2, only when stage 1 is clean: emit, load in a throwaway `Engine::new()` and map every engine diagnostic back through the IRI scheme — every warning is an error finding with the engine's code (decision 14), `origin = engine`; a subject the scheme cannot name is attached to `sequence` with the raw subject in `detail`. Findings are sorted by authored position, code and detail. |
 | `emit`, `EmitOptions`, `EmitError` | The emitter to flat CXF: authored order, never sorted; IRIs `{namespace}{sequence}.{local}` (default `urn:oce:author:`, an override must end in `#`, `/` or `:`); block `@type` under the fixed class base `http://example.org#Buildings.Controls.OBC.`; only the assignments the author wrote; arrays in the CXF array form (element by element under the flattened names when the author left a gap); an enumeration-typed sequence parameter with its class IRI as `isOfDataType` and the full member path as value, and a library constant with its package IRI as `isOfDataType`, as the corpus writes them; boundary `unit`, `quantity`, `displayUnit`, `min` and `max` and no semantic record; a canonical writer (fixed key order, two-space indentation, ASCII, shortest round-trip reals); the `S231` context bound to `http://data.ashrae.org/S231#`, and on the root node the translation-software label `S231:translationSoftware` (`open-control-engine`) and `S231:translationSoftwareVersion` (the workspace version; OBC §8.4), which no importer reads back and which changes every emitted document when the workspace version does; refuses stage-1 errors (`EmitError::Invalid`), a malformed namespace (`EmitError::InvalidNamespace`) and anything above `oce_api::MAX_CXF_BYTES` (`EmitError::TooLarge`). |
 | `import_cxf`, `import_graph_v0`, `ImportOptions`, `Imported`, `ImportReport`, `ImportError` | The importer (importer note [`docs/design/importer.md`](../../../docs/design/importer.md), issue #496): the in-subset library CXF and the frozen prototype's v0 graph JSON into the model, a report of what was read and not carried, and a closed `ImportErrorKind` with a stable `code()` for every refusal; see below. |
 | `parse_text`, `parse_text_bytes`, `print_text`, `fmt_text`, `ParseError`, `PrintError` | The text form (issue #482): a hand-written recursive-descent parser over `&str` or raw bytes, bounded at parse, refusing each malformed construct with one typed `ParseError { code, location, detail }` (`PARSE_CODES`, thirty-one codes, pinned in order); a canonical printer that is total or refusing (`PrintError::Unspellable`); `fmt_text` = parse then print, idempotent. See below. |
@@ -209,10 +209,21 @@ comment     = "#" to the end of the line, anywhere
 - An integer token is a `Literal::Integer` and never becomes a Real; a token with a fraction or an
   exponent is a `Literal::Real`. A leading `+` or a leading zero is **refused**
   (`malformed-number`), not normalized; `-0` reads as the Integer `0`, as on the wire.
-- **Unit suffixes are base units only** (decision 13): every factor must be a coherent, unprefixed
-  SI symbol (`BASE_UNIT_SYMBOLS`: `m kg s A K mol cd rad sr Hz N Pa J W C V F Ohm S Wb T H lm lx
-  Bq Gy Sv kat`), so `86400 s`, `1 m3/s` and `4180 J.kg-1.K-1` are accepted and `1 h`, `20 degC`
-  and `3 kPa` are refused (`unit-not-base`) until vocabulary v1. The grammar is a subset of
+- **Unit suffixes are base units, or one scaled time unit alone** (decision 13 as amended by the
+  vocabulary note's decision 14; issue #501). A base-unit suffix is built from coherent,
+  unprefixed SI symbols (`BASE_UNIT_SYMBOLS`: `m kg s A K mol cd rad sr Hz N Pa J W C V F Ohm S Wb
+  T H lm lx Bq Gy Sv kat`), so `86400 s`, `1 m3/s` and `4180 J.kg-1.K-1` are accepted, and the
+  number is the value as written. A suffix that is exactly `min`, `h` or `d`
+  (`oce_vocab::SCALE_FACTORS`) **scales**: the value is the base-unit Real, exactly and rounded
+  once (`1.1 h` is `3960.0`, an Integer by its exact product, a Real through its shortest
+  round-trip decimal), and `Assignment::scaled_from` keeps the written number, so **`fmt` prints
+  `1 h` again** and never moves a value; the wire form and the emitter see `3600.0`. A scaled
+  value past binary64 is `non-finite-number`. `20 degC`, `3 kPa`, `1 m3/h` (a scaled symbol in a
+  compound) and `1 hr` are refused (`unit-not-base`). Whether the suffix fits its parameter is
+  stage 1's `unit-suffix-mismatch`: it must reduce to the block parameter's declared unit
+  (`oce-vocab`), spelled alike (`delayTime = 5 K` is refused, `3600 s` and `1 h` are not), and a
+  scaled suffix on a parameter that declares no unit, or on a sequence parameter, is refused; a
+  base-unit suffix where no unit is declared stays an annotation. The grammar is a subset of
   Modelica's unit syntax: a symbol with an optional non-zero integer exponent (`m2`, `s-1`; `K0` and
   `m-0` are refused), `.` for products, at most one `/` whose right-hand side is the whole
   denominator, and no parentheses. So `kg/m.s2` reads as kg/(m·s²), a deliberate deviation from

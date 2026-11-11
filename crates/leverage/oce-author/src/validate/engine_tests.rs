@@ -112,6 +112,8 @@ const PARITY: &[(&str, EngineSays)] = &[
     ("parameter-kind-mismatch", EngineSays::Same),
     ("parameter-out-of-range", EngineSays::Same),
     ("non-finite-parameter", EngineSays::Same),
+    // The suffix never reaches the engine, which loads the base-unit value as written.
+    ("unit-suffix-mismatch", EngineSays::Silent),
     (
         "unknown-enum-literal",
         EngineSays::Preempts("grounding-failed"),
@@ -153,6 +155,7 @@ const NOTE_TABLE: &[(&str, &str, Option<&str>)] = &[
     ("parameter-kind-mismatch", "engine", None),
     ("parameter-out-of-range", "engine", None),
     ("non-finite-parameter", "engine", None),
+    ("unit-suffix-mismatch", "author", Some("none")),
     ("unknown-enum-literal", "author", Some("grounding-failed")),
     ("unknown-enum-type", "engine", None),
     (
@@ -226,6 +229,17 @@ fn defect(code: &str) -> Sequence {
         ),
         "parameter-out-of-range" => set(hys(&mut s), "uLow", real(2.0)),
         "non-finite-parameter" => set(hys(&mut s), "uLow", real(f64::NEG_INFINITY)),
+        "unit-suffix-mismatch" => {
+            // `uLow = 0 h`: Hysteresis declares no unit for `uLow`, so a scaled suffix has
+            // nothing to scale to; the value, 0 s, is the worked example's own.
+            let assignment = hys(&mut s)
+                .assignments
+                .iter_mut()
+                .find(|a| a.name.as_str() == "uLow")
+                .expect("uLow");
+            assignment.suffix = Some("h".to_owned());
+            assignment.scaled_from = Some(Literal::Integer(0));
+        }
         "unknown-enum-literal" => {
             let mut pid = Block::new(id("con"), "CDL.Reals.PID");
             pid.assignments.push(Assignment::new(

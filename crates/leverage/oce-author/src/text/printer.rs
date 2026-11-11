@@ -4,8 +4,9 @@
 //! then parameters, inputs, outputs, blocks and connections, authored order kept inside each
 //! section.
 //! One space around `=`, `->` and `:`. Reals in Rust's shortest round-trip spelling (`{:?}`),
-//! Integers bare, suffixes after one space. A statement's blank line and comments are printed
-//! above it, the blank line first. A block prints on one line when it has at most two assignments,
+//! Integers bare, suffixes after one space, a number with a scaled suffix as written (`1 h`, not
+//! its base value). A statement's blank line and comments are printed above it, the blank line
+//! first. A block prints on one line when it has at most two assignments,
 //! none annotated, and the line fits in [`MAX_ONE_LINE_COLUMNS`]; otherwise one assignment per line,
 //! indented by two spaces. The trailing comments follow one blank line. The output ends with one
 //! line feed.
@@ -54,7 +55,10 @@ pub(super) fn print(sequence: &Sequence) -> Result<String, PrintError> {
             "param {} : {} = {}\n",
             param.name,
             param.value_type.as_str(),
-            with_suffix(&literal(&param.value), param.suffix.as_deref())
+            with_suffix(
+                &literal(param.scaled_from.as_ref().unwrap_or(&param.value)),
+                param.suffix.as_deref()
+            )
         ));
         fits(&out, &mut start, param.name.as_str())?;
     }
@@ -170,10 +174,13 @@ fn with_suffix(value: &str, suffix: Option<&str>) -> String {
     }
 }
 
+/// One assignment's value as written: the number before a scaled suffix (`1 h`), not the
+/// base-unit value the model carries for it.
 fn element(assignment: &Assignment) -> String {
-    let value = match &assignment.value {
-        ParamValue::Literal(lit) => literal(lit),
-        ParamValue::Ref(name) => name.as_str().to_owned(),
+    let value = match (&assignment.scaled_from, &assignment.value) {
+        (Some(written), _) => literal(written),
+        (None, ParamValue::Literal(lit)) => literal(lit),
+        (None, ParamValue::Ref(name)) => name.as_str().to_owned(),
     };
     with_suffix(&value, assignment.suffix.as_deref())
 }

@@ -121,6 +121,14 @@ between `sequence` and `derived_from` folds in and prints above `sequence`) and
 after the last item of a block's `(...)` precedes nothing and is refused (`comment-before-close`).
 An end-of-line comment moves to its own line above its statement.
 
+*Amended 2026-11-11 (issue #501; [vocabulary note](vocabulary.md), "Units" and decision 14):* a
+suffix that is exactly one of the vocabulary's scaled time units, `min`, `h` or `d`, scales the
+number exactly to seconds with one rounding (decision 13's amendment), so the value is no longer
+always the number as written. The model carries the base-unit Real (`3600.0` for `1 h`), which is
+all the wire form, the emitter and the engine see, and keeps the suffix and the written number
+(`Assignment::scaled_from`) so `fmt` prints `1 h` again. A base-unit suffix still leaves the
+number as written.
+
 **Canonical printer.** `fmt` is parse then print. The printer emits statements in the section
 order of the `file` production, keeps authored order inside every section, puts one space around
 `=`, `->` and `:`, prints a block on one line when it has at most two assignments and fits in 100
@@ -183,6 +191,9 @@ corpus bundle.
   - `.` forms products, and there are no parentheses.
   - There is at most one `/`, and its right-hand side is the whole denominator. So `kg/m.s2`
     reads as kg/(m·s²), a deliberate deviation from Modelica's left-to-right reading.
+  - *Amended 2026-11-11 (issue #501):* every symbol is a base unit, or the whole suffix is one
+    scaled time unit (`min`, `h`, `d`). A scaled symbol inside a compound (`m3/h`, `1/h`, `h2`)
+    is `unit-not-base`, because its factor would not be an integer multiple of one base unit.
 - **Array regrouping, made precise.** The printer regroups a run of array elements into `[..]` only
   when that run is every element of the template that the block assigns:
   - consecutive, starting at index 1, in row-major order;
@@ -308,7 +319,9 @@ It runs in two stages (decision 4):
 
 1. **Author-side**, from the model and the catalog alone: names, the sequence shape, edge syntax and
    endpoints, class lookup, parameter lookup, kinds and catalog rules, references, arity and port
-   names from the ports #440 synthesizes, duplicates, `SemanticPoint` and `derived_from` syntax.
+   names from the ports #440 synthesizes, duplicates, `SemanticPoint` and `derived_from` syntax,
+   and (amended 2026-11-11, issue #501) each text-form unit suffix against the declared unit of
+   the parameter it is written on.
 2. **Engine-side**, only when stage 1 found no error: emit, load the bytes in a throwaway
    `Engine::new()`, and map every diagnostic back to the model. Subjects are IRIs of the form
    `{namespace}{sequence}.{local}`, so stripping the root prefix yields the model path; a
@@ -339,6 +352,7 @@ pre-empt where one exists. The table is a test fixture: gate item 3 is a table-d
 | `parameter-kind-mismatch` | engine | `param-type-mismatch` | 1 | — |
 | `parameter-out-of-range` | engine | `invalid-width` | 1 | — (catalog rules, widths included) |
 | `non-finite-parameter` | engine | — | 1 | — |
+| `unit-suffix-mismatch` | author-only (added 2026-11-11, issue #501) | — | 1 | none: a suffix is text-only and never reaches the engine (vocabulary note decision 14, ruling 6). A suffix that does not reduce to the block parameter's declared unit (`delayTime = 5 K`), or a scaled one on a parameter that declares no unit or on a sequence parameter |
 | `unknown-enum-literal` | author-only (amended 2026-11-09) | — | 1 | `grounding-failed` |
 | `unknown-enum-type` | engine (added 2026-11-09, issue #492) | — | 1 | — (an unknown type name; a constant package as a type is refused by stage 1 alone, since the engine reads a package-typed parameter as Integer) |
 | `unknown-parameter-reference` | author-only | — | 1 | `grounding-failed` |
@@ -601,7 +615,17 @@ editing); storing lexical spellings in the model (two equal models with differen
 vocabulary v1, so there is no conversion table. A suffix is kept on the model literal as a
 text-only annotation, so `fmt` is lossless, and the number is the base-unit value as written.
 `1 h` is refused with a typed error until the vocabulary supplies scale factors. Text → wire → text
-drops suffixes; wire → text → wire, the gate's direction, is unaffected.
+drops suffixes; wire → text → wire, the gate's direction, is unaffected. *Amended 2026-11-11 (issue
+#501; vocabulary note decision 14 and rulings 5 and 6):* the vocabulary supplies them, time only.
+`min`, `h` and `d` alone scale the number exactly and round once (`1.1 h` is `3960.0` s, where
+multiplying the parsed `f64` would give `3960.0000000000005`): an Integer by its exact product, a
+Real through its shortest round-trip decimal, the spelling `fmt` prints, so formatting never moves
+a value. The model keeps the suffix and the written number beside the base value, so `fmt` still
+prints `1 h`. Stage 1 refuses a suffix that does not reduce to the block parameter's declared
+unit, spelled alike (`delayTime = 5 K`, `delayTime = 1 Hz`), and a scaled suffix on a parameter
+that declares no unit or on a sequence parameter, with the author-only code
+`unit-suffix-mismatch`; a base-unit suffix where no unit is declared stays an annotation.
+`degC`/`degF`, `%`, prefixed SI units and scaled symbols in compounds stay `unit-not-base`.
 
 **14. Every engine warning is an error finding.** Accepted means warning-free, so a
 warning is a defect in the authored sequence, not advice. This covers `unused-boundary-input`,
@@ -722,7 +746,8 @@ without moving them.
 - Nested composites, `hasInstance` members, conditional components and array connectors.
 - Expression parameter values beyond a bare reference, and any evaluation in `oce-author`.
 - Emitting semantic records (M8); resolving or diffing `derived_from` (M3).
-- Unit conversion beyond base units, and unit checks (vocabulary v1).
+- Unit conversion beyond base units and the time scale factors, and any unit check beyond a
+  suffix against its parameter's declared unit (amended 2026-11-11, issue #501).
 - A validate-only facade API (may be proposed later; decision 4).
 - The TUI, `bind`, `points` and `doc` commands.
 - Byte equality with committed library CXF or with any other generator's formatting.
@@ -784,3 +809,8 @@ The architect pass on the draft (owner consulted on 11, 12 and 20) ruled:
 - 2026-11-09 (owner ruling, issue #529): "Rename to `derived_from` now." The provenance statement,
   `Sequence::derived_from` and the wire key `derived_from` replace `extends` in place (decision 5's
   amendment), and `derived_from` joins the text-form keywords, so it is no declared name.
+- 2026-11-11 (issue #501, from the vocabulary note's decision 14 and its rulings 5 and 6):
+  decision 13 amended. The text form scales `min`, `h` and `d` exactly from
+  `oce_vocab::SCALE_FACTORS`, the model gained `Assignment::scaled_from` and
+  `SequenceParameter::scaled_from` (text-only, like the suffix), and stage 1 gained
+  `unit-suffix-mismatch`, author-only, which the parity test pins as silent in the engine.

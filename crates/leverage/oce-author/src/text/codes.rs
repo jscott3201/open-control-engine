@@ -40,7 +40,9 @@ pub const INTEGER_OUT_OF_RANGE: &str = "integer-out-of-range";
 pub const NON_FINITE_NUMBER: &str = "non-finite-number";
 /// A unit suffix that is not a unit expression (`m^2`, `K/`, `(kg)`).
 pub const MALFORMED_SUFFIX: &str = "malformed-suffix";
-/// A well-formed unit suffix that is not a base unit (`h`, `degC`, `kPa`; decision 13).
+/// A well-formed unit suffix that is neither built from base units nor one of the scaled time
+/// units `min`, `h` and `d` alone (`degC`, `kPa`, `m3/h`; decision 13 as amended by the
+/// vocabulary note's decision 14).
 pub const UNIT_NOT_BASE: &str = "unit-not-base";
 /// A tag's atom or the `derived_from` provenance id holds a byte other than printable ASCII (`!` to
 /// `~`). An atom stops at `#`; a provenance id may contain one (decision 5's grammar).

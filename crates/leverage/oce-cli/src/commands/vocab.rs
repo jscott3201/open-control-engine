@@ -9,11 +9,12 @@
 //!
 //! `scale_factors` is the vocabulary's unit scale-factor table (`oce_vocab::SCALE_FACTORS`,
 //! vocabulary note decision 14, GitHub issue #500), in table order: the symbols that are an
-//! exact integer multiple of a base unit, time only (`min`, `h`, `d`). It states the table; a
-//! reader of unit suffixes does the scaling. Until the text form reads it (issue #501) a scaled
-//! suffix is still refused, and the output says so where an agent reads it: in the text
-//! heading, and in the meaning of `unit-not-base` under `parse_codes`, which is in both the text
-//! and the JSON (the table's rows have no place for prose).
+//! exact integer multiple of a base unit, time only (`min`, `h`, `d`). It states the table; the
+//! text form reads it (issue #501): one of these symbols alone as a unit suffix scales the number
+//! exactly, on a parameter declared in the base unit. The output says how where an agent reads
+//! it: in the text heading, and in the meanings of `unit-not-base` under `parse_codes` and of
+//! `unit-suffix-mismatch` under the stage-1 codes, which are in both the text and the JSON (the
+//! table's rows have no place for prose).
 //!
 //! `enumerations` is the facade's enumeration and Integer constant-package table
 //! (`oce_api::enumerations()`, GitHub #488), in table order: each row's authoring class path, kind
@@ -148,10 +149,10 @@ fn render_text() -> String {
     list(&mut out, "types", TYPES);
     list(&mut out, "tags", TEXT_FORM_TAGS);
     list(&mut out, "base units", oce_author::BASE_UNIT_SYMBOLS);
-    // The second clause holds until the text form reads the table (issue #501).
+    // How the text form uses the table (issue #501).
     out.push_str(
-        "scale factors (time only; one symbol is exactly this many base units; not accepted as \
-         a unit suffix yet, the text form refuses them with unit-not-base):\n",
+        "scale factors (time only; one symbol is exactly this many base units; alone as a unit \
+         suffix on a parameter declared in the base unit, it scales the number exactly):\n",
     );
     let width = SCALE_FACTORS
         .iter()

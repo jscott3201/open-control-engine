@@ -256,13 +256,15 @@ multiple of a base unit (`oce_vocab::SCALE_FACTORS`), in table order, each
 all of `s`. It is time only: `degC`, `%` and prefixed SI units are not in it. Every `base` is one
 of `base_units` and no `symbol` is.
 
-The table is printed before the text form reads it: until issue #501 lands, a suffix such as
-`1 h` is still refused with `unit-not-base`, and the output says so itself. The text listing's
-heading reads "not accepted as a unit suffix yet, the text form refuses them with
-unit-not-base", and the meaning of `unit-not-base` under `parse_codes`, in the text and in the
-JSON, names `min`, `h` and `d` as not accepted yet. The JSON carries it there because the
-table's rows have no place for prose. A test fails when the text form starts accepting a scaled
-suffix, which is when that wording goes.
+The text form reads the table (issue #501): one of these symbols alone as a unit suffix scales
+the number exactly (`delayTime = 1 h` is `3600.0` s), on a parameter declared in the base unit.
+The output says so itself. The text listing's heading reads "alone as a unit suffix on a
+parameter declared in the base unit, it scales the number exactly"; the meaning of
+`unit-not-base` under `parse_codes` names `min`, `h` and `d` as accepted alone, and
+`unit-suffix-mismatch` under `finding_codes` is the stage-1 code for a suffix the parameter
+cannot take, in the text and in the JSON. The JSON carries it there because the table's rows
+have no place for prose; `tests/vocabulary.rs` holds the wording to the table and to what the
+text form does.
 
 ### Enumerations
 
