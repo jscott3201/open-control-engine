@@ -1433,7 +1433,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Verification
 
 - **`rustix` moves from 1.1.4 to 1.1.6 in `Cargo.lock`, clearing RUSTSEC-2026-0486** (GitHub
-  #PRNUM, issue #598). The advisory (unsound: rustix's xattr functions mark unwritten bytes
+  #605, issue #598). The advisory (unsound: rustix's xattr functions mark unwritten bytes
   initialized for a zero-length buffer) made `cargo deny check advisories` fail in the daily
   `advisories.yml` run and in `release-gate.yml`'s `cargo-deny (full)` job. The path is a
   dev-dependency only (`rustix` is `oce-cxf`'s Unix dev-dependency), so no shipped build linked it,
