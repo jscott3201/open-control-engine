@@ -718,7 +718,10 @@ publishable and eight private. The fixture and Tier-A provenance goldens
 
   Two mutations fail their tests: copying each reference before the refusal, and naming each
   element before the shape check. Not covered: work that allocates nothing, such as a scan of the
-  node index for each lookup. No `oce-author` test reads the clock any more.
+  node index for each lookup, or that allocates once, such as converting every array element into
+  one buffer sized up front. A `serde_json` feature turned on anywhere in the workspace
+  (`preserve_order`, `arbitrary_precision`) would also move the counts, and the test says so. No
+  `oce-author` test reads the clock any more.
 - **`oce-author`'s validation cost is pinned in key comparisons, not in elapsed time** (GitHub
   #584, issue #478).
   - **What was wrong.** `validate_cost`'s ratio test failed on `development` because it timed two

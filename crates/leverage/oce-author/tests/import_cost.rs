@@ -15,14 +15,23 @@
 //! Measured with `allocation-counter`, whose counters are local to the measuring thread. Naming
 //! that crate links its counting global allocator, which is why this file is a test binary of its
 //! own (`Cargo.toml`). The counts are a function of the input, the importer, and the `serde_json`
-//! and `std` that `Cargo.lock` and the pinned toolchain fix. Each test imports the unedited
-//! document once before measuring, so one-time setup is not counted. The ceilings below have
-//! headroom over what was measured (in brackets). The headroom is a fixed amount, never a part of
-//! an allocation per item, so one more allocation per reference or per element fails.
+//! and `std` that `Cargo.lock` and the pinned toolchain fix: a lockfile change that moves them
+//! is re-measured. That includes `serde_json`'s features, which Cargo unifies across the
+//! workspace. Today the only one on beyond the defaults is `float_roundtrip`. `preserve_order`
+//! would make a parsed object an `IndexMap`, at least four allocations per reference, and
+//! `arbitrary_precision` would give each number a `String`, about 1,000,000 more in the array
+//! case. Either breaks these bounds in a `--workspace` run while `-p oce-author` still passes.
+//! Each test imports the unedited document once before measuring, so one-time setup is not
+//! counted. The ceilings below have headroom over
+//! what was measured (in brackets). The headroom is a fixed amount, never a part of an allocation
+//! per item, so one more allocation per reference or per element fails.
 //!
-//! What this cannot see: work that allocates nothing, such as a scan of the node index for each
-//! lookup in place of the ordered map the importer keeps. The comparison counter of
-//! `src/counted.rs` covers that for stage 1, not for the importer.
+//! What this cannot see: work that allocates nothing, or allocates once whatever the size. For
+//! the reference list that is a scan per item, such as one over the node index for each lookup in
+//! place of the ordered map the importer keeps. For the array it is converting every element
+//! before the shape check into one buffer sized up front: one allocation, and about two bytes of
+//! peak per document byte. The comparison counter of `src/counted.rs` covers scans for stage 1,
+//! not for the importer.
 
 use allocation_counter::AllocationInfo;
 use oce_api::MAX_CXF_BYTES;
@@ -165,6 +174,8 @@ fn a_giant_array_of_the_wrong_size_is_refused_before_its_elements_are_read() {
         );
         counts.push(info.count_total);
     }
-    // Sixteen times the elements adds only the parsed list's own doublings [measured: 4].
-    assert!(counts[1] - counts[0] <= 8, "{counts:?}");
+    // Sixteen times the elements adds only the parsed list's own doublings [measured: 4]. The
+    // difference is taken either way round, so a larger document that allocates less still
+    // prints both counts rather than overflowing.
+    assert!(counts[1].abs_diff(counts[0]) <= 8, "{counts:?}");
 }
