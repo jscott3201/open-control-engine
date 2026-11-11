@@ -78,7 +78,7 @@ whole-sequence Tier-2 traces are byte-identical to the `v0.4.0` tag.
 
 ### Release
 
-- **0.5.0 closeout** (GitHub #PRNUM, issue #455). No version moves in this change:
+- **0.5.0 closeout** (GitHub #600, issue #455). No version moves in this change:
   `development` has carried 0.5.0 since GitHub #518, so every workspace member, the internal
   path+version table, `Cargo.lock`, the descriptor's `oce-api-version:0.5.0`, the blob and
   snapshot headers and every version-bearing golden already name it, and nothing is re-blessed.
