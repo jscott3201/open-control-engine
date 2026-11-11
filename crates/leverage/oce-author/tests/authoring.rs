@@ -40,6 +40,7 @@ mod import_graph_v0;
 mod import_graph_v0_refusals;
 mod import_hostile;
 mod import_namespace_and_label;
+mod import_parameter_attributes;
 mod import_precedence;
 mod import_refusals;
 mod import_sweep;

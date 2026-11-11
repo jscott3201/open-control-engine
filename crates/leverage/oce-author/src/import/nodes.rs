@@ -61,6 +61,46 @@ pub(super) const PARAMETER_ATTRIBUTES: [&str; 5] = [
     "S231:max",
 ];
 
+/// Refuse a descriptive parameter attribute of a malformed shape (GitHub issue #559; owner
+/// ruling of 2026-11-11), before it is dropped. The value is never read, but its shape is held
+/// to what the engine's loader accepts there: a bound (`S231:min`, `S231:max`) is a JSON
+/// number, a typed literal or a string (an expression); a term (`S231:unit`, `S231:quantity`,
+/// `S231:displayUnit`) is a string, a typed literal or an IRI node. A typed literal here is an
+/// object of exactly `@value` and `@type`, both strings, and an IRI node one of exactly `@id`, a
+/// string: the strict shapes the rest of this reader accepts. Anything else, `null` and a list
+/// included, is `wrong-shape` naming the key.
+pub(super) fn check_parameter_attribute(
+    id: &str,
+    key: &str,
+    value: &Value,
+) -> Result<(), ImportError> {
+    let typed_literal = |map: &Map<String, Value>| {
+        map.len() == 2
+            && matches!(map.get("@value"), Some(Value::String(_)))
+            && matches!(map.get("@type"), Some(Value::String(_)))
+    };
+    let iri_node = |map: &Map<String, Value>| {
+        map.len() == 1 && matches!(map.get("@id"), Some(Value::String(_)))
+    };
+    let bound = matches!(key, "S231:min" | "S231:max");
+    let legal = match value {
+        Value::String(_) => true,
+        Value::Number(_) => bound,
+        Value::Object(map) => typed_literal(map) || (!bound && iri_node(map)),
+        Value::Null | Value::Bool(_) | Value::Array(_) => false,
+    };
+    if legal {
+        Ok(())
+    } else {
+        Err(refuse(
+            id,
+            Kind::WrongShape {
+                key: key.to_owned(),
+            },
+        ))
+    }
+}
+
 /// The attributes a block port may not carry (decision 8), in the order they are checked.
 pub(super) const PORT_ATTRIBUTES: [&str; 6] = [
     "S231:unit",

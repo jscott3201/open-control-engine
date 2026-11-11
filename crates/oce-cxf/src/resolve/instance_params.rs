@@ -30,6 +30,7 @@ use crate::scope_chain::{IndexedEntries, ParamScope, ScopeFrame};
 
 use super::instance_interface::InstanceDerivation;
 use super::local_name;
+use super::parameter_attrs;
 use super::specialize::validate_g36_parameter_value;
 
 /// One resolved instance's wiring state, carried from Step 3 through Steps 5-8.
@@ -89,6 +90,7 @@ pub(super) fn ground_instance_params(
                 );
                 continue;
             };
+            parameter_attrs::refuse_malformed(pnode, piri, diags);
             let Some(cxf_val) = &pnode.value else {
                 diags.push(
                     Diagnostic::error(

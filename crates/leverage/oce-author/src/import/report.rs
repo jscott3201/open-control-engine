@@ -89,14 +89,16 @@ pub enum DroppedProperty {
     RootType,
     /// A CXF `S231:label` that differs from the node's local name.
     Label,
-    /// A parameter's descriptive `S231:unit` (CXF; the engine reads none on a parameter node), or
-    /// a v0 boundary `unit` (written as a comment line instead; decision 17).
+    /// A parameter's descriptive `S231:unit` (CXF; the engine uses none on a parameter node, and
+    /// the importer checks only its shape, issue #559), or a v0 boundary `unit` (written as a
+    /// comment line instead; decision 17).
     Unit,
     /// A CXF parameter's `S231:quantity`.
     Quantity,
     /// A CXF parameter's `S231:displayUnit`.
     DisplayUnit,
-    /// A CXF parameter's `S231:min` (decision 9: the engine reads no parameter bound).
+    /// A CXF parameter's `S231:min` (decision 9: the engine uses no parameter bound; its shape is
+    /// checked, issue #559).
     Min,
     /// A CXF parameter's `S231:max` (as [`DroppedProperty::Min`]).
     Max,

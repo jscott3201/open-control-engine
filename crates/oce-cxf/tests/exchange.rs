@@ -99,6 +99,7 @@ mod resolve_load_bounds;
 mod resolve_nominal_attribute;
 mod resolve_ordering;
 mod resolve_param_precedence;
+mod resolve_parameter_attrs;
 mod resolve_pass_through;
 mod resolve_port_binding;
 mod resolve_property_keys;

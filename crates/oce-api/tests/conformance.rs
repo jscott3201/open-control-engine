@@ -29,6 +29,8 @@ const EXTENSION_BLOCK_WITHOUT_FMU_PATH: &str =
     include_str!("../../oce-cxf/tests/fixtures/invalid/extension_block_without_fmu_path.jsonld");
 const BOUND_MISMATCH: &str =
     include_str!("../../oce-cxf/tests/fixtures/invalid/bound_mismatch.jsonld");
+const RELIEF_DAMPER: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_relief_damper.jsonld");
 const BOUNDARY_OUTPUT_UNIT_MISMATCH: &str =
     include_str!("../../oce-cxf/tests/fixtures/declared_output_driver_unit_divergence.jsonld");
 const TWO_UNDRIVEN: &str = include_str!("../../oce-cxf/tests/fixtures/invalid/two_undriven.jsonld");
@@ -150,6 +152,34 @@ fn extension_block_is_rejected_end_to_end_with_its_own_code() {
         );
         assert_eq!(e.all_diagnostics().count(), 1, "{e:?}");
     }
+}
+
+#[test]
+fn malformed_parameter_bound_is_rejected_end_to_end() {
+    // A parameter's `S231:max` written as the list of its typed literal's values used to load
+    // (issue #559). It is refused with one MalformedDocument naming the parameter; the document
+    // as written still loads, and its bound is still not used.
+    let written =
+        r#""S231:max": { "@value": "30", "@type": "http://www.w3.org/2001/XMLSchema#double" },"#;
+    assert_eq!(RELIEF_DAMPER.matches(written).count(), 1);
+    load(RELIEF_DAMPER).expect("the fixture as written loads");
+    let listed = RELIEF_DAMPER.replacen(
+        written,
+        r#""S231:max": ["30", "http://www.w3.org/2001/XMLSchema#double"],"#,
+        1,
+    );
+    let e = load(&listed).expect_err("a list is no bound");
+    assert_eq!(
+        error_signature(&e),
+        vec![(
+            DiagCode::MalformedDocument,
+            Some("http://example.org#g36.source.multizone_vav_relief_damper.dpBuiSet".to_owned()),
+            "S231:max on a parameter is a list; a bound is one number, typed literal or \
+             expression string"
+                .to_owned()
+        )]
+    );
+    assert_eq!(e.all_diagnostics().count(), 1, "{e:?}");
 }
 
 #[test]

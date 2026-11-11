@@ -63,6 +63,7 @@ mod diags;
 pub(crate) mod extension_blocks;
 mod instance_interface;
 mod instance_params;
+mod parameter_attrs;
 mod pass_through;
 mod port_binding;
 #[cfg(test)]

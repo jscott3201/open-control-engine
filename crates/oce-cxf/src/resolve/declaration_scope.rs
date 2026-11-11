@@ -59,6 +59,7 @@ use crate::scope_chain::{IndexedEntries, ScopeFrame};
 
 use super::composite_rules::{ARRAY_PARAMETER, DECLARATION_CYCLE, DUPLICATE_DECLARATION};
 use super::local_name;
+use super::parameter_attrs;
 use super::specialize::{Specialization, validate_g36_parameter_value};
 
 /// Which import pass is invoking the shared own-declaration evaluation.
@@ -393,6 +394,9 @@ fn evaluate_one(
         );
         return;
     };
+    if let Pass::Lowering { diags, .. } = pass {
+        parameter_attrs::refuse_malformed(pnode, declaration.iri, diags);
+    }
     if matches!(pass, Pass::Lowering { .. }) && pnode.is_array == Some(true) {
         emit_generic(
             pass,

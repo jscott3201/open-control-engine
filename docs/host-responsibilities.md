@@ -428,6 +428,15 @@ of the `S231:` terms the importer reads — is the same property whether it is k
 (`S231:min`), by its full IRI in the S231 namespace, by another prefix bound to that namespace, or
 by a declared term.
 
+A parameter's `min`, `max`, `unit`, `quantity` and `displayUnit` are never used for control, but
+their shape is checked where the parameter is read (GitHub #PRNUM, issue #559): a bound is one
+number, typed literal or expression string (modelica-json writes a bound over other parameters as
+an expression, `"yMin"`), and a term is a string, typed literal or IRI node, the shapes a
+connector's term takes. Anything else, a list or a boolean bound, a numeric or list term, is
+refused as `malformed-document`, subject the parameter; JSON `null` reads as absent. The value of
+a well-shaped attribute is still not read, and a parameter pruned by a false conditional guard is
+not read at all.
+
 The importer reads the S231 vocabulary in one namespace, `http://data.ashrae.org/S231#`: the one
 the exporter binds, the OpenBuildingControl (OBC) specification lists (OBC §11.3) and
 modelica-json emits (GitHub #527; the evidence is on the

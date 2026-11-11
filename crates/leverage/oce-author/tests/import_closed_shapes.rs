@@ -5,16 +5,18 @@
 //! a document they read, replaced by the list of its values, is refused with one of the codes in
 //! [`REFUSAL_CODES`], and the same document as written imports.
 //!
-//! One exception, by design: the CXF importer drops a parameter node's descriptive attributes
-//! (`S231:unit`, `quantity`, `displayUnit`, `min`, `max`; importer note, decision 9) without
-//! reading them and reports each value as written, so a list there imports and changes nothing the
-//! model carries. The sweep holds exactly that, and nothing else, for those positions.
+//! There is no exception. Until GitHub issue #559 a parameter node's descriptive attributes
+//! (`S231:unit`, `quantity`, `displayUnit`, `min`, `max`) were dropped without any check, so a
+//! list there imported; the importer now checks their shape before dropping them (owner ruling of
+//! 2026-11-11), and a list there is `wrong-shape` like a list anywhere else.
 
 use std::collections::BTreeSet;
 
 use crate::support;
 
-use oce_author::{ImportError, ImportOptions, Imported, import_cxf, import_graph_v0};
+use oce_author::{
+    ImportError, ImportErrorKind, ImportOptions, Imported, SourceForm, import_cxf, import_graph_v0,
+};
 
 use support::cxf::{IMPORTED, corpus_fixture};
 use support::fixture;
@@ -35,15 +37,6 @@ const MAX_OBJECTS: usize = 150;
 /// expressions, and a list in place of a `hasParameter` reference hides the sequence parameter a
 /// value names.
 const REFUSAL_CODES: [&str; 3] = ["wrong-shape", "array-shape", "expression-value"];
-
-/// The parameter attributes the CXF importer drops unread (decision 9).
-const DROPPED_ATTRIBUTES: [&str; 5] = [
-    "S231:unit",
-    "S231:quantity",
-    "S231:displayUnit",
-    "S231:min",
-    "S231:max",
-];
 
 /// What part of a CXF document an object is, for the coverage check.
 fn role(text: &str, site: &Site) -> &'static str {
@@ -72,26 +65,6 @@ fn swept_objects(text: &str) -> Vec<Site> {
         .collect()
 }
 
-/// Whether `site` is a descriptive attribute the importer drops and `imported` is what it must make
-/// of the list there: the model of the document as written, with the list reported as written.
-fn dropped_as_written(site: &Site, text: &str, imported: &Imported, original: &Imported) -> bool {
-    let Some(Step::Key(key)) = site.steps.last() else {
-        return false;
-    };
-    if !DROPPED_ATTRIBUTES.contains(&key.as_str()) {
-        return false;
-    }
-    let list: serde_json::Value =
-        serde_json::from_str(&site.list_of_values(text)).expect("the list is JSON");
-    let written = list.to_string();
-    imported.sequence == original.sequence
-        && imported
-            .report
-            .dropped
-            .iter()
-            .any(|dropped| dropped.value == written)
-}
-
 /// What a CXF sweep met: the objects swept, their roles, the refusal codes and what broke the
 /// rule.
 #[derive(Default)]
@@ -103,14 +76,13 @@ struct Swept {
 }
 
 /// Sweep `documents` with `importer`: every swept object replaced by the list of its values must
-/// be refused with a code of [`REFUSAL_CODES`] (or, for a dropped attribute, carry nothing into
-/// the model).
+/// be refused with a code of [`REFUSAL_CODES`].
 fn sweep(documents: &[(String, Vec<u8>)], importer: Importer) -> Swept {
     let options = ImportOptions::new();
     let mut swept = Swept::default();
     for (name, bytes) in documents {
         let text = std::str::from_utf8(bytes).expect("UTF-8");
-        let original = importer(bytes, &options).unwrap_or_else(|e| panic!("{name}: {e}"));
+        importer(bytes, &options).unwrap_or_else(|e| panic!("{name}: {e}"));
         for site in swept_objects(text) {
             swept.count += 1;
             swept.roles.insert(role(text, &site));
@@ -122,7 +94,6 @@ fn sweep(documents: &[(String, Vec<u8>)], importer: Importer) -> Swept {
                 Err(error) => swept
                     .broken
                     .push(format!("{name} {}: refused as {error}", site.path())),
-                Ok(imported) if dropped_as_written(&site, text, &imported, &original) => {}
                 Ok(_) => swept
                     .broken
                     .push(format!("{name} {}: imported", site.path())),
@@ -198,9 +169,10 @@ fn every_corpus_cxf_object_refuses_the_list_of_its_values() {
 }
 
 #[test]
-fn a_dropped_parameter_bound_written_as_a_list_is_reported_as_written() {
-    // The exception the sweeps allow, pinned on one node: the corpus's `dpBuiSet` carries
-    // `"S231:max": {"@value": "30", "@type": "…#double"}`, which the importer drops unread.
+fn a_parameter_bound_written_as_a_list_is_refused_as_wrong_shape() {
+    // The exception the sweeps allowed until GitHub issue #559, pinned on its node: the corpus's
+    // `dpBuiSet` carries `"S231:max": {"@value": "30", "@type": "…#double"}`. The list of its
+    // values imported, dropped unread; it is now refused before the drop.
     let bytes = read(&corpus_fixture("multizone_vav_relief_damper"));
     let text = std::str::from_utf8(&bytes).expect("UTF-8");
     let site = sites(text)
@@ -208,24 +180,16 @@ fn a_dropped_parameter_bound_written_as_a_list_is_reported_as_written() {
         .find(|s| s.path() == "@graph[1].S231:max")
         .expect("the bound");
     let options = ImportOptions::new();
-    let original = import_cxf(&bytes, &options).expect("imports");
-    let imported = import_cxf(site.as_list_of_values(text).as_bytes(), &options).expect("imports");
-    assert_eq!(imported.sequence, original.sequence, "nothing read from it");
-    let subject = "http://example.org#g36.source.multizone_vav_relief_damper.dpBuiSet";
-    let dropped = |report: &oce_author::ImportReport| {
-        report
-            .dropped
-            .iter()
-            .find(|d| d.subject == subject && d.property == oce_author::DroppedProperty::Max)
-            .map(|d| d.value.clone())
-    };
+    import_cxf(&bytes, &options).expect("the document as written imports");
     assert_eq!(
-        dropped(&original.report).as_deref(),
-        Some(r#"{"@type":"http://www.w3.org/2001/XMLSchema#double","@value":"30"}"#)
-    );
-    assert_eq!(
-        dropped(&imported.report).as_deref(),
-        Some(r#"["30","http://www.w3.org/2001/XMLSchema#double"]"#)
+        import_cxf(site.as_list_of_values(text).as_bytes(), &options).err(),
+        Some(ImportError::new(
+            SourceForm::Cxf,
+            "http://example.org#g36.source.multizone_vav_relief_damper.dpBuiSet",
+            ImportErrorKind::WrongShape {
+                key: "S231:max".to_owned(),
+            },
+        ))
     );
 }
 
