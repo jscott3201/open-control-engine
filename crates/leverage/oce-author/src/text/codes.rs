@@ -42,7 +42,7 @@ pub const NON_FINITE_NUMBER: &str = "non-finite-number";
 pub const MALFORMED_SUFFIX: &str = "malformed-suffix";
 /// A well-formed unit suffix that is not a base unit (`h`, `degC`, `kPa`; decision 13).
 pub const UNIT_NOT_BASE: &str = "unit-not-base";
-/// A tag's atom or the `extends` provenance id holds a byte other than printable ASCII (`!` to
+/// A tag's atom or the `derived_from` provenance id holds a byte other than printable ASCII (`!` to
 /// `~`). An atom stops at `#`; a provenance id may contain one (decision 5's grammar).
 pub const MALFORMED_ATOM: &str = "malformed-atom";
 /// A token where the grammar allows none, or a missing one (`expected ... found ...`).
@@ -58,10 +58,10 @@ pub const DUPLICATE_TAG: &str = "duplicate-tag";
 pub const UNKNOWN_TYPE: &str = "unknown-type";
 /// The file does not start with a `sequence` statement.
 pub const MISSING_SEQUENCE: &str = "missing-sequence";
-/// The `sequence` statement is not followed by an `extends` statement (`extends none` is
-/// explicit; decision 5).
-pub const MISSING_EXTENDS: &str = "missing-extends";
-/// A second `sequence` or `extends` statement.
+/// The `sequence` statement is not followed by a `derived_from` statement (`derived_from none`
+/// is explicit; decision 5).
+pub const MISSING_DERIVED_FROM: &str = "missing-derived-from";
+/// A second `sequence` or `derived_from` statement.
 pub const MISPLACED_STATEMENT: &str = "misplaced-statement";
 /// A value the position cannot take: a reference or a list as a sequence parameter's value.
 pub const MISPLACED_VALUE: &str = "misplaced-value";
@@ -101,7 +101,7 @@ pub const PARSE_CODES: &[&str] = &[
     DUPLICATE_TAG,
     UNKNOWN_TYPE,
     MISSING_SEQUENCE,
-    MISSING_EXTENDS,
+    MISSING_DERIVED_FROM,
     MISPLACED_STATEMENT,
     MISPLACED_VALUE,
     MALFORMED_LIST,

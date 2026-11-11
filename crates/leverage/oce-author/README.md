@@ -36,7 +36,7 @@ validates nor evaluates; names are carried, never repaired, for the validator to
   stays within `MAX_V0_COMMENT_LINE_BYTES` = 4,096, the truncation reported), never
   `SemanticPoint.unit`; the sequence gets `# imported from v0 graph JSON`
   (`V0_PROVENANCE_COMMENT`). Nothing about provenance reaches the wire form or the emitter.
-- **`ImportOptions`** sets `extends` (none by default; the importer never derives one).
+- **`ImportOptions`** sets `derived_from` (none by default; the importer never derives one).
 - **`ImportReport`** lists, in reading order, every `Dropped { subject, property, value }` (closed
   `DroppedProperty`: the CXF root's `@type` when it is not `S231:Block`, an `S231:label` that
   differs from the local name, a parameter's descriptive `unit`, `quantity`, `displayUnit`, `min`
@@ -135,7 +135,7 @@ example:
 ```text
 # Economizer enable on outdoor-air temperature with a deadband.
 sequence econ_enable
-extends none
+derived_from none
 
 param dTHys : Real = 1 K
 
@@ -155,9 +155,9 @@ hys.y -> ecoEna
 ### Grammar
 
 ```text
-file        = sequence-stmt extends-stmt { statement }
+file        = sequence-stmt derived-from-stmt { statement }
 sequence-stmt = "sequence" name
-extends-stmt  = "extends" ( "none" | provenance-id )
+derived-from-stmt = "derived_from" ( "none" | provenance-id )
 statement   = param-stmt | in-stmt | out-stmt | block-stmt | connection
 param-stmt  = "param" name ":" ( type | name ) "=" scalar   (a name: an enumeration type)
 in-stmt     = "in" name ":" type { tag }        (out-stmt alike, with "out")
@@ -191,6 +191,12 @@ comment     = "#" to the end of the line, anywhere
 - An `atom` runs to the next space or `#` and must be printable ASCII (`malformed-atom`). A
   provenance id runs to the next space and may contain `#`, as decision 5's grammar allows; it too
   must be printable ASCII.
+- The provenance statement is `derived_from` (issue #529). `extends` is kept for its CDL meaning,
+  composite inheritance (OBC specification §7.15): it starts no statement, so a file in the
+  earlier spelling is refused (`missing-derived-from` in the header, `unknown-keyword` after it),
+  and a wire document with an `extends` key is refused (`WireError::UnknownKey`, `unknown-key` in
+  an `oce` report). `derived_from` is a text-form keyword (`TEXT_FORM_KEYWORDS`) and `extends` a
+  Modelica reserved word, so neither is a declared name.
 - On the right of `=` in a block, a bare `name` is a reference to a sequence parameter and a
   dotted `Type.Member` a member of an enumeration or a library constant package. A sequence parameter takes a literal or a member,
   never a reference or a list (`misplaced-value`). `NaN`, `inf` and `Infinity` in any case are
@@ -223,8 +229,8 @@ comment     = "#" to the end of the line, anywhere
 
 `fmt_text` is `parse_text` then `print_text`, and `fmt_text(fmt_text(t)) == fmt_text(t)`.
 
-- **Section order**: header comments, `sequence`, `extends`, then parameters, inputs, outputs,
-  blocks and connections, each section in authored order (decision 12). Nothing is sorted.
+- **Section order**: header comments, `sequence`, `derived_from`, then parameters, inputs,
+  outputs, blocks and connections, each section in authored order (decision 12). Nothing is sorted.
 - **Spelling**: one space around `=`, `->` and `:`; Reals (bounds included) in Rust's shortest round-trip spelling
   (`1.50` → `1.5`, `1E5` → `100000.0`, `0.000001` → `1e-6`); Integers bare; suffixes re-emitted
   after one space; tags in the grammar's order; two-space indentation; one final line feed.
@@ -235,11 +241,11 @@ comment     = "#" to the end of the line, anywhere
   comments) is kept as one; a run collapses to one. Own-line comments stay above the statement
   that follows them. **An end-of-line comment moves to its own line above its statement** (inside
   a block's list, above its assignment; after `(` or `)`, above the block). Comments before
-  `sequence` or between `sequence` and `extends` print above `sequence`; comments after the last
-  statement print last, after one blank line. A comment after the last item of a `(...)` or
-  `[...]` is refused (`comment-before-close`). Trailing spaces in a comment are dropped. A comment
-  is at most `MAX_COMMENT_BYTES` (8,189) bytes after its `#`, the line bound less the `#` and the
-  two-space indent the printer may give it (`comment-too-long`).
+  `sequence` or between `sequence` and `derived_from` print above `sequence`; comments after the
+  last statement print last, after one blank line. A comment after the last item of a `(...)`
+  or `[...]` is refused (`comment-before-close`). Trailing spaces in a comment are dropped. A
+  comment is at most `MAX_COMMENT_BYTES` (8,189) bytes after its `#`, the line bound less the `#`
+  and the two-space indent the printer may give it (`comment-too-long`).
 - **Arrays regroup through the catalog** only when the run is exactly what the block assigns of
   that array: every element of the template the block holds, consecutive, starting at index 1, in
   row-major order, at least two elements, a matrix a whole rectangle, and no comment or blank line
@@ -250,11 +256,11 @@ comment     = "#" to the end of the line, anywhere
   element or an unknown class.
 
 **Total or refusing.** `print_text` returns `Result<String, PrintError>` and never emits text that
-parses to a different model. A name, class path, atom, suffix, string, value or `extends` id the
-lexer would not read back as the same value — a space or line feed in a name, `#` in an atom, a
-non-path class, a suffix that is not a base unit, `extends none` as an id, a reference named
-`true` or `inf`, a member with no `Type.`, an enumeration type spelled as a scalar type or not as
-one word, a non-finite Real or bound, a control character or bidirectional
+parses to a different model. A name, class path, atom, suffix, string, value or `derived_from` id
+the lexer would not read back as the same value — a space or line feed in a name, `#` in an atom,
+a non-path class, a suffix that is not a base unit, `none` as a `derived_from` id, a reference
+named `true` or `inf`, a member with no `Type.`, an enumeration type spelled as a scalar type or
+not as one word, a non-finite Real or bound, a control character or bidirectional
 override in a string — is refused with `PrintError::Unspellable { subject, detail }`, and so is a
 statement whose printed line would pass 8,192 bytes (a dotted name or a tag list too long for one
 line) and a document that would pass 4 MiB, 100,000 lines or 65,536 statements of one kind. The only
@@ -286,7 +292,7 @@ refused before a token is read. Nothing in the parser panics or recurses past th
 ### Spans
 
 `validate_text` (and `validate_text_author_side`) fills `Finding::span` from a `SourceMap` built
-while parsing: `sequence` is the sequence name, `extends` its operand, a declared name its
+while parsing: `sequence` is the sequence name, `derived_from` its operand, a declared name its
 declaration's name, `block.param` the assignment's name (an array element's value), and
 `connection[N]` the connection's source. A `duplicate-name` or `duplicate-parameter` finding is
 placed on the later declaration in model section order (parameters, inputs, outputs, blocks), as

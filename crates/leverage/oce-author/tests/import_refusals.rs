@@ -365,15 +365,15 @@ fn every_emitted_golden_reimports_to_the_same_bytes() {
 }
 
 #[test]
-fn the_options_set_extends_and_nothing_else() {
+fn the_options_set_derived_from_and_nothing_else() {
     let bytes = document().into_bytes();
     let plain = import(&bytes).expect("import").sequence;
-    assert_eq!(plain.extends, None);
+    assert_eq!(plain.derived_from, None);
     let id =
         oce_author::ProvenanceId::new("cxf:fnv1a128:00112233445566778899aabbccddeeff").expect("id");
-    let options = ImportOptions::new().with_extends(id.clone());
+    let options = ImportOptions::new().with_derived_from(id.clone());
     let mut with = import_cxf(&bytes, &options).expect("import").sequence;
-    assert_eq!(with.extends, Some(id));
-    with.extends = None;
+    assert_eq!(with.derived_from, Some(id));
+    with.derived_from = None;
     assert_eq!(with, plain);
 }

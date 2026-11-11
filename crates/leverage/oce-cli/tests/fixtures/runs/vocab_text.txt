@@ -1,7 +1,7 @@
 exit: 0
 --- stdout
 keywords:
-  sequence extends none param in out block true false Real Integer Boolean
+  sequence derived_from none param in out block true false Real Integer Boolean
 
 types:
   Real Integer Boolean
@@ -43,8 +43,8 @@ parse codes (text form, exit 2):
   duplicate-tag         a boundary tag other than @haystack written twice on one statement
   unknown-type          a type other than Real, Integer or Boolean
   missing-sequence      the file does not start with a sequence statement
-  missing-extends       the sequence statement is not followed by an extends statement
-  misplaced-statement   a second sequence or extends statement
+  missing-derived-from  the sequence statement is not followed by a derived_from statement
+  misplaced-statement   a second sequence or derived_from statement
   misplaced-value       a reference or a list as a sequence parameter's value
   malformed-list        an empty, ragged or mixed list
   unclosed-bracket      a ( or [ that is never closed
@@ -74,7 +74,7 @@ finding codes, stage 1 (exit 1):
   invalid-bound                a boundary bound the boundary's type cannot take
   non-finite-bound             a boundary bound is NaN or infinite
   crossed-bounds               a boundary's min exceeds its max
-  invalid-provenance-id        the extends provenance id is malformed
+  invalid-provenance-id        the derived_from provenance id is malformed
   single-assignment            two connections drive one block input or boundary output
 
 finding codes, stage 2 (exit 1; engine codes pass through as well):

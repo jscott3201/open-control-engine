@@ -1,5 +1,5 @@
-//! Sequence-level checks: the sequence shape, declared names and their uniqueness, `extends`,
-//! sequence parameter types and values, and boundary semantic slots and bounds.
+//! Sequence-level checks: the sequence shape, declared names and their uniqueness,
+//! `derived_from`, sequence parameter types and values, and boundary semantic slots and bounds.
 
 use std::collections::BTreeMap;
 
@@ -49,13 +49,13 @@ pub(super) fn check(sequence: &Sequence, findings: &mut Findings) {
             "the sequence has no blocks; it must contain at least one",
         );
     }
-    if let Some(id) = &sequence.extends
+    if let Some(id) = &sequence.derived_from
         && let Err(error) = id.check()
     {
         findings.error(
-            Anchor::Extends,
+            Anchor::DerivedFrom,
             INVALID_PROVENANCE_ID,
-            "extends",
+            "derived_from",
             format!("`{id}`: {error}"),
         );
     }

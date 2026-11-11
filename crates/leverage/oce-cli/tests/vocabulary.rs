@@ -453,14 +453,16 @@ fn vocab_lists_the_scale_factor_table_exactly() {
 fn vocab_says_the_scaled_suffixes_are_refused_for_as_long_as_they_are() {
     for row in SCALE_FACTORS {
         let written = format!(
-            "sequence s\nextends none\nparam p : Real = 1 {}\n",
+            "sequence s\nderived_from none\nparam p : Real = 1 {}\n",
             row.symbol
         );
         let refusal = oce_author::parse_text(&written).expect_err("a scaled suffix is refused");
         assert_eq!(refusal.code, "unit-not-base", "{}", row.symbol);
     }
     // A base unit is accepted, so the refusal above is about the symbol, not the statement.
-    assert!(oce_author::parse_text("sequence s\nextends none\nparam p : Real = 1 s\n").is_ok());
+    assert!(
+        oce_author::parse_text("sequence s\nderived_from none\nparam p : Real = 1 s\n").is_ok()
+    );
 
     let text = oce(&["vocab"], b"");
     let heading = text

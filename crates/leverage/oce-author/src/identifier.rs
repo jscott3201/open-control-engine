@@ -1,4 +1,4 @@
-//! Authored names and the `extends` provenance id.
+//! Authored names and the `derived_from` provenance id.
 //!
 //! An [`Identifier`] names a sequence, a sequence parameter, a boundary input or output, a block,
 //! an assigned parameter or a port. Its rules come from the authoring note ("The authoring
@@ -87,8 +87,18 @@ pub const MODELICA_RESERVED_WORDS: &[&str] = &[
 /// Boolean literals and the three type names. An authored name is never one of them, so the text
 /// form (a later item) needs no change to the model.
 pub const TEXT_FORM_KEYWORDS: &[&str] = &[
-    "sequence", "extends", "none", "param", "in", "out", "block", "true", "false", "Real",
-    "Integer", "Boolean",
+    "sequence",
+    "derived_from",
+    "none",
+    "param",
+    "in",
+    "out",
+    "block",
+    "true",
+    "false",
+    "Real",
+    "Integer",
+    "Boolean",
 ];
 
 /// The words the text form reads as non-finite numbers (`NaN`, `inf`, `Infinity`), compared
@@ -232,7 +242,7 @@ impl fmt::Display for Identifier {
 /// Why a provenance id is malformed (decision 5).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ProvenanceIdError {
-    /// The id is empty; an absent `extends` is `None`, not an empty id.
+    /// The id is empty; an absent `derived_from` is `None`, not an empty id.
     Empty,
     /// The id is longer than [`MAX_PROVENANCE_ID_BYTES`]; carries its length in bytes.
     TooLong(usize),
@@ -300,9 +310,9 @@ pub fn check_provenance_id(id: &str) -> Result<(), ProvenanceIdError> {
     Ok(())
 }
 
-/// An opaque provenance id for `extends` (decision 5): stored, round-tripped and syntax-checked,
-/// never resolved, merged or emitted. Like [`Identifier`], the model can hold a malformed one so
-/// the validator reports it (`invalid-provenance-id`).
+/// An opaque provenance id for `derived_from` (decision 5): stored, round-tripped and
+/// syntax-checked, never resolved, merged or emitted. Like [`Identifier`], the model can hold a
+/// malformed one so the validator reports it (`invalid-provenance-id`).
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ProvenanceId(String);
 

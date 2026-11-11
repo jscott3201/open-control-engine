@@ -1,5 +1,5 @@
 sequence generic_time_suppression
-extends none
+derived_from none
 param chaRat : Real = 540.0
 param maxTim : Real = 1800.0
 param samplePeriod : Real = 120.0

@@ -897,7 +897,7 @@ exit: 0
     },
     {
       "code": "invalid-provenance-id",
-      "meaning": "the extends provenance id is malformed",
+      "meaning": "the derived_from provenance id is malformed",
       "stage": 1
     },
     {
@@ -920,7 +920,7 @@ exit: 0
   "input": null,
   "keywords": [
     "sequence",
-    "extends",
+    "derived_from",
     "none",
     "param",
     "in",
@@ -1035,12 +1035,12 @@ exit: 0
       "meaning": "the file does not start with a sequence statement"
     },
     {
-      "code": "missing-extends",
-      "meaning": "the sequence statement is not followed by an extends statement"
+      "code": "missing-derived-from",
+      "meaning": "the sequence statement is not followed by a derived_from statement"
     },
     {
       "code": "misplaced-statement",
-      "meaning": "a second sequence or extends statement"
+      "meaning": "a second sequence or derived_from statement"
     },
     {
       "code": "misplaced-value",

@@ -223,7 +223,7 @@ pub fn enumerated_models() -> Vec<Sequence> {
     for i in 0..48usize {
         let mut s = Sequence::new(id(if i % 2 == 0 { "enumerated" } else { "none_" }));
         if i % 3 == 1 {
-            s.extends = Some(ProvenanceId::unchecked("cxf:fnv1a128:0123#abc"));
+            s.derived_from = Some(ProvenanceId::unchecked("cxf:fnv1a128:0123#abc"));
         }
         if i % 3 == 0 {
             s.annotations.comments = vec![" header".to_owned(), String::new()];

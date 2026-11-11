@@ -226,10 +226,10 @@ fn vocab_tags_are_exactly_the_tags_the_text_form_reads() {
             "@name" | "@label" => " \"x\"",
             _ => " x",
         };
-        let text = format!("sequence s\nextends none\nin u : Real {tag}{operand}\n");
+        let text = format!("sequence s\nderived_from none\nin u : Real {tag}{operand}\n");
         assert!(oce_author::parse_text(&text).is_ok(), "{tag} is not read");
     }
-    let unknown = oce_author::parse_text("sequence s\nextends none\nin u : Real @bogus x\n");
+    let unknown = oce_author::parse_text("sequence s\nderived_from none\nin u : Real @bogus x\n");
     assert_eq!(unknown.unwrap_err().code, "unknown-tag");
     let codes = |key: &str| -> Vec<String> {
         report[key]

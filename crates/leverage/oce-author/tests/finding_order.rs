@@ -15,7 +15,7 @@ use support::econ_enable;
 fn defective() -> Sequence {
     let mut s = econ_enable();
     s.name = Identifier::unchecked("bad name");
-    s.extends = Some(ProvenanceId::unchecked("X:1"));
+    s.derived_from = Some(ProvenanceId::unchecked("X:1"));
     s.params[0].value = Literal::Text("one".to_owned());
     s.inputs[0].semantic.unit = Some("deg C".to_owned());
     s.inputs[0].semantic.brick = Some(String::new());
@@ -53,7 +53,7 @@ fn findings_follow_authored_position_then_code_then_detail() {
         order,
         vec![
             ("sequence", "invalid-name"),
-            ("extends", "invalid-provenance-id"),
+            ("derived_from", "invalid-provenance-id"),
             ("dTHys", "parameter-kind-mismatch"),
             ("TOut", "invalid-semantic-point"),
             ("TOut", "invalid-semantic-point"),
@@ -134,7 +134,7 @@ fn permuting_the_model_permutes_the_findings_and_nothing_else() {
         subjects,
         vec![
             "sequence",
-            "extends",
+            "derived_from",
             "dTHys",
             "TOut",
             "TOut",

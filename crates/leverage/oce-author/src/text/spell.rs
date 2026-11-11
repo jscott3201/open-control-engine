@@ -6,7 +6,7 @@
 //!
 //! A model from the wire form or the builder can hold values the lexer cannot read back: a name
 //! with a space or a line feed, an atom with a `#`, a class path that is not dotted words, a
-//! suffix that is not a base unit, an `extends` id of `none`, a reference named `true`, an
+//! suffix that is not a base unit, a `derived_from` id of `none`, a reference named `true`, an
 //! enumeration member with no type, an enumeration type spelled as a scalar type or not as one
 //! word, a non-finite Real or bound, a string with a control character or a
 //! bidirectional override. Each is refused here, naming the subject by the validator's model
@@ -29,10 +29,10 @@ use super::units::check_suffix;
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PrintError {
-    /// A name, class path, atom, suffix, string, value, comment or `extends` id that the text
-    /// form's lexer could not read back as the same value.
+    /// A name, class path, atom, suffix, string, value, comment or `derived_from` id that the
+    /// text form's lexer could not read back as the same value.
     Unspellable {
-        /// The model path of what holds it (`sequence`, `extends`, `TOut`, `hys.uHigh`,
+        /// The model path of what holds it (`sequence`, `derived_from`, `TOut`, `hys.uHigh`,
         /// `connection[2]`), as the validator names subjects.
         subject: String,
         /// What cannot be spelled, and why.
@@ -53,7 +53,7 @@ impl fmt::Display for PrintError {
 impl std::error::Error for PrintError {}
 
 /// The words that start a statement: a connection source cannot begin with one.
-const STATEMENT_WORDS: &[&str] = &["sequence", "extends", "param", "in", "out", "block"];
+const STATEMENT_WORDS: &[&str] = &["sequence", "derived_from", "param", "in", "out", "block"];
 
 type Checked = Result<(), String>;
 
@@ -285,14 +285,14 @@ pub(super) fn check(s: &Sequence) -> Result<(), PrintError> {
         .and_then(|()| comment_lines(&s.annotations.comments))
         .and_then(|()| comment_lines(&s.trailing_comments))
         .map_err(at("sequence"))?;
-    if let Some(id) = &s.extends {
+    if let Some(id) = &s.derived_from {
         let id = id.as_str();
         let ok = !id.is_empty()
             && id.len() <= MAX_TOKEN_BYTES
             && id != "none"
             && id.bytes().all(|b| (b'!'..=b'~').contains(&b));
         if !ok {
-            return Err(at("extends")(format!(
+            return Err(at("derived_from")(format!(
                 "`{id}` is not 1 to {MAX_TOKEN_BYTES} bytes of printable ASCII other than `none`"
             )));
         }

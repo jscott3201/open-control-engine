@@ -189,17 +189,17 @@ impl SequenceBuilder {
         Ok(id)
     }
 
-    /// Set the provenance id this sequence derives from.
+    /// Set the provenance id this sequence derives from ([`crate::Sequence::derived_from`]).
     ///
     /// # Errors
     ///
     /// [`BuildError::InvalidProvenanceId`].
-    pub fn extends(mut self, id: &str) -> Result<Self, BuildError> {
+    pub fn derived_from(mut self, id: &str) -> Result<Self, BuildError> {
         let id = ProvenanceId::new(id).map_err(|error| BuildError::InvalidProvenanceId {
             id: id.to_owned(),
             error,
         })?;
-        self.sequence.extends = Some(id);
+        self.sequence.derived_from = Some(id);
         Ok(self)
     }
 

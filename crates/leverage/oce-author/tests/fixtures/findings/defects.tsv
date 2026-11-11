@@ -1,4 +1,4 @@
-invalid-provenance-id	extends	`CXF:abc`: a provenance id starts with a lowercase format prefix (`[a-z][a-z0-9]*`) and a colon
+invalid-provenance-id	derived_from	`CXF:abc`: a provenance id starts with a lowercase format prefix (`[a-z][a-z0-9]*`) and a colon
 parameter-kind-mismatch	nStage	sequence parameter `nStage` is declared Integer but its value is Real
 unknown-enum-type	eneStd	sequence parameter `eneStd`: `OperationModes` (ASHRAE.G36.Types.OperationModes) is a constant package, never a parameter type; declare the parameter `Integer` and assign `OperationModes.<member>`
 crossed-bounds	TOut	`TOut` declares `min` 30.0 above `max` -10; no value lies between them

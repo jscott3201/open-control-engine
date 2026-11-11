@@ -165,7 +165,7 @@ fn text_form_annotations_and_suffixes_never_reach_the_bytes() {
     annotated.blocks[1].assignments[0].suffix = Some("K".to_owned());
     annotated.blocks[1].assignments[0].annotations.comments = vec!["low".to_owned()];
     annotated.connections[0].annotations.comments = vec!["cut-off first".to_owned()];
-    annotated.extends = Some(
+    annotated.derived_from = Some(
         oce_author::ProvenanceId::new("cxf:fnv1a128:00112233445566778899aabbccddeeff").expect("id"),
     );
     assert_ne!(annotated, econ_enable());

@@ -10,7 +10,7 @@ dropped loVal description: "Smallest of the three"
 # text
 # imported from v0 graph JSON
 sequence width_max_min
-extends none
+derived_from none
 # First value
 # unit: 1
 in pA : Real

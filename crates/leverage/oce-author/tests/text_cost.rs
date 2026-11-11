@@ -9,7 +9,7 @@ use oce_author::{MAX_STATEMENTS_PER_KIND, MAX_TEXT_BYTES, validate_text_author_s
 
 /// `n` blocks of an unregistered class: one `class-not-found` finding each.
 fn document(n: usize) -> String {
-    let mut text = String::from("sequence s\nextends none\n");
+    let mut text = String::from("sequence s\nderived_from none\n");
     for i in 0..n {
         text.push_str(&format!("block b{i} = CDL.Reals.Nope\n"));
     }

@@ -1,6 +1,6 @@
 {
   "sequence": "econ_enable",
-  "extends": "",
+  "derived_from": "",
   "params": [
     {
       "name": "dTHys",

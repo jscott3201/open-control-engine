@@ -46,7 +46,7 @@ in its simplest accepted form and the dialect the library already uses. Nested c
 
 | Element | Content |
 | --- | --- |
-| Sequence | `name` (identifier), `extends` (opaque provenance id or none, decision 5) |
+| Sequence | `name` (identifier), `derived_from` (opaque provenance id or none, decision 5; named `extends` until issue #529) |
 | Parameter | sequence-level `name`, `type` (Real, Integer, Boolean, or an enumeration type name; amended 2026-11-09, issue #492), literal `value`; lowered onto the root block (decision 3) |
 | Input / output | boundary `name`, `type` (Real, Integer, Boolean), optional `quantity` and `display_unit` (decision 21), optional `min` and `max` number bounds (amended 2026-11-09, issue #492), and a `SemanticPoint` slot (decision 2) |
 | Block | instance `name`, catalog `class_path`, ordered parameter assignments |
@@ -84,9 +84,9 @@ parser (decision 1). One statement per line except a block's parameter list, whi
 
 | Production | Grammar |
 | --- | --- |
-| file | `sequence-stmt extends-stmt { param-stmt } { in-stmt } { out-stmt } { block-stmt } { connection }` |
+| file | `sequence-stmt derived-from-stmt { param-stmt } { in-stmt } { out-stmt } { block-stmt } { connection }` |
 | sequence-stmt | `"sequence" name` |
-| extends-stmt | `"extends" ( "none" \| provenance-id )` |
+| derived-from-stmt | `"derived_from" ( "none" \| provenance-id )` |
 | param-stmt | `"param" name ":" ( type \| name ) "=" literal` (a `name`: an enumeration type; amended 2026-11-09) |
 | in-stmt / out-stmt | `("in" \| "out") name ":" type { tag }` |
 | block-stmt | `"block" name "=" class-path [ "(" [ assign { "," assign } ] ")" ]` |
@@ -98,7 +98,7 @@ parser (decision 1). One statement per line except a block's parameter list, whi
 | comment | `#` to end of line, anywhere |
 | name / atom | an identifier as above; an atom is printable ASCII with no space or `#`. `@haystack` may repeat |
 
-The `file` production is the canonical order; after `extends` the parser accepts the other
+The `file` production is the canonical order; after `derived_from` the parser accepts the other
 statements in any order and `fmt` regroups them (decision 12). `type` is `Real`, `Integer` or
 `Boolean`. *Amended 2026-11-09 (issue #492):* a sequence parameter's type may also be any other
 word, an enumeration type name the validator resolves (the parser stays catalog-free); a boundary's
@@ -116,7 +116,7 @@ Comments are text-only in the same way: the model keeps them so `fmt` loses noth
 form and the emitter drop them. *Amended 2026-11-09 (issue #482):* statement annotations alone could
 not hold a comment above `sequence` (this note's own worked example opens with one) or after the last
 statement, so the model gained two fields, `Sequence::annotations` (the header comments; a comment
-between `sequence` and `extends` folds in and prints above `sequence`) and
+between `sequence` and `derived_from` folds in and prints above `sequence`) and
 `Sequence::trailing_comments`, which the wire form, the schema and the emitter ignore. A comment
 after the last item of a block's `(...)` precedes nothing and is refused (`comment-before-close`).
 An end-of-line comment moves to its own line above its statement.
@@ -148,8 +148,8 @@ corpus bundle.
 
 - **The property, exactly.** `print_text` returns `Result<String, PrintError>` and is total or
   refusing. It never emits text that parses to a different model. A name, class path, atom,
-  suffix, string, value or `extends` id that the lexer would not read back as the same value is
-  refused with `PrintError::Unspellable { subject, detail }`. Its only normalizations are the
+  suffix, string, value or `derived_from` id that the lexer would not read back as the same value
+  is refused with `PrintError::Unspellable { subject, detail }`. Its only normalizations are the
   parser's own: a comment with a line feed prints as several comment lines, trailing spaces in a
   comment are dropped, and the header's meaningless `blank_line_before` is not printed.
 - **Which models round-trip.** `print` refuses, never emits, a statement whose printed line would
@@ -199,7 +199,7 @@ cut-off.
 ```text
 # Economizer enable on outdoor-air temperature with a deadband.
 sequence econ_enable
-extends none
+derived_from none
 
 param dTHys : Real = 1 K
 
@@ -250,7 +250,7 @@ tagged objects are closed, and the schema lists the five shapes under `anyOf`. C
 ```json
 {
   "sequence": "econ_enable",
-  "extends": "",
+  "derived_from": "",
   "params": [{ "name": "dTHys", "type": "Real", "value": 1 }],
   "inputs": [{ "name": "TOut", "type": "Real", "quantity": "ThermodynamicTemperature",
                "display_unit": "degC", "min": [], "max": [],
@@ -308,7 +308,7 @@ It runs in two stages (decision 4):
 
 1. **Author-side**, from the model and the catalog alone: names, the sequence shape, edge syntax and
    endpoints, class lookup, parameter lookup, kinds and catalog rules, references, arity and port
-   names from the ports #440 synthesizes, duplicates, `SemanticPoint` and `extends` syntax.
+   names from the ports #440 synthesizes, duplicates, `SemanticPoint` and `derived_from` syntax.
 2. **Engine-side**, only when stage 1 found no error: emit, load the bytes in a throwaway
    `Engine::new()`, and map every diagnostic back to the model. Subjects are IRIs of the form
    `{namespace}{sequence}.{local}`, so stripping the root prefix yields the model path; a
@@ -526,13 +526,19 @@ Single assignment, algebraic loops and unused inputs come from emitting and load
 Rejected: a full duplicate validator (drift); a validate-only facade API first (clean, but needs a
 facade issue before M2; it may still be proposed later). Why: the same rule as decision 3.
 
-**5. `extends` before M3: an opaque provenance id.** Stored, round-tripped and syntax-checked;
-never merged and never emitted into CXF; `extends none` is explicit in text. The id grammar is
+**5. `derived_from` before M3: an opaque provenance id.** Stored, round-tripped and syntax-checked;
+never merged and never emitted into CXF; `derived_from none` is explicit in text. The id grammar is
 permissive: a lowercase format prefix, a colon, then printable non-space ASCII, at most 256 bytes
 (`cxf:fnv1a128:<hex>` fits); M3 owns the meaning of the prefixes it defines. Rejected: a local
 bundle-directory resolver (pre-empts M3); leaving it out (both forms change later). Why: the content
 id hashes emitted bytes, so an unemitted id cannot move it; resolution and diff are M3's
-(`oce-diff`).
+(`oce-diff`). *Amended 2026-11-11 (issue #529, owner ruling of 2026-11-09):* the statement, the
+model field and the wire key were named `extends` until this rename. `extends` is reserved for its
+CDL meaning, inheritance of a composite block with modifications (OBC specification §7.15), which
+M7's composite instantiation needs. The format stays at revision 1: it changed in place, with no
+reader for the earlier word, so a text file that says `extends` is refused (`missing-derived-from`
+in the header, `unknown-keyword` after it) and so is a wire document with an `extends` key
+(`WireError::UnknownKey`).
 
 **6. Emission order and IRIs: authored order, never sorted.** `fmt` normalises whitespace, section
 grouping and canonical Real spelling; authored order is kept inside each section, and integers and
@@ -666,9 +672,9 @@ without moving them.
   1 compares canonical ids: the canonical id of the emitter's output equals the committed CXF's.
   The namespace is free (the default `urn:oce:author:` matches the library's `http://example.org#`);
   the sequence name must match, because it is inside every name.
-  M3 also gives `extends` its resolution and diff. Four library rules are known to differ in node
-  order from the emitter's layout; library bundle v2 regenerates them with the emitter, or the gate
-  compares loaded models for them.
+  M3 also gives `derived_from` its resolution and diff. Four library rules are known to differ in
+  node order from the emitter's layout; library bundle v2 regenerates them with the emitter, or the
+  gate compares loaded models for them.
 - **M8 (semantics)** fixes the OBC §7.17.2 record shape. The emitter then writes `SemanticPoint`
   records with no change to the model, either form or the schema.
 - **Vocabulary v1** (from `modelica-json -o doc` over `third_party/`) supplies units, descriptions
@@ -681,7 +687,7 @@ without moving them.
 
 - **Text form.** Round-trip properties over enumerated models and every corpus bundle; `fmt`
   idempotence; each parse bound at its boundary; one typed refusal per malformed construct
-  (unterminated string, bad escape, bad suffix, stray token, missing `extends`, out-of-range
+  (unterminated string, bad escape, bad suffix, stray token, missing `derived_from`, out-of-range
   integer, `NaN` or `inf` spelled as a number); comment and blank-line preservation goldens.
 - **Wire form.** wire → text → wire byte equality for every bundle (gate item 2); closed-object
   refusals (unknown key, missing key, wrong type) as typed errors; the closed-shape sweeps (each
@@ -715,7 +721,7 @@ without moving them.
 
 - Nested composites, `hasInstance` members, conditional components and array connectors.
 - Expression parameter values beyond a bare reference, and any evaluation in `oce-author`.
-- Emitting semantic records (M8); resolving or diffing `extends` (M3).
+- Emitting semantic records (M8); resolving or diffing `derived_from` (M3).
 - Unit conversion beyond base units, and unit checks (vocabulary v1).
 - A validate-only facade API (may be proposed later; decision 4).
 - The TUI, `bind`, `points` and `doc` commands.
@@ -775,3 +781,6 @@ The architect pass on the draft (owner consulted on 11, 12 and 20) ruled:
   as cut moved them; the importer note's ruling 10 had them in the importer PR).
 - 2026-11-08: the CLI exit-code rule was aligned with the diff and commissioning passes: 0 yes, 1
   no, 2 error, with a parse refusal and an I/O failure both 2 and no exit 3.
+- 2026-11-09 (owner ruling, issue #529): "Rename to `derived_from` now." The provenance statement,
+  `Sequence::derived_from` and the wire key `derived_from` replace `extends` in place (decision 5's
+  amendment), and `derived_from` joins the text-form keywords, so it is no declared name.

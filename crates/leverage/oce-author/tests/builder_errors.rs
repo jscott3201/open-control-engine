@@ -72,13 +72,55 @@ fn malformed_and_duplicate_names_are_refused() {
 #[test]
 fn a_malformed_provenance_id_is_refused() {
     assert_eq!(
-        builder().extends("none").err(),
+        builder().derived_from("none").err(),
         Some(BuildError::InvalidProvenanceId {
             id: "none".to_owned(),
             error: ProvenanceIdError::BadPrefix
         })
     );
-    assert!(builder().extends("cxf:abc").is_ok());
+    assert!(builder().derived_from("cxf:abc").is_ok());
+}
+
+#[test]
+fn neither_the_provenance_keyword_nor_the_cdl_extends_is_a_declared_name() {
+    // Issue #529: `derived_from` is a text-form statement word, so no declared name may take it
+    // (a connection from it would read as a statement); `extends` is still refused, as the
+    // Modelica reserved word CDL composite inheritance uses (OBC specification §7.15).
+    assert!(oce_author::TEXT_FORM_KEYWORDS.contains(&"derived_from"));
+    assert!(!oce_author::TEXT_FORM_KEYWORDS.contains(&"extends"));
+    assert!(oce_author::MODELICA_RESERVED_WORDS.contains(&"extends"));
+    for (name, error) in [
+        ("derived_from", IdentifierError::Keyword),
+        ("extends", IdentifierError::ReservedWord),
+    ] {
+        assert_eq!(
+            SequenceBuilder::new(name).err(),
+            Some(BuildError::InvalidName {
+                name: name.to_owned(),
+                error
+            }),
+            "{name}"
+        );
+        assert_eq!(
+            builder().block(name, "CDL.Reals.Abs").err(),
+            Some(BuildError::InvalidName {
+                name: name.to_owned(),
+                error
+            }),
+            "{name}"
+        );
+        let mut s = econ_enable();
+        s.blocks[0].name = Identifier::unchecked(name);
+        assert!(
+            codes(&validate_author_side(&s)).contains(&("invalid-name", name.to_owned())),
+            "{name}: {:?}",
+            codes(&validate_author_side(&s))
+        );
+    }
+    // Neither is refused as a name the catalog gives (a port or a catalog parameter).
+    for name in ["derived_from", "extends"] {
+        assert_eq!(oce_author::check_identifier_syntax(name), Ok(()), "{name}");
+    }
 }
 
 #[test]

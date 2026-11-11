@@ -8,7 +8,7 @@ use oce_author::{
     fmt_text, parse_text,
 };
 
-const HEAD: &str = "sequence s\nextends none\n";
+const HEAD: &str = "sequence s\nderived_from none\n";
 
 /// Makes a token of a given length, or a statement from an index.
 type Maker<'a> = &'a dyn Fn(usize) -> String;
@@ -112,7 +112,7 @@ fn every_token_kind_is_pinned_at_the_token_bound() {
     let cases: [(Maker<'_>, Placer<'_>, u32, u32); 5] = [
         (&name, &|t| format!("{HEAD}param {t} : Real = 1\n"), 3, 7),
         (&atom, &|t| format!("{HEAD}in u : Real @unit {t}\n"), 3, 19),
-        (&id, &|t| format!("sequence s\nextends {t}\n"), 2, 9),
+        (&id, &|t| format!("sequence s\nderived_from {t}\n"), 2, 14),
         (
             &suffix,
             &|t| format!("{HEAD}param p : Real = 1 {t}\n"),

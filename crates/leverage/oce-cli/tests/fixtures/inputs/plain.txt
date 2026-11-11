@@ -1,2 +1,2 @@
 sequence plain
-extends none
+derived_from none

@@ -80,11 +80,11 @@ fn every_bundle_fixture_conforms_to_the_published_schema() {
 /// parameter's value is `value`.
 fn documents(value: &Value) -> [Value; 2] {
     [
-        json!({"sequence": "s", "extends": "", "params": [], "inputs": [], "outputs": [],
+        json!({"sequence": "s", "derived_from": "", "params": [], "inputs": [], "outputs": [],
                "blocks": [{"name": "b", "class": "CDL.Reals.Sources.Constant",
                            "params": [{"name": "k", "value": value}]}],
                "connections": []}),
-        json!({"sequence": "s", "extends": "", "params": [{"name": "p", "type": "Real", "value": value}],
+        json!({"sequence": "s", "derived_from": "", "params": [{"name": "p", "type": "Real", "value": value}],
                "inputs": [], "outputs": [], "blocks": [], "connections": []}),
     ]
 }
@@ -148,7 +148,10 @@ fn the_checker_refuses_closed_object_violations() {
     let mut extra = good.clone();
     extra["note"] = json!("x");
     let mut missing = good.clone();
-    missing.as_object_mut().expect("object").remove("extends");
+    missing
+        .as_object_mut()
+        .expect("object")
+        .remove("derived_from");
     let mut wrong = good;
     wrong["connections"] = json!("a -> b");
     for (name, document) in [("extra", extra), ("missing", missing), ("wrong", wrong)] {
@@ -160,7 +163,7 @@ fn the_checker_refuses_closed_object_violations() {
 /// A minimal document with one Real input `u` whose `min` is `min`, and one with a sequence
 /// parameter of type `value_type` whose value is `value`.
 fn bounded(min: &Value) -> Value {
-    json!({"sequence": "s", "extends": "", "params": [],
+    json!({"sequence": "s", "derived_from": "", "params": [],
            "inputs": [{"name": "u", "type": "Real", "quantity": "", "display_unit": "",
                        "min": min, "max": [],
                        "semantic": {"name": "", "label": "", "unit": "", "brick": "", "s223": "",
@@ -169,7 +172,7 @@ fn bounded(min: &Value) -> Value {
 }
 
 fn typed(value_type: &Value, value: &Value) -> Value {
-    json!({"sequence": "s", "extends": "", "params": [{"name": "p", "type": value_type, "value": value}],
+    json!({"sequence": "s", "derived_from": "", "params": [{"name": "p", "type": value_type, "value": value}],
            "inputs": [], "outputs": [], "blocks": [], "connections": []})
 }
 

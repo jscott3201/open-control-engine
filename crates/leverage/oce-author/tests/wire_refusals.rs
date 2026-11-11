@@ -19,22 +19,22 @@ fn canonical() -> String {
 /// A minimal valid document with `connections` replaced by `connections`.
 fn with_connections(connections: &str) -> String {
     format!(
-        r#"{{"sequence":"s","extends":"","params":[],"inputs":[],"outputs":[],"blocks":[],"connections":{connections}}}"#
+        r#"{{"sequence":"s","derived_from":"","params":[],"inputs":[],"outputs":[],"blocks":[],"connections":{connections}}}"#
     )
 }
 
 /// A minimal valid document whose one block has `value` as its one assignment's value.
 fn with_value(value: &str) -> String {
     format!(
-        r#"{{"sequence":"s","extends":"","params":[],"inputs":[],"outputs":[],"blocks":[{{"name":"b","class":"CDL.Reals.Sources.Constant","params":[{{"name":"k","value":{value}}}]}}],"connections":[]}}"#
+        r#"{{"sequence":"s","derived_from":"","params":[],"inputs":[],"outputs":[],"blocks":[{{"name":"b","class":"CDL.Reals.Sources.Constant","params":[{{"name":"k","value":{value}}}]}}],"connections":[]}}"#
     )
 }
 
 #[test]
 fn an_unknown_key_is_refused_with_its_name() {
     let text = canonical().replacen(
-        "\"extends\": \"\",",
-        "\"extends\": \"\",\n  \"comment\": \"x\",",
+        "\"derived_from\": \"\",",
+        "\"derived_from\": \"\",\n  \"comment\": \"x\",",
         1,
     );
     assert!(matches!(
@@ -66,7 +66,7 @@ fn an_unknown_key_is_refused_with_its_name() {
 fn a_missing_key_is_refused_with_its_name() {
     for key in [
         "sequence",
-        "extends",
+        "derived_from",
         "params",
         "inputs",
         "outputs",
@@ -96,6 +96,34 @@ fn a_missing_key_is_refused_with_its_name() {
         from_wire_str(&value.to_string()),
         Err(WireError::MissingKey { ref key, .. }) if key == "haystack"
     ));
+}
+
+#[test]
+fn the_cdl_word_extends_is_an_unknown_key() {
+    // Issue #529: the provenance key is `derived_from`; the format stays at revision 1 with no
+    // reader for the earlier `extends`, which is refused by name wherever it stands, in place of
+    // the new key, beside it or after every other key.
+    let renamed = canonical().replacen("\"derived_from\": \"\",", "\"extends\": \"\",", 1);
+    let beside = canonical().replacen(
+        "\"derived_from\": \"\",",
+        "\"derived_from\": \"\",\n  \"extends\": \"\",",
+        1,
+    );
+    let without = canonical().replacen("  \"derived_from\": \"\",\n", "", 1);
+    assert!(!without.contains("derived_from"));
+    let close = without.rfind('}').expect("the root closes");
+    let last = format!(
+        "{},\n  \"extends\": \"cxf:fnv1a128:00ff\"\n}}\n",
+        without[..close].trim_end()
+    );
+    for (case, text) in [("renamed", renamed), ("beside", beside), ("last", last)] {
+        assert!(text.contains("\"extends\""), "{case}");
+        assert!(
+            matches!(from_wire_str(&text), Err(WireError::UnknownKey { ref key, .. }) if key == "extends"),
+            "{case}: {:?}",
+            from_wire_str(&text)
+        );
+    }
 }
 
 #[test]
@@ -133,7 +161,7 @@ fn a_wrong_type_is_refused() {
             "{value}: {result:?}"
         );
     }
-    let reference_in_sequence_param = r#"{"sequence":"s","extends":"","params":[{"name":"p","type":"Real","value":{"ref":"q"}}],"inputs":[],"outputs":[],"blocks":[],"connections":[]}"#;
+    let reference_in_sequence_param = r#"{"sequence":"s","derived_from":"","params":[{"name":"p","type":"Real","value":{"ref":"q"}}],"inputs":[],"outputs":[],"blocks":[],"connections":[]}"#;
     assert!(matches!(
         from_wire_str(reference_in_sequence_param),
         Err(WireError::WrongType { .. })
@@ -257,7 +285,7 @@ fn list_lengths_are_bounded() {
 fn string_lengths_are_bounded() {
     let named = |len: usize| {
         format!(
-            r#"{{"sequence":"{}","extends":"","params":[],"inputs":[],"outputs":[],"blocks":[],"connections":[]}}"#,
+            r#"{{"sequence":"{}","derived_from":"","params":[],"inputs":[],"outputs":[],"blocks":[],"connections":[]}}"#,
             "a".repeat(len)
         )
     };
@@ -302,13 +330,13 @@ fn non_utf8_and_a_byte_order_mark_are_refused() {
 #[test]
 fn duplicate_keys_are_refused_at_every_level() {
     let root = canonical().replacen(
-        "\"extends\": \"\",",
-        "\"extends\": \"\",\n  \"extends\": \"\",",
+        "\"derived_from\": \"\",",
+        "\"derived_from\": \"\",\n  \"derived_from\": \"\",",
         1,
     );
     assert!(matches!(
         from_wire_str(&root),
-        Err(WireError::DuplicateKey { ref key, at: Location { line: 4, .. } }) if key == "extends"
+        Err(WireError::DuplicateKey { ref key, at: Location { line: 4, .. } }) if key == "derived_from"
     ));
     let nested = canonical().replacen("\"unit\": \"K\",", "\"unit\": \"K\", \"unit\": \"Pa\",", 1);
     assert!(matches!(
@@ -322,8 +350,8 @@ fn duplicate_keys_are_refused_at_every_level() {
     ));
     // An escaped spelling of the same key is still the same field to the typed parse.
     let escaped = canonical().replacen(
-        "\"extends\": \"\",",
-        "\"extends\": \"\",\n  \"\\u0065xtends\": \"\",",
+        "\"derived_from\": \"\",",
+        "\"derived_from\": \"\",\n  \"\\u0064erived_from\": \"\",",
         1,
     );
     assert!(matches!(

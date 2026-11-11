@@ -112,17 +112,17 @@ pub fn parse_text_with_spans(text: &str) -> Result<(Sequence, SourceMap), ParseE
     parser::Parser::new(text).run()
 }
 
-/// Write the model in the canonical text spelling: the header comments, `sequence`, `extends`,
-/// then parameters, inputs, outputs, blocks and connections in that section order with authored
-/// order kept inside each section (decision 12), Reals in the shortest round-trip spelling,
-/// Integers bare, suffixes re-emitted, comments and blank lines from the annotations, two-space
-/// indentation and one trailing line feed.
+/// Write the model in the canonical text spelling: the header comments, `sequence`,
+/// `derived_from`, then parameters, inputs, outputs, blocks and connections in that section order
+/// with authored order kept inside each section (decision 12), Reals in the shortest round-trip
+/// spelling, Integers bare, suffixes re-emitted, comments and blank lines from the annotations,
+/// two-space indentation and one trailing line feed.
 ///
 /// **Total or refusing** (issue #482 review): whatever it returns, [`parse_text`] reads back as the
 /// same model, within every parse bound. A model the text cannot spell — a name, class path,
-/// atom, suffix, string, value or `extends` id the lexer would not read back as the same value, a
-/// statement whose printed line would exceed the 8,192-byte line bound, or a document that would
-/// exceed 4 MiB, 100,000 lines or 65,536 statements of one kind — is refused with
+/// atom, suffix, string, value or `derived_from` id the lexer would not read back as the same
+/// value, a statement whose printed line would exceed the 8,192-byte line bound, or a document
+/// that would exceed 4 MiB, 100,000 lines or 65,536 statements of one kind — is refused with
 /// [`PrintError::Unspellable`], naming the subject. Three normalizations are the only exceptions,
 /// each one the parser applies itself: a comment with a line feed prints as several comment lines,
 /// a comment loses its trailing spaces, and the header's `blank_line_before` (meaningless at the

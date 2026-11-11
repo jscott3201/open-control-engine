@@ -165,8 +165,8 @@ connector node's IRI and not the synthesized port name (decision 7).
 
 ### What never enters the id
 
-- `SemanticPoint` records, `extends`, comments, annotations, `@context` spelling and every authored
-  order: `@graph`, `containsBlock`, `isConnectedTo`, `hasParameter` (decision 3).
+- `SemanticPoint` records, `derived_from`, comments, annotations, `@context` spelling and every
+  authored order: `@graph`, `containsBlock`, `isConnectedTo`, `hasParameter` (decision 3).
 - The root composite's `@type`, `S231:label`, the translation-software label
   (`S231:translationSoftware`, `S231:translationSoftwareVersion`), and any composite parameter no
   leaf references: none of them survives flattening.
@@ -489,7 +489,7 @@ B's `delayOnInit` sorts before `delayTime` because `O` (0x4f) precedes `T` (0x54
 - re-serialization: JSON whitespace and key order, compact against expanded IRIs, singleton
   relation spellings, and load → export → load of a complete export;
 - the instance namespace changed, for IRIs in form 0;
-- `SemanticPoint` records, `extends`, comments, `S231:label`, the root's `@type`, the
+- `SemanticPoint` records, `derived_from`, comments, `S231:label`, the root's `@type`, the
   translation-software label (present, absent or another tool's), unreferenced
   composite parameters, output `min`/`max`, `nominal`, `unbounded`.
 
@@ -682,10 +682,10 @@ rename-invariant structural identity, which is graph canonicalization (isomorphi
 a safety engine, with its worst cases and its subtle bugs. A later `structural_id` can be added
 without moving this one.
 
-**3. `SemanticPoint` records, `extends`, comments, annotations, `@context` and authored order
+**3. `SemanticPoint` records, `derived_from`, comments, annotations, `@context` and authored order
 never enter the id** (owner). Why: the metadata seam (§7.17 of the OpenBuildingControl (OBC)
 specification; ANSI/ASHRAE 231-2026 §5.13) keeps semantic records non-computational, and
-authoring decisions 2, 5 and 6 keep `extends` as opaque provenance and order as presentation.
+authoring decisions 2, 5 and 6 keep `derived_from` as opaque provenance and order as presentation.
 Rejected: hashing the `SemanticPoint` slot too (it would make M8's record shape, not yet designed,
 part of every id); keeping authored order (that is the order-bearing id being replaced).
 
@@ -792,7 +792,7 @@ which is all that survives of the decision.
 - **`oce-diff` (decision 8 of its note).** Equal canonical ids prove the two **loaded graphs** are
   equal, so the CXF adapter and the blob comparison can return graph-empty without matching, and
   the authoring diff can skip its rename pass. They do not prove an empty authoring diff: a
-  sequence-parameter rename, a literal against a reference with the same value, `extends`,
+  sequence-parameter rename, a literal against a reference with the same value, `derived_from`,
   comments, `SemanticPoint` fields and `reordered` entries are all outside the id (review ruling
   11 narrows decision 8 to that).
 - **Other design notes: the implementation PR's doc scope.** Each of these becomes false or stale
@@ -816,7 +816,7 @@ which is all that survives of the decision.
   default `urn:oce:author:` matches the library's `http://example.org#`; the sequence name must
   match, because it is inside every name.
 - **The registry.** `oce fetch <id>@<content-id>` keys on this id, which is the reason for decision
-  12. Resolving `extends` stays the registry's.
+  12. Resolving `derived_from` stays the registry's.
 - **Library L3.** The re-stamp consumes the mapping table as described above.
 - **`oce-verify` receipts.** The shared receipt header's content id is this id.
 - **M7, composite lowering.** The roadmap promises "a content id equal to the flattened form". This
@@ -881,7 +881,7 @@ What the core PR must prove:
 ## Out of scope
 
 - A rename-invariant `structural_id` (decision 2).
-- The registry, `oce fetch`, and resolving `extends`.
+- The registry, `oce fetch`, and resolving `derived_from`.
 - A cryptographic signature or any authenticity claim; the host's envelope keeps that role.
 - Making the id stable across engine builds that change a used class's signature.
 - Sequence-level parameters as such: the id sees their grounded effect on leaves, not their names.
