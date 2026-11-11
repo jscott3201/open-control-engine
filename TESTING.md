@@ -268,6 +268,12 @@ case" is itself a finding to resolve, not a pass.
   new test file as `mod <file>;` in `tests/exchange.rs` (with `use crate::bless;` or
   `use crate::render;` for the shared helpers), or as its own `[[test]]`, with the reason, when
   something selects it by name; its layout test also refuses a declaration it cannot place.
+  `oce-api` does the same (GitHub #546): a new file under `crates/oce-api/tests/` is registered
+  as a `mod` line in `tests/facade.rs`, or in `tests/facade_allocation_census.rs` if it names
+  `allocation_counter`. Select one file's tests with
+  `cargo nextest run -p oce-api --test facade -E 'test(/^<file>::/)'`. The layout test in
+  `facade.rs` (`every_test_file_is_compiled_into_exactly_one_binary`) fails on a file that is in
+  no binary or in two.
 - **Float comparison:** `Value::bit_eq` (or `f64::to_bits`) — **never** `==` or `(a-b).abs() < ε`
   in an engine assertion. Sole exception: the 21 transcendental, psychrometric, and solar Real
   signal goldens, whose libm-dependent outputs retain the existing aligned-tolerance band on
