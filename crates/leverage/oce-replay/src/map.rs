@@ -153,6 +153,7 @@ impl InputMap {
                 });
             }
         }
+        let paths: Vec<&str> = inputs.iter().map(|d| d.path.as_str()).collect();
         let mut slot_column: Vec<Option<usize>> = vec![None; inputs.len()];
         let mut named = vec![false; columns.len()];
         for (column_name, target) in &map.entries {
@@ -161,7 +162,7 @@ impl InputMap {
                     column: column_name.clone(),
                 });
             };
-            let slot = resolve_target(inputs, target).map_err(|candidates| {
+            let slot = resolve_path(&paths, target).map_err(|candidates| {
                 if candidates.is_empty() {
                     MapError::UnknownTarget {
                         column: column_name.clone(),
@@ -291,30 +292,62 @@ impl InputMap {
     }
 }
 
-/// Exact path, else the unique `.`-boundary suffix match. `Err` carries every candidate (empty
-/// when none matched).
-fn resolve_target(inputs: &[InputDefinition], target: &str) -> Result<usize, Vec<String>> {
-    if let Ok(slot) = inputs.binary_search_by(|d| d.path.as_str().cmp(target)) {
-        return Ok(slot);
+/// The one name rule (replay decision 4; vectors note decision 6): the index of `name` in
+/// `paths`, by the exact path, else by the one path that ends with `name` at a `.` boundary.
+///
+/// `paths` is a list of canonical paths sorted ascending by their UTF-8 bytes with no path
+/// repeated, as `Engine::input_definitions()` and `FrameSlots::outputs()` list theirs; the exact
+/// match is found by binary search, so in a list out of that order it can be missed. A suffix
+/// matches a path when the path is the suffix with something before it that ends in `.`:
+/// `uDam` and `ahu.uDam` match `urn:x#top.ahu.uDam`, while `Dam` does not, and neither does
+/// `top.ahu.uDam` (a `#` is not a boundary). An empty `name` matches only an empty path, never by
+/// suffix. [`InputMap::resolve`] resolves every column target and every policy override with it,
+/// and `oce-verify` resolves a vector set's inputs, outputs and parameter paths with it, so one
+/// rule names one thing everywhere.
+///
+/// Pure: it allocates only for the candidates of a refusal, and never panics.
+///
+/// # Errors
+/// Every path `name` matches by suffix, in list order, when there is no exact match and more
+/// than one suffix match (an ambiguous name); an empty list when nothing matches (an unknown
+/// name).
+///
+/// ```
+/// use oce_replay::resolve_path;
+///
+/// let paths = ["urn:x#top.ahu.T", "urn:x#top.ahu.uDam", "urn:x#top.zone.T"];
+/// assert_eq!(resolve_path(&paths, "urn:x#top.zone.T"), Ok(2));
+/// assert_eq!(resolve_path(&paths, "uDam"), Ok(1));
+/// assert_eq!(resolve_path(&paths, "ahu.uDam"), Ok(1));
+/// assert_eq!(
+///     resolve_path(&paths, "T"),
+///     Err(vec!["urn:x#top.ahu.T".to_owned(), "urn:x#top.zone.T".to_owned()])
+/// );
+/// assert_eq!(resolve_path(&paths, "Dam"), Err(Vec::new()));
+/// assert_eq!(resolve_path(&paths, "top.ahu.uDam"), Err(Vec::new()));
+/// ```
+pub fn resolve_path<P: AsRef<str>>(paths: &[P], name: &str) -> Result<usize, Vec<String>> {
+    if let Ok(index) = paths.binary_search_by(|path| path.as_ref().cmp(name)) {
+        return Ok(index);
     }
-    if target.is_empty() {
+    if name.is_empty() {
         return Err(Vec::new());
     }
-    let matches: Vec<usize> = inputs
+    let matches: Vec<usize> = paths
         .iter()
         .enumerate()
-        .filter(|(_, d)| {
-            d.path
-                .strip_suffix(target)
+        .filter(|(_, path)| {
+            path.as_ref()
+                .strip_suffix(name)
                 .is_some_and(|head| head.ends_with('.'))
         })
-        .map(|(slot, _)| slot)
+        .map(|(index, _)| index)
         .collect();
     match matches.as_slice() {
-        [slot] => Ok(*slot),
+        [index] => Ok(*index),
         _ => Err(matches
             .iter()
-            .map(|&slot| inputs[slot].path.clone())
+            .map(|&index| paths[index].as_ref().to_owned())
             .collect()),
     }
 }
@@ -337,10 +370,11 @@ fn resolve_policies(
     if !valid_max_age(missing) {
         return Err(MapError::InvalidMaxAge { input: None });
     }
+    let paths: Vec<&str> = inputs.iter().map(|d| d.path.as_str()).collect();
     let mut policies = vec![missing.clone(); inputs.len()];
     let mut overridden = vec![false; inputs.len()];
     for (target, policy) in overrides {
-        let slot = resolve_target(inputs, target).map_err(|candidates| {
+        let slot = resolve_path(&paths, target).map_err(|candidates| {
             if candidates.is_empty() {
                 MapError::UnknownTarget {
                     column: String::new(),

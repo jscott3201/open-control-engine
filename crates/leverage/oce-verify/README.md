@@ -1,26 +1,24 @@
 # oce-verify
 
 Verification over vectors: a vector set is a strict-JSON file of scenarios (a schedule of inputs
-over one clock, and expectations over windows of it) to check against one loaded control sequence.
-Design note: [`docs/design/vectors.md`](../../../docs/design/vectors.md), which is the
-specification of everything here.
+over one clock, and expectations over windows of it) to check against one loaded control sequence,
+the **subject**. Design note: [`docs/design/vectors.md`](../../../docs/design/vectors.md), which is
+the specification of everything here.
 
-This is the first of four parts (issue #519): **the format**. The crate reads a vector set, checks
-every rule that needs no engine, writes its canonical form and names it with a `spec_id`. It loads
-no engine, replays nothing and writes no receipt; binding a set to a sequence, the run and the
-receipt, mutants and the `oce verify` verb build on it.
+Two of four parts are in. **The format** (issue #519): the crate reads a vector set, checks every
+rule that needs no engine, writes its canonical form and names it with a `spec_id`. **The run**
+(issue #520): it binds a set to a subject, replays each scenario through `oce-replay`, compares
+exactly and issues the receipt. Mutant mode and the `oce verify` verb build on it.
 
-It is a leverage crate: among `oce-*` packages it may depend on `oce-api` and `oce-replay` only,
-and today it uses neither. It opens no file, runs no clock and is not published.
+It is a leverage crate: among `oce-*` packages it depends on `oce-api` and `oce-replay` only. It
+opens no file, runs no clock, measures nothing and is not published.
 
 ```rust
-use oce_verify::{VectorSet, VerifyLimits};
+use oce_verify::{VectorInputs, VectorSet, VerifyLimits, VerifyOptions, run_vectors};
 
-let set = VectorSet::from_json_bytes(&bytes, &VerifyLimits::default())?;
-for scenario in set.scenarios() {
-    println!("{}: {} expectations", scenario.name(), scenario.expectations().len());
-}
-println!("{} ticks, {}", set.clock().tick_count(), set.spec_id());
+let set = VectorSet::from_json_bytes(&vectors, &VerifyLimits::default())?;
+let run = run_vectors(&set, &VectorInputs::new(&cxf), &VerifyOptions::default())?;
+println!("{}", run.receipt.to_canonical_json()); // `passed`, the body, `receipt_id`
 ```
 
 ## The format: `oce/vectors/v1`
@@ -128,17 +126,26 @@ measured against.
 | `VerifyLimits::max_scenarios` | 4,096 | `too-many-scenarios` | the bound on the receipt's scenario list; the library's largest set has 28 |
 | `VerifyLimits::max_expectations` | 4,096 per scenario | `too-many-expectations` | the library's largest scenario has 12 |
 | `VerifyLimits::max_parameters` | 256 per map | `too-many-parameters` | it bounds the passes that order parameter edits (note decision 14) |
+| `VerifyLimits::max_total_frames` | 16,777,216 | `too-many-frames` | `(N + 1) * scenarios` for the whole run, decided at bind before any frame runs |
+| `VerifyLimits::replay` | `ReplayLimits::MAX` | `too-many-frames` (its `max_frames` against one scenario's `N + 1`, at bind), else `replay-failed` | the limits each scenario's replay runs under |
+| `VerifyLimits::max_recorded_failures` | 16 per scenario | none: the list stops, `failures_total` keeps the count | the note's failure-record cap |
+| `VerifyLimits::max_recorded_warnings` | 16 per scenario | none: the list stops, `warnings_total` keeps the count | the note's warning-row cap |
+| `MAX_LOAD_WARNINGS` | 64 | none: the list stops, `load_warnings_total` keeps the count | the note's load-warning cap |
 
-Each is inclusive: at the bound a set loads, one unit past it is refused with its own code, never
-truncated. The three profile bounds are fixed. A `VerifyLimits` field can be lowered, to zero
+Each is inclusive: at the bound a set loads or runs, one unit past it is refused with its own
+code, never truncated; the three record caps stop a list and keep its total. The three profile
+bounds are fixed. A `VerifyLimits` field can be lowered, to zero
 included, and never raised: a value above its maximum is read as the maximum
-(`VerifyLimits::effective`).
+(`VerifyLimits::effective`). The load bounds apply when a set is read; `run_vectors` applies the
+run's, from `VerifyOptions::limits`.
 
 Memory and work are linear in the document: nothing is materialised per tick (a clock at the tick
 bound costs what a clock of two ticks costs), a refusal stops where it is found, and
 `tests/load_cost.rs` pins the factor with `allocation-counter`: at most 24 bytes held per document
 byte for the densest shape the format has (a map of one-byte constants), 4 for step lists and
-windows.
+windows. A run holds one scenario's trace at a time (unless `keep_traces` asks for all of them),
+and each expectation keeps at most the cap of its own earliest failure records, so the receipt's
+size is bounded by the caps, not by the number of ticks checked.
 
 ## The canonical form and `spec_id`
 
@@ -175,11 +182,11 @@ indentation.
 
 ## Error codes
 
-Every refusal is one `VectorErrorKind` with a stable kebab-case `code()`; `VECTOR_ERROR_CODES`
-lists them, a build fails unless the list and the kinds agree, and `tests/error_codes.rs` pins the
-list and produces each code from a document. A `VectorError` also says where: a line and column
-for a refusal found in the text, a path such as `scenarios[2].inputs.clg_vlv_cmd[1].t` for a rule.
-The code is the contract; the sentence is not.
+Every refusal of a load is one `VectorErrorKind` with a stable kebab-case `code()`;
+`VECTOR_ERROR_CODES` lists them, a build fails unless the list and the kinds agree, and
+`tests/error_codes.rs` pins the list and produces each code from a document. A `VectorError` also
+says where: a line and column for a refusal found in the text, a path such as
+`scenarios[2].inputs.clg_vlv_cmd[1].t` for a rule. The code is the contract; the sentence is not.
 
 | Code | Refuses |
 | --- | --- |
@@ -199,6 +206,106 @@ The code is the contract; the sentence is not.
 The first fourteen are spelled as the authoring wire form's refusals are, so one word names one
 refusal across the tools. The codes of the `mutants` key arrive with the key.
 
+## Binding a set to a subject
+
+`run_vectors(&set, &VectorInputs::new(&cxf), &options)` binds once, against a throwaway engine,
+before any scenario runs, and every refusal is an `Err` with no receipt, never a failed scenario.
+In order, the first refusal winning:
+
+1. **Load** the subject (`Engine::load_cxf`). A refusal is `subject-load-failed`, carrying the
+   engine's `DiagCode` spellings (`VerifyError::diagnostic_codes`). Load warnings never refuse;
+   their codes go to the receipt.
+2. **The boundary**: an Enum input or output is `enum-port-unsupported` (until #465), a String one
+   `unsupported-port-type`. No CXF document the engine loads has either today; unit tests pin both.
+3. **Names and values**: the set's `params`, then each scenario in file order (its inputs, the
+   inputs it does not supply, its expectations, its `params`). A name resolves by replay's one
+   rule, `oce_replay::resolve_path`: the exact canonical path, or the one path that ends with the
+   name at a `.` boundary (`#` is not a boundary). Inputs resolve against
+   `Engine::input_definitions()`, outputs against `FrameSlots::outputs()`, parameter keys against
+   `Engine::params()` sorted by path. Every value is typed by what it lands on, never by its
+   token: a Real takes any number (an integer token when a binary64 holds it exactly, `-0` as
+   `+0.0`, `-0.0` with its sign), an Integer an integer token only (`1.0` is refused), a Boolean
+   `true` or `false`, a String or Enum parameter nothing. A scenario's `params` override the set's
+   by resolved path, whatever either spelling was.
+4. **The frame budget**: `(N + 1) * scenarios` frames against `VerifyLimits::max_total_frames`,
+   and `N + 1` against the replay limits' `max_frames`.
+
+## The run
+
+Each scenario runs on a freshly loaded engine. Its parameter edits are applied inside one halt in
+passes: each pass tries the edits still waiting in ascending path order, a refused edit waits for
+the next pass, and a pass that applies nothing is `param-refused` with the facade's class
+(`param-range`, `param-type`, `param-structural`). So lowering both `Reals.Hysteresis` thresholds
+takes two passes and raising them one. A table that only another order of edits reaches is refused
+too: that limitation is the note's, kept on purpose.
+
+Then one replay: a `StepSource` with the horizon as an instant, on `TimeBase::Grid { t0: 0, step:
+step_s }`, with replay's defaults (refuse a missing sample, stop at a refused frame, refuse a
+repeated time, refuse a non-finite input), in chunks of `VerifyOptions::chunk_frames` frames.
+Every scenario runs exactly the clock's `N + 1` ticks unless a frame is refused, and chunk sizes
+never change a receipt byte. After the run, in order:
+
+1. a refusal about the run rather than the frame (`EngineRefusal::Run`) is the error
+   `run-refused`;
+2. any other refused frame fails the scenario with one `frame-refused` record at its tick, with
+   the refusal's kebab-case class (`input-domain` and the eight others, `ENGINE_REFUSAL_CLASSES`).
+   Instants before it are compared and counted; instants at and after it are not, and coverage is
+   not checked;
+3. otherwise every window must hold an executed tick (`window-uncovered` if one does not, which
+   load already rules out);
+4. every tick of every window and every diagnostic instant is compared. `equals` is exact for every
+   type, a Real by its bits (`0` on a Real output is `+0.0` and does not equal `-0.0`; nothing
+   equals a NaN). A diagnostic expectation matches the class path in `block` and, when given, the
+   `message` byte for byte, at its tick, and is one instant. Warnings no diagnostic expectation
+   matched are listed and never change a verdict.
+
+A replay that ends in an error is `replay-failed` with a cause from a closed table
+(`REPLAY_FAILURE_CAUSES`: `trace-too-large`, `output-set-changed`, `grid-not-increasing`,
+`engine-setup`, `source`), never a Rust variant name.
+
+| Code | Refuses |
+| --- | --- |
+| `subject-load-failed` | a subject the engine refuses to load |
+| `unknown-input`, `ambiguous-input`, `duplicate-input`, `input-not-supplied` | input names (`VerifyError::candidates` lists an ambiguous name's matches) |
+| `unknown-output`, `ambiguous-output` | output names |
+| `param-path-unknown`, `param-path-ambiguous`, `param-path-duplicate` | parameter keys |
+| `param-refused` | an edit no pass admits, with its class in `VerifyError::cause` |
+| `value-type-mismatch`, `value-not-representable` | a value its port or parameter type cannot take |
+| `enum-port-unsupported`, `unsupported-port-type` | an Enum or a String boundary port |
+| `too-many-frames` | the frame budget |
+| `run-refused` | a run-class engine refusal |
+| `replay-failed` | any other replay error, with its cause |
+| `window-uncovered` | a window with no executed tick after a run that refused no frame |
+
+`VERIFY_ERROR_CODES` lists them and a build fails unless the list and the kinds agree;
+`tests/run_error_codes.rs` pins the list and produces each code from a run, except the four no
+run reaches today (the two port codes, `run-refused` and `window-uncovered`), which unit tests in
+`src/bind_tests.rs` and `src/run_tests.rs` produce from the cause replay would hand back.
+
+## The receipt
+
+`Receipt { header, body: ReceiptBody::Vectors(VectorBody) }`, written by `to_canonical_json` under
+the vector file's canonical rules. The header is the one the commissioning verifier shares:
+`schema` (`oce/receipt/v1`), `kind` (`vectors`), the subject's `content_id` as loaded, the
+facade's `engine_version`, the set's `spec_id`, `comparison` (`{ "mode": "exact" }`), `passed`,
+`receipt_id` and `timings`. The body holds the set's `status` (`pass`, `fail` or `no_data`), its
+`clock` as written, the load-warning codes (at most 64, `load_warnings_total` beside them), the
+totals, and one object per scenario: its verdict, its effective parameter edits by canonical path
+with the `content_id` of what ran when it has any, frame and instant counts, failure records
+(`value-mismatch`, `diagnostic-missing`, `frame-refused`, each shaped by its code, by tick then by
+expectation, at most 16 with `failures_total`) and unmatched warnings (at most 16 with
+`warnings_total`).
+
+Values are exact: a Boolean is `true` or `false`, an Integer a JSON integer, a finite Real other
+than negative zero a number in the canonical real spelling, and negative zero, a NaN or an
+infinity the string `"0x"` and the 16 lowercase hex digits of its bits (`"0x8000000000000000"`,
+`"0x7ff8000000000000"`).
+
+`receipt_id` is `receipt:fnv1a128:<32 hex>` over the canonical receipt with `timings` and
+`receipt_id` removed, so two runs give one id whatever they measured; `engine_version` is inside
+the hashed part, so a workspace version bump moves every receipt id. `oce-verify` measures nothing:
+`timings` are zeros unless the caller passes `VerifyOptions::timings`.
+
 ## The schema
 
 [`schema/vectors.schema.json`](schema/vectors.schema.json) (`VECTORS_JSON_SCHEMA`) is derived with
@@ -215,13 +322,29 @@ so a document that satisfies the schema can still be refused. A document the rea
 satisfies the schema.
 
 Regenerate with `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`, run it again without the
-switch, and say in the pull request why it moved (a shape, or a doc comment in `src/dto.rs`).
+switch, and say in the pull request why it moved (a shape, or a doc comment in `src/dto.rs`). The
+same switch rewrites the golden receipts.
 
 ## Fixtures and goldens
 
-- The two in-repo library rules' `vectors.json` files are read in place from
-  `crates/oce-api/tests/fixtures/library_rules/` (`tests/in_repo_rules.rs`).
-- `tests/fixtures/canonical/*.json` are the canonical forms of those two files and of
+- The two in-repo library rules are read in place from
+  `crates/oce-api/tests/fixtures/library_rules/`: their `vectors.json` files
+  (`tests/in_repo_rules.rs`) and, as subjects, their `rule.cxf.jsonld` files.
+- `tests/fixtures/receipts/*.receipt.json` are the golden receipts: the pass receipts of both
+  rules, a fail receipt (`both_open_900.vectors.json`, AHU-0016's set with `both_open`'s first
+  window ending at 900 s, where the delay fires) and a `no_data` receipt
+  (`empty_expect.vectors.json`, one scenario expecting nothing). `tests/receipt_goldens.rs`
+  compares them byte for byte and checks each `receipt_id` against a derivation of its own. They
+  embed the engine version and the two rules' content ids, so a workspace version bump re-blesses
+  them, and so does #517 when it re-vendors the rules. Regenerate with
+  `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`, run it again without the switch, and say in
+  the pull request which receipts moved and why.
+- `tests/fixtures/subjects/*.cxf.json` are two small subjects written for the run's tests: `signals`
+  (inputs of every type, two pairs of names that share a last segment, a bounded input, an
+  assertion, a divider and pass-through outputs) and `hysteresis` (one `Reals.Hysteresis`). They
+  are named `.cxf.json`, not `.jsonld`, because `oce-cxf`'s `parameter_grounding_corpus` test pins
+  the count of every tracked `.jsonld` file.
+- `tests/fixtures/canonical/*.json` are the canonical forms of the two rules' vector files and of
   `tests/fixtures/sets/every_field.json`, and the `spec_id` literals in `tests/canonical_form.rs`
   are their FNV-1a-128 hashes. They were derived outside this crate and **are never blessed**:
   [`tests/fixtures/README.md`](tests/fixtures/README.md) says how to derive them again.

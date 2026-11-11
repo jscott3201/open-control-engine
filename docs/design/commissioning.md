@@ -363,12 +363,19 @@ pub struct CommissionRun { pub receipt: Receipt, pub trace: oce_replay::Trace,
 pub fn funnel(reference: Series<'_>, test: Series<'_>, tol: &Tolerances,
               limits: &CompareLimits) -> Result<FunnelResult, CompareError>;
 pub enum OutputStatus { Pass, Fail, NoData }
-pub struct Receipt { pub header: ReceiptHeader, pub body: CommissioningBody }
+pub struct Receipt { pub header: ReceiptHeader, pub body: ReceiptBody }
+pub enum ReceiptBody { Vectors(VectorBody), Commissioning(CommissioningBody) }
 pub struct ReceiptHeader { pub schema: String, pub kind: ReceiptKind, pub content_id: String,
                            pub engine_version: String, pub spec_id: String,
                            pub comparison: Comparison, pub passed: bool,
                            pub receipt_id: String, pub timings: Timings }
 ```
+
+*(Amended 2026-11-10, with issue #520:)* `Receipt.body` is `ReceiptBody`, the one closed enum the
+[vectors note](vectors.md) decides (decision 21), not `CommissioningBody`: there is one `Receipt`
+type and one writer of the shared header. `oce-verify` builds it with the `Vectors` variant only
+(`#[non_exhaustive]`); the commissioning PR adds the `Commissioning` variant and its `ReceiptKind`
+in place.
 
 Every error is a typed variant (`SpecError`, `UnitError`, `SourceError`, `CompareError`, replay's
 errors and the engine's `OcError` wrapped) naming the spec field, file, row or output; nothing

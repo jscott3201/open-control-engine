@@ -316,7 +316,10 @@ portable-vector checksum in `state_format_golden_tests.rs`. Each failing asserti
 value; the vectors beside the checksum are built there without the codec, so copy the values in
 and run the tests again. The snapshot fixtures under `crates/oce-api/tests/fixtures/`
 (`state_unstamped.hex`, `state_revision_two.hex`, `state_legacy.hex`) are artefacts of earlier
-layouts and never move.
+layouts and never move. It also moves the four golden receipts under
+`crates/leverage/oce-verify/tests/fixtures/receipts/`, whose `engine_version` is inside the hashed
+part of every `receipt_id` (vectors note decision 33):
+`OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`, then again without the switch.
 
 Every exported and emitted CXF document carries the workspace version too, in the
 translation-software label on its root node (`S231:translationSoftwareVersion`, GitHub #527), so
@@ -436,7 +439,17 @@ keywords outside the strict profile; `tests/schema_conformance.rs` holds each cl
 to the keys the reader knows, so a key added to a shape needs its arm in `src/decode.rs` and its
 row in that test's `OBJECTS` table. A shape or a doc comment in `src/dto.rs` moves the schema.
 Regenerate with `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`, run it again without the
-switch, and say in the PR what moved and why. That switch rewrites the schema and nothing else.
+switch, and say in the PR what moved and why. That switch rewrites the schema and the golden
+receipts, and nothing else.
+
+`tests/fixtures/receipts/*.receipt.json` are the golden receipts (issue #520): the pass receipts of
+the two in-repo library rules (vector files and `rule.cxf.jsonld` subjects read in place from
+`crates/oce-api/tests/fixtures/library_rules/`), a fail receipt and a `no_data` receipt from the
+hand-edited sets beside them. `tests/receipt_goldens.rs` compares them byte for byte and checks
+each `receipt_id` against a second FNV-1a-128 over the golden's own text. A receipt embeds the
+engine version and its subject's content id, so the same switch re-blesses all four after a
+workspace version bump, a change to either rule's CXF (#517 re-vendors them), a change to the
+receipt's writer or fields, or any engine change that moves either rule's outputs.
 
 `tests/fixtures/canonical/*.json` (the canonical forms of the two in-repo library rules' vector
 files and of `tests/fixtures/sets/every_field.json`) and the `spec_id` literals in

@@ -1,11 +1,15 @@
-//! The bounds a vector set is read under (vectors note, "Bounds"; decision 35).
+//! The bounds a vector set is read and run under (vectors note, "Bounds"; decision 35).
 //!
 //! Three are fixed by the strict profile and shared with the authoring wire form: nesting
-//! ([`MAX_DEPTH`]), list length ([`MAX_LIST_LEN`]) and string length ([`MAX_STRING_BYTES`]). The
-//! rest are [`VerifyLimits`]: each field is a default and a documented maximum at once. A caller
-//! may lower any of them, to zero included; a value above the maximum is read as the maximum, so
-//! no caller can raise one. Every bound is inclusive: a set *at* a bound loads, one unit past it
-//! is refused with its own code, never truncated.
+//! ([`MAX_DEPTH`]), list length ([`MAX_LIST_LEN`]) and string length ([`MAX_STRING_BYTES`]); one
+//! more is fixed by the receipt ([`MAX_LOAD_WARNINGS`]). The rest are [`VerifyLimits`]: each field
+//! is a default and a documented maximum at once. A caller may lower any of them, to zero
+//! included; a value above the maximum is read as the maximum, so no caller can raise one. Every
+//! bound is inclusive: a set *at* a bound loads or runs, one unit past it is refused with its own
+//! code, never truncated. The two record bounds are caps on a list, not refusals: past them the
+//! receipt keeps the total beside the capped list.
+
+use oce_replay::ReplayLimits;
 
 /// The deepest nesting of objects and arrays. The deepest well-formed set nests six levels (set,
 /// scenarios, scenario, inputs, step list, step); two more are allowed so that a misplaced value
@@ -26,7 +30,11 @@ pub const MAX_STRING_BYTES: usize = 4_096;
 /// binary64 as every real does.
 pub const MAX_TIME_INTEGER: i64 = 1 << 53;
 
-/// The bounds on one vector set that the strict profile does not fix.
+/// The most load-warning codes a receipt lists (`load_warnings`); `load_warnings_total` keeps the
+/// count before the cap.
+pub const MAX_LOAD_WARNINGS: usize = 64;
+
+/// The bounds on one vector set and its run that the strict profile does not fix.
 ///
 /// `Default` is the documented maxima ([`VerifyLimits::MAX`]).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -45,6 +53,20 @@ pub struct VerifyLimits {
     /// Entries in one `params` map, the set's or a scenario's. Maximum 256; past it the refusal
     /// is `too-many-parameters`.
     pub max_parameters: u32,
+    /// Failure records a scenario's receipt lists. Maximum 16; past it the list stops and
+    /// `failures_total` keeps the count.
+    pub max_recorded_failures: u32,
+    /// Unmatched run-time warnings a scenario's receipt lists. Maximum 16; past it the list stops
+    /// and `warnings_total` keeps the count.
+    pub max_recorded_warnings: u32,
+    /// Frames one run may execute, `(N + 1) * scenarios`. Maximum 16,777,216; past it the refusal
+    /// is `too-many-frames`, decided at bind before any frame runs.
+    pub max_total_frames: u64,
+    /// The limits each scenario's replay runs under ([`oce_replay::ReplayLimits`]); each field is
+    /// lowered to that crate's documented maximum, never raised. A scenario whose `N + 1` ticks
+    /// pass its `max_frames` is `too-many-frames` at bind; a replay stopped by another of them is
+    /// `replay-failed`.
+    pub replay: ReplayLimits,
 }
 
 impl VerifyLimits {
@@ -55,6 +77,10 @@ impl VerifyLimits {
         max_scenarios: 4_096,
         max_expectations: 4_096,
         max_parameters: 256,
+        max_recorded_failures: 16,
+        max_recorded_warnings: 16,
+        max_total_frames: 16_777_216,
+        replay: ReplayLimits::MAX,
     };
 
     /// These limits with every field above its documented maximum lowered to that maximum: the
@@ -68,7 +94,26 @@ impl VerifyLimits {
             max_scenarios: self.max_scenarios.min(max.max_scenarios),
             max_expectations: self.max_expectations.min(max.max_expectations),
             max_parameters: self.max_parameters.min(max.max_parameters),
+            max_recorded_failures: self.max_recorded_failures.min(max.max_recorded_failures),
+            max_recorded_warnings: self.max_recorded_warnings.min(max.max_recorded_warnings),
+            max_total_frames: self.max_total_frames.min(max.max_total_frames),
+            replay: lowered(&self.replay),
         }
+    }
+}
+
+/// `limits` with every field above [`ReplayLimits::MAX`] lowered to it, so the limits a scenario
+/// replays under always pass `ReplayLimits::validate`.
+fn lowered(limits: &ReplayLimits) -> ReplayLimits {
+    let max = ReplayLimits::MAX;
+    ReplayLimits {
+        max_rows: limits.max_rows.min(max.max_rows),
+        max_columns: limits.max_columns.min(max.max_columns),
+        max_cell_bytes: limits.max_cell_bytes.min(max.max_cell_bytes),
+        max_source_bytes: limits.max_source_bytes.min(max.max_source_bytes),
+        max_steps: limits.max_steps.min(max.max_steps),
+        max_frames: limits.max_frames.min(max.max_frames),
+        max_trace_bytes: limits.max_trace_bytes.min(max.max_trace_bytes),
     }
 }
 
@@ -91,6 +136,11 @@ mod tests {
         assert_eq!(limits.max_scenarios, 4_096);
         assert_eq!(limits.max_expectations, 4_096);
         assert_eq!(limits.max_parameters, 256);
+        assert_eq!(limits.max_recorded_failures, 16);
+        assert_eq!(limits.max_recorded_warnings, 16);
+        assert_eq!(limits.max_total_frames, 16_777_216);
+        assert_eq!(limits.replay, ReplayLimits::MAX);
+        assert_eq!(MAX_LOAD_WARNINGS, 64);
         assert_eq!(MAX_DEPTH, 8);
         assert_eq!(MAX_LIST_LEN, 65_536);
         assert_eq!(MAX_STRING_BYTES, 4_096);
@@ -105,6 +155,18 @@ mod tests {
             max_scenarios: 1,
             max_expectations: 2,
             max_parameters: 3,
+            max_recorded_failures: 0,
+            max_recorded_warnings: 1,
+            max_total_frames: 5,
+            replay: ReplayLimits {
+                max_rows: 7,
+                max_columns: 0,
+                max_cell_bytes: 1,
+                max_source_bytes: 2,
+                max_steps: 3,
+                max_frames: 4,
+                max_trace_bytes: 5,
+            },
         };
         assert_eq!(lowered.effective(), lowered);
         let raised = VerifyLimits {
@@ -113,15 +175,41 @@ mod tests {
             max_scenarios: u32::MAX,
             max_expectations: u32::MAX,
             max_parameters: u32::MAX,
+            max_recorded_failures: u32::MAX,
+            max_recorded_warnings: u32::MAX,
+            max_total_frames: u64::MAX,
+            replay: ReplayLimits {
+                max_rows: u64::MAX,
+                max_columns: u32::MAX,
+                max_cell_bytes: u32::MAX,
+                max_source_bytes: u64::MAX,
+                max_steps: u64::MAX,
+                max_frames: u64::MAX,
+                max_trace_bytes: u64::MAX,
+            },
         };
         assert_eq!(raised.effective(), VerifyLimits::MAX);
+        assert!(raised.effective().replay.validate().is_ok());
         // One past each maximum is still the maximum.
+        let max = VerifyLimits::MAX;
         let one_past = VerifyLimits {
-            max_bytes: VerifyLimits::MAX.max_bytes + 1,
-            max_ticks: VerifyLimits::MAX.max_ticks + 1,
-            max_scenarios: VerifyLimits::MAX.max_scenarios + 1,
-            max_expectations: VerifyLimits::MAX.max_expectations + 1,
-            max_parameters: VerifyLimits::MAX.max_parameters + 1,
+            max_bytes: max.max_bytes + 1,
+            max_ticks: max.max_ticks + 1,
+            max_scenarios: max.max_scenarios + 1,
+            max_expectations: max.max_expectations + 1,
+            max_parameters: max.max_parameters + 1,
+            max_recorded_failures: max.max_recorded_failures + 1,
+            max_recorded_warnings: max.max_recorded_warnings + 1,
+            max_total_frames: max.max_total_frames + 1,
+            replay: ReplayLimits {
+                max_rows: max.replay.max_rows + 1,
+                max_columns: max.replay.max_columns + 1,
+                max_cell_bytes: max.replay.max_cell_bytes + 1,
+                max_source_bytes: max.replay.max_source_bytes + 1,
+                max_steps: max.replay.max_steps + 1,
+                max_frames: max.replay.max_frames + 1,
+                max_trace_bytes: max.replay.max_trace_bytes + 1,
+            },
         };
         assert_eq!(one_past.effective(), VerifyLimits::MAX);
     }

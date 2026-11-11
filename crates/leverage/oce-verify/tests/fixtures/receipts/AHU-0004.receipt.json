@@ -1,0 +1,238 @@
+{
+  "body": {
+    "clock": {
+      "horizon_s": 14400,
+      "step_s": 300
+    },
+    "load_warnings": [],
+    "load_warnings_total": 0,
+    "scenarios": [
+      {
+        "expectations": 1,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 49,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 49,
+          "failed": 0,
+          "masked": 0,
+          "passed": 49
+        },
+        "name": "stable_state",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      },
+      {
+        "expectations": 1,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 49,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 49,
+          "failed": 0,
+          "masked": 0,
+          "passed": 49
+        },
+        "name": "startup_pulse_is_inert",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      },
+      {
+        "expectations": 1,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 49,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 49,
+          "failed": 0,
+          "masked": 0,
+          "passed": 49
+        },
+        "name": "four_transitions_per_hour",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      },
+      {
+        "expectations": 2,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 49,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 48,
+          "failed": 0,
+          "masked": 0,
+          "passed": 48
+        },
+        "name": "sustained_thrash",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      },
+      {
+        "expectations": 1,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 49,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 49,
+          "failed": 0,
+          "masked": 0,
+          "passed": 49
+        },
+        "name": "seven_per_hour_stays_clear",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      },
+      {
+        "expectations": 2,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 49,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 48,
+          "failed": 0,
+          "masked": 0,
+          "passed": 48
+        },
+        "name": "eight_per_hour_trips",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      },
+      {
+        "expectations": 1,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 49,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 49,
+          "failed": 0,
+          "masked": 0,
+          "passed": 49
+        },
+        "name": "thrash_stops_before_delay",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      },
+      {
+        "expectations": 3,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 49,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 46,
+          "failed": 0,
+          "masked": 0,
+          "passed": 46
+        },
+        "name": "burst_ages_out_of_window",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      },
+      {
+        "expectations": 1,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 49,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 49,
+          "failed": 0,
+          "masked": 0,
+          "passed": 49
+        },
+        "name": "warmup_rate_never_asserts",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      }
+    ],
+    "status": "pass",
+    "totals": {
+      "failures": 0,
+      "frames": {
+        "executed": 441,
+        "refused": 0,
+        "substituted": 0
+      },
+      "instants": {
+        "checked": 436,
+        "failed": 0,
+        "masked": 0,
+        "passed": 436
+      },
+      "scenarios": {
+        "fail": 0,
+        "no_data": 0,
+        "pass": 9,
+        "total": 9
+      },
+      "warnings": 0
+    }
+  },
+  "comparison": {
+    "mode": "exact"
+  },
+  "content_id": "oce:canon1:7e7724896832e40cdfdb908ab2703a0dcf352526017ce05f959c1cfe7f1b8305",
+  "engine_version": "0.5.0",
+  "kind": "vectors",
+  "passed": true,
+  "receipt_id": "receipt:fnv1a128:8e2053e690a3fb7f90c7d9b5b6c7ad80",
+  "schema": "oce/receipt/v1",
+  "spec_id": "spec:fnv1a128:81931efafc9c025ad8141ae8135e286e",
+  "timings": {
+    "compare_ms": 0,
+    "load_ms": 0,
+    "run_ms": 0
+  }
+}

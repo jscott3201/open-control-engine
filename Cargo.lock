@@ -411,7 +411,9 @@ name = "oce-verify"
 version = "0.5.0"
 dependencies = [
  "allocation-counter",
+ "oce-api",
  "oce-bless",
+ "oce-replay",
  "schemars",
  "serde_json",
 ]
