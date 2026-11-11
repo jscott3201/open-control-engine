@@ -993,7 +993,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Verification
 
 - **The release-codegen determinism cells run per pull request again, the merge gate keeps the
-  Windows cell alone, and no change owes a local release-codegen run** (GitHub #PRNUM,
+  Windows cell alone, and no change owes a local release-codegen run** (GitHub #557,
   issue #556; owner decision of 2026-11-10, closing step 3 of #504). Issue #502 had moved the
   release cells out of `pr-gate.yml` when one took 11 to 18 minutes; with the integration tests
   of `oce-api`, `oce-author`, `oce-cxf` and `oce-conformance` built as a few binaries each
