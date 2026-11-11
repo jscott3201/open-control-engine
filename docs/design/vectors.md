@@ -1279,8 +1279,10 @@ Each mutant is opened once:
 What remains:
 - **A swap between the checks and the open.** Another writer in the directory can swap a path
   component for a link, which the open then follows, or the file for a named pipe, which the
-  open then waits on. std offers no component-by-component open that refuses links, and no open
-  that will not block.
+  open then waits on. std offers no component-by-component open that refuses links. A
+  non-blocking open does exist, `OpenOptionsExt::custom_flags` with `O_NONBLOCK`, but the
+  constant differs by operating system and std does not export it without `libc`, so the open
+  stays a plain one *(corrected 2026-11-11, second review of GitHub #573)*.
 - **A hard link inside the directory to a file outside it** on the same file system is read. A
   hard link has no other path to resolve against the directory, so it is inside by every test
   the CLI can make *(added 2026-11-11, review of GitHub #573)*.

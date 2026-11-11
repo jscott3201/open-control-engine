@@ -24,8 +24,10 @@
 //!
 //! What stays racy: between the canonicalization (1) and the open (3) another writer in the
 //! directory can swap a component for a link, which the open then follows, or swap the file for a
-//! named pipe, which the open then waits on; std offers no component-by-component no-follow open
-//! and no non-blocking open. A hard link inside the directory to a file outside it is read: a
+//! named pipe, which the open then waits on. std offers no component-by-component no-follow open;
+//! a non-blocking open (`OpenOptionsExt::custom_flags` with `O_NONBLOCK`) exists but needs the
+//! constant per operating system, which std does not export without `libc`, so the open stays a
+//! plain one. A hard link inside the directory to a file outside it is read: a
 //! hard link has no other path to resolve. A file that grows after its metadata is read is still
 //! bounded: the read stops one byte past the size allowed and refuses.
 //!

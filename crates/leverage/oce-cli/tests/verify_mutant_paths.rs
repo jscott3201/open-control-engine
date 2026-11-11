@@ -32,6 +32,12 @@ use support::{crate_dir, oce_in, oce_in_guarded, scratch};
 /// directory, where the vector file goes.
 fn prepared(name: &str) -> (PathBuf, PathBuf) {
     let root = scratch(name);
+    let set = laid_out(&root);
+    (root, set)
+}
+
+/// `root/set` with AHU-0016's rule in it; returns the `set` directory.
+fn laid_out(root: &Path) -> PathBuf {
     let set = root.join("set");
     fs::create_dir(&set).expect("the set's directory");
     fs::copy(
@@ -39,7 +45,42 @@ fn prepared(name: &str) -> (PathBuf, PathBuf) {
         set.join("rule.cxf.jsonld"),
     )
     .expect("copy the rule");
-    (root, set)
+    set
+}
+
+/// A short directory of this test's own under the system temporary directory, removed when it
+/// is dropped, the test's failure included. A Unix socket's path must fit `sun_path` (104 bytes
+/// on macOS, 108 on Linux), which a path under the checkout's target directory may not; the name
+/// carries the process id and a clock reading, and is created with `create_dir`, so two tests
+/// running at once never share one.
+#[cfg(unix)]
+struct ShortDir(PathBuf);
+
+#[cfg(unix)]
+impl ShortDir {
+    fn new(tag: &str) -> Self {
+        let base = std::env::temp_dir();
+        for attempt in 0..16_u32 {
+            let nanos = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |since| since.subsec_nanos());
+            let dir = base.join(format!(
+                "oce-{tag}-{}-{nanos:x}-{attempt}",
+                std::process::id()
+            ));
+            if fs::create_dir(&dir).is_ok() {
+                return Self(dir);
+            }
+        }
+        panic!("no fresh directory under the system temporary directory");
+    }
+}
+
+#[cfg(unix)]
+impl Drop for ShortDir {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
 }
 
 /// A valid mutant of AHU-0016's rule (the persistence delay 900 s to 930 s).
@@ -276,37 +317,72 @@ fn a_dot_dot_segment_never_reaches_resolution() {
 
 #[cfg(unix)]
 #[test]
-fn a_named_pipe_or_a_socket_is_not_a_file_and_never_opened() {
+fn a_named_pipe_is_not_a_file_and_never_opened() {
     let (root, set) = prepared("paths_fifo");
-    fs::write(set.join("ok.cxf.json"), mutant_bytes()).expect("a mutant");
     let made = std::process::Command::new("mkfifo")
         .arg(set.join("pipe.cxf.json"))
         .status()
         .expect("mkfifo runs");
     assert!(made.success(), "mkfifo made the pipe");
-    let _listener = std::os::unix::net::UnixListener::bind(set.join("socket.cxf.json"))
-        .expect("a socket in the directory");
-    for (listing, place) in [
-        (vec!["pipe.cxf.json"], "mutants[0]"),
-        (vec!["ok.cxf.json", "socket.cxf.json"], "mutants[1]"),
-    ] {
-        write_set(&set, &listing);
-        // The guard is a hang guard: opening the pipe for reading would block for ever, and a
-        // regression must fail the test, not stall it. It asserts nothing about speed.
-        let run = oce_in_guarded(
-            &root,
-            &[
-                "verify",
-                "set/vectors.json",
-                "--subject",
-                "set/rule.cxf.jsonld",
-            ],
-            std::time::Duration::from_secs(120),
-        );
-        assert_eq!(
-            (run.code, refusal(&run.report())),
-            (2, pair("not-a-file", place)),
-            "{listing:?}"
-        );
-    }
+    write_set(&set, &["pipe.cxf.json"]);
+    // The guard is a hang guard: opening the pipe for reading would block for ever, and a
+    // regression must fail the test, not stall it. It asserts nothing about speed.
+    let run = oce_in_guarded(
+        &root,
+        &[
+            "verify",
+            "set/vectors.json",
+            "--subject",
+            "set/rule.cxf.jsonld",
+        ],
+        std::time::Duration::from_secs(120),
+    );
+    assert_eq!(
+        (run.code, refusal(&run.report())),
+        (2, pair("not-a-file", "mutants[0]"))
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn a_socket_is_not_a_file_and_never_opened() {
+    // The socket is bound in a short directory of its own, so its path fits `sun_path` wherever
+    // the checkout is.
+    let short = ShortDir::new("sock");
+    let set = laid_out(&short.0);
+    fs::write(set.join("ok.cxf.json"), mutant_bytes()).expect("a mutant");
+    let socket = set.join("socket.cxf.json");
+    let _listener = match std::os::unix::net::UnixListener::bind(&socket) {
+        Ok(listener) => listener,
+        Err(error) => {
+            // Not this test's subject: a platform that cannot bind a socket here skips, with
+            // the reason, rather than failing.
+            #[allow(
+                clippy::print_stderr,
+                reason = "an explicit skip note in the test output"
+            )]
+            {
+                eprintln!(
+                    "skipped: no Unix socket can be bound at a {}-byte path here: {error}",
+                    socket.as_os_str().len()
+                );
+            }
+            return;
+        }
+    };
+    write_set(&set, &["ok.cxf.json", "socket.cxf.json"]);
+    let run = oce_in_guarded(
+        &short.0,
+        &[
+            "verify",
+            "set/vectors.json",
+            "--subject",
+            "set/rule.cxf.jsonld",
+        ],
+        std::time::Duration::from_secs(120),
+    );
+    assert_eq!(
+        (run.code, refusal(&run.report())),
+        (2, pair("not-a-file", "mutants[1]"))
+    );
 }
