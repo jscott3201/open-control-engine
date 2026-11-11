@@ -3,6 +3,7 @@
 
 use std::collections::BTreeMap;
 
+use crate::counted::Counted;
 use crate::identifier::check_identifier_syntax;
 use crate::model::{Endpoint, Sequence};
 
@@ -32,11 +33,11 @@ impl End {
 pub(super) fn check(
     sequence: &Sequence,
     declared: &Declared<'_>,
-    ports: &[Option<Ports>],
+    ports: &[Option<Ports<'_>>],
     findings: &mut Findings,
 ) {
     // The first connection driving each resolved target, for the single-assignment check.
-    let mut driven: BTreeMap<(&str, &str), usize> = BTreeMap::new();
+    let mut driven: BTreeMap<(Counted<&str>, Counted<&str>), usize> = BTreeMap::new();
     for (index, connection) in sequence.connections.iter().enumerate() {
         let position = Anchor::Connection(index);
         let subject = format!("connection[{index}]");
@@ -86,8 +87,8 @@ pub(super) fn check(
         // A target only a resolved connection names; a repeat drives one input twice.
         if resolved && is_known(declared, ports, &connection.target) {
             let target = match &connection.target {
-                Endpoint::Boundary(name) => (name.as_str(), ""),
-                Endpoint::Port { block, port } => (block.as_str(), port.as_str()),
+                Endpoint::Boundary(name) => (Counted(name.as_str()), Counted("")),
+                Endpoint::Port { block, port } => (Counted(block.as_str()), Counted(port.as_str())),
             };
             if let Some(&first) = driven.get(&target) {
                 findings.error(
@@ -108,13 +109,13 @@ pub(super) fn check(
 }
 
 /// Whether a target's interface is known (its block's ports resolved), so `resolve` judged it.
-fn is_known(declared: &Declared<'_>, ports: &[Option<Ports>], target: &Endpoint) -> bool {
+fn is_known(declared: &Declared<'_>, ports: &[Option<Ports<'_>>], target: &Endpoint) -> bool {
     match target {
         Endpoint::Boundary(_) => true,
         Endpoint::Port { block, .. } => declared
             .blocks
             .get(block.as_str())
-            .and_then(|&i| ports.get(i))
+            .and_then(|i| ports.get(i))
             .is_some_and(Option::is_some),
     }
 }
@@ -138,7 +139,7 @@ const PORT_HINT_LIMIT: usize = 16;
 /// What a well-formed endpoint fails to name, as `(code, detail)`, or `None` when it resolves.
 fn resolve(
     declared: &Declared<'_>,
-    ports: &[Option<Ports>],
+    ports: &[Option<Ports<'_>>],
     end: End,
     endpoint: &Endpoint,
 ) -> Option<(&'static str, String)> {
@@ -153,17 +154,17 @@ fn resolve(
                 End::Source => (&declared.inputs, &declared.outputs),
                 End::Target => (&declared.outputs, &declared.inputs),
             };
-            if wanted.contains_key(name) {
+            if wanted.contains(name) {
                 return None;
             }
-            let what = if other.contains_key(name) {
+            let what = if other.contains(name) {
                 match end {
                     End::Source => "a boundary output, which cannot drive a connection",
                     End::Target => "a boundary input, which cannot be driven",
                 }
-            } else if declared.params.contains_key(name) {
+            } else if declared.params.contains(name) {
                 "a sequence parameter, not a connector"
-            } else if declared.blocks.contains_key(name) {
+            } else if declared.blocks.contains(name) {
                 "a block; name one of its ports as `block.port`"
             } else {
                 "not declared"
@@ -171,7 +172,7 @@ fn resolve(
             Some((unknown, format!("the {} `{name}` is {what}", end.word())))
         }
         Endpoint::Port { block, port } => {
-            let Some(&index) = declared.blocks.get(block.as_str()) else {
+            let Some(index) = declared.blocks.get(block.as_str()) else {
                 return Some((
                     unknown,
                     format!("the {} block `{block}` is not declared", end.word()),

@@ -1,11 +1,12 @@
-//! Stage-1 validation cost stays near-linear in the document: a chain of blocks filling most of the
-//! 4 MiB wire bound validates clean, and sixteen times the chain costs well under the 256-fold a
-//! per-endpoint scan would (the issue #463 review measured 3.4 s for 30,000 blocks before the
-//! name indexes).
+//! A document near the wire bound validates clean: a chain of blocks filling most of the 4 MiB
+//! bound passes stage 1.
+//!
+//! What stage 1 costs at that size is pinned in key comparisons by the unit tests of
+//! `src/counted.rs` (issue #478), not here and not in elapsed time: the comparison counter is
+//! compiled into the library's own test build only. The issue #463 review measured 3.4 s for
+//! 30,000 blocks before the name indexes.
 
 use crate::support;
-
-use std::time::{Duration, Instant};
 
 use oce_author::{
     Block, Boundary, Connection, Endpoint, MAX_WIRE_BYTES, Sequence, SignalType, from_wire_str,
@@ -39,30 +40,6 @@ fn chain(n: usize) -> Sequence {
     s
 }
 
-fn timed(sequence: &Sequence) -> Duration {
-    let start = Instant::now();
-    assert!(validate_author_side(sequence).is_empty());
-    start.elapsed()
-}
-
-/// The smallest ratio of a large run to the small run just before it, over several interleaved
-/// pairs. A burst of load from tests running beside this one (the crate's mutation sweep, the
-/// 8 MiB emitter bound, the rest of the workspace suite) inflates single runs, mostly the longer
-/// large ones; a quadratic validator, though, is slow in every pair, so the quietest pair still
-/// exposes it. Returns that ratio and its two timings.
-fn quietest_ratio(small: &Sequence, large: &Sequence) -> (f64, Duration, Duration) {
-    let mut best = (f64::INFINITY, Duration::ZERO, Duration::ZERO);
-    for _ in 0..9 {
-        let s = timed(small);
-        let l = timed(large);
-        let ratio = l.as_secs_f64() / s.as_secs_f64().max(1e-6);
-        if ratio < best.0 {
-            best = (ratio, s, l);
-        }
-    }
-    best
-}
-
 #[test]
 fn a_document_at_the_wire_bound_validates_clean() {
     let n = 30_000;
@@ -75,16 +52,4 @@ fn a_document_at_the_wire_bound_validates_clean() {
     );
     let model = from_wire_str(&text).expect("reads");
     assert!(validate_author_side(&model).is_empty());
-}
-
-#[test]
-fn sixteen_times_the_document_costs_well_under_a_quadratic_factor() {
-    // 16x the blocks: linear work is ~16x (a little more for the logarithmic indexes), quadratic
-    // work ~256x; the bound sits at 32x, far from both, so neither load nor the quietest-pair
-    // selection decides the outcome.
-    let (ratio, small, large) = quietest_ratio(&chain(1_875), &chain(30_000));
-    assert!(
-        ratio < 32.0,
-        "16x the blocks took {ratio:.1}x the time in the quietest pair ({small:?} vs {large:?})"
-    );
 }
