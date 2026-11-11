@@ -171,6 +171,11 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   under wasmtime on `wasm32-wasip1`, with every output, warning and raw state word after every
   frame of the 46 fixtures bit-identical to the recorded host run. See
   [compiled-schedule blob](docs/compiled-schedule-blob.md#the-blob-round-trip).
+- Lets a person or an agent write a sequence without touching JSON-LD: `oce-author` holds one typed
+  model in a strict-JSON wire form and a terse text form, validates it before an engine sees it,
+  emits it deterministically to flat CXF and imports the library's in-subset CXF back, and the `oce`
+  command-line tool runs all of it with a JSON report and exit codes 0 / 1 / 2. See the
+  [authoring layer](docs/design/authoring-layer.md) and [`oce`](crates/leverage/oce-cli/README.md).
 
 ## What it does not do
 
@@ -210,34 +215,34 @@ Stating this plainly is more useful than a feature list.
 
 ## Status and roadmap
 
-The current release is **v0.4.0** (milestone M1b, November 2026): the execution core builds
-`no_std + alloc` with its math through `libm` and no hash collections, a loaded executable compiles
-to an `OCEB` blob on the host and runs on a `no_std` target through the same HostTick frame driver
-as the facade, a firmware image is built and size-checked per PR for two bare-metal targets and
-executed under QEMU nightly, and every engine PR replays one recorded run of the 46 fixtures' blobs
-bit for bit on x86_64, arm64 and `wasm32-wasip1`. v0.3.0 (M1a) made the engine pure and moved the
-per-PR gate to native x86_64 and arm64 cells under one required `CI OK` status. `development`
-carries the next version, 0.5.0, which is not released: every format and schema stays at revision
-1 until 1.0.0 and changes in place, so the engine version is what separates one layout from
-another, and a compiled blob and a state snapshot each carry it and are accepted only by the
-version that wrote them. Next come M2 (the
-authoring layer) and M3 (the verification product), in parallel; M3's first engine change, the
-facade's slot-indexed execute entry, is in, and so is the first leverage crate built on it:
-`oce-replay`, which drives the engine frame by frame from recorded or scripted inputs (columnar
-arrays, a bounded CSV reader, step lists) under an explicit missing-sample policy and records a
-columnar, bit-exact trace. M3's canonical content id is in as well: `Engine::content_id` names a
-loaded sequence by the SHA-256 of a canonical encoding of its flat graph, the same whatever its
-authored order, JSON spelling or instance namespace, and the blob header carries it.
-M2 has started too: its first leverage crate, `oce-author`, holds the
-typed authoring model and builder, the strict-JSON wire form with a pinned JSON Schema, and the
-author-side validator that reports every catalog-level defect before an engine sees the sequence,
-and now the deterministic emitter to flat CXF, the engine-side validation stage that loads the
-emitted bytes in a throwaway engine and maps every diagnostic back onto the model, the importer
-(31 of the 34 in-subset library fixtures round-trip to their committed content id, and the frozen
-prototype's v0 graph JSON imports to the content id of the CXF it wrote), and the text form:
-a hand-written parser with one typed refusal per malformed construct, a canonical printer and an
-idempotent `fmt` that keeps every comment (an end-of-line comment moves above its statement; a
-comment after the last item of a list or block is refused). The `oce` command-line tool
+The current release is **v0.5.0** (milestone M2, November 2026): the authoring layer. A person or
+an agent writes a sequence without touching JSON-LD. `oce-author` holds one typed authoring model
+and builder with two forms that carry exactly it: a strict-JSON wire form with a pinned JSON Schema,
+and a terse text form with a hand-written parser that gives one typed refusal per malformed
+construct, a canonical printer and an idempotent `fmt` that keeps every comment (an end-of-line
+comment moves above its statement; a comment after the last item of a list or block is refused).
+A two-stage validator reports every catalog-level defect before an engine sees the sequence, then
+loads the emitted bytes in a throwaway engine and maps every diagnostic back onto the model; the
+deterministic emitter writes flat CXF; and the importer reads the in-subset library CXF (31 of the
+34 in-subset library fixtures round-trip to their committed content id) and the frozen prototype's
+v0 graph JSON (it imports to the content id of the CXF the prototype wrote). The engine side it
+needed is in the facade: `oce_api::class_ports` names every port of a configured block,
+`oce_api::class_metadata` gives each class a description and each parameter a settable flag, and
+`oce_api::enumerations` lists every CDL and G36 enumeration and G36 Integer constant package. The
+milestone's last gate row, agent usability measured by a benchmark, moves to the milestone that
+lands the benchmark harness (owner decision, 2026-11-09). v0.5.0 also ships M3's work so far
+(below), and it is the first release in which every format and schema stays at revision 1 until
+1.0.0 and changes in place: the engine version is what separates one layout from another, and a
+compiled blob and a state snapshot each carry it and are accepted only by the version that wrote
+them. v0.4.0 (M1b) made the execution core build `no_std + alloc` with its math through `libm` and
+no hash collections, compiled a loaded executable to an `OCEB` blob that runs on a bare-metal target
+through the facade's own frame driver, and replays one recorded run of the 46 fixtures' blobs bit
+for bit on x86_64, arm64 and `wasm32-wasip1` on every engine PR; v0.3.0 (M1a) made the engine pure
+and moved the per-PR gate to native x86_64 and arm64 cells under one required `CI OK` status.
+`development` carries 0.5.0 until the first change after the tag that moves a format's bytes or
+meaning, which bumps it to the next milestone's version.
+
+M2's `oce` command-line tool
 (`crates/leverage/oce-cli`, the first binary above the facade) puts all of it at a shell prompt:
 `emit`, `validate`, `fmt`, `catalog` and `vocab`, each with a documented JSON report on stdout for
 agents and the exit rule 0 yes / 1 no / 2 error
@@ -266,6 +271,14 @@ scale factors (`min`, `h` and `d`, exact multiples of `s`), and the text form re
 `delayTime = 1 h` is `3600.0` s, exactly, `fmt` keeps `1 h`, and a suffix that is not the
 parameter's declared unit is refused (`unit-suffix-mismatch`).
 
+Next is M3 (the verification product), in progress in parallel with M2 since v0.4.0: the facade's
+slot-indexed execute entry is in, and so is the first leverage crate built on it, `oce-replay`,
+which drives the engine frame by frame from recorded or scripted inputs (columnar arrays, a bounded
+CSV reader, step lists) under an explicit missing-sample policy and records a columnar, bit-exact
+trace. M3's canonical content id is in as well: `Engine::content_id` names a loaded sequence by the
+SHA-256 of a canonical encoding of its flat graph, the same whatever its authored order, JSON
+spelling or instance namespace, and the blob header carries it.
+
 M3's vector format and its replayer are in as well: `oce-verify` (`crates/leverage/oce-verify`,
 [README](crates/leverage/oce-verify/README.md)) reads a vector set, the strict-JSON file of
 scenarios a sequence is checked against (`oce/vectors/v1`: one clock, constant and step inputs,
@@ -290,6 +303,10 @@ no verdict could be reached. Mutant paths are resolved and kept inside the vecto
 directory. The in-repo replay gate runs that binary over both library rules on every PR, against
 their golden receipts.
 
+Open follow-ups from M2 include the benchmark data the agent-usable row needs (#457), `oce check`
+(#574), and checking a sequence parameter's unit suffix against the block parameter it feeds
+(#590).
+
 See [CHANGELOG.md](CHANGELOG.md).
 
 Work is planned as GitHub milestones and cut into issues. Each milestone has a tracking issue that
@@ -299,8 +316,8 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 | --- | --- | --- |
 | **M1a** Portable core: cleanup | Pure `Engine`, dead crates and ledgers removed, two CI lanes, native determinism and strict-bit matrices | Released as v0.3.0 |
 | **M1b** Portable core: `no_std` | Core four build `no_std + alloc`; math through `libm`; hash-free core; the **OCEB** compiled-schedule blob (encoder in `oce-api`, decoder in `oce-graph`, byte-stable across architectures); a `no_std` execution entry that never links `oce-cxf` or `oce-api`; a bare-metal gate cell with a size budget over `thumbv7em`, `riscv32imac` and `wasm32`; QEMU execution nightly | Released as v0.4.0 |
-| **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | In progress: `oce-author`'s model, wire form, schema, two-stage validator, emitter, text form and importer are in, and so are the `oce` CLI (`emit`, `validate`, `fmt`, `catalog`, `vocab`) and vocabulary v1's data crate `oce-vocab`, served through `oce catalog` (descriptions, units, ranges, notes) with the unit scale-factor table in `oce vocab`, which the text form reads for time-unit suffixes (`1 h`, checked against each parameter's declared unit); in parallel with M3 |
-| **M3** Verification product | Canonical content id, the vector format, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode, on the `oce-replay` historical replay crate | In progress: `oce-replay`, the canonical content id (`Engine::content_id`, `oce:canon1:` over the loaded graph), output types in slot order before the first frame (`FrameSlots::output_types()`), the vector format (`oce-verify`: `oce/vectors/v1` with a strict bounded reader, a canonical form with a `spec_id`, and a pinned JSON Schema), the replayer with its receipts (`run_vectors`, `oce/receipt/v1`), mutant mode with its catch score, the four work budgets on a run, and the `oce verify` verb with the in-repo replay gate are in; the tolerance mode next; in parallel with M2 |
+| **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | Released as v0.5.0: `oce-author`'s model, builder, wire form and pinned schema, two-stage validator, emitter, text form and importer; the `oce` CLI (`emit`, `validate`, `fmt`, `catalog`, `vocab`); vocabulary v1 (`oce-vocab`), served through `oce catalog` and read by the text form for time-unit suffixes. The agent-usable gate row moves to the milestone that lands the benchmark harness (owner decision, 2026-11-09) |
+| **M3** Verification product | Canonical content id, the vector format, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode, on the `oce-replay` historical replay crate | In progress: `oce-replay`, the canonical content id (`Engine::content_id`, `oce:canon1:` over the loaded graph), output types in slot order before the first frame (`FrameSlots::output_types()`), the vector format (`oce-verify`: `oce/vectors/v1` with a strict bounded reader, a canonical form with a `spec_id`, and a pinned JSON Schema), the replayer with its receipts (`run_vectors`, `oce/receipt/v1`), mutant mode with its catch score, the four work budgets on a run, and the `oce verify` verb with the in-repo replay gate are in, shipped in v0.5.0; the tolerance mode next |
 | **M4** WASM | `oce-wasm` over `oce-api`, a TypeScript package, a browser demo that replays vectors without a server, a tracked `.wasm` size budget | Planned, in parallel with M5 |
 | **M5** Python | `oce-py` wheels (PyO3, abi3) over the same surface; replay and receipts from a notebook | Planned, in parallel with M4 |
 | **M6** Reference host | `oce-host`: cadence, staleness limits, the non-finite policy, degraded mode and safe-state outputs as tested code; BOPTEST client and a Docker runtime | Planned, in parallel with M7 |

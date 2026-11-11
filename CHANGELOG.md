@@ -37,6 +37,58 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.5.0
+
+Prepared 2026-11-11 on `development`; the release date is the date the `v0.5.0` tag is cut from
+`main`. Every workspace member is 0.5.0. Nothing is published to crates.io.
+
+0.5.0 closes milestone M2: the authoring layer. A person or an agent writes a sequence without
+touching JSON-LD. `oce-author` holds one typed authoring model with a builder, a strict-JSON wire
+form with a pinned JSON Schema and a stage-1 validator (GitHub #466, issue #463), a deterministic
+emitter to flat CXF with an engine-side validation stage that loads the emitted bytes in a
+throwaway engine and maps every diagnostic back onto the model (GitHub #473, issue #464), a terse
+text form with one typed refusal per malformed construct and an idempotent `fmt` (GitHub #485,
+issue #482), enumeration-typed sequence parameters, boundary bounds and member literals (GitHub
+#493, issue #492), and an importer for the in-subset library CXF and the frozen prototype's v0
+graph JSON (GitHub #498, issue #496); the provenance statement is `derived_from` (GitHub #580,
+issue #529), and time unit suffixes scale from the vocabulary's table and must fit the declared
+unit (GitHub #586, issue #501). The engine side it needed is in the facade: resolved port names,
+class descriptions and the settable flag (GitHub #461, issue #440) and the enumeration table
+(GitHub #488, issue #468). The `oce` command-line tool (`emit`, `validate`, `fmt`, `catalog`,
+`vocab`; GitHub #491, issue #489) serves vocabulary v1, which `oce-vocab` projects from the
+vendored modelica-json CXF-Core document (GitHub #511, #526; issues #499, #500). Against the
+milestone's gate: 31 of the 34 in-subset library fixtures import, emit and load to their committed
+content id (the other three carry block-port bounds, refused by design), every bundle round-trips
+wire → text → wire byte for byte, and the parity test pins every stage-1 code that has an engine
+counterpart to the engine's own code at the same subject; the agent-usable row moves to the
+milestone that lands the benchmark harness (owner decision, 2026-11-09). 0.5.0 also carries M3's
+work so far: the slot-indexed execute entry and `oce-replay` (GitHub #459, #462; issues #444,
+#445), the canonical content id (GitHub #474, issue #470), `FrameSlots::output_types()` (GitHub
+#525), and `oce-verify` with the `oce/vectors/v1` format, the replayer and its receipts, mutant
+mode, the four work budgets and the `oce verify` verb with the in-repo replay gate (GitHub #541,
+#558, #565, #570, #572, #573). It is the first release in which every format and schema stays at
+revision 1 until 1.0.0 and changes in place, so the engine version is what separates one layout
+from another: the workspace moved to 0.5.0 on `development` with that reset (GitHub #518, issue
+#509), and a compiled-schedule blob and a state snapshot are each accepted only by the version that
+wrote them (GitHub #540, #579; issues #530, #535). The workspace has 18 members, 10 publishable and
+eight private. The fixture and Tier-A provenance goldens (`tools/golden-gen/goldens`) and the 46
+whole-sequence Tier-2 traces are byte-identical to the `v0.4.0` tag.
+
+### Release
+
+- **0.5.0 closeout** (GitHub #PRNUM, issue #455). No version moves in this change:
+  `development` has carried 0.5.0 since GitHub #518, so every workspace member, the internal
+  path+version table, `Cargo.lock`, the descriptor's `oce-api-version:0.5.0`, the blob and
+  snapshot headers and every version-bearing golden already name it, and nothing is re-blessed.
+  The changelog's unreleased section becomes this one. The entry for GitHub #562 cited only its
+  issue as `(GitHub #544)`; it now names the pull request beside it. The v0.4.0 sync-back merge
+  (GitHub #454) carried no change of its own, and GitHub #599 (issue #581) corrected one rustdoc
+  sentence of `Engine::content_id` that still named the provenance statement `extends`, with no
+  entry of its own. No catalog, contract-schema, state-format,
+  execution-ABI, blob-format or replay-format revision changes.
+
 ### Facade
 
 - **`oce_api::ENGINE_VERSION` names the engine version this build stamps and accepts** (GitHub
@@ -903,7 +955,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
     run's total work, before part 4) and #563 (record the caps a receipt was written under). The
     46 fixture goldens and 422 provenance goldens are byte-identical.
 - **The authoring wire reader refuses a list, or any other type, where an object belongs**
-  (GitHub #544). `oce-author`'s `from_wire_str` read a JSON list where the wire form defines an
+  (GitHub #562, issue #544). `oce-author`'s `from_wire_str` read a JSON list where the wire form defines an
   object: `serde_json` reads a `serde`-derived struct from a list as well as from an object, taking
   the list positionally as the struct's fields, and the strict scan in front of `serde` checks
   syntax, depth, repeated keys and sizes, not shapes. So `"semantic": ["", "", "K", "", "", "", [],
