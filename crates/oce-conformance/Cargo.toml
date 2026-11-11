@@ -45,8 +45,8 @@ path = "tests/conformance.rs"
 
 # The strict-bit evidence tests, which change only when an issue says so (standing rule 3).
 # `scripts/ci/strict-bits-cell.sh`, `.agents/gate.sh` and the strict-bit jobs of `pr-gate.yml` run
-# them with `--test`, and the Windows cell of `release-gate.yml` leaves out these five by
-# `binary_id(..)`, a filter `.github/scripts/check-workflow-gates.sh` pins.
+# them with `--test`, and the Windows cells of `merge-gate.yml` and `release-gate.yml` leave out
+# these five by `binary_id(..)`, a filter `.github/scripts/check-workflow-gates.sh` pins.
 [[test]]
 name = "strict_bits"
 path = "tests/strict_bits.rs"
@@ -67,7 +67,7 @@ path = "tests/per_block_psychrometrics.rs"
 name = "per_block_utilities"
 path = "tests/per_block_utilities.rs"
 
-# The blob round trip: `pr-gate.yml`, `release-gate.yml`, `.agents/gate.sh` and
+# The blob round trip: `pr-gate.yml`, `merge-gate.yml`, `release-gate.yml`, `.agents/gate.sh` and
 # `check-workflow-gates.sh` run it with `--test blob_round_trip`, natively and on `wasm32-wasip1`.
 [[test]]
 name = "blob_round_trip"

@@ -30,7 +30,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
-// The layout check of a crate's test binaries, shared with `oce-cxf` (used at the end of this file).
+// The layout check of the test binaries, shared with `oce-cxf` (used at the end of this file).
 #[path = "../../oce-cxf/tests/binary_layout/mod.rs"]
 mod binary_layout;
 
@@ -144,7 +144,9 @@ const SELECTED_BY_NAME: [&str; 7] = [
 ];
 
 /// The names in [`SELECTED_BY_NAME`] that `manifest` does not give a `[[test]]` target of their own
-/// at `tests/<name>.rs`.
+/// at `tests/<name>.rs`. The match is exact and fails closed: each target must be the three lines
+/// `[[test]]`, `name = "<name>"` and `path = "tests/<name>.rs"`, in that order, with no comment
+/// or blank line between them, so a reformat of `Cargo.toml` fails here until it keeps that shape.
 fn targets_missing(manifest: &str) -> Vec<&'static str> {
     SELECTED_BY_NAME
         .into_iter()
@@ -193,7 +195,9 @@ fn the_binaries_selected_by_name_stay_their_own_targets() {
     assert_eq!(
         targets_missing(&manifest),
         Vec::<&str>::new(),
-        "a workflow, gate step or recorded command selects each of these by name"
+        "a workflow, gate step or recorded command selects each of these by name, so each needs a \
+         [[test]] target of its own in Cargo.toml written as exactly three lines: `[[test]]`, then \
+         `name = \"<name>\"`, then `path = \"tests/<name>.rs\"`"
     );
     // Control: folding one of them into this binary is refused by name.
     let folded = manifest.replace(
