@@ -2,8 +2,8 @@
 //! `serde`-derived struct: both read the document as a `serde_json::Value` and match each node's
 //! JSON type by hand (`import::cxf`, `import::nodes`, `import::values`, `import::v0`), so the
 //! positional read the derive makes of a list cannot happen. These sweeps hold that: an object of
-//! a document they read, replaced by the list of its values, is refused with a typed error, and
-//! the same document as written imports.
+//! a document they read, replaced by the list of its values, is refused with one of the codes in
+//! [`REFUSAL_CODES`], and the same document as written imports.
 //!
 //! One exception, by design: the CXF importer drops a parameter node's descriptive attributes
 //! (`S231:unit`, `quantity`, `displayUnit`, `min`, `max`; importer note, decision 9) without
@@ -27,6 +27,14 @@ type Importer = fn(&[u8], &ImportOptions) -> Result<Imported, ImportError>;
 /// document with fewer, otherwise an even stride, so the corpus stays inside the per-test time
 /// bound in a debug build.
 const MAX_OBJECTS: usize = 150;
+
+/// The codes the CXF importer refuses an object written as the list of its values with:
+/// `wrong-shape` (a document, node, reference or literal of another JSON type), `array-shape` (a
+/// list where one value belongs) and `expression-value`, which its fixed precedence (importer
+/// note) reaches before the shape: a list of strings under `S231:value` is read as candidate
+/// expressions, and a list in place of a `hasParameter` reference hides the sequence parameter a
+/// value names.
+const REFUSAL_CODES: [&str; 3] = ["wrong-shape", "array-shape", "expression-value"];
 
 /// The parameter attributes the CXF importer drops unread (decision 9).
 const DROPPED_ATTRIBUTES: [&str; 5] = [
@@ -84,44 +92,57 @@ fn dropped_as_written(site: &Site, text: &str, imported: &Imported, original: &I
             .any(|dropped| dropped.value == written)
 }
 
+/// What a CXF sweep met: the objects swept, their roles, the refusal codes and what broke the
+/// rule.
+#[derive(Default)]
+struct Swept {
+    count: usize,
+    roles: BTreeSet<&'static str>,
+    codes: BTreeSet<&'static str>,
+    broken: Vec<String>,
+}
+
 /// Sweep `documents` with `importer`: every swept object replaced by the list of its values must
-/// be refused (or, for a dropped attribute, carry nothing into the model). Returns the count
-/// swept, the roles met and what broke the rule.
-fn sweep(
-    documents: &[(String, Vec<u8>)],
-    importer: Importer,
-) -> (usize, BTreeSet<&'static str>, Vec<String>) {
+/// be refused with a code of [`REFUSAL_CODES`] (or, for a dropped attribute, carry nothing into
+/// the model).
+fn sweep(documents: &[(String, Vec<u8>)], importer: Importer) -> Swept {
     let options = ImportOptions::new();
-    let mut swept = 0usize;
-    let mut roles = BTreeSet::new();
-    let mut broken = Vec::new();
+    let mut swept = Swept::default();
     for (name, bytes) in documents {
         let text = std::str::from_utf8(bytes).expect("UTF-8");
         let original = importer(bytes, &options).unwrap_or_else(|e| panic!("{name}: {e}"));
         for site in swept_objects(text) {
-            swept += 1;
-            roles.insert(role(text, &site));
+            swept.count += 1;
+            swept.roles.insert(role(text, &site));
             let mutant = site.as_list_of_values(text);
             match importer(mutant.as_bytes(), &options) {
-                Err(_) => {}
+                Err(error) if REFUSAL_CODES.contains(&error.code()) => {
+                    swept.codes.insert(error.code());
+                }
+                Err(error) => swept
+                    .broken
+                    .push(format!("{name} {}: refused as {error}", site.path())),
                 Ok(imported) if dropped_as_written(&site, text, &imported, &original) => {}
-                Ok(_) => broken.push(format!("{name} {}: imported", site.path())),
+                Ok(_) => swept
+                    .broken
+                    .push(format!("{name} {}: imported", site.path())),
             }
         }
     }
-    (swept, roles, broken)
+    swept
 }
 
 fn read(path: &std::path::Path) -> Vec<u8> {
     std::fs::read(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
 }
 
-fn assert_swept(what: &str, swept: usize, broken: &[String]) {
+fn assert_swept(what: &str, swept: &Swept) {
     assert!(
-        broken.is_empty(),
-        "{} of {swept} {what} objects imported as the list of their values:\n{}",
-        broken.len(),
-        broken.join("\n")
+        swept.broken.is_empty(),
+        "{} of {} {what} objects were not refused by a listed code as the list of their values:\n{}",
+        swept.broken.len(),
+        swept.count,
+        swept.broken.join("\n")
     );
 }
 
@@ -144,12 +165,17 @@ fn every_emitted_cxf_object_refuses_the_list_of_its_values() {
         })
         .collect();
     assert_eq!(documents.len(), 6, "the six emit goldens");
-    let (swept, roles, broken) = sweep(&documents, import_cxf);
-    assert_swept("emitted CXF", swept, &broken);
-    assert!(swept > 300, "{swept}");
+    let swept = sweep(&documents, import_cxf);
+    assert_swept("emitted CXF", &swept);
+    assert!(swept.count > 300, "{}", swept.count);
     for role in ["document", "context", "node", "reference"] {
-        assert!(roles.contains(role), "{role}: {roles:?}");
+        assert!(swept.roles.contains(role), "{role}: {:?}", swept.roles);
     }
+    assert_eq!(
+        swept.codes,
+        REFUSAL_CODES.into_iter().collect(),
+        "every listed code is met"
+    );
 }
 
 #[test]
@@ -158,12 +184,17 @@ fn every_corpus_cxf_object_refuses_the_list_of_its_values() {
         .iter()
         .map(|name| ((*name).to_owned(), read(&corpus_fixture(name))))
         .collect();
-    let (swept, roles, broken) = sweep(&documents, import_cxf);
-    assert_swept("corpus CXF", swept, &broken);
-    assert!(swept > 2_500, "{swept}");
+    let swept = sweep(&documents, import_cxf);
+    assert_swept("corpus CXF", &swept);
+    assert!(swept.count > 2_500, "{}", swept.count);
     for role in ["document", "context", "node", "reference", "literal"] {
-        assert!(roles.contains(role), "{role}: {roles:?}");
+        assert!(swept.roles.contains(role), "{role}: {:?}", swept.roles);
     }
+    assert_eq!(
+        swept.codes,
+        REFUSAL_CODES.into_iter().collect(),
+        "every listed code is met"
+    );
 }
 
 #[test]

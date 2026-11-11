@@ -448,24 +448,46 @@ fn an_absent_value_is_spelled_empty_never_null() {
 /// variant the schema does not name.
 const ALLOWED_SERDE_ATTRIBUTES: [&str; 2] = ["deny_unknown_fields", "rename"];
 
-/// The names inside every `#[serde(...)]` attribute of `source` (`rename = "x"` gives `rename`).
+/// What a `cfg_attr` that carries a serde attribute is recorded as: never allowed, since the
+/// attribute it applies under a condition is one the scan cannot read as written.
+const CONDITIONAL_SERDE: &str = "cfg_attr carrying serde";
+
+/// The names inside every `#[serde(...)]` attribute of `source` (`rename = "x"` gives `rename`), and
+/// [`CONDITIONAL_SERDE`] for each `#[cfg_attr(...)]` that carries one. Whitespace is removed first,
+/// so `#[serde (untagged)]` and `#[ serde(untagged) ]` are read like `#[serde(untagged)]`.
 fn serde_attributes(source: &str) -> Vec<String> {
+    let compact: String = source.chars().filter(|c| !c.is_whitespace()).collect();
     let mut names = Vec::new();
-    let mut rest = source;
+    let mut rest = compact.as_str();
     while let Some(at) = rest.find("#[serde(") {
         let body = &rest[at + "#[serde(".len()..];
         let end = body.find(")]").expect("a closed serde attribute");
         for part in body[..end].split(',') {
-            let name = part.split('=').next().unwrap_or("").trim();
+            let name = part.split('=').next().unwrap_or("");
             if !name.is_empty() {
                 names.push(name.to_owned());
             }
         }
         rest = &body[end..];
     }
+    let mut rest = compact.as_str();
+    while let Some(at) = rest.find("#[cfg_attr(") {
+        let body = &rest[at + "#[cfg_attr(".len()..];
+        let end = body.find(")]").map_or(body.len(), |end| end);
+        if body[..end].contains("serde") {
+            names.push(CONDITIONAL_SERDE.to_owned());
+        }
+        rest = &body[end..];
+    }
     names
 }
 
+/// A tripwire, not a proof: it reads the attribute text of every source file, so it stops the
+/// attributes that read through serde's buffered content (or loosen keys and variants) from being
+/// added to a DTO by accident. A hand-written `Deserialize` that buffers the value through
+/// `serde_json::Value` or `from_value` is out of its reach; the shape sweeps above catch that at
+/// any position a fixture carries, and `every_schema_object_is_swept` makes every schema object
+/// such a position.
 #[test]
 fn the_wire_dtos_carry_no_serde_attribute_that_bypasses_the_closed_shapes() {
     let mut seen = 0usize;
@@ -497,4 +519,19 @@ fn the_wire_dtos_carry_no_serde_attribute_that_bypasses_the_closed_shapes() {
         ["deny_unknown_fields", "rename", "untagged"],
         "the scan reads every name"
     );
+    assert_eq!(
+        serde_attributes(
+            "#[serde (untagged)]\n#[ serde( tag = \"t\" ) ]\n#[serde(\n    flatten\n)]"
+        ),
+        ["untagged", "tag", "flatten"],
+        "whitespace does not hide a name"
+    );
+    assert_eq!(
+        serde_attributes(
+            "#[cfg_attr(feature = \"x\", serde(untagged))]\n#[cfg_attr(test, derive(Debug))]"
+        ),
+        [CONDITIONAL_SERDE],
+        "a conditional serde attribute is refused; another cfg_attr is not read"
+    );
+    assert!(!ALLOWED_SERDE_ATTRIBUTES.contains(&CONDITIONAL_SERDE));
 }

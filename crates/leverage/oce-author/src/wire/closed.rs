@@ -15,8 +15,14 @@
 //!   is `""`, `[]` or `false`), so the inner type judges `null` and refuses it.
 //!
 //! Every other request is forwarded unchanged. The adapter sits at the deserializer rather than at
-//! a field, so a DTO added later is closed by construction: every value reached from the root is
-//! read through it.
+//! a field, so a DTO added later is closed by construction, provided its `Deserialize` is derived
+//! or a visitor-based impl that reads through the deserializer it is given: every value such an
+//! impl reaches from the root is read through the adapter. An impl that buffers the value first
+//! reads past it: serde's own buffered content (`untagged`, `tag`, `content`), or a hand-written
+//! impl that goes through `serde_json::Value` or `from_value`. The integration test
+//! `the_wire_dtos_carry_no_serde_attribute_that_bypasses_the_closed_shapes` is a tripwire for the
+//! first, and the shape sweeps in `tests/wire_closed_shapes.rs` catch either at a position a
+//! fixture carries.
 //!
 //! The adapter also tracks the path of the value being read (`inputs[0].semantic`, `document` for
 //! the root) and keeps the path of the innermost value whose read failed, which
