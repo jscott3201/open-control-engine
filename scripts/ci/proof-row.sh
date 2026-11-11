@@ -10,18 +10,17 @@
 #   leverage     only crates/leverage/**, documentation and the root README.md:
 #                `bash .agents/gate.sh leverage`
 #   light        any other change (the engine lane): `bash .agents/gate.sh`
-#   determinism  the change can move what the release-codegen determinism subset builds or runs:
-#                one of the core four (oce-model, oce-expr, oce-blocks, oce-graph), oce-cxf, or
-#                oce-api (whose test binaries the subset executes), or the lockfile, the root
-#                manifest, the toolchain pin or the cargo config, which move release codegen of
-#                all of them as surely as a source edit. `bash .agents/gate.sh determinism`: the
-#                light proof plus the determinism subset and the strict-bit step under release
-#                codegen.
 #   full         the change is one only the workspace suite or `full` mode itself can check
 #                before the merge: the vendored tree and the pin records its guard reads (a pin
 #                advance; the G36 half of that guard runs only in the workspace suite), or
 #                .agents/gate.sh (whose `full`-only steps no other mode executes).
 #                `bash .agents/gate.sh full`.
+#
+# `determinism` is not a row (issue #556). From issue #545 it was owed by a change to what the
+# release-codegen determinism subset builds, because no per-PR CI job ran that subset under
+# release codegen; pr-gate.yml runs it in all four cells again, so those changes are engine-lane
+# changes like any other. `bash .agents/gate.sh determinism` stays a mode, for reproducing a red
+# release cell on one host, and this script never names it.
 #
 # The rows are ordered, and each mode runs everything the modes before it run, so a heavier run
 # satisfies a lighter row. The lane boundaries are scripts/ci/classify-changes.sh's, read from its
@@ -43,14 +42,6 @@ if [ "$#" -ne 0 ]; then
   echo "usage: bash scripts/ci/proof-row.sh < changed-paths" >&2
   exit 2
 fi
-
-# The crates whose change needs release-codegen evidence before the merge: the core four, whose
-# arithmetic and scheduling every determinism golden rests on, the CXF importer, and the facade,
-# whose test binaries are most of what the release determinism subset runs.
-RELEASE_CODEGEN_CRATES=(oce-model oce-expr oce-blocks oce-graph oce-cxf oce-api)
-
-# Files outside those crates that decide how every one of them is compiled.
-RELEASE_CODEGEN_FILES=(Cargo.lock Cargo.toml rust-toolchain.toml .cargo/config.toml)
 
 # What only `full` checks before a merge. The first four are a pin advance: the vendored tree, the
 # hash manifest and G36 provenance record beside the reference catalog, and the two source files
@@ -75,31 +66,14 @@ needs_full() {
   return 1
 }
 
-needs_release_codegen() {
-  local path="$1" entry
-  for entry in "${RELEASE_CODEGEN_CRATES[@]}"; do
-    case "$path" in
-      "crates/$entry/"*) return 0 ;;
-    esac
-  done
-  for entry in "${RELEASE_CODEGEN_FILES[@]}"; do
-    [ "$path" = "$entry" ] && return 0
-  done
-  return 1
-}
-
 paths="$(cat)"
 count=0
-release_codegen=false
 full=false
 while IFS= read -r path || [ -n "$path" ]; do
   [ -n "$path" ] || continue
   count=$((count + 1))
   if needs_full "$path"; then
     full=true
-  fi
-  if needs_release_codegen "$path"; then
-    release_codegen=true
   fi
 done <<< "$paths"
 
@@ -130,8 +104,6 @@ elif [ "$docs_only" = true ] && [ "$core" = false ]; then
   echo 'row=docs'
 elif [ "$core" = false ]; then
   echo 'row=leverage'
-elif [ "$release_codegen" = true ]; then
-  echo 'row=determinism'
 else
   echo 'row=light'
 fi

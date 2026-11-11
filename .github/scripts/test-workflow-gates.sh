@@ -8,17 +8,20 @@
 # Windows platform cell that loses its runner, its lane, its comparison or its strict-bit exclusion,
 # and a blob round trip that loses a leg, its recording, its comparison or its pinned wasmtime, and
 # a README lane (issue #503) whose job loses its lane-map entry, its lane, its classifier output or
-# its byte-pin step, fail closed. Since issue #502 the determinism matrix is split across the workflows, and the
-# fixtures follow it: pr-gate.yml must hold exactly the two debug cells and the cross-architecture
-# comparisons, and the workflows that run after the merge all four cells, the cross-codegen
-# comparisons, the Windows cell, a pinned checkout ref and a concurrency group that never cancels a
-# push run in progress. Since issue #545 there are two of those: merge-gate.yml, on every push to
-# `development`, must hold exactly those three jobs under an aggregate that is not `CI OK`, and
+# its byte-pin step, fail closed. The determinism matrix is all four cells in pr-gate.yml and in
+# release-gate.yml (issue #556; from issue #502 until then pr-gate.yml held the two debug cells
+# only), and the fixtures follow it: both files must hold both codegen modes, the release steps and
+# the cross-codegen as well as the cross-architecture comparisons, and must run the same steps as
+# each other; only the debug cells of pr-gate.yml may save the shared rust-cache entry. Two
+# workflows run outside a pull request (issue #545): merge-gate.yml, on every push to
+# `development`, must hold exactly the Windows cell under an aggregate that is not `CI OK`, with a
+# pinned checkout ref and a concurrency group that never cancels a run in progress, and
 # release-gate.yml, nightly, on dispatch, on release PRs and on pushes to `main`, must hold exactly
-# the heavy job set. The controls fail when a determinism cell or a comparison leaves the merge
-# gate, when a heavy job leaves the release gate (with or without its `needs:` entry), when either
-# workflow's events or branches change, when a shared job differs between the two files, and when
-# the gate script loses a workspace-suite command the release gate now runs only through it.
+# the heavy job set. The controls fail when a release cell or a comparison leaves pr-gate.yml,
+# when the Windows cell leaves the merge gate or any other job enters it, when a heavy job leaves
+# the release gate (with or without its `needs:` entry), when either workflow's events or branches
+# change, when the Windows job differs between the two files that run it, and when the gate
+# script loses a workspace-suite command the release gate now runs only through it.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -192,88 +195,6 @@ jobs:
         uses: actions/upload-artifact@0123456789abcdef0123456789abcdef01234567 # v7
         with:
           name: strict-bit-matrix
-  determinism-matrix:
-    needs: changes
-    if: needs.changes.outputs.core == 'true'
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [ubuntu-latest, ubuntu-24.04-arm]
-        codegen: [debug]
-        include:
-          - runner: ubuntu-latest
-            arch: x86_64
-          - runner: ubuntu-24.04-arm
-            arch: aarch64
-    steps:
-      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
-        with:
-          tool: nextest@0.9.143
-      - env:
-          CELL_ARCH: ${{ matrix.arch }}
-        run: test "$(uname -m)" = "$CELL_ARCH"
-      - name: Clear cached reports and state vectors
-        run: >-
-          rm -rf target/nextest/{ci,ci-release}/junit.xml
-          target/{portable,target}-state-{debug,release}.bin
-      - run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
-        env:
-          OCE_PORTABLE_STATE_OUT: target/portable-state-debug.bin
-          OCE_TARGET_STATE_OUT: target/target-state-debug.bin
-      - env:
-          OCE_ROUND_TRIP_OUT: target/determinism/round-trip
-        run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci --no-tests=fail
-      - run: |
-          test -s target/nextest/ci/junit.xml
-          test -s target/portable-state-debug.bin
-          test "$(ls target/determinism/round-trip | wc -l | tr -d ' ')" = 92
-      - run: |
-          cargo nextest archive -p oce-conformance --test blob_round_trip --locked --archive-file target/determinism/blob-round-trip.tar.zst
-      - uses: actions/upload-artifact@0123456789abcdef0123456789abcdef01234567 # v7
-        with:
-          name: determinism-${{ matrix.arch }}-${{ matrix.codegen }}
-          path: target/determinism/
-          if-no-files-found: error
-  determinism-compare:
-    needs: [changes, determinism-matrix]
-    if: needs.changes.outputs.core == 'true'
-    strategy:
-      matrix:
-        include:
-          - runner: ubuntu-latest
-            arch: x86_64
-            foreign: aarch64
-          - runner: ubuntu-24.04-arm
-            arch: aarch64
-            foreign: x86_64
-    steps:
-      - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
-        with:
-          tool: nextest@0.9.143
-      - run: >-
-          cmp determinism-x86_64-debug/portable-state-debug.bin determinism-aarch64-debug/portable-state-debug.bin &&
-          ! cmp -s determinism-x86_64-debug/target-state-debug.bin determinism-aarch64-debug/target-state-debug.bin
-      - run: |
-          for file in determinism-{x86_64,aarch64}-debug/blobs-debug.bin; do
-            size="$(wc -c < "$file" | tr -d ' ')"
-            if [ "$size" != 123329 ]; then
-              exit 1
-            fi
-          done
-          cmp determinism-x86_64-debug/blobs-debug.bin determinism-aarch64-debug/blobs-debug.bin
-      - run: |
-          test "$CELL_ARCH" != "$FOREIGN_ARCH"
-          export OCE_FOREIGN_TARGET_STATE_IN="$PWD/target/determinism/determinism-$FOREIGN_ARCH-debug/target-state-debug.bin"
-          cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/oce-api-lib.tar.zst" \
-            --workspace-remap . --profile ci --no-tests=fail \
-            -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
-      - run: |
-          diff -rq determinism-x86_64-debug/round-trip determinism-aarch64-debug/round-trip
-      - run: |
-          export OCE_ROUND_TRIP_EXPECT="$PWD/target/determinism/determinism-x86_64-debug/round-trip"
-          cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/blob-round-trip.tar.zst" \
-            --workspace-remap . --profile ci --no-tests=fail
   blob-round-trip-wasm:
     needs: [changes, determinism-matrix]
     if: needs.changes.outputs.core == 'true'
@@ -518,6 +439,10 @@ jobs:
       - uses: actions/checkout@89abcdef0123456789abcdef0123456789abcdef # v4
         with:
           ref: ${{ env.CHECKOUT_REF }}
+      - uses: Swatinem/rust-cache@0123456789abcdef0123456789abcdef01234567 # v2
+        with:
+          shared-key: nextest
+          save-if: ${{ matrix.arch == 'aarch64' }}
       - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
         with:
           tool: nextest@0.9.143
@@ -609,6 +534,9 @@ jobs:
   std-build-windows:
     runs-on: windows-latest
     steps:
+      - uses: actions/checkout@89abcdef0123456789abcdef0123456789abcdef # v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
       - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
         with:
           tool: nextest@0.9.143
@@ -626,8 +554,25 @@ jobs:
           NEEDS_JSON: ${{ toJSON(needs) }}
         run: python3 check.py
 EOF
-  # merge-gate.yml (issue #545): its own triggers, checkout ref and aggregate around the three
-  # jobs it shares with release-gate.yml, copied from the fixture above so the two start identical.
+  # pr-gate.yml's determinism matrix and fan-in (issue #556) are the release fixture's, with the
+  # per-PR differences the checker allows: the lane filter in place of the pinned checkout ref, and
+  # only the debug cells saving the shared rust-cache entry. Derived from the fixture above, so the
+  # two start with the same steps.
+  awk '/^  determinism-matrix:$/ { copy = 1 } /^  std-build-windows:$/ { copy = 0 } copy' "$dir/release-gate.yml" \
+    | sed -e '/^          ref: \${{ env.CHECKOUT_REF }}$/d' \
+      -e "s/^  determinism-matrix:\$/&\n    needs: changes\n    if: needs.changes.outputs.core == 'true'/" \
+      -e "s/^    needs: determinism-matrix\$/    needs: [changes, determinism-matrix]\n    if: needs.changes.outputs.core == 'true'/" \
+      -e "s/^          save-if: .*\$/          save-if: \${{ matrix.codegen == 'debug' }}/" \
+      > "$dir/determinism-jobs.yml"
+  awk -v jobs="$dir/determinism-jobs.yml" '
+    /^  blob-round-trip-wasm:$/ { while ((getline line < jobs) > 0) print line }
+    { print }
+  ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+  rm -f "$dir/determinism-jobs.yml"
+  # merge-gate.yml (issues #545 and #556): its own triggers, checkout ref and aggregate around the
+  # one job it shares with release-gate.yml, the Windows cell, copied from the fixture above so the
+  # two start identical.
   {
     cat <<'EOF'
 on:
@@ -641,12 +586,12 @@ env:
   CHECKOUT_REF: ${{ github.sha }}
 jobs:
 EOF
-    awk '/^  determinism-matrix:$/ { copy = 1 } /^  ci-ok:$/ { copy = 0 } copy' "$dir/release-gate.yml"
+    awk '/^  std-build-windows:$/ { copy = 1 } /^  ci-ok:$/ { copy = 0 } copy' "$dir/release-gate.yml"
     cat <<'EOF'
   merge-gate-ok:
     name: Merge gate OK
     if: always()
-    needs: [determinism-matrix, determinism-compare, std-build-windows]
+    needs: [std-build-windows]
     steps:
       - env:
           NEEDS_JSON: ${{ toJSON(needs) }}
@@ -1069,8 +1014,8 @@ release_gate_dispatch_checks_out_development() {
   edit_release_gate "$1" "s/^  CHECKOUT_REF: .*\$/  CHECKOUT_REF: \${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') \&\& 'development' || github.event_name == 'push' \&\& github.sha || github.ref }}/"
 }
 
-# merge-gate.yml (issue #545): the post-merge set must keep every determinism cell, both halves of
-# the fan-in and the Windows cell, run on every push to `development`, and never pose as `CI OK`.
+# merge-gate.yml (issues #545 and #556): the post-merge set is the Windows cell alone; it must run
+# on every push to `development`, on the commit the event names, and never pose as `CI OK`.
 merge_gate_missing() {
   rm -f "$1/merge-gate.yml"
 }
@@ -1092,7 +1037,7 @@ merge_gate_checks_out_the_moving_ref() {
 }
 
 merge_gate_checkout_without_the_pinned_ref() {
-  edit_merge_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/^          ref: \${{ env.CHECKOUT_REF }}$/d;}'
+  edit_merge_gate "$1" '/^  std-build-windows:$/,/^  [^ ]/ {/^          ref: \${{ env.CHECKOUT_REF }}$/d;}'
 }
 
 merge_gate_cancels_a_run_in_progress() {
@@ -1103,59 +1048,90 @@ merge_gate_runs_share_no_concurrency_group() {
   edit_merge_gate "$1" 's/^  group: .*$/  group: ${{ github.workflow }}-${{ github.run_id }}/'
 }
 
-drop_merge_gate_release_codegen() {
-  edit_merge_gate "$1" 's/^        codegen: \[debug, release\]$/        codegen: [debug]/'
+# The per-PR determinism matrix is all four cells again (issue #556): pr-gate.yml must keep the
+# release-codegen cells, their steps and every debug-against-release comparison, run the same
+# steps release-gate.yml runs, and never let a release cell write the shared rust-cache entry.
+drop_per_pr_release_codegen() {
+  edit_pr_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ s/^        codegen: \[debug, release\]$/        codegen: [debug]/'
 }
 
-drop_merge_gate_aarch64_runner() {
-  edit_merge_gate "$1" 's/^        runner: \[ubuntu-latest, ubuntu-24\.04-arm\]$/        runner: [ubuntu-latest]/'
+drop_per_pr_release_subset() {
+  edit_pr_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/-p oce-expr --locked --profile ci-release --cargo-profile release/d;}'
 }
 
-merge_gate_fail_fast() {
-  edit_merge_gate "$1" 's/^      fail-fast: false$/      fail-fast: true/'
+drop_per_pr_release_round_trip() {
+  edit_pr_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/--test blob_round_trip --locked --profile ci-release/d;}'
 }
 
-drop_merge_gate_release_subset() {
-  edit_merge_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/-p oce-expr --locked --profile ci-release --cargo-profile release/d;}'
+drop_per_pr_release_state_vector() {
+  edit_pr_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/OCE_PORTABLE_STATE_OUT: target\/portable-state-release.bin/d;}'
 }
 
-drop_merge_gate_debug_subset() {
-  edit_merge_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/-p oce-expr --locked --profile ci --no-tests=fail$/d;}'
+drop_per_pr_cross_codegen_state_comparison() {
+  edit_pr_gate "$1" '/cmp determinism-aarch64-debug\/target-state-debug.bin determinism-aarch64-release\/target-state-release.bin$/d'
 }
 
-drop_merge_gate_determinism_matrix() {
-  edit_merge_gate "$1" \
-    -e '/^  determinism-matrix:$/,/^  determinism-compare:$/ { /^  determinism-compare:$/!d; }' \
-    -e 's/^    needs: determinism-matrix$/    needs: std-build-windows/' \
-    -e 's/^    needs: \[determinism-matrix, determinism-compare, /    needs: [determinism-compare, /'
+drop_per_pr_cross_codegen_blob_comparison() {
+  edit_pr_gate "$1" '/cmp determinism-x86_64-debug\/blobs-debug.bin determinism-x86_64-release\/blobs-release.bin$/d'
 }
 
-drop_merge_gate_fan_in() {
-  edit_merge_gate "$1" \
-    -e '/^  determinism-compare:$/,/^  std-build-windows:$/ { /^  std-build-windows:$/!d; }' \
-    -e 's/^    needs: \[determinism-matrix, determinism-compare, /    needs: [determinism-matrix, /'
+drop_per_pr_cross_codegen_round_trip_comparison() {
+  edit_pr_gate "$1" '/diff -rq determinism-x86_64-debug\/round-trip determinism-aarch64-release\/round-trip$/d'
 }
 
+per_pr_fan_in_over_two_cells() {
+  edit_pr_gate "$1" "s/^          test \"\$(ls determinism-\\*\/blobs-\\*.bin | wc -l | tr -d ' ')\" = 4$/          test \"\$(ls determinism-*\/blobs-*.bin | wc -l | tr -d ' ')\" = 2/"
+}
+
+per_pr_release_cell_saves_the_shared_cache() {
+  edit_pr_gate "$1" "s/^          save-if: .*\$/          save-if: \${{ matrix.arch == 'aarch64' }}/"
+}
+
+per_pr_cells_all_save_the_shared_cache() {
+  edit_pr_gate "$1" '/^          save-if: /d'
+}
+
+# Every pattern rule still passes here: the per-PR fan-in gains a step the nightly one does not
+# have, and the per-PR cell loses a selector the nightly one keeps.
+per_pr_fan_in_step_differs() {
+  edit_pr_gate "$1" '/^  determinism-compare:$/,/^  [^ ]/ s/^    steps:$/    steps:\n      - run: rm -rf target\/determinism\/determinism-aarch64-release/'
+}
+
+per_pr_cell_archive_step_unselected() {
+  dir="$1"
+  awk '
+    /^  determinism-matrix:$/ { inside = 1 }
+    inside && /^  determinism-compare:$/ { inside = 0 }
+    inside && /^      - if: matrix.codegen == .debug.$/ { held = $0; next }
+    held != "" {
+      if ($0 ~ /^        run: \|$/) { print "      - run: |"; held = ""; next }
+      print held; held = ""
+    }
+    { print }
+  ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+# merge-gate.yml holds the Windows cell and nothing else (issue #556).
 drop_merge_gate_windows_cell() {
   edit_merge_gate "$1" \
     -e '/^  std-build-windows:$/,/^  merge-gate-ok:$/ { /^  merge-gate-ok:$/!d; }' \
-    -e 's/, determinism-compare, std-build-windows\]$/, determinism-compare]/'
+    -e 's/^    needs: \[std-build-windows\]$/    needs: []/'
 }
 
-merge_gate_fan_in_out_of_the_aggregate() {
-  edit_merge_gate "$1" 's/^    needs: \[determinism-matrix, determinism-compare, std-build-windows\]$/    needs: [determinism-matrix, std-build-windows]/'
+merge_gate_windows_out_of_the_aggregate() {
+  edit_merge_gate "$1" 's/^    needs: \[std-build-windows\]$/    needs: []/'
 }
 
-detach_merge_gate_fan_in() {
-  edit_merge_gate "$1" 's/^    needs: determinism-matrix$/    needs: std-build-windows/'
-}
-
-drop_merge_gate_cross_codegen_comparison() {
-  edit_merge_gate "$1" '/cmp determinism-aarch64-debug\/target-state-debug.bin determinism-aarch64-release\/target-state-release.bin$/d'
-}
-
-drop_merge_gate_cross_architecture_comparison() {
-  edit_merge_gate "$1" '/cmp -s determinism-x86_64-debug\/target-state-debug.bin/d'
+merge_gate_with_the_determinism_cells() {
+  dir="$1"
+  {
+    awk '/^  merge-gate-ok:$/ { exit } { print }' "$dir/merge-gate.yml"
+    awk '/^  determinism-matrix:$/ { copy = 1 } /^  std-build-windows:$/ { copy = 0 } copy' "$dir/release-gate.yml"
+    awk '/^  merge-gate-ok:$/ { copy = 1 } copy' "$dir/merge-gate.yml" \
+      | sed 's/^    needs: \[std-build-windows\]$/    needs: [std-build-windows, determinism-matrix, determinism-compare]/'
+  } > "$dir/merge-gate.yml.tmp"
+  mv "$dir/merge-gate.yml.tmp" "$dir/merge-gate.yml"
 }
 
 merge_gate_windows_on_linux_runner() {
@@ -1165,7 +1141,7 @@ merge_gate_windows_on_linux_runner() {
 merge_gate_with_a_heavy_job() {
   edit_merge_gate "$1" \
     -e 's/^  merge-gate-ok:$/  test-suite:\n    steps:\n      - run: cargo nextest run --workspace --locked --profile ci --no-tests=fail\n  merge-gate-ok:/' \
-    -e 's/^    needs: \[determinism-matrix, determinism-compare, std-build-windows\]$/    needs: [determinism-matrix, determinism-compare, std-build-windows, test-suite]/'
+    -e 's/^    needs: \[std-build-windows\]$/    needs: [std-build-windows, test-suite]/'
 }
 
 merge_gate_aggregate_named_ci_ok() {
@@ -1191,7 +1167,7 @@ merge_gate_conditional_cell() {
 }
 
 merge_gate_job_continue_on_error() {
-  edit_merge_gate "$1" 's/^  determinism-compare:$/  determinism-compare:\n    continue-on-error: true/'
+  edit_merge_gate "$1" 's/^  std-build-windows:$/  std-build-windows:\n    continue-on-error: true/'
 }
 
 merge_gate_step_condition_on_event() {
@@ -1217,8 +1193,8 @@ release_gate_cell_step_differs() {
   edit_release_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ s/^      - name: Clear cached reports and state vectors$/      - name: Keep cached reports and state vectors/'
 }
 
-merge_gate_fan_in_comment_differs() {
-  edit_merge_gate "$1" 's/^  determinism-compare:$/  determinism-compare:\n    # compares less here/'
+merge_gate_cell_comment_differs() {
+  edit_merge_gate "$1" 's/^  std-build-windows:$/  std-build-windows:\n    # builds less here/'
 }
 
 seed_advisory_ignore() {
@@ -1394,13 +1370,7 @@ swap_aarch64_runner() {
 
 # The per-PR strict-bit matrix keeps its release cells (issue #502 moved only the determinism ones).
 drop_strict_bit_release_codegen() {
-  edit_pr_gate "$1" 's/^        codegen: \[debug, release\]$/        codegen: [debug]/'
-}
-
-# The split of the determinism matrix (issue #502), in both directions: pr-gate.yml must not grow
-# its release-codegen cells back, and release-gate.yml must not lose them.
-restore_per_pr_release_codegen() {
-  edit_pr_gate "$1" 's/^        codegen: \[debug\]$/        codegen: [debug, release]/'
+  edit_pr_gate "$1" '/^  strict-bit-matrix:$/,/^  [^ ]/ s/^        codegen: \[debug, release\]$/        codegen: [debug]/'
 }
 
 drop_release_gate_release_codegen() {
@@ -1895,7 +1865,7 @@ remove_nextest_report_cleanup() {
 }
 
 remove_nextest_report_requirements() {
-  edit_pr_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/test -s target\/nextest\/ci\/junit.xml$/d;}'
+  edit_pr_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/test -s "target\/nextest\/\$profile\/junit.xml"/d;}'
 }
 
 remove_release_nextest_report_requirements() {
@@ -2388,30 +2358,8 @@ run_case merge-gate-cancels-a-run-in-progress fail merge_gate_cancels_a_run_in_p
   "a merge-gate run in progress always finishes"
 run_case merge-gate-runs-share-no-concurrency-group fail merge_gate_runs_share_no_concurrency_group \
   "merge-gate.yml is missing required gate pattern: one concurrency group per event and ref, so pushes to development queue behind each other"
-run_case merge-gate-missing-release-codegen-cells fail drop_merge_gate_release_codegen \
-  "merge-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix runs debug and release codegen"
-run_case merge-gate-missing-aarch64-runner fail drop_merge_gate_aarch64_runner \
-  "merge-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix runs native x86_64 and aarch64 runners"
-run_case merge-gate-fail-fast-cells fail merge_gate_fail_fast \
-  "merge-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix reports every failing cell (fail-fast: false)"
-run_case merge-gate-missing-release-subset fail drop_merge_gate_release_subset \
-  "merge-gate.yml job determinism-matrix is missing required gate pattern: release determinism subset with hard-fail-on-zero-tests"
-run_case merge-gate-missing-debug-subset fail drop_merge_gate_debug_subset \
-  "merge-gate.yml job determinism-matrix is missing required gate pattern: debug determinism subset with hard-fail-on-zero-tests"
-run_case merge-gate-without-determinism-matrix fail drop_merge_gate_determinism_matrix \
-  "merge-gate.yml does not hold exactly its pinned job set"
-run_case merge-gate-without-fan-in fail drop_merge_gate_fan_in \
-  "merge-gate.yml does not hold exactly its pinned job set"
 run_case merge-gate-without-windows-cell fail drop_merge_gate_windows_cell \
   "merge-gate.yml does not hold exactly its pinned job set"
-run_case merge-gate-fan-in-out-of-the-aggregate fail merge_gate_fan_in_out_of_the_aggregate \
-  "merge-gate.yml Merge gate OK needs does not match the workflow's jobs"
-run_case merge-gate-detached-determinism-fan-in fail detach_merge_gate_fan_in \
-  "merge-gate.yml job determinism-compare does not need determinism-matrix"
-run_case merge-gate-cross-codegen-comparison-dropped fail drop_merge_gate_cross_codegen_comparison \
-  "merge-gate.yml job determinism-compare is missing required gate pattern: compare aarch64 target-bound state bytes across codegen profiles"
-run_case merge-gate-cross-architecture-comparison-dropped fail drop_merge_gate_cross_architecture_comparison \
-  "merge-gate.yml job determinism-compare is missing required gate pattern: require target-bound state bytes to differ across architectures"
 run_case merge-gate-windows-on-linux-runner fail merge_gate_windows_on_linux_runner \
   "merge-gate.yml job std-build-windows is missing required gate pattern: the Windows cell runs on windows-latest"
 run_case merge-gate-with-a-heavy-job fail merge_gate_with_a_heavy_job \
@@ -2437,9 +2385,7 @@ run_case merge-gate-cross-target fail merge_gate_cross_target \
 run_case merge-gate-cell-timeout-differs fail merge_gate_cell_timeout_differs \
   "job std-build-windows is not defined identically in"
 run_case release-gate-cell-step-differs fail release_gate_cell_step_differs \
-  "job determinism-matrix is not defined identically in"
-run_case merge-gate-fan-in-comment-differs fail merge_gate_fan_in_comment_differs \
-  "job determinism-compare is not defined identically in"
+  "job determinism-matrix does not run the same steps in"
 run_case seeded-advisory-ignore fail seed_advisory_ignore \
   "empty advisory ignore list"
 run_case garbled-workflow fail garble_release_workflow \
@@ -2480,8 +2426,36 @@ run_case aarch64-on-x86-runner fail swap_aarch64_runner \
   "does not map x86_64 to ubuntu-latest and aarch64 to ubuntu-24.04-arm"
 run_case strict-bit-release-codegen-dropped fail drop_strict_bit_release_codegen \
   "strict-bit-matrix runs debug and release codegen"
-run_case per-pr-release-codegen-cells-restored fail restore_per_pr_release_codegen \
-  "pr-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix runs debug codegen only"
+run_case per-pr-release-codegen-cells-dropped fail drop_per_pr_release_codegen \
+  "pr-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix runs debug and release codegen"
+run_case per-pr-release-subset-dropped fail drop_per_pr_release_subset \
+  "pr-gate.yml job determinism-matrix is missing required gate pattern: release determinism subset with hard-fail-on-zero-tests"
+run_case per-pr-release-round-trip-dropped fail drop_per_pr_release_round_trip \
+  "pr-gate.yml job determinism-matrix is missing required gate pattern: record the release blob round trip in every determinism cell"
+run_case per-pr-release-state-vector-dropped fail drop_per_pr_release_state_vector \
+  "pr-gate.yml job determinism-matrix is missing required gate pattern: emit the release portable state vector in every determinism cell"
+run_case per-pr-cross-codegen-state-comparison-dropped fail drop_per_pr_cross_codegen_state_comparison \
+  "pr-gate.yml job determinism-compare is missing required gate pattern: compare aarch64 target-bound state bytes across codegen profiles"
+run_case per-pr-cross-codegen-blob-comparison-dropped fail drop_per_pr_cross_codegen_blob_comparison \
+  "pr-gate.yml job determinism-compare is missing required gate pattern: compare x86_64 compiled-schedule blob bytes across codegen profiles"
+run_case per-pr-cross-codegen-round-trip-comparison-dropped fail drop_per_pr_cross_codegen_round_trip_comparison \
+  "pr-gate.yml job determinism-compare is missing required gate pattern: compare the determinism-x86_64-debug and determinism-aarch64-release round-trip recordings"
+run_case per-pr-fan-in-over-two-cells fail per_pr_fan_in_over_two_cells \
+  "pr-gate.yml job determinism-compare is missing required gate pattern: the fan-in holds the compiled-schedule blobs of all four cells"
+run_case per-pr-release-cell-saves-the-shared-cache fail per_pr_release_cell_saves_the_shared_cache \
+  "pr-gate.yml job determinism-matrix is missing required gate pattern: only the debug determinism cells save the shared rust-cache entry"
+run_case per-pr-cells-all-save-the-shared-cache fail per_pr_cells_all_save_the_shared_cache \
+  "pr-gate.yml job determinism-matrix is missing required gate pattern: only the debug determinism cells save the shared rust-cache entry"
+run_case per-pr-fan-in-step-differs fail per_pr_fan_in_step_differs \
+  "job determinism-compare does not run the same steps in"
+run_case per-pr-cell-archive-step-unselected fail per_pr_cell_archive_step_unselected \
+  "job determinism-matrix does not run the same steps in"
+run_case merge-gate-with-the-determinism-cells fail merge_gate_with_the_determinism_cells \
+  "merge-gate.yml does not hold exactly its pinned job set"
+run_case merge-gate-windows-out-of-the-aggregate fail merge_gate_windows_out_of_the_aggregate \
+  "merge-gate.yml Merge gate OK needs does not match the workflow's jobs"
+run_case merge-gate-cell-comment-differs fail merge_gate_cell_comment_differs \
+  "job std-build-windows is not defined identically in"
 run_case missing-release-codegen-cells fail drop_release_gate_release_codegen \
   "release-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix runs debug and release codegen"
 run_case release-gate-missing-aarch64-runner fail drop_release_gate_aarch64_runner \

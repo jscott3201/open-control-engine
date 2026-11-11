@@ -992,6 +992,42 @@ and a gate that accepted any text would restore exactly the false assurance desc
   publishable, 6 private); `release.yml`'s comment and step name re-pinned.
 ### Verification
 
+- **The release-codegen determinism cells run per pull request again, the merge gate keeps the
+  Windows cell alone, and no change owes a local release-codegen run** (GitHub #557,
+  issue #556; owner decision of 2026-11-10, closing step 3 of #504). Issue #502 had moved the
+  release cells out of `pr-gate.yml` when one took 11 to 18 minutes; with the integration tests
+  of `oce-api`, `oce-author`, `oce-cxf` and `oce-conformance` built as a few binaries each
+  (GitHub #546, #551, #553, #554) they took 174 s (x86_64) and 181 s (aarch64) in `merge-gate.yml`
+  run 42948818576. The per-PR gate took 5 min 11 s on this change's own head (run 42953966045),
+  against 2.5 to 4.9 minutes for the seven full-lane runs before it.
+  **`pr-gate.yml`.** `determinism-matrix` is `codegen: [debug, release]` again, four native cells,
+  and `determinism-compare` again compares portable and target-bound snapshot bytes, the 46
+  compiled-schedule blobs and the round-trip recordings across debug and release codegen as well
+  as across architectures. Both jobs keep the `core` lane filter, and `CI OK` already needs
+  them, so a determinism-lane PR is gated on all four cells and every comparison. The steps are
+  `release-gate.yml`'s; only the debug cells save the shared `nextest` rust-cache entry.
+  **`merge-gate.yml`** runs one job, `std build and nextest (Windows x86_64, debug)`, under
+  `Merge gate OK`; nothing else is merge-only. **`release-gate.yml`** keeps every job (comments
+  only, one of them the false "the gate script installs nothing").
+  **Local proof.** The `determinism` row is gone: the core four, `oce-cxf`, `oce-api`,
+  `Cargo.lock`, the root `Cargo.toml`, `rust-toolchain.toml` and `.cargo/config.toml` owe the
+  engine row, `bash .agents/gate.sh`. `scripts/ci/proof-row.sh` names only `docs`, `leverage`,
+  `light` and `full`. `bash .agents/gate.sh determinism` stays as a mode, for reproducing a red
+  release cell on one host. The `full` row (a pin advance, or `.agents/gate.sh`) and the rule to
+  dispatch `release-gate.yml` for a change only the nightly executes are unchanged, and the
+  documents now record the owner's confirmation of them (2026-11-10) in place of "to be
+  confirmed".
+  **Checker.** `check-workflow-gates.sh` requires `codegen: [debug, release]`, the release
+  subset, round trip and state vectors and every cross-codegen comparison in `pr-gate.yml`;
+  requires the determinism cells and fan-in to run the same steps in `pr-gate.yml` and
+  `release-gate.yml` (every non-comment line equal apart from the lane filter, the pinned
+  checkout ref and `save-if`); pins `save-if: matrix.codegen == 'debug'` per PR; and holds
+  `merge-gate.yml` to exactly the Windows cell and its aggregate, byte-identical to the release
+  gate's. Twelve per-PR hostile fixtures and three merge-gate ones replace the twelve merge-gate cell fixtures (251 cases, from 249).
+  The product contract moves to revision 29, evidence delivery only (PC-041's limitation: both
+  byte identities are compared per pull request). No crate source, test, fixture or golden
+  changed.
+
 - **The local proof before a merge is matched to the lane a pull request runs, and the heavy
   release gate runs nightly instead of after every merge** (GitHub #547, issue #545; owner
   decisions of 2026-11-10, which amend issue #502's "the release gate runs on every merge" and
@@ -1012,8 +1048,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
   and a pin advance (`third_party/**`, `tools/reference-catalog/**`, the two files that hold a
   pinned upstream commit) or `.agents/gate.sh` itself, which owe `full`. The first three rows and
   the core four and `oce-cxf` are the owner's table; `oce-api`, the four build files and the
-  fifth row are coordinator decisions of 2026-11-10 from the review of this change, to be
-  confirmed by the owner. A change to `release-gate.yml`, or to anything else only `full` or the
+  fifth row are coordinator decisions of 2026-11-10 from the review of this change, which the
+  owner confirmed the same day (GitHub #557 then removed the `determinism` row). A change to `release-gate.yml`, or to anything else only `full` or the
   nightly run executes, also dispatches that workflow on its branch and waits for it before
   merging. `scripts/ci/proof-row.sh` (new, with fixtures in the per-PR `gate behavior
   fixtures` job) names the row from changed paths through the lane classifier, fail-closed, and

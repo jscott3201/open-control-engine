@@ -6,7 +6,7 @@
 # two of them materially weaker than CI, so prose copies are the failure mode
 # this file exists to remove.
 #
-# FIVE PROOF MODES, one per row of the lane-matched local proof (issue #545; the table and the
+# FOUR PROOF MODES, one per row of the lane-matched local proof (issue #545; the table and the
 # rules around it are in docs/ci-and-the-gate.md, "The local proof"). Each runs everything the
 # one above it runs, so a heavier run satisfies a lighter row. An author runs the row the change
 # needs, first-hand, on the final head, and pastes the tail into the pull request;
@@ -24,23 +24,26 @@
 #   bash .agents/gate.sh             # light       — any other change (the engine lane): `leverage`
 #                                    #               plus everything that compiles the engine, in
 #                                    #               debug codegen only
-#   bash .agents/gate.sh determinism # determinism — a change to the core four (oce-model,
-#                                    #               oce-expr, oce-blocks, oce-graph), oce-cxf or
-#                                    #               oce-api, or to Cargo.lock, the root
-#                                    #               Cargo.toml, rust-toolchain.toml or
-#                                    #               .cargo/config.toml: `light` plus the
-#                                    #               determinism subset and the strict-bit step
-#                                    #               under release codegen, which no per-PR CI job
-#                                    #               runs for the subset
 #   bash .agents/gate.sh full        # full        — a pin advance (third_party/**, the reference
 #                                    #               catalog's pin records, the two files holding
 #                                    #               the pinned commits) or a change to this
-#                                    #               script: `determinism` plus the workspace
-#                                    #               suite in debug and release codegen, the
-#                                    #               doctests, the blob matrix artifact and the
-#                                    #               blob round trip. It is also the mode CI
+#                                    #               script: `determinism` (below) plus the
+#                                    #               workspace suite in debug and release codegen,
+#                                    #               the doctests, the blob matrix artifact and
+#                                    #               the blob round trip. It is also the mode CI
 #                                    #               executes (release-gate.yml's `gate (full)`,
 #                                    #               nightly); no other change owes it.
+#
+# ONE REPRODUCTION MODE, between `light` and `full`, that no row asks for (issue #556):
+#
+#   bash .agents/gate.sh determinism # determinism — `light` plus the determinism subset and the
+#                                    #               strict-bit step under release codegen. From
+#                                    #               issue #545 a change to the core four, oce-cxf,
+#                                    #               oce-api or the build files owed it, because
+#                                    #               no per-PR job ran the subset under release
+#                                    #               codegen; pr-gate.yml runs all four cells
+#                                    #               again, so it is now the way to reproduce a
+#                                    #               red release cell on one host.
 #
 # THREE FOCUSED MODES, each one cell and not a proof row:
 #
@@ -263,12 +266,10 @@ engine_lane() { [ "$MODE" = light ] || [ "$MODE" = determinism ] || [ "$MODE" = 
 # `docs` skips them, as pr-gate.yml does for a docs-only PR, which compiles nothing.
 compiled_lanes() { [ "$MODE" != docs ]; }
 # The release-codegen steps (issue #545): the determinism subset and the strict-bit step under
-# `--cargo-profile release`. pr-gate.yml runs neither for the subset (its release cells are
-# merge-gate.yml's, after the merge), so these are the pre-merge release-codegen evidence, and
-# they are owed by a change to what that subset builds (proof-row.sh has the list: the core
-# four, oce-cxf, oce-api and the four files that set how they compile). `light` leaves them out: on an idle
-# 10-core arm64 Mac they are 5.6 minutes of a cold run, nearly all of it building the release
-# test binaries, and the table does not ask them of any other change.
+# `--cargo-profile release`. pr-gate.yml runs both in native cells on every determinism-lane PR
+# (the strict-bit matrix always did; the determinism matrix again since issue #556), so no row
+# of the local proof asks for them and `light` leaves them out. `determinism` runs them, to
+# reproduce a red release cell locally, and `full` does because CI executes it.
 release_codegen() { [ "$MODE" = determinism ] || [ "$MODE" = full ]; }
 
 # ── Formatting, size, secrets ────────────────────────────────────────────────
@@ -417,11 +418,10 @@ step 'strict-bit corpus and controls' \
     --test per_block_psychrometrics --test per_block_utilities --profile ci --no-tests=fail
 
 # ── Release codegen (`determinism` and `full`) ───────────────────────────────
-# The release-codegen run of the subset is this script's alone before a merge (issue #502):
-# pr-gate.yml runs the subset in debug codegen on both architectures, and the release-codegen
-# cells run in merge-gate.yml on the merge commit. Run on the final head, these two steps are the
-# pre-merge release-codegen evidence for a change the `determinism` row names, on one host
-# (issue #545: no other change owes them, and `light` does not run them).
+# The subset and the strict-bit binaries again, under release codegen, on this one host.
+# pr-gate.yml runs both in four native cells per PR (issue #556) and compares debug against
+# release across them, which one machine cannot; these two steps reproduce a release-only
+# failure locally.
 if release_codegen; then
   step 'determinism subset (release codegen)' \
     cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release \
@@ -528,15 +528,13 @@ proof_row_report() {
       echo '    the documentation and the root README.md. It also covers the `docs` row.'
       ;;
     light)
-      echo '  · this run: `light`, the engine-lane proof WITHOUT release codegen, for a change'
-      echo '    that the `determinism` and `full` rows do not name. It also covers the `docs` and'
-      echo '    `leverage` rows.'
+      echo '  · this run: `light`, the engine-lane proof, in debug codegen, for any change the'
+      echo '    `full` row does not name. It also covers the `docs` and `leverage` rows.'
       ;;
     determinism)
-      echo '  · this run: `determinism`, the engine-lane proof PLUS the determinism subset and'
-      echo '    the strict-bit step under release codegen, for a change to the core four,'
-      echo '    oce-cxf, oce-api, Cargo.lock, the root Cargo.toml, rust-toolchain.toml or'
-      echo '    .cargo/config.toml. It covers every row but `full`.'
+      echo '  · this run: `determinism`, the engine-lane proof plus the determinism subset and'
+      echo '    the strict-bit step under release codegen. No row asks for it since pr-gate.yml'
+      echo '    runs the release cells per PR; it covers every row but `full`.'
       ;;
     full)
       echo '  · this run: `full`, the proof for a pin advance or a change to this script, and'
@@ -582,17 +580,14 @@ cat <<'COVERAGE'
 
 ────────────────────────────────────────────────────────────────────────────
 NOT COVERED BY THIS SCRIPT — a green run here does not prove these pass:
-  · cross-arch determinism matrix. Per PR (pr-gate.yml): two native cells in
-    debug codegen, x86_64 on ubuntu-latest and aarch64 on ubuntu-24.04-arm,
-    with the cross-architecture snapshot, compiled-schedule blob and
-    round-trip comparisons in a fan-in job. After each merge into
-    development (merge-gate.yml), and nightly (release-gate.yml): the same
-    matrix in four cells, debug and release codegen, adding the
-    debug-against-release comparisons. One machine cannot reproduce either.
-    CI is the only place they run. What `determinism` and `full` DO run is
-    the determinism subset under release codegen on this host. No per-PR CI
-    job runs it, so that step, run on the final head, is the pre-merge
-    release-codegen evidence for a change the `determinism` row names.
+  · cross-arch determinism matrix. Per PR (pr-gate.yml), and again nightly
+    (release-gate.yml): four native cells, x86_64 on ubuntu-latest and
+    aarch64 on ubuntu-24.04-arm, each in debug and release codegen, with
+    the cross-architecture and the debug-against-release snapshot,
+    compiled-schedule blob and round-trip comparisons in a fan-in job. One
+    machine cannot reproduce it. CI is the only place it runs. What
+    `determinism` and `full` DO run is the determinism subset under release
+    codegen on this host: one cell of the four, and no comparison.
   · the blob round trip's aarch64 leg and the comparison of the cells'
     recordings (determinism-compare). `full` and `roundtrip` record on this
     host and replay here and on wasm32-wasip1; the other architecture is CI's.
@@ -651,10 +646,9 @@ fi
 if ! release_codegen; then
   cat <<'DEBUG_ONLY'
   · release codegen, of anything. This run built and tested in debug codegen
-    only. The determinism subset and the strict-bit step under release
-    codegen are `bash .agents/gate.sh determinism`: owed before the merge by
-    a change the `determinism` row names, and observed for every other
-    change by merge-gate.yml on its merge commit.
+    only. The determinism subset and the strict-bit binaries run under
+    release codegen per PR in pr-gate.yml's native cells;
+    `bash .agents/gate.sh determinism` reproduces them on this host.
 DEBUG_ONLY
 fi
 

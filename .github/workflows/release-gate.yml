@@ -6,8 +6,8 @@
 # THREE WORKFLOWS, DISJOINT BY EVENT AND BRANCH. GitHub keys `pull_request: branches:` on the PR's
 # BASE (target) branch, so:
 #   * a feature -> `development` PR matches pr-gate.yml ONLY (the light per-change gate),
-#   * a merge into `development` (a push to it) matches merge-gate.yml ONLY: the four determinism
-#     cells, their fan-in comparisons and the Windows cell, on the merge commit, and
+#   * a merge into `development` (a push to it) matches merge-gate.yml ONLY: the Windows cell, on
+#     the merge commit (issue #556 returned the determinism cells to pr-gate.yml), and
 #   * a `development` -> `main` release PR, and the push to `main` that lands it, match THIS
 #     workflow ONLY.
 # No two of them fire on one event; there is no double-run.
@@ -15,8 +15,9 @@
 # WHY NIGHTLY (issue #545). Until then this whole file ran on every merge into `development`
 # (issue #502), and a run took about two hours behind a queue: `gate (full)` 88.7 minutes and the
 # full test suite 41.8 in run 42767547196, against under 13 minutes for the determinism cells,
-# their comparisons and the Windows cell together. Those short jobs are what a merge needs
-# reported before the next one, so they are merge-gate.yml; everything here still runs every
+# their comparisons and the Windows cell together. Those short jobs were what a merge needed
+# reported before the next one, so they became merge-gate.yml (the determinism cells have since
+# gone back to pr-gate.yml, issue #556); everything here still runs every
 # night on the `development` tip and on the release PR, whose `CI OK` is the required status on
 # `main`. A red nightly is fixed forward or reverted before the next determinism-lane merge
 # (AGENTS.md, "Merge").
@@ -42,7 +43,7 @@
 # also pins the exact job set of this file: a heavy job cannot be dropped from it).
 # Jobs that share a build shape with pr-gate.yml use the same rust-cache `shared-key`, so the
 # nightly run on `development` (the default branch) seeds the cache scope every PR into
-# `development` can read; merge-gate.yml's cells do the same after each merge.
+# `development` can read; merge-gate.yml's Windows cell does the same after each merge.
 # nextest JUnit reports are required to exist but are not uploaded as artifacts.
 # `CI OK` at the bottom is the single required status for branch protection on `main`.
 #
@@ -73,11 +74,10 @@
 #   * cargo-deny here adds `advisories` to the bans/licenses/sources checks pr-gate.yml runs — a
 #     release warrants a full advisories/bans/licenses/sources sweep.
 #   * The determinism matrix in all four native cells (x86_64 and aarch64, debug and release) and
-#     its full fan-in, where pr-gate.yml runs the two debug cells and the cross-architecture
-#     comparisons only; the Windows std build and nextest cell; and `gate (full)`, which executes
-#     .agents/gate.sh (issue #502). The matrix, its fan-in and the Windows cell are the jobs
-#     merge-gate.yml runs after each merge; check-workflow-gates.sh requires the three job
-#     definitions to be identical in the two files.
+#     its full fan-in, which pr-gate.yml also runs on every determinism-lane PR (issue #556);
+#     the Windows std build and nextest cell; and `gate (full)`, which executes .agents/gate.sh
+#     (issue #502). The Windows cell is the job merge-gate.yml runs after each merge;
+#     check-workflow-gates.sh requires its definition to be identical in the two files.
 #
 # Deferred until first publish: the cargo-about THIRDPARTY.md
 # attribution-currency gate — its natural home is this release gate; restore it before the
@@ -343,7 +343,7 @@ jobs:
   # pr-gate.yml names the profile.
   #
   # This job is the nightly long pole (88.7 minutes in run 42767547196, 55.7 of them the release
-  # workspace build). Nothing waits on it: a merge is reported by merge-gate.yml.
+  # workspace build). Nothing waits on it.
   gate:
     name: gate (full)
     runs-on: ubuntu-latest
@@ -362,7 +362,8 @@ jobs:
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143,cargo-deny,cargo-machete
-      # The gate script installs nothing; its no_std + alloc build steps need these targets.
+      # The gate script adds no rustup target; its no_std + alloc build steps need these. (It does
+      # install two checksum-pinned tools itself: mdBook, and wasmtime for the round trip.)
       - name: Install the no_std targets
         run: rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown
       # `full` includes the blob round trip, whose wasm32 leg runs under wasmtime and fails closed
@@ -380,19 +381,15 @@ jobs:
         run: test -s target/nextest/ci-release-workspace/junit.xml
 
   # The determinism matrix in all four native cells (issue #502): (x86_64 on ubuntu-latest, aarch64
-  # on ubuntu-24.04-arm) x (debug, release). pr-gate.yml runs the two debug cells on every PR; the
-  # release-codegen cells and the comparisons of debug against release run after the merge, because
-  # a release cell was the per-PR long pole (11 to 18 minutes, nearly all of it compiling the test
-  # binaries). This job, determinism-compare and std-build-windows are defined identically in
-  # merge-gate.yml (after each merge into `development`) and release-gate.yml (nightly, on
-  # dispatch, on release PRs and on pushes to `main`); check-workflow-gates.sh requires the three
-  # definitions to be byte-identical in the two files, comments included. Each cell runs the three-crate
+  # on ubuntu-24.04-arm) x (debug, release). pr-gate.yml runs the same four cells and the same
+  # fan-in on every determinism-lane PR (issue #556), with its lane filter and without the pinned
+  # checkout ref; this file runs them nightly, on dispatch, on release PRs and on pushes to
+  # `main`. check-workflow-gates.sh holds both files to every cell and comparison, and requires
+  # std-build-windows to be byte-identical here and in merge-gate.yml. Each cell runs the three-crate
   # state-determinism subset under its own architecture and codegen and emits populated portable
   # and target-bound state vectors; determinism-compare fans the vectors in. No cell is emulated,
   # and none is skipped: a runner type that is unavailable leaves its cell queued and
-  # its workflow's aggregate unreported. The job definitions are copies of pr-gate.yml's as they
-  # stood before the move, without the lane filter; check-workflow-gates.sh holds every file to its
-  # shape.
+  # its workflow's aggregate unreported.
   determinism-matrix:
     name: determinism (${{ matrix.arch }}, ${{ matrix.codegen }})
     runs-on: ${{ matrix.runner }}

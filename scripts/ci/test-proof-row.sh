@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Fixtures for proof-row.sh (issue #545): each case feeds a changed-path list and compares the row
 # it names. The controls are the directions that would let an author paste a lighter proof than
-# the change needs: a pin advance or a gate-script change read as anything but `full`, a path the
-# release determinism subset builds read as the engine row without release codegen, an engine
+# the change needs: a pin advance or a gate-script change read as anything but `full`, an engine
 # path read as leverage or docs, and an uncomputable diff read as anything but the heaviest row.
+# Since issue #556 there is also the opposite control: nothing is read as `determinism`.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -49,28 +49,29 @@ expect unknown-root-file light 'LICENSE-MIT'
 expect deny-config light 'deny.toml'
 expect engine-plus-leverage-and-docs light $'crates/oce-diag/src/lib.rs\ncrates/leverage/oce-cli/src/lib.rs\nREADME.md'
 
-# Row 4: what the release-codegen determinism subset builds or runs, alone or beside anything
-# lighter. The core four, oce-cxf and oce-api, tests and fixtures included.
-expect oce-model determinism 'crates/oce-model/src/lib.rs'
-expect oce-expr determinism 'crates/oce-expr/src/eval.rs'
-expect oce-blocks determinism 'crates/oce-blocks/src/reals.rs'
-expect oce-graph determinism 'crates/oce-graph/src/blob.rs'
-expect oce-cxf determinism 'crates/oce-cxf/src/lib.rs'
-expect facade determinism 'crates/oce-api/src/lib.rs'
-expect facade-tests determinism 'crates/oce-api/tests/blob_goldens.rs'
-expect core-crate-test-fixture determinism 'crates/oce-graph/tests/fixtures/blob_frame_digests.tsv'
-expect core-crate-manifest determinism 'crates/oce-blocks/Cargo.toml'
-expect core-beside-docs determinism $'docs/architecture.md\ncrates/oce-expr/src/lib.rs'
-expect core-beside-leverage determinism $'crates/leverage/oce-cli/src/lib.rs\ncrates/oce-cxf/src/lib.rs\nREADME.md'
-expect core-listed-last determinism $'crates/oce-diag/src/lib.rs\nCHANGELOG.md\ncrates/oce-model/src/lib.rs'
+# Still row 3 (issue #556): what the release-codegen determinism subset builds or runs. These
+# owed a `determinism` row from issue #545 until pr-gate.yml ran the release cells again; the
+# control is that the script never names that mode now, for any of them.
+expect oce-model light 'crates/oce-model/src/lib.rs'
+expect oce-expr light 'crates/oce-expr/src/eval.rs'
+expect oce-blocks light 'crates/oce-blocks/src/reals.rs'
+expect oce-graph light 'crates/oce-graph/src/blob.rs'
+expect oce-cxf light 'crates/oce-cxf/src/lib.rs'
+expect facade light 'crates/oce-api/src/lib.rs'
+expect facade-tests light 'crates/oce-api/tests/blob_goldens.rs'
+expect core-crate-test-fixture light 'crates/oce-graph/tests/fixtures/blob_frame_digests.tsv'
+expect core-crate-manifest light 'crates/oce-blocks/Cargo.toml'
+expect core-beside-docs light $'docs/architecture.md\ncrates/oce-expr/src/lib.rs'
+expect core-beside-leverage light $'crates/leverage/oce-cli/src/lib.rs\ncrates/oce-cxf/src/lib.rs\nREADME.md'
+expect core-listed-last light $'crates/oce-diag/src/lib.rs\nCHANGELOG.md\ncrates/oce-model/src/lib.rs'
 # The files that decide how all of them are compiled.
-expect lockfile determinism 'Cargo.lock'
-expect root-manifest determinism 'Cargo.toml'
-expect toolchain-pin determinism 'rust-toolchain.toml'
-expect cargo-config determinism '.cargo/config.toml'
-expect lockfile-beside-leverage determinism $'crates/leverage/oce-host/Cargo.toml\nCargo.lock'
+expect lockfile light 'Cargo.lock'
+expect root-manifest light 'Cargo.toml'
+expect toolchain-pin light 'rust-toolchain.toml'
+expect cargo-config light '.cargo/config.toml'
+expect lockfile-beside-leverage light $'crates/leverage/oce-host/Cargo.toml\nCargo.lock'
 
-# Row 5: what only the workspace suite or `full` mode itself checks before a merge. A pin
+# Row 4: what only the workspace suite or `full` mode itself checks before a merge. A pin
 # advance, by every file one moves, and the gate script.
 expect vendored-source full 'third_party/modelica-buildings-cdl/README.md'
 expect vendored-class full 'third_party/modelica-buildings-cdl/Buildings/Controls/OBC/CDL/Reals/Add.mo'
@@ -96,7 +97,7 @@ expect leverage-manifest leverage 'crates/leverage/oce-cli/Cargo.toml'
 expect other-agents-file docs '.agents/project-facts.md'
 expect vendored-name-in-docs docs 'docs/third_party/notes.md'
 expect other-tools-directory light 'tools/reference-catalogue/a.json'
-expect other-registry-file determinism 'crates/oce-blocks/src/registry/mod.rs'
+expect other-registry-file light 'crates/oce-blocks/src/registry/mod.rs'
 
 # Fail-closed: a diff that could not be computed, and a path git had to quote.
 expect empty-input full ''
@@ -105,7 +106,14 @@ expect quoted-path full '"crates/oce-bl\303\266cks/src/lib.rs"'
 expect quoted-docs-path full '"docs/caf\303\251.md"'
 
 # No trailing newline on the last path.
-expect unterminated-last-line determinism $'CHANGELOG.md\ncrates/oce-cxf/src/lib.rs'
+expect unterminated-last-line light $'CHANGELOG.md\ncrates/oce-cxf/src/lib.rs'
+
+# No input names `determinism`: every row above was one of docs, leverage, light or full, and the
+# script holds no other name.
+if grep -q "row=determinism" "$ROW"; then
+  echo "FAIL: proof-row can still name the determinism row"
+  failures=$((failures + 1))
+fi
 
 # Arguments are refused: the paths come on stdin only.
 if bash "$ROW" --all < /dev/null > /dev/null 2>&1; then
@@ -123,18 +131,9 @@ expect_list() {
     failures=$((failures + 1))
   fi
 }
-expect_list RELEASE_CODEGEN_CRATES 'oce-model oce-expr oce-blocks oce-graph oce-cxf oce-api'
-expect_list RELEASE_CODEGEN_FILES 'Cargo.lock Cargo.toml rust-toolchain.toml .cargo/config.toml'
 expect_list FULL_PREFIXES 'third_party/ tools/reference-catalog/ crates/oce-cxf/tests/third_party_manifest/'
 expect_list FULL_FILES 'crates/oce-blocks/src/registry/catalog_guard_support.rs .agents/gate.sh'
-for crate in oce-model oce-expr oce-blocks oce-graph oce-cxf oce-api; do
-  if [ ! -f "crates/$crate/Cargo.toml" ]; then
-    echo "FAIL: proof-row names crates/$crate, which is not a crate in this workspace"
-    failures=$((failures + 1))
-  fi
-done
-for path in Cargo.lock Cargo.toml rust-toolchain.toml .cargo/config.toml \
-  third_party tools/reference-catalog crates/oce-cxf/tests/third_party_manifest \
+for path in third_party tools/reference-catalog crates/oce-cxf/tests/third_party_manifest \
   crates/oce-blocks/src/registry/catalog_guard_support.rs .agents/gate.sh; do
   if [ ! -e "$path" ]; then
     echo "FAIL: proof-row names $path, which does not exist"

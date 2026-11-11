@@ -73,17 +73,17 @@ summary of a gate is a claim about a gate, and this engine controls physical equ
 | --- | --- |
 | docs only | `bash .agents/gate.sh docs`: the always-on checks, no cargo build |
 | `crates/leverage/**`, docs, the root `README.md` | `bash .agents/gate.sh leverage` |
-| anything else (the engine lane) | `bash .agents/gate.sh`, which runs no release codegen |
-| the core four (`oce-model`, `oce-expr`, `oce-blocks`, `oce-graph`), `oce-cxf`, `oce-api`, `Cargo.lock`, the root `Cargo.toml`, `rust-toolchain.toml` or `.cargo/config.toml` | `bash .agents/gate.sh determinism`: the engine-lane proof plus the determinism subset and the strict-bit step under release codegen |
-| a pin advance (`third_party/**`, `tools/reference-catalog/**`, or either file that holds a pinned upstream commit) or `.agents/gate.sh` itself | `bash .agents/gate.sh full`: the determinism proof plus the workspace suite in debug and release codegen, the doctests and the blob round trip |
+| anything else (the engine lane), the core four, `oce-cxf` and `oce-api` included | `bash .agents/gate.sh`, which runs no release codegen |
+| a pin advance (`third_party/**`, `tools/reference-catalog/**`, or either file that holds a pinned upstream commit) or `.agents/gate.sh` itself | `bash .agents/gate.sh full`: the engine-lane proof plus the determinism subset under release codegen, the workspace suite in debug and release codegen, the doctests and the blob round trip |
 
 `bash scripts/ci/proof-row.sh` names the row from a list of changed paths (it holds the exact
 path lists), and the closing report of every gate run prints the row the checkout needs beside
-the row the run covered. Each row runs everything the rows above it run. The fourth row is the
-**pre-merge release-codegen evidence**: no per-PR CI job runs the determinism subset under release
-codegen (the per-PR determinism matrix is debug codegen on both architectures; the release-codegen
-cells run after the merge), so a change to what that subset builds, or to the files that set how
-it is compiled, owes it. The fifth is for what only the workspace suite or `full` mode itself
+the row the run covered. Each row runs everything the rows above it run. **No row owes a
+release-codegen run** (issue #556): `pr-gate.yml` runs the determinism subset in all four native
+cells, debug and release codegen on both architectures, with the debug-against-release
+comparisons, on every determinism-lane PR, so the `determinism` row issue #545 introduced is
+gone. `bash .agents/gate.sh determinism` remains as a mode, to reproduce a red release cell on
+one host. The last row is for what only the workspace suite or `full` mode itself
 checks: the G36 half of the pin guard, and the script's own `full`-only steps. `full` is also
 what CI executes nightly; no other PR owes it. **A change to `release-gate.yml`, or to anything
 else only `full` or the nightly run executes, also dispatches that workflow on the branch
@@ -107,9 +107,8 @@ the **same branch**; never a second PR for the same work.
 red (a PR with no checks looks like a PR with no failing checks). Squash-merge into `development`
 once CI OK is green on a branch that is up to date with `development` (branch protection requires
 both) and any requested review is addressed. The merge is a push to `development`, which starts
-`merge-gate.yml` on the merge commit: the determinism matrix in all four cells with its
-debug-against-release comparisons, and the Windows cell (the measured time is in
-[CI and the gate](docs/ci-and-the-gate.md#what-runs-after-the-merge)).
+`merge-gate.yml` on the merge commit: the Windows cell, the one job no pull request runs
+([CI and the gate](docs/ci-and-the-gate.md#what-runs-after-the-merge)).
 **After merging a change that runs the determinism lane, watch that merge-gate run** (its
 aggregate is `Merge gate OK`); a red run is fixed forward or reverted before the next
 determinism-lane merge. (A run still waiting when a later merge lands shows as cancelled: the later
@@ -174,7 +173,7 @@ tagged `v0.x` at the end of each milestone.
   in `merge-gate.yml` and `release-gate.yml`. The single required status is `CI OK`: from
   `pr-gate.yml` into `development`, from `release-gate.yml` into `main`. `pr-gate.yml` runs once
   per change, on the PR. A merge into `development` then runs `merge-gate.yml` on the merge
-  commit — the four determinism cells, their comparisons and the Windows cell, not a required
+  commit — the Windows cell alone, not a required
   status, so a red run is fixed forward or reverted — and `release-gate.yml`, the heavy gate, runs
   nightly on the `development` tip, on dispatch, on release PRs and on pushes to `main`. `advisories.yml` runs
   daily, `docs-pages.yml` validates docs and publishes `main` to GitHub Pages, `release.yml` keeps
@@ -197,10 +196,10 @@ tagged `v0.x` at the end of each milestone.
 - **`ci.yml` is not the CI.** It is the frozen GitHub-era gate that produced the retained native
   strict-bit capture archives; it is disabled in the Actions settings and stays byte-identical.
 - **The determinism and strict-bit matrices run natively**: x86_64 on `ubuntu-latest` and aarch64
-  on `ubuntu-24.04-arm`, with fan-in jobs for the cross-cell comparisons. Per PR the strict-bit
-  matrix runs four cells (debug and release) and the determinism matrix two (debug); the
-  determinism matrix's release-codegen cells and its debug-against-release comparisons run in
-  `merge-gate.yml` on every merge into `development` (and nightly in `release-gate.yml`). Nothing is emulated; an unavailable runner
+  on `ubuntu-24.04-arm`, with fan-in jobs for the cross-cell comparisons. Per PR both
+  matrices run four cells (debug and release), and the determinism fan-in compares debug against
+  release as well as across architectures (issue #556; `release-gate.yml` runs the determinism
+  matrix again nightly). Nothing is emulated; an unavailable runner
   leaves `CI OK` unreported (no merge).
 - **CI is dev-light / release-heavy.** A green PR is not evidence that a change's own tests pass.
   Which crates' suites run per PR, which only in the nightly release gate, and which commands are
@@ -236,8 +235,8 @@ directories — that is expected, and `git add -A` silently stages nothing under
   per `TESTING.md`. Thin coverage is a **blocking review defect**.
 - **The gate:** `bash .agents/gate.sh` mirrors the per-PR gate for an engine change, in debug
   codegen; `docs` and `leverage` mirror the lighter lanes, `determinism` adds the determinism
-  subset and the strict-bit step under release codegen, which CI runs only after the merge, so its
-  tail is the pre-merge release-codegen evidence for a change the `determinism` row names; `full`
+  subset and the strict-bit step under release codegen, which CI runs per PR in native cells, so
+  no PR owes it and it is the way to reproduce a red release cell locally; `full`
   adds the workspace suite and doctests, is owed by a pin advance or a change to the script, and
   is what CI executes nightly ("Prove" above has the table). The script is the single source of truth for gate commands —
   do not restate them anywhere; its closing report names what it cannot cover locally, and a green

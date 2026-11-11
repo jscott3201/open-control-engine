@@ -8,10 +8,11 @@ Things worth knowing before you change this repo that the code does not tell you
 bash .agents/gate.sh docs         # a docs-only PR: the always-on checks, no cargo build
 bash .agents/gate.sh leverage     # crates/leverage/**, docs, the root README.md
 bash .agents/gate.sh              # any other change: the engine lane, debug codegen
-bash .agents/gate.sh determinism  # the core four, oce-cxf, oce-api, Cargo.lock, the root Cargo.toml,
-                                  # rust-toolchain.toml, .cargo/config.toml: adds the release-codegen subset
-bash .agents/gate.sh full         # a pin advance or .agents/gate.sh itself: adds the workspace suite
-                                  # and doctests; also what CI executes nightly
+bash .agents/gate.sh full         # a pin advance or .agents/gate.sh itself: adds the release-codegen
+                                  # subset, the workspace suite and doctests; also what CI executes nightly
+
+bash .agents/gate.sh determinism  # not a row: the engine lane plus the release-codegen subset, to
+                                  # reproduce a red release determinism cell on one host
 ```
 
 That script is the single source of truth for gate commands. Every other document
@@ -19,25 +20,28 @@ points at it. Run it in the form above and read the real output — a summary of
 gate is a claim about a gate, and this engine controls physical equipment.
 
 **Run the row your PR's paths select, on the final head, and paste its tail** (issue #545, owner
-decision of 2026-11-10; before it every PR owed `full`, 30 minutes cold). The five lines above
-are the five rows, lightest first, and each runs everything the one before it runs.
+decision of 2026-11-10; before it every PR owed `full`, 30 minutes cold). The first four lines
+above are the four rows, lightest first, and each runs everything the one before it runs.
 `scripts/ci/proof-row.sh` maps changed paths to a row using the lane classifier and holds the
 exact path lists, and every gate run ends by printing the row the checkout needs beside the row
-it covered, so a tail that is too light says so. The `determinism` row is what the
-release-codegen determinism subset builds and runs (the core four, `oce-cxf`, `oce-api`) and the
-four files that set how all of it is compiled; the `full` row is a pin advance (`third_party/**`,
+it covered, so a tail that is too light says so. The `full` row is a pin advance (`third_party/**`,
 `tools/reference-catalog/**`, `crates/oce-cxf/tests/third_party_manifest/**` and
 `crates/oce-blocks/src/registry/catalog_guard_support.rs`, the two places a pinned upstream
-commit is written) and `.agents/gate.sh`, whose `full`-only steps no lighter mode executes. Rows
-four and five beyond the issue's own table are coordinator decisions of 2026-11-10, to be
-confirmed by the owner. Four rules go with the table:
+commit is written) and `.agents/gate.sh`, whose `full`-only steps no lighter mode executes; the
+owner confirmed it, and the dispatch rule below, on 2026-11-10 (comment on #545).
+
+There is no `determinism` row any more (issue #556, owner decision of 2026-11-10). Issue #545
+had one, for the core four, `oce-cxf`, `oce-api` and the four build files, because no per-PR job
+ran the determinism subset under release codegen. `pr-gate.yml` runs it in all four cells again,
+so those changes are ordinary engine-lane changes and owe `bash .agents/gate.sh`. The mode stays
+for reproducing a red release cell locally. Four rules go with the table:
 
 - A rebase onto `development` with no conflicts needs `CI OK` reported on the new head, not a
   local re-run. A rebase with conflicts, or a fix round, re-runs the row.
 - No row runs every crate's suite. Run the tests of each crate the PR changes:
   `cargo nextest run -p <crate> --locked --profile ci --no-tests=fail`, and
   `cargo test -p <crate> --doc --locked` for its doctests.
-- `full` is owed only by the fifth row. It is also what CI executes nightly.
+- `full` is owed only by the last row. It is also what CI executes nightly.
 - A change to `release-gate.yml`, or to anything else only `full` or the nightly run executes,
   also dispatches the workflow on its branch (`gh workflow run release-gate.yml --ref <branch>`)
   and waits for a green run before merging. That run posts a `CI OK` of its own on the head,
@@ -51,7 +55,7 @@ first, then the script.
 
 GitHub is the primary host: `origin` is `github.com/jscott3201/open-control-engine`, and branches,
 PRs, reviews, issues and CI live there. CI is GitHub Actions in `.github/workflows/` on GitHub-hosted Linux
-runners (plus the macOS platform cell in `pr-gate.yml` and the Windows one in `merge-gate.yml` and `release-gate.yml`): `pr-gate.yml` (per-PR, light), `merge-gate.yml` (every merge into `development`: the four determinism cells, their comparisons and the Windows cell), `release-gate.yml` (nightly against
+runners (plus the macOS platform cell in `pr-gate.yml` and the Windows one in `merge-gate.yml` and `release-gate.yml`): `pr-gate.yml` (per-PR, light), `merge-gate.yml` (every merge into `development`: the Windows cell, the one job no pull request runs), `release-gate.yml` (nightly against
 `development`, release PRs into `main`, pushes to `main`, dispatch; heavy), `advisories.yml` (daily), `docs-pages.yml` (docs validation and the Pages
 publish from `main`), `release.yml` (tag verify / manual crates.io publish) and the two manual
 native-arm64 OpenModelica evidence workflows. `ci.yml` there is byte-frozen and disabled in the
@@ -59,11 +63,10 @@ repository's Actions settings — it is not the CI.
 
 The per-PR gate runs once per change, on the PR: `pr-gate.yml` has no `push` trigger, and
 `check-workflow-gates.sh` refuses one. A merge into `development` runs `merge-gate.yml` on the
-merge commit instead (issues #502 and #545), beside the path-filtered `docs-pages.yml`. That run
-holds what the per-PR gate does not and a merge cannot wait a night for: the determinism subset
-under release codegen on both architectures with the debug-against-release comparisons, and the
-Windows cell (the measured time is in
-[CI and the gate](../docs/ci-and-the-gate.md#what-runs-after-the-merge)). Its aggregate is `Merge gate OK`, deliberately not `CI OK`,
+merge commit instead (issues #502, #545 and #556), beside the path-filtered `docs-pages.yml`. That
+run holds the one job no pull request runs and a merge should not wait a night for: the Windows
+cell. (From issue #545 to issue #556 it also ran the four determinism cells and their fan-in;
+those are per-PR jobs again.) Its aggregate is `Merge gate OK`, deliberately not `CI OK`,
 and it is not a required status — the commit has landed — so after merging a change that runs the
 determinism lane, watch it: a red run is fixed forward or reverted before the next
 determinism-lane merge. Pushes queue: a run in progress finishes and only the newest waiting run
@@ -71,7 +74,7 @@ is kept, so an older waiting run shows as cancelled.
 
 The heavy set runs nightly, not per merge (issue #545): `release-gate.yml` runs the workspace
 suite in debug and release codegen, the doctests, the executed gate script (`gate (full)`),
-cargo-deny with advisories, the light gates again and the same three merge-gate jobs, against the
+cargo-deny with advisories, the light gates again, the determinism matrix and the Windows cell, against the
 `development` tip every night, on manual dispatch, on every `development` → `main` release PR and
 on pushes to `main`. It took about two hours per merge when it ran on each one. Before a
 determinism-lane merge, check the latest nightly with
@@ -134,24 +137,22 @@ cap, the no-secret scan, the database-free check, the golden-gen firewall and
 package/feature/publication contract and its hostile controls, the gate fixtures,
 the [authority index/projection and its hostile controls](../docs/authority-claims.md),
 `cargo machete` — and the state-determinism tests for **`oce-api`, `oce-blocks`, and `oce-expr`**, via the
-determinism matrix: two native cells per PR, x86_64 on `ubuntu-latest` and aarch64 on
-`ubuntu-24.04-arm`, in debug codegen.
+determinism matrix: four native cells per PR, x86_64 on `ubuntu-latest` and aarch64 on
+`ubuntu-24.04-arm`, each in debug and release codegen.
 Its fan-in job compares a populated portable engine-state snapshot byte-for-byte across
 architectures and requires target-bound bytes to differ across architectures. Each architecture
 then parses and refuses the other's target-bound bytes through the public restore path, natively.
 The same fan-in requires the 46 compiled-schedule blobs each cell encodes (`OCE_BLOB_OUT`) to be
-byte-identical in both cells (GitHub #400).
-The release-codegen cells of that matrix do not run per PR (issue #502): `merge-gate.yml` runs
-all four cells on every merge into `development`, and its fan-in adds the checks that portable and
-target-bound bytes, the blobs and the round-trip recordings match across debug/release codegen.
-Before the merge, `bash .agents/gate.sh determinism` runs the subset under release codegen on your
-machine; that run is the release-codegen evidence a PR the `determinism` row names has, and the
-only kind of PR that owes it.
+byte-identical in all four cells (GitHub #400), and portable and target-bound bytes and the
+round-trip recordings to match across debug/release codegen.
+The release-codegen cells ran only after the merge from issue #502 until issue #556: a release
+cell then took 11 to 18 minutes, and about three once the integration tests of four crates were
+built as a few binaries each. `bash .agents/gate.sh determinism` runs the subset under release
+codegen on your machine, to reproduce a red release cell; no PR owes it.
 The blob round trip (issue #403) rides on the same cells: each records
 `crates/oce-conformance/tests/blob_round_trip.rs` (facade against the `no_std` entry, every output,
 warning and raw state word after every frame of the 46 fixtures) into `OCE_ROUND_TRIP_OUT`, the
-fan-in requires the recordings identical (the two debug cells per PR, all four in the merge
-gate) and replays the x86_64 debug recording on aarch64
+fan-in requires the four cells' recordings identical and replays the x86_64 debug recording on aarch64
 through the aarch64 debug cell's archived suite, and `blob round trip (wasm32-wasip1 under wasmtime)` replays it on
 `wasm32-wasip1` under the wasmtime pinned in `scripts/ci/install-wasmtime.sh`. Locally,
 `bash .agents/gate.sh roundtrip` (also in `full`) records and replays on the host and on
