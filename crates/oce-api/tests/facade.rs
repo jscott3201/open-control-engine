@@ -36,6 +36,7 @@ mod blob_hostile_bytes;
 mod blob_hostile_io_schedule;
 mod blob_hostile_model;
 mod blob_old_layout;
+mod blob_refusal_precedence;
 mod blob_semantic_seam;
 mod boundary_output_attrs;
 mod boundary_output_enumeration;

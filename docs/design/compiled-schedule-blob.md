@@ -468,10 +468,12 @@ plus arbitrary strings, through `from_value` and `make`.
 The decoder refuses in this order:
 
 1. Length above 64 MiB: `TooLarge`.
-2. Short input, wrong magic, or a header length that differs from the input length: `Malformed`.
-3. Wrong format version: `UnsupportedFormat`.
-4. Trailer mismatch: `IntegrityMismatch`.
-5. Wrong profile or engine version, or nonzero flags.
+2. Short input or wrong magic: `Malformed`.
+3. Wrong format version (`UnsupportedFormat`), then another engine version
+   (`EngineVersionMismatch`).
+4. A header length that differs from the input length (`Malformed`), then a trailer mismatch
+   (`IntegrityMismatch`).
+5. Wrong profile, or nonzero flags.
 6. Structural problems, each with a byte offset: section order, bounded counts, UTF-8, tags,
    ordering, trailing bytes.
 7. Classes and per-instance checks, each with a named variant:
@@ -485,6 +487,24 @@ The decoder refuses in this order:
 9. The schedule (`InvalidSchedule`).
 10. `MAX_STATE_WORDS` via `allocate_state` (`StateTooLarge`), then the state CRCs
     (`InitialStateMismatch`).
+
+*Amended 2026-11-11 (issue #535).* Steps 2 to 5 read, until then: short input, wrong magic or a
+header length that differs from the input length; the format; the trailer; the profile, the engine
+version and the flags. A blob another engine version wrote could therefore report
+`LengthMismatch` or `IntegrityMismatch` before its version was looked at: a typed refusal still,
+but "corrupt" where the truth was "built by another engine version". The engine version is now
+checked straight after the format, as the state snapshot decoder has done since issue #530, and the
+format before the length. The reason is decision 6 as amended: every format stays at revision 1
+and changes in place, so another version may lay out the length field, the trailer and the body
+differently under the same format number, and none of them can be read until the version is known
+to match. The version refusal is certain only while the magic, format and version fields sit
+where this layout puts them. Rule 9 of `AGENTS.md` (decision 6 as amended) still lets a later
+layout move them in place. A blob from before such a move is then still refused with a typed
+error, though not necessarily `EngineVersionMismatch`. A corrupted version field now reports the
+version it spells, not an integrity failure; the profile and the flags stay behind the CRC. No
+byte of the format changed, so the 46 goldens did not move.
+[Which refusal wins](../compiled-schedule-blob.md#which-refusal-wins) states the rule for the blob
+and the snapshot together.
 
 A count is accepted only if the remaining section bytes could hold that many minimal records, so
 no allocation precedes that proof.
@@ -567,7 +587,10 @@ Moving them is a separate refactor that would have to prove snapshot goldens byt
 Since issue #530 the two do share the engine version: the snapshot header carries the same
 `u16`×3 field from the same constant (`oce_graph::blob::ENGINE_VERSION`), and its decoder refuses
 another version with its own `EngineVersionMismatch`
-([state contract](../state-compatibility.md#wire-revision-and-integrity)).
+([state contract](../state-compatibility.md#wire-revision-and-integrity)). Since issue #535 both
+decoders make that check at the same point, straight after the format revision and before the
+length and the trailer, so a foreign artefact of either kind reports its version first
+([which refusal wins](../compiled-schedule-blob.md#which-refusal-wins)).
 
 ## Size budget
 
