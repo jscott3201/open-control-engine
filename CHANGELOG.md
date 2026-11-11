@@ -1107,6 +1107,39 @@ and a gate that accepted any text would restore exactly the false assurance desc
   publishable, 6 private); `release.yml`'s comment and step name re-pinned.
 ### Verification
 
+- **The workflow checker closes five gaps, and the pin-advance row states its real reason**
+  (GitHub #PRNUM, issue #555; follow-ups from the reviews of GitHub #547 and #557, and an owner
+  ruling of 2026-11-10 that a pin advance keeps the `full` row). No workflow, gate command or
+  proof row changed.
+  **Checker.** `check-workflow-gates.sh` now (1) pins the body of `[profile.ci-release-workspace]`
+  and of its `.junit` table in `.config/nextest.toml` to the line, so a `default-filter` or any
+  other key added to the profile fails instead of narrowing the nightly's one release-codegen
+  workspace run; (2) makes each exception in the per-PR/nightly determinism-job comparison
+  one-sided: only `pr-gate.yml` may carry the lane filter and only `release-gate.yml` the pinned
+  checkout ref, so a per-PR determinism job that pins a ref of its own fails; (3) compares the
+  workflow-level `env:` of `pr-gate.yml`, `merge-gate.yml` and `release-gate.yml`, `CHECKOUT_REF`
+  aside; (4) end-anchors the presence rules for the determinism cells, their fan-in and the
+  Windows cell (new `require_job_line`), so `<command> || true` or a trailing argument added to
+  both copies of a shared step fails, and refuses `|| true`, `|| :`, `|| exit 0`, `; true` and
+  `set +e` on every line of the three gating workflows; (5) pins the release gate's
+  `save-if: matrix.arch == 'aarch64'`. Eighteen hostile fixtures, each of which the checker as
+  it stood let through (269 cases).
+  **Pin advance.** The `full` row stays. Its stated reason is corrected in `AGENTS.md`,
+  `.agents/project-facts.md`, `docs/ci-and-the-gate.md` and `scripts/ci/proof-row.sh`: the
+  pin-guard tests already run per PR (`oce-cxf`'s `g36_catalog_tests` in `crate tests`,
+  `oce-blocks`'s `registry::catalog_tests` in the determinism subset); what only `full` or the
+  nightly gives a pin advance is `oce-conformance`'s `conformance` binary, three of whose modules
+  read the vendored tree and the reference catalog, that crate's `clean_room` unit tests and
+  `open_modelica_nand` binary, which pin the vendored `Nand.mo` by path, line and equation, and
+  the doctests. "The two files that hold a pinned upstream commit" was false and is reworded:
+  nine files write one, the row lists two pin-guard files, and `scripts/ci/test-proof-row.sh`
+  now holds the full list and fails when it changes.
+  **Prose.** The paths whose only executor is `full` or a nightly run are named under the
+  dispatch rule (the `ci-release-workspace` profile, `install-wasmtime.sh`'s default
+  destination, `qemu.yml` with `emulate-firmware.sh`, and `merge-gate.yml`), and
+  `crates/oce-conformance/Cargo.toml` no longer names `merge-gate.yml` as a runner of
+  `--test blob_round_trip`.
+
 - **The release-codegen determinism cells run per pull request again, the merge gate keeps the
   Windows cell alone, and no change owes a local release-codegen run** (GitHub #557,
   issue #556; owner decision of 2026-11-10, closing step 3 of #504). Issue #502 had moved the

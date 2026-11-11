@@ -74,7 +74,7 @@ summary of a gate is a claim about a gate, and this engine controls physical equ
 | docs only | `bash .agents/gate.sh docs`: the always-on checks, no cargo build |
 | `crates/leverage/**`, docs, the root `README.md` | `bash .agents/gate.sh leverage` |
 | anything else (the engine lane), the core four, `oce-cxf` and `oce-api` included | `bash .agents/gate.sh`, which runs no release codegen |
-| a pin advance (`third_party/**`, `tools/reference-catalog/**`, or either file that holds a pinned upstream commit) or `.agents/gate.sh` itself | `bash .agents/gate.sh full`: the engine-lane proof plus the determinism subset under release codegen, the workspace suite in debug and release codegen, the doctests and the blob round trip |
+| a pin advance (`third_party/**`, `tools/reference-catalog/**`, or either of the two pin-guard files `scripts/ci/proof-row.sh` lists) or `.agents/gate.sh` itself | `bash .agents/gate.sh full`: the engine-lane proof plus the determinism subset under release codegen, the workspace suite in debug and release codegen, the doctests and the blob round trip |
 
 `bash scripts/ci/proof-row.sh` names the row from a list of changed paths (it holds the exact
 path lists), and the closing report of every gate run prints the row the checkout needs beside
@@ -84,7 +84,10 @@ cells, debug and release codegen on both architectures, with the debug-against-r
 comparisons, on every determinism-lane PR, so the `determinism` row issue #545 introduced is
 gone. `bash .agents/gate.sh determinism` remains as a mode, to reproduce a red release cell on
 one host. The last row is for what only the workspace suite or `full` mode itself
-checks: the G36 half of the pin guard, and the script's own `full`-only steps. `full` is also
+checks: for a pin advance, `oce-conformance`'s `conformance` binary, three of whose modules read the vendored tree and
+the reference catalog, that crate's `clean_room` unit tests and `open_modelica_nand` binary, which
+pin the vendored `Nand.mo` by path, line and equation, and the doctests (the pin-guard tests themselves run per PR); and the
+script's own `full`-only steps. `full` is also
 what CI executes nightly; no other PR owes it. **A change to `release-gate.yml`, or to anything
 else only `full` or the nightly run executes, also dispatches that workflow on the branch
 (`gh workflow run release-gate.yml --ref <branch>`) and waits for it to finish green before

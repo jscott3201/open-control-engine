@@ -25,8 +25,8 @@
 #                                    #               plus everything that compiles the engine, in
 #                                    #               debug codegen only
 #   bash .agents/gate.sh full        # full        — a pin advance (third_party/**, the reference
-#                                    #               catalog's pin records, the two files holding
-#                                    #               the pinned commits) or a change to this
+#                                    #               catalog's pin records, the two pin-guard
+#                                    #               files proof-row.sh lists) or a change to this
 #                                    #               script: `determinism` (below) plus the
 #                                    #               workspace suite in debug and release codegen,
 #                                    #               the doctests, the blob matrix artifact and

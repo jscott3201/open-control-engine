@@ -140,8 +140,8 @@ for path in third_party tools/reference-catalog crates/oce-cxf/tests/third_party
     failures=$((failures + 1))
   fi
 done
-# The two source files are listed because they hold the pinned upstream commits; if a pin moves
-# to another file, this fails until the list follows it.
+# The two source files in the row each hold a pinned upstream commit; if a pin leaves one of
+# them, this fails until the row follows it.
 for path in crates/oce-cxf/tests/third_party_manifest/mod.rs \
   crates/oce-blocks/src/registry/catalog_guard_support.rs; do
   if ! grep -Eq 'const [A-Z_]*COMMIT: &str = "[0-9a-f]{40}"' "$path"; then
@@ -149,6 +149,25 @@ for path in crates/oce-cxf/tests/third_party_manifest/mod.rs \
     failures=$((failures + 1))
   fi
 done
+
+# Every tracked file that writes a pinned upstream commit, exactly. The documents say the row's
+# two files are not the only ones and name the rest; a pin constant added to a new file, or
+# removed from one, fails here until this list and that prose are brought back in step.
+want_pin_files='crates/leverage/oce-vocab/tests/vocabulary/generator/mod.rs
+crates/oce-blocks/src/registry/catalog_guard_support.rs
+crates/oce-cxf/src/g36_catalog_guard_data.rs
+crates/oce-cxf/tests/third_party_manifest/mod.rs
+tools/golden-gen/src/logical.rs
+tools/golden-gen/src/logical_pre.rs
+tools/golden-gen/src/logical_proof.rs
+tools/golden-gen/src/sequences/provenance.rs
+tools/golden-gen/src/utilities_assert.rs'
+got_pin_files="$(git grep -lE 'const [A-Z_]*COMMIT: &str = "[0-9a-f]{40}"' -- crates tools firmware | LC_ALL=C sort)"
+if [ "$got_pin_files" != "$want_pin_files" ]; then
+  echo "FAIL: the files that hold a pinned upstream commit changed; update this list and the prose that names them"
+  diff <(printf '%s\n' "$want_pin_files") <(printf '%s\n' "$got_pin_files") | sed 's/^/  /' || true
+  failures=$((failures + 1))
+fi
 
 if [ "$failures" -ne 0 ]; then
   echo "FAIL: $failures proof-row fixture(s) failed"

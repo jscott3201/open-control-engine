@@ -25,9 +25,13 @@ above are the four rows, lightest first, and each runs everything the one before
 `scripts/ci/proof-row.sh` maps changed paths to a row using the lane classifier and holds the
 exact path lists, and every gate run ends by printing the row the checkout needs beside the row
 it covered, so a tail that is too light says so. The `full` row is a pin advance (`third_party/**`,
-`tools/reference-catalog/**`, `crates/oce-cxf/tests/third_party_manifest/**` and
-`crates/oce-blocks/src/registry/catalog_guard_support.rs`, the two places a pinned upstream
-commit is written) and `.agents/gate.sh`, whose `full`-only steps no lighter mode executes; the
+`tools/reference-catalog/**`, and two pin-guard files, `crates/oce-cxf/tests/third_party_manifest/**`
+and `crates/oce-blocks/src/registry/catalog_guard_support.rs`) and `.agents/gate.sh`, whose
+`full`-only steps no lighter mode executes. Those two are not the only files that write a pinned
+upstream commit: `crates/oce-cxf/src/g36_catalog_guard_data.rs`, five files under
+`tools/golden-gen/src/` and the `oce-vocab` generator do too (`scripts/ci/test-proof-row.sh`
+holds the full list and fails when it changes). The row does not need them, because a pin advance
+always moves `third_party/**`. The
 owner confirmed it, and the dispatch rule below, on 2026-11-10 (comment on #545).
 
 There is no `determinism` row any more (issue #556, owner decision of 2026-11-10). Issue #545
@@ -46,7 +50,12 @@ for reproducing a red release cell locally. Four rules go with the table:
   also dispatches the workflow on its branch (`gh workflow run release-gate.yml --ref <branch>`)
   and waits for a green run before merging. That run posts a `CI OK` of its own on the head,
   without the strict-bit matrix; read `CI OK` for the merge from the `pr-gate` run on the head
-  SHA (`gh pr checks <N>` names the workflow of each check).
+  SHA (`gh pr checks <N>` names the workflow of each check). Named, so that "anything else" is not left to the reader: the
+  `ci-release-workspace` profile in `.config/nextest.toml` and the default destination of
+  `scripts/ci/install-wasmtime.sh` run only in `full` (and `roundtrip`, for the installer) and in
+  the nightly `gate (full)`; `qemu.yml` and `scripts/ci/emulate-firmware.sh` run only nightly, in a
+  workflow of their own, so a change to them runs `bash .agents/gate.sh qemu` or dispatches
+  `qemu.yml`; `merge-gate.yml` cannot run before the merge at all.
 
 Change a command by changing [`.github/workflows/pr-gate.yml`](../.github/workflows/pr-gate.yml)
 first, then the script.
@@ -182,9 +191,14 @@ Before claiming your tests pass, run the suites of the crates you changed
 
 Pin-advance PRs — any change under `third_party/**` or to the pin constants — still run
 `bash .agents/gate.sh full` first-hand; see the vendored README's
-`## Pin-advance policy` section. It is the `full` row of the local proof, and `proof-row.sh` names
-it for every path a pin advance moves: the G36 half of the pin guard runs only in the workspace
-suite, which CI now runs nightly, after the advance would have landed.
+`## Pin-advance policy` section. It is the `full` row of the local proof (owner ruling of
+2026-11-10, issue #555). The reason is not the one that README gives: the pin-guard tests already
+run per PR, `oce-cxf`'s `g36_catalog_tests` in the `crate tests` job and `oce-blocks`'s
+`registry::catalog_tests` in the determinism subset. What a pin advance gets only from `full`, or
+from the nightly after it has landed, is
+`oce-conformance`'s `conformance` binary, three of whose modules read the vendored tree and
+the reference catalog, that crate's `clean_room` unit tests and `open_modelica_nand` binary, which
+pin the vendored `Nand.mo` by path, line and equation, and the doctests.
 
 **Confirm the checks ran.** GitHub Actions runs the whole per-PR gate on every PR, drafts
 included, and `CI OK` is the one status that summarizes it. A PR with no checks is easy to

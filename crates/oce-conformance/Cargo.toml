@@ -67,8 +67,9 @@ path = "tests/per_block_psychrometrics.rs"
 name = "per_block_utilities"
 path = "tests/per_block_utilities.rs"
 
-# The blob round trip: `pr-gate.yml`, `merge-gate.yml`, `release-gate.yml`, `.agents/gate.sh` and
-# `check-workflow-gates.sh` run it with `--test blob_round_trip`, natively and on `wasm32-wasip1`.
+# The blob round trip: `pr-gate.yml`, `release-gate.yml` and `.agents/gate.sh` run it with
+# `--test blob_round_trip`, natively and on `wasm32-wasip1`, and `check-workflow-gates.sh` pins
+# those commands.
 [[test]]
 name = "blob_round_trip"
 path = "tests/blob_round_trip.rs"

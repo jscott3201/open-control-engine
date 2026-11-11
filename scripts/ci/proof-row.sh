@@ -11,9 +11,11 @@
 #                `bash .agents/gate.sh leverage`
 #   light        any other change (the engine lane): `bash .agents/gate.sh`
 #   full         the change is one only the workspace suite or `full` mode itself can check
-#                before the merge: the vendored tree and the pin records its guard reads (a pin
-#                advance; the G36 half of that guard runs only in the workspace suite), or
-#                .agents/gate.sh (whose `full`-only steps no other mode executes).
+#                before the merge: the vendored tree and the pin records its guards read (a pin
+#                advance; oce-conformance's `conformance` binary, `clean_room` unit tests and
+#                `open_modelica_nand` binary read or pin the vendored files and run in no per-PR
+#                job, and neither do the doctests; the pin-guard tests themselves do run per PR),
+#                or .agents/gate.sh (whose `full`-only steps no other mode executes).
 #                `bash .agents/gate.sh full`.
 #
 # `determinism` is not a row (issue #556). From issue #545 it was owed by a change to what the
@@ -29,7 +31,9 @@
 #
 # Not a row, because no local run can stand in for it: a change to release-gate.yml, or to
 # anything else only the nightly heavy set executes, is shown green by dispatching that workflow
-# on the branch and waiting for it (docs/ci-and-the-gate.md, "The local proof").
+# on the branch and waiting for it (docs/ci-and-the-gate.md, "The local proof", names the paths:
+# the `ci-release-workspace` nextest profile, install-wasmtime.sh's default destination, and
+# qemu.yml with emulate-firmware.sh, which has a nightly workflow of its own).
 #
 # FAIL-CLOSED. Empty input (a diff that could not be computed) and a path git had to quote
 # (unusual bytes; no prefix can be read from it) both name the heaviest row. A classifier that
@@ -44,9 +48,10 @@ if [ "$#" -ne 0 ]; then
 fi
 
 # What only `full` checks before a merge. The first four are a pin advance: the vendored tree, the
-# hash manifest and G36 provenance record beside the reference catalog, and the two source files
-# that hold the pinned upstream commits. The last is the gate script, whose `full` block runs in no
-# lighter mode.
+# hash manifest and G36 provenance record beside the reference catalog, and two pin-guard source
+# files. Other files write a pinned upstream commit too (test-proof-row.sh lists them all); they
+# are not here because a pin advance always moves the vendored tree, which is. The last is the
+# gate script, whose `full` block runs in no lighter mode.
 FULL_PREFIXES=(third_party/ tools/reference-catalog/ crates/oce-cxf/tests/third_party_manifest/)
 FULL_FILES=(crates/oce-blocks/src/registry/catalog_guard_support.rs .agents/gate.sh)
 

@@ -870,6 +870,117 @@ nextest_profile_missing() {
   mv "$config.tmp" "$config"
 }
 
+# The checker gaps closed by issue #555. Each of these passed the checker as it stood after
+# GitHub #557; the mutation is the one an independent review made on a scratch copy.
+
+# A key added to the release-codegen workspace profile narrows the nightly's one release run of
+# the whole workspace while the profile, the command and its report all stay in place.
+nextest_profile_with_a_default_filter() {
+  config="$(dirname "$1")/nextest.toml"
+  sed 's/^\[profile\.ci-release-workspace\]$/&\ndefault-filter = "package(oce-diag)"/' "$config" > "$config.tmp"
+  mv "$config.tmp" "$config"
+}
+
+nextest_profile_inherits_another_profile() {
+  config="$(dirname "$1")/nextest.toml"
+  awk '
+    /^\[profile\.ci-release-workspace\]$/ { print; getline; print "inherits = \"default\""; next }
+    { print }
+  ' "$config" > "$config.tmp"
+  mv "$config.tmp" "$config"
+}
+
+nextest_profile_report_with_another_key() {
+  config="$(dirname "$1")/nextest.toml"
+  printf '%s\n' 'store-success-output = true' >> "$config"
+}
+
+# The checkout-ref exception belongs to release-gate.yml alone: a per-PR determinism job that pins
+# a ref of its own tests a different commit from the pull request it reports on.
+per_pr_cells_check_out_a_pinned_ref() {
+  dir="$1"
+  awk '
+    /^on:$/ { print "env:"; print "  CHECKOUT_REF: development" }
+    /^  determinism-matrix:$/ { inside = 1 }
+    /^  blob-round-trip-wasm:$/ { inside = 0 }
+    { print }
+    inside && /^      - uses: actions\/checkout@/ { checkout = 1; next }
+    inside && checkout && /^        with:$/ { print "          ref: ${{ env.CHECKOUT_REF }}" }
+    { checkout = 0 }
+  ' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+per_pr_cells_carry_the_release_ref_line() {
+  edit_pr_gate "$1" '/^  determinism-matrix:$/,/^  determinism-compare:$/ s/^          shared-key: nextest$/&\n          ref: ${{ env.CHECKOUT_REF }}/'
+}
+
+# The lane filter belongs to pr-gate.yml alone.
+release_gate_cells_wait_on_another_job() {
+  edit_release_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ s/^    runs-on: \${{ matrix.runner }}$/    needs: fmt\n&/'
+}
+
+# Workflow-level environment is part of what a job runs.
+per_pr_workflow_env_differs() {
+  edit_pr_gate "$1" 's/^on:$/env:\n  RUSTFLAGS: --cap-lints=allow\non:/'
+}
+
+release_gate_workflow_env_differs() {
+  edit_release_gate "$1" 's/^env:$/env:\n  CARGO_PROFILE_RELEASE_OPT_LEVEL: "0"/'
+}
+
+merge_gate_workflow_env_differs() {
+  edit_merge_gate "$1" 's/^env:$/env:\n  CARGO_PROFILE_DEV_DEBUG: "2"/'
+}
+
+# The same weakening made to both copies of a shared job keeps the copies equal.
+both_edit() {
+  dir="$1"
+  shift
+  for workflow in "$dir/pr-gate.yml" "$dir/release-gate.yml"; do
+    sed "$@" "$workflow" > "$workflow.tmp"
+    mv "$workflow.tmp" "$workflow"
+  done
+}
+
+release_subset_failure_masked_in_both_files() {
+  both_edit "$1" 's/^\(        run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail\)$/\1 || true/'
+}
+
+debug_subset_trailing_argument_in_both_files() {
+  both_edit "$1" '/^  determinism-matrix:$/,/^  determinism-compare:$/ s/^\(        run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail\)$/\1 -E none()/'
+}
+
+round_trip_comparison_failure_masked_in_both_files() {
+  both_edit "$1" 's/^\(          diff -rq determinism-x86_64-debug\/round-trip determinism-aarch64-release\/round-trip\)$/\1 || :/'
+}
+
+cell_report_requirement_masked_in_both_files() {
+  both_edit "$1" 's/^\(          test -s "target\/nextest\/\$profile\/junit.xml"\)$/\1 || echo missing/'
+}
+
+# A masked failure on a line no presence rule names.
+upload_step_failure_masked_in_both_files() {
+  both_edit "$1" '/^  determinism-compare:$/,/^  [^ ]/ s/^\(          export OCE_FOREIGN_TARGET_STATE_IN=.*\)$/\1 || true/'
+}
+
+build_failure_masked() {
+  edit_pr_gate "$1" 's/^      - run: cargo build --workspace --locked$/      - run: cargo build --workspace --locked || :/'
+}
+
+errexit_turned_off() {
+  edit_release_gate "$1" 's/^      - run: cargo test --workspace --doc --locked$/      - run: |\n          set +e\n          cargo test --workspace --doc --locked/'
+}
+
+# The release gate's side of the save-if exception.
+release_gate_save_if_dropped() {
+  edit_release_gate "$1" '/^          save-if: /d'
+}
+
+release_gate_cells_never_save() {
+  edit_release_gate "$1" 's/^          save-if: .*$/          save-if: false/'
+}
+
 # The gate-mode and wasmtime-installer fixtures run on every PR beside the proof-row ones.
 drop_gate_mode_fixtures() {
   edit_pr_gate "$1" '/test-gate-modes/d'
@@ -2280,6 +2391,42 @@ run_case release-gate-cell-writes-the-workspace-report fail release_gate_cell_wr
   "release-gate.yml names ci-release-workspace outside the gate job's report clear and requirement"
 run_case pr-gate-writes-the-workspace-report fail pr_gate_writes_the_workspace_report \
   "pr-gate.yml names the nextest profile ci-release-workspace"
+run_case nextest-profile-with-a-default-filter fail nextest_profile_with_a_default_filter \
+  "[profile.ci-release-workspace] is not exactly its pinned body: the release-codegen workspace profile only inherits ci"
+run_case nextest-profile-inherits-another-profile fail nextest_profile_inherits_another_profile \
+  "[profile.ci-release-workspace] is not exactly its pinned body: the release-codegen workspace profile only inherits ci"
+run_case nextest-profile-report-with-another-key fail nextest_profile_report_with_another_key \
+  "[profile.ci-release-workspace.junit] is not exactly its pinned body: the release-codegen workspace profile only names its report"
+run_case per-pr-cells-check-out-a-pinned-ref fail per_pr_cells_check_out_a_pinned_ref \
+  "job determinism-matrix does not run the same steps in"
+run_case per-pr-cells-carry-the-release-ref-line fail per_pr_cells_carry_the_release_ref_line \
+  "job determinism-matrix does not run the same steps in"
+run_case release-gate-cells-wait-on-another-job fail release_gate_cells_wait_on_another_job \
+  "job determinism-matrix does not run the same steps in"
+run_case per-pr-workflow-env-differs fail per_pr_workflow_env_differs \
+  "pr-gate.yml and"
+run_case release-gate-workflow-env-differs fail release_gate_workflow_env_differs \
+  "do not set the same workflow-level env"
+run_case merge-gate-workflow-env-differs fail merge_gate_workflow_env_differs \
+  "do not set the same workflow-level env"
+run_case release-subset-failure-masked-in-both-files fail release_subset_failure_masked_in_both_files \
+  "pr-gate.yml job determinism-matrix is missing required gate pattern: release determinism subset with hard-fail-on-zero-tests"
+run_case debug-subset-trailing-argument-in-both-files fail debug_subset_trailing_argument_in_both_files \
+  "pr-gate.yml job determinism-matrix is missing required gate pattern: debug determinism subset with hard-fail-on-zero-tests"
+run_case round-trip-comparison-failure-masked-in-both-files fail round_trip_comparison_failure_masked_in_both_files \
+  "pr-gate.yml job determinism-compare is missing required gate pattern: compare the determinism-x86_64-debug and determinism-aarch64-release round-trip recordings"
+run_case cell-report-requirement-masked-in-both-files fail cell_report_requirement_masked_in_both_files \
+  "pr-gate.yml job determinism-matrix is missing required gate pattern: refuse an absent or empty nextest determinism report"
+run_case upload-step-failure-masked-in-both-files fail upload_step_failure_masked_in_both_files \
+  "pr-gate.yml contains a refused gate pattern: a masked failure"
+run_case build-failure-masked fail build_failure_masked \
+  "pr-gate.yml contains a refused gate pattern: a masked failure"
+run_case errexit-turned-off fail errexit_turned_off \
+  "release-gate.yml contains a refused gate pattern: a masked failure"
+run_case release-gate-save-if-dropped fail release_gate_save_if_dropped \
+  "release-gate.yml job determinism-matrix is missing required gate pattern: only the aarch64 determinism cells of the release gate save the shared rust-cache entry"
+run_case release-gate-cells-never-save fail release_gate_cells_never_save \
+  "release-gate.yml job determinism-matrix is missing required gate pattern: only the aarch64 determinism cells of the release gate save the shared rust-cache entry"
 run_case nextest-profile-missing fail nextest_profile_missing \
   "is missing required gate pattern: a nextest profile of its own for the release-codegen workspace run"
 run_case gate-mode-fixtures-dropped fail drop_gate_mode_fixtures \

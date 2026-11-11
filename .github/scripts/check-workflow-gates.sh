@@ -111,6 +111,32 @@ require_job_literal() {
   fi
 }
 
+# Like require_job_literal, but the needle must be a WHOLE line of the job: leading whitespace, a
+# leading `- ` and a leading `run: ` aside, nothing may come before it or after it. A presence
+# check that is not anchored at the end is satisfied by `<command> || true`, which is the command
+# with its failure thrown away (issue #555).
+require_job_line() {
+  path="$1"
+  job="$2"
+  literal="$3"
+  label="$4"
+  job_body="$(awk -v header="  $job:" '
+    $0 == header { found = 1; next }
+    found && /^  [^ ]/ { exit }
+    found && !/^[[:space:]]*#/ {
+      line = $0
+      sub(/^[[:space:]]+/, "", line)
+      sub(/^- /, "", line)
+      sub(/^run: /, "", line)
+      print line
+    }
+  ' "$path")"
+  if ! grep -Fxq -- "$literal" <<< "$job_body"; then
+    echo "FAIL: $path job $job is missing required gate pattern: $label"
+    exit 1
+  fi
+}
+
 # Step-level `if:` (#418 review). A step condition can skip a gating command while its job still
 # reports success, and CI OK sees only job results, so the lane filter is the one condition that may
 # skip work. Two step-condition shapes remain, both of which run a step at least as often as its
@@ -197,14 +223,14 @@ require_native_cell_matrix() {
 # and uploads under its own name.
 require_determinism_cells() {
   path="$1"
-  require_job_pattern "$path" 'determinism-matrix' 'test "\$\(uname -m\)" = "\$CELL_ARCH"' \
+  require_job_pattern "$path" 'determinism-matrix' 'test "\$\(uname -m\)" = "\$CELL_ARCH"$' \
     'determinism cells refuse a runner of the wrong architecture'
   require_job_pattern "$path" 'determinism-matrix' \
-    'cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail' \
+    'cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail$' \
     'debug determinism subset with hard-fail-on-zero-tests'
-  require_job_pattern "$path" 'determinism-matrix' 'OCE_PORTABLE_STATE_OUT: target/portable-state-debug\.bin' \
+  require_job_pattern "$path" 'determinism-matrix' 'OCE_PORTABLE_STATE_OUT: target/portable-state-debug\.bin$' \
     'emit the debug portable state vector in every determinism cell'
-  require_job_pattern "$path" 'determinism-matrix' 'OCE_TARGET_STATE_OUT: target/target-state-debug\.bin' \
+  require_job_pattern "$path" 'determinism-matrix' 'OCE_TARGET_STATE_OUT: target/target-state-debug\.bin$' \
     'emit the debug target-bound state vector in every determinism cell'
   require_job_pattern "$path" 'determinism-matrix' 'tool:[[:space:]]*nextest@0\.9\.143' \
     'pinned cargo-nextest install for the determinism cells'
@@ -221,10 +247,10 @@ require_determinism_cells() {
     'record the debug blob round trip in every determinism cell'
   require_job_pattern "$path" 'determinism-matrix' 'OCE_ROUND_TRIP_OUT: target/determinism/round-trip$' \
     'write the blob round-trip recording into the uploaded cell directory'
-  require_job_literal "$path" 'determinism-matrix' \
+  require_job_line "$path" 'determinism-matrix' \
     'test "$(ls target/determinism/round-trip | wc -l | tr -d '"' '"')" = 92' \
     'refuse a determinism cell whose round-trip recording is not 46 blobs and 46 traces'
-  require_job_literal "$path" 'determinism-matrix' \
+  require_job_line "$path" 'determinism-matrix' \
     'cargo nextest archive -p oce-conformance --test blob_round_trip --locked --archive-file target/determinism/blob-round-trip.tar.zst' \
     'archive each architecture'"'"'s debug blob round trip for the fan-in'
 }
@@ -235,18 +261,18 @@ require_determinism_cells() {
 require_release_codegen_determinism_cells() {
   path="$1"
   require_job_pattern "$path" 'determinism-matrix' \
-    'cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail' \
+    'cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail$' \
     'release determinism subset with hard-fail-on-zero-tests'
-  require_job_pattern "$path" 'determinism-matrix' 'OCE_PORTABLE_STATE_OUT: target/portable-state-release\.bin' \
+  require_job_pattern "$path" 'determinism-matrix' 'OCE_PORTABLE_STATE_OUT: target/portable-state-release\.bin$' \
     'emit the release portable state vector in every determinism cell'
-  require_job_pattern "$path" 'determinism-matrix' 'OCE_TARGET_STATE_OUT: target/target-state-release\.bin' \
+  require_job_pattern "$path" 'determinism-matrix' 'OCE_TARGET_STATE_OUT: target/target-state-release\.bin$' \
     'emit the release target-bound state vector in every determinism cell'
   require_job_pattern "$path" 'determinism-matrix' \
     '^[[:space:]]*(- )?run: cargo nextest run -p oce-conformance --test blob_round_trip --locked --profile ci-release --cargo-profile release --no-tests=fail$' \
     'record the release blob round trip in every determinism cell'
-  require_job_pattern "$path" 'determinism-matrix' 'test -s "target/nextest/\$profile/junit\.xml"' \
+  require_job_pattern "$path" 'determinism-matrix' 'test -s "target/nextest/\$profile/junit\.xml"$' \
     'refuse an absent or empty nextest determinism report'
-  require_job_pattern "$path" 'determinism-matrix' 'test -s "target/portable-state-\$CELL_CODEGEN\.bin"' \
+  require_job_pattern "$path" 'determinism-matrix' 'test -s "target/portable-state-\$CELL_CODEGEN\.bin"$' \
     'refuse a determinism cell that emitted no portable state vector'
 }
 
@@ -258,20 +284,20 @@ require_determinism_fan_in() {
   path="$1"
   require_job_needs "$path" 'determinism-compare' 'determinism-matrix'
   require_job_pattern "$path" 'determinism-compare' \
-    'cmp determinism-x86_64-debug/portable-state-debug\.bin determinism-aarch64-debug/portable-state-debug\.bin' \
+    'cmp determinism-x86_64-debug/portable-state-debug\.bin determinism-aarch64-debug/portable-state-debug\.bin( &&)?$' \
     'compare portable state bytes across architectures'
   require_job_pattern "$path" 'determinism-compare' \
-    '![[:space:]]*cmp -s determinism-x86_64-debug/target-state-debug\.bin determinism-aarch64-debug/target-state-debug\.bin' \
+    '![[:space:]]*cmp -s determinism-x86_64-debug/target-state-debug\.bin determinism-aarch64-debug/target-state-debug\.bin( &&)?$' \
     'require target-bound state bytes to differ across architectures'
   require_job_pattern "$path" 'determinism-compare' \
     '^[[:space:]]*cmp determinism-x86_64-debug/blobs-debug\.bin determinism-aarch64-debug/blobs-debug\.bin$' \
     'compare compiled-schedule blob bytes across architectures'
-  require_job_literal "$path" 'determinism-compare' 'if [ "$size" != 123329 ]; then' \
+  require_job_line "$path" 'determinism-compare' 'if [ "$size" != 123329 ]; then' \
     'refuse a compiled-schedule blob artifact that is not the 123329 bytes of the goldens'
   require_job_pattern "$path" 'determinism-compare' \
     'export OCE_FOREIGN_TARGET_STATE_IN=.*determinism-\$FOREIGN_ARCH-debug/target-state-debug\.bin' \
     'supply the other architecture target-bound snapshot to the restore test'
-  require_job_pattern "$path" 'determinism-compare' 'test "\$CELL_ARCH" != "\$FOREIGN_ARCH"' \
+  require_job_pattern "$path" 'determinism-compare' 'test "\$CELL_ARCH" != "\$FOREIGN_ARCH"$' \
     'the restoring architecture differs from the snapshot architecture'
   require_job_pattern "$path" 'determinism-compare' \
     "test\\(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied\\)'" \
@@ -282,14 +308,14 @@ require_determinism_fan_in() {
     'pinned cargo-nextest install for foreign restore'
   require_job_pattern "$path" 'determinism-compare' 'arch: x86_64' 'x86_64 restores the aarch64 snapshot'
   require_job_pattern "$path" 'determinism-compare' 'arch: aarch64' 'aarch64 restores the x86_64 snapshot'
-  require_job_literal "$path" 'determinism-compare' \
+  require_job_line "$path" 'determinism-compare' \
     'diff -rq determinism-x86_64-debug/round-trip determinism-aarch64-debug/round-trip' \
     'compare the determinism-x86_64-debug and determinism-aarch64-debug round-trip recordings'
-  require_job_literal "$path" 'determinism-compare' \
+  require_job_line "$path" 'determinism-compare' \
     'export OCE_ROUND_TRIP_EXPECT="$PWD/target/determinism/determinism-x86_64-debug/round-trip"' \
     'replay the x86_64 debug round-trip recording on each architecture'
-  require_job_literal "$path" 'determinism-compare' \
-    'cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/blob-round-trip.tar.zst"' \
+  require_job_line "$path" 'determinism-compare' \
+    'cargo nextest run --archive-file "target/determinism/determinism-$CELL_ARCH-debug/blob-round-trip.tar.zst" \' \
     'replay the recording through this architecture'"'"'s own archived suite'
   require_job_pattern "$path" 'determinism-compare' '^[[:space:]]*--workspace-remap \. --profile ci --no-tests=fail$' \
     'the round-trip replay hard-fails when its suite is absent'
@@ -301,27 +327,27 @@ require_determinism_fan_in() {
 require_cross_codegen_fan_in() {
   path="$1"
   require_job_pattern "$path" 'determinism-compare' \
-    'cmp determinism-x86_64-debug/portable-state-debug\.bin determinism-x86_64-release/portable-state-release\.bin' \
+    'cmp determinism-x86_64-debug/portable-state-debug\.bin determinism-x86_64-release/portable-state-release\.bin( &&)?$' \
     'compare x86_64 portable state bytes across codegen profiles'
   require_job_pattern "$path" 'determinism-compare' \
-    'cmp determinism-x86_64-debug/target-state-debug\.bin determinism-x86_64-release/target-state-release\.bin' \
+    'cmp determinism-x86_64-debug/target-state-debug\.bin determinism-x86_64-release/target-state-release\.bin( &&)?$' \
     'compare x86_64 target-bound state bytes across codegen profiles'
   require_job_pattern "$path" 'determinism-compare' \
-    'cmp determinism-aarch64-debug/portable-state-debug\.bin determinism-aarch64-release/portable-state-release\.bin' \
+    'cmp determinism-aarch64-debug/portable-state-debug\.bin determinism-aarch64-release/portable-state-release\.bin( &&)?$' \
     'compare aarch64 portable state bytes across codegen profiles'
   require_job_pattern "$path" 'determinism-compare' \
-    'cmp determinism-aarch64-debug/target-state-debug\.bin determinism-aarch64-release/target-state-release\.bin' \
+    'cmp determinism-aarch64-debug/target-state-debug\.bin determinism-aarch64-release/target-state-release\.bin( &&)?$' \
     'compare aarch64 target-bound state bytes across codegen profiles'
   for arch in x86_64 aarch64; do
     require_job_pattern "$path" 'determinism-compare' \
       "^[[:space:]]*cmp determinism-$arch-debug/blobs-debug\\.bin determinism-$arch-release/blobs-release\\.bin\$" \
       "compare $arch compiled-schedule blob bytes across codegen profiles"
   done
-  require_job_literal "$path" 'determinism-compare' \
+  require_job_line "$path" 'determinism-compare' \
     'test "$(ls determinism-*/blobs-*.bin | wc -l | tr -d '"' '"')" = 4' \
     'the fan-in holds the compiled-schedule blobs of all four cells'
   for pair in 'x86_64-debug determinism-x86_64-release' 'x86_64-debug determinism-aarch64-release'; do
-    require_job_literal "$path" 'determinism-compare' \
+    require_job_line "$path" 'determinism-compare' \
       "diff -rq determinism-${pair% *}/round-trip ${pair#* }/round-trip" \
       "compare the determinism-${pair% *} and ${pair#* } round-trip recordings"
   done
@@ -339,7 +365,7 @@ require_windows_cell() {
   require_job_pattern "$path" 'std-build-windows' \
     '^[[:space:]]*cargo nextest run --workspace --locked --profile ci --no-tests=fail$' \
     'the Windows cell runs the workspace suite with hard-fail-on-zero-tests'
-  require_job_literal "$path" 'std-build-windows' \
+  require_job_line "$path" 'std-build-windows' \
     "-E 'not (binary_id(oce-conformance::strict_bits) | binary_id(oce-conformance::per_block_reals_transcendental) | binary_id(oce-conformance::per_block_reals_sources_transcendental) | binary_id(oce-conformance::per_block_psychrometrics) | binary_id(oce-conformance::per_block_utilities))'" \
     'the Windows cell excludes exactly the strict-bit binaries'
   require_job_pattern "$path" 'std-build-windows' '^[[:space:]]*(- )?run: test -s target/nextest/ci/junit\.xml$' \
@@ -640,15 +666,19 @@ require_identical_job() {
   fi
 }
 
-# One job, the lines of it that do work: comment lines dropped, and the four kinds of line that
-# legitimately differ between the per-PR and the release definition of a determinism job. Those
-# are the lane filter (`needs:` and the job-level `if:`), the pinned checkout ref the release gate
-# adds, and the rust-cache `save-if:`, each of which has a rule of its own in this script.
+# One job, the lines of it that do work: comment lines dropped, and the lines that legitimately
+# differ between the per-PR and the release definition of a determinism job. Each exception
+# belongs to ONE side (issue #555): `per-pr` drops the lane filter (`needs:` and the job-level
+# `if:`), which only pr-gate.yml may carry, and `release` drops the pinned checkout ref, which only
+# release-gate.yml may carry. A lane filter in the release job, or a `ref:` of any kind in the
+# per-PR job, is therefore left in and fails the comparison. The rust-cache `save-if:` differs on
+# both sides and is dropped from both; each side's value is pinned by a rule of its own below.
 job_commands() {
-  job_definition "$1" "$2" | awk '
+  job_definition "$1" "$2" | awk -v side="$3" '
     /^[[:space:]]*#/ { next }
-    /^    needs:/ || /^    if: needs\.changes\.outputs\./ { next }
-    /^          ref: \$\{\{ env\.CHECKOUT_REF \}\}[[:space:]]*$/ { next }
+    side == "per-pr" && (/^    needs:/ || /^    if: needs\.changes\.outputs\./) { next }
+    side == "release" && /^    needs: determinism-matrix[[:space:]]*$/ { next }
+    side == "release" && /^          ref: \$\{\{ env\.CHECKOUT_REF \}\}[[:space:]]*$/ { next }
     /^          save-if:/ { next }
     { print }
   '
@@ -658,17 +688,77 @@ job_commands() {
 # release-gate.yml (issue #556). Every step, command, environment variable, matrix entry and
 # step condition must be the same in both: a cell, a codegen mode or a comparison cannot be
 # dropped or weakened per PR while the nightly definition keeps it, or the reverse. Comments may
-# differ, and so may the four kinds of line job_commands sets aside.
+# differ, and so may the lines job_commands sets aside, each on the one side that may carry it.
 require_same_job_commands() {
   first="$1"
   second="$2"
   job="$3"
   local one two
-  one="$(job_commands "$first" "$job")"
-  two="$(job_commands "$second" "$job")"
+  one="$(job_commands "$first" "$job" per-pr)"
+  two="$(job_commands "$second" "$job" release)"
   if [ -z "$one" ] || [ "$one" != "$two" ]; then
     echo "FAIL: job $job does not run the same steps in $first and $second"
     diff <(printf '%s\n' "$one") <(printf '%s\n' "$two") | head -n 20 | sed 's/^/  /' || true
+    exit 1
+  fi
+}
+
+# The top-level `env:` of a workflow, comment lines dropped, one `NAME: value` per line.
+workflow_env() {
+  awk '
+    /^env:[[:space:]]*$/ { inside = 1; next }
+    inside && /^[^[:space:]#]/ { inside = 0 }
+    inside && !/^[[:space:]]*(#.*)?$/ { line = $0; sub(/[[:space:]]+$/, "", line); print line }
+  ' "$1"
+}
+
+# Two workflows that run the same jobs must give them the same workflow-level environment
+# (issue #555): the job comparison above reads one job at a time, so `RUSTFLAGS`, a
+# `CARGO_PROFILE_*` override or `CARGO_INCREMENTAL` set for a whole file changes what every step
+# in it builds without changing a line the comparison sees. `CHECKOUT_REF` is the one variable
+# that may differ; it is dropped from the files named in `$3` (each pins its own value) and left
+# in for the others, so pr-gate.yml, which has no pinned ref, fails if it grows one.
+require_same_workflow_env() {
+  first="$1"
+  second="$2"
+  local one two
+  one="$(workflow_env "$first")"
+  two="$(workflow_env "$second")"
+  case " $3 " in *" first "*) one="$(grep -v '^  CHECKOUT_REF:' <<< "$one" || true)" ;; esac
+  case " $3 " in *" second "*) two="$(grep -v '^  CHECKOUT_REF:' <<< "$two" || true)" ;; esac
+  if [ "$one" != "$two" ]; then
+    echo "FAIL: $first and $second do not set the same workflow-level env"
+    diff <(printf '%s\n' "$one") <(printf '%s\n' "$two") | head -n 20 | sed 's/^/  /' || true
+    exit 1
+  fi
+}
+
+# No line of a gating workflow may throw a command's failure away. `cmd || true`, `cmd || :`,
+# `cmd || exit 0`, a trailing `; true` and `set +e` each turn a red step green, and the same edit
+# made to both copies of a shared job keeps the two copies equal (issue #555). The end-anchored
+# presence rules catch this on the lines they name; this catches it on every other line.
+refuse_failure_masks() {
+  path="$1"
+  refuse_pattern "$path" '\|\|[[:space:]]*(true|:|exit[[:space:]]+0)([[:space:];)]|$)|;[[:space:]]*true[[:space:]]*$|(^|[[:space:];])set[[:space:]]+\+e([[:space:];]|$)' \
+    'a masked failure (|| true, || :, || exit 0, ; true or set +e), which lets a failing command read as green'
+}
+
+# The body of one TOML table, exactly: its non-comment, non-blank lines up to the next table
+# header, in order, compared with the lines given.
+require_toml_table() {
+  path="$1"
+  table="$2"
+  expected="$3"
+  label="$4"
+  local actual
+  actual="$(awk -v header="[$table]" '
+    $0 == header { inside = 1; next }
+    inside && /^\[/ { inside = 0 }
+    inside && !/^[[:space:]]*(#.*)?$/ { line = $0; sub(/[[:space:]]+$/, "", line); print line }
+  ' "$path")"
+  if [ "$actual" != "$expected" ]; then
+    echo "FAIL: $path [$table] is not exactly its pinned body: $label"
+    diff <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") | sed 's/^/  /' || true
     exit 1
   fi
 }
@@ -1357,6 +1447,17 @@ require_identical_job "$merge" "$release" 'std-build-windows'
 for shared in determinism-matrix determinism-compare; do
   require_same_job_commands "$ci" "$release" "$shared"
 done
+# The same workflow-level environment in every file that runs those jobs, and in the two that run
+# the Windows cell. Only release-gate.yml and merge-gate.yml pin a checkout ref.
+require_same_workflow_env "$ci" "$release" 'second'
+require_same_workflow_env "$merge" "$release" 'first second'
+# The release gate's side of the `save-if` exception (the per-PR side is pinned with pr-gate.yml's
+# cells above): only its aarch64 cells save, because `test-suite` writes the x86_64 entry.
+require_job_pattern "$release" 'determinism-matrix' "^          save-if: \\\$\\{\\{ matrix\\.arch == 'aarch64' \\}\\}\$" \
+  'only the aarch64 determinism cells of the release gate save the shared rust-cache entry'
+for workflow in "$ci" "$merge" "$release"; do
+  refuse_failure_masks "$workflow"
+done
 require_job_pattern "$release" 'gate' '^[[:space:]]*(- )?run: bash \.agents/gate\.sh full$' \
   'the release gate executes the gate script in full mode'
 require_job_order "$release" 'gate' "$no_std_targets" 'run: bash .agents/gate.sh full' \
@@ -1382,6 +1483,15 @@ require_pattern "$NEXTEST_CONFIG" '^\[profile\.ci-release-workspace\]$' \
   'a nextest profile of its own for the release-codegen workspace run'
 require_pattern "$NEXTEST_CONFIG" '^\[profile\.ci-release-workspace\.junit\]$' \
   'a JUnit report of its own for the release-codegen workspace run'
+# The profile's body is pinned to the line (issue #555). A `default-filter`, a test-group override
+# or any other key added to it changes which tests the one release-codegen workspace run executes
+# while the profile, the command and the report requirement all stay in place: with
+# `default-filter = "package(oce-diag)"` the nightly would run one crate and stay green.
+require_toml_table "$NEXTEST_CONFIG" 'profile.ci-release-workspace' 'inherits = "ci"' \
+  'the release-codegen workspace profile only inherits ci'
+require_toml_table "$NEXTEST_CONFIG" 'profile.ci-release-workspace.junit' \
+  'report-name = "open-control-ci-release-workspace"' \
+  'the release-codegen workspace profile only names its report'
 require_job_order "$release" 'gate' 'run: rm -f target/nextest/ci-release-workspace/junit.xml' \
   'run: bash .agents/gate.sh full' \
   'the release-codegen workspace report is cleared before the gate script runs'
