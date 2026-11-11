@@ -51,7 +51,7 @@ name: merge-gate
 on:
   push:
     # Every merged PR, on its merge commit. `main` is release-gate.yml's.
-    branches: [development]
+    branches: [development, ci/lane-matched-proof-and-nightly-release-gate]
   workflow_dispatch:
 
 permissions:
