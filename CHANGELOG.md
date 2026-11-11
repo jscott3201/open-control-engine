@@ -1432,6 +1432,19 @@ and a gate that accepted any text would restore exactly the false assurance desc
   publishable, 6 private); `release.yml`'s comment and step name re-pinned.
 ### Verification
 
+- **`rustix` moves from 1.1.4 to 1.1.6 in `Cargo.lock`, clearing RUSTSEC-2026-0486** (GitHub
+  #PRNUM, issue #598). The advisory (unsound: rustix's xattr functions mark unwritten bytes
+  initialized for a zero-length buffer) made `cargo deny check advisories` fail in the daily
+  `advisories.yml` run and in `release-gate.yml`'s `cargo-deny (full)` job. The path is a
+  dev-dependency only (`rustix` is `oce-cxf`'s Unix dev-dependency), so no shipped build linked it,
+  and the per-PR `cargo-deny` job, which checks bans, licenses and sources only, stayed green. Only
+  the lockfile moves: rustix's own dependencies and the `Cargo.toml` requirement (`1.1.4`, which
+  1.1.6 satisfies) are unchanged, rustix 1.1.6 needs Rust 1.65 against the workspace's 1.97, and no
+  ignore entry was added. `cargo deny check bans licenses sources advisories` is clean, with the same
+  warnings as before. Not moved: `tools/openmodelica-line-reference/Cargo.lock` and
+  `tools/openmodelica-reliefs-reference/Cargo.lock` also pin rustix 1.1.4, but no workflow
+  advisory-checks those workspaces, and each lockfile's SHA-256 is bound into recorded OpenModelica
+  evidence that only the manual native-arm64 workflows can regenerate (GitHub issue #604).
 - **The workflow checker closes five gaps, and the pin-advance row states its real reason**
   (GitHub #564, issue #555; follow-ups from the reviews of GitHub #547 and #557, and an owner
   rulings of 2026-11-10 and 2026-11-11). No workflow or gate command changed; the `full` proof
