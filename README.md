@@ -173,8 +173,11 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   [compiled-schedule blob](docs/compiled-schedule-blob.md#the-blob-round-trip).
 - Lets a person or an agent write a sequence without touching JSON-LD: `oce-author` holds one typed
   model in a strict-JSON wire form and a terse text form, validates it before an engine sees it,
-  emits it deterministically to flat CXF and imports the library's in-subset CXF back, and the `oce`
-  command-line tool runs all of it with a JSON report and exit codes 0 / 1 / 2. See the
+  emits it deterministically to flat CXF and imports the library's in-subset CXF back. The `oce`
+  command-line tool validates, emits and formats a sequence, serves the catalog and the vocabulary
+  and replays a vector set (`emit`, `validate`, `fmt`, `catalog`, `vocab`, `verify`), with a JSON
+  report and exit codes 0 / 1 / 2; the importer is a library API today, and an `oce import` verb is
+  planned (#514). See the
   [authoring layer](docs/design/authoring-layer.md) and [`oce`](crates/leverage/oce-cli/README.md).
 
 ## What it does not do
@@ -243,9 +246,9 @@ and moved the per-PR gate to native x86_64 and arm64 cells under one required `C
 meaning, which bumps it to the next milestone's version.
 
 M2's `oce` command-line tool
-(`crates/leverage/oce-cli`, the first binary above the facade) puts all of it at a shell prompt:
-`emit`, `validate`, `fmt`, `catalog` and `vocab`, each with a documented JSON report on stdout for
-agents and the exit rule 0 yes / 1 no / 2 error
+(`crates/leverage/oce-cli`, the first binary above the facade) puts the authoring loop at a shell
+prompt: `emit`, `validate`, `fmt`, `catalog` and `vocab` (M3 adds `verify`, below), each with a
+documented JSON report on stdout for agents and the exit rule 0 yes / 1 no / 2 error
 ([report contract](crates/leverage/oce-cli/README.md)):
 
 ```sh
@@ -256,6 +259,9 @@ cargo run -p oce-cli -- fmt --check econ_enable.oce     # exit 1 when not canoni
 cargo run -p oce-cli -- catalog CDL.Reals.MultiSum --param nin=3
 cargo run -p oce-cli -- catalog CDL.Reals.PID           # what each port and parameter means
 ```
+
+The importer has no verb yet: it is the library API `oce_author::import_cxf` and
+`oce_author::import_graph_v0`, and an `oce import` verb is planned (#514).
 
 Vocabulary v1 is the reference text behind `oce catalog`: `oce-vocab`
 (`crates/leverage/oce-vocab`, [README](crates/leverage/oce-vocab/README.md)) carries, for each of
@@ -303,9 +309,9 @@ no verdict could be reached. Mutant paths are resolved and kept inside the vecto
 directory. The in-repo replay gate runs that binary over both library rules on every PR, against
 their golden receipts.
 
-Open follow-ups from M2 include the benchmark data the agent-usable row needs (#457), `oce check`
-(#574), and checking a sequence parameter's unit suffix against the block parameter it feeds
-(#590).
+Open follow-ups from M2 include the benchmark data the agent-usable row needs (#457) and checking a
+sequence parameter's unit suffix against the block parameter it feeds (#590); `oce import` (#514)
+and `oce check` (#574) are on M3.
 
 See [CHANGELOG.md](CHANGELOG.md).
 
