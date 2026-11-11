@@ -117,8 +117,17 @@ fn the_defects_bundle_covers_every_wire_expressible_code() {
         .iter()
         .copied()
         // A sequence with blocks is not empty; a non-finite Real has no wire spelling, as a
-        // parameter value or as a bound.
-        .filter(|c| !["empty-sequence", "non-finite-parameter", "non-finite-bound"].contains(c))
+        // parameter value or as a bound; a unit suffix is text-only, so the wire form carries
+        // none to mismatch (issue #501).
+        .filter(|c| {
+            ![
+                "empty-sequence",
+                "non-finite-parameter",
+                "non-finite-bound",
+                "unit-suffix-mismatch",
+            ]
+            .contains(c)
+        })
         .collect();
     assert_eq!(codes, expected);
 }

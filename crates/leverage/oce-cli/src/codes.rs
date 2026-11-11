@@ -245,9 +245,9 @@ pub(crate) const PARSE_MEANINGS: &[(&str, &str)] = &[
     ),
     (
         "unit-not-base",
-        // The scaled symbols are named until the text form reads the scale-factor table (issue
-        // #501); `tests/vocabulary.rs` fails when it does, and this clause goes then.
-        "a unit suffix that is not built from base SI units; the scaled symbols min, h and d are not accepted yet",
+        // Names the scaled symbols, which are accepted only alone (issue #501); `tests/vocabulary.rs`
+        // holds the clause to `oce_vocab::SCALE_FACTORS`.
+        "a unit suffix that is neither built from base SI units nor one of the scaled symbols min, h and d alone",
     ),
     (
         "malformed-atom",
@@ -332,6 +332,10 @@ pub(crate) const STAGE_ONE_MEANINGS: &[(&str, &str)] = &[
         "a value breaks a catalog rule, widths included",
     ),
     ("non-finite-parameter", "a Real value is NaN or infinite"),
+    (
+        "unit-suffix-mismatch",
+        "a unit suffix that is not the parameter's declared unit, a scaled one where none is declared, or one that disagrees with its value",
+    ),
     (
         "unknown-enum-literal",
         "an enumeration member is not a member of the parameter's type",

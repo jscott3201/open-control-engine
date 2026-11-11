@@ -9,12 +9,13 @@
 
 use oce_api::{EnumerationClass, EnumerationKind, MemberValue, enumerations};
 
-use crate::model::{Literal, MemberRef, ParameterType, SequenceParameter};
+use crate::model::{Literal, MemberRef, ParamValue, ParameterType, SequenceParameter};
 
 use super::names::{exact_as_real, inexact_detail};
+use super::suffixes;
 use super::{
-    NON_FINITE_PARAMETER, PARAMETER_KIND_MISMATCH, PARAMETER_OUT_OF_RANGE, UNKNOWN_ENUM_LITERAL,
-    UNKNOWN_ENUM_TYPE,
+    NON_FINITE_PARAMETER, PARAMETER_KIND_MISMATCH, PARAMETER_OUT_OF_RANGE, UNIT_SUFFIX_MISMATCH,
+    UNKNOWN_ENUM_LITERAL, UNKNOWN_ENUM_TYPE,
 };
 
 /// The row whose type name ([`EnumerationClass::type_name`]) is exactly `type_name`, enumeration
@@ -107,11 +108,24 @@ pub(crate) fn enum_ordinal(member: &MemberRef, row: &EnumerationClass) -> Result
     }
 }
 
-/// What is wrong with a sequence parameter's declared type and value, if anything: the finding
-/// code and its detail. `None` means stage 1 accepts the parameter, so a block may take a
+/// What is wrong with a sequence parameter's unit suffix, declared type and value, if anything:
+/// the finding code and its detail. `None` means stage 1 accepts the parameter, so a block may take a
 /// reference to it.
 pub(crate) fn parameter_problem(param: &SequenceParameter) -> Option<(&'static str, String)> {
     let name = &param.name;
+    // A sequence parameter declares no unit: a base-unit suffix stays an annotation, a scaled
+    // one has nothing to scale to (vocabulary note, "Units").
+    if (param.suffix.is_some() || param.scaled_from.is_some())
+        && let Some(detail) = suffixes::problem(
+            &format!("sequence parameter `{name}`"),
+            "",
+            &ParamValue::Literal(param.value.clone()),
+            param.suffix.as_deref(),
+            param.scaled_from.as_ref(),
+        )
+    {
+        return Some((UNIT_SUFFIX_MISMATCH, detail));
+    }
     let declared = param.value_type.as_str();
     let mismatch = || {
         Some((

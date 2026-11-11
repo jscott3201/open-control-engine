@@ -10,7 +10,7 @@ use support::text::{bundle_model, bundles, enumerated_models, note_text_example,
 use support::{compare_or_bless, fixture};
 
 /// The hand-written `fmt` inputs under `tests/fixtures/text/fmt/`, each with a blessed output.
-const FMT_CASES: &[&str] = &["arrays", "comments", "sections"];
+const FMT_CASES: &[&str] = &["arrays", "comments", "scaled_suffixes", "sections"];
 
 fn fmt_input(case: &str) -> String {
     std::fs::read_to_string(fixture(&format!("text/fmt/{case}.in.oce"))).expect("input")

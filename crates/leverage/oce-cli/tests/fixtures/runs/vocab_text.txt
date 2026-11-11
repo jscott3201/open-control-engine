@@ -12,7 +12,7 @@ tags:
 base units:
   m kg s A K mol cd rad sr Hz N Pa J W C V F Ohm S Wb T H lm lx Bq Gy Sv kat
 
-scale factors (time only; one symbol is exactly this many base units; not accepted as a unit suffix yet, the text form refuses them with unit-not-base):
+scale factors (time only; one symbol is exactly this many base units; alone as a unit suffix on a parameter declared in the base unit, it scales the number, rounding once):
   min  60 s
   h    3600 s
   d    86400 s
@@ -35,7 +35,7 @@ parse codes (text form, exit 2):
   integer-out-of-range  an integer outside the 64-bit signed range
   non-finite-number     NaN, inf or Infinity as a value, or a real that overflows binary64
   malformed-suffix      a unit suffix that is not a unit expression
-  unit-not-base         a unit suffix that is not built from base SI units; the scaled symbols min, h and d are not accepted yet
+  unit-not-base         a unit suffix that is neither built from base SI units nor one of the scaled symbols min, h and d alone
   malformed-atom        a tag atom or provenance id with a byte outside printable ASCII
   stray-token           a token where the grammar allows none, or a missing one
   unknown-keyword       a line that starts with no statement keyword and is not a connection
@@ -63,6 +63,7 @@ finding codes, stage 1 (exit 1):
   parameter-kind-mismatch      a value's kind does not fit the parameter
   parameter-out-of-range       a value breaks a catalog rule, widths included
   non-finite-parameter         a Real value is NaN or infinite
+  unit-suffix-mismatch         a unit suffix that is not the parameter's declared unit, a scaled one where none is declared, or one that disagrees with its value
   unknown-enum-literal         an enumeration member is not a member of the parameter's type
   unknown-enum-type            a sequence parameter's type names no enumeration, or names a constant package
   unknown-parameter-reference  a reference names no sequence parameter
