@@ -4,7 +4,7 @@
 //! refused unless it ends in `#`, `/` or `:` and is printable ASCII without IRI-reserved
 //! characters.
 
-mod support;
+use crate::support;
 
 use oce_api::MAX_CXF_BYTES;
 use oce_author::{

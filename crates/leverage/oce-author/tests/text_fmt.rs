@@ -2,7 +2,7 @@
 //! non-canonical and comment-laden input, with comment and blank-line preservation goldens and one
 //! test per printer convention the crate README documents.
 
-mod support;
+use crate::support;
 
 use oce_author::{Literal, MALFORMED_NUMBER, ParamValue, fmt_text, parse_text, to_wire_string};
 

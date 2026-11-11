@@ -2,7 +2,7 @@
 //! sequence stage 1 passes is an error finding with the engine's code, mapped onto the model
 //! through the IRI scheme, with `origin = engine`.
 
-mod support;
+use crate::support;
 
 use oce_author::{
     Block, Boundary, Connection, Endpoint, Finding, Literal, Origin, ParamValue, Sequence,

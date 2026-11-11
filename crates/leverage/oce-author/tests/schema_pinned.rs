@@ -2,7 +2,7 @@
 //! outside the strict profile, and checked for closed objects and the catalog class enum
 //! (decision 8).
 
-mod support;
+use crate::support;
 
 use oce_author::{SCHEMA_PROFILE_KEYWORDS, WIRE_SCHEMA, authorable_class_paths, wire_schema};
 use serde_json::Value;

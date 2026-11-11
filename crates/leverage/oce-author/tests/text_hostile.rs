@@ -5,7 +5,7 @@
 //! text that parses back to the same model and is its own `fmt`. Then the giant shapes: deep
 //! brackets, giant statements, a block of thousands of assignments, long runs of comments.
 
-mod support;
+use crate::support;
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 

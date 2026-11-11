@@ -26,7 +26,7 @@
 //! compared on its identity like the others and its export bytes are left out ([`ORDER_DIFFERS`]).
 //! `node_order_alone_moves_the_sumzone_export_but_not_its_identity` pins the mismatch itself.
 
-mod support;
+use crate::support;
 
 use oce_api::Value;
 use oce_author::{

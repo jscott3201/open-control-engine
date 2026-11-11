@@ -1,7 +1,7 @@
 //! One test per stage-1 finding code, each with the exact code and subject (issue #463
 //! acceptance; authoring note, "Finding codes").
 
-mod support;
+use crate::support;
 
 use oce_author::{
     Block, Boundary, Connection, Endpoint, Finding, Identifier, Literal, MemberRef, Origin,

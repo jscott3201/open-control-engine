@@ -3,7 +3,7 @@
 //! mark, duplicate keys, non-finite numbers, control characters), each a typed `WireError` and
 //! never a panic. Every bound is pinned at its boundary: accepted at the limit, refused one past.
 
-mod support;
+use crate::support;
 
 use oce_author::{
     Location, MAX_WIRE_BYTES, MAX_WIRE_DEPTH, MAX_WIRE_LIST_LEN, MAX_WIRE_STRING_BYTES, WireError,

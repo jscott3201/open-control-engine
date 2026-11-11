@@ -1,7 +1,7 @@
 //! Wire → model → wire byte equality: the reference bundles, every checked-in bundle and the
 //! authoring note's worked example (issue #463 acceptance).
 
-mod support;
+use crate::support;
 
 use oce_author::{from_wire_str, to_wire_string, validate};
 

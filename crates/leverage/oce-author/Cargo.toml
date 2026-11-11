@@ -16,6 +16,9 @@ repository.workspace = true
 homepage.workspace = true
 # Nothing above the facade is published in M2 (decision 20).
 publish = false
+# The integration tests are one binary instead of one per file; the `[[test]]` target at the end of
+# this file names it (GitHub #504).
+autotests = false
 
 [lints]
 workspace = true
@@ -32,3 +35,13 @@ schemars = { version = "=1.2.3", default-features = false, features = ["derive",
 
 [dev-dependencies]
 oce-bless = { workspace = true }
+
+# Integration-test binary. Cargo's default builds every file under `tests/` as its own binary, and
+# under the release profile (`lto = "thin"`, `codegen-units = 1`) each one links the whole
+# dependency graph again (GitHub #504). Every file is a module of `authoring`, and
+# `tests/authoring.rs` fails when a file is compiled into no binary or into two. Nothing in this
+# crate selects a test binary by name (its bless command names the package), so there is no other
+# target: a file that something selects by name gets its own `[[test]]` here, with the reason.
+[[test]]
+name = "authoring"
+path = "tests/authoring.rs"

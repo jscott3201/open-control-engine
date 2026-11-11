@@ -5,7 +5,7 @@
 //! over every document the importers read (`import_sweep.rs`). Every case returns a typed result
 //! with its exact kind; none panics.
 
-mod support;
+use crate::support;
 
 use oce_author::{ImportError, ImportErrorKind, ImportOptions, Imported, StrictJson, import_cxf};
 

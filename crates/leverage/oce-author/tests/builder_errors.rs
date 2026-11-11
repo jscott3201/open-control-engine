@@ -1,7 +1,7 @@
 //! The typed builder: every refusal it can make without the catalog, and array element naming
 //! through `oce_api::param_element_name` (decision 15).
 
-mod support;
+use crate::support;
 
 use oce_author::{
     Boundary, BuildError, Identifier, IdentifierError, Literal, ProvenanceIdError, SequenceBuilder,

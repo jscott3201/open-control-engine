@@ -2,7 +2,7 @@
 //! bundle, compared bit for bit, so a change to any message or to the order is deliberate. The
 //! `defects.json` bundle carries a defect of every stage-1 kind the wire form can express.
 
-mod support;
+use crate::support;
 
 use oce_author::{
     Block, Boundary, Endpoint, Identifier, Literal, MemberRef, ParamValue, ProvenanceId,

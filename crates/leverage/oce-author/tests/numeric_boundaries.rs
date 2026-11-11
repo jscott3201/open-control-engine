@@ -2,7 +2,7 @@
 //! limits, integers past 2^53, subnormals and the extremes of binary64, and which literal kinds
 //! each parameter kind accepts.
 
-mod support;
+use crate::support;
 
 use oce_author::{
     Block, Boundary, Connection, Endpoint, Literal, ParamValue, Sequence, SignalType,

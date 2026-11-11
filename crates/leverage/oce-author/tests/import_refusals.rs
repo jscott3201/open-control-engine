@@ -1,7 +1,7 @@
 //! The CXF importer refuses hostile and out-of-subset input with a typed error whose kind names
 //! the refusal, never a panic, and reads every emitted golden back to the same bytes.
 
-mod support;
+use crate::support;
 
 use oce_api::MAX_CXF_BYTES;
 use oce_author::{

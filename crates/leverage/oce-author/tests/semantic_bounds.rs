@@ -1,7 +1,7 @@
 //! `MAX_SEMANTIC_FIELD_BYTES` pinned at its boundary for atoms, free-text fields and haystack
 //! tags: 256 bytes accepted, 257 refused as `invalid-semantic-point`.
 
-mod support;
+use crate::support;
 
 use oce_author::{MAX_SEMANTIC_FIELD_BYTES, Sequence, validate};
 

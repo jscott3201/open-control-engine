@@ -7,7 +7,7 @@
 //! report match a golden; v0 to model to wire to model is identity; and the comment rules keep
 //! any v0 text printable, parseable and `fmt`-stable.
 
-mod support;
+use crate::support;
 
 use oce_author::{
     DroppedProperty, EmitOptions, ImportOptions, Imported, MAX_V0_COMMENT_LINE_BYTES, ProvenanceId,

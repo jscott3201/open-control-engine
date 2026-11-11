@@ -2,7 +2,7 @@
 //! finding of a text document, stage 1 and stage 2, is placed on the line and column of its
 //! subject, and a wire document's findings keep `None`.
 
-mod support;
+use crate::support;
 
 use oce_author::{
     DUPLICATE_NAME, DUPLICATE_PARAMETER, Finding, Location, UNKNOWN_PARAMETER_REFERENCE,

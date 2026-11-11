@@ -4,7 +4,7 @@
 //! several is refused for the first of nested composite, conditional component, expression
 //! value, port attribute and name, whatever its node order.
 
-mod support;
+use crate::support;
 
 use oce_author::{ImportOptions, import_cxf};
 use serde_json::json;

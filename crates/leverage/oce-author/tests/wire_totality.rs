@@ -3,7 +3,7 @@
 //! bounds), over every fixture and an enumerated set of string values; text-form annotations are
 //! never written; and the String bounds that would break this are findings.
 
-mod support;
+use crate::support;
 
 use oce_author::{
     Annotations, Block, Boundary, Connection, Endpoint, Literal, MAX_WIRE_STRING_BYTES, Sequence,

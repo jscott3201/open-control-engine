@@ -3,7 +3,7 @@
 //! per-endpoint scan would (the issue #463 review measured 3.4 s for 30,000 blocks before the
 //! name indexes).
 
-mod support;
+use crate::support;
 
 use std::time::{Duration, Instant};
 
