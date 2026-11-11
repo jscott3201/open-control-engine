@@ -1547,7 +1547,7 @@ publishable and eight private. The fixture and Tier-A provenance goldens
   evidence that only the manual native-arm64 workflows can regenerate (GitHub issue #604).
 
 - **The no-secret scan catches a tracked private key, and a `git grep` that fails fails the scan**
-  (GitHub #PRNUM, issue #524). `.github/scripts/check-no-secrets.sh` passed its private-key
+  (GitHub #597, issue #524). `.github/scripts/check-no-secrets.sh` passed its private-key
   pattern to `git grep` without `-e`; the pattern begins with `-----`, so git read it as an
   option, printed its usage and exited 129, the scan's `if` took that for "no match", and
   `>/dev/null 2>&1` hid the message. A tracked private key passed the gate, in CI and in the
