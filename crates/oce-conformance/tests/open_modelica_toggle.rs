@@ -1,6 +1,6 @@
 //! Scoped stateful OpenModelica differential for `CDL.Logical.Toggle`.
 
-mod block_harness;
+// The scoped helper below reaches `crate::block_harness`, which the binary root declares.
 #[path = "open_modelica_toggle/support.rs"]
 mod scoped;
 

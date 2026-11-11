@@ -5,9 +5,9 @@
 use oce_api::Value;
 use oce_conformance::drive_trace_with_options;
 
-#[allow(dead_code)]
-#[path = "g36_determinism/support.rs"]
-mod support;
+// Shared helper, declared once for this binary in its root `conformance.rs`:
+// `g36_determinism/support.rs`.
+use crate::support;
 
 use support::{
     PointSpec, SequenceSpec, assert_exact_comparisons_pass, assert_output_table_shape,

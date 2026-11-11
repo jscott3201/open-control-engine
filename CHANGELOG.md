@@ -1193,6 +1193,37 @@ and a gate that accepted any text would restore exactly the false assurance desc
   1.32 GiB to 642 MiB. The 1,001 tests listed before are all listed after under the same file and
   test names, plus the eight layout tests. No source, fixture or golden changed.
 
+- **`oce-conformance`'s integration tests build as eight binaries instead of 90, and its release
+  test build takes a sixth of the time** (GitHub #550, issue #504; the last of the four crates).
+  `crates/oce-conformance/Cargo.toml` sets `autotests = false` and lists the targets: `conformance`
+  holds 83 files as modules, and seven stay their own binaries because a workflow, a gate step or a
+  recorded command selects each by name: the strict-bit evidence tests (`strict_bits`,
+  `per_block_reals_transcendental`, `per_block_reals_sources_transcendental`,
+  `per_block_psychrometrics` and `per_block_utilities`, run with `--test` by the strict-bit cells
+  and left out of the Windows cell by `binary_id(..)`), `blob_round_trip` and `open_modelica_nand`.
+  Neither those seven files nor anything under `tests/strict_bits/` changed, and no selector
+  changed: each `--test`, `binary_id(..)` and `test(=..)` selector of this crate lists the same
+  tests before and after. The helpers several modules share (`block_harness`, `support`,
+  `funnel_band_policy`, `sequences`, `scoped_open_modelica_line`) are declared once in
+  `tests/conformance.rs`, and each module says `use crate::<helper>;`, with a comment, on the lines
+  that declared it; three modules that declared `block_harness` only for their scoped OpenModelica
+  helper now carry a comment there, and `g36_determinism/sequence_inputs.rs` imports its parent's
+  point identities with `use super::*;` instead of `use crate::*;`. No line moved and no test body
+  changed. A test in a merged file is now `oce-conformance::conformance <file>::<test>`; select one
+  file with `-E 'test(/^<file>::/)'`. The layout test reuses `oce-cxf`'s check
+  (`crates/oce-cxf/tests/binary_layout/`) through `#[path]` instead of copying it, so its controls
+  run here too, and a second test refuses a manifest that folds one of the seven name-selected
+  binaries into `conformance`. No test sets a global allocator, an environment variable or the
+  working directory; the three temporary paths are named for the process and used by one test
+  each; the two statics are `OnceLock` caches of data parsed from an `include_str!`; and the G36
+  bless writer (`OCE_BLESS_G36`) writes one golden per sequence, so three bless runs of the merged
+  binary under plain `cargo test` rewrote every golden byte-identically. Measured on one 10-core
+  arm64 Mac from a removed `target/`, `cargo nextest run -p oce-conformance --locked --no-run`:
+  release 270 s to 45 s wall (2,185 s to 304 s of CPU) and `target/` 452 MiB to 156 MiB; debug
+  12.7 s to 9.3 s and 2.1 GiB to 668 MiB. The 338 tests listed before are all listed after under
+  the same file and test names, with the one ignored test still ignored, plus nine layout tests. No
+  `src/` file, fixture or golden changed.
+
 ### Documentation
 
 - **The facade migration page is retired, with the other prose the format reset made false**

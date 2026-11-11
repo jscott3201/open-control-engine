@@ -9,8 +9,8 @@ use oce_conformance::{
 };
 use serde_json::Value;
 
-#[path = "g36_funnel_band/policy.rs"]
-mod funnel_band_policy;
+// Shared helper `g36_funnel_band/policy.rs`, declared once in the root `conformance.rs`.
+use crate::funnel_band_policy;
 
 const HIGH_LIMIT_FIXED_24: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_24.jsonld"

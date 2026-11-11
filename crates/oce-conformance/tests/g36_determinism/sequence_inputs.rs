@@ -6,8 +6,8 @@
 use oce_api::Value;
 
 use crate::support::pair;
-// The authored input point identities live at the crate root next to the sequence table.
-use crate::*;
+// The authored input point identities live in `g36_determinism.rs`, the parent module.
+use super::*;
 
 pub(crate) fn sat_inputs(t: f64) -> Vec<(String, Value)> {
     let zone_temp = match t as u32 {

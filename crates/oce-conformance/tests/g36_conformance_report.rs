@@ -13,21 +13,21 @@ use oce_conformance::{
     Tier2Source, TierStatus, ValueKind, VerifyConfig, assemble_report,
 };
 
-#[path = "g36_funnel_band/policy.rs"]
-mod funnel_band_policy;
+// Shared helper `g36_funnel_band/policy.rs`, declared once in the root `conformance.rs`.
+use crate::funnel_band_policy;
 
-#[allow(dead_code)]
-#[path = "g36_determinism/support.rs"]
-mod support;
+// Shared helper, declared once for this binary in its root `conformance.rs`:
+// `g36_determinism/support.rs`.
+use crate::support;
 
 use support::{
     PointSpec, SequenceSpec, config_for, driver_reference_from_output_golden, options_for, pair,
     read_output_golden,
 };
 
-mod block_harness;
-#[path = "open_modelica_line/support.rs"]
-mod scoped_open_modelica_line;
+// The scoped helpers reach `crate::block_harness`, which the binary root declares.
+// Shared helper `open_modelica_line/support.rs`, declared once in the root `conformance.rs`.
+use crate::scoped_open_modelica_line;
 #[path = "open_modelica_nand/support.rs"]
 mod scoped_open_modelica_nand;
 

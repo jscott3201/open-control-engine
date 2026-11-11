@@ -274,6 +274,11 @@ case" is itself a finding to resolve, not a pass.
   `cargo nextest run -p oce-api --test facade -E 'test(/^<file>::/)'`. The layout test in
   `facade.rs` (`every_test_file_is_compiled_into_exactly_one_binary`) fails on a file that is in
   no binary or in two.
+  `oce-conformance` builds them as `conformance` plus the seven binaries something selects by name,
+  the strict-bit evidence tests among them (GitHub #550): register a new test file as
+  `mod <file>;` in `tests/conformance.rs` (with `use crate::<helper>;` for a helper that root
+  declares, such as `block_harness`), or as its own `[[test]]`, with the reason, when something
+  selects it by name.
 - **Float comparison:** `Value::bit_eq` (or `f64::to_bits`) — **never** `==` or `(a-b).abs() < ε`
   in an engine assertion. Sole exception: the 21 transcendental, psychrometric, and solar Real
   signal goldens, whose libm-dependent outputs retain the existing aligned-tolerance band on

@@ -9,6 +9,9 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
+# The integration tests are eight binaries instead of one per file; the `[[test]]` targets at the
+# end of this file name them (GitHub #504).
+autotests = false
 
 [lints]
 workspace = true
@@ -29,3 +32,50 @@ oce-bless = { workspace = true }
 oce-blocks = { workspace = true, features = ["std"] }
 oce-graph = { workspace = true, features = ["std"] }
 sha2 = "0.10"
+
+# Integration-test binaries. Cargo's default builds every file under `tests/` as its own binary, and
+# under the release profile (`lto = "thin"`, `codegen-units = 1`) each one links the whole
+# dependency graph again (GitHub #504). Every file not named below is a module of `conformance`, and
+# `tests/conformance.rs` fails when a file is in no binary or in two.
+[[test]]
+name = "conformance"
+path = "tests/conformance.rs"
+
+# The binaries below are selected by name and stay their own.
+
+# The strict-bit evidence tests, which change only when an issue says so (standing rule 3).
+# `scripts/ci/strict-bits-cell.sh`, `.agents/gate.sh` and the strict-bit jobs of `pr-gate.yml` run
+# them with `--test`, and the Windows cells of `merge-gate.yml` and `release-gate.yml` leave out
+# these five by `binary_id(..)`, a filter `.github/scripts/check-workflow-gates.sh` pins.
+[[test]]
+name = "strict_bits"
+path = "tests/strict_bits.rs"
+
+[[test]]
+name = "per_block_reals_transcendental"
+path = "tests/per_block_reals_transcendental.rs"
+
+[[test]]
+name = "per_block_reals_sources_transcendental"
+path = "tests/per_block_reals_sources_transcendental.rs"
+
+[[test]]
+name = "per_block_psychrometrics"
+path = "tests/per_block_psychrometrics.rs"
+
+[[test]]
+name = "per_block_utilities"
+path = "tests/per_block_utilities.rs"
+
+# The blob round trip: `pr-gate.yml`, `merge-gate.yml`, `release-gate.yml`, `.agents/gate.sh` and
+# `check-workflow-gates.sh` run it with `--test blob_round_trip`, natively and on `wasm32-wasip1`.
+[[test]]
+name = "blob_round_trip"
+path = "tests/blob_round_trip.rs"
+
+# The recorded NAND mutation log, a fixture
+# (`tests/fixtures/open_modelica/logical_nand/projection-mutation.log`), gives
+# `--test open_modelica_nand`.
+[[test]]
+name = "open_modelica_nand"
+path = "tests/open_modelica_nand.rs"

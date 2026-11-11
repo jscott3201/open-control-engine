@@ -1,6 +1,6 @@
 //! Tier-1 exact conformance for CDL.Routing Boolean and Integer blocks.
 
-mod block_harness;
+use crate::block_harness; // Shared helper, declared once in the root `conformance.rs`.
 
 use block_harness::{
     B, BlockCase, I, Param, ParamValue, Port, assert_cases_match_exact_oracle, case,

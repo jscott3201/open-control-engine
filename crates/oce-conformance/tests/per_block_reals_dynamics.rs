@@ -3,7 +3,7 @@
 //! `per_block_reals.rs` along the reals-dynamics behavioral topic; the checked-in goldens are
 //! independent Tier-A recurrence oracles from `tools/golden-gen` (never engine self-output).
 
-mod block_harness;
+use crate::block_harness; // Shared helper, declared once in the root `conformance.rs`.
 
 use block_harness::{
     B, BlockCase, Param, ParamValue, Port, R, assert_cases_are_deterministic,
