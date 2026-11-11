@@ -164,8 +164,9 @@ transfer or storage; it is not tamper evidence, because anyone can recompute it.
 
 ## Refusals
 
-The decoder checks, in order, and returns the first failure: the 64 MiB size limit; header shape,
-magic and total length; format version; the CRC; profile, engine version and flags; structure
+The decoder checks, in order, and returns the first failure: the 64 MiB size limit; a header and
+trailer's worth of bytes and the magic; format version, then engine version; total length, then
+the CRC; profile and flags; structure
 (section order and lengths, bounded counts, port lists no longer than any class resolves, UTF-8,
 tags, canonical list order, no trailing bytes);
 classes (registered, same hash, each used) and instances (class index, unique parameter names,
@@ -175,6 +176,38 @@ typed, finite and uncrossed bounds), connections (output to input, equal kinds, 
 input, one driver per input), undriven inputs and boundary outputs (output sources, unique paths);
 the schedule (a permutation that respects emit-before under the target's own feedthrough); the state
 budget (`MAX_STATE_WORDS`) and each initial-state CRC.
+
+### Which refusal wins
+
+One rule decides which refusal a blob or a [state snapshot](state-compatibility.md) reports when it
+is wrong in more than one way (issue #535): **nothing that another engine version may lay out
+differently is checked before the engine version.** Each decoder checks, in this order, the size
+limit, that a header and a trailer fit, the magic, the format revision, the engine version, and
+only then the total or body length, the integrity trailer and the rest. Every format stays at
+revision 1 until 1.0.0 and changes in place, so a later field of another version's artefact (its
+length, its trailer algorithm, its body) cannot be read until the version is known to match.
+
+| Step | Blob (`BlobError`) | Snapshot (`EngineStateError`) |
+| --- | --- | --- |
+| Size limit, 64 MiB inclusive | `TooLarge` | `SnapshotTooLarge` |
+| Shorter than a header and a trailer | `Malformed`, `Truncated` | `MalformedSnapshot` at offset 0 |
+| Magic | `Malformed`, `BadMagic` | `MalformedSnapshot` at offset 0 |
+| Format revision | `UnsupportedFormat` | `UnsupportedFormat` |
+| Engine version | `EngineVersionMismatch` | `EngineVersionMismatch` |
+| Total or body length | `Malformed`, `LengthMismatch` | `MalformedSnapshot` at offset 22 |
+| Integrity trailer | `IntegrityMismatch` (CRC-32C) | `IntegrityMismatch` (FNV-1a-128) |
+| Then | profile, flags, structure, classes, … | body, fingerprint, flags, … |
+
+So an artefact another engine version wrote reports `EngineVersionMismatch` however else it is
+damaged, unless it is over the size limit, too short to hold a header, not of its kind or of
+another format revision. A corrupted version field therefore reports the version it now spells,
+not an integrity failure; the trailer still covers the field, so a version field rewritten to
+this build's fails the trailer. The fields between the format and the version (the blob's
+execution profile, the snapshot's execution-state ABI revision) are read on the way and checked
+later: the profile after the CRC, the ABI revision at restore. Under another engine version
+either is a version refusal. No byte of either format changed with this rule.
+`tests/blob_refusal_precedence.rs` and `src/tests/state_codec_tests.rs` in `oce-api` pin it with
+every pair of defects for each artefact; the earlier check wins in every pair.
 
 ## Cost
 

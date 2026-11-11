@@ -30,11 +30,15 @@ use crate::{MAX_STATE_WORDS, Schedule, allocate_state, build_driver_of};
 /// The checks run in this order, and the first failure is returned:
 ///
 /// 1. the length is at most [`MAX_BLOB_BYTES`](super::MAX_BLOB_BYTES) ([`BlobError::TooLarge`]);
-/// 2. a header and trailer fit, the magic is `OCEB` and the header length equals the input length
-///    ([`BlobError::Malformed`]);
-/// 3. the format version is [`FORMAT_VERSION`](super::FORMAT_VERSION);
-/// 4. the CRC-32C trailer matches ([`BlobError::IntegrityMismatch`]);
-/// 5. the execution profile and engine version are this build's, and the reserved flags are zero;
+/// 2. a header and trailer fit and the magic is `OCEB` ([`BlobError::Malformed`]);
+/// 3. the format version is [`FORMAT_VERSION`](super::FORMAT_VERSION)
+///    ([`BlobError::UnsupportedFormat`]), then the engine version is
+///    [`ENGINE_VERSION`](super::ENGINE_VERSION) ([`BlobError::EngineVersionMismatch`]): nothing
+///    after the version field is checked in a blob another engine version wrote, whose length,
+///    trailer and body may be laid out differently under the same format number;
+/// 4. the header length equals the input length ([`BlobError::Malformed`]), then the CRC-32C
+///    trailer matches ([`BlobError::IntegrityMismatch`]);
+/// 5. the execution profile is this build's and the reserved flags are zero;
 /// 6. structure, each with a byte offset: section order and lengths, bounded counts, UTF-8, tags,
 ///    canonical list order and exact consumption ([`BlobError::Malformed`]);
 /// 7. classes (registered, same signature hash, each used) and instances (class index, unique

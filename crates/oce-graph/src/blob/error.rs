@@ -8,8 +8,12 @@ use super::EngineVersion;
 /// source.
 ///
 /// Variants are listed in the decoder's refusal order: a blob with several defects reports the
-/// first one in this order. Indices are positions in the blob's own lists (class, block,
-/// connection, input, output, schedule position); offsets are absolute byte offsets into the blob.
+/// first one in this order. The one exception is [`Malformed`](Self::Malformed), listed once
+/// although the decoder finds its faults at three points: a short input or a wrong magic before
+/// the format, a total length that differs from the input after the engine version, and every
+/// structural fault after the flags ([`decode()`](super::decode()) lists the steps). Indices are
+/// positions in the blob's own lists (class, block, connection, input, output, schedule
+/// position); offsets are absolute byte offsets into the blob.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum BlobError {
@@ -34,6 +38,15 @@ pub enum BlobError {
         /// The only version this build accepts.
         supported: u16,
     },
+    /// The encoder's engine version differs from this build's. Checked straight after the format,
+    /// so a blob another engine version wrote reports this whatever its length, trailer or body
+    /// hold; a corrupted version field reports the version it now spells.
+    EngineVersionMismatch {
+        /// The version in the blob.
+        found: EngineVersion,
+        /// This build's version.
+        expected: EngineVersion,
+    },
     /// The CRC-32C trailer does not match the bytes before it: corruption in flash, transfer or
     /// storage. Not tamper evidence; anyone can recompute it.
     IntegrityMismatch {
@@ -48,13 +61,6 @@ pub enum BlobError {
         found: u16,
         /// The only profile this build accepts.
         supported: u16,
-    },
-    /// The encoder's engine version differs from this build's.
-    EngineVersionMismatch {
-        /// The version in the blob.
-        found: EngineVersion,
-        /// This build's version.
-        expected: EngineVersion,
     },
     /// The reserved header flags are not zero.
     NonzeroFlags {
@@ -345,14 +351,6 @@ impl core::fmt::Display for BlobError {
                 f,
                 "unsupported blob format version {found}; this build supports only {supported}"
             ),
-            Self::IntegrityMismatch { stored, computed } => write!(
-                f,
-                "blob CRC-32C mismatch: trailer {stored:#010x}, computed {computed:#010x}"
-            ),
-            Self::UnsupportedProfile { found, supported } => write!(
-                f,
-                "unsupported execution profile {found}; this build runs only {supported}"
-            ),
             Self::EngineVersionMismatch { found, expected } => write!(
                 f,
                 "blob encoded by engine {}.{}.{}; this build is {}.{}.{}",
@@ -362,6 +360,14 @@ impl core::fmt::Display for BlobError {
                 expected.major,
                 expected.minor,
                 expected.patch
+            ),
+            Self::IntegrityMismatch { stored, computed } => write!(
+                f,
+                "blob CRC-32C mismatch: trailer {stored:#010x}, computed {computed:#010x}"
+            ),
+            Self::UnsupportedProfile { found, supported } => write!(
+                f,
+                "unsupported execution profile {found}; this build runs only {supported}"
             ),
             Self::NonzeroFlags { flags } => {
                 write!(f, "reserved blob flags {flags:#06x} are not zero")
