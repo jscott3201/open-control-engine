@@ -429,7 +429,7 @@ of the `S231:` terms the importer reads — is the same property whether it is k
 by a declared term.
 
 A parameter's `min`, `max`, `unit`, `quantity` and `displayUnit` are never used for control, but
-their shape is checked where the parameter is read (GitHub #PRNUM, issue #559): a bound is one
+their shape is checked where the parameter is read (GitHub #594, issue #559): a bound is one
 number, typed literal or expression string (modelica-json writes a bound over other parameters as
 an expression, `"yMin"`), and a term is a string, typed literal or IRI node, the shapes a
 connector's term takes. Anything else, a list or a boolean bound, a numeric or list term, is

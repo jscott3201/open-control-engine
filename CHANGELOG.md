@@ -368,7 +368,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### CXF import and export
 
 - **A parameter's `min`, `max`, `unit`, `quantity` and `displayUnit` are shape-checked on both
-  readers** (GitHub #PRNUM, issue #559; owner ruling of 2026-11-11). Nothing read them on a
+  readers** (GitHub #594, issue #559; owner ruling of 2026-11-11). Nothing read them on a
   parameter, so a malformed one loaded in the engine and imported through `oce-author` unjudged:
   `"S231:max": ["30", "…#double"]`, the list of a typed literal's values, among them. Their values
   are still not used for control. The engine (`oce-cxf`) now checks them where a parameter is read

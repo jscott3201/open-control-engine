@@ -235,7 +235,7 @@ node's local name; a parameter's descriptive `unit`, `quantity`, `displayUnit`, 
 engine uses none of these on a parameter node: only connector nodes reach
 `oce_cxf::resolve::attrs::connector_attrs`. Carrying parameter bounds would give the author a range
 the engine never enforces (decision 9). Both readers do check their shape before letting them go
-(GitHub #PRNUM, issue #559; owner ruling of 2026-11-11): a bound is a JSON number, a typed literal or a
+(GitHub #594, issue #559; owner ruling of 2026-11-11): a bound is a JSON number, a typed literal or a
 string (an expression, as modelica-json writes `"yMin"`), and a term is a string, a typed literal or
 an IRI node. Anything else is refused: `wrong-shape` naming the key here, where a typed literal is
 exactly `@value` and `@type` and an IRI node exactly `@id` and `null` is refused too, and
@@ -548,7 +548,7 @@ with an author-side range check (a second semantics the engine does not share, a
 fixtures, so refusing descriptive parameter attributes would block far more). Why: the engine reads
 no parameter `min`/`max` (verified in review: `connector_attrs` is reached only for connectors and
 boundaries); `ImportReport` makes the drop visible. *(Landed in GitHub #498, 2026-11-09.)* The values
-stay unused, but a malformed shape is refused on both readers (GitHub #PRNUM, issue #559; owner ruling
+stay unused, but a malformed shape is refused on both readers (GitHub #594, issue #559; owner ruling
 of 2026-11-11), so a list in place of a typed literal no longer imports.
 
 **10. Library constants are members.** `{"member": "OperationModes.occupied"}` covers enumeration
