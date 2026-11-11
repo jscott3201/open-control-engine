@@ -1335,8 +1335,9 @@ drop_blob_size_requirement() {
   edit_pr_gate "$1" '/if \[ "\$size" != 123329 \]; then/d'
 }
 
-# The run after each merge (issue #502): the trigger, the commit a push run tests, the pinned ref
-# of every checkout, and a concurrency group that queues pushes without cancelling one in progress.
+# The release gate's own triggers (issue #545: a push to `development` is merge-gate.yml's), the
+# commit a push or dispatched run tests, the pinned ref of every checkout, and a concurrency group
+# that cancels only a superseded release-PR run.
 release_gate_with_development_push() {
   edit_release_gate "$1" '/^  push:$/,/^    branches:/ s/^    branches: \[main\]$/    branches: [main, development]/'
 }

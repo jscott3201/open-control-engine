@@ -26,7 +26,7 @@
 #                 scripts/ outside scripts/docs, the workflows and .config/. Implies core, so such
 #                 a change runs the whole determinism lane. Informational since issue #502: no job
 #                 is gated on it (`gate (light)` was; release-gate.yml's `gate (full)` executes
-#                 .agents/gate.sh on every merge into `development` instead).
+#                 .agents/gate.sh nightly instead).
 #   docs_only     every path is a documentation path that no lane-filtered job reads
 #                 (informational; nothing is gated on it). The root README.md is not one.
 #
