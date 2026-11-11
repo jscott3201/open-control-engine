@@ -125,6 +125,22 @@ pub use io::{
 };
 pub use loading::{LoadReport, LoadedModel};
 pub use observations::{AssertEvent, AssertLevel};
+/// This build's engine version: the major, minor and patch of the workspace version that the core
+/// crates and `oce-api` share (`workspace.package.version`). A pre-release or build suffix is
+/// dropped, so `0.5.0-rc.1` and `0.5.0` are the same engine version.
+///
+/// Every compiled-schedule blob ([`CompiledBlob`]) and state snapshot ([`EngineStateSnapshot`])
+/// this build writes carries this value in its header. Each decoder accepts only this value: a blob
+/// or snapshot with any other version is refused with [`BlobError::EngineVersionMismatch`] or
+/// [`EngineStateError::EngineVersionMismatch`], whose `expected` field is this constant. A host
+/// that stores either artefact can record this value beside it, to know which engine version will
+/// accept the bytes, without parsing it out of a header, an error or a version string.
+///
+/// It is a release version, not a build identity: two builds of one version, from different
+/// compilers, features or targets, carry the same value. It is also not the compatibility
+/// descriptor's `oce-api-version` ([`CompatibilityDescriptor::oce_api_version`]), which is the
+/// full package version string, suffix included.
+pub use oce_graph::blob::ENGINE_VERSION;
 /// Re-export of the compiled-schedule blob refusal type and its fault vocabularies, so a host
 /// matches [`OcError::Blob`] without a direct `oce-graph` dependency (GitHub #400).
 /// [`EngineVersion`] is also what [`EngineStateError::EngineVersionMismatch`] reports: a blob and a

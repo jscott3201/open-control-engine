@@ -444,3 +444,75 @@ fn refusing_another_version_allocates_nothing_that_grows_with_the_input() {
         info.bytes_total
     );
 }
+
+/// The engine version a compiled-schedule blob header carries, at bytes 8..14.
+fn blob_version(blob: &[u8]) -> EngineVersion {
+    let part = |at: usize| u16::from_le_bytes([blob[at], blob[at + 1]]);
+    EngineVersion {
+        major: part(8),
+        minor: part(10),
+        patch: part(12),
+    }
+}
+
+#[test]
+fn facade_engine_version_is_this_packages_version_and_what_both_headers_carry() {
+    // `oce_api::ENGINE_VERSION` (issue #536) is the facade's own package version without a
+    // suffix. It is the constant the core codecs stamp and compare, and the value this build's
+    // freshly written blob and snapshot both carry.
+    let package = EngineVersion {
+        major: env!("CARGO_PKG_VERSION_MAJOR").parse().unwrap(),
+        minor: env!("CARGO_PKG_VERSION_MINOR").parse().unwrap(),
+        patch: env!("CARGO_PKG_VERSION_PATCH").parse().unwrap(),
+    };
+    assert_eq!(oce_api::ENGINE_VERSION, package);
+    assert_eq!(oce_api::ENGINE_VERSION, ENGINE_VERSION);
+    let release = env!("CARGO_PKG_VERSION").split(['-', '+']).next().unwrap();
+    assert_eq!(
+        release,
+        format!("{}.{}.{}", package.major, package.minor, package.patch)
+    );
+
+    let engine = delay_after_two_frames();
+    let snapshot = engine.state_snapshot().unwrap();
+    assert_eq!(
+        stamped_version(snapshot.as_bytes()),
+        oce_api::ENGINE_VERSION
+    );
+    assert_eq!(
+        snapshot.as_bytes()[VERSION_FIELD],
+        version_field(oce_api::ENGINE_VERSION)
+    );
+    let blob = engine.compile_blob().unwrap().bytes;
+    assert_eq!(&blob[..4], b"OCEB");
+    assert_eq!(blob_version(&blob), oce_api::ENGINE_VERSION);
+    // A fresh load writes the same value as an engine that has run frames.
+    let loaded = delay_target();
+    assert_eq!(
+        stamped_version(loaded.state_snapshot().unwrap().as_bytes()),
+        oce_api::ENGINE_VERSION
+    );
+    assert_eq!(
+        blob_version(&loaded.compile_blob().unwrap().bytes),
+        oce_api::ENGINE_VERSION
+    );
+}
+
+#[test]
+fn both_version_refusals_name_the_facade_constant_as_expected() {
+    // What `EngineVersionMismatch` compares, on each artefact: another version found, this
+    // constant expected. The blob needs no new CRC, because its version is checked first.
+    let other = patch_differs();
+    let snapshot = restamp(&captured(), other);
+    assert_eq!(version_refusal(&snapshot), (other, oce_api::ENGINE_VERSION));
+
+    let mut blob = delay_after_two_frames().compile_blob().unwrap().bytes;
+    blob[8..14].copy_from_slice(&version_field(other));
+    assert_eq!(
+        oce_graph::blob::decode(&blob).err(),
+        Some(oce_api::BlobError::EngineVersionMismatch {
+            found: other,
+            expected: oce_api::ENGINE_VERSION,
+        })
+    );
+}
