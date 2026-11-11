@@ -1,6 +1,6 @@
 {
   "sequence": "every_element",
-  "extends": "cxf:fnv1a128:00112233445566778899aabbccddeeff",
+  "derived_from": "cxf:fnv1a128:00112233445566778899aabbccddeeff",
   "params": [
     {
       "name": "kGain",

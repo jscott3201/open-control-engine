@@ -1,5 +1,5 @@
 sequence   reordered
-extends    cxf:fnv1a128:00ff
+derived_from    cxf:fnv1a128:00ff
 sub.y->hys.u
 TOut->sub.u1
 block hys=CDL.Reals.Hysteresis(uLow=1.50,uHigh=dTHys)

@@ -355,8 +355,8 @@ pub fn to_wire_string(sequence: &Sequence) -> String {
     Json::obj([
         ("sequence", Json::str(sequence.name.as_str())),
         (
-            "extends",
-            Json::str(sequence.extends.as_ref().map_or("", |id| id.as_str())),
+            "derived_from",
+            Json::str(sequence.derived_from.as_ref().map_or("", |id| id.as_str())),
         ),
         ("params", Json::Arr(params)),
         ("inputs", boundaries(&sequence.inputs)),

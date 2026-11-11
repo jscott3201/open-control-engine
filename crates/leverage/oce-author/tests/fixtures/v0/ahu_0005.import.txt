@@ -7,7 +7,7 @@ dropped yFault description: "Supply air stays well below mixed air for too long"
 # text
 # imported from v0 graph JSON
 sequence ahu_0005
-extends none
+derived_from none
 # Mixed air temperature
 # unit: degC
 in mat : Real

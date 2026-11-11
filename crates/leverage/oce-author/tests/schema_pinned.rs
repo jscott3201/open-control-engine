@@ -193,7 +193,7 @@ fn root_requires_the_seven_sequence_keys_in_wire_order() {
         schema["required"],
         serde_json::json!([
             "sequence",
-            "extends",
+            "derived_from",
             "params",
             "inputs",
             "outputs",

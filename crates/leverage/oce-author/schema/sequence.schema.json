@@ -419,7 +419,7 @@
       },
       "type": "array"
     },
-    "extends": {
+    "derived_from": {
       "description": "The provenance id this sequence derives from (`<format>:<id>`), or \"\" for none.",
       "type": "string"
     },
@@ -451,7 +451,7 @@
   },
   "required": [
     "sequence",
-    "extends",
+    "derived_from",
     "params",
     "inputs",
     "outputs",

@@ -42,7 +42,7 @@ fn binary_junk_is_refused_in_both_forms() {
 #[test]
 fn bad_utf8_is_refused_as_not_utf8() {
     let dir = scratch("bad_utf8");
-    let bytes = b"sequence s\nextends none\nparam x : Real = \"\xff\"\n";
+    let bytes = b"sequence s\nderived_from none\nparam x : Real = \"\xff\"\n";
     std::fs::write(dir.join("bad.oce"), bytes).expect("write");
     std::fs::write(dir.join("bad.json"), b"{\"sequence\": \"\xc3\x28\"}").expect("write");
     for command in ["validate", "emit", "fmt"] {
@@ -90,7 +90,7 @@ fn a_file_at_the_bound_is_read_and_one_byte_over_is_refused() {
     let dir = scratch("bound");
     assert_eq!(MAX_TEXT_BYTES, MAX_WIRE_BYTES);
     // A parseable document of exactly the bound: comment lines of 8,000 bytes, then one shorter.
-    let mut at = b"sequence s\nextends none\n".to_vec();
+    let mut at = b"sequence s\nderived_from none\n".to_vec();
     while at.len() < MAX_TEXT_BYTES {
         let room = (MAX_TEXT_BYTES - at.len()).min(8_000);
         at.push(b'#');
@@ -167,6 +167,40 @@ fn an_empty_input_is_a_parse_refusal_not_a_panic() {
         refusal(&oce_in(&dir, &["validate", "empty.json"], b"")),
         "json-syntax"
     );
+}
+
+#[test]
+fn a_document_in_the_earlier_extends_spelling_is_refused_by_every_reading_command() {
+    // Issue #529: the provenance statement and key are `derived_from`; `extends` keeps its CDL
+    // meaning and the format has no reader for the earlier spelling, in either form.
+    let dir = scratch("earlier_extends");
+    let body = "in u : Real\nout y : Real\nblock abs = CDL.Reals.Abs\nu -> abs.u\nabs.y -> y\n";
+    let current = format!("sequence s\nderived_from none\n{body}");
+    std::fs::write(dir.join("current.oce"), &current).expect("write");
+    std::fs::write(
+        dir.join("earlier.oce"),
+        format!("sequence s\nextends none\n{body}"),
+    )
+    .expect("write");
+    let wire = oce_author::to_wire_string(&oce_author::parse_text(&current).expect("parses"));
+    let earlier = wire.replacen("\"derived_from\":", "\"extends\":", 1);
+    assert_ne!(earlier, wire);
+    std::fs::write(dir.join("current.json"), &wire).expect("write");
+    std::fs::write(dir.join("earlier.json"), earlier).expect("write");
+    for command in ["validate", "emit", "fmt"] {
+        for current in ["current.oce", "current.json"] {
+            let run = oce_in(&dir, &[command, current], b"");
+            assert_eq!(run.code, 0, "{}", run.transcript());
+        }
+        assert_eq!(
+            refusal(&oce_in(&dir, &[command, "earlier.oce"], b"")),
+            "missing-derived-from"
+        );
+        assert_eq!(
+            refusal(&oce_in(&dir, &[command, "earlier.json"], b"")),
+            "unknown-key"
+        );
+    }
 }
 
 #[test]

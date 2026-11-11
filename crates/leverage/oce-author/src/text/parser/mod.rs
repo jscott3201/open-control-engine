@@ -5,8 +5,9 @@
 //! `blank_line_before`; comment lines on their own lines are that statement's `comments`; a comment
 //! after a token on the same line (an end-of-line comment) is appended to the comments of the
 //! statement on that line, so `fmt` moves it to its own line above. Comments before `sequence`
-//! and between `sequence` and `extends` are the header's ([`crate::Sequence::annotations`]); the
-//! comments after the last statement are [`crate::Sequence::trailing_comments`].
+//! and between `sequence` and `derived_from` are the header's
+//! ([`crate::Sequence::annotations`]); the comments after the last statement are
+//! [`crate::Sequence::trailing_comments`].
 
 mod connections;
 mod statements;
@@ -21,7 +22,7 @@ use crate::model::{Annotations, Sequence};
 
 use super::ParseError;
 use super::codes::{
-    MALFORMED_ATOM, MAX_STATEMENTS_PER_KIND, MISPLACED_STATEMENT, MISSING_EXTENDS,
+    MALFORMED_ATOM, MAX_STATEMENTS_PER_KIND, MISPLACED_STATEMENT, MISSING_DERIVED_FROM,
     MISSING_SEQUENCE, STRAY_TOKEN, TOO_MANY_STATEMENTS,
 };
 use super::lexer::{Lexer, Tok, Token};
@@ -81,7 +82,7 @@ impl<'a> Parser<'a> {
         Ok((self.sequence, self.spans))
     }
 
-    /// `sequence name` and `extends ( none | id )`, with the comments around them.
+    /// `sequence name` and `derived_from ( none | id )`, with the comments around them.
     fn header(&mut self) -> Result<(), ParseError> {
         let keyword = self.skip_header_layout()?;
         if !self.is_word(&keyword, "sequence") {
@@ -101,12 +102,12 @@ impl<'a> Parser<'a> {
         self.end_header_statement()?;
 
         let keyword = self.skip_header_layout()?;
-        if !self.is_word(&keyword, "extends") {
+        if !self.is_word(&keyword, "derived_from") {
             return Err(ParseError::new(
-                MISSING_EXTENDS,
+                MISSING_DERIVED_FROM,
                 keyword.at,
                 format!(
-                    "`sequence` is followed by `extends none` or `extends <provenance id>` (decision 5), found {}",
+                    "`sequence` is followed by `derived_from none` or `derived_from <provenance id>` (decision 5), found {}",
                     keyword.describe(self.lx.src())
                 ),
             ));
@@ -117,7 +118,7 @@ impl<'a> Parser<'a> {
             return Err(ParseError::new(
                 STRAY_TOKEN,
                 found.at,
-                "expected `none` or a provenance id after `extends`",
+                "expected `none` or a provenance id after `derived_from`",
             ));
         };
         if let Some(bad) = id.bytes().position(|b| !(b'!'..=b'~').contains(&b)) {
@@ -129,8 +130,8 @@ impl<'a> Parser<'a> {
                 ),
             ));
         }
-        self.spans.extends = at;
-        self.sequence.extends = (id != "none").then(|| ProvenanceId::unchecked(id));
+        self.spans.derived_from = at;
+        self.sequence.derived_from = (id != "none").then(|| ProvenanceId::unchecked(id));
         self.end_header_statement()
     }
 
@@ -160,7 +161,7 @@ impl<'a> Parser<'a> {
     fn statement(&mut self, keyword: Token) -> Result<(), ParseError> {
         let word = keyword.text(self.lx.src());
         match word {
-            "sequence" | "extends" => Err(ParseError::new(
+            "sequence" | "derived_from" => Err(ParseError::new(
                 MISPLACED_STATEMENT,
                 keyword.at,
                 format!("`{word}` is written once, at the top of the document"),

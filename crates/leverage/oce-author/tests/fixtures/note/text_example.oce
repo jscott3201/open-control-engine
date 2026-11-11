@@ -1,6 +1,6 @@
 # Economizer enable on outdoor-air temperature with a deadband.
 sequence econ_enable
-extends none
+derived_from none
 
 param dTHys : Real = 1 K
 

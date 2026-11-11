@@ -1,12 +1,13 @@
 //! Where each part of a parsed sequence was written, and how a validator finding is placed on
 //! the text (the [`crate::Finding::span`] contract of GitHub #466).
 //!
-//! A finding names its subject by model path: `sequence`, `extends`, a declared name, `block.param`
-//! or `connection[N]`. The map resolves the path to the model elements it can mean, in authored
-//! model order (parameters, inputs, outputs, blocks), and takes the first. A duplicate is the one
-//! case where a path means several elements: the validator reports the k-th `duplicate-name` or
-//! `duplicate-parameter` of a subject at its (k+1)-th declaration in model section order, so the
-//! map does the same. The subject index is a `BTreeMap` built once per [`SourceMap::apply`].
+//! A finding names its subject by model path: `sequence`, `derived_from`, a declared name,
+//! `block.param` or `connection[N]`. The map resolves the path to the model elements it can mean,
+//! in authored model order (parameters, inputs, outputs, blocks), and takes the first. A duplicate
+//! is the one case where a path means several elements: the validator reports the k-th
+//! `duplicate-name` or `duplicate-parameter` of a subject at its (k+1)-th declaration in model
+//! section order, so the map does the same. The subject index is a `BTreeMap` built once per
+//! [`SourceMap::apply`].
 
 use std::collections::BTreeMap;
 
@@ -19,7 +20,7 @@ use crate::validate::{DUPLICATE_NAME, DUPLICATE_PARAMETER, Finding};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceMap {
     pub(super) sequence: Location,
-    pub(super) extends: Location,
+    pub(super) derived_from: Location,
     pub(super) params: Vec<Location>,
     pub(super) inputs: Vec<Location>,
     pub(super) outputs: Vec<Location>,
@@ -32,7 +33,7 @@ impl SourceMap {
     pub(super) fn new(sequence: Location) -> Self {
         Self {
             sequence,
-            extends: sequence,
+            derived_from: sequence,
             params: Vec::new(),
             inputs: Vec::new(),
             outputs: Vec::new(),
@@ -43,9 +44,10 @@ impl SourceMap {
     }
 
     /// Every location `subject` can mean in `sequence`, in model order: the `sequence` keyword's
-    /// name, the `extends` operand, a declaration's name, an assignment's name (an array element's
-    /// value) or a connection's source. Empty when the subject names nothing in the map. Builds
-    /// the subject index each call; [`SourceMap::apply`] builds it once for a whole finding list.
+    /// name, the `derived_from` operand, a declaration's name, an assignment's name (an array
+    /// element's value) or a connection's source. Empty when the subject names nothing in the map.
+    /// Builds the subject index each call; [`SourceMap::apply`] builds it once for a whole finding
+    /// list.
     #[must_use]
     pub fn locations(&self, sequence: &Sequence, subject: &str) -> Vec<Location> {
         Index::new(self, sequence).lookup(subject).to_vec()
@@ -79,7 +81,7 @@ impl SourceMap {
 }
 
 /// Subject → locations, in model order, built once per lookup batch: the fixed subjects
-/// (`sequence`, `extends`, `connection[N]`) first, then declarations, then `block.param`.
+/// (`sequence`, `derived_from`, `connection[N]`) first, then declarations, then `block.param`.
 struct Index {
     subjects: BTreeMap<String, Vec<Location>>,
 }
@@ -89,7 +91,7 @@ impl Index {
         let mut subjects: BTreeMap<String, Vec<Location>> = BTreeMap::new();
         let mut add = |subject: String, at: Location| subjects.entry(subject).or_default().push(at);
         add("sequence".to_owned(), map.sequence);
-        add("extends".to_owned(), map.extends);
+        add("derived_from".to_owned(), map.derived_from);
         for (i, at) in map.connections.iter().enumerate() {
             add(format!("connection[{i}]"), *at);
         }

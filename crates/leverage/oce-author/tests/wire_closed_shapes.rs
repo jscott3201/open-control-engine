@@ -421,7 +421,7 @@ fn an_absent_value_is_spelled_empty_never_null() {
         "inputs[0].semantic.provisional",
         "inputs[0].min",
         "inputs[0].quantity",
-        "extends",
+        "derived_from",
         "params[0].value",
         "blocks[1].params[1].value.ref",
     ] {

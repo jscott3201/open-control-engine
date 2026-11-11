@@ -1,6 +1,6 @@
 # Stage-1 defects with spans.
 sequence stage_one
-extends none
+derived_from none
 
 in TOut : Real
 out y : Real

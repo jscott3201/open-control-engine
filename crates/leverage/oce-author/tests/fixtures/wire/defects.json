@@ -1,6 +1,6 @@
 {
   "sequence": "defects",
-  "extends": "CXF:abc",
+  "derived_from": "CXF:abc",
   "params": [
     {
       "name": "dTHys",

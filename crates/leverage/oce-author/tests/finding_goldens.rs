@@ -15,7 +15,7 @@ use support::{compare_or_bless, econ_enable, fixture, id};
 fn defects() -> oce_author::Sequence {
     let mut s = econ_enable();
     s.name = Identifier::unchecked("defects");
-    s.extends = Some(ProvenanceId::unchecked("CXF:abc"));
+    s.derived_from = Some(ProvenanceId::unchecked("CXF:abc"));
     s.params.push(oce_author::SequenceParameter::new(
         id("nStage"),
         SignalType::Integer,

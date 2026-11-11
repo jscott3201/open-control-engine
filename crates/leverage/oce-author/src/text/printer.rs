@@ -1,7 +1,8 @@
 //! The canonical printer (authoring note, "Canonical printer"; decisions 6 and 12).
 //!
-//! Section order is the `file` production's: header comments, `sequence`, `extends`, then
-//! parameters, inputs, outputs, blocks and connections, authored order kept inside each section.
+//! Section order is the `file` production's: header comments, `sequence`, `derived_from`,
+//! then parameters, inputs, outputs, blocks and connections, authored order kept inside each
+//! section.
 //! One space around `=`, `->` and `:`. Reals in Rust's shortest round-trip spelling (`{:?}`),
 //! Integers bare, suffixes after one space. A statement's blank line and comments are printed
 //! above it, the blank line first. A block prints on one line when it has at most two assignments,
@@ -42,9 +43,9 @@ pub(super) fn print(sequence: &Sequence) -> Result<String, PrintError> {
     let mut start = 0;
     comments(&mut out, &sequence.annotations.comments, "");
     out.push_str(&format!("sequence {}\n", sequence.name));
-    match &sequence.extends {
-        Some(id) => out.push_str(&format!("extends {id}\n")),
-        None => out.push_str("extends none\n"),
+    match &sequence.derived_from {
+        Some(id) => out.push_str(&format!("derived_from {id}\n")),
+        None => out.push_str("derived_from none\n"),
     }
     fits(&out, &mut start, "sequence")?;
     for param in &sequence.params {

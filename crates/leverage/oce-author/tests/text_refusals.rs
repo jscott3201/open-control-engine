@@ -6,13 +6,13 @@
 use oce_author::{
     BAD_ESCAPE, BYTE_ORDER_MARK, COMMENT_BEFORE_CLOSE, CONTROL_CHARACTER, DUPLICATE_NAME,
     DUPLICATE_TAG, INTEGER_OUT_OF_RANGE, Literal, MALFORMED_ATOM, MALFORMED_LIST, MALFORMED_NUMBER,
-    MALFORMED_SUFFIX, MISPLACED_STATEMENT, MISPLACED_VALUE, MISSING_EXTENDS, MISSING_SEQUENCE,
+    MALFORMED_SUFFIX, MISPLACED_STATEMENT, MISPLACED_VALUE, MISSING_DERIVED_FROM, MISSING_SEQUENCE,
     NESTING_TOO_DEEP, NON_FINITE_NUMBER, NOT_UTF8, PARSE_CODES, STRAY_TOKEN, UNCLOSED_BRACKET,
     UNIT_NOT_BASE, UNKNOWN_KEYWORD, UNKNOWN_TAG, UNKNOWN_TYPE, UNTERMINATED_STRING, parse_text,
     parse_text_bytes, validate_text_author_side,
 };
 
-const HEAD: &str = "sequence s\nextends none\n";
+const HEAD: &str = "sequence s\nderived_from none\n";
 
 /// Assert `text` is refused with `code` at `line`:`column`, and return the detail.
 fn refused(text: &str, code: &str, line: u32, column: u32) -> String {
@@ -63,7 +63,7 @@ fn the_refusal_codes_are_pinned_in_order() {
             "duplicate-tag",
             "unknown-type",
             "missing-sequence",
-            "missing-extends",
+            "missing-derived-from",
             "misplaced-statement",
             "misplaced-value",
             "malformed-list",
@@ -231,7 +231,7 @@ fn a_suffix_that_is_not_a_base_unit_is_refused_naming_vocabulary_v1() {
 #[test]
 fn a_stray_token_is_refused_where_it_stands() {
     refused(&body("param p : Real = 1 K extra\n"), STRAY_TOKEN, 3, 22);
-    refused("sequence s t\nextends none\n", STRAY_TOKEN, 1, 12);
+    refused("sequence s t\nderived_from none\n", STRAY_TOKEN, 1, 12);
     refused(&body("param p Real = 1\n"), STRAY_TOKEN, 3, 9);
     refused(&body("$\n"), STRAY_TOKEN, 3, 1);
     refused(&body("a.y -> b.u $\n"), STRAY_TOKEN, 3, 12);
@@ -245,7 +245,7 @@ fn a_stray_token_is_refused_where_it_stands() {
     refused(&body("in u : Real @unit\n"), STRAY_TOKEN, 3, 18);
     refused(&body("in u : Real @name K\n"), STRAY_TOKEN, 3, 19);
     refused(&body("in u : Real \u{e9}\n"), STRAY_TOKEN, 3, 13);
-    refused("sequence s\nextends\n", STRAY_TOKEN, 2, 8);
+    refused("sequence s\nderived_from\n", STRAY_TOKEN, 2, 13);
     refused(&body("block h = C(k = -x)\n"), STRAY_TOKEN, 3, 17);
 }
 
@@ -274,25 +274,97 @@ fn an_unknown_tag_type_or_repeated_tag_is_refused() {
 }
 
 #[test]
-fn the_header_is_sequence_then_an_explicit_extends() {
+fn the_header_is_sequence_then_an_explicit_derived_from() {
     refused("", MISSING_SEQUENCE, 1, 1);
     refused("# only a comment\n\n", MISSING_SEQUENCE, 3, 1);
     refused("param p : Real = 1\n", MISSING_SEQUENCE, 1, 1);
-    refused("extends none\nsequence s\n", MISSING_SEQUENCE, 1, 1);
-    refused("sequence s\n", MISSING_EXTENDS, 2, 1);
-    refused("sequence s", MISSING_EXTENDS, 1, 11);
-    refused("sequence s\nparam p : Real = 1\n", MISSING_EXTENDS, 2, 1);
+    refused("derived_from none\nsequence s\n", MISSING_SEQUENCE, 1, 1);
+    refused("sequence s\n", MISSING_DERIVED_FROM, 2, 1);
+    refused("sequence s", MISSING_DERIVED_FROM, 1, 11);
+    refused(
+        "sequence s\nparam p : Real = 1\n",
+        MISSING_DERIVED_FROM,
+        2,
+        1,
+    );
     refused(&body("sequence t\n"), MISPLACED_STATEMENT, 3, 1);
     refused(
-        &body("param p : Real = 1\nextends none\n"),
+        &body("param p : Real = 1\nderived_from none\n"),
         MISPLACED_STATEMENT,
         4,
         1,
     );
     // A comment between the two folds into the header; blank lines are allowed.
-    let model = parse_text("\n# a\nsequence s\n\n# b\nextends none\n").expect("parses");
+    let model = parse_text("\n# a\nsequence s\n\n# b\nderived_from none\n").expect("parses");
     assert_eq!(model.annotations.comments, [" a", " b"]);
-    assert_eq!(model.extends, None);
+    assert_eq!(model.derived_from, None);
+}
+
+#[test]
+fn the_cdl_word_extends_is_not_the_provenance_statement() {
+    // Issue #529: the provenance statement is `derived_from`, and `extends` keeps its CDL meaning
+    // (composite inheritance, OBC specification §7.15). The format stays at revision 1 with no
+    // reader for the earlier spelling: in the header the provenance statement is missing ...
+    let detail = refused("sequence s\nextends none\n", MISSING_DERIVED_FROM, 2, 1);
+    assert!(detail.contains("found `extends`"), "{detail}");
+    refused(
+        "sequence s\nextends cxf:fnv1a128:00ff\n",
+        MISSING_DERIVED_FROM,
+        2,
+        1,
+    );
+    refused(
+        "# comment\nsequence s\n\nextends none\nderived_from none\n",
+        MISSING_DERIVED_FROM,
+        4,
+        1,
+    );
+    // ... and after it `extends` starts no statement, with or without a provenance id.
+    let detail = refused(&body("extends none\n"), UNKNOWN_KEYWORD, 3, 1);
+    assert!(
+        detail.contains("`extends` is not a statement keyword"),
+        "{detail}"
+    );
+    refused(&body("extends cxf:fnv1a128:00ff\n"), UNKNOWN_KEYWORD, 3, 1);
+    // A second `derived_from` is misplaced, as a second `sequence` is.
+    refused(&body("derived_from none\n"), MISPLACED_STATEMENT, 3, 1);
+}
+
+#[test]
+fn every_text_fixture_in_the_earlier_spelling_is_refused() {
+    // Every canonical text fixture and every `fmt` input, with its provenance statement spelled
+    // `extends`, is refused where that statement stands; nothing reads it as `derived_from`.
+    let mut paths = Vec::new();
+    for dir in ["text", "text/fmt", "note"] {
+        for entry in std::fs::read_dir(crate::support::fixture(dir)).expect("fixtures") {
+            let path = entry.expect("entry").path();
+            if path.extension().is_some_and(|e| e == "oce") {
+                paths.push(path);
+            }
+        }
+    }
+    paths.sort();
+    assert_eq!(paths.len(), 14, "{paths:#?}");
+    for path in &paths {
+        let shown = path.display().to_string();
+        let text = std::fs::read_to_string(path).expect("read");
+        parse_text(&text).unwrap_or_else(|e| panic!("{shown}: {e}"));
+        let at = text
+            .find("\nderived_from ")
+            .unwrap_or_else(|| panic!("{shown} has no provenance statement"));
+        let line = u32::try_from(text[..=at].matches('\n').count() + 1).expect("line");
+        let earlier = format!(
+            "{}\nextends {}",
+            &text[..at],
+            &text[at + "\nderived_from ".len()..]
+        );
+        let error = parse_text(&earlier).expect_err(&shown);
+        assert_eq!(
+            (error.code, error.location.line, error.location.column),
+            (MISSING_DERIVED_FROM, line, 1),
+            "{shown}: {error}"
+        );
+    }
 }
 
 #[test]
@@ -359,7 +431,12 @@ fn a_comment_before_a_close_is_refused() {
 
 #[test]
 fn lexical_refusals_name_the_byte() {
-    refused("\u{feff}sequence s\nextends none\n", BYTE_ORDER_MARK, 1, 1);
+    refused(
+        "\u{feff}sequence s\nderived_from none\n",
+        BYTE_ORDER_MARK,
+        1,
+        1,
+    );
     for (ch, column) in [
         ("\t", 9),
         ("\r", 9),
@@ -368,7 +445,7 @@ fn lexical_refusals_name_the_byte() {
         ("\u{0}", 9),
     ] {
         refused(
-            &format!("sequence{ch} s\nextends none\n"),
+            &format!("sequence{ch} s\nderived_from none\n"),
             CONTROL_CHARACTER,
             1,
             column,
@@ -383,8 +460,13 @@ fn lexical_refusals_name_the_byte() {
         21,
     );
     // CRLF line ends are refused at the carriage return.
-    refused("sequence s\r\nextends none\r\n", CONTROL_CHARACTER, 1, 11);
-    let error = parse_text_bytes(b"sequence s\nextends none\nparam p : Real = 1 \xff\n")
+    refused(
+        "sequence s\r\nderived_from none\r\n",
+        CONTROL_CHARACTER,
+        1,
+        11,
+    );
+    let error = parse_text_bytes(b"sequence s\nderived_from none\nparam p : Real = 1 \xff\n")
         .expect_err("not UTF-8");
     assert_eq!(
         (error.code, error.location.line, error.location.column),
@@ -432,12 +514,17 @@ fn an_atom_is_printable_ascii_and_stops_at_a_hash() {
         3,
         23,
     );
-    refused("sequence s\nextends cxf:\u{e9}\n", MALFORMED_ATOM, 2, 9);
+    refused(
+        "sequence s\nderived_from cxf:\u{e9}\n",
+        MALFORMED_ATOM,
+        2,
+        14,
+    );
     // `#` ends an atom (the rest is a comment) but belongs to a provenance id (decision 5).
-    let model =
-        parse_text("sequence s\nextends cxf:a#b # c\nin u : Real @unit K#c\n").expect("parses");
+    let model = parse_text("sequence s\nderived_from cxf:a#b # c\nin u : Real @unit K#c\n")
+        .expect("parses");
     assert_eq!(
-        model.extends.as_ref().map(|id| id.as_str()),
+        model.derived_from.as_ref().map(|id| id.as_str()),
         Some("cxf:a#b")
     );
     assert_eq!(model.inputs[0].semantic.unit.as_deref(), Some("K"));
@@ -502,7 +589,7 @@ fn every_parse_code_is_produced_by_some_input() {
     );
     big.push_str(&"#".repeat(64));
     let cases: Vec<(Vec<u8>, &str)> = vec![
-        (b"sequence s\nextends none\n\xff".to_vec(), NOT_UTF8),
+        (b"sequence s\nderived_from none\n\xff".to_vec(), NOT_UTF8),
         ("\u{feff}sequence s".into(), BYTE_ORDER_MARK),
         ("sequence\ts".into(), CONTROL_CHARACTER),
         (big.into_bytes(), oce_author::INPUT_TOO_LARGE),
@@ -563,7 +650,7 @@ fn every_parse_code_is_produced_by_some_input() {
         ),
         (body("in u : Float\n").into_bytes(), UNKNOWN_TYPE),
         (b"param p : Real = 1\n".to_vec(), MISSING_SEQUENCE),
-        (b"sequence s\n".to_vec(), MISSING_EXTENDS),
+        (b"sequence s\n".to_vec(), MISSING_DERIVED_FROM),
         (body("sequence t\n").into_bytes(), MISPLACED_STATEMENT),
         (body("param p : Real = q\n").into_bytes(), MISPLACED_VALUE),
         (body("block g = C(K = [])\n").into_bytes(), MALFORMED_LIST),

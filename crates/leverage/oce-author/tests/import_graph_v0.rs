@@ -146,15 +146,15 @@ fn the_printed_text_parses_back_to_the_imported_model_and_fmt_is_idempotent() {
 }
 
 #[test]
-fn the_options_set_extends_and_the_provenance_never_reaches_the_wire_or_the_emitter() {
+fn the_options_set_derived_from_and_the_provenance_never_reaches_the_wire_or_the_emitter() {
     let bytes = read("ahu_0027", "graph.json");
     let plain = import(&bytes).sequence;
-    assert_eq!(plain.extends, None);
+    assert_eq!(plain.derived_from, None);
     let id = ProvenanceId::new("cxf:fnv1a128:00112233445566778899aabbccddeeff").expect("id");
-    let with = import_graph_v0(&bytes, &ImportOptions::new().with_extends(id.clone()))
+    let with = import_graph_v0(&bytes, &ImportOptions::new().with_derived_from(id.clone()))
         .expect("import")
         .sequence;
-    assert_eq!(with.extends, Some(id));
+    assert_eq!(with.derived_from, Some(id));
     let wire = to_wire_string(&plain);
     assert!(!wire.contains("imported from"), "{wire}");
     let emitted =

@@ -5,7 +5,7 @@ dropped yFault description: "True once the override has been held for a day, the
 # text
 # imported from v0 graph JSON
 sequence ahu_0027
-extends none
+derived_from none
 # Manual override active flag
 # unit: bool
 in override_active : Boolean

@@ -453,6 +453,38 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
+- **The authoring provenance statement is `derived_from`, no longer `extends`** (GitHub #PRNUM,
+  issue #529; [authoring note](docs/design/authoring-layer.md), decision 5 as amended; owner
+  ruling of 2026-11-09). CDL uses `extends` for inheritance of a composite block with
+  modifications (OBC specification §7.15), which M7's composite instantiation needs, so the word
+  is kept for that meaning.
+  - **Renamed in place.** `Sequence::derived_from`, `SequenceBuilder::derived_from`,
+    `ImportOptions::derived_from` and `ImportOptions::with_derived_from`; the text statement
+    `derived_from none` or `derived_from <provenance id>`; the wire key `"derived_from"`; the
+    subject `derived_from` of `invalid-provenance-id`; the parse code `missing-derived-from`
+    (`MISSING_DERIVED_FROM`). The format stays at revision 1, with no reader, alias or hint for the
+    earlier word.
+  - **The earlier spelling is refused.** A text file that says `extends` is `missing-derived-from`
+    in the header and `unknown-keyword` after it; a wire document with an `extends` key is
+    `WireError::UnknownKey` (`unknown-key` from `oce`), in place of the new key, beside it or after
+    every other key. Every text fixture rewritten to the earlier spelling is refused at that
+    statement, and `oce validate`, `emit` and `fmt` refuse both forms.
+  - **Names.** `derived_from` joins `TEXT_FORM_KEYWORDS`, so it is no longer a declared name
+    (`invalid-name`). `extends` stays refused as a Modelica reserved word; it is no longer a
+    statement word, so the printer now spells a connection whose source is named `extends` (a
+    model only the wire form or the builder can hold, which reads back equal).
+  - **No emitted byte moves.** The provenance id is never emitted: the six emit goldens, every
+    content id and every blob golden are unchanged.
+  - **Re-blessed:** the wire schema (`schema/sequence.schema.json`, the property and its
+    `required` entry), the canonical text goldens (`tests/fixtures/text/*.oce` and the three `fmt`
+    outputs), the three v0 `*.import.txt` goldens and `findings/defects.tsv`, and the `oce`
+    transcripts `fmt_text`, `fmt_wire_to_text`, `validate_wire_findings`, `vocab_text` and
+    `vocab_json`. Edited by hand: the four wire bundles, the three `fmt` inputs, the note's two
+    copied blocks and the four `oce-cli` inputs.
+  - **Docs.** The authoring note (decision 5's amendment, the grammar, the worked example, the wire
+    block and a ruling), the diff note (`derived-from-changed`, `SequenceRef`), the importer and
+    content-id notes, and the `oce-author` README.
+
 - **Vectors, part 4 of 4: the `oce verify` verb and the in-repo replay gate** (GitHub #573, issue
   #522; [vectors note](docs/design/vectors.md), "CLI", decisions 19, 26, 30, 31, 34 and 36, the
   owner's rulings of 2026-11-11 in "Part 4's readings").

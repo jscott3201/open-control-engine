@@ -10,7 +10,7 @@ exit: 1
       "origin": "author",
       "severity": "error",
       "span": null,
-      "subject": "extends"
+      "subject": "derived_from"
     },
     {
       "code": "parameter-kind-mismatch",

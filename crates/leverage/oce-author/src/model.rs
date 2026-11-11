@@ -35,8 +35,10 @@ pub struct Annotations {
 pub struct Sequence {
     /// The sequence name; the root block's local name.
     pub name: Identifier,
-    /// The opaque provenance id this sequence derives from (decision 5), or `None`.
-    pub extends: Option<ProvenanceId>,
+    /// The opaque provenance id this sequence derives from (decision 5), or `None`. Named
+    /// `derived_from`, not `extends`: that word is kept for CDL's composite inheritance
+    /// (OBC specification §7.15; issue #529).
+    pub derived_from: Option<ProvenanceId>,
     /// Sequence-level parameters, lowered onto the root block (decision 3).
     pub params: Vec<SequenceParameter>,
     /// Boundary inputs.
@@ -48,9 +50,9 @@ pub struct Sequence {
     /// Connections, `source -> target`.
     pub connections: Vec<Connection>,
     /// Text-form annotations of the header: the comment lines above the `sequence` line (a
-    /// comment between `sequence` and `extends` folds in here). `blank_line_before` has no meaning
-    /// at the top of a file; the text printer ignores it and the parser never sets it. Never
-    /// written to the wire form and never emitted (issue #482).
+    /// comment between `sequence` and `derived_from` folds in here). `blank_line_before` has no
+    /// meaning at the top of a file; the text printer ignores it and the parser never sets it.
+    /// Never written to the wire form and never emitted (issue #482).
     pub annotations: Annotations,
     /// Comment lines after the last statement, without the leading `#`, in order. Text-only like
     /// [`Annotations`] (issue #482).
@@ -58,12 +60,12 @@ pub struct Sequence {
 }
 
 impl Sequence {
-    /// An empty sequence named `name`, extending nothing, with no annotations.
+    /// An empty sequence named `name`, derived from nothing, with no annotations.
     #[must_use]
     pub fn new(name: Identifier) -> Self {
         Self {
             name,
-            extends: None,
+            derived_from: None,
             params: Vec::new(),
             inputs: Vec::new(),
             outputs: Vec::new(),

@@ -272,12 +272,12 @@ pub(crate) const PARSE_MEANINGS: &[(&str, &str)] = &[
         "the file does not start with a sequence statement",
     ),
     (
-        "missing-extends",
-        "the sequence statement is not followed by an extends statement",
+        "missing-derived-from",
+        "the sequence statement is not followed by a derived_from statement",
     ),
     (
         "misplaced-statement",
-        "a second sequence or extends statement",
+        "a second sequence or derived_from statement",
     ),
     (
         "misplaced-value",
@@ -372,7 +372,7 @@ pub(crate) const STAGE_ONE_MEANINGS: &[(&str, &str)] = &[
     ("crossed-bounds", "a boundary's min exceeds its max"),
     (
         "invalid-provenance-id",
-        "the extends provenance id is malformed",
+        "the derived_from provenance id is malformed",
     ),
     (
         "single-assignment",

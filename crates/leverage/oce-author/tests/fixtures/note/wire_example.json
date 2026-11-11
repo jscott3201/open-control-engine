@@ -1,6 +1,6 @@
 {
   "sequence": "econ_enable",
-  "extends": "",
+  "derived_from": "",
   "params": [{ "name": "dTHys", "type": "Real", "value": 1 }],
   "inputs": [{ "name": "TOut", "type": "Real", "quantity": "ThermodynamicTemperature",
                "display_unit": "degC", "min": [], "max": [],
