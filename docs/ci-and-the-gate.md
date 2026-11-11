@@ -405,12 +405,19 @@ building release-codegen test binaries, about three times per PR.
 | docs only | `bash .agents/gate.sh docs` | fmt, the file-size cap, the no-secret scan, the package/authority/product contract and its controls, the gate fixtures and the documentation checks (staging, mdBook build, links): the always-on jobs of `pr-gate.yml`. Nothing is compiled. |
 | `crates/leverage/**`, docs, the root `README.md` | `bash .agents/gate.sh leverage` | the leverage lane (each member's fmt, clippy, rustdoc, nextest and cargo-machete) and the README lane (the Quickstart byte-pin and its execution) |
 | anything else (the engine lane), the core four, `oce-cxf` and `oce-api` included | `bash .agents/gate.sh` | everything that compiles the engine, in debug codegen: the database-free check, the golden-gen firewall, the facade compiler contract, cargo-machete, clippy, build, the bare-metal cell, rustdoc, cargo-deny, the determinism subset, the strict-bit corpus and the two input-hygiene audits |
-| a pin advance (`third_party/**`, `tools/reference-catalog/**`, or either file that holds a pinned upstream commit) or `.agents/gate.sh` itself | `bash .agents/gate.sh full` | the determinism subset and the strict-bit step under release codegen, the workspace suite in debug and release codegen, the doctests, the blob matrix artifact and the blob round trip |
+| a pin advance (`third_party/**`, `tools/reference-catalog/**`, or either of the two pin-guard files `scripts/ci/proof-row.sh` lists), `.agents/gate.sh` itself, `.config/nextest.toml` or `scripts/ci/install-wasmtime.sh` | `bash .agents/gate.sh full` | the determinism subset and the strict-bit step under release codegen, the workspace suite in debug and release codegen, the doctests, the blob matrix artifact and the blob round trip |
 
 The first three rows are the owner's table (issue #545). The last is the owner's too: confirmed
 on 2026-11-10 (comment on #545), with the dispatch rule below, after the review of GitHub #547
-proposed it. It exists because the G36 half of the pin guard runs only in the workspace suite and
-the script's `full`-only steps run in no lighter mode.
+proposed it, and ruled on again on 2026-11-10 and 2026-11-11 (issue #555). It exists because
+the script's `full`-only steps run in no lighter mode, which is also why the two files only those
+steps exercise are in it, and because a pin advance has tests that no per-PR job runs:
+`oce-conformance`'s `conformance` binary, three of whose modules read the vendored tree and the
+reference catalog; that crate's `clean_room` unit tests and `open_modelica_nand` binary, which do
+not read the vendored files but pin the vendored `Nand.mo` by path, line and equation; and the
+doctests. An earlier reason given here, that the G36 half of the pin guard runs
+only in the workspace suite, was wrong: `oce-cxf`'s `g36_catalog_tests` run per PR in
+`crate tests`, and `oce-blocks`'s `registry::catalog_tests` in the determinism subset.
 
 **There is no release-codegen row** (issue #556, owner decision of 2026-11-10). From issue #545
 until then a fourth row, `bash .agents/gate.sh determinism`, was owed by a change to the core
@@ -423,11 +430,15 @@ nothing more, and `proof-row.sh` never names `determinism`. The mode remains.
   documentation a test reads, a gate script, a workflow and a tool config are engine changes.
   `scripts/ci/proof-row.sh` reads changed paths on stdin and prints the row
   (`git diff --no-renames --name-only origin/development... | bash scripts/ci/proof-row.sh`); it
-  holds the exact path list of the last row (its two source files are `crates/oce-cxf/tests/third_party_manifest/` and
-  `crates/oce-blocks/src/registry/catalog_guard_support.rs`, where the pinned upstream commits are
-  written), and names the heaviest row for a diff it cannot read. Its fixtures
-  (`scripts/ci/test-proof-row.sh`) run on every PR and fail if a listed path stops existing or a
-  pin constant leaves its file.
+  holds the exact path list of the last row (its two source files are the pin-guard files
+  `crates/oce-cxf/tests/third_party_manifest/` and
+  `crates/oce-blocks/src/registry/catalog_guard_support.rs`), and names the heaviest row for a
+  diff it cannot read. Those two are not every file that writes a pinned upstream commit:
+  `crates/oce-cxf/src/g36_catalog_guard_data.rs`, five files under `tools/golden-gen/src/` and the
+  `oce-vocab` generator do as well, and the row does not list them because a pin advance always
+  moves `third_party/**`. Its fixtures (`scripts/ci/test-proof-row.sh`) run on every PR and fail
+  if a listed path stops existing, if a pin constant leaves one of the two files, or if the set of
+  files that hold one changes.
 - **The script says which row a run was.** Every gate run ends with a `LOCAL PROOF` block: the row
   the run covered, and the row the checkout needs, from the paths that differ from the merge base
   with `origin/development` (uncommitted and untracked files included). When the mode is lighter
@@ -441,7 +452,14 @@ nothing more, and `proof-row.sh` never names `determinism`. The mode remains.
   executes, is not covered by any row.** Dispatch the workflow on the branch
   (`gh workflow run release-gate.yml --ref <branch>`) and wait for it to finish green before the
   PR merges. The `CI OK` that run posts is not the one that decides the merge
-  ([above](#what-runs-after-the-merge)).
+  ([above](#what-runs-after-the-merge)). Named, so that "anything else" is not left to the reader:
+  `qemu.yml` and `scripts/ci/emulate-firmware.sh` run only nightly, in a workflow of their own,
+  so a change to them runs `bash .agents/gate.sh qemu` or dispatches `qemu.yml`. `merge-gate.yml`
+  can be dispatched but need not run before the merge: its one job is byte-identical to the
+  Windows cell a dispatched `release-gate.yml` runs, and the checker holds that. Two files that
+  only `full` exercises are in the `full` row instead (owner ruling of 2026-11-11): the
+  `ci-release-workspace` profile lives in `.config/nextest.toml`, and the default destination of
+  `scripts/ci/install-wasmtime.sh` is used only by `full` and `roundtrip`.
 - **A rebase onto `development` with no conflicts** needs `CI OK` reported on the new head, not a
   local re-run. **A rebase with conflicts, or a fix round,** re-runs the row's proof.
 - **No row runs every crate's suite.** The author still runs the tests of the crates the PR
@@ -450,10 +468,10 @@ nothing more, and `proof-row.sh` never names `determinism`. The mode remains.
   `oce-blocks` and `oce-expr` suites and the scoped strict-bit binaries; CI adds `oce-graph`,
   `oce-validate`, `oce-model`, `oce-cxf` and `oce-store` per PR; every other crate's suite first
   runs in CI in the nightly release gate.
-- **`full` is also what CI executes nightly.** Only the last row owes it: a pin advance,
-  because the G36 half of the pin guard runs only in the workspace suite (the vendored README's
-  pin-advance policy), and a change to the script, because nothing else runs its `full` block
-  before the merge.
+- **`full` is also what CI executes nightly.** Only the last row owes it: a pin advance, for the
+  tests named above, and a change to the script, to `.config/nextest.toml` or to
+  `scripts/ci/install-wasmtime.sh`, because nothing else runs the script's `full` block before
+  the merge.
 
 What the rows cost, cold (`cargo clean` first, `target/` empty), on a 10-core arm64 Mac,
 measured on 2026-11-10 at the head that introduced them:

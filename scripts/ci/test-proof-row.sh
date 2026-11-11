@@ -40,7 +40,7 @@ expect workflow light '.github/workflows/merge-gate.yml'
 expect release-workflow light '.github/workflows/release-gate.yml'
 expect ci-script light 'scripts/ci/proof-row.sh'
 expect checker light '.github/scripts/check-workflow-gates.sh'
-expect tool-config light '.config/nextest.toml'
+expect other-tool-config light '.config/other.toml'
 expect firmware-image light 'firmware/link/src/lib.rs'
 expect other-engine-crates light $'crates/oce-validate/src/lib.rs\ncrates/oce-store/src/lib.rs\ncrates/oce-conformance/tests/strict_bits/main.rs'
 expect golden-generator light 'tools/golden-gen/src/main.rs'
@@ -80,6 +80,9 @@ expect g36-provenance-record full 'tools/reference-catalog/Buildings.Controls.OB
 expect manifest-pin-constants full 'crates/oce-cxf/tests/third_party_manifest/mod.rs'
 expect reference-commit-constant full 'crates/oce-blocks/src/registry/catalog_guard_support.rs'
 expect gate-script full '.agents/gate.sh'
+expect nextest-config full '.config/nextest.toml'
+expect wasmtime-installer full 'scripts/ci/install-wasmtime.sh'
+expect wasmtime-installer-beside-leverage full $'crates/leverage/oce-cli/src/lib.rs\nscripts/ci/install-wasmtime.sh'
 expect gate-script-beside-docs full $'docs/ci-and-the-gate.md\n.agents/gate.sh'
 expect vendored-beside-core full $'crates/oce-cxf/src/lib.rs\nthird_party/modelica-buildings-cdl/cxf/a.json'
 expect vendored-listed-last full $'CHANGELOG.md\ncrates/leverage/oce-vocab/data/generated.json\nthird_party/modelica-buildings-cdl/README.md'
@@ -95,6 +98,9 @@ expect nested-manifest light 'crates/oce-validate/Cargo.toml'
 expect golden-gen-lockfile light 'tools/golden-gen/Cargo.lock'
 expect leverage-manifest leverage 'crates/leverage/oce-cli/Cargo.toml'
 expect other-agents-file docs '.agents/project-facts.md'
+expect wasmtime-runner light 'scripts/ci/wasmtime-runner.sh'
+expect wasmtime-installer-fixtures light 'scripts/ci/test-install-wasmtime.sh'
+expect golden-gen-nextest-config light 'tools/golden-gen/.config/nextest.toml'
 expect vendored-name-in-docs docs 'docs/third_party/notes.md'
 expect other-tools-directory light 'tools/reference-catalogue/a.json'
 expect other-registry-file light 'crates/oce-blocks/src/registry/mod.rs'
@@ -132,16 +138,17 @@ expect_list() {
   fi
 }
 expect_list FULL_PREFIXES 'third_party/ tools/reference-catalog/ crates/oce-cxf/tests/third_party_manifest/'
-expect_list FULL_FILES 'crates/oce-blocks/src/registry/catalog_guard_support.rs .agents/gate.sh'
+expect_list FULL_FILES 'crates/oce-blocks/src/registry/catalog_guard_support.rs .agents/gate.sh .config/nextest.toml scripts/ci/install-wasmtime.sh'
 for path in third_party tools/reference-catalog crates/oce-cxf/tests/third_party_manifest \
-  crates/oce-blocks/src/registry/catalog_guard_support.rs .agents/gate.sh; do
+  crates/oce-blocks/src/registry/catalog_guard_support.rs .agents/gate.sh \
+  .config/nextest.toml scripts/ci/install-wasmtime.sh; do
   if [ ! -e "$path" ]; then
     echo "FAIL: proof-row names $path, which does not exist"
     failures=$((failures + 1))
   fi
 done
-# The two source files are listed because they hold the pinned upstream commits; if a pin moves
-# to another file, this fails until the list follows it.
+# The two source files in the row each hold a pinned upstream commit; if a pin leaves one of
+# them, this fails until the row follows it.
 for path in crates/oce-cxf/tests/third_party_manifest/mod.rs \
   crates/oce-blocks/src/registry/catalog_guard_support.rs; do
   if ! grep -Eq 'const [A-Z_]*COMMIT: &str = "[0-9a-f]{40}"' "$path"; then
@@ -149,6 +156,25 @@ for path in crates/oce-cxf/tests/third_party_manifest/mod.rs \
     failures=$((failures + 1))
   fi
 done
+
+# Every tracked file that writes a pinned upstream commit, exactly. The documents say the row's
+# two files are not the only ones and name the rest; a pin constant added to a new file, or
+# removed from one, fails here until this list and that prose are brought back in step.
+want_pin_files='crates/leverage/oce-vocab/tests/vocabulary/generator/mod.rs
+crates/oce-blocks/src/registry/catalog_guard_support.rs
+crates/oce-cxf/src/g36_catalog_guard_data.rs
+crates/oce-cxf/tests/third_party_manifest/mod.rs
+tools/golden-gen/src/logical.rs
+tools/golden-gen/src/logical_pre.rs
+tools/golden-gen/src/logical_proof.rs
+tools/golden-gen/src/sequences/provenance.rs
+tools/golden-gen/src/utilities_assert.rs'
+got_pin_files="$(git grep -lE 'const [A-Z_]*COMMIT: &str = "[0-9a-f]{40}"' -- crates tools firmware | LC_ALL=C sort)"
+if [ "$got_pin_files" != "$want_pin_files" ]; then
+  echo "FAIL: the files that hold a pinned upstream commit changed; update this list and the prose that names them"
+  diff <(printf '%s\n' "$want_pin_files") <(printf '%s\n' "$got_pin_files") | sed 's/^/  /' || true
+  failures=$((failures + 1))
+fi
 
 if [ "$failures" -ne 0 ]; then
   echo "FAIL: $failures proof-row fixture(s) failed"

@@ -1107,6 +1107,47 @@ and a gate that accepted any text would restore exactly the false assurance desc
   publishable, 6 private); `release.yml`'s comment and step name re-pinned.
 ### Verification
 
+- **The workflow checker closes five gaps, and the pin-advance row states its real reason**
+  (GitHub #564, issue #555; follow-ups from the reviews of GitHub #547 and #557, and an owner
+  rulings of 2026-11-10 and 2026-11-11). No workflow or gate command changed; the `full` proof
+  row gains two files.
+  **Checker.** `check-workflow-gates.sh` now (1) pins the body of `[profile.ci-release-workspace]`
+  and of its `.junit` table in `.config/nextest.toml` to the line, so a `default-filter` or any
+  other key added to the profile fails instead of narrowing the nightly's one release-codegen
+  workspace run; (2) makes each exception in the per-PR/nightly determinism-job comparison
+  one-sided: only `pr-gate.yml` may carry the lane filter and only `release-gate.yml` the pinned
+  checkout ref, so a per-PR determinism job that pins a ref of its own fails; (3) compares the
+  workflow-level `env:` of `pr-gate.yml`, `merge-gate.yml` and `release-gate.yml`, `CHECKOUT_REF`
+  aside; (4) end-anchors the presence rules for the determinism cells, their fan-in and the
+  Windows cell (new `require_job_line`), so `<command> || true` or a trailing argument added to
+  both copies of a shared step fails; (5) pins the release gate's
+  `save-if: matrix.arch == 'aarch64'`. It also gains a tripwire, `refuse_failure_masks`, on every
+  non-comment line of the three gating workflows: `||` outside a `${{ }}` expression, a line
+  ending in `|\` or starting with `|`, a trailing `; true`, `; exit 0` or `&`, `set` with a `+`
+  option among its arguments, `shopt -u`, a quoted literal containing `|`, `&`, `;` or `+` inside
+  an expression, and a `shell` key in block or flow style that is not the line `shell: bash` (a
+  template such as `bash {0}` drops errexit and pipefail). The tripwire is not a proof that no
+  step discards a failure: a bare `exit 0`, `cmd && true` on a non-final line, `cmd & wait` and
+  `(cmd &)` still pass, and GitHub #566 tracks them. 52 hostile fixtures, each of which the
+  checker let through before the rule that refuses it, and 2 positive ones (305 cases).
+  **Pin advance.** The `full` row stays. Its stated reason is corrected in `AGENTS.md`,
+  `.agents/project-facts.md`, `docs/ci-and-the-gate.md` and `scripts/ci/proof-row.sh`: the
+  pin-guard tests already run per PR (`oce-cxf`'s `g36_catalog_tests` in `crate tests`,
+  `oce-blocks`'s `registry::catalog_tests` in the determinism subset); what only `full` or the
+  nightly gives a pin advance is `oce-conformance`'s `conformance` binary, three of whose modules
+  read the vendored tree and the reference catalog, that crate's `clean_room` unit tests and
+  `open_modelica_nand` binary, which pin the vendored `Nand.mo` by path, line and equation, and
+  the doctests. "The two files that hold a pinned upstream commit" was false and is reworded:
+  nine files write one, the row lists two pin-guard files, and `scripts/ci/test-proof-row.sh`
+  now holds the full list and fails when it changes.
+  **Proof row.** `.config/nextest.toml` (for its `ci-release-workspace` profile) and
+  `scripts/ci/install-wasmtime.sh` (for its default destination) join the `full` row in
+  `scripts/ci/proof-row.sh`: only the script's `full` block exercises them (owner ruling of
+  2026-11-11). `qemu.yml` and `emulate-firmware.sh`, which have a nightly workflow of their own,
+  are named in prose under the dispatch rule, and
+  `crates/oce-conformance/Cargo.toml` no longer names `merge-gate.yml` as a runner of
+  `--test blob_round_trip`.
+
 - **The release-codegen determinism cells run per pull request again, the merge gate keeps the
   Windows cell alone, and no change owes a local release-codegen run** (GitHub #557,
   issue #556; owner decision of 2026-11-10, closing step 3 of #504). Issue #502 had moved the
