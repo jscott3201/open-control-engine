@@ -79,7 +79,7 @@ pub use columnar::{Column, ColumnarSource};
 pub use csv_source::{CsvFormat, CsvSource, CsvTime};
 pub use error::{MapError, ReplayError, SourceError};
 pub use limits::{LimitError, ReplayLimits};
-pub use map::{ColumnKind, ColumnMap, ColumnSpec, InputMap, MapId};
+pub use map::{ColumnKind, ColumnMap, ColumnSpec, InputMap, MapId, resolve_path};
 pub use policy::{DuplicateTime, FrameStatus, MissingPolicy, OnRefusal, SourceKind, TimeBase};
 pub use replay::{Progress, Replay, ReplayOptions, TraceOptions};
 pub use source::{FrameSource, Row};

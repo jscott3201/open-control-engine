@@ -453,6 +453,72 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
+- **Vectors, part 2 of 4: bind, replay and compare a vector set, and issue the receipt**
+  (GitHub #558, issue #520; [vectors note](docs/design/vectors.md) decisions 3, 6 to 8, 11,
+  12, 14, 15, 18 to 26, 31 to 33 and 37). `oce-verify` now depends on `oce-api` and `oce-replay`
+  (the leverage rule holds as written) and runs a set: `run_vectors(&set,
+  &VectorInputs::new(&cxf), &VerifyOptions)` returns a `VectorRun` with its `Receipt`, or a
+  `VerifyError` and no receipt.
+  - **Binding**, once per set against a throwaway engine, before any scenario runs: the subject
+    loaded (`subject-load-failed` carries the engine's `DiagCode` spellings; load warnings go to
+    the receipt, at most 64 with their total), an Enum boundary port refused
+    (`enum-port-unsupported`, until #465) and a String one (`unsupported-port-type`), every input,
+    output and parameter name resolved by one rule, every value typed by the declared type of what
+    it lands on (`InputDefinition::value_type`, `FrameSlots::output_types()`, the parameter's
+    declared type): a Real takes an integer token only when a binary64 holds it exactly (`-0` is
+    `+0.0`; `9007199254740993` is `value-not-representable`), an Integer refuses `1.0`, a Boolean
+    refuses `0` and `1`. A scenario's `params` override the set's by resolved path whatever either
+    spelling, two keys of one map on one parameter are `param-path-duplicate`, and the frame
+    budget, `(N + 1) * scenarios`, is held to `VerifyLimits::max_total_frames`. Every scenario's
+    effective edits are also tried at bind on a freshly loaded engine, so an edit no pass admits is
+    `param-refused` before any frame of any scenario runs (owner ruling).
+  - **The run**: each scenario on a freshly loaded engine, its parameter edits applied inside one
+    halt in passes in ascending path order (lowering both `Reals.Hysteresis` thresholds takes two
+    passes; a pass that applies nothing is `param-refused` with the class `param-range`,
+    `param-type` or `param-structural`), then one replay on `TimeBase::Grid` with the horizon added
+    as an instant and replay's defaults, in chunks of `VerifyOptions::chunk_frames` frames. After
+    it, in order: a run-class engine refusal is `run-refused`; any other refused frame fails the
+    scenario with one `frame-refused` record (later ticks uncounted, coverage not checked);
+    otherwise coverage, then the exact comparison: a Real by its bits, a diagnostic by its class
+    path and optional message at its tick. Diagnostic expectations match warnings one to one
+    (owner ruling): within a tick, the expectations that name a message pair first, then the
+    block-only ones, each taking the earliest free warning it matches, so a second instance's
+    equal warning stays unmatched. Unmatched warnings are listed (16, with the total) and never
+    fail a scenario. A replay error is `replay-failed` with a cause from a closed table
+    (`trace-too-large`, `output-set-changed`, `grid-not-increasing`, `engine-setup`, `source`).
+  - **The receipt**: `Receipt { header, body: ReceiptBody }`, `ReceiptBody` closed and
+    `#[non_exhaustive]` with its one `Vectors` variant; every field of the note's header, body,
+    scenario and failure-record tables, written canonically by `Receipt::to_canonical_json`. A
+    `frame-refused` record always keeps the list's last slot, so earlier mismatches cannot push it
+    out (owner ruling).
+    Values are exact (`-0.0`, a NaN and the infinities as `"0x"` and their 16 hex digits),
+    `engine_version` is `CompatibilityDescriptor::oce_api_version`, `timings` are zeros unless the
+    caller passes them, and `receipt_id` is `receipt:fnv1a128:` over the canonical receipt with
+    `timings` and `receipt_id` removed (`Receipt::computed_receipt_id` recomputes it). A frame
+    refusal's class is a kebab-case table held complete by an exhaustive match
+    (`ENGINE_REFUSAL_CLASSES`, `engine_refusal_class`).
+  - **Errors**: `VerifyError` with a closed `VerifyErrorKind`, a `code()` per kind and
+    `VERIFY_ERROR_CODES` (19 codes: the note's bind and run rows without the six mutant rows, which
+    arrive with mutant mode, plus `window-uncovered` for a window a run left uncovered), with the
+    place, the canonical path, an ambiguous name's candidates and a cause where a kind has one.
+    `VerifyLimits` gains `max_recorded_failures` and `max_recorded_warnings` (16 each),
+    `max_total_frames` (16,777,216) and `replay` (`ReplayLimits`), lowered and never raised.
+  - **`oce-replay`**: the private name rule is the public `resolve_path` over a sorted path list
+    (exact path, else the one `.`-boundary suffix, the candidates on ambiguity), and
+    `InputMap::resolve` calls it. No behaviour changes; the four canonical trace goldens are
+    byte-identical.
+  - **Goldens**: the pass receipts of both in-repo library rules (AHU-0016: 217 frames and 216
+    instants; AHU-0004: 441 frames), read in place from `crates/oce-api/tests/fixtures/`, a fail
+    receipt (`both_open` with its first window ending at 900 s, where the delay fires) and a
+    `no_data` receipt, under `crates/leverage/oce-verify/tests/fixtures/receipts/`, compared byte
+    for byte and blessed only by `OCE_BLESS_VERIFY`. Each `receipt_id` is checked against a second
+    FNV-1a-128 over the golden's text, and is one across two runs, chunk sizes 1, 7 and the whole
+    run, and with caller timings. They embed the engine version, so a workspace version bump
+    re-blesses them (`.agents/project-facts.md`).
+  - The commissioning note's API sketch is amended: `Receipt.body` is `ReceiptBody`. The vectors
+    note records part 2's ten readings as ruled ("Part 2's readings"). Follow-ups: #561 (bound a
+    run's total work, before part 4) and #563 (record the caps a receipt was written under). The
+    46 fixture goldens and 422 provenance goldens are byte-identical.
 - **The authoring wire reader refuses a list, or any other type, where an object belongs**
   (GitHub #544). `oce-author`'s `from_wire_str` read a JSON list where the wire form defines an
   object: `serde_json` reads a `serde`-derived struct from a list as well as from an object, taking

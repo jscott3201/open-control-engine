@@ -267,6 +267,7 @@ fn a_limit_above_its_maximum_is_the_maximum() {
         max_scenarios: u32::MAX,
         max_expectations: u32::MAX,
         max_parameters: u32::MAX,
+        ..MAX
     };
     assert_eq!(raised.effective(), MAX);
     assert_eq!(
@@ -370,6 +371,7 @@ fn the_profile_bounds_do_not_move_with_the_limits() {
         max_scenarios: 0,
         max_expectations: 0,
         max_parameters: 0,
+        ..MAX
     };
     assert_eq!(code_under("[[[[[[[[[1]]]]]]]]]", &zero), "nesting-too-deep");
     assert_eq!(code_under("[[[[[[[[1]]]]]]]]", &zero), "wrong-type");
