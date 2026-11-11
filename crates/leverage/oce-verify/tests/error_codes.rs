@@ -331,6 +331,45 @@ fn every_code_is_produced_by_its_case_at_the_place_it_names() {
 }
 
 #[test]
+fn every_mutant_path_rule_refuses_its_own_defect() {
+    // Each rule of decision 28 on its own, the reason in the detail: a path that could leave the
+    // vector file's directory or name a file two ways. A backslash is written `\\\\` here: the
+    // JSON escape of one.
+    for (path, reason) in [
+        ("/m/a.cxf.json", "is absolute"),
+        ("", "has an empty segment"),
+        ("m/", "has an empty segment"),
+        ("m//a.cxf.json", "has an empty segment"),
+        ("./a.cxf.json", "has a `.` segment"),
+        ("m/./a.cxf.json", "has a `.` segment"),
+        ("..", "has a `..` segment"),
+        ("m/../a.cxf.json", "has a `..` segment"),
+        ("m\\\\a.cxf.json", "holds a backslash"),
+        ("/m\\\\a.cxf.json", "holds a backslash"),
+    ] {
+        let refused = VectorSet::from_json_bytes(
+            listing(&["m/ok.cxf.json", path]).as_bytes(),
+            &VerifyLimits::default(),
+        )
+        .expect_err(path);
+        assert_eq!(refused.code(), "mutant-path-invalid", "{path}");
+        assert_eq!(refused.subject(), "mutants[1].path", "{path}");
+        assert!(refused.detail().contains(reason), "{path}: {refused}");
+    }
+    // A dot that is not a whole segment is a name: these load.
+    let names = [
+        "a.cxf.json",
+        "m/a.cxf.json",
+        "...",
+        "m/.../a",
+        ".hidden",
+        "a..b",
+        "m/a.",
+    ];
+    assert_eq!(support::code_of(&listing(&names)), "loaded");
+}
+
+#[test]
 fn the_cases_and_the_code_list_cover_each_other() {
     let covered: Vec<&str> = cases().iter().map(|(code, _, _)| *code).collect();
     assert_eq!(covered, VECTOR_ERROR_CODES, "one case per code, in order");

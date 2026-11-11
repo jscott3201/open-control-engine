@@ -4,14 +4,15 @@
 
 mod support;
 
-use oce_replay::EngineRefusal;
+use oce_replay::{EngineRefusal, ReplayLimits};
 use oce_verify::{
     Failure, MutantSection, MutantStatus, ReceiptValue, ScoreStatus, VectorSet, VerifyLimits,
+    VerifyOptions,
 };
 
 use support::{
     AHU_0016, ahu_mutants, body, edited, library_subject, library_vectors, mutant, mutant_set,
-    run_mutants,
+    run_mutants, run_mutants_with, subject,
 };
 
 fn section(receipt: &oce_verify::Receipt) -> &MutantSection {
@@ -296,4 +297,223 @@ fn an_empty_mutant_list_writes_no_section() {
         .receipt;
     assert!(body(&receipt).mutants.is_none());
     assert!(!receipt.to_canonical_json().contains("\"mutants\""));
+}
+
+/// The `hysteresis` subject with `edits`, then `u` bounded above by 3 and, when `asserting`, a
+/// `CDL.Utilities.Assert` on `hys.y` that warns on every frame where `y` is false. Neither
+/// changes what an accepted frame computes; the bound refuses a frame where `u` passes 3.
+fn bounded_hysteresis(edits: &[(&str, &str)], asserting: bool) -> Vec<u8> {
+    const ROOT: &str = "urn:verify:hysteresis#top";
+    let mut bytes = edited(
+        &subject("hysteresis"),
+        &[(
+            &format!(
+                r#"{{"@id": "{ROOT}.u", "@type": "S231:RealInput", "S231:isOfDataType": {{"@id": "S231:Real"}},"#
+            ),
+            &format!(
+                r#"{{"@id": "{ROOT}.u", "@type": "S231:RealInput", "S231:isOfDataType": {{"@id": "S231:Real"}}, "S231:max": 3.0,"#
+            ),
+        )],
+    );
+    bytes = edited(&bytes, edits);
+    if asserting {
+        bytes = edited(
+            &bytes,
+            &[
+                (
+                    &format!(r#""S231:containsBlock": [{{"@id": "{ROOT}.hys"}}]"#),
+                    &format!(
+                        r#""S231:containsBlock": [{{"@id": "{ROOT}.hys"}}, {{"@id": "{ROOT}.chk"}}]"#
+                    ),
+                ),
+                (
+                    &format!(r#""S231:isConnectedTo": {{"@id": "{ROOT}.y"}}}}"#),
+                    &format!(
+                        r#""S231:isConnectedTo": [{{"@id": "{ROOT}.y"}}, {{"@id": "{ROOT}.chk.u"}}]}}"#
+                    ),
+                ),
+                (
+                    &format!(
+                        r#"{{"@id": "{ROOT}.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": {{"@id": "S231:Boolean"}}}}"#
+                    ),
+                    &format!(
+                        r#"{{"@id": "{ROOT}.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": {{"@id": "S231:Boolean"}}}},
+    {{"@id": "{ROOT}.chk", "@type": "CDL.Utilities.Assert",
+     "S231:hasInput": {{"@id": "{ROOT}.chk.u"}}, "S231:hasParameter": {{"@id": "{ROOT}.chk.message"}}}},
+    {{"@id": "{ROOT}.chk.message", "@type": "S231:Parameter",
+     "S231:isOfDataType": {{"@id": "S231:String"}}, "S231:value": "\"y is false\""}},
+    {{"@id": "{ROOT}.chk.u", "@type": "S231:BooleanInput", "S231:isOfDataType": {{"@id": "S231:Boolean"}}}}"#
+                    ),
+                ),
+            ],
+        );
+    }
+    bytes
+}
+
+/// A hysteresis set on a 30-step clock listing `m.cxf.json`, with `scenarios` as written.
+fn hysteresis_set(scenarios: &[&str]) -> String {
+    format!(
+        r#"{{"schema": "oce/vectors/v1", "clock": {{"step_s": 60, "horizon_s": 1800}},
+        "mutants": [{{"path": "m.cxf.json"}}], "scenarios": [{}]}}"#,
+        scenarios.join(", ")
+    )
+}
+
+/// `u` above both thresholds: `y` is true throughout. On the bounded mutant the first frame is
+/// refused, so the scenario fails at once on a trace of nothing.
+const HIGH: &str = r#"{"name": "high", "inputs": {"u": 5.0},
+    "expect": [{"output": "y", "from_s": 0, "to_s": 1800, "equals": true}]}"#;
+
+/// `u` at 0: `y` is false throughout, so the asserting mutant warns on every frame.
+const LOW: &str = r#"{"name": "low", "inputs": {"u": 0.0},
+    "expect": [{"output": "y", "from_s": 0, "to_s": 1800, "equals": false}]}"#;
+
+/// The smallest trace bound the subject passes `LOW` and `HIGH` under: the asserting mutant's
+/// warnings take its trace of `LOW` past it.
+fn tight_trace() -> VerifyOptions {
+    VerifyOptions {
+        limits: VerifyLimits {
+            replay: ReplayLimits {
+                max_trace_bytes: 310,
+                ..ReplayLimits::MAX
+            },
+            ..VerifyLimits::MAX
+        },
+        ..VerifyOptions::default()
+    }
+}
+
+#[test]
+fn a_refusal_on_a_mutants_run_is_an_error_naming_the_mutant_and_scenario() {
+    let asserting = vec![("m.cxf.json".to_owned(), bounded_hysteresis(&[], true))];
+    let hysteresis = subject("hysteresis");
+    let error = run_mutants_with(
+        &hysteresis_set(&[LOW]),
+        &hysteresis,
+        &asserting,
+        &tight_trace(),
+    )
+    .expect_err("the mutant's trace is too large");
+    assert_eq!(
+        (error.code(), error.cause(), error.subject()),
+        (
+            "replay-failed",
+            Some("trace-too-large"),
+            "mutants[0].scenarios[0]"
+        )
+    );
+    // The controls: the subject passes under the same bound, and without it the mutant survives
+    // (its warnings are not failures).
+    let mut set = hysteresis_set(&[LOW]);
+    set = set.replace(r#""mutants": [{"path": "m.cxf.json"}], "#, "");
+    assert!(
+        support::run_with(&set, &hysteresis, &tight_trace())
+            .is_ok_and(|run| run.receipt.header.passed)
+    );
+    let receipt = run_mutants(&hysteresis_set(&[LOW]), &hysteresis, &asserting)
+        .expect("a receipt")
+        .receipt;
+    assert_eq!(section(&receipt).entries[0].status, MutantStatus::Survived);
+}
+
+#[test]
+fn a_mutants_run_skips_every_scenario_after_the_one_that_catches_it() {
+    // `LOW` would refuse the mutant's run under the tight bound; after `HIGH` it never runs.
+    let asserting = vec![("m.cxf.json".to_owned(), bounded_hysteresis(&[], true))];
+    let hysteresis = subject("hysteresis");
+    let receipt = run_mutants_with(
+        &hysteresis_set(&[HIGH, LOW]),
+        &hysteresis,
+        &asserting,
+        &tight_trace(),
+    )
+    .expect("the catch ends the mutant's run")
+    .receipt;
+    let caught = section(&receipt).entries[0]
+        .caught_by
+        .as_ref()
+        .expect("caught");
+    assert_eq!(caught.scenario, "high");
+    assert!(matches!(
+        caught.failure,
+        Failure::FrameRefused { t, refusal: EngineRefusal::InputDomain } if t.to_bits() == 0
+    ));
+    // In the other order `LOW` runs first on the mutant, and its refusal is the run's.
+    let error = run_mutants_with(
+        &hysteresis_set(&[LOW, HIGH]),
+        &hysteresis,
+        &asserting,
+        &tight_trace(),
+    )
+    .expect_err("refused");
+    assert_eq!(error.subject(), "mutants[0].scenarios[0]");
+}
+
+#[test]
+fn a_caught_mutants_record_is_its_first_failure_whatever_the_failure_cap() {
+    // Part 3's reading 3. The mutant's band is (-2, -1): `y` is true at 0 s where the subject's is
+    // false, a mismatch, and its bound refuses the frame at 60 s where `u` steps to 5. Under a
+    // cap of one record the refusal would take the only slot; the catch is the mismatch.
+    let mutants = vec![(
+        "m.cxf.json".to_owned(),
+        bounded_hysteresis(
+            &[
+                (r#""@value": "1.0""#, r#""@value": "-2.0""#),
+                (r#""@value": "2.0""#, r#""@value": "-1.0""#),
+            ],
+            false,
+        ),
+    )];
+    let set = hysteresis_set(&[r#"{"name": "step",
+        "inputs": {"u": [{"t": 0, "value": 0.0}, {"t": 60, "value": 5.0}]},
+        "expect": [{"output": "y", "from_s": 0, "to_s": 0, "equals": false},
+                   {"output": "y", "from_s": 60, "to_s": 1800, "equals": true}]}"#]);
+    for cap in [16, 1, 0] {
+        let options = VerifyOptions {
+            limits: VerifyLimits {
+                max_recorded_failures: cap,
+                ..VerifyLimits::MAX
+            },
+            ..VerifyOptions::default()
+        };
+        let receipt = run_mutants_with(&set, &subject("hysteresis"), &mutants, &options)
+            .expect("a receipt")
+            .receipt;
+        assert!(receipt.header.passed, "the subject passes");
+        let caught = section(&receipt).entries[0]
+            .caught_by
+            .as_ref()
+            .expect("caught");
+        assert_eq!(
+            (caught.failure.code(), caught.failure.t().to_bits()),
+            ("value-mismatch", 0.0_f64.to_bits()),
+            "cap {cap}"
+        );
+    }
+}
+
+#[test]
+fn a_mutant_the_sets_edits_overwrite_is_valid_and_survives() {
+    // Part 3's reading 6: the mutant bakes in the uHigh every scenario sets, so its content id
+    // differs from the subject's and every run of it is the subject's run.
+    let set = r#"{"schema": "oce/vectors/v1", "clock": {"step_s": 60, "horizon_s": 1800},
+        "params": {"uHigh": 3.0}, "mutants": [{"path": "m.cxf.json"}],
+        "scenarios": [{"name": "s", "inputs": {"u": 2.5},
+            "expect": [{"output": "y", "from_s": 0, "to_s": 1800, "equals": false}]}]}"#;
+    let mutants = vec![(
+        "m.cxf.json".to_owned(),
+        edited(
+            &subject("hysteresis"),
+            &[(r#""@value": "2.0""#, r#""@value": "3.0""#)],
+        ),
+    )];
+    let receipt = run_mutants(set, &subject("hysteresis"), &mutants)
+        .expect("a valid mutant")
+        .receipt;
+    assert!(receipt.header.passed);
+    let section = section(&receipt);
+    assert_eq!(section.status, ScoreStatus::Scored);
+    assert_eq!(section.entries[0].status, MutantStatus::Survived);
+    assert_ne!(section.entries[0].content_id, receipt.header.content_id);
 }

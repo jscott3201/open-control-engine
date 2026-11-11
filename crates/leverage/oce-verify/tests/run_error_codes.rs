@@ -1,7 +1,8 @@
 //! Every bind and run code of the vectors note's table, pinned, and produced by a run, the mutant
-//! rows included (`tests/mutant_validation.rs` pins each of those in depth). Four codes are refusals no loadable subject or loaded set
-//! reaches through a run today, so their cases live beside the code that makes them, each with
-//! the reason; this file holds the two lists to cover the pinned list exactly between them.
+//! rows included (`tests/mutant_validation.rs` pins each of those in depth). Four codes are
+//! refusals no loadable subject or loaded set reaches through a run today, so their cases live
+//! beside the code that makes them, each with the reason; this file holds the two lists to cover
+//! the pinned list exactly between them.
 //!
 //! The frame budget is pinned at its bound: at the limit a run is accepted, one frame past it is
 //! refused before any frame runs.

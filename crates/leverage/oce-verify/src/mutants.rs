@@ -4,8 +4,10 @@
 //! subject. The set lists each by path ([`crate::Mutant`]); the caller hands the run each one's
 //! bytes under that path ([`crate::VectorInputs::with_mutants`]); `oce-verify` opens no file.
 //!
-//! **Validation**, at bind, after the subject's parameter edits are tried and before the frame
-//! budget, so before any frame runs. In this order, the first refusal winning:
+//! **Validation**, at bind, after the subject's parameter edits are tried and the frame budget is
+//! checked (owner ruling of 2026-11-11: the budget is arithmetic on the listed count, so no
+//! mutant is loaded for a set that is over it), and before any frame runs. In this order, the
+//! first refusal winning:
 //!
 //! 1. the bytes supplied, in the order given: a path the set does not list is `mutant-unlisted`,
 //!    a path given twice `duplicate-mutant`;
@@ -390,12 +392,25 @@ fn first_catch(
             &subject,
         )?;
         let failed = ran.refused.is_some() || compared.instants.failed > 0;
-        if let (true, Some(failure)) = (failed, compared.failures.into_iter().next()) {
-            return Ok(Some(MutantCatch {
-                scenario: scenario.name().to_owned(),
-                failure,
-            }));
+        if !failed {
+            continue;
         }
+        // The invariant: a failed scenario has a record under these caps, since a failed instant
+        // keeps the earliest and a refused frame the reserved slot. A failed scenario without one
+        // is refused (`replay-failed`, the table's catch-all `engine-setup`), never counted as a
+        // survivor: a defence no loaded set reaches, like `window-uncovered`.
+        let Some(failure) = compared.failures.into_iter().next() else {
+            return Err(VerifyError::new(
+                Kind::ReplayFailed,
+                subject,
+                "the scenario failed on the mutant and its comparison kept no failure record",
+            )
+            .with_cause("engine-setup"));
+        };
+        return Ok(Some(MutantCatch {
+            scenario: scenario.name().to_owned(),
+            failure,
+        }));
     }
     Ok(None)
 }

@@ -246,10 +246,11 @@ In order, the first refusal winning:
 4. **The parameter edits**: each scenario's effective edits are tried on a freshly loaded engine
    by the passes the run uses (below), so an edit no pass admits is `param-refused` here, before
    any frame of any scenario runs.
-5. **The mutants** ([below](#mutant-mode)): each one supplied, within the byte bound, loaded,
+5. **The frame budget**: `(N + 1) * scenarios * (1 + mutants)` frames against
+   `VerifyLimits::max_total_frames`, and `N + 1` against the replay limits' `max_frames`. It is
+   arithmetic on the listed count, so a set over it loads no mutant (owner ruling, 2026-11-11).
+6. **The mutants** ([below](#mutant-mode)): each one supplied, within the byte bound, loaded,
    held to the subject's boundary and content id, and given every edit list.
-6. **The frame budget**: `(N + 1) * scenarios * (1 + mutants)` frames against
-   `VerifyLimits::max_total_frames`, and `N + 1` against the replay limits' `max_frames`.
 
 ## The run
 
@@ -316,10 +317,13 @@ run reaches today (the two port codes, `run-refused` and `window-uncovered`), wh
 
 A **mutant** is a CXF document that should fail the vectors: a deliberate defect in the subject.
 The set lists each by a path relative to the vector file; the caller resolves the paths and hands
-the bytes in (`VectorInputs::with_mutants`), so `oce-verify` still opens no file.
+the bytes in (`VectorInputs::with_mutants`), so `oce-verify` still opens no file. A caller that
+reads files resolves each path, keeps it inside the vector file's directory and refuses two
+listings that resolve to one file (owner ruling of 2026-11-11, for part 4's CLI): the format's
+lexical path rule cannot see every alias.
 
-**Validation**, at bind, before any frame runs. An invalid mutant is an error with no receipt;
-there is no `invalid` status. In this order:
+**Validation**, at bind, after the frame budget and before any frame runs. An invalid mutant is an
+error with no receipt; there is no `invalid` status. In this order:
 
 1. every path given is listed, and given once (`mutant-unlisted`, `duplicate-mutant`);
 2. every listed mutant is given (`mutant-missing`);
@@ -418,8 +422,8 @@ same switch rewrites the golden receipts.
 - `tests/fixtures/AHU-0016/` holds the mutants:
   - `vectors.json` is AHU-0016's set plus the `mutants` list; `tests/mutant_mode.rs` holds its
     clock and scenarios equal to the facade's copy, which lists no mutant;
-  - `mutants/` holds three hand edits of the rule's CXF, each with a provenance line in its listing's
-    `description`. `threshold_inclusive` (both thresholds read `u >= 5`, a `Not` over
+  - `mutants/` holds three hand edits of the rule's CXF, each with a provenance line in its
+    listing's `description`. `threshold_inclusive` (both thresholds read `u >= 5`, a `Not` over
     `Reals.LessThreshold`) is caught by `threshold_edge`. `no_persistence` (`persist.delayTime`
     900 to 0) is caught by `both_open`. `late_alarm` (900 to 930) survives by design: no window
     asserts the tick at 900 s;

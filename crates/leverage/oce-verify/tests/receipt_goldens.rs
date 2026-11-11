@@ -1,11 +1,11 @@
-//! The golden receipts (vectors note decision 19, "Fixtures"): the two in-repo library rules'
-//! pass receipts, read in place from the facade's fixtures, a fail receipt (AHU-0016's
-//! `both_open` with its first window ending at 900 s, where the delay fires) and a `no_data`
-//! receipt (a scenario whose `expect` is empty), and AHU-0016's set with its three mutants
-//! (`tests/fixtures/AHU-0016/`: two caught, one survivor), each compared byte for byte. They regenerate
-//! only through the crate's bless switch (`OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`);
-//! every receipt embeds the engine version, so a workspace version bump re-blesses them, and so
-//! does #517 when it re-vendors the two rules.
+//! The golden receipts (vectors note decision 19, "Fixtures"): the two in-repo library rules' pass
+//! receipts, read in place from the facade's fixtures, a fail receipt (AHU-0016's `both_open` with
+//! its first window ending at 900 s, where the delay fires) and a `no_data` receipt (a scenario
+//! whose `expect` is empty), and AHU-0016's set with its three mutants (`tests/fixtures/AHU-0016/`:
+//! two caught, one survivor), each compared byte for byte. They regenerate only through the crate's
+//! bless switch (`OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`); every receipt embeds the
+//! engine version, so a workspace version bump re-blesses them, and so does #517 when it re-vendors
+//! the two rules.
 //!
 //! Beside the bytes: `receipt_id` is checked against an independent derivation from the golden
 //! (the `receipt_id` line and the `timings` block cut out of the canonical text, hashed with a

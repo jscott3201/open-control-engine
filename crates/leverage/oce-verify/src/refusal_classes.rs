@@ -69,9 +69,9 @@ pub(crate) fn param_refusal_class(error: &OcError) -> Option<&'static str> {
 }
 
 /// The cause of a mutant's refusal of an edit the subject admits, from
-/// [`crate::MUTANT_PARAM_REFUSAL_CAUSES`] (owner ruling of 2026-11-11): the subject's three classes,
-/// and `param-path-unknown` for a parameter the mutant does not have, spelled as the bind code for
-/// a key that names no parameter. `None` for any other refusal (`engine-setup`).
+/// [`crate::MUTANT_PARAM_REFUSAL_CAUSES`] (owner ruling of 2026-11-11): the subject's three
+/// classes, and `param-path-unknown` for a parameter the mutant does not have, spelled as the bind
+/// code for a key that names no parameter. `None` for any other refusal (`engine-setup`).
 pub(crate) fn mutant_param_refusal_cause(error: &OcError) -> Option<&'static str> {
     match error {
         OcError::UnknownPoint(_) => Some("param-path-unknown"),

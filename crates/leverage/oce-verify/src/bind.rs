@@ -23,11 +23,13 @@
 //!    `param-refused` here, before any frame of any scenario runs (owner ruling of 2026-11-10;
 //!    the note's table puts the code at bind). The run applies the same edits to its own fresh
 //!    engine again, by the same deterministic passes.
-//! 5. **The mutants** ([`crate::mutants`]): the bytes supplied against the set's listing and the
+//! 5. **The frame budget.** `(N + 1) * scenarios * (1 + mutants)` against
+//!    [`VerifyLimits::max_total_frames`], and `N + 1` against the replay limits' `max_frames`:
+//!    arithmetic on the listed count, so it runs before any mutant is loaded or has an edit tried
+//!    (owner ruling of 2026-11-11).
+//! 6. **The mutants** ([`crate::mutants`]): the bytes supplied against the set's listing and the
 //!    byte bound, then each listed mutant in file order loaded, held to the subject's boundary and
 //!    content id, and given every distinct edit list of the scenarios.
-//! 6. **The frame budget.** `(N + 1) * scenarios * (1 + mutants)` against
-//!    [`VerifyLimits::max_total_frames`], and `N + 1` against the replay limits' `max_frames`.
 //!
 //! Every refusal is a [`VerifyError`], never a failed scenario.
 
@@ -181,8 +183,10 @@ pub(crate) fn bind<'a>(
     for (index, scenario) in scenarios.iter().enumerate() {
         try_edits(subject, &scenario.edits, &format!("scenarios[{index}]"))?;
     }
+    let listed = set.mutants().unwrap_or_default();
+    frame_budget(set, listed.len(), limits)?;
     let mutants = crate::mutants::validate(
-        set.mutants().unwrap_or_default(),
+        listed,
         supplied,
         &SubjectBoundary {
             inputs: &inputs,
@@ -194,7 +198,6 @@ pub(crate) fn bind<'a>(
         &scenarios,
         limits,
     )?;
-    frame_budget(set, mutants.len(), limits)?;
     Ok(Bound {
         content_id,
         engine_version: CompatibilityDescriptor::current(None).oce_api_version(),
@@ -527,7 +530,7 @@ fn bind_inputs(
     Ok(lists)
 }
 
-/// The frame budget (bind step 6): every scenario runs `N + 1` frames, on the subject and on
+/// The frame budget (bind step 5): every scenario runs `N + 1` frames, on the subject and on
 /// each mutant at most (a mutant's run stops at its first failing scenario, and none runs against
 /// a subject that did not pass, so the budget is the bound, not the count).
 fn frame_budget(set: &VectorSet, mutants: usize, limits: &VerifyLimits) -> Result<(), VerifyError> {

@@ -1,8 +1,11 @@
-//! Mutant validation at bind (vectors note decision 27; owner ruling of 2026-11-11 on parameter
-//! edits): every listed mutant is supplied once and nothing else, the bytes fit their bound, and
-//! each one loads, has the subject's boundary, differs from the subject's content id and admits
-//! every edit list the subject admits. Any failure is an error with no receipt, before any frame
-//! of any scenario runs.
+//! Mutant validation at bind (vectors note decision 27; owner rulings of 2026-11-11 on parameter
+//! edits and on the frame budget): every listed mutant is supplied once and nothing else, the
+//! bytes fit their bound, and each one loads, has the subject's boundary, differs from the
+//! subject's content id and admits every edit list the subject admits. Any failure is an error
+//! with no receipt, before any frame of any scenario runs. The order the note's part 3 reading 1
+//! gives is pinned here too: the subject's own refusals and the frame budget first, then the
+//! bytes as given, the listing, the byte bound, and each mutant in file order, its edit lists
+//! included.
 
 mod support;
 
@@ -333,5 +336,192 @@ fn an_invalid_mutant_is_refused_before_any_frame_of_any_scenario_runs() {
     assert_eq!(
         (error.code(), error.cause()),
         ("replay-failed", Some("trace-too-large"))
+    );
+}
+
+#[test]
+fn a_mutant_that_holds_an_edited_parameter_as_structural_is_invalid() {
+    // A block instance can carry a parameter its class does not declare. The subject's
+    // `Logical.Not` carries an Integer `nin`, which it admits as settable; the mutant's
+    // `gate` is a `Logical.MultiAnd`, where `nin` is the structural input count.
+    let set = r#"{"schema": "oce/vectors/v1", "clock": {"step_s": 60, "horizon_s": 1800},
+        "mutants": [{"path": "m.cxf.json"}],
+        "scenarios": [{"name": "s", "params": {"gate.nin": 1}, "inputs": {"u": 0.0}, "expect": []}]}"#;
+    let mutants = vec![("m.cxf.json".to_owned(), subject("gate_multiand"))];
+    let error = param_refusal(set, &subject("gate"), &mutants);
+    assert_eq!(
+        (error.code(), error.subject()),
+        ("mutant-param-refused", "mutants[0]")
+    );
+    assert_eq!(error.path(), Some("urn:verify:gate#top.gate.nin"));
+    assert_eq!(error.cause(), Some("param-structural"));
+    // The subject admits the edit on its own, and the mutant is valid under a set without it.
+    let unedited = set.replace(r#""params": {"gate.nin": 1}, "#, "");
+    assert_ne!(unedited, set);
+    assert!(run_mutants(&unedited, &subject("gate"), &mutants).is_ok());
+}
+
+#[test]
+fn a_mutant_past_the_engines_document_bound_fails_to_load_whatever_the_byte_bound() {
+    // Each mutant is held to the engine's own CXF bound, as the subject is, whatever room
+    // `max_mutant_bytes` leaves: trailing spaces pad the late alarm to the bound and one past it.
+    let padded = |len: usize| {
+        let mut bytes = mutant("late_alarm");
+        bytes.resize(len, b' ');
+        bytes
+    };
+    let past = refused(&with_late_alarm(padded(oce_api::MAX_CXF_BYTES + 1)));
+    assert_eq!(
+        (past.code(), past.subject()),
+        ("mutant-load-failed", "mutants[2]")
+    );
+    assert!(past.diagnostic_codes().is_empty(), "{past:?}");
+    let at = run_mutants(
+        &mutant_set(),
+        &library_subject("AHU-0016"),
+        &with_late_alarm(padded(oce_api::MAX_CXF_BYTES)),
+    );
+    assert!(at.is_ok(), "{:?}", at.err());
+    assert!(
+        VerifyLimits::MAX.max_mutant_bytes > u64::try_from(oce_api::MAX_CXF_BYTES).expect("fits")
+    );
+}
+
+/// `VerifyOptions` with `limits` over the maximum ones.
+fn options(limits: VerifyLimits) -> VerifyOptions {
+    VerifyOptions {
+        limits,
+        ..VerifyOptions::default()
+    }
+}
+
+#[test]
+fn the_frame_budget_is_checked_before_any_mutant_is_judged() {
+    // Owner ruling of 2026-11-11: the budget is arithmetic on the listed count, so a set over
+    // it is `too-many-frames` whatever its mutants hold.
+    let over = options(VerifyLimits {
+        max_total_frames: 867,
+        ..VerifyLimits::MAX
+    });
+    let mut missing = ahu_mutants();
+    missing.pop();
+    let mut unlisted = ahu_mutants();
+    unlisted.insert(
+        0,
+        ("mutants/extra.cxf.json".to_owned(), mutant("late_alarm")),
+    );
+    let ahu = library_subject("AHU-0016");
+    for (defect, mutants, code) in [
+        (
+            "unloadable",
+            with_late_alarm(b"{".to_vec()),
+            "mutant-load-failed",
+        ),
+        (
+            "identical",
+            with_late_alarm(ahu.clone()),
+            "mutant-identical",
+        ),
+        ("missing", missing, "mutant-missing"),
+        ("unlisted", unlisted, "mutant-unlisted"),
+    ] {
+        let error =
+            run_mutants_with(&mutant_set(), &ahu, &mutants, &over).expect_err("over the budget");
+        assert_eq!(error.code(), "too-many-frames", "{defect}");
+        // The control: within the budget the defect is what is refused.
+        assert_eq!(refused(&mutants).code(), code, "{defect}");
+    }
+    // Over the byte bound too: the budget still wins.
+    let both = options(VerifyLimits {
+        max_total_frames: 867,
+        max_mutant_bytes: 0,
+        ..VerifyLimits::MAX
+    });
+    let error =
+        run_mutants_with(&mutant_set(), &ahu, &ahu_mutants(), &both).expect_err("over both");
+    assert_eq!(error.code(), "too-many-frames");
+}
+
+#[test]
+fn the_bytes_are_bounded_together_before_any_mutant_loads() {
+    let unloadable = with_late_alarm(b"{".to_vec());
+    let none = options(VerifyLimits {
+        max_mutant_bytes: 0,
+        ..VerifyLimits::MAX
+    });
+    let error = run_mutants_with(
+        &mutant_set(),
+        &library_subject("AHU-0016"),
+        &unloadable,
+        &none,
+    )
+    .expect_err("over the byte bound");
+    assert_eq!(error.code(), "too-many-mutant-bytes");
+    assert_eq!(refused(&unloadable).code(), "mutant-load-failed");
+}
+
+#[test]
+fn of_two_misuses_of_the_bytes_the_one_given_first_wins() {
+    let extra = || ("mutants/extra.cxf.json".to_owned(), mutant("late_alarm"));
+    let mut repeat_first = ahu_mutants();
+    repeat_first.push(repeat_first[0].clone());
+    repeat_first.push(extra());
+    assert_eq!(refused(&repeat_first).code(), "duplicate-mutant");
+    let mut unlisted_first = vec![extra()];
+    unlisted_first.extend(ahu_mutants());
+    unlisted_first.push(unlisted_first[1].clone());
+    assert_eq!(refused(&unlisted_first).code(), "mutant-unlisted");
+}
+
+/// The hysteresis set of [`hysteresis_set`] listing `m0.cxf.json` and `m1.cxf.json`.
+fn two_mutant_set(params: &[&str]) -> String {
+    hysteresis_set(params).replace(
+        r#""mutants": [{"path": "m.cxf.json"}]"#,
+        r#""mutants": [{"path": "m0.cxf.json"}, {"path": "m1.cxf.json"}]"#,
+    )
+}
+
+#[test]
+fn a_mutants_edit_lists_are_tried_before_the_next_mutant_loads() {
+    let hysteresis = subject("hysteresis");
+    let refusing = edited(&hysteresis, &[(r#""@value": "1.0""#, r#""@value": "1.8""#)]);
+    let set = two_mutant_set(&[r#""uHigh": 1.5"#]);
+    assert_ne!(set, hysteresis_set(&[r#""uHigh": 1.5"#]));
+    let pair = |first: Vec<u8>, second: Vec<u8>| {
+        vec![
+            ("m0.cxf.json".to_owned(), first),
+            ("m1.cxf.json".to_owned(), second),
+        ]
+    };
+    let error = param_refusal(&set, &hysteresis, &pair(refusing.clone(), b"{".to_vec()));
+    assert_eq!(
+        (error.code(), error.subject()),
+        ("mutant-param-refused", "mutants[0]")
+    );
+    let error = param_refusal(&set, &hysteresis, &pair(b"{".to_vec(), refusing));
+    assert_eq!(
+        (error.code(), error.subject()),
+        ("mutant-load-failed", "mutants[0]")
+    );
+}
+
+#[test]
+fn the_subjects_own_parameter_refusal_comes_before_any_mutant_defect() {
+    // The subject's band is (1, 2): uHigh 0.5 is below uLow in every pass.
+    let set = hysteresis_set(&[r#""uHigh": 0.5"#]);
+    let error = param_refusal(
+        &set,
+        &subject("hysteresis"),
+        &[("m.cxf.json".to_owned(), b"{".to_vec())],
+    );
+    assert_eq!(
+        (error.code(), error.subject()),
+        ("param-refused", "scenarios[0]")
+    );
+    let error = param_refusal(&set, &subject("hysteresis"), &[]);
+    assert_eq!(
+        error.code(),
+        "param-refused",
+        "even with the mutant missing"
     );
 }

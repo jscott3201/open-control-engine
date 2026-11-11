@@ -1,7 +1,7 @@
 //! Every object of the format is closed: an unknown key is refused at every level (the keys the
-//! format does not have yet among them, and `mutants` anywhere but the set), a required key cannot be absent, a value of another
-//! JSON type is refused, an expectation is exactly one of its two forms, and any tag but
-//! `oce/vectors/v1` is refused by name before the shape is judged.
+//! format does not have yet among them, and `mutants` anywhere but the set), a required key cannot
+//! be absent, a value of another JSON type is refused, an expectation is exactly one of its two
+//! forms, and any tag but `oce/vectors/v1` is refused by name before the shape is judged.
 
 mod support;
 

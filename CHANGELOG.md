@@ -463,8 +463,12 @@ and a gate that accepted any text would restore exactly the false assurance desc
     codes go from 32 to 35.
   - **The mutants' bytes.** `VectorInputs::with_mutants` hands them in under their listed paths;
     `oce-verify` still opens no file. `VerifyLimits` gains `max_mutants` (256) and
-    `max_mutant_bytes` (64 MiB, all mutants together).
-  - **Validation at bind**, before any frame runs, the first refusal winning:
+    `max_mutant_bytes` (64 MiB, all mutants together). By owner ruling, part 4's CLI resolves each
+    path, keeps it inside the vector file's directory and refuses two listings that resolve to one
+    file; the format's lexical rule stays as it is.
+  - **Validation at bind**, before any frame runs and after the frame budget (which counts
+    `(N + 1) * scenarios * (1 + mutants)` from the listing, so a set over it loads no mutant;
+    owner ruling), the first refusal winning:
     - the bytes given are listed, and given once (`mutant-unlisted`, `duplicate-mutant`);
     - each listed mutant is given (`mutant-missing`);
     - the bytes fit their bound (`too-many-mutant-bytes`);
@@ -475,8 +479,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
     - each mutant admits every distinct effective edit list, each tried once on a fresh engine of
       it in the order of the first scenario that has it (`mutant-param-refused` with the cause
       `param-range`, `param-type`, `param-structural` or `param-path-unknown`, owner ruling).
-    - An invalid mutant is an error with no receipt. The frame budget counts
-      `(N + 1) * scenarios * (1 + mutants)`.
+    - An invalid mutant is an error with no receipt.
   - **Scoring**, only when the subject passes. Each mutant runs the scenarios in file order, as
     the subject did, and stops at the first that fails on it. A frame-class refusal fails it, so a
     mutant that narrows an input bound is caught, not an error.

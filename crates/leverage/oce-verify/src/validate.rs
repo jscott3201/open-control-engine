@@ -2,11 +2,11 @@
 //! "Clock", "Inputs", "Windows", "Diagnostic at an instant").
 //!
 //! The checks run in one fixed order, and the first refusal wins: the clock, the set's `params`,
-//! the set's `mutants` in file order (each path, then repeats), then each scenario in file order (its name, its `params`, its inputs in file order, its
-//! expectations in file order). Each refusal names the place by a path into the set, with
-//! indexes counted from zero in file order. Every check is arithmetic on the values at hand:
-//! nothing iterates over ticks, so a clock at the tick bound costs no more than a clock of two
-//! ticks.
+//! the set's `mutants` in file order (each path, then repeats), then each scenario in file order
+//! (its name, its `params`, its inputs in file order, its expectations in file order). Each refusal
+//! names the place by a path into the set, with indexes counted from zero in file order. Every
+//! check is arithmetic on the values at hand: nothing iterates over ticks, so a clock at the tick
+//! bound costs no more than a clock of two ticks.
 
 use std::collections::BTreeSet;
 

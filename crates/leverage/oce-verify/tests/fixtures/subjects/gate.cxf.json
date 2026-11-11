@@ -1,0 +1,30 @@
+{
+  "@context": {"S231": "http://data.ashrae.org/S231#"},
+  "@graph": [
+    {"@id": "urn:verify:gate#top", "@type": "S231:Block",
+     "S231:containsBlock": [{"@id": "urn:verify:gate#top.cmp"}, {"@id": "urn:verify:gate#top.gate"}],
+     "S231:hasInput": [{"@id": "urn:verify:gate#top.u"}],
+     "S231:hasOutput": [{"@id": "urn:verify:gate#top.y"}]},
+    {"@id": "urn:verify:gate#top.cmp", "@type": "CDL.Reals.GreaterThreshold",
+     "S231:hasParameter": {"@id": "urn:verify:gate#top.cmp.t"},
+     "S231:hasInput": {"@id": "urn:verify:gate#top.cmp.u"},
+     "S231:hasOutput": {"@id": "urn:verify:gate#top.cmp.y"}},
+    {"@id": "urn:verify:gate#top.cmp.t",
+     "S231:value": {"@value": "5.0", "@type": "http://www.w3.org/2001/XMLSchema#double"}},
+    {"@id": "urn:verify:gate#top.cmp.u", "@type": "S231:RealInput", "S231:isOfDataType": {"@id": "S231:Real"}},
+    {"@id": "urn:verify:gate#top.cmp.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": {"@id": "S231:Boolean"},
+     "S231:isConnectedTo": {"@id": "urn:verify:gate#top.gate.u"}},
+    {"@id": "urn:verify:gate#top.gate", "@type": "CDL.Logical.Not",
+     "S231:hasParameter": {"@id": "urn:verify:gate#top.gate.nin"},
+     "S231:hasInput": {"@id": "urn:verify:gate#top.gate.u"},
+     "S231:hasOutput": {"@id": "urn:verify:gate#top.gate.y"}},
+    {"@id": "urn:verify:gate#top.gate.nin",
+     "S231:value": {"@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#integer"}},
+    {"@id": "urn:verify:gate#top.gate.u", "@type": "S231:BooleanInput", "S231:isOfDataType": {"@id": "S231:Boolean"}},
+    {"@id": "urn:verify:gate#top.gate.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": {"@id": "S231:Boolean"},
+     "S231:isConnectedTo": {"@id": "urn:verify:gate#top.y"}},
+    {"@id": "urn:verify:gate#top.u", "@type": "S231:RealInput", "S231:isOfDataType": {"@id": "S231:Real"},
+     "S231:isConnectedTo": {"@id": "urn:verify:gate#top.cmp.u"}},
+    {"@id": "urn:verify:gate#top.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": {"@id": "S231:Boolean"}}
+  ]
+}

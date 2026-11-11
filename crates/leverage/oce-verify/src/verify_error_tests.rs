@@ -70,7 +70,7 @@ fn every_table_is_unique_lowercase_kebab_case() {
 }
 
 #[test]
-fn the_replay_causes_and_parameter_classes_are_the_notes_tables() {
+fn the_replay_causes_and_the_parameter_tables_are_the_notes() {
     assert_eq!(
         REPLAY_FAILURE_CAUSES,
         [
@@ -84,6 +84,17 @@ fn the_replay_causes_and_parameter_classes_are_the_notes_tables() {
     assert_eq!(
         PARAM_REFUSAL_CLASSES,
         ["param-range", "param-type", "param-structural"]
+    );
+    // The note's mutant causes (owner ruling of 2026-11-11): the three classes, then a parameter
+    // the mutant lacks.
+    assert_eq!(
+        MUTANT_PARAM_REFUSAL_CAUSES,
+        [
+            "param-range",
+            "param-type",
+            "param-structural",
+            "param-path-unknown"
+        ]
     );
 }
 
