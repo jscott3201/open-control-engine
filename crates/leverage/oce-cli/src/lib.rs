@@ -1,10 +1,12 @@
 #![forbid(unsafe_code)]
 //! `oce-cli`: the `oce` command-line tool (authoring note `docs/design/authoring-layer.md`, "CLI",
 //! decisions 9 and 20; GitHub issue #489; vocabulary note `docs/design/vocabulary.md`, decision
-//! 12, GitHub issue #500).
+//! 12, GitHub issue #500; vectors note `docs/design/vectors.md`, "CLI", decision 34, GitHub issue
+//! #522).
 //!
 //! The binary (`src/main.rs`) is a thin shell over [`run`], which parses the arguments with `clap`
-//! and dispatches to one of five commands over `oce-author`, `oce-vocab` and the facade:
+//! and dispatches to one of six commands over `oce-author`, `oce-vocab`, `oce-verify` and the
+//! facade:
 //!
 //! - `emit`: an authored sequence (text or wire) to flat CXF, after both validation stages;
 //! - `validate`: both validation stages, or stage 1 alone, as a JSON report;
@@ -12,13 +14,15 @@
 //! - `catalog`: the classes, their parameters and resolved ports, and the block vocabulary:
 //!   descriptions, declared units and quantities, ranges, typed notes and upstream links;
 //! - `vocab`: the text-form vocabulary, the unit scale factors and every code the tool can
-//!   report.
+//!   report;
+//! - `verify`: a vector set replayed against a subject, the receipt on stdout.
 //!
-//! **Exit codes** follow the one `oce` rule: `0` yes (clean), `1` no (an error finding, a
-//! non-canonical file, a class whose ports do not resolve), `2` error (a usage error, input that
-//! cannot be read or parsed, an over-size input, an I/O failure). **Output** is deterministic:
-//! stdout carries exactly one document — the command's product (CXF, canonical text, a catalog
-//! listing) or its JSON report (`report.rs`, documented in the crate README) — with sorted keys, LF
+//! **Exit codes** follow the one `oce` rule: `0` yes (clean, every scenario passed), `1` no (an
+//! error finding, a non-canonical file, a class whose ports do not resolve, a failed or `no_data`
+//! verdict), `2` error (a usage error, input that cannot be read or parsed, an over-size input, an
+//! I/O failure, a run that reached no verdict). **Output** is deterministic: stdout carries
+//! exactly one document — the command's product (CXF, canonical text, a catalog listing, a
+//! receipt) or its JSON report (`report.rs`, documented in the crate README) — with sorted keys, LF
 //! line endings and no timestamps; a human-readable rendering goes to stderr only when stderr is a
 //! terminal or `--render always` asks for it. Nothing here panics on hostile input, and no path
 //! the tool prints is one it did not receive as an argument.
@@ -26,13 +30,15 @@
 //! The `pub` items ([`Exit`], [`Streams`], [`run`], [`REPORT_SCHEMA`]) are exposed for the crate's
 //! own binary and integration tests; they are not a supported library API.
 //!
-//! The crate sits above the facade: it depends on `oce-api` and the leverage crates `oce-author`
-//! and `oce-vocab` only, and every engine it loads is a throwaway of the validator's own.
+//! The crate sits above the facade: it depends on `oce-api` and the leverage crates `oce-author`,
+//! `oce-vocab` and `oce-verify` only, and every engine it loads is a throwaway of the validator's
+//! or the verifier's own.
 
 mod codes;
 mod commands;
 mod input;
 mod report;
+mod verify_codes;
 
 use std::ffi::OsString;
 use std::io::{IsTerminal, Read, Write};
@@ -109,6 +115,44 @@ pub(crate) struct Source {
     pub(crate) from: Option<Form>,
 }
 
+/// The forms a `verify` subject is read in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+pub(crate) enum SubjectForm {
+    // Flat CXF, given to the engine untouched (`.jsonld`, `.cxf.json`).
+    Cxf,
+    // The text form (`.oce`), validated and emitted first.
+    Text,
+    // The strict-JSON wire form (any other `.json`), validated and emitted first.
+    Wire,
+}
+
+/// What `verify` runs and how it answers.
+#[derive(Debug, Args)]
+pub(crate) struct VerifyArgs {
+    /// The vector set (`oce/vectors/v1`); mutant paths resolve against its directory.
+    pub(crate) vectors: OsString,
+    /// The sequence the vectors check: CXF (`.jsonld`, `.cxf.json`), text (`.oce`) or wire
+    /// (`.json`).
+    #[arg(long)]
+    pub(crate) subject: OsString,
+    /// The subject's form; overrides the name.
+    #[arg(long, value_enum)]
+    pub(crate) subject_form: Option<SubjectForm>,
+    /// Write the receipt to DIR/receipt.json (atomically) and print the report on stdout.
+    #[arg(long, value_name = "DIR")]
+    pub(crate) out: Option<OsString>,
+    /// Exit 1 when a mutant survived or the set lists none; no receipt byte changes.
+    #[arg(long)]
+    pub(crate) require_mutants_caught: bool,
+    /// Exit 1 when the subject warned at load or a scenario left a warning unmatched; no receipt
+    /// byte changes.
+    #[arg(long)]
+    pub(crate) deny_warnings: bool,
+    /// Measure the run into the receipt's timings, which receipt_id never covers.
+    #[arg(long)]
+    pub(crate) timings: bool,
+}
+
 #[derive(Debug, Subcommand)]
 enum Command {
     /// Validate a sequence, then write it as flat CXF.
@@ -167,6 +211,12 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    /// Replay a vector set against a subject and print the receipt.
+    ///
+    /// Stdout is the receipt when the run reaches a verdict: exit 0 when every scenario passed, 1
+    /// when one failed or the set checked nothing. Anything that prevents a verdict is exit 2 with
+    /// the JSON report. With --out the receipt goes to DIR/receipt.json and the report to stdout.
+    Verify(VerifyArgs),
 }
 
 /// The streams one run reads and writes, and whether stderr is a terminal.
@@ -230,6 +280,7 @@ where
             params,
         } => commands::catalog::run(class.as_deref(), json, &params),
         Command::Vocab { json } => commands::vocab::run(json),
+        Command::Verify(args) => commands::verify::run(&args),
     };
     commands::finish(outcome, render, streams)
 }

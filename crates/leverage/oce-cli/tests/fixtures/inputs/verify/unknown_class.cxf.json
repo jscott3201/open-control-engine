@@ -1,0 +1,23 @@
+{
+  "@context": {"S231": "http://data.ashrae.org/S231#"},
+  "@graph": [
+    {"@id": "urn:verify:hysteresis#top", "@type": "S231:Block",
+     "S231:containsBlock": [{"@id": "urn:verify:hysteresis#top.hys"}],
+     "S231:hasInput": [{"@id": "urn:verify:hysteresis#top.u"}],
+     "S231:hasOutput": [{"@id": "urn:verify:hysteresis#top.y"}]},
+    {"@id": "urn:verify:hysteresis#top.hys", "@type": "CDL.Reals.NoSuchClass",
+     "S231:hasParameter": [{"@id": "urn:verify:hysteresis#top.hys.uLow"}, {"@id": "urn:verify:hysteresis#top.hys.uHigh"}],
+     "S231:hasInput": {"@id": "urn:verify:hysteresis#top.hys.u"},
+     "S231:hasOutput": {"@id": "urn:verify:hysteresis#top.hys.y"}},
+    {"@id": "urn:verify:hysteresis#top.hys.uLow",
+     "S231:value": {"@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double"}},
+    {"@id": "urn:verify:hysteresis#top.hys.uHigh",
+     "S231:value": {"@value": "2.0", "@type": "http://www.w3.org/2001/XMLSchema#double"}},
+    {"@id": "urn:verify:hysteresis#top.hys.u", "@type": "S231:RealInput", "S231:isOfDataType": {"@id": "S231:Real"}},
+    {"@id": "urn:verify:hysteresis#top.hys.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": {"@id": "S231:Boolean"},
+     "S231:isConnectedTo": {"@id": "urn:verify:hysteresis#top.y"}},
+    {"@id": "urn:verify:hysteresis#top.u", "@type": "S231:RealInput", "S231:isOfDataType": {"@id": "S231:Real"},
+     "S231:isConnectedTo": {"@id": "urn:verify:hysteresis#top.hys.u"}},
+    {"@id": "urn:verify:hysteresis#top.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": {"@id": "S231:Boolean"}}
+  ]
+}

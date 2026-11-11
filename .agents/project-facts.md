@@ -427,7 +427,11 @@ commit (the links); `vocab_text` and `vocab_json` move with `oce_vocab::SCALE_FA
 `OCE_BLESS_CLI=1 cargo nextest run -p oce-cli`, run it again without the switch, and say in the PR
 which transcripts moved and why. `tests/report_shape.rs` holds every report transcript to the
 README's contract (sorted keys, `ok` iff exit 0, `errors` iff exit 2, no absolute path), so a
-blessed transcript that breaks the contract still fails.
+blessed transcript that breaks the contract still fails. Since issue #522 the `verify_*`
+transcripts embed `oce-verify` receipts, which carry the engine version: a workspace version bump,
+or anything that moves an `oce-verify` golden receipt, moves them too. `tests/replay_gate.rs`
+compares the binary's stdout with `oce-verify`'s golden receipts in place, so it fails until those
+are re-blessed in `oce-verify`.
 
 ## The `oce-vocab` data files move with catalog names and the vendored CXF-Core
 

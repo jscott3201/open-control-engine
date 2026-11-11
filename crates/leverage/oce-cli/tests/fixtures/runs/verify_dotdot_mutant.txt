@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "at": "mutants[0].path",
+      "code": "mutant-path-invalid",
+      "detail": "the mutant path `../identical_mutant/copy.cxf.json` has a `..` segment; it must stay inside the vector file's directory",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "tests/fixtures/inputs/verify/dotdot_mutant/vectors.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "subject": "../oce-verify/tests/fixtures/subjects/hysteresis.cxf.json",
+  "tool": "oce"
+}
+--- stderr

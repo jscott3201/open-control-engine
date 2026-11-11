@@ -453,6 +453,56 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
+- **Vectors, part 4 of 4: the `oce verify` verb and the in-repo replay gate** (GitHub #573, issue
+  #522; [vectors note](docs/design/vectors.md), "CLI", decisions 19, 26, 30, 31, 34 and 36, the
+  owner's rulings of 2026-11-11 in "Part 4's readings").
+  - **The verb.**
+    `oce verify <VECTORS> --subject <FILE> [--subject-form cxf|text|wire] [--out <DIR>]
+    [--require-mutants-caught] [--deny-warnings] [--timings]` takes one vector set and one subject
+    per run over `oce-verify`, which `oce-cli` now depends on.
+  - **Forms.** A subject named `.jsonld` or `.cxf.json` is CXF, tested before `.json` is wire; `.oce`
+    is text. A text or wire subject is validated and emitted with the default options first.
+    Anything else is the new code `unknown-subject-form`.
+  - **Reads.** Every size is checked from metadata before a byte is read: the vector file at 4 MiB,
+    a CXF subject and each mutant at 8 MiB, a text or wire subject at its form's 4 MiB (owner
+    ruling), and the mutants together at 64 MiB.
+  - **Mutant paths, per the owner's ruling.** Each path is resolved against the vector file's
+    directory, following links. A path that leaves it is the new `mutant-outside-directory`, and
+    two listings that are one file are `duplicate-mutant`. One file is one (device, inode) on Unix
+    and one canonical path on Windows. Each mutant must be a regular file by its metadata before
+    it is opened, so a named pipe or a socket is `not-a-file` and never blocks the run (review of
+    GitHub #573). It is then opened once, the handle must be the file checked, and its size and
+    bytes come from that handle.
+  - **Output.** The receipt is stdout for a verdict, exit 0 or 1: the CLI's one exception to "exit
+    1 prints the report". Exit 2 prints the `oce-report/1` report. `--out DIR` writes
+    `DIR/receipt.json` atomically and prints the report with `passed`, `status`, `receipt_id` and
+    `output`; on exit 2 nothing is written.
+  - **Report errors** gain the optional keys `at` (the place), `path`, `candidates`, `cause` and
+    `diagnostic_codes`, written only with a value. The schema is changed in place and stays
+    `oce-report/1`. The place was first built as `subject`; the owner ruled `at`, because a
+    `verify` report's top-level `subject` is the subject file.
+  - **Exit-only flags.** `--require-mutants-caught` and `--deny-warnings` flip the exit status over
+    the same receipt bytes. By owner ruling, `--require-mutants-caught` also fails a set that
+    lists no mutant (no `mutants` key, or an empty list).
+  - **`--timings`** fills `load_ms` (reading and emitting) and `run_ms` (the whole `run_vectors`
+    call). `compare_ms` stays 0, and `receipt_id` never moves.
+  - **Vocabulary.** `oce vocab` lists `oce-verify`'s 35 load codes and 30 bind and run codes, pinned
+    to its lists, and the two new CLI codes.
+  - **The in-repo replay gate.** `crates/leverage/oce-cli/tests/replay_gate.rs` runs the built
+    binary over both in-repo library rules in place and requires exit 0 and stdout byte-equal to
+    `oce-verify`'s golden receipts. It runs in the leverage lane, and an edited expectation fails
+    it.
+  - **Transcripts.** New: 23 `verify_*` transcripts and `help_verify`. Re-blessed: `help_oce` and
+    `usage_no_arguments` (the new subcommand line), `vocab_text` and `vocab_json` (the new tables,
+    and the widened exit and `input-too-large` meanings). No `oce-verify` golden moves.
+  - **Docs.**
+    - `docs/design/vectors.md`: part 4's rulings and readings, decision 19's gate, the CLI codes.
+    - `docs/design/authoring-layer.md`: `oce check` stays deferred, cut as #574.
+    - `docs/ci-and-the-gate.md`: the gate as the M3 "In-repo rules replay" evidence.
+    - The crate README, `docs/architecture.md`, `crates/leverage/README.md` and
+      `.agents/project-facts.md`.
+    - The root README's M3 status.
+    - Tracking #456 item 7 now says `oce verify --commission`.
 - **Binding resolves names through an index and holds set-level edits once** (GitHub #572, issue
   #571; [work-budget note](docs/design/vector-work-budget.md), "What the budgets leave bounded
   elsewhere"). The review of GitHub #570 found two costs at bind that come before the work budgets.

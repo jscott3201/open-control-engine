@@ -1,0 +1,23 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "at": "line 2 column 1",
+      "code": "json-syntax",
+      "detail": "expected a key",
+      "span": {
+        "column": 1,
+        "line": 2
+      }
+    }
+  ],
+  "findings": [],
+  "input": "tests/fixtures/inputs/verify/malformed.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "subject": "../oce-verify/tests/fixtures/subjects/hysteresis.cxf.json",
+  "tool": "oce"
+}
+--- stderr

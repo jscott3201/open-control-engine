@@ -12,6 +12,7 @@ Commands:
   fmt       Print the canonical text form of a sequence
   catalog   List the block classes, or describe one: its ports, parameters, units, ranges and notes
   vocab     Print the text-form vocabulary, the unit scale factors and every code oce reports
+  verify    Replay a vector set against a subject and print the receipt
   help      Print this message or the help of the given subcommand(s)
 
 Options:

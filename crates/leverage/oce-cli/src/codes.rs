@@ -39,6 +39,11 @@ pub(crate) const MALFORMED_VALUE: &str = "malformed-value";
 pub(crate) const PORTS_UNRESOLVABLE: &str = "ports-unresolvable";
 /// The emitter refused for a reason this tool does not know (never expected).
 pub(crate) const EMIT_REFUSED: &str = "emit-refused";
+/// A `verify` subject whose name gives no form, without `--subject-form`.
+pub(crate) const UNKNOWN_SUBJECT_FORM: &str = "unknown-subject-form";
+/// A mutant path that resolves, through a symbolic link or a drive prefix, to a file outside the
+/// vector file's directory (owner ruling of 2026-11-11).
+pub(crate) const MUTANT_OUTSIDE_DIRECTORY: &str = "mutant-outside-directory";
 
 // --- Wire-form refusal codes (`errors[].code`, exit 2), one per `oce_author::WireError`. ---
 
@@ -90,7 +95,7 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
     (READ_FAILED, "the input could not be read"),
     (
         INPUT_TOO_LARGE,
-        "the input is over its form's 4 MiB limit; refused before it is read",
+        "the input is over its limit (4 MiB a sequence or vector file, 8 MiB CXF); refused before it is read",
     ),
     (
         INVALID_NAMESPACE,
@@ -120,6 +125,14 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
     (
         EMIT_REFUSED,
         "the emitter refused for a reason this tool does not know",
+    ),
+    (
+        UNKNOWN_SUBJECT_FORM,
+        "a verify subject is not .jsonld, .cxf.json, .oce or .json and --subject-form was not given",
+    ),
+    (
+        MUTANT_OUTSIDE_DIRECTORY,
+        "a mutant path resolves, through a link or a drive prefix, outside the vector file's directory",
     ),
 ];
 
@@ -395,14 +408,14 @@ pub(crate) const TEXT_FORM_TAGS: &[&str] = &[
 
 /// The exit statuses and their meanings.
 pub(crate) const EXIT_MEANINGS: &[(u8, &str)] = &[
-    (0, "yes: clean, canonical, resolved"),
+    (0, "yes: clean, canonical, resolved, every scenario passed"),
     (
         1,
-        "no: an error finding, a non-canonical file, ports that do not resolve",
+        "no: an error finding, a non-canonical file, ports that do not resolve, a failed or no_data verdict",
     ),
     (
         2,
-        "error: a usage, read, parse, size or I/O failure; the question was not answered",
+        "error: a usage, read, parse, size or I/O failure, or a run with no verdict; the question was not answered",
     ),
 ];
 

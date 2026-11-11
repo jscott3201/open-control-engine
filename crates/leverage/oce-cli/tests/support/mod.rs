@@ -80,6 +80,50 @@ pub fn oce_in(dir: &Path, args: &[&str], stdin: &[u8]) -> Run {
     }
 }
 
+/// Run `oce` with `args` in `dir`, killing it if it has not finished after `guard`. The guard
+/// catches a run that would never return (a regression that blocks on a named pipe, say) so the
+/// test fails instead of hanging; it is a hang guard, never an assertion on speed, and is meant to
+/// be far longer than any run takes.
+pub fn oce_in_guarded(dir: &Path, args: &[&str], guard: std::time::Duration) -> Run {
+    use std::io::Read;
+    let mut child = Command::new(env!("CARGO_BIN_EXE_oce"))
+        .args(args)
+        .current_dir(dir)
+        .env_remove(BLESS_VAR)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("the oce binary starts");
+    // Drained on their own threads, so a full pipe never looks like a hang.
+    let drain = |mut pipe: Box<dyn Read + Send>| {
+        std::thread::spawn(move || {
+            let mut bytes = Vec::new();
+            let _ = pipe.read_to_end(&mut bytes);
+            bytes
+        })
+    };
+    let stdout = drain(Box::new(child.stdout.take().expect("stdout is piped")));
+    let stderr = drain(Box::new(child.stderr.take().expect("stderr is piped")));
+    let started = std::time::Instant::now();
+    let status = loop {
+        if let Some(status) = child.try_wait().expect("the child can be polled") {
+            break status;
+        }
+        if started.elapsed() > guard {
+            let _ = child.kill();
+            let _ = child.wait();
+            panic!("oce {args:?} did not finish: it hung");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    };
+    Run {
+        code: status.code().expect("the binary exits with a status"),
+        stdout: stdout.join().expect("stdout drained"),
+        stderr: stderr.join().expect("stderr drained"),
+    }
+}
+
 /// Run `oce` with `args` in the crate directory.
 pub fn oce(args: &[&str], stdin: &[u8]) -> Run {
     oce_in(crate_dir(), args, stdin)
@@ -115,6 +159,20 @@ pub fn compare_or_bless(relative: &str, actual: &str) {
 /// transcript with `tests/fixtures/runs/<name>.txt` (or write it when blessing).
 pub fn case(name: &str, expected_exit: i32, args: &[&str], stdin: &[u8]) {
     let run = oce(args, stdin);
+    assert_eq!(
+        run.code,
+        expected_exit,
+        "{name}: exit status\n{}",
+        run.transcript()
+    );
+    compare_or_bless(&format!("runs/{name}.txt"), &run.transcript());
+}
+
+/// Run one golden case in `dir` (a scratch directory with its inputs copied in, named by relative
+/// paths): check its exit status, then compare its transcript with
+/// `tests/fixtures/runs/<name>.txt` (or write it when blessing).
+pub fn case_in(dir: &Path, name: &str, expected_exit: i32, args: &[&str]) {
+    let run = oce_in(dir, args, b"");
     assert_eq!(
         run.code,
         expected_exit,

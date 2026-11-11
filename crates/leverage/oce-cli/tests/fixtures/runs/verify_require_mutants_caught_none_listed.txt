@@ -1,0 +1,73 @@
+exit: 1
+--- stdout
+{
+  "body": {
+    "clock": {
+      "horizon_s": 600,
+      "step_s": 60
+    },
+    "load_warnings": [],
+    "load_warnings_total": 0,
+    "scenarios": [
+      {
+        "expectations": 1,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 11,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 11,
+          "failed": 0,
+          "masked": 0,
+          "passed": 11
+        },
+        "name": "low",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      }
+    ],
+    "status": "pass",
+    "totals": {
+      "failures": 0,
+      "frames": {
+        "executed": 11,
+        "refused": 0,
+        "substituted": 0
+      },
+      "instants": {
+        "checked": 11,
+        "failed": 0,
+        "masked": 0,
+        "passed": 11
+      },
+      "scenarios": {
+        "fail": 0,
+        "no_data": 0,
+        "pass": 1,
+        "total": 1
+      },
+      "warnings": 0
+    }
+  },
+  "comparison": {
+    "mode": "exact"
+  },
+  "content_id": "oce:canon1:f4c4aaff330f0d99a457ef62738d9670238c0680d9ecd25b63f034ade47e9f95",
+  "engine_version": "0.5.0",
+  "kind": "vectors",
+  "passed": true,
+  "receipt_id": "receipt:fnv1a128:3dddfb7ae9c6879b09a56636ab6400a8",
+  "schema": "oce/receipt/v1",
+  "spec_id": "spec:fnv1a128:b7da8efe166918a24bdee0dddc92a257",
+  "timings": {
+    "compare_ms": 0,
+    "load_ms": 0,
+    "run_ms": 0
+  }
+}
+--- stderr

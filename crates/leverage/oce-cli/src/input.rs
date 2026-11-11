@@ -95,7 +95,7 @@ fn form_of(source: &Source) -> Result<Form, (&'static str, String)> {
 }
 
 /// Read a file, refusing a missing path, a non-file and an over-size file before reading.
-fn read_file(path: &Path, bound: usize) -> Result<Vec<u8>, (&'static str, String)> {
+pub(crate) fn read_file(path: &Path, bound: usize) -> Result<Vec<u8>, (&'static str, String)> {
     let metadata = std::fs::metadata(path).map_err(io_refusal)?;
     if !metadata.is_file() {
         return Err((
@@ -111,7 +111,10 @@ fn read_file(path: &Path, bound: usize) -> Result<Vec<u8>, (&'static str, String
 }
 
 /// Read at most `bound` bytes; one byte more is an over-size refusal.
-fn read_bounded(reader: impl Read, bound: usize) -> Result<Vec<u8>, (&'static str, String)> {
+pub(crate) fn read_bounded(
+    reader: impl Read,
+    bound: usize,
+) -> Result<Vec<u8>, (&'static str, String)> {
     let mut bytes = Vec::new();
     let cap = u64::try_from(bound).unwrap_or(u64::MAX).saturating_add(1);
     reader
@@ -127,7 +130,7 @@ fn read_bounded(reader: impl Read, bound: usize) -> Result<Vec<u8>, (&'static st
     Ok(bytes)
 }
 
-fn too_large(size: u64, bound: usize) -> (&'static str, String) {
+pub(crate) fn too_large(size: u64, bound: usize) -> (&'static str, String) {
     (
         codes::INPUT_TOO_LARGE,
         format!("the input is {size} bytes; at most {bound} are read"),

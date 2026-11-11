@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "at": "scenarios[0].inputs.v",
+      "code": "unknown-input",
+      "detail": "`v` matches no boundary input, by exact path or by suffix",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "tests/fixtures/inputs/verify/unknown_input.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "subject": "../oce-verify/tests/fixtures/subjects/hysteresis.cxf.json",
+  "tool": "oce"
+}
+--- stderr

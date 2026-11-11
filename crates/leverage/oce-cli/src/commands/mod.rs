@@ -1,9 +1,10 @@
-//! The five commands, and how one run's outcome reaches the streams.
+//! The six commands, and how one run's outcome reaches the streams.
 //!
 //! Every command returns an [`Outcome`]: its exit status, its report, and optionally a document
-//! (CXF, canonical text, a text listing) that stdout carries instead of the report's JSON. Exactly
-//! one of the two is written to stdout; the human-readable rendering of the report goes to stderr
-//! when asked for.
+//! (CXF, canonical text, a text listing, a receipt) that stdout carries instead of the report's
+//! JSON. Exactly one of the two is written to stdout; the human-readable rendering of the report
+//! goes to stderr when asked for. A document comes with exit `0`, except a `verify` receipt,
+//! which is also stdout for a verdict of exit `1` (vectors note, "CLI").
 
 mod atomic_write;
 pub(crate) mod catalog;
@@ -11,6 +12,9 @@ mod catalog_params;
 pub(crate) mod emit;
 pub(crate) mod fmt;
 pub(crate) mod validate;
+pub(crate) mod verify;
+mod verify_mutants;
+mod verify_subject;
 pub(crate) mod vocab;
 
 use std::ffi::OsStr;
@@ -61,6 +65,16 @@ impl Outcome {
     pub(crate) fn document(report: Report, document: Vec<u8>) -> Self {
         Self {
             exit: Exit::Yes,
+            report,
+            document: Some(document),
+        }
+    }
+
+    /// A verdict whose product is `document` whatever the answer: a `verify` receipt on stdout
+    /// for exit `0` or `1`.
+    pub(crate) fn verdict(exit: Exit, report: Report, document: Vec<u8>) -> Self {
+        Self {
+            exit,
             report,
             document: Some(document),
         }

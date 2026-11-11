@@ -1,0 +1,199 @@
+exit: 0
+--- stdout
+{
+  "body": {
+    "clock": {
+      "horizon_s": 1800,
+      "step_s": 60
+    },
+    "load_warnings": [],
+    "load_warnings_total": 0,
+    "scenarios": [
+      {
+        "expectations": 1,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 31,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 31,
+          "failed": 0,
+          "masked": 0,
+          "passed": 31
+        },
+        "name": "normal_heating",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      },
+      {
+        "expectations": 1,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 31,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 31,
+          "failed": 0,
+          "masked": 0,
+          "passed": 31
+        },
+        "name": "normal_cooling",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      },
+      {
+        "expectations": 2,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 31,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 30,
+          "failed": 0,
+          "masked": 0,
+          "passed": 30
+        },
+        "name": "both_open",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      },
+      {
+        "expectations": 1,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 31,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 31,
+          "failed": 0,
+          "masked": 0,
+          "passed": 31
+        },
+        "name": "both_below_threshold",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      },
+      {
+        "expectations": 1,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 31,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 31,
+          "failed": 0,
+          "masked": 0,
+          "passed": 31
+        },
+        "name": "deadband",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      },
+      {
+        "expectations": 1,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 31,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 31,
+          "failed": 0,
+          "masked": 0,
+          "passed": 31
+        },
+        "name": "threshold_edge",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      },
+      {
+        "expectations": 1,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 31,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 31,
+          "failed": 0,
+          "masked": 0,
+          "passed": 31
+        },
+        "name": "transient_overlap",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      }
+    ],
+    "status": "pass",
+    "totals": {
+      "failures": 0,
+      "frames": {
+        "executed": 217,
+        "refused": 0,
+        "substituted": 0
+      },
+      "instants": {
+        "checked": 216,
+        "failed": 0,
+        "masked": 0,
+        "passed": 216
+      },
+      "scenarios": {
+        "fail": 0,
+        "no_data": 0,
+        "pass": 7,
+        "total": 7
+      },
+      "warnings": 0
+    }
+  },
+  "comparison": {
+    "mode": "exact"
+  },
+  "content_id": "oce:canon1:faddaaad1ed2bc2adfaece89cbc5a5bb9fa68eccc958c800678ddaf37edf2d7b",
+  "engine_version": "0.5.0",
+  "kind": "vectors",
+  "passed": true,
+  "receipt_id": "receipt:fnv1a128:cca7cd3d97e3ee78ab48d54f4320df2c",
+  "schema": "oce/receipt/v1",
+  "spec_id": "spec:fnv1a128:21155b0b2204f4353df7751eab35d1ee",
+  "timings": {
+    "compare_ms": 0,
+    "load_ms": 0,
+    "run_ms": 0
+  }
+}
+--- stderr
