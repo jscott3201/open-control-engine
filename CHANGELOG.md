@@ -1108,7 +1108,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Verification
 
 - **The workflow checker closes five gaps, and the pin-advance row states its real reason**
-  (GitHub #PRNUM, issue #555; follow-ups from the reviews of GitHub #547 and #557, and an owner
+  (GitHub #564, issue #555; follow-ups from the reviews of GitHub #547 and #557, and an owner
   ruling of 2026-11-10 that a pin advance keeps the `full` row). No workflow, gate command or
   proof row changed.
   **Checker.** `check-workflow-gates.sh` now (1) pins the body of `[profile.ci-release-workspace]`
