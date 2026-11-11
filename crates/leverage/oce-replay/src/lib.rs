@@ -10,7 +10,8 @@
 //! It holds four things:
 //!
 //! - **Frame sources** ([`FrameSource`]): rows by slot, `(t, &[Option<Value>])`, after a one-time
-//!   name→slot mapping ([`InputMap::resolve`]); three adapters — [`ColumnarSource`] (owned typed
+//!   name→slot mapping ([`InputMap::resolve`], by the one name rule [`resolve_path`], which
+//!   [`PathIndex`] answers for many names at once); three adapters — [`ColumnarSource`] (owned typed
 //!   columns, the numpy and pandas shape), [`CsvSource`] (a bounded byte reader with a column map
 //!   and a time origin) and [`StepSource`] (per-input change lists).
 //! - **Missing-sample policy** ([`MissingPolicy`], [`OnRefusal`], [`DuplicateTime`], [`TimeBase`]):

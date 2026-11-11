@@ -7,7 +7,9 @@ scoring mutants, and the frames it runs, weighted by the size of the document th
 4 (the `oce verify` verb, #522) is blocked on it, because the verb puts the run in front of files
 fetched from elsewhere. The [vectors note](vectors.md) is the format and run this note bounds. A
 test reads its text, so its amendment ships with the implementing PR, which closes #561; this note
-stays documentation only. *(2026-11-11: built in GitHub #570, which amends the vectors note.)*
+stays documentation only. *(2026-11-11: built in GitHub #570, which amends the vectors note.
+The two bind costs before the budget step that the review of #570 found are removed in GitHub
+#572, issue #571: see "What the budgets leave bounded elsewhere".)*
 
 ## What is bounded today, and what is not
 
@@ -195,6 +197,37 @@ run a hostile file would ask for.
   scenario's trace.
 - **The vector file** is read once under its 4 MiB bound. The receipt is written under its record
   caps.
+- **Name resolution at bind** *(added 2026-11-11, GitHub #572, issue #571)*. It comes before the
+  budget step, so no budget bounds it.
+  - **Before:** every input, output and parameter name was resolved by `oce_replay::resolve_path`,
+    which scans every candidate path for a suffix match, so binding cost names times paths. The
+    review of #570 measured 4.2 s in `dev` for 51,200 suffix keys against 8,000 parameters.
+  - **Now:** each list is indexed once, by `oce_replay::PathIndex`. It sorts the paths by their
+    bytes read backwards, so the paths that end with a name at a `.` boundary sit together and
+    one binary search finds them. A shared last segment (`uLow` in every block) costs nothing
+    extra. Every answer is `resolve_path`'s, the candidates of an ambiguous name in list order
+    included, and a generated corpus pins that.
+  - **Measured.** 204,800 suffix keys (800 scenarios of 256, a 3.5 MB set) against 8,000
+    parameters (4,000 `Reals.Hysteresis` blocks, a 3.2 MB subject) bound in **15.7 s** in `dev`
+    before, and in **1.4 s** now, most of which is reading the two documents and loading the
+    subject. For the review's 51,200 keys, `oce-replay`'s unit test counts 106,868 comparisons
+    to index the 8,000 paths and 1,535,987 to resolve every key: about 30 a key, against the
+    409,600,000 the scan makes. `InputMap::resolve` resolves its column targets and policy
+    overrides through the same index, and finds columns by name in an ordered map.
+- **Binding's memory** *(added 2026-11-11, GitHub #572, issue #571)*. It is also spent before the
+  budget step.
+  - **Before:** binding copied the set's own `params` into every scenario's effective list, and
+    `edit_lists::distinct` built an identity key for every list. The review counted about 80 MB
+    of edits for a 4 MiB set, plus up to 34 MB of keys.
+  - **Now:** an edit is a row of the parameter table and its value, the set's edits are held
+    once, and each scenario holds only its own map. A trial, a run or a receipt builds the
+    effective list it uses, for that use alone. Distinct lists are found by sorting the scenarios
+    by their merged lists, compared in place.
+  - **Measured.** For 4,096 scenarios under 256 set-level edits, the most held before the budget
+    step fell from **72,811,014 bytes in 1,221,928 allocations** to **3,177,307 bytes in 67,105**.
+    That is the same peak as one scenario's, which is the subject's load; `tests/bind_cost.rs`
+    pins it. A receipt still lists each scenario's effective edits, as its format says, but it is
+    written only for a run inside every budget.
 
 ## Alternatives
 

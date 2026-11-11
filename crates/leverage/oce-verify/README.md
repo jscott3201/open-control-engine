@@ -244,11 +244,13 @@ In order, the first refusal winning:
    rule, `oce_replay::resolve_path`: the exact canonical path, or the one path that ends with the
    name at a `.` boundary (`#` is not a boundary). Inputs resolve against
    `Engine::input_definitions()`, outputs against `FrameSlots::outputs()`, parameter keys against
-   `Engine::params()` sorted by path. Every value is typed by what it lands on, never by its
-   token: a Real takes any number (an integer token when a binary64 holds it exactly, `-0` as
-   `+0.0`, `-0.0` with its sign), an Integer an integer token only (`1.0` is refused), a Boolean
-   `true` or `false`, a String or Enum parameter nothing. A scenario's `params` override the set's
-   by resolved path, whatever either spelling was.
+   `Engine::params()` sorted by path, each list indexed once (`oce_replay::PathIndex`), so a name
+   costs a binary search rather than a scan of the list (issue #571). Every value is typed by what
+   it lands on, never by its token: a Real takes any number (an integer token when a binary64
+   holds it exactly, `-0` as `+0.0`, `-0.0` with its sign), an Integer an integer token only
+   (`1.0` is refused), a Boolean `true` or `false`, a String or Enum parameter nothing. A
+   scenario's `params` override the set's by resolved path, whatever either spelling was. The
+   set's `params` are held once; each scenario keeps only its own map.
 4. **The work budgets** (the [work-budget note](../../../docs/design/vector-work-budget.md)), in
    this order, the first exceeded winning; each counts every mutant as if it ran every scenario:
    - frames, `(N + 1) * scenarios * (1 + mutants)`, against `max_total_frames`, after one

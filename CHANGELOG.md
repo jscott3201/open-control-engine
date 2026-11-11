@@ -453,6 +453,32 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
+- **Binding resolves names through an index and holds set-level edits once** (GitHub #572, issue
+  #571; [work-budget note](docs/design/vector-work-budget.md), "What the budgets leave bounded
+  elsewhere"). The review of GitHub #570 found two costs at bind that come before the work budgets.
+  Both are removed, and no resolved name, refusal or receipt byte changes.
+  - **`oce_replay::PathIndex`** (new public type) answers the one name rule, `resolve_path`, for
+    many names at once. It sorts a path list once by its bytes read backwards, so the paths ending
+    with a name at a `.` boundary are found by one binary search; a shared last segment costs
+    nothing extra. `resolve_path` stays as it was. `InputMap::resolve` resolves its column
+    targets and policy overrides through the index, and finds columns by name in an ordered map;
+    every `MapError` is unchanged. A generated corpus pins every answer against `resolve_path`,
+    including exact, suffix, ambiguous (candidates in list order) and absent names, dots,
+    brackets, `#`, multi-byte characters and an out-of-order list. A comparison count pins the
+    cost: about 30 comparisons a key for 51,200 suffix keys against 8,000 paths, where the scan
+    makes 409,600,000.
+  - **`oce-verify` binds through it**: each of the input, output and parameter lists is indexed
+    once. 204,800 suffix keys against 8,000 parameters bound in 15.7 s in `dev` before and 1.4 s
+    now (`tests/name_resolution.rs`).
+  - **Set-level edits are held once.** An edit is a parameter-table row and its value. Each
+    scenario keeps its own map, and the effective list is built for the trial, run or receipt
+    that uses it. Distinct lists are found by sorting the scenarios by their merged lists rather
+    than by copying a key for each. For 4,096 scenarios under 256 set-level edits, the most held
+    before the budget step fell from 72,811,014 bytes in 1,221,928 allocations to 3,177,307 bytes
+    in 67,105, the subject's load (`tests/bind_cost.rs`).
+  - **Goldens.** The five golden receipts, the schema, the canonical goldens and `oce-replay`'s
+    trace goldens are unchanged. The digest `tests/parameter_trials.rs` pinned before #570's
+    deduplication still matches.
 - **Vectors: four work budgets bound one run, checked at bind** (GitHub #570, issue #561;
   [work-budget note](docs/design/vector-work-budget.md), the owner's rulings of 2026-11-11).
   - **The budgets.** `VerifyLimits` gains three fields beside `max_total_frames` (2^24, kept):
