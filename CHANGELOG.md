@@ -526,7 +526,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Leverage
 
 - **Time unit suffixes scale from the vocabulary, and a suffix must fit its parameter**
-  (GitHub #PRNUM, issue #501; vocabulary v1, part 3 of 3; [vocabulary note](docs/design/vocabulary.md),
+  (GitHub #586, issue #501; vocabulary v1, part 3 of 3; [vocabulary note](docs/design/vocabulary.md),
   "Units", decision 14 and rulings 5 and 6; authoring decision 13 amended).
   - **Scaled suffixes.** A suffix that is exactly `min`, `h` or `d` (`oce_vocab::SCALE_FACTORS`)
     scales the number to seconds exactly, with one rounding: an Integer by its exact product, a

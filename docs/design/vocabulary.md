@@ -440,7 +440,7 @@ mean of at least 131.
    and does not restate it; until step 4 lands the text form still refuses `1 h`, and
    `oce vocab` says so in its own output.)*
 4. **Text-form PR**: scale factors and `unit-suffix-mismatch`, amending authoring decision 13 with a
-   dated ruling. *(Landed in GitHub #PRNUM, issue #501.)*
+   dated ruling. *(Landed in GitHub #586, issue #501.)*
 5. **Closeout** records coverage against decision 15; gate item 4 follows #457.
 
 ## Out of scope
