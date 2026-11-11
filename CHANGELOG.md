@@ -243,6 +243,28 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Execution core
 
+- **A compiled-schedule blob of another engine version is refused by its version, whatever else
+  is wrong with it** (GitHub #579, issue #535). `oce_graph::blob::decode` now checks the size
+  limit, that a header and a trailer fit, the magic, the format, then the engine version, and only
+  then the total length, the CRC-32C trailer, the profile and the flags. It used to check the
+  length before the format and the version after the CRC and the profile, so a blob another
+  version wrote could report `LengthMismatch` or `IntegrityMismatch` ("corrupt") before its
+  version was read. The state snapshot decoder has used the new order since issue #530, for the
+  same reason: formats stay at revision 1 and change in place, so another version may lay out its
+  length, trailer and body differently. **Behaviour change:** a blob wrong in two of these ways
+  can report a different refusal than before. Another engine version with a wrong length, a wrong
+  CRC or another profile now reports `EngineVersionMismatch`, where it reported
+  `LengthMismatch`, `IntegrityMismatch` or `UnsupportedProfile`. So a flipped bit in the version
+  field reports the version it now spells, not an integrity failure. A wrong format with a wrong
+  length reports `UnsupportedFormat`, not `LengthMismatch`. A blob with one defect reports what
+  it did before. `BlobError` lists `EngineVersionMismatch` straight after
+  `UnsupportedFormat`, matching the order. No byte of the format changes: the 46 blob goldens,
+  the frame digests and `tools/golden-gen/goldens` are unchanged. One rule now covers both
+  artefacts ([which refusal wins](docs/compiled-schedule-blob.md#which-refusal-wins)). It is
+  pinned by `tests/blob_refusal_precedence.rs` and two new tests in
+  `src/tests/state_codec_tests.rs`, which put every pair of defects into each artefact and check
+  that the earlier check wins, and by a test that the release-0.4.0 blob is still refused by its
+  version when its length, trailer, profile or body is damaged.
 - **Every format and schema revision is 1 until 1.0.0, and `development` carries version 0.5.0**
   (GitHub #518, issue #509; owner rulings of 2026-11-09). There is no backwards compatibility
   before 1.0.0: a format changes in place and its fixtures and goldens are re-blessed, with no

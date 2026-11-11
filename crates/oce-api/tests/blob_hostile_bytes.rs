@@ -143,7 +143,7 @@ fn header_defects_refuse_in_the_documented_order() {
             })
         );
     }
-    // A wrong version is refused before the CRC is even read.
+    // A wrong format version is refused before the CRC is even read.
     let mut format = bytes.clone();
     format[4] = 2;
     assert!(matches!(

@@ -119,7 +119,9 @@ exactly its own version and returns `EngineVersionMismatch { found, expected }` 
 It makes that check straight after the two revision fields and before the body length, the
 trailer or any body byte, because another version may lay all of those out differently; a
 corrupted version field therefore reports the version it now spells, not an integrity failure.
-Nothing relaxes the rule before 1.0.0: there is no range of accepted versions, no optional form of
+The compiled-schedule blob decoder checks its version at the same point, straight after its
+format (issue #535): [which refusal wins](compiled-schedule-blob.md#which-refusal-wins) is one
+rule for both artefacts. Nothing relaxes the rule before 1.0.0: there is no range of accepted versions, no optional form of
 the field and no reader for a header without it. A version is not a build token, and the host
 envelope above still binds bytes to a model, a build and a deployment.
 

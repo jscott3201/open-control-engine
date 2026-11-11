@@ -24,8 +24,8 @@ const OLD_ENGINE: EngineVersion = EngineVersion {
 
 #[test]
 fn old_layout_fixture_passes_every_header_check_before_the_engine_version() {
-    // The precondition of the refusal tests below: magic, length, format number and CRC cannot
-    // refuse these bytes, so the engine version is what does.
+    // The precondition of the refusal tests below: magic, format, length and CRC are all valid, so
+    // the engine version refuses these bytes whatever order the header checks run in.
     assert_eq!(&OLD_LAYOUT[..4], b"OCEB");
     assert_eq!(
         u16::from_le_bytes([OLD_LAYOUT[4], OLD_LAYOUT[5]]),
@@ -62,4 +62,40 @@ fn old_layout_blob_never_becomes_an_executable() {
         Err(BlobError::EngineVersionMismatch { found, expected })
             if found == OLD_ENGINE && expected == ENGINE_VERSION
     ));
+}
+
+#[test]
+fn old_layout_blob_damaged_after_its_version_field_is_still_refused_by_its_version() {
+    // The engine version is checked straight after the format (issue #535), so damage to what
+    // another version laid out (its length, its trailer, its profile, its body) never turns the
+    // refusal into a length or integrity one. None of these edits recomputes the CRC.
+    let mut short = OLD_LAYOUT.to_vec();
+    short.pop();
+    let mut long = OLD_LAYOUT.to_vec();
+    long.push(0);
+    let mut trailer = OLD_LAYOUT.to_vec();
+    *trailer.last_mut().unwrap() ^= 0x01;
+    let mut length = OLD_LAYOUT.to_vec();
+    length[16..20].copy_from_slice(&u32::MAX.to_le_bytes());
+    let mut profile = OLD_LAYOUT.to_vec();
+    profile[6] = 2;
+    let mut body = OLD_LAYOUT.to_vec();
+    body[52..].fill(0xa5);
+    for (what, bytes) in [
+        ("one byte short", short),
+        ("one byte long", long),
+        ("a flipped trailer bit", trailer),
+        ("an absurd total length", length),
+        ("another profile", profile),
+        ("a body of noise", body),
+    ] {
+        assert_eq!(
+            decode(&bytes).err(),
+            Some(BlobError::EngineVersionMismatch {
+                found: OLD_ENGINE,
+                expected: ENGINE_VERSION,
+            }),
+            "{what}"
+        );
+    }
 }
