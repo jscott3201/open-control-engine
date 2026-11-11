@@ -998,7 +998,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
   release cells out of `pr-gate.yml` when one took 11 to 18 minutes; with the integration tests
   of `oce-api`, `oce-author`, `oce-cxf` and `oce-conformance` built as a few binaries each
   (GitHub #546, #551, #553, #554) they took 174 s (x86_64) and 181 s (aarch64) in `merge-gate.yml`
-  run 42948818576.
+  run 42948818576. The per-PR gate took 5 min 11 s on this change's own head (run 42953966045),
+  against 2.5 to 4.9 minutes for the seven full-lane runs before it.
   **`pr-gate.yml`.** `determinism-matrix` is `codegen: [debug, release]` again, four native cells,
   and `determinism-compare` again compares portable and target-bound snapshot bytes, the 46
   compiled-schedule blobs and the round-trip recordings across debug and release codegen as well
@@ -1047,8 +1048,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
   and a pin advance (`third_party/**`, `tools/reference-catalog/**`, the two files that hold a
   pinned upstream commit) or `.agents/gate.sh` itself, which owe `full`. The first three rows and
   the core four and `oce-cxf` are the owner's table; `oce-api`, the four build files and the
-  fifth row are coordinator decisions of 2026-11-10 from the review of this change, to be
-  confirmed by the owner. A change to `release-gate.yml`, or to anything else only `full` or the
+  fifth row are coordinator decisions of 2026-11-10 from the review of this change, which the
+  owner confirmed the same day (GitHub #557 then removed the `determinism` row). A change to `release-gate.yml`, or to anything else only `full` or the
   nightly run executes, also dispatches that workflow on its branch and waits for it before
   merging. `scripts/ci/proof-row.sh` (new, with fixtures in the per-PR `gate behavior
   fixtures` job) names the row from changed paths through the lane classifier, fail-closed, and
