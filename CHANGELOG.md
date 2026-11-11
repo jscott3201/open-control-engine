@@ -556,6 +556,12 @@ and a gate that accepted any text would restore exactly the false assurance desc
     parses back equal.
   - **Dependencies:** `oce-author` now depends on the leverage crate `oce-vocab` (the table and
     the declared units), which moves `Cargo.lock`.
+  - **Cost.** The declared-unit lookup is an index over the embedded vocabulary, bounded by the
+    catalog, not the document; `src/counted.rs` lists it, with the scale-factor table and the
+    agreement check, among stage 1's uncounted bounded lookups. The counted tests of GitHub #584
+    gain three shapes, a chain of `n` blocks whose suffixes fit, do not fit, or disagree with
+    their values, held to the same `24 * n * bits(n)`; a suffix adds no counted comparison (the
+    fitting chain costs exactly what the plain chain does).
   - **`oce vocab`** says how the text form reads the table, in its heading ("it scales the number,
     rounding once") and in the meanings of `unit-not-base` and the new `unit-suffix-mismatch`.
     Re-blessed: `vocab_text` and `vocab_json` (those three lines and the new code's row). New golden: `tests/fixtures/text/fmt/scaled_suffixes.out.oce`
