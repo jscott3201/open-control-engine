@@ -437,6 +437,10 @@ and the message names the IRI found and the IRI expected:
   with a current engine or tool.
 - A modeled term keyed by its full IRI in that namespace or in the `https:` spelling of either
   namespace, and a `@type` or `isOfDataType` value in the retired namespace.
+- A `@type` naming the class `ExtensionBlock` in the `https:` spelling of either namespace
+  (GitHub #582). That class is read only in the published namespace, so this spelling would
+  otherwise be read as an ordinary class (see
+  [what the engine does not execute](cdl-coverage.md#what-the-engine-does-not-execute)).
 
 In a list of context maps only the binding in force is judged (a later map replaces an earlier
 one). Another prefix bound to the published IRI is the same namespace under another name and is

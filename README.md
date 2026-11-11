@@ -179,7 +179,9 @@ Stating this plainly is more useful than a feature list.
 - **It does not parse or flatten Modelica `.mo` sources.** It executes the block graph a CXF
   document hands it; the `oce-cxf` resolver lowers that document and nothing elaborates it further.
 - **It does not execute CDL extension blocks.** It executes elementary and composite blocks. An
-  extension block is implemented by a Functional Mockup Unit, and FMI is out of scope before 1.0.
+  extension block is implemented by a Functional Mockup Unit, and FMI is out of scope before 1.0,
+  so a document that contains one is refused at load with `extension-block-unsupported`
+  (GitHub #582).
   [What the engine does not execute](docs/cdl-coverage.md#what-the-engine-does-not-execute).
 - **It is not general ASHRAE G36 support.** The supported set is explicitly
   *selected-explicit-cxf-variants-supported*: pre-flattened CXF at specific parameterizations, not

@@ -109,6 +109,14 @@ is a runtime composite, while
 stays a leaf: it imports as a normal `CDL.Reals.Sources.Constant` block and the protected child
 is elided (corpus fixture `accepted/registered_leaf_carveout.jsonld`).
 
+An extension block is never classified. A document with an active one is refused before this
+rule runs, with `extension-block-unsupported` (see
+[acceptance preconditions](#acceptance-preconditions)), so an `S231:ExtensionBlock` that lists
+`S231:containsBlock` children is not lowered as a composite and its children never run in place
+of its FMU. Only the S231 class is one: a vendor class that happens to be named `ExtensionBlock`
+in another namespace (`http://example.org#ExtensionBlock`) is classified by this rule like any
+other unregistered type.
+
 ## Rule 2 — Single top root (rejects: `composite/root-count`)
 
 > After classification, exactly one runtime composite must be unreferenced by any other runtime
@@ -538,6 +546,15 @@ loads warning-free:
    prefix to exactly that IRI, or binds no `S231` at all; any other binding is refused with
    `vocabulary-namespace-mismatch` before a node is read (see
    [host responsibilities](host-responsibilities.md#cxf-point-identities-are-the-authored-ids)).
+6. No active node is an extension block (OBC §7.13): one typed `S231:ExtensionBlock` (the class
+   in the S231 namespace only, in any spelling that expands to it, or compact in a document that
+   binds no `S231`), carrying `S231:hasFmuPath`, or whose `@type` names such a node of the same
+   document, wherever it sits. Each is refused with `extension-block-unsupported`, subject the
+   node, before rules 1–7 run, and the resolve ends there: nothing those rules or a later stage
+   would find is reported for the document. FMI is out of scope before 1.0 (see
+   [what the engine does not execute](cdl-coverage.md#what-the-engine-does-not-execute), which
+   also lists the spellings that are not the class). An instance of an extension-block class the
+   document does not define falls under precondition 3.
 
 ## Testing your emitter
 
