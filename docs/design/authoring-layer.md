@@ -279,6 +279,18 @@ strict profile cannot say "at most one item" (no `maxItems`), so the schema's de
 and the reader refuses a second item with `WireError::BoundListTooLong`. The worked example above
 gained `"min": [], "max": []` with this amendment.
 
+*Amended 2026-11-10 (GitHub #544):* an object is closed in shape as well as in keys. It is read
+only from a JSON object: the list of its values (which a `serde`-derived struct would otherwise
+read positionally as its fields), a string, a number, a boolean or `null` in its place is refused
+with `wrong-type` (`WireError::WrongType`), which carries the path of the offending value
+(`inputs[0].semantic`, `blocks[1].params[0]`; `document` for the root). A boundary's `type` is
+read only from one of its three strings, so `{"Real": null}` is refused the same way. Because every
+property is required and an absent value is `""`, `[]` or `false`, the form has no nullable
+value: `null` is refused wherever it stands and is never read as an absent value. The reader holds
+this at the deserializer, not field by field, so a struct added to the form is closed without a
+change to the reader. The format stays at revision 1: no document the canonical writer produces
+changes.
+
 The JSON Schema is derived from the wire DTOs with `schemars`, a dependency of `oce-author` only,
 never of an engine crate. The `class` enum is generated from the non-reserved class paths of
 `oce_api::catalog()` (133 today, well under the 1,000-value cap of common decoders). A test
@@ -669,8 +681,10 @@ without moving them.
   (unterminated string, bad escape, bad suffix, stray token, missing `extends`, out-of-range
   integer, `NaN` or `inf` spelled as a number); comment and blank-line preservation goldens.
 - **Wire form.** wire → text → wire byte equality for every bundle (gate item 2); closed-object
-  refusals (unknown key, missing key, wrong type) as typed errors; the schema regeneration and
-  profile-keyword tests.
+  refusals (unknown key, missing key, wrong type) as typed errors; the closed-shape sweeps (each
+  object replaced by the list of its values, each value by every JSON type its position does not
+  take, `null` everywhere; `wrong-type` at the value's path, GitHub #544); the schema regeneration
+  and profile-keyword tests.
 - **Validator.** One test per finding code with the exact code and subject; the parity test
   (stage 1 bypassed, engine code equal); the gate item 3 table test over the library refusal
   corpus; finding-order determinism over permuted inputs; numeric boundaries for parameters (`-0.0`,

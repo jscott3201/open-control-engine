@@ -7,6 +7,11 @@
 //! parameter's value is a literal: the same shapes without the reference. A sequence parameter's
 //! `type` is a scalar type or an enumeration type name, and a boundary's `min` and `max` are lists
 //! of at most one number (importer note, decisions 1 and 5; issue #492).
+//!
+//! The reader fills these through the closed-shape adapter (`super::closed`), which reads each
+//! struct from an object only and each enum from a string only (GitHub #544). Each is named for its
+//! schema definition with `#[serde(rename)]`, which `schemars` reads too, so a refusal names the
+//! object the schema defines there (`expected a SemanticPoint object`).
 
 use std::borrow::Cow;
 use std::fmt;
@@ -26,7 +31,7 @@ use super::WireError;
 /// One authored sequence: a flat, single-root control sequence of boundary connectors, leaf
 /// blocks from the Open Control Engine catalog and the connections between them.
 #[derive(Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[serde(deny_unknown_fields, rename = "Sequence")]
 #[schemars(title = "Sequence")]
 pub(crate) struct WireSequence {
     /// The sequence name: an identifier (`[A-Za-z_][A-Za-z0-9_]*`, at most 64 bytes).
@@ -47,7 +52,7 @@ pub(crate) struct WireSequence {
 
 /// The type of a boundary connector.
 #[derive(Clone, Copy, Deserialize, JsonSchema)]
-#[schemars(rename = "SignalType")]
+#[serde(rename = "SignalType")]
 pub(crate) enum WireType {
     // Plain comments, not doc comments: a documented variant would turn the schema's `enum` into
     // a `oneOf` of `const`s, outside the strict profile.
@@ -61,8 +66,7 @@ pub(crate) enum WireType {
 
 /// A sequence-level parameter.
 #[derive(Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[schemars(rename = "SequenceParameter")]
+#[serde(deny_unknown_fields, rename = "SequenceParameter")]
 pub(crate) struct WireSequenceParam {
     /// The parameter name, an identifier.
     name: String,
@@ -79,8 +83,7 @@ pub(crate) struct WireSequenceParam {
 
 /// A boundary input or output.
 #[derive(Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[schemars(rename = "Boundary")]
+#[serde(deny_unknown_fields, rename = "Boundary")]
 pub(crate) struct WireBoundary {
     /// The connector name, an identifier.
     name: String,
@@ -104,8 +107,7 @@ pub(crate) struct WireBoundary {
 /// The semantic slot of a boundary connector. Checked for syntax only; only `unit` reaches the
 /// engine.
 #[derive(Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[schemars(rename = "SemanticPoint")]
+#[serde(deny_unknown_fields, rename = "SemanticPoint")]
 pub(crate) struct WireSemantic {
     /// A display name, or "".
     name: String,
@@ -127,8 +129,7 @@ pub(crate) struct WireSemantic {
 
 /// A leaf block instance.
 #[derive(Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[schemars(rename = "Block")]
+#[serde(deny_unknown_fields, rename = "Block")]
 pub(crate) struct WireBlock {
     /// The instance name, an identifier.
     name: String,
@@ -143,8 +144,7 @@ pub(crate) struct WireBlock {
 
 /// One block parameter assignment.
 #[derive(Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[schemars(rename = "Assignment")]
+#[serde(deny_unknown_fields, rename = "Assignment")]
 pub(crate) struct WireAssignment {
     /// The catalog parameter name, or an array element name.
     name: String,

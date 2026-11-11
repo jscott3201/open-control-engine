@@ -7,11 +7,17 @@
 //! [`WireError`], never a panic. Names are carried unchecked so that [`crate::validate()`] reports a
 //! bad name as a finding.
 //!
+//! Every object is closed in shape as well as in keys (GitHub #544): an object is read only from a
+//! JSON object, never from a list of its values or from any other type, a signal type only from a
+//! string, and `null` is never a value (an absent value is `""`, `[]` or `false`). Each such
+//! refusal is a [`WireError::WrongType`] carrying the path of the offending value.
+//!
 //! The canonical spelling is fixed: the key order of the schema, two-space indentation, one
 //! entry per line, one trailing newline, ASCII-only strings, integers without a fraction and reals
 //! in the shortest round-trip spelling. For every document `d` this module writes,
 //! `to_wire_string(&from_wire_str(d)?) == d`.
 
+mod closed;
 mod dto;
 mod scan;
 
@@ -113,10 +119,16 @@ pub enum WireError {
         /// Where the parse stopped.
         at: Location,
     },
-    /// A value has the wrong JSON type or an unknown enumerator.
+    /// A value has the wrong JSON type or an unknown enumerator: a list, a string, a number, a
+    /// boolean or `null` where an object belongs, an object or a list where a scalar belongs, or a
+    /// scalar or an object where a list belongs.
     WrongType {
         /// What the parser found and expected.
         detail: String,
+        /// The path of the offending value from the root: keys joined by dots and list indexes
+        /// in brackets, counted from zero (`inputs[0].semantic`, `blocks[1].params[0].value`), or
+        /// `document` for the root itself.
+        path: String,
         /// Where the parse stopped.
         at: Location,
     },
@@ -172,7 +184,7 @@ impl fmt::Display for WireError {
             }
             Self::UnknownKey { key, at } => write!(f, "unknown key `{key}` at {at}"),
             Self::MissingKey { key, at } => write!(f, "missing key `{key}` at {at}"),
-            Self::WrongType { detail, at } => write!(f, "{detail} at {at}"),
+            Self::WrongType { detail, path, at } => write!(f, "{detail} at {path}, {at}"),
             Self::Syntax { detail, at } => write!(f, "not JSON: {detail} at {at}"),
             Self::BoundListTooLong { at } => {
                 write!(
@@ -219,8 +231,9 @@ pub fn from_wire_bytes(bytes: &[u8]) -> Result<Sequence, WireError> {
 ///
 /// A typed [`WireError`] for a document over a bound, with a byte-order mark, a duplicate key, a
 /// non-finite or out-of-range number, a control character, an unknown or missing key, a wrong
-/// type, broken syntax, a bound list with a second item, or a connection without exactly one
-/// `->`. Never panics.
+/// type (an object spelled as a list of its values among them, and `null` anywhere), broken
+/// syntax, a bound list with a second item, or a connection without exactly one `->`. Never
+/// panics.
 pub fn from_wire_str(text: &str) -> Result<Sequence, WireError> {
     if text.len() > MAX_WIRE_BYTES {
         return Err(WireError::TooLarge {
@@ -232,8 +245,9 @@ pub fn from_wire_str(text: &str) -> Result<Sequence, WireError> {
         return Err(WireError::ByteOrderMark);
     }
     let negative_zeros = scan::scan(text)?;
-    let dto: WireSequence = if negative_zeros.is_empty() {
-        serde_json::from_str(text)
+    let track = closed::Track::default();
+    let dto = if negative_zeros.is_empty() {
+        read_closed(text, &track)
     } else {
         // Blank the sign of each integer `-0` token (same length, so positions hold).
         let mut bytes = text.as_bytes().to_vec();
@@ -243,16 +257,25 @@ pub fn from_wire_str(text: &str) -> Result<Sequence, WireError> {
         let unsigned = String::from_utf8(bytes).map_err(|error| WireError::NotUtf8 {
             offset: error.utf8_error().valid_up_to(),
         })?;
-        serde_json::from_str(&unsigned)
+        read_closed(&unsigned, &track)
     }
-    .map_err(|error| classify(&error))?;
+    .map_err(|error| classify(&error, &track))?;
     dto.into_model()
 }
 
+/// The typed parse through the closed-shape adapter, refusing anything after the root value.
+fn read_closed(text: &str, track: &closed::Track) -> Result<WireSequence, serde_json::Error> {
+    use serde::Deserialize as _;
+    let mut deserializer = serde_json::Deserializer::from_str(text);
+    let dto = WireSequence::deserialize(closed::Closed::new(&mut deserializer, track))?;
+    deserializer.end()?;
+    Ok(dto)
+}
+
 /// Map a `serde_json` refusal onto the typed vocabulary. serde's data-error messages are stable
-/// (`unknown field`, `missing field`, `duplicate field`); anything else is a wrong type, and a
-/// syntax or end-of-input error is [`WireError::Syntax`].
-fn classify(error: &serde_json::Error) -> WireError {
+/// (`unknown field`, `missing field`, `duplicate field`); anything else is a wrong type at the
+/// path `track` kept, and a syntax or end-of-input error is [`WireError::Syntax`].
+fn classify(error: &serde_json::Error, track: &closed::Track) -> WireError {
     let at = Location::new(error.line(), error.column());
     let full = error.to_string();
     let suffix = format!(" at line {} column {}", at.line, at.column);
@@ -273,7 +296,11 @@ fn classify(error: &serde_json::Error) -> WireError {
             } else if detail.starts_with(dto::BOUND_LIST_TOO_LONG) {
                 WireError::BoundListTooLong { at }
             } else {
-                WireError::WrongType { detail, at }
+                WireError::WrongType {
+                    detail,
+                    path: track.failed_path(),
+                    at,
+                }
             }
         }
         _ => WireError::Syntax { detail, at },
