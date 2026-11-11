@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 # Install the checksum-pinned wasmtime release binary into an untracked directory (issue #403).
 #
-#   bash scripts/ci/install-wasmtime.sh [destination]    # default: target/wasmtime-bin
+#   bash scripts/ci/install-wasmtime.sh [destination]
+#   bash scripts/ci/install-wasmtime.sh --print-destination    # the default destination, no install
+#
+# The default destination is outside the repository, in the user's cache directory:
+# `$OCE_WASMTIME_DIR` when set, else `${XDG_CACHE_HOME:-$HOME/.cache}/open-control-engine/wasmtime-bin`.
+# It was `target/wasmtime-bin` until issue #545: `cargo clean`, which this repository runs at every
+# merge boundary, deleted the binary, and the next `bash .agents/gate.sh roundtrip` or `full` failed
+# on "wasmtime is not installed". A cache directory survives the clean and is shared by every
+# worktree. `.agents/gate.sh` asks this script for the directory (`--print-destination`), so the
+# two cannot disagree. pr-gate.yml's wasm32 leg still passes `target/wasmtime-bin` explicitly: a
+# runner's tree is new on every job, and that path is what its actions/cache step restores.
 #
 # The blob round trip's wasm32 leg runs its test binary under this wasmtime through the cargo
 # target runner (scripts/ci/wasmtime-runner.sh). The version and the SHA-256 of every supported
@@ -15,7 +25,31 @@ set -euo pipefail
 
 version="50.0.1"
 
-repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+# Each variable is read only when the one before it is unset or empty, so `OCE_WASMTIME_DIR`
+# alone is enough on a host with no HOME (scripts/ci/test-install-wasmtime.sh holds the order).
+default_destination() {
+  if [ -n "${OCE_WASMTIME_DIR:-}" ]; then
+    printf '%s\n' "$OCE_WASMTIME_DIR"
+  elif [ -n "${XDG_CACHE_HOME:-}" ]; then
+    printf '%s\n' "$XDG_CACHE_HOME/open-control-engine/wasmtime-bin"
+  elif [ -n "${HOME:-}" ]; then
+    printf '%s\n' "$HOME/.cache/open-control-engine/wasmtime-bin"
+  else
+    echo "install-wasmtime: HOME, XDG_CACHE_HOME and OCE_WASMTIME_DIR are all unset, so there is no default directory; pass a destination or set OCE_WASMTIME_DIR" >&2
+    return 1
+  fi
+}
+if [ "${1:-}" = "--print-destination" ]; then
+  default_destination
+  exit 0
+fi
+case "${1:-}" in
+  -*)
+    echo "usage: bash scripts/ci/install-wasmtime.sh [destination | --print-destination]" >&2
+    exit 2
+    ;;
+esac
+
 case "$(uname -s)/$(uname -m)" in
   Linux/x86_64)
     platform="x86_64-linux"
@@ -51,7 +85,11 @@ sha256_of() {
   fi
 }
 
-destination=${1:-"$repo_root/target/wasmtime-bin"}
+if [ -n "${1:-}" ]; then
+  destination="$1"
+else
+  destination="$(default_destination)"
+fi
 
 if [ -f "$destination/wasmtime" ] && [ "$(sha256_of "$destination/wasmtime")" = "$binary_sha" ]; then
   echo "wasmtime $version already present and verified"

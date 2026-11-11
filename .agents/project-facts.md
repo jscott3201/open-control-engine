@@ -5,13 +5,44 @@ Things worth knowing before you change this repo that the code does not tell you
 ## The gate
 
 ```bash
-bash .agents/gate.sh          # mirrors the per-PR gate
-bash .agents/gate.sh full     # adds the workspace suite and doctests
+bash .agents/gate.sh docs         # a docs-only PR: the always-on checks, no cargo build
+bash .agents/gate.sh leverage     # crates/leverage/**, docs, the root README.md
+bash .agents/gate.sh              # any other change: the engine lane, debug codegen
+bash .agents/gate.sh determinism  # the core four, oce-cxf, oce-api, Cargo.lock, the root Cargo.toml,
+                                  # rust-toolchain.toml, .cargo/config.toml: adds the release-codegen subset
+bash .agents/gate.sh full         # a pin advance or .agents/gate.sh itself: adds the workspace suite
+                                  # and doctests; also what CI executes nightly
 ```
 
 That script is the single source of truth for gate commands. Every other document
 points at it. Run it in the form above and read the real output — a summary of a
 gate is a claim about a gate, and this engine controls physical equipment.
+
+**Run the row your PR's paths select, on the final head, and paste its tail** (issue #545, owner
+decision of 2026-11-10; before it every PR owed `full`, 30 minutes cold). The five lines above
+are the five rows, lightest first, and each runs everything the one before it runs.
+`scripts/ci/proof-row.sh` maps changed paths to a row using the lane classifier and holds the
+exact path lists, and every gate run ends by printing the row the checkout needs beside the row
+it covered, so a tail that is too light says so. The `determinism` row is what the
+release-codegen determinism subset builds and runs (the core four, `oce-cxf`, `oce-api`) and the
+four files that set how all of it is compiled; the `full` row is a pin advance (`third_party/**`,
+`tools/reference-catalog/**`, `crates/oce-cxf/tests/third_party_manifest/**` and
+`crates/oce-blocks/src/registry/catalog_guard_support.rs`, the two places a pinned upstream
+commit is written) and `.agents/gate.sh`, whose `full`-only steps no lighter mode executes. Rows
+four and five beyond the issue's own table are coordinator decisions of 2026-11-10, to be
+confirmed by the owner. Four rules go with the table:
+
+- A rebase onto `development` with no conflicts needs `CI OK` reported on the new head, not a
+  local re-run. A rebase with conflicts, or a fix round, re-runs the row.
+- No row runs every crate's suite. Run the tests of each crate the PR changes:
+  `cargo nextest run -p <crate> --locked --profile ci --no-tests=fail`, and
+  `cargo test -p <crate> --doc --locked` for its doctests.
+- `full` is owed only by the fifth row. It is also what CI executes nightly.
+- A change to `release-gate.yml`, or to anything else only `full` or the nightly run executes,
+  also dispatches the workflow on its branch (`gh workflow run release-gate.yml --ref <branch>`)
+  and waits for a green run before merging. That run posts a `CI OK` of its own on the head,
+  without the strict-bit matrix; read `CI OK` for the merge from the `pr-gate` run on the head
+  SHA (`gh pr checks <N>` names the workflow of each check).
 
 Change a command by changing [`.github/workflows/pr-gate.yml`](../.github/workflows/pr-gate.yml)
 first, then the script.
@@ -20,29 +51,42 @@ first, then the script.
 
 GitHub is the primary host: `origin` is `github.com/jscott3201/open-control-engine`, and branches,
 PRs, reviews, issues and CI live there. CI is GitHub Actions in `.github/workflows/` on GitHub-hosted Linux
-runners (plus the macOS platform cell in `pr-gate.yml` and the Windows one in `release-gate.yml`): `pr-gate.yml` (per-PR, light), `release-gate.yml` (every merge into `development`, release PRs into `main`, daily against
-`development`; heavy), `advisories.yml` (daily), `docs-pages.yml` (docs validation and the Pages
+runners (plus the macOS platform cell in `pr-gate.yml` and the Windows one in `merge-gate.yml` and `release-gate.yml`): `pr-gate.yml` (per-PR, light), `merge-gate.yml` (every merge into `development`: the four determinism cells, their comparisons and the Windows cell), `release-gate.yml` (nightly against
+`development`, release PRs into `main`, pushes to `main`, dispatch; heavy), `advisories.yml` (daily), `docs-pages.yml` (docs validation and the Pages
 publish from `main`), `release.yml` (tag verify / manual crates.io publish) and the two manual
 native-arm64 OpenModelica evidence workflows. `ci.yml` there is byte-frozen and disabled in the
 repository's Actions settings — it is not the CI.
 
 The per-PR gate runs once per change, on the PR: `pr-gate.yml` has no `push` trigger, and
-`check-workflow-gates.sh` refuses one. A merge into `development` runs `release-gate.yml` on the
-merge commit instead (issue #502), beside the path-filtered `docs-pages.yml`. That run holds what
-the per-PR gate no longer does: the determinism subset under release codegen on both
-architectures with the debug-against-release comparisons, the Windows cell, and the executed gate
-script (`gate (full)`). It is not a required status on `development` — the commit has landed — so
-after merging a change that runs the determinism lane, watch it: a red run is fixed forward or
-reverted before the next determinism-lane merge. Pushes queue: a run in progress finishes and only
-the newest waiting run is kept, so an older waiting run shows as cancelled. The daily run on the
-`development` tip stays. See [CI and the gate](../docs/ci-and-the-gate.md#what-runs-when).
+`check-workflow-gates.sh` refuses one. A merge into `development` runs `merge-gate.yml` on the
+merge commit instead (issues #502 and #545), beside the path-filtered `docs-pages.yml`. That run
+holds what the per-PR gate does not and a merge cannot wait a night for: the determinism subset
+under release codegen on both architectures with the debug-against-release comparisons, and the
+Windows cell (the measured time is in
+[CI and the gate](../docs/ci-and-the-gate.md#what-runs-after-the-merge)). Its aggregate is `Merge gate OK`, deliberately not `CI OK`,
+and it is not a required status — the commit has landed — so after merging a change that runs the
+determinism lane, watch it: a red run is fixed forward or reverted before the next
+determinism-lane merge. Pushes queue: a run in progress finishes and only the newest waiting run
+is kept, so an older waiting run shows as cancelled.
+
+The heavy set runs nightly, not per merge (issue #545): `release-gate.yml` runs the workspace
+suite in debug and release codegen, the doctests, the executed gate script (`gate (full)`),
+cargo-deny with advisories, the light gates again and the same three merge-gate jobs, against the
+`development` tip every night, on manual dispatch, on every `development` → `main` release PR and
+on pushes to `main`. It took about two hours per merge when it ran on each one. Before a
+determinism-lane merge, check the latest nightly with
+`gh run list --workflow release-gate.yml --branch development --event schedule --limit 1`:
+the merge needs it not red, or its failure already being fixed forward; otherwise the red nightly
+is fixed forward or reverted first. `check-workflow-gates.sh` pins each
+workflow's events, branches and exact job set, and requires the three shared jobs to be identical
+in both files. See [CI and the gate](../docs/ci-and-the-gate.md#what-runs-when).
 
 The per-PR gate has three lanes under the one `CI OK` (issues #393 and #503). Its first job classifies the
 PR's changed paths with plain git and `scripts/ci/classify-changes.sh`, fail-closed: any path that
 is not documentation or under `crates/leverage/` runs the determinism lane — every job that
 compiles the engine — and so does any change to a gate script, workflow or tool config. No per-PR
 job executes `.agents/gate.sh` any more (`gate (light)` did; `gate (full)` in `release-gate.yml`
-runs it after the merge). A `crates/leverage/**` change runs only the `leverage lane` job beside the
+runs it nightly). A `crates/leverage/**` change runs only the `leverage lane` job beside the
 always-on checks (fmt, file-size, no-secret, docs, gate fixtures, the package/authority/product
 contract); an engine change runs it too. A docs-only PR compiles nothing, and documentation a
 test reads (`docs/cxf-composite-subset.md`, and `docs/design/vectors.md` since issue #519) is not
@@ -58,12 +102,12 @@ table names the always-on or README-lane job that runs it.
 
 `CI OK` accepts a skip only when the job's lane output was `false`. Locally,
 `bash .agents/gate.sh leverage` mirrors a PR confined to `crates/leverage/`, the docs and the root
-README (it always runs the two README checks); see
+README (it always runs the two README checks), and `bash .agents/gate.sh docs` a docs-only one; see
 [lanes](../docs/ci-and-the-gate.md#lanes-what-a-pr-runs).
 
 Two platform cells observe other operating systems (issue #394): macOS arm64, per PR with the
 determinism lane, checks that the portable state snapshot equals Linux byte for byte; Windows, in
-`release-gate.yml` after each merge (issue #502), builds the workspace and runs its suite without
+`merge-gate.yml` after each merge (issue #502) and nightly in `release-gate.yml`, builds the workspace and runs its suite without
 the strict-bit binaries — observations, not qualification; see
 [platform cells](../docs/ci-and-the-gate.md#platform-cells-macos-and-windows).
 
@@ -85,8 +129,8 @@ dangerous direction.
 
 The per-PR gate into `development` runs fmt, clippy, build, rustdoc, the file-size
 cap, the no-secret scan, the database-free check, the golden-gen firewall and
-[hygiene job](#golden-gen-hygiene-is-ci-only-for-now), the
-[docs and crate-suite jobs](#the-docs-and-crate-suite-jobs-are-ci-only-for-now), the closed
+[hygiene job](#golden-gen-hygiene-is-ci-only-for-now), the docs job, the
+[crate-suite job](#the-crate-suite-job-is-ci-only-for-now), the closed
 package/feature/publication contract and its hostile controls, the gate fixtures,
 the [authority index/projection and its hostile controls](../docs/authority-claims.md),
 `cargo machete` — and the state-determinism tests for **`oce-api`, `oce-blocks`, and `oce-expr`**, via the
@@ -97,21 +141,27 @@ architectures and requires target-bound bytes to differ across architectures. Ea
 then parses and refuses the other's target-bound bytes through the public restore path, natively.
 The same fan-in requires the 46 compiled-schedule blobs each cell encodes (`OCE_BLOB_OUT`) to be
 byte-identical in both cells (GitHub #400).
-The release-codegen cells of that matrix do not run per PR (issue #502): `release-gate.yml` runs
+The release-codegen cells of that matrix do not run per PR (issue #502): `merge-gate.yml` runs
 all four cells on every merge into `development`, and its fan-in adds the checks that portable and
 target-bound bytes, the blobs and the round-trip recordings match across debug/release codegen.
-Before the merge, `bash .agents/gate.sh` runs the subset under release codegen on your machine;
-that run is the release-codegen evidence a PR has.
+Before the merge, `bash .agents/gate.sh determinism` runs the subset under release codegen on your
+machine; that run is the release-codegen evidence a PR the `determinism` row names has, and the
+only kind of PR that owes it.
 The blob round trip (issue #403) rides on the same cells: each records
 `crates/oce-conformance/tests/blob_round_trip.rs` (facade against the `no_std` entry, every output,
 warning and raw state word after every frame of the 46 fixtures) into `OCE_ROUND_TRIP_OUT`, the
-fan-in requires the recordings identical (the two debug cells per PR, all four in the release
+fan-in requires the recordings identical (the two debug cells per PR, all four in the merge
 gate) and replays the x86_64 debug recording on aarch64
 through the aarch64 debug cell's archived suite, and `blob round trip (wasm32-wasip1 under wasmtime)` replays it on
 `wasm32-wasip1` under the wasmtime pinned in `scripts/ci/install-wasmtime.sh`. Locally,
 `bash .agents/gate.sh roundtrip` (also in `full`) records and replays on the host and on
 `wasm32-wasip1`; it needs `rustup target add wasm32-wasip1` and `bash scripts/ci/install-wasmtime.sh`
-and fails, not skips, without them. A behaviour change that moves a run digest moves the recording
+and fails, not skips, without the target; it runs the installer itself, which keeps a binary
+already installed only if its SHA-256 is the pinned one, and never uses another `wasmtime` from
+PATH. The installer puts wasmtime in a user cache directory
+(`$OCE_WASMTIME_DIR`, else `${XDG_CACHE_HOME:-$HOME/.cache}/open-control-engine/wasmtime-bin`), not
+under `target/`, so the `cargo clean` at a merge boundary no longer deletes it and every worktree
+shares one copy (issue #545). A behaviour change that moves a run digest moves the recording
 with it; there is nothing extra to bless.
 The standalone `cargo-deny` CI job runs `cargo deny check bans licenses sources` on every PR, and
 `.agents/gate.sh` runs it too.
@@ -123,14 +173,17 @@ in four native Linux architecture/codegen cells (both architectures, debug and r
 matrix did not move), with repeat captures and an eight-capture
 cross-cell comparison ([bounded evidence](../docs/strict-bit-evidence.md)). The
 `oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and `oce-store` suites run per
-PR too, x86_64 debug only. The remainder — and the release-codegen runs of those five — needs the
-release/full gate. A change confined to `oce-diag` or `oce-semantics` can show a fully
-green PR having executed none of its own tests. Before claiming your tests pass, run
-`bash .agents/gate.sh full` and read the tail.
+PR too, x86_64 debug only. The remainder — and the release-codegen runs of those five — runs in
+the nightly release gate. A change confined to `oce-diag` or `oce-semantics` can show a fully
+green PR having executed none of its own tests, and its local proof row does not run them either.
+Before claiming your tests pass, run the suites of the crates you changed
+(`cargo nextest run -p <crate> --locked --profile ci --no-tests=fail`) and read the tail.
 
-Pin-advance PRs — any change under `third_party/**` or to the pin constants — run
+Pin-advance PRs — any change under `third_party/**` or to the pin constants — still run
 `bash .agents/gate.sh full` first-hand; see the vendored README's
-`## Pin-advance policy` section.
+`## Pin-advance policy` section. It is the `full` row of the local proof, and `proof-row.sh` names
+it for every path a pin advance moves: the G36 half of the pin guard runs only in the workspace
+suite, which CI now runs nightly, after the advance would have landed.
 
 **Confirm the checks ran.** GitHub Actions runs the whole per-PR gate on every PR, drafts
 included, and `CI OK` is the one status that summarizes it. A PR with no checks is easy to
@@ -435,32 +488,24 @@ cargo run --release --locked
 git status --porcelain -- goldens    # must print nothing
 ```
 
-## The docs and crate-suite jobs are CI-only for now
+## The crate-suite job is CI-only for now
 
-Two `pr-gate.yml` jobs that `CI OK` needs run commands `.agents/gate.sh` does not, like the
-golden-gen hygiene job: wiring them into the script is a separate change.
-
-- `crate-tests` runs the `oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and `oce-store`
-  suites in x86_64 debug. It is a separate job, not a determinism-matrix
-  cell, so it runs beside the cells instead of lengthening them.
-- `docs` runs the documentation checks that `docs-pages.yml` also runs. That workflow is
-  path-filtered and not required, so before this job a PR could merge green with it failing.
-  `docs-pages.yml` still builds and publishes the site from `main`.
-
-Run them by hand after touching those crates or the docs:
+One `pr-gate.yml` job that `CI OK` needs runs a command `.agents/gate.sh` does not, like the
+golden-gen hygiene job: wiring it into the script is a separate change. `crate-tests` runs the
+`oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and `oce-store` suites in x86_64 debug. It is
+a separate job, not a determinism-matrix cell, so it runs beside the cells instead of lengthening
+them. Run it by hand after touching those crates:
 
 ```bash
 cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf -p oce-store \
   --locked --profile ci --no-tests=fail
-
-bash scripts/docs/install-mdbook.sh target/mdbook-bin
-python3 scripts/docs/test_check_links.py
-python3 scripts/docs/test_authority_literals.py --mdbook target/mdbook-bin/mdbook
-python3 scripts/docs/check_integrity.py --output target/docs-book --revision "$(git rev-parse HEAD)"
-target/mdbook-bin/mdbook build target/docs-book
-python3 scripts/docs/check_links.py target/docs-book/book --site-prefix /open-control-engine/
-rm -rf target/docs-book
 ```
+
+The `docs` job is no longer CI-only (issue #545): every gate mode runs its steps, the mdBook
+install included (`scripts/docs/install-mdbook.sh target/mdbook-bin`, which downloads the pinned
+release once and afterwards only re-verifies it; `cargo clean` removes it, and the next run
+downloads it again). That job runs the documentation checks `docs-pages.yml` also runs; that
+workflow is path-filtered and not required, and still builds and publishes the site from `main`.
 
 ## Clippy lints the default feature set
 
@@ -516,5 +561,6 @@ Base branch is `development`. Branch protection on GitHub blocks direct pushes t
 a pull request, requires the `CI OK` status from `pr-gate.yml`, and requires the branch to be up to
 date with `development` before merging; everything lands by squash-merge through a GitHub PR. A PR
 that falls behind is updated and its gate re-runs, because that run is the only one the change
-gets. A fix round pushes to the **same** branch — never a second PR for the same
+gets. An update that merges or rebases cleanly needs that CI run and no local one; one with
+conflicts re-runs the PR's local proof row. A fix round pushes to the **same** branch — never a second PR for the same
 work.

@@ -90,7 +90,7 @@ its caps and streamed-host allocation evidence, not a speed claim.
 
 Run observations explicitly with `--success-output immediate --test-threads 1` on the focused
 `frame_observations` nextest binary. It is also included in the existing oce-api matrix test set
-(debug codegen per PR; release codegen in the release gate on every merge into `development`);
+(debug codegen per PR; release codegen in the merge gate on every merge into `development`);
 normal success-output suppression hides passing timing logs, but allocation checks still execute.
 Use `--locked --profile ci --no-tests=fail` for debug and
 `--locked --profile ci-release --cargo-profile release --no-tests=fail` for release. The full

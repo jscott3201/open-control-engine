@@ -962,6 +962,78 @@ and a gate that accepted any text would restore exactly the false assurance desc
   publishable, 6 private); `release.yml`'s comment and step name re-pinned.
 ### Verification
 
+- **The local proof before a merge is matched to the lane a pull request runs, and the heavy
+  release gate runs nightly instead of after every merge** (GitHub #547, issue #545; owner
+  decisions of 2026-11-10, which amend issue #502's "the release gate runs on every merge" and
+  the standing "run `gate.sh full` before the PR"). Measured on `fdd70c0`: a cold
+  `bash .agents/gate.sh full` took 30.1 minutes on an idle 10-core arm64 Mac, 21 of them building
+  release-codegen test binaries, about three times per PR; the post-merge `release-gate.yml` run
+  42767547196 started 43 minutes after its push and then took 1 h 29 min (`gate (full)` 88.7
+  minutes, the full test suite 41.8), while its four determinism cells, both comparison legs and
+  the Windows cell finished in under 13 minutes.
+  **Local proof.** `.agents/gate.sh` has five proof modes, each running everything the one before
+  it runs: `docs` (new; a docs-only PR: the always-on checks, no cargo build), `leverage`, the
+  default `light` (the engine lane, now in debug codegen only), `determinism` (new; `light`
+  plus the determinism subset and the strict-bit step under release codegen, the two steps
+  `light` ran until now) and `full`. A PR owes the row its changed paths select: docs only;
+  `crates/leverage/**`, docs and the root `README.md`; anything else; the core four (`oce-model`,
+  `oce-expr`, `oce-blocks`, `oce-graph`), `oce-cxf`, `oce-api`, `Cargo.lock`, the root
+  `Cargo.toml`, `rust-toolchain.toml` or `.cargo/config.toml`, which owe the release-codegen run;
+  and a pin advance (`third_party/**`, `tools/reference-catalog/**`, the two files that hold a
+  pinned upstream commit) or `.agents/gate.sh` itself, which owe `full`. The first three rows and
+  the core four and `oce-cxf` are the owner's table; `oce-api`, the four build files and the
+  fifth row are coordinator decisions of 2026-11-10 from the review of this change, to be
+  confirmed by the owner. A change to `release-gate.yml`, or to anything else only `full` or the
+  nightly run executes, also dispatches that workflow on its branch and waits for it before
+  merging. `scripts/ci/proof-row.sh` (new, with fixtures in the per-PR `gate behavior
+  fixtures` job) names the row from changed paths through the lane classifier, fail-closed, and
+  every gate run ends with a `LOCAL PROOF` block naming the row it covered and the row the
+  checkout needs against `origin/development`; that block is advice and never changes the exit
+  status. A rebase with no conflicts needs `CI OK` on the new head and no local re-run; a rebase
+  with conflicts or a fix round re-runs the row. No row runs every crate's suite, so the author
+  runs the suites of the crates the PR changes. `full` is also what CI executes nightly. A
+  determinism-lane merge needs the latest nightly not red, or its failure already being fixed
+  forward. `scripts/ci/test-gate-modes.sh` (new, per PR) executes the script in each mode with
+  stubbed children and fails unless the modes nest. Every mode now runs the per-PR `docs` job's
+  steps (mdBook install, checker contracts, staging, build, links), which were CI-only.
+  **Workflows.** New `merge-gate.yml` runs on every push to `development` and on dispatch, on the
+  commit the event names, never cancelled in progress: the determinism matrix in all four native
+  cells, its fan-in with the debug-against-release and cross-architecture comparisons, and the
+  Windows cell, under an aggregate named `Merge gate OK` (not `CI OK`, which is `main`'s required
+  status and must not be satisfiable by this short run on a release PR's head commit).
+  `release-gate.yml` no longer triggers on a push to `development`; it runs nightly on the
+  `development` tip, on dispatch, on release PRs into `main` and on pushes to `main`, with every
+  job it had. A dispatched run now checks out the dispatched ref's head (`github.sha`), as a push
+  run does, instead of the `development` tip, so a branch can show the heavy set green before it
+  merges; a scheduled run still checks out `development`. The release-codegen workspace suite is
+  built once per run, not twice: `test-suite` runs the debug suite and the doctests, and
+  `gate (full)` runs the release suite through the executed script under a nextest profile of
+  its own, `ci-release-workspace` (new in `.config/nextest.toml`), clearing that profile's JUnit
+  report before the script and requiring it after; the shared `ci-release` report would not do,
+  because the release determinism subset and strict-bit step write it in the same mode. `CI OK` stays the one required status on both
+  protected branches; branch-protection settings are unchanged.
+  **Checker.** `check-workflow-gates.sh` pins each of the two workflows' events and branch
+  filters exactly, their job ids exactly (a heavy job deleted from `release-gate.yml` with its
+  `needs:` entry fails; so does a cell, a comparison or the Windows cell leaving `merge-gate.yml`,
+  or a heavy job entering it), the three shared job definitions byte for byte between the files,
+  the merge gate's aggregate name, checkout ref and concurrency lines, that `branches:` is each
+  event's only filter, the nightly cron string, the `gate` job's clear-run-require order, the
+  shape of the `full` block of `.agents/gate.sh` (so a workspace step that is dropped, wrapped
+  in a condition or prefixed with one fails) and that nothing else names the
+  `ci-release-workspace` profile. A required job command that survives only in a comment no
+  longer satisfies `require_job_pattern`. Its fixtures gain 79 cases, every one a hostile
+  control.
+  **wasmtime.** `scripts/ci/install-wasmtime.sh` installs by default into a user cache directory
+  (`$OCE_WASMTIME_DIR`, else `${XDG_CACHE_HOME:-$HOME/.cache}/open-control-engine/wasmtime-bin`)
+  instead of `target/wasmtime-bin`, which the `cargo clean` at each merge boundary deleted, and
+  prints that path for `.agents/gate.sh` (`--print-destination`); the pin and both SHA-256 checks
+  are unchanged, and the per-PR wasm32 leg still passes `target/wasmtime-bin` explicitly. The
+  script's blob round trip now runs the installer, which re-verifies an installed binary's
+  digest, and executes that binary by path, never another `wasmtime` from PATH;
+  `scripts/ci/test-install-wasmtime.sh` (new, per PR) holds the destination order.
+  The product contract moves to revision 28, evidence delivery only (PC-041's limitation names
+  the merge gate). No crate source, test, fixture or golden changed.
+
 - **The root `README.md` has its own lane in the per-PR gate, so a pull request that updates it
   beside leverage or documentation paths no longer runs the determinism lane** (GitHub #507,
   issue #503; owner decision of 2026-11-09). `scripts/ci/classify-changes.sh` emits a fifth output,

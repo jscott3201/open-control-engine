@@ -109,9 +109,10 @@ output.
 
 ## Dependencies
 
-`cargo deny check bans licenses sources` runs unconditionally in `.agents/gate.sh`, which CI
-executes on every pull request. `cargo deny check advisories` runs on a daily schedule and on
-every release PR — it is excluded from the per-PR script because it needs network access and
+`cargo deny check bans licenses sources` runs in the engine lane of `.agents/gate.sh` and as its
+own CI job on every pull request that changes anything outside the documentation, the root
+`README.md` and `crates/leverage/`. `cargo deny check advisories` runs on a daily schedule, in the nightly release
+gate and on every release PR — it is excluded from the per-PR script because it needs network access and
 a writable advisory database.
 
 `third_party/` vendors upstream Modelica Buildings CDL sources and modelica-json CXF

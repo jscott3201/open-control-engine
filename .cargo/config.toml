@@ -24,6 +24,7 @@ runner = "qemu-system-riscv32 -machine virt -bios none -nodefaults -display none
 # (scripts/ci/install-wasmtime.sh) and what the guest can see; a relative program path here resolves
 # against the directory that holds `.cargo/`. Only `--target wasm32-wasip1` runs need wasmtime on
 # PATH; without it the runner exits with an install hint (`bash scripts/ci/install-wasmtime.sh`
-# installs the pinned release into target/wasmtime-bin). Host builds and tests never use it.
+# installs the pinned release into a user cache directory and prints where). Host builds and tests never
+# use it.
 [target.wasm32-wasip1]
 runner = "scripts/ci/wasmtime-runner.sh"

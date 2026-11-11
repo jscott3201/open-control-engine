@@ -8,11 +8,17 @@
 # Windows platform cell that loses its runner, its lane, its comparison or its strict-bit exclusion,
 # and a blob round trip that loses a leg, its recording, its comparison or its pinned wasmtime, and
 # a README lane (issue #503) whose job loses its lane-map entry, its lane, its classifier output or
-# its byte-pin step, fail closed. Since issue #502 the determinism matrix is split across the two workflows, and the
+# its byte-pin step, fail closed. Since issue #502 the determinism matrix is split across the workflows, and the
 # fixtures follow it: pr-gate.yml must hold exactly the two debug cells and the cross-architecture
-# comparisons, and release-gate.yml all four cells, the cross-codegen comparisons, the Windows
-# cell, the push-to-development trigger, a pinned checkout ref and a concurrency group that never
-# cancels a push run in progress.
+# comparisons, and the workflows that run after the merge all four cells, the cross-codegen
+# comparisons, the Windows cell, a pinned checkout ref and a concurrency group that never cancels a
+# push run in progress. Since issue #545 there are two of those: merge-gate.yml, on every push to
+# `development`, must hold exactly those three jobs under an aggregate that is not `CI OK`, and
+# release-gate.yml, nightly, on dispatch, on release PRs and on pushes to `main`, must hold exactly
+# the heavy job set. The controls fail when a determinism cell or a comparison leaves the merge
+# gate, when a heavy job leaves the release gate (with or without its `needs:` entry), when either
+# workflow's events or branches change, when a shared job differs between the two files, and when
+# the gate script loses a workspace-suite command the release gate now runs only through it.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -125,6 +131,9 @@ jobs:
       - run: bash .github/scripts/check-stale-crate-status.sh
       - run: bash .github/scripts/check-workflow-gates.sh
       - run: bash scripts/ci/test-classify-changes.sh
+      - run: bash scripts/ci/test-proof-row.sh
+      - run: bash scripts/ci/test-gate-modes.sh
+      - run: bash scripts/ci/test-install-wasmtime.sh
       - run: python3 scripts/ci/test_ci_ok.py
       - run: bash scripts/ci/test-leverage-members.sh
   golden-gen-firewall:
@@ -422,7 +431,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, development]
+    branches: [main]
   schedule:
     - cron: "17 8 * * *"
   workflow_dispatch:
@@ -430,7 +439,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 env:
-  CHECKOUT_REF: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'development' || github.event_name == 'push' && github.sha || github.ref }}
+  CHECKOUT_REF: ${{ github.event_name == 'schedule' && 'development' || (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.sha || github.ref }}
 jobs:
   test-suite:
     steps:
@@ -440,15 +449,32 @@ jobs:
       - uses: taiki-e/install-action@0123456789abcdef0123456789abcdef01234567 # v2
         with:
           tool: nextest@0.9.143
-      - name: Clear cached nextest reports
-        run: rm -f target/nextest/{ci,ci-release}/junit.xml
+      - name: Clear the cached nextest report
+        run: rm -f target/nextest/ci/junit.xml
       - run: cargo nextest run --workspace --locked --profile ci --no-tests=fail
-      - run: cargo nextest run --workspace --locked --profile ci-release --cargo-profile release --no-tests=fail
       - run: cargo test --workspace --doc --locked
-      - run: >-
-          for profile in ci ci-release;
-          do test -s "target/nextest/$profile/junit.xml";
-          done
+      - run: test -s target/nextest/ci/junit.xml
+  fmt:
+    steps:
+      - run: cargo fmt --all --check
+  file-size-cap:
+    steps:
+      - run: bash .github/scripts/check-file-size.sh
+  no-secret-scan:
+    steps:
+      - run: bash .github/scripts/check-no-secrets.sh
+  clippy:
+    steps:
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+  build:
+    steps:
+      - run: cargo build --workspace --locked
+  rustdoc:
+    steps:
+      - run: cargo doc --no-deps --workspace --lib --document-private-items --locked
+  deny:
+    steps:
+      - run: cargo deny check bans licenses sources advisories
   default-no-db:
     steps:
       - run: bash .github/scripts/check-default-no-db.sh
@@ -472,8 +498,10 @@ jobs:
       - run: rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown
       - run: |
           rustup target add wasm32-wasip1
-          bash scripts/ci/install-wasmtime.sh target/wasmtime-bin
+          bash scripts/ci/install-wasmtime.sh
+      - run: rm -f target/nextest/ci-release-workspace/junit.xml
       - run: bash .agents/gate.sh full
+      - run: test -s target/nextest/ci-release-workspace/junit.xml
   determinism-matrix:
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -592,11 +620,78 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [test-suite, default-no-db, unused-deps, gate-fixtures, golden-gen-firewall, gate, determinism-matrix, determinism-compare, std-build-windows]
+    needs: [test-suite, default-no-db, unused-deps, gate-fixtures, golden-gen-firewall, fmt, file-size-cap, no-secret-scan, clippy, build, rustdoc, deny, gate, determinism-matrix, determinism-compare, std-build-windows]
     steps:
       - env:
           NEEDS_JSON: ${{ toJSON(needs) }}
         run: python3 check.py
+EOF
+  # merge-gate.yml (issue #545): its own triggers, checkout ref and aggregate around the three
+  # jobs it shares with release-gate.yml, copied from the fixture above so the two start identical.
+  {
+    cat <<'EOF'
+on:
+  push:
+    branches: [development]
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+env:
+  CHECKOUT_REF: ${{ github.sha }}
+jobs:
+EOF
+    awk '/^  determinism-matrix:$/ { copy = 1 } /^  ci-ok:$/ { copy = 0 } copy' "$dir/release-gate.yml"
+    cat <<'EOF'
+  merge-gate-ok:
+    name: Merge gate OK
+    if: always()
+    needs: [determinism-matrix, determinism-compare, std-build-windows]
+    steps:
+      - env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: python3 check.py
+EOF
+  } > "$dir/merge-gate.yml"
+  # The gate script (issue #545): the release gate's workspace suite under release codegen runs
+  # only through it, so the checker reads the shape of its `full` block. The release subset step
+  # above the block is the look-alike that writes the shared `ci-release` report.
+  cat > "$(dirname "$dir")/gate.sh" <<'EOF'
+# Comment lines never count: cargo nextest run --workspace --locked --profile ci-release-workspace --cargo-profile release --no-tests=fail
+if release_codegen; then
+  step 'determinism subset (release codegen)' \
+    cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release \
+      --cargo-profile release --no-tests=fail
+fi
+# Comments between the header and the steps are allowed.
+if [ "$MODE" = full ]; then
+  step 'nextest — workspace' \
+    cargo nextest run --workspace --locked --profile ci --no-tests=fail
+  # So is a comment between two steps.
+  step 'nextest — workspace (release codegen)' \
+    cargo nextest run --workspace --locked --profile ci-release-workspace --cargo-profile release --no-tests=fail
+  step 'doctests' cargo test --workspace --doc --locked
+  step 'compiled-schedule blob matrix artifact' blob_matrix_artifact
+fi
+EOF
+  cat > "$(dirname "$dir")/nextest.toml" <<'EOF'
+[profile.ci]
+fail-fast = false
+
+[profile.ci.junit]
+path = "junit.xml"
+
+[profile.ci-release]
+inherits = "ci"
+
+[profile.ci-release.junit]
+report-name = "open-control-ci-release"
+
+[profile.ci-release-workspace]
+inherits = "ci"
+
+[profile.ci-release-workspace.junit]
+report-name = "open-control-ci-release-workspace"
 EOF
   cat > "$dir/qemu.yml" <<'EOF'
 on:
@@ -679,6 +774,8 @@ run_case() {
     OCE_ROOT_CARGO_TOML="$root_cargo" \
     OCE_CRATES_DIR="$crates_dir" \
     OCE_FIRMWARE_DIR="$tmp/$name/firmware" \
+    OCE_GATE_SCRIPT="$tmp/$name/gate.sh" \
+    OCE_NEXTEST_CONFIG="$tmp/$name/nextest.toml" \
     bash "$SCRIPT" 2>&1
   )"
   status=$?
@@ -734,10 +831,394 @@ edit_release_gate() {
   mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
 }
 
-# Only the full suite's release-codegen run goes; the determinism cells keep theirs, which must not
-# stand in for it.
+# The local proof-row fixtures (issue #545) run on every PR, with the lane classifier's.
+drop_proof_row_fixtures() {
+  dir="$1"
+  grep -v 'test-proof-row' "$dir/pr-gate.yml" > "$dir/pr-gate.yml.tmp"
+  mv "$dir/pr-gate.yml.tmp" "$dir/pr-gate.yml"
+}
+
+# `sed` over the fixture's merge-gate.yml.
+edit_merge_gate() {
+  dir="$1"
+  shift
+  sed "$@" "$dir/merge-gate.yml" > "$dir/merge-gate.yml.tmp"
+  mv "$dir/merge-gate.yml.tmp" "$dir/merge-gate.yml"
+}
+
+# `sed` over the fixture's gate script.
+edit_gate_script() {
+  script="$(dirname "$1")/gate.sh"
+  shift
+  sed "$@" "$script" > "$script.tmp"
+  mv "$script.tmp" "$script"
+}
+
+# The workspace suite's release-codegen run lives in the gate script since issue #545, and the
+# release gate reaches it only by executing the script. Only that command goes; the determinism
+# cells keep theirs, which must not stand in for it, and so does the comment line that names it.
 remove_release_nextest() {
-  edit_release_gate "$1" '/^  test-suite:$/,/^  [^ ]/ {/--cargo-profile release/d;}'
+  edit_gate_script "$1" "/^  step 'nextest — workspace (release codegen)' /,/^    cargo nextest run --workspace --locked --profile ci-release-workspace/d"
+}
+
+gate_script_release_suite_wrapped_over_two_lines() {
+  edit_gate_script "$1" 's/^\(    cargo nextest run --workspace --locked --profile ci-release-workspace\) \(--cargo-profile release --no-tests=fail\)$/\1 \\\n      \2/'
+}
+
+# The two shapes an independent review used to make the release workspace run unreachable while
+# the earlier checker and the earlier report requirement both still passed (GitHub #547): an inner
+# `if false`, and a condition in front of the step.
+gate_script_release_suite_inside_if_false() {
+  edit_gate_script "$1" \
+    -e "s/^  step 'nextest — workspace (release codegen)' /  if false; then\n  step 'nextest — workspace (release codegen)' /" \
+    -e 's/^\(    cargo nextest run --workspace --locked --profile ci-release-workspace .*\)$/\1\n  fi/'
+}
+
+gate_script_release_suite_behind_a_condition() {
+  edit_gate_script "$1" "s/^  step 'nextest — workspace (release codegen)' /  [ -n \"\${OCE_FAST:-}\" ] || step 'nextest — workspace (release codegen)' /"
+}
+
+gate_script_full_block_never_entered() {
+  edit_gate_script "$1" 's/^if \[ "\$MODE" = full \]; then$/if [ "$MODE" = full ] \&\& false; then/'
+}
+
+gate_script_second_full_block() {
+  script="$(dirname "$1")/gate.sh"
+  printf '%s\n' 'if [ "$MODE" = full ]; then' '  true' 'fi' >> "$script"
+}
+
+gate_script_release_suite_moved_after_the_doctests() {
+  script="$(dirname "$1")/gate.sh"
+  awk '
+    /^  step .nextest — workspace \(release codegen\). / { held = $0; getline; held = held "\n" $0; next }
+    { print }
+    /^  step .doctests. / { print held }
+  ' "$script" > "$script.tmp"
+  mv "$script.tmp" "$script"
+}
+
+# The release workspace run must not share a report with any other run: back on the `ci-release`
+# profile, the release determinism subset's report would satisfy the gate job's requirement.
+gate_script_release_suite_on_the_shared_profile() {
+  edit_gate_script "$1" 's/^    cargo nextest run --workspace --locked --profile ci-release-workspace /    cargo nextest run --workspace --locked --profile ci-release /'
+}
+
+gate_script_subset_writes_the_workspace_report() {
+  edit_gate_script "$1" 's/^    cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release \\$/    cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release-workspace \\/'
+}
+
+release_gate_requires_the_shared_report() {
+  edit_release_gate "$1" 's/^      - run: test -s target\/nextest\/ci-release-workspace\/junit.xml$/      - run: test -s target\/nextest\/ci-release\/junit.xml/'
+}
+
+release_gate_cell_writes_the_workspace_report() {
+  edit_release_gate "$1" 's/^      - run: cargo test --workspace --doc --locked$/&\n      - run: cargo nextest run -p oce-api --locked --profile ci-release-workspace --cargo-profile release/'
+}
+
+pr_gate_writes_the_workspace_report() {
+  edit_pr_gate "$1" 's/^      - run: cargo build --workspace --locked$/&\n      - run: cargo nextest run -p oce-api --locked --profile ci-release-workspace --cargo-profile release/'
+}
+
+nextest_profile_missing() {
+  config="$(dirname "$1")/nextest.toml"
+  grep -v 'ci-release-workspace' "$config" > "$config.tmp"
+  mv "$config.tmp" "$config"
+}
+
+# The gate-mode and wasmtime-installer fixtures run on every PR beside the proof-row ones.
+drop_gate_mode_fixtures() {
+  edit_pr_gate "$1" '/test-gate-modes/d'
+}
+
+drop_wasmtime_installer_fixtures() {
+  edit_pr_gate "$1" '/test-install-wasmtime/d'
+}
+
+# A required command that survives only in a comment is not run.
+required_command_only_in_a_comment() {
+  edit_pr_gate "$1" 's/^      - run: bash scripts\/ci\/test-proof-row.sh$/      # - run: bash scripts\/ci\/test-proof-row.sh/'
+}
+
+# An event filter beside `branches:` lets the event skip commits the branch list says it runs on,
+# and a cron that never fires ends the nightly run as surely as a deleted trigger.
+merge_gate_push_with_a_paths_filter() {
+  edit_merge_gate "$1" 's/^    branches: \[development\]$/&\n    paths:\n      - "crates\/**"/'
+}
+
+merge_gate_push_with_paths_ignore() {
+  edit_merge_gate "$1" 's/^    branches: \[development\]$/&\n    paths-ignore: ["**"]/'
+}
+
+release_gate_release_pr_with_a_paths_filter() {
+  edit_release_gate "$1" '/^  pull_request:$/,/^    branches:/ s/^    branches: \[main\]$/&\n    paths: ["docs\/**"]/'
+}
+
+release_gate_push_with_tags_only() {
+  edit_release_gate "$1" '/^  push:$/,/^    branches:/ s/^    branches: \[main\]$/&\n    tags: ["v*"]/'
+}
+
+release_gate_cron_never_fires() {
+  edit_release_gate "$1" 's/^    - cron: "17 8 \* \* \*"$/    - cron: "0 0 31 2 *"/'
+}
+
+release_gate_cron_weekly() {
+  edit_release_gate "$1" 's/^    - cron: "17 8 \* \* \*"$/    - cron: "17 8 * * 0"/'
+}
+
+release_gate_schedule_without_a_cron() {
+  edit_release_gate "$1" '/^    - cron: /d'
+}
+
+gate_script_debug_suite_dropped() {
+  edit_gate_script "$1" '/^    cargo nextest run --workspace --locked --profile ci --no-tests=fail$/d'
+}
+
+gate_script_doctests_dropped() {
+  edit_gate_script "$1" '/cargo test --workspace --doc --locked/d'
+}
+
+gate_script_missing() {
+  rm -f "$(dirname "$1")/gate.sh"
+}
+
+# The gate job's report requirement around the executed script (issue #545).
+release_gate_script_report_unchecked() {
+  edit_release_gate "$1" '/^      - run: test -s target\/nextest\/ci-release-workspace\/junit.xml$/d'
+}
+
+release_gate_script_report_not_cleared() {
+  edit_release_gate "$1" '/^      - run: rm -f target\/nextest\/ci-release-workspace\/junit.xml$/d'
+}
+
+release_gate_script_report_checked_before_the_script() {
+  dir="$1"
+  awk '
+    /^      - run: test -s target\/nextest\/ci-release-workspace\/junit.xml$/ { next }
+    /^      - run: bash .agents\/gate.sh full$/ { print "      - run: test -s target/nextest/ci-release-workspace/junit.xml" }
+    { print }
+  ' "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+}
+
+release_gate_runs_the_light_script() {
+  edit_release_gate "$1" 's/^      - run: bash .agents\/gate.sh full$/      - run: bash .agents\/gate.sh/'
+}
+
+release_gate_installs_wasmtime_into_target() {
+  edit_release_gate "$1" 's/^          bash scripts\/ci\/install-wasmtime.sh$/          bash scripts\/ci\/install-wasmtime.sh target\/wasmtime-bin/'
+}
+
+# The heavy set (issue #545): a job deleted from release-gate.yml together with its `needs:` entry
+# passes every topology check and simply stops running, nightly and on the release PR.
+drop_release_gate_job() {
+  dir="$1"
+  job="$2"
+  awk -v header="  $job:" '
+    $0 == header { skip = 1; next }
+    skip && /^  [^ ]/ { skip = 0 }
+    !skip { print }
+  ' "$dir/release-gate.yml" | sed -e "s/, $job, /, /" -e "s/\[$job, /[/" > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+}
+
+release_gate_without_the_suite() { drop_release_gate_job "$1" test-suite; }
+release_gate_without_the_executed_script() { drop_release_gate_job "$1" gate; }
+release_gate_without_cargo_deny() { drop_release_gate_job "$1" deny; }
+release_gate_without_clippy() { drop_release_gate_job "$1" clippy; }
+release_gate_without_the_fixtures() { drop_release_gate_job "$1" gate-fixtures; }
+
+release_gate_deny_without_advisories() {
+  edit_release_gate "$1" 's/^      - run: cargo deny check bans licenses sources advisories$/      - run: cargo deny check bans licenses sources/'
+}
+
+release_gate_doctests_dropped() {
+  edit_release_gate "$1" '/^      - run: cargo test --workspace --doc --locked$/d'
+}
+
+release_gate_job_only_on_schedule() {
+  dir="$1"
+  awk '
+    { print }
+    /^  gate:$/ { print "    if: github.event_name != '"'"'push'"'"'" }
+  ' "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+}
+
+release_gate_aggregate_renamed() {
+  edit_release_gate "$1" 's/^    name: CI OK$/    name: Release gate OK/'
+}
+
+# The events and branches of the two workflows that run after a merge (issue #545).
+release_gate_without_the_release_pr() {
+  edit_release_gate "$1" '/^  pull_request:$/,/^    branches:/d'
+}
+
+release_gate_on_pull_requests_into_development() {
+  edit_release_gate "$1" '/^  pull_request:$/,/^    branches:/ s/^    branches: \[main\]$/    branches: [main, development]/'
+}
+
+release_gate_without_the_schedule() {
+  edit_release_gate "$1" '/^  schedule:$/,/^    - cron:/d'
+}
+
+release_gate_without_dispatch() {
+  edit_release_gate "$1" '/^  workflow_dispatch:$/d'
+}
+
+release_gate_dispatch_checks_out_development() {
+  edit_release_gate "$1" "s/^  CHECKOUT_REF: .*\$/  CHECKOUT_REF: \${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') \&\& 'development' || github.event_name == 'push' \&\& github.sha || github.ref }}/"
+}
+
+# merge-gate.yml (issue #545): the post-merge set must keep every determinism cell, both halves of
+# the fan-in and the Windows cell, run on every push to `development`, and never pose as `CI OK`.
+merge_gate_missing() {
+  rm -f "$1/merge-gate.yml"
+}
+
+merge_gate_without_development_push() {
+  edit_merge_gate "$1" 's/^    branches: \[development\]$/    branches: [main]/'
+}
+
+merge_gate_without_push_trigger() {
+  edit_merge_gate "$1" '/^  push:$/,/^    branches:/d'
+}
+
+merge_gate_on_pull_requests() {
+  edit_merge_gate "$1" 's/^  workflow_dispatch:$/  workflow_dispatch:\n  pull_request:\n    branches: [main]/'
+}
+
+merge_gate_checks_out_the_moving_ref() {
+  edit_merge_gate "$1" 's/^  CHECKOUT_REF: .*$/  CHECKOUT_REF: development/'
+}
+
+merge_gate_checkout_without_the_pinned_ref() {
+  edit_merge_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/^          ref: \${{ env.CHECKOUT_REF }}$/d;}'
+}
+
+merge_gate_cancels_a_run_in_progress() {
+  edit_merge_gate "$1" 's/^  cancel-in-progress: .*$/  cancel-in-progress: true/'
+}
+
+merge_gate_runs_share_no_concurrency_group() {
+  edit_merge_gate "$1" 's/^  group: .*$/  group: ${{ github.workflow }}-${{ github.run_id }}/'
+}
+
+drop_merge_gate_release_codegen() {
+  edit_merge_gate "$1" 's/^        codegen: \[debug, release\]$/        codegen: [debug]/'
+}
+
+drop_merge_gate_aarch64_runner() {
+  edit_merge_gate "$1" 's/^        runner: \[ubuntu-latest, ubuntu-24\.04-arm\]$/        runner: [ubuntu-latest]/'
+}
+
+merge_gate_fail_fast() {
+  edit_merge_gate "$1" 's/^      fail-fast: false$/      fail-fast: true/'
+}
+
+drop_merge_gate_release_subset() {
+  edit_merge_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/-p oce-expr --locked --profile ci-release --cargo-profile release/d;}'
+}
+
+drop_merge_gate_debug_subset() {
+  edit_merge_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ {/-p oce-expr --locked --profile ci --no-tests=fail$/d;}'
+}
+
+drop_merge_gate_determinism_matrix() {
+  edit_merge_gate "$1" \
+    -e '/^  determinism-matrix:$/,/^  determinism-compare:$/ { /^  determinism-compare:$/!d; }' \
+    -e 's/^    needs: determinism-matrix$/    needs: std-build-windows/' \
+    -e 's/^    needs: \[determinism-matrix, determinism-compare, /    needs: [determinism-compare, /'
+}
+
+drop_merge_gate_fan_in() {
+  edit_merge_gate "$1" \
+    -e '/^  determinism-compare:$/,/^  std-build-windows:$/ { /^  std-build-windows:$/!d; }' \
+    -e 's/^    needs: \[determinism-matrix, determinism-compare, /    needs: [determinism-matrix, /'
+}
+
+drop_merge_gate_windows_cell() {
+  edit_merge_gate "$1" \
+    -e '/^  std-build-windows:$/,/^  merge-gate-ok:$/ { /^  merge-gate-ok:$/!d; }' \
+    -e 's/, determinism-compare, std-build-windows\]$/, determinism-compare]/'
+}
+
+merge_gate_fan_in_out_of_the_aggregate() {
+  edit_merge_gate "$1" 's/^    needs: \[determinism-matrix, determinism-compare, std-build-windows\]$/    needs: [determinism-matrix, std-build-windows]/'
+}
+
+detach_merge_gate_fan_in() {
+  edit_merge_gate "$1" 's/^    needs: determinism-matrix$/    needs: std-build-windows/'
+}
+
+drop_merge_gate_cross_codegen_comparison() {
+  edit_merge_gate "$1" '/cmp determinism-aarch64-debug\/target-state-debug.bin determinism-aarch64-release\/target-state-release.bin$/d'
+}
+
+drop_merge_gate_cross_architecture_comparison() {
+  edit_merge_gate "$1" '/cmp -s determinism-x86_64-debug\/target-state-debug.bin/d'
+}
+
+merge_gate_windows_on_linux_runner() {
+  edit_merge_gate "$1" 's/^    runs-on: windows-latest$/    runs-on: ubuntu-latest/'
+}
+
+merge_gate_with_a_heavy_job() {
+  edit_merge_gate "$1" \
+    -e 's/^  merge-gate-ok:$/  test-suite:\n    steps:\n      - run: cargo nextest run --workspace --locked --profile ci --no-tests=fail\n  merge-gate-ok:/' \
+    -e 's/^    needs: \[determinism-matrix, determinism-compare, std-build-windows\]$/    needs: [determinism-matrix, determinism-compare, std-build-windows, test-suite]/'
+}
+
+merge_gate_aggregate_named_ci_ok() {
+  edit_merge_gate "$1" 's/^    name: Merge gate OK$/    name: CI OK/'
+}
+
+merge_gate_cell_named_ci_ok() {
+  edit_merge_gate "$1" 's/^  std-build-windows:$/  std-build-windows:\n    name: "CI OK"/'
+}
+
+merge_gate_conditional_aggregate() {
+  edit_merge_gate "$1" '/^  merge-gate-ok:$/,$ s/^    if: always()$/    if: success()/'
+}
+
+merge_gate_blind_aggregate() {
+  dir="$1"
+  awk '/^  merge-gate-ok:$/ { tail = 1 } !(tail && /toJSON\(needs\)/)' "$dir/merge-gate.yml" > "$dir/merge-gate.yml.tmp"
+  mv "$dir/merge-gate.yml.tmp" "$dir/merge-gate.yml"
+}
+
+merge_gate_conditional_cell() {
+  edit_merge_gate "$1" 's/^  std-build-windows:$/  std-build-windows:\n    if: github.event_name == '"'"'push'"'"'/'
+}
+
+merge_gate_job_continue_on_error() {
+  edit_merge_gate "$1" 's/^  determinism-compare:$/  determinism-compare:\n    continue-on-error: true/'
+}
+
+merge_gate_step_condition_on_event() {
+  edit_merge_gate "$1" \
+    "/^  std-build-windows:\$/,/^  [^ ]/ s/^      - run: cargo build --workspace --locked\$/      - if: github.event_name != 'push'\n        run: cargo build --workspace --locked/"
+}
+
+merge_gate_unpinned_action() {
+  edit_merge_gate "$1" 's#taiki-e/install-action@[0-9a-f]\{40\} \# v2#taiki-e/install-action@v2#'
+}
+
+merge_gate_cross_target() {
+  edit_merge_gate "$1" 's/^  merge-gate-ok:$/  # cells once ran under qemu-user\n  merge-gate-ok:/'
+}
+
+# The three shared jobs must be one definition in both files: a weakening confined to a comment
+# or a flag no other check reads still fails.
+merge_gate_cell_timeout_differs() {
+  edit_merge_gate "$1" 's/^    runs-on: windows-latest$/    runs-on: windows-latest\n    timeout-minutes: 5/'
+}
+
+release_gate_cell_step_differs() {
+  edit_release_gate "$1" '/^  determinism-matrix:$/,/^  [^ ]/ s/^      - name: Clear cached reports and state vectors$/      - name: Keep cached reports and state vectors/'
+}
+
+merge_gate_fan_in_comment_differs() {
+  edit_merge_gate "$1" 's/^  determinism-compare:$/  determinism-compare:\n    # compares less here/'
 }
 
 seed_advisory_ignore() {
@@ -989,10 +1470,15 @@ drop_blob_size_requirement() {
   edit_pr_gate "$1" '/if \[ "\$size" != 123329 \]; then/d'
 }
 
-# The run after each merge (issue #502): the trigger, the commit a push run tests, the pinned ref
-# of every checkout, and a concurrency group that queues pushes without cancelling one in progress.
-release_gate_without_development_push() {
-  edit_release_gate "$1" 's/^    branches: \[main, development\]$/    branches: [main]/'
+# The release gate's own triggers (issue #545: a push to `development` is merge-gate.yml's), the
+# commit a push or dispatched run tests, the pinned ref of every checkout, and a concurrency group
+# that cancels only a superseded release-PR run.
+release_gate_with_development_push() {
+  edit_release_gate "$1" '/^  push:$/,/^    branches:/ s/^    branches: \[main\]$/    branches: [main, development]/'
+}
+
+release_gate_push_to_development_only() {
+  edit_release_gate "$1" '/^  push:$/,/^    branches:/ s/^    branches: \[main\]$/    branches: [development]/'
 }
 
 release_gate_without_push_trigger() {
@@ -1000,7 +1486,7 @@ release_gate_without_push_trigger() {
 }
 
 release_push_checks_out_the_moving_ref() {
-  edit_release_gate "$1" "s/ || github.event_name == 'push' \&\& github.sha || github.ref }}\$/ || github.ref }}/"
+  edit_release_gate "$1" "s/ || (github.event_name == 'push' || github.event_name == 'workflow_dispatch') \&\& github.sha || github.ref }}\$/ || github.ref }}/"
 }
 
 release_checkout_without_the_pinned_ref() {
@@ -1104,7 +1590,7 @@ omit_ci_ok_need() {
 }
 
 omit_release_ci_ok_need() {
-  edit_release_gate "$1" 's/^    needs: \[test-suite, default-no-db, /    needs: [test-suite, /'
+  edit_release_gate "$1" '/^  ci-ok:$/,$ s/^    needs: \[test-suite, default-no-db, /    needs: [test-suite, /'
 }
 
 restore_development_push_trigger() {
@@ -1413,7 +1899,7 @@ remove_nextest_report_requirements() {
 }
 
 remove_release_nextest_report_requirements() {
-  edit_release_gate "$1" '/^  test-suite:$/,/^  [^ ]/ {/for profile in/d; /test -s.*\$profile/d; /^[[:space:]]*done[[:space:]]*$/d;}'
+  edit_release_gate "$1" '/^  test-suite:$/,/^  [^ ]/ {/^      - run: test -s target\/nextest\/ci\/junit.xml$/d;}'
 }
 
 downgrade_nextest_pin() {
@@ -1797,11 +2283,167 @@ remove_crates_dir() {
 
 run_case positive pass noop
 run_case missing-release-nextest fail remove_release_nextest \
-  "release-codegen nextest with hard-fail-on-zero-tests"
+  "gate.sh full block does not open with exactly the workspace suite"
+run_case gate-script-release-suite-wrapped fail gate_script_release_suite_wrapped_over_two_lines \
+  "gate.sh full block does not open with exactly the workspace suite"
+run_case gate-script-debug-suite-dropped fail gate_script_debug_suite_dropped \
+  "gate.sh full block does not open with exactly the workspace suite"
+run_case gate-script-doctests-dropped fail gate_script_doctests_dropped \
+  "gate.sh full block does not open with exactly the workspace suite"
+run_case gate-script-release-suite-inside-if-false fail gate_script_release_suite_inside_if_false \
+  "gate.sh full block does not open with exactly the workspace suite"
+run_case gate-script-release-suite-behind-a-condition fail gate_script_release_suite_behind_a_condition \
+  "gate.sh full block does not open with exactly the workspace suite"
+run_case gate-script-full-block-never-entered fail gate_script_full_block_never_entered \
+  "gate.sh full block does not open with exactly the workspace suite"
+run_case gate-script-second-full-block fail gate_script_second_full_block \
+  "gate.sh full block does not open with exactly the workspace suite"
+run_case gate-script-release-suite-moved-after-the-doctests fail gate_script_release_suite_moved_after_the_doctests \
+  "gate.sh full block does not open with exactly the workspace suite"
+run_case gate-script-release-suite-on-the-shared-profile fail gate_script_release_suite_on_the_shared_profile \
+  "gate.sh full block does not open with exactly the workspace suite"
+run_case gate-script-subset-writes-the-workspace-report fail gate_script_subset_writes_the_workspace_report \
+  "names the nextest profile ci-release-workspace on other than exactly one line"
+run_case release-gate-requires-the-shared-report fail release_gate_requires_the_shared_report \
+  "the gate job requires the release-codegen workspace suite report after the script"
+run_case release-gate-cell-writes-the-workspace-report fail release_gate_cell_writes_the_workspace_report \
+  "release-gate.yml names ci-release-workspace outside the gate job's report clear and requirement"
+run_case pr-gate-writes-the-workspace-report fail pr_gate_writes_the_workspace_report \
+  "pr-gate.yml names the nextest profile ci-release-workspace"
+run_case nextest-profile-missing fail nextest_profile_missing \
+  "is missing required gate pattern: a nextest profile of its own for the release-codegen workspace run"
+run_case gate-mode-fixtures-dropped fail drop_gate_mode_fixtures \
+  "pr-gate.yml job gate-fixtures is missing required gate pattern: run the gate-mode nesting fixtures on every PR"
+run_case wasmtime-installer-fixtures-dropped fail drop_wasmtime_installer_fixtures \
+  "pr-gate.yml job gate-fixtures is missing required gate pattern: run the wasmtime installer destination fixtures on every PR"
+run_case required-command-only-in-a-comment fail required_command_only_in_a_comment \
+  "pr-gate.yml job gate-fixtures is missing required gate pattern: run the local proof-row fixtures on every PR"
+run_case merge-gate-push-with-a-paths-filter fail merge_gate_push_with_a_paths_filter \
+  "merge-gate.yml push trigger carries a filter other than branches: (got: branches paths )"
+run_case merge-gate-push-with-paths-ignore fail merge_gate_push_with_paths_ignore \
+  "merge-gate.yml push trigger carries a filter other than branches: (got: branches paths-ignore )"
+run_case release-gate-release-pr-with-a-paths-filter fail release_gate_release_pr_with_a_paths_filter \
+  "release-gate.yml pull_request trigger carries a filter other than branches: (got: branches paths )"
+run_case release-gate-push-with-tags-only fail release_gate_push_with_tags_only \
+  "release-gate.yml push trigger carries a filter other than branches: (got: branches tags )"
+run_case release-gate-cron-never-fires fail release_gate_cron_never_fires \
+  'release-gate.yml schedule is not exactly the one cron entry "17 8 * * *" (got: - cron: "0 0 31 2 *")'
+run_case release-gate-cron-weekly fail release_gate_cron_weekly \
+  'release-gate.yml schedule is not exactly the one cron entry "17 8 * * *"'
+run_case release-gate-schedule-without-a-cron fail release_gate_schedule_without_a_cron \
+  'release-gate.yml schedule is not exactly the one cron entry "17 8 * * *" (got: none)'
+run_case gate-script-missing fail gate_script_missing \
+  "required gate file is missing or empty"
+run_case release-gate-script-report-unchecked fail release_gate_script_report_unchecked \
+  "the gate job requires the release-codegen workspace suite report after the script"
+run_case release-gate-script-report-not-cleared fail release_gate_script_report_not_cleared \
+  "the release-codegen workspace report is cleared before the gate script runs"
+run_case release-gate-script-report-checked-before-the-script fail release_gate_script_report_checked_before_the_script \
+  "the gate job requires the release-codegen workspace suite report after the script"
+run_case release-gate-runs-the-light-script fail release_gate_runs_the_light_script \
+  "the release gate executes the gate script in full mode"
+run_case release-gate-installs-wasmtime-into-target fail release_gate_installs_wasmtime_into_target \
+  "the executed full gate script has the pinned wasmtime its round trip runs under"
+run_case release-gate-without-the-suite fail release_gate_without_the_suite \
+  "release-gate.yml does not hold exactly its pinned job set"
+run_case release-gate-without-the-executed-script fail release_gate_without_the_executed_script \
+  "release-gate.yml does not hold exactly its pinned job set"
+run_case release-gate-without-cargo-deny fail release_gate_without_cargo_deny \
+  "release-gate.yml does not hold exactly its pinned job set"
+run_case release-gate-without-clippy fail release_gate_without_clippy \
+  "release-gate.yml does not hold exactly its pinned job set"
+run_case release-gate-without-the-fixtures fail release_gate_without_the_fixtures \
+  "release-gate.yml does not hold exactly its pinned job set"
+run_case release-gate-deny-without-advisories fail release_gate_deny_without_advisories \
+  "release gate sweeps advisories with bans, licenses and sources"
+run_case release-gate-doctests-dropped fail release_gate_doctests_dropped \
+  "release-gate.yml job test-suite is missing required gate pattern: doctest gate"
+run_case release-gate-job-only-on-schedule fail release_gate_job_only_on_schedule \
+  "release-gate.yml gating job has a job-level if: that CI OK would read as failure: gate"
+run_case release-gate-aggregate-renamed fail release_gate_aggregate_renamed \
+  "release gate aggregate is the CI OK status branch protection on main requires"
+run_case release-gate-without-the-release-pr fail release_gate_without_the_release_pr \
+  "release-gate.yml does not run on exactly the events: pull_request push schedule workflow_dispatch"
+run_case release-gate-on-pull-requests-into-development fail release_gate_on_pull_requests_into_development \
+  "release-gate.yml pull_request trigger does not name branches [main] (got: [main, development])"
+run_case release-gate-without-the-schedule fail release_gate_without_the_schedule \
+  "release-gate.yml does not run on exactly the events: pull_request push schedule workflow_dispatch"
+run_case release-gate-without-dispatch fail release_gate_without_dispatch \
+  "release-gate.yml does not run on exactly the events: pull_request push schedule workflow_dispatch"
+run_case release-gate-dispatch-checks-out-development fail release_gate_dispatch_checks_out_development \
+  "a scheduled run checks out development, a push or dispatched run the commit its event names, a release PR its merge ref"
+run_case merge-gate-missing fail merge_gate_missing \
+  "required gate file is missing or empty"
+run_case merge-gate-without-development-push fail merge_gate_without_development_push \
+  "merge-gate.yml push trigger does not name branches [development] (got: [main])"
+run_case merge-gate-without-push-trigger fail merge_gate_without_push_trigger \
+  "merge-gate.yml does not run on exactly the events: push workflow_dispatch"
+run_case merge-gate-on-pull-requests fail merge_gate_on_pull_requests \
+  "merge-gate.yml does not run on exactly the events: push workflow_dispatch"
+run_case merge-gate-checks-out-the-moving-ref fail merge_gate_checks_out_the_moving_ref \
+  "a merge-gate run checks out the commit its event names in every job"
+run_case merge-gate-checkout-without-the-pinned-ref fail merge_gate_checkout_without_the_pinned_ref \
+  "merge-gate.yml has a checkout that does not pin ref:"
+run_case merge-gate-cancels-a-run-in-progress fail merge_gate_cancels_a_run_in_progress \
+  "a merge-gate run in progress always finishes"
+run_case merge-gate-runs-share-no-concurrency-group fail merge_gate_runs_share_no_concurrency_group \
+  "merge-gate.yml is missing required gate pattern: one concurrency group per event and ref, so pushes to development queue behind each other"
+run_case merge-gate-missing-release-codegen-cells fail drop_merge_gate_release_codegen \
+  "merge-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix runs debug and release codegen"
+run_case merge-gate-missing-aarch64-runner fail drop_merge_gate_aarch64_runner \
+  "merge-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix runs native x86_64 and aarch64 runners"
+run_case merge-gate-fail-fast-cells fail merge_gate_fail_fast \
+  "merge-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix reports every failing cell (fail-fast: false)"
+run_case merge-gate-missing-release-subset fail drop_merge_gate_release_subset \
+  "merge-gate.yml job determinism-matrix is missing required gate pattern: release determinism subset with hard-fail-on-zero-tests"
+run_case merge-gate-missing-debug-subset fail drop_merge_gate_debug_subset \
+  "merge-gate.yml job determinism-matrix is missing required gate pattern: debug determinism subset with hard-fail-on-zero-tests"
+run_case merge-gate-without-determinism-matrix fail drop_merge_gate_determinism_matrix \
+  "merge-gate.yml does not hold exactly its pinned job set"
+run_case merge-gate-without-fan-in fail drop_merge_gate_fan_in \
+  "merge-gate.yml does not hold exactly its pinned job set"
+run_case merge-gate-without-windows-cell fail drop_merge_gate_windows_cell \
+  "merge-gate.yml does not hold exactly its pinned job set"
+run_case merge-gate-fan-in-out-of-the-aggregate fail merge_gate_fan_in_out_of_the_aggregate \
+  "merge-gate.yml Merge gate OK needs does not match the workflow's jobs"
+run_case merge-gate-detached-determinism-fan-in fail detach_merge_gate_fan_in \
+  "merge-gate.yml job determinism-compare does not need determinism-matrix"
+run_case merge-gate-cross-codegen-comparison-dropped fail drop_merge_gate_cross_codegen_comparison \
+  "merge-gate.yml job determinism-compare is missing required gate pattern: compare aarch64 target-bound state bytes across codegen profiles"
+run_case merge-gate-cross-architecture-comparison-dropped fail drop_merge_gate_cross_architecture_comparison \
+  "merge-gate.yml job determinism-compare is missing required gate pattern: require target-bound state bytes to differ across architectures"
+run_case merge-gate-windows-on-linux-runner fail merge_gate_windows_on_linux_runner \
+  "merge-gate.yml job std-build-windows is missing required gate pattern: the Windows cell runs on windows-latest"
+run_case merge-gate-with-a-heavy-job fail merge_gate_with_a_heavy_job \
+  "merge-gate.yml does not hold exactly its pinned job set"
+run_case merge-gate-aggregate-named-ci-ok fail merge_gate_aggregate_named_ci_ok \
+  "the merge-gate aggregate is named Merge gate OK"
+run_case merge-gate-cell-named-ci-ok fail merge_gate_cell_named_ci_ok \
+  "merge-gate.yml contains a refused gate pattern: a job named CI OK"
+run_case merge-gate-conditional-aggregate fail merge_gate_conditional_aggregate \
+  "the merge-gate aggregate reports on every run"
+run_case merge-gate-blind-aggregate fail merge_gate_blind_aggregate \
+  "the merge-gate aggregate inspects every needed result"
+run_case merge-gate-conditional-cell fail merge_gate_conditional_cell \
+  "merge-gate.yml gating job has a job-level if: that Merge gate OK would read as failure: std-build-windows"
+run_case merge-gate-job-continue-on-error fail merge_gate_job_continue_on_error \
+  "merge-gate.yml contains a refused gate pattern: continue-on-error"
+run_case merge-gate-step-condition-on-event fail merge_gate_step_condition_on_event \
+  "merge-gate.yml has a step-level if: other than a matrix selector or !cancelled()"
+run_case merge-gate-unpinned-action fail merge_gate_unpinned_action \
+  "merge-gate.yml uses an action not pinned to a full commit SHA"
+run_case merge-gate-cross-target fail merge_gate_cross_target \
+  "merge-gate.yml mentions emulation or a cross-compiled aarch64 target"
+run_case merge-gate-cell-timeout-differs fail merge_gate_cell_timeout_differs \
+  "job std-build-windows is not defined identically in"
+run_case release-gate-cell-step-differs fail release_gate_cell_step_differs \
+  "job determinism-matrix is not defined identically in"
+run_case merge-gate-fan-in-comment-differs fail merge_gate_fan_in_comment_differs \
+  "job determinism-compare is not defined identically in"
 run_case seeded-advisory-ignore fail seed_advisory_ignore \
   "empty advisory ignore list"
 run_case garbled-workflow fail garble_release_workflow \
-  "scheduled heavy gate"
+  "release-gate.yml does not run on exactly the events: pull_request push schedule workflow_dispatch"
 run_case missing-stale-status-gate fail remove_stale_status_gate \
   "run stale crate-status fixture tests"
 run_case empty-bans-deny fail empty_bans_deny \
@@ -1847,7 +2489,7 @@ run_case release-gate-missing-aarch64-runner fail drop_release_gate_aarch64_runn
 run_case release-gate-fail-fast-cells fail release_gate_fail_fast \
   "release-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix reports every failing cell (fail-fast: false)"
 run_case release-gate-without-determinism-matrix fail drop_release_gate_determinism_matrix \
-  "release-gate.yml job determinism-matrix is missing required gate pattern: determinism-matrix runs on the matrix runner"
+  "release-gate.yml does not hold exactly its pinned job set"
 run_case release-gate-missing-release-subset fail drop_release_gate_release_subset \
   "release-gate.yml job determinism-matrix is missing required gate pattern: release determinism subset with hard-fail-on-zero-tests"
 run_case release-gate-missing-release-round-trip fail drop_release_gate_release_round_trip \
@@ -1872,18 +2514,20 @@ run_case blob-architecture-comparison-dropped fail drop_blob_architecture_compar
   "pr-gate.yml job determinism-compare is missing required gate pattern: compare compiled-schedule blob bytes across architectures"
 run_case blob-size-unchecked fail drop_blob_size_requirement \
   "refuse a compiled-schedule blob artifact that is not the 123329 bytes of the goldens"
-run_case release-gate-without-development-push fail release_gate_without_development_push \
-  "release-gate.yml push trigger does not name branches [main, development] (got: [main])"
+run_case release-gate-with-development-push fail release_gate_with_development_push \
+  "release-gate.yml push trigger does not name branches [main] (got: [main, development])"
+run_case release-gate-push-to-development-only fail release_gate_push_to_development_only \
+  "release-gate.yml push trigger does not name branches [main] (got: [development])"
 run_case release-gate-without-push-trigger fail release_gate_without_push_trigger \
-  "release-gate.yml push trigger does not name branches [main, development] (got: none)"
+  "release-gate.yml does not run on exactly the events: pull_request push schedule workflow_dispatch"
 run_case release-push-checks-out-the-moving-ref fail release_push_checks_out_the_moving_ref \
-  "a push run checks out the pushed commit in every job"
+  "a scheduled run checks out development, a push or dispatched run the commit its event names, a release PR its merge ref"
 run_case release-checkout-without-the-pinned-ref fail release_checkout_without_the_pinned_ref \
   "release-gate.yml has a checkout that does not pin ref:"
 run_case release-push-cancels-a-run-in-progress fail release_push_cancels_a_run_in_progress \
-  "only a superseded release-PR run is cancelled; a push run in progress always finishes"
+  "only a superseded release-PR run is cancelled; any other run in progress always finishes"
 run_case release-runs-share-no-concurrency-group fail release_runs_share_no_concurrency_group \
-  "one concurrency group per event and ref, so pushes to development queue behind each other"
+  "release-gate.yml is missing required gate pattern: one concurrency group per event and ref"
 run_case fail-fast-cells fail enable_fail_fast \
   "determinism-matrix reports every failing cell (fail-fast: false)"
 run_case reinstalled-qemu fail reinstall_qemu \
@@ -1994,7 +2638,7 @@ run_case missing-nextest-report-cleanup fail remove_nextest_report_cleanup \
 run_case missing-nextest-report-requirements fail remove_nextest_report_requirements \
   "pr-gate.yml job determinism-matrix is missing required gate pattern: refuse an absent or empty nextest determinism report"
 run_case missing-release-nextest-report-requirements fail remove_release_nextest_report_requirements \
-  "release gate requires the complete nextest report set"
+  "release-gate.yml job test-suite is missing required gate pattern: release gate refuses an absent or empty nextest report"
 run_case release-full-suite-debug-run-dropped fail release_full_suite_debug_run_dropped \
   "release-gate.yml job test-suite is missing required gate pattern: debug nextest with hard-fail-on-zero-tests"
 run_case stale-nextest-pin fail downgrade_nextest_pin \
@@ -2067,7 +2711,7 @@ run_case windows-report-requirement-dropped fail windows_report_requirement_drop
 run_case windows-out-of-release-ci-ok fail windows_out_of_release_ci_ok \
   "release-gate.yml CI OK needs does not match the workflow's jobs"
 run_case windows-cell-removed fail windows_cell_removed \
-  "release-gate.yml job std-build-windows is missing required gate pattern: the Windows cell runs on windows-latest"
+  "release-gate.yml does not hold exactly its pinned job set"
 run_case no-std-check-script-dropped fail no_std_check_script_dropped \
   "build, lint and graph-scan the core four no_std + alloc on every target"
 run_case no-std-controls-dropped fail no_std_controls_dropped \

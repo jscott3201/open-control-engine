@@ -5,6 +5,14 @@
 # The live per-PR gate is .github/workflows/pr-gate.yml. .github/workflows/ci.yml is a dormant,
 # byte-frozen copy kept as the history of the retained strict-bit capture archives, disabled in the
 # repository's Actions settings, and is not checked here.
+#
+# Three gating workflows, each held to its own shape (issue #545 split the third from the second):
+#   pr-gate.yml       per PR into `development`: the lane-filtered light gate.
+#   merge-gate.yml    after each merge into `development`: exactly the four determinism cells, their
+#                     fan-in and the Windows cell.
+#   release-gate.yml  nightly, on dispatch, on release PRs and on pushes to `main`: the heavy set,
+#                     whose exact job list is pinned below so that none can be dropped.
+# The three jobs the last two share must be byte-identical in both files.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -14,6 +22,8 @@ DENY_TOML="${OCE_DENY_TOML:-deny.toml}"
 ROOT_CARGO_TOML="${OCE_ROOT_CARGO_TOML:-Cargo.toml}"
 CRATES_DIR="${OCE_CRATES_DIR:-crates}"
 FIRMWARE_DIR="${OCE_FIRMWARE_DIR:-firmware}"
+GATE_SCRIPT="${OCE_GATE_SCRIPT:-.agents/gate.sh}"
+NEXTEST_CONFIG="${OCE_NEXTEST_CONFIG:-.config/nextest.toml}"
 
 require_file() {
   path="$1"
@@ -50,10 +60,11 @@ require_job_pattern() {
   job="$2"
   pattern="$3"
   label="$4"
+  # Comment lines never count: a required command that survives only in a comment is not run.
   job_body="$(awk -v header="  $job:" '
     $0 == header { found = 1; next }
     found && /^  [^ ]/ { exit }
-    found { print }
+    found && !/^[[:space:]]*#/ { print }
   ' "$path")"
   if ! grep -Eq -- "$pattern" <<< "$job_body"; then
     echo "FAIL: $path job $job is missing required gate pattern: $label"
@@ -143,8 +154,8 @@ refuse_emulation() {
 # A native cell matrix: x86_64 on ubuntu-latest and aarch64 on ubuntu-24.04-arm, in exactly the
 # codegen modes named (`debug, release`, or `debug` alone), without fail-fast, so one run reports
 # every failing cell. The codegen list is exact in both directions (issue #502): pr-gate.yml's
-# determinism matrix is debug only, because its release-codegen cells run in release-gate.yml, and
-# release-gate.yml's must name both.
+# determinism matrix is debug only, because its release-codegen cells run in merge-gate.yml and
+# release-gate.yml, and theirs must name both.
 require_native_cell_matrix() {
   path="$1"
   job="$2"
@@ -156,7 +167,7 @@ require_native_cell_matrix() {
       ;;
     'debug')
       codegen_pattern='\[debug\]'
-      codegen_label="$job runs debug codegen only (its release-codegen cells belong to release-gate.yml)"
+      codegen_label="$job runs debug codegen only (its release-codegen cells belong to merge-gate.yml and release-gate.yml)"
       ;;
     *)
       echo "BUG: require_native_cell_matrix: unknown codegen list '$3'"
@@ -184,8 +195,8 @@ require_native_cell_matrix() {
   fi
 }
 
-# The determinism cells, in either workflow (issue #502 split the matrix: pr-gate.yml runs the two
-# debug cells per PR, release-gate.yml runs all four after the merge). Every cell refuses a runner
+# The determinism cells, in every workflow (issue #502 split the matrix: pr-gate.yml runs the two
+# debug cells per PR; merge-gate.yml runs all four after the merge and release-gate.yml nightly). Every cell refuses a runner
 # of the wrong architecture, records the blob round trip (issue #403), runs the debug subset with
 # hard-fail-on-zero-tests, emits both state vectors, archives its round-trip suite for the fan-in
 # and uploads under its own name.
@@ -223,7 +234,7 @@ require_determinism_cells() {
     'archive each architecture'"'"'s debug blob round trip for the fan-in'
 }
 
-# The release-codegen determinism cells (release-gate.yml only): the subset and the blob round trip
+# The release-codegen determinism cells (merge-gate.yml and release-gate.yml): the subset and the blob round trip
 # under `--cargo-profile release`, their state vectors, and the report and vector checks that follow
 # the cell's codegen so a matrix edit cannot leave a release cell a green no-op.
 require_release_codegen_determinism_cells() {
@@ -289,7 +300,7 @@ require_determinism_fan_in() {
     'the round-trip replay hard-fails when its suite is absent'
 }
 
-# The determinism fan-in's cross-codegen half (release-gate.yml only, issue #502): debug against
+# The determinism fan-in's cross-codegen half (merge-gate.yml and release-gate.yml, issue #502): debug against
 # release within each architecture, for the portable and target-bound state bytes, the
 # compiled-schedule blobs and the round-trip recordings, over all four cells' artifacts.
 require_cross_codegen_fan_in() {
@@ -321,7 +332,8 @@ require_cross_codegen_fan_in() {
   done
 }
 
-# The Windows platform cell (issue #394; in release-gate.yml since issue #502): the workspace build
+# The Windows platform cell (issue #394; out of pr-gate.yml since issue #502, in merge-gate.yml and
+# release-gate.yml): the workspace build
 # and the workspace suite without exactly the strict-bit binaries, on a Windows runner.
 require_windows_cell() {
   path="$1"
@@ -339,28 +351,132 @@ require_windows_cell() {
     'the Windows cell refuses an absent or empty nextest report'
 }
 
-# release-gate.yml runs on every push to `development` — each merged PR — as well as to `main`
-# (issue #502): that run is where the release-codegen determinism cells, the Windows cell and the
-# executed gate script now run for a change. The parse reads the block-map `on:` the workflow uses.
-require_release_push_branches() {
-  path="$1"
-  local branches
-  branches="$(awk '
+# The top-level events of a workflow's block-map `on:`, one per line, sorted.
+workflow_events() {
+  awk '
     /^on:[[:space:]]*$/ { in_on = 1; next }
     in_on && /^[^[:space:]#]/ { in_on = 0 }
     !in_on || /^[[:space:]]*#/ { next }
-    /^  [A-Za-z_]+:/ { in_push = ($0 ~ /^  push:[[:space:]]*$/); next }
-    in_push && /^    branches:/ { sub(/^    branches:[[:space:]]*/, ""); sub(/[[:space:]]+$/, ""); print }
-  ' "$path")"
-  if [ "$branches" != '[main, development]' ]; then
-    echo "FAIL: $path push trigger does not name branches [main, development] (got: ${branches:-none}); the release gate must run on every merge into development"
+    /^  [A-Za-z_]+:/ { event = $0; sub(/^  /, "", event); sub(/:.*/, "", event); print event }
+  ' "$1" | sort
+}
+
+# The events a workflow runs on, exactly (issue #545). The split of the release gate is a split by
+# event: a `push` trigger gone from release-gate.yml would leave the merged release untested, a
+# `pull_request` one gone would leave the release PR with no `CI OK` at all, a `schedule` one gone
+# would end the nightly run, and a `pull_request` or `schedule` event added to merge-gate.yml would
+# let its short run report where the heavy set must.
+require_workflow_events() {
+  path="$1"
+  local expected actual
+  expected="$(printf '%s\n' $2 | sort)"
+  actual="$(workflow_events "$path")"
+  if [ "$expected" != "$actual" ]; then
+    echo "FAIL: $path does not run on exactly the events: $2 (got: $(printf '%s' "$actual" | tr '\n' ' '))"
     exit 1
   fi
 }
 
-# Every checkout in release-gate.yml pins `ref: ${{ env.CHECKOUT_REF }}`: a job that took the
-# default ref would test a different commit from the rest of its run on a dispatched run, and a
-# fan-in would compare cells built from two trees.
+# The `branches:` filter of one event in a workflow's block-map `on:`, exactly. Which workflow runs
+# on a push to which branch is the whole of the split (issue #545): merge-gate.yml takes
+# `development`, every merged PR, and release-gate.yml takes `main`, the merged release; a release
+# PR is a `pull_request` into `main`. A `development` push back in release-gate.yml would put the
+# two-hour heavy set behind every merge again, and one missing from merge-gate.yml would leave a
+# merge with no release-codegen determinism evidence until the night.
+require_event_branches() {
+  path="$1"
+  event="$2"
+  expected="$3"
+  reason="$4"
+  local branches
+  branches="$(awk -v header="  $event:" '
+    /^on:[[:space:]]*$/ { in_on = 1; next }
+    in_on && /^[^[:space:]#]/ { in_on = 0 }
+    !in_on || /^[[:space:]]*#/ { next }
+    /^  [A-Za-z_]+:/ { line = $0; sub(/[[:space:]]+$/, "", line); in_event = (line == header); next }
+    in_event && /^    branches:/ { sub(/^    branches:[[:space:]]*/, ""); sub(/[[:space:]]+$/, ""); print }
+  ' "$path")"
+  if [ "$branches" != "$expected" ]; then
+    echo "FAIL: $path $event trigger does not name branches $expected (got: ${branches:-none}); $reason"
+    exit 1
+  fi
+  # `branches:` is the event's only filter. A `paths:`, `paths-ignore:`, `branches-ignore:` or
+  # `tags:` key beside it would let the event skip commits the branch list says it runs on.
+  local filters
+  filters="$(awk -v header="  $event:" '
+    /^on:[[:space:]]*$/ { in_on = 1; next }
+    in_on && /^[^[:space:]#]/ { in_on = 0 }
+    !in_on || /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+    /^  [A-Za-z_]+:/ { line = $0; sub(/[[:space:]]+$/, "", line); in_event = (line == header); next }
+    in_event && /^    [^[:space:]]/ { key = $0; sub(/^    /, "", key); sub(/:.*/, "", key); print key }
+  ' "$path" | sort | tr '\n' ' ')"
+  if [ "$filters" != 'branches ' ]; then
+    echo "FAIL: $path $event trigger carries a filter other than branches: (got: $filters); $reason"
+    exit 1
+  fi
+}
+
+# The lines under `schedule:` in a workflow's block-map `on:`, exactly one cron entry with the
+# given expression. The nightly run is where the heavy set executes (issue #545), and a cron that
+# is present but never fires (`0 0 31 2 *`) would end it as surely as a deleted trigger, so the
+# expression is pinned to the string, not to its shape.
+require_schedule() {
+  path="$1"
+  expected="$2"
+  local entries
+  entries="$(awk '
+    /^on:[[:space:]]*$/ { in_on = 1; next }
+    in_on && /^[^[:space:]#]/ { in_on = 0 }
+    !in_on || /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+    /^  [A-Za-z_]+:/ { in_schedule = ($0 ~ /^  schedule:[[:space:]]*$/); next }
+    in_schedule { line = $0; sub(/^[[:space:]]+/, "", line); sub(/[[:space:]]+(#.*)?$/, "", line); print line }
+  ' "$path")"
+  if [ "$entries" != "- cron: \"$expected\"" ]; then
+    echo "FAIL: $path schedule is not exactly the one cron entry \"$expected\" (got: ${entries:-none})"
+    exit 1
+  fi
+}
+
+# The `full` block of the gate script (issue #545). release-gate.yml reaches the workspace suite
+# under release codegen only by executing the script, so the script's shape is part of the gate:
+# after `if [ "$MODE" = full ]; then`, comment lines aside, come exactly the debug workspace step,
+# the release-codegen workspace step under its own nextest profile, and the doctests, each a plain
+# `step` at the block's own indent. A step that is dropped, prefixed with a condition
+# (`[ -n "$X" ] || step ...`), wrapped in an inner `if`, or moved elsewhere changes those five
+# lines. What this cannot see: an enclosing condition above the block, a redefined `step`, or an
+# early exit before it; the executed job's report requirement and test-gate-modes.sh, which runs
+# the script in `full` mode with stubbed children and reads which steps it reaches, cover those.
+require_gate_full_block() {
+  path="$1"
+  local expected actual
+  expected="$(cat <<'BLOCK'
+  step 'nextest — workspace' \
+    cargo nextest run --workspace --locked --profile ci --no-tests=fail
+  step 'nextest — workspace (release codegen)' \
+    cargo nextest run --workspace --locked --profile ci-release-workspace --cargo-profile release --no-tests=fail
+  step 'doctests' cargo test --workspace --doc --locked
+BLOCK
+)"
+  actual="$(awk '
+    /^[[:space:]]*#/ { next }
+    $0 == "if [ \"$MODE\" = full ]; then" { blocks++; taken = 0; inside = (blocks == 1); next }
+    inside && taken < 5 { print; taken++ }
+  ' "$path")"
+  if [ "$(grep -c '^if \[ "\$MODE" = full \]; then$' "$path")" != 1 ] || [ "$expected" != "$actual" ]; then
+    echo "FAIL: $path full block does not open with exactly the workspace suite, the release-codegen workspace suite under profile ci-release-workspace, and the doctests"
+    diff <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") | sed 's/^/  /' || true
+    exit 1
+  fi
+}
+
+# How many non-comment lines of a file name a fixed string.
+count_code_lines() {
+  grep -Ev '^[[:space:]]*#' "$1" | grep -cF -- "$2" || true
+}
+
+# Every checkout in merge-gate.yml and release-gate.yml pins `ref: ${{ env.CHECKOUT_REF }}`: a job
+# that took the default ref would test a different commit from the rest of its run on a scheduled
+# run, and a fan-in would compare cells built from two trees.
 require_pinned_checkout_ref() {
   path="$1"
   local unpinned
@@ -437,13 +553,14 @@ require_job_needs() {
   fi
 }
 
-# Every job-level `if:` other than CI OK's, as `job<TAB>condition` lines.
+# Every job-level `if:` other than the aggregate job's (`ci-ok` unless named), as
+# `job<TAB>condition` lines.
 job_conditions() {
-  awk '
+  awk -v aggregate="${2:-ci-ok}" '
     /^jobs:[[:space:]]*$/ { in_jobs = 1; next }
     in_jobs && /^[^[:space:]#]/ { in_jobs = 0 }
     in_jobs && /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { job = $0; sub(/^  /, "", job); sub(/:.*/, "", job) }
-    in_jobs && job != "ci-ok" && /^    if:/ {
+    in_jobs && job != aggregate && /^    if:/ {
       value = $0
       sub(/^    if:[[:space:]]*/, "", value)
       sub(/[[:space:]]+$/, "", value)
@@ -452,27 +569,78 @@ job_conditions() {
   ' "$1"
 }
 
-# The aggregate job must need every other job: one missing from `needs:` would not be gated at all.
+# The aggregate job (`ci-ok` unless named) must need every other job: one missing from `needs:`
+# would not be gated at all.
 require_ci_ok_covers_every_job() {
   path="$1"
-  local expected actual
-  expected="$(workflow_jobs "$path" | grep -vx 'ci-ok' || true)"
-  actual="$(job_needs "$path" ci-ok)"
+  local aggregate="${2:-ci-ok}" label="${3:-CI OK}" expected actual
+  expected="$(workflow_jobs "$path" | grep -vx -- "$aggregate" || true)"
+  actual="$(job_needs "$path" "$aggregate")"
   if [ -z "$expected" ] || [ "$expected" != "$actual" ]; then
-    echo "FAIL: $path CI OK needs does not match the workflow's jobs"
+    echo "FAIL: $path $label needs does not match the workflow's jobs"
     diff <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") | sed 's/^/  /' || true
     exit 1
   fi
 }
 
-# No job other than CI OK may carry a job-level `if:` (release-gate.yml): its aggregate accepts
-# only `success`, so a conditionally skipped gate would read as a failure.
+# No job other than the aggregate may carry a job-level `if:` (merge-gate.yml, release-gate.yml):
+# the aggregate accepts only `success`, so a conditionally skipped gate would read as a failure.
+# This is also what keeps the split by event out of the job graph: a heavy job cannot be made to
+# run "only on schedule" inside one file, it has to live in the workflow that runs on that event.
 require_no_job_conditions() {
   path="$1"
-  local gated
-  gated="$(job_conditions "$path" | cut -f1)"
+  local aggregate="${2:-ci-ok}" label="${3:-CI OK}" gated
+  gated="$(job_conditions "$path" "$aggregate" | cut -f1)"
   if [ -n "$gated" ]; then
-    echo "FAIL: $path gating job has a job-level if: that CI OK would read as failure: $gated"
+    echo "FAIL: $path gating job has a job-level if: that $label would read as failure: $gated"
+    exit 1
+  fi
+}
+
+# The exact job ids of a workflow (issue #545). release-gate.yml is the only place the heavy set
+# runs, nightly and on the release PR, so a job deleted from it together with its `needs:` entry
+# would pass every other check here and simply stop running. merge-gate.yml is held to the same
+# rule in the other direction: a heavy job added to it would put the wait back behind every merge.
+require_job_set() {
+  path="$1"
+  local expected actual
+  expected="$(printf '%s\n' $2 | sort)"
+  actual="$(workflow_jobs "$path")"
+  if [ "$expected" != "$actual" ]; then
+    echo "FAIL: $path does not hold exactly its pinned job set"
+    diff <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") | sed 's/^/  /' || true
+    exit 1
+  fi
+}
+
+# One job's whole definition, comments and blank lines included, with the trailing blank lines and
+# the comment block that introduces the next job dropped.
+job_definition() {
+  awk -v header="  $2:" '
+    $0 == header { found = 1 }
+    found && $0 != header && /^  [^ #]/ { exit }
+    found { lines[++count] = $0 }
+    END {
+      while (count > 0 && lines[count] ~ /^(  #.*)?[[:space:]]*$/) count--
+      for (i = 1; i <= count; i++) print lines[i]
+    }
+  ' "$1"
+}
+
+# A job that two workflows both run must be the same job in both (issue #545): the determinism
+# cells, their fan-in and the Windows cell run after each merge from merge-gate.yml and nightly
+# and on release PRs from release-gate.yml. Byte equality, comments inside the job included, is the
+# whole rule: a cell or a comparison cannot be weakened in one file while the other keeps it.
+require_identical_job() {
+  first="$1"
+  second="$2"
+  job="$3"
+  local one two
+  one="$(job_definition "$first" "$job")"
+  two="$(job_definition "$second" "$job")"
+  if [ -z "$one" ] || [ "$one" != "$two" ]; then
+    echo "FAIL: job $job is not defined identically in $first and $second"
+    diff <(printf '%s\n' "$one") <(printf '%s\n' "$two") | head -n 20 | sed 's/^/  /' || true
     exit 1
   fi
 }
@@ -801,15 +969,19 @@ require_mdbook_cache() {
 }
 
 ci="$WORKFLOW_DIR/pr-gate.yml"
+merge="$WORKFLOW_DIR/merge-gate.yml"
 release="$WORKFLOW_DIR/release-gate.yml"
 advisories="$WORKFLOW_DIR/advisories.yml"
 
 require_file "$ci"
+require_file "$merge"
 require_file "$release"
 require_file "$advisories"
 require_file "$DENY_TOML"
+require_file "$GATE_SCRIPT"
 require_unsafe_forbid_layers
 require_pinned_actions "$ci"
+require_pinned_actions "$merge"
 require_pinned_actions "$release"
 require_pinned_actions "$advisories"
 
@@ -834,6 +1006,7 @@ require_pattern "$ci" 'check-stale-crate-status\.sh' 'run stale crate-status smo
 require_pattern "$ci" 'check-workflow-gates\.sh' 'run workflow gate smoke'
 require_pattern "$ci" 'determinism-matrix' 'targeted cross-arch determinism matrix job'
 refuse_emulation "$ci"
+refuse_emulation "$merge"
 refuse_emulation "$release"
 # Per PR the determinism matrix is two native cells in debug codegen, and its fan-in compares
 # across architectures; the strict-bit matrix keeps all four cells (issue #502).
@@ -880,7 +1053,7 @@ require_job_order "$ci" 'blob-round-trip-wasm' 'run: bash scripts/ci/install-was
   'cargo nextest run -p oce-conformance --test blob_round_trip --target wasm32-wasip1' \
   'the wasm32 leg installs wasmtime before running under it'
 # Platform observation cell (issue #394): macOS arm64 portable snapshot. The Windows std build is
-# release-gate.yml's (below).
+# merge-gate.yml's and release-gate.yml's (below).
 require_job_pattern "$ci" 'portable-snapshot-macos' '^    runs-on:[[:space:]]*macos-15[[:space:]]*$' \
   'the macOS portable-snapshot cell runs on macos-15'
 require_job_pattern "$ci" 'portable-snapshot-macos' 'test "\$\(uname -s\)-\$\(uname -m\)" = Darwin-arm64' \
@@ -972,9 +1145,15 @@ refuse_pattern "$ci" 'continue-on-error' \
 require_static_step_conditions "$ci"
 # The lane machinery is itself tested on every PR, and the facade contract and Quickstart run in
 # their own job, on the README lane. Nothing in pr-gate.yml executes .agents/gate.sh:
-# release-gate.yml's `gate (full)` does, on every merge into `development` (below).
+# release-gate.yml's `gate (full)` does, nightly and on release PRs (below).
 require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/ci/test-classify-changes\.sh$' \
   'run the lane classifier fixtures on every PR'
+require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/ci/test-proof-row\.sh$' \
+  'run the local proof-row fixtures on every PR'
+require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/ci/test-gate-modes\.sh$' \
+  'run the gate-mode nesting fixtures on every PR'
+require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/ci/test-install-wasmtime\.sh$' \
+  'run the wasmtime installer destination fixtures on every PR'
 require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: python3 scripts/ci/test_ci_ok\.py$' \
   'run the CI OK result-check controls on every PR'
 require_job_pattern "$ci" 'gate-fixtures' '^[[:space:]]*(- )?run: bash scripts/ci/test-leverage-members\.sh$' \
@@ -1021,40 +1200,94 @@ require_job_pattern "$ci" 'strict-bit-compare' 'test -s target/strict-bits/recei
 require_pattern "scripts/ci/strict-bits-cell.sh" 'uname -m' \
   'strict-bit cells refuse a host of the wrong architecture'
 
-# Heavy gate runs on release PRs, on every push to `development` and `main`, on manual dispatch,
-# and on scheduled development-tip checks.
-require_pattern "$release" 'schedule:' 'scheduled heavy gate'
-require_pattern "$release" 'cron:' 'cron entry'
-require_pattern "$release" 'workflow_dispatch:' 'manual heavy gate'
-require_pattern "$release" '(CHECKOUT_REF:.*development|ref:.*development)' 'scheduled checkout targets development tip'
-require_pattern "$release" 'ref:.*(CHECKOUT_REF|development)' 'checkout uses the scheduled development ref'
-# The run after each merge (issue #502): the push trigger names `development`, a push run checks out
-# the pushed commit, every checkout takes the one pinned ref, and the concurrency group never
-# cancels a push run in progress (GitHub then keeps the run in progress and the newest waiting one).
-require_release_push_branches "$release"
-require_pattern "$release" "CHECKOUT_REF:.*github\\.event_name == 'push' && github\\.sha" \
-  'a push run checks out the pushed commit in every job'
+# ── merge-gate.yml: after each merge into `development` (issue #545) ──────────────────────────
+# Exactly the four determinism cells, their fan-in and the Windows cell, on every push to
+# `development` and on dispatch, on the commit the event names, never cancelled in progress, under
+# an aggregate that is not called `CI OK`.
+require_workflow_events "$merge" 'push workflow_dispatch'
+require_event_branches "$merge" push '[development]' \
+  'the merge gate must run on every merge into development, and only there'
+require_pattern "$merge" '^  CHECKOUT_REF: \$\{\{ github\.sha \}\}$' \
+  'a merge-gate run checks out the commit its event names in every job'
+require_pinned_checkout_ref "$merge"
+require_pattern "$merge" '^  group: \$\{\{ github\.workflow \}\}-\$\{\{ github\.event_name \}\}-\$\{\{ github\.ref \}\}$' \
+  'one concurrency group per event and ref, so pushes to development queue behind each other'
+require_pattern "$merge" '^  cancel-in-progress: false$' \
+  'a merge-gate run in progress always finishes'
+require_job_set "$merge" 'determinism-matrix determinism-compare std-build-windows merge-gate-ok'
+require_native_cell_matrix "$merge" 'determinism-matrix' 'debug, release'
+require_determinism_cells "$merge"
+require_release_codegen_determinism_cells "$merge"
+require_determinism_fan_in "$merge"
+require_cross_codegen_fan_in "$merge"
+require_windows_cell "$merge"
+require_job_pattern "$merge" 'merge-gate-ok' '^[[:space:]]*if:[[:space:]]*always\(\)' \
+  'the merge-gate aggregate reports on every run'
+require_job_pattern "$merge" 'merge-gate-ok' 'toJSON\(needs\)' \
+  'the merge-gate aggregate inspects every needed result'
+require_job_pattern "$merge" 'merge-gate-ok' '^    name: Merge gate OK$' \
+  'the merge-gate aggregate is named Merge gate OK'
+# `CI OK` is the required status on `main`, and a release PR's head is a commit this workflow has
+# already reported on: a job of that name here could satisfy branch protection in place of the
+# heavy set's.
+refuse_pattern "$merge" '^[[:space:]]*name:[[:space:]]*["'"'"']?CI OK' \
+  'a job named CI OK; that name is the required status of pr-gate.yml and release-gate.yml'
+require_ci_ok_covers_every_job "$merge" merge-gate-ok 'Merge gate OK'
+require_no_job_conditions "$merge" merge-gate-ok 'Merge gate OK'
+refuse_pattern "$merge" 'continue-on-error' \
+  'continue-on-error, which lets a failing job or step read as green'
+require_static_step_conditions "$merge"
+
+# ── release-gate.yml: the heavy set (issue #545) ──────────────────────────────────────────────
+# Nightly on the development tip, on manual dispatch, on release PRs into `main` and on pushes to
+# `main`. Not on a push to `development`: that is merge-gate.yml's.
+require_workflow_events "$release" 'pull_request push schedule workflow_dispatch'
+require_event_branches "$release" pull_request '[main]' \
+  'the release PR into main must run the heavy set, and no other pull request may'
+require_event_branches "$release" push '[main]' \
+  'the heavy set runs on the merged release only; a merge into development runs merge-gate.yml'
+require_schedule "$release" '17 8 * * *'
+# A scheduled run checks out the development tip; a push run and a dispatched run check out the
+# commit the event names, the same one in every job; a release PR checks out its merge ref. Every
+# checkout takes that one pinned ref, and the concurrency group cancels only a superseded release-PR
+# run.
+require_pattern "$release" "^  CHECKOUT_REF: \\\$\\{\\{ github\\.event_name == 'schedule' && 'development' \\|\\| \\(github\\.event_name == 'push' \\|\\| github\\.event_name == 'workflow_dispatch'\\) && github\\.sha \\|\\| github\\.ref \\}\\}\$" \
+  'a scheduled run checks out development, a push or dispatched run the commit its event names, a release PR its merge ref'
 require_pinned_checkout_ref "$release"
 require_pattern "$release" '^  group: \$\{\{ github\.workflow \}\}-\$\{\{ github\.event_name \}\}-\$\{\{ github\.ref \}\}$' \
-  'one concurrency group per event and ref, so pushes to development queue behind each other'
+  'one concurrency group per event and ref'
 require_pattern "$release" "^  cancel-in-progress: \\\$\\{\\{ github\\.event_name == 'pull_request' \\}\\}\$" \
-  'only a superseded release-PR run is cancelled; a push run in progress always finishes'
+  'only a superseded release-PR run is cancelled; any other run in progress always finishes'
+# The heavy set, by job id. Each job below is also held to the command that makes it that job.
+require_job_set "$release" \
+  'test-suite fmt file-size-cap no-secret-scan gate-fixtures unused-deps default-no-db golden-gen-firewall clippy build rustdoc deny gate determinism-matrix determinism-compare std-build-windows ci-ok'
 require_pattern "$release" 'nextest@0\.9\.143' 'release gate pinned cargo-nextest 0.9.143 install'
 # Scoped to the `test-suite` job: the determinism cells and the Windows cell in this file carry
-# look-alike lines that must not stand in for the full suite's.
+# look-alike lines that must not stand in for the workspace suite's. The job runs the suite in
+# debug codegen and the doctests; the release-codegen run is the `gate` job's (below).
 require_job_pattern "$release" 'test-suite' \
   'cargo nextest run --workspace --locked --profile ci --no-tests=fail$' \
   'debug nextest with hard-fail-on-zero-tests'
-require_job_pattern "$release" 'test-suite' \
-  'cargo nextest run --workspace --locked --profile ci-release --cargo-profile release --no-tests=fail$' \
-  'release-codegen nextest with hard-fail-on-zero-tests'
-require_job_pattern "$release" 'test-suite' 'target/nextest/\{ci,ci-release\}/junit\.xml' \
-  'release gate clears cached nextest JUnit reports'
-require_job_pattern "$release" 'test-suite' 'for profile in ci ci-release;' \
-  'release gate requires the complete nextest report set'
-require_job_pattern "$release" 'test-suite' 'test -s "target/nextest/\$profile/junit\.xml"' \
+require_job_pattern "$release" 'test-suite' 'rm -f target/nextest/ci/junit\.xml$' \
+  'release gate clears the cached nextest JUnit report'
+require_job_pattern "$release" 'test-suite' '^[[:space:]]*(- )?run: test -s target/nextest/ci/junit\.xml$' \
   'release gate refuses an absent or empty nextest report'
 require_job_pattern "$release" 'test-suite' 'cargo test --workspace --doc --locked' 'doctest gate'
+require_job_pattern "$release" 'fmt' '^[[:space:]]*(- )?run: cargo fmt --all --check$' 'release gate checks formatting'
+require_job_pattern "$release" 'file-size-cap' '^[[:space:]]*(- )?run: bash \.github/scripts/check-file-size\.sh$' \
+  'release gate runs the file-size cap'
+require_job_pattern "$release" 'no-secret-scan' '^[[:space:]]*(- )?run: bash \.github/scripts/check-no-secrets\.sh$' \
+  'release gate runs the no-secret scan'
+require_job_pattern "$release" 'clippy' \
+  '^[[:space:]]*(- )?run: cargo clippy --workspace --all-targets --locked -- -D warnings$' \
+  'release gate lints the default feature set with warnings denied'
+require_job_pattern "$release" 'build' '^[[:space:]]*(- )?run: cargo build --workspace --locked$' \
+  'release gate builds the workspace'
+require_job_pattern "$release" 'rustdoc' \
+  '^[[:space:]]*(- )?run: cargo doc --no-deps --workspace --lib --document-private-items --locked$' \
+  'release gate builds the library rustdoc'
+require_job_pattern "$release" 'deny' '^[[:space:]]*(- )?run: cargo deny check bans licenses sources advisories$' \
+  'release gate sweeps advisories with bans, licenses and sources'
 refuse_pattern "$release" 'rustup[[:space:]]+toolchain[[:space:]]+install|nightly' \
   'release gate installs no nightly toolchain; the workspace builds on its pinned stable'
 require_pattern "$release" 'cargo-machete' 'release gate installs cargo-machete'
@@ -1072,28 +1305,75 @@ require_job_pattern "$release" 'ci-ok' '^[[:space:]]*if:[[:space:]]*always\(\)' 
   'release gate CI OK aggregate reports on every run'
 require_job_pattern "$release" 'ci-ok' 'toJSON\(needs\)' \
   'release gate CI OK aggregate inspects every needed result'
+require_job_pattern "$release" 'ci-ok' '^    name: CI OK$' \
+  'release gate aggregate is the CI OK status branch protection on main requires'
 require_ci_ok_covers_every_job "$release"
 require_no_job_conditions "$release"
 refuse_pattern "$release" 'continue-on-error' \
   'continue-on-error, which lets a failing job or step read as green'
 require_static_step_conditions "$release"
 # The determinism matrix in all four native cells, with the cross-architecture and the cross-codegen
-# halves of its fan-in, and the Windows cell (issue #502: the release-codegen cells, the
-# debug-against-release comparisons and the Windows cell moved here from pr-gate.yml).
+# halves of its fan-in, and the Windows cell (issue #502 moved the release-codegen cells, the
+# debug-against-release comparisons and the Windows cell out of pr-gate.yml).
 require_native_cell_matrix "$release" 'determinism-matrix' 'debug, release'
 require_determinism_cells "$release"
 require_release_codegen_determinism_cells "$release"
 require_determinism_fan_in "$release"
 require_cross_codegen_fan_in "$release"
 require_windows_cell "$release"
+# The three jobs both workflows run are one definition (issue #545).
+for shared in determinism-matrix determinism-compare std-build-windows; do
+  require_identical_job "$merge" "$release" "$shared"
+done
+require_job_pattern "$release" 'gate' '^[[:space:]]*(- )?run: bash \.agents/gate\.sh full$' \
+  'the release gate executes the gate script in full mode'
 require_job_order "$release" 'gate' "$no_std_targets" 'run: bash .agents/gate.sh full' \
   'the executed full gate script has the no_std targets it builds for'
-# `gate.sh full` runs the blob round trip's wasm32 leg and fails closed without its runtime.
+# `gate.sh full` runs the blob round trip's wasm32 leg and fails closed without its runtime. The
+# installer takes no destination here: its default is the directory gate.sh looks in.
 require_job_order "$release" 'gate' 'rustup target add wasm32-wasip1' 'run: bash .agents/gate.sh full' \
   'the executed full gate script has the wasm32-wasip1 target its round trip runs on'
-require_job_order "$release" 'gate' 'bash scripts/ci/install-wasmtime.sh target/wasmtime-bin' \
+require_job_pattern "$release" 'gate' '^[[:space:]]*bash scripts/ci/install-wasmtime\.sh$' \
+  'the executed full gate script has the pinned wasmtime its round trip runs under'
+require_job_order "$release" 'gate' 'bash scripts/ci/install-wasmtime.sh' \
   'run: bash .agents/gate.sh full' \
   'the executed full gate script has the pinned wasmtime its round trip runs under'
+# The workspace suite under release codegen runs in this job only (issue #545: `test-suite` and
+# `gate (full)` each built the release workspace), and only through the executed script, under a
+# nextest profile that nothing else uses. The profile is what makes the report requirement mean
+# something: `full` mode also runs the determinism subset and the strict-bit step under release
+# codegen, which write the `ci-release` report, so a requirement on that file is met with the
+# workspace run removed. The job clears the `ci-release-workspace` report, executes the script,
+# then requires the report. A report says the command started and nextest wrote one; the script's
+# exit status is what says the suite passed.
+require_pattern "$NEXTEST_CONFIG" '^\[profile\.ci-release-workspace\]$' \
+  'a nextest profile of its own for the release-codegen workspace run'
+require_pattern "$NEXTEST_CONFIG" '^\[profile\.ci-release-workspace\.junit\]$' \
+  'a JUnit report of its own for the release-codegen workspace run'
+require_job_order "$release" 'gate' 'run: rm -f target/nextest/ci-release-workspace/junit.xml' \
+  'run: bash .agents/gate.sh full' \
+  'the release-codegen workspace report is cleared before the gate script runs'
+require_job_order "$release" 'gate' 'run: bash .agents/gate.sh full' \
+  'run: test -s target/nextest/ci-release-workspace/junit.xml' \
+  'the gate job requires the release-codegen workspace suite report after the script'
+require_gate_full_block "$GATE_SCRIPT"
+# Exactly one command anywhere may write that report: the script's workspace run. A second user in
+# the script, or any in a workflow other than the gate job's clear and requirement, would let the
+# report exist without that run.
+if [ "$(count_code_lines "$GATE_SCRIPT" 'ci-release-workspace')" != 1 ]; then
+  echo "FAIL: $GATE_SCRIPT names the nextest profile ci-release-workspace on other than exactly one line; only the release-codegen workspace run may use it"
+  exit 1
+fi
+if [ "$(count_code_lines "$release" 'ci-release-workspace')" != 2 ]; then
+  echo "FAIL: $release names ci-release-workspace outside the gate job's report clear and requirement"
+  exit 1
+fi
+for other in "$ci" "$merge"; do
+  if [ "$(count_code_lines "$other" 'ci-release-workspace')" != 0 ]; then
+    echo "FAIL: $other names the nextest profile ci-release-workspace; only the release-codegen workspace run in $GATE_SCRIPT may use it"
+    exit 1
+  fi
+done
 
 # The emulation check (issue #402): nightly and on dispatch, never on a pull request or a push (it
 # is not part of CI OK), its actions pinned, and it runs the emulation script.
