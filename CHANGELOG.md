@@ -454,7 +454,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Leverage
 
 - **Vectors, part 3 of 4: mutant mode, the catch score and the in-repo AHU-0016 mutants**
-  (GitHub #PRNUMBER, issue #521; [vectors note](docs/design/vectors.md) decisions 27 to 30, the
+  (GitHub #565, issue #521; [vectors note](docs/design/vectors.md) decisions 27 to 30, the
   owner's ruling of 2026-11-11 and "Part 3's readings").
   - **The format, in place.** `mutants` is a list of `{ "path", "description"? }`, at most 256
     (`too-many-mutants`). A path is `/`-separated with no empty, `.` or `..` segment and no

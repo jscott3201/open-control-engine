@@ -9,7 +9,7 @@ the owner on 2026-11-09 (see [Review rulings](#review-rulings)); the note is ame
 Decisions 1 to 19 answer the format half of the issue's outline in its order, decisions 20 to 37
 the replayer half (outline item *n* is decision 19 + *n*). Nothing here is built. *(2026-11-09:
 part 1 of 4, the format, landed in GitHub #541. 2026-11-10: part 2 of 4, binding, the run and the
-receipt, landed in GitHub #558. 2026-11-11: part 3 of 4, mutant mode, issue #521.)*
+receipt, landed in GitHub #558. 2026-11-11: part 3 of 4, mutant mode, landed in GitHub #565.)*
 
 **The version rule, in one sentence.** The format is `oce/vectors/v1` and stays `v1` until 1.0.0: a
 change is made in place, in the PR that rewrites every in-repo fixture and golden, and nothing
@@ -919,6 +919,7 @@ The content id it was also to print has its own verb, `oce id` (#513).
 5. **Part 3 of 4, mutant mode.** The `mutants` key in place, validation, the score, the receipt
    section, the AHU-0016 fixtures. Between parts 2 and 3 a set that lists mutants is refused, not
    replayed without them.
+   *(Landed in GitHub #565.)*
 6. **Part 4 of 4, `oce verify`.** The verb, codes, `oce vocab`, golden transcripts, README and
    CHANGELOG.
 7. **Follow-ups, cut with the four:** `oce check`; "vectors: assert named state"; a run-time
@@ -1093,7 +1094,7 @@ loads included (#561, which part 4 waits for).
 
 ### Part 3's readings
 
-*(Added 2026-11-11, with part 3, issue #521.)* Mutant mode needed one owner ruling and some
+*(Added 2026-11-11, with GitHub #565, issue #521.)* Mutant mode needed one owner ruling and some
 readings where this note was silent. The ruling is normative. The readings are marked for the
 owner to confirm, and each says whether overruling it would change behaviour.
 
