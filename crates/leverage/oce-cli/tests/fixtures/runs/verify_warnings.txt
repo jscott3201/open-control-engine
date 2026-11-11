@@ -1,0 +1,91 @@
+exit: 0
+--- stdout
+{
+  "body": {
+    "clock": {
+      "horizon_s": 120,
+      "step_s": 60
+    },
+    "load_warnings": [
+      "unused-boundary-input"
+    ],
+    "load_warnings_total": 1,
+    "scenarios": [
+      {
+        "expectations": 1,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 3,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 3,
+          "failed": 0,
+          "masked": 0,
+          "passed": 3
+        },
+        "name": "b_false_warns",
+        "params": [],
+        "status": "pass",
+        "warnings": [
+          {
+            "block": "CDL.Utilities.Assert",
+            "message": "b is false",
+            "t": 0.0
+          },
+          {
+            "block": "CDL.Utilities.Assert",
+            "message": "b is false",
+            "t": 60.0
+          },
+          {
+            "block": "CDL.Utilities.Assert",
+            "message": "b is false",
+            "t": 120.0
+          }
+        ],
+        "warnings_total": 3
+      }
+    ],
+    "status": "pass",
+    "totals": {
+      "failures": 0,
+      "frames": {
+        "executed": 3,
+        "refused": 0,
+        "substituted": 0
+      },
+      "instants": {
+        "checked": 3,
+        "failed": 0,
+        "masked": 0,
+        "passed": 3
+      },
+      "scenarios": {
+        "fail": 0,
+        "no_data": 0,
+        "pass": 1,
+        "total": 1
+      },
+      "warnings": 3
+    }
+  },
+  "comparison": {
+    "mode": "exact"
+  },
+  "content_id": "oce:canon1:5b61075c708fb6a68e8abc35f5d6952874fdabd3cf7817eac0559e8a2b5cd9d0",
+  "engine_version": "0.5.0",
+  "kind": "vectors",
+  "passed": true,
+  "receipt_id": "receipt:fnv1a128:0f1196321b887a433fd5b7177b7c31e7",
+  "schema": "oce/receipt/v1",
+  "spec_id": "spec:fnv1a128:40ac3b9b1ee436da4f0585571b9bc75f",
+  "timings": {
+    "compare_ms": 0,
+    "load_ms": 0,
+    "run_ms": 0
+  }
+}
+--- stderr

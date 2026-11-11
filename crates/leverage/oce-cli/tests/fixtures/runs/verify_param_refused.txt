@@ -1,0 +1,22 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "cause": "param-range",
+      "code": "param-refused",
+      "detail": "no pass admits the edit of urn:verify:hysteresis#top.hys.uHigh: parameter 'urn:verify:hysteresis#top.hys.uHigh' value out of declared [min,max] (CDL §7.4.1); the edits are applied in passes in path order (decision 14)",
+      "path": "urn:verify:hysteresis#top.hys.uHigh",
+      "span": null,
+      "subject": "scenarios[0]"
+    }
+  ],
+  "findings": [],
+  "input": "tests/fixtures/inputs/verify/param_refused.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "subject": "../oce-verify/tests/fixtures/subjects/hysteresis.cxf.json",
+  "tool": "oce"
+}
+--- stderr

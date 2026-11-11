@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "code": "unknown-subject-form",
+      "detail": "the subject's name ends in none of .jsonld, .cxf.json (CXF), .oce (text) and .json (wire); pass --subject-form cxf, text or wire",
+      "span": null,
+      "subject": "subject"
+    }
+  ],
+  "findings": [],
+  "input": "tests/fixtures/inputs/verify/hysteresis.vectors.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "subject": "tests/fixtures/inputs/plain.txt",
+  "tool": "oce"
+}
+--- stderr

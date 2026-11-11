@@ -1,0 +1,22 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "code": "unknown-input",
+      "detail": "`v` matches no boundary input, by exact path or by suffix",
+      "span": null,
+      "subject": "scenarios[0].inputs.v"
+    }
+  ],
+  "findings": [],
+  "input": "tests/fixtures/inputs/verify/unknown_input.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "subject": "../oce-verify/tests/fixtures/subjects/hysteresis.cxf.json",
+  "tool": "oce"
+}
+--- stderr
+tests/fixtures/inputs/verify/unknown_input.json: error[unknown-input] `v` matches no boundary input, by exact path or by suffix
+oce verify tests/fixtures/inputs/verify/unknown_input.json: refused: the run reached no verdict; no receipt

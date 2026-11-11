@@ -1,0 +1,24 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "candidates": [
+        "urn:verify:signals#top.ahu.T",
+        "urn:verify:signals#top.zone.T"
+      ],
+      "code": "ambiguous-input",
+      "detail": "`T` matches 2 boundary inputs: urn:verify:signals#top.ahu.T, urn:verify:signals#top.zone.T",
+      "span": null,
+      "subject": "scenarios[0].inputs.T"
+    }
+  ],
+  "findings": [],
+  "input": "tests/fixtures/inputs/verify/ambiguous_input.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "subject": "../oce-verify/tests/fixtures/subjects/signals.cxf.json",
+  "tool": "oce"
+}
+--- stderr

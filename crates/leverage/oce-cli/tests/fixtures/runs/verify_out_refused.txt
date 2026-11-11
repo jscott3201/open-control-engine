@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "code": "not-found",
+      "detail": "no such file",
+      "span": null,
+      "subject": "subject"
+    }
+  ],
+  "findings": [],
+  "input": "vectors.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "subject": "missing.cxf.json",
+  "tool": "oce"
+}
+--- stderr

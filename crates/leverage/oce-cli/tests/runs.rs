@@ -547,6 +547,7 @@ fn help_is_pinned_for_the_tool_and_every_subcommand() {
         ("help_fmt", &["fmt", "--help"][..]),
         ("help_catalog", &["catalog", "--help"][..]),
         ("help_vocab", &["vocab", "--help"][..]),
+        ("help_verify", &["verify", "--help"][..]),
     ] {
         case(name, 0, args, b"");
     }

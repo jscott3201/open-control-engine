@@ -1,0 +1,7 @@
+{
+  "schema": "oce/vectors/v1",
+  "clock": { "step_s": 60, "horizon_s": 600 },
+  "scenarios": [
+    { "name": "s", "inputs": { "T": 1.0 }, "expect": [] }
+  ]
+}

@@ -10,8 +10,16 @@
 //! nothing in it depends on the clock, the locale or the host's paths: `input` is the path exactly
 //! as given (`-` for stdin). `findings` are the validator's (or the class rules') answers and make
 //! the exit `1`; `errors` are why a question could not be answered and make it `2`.
+//!
+//! An error is `{ "code", "detail", "span" }`. A `verify` refusal adds, each only when it has a
+//! value (owner ruling of 2026-11-11, vectors note "Part 4's readings"): `subject`, the place it
+//! is about (`scenarios[0].inputs.u`, `mutants[2]`, `line 3 column 7`); `path`, the canonical path
+//! it concerns; `candidates`, an ambiguous name's matches in their order; `cause`, a value from a
+//! closed table `oce-verify` owns; `diagnostic_codes`, the engine's codes of a subject that did not
+//! load.
 
 use oce_author::{Finding, Location, Origin, ParseError, Severity};
+use oce_verify::{VectorError, VerifyError};
 use serde_json::{Map, Value, json};
 
 /// The report schema identifier every report carries under `schema`.
@@ -78,6 +86,63 @@ impl Report {
             "detail": detail.into(),
             "span": span(at),
         }));
+    }
+
+    /// Record a refusal about one place (`subject`), with the optional facts a `verify` refusal
+    /// carries. Each optional key is written only when it has a value.
+    pub(crate) fn error_at(
+        &mut self,
+        code: &str,
+        detail: impl Into<String>,
+        at: Option<Location>,
+        facts: &Facts<'_>,
+    ) {
+        let mut entry = Map::new();
+        entry.insert("code".into(), Value::from(code));
+        entry.insert("detail".into(), Value::from(detail.into()));
+        entry.insert("span".into(), span(at));
+        entry.insert("subject".into(), Value::from(facts.subject));
+        if let Some(path) = facts.path {
+            entry.insert("path".into(), Value::from(path));
+        }
+        if !facts.candidates.is_empty() {
+            entry.insert("candidates".into(), strings(facts.candidates));
+        }
+        if let Some(cause) = facts.cause {
+            entry.insert("cause".into(), Value::from(cause));
+        }
+        if !facts.diagnostic_codes.is_empty() {
+            entry.insert("diagnostic_codes".into(), strings(facts.diagnostic_codes));
+        }
+        self.errors.push(Value::Object(entry));
+    }
+
+    /// Record a vector file `oce-verify` refused to load: its code, the place and, for a refusal
+    /// found in the text, its line and column.
+    pub(crate) fn vector_error(&mut self, error: &VectorError) {
+        let wide = |count: u32| usize::try_from(count).unwrap_or(usize::MAX);
+        let at = error
+            .at()
+            .map(|at| Location::new(wide(at.line), wide(at.column)));
+        self.error_at(
+            error.code(),
+            error.detail(),
+            at,
+            &Facts::about(error.subject()),
+        );
+    }
+
+    /// Record a bind or run refusal of `oce-verify`, with every fact it carries.
+    pub(crate) fn verify_error(&mut self, error: &VerifyError) {
+        let candidates: Vec<&str> = error.candidates().iter().map(String::as_str).collect();
+        let facts = Facts {
+            subject: error.subject(),
+            path: error.path(),
+            candidates: &candidates,
+            cause: error.cause(),
+            diagnostic_codes: error.diagnostic_codes(),
+        };
+        self.error_at(error.code(), error.detail(), None, &facts);
     }
 
     /// Record a text-form parse refusal.
@@ -158,6 +223,37 @@ impl Report {
         }
         out
     }
+}
+
+/// The place a refusal is about and the optional facts it carries ([`Report::error_at`]).
+pub(crate) struct Facts<'a> {
+    /// The place: a path into the vector set, `subject`, `mutants[i]`.
+    pub(crate) subject: &'a str,
+    /// The canonical path the refusal concerns.
+    pub(crate) path: Option<&'a str>,
+    /// An ambiguous name's matches, in their order.
+    pub(crate) candidates: &'a [&'a str],
+    /// A value from one of `oce-verify`'s closed cause tables.
+    pub(crate) cause: Option<&'a str>,
+    /// The engine's codes of a subject that did not load.
+    pub(crate) diagnostic_codes: &'a [&'a str],
+}
+
+impl<'a> Facts<'a> {
+    /// A place and nothing more.
+    pub(crate) fn about(subject: &'a str) -> Self {
+        Self {
+            subject,
+            path: None,
+            candidates: &[],
+            cause: None,
+            diagnostic_codes: &[],
+        }
+    }
+}
+
+fn strings(items: &[&str]) -> Value {
+    Value::Array(items.iter().map(|item| Value::from(*item)).collect())
 }
 
 /// `place:line:column` when the span is known, else `place`.

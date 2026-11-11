@@ -2,8 +2,10 @@
 //!
 //! The keywords (`oce_author::TEXT_FORM_KEYWORDS`), types, boundary tags and base-unit symbols
 //! (`oce_author::BASE_UNIT_SYMBOLS`); the parse codes (`oce_author::PARSE_CODES`), the stage-1
-//! finding codes (`oce_author::STAGE_ONE_CODES`), the stage-2 codes, the wire codes and the tool's
-//! own error codes, each with one line of meaning; and the exit statuses.
+//! finding codes (`oce_author::STAGE_ONE_CODES`), the stage-2 codes, the wire codes, the tool's
+//! own error codes, and the vector file's and the verifier's codes `verify` passes through
+//! (`oce_verify::VECTOR_ERROR_CODES`, `oce_verify::VERIFY_ERROR_CODES`), each with one line of
+//! meaning; and the exit statuses.
 //!
 //! `scale_factors` is the vocabulary's unit scale-factor table (`oce_vocab::SCALE_FACTORS`,
 //! vocabulary note decision 14, GitHub issue #500), in table order: the symbols that are an
@@ -28,6 +30,7 @@ use crate::codes::{
     TOOL_CODES, WIRE_CODES,
 };
 use crate::report::Report;
+use crate::verify_codes::{VECTOR_MEANINGS, VERIFY_MEANINGS};
 
 /// The text-form value types.
 const TYPES: &[&str] = &["Real", "Integer", "Boolean"];
@@ -44,6 +47,8 @@ pub(crate) fn run(json: bool) -> Outcome {
     report.set("finding_codes", finding_codes());
     report.set("wire_codes", table(WIRE_CODES));
     report.set("error_codes", table(TOOL_CODES));
+    report.set("vector_codes", table(VECTOR_MEANINGS));
+    report.set("verify_codes", table(VERIFY_MEANINGS));
     report.set(
         "exit_codes",
         Value::Array(
@@ -182,6 +187,16 @@ fn render_text() -> String {
     );
     rows(&mut out, "wire codes (exit 2)", WIRE_CODES);
     rows(&mut out, "error codes (exit 2)", TOOL_CODES);
+    rows(
+        &mut out,
+        "vector file codes (verify, exit 2)",
+        VECTOR_MEANINGS,
+    );
+    rows(
+        &mut out,
+        "bind and run codes (verify, exit 2)",
+        VERIFY_MEANINGS,
+    );
     out.push_str("exit codes:\n");
     for (code, meaning) in EXIT_MEANINGS {
         out.push_str(&format!("  {code}  {meaning}\n"));

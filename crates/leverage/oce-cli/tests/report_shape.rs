@@ -1,6 +1,9 @@
 //! The report contract over every golden run: one JSON object with the fixed common keys, keys
 //! sorted at every depth, LF line endings and one final line feed, `ok` true exactly when the
-//! exit is 0, `errors` non-empty exactly when it is 2, and no absolute path anywhere.
+//! exit is 0, `errors` non-empty exactly when it is 2, and no absolute path anywhere. Every error
+//! is `code`, `detail` and `span`, plus the optional keys a `verify` refusal carries, each only
+//! with a value (owner ruling of 2026-11-11). A `verify` receipt on stdout is a document, not a
+//! report, and is skipped like CXF.
 
 mod support;
 
@@ -83,6 +86,9 @@ fn every_golden_report_keeps_the_contract() {
         assert_eq!(report["ok"] == true, exit == 0, "{name}: ok vs exit");
         let errors = report["errors"].as_array().expect("errors").len();
         assert_eq!(errors > 0, exit == 2, "{name}: errors vs exit");
+        for error in report["errors"].as_array().expect("errors") {
+            error_shape(&name, error);
+        }
         if exit == 1 {
             assert!(
                 report["findings"]
@@ -90,12 +96,97 @@ fn every_golden_report_keeps_the_contract() {
                     .expect("findings")
                     .iter()
                     .any(|f| f["severity"] == "error")
-                    || report.get("canonical") == Some(&Value::Bool(false)),
-                "{name}: exit 1 without an error finding or a non-canonical file"
+                    || report.get("canonical") == Some(&Value::Bool(false))
+                    || (report["command"] == "verify" && report.get("passed").is_some()),
+                "{name}: exit 1 without an error finding, a non-canonical file or a verdict"
             );
         }
     }
     assert!(reports >= 35, "only {reports} reports");
+}
+
+/// The keys an error may carry beside `code`, `detail` and `span`.
+const OPTIONAL_ERROR_KEYS: [&str; 5] =
+    ["candidates", "cause", "diagnostic_codes", "path", "subject"];
+
+/// One error object: the three fixed keys, and optional keys only from the pinned set, each with
+/// a value of its type (a list is never empty, a string never empty).
+fn error_shape(name: &str, error: &Value) {
+    let map = error.as_object().expect("an error is an object");
+    for key in ["code", "detail", "span"] {
+        assert!(map.contains_key(key), "{name}: an error without {key}");
+    }
+    for (key, value) in map {
+        match key.as_str() {
+            "code" | "detail" => assert!(value.is_string(), "{name}: {key}"),
+            "span" => assert!(value.is_null() || value.is_object(), "{name}: span"),
+            "subject" | "path" | "cause" => assert!(
+                value.as_str().is_some_and(|text| !text.is_empty()),
+                "{name}: {key} is a non-empty string"
+            ),
+            "candidates" | "diagnostic_codes" => assert!(
+                value
+                    .as_array()
+                    .is_some_and(|items| !items.is_empty() && items.iter().all(Value::is_string)),
+                "{name}: {key} is a non-empty list of strings"
+            ),
+            other => panic!("{name}: an error key outside the pinned set: {other}"),
+        }
+    }
+}
+
+#[test]
+fn each_optional_error_key_is_written_when_its_refusal_has_a_value() {
+    let error = |run: &str| -> Value {
+        let path = crate_dir().join(format!("tests/fixtures/runs/{run}.txt"));
+        let text = std::fs::read_to_string(&path).expect("golden");
+        let (_, stdout, _) = transcript(&text);
+        let report: Value = serde_json::from_str(stdout).expect("a report");
+        report["errors"][0].clone()
+    };
+    let keys = |value: &Value| -> Vec<String> {
+        let mut keys: Vec<String> = value
+            .as_object()
+            .expect("object")
+            .keys()
+            .filter(|key| OPTIONAL_ERROR_KEYS.contains(&key.as_str()))
+            .cloned()
+            .collect();
+        keys.sort();
+        keys
+    };
+    // `subject` alone: an unresolved input name names its place and nothing else.
+    let unknown = error("verify_unknown_input");
+    assert_eq!(keys(&unknown), ["subject"]);
+    assert_eq!(unknown["subject"], "scenarios[0].inputs.v");
+    // `candidates`, in their order.
+    let ambiguous = error("verify_ambiguous_input");
+    assert_eq!(keys(&ambiguous), ["candidates", "subject"]);
+    assert_eq!(
+        ambiguous["candidates"],
+        serde_json::json!([
+            "urn:verify:signals#top.ahu.T",
+            "urn:verify:signals#top.zone.T"
+        ])
+    );
+    // `path` and `cause`.
+    let refused = error("verify_param_refused");
+    assert_eq!(keys(&refused), ["cause", "path", "subject"]);
+    assert_eq!(refused["cause"], "param-range");
+    assert_eq!(refused["path"], "urn:verify:hysteresis#top.hys.uHigh");
+    // `diagnostic_codes`.
+    let not_loading = error("verify_subject_not_loading");
+    assert_eq!(keys(&not_loading), ["diagnostic_codes", "subject"]);
+    assert_eq!(
+        not_loading["diagnostic_codes"],
+        serde_json::json!(["class-not-found"])
+    );
+    // A vector file's refusal found in the text carries its place and its span.
+    let malformed = error("verify_malformed_vectors");
+    assert_eq!(keys(&malformed), ["subject"]);
+    assert!(malformed["span"].is_object(), "{malformed}");
+    // Every other command's errors carry none of them.
+    assert!(keys(&error("validate_missing_file")).is_empty());
 }
 
 #[test]

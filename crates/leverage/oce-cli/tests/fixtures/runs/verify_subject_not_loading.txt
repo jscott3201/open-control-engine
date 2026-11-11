@@ -1,0 +1,23 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "code": "subject-load-failed",
+      "detail": "the engine refused to load the subject: CXF ingest error: CXF validation failed with 1 diagnostic(s)",
+      "diagnostic_codes": [
+        "class-not-found"
+      ],
+      "span": null,
+      "subject": "subject"
+    }
+  ],
+  "findings": [],
+  "input": "tests/fixtures/inputs/verify/hysteresis.vectors.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "subject": "tests/fixtures/inputs/verify/unknown_class.cxf.json",
+  "tool": "oce"
+}
+--- stderr

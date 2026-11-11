@@ -124,6 +124,20 @@ pub fn case(name: &str, expected_exit: i32, args: &[&str], stdin: &[u8]) {
     compare_or_bless(&format!("runs/{name}.txt"), &run.transcript());
 }
 
+/// Run one golden case in `dir` (a scratch directory with its inputs copied in, named by relative
+/// paths): check its exit status, then compare its transcript with
+/// `tests/fixtures/runs/<name>.txt` (or write it when blessing).
+pub fn case_in(dir: &Path, name: &str, expected_exit: i32, args: &[&str]) {
+    let run = oce_in(dir, args, b"");
+    assert_eq!(
+        run.code,
+        expected_exit,
+        "{name}: exit status\n{}",
+        run.transcript()
+    );
+    compare_or_bless(&format!("runs/{name}.txt"), &run.transcript());
+}
+
 /// `--param` arguments that give every required scalar parameter of the class a value of its
 /// type (1, `true`, a one-letter string, an enumeration's first member), so that the class
 /// resolves wherever such a table satisfies its rules. A required array (the `TimeTable`

@@ -709,7 +709,7 @@ exit: 0
     },
     {
       "code": "input-too-large",
-      "meaning": "the input is over its form's 4 MiB limit; refused before it is read"
+      "meaning": "the input is over its limit (4 MiB a sequence or vector file, 8 MiB CXF); refused before it is read"
     },
     {
       "code": "invalid-namespace",
@@ -754,21 +754,29 @@ exit: 0
     {
       "code": "emit-refused",
       "meaning": "the emitter refused for a reason this tool does not know"
+    },
+    {
+      "code": "unknown-subject-form",
+      "meaning": "a verify subject is not .jsonld, .cxf.json, .oce or .json and --subject-form was not given"
+    },
+    {
+      "code": "mutant-outside-directory",
+      "meaning": "a mutant path resolves, through a link or a drive prefix, outside the vector file's directory"
     }
   ],
   "errors": [],
   "exit_codes": [
     {
       "code": 0,
-      "meaning": "yes: clean, canonical, resolved"
+      "meaning": "yes: clean, canonical, resolved, every scenario passed"
     },
     {
       "code": 1,
-      "meaning": "no: an error finding, a non-canonical file, ports that do not resolve"
+      "meaning": "no: an error finding, a non-canonical file, ports that do not resolve, a failed or no_data verdict"
     },
     {
       "code": 2,
-      "meaning": "error: a usage, read, parse, size or I/O failure; the question was not answered"
+      "meaning": "error: a usage, read, parse, size or I/O failure, or a run with no verdict; the question was not answered"
     }
   ],
   "finding_codes": [
@@ -1086,6 +1094,270 @@ exit: 0
     "Real",
     "Integer",
     "Boolean"
+  ],
+  "vector_codes": [
+    {
+      "code": "not-utf8",
+      "meaning": "the vector file is not UTF-8"
+    },
+    {
+      "code": "byte-order-mark",
+      "meaning": "the vector file starts with a byte-order mark"
+    },
+    {
+      "code": "json-syntax",
+      "meaning": "the vector file is not one JSON document"
+    },
+    {
+      "code": "input-too-large",
+      "meaning": "the vector file is larger than 4 MiB; refused before it is read"
+    },
+    {
+      "code": "nesting-too-deep",
+      "meaning": "objects and arrays nest deeper than 8 levels"
+    },
+    {
+      "code": "list-too-long",
+      "meaning": "a list has more than 65,536 entries, a step list included"
+    },
+    {
+      "code": "string-too-long",
+      "meaning": "a string is longer than 4,096 bytes as written"
+    },
+    {
+      "code": "duplicate-key",
+      "meaning": "an object writes one key twice"
+    },
+    {
+      "code": "unknown-key",
+      "meaning": "an object carries a key the format does not define (within, when: not yet)"
+    },
+    {
+      "code": "missing-key",
+      "meaning": "an object lacks a required key"
+    },
+    {
+      "code": "wrong-type",
+      "meaning": "a value has the wrong JSON type for its position"
+    },
+    {
+      "code": "non-finite-number",
+      "meaning": "NaN or Infinity as a number, or a real that overflows binary64"
+    },
+    {
+      "code": "integer-out-of-range",
+      "meaning": "an integer outside 64 bits, or a time outside the integers a binary64 holds"
+    },
+    {
+      "code": "control-character",
+      "meaning": "a string carries a control character, raw or escaped"
+    },
+    {
+      "code": "unknown-schema",
+      "meaning": "schema is not oce/vectors/v1"
+    },
+    {
+      "code": "invalid-clock",
+      "meaning": "step_s is not finite and positive, or horizon_s is not finite or is negative"
+    },
+    {
+      "code": "horizon-off-cadence",
+      "meaning": "no whole number of steps reaches horizon_s"
+    },
+    {
+      "code": "too-many-ticks",
+      "meaning": "the clock has more than 16,777,216 ticks"
+    },
+    {
+      "code": "too-many-scenarios",
+      "meaning": "more than 4,096 scenarios"
+    },
+    {
+      "code": "too-many-expectations",
+      "meaning": "a scenario has more than 4,096 expectations"
+    },
+    {
+      "code": "too-many-mutants",
+      "meaning": "more than 256 mutants"
+    },
+    {
+      "code": "too-many-parameters",
+      "meaning": "a params map has more than 256 entries"
+    },
+    {
+      "code": "duplicate-scenario",
+      "meaning": "two scenarios share a name"
+    },
+    {
+      "code": "empty-name",
+      "meaning": "an empty scenario, input, parameter, output or diagnostic block name"
+    },
+    {
+      "code": "step-list-empty",
+      "meaning": "a step list has no step"
+    },
+    {
+      "code": "step-list-not-from-zero",
+      "meaning": "a step list does not start at t = 0"
+    },
+    {
+      "code": "step-times-not-increasing",
+      "meaning": "a step's t is not after the step before it"
+    },
+    {
+      "code": "step-after-horizon",
+      "meaning": "a step's t is after horizon_s"
+    },
+    {
+      "code": "invalid-window",
+      "meaning": "a window's from_s is after its to_s"
+    },
+    {
+      "code": "window-outside-clock",
+      "meaning": "a window starts before 0 or ends after horizon_s"
+    },
+    {
+      "code": "window-uncovered",
+      "meaning": "a window holds no tick of the clock"
+    },
+    {
+      "code": "ambiguous-expectation",
+      "meaning": "an expectation is not exactly one of the window and instant forms"
+    },
+    {
+      "code": "instant-off-cadence",
+      "meaning": "a diagnostic at_s is not a tick of the clock"
+    },
+    {
+      "code": "mutant-path-invalid",
+      "meaning": "a mutant path is absolute, has an empty, . or .. segment, or holds a backslash"
+    },
+    {
+      "code": "duplicate-mutant",
+      "meaning": "two mutants share a path"
+    }
+  ],
+  "verify_codes": [
+    {
+      "code": "subject-load-failed",
+      "meaning": "the engine refused the subject, or a text or wire subject has an error finding"
+    },
+    {
+      "code": "unknown-input",
+      "meaning": "an input name matches no boundary input"
+    },
+    {
+      "code": "ambiguous-input",
+      "meaning": "an input suffix matches several boundary inputs (candidates)"
+    },
+    {
+      "code": "duplicate-input",
+      "meaning": "two input names of one scenario resolve to one boundary input"
+    },
+    {
+      "code": "input-not-supplied",
+      "meaning": "a scenario supplies no value for a boundary input"
+    },
+    {
+      "code": "unknown-output",
+      "meaning": "an output name matches no boundary output"
+    },
+    {
+      "code": "ambiguous-output",
+      "meaning": "an output suffix matches several boundary outputs (candidates)"
+    },
+    {
+      "code": "param-path-unknown",
+      "meaning": "a parameter key matches no parameter"
+    },
+    {
+      "code": "param-path-ambiguous",
+      "meaning": "a parameter suffix matches several parameters (candidates)"
+    },
+    {
+      "code": "param-path-duplicate",
+      "meaning": "two keys of one params map name one parameter"
+    },
+    {
+      "code": "param-refused",
+      "meaning": "the engine refuses an edit in every pass (cause: param-range, param-type, param-structural)"
+    },
+    {
+      "code": "value-type-mismatch",
+      "meaning": "a value its port's or parameter's type does not take"
+    },
+    {
+      "code": "value-not-representable",
+      "meaning": "a number no binary64 holds exactly where a Real is read"
+    },
+    {
+      "code": "enum-port-unsupported",
+      "meaning": "the subject has an Enum boundary input or output"
+    },
+    {
+      "code": "unsupported-port-type",
+      "meaning": "the subject has a String boundary input or output"
+    },
+    {
+      "code": "too-many-frames",
+      "meaning": "the run would execute more than 16,777,216 frames, or one scenario more than replay allows"
+    },
+    {
+      "code": "too-many-instants",
+      "meaning": "the run would compare more than 268,435,456 instants"
+    },
+    {
+      "code": "too-many-load-bytes",
+      "meaning": "the run would load more than 1 GiB of subject and mutant bytes"
+    },
+    {
+      "code": "too-many-frame-bytes",
+      "meaning": "the run's frames weighted by document bytes would pass 2^40"
+    },
+    {
+      "code": "mutant-missing",
+      "meaning": "a listed mutant was given no bytes"
+    },
+    {
+      "code": "mutant-unlisted",
+      "meaning": "mutant bytes were given for a path the set does not list"
+    },
+    {
+      "code": "duplicate-mutant",
+      "meaning": "one mutant given twice, or two listings that resolve to one file"
+    },
+    {
+      "code": "too-many-mutant-bytes",
+      "meaning": "the mutants are larger than 64 MiB together; refused before any is read"
+    },
+    {
+      "code": "mutant-load-failed",
+      "meaning": "the engine refused a mutant"
+    },
+    {
+      "code": "mutant-boundary-differs",
+      "meaning": "a mutant's input or output paths or types are not the subject's (path)"
+    },
+    {
+      "code": "mutant-identical",
+      "meaning": "a mutant has the subject's content id"
+    },
+    {
+      "code": "mutant-param-refused",
+      "meaning": "a mutant refuses an edit the subject admits (cause)"
+    },
+    {
+      "code": "run-refused",
+      "meaning": "the engine refused a frame for a reason about the run, not the frame"
+    },
+    {
+      "code": "replay-failed",
+      "meaning": "the replay stopped with an error (cause: trace-too-large, engine-setup, ...)"
+    },
+    {
+      "code": "window-uncovered",
+      "meaning": "a window held no executed tick after a run with no refused frame"
+    }
   ],
   "wire_codes": [
     {

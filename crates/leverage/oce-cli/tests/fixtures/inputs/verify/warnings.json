@@ -1,0 +1,11 @@
+{
+  "schema": "oce/vectors/v1",
+  "clock": { "step_s": 60, "horizon_s": 120 },
+  "scenarios": [
+    {
+      "name": "b_false_warns",
+      "inputs": { "ahu.T": 1.0, "zone.T": 2.0, "n": 3, "b": false, "lim": 5.0 },
+      "expect": [{ "output": "bOut", "from_s": 0, "to_s": 120, "equals": false }]
+    }
+  ]
+}
