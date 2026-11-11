@@ -554,6 +554,15 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
+- **M2 gate item 2 holds over every imported corpus fixture, not only the seven bundles**
+  (GitHub #PRNUM, issue #603). `text_round_trip::wire_to_text_to_wire_is_byte_identical_for_every_imported_corpus_fixture`
+  takes each of the 31 fixtures `library_round_trip` imports (`support::cxf::IMPORTED`, which that
+  file's partition test holds to the 46 corpus files; the count is asserted here too) wire → text
+  → wire, compared byte for byte, and requires `fmt` to leave the printed text as it is. A failure
+  names every fixture that fails, the step it fails at, and the first differing line. It passes
+  for all 31, as a probe on the M2 closeout (GitHub #600) found. Test only: no behaviour, golden or
+  fixture moves.
+
 - **Time unit suffixes scale from the vocabulary, and a suffix must fit its parameter**
   (GitHub #586, issue #501; vocabulary v1, part 3 of 3; [vocabulary note](docs/design/vocabulary.md),
   "Units", decision 14 and rulings 5 and 6; authoring decision 13 amended).

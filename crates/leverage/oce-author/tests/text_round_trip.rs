@@ -1,17 +1,19 @@
 //! Text-form round trips (issue #482; authoring note "Round-trip properties"): text → model →
 //! text byte-stable for canonical text over every bundle and the note's worked example; model →
 //! text → model over an enumerated model set; wire → text → wire byte equality for every bundle
-//! (gate item 2); the worked text example equal to its wire example; and the header and trailing
-//! comments the text form added to the model never reaching the wire form, the schema or the
-//! emitter.
+//! (gate item 2) and for every imported corpus fixture (issue #603); the worked text example equal
+//! to its wire example; and the header and trailing comments the text form added to the model
+//! never reaching the wire form, the schema or the emitter.
 
 use crate::support;
 
 use oce_author::{
-    EmitOptions, Literal, ParamValue, PrintError, Sequence, WIRE_SCHEMA, emit, from_wire_str,
-    parse_text, print_text, to_wire_string, validate_author_side, wire_schema,
+    EmitOptions, ImportOptions, Literal, ParamValue, PrintError, Sequence, WIRE_SCHEMA, emit,
+    fmt_text, from_wire_str, import_cxf, parse_text, print_text, to_wire_string,
+    validate_author_side, wire_schema,
 };
 
+use support::cxf::{IMPORTED, corpus_fixture};
 use support::text::{bundle_model, bundles, enumerated_models, note_text_example, print};
 use support::{compare_or_bless, econ_enable, fixture};
 
@@ -75,6 +77,100 @@ fn wire_to_text_to_wire_is_byte_identical_for_every_bundle() {
         let back = parse_text(&text).unwrap_or_else(|e| panic!("{name}: {e}\n{text}"));
         assert_eq!(to_wire_string(&back), wire, "{name}");
     }
+}
+
+/// Where one imported corpus fixture's wire → text → wire round trip first fails, naming the step
+/// and, for a byte difference, the first line that differs; `None` when it holds: the fixture
+/// imports, its wire form reads back, prints as text, the text parses to a model whose wire form is
+/// the same bytes, and `fmt` leaves the text as it is.
+fn text_round_trip_failure(name: &str) -> Option<String> {
+    let bytes = match std::fs::read(corpus_fixture(name)) {
+        Ok(bytes) => bytes,
+        Err(error) => return Some(format!("read: {error}")),
+    };
+    let model = match import_cxf(&bytes, &ImportOptions::new()) {
+        Ok(imported) => imported.sequence,
+        Err(error) => return Some(format!("import: {error}")),
+    };
+    let wire = to_wire_string(&model);
+    let read = match from_wire_str(&wire) {
+        Ok(read) => read,
+        Err(error) => return Some(format!("wire read: {error}")),
+    };
+    let text = match print_text(&read) {
+        Ok(text) => text,
+        Err(error) => return Some(format!("print: {error}")),
+    };
+    let parsed = match parse_text(&text) {
+        Ok(parsed) => parsed,
+        Err(error) => return Some(format!("parse: {error}")),
+    };
+    let again = to_wire_string(&parsed);
+    if again != wire {
+        return Some(first_difference("the wire form after text", &wire, &again));
+    }
+    match fmt_text(&text) {
+        Ok(formatted) if formatted == text => None,
+        Ok(formatted) => Some(first_difference("fmt", &text, &formatted)),
+        Err(error) => Some(format!("fmt: {error}")),
+    }
+}
+
+/// `what` differs: the first line (1-based) at which `actual` leaves `expected`, with both lines
+/// (`None` past the end of the shorter one).
+fn first_difference(what: &str, expected: &str, actual: &str) -> String {
+    let (want, got): (Vec<&str>, Vec<&str>) =
+        (expected.lines().collect(), actual.lines().collect());
+    let at = want
+        .iter()
+        .zip(&got)
+        .position(|(a, b)| a != b)
+        .unwrap_or_else(|| want.len().min(got.len()));
+    format!(
+        "{what} differs at line {}: expected {:?}, got {:?}",
+        at + 1,
+        want.get(at),
+        got.get(at)
+    )
+}
+
+#[test]
+fn wire_to_text_to_wire_is_byte_identical_for_every_imported_corpus_fixture() {
+    // Gate item 2 over the whole importable corpus (issue #603), not only the seven bundles above:
+    // every fixture `library_round_trip` imports. Its partition test holds `IMPORTED` and `REFUSED`
+    // to the 46 corpus files, so the list cannot shrink without failing there, and the count is
+    // asserted here too.
+    assert_eq!(IMPORTED.len(), 31, "the importable corpus fixtures");
+    let failures: Vec<String> = IMPORTED
+        .iter()
+        .filter_map(|name| text_round_trip_failure(name).map(|why| format!("{name}: {why}")))
+        .collect();
+    assert!(
+        failures.is_empty(),
+        "{} of {} imported corpus fixtures fail wire -> text -> wire:\n{}",
+        failures.len(),
+        IMPORTED.len(),
+        failures.join("\n")
+    );
+}
+
+#[test]
+fn a_text_round_trip_difference_is_reported_at_its_first_line() {
+    // The control for the report above: the first differing line, both lines, and a length
+    // difference reported where the shorter text ends.
+    assert_eq!(
+        first_difference("x", "a\nb\nc\n", "a\nB\nc\n"),
+        "x differs at line 2: expected Some(\"b\"), got Some(\"B\")"
+    );
+    assert_eq!(
+        first_difference("x", "a\nb\n", "a\n"),
+        "x differs at line 2: expected Some(\"b\"), got None"
+    );
+    assert_eq!(text_round_trip_failure(IMPORTED[0]), None);
+    assert!(
+        text_round_trip_failure("no_such_fixture").is_some_and(|why| why.starts_with("read: ")),
+        "a missing fixture is reported, not skipped"
+    );
 }
 
 #[test]
