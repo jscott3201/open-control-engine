@@ -137,6 +137,21 @@ fn a_literal_past_two_to_the_fifty_third_is_rounded_once() {
         (9_007_199_254_740_993_i64 as f64 * 60.0).to_bits(),
         540_431_955_284_459_584.0_f64.to_bits()
     );
+    // A Real of the same digits parses to 2^53 first and scales to 2^53 minutes: an Integer and
+    // a Real spelling past 2^53 scale differently.
+    assert_eq!(
+        bits(scale(&Literal::Real(9_007_199_254_740_993.0), 60)),
+        Some(540_431_955_284_459_520.0_f64.to_bits())
+    );
+    // An exact midpoint, 288230376151712160 between ...128 and ...192: ties to even.
+    assert_eq!(
+        bits(scale(&Literal::Integer(4_803_839_602_528_536), 60)),
+        Some(0x4390_0000_0000_0006)
+    );
+    assert_eq!(
+        bits(scale(&Literal::Integer(-4_803_839_602_528_536), 60)),
+        Some(0xC390_0000_0000_0006)
+    );
     // The extremes of `i64` in days: exact products, rounded once.
     let max: f64 = "796899343984252629724800".parse().expect("decimal");
     let min: f64 = "-796899343984252629811200".parse().expect("decimal");

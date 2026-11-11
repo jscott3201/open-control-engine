@@ -57,10 +57,10 @@ fn a_suffix_must_reduce_to_the_declared_unit() {
         assert_eq!(mismatch(what, "s", fits), None, "{fits}");
     }
     for (suffix, needle) in [
-        ("K", "is not that unit"),
-        ("Hz", "is not that unit"),
-        ("1/s", "is not that unit"),
-        ("m.s", "is not that unit"),
+        ("K", "is not spelled as that unit"),
+        ("Hz", "is not spelled as that unit"),
+        ("1/s", "is not spelled as that unit"),
+        ("m.s", "is not spelled as that unit"),
     ] {
         let detail = mismatch(what, "s", suffix).expect(suffix);
         assert!(detail.starts_with(what), "{detail}");
@@ -71,9 +71,17 @@ fn a_suffix_must_reduce_to_the_declared_unit() {
     let detail = mismatch("parameter `k` of `C`", "K", "h").expect("h on K");
     assert!(detail.contains("a multiple of `s`"), "{detail}");
     // Spelled alike: Hz on a parameter declared in Hz fits; a different spelling of the same
-    // dimension does not.
+    // dimension does not, and the detail says the spelling is what is matched.
     assert_eq!(mismatch(what, "Hz", "Hz"), None);
-    assert!(mismatch(what, "1/s", "Hz").is_some());
+    for (declared, suffix) in [("1/s", "Hz"), ("Hz", "1/s"), ("1/s", "s-1"), ("Pa", "N/m2")] {
+        let detail = mismatch(what, declared, suffix).expect(suffix);
+        assert!(
+            detail.ends_with(&format!(
+                "the suffix `{suffix}` is not spelled as that unit (a unit is matched by its spelling, so write `{declared}`)"
+            )),
+            "{detail}"
+        );
+    }
 }
 
 #[test]

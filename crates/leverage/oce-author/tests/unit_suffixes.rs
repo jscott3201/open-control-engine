@@ -210,11 +210,11 @@ fn the_printer_refuses_a_scaled_suffix_that_does_not_agree_with_its_value() {
         (|a| a.suffix = None, "but no suffix"),
         (
             |a| a.value = ParamValue::Literal(Literal::Real(3_601.0)),
-            "does not scale to the value",
+            "but the value is",
         ),
         (
             |a| a.value = ParamValue::Literal(Literal::Integer(3_600)),
-            "does not scale to the value",
+            "but the value is",
         ),
         (|a| a.suffix = Some("s".to_owned()), "is a base unit"),
     ];
@@ -240,4 +240,151 @@ fn the_printer_refuses_a_scaled_suffix_that_does_not_agree_with_its_value() {
         print_text(&param),
         Err(PrintError::Unspellable { ref subject, .. }) if subject == "p"
     ));
+}
+
+/// A model built in code whose scaled suffix, written number and value no longer agree (a tool
+/// that set `delayTime` to 1.0 and left the `1 h` annotation) is caught by stage 1, not emitted:
+/// the printer's own agreement rule, reported as `unit-suffix-mismatch` at the assignment.
+#[test]
+fn stage_one_refuses_a_suffix_that_does_not_agree_with_its_value() {
+    type Edit = fn(&mut Assignment);
+    let what = "parameter `delayTime` of `CDL.Logical.TrueDelay`";
+    let cases: [(Edit, &str); 10] = [
+        (
+            |a| a.scaled_from = None,
+            "the scaled suffix `h` has no written number",
+        ),
+        (
+            |a| a.scaled_from = Some(Literal::Integer(2)),
+            "`2 h` is `7200.0` in `s`, but the value is Real `3600.0`",
+        ),
+        (
+            |a| a.suffix = Some("s".to_owned()),
+            "the suffix `s` is a base unit, so it keeps no written number to scale (`1`)",
+        ),
+        (
+            |a| a.suffix = None,
+            "a written number `1` for a scaled suffix, but no suffix",
+        ),
+        (
+            |a| a.scaled_from = Some(Literal::Boolean(true)),
+            "the written number before `h` is Boolean, not a number",
+        ),
+        (
+            |a| a.value = ParamValue::Literal(Literal::Integer(3_600)),
+            "`1 h` is `3600.0` in `s`, but the value is Integer `3600`",
+        ),
+        (
+            |a| a.value = ParamValue::Literal(Literal::Real(1.0)),
+            "`1 h` is `3600.0` in `s`, but the value is Real `1.0`",
+        ),
+        (
+            |a| {
+                a.suffix = Some("d".to_owned());
+                a.scaled_from = Some(Literal::Real(1e308));
+            },
+            "`1e308 d` is not finite once scaled to `s`",
+        ),
+        (
+            |a| a.value = ParamValue::Literal(Literal::Boolean(true)),
+            "the suffix `h` follows a value that is not a number",
+        ),
+        (
+            |a| a.suffix = Some("degC".to_owned()),
+            "`degC` in `degC` is not a base unit; a suffix is built from base units, or is one of the scaled time units `min`, `h` and `d` alone (affine, prefixed and other scaled units are refused)",
+        ),
+    ];
+    let base = parse_text(&delay("1 h")).expect("parses");
+    assert_eq!(validate(&base), vec![]);
+    for (edit, why) in cases {
+        let mut model = base.clone();
+        edit(&mut model.blocks[0].assignments[0]);
+        let findings = validate(&model);
+        let found: Vec<(&str, &str, &str)> = findings
+            .iter()
+            .map(|f| (f.code, f.subject.as_str(), f.detail.as_str()))
+            .collect();
+        assert_eq!(
+            found,
+            [(
+                UNIT_SUFFIX_MISMATCH,
+                "del.delayTime",
+                format!("{what}: {why}").as_str()
+            )],
+            "{why}"
+        );
+        // Whatever stage 1 refuses, the emitter refuses to write.
+        assert!(emit(&model, &EmitOptions::default()).is_err(), "{why}");
+    }
+    // The same rule on a sequence parameter.
+    let mut param = parse_text(&format!("{HEAD}param p : Real = 2 min\n")).expect("parses");
+    param.params[0].value = Literal::Real(2.0);
+    let findings = validate(&param);
+    let on_p: Vec<(&str, &str)> = findings
+        .iter()
+        .filter(|f| f.subject == "p")
+        .map(|f| (f.code, f.detail.as_str()))
+        .collect();
+    assert_eq!(
+        on_p,
+        [(
+            UNIT_SUFFIX_MISMATCH,
+            "sequence parameter `p`: `2 min` is `120.0` in `s`, but the value is Real `2.0`"
+        )]
+    );
+}
+
+/// A Real is scaled from the binary64 it parses to, through that value's shortest round-trip
+/// decimal, never from the digits as typed (so `fmt`, which prints that decimal, never moves a
+/// value). Two consequences are pinned: a Real typed with more digits than binary64 holds scales
+/// as its shortest spelling does, and an Integer and a Real spelling of one number past 2^53 scale
+/// differently, because the Real is rounded when it is parsed and the Integer is not.
+#[test]
+fn a_real_scales_from_its_binary64_value_and_an_integer_from_its_digits() {
+    let bits = |written: &str| real(&parse_text(&delay(written)).expect(written)).to_bits();
+    // The Integer: the exact product 540431955284459580, rounded once.
+    assert_eq!(
+        bits("9007199254740993 min"),
+        540_431_955_284_459_584.0_f64.to_bits()
+    );
+    // The Real spellings parse to 2^53 first, so they scale to 2^53 minutes.
+    for real_spelling in ["9007199254740993.0 min", "9.007199254740993e15 min"] {
+        assert_eq!(
+            bits(real_spelling),
+            540_431_955_284_459_520.0_f64.to_bits(),
+            "{real_spelling}"
+        );
+    }
+    // Digits past binary64's precision: scaled as the shortest spelling (`1.1`, `0.1`, `1.5`) is.
+    assert_eq!(bits("1.10000000000000009 h"), 3_960.0_f64.to_bits());
+    assert_eq!(bits("0.10000000000000001 h"), 360.0_f64.to_bits());
+    assert_eq!(bits("1.4999999999999999 d"), 129_600.0_f64.to_bits());
+    // An exact Integer midpoint: 4803839602528536 min is 288230376151712160 s, halfway between
+    // ...128 and ...192; ties to even gives ...128.
+    assert_eq!(bits("4803839602528536 min"), 0x4390_0000_0000_0006);
+    assert_eq!(
+        f64::from_bits(0x4390_0000_0000_0006),
+        288_230_376_151_712_128.0
+    );
+}
+
+#[test]
+fn a_scaled_literal_at_the_token_bound_is_read_and_one_past_it_is_refused() {
+    let at_bound = format!("1.{}", "0".repeat(254));
+    assert_eq!(at_bound.len(), oce_author::MAX_TOKEN_BYTES);
+    let model = parse_text(&delay(&format!("{at_bound} h"))).expect("at the bound");
+    assert_eq!(real(&model).to_bits(), 3_600.0_f64.to_bits());
+    assert_eq!(delay_time(&model).scaled_from, Some(Literal::Real(1.0)));
+    // `fmt` prints the shortest spelling, well inside the bound.
+    assert!(
+        fmt_text(&delay(&format!("{at_bound} h")))
+            .expect("formats")
+            .contains("delayTime = 1.0 h)")
+    );
+    let past = format!("{at_bound}0 h");
+    let error = parse_text(&delay(&past)).expect_err("one past the bound");
+    assert_eq!(
+        (error.code, error.location.line, error.location.column),
+        (oce_author::TOKEN_TOO_LONG, 5, 47)
+    );
 }

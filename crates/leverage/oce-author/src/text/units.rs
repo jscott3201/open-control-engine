@@ -22,7 +22,7 @@
 
 use oce_vocab::{ScaleFactor, scale_factor};
 
-use crate::model::Literal;
+use crate::model::{Literal, ParamValue};
 
 use super::codes::{MALFORMED_SUFFIX, UNIT_NOT_BASE};
 
@@ -120,16 +120,113 @@ fn factors<'a>(text: &'a str, symbols: &mut Vec<&'a str>) -> Result<(), &'static
     Ok(())
 }
 
-/// Scale a written number by `factor` exactly and round once to binary64 (vocabulary note,
-/// "Units"): `1.1 h` is `3960.0`, where multiplying the parsed `f64` by 3600 would give
+/// Whether a value, its unit suffix and the written number a scaled suffix keeps agree, so the
+/// text form reads the printed value back as the same model: a suffix follows a number and is
+/// well formed; a base-unit suffix keeps no written number; a scaled suffix keeps a written
+/// number that [`scale`]s to exactly the value, a Real, bit for bit; and no written number stands
+/// without its scaled suffix. The text printer refuses a model that breaks one
+/// ([`crate::PrintError::Unspellable`]) and stage 1 reports it as `unit-suffix-mismatch`, so a
+/// model built in code with an annotation that no longer matches its value is caught before it is
+/// emitted. `Err` says which rule broke. Pure; never panics.
+pub(crate) fn agreement(
+    value: &ParamValue,
+    suffix: Option<&str>,
+    scaled_from: Option<&Literal>,
+) -> Result<(), String> {
+    let Some(suffix) = suffix else {
+        return match scaled_from {
+            Some(written) => Err(format!(
+                "a written number `{}` for a scaled suffix, but no suffix",
+                spelling(written)
+            )),
+            None => Ok(()),
+        };
+    };
+    if !matches!(
+        value,
+        ParamValue::Literal(Literal::Integer(_) | Literal::Real(_))
+    ) {
+        return Err(format!(
+            "the suffix `{suffix}` follows a value that is not a number"
+        ));
+    }
+    let row = match check_suffix(suffix).map_err(|(_, detail)| detail)? {
+        SuffixKind::Base => {
+            return match scaled_from {
+                Some(written) => Err(format!(
+                    "the suffix `{suffix}` is a base unit, so it keeps no written number to scale (`{}`)",
+                    spelling(written)
+                )),
+                None => Ok(()),
+            };
+        }
+        SuffixKind::Scaled(row) => row,
+    };
+    let Some(written) = scaled_from else {
+        return Err(format!(
+            "the scaled suffix `{suffix}` has no written number"
+        ));
+    };
+    if !matches!(written, Literal::Integer(_) | Literal::Real(_)) {
+        return Err(format!(
+            "the written number before `{suffix}` is {}, not a number",
+            written.kind_name()
+        ));
+    }
+    let Some(base) = scale(written, row.factor) else {
+        return Err(format!(
+            "`{} {suffix}` is not finite once scaled to `{}`",
+            spelling(written),
+            row.base
+        ));
+    };
+    match value {
+        ParamValue::Literal(Literal::Real(v)) if v.to_bits() == base.to_bits() => Ok(()),
+        ParamValue::Literal(found) => Err(format!(
+            "`{} {suffix}` is `{base:?}` in `{}`, but the value is {} `{}`",
+            spelling(written),
+            row.base,
+            found.kind_name(),
+            spelling(found)
+        )),
+        ParamValue::Ref(_) => Err(format!(
+            "the suffix `{suffix}` follows a value that is not a number"
+        )),
+    }
+}
+
+/// How a literal reads in a disagreement's detail: a number as the text form spells it, anything
+/// else by its kind.
+fn spelling(literal: &Literal) -> String {
+    match literal {
+        Literal::Integer(v) => v.to_string(),
+        Literal::Real(v) => format!("{v:?}"),
+        other => other.kind_name().to_owned(),
+    }
+}
+
+/// Scale a written number by `factor` and round once to binary64 (vocabulary note, "Units"):
+/// `1.1 h` is `3960.0`, where multiplying the parsed `f64` by 3600 would give
 /// `3960.0000000000005`.
 ///
 /// An Integer is multiplied exactly (in `i128`, which cannot overflow: `|i64| * u32 < 2^95`) and
-/// converted with one rounding to nearest, ties to even. A Real is scaled through its shortest
-/// round-trip decimal, the spelling `fmt` prints for it, so the base value of a printed text is
-/// the base value of the model it was printed from: its decimal digits times `factor` are an
-/// exact decimal, which Rust's correctly rounded `f64` parser rounds once. The sign is kept, so
-/// `-0.0 h` is `-0.0`.
+/// converted with one rounding to nearest, ties to even (`4803839602528536 min`, exactly halfway,
+/// is `288230376151712128.0`).
+///
+/// A Real is scaled from the binary64 it parsed to, not from the digits as typed: through that
+/// value's shortest round-trip decimal, the spelling `fmt` prints, whose digits times `factor` are
+/// an exact decimal that Rust's correctly rounded `f64` parser rounds once. That is what makes the
+/// base value of a printed text the base value of the model it was printed from, so `fmt` never
+/// moves a value. Two consequences follow. A literal typed with more digits than binary64 holds
+/// is rounded when it is parsed and again when it is scaled, so its base value can differ from
+/// the exact product of the typed digits by about an ulp, more for a subnormal
+/// (`1.10000000000000009 h` is `3960.0`, as `1.1 h` is). And an Integer and a Real spelling of one
+/// number past 2^53 scale differently: `9007199254740993 min` is `540431955284459584.0` s, while
+/// `9007199254740993.0 min` parses to 2^53 first and is `540431955284459520.0` s. A scaled Integer
+/// past 2^53 is accepted although the same Integer unscaled on a Real parameter is
+/// `parameter-out-of-range`, because a scaled value is a rounded Real by construction.
+///
+/// The sign is kept, so `-0.0 h` is `-0.0`.
 ///
 /// `None` when the literal is not a number, the Real is not finite, or the result overflows
 /// binary64. Pure; never panics.

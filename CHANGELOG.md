@@ -529,9 +529,15 @@ and a gate that accepted any text would restore exactly the false assurance desc
   (GitHub #586, issue #501; vocabulary v1, part 3 of 3; [vocabulary note](docs/design/vocabulary.md),
   "Units", decision 14 and rulings 5 and 6; authoring decision 13 amended).
   - **Scaled suffixes.** A suffix that is exactly `min`, `h` or `d` (`oce_vocab::SCALE_FACTORS`)
-    scales the number to seconds exactly, with one rounding: an Integer by its exact product, a
-    Real through its shortest round-trip decimal, so `1.1 h` is `3960.0` (multiplying the parsed
-    `f64` gives `3960.0000000000005`) and `9007199254740993 min` is `540431955284459584.0`. The
+    scales the number to seconds with one rounding: an Integer by its exact product, a Real from
+    the binary64 it parses to, through its shortest round-trip decimal (the spelling `fmt`
+    prints), not from the digits as typed. So `1.1 h` is `3960.0` (multiplying the parsed `f64`
+    gives `3960.0000000000005`), and `fmt` never moves a value. Two consequences: a Real typed
+    with more digits than binary64 holds can scale to about an ulp from the exact product of its
+    typed digits (`1.10000000000000009 h` is `3960.0`), and an Integer and a Real spelling past
+    2^53 scale differently (`9007199254740993 min` is `540431955284459584.0` s,
+    `9007199254740993.0 min` is `540431955284459520.0` s). A scaled Integer past 2^53 is
+    accepted, though the same Integer unscaled on a Real parameter is `parameter-out-of-range`. The
     model's value is the base-unit Real, which is all the wire form, the emitter and the engine
     see; the new text-only `Assignment::scaled_from` and `SequenceParameter::scaled_from` keep
     the written number beside the suffix, so `fmt` prints `1 h` again and never moves a value. A
@@ -543,13 +549,16 @@ and a gate that accepted any text would restore exactly the false assurance desc
     `oce-vocab`, spelled alike (`delayTime = 5 K`, `delayTime = 1 Hz`), and a scaled suffix on a
     parameter that declares no unit or on a sequence parameter. A base-unit suffix where no unit
     is declared stays an annotation. The parity test pins it as silent in the engine.
-  - **The printer** refuses (`PrintError::Unspellable`) a model whose scaled suffix, written
-    number and value disagree, so a model it prints parses back equal.
+  - **A disagreeing annotation is caught.** A model built in code whose suffix, written number
+    and value disagree (a tool that set `delayTime` to `1.0` and left `1 h` in place) is
+    `unit-suffix-mismatch` in stage 1, so `emit` refuses it, and the printer refuses it too
+    (`PrintError::Unspellable`): a model that validates clean always prints, and one that prints
+    parses back equal.
   - **Dependencies:** `oce-author` now depends on the leverage crate `oce-vocab` (the table and
     the declared units), which moves `Cargo.lock`.
-  - **`oce vocab`** says how the text form reads the table, in its heading and in the meanings of
-    `unit-not-base` and the new `unit-suffix-mismatch`. Re-blessed: `vocab_text` and `vocab_json`
-    (those three lines and the new code's row). New golden: `tests/fixtures/text/fmt/scaled_suffixes.out.oce`
+  - **`oce vocab`** says how the text form reads the table, in its heading ("it scales the number,
+    rounding once") and in the meanings of `unit-not-base` and the new `unit-suffix-mismatch`.
+    Re-blessed: `vocab_text` and `vocab_json` (those three lines and the new code's row). New golden: `tests/fixtures/text/fmt/scaled_suffixes.out.oce`
     beside its hand-written input. No emit golden, schema, wire fixture or other transcript moves.
   - **Docs.** The authoring note (decision 13 amended, the unit-literal paragraph and suffix
     production, the stage-1 list, the finding-code table, out of scope, a ruling), the vocabulary

@@ -11,7 +11,7 @@ and loads only throwaway engines of its own (validation stage 2), never one a ho
 | `SequenceBuilder` | A checked builder; refuses with a typed `BuildError` what it can see without the catalog. |
 | `from_wire_str`, `from_wire_bytes`, `to_wire_string` | The strict-JSON wire form: closed objects, every key required, absent values `""`/`[]`/`false` (never `null`), an object read from a JSON object only (never from the list of its values; any other type is `WireError::WrongType` with the path of the value, GitHub #544), connections as `"a.y -> b.u"`, boundary bounds as a list of at most one number (`"min": []` or `[0]`; a second item is `WireError::BoundListTooLong`). Reads are bounded (4 MiB, depth 8, 65,536 entries per list, 4,096-byte strings) and refuse hostile input with a typed `WireError`; writes are canonical and byte-stable. |
 | `WIRE_SCHEMA`, `wire_schema()` | The JSON Schema (draft 2020-12) derived from the wire DTOs with `schemars`, published at [`schema/sequence.schema.json`](schema/sequence.schema.json) and pinned byte for byte; the `class` enum is the catalog's authorable class paths and a sequence parameter's `type` enum is `parameter_type_names()` (`Real`, `Integer`, `Boolean` and every enumeration of `oce_api::enumeration_types()`, never a constant package). Strict profile: closed objects, all required, `anyOf` only over the value shapes. |
-| `validate`, `validate_author_side`, `Finding` | The two-stage validator. Stage 1 (`validate_author_side`): twenty-six finding codes (`STAGE_ONE_CODES`) from the model and the catalog, a repeated connection target (`single-assignment`), a unit suffix against the parameter's declared unit (`unit-suffix-mismatch`, through `oce-vocab`), an Integer above 2^53 on a Real parameter, enumeration types and members (`unknown-enum-type`, `unknown-enum-literal`) and boundary bounds (`invalid-bound`, `non-finite-bound`, `crossed-bounds`) included. Stage 2, only when stage 1 is clean: emit, load in a throwaway `Engine::new()` and map every engine diagnostic back through the IRI scheme — every warning is an error finding with the engine's code (decision 14), `origin = engine`; a subject the scheme cannot name is attached to `sequence` with the raw subject in `detail`. Findings are sorted by authored position, code and detail. |
+| `validate`, `validate_author_side`, `Finding` | The two-stage validator. Stage 1 (`validate_author_side`): twenty-six finding codes (`STAGE_ONE_CODES`) from the model and the catalog, a repeated connection target (`single-assignment`), a unit suffix against the parameter's declared unit and against its value (`unit-suffix-mismatch`, through `oce-vocab`), an Integer above 2^53 on a Real parameter, enumeration types and members (`unknown-enum-type`, `unknown-enum-literal`) and boundary bounds (`invalid-bound`, `non-finite-bound`, `crossed-bounds`) included. Stage 2, only when stage 1 is clean: emit, load in a throwaway `Engine::new()` and map every engine diagnostic back through the IRI scheme — every warning is an error finding with the engine's code (decision 14), `origin = engine`; a subject the scheme cannot name is attached to `sequence` with the raw subject in `detail`. Findings are sorted by authored position, code and detail. |
 | `emit`, `EmitOptions`, `EmitError` | The emitter to flat CXF: authored order, never sorted; IRIs `{namespace}{sequence}.{local}` (default `urn:oce:author:`, an override must end in `#`, `/` or `:`); block `@type` under the fixed class base `http://example.org#Buildings.Controls.OBC.`; only the assignments the author wrote; arrays in the CXF array form (element by element under the flattened names when the author left a gap); an enumeration-typed sequence parameter with its class IRI as `isOfDataType` and the full member path as value, and a library constant with its package IRI as `isOfDataType`, as the corpus writes them; boundary `unit`, `quantity`, `displayUnit`, `min` and `max` and no semantic record; a canonical writer (fixed key order, two-space indentation, ASCII, shortest round-trip reals); the `S231` context bound to `http://data.ashrae.org/S231#`, and on the root node the translation-software label `S231:translationSoftware` (`open-control-engine`) and `S231:translationSoftwareVersion` (the workspace version; OBC §8.4), which no importer reads back and which changes every emitted document when the workspace version does; refuses stage-1 errors (`EmitError::Invalid`), a malformed namespace (`EmitError::InvalidNamespace`) and anything above `oce_api::MAX_CXF_BYTES` (`EmitError::TooLarge`). |
 | `import_cxf`, `import_graph_v0`, `ImportOptions`, `Imported`, `ImportReport`, `ImportError` | The importer (importer note [`docs/design/importer.md`](../../../docs/design/importer.md), issue #496): the in-subset library CXF and the frozen prototype's v0 graph JSON into the model, a report of what was read and not carried, and a closed `ImportErrorKind` with a stable `code()` for every refusal; see below. |
 | `parse_text`, `parse_text_bytes`, `print_text`, `fmt_text`, `ParseError`, `PrintError` | The text form (issue #482): a hand-written recursive-descent parser over `&str` or raw bytes, bounded at parse, refusing each malformed construct with one typed `ParseError { code, location, detail }` (`PARSE_CODES`, thirty-one codes, pinned in order); a canonical printer that is total or refusing (`PrintError::Unspellable`); `fmt_text` = parse then print, idempotent. See below. |
@@ -214,11 +214,17 @@ comment     = "#" to the end of the line, anywhere
   unprefixed SI symbols (`BASE_UNIT_SYMBOLS`: `m kg s A K mol cd rad sr Hz N Pa J W C V F Ohm S Wb
   T H lm lx Bq Gy Sv kat`), so `86400 s`, `1 m3/s` and `4180 J.kg-1.K-1` are accepted, and the
   number is the value as written. A suffix that is exactly `min`, `h` or `d`
-  (`oce_vocab::SCALE_FACTORS`) **scales**: the value is the base-unit Real, exactly and rounded
-  once (`1.1 h` is `3960.0`, an Integer by its exact product, a Real through its shortest
-  round-trip decimal), and `Assignment::scaled_from` keeps the written number, so **`fmt` prints
-  `1 h` again** and never moves a value; the wire form and the emitter see `3600.0`. A scaled
-  value past binary64 is `non-finite-number`. `20 degC`, `3 kPa`, `1 m3/h` (a scaled symbol in a
+  (`oce_vocab::SCALE_FACTORS`) **scales**: the value is the base-unit Real, rounded once, and
+  `Assignment::scaled_from` keeps the written number, so **`fmt` prints `1 h` again**; the wire
+  form and the emitter see `3600.0`. An Integer is scaled by its exact product. A Real is scaled
+  from the binary64 it parses to, through that value's shortest round-trip decimal (the spelling
+  `fmt` prints), not from the digits as typed (`1.1 h` is `3960.0`). That is why `fmt` never moves
+  a value, and it has two consequences: a Real typed with more digits than binary64 holds can
+  scale to about an ulp from the exact product of its typed digits (`1.10000000000000009 h` is
+  `3960.0`), and an Integer and a Real spelling past 2^53 scale differently (`9007199254740993 min`
+  is `540431955284459584.0` s, `9007199254740993.0 min` is `540431955284459520.0` s). A scaled
+  Integer past 2^53 is accepted, though the same Integer unscaled on a Real parameter is
+  `parameter-out-of-range`. A scaled value past binary64 is `non-finite-number`. `20 degC`, `3 kPa`, `1 m3/h` (a scaled symbol in a
   compound) and `1 hr` are refused (`unit-not-base`). Whether the suffix fits its parameter is
   stage 1's `unit-suffix-mismatch`: it must reduce to the block parameter's declared unit
   (`oce-vocab`), spelled alike (`delayTime = 5 K` is refused, `3600 s` and `1 h` are not), and a
@@ -269,12 +275,16 @@ comment     = "#" to the end of the line, anywhere
 **Total or refusing.** `print_text` returns `Result<String, PrintError>` and never emits text that
 parses to a different model. A name, class path, atom, suffix, string, value or `derived_from` id
 the lexer would not read back as the same value — a space or line feed in a name, `#` in an atom,
-a non-path class, a suffix that is not a base unit, `none` as a `derived_from` id, a reference
-named `true` or `inf`, a member with no `Type.`, an enumeration type spelled as a scalar type or
-not as one word, a non-finite Real or bound, a control character or bidirectional
-override in a string — is refused with `PrintError::Unspellable { subject, detail }`, and so is a
-statement whose printed line would pass 8,192 bytes (a dotted name or a tag list too long for one
-line) and a document that would pass 4 MiB, 100,000 lines or 65,536 statements of one kind. The only
+a non-path class, a suffix that is neither a base unit nor a scaled time unit alone, a suffix
+after a value that is not a number, a scaled suffix whose written number (`scaled_from`) is
+missing or does not scale to the value bit for bit, a written number with no scaled suffix or
+with a base-unit one, `none` as a `derived_from` id, a reference named `true` or `inf`, a member
+with no `Type.`, an enumeration type spelled as a scalar type or not as one word, a non-finite
+Real or bound, a control character or bidirectional override in a string — is refused with
+`PrintError::Unspellable { subject, detail }`, and so is a statement whose printed line would
+pass 8,192 bytes (a dotted name or a tag list too long for one line) and a document that would
+pass 4 MiB, 100,000 lines or 65,536 statements of one kind. Stage 1 reports the suffix
+disagreements as `unit-suffix-mismatch` too, so a model that validates clean prints. The only
 normalizations are the parser's own: a comment with a line feed prints as several comment lines,
 trailing spaces in a comment are dropped, and the header's `blank_line_before` is not printed.
 

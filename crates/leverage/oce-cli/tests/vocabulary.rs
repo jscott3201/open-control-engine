@@ -440,12 +440,12 @@ fn vocab_lists_the_scale_factor_table_exactly() {
     assert_eq!(text.code, 0);
     assert!(text.stdout_text().contains(
         "\nscale factors (time only; one symbol is exactly this many base units; alone as a unit \
-         suffix on a parameter declared in the base unit, it scales the number exactly):\n  \
+         suffix on a parameter declared in the base unit, it scales the number, rounding once):\n  \
          min  60 s\n  h    3600 s\n  d    86400 s\n\n"
     ));
 }
 
-/// The text form reads the table (issue #501): each symbol alone scales the number exactly on a
+/// The text form reads the table (issue #501): each symbol alone scales the number, rounding once, on a
 /// parameter declared in its base unit, a scaled symbol inside a compound is still
 /// `unit-not-base`, and the scaled value is what stage 1 and the emitter see. The output names
 /// the symbols where it explains both codes.

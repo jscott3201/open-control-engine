@@ -9,7 +9,7 @@
 
 use oce_api::{EnumerationClass, EnumerationKind, MemberValue, enumerations};
 
-use crate::model::{Literal, MemberRef, ParameterType, SequenceParameter};
+use crate::model::{Literal, MemberRef, ParamValue, ParameterType, SequenceParameter};
 
 use super::names::{exact_as_real, inexact_detail};
 use super::suffixes;
@@ -115,9 +115,14 @@ pub(crate) fn parameter_problem(param: &SequenceParameter) -> Option<(&'static s
     let name = &param.name;
     // A sequence parameter declares no unit: a base-unit suffix stays an annotation, a scaled
     // one has nothing to scale to (vocabulary note, "Units").
-    if let Some(suffix) = &param.suffix
-        && let Some(detail) =
-            suffixes::mismatch(&format!("sequence parameter `{name}`"), "", suffix)
+    if (param.suffix.is_some() || param.scaled_from.is_some())
+        && let Some(detail) = suffixes::problem(
+            &format!("sequence parameter `{name}`"),
+            "",
+            &ParamValue::Literal(param.value.clone()),
+            param.suffix.as_deref(),
+            param.scaled_from.as_ref(),
+        )
     {
         return Some((UNIT_SUFFIX_MISMATCH, detail));
     }

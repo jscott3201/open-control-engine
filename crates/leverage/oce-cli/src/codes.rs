@@ -334,7 +334,7 @@ pub(crate) const STAGE_ONE_MEANINGS: &[(&str, &str)] = &[
     ("non-finite-parameter", "a Real value is NaN or infinite"),
     (
         "unit-suffix-mismatch",
-        "a unit suffix that is not the parameter's declared unit, or a scaled one where none is declared",
+        "a unit suffix that is not the parameter's declared unit, a scaled one where none is declared, or one that disagrees with its value",
     ),
     (
         "unknown-enum-literal",

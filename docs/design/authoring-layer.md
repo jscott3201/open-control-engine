@@ -352,7 +352,7 @@ pre-empt where one exists. The table is a test fixture: gate item 3 is a table-d
 | `parameter-kind-mismatch` | engine | `param-type-mismatch` | 1 | — |
 | `parameter-out-of-range` | engine | `invalid-width` | 1 | — (catalog rules, widths included) |
 | `non-finite-parameter` | engine | — | 1 | — |
-| `unit-suffix-mismatch` | author-only (added 2026-11-11, issue #501) | — | 1 | none: a suffix is text-only and never reaches the engine (vocabulary note decision 14, ruling 6). A suffix that does not reduce to the block parameter's declared unit (`delayTime = 5 K`), or a scaled one on a parameter that declares no unit or on a sequence parameter |
+| `unit-suffix-mismatch` | author-only (added 2026-11-11, issue #501) | — | 1 | none: a suffix is text-only and never reaches the engine (vocabulary note decision 14, ruling 6). A suffix that does not reduce to the block parameter's declared unit (`delayTime = 5 K`), a scaled one on a parameter that declares no unit or on a sequence parameter, or, in a model built in code, a suffix, written number and value that disagree |
 | `unknown-enum-literal` | author-only (amended 2026-11-09) | — | 1 | `grounding-failed` |
 | `unknown-enum-type` | engine (added 2026-11-09, issue #492) | — | 1 | — (an unknown type name; a constant package as a type is refused by stage 1 alone, since the engine reads a package-typed parameter as Integer) |
 | `unknown-parameter-reference` | author-only | — | 1 | `grounding-failed` |
@@ -617,14 +617,20 @@ text-only annotation, so `fmt` is lossless, and the number is the base-unit valu
 `1 h` is refused with a typed error until the vocabulary supplies scale factors. Text → wire → text
 drops suffixes; wire → text → wire, the gate's direction, is unaffected. *Amended 2026-11-11 (issue
 #501; vocabulary note decision 14 and rulings 5 and 6):* the vocabulary supplies them, time only.
-`min`, `h` and `d` alone scale the number exactly and round once (`1.1 h` is `3960.0` s, where
+`min`, `h` and `d` alone scale the number and round once (`1.1 h` is `3960.0` s, where
 multiplying the parsed `f64` would give `3960.0000000000005`): an Integer by its exact product, a
-Real through its shortest round-trip decimal, the spelling `fmt` prints, so formatting never moves
-a value. The model keeps the suffix and the written number beside the base value, so `fmt` still
+Real from the binary64 it parses to, through its shortest round-trip decimal (the spelling `fmt`
+prints), not from the digits as typed, so formatting never moves a value. So a Real typed with
+more digits than binary64 holds can scale to about an ulp from the exact product of its typed
+digits, and an Integer and a Real spelling past 2^53 scale differently (`9007199254740993 min` is
+`540431955284459584.0` s, `9007199254740993.0 min` is `540431955284459520.0` s); a scaled
+Integer past 2^53 is accepted, unlike the same Integer unscaled on a Real parameter. The model keeps the suffix and the written number beside the base value, so `fmt` still
 prints `1 h`. Stage 1 refuses a suffix that does not reduce to the block parameter's declared
 unit, spelled alike (`delayTime = 5 K`, `delayTime = 1 Hz`), and a scaled suffix on a parameter
 that declares no unit or on a sequence parameter, with the author-only code
-`unit-suffix-mismatch`; a base-unit suffix where no unit is declared stays an annotation.
+`unit-suffix-mismatch`; a base-unit suffix where no unit is declared stays an annotation. Stage 1
+also reports, with the same code, a model built in code whose suffix, written number and value
+disagree (the printer's own agreement rule), so a model it accepts always prints.
 `degC`/`degF`, `%`, prefixed SI units and scaled symbols in compounds stay `unit-not-base`.
 
 **14. Every engine warning is an error finding.** Accepted means warning-free, so a

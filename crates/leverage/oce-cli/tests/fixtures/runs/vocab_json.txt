@@ -842,7 +842,7 @@ exit: 0
     },
     {
       "code": "unit-suffix-mismatch",
-      "meaning": "a unit suffix that is not the parameter's declared unit, or a scaled one where none is declared",
+      "meaning": "a unit suffix that is not the parameter's declared unit, a scaled one where none is declared, or one that disagrees with its value",
       "stage": 1
     },
     {

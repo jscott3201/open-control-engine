@@ -257,9 +257,12 @@ all of `s`. It is time only: `degC`, `%` and prefixed SI units are not in it. Ev
 of `base_units` and no `symbol` is.
 
 The text form reads the table (issue #501): one of these symbols alone as a unit suffix scales
-the number exactly (`delayTime = 1 h` is `3600.0` s), on a parameter declared in the base unit.
-The output says so itself. The text listing's heading reads "alone as a unit suffix on a
-parameter declared in the base unit, it scales the number exactly"; the meaning of
+the number with one rounding (`delayTime = 1 h` is `3600.0` s), on a parameter declared in the
+base unit. An Integer is scaled by its exact product, a Real from the binary64 it parses to
+(through its shortest round-trip decimal, not the digits as typed), so `fmt` never moves a value;
+the [`oce-author` README](../oce-author/README.md) states the consequences. The output says so
+itself. The text listing's heading reads "alone as a unit suffix on a parameter declared in the
+base unit, it scales the number, rounding once"; the meaning of
 `unit-not-base` under `parse_codes` names `min`, `h` and `d` as accepted alone, and
 `unit-suffix-mismatch` under `finding_codes` is the stage-1 code for a suffix the parameter
 cannot take, in the text and in the JSON. The JSON carries it there because the table's rows

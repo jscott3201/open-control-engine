@@ -24,7 +24,7 @@ use crate::model::{
 
 use super::codes::{MAX_COMMENT_BYTES, MAX_STATEMENTS_PER_KIND, MAX_STRING_BYTES, MAX_TOKEN_BYTES};
 use super::is_bidi_control;
-use super::units::{SuffixKind, check_suffix, scale};
+use super::units::agreement;
 
 /// Why a model has no text spelling. Never a panic.
 #[non_exhaustive]
@@ -184,63 +184,15 @@ fn bounds(b: &Boundary) -> Checked {
     Ok(())
 }
 
-/// A suffix, and the written number a scaled one keeps: the text reads back as the same value
-/// only when the suffix is well formed, follows a number, and a scaled suffix's written number
-/// scales to exactly the value (bit for bit) while a base-unit suffix keeps none.
+/// A suffix within the token bound, and its agreement with the value and the written number a
+/// scaled suffix keeps ([`super::units::agreement`], which stage 1 runs too).
 fn suffix(value: &ParamValue, suffix: Option<&String>, scaled_from: Option<&Literal>) -> Checked {
-    let Some(suffix) = suffix else {
-        return match scaled_from {
-            Some(_) => Err("a written number for a scaled suffix, but no suffix".to_owned()),
-            None => Ok(()),
-        };
-    };
-    if !matches!(
-        value,
-        ParamValue::Literal(Literal::Integer(_) | Literal::Real(_))
-    ) {
-        return Err(format!(
-            "the suffix `{suffix}` follows a value that is not a number"
-        ));
-    }
-    if suffix.len() > MAX_TOKEN_BYTES {
+    if let Some(suffix) = suffix
+        && suffix.len() > MAX_TOKEN_BYTES
+    {
         return Err(format!("the suffix is longer than {MAX_TOKEN_BYTES} bytes"));
     }
-    match check_suffix(suffix).map_err(|(_, detail)| detail)? {
-        SuffixKind::Base => match scaled_from {
-            Some(_) => Err(format!(
-                "the suffix `{suffix}` is a base unit, so it keeps no written number to scale"
-            )),
-            None => Ok(()),
-        },
-        SuffixKind::Scaled(row) => {
-            let Some(written) = scaled_from else {
-                return Err(format!(
-                    "the scaled suffix `{suffix}` has no written number to print"
-                ));
-            };
-            let scaled = scale(written, row.factor);
-            match (scaled, value) {
-                (Some(base), ParamValue::Literal(Literal::Real(v)))
-                    if base.to_bits() == v.to_bits() =>
-                {
-                    Ok(())
-                }
-                _ => Err(format!(
-                    "`{} {suffix}` does not scale to the value the model carries",
-                    written_spelling(written)
-                )),
-            }
-        }
-    }
-}
-
-/// How a written number reads in a refusal's detail.
-fn written_spelling(written: &Literal) -> String {
-    match written {
-        Literal::Integer(v) => v.to_string(),
-        Literal::Real(v) => format!("{v:?}"),
-        other => other.kind_name().to_owned(),
-    }
+    agreement(value, suffix.map(String::as_str), scaled_from)
 }
 
 fn comment_lines(lines: &[String]) -> Checked {

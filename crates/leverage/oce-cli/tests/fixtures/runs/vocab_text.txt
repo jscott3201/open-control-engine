@@ -12,7 +12,7 @@ tags:
 base units:
   m kg s A K mol cd rad sr Hz N Pa J W C V F Ohm S Wb T H lm lx Bq Gy Sv kat
 
-scale factors (time only; one symbol is exactly this many base units; alone as a unit suffix on a parameter declared in the base unit, it scales the number exactly):
+scale factors (time only; one symbol is exactly this many base units; alone as a unit suffix on a parameter declared in the base unit, it scales the number, rounding once):
   min  60 s
   h    3600 s
   d    86400 s
@@ -63,7 +63,7 @@ finding codes, stage 1 (exit 1):
   parameter-kind-mismatch      a value's kind does not fit the parameter
   parameter-out-of-range       a value breaks a catalog rule, widths included
   non-finite-parameter         a Real value is NaN or infinite
-  unit-suffix-mismatch         a unit suffix that is not the parameter's declared unit, or a scaled one where none is declared
+  unit-suffix-mismatch         a unit suffix that is not the parameter's declared unit, a scaled one where none is declared, or one that disagrees with its value
   unknown-enum-literal         an enumeration member is not a member of the parameter's type
   unknown-enum-type            a sequence parameter's type names no enumeration, or names a constant package
   unknown-parameter-reference  a reference names no sequence parameter

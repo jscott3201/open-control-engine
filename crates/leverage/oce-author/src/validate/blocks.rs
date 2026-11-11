@@ -16,7 +16,7 @@ use oce_api::{ClassPorts, ClassPortsError, Diagnostic, Value, ValueType, class_p
 
 use crate::counted::Counted;
 use crate::json::wire_string_len;
-use crate::model::{Block, Literal, ParamValue, ParameterType, Sequence};
+use crate::model::{Assignment, Block, Literal, ParamValue, ParameterType, Sequence};
 use crate::wire::MAX_WIRE_STRING_BYTES;
 
 use super::catalog::{ClassView, enum_type, lookup_class, lookup_parameter};
@@ -95,15 +95,7 @@ fn check_block(
     for (j, assignment) in block.assignments.iter().enumerate() {
         let name = assignment.name.as_str();
         let outcome = if seen.insert(Counted(name)) {
-            judge(
-                sequence,
-                declared,
-                &class,
-                block,
-                name,
-                &assignment.value,
-                assignment.suffix.as_deref(),
-            )
+            judge(sequence, declared, &class, block, assignment)
         } else {
             Err(refuse(
                 DUPLICATE_PARAMETER,
@@ -233,17 +225,18 @@ fn backticked(message: &str) -> Vec<&str> {
 
 /// Judge one assignment. `Ok(Some(value))` passes it to the class rules; `Ok(None)` withholds it
 /// silently because a finding elsewhere already covers it (a broken sequence parameter it
-/// references); `Err` is a finding on the assignment. `suffix` is the text form's unit suffix on
-/// the value, judged against the parameter's declared unit before the value is.
+/// references); `Err` is a finding on the assignment. The text form's unit suffix on the value,
+/// and the written number a scaled one keeps, are judged against the value and the parameter's
+/// declared unit before the value is.
 fn judge(
     sequence: &Sequence,
     declared: &Declared<'_>,
     class: &ClassView,
     block: &Block,
-    name: &str,
-    value: &ParamValue,
-    suffix: Option<&str>,
+    assignment: &Assignment,
 ) -> Result<Option<Value>, Refusal> {
+    let name = assignment.name.as_str();
+    let value = &assignment.value;
     // A reserved lowering identity takes no authored parameter at all (#440: `settable` is false
     // only there), so every assignment on one is unsettable, whether or not the name exists.
     if class.entry.reserved {
@@ -273,11 +266,13 @@ fn judge(
             ),
         ));
     }
-    if let Some(suffix) = suffix
-        && let Some(detail) = suffixes::mismatch(
+    if (assignment.suffix.is_some() || assignment.scaled_from.is_some())
+        && let Some(detail) = suffixes::problem(
             &format!("parameter `{name}` of `{}`", block.class_path),
             suffixes::declared_unit(&block.class_path, parameter),
-            suffix,
+            value,
+            assignment.suffix.as_deref(),
+            assignment.scaled_from.as_ref(),
         )
     {
         return Err(refuse(UNIT_SUFFIX_MISMATCH, detail));

@@ -7,16 +7,20 @@
 //! unit to its base (`h` to `s`), and the two must be spelled alike (`delayTime = 5 K` and
 //! `delayTime = 1 Hz` are refused; `1 h` and `3600 s` are accepted). On a parameter that declares no
 //! unit, and on a sequence parameter (which never declares one), a base-unit suffix stays an
-//! annotation, as in M2, and a scaled one is refused, because nothing says what it scales to. A
-//! suffix that is no unit expression at all, which only a model built in code can hold, is
-//! refused the same way.
+//! annotation, as in M2, and a scaled one is refused, because nothing says what it scales to.
+//!
+//! Three things only a model built in code can hold are refused the same way, so a model stage 1
+//! accepts always prints and its annotation matches what is emitted: a suffix that is no unit
+//! expression, a suffix after a value that is not a number, and a scaled suffix, written number
+//! and value that do not agree (`delayTime = 1 h` with the value edited to `1.0`).
 
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
 use oce_api::ClassParameter;
 
-use crate::text::{SuffixKind, check_suffix};
+use crate::model::{Literal, ParamValue};
+use crate::text::{SuffixKind, agreement, check_suffix};
 
 /// The unit `class_path`'s parameter `parameter` declares (`s`), or `""` when it declares none.
 /// An index over the embedded vocabulary, built once per process; an array template (`k_<i>`)
@@ -62,9 +66,27 @@ pub(super) fn mismatch(what: &str, declared: &str, suffix: &str) -> Option<Strin
             "{what} is declared in `{declared}`; the suffix `{suffix}` is a multiple of `{reduced}`"
         )),
         (declared, SuffixKind::Base) => Some(format!(
-            "{what} is declared in `{declared}`; the suffix `{suffix}` is not that unit"
+            "{what} is declared in `{declared}`; the suffix `{suffix}` is not spelled as that unit (a unit is matched by its spelling, so write `{declared}`)"
         )),
     }
+}
+
+/// Why the suffix of a value, or the written number a scaled one keeps, cannot stand, as a finding
+/// detail about `what`; `None` when it can. First the value, the suffix and the written number
+/// must agree ([`crate::text::agreement`], the printer's own rule): a model built in code whose
+/// annotation no longer matches its value is caught here rather than emitted. Then the suffix
+/// must fit `declared` ([`mismatch`]).
+pub(super) fn problem(
+    what: &str,
+    declared: &str,
+    value: &ParamValue,
+    suffix: Option<&str>,
+    scaled_from: Option<&Literal>,
+) -> Option<String> {
+    if let Err(why) = agreement(value, suffix, scaled_from) {
+        return Some(format!("{what}: {why}"));
+    }
+    mismatch(what, declared, suffix?)
 }
 
 #[cfg(test)]

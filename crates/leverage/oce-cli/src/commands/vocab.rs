@@ -152,7 +152,7 @@ fn render_text() -> String {
     // How the text form uses the table (issue #501).
     out.push_str(
         "scale factors (time only; one symbol is exactly this many base units; alone as a unit \
-         suffix on a parameter declared in the base unit, it scales the number exactly):\n",
+         suffix on a parameter declared in the base unit, it scales the number, rounding once):\n",
     );
     let width = SCALE_FACTORS
         .iter()

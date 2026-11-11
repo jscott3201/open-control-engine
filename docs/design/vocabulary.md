@@ -199,7 +199,9 @@ behaviour (annotation only). Everything else about units is informational in v1.
 scaled is the shortest round-trip spelling of the parsed number, which is what `fmt` prints; it
 differs from the digits typed only when they carry more precision than binary64 holds, and it
 means formatting never moves a value. An Integer is scaled by its exact product, so a literal past
-2^53 is rounded once like any other (`9007199254740993 min` is `540431955284459584` s). "Reduce to
+2^53 is rounded once like any other (`9007199254740993 min` is `540431955284459584` s), where a
+Real spelling of it parses to 2^53 first (`9007199254740993.0 min` is `540431955284459520` s) and
+the same Integer unscaled on a Real parameter is `parameter-out-of-range`. "Reduce to
 that unit" is spelling equality after a scaled symbol becomes its base (`1 Hz` on a parameter
 declared in `1/s` is refused). A sequence parameter declares no unit, so a scaled suffix on one is
 refused too. A scaled symbol is accepted only as the whole suffix; in a compound (`m3/h`) it is
