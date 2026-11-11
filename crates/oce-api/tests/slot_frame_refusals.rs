@@ -12,12 +12,12 @@
 //! a superseded or foreign incarnation), precedence between classes, and a hostile oversized slot
 //! vector (refused before any value is read, allocating nothing) close the matrix.
 
-#[path = "support/blob_corpus.rs"]
-mod blob_corpus;
-#[path = "support/dual_entry.rs"]
-mod dual_entry;
-#[path = "../../oce-graph/tests/support/frame_schedule.rs"]
-mod frame_schedule;
+// Shared helpers, declared once for this binary in its root `facade_allocation_census.rs`:
+// `support/blob_corpus.rs`, `support/dual_entry.rs`
+// and `../../oce-graph/tests/support/frame_schedule.rs`.
+use crate::blob_corpus;
+use crate::dual_entry;
+use crate::frame_schedule;
 
 use allocation_counter::measure;
 use blob_corpus::{FIXTURES, fixture_bytes};

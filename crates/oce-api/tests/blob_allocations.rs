@@ -7,8 +7,8 @@
 //! constructors allocate whatever they allocate on the host too; their share is measured by
 //! constructing each block again with its decoded parameters.
 
-#[path = "support/blob_corpus.rs"]
-mod blob_corpus;
+// Shared helper, declared once for this binary in its root `facade_allocation_census.rs`.
+use crate::blob_corpus;
 
 use std::hint::black_box;
 

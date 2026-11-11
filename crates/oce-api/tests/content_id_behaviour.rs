@@ -5,8 +5,8 @@
 //! block name, and the same refusals. Warnings compare as sets per frame: their order follows the
 //! schedule, which authored order may change.
 
-#[path = "support/content_id_corpus.rs"]
-mod corpus;
+// Shared helper, declared once for this binary in its root `facade.rs`.
+use crate::content_id_corpus as corpus;
 #[path = "../../oce-graph/tests/support/frame_schedule.rs"]
 mod frame_schedule;
 

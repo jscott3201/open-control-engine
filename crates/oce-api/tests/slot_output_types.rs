@@ -17,10 +17,10 @@
 //!   a read that allocates nothing. An Enum and a String boundary output, which no CXF document
 //!   can declare, are hand-built in the private `frame_slots_tests.rs`.
 
-#[path = "support/blob_corpus.rs"]
-mod blob_corpus;
-#[path = "../../oce-graph/tests/support/frame_schedule.rs"]
-mod frame_schedule;
+// Shared helpers, declared once for this binary in its root `facade_allocation_census.rs`:
+// `support/blob_corpus.rs` and `../../oce-graph/tests/support/frame_schedule.rs`.
+use crate::blob_corpus;
+use crate::frame_schedule;
 
 use std::hint::black_box;
 

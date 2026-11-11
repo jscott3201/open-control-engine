@@ -7,10 +7,10 @@
 //! state is equal word for word. "Identical outputs" is checked by ticking the payload-free and the
 //! payload-filled executables through the same frames and comparing every connector value.
 
-#[path = "support/blob_corpus.rs"]
-mod blob_corpus;
-#[path = "support/blob_image.rs"]
-mod blob_image;
+// Shared helpers, declared once for this binary in its root `facade.rs`:
+// `support/blob_corpus.rs` and `support/blob_image.rs`.
+use crate::blob_corpus;
+use crate::blob_image;
 
 use blob_corpus::{FIXTURES, golden};
 use blob_image::rechecksum;

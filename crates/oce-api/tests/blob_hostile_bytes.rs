@@ -2,10 +2,10 @@
 //! ordering and trailing-byte defect is a typed refusal, never a panic. Each mutation is
 //! re-checksummed so it reaches the check under test rather than the CRC.
 
-#[path = "support/blob_corpus.rs"]
-mod blob_corpus;
-#[path = "support/blob_image.rs"]
-mod blob_image;
+// Shared helpers, declared once for this binary in its root `facade.rs`:
+// `support/blob_corpus.rs` and `support/blob_image.rs`.
+use crate::blob_corpus;
+use crate::blob_image;
 
 use blob_corpus::{FIXTURES, golden};
 use blob_image::{Image, VType, Val, rechecksum, reseal};

@@ -1047,6 +1047,28 @@ and a gate that accepted any text would restore exactly the false assurance desc
   revision 24 records the evidence-delivery change in PC-041's limitation; PC-037 is unchanged.
   No crate source or golden changed.
 
+- **`oce-api`'s integration tests build as eight binaries instead of 103, and the determinism
+  subset's release-codegen build takes a sixth of the time** (GitHub #546, issue #504; the pilot of
+  the owner decision of 2026-11-09). Cargo built every file under `crates/oce-api/tests/` as its own
+  binary, and under the release profile (`lto = "thin"`, `codegen-units = 1`) each linked the
+  dependency graph again. `crates/oce-api/Cargo.toml` now sets `autotests = false` and lists the
+  targets: `facade` holds 86 files as modules and `facade_allocation_census` the 11 that call
+  `allocation_counter::measure`, because naming that crate links its counting global allocator
+  into a binary and so no test changes the allocator it runs under. `blob_goldens`,
+  `readme_quickstart`, `conformance`, `content_id_pin`, `export_content_oracle` and
+  `frame_observations` stay their own binaries: a gate step, a workflow or a documented command
+  selects each by name. Module files keep their names; a helper several modules of one binary
+  share is declared once in its root, and the two lines that declared it in each file became a
+  comment and a `use`, so no line moved and the product contract's line anchors still hold. A test
+  in a merged file is now `oce-api::facade <file>::<test>`; select one file with
+  `-E 'test(/^<file>::/)'` where `--test <file>` was used. `tests/facade.rs` checks that every
+  file under `tests/` is compiled into exactly one binary, with controls for a file in no binary,
+  one in two and discovery left on. Measured on one 10-core arm64 Mac from a clean `target/`,
+  `cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --no-run`: release 406 s to
+  61 s wall (2,452 s to 391 s of CPU) and `target/` 391 MiB to 137 MiB; debug 11.8 s to 10.5 s and
+  2.0 GiB to 819 MiB. The 718 tests listed before are all listed after under the same module paths,
+  plus the two layout tests. No engine source, fixture or golden changed.
+
 ### Documentation
 
 - **The facade migration page is retired, with the other prose the format reset made false**
