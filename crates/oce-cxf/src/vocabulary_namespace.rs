@@ -18,6 +18,11 @@
 //! - **A typing token in [`RETIRED_NAMESPACE`]** (a `@type` value or an `isOfDataType` reference
 //!   written as a full IRI) is refused. Types are otherwise read by their trailing term in any
 //!   namespace, which is unchanged.
+//! - **A `@type` naming the S231 class `ExtensionBlock` in the `https:` spelling of either
+//!   namespace** is refused (GitHub #582). The resolver reads that class only in
+//!   [`S231_CONTEXT_IRI`], the way a modeled key is read, so it would read this spelling as an
+//!   ordinary class and lower an extension block that lists children as a composite. A modeled key
+//!   in the same namespaces is refused for the same reason ([`super::property_keys`]).
 //!
 //! The check reads the effective prefix table: in a list of context maps a later binding replaces
 //! an earlier one (JSON-LD context processing order), so only the binding in force is judged.
@@ -30,6 +35,7 @@ use oce_diag::{DiagCode, Diagnostic};
 
 use super::PrefixTable;
 use crate::export::S231_CONTEXT_IRI;
+use crate::resolve::extension_blocks::EXTENSION_BLOCK_TERM;
 
 /// The namespace IRI this engine bound through release 0.4.0. Kept only to refuse it.
 pub(super) const RETIRED_NAMESPACE: &str = "http://data.ashrae.org/S231P#";
@@ -71,18 +77,38 @@ pub(super) fn check_bindings(table: &PrefixTable, diags: &mut Vec<Diagnostic>) {
     }
 }
 
-/// Refuse a typing token (`@type` value or `isOfDataType` reference) in [`RETIRED_NAMESPACE`].
-/// A type is recognised by its trailing term in any namespace, so without this a full IRI in the
-/// retired namespace would be read through it. `owner` is the node's expanded `@id`.
+/// Refuse a typing token (`@type` value or `isOfDataType` reference) in [`RETIRED_NAMESPACE`],
+/// and a `@type` naming the class `ExtensionBlock` in [`HTTPS_NEAR_MISS`] or
+/// [`HTTPS_RETIRED_NEAR_MISS`]. A type is recognised by its trailing term in any namespace, so
+/// without the first a full IRI in the retired namespace would be read through it; the
+/// extension-block class is read only in [`S231_CONTEXT_IRI`], so without the second the near
+/// miss would be read as an ordinary class. `owner` is the node's expanded `@id`.
 pub(super) fn check_typing(token: &str, slot: &str, owner: &str, diags: &mut Vec<Diagnostic>) {
+    let subject = if owner.is_empty() { token } else { owner };
     if token.starts_with(RETIRED_NAMESPACE) {
-        let subject = if owner.is_empty() { token } else { owner };
         diags.push(
             Diagnostic::error(
                 DiagCode::VocabularyNamespaceMismatch,
                 format!(
                     "{slot} `{token}` on node `{owner}` is in `{RETIRED_NAMESPACE}`; the S231 \
                      vocabulary is read only in `{S231_CONTEXT_IRI}`"
+                ),
+            )
+            .with_subject(subject.to_owned()),
+        );
+        return;
+    }
+    let near_miss = [HTTPS_NEAR_MISS, HTTPS_RETIRED_NEAR_MISS]
+        .into_iter()
+        .find(|ns| token.strip_prefix(ns) == Some(EXTENSION_BLOCK_TERM));
+    if let Some(namespace) = near_miss.filter(|_| slot == "@type") {
+        diags.push(
+            Diagnostic::error(
+                DiagCode::VocabularyNamespaceMismatch,
+                format!(
+                    "{slot} `{token}` on node `{owner}` names the class `{EXTENSION_BLOCK_TERM}` \
+                     in `{namespace}`; the S231 vocabulary is read only in `{S231_CONTEXT_IRI}`; \
+                     write it as `S231:{EXTENSION_BLOCK_TERM}`"
                 ),
             )
             .with_subject(subject.to_owned()),

@@ -23,6 +23,10 @@ const DISPLAY_DIV: &str =
 const DOUBLE_DRIVEN: &str =
     include_str!("../../oce-cxf/tests/fixtures/invalid/double_driven.jsonld");
 const NON_SUBSET: &str = include_str!("../../oce-cxf/tests/fixtures/invalid/non_subset.jsonld");
+const EXTENSION_BLOCK_WITH_FMU_PATH: &str =
+    include_str!("../../oce-cxf/tests/fixtures/invalid/extension_block_with_fmu_path.jsonld");
+const EXTENSION_BLOCK_WITHOUT_FMU_PATH: &str =
+    include_str!("../../oce-cxf/tests/fixtures/invalid/extension_block_without_fmu_path.jsonld");
 const BOUND_MISMATCH: &str =
     include_str!("../../oce-cxf/tests/fixtures/invalid/bound_mismatch.jsonld");
 const BOUNDARY_OUTPUT_UNIT_MISMATCH: &str =
@@ -122,6 +126,30 @@ fn double_driven_input_is_rejected_end_to_end() {
 fn non_subset_class_is_rejected_end_to_end() {
     // An unregistered CDL class ⇒ ClassNotFound, never a panic.
     assert_rejected_with(NON_SUBSET, DiagCode::ClassNotFound);
+}
+
+#[test]
+fn extension_block_is_rejected_end_to_end_with_its_own_code() {
+    // An extension block (OBC §7.13) ⇒ one ExtensionBlockUnsupported error naming it, with or
+    // without an FMU path; never ClassNotFound, never a panic (issue #537).
+    for src in [
+        EXTENSION_BLOCK_WITH_FMU_PATH,
+        EXTENSION_BLOCK_WITHOUT_FMU_PATH,
+    ] {
+        let e = load(src).expect_err("an extension block cannot load");
+        let signature: Vec<(DiagCode, Option<String>)> = error_signature(&e)
+            .into_iter()
+            .map(|(code, subject, _)| (code, subject))
+            .collect();
+        assert_eq!(
+            signature,
+            vec![(
+                DiagCode::ExtensionBlockUnsupported,
+                Some("http://example.org#Fdd.ext".to_owned())
+            )]
+        );
+        assert_eq!(e.all_diagnostics().count(), 1, "{e:?}");
+    }
 }
 
 #[test]
