@@ -63,6 +63,40 @@ and a gate that accepted any text would restore exactly the false assurance desc
   manifest moves: the tools' rustix bump and the evidence regeneration it needs stay issue #604
   (owner rulings of 2026-11-12: keep the `v0.5.0` tag and fix forward; prefetch now, bump later).
 
+- **The no-secret scan's private-key pattern matches again, for an RSA, EC or OpenSSH
+  private-key header, and a `git grep` that fails fails the scan** (GitHub #597, issue #524).
+  `.github/scripts/check-no-secrets.sh` passed its private-key pattern to `git grep` without
+  `-e`; the pattern begins with `-----`, so git read it as an option, printed its usage and
+  exited 129, the scan's `if` took that for "no match", and `>/dev/null 2>&1` hid the message.
+  The pattern matched nothing, in CI and in the pre-commit hook, and a run outside any repository
+  passed too. Every pattern now follows `-e`; only exit 1 counts as no match, and any status
+  above it fails the scan with exit 2, a line naming the pattern and git's status, and git's own
+  error left on stderr. `grep.fallbackToNoIndex` is forced off, so a config file, `git -c` or
+  `GIT_CONFIG_COUNT` that turns it on cannot make a run outside a repository search the
+  directory and pass. The patterns themselves are unchanged, and a corrected scan of the tracked
+  tree finds nothing. What the private-key pattern covers is unchanged too: a PKCS#8
+  (`BEGIN PRIVATE KEY`), DSA or encrypted header still passes, and its `PGP` alternative cannot
+  match an armored OpenPGP key, whose header ends in `PRIVATE KEY BLOCK`; issue #607 tracks that.
+  The new `test-check-no-secrets.sh` runs in scratch repositories. A clean tree, holding copies
+  of the scan and the fixture and 12 near misses (one character short of each quantifier of every
+  pattern), passes. Each of 23 planted values (every alternative; every pattern at the shortest
+  length it accepts; both ends of every range and every punctuation member of each class, where
+  the pattern reads them; text after each value) is reported as the one match under its own
+  label, naming the planted file, and passes once removed. The planted and near-miss labels must
+  each equal the scan's. A run outside a repository, a git that exits 129 on the private-key
+  pattern (a planted AWS key is still reported) and a run outside a repository with the fallback
+  on in each of the three forms all fail. 37 copies of the scan with a defect put back must each
+  fail a named check: `-e` removed, git's error sent to `/dev/null`, an error read as no match,
+  the scan as shipped, the fallback no longer forced off, and every pattern with a class
+  narrowed, an end anchor added, or a quantifier tightened or loosened. The fixture isolates
+  itself from the caller's repository, locale and git config, in files and in the environment
+  (`GIT_CONFIG_COUNT`, `GIT_CONFIG_PARAMETERS`), and checks that isolation against injected
+  config. Its values are assembled at run time from fragments, so it holds no match. It runs in
+  the `gate behavior fixtures` job of `pr-gate.yml` and `release-gate.yml` and in
+  `.agents/gate.sh`, and `check-workflow-gates.sh` requires it in both jobs as a whole line, with
+  eight hostile fixtures (deleted, commented out, moved to the no-secret job, given an argument,
+  masked, or run from another directory).
+
 ## 0.5.0
 
 Prepared 2026-11-11 on `development`; the release date is the date the `v0.5.0` tag is cut from
@@ -1545,40 +1579,6 @@ publishable and eight private. The fixture and Tier-A provenance goldens
   `tools/openmodelica-reliefs-reference/Cargo.lock` also pin rustix 1.1.4, but no workflow
   advisory-checks those workspaces, and each lockfile's SHA-256 is bound into recorded OpenModelica
   evidence that only the manual native-arm64 workflows can regenerate (GitHub issue #604).
-
-- **The no-secret scan's private-key pattern matches again, for an RSA, EC or OpenSSH
-  private-key header, and a `git grep` that fails fails the scan** (GitHub #597, issue #524).
-  `.github/scripts/check-no-secrets.sh` passed its private-key pattern to `git grep` without
-  `-e`; the pattern begins with `-----`, so git read it as an option, printed its usage and
-  exited 129, the scan's `if` took that for "no match", and `>/dev/null 2>&1` hid the message.
-  The pattern matched nothing, in CI and in the pre-commit hook, and a run outside any repository
-  passed too. Every pattern now follows `-e`; only exit 1 counts as no match, and any status
-  above it fails the scan with exit 2, a line naming the pattern and git's status, and git's own
-  error left on stderr. `grep.fallbackToNoIndex` is forced off, so a config file, `git -c` or
-  `GIT_CONFIG_COUNT` that turns it on cannot make a run outside a repository search the
-  directory and pass. The patterns themselves are unchanged, and a corrected scan of the tracked
-  tree finds nothing. What the private-key pattern covers is unchanged too: a PKCS#8
-  (`BEGIN PRIVATE KEY`), DSA or encrypted header still passes, and its `PGP` alternative cannot
-  match an armored OpenPGP key, whose header ends in `PRIVATE KEY BLOCK`; issue #607 tracks that.
-  The new `test-check-no-secrets.sh` runs in scratch repositories. A clean tree, holding copies
-  of the scan and the fixture and 12 near misses (one character short of each quantifier of every
-  pattern), passes. Each of 23 planted values (every alternative; every pattern at the shortest
-  length it accepts; both ends of every range and every punctuation member of each class, where
-  the pattern reads them; text after each value) is reported as the one match under its own
-  label, naming the planted file, and passes once removed. The planted and near-miss labels must
-  each equal the scan's. A run outside a repository, a git that exits 129 on the private-key
-  pattern (a planted AWS key is still reported) and a run outside a repository with the fallback
-  on in each of the three forms all fail. 37 copies of the scan with a defect put back must each
-  fail a named check: `-e` removed, git's error sent to `/dev/null`, an error read as no match,
-  the scan as shipped, the fallback no longer forced off, and every pattern with a class
-  narrowed, an end anchor added, or a quantifier tightened or loosened. The fixture isolates
-  itself from the caller's repository, locale and git config, in files and in the environment
-  (`GIT_CONFIG_COUNT`, `GIT_CONFIG_PARAMETERS`), and checks that isolation against injected
-  config. Its values are assembled at run time from fragments, so it holds no match. It runs in
-  the `gate behavior fixtures` job of `pr-gate.yml` and `release-gate.yml` and in
-  `.agents/gate.sh`, and `check-workflow-gates.sh` requires it in both jobs as a whole line, with
-  eight hostile fixtures (deleted, commented out, moved to the no-secret job, given an argument,
-  masked, or run from another directory).
 
 - **The workflow checker closes five gaps, and the pin-advance row states its real reason**
   (GitHub #564, issue #555; follow-ups from the reviews of GitHub #547 and #557, and an owner
