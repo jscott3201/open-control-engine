@@ -184,7 +184,7 @@ pub fn run_vectors(
             schema: RECEIPT_SCHEMA.to_owned(),
             kind: ReceiptKind::Vectors,
             content_id: bound.content_id,
-            engine_version: bound.engine_version.to_owned(),
+            engine_version: bound.engine_version,
             spec_id: set.spec_id(),
             comparison: Comparison {
                 mode: ComparisonMode::Exact,

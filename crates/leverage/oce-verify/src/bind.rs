@@ -41,7 +41,7 @@
 use std::collections::BTreeMap;
 
 use oce_api::{
-    CompatibilityDescriptor, Engine, InputDefinition, LoadReport, OcError, Value, ValueType,
+    ENGINE_VERSION, Engine, EngineVersion, InputDefinition, LoadReport, OcError, Value, ValueType,
 };
 use oce_replay::PathIndex;
 
@@ -60,8 +60,9 @@ use crate::verify_error::{VerifyError, VerifyErrorKind as Kind};
 pub(crate) struct Bound<'a> {
     /// The subject's content id as loaded, before any parameter edit.
     pub(crate) content_id: String,
-    /// The facade's Cargo version.
-    pub(crate) engine_version: &'static str,
+    /// The engine version every blob and snapshot of this build records, as [`engine_version`]
+    /// spells it.
+    pub(crate) engine_version: String,
     /// Load-warning codes in load order, at most [`MAX_LOAD_WARNINGS`].
     pub(crate) load_warnings: Vec<String>,
     /// The number of load warnings before the cap.
@@ -224,7 +225,7 @@ pub(crate) fn bind<'a>(
     )?;
     Ok(Bound {
         content_id,
-        engine_version: CompatibilityDescriptor::current(None).oce_api_version(),
+        engine_version: engine_version(ENGINE_VERSION),
         load_warnings: report
             .warnings
             .iter()
@@ -238,6 +239,19 @@ pub(crate) fn bind<'a>(
         scenarios,
         mutants,
     })
+}
+
+/// The receipt's spelling of an engine version, `major.minor.patch` in decimal with no padding,
+/// prefix or suffix. [`bind`] passes [`ENGINE_VERSION`], the version this build stamps in every
+/// blob and snapshot header (decision 33, amended 2026-11-12), so the Cargo version's pre-release
+/// suffix is not part of the receipt's.
+fn engine_version(version: EngineVersion) -> String {
+    let EngineVersion {
+        major,
+        minor,
+        patch,
+    } = version;
+    format!("{major}.{minor}.{patch}")
 }
 
 /// Try `edits` on a freshly loaded engine by the passes the run applies them with, so a refusal
