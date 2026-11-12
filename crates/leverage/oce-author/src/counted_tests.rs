@@ -27,8 +27,8 @@ use crate::model::{
 };
 use crate::text::validate_text_author_side;
 use crate::validate::{
-    CLASS_NOT_FOUND, DUPLICATE_NAME, Finding, UNIT_SUFFIX_MISMATCH, UNKNOWN_PORT,
-    validate_author_side,
+    CLASS_NOT_FOUND, DUPLICATE_NAME, Finding, UNIT_SUFFIX_MISMATCH, UNKNOWN_PARAMETER_REFERENCE,
+    UNKNOWN_PORT, validate_author_side,
 };
 
 thread_local! {
@@ -173,6 +173,20 @@ fn blocks_text(n: usize, one_name: bool) -> String {
             text.push_str(&format!("block b{i} = CDL.Reals.Nope\n"));
         }
     }
+    text
+}
+
+/// A text document of one `MultiSum` block with `elements` gains, each an element assignment
+/// (`k_1` to `k_<elements>`) that references the undeclared `q`, one per line after `nin`.
+fn array_text(elements: usize) -> String {
+    let mut text = format!(
+        "sequence s\nderived_from none\nblock m = CDL.Reals.MultiSum(\n  nin = {elements},\n"
+    );
+    for i in 1..=elements {
+        let separator = if i == elements { "" } else { "," };
+        text.push_str(&format!("  k_{i} = q{separator}\n"));
+    }
+    text.push_str(")\n");
     text
 }
 
@@ -329,6 +343,15 @@ fn placing_findings_on_text_compares_subjects_near_linearly_in_the_document() {
             assert_eq!(usize::try_from(line).expect("fits"), k + 4);
         }
         assert!(count <= bound(n), "{n} repeats: {count} comparisons");
+        // One block of `nin` and `n - 1` array elements, the most assignments a block holds,
+        // each element a finding: every element also looks its array's base up once in the
+        // index, to hold it at the first (GitHub #617) [480,519 and 10,559,655; without the base,
+        // 431,370 and 9,511,084].
+        let text = array_text(n - 1);
+        let (count, findings) = comparisons(|| validate_text_author_side(&text).expect("parses"));
+        assert_findings(&findings, n - 1, UNKNOWN_PARAMETER_REFERENCE);
+        assert!(findings.iter().all(|f| f.span.is_some()));
+        assert!(count <= bound(n), "{n} array elements: {count} comparisons");
     }
 }
 
