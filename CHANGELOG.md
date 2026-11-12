@@ -77,6 +77,27 @@ and a gate that accepted any text would restore exactly the false assurance desc
   No tracked or library document carries one: a probe over the 25,873 references in 257 tracked
   documents and the 10,598 in the library's 140 found none, and `fixture_corpus_import.txt` is
   byte-identical.
+- **A typing token that names an S231 term only once its whitespace is trimmed is refused**
+  (GitHub #619, issue #587). No whitespace-bearing token expands, so a `@type` such as
+  `"S231:ExtensionBlock "` was kept as written and read as no S231 type. A composite never reads
+  its `@type`, so a root or nested composite typed that way loaded and ran its children; a
+  connector typed `"S231:RealOutput "` loaded on its `isOfDataType`, and a parameter typed
+  `"S231:Parameter "` loaded. A `@type` value or `isOfDataType` reference that names a term once
+  its surrounding whitespace (`str::trim`) is removed is now refused as `malformed-document` in the
+  expansion pass, subject the node, on every node: as a whitespace near-miss property key already
+  is. The term is read as the resolver reads an S231 type: a literal `S231:` prefix, else the
+  token's expansion, which may come through another prefix or a declared term. It is read in the
+  S231 namespace or one of the foreign namespaces: the retired one and both `https:` spellings.
+  The message names the term and the namespace and says to write it as `S231:<term>`. Inner
+  whitespace (`"S231: Block"`) and tokens that name no such term once trimmed are untouched. Two
+  inputs that were already refused now carry this code: an `isOfDataType` near miss, which was
+  `unresolved-reference`, and a retired-namespace type with only trailing whitespace, which was
+  `vocabulary-namespace-mismatch`. A leaf typed that way, which no class matched
+  (`class-not-found`), is refused by this rule too. **Breaking, in place:** such a document loaded
+  before. No tracked or library document carries whitespace around any typing token: a probe over
+  the 10,979 `@type` values and 6,988 `isOfDataType` references in 257 tracked documents, and the
+  4,657 and 3,372 in the library's 140, found none, and `fixture_corpus_import.txt` is
+  byte-identical.
 
 ### Leverage
 
