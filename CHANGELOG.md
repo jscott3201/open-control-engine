@@ -144,6 +144,27 @@ and a gate that accepted any text would restore exactly the false assurance desc
   eight hostile fixtures (deleted, commented out, moved to the no-secret job, given an argument,
   masked, or run from another directory).
 
+- **The no-secret scan catches every PEM private-key header and the armored OpenPGP private
+  key** (GitHub #PRNUM, issue #607). The private-key pattern is now
+  `-----BEGIN ([A-Z0-9]+ )*PRIVATE KEY( BLOCK)?-----`. Before, it was
+  `(RSA|EC|OPENSSH|PGP) PRIVATE KEY`. That passed PKCS#8's `PRIVATE KEY` (OpenSSL's default
+  output), `ENCRYPTED PRIVATE KEY` and `DSA PRIVATE KEY`, and its `PGP` alternative could not
+  match a real armored key, whose header ends in `PRIVATE KEY BLOCK`. Public-key and certificate
+  headers still pass, and no tracked file matches the wider pattern. `test-check-no-secrets.sh`
+  plants 80 values and keeps 26 near misses:
+  - **Planted values.** Between them, each pattern's values hold every member of each character
+    class where the pattern reads it, not only the ends of each range, so a hole anywhere in a
+    class misses one. Each value is as short as its pattern accepts and has text after it. Every
+    pattern also has one value at the start of its line and one after a word character.
+  - **Near misses.** Every pattern in the wrong case, one character short of every quantifier,
+    and the public-key, OpenPGP public-key and certificate headers.
+  - **Batching.** A pattern's values are planted together and must come back as one FAIL block,
+    each in its own file.
+  - **Defect copies.** There are now 72, up from 37. The new ones are `-i`, a hole in the middle
+    of a class, a start anchor, a required non-word character before the pattern, the `BLOCK`
+    form dropped, and the private-key label words made required or limited to one. Each must
+    fail a named check.
+
 ## 0.5.0
 
 Prepared 2026-11-11 on `development`; the release date is the date the `v0.5.0` tag is cut from
