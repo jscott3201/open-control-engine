@@ -381,7 +381,7 @@ impl ImportErrorKind { pub fn code(&self) -> &'static str }   // stable kebab-ca
 | `UnknownKey { key }` | `unknown-key` | a property, top-level key or `@context` term the form does not define |
 | `NamespaceMismatch { term, found, expected }` | `namespace-mismatch` | a CXF `@context` that binds `S231` to any IRI but `http://data.ashrae.org/S231#`, or binds any term to the namespace written through release 0.4.0 (GitHub #527) |
 | `MissingKey { key }` | `missing-key` | a required v0 key, a value-less parameter |
-| `WrongShape { key }` | `wrong-shape` | a relation that is not references, a label that is not a string, a v0 value that is null, an object or an array |
+| `WrongShape { key }` | `wrong-shape` | a relation that is not references (each exactly `{"@id": <string>}`, so a reference carrying another key is one), a label that is not a string, a v0 value that is null, an object or an array |
 | `NoRoot` | `no-root` | no node contains blocks |
 | `DuplicateId` | `duplicate-id` | a node `@id` declared twice |
 | `Unresolved { reference }` | `unresolved-reference` | a reference to no node, or to a node outside the root's IRI |
