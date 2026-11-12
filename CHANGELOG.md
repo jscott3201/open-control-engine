@@ -105,6 +105,33 @@ and a gate that accepted any text would restore exactly the false assurance desc
   - **Nothing pinned moves.** No golden, provenance record, class signature, catalog, blob or
     content id changes, and no block computes anything different. `MatrixGain`'s `K` has the
     same per-cell shape and is #643.
+- **Building a `MatrixGain` reads its gain matrix in one pass** (GitHub #650, issue #643).
+  - **What was wrong.** The `CDL.Reals.MatrixGain` constructor built each cell's name
+    `K_<row>_<col>` and scanned the whole parameter table for it, for every cell of `nout` ×
+    `nin`. That is one allocation per cell, and on the order of the cell count squared in
+    comparisons. A 1,041-byte CXF document with no ports declared took 2.7 s in release to be
+    refused; its `K` broadcasts one value over 256 × 256 cells. At 128 × 128 it took 116 ms.
+    1024 × 1024, which the input limits allow, extrapolates to about ten minutes.
+  - **The fix.** The constructor reads the table once. For each cell it keeps the first binding
+    of the canonical name, which is the binding the per-cell lookup returned. Defaults (the
+    identity's 1 or 0), Integer-to-Real promotion and the shape guards are unchanged. The
+    256 × 256 document now takes 27 ms, and 4 ms at 128 × 128. At 1024 × 1024 the load takes
+    0.73 s, 14 ms of it in the constructor.
+  - **Pinned.**
+    - A differential test holds the matrix reader to the per-cell lookup, binding for binding
+      by reference, over 21,953 tables of hostile spellings at 11 shapes.
+    - A second builds 1,184 blocks from hostile shape and cell tables. It compares their
+      outputs bit for bit, over four input vectors, with a reference written from the per-cell
+      reading.
+    - An allocation pin holds building the block to at most 64 allocations at 64 × 64 and
+      256 × 256 cells (measured: 11 and 13). The per-cell reading made 7,138 and 129,392 and
+      fails the pin.
+  - **Nothing pinned moves.** No golden, provenance record, class signature, catalog, blob or
+    content id changes, and no block computes anything different.
+  - **Checked and left alone.** The `TimeTable` readers and the matrix and offset rules already
+    make one pass. Two follow-ups are open: sharing one element reader between the
+    constructors and the load gate (#648), and a `TimeTable` table of three bindings drawing a
+    diagnostic for each missing cell, up to 2^20 (#649).
 
 ### CXF import and export
 

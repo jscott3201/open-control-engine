@@ -91,6 +91,8 @@ pub(crate) mod manifest;
 #[cfg(test)]
 mod manifest_tests;
 #[cfg(test)]
+mod matrix_elements_tests;
+#[cfg(test)]
 mod vector_elements_tests;
 
 /// Look up an elementary-block constructor by canonical class path. Unknown paths return `None`
@@ -282,6 +284,50 @@ pub(crate) fn vector_elements<'a>(
         }
     }
     elements
+}
+
+/// The bindings of a flattened matrix parameter's cells `base_<row>_<col>`, rows `1..=rows` and
+/// columns `1..=cols`, read in one pass over `params` (GitHub #643): entry
+/// `(row - 1) * cols + (col - 1)`, row-major, is the first binding of the exact name
+/// `base_<row>_<col>`, the one `find(params, &format!("{base}_{row}_{col}"))` returns, or
+/// `None`. Each index is read as [`vector_elements`] reads one (decimal, no sign, no leading
+/// zero, from 1), a name with any other number of index fields is no cell, and a cell outside
+/// the shape is not read, exactly as the per-cell lookups did. They built a name and scanned the
+/// whole table for every cell, so a table of `rows × cols` cells cost on the order of its square
+/// in comparisons and one allocation per cell; this pass is one allocation of `rows × cols`
+/// slots and one comparison of each name's prefix. The caller bounds `rows × cols` (`MatrixGain`
+/// holds it to [`crate::MAX_RESOLVED_PORT_WIDTH`]); a product that overflows `usize` reads no
+/// cell and returns an empty table. Never panics.
+pub(crate) fn matrix_elements<'a>(
+    params: &'a ParamTable,
+    base: &str,
+    rows: usize,
+    cols: usize,
+) -> Vec<Option<&'a Value>> {
+    let Some(count) = rows.checked_mul(cols) else {
+        return Vec::new();
+    };
+    let mut cells = vec![None; count];
+    for (name, value) in &params.values {
+        let Some((row, col)) = name
+            .strip_prefix(base)
+            .and_then(|rest| rest.strip_prefix('_'))
+            .and_then(|rest| rest.split_once('_'))
+            .and_then(|(row, col)| Some((element_index(row)?, element_index(col)?)))
+        else {
+            continue;
+        };
+        if row > rows || col > cols {
+            continue;
+        }
+        // `1 <= row <= rows` and `1 <= col <= cols`, so the slot is below `rows * cols`.
+        if let Some(slot) = cells.get_mut((row - 1) * cols + (col - 1))
+            && slot.is_none()
+        {
+            *slot = Some(value);
+        }
+    }
+    cells
 }
 
 /// The index an element suffix spells, if it is the one decimal spelling of an index from 1:
