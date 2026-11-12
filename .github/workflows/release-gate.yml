@@ -147,6 +147,11 @@ jobs:
           tool: nextest@0.9.143
       - name: Clear the cached nextest report
         run: rm -f target/nextest/ci/junit.xml
+      # oce-cxf's OpenModelica evidence checks build tool workspaces with `cargo --offline`; the
+      # rust-cache entry is keyed on the root lockfile and pruned to its crates, so it need not
+      # hold theirs (issue #610). check-workflow-gates.sh requires this step before the suite.
+      - name: Prefetch the tool workspaces the tests build offline
+        run: bash scripts/ci/prefetch-offline-tools.sh
       # Unit + integration tests. `--no-tests=fail` makes the hard-fail-on-empty intent
       # explicit (nextest's default is `auto`, which only *happens* to resolve to fail for a
       # whole-workspace run — pinning it keeps the gate correct if the invocation ever narrows).

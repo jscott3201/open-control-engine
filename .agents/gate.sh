@@ -435,6 +435,15 @@ if release_codegen; then
       --cargo-profile release --no-tests=fail
 fi
 
+# ── Offline tool workspaces ──────────────────────────────────────────────────
+# oce-cxf's OpenModelica evidence checks (the structural-oracle binary below, and `full`'s
+# workspace suite) build tool workspaces under tools/ with `cargo --offline`. Their crates are in
+# lockfiles of their own, so a cargo home that has only built the root workspace lacks them, and
+# the tests then fail (issue #610). pr-gate.yml, release-gate.yml and release.yml run the same
+# script before the same tests; check-workflow-gates.sh requires this line, whole, before the
+# first oce-cxf or workspace test step of this script.
+step 'prefetch the offline tool workspaces' bash scripts/ci/prefetch-offline-tools.sh
+
 # ── Fixture input hygiene ────────────────────────────────────────────────────
 # NOT engine coverage — it exercises no shipping code path. It checks 46 G36 catalog fixtures and
 # one resolver-contract document for block ports listed in upstream CDL declaration order.
