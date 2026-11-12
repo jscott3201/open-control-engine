@@ -426,6 +426,43 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Verification
 
+- **Each run of the OpenModelica Line or Reliefs tool in the `oce-cxf` tests starts an executable
+  of its own, so those tests no longer fail now and then with `could not execute process …
+  (never executed)`** (GitHub #645, issues #642 and #640).
+  The `fixture_structural_oracle` tests of the Line and Reliefs evidence run their tool with
+  `cargo run`, about 40 times per run of the binary. Some call it directly; the rest go through
+  the tool's `assemble.sh`, `candidate_assembly_test.sh` and `verify_evidence.py`. All of them used
+  the tool's one `target/`. Every `cargo run` puts the executable it is about to start at
+  `target/debug/<bin>` again, then releases its build lock and starts it. On macOS that means
+  deleting the file and cloning it afresh from `deps/` on every run, even when nothing is rebuilt.
+  So one test's run could delete the executable while another's was starting it. Linux CI never
+  showed it: there a fresh build finds its hard link already in place and leaves it alone.
+  - **The evidence:** on macOS arm64, looped runs of `development` failed 14 times in 412:
+    - 7 of 312 under the machine's own load, under nextest and `cargo test`;
+    - 7 of 100 under added CPU load;
+    - on both tools and in 10 different tests. Each of the 13 failures whose output was kept
+      shows that signature.
+
+    A probe ran 300 `cargo build`s that compiled nothing while it started the executable in a
+    loop: 17 of 2,108 starts failed with `ENOENT`, and the file's inode changed on every build.
+  - **The fix:** each such run claims a `ToolArtifactDir`
+    (`crates/oce-cxf/tests/open_modelica_tool_artifacts/`), which sets two variables:
+    - `CARGO_TARGET_DIR`: a directory of the run's own, which holds the only executable it starts;
+    - `CARGO_BUILD_BUILD_DIR`: the tool's `target/`, so the tool is still compiled once, under
+      Cargo's lock.
+
+    The scripts inherit both variables and keep their bytes, which the recorded evidence pins.
+  - **After it:** the same loops failed 0 times in 900: 0 of 700 under the machine's own load and
+    0 of 200 under the same added load.
+  - **Its control:** `tool_runs_start_a_private_executable_and_leave_the_shared_one_in_place` runs
+    each tool twice through it. It requires that Cargo starts the run's own executable, and that the
+    one in the tool's `target/debug/` is still the same file afterwards. With the two variables
+    removed, the first assertion fails; on macOS the second fails too.
+  - **Its cost:** none measurable. Run back to back, the `oce-cxf` suite took 8.0–8.1 s against
+    8.6–9.3 s before, and the structural-oracle binary 2.6–2.9 s against 2.9–3.0 s.
+
+  `docs/ci-and-the-gate.md` and `.agents/project-facts.md` say which tests need it.
+
 - **The workflow-gate fixture suite runs its cases concurrently, so `gate behavior fixtures` is no
   longer the per-PR gate's longest job** (GitHub #630, issue #627).
   `test-workflow-gates.sh` ran its 348 cases one after another: its step took 323–335 s of a

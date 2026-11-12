@@ -1,6 +1,7 @@
 //! Process-level counterexamples for the strict assembly canonicalization boundary.
 
 use super::verifier_adversarial_tests::{ClaimedTempDir, copy_tree};
+use crate::open_modelica_tool_artifacts::{LINE_TOOL, ToolArtifactDir};
 use std::process::Stdio;
 use std::time::{Duration, Instant};
 
@@ -13,7 +14,9 @@ fn assert_strict_boundary_rejects(label: &str, mutate: impl FnOnce(&mut Vec<u8>)
     mutate(&mut bytes);
     std::fs::write(raw, bytes).unwrap();
     let root = super::repository_root();
-    let output = std::process::Command::new("cargo")
+    let artifacts = ToolArtifactDir::claim(LINE_TOOL);
+    let output = artifacts
+        .isolate(&mut std::process::Command::new("cargo"))
         .args(["run", "--manifest-path"])
         .arg(root.join("tools/openmodelica-line-reference/Cargo.toml"))
         .args([
@@ -91,7 +94,9 @@ fn fifo_input_fails_before_copy_without_blocking() {
     );
     let root = super::repository_root();
     let destination = temporary.path().join("assembled");
-    let mut child = std::process::Command::new("sh")
+    let artifacts = ToolArtifactDir::claim(LINE_TOOL);
+    let mut child = artifacts
+        .isolate(&mut std::process::Command::new("sh"))
         .arg(root.join("tools/openmodelica-line-reference/line/assemble.sh"))
         .arg(&copied)
         .arg(super::fixture("amd64"))
