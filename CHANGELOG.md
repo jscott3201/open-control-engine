@@ -39,7 +39,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Execution core
 
-- **The load gate refuses a vector parameter element past its resolved length** (GitHub #PRNUM,
+- **The load gate refuses a vector parameter element past its resolved length** (GitHub #635,
   issue #626). **Breaking, in place:** a document with such an element loaded before and is
   refused now.
   - **What was wrong.** The four vector rules judged elements 1 to `n` only and never saw one
