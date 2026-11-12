@@ -13,7 +13,7 @@
 //!
 //! The check runs on the expanded document (every `@id` canonical) with the `@id` index, before
 //! anything reads the graph. A `@context` inside a reference never reaches it: the expansion pass
-//! refuses a scoped context first ([`crate::context_scope`]).
+//! refuses a scoped context first, in its `context_scope` check.
 
 use std::sync::Arc;
 
