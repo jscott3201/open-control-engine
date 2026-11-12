@@ -125,6 +125,12 @@ fn base_params(entry: &CatalogEntry) -> Vec<(Arc<str>, Value)> {
             params.push(rp("period", 2.0));
         }
     }
+    // `MultiSum.nin` defaults to 0, which leaves `k_1` past the length, and the load gate refuses
+    // such an element since GitHub #626. Before, the gain was dropped silently, so this census
+    // checked a parameter the block never read. One input makes `k_1` a gain the block uses.
+    if entry.class_path == "CDL.Reals.MultiSum" {
+        params.push((Arc::from("nin"), Value::Integer(1)));
+    }
     params
 }
 

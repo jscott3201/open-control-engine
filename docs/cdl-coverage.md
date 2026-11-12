@@ -193,6 +193,24 @@ Array **parameters** keep the older import spelling, with an underscore before e
 catalog lists `k_<i>` and `K_<row>_<col>` once, and `oce_api::param_element_name` expands them to the
 `k_1`, `K_2_1` names the CXF import mints for a preserved array.
 
+Every element must lie inside its array's resolved extent, or the load is refused with
+`parameter-out-of-range`, so a value an author wrote is never dropped without a word. A matrix
+cell must lie inside `nout` × `nin` (`MatrixGain.K`) and a `TimeTable` offset inside the table's
+outputs. Since GitHub #626, a vector element must lie inside its length too, its index from 1 to
+`n`:
+
+- `k` on both `MultiSum` classes, against `nin`;
+- `extract` on the three `ExtractSignal` classes, against `nout`;
+- `msk` on the three `VectorFilter` classes, against `nin`.
+
+The length is the block's parameter, a reference to a sequence parameter folded to its value,
+or, when the block omits it, the class's literal default. `MultiSum.nin` defaults to 0, so its
+gains then lie past the length. `VectorFilter.nin` has no default, so leaving it out is
+`missing-required-parameter` and no member is judged. Before #626, `MultiSum(nin = 2)` with gains
+`[1, 2, 3]` loaded warning-free and ran as `[1, 2]`. A name that is not an element spelling of the
+class at all (`k_x`, `k_1_2` on a vector) is still not refused at load: GitHub #467 keeps that
+half open.
+
 `oce_api::class_metadata()` adds, for every class in catalog order, a one-sentence `description`
 (the upstream Modelica class description string where a vendored source exists, held to it by a
 test; engine-written for `CDL.Logical.TrueHoldWithReset` and the three reserved identities) and the

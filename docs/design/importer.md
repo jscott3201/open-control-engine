@@ -504,7 +504,10 @@ Relation to other work:
   the corrected out-of-subset count, and the #455 gate row's denominator becomes 34.
 - **#458** closes: with the canonical id, node order no longer bears on the comparison.
 - **#467** is unaffected; the importer carries out-of-extent element names and the validator (and,
-  after #467, the load gate) reports them.
+  after #467, the load gate) reports them. *(Amended 2026-11-12, GitHub #626: neither did until
+  then. The load gate now refuses a vector element past its length, as it already refused a matrix
+  cell or a `TimeTable` offset outside its shape, and the validator inherits the refusal; #467
+  keeps the unknown-name half.)*
 - **#468** must widen to the G36 enumerations and constant packages (decision 11); it is the only
   facade change this note needs.
 - **#474** supplies `Engine::content_id()`.

@@ -8,16 +8,6 @@ use oce_model::{BlockInstance, ParamTable, Value};
 
 use super::block_subject_of;
 
-pub(super) struct IntegerArrayRangeRule {
-    pub(super) base: &'static str,
-    pub(super) len: &'static str,
-    pub(super) len_default: i64,
-    pub(super) min: i64,
-    pub(super) max: &'static str,
-    pub(super) max_default: i64,
-    pub(super) default_to_index: bool,
-}
-
 pub(super) struct RealMatrixRule {
     pub(super) base: &'static str,
     pub(super) rows: &'static str,
@@ -32,119 +22,6 @@ pub(super) struct TimeTableRule {
     pub(super) time_scale: &'static str,
     pub(super) period: Option<&'static str>,
     pub(super) extrapolation: Option<&'static str>,
-}
-
-pub(super) fn check_integer_array_elements(
-    blk: &BlockInstance,
-    diags: &mut Vec<Diagnostic>,
-    base: &str,
-    len: &str,
-) {
-    let Some(value) = find_param(&blk.params, len) else {
-        return;
-    };
-    let Some(n) = integer_value(value) else {
-        return;
-    };
-    let Ok(n) = usize::try_from(n) else {
-        return;
-    };
-    for idx in 1..=n.min(MAX_RESOLVED_PORT_WIDTH) {
-        let name = format!("{base}_{idx}");
-        let Some(value) = find_param(&blk.params, &name) else {
-            continue;
-        };
-        if integer_value(value).is_none() {
-            push_range_error(
-                blk,
-                diags,
-                format!(
-                    "parameter `{name}` on block `{}` must be an integer array element",
-                    blk.class_iri
-                ),
-            );
-        }
-    }
-}
-
-pub(super) fn check_integer_array_elements_in_range(
-    blk: &BlockInstance,
-    diags: &mut Vec<Diagnostic>,
-    rule: IntegerArrayRangeRule,
-) {
-    let Some(n) = integer_param_or_default(&blk.params, rule.len, rule.len_default) else {
-        return;
-    };
-    let Some(upper) = integer_param_or_default(&blk.params, rule.max, rule.max_default) else {
-        return;
-    };
-    let Ok(n) = usize::try_from(n) else {
-        return;
-    };
-    for idx in 1..=n.min(MAX_RESOLVED_PORT_WIDTH) {
-        let name = format!("{}_{idx}", rule.base);
-        let member = match find_param(&blk.params, &name) {
-            Some(value) => {
-                let Some(value) = integer_value(value) else {
-                    push_range_error(
-                        blk,
-                        diags,
-                        format!(
-                            "parameter `{name}` on block `{}` must be an integer array element",
-                            blk.class_iri
-                        ),
-                    );
-                    continue;
-                };
-                value
-            }
-            None if rule.default_to_index => idx as i64,
-            None => continue,
-        };
-        if member < rule.min || member > upper {
-            push_range_error(
-                blk,
-                diags,
-                format!(
-                    "parameter `{name}` on block `{}` must be in range {}..={upper}; got {member}",
-                    blk.class_iri, rule.min
-                ),
-            );
-        }
-    }
-}
-
-pub(super) fn check_real_array_elements(
-    blk: &BlockInstance,
-    diags: &mut Vec<Diagnostic>,
-    base: &str,
-    len: &str,
-) {
-    let Some(value) = find_param(&blk.params, len) else {
-        return;
-    };
-    let Some(n) = integer_value(value) else {
-        return;
-    };
-    let Ok(n) = usize::try_from(n) else {
-        return;
-    };
-    for idx in 1..=n.min(MAX_RESOLVED_PORT_WIDTH) {
-        let name = format!("{base}_{idx}");
-        let Some(value) = find_param(&blk.params, &name) else {
-            continue;
-        };
-        if real_value(value).is_none() {
-            push_range_error(
-                blk,
-                diags,
-                format!(
-                    "parameter `{name}` on block `{}` must be a numeric real array element",
-                    blk.class_iri
-                ),
-            );
-        }
-    }
 }
 
 pub(super) fn check_real_matrix_elements(
@@ -436,39 +313,6 @@ pub(super) fn check_time_table_offset(
     }
 }
 
-pub(super) fn check_boolean_array_elements(
-    blk: &BlockInstance,
-    diags: &mut Vec<Diagnostic>,
-    base: &str,
-    len: &str,
-) {
-    let Some(value) = find_param(&blk.params, len) else {
-        return;
-    };
-    let Some(n) = integer_value(value) else {
-        return;
-    };
-    let Ok(n) = usize::try_from(n) else {
-        return;
-    };
-    for idx in 1..=n.min(MAX_RESOLVED_PORT_WIDTH) {
-        let name = format!("{base}_{idx}");
-        let Some(value) = find_param(&blk.params, &name) else {
-            continue;
-        };
-        if boolean_value(value).is_none() {
-            push_range_error(
-                blk,
-                diags,
-                format!(
-                    "parameter `{name}` on block `{}` must be a Boolean array element",
-                    blk.class_iri
-                ),
-            );
-        }
-    }
-}
-
 pub(super) fn check_boolean_array_true_count_equals(
     blk: &BlockInstance,
     diags: &mut Vec<Diagnostic>,
@@ -520,7 +364,7 @@ pub(super) fn check_boolean_array_true_count_equals(
     }
 }
 
-fn find_param<'a>(params: &'a ParamTable, name: &str) -> Option<&'a Value> {
+pub(super) fn find_param<'a>(params: &'a ParamTable, name: &str) -> Option<&'a Value> {
     params
         .values
         .iter()
@@ -545,7 +389,7 @@ fn infer_matrix_shape(params: &ParamTable, base: &str) -> Option<(usize, usize)>
     Some((n_row, n_col)).filter(|(row, col)| *row > 0 && *col > 0)
 }
 
-fn real_value(value: &Value) -> Option<f64> {
+pub(super) fn real_value(value: &Value) -> Option<f64> {
     match value {
         Value::Real(v) => Some(*v),
         Value::Integer(v) => Some(*v as f64),
@@ -553,14 +397,18 @@ fn real_value(value: &Value) -> Option<f64> {
     }
 }
 
-fn integer_value(value: &Value) -> Option<i64> {
+pub(super) fn integer_value(value: &Value) -> Option<i64> {
     match value {
         Value::Integer(v) => Some(*v),
         _ => None,
     }
 }
 
-fn integer_param_or_default(params: &ParamTable, name: &str, default: i64) -> Option<i64> {
+pub(super) fn integer_param_or_default(
+    params: &ParamTable,
+    name: &str,
+    default: i64,
+) -> Option<i64> {
     find_param(params, name).map_or(Some(default), integer_value)
 }
 
@@ -676,14 +524,14 @@ fn extrapolation_is_periodic(value: &Value) -> bool {
     }
 }
 
-fn boolean_value(value: &Value) -> Option<bool> {
+pub(super) fn boolean_value(value: &Value) -> Option<bool> {
     match value {
         Value::Boolean(v) => Some(*v),
         _ => None,
     }
 }
 
-fn push_range_error(blk: &BlockInstance, diags: &mut Vec<Diagnostic>, message: String) {
+pub(super) fn push_range_error(blk: &BlockInstance, diags: &mut Vec<Diagnostic>, message: String) {
     diags.push(
         Diagnostic::error(DiagCode::ParameterOutOfRange, message)
             .with_subject(block_subject_of(blk)),

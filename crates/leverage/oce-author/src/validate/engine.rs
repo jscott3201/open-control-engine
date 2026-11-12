@@ -287,3 +287,7 @@ fn assignment_of(block: &crate::model::Block, member: &str) -> Option<usize> {
 #[cfg(test)]
 #[path = "engine_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "engine_extent_tests.rs"]
+mod extent_tests;

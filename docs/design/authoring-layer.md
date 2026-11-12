@@ -351,7 +351,7 @@ pre-empt where one exists. The table is a test fixture: gate item 3 is a table-d
 | `duplicate-parameter` | author-only (amended 2026-11-09) | `duplicate-param` | 1 | `duplicate-id` (the repeated parameter node) |
 | `missing-required-parameter` | engine | `missing-required-param` | 1 | — |
 | `parameter-kind-mismatch` | engine | `param-type-mismatch` | 1 | — |
-| `parameter-out-of-range` | engine | `invalid-width` | 1 | — (catalog rules, widths included) |
+| `parameter-out-of-range` | engine | `invalid-width` | 1 | — (catalog rules, widths included; amended 2026-11-12, GitHub #626: also an array element past its block's resolved length, which the load gate refuses and stage 1 inherits through `class_ports`) |
 | `non-finite-parameter` | engine | — | 1 | — |
 | `unit-suffix-mismatch` | author-only (added 2026-11-11, issue #501) | — | 1 | none: a suffix is text-only and never reaches the engine (vocabulary note decision 14, ruling 6). A suffix that does not reduce to the block parameter's declared unit (`delayTime = 5 K`), a scaled one on a parameter that declares no unit or on a sequence parameter, or, in a model built in code, a suffix, written number and value that disagree or a suffix longer than the 256-byte token bound |
 | `unknown-enum-literal` | author-only (amended 2026-11-09) | — | 1 | `grounding-failed` |
