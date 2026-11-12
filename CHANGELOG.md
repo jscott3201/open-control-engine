@@ -85,7 +85,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
     for a partial array: `MultiSum(nin = 3, k_1 = 10, k_3 = 30)` runs with `[10, 1, 30]`.
   - **No version bump.** A load refusal is not a format change (owner ruling of 2026-11-12). No
     golden, class signature or catalog byte moves.
-- **Building a vector block reads its elements in one pass** (GitHub #PRNUM, issue #634).
+- **Building a vector block reads its elements in one pass** (GitHub #644, issue #634).
   - **What was wrong.** The constructors of both `MultiSum` classes (`k`), the three
     `ExtractSignal` classes (`extract`) and the three `VectorFilter` classes (`msk`) built each
     element's name and scanned the whole parameter table for it, for every index up to the
