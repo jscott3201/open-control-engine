@@ -1,7 +1,7 @@
-use alloc::{boxed::Box, format, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
 use oce_model::ParamTable;
 
-use super::{bool_param, int_param};
+use super::{bool_or, int_or, int_param, vector_elements};
 use crate::{
     Block, BooleanExtractSignal, BooleanExtractor, BooleanScalarReplicator, BooleanVectorFilter,
     BooleanVectorReplicator, IntegerExtractSignal, IntegerExtractor, IntegerScalarReplicator,
@@ -325,16 +325,19 @@ fn make_real_vector_replicator(p: &ParamTable) -> Box<dyn Block> {
 }
 
 fn extract_param_vector(p: &ParamTable, nout: usize) -> Vec<usize> {
-    (1..=nout)
-        .map(|idx| usize_param(p, &format!("extract_{idx}"), idx as i64))
+    vector_elements(p, "extract", nout)
+        .into_iter()
+        .zip(1_i64..)
+        .map(|(value, idx)| usize::try_from(int_or(value, idx)).unwrap_or(0))
         .collect()
 }
 
 fn vector_filter_params(p: &ParamTable) -> (usize, usize, Vec<bool>) {
     let nin = bounded_usize_param(p, "nin", VECTOR_FILTER_NIN_FALLBACK);
     let nout = bounded_usize_param(p, "nout", VECTOR_FILTER_NOUT_FALLBACK);
-    let mask = (1..=nin)
-        .map(|idx| bool_param(p, &format!("msk_{idx}"), VECTOR_FILTER_MASK_DEFAULT))
+    let mask = vector_elements(p, "msk", nin)
+        .into_iter()
+        .map(|value| bool_or(value, VECTOR_FILTER_MASK_DEFAULT))
         .collect();
     (nin, nout, mask)
 }

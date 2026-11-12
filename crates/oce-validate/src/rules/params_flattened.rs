@@ -7,6 +7,7 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{BlockInstance, ParamTable, Value};
 
 use super::block_subject_of;
+use super::params_element_names::is_canonical_index;
 
 pub(super) struct RealMatrixRule {
     pub(super) base: &'static str,
@@ -335,10 +336,28 @@ pub(super) fn check_boolean_array_true_count_equals(
     if n > MAX_RESOLVED_PORT_WIDTH {
         return;
     }
+    // The members `base_1` to `base_n`, each its first binding, read in one pass over the
+    // parameters (GitHub #634): the rule used to build each name and scan the table for it,
+    // `n` times. In index order, a present member that is not Boolean ends the rule (the element
+    // rule refuses it), and an absent one is `default`.
+    let mut members: Vec<Option<&Value>> = vec![None; n];
+    for (name, value) in &blk.params.values {
+        let index = name
+            .strip_prefix(base)
+            .and_then(|rest| rest.strip_prefix('_'))
+            .filter(|index| is_canonical_index(index))
+            .and_then(|index| index.parse::<usize>().ok());
+        if let Some(slot) = index
+            .and_then(|index| index.checked_sub(1))
+            .and_then(|slot| members.get_mut(slot))
+            && slot.is_none()
+        {
+            *slot = Some(value);
+        }
+    }
     let mut true_count = 0_i64;
-    for idx in 1..=n {
-        let name = format!("{base}_{idx}");
-        let value = match find_param(&blk.params, &name) {
+    for member in members {
+        let value = match member {
             Some(value) => {
                 let Some(value) = boolean_value(value) else {
                     return;

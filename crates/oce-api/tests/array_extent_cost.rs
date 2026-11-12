@@ -10,10 +10,10 @@
 //! (`Integers.MultiSum`), `IntegerArrayElementsInRange` (`ExtractSignal`) and
 //! `BooleanArrayElements` (`VectorFilter`). The tables at the widest length with a wrong-kind
 //! element inside it are refused by the old rules too, which makes the old counts in the
-//! brackets comparable. A `VectorFilter` table here keeps the mask's true-count rule out of the
-//! count, which still builds a name per index (GitHub #634): its wrong-kind member stops that
-//! rule at index 1, and its table past the length leaves `nout` out (refused as missing), so the
-//! rule has no count to check.
+//! brackets comparable. A `VectorFilter` table in those two tests keeps the mask's true-count
+//! rule out of their counts: its wrong-kind member stops that rule at index 1, and its table
+//! past the length leaves `nout` out (refused as missing), so the rule has no count to check.
+//! The true-count rule, one pass since GitHub #634, is pinned on its own at the end.
 
 use allocation_counter::{AllocationInfo, measure};
 use oce_api::{ClassPortsError, Value, class_ports};
@@ -154,4 +154,22 @@ fn many() -> Vec<Many> {
             Value::Boolean(true),
         ),
     ]
+}
+
+#[test]
+fn counting_a_masks_true_members_allocates_nothing_per_index() {
+    // The `VectorFilter` true-count rule (GitHub #634) at two widths, every member defaulted to
+    // `true` against `nout = 0`, so the table is refused for its count before any port is named:
+    // at most 64 allocations, and a peak of 16 bytes per index [measured: 18 allocations at both
+    // widths, 8 bytes of peak per index for the member table; the per-index rule made 121,090
+    // and 2,087,170 allocations].
+    for nin in [1_i64 << 16, WIDTH] {
+        let info = refused(
+            "CDL.Routing.RealVectorFilter",
+            &[("nin", Value::Integer(nin)), ("nout", Value::Integer(0))],
+        );
+        assert!(info.count_total <= 64, "{nin}: {info:?}");
+        let bytes = 16 * u64::try_from(nin).expect("fits");
+        assert!(info.bytes_max <= bytes, "{nin}: {info:?}");
+    }
 }

@@ -1,8 +1,8 @@
-use alloc::{boxed::Box, format};
+use alloc::boxed::Box;
 use oce_model::ParamTable;
 
-use super::int_param;
 use super::real_param;
+use super::{int_or, int_param, vector_elements};
 use crate::source_timetable::{MIN_TIMETABLE_PERIOD, TIMETABLE_TIME_SCALE_DEFAULT};
 use crate::{
     Block, IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerChange, IntegerConstant,
@@ -292,11 +292,9 @@ fn make_integer_min(_p: &ParamTable) -> Box<dyn Block> {
 
 fn make_integer_multi_sum(p: &ParamTable) -> Box<dyn Block> {
     let nin = bounded_nin(p);
-    let gains = (1..=nin)
-        .map(|idx| {
-            let key = format!("k_{idx}");
-            int_param(p, &key, MULTI_SUM_K_DEFAULT)
-        })
+    let gains = vector_elements(p, "k", nin)
+        .into_iter()
+        .map(|value| int_or(value, MULTI_SUM_K_DEFAULT))
         .collect();
     Box::new(IntegerMultiSum::new(gains))
 }
