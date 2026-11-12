@@ -84,7 +84,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   (`preserve_order`, `arbitrary_precision`) would also move the counts, and the test says so. No
   `oce-author` test reads the clock any more.
 - **A finding is placed on the statement it is about, even when its subject names several**
-  (GitHub #PRNUM, issue #585). `SourceMap::apply` resolved a finding's subject to every statement
+  (GitHub #616, issue #585). `SourceMap::apply` resolved a finding's subject to every statement
   it names and took the first, with the fixed header subjects `sequence` and `derived_from` ahead
   of the declarations; only `duplicate-name` and `duplicate-parameter` were sent on to the
   repeat. So `in derived_from : Real @min 2 @max 1` on line 4 had its `invalid-name` and
