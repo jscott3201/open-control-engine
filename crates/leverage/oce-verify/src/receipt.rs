@@ -90,8 +90,11 @@ pub struct ReceiptHeader {
     pub kind: ReceiptKind,
     /// The subject's canonical content id (`oce:canon1:…`) as loaded, before any parameter edit.
     pub content_id: String,
-    /// The facade's Cargo version (`CompatibilityDescriptor::oce_api_version`, decision 33): not a
-    /// build identity, and inside the hashed part, so a version bump moves every receipt id.
+    /// The engine version, `major.minor.patch`: [`oce_api::ENGINE_VERSION`], the version this
+    /// build stamps in every compiled-schedule blob and state snapshot header and the only one it
+    /// accepts there (decision 33, amended 2026-11-12). A pre-release suffix of the Cargo version
+    /// is not part of it, so `0.6.0-rc.1` and `0.6.0` write the same field. Not a build identity,
+    /// and inside the hashed part, so a version bump moves every receipt id.
     pub engine_version: String,
     /// The vector set's `spec_id` (`spec:fnv1a128:…`).
     pub spec_id: String,

@@ -14,7 +14,7 @@
 
 mod support;
 
-use oce_api::{CompatibilityDescriptor, Engine};
+use oce_api::Engine;
 use oce_verify::{
     Failure, ReceiptValue, ScenarioStatus, Timings, VectorInputs, VectorSet, VerifyLimits,
     VerifyOptions, run_vectors,
@@ -239,12 +239,39 @@ fn the_header_names_the_subject_as_loaded_the_set_and_the_engine() {
             engine.content_id().expect("an id").to_string()
         );
         assert_eq!(header.spec_id, set_of(&golden).spec_id());
-        assert_eq!(
-            header.engine_version,
-            CompatibilityDescriptor::current(None).oce_api_version()
+        // The Cargo version's major, minor and patch, without a pre-release suffix (decision 33,
+        // amended 2026-11-12); the next test holds it to a blob's header.
+        let cargo = concat!(
+            env!("CARGO_PKG_VERSION_MAJOR"),
+            ".",
+            env!("CARGO_PKG_VERSION_MINOR"),
+            ".",
+            env!("CARGO_PKG_VERSION_PATCH")
         );
-        assert_eq!(header.engine_version, env!("CARGO_PKG_VERSION"));
+        assert_eq!(header.engine_version, cargo);
         assert_eq!(header.passed, body(&receipt).status == ScenarioStatus::Pass);
+    }
+}
+
+#[test]
+fn the_engine_version_is_the_one_a_blob_of_the_same_build_records() {
+    // Decision 33, amended 2026-11-12 (issue #593): a receipt names the engine version that the
+    // compiled-schedule blobs and state snapshots of the same build carry. It is read here from
+    // the header of a blob this build wrote, not from the constant the receipt is filled from:
+    // format 1 at offset 4, then the encoder's major, minor and patch at offset 8, each a
+    // little-endian `u16` (docs/design/compiled-schedule-blob.md, "Layout").
+    for golden in goldens() {
+        let receipt = run(&golden, &VerifyOptions::default());
+        let mut engine = Engine::new();
+        engine.load_cxf(&golden.subject).expect("the subject loads");
+        let blob = engine
+            .compile_blob()
+            .expect("the subject compiles to a blob")
+            .bytes;
+        let field = |at: usize| u16::from_le_bytes([blob[at], blob[at + 1]]);
+        assert_eq!((&blob[..4], field(4)), (&b"OCEB"[..], 1), "{}", golden.name);
+        let stamped = format!("{}.{}.{}", field(8), field(10), field(12));
+        assert_eq!(receipt.header.engine_version, stamped, "{}", golden.name);
     }
 }
 

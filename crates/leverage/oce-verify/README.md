@@ -383,8 +383,10 @@ The score is `caught` and `total`, with `survived`, never a ratio, and it never 
 `Receipt { header, body: ReceiptBody::Vectors(VectorBody) }`, written by `to_canonical_json` under
 the vector file's canonical rules. The header is the one the commissioning verifier shares:
 `schema` (`oce/receipt/v1`), `kind` (`vectors`), the subject's `content_id` as loaded, the
-facade's `engine_version`, the set's `spec_id`, `comparison` (`{ "mode": "exact" }`), `passed`,
-`receipt_id` and `timings`. The body holds the set's `status` (`pass`, `fail` or `no_data`), its
+`engine_version` (`oce_api::ENGINE_VERSION` as `major.minor.patch`, the version every blob and
+state snapshot of the same build records, without the Cargo version's pre-release suffix; issue
+#593), the set's `spec_id`, `comparison` (`{ "mode": "exact" }`), `passed`, `receipt_id` and
+`timings`. The body holds the set's `status` (`pass`, `fail` or `no_data`), its
 `clock` as written, the load-warning codes (at most 64, `load_warnings_total` beside them), the
 totals, and one object per scenario: its verdict, its effective parameter edits by canonical path
 with the `content_id` of what ran when it has any, frame and instant counts, failure records
