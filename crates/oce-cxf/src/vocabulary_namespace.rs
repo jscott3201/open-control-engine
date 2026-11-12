@@ -23,6 +23,14 @@
 //!   [`S231_CONTEXT_IRI`], the way a modeled key is read, so it would read this spelling as an
 //!   ordinary class and lower an extension block that lists children as a composite. A modeled key
 //!   in the same namespaces is refused for the same reason ([`super::property_keys`]).
+//! - **A typing token that names an S231 term only once its surrounding whitespace is trimmed**
+//!   (`"S231:ExtensionBlock "`, `" S231:Real"`) is refused as `malformed-document` (GitHub #587),
+//!   as a whitespace near-miss property key is ([`super::property_keys`]). No whitespace-bearing
+//!   token expands, so it would be kept as written and read as no S231 type at all: a composite
+//!   never reads its `@type`, so a root typed `"S231:ExtensionBlock "` with a child loaded and ran
+//!   the child. The check reads the trimmed token the way the resolver reads an S231 type (a
+//!   literal `S231:` prefix, else the expanded IRI) in [`S231_CONTEXT_IRI`] and in
+//!   [`FOREIGN_NAMESPACES`], and replaces the checks above for that token.
 //!
 //! The check reads the effective prefix table: in a list of context maps a later binding replaces
 //! an earlier one (JSON-LD context processing order), so only the binding in force is judged.
@@ -33,7 +41,7 @@
 
 use oce_diag::{DiagCode, Diagnostic};
 
-use super::PrefixTable;
+use super::{Expansion, PrefixTable, expand_token};
 use crate::export::S231_CONTEXT_IRI;
 use crate::resolve::extension_blocks::EXTENSION_BLOCK_TERM;
 
@@ -114,6 +122,51 @@ pub(super) fn check_typing(token: &str, slot: &str, owner: &str, diags: &mut Vec
             .with_subject(subject.to_owned()),
         );
     }
+}
+
+/// Refuse a typing token (`@type` value or `isOfDataType` reference, as written) that names a
+/// term in the S231 vocabulary's namespace, or in one of [`FOREIGN_NAMESPACES`], only once its
+/// surrounding whitespace is trimmed (GitHub #587). Returns whether it refused, in which case the
+/// caller skips [`check_typing`] for the token. `owner` is the node's expanded `@id`.
+///
+/// Whitespace is what [`str::trim`] removes. A token with whitespace inside (`"S231: Real"`) is
+/// not a near miss and is left to the readers, as a key is in [`super::property_keys`].
+pub(super) fn check_typing_whitespace(
+    token: &str,
+    slot: &str,
+    owner: &str,
+    table: &PrefixTable,
+    diags: &mut Vec<Diagnostic>,
+) -> bool {
+    let trimmed = token.trim();
+    if trimmed == token {
+        return false;
+    }
+    let iri = match expand_token(trimmed, table) {
+        Expansion::Expanded(iri) => iri,
+        Expansion::Verbatim | Expansion::Relative => trimmed.to_owned(),
+    };
+    let named = match trimmed.strip_prefix("S231:") {
+        Some(term) => Some((S231_CONTEXT_IRI, term)),
+        None => std::iter::once(S231_CONTEXT_IRI)
+            .chain(FOREIGN_NAMESPACES)
+            .find_map(|namespace| Some((namespace, iri.strip_prefix(namespace)?))),
+    };
+    let Some((namespace, term)) = named.filter(|(_, term)| !term.is_empty()) else {
+        return false;
+    };
+    let subject = if owner.is_empty() { token } else { owner };
+    diags.push(
+        Diagnostic::error(
+            DiagCode::MalformedDocument,
+            format!(
+                "{slot} {token:?} on node `{owner}` carries surrounding whitespace; without it, \
+                 it names `{term}` in `{namespace}`; write it as `S231:{term}`"
+            ),
+        )
+        .with_subject(subject.to_owned()),
+    );
+    true
 }
 
 /// The refusal for a modeled term keyed by its full IRI in a foreign namespace.
