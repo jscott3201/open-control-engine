@@ -40,7 +40,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Verification
 
 - **Every job that runs the oce-cxf or workspace suite prefetches the tool workspaces its tests
-  build offline** (GitHub #PRNUM, issue #610). The `release.yml` verify of tag `v0.5.0` (run
+  build offline** (GitHub #611, issue #610). The `release.yml` verify of tag `v0.5.0` (run
   43129183575) failed 15 oce-cxf tests of the `fixture_structural_oracle` binary, all
   `open_modelica_line_reference::*` and `open_modelica_reliefs_reference::*`. Those tests build a
   tool workspace (`tools/openmodelica-line-reference`, `-reliefs-reference`, and the dependency-free
