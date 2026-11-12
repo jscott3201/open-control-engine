@@ -4,8 +4,9 @@
 //! whose `expect` is empty), and AHU-0016's set with its three mutants (`tests/fixtures/AHU-0016/`:
 //! two caught, one survivor), each compared byte for byte. They regenerate only through the crate's
 //! bless switch (`OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`); every receipt embeds the
-//! engine version, so a workspace version bump re-blesses them, and so does #517 when it re-vendors
-//! the two rules.
+//! engine version, so a bump of the workspace version's major, minor or patch re-blesses them (a
+//! change of its pre-release suffix alone does not), and so does #517 when it re-vendors the two
+//! rules.
 //!
 //! Beside the bytes: `receipt_id` is checked against an independent derivation from the golden
 //! (the `receipt_id` line and the `timings` block cut out of the canonical text, hashed with a
@@ -14,7 +15,7 @@
 
 mod support;
 
-use oce_api::{CompatibilityDescriptor, Engine};
+use oce_api::Engine;
 use oce_verify::{
     Failure, ReceiptValue, ScenarioStatus, Timings, VectorInputs, VectorSet, VerifyLimits,
     VerifyOptions, run_vectors,
@@ -239,12 +240,43 @@ fn the_header_names_the_subject_as_loaded_the_set_and_the_engine() {
             engine.content_id().expect("an id").to_string()
         );
         assert_eq!(header.spec_id, set_of(&golden).spec_id());
-        assert_eq!(
-            header.engine_version,
-            CompatibilityDescriptor::current(None).oce_api_version()
+        // The Cargo version's major, minor and patch, without a pre-release suffix (decision 33,
+        // amended 2026-11-12); the next test holds it to a blob's header.
+        let cargo = concat!(
+            env!("CARGO_PKG_VERSION_MAJOR"),
+            ".",
+            env!("CARGO_PKG_VERSION_MINOR"),
+            ".",
+            env!("CARGO_PKG_VERSION_PATCH")
         );
-        assert_eq!(header.engine_version, env!("CARGO_PKG_VERSION"));
+        assert_eq!(header.engine_version, cargo);
         assert_eq!(header.passed, body(&receipt).status == ScenarioStatus::Pass);
+    }
+}
+
+#[test]
+fn the_engine_version_is_the_one_a_blob_of_the_same_build_records() {
+    // Decision 33, amended 2026-11-12 (issue #593): a receipt names the engine version that the
+    // compiled-schedule blobs and state snapshots of the same build carry. It is read here from
+    // the header of a blob this build wrote, not from the constant the receipt is filled from:
+    // format 1 at offset 4, then the encoder's major, minor and patch at offset 8, each a
+    // little-endian `u16` (docs/design/compiled-schedule-blob.md, "Layout"). The descriptor's
+    // Cargo version, which the field held before, spells the same string at every version
+    // without a pre-release suffix, 0.5.0 included, so this tells the old source from the new
+    // only on a pre-release build. The spelling itself is pinned at every build by
+    // `an_engine_version_is_spelled_major_minor_patch_in_plain_decimal` (`src/bind_tests.rs`).
+    for golden in goldens() {
+        let receipt = run(&golden, &VerifyOptions::default());
+        let mut engine = Engine::new();
+        engine.load_cxf(&golden.subject).expect("the subject loads");
+        let blob = engine
+            .compile_blob()
+            .expect("the subject compiles to a blob")
+            .bytes;
+        let field = |at: usize| u16::from_le_bytes([blob[at], blob[at + 1]]);
+        assert_eq!((&blob[..4], field(4)), (&b"OCEB"[..], 1), "{}", golden.name);
+        let stamped = format!("{}.{}.{}", field(8), field(10), field(12));
+        assert_eq!(receipt.header.engine_version, stamped, "{}", golden.name);
     }
 }
 

@@ -1,11 +1,36 @@
 //! The boundary refusals, over synthetic definitions. No CXF document the engine loads has an
 //! Enum or a String boundary port today (the importer refuses a non-scalar pass-through as
 //! `non-subset-construct`, and no elementary block takes or gives an Enum signal), so the two
-//! codes are pinned here, with an Enum class identity taken from the facade's table.
+//! codes are pinned here, with an Enum class identity taken from the facade's table. Also the
+//! receipt's spelling of an engine version, over constructed versions, since this build's own is
+//! only one value.
 
-use oce_api::{InputDefinition, ValueType};
+use oce_api::{EngineVersion, InputDefinition, ValueType};
 
-use super::boundary;
+use super::{boundary, engine_version};
+
+#[test]
+fn an_engine_version_is_spelled_major_minor_patch_in_plain_decimal() {
+    // Decision 33, amended 2026-11-12 (issue #593): every component in decimal, with no padding,
+    // no `v` and no pre-release or build suffix, at zero, past one digit and at `u16::MAX`.
+    let version = |major, minor, patch| EngineVersion {
+        major,
+        minor,
+        patch,
+    };
+    for (spelled, expected) in [
+        (version(0, 5, 0), "0.5.0"),
+        (version(0, 10, 0), "0.10.0"),
+        (version(1, 0, 0), "1.0.0"),
+        (version(0, 0, 0), "0.0.0"),
+        (version(u16::MAX, 0, 0), "65535.0.0"),
+        (version(0, u16::MAX, 0), "0.65535.0"),
+        (version(0, 0, u16::MAX), "0.0.65535"),
+        (version(u16::MAX, u16::MAX, u16::MAX), "65535.65535.65535"),
+    ] {
+        assert_eq!(engine_version(spelled), expected, "{spelled:?}");
+    }
+}
 
 fn input(path: &str, value_type: ValueType) -> InputDefinition {
     InputDefinition {

@@ -383,8 +383,10 @@ The score is `caught` and `total`, with `survived`, never a ratio, and it never 
 `Receipt { header, body: ReceiptBody::Vectors(VectorBody) }`, written by `to_canonical_json` under
 the vector file's canonical rules. The header is the one the commissioning verifier shares:
 `schema` (`oce/receipt/v1`), `kind` (`vectors`), the subject's `content_id` as loaded, the
-facade's `engine_version`, the set's `spec_id`, `comparison` (`{ "mode": "exact" }`), `passed`,
-`receipt_id` and `timings`. The body holds the set's `status` (`pass`, `fail` or `no_data`), its
+`engine_version` (`oce_api::ENGINE_VERSION` as `major.minor.patch`, the version every blob and
+state snapshot of the same build records, without the Cargo version's pre-release suffix; issue
+#593), the set's `spec_id`, `comparison` (`{ "mode": "exact" }`), `passed`, `receipt_id` and
+`timings`. The body holds the set's `status` (`pass`, `fail` or `no_data`), its
 `clock` as written, the load-warning codes (at most 64, `load_warnings_total` beside them), the
 totals, and one object per scenario: its verdict, its effective parameter edits by canonical path
 with the `content_id` of what ran when it has any, frame and instant counts, failure records
@@ -405,7 +407,8 @@ infinity the string `"0x"` and the 16 lowercase hex digits of its bits (`"0x8000
 
 `receipt_id` is `receipt:fnv1a128:<32 hex>` over the canonical receipt with `timings` and
 `receipt_id` removed, so two runs give one id whatever they measured; `engine_version` is inside
-the hashed part, so a workspace version bump moves every receipt id. `oce-verify` measures nothing:
+the hashed part, so a workspace version bump of the major, minor or patch moves every receipt id;
+a change of the pre-release suffix alone moves none (issue #593). `oce-verify` measures nothing:
 `timings` are zeros unless the caller passes `VerifyOptions::timings`.
 
 ## The schema
@@ -437,10 +440,10 @@ same switch rewrites the golden receipts.
   window ending at 900 s, where the delay fires) and a `no_data` receipt
   (`empty_expect.vectors.json`, one scenario expecting nothing). `tests/receipt_goldens.rs`
   compares them byte for byte and checks each `receipt_id` against a derivation of its own. They
-  embed the engine version and the two rules' content ids, so a workspace version bump re-blesses
-  them, and so does #517 when it re-vendors the rules. Regenerate with
-  `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`, run it again without the switch, and say in
-  the pull request which receipts moved and why.
+  embed the engine version and the two rules' content ids, so a bump of the workspace version's
+  major, minor or patch re-blesses them, and so does #517 when it re-vendors the rules.
+  Regenerate with `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`, run it again without the
+  switch, and say in the pull request which receipts moved and why.
 - `tests/fixtures/receipts/AHU-0016.mutants.receipt.json` is the golden receipt of AHU-0016 with
   its three mutants.
 - `tests/fixtures/AHU-0016/` holds the mutants:

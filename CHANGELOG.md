@@ -176,6 +176,30 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `validate`, `emit` and `fmt` in the earlier-spelling refusal loop of `hostile_inputs.rs`, and
   each command's text refusal is pinned at 2:1. The `extends` test in `wire_refusals.rs` now
   pins where each of its three refusals stops.
+- **A receipt's `engine_version` is the engine version its build's blobs and snapshots record**
+  (GitHub #621, issue #593). `oce-verify` filled the field from
+  `CompatibilityDescriptor::oce_api_version()`, the facade's Cargo version, which keeps a
+  pre-release suffix. A compiled-schedule blob and a state snapshot carry
+  `oce_api::ENGINE_VERSION`, its major, minor and patch only. So a `0.6.0-rc.1` build would
+  have issued receipts saying `0.6.0-rc.1` beside blobs saying `0.6.0`. The field is now
+  `ENGINE_VERSION` spelled `major.minor.patch`: one meaning for one name. This follows the
+  owner's ruling of 2026-11-12, which amends the vectors note's decision 33 and its
+  receipt-table row. The two sources agree at every version without a suffix, so nothing
+  written by 0.5.0 changes bytes or meaning. The ruling bumps no version, no golden receipt
+  moves, and no `verify_*` CLI transcript moves; both bless switches leave the tree unchanged.
+  From now on, a version change of the pre-release suffix alone moves no receipt id; the note,
+  the README and the rustdoc say so where they said every bump does. The note's "Review
+  rulings" section records both rulings.
+  - A unit test in `src/bind_tests.rs` pins the spelling over constructed versions: `0.5.0`,
+    `0.10.0`, `1.0.0`, `0.0.0` and `u16::MAX` in each field, exact, with no padding and no
+    `v`.
+  - `receipt_goldens.rs` now reads the encoder version from the header of a blob the same
+    build writes for each golden's subject (offset 8, three little-endian `u16`), checks the
+    format at offset 4, and requires the receipt to name that version. A receipt filled with
+    `0.5.0-rc.1` fails it. At 0.5.0 the old source spells the same string, so this test tells
+    the two apart only on a pre-release build.
+  - The header test checks the Cargo version's major, minor and patch instead of the
+    descriptor's string.
 
 ### Verification
 
