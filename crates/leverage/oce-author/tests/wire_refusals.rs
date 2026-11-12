@@ -116,10 +116,43 @@ fn the_cdl_word_extends_is_an_unknown_key() {
         "{},\n  \"extends\": \"cxf:fnv1a128:00ff\"\n}}\n",
         without[..close].trim_end()
     );
-    for (case, text) in [("renamed", renamed), ("beside", beside), ("last", last)] {
+    // The refusal is placed where the reader stopped: the key's closing quote, on its own line.
+    let key_end = |text: &str| {
+        let start = text.find("\"extends\"").expect("the key");
+        let line_start = text[..start].rfind('\n').map_or(0, |i| i + 1);
+        Location {
+            line: u32::try_from(text[..start].matches('\n').count() + 1).expect("fits"),
+            column: u32::try_from(start - line_start + "\"extends\"".len()).expect("fits"),
+        }
+    };
+    // The last key stands on the line before the root closes, indented like the others.
+    let last_at = Location {
+        line: u32::try_from(last.lines().count() - 1).expect("fits"),
+        column: 11,
+    };
+    for (case, text, at) in [
+        (
+            "renamed",
+            renamed,
+            Location {
+                line: 3,
+                column: 11,
+            },
+        ),
+        (
+            "beside",
+            beside,
+            Location {
+                line: 4,
+                column: 11,
+            },
+        ),
+        ("last", last, last_at),
+    ] {
         assert!(text.contains("\"extends\""), "{case}");
+        assert_eq!(key_end(&text), at, "{case}");
         assert!(
-            matches!(from_wire_str(&text), Err(WireError::UnknownKey { ref key, .. }) if key == "extends"),
+            matches!(from_wire_str(&text), Err(WireError::UnknownKey { ref key, at: found }) if key == "extends" && found == at),
             "{case}: {:?}",
             from_wire_str(&text)
         );

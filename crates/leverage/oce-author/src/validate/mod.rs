@@ -172,6 +172,11 @@ pub enum Origin {
 }
 
 /// One validation finding.
+///
+/// Equality compares every field, including one callers cannot read: the position in the
+/// authored model the validator reported the finding at (the element [`crate::SourceMap::apply`]
+/// places it on). So two findings that print and serialise alike, about two declarations of one
+/// name, are not equal.
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Finding {
@@ -193,6 +198,11 @@ pub struct Finding {
     pub detail: String,
     /// Who found it.
     pub origin: Origin,
+    /// Where the subject sits in the authored model: the first key of the list's order and, with
+    /// the subject, the element [`crate::SourceMap::apply`] places the finding on. A subject can
+    /// name several elements (a declaration named like a header word, `sequence` or
+    /// `derived_from`, or a name declared twice); the anchor says which one the finding is about.
+    pub(crate) anchor: Anchor,
 }
 
 impl fmt::Display for Finding {
@@ -217,7 +227,7 @@ pub(crate) enum Anchor {
 /// The findings of one run, before ordering.
 #[derive(Default)]
 pub(crate) struct Findings {
-    items: Vec<(Anchor, Finding)>,
+    items: Vec<Finding>,
 }
 
 impl Findings {
@@ -229,31 +239,30 @@ impl Findings {
         subject: impl Into<String>,
         detail: impl Into<String>,
     ) {
-        self.items.push((
-            position,
-            Finding {
-                code,
-                severity: Severity::Error,
-                subject: subject.into(),
-                span: None,
-                detail: detail.into(),
-                origin: Origin::Author,
-            },
-        ));
+        self.items.push(Finding {
+            code,
+            severity: Severity::Error,
+            subject: subject.into(),
+            span: None,
+            detail: detail.into(),
+            origin: Origin::Author,
+            anchor: position,
+        });
     }
 
-    /// Record a finding as it is.
-    pub(crate) fn push(&mut self, position: Anchor, finding: Finding) {
-        self.items.push((position, finding));
+    /// Record a finding as it is, its anchor included.
+    pub(crate) fn push(&mut self, finding: Finding) {
+        self.items.push(finding);
     }
 
     fn finish(mut self) -> Vec<Finding> {
-        self.items.sort_by(|(pa, fa), (pb, fb)| {
+        self.items.sort_by(|a, b| {
             compared();
-            (pa, fa.code, &fa.detail, &fa.subject).cmp(&(pb, fb.code, &fb.detail, &fb.subject))
+            (a.anchor, a.code, &a.detail, &a.subject)
+                .cmp(&(b.anchor, b.code, &b.detail, &b.subject))
         });
         self.items.dedup();
-        self.items.into_iter().map(|(_, finding)| finding).collect()
+        self.items
     }
 }
 

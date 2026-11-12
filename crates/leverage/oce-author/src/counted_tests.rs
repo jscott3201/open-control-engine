@@ -316,13 +316,18 @@ fn placing_findings_on_text_compares_subjects_near_linearly_in_the_document() {
         assert_findings(&findings, n, CLASS_NOT_FOUND);
         assert!(findings.iter().all(|f| f.span.is_some()));
         assert!(count <= bound(n), "{n} findings: {count} comparisons");
-        // Every block after the first repeats one name: one subject holding every location, and
-        // the count of repeats looked up per finding [24,570 and 393,210].
+        // Every block after the first repeats one name: one subject at every location, each
+        // repeat placed by its own key, the subject and the block's position (GitHub #585; a map
+        // keyed by the subject alone made 24,570 and 393,210, but put a finding about a
+        // declaration named like a header word on the header) [193,195 and 4,039,343].
         let text = blocks_text(n, true);
         let (count, findings) = comparisons(|| validate_text_author_side(&text).expect("parses"));
         assert_findings(&findings, n - 1, DUPLICATE_NAME);
-        let last = findings.last().expect("findings").span.expect("placed");
-        assert_eq!(usize::try_from(last.line).expect("fits"), n + 2);
+        // The blocks are lines 3 to `n + 2`; the repeats are every one but the first.
+        for (k, finding) in findings.iter().enumerate() {
+            let line = finding.span.expect("placed").line;
+            assert_eq!(usize::try_from(line).expect("fits"), k + 4);
+        }
         assert!(count <= bound(n), "{n} repeats: {count} comparisons");
     }
 }

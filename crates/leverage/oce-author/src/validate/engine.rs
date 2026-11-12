@@ -65,17 +65,15 @@ pub(super) fn check(sequence: &Sequence, ports: &[Option<ClassPorts>]) -> Vec<Fi
         Ok(bytes) => bytes,
         Err(error) => {
             // Stage 1 passed, so the only refusal left is the document size.
-            findings.push(
-                Anchor::Sequence,
-                Finding {
-                    code: DOCUMENT_TOO_LARGE,
-                    severity: Severity::Error,
-                    subject: "sequence".to_owned(),
-                    span: None,
-                    detail: error.to_string(),
-                    origin: Origin::Author,
-                },
-            );
+            findings.push(Finding {
+                code: DOCUMENT_TOO_LARGE,
+                severity: Severity::Error,
+                subject: "sequence".to_owned(),
+                span: None,
+                detail: error.to_string(),
+                origin: Origin::Author,
+                anchor: Anchor::Sequence,
+            });
             return findings.finish();
         }
     };
@@ -100,17 +98,24 @@ pub(crate) fn judge(sequence: &Sequence, bytes: &[u8], namespace: &str) -> Vec<F
                 record_finding(sequence, &scheme, record, &mut findings);
             }
             if records.is_empty() {
-                findings.push(
+                findings.push(engine_finding(
                     Anchor::Sequence,
-                    engine_finding(LOAD_FAILED, "sequence", failure.error().to_string()),
-                );
+                    LOAD_FAILED,
+                    "sequence",
+                    failure.error().to_string(),
+                ));
             }
         }
     }
     findings.finish()
 }
 
-fn engine_finding(code: &'static str, subject: impl Into<String>, detail: String) -> Finding {
+fn engine_finding(
+    anchor: Anchor,
+    code: &'static str,
+    subject: impl Into<String>,
+    detail: String,
+) -> Finding {
     Finding {
         code,
         severity: Severity::Error,
@@ -118,6 +123,7 @@ fn engine_finding(code: &'static str, subject: impl Into<String>, detail: String
         span: None,
         detail,
         origin: Origin::Engine,
+        anchor,
     }
 }
 
@@ -138,7 +144,7 @@ fn record_finding(
         _ => None,
     };
     let (anchor, subject, detail) = map_subject(sequence, scheme, raw, message);
-    findings.push(anchor, engine_finding(code, subject, detail));
+    findings.push(engine_finding(anchor, code, subject, detail));
 }
 
 /// The anchor, subject and detail of an engine diagnostic with subject `raw` and `message`: a

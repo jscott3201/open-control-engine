@@ -8,10 +8,11 @@
 //!
 //! [`Counted`] is the key of every index stage 1 and the text placement build over the document:
 //! the declared names, a block's assignments, a block's resolved ports, the driven targets and the
-//! finding subjects. It orders exactly as the value it wraps, so an index keyed by it holds and
-//! finds the same entries in the same order. In a test build each comparison also adds one to a
-//! counter local to the comparing thread; in any other build the wrapper compiles to the inner
-//! comparison. A sort with a comparator of its own reports each comparison through [`compared`].
+//! finding subjects, each with its position in the model. It orders exactly as the value it
+//! wraps, so an index keyed by it holds and finds the same entries in the same order. In a test
+//! build each comparison also adds one to a counter local to the comparing thread; in any other
+//! build the wrapper compiles to the inner comparison. A sort with a comparator of its own reports
+//! each comparison through [`compared`].
 //!
 //! Some lookups of stage 1 do not go through it and are not counted. Each is bounded by the
 //! catalog or by a fixed table, not by the document: the class index and the scan of one class's

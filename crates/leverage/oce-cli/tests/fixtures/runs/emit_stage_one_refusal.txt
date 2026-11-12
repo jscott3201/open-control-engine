@@ -22,7 +22,7 @@ exit: 1
       "severity": "error",
       "span": {
         "column": 7,
-        "line": 8
+        "line": 9
       },
       "subject": "lim"
     },
