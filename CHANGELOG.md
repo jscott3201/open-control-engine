@@ -172,7 +172,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   - The header test checks the Cargo version's major, minor and patch instead of the
     descriptor's string.
 - **An engine finding about an array is placed on the array's first authored element** (GitHub
-  #PRNUM, issue #617). The emitter writes an array's elements as one node named by the
+  #625, issue #617). The emitter writes an array's elements as one node named by the
   template's base (`m.k` for `k = [1.5, 2.5]`). Stage 2 maps an engine subject that names the
   node to the array's first authored element and keeps `m.k` as the subject. The text
   placement indexed only `m.k_1` and `m.k_2`, so such a finding kept no span.
