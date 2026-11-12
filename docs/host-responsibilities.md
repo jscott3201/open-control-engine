@@ -417,7 +417,13 @@ merged in order with later bindings winning; a remote context reference, `@base`
 prefix are refused at load as non-subset constructs rather than silently ignored. The last case is
 a nested compact IRI; it includes an absolute-looking value such as `urn:oce:names#` when the same
 context also declares `urn` as a term. Recursive context-term expansion is outside the supported
-subset. A direct `@context` on an `@graph` node, one of its identity/type reference objects, or a
+subset. A term whose name is itself spelled as an IRI or a compact IRI (a `:` anywhere but first or
+last, or a `/` anywhere) must bind its own expansion (issue #591). A term matches a token before any
+other reading, so `"S231:ExtensionBlock": "http://example.org#Foo"` would let the document redirect
+a standard spelling; it is refused as `malformed-document`, the error JSON-LD 1.1 calls an invalid
+IRI mapping. Such a term must still bind its own expansion once every map of a list is merged,
+because a later map may rebind the prefix it was read through; that shape, which JSON-LD accepts,
+is refused as a non-subset construct. A direct `@context` on an `@graph` node, one of its identity/type reference objects, or a
 modeled value/term object is also refused: context bindings are document-level only, and the engine
 never applies a scoped context to one semantic value. The canonical-key guarantee therefore holds
 for every document that loads at all.
