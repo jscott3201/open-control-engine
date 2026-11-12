@@ -32,8 +32,15 @@ Nothing reads it at run time, and no test fetches anything.
 A later Unicode version is a new excerpt cut the same way, the table in `format_controls.rs`
 updated to match, and this file's digests and line numbers with it.
 
-## Terms of use
+## License
 
-The excerpt keeps the file's copyright line. Unicode data files are distributed under the Unicode
-License v3, which permits copying them with that notice; see
-<https://www.unicode.org/terms_of_use.html> and <https://www.unicode.org/license.txt>.
+The excerpt is Unicode data, not open-control code, and it is not under the repository's MIT OR
+Apache-2.0. Unicode's terms of use (<https://www.unicode.org/copyright.html>, which the data file's
+header reaches through <https://www.unicode.org/terms_of_use.html>) put every data file under
+`https://www.unicode.org/Public/` under the **Unicode License v3**. That license grants its
+permissions provided its copyright and permission notice appears with every copy, so the notice
+travels with the excerpt. [`LICENSE`](LICENSE) beside it is the license's full text, copied byte
+for byte from <https://www.unicode.org/license.txt> on 2026-11-12 (1,995 bytes; SHA-256
+`e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96`; it reads "Copyright © 1991-2026
+Unicode, Inc."). The excerpt also keeps the data file's own copyright line. Both files sit inside
+`oce-cxf`'s package root, so a `cargo package` of the crate ships them together.

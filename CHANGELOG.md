@@ -294,8 +294,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   - **The `Cf` table's content is pinned.** GitHub #641's tests held only its size and edges, so a
     range shifted by one passed them. A unit test now checks every Unicode scalar value against a
     verbatim excerpt of Unicode 17.0.0's `DerivedGeneralCategory.txt` (its header and its `Cc` and
-    `Cf` sections), checked in under `crates/oce-cxf/tests/fixtures/unicode/` with how it was cut
-    and both digests. No dependency is added.
+    `Cf` sections), checked in under `crates/oce-cxf/tests/fixtures/unicode/` with how it was cut,
+    both digests and, as `LICENSE`, the full text of the Unicode License v3 it is distributed
+    under. No dependency is added.
   - **Breaking, in place:** such a document loaded before. None is tracked or in the library: no
     `Cf` or `Cc` character is in any of the 1,864 strings inside a `unit`, `quantity` or
     `displayUnit` value, in any key spelling, in the 833 tracked JSON documents (the 257 CXF
