@@ -145,7 +145,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   masked, or run from another directory).
 
 - **The no-secret scan catches every PEM private-key header and the armored OpenPGP private
-  key** (GitHub #PRNUM, issue #607). The private-key pattern is now
+  key** (GitHub #615, issue #607). The private-key pattern is now
   `-----BEGIN ([A-Z0-9]+ )*PRIVATE KEY( BLOCK)?-----`. Before, it was
   `(RSA|EC|OPENSSH|PGP) PRIVATE KEY`. That passed PKCS#8's `PRIVATE KEY` (OpenSSL's default
   output), `ENCRYPTED PRIVATE KEY` and `DSA PRIVATE KEY`, and its `PGP` alternative could not
