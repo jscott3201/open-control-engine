@@ -227,6 +227,31 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Verification
 
+- **The workflow-gate fixture suite runs its cases concurrently, so `gate behavior fixtures` is no
+  longer the per-PR gate's longest job** (GitHub #630, issue #627).
+  `test-workflow-gates.sh` ran its 348 cases one after another: its step took 323–335 s of a
+  379–393 s job on recent PRs, and 432 s with GitHub #624's 37 more, against 3.2–4.5 min for the
+  next-longest job. `run_case` now registers a case, and a bounded pool runs them:
+  - **Concurrency:** as many at once as the machine has CPUs (`getconf _NPROCESSORS_ONLN`; 2 when
+    unknown; `OCE_FIXTURE_JOBS` overrides), each in a subshell with its output in a file of its
+    own.
+  - **Reporting:** every case's output is printed in registration order, and the script exits 1
+    naming every failing case, not only the first.
+  - **Portability:** it uses no `wait -n`, so it runs on bash 3.2.
+  - **Isolation:** each case already built its own scratch tree and the checker only reads, so the
+    cases share no state.
+  - **The pool's own control:** six synthetic runs that finish out of order, with a failure planted
+    at the first, the middle, the last or no position. It must report exactly that failure, keep
+    each output whole and in order, and never run more than its bound. Copies of the runner that
+    drop a status, merge the outputs or ignore the bound each fail it.
+  - **Planted real failures:** flipping one real case at position 1, 174 or 348 exits 1 and names
+    only that case.
+
+  On the per-PR gate (runs 43167472832 and 43169110914, four CPUs) the step took 119 s and 178 s
+  against 323–335 s, and the job 166 s and 240 s against 379–393 s; the x86_64 release determinism
+  cell (265 s and 253 s) is the longest job again.
+  The timing rows in `docs/ci-and-the-gate.md` are updated.
+
 - **Every job that runs the oce-cxf or workspace suite prefetches the tool workspaces its tests
   build offline** (GitHub #611, issue #610). The `release.yml` verify of tag `v0.5.0` (run
   43129183575) failed 15 oce-cxf tests of the `fixture_structural_oracle` binary, all
