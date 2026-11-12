@@ -519,9 +519,12 @@ measured on 2026-11-10 at the head that introduced them:
 | engine | `bash .agents/gate.sh` | 7.1 min (423 s) | under the same load |
 | full | `bash .agents/gate.sh full` | 16.1 min (966 s) | on 2026-11-11, from an empty `target/` on an otherwise idle machine, at the head of GitHub #557, after GitHub #546, #551, #553 and #554 cut the release test binaries. The same mode took 30.1 min on `fdd70c0` before them, 15.9 min of it the release-codegen workspace suite |
 
-The first three are upper bounds, since the machine was busy. About three minutes of each is the
-gate's own fixture suites, which run in every mode (`test-workflow-gates.sh` alone took 3 min 22 s
-under that load): they are the floor of every row, and the reason the docs row is not seconds.
+The first three are upper bounds, since the machine was busy. About three minutes of each was then
+the gate's own fixture suites, which run in every mode (`test-workflow-gates.sh` alone took 3 min
+22 s under that load): they are the floor of every row, and the reason the docs row is not seconds.
+Since issue #627 that suite runs its cases concurrently, as many at once as the machine has CPUs
+(or `OCE_FIXTURE_JOBS`). On 2026-11-12 it took 1 min 20 s for its 348 cases on the same 10-core
+Mac, under a load average of 30, so the floor of each row is lower than the table shows.
 
 CI does not merely mirror that script, it **executes** it: `gate (full)` at
 [`.github/workflows/release-gate.yml`](../.github/workflows/release-gate.yml), nightly on the

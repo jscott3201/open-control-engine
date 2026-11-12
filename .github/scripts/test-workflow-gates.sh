@@ -27,6 +27,16 @@
 # build offline (issue #610), in any spelling of the command, the prefetch missing, late, masked,
 # commented out or in another job, and a gate script without it, fail; a Windows job, an archived
 # run, another workspace and doctests need no prefetch.
+#
+# The cases run concurrently (issue #627); run serially they made `gate behavior fixtures` the
+# per-PR gate's longest job. Each case builds and edits a scratch tree of its own under
+# "$tmp/<name>" (the names are unique), and the checker only reads, so no case can see another's
+# files. `run_case` only registers a case. run_registered_cases runs them, at most
+# `OCE_FIXTURE_JOBS` at a time, or as many as the machine has CPUs. Each case writes its output to
+# a file of its own, so no two interleave. Then everything is printed in registration order, and
+# the script exits 1 if any case failed, naming every failure, not only the first. The pool is
+# itself checked first, on synthetic cases that finish out of order with a failure planted at the
+# first, the middle and the last position.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -746,7 +756,9 @@ EOF
 EOF
 }
 
-run_case() {
+# Runs one case and exits non-zero, having said why, if it does not hold. It runs in a subshell of
+# its own (run_pool), so its exit ends only that case.
+run_one_case() {
   name="$1"
   expected="$2"
   mutate="$3"
@@ -808,6 +820,147 @@ run_case() {
       exit 1
       ;;
   esac
+}
+
+# `run_case NAME EXPECTED MUTATE [MESSAGE]` registers a case; run_registered_cases runs it.
+cases=0
+run_case() {
+  cases=$((cases + 1))
+  case_name[$cases]="$1"
+  case_expected[$cases]="$2"
+  case_mutate[$cases]="$3"
+  case_message[$cases]="${4:-}"
+}
+
+# `run_pool RUNNER COUNT DIR JOBS` runs `RUNNER i` for i = 1..COUNT, at most JOBS at a time, each in
+# a subshell of its own with its stdout and stderr in DIR/i.out, and sets pool_status[i] to its
+# exit status. It waits in the order it started the runs, so a slow run holds back the next start,
+# never a result. Bash 3.2 has no `wait -n`; a background subshell does not run the EXIT trap.
+run_pool() {
+  local runner="$1" count="$2" out="$3" jobs="$4" i=1 waited=0
+  mkdir -p "$out"
+  pool_pid=()
+  pool_status=()
+  while [ "$i" -le "$count" ]; do
+    ( "$runner" "$i" ) > "$out/$i.out" 2>&1 < /dev/null &
+    pool_pid[$i]=$!
+    if [ $((i - waited)) -ge "$jobs" ]; then
+      waited=$((waited + 1))
+      pool_wait "$waited"
+    fi
+    i=$((i + 1))
+  done
+  while [ "$waited" -lt "$count" ]; do
+    waited=$((waited + 1))
+    pool_wait "$waited"
+  done
+}
+pool_wait() {
+  if wait "${pool_pid[$1]}"; then pool_status[$1]=0; else pool_status[$1]=$?; fi
+}
+
+# The pool's own control: six synthetic runs, each finishing before the one started ahead of it,
+# two at a time. With a failure planted at the first, the middle, the last or no position, the
+# statuses must be exactly that failure and the outputs whole and in start order. Each run also
+# counts the runs alive as it starts, which the bound keeps at two or fewer: the pool leaves at most
+# two runs unwaited, and a run that is alive has not been waited for.
+synthetic_run() {
+  touch "$pool_marks/alive.$1"
+  ls "$pool_marks" | grep -c '^alive\.' > "$pool_marks/seen.$1"
+  sleep "0.0$((7 - $1))"
+  rm -f "$pool_marks/alive.$1"
+  echo "synthetic run $1 started"
+  if [ "$1" = "$planted" ]; then
+    echo "synthetic run $1 failed"
+    exit 7
+  fi
+  echo "synthetic run $1 passed"
+}
+pool_self_check() {
+  local planted want got statuses i most
+  for planted in 1 3 6 none; do
+    pool_marks="$tmp/pool-check-$planted-marks"
+    mkdir -p "$pool_marks"
+    run_pool synthetic_run 6 "$tmp/pool-check-$planted" 2
+    most="$(cat "$pool_marks"/seen.* | sort -n | tail -n 1)"
+    if [ "$most" -gt 2 ]; then
+      echo "FAIL: the case runner ran $most synthetic runs at once with a bound of two"
+      exit 1
+    fi
+    want=""
+    got=""
+    statuses=""
+    for i in 1 2 3 4 5 6; do
+      if [ "$i" = "$planted" ]; then
+        want="$want|synthetic run $i started|synthetic run $i failed"
+        statuses="$statuses 7"
+      else
+        want="$want|synthetic run $i started|synthetic run $i passed"
+        statuses="$statuses 0"
+      fi
+      if [ -f "$tmp/pool-check-$planted/$i.out" ]; then
+        got="$got|$(tr '\n' '|' < "$tmp/pool-check-$planted/$i.out" | sed 's/|$//')"
+      else
+        got="$got|(run $i wrote no output file)"
+      fi
+    done
+    if [ "$got" != "$want" ] || [ " ${pool_status[*]}" != "$statuses" ]; then
+      echo "FAIL: the case runner's control with a failure planted at $planted:"
+      echo "  outputs  $got"
+      echo "  expected $want"
+      echo "  statuses ${pool_status[*]} (expected$statuses)"
+      exit 1
+    fi
+  done
+}
+
+# How many cases run at once: OCE_FIXTURE_JOBS when set, else the CPU count, else 2.
+fixture_jobs() {
+  local jobs="${OCE_FIXTURE_JOBS:-}"
+  if [ -n "$jobs" ]; then
+    case "$jobs" in
+      '' | *[!0-9]* | 0)
+        echo "BUG: OCE_FIXTURE_JOBS must be a positive integer, not '$jobs'" >&2
+        return 1
+        ;;
+    esac
+  else
+    jobs="$(getconf _NPROCESSORS_ONLN 2>/dev/null || true)"
+    case "$jobs" in '' | *[!0-9]* | 0) jobs=2 ;; esac
+  fi
+  echo "$jobs"
+}
+
+run_registered_case() {
+  run_one_case "${case_name[$1]}" "${case_expected[$1]}" "${case_mutate[$1]}" "${case_message[$1]}"
+}
+
+# Runs every registered case through the pool, then prints what each printed, in registration
+# order, and exits 1 naming every case that failed.
+run_registered_cases() {
+  local jobs failed=0 i
+  if [ "$cases" -eq 0 ]; then
+    echo "BUG: no workflow fixture case is registered"
+    exit 1
+  fi
+  jobs="$(fixture_jobs)" || exit 1
+  run_pool run_registered_case "$cases" "$tmp/results" "$jobs"
+  i=1
+  while [ "$i" -le "$cases" ]; do
+    cat "$tmp/results/$i.out"
+    if [ "${pool_status[$i]}" != 0 ]; then
+      failed=$((failed + 1))
+      if [ ! -s "$tmp/results/$i.out" ]; then
+        echo "FAIL: workflow fixture '${case_name[$i]}' exited ${pool_status[$i]} and printed nothing"
+      fi
+    fi
+    i=$((i + 1))
+  done
+  if [ "$failed" -ne 0 ]; then
+    echo "FAIL: $failed of $cases workflow fixture cases failed (above)"
+    exit 1
+  fi
+  echo "ran $cases workflow fixture cases, $jobs at a time"
 }
 
 noop() {
@@ -3382,4 +3535,6 @@ run_case gate-script-prefetch-after-the-oracle fail gate_script_prefetch_after_t
 run_case gate-script-prefetch-or-true fail gate_script_prefetch_or_true "$OFFLINE_GATE_MESSAGE"
 run_case gate-script-prefetch-in-a-comment fail gate_script_prefetch_in_a_comment "$OFFLINE_GATE_MESSAGE"
 
+pool_self_check
+run_registered_cases
 echo "OK: workflow gate fixtures passed."
