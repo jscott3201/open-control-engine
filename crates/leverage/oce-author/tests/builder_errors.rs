@@ -234,10 +234,13 @@ fn array_element_names_are_checked_against_the_class_templates() {
             "{unknown}"
         );
     }
-    // An element past the configured width is not refused: `class_ports` ignores any name the
-    // class does not read (GitHub #467, a facade issue), and stage 1 does not guess a width from
-    // the resolved port count. Stage 2 judges the emitted array until #467 lands.
-    assert_eq!(with("k_3"), vec![]);
+    // An element past the configured width is refused: the load gate's vector rule, which
+    // `class_ports` runs, judges every element against the resolved length (GitHub #626). Before
+    // that, `k_3` on `nin = 2` passed both stages and the engine dropped it.
+    assert_eq!(
+        with("k_3"),
+        vec![("parameter-out-of-range", "sum.k_3".to_owned())]
+    );
 }
 
 #[test]

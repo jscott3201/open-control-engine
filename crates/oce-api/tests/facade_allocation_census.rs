@@ -18,6 +18,7 @@ mod frame_schedule;
 #[path = "replay_oracle/mod.rs"]
 mod replay_oracle;
 
+mod array_extent_cost;
 mod blob_allocations;
 mod blob_peak_allocation;
 mod cxf_admission;

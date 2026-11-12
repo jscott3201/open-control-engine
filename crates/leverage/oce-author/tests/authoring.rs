@@ -24,6 +24,7 @@ use std::path::Path;
 
 mod support;
 
+mod array_extent;
 mod boundary_bounds;
 mod builder_errors;
 mod emit_bounds;
