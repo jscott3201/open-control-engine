@@ -57,6 +57,17 @@ pub(crate) fn lookup_parameter<'a>(
     })
 }
 
+/// The base of the array template an assignment name is an element of: `k` for `k_2` on a class
+/// that declares `k_<i>`, `K` for `K_1_2` and `K_<row>_<col>`; `None` for a scalar parameter or a
+/// name the class does not declare. The emitter writes an array's elements as one node named by
+/// this base, and stage 2 maps an engine subject that names it to the array's first authored
+/// element; the text placement indexes the base there too (GitHub #617).
+pub(crate) fn element_base(class: &ClassMetadata, name: &str) -> Option<&'static str> {
+    let parameter = lookup_parameter(class, name)?;
+    let (base, _) = parameter.name.split_once("_<")?;
+    match_template(parameter.name, name).map(|_| base)
+}
+
 const PLACEHOLDERS: [&str; 3] = [
     PARAM_INDEX_PLACEHOLDER,
     PARAM_ROW_PLACEHOLDER,

@@ -240,6 +240,47 @@ block derived_from = CDL.Reals.Nope
 }
 
 #[test]
+fn an_array_base_is_placed_on_the_arrays_first_authored_element() {
+    // GitHub #617: the emitter writes an array's elements as one node named by the template's
+    // base (`m.k`, `g.K`), and stage 2 anchors an engine finding about that node at the array's
+    // first authored element, so the map holds the base there: a list's first value, or the
+    // first element assignment as written, whatever its index.
+    let text = "\
+sequence s
+derived_from none
+block m = CDL.Reals.MultiSum(nin = 2, k = [1.5, 2.5])
+block g = CDL.Reals.MatrixGain(K = [[1.0, 0.0], [0.0, 1.0]])
+block h = CDL.Reals.MultiSum(
+  nin = 3,
+  k_2 = 2.0,
+  k_1 = 1.0
+)
+block a = CDL.Reals.Abs
+block n = CDL.Reals.Nope(k_1 = 1.0)
+";
+    let (model, spans) = parse_text_with_spans(text).expect("parses");
+    let at = |line, column| vec![Location { line, column }];
+    for (subject, expected) in [
+        ("m.k", at(3, 44)),
+        ("m.k_1", at(3, 44)),
+        ("m.k_2", at(3, 49)),
+        ("g.K", at(4, 38)),
+        ("g.K_1_1", at(4, 38)),
+        ("h.k", at(7, 3)),
+        ("h.k_1", at(8, 3)),
+        // A scalar parameter has no base, and a class the catalog does not register has no
+        // template to read one from.
+        ("h.nin", at(6, 3)),
+        ("h.ni", Vec::new()),
+        ("a.k", Vec::new()),
+        ("n.k", Vec::new()),
+        ("n.k_1", at(11, 26)),
+    ] {
+        assert_eq!(spans.locations(&model, subject), expected, "{subject}");
+    }
+}
+
+#[test]
 fn a_rewritten_subject_is_placed_only_where_it_names_one_statement() {
     // `apply` places a finding on the element its subject and its position both name. A caller
     // that rewrites the subject breaks the pair: the finding is then placed on the subject's

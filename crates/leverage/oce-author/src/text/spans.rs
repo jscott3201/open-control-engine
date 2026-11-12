@@ -17,6 +17,7 @@ use std::collections::BTreeMap;
 use crate::counted::Counted;
 use crate::location::Location;
 use crate::model::Sequence;
+use crate::validate::catalog::{element_base, lookup_class};
 use crate::validate::{Anchor, Finding};
 
 /// The text location of every statement, assignment and connection of one parsed document, in
@@ -49,8 +50,9 @@ impl SourceMap {
 
     /// Every location `subject` can mean in `sequence`, in model order: the `sequence` keyword's
     /// name, the `derived_from` operand, a declaration's name (parameters, inputs, outputs,
-    /// blocks), an assignment's name (an array element's value) or a connection's source. Empty
-    /// when the subject names nothing in the map. Builds the index each call;
+    /// blocks), an assignment's name (an array element's value), an array's base (`blk.k`, at
+    /// its first authored element, where stage 2 anchors an engine finding about the array
+    /// node) or a connection's source. Empty when the subject names nothing in the map. Builds the index each call;
     /// [`SourceMap::apply`] builds it once for a whole finding list.
     #[must_use]
     pub fn locations(&self, sequence: &Sequence, subject: &str) -> Vec<Location> {
@@ -74,6 +76,16 @@ impl SourceMap {
             finding.span = index.place(&finding.subject, finding.anchor);
         }
     }
+}
+
+/// Whether `elements` holds `subject` at an assignment of block `block`.
+fn indexed_in_block<'s>(
+    elements: &'s BTreeMap<Counted<(Cow<'s, str>, Anchor)>, Location>,
+    subject: &'s str,
+    block: usize,
+) -> bool {
+    let key = |j| Counted((Cow::Borrowed(subject), Anchor::Block(block, Some(j))));
+    elements.range(key(0)..=key(usize::MAX)).next().is_some()
 }
 
 /// The first anchor in model order, and the last: every key of one subject lies between them.
@@ -126,6 +138,28 @@ impl<'a> Index<'a> {
                     Anchor::Block(i, Some(j)),
                     *at,
                 );
+            }
+        }
+        // An array's base (`blk.k`) names the one node the emitter writes for the array, and
+        // stage 2 anchors an engine finding about that node at the array's first authored
+        // element (`assignment_of` in `validate::engine`, GitHub #617). So the base is indexed
+        // there too, unless an assignment of the block is named the base itself: stage 2 takes
+        // that one first, and it is already indexed.
+        for (i, (block, spans)) in sequence.blocks.iter().zip(&map.assignments).enumerate() {
+            let Some(class) = lookup_class(&block.class_path) else {
+                continue;
+            };
+            for (j, (a, at)) in block.assignments.iter().zip(spans).enumerate() {
+                let Some(base) = element_base(class.metadata, a.name.as_str()) else {
+                    continue;
+                };
+                let subject = format!("{}.{base}", block.name);
+                if !indexed_in_block(&elements, &subject, i) {
+                    elements.insert(
+                        Counted((Cow::Owned(subject), Anchor::Block(i, Some(j)))),
+                        *at,
+                    );
+                }
             }
         }
         Self { elements }
