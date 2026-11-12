@@ -267,6 +267,42 @@ and a gate that accepted any text would restore exactly the false assurance desc
     S231 namespace IRI itself (#636); CDL enumeration IRIs in another namespace matched by last
     segment (#637); role-aware checking (#638); the authoring importer's reading of the compact
     spelling (#639).
+- **A `unit`, `quantity` or `displayUnit` term carrying an invisible character is refused, in both
+  readers** (GitHub #646, issue #629; owner ruling of 2026-11-12). A term on a connector, a
+  boundary or a parameter, at every place a parameter is read, that carries a Unicode format
+  (`Cf`) or control (`Cc`) character anywhere in its string, a typed literal's `@value` or an IRI
+  node's `@id` (a zero-width space, a byte-order mark, U+2060, U+180E, a soft hyphen, a
+  bidirectional control, a C0 or C1 control) is refused as `malformed-document`, subject the node,
+  once: the rule GitHub #641 applies to a typing token.
+  - **Before**, none of these characters is blank to `str::trim`, so `"K\u{200B}"` loaded and
+    reached the §7.10 gate and the host's point list as a unit that looks like `K` and equals no
+    other.
+  - The message names the first such code point (`U+200B, a format character (Cf)`) and quotes
+    the term excerpted, with each such character written `\u{…}`, never as it is.
+  - **Precedence:** the shape refusals come first, then the blank one, so a term of whitespace
+    alone is blank even where that whitespace is a control character too (a tab, a line feed,
+    U+0085). The same characters around or inside a visible term are this refusal: `"K\t"` loaded
+    before as a unit that is not `K`, and a term, unlike a typing token, has no
+    surrounding-whitespace rule that trims them. An Integer or Boolean connector's term is still
+    refused once, for being there. A typed literal's `@type` is not judged, and characters outside
+    `Cf` and `Cc` (a no-break space, a line separator, a variation selector) are not this rule's.
+  - **One decision in both readers.** The authoring importer refuses the same characters as
+    `wrong-shape` naming the key, on a boundary's term and on a sequence or block parameter's. It
+    decides the class with the engine's own table, which the facade now re-exports as
+    `oce_api::is_format_or_control`, since a leverage crate depends on `oce-api` only. A test holds
+    the two readers to the same verdict on each character.
+  - **The `Cf` table's content is pinned.** GitHub #641's tests held only its size and edges, so a
+    range shifted by one passed them. A unit test now checks every Unicode scalar value against a
+    verbatim excerpt of Unicode 17.0.0's `DerivedGeneralCategory.txt` (its header and its `Cc` and
+    `Cf` sections), checked in under `crates/oce-cxf/tests/fixtures/unicode/` with how it was cut,
+    both digests and, as `LICENSE`, the full text of the Unicode License v3 it is distributed
+    under. No dependency is added.
+  - **Breaking, in place:** such a document loaded before. None is tracked or in the library: no
+    `Cf` or `Cc` character is in any of the 1,864 strings inside a `unit`, `quantity` or
+    `displayUnit` value, in any key spelling, in the 833 tracked JSON documents (the 257 CXF
+    documents, `CXF-Core.jsonld` and the vendored translations among them). The library's 140 CXF
+    documents carry no term. `fixture_corpus_import.txt` is byte-identical. The workspace version
+    is not bumped (owner ruling: tightening accepted CXF input is not a format change).
 ### Leverage
 
 - **The importer's refusal of a giant list is pinned in allocations, not in elapsed time** (GitHub

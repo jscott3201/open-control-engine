@@ -105,6 +105,7 @@ mod resolve_pass_through;
 mod resolve_port_binding;
 mod resolve_property_keys;
 mod resolve_reference_keys;
+mod resolve_term_controls;
 mod resolve_term_shapes;
 mod resolve_type_near_miss;
 mod resolve_typing_controls;

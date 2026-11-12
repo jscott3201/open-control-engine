@@ -57,6 +57,7 @@ mod tests;
 mod translation_software;
 
 pub use dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany, TermAttr};
+pub use format_controls::is_format_or_control;
 pub use resolve::{ImportMode, ResolveOptions, ValidationReport};
 
 /// A CXF import/export error. Ingest failures in bounded parser and composite-lowering paths are

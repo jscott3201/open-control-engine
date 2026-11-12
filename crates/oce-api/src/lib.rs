@@ -158,6 +158,13 @@ pub use state::{EngineCheckpoint, EngineStateError, EngineStateSnapshot};
 pub use state_snapshot::StatePortability;
 pub use topology::{DeclaredOutput, PassThroughPair, Topology, TopologyBlock, TopologyConnection};
 
+/// Re-export of the CXF reader's invisible-character class: whether a character is a Unicode
+/// format (`Cf`) or control (`Cc`) character, which the loader refuses in a typing token and in a
+/// `unit`, `quantity` or `displayUnit` term (GitHub #641, issue #629). It is here so a second CXF
+/// reader above the facade, the authoring importer, refuses exactly the characters the loader
+/// does, from the same table, and never a copy of it.
+pub use oce_cxf::is_format_or_control;
+
 /// Re-export of the diagnostic code vocabulary: the type of [`Diagnostic::code`], so a host
 /// matches a refusal's code (for example [`ClassPortsError::InvalidParameters`]) as
 /// `oce_api::DiagCode` without a direct `oce-diag` dependency. `DiagCode::as_str` is the stable
