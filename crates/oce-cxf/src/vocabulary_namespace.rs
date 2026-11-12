@@ -42,6 +42,7 @@
 use oce_diag::{DiagCode, Diagnostic};
 
 use super::{Expansion, PrefixTable, expand_token};
+use crate::excerpt::excerpt;
 use crate::export::S231_CONTEXT_IRI;
 use crate::resolve::extension_blocks::EXTENSION_BLOCK_TERM;
 
@@ -129,8 +130,10 @@ pub(super) fn check_typing(token: &str, slot: &str, owner: &str, diags: &mut Vec
 /// surrounding whitespace is trimmed (GitHub #587). Returns whether it refused, in which case the
 /// caller skips [`check_typing`] for the token. `owner` is the node's expanded `@id`.
 ///
-/// Whitespace is what [`str::trim`] removes. A token with whitespace inside (`"S231: Real"`) is
-/// not a near miss and is left to the readers, as a key is in [`super::property_keys`].
+/// Whitespace is what [`str::trim`] removes. A token with whitespace inside (`"S231: Real"`, and
+/// `" S231: Real"` once trimmed) is not a near miss and is left to the readers, as a key is in
+/// [`super::property_keys`]: no spelling of it without the surrounding whitespace names a term.
+/// The message quotes the token and the term as excerpts ([`crate::excerpt`]).
 pub(super) fn check_typing_whitespace(
     token: &str,
     slot: &str,
@@ -152,15 +155,18 @@ pub(super) fn check_typing_whitespace(
             .chain(FOREIGN_NAMESPACES)
             .find_map(|namespace| Some((namespace, iri.strip_prefix(namespace)?))),
     };
-    let Some((namespace, term)) = named.filter(|(_, term)| !term.is_empty()) else {
+    let Some((namespace, term)) =
+        named.filter(|(_, term)| !term.is_empty() && !term.contains(char::is_whitespace))
+    else {
         return false;
     };
     let subject = if owner.is_empty() { token } else { owner };
+    let (quoted, term) = (excerpt(token), excerpt(term));
     diags.push(
         Diagnostic::error(
             DiagCode::MalformedDocument,
             format!(
-                "{slot} {token:?} on node `{owner}` carries surrounding whitespace; without it, \
+                "{slot} {quoted:?} on node `{owner}` carries surrounding whitespace; without it, \
                  it names `{term}` in `{namespace}`; write it as `S231:{term}`"
             ),
         )

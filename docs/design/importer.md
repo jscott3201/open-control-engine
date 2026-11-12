@@ -224,7 +224,7 @@ for a member path) and at validation (`unknown-enum-type`, `unknown-enum-literal
 | --- | --- |
 | root `@id` `{namespace}{sequence}` | `Sequence.name` = the trailing identifier; the namespace is not kept |
 | root `hasParameter` | sequence parameters in order; `isOfDataType` names the type (scalar or enumeration); value a literal or a member |
-| root `hasInput` / `hasOutput` | boundaries in order; `@type` and `isOfDataType` must agree; `unit` to `SemanticPoint.unit`; `quantity`, `displayUnit`, `min`, `max` to their fields |
+| root `hasInput` / `hasOutput` | boundaries in order; `@type` and `isOfDataType` must agree; `unit` to `SemanticPoint.unit`; `quantity`, `displayUnit`, `min`, `max` to their fields. A term (`unit`, `quantity`, `displayUnit`) is a string that is not empty or whitespace-only; anything else is `wrong-shape` naming the key (GitHub #602) |
 | root `containsBlock` | blocks in order; class path from the `@type` fragment after `Buildings.Controls.OBC.` |
 | block `hasParameter` | assignments in order; arrays row-major under the catalog's template names |
 | `isConnectedTo` | connections by source node in `@graph` order, each source's targets in array order |
@@ -237,9 +237,11 @@ engine uses none of these on a parameter node: only connector nodes reach
 the engine never enforces (decision 9). Both readers do check their shape before letting them go
 (GitHub #594, issue #559; owner rulings of 2026-11-11): a bound is a JSON number, a typed literal
 or a string (an expression, as modelica-json writes `"yMin"`), a term is a string, a typed literal
-or an IRI node, and no string among them (the attribute, a typed literal's `@value`, an IRI node's
-`@id`) is empty or whitespace-only. Anything else is refused: `wrong-shape` naming the key here,
-`malformed-document` subject the parameter in the engine. In the in-subset corpus, root
+holding exactly `@value` and `@type` or an IRI node holding exactly `@id` (never an object carrying
+both `@id` and `@value`), and no string among them (the attribute, a typed literal's `@value`, an
+IRI node's `@id`) is empty or whitespace-only. Anything else is refused: `wrong-shape` naming the
+key here, `malformed-document` subject the parameter in the engine. The engine holds a
+connector's and a boundary's terms to the same shape (GitHub #602, owner ruling of 2026-11-12). In the in-subset corpus, root
 parameters carry `unit` in 16 fixtures, `quantity` in 13 and `min`/`max` in 3. The report also
 lists one **normalisation**: a boundary typed by a constant package becomes an Integer boundary
 (decision 21).
@@ -251,11 +253,17 @@ none: in every difference the engine is the more lenient, or both refuse with di
 | Input | Engine | Importer |
 | --- | --- | --- |
 | `null` bound or term | absent, as on a connector | `wrong-shape`, as on a boundary |
-| typed literal or IRI-node term with extra keys (`@language`, any other) | accepted: kept for lossless round-trip (R-8) | `wrong-shape`: exact shapes only |
 | object bound that is no typed literal (`{}`, `{"@id": …}`, `{"@value": "30"}`) | the whole document fails to parse (`CxfError::Json`, no code or subject) | `wrong-shape` naming the key |
 | a well-shaped attribute under its full-IRI key | normalised, then checked | `unknown-key`: compact keys only |
 | typed literal carrying `@context` | `non-subset-construct` | `wrong-shape` |
 | integer outside `i64` | read as a float | `not-strict-json` |
+
+Until GitHub #602 a typed literal or IRI-node term carrying another key (`@language`, `@index`,
+`qudt:symbol`) was one more difference: the engine accepted it, on the reading that the key was kept
+for lossless round-trip (R-8). Only `oce_cxf::parse_document` and `write_document` keep it; the
+engine reads the term alone and its export writes every term back as a bare string, so the key was
+lost between import and export. Both readers now refuse it, on every role (owner ruling of
+2026-11-12), and the DTO still round-trips it.
 
 **Refused, never guessed** (each a typed kind, see [`ImportError`](#importerror)): every construct in
 the authoring note's out-of-scope list, an expression value, a block-port attribute, `nominal` and

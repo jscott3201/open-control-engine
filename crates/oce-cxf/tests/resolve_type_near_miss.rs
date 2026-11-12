@@ -311,10 +311,14 @@ fn a_near_miss_is_read_through_the_document_s_own_bindings() {
 
 #[test]
 fn tokens_that_name_no_s231_term_once_trimmed_are_left_to_the_readers() {
-    // Inner whitespace is not a near miss, and neither is a token that names nothing in the S231
-    // namespace once trimmed: a root reads no type, so these load as before.
+    // Inner whitespace is not a near miss, with surrounding whitespace too (no spelling without the
+    // surrounding whitespace names a term, so the old suggestion `S231: Block` was still broken;
+    // GitHub #620), and neither is a token that names nothing in the S231 namespace once trimmed: a
+    // root reads no type, so these load as before.
     for token in [
         "S231: ExtensionBlock",
+        " S231: Block",
+        "S231:Extension Block\t",
         "S231:",
         " S231: ",
         " ",
@@ -328,6 +332,31 @@ fn tokens_that_name_no_s231_term_once_trimmed_are_left_to_the_readers() {
     let diags = refusal(&with(base(), CON, "@type", json!(token)));
     assert_eq!(diags.len(), 1, "{diags:?}");
     assert_eq!(diags[0].code, DiagCode::ClassNotFound, "{diags:?}");
+}
+
+#[test]
+fn a_long_token_and_its_term_are_quoted_as_excerpts() {
+    // A message quotes at most 64 bytes of the token and of the term, cut on a character boundary
+    // and marked `…` (GitHub #602), however long the document writes them.
+    // The `é` straddles byte 64 of the term, so it is left out whole.
+    let term = format!("{}é{}", "B".repeat(63), "k".repeat(1 << 20));
+    let token = format!("S231:{term} ");
+    let doc = with(base(), ROOT, "@type", json!(token));
+    let quoted = format!("{}…", &token[..64]);
+    let named = format!("{}…", "B".repeat(63));
+    assert_eq!(
+        refusal(&doc),
+        vec![
+            Diagnostic::error(
+                DiagCode::MalformedDocument,
+                format!(
+                    "@type {quoted:?} on node `{ROOT}` carries surrounding whitespace; without it, \
+                     it names `{named}` in `{S231_NS}`; write it as `S231:{named}`"
+                ),
+            )
+            .with_subject(ROOT)
+        ]
+    );
 }
 
 #[test]

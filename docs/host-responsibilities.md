@@ -445,16 +445,14 @@ by a declared term.
 A parameter's `min`, `max`, `unit`, `quantity` and `displayUnit` are never used for control, but
 their shape is checked where the parameter is read (GitHub #594, issue #559): a bound is one
 number, typed literal or expression string (modelica-json writes a bound over other parameters as
-an expression, `"yMin"`), and a term is a string, typed literal or IRI node, the shapes a
-connector's term takes. No string among them may be empty or whitespace-only: not the attribute
-itself, a typed literal's `@value` or an IRI node's `@id`. JSON `null` reads as absent. A
-malformed attribute is refused in one of two ways:
+an expression, `"yMin"`), and a term has the shape every term has (below). No string among the
+bounds may be empty or whitespace-only. JSON `null` reads as absent. A malformed attribute is
+refused in one of two ways:
 
 - **`malformed-document`, subject the parameter**, once per malformed attribute however often the
   parameter is read: a bound that is a list, a boolean or a blank string, or a typed literal with
-  a blank `@value`; and every malformed term (a number, a boolean, a list, an object that is no
-  typed literal or IRI node, or a blank string, `@value` or `@id`). Only a parameter that is read
-  gets it; one pruned by a false conditional guard, or listed by no node, is not checked.
+  a blank `@value`; and every malformed term. Only a parameter that is read gets it; one pruned by
+  a false conditional guard, or listed by no node, is not checked.
 - **A parse failure of the whole document** (`CxfError::Json`; no code and no subject): a bound
   that is an object but no typed literal with a string `@value` and `@type` (`{}`, `{"@id": …}`,
   `{"@value": "30"}`, `{"@value": [1], …}`, `{"@list": …}`), or a list holding one. Such a bound
@@ -462,6 +460,17 @@ malformed attribute is refused in one of two ways:
   parameter is, read, pruned or listed by no node, as a malformed `S231:value` does.
 
 The value of a well-shaped attribute is still not read.
+
+A term (`unit`, `quantity`, `displayUnit`) on any node that carries one, a connector, a boundary or
+a parameter, is a string, a typed literal holding exactly `@value` and `@type`, or an IRI node
+holding exactly `@id`, and it is not empty or whitespace-only: not the string, the `@value` or the
+`@id` (GitHub #602, owner ruling of 2026-11-12). Anything else is refused as `malformed-document`,
+subject the node: another JSON shape, an object carrying both `@id` and `@value` (with or without
+`@type`), an object carrying any other key (`@language`, `@index`, `qudt:symbol`), and a blank term.
+On a connector a blank term would otherwise be a declared unit to the §7.10 gate: unequal to any
+other, so a cluster an absent unit lets load is refused as a mismatch, and alone, propagated to
+the peers that declare none and reported in the point list as a unit. A Boolean connector permits
+no term, whatever its shape, and is refused for carrying one.
 
 The importer reads the S231 vocabulary in one namespace, `http://data.ashrae.org/S231#`: the one
 the exporter binds, the OpenBuildingControl (OBC) specification lists (OBC §11.3) and

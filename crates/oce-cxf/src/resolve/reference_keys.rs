@@ -11,6 +11,9 @@
 //! The engine reads none of it, so it refuses the document as `non-subset-construct` rather than
 //! load a reading the author did not write.
 //!
+//! The message names the property, the reference's canonical `@id` (whole) and up to four of the
+//! keys, each cut to an excerpt ([`crate::excerpt`]), then counts the rest.
+//!
 //! The check runs on the expanded document (every `@id` canonical) with the `@id` index, before
 //! anything reads the graph. A `@context` inside a reference never reaches it: the expansion pass
 //! refuses a scoped context first, in its `context_scope` check.
@@ -20,9 +23,7 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic};
 
 use crate::dto::{CxfDocument, IriRef};
-
-/// The most keys one refusal names; the rest are counted.
-const NAMED_KEYS: usize = 4;
+use crate::excerpt::named_keys;
 
 /// Refuse every reference object of `doc` that carries a key beside its `@id`: one error per
 /// reference, subject the node that holds it (`connector at @graph[N]` for a node without an
@@ -46,7 +47,7 @@ pub(super) fn refuse(doc: &CxfDocument, diags: &mut Vec<Diagnostic>) {
                          reference is read as its `@id` alone, so the engine would drop it \
                          without effect: state it on the referenced node instead",
                         reference.id,
-                        named_keys(reference),
+                        named_keys(&reference.other),
                     ),
                 )
                 .with_subject(subject),
@@ -66,26 +67,5 @@ pub(super) fn refuse(doc: &CxfDocument, diags: &mut Vec<Diagnostic>) {
                 refuse_one(slot, reference);
             }
         }
-    }
-}
-
-/// The keys of `reference` beside its `@id`, in key order: `` `k` `` for one, `` keys `a`, `b` ``
-/// for several, at most [`NAMED_KEYS`] of them, then how many more.
-fn named_keys(reference: &IriRef) -> String {
-    let keys = &reference.other;
-    let named: Vec<String> = keys
-        .keys()
-        .take(NAMED_KEYS)
-        .map(|key| format!("`{key}`"))
-        .collect();
-    let noun = if keys.len() == 1 {
-        "the key"
-    } else {
-        "the keys"
-    };
-    let list = named.join(", ");
-    match keys.len() - named.len() {
-        0 => format!("{noun} {list}"),
-        more => format!("{noun} {list} and {more} more"),
     }
 }

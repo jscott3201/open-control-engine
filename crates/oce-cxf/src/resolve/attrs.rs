@@ -32,6 +32,17 @@ pub(super) fn connector_attrs(node: &Node, vt: ValueType, diags: &mut Vec<Diagno
             unbounded: None,
         }),
         ValueType::Integer => {
+            // An Integer connector carries no term, and reads none (doc 02 §3.3); one of the wrong
+            // shape is refused all the same, as on every node (GitHub #602).
+            for (which, term) in [
+                ("quantity", &node.quantity),
+                ("unit", &node.unit),
+                ("displayUnit", &node.display_unit),
+            ] {
+                if let Some(term) = term {
+                    refuse_term(term, which, subject, diags);
+                }
+            }
             refuse_nominal(node, "an Integer", subject, diags);
             Attrs::Integer(IntAttrs {
                 min: int_connector_bound(node.min.as_ref(), "min", subject, diags),
@@ -78,27 +89,38 @@ fn refuse_nominal(node: &Node, kind: &str, subject: &str, diags: &mut Vec<Diagno
     }
 }
 
+/// Read one term of a Real connector, refusing one of the wrong shape ([`super::term_shape`]).
 fn term_attr(
     t: Option<&crate::dto::TermAttr>,
     which: &str,
     subject: &str,
     diags: &mut Vec<Diagnostic>,
 ) -> Option<Arc<str>> {
-    match t?.as_term() {
-        Some(s) => Some(Arc::from(s)),
-        None => {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::MalformedDocument,
-                    format!(
-                        "S231:{which} is not a string, typed literal, or IRI node — malformed term"
-                    ),
-                )
-                .with_subject(subject.to_owned()),
-            );
-            None
-        }
+    let term = t?;
+    if refuse_term(term, which, subject, diags) {
+        return None;
     }
+    term.as_term().map(Arc::from)
+}
+
+/// Refuse `term` if it has the wrong shape ([`super::term_shape`]); returns whether it did.
+fn refuse_term(
+    term: &crate::dto::TermAttr,
+    which: &str,
+    subject: &str,
+    diags: &mut Vec<Diagnostic>,
+) -> bool {
+    let Some(found) = super::term_shape::problem(term) else {
+        return false;
+    };
+    diags.push(
+        Diagnostic::error(
+            DiagCode::MalformedDocument,
+            format!("S231:{which} is {found} — malformed term"),
+        )
+        .with_subject(subject.to_owned()),
+    );
+    true
 }
 
 /// Ground one numeric Real attribute — a `min`/`max` bound or the `nominal` — against an empty
