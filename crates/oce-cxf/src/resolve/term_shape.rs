@@ -16,13 +16,27 @@
 //! - **an empty or whitespace-only term**: the string, the `@value` or the `@id`, as [`str::trim`]
 //!   reads whitespace. The unit gate would read it as a declared unit: unequal to `"K"`, so a
 //!   cluster that an absent unit would let load is refused as a mismatch; alone, propagated to
-//!   every peer that declares none, and reported to the host as a unit.
+//!   every peer that declares none, and reported to the host as a unit;
+//! - **a term carrying a Unicode format (`Cf`) or control (`Cc`) character** anywhere in the
+//!   string, the `@value` or the `@id` (issue #629; owner ruling of 2026-11-12, the rule GitHub
+//!   #641 applies to a typing token, decided by the same [`crate::is_format_or_control`]): a
+//!   zero-width space, a byte-order mark, U+2060, U+180E, a soft hyphen, a bidirectional control,
+//!   a C0 or C1 control. No reader can see one, so `"K\u{200B}"` would reach the unit gate and the
+//!   host's point list as a unit that looks like `K` and equals no other. The message names the
+//!   first such code point and quotes the term as an excerpt with each such character written
+//!   `\u{…}`.
 //!
-//! The problems are checked in that order and the first one found is reported. A `@context` inside
-//! a term object is refused before any of these, by the expansion pass, as a scoped context.
+//! The problems are checked in that order and the first one found is reported, so a term is
+//! refused once. The blank check comes before the invisible-character check: a term of whitespace
+//! alone is blank, even where that whitespace is also `Cc` (a tab, a line feed, U+0085). Whitespace
+//! of that kind around or inside a visible term is not trimmed away first, as it is for a typing
+//! token: `"K\t"` is refused as carrying U+0009, since no other rule refuses it (a term may carry
+//! surrounding spaces) and it would reach the gate as a unit that is not `K`. A `@context` inside a
+//! term object is refused before any of these, by the expansion pass, as a scoped context.
 
 use crate::dto::TermAttr;
-use crate::excerpt::named_keys;
+use crate::excerpt::{excerpt, named_keys};
+use crate::format_controls::{describe, first_format_or_control, visible};
 
 /// What a refusal calls an empty or whitespace-only string.
 pub(super) const BLANK_STRING: &str = "an empty or whitespace-only string";
@@ -31,7 +45,7 @@ pub(super) const BLANK_STRING: &str = "an empty or whitespace-only string";
 pub(super) const BLANK_VALUE: &str = "a typed literal whose @value is empty or whitespace-only";
 
 /// What is wrong with `term`, as the noun phrase a refusal reads (`S231:unit … is <it>`), or
-/// `None` when it is one of the three shapes and not blank.
+/// `None` when it is one of the three shapes, not blank and free of format and control characters.
 pub(super) fn problem(term: &TermAttr) -> Option<String> {
     match term {
         TermAttr::Other(_) => Some("not a string, typed literal, or IRI node".to_owned()),
@@ -50,8 +64,25 @@ pub(super) fn problem(term: &TermAttr) -> Option<String> {
         TermAttr::Iri { id, .. } if blank(id) => {
             Some("an IRI node whose @id is empty or whitespace-only".to_owned())
         }
-        TermAttr::Bare(_) | TermAttr::Typed { .. } | TermAttr::Iri { .. } => None,
+        TermAttr::Bare(text) => invisible(text, "the string", ", which carries"),
+        TermAttr::Typed { value, .. } => {
+            invisible(value, "a typed literal whose @value", " carries")
+        }
+        TermAttr::Iri { id, .. } => invisible(id, "an IRI node whose @id", " carries"),
     }
+}
+
+/// What a refusal calls `text`, the lexical form of a well-shaped term, when it carries a format
+/// or control character: `<holder> `<text>`<carries> U+200B, a format character (Cf) that no
+/// reader can see`, the text an excerpt with each such character escaped; `None` when it carries
+/// none.
+fn invisible(text: &str, holder: &str, carries: &str) -> Option<String> {
+    let found = first_format_or_control(text)?;
+    Some(format!(
+        "{holder} `{}`{carries} {} that no reader can see",
+        visible(&excerpt(text)),
+        describe(found)
+    ))
 }
 
 /// What a refusal calls an object carrying both `@id` and `@value`.

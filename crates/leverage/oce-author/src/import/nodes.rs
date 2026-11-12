@@ -69,14 +69,22 @@ pub(super) const PARAMETER_ATTRIBUTES: [&str; 5] = [
 /// object of exactly `@value` and `@type`, both strings, and an IRI node one of exactly `@id`, a
 /// string: the strict shapes the rest of this reader accepts. No such string (the value itself, a
 /// typed literal's `@value`, an IRI node's `@id`) may be empty or whitespace-only, as
-/// [`str::trim`] reads whitespace. Anything else, `null` and a list included, is `wrong-shape`
+/// [`str::trim`] reads whitespace, and a term's may carry no Unicode format or control character
+/// ([`legal_term_text`], issue #629). Anything else, `null` and a list included, is `wrong-shape`
 /// naming the key.
 pub(super) fn check_parameter_attribute(
     id: &str,
     key: &str,
     value: &Value,
 ) -> Result<(), ImportError> {
-    let filled = |text: &str| !text.trim().is_empty();
+    let bound = matches!(key, "S231:min" | "S231:max");
+    let filled = |text: &str| {
+        if bound {
+            !text.trim().is_empty()
+        } else {
+            legal_term_text(text)
+        }
+    };
     let typed_literal = |map: &Map<String, Value>| {
         map.len() == 2
             && matches!(map.get("@value"), Some(Value::String(text)) if filled(text))
@@ -85,7 +93,6 @@ pub(super) fn check_parameter_attribute(
     let iri_node = |map: &Map<String, Value>| {
         map.len() == 1 && matches!(map.get("@id"), Some(Value::String(text)) if filled(text))
     };
-    let bound = matches!(key, "S231:min" | "S231:max");
     let legal = match value {
         Value::String(text) => filled(text),
         Value::Number(_) => bound,
@@ -261,17 +268,28 @@ pub(super) fn text_attribute<'a>(
     }
 }
 
+/// Whether `text` may be a term's lexical form (`S231:unit`, `S231:quantity`, `S231:displayUnit`:
+/// the string, a typed literal's `@value` or an IRI node's `@id`): not empty or whitespace-only,
+/// as [`str::trim`] reads whitespace (GitHub #602), and carrying no Unicode format (`Cf`) or
+/// control (`Cc`) character, a tab or line feed around a visible term included (owner ruling of
+/// 2026-11-12, issue #629). The character class is the engine loader's own,
+/// [`oce_api::is_format_or_control`], so the two readers refuse the same characters.
+fn legal_term_text(text: &str) -> bool {
+    !text.trim().is_empty() && !text.chars().any(oce_api::is_format_or_control)
+}
+
 /// A boundary's term (`S231:unit`, `S231:quantity`, `S231:displayUnit`), or `None` when absent: a
-/// string that is not empty or whitespace-only, as [`str::trim`] reads whitespace (owner ruling of
-/// 2026-11-12, GitHub #602). Anything else is `wrong-shape` naming the key: a typed literal and an
-/// IRI node too, which the engine also accepts, since a boundary's term here is a string.
+/// string that is a legal term ([`legal_term_text`]: not empty or whitespace-only, owner ruling of
+/// 2026-11-12, GitHub #602; no format or control character, issue #629). Anything else is
+/// `wrong-shape` naming the key: a typed literal and an IRI node too, which the engine also
+/// accepts, since a boundary's term here is a string.
 pub(super) fn term_attribute<'a>(
     id: &str,
     node: &'a Map<String, Value>,
     key: &str,
 ) -> Result<Option<&'a str>, ImportError> {
     match text_attribute(id, node, key)? {
-        Some(text) if text.trim().is_empty() => Err(refuse(
+        Some(text) if !legal_term_text(text) => Err(refuse(
             id,
             Kind::WrongShape {
                 key: key.to_owned(),

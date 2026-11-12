@@ -476,6 +476,25 @@ Integer connector was dropped without a word). The check runs where the node is 
 parameter's does: a connector or parameter of a block pruned by a false conditional guard, or a
 node no other node lists, is not checked.
 
+Nor may a term carry a Unicode format or control character (general category `Cf` or `Cc`, the
+class a typing token is held to, below: a zero-width space, a byte-order mark, U+2060, U+180E, a
+soft hyphen, a bidirectional control, a C0 or C1 control) anywhere in the string, the `@value` or
+the `@id` (GitHub #646, issue #629, owner ruling of
+2026-11-12). Such a term is refused as `malformed-document`, subject the node, once. The message
+names the first such code point (`U+200B, a format character (Cf)`) and quotes the term excerpted,
+with each such character written `\u{…}`, never as it is. No reader can see such a character:
+before, `"K\u{200B}"` loaded and reached the §7.10 gate and the point list as a unit that looks
+like `K` and equals no other. The shape refusals above come first, then the blank one, so a term of
+whitespace alone is blank even where that whitespace is a control character too (a tab, a line
+feed, a carriage return, U+0085). The same characters around or inside a visible term are this
+refusal (`"K\t"`): a term, unlike a typing token, has no surrounding-whitespace rule that would
+trim them away, and a term may carry surrounding spaces. On an Integer or Boolean connector the
+term is refused for being there, once, whatever it carries. A typed literal's `@type` is the
+datatype, not the term, and is not judged. Characters outside `Cf` and `Cc` are not this rule's:
+a no-break space or a line separator inside a term, a variation selector, a Hangul filler and a
+private-use character still load. The authoring importer refuses the same characters, decided by
+the same table (`oce_api::is_format_or_control`), as `wrong-shape` naming the key.
+
 The importer reads the S231 vocabulary in one namespace, `http://data.ashrae.org/S231#`: the one
 the exporter binds, the OpenBuildingControl (OBC) specification lists (OBC §11.3) and
 modelica-json emits (GitHub #527; the evidence is on the
