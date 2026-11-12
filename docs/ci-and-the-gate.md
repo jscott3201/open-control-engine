@@ -125,11 +125,11 @@ nor the leverage allowlist, and is not the root README, counts as an engine chan
 
 | Change class | Jobs that run | Jobs skipped | Expected wall-clock |
 | --- | --- | --- | --- |
-| docs-only | `classify changed paths`, fmt, file-size cap, no-secret scan, docs, gate behavior fixtures, the package/authority/product contract, `CI OK` | the determinism lane, `leverage lane` | under 3 minutes (2m40s in run 42476084422) |
+| docs-only | `classify changed paths`, fmt, file-size cap, no-secret scan, docs, gate behavior fixtures, the package/authority/product contract, `CI OK` | the determinism lane, `leverage lane` | 3 to 4 minutes, the time of the always-on set's longest job, `gate behavior fixtures`: 166 s and 240 s in runs 43167472832 and 43169110914 (2026-11-12, the same change on two runners), once issue #627 ran its workflow-gate cases four at a time. From GitHub #564 until then that job took 379–393 s (on GitHub #619 and #621), so a docs-only PR waited about 6.5 minutes; it was 2m40s in run 42476084422, before the suite grew |
 | README (the root `README.md`, optionally with docs) | the docs-only set plus `facade contract and Quickstart` | the determinism lane, `leverage lane` | the docs-only time: the README job is shorter than `gate behavior fixtures`. It took 41 s with no rust-cache entry to restore in run 42703119408 (13 s for the facade compiler contract, 11 s to build and run the byte-pin) |
 | leverage-only (`crates/leverage/**`, optionally with docs) | the docs-only set plus `leverage lane` | the determinism lane, `facade contract and Quickstart` | about 1 minute before the first leverage crate (56s in run 42476081207), plus each member's build and tests (`oce-replay` builds the facade and runs its suite) |
 | leverage with the root `README.md` (a landing PR that updates the README's status) | the docs-only set plus `leverage lane` and `facade contract and Quickstart` | the determinism lane | the leverage-only time; the two jobs run side by side |
-| engine (any other path, gate scripts, workflows and tool config included) | every job | none | about 5 minutes: 5 min 11 s in run 42953966045 (2026-11-11), the first with the four-cell determinism matrix back (issue #556), against 2.5 to 4.9 minutes over the seven full-lane runs before it. In that run the release determinism cells took 168 s (aarch64) and 226 s (x86_64), the jobs that wait for the matrix (its fan-in, the wasm32 round-trip leg, the macOS comparison) finished within 41 s of it, and `gate behavior fixtures`, which waits for nothing, took 276 s and finished last. Before issue #502 it was a median of 18.3 minutes over 69 full-lane runs (2026-11-07 to 2026-11-09), and about 26 with `gate (light)` |
+| engine (any other path, gate scripts, workflows and tool config included) | every job | none | about 5 minutes: 5 min 11 s in run 42953966045 (2026-11-11), the first with the four-cell determinism matrix back (issue #556), against 2.5 to 4.9 minutes over the seven full-lane runs before it. In that run the release determinism cells took 168 s (aarch64) and 226 s (x86_64), the jobs that wait for the matrix (its fan-in, the wasm32 round-trip leg, the macOS comparison) finished within 41 s of it, and `gate behavior fixtures`, which waits for nothing, took 276 s and finished last. That job then grew into the long pole as the workflow checker's cases did: 379–393 s on GitHub #619 and #621, 492 s on the head of GitHub #624. Issue #627 runs its cases concurrently: in runs 43167472832 and 43169110914 (2026-11-12) it took 166 s and 240 s, the x86_64 release determinism cell (265 s and 253 s) was again the longest job, and the jobs spanned 5 min 24 s and 5 min 21 s. Before issue #502 it was a median of 18.3 minutes over 69 full-lane runs (2026-11-07 to 2026-11-09), and about 26 with `gate (light)` |
 
 The always-on set runs whatever changed: it compiles nothing (fmt only reads the tree), and the
 package/authority/product contract stays in it because its checks read the documentation as well as
@@ -519,9 +519,12 @@ measured on 2026-11-10 at the head that introduced them:
 | engine | `bash .agents/gate.sh` | 7.1 min (423 s) | under the same load |
 | full | `bash .agents/gate.sh full` | 16.1 min (966 s) | on 2026-11-11, from an empty `target/` on an otherwise idle machine, at the head of GitHub #557, after GitHub #546, #551, #553 and #554 cut the release test binaries. The same mode took 30.1 min on `fdd70c0` before them, 15.9 min of it the release-codegen workspace suite |
 
-The first three are upper bounds, since the machine was busy. About three minutes of each is the
-gate's own fixture suites, which run in every mode (`test-workflow-gates.sh` alone took 3 min 22 s
-under that load): they are the floor of every row, and the reason the docs row is not seconds.
+The first three are upper bounds, since the machine was busy. About three minutes of each was then
+the gate's own fixture suites, which run in every mode (`test-workflow-gates.sh` alone took 3 min
+22 s under that load): they are the floor of every row, and the reason the docs row is not seconds.
+Since issue #627 that suite runs its cases concurrently, as many at once as the machine has CPUs
+(or `OCE_FIXTURE_JOBS`). On 2026-11-12 it took 1 min 20 s for its 348 cases on the same 10-core
+Mac, under a load average of 30, so the floor of each row is lower than the table shows.
 
 CI does not merely mirror that script, it **executes** it: `gate (full)` at
 [`.github/workflows/release-gate.yml`](../.github/workflows/release-gate.yml), nightly on the

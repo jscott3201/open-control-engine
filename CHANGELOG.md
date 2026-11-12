@@ -37,6 +37,55 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
+### Execution core
+
+- **The load gate refuses a vector parameter element past its resolved length** (GitHub #635,
+  issue #626). **Breaking, in place:** a document with such an element loaded before and is
+  refused now.
+  - **What was wrong.** The four vector rules judged elements 1 to `n` only and never saw one
+    past them. They cover `k` on both `MultiSum` classes, `extract` on the three
+    `ExtractSignal` classes and `msk` on the three `VectorFilter` classes. So
+    `MultiSum(nin = 2)` with gains `[1, 2, 3]` loaded warning-free and ran as `[1, 2]`, and a
+    lone `k_3` was ignored. The matrix (`MatrixGain.K`) and `TimeTable` offset rules already
+    refused a cell outside their shape.
+  - **The new rule.** Each vector rule reads the block's elements in one pass over its
+    parameters. It refuses an element whose index is 0, past `n`, or too large for `usize` as
+    `parameter-out-of-range` ("outside resolved array length N").
+  - **An omitted length.** It now takes the class's literal default where the rule used to skip
+    the check. `MultiSum.nin` defaults to 0, so its gains then lie past it. `VectorFilter.nin`
+    has no default, so leaving it out stays `missing-required-parameter` and no member is
+    judged.
+  - **Names this rule does not judge.** A signed or zero-padded index stays the spelling
+    check's `non-canonical-element-name`. A name that is no element spelling at all (`k_x`,
+    `k_1_2` on a vector) is not refused; that is the unknown-name half of #467, which stays
+    open.
+  - **The authoring validator** inherits the refusal through `oce_api::class_ports`, placed on
+    the element (`parameter-out-of-range` at `m.k_3`). Stage 2 reports the same code at the
+    same subject.
+  - **Measured before the change.** No document changes its load outcome or diagnostic codes:
+    - the 257 CXF documents the workspace tracks (the G36 fixtures, the vendored translations
+      and CXF-Core among them);
+    - the 142 of `open-control-library` at `fe7060a`, read as written and again with their
+      earlier namespace rebound;
+    - the 34 authoring and CLI inputs, of which no clean one is now refused. Four `fmt`
+      fixtures that were already refused now show their gains: their `MultiSum` omits `nin`,
+      and they had `unknown-port` or `class-not-found` before.
+  - **Cost of the rules.** The four rules build no string per index any more. A refusal at the
+    2^20 width takes 16 to 21 allocations where it took 1,097,169 to 2,097,170. Each rule is
+    pinned there and at 4,096 and 65,536 elements in `array_extent_cost.rs`. This is true of
+    the rules, not of a load end to end: the block constructors (`make_multi_sum`,
+    `make_integer_multi_sum`, `extract_param_vector`, `vector_filter_params`) and the
+    `VectorFilter` true-count rule still build a name and scan the parameters per index, so a
+    hostile width stays quadratic at construction. That is tracked in #634.
+  - **Compiled-schedule blobs** are not judged again. A blob decodes and runs without
+    re-running the parameter rules, so a 0.5.0 blob compiled from a document with an
+    out-of-extent element still decodes and runs with the element dropped. Compiling it again
+    from the CXF now refuses the document.
+  - **A gap inside the length** is still filled by the class default, as CDL has no spelling
+    for a partial array: `MultiSum(nin = 3, k_1 = 10, k_3 = 30)` runs with `[10, 1, 30]`.
+  - **No version bump.** A load refusal is not a format change (owner ruling of 2026-11-12). No
+    golden, class signature or catalog byte moves.
+
 ### CXF import and export
 
 - **A `@context` term spelled as an IRI must bind its own expansion** (GitHub #613, issue #591).
@@ -293,6 +342,31 @@ and a gate that accepted any text would restore exactly the false assurance desc
     other count there is unchanged.
 
 ### Verification
+
+- **The workflow-gate fixture suite runs its cases concurrently, so `gate behavior fixtures` is no
+  longer the per-PR gate's longest job** (GitHub #630, issue #627).
+  `test-workflow-gates.sh` ran its 348 cases one after another: its step took 323–335 s of a
+  379–393 s job on recent PRs, and 432 s with GitHub #624's 37 more, against 3.2–4.5 min for the
+  next-longest job. `run_case` now registers a case, and a bounded pool runs them:
+  - **Concurrency:** as many at once as the machine has CPUs (`getconf _NPROCESSORS_ONLN`; 2 when
+    unknown; `OCE_FIXTURE_JOBS` overrides), each in a subshell with its output in a file of its
+    own.
+  - **Reporting:** every case's output is printed in registration order, and the script exits 1
+    naming every failing case, not only the first.
+  - **Portability:** it uses no `wait -n`, so it runs on bash 3.2.
+  - **Isolation:** each case already built its own scratch tree and the checker only reads, so the
+    cases share no state.
+  - **The pool's own control:** six synthetic runs that finish out of order, with a failure planted
+    at the first, the middle, the last or no position. It must report exactly that failure, keep
+    each output whole and in order, and never run more than its bound. Copies of the runner that
+    drop a status, merge the outputs or ignore the bound each fail it.
+  - **Planted real failures:** flipping one real case at position 1, 174 or 348 exits 1 and names
+    only that case.
+
+  On the per-PR gate (runs 43167472832 and 43169110914, four CPUs) the step took 119 s and 178 s
+  against 323–335 s, and the job 166 s and 240 s against 379–393 s; the x86_64 release determinism
+  cell (265 s and 253 s) is the longest job again.
+  The timing rows in `docs/ci-and-the-gate.md` are updated.
 
 - **Every job that runs the oce-cxf or workspace suite prefetches the tool workspaces its tests
   build offline** (GitHub #611, issue #610). The `release.yml` verify of tag `v0.5.0` (run

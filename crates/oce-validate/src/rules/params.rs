@@ -7,7 +7,7 @@ use oce_blocks::{ParamRule, lookup};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{BlockInstance, ModelGraph, ParamTable, Value, ValueType, enum_descriptor};
 
-use super::{block_subject_of, params_flattened};
+use super::{block_subject_of, params_arrays, params_flattened};
 
 /// Check raw resolved block parameters against the registry-published class rules.
 ///
@@ -257,7 +257,7 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
             }
         }
         ParamRule::IntegerArrayElements { base, len } => {
-            params_flattened::check_integer_array_elements(blk, diags, base, len);
+            params_arrays::check_integer_array_elements(blk, diags, base, len);
         }
         ParamRule::IntegerArrayElementsInRange {
             base,
@@ -268,10 +268,10 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
             max_default,
             default_to_index,
         } => {
-            params_flattened::check_integer_array_elements_in_range(
+            params_arrays::check_integer_array_elements_in_range(
                 blk,
                 diags,
-                params_flattened::IntegerArrayRangeRule {
+                params_arrays::IntegerArrayRangeRule {
                     base,
                     len,
                     len_default,
@@ -283,7 +283,7 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
             );
         }
         ParamRule::RealArrayElements { base, len } => {
-            params_flattened::check_real_array_elements(blk, diags, base, len);
+            params_arrays::check_real_array_elements(blk, diags, base, len);
         }
         ParamRule::RealMatrixElements {
             base,
@@ -327,7 +327,7 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
             params_flattened::check_time_table_offset(blk, diags, base, table);
         }
         ParamRule::BooleanArrayElements { base, len } => {
-            params_flattened::check_boolean_array_elements(blk, diags, base, len);
+            params_arrays::check_boolean_array_elements(blk, diags, base, len);
         }
         ParamRule::BooleanArrayTrueCountEquals {
             base,

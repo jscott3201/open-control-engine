@@ -63,7 +63,7 @@ fn is_signed_decimal(text: &str) -> bool {
 
 /// `0|[1-9][0-9]*`: the one decimal spelling of an index value. Zero is a canonical spelling
 /// (of an out-of-range index, which the class's own rules refuse where it matters).
-fn is_canonical_index(text: &str) -> bool {
+pub(super) fn is_canonical_index(text: &str) -> bool {
     (text == "0"
         || text
             .bytes()

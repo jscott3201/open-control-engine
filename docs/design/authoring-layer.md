@@ -346,12 +346,12 @@ pre-empt where one exists. The table is a test fixture: gate item 3 is a table-d
 | `duplicate-name` | author-only | `duplicate-name` | 1 | `duplicate-id` |
 | `class-not-found` | engine | `unknown-class` | 1 | — |
 | `class-not-authorable` | author-only | `class-not-authorable` | 1 | — (reserved classes) |
-| `unknown-parameter` | author-only | `unknown-param` | 1 | none: the engine ignores an unknown name (#467; amended 2026-11-09) |
+| `unknown-parameter` | author-only | `unknown-param` | 1 | none: the engine ignores an unknown name (#467; amended 2026-11-09). *Amended 2026-11-12, GitHub #635:* an element at index 0 (`k_0`), which stage 1 reads as no parameter of the class, the engine refuses as `parameter-out-of-range`, so for it this row pre-empts that code |
 | `parameter-not-settable` | author-only | `unsupported-param` | 1 | — (reserved classes only; #440's settable flag) |
 | `duplicate-parameter` | author-only (amended 2026-11-09) | `duplicate-param` | 1 | `duplicate-id` (the repeated parameter node) |
 | `missing-required-parameter` | engine | `missing-required-param` | 1 | — |
 | `parameter-kind-mismatch` | engine | `param-type-mismatch` | 1 | — |
-| `parameter-out-of-range` | engine | `invalid-width` | 1 | — (catalog rules, widths included) |
+| `parameter-out-of-range` | engine | `invalid-width` | 1 | — (catalog rules, widths included; amended 2026-11-12, GitHub #626: also an array element past its block's resolved length, which the load gate refuses and stage 1 inherits through `class_ports`) |
 | `non-finite-parameter` | engine | — | 1 | — |
 | `unit-suffix-mismatch` | author-only (added 2026-11-11, issue #501) | — | 1 | none: a suffix is text-only and never reaches the engine (vocabulary note decision 14, ruling 6). A suffix that does not reduce to the block parameter's declared unit (`delayTime = 5 K`), a scaled one on a parameter that declares no unit or on a sequence parameter, or, in a model built in code, a suffix, written number and value that disagree or a suffix longer than the 256-byte token bound |
 | `unknown-enum-literal` | author-only (amended 2026-11-09) | — | 1 | `grounding-failed` |
@@ -396,7 +396,12 @@ parity test first ran against the emitter: `duplicate-parameter` and `unknown-en
 the flat emitter writes a repeated assignment as a second node with the same `@id` (`duplicate-id`)
 and the engine refuses an unknown member while grounding it (`grounding-failed`, recorded on #455),
 so both are author-only codes that pre-empt those engine codes; `unknown-parameter` pre-empts
-nothing, because the load gate ignores a parameter name it does not read (#467); and `unknown-port`
+nothing, because the load gate ignores a parameter name it does not read (#467) *(amended
+2026-11-12, GitHub #635: except an array element at index 0, such as `k_0`. Stage 1 reports it as
+`unknown-parameter`, because its own name check finds no such parameter; the load gate refuses
+it as `parameter-out-of-range`, outside the resolved array length. Both refuse, under different
+codes, so for that element the row pre-empts `parameter-out-of-range`. The parity table's
+`unknown-parameter` row stays `Silent`: its defect is a name no rule reads.)*; and `unknown-port`
 pre-empts `unresolved-reference`, because the emitter writes every port the catalog resolves, so a
 wrong port name is a dangling target rather than a port-name mismatch. Stage 2 also has two codes of
 its own: `document-too-large` (the emitter's size refusal after a clean stage 1) and `load-failed`.
