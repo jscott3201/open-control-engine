@@ -298,6 +298,7 @@ step 'product contract traceability' python3 scripts/product_contract/check.py
 # these fixtures are what keep that from happening silently.
 step 'no-db gate fixtures' bash .github/scripts/test-check-default-no-db.sh
 step 'golden-gen firewall fixtures' bash .github/scripts/test-check-golden-gen-anti-tautology.sh
+step 'no-secret scan fixtures' bash .github/scripts/test-check-no-secrets.sh
 step 'package-contract hostile controls' python3 scripts/package_policy/test_validate.py
 step 'authority claim hostile controls' python3 scripts/authority_claims/test_check.py
 step 'product contract hostile controls' python3 scripts/product_contract/test_check.py

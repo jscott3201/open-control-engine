@@ -298,6 +298,8 @@ jobs:
         run: bash .github/scripts/test-check-default-no-db.sh
       - name: golden-gen firewall fixtures
         run: bash .github/scripts/test-check-golden-gen-anti-tautology.sh
+      - name: no-secret scan fixtures
+        run: bash .github/scripts/test-check-no-secrets.sh
       - name: stale crate-status fixtures
         run: bash .github/scripts/test-check-stale-crate-status.sh
       - name: stale crate-status smoke

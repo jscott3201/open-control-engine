@@ -596,6 +596,23 @@ be scrubbed from history rather than simply deleted.
 
 Keep absolute paths out of committed files, including scripts and doc examples.
 
+Until issue #524 the private-key pattern matched nothing: it begins with `-----`, so `git grep`
+read it as an option, exited 129, and the scan took that for a clean tree. Each pattern now goes
+after `-e`, and only `git grep`'s "no match" (exit 1) counts as clean: an error fails the scan
+with exit 2, naming the pattern and git's status, with git's own message left on stderr (so the
+scan also fails outside a repository, where `grep.fallbackToNoIndex`, forced off, would otherwise
+let git search the directory). The private-key pattern covers RSA, EC and OpenSSH headers only;
+issue #607 tracks PKCS#8, DSA, encrypted and OpenPGP keys. `.github/scripts/test-check-no-secrets.sh`
+plants matches for every pattern in a scratch repository (every alternative, at the shortest
+length each pattern accepts, with both ends of every range of each class) and requires each to
+fail under its own label, keeps a near miss one character short of every quantifier in the clean
+tree, holds both lists of labels equal to the scan's, and puts a defect back in 37 copies of the
+scan (among them every pattern with a class narrowed, an end anchor added, or a quantifier
+tightened or loosened), each of which must fail a named check. Its values are assembled at run
+time from fragments, so the fixture file itself holds no match; build any new one the same way.
+A new pattern needs planted values and a near miss there, or the fixture fails, and a change to a
+pattern's meaning moves the values, near misses and weakened copies that pin it.
+
 ## Working directories are gitignored
 
 `.gitignore` excludes every top-level `_*/` directory, so `_spec/`, `_research/`,
