@@ -73,9 +73,10 @@ pub(super) fn problem(term: &TermAttr) -> Option<String> {
 }
 
 /// What a refusal calls `text`, the lexical form of a well-shaped term, when it carries a format
-/// or control character: `<holder> `<text>`<carries> U+200B, a format character (Cf) that no
-/// reader can see`, the text an excerpt with each such character escaped; `None` when it carries
-/// none.
+/// or control character, or `None` when it carries none: `holder`, then `text` in backticks (an
+/// excerpt with each such character escaped), then `carries` and the first such character named,
+/// as in ``the string `K\u{200B}`, which carries U+200B, a format character (Cf) that no reader
+/// can see``.
 fn invisible(text: &str, holder: &str, carries: &str) -> Option<String> {
     let found = first_format_or_control(text)?;
     Some(format!(
