@@ -32,6 +32,7 @@ mod export_defer;
 mod export_pass_through;
 #[cfg(test)]
 mod export_tests;
+mod format_controls;
 #[cfg(test)]
 mod g36_catalog_fixture_manifest;
 #[cfg(test)]

@@ -766,3 +766,26 @@ fn compact_spellings_repeated_or_mixed_with_an_expanded_one_are_refused() {
         )
     );
 }
+
+#[test]
+fn a_long_near_miss_key_is_quoted_as_an_excerpt() {
+    // GitHub #641: a megabyte of padding before a modeled key used to be quoted whole.
+    let mut doc = fixture();
+    let node = node_mut(&mut doc, SOURCE_PORT);
+    let value = node
+        .remove("S231:isConnectedTo")
+        .expect("the port drives something");
+    let key = format!("{}S231:isConnectedTo", " ".repeat(1 << 20));
+    node.insert(key, value);
+    let diags = refusal(&bytes(&doc));
+    assert_eq!(diags.len(), 1, "{}", diags.len());
+    assert!(
+        diags[0].message.starts_with(&format!(
+            "property key {:?}",
+            format!("{}…", " ".repeat(64))
+        )),
+        "{}",
+        &diags[0].message[..80]
+    );
+    assert!(diags[0].message.len() < 400, "{}", diags[0].message.len());
+}

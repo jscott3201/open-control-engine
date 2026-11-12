@@ -65,7 +65,7 @@ fn add_boundary_input(doc: &mut Value, datatype: &str) {
     node_mut(doc, "#M")["S231:hasInput"] = json!({ "@id": "http://example.org#M.boundaryInput" });
     doc["@graph"].as_array_mut().unwrap().push(json!({
         "@id": "http://example.org#M.boundaryInput",
-        "@type": "S231:Input",
+        "@type": "S231:InputConnector",
         "S231:isOfDataType": { "@id": datatype },
         "S231:isConnectedTo": { "@id": "http://example.org#M.c2.u" }
     }));
@@ -76,7 +76,7 @@ fn add_boundary_output(doc: &mut Value, datatype: &str) {
     node_mut(doc, "#M")["S231:hasOutput"] = json!({ "@id": "http://example.org#M.boundaryOutput" });
     doc["@graph"].as_array_mut().unwrap().push(json!({
         "@id": "http://example.org#M.boundaryOutput",
-        "@type": "S231:Output",
+        "@type": "S231:OutputConnector",
         "S231:isOfDataType": { "@id": datatype }
     }));
     node_mut(doc, "M.c2.y2")["S231:isConnectedTo"] =
@@ -162,7 +162,10 @@ fn unresolved_connection_endpoint_is_rejected() {
 #[test]
 fn unresolved_datatype_is_rejected() {
     let mut doc = base();
-    node_mut(&mut doc, "M.c2.u")["S231:isOfDataType"] = json!({ "@id": "S231:Frobnicate" });
+    // A data type in another namespace that no reader resolves; one in the S231 namespace that
+    // names no term is refused before any reader sees it (`resolve_vocabulary_terms.rs`).
+    node_mut(&mut doc, "M.c2.u")["S231:isOfDataType"] =
+        json!({ "@id": "http://example.org#Frobnicate" });
     assert_error_code(&doc, DiagCode::UnresolvedReference);
 }
 
@@ -326,7 +329,7 @@ fn enum_boundary_input_driving_integer_child_input_is_rejected() {
 fn different_enum_classes_across_boundary_elision_are_rejected() {
     let mut doc = base();
     let child = node_mut(&mut doc, "M.c2.u");
-    child["@type"] = json!("S231:Input");
+    child["@type"] = json!("S231:InputConnector");
     child["S231:isOfDataType"] =
         json!({ "@id": "Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil" });
     add_boundary_input(
@@ -358,7 +361,7 @@ fn matched_types_across_both_boundary_elision_arms_resolve() {
 #[test]
 fn unresolvable_boundary_datatype_is_diagnosed() {
     let mut doc = base();
-    add_boundary_input(&mut doc, "S231:Frobnicate");
+    add_boundary_input(&mut doc, "http://example.org#Frobnicate");
     assert_error_code(&doc, DiagCode::UnresolvedReference);
 }
 
@@ -474,7 +477,7 @@ fn multi_type_array_classifies_on_first_without_panic() {
     // First element is the valid Constant class, so this still resolves.
     node_mut(&mut doc, "M.c1")["@type"] = json!([
         "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
-        "S231:DecorativeMarker"
+        "http://example.org#DecorativeMarker"
     ]);
     let (g, _r) = import(&doc).expect("multi-@type with a valid first class resolves");
     assert_eq!(g.blocks[0].class_iri.as_ref(), "CDL.Reals.Sources.Constant");

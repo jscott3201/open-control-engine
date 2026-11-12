@@ -314,3 +314,21 @@ fn a_modeled_key_in_the_retired_namespace_is_refused_and_an_unmodeled_one_passes
     node_mut(&mut doc, SOURCE_PORT).insert(format!("{RETIRED}documentation"), json!("text"));
     assert_eq!(outcome(&bytes(&doc)), baseline);
 }
+
+#[test]
+fn a_long_retired_namespace_type_is_quoted_as_an_excerpt() {
+    // GitHub #641: a megabyte of term after the retired namespace used to be quoted whole.
+    let mut doc = fixture();
+    let token = format!("{RETIRED}{}", "B".repeat(1 << 20));
+    node_mut(&mut doc, SOURCE_PORT).insert("@type".into(), json!(token));
+    let diags = refusal(&bytes(&doc));
+    assert_eq!(diags.len(), 1, "{}", diags.len());
+    let quoted = format!("{RETIRED}{}…", "B".repeat(64 - RETIRED.len()));
+    assert_eq!(
+        diags[0].message,
+        format!(
+            "@type `{quoted}` on node `{SOURCE_PORT}` is in `{RETIRED}`; the S231 vocabulary is \
+             read only in `{PUBLISHED}`"
+        )
+    );
+}
