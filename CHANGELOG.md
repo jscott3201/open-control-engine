@@ -252,7 +252,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   cell (265 s and 253 s) is the longest job again.
   The timing rows in `docs/ci-and-the-gate.md` are updated.
 
-- **The workflow checker closes the four gaps GitHub #564 left open** (GitHub #PRNUM, issue #566).
+- **The workflow checker closes the four gaps GitHub #564 left open** (GitHub #624, issue #566).
   `check-workflow-gates.sh` now refuses these; each passed it before:
   - **(1) A dead step selector.** A selector that picks no cell of its job's matrix, so its step
     never runs: a misspelled value (`matrix.codegen == 'relese'`), a key the matrix lacks, a
