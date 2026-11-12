@@ -27,12 +27,19 @@
 //!   expansion, **best-effort**. Whatever does not expand stays verbatim and is never refused
 //!   here — the downstream `ClassNotFound` / `UnresolvedReference` no-match diagnostics are the
 //!   pinned behavior for junk typing tokens (`resolve_errors.rs` pins `@type: "NotAnIri"` →
-//!   `ClassNotFound`). Two exceptions ([`vocabulary_namespace`]): a typing token in the namespace
-//!   written through release 0.4.0 is refused as `VocabularyNamespaceMismatch`, because a type is
-//!   read by its trailing term and would otherwise be read through that namespace; and a typing
-//!   token that names an S231 term only once its surrounding whitespace is trimmed is refused as
-//!   `MalformedDocument` (GitHub #587), because it would stay verbatim and be read as no S231
-//!   type, which a composite, never reading its `@type`, does not notice.
+//!   `ClassNotFound`). Four exceptions, checked in this order and each ending the checks of its
+//!   token: a typing token in any namespace that carries a Unicode format or control character
+//!   inside its surrounding whitespace is refused as `MalformedDocument` (GitHub #641), because no
+//!   reader can see it and it escapes every other check; a typing token that names an S231 term
+//!   only once its surrounding whitespace is trimmed is refused as `MalformedDocument` (GitHub
+//!   #587, [`vocabulary_namespace`]), because it would stay verbatim and be read as no S231 type,
+//!   which a composite, never reading its `@type`, does not notice; a typing token in the namespace
+//!   written through release 0.4.0 or in an `https:` spelling is refused as
+//!   `VocabularyNamespaceMismatch`, because a type is read by its trailing term and would otherwise
+//!   be read through that namespace; and a typing token in the S231 namespace that names no term of
+//!   the vocabulary the engine reads is refused as `MalformedDocument`, or `ClassNotFound` for a
+//!   CDL block class the registry lacks (GitHub #620, [`vocabulary_terms`]), which also matches an
+//!   enumeration there by its full path.
 //!
 //! Deliberately excluded from expansion: the [`crate::dto::TermAttr::Iri`] arm (`unit`/`quantity`/
 //! `displayUnit` are lexical terms consumed verbatim by attribute parsing), the `@type` annotation
@@ -88,6 +95,8 @@ mod context_scope;
 mod property_keys;
 #[path = "vocabulary_namespace.rs"]
 mod vocabulary_namespace;
+#[path = "vocabulary_terms.rs"]
+mod vocabulary_terms;
 
 /// Declared `@context` prefix/term substitutions: term → IRI.
 type PrefixTable = BTreeMap<String, String>;
@@ -576,11 +585,17 @@ fn expand_node(node: &mut Node, table: &PrefixTable, diags: &mut Vec<Diagnostic>
     expand_refs("S231:hasInstance", &mut node.has_instance);
     expand_refs("S231:isConnectedTo", &mut node.is_connected_to);
     let mut expand_type = |slot: &str, value: &mut String| {
+        if vocabulary_namespace::check_typing_controls(value, slot, &owner, diags) {
+            return;
+        }
         if vocabulary_namespace::check_typing_whitespace(value, slot, &owner, table, diags) {
             return;
         }
         expand_typing(value, table);
+        // A token in the retired or an `https:` namespace never starts with the published one,
+        // so at most one of these two refuses it.
         vocabulary_namespace::check_typing(value, slot, &owner, diags);
+        vocabulary_terms::check_term(value, slot, &owner, diags);
     };
     if let Some(types) = &mut node.r#type {
         each_mut(types, |value: &mut String| expand_type("@type", value));

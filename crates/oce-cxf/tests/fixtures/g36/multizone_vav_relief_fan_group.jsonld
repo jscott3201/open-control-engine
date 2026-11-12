@@ -5106,7 +5106,7 @@
       "@id": "http://example.org#g36.source.multizone_vav_relief_fan_group.conP.controllerType",
       "@type": "S231:Parameter",
       "S231:isOfDataType": {
-        "@id": "S231:http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
       },
       "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.P"
     },

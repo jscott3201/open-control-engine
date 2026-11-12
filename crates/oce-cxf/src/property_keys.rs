@@ -50,6 +50,7 @@ use serde_json::{Map, Value as Json};
 use super::vocabulary_namespace::{FOREIGN_NAMESPACES, foreign_key};
 use super::{Expansion, PrefixTable, expand_token};
 use crate::dto::{CxfDocument, Node};
+use crate::excerpt::excerpt;
 use crate::export::S231_CONTEXT_IRI;
 
 /// Every property term the [`Node`] DTO models as a typed field, i.e. every `S231:<term>` serde
@@ -246,9 +247,10 @@ impl KeyScope<'_> {
                     diags.push(malformed(
                         subject,
                         format!(
-                            "property key {key:?} on node `{subject}` carries surrounding \
+                            "property key {:?} on node `{subject}` carries surrounding \
                              whitespace; without it, it names the modeled term `{term}`; write \
-                             it as `S231:{term}`"
+                             it as `S231:{term}`",
+                            excerpt(key)
                         ),
                     ));
                 }

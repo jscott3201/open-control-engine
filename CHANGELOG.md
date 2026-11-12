@@ -179,7 +179,74 @@ and a gate that accepted any text would restore exactly the false assurance desc
     none is blank, carries both `@id` and `@value` or another key, and none of their 794
     Integer-typed nodes carries a term in any spelling. The library's 140 carry no term at
     all, and each is refused before any term is read. `fixture_corpus_import.txt` is byte-identical.
+- **A typing token that names no term of the S231 vocabulary, or carries an invisible character,
+  is refused** (GitHub #641, issue #620; owner rulings of 2026-11-12). It is checked on every node,
+  for a `@type` value and an `isOfDataType` reference alike, in the expansion pass, and refused
+  subject the node:
+  - **an invisible character, in any namespace**: a token carrying a Unicode format (`Cf`) or
+    control (`Cc`) character inside its surrounding whitespace, such as a zero-width space, a
+    byte-order mark, U+2060, U+180E, a soft hyphen or a C0 or C1 control, is `malformed-document`.
+    The message names the first such code point (`U+200B, a format character (Cf)`) and quotes the
+    token excerpted with each such character written `\u{…}`. This check runs first; surrounding
+    whitespace alone, a tab or line break included, is still #619's near miss. `Cc` is
+    `char::is_control`; `Cf` is the 170 code points Unicode 17.0.0 assigns to it, held in a table
+    with a test pinning its size and edges.
+  - **an S231 term outside the vocabulary**: a token in the S231 namespace (the expanded IRI, or a
+    literal `S231:` prefix in a document that binds no `S231`) whose term the vocabulary does not
+    hold is `malformed-document`, the token and term excerpted. For an S231 `@type` naming a
+    `Buildings.Controls.OBC.CDL.` block class the registry does not implement it is instead
+    `class-not-found` (`no registered block class for …`), as the same class is in any other
+    spelling.
+  - **an `https:` spelling**: every S231 typing token in the `https:` spelling of either namespace
+    is `vocabulary-namespace-mismatch`, whatever its term; before, only `ExtensionBlock` was.
+  - **Before**, the resolver read a node's `@type` only where it looked up a leaf's class or a
+    connector's data type, so a misspelt S231 type on a composite (`S231:ExtensonBlock`,
+    `S231: ExtensionBlock`), a parameter, a connector declaring `isOfDataType` or any other node
+    loaded without a word. A token carrying an invisible character before or inside the `S231:`
+    prefix (`" \u{200B}S231:Block"`, `"S\u{200B}231:Block"`) never expanded, so it escaped every
+    check: a nested composite typed that way as `ExtensionBlock` lowered its children as a
+    composite. An S231 `isOfDataType` naming a CDL enumeration was matched by its last dotted
+    segment, so `S231:ZeroTime` or a typo in the package loaded.
+  - **The vocabulary** is one table in `crates/oce-cxf/src/vocabulary_terms.rs`, each of its 39
+    terms with its provenance:
+    - the 23 classes the vendored `CXF-Core.jsonld` declares;
+    - the 8 terms it uses without declaring them (`BooleanInput`, `BooleanOutput`, `Datatype`,
+      `EnumerationType`, `Real`, `Integer`, `Boolean`, `String`);
+    - the 2 the engine writes that CXF-Core lacks (`StringInput`, `StringOutput`);
+    - 6 spelling tolerances, the other `DataType`/`Datatype` ending of CXF-Core's data-type classes,
+      which it spells both ways.
 
+    The table is joined with the registry's 133 CDL block classes, written
+    `Buildings.Controls.OBC.CDL.…` (its three internal `urn:oce:lowering#PassThrough.*` identities
+    are never S231 terms), and the 18 CDL and G36 enumeration and constant-package types by their
+    full path, into one set built once, with one lookup per token. Tests pin the table against the
+    vendored CXF-Core (declared, used and tolerated terms, exactly), and tie CXF-Core's 132
+    elementary blocks to the registry both ways. A term a newer CXF-Core adds is refused until the
+    table holds it, and the tests say so.
+  - **Messages quote at most 64 bytes** of a token or key on every remaining path: the #614
+    property-key near miss and the retired-namespace refusal no longer echo a megabyte.
+  - **One fixture token fixed (owner ruling: option A).**
+    `g36/multizone_vav_relief_fan_group.jsonld` typed `conP.controllerType` as
+    `S231:http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController`, a compact prefix
+    glued to a full IRI that loaded only through the last-segment match. It is now
+    `http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController`, the spelling of the
+    corpus's other 27 uses and of the authoring emitter. CXF-Core's compact spelling was not used:
+    the authoring importer reads a named type only as an IRI with a `#` fragment, so 19
+    `oce-author` tests that import this fixture would fail (#639). Nothing pinned moves:
+    golden-gen regenerates nothing, and the fixture's census line and its model-graph, content-id,
+    blob and trace goldens are unchanged.
+  - **Census:** two rejected fixtures move, as intended. `member_unrecognized_type` (`@type
+    S231:Frobnicator`) was `connector lacks a recognized data type`, and
+    `member_isofdatatype_unresolved` (`isOfDataType S231:Bogus`) was `unresolved-reference`,
+    subject the IRI. Both are now the vocabulary refusal, subject the member node.
+  - **Breaking, in place:** such a document loaded before. Apart from the fixed fixture, no
+    tracked or library document names an S231 term outside the vocabulary, carries a format or
+    control character in a typing token, or uses an `https:` spelling (measured over every `@type`
+    and `isOfDataType` in 257 tracked and 140 library documents).
+  - **Follow-ups:** composites typed in another namespace, including near-miss spellings of the
+    S231 namespace IRI itself (#636); CDL enumeration IRIs in another namespace matched by last
+    segment (#637); role-aware checking (#638); the authoring importer's reading of the compact
+    spelling (#639).
 ### Leverage
 
 - **The importer's refusal of a giant list is pinned in allocations, not in elapsed time** (GitHub

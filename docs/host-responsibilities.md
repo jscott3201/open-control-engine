@@ -491,9 +491,10 @@ and the message names the IRI found and the IRI expected:
   with a current engine or tool.
 - A modeled term keyed by its full IRI in that namespace or in the `https:` spelling of either
   namespace, and a `@type` or `isOfDataType` value in the retired namespace.
-- A `@type` naming the class `ExtensionBlock` in the `https:` spelling of either namespace
-  (GitHub #582). That class is read only in the published namespace, so this spelling would
-  otherwise be read as an ordinary class (see
+- A `@type` or `isOfDataType` value in the `https:` spelling of either namespace, whatever the
+  term (GitHub #620; the class `ExtensionBlock` since GitHub #582). The vocabulary is read only in
+  the published namespace, so such a spelling would otherwise be read by its trailing term, or for
+  `ExtensionBlock` as an ordinary class (see
   [what the engine does not execute](cdl-coverage.md#what-the-engine-does-not-execute)).
 
 In a list of context maps only the binding in force is judged (a later map replaces an earlier
@@ -508,6 +509,31 @@ dropped. Keys that name no modeled property pass through unchanged. A `@type` va
 (`"S231:ExtensionBlock "`) is refused the same way (issue #587): it would be kept as written and
 read as no S231 type, and a composite never reads its type, so a root typed that way loaded its
 children.
+
+A `@type` value or an `isOfDataType` reference in the published namespace must name a term of the
+S231 vocabulary the engine reads, on any node (GitHub #620, owner ruling of 2026-11-12); anything
+else is refused as `malformed-document`, subject the node, the token and term quoted as
+excerpts. The one exception is an S231-spelled `Buildings.Controls.OBC.CDL.` block class the
+registry does not implement, which is refused as `class-not-found` (`no registered block class
+for …`), as the same class is in any other spelling. The vocabulary is one set: the classes the
+vendored `CXF-Core.jsonld` declares, the terms it uses without declaring them, the terms the
+engine writes, both endings of CXF-Core's `DataType`/`Datatype` classes, the registry's 133 CDL
+block classes written `Buildings.Controls.OBC.CDL.…`, and the 18 CDL and G36 enumeration and
+constant package types by their full path (the
+[CDL coverage page](cdl-coverage.md#the-standard-this-page-measures-against) lists them). An S231 enumeration reference is matched by its full path, so
+`S231:Buildings.Controls.OBC.CDL.Types.ZeroTime` is read and `S231:ZeroTime` is refused. A term a
+newer CXF-Core adds is refused until the engine's table holds it. A class in another namespace (a
+leaf's `http://example.org#Buildings.Controls.OBC.CDL.Reals.Add`, a composite's own class) is not
+judged by this rule: a leaf's must still be a registered class (`class-not-found`).
+
+A `@type` value or an `isOfDataType` reference in any namespace that carries a Unicode format or
+control character (general category `Cf` or `Cc`: a zero-width space, a byte-order mark, a soft
+hyphen, a C0 or C1 control) inside its surrounding whitespace is refused as
+`malformed-document`, subject the node (GitHub #641, owner ruling of 2026-11-12). The message names
+the first such code point (`U+200B, a format character (Cf)`) and quotes the token with each such
+character written `\u{…}`, never as it is. The check comes before every other on the token:
+surrounding whitespace alone, a tab or line break included, is still the whitespace near miss
+above, and a token with both is this refusal, once.
 
 The document's declared boundary-output names (root `S231:hasOutput`) are a second read-only
 identity space: each resolves on `get_output` and `watch` as an alias for

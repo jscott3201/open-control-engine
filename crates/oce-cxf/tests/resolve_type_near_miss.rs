@@ -311,16 +311,38 @@ fn a_near_miss_is_read_through_the_document_s_own_bindings() {
 
 #[test]
 fn tokens_that_name_no_s231_term_once_trimmed_are_left_to_the_readers() {
-    // Inner whitespace alone is not a near miss (GitHub #620 covers it), and neither is a token that
-    // names nothing in the S231 namespace once trimmed: a root reads no type, so these load as
-    // before.
-    for token in [
-        "S231: ExtensionBlock",
-        "S231:",
-        " S231: ",
-        " ",
-        "http://example.org#Block ",
+    // Inner whitespace alone is not a near miss, and neither is a token that names nothing in the
+    // S231 namespace once trimmed. Of these, a token in the S231 namespace is refused by the
+    // vocabulary check that follows (GitHub #620), one that never reaches it loads as before: a
+    // root reads no type.
+    // The message quotes the token after expansion: `S231:` expands to the bare namespace.
+    for (token, quoted, term) in [
+        (
+            "S231: ExtensionBlock",
+            "S231: ExtensionBlock",
+            " ExtensionBlock",
+        ),
+        ("S231:", "http://data.ashrae.org/S231#", ""),
     ] {
+        let doc = with(base(), ROOT, "@type", json!(token));
+        assert_eq!(
+            refusal(&doc),
+            vec![
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!(
+                        "@type `{quoted}` on node `{ROOT}` names `{term}`, which is no term of the \
+                         S231 vocabulary the engine reads (a CXF-Core class or data type, a term \
+                         the engine writes, a registered CDL block class, or a CDL or G36 \
+                         enumeration type by its full path)"
+                    ),
+                )
+                .with_subject(ROOT)
+            ],
+            "{token:?}"
+        );
+    }
+    for token in [" S231: ", " ", "http://example.org#Block "] {
         let doc = with(base(), ROOT, "@type", json!(token));
         assert_eq!(loads(&doc), 1, "{token:?}");
     }
