@@ -295,7 +295,11 @@ fn independent_python_validator_accepts_the_retained_graph() {
     let root = repository_root();
     let bytecode = root.join("tools/openmodelica-reliefs-reference/reliefs/__pycache__");
     assert!(!bytecode.exists());
-    let output = std::process::Command::new("python3")
+    let artifacts = crate::open_modelica_tool_artifacts::ToolArtifactDir::claim(
+        crate::open_modelica_tool_artifacts::RELIEFS_TOOL,
+    );
+    let output = artifacts
+        .isolate(&mut std::process::Command::new("python3"))
         .args([
             "tools/openmodelica-reliefs-reference/reliefs/verify_evidence.py",
             "final",

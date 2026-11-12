@@ -577,6 +577,15 @@ either tool lockfile is issue #604: their digests are bound into recorded OpenMo
 `release.yml` is byte-pinned by `scripts/package_policy/release_workflow.py` (digest) and
 `test_validate.py` (golden), so a change to it updates both in the same PR.
 
+A test that runs the Line or Reliefs tool, directly or through its `assemble.sh`,
+`candidate_assembly_test.sh` or `verify_evidence.py`, claims a `ToolArtifactDir`
+(`crates/oce-cxf/tests/open_modelica_tool_artifacts/`) and runs the command through its `isolate`.
+Every `cargo run` re-places the executable it starts, and on macOS deletes and clones it even when
+nothing is rebuilt. So parallel tests sharing the tool's `target/` failed now and then with
+`could not execute process … (never executed)` (issues #640 and #642). The run gets a
+`CARGO_TARGET_DIR` of its own over the tool's shared `target/` as `CARGO_BUILD_BUILD_DIR`. The
+scripts keep their `cargo run`, because the evidence pins their bytes.
+
 ## Clippy lints the default feature set
 
 `cargo clippy --workspace --all-targets --locked -- -D warnings`, matching CI.

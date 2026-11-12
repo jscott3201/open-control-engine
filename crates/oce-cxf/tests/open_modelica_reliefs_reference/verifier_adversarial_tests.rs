@@ -5,13 +5,20 @@ use std::path::{Path, PathBuf};
 
 use sha2::{Digest as _, Sha256};
 
+use crate::open_modelica_tool_artifacts::{RELIEFS_TOOL, ToolArtifactDir};
+
 fn verifier() -> PathBuf {
     super::repository_root().join("tools/openmodelica-reliefs-reference/reliefs/verify_evidence.py")
 }
 
 fn run(arguments: &[&Path]) -> std::process::Output {
+    // The verifier's strict boundary runs the tool through `cargo run`.
+    let artifacts = ToolArtifactDir::claim(RELIEFS_TOOL);
     let mut command = std::process::Command::new("python3");
-    command.arg(verifier()).env("PYTHONDONTWRITEBYTECODE", "1");
+    artifacts
+        .isolate(&mut command)
+        .arg(verifier())
+        .env("PYTHONDONTWRITEBYTECODE", "1");
     for argument in arguments {
         command.arg(argument);
     }
@@ -401,7 +408,9 @@ fn fully_rehashed_wrong_final_clamp_inputs_are_rejected() {
 fn retained_native_outputs_enter_candidate_assembly_without_docker() {
     let script = super::repository_root()
         .join("tools/openmodelica-reliefs-reference/reliefs/candidate_assembly_test.sh");
-    let output = std::process::Command::new("sh")
+    let artifacts = ToolArtifactDir::claim(RELIEFS_TOOL);
+    let output = artifacts
+        .isolate(&mut std::process::Command::new("sh"))
         .arg(script)
         .env("TMPDIR", std::env::temp_dir().canonicalize().unwrap())
         .output()
@@ -424,7 +433,9 @@ fn missing_mixed_architecture_and_partial_assembly_leave_no_output() {
     let destination = temporary.path().join("assembled");
     let script =
         super::repository_root().join("tools/openmodelica-reliefs-reference/reliefs/assemble.sh");
-    let output = std::process::Command::new("sh")
+    let artifacts = ToolArtifactDir::claim(RELIEFS_TOOL);
+    let output = artifacts
+        .isolate(&mut std::process::Command::new("sh"))
         .args([
             script.as_os_str(),
             super::fixture("arm64").as_os_str(),
@@ -436,7 +447,8 @@ fn missing_mixed_architecture_and_partial_assembly_leave_no_output() {
     assert!(!output.status.success());
     assert!(!destination.exists());
 
-    let output = std::process::Command::new("sh")
+    let output = artifacts
+        .isolate(&mut std::process::Command::new("sh"))
         .args([
             script.as_os_str(),
             super::fixture("amd64").as_os_str(),

@@ -53,6 +53,10 @@ mod open_modelica_line_reference;
 mod open_modelica_reference;
 mod open_modelica_reliefs_reference;
 mod open_modelica_toggle_reference;
+// Each run of the Line or Reliefs tool takes an artifact directory of its own (issues #640 and
+// #642). Unix-only, like every test that runs a tool.
+#[cfg(unix)]
+mod open_modelica_tool_artifacts;
 mod structural_oracle;
 mod third_party_manifest;
 

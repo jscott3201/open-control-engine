@@ -335,6 +335,28 @@ another tool workspace offline adds the tool to the script's list. Without it, t
 warm cache and fails on a cold one, as these did. The two tools' lockfiles stay on rustix 1.1.4
 until issue #604 moves them with the OpenModelica evidence their digests are bound into.
 
+**Parallel runs of one tool.** The same tests run in parallel, and about 40 of their `cargo run`s
+go to the Line and Reliefs tools in one run of the binary. Every `cargo run` puts the executable it
+is about to start at `<target-dir>/debug/<bin>` again, even when nothing needs compiling. On macOS
+Cargo deletes that file and clones it afresh from `deps/` each time; on any host a rebuild replaces
+it. Cargo releases its build lock before it starts the program. So while the tests shared each
+tool's `target/`, one run could delete the executable while another was starting it, and a test
+failed with `could not execute process … (never executed)` and `No such file or directory`
+(issues #640 and #642). It was seen in local runs on macOS; Linux CI showed nothing, because there
+a fresh build leaves its hard link alone.
+
+Each test that runs one of those two tools, directly or through `assemble.sh`,
+`candidate_assembly_test.sh` or `verify_evidence.py`, now claims a `ToolArtifactDir`
+(`crates/oce-cxf/tests/open_modelica_tool_artifacts/`) for that run. It sets two variables, which
+the scripts inherit:
+- `CARGO_TARGET_DIR`: a directory of the run's own, which holds the only executable it starts;
+- `CARGO_BUILD_BUILD_DIR`: the tool's `target/`, which holds what Cargo compiled.
+
+The tool is still compiled once, under Cargo's lock, and no run deletes an executable another run
+is starting. This holds under nextest (a process per test) and `cargo test` (a thread per test),
+because each run claims its directory. The scripts keep their own `cargo run`: their bytes are
+bound into the recorded evidence. A new test that runs either tool claims one too.
+
 **mdBook.** The `docs` job and `docs-pages.yml` get mdBook only from `scripts/docs/install-mdbook.sh`,
 which downloads the pinned upstream release archive, checks its SHA-256 against
 `site/mdbook-checksums.txt`, extracts it, and checks the extracted `mdbook` executable against a second

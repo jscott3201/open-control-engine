@@ -5,13 +5,17 @@ use std::path::{Path, PathBuf};
 
 use sha2::{Digest as _, Sha256};
 
+use crate::open_modelica_tool_artifacts::{LINE_TOOL, ToolArtifactDir};
+
 fn verifier() -> PathBuf {
     super::repository_root().join("tools/openmodelica-line-reference/line/verify_evidence.py")
 }
 
 fn run(arguments: &[&Path]) -> std::process::Output {
+    // The verifier's strict canonical boundary runs the tool through `cargo run`.
+    let artifacts = ToolArtifactDir::claim(LINE_TOOL);
     let mut command = std::process::Command::new("python3");
-    command.arg(verifier());
+    artifacts.isolate(&mut command).arg(verifier());
     for argument in arguments {
         command.arg(argument);
     }
