@@ -109,6 +109,7 @@ mod resolve_term_shapes;
 mod resolve_type_near_miss;
 mod resolve_unused_boundary_input;
 mod resolve_vocabulary_namespace;
+mod resolve_vocabulary_terms;
 
 #[test]
 fn every_test_file_is_compiled_into_exactly_one_binary() {

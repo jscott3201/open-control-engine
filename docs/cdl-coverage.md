@@ -42,6 +42,30 @@ namespace, and both importers read the vocabulary in no other (GitHub #527). The
 importer accepts and refuses are listed under
 [host responsibilities](host-responsibilities.md#cxf-point-identities-are-the-authored-ids).
 
+**CXF vocabulary.** A typing token in that namespace (a `@type` value or an `isOfDataType`
+reference, on any node) must name a term of the vocabulary the engine reads, or the document is
+refused as `malformed-document` (GitHub #620). The vocabulary is one set, built from these sources
+and held in one table with each term's provenance (`crates/oce-cxf/src/vocabulary_terms.rs`):
+
+- **Declared by `CXF-Core.jsonld`** (23 classes): `AnalogDataType`, `AnalogInput`, `AnalogOutput`,
+  `Block`, `BooleanDataType`, `CompositeBlock`, `Connector`, `Constant`, `DataType`,
+  `ElementaryBlock`, `EnumerationDatatype`, `ExtensionBlock`, `InputConnector`, `IntegerDataType`,
+  `IntegerInput`, `IntegerOutput`, `OutputConnector`, `Package`, `Parameter`, `RealDatatype`,
+  `RealInput`, `RealOutput`, `StringDatatype`.
+- **Used by `CXF-Core.jsonld` without being declared there** (8): `BooleanInput`,
+  `BooleanOutput`, `Datatype`, `EnumerationType`, and the data types `Real`, `Integer`, `Boolean`,
+  `String`. CXF-Core types its enumerations `EnumerationType` and its Boolean connectors
+  `BooleanInput` and `BooleanOutput`, though it declares neither.
+- **Written by the engine, absent from CXF-Core** (2): `StringInput`, `StringOutput`.
+- **The registry's 133 CDL block classes**, each written `Buildings.Controls.OBC.CDL.…` (the
+  registry's three internal `urn:oce:lowering#PassThrough.*` identities are never an S231 term).
+- **The 18 CDL and G36 enumeration and constant-package types**, each by its full path
+  (`Buildings.Controls.OBC.CDL.Types.ZeroTime`), never by its last segment.
+
+A term a newer CXF-Core declares or uses is refused until the table holds it. A test pins the
+table against the vendored `CXF-Core.jsonld`, so a pin advance that adds a class fails it and
+says to update the table; another pins the class and enumeration counts against the registry.
+
 ## What the engine does not execute
 
 CDL has three kinds of block. The engine executes two: **elementary blocks**, the registered
@@ -68,8 +92,8 @@ with `x` bound elsewhere, an unexpanded bare `ExtensionBlock`) is an ordinary cl
 class of any other name does: unknown as a leaf (`class-not-found`), lowered as a composite when it
 lists children, and ignored after a registered class in a type list. The class written in the
 `https:` spelling of either S231 namespace is refused as `vocabulary-namespace-mismatch`, as a
-modeled key in them is; the namespace the engine wrote through release 0.4.0 is refused that way
-for any type, and both refusals come first.
+modeled key in them is, and since GitHub #620 so is any type in them; the namespace the engine
+wrote through release 0.4.0 is refused that way for any type, and both refusals come first.
 
 The refusal covers every active node wherever it sits: the root, a child at any depth, an
 extension block that lists children of its own, and a node no `containsBlock` edge reaches. One

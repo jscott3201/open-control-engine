@@ -151,12 +151,16 @@ pub(crate) const MEMBER_REJECTIONS: [CompositeRejection; 22] = [
         )],
     ),
     (
+        // An S231 term outside the vocabulary (GitHub #620); before, `unresolved-reference`.
         "member_isofdatatype_unresolved.jsonld",
         None,
         &[(
-            DiagCode::UnresolvedReference,
-            Some("http://data.ashrae.org/S231#Bogus"),
-            "unresolved isOfDataType",
+            DiagCode::MalformedDocument,
+            Some("http://example.org#M.c.u"),
+            "S231:isOfDataType `http://data.ashrae.org/S231#Bogus` on node `http://example.org#M.c.u` \
+             names `Bogus`, which is no term of the S231 vocabulary the engine reads (a CXF-Core \
+             class or data type, a term the engine writes, a registered CDL block class, or a CDL \
+             or G36 enumeration type by its full path)",
         )],
     ),
     (
@@ -169,12 +173,16 @@ pub(crate) const MEMBER_REJECTIONS: [CompositeRejection; 22] = [
         )],
     ),
     (
+        // As above (GitHub #620); before, `connector lacks a recognized data type`.
         "member_unrecognized_type.jsonld",
         None,
         &[(
             DiagCode::MalformedDocument,
             Some("http://example.org#M.c.u"),
-            "connector lacks a recognized data type",
+            "@type `http://data.ashrae.org/S231#Frobnicator` on node `http://example.org#M.c.u` \
+             names `Frobnicator`, which is no term of the S231 vocabulary the engine reads (a \
+             CXF-Core class or data type, a term the engine writes, a registered CDL block class, \
+             or a CDL or G36 enumeration type by its full path)",
         )],
     ),
     (

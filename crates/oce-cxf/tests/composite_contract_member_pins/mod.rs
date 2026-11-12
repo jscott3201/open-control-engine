@@ -193,11 +193,16 @@ pub(crate) fn rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
             )],
         ),
         (
+            // An S231 term outside the vocabulary is refused before any reader sees it (GitHub
+            // #620); before, the reader refused it as `unresolved-reference`, subject the IRI.
             "rejected/member_isofdatatype_unresolved.jsonld",
             vec![error_with_subject(
-                DiagCode::UnresolvedReference,
-                "http://data.ashrae.org/S231#Bogus",
-                "unresolved isOfDataType",
+                DiagCode::MalformedDocument,
+                "http://example.org#M.c.u",
+                "S231:isOfDataType `http://data.ashrae.org/S231#Bogus` on node \
+                 `http://example.org#M.c.u` names `Bogus`, which is no term of the S231 vocabulary \
+                 the engine reads (a CXF-Core class or data type, a term the engine writes, a \
+                 registered CDL block class, or a CDL or G36 enumeration type by its full path)",
             )],
         ),
         (
@@ -209,11 +214,15 @@ pub(crate) fn rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
             )],
         ),
         (
+            // As above (GitHub #620); before, `connector lacks a recognized data type`.
             "rejected/member_unrecognized_type.jsonld",
             vec![error_with_subject(
                 DiagCode::MalformedDocument,
                 "http://example.org#M.c.u",
-                "connector lacks a recognized data type",
+                "@type `http://data.ashrae.org/S231#Frobnicator` on node `http://example.org#M.c.u` \
+                 names `Frobnicator`, which is no term of the S231 vocabulary the engine reads (a \
+                 CXF-Core class or data type, a term the engine writes, a registered CDL block \
+                 class, or a CDL or G36 enumeration type by its full path)",
             )],
         ),
         (

@@ -18,11 +18,13 @@
 //! - **A typing token in [`RETIRED_NAMESPACE`]** (a `@type` value or an `isOfDataType` reference
 //!   written as a full IRI) is refused. Types are otherwise read by their trailing term in any
 //!   namespace, which is unchanged.
-//! - **A `@type` naming the S231 class `ExtensionBlock` in the `https:` spelling of either
-//!   namespace** is refused (GitHub #582). The resolver reads that class only in
-//!   [`S231_CONTEXT_IRI`], the way a modeled key is read, so it would read this spelling as an
-//!   ordinary class and lower an extension block that lists children as a composite. A modeled key
-//!   in the same namespaces is refused for the same reason ([`super::property_keys`]).
+//! - **A typing token in the `https:` spelling of either namespace** is refused, whatever its term
+//!   (GitHub #620; the class `ExtensionBlock` since GitHub #582). The vocabulary is read only in
+//!   [`S231_CONTEXT_IRI`], the way a modeled key is read, so such a token would be read by its
+//!   trailing term, and `ExtensionBlock` as an ordinary class, lowering an extension block that
+//!   lists children as a composite. A modeled key in the same namespaces is refused for the same
+//!   reason ([`super::property_keys`]). A token in [`S231_CONTEXT_IRI`] must then name a term of the
+//!   vocabulary ([`super::vocabulary_terms`]).
 //! - **A typing token that names an S231 term only once its surrounding whitespace is trimmed**
 //!   (`"S231:ExtensionBlock "`, `" S231:Real"`) is refused as `malformed-document` (GitHub #587),
 //!   as a whitespace near-miss property key is ([`super::property_keys`]). No whitespace-bearing
@@ -87,11 +89,10 @@ pub(super) fn check_bindings(table: &PrefixTable, diags: &mut Vec<Diagnostic>) {
 }
 
 /// Refuse a typing token (`@type` value or `isOfDataType` reference) in [`RETIRED_NAMESPACE`],
-/// and a `@type` naming the class `ExtensionBlock` in [`HTTPS_NEAR_MISS`] or
-/// [`HTTPS_RETIRED_NEAR_MISS`]. A type is recognised by its trailing term in any namespace, so
-/// without the first a full IRI in the retired namespace would be read through it; the
-/// extension-block class is read only in [`S231_CONTEXT_IRI`], so without the second the near
-/// miss would be read as an ordinary class. `owner` is the node's expanded `@id`.
+/// [`HTTPS_NEAR_MISS`] or [`HTTPS_RETIRED_NEAR_MISS`]. A type is recognised by its trailing term
+/// in any namespace, so without this a full IRI in one of them would be read through it as if it
+/// were the S231 vocabulary's (GitHub #527, #582; every `https:` term since GitHub #620). The class
+/// `ExtensionBlock` keeps its own message. `owner` is the node's expanded `@id`.
 pub(super) fn check_typing(token: &str, slot: &str, owner: &str, diags: &mut Vec<Diagnostic>) {
     let subject = if owner.is_empty() { token } else { owner };
     if token.starts_with(RETIRED_NAMESPACE) {
@@ -107,22 +108,29 @@ pub(super) fn check_typing(token: &str, slot: &str, owner: &str, diags: &mut Vec
         );
         return;
     }
-    let near_miss = [HTTPS_NEAR_MISS, HTTPS_RETIRED_NEAR_MISS]
+    let Some((namespace, term)) = [HTTPS_NEAR_MISS, HTTPS_RETIRED_NEAR_MISS]
         .into_iter()
-        .find(|ns| token.strip_prefix(ns) == Some(EXTENSION_BLOCK_TERM));
-    if let Some(namespace) = near_miss.filter(|_| slot == "@type") {
-        diags.push(
-            Diagnostic::error(
-                DiagCode::VocabularyNamespaceMismatch,
-                format!(
-                    "{slot} `{token}` on node `{owner}` names the class `{EXTENSION_BLOCK_TERM}` \
-                     in `{namespace}`; the S231 vocabulary is read only in `{S231_CONTEXT_IRI}`; \
-                     write it as `S231:{EXTENSION_BLOCK_TERM}`"
-                ),
-            )
+        .find_map(|namespace| Some((namespace, token.strip_prefix(namespace)?)))
+    else {
+        return;
+    };
+    let message = if slot == "@type" && term == EXTENSION_BLOCK_TERM {
+        format!(
+            "{slot} `{token}` on node `{owner}` names the class `{EXTENSION_BLOCK_TERM}` in \
+             `{namespace}`; the S231 vocabulary is read only in `{S231_CONTEXT_IRI}`; write it as \
+             `S231:{EXTENSION_BLOCK_TERM}`"
+        )
+    } else {
+        let (quoted, named) = (excerpt(token), excerpt(term));
+        format!(
+            "{slot} `{quoted}` on node `{owner}` is in `{namespace}`; the S231 vocabulary is read \
+             only in `{S231_CONTEXT_IRI}`; write it as `S231:{named}`"
+        )
+    };
+    diags.push(
+        Diagnostic::error(DiagCode::VocabularyNamespaceMismatch, message)
             .with_subject(subject.to_owned()),
-        );
-    }
+    );
 }
 
 /// Refuse a typing token (`@type` value or `isOfDataType` reference, as written) that names a
