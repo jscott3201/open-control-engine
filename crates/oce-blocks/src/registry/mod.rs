@@ -1,6 +1,8 @@
 //! Static class-path to constructor registry for native CDL block implementations.
 
 use alloc::sync::Arc;
+use alloc::vec;
+use alloc::vec::Vec;
 
 use oce_model::{ParamTable, SimpleController, Value, ZeroTime};
 
@@ -88,6 +90,8 @@ mod catalog_tests;
 pub(crate) mod manifest;
 #[cfg(test)]
 mod manifest_tests;
+#[cfg(test)]
+mod vector_elements_tests;
 
 /// Look up an elementary-block constructor by canonical class path. Unknown paths return `None`
 /// (an unresolved external / extension block — never a panic; R-IMPL-2).
@@ -206,7 +210,13 @@ fn find<'a>(params: &'a ParamTable, name: &str) -> Option<&'a Value> {
 }
 
 pub(crate) fn real_param(params: &ParamTable, name: &str, default: f64) -> f64 {
-    match find(params, name) {
+    real_or(find(params, name), default)
+}
+
+/// A Real parameter's value from its binding, `default` when unbound or of another kind: the
+/// reading [`real_param`] applies to a looked-up name, shared with [`vector_elements`].
+pub(crate) fn real_or(value: Option<&Value>, default: f64) -> f64 {
+    match value {
         Some(Value::Real(x)) => *x,
         // Modelica/CDL Int→Real promotion (§7.3.4): an integer literal bound to a `Real` parameter
         // is its real value. CXF may carry a bare integer (e.g. `y_start: 0`) for a Real parameter
@@ -220,17 +230,68 @@ pub(crate) fn real_param(params: &ParamTable, name: &str, default: f64) -> f64 {
 }
 
 pub(crate) fn bool_param(params: &ParamTable, name: &str, default: bool) -> bool {
-    match find(params, name) {
+    bool_or(find(params, name), default)
+}
+
+/// A Boolean parameter's value from its binding, `default` when unbound or of another kind.
+pub(crate) fn bool_or(value: Option<&Value>, default: bool) -> bool {
+    match value {
         Some(Value::Boolean(b)) => *b,
         _ => default,
     }
 }
 
 pub(crate) fn int_param(params: &ParamTable, name: &str, default: i64) -> i64 {
-    match find(params, name) {
+    int_or(find(params, name), default)
+}
+
+/// An Integer parameter's value from its binding, `default` when unbound or of another kind.
+pub(crate) fn int_or(value: Option<&Value>, default: i64) -> i64 {
+    match value {
         Some(Value::Integer(n)) => *n,
         _ => default,
     }
+}
+
+/// The bindings of a flattened vector parameter's elements `base_1` to `base_n`, read in one
+/// pass over `params` (GitHub #634): entry `i - 1` is the first binding of the exact name
+/// `base_i`, the one `find(params, &format!("{base}_{i}"))` returns, or `None`. Only the
+/// spelling that format writes is an element (decimal, no sign, no leading zero, from 1), and an
+/// index past `n` is not read, exactly as the per-index lookups did; the difference is cost. They
+/// built a name and scanned the whole table for every index up to `n`, so a block's table of
+/// `n` elements cost on the order of `n` squared comparisons and `n` allocations; this pass is
+/// one allocation and one comparison of each name's prefix.
+pub(crate) fn vector_elements<'a>(
+    params: &'a ParamTable,
+    base: &str,
+    n: usize,
+) -> Vec<Option<&'a Value>> {
+    let mut elements = vec![None; n];
+    for (name, value) in &params.values {
+        let Some(index) = name
+            .strip_prefix(base)
+            .and_then(|rest| rest.strip_prefix('_'))
+            .and_then(element_index)
+        else {
+            continue;
+        };
+        if let Some(slot) = elements.get_mut(index - 1)
+            && slot.is_none()
+        {
+            *slot = Some(value);
+        }
+    }
+    elements
+}
+
+/// The index an element suffix spells, if it is the one decimal spelling of an index from 1:
+/// ASCII digits with no sign and no leading zero. A value too large for `usize` is no index.
+fn element_index(suffix: &str) -> Option<usize> {
+    let first = *suffix.as_bytes().first()?;
+    if !(b'1'..=b'9').contains(&first) || !suffix.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    suffix.parse().ok()
 }
 
 pub(crate) fn string_param(params: &ParamTable, name: &str, default: &'static str) -> Arc<str> {

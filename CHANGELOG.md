@@ -85,6 +85,26 @@ and a gate that accepted any text would restore exactly the false assurance desc
     for a partial array: `MultiSum(nin = 3, k_1 = 10, k_3 = 30)` runs with `[10, 1, 30]`.
   - **No version bump.** A load refusal is not a format change (owner ruling of 2026-11-12). No
     golden, class signature or catalog byte moves.
+- **Building a vector block reads its elements in one pass** (GitHub #PRNUM, issue #634).
+  - **What was wrong.** The constructors of both `MultiSum` classes (`k`), the three
+    `ExtractSignal` classes (`extract`) and the three `VectorFilter` classes (`msk`) built each
+    element's name and scanned the whole parameter table for it, for every index up to the
+    length. The load gate's `VectorFilter` true-count rule did the same. A block of `n`
+    elements therefore cost `n` allocations and on the order of `n` squared comparisons. The
+    1,024-byte CXF `MultiSum(nin = 65536, k = "fill(1, 65536)")` took 2.8 s in release to be
+    refused (it declares no inputs); 2^20 elements, which the input limits allow, would take
+    minutes.
+  - **The fix.** Each reads the table once now, keeping the first binding of each element's
+    canonical name, the binding the per-index lookup returned. The same document takes
+    13 ms; at 2^14 elements, 3 ms instead of 122 ms.
+  - **Pinned.** A differential test holds the one-pass reader to the per-index lookup, binding
+    for binding by reference, over 4,096 tables of hostile spellings. Allocation pins hold
+    building each class to at most 64 allocations at 4,096 and 65,536 elements, where the
+    per-index readers made 4,101 to 8,096 at 4,096. The true-count rule is held to at most 64
+    at 2^16 and 2^20, where it made 121,090 and 2,087,170. Each per-index version fails its pin.
+  - **Nothing pinned moves.** No golden, provenance record, class signature, catalog, blob or
+    content id changes, and no block computes anything different. `MatrixGain`'s `K` has the
+    same per-cell shape and is #643.
 
 ### CXF import and export
 

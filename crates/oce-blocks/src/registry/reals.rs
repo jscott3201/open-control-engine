@@ -2,7 +2,7 @@ use alloc::{boxed::Box, format, vec::Vec};
 use oce_model::ParamTable;
 
 use super::reals_defaults::*;
-use super::{bool_param, int_param, real_param, zero_time_param};
+use super::{bool_param, int_param, real_or, real_param, vector_elements, zero_time_param};
 use crate::reals_sources::{MIN_SOURCE_RAMP_DURATION, ZERO_TIME_MEMBERS};
 use crate::source_timetable::{EXTRAPOLATION_MEMBERS, SMOOTHNESS_MEMBERS};
 use crate::{
@@ -639,8 +639,9 @@ fn make_multi_min(p: &ParamTable) -> Box<dyn Block> {
 
 fn make_multi_sum(p: &ParamTable) -> Box<dyn Block> {
     let nin = bounded_nin(p);
-    let gains = (1..=nin)
-        .map(|idx| real_param(p, &format!("k_{idx}"), MULTI_SUM_K_DEFAULT))
+    let gains = vector_elements(p, "k", nin)
+        .into_iter()
+        .map(|value| real_or(value, MULTI_SUM_K_DEFAULT))
         .collect();
     Box::new(MultiSum::new(gains))
 }
