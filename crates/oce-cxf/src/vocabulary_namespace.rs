@@ -25,6 +25,10 @@
 //!   lists children as a composite. A modeled key in the same namespaces is refused for the same
 //!   reason ([`super::property_keys`]). A token in [`S231_CONTEXT_IRI`] must then name a term of the
 //!   vocabulary ([`super::vocabulary_terms`]).
+//! - **A typing token that carries a Unicode format or control character** (general category
+//!   `Cf` or `Cc`, [`crate::format_controls`]) inside its surrounding whitespace, in any
+//!   namespace, is refused as `malformed-document` (GitHub #641), before any other check on it:
+//!   such a token escapes every other check, and no reader can see the character.
 //! - **A typing token that names an S231 term only once its surrounding whitespace is trimmed**
 //!   (`"S231:ExtensionBlock "`, `" S231:Real"`) is refused as `malformed-document` (GitHub #587),
 //!   as a whitespace near-miss property key is ([`super::property_keys`]). No whitespace-bearing
@@ -46,6 +50,7 @@ use oce_diag::{DiagCode, Diagnostic};
 use super::{Expansion, PrefixTable, expand_token};
 use crate::excerpt::excerpt;
 use crate::export::S231_CONTEXT_IRI;
+use crate::format_controls::{describe, first_format_or_control, visible};
 use crate::resolve::extension_blocks::EXTENSION_BLOCK_TERM;
 
 /// The namespace IRI this engine bound through release 0.4.0. Kept only to refuse it.
@@ -94,13 +99,14 @@ pub(super) fn check_bindings(table: &PrefixTable, diags: &mut Vec<Diagnostic>) {
 /// were the S231 vocabulary's (GitHub #527, #582; every `https:` term since GitHub #620). The class
 /// `ExtensionBlock` keeps its own message. `owner` is the node's expanded `@id`.
 pub(super) fn check_typing(token: &str, slot: &str, owner: &str, diags: &mut Vec<Diagnostic>) {
-    let subject = if owner.is_empty() { token } else { owner };
+    let quoted = excerpt(token);
+    let subject = if owner.is_empty() { &quoted } else { owner };
     if token.starts_with(RETIRED_NAMESPACE) {
         diags.push(
             Diagnostic::error(
                 DiagCode::VocabularyNamespaceMismatch,
                 format!(
-                    "{slot} `{token}` on node `{owner}` is in `{RETIRED_NAMESPACE}`; the S231 \
+                    "{slot} `{quoted}` on node `{owner}` is in `{RETIRED_NAMESPACE}`; the S231 \
                      vocabulary is read only in `{S231_CONTEXT_IRI}`"
                 ),
             )
@@ -121,7 +127,7 @@ pub(super) fn check_typing(token: &str, slot: &str, owner: &str, diags: &mut Vec
              `S231:{EXTENSION_BLOCK_TERM}`"
         )
     } else {
-        let (quoted, named) = (excerpt(token), excerpt(term));
+        let named = excerpt(term);
         format!(
             "{slot} `{quoted}` on node `{owner}` is in `{namespace}`; the S231 vocabulary is read \
              only in `{S231_CONTEXT_IRI}`; write it as `S231:{named}`"
@@ -131,6 +137,42 @@ pub(super) fn check_typing(token: &str, slot: &str, owner: &str, diags: &mut Vec
         Diagnostic::error(DiagCode::VocabularyNamespaceMismatch, message)
             .with_subject(subject.to_owned()),
     );
+}
+
+/// Refuse a typing token (`@type` value or `isOfDataType` reference, as written, in any
+/// namespace) that carries a Unicode format or control character ([`crate::format_controls`])
+/// inside its surrounding whitespace (GitHub #641; owner ruling of 2026-11-12); returns whether it
+/// refused, in which case the caller skips every later check for the token. No reader can see
+/// such a character, and a token carrying one escapes every other check: before or inside the
+/// `S231:` prefix it never expands, so it is read as no S231 type, and a nested composite typed
+/// `"\u{200B}S231:ExtensionBlock"` lowered its children as a composite. The check runs first: a
+/// token with surrounding whitespace and such a character inside is this refusal, and surrounding
+/// whitespace alone, a tab or a line break included, is left to [`check_typing_whitespace`]. The
+/// message names the first such code point and quotes the token as an excerpt with each such
+/// character escaped ([`crate::format_controls::visible`]).
+pub(super) fn check_typing_controls(
+    token: &str,
+    slot: &str,
+    owner: &str,
+    diags: &mut Vec<Diagnostic>,
+) -> bool {
+    let Some(invisible) = first_format_or_control(token.trim()) else {
+        return false;
+    };
+    let quoted = visible(&excerpt(token)).into_owned();
+    let subject = if owner.is_empty() { &quoted } else { owner };
+    diags.push(
+        Diagnostic::error(
+            DiagCode::MalformedDocument,
+            format!(
+                "{slot} `{quoted}` on node `{owner}` carries {}, which no reader can see; write \
+                 the type without format or control characters",
+                describe(invisible)
+            ),
+        )
+        .with_subject(subject.to_owned()),
+    );
+    true
 }
 
 /// Refuse a typing token (`@type` value or `isOfDataType` reference, as written) that names a
@@ -167,8 +209,8 @@ pub(super) fn check_typing_whitespace(
     let Some((namespace, term)) = named.filter(|(_, term)| !term.is_empty()) else {
         return false;
     };
-    let subject = if owner.is_empty() { token } else { owner };
     let (quoted, named) = (excerpt(token), excerpt(term));
+    let subject = if owner.is_empty() { &quoted } else { owner };
     let message = if term.contains(char::is_whitespace) {
         // No spelling of it without the surrounding whitespace names a term, so none is offered.
         format!(

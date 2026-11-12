@@ -27,16 +27,19 @@
 //!   expansion, **best-effort**. Whatever does not expand stays verbatim and is never refused
 //!   here — the downstream `ClassNotFound` / `UnresolvedReference` no-match diagnostics are the
 //!   pinned behavior for junk typing tokens (`resolve_errors.rs` pins `@type: "NotAnIri"` →
-//!   `ClassNotFound`). Three exceptions, checked in this order and each ending the checks of its
-//!   token: a typing token that names an S231 term only once its surrounding whitespace is
-//!   trimmed is refused as `MalformedDocument` (GitHub #587, [`vocabulary_namespace`]), because it
-//!   would stay verbatim and be read as no S231 type, which a composite, never reading its
-//!   `@type`, does not notice; a typing token in the namespace written through release 0.4.0 or in
-//!   an `https:` spelling is refused as `VocabularyNamespaceMismatch`, because a type is read by its
-//!   trailing term and would otherwise be read through that namespace; and a typing token in the
-//!   S231 namespace that names no term of the vocabulary the engine reads is refused as
-//!   `MalformedDocument` (GitHub #620, [`vocabulary_terms`]), which also matches an enumeration
-//!   there by its full path.
+//!   `ClassNotFound`). Four exceptions, checked in this order and each ending the checks of its
+//!   token: a typing token in any namespace that carries a Unicode format or control character
+//!   inside its surrounding whitespace is refused as `MalformedDocument` (GitHub #641), because no
+//!   reader can see it and it escapes every other check; a typing token that names an S231 term
+//!   only once its surrounding whitespace is trimmed is refused as `MalformedDocument` (GitHub
+//!   #587, [`vocabulary_namespace`]), because it would stay verbatim and be read as no S231 type,
+//!   which a composite, never reading its `@type`, does not notice; a typing token in the namespace
+//!   written through release 0.4.0 or in an `https:` spelling is refused as
+//!   `VocabularyNamespaceMismatch`, because a type is read by its trailing term and would otherwise
+//!   be read through that namespace; and a typing token in the S231 namespace that names no term of
+//!   the vocabulary the engine reads is refused as `MalformedDocument`, or `ClassNotFound` for a
+//!   CDL block class the registry lacks (GitHub #620, [`vocabulary_terms`]), which also matches an
+//!   enumeration there by its full path.
 //!
 //! Deliberately excluded from expansion: the [`crate::dto::TermAttr::Iri`] arm (`unit`/`quantity`/
 //! `displayUnit` are lexical terms consumed verbatim by attribute parsing), the `@type` annotation
@@ -582,6 +585,9 @@ fn expand_node(node: &mut Node, table: &PrefixTable, diags: &mut Vec<Diagnostic>
     expand_refs("S231:hasInstance", &mut node.has_instance);
     expand_refs("S231:isConnectedTo", &mut node.is_connected_to);
     let mut expand_type = |slot: &str, value: &mut String| {
+        if vocabulary_namespace::check_typing_controls(value, slot, &owner, diags) {
+            return;
+        }
         if vocabulary_namespace::check_typing_whitespace(value, slot, &owner, table, diags) {
             return;
         }

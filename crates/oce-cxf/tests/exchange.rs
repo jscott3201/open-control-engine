@@ -107,6 +107,7 @@ mod resolve_property_keys;
 mod resolve_reference_keys;
 mod resolve_term_shapes;
 mod resolve_type_near_miss;
+mod resolve_typing_controls;
 mod resolve_unused_boundary_input;
 mod resolve_vocabulary_namespace;
 mod resolve_vocabulary_terms;

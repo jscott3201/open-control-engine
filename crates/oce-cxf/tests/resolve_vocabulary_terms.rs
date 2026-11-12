@@ -24,9 +24,10 @@ const Y: &str = "http://example.org#R.con.y";
 const ORPHAN: &str = "http://example.org#R.note";
 const CONSTANT: &str = "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant";
 
-/// The 33 vocabulary terms, as the engine's table holds them (its pin tests tie them to
-/// CXF-Core); stated again here as the document-level contract.
-const TERMS: [&str; 33] = [
+/// The 39 vocabulary terms, as the engine's table holds them (its pin tests tie them to
+/// CXF-Core); stated again here as the document-level contract. The last six are the other
+/// `DataType`/`Datatype` ending of CXF-Core's data-type classes, which it spells both ways.
+const TERMS: [&str; 39] = [
     "AnalogDataType",
     "AnalogInput",
     "AnalogOutput",
@@ -60,6 +61,12 @@ const TERMS: [&str; 33] = [
     "String",
     "StringInput",
     "StringOutput",
+    "AnalogDatatype",
+    "BooleanDatatype",
+    "EnumerationDataType",
+    "IntegerDatatype",
+    "RealDataType",
+    "StringDataType",
 ];
 
 /// A root holding a nested composite that holds a `Constant`, plus an orphan node, under
@@ -165,7 +172,7 @@ fn every_vocabulary_term_class_and_enumeration_is_accepted() {
         .chain(classes)
         .chain(enumerations)
         .collect();
-    assert_eq!(terms.len(), 33 + 133 + 18);
+    assert_eq!(terms.len(), 39 + 133 + 18);
     for term in terms.iter().filter(|term| *term != "ExtensionBlock") {
         for key in ["@type", "S231:isOfDataType"] {
             let value = if key == "@type" {
@@ -180,9 +187,10 @@ fn every_vocabulary_term_class_and_enumeration_is_accepted() {
 
 #[test]
 fn a_term_outside_the_vocabulary_is_refused_on_every_role() {
-    // (node, slot, token as written, token as expanded, term). Before: each loaded, but the leaf
-    // (`class-not-found`) and the two data types with no last-segment match
-    // (`unresolved-reference`).
+    // (node, slot, token as written, term). Before: each loaded, but the two data types with no
+    // last-segment match (`unresolved-reference`). Invisible characters are refused before this
+    // check (`resolve_typing_controls.rs`), and an unregistered CDL class is `class-not-found`
+    // (below).
     let full = |term: &str| format!("{S231_NS}{term}");
     let cases = [
         (
@@ -194,29 +202,10 @@ fn a_term_outside_the_vocabulary_is_refused_on_every_role() {
         (ROOT, "@type", "S231:block".to_owned(), "block"),
         (ROOT, "@type", full("Blok"), "Blok"),
         (
-            ROOT,
-            "@type",
-            "S231:Block\u{200b}".to_owned(),
-            "Block\u{200b}",
-        ),
-        (
-            ROOT,
-            "@type",
-            "S231:\u{feff}Block".to_owned(),
-            "\u{feff}Block",
-        ),
-        (ROOT, "@type", "S231:Bl\u{ad}ock".to_owned(), "Bl\u{ad}ock"),
-        (
             SUB,
             "@type",
             "S231:CompositBlock".to_owned(),
             "CompositBlock",
-        ),
-        (
-            CON,
-            "@type",
-            "S231:Buildings.Controls.OBC.CDL.Reals.Sources.Constantt".to_owned(),
-            "Buildings.Controls.OBC.CDL.Reals.Sources.Constantt",
         ),
         (Y, "@type", "S231:RealOutptu".to_owned(), "RealOutptu"),
         (K, "@type", "S231:Paramter".to_owned(), "Paramter"),
@@ -263,6 +252,47 @@ fn a_term_outside_the_vocabulary_is_refused_on_every_role() {
             "{node} {slot} {token:?}"
         );
     }
+}
+
+#[test]
+fn an_s231_spelled_cdl_class_the_registry_lacks_is_class_not_found_as_in_any_spelling() {
+    // Before, a leaf typed so was `class-not-found` in either spelling, and a composite loaded.
+    // Now a leaf in the S231 or the `ex:` spelling reads the same, and so does a composite typed
+    // with the S231 spelling, whose class is never read otherwise.
+    for (node, token) in [
+        (
+            CON,
+            "S231:Buildings.Controls.OBC.CDL.Reals.Sources.Constantt".to_owned(),
+        ),
+        (
+            SUB,
+            "S231:Buildings.Controls.OBC.CDL.Reals.Sources.Constantt".to_owned(),
+        ),
+        (CON, format!("{CONSTANT}t")),
+    ] {
+        assert_eq!(
+            refusal(&with(base(), node, "@type", json!(token))),
+            vec![
+                Diagnostic::error(
+                    DiagCode::ClassNotFound,
+                    "no registered block class for `CDL.Reals.Sources.Constantt`",
+                )
+                .with_subject(node)
+            ],
+            "{node} {token}"
+        );
+    }
+    // A CDL enumeration path is no block class: a typo there is the vocabulary's refusal.
+    let token = "S231:Buildings.Controls.OBC.CDL.Types.ZeroTim";
+    assert_eq!(
+        refusal(&with(base(), ORPHAN, "@type", json!(token))),
+        vec![unknown(
+            ORPHAN,
+            "@type",
+            &format!("{S231_NS}Buildings.Controls.OBC.CDL.Types.ZeroTim"),
+            "Buildings.Controls.OBC.CDL.Types.ZeroTim"
+        )]
+    );
 }
 
 #[test]

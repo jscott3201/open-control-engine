@@ -89,6 +89,65 @@ fn the_table_holds_exactly_what_cxf_core_declares_and_uses() {
         "CXF-Core uses class paths outside the vocabulary: {unknown:?}"
     );
     assert_eq!(paths.len(), 4, "{paths:?}");
+
+    // The spelling tolerances are exactly the other `DataType`/`Datatype` ending of every
+    // data-type class CXF-Core declares or uses, where CXF-Core has not written that ending
+    // itself.
+    let seen: BTreeSet<String> = declared.union(&used).cloned().collect();
+    let tolerances: BTreeSet<String> = seen
+        .iter()
+        .filter_map(|term| {
+            let (stem, other) = if let Some(stem) = term.strip_suffix("DataType") {
+                (stem, "Datatype")
+            } else {
+                (term.strip_suffix("Datatype")?, "DataType")
+            };
+            Some(format!("{stem}{other}"))
+        })
+        .filter(|alternate| !seen.contains(alternate))
+        .collect();
+    let table: BTreeSet<String> = names(SpellingTolerance)
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+    assert_eq!(
+        tolerances, table,
+        "the data-type classes CXF-Core spells changed: update the `SpellingTolerance` entries of \
+         `TERMS` in vocabulary_terms.rs"
+    );
+}
+
+#[test]
+fn cxf_core_s_elementary_blocks_are_the_registry_s_classes() {
+    let core = cxf_core();
+    let blocks: BTreeSet<String> = core["@graph"]
+        .as_array()
+        .expect("@graph")
+        .iter()
+        .filter(|node| s231_types(node).contains(&"ElementaryBlock"))
+        .filter_map(|node| node["@id"].as_str()?.strip_prefix("S231:"))
+        .map(str::to_owned)
+        .collect();
+    let registered: BTreeSet<String> = oce_blocks::catalog()
+        .iter()
+        .filter(|entry| entry.class_path.starts_with("CDL."))
+        .map(|entry| format!("Buildings.Controls.OBC.{}", entry.class_path))
+        .collect();
+    let unregistered: Vec<&String> = blocks.difference(&registered).collect();
+    assert!(
+        unregistered.is_empty(),
+        "CXF-Core.jsonld declares elementary blocks the registry does not implement: {unregistered:?}. \
+         An S231 document typing a leaf with one is refused as `class-not-found`; register the \
+         block in oce-blocks, or record here why the engine does not implement it"
+    );
+    let engine_only: Vec<&str> = registered.difference(&blocks).map(String::as_str).collect();
+    assert_eq!(
+        engine_only,
+        vec!["Buildings.Controls.OBC.CDL.Logical.TrueHoldWithReset"],
+        "the registry's CDL classes that CXF-Core.jsonld does not declare changed: update this \
+         list, and check the class against the vendored Buildings sources"
+    );
+    assert_eq!(blocks.len(), 132);
 }
 
 #[test]
@@ -96,7 +155,7 @@ fn the_table_is_ordered_unique_and_names_the_engine_only_terms() {
     let all: Vec<&str> = TERMS.iter().map(|term| term.name).collect();
     let unique: BTreeSet<&str> = all.iter().copied().collect();
     assert_eq!(unique.len(), all.len(), "a term listed twice");
-    for cxf_core in [Declared, UsedUndeclared, Absent] {
+    for cxf_core in [Declared, UsedUndeclared, Absent, SpellingTolerance] {
         let names: Vec<&str> = TERMS
             .iter()
             .filter(|t| t.cxf_core == cxf_core)
@@ -108,6 +167,8 @@ fn the_table_is_ordered_unique_and_names_the_engine_only_terms() {
     }
     assert_eq!(names(Declared).len(), 23);
     assert_eq!(names(UsedUndeclared).len(), 8);
+    assert_eq!(names(SpellingTolerance).len(), 6);
+    assert_eq!(TERMS.len(), 39);
     // A term CXF-Core neither declares nor uses is in the table only because the engine writes it.
     for term in TERMS.iter().filter(|term| term.cxf_core == Absent) {
         assert!(term.engine, "{} is in no source", term.name);
@@ -177,5 +238,5 @@ fn the_vocabulary_holds_every_registered_cdl_class_and_enumeration_row_by_full_p
             "an enumeration is held by its full path only: {last}"
         );
     }
-    assert_eq!(vocabulary().len(), 33 + 133 + 18);
+    assert_eq!(vocabulary().len(), 39 + 133 + 18);
 }

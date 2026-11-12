@@ -57,14 +57,31 @@ and held in one table with each term's provenance (`crates/oce-cxf/src/vocabular
   `String`. CXF-Core types its enumerations `EnumerationType` and its Boolean connectors
   `BooleanInput` and `BooleanOutput`, though it declares neither.
 - **Written by the engine, absent from CXF-Core** (2): `StringInput`, `StringOutput`.
+- **Spelling tolerances** (6): `AnalogDatatype`, `BooleanDatatype`, `EnumerationDataType`,
+  `IntegerDatatype`, `RealDataType`, `StringDataType`. CXF-Core spells its data-type classes both
+  ways (`IntegerDataType` but `RealDatatype`, and an undeclared `IntegerDatatype` in a shape), so
+  both endings of each are accepted (owner ruling of 2026-11-12).
 - **The registry's 133 CDL block classes**, each written `Buildings.Controls.OBC.CDL.…` (the
   registry's three internal `urn:oce:lowering#PassThrough.*` identities are never an S231 term).
+  They are CXF-Core's 132 elementary blocks and `CDL.Logical.TrueHoldWithReset`, which CXF-Core
+  does not declare.
 - **The 18 CDL and G36 enumeration and constant-package types**, each by its full path
   (`Buildings.Controls.OBC.CDL.Types.ZeroTime`), never by its last segment.
 
 A term a newer CXF-Core declares or uses is refused until the table holds it. A test pins the
 table against the vendored `CXF-Core.jsonld`, so a pin advance that adds a class fails it and
-says to update the table; another pins the class and enumeration counts against the registry.
+says to update the table. Another ties CXF-Core's elementary blocks to the registry, both ways,
+so a CXF-Core block the engine does not implement fails it. An S231-spelled
+`Buildings.Controls.OBC.CDL.` block class the registry does not implement is refused as
+`class-not-found` (`no registered block class for …`), as the same class is in any other
+spelling; it was `class-not-found` on a leaf before, and a composite typed with it loaded.
+
+**Invisible characters.** A typing token in any namespace that carries a Unicode format (`Cf`) or
+control (`Cc`) character, a zero-width space, a byte-order mark, a soft hyphen, U+2060, U+180E or
+a C0 or C1 control among them, is refused as `malformed-document` (GitHub #641). No reader can
+see such a character, and before the check a token carrying one before or inside the `S231:`
+prefix was read as no S231 type at all. `Cc` is what `char::is_control` reports; `Cf` is the 170
+code points Unicode 17.0.0 assigns to the category, held in a table (`crates/oce-cxf/src/format_controls.rs`).
 
 ## What the engine does not execute
 

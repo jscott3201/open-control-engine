@@ -11,11 +11,13 @@
 //!
 //! The vocabulary is one set, built once and read with one lookup per token:
 //!
-//! - **[`TERMS`]**, the 33 vocabulary terms, each with its provenance: the 23 classes the vendored
+//! - **[`TERMS`]**, the 39 vocabulary terms, each with its provenance: the 23 classes the vendored
 //!   `CXF-Core.jsonld` declares; the 8 terms it uses as a type or data type without declaring them
 //!   (`BooleanInput`, `BooleanOutput`, `Datatype`, `EnumerationType`, `Real`, `Integer`, `Boolean`,
-//!   `String`); and the 2 the engine writes that CXF-Core has neither declared nor used
-//!   (`StringInput`, `StringOutput`). Each also records whether the engine reads or writes it.
+//!   `String`); the 2 the engine writes that CXF-Core has neither declared nor used
+//!   (`StringInput`, `StringOutput`); and 6 spelling tolerances, the other `DataType`/`Datatype`
+//!   ending of CXF-Core's data-type classes, which it spells both ways. Each also records whether
+//!   the engine reads or writes it.
 //! - **the registered CDL block classes**, each written `Buildings.Controls.OBC.CDL.…`: the block
 //!   registry's classes but its three internal `urn:oce:lowering#PassThrough.*` identities, which
 //!   are never an S231 term.
@@ -24,7 +26,12 @@
 //!
 //! A term a newer CXF-Core adds is refused until [`TERMS`] holds it: a test pins the table against
 //! the vendored `CXF-Core.jsonld`, so a pin advance that adds a class fails it and says to update
-//! the table, and another pins the class count against the registry.
+//! the table. Another ties CXF-Core's elementary blocks to the registry, both ways, and pins the
+//! class count.
+//!
+//! An S231 `@type` naming a `Buildings.Controls.OBC.CDL.` block class the registry does not
+//! implement is refused as `class-not-found`, `no registered block class for …`, as a leaf in any
+//! other spelling is; every other term outside the vocabulary is `malformed-document`.
 //!
 //! Only the S231 namespace is judged: the expanded IRI under it, or a literal `S231:` prefix in a
 //! document that binds no `S231`. Another namespace's class (a leaf's `http://example.org#…` class
@@ -48,6 +55,10 @@ pub(super) enum CxfCore {
     UsedUndeclared,
     /// Neither declared nor used there.
     Absent,
+    /// The other ending of a data-type class CXF-Core declares or uses: CXF-Core spells the family
+    /// both ways (`IntegerDataType` but `RealDatatype`, and an undeclared `IntegerDatatype` in a
+    /// shape), so both endings are accepted (owner ruling of 2026-11-12).
+    SpellingTolerance,
 }
 
 /// One vocabulary term: its name after `S231:`, its place in CXF-Core, and whether the engine
@@ -74,10 +85,10 @@ const fn term(name: &'static str, cxf_core: CxfCore, engine: bool) -> Term {
     }
 }
 
-use CxfCore::{Absent, Declared, UsedUndeclared};
+use CxfCore::{Absent, Declared, SpellingTolerance, UsedUndeclared};
 
 /// The vocabulary terms, in name order within each provenance.
-pub(super) const TERMS: [Term; 33] = [
+pub(super) const TERMS: [Term; 39] = [
     // Declared by CXF-Core as an `rdfs:Class`.
     term("AnalogDataType", Declared, false),
     term("AnalogInput", Declared, true),
@@ -114,6 +125,13 @@ pub(super) const TERMS: [Term; 33] = [
     // Written by the engine, absent from CXF-Core.
     term("StringInput", Absent, true),
     term("StringOutput", Absent, true),
+    // The other ending of a CXF-Core data-type class (`DataType` / `Datatype`).
+    term("AnalogDatatype", SpellingTolerance, false),
+    term("BooleanDatatype", SpellingTolerance, false),
+    term("EnumerationDataType", SpellingTolerance, false),
+    term("IntegerDatatype", SpellingTolerance, false),
+    term("RealDataType", SpellingTolerance, false),
+    term("StringDataType", SpellingTolerance, false),
 ];
 
 /// The Modelica package every CDL and G36 class path starts with.
@@ -155,6 +173,22 @@ pub(super) fn check_term(
     }
     let (quoted, named) = (excerpt(token), excerpt(term));
     let subject = if owner.is_empty() { &quoted } else { owner };
+    // A CDL block class the registry does not implement is refused as a leaf reader refuses it in
+    // any other spelling, so the S231 and the `ex:` spellings of one class read the same.
+    if slot == "@type"
+        && let Some(class_path) = term.strip_prefix(OBC_PACKAGE)
+        && class_path.starts_with("CDL.")
+        && !class_path.starts_with("CDL.Types.")
+    {
+        diags.push(
+            Diagnostic::error(
+                DiagCode::ClassNotFound,
+                format!("no registered block class for `{}`", excerpt(class_path)),
+            )
+            .with_subject(subject.to_owned()),
+        );
+        return true;
+    }
     diags.push(
         Diagnostic::error(
             DiagCode::MalformedDocument,
