@@ -143,6 +143,8 @@ require_job_line() {
 # cell's identity says it must: a static matrix selector (`matrix.<key> == '<value>'`, optionally
 # joined by `&&`), whose cell a later step proves did the selected work, and `${{ !cancelled() }}`,
 # which only lets an evidence upload run after an earlier failure. Every other step `if:` fails.
+# That a selector picks at least one cell of its job's matrix is require_live_matrix_selectors'
+# rule (issue #566).
 require_static_step_conditions() {
   path="$1"
   local bad
@@ -752,9 +754,9 @@ require_same_workflow_env() {
 # And every `shell` key, in block or flow style and with or without quotes, must be the line
 # `shell: bash`. GitHub runs that as `bash --noprofile --norc -eo pipefail {0}`; a custom template
 # such as `bash {0}` drops `-e` and `pipefail` for every step under it.
-# Known to pass, tracked in GitHub #566: a bare `exit 0` on a line of its own; `cmd && true` or
-# `cmd && :` on a line that is not the last of its step; `cmd & wait`; `(cmd &)`; and anything
-# inside a script the workflow calls.
+# A bare `exit 0`, `cmd && true` or `cmd && :` before the last command of a step, `cmd & wait` and
+# `(cmd &)` pass this line scan; refuse_masked_step_status reads each step's script whole and
+# refuses them (issue #566). Anything inside a script the workflow calls passes both.
 refuse_failure_masks() {
   path="$1"
   local lines code bad
@@ -796,6 +798,348 @@ require_toml_table() {
   if [ "$actual" != "$expected" ]; then
     echo "FAIL: $path [$table] is not exactly its pinned body: $label"
     diff <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") | sed 's/^/  /' || true
+    exit 1
+  fi
+}
+
+# A whole file's non-comment, non-blank lines, trailing space trimmed, exactly (issue #566).
+require_file_lines() {
+  path="$1"
+  expected="$2"
+  label="$3"
+  local actual
+  actual="$(grep -Ev '^[[:space:]]*(#.*)?$' "$path" | sed 's/[[:space:]]*$//')"
+  if [ "$actual" != "$expected" ]; then
+    echo "FAIL: $path is not exactly its pinned lines: $label"
+    diff <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") | sed 's/^/  /' || true
+    exit 1
+  fi
+}
+
+# Every step selector must pick at least one cell of its job's matrix (issue #566).
+# require_static_step_conditions admits `matrix.<key> == '<value>'` joined by `&&`; a selector
+# naming a key or value the matrix does not have, a combination no cell has, or any selector on a
+# job with no matrix, skips its step in every run while the job stays green. The job's cells are
+# expanded as GitHub expands them, for the shapes the gating workflows use: keys with a list of
+# values (in flow or block style) give their cross product, and each `include` entry is merged
+# into every original combination it does not contradict on an original key, or becomes a
+# combination of its own when it fits none (an include-only matrix is its entries). A matrix this
+# cannot read (an `exclude`, a value from an expression, a flow-style matrix) fails closed.
+require_live_matrix_selectors() {
+  path="$1"
+  local bad
+  bad="$(awk '
+    function trim(s) { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); return s }
+    function unquote(s) {
+      s = trim(s)
+      if (s ~ /^".*"$/ || s ~ /^\047.*\047$/) s = substr(s, 2, length(s) - 2)
+      return s
+    }
+    function indent(s) { match(s, /^ */); return RLENGTH }
+    # The value of key k in combination c ("\034k=v\034k=v\034"), or "\001" when c lacks it.
+    function get(c, k,   i, rest) {
+      i = index(c, "\034" k "=")
+      if (!i) return "\001"
+      rest = substr(c, i + length(k) + 2)
+      return substr(rest, 1, index(rest, "\034") - 1)
+    }
+    function set(c, k, v,   i, rest) {
+      i = index(c, "\034" k "=")
+      if (!i) return c k "=" v "\034"
+      rest = substr(c, i + length(k) + 2)
+      return substr(c, 1, i) k "=" v substr(rest, index(rest, "\034"))
+    }
+    function add_base(j, k, v) {
+      if (!((j, k) in base_seen)) { base_seen[j, k] = 1; base_keys[j] = base_keys[j] "\034" k }
+      base_vals[j, k] = base_vals[j, k] "\034" v
+    }
+    function expand(j,   nk, keys, i, kv, nv, vals, combos, nc, next_c, nn, a, b, e, ne, entry, bk, isbase,
+                         pairs, np, p, ok, matched, cell_n) {
+      nc = 1; combos[1] = "\034"
+      nk = split(substr(base_keys[j], 2), keys, "\034")
+      if (base_keys[j] == "") nk = 0
+      for (i = 1; i <= nk; i++) {
+        nv = split(substr(base_vals[j, keys[i]], 2), vals, "\034")
+        nn = 0
+        for (a = 1; a <= nc; a++)
+          for (b = 1; b <= nv; b++) next_c[++nn] = set(combos[a], keys[i], vals[b])
+        nc = nn
+        for (a = 1; a <= nc; a++) combos[a] = next_c[a]
+      }
+      if (nk == 0) nc = 0
+      cell_n = nc
+      for (a = 1; a <= nc; a++) cell[j, a] = combos[a]
+      for (e = 1; e <= includes[j]; e++) {
+        np = split(substr(include[j, e], 2), pairs, "\034")
+        matched = 0
+        for (a = 1; a <= nc; a++) {
+          ok = 1
+          for (p = 1; p <= np; p++) {
+            if (pairs[p] == "") continue
+            kv = index(pairs[p], "=")
+            bk = substr(pairs[p], 1, kv - 1)
+            isbase = ((j, bk) in base_seen)
+            if (isbase && get(combos[a], bk) != substr(pairs[p], kv + 1)) ok = 0
+          }
+          if (!ok) continue
+          matched = 1
+          for (p = 1; p <= np; p++) {
+            if (pairs[p] == "") continue
+            kv = index(pairs[p], "=")
+            cell[j, a] = set(cell[j, a], substr(pairs[p], 1, kv - 1), substr(pairs[p], kv + 1))
+          }
+        }
+        if (!matched) cell[j, ++cell_n] = include[j, e]
+      }
+      cells[j] = cell_n
+    }
+    FNR == NR {
+      if ($0 ~ /^[[:space:]]*#/) next
+      if ($0 ~ /^jobs:[[:space:]]*$/) { in_jobs = 1; next }
+      if (!in_jobs) next
+      if ($0 ~ /^  [A-Za-z0-9_-]+:[[:space:]]*$/) {
+        job = trim($0); sub(/:$/, "", job); mode = ""; in_matrix = 0; next
+      }
+      if ($0 ~ /^      matrix:/) {
+        rest = $0; sub(/^      matrix:[[:space:]]*/, "", rest)
+        has_matrix[job] = 1
+        if (trim(rest) != "") unreadable[job] = 1
+        in_matrix = 1; mode = ""; next
+      }
+      if (!in_matrix || $0 ~ /^[[:space:]]*$/) next
+      if (indent($0) < 8) { in_matrix = 0; next }
+      line = $0
+      if (indent(line) == 8) {
+        key = trim(line); sub(/:.*/, "", key)
+        value = line; sub(/^[^:]*:/, "", value); value = trim(value)
+        if (key == "include") { mode = "include"; next }
+        if (key == "exclude" || value ~ /\$\{\{/) { unreadable[job] = 1; mode = ""; next }
+        if (value == "") { mode = "list"; list_key = key; next }
+        mode = ""
+        if (value ~ /^\[.*\]$/) {
+          n = split(substr(value, 2, length(value) - 2), items, ",")
+          for (i = 1; i <= n; i++) add_base(job, key, unquote(items[i]))
+        } else add_base(job, key, unquote(value))
+        next
+      }
+      if (mode == "list" && line ~ /^          - /) {
+        item = line; sub(/^          - /, "", item); add_base(job, list_key, unquote(item)); next
+      }
+      if (mode == "include" && line ~ /^          - /) {
+        includes[job]++; include[job, includes[job]] = "\034"
+        line = "            " substr(line, 13)
+      }
+      if (mode == "include" && indent(line) == 12 && line ~ /:/) {
+        key = trim(line); sub(/:.*/, "", key)
+        value = line; sub(/^[^:]*:/, "", value)
+        if (value ~ /\$\{\{/) unreadable[job] = 1
+        include[job, includes[job]] = set(include[job, includes[job]], key, unquote(value))
+        next
+      }
+      unreadable[job] = 1
+      next
+    }
+    FNR == 1 { for (j in has_matrix) expand(j); in_jobs = 0 }
+    /^[[:space:]]*#/ { next }
+    /^jobs:[[:space:]]*$/ { in_jobs = 1; next }
+    !in_jobs { next }
+    /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { job = trim($0); sub(/:$/, "", job); next }
+    /^      [[:space:]]*(- )?if:[[:space:]]*matrix\./ {
+      value = $0
+      sub(/^[[:space:]]*(- )?if:[[:space:]]*/, "", value)
+      value = trim(value)
+      if (!(job in has_matrix)) { print job ": " value " (the job has no matrix)"; next }
+      if (job in unreadable) { print job ": " value " (the job matrix is not one this check can read)"; next }
+      n = split(value, clauses, / && /)
+      live = 0
+      for (c = 1; c <= cells[job] && !live; c++) {
+        all = 1
+        for (i = 1; i <= n; i++) {
+          k = clauses[i]; sub(/^matrix\./, "", k); sub(/ == .*/, "", k)
+          v = clauses[i]; sub(/^[^\047]*\047/, "", v); sub(/\047.*$/, "", v)
+          if (get(cell[job, c], k) != v) all = 0
+        }
+        if (all) live = 1
+      }
+      if (!live) print job ": " value " (no cell of the job matrix has it)"
+    }
+  ' "$path" "$path")"
+  if [ -n "$bad" ]; then
+    echo "FAIL: $path has a step selector that picks no cell of its job's matrix, so the step never runs:"
+    printf '%s\n' "$bad" | sed 's/^/  /'
+    exit 1
+  fi
+}
+
+# What a step builds and how its shell runs stay out of the jobs' hands (issue #566). The
+# workflow-level `env:` is pinned below and compared across files; below it, nothing may set a
+# variable that changes what cargo or nextest builds and runs, or how bash starts, for a job, a
+# step or every later step: no `RUST*`, `CARGO_*`, `NEXTEST_*`, `BASH_ENV`, `ENV`, `SHELLOPTS`,
+# `BASHOPTS` or `PATH` key in a job or step `env:` (the rustdoc steps' `RUSTDOCFLAGS: "-D warnings"`
+# is the one exception, value included), no inline assignment of those names in a command, no
+# write to `$GITHUB_ENV` at all, and no write to `$GITHUB_PATH` but the wasmtime directory the
+# blob round trip's wasm32 leg adds. A flow-style `env:` below `jobs:` is refused as unreadable.
+# `strict-bit-matrix`, which only pr-gate.yml runs, is covered by this rule and by no comparison.
+require_build_env_untouched() {
+  path="$1"
+  local bad
+  bad="$(awk '
+    function trim(s) { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); return s }
+    function indent(s) { match(s, /^ */); return RLENGTH }
+    /^[[:space:]]*#/ { next }
+    /^jobs:[[:space:]]*$/ { in_jobs = 1; next }
+    !in_jobs { next }
+    {
+      code = $0
+      gsub(/\$\{\{[^}]*\}\}/, "", code)
+      if (env_indent >= 0 && code !~ /^[[:space:]]*$/) {
+        if (indent($0) <= env_indent) env_indent = -1
+        else {
+          if (key_indent < 0) key_indent = indent($0)
+          if (indent($0) == key_indent) {
+            name = trim($0); sub(/:.*/, "", name)
+            value = $0; sub(/^[^:]*:/, "", value); value = trim(value)
+            if (name ~ /^(RUST[A-Z0-9_]*|CARGO_[A-Z0-9_]+|NEXTEST_[A-Z0-9_]+|BASH_ENV|ENV|SHELLOPTS|BASHOPTS|PATH)$/ &&
+                !(name == "RUSTDOCFLAGS" && value == "\"-D warnings\""))
+              print NR ": " trim($0) " (a job or step env key that changes what is built or how bash runs)"
+          }
+          next
+        }
+      }
+      if ($0 ~ /^ +(- )?env:/) {
+        rest = $0; sub(/^ +(- )?env:/, "", rest)
+        if (trim(rest) != "") print NR ": " trim($0) " (a flow-style env this check cannot read)"
+        else { env_indent = indent($0); if ($0 ~ /^ +- /) env_indent += 2; key_indent = -1 }
+        next
+      }
+      if (code ~ /GITHUB_ENV/) print NR ": " trim($0) " (a write to GITHUB_ENV)"
+      command = trim(code); sub(/^(- )?run:[[:space:]]*/, "", command)
+      if (code ~ /GITHUB_PATH/ && command != "echo \"$PWD/target/wasmtime-bin\" >> \"$GITHUB_PATH\"")
+        print NR ": " trim($0) " (a write to GITHUB_PATH other than the wasmtime directory)"
+      if (code ~ /(^|[^A-Za-z0-9_])(RUST[A-Z0-9_]*|CARGO_[A-Z0-9_]+|NEXTEST_[A-Z0-9_]+|BASH_ENV|SHELLOPTS|BASHOPTS)=/)
+        print NR ": " trim($0) " (an inline assignment that changes what is built or how bash runs)"
+    }
+    BEGIN { env_indent = -1 }
+  ' "$path")"
+  if [ -n "$bad" ]; then
+    echo "FAIL: $path sets build or shell environment below the workflow level:"
+    printf '%s\n' "$bad" | head -n 5 | sed 's/^/  /'
+    exit 1
+  fi
+}
+
+# What a step's `run:` script returns, read whole (issue #566). GitHub runs it as
+# `bash --noprofile --norc -eo pipefail`, and errexit does not fire for a command in a `&&` list
+# unless the list is the script's last command, so `cmd && true`, `cmd && :` or `cmd && echo ok`
+# followed by anything else ends the step green when `cmd` fails. For each step's script (a literal
+# block line by line, a folded block or a plain value as one line, continuations joined, heredoc
+# bodies and quoted text set aside, `if`/`elif`/`while`/`until` conditions set aside, and split
+# on `;`) this refuses:
+#   * `exit` with no status or a zero status, anywhere: `exit 0` ahead of the real command ends
+#     the step green;
+#   * a `&&` in any command but the script's last (closing `fi`, `done`, `esac` and braces aside);
+#   * a background `&`, once `&&` and the redirections `>&`, `&>` and `<&` are removed: `cmd & wait`
+#     and `(cmd &)` both return 0 whatever `cmd` returned.
+# Like refuse_failure_masks it is a tripwire, not a proof. Known to pass: a `&&` that is the last
+# command of a loop body (an earlier iteration's failure is lost), a status masked inside a script
+# the step calls, and `!` in front of a command.
+refuse_masked_step_status() {
+  path="$1"
+  local bad
+  bad="$(awk '
+    function trim(s) { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); return s }
+    function indent(s) { match(s, /^ */); return RLENGTH }
+    # Quoted text removed, quotes kept: a quoted `&&`, `;` or `exit 0` is not a command.
+    function unquote_text(s,   out, i, ch, q) {
+      out = ""; q = ""
+      for (i = 1; i <= length(s); i++) {
+        ch = substr(s, i, 1)
+        if (q == "") {
+          if (ch == "\047" || ch == "\"") { q = ch; out = out ch }
+          else out = out ch
+        } else if (ch == q && !(q == "\"" && substr(s, i - 1, 1) == "\\")) { q = ""; out = out ch }
+      }
+      return out
+    }
+    function analyse(   i, j, n, lines, logical, nl, delim, cmds, nc, parts, np, c, cmd, s) {
+      nl = 0; delim = ""; logical = ""
+      for (i = 1; i <= nraw; i++) {
+        line = raw[i]
+        gsub(/\$\{\{[^}]*\}\}/, "", line)
+        if (delim != "") { if (trim(line) == delim) delim = ""; continue }
+        if (line ~ /^[[:space:]]*(#.*)?$/) continue
+        if (match(line, /<<-?[[:space:]]*[\047"]?[A-Za-z_][A-Za-z0-9_]*[\047"]?/)) {
+          delim = substr(line, RSTART, RLENGTH); sub(/^<<-?[[:space:]]*/, "", delim); gsub(/[\047"]/, "", delim)
+        }
+        line = unquote_text(line)
+        logical = logical (logical == "" ? "" : " ") trim(line)
+        if (logical ~ /(\\|&&|\|\||\|)$/) { sub(/\\$/, "", logical); continue }
+        lines[++nl] = logical; logical = ""
+      }
+      if (logical != "") lines[++nl] = logical
+      nc = 0
+      for (i = 1; i <= nl; i++) {
+        s = lines[i]
+        gsub(/\[\[[^]]*\]\]/, "", s)
+        if (s ~ /^(if|elif|while|until)[[:space:]]/) {
+          if (match(s, /;[[:space:]]*(then|do)([[:space:]]|$)/)) s = substr(s, RSTART + RLENGTH)
+          else s = ""
+        }
+        gsub(/;;/, ";", s)
+        np = split(s, parts, ";")
+        for (j = 1; j <= np; j++) {
+          cmd = trim(parts[j])
+          while (cmd ~ /^(then|do|else|\{|\()([[:space:]]|$)/) { sub(/^(then|do|else|\{|\()[[:space:]]*/, "", cmd) }
+          if (cmd ~ /^(fi|done|esac|\}|\))?$/) continue
+          cmds[++nc] = cmd
+        }
+      }
+      for (c = 1; c <= nc; c++) {
+        cmd = cmds[c]
+        if (cmd ~ /(^|[[:space:](])exit([[:space:]]+0+)?[[:space:]]*\)?$/)
+          print job ": " cmd " (exit with no status or a zero status)"
+        if (c < nc && index(cmd, "&&"))
+          print job ": " cmd " (a && list that is not the step last command, so errexit ignores its failure)"
+        s = cmd
+        gsub(/&&/, "", s); gsub(/[0-9]*>&[0-9-]*/, "", s); gsub(/&>>?/, "", s); gsub(/<&[0-9-]*/, "", s)
+        if (index(s, "&")) print job ": " cmd " (a background &)"
+      }
+    }
+    function flush() { if (nraw) analyse(); nraw = 0; in_block = 0 }
+    /^jobs:[[:space:]]*$/ { in_jobs = 1; next }
+    !in_jobs { next }
+    in_block {
+      if ($0 ~ /^[[:space:]]*$/ || indent($0) > key_indent) {
+        line = $0
+        if (block_indent < 0 && line !~ /^[[:space:]]*$/) block_indent = indent(line)
+        line = substr(line, block_indent + 1)
+        if (style == ">") { if (trim(line) != "") folded = folded " " trim(line) }
+        else raw[++nraw] = line
+        next
+      }
+      if (style == ">") raw[++nraw] = folded
+      in_block = 0
+      flush()
+    }
+    /^[[:space:]]*#/ { next }
+    /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { flush(); job = trim($0); sub(/:$/, "", job); next }
+    /^      - / { flush() }
+    /^(      - |        )run:/ {
+      key_indent = 8
+      value = $0; sub(/^ *(- )?run:[[:space:]]*/, "", value); value = trim(value)
+      if (value ~ /^[|>][-+]?$/) {
+        style = substr(value, 1, 1); in_block = 1; block_indent = -1; folded = ""; nraw = 0
+      } else {
+        if (value ~ /^".*"$/ || value ~ /^\047.*\047$/) value = substr(value, 2, length(value) - 2)
+        nraw = 1; raw[1] = value; flush()
+      }
+      next
+    }
+    END { if (in_block && style == ">") raw[++nraw] = folded; flush() }
+  ' "$path")"
+  if [ -n "$bad" ]; then
+    echo "FAIL: $path contains a refused gate pattern: a masked step status (an exit with no or a zero status, a && list before the last command, or a background &), which lets a failing command read as green"
+    printf '%s\n' "$bad" | head -n 5 | sed 's/^/  /'
     exit 1
   fi
 }
@@ -1643,12 +1987,32 @@ done
 # the Windows cell. Only release-gate.yml and merge-gate.yml pin a checkout ref.
 require_same_workflow_env "$ci" "$release" 'second'
 require_same_workflow_env "$merge" "$release" 'first second'
+# And that environment is pinned (issue #566), so a `RUSTFLAGS`, a `CARGO_PROFILE_*` override or a
+# `NEXTEST_*` setting added to all three files at once cannot pass as three equal blocks. Below the
+# workflow level require_build_env_untouched refuses them outright.
+pinned_workflow_env="$(cat <<'EOF'
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: short
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+EOF
+)"
+if [ "$(workflow_env "$ci")" != "$pinned_workflow_env" ]; then
+  echo "FAIL: $ci workflow-level env is not exactly its pinned lines"
+  diff <(printf '%s\n' "$pinned_workflow_env") <(workflow_env "$ci") | sed 's/^/  /' || true
+  exit 1
+fi
 # The release gate's side of the `save-if` exception (the per-PR side is pinned with pr-gate.yml's
 # cells above): only its aarch64 cells save, because `test-suite` writes the x86_64 entry.
 require_job_pattern "$release" 'determinism-matrix' "^          save-if: \\\$\\{\\{ matrix\\.arch == 'aarch64' \\}\\}\$" \
   'only the aarch64 determinism cells of the release gate save the shared rust-cache entry'
 for workflow in "$ci" "$merge" "$release"; do
   refuse_failure_masks "$workflow"
+  refuse_masked_step_status "$workflow"
+  require_live_matrix_selectors "$workflow"
+  require_build_env_untouched "$workflow"
 done
 require_job_pattern "$release" 'gate' '^[[:space:]]*(- )?run: bash \.agents/gate\.sh full$' \
   'the release gate executes the gate script in full mode'
@@ -1684,6 +2048,45 @@ require_toml_table "$NEXTEST_CONFIG" 'profile.ci-release-workspace' 'inherits = 
 require_toml_table "$NEXTEST_CONFIG" 'profile.ci-release-workspace.junit' \
   'report-name = "open-control-ci-release-workspace"' \
   'the release-codegen workspace profile only names its report'
+# And the whole file is pinned to the line (issue #566). `ci` and `ci-release` are the profiles
+# every other gate command runs under, and `default` is what they inherit: a `default-filter`, a
+# `retries` above 0, an override table, a setup script or a test group added to any of them
+# narrows or softens every per-PR suite while each command and report stays in place. Comment lines
+# and blank lines may change; a change to a key, or a comment after one, is a change to this pin.
+pinned_nextest_config="$(cat <<'EOF'
+nextest-version = { required = "0.9.143", recommended = "0.9.143" }
+[profile.default]
+fail-fast = true
+retries = 0
+flaky-result = "fail"
+slow-timeout = { period = "60s", terminate-after = 2, on-timeout = "fail" }
+leak-timeout = { period = "2s", result = "fail" }
+global-timeout = "15m"
+[profile.ci]
+fail-fast = false
+failure-output = "immediate-final"
+success-output = "never"
+status-level = "fail"
+final-status-level = "slow"
+[profile.ci.junit]
+path = "junit.xml"
+report-name = "open-control-ci"
+store-success-output = false
+store-failure-output = true
+report-skipped = "ignored"
+flaky-fail-status = "failure"
+[profile.ci-release]
+inherits = "ci"
+[profile.ci-release.junit]
+report-name = "open-control-ci-release"
+[profile.ci-release-workspace]
+inherits = "ci"
+[profile.ci-release-workspace.junit]
+report-name = "open-control-ci-release-workspace"
+EOF
+)"
+require_file_lines "$NEXTEST_CONFIG" "$pinned_nextest_config" \
+  'the nextest profiles every gate command runs under narrow and soften nothing'
 require_job_order "$release" 'gate' 'run: rm -f target/nextest/ci-release-workspace/junit.xml' \
   'run: bash .agents/gate.sh full' \
   'the release-codegen workspace report is cleared before the gate script runs'

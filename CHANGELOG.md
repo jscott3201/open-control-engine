@@ -252,6 +252,34 @@ and a gate that accepted any text would restore exactly the false assurance desc
   cell (265 s and 253 s) is the longest job again.
   The timing rows in `docs/ci-and-the-gate.md` are updated.
 
+- **The workflow checker closes the four gaps GitHub #564 left open** (GitHub #PRNUM, issue #566).
+  `check-workflow-gates.sh` now refuses these; each passed it before:
+  - **(1) A dead step selector.** A selector that picks no cell of its job's matrix, so its step
+    never runs: a misspelled value (`matrix.codegen == 'relese'`), a key the matrix lacks, a
+    combination no cell has, or any selector on a job with no matrix. The cells are expanded as
+    GitHub expands them (cross product, then `include` merging); a matrix with an `exclude` or an
+    expression fails closed.
+  - **(2) Build or shell environment below the workflow level.** A `RUST*`, `CARGO_*`,
+    `NEXTEST_*`, `BASH_ENV`, `ENV`, `SHELLOPTS`, `BASHOPTS` or `PATH` key in a job or step `env:`
+    (the rustdoc steps' `RUSTDOCFLAGS: "-D warnings"` excepted), an inline assignment of those
+    names, any write to `$GITHUB_ENV`, and a `$GITHUB_PATH` write other than wasmtime's directory.
+    This covers `strict-bit-matrix`, which no cross-file comparison reaches. The workflow-level
+    `env:` is pinned too, so a `RUSTFLAGS` added to all three files at once fails.
+  - **(3) A narrowed or softened nextest profile.** `.config/nextest.toml` is pinned line for line
+    (comment lines and blank lines aside), so a `default-filter` on `ci` or `ci-release`, a
+    `retries` above 0 in `default`, an override table or a setup script fails.
+  - **(4) A masked step status.** Each `run:` script is read whole: an `exit` with no or a zero
+    status, a `&&` in any command but the last (errexit ignores it there: `cmd && true`,
+    `cmd && :`, `cmd && echo ok`), and a background `&` (`cmd & wait`, `(cmd &)`).
+
+  No workflow or nextest setting changed. 37 new cases in `test-workflow-gates.sh` (348 → 385):
+  32 hostile ones, each of which the checker passed before, and 5 positive ones (a live selector on
+  an include-only matrix, `RUSTDOCFLAGS: "-D warnings"`, the wasmtime `$GITHUB_PATH` line, comment
+  lines in the nextest config, and scripts with a `&&` in an `if` condition or at the end, a
+  nonzero `exit`, redirections, a heredoc and quoted operators). The masked-status rule is a
+  tripwire like the line-level one; a `&&` that ends a loop body and a `!` before a command still
+  pass.
+
 - **Every job that runs the oce-cxf or workspace suite prefetches the tool workspaces its tests
   build offline** (GitHub #611, issue #610). The `release.yml` verify of tag `v0.5.0` (run
   43129183575) failed 15 oce-cxf tests of the `fixture_structural_oracle` binary, all

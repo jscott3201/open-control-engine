@@ -735,12 +735,42 @@ step-level `if:` may take exactly two shapes:
 
 - a static matrix selector — `matrix.<key> == '<value>'`, optionally joined by `&&` (for example
   `matrix.codegen == 'debug'`) — which picks the work a cell does from its fixed identity, and which a
-  later step of that cell backs by requiring the selected work's outputs;
+  later step of that cell backs by requiring the selected work's outputs. It must pick at least one
+  cell of its job's matrix (issue #566). The checker expands the cells as GitHub does, from the
+  value lists' cross product and the `include` entries. A selector on a job with no matrix, a key
+  or value the matrix lacks, or a combination no cell has would skip its step in every run, so it
+  fails, and so does a matrix the checker cannot read (an `exclude`, or a value from an
+  expression);
 - `${{ !cancelled() }}`, which only lets an evidence upload run after an earlier step failed.
 
 Anything else — a lane output, an event name, `false`, `always()`, `||` — fails
 `check-workflow-gates.sh`, with a failing fixture for each shape. The reason: `CI OK` sees job
 results only, so a step skipped inside a green job would be invisible to it.
+
+**What a step runs, and what it runs with.** For the same reason the checker also reads each
+step's `run:` script whole (issue #566). GitHub runs it as `bash --noprofile --norc -eo pipefail`,
+and errexit does not fire for a command in a `&&` list unless the list is the script's last
+command. So the checker refuses:
+- a `&&` in any command but the last, so `cmd && true` followed by anything ends the step green;
+- an `exit` with no status or a zero status, anywhere;
+- a background `&`, such as `cmd & wait` or `(cmd &)`. Redirections such as `>&2` are not
+  background jobs.
+
+Like the line-level mask rule beside it, this is a tripwire, not a proof. Known to pass: a `&&`
+that ends a loop body, `!` in front of a command, and anything inside a script a step calls.
+
+Below the workflow level, nothing may change what cargo or nextest builds and runs, or how bash
+starts:
+- no `RUST*`, `CARGO_*`, `NEXTEST_*`, `BASH_ENV`, `ENV`, `SHELLOPTS`, `BASHOPTS` or `PATH` key in
+  a job or step `env:`. The one exception is the rustdoc steps' `RUSTDOCFLAGS: "-D warnings"`,
+  value included;
+- no inline assignment of those names;
+- no write to `$GITHUB_ENV`;
+- no write to `$GITHUB_PATH`, except the wasmtime directory the wasm32 round-trip leg adds.
+
+The workflow-level `env:` is pinned line for line, beside the existing cross-file comparison, so a
+`RUSTFLAGS` added to all three files at once fails too. These rules cover `strict-bit-matrix`,
+which no cross-file comparison reaches.
 
 A PR with no checks still looks a lot like a PR with no failing checks — confirm `CI OK` actually
 reported, and on a docs-only or leverage-only PR expect the determinism jobs to show as skipped, not
@@ -803,7 +833,11 @@ both required and recommended, so an older local binary exits before testing. Th
 is fail-fast. Automated debug runs use `ci`; release-codegen runs use `ci-release`, which inherits
 the same retries, timeout, leak, and reporter policy instead of copying it, and the one
 release-codegen run of the whole workspace uses `ci-release-workspace`, which inherits it too and
-differs only in where its report goes. Those four are the only profiles.
+differs only in where its report goes. Those four are the only profiles, and `check-workflow-gates.sh`
+pins the file to the line, comment lines and blank lines aside (issue #566). A `default-filter`, a
+`retries` above 0, an override table or a setup script in `default`, `ci` or `ci-release` would
+narrow or soften every per-PR suite while each command and report stayed in place, so a change to
+any key is also a change to the checker's pin.
 
 Retries are zero and a flaky pass is still a failure. Ordinary tests terminate after 120 seconds. A
 run stops
