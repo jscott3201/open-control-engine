@@ -1,17 +1,26 @@
 # Unit spellings
 
-**Design note for issue #622, a draft awaiting the owner's rulings (see
-[Questions for the owner](#questions-for-the-owner)).** The engine's OpenBuildingControl (OBC)
-§7.10 unit gate reads a connector's unit, quantity and display unit only under the keys
-`S231:unit`, `S231:quantity` and `S231:displayUnit`. modelica-json, the upstream translator, never
-writes those keys: it writes `qudt:hasUnit`, `qudt:hasQuantityKind` and `S231:hasDisplayUnit`, and
-they pass through unread. This note measures every tracked and library document under each way
-of reading the other spellings, and asks the owner to rule on eight questions. Loading does not
-change until the note is merged with rulings. The implementation is a later PR. Related: the
-blank-term rule for connectors ([#602](https://github.com/jscott3201/open-control-engine/issues/602)),
-the parameter shape check ([GitHub #594](https://github.com/jscott3201/open-control-engine/pull/594))
-and the refusal of unknown S231 types
-([#620](https://github.com/jscott3201/open-control-engine/issues/620)).
+**Design note for issue #622, written before any code, and ruled by the owner on 2026-11-12 (see
+[Rulings](#rulings)).** The engine's OpenBuildingControl (OBC) §7.10 unit gate reads a connector's
+unit, quantity and display unit only under the keys `S231:unit`, `S231:quantity` and
+`S231:displayUnit`. modelica-json, the upstream translator, never writes those keys: it writes
+`qudt:hasUnit`, `qudt:hasQuantityKind` and `S231:hasDisplayUnit`, and they pass through unread.
+This note measures every tracked and library document under each way of reading the other
+spellings, and records the eight decisions the owner ruled on.
+
+The work is two issues:
+- [#631](https://github.com/jscott3201/open-control-engine/issues/631) reads the spellings in
+  both readers and closes #622;
+- [#632](https://github.com/jscott3201/open-control-engine/issues/632), blocked by #631, unifies
+  a root input's declared unit with the ports it drives.
+
+This note stays documentation only. Related:
+- the term-shape rule on every role
+  ([GitHub #623](https://github.com/jscott3201/open-control-engine/pull/623), issue #602);
+- the parameter shape check
+  ([GitHub #594](https://github.com/jscott3201/open-control-engine/pull/594));
+- the refusal of unknown S231 types
+  ([#620](https://github.com/jscott3201/open-control-engine/issues/620)).
 
 ## What the engine does today
 
@@ -21,7 +30,9 @@ and the refusal of unknown S231 types
   `{"@id": "unit:K"}` is the term `unit:K`. Any other key, `qudt:*` included, stays in the opaque
   pass-through map. A modeled key spelled by its full IRI or another prefix is read as the same
   property, and two spellings of one property on one node are refused (issue #383,
-  `crates/oce-cxf/src/property_keys.rs`).
+  `crates/oce-cxf/src/property_keys.rs`). Since GitHub #623 a term on every role must be exactly
+  one of those shapes and not blank, and an Integer or Boolean connector may carry none. Anything
+  else is `malformed-document` (`crates/oce-cxf/src/resolve/term_shape.rs`).
 - **The gate compares strings exactly.** `oce-validate` unifies each connected star (one output,
   the inputs it drives, and any declared boundary outputs that alias it). Two declared units or
   quantities that differ refuse the load with `unit-quantity-mismatch`. One declared value
@@ -87,9 +98,10 @@ The project reads the published OBC text; it has not read the text of ANSI/ASHRA
     `Pressure`. That is the distinction §7.17.1 uses as its example.
 - **Namespaces differ by document.** modelica-json binds `unit` to `http://qudt.org/vocab/unit#`
   and `q` to `http://qudt.org/vocab/quantitykind#`. QUDT publishes `http://qudt.org/vocab/unit/`,
-  `http://qudt.org/vocab/quantitykind/` and `http://qudt.org/schema/qudt/`, each ending in a slash. The 34 translations that carry a unit bind
-  `qudt` to `http://qudt.org/schema/qudt#`. CXF-Core binds it to `http://qudt.org/schema/qudt/`. The
-  same compact key `qudt:hasUnit` therefore names two IRIs.
+  `http://qudt.org/vocab/quantitykind/` and `http://qudt.org/schema/qudt/`, each ending in a slash.
+  The 34 translations that carry a unit bind `qudt` to `http://qudt.org/schema/qudt#`. CXF-Core
+  binds it to `http://qudt.org/schema/qudt/`. The same compact key `qudt:hasUnit` therefore names
+  two IRIs.
 
 ## Measurements
 
@@ -102,6 +114,12 @@ It then loaded the rewrite through `Engine::load_cxf` and compared it with the d
 load outcome, diagnostics by code, the unit columns of `point_list(None)` and `content_id()`. On the
 graph after `import_cxf` and `unify_and_validate`, it also unified every root input declaration with
 its targets. Everything below is computed, except the one row marked as an estimate.
+
+The probe ran on `development` at `50518c81`, before GitHub #623 landed. That PR changes none of
+the numbers below:
+- by its own count, no tracked or library document changes outcome under it;
+- no upstream unit key sits on an Integer or Boolean connector, whose terms it now refuses. The
+  translations' 213 connector occurrences and CXF-Core's 21 are all on Real ones.
 
 **Where each spelling occurs.** Roles:
 - *boundary*: a composite's own `hasInput` or `hasOutput` node;
@@ -162,10 +180,12 @@ uses QUDT's published namespaces.
 The seven that load are `ReliefDamper`, `ReliefFan`, `SupplySignals`, `TimeSuppression`, Reheat
 `Overrides`, `ControlLoops` and `ZoneStates`.
 
-**Outcome per reading, against today, over all 537 documents.** The readings are defined under
-question 2. *R* is the recommendation: C without quantity kinds, every IRI-node unit term (the
-engine's own keys included) through the table less its two contradicting entries, and an unmapped
-IRI refused.
+**Outcome per reading, against today, over all 537 documents.** *R* is the ruled design
+(decisions 1 and 2):
+- C without quantity kinds;
+- every IRI-node unit term, the engine's own keys included, through the table less its two
+  entries that name another unit;
+- an unmapped IRI refused.
 
 | Reading | Newly fail | Newly load | Newly warn | Point rows changed | Content ids changed |
 | --- | --- | --- | --- | --- | --- |
@@ -174,7 +194,7 @@ IRI refused.
 | C. B plus `qudt:hasUnit`, `qudt:hasQuantityKind`, closed table | 0 | 0 | 0 | 18 in 5 translations | 6 translations |
 | C′. C without quantity kinds | 0 | 0 | 0 | 18 in 5 translations | 6 translations |
 | D. B plus the QUDT keys, IRIs opaque | 0 | 0 | 0 | 18 in 5 translations | 6 translations |
-| R. the recommendation | 1, `connector_attrs.jsonld` | 0 | 0 | 19 in 6 documents | 7 documents |
+| R. the ruled design | 1, `connector_attrs.jsonld` | 0 | 0 | 19 in 6 documents | 7 documents |
 
 - **The 18 rows under C** gain unit `1` (11) and `Pa` (7), display unit `Pa` (3), and quantity
   `Pressure` (2). Both quantities are on `ReliefFan` points whose source declares
@@ -187,7 +207,7 @@ IRI refused.
   does not move.
 - **Under R, the one newly failing document is a synthetic fixture.** `connector_attrs.jsonld`
   writes the display unit `{"@id": "degC"}`, which is no QUDT IRI. `{"@id": "unit:DEG_C"}` keeps
-  its IRI-node coverage and its export bytes, which stay `"degC"`.
+  its IRI-node coverage, its export bytes (`"degC"`) and its fixture-corpus import line.
 - **The 19th row** is `modelica_json_style.jsonld`'s `gai.y`, which reads `K` instead of `unit:K`.
 - **The library changes under no reading.**
 - **Estimate for the 37 translations that do not load**, read on their authored `isConnectedTo`
@@ -225,202 +245,229 @@ Today 125 of the 127 declared in-repo root-input units never reach the point lis
 show only because the driven port declares the same unit. No declaration gains a unit from a port,
 so no content id moves. The state manifest and the point list do.
 
-## The proposal
+## Corrections to the issue's statement
 
-1. Read `qudt:hasUnit` and `S231:hasUnit` as spellings of `unit`, and `S231:hasDisplayUnit` as a
-   spelling of `displayUnit`. The S231 terms stay, and two spellings on one node are refused.
-2. A term's shape decides how it is read, not its key. A string or typed literal is a unit string,
-   read verbatim as today. An IRI node is a unit reference: it is expanded against the document's
-   `@context` and looked up in a closed table compiled into `oce-cxf`. An unmapped IRI is refused.
-   The host sees the table's Modelica strings.
-3. `qudt:hasQuantityKind` is not read in this work.
-4. The exporter is unchanged. A round trip writes the `S231:` spelling.
-5. The root-input limit is closed by its own PR, right after this work.
+Issue #622 was written from a first measurement. Three of its points are corrected here.
 
-## Questions for the owner
+- **The role split.**
+  - The issue's totals hold, counting CXF-Core with the translations: 484 `qudt:hasUnit`, 212
+    `qudt:hasQuantityKind` and 75 `S231:hasDisplayUnit`.
+  - Its "21 on block ports" are CXF-Core's declarations of each elementary class's own
+    connectors, which no load reads.
+  - Of the translations' 411 `qudt:hasUnit`: 6 are on instance ports, all `hasInstance` members;
+    207 on boundaries (111 root inputs, 96 root outputs); and 198 on parameters.
+- **`S231:unit` is not only the engine's spelling.**
+  - CXF-Core declares `S231:unit`, `S231:quantity` and `S231:displayUnit` as properties, and uses
+    them in its `Constant` shape.
+  - `S231:hasUnit` and `S231:hasDisplayUnit` appear only in its connector and parameter shapes,
+    and it declares neither as a property.
+  - Its own data nodes use modelica-json's keys.
+- **What the gate gains.** In today's corpus, reading the spellings gives the gate little to
+  compare.
+  - Only 3 of the translations' 1,193 authored stars carry two or more declared units, and none
+    conflicts.
+  - 111 of their 213 connector units sit on root inputs, outside the gate until #632.
+  - What the reading gains is propagation and what the host sees: 18 point rows, 6 content ids,
+    and an export that today drops those units.
+  - The issue's own probe holds (the first probe case above).
+  - The issue did not name the larger hazard: a root input's point row shows the unit of the port
+    it drives, never the unit it declares (the eighth and ninth probe cases).
 
-1. **Which spellings the engine reads, and what two on one node means.**
-   - **Recommendation:**
-     - read `qudt:hasUnit` and `S231:hasUnit` as `unit`, and `S231:hasDisplayUnit` as
-       `displayUnit`, matched after `@context` expansion like every modeled key (issue #383);
-     - accept `qudt:` keys in both QUDT schema namespaces: `#`, as the translations bind it, and
-       `/`, as QUDT and CXF-Core bind it;
-     - refuse two spellings of one property on one node as `malformed-document`, even when they
-       agree, as #383 already does for two S231 spellings. No corpus node has two.
-   - **Alternatives:**
-     - S231 terms only, with the upstream keys refused or warned about. The 34 translations that
-       carry a unit would then fail or warn on every one.
-     - CXF-Core's `S231:hasUnit` and `S231:hasDisplayUnit` only. These read no corpus node.
-     - Two spellings refused only when they disagree. That needs a comparison after mapping and an
-       order between spellings, for a case no document has.
+## The design
 
-2. **How an IRI becomes the string the gate compares and the host sees, and what an unmapped IRI
-   is.**
-   - **Recommendation:**
-     - the shape rule of proposal 2, applied to every unit and display-unit IRI node, the engine's
-       own `S231:unit` included;
-     - the table is a `const` array in `oce-cxf`: modelica-json's `getQudtUnit` inverted at the
-       vendored pin, keyed by local name under modelica-json's `unit:` namespace and QUDT's
-       published one, plus the S231 fallback read as its original string;
-     - it drops the two entries whose QUDT identifier names another unit (`M3-PER-MIN`,
-       `IN_H2O_60DEG_F`), which no corpus document uses;
-     - an unmapped IRI is `non-subset-construct`, subject the node, with the IRI quoted and
-       truncated;
-     - the host sees Modelica strings (`K`, `Pa`, `1`, `m3/s`), the spelling of the engine corpus,
-       vocabulary v1 and the commissioning table;
-     - it stays database-free and deterministic: the table is static, no IRI is ever
-       dereferenced, nothing can register entries at run time, and the same bytes give the same
-       strings on every host.
-   - **This reverses one recorded rule.** `TermAttr::Iri` says a unit IRI is never expanded and is
-     compared verbatim. Under R, a document that connects an `S231:unit` IRI node to an equal unit
-     string newly loads (the third probe case). No corpus document does.
-   - **Alternatives:**
-     - **D, opaque exact-match IRIs.** The measured corpus outcome is the same. It refuses
-       `unit:K` beside `K`, and the host sees `unit:PA`.
-     - **An unmapped IRI read as an opaque term, or warned about.** A typo would then unify with
-       nothing and fail only where a declared unit meets it.
-     - **The table kept in `oce-vocab`.** A core crate cannot depend on a leverage crate.
-     - **The whole QUDT catalogue.** That is a database by another name, and conversion is M8's.
-     - **The full 27-entry inverse.** It keeps `cfm` and `inH2O` readable from an IRI whose QUDT
-       meaning is another unit.
-   - **(b) Quantity kinds.**
-     - Recommendation: do not read `qudt:hasQuantityKind` now, and leave `S231:quantity` as it is.
-       modelica-json's table is lossy exactly at `PressureDifference`, and the measured result of
-       reading it is wrong in 2 of 2 new host rows and 19 of 19 translation uses.
-     - Alternatives: read every kind but `q:Pressure`; or read all of them, with `q:Pressure` as
-       `Pressure`.
+Every decision below was ruled by the owner on 2026-11-12. What each rejected is under
+[Rulings](#rulings).
 
-3. **What the exporter writes, and whether a round trip keeps the authored spelling.**
-   - **Recommendation:** the exporter is unchanged. It writes bare strings under `S231:unit`,
-     `S231:quantity` and `S231:displayUnit`. A document written with
-     `qudt:hasUnit {"@id": "unit:K"}` exports `"S231:unit": "K"`, where today it exports no unit.
-     The round trip normalises the spelling, as it already normalises a full-IRI key to the
-     compact one. RT-2 holds, because re-import reads the same string. No export golden moves.
-   - **Alternatives:**
-     - **Write the upstream spellings.** This changes the export bytes of every document with a
-       unit (question 7) and needs a forward table. 3 of the 10 distinct unit strings the in-repo
-       corpus writes (`s/K`, `ppm`, `5`) have no QUDT entry.
-     - **Keep each attribute's authored spelling.** That adds a model field per attribute and
-       raises a content-id question, and nothing would read it.
+1. **Spellings.**
+   - **Unit and display unit:** `qudt:hasUnit` and `S231:hasUnit` are read as `unit`, and
+     `S231:hasDisplayUnit` as `displayUnit`, beside the S231 terms. Each is matched after
+     `@context` expansion, like every modeled key (issue #383).
+   - **Namespaces:** the `qudt` schema namespace is accepted in both spellings: `#`, as the
+     translations bind it, and `/`, as QUDT and CXF-Core bind it.
+   - **Two spellings** of one property on one node are refused as `malformed-document`, even when
+     they agree, as #383 already does for two S231 spellings. No corpus node has two.
+   - **Quantity:** `qudt:hasQuantityKind` is not read, and `S231:quantity` is read as today.
+     modelica-json's quantity table is lossy exactly at `PressureDifference`. Reading it was wrong
+     in 2 of 2 new host rows and in 19 of 19 translation uses. A QUDT quantity kind is semantic
+     data (`SemanticPoint.qudt`), which is M8's.
+   - *(Ruled 2026-11-12.)*
+2. **Mapping.** A term's shape decides how it is read, not its key.
+   - **A string or typed literal** is a unit string, read verbatim, as today.
+   - **An IRI node** for `unit` or `displayUnit`, under any key and including the engine's own
+     `S231:unit`, is expanded against the document's `@context` and looked up in a closed `const`
+     table in `oce-cxf`:
+     - modelica-json's `getQudtUnit` inverted at the vendored pin;
+     - less the two entries whose QUDT identifier names another unit, `M3-PER-MIN` (`cfm`) and
+       `IN_H2O_60DEG_F` (`inH2O`), which leaves 25 entries;
+     - keyed by local name under modelica-json's `unit:` namespace and QUDT's published one;
+     - plus the S231 fallback, read as its original string.
+   - **An unmapped IRI** is refused as outside the subset (`non-subset-construct`), subject the
+     node.
+   - **What the host sees:** Modelica strings (`K`, `Pa`, `1`, `m3/s`), the spelling of the engine
+     corpus, vocabulary v1 and the commissioning table.
+   - **Database-free and deterministic:** the table is static, no IRI is ever dereferenced,
+     nothing registers entries at run time, and the same bytes give the same strings on every
+     host.
+   - **One recorded rule is reversed.** `TermAttr::Iri` said a unit IRI is never expanded and is
+     compared verbatim. That no longer holds for `unit` and `displayUnit`. A document that connects
+     an `S231:unit` IRI node to an equal unit string now loads (the third probe case). No corpus
+     document does.
+   - *(Ruled 2026-11-12.)*
+3. **Export.** The exporter is unchanged. It writes bare strings under `S231:unit`,
+   `S231:quantity` and `S231:displayUnit`.
+   - A document written with `qudt:hasUnit {"@id": "unit:K"}` exports `"S231:unit": "K"`, where
+     today it exports no unit.
+   - A round trip normalises the spelling, as it already normalises a full-IRI key to the compact
+     one.
+   - RT-2 holds, because re-import reads the same string. No export golden moves.
+   - *(Ruled 2026-11-12.)*
+4. **Impact.** Accepted as measured: under R no real document changes load outcome.
+   - **The one newly failing document is synthetic.** `connector_attrs.jsonld` is rewritten in
+     #631 to `{"@id": "unit:DEG_C"}`.
+   - **The 19 point rows and 7 content ids move** because those documents now carry units they
+     always declared. The 7 content ids are:
+     - the translations `ReliefDamper`, `ReliefFan`, `SupplySignals`, `TimeSuppression`, Reheat
+       `Overrides` and `ControlLoops`;
+     - the fixture `modelica_json_style.jsonld`.
+   - *(Ruled 2026-11-12.)*
+5. **The root-input limit** is closed in its own issue and PR, right after the spellings work:
+   #632, blocked by #631.
+   - It unifies each root input declaration and every port it drives as one star, as §7.10 reads.
+   - The point list then reports the declared unit.
+   - Measured, it fails no document, and 188 in-repo ports gain a unit and 128 a quantity, in 40
+     documents.
+   - *(Ruled 2026-11-12.)*
+6. **`oce-author` and `oce-vocab`.**
+   - **Importer:** reads the same spellings through the same table, which `oce-api` re-exports.
+     - On a boundary they go into `SemanticPoint.unit` and `display_unit`, and an IRI node is
+       accepted where the importer says `wrong-shape` today.
+     - On a block port they are `port-attribute` (importer decision 8), not `unknown-key`.
+     - On a parameter they are shape-checked, dropped and reported, as `S231:unit` is (decision
+       9).
+     - `qudt:hasQuantityKind` stays `unknown-key`.
+   - **Emitter:** unchanged.
+   - **`oce-vocab`:** its generator reads units through the shared table instead of its own copy,
+     and `generated.json` stays byte-identical, since CXF-Core uses neither dropped entry. It keeps
+     its quantity inverse and the hand-resolved `pAtm` row. Those are descriptive data, resolved
+     against `.mo` sources, which the engine cannot do at load.
+   - *(Ruled 2026-11-12.)*
+7. **Version.** No 0.6.0 bump.
+   - **No format this project defines changes its bytes or meaning:** not the content-id encoding,
+     the blob, the snapshot layout, or the exporter's layout for a given graph.
+   - **The content ids that move** do so because those documents now carry units they always
+     declared, and #631 lists them. The state manifests of the same documents move too; snapshots
+     and blobs already refuse a different engine version.
+   - **Formats stay at revision 1** (rule 9).
+   - **Writing QUDT spellings on export would have needed the bump.**
+   - **For #632** the same reasoning is this note's reading: its export changes through the graph,
+     not the exporter's layout. #632 states it, and the owner may overrule it there.
+   - *(Ruled 2026-11-12.)*
+8. **Hostile-input bounds.**
+   - **Lookup:** one prefix strip and a search of the sorted 25-entry table a term, using the
+     resolver's existing prefix expansion. Work stays linear in document bytes.
+   - **Memory:** one `Arc<str>` a term, as today. Mapped strings are `&'static str`.
+   - **No I/O:** no IRI is dereferenced, and nothing touches a network or a file.
+   - **Messages:** a refusal quotes the IRI through the engine's shared excerpt bound
+     (`crates/oce-cxf/src/excerpt.rs`, 64 bytes, cut on a character boundary).
+     *Amended at finalisation: the draft proposed 128 bytes before GitHub #623 landed one bound
+     for every quoted token. The ruling asks only that the message be truncated.*
+   - **Near misses:** a key that names a new spelling only after trimming (`"qudt:hasUnit "`) is
+     refused like any near miss (#383). A blank `@id` is already refused by #623's term-shape rule.
+   - **Scoped contexts:** a scoped `@context` on the term object stays refused.
+   - *(Ruled 2026-11-12.)*
 
-4. **Is the measured impact acceptable?**
-   - **Recommendation:** yes. Under R no real document changes load outcome. The one newly failing
-     document is a synthetic fixture the implementing PR rewrites. The 19 changed point rows and 7
-     changed content ids are units that were silently dropped. The library changes under no
-     reading, because it carries no units.
-   - **Alternative:** wait for the library's namespace re-stamp before landing. Nothing in the
-     library would move either way.
+## Rulings
 
-5. **Is the root-input limit closed in the same work?**
-   - **Recommendation:** close it, but in its own issue and PR, right after this one and in the
-     same milestone. It unifies a root input's declaration and every port it drives as one star,
-     as §7.10 reads.
-     - Measured, it fails no document and gives 188 in-repo ports a unit and 128 a quantity, in 40
-       documents.
-     - Without it, 111 of the 213 connector units in the translations, those on root inputs, stay
-       outside the gate. The other 96 boundary units are on root outputs, which join it.
-     - The host keeps reading a root input's port unit rather than its declared unit, which is
-       wrong whenever they differ (the eighth probe case).
-     - It changes what those 40 documents export, because their minted child ports gain the unit
-       (question 7).
-   - **Alternatives:**
-     - The same PR. That is two behaviour changes in one review.
-     - Leave the limit. Then at least document that a root input's point row shows the driven
-       port's unit, which 125 of 127 declared units never reach.
+The owner ruled on all eight questions on 2026-11-12, in a
+[comment on GitHub #628](https://github.com/jscott3201/open-control-engine/pull/628#issuecomment-6816425626).
+Each accepted the recommendation. Each ruling names what it rejected.
 
-6. **`oce-author`'s importer and emitter, and vocabulary v1's declared units.**
-   - **Recommendation:**
-     - **Importer:** read the same spellings through the same table on a boundary (into
-       `SemanticPoint.unit` and `display_unit`), accepting an IRI node where it now says
-       `wrong-shape`. Refuse them on a block port as `port-attribute`, not `unknown-key`. On a
-       parameter, check their shape, drop them and report them, as for `S231:unit`.
-       `qudt:hasQuantityKind` stays `unknown-key`.
-     - **Emitter:** unchanged.
-     - **Table:** `oce-api` re-exports the engine's table, and `oce-vocab`'s generator reads units
-       through it instead of its own copy (`tests/vocabulary/generator/units.rs`), so there is one
-       table. CXF-Core uses neither dropped entry, so `generated.json` stays byte-identical.
-       `oce-vocab` keeps its quantity inverse and the hand-resolved `pAtm` row. They are
-       descriptive data, resolved against `.mo` sources, which the engine cannot do at load.
-   - **Alternatives:**
-     - Leave the importer on the S231 spellings, so the two readers disagree on the same document.
-     - Keep two copies of the table, with a test that they match. The test could only live
-       behind the facade.
-
-7. **Sequencing, and rules 9 and 10.**
-   - **Recommendation:**
-     1. this note, merged with the rulings;
-     2. the spellings PR, engine lane (`bash .agents/gate.sh`);
-     3. the root-input PR, if question 5 is ruled so.
-   - **Neither PR bumps to 0.6.0.** No format's bytes or meaning changes: not the content-id
-     encoding, the blob, the snapshot layout, or what the exporter writes for a given graph. What
-     changes is what an accepted document means, its units. That is the kind of change the owner
-     ruled on 2026-11-12 is not a rule-10 change for tightening.
-   - **This is partly a loosening, which that ruling did not name.** Some documents gain units, and
-     the third probe case newly loads. The owner is asked to confirm the ruling covers it.
-   - **Ids still move.** Content ids and state manifests of documents whose units are newly read
-     change (7 tracked documents), and the CHANGELOG says so. The state manifest matters little:
-     snapshots and blobs already refuse a different engine version.
-   - **Changed export bytes would be different.** If question 3 chooses the upstream spellings, the
-     exporter's own output changes: that PR bumps the workspace to 0.6.0 and re-blesses the export
-     goldens. Closing the root-input limit also changes export bytes, but through the graph. The
-     exporter's layout is the same, so the owner is asked to rule whether that counts.
-   - **Formats stay at revision 1** in every case (rule 9).
-
-8. **Hostile-input bounds for what is added.**
-   - **Recommendation:**
-     - **Lookup:** one prefix strip and a search of a sorted table of 25 entries a term, using the
-       resolver's existing prefix expansion. Work stays linear in document bytes.
-     - **Memory:** one `Arc<str>` a term, as today. Mapped strings are `&'static str`.
-     - **No I/O:** no IRI is dereferenced, and nothing touches a network or a file.
-     - **Messages:** a refusal quotes at most 128 bytes of the IRI, cut on a character boundary.
-       This answers #620's note that a megabyte token makes a megabyte message.
-     - **Near misses:** a key that names a new spelling only after trimming (`"qudt:hasUnit "`) is
-       refused like any near miss (#383). An `@id` that is blank or padded is unmapped, so refused;
-       #602 states the blank rule for connector terms.
-     - **Scoped contexts:** a scoped `@context` on the term object stays refused.
-   - **Alternative:** a per-document cap on unit terms. Each term is already bounded by its node,
-     and its node by the 8 MiB document limit.
+1. **Spellings** (decision 1). Rejected:
+   - the S231 terms only, with the upstream keys refused or warned about. The 34 translations that
+     carry a unit would fail or warn on every one;
+   - CXF-Core's `S231:hasUnit` and `S231:hasDisplayUnit` only, which read no corpus node;
+   - two spellings refused only when they disagree. That needs a comparison after mapping and an
+     order between spellings, for a case no document has;
+   - reading quantity kinds, whether all of them, with `q:Pressure` as `Pressure`, or every kind
+     but `q:Pressure`.
+2. **Mapping** (decision 2). Rejected:
+   - **opaque exact-match IRIs:** these refuse `unit:K` beside `K`, and the host would see
+     `unit:PA`;
+   - **an unmapped IRI read as an opaque term, or warned about:** a typo would unify with nothing,
+     and fail only where a declared unit meets it;
+   - **the table kept in `oce-vocab`:** a core crate cannot depend on a leverage crate;
+   - **the whole QUDT catalogue:** a database by another name, and conversion is M8's;
+   - **modelica-json's full 27-entry inverse:** it keeps `cfm` and `inH2O` readable from an IRI
+     whose QUDT meaning is another unit.
+3. **Export unchanged** (decision 3). Rejected:
+   - **writing the upstream spellings:** this changes the export bytes of every document with a
+     unit and would need the 0.6.0 bump. It needs a forward table, and 3 of the 10 distinct unit
+     strings the in-repo corpus writes (`s/K`, `ppm`, `5`) have no QUDT entry;
+   - **keeping each attribute's authored spelling:** a model field per attribute and a content-id
+     question, and nothing would read it.
+4. **Impact accepted** (decision 4). Rejected: waiting for the library's namespace re-stamp. The
+   library carries no units, so nothing there would move.
+5. **The root-input limit in its own PR**, #632 (decision 5). Rejected:
+   - the same PR, which is two behaviour changes in one review;
+   - leaving the limit, under which 125 of 127 declared in-repo root-input units never reach the
+     host.
+6. **The importer on the shared table** (decision 6). Rejected:
+   - leaving the importer on the S231 spellings, so the two readers would disagree on one
+     document;
+   - two copies of the table with a test that they match, which could only live behind the facade.
+7. **No 0.6.0 bump** (decision 7). Rejected: treating an input-reading change as a format change.
+8. **Bounds as proposed** (decision 8), with the excerpt bound amended to #623's shared one.
+   Rejected: a per-document cap on unit terms. Each term is bounded by its node, and its node by
+   the 8 MiB document limit.
 
 ## What the implementing PRs change
 
-**The spellings PR (engine lane):**
+**[#631](https://github.com/jscott3201/open-control-engine/issues/631): the spellings (engine
+lane; closes #622).**
 - **`oce-cxf`:**
   - the new spellings in `property_keys.rs`;
   - a new module holding the table;
-  - the shape rule and the unmapped refusal in `resolve/attrs.rs` and `resolve/parameter_attrs.rs`;
+  - the shape rule and the unmapped refusal in `resolve/attrs.rs`, `resolve/parameter_attrs.rs`
+    and `resolve/term_shape.rs`;
   - the `TermAttr` documentation in `dto.rs`.
 - **`oce-api`:** the re-export.
 - **`oce-author`:** `import/nodes.rs` and `import/cxf.rs`.
 - **`oce-vocab`:** the generator's unit inverse.
 - **Tests:**
-  - each spelling on each role;
-  - both QUDT namespaces;
+  - each spelling on each role, in both QUDT namespaces;
   - a `unit:` prefix bound elsewhere, which is not read as QUDT;
   - two spellings refused;
   - unmapped and dropped entries refused;
   - the probe cases above;
   - every unit IRI in the vendored translations and CXF-Core maps.
 - **Fixtures and expectations that move:**
-  - `connector_attrs.jsonld`'s display unit, rewritten to `unit:DEG_C` with its export bytes
-    unchanged;
-  - `modelica_json_style.jsonld`'s `unit:K`, which becomes `K` in
-    `oce-cxf/tests/resolve_context_expansion.rs` and `oce-api/tests/context_expansion_identity.rs`;
-  - two lines of `oce-cxf`'s fixture-corpus import golden.
+  - `connector_attrs.jsonld`'s display unit, rewritten to `unit:DEG_C`. Its export bytes and its
+    fixture-corpus import line stay, because the graph reads `degC` either way.
+  - `modelica_json_style.jsonld`'s `unit:K`, which becomes `K`. That moves its expectations in
+    `oce-cxf/tests/resolve_context_expansion.rs` and `oce-api/tests/context_expansion_identity.rs`,
+    and its one line of `oce-cxf`'s fixture-corpus import golden.
 - **What does not move:** the vendored-corpus delta table, and the 46 fixture goldens and 422
   provenance goldens.
 - **Documents:**
   - [CXF round trip](../cxf-round-trip.md): the spellings read, and the spelling a round trip
     writes;
   - [host responsibilities](../host-responsibilities.md): the property-key paragraph;
-  - the CHANGELOG.
+  - the CHANGELOG, naming the 7 content ids.
 
-**The root-input PR (engine lane, if ruled):**
+**[#632](https://github.com/jscott3201/open-control-engine/issues/632): the root-input limit
+(engine lane; blocked by #631).**
 - **Code:** `oce-validate`'s star gathering.
 - **Expectations:** the point-list and state-manifest expectations of the 40 documents, and the
   export goldens among them.
-- **Documents:** the limit's sentence in [CXF round trip](../cxf-round-trip.md#the-export-subset),
-  and the point-identity section of
-  [host responsibilities](../host-responsibilities.md#cxf-point-identities-are-the-authored-ids).
+- **Documents:**
+  - the limit's sentence in [CXF round trip](../cxf-round-trip.md#the-export-subset);
+  - the point-identity section of
+    [host responsibilities](../host-responsibilities.md#cxf-point-identities-are-the-authored-ids).
+
+**Found while measuring:**
+[#633](https://github.com/jscott3201/open-control-engine/issues/633). The header of
+`crates/oce-cxf/tests/vendored_corpus_delta.rs` says none of the 44 translations can load, but
+seven do.
 
 ## Out of scope
 
