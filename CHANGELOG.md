@@ -37,6 +37,73 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.5.0
+
+Prepared 2026-11-11 on `development`; the release date is the date the `v0.5.0` tag is cut from
+`main`. Every workspace member is 0.5.0. Nothing is published to crates.io.
+
+0.5.0 closes milestone M2: the authoring layer. A person or an agent writes a sequence without
+touching JSON-LD. `oce-author` holds one typed authoring model with a builder, a strict-JSON wire
+form with a pinned JSON Schema and a stage-1 validator (GitHub #466, issue #463), a deterministic
+emitter to flat CXF with an engine-side validation stage that loads the emitted bytes in a throwaway
+engine and maps every diagnostic back onto the model (GitHub #473, issue #464), a terse text form
+with one typed refusal per malformed construct and an idempotent `fmt` (GitHub #485, issue #482),
+enumeration-typed sequence parameters, boundary bounds and member literals (GitHub #493, issue
+#492), and an importer for the in-subset library CXF and the frozen prototype's v0 graph JSON
+(GitHub #498, issue #496); the provenance statement is `derived_from` (GitHub #580, issue #529), and
+time unit suffixes scale from the vocabulary's table and must fit the declared unit (GitHub #586,
+issue #501); stage 1 is held to a near-linear count of key comparisons rather than to elapsed time
+(GitHub #584, issue #478). The engine side it needed is in the facade: resolved port names, class
+descriptions and the settable flag (GitHub #461, issue #440) and the enumeration table (GitHub #488,
+issue #468). The `oce` command-line tool (`emit`, `validate`, `fmt`, `catalog`, `vocab`; GitHub
+#491, issue #489) serves vocabulary v1, which `oce-vocab` projects from the vendored modelica-json
+CXF-Core document (GitHub #511, #526; issues #499, #500). Against the milestone's gate: 31 of the 34
+in-subset library fixtures import, emit and load to their committed content id (the other three
+carry block-port bounds, refused by design), every bundle and every one of the 31 importable corpus
+fixtures round-trips wire → text → wire byte for byte (GitHub #606, issue #603), and the parity test
+pins every stage-1 code that has an engine counterpart to the engine's own code at the same subject;
+the agent-usable row moves to the milestone that lands the benchmark harness (owner decision,
+2026-11-09). 0.5.0 also carries M3's work so far: the slot-indexed execute entry and `oce-replay`
+(GitHub #459, #462; issues #444, #445), the canonical content id (GitHub #474, issue #470),
+`FrameSlots::output_types()` (GitHub #525), and `oce-verify` with the `oce/vectors/v1` format, the
+replayer and its receipts, mutant mode, the four work budgets and the `oce verify` verb with the
+in-repo replay gate (GitHub #541, #558, #565, #570, #572, #573). Import is stricter: CXF is read and
+written in the one vocabulary namespace `http://data.ashrae.org/S231#` and every exported document
+carries a translation-software label (GitHub #543, issue #527), a block input driven by both a block
+output and a boundary input is refused (GitHub #477, issue #472), a CDL extension block is refused
+with its own code (GitHub #582, issue #537), and a parameter's `min`, `max`, `unit`, `quantity` or
+`displayUnit` of a malformed shape is refused on both readers (GitHub #594, issue #559). It is the
+first release in which every format and schema stays at revision 1 until 1.0.0 and changes in place,
+so the engine version is what separates one layout from another: the workspace moved to 0.5.0 on
+`development` with that reset (GitHub #518, issue #509), and a compiled-schedule blob and a state
+snapshot are each accepted only by the version that wrote them (GitHub #540, #579; issues #530,
+#535), with `oce_api::ENGINE_VERSION` naming that version (GitHub #592, issue #536). `Cargo.lock`
+moves `rustix` past RUSTSEC-2026-0486 (GitHub #605, issue #598). The workspace has 18 members, 10
+publishable and eight private. The fixture and Tier-A provenance goldens
+(`tools/golden-gen/goldens`) and the 46 whole-sequence Tier-2 traces are byte-identical to the
+`v0.4.0` tag.
+
+### Release
+
+- **0.5.0 closeout** (GitHub #600, issue #455). No version moves in this change:
+  `development` has carried 0.5.0 since GitHub #518, so every workspace member, the internal
+  path+version table, `Cargo.lock`, the descriptor's `oce-api-version:0.5.0`, the blob and
+  snapshot headers and every version-bearing golden already name it, and nothing is re-blessed.
+  The changelog's unreleased section becomes this one. Four entries cited an issue as if it were
+  the pull request, and now name the pull request beside it: `(GitHub #544)` is
+  `(GitHub #562, issue #544)`, and the three test-binary entries' `(GitHub #548, issue #504)`,
+  `(GitHub #549, …)` and `(GitHub #550, …)` are `(GitHub #551, issues #548 and #504)`,
+  `(GitHub #553, issues #549 and #504)` and `(GitHub #554, issues #550 and #504)`. Three
+  references to an issue read `GitHub #N` and now read `issue #N` or name the pull request: "as
+  GitHub #392 did" is "as GitHub #413, issue #392, did", and "the facade gap GitHub #467" and
+  "GitHub #566 tracks them" cite issues #467 and #566. The v0.4.0 sync-back merge
+  (GitHub #454) carried no change of its own, and GitHub #599 (issue #581) corrected one rustdoc
+  sentence of `Engine::content_id` that still named the provenance statement `extends`, with no
+  entry of its own. No catalog, contract-schema, state-format, execution-ABI, blob-format or
+  replay-format revision changes.
+
 ### Facade
 
 - **`oce_api::ENGINE_VERSION` names the engine version this build stamps and accepts** (GitHub
@@ -362,7 +429,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `DiagCode::NonCanonicalElementName` (`non-canonical-element-name`) before `make`. `TimeTable`
   parsed indices with `usize::parse`, so an aliased spelling silently replaced a cell and the later
   one in table order won; with one spelling per element, sorting parameters by name in the content
-  id loses nothing. This is the spelling half of the facade gap GitHub #467 (names outside the
+  id loses nothing. This is the spelling half of the facade gap issue #467 (names outside the
   declared extent), which stays open.
 
 ### CXF import and export
@@ -476,8 +543,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
   its `@context`, and the corpus pins each document's SHA-256, so the 21 `cxf_sha256` values of
   `corpus.json` were rewritten from a fresh capture; no other field changed. The retained native
   archives are byte-identical and their `cxf_sha256` values are no longer compared with the
-  corpus (as GitHub #392 did for their source maps), so both recorded matrix digests still
-  reconstruct; a fresh collection and the per-PR captures keep the comparison.
+  corpus (as GitHub #413, issue #392, did for their source maps), so both recorded matrix digests
+  still reconstruct; a fresh collection and the per-PR captures keep the comparison.
   Rustdoc, `AGENTS.md` and the `Cargo.toml` header now name ANSI/ASHRAE Standard 231-2026 and
   cite the OBC specification's sections as `OBC §N`.
 
@@ -903,13 +970,13 @@ and a gate that accepted any text would restore exactly the false assurance desc
     run's total work, before part 4) and #563 (record the caps a receipt was written under). The
     46 fixture goldens and 422 provenance goldens are byte-identical.
 - **The authoring wire reader refuses a list, or any other type, where an object belongs**
-  (GitHub #544). `oce-author`'s `from_wire_str` read a JSON list where the wire form defines an
-  object: `serde_json` reads a `serde`-derived struct from a list as well as from an object, taking
-  the list positionally as the struct's fields, and the strict scan in front of `serde` checks
-  syntax, depth, repeated keys and sizes, not shapes. So `"semantic": ["", "", "K", "", "", "", [],
-  false]` loaded as the slot it abbreviates and `oce validate` answered `"ok": true`; on
-  `development`, 1,765 of the 1,948 objects the new sweep replaces loaded that way (every root,
-  sequence parameter, boundary, semantic slot, block and assignment it reaches; the 183
+  (GitHub #562, issue #544). `oce-author`'s `from_wire_str` read a JSON list where the wire form
+  defines an object: `serde_json` reads a `serde`-derived struct from a list as well as from an
+  object, taking the list positionally as the struct's fields, and the strict scan in front of
+  `serde` checks syntax, depth, repeated keys and sizes, not shapes. So `"semantic": ["", "", "K",
+  "", "", "", [], false]` loaded as the slot it abbreviates and `oce validate` answered `"ok":
+  true`; on `development`, 1,765 of the 1,948 objects the new sweep replaces loaded that way (every
+  root, sequence parameter, boundary, semantic slot, block and assignment it reaches; the 183
   `{"ref": …}` and `{"member": …}` values were already refused), and a boundary's `type` read
   `{"Real": null}` as `"Real"`. The typed parse now runs through a closed-shape adapter that wraps
   `serde_json`'s deserializer at every depth (`src/wire/closed.rs`): a struct is read from an
@@ -1475,7 +1542,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   an expression, and a `shell` key in block or flow style that is not the line `shell: bash` (a
   template such as `bash {0}` drops errexit and pipefail). The tripwire is not a proof that no
   step discards a failure: a bare `exit 0`, `cmd && true` on a non-final line, `cmd & wait` and
-  `(cmd &)` still pass, and GitHub #566 tracks them. 52 hostile fixtures, each of which the
+  `(cmd &)` still pass, and issue #566 tracks them. 52 hostile fixtures, each of which the
   checker let through before the rule that refuses it, and 2 positive ones (305 cases).
   **Pin advance.** The `full` row stays. Its stated reason is corrected in `AGENTS.md`,
   `.agents/project-facts.md`, `docs/ci-and-the-gate.md` and `scripts/ci/proof-row.sh`: the
@@ -1711,7 +1778,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
   plus the two layout tests. No engine source, fixture or golden changed.
 
 - **`oce-author`'s integration tests build as one binary instead of 40, and its release test build
-  takes a quarter of the time** (GitHub #548, issue #504; the second crate after `oce-api`).
+  takes a quarter of the time** (GitHub #551, issues #548 and #504; the second crate after
+  `oce-api`).
   `crates/leverage/oce-author/Cargo.toml` sets `autotests = false` and lists one target,
   `authoring`, of which every file under `tests/` is a module. No file needs a binary of its own:
   the crate's bless command names the package, and nothing in `.agents/`, `.github/`, `scripts/`,
@@ -1733,37 +1801,38 @@ and a gate that accepted any text would restore exactly the false assurance desc
   tests. No source, fixture or golden changed.
 
 - **`oce-cxf`'s integration tests build as 12 binaries instead of 79, and its release test build
-  takes about a third of the time** (GitHub #549, issue #504; the third crate after `oce-api` and
-  `oce-author`). `crates/oce-cxf/Cargo.toml` sets `autotests = false` and lists the targets:
-  `exchange` holds 68 files as modules, and `fixture_port_order`, `fixture_structural_oracle`,
-  `export_golden`, `export_declared_input_attrs`, `composite_contract_corpus`,
-  `composite_contract_doc`, `resolve_golden`, `resolve_array`, `resolve_array_expression`,
-  `vendored_corpus_delta` and `parameter_grounding_corpus` stay their own binaries, because
-  `.agents/gate.sh` (`binary(..)`), a document, a recorded command or the file's own bless command
-  selects each by name. No selector changed. Of the 38 files that declared `mod bless;`, the 29 now
-  in `exchange` say `use crate::bless;` on the same line, and the four that declared `mod render;`
-  say `use crate::render;`, with both helpers declared once in `tests/exchange.rs`; no line moved,
-  so the line anchors into this crate's tests still hold, and no test body changed.
-  `open_modelica_reliefs_windows_boundary.rs` keeps its `#![cfg(windows)]`, which now gates the
-  module: it compiles into `exchange` on Windows only, and the Windows cell in `release-gate.yml`
-  runs that binary. A test in a merged file is now `oce-cxf::exchange <file>::<test>`; select one
-  file with `-E 'test(/^<file>::/)'`. The layout check (`tests/binary_layout/`) is adapted from
-  GitHub #551's and closes the gaps its review found: it follows the helper directories a
-  declaration reaches, resolves a plain `mod` in a `#[path]` file as the compiler does, refuses a
-  `cfg_attr` path and a declaration inside braces instead of guessing, counts a `cfg`-gated
-  declaration as compiled on purpose, and accepts only `autotests = false` exactly. No test sets a
-  global allocator, an environment variable, a static or the working directory; each golden a
-  bless run writes is written by one file and read by no other, the one temporary directory is
-  named for the process and used by one test, and the `git ls-files` call only reads, so none
-  changes meaning in a shared binary or under plain `cargo test`, and an `OCE_BLESS=1` run of the
-  merged binary rewrites every golden byte-identically. Measured on one 10-core arm64 Mac from a
-  removed `target/`, `cargo nextest run -p oce-cxf --locked --no-run`: release 191 s to 60 s wall
-  (1,424 s to 298 s of CPU) and `target/` 276 MiB to 123 MiB; debug 15.8 s to 8.3 s and
-  1.32 GiB to 642 MiB. The 1,001 tests listed before are all listed after under the same file and
-  test names, plus the eight layout tests. No source, fixture or golden changed.
+  takes about a third of the time** (GitHub #553, issues #549 and #504; the third crate after
+  `oce-api` and `oce-author`). `crates/oce-cxf/Cargo.toml` sets `autotests = false` and lists the
+  targets: `exchange` holds 68 files as modules, and `fixture_port_order`,
+  `fixture_structural_oracle`, `export_golden`, `export_declared_input_attrs`,
+  `composite_contract_corpus`, `composite_contract_doc`, `resolve_golden`, `resolve_array`,
+  `resolve_array_expression`, `vendored_corpus_delta` and `parameter_grounding_corpus` stay their
+  own binaries, because `.agents/gate.sh` (`binary(..)`), a document, a recorded command or the
+  file's own bless command selects each by name. No selector changed. Of the 38 files that declared
+  `mod bless;`, the 29 now in `exchange` say `use crate::bless;` on the same line, and the four that
+  declared `mod render;` say `use crate::render;`, with both helpers declared once in
+  `tests/exchange.rs`; no line moved, so the line anchors into this crate's tests still hold, and no
+  test body changed. `open_modelica_reliefs_windows_boundary.rs` keeps its `#![cfg(windows)]`, which
+  now gates the module: it compiles into `exchange` on Windows only, and the Windows cell in
+  `release-gate.yml` runs that binary. A test in a merged file is now `oce-cxf::exchange
+  <file>::<test>`; select one file with `-E 'test(/^<file>::/)'`. The layout check
+  (`tests/binary_layout/`) is adapted from GitHub #551's and closes the gaps its review found: it
+  follows the helper directories a declaration reaches, resolves a plain `mod` in a `#[path]` file
+  as the compiler does, refuses a `cfg_attr` path and a declaration inside braces instead of
+  guessing, counts a `cfg`-gated declaration as compiled on purpose, and accepts only `autotests =
+  false` exactly. No test sets a global allocator, an environment variable, a static or the working
+  directory; each golden a bless run writes is written by one file and read by no other, the one
+  temporary directory is named for the process and used by one test, and the `git ls-files` call
+  only reads, so none changes meaning in a shared binary or under plain `cargo test`, and an
+  `OCE_BLESS=1` run of the merged binary rewrites every golden byte-identically. Measured on one
+  10-core arm64 Mac from a removed `target/`, `cargo nextest run -p oce-cxf --locked --no-run`:
+  release 191 s to 60 s wall (1,424 s to 298 s of CPU) and `target/` 276 MiB to 123 MiB; debug 15.8
+  s to 8.3 s and 1.32 GiB to 642 MiB. The 1,001 tests listed before are all listed after under the
+  same file and test names, plus the eight layout tests. No source, fixture or golden changed.
 
 - **`oce-conformance`'s integration tests build as eight binaries instead of 90, and its release
-  test build takes a sixth of the time** (GitHub #550, issue #504; the last of the four crates).
+  test build takes a sixth of the time** (GitHub #554, issues #550 and #504; the last of the four
+  crates).
   `crates/oce-conformance/Cargo.toml` sets `autotests = false` and lists the targets: `conformance`
   holds 83 files as modules, and seven stay their own binaries because a workflow, a gate step or a
   recorded command selects each by name: the strict-bit evidence tests (`strict_bits`,
