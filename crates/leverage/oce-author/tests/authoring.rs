@@ -44,6 +44,7 @@ mod import_hostile;
 mod import_namespace_and_label;
 mod import_parameter_attributes;
 mod import_precedence;
+mod import_reference_keys;
 mod import_refusals;
 mod import_sweep;
 mod import_values;

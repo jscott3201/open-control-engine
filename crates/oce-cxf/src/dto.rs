@@ -275,16 +275,18 @@ pub struct Node {
 }
 
 /// A JSON-LD cross-reference: `{"@id": "..."}`. Any other keys on the reference object (JSON-LD
-/// permits `@index`/`@type` on a reference) flow through `other` for lossless round-trip (R-8). A
-/// direct `@context` is retained but refused before identity expansion, matching the same rule on
-/// [`Node::other`].
+/// permits `@index`, `@type` and properties there, as an embedded node object) flow through
+/// `other`, so [`crate::parse_document`] and [`crate::write_document`] round-trip them (R-8). The
+/// resolver reads a reference as its `@id` alone and refuses one that carries any of them: a
+/// direct `@context` before identity expansion, as a scoped context, matching the same rule on
+/// [`Node::other`]; any other key at the `@id` index, as `non-subset-construct` (issue #588).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct IriRef {
     /// The referenced node's IRI.
     #[serde(rename = "@id")]
     pub id: String,
-    /// Any other keys on the reference object, preserved for lossless round-trip (R-8). A direct
-    /// `@context` is preserved here but refused by ingest as an unsupported scoped context.
+    /// Any other keys on the reference object, preserved for lossless round-trip (R-8) and refused
+    /// by [`crate::import_cxf`] (see [`IriRef`]).
     #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     pub other: BTreeMap<String, serde_json::Value>,
 }
