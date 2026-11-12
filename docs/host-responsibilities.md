@@ -423,10 +423,18 @@ other reading, so `"S231:ExtensionBlock": "http://example.org#Foo"` would let th
 a standard spelling; it is refused as `malformed-document`, the error JSON-LD 1.1 calls an invalid
 IRI mapping. Such a term must still bind its own expansion once every map of a list is merged,
 because a later map may rebind the prefix it was read through; that shape, which JSON-LD accepts,
-is refused as a non-subset construct. A direct `@context` on an `@graph` node, one of its identity/type reference objects, or a
-modeled value/term object is also refused: context bindings are document-level only, and the engine
-never applies a scoped context to one semantic value. The canonical-key guarantee therefore holds
-for every document that loads at all.
+is refused as a non-subset construct. A direct `@context` on an `@graph` node, one of its
+identity/type reference objects, or a modeled value/term object is also refused: context bindings
+are document-level only, and the engine never applies a scoped context to one semantic value. The
+canonical-key guarantee therefore holds for every document that loads at all.
+
+A reference object (each value of a structural edge, `hasInput`, `hasOutput`, `hasParameter`,
+`hasConstant`, `containsBlock`, `hasInstance` or `isConnectedTo`, and of `isOfDataType`) is read as
+its `@id` alone (issue #588). One that carries any other key, such as `@type`, `@index` or a
+property like `S231:value`, is refused as a non-subset construct, subject the node that holds it.
+In JSON-LD such an object is an embedded node object that states more about the node it names;
+flattened CXF states that on the node's own `@graph` entry, and the engine would otherwise drop it
+without a word.
 
 Property keys are expanded against the same `@context` (issue #383). A modeled property — `min`,
 `max`, `nominal`, `unit`, `quantity`, `displayUnit`, `value`, the structural edges, and the rest

@@ -59,6 +59,24 @@ and a gate that accepted any text would restore exactly the false assurance desc
   defines one: a probe over the 257 tracked documents with a `@context` (the vendored translations
   and `CXF-Core.jsonld` included) and the library's 144 found no term name of this shape, and
   `fixture_corpus_import.txt` is byte-identical.
+- **A reference object that carries a key beside its `@id` is refused** (GitHub #614, issue #588).
+  The engine reads each value of a structural edge (`hasInput`, `hasOutput`, `hasParameter`,
+  `hasConstant`, `containsBlock`, `hasInstance`, `isConnectedTo`) and of `isOfDataType` as its
+  `@id` alone. Any other key was kept for round-trip and dropped without a word:
+  `"S231:hasParameter": {"@id": k, "S231:value": 99}` loaded with `k` at its own 1.0, and a
+  `containsBlock` entry carrying `"@type": "S231:ExtensionBlock"` and `S231:hasFmuPath` loaded its
+  leaf as an ordinary block. The resolver now refuses such a reference as `non-subset-construct`,
+  subject the node that holds it, at the `@id` index and before anything reads the graph. The
+  message names up to four of the keys and counts the rest. In JSON-LD such an object is an
+  embedded node object; flattened CXF states those keys on the node's own `@graph` entry. A
+  `@context` in a reference is still refused first, by the expansion pass, as a scoped context.
+  `parse_document` and `write_document` still round-trip the keys. The authoring importer
+  (`oce_author::import_cxf`) already refused such a reference as `wrong-shape`, naming the
+  property, and refuses `hasConstant` and `hasInstance` outright (`constant-member`,
+  `instance-member`); new tests pin both. **Breaking, in place:** such a document loaded before.
+  No tracked or library document carries one: a probe over the 25,873 references in 257 tracked
+  documents and the 10,598 in the library's 140 found none, and `fixture_corpus_import.txt` is
+  byte-identical.
 
 ### Leverage
 
@@ -168,6 +186,27 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `.agents/gate.sh`, and `check-workflow-gates.sh` requires it in both jobs as a whole line, with
   eight hostile fixtures (deleted, commented out, moved to the no-secret job, given an argument,
   masked, or run from another directory).
+
+- **The no-secret scan catches every PEM private-key header and the armored OpenPGP private
+  key** (GitHub #615, issue #607). The private-key pattern is now
+  `-----BEGIN ([A-Z0-9]+ )*PRIVATE KEY( BLOCK)?-----`. Before, it was
+  `(RSA|EC|OPENSSH|PGP) PRIVATE KEY`. That passed PKCS#8's `PRIVATE KEY` (OpenSSL's default
+  output), `ENCRYPTED PRIVATE KEY` and `DSA PRIVATE KEY`, and its `PGP` alternative could not
+  match a real armored key, whose header ends in `PRIVATE KEY BLOCK`. Public-key and certificate
+  headers still pass, and no tracked file matches the wider pattern. `test-check-no-secrets.sh`
+  plants 80 values and keeps 26 near misses:
+  - **Planted values.** Between them, each pattern's values hold every member of each character
+    class where the pattern reads it, not only the ends of each range, so a hole anywhere in a
+    class misses one. Each value is as short as its pattern accepts and has text after it. Every
+    pattern also has one value at the start of its line and one after a word character.
+  - **Near misses.** Every pattern in the wrong case, one character short of every quantifier,
+    and the public-key, OpenPGP public-key and certificate headers.
+  - **Batching.** A pattern's values are planted together and must come back as one FAIL block,
+    each in its own file.
+  - **Defect copies.** There are now 72, up from 37. The new ones are `-i`, a hole in the middle
+    of a class, a start anchor, a required non-word character before the pattern, the `BLOCK`
+    form dropped, and the private-key label words made required or limited to one. Each must
+    fail a named check.
 
 ## 0.5.0
 

@@ -68,6 +68,7 @@ mod pass_through;
 mod port_binding;
 #[cfg(test)]
 mod port_binding_tests;
+mod reference_keys;
 mod report;
 mod single_assignment;
 mod specialize;
@@ -147,8 +148,10 @@ pub(crate) fn resolve(
     let doc = &expanded;
     let mut diags: Vec<Diagnostic> = Vec::new();
 
-    // --- Step 1: @graph presence + index by @id (DuplicateId / MalformedDocument). by_id is
-    // lookup-only. A poisoned index (empty graph, duplicate ids) is fatal — return immediately.
+    // --- Step 1: @graph presence + index by @id (DuplicateId / MalformedDocument), and every
+    // reference read as its `@id` alone (`reference_keys`). by_id is lookup-only. A poisoned index
+    // (empty graph, duplicate ids) or a reference carrying other keys is fatal — return
+    // immediately.
     if doc.graph.is_empty() {
         return Err(CxfError::Validation(vec![Diagnostic::error(
             DiagCode::MalformedDocument,
@@ -181,6 +184,7 @@ pub(crate) fn resolve(
             );
         }
     }
+    reference_keys::refuse(doc, &mut diags);
     if has_errors(&diags) {
         return Err(CxfError::Validation(finalize_diags(diags, &HashMap::new())));
     }
