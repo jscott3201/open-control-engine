@@ -490,7 +490,11 @@ accepted. A node that writes one property in two spellings
 trimming surrounding whitespace are refused as `malformed-document`, as is any key — modeled or
 not — written more than once on one `@graph` node, since JSON parsing would silently keep only one
 of the values. None of these is silently
-dropped. Keys that name no modeled property pass through unchanged.
+dropped. Keys that name no modeled property pass through unchanged. A `@type` value or an
+`isOfDataType` reference that names an S231 term only after trimming surrounding whitespace
+(`"S231:ExtensionBlock "`) is refused the same way (issue #587): it would be kept as written and
+read as no S231 type, and a composite never reads its type, so a root typed that way loaded its
+children.
 
 The document's declared boundary-output names (root `S231:hasOutput`) are a second read-only
 identity space: each resolves on `get_output` and `watch` as an alias for
