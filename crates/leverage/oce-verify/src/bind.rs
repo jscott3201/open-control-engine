@@ -60,7 +60,8 @@ use crate::verify_error::{VerifyError, VerifyErrorKind as Kind};
 pub(crate) struct Bound<'a> {
     /// The subject's content id as loaded, before any parameter edit.
     pub(crate) content_id: String,
-    /// The engine version every blob and snapshot of this build records ([`engine_version`]).
+    /// The engine version every blob and snapshot of this build records, as [`engine_version`]
+    /// spells it.
     pub(crate) engine_version: String,
     /// Load-warning codes in load order, at most [`MAX_LOAD_WARNINGS`].
     pub(crate) load_warnings: Vec<String>,
@@ -224,7 +225,7 @@ pub(crate) fn bind<'a>(
     )?;
     Ok(Bound {
         content_id,
-        engine_version: engine_version(),
+        engine_version: engine_version(ENGINE_VERSION),
         load_warnings: report
             .warnings
             .iter()
@@ -240,15 +241,16 @@ pub(crate) fn bind<'a>(
     })
 }
 
-/// The receipt's `engine_version`: [`ENGINE_VERSION`] spelled `major.minor.patch`, the version
-/// this build stamps in every blob and snapshot header (decision 33, amended 2026-11-12). The
-/// Cargo version's pre-release suffix is not part of it.
-fn engine_version() -> String {
+/// The receipt's spelling of an engine version, `major.minor.patch` in decimal with no padding,
+/// prefix or suffix. [`bind`] passes [`ENGINE_VERSION`], the version this build stamps in every
+/// blob and snapshot header (decision 33, amended 2026-11-12), so the Cargo version's pre-release
+/// suffix is not part of the receipt's.
+fn engine_version(version: EngineVersion) -> String {
     let EngineVersion {
         major,
         minor,
         patch,
-    } = ENGINE_VERSION;
+    } = version;
     format!("{major}.{minor}.{patch}")
 }
 

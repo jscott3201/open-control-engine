@@ -4,8 +4,9 @@
 //! whose `expect` is empty), and AHU-0016's set with its three mutants (`tests/fixtures/AHU-0016/`:
 //! two caught, one survivor), each compared byte for byte. They regenerate only through the crate's
 //! bless switch (`OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`); every receipt embeds the
-//! engine version, so a workspace version bump re-blesses them, and so does #517 when it re-vendors
-//! the two rules.
+//! engine version, so a bump of the workspace version's major, minor or patch re-blesses them (a
+//! change of its pre-release suffix alone does not), and so does #517 when it re-vendors the two
+//! rules.
 //!
 //! Beside the bytes: `receipt_id` is checked against an independent derivation from the golden
 //! (the `receipt_id` line and the `timings` block cut out of the canonical text, hashed with a
@@ -259,7 +260,11 @@ fn the_engine_version_is_the_one_a_blob_of_the_same_build_records() {
     // compiled-schedule blobs and state snapshots of the same build carry. It is read here from
     // the header of a blob this build wrote, not from the constant the receipt is filled from:
     // format 1 at offset 4, then the encoder's major, minor and patch at offset 8, each a
-    // little-endian `u16` (docs/design/compiled-schedule-blob.md, "Layout").
+    // little-endian `u16` (docs/design/compiled-schedule-blob.md, "Layout"). The descriptor's
+    // Cargo version, which the field held before, spells the same string at every version
+    // without a pre-release suffix, 0.5.0 included, so this tells the old source from the new
+    // only on a pre-release build. The spelling itself is pinned at every build by
+    // `an_engine_version_is_spelled_major_minor_patch_in_plain_decimal` (`src/bind_tests.rs`).
     for golden in goldens() {
         let receipt = run(&golden, &VerifyOptions::default());
         let mut engine = Engine::new();

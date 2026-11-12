@@ -94,7 +94,7 @@ pub struct ReceiptHeader {
     /// build stamps in every compiled-schedule blob and state snapshot header and the only one it
     /// accepts there (decision 33, amended 2026-11-12). A pre-release suffix of the Cargo version
     /// is not part of it, so `0.6.0-rc.1` and `0.6.0` write the same field. Not a build identity,
-    /// and inside the hashed part, so a version bump moves every receipt id.
+    /// and inside the hashed part, so a bump of the major, minor or patch moves every receipt id.
     pub engine_version: String,
     /// The vector set's `spec_id` (`spec:fnv1a128:…`).
     pub spec_id: String,

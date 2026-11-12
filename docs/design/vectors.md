@@ -599,9 +599,10 @@ AHU-0016, 441 frames for AHU-0004. Their pass receipts are goldens. That they pa
 not run for this note.
 
 **What moves a golden receipt.** `engine_version` is inside the hashed part, so every workspace
-version bump re-blesses every golden receipt, as it already does the blob goldens. The owner ruled
-on 2026-11-09 that `development` moves to 0.5.0 in #509 and bumps when a format changes; the
-examples here show 0.5.0.
+version bump of the major, minor or patch re-blesses every golden receipt, as it already does the
+blob goldens; a change of the pre-release suffix alone moves none *(amended 2026-11-12, owner
+ruling with issue #593: see decision 33)*. The owner ruled on 2026-11-09 that `development` moves
+to 0.5.0 in #509 and bumps when a format changes; the examples here show 0.5.0.
 
 **Re-vendoring.** Both vendored rules carry a retired root name, which is inside every canonical
 path and the content id. When #517 re-vendors them, the golden receipts (their `content_id`,
@@ -871,7 +872,8 @@ build accepts there, so one name has one meaning. The descriptor's version keeps
 suffix and the blob drops it, so a `0.6.0-rc.1` build would have issued receipts saying
 `0.6.0-rc.1` beside blobs saying `0.6.0`. The two agree at every version without a suffix, 0.5.0
 included: nothing written by 0.5.0 changes bytes or meaning, and the same ruling bumps no version
-for it. The field stays hashed.
+for it. The field stays hashed, and a change of the pre-release suffix alone now moves no receipt
+id.
 
 **34. `oce verify <VECTORS> --subject <FILE>`.** As [CLI](#cli): one vector file and one subject
 per run, the form rule that reads `.cxf.json` as CXF, default emit options for an authored
@@ -1329,3 +1331,20 @@ What remains:
 6. **The report carries the subject's path as given** under the top-level `subject`, beside
    `input`, which is the vector file's. An error's place is `at`, never `subject` *(ruled by the
    owner, 2026-11-11)*.
+
+### The receipt's engine version
+
+*(Added 2026-11-12, with GitHub #621, issue #593.)* The review of GitHub #592 found that the
+receipt's `engine_version` and the blob's engine version could differ on a pre-release build. Two
+owner rulings settle it, and they are normative.
+
+**`engine_version` is `oce_api::ENGINE_VERSION`** *(ruled by the owner, 2026-11-12).* Decision 33
+is amended, not replaced: the field is the engine version spelled `major.minor.patch`, the one
+every compiled-schedule blob and state snapshot header of the same build records, so one name has
+one meaning. The descriptor's `oce-api-version` keeps a pre-release suffix and the blob drops it.
+The issue's other option, renaming the field to say it holds the descriptor's version, is not
+taken.
+
+**No version bump for it** *(ruled by the owner, 2026-11-12).* The two sources spell the same
+string at every version without a pre-release suffix, so nothing written by 0.5.0 changes bytes or
+meaning: no golden receipt and no `verify_*` transcript moves, and standing rule 10 does not apply.
