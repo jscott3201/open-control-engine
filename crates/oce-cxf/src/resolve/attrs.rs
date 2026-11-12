@@ -12,9 +12,10 @@ use crate::scope_chain::ParamScope;
 /// Parse a connector node's declared §7.4.1 attributes
 /// (`unit`/`quantity`/`displayUnit`/`min`/`max`/`nominal`) into the `Attrs` variant matching its
 /// [`ValueType`] (doc 02 §3.3). `Real` carries unit/quantity/displayUnit, numeric bounds and
-/// `nominal`; `Integer` carries only integer bounds; `Boolean`/`String`/`Enum` carry none (the
-/// type system forbids it), so a declared one is a `malformed-document` error, never silently
-/// dropped.
+/// `nominal`; `Integer` carries only integer bounds, so a declared term or `nominal` is a
+/// `malformed-document` error; `Boolean`/`String`/`Enum` carry none (the type system forbids it),
+/// so a declared one is a `malformed-document` error, never silently dropped. A Real connector's
+/// term is held to its shape ([`super::term_shape`]).
 ///
 /// `nominal` grounds like a bound (issue #379): it reaches the deep gate, which refuses a
 /// non-finite one (`non-finite-bound`), and export round-trips it. It is still excluded from
@@ -32,6 +33,19 @@ pub(super) fn connector_attrs(node: &Node, vt: ValueType, diags: &mut Vec<Diagno
             unbounded: None,
         }),
         ValueType::Integer => {
+            // CDL §7.4.1.2 gives an Integer only `min` and `max`, so a declared term is a malformed
+            // model, refused whatever its shape, as on a Boolean connector (owner ruling of
+            // 2026-11-12, GitHub #602); before, a well-shaped one was dropped without a word.
+            if node.unit.is_some() || node.quantity.is_some() || node.display_unit.is_some() {
+                diags.push(
+                    Diagnostic::error(
+                        DiagCode::MalformedDocument,
+                        "§7.4.1 term (unit/quantity/displayUnit) declared on an Integer connector, \
+                         which permits only min and max",
+                    )
+                    .with_subject(subject.to_owned()),
+                );
+            }
             refuse_nominal(node, "an Integer", subject, diags);
             Attrs::Integer(IntAttrs {
                 min: int_connector_bound(node.min.as_ref(), "min", subject, diags),
@@ -78,27 +92,38 @@ fn refuse_nominal(node: &Node, kind: &str, subject: &str, diags: &mut Vec<Diagno
     }
 }
 
+/// Read one term of a Real connector, refusing one of the wrong shape ([`super::term_shape`]).
 fn term_attr(
     t: Option<&crate::dto::TermAttr>,
     which: &str,
     subject: &str,
     diags: &mut Vec<Diagnostic>,
 ) -> Option<Arc<str>> {
-    match t?.as_term() {
-        Some(s) => Some(Arc::from(s)),
-        None => {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::MalformedDocument,
-                    format!(
-                        "S231:{which} is not a string, typed literal, or IRI node — malformed term"
-                    ),
-                )
-                .with_subject(subject.to_owned()),
-            );
-            None
-        }
+    let term = t?;
+    if refuse_term(term, which, subject, diags) {
+        return None;
     }
+    term.as_term().map(Arc::from)
+}
+
+/// Refuse `term` if it has the wrong shape ([`super::term_shape`]); returns whether it did.
+fn refuse_term(
+    term: &crate::dto::TermAttr,
+    which: &str,
+    subject: &str,
+    diags: &mut Vec<Diagnostic>,
+) -> bool {
+    let Some(found) = super::term_shape::problem(term) else {
+        return false;
+    };
+    diags.push(
+        Diagnostic::error(
+            DiagCode::MalformedDocument,
+            format!("S231:{which} is {found} — malformed term"),
+        )
+        .with_subject(subject.to_owned()),
+    );
+    true
 }
 
 /// Ground one numeric Real attribute — a `min`/`max` bound or the `nominal` — against an empty

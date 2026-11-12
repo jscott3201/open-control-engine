@@ -47,6 +47,7 @@ mod import_precedence;
 mod import_reference_keys;
 mod import_refusals;
 mod import_sweep;
+mod import_term_shapes;
 mod import_values;
 mod library_round_trip;
 mod named_types;

@@ -12,9 +12,11 @@
 //!   one string. The string is the form modelica-json writes for a bound over other parameters or
 //!   a constant expression (`"yMin"`, `"100*1e-15"`); it is not evaluated, because the bound is
 //!   not used. A list and a boolean are refused: no bound is either.
-//! - a **term** (`unit`, `quantity`, `displayUnit`) is a string, a typed literal or an IRI node,
-//!   the three shapes a connector's term takes ([`crate::dto::TermAttr`]). Anything else (a
-//!   number, a boolean, a list, an object that is neither) is refused.
+//! - a **term** (`unit`, `quantity`, `displayUnit`) is held to the shape every term is, on a
+//!   connector and a boundary too ([`super::term_shape`], GitHub #602): a string, a typed literal
+//!   holding exactly `@value` and `@type`, or an IRI node holding exactly `@id`. Anything else (a
+//!   number, a boolean, a list, an object carrying both `@id` and `@value` or another key) is
+//!   refused.
 //! - **No string may be empty or whitespace-only** (owner ruling): not a bound or term written as
 //!   a string, not a typed literal's `@value`, and not an IRI node's `@id` (the term's lexical
 //!   form, [`crate::dto::TermAttr::as_term`]). Whitespace is Unicode `White_Space`, as
@@ -41,7 +43,8 @@ use std::collections::HashSet;
 
 use oce_diag::{DiagCode, Diagnostic};
 
-use crate::dto::{CxfValue, Node, TermAttr};
+use super::term_shape::{self, BLANK_STRING, BLANK_VALUE, blank};
+use crate::dto::{CxfValue, Node};
 
 /// The parameter nodes already checked in one resolve, keyed by their expanded `@id`, so a node
 /// read more than once is reported once. Lookup-only: never iterated, so it orders nothing.
@@ -87,16 +90,8 @@ impl CheckedParameters {
             ("quantity", &node.quantity),
             ("displayUnit", &node.display_unit),
         ] {
-            let found = match term {
-                Some(TermAttr::Other(_)) => "not a string, typed literal, or IRI node",
-                Some(TermAttr::Bare(text)) if blank(text) => BLANK_STRING,
-                Some(TermAttr::Typed { value, .. }) if blank(value) => BLANK_VALUE,
-                Some(TermAttr::Iri { id, .. }) if blank(id) => {
-                    "an IRI node whose @id is empty or whitespace-only"
-                }
-                Some(TermAttr::Bare(_) | TermAttr::Typed { .. } | TermAttr::Iri { .. }) | None => {
-                    continue;
-                }
+            let Some(found) = term.as_ref().and_then(term_shape::problem) else {
+                continue;
             };
             diags.push(malformed(
                 subject,
@@ -104,17 +99,6 @@ impl CheckedParameters {
             ));
         }
     }
-}
-
-/// What a message calls an empty or whitespace-only string.
-const BLANK_STRING: &str = "an empty or whitespace-only string";
-
-/// What a message calls a typed literal whose `@value` is one.
-const BLANK_VALUE: &str = "a typed literal whose @value is empty or whitespace-only";
-
-/// Whether `text` is empty or holds only Unicode `White_Space`.
-fn blank(text: &str) -> bool {
-    text.trim().is_empty()
 }
 
 fn malformed(subject: &str, message: String) -> Diagnostic {

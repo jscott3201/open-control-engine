@@ -261,6 +261,26 @@ pub(super) fn text_attribute<'a>(
     }
 }
 
+/// A boundary's term (`S231:unit`, `S231:quantity`, `S231:displayUnit`), or `None` when absent: a
+/// string that is not empty or whitespace-only, as [`str::trim`] reads whitespace (owner ruling of
+/// 2026-11-12, GitHub #602). Anything else is `wrong-shape` naming the key: a typed literal and an
+/// IRI node too, which the engine also accepts, since a boundary's term here is a string.
+pub(super) fn term_attribute<'a>(
+    id: &str,
+    node: &'a Map<String, Value>,
+    key: &str,
+) -> Result<Option<&'a str>, ImportError> {
+    match text_attribute(id, node, key)? {
+        Some(text) if text.trim().is_empty() => Err(refuse(
+            id,
+            Kind::WrongShape {
+                key: key.to_owned(),
+            },
+        )),
+        term => Ok(term),
+    }
+}
+
 /// A value as written, for the report: a string's text, anything else compact JSON.
 pub(super) fn spelled(value: &Value) -> String {
     match value {

@@ -72,6 +72,7 @@ mod reference_keys;
 mod report;
 mod single_assignment;
 mod specialize;
+mod term_shape;
 mod value_types;
 
 pub use report::ValidationReport;

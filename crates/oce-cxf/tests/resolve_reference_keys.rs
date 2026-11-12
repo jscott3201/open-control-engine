@@ -263,6 +263,27 @@ fn a_refusal_names_four_keys_and_counts_the_rest() {
 }
 
 #[test]
+fn a_long_key_is_named_as_an_excerpt_and_the_id_whole() {
+    // Each named key is cut to 64 bytes on a character boundary and marked `…` (GitHub #602); the
+    // reference's canonical `@id` is the identity the message is about and is never cut.
+    let id = format!("http://example.org#R.con.{}", "y".repeat(200));
+    let mut doc = constant_root();
+    let graph = doc["@graph"].as_array_mut().expect("@graph");
+    graph[1]["S231:hasOutput"] =
+        json!({ "@id": id, &format!("{}ü{}", "k".repeat(63), "z".repeat(1 << 20)): 1 });
+    graph[3]["@id"] = json!(id);
+    assert_eq!(
+        refusal(&doc),
+        vec![carries(
+            "http://example.org#R.con",
+            "S231:hasOutput",
+            &id,
+            &format!("the key `{}…`", "k".repeat(63)),
+        )]
+    );
+}
+
+#[test]
 fn a_key_is_refused_whatever_its_value() {
     // `null`, an empty list and an empty object carry nothing in JSON-LD, but the key is still not
     // the engine's to drop; and a key spelled with `@` is refused like any other.

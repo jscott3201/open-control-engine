@@ -429,7 +429,10 @@ pub enum CxfValue {
 /// Variant order is load-bearing for `#[serde(untagged)]`: `Bare` (a string) must precede the two
 /// object arms, which are themselves disjoint (`Typed` requires `@value`+`@type`; `Iri` requires
 /// `@id`). Each object arm keeps a flattened `extra` map so unknown JSON-LD keys (`@language`,
-/// `@index`, …) still round-trip losslessly (R-8).
+/// `@index`, …) round-trip through [`crate::parse_document`] and [`crate::write_document`] (R-8).
+/// The resolver reads the term alone and refuses an object arm whose `extra` is not empty, an
+/// object carrying both `@id` and `@value` among them, and a blank term, on every node (GitHub
+/// #602).
 ///
 /// `Other` is a **last-resort catch-all** (it matches any JSON, so it must be the final arm): a
 /// `unit`/`quantity`/`displayUnit` in some other shape (a bare number, an array, or a partial object

@@ -311,8 +311,9 @@ fn a_near_miss_is_read_through_the_document_s_own_bindings() {
 
 #[test]
 fn tokens_that_name_no_s231_term_once_trimmed_are_left_to_the_readers() {
-    // Inner whitespace is not a near miss, and neither is a token that names nothing in the S231
-    // namespace once trimmed: a root reads no type, so these load as before.
+    // Inner whitespace alone is not a near miss (GitHub #620 covers it), and neither is a token that
+    // names nothing in the S231 namespace once trimmed: a root reads no type, so these load as
+    // before.
     for token in [
         "S231: ExtensionBlock",
         "S231:",
@@ -328,6 +329,64 @@ fn tokens_that_name_no_s231_term_once_trimmed_are_left_to_the_readers() {
     let diags = refusal(&with(base(), CON, "@type", json!(token)));
     assert_eq!(diags.len(), 1, "{diags:?}");
     assert_eq!(diags[0].code, DiagCode::ClassNotFound, "{diags:?}");
+}
+
+#[test]
+fn a_near_miss_with_whitespace_inside_too_is_refused_without_a_suggestion() {
+    // Surrounding whitespace and whitespace inside: refused, as #619 refused it, but no spelling
+    // without the surrounding whitespace names a term, so the message offers none (#619's offered
+    // `S231: ExtensionBlock`, still broken). Before this fix round the PR left these to the
+    // readers, and the root loaded and ran its child.
+    for (token, namespace) in [
+        (" S231: ExtensionBlock", S231_NS),
+        ("S231:Extension Block\t", S231_NS),
+        (
+            " https://data.ashrae.org/S231#Extension Block",
+            "https://data.ashrae.org/S231#",
+        ),
+    ] {
+        let doc = with(base(), ROOT, "@type", json!(token));
+        assert_eq!(
+            refusal(&doc),
+            vec![
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!(
+                        "@type {token:?} on node `{ROOT}` carries surrounding whitespace, and \
+                         whitespace inside it too, so it names no term in `{namespace}` as \
+                         written; write the S231 term with no whitespace"
+                    ),
+                )
+                .with_subject(ROOT)
+            ],
+            "{token:?}"
+        );
+    }
+}
+
+#[test]
+fn a_long_token_and_its_term_are_quoted_as_excerpts() {
+    // A message quotes at most 64 bytes of the token and of the term, cut on a character boundary
+    // and marked `…` (GitHub #602), however long the document writes them.
+    // The `é` straddles byte 64 of the term, so it is left out whole.
+    let term = format!("{}é{}", "B".repeat(63), "k".repeat(1 << 20));
+    let token = format!("S231:{term} ");
+    let doc = with(base(), ROOT, "@type", json!(token));
+    let quoted = format!("{}…", &token[..64]);
+    let named = format!("{}…", "B".repeat(63));
+    assert_eq!(
+        refusal(&doc),
+        vec![
+            Diagnostic::error(
+                DiagCode::MalformedDocument,
+                format!(
+                    "@type {quoted:?} on node `{ROOT}` carries surrounding whitespace; without it, \
+                     it names `{named}` in `{S231_NS}`; write it as `S231:{named}`"
+                ),
+            )
+            .with_subject(ROOT)
+        ]
+    );
 }
 
 #[test]

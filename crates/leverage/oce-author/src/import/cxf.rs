@@ -25,7 +25,7 @@ use super::error::{ImportError, ImportErrorKind as Kind, SourceForm};
 use super::nodes::{
     DataType, Names, NodeKind, OBC_PACKAGE, PARAMETER_ATTRIBUTES, RETIRED_S231_IRI, S231_IRI,
     check_keys, check_parameter_attribute, check_parameter_type, connector_type, data_type,
-    declared_type, references, refuse, sequence_name, spelled, text_attribute,
+    declared_type, references, refuse, sequence_name, spelled, term_attribute, text_attribute,
 };
 use super::precedence::{self, Graph};
 use super::report::{Dropped, DroppedProperty, ImportOptions, ImportReport, Imported, Normalised};
@@ -415,9 +415,9 @@ impl<'a> Reader<'a> {
             return Err(refuse(iri, Kind::DrivingSink));
         }
         let mut boundary = Boundary::new(Identifier::unchecked(local), typed.signal);
-        boundary.semantic.unit = text_attribute(iri, node, "S231:unit")?.map(str::to_owned);
-        boundary.quantity = text_attribute(iri, node, "S231:quantity")?.map(str::to_owned);
-        boundary.display_unit = text_attribute(iri, node, "S231:displayUnit")?.map(str::to_owned);
+        boundary.semantic.unit = term_attribute(iri, node, "S231:unit")?.map(str::to_owned);
+        boundary.quantity = term_attribute(iri, node, "S231:quantity")?.map(str::to_owned);
+        boundary.display_unit = term_attribute(iri, node, "S231:displayUnit")?.map(str::to_owned);
         if let Some(value) = node.get("S231:min") {
             boundary.min = Some(values::bound(iri, "S231:min", typed.signal, value)?);
         }
