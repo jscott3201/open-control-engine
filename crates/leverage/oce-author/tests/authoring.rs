@@ -6,11 +6,13 @@
 //! mirrors the source module it exercises, and nextest reports its tests as
 //! `oce-author::authoring <file>::<test>`.
 //!
-//! `Cargo.toml` sets `autotests = false` and lists this binary as its one `[[test]]` target. The
-//! crate's bless command names the package, not a binary, and nothing selects a test binary of this
-//! crate by name, so none of the files needs a binary of its own; one that does gets a `[[test]]`
-//! entry with the reason. With discovery off a new file under `tests/` would compile into nothing:
-//! the layout check at the end of this file refuses that, and a file compiled more than once.
+//! `Cargo.toml` sets `autotests = false` and lists this binary and one other `[[test]]` target,
+//! `import_cost`, which measures allocations and so links `allocation-counter`'s counting global
+//! allocator; it stays apart so no test here runs under that allocator. The crate's bless command
+//! names the package, not a binary, and nothing selects a test binary of this crate by name; a
+//! file that needs a binary of its own gets a `[[test]]` entry with the reason. With discovery off
+//! a new file under `tests/` would compile into nothing: the layout check at the end of this file
+//! refuses that, and a file compiled more than once.
 //!
 //! The helpers every module shares (`support`) are declared once here and imported with
 //! `use crate::support;`, because a second declaration of the same file trips

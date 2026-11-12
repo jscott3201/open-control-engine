@@ -255,6 +255,7 @@ dependencies = [
 name = "oce-author"
 version = "0.5.0"
 dependencies = [
+ "allocation-counter",
  "oce-api",
  "oce-bless",
  "oce-vocab",

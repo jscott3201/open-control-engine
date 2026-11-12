@@ -1,9 +1,11 @@
 //! Hostile input for the CXF importer: the panics the #473 review found (a multi-byte root
 //! `@id`, an overflowing `sizeOfDimensions`), lexical traps `serde_json` would resolve silently
-//! (a duplicate key, an integer past `i64`), structural traps (giant lists, a datatype that
-//! disagrees with its value, an unchecked `@type`), and a bounded deterministic mutation sweep
-//! over every document the importers read (`import_sweep.rs`). Every case returns a typed result
-//! with its exact kind; none panics.
+//! (a duplicate key, an integer past `i64`), structural traps (a datatype that disagrees with
+//! its value, an unchecked `@type`), and a bounded deterministic mutation sweep over every
+//! document the importers read (`import_sweep.rs`). Every case returns a typed result with its
+//! exact kind; none panics. The giant lists (100,000 unresolved references, a 1,000,000-element
+//! array of the wrong size) are in `import_cost.rs`, a binary of its own, which pins what refusing
+//! them costs in allocations.
 
 use crate::support;
 
@@ -228,33 +230,6 @@ fn a_parameter_type_other_than_parameter_is_refused() {
             "{to}"
         );
     }
-}
-
-#[test]
-fn giant_lists_are_refused_in_bounded_time() {
-    let start = std::time::Instant::now();
-    // 100,000 references to nodes that do not exist (about 5 MB, under the document bound).
-    let refs: Vec<String> = (0..100_000)
-        .map(|i| format!("{{\"@id\": \"urn:oce:author:econ_enable.p{i}\"}}"))
-        .collect();
-    let doc = edited(
-        "\"S231:hasParameter\": [",
-        &format!("\"S231:hasParameter\": [{},", refs.join(",")),
-    );
-    assert_eq!(code(&doc), "unresolved-reference");
-    // A 1,000,000-element array value whose declared size is (2).
-    let items = vec!["1.0"; 1_000_000].join(",");
-    let node =
-        "\"@id\": \"urn:oce:author:econ_enable.hys.uLow\",\n      \"@type\": \"S231:Parameter\",";
-    let text = econ();
-    let doc = text.replacen(
-        node,
-        &format!("{node}\n      \"S231:isArray\": true, \"S231:numberDimensions\": 1, \"S231:sizeOfDimensions\": \"(2)\","),
-        1,
-    );
-    let doc = doc.replacen(LOW_VALUE, &format!("\"S231:value\": [{items}]"), 1);
-    assert_eq!(code(doc.as_bytes()), "array-shape");
-    assert!(start.elapsed() < std::time::Duration::from_secs(60));
 }
 
 #[test]
