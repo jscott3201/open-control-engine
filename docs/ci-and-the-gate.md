@@ -523,7 +523,9 @@ The first three are upper bounds, since the machine was busy. About three minute
 the gate's own fixture suites, which run in every mode (`test-workflow-gates.sh` alone took 3 min
 22 s under that load): they are the floor of every row, and the reason the docs row is not seconds.
 Since issue #627 that suite runs its cases concurrently, as many at once as the machine has CPUs
-(or `OCE_FIXTURE_JOBS`). On 2026-11-12 it took 1 min 20 s for its 348 cases on the same 10-core
+(or `OCE_FIXTURE_JOBS`, a positive number: `0` and `00` are refused, and no more run at once than
+there are cases). A case that ends with status 0 before its checks finish fails. On 2026-11-12 it
+took 1 min 20 s for its then 348 cases on the same 10-core
 Mac, under a load average of 30, so the floor of each row is lower than the table shows.
 
 CI does not merely mirror that script, it **executes** it: `gate (full)` at
@@ -740,7 +742,9 @@ step-level `if:` may take exactly two shapes:
   value lists' cross product and the `include` entries. A selector on a job with no matrix, a key
   or value the matrix lacks, or a combination no cell has would skip its step in every run, so it
   fails, and so does a matrix the checker cannot read (an `exclude`, or a value from an
-  expression);
+  expression). An unquoted YAML boolean in a matrix (`cached: [true, false]`) never matches a
+  quoted selector (`matrix.cached == 'true'`): GitHub compares the two as numbers. So the checker
+  refuses that pairing; quote the value in the matrix;
 - `${{ !cancelled() }}`, which only lets an evidence upload run after an earlier step failed.
 
 Anything else — a lane output, an event name, `false`, `always()`, `||` — fails
@@ -752,25 +756,55 @@ step's `run:` script whole (issue #566). GitHub runs it as `bash --noprofile --n
 and errexit does not fire for a command in a `&&` list unless the list is the script's last
 command. So the checker refuses:
 - a `&&` in any command but the last, so `cmd && true` followed by anything ends the step green;
-- an `exit` with no status or a zero status, anywhere;
+- an `exit` with no status or a zero status, anywhere, quoted or not (`exit "0"`);
+- a `trap` whose action exits with no or a zero status, on `EXIT`, `ERR` or any signal;
+- an `exec` of a command before the last command (an `exec` of redirections alone is allowed);
 - a background `&`, such as `cmd & wait` or `(cmd &)`. Redirections such as `>&2` are not
   background jobs.
 
-Like the line-level mask rule beside it, this is a tripwire, not a proof. Known to pass: a `&&`
-that ends a loop body, `!` in front of a command, and anything inside a script a step calls.
+Like the line-level mask rule beside it, this is a tripwire, not a proof. What passes it is a
+class: any context errexit does not reach. That includes:
+- an `if`, `elif`, `while` or `until` condition (`if cmd; then :; fi`);
+- a command after `!`;
+- a command substitution in an argument (`echo "$(cmd)"`);
+- a heredoc into a `bash` without `-e`;
+- a function that shadows the command;
+- a `&&` that ends a loop body;
+- anything inside a script the step calls.
 
 Below the workflow level, nothing may change what cargo or nextest builds and runs, or how bash
 starts:
 - no `RUST*`, `CARGO_*`, `NEXTEST_*`, `BASH_ENV`, `ENV`, `SHELLOPTS`, `BASHOPTS` or `PATH` key in
   a job or step `env:`. The one exception is the rustdoc steps' `RUSTDOCFLAGS: "-D warnings"`,
   value included;
-- no inline assignment of those names;
+- no `GIT_DIR`, `GIT_WORK_TREE` or `GIT_INDEX_FILE` key either: pointed at an empty repository,
+  tree or index, they make the no-secret scan pass vacuously (issue #596);
+- no inline assignment of any of those names, `PATH=` and `ENV=` included;
 - no write to `$GITHUB_ENV`;
 - no write to `$GITHUB_PATH`, except the wasmtime directory the wasm32 round-trip leg adds.
 
 The workflow-level `env:` is pinned line for line, beside the existing cross-file comparison, so a
 `RUSTFLAGS` added to all three files at once fails too. These rules cover `strict-bit-matrix`,
-which no cross-file comparison reaches.
+which no cross-file comparison reaches. They read `pr-gate.yml`, `merge-gate.yml` and
+`release-gate.yml`. `release.yml` is held byte for byte by the package validator instead, and
+`qemu.yml` and `advisories.yml` are outside every `CI OK`.
+
+The file-and-flag forms of the same knobs are not covered: `cargo --config` on a command, a step
+that writes `.cargo/config.toml`, and the tracked `.cargo/config.toml` and root `Cargo.toml`
+`[profile.*]` tables. They are recorded on #595.
+
+**Edits these rules now turn into checker edits.** Some workflow changes are legitimate but fail
+until the pin in `.github/scripts/check-workflow-gates.sh` changes with them. Each failure names
+the rule or pin and the edit that resolves it:
+- a job-level or step-level `CARGO_TERM_COLOR`, `RUST_BACKTRACE` or any other `RUST*`/`CARGO_*`
+  setting (`require_build_env_untouched`): move it to the workflow-level `env:` of all three gating
+  workflows and to `pinned_workflow_env`;
+- an `exclude` in a job whose steps carry a matrix selector (`require_live_matrix_selectors`):
+  list the cells without it, or teach the rule to read it;
+- a second `$GITHUB_PATH` line (`require_build_env_untouched`): widen the rule's one allowed line;
+- a mid-script `cd x && cmd` (`refuse_masked_step_status`): write `cd x` and `cmd` on lines of
+  their own;
+- any key in `.config/nextest.toml` (`pinned_nextest_config`): change the pin in the same PR.
 
 A PR with no checks still looks a lot like a PR with no failing checks — confirm `CI OK` actually
 reported, and on a docs-only or leverage-only PR expect the determinism jobs to show as skipped, not

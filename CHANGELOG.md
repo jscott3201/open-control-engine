@@ -256,29 +256,60 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `check-workflow-gates.sh` now refuses these; each passed it before:
   - **(1) A dead step selector.** A selector that picks no cell of its job's matrix, so its step
     never runs: a misspelled value (`matrix.codegen == 'relese'`), a key the matrix lacks, a
-    combination no cell has, or any selector on a job with no matrix. The cells are expanded as
-    GitHub expands them (cross product, then `include` merging); a matrix with an `exclude` or an
-    expression fails closed.
+    combination no cell has, any selector on a job with no matrix, or an unquoted YAML boolean in
+    the matrix against a quoted selector (GitHub compares those as numbers, so `true` never equals
+    `'true'`). The cells are expanded as GitHub expands them (cross product, then `include`
+    merging); a matrix with an `exclude` or an expression fails closed.
   - **(2) Build or shell environment below the workflow level.** A `RUST*`, `CARGO_*`,
-    `NEXTEST_*`, `BASH_ENV`, `ENV`, `SHELLOPTS`, `BASHOPTS` or `PATH` key in a job or step `env:`
-    (the rustdoc steps' `RUSTDOCFLAGS: "-D warnings"` excepted), an inline assignment of those
-    names, any write to `$GITHUB_ENV`, and a `$GITHUB_PATH` write other than wasmtime's directory.
-    This covers `strict-bit-matrix`, which no cross-file comparison reaches. The workflow-level
-    `env:` is pinned too, so a `RUSTFLAGS` added to all three files at once fails.
+    `NEXTEST_*`, `BASH_ENV`, `ENV`, `SHELLOPTS`, `BASHOPTS`, `PATH`, `GIT_DIR`, `GIT_WORK_TREE` or
+    `GIT_INDEX_FILE` key in a job or step `env:` (the rustdoc steps' `RUSTDOCFLAGS: "-D warnings"`
+    excepted), an inline assignment of any of those names, any write to `$GITHUB_ENV`, and a
+    `$GITHUB_PATH` write other than wasmtime's directory. The three `GIT_*` names would point the
+    no-secret scan at an empty repository, tree or index (issue #596). This covers
+    `strict-bit-matrix`, which no cross-file comparison reaches. The workflow-level `env:` is pinned
+    too, so a `RUSTFLAGS` added to all three files at once fails. The file-and-flag forms
+    (`cargo --config`, a written or the tracked `.cargo/config.toml`, the root `[profile.*]`
+    tables) are not covered; they are recorded on #595.
   - **(3) A narrowed or softened nextest profile.** `.config/nextest.toml` is pinned line for line
     (comment lines and blank lines aside), so a `default-filter` on `ci` or `ci-release`, a
     `retries` above 0 in `default`, an override table or a setup script fails.
-  - **(4) A masked step status.** Each `run:` script is read whole: an `exit` with no or a zero
-    status, a `&&` in any command but the last (errexit ignores it there: `cmd && true`,
-    `cmd && :`, `cmd && echo ok`), and a background `&` (`cmd & wait`, `(cmd &)`).
+  - **(4) A masked step status.** Each `run:` script is read whole. The rule refuses:
+    - an `exit` with no or a zero status, quoted or not;
+    - a `trap` whose action exits so, on `EXIT`, `ERR` or any signal;
+    - an `exec` of a command before the last command;
+    - a `&&` in any command but the last (errexit ignores it there: `cmd && true`, `cmd && :`,
+      `cmd && echo ok`);
+    - a background `&` (`cmd & wait`, `(cmd &)`).
 
-  No workflow or nextest setting changed. 37 new cases in `test-workflow-gates.sh` (348 → 385):
-  32 hostile ones, each of which the checker passed before, and 5 positive ones (a live selector on
-  an include-only matrix, `RUSTDOCFLAGS: "-D warnings"`, the wasmtime `$GITHUB_PATH` line, comment
-  lines in the nextest config, and scripts with a `&&` in an `if` condition or at the end, a
-  nonzero `exit`, redirections, a heredoc and quoted operators). The masked-status rule is a
-  tripwire like the line-level one; a `&&` that ends a loop body and a `!` before a command still
-  pass.
+    Like the line-level rule it is a tripwire. What still passes is any context errexit does not
+    reach: a condition, `!`, a command substitution, a heredoc into `bash` without `-e`, a
+    shadowing function, a `&&` that ends a loop body, a called script.
+
+  **Failure messages.** Each new failure names its rule or pin in `check-workflow-gates.sh` and the
+  edit that resolves it. `docs/ci-and-the-gate.md` lists the legitimate edits that now need a
+  checker edit: a job-level `CARGO_TERM_COLOR` or `RUST_BACKTRACE`, an `exclude` on a job with
+  selectors, a second `$GITHUB_PATH` line, a mid-script `cd x && cmd`, and any key in the nextest
+  config.
+
+  **The fixture runner (GitHub #630) gains two guards:**
+  - **Early exit.** A run that ends with status 0 without the sentinel the pool appends after a
+    normal return (an `exit 0` in a case body or its mutation) fails with status 125. The pool's
+    own control checks this with an early `exit 0` among its synthetic runs.
+  - **Job count.** `OCE_FIXTURE_JOBS` is read as a decimal number, so `0`, `00` and any
+    non-number are refused alike, and the pool runs no more at once than there are cases.
+
+  No workflow or nextest setting changed. 54 new cases in `test-workflow-gates.sh` (348 → 402):
+  - **42 hostile cases,** each of which the checker passed before;
+  - **5 that pin the new message text;**
+  - **7 positive cases:**
+    - a live selector on an include-only matrix;
+    - a quoted boolean matrix value;
+    - `RUSTDOCFLAGS: "-D warnings"`;
+    - the wasmtime `$GITHUB_PATH` line;
+    - comment lines in the nextest config;
+    - scripts with a `&&` in an `if` condition or at the end, a nonzero `exit`, redirections, a
+      heredoc and quoted operators;
+    - a cleanup trap, a nonzero trap and `exec` of redirections.
 
 - **Every job that runs the oce-cxf or workspace suite prefetches the tool workspaces its tests
   build offline** (GitHub #611, issue #610). The `release.yml` verify of tag `v0.5.0` (run

@@ -807,10 +807,11 @@ require_file_lines() {
   path="$1"
   expected="$2"
   label="$3"
+  pin="$4"
   local actual
   actual="$(grep -Ev '^[[:space:]]*(#.*)?$' "$path" | sed 's/[[:space:]]*$//')"
   if [ "$actual" != "$expected" ]; then
-    echo "FAIL: $path is not exactly its pinned lines: $label"
+    echo "FAIL: $path is not exactly its pinned lines: $label. The pin is $pin in .github/scripts/check-workflow-gates.sh; change it in the same PR as the file."
     diff <(printf '%s\n' "$expected") <(printf '%s\n' "$actual") | sed 's/^/  /' || true
     exit 1
   fi
@@ -834,6 +835,13 @@ require_live_matrix_selectors() {
       s = trim(s)
       if (s ~ /^".*"$/ || s ~ /^\047.*\047$/) s = substr(s, 2, length(s) - 2)
       return s
+    }
+    # A matrix value: an unquoted YAML boolean is marked, because GitHub compares it with a quoted
+    # selector as numbers (true is 1, the string \047true\047 is NaN) and the two are never equal.
+    function matrix_value(s) {
+      s = trim(s)
+      if (s ~ /^(true|false|True|False|TRUE|FALSE)$/) return "\002" tolower(s)
+      return unquote(s)
     }
     function indent(s) { match(s, /^ */); return RLENGTH }
     # The value of key k in combination c ("\034k=v\034k=v\034"), or "\001" when c lacks it.
@@ -918,12 +926,12 @@ require_live_matrix_selectors() {
         mode = ""
         if (value ~ /^\[.*\]$/) {
           n = split(substr(value, 2, length(value) - 2), items, ",")
-          for (i = 1; i <= n; i++) add_base(job, key, unquote(items[i]))
-        } else add_base(job, key, unquote(value))
+          for (i = 1; i <= n; i++) add_base(job, key, matrix_value(items[i]))
+        } else add_base(job, key, matrix_value(value))
         next
       }
       if (mode == "list" && line ~ /^          - /) {
-        item = line; sub(/^          - /, "", item); add_base(job, list_key, unquote(item)); next
+        item = line; sub(/^          - /, "", item); add_base(job, list_key, matrix_value(item)); next
       }
       if (mode == "include" && line ~ /^          - /) {
         includes[job]++; include[job, includes[job]] = "\034"
@@ -933,7 +941,7 @@ require_live_matrix_selectors() {
         key = trim(line); sub(/:.*/, "", key)
         value = line; sub(/^[^:]*:/, "", value)
         if (value ~ /\$\{\{/) unreadable[job] = 1
-        include[job, includes[job]] = set(include[job, includes[job]], key, unquote(value))
+        include[job, includes[job]] = set(include[job, includes[job]], key, matrix_value(value))
         next
       }
       unreadable[job] = 1
@@ -961,12 +969,27 @@ require_live_matrix_selectors() {
         }
         if (all) live = 1
       }
-      if (!live) print job ": " value " (no cell of the job matrix has it)"
+      if (!live) {
+        boolean = 0
+        for (c = 1; c <= cells[job]; c++) {
+          all = 1
+          for (i = 1; i <= n; i++) {
+            k = clauses[i]; sub(/^matrix\./, "", k); sub(/ == .*/, "", k)
+            v = clauses[i]; sub(/^[^\047]*\047/, "", v); sub(/\047.*$/, "", v)
+            got = get(cell[job, c], k); sub(/^\002/, "", got)
+            if (got != v) all = 0
+          }
+          if (all) boolean = 1
+        }
+        if (boolean) print job ": " value " (the matrix value is a YAML boolean, which GitHub never finds equal to a quoted selector; quote it in the matrix)"
+        else print job ": " value " (no cell of the job matrix has it)"
+      }
     }
   ' "$path" "$path")"
   if [ -n "$bad" ]; then
     echo "FAIL: $path has a step selector that picks no cell of its job's matrix, so the step never runs:"
     printf '%s\n' "$bad" | sed 's/^/  /'
+    echo "  The rule is require_live_matrix_selectors in .github/scripts/check-workflow-gates.sh. Give the selector a key and value the job's matrix has, or drop the if:. A matrix with an exclude is not read: list its cells without one, or teach the rule to read it."
     exit 1
   fi
 }
@@ -976,7 +999,9 @@ require_live_matrix_selectors() {
 # variable that changes what cargo or nextest builds and runs, or how bash starts, for a job, a
 # step or every later step: no `RUST*`, `CARGO_*`, `NEXTEST_*`, `BASH_ENV`, `ENV`, `SHELLOPTS`,
 # `BASHOPTS` or `PATH` key in a job or step `env:` (the rustdoc steps' `RUSTDOCFLAGS: "-D warnings"`
-# is the one exception, value included), no inline assignment of those names in a command, no
+# is the one exception, value included), and no `GIT_DIR`, `GIT_WORK_TREE` or `GIT_INDEX_FILE`,
+# which point git elsewhere and make the no-secret scan pass vacuously (issue #596); no inline
+# assignment of any of those names in a command, no
 # write to `$GITHUB_ENV` at all, and no write to `$GITHUB_PATH` but the wasmtime directory the
 # blob round trip's wasm32 leg adds. A flow-style `env:` below `jobs:` is refused as unreadable.
 # `strict-bit-matrix`, which only pr-gate.yml runs, is covered by this rule and by no comparison.
@@ -999,7 +1024,7 @@ require_build_env_untouched() {
           if (indent($0) == key_indent) {
             name = trim($0); sub(/:.*/, "", name)
             value = $0; sub(/^[^:]*:/, "", value); value = trim(value)
-            if (name ~ /^(RUST[A-Z0-9_]*|CARGO_[A-Z0-9_]+|NEXTEST_[A-Z0-9_]+|BASH_ENV|ENV|SHELLOPTS|BASHOPTS|PATH)$/ &&
+            if (name ~ /^(RUST[A-Z0-9_]*|CARGO_[A-Z0-9_]+|NEXTEST_[A-Z0-9_]+|BASH_ENV|ENV|SHELLOPTS|BASHOPTS|PATH|GIT_DIR|GIT_WORK_TREE|GIT_INDEX_FILE)$/ &&
                 !(name == "RUSTDOCFLAGS" && value == "\"-D warnings\""))
               print NR ": " trim($0) " (a job or step env key that changes what is built or how bash runs)"
           }
@@ -1016,7 +1041,7 @@ require_build_env_untouched() {
       command = trim(code); sub(/^(- )?run:[[:space:]]*/, "", command)
       if (code ~ /GITHUB_PATH/ && command != "echo \"$PWD/target/wasmtime-bin\" >> \"$GITHUB_PATH\"")
         print NR ": " trim($0) " (a write to GITHUB_PATH other than the wasmtime directory)"
-      if (code ~ /(^|[^A-Za-z0-9_])(RUST[A-Z0-9_]*|CARGO_[A-Z0-9_]+|NEXTEST_[A-Z0-9_]+|BASH_ENV|SHELLOPTS|BASHOPTS)=/)
+      if (code ~ /(^|[^A-Za-z0-9_])(RUST[A-Z0-9_]*|CARGO_[A-Z0-9_]+|NEXTEST_[A-Z0-9_]+|BASH_ENV|ENV|SHELLOPTS|BASHOPTS|PATH|GIT_DIR|GIT_WORK_TREE|GIT_INDEX_FILE)=/)
         print NR ": " trim($0) " (an inline assignment that changes what is built or how bash runs)"
     }
     BEGIN { env_indent = -1 }
@@ -1024,6 +1049,7 @@ require_build_env_untouched() {
   if [ -n "$bad" ]; then
     echo "FAIL: $path sets build or shell environment below the workflow level:"
     printf '%s\n' "$bad" | head -n 5 | sed 's/^/  /'
+    echo "  The rule is require_build_env_untouched in .github/scripts/check-workflow-gates.sh. Set such a variable in the workflow-level env: instead (pinned there as pinned_workflow_env, alike in all three gating workflows), or drop it. Another \$GITHUB_PATH line needs the rule's one allowed line changed."
     exit 1
   fi
 }
@@ -1035,14 +1061,20 @@ require_build_env_untouched() {
 # block line by line, a folded block or a plain value as one line, continuations joined, heredoc
 # bodies and quoted text set aside, `if`/`elif`/`while`/`until` conditions set aside, and split
 # on `;`) this refuses:
-#   * `exit` with no status or a zero status, anywhere: `exit 0` ahead of the real command ends
-#     the step green;
+#   * `exit` with no status or a zero status, anywhere, quoted or not: `exit 0` ahead of the real
+#     command ends the step green;
+#   * a `trap` whose action exits with no or a zero status, on EXIT, ERR or any signal;
+#   * an `exec` of a command before the script's last command (an `exec` of redirections only
+#     replaces no shell);
 #   * a `&&` in any command but the script's last (closing `fi`, `done`, `esac` and braces aside);
 #   * a background `&`, once `&&` and the redirections `>&`, `&>` and `<&` are removed: `cmd & wait`
 #     and `(cmd &)` both return 0 whatever `cmd` returned.
-# Like refuse_failure_masks it is a tripwire, not a proof. Known to pass: a `&&` that is the last
-# command of a loop body (an earlier iteration's failure is lost), a status masked inside a script
-# the step calls, and `!` in front of a command.
+# Like refuse_failure_masks it is a tripwire, not a proof. What passes it is a class, not a list:
+# any context errexit does not reach. That includes an `if`, `elif`, `while` or `until` condition
+# (`if cmd; then :; fi`), a command after `!`, a command substitution in an argument
+# (`echo "$(cmd)"`), a heredoc into a `bash` without `-e`, a function that shadows the command, a
+# `&&` that ends a loop body (an earlier iteration's failure is lost), and anything inside a
+# script the step calls.
 refuse_masked_step_status() {
   path="$1"
   local bad
@@ -1061,7 +1093,7 @@ refuse_masked_step_status() {
       }
       return out
     }
-    function analyse(   i, j, n, lines, logical, nl, delim, cmds, nc, parts, np, c, cmd, s) {
+    function analyse(   i, j, n, lines, logical, nl, delim, cmds, nc, parts, np, c, cmd, s, seg, rest) {
       nl = 0; delim = ""; logical = ""
       for (i = 1; i <= nraw; i++) {
         line = raw[i]
@@ -1070,6 +1102,17 @@ refuse_masked_step_status() {
         if (line ~ /^[[:space:]]*(#.*)?$/) continue
         if (match(line, /<<-?[[:space:]]*[\047"]?[A-Za-z_][A-Za-z0-9_]*[\047"]?/)) {
           delim = substr(line, RSTART, RLENGTH); sub(/^<<-?[[:space:]]*/, "", delim); gsub(/[\047"]/, "", delim)
+        }
+        # A quoted status is a status: `exit "0"` is `exit 0` (quoted text is set aside below).
+        while (match(line, /(^|[^A-Za-z0-9_.-])exit[[:space:]]+[\047"][0-9]*[\047"]/)) {
+          seg = substr(line, RSTART, RLENGTH); gsub(/[\047"]/, "", seg)
+          line = substr(line, 1, RSTART - 1) seg substr(line, RSTART + RLENGTH)
+        }
+        # A trap whose action exits with no or a zero status ends the script green, on EXIT or ERR.
+        if (match(line, /(^|[;&|[:space:](])trap[[:space:]]/)) {
+          rest = substr(line, RSTART + RLENGTH)
+          if (rest ~ /(^|[^A-Za-z0-9_.-])exit([[:space:]]+0+)?[[:space:]]*([\047";)]|$)/)
+            print job ": " trim(line) " (a trap that exits with no status or a zero status)"
         }
         line = unquote_text(line)
         logical = logical (logical == "" ? "" : " ") trim(line)
@@ -1100,6 +1143,8 @@ refuse_masked_step_status() {
           print job ": " cmd " (exit with no status or a zero status)"
         if (c < nc && index(cmd, "&&"))
           print job ": " cmd " (a && list that is not the step last command, so errexit ignores its failure)"
+        if (c < nc && cmd ~ /^exec[[:space:]]+[^<>&0-9[:space:]]/)
+          print job ": " cmd " (an exec before the step last command, which ends the script with another command status)"
         s = cmd
         gsub(/&&/, "", s); gsub(/[0-9]*>&[0-9-]*/, "", s); gsub(/&>>?/, "", s); gsub(/<&[0-9-]*/, "", s)
         if (index(s, "&")) print job ": " cmd " (a background &)"
@@ -1138,8 +1183,9 @@ refuse_masked_step_status() {
     END { if (in_block && style == ">") raw[++nraw] = folded; flush() }
   ' "$path")"
   if [ -n "$bad" ]; then
-    echo "FAIL: $path contains a refused gate pattern: a masked step status (an exit with no or a zero status, a && list before the last command, or a background &), which lets a failing command read as green"
+    echo "FAIL: $path contains a refused gate pattern: a masked step status (an exit with no or a zero status, a trap that exits so, an exec or a && list before the last command, or a background &), which lets a failing command read as green"
     printf '%s\n' "$bad" | head -n 5 | sed 's/^/  /'
+    echo "  The rule is refuse_masked_step_status in .github/scripts/check-workflow-gates.sh. Make a && chain the step's last command or split it into lines (a mid-script \`cd x && cmd\` becomes \`cd x\` and \`cmd\` on lines of their own), remove the exit, the trap or the exec, and run a background command in the foreground."
     exit 1
   fi
 }
@@ -2000,7 +2046,7 @@ pinned_workflow_env="$(cat <<'EOF'
 EOF
 )"
 if [ "$(workflow_env "$ci")" != "$pinned_workflow_env" ]; then
-  echo "FAIL: $ci workflow-level env is not exactly its pinned lines"
+  echo "FAIL: $ci workflow-level env is not exactly its pinned lines (pinned_workflow_env in .github/scripts/check-workflow-gates.sh: change the pin and the env: of all three gating workflows together)"
   diff <(printf '%s\n' "$pinned_workflow_env") <(workflow_env "$ci") | sed 's/^/  /' || true
   exit 1
 fi
@@ -2086,7 +2132,7 @@ report-name = "open-control-ci-release-workspace"
 EOF
 )"
 require_file_lines "$NEXTEST_CONFIG" "$pinned_nextest_config" \
-  'the nextest profiles every gate command runs under narrow and soften nothing'
+  'the nextest profiles every gate command runs under narrow and soften nothing' pinned_nextest_config
 require_job_order "$release" 'gate' 'run: rm -f target/nextest/ci-release-workspace/junit.xml' \
   'run: bash .agents/gate.sh full' \
   'the release-codegen workspace report is cleared before the gate script runs'
