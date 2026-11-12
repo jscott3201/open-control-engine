@@ -37,6 +37,30 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
+### Leverage
+
+- **The importer's refusal of a giant list is pinned in allocations, not in elapsed time** (GitHub
+  #601, issue #578). `import_hostile.rs` asserted a 60 s ceiling over two refusals: 100,000
+  references to nodes that do not exist (`unresolved-reference`) and a 1,000,000-element array
+  value declared `(2)` (`array-shape`). `TESTING.md` rules out wall-clock assertions, and that
+  ceiling would not have noticed the importer becoming a hundred times slower. Both refusals
+  move to `tests/import_cost.rs`. It is a test binary of its own, because `allocation-counter`,
+  now an `oce-author` dev-dependency at the version the workspace already locks, links a
+  counting global allocator. Each refusal is measured at its size and at a sixteenth of it, with
+  the exact refusal asserted.
+  - **The reference list** costs at most three allocations per reference, which is what parsing
+    each `{"@id": …}` object costs, plus a fixed 1,024. Its peak memory is at most 24 bytes per
+    document byte and grows linearly between the sizes.
+  - **The array** is refused within 512 allocations at either size, so it is refused on its
+    length before any element becomes an assignment.
+
+  Two mutations fail their tests: copying each reference before the refusal, and naming each
+  element before the shape check. Not covered: work that allocates nothing, such as a scan of the
+  node index for each lookup, or that allocates once, such as converting every array element into
+  one buffer sized up front. A `serde_json` feature turned on anywhere in the workspace
+  (`preserve_order`, `arbitrary_precision`) would also move the counts, and the test says so. No
+  `oce-author` test reads the clock any more.
+
 ### Verification
 
 - **Every job that runs the oce-cxf or workspace suite prefetches the tool workspaces its tests
@@ -701,27 +725,6 @@ publishable and eight private. The fixture and Tier-A provenance goldens
     note (four implementation readings; step 4 landed), the `oce-author`, `oce-cli` and
     `oce-vocab` READMEs and the root README's status.
 
-- **The importer's refusal of a giant list is pinned in allocations, not in elapsed time** (GitHub
-  #601, issue #578). `import_hostile.rs` asserted a 60 s ceiling over two refusals: 100,000
-  references to nodes that do not exist (`unresolved-reference`) and a 1,000,000-element array
-  value declared `(2)` (`array-shape`). `TESTING.md` rules out wall-clock assertions, and that
-  ceiling would not have noticed the importer becoming a hundred times slower. Both refusals
-  move to `tests/import_cost.rs`. It is a test binary of its own, because `allocation-counter`,
-  now an `oce-author` dev-dependency at the version the workspace already locks, links a
-  counting global allocator. Each refusal is measured at its size and at a sixteenth of it, with
-  the exact refusal asserted.
-  - **The reference list** costs at most three allocations per reference, which is what parsing
-    each `{"@id": …}` object costs, plus a fixed 1,024. Its peak memory is at most 24 bytes per
-    document byte and grows linearly between the sizes.
-  - **The array** is refused within 512 allocations at either size, so it is refused on its
-    length before any element becomes an assignment.
-
-  Two mutations fail their tests: copying each reference before the refusal, and naming each
-  element before the shape check. Not covered: work that allocates nothing, such as a scan of the
-  node index for each lookup, or that allocates once, such as converting every array element into
-  one buffer sized up front. A `serde_json` feature turned on anywhere in the workspace
-  (`preserve_order`, `arbitrary_precision`) would also move the counts, and the test says so. No
-  `oce-author` test reads the clock any more.
 - **`oce-author`'s validation cost is pinned in key comparisons, not in elapsed time** (GitHub
   #584, issue #478).
   - **What was wrong.** `validate_cost`'s ratio test failed on `development` because it timed two
