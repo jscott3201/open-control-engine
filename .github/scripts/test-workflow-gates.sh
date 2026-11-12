@@ -21,7 +21,11 @@
 # when the Windows cell leaves the merge gate or any other job enters it, when a heavy job leaves
 # the release gate (with or without its `needs:` entry), when either workflow's events or branches
 # change, when the Windows job differs between the two files that run it, and when the gate
-# script loses a workspace-suite command the release gate now runs only through it.
+# script loses a workspace-suite command the release gate now runs only through it. A job that
+# runs the oce-cxf or the workspace suite without first prefetching the tool workspaces its tests
+# build offline (issue #610), in any spelling of the command, the prefetch missing, late, masked,
+# commented out or in another job, and a gate script without it, fail; a Windows job, an archived
+# run, another workspace and doctests need no prefetch.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -74,7 +78,11 @@ jobs:
   golden-gen-hygiene:
     needs: changes
     if: needs.changes.outputs.core == 'true'
+    defaults:
+      run:
+        working-directory: tools/golden-gen
     steps:
+      - run: cargo test --locked
       - run: cargo run --release --locked
   build:
     needs: changes
@@ -257,6 +265,7 @@ jobs:
         with:
           tool: nextest@0.9.143
       - run: rm -f target/nextest/ci/junit.xml
+      - run: bash scripts/ci/prefetch-offline-tools.sh
       - run: >-
           cargo nextest run -p oce-graph -p oce-validate -p oce-model -p oce-cxf -p oce-store --locked --profile ci --no-tests=fail
       - run: test -s target/nextest/ci/junit.xml
@@ -372,6 +381,8 @@ jobs:
           tool: nextest@0.9.143
       - name: Clear the cached nextest report
         run: rm -f target/nextest/ci/junit.xml
+      - name: Prefetch the tool workspaces the tests build offline
+        run: bash scripts/ci/prefetch-offline-tools.sh
       - run: cargo nextest run --workspace --locked --profile ci --no-tests=fail
       - run: cargo test --workspace --doc --locked
       - run: test -s target/nextest/ci/junit.xml
@@ -603,6 +614,10 @@ EOF
   # above the block is the look-alike that writes the shared `ci-release` report.
   cat > "$(dirname "$dir")/gate.sh" <<'EOF'
 # Comment lines never count: cargo nextest run --workspace --locked --profile ci-release-workspace --cargo-profile release --no-tests=fail
+step 'prefetch the offline tool workspaces' bash scripts/ci/prefetch-offline-tools.sh
+step 'structural oracle (input hygiene)' \
+  cargo nextest run -p oce-cxf --locked --profile ci \
+  -E 'binary(fixture_structural_oracle)' --no-tests=fail
 if release_codegen; then
   step 'determinism subset (release codegen)' \
     cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release \
@@ -648,6 +663,35 @@ jobs:
     steps:
       - uses: actions/checkout@89abcdef0123456789abcdef0123456789abcdef # v4
       - run: bash scripts/ci/emulate-firmware.sh
+EOF
+  # release.yml (issue #610): the tag verify runs the workspace suite with no cache at all, so it
+  # prefetches the offline tool workspaces first. A doctest-only job and another package selection
+  # need no prefetch; a step-level `if:` elsewhere in the job is the workflow's own tag check.
+  cat > "$dir/release.yml" <<'EOF'
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@89abcdef0123456789abcdef0123456789abcdef # v4
+      - name: tag matches workspace version
+        if: github.event_name == 'push'
+        run: test -n "$TAG"
+      - name: prefetch the tool workspaces the tests build offline
+        run: bash scripts/ci/prefetch-offline-tools.sh
+      - name: tests
+        run: cargo test --workspace --locked
+  doctests:
+    runs-on: ubuntu-latest
+    steps:
+      - run: cargo test --workspace --doc --locked
+  facade:
+    runs-on: ubuntu-latest
+    steps:
+      - run: cargo nextest run -p oce-api --locked --profile ci --no-tests=fail
 EOF
   cat > "$dir/advisories.yml" <<'EOF'
 on:
@@ -2487,6 +2531,156 @@ remove_crates_dir() {
   rm -rf "$crates_dir"
 }
 
+# The offline tool workspaces (issue #610). The tag verify of v0.5.0, with no cache, failed the
+# oce-cxf tests that build tool workspaces with `cargo --offline`; every job that runs the oce-cxf
+# or the workspace suite must run the prefetch script, as a whole unmasked step, before it.
+
+# `sed` over the fixture's release.yml.
+edit_release_yml() {
+  dir="$1"
+  shift
+  sed "$@" "$dir/release.yml" > "$dir/release.yml.tmp"
+  mv "$dir/release.yml.tmp" "$dir/release.yml"
+}
+
+# Append one job to the fixture's release.yml, `printf %b`-escaped. Its job set is pinned by no
+# other rule, so it is where a job that dodges the prefetch rule can land.
+release_yml_job() {
+  printf '%b' "$2" >> "$1/release.yml"
+}
+
+# One release.yml job of a single `run:` step, on `runs-on: $2`.
+release_yml_run_job() {
+  release_yml_job "$1" "  dodge:\n    runs-on: $2\n    steps:\n      - run: $3\n"
+}
+
+crate_tests_without_prefetch() {
+  edit_pr_gate "$1" '/^      - run: bash scripts\/ci\/prefetch-offline-tools\.sh$/d'
+}
+
+crate_tests_prefetch_after_the_suite() {
+  awk '
+    /^      - run: bash scripts\/ci\/prefetch-offline-tools\.sh$/ { next }
+    { print }
+    /-p oce-store --locked --profile ci --no-tests=fail$/ { print "      - run: bash scripts/ci/prefetch-offline-tools.sh" }
+  ' "$1/pr-gate.yml" > "$1/pr-gate.yml.tmp"
+  mv "$1/pr-gate.yml.tmp" "$1/pr-gate.yml"
+}
+
+test_suite_without_prefetch() {
+  edit_release_gate "$1" -e '/^      - name: Prefetch the tool workspaces the tests build offline$/d' \
+    -e '/^        run: bash scripts\/ci\/prefetch-offline-tools\.sh$/d'
+}
+
+release_verify_without_prefetch() {
+  edit_release_yml "$1" -e '/^      - name: prefetch the tool workspaces the tests build offline$/d' \
+    -e '/^        run: bash scripts\/ci\/prefetch-offline-tools\.sh$/d'
+}
+
+release_verify_prefetch_after_the_tests() {
+  awk '
+    /^      - name: prefetch the tool workspaces the tests build offline$/ { next }
+    /^        run: bash scripts\/ci\/prefetch-offline-tools\.sh$/ { next }
+    { print }
+    /^        run: cargo test --workspace --locked$/ { print "      - run: bash scripts/ci/prefetch-offline-tools.sh" }
+  ' "$1/release.yml" > "$1/release.yml.tmp"
+  mv "$1/release.yml.tmp" "$1/release.yml"
+}
+
+# Insert `$2` as a key of the prefetch step of the fixture's release.yml.
+release_verify_prefetch_step_key() {
+  awk -v key="$2" '
+    { print }
+    /^      - name: prefetch the tool workspaces the tests build offline$/ { print "        " key }
+  ' "$1/release.yml" > "$1/release.yml.tmp"
+  mv "$1/release.yml.tmp" "$1/release.yml"
+}
+
+release_verify_prefetch_continues_on_error() {
+  release_verify_prefetch_step_key "$1" 'continue-on-error: true'
+}
+
+release_verify_prefetch_behind_a_condition() {
+  release_verify_prefetch_step_key "$1" "if: github.event_name == 'push'"
+}
+
+release_verify_prefetch_or_true() {
+  edit_release_yml "$1" 's/^        run: bash scripts\/ci\/prefetch-offline-tools\.sh$/& || true/'
+}
+
+release_verify_prefetch_in_a_comment() {
+  edit_release_yml "$1" 's/^        run: bash scripts\/ci\/prefetch-offline-tools\.sh$/        # run: bash scripts\/ci\/prefetch-offline-tools.sh/'
+}
+
+prefetch_in_another_job() {
+  release_yml_job "$1" '  prefetcher:\n    runs-on: ubuntu-latest\n    steps:\n      - run: bash scripts/ci/prefetch-offline-tools.sh\n'
+  release_yml_run_job "$1" ubuntu-latest 'cargo nextest run -p oce-cxf --locked --profile ci'
+}
+
+offline_suite_by_long_package() { release_yml_run_job "$1" ubuntu-latest 'cargo test --package oce-cxf --locked'; }
+offline_suite_by_package_equals() { release_yml_run_job "$1" ubuntu-latest 'cargo nextest run --package=oce-cxf --locked'; }
+offline_suite_by_joined_p() { release_yml_run_job "$1" ubuntu-latest 'cargo test -poce-cxf --locked'; }
+offline_suite_under_a_toolchain() { release_yml_run_job "$1" ubuntu-latest 'cargo +1.97.1 test --workspace --locked'; }
+offline_suite_bare_at_the_root() { release_yml_run_job "$1" ubuntu-latest 'cargo test --locked'; }
+offline_suite_by_alias_t() { release_yml_run_job "$1" ubuntu-latest 'cargo t --workspace'; }
+offline_suite_by_nextest_r() { release_yml_run_job "$1" ubuntu-latest 'cargo nextest r --workspace'; }
+offline_suite_by_the_nextest_binary() { release_yml_run_job "$1" ubuntu-latest 'cargo-nextest nextest run --workspace'; }
+offline_suite_by_all() { release_yml_run_job "$1" ubuntu-latest 'cargo test --all --locked'; }
+offline_suite_quoted() { release_yml_run_job "$1" ubuntu-latest '"cargo test --workspace --locked"'; }
+offline_suite_behind_an_env_prefix() { release_yml_run_job "$1" ubuntu-latest 'RUST_BACKTRACE=1 cargo test --workspace'; }
+offline_suite_on_an_expression_runner() { release_yml_run_job "$1" '${{ matrix.os }}' 'cargo nextest run --workspace'; }
+
+offline_suite_over_a_continuation() {
+  release_yml_job "$1" '  dodge:\n    runs-on: ubuntu-latest\n    steps:\n      - run: |\n          cargo nextest run --locked \\\n            -p oce-cxf --profile ci\n'
+}
+
+offline_suite_in_a_folded_block() {
+  release_yml_job "$1" '  dodge:\n    runs-on: ubuntu-latest\n    steps:\n      - run: >-\n          cargo nextest run --locked\n          -p oce-cxf --profile ci\n'
+}
+
+offline_suite_under_the_root_directory() {
+  release_yml_job "$1" '  dodge:\n    runs-on: ubuntu-latest\n    defaults:\n      run:\n        working-directory: .\n    steps:\n      - run: cargo test --locked\n'
+}
+
+offline_suite_under_a_step_root_directory() {
+  release_yml_job "$1" '  dodge:\n    runs-on: ubuntu-latest\n    steps:\n      - run: cargo test --locked\n        working-directory: ./\n'
+}
+
+windows_job_needs_no_prefetch() { release_yml_run_job "$1" windows-2022 'cargo nextest run --workspace --locked'; }
+archive_run_needs_no_prefetch() {
+  release_yml_run_job "$1" ubuntu-latest 'cargo nextest run --archive-file suite.tar.zst --workspace-remap . --profile ci'
+}
+manifest_path_needs_no_prefetch() {
+  release_yml_run_job "$1" ubuntu-latest 'cargo test --manifest-path tools/golden-gen/Cargo.toml --locked'
+}
+step_directory_needs_no_prefetch() {
+  release_yml_job "$1" '  other:\n    runs-on: ubuntu-latest\n    steps:\n      - run: cargo test --locked\n        working-directory: tools/golden-gen\n'
+}
+prefetch_earlier_in_the_same_block() {
+  release_yml_job "$1" '  both:\n    runs-on: ubuntu-latest\n    steps:\n      - run: |\n          bash scripts/ci/prefetch-offline-tools.sh\n          cargo nextest run -p oce-cxf --locked\n'
+}
+
+gate_script_without_prefetch() {
+  edit_gate_script "$1" "/^step 'prefetch the offline tool workspaces' bash scripts\/ci\/prefetch-offline-tools\.sh$/d"
+}
+
+gate_script_prefetch_after_the_oracle() {
+  script="$(dirname "$1")/gate.sh"
+  {
+    grep -v "^step 'prefetch the offline tool workspaces'" "$script"
+    echo "step 'prefetch the offline tool workspaces' bash scripts/ci/prefetch-offline-tools.sh"
+  } > "$script.tmp"
+  mv "$script.tmp" "$script"
+}
+
+gate_script_prefetch_or_true() {
+  edit_gate_script "$1" "s/^step 'prefetch the offline tool workspaces' bash scripts\/ci\/prefetch-offline-tools\.sh$/& || true/"
+}
+
+gate_script_prefetch_in_a_comment() {
+  edit_gate_script "$1" "s/^step 'prefetch the offline tool workspaces'/# &/"
+}
+
 run_case positive pass noop
 run_case missing-release-nextest fail remove_release_nextest \
   "gate.sh full block does not open with exactly the workspace suite"
@@ -3091,5 +3285,43 @@ run_case wasm-leg-out-of-ci-ok fail wasm_leg_out_of_ci_ok \
   "pr-gate.yml CI OK needs does not match the workflow's jobs"
 run_case release-gate-without-wasm-runtime fail release_gate_without_wasm_runtime \
   "the executed full gate script has the wasm32-wasip1 target its round trip runs on"
+
+OFFLINE_PREFETCH_MESSAGE='runs the oce-cxf or workspace suite, whose OpenModelica checks build tool workspaces offline'
+OFFLINE_GATE_MESSAGE='the whole line, before its first oce-cxf or workspace test step'
+run_case crate-tests-without-prefetch fail crate_tests_without_prefetch "$OFFLINE_PREFETCH_MESSAGE"
+run_case crate-tests-prefetch-after-the-suite fail crate_tests_prefetch_after_the_suite "$OFFLINE_PREFETCH_MESSAGE"
+run_case test-suite-without-prefetch fail test_suite_without_prefetch "$OFFLINE_PREFETCH_MESSAGE"
+run_case release-verify-without-prefetch fail release_verify_without_prefetch "$OFFLINE_PREFETCH_MESSAGE"
+run_case release-verify-prefetch-after-the-tests fail release_verify_prefetch_after_the_tests "$OFFLINE_PREFETCH_MESSAGE"
+run_case release-verify-prefetch-continues-on-error fail release_verify_prefetch_continues_on_error "$OFFLINE_PREFETCH_MESSAGE"
+run_case release-verify-prefetch-behind-a-condition fail release_verify_prefetch_behind_a_condition "$OFFLINE_PREFETCH_MESSAGE"
+run_case release-verify-prefetch-or-true fail release_verify_prefetch_or_true "$OFFLINE_PREFETCH_MESSAGE"
+run_case release-verify-prefetch-in-a-comment fail release_verify_prefetch_in_a_comment "$OFFLINE_PREFETCH_MESSAGE"
+run_case prefetch-in-another-job fail prefetch_in_another_job "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-by-long-package fail offline_suite_by_long_package "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-by-package-equals fail offline_suite_by_package_equals "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-by-joined-p fail offline_suite_by_joined_p "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-under-a-toolchain fail offline_suite_under_a_toolchain "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-bare-at-the-root fail offline_suite_bare_at_the_root "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-by-alias-t fail offline_suite_by_alias_t "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-by-nextest-r fail offline_suite_by_nextest_r "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-by-the-nextest-binary fail offline_suite_by_the_nextest_binary "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-by-all fail offline_suite_by_all "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-quoted fail offline_suite_quoted "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-behind-an-env-prefix fail offline_suite_behind_an_env_prefix "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-on-an-expression-runner fail offline_suite_on_an_expression_runner "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-over-a-continuation fail offline_suite_over_a_continuation "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-in-a-folded-block fail offline_suite_in_a_folded_block "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-under-the-root-directory fail offline_suite_under_the_root_directory "$OFFLINE_PREFETCH_MESSAGE"
+run_case offline-suite-under-a-step-root-directory fail offline_suite_under_a_step_root_directory "$OFFLINE_PREFETCH_MESSAGE"
+run_case windows-job-needs-no-prefetch pass windows_job_needs_no_prefetch
+run_case archive-run-needs-no-prefetch pass archive_run_needs_no_prefetch
+run_case manifest-path-needs-no-prefetch pass manifest_path_needs_no_prefetch
+run_case step-directory-needs-no-prefetch pass step_directory_needs_no_prefetch
+run_case prefetch-earlier-in-the-same-block pass prefetch_earlier_in_the_same_block
+run_case gate-script-without-prefetch fail gate_script_without_prefetch "$OFFLINE_GATE_MESSAGE"
+run_case gate-script-prefetch-after-the-oracle fail gate_script_prefetch_after_the_oracle "$OFFLINE_GATE_MESSAGE"
+run_case gate-script-prefetch-or-true fail gate_script_prefetch_or_true "$OFFLINE_GATE_MESSAGE"
+run_case gate-script-prefetch-in-a-comment fail gate_script_prefetch_in_a_comment "$OFFLINE_GATE_MESSAGE"
 
 echo "OK: workflow gate fixtures passed."
