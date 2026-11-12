@@ -26,7 +26,7 @@
 //! factored out: each integration test file is its own binary, and the helpers are too thin to
 //! justify a shared module. `render` itself IS shared via `mod render;`.
 
-mod render;
+use crate::render;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;

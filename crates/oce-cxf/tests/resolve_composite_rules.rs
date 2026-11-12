@@ -21,7 +21,7 @@ const CATALOG_JSON: &str =
 /// A minimal valid single-composite model (mirrors the `resolve_errors.rs` BASE): `c1 =
 /// Constant(k=1.0)` driving `c2 = MultiplyByParameter(k=2.0)`. Resolves with zero diagnostics.
 const BASE: &str = r#"{
-  "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+  "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
   "@graph": [
     { "@id": "http://example.org#M", "@type": "S231:Block",
       "S231:containsBlock": [ { "@id": "http://example.org#M.c1" }, { "@id": "http://example.org#M.c2" } ] },
@@ -93,7 +93,7 @@ fn multi_root_doc() -> JsonValue {
 /// referenced, so root classification finds ZERO candidates and the cycle detector never runs.
 fn pure_cycle_doc() -> JsonValue {
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             { "@id": "http://example.org#A", "@type": "S231:Block",
               "S231:containsBlock": { "@id": "http://example.org#B" } },
@@ -110,7 +110,7 @@ fn pure_cycle_doc() -> JsonValue {
 /// non-palindromic, so a reversed reconstruction cannot pass by accident.
 fn reachable_cycle_doc() -> JsonValue {
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             { "@id": "http://example.org#R", "@type": "S231:Block",
               "S231:containsBlock": { "@id": "http://example.org#A" } },
@@ -260,8 +260,8 @@ fn banned_modelica_key_rejections_are_tagged_and_name_the_authored_key_in_any_sp
         "modelicaSource",
         "S231:constrainedby",
         "S231:extendsFrom",
-        "http://data.ashrae.org/S231P#extends",
-        "http://data.ashrae.org/S231P#moSource",
+        "http://data.ashrae.org/S231#extends",
+        "http://data.ashrae.org/S231#moSource",
     ] {
         assert_eq!(
             reject(&banned_key_doc(key)),
@@ -335,7 +335,7 @@ fn array_valued_instance_rejection_is_tagged_with_the_instance_subject() {
 /// scalar-only slice refuses the whole derivation, one diagnostic per instance.
 fn vector_port_instance_doc() -> JsonValue {
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
               "S231:containsBlock": { "@id": "http://example.org#M.rep" } },
@@ -350,7 +350,7 @@ fn vector_port_instance_doc() -> JsonValue {
 /// declared port nor a declared parameter of the class.
 fn unsupported_instance_member_doc() -> JsonValue {
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
               "S231:containsBlock": { "@id": "http://example.org#M.c" } },
@@ -369,7 +369,7 @@ fn unsupported_instance_member_doc() -> JsonValue {
 /// the identity would be minted twice for one owner.
 fn colliding_member_identity_doc() -> JsonValue {
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
               "S231:containsBlock": { "@id": "http://example.org#M.c" } },
@@ -541,7 +541,7 @@ fn composite_containing_itself_reports_the_degenerate_two_entry_cycle() {
     // list names the node twice. This locks the `start == path.len() - 1` edge of the slice
     // arithmetic — a mis-slice or off-by-one there would drop an endpoint or panic.
     let doc = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             { "@id": "http://example.org#R", "@type": "S231:Block",
               "S231:containsBlock": { "@id": "http://example.org#A" } },
@@ -568,7 +568,7 @@ fn two_disjoint_cycles_under_one_root_report_one_rejection_per_reentry_in_subjec
     // by subject. (Traversal follows `containsBlock` document order, so here document order and
     // subject order coincide — the pin is on the POST-SORT vector.)
     let doc = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             { "@id": "http://example.org#R", "@type": "S231:Block",
               "S231:containsBlock": [

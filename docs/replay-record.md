@@ -13,8 +13,8 @@ outside OCE before decoding, not through an invented historical replay decoder.
 `CompletedFrame::inputs()` retains the canonical accepted boundary inputs independently of caller
 buffers and later engine mutation. `CompletedFrame::replay_record()` encodes those inputs, that
 transition's outputs/warnings/time and its captured placement, without executing again. It records
-the public `CompatibilityDescriptor::current(None)` facts: **export is explicitly absent**, not
-silently claimed complete. The public descriptor is constant for that compiled process; it is not
+the public `CompatibilityDescriptor::current(None)` facts: **the content id is explicitly absent**
+(`content:none`), not silently claimed. The public descriptor is constant for that compiled process; it is not
 the loaded executable. No export, state capture, private fingerprint or storage operation is involved.
 
 The record contains no sequence number. `CompletedFrame::sequence()` remains Engine-lifetime
@@ -28,10 +28,11 @@ can represent two distinct accepted transitions. Equal timestamps are not idempo
    ordered position, compatible executable/parameters, approved same-build/deployment qualification,
    and any snapshot sidecars. Check freshness/generation and missing/duplicate policy outside OCE.
    Build qualification can include source/dependency lock, compiler, features, target and codegen.
-   Package version, catalog/export tags and replay content identity are not build authority.
+   Package version, catalog tag, canonical content id and replay content identity are not build
+   authority.
 2. Decode an approved record with `ReplayRecord::from_bytes`. This checks canonical representation,
    corruption and bounds, not host trust. Do not patch bytes or relabel placement to make them pass.
-3. Call `record.check_compatible(&CompatibilityDescriptor::current(None)?)` **before preparation**.
+3. Call `record.check_compatible(&CompatibilityDescriptor::current(None))` **before preparation**.
    It checks exact public facts in canonical order, then foreign target placement. V1 only decodes
    exact-bits policy. It never accesses an engine, performs execution or implements a tolerance.
 4. Use an isolated engine loaded with the host-approved compatible executable/parameters. If supplied,
@@ -43,7 +44,7 @@ can represent two distinct accepted transitions. Equal timestamps are not idempo
    then consuming `execute_frame` **once**. Preparation still checks completeness, types, domains,
    time and current executable; ordinary refusal preserves all state and restore readiness.
 6. Call `record.verify(&completed)` to compare exact time, accepted inputs, outputs and diagnostics.
-   Comparison also rechecks current public facts (`export:none`) and receipt placement. A mismatch
+   Comparison also rechecks current public facts (`content:none`) and receipt placement. A mismatch
    happens **after** that transition and does not roll it back. Stop the isolated host replay loop;
    do not blindly retry or use comparison failure as equipment fail-safe policy.
 7. Drop that record before reading the next unless host retention is intended. Compare optional
@@ -112,18 +113,19 @@ policy only decides which frames are accepted, so an accepted replay is bit-iden
 
 The descriptor is at most 1024 UTF-8 bytes, with the ten existing labeled LF-terminated lines in
 exact order: `oce-compatibility`, `catalog-schema`, `catalog`, `io-schema`, `value-schema`,
-`parameter-schema`, `execution-profile`, `execution-profile-schema`, `oce-api-version`, `export`.
+`parameter-schema`, `execution-profile`, `execution-profile-schema`, `oce-api-version`, `content`.
 No missing/extra lines, CR/BOM, whitespace or escaping is accepted. Revision fields are positive
 u32 decimal with no leading zeros. Catalog text is `catalog:1:fnv1a128:` plus 32 lowercase hex
-digits; export is `none` or `cxf:fnv1a128:` plus 32 lowercase hex digits. The profile is `HostTick-v`
+digits; content is `none` or `oce:canon1:` plus 64 lowercase hex digits (an `export` line in its
+place, as release 0.4.0 wrote under the same revision number, is refused). The profile is `HostTick-v`
 plus a positive u32 decimal. Package version uses SemVer syntax: three canonical u64 decimal
 components, optional dot-separated ASCII alphanumeric/hyphen prerelease (numeric identifiers
 have no leading zeros), and optional build identifiers. Empty identifiers refuse.
 
 Structurally valid differing facts can decode, then fail `check_compatible` with the existing
-`CompatibilityMismatch` cause. Descriptor revision other than 1 always refuses eligibility.
-Native capture/verification use `export:none`; a decoded present export never matches absence.
-Inspection/comparison of externally carried export facts does not make OCE attest their provenance.
+`CompatibilityMismatch` cause. Descriptor revision other than 2 always refuses eligibility.
+Native capture/verification use `content:none`; a decoded present content id never matches absence.
+Inspection/comparison of externally carried content facts does not make OCE attest their provenance.
 No standalone public descriptor parser or arbitrary serde-stability promise is added.
 
 ## Integrity, identity and exactness
@@ -132,7 +134,7 @@ The trailer uses offset `0x6c62272e07bb014262b821756295c58d`, XOR each byte then
 `0x0000000001000000000000000000013b` modulo 2^128. `ReplayContentId` applies the same FNV-1a-128
 algorithm to **all canonical bytes including the trailer**; Display is
 `replay:1:fnv1a128:<32 lowercase hex digits>`. Its private typed representation cannot be confused
-with catalog/export identity. Both hashes are noncryptographic, collision-prone accidental-content
+with catalog or canonical content identity. Both FNV hashes are noncryptographic, collision-prone accidental-content
 checks. An attacker can recompute them. Only exact host-authenticated bytes are the trust boundary.
 
 Exact means `Value::bit_eq` and exact diagnostic source/message, severity and time bits, in order.
@@ -192,7 +194,7 @@ manifest validation. A post-execution mismatch does not undo a prior accepted tr
   This fixture is not a whole-program performance or all-model memory claim.
 - `tests/replay_matrix.rs` supplies repeat-exact portable and target-bound local vectors via optional
   `OCE_PORTABLE_REPLAY_OUT` / `OCE_TARGET_REPLAY_OUT` paths and foreign-placement inspection via
-  `OCE_FOREIGN_TARGET_REPLAY_IN`. The existing debug/release `oce-api` matrix runs these tests, but
+  `OCE_FOREIGN_TARGET_REPLAY_IN`. The `oce-api` determinism matrix runs these tests (debug and release codegen, per PR), but
   **cross-architecture replay artifact comparison is pending**. The native determinism cells and
   their `determinism-compare` fan-in in `pr-gate.yml` now carry the state vectors across
   architectures; the replay vectors are not yet wired into that artifact plumbing. Local artifact equality never fabricates hosted results or macOS qualification.

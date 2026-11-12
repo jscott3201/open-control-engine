@@ -1,0 +1,45 @@
+exit: 0
+--- stdout
+Replay a vector set against a subject and print the receipt.
+
+Stdout is the receipt when the run reaches a verdict: exit 0 when every scenario passed, 1 when one failed or the set checked nothing. Anything that prevents a verdict is exit 2 with the JSON report. With --out the receipt goes to DIR/receipt.json and the report to stdout.
+
+Usage: oce verify [OPTIONS] --subject <SUBJECT> <VECTORS>
+
+Arguments:
+  <VECTORS>
+          The vector set (`oce/vectors/v1`); mutant paths resolve against its directory
+
+Options:
+      --render <RENDER>
+          When to write a human-readable rendering of the report to stderr
+          
+          [default: auto]
+          [possible values: auto, always, never]
+
+      --subject <SUBJECT>
+          The sequence the vectors check: CXF (`.jsonld`, `.cxf.json`), text (`.oce`) or wire (`.json`)
+
+      --subject-form <SUBJECT_FORM>
+          The subject's form; overrides the name
+          
+          [possible values: cxf, text, wire]
+
+      --out <DIR>
+          Write the receipt to DIR/receipt.json (atomically) and print the report on stdout
+
+      --require-mutants-caught
+          Exit 1 when a mutant survived or the set lists none; no receipt byte changes
+
+      --deny-warnings
+          Exit 1 when the subject warned at load or a scenario left a warning unmatched; no receipt byte changes
+
+      --timings
+          Measure the run into the receipt's timings, which receipt_id never covers
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+--- stderr

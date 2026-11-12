@@ -57,8 +57,16 @@ pub(super) struct Counts {
     pub(super) largest_parameter_list: usize,
 }
 
-/// Refusal steps 1 to 5 and the section frames: size, header, format, CRC, profile, engine
-/// version and flags, then five sections in order whose lengths exactly fill the body.
+/// Refusal steps 1 to 5 and the section frames: size, a header and trailer's worth of bytes,
+/// magic, format, engine version, total length, CRC, profile and flags, then five sections in
+/// order whose lengths exactly fill the body.
+///
+/// The engine version is checked straight after the format, before the total length or the CRC
+/// (issue #535), as the snapshot decoder does. Every format stays 1 until 1.0.0 and changes in
+/// place, so a blob another engine version wrote may lay out its length, its trailer and every
+/// later field differently: nothing after the version field is checked until the version is
+/// known to be this build's, and a blob of another version is refused by its version however else
+/// it is damaged. A corrupted version field therefore reports the version it now spells.
 pub(super) fn frame(bytes: &[u8]) -> Result<Layout<'_>, BlobError> {
     if bytes.len() > MAX_BLOB_BYTES {
         return Err(BlobError::TooLarge {
@@ -80,23 +88,31 @@ pub(super) fn frame(bytes: &[u8]) -> Result<Layout<'_>, BlobError> {
         });
     }
     let format = header.u16()?;
+    if format != FORMAT_VERSION {
+        return Err(BlobError::UnsupportedFormat {
+            found: format,
+            supported: FORMAT_VERSION,
+        });
+    }
+    // The profile sits between the format and the version. It is read on the way and checked after
+    // the CRC, as before, so another profile under another engine version is a version refusal.
     let profile = header.u16()?;
     let found = EngineVersion {
         major: header.u16()?,
         minor: header.u16()?,
         patch: header.u16()?,
     };
+    if found != ENGINE_VERSION {
+        return Err(BlobError::EngineVersionMismatch {
+            found,
+            expected: ENGINE_VERSION,
+        });
+    }
     let flags = header.u16()?;
     let length_at = header.clone();
     let total = header.u32()?;
     if usize::try_from(total).ok() != Some(bytes.len()) {
         return length_at.malformed(MalformedFault::LengthMismatch);
-    }
-    if format != FORMAT_VERSION {
-        return Err(BlobError::UnsupportedFormat {
-            found: format,
-            supported: FORMAT_VERSION,
-        });
     }
     let body_end = bytes.len() - TRAILER_BYTES;
     let mut trailer = [0u8; 4];
@@ -110,12 +126,6 @@ pub(super) fn frame(bytes: &[u8]) -> Result<Layout<'_>, BlobError> {
         return Err(BlobError::UnsupportedProfile {
             found: profile,
             supported: EXECUTION_PROFILE,
-        });
-    }
-    if found != ENGINE_VERSION {
-        return Err(BlobError::EngineVersionMismatch {
-            found,
-            expected: ENGINE_VERSION,
         });
     }
     if flags != 0 {

@@ -12,7 +12,7 @@ const LABELS: [&str; 10] = [
     "execution-profile:",
     "execution-profile-schema:",
     "oce-api-version:",
-    "export:",
+    "content:",
 ];
 
 pub(crate) fn fields(text: &str) -> Result<[&str; 10], ReplayError> {
@@ -32,7 +32,7 @@ pub(crate) fn fields(text: &str) -> Result<[&str; 10], ReplayError> {
         || !tag(fields[2], "catalog:1:fnv1a128:")
         || !fields[6].strip_prefix("HostTick-v").is_some_and(revision)
         || !version(fields[8])
-        || !(fields[9] == "none" || tag(fields[9], "cxf:fnv1a128:"))
+        || !(fields[9] == "none" || crate::ContentId::parse(fields[9]).is_ok())
     {
         return Err(ReplayError::MalformedDescriptor);
     }
@@ -53,9 +53,9 @@ pub(crate) fn compare(actual: &str, expected: &str) -> Result<(), ReplayError> {
         M::ExecutionProfile,
         M::Build,
         if (a[9] == "none") != (b[9] == "none") {
-            M::ExportPresence
+            M::ContentIdPresence
         } else {
-            M::ExportContent
+            M::ContentIdMismatch
         },
     ];
     for (index, cause) in causes.into_iter().enumerate() {

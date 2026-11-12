@@ -1,4 +1,4 @@
-# Commissioning verifier (CDL §12)
+# Commissioning verifier (OBC §12)
 
 **Design note, written before any verifier code.** It fixes what the commissioning verifier is, its
 test-spec and point-mapping files, unit conversion, the envelope, indicators, time handling, the
@@ -8,8 +8,12 @@ technical recommendations the orchestrator accepted; both are stated here, not r
 replaced 17 and 21 (see [Review rulings](#review-rulings)). It answers GitHub #436 and drives
 [the replay API](replay.md) (GitHub #435, merged as GitHub #443; the crate is #445).
 
-CDL §12.7.1 states the product: "a report that describes whether the real implementation conforms
-to the CDL implementation within a user-specified error tolerance."
+The OpenBuildingControl (OBC) specification's §12.7.1 states the product: "a report that describes
+whether the real implementation conforms to the CDL implementation within a user-specified error
+tolerance." Every §12 citation in this note is a section of that specification's
+[Verification chapter](https://obc.lbl.gov/specification/verification.html), as numbered on
+2026-11-09. The table of contents of ANSI/ASHRAE 231-2026 lists no verification or conformance
+clause.
 
 ## What the verifier is, and is not
 
@@ -17,13 +21,16 @@ It is the **tolerance mode of `oce-verify`** (M3), a leverage crate above the fa
 `oce-api` and `oce-replay` only. Given a test spec, it loads the CDL sequence's CXF into an
 `Engine`, applies the spec's parameters, feeds the trended inputs of a real controller (or a
 simulation's inputs) through the replay API, and compares the engine's outputs with the trended
-outputs, per CDL §12.4: "the CDL runs on trended inputs and is compared with trended outputs."
+outputs, per OBC §12.4: "The commissioning agent then executes the CDL specification for the
+trended input time series, and compares" whether the trended outputs and the computed ones "are
+close to each other."
 
 - It is **never the default comparison**. `oce-verify`'s default is exact; tolerance mode is chosen
   by the spec, and every receipt names the comparison mode and the envelope.
 - It **never changes the engine**. It adds nothing to `oce-api`, sets parameters only through the
   facade's halt / `set_param` / resume path, and the engine keeps its
-  [§7.17 seam](../architecture.md#the-organising-idea-the-cdl-717-non-computational-seam).
+  [metadata seam](../architecture.md#the-organising-idea-the-non-computational-metadata-seam)
+  (OBC §7.17; ANSI/ASHRAE 231-2026 §5.13).
 - **Unit conversion and point mapping happen outside the engine**, in the verifier's source adapter,
   as §12.7 requires: conversion "will need to be done by the tool that reads the CSV files", because
   "CDL provides all required unit information, but this is not the case in general for a building
@@ -302,7 +309,7 @@ the same id (decision 20).
 {
   "schema": "oce/receipt/v1",
   "kind": "commissioning",
-  "content_id": "cxf:fnv1a128:3b1f0c92d47e8a6b5c0d9e1f2a3b4c5d",
+  "content_id": "oce:canon1:fbbea1ef32cb24797011163d09ead7ee5c17757a4aad551b6989c745740a07a5",
   "engine_version": "0.3.0",
   "spec_id": "spec:fnv1a128:9e4d2a7c1b0f8e6d5c4b3a2918070605",
   "comparison": { "mode": "tolerance", "envelope": "funnel", "envelope_version": "funnel@a12fa96" },
@@ -356,12 +363,19 @@ pub struct CommissionRun { pub receipt: Receipt, pub trace: oce_replay::Trace,
 pub fn funnel(reference: Series<'_>, test: Series<'_>, tol: &Tolerances,
               limits: &CompareLimits) -> Result<FunnelResult, CompareError>;
 pub enum OutputStatus { Pass, Fail, NoData }
-pub struct Receipt { pub header: ReceiptHeader, pub body: CommissioningBody }
+pub struct Receipt { pub header: ReceiptHeader, pub body: ReceiptBody }
+pub enum ReceiptBody { Vectors(VectorBody), Commissioning(CommissioningBody) }
 pub struct ReceiptHeader { pub schema: String, pub kind: ReceiptKind, pub content_id: String,
                            pub engine_version: String, pub spec_id: String,
                            pub comparison: Comparison, pub passed: bool,
                            pub receipt_id: String, pub timings: Timings }
 ```
+
+*(Amended 2026-11-10, with GitHub #558, issue #520:)* `Receipt.body` is `ReceiptBody`, the one closed enum the
+[vectors note](vectors.md) decides (decision 21), not `CommissioningBody`: there is one `Receipt`
+type and one writer of the shared header. `oce-verify` builds it with the `Vectors` variant only
+(`#[non_exhaustive]`); the commissioning PR adds the `Commissioning` variant and its `ReceiptKind`
+in place.
 
 Every error is a typed variant (`SpecError`, `UnitError`, `SourceError`, `CompareError`, replay's
 errors and the engine's `OcError` wrapped) naming the spec field, file, row or output; nothing
@@ -469,8 +483,11 @@ acting on them (the verifier drives no controller).
 a `0.5` Boolean threshold (a sensor fault would read as a state).
 
 **20. FNV-1a-128 identities** for `spec_id`, source digests and `receipt_id`, over
-canonical bytes, `timings` excluded. Rejected: a new hash dependency. M3's canonical content id
-may replace the hash function; the receipt names which one was used.
+canonical bytes, `timings` excluded. Rejected: a new hash dependency in the verifier. *Reconciled
+2026-11-09 with the canonical content id (GitHub #470, [content-id note](content-id.md)):* the
+content id a receipt carries is M3's `oce:canon1:` id, SHA-256 through `sha2` on `oce-api`, which
+the verifier reads from `Engine::content_id` and adds no edge for; `spec_id` and `receipt_id` keep
+FNV-1a-128, and the receipt names both algorithms by their prefixes.
 
 **21. Exit codes: the `oce` convention.** 0 pass; 1 not passed (`fail` or `no_data`, the
 receipt says which); 2 usage errors, refused specs, unreadable sources and I/O. Rejected: a separate
@@ -501,9 +518,10 @@ Rejected: a one-day slice (not verbatim, outside the manifest's fidelity check).
   with substitution bits, an input-retaining trace and `check_coverage`; the replay note provides
   all of them and leaves comparison, resampling, indicators and units here. The `combiTimeTable`
   reader lives in `oce-verify`.
-- **M3 `oce-verify` and vector format v2.** Tolerance mode shares source, tolerance and receipt
-  header types with v2's `within` / `of` / `when`: "a §12 commissioning spec and a library vector
-  set are the same machinery". The vector receipt's body is M3's.
+- **M3 `oce-verify` and the vector format** ([design note](vectors.md)). Tolerance mode shares
+  source, tolerance and receipt header types with its `within` / `of` / `when`: "a §12
+  commissioning spec and a library vector set are the same machinery". The vector receipt's body
+  is M3's.
 - **M5 notebooks** read the receipt through `serde` and the trace and exceedance columns through
   `Trace.to_pandas()`; plots are theirs.
 - **Conformance harness.** `oce-conformance` keeps `VerifyConfig`, `build_bounds` and segmented

@@ -1,0 +1,136 @@
+{
+  "clock": {
+    "horizon_s": 1800,
+    "step_s": 60
+  },
+  "scenarios": [
+    {
+      "description": "Reference vector: heating only, no fault",
+      "expect": [
+        {
+          "equals": false,
+          "from_s": 0,
+          "output": "yFault",
+          "to_s": 1800
+        }
+      ],
+      "inputs": {
+        "clg_vlv_cmd": 0.0,
+        "htg_vlv_cmd": 45.0
+      },
+      "name": "normal_heating"
+    },
+    {
+      "description": "Reference vector: cooling only, no fault",
+      "expect": [
+        {
+          "equals": false,
+          "from_s": 0,
+          "output": "yFault",
+          "to_s": 1800
+        }
+      ],
+      "inputs": {
+        "clg_vlv_cmd": 60.0,
+        "htg_vlv_cmd": 0.0
+      },
+      "name": "normal_cooling"
+    },
+    {
+      "description": "Reference vector: both valves open; fault asserts after alarm_delay (900 s)",
+      "expect": [
+        {
+          "equals": false,
+          "from_s": 0,
+          "output": "yFault",
+          "to_s": 840
+        },
+        {
+          "equals": true,
+          "from_s": 960,
+          "output": "yFault",
+          "to_s": 1800
+        }
+      ],
+      "inputs": {
+        "clg_vlv_cmd": 30.0,
+        "htg_vlv_cmd": 20.0
+      },
+      "name": "both_open"
+    },
+    {
+      "description": "Reference vector: both valves cracked but under threshold",
+      "expect": [
+        {
+          "equals": false,
+          "from_s": 0,
+          "output": "yFault",
+          "to_s": 1800
+        }
+      ],
+      "inputs": {
+        "clg_vlv_cmd": 4.0,
+        "htg_vlv_cmd": 3.0
+      },
+      "name": "both_below_threshold"
+    },
+    {
+      "description": "Reference vector: both valves closed",
+      "expect": [
+        {
+          "equals": false,
+          "from_s": 0,
+          "output": "yFault",
+          "to_s": 1800
+        }
+      ],
+      "inputs": {
+        "clg_vlv_cmd": 0.0,
+        "htg_vlv_cmd": 0.0
+      },
+      "name": "deadband"
+    },
+    {
+      "description": "Exactly at threshold is not open (strict > comparison)",
+      "expect": [
+        {
+          "equals": false,
+          "from_s": 0,
+          "output": "yFault",
+          "to_s": 1800
+        }
+      ],
+      "inputs": {
+        "clg_vlv_cmd": 5.0,
+        "htg_vlv_cmd": 5.0
+      },
+      "name": "threshold_edge"
+    },
+    {
+      "description": "Overlap shorter than alarm_delay never alarms; TrueDelay resets on release",
+      "expect": [
+        {
+          "equals": false,
+          "from_s": 0,
+          "output": "yFault",
+          "to_s": 1800
+        }
+      ],
+      "inputs": {
+        "clg_vlv_cmd": [
+          {
+            "t": 0,
+            "value": 30.0
+          },
+          {
+            "t": 600,
+            "value": 0.0
+          }
+        ],
+        "htg_vlv_cmd": 20.0
+      },
+      "name": "transient_overlap"
+    }
+  ],
+  "schema": "oce/vectors/v1"
+}

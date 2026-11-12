@@ -1,7 +1,18 @@
 //! Adversarial byte-level tests for the durable snapshot decoder.
 
+use oce_graph::blob::{ENGINE_VERSION, EngineVersion};
+
 use crate::state::{BlockKey, ConnectorKey, WireDir};
 use crate::{Engine, EngineStateError, EngineStateSnapshot};
+
+/// The engine-version field of the fixed header: major, minor, patch as little-endian `u16`.
+const VERSION_FIELD: std::ops::Range<usize> = 16..22;
+/// Offset of the body-length field, which every length refusal names.
+const BODY_LENGTH: usize = 22;
+/// Bytes in the fixed header; the body starts here with the 16-byte fingerprint.
+const HEADER: usize = 30;
+/// Bytes in the trailer.
+const TRAILER: usize = 16;
 
 const MINIMAL_LOOP: &[u8] = include_bytes!("../../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
 
@@ -50,8 +61,8 @@ struct Offsets {
 }
 
 fn offsets(bytes: &[u8]) -> Offsets {
-    let model_length = u32_at(bytes, 40) as usize;
-    let model_bytes = 44..44 + model_length;
+    let model_length = u32_at(bytes, HEADER + 16) as usize;
+    let model_bytes = HEADER + 20..HEADER + 20 + model_length;
     let state_t = model_bytes.end;
     let prev_tag = state_t + 8;
     let manifest_length = prev_tag + 1 + usize::from(bytes[prev_tag] == 1) * 8;
@@ -98,7 +109,7 @@ fn every_truncation_boundary_is_a_typed_refusal() {
         let error = EngineStateSnapshot::from_bytes(&bytes[..length]).unwrap_err();
         assert!(
             matches!(error, EngineStateError::MalformedSnapshot { offset, .. }
-            if offset == if length < 40 { 0 } else { 16 }),
+            if offset == if length < HEADER + TRAILER { 0 } else { BODY_LENGTH as u64 }),
             "length {length}: {error:?}"
         );
     }
@@ -116,18 +127,82 @@ fn fixed_header_refusals_follow_the_pinned_precedence() {
     ));
 
     let mut unsupported = bytes.clone();
-    unsupported[8..12].copy_from_slice(&1u32.to_le_bytes());
+    unsupported[8..12].copy_from_slice(&2u32.to_le_bytes());
     assert!(matches!(
         EngineStateSnapshot::from_bytes(&unsupported),
-        Err(EngineStateError::UnsupportedFormat { revision: 1 })
+        Err(EngineStateError::UnsupportedFormat { revision: 2 })
     ));
 
     let mut trailing = bytes.clone();
     trailing.push(0);
     assert!(matches!(
         EngineStateSnapshot::from_bytes(&trailing),
-        Err(EngineStateError::MalformedSnapshot { offset: 16, .. })
+        Err(EngineStateError::MalformedSnapshot { offset, .. }) if offset == BODY_LENGTH as u64
     ));
+
+    // The engine version sits between the format and the length: a wrong magic or format wins
+    // over it, and it wins over a wrong length, a wrong trailer and a wrong body.
+    let other = EngineVersion {
+        patch: ENGINE_VERSION.patch.wrapping_add(1),
+        ..ENGINE_VERSION
+    };
+    let mut other_version = bytes.clone();
+    other_version[VERSION_FIELD.end - 2..VERSION_FIELD.end]
+        .copy_from_slice(&other.patch.to_le_bytes());
+    let edits: [fn(&mut Vec<u8>); 5] = [
+        |_| {},
+        |bytes| bytes.push(0),
+        |bytes| bytes.truncate(bytes.len() - 1),
+        |bytes| bytes[HEADER] ^= 1,
+        |bytes| bytes[BODY_LENGTH..HEADER].fill(0xff),
+    ];
+    for edit in edits {
+        let mut edited = other_version.clone();
+        edit(&mut edited);
+        assert!(matches!(
+            EngineStateSnapshot::from_bytes(&edited),
+            Err(EngineStateError::EngineVersionMismatch { found, expected })
+                if found == other && expected == ENGINE_VERSION
+        ));
+    }
+    let mut bad_magic = other_version.clone();
+    bad_magic[7] ^= 1;
+    assert!(matches!(
+        EngineStateSnapshot::from_bytes(&bad_magic),
+        Err(EngineStateError::MalformedSnapshot { offset: 0, .. })
+    ));
+    let mut unsupported = other_version;
+    unsupported[8..12].copy_from_slice(&0u32.to_le_bytes());
+    assert!(matches!(
+        EngineStateSnapshot::from_bytes(&unsupported),
+        Err(EngineStateError::UnsupportedFormat { revision: 0 })
+    ));
+}
+
+#[test]
+fn a_header_cut_inside_the_version_field_is_too_short_or_another_version() {
+    // Every prefix that ends inside the version field, alone and padded out to the shortest
+    // length the decoder inspects: the first is shorter than a header and trailer, the second
+    // reads a version the padding completed and refuses it as another engine's.
+    let bytes = snapshot_bytes();
+    for cut in VERSION_FIELD.start..VERSION_FIELD.end {
+        assert!(matches!(
+            EngineStateSnapshot::from_bytes(&bytes[..cut]),
+            Err(EngineStateError::MalformedSnapshot { offset: 0, .. })
+        ));
+        let mut padded = bytes[..cut].to_vec();
+        padded.resize(HEADER + TRAILER, 0xff);
+        match EngineStateSnapshot::from_bytes(&padded) {
+            Err(EngineStateError::EngineVersionMismatch { found, expected }) => {
+                assert_eq!(expected, ENGINE_VERSION);
+                assert_eq!(
+                    [found.major, found.minor, found.patch],
+                    [0, 2, 4].map(|at| u16::from_le_bytes([padded[16 + at], padded[17 + at]]))
+                );
+            }
+            other => panic!("cut {cut}: {:?}", other.map(|_| ())),
+        }
+    }
 }
 
 #[test]
@@ -183,7 +258,7 @@ fn self_consistency_and_value_type_corruption_refuse() {
     let layout = offsets(&bytes);
 
     let mut fingerprint = bytes.clone();
-    fingerprint[24] ^= 1;
+    fingerprint[HEADER] ^= 1;
     resign(&mut fingerprint);
     assert!(matches!(
         EngineStateSnapshot::from_bytes(&fingerprint),
@@ -215,7 +290,7 @@ fn self_consistency_and_value_type_corruption_refuse() {
 #[test]
 fn integrity_mismatch_reports_recomputed_and_carried_values() {
     let mut bytes = snapshot_bytes();
-    bytes[24] ^= 1;
+    bytes[HEADER] ^= 1;
     let expected = fnv(&bytes[..bytes.len() - 16]);
     let found = u128::from_le_bytes(bytes[bytes.len() - 16..].try_into().unwrap());
     assert!(matches!(
@@ -277,4 +352,230 @@ fn hostile_section_counts_refuse_before_large_allocation() {
         EngineStateSnapshot::from_bytes(&bytes),
         Err(EngineStateError::MalformedSnapshot { .. })
     ));
+}
+
+/// One snapshot defect, in the decoder's refusal order (issue #535 pins the same rule for the
+/// compiled-schedule blob, in `tests/blob_refusal_precedence.rs`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Defect {
+    /// One byte longer than the snapshot cap.
+    Oversized,
+    /// One byte shorter than a header and a trailer.
+    Short,
+    /// A magic other than `OCESTAT\0`.
+    Magic,
+    /// Format revision 2.
+    Format,
+    /// The engine version with its patch one higher. The fingerprint, which covers the version,
+    /// is left as this build wrote it: no check after the version is reached.
+    Version,
+    /// A body length one more than the bytes hold.
+    BodyLength,
+    /// A trailer that does not match the bytes before it.
+    Trailer,
+    /// A fingerprint that does not match the manifest. The decoder compares the two only after it
+    /// has read the model id, checked that the model time is finite, read the previous-time tag
+    /// and decoded the whole manifest. The rest of this body is valid, so the comparison is the
+    /// first body check to fail. The matrix pairs it only with header defects.
+    Fingerprint,
+}
+
+const REFUSAL_ORDER: [Defect; 8] = [
+    Defect::Oversized,
+    Defect::Short,
+    Defect::Magic,
+    Defect::Format,
+    Defect::Version,
+    Defect::BodyLength,
+    Defect::Trailer,
+    Defect::Fingerprint,
+];
+
+fn other_engine_version() -> EngineVersion {
+    EngineVersion {
+        patch: ENGINE_VERSION.patch.wrapping_add(1),
+        ..ENGINE_VERSION
+    }
+}
+
+fn version_bytes(version: EngineVersion) -> Vec<u8> {
+    [version.major, version.minor, version.patch]
+        .iter()
+        .flat_map(|part| part.to_le_bytes())
+        .collect()
+}
+
+fn snapshot_cap() -> usize {
+    usize::try_from(crate::state::MAX_SNAPSHOT_BYTES).unwrap()
+}
+
+/// `valid` with every defect in `defects`: the field edits, each in its own bytes, then a trailer
+/// over them (broken afterwards for `Trailer`), then the size edits.
+fn with_defects(valid: &[u8], defects: &[Defect]) -> Vec<u8> {
+    let mut bytes = valid.to_vec();
+    for defect in defects {
+        match defect {
+            Defect::Magic => bytes[0] ^= 1,
+            Defect::Format => bytes[8..12].copy_from_slice(&2u32.to_le_bytes()),
+            Defect::Version => {
+                bytes[VERSION_FIELD].copy_from_slice(&version_bytes(other_engine_version()));
+            }
+            Defect::BodyLength => {
+                let body = u64_at(&bytes, BODY_LENGTH) + 1;
+                bytes[BODY_LENGTH..HEADER].copy_from_slice(&body.to_le_bytes());
+            }
+            Defect::Fingerprint => bytes[HEADER] ^= 1,
+            Defect::Oversized | Defect::Short | Defect::Trailer => {}
+        }
+    }
+    resign(&mut bytes);
+    if defects.contains(&Defect::Trailer) {
+        *bytes.last_mut().unwrap() ^= 0x80;
+    }
+    if defects.contains(&Defect::Short) {
+        bytes.truncate(HEADER + TRAILER - 1);
+    }
+    if defects.contains(&Defect::Oversized) {
+        let mut oversized = vec![0u8; snapshot_cap() + 1];
+        oversized[..bytes.len()].copy_from_slice(&bytes);
+        bytes = oversized;
+    }
+    bytes
+}
+
+/// Whether `bytes` carry `defect`, read without the codec; `valid` is the snapshot they were
+/// edited from. Not asked of an oversized input, whose trailer would cost a 64 MiB hash.
+///
+/// On a `Short` input it cannot tell whether the `BodyLength` and `Trailer` edits were applied.
+/// No input that short matches its body length, and its last sixteen bytes are not a trailer, so
+/// both read as present either way. A pair of `Short` with either of them therefore shows only
+/// that the short-input refusal wins. That needs nothing more, because the size is checked before
+/// the body length and the trailer.
+fn present(defect: Defect, bytes: &[u8], valid: &[u8]) -> bool {
+    assert!(
+        bytes.len() <= snapshot_cap(),
+        "not inspected when oversized"
+    );
+    let len = bytes.len();
+    match defect {
+        Defect::Oversized => false,
+        Defect::Short => len < HEADER + TRAILER,
+        Defect::Magic => bytes[..8] != *b"OCESTAT\0",
+        Defect::Format => u32_at(bytes, 8) != 1,
+        Defect::Version => bytes[VERSION_FIELD] != *version_bytes(ENGINE_VERSION),
+        Defect::BodyLength => {
+            usize::try_from(u64_at(bytes, BODY_LENGTH)).unwrap() + HEADER + TRAILER != len
+        }
+        Defect::Trailer => {
+            fnv(&bytes[..len - TRAILER])
+                != u128::from_le_bytes(bytes[len - TRAILER..].try_into().unwrap())
+        }
+        Defect::Fingerprint => {
+            len >= HEADER + 16 && bytes[HEADER..HEADER + 16] != valid[HEADER..HEADER + 16]
+        }
+    }
+}
+
+/// The refusal `defect` earns when it is the first defect of `bytes`, as its `Debug` text: the
+/// error type has no `PartialEq`, and the text names the variant and every field.
+fn refusal(defect: Defect, bytes: &[u8]) -> String {
+    let len = bytes.len();
+    let error = match defect {
+        Defect::Oversized => EngineStateError::SnapshotTooLarge {
+            actual_bytes: crate::state::MAX_SNAPSHOT_BYTES + 1,
+            max_bytes: crate::state::MAX_SNAPSHOT_BYTES,
+        },
+        Defect::Short => EngineStateError::MalformedSnapshot {
+            offset: 0,
+            detail: "snapshot is shorter than the fixed header and trailer".into(),
+        },
+        Defect::Magic => EngineStateError::MalformedSnapshot {
+            offset: 0,
+            detail: "invalid state-snapshot magic".into(),
+        },
+        Defect::Format => EngineStateError::UnsupportedFormat { revision: 2 },
+        Defect::Version => EngineStateError::EngineVersionMismatch {
+            found: other_engine_version(),
+            expected: ENGINE_VERSION,
+        },
+        Defect::BodyLength => EngineStateError::MalformedSnapshot {
+            offset: BODY_LENGTH as u64,
+            detail: format!("body length names {} total bytes, found {len}", len + 1),
+        },
+        Defect::Trailer => EngineStateError::IntegrityMismatch {
+            expected: fnv(&bytes[..len - TRAILER]),
+            found: u128::from_le_bytes(bytes[len - TRAILER..].try_into().unwrap()),
+        },
+        Defect::Fingerprint => EngineStateError::MalformedSnapshot {
+            offset: HEADER as u64,
+            detail: "execution fingerprint does not match its manifest".into(),
+        },
+    };
+    format!("{error:?}")
+}
+
+fn outcome(bytes: &[u8]) -> String {
+    match EngineStateSnapshot::from_bytes(bytes) {
+        Ok(_) => "accepted".into(),
+        Err(error) => format!("{error:?}"),
+    }
+}
+
+#[test]
+fn each_snapshot_defect_alone_earns_its_own_refusal() {
+    let valid = snapshot_bytes();
+    assert_eq!(outcome(&valid), "accepted");
+    for defect in REFUSAL_ORDER {
+        let bytes = with_defects(&valid, &[defect]);
+        // A size defect moves the body length and the trailer with it; every other defect is the
+        // only one its bytes carry.
+        match defect {
+            Defect::Oversized => {}
+            Defect::Short => assert!(present(Defect::Short, &bytes, &valid)),
+            _ => {
+                for other in REFUSAL_ORDER
+                    .into_iter()
+                    .filter(|&o| o != Defect::Oversized)
+                {
+                    assert_eq!(
+                        present(other, &bytes, &valid),
+                        other == defect,
+                        "{defect:?}: {other:?}"
+                    );
+                }
+            }
+        }
+        assert_eq!(outcome(&bytes), refusal(defect, &bytes), "{defect:?}");
+    }
+}
+
+#[test]
+fn of_every_two_snapshot_defects_the_earlier_check_wins() {
+    // Every pair, so every two adjacent checks among them. Two pairs cannot occur: an input is not
+    // both larger than the cap and shorter than a header, and one shorter than a header and a
+    // trailer has no whole fingerprint field.
+    let valid = snapshot_bytes();
+    for (index, &earlier) in REFUSAL_ORDER.iter().enumerate() {
+        for &later in &REFUSAL_ORDER[index + 1..] {
+            if matches!(
+                (earlier, later),
+                (Defect::Oversized, Defect::Short) | (Defect::Short, Defect::Fingerprint)
+            ) {
+                continue;
+            }
+            let bytes = with_defects(&valid, &[earlier, later]);
+            if earlier != Defect::Oversized {
+                assert!(
+                    present(earlier, &bytes, &valid),
+                    "{earlier:?} with {later:?}"
+                );
+                assert!(present(later, &bytes, &valid), "{later:?} with {earlier:?}");
+            }
+            assert_eq!(
+                outcome(&bytes),
+                refusal(earlier, &bytes),
+                "{earlier:?} with {later:?}"
+            );
+        }
+    }
 }

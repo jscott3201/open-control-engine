@@ -4,7 +4,7 @@
 //! Title 24 branch is pruned before import, so only the 213 active leaf blocks participate in
 //! the flattened runtime graph.
 
-mod bless;
+use crate::bless;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;

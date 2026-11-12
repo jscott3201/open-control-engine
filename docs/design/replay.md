@@ -29,7 +29,8 @@ with "no hold-last, zero/false seed or stored-sample fill-in", and
 nor qualifies a host's substitution policy". Replay is that host policy applied offline, made
 explicit and written down frame by frame. It adds nothing to `oce-api`, it runs no thread, async
 runtime, clock, file system walk or network listener, and it never touches
-[the §7.17 seam](../architecture.md#the-organising-idea-the-cdl-717-non-computational-seam). Reading
+[the metadata seam](../architecture.md#the-organising-idea-the-non-computational-metadata-seam)
+(§7.17 of the OpenBuildingControl (OBC) specification; ANSI/ASHRAE 231-2026 §5.13). Reading
 a CSV file from a path is the caller's job; the CSV adapter takes a byte reader.
 
 ## Frame sources
@@ -58,7 +59,7 @@ validity bit are all `None`, never a value, whatever `NonFiniteInputPolicy` says
 | --- | --- | --- | --- |
 | `ColumnarSource` | one time column and one owned typed column per input (numpy or pandas shape) | NaN (Real); validity mask (Integer, Boolean, Enum) | `oce-py`, `oce-wasm`, the benchmark |
 | `CsvSource` | a byte reader, a header row, a time column and a `ColumnMap` | empty cell or a configured token (`NaN`, `NA`) | `oce-verify`, `oce-host`, #436 |
-| `StepSource` | per input, a list of `(t, value)` changes; a constant is a one-step list | none: a step list defines a value on every interval it covers | `oce-verify` vector format v2 |
+| `StepSource` | per input, a list of `(t, value)` changes; a constant is a one-step list | none: a step list defines a value on every interval it covers | `oce-verify` vector format |
 
 The columnar adapter owns its columns. Python and JavaScript copy their arrays in before the run, so
 no foreign buffer is borrowed across a released lock (a day of 14 inputs at 5 s is under 2 MB).
@@ -84,8 +85,8 @@ Rows must have nondecreasing time; a decrease is a typed `SourceError::TimeRegre
 engine sees anything. A row whose time is missing is refused, never substituted. Equal times follow
 the `DuplicateTime` policy: `Refuse` by default, `Allow` as an explicit opt-in. The contract says an
 equal timestamp "is neither a read nor an idempotent retry": it is a legal HostTick transition with
-zero elapsed time, and CDL §12 verification data can carry equal-time samples. Under `Allow` each
-equal-time row is its own frame and its own trace row; replay never collapses rows.
+zero elapsed time, and OBC §12 verification data can carry equal-time samples. Under
+`Allow` each equal-time row is its own frame and its own trace row; replay never collapses rows.
 
 **Bounds.** Every adapter is bounded at construction or while reading, with a typed error and never
 a panic: rows, columns, bytes, cell length and step-list length (decision 8; numbers, decision 19).
@@ -320,6 +321,52 @@ that both the facade and the `no_std` entry call. A leverage crate reaches it on
 private driver alone; the trace and every public signature stay as above, and the chunk-size and
 golden tests prove the bits did not move.
 
+## As built (GitHub #462)
+
+`crates/leverage/oce-replay` implements this note with these differences from the sketch above.
+The decisions stand; where one could not be built as written, the gap is named.
+
+- **`ColumnSpec { name, kind: ColumnKind }`**, not `value_type: ValueType`: a caller cannot
+  construct an enum class identity, so a column declares its kind (`Real`, `Integer`, `Boolean`,
+  `Enum(class_path)`) and the map checks that it carries the input's type.
+- **`FrameSource`** exposes `map_id` (the `InputMap` it was bound to; `Replay::new` refuses another),
+  `kind` (`Samples` or `Signals`, decision 11), `origin` and `ignored_columns`, not `columns()`.
+  Rows are lent as `Row<'_> = (f64, &[Option<Value>])`. `&mut S` and `Box<S>` are sources too, so a
+  binding can hold `Replay<Box<dyn FrameSource>>`. Replay itself treats a Real NaN cell from any
+  source as missing.
+- **`TimeOrigin`** is a parsed struct (the text as written plus its Unix nanoseconds), not a
+  newtype over the string.
+- **`StepSource::with_instants`** adds evaluation instants at which no input changes; a model with
+  no inputs runs on these alone.
+- **`Replay::reserve(frames)`** preallocates trace rows; each `advance` chunk also reserves its own.
+- **`Trace::check_coverage`** holds the coverage check (`Replay::check_coverage` delegates); a window
+  counts only rows the engine executed (`Executed` or `Substituted`).
+- **`ReplayError::TooManyFrames`**: reaching `max_frames` with frames still to attempt is a typed
+  error, never truncation, on either time base. **`ReplayError::GridNotIncreasing`**: a grid whose
+  consecutive ticks round equal (a huge `t0`, or `k` beyond 2^53) stops with a typed error.
+- **Precedence within a frame.** If any missing input cannot be substituted (`Refuse`, or `HoldLast`
+  with no sample young enough), the frame is `RefusedMissing`, naming the first such input in slot
+  order, even when another missing input is `SkipFrame`; otherwise a missing `SkipFrame` input skips
+  it. The substitution mask records every input substituted on a row whatever its status, skipped
+  and refused rows included. Observations on refused or skipped rows still count as the latest
+  observed sample for a later hold.
+- **Engine refusals.** A refusal row stores a closed `EngineRefusal` class (input type, non-finite,
+  domain, the time classes, or `Run`) in the canonical bytes and keeps the facade's message text in
+  memory only. A `Run` refusal (a state precondition, `FrameSequenceExhausted`, a stale slot map) is
+  about the run, not the frame, so it stops the run even under `RecordAndContinue`.
+- **Decision 21 as built.** The facade exposes no lookup from an enum class to its class path. An
+  Enum input column carries the class path its source declares, recorded as an unverified label; an
+  Enum output keeps the facade's process-local class index in memory only, and the canonical bytes
+  carry the ordinal with an empty class path. A facade class-path lookup is a follow-up.
+- **Decision 22 as built.** `CsvSource` tokenizes with `csv-core`, the allocation-free core of the
+  `csv` crate, so the column, cell and byte caps are enforced field by field as the bytes arrive:
+  peak memory is one 8 KiB chunk, one cell and one record of at most `max_columns` cells, whatever
+  the input. The `csv` crate's reader buffers a whole record before a caller can check it, which
+  made a hostile header line an out-of-memory abort at the default byte cap.
+- **The trace byte cap** is checked before each frame against its row bytes (each output counted at
+  8 bytes until the first accepted frame fixes the set) and after it for its sparse rows and
+  snapshots, so it holds to within one frame's sparse output.
+
 ## Decisions
 
 Decisions 1 to 4 are the owner's. Decisions 5 to 10 are technical recommendations accepted by the
@@ -354,7 +401,7 @@ multiply, never accumulated; `Recorded` passes sample times through unchanged; `
 policy, `Refuse` by default and `Allow` as an explicit opt-in, with each equal-time frame its own
 trace row; a reference on a different time base is resampled by the consumer, never by replay.
 Rejected: accumulating ticks (drift); collapsing equal times (first-wins or last-wins); a fixed
-refusal (CDL §12 data carries equal-time samples). Why: an equal-time resubmission is a real, legal
+refusal (OBC §12 data carries equal-time samples). Why: an equal-time resubmission is a real, legal
 HostTick transition, so it is the caller's decision, recorded. (`Allow` and consumer-side
 resampling were added by the orchestrator from the #436 research.)
 
@@ -379,7 +426,7 @@ golden byte-identical.
 
 **10. Sequencing.** #445 builds `oce-replay` on the facade path; the slot shape moves to #401's
 driver through #444's facade entry, with or after #401; time and missing-sample semantics are
-designed with #436; M3 vector format v2 maps onto the step, CSV and series sources.
+designed with #436; the M3 vector format maps onto the step, CSV and series sources.
 
 **11. samples and signals.** As stated under [Missing samples](#missing-samples).
 Rejected: treating zero-order hold as free (it hides staleness, the defect decision 2 exists to
@@ -451,10 +498,12 @@ published interchange format until a later note says so.
   origin, `CsvSource` with its caps and an input-retaining trace; converts units before the source;
   resamples references, builds its funnel envelope and derives indicators from the trace's exact
   times and bits. The two notes settle time and missing-sample semantics together.
-- **M3 vector format v2.** Constant and step inputs map onto `StepSource`, CSV columns onto
-  `CsvSource`, series onto `ColumnarSource`; expected diagnostics read the diagnostics table and
-  expected state reads snapshots; windows go through `check_coverage`. Comparison is `oce-verify`'s
-  layer over the trace; the trace never embeds a tolerance.
+- **M3 vector format** ([design note](vectors.md)). Constant and step inputs map onto
+  `StepSource`, CSV columns onto `CsvSource`, series onto `ColumnarSource`; expected diagnostics
+  read the diagnostics table; windows go through `check_coverage`. Comparison is `oce-verify`'s
+  layer over the trace; the trace never embeds a tolerance. *Amended 2026-11-09:* this bullet
+  first said "expected state reads snapshots"; the vectors note defers expected state (its
+  decision 13), so no vector reads a snapshot.
 - **M5 (`oce-py`)** builds `engine.run(frames) -> Trace` and `Trace.to_pandas()` on the cursor and
   columns; **M4 (`oce-wasm`)** runs the worker through `advance`; **M6 (`oce-host`)** reuses
   `MissingPolicy`, `OnRefusal` and `CsvSource` and adds wall-clock staleness, never a second

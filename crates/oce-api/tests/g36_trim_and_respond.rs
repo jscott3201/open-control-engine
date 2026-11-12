@@ -1,8 +1,8 @@
 //! G36 Generic.TrimAndRespond `have_hol=false` facade simulation evidence.
 
 use oce_api::{Engine, PointDirection, Value};
-#[path = "support/frame_trace.rs"]
-mod frame_trace;
+// Shared helper, declared once for this binary in its root `facade.rs`.
+use crate::frame_trace;
 use frame_trace::FrameRun;
 
 const TRIM_AND_RESPOND: &str =

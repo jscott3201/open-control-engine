@@ -1,0 +1,42 @@
+	{ "scenarios" : [
+  { "expect": [
+      { "to_s": 4.3E0, "equals": -0, "from_s": 0.0, "output": "y.é" },
+      { "at_s": 0.30000000000000004,
+        "diagnostic": { "message": "line one\nline \"two\" \\ \/ end 😀", "block": "CDL.Utilities.Assert" } },
+      { "diagnostic": { "block": "CDL.Reals.MovingAverage" }, "at_s": 0 },
+      { "output": "z", "from_s": 4.25, "to_s": 43e-1, "equals": true },
+      { "equals": 1e-4, "output": "ratio", "to_s": 0.5, "from_s": 5e-1 },
+      { "output": "ratio", "from_s": 1, "to_s": 2, "equals": 0.00001 },
+      { "output": "ratio", "from_s": 1, "to_s": 2, "equals": 9999999999999998.0 },
+      { "output": "ratio", "from_s": 1, "to_s": 2, "equals": 1E16 },
+      { "output": "ratio", "from_s": 1, "to_s": 2, "equals": 1e+2 },
+      { "output": "ratio", "from_s": 1, "to_s": 2, "equals": 0.1e1 },
+      { "output": "ratio", "from_s": 1, "to_s": 2, "equals": 123456789012345678.0 },
+      { "output": "ratio", "from_s": 1, "to_s": 2, "equals": 1e-400 },
+      { "output": "ratio", "from_s": 1, "to_s": 2, "equals": -1.7976931348623157e308 },
+      { "output": "count", "from_s": 1, "to_s": 2, "equals": 9007199254740993 },
+      { "output": "count", "from_s": 1, "to_s": 2, "equals": -9223372036854775808 }
+    ],
+    "description": "Every field, spelled awkwardly: → arrows — dashes, a tab-free line\nbreak and an astral 😀.",
+    "inputs": {
+      "zeta": false,
+      "Alpha": -0.0,
+      "alpha": [ { "value": 1, "t": 0 }, { "t": 0.05, "value": 2.50 }, { "t": 4.3, "value": 5e-324 } ],
+      "écart": 9223372036854775807,
+      "été": [ { "t": -0.0, "value": true } ],
+      "￿": 1,
+      "𐀀": 2,
+      "a.b": 3, "a_b": 4, "aB": 5, "a": 6
+    },
+    "params": { "b.k": 1, "a.k": 2.50, "Z": true, "é": -0.0 },
+    "name": "every field · one"
+  },
+  { "name": "nothing", "inputs": {}, "expect": [], "params": {} },
+  { "inputs": { "u": [ { "t": 0, "value": 0 } ] }, "name": "a constant written as a list", "expect": [] }
+],
+  "params": { "persist.delayTime": 300.0, "gain.k": 2 },
+  "mutants" :[ { "description": "Both thresholds read \u003e= 5 · \u00e9", "path": "mutants\/threshold_inclusive.cxf.json" },
+	{"path":"m/late_alarm.cxf.json"} ],
+  "clock" : { "horizon_s" : 4.3 , "step_s" : 1e-1 } ,
+  "schema": "oce\/vectors\/v1"
+}

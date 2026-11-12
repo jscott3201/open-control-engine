@@ -1,0 +1,174 @@
+{
+  "clock": {
+    "horizon_s": 4.3,
+    "step_s": 0.1
+  },
+  "mutants": [
+    {
+      "description": "Both thresholds read >= 5 \u00b7 \u00e9",
+      "path": "mutants/threshold_inclusive.cxf.json"
+    },
+    {
+      "path": "m/late_alarm.cxf.json"
+    }
+  ],
+  "params": {
+    "gain.k": 2,
+    "persist.delayTime": 300.0
+  },
+  "scenarios": [
+    {
+      "description": "Every field, spelled awkwardly: \u2192 arrows \u2014 dashes, a tab-free line\nbreak and an astral \ud83d\ude00.",
+      "expect": [
+        {
+          "equals": 0,
+          "from_s": 0.0,
+          "output": "y.\u00e9",
+          "to_s": 4.3
+        },
+        {
+          "at_s": 0.30000000000000004,
+          "diagnostic": {
+            "block": "CDL.Utilities.Assert",
+            "message": "line one\nline \"two\" \\ / end \ud83d\ude00"
+          }
+        },
+        {
+          "at_s": 0,
+          "diagnostic": {
+            "block": "CDL.Reals.MovingAverage"
+          }
+        },
+        {
+          "equals": true,
+          "from_s": 4.25,
+          "output": "z",
+          "to_s": 4.3
+        },
+        {
+          "equals": 0.0001,
+          "from_s": 0.5,
+          "output": "ratio",
+          "to_s": 0.5
+        },
+        {
+          "equals": 1e-5,
+          "from_s": 1,
+          "output": "ratio",
+          "to_s": 2
+        },
+        {
+          "equals": 9999999999999998.0,
+          "from_s": 1,
+          "output": "ratio",
+          "to_s": 2
+        },
+        {
+          "equals": 1e16,
+          "from_s": 1,
+          "output": "ratio",
+          "to_s": 2
+        },
+        {
+          "equals": 100.0,
+          "from_s": 1,
+          "output": "ratio",
+          "to_s": 2
+        },
+        {
+          "equals": 1.0,
+          "from_s": 1,
+          "output": "ratio",
+          "to_s": 2
+        },
+        {
+          "equals": 1.2345678901234568e17,
+          "from_s": 1,
+          "output": "ratio",
+          "to_s": 2
+        },
+        {
+          "equals": 0.0,
+          "from_s": 1,
+          "output": "ratio",
+          "to_s": 2
+        },
+        {
+          "equals": -1.7976931348623157e308,
+          "from_s": 1,
+          "output": "ratio",
+          "to_s": 2
+        },
+        {
+          "equals": 9007199254740993,
+          "from_s": 1,
+          "output": "count",
+          "to_s": 2
+        },
+        {
+          "equals": -9223372036854775808,
+          "from_s": 1,
+          "output": "count",
+          "to_s": 2
+        }
+      ],
+      "inputs": {
+        "Alpha": -0.0,
+        "a": 6,
+        "a.b": 3,
+        "aB": 5,
+        "a_b": 4,
+        "alpha": [
+          {
+            "t": 0,
+            "value": 1
+          },
+          {
+            "t": 0.05,
+            "value": 2.5
+          },
+          {
+            "t": 4.3,
+            "value": 5e-324
+          }
+        ],
+        "zeta": false,
+        "\u00e9cart": 9223372036854775807,
+        "\u00e9t\u00e9": [
+          {
+            "t": -0.0,
+            "value": true
+          }
+        ],
+        "\uffff": 1,
+        "\ud800\udc00": 2
+      },
+      "name": "every field \u00b7 one",
+      "params": {
+        "Z": true,
+        "a.k": 2.5,
+        "b.k": 1,
+        "\u00e9": -0.0
+      }
+    },
+    {
+      "expect": [],
+      "inputs": {},
+      "name": "nothing",
+      "params": {}
+    },
+    {
+      "expect": [],
+      "inputs": {
+        "u": [
+          {
+            "t": 0,
+            "value": 0
+          }
+        ]
+      },
+      "name": "a constant written as a list"
+    }
+  ],
+  "schema": "oce/vectors/v1"
+}

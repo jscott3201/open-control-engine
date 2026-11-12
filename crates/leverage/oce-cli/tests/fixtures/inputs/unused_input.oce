@@ -1,0 +1,11 @@
+sequence unused_input
+derived_from none
+
+in TOut : Real @unit K
+in TSpare : Real @unit K
+out y : Real
+
+block gai = CDL.Reals.MultiplyByParameter(k = 2.0)
+
+TOut -> gai.u
+gai.y -> y

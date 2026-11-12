@@ -1,0 +1,189 @@
+{
+  "sequence": "defects",
+  "derived_from": "CXF:abc",
+  "params": [
+    {
+      "name": "dTHys",
+      "type": "Real",
+      "value": 1
+    },
+    {
+      "name": "nStage",
+      "type": "Integer",
+      "value": 2.5
+    },
+    {
+      "name": "eneStd",
+      "type": "OperationModes",
+      "value": {
+        "member": "OperationModes.occupied"
+      }
+    }
+  ],
+  "inputs": [
+    {
+      "name": "TOut",
+      "type": "Real",
+      "quantity": "ThermodynamicTemperature",
+      "display_unit": "degC",
+      "min": [
+        30.0
+      ],
+      "max": [
+        -10
+      ],
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "deg C",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    },
+    {
+      "name": "TOutCut",
+      "type": "Real",
+      "quantity": "",
+      "display_unit": "",
+      "min": [],
+      "max": [],
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "K",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": true
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "ecoEna",
+      "type": "Boolean",
+      "quantity": "",
+      "display_unit": "",
+      "min": [],
+      "max": [
+        1
+      ],
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "",
+        "brick": "Enable_Command",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    },
+    {
+      "name": "sub",
+      "type": "Real",
+      "quantity": "",
+      "display_unit": "",
+      "min": [],
+      "max": [],
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    }
+  ],
+  "blocks": [
+    {
+      "name": "sub",
+      "class": "CDL.Reals.Subtract",
+      "params": []
+    },
+    {
+      "name": "hys",
+      "class": "CDL.Reals.Hysteresis",
+      "params": [
+        {
+          "name": "uLow",
+          "value": 0.0
+        },
+        {
+          "name": "uHigh",
+          "value": {
+            "ref": "dTHys"
+          }
+        },
+        {
+          "name": "uLow",
+          "value": 0.5
+        },
+        {
+          "name": "uMid",
+          "value": 0.5
+        },
+        {
+          "name": "pre_y_start",
+          "value": {
+            "ref": "dTHysX"
+          }
+        }
+      ]
+    },
+    {
+      "name": "con",
+      "class": "CDL.Reals.PID",
+      "params": [
+        {
+          "name": "controllerType",
+          "value": {
+            "member": "SimpleController.PIX"
+          }
+        },
+        {
+          "name": "k",
+          "value": -1.0
+        }
+      ]
+    },
+    {
+      "name": "end",
+      "class": "CDL.Reals.Nope",
+      "params": []
+    },
+    {
+      "name": "pass",
+      "class": "urn:oce:lowering#PassThrough.Real",
+      "params": [
+        {
+          "name": "k",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "limit",
+      "class": "CDL.Reals.Limiter",
+      "params": []
+    }
+  ],
+  "connections": [
+    "TOutCut -> sub.u1",
+    "TOut -> sub.u2",
+    "sub.y -> hys.u",
+    "hys.y -> ecoEna",
+    "hys.y.z -> ecoEna",
+    "TOut -> sub.u1",
+    "ecoEna -> hys.u",
+    "sub.y -> TOut",
+    "TOut -> sub.u9"
+  ]
+}

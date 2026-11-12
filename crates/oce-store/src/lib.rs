@@ -147,7 +147,7 @@ pub struct RelationDto {
     pub kind: RelationKind,
 }
 
-/// A raw semantic payload kept for lossless re-emit (§7.17.2).
+/// A raw semantic payload kept for lossless re-emit (OBC §7.17.2).
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SemanticPayloadDto {
     /// The subject element.

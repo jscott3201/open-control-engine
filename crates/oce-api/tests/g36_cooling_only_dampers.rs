@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use oce_api::{Engine, Value};
-#[path = "support/frame_trace.rs"]
-mod frame_trace;
+// Shared helper, declared once for this binary in its root `facade.rs`.
+use crate::frame_trace;
 use frame_trace::FrameRun;
 
 const DAMPERS: &str = include_str!("../../oce-cxf/tests/fixtures/g36/cooling_only_dampers.jsonld");

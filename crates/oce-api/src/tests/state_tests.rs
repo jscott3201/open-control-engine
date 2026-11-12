@@ -528,20 +528,49 @@ fn decoder_size_cap_precedes_header_validation() {
 }
 
 #[test]
+fn decoder_size_cap_precedes_the_engine_version_check() {
+    // A header of another engine version in front of a buffer at the cap and one byte past it:
+    // the cap refuses the longer one by size, and the version refuses the other without reading
+    // the 64 MiB behind it (its length field and trailer are both wrong).
+    let other = oce_graph::blob::EngineVersion {
+        minor: oce_graph::blob::ENGINE_VERSION.minor.wrapping_add(1),
+        ..oce_graph::blob::ENGINE_VERSION
+    };
+    let mut bytes = authored_empty_snapshot().into_bytes();
+    bytes[18..20].copy_from_slice(&other.minor.to_le_bytes());
+    bytes.resize(crate::state::MAX_SNAPSHOT_BYTES as usize, 0xff);
+    assert!(matches!(
+        EngineStateSnapshot::from_bytes(&bytes),
+        Err(EngineStateError::EngineVersionMismatch { found, expected })
+            if found == other && expected == oce_graph::blob::ENGINE_VERSION
+    ));
+    bytes.push(0xff);
+    assert!(matches!(
+        EngineStateSnapshot::from_bytes(&bytes),
+        Err(EngineStateError::SnapshotTooLarge {
+            actual_bytes,
+            max_bytes
+        }) if actual_bytes == max_bytes + 1
+    ));
+}
+
+#[test]
 fn empty_authored_model_has_pinned_durable_bytes_and_fingerprint() {
     let snapshot = authored_empty_snapshot();
     let bytes = snapshot.into_bytes();
-    let fingerprint = u128::from_le_bytes(bytes[24..40].try_into().unwrap());
+    let fingerprint = u128::from_le_bytes(bytes[30..46].try_into().unwrap());
     let actual = bytes
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect::<String>();
+    // Both pins carry the engine version (the header field, and the fingerprint and trailer that
+    // cover it), so they move with every workspace version bump: these are for 0.5.0.
     assert_eq!(
         fingerprint,
-        12_166_013_797_975_197_438_589_920_839_995_253_557
+        77_754_179_385_031_247_724_275_301_963_868_691_827
     );
     assert_eq!(
         actual,
-        "4f43455354415400020000000200000076000000000000003563bc4e4d6f7568e3b58985ca1627091400000075726e3a746573743a656d7074792d6d6f64656c0000000000000000002d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002cece89772fdd4ad50df3cf14722371d"
+        "4f4345535441540001000000010000000000050000007600000000000000735d8ccc1a72883ae824ac5905e97e3a1400000075726e3a746573743a656d7074792d6d6f64656c0000000000000000002d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008bf2bf91acb2b1259833c77e66d9857a"
     );
 }

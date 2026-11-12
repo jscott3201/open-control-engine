@@ -1,7 +1,7 @@
 {
   "domain": "assertions",
   "representation": "Rust facade contract description; not a general JSON codec",
-  "revision": 2,
+  "revision": 1,
   "semantics": [
     "False CDL.Utilities.Assert input emits Warning on every evaluation, including repeated false and equal-time calls; true is silent.",
     "Other block classes may warn; sources are not guaranteed instance identities. No latch, warn-once, escalation, scheduler or safety policy.",

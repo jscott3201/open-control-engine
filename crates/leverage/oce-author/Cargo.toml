@@ -1,0 +1,52 @@
+# The authoring layer above the facade (design note docs/design/authoring-layer.md, issue #463):
+# the typed authoring model, a builder, the strict-JSON wire form with its pinned schema, the
+# two-stage validator, the CXF emitter (issue #464), the text form (issue #482) and the importer
+# for library CXF and the prototype's v0 graph JSON (issue #496). It depends on `oce-api` only
+# among the engine crates (crates/leverage/README.md), and on the leverage crate `oce-vocab` for
+# unit suffixes (issue #501); `oce-bless` is its one other `oce-*` edge, as a dev-dependency for
+# the golden switch (decision 19).
+[package]
+name = "oce-author"
+description = "Authoring model, text form, strict-JSON wire form, pinned JSON Schema, two-stage validator, CXF emitter and importer for Open Control Engine sequences."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+# Nothing above the facade is published in M2 (decision 20).
+publish = false
+# The integration tests are one binary instead of one per file; the `[[test]]` target at the end of
+# this file names it (GitHub #504).
+autotests = false
+
+[lints]
+workspace = true
+
+[dependencies]
+oce-api = { workspace = true }
+# The unit scale-factor table and each parameter's declared unit, which the text form scales a
+# time suffix by and stage 1 checks a suffix against (vocabulary note decision 14, issue #501).
+# A leverage crate; it depends on `oce-api` only.
+oce-vocab = { path = "../oce-vocab" }
+# The wire DTOs (decision 8). The workspace entries pin serde without default features for the
+# `no_std` core, so this crate names `std` itself.
+serde = { workspace = true, features = ["std"] }
+serde_json = { workspace = true }
+# The wire-form JSON Schema is derived from the DTOs (decision 8); M2's one new third-party
+# dependency in this crate, confined to crates/leverage/ (decision 20).
+schemars = { version = "=1.2.3", default-features = false, features = ["derive", "std"] }
+
+[dev-dependencies]
+oce-bless = { workspace = true }
+
+# Integration-test binary. Cargo's default builds every file under `tests/` as its own binary, and
+# under the release profile (`lto = "thin"`, `codegen-units = 1`) each one links the whole
+# dependency graph again (GitHub #504). Every file is a module of `authoring`, and
+# `tests/authoring.rs` fails when a file is compiled into no binary or into two. Nothing in this
+# crate selects a test binary by name (its bless command names the package), so there is no other
+# target: a file that something selects by name gets its own `[[test]]` here, with the reason.
+[[test]]
+name = "authoring"
+path = "tests/authoring.rs"

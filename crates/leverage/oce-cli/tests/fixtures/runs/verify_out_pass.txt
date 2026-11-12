@@ -1,0 +1,17 @@
+exit: 0
+--- stdout
+{
+  "command": "verify",
+  "errors": [],
+  "findings": [],
+  "input": "vectors.json",
+  "ok": true,
+  "output": "out/receipt.json",
+  "passed": true,
+  "receipt_id": "receipt:fnv1a128:cca7cd3d97e3ee78ab48d54f4320df2c",
+  "schema": "oce-report/1",
+  "status": "pass",
+  "subject": "rule.cxf.jsonld",
+  "tool": "oce"
+}
+--- stderr

@@ -1,6 +1,6 @@
 //! Source-transcribed G36 ReliefFanGroup composite import tests.
 
-mod bless;
+use crate::bless;
 
 use std::fmt::Write as _;
 use std::path::PathBuf;

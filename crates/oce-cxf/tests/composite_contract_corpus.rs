@@ -325,7 +325,7 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
                 DiagCode::NonSubsetConstruct,
                 "http://example.org#M.c2",
                 "composite/banned-modelica-key: unsupported Modelica construct \
-                 `http://data.ashrae.org/S231P#moSource` survived CXF lowering",
+                 `http://data.ashrae.org/S231#moSource` survived CXF lowering",
             )],
         ),
         (
@@ -393,6 +393,7 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
         ),
     ];
     rows.extend(composite_contract_member_pins::rejections());
+    rows.extend(composite_contract_boundary_pins::rejections());
     rows
 }
 

@@ -1,0 +1,34 @@
+
+
+# File header, line one.
+#   indented header line
+
+sequence commented   # end-of-line on sequence
+# between sequence and derived_from
+derived_from none # end-of-line on derived_from
+
+
+
+# Comment above the parameter, after a blank run.
+param dTHys : Real = 1 K   # end-of-line on the parameter
+in TOut : Real @unit K # end-of-line on an input
+
+# Two comments
+# above a block.
+block hys = CDL.Reals.Hysteresis(   # end-of-line after the open parenthesis
+  # above uLow
+  uLow = 0.0 K,  # end-of-line on uLow
+
+  uHigh = dTHys
+) # end-of-line on the close
+block sum3 = CDL.Reals.MultiSum(k = [ # inside the list, before its first item
+    1.0,
+    # above the second element: the list prints flat
+    2.0])
+# above a connection
+TOut -> hys.u # end-of-line on a connection
+hys.y -> sum3.u1
+
+# Trailing comment one.
+
+#Trailing comment two, after a blank.

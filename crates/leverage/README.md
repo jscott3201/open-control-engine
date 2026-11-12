@@ -1,8 +1,17 @@
 # Leverage crates
 
 This directory holds the crates that sit **above the facade**: authoring, verification, diffing,
-hosting, bindings and packaging (`oce-author`, `oce-verify`, `oce-diff`, `oce-host`, `oce-bind`,
-`oce-bacnet`, `oce-wasm`, `oce-py`, …) as the milestones add them. There are none yet.
+hosting, bindings, packaging and tools (`oce-author`, `oce-cli`, `oce-vocab`, `oce-verify`,
+`oce-diff`, `oce-host`, `oce-bind`, `oce-bacnet`, `oce-wasm`, `oce-py`, …) as the milestones add
+them.
+
+| Crate | Responsibility |
+| --- | --- |
+| [`oce-replay`](oce-replay/) | Historical replay (M3, [design note](../../docs/design/replay.md)): slot-indexed frame sources (columnar, bounded CSV, step lists), the missing-sample policy, a columnar bit-exact trace and a resumable cursor over the facade's slot entry. `publish = false`. |
+| [`oce-author`](oce-author/) | Authoring layer (M2, [design note](../../docs/design/authoring-layer.md), [README](oce-author/README.md)): the typed authoring model and builder, the strict-JSON wire form (`from_wire_str` / `to_wire_string`, five value shapes) with its pinned `schemars` schema (`WIRE_SCHEMA`, [`schema/sequence.schema.json`](oce-author/schema/sequence.schema.json)), the two-stage validator (author side, then a throwaway engine load), the deterministic emitter to flat CXF (`emit`), the importer (`import_cxf` for the in-subset library CXF, `import_graph_v0` for the frozen prototype's v0 graph JSON, a typed `ImportErrorKind` and an `ImportReport`) and the text form (`parse_text` / `print_text` / `fmt_text`, typed `ParseError` refusals, finding spans). `publish = false`. |
+| [`oce-cli`](oce-cli/) | The `oce` command-line tool (M2, [design note](../../docs/design/authoring-layer.md) "CLI", [README](oce-cli/README.md)): `emit`, `validate`, `fmt`, `catalog` and `vocab` over `oce-author`, `oce-vocab` and the facade, `clap` argument parsing, bounded reads, a documented JSON report and the exit rule 0 yes / 1 no / 2 error. `catalog` serves the block vocabulary (descriptions, declared units and quantities, ranges, typed notes, upstream links) and `vocab` the unit scale-factor table. `verify` (M3, [vectors note](../../docs/design/vectors.md) "CLI") replays a vector set against a subject over `oce-verify`, the receipt on stdout; `tests/replay_gate.rs` runs it over both in-repo library rules as the M3 in-repo replay gate. The first leverage crate with a binary (`oce`); leverage crates may ship binaries, engine crates never do. `publish = false`. |
+| [`oce-vocab`](oce-vocab/) | The block vocabulary (M2, [design note](../../docs/design/vocabulary.md), [README](oce-vocab/README.md)): descriptions, declared units and quantities and curated notes for the 133 authorable classes, as [`data/generated.json`](oce-vocab/data/generated.json) (regenerated from the vendored modelica-json CXF-Core document and compared byte for byte) and [`data/curated.json`](oce-vocab/data/curated.json) (written by people, additive only), served as `vocabulary()` and the catalog-joined `class_vocab()`, with each parameter's range rendered from the catalog's rules (`parameter_range`) and the unit scale-factor table (`SCALE_FACTORS`). `publish = false`. |
+| [`oce-verify`](oce-verify/) | Verification over vectors (M3, [design note](../../docs/design/vectors.md), [README](oce-verify/README.md)): the one vector format, `oce/vectors/v1` (a strict bounded reader, `VectorSet::from_json_bytes`, closed objects, typed `VectorErrorKind` codes, lowerable `VerifyLimits`; the clock, step-list, window and instant rules checked at load; the canonical form with its `spec_id`; the pinned `schemars` schema, [`schema/vectors.schema.json`](oce-verify/schema/vectors.schema.json)), and the run (`run_vectors`: binding a set to a CXF subject, one replay per scenario on a fresh engine, exact comparison, the `oce/receipt/v1` receipt with its `receipt_id`, typed `VerifyErrorKind` codes), and mutant mode (mutants validated at bind and scored as `caught` of `total`). Among `oce-*` packages it depends on `oce-api` and `oce-replay` only. `publish = false`. |
 
 Each one lives at `crates/leverage/<name>`, is named `oce-<name>`, and is a workspace member through
 the `crates/leverage/*` glob in the root `Cargo.toml`.
@@ -11,11 +20,18 @@ the `crates/leverage/*` glob in the root `Cargo.toml`.
 
 1. **A leverage crate depends on `oce-api` only — never on a core crate directly.** Among `oce-*`
    packages, its direct dependencies (normal, build and dev) may name `oce-api` and other leverage
-   crates, nothing else. The engine's internals (`oce-model`, `oce-expr`, `oce-blocks`,
+   crates, nothing else — with one exception: `oce-bless`, the repository's single golden-bless
+   switch, as a **dev-dependency only** ([authoring note decision 19](../../docs/design/authoring-layer.md),
+   first used by `oce-replay`, issue #445), so a leverage crate's goldens regenerate under the same
+   truthiness policy as the engine's. As a normal or build dependency it still fails. The engine's internals (`oce-model`, `oce-expr`, `oce-blocks`,
    `oce-graph`, `oce-cxf`, …) are reached through the facade or not at all, so a leverage crate
    can never come to depend on behaviour the facade does not promise.
    `bash scripts/ci/leverage-members.sh check` enforces it with `cargo tree` on every leverage-lane
-   run.
+   run, reading normal and build edges and dev edges separately. Leverage *tests* may also include
+   core-crate test-support files by `#[path]` (the shared G36 corpus list and frame schedule, as
+   `oce-replay` does), which `cargo tree` does not see; that is source reuse, not a dependency,
+   and because any core change also runs the leverage lane, a change to those files is exercised
+   here too.
 2. **It ships the same goldens.** Tests compare checked-in expected outputs bit-exactly, as the
    engine crates do (see `TESTING.md`); a leverage crate is not a lighter testing tier.
 3. **It runs in the leverage CI lane.** A pull request that touches `crates/leverage/**` and

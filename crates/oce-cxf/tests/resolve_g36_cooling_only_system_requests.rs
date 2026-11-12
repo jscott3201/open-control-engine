@@ -4,7 +4,7 @@
 //! pre-grounds that expression to `0.005` from the canonical Validation binding `floHys=0.01`;
 //! this test pins the resulting constant alongside every referenced timing and hysteresis value.
 
-mod bless;
+use crate::bless;
 
 use std::fmt::Write as _;
 use std::path::PathBuf;

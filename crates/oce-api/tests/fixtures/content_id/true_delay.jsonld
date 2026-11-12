@@ -1,0 +1,27 @@
+{
+  "@context": { "S231": "http://data.ashrae.org/S231#" },
+  "@graph": [
+    { "@id": "http://example.org#ex.true_delay", "@type": "S231:Block",
+      "S231:hasInput": [{ "@id": "http://example.org#ex.true_delay.u" }],
+      "S231:containsBlock": [{ "@id": "http://example.org#ex.true_delay.del" }],
+      "S231:hasOutput": [{ "@id": "http://example.org#ex.true_delay.y" }] },
+    { "@id": "http://example.org#ex.true_delay.del",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:hasParameter": [{ "@id": "http://example.org#ex.true_delay.del.delayTime" }],
+      "S231:hasInput": [{ "@id": "http://example.org#ex.true_delay.del.u" }],
+      "S231:hasOutput": [{ "@id": "http://example.org#ex.true_delay.del.y" }] },
+    { "@id": "http://example.org#ex.true_delay.del.delayTime", "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "60.0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#ex.true_delay.del.u", "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#ex.true_delay.del.y", "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [{ "@id": "http://example.org#ex.true_delay.y" }] },
+    { "@id": "http://example.org#ex.true_delay.u", "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [{ "@id": "http://example.org#ex.true_delay.del.u" }] },
+    { "@id": "http://example.org#ex.true_delay.y", "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" } }
+  ]
+}

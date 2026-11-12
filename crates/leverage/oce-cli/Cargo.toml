@@ -1,0 +1,42 @@
+# The `oce` command-line tool (authoring note docs/design/authoring-layer.md, "CLI", decisions 9 and
+# 20; issue #489): `emit`, `validate`, `fmt`, `catalog`, `vocab` and `verify` over `oce-author`,
+# `oce-verify` and the facade. The first binary above the facade: engine crates ship none
+# (docs/architecture.md). It depends on `oce-api` and the leverage crates `oce-author`, `oce-vocab`
+# and `oce-verify` only among the `oce-*` packages (crates/leverage/README.md; vocabulary note
+# decision 10, issue #500; vectors note decision 34, issue #522); `oce-bless` is a dev-dependency
+# for the golden switch (decision 19).
+[package]
+name = "oce-cli"
+description = "The oce command-line tool: emit, validate, fmt, catalog, vocab and verify over the Open Control Engine authoring layer and vector verification."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+# Nothing above the facade is published in M2 (decision 20).
+publish = false
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "oce"
+path = "src/main.rs"
+
+[dependencies]
+oce-api = { workspace = true }
+oce-author = { path = "../oce-author" }
+# The block vocabulary `oce catalog` serves and the scale-factor table `oce vocab` prints.
+oce-vocab = { path = "../oce-vocab" }
+# Vector verification (`oce verify`, vectors note decision 34): the set, the run and the receipt.
+oce-verify = { path = "../oce-verify" }
+# Argument parsing with derive (decision 20): M2's second new third-party dependency, confined to
+# crates/leverage/. No `color` feature, so `--help` and every usage error are plain bytes that do
+# not depend on the terminal.
+clap = { version = "=4.6.7", default-features = false, features = ["std", "derive", "help", "usage", "error-context", "suggestions"] }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+oce-bless = { workspace = true }

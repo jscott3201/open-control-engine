@@ -1,0 +1,28 @@
+exit: 0
+--- stdout
+CDL.Psychrometrics.DewPoint_TDryBulPhi
+  Block to compute the dew point temperature based on relative humidity
+
+parameters:
+  (none)
+
+inputs:
+  TDryBul : Real
+      Dry bulb temperature
+      unit: K; quantity: ThermodynamicTemperature
+  phi : Real
+      Relative air humidity
+      unit: 1
+
+outputs:
+  TDewPoi : Real
+      Dew point temperature
+      unit: K; quantity: ThermodynamicTemperature
+
+notes:
+  (none)
+
+links:
+  source at the pinned Buildings commit: https://github.com/lbl-srg/modelica-buildings/blob/a131864e4c4df22ebcd52bb8da439de0087ac365/Buildings/Controls/OBC/CDL/Psychrometrics/DewPoint_TDryBulPhi.mo
+  help in the latest Buildings release (may drift from the pin): https://simulationresearch.lbl.gov/modelica/releases/latest/help/Buildings_Controls_OBC_CDL_Psychrometrics.html#Buildings.Controls.OBC.CDL.Psychrometrics.DewPoint_TDryBulPhi
+--- stderr

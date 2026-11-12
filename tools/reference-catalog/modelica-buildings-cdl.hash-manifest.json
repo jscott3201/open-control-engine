@@ -2,9 +2,10 @@
   "schema": "open-control/modelica-buildings-cdl-hash-manifest/v1",
   "buildings_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
   "modelica_json_commit": "85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb",
-  "subtree_tree_sha": "3f04e42cdf3f2edcb78aa3817f48bcd680a71ac8",
+  "subtree_tree_sha": "c943691a48fe4e6d511884634b27b193252339bf",
   "bucket_counts": {
     "generated-cxf": 44,
+    "generated-cxf-core": 1,
     "repo-authored": 1,
     "upstream-buildings": 177
   },
@@ -1251,9 +1252,16 @@
     {
       "path": "README.md",
       "origin": "repo-authored",
-      "size_bytes": 7868,
-      "git_blob_oid": "88e048e207e251d392c1b86289665228fed78cfc",
-      "sha256": "d53e1968b8f7b587e3e436ecbc6504744c24b981fa1c46af5a45ea5e8ba616e6"
+      "size_bytes": 11915,
+      "git_blob_oid": "ecadf22d5b4325a8fce6e2a132492d2511d0a7c3",
+      "sha256": "dbaf5197c1ab24613c4e1f46ce3460ebb4cd46bc2b62ca53598a1635a7e5a835"
+    },
+    {
+      "path": "cxf-core/CXF-Core.jsonld",
+      "origin": "generated-cxf-core",
+      "size_bytes": 682615,
+      "git_blob_oid": "a77ee0004e9e35ab8292ab1cadb1582e74009dfd",
+      "sha256": "bb2bf4a7f868af884df4b2f05258a754625e10920716739527b46631a4383314"
     },
     {
       "path": "cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.jsonld",

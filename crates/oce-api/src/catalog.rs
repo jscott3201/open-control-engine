@@ -142,7 +142,7 @@ pub fn catalog() -> &'static [CatalogEntry] {
 }
 
 fn project_entry(entry: &oce_blocks::CatalogEntry) -> CatalogEntry {
-    use oce_blocks::{DefaultLiteral as Literal, DefaultSource as Source, PortNaming};
+    use oce_blocks::PortNaming;
     CatalogEntry {
         class_path: entry.class_path,
         inputs: entry.inputs.iter().map(project_port).collect(),
@@ -162,22 +162,28 @@ fn project_entry(entry: &oce_blocks::CatalogEntry) -> CatalogEntry {
             .iter()
             .map(|param| CatalogParamDefault {
                 name: param.name,
-                default: match param.default {
-                    Source::Literal(literal) => match literal {
-                        Literal::Real(value) => CatalogDefault::Real(value),
-                        Literal::Integer(value) => CatalogDefault::Integer(value),
-                        Literal::Boolean(value) => CatalogDefault::Boolean(value),
-                        Literal::Str(value) => CatalogDefault::String(value),
-                        Literal::EnumMember(value) => CatalogDefault::EnumMember(value),
-                    },
-                    Source::Derived { formula } => CatalogDefault::Derived(formula),
-                    Source::Required => CatalogDefault::Required,
-                },
+                default: project_default(param.default),
             })
             .collect(),
         width_driven: entry.width_driven,
         stateful: entry.stateful,
         reserved: entry.reserved,
+    }
+}
+
+/// Project a registry default source into the facade's default payload, losslessly.
+pub(crate) fn project_default(default: oce_blocks::DefaultSource) -> CatalogDefault {
+    use oce_blocks::{DefaultLiteral as Literal, DefaultSource as Source};
+    match default {
+        Source::Literal(literal) => match literal {
+            Literal::Real(value) => CatalogDefault::Real(value),
+            Literal::Integer(value) => CatalogDefault::Integer(value),
+            Literal::Boolean(value) => CatalogDefault::Boolean(value),
+            Literal::Str(value) => CatalogDefault::String(value),
+            Literal::EnumMember(value) => CatalogDefault::EnumMember(value),
+        },
+        Source::Derived { formula } => CatalogDefault::Derived(formula),
+        Source::Required => CatalogDefault::Required,
     }
 }
 

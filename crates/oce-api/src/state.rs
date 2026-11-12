@@ -4,13 +4,14 @@ use std::fmt;
 use std::sync::Arc;
 
 use oce_blocks::BlockKind;
+use oce_graph::blob::EngineVersion;
 use oce_model::{Dir, Value, ValueType, enum_descriptor, enum_descriptor_by_path};
 
 use crate::engine::Engine;
 use crate::error::OcError;
 
-pub(crate) const FORMAT_REVISION: u32 = 2;
-pub(crate) const EXECUTION_ABI_REVISION: u32 = 2;
+pub(crate) const FORMAT_REVISION: u32 = 1;
+pub(crate) const EXECUTION_ABI_REVISION: u32 = 1;
 pub(crate) const MAX_SNAPSHOT_BYTES: u64 = 64 * 1024 * 1024;
 
 /// Every model `oce-graph` admits fits a snapshot: its state words (at most
@@ -43,9 +44,10 @@ impl fmt::Debug for EngineCheckpoint {
 
 /// Canonical durable bytes for same-loaded-executable continuation in another engine process.
 ///
-/// The host first authenticates an envelope binding these exact bytes to an approved build and
-/// deployment, freshness and generation. OCE carries no build token and cannot authenticate that
-/// precondition. Compatibility and the corruption checksum are not permission to actuate.
+/// The header names the engine version that wrote the bytes, and [`Self::from_bytes`] accepts
+/// only this build's. A version is not a build: the host first authenticates an envelope binding
+/// these exact bytes to an approved build and deployment, freshness and generation, which OCE
+/// cannot do. Compatibility and the corruption checksum are not permission to actuate.
 #[derive(Clone)]
 pub struct EngineStateSnapshot {
     pub(crate) bytes: Arc<[u8]>,
@@ -105,6 +107,19 @@ pub enum EngineStateError {
     UnsupportedFormat {
         /// Unsupported revision from the byte stream.
         revision: u32,
+    },
+    /// The fixed header names another engine version than this build's. A snapshot restores only
+    /// on the version that wrote it; no later field of such a snapshot is read.
+    #[error(
+        "state snapshot written by engine {}.{}.{}; this build is {}.{}.{}",
+        .found.major, .found.minor, .found.patch,
+        .expected.major, .expected.minor, .expected.patch
+    )]
+    EngineVersionMismatch {
+        /// The six version bytes of the header, as major, minor and patch.
+        found: EngineVersion,
+        /// This build's engine version.
+        expected: EngineVersion,
     },
     /// Bytes violate the structural or canonical encoding contract.
     #[error("malformed or non-canonical state snapshot at byte {offset}: {detail}")]

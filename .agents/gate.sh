@@ -6,33 +6,82 @@
 # two of them materially weaker than CI, so prose copies are the failure mode
 # this file exists to remove.
 #
-#   bash .agents/gate.sh          # light    — mirrors the per-PR gate (pr-gate.yml)
-#   bash .agents/gate.sh full     # full     — adds the suite (release-gate.yml)
-#   bash .agents/gate.sh leverage # leverage — mirrors a PR confined to crates/leverage/: the
-#                                 #            always-on jobs plus the leverage lane, no engine lane
-#   bash .agents/gate.sh nostd    # nostd    — the bare-metal cell alone (pr-gate.yml's
-#                                 #            `no-std-build` job): the no_std core, the firmware
-#                                 #            image's build and size budget; light and full run
-#                                 #            it too
-#   bash .agents/gate.sh qemu     # qemu     — the emulation check (qemu.yml, nightly): the firmware
-#                                 #            images under QEMU against the host reference; needs
-#                                 #            qemu-system-arm and qemu-system-riscv32 on PATH
-#   bash .agents/gate.sh roundtrip # roundtrip — the blob round trip (pr-gate.yml's determinism
-#                                 #            cells, determinism-compare and blob-round-trip-wasm):
-#                                 #            record on the host, then replay the recording on the
-#                                 #            host and on wasm32-wasip1 under wasmtime; needs the
-#                                 #            wasm32-wasip1 target and the pinned wasmtime
-#                                 #            (scripts/ci/install-wasmtime.sh); full runs it too
+# FOUR PROOF MODES, one per row of the lane-matched local proof (issue #545; the table and the
+# rules around it are in docs/ci-and-the-gate.md, "The local proof"). Each runs everything the
+# one above it runs, so a heavier run satisfies a lighter row. An author runs the row the change
+# needs, first-hand, on the final head, and pastes the tail into the pull request;
+# scripts/ci/proof-row.sh names the row from the changed paths, and the closing report of every
+# run prints the row this checkout needs beside the row the run covered.
+#
+#   bash .agents/gate.sh docs        # docs        — a docs-only PR: the always-on jobs of
+#                                    #               pr-gate.yml (fmt, file size, secrets, the
+#                                    #               package/authority/product contract, the gate
+#                                    #               fixtures and the documentation checks). No
+#                                    #               cargo build of any kind.
+#   bash .agents/gate.sh leverage    # leverage    — a PR confined to crates/leverage/, the
+#                                    #               documentation and the root README.md: `docs`
+#                                    #               plus the leverage lane and the README lane
+#   bash .agents/gate.sh             # light       — any other change (the engine lane): `leverage`
+#                                    #               plus everything that compiles the engine, in
+#                                    #               debug codegen only
+#   bash .agents/gate.sh full        # full        — a pin advance (third_party/**, the reference
+#                                    #               catalog's pin records, the two pin-guard
+#                                    #               files proof-row.sh lists) or a change to this
+#                                    #               script, .config/nextest.toml or
+#                                    #               scripts/ci/install-wasmtime.sh:
+#                                    #               `determinism` (below) plus the
+#                                    #               workspace suite in debug and release codegen,
+#                                    #               the doctests, the blob matrix artifact and
+#                                    #               the blob round trip. It is also the mode CI
+#                                    #               executes (release-gate.yml's `gate (full)`,
+#                                    #               nightly); no other change owes it.
+#
+# ONE REPRODUCTION MODE, between `light` and `full`, that no row asks for (issue #556):
+#
+#   bash .agents/gate.sh determinism # determinism — `light` plus the determinism subset and the
+#                                    #               strict-bit step under release codegen. From
+#                                    #               issue #545 a change to the core four, oce-cxf,
+#                                    #               oce-api or the build files owed it, because
+#                                    #               no per-PR job ran the subset under release
+#                                    #               codegen; pr-gate.yml runs all four cells
+#                                    #               again, so it is now the way to reproduce a
+#                                    #               red release cell on one host.
+#
+# THREE FOCUSED MODES, each one cell and not a proof row:
+#
+#   bash .agents/gate.sh nostd       # nostd       — the bare-metal cell alone (pr-gate.yml's
+#                                    #               `no-std-build` job): the no_std core, the
+#                                    #               firmware image's build and size budget; light,
+#                                    #               determinism and full run it too
+#   bash .agents/gate.sh qemu        # qemu        — the emulation check (qemu.yml, nightly): the
+#                                    #               firmware images under QEMU against the host
+#                                    #               reference; needs qemu-system-arm and
+#                                    #               qemu-system-riscv32 on PATH
+#   bash .agents/gate.sh roundtrip   # roundtrip   — the blob round trip (pr-gate.yml's determinism
+#                                    #               cells, determinism-compare and
+#                                    #               blob-round-trip-wasm): record on the host, then
+#                                    #               replay the recording on the host and on
+#                                    #               wasm32-wasip1 under wasmtime; needs the
+#                                    #               wasm32-wasip1 target, and installs or
+#                                    #               re-verifies the pinned wasmtime
+#                                    #               (scripts/ci/install-wasmtime.sh); full runs it
+#                                    #               too
+#
+# No mode runs every crate's own tests except `full`. Whatever the row, also run the suites of
+# the crates the change touches: `cargo nextest run -p <crate> --locked --profile ci
+# --no-tests=fail` (and `cargo test -p <crate> --doc --locked` for its doctests).
 #
 # Commands are kept in CI's exact form, flags included. `--locked`, the `ci`
 # nextest profile, `--no-tests=fail`, and `RUSTDOCFLAGS` are each load-bearing:
 # dropping any one of them turns a real gate into a green light that proves
 # less than it appears to. Change a command here only by changing CI first.
 #
-# CI executes this script as well as mirroring it — `gate (full)` in release-gate.yml
-# daily, and `gate (light)` in pr-gate.yml on every PR that changes this script, a CI or
-# repository script, a workflow or tool config — so an edit here changes what gates a
-# pull request, not merely what a local run does.
+# CI executes this script as well as mirroring it: `gate (full)` in release-gate.yml, nightly on
+# the `development` tip, on dispatch, on release PRs and on pushes to `main` (issue #545; it ran
+# on every merge into `development` before). No per-PR job executes it (pr-gate.yml's
+# `gate (light)` was retired by issue #502), so CI first runs an edit to this script, a CI or
+# repository script, a workflow or tool config on the night after it merges. Before the merge the
+# author's own lane-matched run on the final head is the only run there is.
 #
 # Agents: this script is executable but not writable inside a Codex lane
 # sandbox. That is deliberate. A failing gate is fixed at its cause, never by
@@ -44,9 +93,9 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 MODE="${1:-light}"
 case "$MODE" in
-  light | full | leverage | nostd | qemu | roundtrip) ;;
+  docs | leverage | light | determinism | full | nostd | qemu | roundtrip) ;;
   *)
-    echo "usage: bash .agents/gate.sh [light|full|leverage|nostd|qemu|roundtrip]" >&2
+    echo "usage: bash .agents/gate.sh [docs|leverage|light|determinism|full|nostd|qemu|roundtrip]" >&2
     exit 2
     ;;
 esac
@@ -147,18 +196,25 @@ round_trip_replay_host() {
     OCE_ROUND_TRIP_EXPECT="$ROUND_TRIP_DIR" cargo nextest run -p oce-conformance \
       --test blob_round_trip --locked --profile ci --no-tests=fail
 }
+# wasmtime comes from the installer, never from whatever `wasmtime` PATH holds: the installer
+# keeps a binary already at its default destination only if its SHA-256 is the pinned one, and
+# otherwise downloads the pinned release and verifies it (issue #545). That destination is a user
+# cache directory outside `target/`, so `cargo clean` does not delete it. The rustup target is
+# still the author's to add.
 round_trip_replay_wasm() {
-  local tools="$PWD/target/wasmtime-bin"
+  local tools
+  tools="$(bash scripts/ci/install-wasmtime.sh --print-destination)" || return 1
+  bash scripts/ci/install-wasmtime.sh || return 1
   if ! rustup target list --installed | grep -qx wasm32-wasip1; then
     echo 'the wasm32-wasip1 target is not installed: rustup target add wasm32-wasip1' >&2
     return 1
   fi
-  if ! PATH="$tools:$PATH" command -v wasmtime >/dev/null 2>&1; then
-    echo 'wasmtime is not installed: bash scripts/ci/install-wasmtime.sh (the pinned release, into target/wasmtime-bin)' >&2
+  if [ ! -x "$tools/wasmtime" ]; then
+    echo "the pinned wasmtime is not at $tools: bash scripts/ci/install-wasmtime.sh" >&2
     return 1
   fi
   test -d "$ROUND_TRIP_DIR" &&
-    PATH="$tools:$PATH" wasmtime --version &&
+    "$tools/wasmtime" --version &&
     PATH="$tools:$PATH" OCE_ROUND_TRIP_EXPECT="$ROUND_TRIP_DIR" cargo nextest run \
       -p oce-conformance --test blob_round_trip --target wasm32-wasip1 --locked --profile ci \
       --no-tests=fail
@@ -184,12 +240,13 @@ if [ "$MODE" = nostd ] || [ "$MODE" = qemu ] || [ "$MODE" = roundtrip ]; then
   echo
   echo '────────────────────────────────────────────────────────────────────────────'
   echo "NOT COVERED BY THIS RUN — mode $MODE runs one cell, not the gate:"
-  echo '  · everything else in the per-PR gate. Run `bash .agents/gate.sh` for it.'
+  echo '  · everything else in the per-PR gate, and every row of the local proof: a focused'
+  echo '    mode is not one. Run the mode `bash scripts/ci/proof-row.sh` names for the change.'
   if [ "$MODE" = nostd ]; then
     echo '  · executing the images on their targets: `bash .agents/gate.sh qemu` (nightly in CI).'
   fi
   if [ "$MODE" = roundtrip ]; then
-    echo '  · the aarch64 leg and the four-cell recording comparison: CI only (determinism-compare).'
+    echo '  · the aarch64 leg and the comparison of the cells'"'"' recordings: CI only (determinism-compare).'
   fi
   echo '────────────────────────────────────────────────────────────────────────────'
   if [ "$failures" -gt 0 ]; then
@@ -203,9 +260,19 @@ if [ "$MODE" = nostd ] || [ "$MODE" = qemu ] || [ "$MODE" = roundtrip ]; then
   exit 0
 fi
 
-# The engine (determinism) lane: everything that compiles the engine. `leverage` mode
-# skips it, as pr-gate.yml does for a PR confined to crates/leverage/ and the docs.
-engine_lane() { [ "$MODE" != leverage ]; }
+# The engine (determinism) lane: everything that compiles the engine. `docs` and `leverage`
+# skip it, as pr-gate.yml does for a PR confined to crates/leverage/, the docs and the root
+# README.md.
+engine_lane() { [ "$MODE" = light ] || [ "$MODE" = determinism ] || [ "$MODE" = full ]; }
+# The leverage lane and the README lane: the two jobs that compile without the engine lane.
+# `docs` skips them, as pr-gate.yml does for a docs-only PR, which compiles nothing.
+compiled_lanes() { [ "$MODE" != docs ]; }
+# The release-codegen steps (issue #545): the determinism subset and the strict-bit step under
+# `--cargo-profile release`. pr-gate.yml runs both in native cells on every determinism-lane PR
+# (the strict-bit matrix always did; the determinism matrix again since issue #556), so no row
+# of the local proof asks for them and `light` leaves them out. `determinism` runs them, to
+# reproduce a red release cell locally, and `full` does because CI executes it.
+release_codegen() { [ "$MODE" = determinism ] || [ "$MODE" = full ]; }
 
 # ── Formatting, size, secrets ────────────────────────────────────────────────
 step 'fmt' cargo fmt --all --check
@@ -246,17 +313,75 @@ step 'real workflow smoke' bash .github/scripts/check-workflow-gates.sh
 step 'lane classifier fixtures' bash scripts/ci/test-classify-changes.sh
 step 'CI OK result-check controls' python3 scripts/ci/test_ci_ok.py
 step 'leverage dependency-rule fixtures' bash scripts/ci/test-leverage-members.sh
+step 'local proof-row fixtures' bash scripts/ci/test-proof-row.sh
+step 'gate-mode nesting fixtures' bash scripts/ci/test-gate-modes.sh
+step 'wasmtime installer destination fixtures' bash scripts/ci/test-install-wasmtime.sh
+
+# ── Documentation checks ─────────────────────────────────────────────────────
+# pr-gate.yml's always-on `docs` job, step for step (issue #545: they were CI-only until the
+# docs-only proof row needed them, and a docs PR's own check was the one thing its author could
+# not run from here). The installer is the job's first step: it downloads the checksum-pinned
+# mdBook once, and afterwards only re-verifies the binary's digest. The staged book is removed
+# when the link check has read it.
+documentation_staging() {
+  local revision
+  revision="$(git rev-parse HEAD)" || return 1
+  python3 scripts/docs/check_integrity.py --output target/docs-book --revision "$revision"
+}
+step 'mdBook, checksum-pinned' bash scripts/docs/install-mdbook.sh target/mdbook-bin
+step 'mdBook installer verify-or-reinstall contract' bash scripts/docs/test-install-mdbook.sh
+step 'documentation checker contracts' python3 scripts/docs/test_check_links.py
+step 'authority literals through staging and mdBook' \
+  python3 scripts/docs/test_authority_literals.py --mdbook target/mdbook-bin/mdbook
+step 'documentation staging without source writes' documentation_staging
+step 'mdBook build' target/mdbook-bin/mdbook build target/docs-book
+step 'generated internal links and anchors' \
+  python3 scripts/docs/check_links.py target/docs-book/book --site-prefix /open-control-engine/
+rm -rf target/docs-book
+
+if compiled_lanes; then
 
 # ── Leverage lane ────────────────────────────────────────────────────────────
 # crates/leverage/*: layout and the oce-api-only dependency rule, then fmt, clippy,
 # rustdoc, nextest and cargo-machete per member — the `leverage-lane` job's one
-# command. Prints "no leverage crates yet" while there are none. pr-gate.yml runs it
-# for every engine change too, so it runs in every mode.
+# command (oce-replay is the first member; with none it prints "no leverage crates yet"). pr-gate.yml runs it
+# for every engine change too, so it runs in every mode but `docs`.
 step 'leverage lane' bash scripts/ci/leverage-members.sh lane
 
+# ── README lane ──────────────────────────────────────────────────────────────
+# The two checks that read the root README.md and are in no always-on job: pr-gate.yml's
+# `facade-contract` job, filtered on the `readme` lane (issue #503), which runs when the root
+# README.md changes and for every engine change. They run in every mode but `docs`. A landing PR
+# confined to crates/leverage/ usually updates the README's status and roadmap too; CI then
+# runs these two beside the leverage lane, so a `leverage` run that left them out could pass
+# here and go red there. That job's other two steps, the facade compiler contract and its
+# controls, stay in the engine lane below: they read the facade's source, which no leverage
+# or README change touches.
+#
+# The byte-pin proves the README's Quickstart and crates/oce-api/examples/quickstart.rs are
+# the same bytes (the determinism subset below runs the same test inside the oce-api suite;
+# it is named here because `leverage` mode skips that subset). `--no-tests=fail` so a renamed
+# or deleted test hard-fails instead of going green on zero tests.
+step 'README Quickstart byte-pin' \
+  cargo nextest run -p oce-api --test readme_quickstart --locked --profile ci --no-tests=fail
+
+# The published Quickstart, EXECUTED. A byte-pin proves the README and the example agree; it does
+# not prove either one runs, and this repo once shipped a Quickstart that compiled, was byte-pinned,
+# and had never been executed by anything.
+#
+# This step existed in ci.yml as its own `gate (light)` step and NOT here, which made it the one
+# command out of eleven that gated a pull request while being invisible to anyone running this
+# script. `bash .agents/gate.sh` could pass locally and CI still go red on a check the contributor
+# had no way to run. Adding it closes that gap in the direction the rule requires: ci.yml already
+# demanded it, so this is the script catching up to CI rather than the script growing a
+# local-only requirement.
+step 'quickstart executes' bash .github/scripts/check-quickstart-runs.sh
+
+fi # compiled_lanes
+
 # ── Engine lane: everything from here to `fi # engine_lane` ──────────────────
-# Skipped in `leverage` mode, as pr-gate.yml skips the determinism lane for a PR
-# confined to crates/leverage/ and the documentation.
+# Skipped in `docs` and `leverage` mode, as pr-gate.yml skips the determinism lane for a PR
+# confined to crates/leverage/, the documentation and the root README.md.
 if engine_lane; then
 
 # ── Build, lint, docs ────────────────────────────────────────────────────────
@@ -285,9 +410,6 @@ step 'cargo-deny (bans licenses sources)' cargo deny check bans licenses sources
 # and why a green PR is not evidence that the suite passes.
 step 'determinism subset' \
   cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
-step 'determinism subset (release codegen)' \
-  cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release \
-    --cargo-profile release --no-tests=fail
 
 # The strict-bit binary shares the four suites' fixtures and runs inventory/provenance, facade
 # mutation and synthetic matrix controls. These local observations do NOT qualify Linux or macOS;
@@ -296,11 +418,22 @@ step 'strict-bit corpus and controls' \
   cargo nextest run -p oce-conformance --test strict_bits --locked \
     --test per_block_reals_transcendental --test per_block_reals_sources_transcendental \
     --test per_block_psychrometrics --test per_block_utilities --profile ci --no-tests=fail
-step 'strict-bit corpus and controls (release codegen)' \
-  cargo nextest run -p oce-conformance --test strict_bits --locked \
-    --test per_block_reals_transcendental --test per_block_reals_sources_transcendental \
-    --test per_block_psychrometrics --test per_block_utilities --profile ci-release \
-    --cargo-profile release --no-tests=fail
+
+# ── Release codegen (`determinism` and `full`) ───────────────────────────────
+# The subset and the strict-bit binaries again, under release codegen, on this one host.
+# pr-gate.yml runs both in four native cells per PR (issue #556) and compares debug against
+# release across them, which one machine cannot; these two steps reproduce a release-only
+# failure locally.
+if release_codegen; then
+  step 'determinism subset (release codegen)' \
+    cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release \
+      --cargo-profile release --no-tests=fail
+  step 'strict-bit corpus and controls (release codegen)' \
+    cargo nextest run -p oce-conformance --test strict_bits --locked \
+      --test per_block_reals_transcendental --test per_block_reals_sources_transcendental \
+      --test per_block_psychrometrics --test per_block_utilities --profile ci-release \
+      --cargo-profile release --no-tests=fail
+fi
 
 # ── Fixture input hygiene ────────────────────────────────────────────────────
 # NOT engine coverage — it exercises no shipping code path. It checks 46 G36 catalog fixtures and
@@ -332,27 +465,22 @@ step 'structural oracle (input hygiene)' \
   cargo nextest run -p oce-cxf --locked --profile ci \
   -E 'binary(fixture_structural_oracle)' --no-tests=fail
 
-# The published Quickstart, EXECUTED. A byte-pin proves the README and the example agree; it does
-# not prove either one runs, and this repo once shipped a Quickstart that compiled, was byte-pinned,
-# and had never been executed by anything.
-#
-# This step existed in ci.yml as its own `gate (light)` step and NOT here, which made it the one
-# command out of eleven that gated a pull request while being invisible to anyone running this
-# script. `bash .agents/gate.sh` could pass locally and CI still go red on a check the contributor
-# had no way to run. Adding it closes that gap in the direction the rule requires: ci.yml already
-# demanded it, so this is the script catching up to CI rather than the script growing a
-# local-only requirement.
-step 'quickstart executes' bash .github/scripts/check-quickstart-runs.sh
-
 fi # engine_lane
 
 # ── Full suite (release-gate.yml) ────────────────────────────────────────────
+# The release-codegen workspace run is CI's only one (issue #545): release-gate.yml's `test-suite`
+# job runs the debug suite and the doctests, and `gate (full)` executes this block and then
+# requires the JUnit report of the nextest profile `ci-release-workspace`. That profile is this
+# one command's: the release determinism subset and strict-bit step above write `ci-release`'s
+# report, so only a profile of its own lets the job tell that this run happened. Use it nowhere
+# else. check-workflow-gates.sh pins the five lines after the `if` below exactly, comments
+# aside, so a step cannot be dropped, wrapped in a condition or moved out of the block unseen;
+# keep each command on one line.
 if [ "$MODE" = full ]; then
   step 'nextest — workspace' \
     cargo nextest run --workspace --locked --profile ci --no-tests=fail
   step 'nextest — workspace (release codegen)' \
-    cargo nextest run --workspace --locked --profile ci-release \
-    --cargo-profile release --no-tests=fail
+    cargo nextest run --workspace --locked --profile ci-release-workspace --cargo-profile release --no-tests=fail
   # nextest cannot run doctests; this step is not optional.
   step 'doctests' cargo test --workspace --doc --locked
   # The determinism cells write the 46 compiled-schedule blobs to OCE_BLOB_OUT as a path relative
@@ -363,57 +491,179 @@ if [ "$MODE" = full ]; then
   blob_round_trip
 fi
 
+
 # ── Report ───────────────────────────────────────────────────────────────────
+# Which row of the lane-matched local proof this run is, and which row this checkout's changes
+# need (issue #545). The second half is advice from scripts/ci/proof-row.sh over the paths that
+# differ from the merge base with origin/development, uncommitted and untracked files included.
+# It never changes the exit status: a run answers for its steps, and a stale or absent
+# origin/development (a CI checkout has none) must not fail a gate. The tail an author pastes
+# carries both lines, so a proof lighter than the change needs is visible to whoever reads it.
+row_rank() {
+  case "$1" in
+    docs) echo 1 ;;
+    leverage) echo 2 ;;
+    light) echo 3 ;;
+    determinism) echo 4 ;;
+    full) echo 5 ;;
+    *) echo 0 ;;
+  esac
+}
+row_command() {
+  case "$1" in
+    light) echo 'bash .agents/gate.sh' ;;
+    *) echo "bash .agents/gate.sh $1" ;;
+  esac
+}
+proof_row_report() {
+  local base paths count needed
+  echo
+  echo '────────────────────────────────────────────────────────────────────────────'
+  echo 'LOCAL PROOF — the row of the lane-matched table this run is'
+  echo '(docs/ci-and-the-gate.md, "The local proof"):'
+  case "$MODE" in
+    docs)
+      echo '  · this run: `docs`, the proof for a docs-only change.'
+      ;;
+    leverage)
+      echo '  · this run: `leverage`, the proof for a change confined to crates/leverage/,'
+      echo '    the documentation and the root README.md. It also covers the `docs` row.'
+      ;;
+    light)
+      echo '  · this run: `light`, the engine-lane proof, in debug codegen, for any change the'
+      echo '    `full` row does not name. It also covers the `docs` and `leverage` rows.'
+      ;;
+    determinism)
+      echo '  · this run: `determinism`, the engine-lane proof plus the determinism subset and'
+      echo '    the strict-bit step under release codegen. No row asks for it since pr-gate.yml'
+      echo '    runs the release cells per PR; it covers every row but `full`.'
+      ;;
+    full)
+      echo '  · this run: `full`, the proof for a pin advance or a change to this script, and'
+      echo '    what CI executes nightly. It covers every row.'
+      ;;
+  esac
+  if ! base="$(git merge-base HEAD origin/development 2>/dev/null)"; then
+    echo '  · the row this checkout needs: UNKNOWN. There is no origin/development to compare'
+    echo '    with here; list the changed paths yourself and run'
+    echo '    `bash scripts/ci/proof-row.sh` over them.'
+    return 0
+  fi
+  paths="$({
+    git diff --no-renames --name-only "$base"
+    git ls-files --others --exclude-standard
+  } 2>/dev/null | sort -u || true)"
+  count="$(printf '%s' "$paths" | grep -c . || true)"
+  if [ "$count" -eq 0 ]; then
+    echo "  · the row this checkout needs: none. Nothing differs from the merge base with"
+    echo "    origin/development (${base:0:9})."
+    return 0
+  fi
+  if ! needed="$(printf '%s\n' "$paths" | bash scripts/ci/proof-row.sh 2>/dev/null | sed -n 's/^row=//p')" ||
+    [ "$(row_rank "$needed")" -eq 0 ]; then
+    echo '  · the row this checkout needs: UNKNOWN. scripts/ci/proof-row.sh did not name one.'
+    return 0
+  fi
+  echo "  · the row this checkout needs: \`$needed\` ($(row_command "$needed")), from the $count"
+  echo "    path(s) that differ from the merge base with origin/development (${base:0:9}),"
+  echo '    uncommitted and untracked files included. Fetch first if that base is stale.'
+  if [ "$(row_rank "$MODE")" -ge "$(row_rank "$needed")" ]; then
+    echo '  · this mode covers that row.'
+  else
+    printf '  · \033[31mTHIS MODE DOES NOT COVER THAT ROW.\033[0m Run `%s` and paste that tail.\n' \
+      "$(row_command "$needed")"
+  fi
+  echo '  · a row does not run every crate'"'"'s tests. Run the suites of the crates the change'
+  echo '    touches as well: cargo nextest run -p <crate> --locked --profile ci --no-tests=fail'
+}
+proof_row_report
+
 cat <<'COVERAGE'
 
 ────────────────────────────────────────────────────────────────────────────
 NOT COVERED BY THIS SCRIPT — a green run here does not prove these pass:
-  · cross-arch determinism matrix: four native cells, x86_64 on ubuntu-latest
-    and aarch64 on ubuntu-24.04-arm, in debug and release codegen, with the
-    cross-architecture snapshot and compiled-schedule blob comparisons in a
-    fan-in job. One machine cannot reproduce it. CI is the only place it runs.
-  · the blob round trip's aarch64 leg and the comparison of the four cells'
+  · cross-arch determinism matrix. Per PR (pr-gate.yml), and again nightly
+    (release-gate.yml): four native cells, x86_64 on ubuntu-latest and
+    aarch64 on ubuntu-24.04-arm, each in debug and release codegen, with
+    the cross-architecture and the debug-against-release snapshot,
+    compiled-schedule blob and round-trip comparisons in a fan-in job. One
+    machine cannot reproduce it. CI is the only place it runs. What
+    `determinism` and `full` DO run is the determinism subset under release
+    codegen on this host: one cell of the four, and no comparison.
+  · the blob round trip's aarch64 leg and the comparison of the cells'
     recordings (determinism-compare). `full` and `roundtrip` record on this
     host and replay here and on wasm32-wasip1; the other architecture is CI's.
-  · strict-bit raw-output matrix over the 21 inventoried signals: the same
-    four native cells, two capture processes each, then the eight-capture
-    comparison. Local synthetic controls and macOS observations are NOT
-    native Linux evidence.
-  · the macOS arm64 and Windows platform cells: they need those OSes; CI only.
-  · executing the firmware images on their targets. This run builds them and
-    checks their size; qemu.yml runs them under QEMU nightly, and
-    `bash .agents/gate.sh qemu` does locally when QEMU is installed.
+  · strict-bit raw-output matrix over the 21 inventoried signals: four native
+    cells on every PR (both architectures, debug and release codegen), two
+    capture processes each, then the eight-capture comparison. Local
+    synthetic controls and macOS observations are NOT native Linux evidence.
+  · the macOS arm64 platform cell (per PR) and the Windows platform cell
+    (merge-gate.yml, after each merge): they need those OSes; CI only.
+  · executing the firmware images on their targets. `light`, `determinism`
+    and `full` build them and check their size; qemu.yml runs them under
+    QEMU nightly, and `bash .agents/gate.sh qemu` does locally when QEMU is
+    installed.
   · cargo deny check advisories. Needs network and a writable advisory-db;
     it runs in advisories.yml (daily) and in release-gate.yml's cargo-deny
-    job, which sweeps advisories/bans/licenses/sources on every release PR.
+    job, which sweeps advisories/bans/licenses/sources nightly and on every
+    release PR.
+  · the golden-gen hygiene job and the five per-PR crate suites (oce-graph,
+    oce-validate, oce-model, oce-cxf, oce-store). pr-gate.yml runs both;
+    this script runs the five suites only inside `full`'s workspace suite,
+    and the separate golden-gen workspace never. .agents/project-facts.md
+    gives the commands.
   · that these commands still match pr-gate.yml. Nothing verifies that
     mechanically. Change a command here only by changing CI first.
-    CI does RUN this script: `gate (full)` in release-gate.yml daily, and
-    `gate (light)` in pr-gate.yml on a PR that changes this script, a CI or
-    repository script, a workflow or tool config — the edits that can make
-    a pr-gate.yml job diverge from it. Read that as coverage, not parity: a green
-    `gate (light)` says these commands ran, and says nothing at all about
-    whether the two files still agree.
+    CI does RUN this script, but only after a merge: `gate (full)` in
+    release-gate.yml, nightly on the development tip and on every release
+    PR. No per-PR job executes it, so for a PR that changes this script, a
+    CI or repository script, a workflow or tool config, this run is the
+    only one before the merge. Read the CI run as coverage, not parity: a
+    green `gate (full)` says these commands ran, and says nothing at all
+    about whether the two files still agree.
 COVERAGE
+
+if [ "$MODE" = docs ]; then
+  cat <<'DOCS'
+  · anything that compiles: the leverage lane, the README lane (the
+    Quickstart byte-pin and its execution) and the engine lane. A `docs` run
+    mirrors a docs-only PR, which compiles nothing in CI either. If a path
+    outside the documentation changed, or documentation a test reads
+    (scripts/ci/classify-changes.sh lists it), run the mode
+    `bash scripts/ci/proof-row.sh` names.
+DOCS
+fi
 
 if [ "$MODE" = leverage ]; then
   cat <<'LEVERAGE'
-  · the engine lane: no-db, golden-gen firewall, facade contract and
-    Quickstart, clippy, build, rustdoc, cargo-machete and cargo-deny over the
+  · the engine lane: no-db, golden-gen firewall, the facade compiler
+    contract, clippy, build, rustdoc, cargo-machete and cargo-deny over the
     workspace, the determinism and strict-bit subsets, and the input-hygiene
-    audits. A `leverage` run mirrors a PR confined to crates/leverage/ and
-    the docs. If anything else changed, run `bash .agents/gate.sh`.
+    audits. A `leverage` run mirrors a PR confined to crates/leverage/, the
+    docs and the root README.md (whose Quickstart byte-pin and execution it
+    did run). If anything else changed, run `bash .agents/gate.sh`.
 LEVERAGE
 fi
 
+if ! release_codegen; then
+  cat <<'DEBUG_ONLY'
+  · release codegen, of anything. This run built and tested in debug codegen
+    only. The determinism subset and the strict-bit binaries run under
+    release codegen per PR in pr-gate.yml's native cells;
+    `bash .agents/gate.sh determinism` reproduces them on this host.
+DEBUG_ONLY
+fi
+
 if [ "$MODE" != full ]; then
-  cat <<'LIGHT'
+  cat <<'NOT_FULL'
   · the workspace test suite and doctests. This was not a `full` run: it
-    mirrors the per-PR gate — and the per-PR gate does not run them.
-    Run `bash .agents/gate.sh full` before claiming tests pass.
+    mirrors the per-PR gate — and the per-PR gate does not run them. They
+    run nightly (release-gate.yml). Before claiming a crate's tests pass,
+    run that crate's suite: cargo nextest run -p <crate> --locked
+    --profile ci --no-tests=fail, and cargo test -p <crate> --doc --locked.
   · the blob round trip's recorded artifact and its wasm32-wasip1 replay,
     which the per-PR gate does run: `bash .agents/gate.sh roundtrip`.
-LIGHT
+NOT_FULL
 fi
 
 echo '────────────────────────────────────────────────────────────────────────────'

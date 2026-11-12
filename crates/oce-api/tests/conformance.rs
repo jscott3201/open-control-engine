@@ -23,8 +23,14 @@ const DISPLAY_DIV: &str =
 const DOUBLE_DRIVEN: &str =
     include_str!("../../oce-cxf/tests/fixtures/invalid/double_driven.jsonld");
 const NON_SUBSET: &str = include_str!("../../oce-cxf/tests/fixtures/invalid/non_subset.jsonld");
+const EXTENSION_BLOCK_WITH_FMU_PATH: &str =
+    include_str!("../../oce-cxf/tests/fixtures/invalid/extension_block_with_fmu_path.jsonld");
+const EXTENSION_BLOCK_WITHOUT_FMU_PATH: &str =
+    include_str!("../../oce-cxf/tests/fixtures/invalid/extension_block_without_fmu_path.jsonld");
 const BOUND_MISMATCH: &str =
     include_str!("../../oce-cxf/tests/fixtures/invalid/bound_mismatch.jsonld");
+const RELIEF_DAMPER: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_relief_damper.jsonld");
 const BOUNDARY_OUTPUT_UNIT_MISMATCH: &str =
     include_str!("../../oce-cxf/tests/fixtures/declared_output_driver_unit_divergence.jsonld");
 const TWO_UNDRIVEN: &str = include_str!("../../oce-cxf/tests/fixtures/invalid/two_undriven.jsonld");
@@ -122,6 +128,58 @@ fn double_driven_input_is_rejected_end_to_end() {
 fn non_subset_class_is_rejected_end_to_end() {
     // An unregistered CDL class ⇒ ClassNotFound, never a panic.
     assert_rejected_with(NON_SUBSET, DiagCode::ClassNotFound);
+}
+
+#[test]
+fn extension_block_is_rejected_end_to_end_with_its_own_code() {
+    // An extension block (OBC §7.13) ⇒ one ExtensionBlockUnsupported error naming it, with or
+    // without an FMU path; never ClassNotFound, never a panic (issue #537).
+    for src in [
+        EXTENSION_BLOCK_WITH_FMU_PATH,
+        EXTENSION_BLOCK_WITHOUT_FMU_PATH,
+    ] {
+        let e = load(src).expect_err("an extension block cannot load");
+        let signature: Vec<(DiagCode, Option<String>)> = error_signature(&e)
+            .into_iter()
+            .map(|(code, subject, _)| (code, subject))
+            .collect();
+        assert_eq!(
+            signature,
+            vec![(
+                DiagCode::ExtensionBlockUnsupported,
+                Some("http://example.org#Fdd.ext".to_owned())
+            )]
+        );
+        assert_eq!(e.all_diagnostics().count(), 1, "{e:?}");
+    }
+}
+
+#[test]
+fn malformed_parameter_bound_is_rejected_end_to_end() {
+    // A parameter's `S231:max` written as the list of its typed literal's values used to load
+    // (issue #559). It is refused with one MalformedDocument naming the parameter; the document
+    // as written still loads, and its bound is still not used.
+    let written =
+        r#""S231:max": { "@value": "30", "@type": "http://www.w3.org/2001/XMLSchema#double" },"#;
+    assert_eq!(RELIEF_DAMPER.matches(written).count(), 1);
+    load(RELIEF_DAMPER).expect("the fixture as written loads");
+    let listed = RELIEF_DAMPER.replacen(
+        written,
+        r#""S231:max": ["30", "http://www.w3.org/2001/XMLSchema#double"],"#,
+        1,
+    );
+    let e = load(&listed).expect_err("a list is no bound");
+    assert_eq!(
+        error_signature(&e),
+        vec![(
+            DiagCode::MalformedDocument,
+            Some("http://example.org#g36.source.multizone_vav_relief_damper.dpBuiSet".to_owned()),
+            "S231:max on a parameter is a list; a bound is one number, typed literal or \
+             expression string"
+                .to_owned()
+        )]
+    );
+    assert_eq!(e.all_diagnostics().count(), 1, "{e:?}");
 }
 
 #[test]
@@ -266,7 +324,7 @@ type CompositeWarning = (
     &'static [(DiagCode, Option<&'static str>, &'static str)],
 );
 
-const COMPOSITE_REJECTIONS: [CompositeRejection; 18] = [
+const COMPOSITE_REJECTIONS: [CompositeRejection; 22] = [
     (
         "multi_root.jsonld",
         Some("root-count"),
@@ -394,7 +452,7 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 18] = [
             DiagCode::NonSubsetConstruct,
             Some("http://example.org#M.c2"),
             "composite/banned-modelica-key: unsupported Modelica construct \
-             `http://data.ashrae.org/S231P#moSource` survived CXF lowering",
+             `http://data.ashrae.org/S231#moSource` survived CXF lowering",
         )],
     ),
     (
@@ -464,6 +522,42 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 18] = [
             DiagCode::SingleAssignment,
             Some("http://example.org#M.y"),
             "boundary output is multiply driven (distinct drivers 2)",
+        )],
+    ),
+    (
+        "double_driver_two_block_outputs.jsonld",
+        None,
+        &[(
+            DiagCode::SingleAssignment,
+            Some("http://example.org#M.abs.u"),
+            "input is multiply driven (in-degree 2)",
+        )],
+    ),
+    (
+        "double_driver_two_boundary_inputs.jsonld",
+        None,
+        &[(
+            DiagCode::SingleAssignment,
+            Some("http://example.org#M.abs.u"),
+            "input is driven by distinct boundary inputs",
+        )],
+    ),
+    (
+        "double_driver_block_output_and_boundary_input.jsonld",
+        None,
+        &[(
+            DiagCode::SingleAssignment,
+            Some("http://example.org#M.abs.u"),
+            "input is driven by a block output and a boundary input",
+        )],
+    ),
+    (
+        "double_driver_econ_enable.jsonld",
+        None,
+        &[(
+            DiagCode::SingleAssignment,
+            Some("http://example.org#econ_enable.hys.u"),
+            "input is driven by a block output and a boundary input",
         )],
     ),
 ];

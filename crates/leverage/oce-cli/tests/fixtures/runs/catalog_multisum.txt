@@ -1,0 +1,31 @@
+exit: 0
+--- stdout
+CDL.Reals.MultiSum
+  Sum of Reals, y = k[1]*u[1] + k[2]*u[2] + ... + k[n]*u[n]
+
+parameters:
+  nin : Integer = 0
+      Number of input signals
+      range: nin >= 0; nin <= 1048576
+  k_<i> : Real = 1.0
+      Input gains
+
+inputs:
+  u1 : Real
+      Input to multiplied by gain and then added
+  u2 : Real
+      Input to multiplied by gain and then added
+  u3 : Real
+      Input to multiplied by gain and then added
+
+outputs:
+  y : Real
+      Sum of inputs times gains
+
+notes:
+  (none)
+
+links:
+  source at the pinned Buildings commit: https://github.com/lbl-srg/modelica-buildings/blob/a131864e4c4df22ebcd52bb8da439de0087ac365/Buildings/Controls/OBC/CDL/Reals/MultiSum.mo
+  help in the latest Buildings release (may drift from the pin): https://simulationresearch.lbl.gov/modelica/releases/latest/help/Buildings_Controls_OBC_CDL_Reals.html#Buildings.Controls.OBC.CDL.Reals.MultiSum
+--- stderr

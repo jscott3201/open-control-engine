@@ -4,6 +4,9 @@
 and decodes, #401 executes on a `no_std` target, #402 sizes in a firmware image and #403
 round-trips across architectures. Where this note departs from the owner's starting sketch, it says
 so and why. The user-facing contract #400 shipped is [Compiled-schedule blob](../compiled-schedule-blob.md).
+The content-id field's meaning changed once after the first release that shipped the format
+(GitHub #470, decision 5). The format number is 1 and stays 1 until 1.0.0 (issue #509, decision 6):
+the change was made in place, and the engine version in the header separates the two layouts.
 
 ## What the blob is
 
@@ -53,7 +56,7 @@ the boundary outputs.
 | 0 | 4 | bytes | Magic `OCEB` (`4f 43 45 42`) |
 | 4 | 2 | `u16` | Format version, `1` |
 | 6 | 2 | `u16` | Execution profile, `1` = HostTick v1 ([execution profile](../execution-profile.md)) |
-| 8 | 6 | `u16`×3 | Encoder engine version: major, minor, patch (`0, 4, 0` today) |
+| 8 | 6 | `u16`×3 | Encoder engine version: major, minor, patch (`0, 5, 0` today) |
 | 14 | 2 | `u16` | Reserved flags, must be 0 |
 | 16 | 4 | `u32` | Total blob length in bytes, header and trailer included |
 | 20 | 32 | bytes | Content id (decision 5) |
@@ -130,32 +133,35 @@ boundary input and output, so every section except Connections is non-empty. Of 
 one is the smallest.
 
 The model is one `CDL.Reals.AddParameter` (`p = 0.0`): boundary input `TRet` drives connector 0
-(`u`), and connector 1 (`y`) is boundary output `TCut`. The content id decodes to
-`cxf:fnv1a128:9aeed987b862eb2504fbde693778e5fd`. Both I/O paths are 89 bytes:
+(`u`), and connector 1 (`y`) is boundary output `TCut`. The content id field holds the SHA-256
+digest of its canonical content id,
+`oce:canon1:22d010e1298d0a1392a8bcc0475d9e201c2b41406bd90593c5207b60aa015a51`
+([content-id note](content-id.md)). Both I/O paths are 89 bytes:
 `http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.` + `TRet` /
 `TCut`.
 
-The dump below is printed by the throwaway prototype, which walks the encoded bytes field by field.
-For strings longer than four bytes it shows only the `u32` length prefix; the UTF-8 bytes follow.
-Two fields are placeholders: the class hash (`aa` ×8), because #400 fixes the signature record,
-and the CRC, which covers that placeholder. The prototype ran at engine 0.2.0; the dump shows the
-0.4.0 version bytes and the CRC-32C recomputed for them, every other byte unchanged.
+The dump below walks the encoded bytes field by field. For strings longer than four bytes it shows
+only the `u32` length prefix; the UTF-8 bytes follow. It was first printed by the throwaway
+prototype at engine 0.2.0 with a placeholder class hash; it is regenerated (2026-11-09, issue #509)
+from the checked-in golden
+(`crates/oce-api/tests/fixtures/blob/generic_air_economizer_high_limits_ashrae_differential.oceb`)
+at engine 0.5.0, so the class hash, the content id and the CRC are the real bytes.
 
 ```text
 0000  4f 43 45 42                      magic "OCEB"
 0004  01 00                            format 1
 0006  01 00                            profile 1 (HostTick v1)
-0008  00 00 04 00 00 00                engine 0.4.0
+0008  00 00 05 00 00 00                engine 0.5.0
 000e  00 00                            flags 0
 0010  a2 01 00 00                      total length 418
-0014  fd e5 78 37 69 de fb 04 25 eb 62 b8 87 d9 ee 9a
-                                       content id, u128 LE
-0024  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-                                       content id padding
+0014  22 d0 10 e1 29 8d 0a 13 92 a8 bc c0 47 5d 9e 20
+                                       content id: SHA-256 digest bytes 0-15
+0024  1c 2b 41 40 6b d9 05 93 c5 20 7b 60 aa 01 5a 51
+                                       content id: digest bytes 16-31
 0034  01 00 00 00 26 00 00 00          section 1 Classes
 003c  01 00 00 00                      1 class
 0040  16 00 00 00                      str "CDL.Reals.AddParameter"
-005a  aa aa aa aa aa aa aa aa          class signature hash (placeholder)
+005a  0d c3 5f e4 a5 cf 1f e7          class signature hash 0xe71fcfa5e45fc30d
 0062  02 00 00 00 37 00 00 00          section 2 Instances
 006a  01 00 00 00 02 00 00 00          1 block, 2 connectors
 0072  00 00 00 00 00                   block 0: class 0, kind [A]
@@ -178,7 +184,7 @@ and the CRC, which covers that placeholder. The prototype ran at engine 0.2.0; t
 0135  01 00 00 00                      1 output
 0139  59 00 00 00                      path str "…TCut" (89 bytes)
 0196  01 00 00 00 00 00 00 00          source connector 1, empty payload
-019e  06 5e 96 76                      CRC-32C (placeholder: covers the placeholder hash)
+019e  26 83 7c 9b                      CRC-32C
 ```
 
 ## Decisions
@@ -311,7 +317,8 @@ reuses that encoding. The decoder checks four things:
 
 The non-finite input policy is host configuration, not blob content.
 
-`SemanticPoint` payloads are non-computational under CDL §7.17 (the seam in
+`SemanticPoint` payloads are non-computational under the metadata section of the
+OpenBuildingControl (OBC) specification (OBC §7.17; ANSI/ASHRAE 231-2026 §5.13; the seam in
 [architecture](../architecture.md)). The decoder bounds each one by its length, skips it, and never
 reads, stores or forwards it. No `SemanticPoint` type exists yet, so the v1 encoder writes empty
 payloads. A test in the style of `crates/oce-api/tests/frame_purity.rs` proves the seam (see the
@@ -323,7 +330,15 @@ a `u128` LE, followed by 16 zero bytes. The field's position and width are stabl
 "the facade's content id at encode time" until M3 replaces the algorithm. Changing the meaning bumps
 the format version.
 
-`content_id_complete` refuses partial exports. 13 of the 46 G36 fixtures export partially today;
+*Amended 2026-11-09 (GitHub #470, [canonical content id](content-id.md)).* M3 replaced the
+algorithm: the field holds the 32 SHA-256 digest bytes of the canonical content id
+(`oce:canon1:`, over the loaded flat graph) in digest output order, with no padding, and is present
+for every loaded document, the 13 partial exports included. 32 zero bytes now means only "no id"
+(a hand-built model). The decoder still never interprets the field, so no hash is linked on a
+target. The rest of this decision records the field as release 0.4.0 wrote it; that change did not
+keep its own format number (decision 6, as amended).
+
+`content_id_complete` refused partial exports. 13 of the 46 G36 fixtures export partially today;
 in all 13, a PID's `controllerType` is enum-valued. For those, the field is 32 zero bytes, meaning
 "no content id". The `oce-api` encoder API reports the id as an `Option`. The decoder never
 interprets the field. It does keep it verbatim, and the decoded executable also exposes it as an
@@ -340,11 +355,20 @@ exactly its own version and its own execution profile. Any other version, newer 
 ([state continuation and portability](../state-compatibility.md)). Engine version must also match exactly;
 a mismatch is `EngineVersionMismatch` naming both versions.
 
+*Amended 2026-11-09 (issue #509).* The owner ruled that every format the project defines stays at
+revision 1 until 1.0.0, with no backwards compatibility: a change of the kinds listed above is made
+in place and the goldens are re-blessed, and nothing reads two layouts. The format number therefore
+no longer separates layouts; the engine version does, because the header carries it and the decoder
+accepts only its own. The first PR after a release tag that changes the format's bytes or meaning
+bumps the workspace version on `development`. This was found the hard way: with the number reset
+and the workspace still at 0.4.0, all 46 blobs of release 0.4.0 decoded, 33 of them presenting the
+retired export tag as a canonical content id.
+
 Additive or skippable sections are not allowed in v1. A decoder that skips what it does not
 understand would execute a model differently from what its encoder meant, for example by
 ignoring a future override section. In a format that commands equipment, every byte that can
 affect computation must be understood or refused. The only skipped bytes are `SemanticPoint`
-payloads, and §7.17 makes those non-computational.
+payloads, and OBC §7.17 makes those non-computational.
 
 **7. Integrity.** The trailer is CRC-32C, the Castagnoli polynomial (reflected `0x82F63B78`,
 initial value and final XOR `0xFFFFFFFF`; the check value of `"123456789"` is `0xE3069283`). It
@@ -376,7 +400,7 @@ same 15 classes, so snapshot bytes are unchanged. The decoded executable exposes
 None of the 46 fixtures uses one of those classes.
 
 A variant that embeds a platform stamp, as the snapshot's `TargetBound { arch, os }` does, would be
-format version 2. The reserved `u16` flags must be zero, matching the snapshot's zero reserved
+a further format version. The reserved `u16` flags must be zero, matching the snapshot's zero reserved
 flags.
 
 **10. Out of scope for v1.** Do not add any of these in M1b:
@@ -444,10 +468,12 @@ plus arbitrary strings, through `from_value` and `make`.
 The decoder refuses in this order:
 
 1. Length above 64 MiB: `TooLarge`.
-2. Short input, wrong magic, or a header length that differs from the input length: `Malformed`.
-3. Wrong format version: `UnsupportedFormat`.
-4. Trailer mismatch: `IntegrityMismatch`.
-5. Wrong profile or engine version, or nonzero flags.
+2. Short input or wrong magic: `Malformed`.
+3. Wrong format version (`UnsupportedFormat`), then another engine version
+   (`EngineVersionMismatch`).
+4. A header length that differs from the input length (`Malformed`), then a trailer mismatch
+   (`IntegrityMismatch`).
+5. Wrong profile, or nonzero flags.
 6. Structural problems, each with a byte offset: section order, bounded counts, UTF-8, tags,
    ordering, trailing bytes.
 7. Classes and per-instance checks, each with a named variant:
@@ -461,6 +487,24 @@ The decoder refuses in this order:
 9. The schedule (`InvalidSchedule`).
 10. `MAX_STATE_WORDS` via `allocate_state` (`StateTooLarge`), then the state CRCs
     (`InitialStateMismatch`).
+
+*Amended 2026-11-11 (issue #535).* Steps 2 to 5 read, until then: short input, wrong magic or a
+header length that differs from the input length; the format; the trailer; the profile, the engine
+version and the flags. A blob another engine version wrote could therefore report
+`LengthMismatch` or `IntegrityMismatch` before its version was looked at: a typed refusal still,
+but "corrupt" where the truth was "built by another engine version". The engine version is now
+checked straight after the format, as the state snapshot decoder has done since issue #530, and the
+format before the length. The reason is decision 6 as amended: every format stays at revision 1
+and changes in place, so another version may lay out the length field, the trailer and the body
+differently under the same format number, and none of them can be read until the version is known
+to match. The version refusal is certain only while the magic, format and version fields sit
+where this layout puts them. Rule 9 of `AGENTS.md` (decision 6 as amended) still lets a later
+layout move them in place. A blob from before such a move is then still refused with a typed
+error, though not necessarily `EngineVersionMismatch`. A corrupted version field now reports the
+version it spells, not an integrity failure; the profile and the flags stay behind the CRC. No
+byte of the format changed, so the 46 goldens did not move.
+[Which refusal wins](../compiled-schedule-blob.md#which-refusal-wins) states the rule for the blob
+and the snapshot together.
 
 A count is accepted only if the remaining section bytes could hold that many minimal records, so
 no allocation precedes that proof.
@@ -540,6 +584,14 @@ The primitives are duplicated in `oce-graph`, about 100 lines, rather than moved
 Moving them is a separate refactor that would have to prove snapshot goldens byte-identical.
 **Snapshot bytes and code are unchanged by M1b.**
 
+Since issue #530 the two do share the engine version: the snapshot header carries the same
+`u16`×3 field from the same constant (`oce_graph::blob::ENGINE_VERSION`), and its decoder refuses
+another version with its own `EngineVersionMismatch`
+([state contract](../state-compatibility.md#wire-revision-and-integrity)). Since issue #535 both
+decoders make that check at the same point, straight after the format revision and before the
+length and the trailer, so a foreign artefact of either kind reports its version first
+([which refusal wins](../compiled-schedule-blob.md#which-refusal-wins)).
+
 ## Size budget
 
 | Item | Bytes |
@@ -611,8 +663,8 @@ What #400, #401 and #403 must prove:
   out-of-range ordinal.
 - **One frame driver.** For every fixture's frame sequence, the facade's `execute_frame` and the
   core driver produce identical outputs, refusals and state (decision 11).
-- **§7.17 seam.** A `frame_purity`-style test fills and mutates every `SemanticPoint` payload byte
-  and requires an identical decoded executable and identical outputs.
+- **Metadata seam.** A `frame_purity`-style test fills and mutates every `SemanticPoint` payload
+  byte and requires an identical decoded executable and identical outputs.
 
 ## Review rulings
 

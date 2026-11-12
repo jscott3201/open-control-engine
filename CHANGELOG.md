@@ -39,6 +39,1975 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 Nothing yet.
 
+## 0.5.0
+
+Prepared 2026-11-11 on `development`; the release date is the date the `v0.5.0` tag is cut from
+`main`. Every workspace member is 0.5.0. Nothing is published to crates.io.
+
+0.5.0 closes milestone M2: the authoring layer. A person or an agent writes a sequence without
+touching JSON-LD. `oce-author` holds one typed authoring model with a builder, a strict-JSON wire
+form with a pinned JSON Schema and a stage-1 validator (GitHub #466, issue #463), a deterministic
+emitter to flat CXF with an engine-side validation stage that loads the emitted bytes in a throwaway
+engine and maps every diagnostic back onto the model (GitHub #473, issue #464), a terse text form
+with one typed refusal per malformed construct and an idempotent `fmt` (GitHub #485, issue #482),
+enumeration-typed sequence parameters, boundary bounds and member literals (GitHub #493, issue
+#492), and an importer for the in-subset library CXF and the frozen prototype's v0 graph JSON
+(GitHub #498, issue #496); the provenance statement is `derived_from` (GitHub #580, issue #529), and
+time unit suffixes scale from the vocabulary's table and must fit the declared unit (GitHub #586,
+issue #501); stage 1 is held to a near-linear count of key comparisons rather than to elapsed time
+(GitHub #584, issue #478). The engine side it needed is in the facade: resolved port names, class
+descriptions and the settable flag (GitHub #461, issue #440) and the enumeration table (GitHub #488,
+issue #468). The `oce` command-line tool (`emit`, `validate`, `fmt`, `catalog`, `vocab`; GitHub
+#491, issue #489) serves vocabulary v1, which `oce-vocab` projects from the vendored modelica-json
+CXF-Core document (GitHub #511, #526; issues #499, #500). Against the milestone's gate: 31 of the 34
+in-subset library fixtures import, emit and load to their committed content id (the other three
+carry block-port bounds, refused by design), every bundle and every one of the 31 importable corpus
+fixtures round-trips wire → text → wire byte for byte (GitHub #606, issue #603), and the parity test
+pins every stage-1 code that has an engine counterpart to the engine's own code at the same subject;
+the agent-usable row moves to the milestone that lands the benchmark harness (owner decision,
+2026-11-09). 0.5.0 also carries M3's work so far: the slot-indexed execute entry and `oce-replay`
+(GitHub #459, #462; issues #444, #445), the canonical content id (GitHub #474, issue #470),
+`FrameSlots::output_types()` (GitHub #525), and `oce-verify` with the `oce/vectors/v1` format, the
+replayer and its receipts, mutant mode, the four work budgets and the `oce verify` verb with the
+in-repo replay gate (GitHub #541, #558, #565, #570, #572, #573). Import is stricter: CXF is read and
+written in the one vocabulary namespace `http://data.ashrae.org/S231#` and every exported document
+carries a translation-software label (GitHub #543, issue #527), a block input driven by both a block
+output and a boundary input is refused (GitHub #477, issue #472), a CDL extension block is refused
+with its own code (GitHub #582, issue #537), and a parameter's `min`, `max`, `unit`, `quantity` or
+`displayUnit` of a malformed shape is refused on both readers (GitHub #594, issue #559). It is the
+first release in which every format and schema stays at revision 1 until 1.0.0 and changes in place,
+so the engine version is what separates one layout from another: the workspace moved to 0.5.0 on
+`development` with that reset (GitHub #518, issue #509), and a compiled-schedule blob and a state
+snapshot are each accepted only by the version that wrote them (GitHub #540, #579; issues #530,
+#535), with `oce_api::ENGINE_VERSION` naming that version (GitHub #592, issue #536). `Cargo.lock`
+moves `rustix` past RUSTSEC-2026-0486 (GitHub #605, issue #598). The workspace has 18 members, 10
+publishable and eight private. The fixture and Tier-A provenance goldens
+(`tools/golden-gen/goldens`) and the 46 whole-sequence Tier-2 traces are byte-identical to the
+`v0.4.0` tag.
+
+### Release
+
+- **0.5.0 closeout** (GitHub #600, issue #455). No version moves in this change:
+  `development` has carried 0.5.0 since GitHub #518, so every workspace member, the internal
+  path+version table, `Cargo.lock`, the descriptor's `oce-api-version:0.5.0`, the blob and
+  snapshot headers and every version-bearing golden already name it, and nothing is re-blessed.
+  The changelog's unreleased section becomes this one. Four entries cited an issue as if it were
+  the pull request, and now name the pull request beside it: `(GitHub #544)` is
+  `(GitHub #562, issue #544)`, and the three test-binary entries' `(GitHub #548, issue #504)`,
+  `(GitHub #549, …)` and `(GitHub #550, …)` are `(GitHub #551, issues #548 and #504)`,
+  `(GitHub #553, issues #549 and #504)` and `(GitHub #554, issues #550 and #504)`. Three
+  references to an issue read `GitHub #N` and now read `issue #N` or name the pull request: "as
+  GitHub #392 did" is "as GitHub #413, issue #392, did", and "the facade gap GitHub #467" and
+  "GitHub #566 tracks them" cite issues #467 and #566. The v0.4.0 sync-back merge
+  (GitHub #454) carried no change of its own, and GitHub #599 (issue #581) corrected one rustdoc
+  sentence of `Engine::content_id` that still named the provenance statement `extends`, with no
+  entry of its own. No catalog, contract-schema, state-format, execution-ABI, blob-format or
+  replay-format revision changes.
+
+### Facade
+
+- **`oce_api::ENGINE_VERSION` names the engine version this build stamps and accepts** (GitHub
+  #592, issue #536). It re-exports `oce_graph::blob::ENGINE_VERSION`, an `EngineVersion` holding
+  the major, minor and patch of the workspace version, with any pre-release or build suffix
+  dropped. Every compiled-schedule blob and state snapshot this build writes carries it in its
+  header, and either `EngineVersionMismatch` names it as `expected`. A host's storage envelope,
+  an `oce-verify` receipt or an `oce-replay` envelope can now record "written by engine X" from a
+  named facade item, without a direct `oce-graph` dependency and without parsing a header, an
+  error or a version string. It is a release version, not a build identity. It is not the
+  compatibility descriptor's `oce-api-version`, which keeps the suffix. Tests in
+  `tests/state_engine_version.rs` hold it equal to `oce-api`'s own package version and to the
+  bytes of a freshly written blob and snapshot, after frames and straight after load. They also
+  check that both refusals name it as `expected`. The facade-contract check's positive control now
+  compiles a host-side use of it, and fails with E0425 without the re-export. Documented in the
+  [identity glossary](docs/facade-contracts.md#identity-glossary) and in
+  [host responsibilities](docs/host-responsibilities.md#persist-engine-state-outside-the-engine).
+  No behaviour, format or golden changes.
+- **A state snapshot names the engine version that wrote it, and only that version restores it**
+  (GitHub #540, issue #530; owner rulings of 2026-11-09). The fixed header gains six bytes after
+  the execution-state ABI revision: major, minor and patch as little-endian `u16`, from the constant
+  a compiled-schedule blob records (`oce_graph::blob::ENGINE_VERSION`; neither records a
+  pre-release suffix). The header is now 30 bytes and every snapshot is six bytes longer.
+  `EngineStateSnapshot::from_bytes` refuses any other version with the new
+  `EngineStateError::EngineVersionMismatch { found, expected }`, checked after the magic and the
+  format revision and before the body length, the trailer or the body is read, so
+  `Engine::restore_state` never receives such a snapshot. The execution fingerprint now covers
+  the version bytes, as the trailer already covered the header: a snapshot edited to claim this
+  build's version fails its trailer, and with the trailer recomputed, its fingerprint.
+  **Breaking, in place:** the format and ABI revisions stay 1 and there is no reader for a header
+  without the field. `development` wrote that header between GitHub #518 and this change and no
+  release did, so no version bump accompanies it; one such snapshot is kept as a refused fixture
+  (`fixtures/state_unstamped.hex`, `tests/state_old_layout.rs`), and the older empty-model
+  vector, and the release snapshot once its numbers are edited, are now refused at the version
+  field as well. The three inline state pins are re-blessed and from here on move with a
+  workspace version bump; blob goldens, canonical content ids and
+  `tools/golden-gen/goldens` are unchanged. The engine version is not a build token: the host
+  envelope still binds a snapshot to its model, build and deployment
+  ([state continuation](docs/state-compatibility.md#wire-revision-and-integrity)).
+- **Output types in slot order** (GitHub #525, issue #460). `FrameSlots::output_types()` returns
+  one `ValueType` per output slot, parallel to `outputs()`: the declared type of the connector that
+  drives each boundary output (for a pass-through declared output, the type of the input it
+  copies), known at load. Until now `outputs()` gave paths only and an output's type existed only
+  on the first accepted frame; `oce-verify` types every expected value and compares a mutant's
+  boundary with the subject's before any frame runs (`docs/design/vectors.md`, decisions 7 and 27).
+  It is the type alone, as `InputDefinition::value_type` is for an input, and an Enum output is
+  `ValueType::Enum` with its exact class identity. For every frame accepted in the load the map
+  was built from, through either entry, the `j`-th output value has the type of entry `j`. The slice is borrowed (no allocation
+  on read), is empty for an executable with no boundary output, and belongs to the map's load
+  incarnation like the paths: a superseded map keeps its types and is still refused with
+  `StalePreparedFrame`. Additive only: no existing signature, refusal, error variant or behaviour
+  changes, `execute_slots` and the frame driver are untouched, `oce-replay` still fixes its output
+  columns from the first accepted frame, and every golden is byte-identical. The `is_current`
+  staleness probe that shared this issue is split off to M6.
+  Evidence (`tests/slot_output_types.rs`): over the 46 G36 fixtures and the two library rules, each
+  of the 134 output slots (102 Real, 18 Integer, 14 Boolean) is typed before any frame exactly as
+  its CXF document node declares it, by a `serde_json` walk that shares no engine helper, with a
+  transposition control on the ten mixed-type boundaries; all 21,440 output values of the shared
+  160-frame schedule and the named path's first `CompletedFrame` have their slot's type; an empty
+  boundary, Real, Integer and Boolean pass-through outputs copied bit for bit, a reload of
+  identical bytes (a new map, the same types, the old map refused), a dirty parameter resume, a
+  reload of a different model, a failed load and an allocation-free read with a positive control.
+  An Enum and a String boundary output, which no CXF can declare, are hand-built in
+  `frame_slots_tests.rs`: seven declared outputs over every value kind and two enumeration
+  classes, typed in lexical slot order with the exact class, on both entries. The signature guard
+  (`guards.rs`) and the facade compiler contract's positive control name the accessor;
+  `docs/complete-frame-contract.md`, `docs/facade-contracts.md` and the README are updated, and
+  `docs/design/vectors.md` records that the accessor landed.
+
+- **Enumeration and constant-package table** (GitHub #488, issue #468). `oce_api::enumerations()`
+  lists, beside `class_metadata()`, every named type the engine knows as one `&'static` table of
+  `EnumerationClass { class_path, qualified_path, kind, id, members, values }`: the four CDL
+  enumerations, the ten G36 enumerations (`ASHRAEClimateZone`, `ControlEconomizer`, `CoolingCoil`,
+  `EnergyStandard`, `FreezeStat`, `HeatingCoil`, `OutdoorAirSection`, `PressureControl`,
+  `Title24ClimateZone`, `VentilationStandard`) with their members in source order, and the four G36
+  Integer constant packages (`DemandLimitLevels`, `FreezeProtectionStages`, `OperationModes`,
+  `ZoneStates`) with each constant's value. `class_path` has one form for every row, relative to
+  `Buildings.Controls.OBC.` (`CDL.Types.SimpleController`, `ASHRAE.G36.Types.OperationModes`); each
+  row is an `EnumerationKind::Enumeration` (a parameter and connector type, carrying its
+  `EnumClassId`) or an `EnumerationKind::ConstantPackage` (named Integer constants, never a
+  parameter type). `enumeration(class_path)`, `enumeration_by_id(id)`,
+  `enumeration_class_path(id)`, `enumeration_member_value(class_path, member)` and
+  `enumeration_types()` look rows up without allocating, and `EnumerationClass::member_value` gives
+  a member's ordinal or Integer (`MemberValue`); `EnumClassId` is re-exported.
+  `enumeration_class_path` is the relative authoring form; the durable spelling snapshots, blobs,
+  the replay wire and class hashes record stays `EnumDescriptor::class_path` (fully qualified for
+  G36), and the rustdoc on both says so. `CATALOG_JSON`,
+  `catalog_content_id`, every class signature hash and the `class_ports` golden are unchanged. Tests
+  (`crates/oce-api/tests/enumerations.rs`) hold the table to every `EnumMembers` rule, `Required`
+  Enum kind, enum default and Enum-typed parameter the catalog publishes (members in order), and to
+  every Enum parameter a load of the G36 corpus keeps. #465 (recording an Enum column's class in
+  `oce-replay` traces) stays open; a trace must record the durable `enum_descriptor` spelling, not
+  `enumeration_class_path`.
+
+- **Canonical content id** (GitHub #474, issue #470; design note GitHub #471).
+  `Engine::content_id()` mints one identity for a loaded sequence, `oce:canon1:` and the 64 hex
+  digits of the SHA-256 (via `sha2` 0.10, `default-features = false`, on `oce-api` only) of the
+  `OCECANON` version 1 encoding of the loaded flat graph, exactly as `docs/design/content-id.md`
+  specifies: boundary inputs (name, type, `quantity`/`unit`/`displayUnit`, effective domain,
+  fan-out), boundary outputs including pass-through outputs (driven by their input), non-reserved
+  blocks (name, class path, class signature hash, bound parameters sorted by name) and connections
+  by port index, every name stripped of its namespace with the whole-IRI fallback. It refuses
+  before a load and while parameter edits are pending (`compile_blob`'s preconditions) and is a
+  typed `OcError::ContentId` for a hand-built model with an unnamed block. `ContentId` has
+  `Display`, a checked `parse`/`FromStr` of the exact text (refusing with `ContentIdParseError`)
+  and `digest()`; it does not convert from
+  a string, `CatalogContentId` or `DomainKey`. `Engine::canonical_content_bytes()` returns the
+  encoded bytes, versioned with the id text (`canon1`), for recomputing the digest or diagnostics;
+  no decoder is provided or promised. The order-bearing export tag is removed:
+  `ExportReport::content_id_complete()`, the deprecated `ExportReport::content_id()`,
+  `CompleteExportContentId` and `ContentIdError::Incomplete` are gone; `ExportReport::complete()
+  -> Result<(), ExportIncomplete>` keeps the completeness check, and `ContentIdError` now names the
+  minting refusals (`UnnamedBlock`, `UnregisteredClass`, `UnknownEnumClass`, `MalformedModel`,
+  `TooLarge`, carried as the new `OcError::ContentId`). The compatibility descriptor is revision 2: its tenth line is `content:none` or
+  the `oce:canon1:` id, `CompatibilityDescriptor::current` takes an `Option<&ContentId>` and is
+  infallible, `export_content_id()` is `content_id()`, `check_compatible` requires revision 2, and
+  `ExportPresence`/`ExportContent` are `ContentIdPresence`/`ContentIdMismatch`; the replay record's
+  descriptor grammar follows (its wire size grows by one byte, `export:none` to `content:none`).
+  Evidence: the note's two worked examples reproduced byte for byte from hand-assembled vectors
+  (`offset_gain` 394 bytes `fbbea1ef…`, `TrueDelay` 216/233 bytes `aff7775c…`/`05b0f40f…`); 13
+  same-id rewrites of all 47 corpus documents (`@graph` reversed and rotated, relation arrays
+  reversed, keys reversed, pretty-printed, compact IRIs, two other namespaces) and a leaf
+  port-list reversal that keeps the id exactly when the binding is unchanged; load → export →
+  load canonical-byte equality for the 34 complete exports; every parameter's one-bit, ±1,
+  flipped or other-member edit (837 edits, 120 of them `+0.0` to `-0.0`) and block, boundary and
+  sequence renames, rewires, class swaps, boundary label changes, tightened bounds and removed
+  bindings each moving the id with no two variants sharing one; the 160-frame schedule over every
+  document and four permuted variants giving identical outputs, per-block state and refusals; the
+  pass-through case, name collisions, refusals, the FIPS 180-4 vectors and the largest encoding
+  (64,491 bytes) pinned. `tests/fixtures/content_id/restamp.tsv` maps all 47 documents' retired
+  `cxf:fnv1a128:` tags (`-` for the 13 partial exports) to their new ids, in the format the
+  library's re-stamp uses. Re-blessed: `compatibility.txt` and `compatibility_export.txt` (revision
+  and `content` line); `oce-cxf`'s `fixture_corpus_import.txt` gains one line for each of the four
+  new `tests/fixtures/content_id/*.jsonld` documents (the tracked corpus is 222 with #477's
+  four), every existing line unchanged. `g36_export_content.txt`, the export bytes and every other golden are
+  byte-identical. PC-018, PC-021 and PC-036 are reworded and PC-041 names a format-2 blob (product
+  contract revision 23). `oce-author`'s `validate_cost` ratio test fails on `development` as well on
+  a local arm64 debug build; it is tracked as #478, untouched here.
+  `oce-author`'s test helpers (merged first in GitHub #473) move to the new id: `identity` is
+  `Engine::content_id`, and `executable` zeroes header bytes 20..52 and the CRC. The order tests
+  invert, because order no longer moves the id: `block_order_moves_the_bytes_but_not_the_identity`,
+  `boundary_order_moves_the_bytes_but_not_the_identity`, the direct-target permutation, and
+  `node_order_alone_moves_the_sumzone_export_but_not_its_identity`, which now pins the export-byte
+  difference. The kelvin/celsius semantic-seam test is unchanged. `fixture_corpus_import.txt`'s
+  corpus pin is 222: GitHub #477 added four fixtures, and this PR adds four more.
+
+- **Slot-indexed execute entry** (GitHub #459, issue #444). `Engine::frame_slots()` resolves the
+  executable boundary once into an owned `FrameSlots` map (input slots in `input_definitions()`
+  order, output slots in `CompletedFrame::outputs()` order, both the compiled blob's I/O order),
+  and `Engine::execute_slots(&slots, t, &values)` commits one complete frame from one value per
+  input slot, returning a `SlotFrame` that borrows the outputs in slot order and the frame's
+  warnings. It runs the same core driver (`oce_graph::frame::FrameDriver`) as `execute_frame`, with
+  the same refusal order, error variants and atomicity: a shorter vector is `FrameMissingInput` for
+  the first absent slot, and the one new variant, `OcError::FrameExtraInputs { expected, found }`,
+  refuses a longer one before any value is read. The map carries the prepared-plan incarnation
+  fence, so a reload or dirty resume makes it `StalePreparedFrame` instead of rebinding positions;
+  that variant's rustdoc and `Display` text now name the slot map too ("prepared input frame or slot
+  map is stale for this executable context").
+  Once the map exists a slot frame allocates nothing; warning records are reused in place, so only
+  a frame that emits more or longer warnings than any before it allocates (census: 0 allocations
+  on 7,357 of the 7,360 corpus frames; the other three each grow a warning record). New evidence:
+  dual-entry equivalence on all 46 G36 fixtures (`tests/slot_frames.rs`, and the slot entry as a
+  fourth caller in `blob_dual_path_tests.rs`), refusal parity for every class on every fixture
+  (`tests/slot_frame_refusals.rs`, String values in every slot included), Enum- and String-slot
+  type and domain parity on detached probes plus private preflight and transition-count controls
+  (`frame_slots_tests.rs`), a whitespace-tolerant, path-exact check that `frame.rs` and
+  `frame_slots.rs` are the only `FrameDriver` constructors and that every excluded test source
+  compiles only under `#[cfg(test)]` (`tests/frame_driver_ownership.rs`), and the slot path in the
+  facade compiler contract's positive control.
+  `docs/complete-frame-contract.md`, `docs/facade-contracts.md`, `docs/execution-profile.md`,
+  `docs/host-responsibilities.md`, PC-035 in `docs/product-contract.md` and the README name the
+  slot entry beside the named path. `oce-graph` and every golden are unchanged.
+
+- **Resolved port names, class descriptions and parameter metadata** (GitHub #461, issue #440;
+  authoring-layer design note decisions 15 and 18). `oce_api::class_ports(class_path, params)`
+  names every port of a class as configured, in port index order: scalar connectors keep their CDL
+  name, a vector connector `u[n]` is `u1`…`un` (the corpus's spelling, bound by position by the
+  import), a matrix `y[r, c]` is `y1_1`…`yr_c` row-major; a `TimeTable` source has `y1`…`yn` for an
+  `n`-value-column table. The parameters are first checked with the load gate's own rules through
+  the new `oce_validate::validate_block_parameters`, so a table a load would refuse is
+  `ClassPortsError::InvalidParameters` (carrying the load diagnostics) and an unregistered class is
+  `ClassPortsError::UnknownClass`; nothing panics. `oce_api::DiagCode` is now re-exported (the type
+  of `Diagnostic::code`), so a host matches those refusals without `oce-diag`; `as_str()` is the
+  stable key. `oce_api::class_metadata()` gives every class in catalog order a one-sentence
+  description (the vendored Modelica class description string, checked against `third_party/`, or
+  an engine-written sentence for `TrueHoldWithReset` and the three reserved identities) and its
+  parameters, each with `value_type`, `default` (the catalog's `CatalogDefault`: a literal,
+  `Derived` with its formula, or `Required`) and `settable`; the `TimeTable` sources' rule-only
+  `table_<row>_<col>` is listed as `Required`. Per the
+  [#440 amendment](https://github.com/jscott3201/open-control-engine/issues/440#issuecomment-6730952664),
+  `settable` means "an author may assign this parameter" and is false only for the reserved
+  identities: the twelve derived defaults (`MatrixGain.K`, `PIDWithReset.y_reset`, …) are plain
+  overridable CDL parameters, and the M2 design note's `parameter-not-settable` row is narrowed to
+  the reserved classes. `oce_api::param_element_name` expands a catalog template (`k_<i>`,
+  `K_<row>_<col>`) to the names the CXF import mints, and the placeholders are exported as
+  `PARAM_INDEX_PLACEHOLDER`, `PARAM_ROW_PLACEHOLDER` and `PARAM_COL_PLACEHOLDER`. Underneath,
+  `oce_blocks::resolved_ports` synthesizes the names over the registry constructor's
+  `resolved_signature()` and refuses a layout that does not cover it exactly;
+  `oce_blocks::class_description`, `class_parameters` and `ParamNameTemplate` carry the metadata.
+  All four new `oce-blocks` modules compile only with the `std` feature, so the bare-metal firmware
+  image is byte-for-byte the size it was on `development` (`thumbv7em` `.text` 144,428 B, flash
+  206,264 B; `core::fmt` 21 and 22 functions). No constructor, tick behaviour or `ParamRule`
+  changes, and the metadata stays outside the revision-1 catalog: `CATALOG_JSON`,
+  `catalog_content_id`, `class_signatures.tsv` and every golden under `tools/golden-gen/goldens`
+  are byte-identical. A new golden, `crates/oce-blocks/tests/fixtures/class_ports.golden.txt`
+  (bless switch `OCE_BLESS_CLASS_PORTS`), pins the names of every class at its empty table and of
+  every width-driven class at widths 1, 2 and the maximum, every description, and every
+  parameter's type, default and settable flag. Cross-checks run against the CXF import: every G36
+  document's bound connectors, and hand-written documents for the replicators, matrix reductions,
+  `Sort`, the extractors, filters and extract signals, `Integers.MultiSum` and the three
+  `TimeTable` sources, must equal `class_ports`; preserved arrays import under exactly the
+  expanded template names. The naming seam's every refusal is reached with hand-built signatures,
+  names are checked against the constructed blocks' feedthrough under every flag spelling, and
+  `validate_block_parameters` is held equal to whole-model validation over the constructor fuzz's
+  hostile tables for every class (the generator moved to
+  `crates/oce-blocks/tests/support/hostile_tables.rs` so both crates share it). The fuzz also
+  names every constructible table. PC-041's evidence line for
+  `every_constructor_survives_hostile_parameter_tables` in `docs/product-contract.md` moves to
+  where that test now starts. `docs/cdl-coverage.md` states the naming contract.
+
+### Execution core
+
+- **A compiled-schedule blob of another engine version is refused by its version, whatever else
+  is wrong with it** (GitHub #579, issue #535). `oce_graph::blob::decode` now checks the size
+  limit, that a header and a trailer fit, the magic, the format, then the engine version, and only
+  then the total length, the CRC-32C trailer, the profile and the flags. It used to check the
+  length before the format and the version after the CRC and the profile, so a blob another
+  version wrote could report `LengthMismatch` or `IntegrityMismatch` ("corrupt") before its
+  version was read. The state snapshot decoder has used the new order since issue #530, for the
+  same reason: formats stay at revision 1 and change in place, so another version may lay out its
+  length, trailer and body differently. **Behaviour change:** a blob wrong in two of these ways
+  can report a different refusal than before. Another engine version with a wrong length, a wrong
+  CRC or another profile now reports `EngineVersionMismatch`, where it reported
+  `LengthMismatch`, `IntegrityMismatch` or `UnsupportedProfile`. So a flipped bit in the version
+  field reports the version it now spells, not an integrity failure. A wrong format with a wrong
+  length reports `UnsupportedFormat`, not `LengthMismatch`. A blob with one defect reports what
+  it did before. `BlobError` lists `EngineVersionMismatch` straight after
+  `UnsupportedFormat`, matching the order. No byte of the format changes: the 46 blob goldens,
+  the frame digests and `tools/golden-gen/goldens` are unchanged. One rule now covers both
+  artefacts ([which refusal wins](docs/compiled-schedule-blob.md#which-refusal-wins)). It is
+  pinned by `tests/blob_refusal_precedence.rs` and two new tests in
+  `src/tests/state_codec_tests.rs`, which put every pair of defects into each artefact and check
+  that the earlier check wins, and by a test that the release-0.4.0 blob is still refused by its
+  version when its length, trailer, profile or body is damaged.
+- **Every format and schema revision is 1 until 1.0.0, and `development` carries version 0.5.0**
+  (GitHub #518, issue #509; owner rulings of 2026-11-09). There is no backwards compatibility
+  before 1.0.0: a format changes in place and its fixtures and goldens are re-blessed, with no
+  importer, mapping table or dual-read path. Six numbers that had moved are reset to 1, with no
+  layout change: the `OCEB` blob format (`oce_graph::blob::FORMAT_VERSION`, was 2), the state
+  snapshot format and execution-state ABI revisions (were 2), the compatibility descriptor
+  (`oce-compatibility:1`, was 2), and the diagnostics (`DIAGNOSTIC_SCHEMA_REVISION`, was 3),
+  assertions and execution-profile contract revisions (were 2;
+  `execution-profile-schema:1` in the descriptor). A wrong number is still refused with the same
+  typed errors (`BlobError::UnsupportedFormat`, `EngineStateError::UnsupportedFormat`,
+  `CompatibilityMismatch::DescriptorRevision`).
+  **The workspace version moves to 0.5.0 in the same change, without a release or a tag.** With
+  the numbers reset and the version still 0.4.0, every one of release 0.4.0's 46 blobs decoded and
+  built an executable (same sections, class hashes and a valid CRC), and 33 of them presented the
+  retired `cxf:fnv1a128:` export tag as a canonical content id. The engine version in the blob
+  header and the descriptor's `oce-api-version` line now separate the layouts: a release-0.4.0
+  blob is refused with `BlobError::EngineVersionMismatch` (`tests/blob_old_layout.rs`, one such
+  blob kept unblessed as `fixtures/blob_legacy.oceb`). The rule that follows is in `AGENTS.md`:
+  the first PR after a release tag that changes a format's bytes or meaning bumps the workspace
+  version.
+  A state snapshot header had no engine version at this change; the entry under Facade above
+  (GitHub #540, issue #530) adds it. Releases 0.2.0 to 0.4.0 numbered their snapshots 2, so a
+  populated snapshot from them is refused by number (`tests/state_old_layout.rs`,
+  `fixtures/state_revision_two.hex`). The same snapshot with its numbers edited to 1, and the
+  empty-model vector of the layout before those releases (`fixtures/state_legacy.hex`), which
+  shares today's numbers, are refused for the version field they lack
+  ([state continuation](docs/state-compatibility.md#wire-revision-and-integrity)).
+  Re-blessed: the 46 blob goldens (format field, engine-version bytes and CRC only; 123,329 bytes
+  in all, unchanged), `compatibility.txt` and `compatibility_export.txt`, the two pinned state
+  vectors in `state_tests.rs` and `state_format_golden_tests.rs`, and `restamp.tsv`, which loses
+  its retired-id column and becomes a plain pin of the 47 canonical content ids (all 47 unchanged).
+  The catalog content id, every class signature hash, the run digests, the determinism state
+  vectors' sizes and `tools/golden-gen/goldens` do not move. `DiagnosticStage::rank` and the
+  three contract schema files change only their revision number; the product contract advances to
+  revision 25.
+
+- **One enumeration table in `oce-model`** (GitHub #488, issue #468). The enum facts that lived in
+  hand-written `match` arms and member constants in `oce-model/src/types.rs` are now one static
+  table, `oce_model::enumerations` (`no_std`, plain `&'static` data, linear lookups with no
+  allocation and no hashing). `enum_class_id`, `enum_descriptor`, `enum_descriptor_by_path`,
+  `enum_member_ordinal`, `g36_enum_class_id`, `g36_enum_literals`,
+  `is_g36_integer_constant_package`, `g36_integer_constant` and `g36_integer_constant_in_package`
+  read it, so the four G36 constant packages have a list a test can enumerate for the first time.
+  No behaviour change and no golden moved: the descriptor keeps its frozen durable class paths
+  (relative for CDL, fully qualified for G36), and `crates/oce-model/tests/enumeration_table.rs`
+  checks every table-backed function against a verbatim copy of the old `match` arms on every class
+  path and member, and on hostile spellings (wrong case, trailing dot, prefixes, the full
+  `Buildings.Controls.OBC.` form, IRIs, empty), plus the table's invariants (unique ids, paths and
+  last segments; one value per constant) and the G36 members against the vendored `.mo` sources in
+  order. `tests/enumeration_corpus_references.rs` checks that every `CDL.Types` / `G36.Types` class,
+  member and constant the CXF corpus names is a row or member, grounding to the row's value.
+  Provenance: the 10 G36 enumerations are checked against the vendored `.mo` sources in order; the 4
+  CDL enumerations are not vendored and are held to the registry's `EnumMembers` lists and the typed
+  `SimpleController` / `ZeroTime` parsers; the 4 constant packages are not vendored either and carry
+  exactly the members and values the resolver always used, pinned only by the differential test
+  against the old `match` arms (the corpus test cannot catch a wrong value there).
+  `DemandLimitLevels`' member order (`cooling0..3`, then `heating0..3`) is a choice, not an upstream
+  order. A test pins that every row lies in `CDL.Types` or `ASHRAE.G36.Types`, the two packages
+  whose durable class-path form is decided.
+
+- **Blob format 2: the content-id field holds the canonical digest** (GitHub #474, issue #470).
+  `oce_graph::blob::FORMAT_VERSION` is 2 and the decoder accepts only 2: the 32-byte header field
+  now holds the SHA-256 digest of the canonical content id in output order, present for all 46
+  fixtures including the 13 partial exports, and 32 zero bytes only for a hand-built model with an
+  unnamed block. Any other failure to mint the id refuses `compile_blob` with `OcError::ContentId`,
+  so a blob from CXF never ships without its id.
+  `content_id_field` takes the digest bytes; `CompiledBlob::content_id` is `Option<ContentId>`.
+  The decoder still carries the field verbatim, so `sha2` never enters the `no_std` core. The 46
+  blob goldens are re-blessed and differ from format 1 in exactly three places: byte 4 (format
+  version 1 → 2), bytes 20 to 51 (the content id) and the 4-byte CRC-32C trailer.
+  `blob_frame_digests.tsv` and the firmware image's expected run digests are unchanged. Both blob
+  docs say format 2; the design note's dump is regenerated from the golden with the real class
+  hash, id and CRC.
+
+- **The load gate refuses non-canonical array and matrix element names** (GitHub #474, issue
+  #470). A bound parameter that spells an element of one of its class's array templates (`k_<i>`,
+  `K_<row>_<col>`, `table_<row>_<col>`, `offset_<i>`) with a sign or a leading zero (`table_01_2`,
+  `table_+1_2`, `offset_+1`, `k_01`) is refused with the new
+  `DiagCode::NonCanonicalElementName` (`non-canonical-element-name`) before `make`. `TimeTable`
+  parsed indices with `usize::parse`, so an aliased spelling silently replaced a cell and the later
+  one in table order won; with one spelling per element, sorting parameters by name in the content
+  id loses nothing. This is the spelling half of the facade gap issue #467 (names outside the
+  declared extent), which stays open.
+
+### CXF import and export
+
+- **A parameter's `min`, `max`, `unit`, `quantity` and `displayUnit` are shape-checked on both
+  readers** (GitHub #594, issue #559; owner rulings of 2026-11-11). Nothing read them on a
+  parameter, so a malformed one loaded in the engine and imported through `oce-author` unjudged:
+  `"S231:max": ["30", "…#double"]`, the list of a typed literal's values, among them. Their values
+  are still not used for control. The engine (`oce-cxf`) now checks them where a parameter is read
+  (a leaf's `hasParameter`, `hasConstant` and classified `hasInstance` parameter members, and every
+  declaration of an active composite in the lowering pass), once per parameter node however often
+  it is read. A bound is one number, typed literal or string, the last the expression form
+  modelica-json writes for a bound over other parameters (`"yMin"`, `"100*1e-15"`); a term is a
+  string, typed literal or IRI node, as on a connector; and no string among them (the attribute, a
+  typed literal's `@value`, an IRI node's `@id`) may be empty or whitespace-only. A list, boolean
+  or blank bound, a typed literal with a blank `@value`, and every malformed term are refused as
+  `malformed-document`, subject the parameter; JSON `null` reads as absent, and a pruned or
+  unreferenced parameter is not checked. A bound that is an object but no typed literal (`{}`,
+  `{"@id": …}`, `{"@value": "30"}`, `{"@list": …}`), or a list holding one, gets no such
+  diagnostic: it matches no shape the document reader knows, so the whole document fails to parse
+  (`CxfError::Json`, no code or subject) wherever the parameter is, as it already did. The authoring
+  importer (`oce_author::import_cxf`) checks the same shapes before it drops the attributes, in its
+  own strict reading (a typed literal is exactly `@value` and `@type`, an IRI node exactly `@id`,
+  and `null` is refused), with `wrong-shape` naming the key; the `DROPPED_ATTRIBUTES` exception of
+  its closed-shapes sweep is gone, so a list at those positions is held like a list anywhere else.
+  The importer note tabulates where the two readers differ. **Breaking, in place:** a document
+  carrying such a shape loaded or imported before. No tracked document does: a probe over every
+  tracked `.jsonld` (vendored translations and `CXF-Core.jsonld` included) and the current
+  library's 142 CXF documents moved no outcome, none carries a blank value in these attributes on
+  any node, and `fixture_corpus_import.txt` is byte-identical. A stricter rule that also refused a
+  string bound would have added a refusal to three vendored translations that are already refused
+  for other reasons (`Limits/Common`, `SetPoints/SupplyFan`, `Generic/TrimAndRespond`, whose bounds
+  are written `"yMin"`, `"minSpe"` and `"100*1e-15"`), so the expression string is a legal shape.
+- **A CDL extension block is refused at load with its own code, `extension-block-unsupported`,
+  and the dead `missing-fmu-path` code is removed** (GitHub #582, issue #537). An extension
+  block's behaviour is a Functional Mockup Unit (OBC §7.13 and §8.7), and FMI is out of scope
+  before 1.0. Before composite lowering, the resolver now refuses every active node typed
+  `S231:ExtensionBlock` (at any position of its `@type` list), carrying `S231:hasFmuPath` (whose
+  domain is `ExtensionBlock`), or whose `@type` names such a node of the same document, wherever
+  it sits: the root, a child at any depth, an extension block that lists children of its own, and
+  a node no `containsBlock` edge reaches. The class is read the way a modeled key is (owner ruling
+  on GitHub #582): its type must expand to `http://data.ashrae.org/S231#ExtensionBlock` (that IRI,
+  `S231:ExtensionBlock` under the published binding or under none, another prefix bound to the
+  namespace, or a `@context` term expanding to it); a class of that name in any other namespace,
+  or a bare `ExtensionBlock` that no term expands, is an ordinary class, and the class in the
+  `https:` spelling of either S231 namespace is refused as `vocabulary-namespace-mismatch`, as a
+  modeled key there is. Each extension block gets one error under the new
+  `DiagCode::ExtensionBlockUnsupported`, subject its `@id`, and the resolve ends there, so nothing
+  lowering or a later stage would find is reported for the document; the declaration findings
+  the specialize pass withheld still are. A node pruned by a false conditional guard is not
+  refused; a class definition the document carries is, even when every instance of it is pruned.
+  **Breaking, in place:**
+  four shapes loaded before. An extension block that listed children, as the root or nested, was
+  lowered as a composite and its children ran in place of its FMU; one that no `containsBlock`
+  edge reached was ignored; `@type: [<registered class>, S231:ExtensionBlock]` ran the registered
+  class; and `S231:hasFmuPath` on a registered class was never read. A leaf extension block was
+  `class-not-found` and an extension-block root without children `composite/root-count`; the
+  `https:` spellings of the class were read as an ordinary class, and are now refused. An
+  instance of an extension-block class whose definition the document does not carry is still
+  `class-not-found`. `DiagCode::MissingFmuPath` (`missing-fmu-path`), an advisory that nothing
+  ever constructed, is removed (the workspace builds without the variant), the `ClassNotFound`
+  rustdoc no longer describes an `ExtensionBlock` check that no code made, and `Node::fmu_path`
+  gains its one reader. Two fixtures under `crates/oce-cxf/tests/fixtures/invalid/` and
+  `tests/resolve_extension_blocks.rs` pin each position, and `oce-api`'s conformance harness drives
+  both fixtures through `Engine::load_cxf`. Re-blessed: `fixture_corpus_import.txt` gains the two
+  fixtures' lines and its pinned count goes from 223 to 225; none of its existing 223 lines moved.
+  `tools/golden-gen/goldens`, the blob goldens and the content-id pin are unchanged.
+- **CXF is read and written in one vocabulary namespace, `http://data.ashrae.org/S231#`, and
+  every exported document names the software that wrote it** (GitHub #543, issue #527; owner
+  rulings of 2026-11-09 and 2026-11-10). The evidence for the namespace is public: the
+  OpenBuildingControl (OBC) specification lists it (OBC §11.3) and modelica-json's `CXF-Core.jsonld`
+  binds it; this project has not read the CXF clause of ANSI/ASHRAE Standard 231-2026. The
+  exporter (`oce-cxf`) and the authoring emitter (`oce-author`) bind `S231` to that IRI.
+  **Breaking, in place:** the importer reads the vocabulary in no other namespace. `S231` bound to
+  any other IRI (the `https:` spelling included), any prefix bound to
+  `http://data.ashrae.org/S231P#` (the IRI the engine wrote through release 0.4.0), a modeled
+  property keyed by its full IRI in that namespace or in the `https:` spelling of either, and a
+  `@type` or `isOfDataType` value in that namespace are each refused with the new diagnostic code
+  `vocabulary-namespace-mismatch` (`DiagCode::VocabularyNamespaceMismatch`), whose message names
+  the IRI found and the IRI expected. A foreign-namespace key was `non-subset-construct` before;
+  a document that bound `S231` anywhere else used to load. The authoring importer refuses the same
+  bindings with the new kind `ImportErrorKind::NamespaceMismatch { term, found, expected }`
+  (`namespace-mismatch`, the thirtieth code). A document with no `S231` binding still loads, its
+  compact keys read in the published namespace; another prefix bound to the published IRI is still
+  accepted by the engine importer; in a list of context maps only the binding in force is judged.
+  There is no reader, alias or importer for the earlier spelling: two documents exactly as
+  release 0.4.0 carried them are kept unblessed to prove the refusal
+  (`crates/oce-cxf/tests/fixtures/previous_layout/`,
+  `crates/leverage/oce-author/tests/fixtures/previous_layout/`). The workspace was already at
+  0.5.0, so no version bump accompanies the change.
+  **The label.** Both writers put `S231:translationSoftware` (`open-control-engine`) and
+  `S231:translationSoftwareVersion` (the workspace version) on the root node, as two JSON
+  strings; the spelling is `CXF-Core.jsonld`'s, the properties are OBC §8.2 Table 8.2, and OBC
+  §8.4 makes them optional. No importer reads them back, in any spelling, on any node, with any
+  value, so they are in no content id, blob or snapshot; the authoring importer admits the two
+  keys on the root and on a block node and treats them as unknown keys elsewhere. Exported and
+  emitted bytes therefore change with the workspace version (the pins are listed in
+  `.agents/project-facts.md`).
+  **What moved.** No canonical content id, no blob golden, no frame digest and nothing under
+  `tools/golden-gen/goldens`. The `S231` context IRI was rebound mechanically in 175 input
+  fixtures and in five copies of documents from other repositories, whose provenance records now
+  give the source digest beside the new one (`tests/fixtures/v0/PROVENANCE.md`,
+  `tests/fixtures/library_rules/README.md`). Regenerated by their own bless switches: the nine
+  export goldens, the allowed-delta and export-content expectation files (47 records each), two
+  of the 223 lines of `fixture_corpus_import.txt` (both rejected fixtures whose message quotes the
+  IRI; every vendored translation's verdict is unchanged), the six emit goldens and two CLI
+  transcripts; the three inline export digests in `tests/export_cxf.rs` were copied from the
+  failing assertions and the first cross-checked against the regenerated golden. Each
+  regenerated document differs from its predecessor in the IRI and the label and nothing else.
+  **Strict-bit inventory.** The conformance harness builds each case's CXF with the binding in
+  its `@context`, and the corpus pins each document's SHA-256, so the 21 `cxf_sha256` values of
+  `corpus.json` were rewritten from a fresh capture; no other field changed. The retained native
+  archives are byte-identical and their `cxf_sha256` values are no longer compared with the
+  corpus (as GitHub #413, issue #392, did for their source maps), so both recorded matrix digests
+  still reconstruct; a fresh collection and the per-PR captures keep the comparison.
+  Rustdoc, `AGENTS.md` and the `Cargo.toml` header now name ANSI/ASHRAE Standard 231-2026 and
+  cite the OBC specification's sections as `OBC §N`.
+
+- **Composite lowering costs time and memory linear in the document, not fan-out × IRI length**
+  (GitHub #490, issue #480). The lowering pass classified both ends of every authored
+  `isConnectedTo` edge by string content and keyed its duplicate counts, crossed drivers and
+  adjacency on IRI strings, so one long authored source shared by a whole fan-out cost fan-out ×
+  IRI length: a leaf port with a 1 MiB `@id` wired 65,535 times to a top boundary port (a 10 MB
+  document) took more than three minutes of release CPU before any diagnostic, and the swapped
+  variant (a leaf input naming a top input) copied the IRI into the lowered list once per edge,
+  about 64 GiB. Lowering now interns each distinct endpoint once
+  (`resolve/composite_orientation/endpoints.rs`) and runs orientation, duplicate suppression, the
+  boundary walk and the erased-relation check on dense ids, with expansion checks memoized per
+  start; owners, composites and parents are `@graph` positions rather than copied IRIs; and the
+  lowered edge list lives beside the lowered document with one shared allocation per distinct
+  IRI. The passes after it keep the same cost: boundary-type derivation classifies a source once
+  per node and skips a repeated shared target, Step 9 memoizes a run of one shared target as it
+  already did a source, and the diagnostic sort keys each subject allocation once instead of
+  hashing a long subject on every comparison. That document now imports to its ordinary
+  diagnostics in under 0.1 s in release (about 1 s in debug). Every diagnostic, its order and its
+  text are unchanged, and no bound changed; no golden moved. Regression tests pin the bound (1 MiB
+  × 65,535 for a kept, a contradictory and a swapped fan-out, with a short-source control) and
+  determinism (a repeated import, lowering one document twice, and shared versus separate
+  allocations for lowered targets, boundary-type derivation and the diagnostic sort).
+  `SECURITY.md` no longer lists the path as not yet bounded.
+
+- **Resolve Step 9 costs time linear in the edge list, not fan-out × source-IRI length**
+  (GitHub #481, issue #479). Connection collection classified both ends of every
+  `isConnectedTo` edge by string content, hashing the source IRI about ten times per edge, so one
+  long source shared by a whole fan-out cost fan-out × IRI length: a 10 MB document with a 1 MiB
+  derivation-skipped re-anchored source and 65,535 targets took about 71 s of release CPU before it
+  was refused, breaking the bound-CPU-at-load rule. Step 9 now interns each distinct endpoint once
+  (`resolve/connection_endpoints.rs`, the loop moved to `resolve/connections.rs`), memoizes an edge
+  group's shared source by slice identity, keys every report-once set, the pass-through pair set
+  and the boundary-input assignment tracker on endpoint ids, and mints one shared subject
+  allocation per endpoint, so a per-edge diagnostic no longer copies a long IRI. The unused-input
+  warning reads the boundary inputs Step 9 interned instead of walking the edges again. That
+  document is now refused in about 75 ms in release (0.9 s in debug), and the three
+  `skipped_synthesized_*` tests drop from 55–86 s to about 1 s in debug, which closes #469 with
+  no test-side change. Every diagnostic, its order and its text are unchanged; no golden moved.
+  Regression tests pin the bound (1 MiB × 65,535 at and one past the target-examination limit for
+  all three target roles, a short-source control) and determinism (a repeated import, and shared
+  versus separate source allocations collecting identically). A long *authored* source fanned out
+  in the lowering pass remains bilinear — more than 180 s of release CPU at 1 MiB × 65,535 — and
+  is tracked in #480; `SECURITY.md` lists that path as not yet bounded.
+
+- **A block input driven by both a block output and a root boundary input is refused**
+  (GitHub #477, issue #472). CDL §7.10 gives every input exactly one driver, and the resolver
+  refused two of the three double-driver shapes (two block outputs; two boundary inputs) but
+  loaded the mixed one warning-free: boundary-driven assignments were counted by the
+  boundary-input elision pass and wire in-degree by the later single-assignment check, and that
+  check deliberately accepted an `external_inputs` connector with one wire. At run time the wire
+  won (`build_driver_of` points the input at the driving output's slot) and the frame value the
+  host staged for the boundary input was discarded without a trace. The boundary-input pass now
+  counts both kinds of driver and refuses the mixed shape with `single-assignment` at the input's
+  authored IRI, message `input is driven by a block output and a boundary input`; the wire-only
+  check leaves every frame-driven input to it. A wire from an input connector is not counted (it
+  is the existing direction refusal). The exporter refuses the same shape on a hand-built graph
+  (`ExportUnsupported`, owning block named) instead of emitting bytes that no longer re-import.
+  New rejected-corpus fixtures pin all three shapes and the authoring note's `econ_enable`
+  example with `TOut -> hys.u` added, through `import_cxf`, `Engine::load_cxf` and
+  `load_cxf_with_receipt`, with hostile spellings (reversed edges, a repeated boundary target,
+  a nested pass-through composite on either driver, a parameter wired to the input) and a
+  sweep proving every one of the 47 G36 fixture documents gives each input exactly one driver.
+  No golden moved: the 46 fixture goldens, the 422 provenance goldens, the blob goldens and
+  `class_signatures.tsv` are byte-identical. The vendored-corpus characterization moved
+  deliberately: `single-assignment` 57 → 68, eleven mixed inputs in three documents
+  (`Limits/SeparateWithDP`, `SetPoints/FreezeProtection`, `Generic/AirEconomizerHighLimits`)
+  that were already refused for unresolvable conditional guards, so no document changed outcome
+  (`fixture_corpus_import.txt` re-hashes those three error lines, and gains four new lines for
+  the new fixtures, corpus 214 → 218). Three existing tests that
+  had carried an unintended mixed driver were corrected, and the export-side test that pinned
+  the mixed shape as round-trippable now pins its refusal.
+
+### Leverage
+
+- **M2 gate item 2 holds over every imported corpus fixture, not only the seven bundles**
+  (GitHub #606, issue #603). `text_round_trip::wire_to_text_to_wire_is_byte_identical_for_every_imported_corpus_fixture`
+  takes each of the 31 fixtures `library_round_trip` imports (`support::cxf::IMPORTED`, which that
+  file's partition test holds to the 46 corpus files; the count is asserted here too) wire → text
+  → wire, compared byte for byte, and requires `fmt` to leave the printed text as it is. A failure
+  names every fixture that fails, the step it fails at, and the first differing line. It passes
+  for all 31, as a probe on the M2 closeout (GitHub #600) found. Test only: no behaviour, golden or
+  fixture moves.
+
+- **Time unit suffixes scale from the vocabulary, and a suffix must fit its parameter**
+  (GitHub #586, issue #501; vocabulary v1, part 3 of 3; [vocabulary note](docs/design/vocabulary.md),
+  "Units", decision 14 and rulings 5 and 6; authoring decision 13 amended).
+  - **Scaled suffixes.** A suffix that is exactly `min`, `h` or `d` (`oce_vocab::SCALE_FACTORS`)
+    scales the number to seconds with one rounding: an Integer by its exact product, a Real from
+    the binary64 it parses to, through its shortest round-trip decimal (the spelling `fmt`
+    prints), not from the digits as typed. So `1.1 h` is `3960.0` (multiplying the parsed `f64`
+    gives `3960.0000000000005`), and `fmt` never moves a value. Two consequences: a Real typed
+    with more digits than binary64 holds can scale to about an ulp (more for a subnormal) from the
+    exact product of its typed digits (`1.10000000000000009 h` is `3960.0`), and an Integer and a Real spelling past
+    2^53 scale differently (`9007199254740993 min` is `540431955284459584.0` s,
+    `9007199254740993.0 min` is `540431955284459520.0` s). A scaled Integer past 2^53 is
+    accepted, though the same Integer unscaled on a Real parameter is `parameter-out-of-range`. The
+    model's value is the base-unit Real, which is all the wire form, the emitter and the engine
+    see; the new text-only `Assignment::scaled_from` and `SequenceParameter::scaled_from` keep
+    the written number beside the suffix, so `fmt` prints `1 h` again and never moves a value. A
+    scaled value past binary64 is `non-finite-number`.
+  - **Still refused** (`unit-not-base`): `degC`/`degF`, `%`, prefixed SI units, any other symbol,
+    and a scaled symbol inside a compound (`m3/h`, `1/h`, `h2`). `1h` stays `malformed-number`.
+  - **`unit-suffix-mismatch`**, a new author-only stage-1 code (`STAGE_ONE_CODES` is
+    twenty-six): a suffix that does not reduce to the block parameter's declared unit from
+    `oce-vocab`, spelled alike (`delayTime = 5 K`, `delayTime = 1 Hz`), and a scaled suffix on a
+    parameter that declares no unit or on a sequence parameter. A base-unit suffix where no unit
+    is declared stays an annotation. The parity test pins it as silent in the engine.
+  - **A disagreeing annotation is caught.** A model built in code whose suffix, written number
+    and value disagree (a tool that set `delayTime` to `1.0` and left `1 h` in place), or whose
+    suffix is longer than the 256-byte token bound, is `unit-suffix-mismatch` in stage 1, so
+    `emit` refuses it, and the printer refuses it too (`PrintError::Unspellable`) through the same
+    shared check: no suffix stops a model that validates clean from printing, and one that prints
+    parses back equal.
+  - **Dependencies:** `oce-author` now depends on the leverage crate `oce-vocab` (the table and
+    the declared units), which moves `Cargo.lock`.
+  - **Cost.** The declared-unit lookup is an index over the embedded vocabulary, bounded by the
+    catalog, not the document; `src/counted.rs` lists it, with the scale-factor table and the
+    agreement check, among stage 1's uncounted bounded lookups. The counted tests of GitHub #584
+    gain three shapes, a chain of `n` blocks whose suffixes fit, do not fit, or disagree with
+    their values, held to the same `24 * n * bits(n)`; a suffix adds no counted comparison (the
+    fitting chain costs exactly what the plain chain does).
+  - **`oce vocab`** says how the text form reads the table, in its heading ("it scales the number,
+    rounding once") and in the meanings of `unit-not-base` and the new `unit-suffix-mismatch`.
+    Re-blessed: `vocab_text` and `vocab_json` (those three lines and the new code's row). New golden: `tests/fixtures/text/fmt/scaled_suffixes.out.oce`
+    beside its hand-written input. No emit golden, schema, wire fixture or other transcript moves.
+  - **Docs.** The authoring note (decision 13 amended, the unit-literal paragraph and suffix
+    production, the stage-1 list, the finding-code table, out of scope, a ruling), the vocabulary
+    note (four implementation readings; step 4 landed), the `oce-author`, `oce-cli` and
+    `oce-vocab` READMEs and the root README's status.
+
+- **`oce-author`'s validation cost is pinned in key comparisons, not in elapsed time** (GitHub
+  #584, issue #478).
+  - **What was wrong.** `validate_cost`'s ratio test failed on `development` because it timed two
+    document sizes and compared them. Stage 1 was never superlinear: run alone, 1,875 to 30,000
+    blocks (sixteen times) costs 16.6 times at the commit the issue names (debug codegen) and, on
+    `development` before this change, 16.7 times in debug and 17.9 times in release. Under sixteen
+    concurrent copies of the issue commit's test binary the smallest run still took 8.7 ms and the
+    largest 310 to 473 ms instead of 145 ms: the
+    best of several short runs escapes a busy machine and a long run does not, so the ratio
+    measured the host.
+  - **What replaces it.** Every index stage 1 and the text placement (`SourceMap::apply`) build
+    over the document is keyed by a crate-private `Counted` wrapper, which orders as the value
+    it wraps and, in the library's own test build only, counts each comparison on the comparing
+    thread; the sort of the findings counts through the same counter. The unit tests of
+    `src/counted.rs` hold stage 1 (a clean chain, a chain whose every block is a finding, one
+    block of `n` ports resolved, misnamed and with `n` assignments, and `n` referenced sequence
+    parameters, at 1,875 and 30,000) and the text placement (a
+    finding per block and one name repeated by every block, at 4,096 and 65,536) to
+    `24 * n * bits(n)` comparisons [measured: at most 19.9], and a control counts the scan per
+    lookup the indexes replaced: `n * (n + 1)`, seven times the bound at 1,875 blocks and eighty
+    times at 30,000.
+  - **Behaviour.** Unchanged: every finding, its order, its subject and its location. The port
+    sets and the text subject index now borrow their names where they copied them. The two
+    wall-clock ratio tests are removed from `tests/validate_cost.rs` and `tests/text_cost.rs`;
+    the tests there that validate a document at the wire bound and at the statement cap stay.
+  - **Not covered.** A lookup that compares names without `Counted` is invisible to the counter;
+    the ones stage 1 has today (the class index, a class's parameters, the named types,
+    `STAGE_ONE_CODES`, `class_ports`) are bounded by the catalog, not the document. The cost of
+    parsing text is no longer pinned by any test: the removed ratio test timed it with the rest,
+    and the parser compares no counted key (#589). Two more follow-ups are filed: stage 2 maps each engine diagnostic by scanning the model, a cost
+    of diagnostics times blocks inside the 8 MiB emission bound (#577), and
+    `import_hostile.rs` still asserts a 60 s ceiling on elapsed time (#578).
+
+- **The authoring provenance statement is `derived_from`, no longer `extends`** (GitHub #580,
+  issue #529; [authoring note](docs/design/authoring-layer.md), decision 5 as amended; owner
+  ruling of 2026-11-09). CDL uses `extends` for inheritance of a composite block with
+  modifications (OBC specification §7.15), which M7's composite instantiation needs, so the word
+  is kept for that meaning.
+  - **Renamed in place.** `Sequence::derived_from`, `SequenceBuilder::derived_from`,
+    `ImportOptions::derived_from` and `ImportOptions::with_derived_from`; the text statement
+    `derived_from none` or `derived_from <provenance id>`; the wire key `"derived_from"`; the
+    subject `derived_from` of `invalid-provenance-id`; the parse code `missing-derived-from`
+    (`MISSING_DERIVED_FROM`). The format stays at revision 1, with no reader, alias or hint for the
+    earlier word.
+  - **The earlier spelling is refused.** A text file that says `extends` is `missing-derived-from`
+    in the header and `unknown-keyword` after it; a wire document with an `extends` key is
+    `WireError::UnknownKey` (`unknown-key` from `oce`), in place of the new key, beside it or after
+    every other key. Every text fixture rewritten to the earlier spelling is refused at that
+    statement, and `oce validate`, `emit` and `fmt` refuse both forms.
+  - **Names.** `derived_from` joins `TEXT_FORM_KEYWORDS`, so it is no longer a declared name
+    (`invalid-name`). `extends` stays refused as a Modelica reserved word; it is no longer a
+    statement word, so the printer now spells a connection whose source is named `extends` (a
+    model only the wire form or the builder can hold, which reads back equal).
+  - **No emitted byte moves.** The provenance id is never emitted: the six emit goldens, every
+    content id and every blob golden are unchanged.
+  - **Re-blessed:** the wire schema (`schema/sequence.schema.json`, the property and its
+    `required` entry), the canonical text goldens (`tests/fixtures/text/*.oce` and the three `fmt`
+    outputs), the three v0 `*.import.txt` goldens and `findings/defects.tsv`, and the `oce`
+    transcripts `fmt_text`, `fmt_wire_to_text`, `validate_wire_findings`, `vocab_text` and
+    `vocab_json`. Edited by hand: the four wire bundles, the three `fmt` inputs, the note's two
+    copied blocks and the four `oce-cli` inputs.
+  - **Docs.** The authoring note (decision 5's amendment, the grammar, the worked example, the wire
+    block and a ruling), the diff note (`derived-from-changed`, `SequenceRef`), the importer and
+    content-id notes, and the `oce-author` README.
+
+- **Vectors, part 4 of 4: the `oce verify` verb and the in-repo replay gate** (GitHub #573, issue
+  #522; [vectors note](docs/design/vectors.md), "CLI", decisions 19, 26, 30, 31, 34 and 36, the
+  owner's rulings of 2026-11-11 in "Part 4's readings").
+  - **The verb.**
+    `oce verify <VECTORS> --subject <FILE> [--subject-form cxf|text|wire] [--out <DIR>]
+    [--require-mutants-caught] [--deny-warnings] [--timings]` takes one vector set and one subject
+    per run over `oce-verify`, which `oce-cli` now depends on.
+  - **Forms.** A subject named `.jsonld` or `.cxf.json` is CXF, tested before `.json` is wire; `.oce`
+    is text. A text or wire subject is validated and emitted with the default options first.
+    Anything else is the new code `unknown-subject-form`.
+  - **Reads.** Every size is checked from metadata before a byte is read: the vector file at 4 MiB,
+    a CXF subject and each mutant at 8 MiB, a text or wire subject at its form's 4 MiB (owner
+    ruling), and the mutants together at 64 MiB.
+  - **Mutant paths, per the owner's ruling.** Each path is resolved against the vector file's
+    directory, following links. A path that leaves it is the new `mutant-outside-directory`, and
+    two listings that are one file are `duplicate-mutant`. One file is one (device, inode) on Unix
+    and one canonical path on Windows. Each mutant must be a regular file by its metadata before
+    it is opened, so a named pipe or a socket is `not-a-file` and never blocks the run (review of
+    GitHub #573). It is then opened once, the handle must be the file checked, and its size and
+    bytes come from that handle.
+  - **Output.** The receipt is stdout for a verdict, exit 0 or 1: the CLI's one exception to "exit
+    1 prints the report". Exit 2 prints the `oce-report/1` report. `--out DIR` writes
+    `DIR/receipt.json` atomically and prints the report with `passed`, `status`, `receipt_id` and
+    `output`; on exit 2 nothing is written.
+  - **Report errors** gain the optional keys `at` (the place), `path`, `candidates`, `cause` and
+    `diagnostic_codes`, written only with a value. The schema is changed in place and stays
+    `oce-report/1`. The place was first built as `subject`; the owner ruled `at`, because a
+    `verify` report's top-level `subject` is the subject file.
+  - **Exit-only flags.** `--require-mutants-caught` and `--deny-warnings` flip the exit status over
+    the same receipt bytes. By owner ruling, `--require-mutants-caught` also fails a set that
+    lists no mutant (no `mutants` key, or an empty list).
+  - **`--timings`** fills `load_ms` (reading and emitting) and `run_ms` (the whole `run_vectors`
+    call). `compare_ms` stays 0, and `receipt_id` never moves.
+  - **Vocabulary.** `oce vocab` lists `oce-verify`'s 35 load codes and 30 bind and run codes, pinned
+    to its lists, and the two new CLI codes.
+  - **The in-repo replay gate.** `crates/leverage/oce-cli/tests/replay_gate.rs` runs the built
+    binary over both in-repo library rules in place and requires exit 0 and stdout byte-equal to
+    `oce-verify`'s golden receipts. It runs in the leverage lane, and an edited expectation fails
+    it.
+  - **Transcripts.** New: 23 `verify_*` transcripts and `help_verify`. Re-blessed: `help_oce` and
+    `usage_no_arguments` (the new subcommand line), `vocab_text` and `vocab_json` (the new tables,
+    and the widened exit and `input-too-large` meanings). No `oce-verify` golden moves.
+  - **Docs.**
+    - `docs/design/vectors.md`: part 4's rulings and readings, decision 19's gate, the CLI codes.
+    - `docs/design/authoring-layer.md`: `oce check` stays deferred, cut as #574.
+    - `docs/ci-and-the-gate.md`: the gate as the M3 "In-repo rules replay" evidence.
+    - The crate README, `docs/architecture.md`, `crates/leverage/README.md` and
+      `.agents/project-facts.md`.
+    - The root README's M3 status.
+    - Tracking #456 item 7 now says `oce verify --commission`.
+- **Binding resolves names through an index and holds set-level edits once** (GitHub #572, issue
+  #571; [work-budget note](docs/design/vector-work-budget.md), "What the budgets leave bounded
+  elsewhere"). The review of GitHub #570 found two costs at bind that come before the work budgets.
+  Both are removed, and no resolved name, refusal or receipt byte changes.
+  - **`oce_replay::PathIndex`** (new public type) answers the one name rule, `resolve_path`, for
+    many names at once. It sorts a path list once by its bytes read backwards, so the paths ending
+    with a name at a `.` boundary are found by one binary search; a shared last segment costs
+    nothing extra. `resolve_path` stays as it was. `InputMap::resolve` resolves its column
+    targets and policy overrides through the index, and finds columns by name in an ordered map;
+    every `MapError` is unchanged. A generated corpus pins every answer against `resolve_path`,
+    including exact, suffix, ambiguous (candidates in list order) and absent names, dots,
+    brackets, `#`, multi-byte characters and an out-of-order list. A comparison count pins the
+    cost: about 30 comparisons a key for 51,200 suffix keys against 8,000 paths, where the scan
+    makes 409,600,000.
+  - **`oce-verify` binds through it**: each of the input, output and parameter lists is indexed
+    once. 204,800 suffix keys against 8,000 parameters bound in 15.7 s in `dev` before and 1.4 s
+    now, measured once on the shape `tests/name_resolution.rs` binds; that test asserts that every
+    key resolves, and no time.
+  - **Set-level edits are held once.** An edit is a parameter-table row and its value. Each
+    scenario keeps its own map, and the effective list is built for the trial, run or receipt
+    that uses it. Distinct lists are found by sorting the scenarios by their merged lists rather
+    than by copying a key for each. For 4,096 scenarios under 256 set-level edits, the most held
+    before the budget step fell from 72,811,014 bytes in 1,221,928 allocations to 3,177,307 bytes
+    in 67,105, the subject's load (`tests/bind_cost.rs`).
+  - **Goldens.** The five golden receipts, the schema, the canonical goldens and `oce-replay`'s
+    trace goldens are unchanged. The digest `tests/parameter_trials.rs` pinned before #570's
+    deduplication still matches.
+- **Vectors: four work budgets bound one run, checked at bind** (GitHub #570, issue #561;
+  [work-budget note](docs/design/vector-work-budget.md), the owner's rulings of 2026-11-11).
+  - **The budgets.** `VerifyLimits` gains three fields beside `max_total_frames` (2^24, kept):
+    - `max_total_instants`, 2^28: `(1 + mutants)` times every window's ticks and every
+      diagnostic;
+    - `max_total_load_bytes`, 2^30: the subject's and every supplied mutant's bytes times
+      `1 + e + s` (`e` distinct edit lists, `s` scenarios);
+    - `max_total_frame_bytes`, 2^40: `(N + 1) * s` times the same bytes.
+
+    Each refuses with its own bind code, `too-many-instants`, `too-many-load-bytes` and
+    `too-many-frame-bytes`, placed after `too-many-frames`; the bind codes go from 27 to 30. Each
+    is lower-only, like every limit (decision 35).
+  - **One step, before every other load.** The four are checked in that order after the subject's
+    first load and its names and values, before the parameter trials and every mutant check. So
+    `too-many-frames` now wins over `param-refused`. Each product is an upper bound taken in `u128`
+    with checked multiplication, so a hostile count refuses and never wraps or panics.
+  - **The subject's parameter trials are deduplicated.** Each distinct effective edit list is
+    tried once, in the order of the first scenario that has it, as the mutants' already were. A
+    refusal still names the first scenario holding the refused list. A receipt pinned before the
+    change is byte-identical after it (`tests/parameter_trials.rs`). The distinct lists are now
+    found through an ordered set rather than by comparing every pair.
+  - **Tests.** `tests/work_budgets.rs` pins each budget at its bound and one past it, on AHU-0016's
+    set with and without its mutants (the receipt at the bound is byte-identical to the default's).
+    It also pins the order of the budgets, their precedence over `param-refused` and the mutant
+    codes, what the load bytes count, and that a host asking for `u64::MAX` gets the defaults.
+    `src/budget_tests.rs` pins the products at the `u64` and `u128` extremes.
+    `tests/parameter_trials.rs` pins the catalog's longest cross-parameter rule chain at two (14
+    classes), the bound on the passes an edit list takes.
+  - **Goldens.** The five golden receipts, the schema and the canonical goldens are unchanged; no
+    receipt byte moves. Formats stay at revision 1.
+  - **Docs.** `docs/design/vectors.md` is amended as the work-budget note lists: binding steps 4
+    to 6, the error-code table, decision 35, the API sketch, part 2's readings 8 and 9, and part
+    3's readings 1 and 6. The work-budget note records the build and two corrections: there are
+    four cross-parameter rules, not three, and each finds its partner by a scan that is linear in
+    the document. The crate README's bounds table, bind order, codes and costs are updated.
+- **Vectors, part 3 of 4: mutant mode, the catch score and the in-repo AHU-0016 mutants**
+  (GitHub #565, issue #521; [vectors note](docs/design/vectors.md) decisions 27 to 30, the
+  owner's ruling of 2026-11-11 and "Part 3's readings").
+  - **The format, in place.** `mutants` is a list of `{ "path", "description"? }`, at most 256
+    (`too-many-mutants`). A path is `/`-separated with no empty, `.` or `..` segment and no
+    backslash (`mutant-path-invalid`), and is unique (`duplicate-mutant`). The canonical writer and
+    `spec_id` cover it, and the pinned schema gains the `Mutant` object (re-blessed). The load
+    codes go from 32 to 35.
+  - **The mutants' bytes.** `VectorInputs::with_mutants` hands them in under their listed paths;
+    `oce-verify` still opens no file. `VerifyLimits` gains `max_mutants` (256) and
+    `max_mutant_bytes` (64 MiB, all mutants together). By owner ruling, part 4's CLI resolves each
+    path, keeps it inside the vector file's directory and refuses two listings that resolve to one
+    file; the format's lexical rule stays as it is.
+  - **Validation at bind**, before any frame runs and after the frame budget (which counts
+    `(N + 1) * scenarios * (1 + mutants)` from the listing, so a set over it loads no mutant;
+    owner ruling), the first refusal winning:
+    - the bytes given are listed, and given once (`mutant-unlisted`, `duplicate-mutant`);
+    - each listed mutant is given (`mutant-missing`);
+    - the bytes fit their bound (`too-many-mutant-bytes`);
+    - each mutant in file order loads (`mutant-load-failed`, with the engine's codes), has the
+      subject's input and output paths and types, input bounds not compared
+      (`mutant-boundary-differs`, naming the first port that differs), and has another content id
+      than the subject (`mutant-identical`);
+    - each mutant admits every distinct effective edit list, each tried once on a fresh engine of
+      it in the order of the first scenario that has it (`mutant-param-refused` with the cause
+      `param-range`, `param-type`, `param-structural` or `param-path-unknown`, owner ruling).
+    - An invalid mutant is an error with no receipt.
+  - **Scoring**, only when the subject passes. Each mutant runs the scenarios in file order, as
+    the subject did, and stops at the first that fails on it. A frame-class refusal fails it, so a
+    mutant that narrows an input bound is caught, not an error.
+  - **The receipt** gains the body's `mutants` section, written when the set lists a mutant:
+    - `status` (`scored` or `not_run`), `total`, `caught` and `survived`;
+    - one entry per mutant with its `path`, its `digest` (`fnv1a128:` of the bytes given), its
+      `content_id` and its `status`, plus, when caught, the `scenario` and its first `failure`;
+    - the score never changes `passed`. The bind codes go from 19 to 27.
+  - **Fixtures** under `crates/leverage/oce-verify/tests/fixtures/AHU-0016/`: AHU-0016's set plus
+    the `mutants` list (its clock and scenarios held equal to the facade's copy, which lists none)
+    and three hand edits of the rule, named `.cxf.json`. The run agrees with the note's table:
+    - `threshold_inclusive` is caught by `threshold_edge`, `value-mismatch` at 900 s;
+    - `no_persistence` is caught by `both_open` at 0 s;
+    - `late_alarm` survives, as designed.
+  - **Goldens:** the fifth golden receipt, `receipts/AHU-0016.mutants.receipt.json`, compared byte
+    for byte. The four earlier receipts are byte-identical. `sets/every_field.json` gains a
+    `mutants` list, so its canonical golden and `spec_id` are re-derived by the independent Python
+    script.
+  - **Docs:** the note records the owner's ruling, part 3's readings (for confirmation) and the
+    mutant table confirmed by the run. Mutant mode multiplies the loads and frames #561 describes;
+    the issue now counts them. The 46 fixture goldens and 422 provenance goldens are
+    byte-identical.
+- **Vectors, part 2 of 4: bind, replay and compare a vector set, and issue the receipt**
+  (GitHub #558, issue #520; [vectors note](docs/design/vectors.md) decisions 3, 6 to 8, 11,
+  12, 14, 15, 18 to 26, 31 to 33 and 37). `oce-verify` now depends on `oce-api` and `oce-replay`
+  (the leverage rule holds as written) and runs a set: `run_vectors(&set,
+  &VectorInputs::new(&cxf), &VerifyOptions)` returns a `VectorRun` with its `Receipt`, or a
+  `VerifyError` and no receipt.
+  - **Binding**, once per set against a throwaway engine, before any scenario runs: the subject
+    loaded (`subject-load-failed` carries the engine's `DiagCode` spellings; load warnings go to
+    the receipt, at most 64 with their total), an Enum boundary port refused
+    (`enum-port-unsupported`, until #465) and a String one (`unsupported-port-type`), every input,
+    output and parameter name resolved by one rule, every value typed by the declared type of what
+    it lands on (`InputDefinition::value_type`, `FrameSlots::output_types()`, the parameter's
+    declared type): a Real takes an integer token only when a binary64 holds it exactly (`-0` is
+    `+0.0`; `9007199254740993` is `value-not-representable`), an Integer refuses `1.0`, a Boolean
+    refuses `0` and `1`. A scenario's `params` override the set's by resolved path whatever either
+    spelling, two keys of one map on one parameter are `param-path-duplicate`, and the frame
+    budget, `(N + 1) * scenarios`, is held to `VerifyLimits::max_total_frames`. Every scenario's
+    effective edits are also tried at bind on a freshly loaded engine, so an edit no pass admits is
+    `param-refused` before any frame of any scenario runs (owner ruling).
+  - **The run**: each scenario on a freshly loaded engine, its parameter edits applied inside one
+    halt in passes in ascending path order (lowering both `Reals.Hysteresis` thresholds takes two
+    passes; a pass that applies nothing is `param-refused` with the class `param-range`,
+    `param-type` or `param-structural`), then one replay on `TimeBase::Grid` with the horizon added
+    as an instant and replay's defaults, in chunks of `VerifyOptions::chunk_frames` frames. After
+    it, in order: a run-class engine refusal is `run-refused`; any other refused frame fails the
+    scenario with one `frame-refused` record (later ticks uncounted, coverage not checked);
+    otherwise coverage, then the exact comparison: a Real by its bits, a diagnostic by its class
+    path and optional message at its tick. Diagnostic expectations match warnings one to one
+    (owner ruling): within a tick, the expectations that name a message pair first, then the
+    block-only ones, each taking the earliest free warning it matches, so a second instance's
+    equal warning stays unmatched. Unmatched warnings are listed (16, with the total) and never
+    fail a scenario. A replay error is `replay-failed` with a cause from a closed table
+    (`trace-too-large`, `output-set-changed`, `grid-not-increasing`, `engine-setup`, `source`).
+  - **The receipt**: `Receipt { header, body: ReceiptBody }`, `ReceiptBody` closed and
+    `#[non_exhaustive]` with its one `Vectors` variant; every field of the note's header, body,
+    scenario and failure-record tables, written canonically by `Receipt::to_canonical_json`. A
+    `frame-refused` record always keeps the list's last slot, so earlier mismatches cannot push it
+    out (owner ruling).
+    Values are exact (`-0.0`, a NaN and the infinities as `"0x"` and their 16 hex digits),
+    `engine_version` is `CompatibilityDescriptor::oce_api_version`, `timings` are zeros unless the
+    caller passes them, and `receipt_id` is `receipt:fnv1a128:` over the canonical receipt with
+    `timings` and `receipt_id` removed (`Receipt::computed_receipt_id` recomputes it). A frame
+    refusal's class is a kebab-case table held complete by an exhaustive match
+    (`ENGINE_REFUSAL_CLASSES`, `engine_refusal_class`).
+  - **Errors**: `VerifyError` with a closed `VerifyErrorKind`, a `code()` per kind and
+    `VERIFY_ERROR_CODES` (19 codes: the note's bind and run rows without the six mutant rows, which
+    arrive with mutant mode, plus `window-uncovered` for a window a run left uncovered), with the
+    place, the canonical path, an ambiguous name's candidates and a cause where a kind has one.
+    `VerifyLimits` gains `max_recorded_failures` and `max_recorded_warnings` (16 each),
+    `max_total_frames` (16,777,216) and `replay` (`ReplayLimits`), lowered and never raised.
+  - **`oce-replay`**: the private name rule is the public `resolve_path` over a sorted path list
+    (exact path, else the one `.`-boundary suffix, the candidates on ambiguity), and
+    `InputMap::resolve` calls it. No behaviour changes; the four canonical trace goldens are
+    byte-identical.
+  - **Goldens**: the pass receipts of both in-repo library rules (AHU-0016: 217 frames and 216
+    instants; AHU-0004: 441 frames), read in place from `crates/oce-api/tests/fixtures/`, a fail
+    receipt (`both_open` with its first window ending at 900 s, where the delay fires) and a
+    `no_data` receipt, under `crates/leverage/oce-verify/tests/fixtures/receipts/`, compared byte
+    for byte and blessed only by `OCE_BLESS_VERIFY`. Each `receipt_id` is checked against a second
+    FNV-1a-128 over the golden's text, and is one across two runs, chunk sizes 1, 7 and the whole
+    run, and with caller timings. They embed the engine version, so a workspace version bump
+    re-blesses them (`.agents/project-facts.md`).
+  - The commissioning note's API sketch is amended: `Receipt.body` is `ReceiptBody`. The vectors
+    note records part 2's ten readings as ruled ("Part 2's readings"). Follow-ups: #561 (bound a
+    run's total work, before part 4) and #563 (record the caps a receipt was written under). The
+    46 fixture goldens and 422 provenance goldens are byte-identical.
+- **The authoring wire reader refuses a list, or any other type, where an object belongs**
+  (GitHub #562, issue #544). `oce-author`'s `from_wire_str` read a JSON list where the wire form
+  defines an object: `serde_json` reads a `serde`-derived struct from a list as well as from an
+  object, taking the list positionally as the struct's fields, and the strict scan in front of
+  `serde` checks syntax, depth, repeated keys and sizes, not shapes. So `"semantic": ["", "", "K",
+  "", "", "", [], false]` loaded as the slot it abbreviates and `oce validate` answered `"ok":
+  true`; on `development`, 1,765 of the 1,948 objects the new sweep replaces loaded that way (every
+  root, sequence parameter, boundary, semantic slot, block and assignment it reaches; the 183
+  `{"ref": …}` and `{"member": …}` values were already refused), and a boundary's `type` read
+  `{"Real": null}` as `"Real"`. The typed parse now runs through a closed-shape adapter that wraps
+  `serde_json`'s deserializer at every depth (`src/wire/closed.rs`): a struct is read from an
+  object only, an enum from a string only, and an option never reads `null` as absent, so a struct
+  added to the form later is closed without a change to the reader. Each refusal is
+  `WireError::WrongType` (`wrong-type` in `oce`), which gains a `path` field naming the offending
+  value (`inputs[0].semantic`, `document` for the root) and prints it
+  (`invalid type: sequence, expected a SemanticPoint object at inputs[0].semantic, line 19 column
+  18`); a boundary `type` of `null`, a number, a boolean, a list or an object, refused as
+  `json-syntax` before, is `wrong-type` too. `null` stays refused at every position, since the
+  form has no nullable value; the [authoring note](docs/design/authoring-layer.md#wire-form) now
+  says so. New sweeps over every wire fixture, the note's example and the 31 importable corpus
+  fixtures in the wire form replace each object by the list of its values and each value by every
+  JSON type its position does not take, read the allowed types from the published schema, and
+  fail if a schema object appears in no fixture; a source scan allows only `deny_unknown_fields`
+  and `rename` on the DTOs, because serde's buffered-content attributes (`untagged`, `tag`,
+  `content`) would read a struct past the adapter. The importers (`import_cxf`,
+  `import_graph_v0`) read a `serde_json::Value` and never fill a derived struct, so they never had
+  the hole; sweeps now hold that, and `oce validate`, `emit` and `fmt` refuse each mutant at its
+  path. Breaking for pre-1.0 code that builds `WireError::WrongType`, which gains `path`. The
+  format stays at revision 1: no fixture, golden or schema byte moves.
+
+- **Vectors, part 1 of 4: the `oce-verify` crate and the one vector format, `oce/vectors/v1`**
+  (GitHub #541, issue #519; [vectors note](docs/design/vectors.md) decisions 1 to 5, 8 to 12,
+  16 to 18 and 35). A new leverage crate, `crates/leverage/oce-verify` (`publish = false`;
+  `schemars` and `serde_json`, with `oce-bless` and `allocation-counter` as dev-dependencies). It
+  holds the format and nothing that runs: it loads no engine, replays nothing and writes no
+  receipt, so it names neither `oce-api` nor `oce-replay` yet; binding, the run, receipts,
+  mutants and the `oce verify` verb are parts 2 to 4.
+  - **The reader**, `VectorSet::from_json_bytes(bytes, &VerifyLimits)`: strict JSON under the
+    authoring wire profile (nesting 8, lists 65,536, strings 4,096 bytes, no repeated key, no
+    control character, no non-finite number, integer tokens within `i64`), read by the crate's own
+    cursor with a line and column on every refusal. Every object is closed: a key the format does
+    not define is `unknown-key` and is never skipped, which covers `within`, `of`, `when` and
+    `mutants` until the format gains them; `null` is never a value and a list is never read as an
+    object's members. A root `schema` other than `oce/vectors/v1` is `unknown-schema` before the
+    shape is judged, `cxf-library/vectors/v1` included: there is one format and no reader of
+    another. A value is a number or a boolean and keeps the kind it was written as (`Literal`:
+    `1` is not `1.0`, `-0` is the integer zero); typing waits for the binder.
+  - **The rules a shape cannot say**, checked at load. The clock's cadence is decided by
+    multiplication (`Clock`): a time is a tick when some integer `k` gives `k * step_s` exactly,
+    found by rounding the quotient and testing its neighbours, never by flooring it, so
+    `{ step_s: 0.1, horizon_s: 4.3 }` loads and a horizon one ulp away does not. Step lists start
+    at exactly `t = 0`, increase strictly and never pass the horizon. Windows are inclusive, lie
+    inside the clock and must hold a tick, decided from tick values (a loaded `Window` carries its
+    first and last tick). A diagnostic `at_s` is a tick. An integer token in a time position must
+    be within ±2^53 (`MAX_TIME_INTEGER`), where every integer is a binary64, or it is
+    `integer-out-of-range`; a larger time is written as a real. No name is empty: `empty-name`
+    covers a scenario name, an input name, a parameter path, an output name and a diagnostic's
+    `block`. The note is amended with both rules, dated 2026-11-10 (review ruling).
+  - **Bounds**: `VerifyLimits` (4 MiB, 16,777,216 ticks, 4,096 scenarios, 4,096 expectations per
+    scenario, 256 parameters per map), each a typed refusal one past its value, lowerable to zero
+    and never raisable (a value above the maximum is read as the maximum). Nothing is materialised
+    per tick, and `tests/load_cost.rs` pins the memory a load holds with `allocation-counter`: at
+    most 24 bytes per document byte for the densest shape, 4 for step lists and windows.
+  - **The canonical form and `spec_id`**: `to_canonical_json` (keys sorted by UTF-8 bytes at every
+    depth, two-space indentation, ASCII only, one final line feed) and
+    `spec_id() = spec:fnv1a128:<32 hex>` over it, with FNV-1a-128 implemented in the crate.
+    **The number-formatting rule is confirmed and written back into the note**, which had marked
+    it as recalled from memory: an integer token as a decimal integer (`-0` as `0`); a real with
+    the shortest round-trip digits, in plain decimal for zero and `1e-4 <= |x| < 1e16`, otherwise
+    `d[.ddd]e[-]N` (`0.0001` and `9.999999999999999e-5`, `9999999999999998.0` and `1e16`, `-0.0`,
+    `5e-324`). The thresholds and the exponent spelling stand as the note had them; the layout is
+    the crate's own code, compared with Rust's `{:?}` over more than 23,000 values. The note and
+    the rustdoc now also state the tiebreak: of the shortest strings that read back (`3e-324`
+    through `7e-324` all read back to the smallest subnormal) the one closest to the exact value
+    is written, pinned by goldens at the three smallest subnormals and by an exact-integer check
+    over 6,000 values. The canonical goldens
+    and the `spec_id` literals are derived by a second implementation in Python
+    (`tests/fixtures/derive_canonical.py`), never blessed from the code they check.
+  - **Errors**: `VectorError` with a closed, `#[non_exhaustive]` `VectorErrorKind`, a kebab-case
+    `code()` per kind and `VECTOR_ERROR_CODES` (32 codes, checked against the kinds at compile
+    time and pinned by a test that produces each one from a document). They are the note's load
+    rows without the three mutant rows (`too-many-mutants`, `mutant-path-invalid`,
+    `duplicate-mutant`), which arrive with the `mutants` key in part 3.
+  - **The schema**: `schema/vectors.schema.json` (`VECTORS_JSON_SCHEMA`), derived with `schemars`
+    from the reader's shapes, regenerated and compared byte for byte (`OCE_BLESS_VERIFY`), walked
+    for keywords outside the strict profile, and held to the reader key by key.
+  - **The two in-repo vector files are rewritten in place** to the format:
+    `crates/oce-api/tests/fixtures/library_rules/AHU-0016/vectors.json` and
+    `AHU-0004/vectors.json` change their `schema` line and nothing else, their two SHA-256 rows in
+    that directory's README move, and `library_rule_state_continuation.rs` asserts the new tag and
+    resolves names at a `.` boundary only. It runs the same scenarios, windows and restart sweep.
+  - Tests: 155 in the crate, among them the strict cursor against `serde_json` as a syntax oracle
+    over 20,000 mutated documents, the cadence rule against a search over every tick product, a
+    10,000-document byte-mutation sweep through the whole load, and every bound at its limit and
+    one past it. One of them reads `docs/design/vectors.md` and holds the note's worked example
+    equal to its fixture byte for byte, so `scripts/ci/classify-changes.sh` now lists the note as
+    a document a test reads: an edit to it runs the determinism and leverage lanes.
+  - The workspace has 18 members (10 publishable, eight private); `release.yml`'s comment and step
+    name, its digest and byte golden in `scripts/package_policy/` are re-pinned for the new
+    private member. The 46 fixture goldens and 422 provenance goldens are byte-identical.
+- **Vocabulary v1, part 2: `oce catalog` serves the block vocabulary and `oce vocab` the unit
+  scale-factor table** (GitHub #526, issue #500; vocabulary note decisions 12 and 14). `oce-cli`
+  now depends on `oce-vocab` (a leverage crate, so the `oce-api`-only rule holds as written).
+  - **`oce catalog CLASS`** adds, to each parameter and each resolved port, the vocabulary's
+    `description` and the `unit` and `quantity` the CDL source declares; to each parameter a
+    `range`; and to the class its typed `notes` and its upstream `links` (the Modelica source at the
+    pinned Buildings commit, and the latest-release help page, labelled as possibly drifting from
+    the pin). A port reads its connector's text, so `u3` of a `MultiSum` carries the vector
+    connector `u`'s. A note is printed as `kind`, `subject` and `text`: its `evidence` is for
+    reviewers and is never printed, in text or JSON, which a test holds over every class. The text
+    list of `oce catalog` is still one line per class; `oce catalog --json` gives every class the
+    same shape as a single one. The report schema stays `oce-report/1`: the change adds keys
+    (`description`, `unit`, `quantity` on ports and parameters, `range` on parameters, `notes` and
+    `links` on the class) and removes none. A reserved lowering identity has no vocabulary: empty
+    strings and `"links": null`.
+  - **A range is rendered from the catalog's rules, never stored.** `oce_vocab::parameter_range`
+    (and `ParameterVocab::range` in the joined view) turns `oce_api::CatalogEntry::param_rules`
+    into one line of text per value rule: a bound (`Ti >= 1e-13`, `delta > 0.0`,
+    `pAtm > 0.0 and finite`, `shift is finite`), a relation listed for both parameters
+    (`uLow <= uHigh`, `nout * nin <= 1048576`, `0.001 <= h * n <= 0.5`), a relation that only warns
+    (`uLow == uHigh warns`) and an element bound (`1 <= extract_<i> <= nin`). Rules about type,
+    array shape and port structure render nothing. All 27 rule kinds the catalog uses are named in
+    one total `match` and pinned by a test, and every kind of line is checked against what
+    `oce_api::class_ports` and a loaded engine accept, refuse and warn about at the boundary value
+    and the next `f64` past it. 101 of the 189 parameters have a range (176 lines).
+  - **`oce vocab`** adds `scale_factors`, in text and JSON: `min` 60, `h` 3600 and `d` 86400, each
+    an exact multiple of `s`. The table is `oce_vocab::SCALE_FACTORS` (with `scale_factor(symbol)`),
+    time only; `degC`, `%` and prefixed SI units are not in it. It states the table: the text form
+    still refuses `1 h` (`unit-not-base`) until part 3 (#501) reads it, and the output says so
+    where an agent reads it: the text heading reads "not accepted as a unit suffix yet", and the
+    meaning of `unit-not-base` under `parse_codes`, in text and JSON, names `min`, `h` and `d` as
+    not accepted yet. A test fails when the text form starts accepting one.
+  - **The text listing is held to the JSON line for line.** `tests/catalog_text.rs` writes the
+    text it expects from each class's JSON report and requires the binary's text to be exactly
+    that, for the 133 classes that resolve at a table of plain values, so a `unit:` line dropped
+    under a port fails for every port that declares one (21 do).
+  - **No output cap.** `oce catalog` builds the whole report in memory, for text as for JSON, and
+    the catalog's width rules allow one class about 2^21 ports:
+    `CDL.Routing.RealExtractSignal` at `nin=1048576` and `nout=1048576` wrote 416 MB and peaked at
+    3.1 GB. The README states it; a cap is a separate change.
+  - **Carried in from the review of GitHub #511, in `oce-vocab`:** the curated join no longer
+    scans a class once per curated entry. Each curated class indexes its subjects once and every
+    description and note is a binary search, so the reviewer's pair (one class with 24,000
+    connectors, 32,000 notes naming the last) costs about 0.83 million name comparisons where the
+    scan made 498 million; a test holds the join to `n log n` in name comparisons, not wall-clock
+    time, and the resolved positions are kept so a view searches nothing. The reader's comment
+    and test no longer say the list bound "cannot be reached": that holds for an accepted document only, and
+    a compact 95,000-item document under the byte bound is read, checked and then refused
+    `NotCanonical` (now pinned). A 1,000,000-deep nest is refused where the closed shape ends, in
+    both readers, with a typed `VocabError::Json` (now pinned; an open shape would have scanned the
+    whole document). The design note says 189 parameters and gives the regeneration command with
+    `-p`.
+  - Transcripts: nine new (`catalog_true_delay`, `catalog_true_hold_with_reset` and
+    `catalog_dew_point`, each as text and `_json`; `catalog_pid`, `catalog_hysteresis_json`,
+    `catalog_multisum`) and eleven re-blessed
+    (`catalog_class`, `catalog_class_params_json`, `catalog_enum_param`, `catalog_rule_refusal`,
+    `catalog_unresolved`, `vocab_text`, `vocab_json`, `help_oce`, `help_catalog`, `help_vocab`,
+    `usage_no_arguments`). `oce-api`, the core four, `oce-cxf`, `oce-author` and both vocabulary
+    data files are untouched.
+
+- **Vocabulary v1, part 1: the vendored CXF-Core document and the `oce-vocab` crate** (GitHub
+  #511, issue #499; design note GitHub #497).
+  `third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld` is modelica-json's
+  `-o cxf --elementary --cxfCore -p` output over the Buildings `CDL` package at the two recorded
+  pins (682,615 bytes; the vendored README records the command, both pins, the date and the
+  SHA-256, and says that byte-identity across operating systems and Node versions is unverified,
+  so a pin advance re-vendors and re-blesses). The hash manifest gains a
+  `generated-cxf-core` bucket of exactly that one file, the tree-SHA constant and the tracked
+  `.jsonld` census (now 223; the document's import outcome is one new golden line, a refusal) move
+  with it, and `.agents/revendor-upstream.sh` knows the bucket.
+  `crates/leverage/oce-vocab` (`publish = false`; `oce-api`, `serde` and `serde_json`, with
+  `oce-bless` and `sha2` as dev-dependencies) holds two strict-JSON files in one canonical spelling
+  (closed objects, sorted keys, no `null`; a bounded reader that refuses anything else with a typed
+  `VocabError`): `data/generated.json`, a description plus the declared Modelica unit and quantity
+  for every connector and parameter of the 133 authorable classes, and `data/curated.json`, typed
+  notes (`convention`, `pitfall`, `port-order`, `loop`, `units`) and descriptions only where the
+  generated one is empty, every entry with `evidence`. `vocabulary()` merges and checks the pair
+  against the catalog; `class_vocab(class_path)` joins one class with `class_metadata()` (the
+  one-liner, each parameter's type, default and settable flag) and derives its pinned source link
+  and its latest-release help link, labelled as possibly drifting from the pin; a resolved port
+  name maps to its connector with `ClassVocab::connector_of_port` (`u3` is element 3 of `u`).
+  Defaults and ranges are never copied into the data, and `oce-api` is untouched: `catalog()`,
+  `class_metadata()` and `CATALOG_JSON` are byte-identical.
+  - **The generator is a regenerate-and-diff test** (`OCE_BLESS=1` rewrites `generated.json`). It
+    walks the catalog's own names, looks each up in CXF-Core by `@id`, and inverts modelica-json's
+    QUDT unit table through a closed pinned table plus the S231 fallback (`1/s`). It refuses, naming
+    the class and the subject, a missing node, a node for something pinned as absent
+    (`TrueHoldWithReset`, and `MatrixGain`'s `protected` `nin` and `nout`), a malformed node, an
+    unknown unit or quantity identifier, and a quantity kind with two inverses on a subject without
+    a pinned resolution (`Pressure` also stands for `PressureDifference`; one parameter,
+    `SpecificEnthalpy_TDryBulPhi.pAtm`, is resolved and checked against its `.mo` declaration).
+  - **Coverage:** 133 classes (132 upstream, with links), 322 connectors (265 named ports and 57
+    vector or positional connectors) and 189 parameters (the note's 186 plus the three `TimeTable`
+    sources' rule-only `table`), every one described: 505 descriptions generated and six curated
+    (`TrueHoldWithReset`'s `u`, `clr`, `y` and `duration`; `MatrixGain`'s `nout` and `nin`); 73
+    declared units and 52 quantities. Curation seed: 13 notes over 11 classes (the prototype's port
+    order, `delayOnInit` and loop-breaker rules, and a `Discrete.Sampler` pitfall).
+  - **Tests:** the regeneration is byte-stable and fails on a renamed port or parameter, a
+    removed or added class and an edited file; coverage against the catalog in both directions,
+    with every width-driven and positional class resolved at widths 1, 2 and 1,048,576; every
+    generated description, unit and quantity found in its vendored `.mo` declaration, and no
+    declared unit dropped; each curation rule refused with its typed error; no string in either
+    file with an absolute path, a UUID shape, a `modelica://` link or an HTML tag; and every seeded
+    note the engine can decide held against a loaded engine (a self-loop through each class with a
+    `loop` note, swapped inputs for each `port-order` note, both `delayOnInit` settings, runs of
+    frames through `TrueHoldWithReset` and `Sampler`).
+  Workspace 17 members (10 publishable, seven private); `release.yml`'s comment and step name, its
+  byte pin and the package validator's golden name the new split. Parts 2 (`oce catalog`, #500)
+  and 3 (time-unit suffixes, #501) follow.
+
+- **The importer: the in-subset library CXF and the prototype's v0 graph JSON into the
+  authoring model** (GitHub #498, issue #496; the [importer note](docs/design/importer.md); closes
+  #475, M2 gate item 1). `oce-author`'s `import_cxf(bytes, &ImportOptions)` now returns
+  `Imported { sequence, report }` and reads the full flat library dialect: enumeration-typed
+  sequence parameters, boundary `min` / `max` converted exactly as the loader converts them (a
+  test pins every corpus input bound to the engine's `InputDefinition` bound bit for bit),
+  enumeration members and library constants as full member paths resolved through
+  `oce_api::enumerations()`, and a constant-package-typed Integer boundary normalised to the
+  Integer the engine reads. **Gate item 1 is met:** 31 of the 34 in-subset G36 fixtures import,
+  emit, load warning-free and match the committed fixture's canonical content id (their exports
+  byte for byte wherever block order agrees); the other 15 are refused with their kind (4
+  `nested-composite`, 7 `conditional-component`, 1 `expression-value`, 3 `port-attribute`).
+  `ImportError` becomes `{ source, subject, kind }` with a closed, `#[non_exhaustive]`
+  `ImportErrorKind` of 29 kinds, each with a stable kebab-case `code()` (`IMPORT_ERROR_CODES`,
+  pinned in-crate and each produced by a test), refused in a fixed precedence (nested composite,
+  conditional component, expression value, port attribute, name) whatever the node order; the
+  provisional `Unsupported { construct }` and `Malformed` variants are gone. `ImportReport` lists
+  every dropped property (the root's `@type`, a differing `S231:label`, a parameter's `unit`,
+  `quantity`, `displayUnit`, `min` and `max`), every normalisation and every truncated v0 comment
+  line. The new `import_graph_v0` reads the frozen prototype's compact block graph under the wire
+  form's bounds: `unit` and `description` become comment lines (split at line feeds, controls to
+  spaces, truncated at a character boundary within `MAX_V0_COMMENT_LINE_BYTES`) and report
+  entries, never a point unit, and the sequence carries `# imported from v0 graph JSON`; string,
+  null, object and list values are refused. The prototype's three golden pairs are vendored
+  verbatim under `crates/leverage/oce-author/tests/fixtures/v0/` with a `PROVENANCE.md`
+  (repository URL, commit `f951346`, `MIT OR Apache-2.0`, the copyright line), and each graph
+  loads to the canonical content id of the CXF the prototype wrote. The hostile suite grows: a
+  mutation sweep over all 31 fixtures, every emitted golden and the three graphs; every bound,
+  member, datatype and v0 refusal with its exact kind; each out-of-subset construct grafted onto an
+  importable fixture. New goldens: `tests/fixtures/v0/*.import.txt`; no other golden moved, and the
+  every-element emit golden now re-imports to the same bytes. `import_cxf`'s signature and
+  `ImportError`'s shape are breaking for pre-1.0 consumers of `oce-author`; none outside the crate
+  calls it. The importer note records the choices the note left open under "As landed".
+
+- **Enumeration-typed sequence parameters, boundary bounds and member literals in the authoring
+  model** (GitHub #493, issue #492; the [importer note](docs/design/importer.md)'s model changes).
+  `oce-author`'s `SequenceParameter::value_type` is a `ParameterType` (`Real`, `Integer`, `Boolean`
+  or `Enum(type_name)`, the enumeration's last segment): wire `"type": "SimpleController"`, text
+  `param conTyp : SimpleController = SimpleController.PI`; the pinned schema lists a `type` enum of
+  the three scalars and every `oce_api::enumeration_types()` row (17 values, never a constant
+  package). `Literal::EnumMember` is renamed `Literal::Member(MemberRef)` and covers library
+  constants (`OperationModes.occupied`) beside enumeration members, resolved through
+  `oce_api::enumerations()`; a constant fits an Integer parameter and the emitter writes the package
+  IRI as its `isOfDataType` (importer note, ruling 9), an enumeration parameter its class IRI and
+  full member path, as the corpus does. `Boundary` gains `min` and `max` (`Option<Bound>`, an Integer
+  or Real literal): wire `"min": []` or `[<number>]` (a second item is
+  `WireError::BoundListTooLong`), text `@min` / `@max` after `@displayUnit`, emitted as `S231:min` /
+  `S231:max` (a typed `xsd:double` on a Real boundary, a bare integer on an Integer one). Stage 1
+  gains four codes (`STAGE_ONE_CODES` is twenty-five): `unknown-enum-type` (an unknown type name or a
+  constant package as a type; the engine's code), `invalid-bound` (author-only: a bound on a Boolean
+  boundary, a Real on an Integer boundary, an Integer above 2^53 on a Real one, and an Integer
+  bound on an Integer boundary outside the engine's `i32` domain, which the engine would narrow
+  without a warning: the importer note's decision 6 is amended, and a parity test pins the
+  narrowing), `non-finite-bound`
+  and `crossed-bounds` (the engine's codes), each pinned by the parity test; a reference to an
+  enumeration parameter type-checks by class identity (`parameter-kind-mismatch` otherwise), and the
+  builder refuses a non-finite bound (`BuildError::NonFiniteBound`). Tests generate every enumeration
+  member and every constant of the facade table through both forms, the emitter and a warning-free
+  load; pin each input's loaded domain to its declared bounds bit for bit (the text spelling
+  converted as the loader converts it); show an input bound moves the canonical content id and an
+  output bound does not; and extend the refusal matrix, the printer's totality cases, the enumerated
+  round-trip models, the schema checker and the hostile sweeps (a new wire mutation sweep over the
+  every-element bundle). Re-blessed: `schema/sequence.schema.json`, the every-element wire, text and
+  emit goldens, `wire/econ_enable.json`, `wire/note_example.json`, `wire/defects.json` and its
+  findings golden; the authoring note's wire example gained `"min": [], "max": []`. The minimal
+  importer refuses the every-element golden until the importer PR, which unblocks 27 of #475's 36
+  fixtures with these model changes; the authoring note carries the dated amendments. The renames
+  (`EnumMember` to `MemberRef`, `Literal::EnumMember` to `Literal::Member`, `value_type:
+  ParameterType`) are breaking for pre-1.0 consumers of `oce-author`; the `oce` CLI (GitHub #491)
+  is the only one.
+
+- **`oce-author` reads the facade's enumeration table** (GitHub #488, issue #468). The pinned
+  four-row `ENUM_TYPES` table is deleted: the validator and emitter look an enum parameter's type up
+  with `oce_api::enumeration_by_id`, and `tests/enum_member_oracle.rs` loads each member of the
+  facade's `SimpleController` row through the engine. A test round-trips every row's class path
+  through the emitter's class base (`http://example.org#Buildings.Controls.OBC.`). Findings and
+  emitted bytes are unchanged.
+
+- **`oce-replay`, the first leverage crate** (GitHub #462, issue #445). `crates/leverage/oce-replay`
+  implements the historical replay note (`docs/design/replay.md`, decisions 1 to 23) above the
+  facade, `publish = false`: an `InputMap` resolves source columns to engine input slots once (exact
+  path or unique `.`-boundary suffix; ambiguous, unknown, unmapped, doubled, mistyped and stale maps
+  are typed errors), and three sources lend rows by slot with `None` for a missing sample —
+  `ColumnarSource` (owned typed columns, NaN and cleared validity missing, seconds or epoch
+  nanoseconds), `CsvSource<R: Read>` (RFC 3339 instants with an explicit offset against a
+  header-only origin) and `StepSource` (change lists as signals). `TimeBase::Recorded` passes times
+  through bit for bit; `TimeBase::Grid { t0, step }` ticks at `t0 + k * step` by multiply with
+  zero-order hold, a sample current only for its tick interval. `MissingPolicy` (`Refuse` by
+  default, `HoldLast { max_age }` holding only observed samples, per-input `Fallback`, `SkipFrame`),
+  `OnRefusal` (`Stop` by default, `RecordAndContinue`) and `DuplicateTime` (`Refuse` by default,
+  `Allow`) are recorded frame by frame; `ReplayOptions::non_finite` defaults to `Refuse` and is set
+  on the owned engine and recorded. `Replay::advance(max_frames)` is a resumable cursor over
+  `Engine::execute_slots` (GitHub #459) and `finish` returns the engine. The `Trace` is columnar
+  with raw bits: one row per attempted frame with a status byte, outputs fixed by the first accepted
+  frame and checked every frame, a dense substitution mask, opt-in inputs and state snapshots,
+  sparse diagnostic and refusal tables, and `Trace::canonical_bytes()`; every limit of decision 19
+  is a typed error, accepted at the cap and refused one past.
+  As built, against the note's sketch (its new "As built" section lists them): column specs carry a
+  `ColumnKind` rather than a `ValueType`; `FrameSource` exposes `map_id`, `kind`, `origin` and
+  `ignored_columns` rather than `columns()`, and `&mut S` and `Box<S>` are sources; `TimeOrigin` is
+  a parsed struct; `StepSource::with_instants` adds evaluation instants with no input change;
+  `Replay::reserve` preallocates rows; `Trace::check_coverage` counts only executed rows;
+  `max_frames` with frames remaining is `ReplayError::TooManyFrames` and a grid whose ticks stop
+  advancing is `ReplayError::GridNotIncreasing`; a missing input that cannot be substituted refuses
+  the frame even when another is `SkipFrame`, and the mask records substitutions on skipped and
+  refused rows; a refusal stores a closed `EngineRefusal` class in the canonical bytes (the facade's
+  message stays in memory), and a `Run`-class refusal stops the run whatever `OnRefusal` says; Real
+  NaN from any source, custom ones included, is missing. Decision 21 as built: the facade has no
+  enum class-path lookup, so an Enum input records its source-declared class path as an unverified
+  label and the canonical bytes carry an Enum output's ordinal with an empty class path. Decision 22
+  as built: `CsvSource` tokenizes with `csv-core` (pinned `=0.1.13`, the allocation-free core of the
+  `csv` crate) so the column, cell and byte caps bound memory as the bytes arrive; the `csv`
+  crate's reader buffered a whole record first (a 100 MB header line of commas reached 3.2 GB in
+  review). `allocation-counter` is a new dev-dependency, for the census.
+  Evidence: all 46 G36 fixtures through the columnar and step sources equal the named facade path
+  bit for bit, and the controller's minute day equals its conformance golden
+  (`g36_traces/cooling_only_controller.csv`); four canonical-byte goldens; chunk sizes 1, 7 and N,
+  and a mid-run `reserve`, byte-identical; every policy pair with exact status, mask and refusal
+  rows; refusal atomicity against a run that never saw the frames; time, mapping, bounds, a custom
+  source, and a hostile CSV corpus including 64 and 100 MB floods refused at small peak memory;
+  trace bytes equal `rows × bytes_per_frame` for every fixture (the controller: 89 B a frame,
+  1,538,009 B for a day at 5 s); and an allocation census: nothing on any quiet frame after the
+  first, once the trace columns are reserved; the first frame allocates the output columns;
+  warning, refusal and snapshot frames allocate as documented. The leverage rule now allows
+  `oce-bless` as a dev-dependency only (authoring note decision 19): `scripts/ci/leverage-members.sh`
+  reads normal and build edges and dev edges separately, with fixtures for each. The workspace has
+  14 members (10 publishable, four private); `release.yml`'s comment and step name, its digest and
+  the validator's controls are re-pinned.
+
+- **`oce-author`: the authoring model, wire form, pinned schema and stage-1 validator** (GitHub
+  #466, issue #463). `crates/leverage/oce-author` (`publish = false`, `oce-api` only) is M2's first
+  crate, built to `docs/design/authoring-layer.md`. The model is one flat `Sequence` of sequence
+  parameters, boundary inputs and outputs (with `quantity`, `display_unit` and a closed
+  `SemanticPoint` slot), leaf blocks with ordered assignments (a tagged literal or a reference to a
+  sequence parameter; array parameters one element at a time under `oce_api::param_element_name`)
+  and typed connections, all in authored order; `Identifier` and `ProvenanceId` carry the note's
+  grammars, and `SequenceBuilder` refuses what it can see without the catalog with a typed
+  `BuildError`. The wire form (`from_wire_str`, `from_wire_bytes`, `to_wire_string`) is closed
+  serde DTOs with every key required, the five value shapes and `"a.y -> b.u"` connections; a bounded
+  lexical pass refuses an oversized document (4 MiB), nesting past 8, a list past 65,536 entries, a
+  string past 4,096 bytes, duplicate keys, `NaN`/`Infinity`, integers outside `i64` and control
+  characters as typed `WireError`s before the typed parse, and the canonical writer is byte-stable
+  (fixed key order, integers bare, reals in the shortest round-trip spelling, ASCII only). The JSON
+  Schema is derived with `schemars` 1.2.3 (the only new third-party dependency) with the `class`
+  enum from the 133 authorable catalog classes, checked in as `schema/sequence.schema.json`,
+  regenerated byte for byte in a test and walked for keywords outside the strict profile.
+  `validate` (stage 1, `validate_author_side`; the engine stage arrives with the emitter) reports
+  the twenty stage-1 codes with the note's exact strings, sorted by authored position, code and
+  detail and deduplicated, using `oce_api::class_metadata` and `oce_api::class_ports` for class,
+  parameter, kind, settability (reserved classes only), catalog-rule (the load gate's own checks,
+  mapped by `DiagCode::as_str`), arity and port-name judgements. `SimpleController`'s members are
+  not published by the facade, so the crate pins the four enumeration types and a test checks the
+  table against everything `oce-api` does publish (noted on #455). Goldens: four canonical wire
+  bundles (the worked example, an every-element sequence, the note's abridged example and a
+  defects bundle) and their finding lists, bless switch `OCE_BLESS_AUTHOR`; a structural schema
+  checker agrees with the parser shape by shape, the `SimpleController` table is loaded member by
+  member through `Engine::load_cxf`, and a document near the 4 MiB bound validates in near-linear
+  time (name indexes built once per run). Every statement carries text-form `Annotations`
+  (comments, a blank line before it) and assignments and sequence parameters a unit `suffix`, so
+  the text form needs no model change; the wire form and the emitter ignore them, and the model,
+  `BuildError`, `Stage`, `Origin`, `Severity` and `Finding` are `#[non_exhaustive]`. Choices the
+  note left open: a connection string without exactly one `->` is a `WireError`, a sequence
+  parameter's value is a literal (no reference), `-0` reads as `Integer(0)` while `-0.0` keeps its
+  sign, a non-finite Real (reachable only through the Rust model) is written `null`, a String value
+  the wire cannot carry is `parameter-out-of-range`, and an array element past the configured width
+  (`k_3` on `nin = 2`) is not refused until the facade reports unread names (#467). The crate
+  relies on the leverage rule from GitHub #462 that allows `oce-bless` as a dev-dependency only.
+  The workspace has 15 members (10 publishable, five private); `release.yml`'s comment and step
+  name, its digest and the validator's controls are re-pinned.
+
+- **`oce-author`: the emitter, engine-side validation and the library round trip** (GitHub #473,
+  issue #464). `emit(&Sequence, &EmitOptions)` writes one flat, single-root CXF document in the
+  authoring note's fixed layout and authored order, never sorted: instance IRIs
+  `{namespace}{sequence}.{local}` under `urn:oce:author:` or an override that must end in `#`, `/`
+  or `:` (the content-id note's last-delimiter rule, GitHub #471), block `@type` under the fixed
+  class base `http://example.org#Buildings.Controls.OBC.`, only the assignments the author wrote,
+  relation lists always arrays, array parameters in the CXF array form, boundary `unit`, `quantity`
+  and `displayUnit` and no semantic record, from a canonical writer; it refuses a stage-1 error
+  (`EmitError::Invalid`), a malformed namespace and a document above `MAX_CXF_BYTES` (one byte over
+  is refused, the limit itself loads). `validate` now runs stage 2 when stage 1 is clean: it emits,
+  loads in a throwaway `Engine::new()` through the receipt path and maps every engine diagnostic
+  back through the IRI scheme, every warning an error finding with the engine's code (decision 14),
+  `origin = engine`; `connector#N` and other subjects outside the scheme stay on `sequence` with
+  the raw subject in `detail`. Two new codes: `document-too-large` and `load-failed`. Stage 1
+  gains two rules: a target the connection list repeats is `single-assignment` (pre-empting the
+  engine's own refusal, which covers a block output beside a boundary input since GitHub #477),
+  and an Integer literal above 2^53 in magnitude on a Real parameter is `parameter-out-of-range`
+  (`MAX_EXACT_INTEGER`). A minimal `import_cxf` reads the flat corpus dialect strictly (a key
+  written twice or an integer outside `i64` is refused) and refuses everything outside the
+  authoring subset with a typed `ImportError`. The parity test emits each stage-1 defect with
+  stage 1 bypassed and amends four rows of the note's finding-code table: `duplicate-parameter`
+  pre-empts `duplicate-id`, `unknown-enum-literal` pre-empts `grounding-failed`,
+  `unknown-parameter` pre-empts nothing (#467) and `unknown-port` pre-empts
+  `unresolved-reference`; decision 15 gains the partial array (written element by element under
+  the flattened names, no default filled). **Gate item 1 is not yet met:** 4 of the 40 in-subset
+  G36 fixtures (6 are nested or conditional, out of subset) import — `cooling_only_system_requests`,
+  `generic_time_suppression`, `multizone_vav_relief_fan_group`, `reheat_overrides` — and each
+  round-trips to the committed fixture's export identity (`multizone_vav_relief_fan_group` exports
+  partially, so it is compared on export bytes plus deferral codes, not a content id); the 36
+  others wait on model decisions (boundary or port `min`/`max`, enumeration-typed sequence
+  parameters, library enumerations; #475). The comparison re-stamps the corpus namespace
+  (`http://example.org#g36.source.`, which ends in `.` and so cannot be an emitter namespace) to
+  `urn:oce:library:`; the re-stamp stays after the canonical content id lands, until library
+  bundle v2. **#458:** the only flat fixture whose `@graph` order differs from the emitter's
+  layout is `multizone_vav_outdoor_airflow_sumzone` (block nodes out of `containsBlock` order
+  from the third block), and the four nested fixtures have no flat layout; all five are refused by
+  the importer before order matters, so they are excluded with a documented list and a test that
+  pins the sumzone mismatch, not compared on loaded models.
+  Byte goldens under `tests/fixtures/emit/` (`.cxf.json`, so `oce-cxf`'s `.jsonld` census is
+  unchanged; the worked example, the every-element sequence and the four imported fixtures) each
+  load warning-free and load to the model's topology; values ground bit for bit through the
+  engine (subnormals, `f64::MAX`, `-0.0`, `i64::MIN`/`MAX`, enumeration members, references); the
+  permutation classes, the §7.17 seam (only `unit` lines move and the compiled blob is unit-blind
+  apart from its content id) and hostile importer input (a bounded mutation sweep over every
+  imported document) are tested. Found on the way, and fixed by GitHub #477: a block input driven by
+  both a block output and a boundary input loaded without a `single-assignment` refusal (#472);
+  the parity test now pins the engine's refusal of it.
+- **`oce-author`: the text form, with an idempotent `fmt`** (GitHub #485, issue #482).
+
+  **What it is.** The authoring note's terse line grammar (decisions 1, 3, 12, 13 and 15): a
+  hand-written recursive-descent parser and a canonical printer.
+  - `parse_text` / `parse_text_bytes` / `fmt_text` return `Result<_, ParseError>`; `print_text`
+    returns `Result<String, PrintError>`.
+  - `fmt_text` is parse then print, and it is idempotent. It keeps every comment: an end-of-line
+    comment moves above its statement, and a comment after the last item of a list or block is
+    refused.
+  - Parsing is bounded: 4 MiB, 100,000 lines, 8,192-byte lines, 256-byte tokens, 4,096-byte
+    strings, 8,189-byte comments, list depth 2, 65,536 statements of one kind.
+  - Each malformed construct gets one typed `ParseError { code, location, detail }`, never a
+    panic. The thirty-one codes of `PARSE_CODES` are pinned in order, as `STAGE_ONE_CODES` is.
+  - Semantic defects stay the validator's.
+  - Unit suffixes are base units only: `1 h` is refused as `unit-not-base`, naming vocabulary v1.
+  - Lists lower to the catalog's element names.
+  - Reals print in the shortest round-trip spelling, and an Integer never becomes a Real.
+  - `validate_text` fills `Finding::span` for both stages. A `SourceMap` indexes the subjects once,
+    so a document at the statement cap places its findings in linear time. A duplicate is placed
+    on the later declaration in model section order; a subject the text does not name keeps
+    `None`.
+
+  **The one model change the text form required:** `Sequence::annotations` (header comments) and
+  `Sequence::trailing_comments`. The wire form, the schema and the emitter ignore both. The note's
+  worked example opens with a header comment, and statement annotations could not hold it.
+
+  **Stage 1 additions** that make every clean model printable:
+  - `nan`, `inf` and `infinity` (any case) are refused as declared names (`invalid-name`);
+  - a boundary carries at most 16 `@haystack` tags (`MAX_HAYSTACK_TAGS`), so a clean boundary fits
+    on one line;
+  - strings, `@name` and `@label` with a bidirectional override or isolate are refused.
+
+  **Gate item 2 holds:** wire → text → wire is byte-identical for the three wire bundles and the
+  four imported corpus fixtures. The note's worked text example parses to its wire bundle.
+
+  **Deviations from the note and the issue:**
+  - The functions are named `parse_text` / `print_text` / `fmt_text`, not `parse` / `print` /
+    `fmt`, after `from_wire_str` / `to_wire_string`.
+  - The line bound is 8,192 bytes, not 4,096, so the longest string the wire form carries
+    (4,096 bytes as written) fits on one line with its assignment.
+  - `print_text` is total or refusing. A name, class path, atom, suffix, string, value or
+    `extends` id the lexer could not read back, a statement whose printed line would pass 8,192
+    bytes, and a document that would pass 4 MiB, 100,000 lines or 65,536 statements of one kind are
+    `PrintError::Unspellable`, never text that `parse_text` refuses or reads
+    to a different model.
+  - `tests/fixtures/wire/defects.json` is excluded from wire → text → wire. It holds a `unit` atom
+    with a space and a non-path class, which stage 1 refuses and which `print_text` refuses as
+    unspellable.
+  - Long arrays print one element or row per line, and a long row one cell per line.
+  - Array elements regroup into `[..]` only when the run is every element of the template the block
+    assigns: consecutive, from index 1, at least two, a matrix a whole rectangle. Anything else
+    prints flattened.
+  - `NaN`, `inf` and `Infinity` are refused as values (`non-finite-number`).
+  - `-0` reads as the Integer `0`, and a leading `+` or zero is refused rather than normalized
+    (stricter than decision 12).
+  - `comment-before-close` refuses a comment after the last item of a `(...)` or `[...]`.
+  - The empty list is refused (`malformed-list`).
+  - The unit-suffix grammar is a Modelica subset: exponents other than zero, a single `/` whose
+    right-hand side is the whole denominator (`kg/m.s2` is kg/(m·s²)), no parentheses.
+  - Atoms are checked as printable ASCII at parse (`malformed-atom`).
+  - Bidirectional overrides and isolates are refused anywhere.
+  - A dotted name has no space around its dots.
+
+  **Tests:**
+  - canonical bundle texts and `fmt` comment goldens (`OCE_BLESS_AUTHOR`);
+  - 48 enumerated models through print and parse;
+  - every stage-1-clean fixture and a set of clean models at their field bounds printing within the
+    line bound and reading back equal;
+  - one test per unspellable value, statements and documents past a bound refused rather than
+    printed, and a dirty-model sweep (39 string slots × 26 hostile strings) in which every model
+    either refuses or prints text that reads back equal within the bounds;
+  - one test per refusal code with its exact location, a mechanical check that every code in
+    `PARSE_CODES` is produced by some input, and every bound at its boundary;
+  - finding spans and a span-cost test at the statement cap;
+  - a deterministic mutation sweep of more than 25,000 mutants, with `catch_unwind` naming each,
+    that also requires every mutant that parses to print and parse back unchanged.
+
+  The note's text-form section is amended (dated) with each of these.
+
+- **The `oce` command-line tool** (GitHub #491, issue #489). `crates/leverage/oce-cli` (package
+  `oce-cli`, binary `oce`, `publish = false`) is M2 item 4 and the first binary above the facade:
+  `docs/architecture.md`'s no-binaries rule now covers the engine crates only (authoring note
+  decision 9). `oce emit` validates both stages and writes flat CXF to stdout or atomically to `-o`
+  (`--namespace` checked by the emitter), writing nothing on an error finding; `oce validate`
+  reports both stages or `--author-side` alone, with spans for text input; `oce fmt` prints the
+  canonical text (wire input converted), `--check` answers whether the input is canonical in its own
+  form and `--write` rewrites a text file atomically and only on change (both file writes go
+  through a uniquely named `create_new` temporary file that never follows a planted link and is
+  never more permissive than the target, new files `0600` on Unix, keep the target's permissions, follow a symbolic-link target, and report `changed`, `output` and `bytes`
+  only once the write succeeded); `oce catalog` lists the
+  classes or describes one with its parameters (type, default, settable) and its ports resolved at
+  the default table or at `--param NAME=VALUE`; `oce vocab` prints the keywords, tags, base units and
+  every code the tool reports with one line of meaning, and the facade's enumeration and
+  constant-package table (`oce_api::enumerations()`, GitHub #488) with each member's value. Arguments are parsed with `clap` (derive,
+  pinned `=4.6.7`, no colour), the second of M2's two new dependencies. Input is `.oce` text or
+  `.json` wire by extension, `--from text|wire` required for stdin; every read is bounded by the
+  form's 4 MiB limit, a file's size checked from its metadata before a byte is read. Stdout carries
+  one document per run — the product, or a JSON report (`schema: "oce-report/1"`: `tool`, `command`,
+  `input` as given, `ok`, `findings`, `errors`, command keys; sorted keys, LF, no clock, no host
+  path) documented in the crate README as the agent-facing contract; a human rendering goes to
+  stderr only on a terminal or with `--render always`. Exit codes: `0` yes, `1` no (error findings,
+  non-canonical, unresolved ports, unknown class), `2` error (usage, read, parse, size, write). A catalog
+  parameter of an enumeration type names its type's class path, and its `--param` value is a member
+  name (`PI` or `SimpleController.PI`). Evidence: 59 golden transcripts (exit, stdout, stderr) through the built binary
+  for every subcommand × outcome class and every `--help`; a contract test over every report;
+  `fmt --check` over every `oce-author` text fixture in place, `fmt` equal to its goldens and
+  idempotent; every emitted bundle loads warning-free in a throwaway `Engine` under two namespaces;
+  hostile inputs (binary junk, bad UTF-8, a 100 MB sparse file refused from its metadata, an
+  over-size stdin, a directory, a missing path, an empty file). 16 workspace members (10
+  publishable, 6 private); `release.yml`'s comment and step name re-pinned.
+### Verification
+
+- **`rustix` moves from 1.1.4 to 1.1.6 in `Cargo.lock`, clearing RUSTSEC-2026-0486** (GitHub
+  #605, issue #598). The advisory (unsound: rustix's xattr functions mark unwritten bytes
+  initialized for a zero-length buffer) made `cargo deny check advisories` fail in the daily
+  `advisories.yml` run and in `release-gate.yml`'s `cargo-deny (full)` job. The path is a
+  dev-dependency only (`rustix` is `oce-cxf`'s Unix dev-dependency), so no shipped build linked it,
+  and the per-PR `cargo-deny` job, which checks bans, licenses and sources only, stayed green. Only
+  the lockfile moves: rustix's own dependencies and the `Cargo.toml` requirement (`1.1.4`, which
+  1.1.6 satisfies) are unchanged, rustix 1.1.6 needs Rust 1.65 against the workspace's 1.97, and no
+  ignore entry was added. `cargo deny check bans licenses sources advisories` is clean, with the same
+  warnings as before. Not moved: `tools/openmodelica-line-reference/Cargo.lock` and
+  `tools/openmodelica-reliefs-reference/Cargo.lock` also pin rustix 1.1.4, but no workflow
+  advisory-checks those workspaces, and each lockfile's SHA-256 is bound into recorded OpenModelica
+  evidence that only the manual native-arm64 workflows can regenerate (GitHub issue #604).
+- **The workflow checker closes five gaps, and the pin-advance row states its real reason**
+  (GitHub #564, issue #555; follow-ups from the reviews of GitHub #547 and #557, and an owner
+  rulings of 2026-11-10 and 2026-11-11). No workflow or gate command changed; the `full` proof
+  row gains two files.
+  **Checker.** `check-workflow-gates.sh` now (1) pins the body of `[profile.ci-release-workspace]`
+  and of its `.junit` table in `.config/nextest.toml` to the line, so a `default-filter` or any
+  other key added to the profile fails instead of narrowing the nightly's one release-codegen
+  workspace run; (2) makes each exception in the per-PR/nightly determinism-job comparison
+  one-sided: only `pr-gate.yml` may carry the lane filter and only `release-gate.yml` the pinned
+  checkout ref, so a per-PR determinism job that pins a ref of its own fails; (3) compares the
+  workflow-level `env:` of `pr-gate.yml`, `merge-gate.yml` and `release-gate.yml`, `CHECKOUT_REF`
+  aside; (4) end-anchors the presence rules for the determinism cells, their fan-in and the
+  Windows cell (new `require_job_line`), so `<command> || true` or a trailing argument added to
+  both copies of a shared step fails; (5) pins the release gate's
+  `save-if: matrix.arch == 'aarch64'`. It also gains a tripwire, `refuse_failure_masks`, on every
+  non-comment line of the three gating workflows: `||` outside a `${{ }}` expression, a line
+  ending in `|\` or starting with `|`, a trailing `; true`, `; exit 0` or `&`, `set` with a `+`
+  option among its arguments, `shopt -u`, a quoted literal containing `|`, `&`, `;` or `+` inside
+  an expression, and a `shell` key in block or flow style that is not the line `shell: bash` (a
+  template such as `bash {0}` drops errexit and pipefail). The tripwire is not a proof that no
+  step discards a failure: a bare `exit 0`, `cmd && true` on a non-final line, `cmd & wait` and
+  `(cmd &)` still pass, and issue #566 tracks them. 52 hostile fixtures, each of which the
+  checker let through before the rule that refuses it, and 2 positive ones (305 cases).
+  **Pin advance.** The `full` row stays. Its stated reason is corrected in `AGENTS.md`,
+  `.agents/project-facts.md`, `docs/ci-and-the-gate.md` and `scripts/ci/proof-row.sh`: the
+  pin-guard tests already run per PR (`oce-cxf`'s `g36_catalog_tests` in `crate tests`,
+  `oce-blocks`'s `registry::catalog_tests` in the determinism subset); what only `full` or the
+  nightly gives a pin advance is `oce-conformance`'s `conformance` binary, three of whose modules
+  read the vendored tree and the reference catalog, that crate's `clean_room` unit tests and
+  `open_modelica_nand` binary, which pin the vendored `Nand.mo` by path, line and equation, and
+  the doctests. "The two files that hold a pinned upstream commit" was false and is reworded:
+  nine files write one, the row lists two pin-guard files, and `scripts/ci/test-proof-row.sh`
+  now holds the full list and fails when it changes.
+  **Proof row.** `.config/nextest.toml` (for its `ci-release-workspace` profile) and
+  `scripts/ci/install-wasmtime.sh` (for its default destination) join the `full` row in
+  `scripts/ci/proof-row.sh`: only the script's `full` block exercises them (owner ruling of
+  2026-11-11). `qemu.yml` and `emulate-firmware.sh`, which have a nightly workflow of their own,
+  are named in prose under the dispatch rule, and
+  `crates/oce-conformance/Cargo.toml` no longer names `merge-gate.yml` as a runner of
+  `--test blob_round_trip`.
+
+- **The release-codegen determinism cells run per pull request again, the merge gate keeps the
+  Windows cell alone, and no change owes a local release-codegen run** (GitHub #557,
+  issue #556; owner decision of 2026-11-10, closing step 3 of #504). Issue #502 had moved the
+  release cells out of `pr-gate.yml` when one took 11 to 18 minutes; with the integration tests
+  of `oce-api`, `oce-author`, `oce-cxf` and `oce-conformance` built as a few binaries each
+  (GitHub #546, #551, #553, #554) they took 174 s (x86_64) and 181 s (aarch64) in `merge-gate.yml`
+  run 42948818576. The per-PR gate took 5 min 11 s on this change's own head (run 42953966045),
+  against 2.5 to 4.9 minutes for the seven full-lane runs before it.
+  **`pr-gate.yml`.** `determinism-matrix` is `codegen: [debug, release]` again, four native cells,
+  and `determinism-compare` again compares portable and target-bound snapshot bytes, the 46
+  compiled-schedule blobs and the round-trip recordings across debug and release codegen as well
+  as across architectures. Both jobs keep the `core` lane filter, and `CI OK` already needs
+  them, so a determinism-lane PR is gated on all four cells and every comparison. The steps are
+  `release-gate.yml`'s; only the debug cells save the shared `nextest` rust-cache entry.
+  **`merge-gate.yml`** runs one job, `std build and nextest (Windows x86_64, debug)`, under
+  `Merge gate OK`; nothing else is merge-only. **`release-gate.yml`** keeps every job (comments
+  only, one of them the false "the gate script installs nothing").
+  **Local proof.** The `determinism` row is gone: the core four, `oce-cxf`, `oce-api`,
+  `Cargo.lock`, the root `Cargo.toml`, `rust-toolchain.toml` and `.cargo/config.toml` owe the
+  engine row, `bash .agents/gate.sh`. `scripts/ci/proof-row.sh` names only `docs`, `leverage`,
+  `light` and `full`. `bash .agents/gate.sh determinism` stays as a mode, for reproducing a red
+  release cell on one host. The `full` row (a pin advance, or `.agents/gate.sh`) and the rule to
+  dispatch `release-gate.yml` for a change only the nightly executes are unchanged, and the
+  documents now record the owner's confirmation of them (2026-11-10) in place of "to be
+  confirmed".
+  **Checker.** `check-workflow-gates.sh` requires `codegen: [debug, release]`, the release
+  subset, round trip and state vectors and every cross-codegen comparison in `pr-gate.yml`;
+  requires the determinism cells and fan-in to run the same steps in `pr-gate.yml` and
+  `release-gate.yml` (every non-comment line equal apart from the lane filter, the pinned
+  checkout ref and `save-if`); pins `save-if: matrix.codegen == 'debug'` per PR; and holds
+  `merge-gate.yml` to exactly the Windows cell and its aggregate, byte-identical to the release
+  gate's. Twelve per-PR hostile fixtures and three merge-gate ones replace the twelve merge-gate cell fixtures (251 cases, from 249).
+  The product contract moves to revision 29, evidence delivery only (PC-041's limitation: both
+  byte identities are compared per pull request). No crate source, test, fixture or golden
+  changed.
+
+- **The local proof before a merge is matched to the lane a pull request runs, and the heavy
+  release gate runs nightly instead of after every merge** (GitHub #547, issue #545; owner
+  decisions of 2026-11-10, which amend issue #502's "the release gate runs on every merge" and
+  the standing "run `gate.sh full` before the PR"). Measured on `fdd70c0`: a cold
+  `bash .agents/gate.sh full` took 30.1 minutes on an idle 10-core arm64 Mac, 21 of them building
+  release-codegen test binaries, about three times per PR; the post-merge `release-gate.yml` run
+  42767547196 started 43 minutes after its push and then took 1 h 29 min (`gate (full)` 88.7
+  minutes, the full test suite 41.8), while its four determinism cells, both comparison legs and
+  the Windows cell finished in under 13 minutes.
+  **Local proof.** `.agents/gate.sh` has five proof modes, each running everything the one before
+  it runs: `docs` (new; a docs-only PR: the always-on checks, no cargo build), `leverage`, the
+  default `light` (the engine lane, now in debug codegen only), `determinism` (new; `light`
+  plus the determinism subset and the strict-bit step under release codegen, the two steps
+  `light` ran until now) and `full`. A PR owes the row its changed paths select: docs only;
+  `crates/leverage/**`, docs and the root `README.md`; anything else; the core four (`oce-model`,
+  `oce-expr`, `oce-blocks`, `oce-graph`), `oce-cxf`, `oce-api`, `Cargo.lock`, the root
+  `Cargo.toml`, `rust-toolchain.toml` or `.cargo/config.toml`, which owe the release-codegen run;
+  and a pin advance (`third_party/**`, `tools/reference-catalog/**`, the two files that hold a
+  pinned upstream commit) or `.agents/gate.sh` itself, which owe `full`. The first three rows and
+  the core four and `oce-cxf` are the owner's table; `oce-api`, the four build files and the
+  fifth row are coordinator decisions of 2026-11-10 from the review of this change, which the
+  owner confirmed the same day (GitHub #557 then removed the `determinism` row). A change to `release-gate.yml`, or to anything else only `full` or the
+  nightly run executes, also dispatches that workflow on its branch and waits for it before
+  merging. `scripts/ci/proof-row.sh` (new, with fixtures in the per-PR `gate behavior
+  fixtures` job) names the row from changed paths through the lane classifier, fail-closed, and
+  every gate run ends with a `LOCAL PROOF` block naming the row it covered and the row the
+  checkout needs against `origin/development`; that block is advice and never changes the exit
+  status. A rebase with no conflicts needs `CI OK` on the new head and no local re-run; a rebase
+  with conflicts or a fix round re-runs the row. No row runs every crate's suite, so the author
+  runs the suites of the crates the PR changes. `full` is also what CI executes nightly. A
+  determinism-lane merge needs the latest nightly not red, or its failure already being fixed
+  forward. `scripts/ci/test-gate-modes.sh` (new, per PR) executes the script in each mode with
+  stubbed children and fails unless the modes nest. Every mode now runs the per-PR `docs` job's
+  steps (mdBook install, checker contracts, staging, build, links), which were CI-only.
+  **Workflows.** New `merge-gate.yml` runs on every push to `development` and on dispatch, on the
+  commit the event names, never cancelled in progress: the determinism matrix in all four native
+  cells, its fan-in with the debug-against-release and cross-architecture comparisons, and the
+  Windows cell, under an aggregate named `Merge gate OK` (not `CI OK`, which is `main`'s required
+  status and must not be satisfiable by this short run on a release PR's head commit).
+  `release-gate.yml` no longer triggers on a push to `development`; it runs nightly on the
+  `development` tip, on dispatch, on release PRs into `main` and on pushes to `main`, with every
+  job it had. A dispatched run now checks out the dispatched ref's head (`github.sha`), as a push
+  run does, instead of the `development` tip, so a branch can show the heavy set green before it
+  merges; a scheduled run still checks out `development`. The release-codegen workspace suite is
+  built once per run, not twice: `test-suite` runs the debug suite and the doctests, and
+  `gate (full)` runs the release suite through the executed script under a nextest profile of
+  its own, `ci-release-workspace` (new in `.config/nextest.toml`), clearing that profile's JUnit
+  report before the script and requiring it after; the shared `ci-release` report would not do,
+  because the release determinism subset and strict-bit step write it in the same mode. `CI OK` stays the one required status on both
+  protected branches; branch-protection settings are unchanged.
+  **Checker.** `check-workflow-gates.sh` pins each of the two workflows' events and branch
+  filters exactly, their job ids exactly (a heavy job deleted from `release-gate.yml` with its
+  `needs:` entry fails; so does a cell, a comparison or the Windows cell leaving `merge-gate.yml`,
+  or a heavy job entering it), the three shared job definitions byte for byte between the files,
+  the merge gate's aggregate name, checkout ref and concurrency lines, that `branches:` is each
+  event's only filter, the nightly cron string, the `gate` job's clear-run-require order, the
+  shape of the `full` block of `.agents/gate.sh` (so a workspace step that is dropped, wrapped
+  in a condition or prefixed with one fails) and that nothing else names the
+  `ci-release-workspace` profile. A required job command that survives only in a comment no
+  longer satisfies `require_job_pattern`. Its fixtures gain 79 cases, every one a hostile
+  control.
+  **wasmtime.** `scripts/ci/install-wasmtime.sh` installs by default into a user cache directory
+  (`$OCE_WASMTIME_DIR`, else `${XDG_CACHE_HOME:-$HOME/.cache}/open-control-engine/wasmtime-bin`)
+  instead of `target/wasmtime-bin`, which the `cargo clean` at each merge boundary deleted, and
+  prints that path for `.agents/gate.sh` (`--print-destination`); the pin and both SHA-256 checks
+  are unchanged, and the per-PR wasm32 leg still passes `target/wasmtime-bin` explicitly. The
+  script's blob round trip now runs the installer, which re-verifies an installed binary's
+  digest, and executes that binary by path, never another `wasmtime` from PATH;
+  `scripts/ci/test-install-wasmtime.sh` (new, per PR) holds the destination order.
+  The product contract moves to revision 28, evidence delivery only (PC-041's limitation names
+  the merge gate). No crate source, test, fixture or golden changed.
+
+- **The root `README.md` has its own lane in the per-PR gate, so a pull request that updates it
+  beside leverage or documentation paths no longer runs the determinism lane** (GitHub #507,
+  issue #503; owner decision of 2026-11-09). `scripts/ci/classify-changes.sh` emits a fifth output,
+  `readme`, true when the root `README.md` changed or `core` is true; the root `README.md` alone
+  sets neither `core` nor `leverage` and is not `docs_only`. Nothing else is reclassified:
+  `crates/*/README.md` and `third_party/**/README.md` stay `core`, `crates/leverage/**/README.md`
+  stays `leverage`, `docs/cxf-composite-subset.md` stays `core`, an unmatched path is `core` and
+  empty input runs every lane. The README lane is one job, the existing `facade-contract`
+  (`facade contract and Quickstart`), now filtered on `readme` instead of `core` and so still run by
+  every engine change. It gains a step that runs `readme_quickstart`, the byte-pin of the README's
+  first Rust block against `crates/oce-api/examples/quickstart.rs`, beside the executed Quickstart
+  it already ran; before this the byte-pin ran only inside the determinism cells' `oce-api` suite.
+  The README's other readers were already in always-on jobs (`scripts/docs/stage.py` and
+  `scripts/docs/test_check_links.py` in `docs`, `scripts/product_contract/check.py` and its controls
+  in the package/authority/product contract job). `scripts/ci/test-classify-changes.sh` now holds
+  that enumeration: it scans the crates, tools, firmware and script trees for sources that name the
+  root `README.md` and fails when one is run neither by an always-on job nor by the README-lane job,
+  when a recorded job is filtered on another lane or loses the command, and when a recorded
+  exception no longer matches; eleven controls (a reader on the `core` lane, three dropped steps,
+  an always-on job given a filter, a removed job, four unlisted-reader constructions and a
+  non-root README that must not be reported) prove each failure. `ci_ok.py` accepts `readme` as a
+  filter lane, requires the output, and refuses `core=true` without `readme=true` and
+  `docs_only=true` with it; `check-workflow-gates.sh` accepts the lane name, pins
+  `facade-contract=readme`, requires the `readme` output on the `changes` job and requires the
+  byte-pin step, its pinned nextest, its report check and the Quickstart execution in that job.
+  Their fixtures go from 160 to 170 cases and from 20 to 35 tests: a README-lane job missing from
+  `JOB_LANES`, moved back to `core`, made always-on, or stripped of a step each fail. Eight of the
+  new `test_ci_ok.py` tests compose the real classifier with `pr-gate.yml`'s own `needs:` and
+  `JOB_LANES`, because a pull request that changes CI files runs every lane and so cannot show its
+  own filter working: a README-only change runs `facade-contract` alone among the filtered jobs and
+  passes `CI OK`, README with a leverage path adds only `leverage-lane`, an engine path runs every
+  filtered job, and a failed or unstarted README job fails a README-only change.
+  `bash .agents/gate.sh` runs the byte-pin and the executed Quickstart in every mode, `leverage`
+  included, so the local mirror of a leverage PR that also edits the README covers what CI runs;
+  the facade compiler contract stays in the engine lane there. Before this, GitHub #485 and #498
+  (leverage, documentation and `README.md` only) ran the whole determinism lane, about 18 minutes a
+  push at the time, where GitHub #493 (no README change) ran in 2. No crate source or golden
+  changed.
+
+- **The per-PR gate keeps the debug determinism cells and loses its three long jobs, which move to
+  the release gate; the release gate now runs on every merge into `development`** (GitHub #505,
+  issue #502; owner decision of 2026-11-09, which amends the plan's "debug and release on every PR"
+  for the determinism matrix only). `pr-gate.yml`'s determinism matrix is two native cells, x86_64
+  on `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm`, in debug codegen, and its fan-in keeps every
+  cross-architecture check: portable snapshot bytes equal, target-bound bytes different, the 46
+  compiled-schedule blobs equal and 123329 bytes each, the round-trip recordings equal (92 files
+  each), the replay of the x86_64 recording and the refusal of the foreign target-bound snapshot.
+  `std-build-windows` and `gate` (`gate (light)`) leave `pr-gate.yml`, `CI OK`'s `needs:` and
+  `JOB_LANES`. The strict-bit matrix (four cells) and its eight-capture fan-in, the wasm32 round-trip
+  leg, the macOS cell and its comparison, `crate-tests`, the bare-metal cell, the leverage lane and
+  every always-on job are unchanged. `gate_scripts` stays a classifier output, informational like
+  `docs_only`: a gate-script path still implies `core`, and `ci_ok.py` and
+  `check-workflow-gates.sh` now refuse a job filtered on it. `release-gate.yml` gains the
+  determinism matrix in all four cells (both architectures, debug and release) with the full
+  fan-in — the cross-architecture checks plus portable and target-bound bytes, blobs and round-trip
+  recordings equal across debug and release — and the Windows cell, all in its `CI OK`;
+  `gate (full)` already covers what `gate (light)` ran. It also triggers on push to `development`.
+  Its concurrency group cancels only a superseded release-PR run, so for pushes the run in progress
+  finishes and only the newest waiting run is kept, and a push run now checks out the pushed commit
+  (`github.sha`) in every job, so the cells and their fan-in build one tree when another merge lands
+  meanwhile (a push to `main` therefore tests the pushed commit too, not the branch tip at job
+  start). The x86_64 determinism cells there restore the shared `nextest` rust-cache key without
+  saving it, so `test-suite`'s superset entry stays the one PRs warm-start from; the arm64 cells
+  save. `check-workflow-gates.sh` follows the jobs: `codegen: [debug]` exactly for the per-PR
+  determinism matrix, `[debug, release]` for the release gate's and for the strict-bit matrix; the
+  release-codegen cell rules, the cross-codegen comparisons and the Windows cell rules apply to
+  `release-gate.yml`; the cross-architecture fan-in rules apply to both files and now include the
+  blob comparison and its size check; new rules pin the release gate's push branches, the push
+  checkout ref, `ref: ${{ env.CHECKOUT_REF }}` on every checkout, both concurrency lines, no
+  `continue-on-error` and the two step-condition shapes; the full-suite rules are scoped to the
+  `test-suite` job, because the copied cells carry look-alike lines; `pr-gate.yml` still refuses a
+  `push` trigger. Its fixtures go from 129 to 160 cases, one or more failing control for each moved
+  or new rule, and `test_ci_ok.py` from 18 to 20. Measured on 2026-11-09: the release-codegen cells
+  took 809–1101 s (x86_64) and 653–671 s (aarch64), the Windows cell 251–450 s and `gate (light)`
+  1540–1600 s, and 69 full-lane runs had a median of 18.3 minutes. What this costs, stated in
+  `AGENTS.md`, `CONTRIBUTING.md` and [CI and the gate](docs/ci-and-the-gate.md#what-runs-after-the-merge):
+  no per-PR job runs the determinism subset under release codegen, compares a debug artifact with
+  a release one, builds on Windows or executes `.agents/gate.sh`. The author's
+  `bash .agents/gate.sh` (commands unchanged; comments and closing report updated) runs the subset
+  under release codegen on one host and is the pre-merge release-codegen evidence; after merging a
+  change that runs the determinism lane, the release-gate run on the merge commit is watched, and a
+  red run is fixed forward or reverted before the next determinism-lane merge. Product contract
+  revision 24 records the evidence-delivery change in PC-041's limitation; PC-037 is unchanged.
+  No crate source or golden changed.
+
+- **`oce-api`'s integration tests build as eight binaries instead of 103, and the determinism
+  subset's release-codegen build takes a sixth of the time** (GitHub #546, issue #504; the pilot of
+  the owner decision of 2026-11-09). Cargo built every file under `crates/oce-api/tests/` as its own
+  binary, and under the release profile (`lto = "thin"`, `codegen-units = 1`) each linked the
+  dependency graph again. `crates/oce-api/Cargo.toml` now sets `autotests = false` and lists the
+  targets: `facade` holds 86 files as modules and `facade_allocation_census` the 11 that call
+  `allocation_counter::measure`, because naming that crate links its counting global allocator
+  into a binary and so no test changes the allocator it runs under. `blob_goldens`,
+  `readme_quickstart`, `conformance`, `content_id_pin`, `export_content_oracle` and
+  `frame_observations` stay their own binaries: a gate step, a workflow or a documented command
+  selects each by name. Module files keep their names; a helper several modules of one binary
+  share is declared once in its root, and the two lines that declared it in each file became a
+  comment and a `use`, so no line moved and the product contract's line anchors still hold. A test
+  in a merged file is now `oce-api::facade <file>::<test>`; select one file with
+  `-E 'test(/^<file>::/)'` where `--test <file>` was used. `tests/facade.rs` checks that every
+  file under `tests/` is compiled into exactly one binary, with controls for a file in no binary,
+  one in two and discovery left on. Measured on one 10-core arm64 Mac from a clean `target/`,
+  `cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --no-run`: release 406 s to
+  61 s wall (2,452 s to 391 s of CPU) and `target/` 391 MiB to 137 MiB; debug 11.8 s to 10.5 s and
+  2.0 GiB to 819 MiB. The 718 tests listed before are all listed after under the same module paths,
+  plus the two layout tests. No engine source, fixture or golden changed.
+
+- **`oce-author`'s integration tests build as one binary instead of 40, and its release test build
+  takes a quarter of the time** (GitHub #551, issues #548 and #504; the second crate after
+  `oce-api`).
+  `crates/leverage/oce-author/Cargo.toml` sets `autotests = false` and lists one target,
+  `authoring`, of which every file under `tests/` is a module. No file needs a binary of its own:
+  the crate's bless command names the package, and nothing in `.agents/`, `.github/`, `scripts/`,
+  `docs/` or the tests selects a test binary of this crate by name. Of the 37 files that
+  declared `mod support;`, 36 now say `use crate::support;` on the same line, with the helper
+  declared once in `tests/authoring.rs`, and `import_graph_v0_refusals.rs`, which never used it,
+  drops the line; no test body changed. A test in a merged file is now
+  `oce-author::authoring <file>::<test>`; select one file with `-E 'test(/^<file>::/)'`.
+  `tests/authoring.rs` checks that every file under `tests/` is compiled into exactly one binary,
+  reading the root's declarations as the compiler does: `pub mod`, a comment after the semicolon,
+  `mod` inside a block comment or a string, a `#[path]` module counted when it names a file under
+  `tests/`, and a file named by two roots or by a root and a target, with controls for each, for a
+  file in no binary and for discovery left on. No test sets a global allocator, an environment
+  variable, a static, the working directory or a temporary file, so none changes meaning in a
+  shared binary. Measured on one 10-core arm64 Mac from a clean `target/`, `cargo nextest run
+  -p oce-author --locked --no-run`: release 166 s to 41.5 s wall (933 s to 132 s of CPU) and
+  `target/` 219 MiB to 122 MiB; debug 15.0 s to 12.2 s and 1.0 GiB to 469 MiB. The 358 tests
+  listed before are all listed after under the same file and test names, plus the six layout
+  tests. No source, fixture or golden changed.
+
+- **`oce-cxf`'s integration tests build as 12 binaries instead of 79, and its release test build
+  takes about a third of the time** (GitHub #553, issues #549 and #504; the third crate after
+  `oce-api` and `oce-author`). `crates/oce-cxf/Cargo.toml` sets `autotests = false` and lists the
+  targets: `exchange` holds 68 files as modules, and `fixture_port_order`,
+  `fixture_structural_oracle`, `export_golden`, `export_declared_input_attrs`,
+  `composite_contract_corpus`, `composite_contract_doc`, `resolve_golden`, `resolve_array`,
+  `resolve_array_expression`, `vendored_corpus_delta` and `parameter_grounding_corpus` stay their
+  own binaries, because `.agents/gate.sh` (`binary(..)`), a document, a recorded command or the
+  file's own bless command selects each by name. No selector changed. Of the 38 files that declared
+  `mod bless;`, the 29 now in `exchange` say `use crate::bless;` on the same line, and the four that
+  declared `mod render;` say `use crate::render;`, with both helpers declared once in
+  `tests/exchange.rs`; no line moved, so the line anchors into this crate's tests still hold, and no
+  test body changed. `open_modelica_reliefs_windows_boundary.rs` keeps its `#![cfg(windows)]`, which
+  now gates the module: it compiles into `exchange` on Windows only, and the Windows cell in
+  `release-gate.yml` runs that binary. A test in a merged file is now `oce-cxf::exchange
+  <file>::<test>`; select one file with `-E 'test(/^<file>::/)'`. The layout check
+  (`tests/binary_layout/`) is adapted from GitHub #551's and closes the gaps its review found: it
+  follows the helper directories a declaration reaches, resolves a plain `mod` in a `#[path]` file
+  as the compiler does, refuses a `cfg_attr` path and a declaration inside braces instead of
+  guessing, counts a `cfg`-gated declaration as compiled on purpose, and accepts only `autotests =
+  false` exactly. No test sets a global allocator, an environment variable, a static or the working
+  directory; each golden a bless run writes is written by one file and read by no other, the one
+  temporary directory is named for the process and used by one test, and the `git ls-files` call
+  only reads, so none changes meaning in a shared binary or under plain `cargo test`, and an
+  `OCE_BLESS=1` run of the merged binary rewrites every golden byte-identically. Measured on one
+  10-core arm64 Mac from a removed `target/`, `cargo nextest run -p oce-cxf --locked --no-run`:
+  release 191 s to 60 s wall (1,424 s to 298 s of CPU) and `target/` 276 MiB to 123 MiB; debug 15.8
+  s to 8.3 s and 1.32 GiB to 642 MiB. The 1,001 tests listed before are all listed after under the
+  same file and test names, plus the eight layout tests. No source, fixture or golden changed.
+
+- **`oce-conformance`'s integration tests build as eight binaries instead of 90, and its release
+  test build takes a sixth of the time** (GitHub #554, issues #550 and #504; the last of the four
+  crates).
+  `crates/oce-conformance/Cargo.toml` sets `autotests = false` and lists the targets: `conformance`
+  holds 83 files as modules, and seven stay their own binaries because a workflow, a gate step or a
+  recorded command selects each by name: the strict-bit evidence tests (`strict_bits`,
+  `per_block_reals_transcendental`, `per_block_reals_sources_transcendental`,
+  `per_block_psychrometrics` and `per_block_utilities`, run with `--test` by the strict-bit cells
+  and left out of the Windows cell by `binary_id(..)`), `blob_round_trip` and `open_modelica_nand`.
+  Neither those seven files nor anything under `tests/strict_bits/` changed, and no selector
+  changed: each `--test`, `binary_id(..)` and `test(=..)` selector of this crate lists the same
+  tests before and after. The helpers several modules share (`block_harness`, `support`,
+  `funnel_band_policy`, `sequences`, `scoped_open_modelica_line`) are declared once in
+  `tests/conformance.rs`, and each module says `use crate::<helper>;`, with a comment, on the lines
+  that declared it; three modules that declared `block_harness` only for their scoped OpenModelica
+  helper now carry a comment there, and `g36_determinism/sequence_inputs.rs` imports its parent's
+  point identities with `use super::*;` instead of `use crate::*;`. No line moved and no test body
+  changed. A test in a merged file is now `oce-conformance::conformance <file>::<test>`; select one
+  file with `-E 'test(/^<file>::/)'`. The layout test reuses `oce-cxf`'s check
+  (`crates/oce-cxf/tests/binary_layout/`) through `#[path]` instead of copying it, so its controls
+  run here too, and a second test refuses a manifest that folds one of the seven name-selected
+  binaries into `conformance`. No test sets a global allocator, an environment variable or the
+  working directory; the three temporary paths are named for the process and used by one test
+  each; the two statics are `OnceLock` caches of data parsed from an `include_str!`; and the G36
+  bless writer (`OCE_BLESS_G36`) writes one golden per sequence, so three bless runs of the merged
+  binary under plain `cargo test` rewrote every golden byte-identically. Measured on one 10-core
+  arm64 Mac from a removed `target/`, `cargo nextest run -p oce-conformance --locked --no-run`:
+  release 270 s to 45 s wall (2,185 s to 304 s of CPU) and `target/` 452 MiB to 156 MiB; debug
+  12.7 s to 9.3 s and 2.1 GiB to 668 MiB. The 338 tests listed before are all listed after under
+  the same file and test names, with the one ignored test still ignored, plus nine layout tests. No
+  `src/` file, fixture or golden changed.
+
+### Documentation
+
+- **Design note for bounding a vector run's work** (GitHub #568, issue #561), ruled by the owner
+  on 2026-11-11, with no code. `docs/design/vector-work-budget.md` bounds one `run_vectors` call
+  with four budgets, each a simple product:
+  - frames (`max_total_frames`, kept at 2^24);
+  - compared instants (`max_total_instants`, 2^28);
+  - bytes loaded at bind and while scoring mutants (`max_total_load_bytes`, 2^30);
+  - frames weighted by document bytes (`max_total_frame_bytes`, 2^40).
+
+  The budgets are checked in one step at bind, after the subject's first load and its name
+  resolution and before every other load, so `too-many-frames` now wins over `param-refused`. Each
+  refuses with its own code. They are lower-only, as decision 35 states for every limit, and the
+  receipt records none of them. The subject's parameter trials are deduplicated by distinct edit
+  list. Measured on 139 library and in-repo sets and on synthetic documents up to 8 MiB, today's
+  worst case is over 5 hours in `release`. At these defaults it is about one minute, and the
+  corpus sits 700x to 6,500x under them. The rejected alternatives are recorded with the ten
+  rulings; engine reuse through checkpoints is the follow-up #569, after part 4. The note is
+  registered in `docs/README.md` and the book. `docs/design/vectors.md` is amended by the
+  implementing PR, which closes #561, because a test reads it.
+- **The facade migration page is retired, with the other prose the format reset made false**
+  (GitHub #542, issue #531). `docs/facade-migration.md` is deleted: nothing was published to migrate from, and
+  its rows still stated diagnostics schema revisions 2 and 3, descriptor revisions advancing to 2
+  and an execution-profile schema "revision 2" after every format and schema went back to 1
+  (GitHub #518). Its links are repointed at the pages that own the current facts: the README's two
+  bullets and its documentation table, `docs/README.md`, the book summary,
+  `docs/facade-contracts.md` (serialized admission and load replacement now link to
+  `docs/host-responsibilities.md`) and `docs/host-responsibilities.md`. The product contract moves
+  to revision 27, traceability and editorial only: PC-003, PC-028 and PC-029 ground on the compiler
+  controls, the package validator and the producer-evidence section in place of the retired page,
+  and its fulfilled-contraction section now states the source inspection itself, corrected to the
+  tree (the only `unreachable!` arms in engine source outside tests are three invariant arms in
+  `oce-blocks`; the two the retired page listed in the CXF resolver no longer exist). The
+  content-id pin is renamed for what it is: `tests/fixtures/content_id/restamp.tsv` becomes
+  `pin.tsv` and its owner test `content_id_restamp.rs` becomes `content_id_pin.rs` (the file's
+  `# Owner test:` line moves with the name; all 47 ids are unchanged), and decision 17 of
+  `docs/design/content-id.md` is struck with the ruling. `docs/design/vectors.md` decision 33
+  states the version rule in place of "`0.4.0` in the tree today", an `oce-author` test comment
+  drops "format 2", and `.agents/project-facts.md` lists everything a workspace version bump
+  moves (`Cargo.toml`'s workspace dependency versions, `Cargo.lock`, the README sentence and the
+  blob note's header table were missing). No behaviour, signature, golden or content id changes.
+- **Design note for the canonical content id** (GitHub #471, issue #470).
+  `docs/design/content-id.md` fixes, before any code, the one content id that replaces the
+  order-bearing `cxf:fnv1a128:` export tag: SHA-256 (via `sha2`) over an `OCECANON` version 1
+  encoding of the loaded flat graph, written `oce:canon1:<64 hex>` and minted only by
+  `Engine::content_id`. Names are inside the id (instance namespace stripped through the last `#`,
+  `/` or `:`, the sequence name kept, whole-IRI fallback rather than refusal); blocks sort by name
+  with class path, class signature hash and ground parameter bits, presence being the
+  evaluated-or-not flag; connections sort by target then source port; boundary outputs include
+  pass-through outputs; boundaries carry type, `quantity`, `unit`, `displayUnit` and an input's
+  effective domain; `SemanticPoint` records, `extends`, comments and authored order never enter it.
+  It states what equal ids promise (equal outputs and per-block state on every successful frame,
+  resting on the two-pass tick and the feedthrough contract; not equal blobs, point inventories or
+  snapshot interchange), the canonical element-name refusal that makes sorted parameters sound, the
+  surface changes (`ExportReport` loses both id methods and keeps `complete()`, blob format version
+  2, compatibility descriptor revision 2 with a `content` line, PC-018/PC-021, the call sites and
+  docs), the TSV mapping table for the library re-stamp, and two worked examples with exact byte
+  dumps and ids (the second shows that binding a default moves the id). The architect review's
+  rulings are recorded in the note. It is registered in `docs/README.md` and the book.
+- **Design note for the `oce-author` importer** (GitHub #484, issue #483).
+  `docs/design/importer.md` fixes, before the implementation PRs, how flat library CXF and the frozen
+  prototype's v0 graph JSON enter the authoring model, and the model changes gate item 1 waits on:
+  sequence parameters of an enumeration type (`"type": "SimpleController"`, references checked by
+  class identity, lowered as the corpus does; 17 in-subset fixtures), optional `min`/`max` on
+  boundary declarations (`@min`/`@max`, `"min": []`; 9 in-subset fixtures; input bounds are the frame
+  acceptance domain the engine refuses outside of, not a clamp), and library constants
+  (`OperationModes.occupied`, G36 Integer constants rather than enumerations) as member values
+  resolved through one facade data table (#468, widened to the G36 enumerations and constant
+  packages). A full-construct scan of the 46 G36 fixtures puts 12 outside the M2 subset (4 nested, 7
+  conditional, 1 expression), not 6, so the gate denominator is 34; 31 round-trip with the decisions
+  and the widened #468, and three with block-port bounds stay refused (#486). It also fixes the
+  normalisation of a constant-package-typed Integer boundary, a `#[non_exhaustive]` `ImportError`
+  kind with pinned codes and a fixed refusal precedence, an `ImportReport` of dropped properties
+  (root-parameter bounds and units), the v0 mapping with its comment rules and three vendored golden
+  pairs, the naming and re-stamp rules, the test plan and the order #468, model PR, importer PR. The
+  review's rulings on its ten questions are recorded in the note. It is registered in
+  `docs/README.md` and the book.
+- **Design note for vocabulary v1** (M2 item 6, tracking issue #455). `docs/design/vocabulary.md`
+  fixes, before any code, where the block vocabulary comes from and how it is served. A scratch run
+  of modelica-json at the recorded pins showed that `-o doc` (the plan's wording) is the G36
+  sequence-document generator and yields nothing for elementary classes, while
+  `-o cxf --elementary --cxfCore` gives a byte-stable `CXF-Core.jsonld` with a description on every
+  connector and public parameter; the note proposes vendoring it at the existing pins and
+  generating from it with a regenerate-and-diff test, walking the catalog's names. It describes 262 of 265 named ports,
+  all 57 vector connectors and 183 of 186 parameters of the 133 classes, leaving six to curate. The
+  data is two strict-JSON files (`generated.json`, `curated.json` with typed notes) in a new
+  leverage crate `oce-vocab`; `oce-api`, its catalog JSON, the content id and class signature hashes
+  are unchanged. `oce catalog` serves the block vocabulary and `oce vocab` gains a time-only
+  scale-factor table, so `1 h` becomes legal with exact scaling and an author-only
+  `unit-suffix-mismatch` check (amending authoring decision 13). Gate item 4 (agent-usable) is
+  deferred to the milestone that lands the benchmark harness (owner-confirmed), and M2 closes on
+  items 1 to 3. The review's rulings on its ten questions are recorded in the note. It is registered
+  in `docs/README.md` and the book.
+- **Design note for vectors, the verify replayer and receipts** (GitHub #512, issue #508).
+  `docs/design/vectors.md` fixes, before any `oce-verify` code, the one vector format
+  (`oce/vectors/v1`, changed in place until 1.0.0 by the owner's ruling of 2026-11-09: no importer
+  from the old shape, no dual-read path), how a set is bound to a loaded sequence and replayed on
+  `oce-replay`, the vector receipt body under the header shared with the commissioning verifier,
+  mutant mode and its integer score, the complete error-code table, the `oce verify` verb and the
+  in-repo fixtures to rewrite: 37 numbered decisions with their rejected alternatives and a
+  normative receipt field table. The owner ruled on 2026-11-09, accepting all eleven questions the
+  draft put as recommended, and the rulings are recorded in the note (Real `equals` by bits,
+  tolerance names, expected state deferred, warnings
+  reported and not failed, a refused frame failing its scenario, the mutant score not gating
+  `passed`, the AHU-0016 mutants, zero timings by default, the argument shape, where the in-repo
+  replay gate runs, and #460's `FrameSlots::output_types()` moving into M3 so outputs can be typed
+  before any frame runs). Checked against the
+  tree, it records where the code overrules the issue's outline: a run-time warning carries a class
+  path and a message but no code and no instance, so a diagnostic expectation can match only those;
+  `Grid` replay runs to the last source row, so a step after the horizon is refused; the replay
+  name rule is private and input-only; the catalog has no Real `>=` class. The "vector format v2"
+  wording in `docs/design/replay.md`, `docs/design/commissioning.md` and the README's M3 roadmap
+  row becomes "the vector format". Nothing is implemented. It is registered in `docs/README.md`
+  and the book.
+- **The published standard is named, its clauses are cited beside the OBC sections, and the
+  coverage claim says what the engine does not execute** (GitHub #539, issue #510; owner rulings
+  of 2026-11-09). CDL is published as ANSI/ASHRAE Standard 231-2026, and the README, the
+  architecture page and `docs/cdl-coverage.md` now say so. This project has read the standard's
+  published table of contents, not its text, and claims no conformance to it: every clause number
+  of the standard in the documentation comes from that table, and what the documentation says a
+  section says is quoted from the public OpenBuildingControl (OBC) specification. Where a page
+  cited "CDL §7.17" for the metadata seam it now cites OBC §7.17 beside clause 5.13 of the
+  standard, and says the engine applies that section's rule (none of the metadata affects the
+  computation of a control signal) to point lists, trends, tags and semantic records. The
+  commissioning verifier follows OBC §12; the standard's table of contents lists no verification
+  or conformance clause. The architecture page's seam heading and the diagram's label drop the
+  bare section number (the heading's anchor changes; the three design notes that link to it
+  follow). The README's "CDL §7.1 resolver" loses a number that was never CDL's, and "CDL §7.7.2"
+  and "CDL §7.16" on the architecture and facade-contracts pages become OBC citations.
+  `docs/cdl-coverage.md` gains two sections. The first records the clauses, that the standard's
+  public page (`data.ashrae.org/standard231`, read 2026-11-09) bases its normative elementary
+  blocks on Modelica Buildings Library v12.1.0, that the file list under
+  `Buildings/Controls/OBC/CDL` is identical at tag `v12.1.0` and at the vendored pin `a131864`
+  (checked 2026-11-09; contents not compared), and that the standard's CXF namespace is
+  `http://data.ashrae.org/S231#` on the evidence of OBC §11.3 and modelica-json's
+  `CXF-Core.jsonld`, while the `oce-cxf` exporter and the `oce-author` emitter still bind
+  `http://data.ashrae.org/S231P#` until issue #527. The second states that the engine executes
+  elementary and composite blocks only: an extension block is implemented by an FMU (OBC §7.13
+  and §8.7; clauses 5.9 and 6.7 of the standard), FMI is out of scope before 1.0, and an instance
+  of an unregistered class with no children is refused with `class-not-found` (read from the
+  resolver; no fixture exercises an extension block, and a dedicated refusal code with fixtures
+  is issue #537). Documentation only: no behaviour, signature, fixture or golden changes. Left
+  for issue #527: `docs/cxf-composite-subset.md` (an engine test reads it), the bare §7.10,
+  §7.4.1 and §8.2 citations on other pages, and the citations in crate rustdoc, `Cargo.toml` and
+  `AGENTS.md`.
+
 ## 0.4.0
 
 Prepared 2026-11-08 on `development`; the release date is the date the `v0.4.0` tag is cut from

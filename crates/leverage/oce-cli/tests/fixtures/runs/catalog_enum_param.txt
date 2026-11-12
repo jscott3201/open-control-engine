@@ -1,0 +1,238 @@
+exit: 0
+--- stdout
+{
+  "class": {
+    "class_path": "CDL.Reals.PID",
+    "description": "P, PI, PD, and PID controller",
+    "inputs": [
+      {
+        "description": "Setpoint input signal",
+        "kind": "Real",
+        "name": "u_s",
+        "quantity": "",
+        "unit": ""
+      },
+      {
+        "description": "Measurement input signal",
+        "kind": "Real",
+        "name": "u_m",
+        "quantity": "",
+        "unit": ""
+      }
+    ],
+    "links": {
+      "latest_help": "https://simulationresearch.lbl.gov/modelica/releases/latest/help/Buildings_Controls_OBC_CDL_Reals.html#Buildings.Controls.OBC.CDL.Reals.PID",
+      "pinned_source": "https://github.com/lbl-srg/modelica-buildings/blob/a131864e4c4df22ebcd52bb8da439de0087ac365/Buildings/Controls/OBC/CDL/Reals/PID.mo"
+    },
+    "notes": [],
+    "outputs": [
+      {
+        "description": "Actuator output signal",
+        "kind": "Real",
+        "name": "y",
+        "quantity": "",
+        "unit": ""
+      }
+    ],
+    "parameters": [
+      {
+        "default": {
+          "kind": "member",
+          "value": "PI"
+        },
+        "description": "Type of controller",
+        "enumeration": "CDL.Types.SimpleController",
+        "name": "controllerType",
+        "quantity": "",
+        "range": [],
+        "settable": true,
+        "type": "Enum",
+        "unit": ""
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 1.0
+        },
+        "description": "Gain of controller",
+        "enumeration": null,
+        "name": "k",
+        "quantity": "",
+        "range": [
+          "k >= 1e-13"
+        ],
+        "settable": true,
+        "type": "Real",
+        "unit": ""
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 0.5
+        },
+        "description": "Time constant of integrator block",
+        "enumeration": null,
+        "name": "Ti",
+        "quantity": "Time",
+        "range": [
+          "Ti >= 1e-13"
+        ],
+        "settable": true,
+        "type": "Real",
+        "unit": "s"
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 0.1
+        },
+        "description": "Time constant of derivative block",
+        "enumeration": null,
+        "name": "Td",
+        "quantity": "Time",
+        "range": [
+          "Td >= 1e-13"
+        ],
+        "settable": true,
+        "type": "Real",
+        "unit": "s"
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 1.0
+        },
+        "description": "Typical range of control error, used for scaling the control error",
+        "enumeration": null,
+        "name": "r",
+        "quantity": "",
+        "range": [
+          "r >= 1e-13"
+        ],
+        "settable": true,
+        "type": "Real",
+        "unit": ""
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 1.0
+        },
+        "description": "Upper limit of output",
+        "enumeration": null,
+        "name": "yMax",
+        "quantity": "",
+        "range": [
+          "yMin <= yMax",
+          "yMin == yMax warns"
+        ],
+        "settable": true,
+        "type": "Real",
+        "unit": ""
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 0.0
+        },
+        "description": "Lower limit of output",
+        "enumeration": null,
+        "name": "yMin",
+        "quantity": "",
+        "range": [
+          "yMin <= yMax",
+          "yMin == yMax warns"
+        ],
+        "settable": true,
+        "type": "Real",
+        "unit": ""
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 0.9
+        },
+        "description": "Ni*Ti is time constant of anti-windup compensation",
+        "enumeration": null,
+        "name": "Ni",
+        "quantity": "",
+        "range": [
+          "Ni >= 1e-13"
+        ],
+        "settable": true,
+        "type": "Real",
+        "unit": ""
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 10.0
+        },
+        "description": "The higher Nd, the more ideal the derivative block",
+        "enumeration": null,
+        "name": "Nd",
+        "quantity": "",
+        "range": [
+          "Nd >= 1e-13"
+        ],
+        "settable": true,
+        "type": "Real",
+        "unit": ""
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 0.0
+        },
+        "description": "Initial value of integrator state",
+        "enumeration": null,
+        "name": "xi_start",
+        "quantity": "",
+        "range": [],
+        "settable": true,
+        "type": "Real",
+        "unit": ""
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 0.0
+        },
+        "description": "Initial value of derivative output",
+        "enumeration": null,
+        "name": "yd_start",
+        "quantity": "",
+        "range": [],
+        "settable": true,
+        "type": "Real",
+        "unit": ""
+      },
+      {
+        "default": {
+          "kind": "boolean",
+          "value": true
+        },
+        "description": "Set to true for reverse acting, or false for direct acting control action",
+        "enumeration": null,
+        "name": "reverseActing",
+        "quantity": "",
+        "range": [],
+        "settable": true,
+        "type": "Boolean",
+        "unit": ""
+      }
+    ],
+    "reserved": false
+  },
+  "command": "catalog",
+  "errors": [],
+  "findings": [],
+  "input": null,
+  "ok": true,
+  "params": [
+    "controllerType=SimpleController.P"
+  ],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

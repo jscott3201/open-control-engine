@@ -1,8 +1,8 @@
 //! Source-verified ASHRAE G36 OutdoorAirFlow AHU through the frozen facade.
 
 use oce_api::{Engine, PointDirection, Value};
-#[path = "support/frame_trace.rs"]
-mod frame_trace;
+// Shared helper, declared once for this binary in its root `facade.rs`.
+use crate::frame_trace;
 use frame_trace::FrameRun;
 
 const OUTDOOR_AIRFLOW_AHU: &str =

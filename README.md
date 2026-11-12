@@ -1,8 +1,8 @@
 # Open Control Engine
 
 **Open Control Engine runs building control sequences written in the OBC / LBL
-[Control Description Language (CDL)](https://obc.lbl.gov/specification/cdl.html), as a Rust
-library you embed in your own application.**
+[Control Description Language (CDL)](https://obc.lbl.gov/specification/cdl.html), published as
+ANSI/ASHRAE Standard 231-2026, as a Rust library you embed in your own application.**
 
 [![License: Apache-2.0 OR MIT](https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg)](#license)
 [![Rust 1.97.0 MSRV · edition 2024](https://img.shields.io/badge/rust-1.97.0%20MSRV%20%C2%B7%20edition%202024-orange.svg)](docs/architecture.md#embeddability-posture)
@@ -17,8 +17,10 @@ every pull request.
 
 It is a library and nothing else: no `main`, no daemon, no network listener, no async runtime, and
 no database. Everything non-computational — points, trends, tags, durability — sits behind a
-storage port your application implements. That split is not a design preference; it is CDL §7.17,
-which states that such metadata does not affect the computation of a control signal.
+storage port your application implements. That split is not a design preference. The
+OpenBuildingControl (OBC) specification's metadata section (OBC §7.17; clause 5.13 in the table of
+contents of ANSI/ASHRAE Standard 231-2026) says of that metadata that none of it affects the
+computation of a control signal, and the engine applies that rule to everything non-computational.
 
 Its four execution-core crates build `#![no_std]` on `core` and `alloc` alone, and the work in
 progress lets a verified sequence leave a `std` host as a compiled-schedule blob that a bare-metal
@@ -124,15 +126,21 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
 
 ## What it does today
 
-- Imports CXF via the CDL §7.1 resolver, and **exports** back to CXF under a round-trip contract
-  where re-importing the emitted bytes renders bit-identically — Reals compared by IEEE-754 bits,
-  not by epsilon. See [CXF round trip](docs/cxf-round-trip.md).
+- Imports CXF through the `oce-cxf` resolver, and **exports** back to CXF under a round-trip
+  contract where re-importing the emitted bytes renders bit-identically — Reals compared by
+  IEEE-754 bits, not by epsilon. See [CXF round trip](docs/cxf-round-trip.md). Both directions use
+  one vocabulary namespace, `http://data.ashrae.org/S231#`: a document bound to another is refused
+  with a typed diagnostic, and every exported document names the software and version that wrote
+  it.
 - Executes a registry of **133 CDL elementary block classes** plus 3 reserved internal lowering
   classes, enumerable at runtime via `oce_api::catalog()` with per-class ports, parameter rules,
   and honest parameter defaults. See [CDL coverage](docs/cdl-coverage.md).
 - Runs **46 G36 conformance fixtures** end to end through the frozen facade, each with a committed
   whole-sequence golden trace.
-- Executes exclusively through `prepare_frame` followed by consuming `execute_frame`. The engine is
+- Executes exclusively through `prepare_frame` followed by consuming `execute_frame`, or by slot:
+  `frame_slots` resolves the boundary once and `execute_slots(&slots, t, &values)` then submits each
+  complete frame through the same core driver, with the same refusals, borrowing its outputs and
+  allocating nothing per frame once the map exists, beyond warning-record growth. The engine is
   pure: it has no storage dependency, and `load_cxf` returns the resolved model and IO inventory as
   a plain-data `LoadedModel`. Hosts own cadence, persistence and equipment delivery; for
   persistence, `oce_store::host::persist_loaded_model` runs the post-load recover → save →
@@ -163,6 +171,14 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   under wasmtime on `wasm32-wasip1`, with every output, warning and raw state word after every
   frame of the 46 fixtures bit-identical to the recorded host run. See
   [compiled-schedule blob](docs/compiled-schedule-blob.md#the-blob-round-trip).
+- Lets a person or an agent write a sequence without touching JSON-LD: `oce-author` holds one typed
+  model in a strict-JSON wire form and a terse text form, validates it before an engine sees it,
+  emits it deterministically to flat CXF and imports the library's in-subset CXF back. The `oce`
+  command-line tool validates, emits and formats a sequence, serves the catalog and the vocabulary
+  and replays a vector set (`emit`, `validate`, `fmt`, `catalog`, `vocab`, `verify`), with a JSON
+  report and exit codes 0 / 1 / 2; the importer is a library API today, and an `oce import` verb is
+  planned (#514). See the
+  [authoring layer](docs/design/authoring-layer.md) and [`oce`](crates/leverage/oce-cli/README.md).
 
 ## What it does not do
 
@@ -170,6 +186,11 @@ Stating this plainly is more useful than a feature list.
 
 - **It does not parse or flatten Modelica `.mo` sources.** It executes the block graph a CXF
   document hands it; the `oce-cxf` resolver lowers that document and nothing elaborates it further.
+- **It does not execute CDL extension blocks.** It executes elementary and composite blocks. An
+  extension block is implemented by a Functional Mockup Unit, and FMI is out of scope before 1.0,
+  so a document that contains one is refused at load with `extension-block-unsupported`
+  (GitHub #582).
+  [What the engine does not execute](docs/cdl-coverage.md#what-the-engine-does-not-execute).
 - **It is not general ASHRAE G36 support.** The supported set is explicitly
   *selected-explicit-cxf-variants-supported*: pre-flattened CXF at specific parameterizations, not
   other G36 composites. [What "supported" means](docs/cdl-coverage.md).
@@ -189,23 +210,110 @@ Stating this plainly is more useful than a feature list.
   `set_param` is accepted; complete-frame execution can continue while halted with no pending edits.
 - **Deferred loader signatures have been removed.** `load_from_semantic` and `load_modelica`
   are no longer callable; prepare supported CXF externally and use `load_cxf`.
-  See [facade migration](docs/facade-migration.md) for the pre-release source break.
 - **Assertion events and `AssertLevel` are Warning-only.** `AssertLevel::default()` is now
   `Warning`; the never-emitted `AssertLevel::Error` variant was removed. This adds no escalation
-  or safety policy. See [facade migration](docs/facade-migration.md).
+  or safety policy.
 
 ---
 
 ## Status and roadmap
 
-The current release is **v0.4.0** (milestone M1b, November 2026): the execution core builds
-`no_std + alloc` with its math through `libm` and no hash collections, a loaded executable compiles
-to an `OCEB` blob on the host and runs on a `no_std` target through the same HostTick frame driver
-as the facade, a firmware image is built and size-checked per PR for two bare-metal targets and
-executed under QEMU nightly, and every engine PR replays one recorded run of the 46 fixtures' blobs
-bit for bit on x86_64, arm64 and `wasm32-wasip1`. v0.3.0 (M1a) made the engine pure and moved the
-per-PR gate to native x86_64 and arm64 cells under one required `CI OK` status. Next come M2 (the
-authoring layer) and M3 (the verification product), in parallel; see [CHANGELOG.md](CHANGELOG.md).
+The current release is **v0.5.0** (milestone M2, November 2026): the authoring layer. A person or
+an agent writes a sequence without touching JSON-LD. `oce-author` holds one typed authoring model
+and builder with two forms that carry exactly it: a strict-JSON wire form with a pinned JSON Schema,
+and a terse text form with a hand-written parser that gives one typed refusal per malformed
+construct, a canonical printer and an idempotent `fmt` that keeps every comment (an end-of-line
+comment moves above its statement; a comment after the last item of a list or block is refused).
+A two-stage validator reports every catalog-level defect before an engine sees the sequence, then
+loads the emitted bytes in a throwaway engine and maps every diagnostic back onto the model; the
+deterministic emitter writes flat CXF; and the importer reads the in-subset library CXF (31 of the
+34 in-subset library fixtures round-trip to their committed content id) and the frozen prototype's
+v0 graph JSON (it imports to the content id of the CXF the prototype wrote). The engine side it
+needed is in the facade: `oce_api::class_ports` names every port of a configured block,
+`oce_api::class_metadata` gives each class a description and each parameter a settable flag, and
+`oce_api::enumerations` lists every CDL and G36 enumeration and G36 Integer constant package. The
+milestone's last gate row, agent usability measured by a benchmark, moves to the milestone that
+lands the benchmark harness (owner decision, 2026-11-09). v0.5.0 also ships M3's work so far
+(below), and it is the first release in which every format and schema stays at revision 1 until
+1.0.0 and changes in place: the engine version is what separates one layout from another, and a
+compiled blob and a state snapshot each carry it and are accepted only by the version that wrote
+them. v0.4.0 (M1b) made the execution core build `no_std + alloc` with its math through `libm` and
+no hash collections, compiled a loaded executable to an `OCEB` blob that runs on a bare-metal target
+through the facade's own frame driver, and replays one recorded run of the 46 fixtures' blobs bit
+for bit on x86_64, arm64 and `wasm32-wasip1` on every engine PR; v0.3.0 (M1a) made the engine pure
+and moved the per-PR gate to native x86_64 and arm64 cells under one required `CI OK` status.
+`development` carries 0.5.0 until the first change after the tag that moves a format's bytes or
+meaning, which bumps it to the next milestone's version.
+
+M2's `oce` command-line tool
+(`crates/leverage/oce-cli`, the first binary above the facade) puts the authoring loop at a shell
+prompt: `emit`, `validate`, `fmt`, `catalog` and `vocab` (M3 adds `verify`, below), each with a
+documented JSON report on stdout for agents and the exit rule 0 yes / 1 no / 2 error
+([report contract](crates/leverage/oce-cli/README.md)):
+
+```sh
+# econ_enable.oce is crates/leverage/oce-author/tests/fixtures/text/econ_enable.oce; copy it here first
+cargo run -p oce-cli -- validate econ_enable.oce        # findings as JSON; exit 0, 1 or 2
+cargo run -p oce-cli -- emit econ_enable.oce -o out.json # validate, then write flat CXF
+cargo run -p oce-cli -- fmt --check econ_enable.oce     # exit 1 when not canonical
+cargo run -p oce-cli -- catalog CDL.Reals.MultiSum --param nin=3
+cargo run -p oce-cli -- catalog CDL.Reals.PID           # what each port and parameter means
+```
+
+The importer has no verb yet: it is the library API `oce_author::import_cxf` and
+`oce_author::import_graph_v0`, and an `oce import` verb is planned (#514).
+
+Vocabulary v1 is the reference text behind `oce catalog`: `oce-vocab`
+(`crates/leverage/oce-vocab`, [README](crates/leverage/oce-vocab/README.md)) carries, for each of
+the 133 authorable classes, a description of every connector and parameter with the unit and quantity the CDL source declares,
+generated from modelica-json's CXF-Core output (vendored under `third_party/` and regenerated and
+compared byte for byte by a test), plus hand-written notes an agent needs and the catalog cannot
+say: which input is the minuend, which classes break an algebraic loop, the library's
+`delayOnInit` convention. `class_vocab()` joins it with the catalog, and `oce catalog CLASS`
+prints the result as text or JSON: for every parameter and port its meaning and declared unit,
+for every parameter its range (rendered from the catalog's own rules, such as `Ti >= 1e-13` and
+`uLow <= uHigh`, never stored), then the notes and the upstream links. `oce vocab` lists the unit
+scale factors (`min`, `h` and `d`, exact multiples of `s`), and the text form reads them:
+`delayTime = 1 h` is `3600.0` s, exactly, `fmt` keeps `1 h`, and a suffix that is not the
+parameter's declared unit is refused (`unit-suffix-mismatch`).
+
+Next is M3 (the verification product), in progress in parallel with M2 since v0.4.0: the facade's
+slot-indexed execute entry is in, and so is the first leverage crate built on it, `oce-replay`,
+which drives the engine frame by frame from recorded or scripted inputs (columnar arrays, a bounded
+CSV reader, step lists) under an explicit missing-sample policy and records a columnar, bit-exact
+trace. M3's canonical content id is in as well: `Engine::content_id` names a loaded sequence by the
+SHA-256 of a canonical encoding of its flat graph, the same whatever its authored order, JSON
+spelling or instance namespace, and the blob header carries it.
+
+M3's vector format and its replayer are in as well: `oce-verify` (`crates/leverage/oce-verify`,
+[README](crates/leverage/oce-verify/README.md)) reads a vector set, the strict-JSON file of
+scenarios a sequence is checked against (`oce/vectors/v1`: one clock, constant and step inputs,
+expectations over windows of ticks or a diagnostic at one tick). It refuses everything the format
+does not define with a typed code, never ignoring a key, decides what a tick is by multiplication
+so that `{ step_s: 0.1, horizon_s: 4.3 }` is a clock, and writes a canonical form with a `spec_id`
+over it; its JSON Schema is derived from the reader and pinned. `run_vectors` binds a set to a CXF
+subject (every name by one rule, every value typed by the port it lands on), replays each scenario
+on a fresh engine through `oce-replay`, compares exactly, a Real by its bits, and issues a receipt
+(`oce/receipt/v1`) whose `receipt_id` is the same for every run of the same inputs. The two in-repo
+library rules pass and their receipts are goldens. Mutant mode scores how well a set's vectors
+catch deliberate defects: a set lists mutants, deliberately broken copies of the subject; each is
+validated at bind and, when the subject passes, run until a scenario fails on it. The receipt
+records the catch score as two integers, `caught` of `total`. AHU-0016 ships three hand-written
+mutants: two caught, and one deliberate survivor that shows a real gap in its vectors. Every run
+is held to four work budgets, checked at bind before any load but the subject's first: frames,
+compared instants, bytes loaded, and frames weighted by the bytes of the document that runs them
+([work-budget note](docs/design/vector-work-budget.md)). The worst a set can ask for is then about
+a minute in `release`, not hours. `oce verify <VECTORS> --subject <FILE>` runs it all from the
+command line: the receipt on stdout, exit 0 when every scenario passed, 1 when one failed, 2 when
+no verdict could be reached. Mutant paths are resolved and kept inside the vector file's
+directory. The in-repo replay gate runs that binary over both library rules on every PR, against
+their golden receipts.
+
+Open follow-ups from M2 include the benchmark data the agent-usable row needs (#457) and checking a
+sequence parameter's unit suffix against the block parameter it feeds (#590); `oce import` (#514)
+and `oce check` (#574) are on M3.
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 Work is planned as GitHub milestones and cut into issues. Each milestone has a tracking issue that
 lists the order, the hard dependencies and the gate that closes it. The engine milestones, in order:
@@ -214,19 +322,25 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 | --- | --- | --- |
 | **M1a** Portable core: cleanup | Pure `Engine`, dead crates and ledgers removed, two CI lanes, native determinism and strict-bit matrices | Released as v0.3.0 |
 | **M1b** Portable core: `no_std` | Core four build `no_std + alloc`; math through `libm`; hash-free core; the **OCEB** compiled-schedule blob (encoder in `oce-api`, decoder in `oce-graph`, byte-stable across architectures); a `no_std` execution entry that never links `oce-cxf` or `oce-api`; a bare-metal gate cell with a size budget over `thumbv7em`, `riscv32imac` and `wasm32`; QEMU execution nightly | Released as v0.4.0 |
-| **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | Next, in parallel with M3 |
-| **M3** Verification product | Canonical content id, vector format v2, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode | Next, in parallel with M2 |
+| **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | Released as v0.5.0: `oce-author`'s model, builder, wire form and pinned schema, two-stage validator, emitter, text form and importer; the `oce` CLI (`emit`, `validate`, `fmt`, `catalog`, `vocab`); vocabulary v1 (`oce-vocab`), served through `oce catalog` and read by the text form for time-unit suffixes. The agent-usable gate row moves to the milestone that lands the benchmark harness (owner decision, 2026-11-09) |
+| **M3** Verification product | Canonical content id, the vector format, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode, on the `oce-replay` historical replay crate | In progress: `oce-replay`, the canonical content id (`Engine::content_id`, `oce:canon1:` over the loaded graph), output types in slot order before the first frame (`FrameSlots::output_types()`), the vector format (`oce-verify`: `oce/vectors/v1` with a strict bounded reader, a canonical form with a `spec_id`, and a pinned JSON Schema), the replayer with its receipts (`run_vectors`, `oce/receipt/v1`), mutant mode with its catch score, the four work budgets on a run, and the `oce verify` verb with the in-repo replay gate are in, shipped in v0.5.0; the tolerance mode next |
 | **M4** WASM | `oce-wasm` over `oce-api`, a TypeScript package, a browser demo that replays vectors without a server, a tracked `.wasm` size budget | Planned, in parallel with M5 |
 | **M5** Python | `oce-py` wheels (PyO3, abi3) over the same surface; replay and receipts from a notebook | Planned, in parallel with M4 |
 | **M6** Reference host | `oce-host`: cadence, staleness limits, the non-finite policy, degraded mode and safe-state outputs as tested code; BOPTEST client and a Docker runtime | Planned, in parallel with M7 |
-| **M7** Composite lowering | Composites first-class on import, with canonical lowering order and a content id equal to the flattened form, so the library ships reusable routines | Planned, in parallel with M6 |
+| **M7** Composite lowering | Composites first-class on import, with canonical lowering order and leaf names chosen so a composite has the canonical content id of its flattened form (the id already ignores order), so the library ships reusable routines | Planned, in parallel with M6 |
 | **M8** Semantics | `SemanticPoint` records (Brick, 223P, QUDT, Haystack) carried through import and export without the tick ever reading them; `oce-bind` matches a building graph to a sequence | Planned |
 | **M9** BACnet device image | One `no_std` image that is a BACnet device: compiled sequence inside, boundary points as objects, MS/TP or B/IP outside, over rusty-bacnet | Planned |
 
 The three one-page design passes M3 waits on are written: the
-[historical replay API](docs/design/replay.md), the
-[CDL §12 commissioning verifier](docs/design/commissioning.md) and
+[historical replay API](docs/design/replay.md) (built as `crates/leverage/oce-replay`), the
+[commissioning verifier](docs/design/commissioning.md) (it follows OBC §12, Verification; the
+standard's table of contents lists no verification clause) and
 [`oce-diff`](docs/design/diff.md), beside the [M2 authoring layer](docs/design/authoring-layer.md).
+M2's engine prerequisite is in: `oce_api::class_ports` names every port of a configured block, and
+`oce_api::class_metadata` gives each class a description and each parameter a settable flag
+(issue #440; [port naming contract](docs/cdl-coverage.md#port-names-are-an-engine-contract)), and
+`oce_api::enumerations` lists every CDL and G36 enumeration and G36 Integer constant package with
+its members (issue #468; [enumerations](docs/cdl-coverage.md#enumerations-and-constant-packages)).
 Design notes for thinly specified work land in
 [`docs/design/`](docs/design/compiled-schedule-blob.md) before code; the OCEB blob format is the
 first. Sequences, routines and their test vectors live in the separate `open-control-library`;
@@ -252,10 +366,12 @@ anything to a physical output.
 
 ## Architecture
 
-CDL §7.17 states that point lists, trends, display units, tags, and Brick / Haystack / ASHRAE 223P
-semantics do not affect the computation of a control signal. That one rule is the seam the whole
-system is built around: an execution core that sees only blocks, typed connections, and values, and
-a storage port for everything else, which the host reaches and the engine never does.
+OBC §7.17 (clause 5.13 in the table of contents of ANSI/ASHRAE Standard 231-2026) says of CDL's
+metadata that none of it affects the computation of a control signal. The engine applies that rule
+to point lists, trends, display units, tags, and Brick / Haystack / ASHRAE 223P semantics. That one
+rule is the seam the whole system is built around: an execution core that sees only blocks, typed
+connections, and values, and a storage port for everything else, which the host reaches and the
+engine never does.
 
 ![The execution core sees only blocks, connections, and values and has no database; everything non-computational sits behind the oce-store port, which only the host reaches](docs/diagrams/architecture-seam.svg)
 
@@ -282,7 +398,10 @@ That Linux result is re-established per-PR: the scoped strict-bit subset and its
 binaries run in four native Linux cells (x86_64 and aarch64, debug and release) with repeat
 captures and a cross-cell comparison, and no source file is bound to a stored receipt any more
 ([strict-bit evidence](docs/strict-bit-evidence.md)). It bounds the claim to the pinned
-corpus, rustc and libm; it is not mathematical correctness or arbitrary-input proof. The blob round
+corpus, rustc and libm; it is not mathematical correctness or arbitrary-input proof. The
+state-determinism subset runs per-PR on both architectures in debug and release codegen, with the
+debug-against-release comparison
+([CI and the gate](docs/ci-and-the-gate.md#dev-light-release-heavy)). The blob round
 trip in `oce-conformance` also runs per-PR, from one recorded x86_64 artifact replayed natively on
 arm64 and under wasmtime on `wasm32-wasip1`
 ([blob round trip](docs/compiled-schedule-blob.md#the-blob-round-trip)). The remainder
@@ -308,7 +427,7 @@ repository is the newer copy.
 
 | Page | For |
 | --- | --- |
-| [Architecture](docs/architecture.md) | Layers, the §7.17 seam, the crate map, platform and MSRV |
+| [Architecture](docs/architecture.md) | Layers, the metadata seam (OBC §7.17; ANSI/ASHRAE 231-2026 §5.13), the crate map, platform and MSRV |
 | [Execution profile](docs/execution-profile.md) | HostTick semantics and the `CDL.Logical.Pre` conformance boundary |
 | [Verification and evidence](docs/verification-evidence.md) | What has been proven, and what has not |
 | [CDL coverage](docs/cdl-coverage.md) | Which classes and sequences run, and what "supported" means |
@@ -318,7 +437,6 @@ repository is the newer copy.
 | [Product contract](docs/product-contract.md) | The versioned executable-CXF / HostTick boundary and its evidence map |
 | [State compatibility](docs/state-compatibility.md) | Snapshot and checkpoint bytes: what is portable, what is target-bound |
 | [Strict-bit evidence](docs/strict-bit-evidence.md) | What the per-PR native matrix proves about exact Real results |
-| [Facade migration](docs/facade-migration.md) | Pre-1.0 source breaks and how to move across them |
 | [Compiled-schedule blob](docs/compiled-schedule-blob.md) | What travels in an OCEB blob, what does not, versioning and the trust model |
 | [Design notes](docs/design/compiled-schedule-blob.md) | One-page decisions written before thinly specified work; currently the OCEB blob format |
 | [CI and the gate](docs/ci-and-the-gate.md) | What runs when, and what a green check proves |
@@ -331,8 +449,9 @@ repository is the newer copy.
 ## Contributing
 
 Changes land via pull requests into `development`. Install the shared git hooks once after cloning
-with `bash scripts/install-hooks.sh`, and run `bash .agents/gate.sh` before opening a PR — that
-script is the single source of truth for what CI runs.
+with `bash scripts/install-hooks.sh`, and run the `bash .agents/gate.sh` mode that matches your
+change before opening a PR ([CONTRIBUTING.md](CONTRIBUTING.md#before-you-open-a-pr) has the
+table) — that script is the single source of truth for what CI runs.
 
 Read **[CONTRIBUTING.md](CONTRIBUTING.md)** first, and **[TESTING.md](TESTING.md)** before writing a
 test. Notable changes are in **[CHANGELOG.md](CHANGELOG.md)**. Coding agents start from
@@ -341,8 +460,9 @@ test. Notable changes are in **[CHANGELOG.md](CHANGELOG.md)**. Coding agents sta
 One thing worth knowing up front: the per-PR gate runs the `oce-api`, `oce-blocks`, and `oce-expr`
 state-determinism subset plus the scoped `oce-conformance` strict-bit subset. Changes outside
 those and the named input-hygiene audits can show every check green without running their own
-tests. The gate also has two lanes under the one `CI OK`: a documentation-only change compiles
-nothing (`README.md` is the exception, because a test reads its Quickstart), a change under
+tests. The gate also has three lanes under the one `CI OK`: a documentation-only change compiles
+nothing, a change to this `README.md` runs the checks that read it (a test byte-pins the Quickstart
+above to the example that compiles, and the gate executes that example), a change under
 `crates/leverage/` runs the lighter leverage lane, and anything else runs the full determinism
 lane. [CI and the gate](docs/ci-and-the-gate.md) explains the split.
 
@@ -359,7 +479,7 @@ at your option. Unless you explicitly state otherwise, any contribution intentio
 inclusion in the work by you shall be dual-licensed as above, without any additional terms or
 conditions.
 
-`third_party/` vendors upstream Modelica Buildings CDL sources and modelica-json CXF translations
-verbatim, under their own license — see
+`third_party/` vendors upstream Modelica Buildings CDL sources, modelica-json CXF translations and
+its CXF-Core document verbatim, under their own license — see
 [`third_party/modelica-buildings-cdl/README.md`](third_party/modelica-buildings-cdl/README.md). That
 tree sits outside every crate root, so `cargo package` never ships it.

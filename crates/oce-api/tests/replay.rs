@@ -1,6 +1,6 @@
 //! Public-only host composition of accepted-frame replay records. No implementation crate access.
 
-mod replay_oracle;
+use crate::replay_oracle; // Shared helper, declared once in the binary root.
 
 use allocation_counter::measure;
 use oce_api::{
@@ -45,7 +45,7 @@ fn accepted_inputs_survive_execution_reload_and_caller_buffer_reuse() {
 #[test]
 fn canonical_receipt_matches_independent_bytes_and_repeats_without_reexecution() {
     let expected = replay_oracle::add();
-    assert_eq!(expected.len(), 389, "hand-counted wire size");
+    assert_eq!(expected.len(), 390, "hand-counted wire size");
     for _ in 0..3 {
         let mut engine = Engine::new();
         engine.load_cxf(ADD).unwrap();
@@ -98,7 +98,7 @@ fn host_stream_continues_from_separate_snapshot_with_equal_times_and_exact_end_s
     playback
         .restore_state(&EngineStateSnapshot::from_bytes(&start_bytes).unwrap())
         .unwrap();
-    let descriptor = CompatibilityDescriptor::current(None).unwrap();
+    let descriptor = CompatibilityDescriptor::current(None);
     let mut peak = None;
     let mut first = None;
     let count = 16_384;
@@ -211,7 +211,7 @@ fn warning_records_match_hand_bytes_and_replay_without_severity_or_order_policy(
             .unwrap();
         let record = ReplayRecord::from_bytes(&expected).unwrap();
         record
-            .check_compatible(&CompatibilityDescriptor::current(None).unwrap())
+            .check_compatible(&CompatibilityDescriptor::current(None))
             .unwrap();
         let entries: Vec<_> = record
             .inputs()
@@ -247,7 +247,7 @@ fn stateful_inputs_replay_from_a_separate_start_sidecar_to_exact_end_bytes() {
     playback
         .restore_state(&EngineStateSnapshot::from_bytes(sidecar.as_bytes()).unwrap())
         .unwrap();
-    let descriptor = CompatibilityDescriptor::current(None).unwrap();
+    let descriptor = CompatibilityDescriptor::current(None);
     for (time, input, output) in [(1.0, 3.0, 2.0), (1.0, 4.0, 2.0), (2.0, 5.0, 3.0)] {
         let plan = source.prepare_frame(time, &entries(input)).unwrap();
         let completed = source.execute_frame(plan).unwrap();
@@ -289,7 +289,7 @@ fn host_eligibility_refusals_preserve_fresh_and_advanced_state_and_restore_windo
             engine.execute_frame(frame).unwrap();
         }
         let before = engine.state_snapshot().unwrap();
-        let descriptor = CompatibilityDescriptor::current(None).unwrap();
+        let descriptor = CompatibilityDescriptor::current(None);
         for (text, target, cause) in [
             (
                 replay_oracle::DESCRIPTOR.replace("io-schema:1", "io-schema:2"),

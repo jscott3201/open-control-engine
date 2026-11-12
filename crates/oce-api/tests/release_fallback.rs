@@ -148,7 +148,7 @@ fn approved_same_candidate_continuation_differs_from_fresh_cold_requalification(
         |bytes| {
             let replay = ReplayRecord::from_bytes(bytes).unwrap();
             replay
-                .check_compatible(&CompatibilityDescriptor::current(None).unwrap())
+                .check_compatible(&CompatibilityDescriptor::current(None))
                 .unwrap();
             let plan = target.prepare_frame(replay.time(), &[]).unwrap();
             replay.verify(&target.execute_frame(plan).unwrap()).unwrap();

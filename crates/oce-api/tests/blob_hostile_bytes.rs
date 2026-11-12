@@ -2,10 +2,10 @@
 //! ordering and trailing-byte defect is a typed refusal, never a panic. Each mutation is
 //! re-checksummed so it reaches the check under test rather than the CRC.
 
-#[path = "support/blob_corpus.rs"]
-mod blob_corpus;
-#[path = "support/blob_image.rs"]
-mod blob_image;
+// Shared helpers, declared once for this binary in its root `facade.rs`:
+// `support/blob_corpus.rs` and `support/blob_image.rs`.
+use crate::blob_corpus;
+use crate::blob_image;
 
 use blob_corpus::{FIXTURES, golden};
 use blob_image::{Image, VType, Val, rechecksum, reseal};
@@ -130,7 +130,8 @@ fn header_defects_refuse_in_the_documented_order() {
         assert_eq!(malformed(&length), (16, MalformedFault::LengthMismatch));
     }
 
-    for version in [0u16, 2, u16::MAX] {
+    // Every format number but the one this build writes is refused.
+    for version in [0u16, 2, 3, u16::MAX] {
         let mut format = bytes.clone();
         format[4..6].copy_from_slice(&version.to_le_bytes());
         rechecksum(&mut format);
@@ -142,7 +143,7 @@ fn header_defects_refuse_in_the_documented_order() {
             })
         );
     }
-    // A wrong version is refused before the CRC is even read.
+    // A wrong format version is refused before the CRC is even read.
     let mut format = bytes.clone();
     format[4] = 2;
     assert!(matches!(

@@ -3,8 +3,8 @@
 //! sequences; bit-exact oracle comparison against reference traces is deferred to the E2 oracle.
 
 use oce_api::{Engine, LoadReport, PointDirection, Value};
-#[path = "support/frame_trace.rs"]
-mod frame_trace;
+// Shared helper, declared once for this binary in its root `facade.rs`.
+use crate::frame_trace;
 use frame_trace::FrameRun;
 
 const AHU_SAT_RESET: &str =

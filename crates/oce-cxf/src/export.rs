@@ -47,6 +47,10 @@
 //! `None`) and a non-finite Real `min`/`max`/`nominal` (which serialize as JSON `null`) are
 //! rejected, not emitted — see [`classify_attrs`].
 //!
+//! ## Translation-software label
+//! The root node names the software that wrote the document and its version, as OBC §8.4 allows
+//! ([`crate::translation_software`]). The importer reads neither property back.
+//!
 //! ## Determinism
 //! Emission order derives from the `ModelGraph` vectors alone: root, then blocks in `BlockId`
 //! order (each followed by its parameter nodes in `ParamTable` order), then one port node per
@@ -68,7 +72,8 @@
 //!
 //! Some rejections prevent silent loss rather than enforce the subset: a connector listed twice in
 //! `external_inputs`, a boundary alias whose source has no emitted port, a connection involving a
-//! reserved pass-through connector, and an input driven by more than one surviving output. These
+//! reserved pass-through connector, an input driven by more than one surviving output, and an
+//! `external_inputs` connector that a surviving output also drives. These
 //! checks are judged over the **survivor cone** for ordinary blocks, so a defect sitting entirely
 //! inside a deferred ordinary block never aborts an export whose document omits that block.
 //!
@@ -94,13 +99,18 @@ use crate::export_pass_through::{
 };
 use crate::{CxfError, bridge};
 
+#[path = "export_single_assignment.rs"]
+mod single_assignment;
+
 /// `@id` of the synthesized root composite. `ModelGraph` does not record the source document's
 /// root IRI, so every export uses this fixed, collision-improbable URN. A (contrived) block whose
 /// `instance_iri` equals it would surface as a loud `DuplicateId` on re-import, never silently.
 pub(crate) const EXPORT_ROOT_IRI: &str = "urn:open-control:cxf-export:root";
 
-/// The `S231` prefix binding emitted in `@context` (matches the import fixtures).
-pub(crate) const S231_CONTEXT_IRI: &str = "http://data.ashrae.org/S231P#";
+/// The `S231` prefix binding emitted in `@context`, and the only namespace the importer reads the
+/// vocabulary in: the one the OpenBuildingControl (OBC) specification lists (OBC §11.3) and
+/// modelica-json's `CXF-Core.jsonld` binds (GitHub #527).
+pub(crate) const S231_CONTEXT_IRI: &str = "http://data.ashrae.org/S231#";
 
 /// Base IRI for emitted instance `@type`s: `<base>Buildings.Controls.OBC.<class_path>` — the
 /// inverse of [`bridge::class_path_of`], using the same base the import fixtures use. The
@@ -176,17 +186,6 @@ const MSG_BOUNDARY_OUTPUT_IRI: &str =
 /// node on which an additional host-built connection can be represented.
 const MSG_CONNECTION_ENDPOINT_NOT_EMITTED: &str = "export subset: connection endpoint is a reserved lowering connector with no emitted \
      child-port node";
-/// A surviving input connector is driven by more than one **surviving** output. The emitted
-/// document carries every one of those `isConnectedTo` targets, so re-import counts an in-degree
-/// above 1 and fails the §7.10 single-assignment law — the export would be `Ok` with bytes that do
-/// not load at all, a strictly worse silent loss than [`MSG_DUPLICATE_EXTERNAL_INPUT`]'s one
-/// dropped entry. Deliberately not a reuse of [`MSG_STRUCTURE`]: a multiply-driven input is
-/// internally *consistent* (ids in range, owners correct, every edge output→input) and needs a
-/// different fix from the host than a cross-reference disagreement does. Hand-built graphs only —
-/// `resolve`'s single-assignment pre-check rejects in-degree ≥ 2 on the way in, so no imported
-/// graph can reach this.
-const MSG_MULTIPLY_DRIVEN: &str = "export subset: input connector is driven by more than one surviving output, and the emitted \
-     document fails re-import with a single-assignment error (§7.10)";
 /// Two emitted nodes would share one `@id` — duplicate block `instance_iri`s, a parameter named
 /// like a minted port (`out0`), a boundary IRI reusing another node's id. The document would
 /// fail re-import with `DuplicateId`; reject at plan time with the owner named instead.
@@ -660,22 +659,8 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         });
     }
 
-    // Phase 5b — §7.10 single assignment over the survivor cone. Every edge counted above is one
-    // the document emits, so an input carrying two of them re-imports with a `SingleAssignment`
-    // error and the bytes do not load at all. That is the outcome class this exporter refuses:
-    // `MSG_DUPLICATE_EXTERNAL_INPUT` already rejects bytes that come back one entry short, and
-    // these come back as nothing. Rejecting here also names the offender better than re-import
-    // can — the owning block's `instance_iri`, against re-import's positional `connector#N`.
-    //
-    // One diagnostic per offending connector, in connector-position order (a post-loop scan, not a
-    // reject at the push site), so a triple-driven input yields one entry rather than two and the
-    // ordering matches the Phase 3 orphan scan. No `Dir::In` test is needed: the `output_to_input`
-    // guard above is the only path that sets either flag, so both are false for every output.
-    for (i, c) in g.connectors.iter().enumerate() {
-        if multiply_driven[i] {
-            diags.push(reject(MSG_MULTIPLY_DRIVEN, &owner_subject(g, c, i)));
-        }
-    }
+    // Phase 5b — §7.10 single assignment over the survivor cone (`single_assignment`).
+    single_assignment::refuse_multiply_driven(g, &multiply_driven, &mut diags);
 
     // Boundary-input declarations are a sidecar over `external_inputs`: one declaration per IRI,
     // independent of fan-out targets. Validate the sidecar before the survivor scan, but defer attr
@@ -740,6 +725,11 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         // connector is lost on re-import.
         if !seen_external.insert(idx) {
             diags.push(reject(MSG_DUPLICATE_EXTERNAL_INPUT, &subject));
+            continue;
+        }
+        // A surviving wire into a frame-driven input is a second driver: the emitted document
+        // re-imports with the mixed-driver `SingleAssignment` refusal (issue #472).
+        if single_assignment::refuse_driven_external(driven[idx], &subject, &mut diags) {
             continue;
         }
         if c.dir != Dir::In {
@@ -973,6 +963,7 @@ fn build(plan: Plan) -> CxfDocument {
             .collect(),
     );
     root.contains_block = refs(plan.blocks.iter().map(|b| b.iri.clone()).collect());
+    crate::translation_software::stamp(&mut root);
     graph.push(root);
 
     for b in plan.blocks {

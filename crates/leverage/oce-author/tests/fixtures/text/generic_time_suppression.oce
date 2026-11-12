@@ -1,0 +1,66 @@
+sequence generic_time_suppression
+derived_from none
+param chaRat : Real = 540.0
+param maxTim : Real = 1800.0
+param samplePeriod : Real = 120.0
+param dTHys : Real = 0.25
+in TSet : Real @unit K @quantity ThermodynamicTemperature
+in TZon : Real @unit K @quantity ThermodynamicTemperature
+out yAftSup : Boolean
+block supTim = CDL.Reals.Min
+block samSet = CDL.Discrete.Sampler(samplePeriod = samplePeriod)
+block uniDel = CDL.Discrete.UnitDelay(samplePeriod = samplePeriod, y_start = 0.0)
+block abs1 = CDL.Reals.Abs
+block triSam = CDL.Discrete.TriggeredSampler(y_start = 0.0)
+block edg = CDL.Logical.Edge
+block lat = CDL.Logical.Latch
+block lat1 = CDL.Logical.Latch
+block tim = CDL.Logical.Timer(t = 0.0)
+block greThr = CDL.Reals.GreaterThreshold(t = dTHys, h = 0.125)
+block gai = CDL.Reals.MultiplyByParameter(k = chaRat)
+block sub1 = CDL.Reals.Subtract
+block conZer = CDL.Reals.Sources.Constant(k = 0.0)
+block maxSupTim = CDL.Reals.Sources.Constant(k = maxTim)
+block con5 = CDL.Logical.Sources.Constant(k = true)
+block swi = CDL.Reals.Switch
+block pre1 = CDL.Logical.Pre(pre_u_start = false)
+block pasSupTim = CDL.Logical.Switch
+block pasSup = CDL.Reals.Greater(h = 0.0)
+block temDif = CDL.Reals.Subtract
+block triSam1 = CDL.Discrete.TriggeredSampler(y_start = 0.0)
+block abs2 = CDL.Reals.Abs
+block truDel = CDL.Logical.TrueDelay(delayTime = samplePeriod, delayOnInit = true)
+block con1 = CDL.Logical.Sources.Constant(k = true)
+TSet -> samSet.u
+TSet -> triSam.u
+TZon -> triSam1.u
+supTim.y -> pasSup.u2
+samSet.y -> uniDel.u
+samSet.y -> sub1.u1
+uniDel.y -> sub1.u2
+abs1.y -> greThr.u
+triSam.y -> temDif.u1
+edg.y -> lat1.clr
+edg.y -> triSam1.trigger
+edg.y -> triSam.trigger
+lat.y -> tim.u
+lat.y -> edg.u
+lat.y -> pasSupTim.u2
+lat1.y -> pasSupTim.u1
+tim.y -> pasSup.u1
+greThr.y -> lat.u
+gai.y -> supTim.u1
+sub1.y -> swi.u1
+conZer.y -> swi.u3
+maxSupTim.y -> supTim.u2
+con5.y -> pasSupTim.u3
+swi.y -> abs1.u
+pre1.y -> lat.clr
+pasSupTim.y -> yAftSup
+pasSup.y -> lat1.u
+pasSup.y -> pre1.u
+temDif.y -> abs2.u
+triSam1.y -> temDif.u2
+abs2.y -> gai.u
+truDel.y -> swi.u2
+con1.y -> truDel.u

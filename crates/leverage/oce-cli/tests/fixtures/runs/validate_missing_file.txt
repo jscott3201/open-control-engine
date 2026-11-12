@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "validate",
+  "errors": [
+    {
+      "code": "not-found",
+      "detail": "no such file",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "tests/fixtures/inputs/does_not_exist.oce",
+  "ok": false,
+  "schema": "oce-report/1",
+  "stages": [],
+  "tool": "oce"
+}
+--- stderr

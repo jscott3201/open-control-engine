@@ -1,0 +1,78 @@
+exit: 1
+--- stdout
+{
+  "class": {
+    "class_path": "CDL.Reals.Limiter",
+    "description": "Limit the range of a signal",
+    "inputs": null,
+    "links": {
+      "latest_help": "https://simulationresearch.lbl.gov/modelica/releases/latest/help/Buildings_Controls_OBC_CDL_Reals.html#Buildings.Controls.OBC.CDL.Reals.Limiter",
+      "pinned_source": "https://github.com/lbl-srg/modelica-buildings/blob/a131864e4c4df22ebcd52bb8da439de0087ac365/Buildings/Controls/OBC/CDL/Reals/Limiter.mo"
+    },
+    "notes": [],
+    "outputs": null,
+    "parameters": [
+      {
+        "default": {
+          "kind": "required",
+          "value": null
+        },
+        "description": "Lower limit of input signal",
+        "enumeration": null,
+        "name": "uMin",
+        "quantity": "",
+        "range": [
+          "uMin <= uMax",
+          "uMin == uMax warns"
+        ],
+        "settable": true,
+        "type": "Real",
+        "unit": ""
+      },
+      {
+        "default": {
+          "kind": "required",
+          "value": null
+        },
+        "description": "Upper limit of input signal",
+        "enumeration": null,
+        "name": "uMax",
+        "quantity": "",
+        "range": [
+          "uMin <= uMax",
+          "uMin == uMax warns"
+        ],
+        "settable": true,
+        "type": "Real",
+        "unit": ""
+      }
+    ],
+    "reserved": false
+  },
+  "command": "catalog",
+  "errors": [],
+  "findings": [
+    {
+      "code": "missing-required-parameter",
+      "detail": "block `CDL.Reals.Limiter` is missing required parameter `uMax`",
+      "origin": "engine",
+      "severity": "error",
+      "span": null,
+      "subject": "CDL.Reals.Limiter"
+    },
+    {
+      "code": "missing-required-parameter",
+      "detail": "block `CDL.Reals.Limiter` is missing required parameter `uMin`",
+      "origin": "engine",
+      "severity": "error",
+      "span": null,
+      "subject": "CDL.Reals.Limiter"
+    }
+  ],
+  "input": null,
+  "ok": false,
+  "params": [],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

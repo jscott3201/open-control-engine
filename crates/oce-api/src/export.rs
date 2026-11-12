@@ -1,11 +1,10 @@
-//! CXF export and emitted-document identity.
+//! CXF export and its completeness check.
 
 use oce_cxf::ExportReport as CxfExportReport;
 
 use crate::diagnostics::{DiagnosticCapture, DiagnosticStage, ExportReceipt, OperationFailure};
 use crate::engine::Engine;
 use crate::error::OcError;
-use crate::stable_hash::StableHash;
 
 /// A successful CXF export and any diagnostics for content deferred from the emitted document.
 #[derive(Debug)]
@@ -17,89 +16,45 @@ pub struct ExportReport {
     pub warnings: Vec<oce_diag::Diagnostic>,
 }
 
-/// The reason a checked CXF content identity could not be minted.
-#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+/// A partial export: [`ExportReport::complete`] found deferral warnings, so the emitted document
+/// omits one or more blocks of the loaded model.
+#[derive(Debug, Clone, Copy, thiserror::Error, PartialEq, Eq)]
+#[error("the CXF export is partial: {warning_count} deferral warning(s)")]
 #[non_exhaustive]
-pub enum ContentIdError {
-    /// The emitted document is partial because one or more blocks were deferred.
-    #[error("cannot mint a complete CXF content identity: export has {warning_count} warning(s)")]
-    #[non_exhaustive]
-    Incomplete {
-        /// Number of deferral warnings carried by the export report.
-        warning_count: usize,
-    },
+pub struct ExportIncomplete {
+    /// Number of deferral warnings carried by the export report.
+    pub warning_count: usize,
 }
 
 impl ExportReport {
-    /// Return an unchecked non-cryptographic integrity tag over exactly [`Self::bytes`].
+    /// Check that the emitted document is the whole loaded model: no block was deferred.
     ///
-    /// This is not [`crate::LoadReport::model_id`]: that identity preserves the authored
-    /// top-composite `@id`, while export uses a synthetic root, and resumed parameter edits change
-    /// exported bytes without recomputing `model_id`.
-    ///
-    /// When [`Self::warnings`] is non-empty, the id identifies only the partial emitted survivor
-    /// document. Hosts minting version identities must call [`Self::content_id_complete`] instead.
-    #[deprecated(
-        since = "0.1.0",
-        note = "use ExportReport::content_id_complete to reject partial exports"
-    )]
-    #[must_use]
-    pub fn content_id(&self) -> String {
-        self.content_id_unchecked()
-    }
-
-    /// Return the exported-document integrity tag only when the export is complete.
-    ///
-    /// The tag is FNV-1a-128 over exactly [`Self::bytes`], formatted as
-    /// `cxf:fnv1a128:<32 lowercase hex characters>`. This documents how the returned tag is
-    /// computed so hosts can verify it independently; call this method to obtain an identity so
-    /// partial exports are refused. The tag is not a security boundary. Hosts requiring a
-    /// cryptographic digest must hash the same bytes themselves after this completeness check.
-    ///
-    /// The FNV computation is reproducible independently:
-    ///
-    /// ```
-    /// let bytes = b"abc";
-    /// let mut hash = 0x6c62_272e_07bb_0142_62b8_2175_6295_c58d_u128;
-    /// for byte in bytes {
-    ///     hash ^= u128::from(*byte);
-    ///     hash = hash.wrapping_mul(0x0000_0000_0100_0000_0000_0000_0000_013b);
-    /// }
-    /// assert_eq!(hash, 0xa68d_622c_ec8b_5822_836d_bc79_77af_7f3b);
-    /// ```
+    /// This is a completeness check only; the export carries no identity. The canonical content
+    /// id of the loaded model comes from [`Engine::content_id`], which is defined whether or not
+    /// the export is complete. A host that wants "the id of a completely exportable model" calls
+    /// both. The check reads [`Self::warnings`] as it is now: the report is plain host-owned data,
+    /// so a host that edits it is answered about the edited report.
     ///
     /// # Errors
-    ///
-    /// Returns [`ContentIdError::Incomplete`] with the warning count when any blocks were deferred
-    /// from the emitted survivor document. It never panics.
-    pub fn content_id_complete(&self) -> Result<String, ContentIdError> {
+    /// [`ExportIncomplete`] with the warning count when any block was deferred. Never panics.
+    pub fn complete(&self) -> Result<(), ExportIncomplete> {
         if self.warnings.is_empty() {
-            Ok(self.content_id_unchecked())
+            Ok(())
         } else {
-            Err(ContentIdError::Incomplete {
+            Err(ExportIncomplete {
                 warning_count: self.warnings.len(),
             })
         }
-    }
-
-    fn content_id_unchecked(&self) -> String {
-        format!("cxf:fnv1a128:{:032x}", self.content_hash())
-    }
-
-    /// The FNV-1a-128 behind the content id, only when the export is complete.
-    pub(crate) fn complete_content_hash(&self) -> Option<u128> {
-        self.warnings.is_empty().then(|| self.content_hash())
-    }
-
-    fn content_hash(&self) -> u128 {
-        let mut hash = StableHash::new();
-        hash.write_bytes(&self.bytes);
-        hash.finish()
     }
 }
 
 impl Engine {
     /// Export the current resolved model as deterministic CXF bytes.
+    ///
+    /// The document's root node carries the translation-software label, `S231:translationSoftware`
+    /// (`open-control-engine`) and `S231:translationSoftwareVersion` (this engine's version), so
+    /// the bytes of one model differ between engine versions. The canonical content id
+    /// ([`Engine::content_id`]) does not: no importer reads the label back.
     ///
     /// # Errors
     /// Returns [`OcError::Cxf`] when the model cannot be exported, including an unloaded engine.
@@ -110,8 +65,8 @@ impl Engine {
 
     /// Export through the existing pipeline with immutable, machine-ordered producer evidence.
     ///
-    /// Partial exports remain successful with warnings. Inspect the legacy report's completeness
-    /// check before using its emitted-document content identity. No engine or store mutation occurs.
+    /// Partial exports remain successful with warnings; [`ExportReport::complete`] tells them
+    /// apart. No engine or store mutation occurs.
     ///
     /// # Errors
     /// Returns [`OperationFailure`] with the export stage and original error chain, even when the

@@ -1,7 +1,8 @@
 # Vendored: Modelica Buildings Library — CDL block sources
 
 Third-party source, copied verbatim. **Nothing here is open-control code, and nothing here is
-compiled.** These files are read as *data* by three input-hygiene audits (see "Who reads it").
+compiled.** These files are read as *data* by three input-hygiene audits and by the block
+vocabulary's generator test (see "Who reads it").
 
 ## License
 
@@ -25,11 +26,12 @@ so `cargo package` does not see it.
 | Upstream | https://github.com/lbl-srg/modelica-buildings |
 | Commit | `a131864e4c4df22ebcd52bb8da439de0087ac365` |
 | Files | 176 `.mo` class sources + `Buildings/legal.html` |
-| Vendored tree size | About 3.46 MB (`Buildings/` 1.34 MB; generated `cxf/` 2.11 MB) |
+| Vendored tree size | About 4.14 MB (`Buildings/` 1.34 MB; generated `cxf/` 2.11 MB; generated `cxf-core/` 0.68 MB) |
 
 The always-on local integrity check is the `structural oracle (input hygiene)` step of
 `bash .agents/gate.sh`. Its hash manifest checks every expected path and byte in both directions,
-including the repo-authored README and generated CXF documents.
+including the repo-authored README, the generated CXF documents and the generated CXF-Core
+document.
 
 For a separate upstream-fidelity spot-check, derive the `Buildings/**` comparison set from the
 Git index. Its count must agree with the hash manifest's `upstream-buildings` bucket:
@@ -100,6 +102,64 @@ diff -r "$repo_root/third_party/modelica-buildings-cdl/cxf" /tmp/regenerated-cxf
 The 44 checked-in documents were byte-compared with a fresh regeneration at exactly those pins
 on 2026-07-28.
 
+## Generated CXF-Core document
+
+`cxf-core/CXF-Core.jsonld` is modelica-json's CXF-Core output for the whole Buildings `CDL`
+package: one JSON-LD document with a node for every elementary block class and every connector
+and parameter it declares, each carrying the declaration's description string and, where the
+source declares them, its unit and quantity as QUDT identifiers. It is the source of the block
+vocabulary's generated text (`crates/leverage/oce-vocab`, design note
+`docs/design/vocabulary.md`). Like `cxf/`, it is a derived copy under the same upstream license,
+test data that no `oce-*` crate compiles or packages.
+
+| | |
+| --- | --- |
+| Generator | `modelica-json` commit `85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb` |
+| Source | The Buildings commit recorded under "What was copied", `Buildings/Controls/OBC/CDL` |
+| Generated | 2026-11-09, Node v26.13.0, npm 11.20.0, macOS arm64 |
+| Size | 682,615 bytes |
+| SHA-256 | `bb2bf4a7f868af884df4b2f05258a754625e10920716739527b46631a4383314` |
+
+The vendored cone cannot regenerate it: modelica-json reads the whole `CDL` package, and the cone
+omits its `package.mo` files, `Interfaces` and `Types`. Generation therefore runs against an
+upstream clone at the pin. It needs Node only, no Java:
+
+```bash
+repo_root=$(git rev-parse --show-toplevel)
+[ -d /tmp/modelica-buildings/.git ] ||
+  git clone https://github.com/lbl-srg/modelica-buildings /tmp/modelica-buildings
+git -C /tmp/modelica-buildings checkout a131864e4c4df22ebcd52bb8da439de0087ac365
+[ -d /tmp/modelica-json/.git ] ||
+  git clone https://github.com/lbl-srg/modelica-json /tmp/modelica-json
+git -C /tmp/modelica-json checkout 85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb
+cd /tmp/modelica-json
+npm install
+rm -rf /tmp/regenerated-cxf-core
+MODELICAPATH=/tmp/modelica-buildings node app.js \
+  -f /tmp/modelica-buildings/Buildings/Controls/OBC/CDL \
+  -o cxf --elementary --cxfCore -p -d /tmp/regenerated-cxf-core -l error
+cmp /tmp/regenerated-cxf-core/cxf/CXF-Core.jsonld \
+  "$repo_root/third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld"
+shasum -a 256 /tmp/regenerated-cxf-core/cxf/CXF-Core.jsonld
+```
+
+`-p` (pretty print) is part of the command: without it the output is 585,029 bytes of the same
+graph. The checked-in file was byte-compared with two fresh regenerations at exactly those pins
+on 2026-11-09, and its digest equals the one the design note recorded from an earlier run. That
+is one host. **Byte-identity across operating systems and Node versions is unverified**, and the
+upstream repository ships no lockfile, so `npm install` resolves its dependencies at install
+time. A regeneration that differs is not, by itself, evidence of tampering; a pin advance
+re-vendors the file and re-blesses the hash manifest and `oce-vocab`'s `data/generated.json`
+rather than assuming reproducibility. The copy modelica-json ships at its own repository root was
+generated from a different Buildings commit and is not this file.
+
+Known limits of the document, each handled by the reader rather than patched here: class nodes
+carry no one-line description; `discrete` connectors and enumeration parameters lose their
+`@type` and drop out of the class's relation lists; `protected` parameters are absent; a unit
+outside the translator's table is written as the original string in the S231 namespace (`1/s`);
+`PressureDifference` and `Pressure` both become the quantity kind `Pressure`; and the vector
+outputs of `MatrixMax` and `MatrixMin` carry no dimension count.
+
 ## Why the files are unmodified
 
 They are deliberately **not** stripped down to interface declarations, even though the consuming
@@ -116,7 +176,7 @@ broken the upstream-fidelity comparison above.
 
 ## Who reads it
 
-Three input-hygiene audits, and nothing else:
+Three input-hygiene audits and one generator test, and nothing else:
 
 - `crates/oce-cxf/tests/fixture_port_order.rs` derives each class's port declaration
   order from these sources at test time and checks that every fixture lists its ports in
@@ -128,6 +188,9 @@ Three input-hygiene audits, and nothing else:
   `crates/oce-cxf/tests/fixture_structural_oracle.rs` hashes every byte of every
   manifest-listed file and rejects additions, deletions, and non-whitelisted file types. Unlike
   the declaration-only scanner, it covers the complete vendored bytes.
+- `crates/leverage/oce-vocab/tests/vocabulary/` reads `cxf-core/CXF-Core.jsonld` to regenerate
+  the block vocabulary's `data/generated.json` and compare it byte for byte, and reads the `.mo`
+  sources as text to check that every generated unit and quantity is declared there.
 
 See `TESTING.md` for what those gates do and do not prove.
 
@@ -136,8 +199,10 @@ See `TESTING.md` for what those gates do and do not prove.
 Pins advance only when a needed class is absent at the current pin, the upstream subtree SHA
 diverges, or a CDL specification revision is one we intend to conform to. Advances are
 event-driven only, never on cadence. A pin-advance PR must land the whole advance in one PR:
-run `bash .agents/gate.sh full` and re-bless the hash manifest, its independently pinned tree-SHA
-constant, affected catalog fingerprints, and this README's commit row. The full gate is
+run `bash .agents/gate.sh full`, regenerate `cxf/` and `cxf-core/` at the new pins, and re-bless
+the hash manifest, its independently pinned tree-SHA constant, affected catalog fingerprints,
+`oce-vocab`'s `data/generated.json` (`OCE_BLESS=1 cargo nextest run -p oce-vocab`) and this
+README's commit and digest rows. The full gate is
 required because the G36 half of the pin guard is release-gate-only: a PR that edits the G36
 provenance commit field passes the light gate green.
 

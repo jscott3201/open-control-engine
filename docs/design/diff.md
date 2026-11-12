@@ -12,7 +12,7 @@ The owner's work plan names the M3 deliverable as "a structural diff of two auth
 documents, used in receipts and bundle cards", with `oce diff` in the CLI. Its consumers are M3
 receipts (plain data with machine-stable codes), library bundle cards (a "what changed from the
 base" section), agent explanations (a code, a subject and a detail an agent can quote, as the
-validator's findings give) and the registry's `extends` view.
+validator's findings give) and the registry's `derived_from` view.
 
 ## What `oce-diff` is, and is not
 
@@ -32,7 +32,7 @@ wire form) that returns data, plus pure renderers that turn the data into text.
 It is **not** an evaluator: it never grounds a reference, runs a block, schedules, or loads the
 authoring model into an engine. It never validates either, so an agent's broken draft can be diffed
 against the reference it is repairing (decision 10). It is not three-way: a diff against the
-`extends` base waits for M3. It contains no LLM and writes no prose beyond fixed templates;
+`derived_from` base waits for M3. It contains no LLM and writes no prose beyond fixed templates;
 narrative belongs to the agent or card layer above it. It lives in its own leverage crate,
 `crates/leverage/oce-diff` (decision 9), and is surfaced as `oce diff A B`.
 
@@ -95,16 +95,18 @@ Every connection change is reported **once, at its target**, because an input ha
 driver moved is `rewired`. Drivers are compared after mapping renames, so a renamed source alone
 does not rewire its targets.
 
-`reordered` is its own kind because order moves the content id but not the semantics: under the
-[ordering contract](../cxf-composite-subset.md#ordering-and-identity-contract) `@graph` and
-`containsBlock` order assign `BlockId`, and the emitter keeps authored order. It is computed over
+`reordered` is its own kind because it is not semantic: the canonical content id
+([content-id note](content-id.md)) ignores authored order, but under the [ordering
+contract](../cxf-composite-subset.md#ordering-and-identity-contract) `@graph` and `containsBlock`
+order still assign `BlockId`, and the emitter keeps authored order. (Before GitHub #470 order also
+moved the export content id; that order-bearing id is retired.) It is computed over
 name-matched elements only, at most one entry per list (`blocks`, `connections`, a block's
 assignments).
 
 **Parameters** (sequence-level `param`): `added`, `removed`, `changed`, `type-changed`, `reordered`.
 **Interface** (boundary inputs and outputs): `added`, `removed`, `type-changed`, `unit-changed`,
 `quantity-changed`, `display-unit-changed`, `reordered`. **Metadata**: `sequence-renamed`,
-`extends-changed`, `semantic-changed` (subject such as `TOut.brick`), `comment-changed` and
+`derived-from-changed`, `semantic-changed` (subject such as `TOut.brick`), `comment-changed` and
 `literal-respelled` (an Integer literal on a Real parameter, or a unit suffix, changed with the
 value unchanged). `unit` is interface because the emitter writes it as `S231:unit`; the other
 `SemanticPoint` fields are not emitted before M8 and are metadata (decision 14).
@@ -115,8 +117,8 @@ A sequence-level `param` change is reported in the **parameters** section, listi
 the `block.param` assignments that reference it (head side; base side for a removed parameter). It
 is **not** repeated as `reparameterized` graph entries, or every site retune would appear twice
 (decision 6). The summary carries `graph_equal` and `parameters_equal`; a site retune is
-`graph_equal && !parameters_equal`, which is the card's and the `extends` view's headline: "same
-structure, different tuning".
+`graph_equal && !parameters_equal`, which is the card's and the `derived_from` view's headline:
+"same structure, different tuning".
 
 The same semantic edit lands in different sections depending on authoring style: raising a
 threshold through `param phiHigh` is a parameters change, editing a literal `uHigh = 0.6` is a graph
@@ -131,11 +133,11 @@ comparison says only "different" (decision 15).
 ## Output
 
 **Data.** A serde `Diff`: a `schema` string (`oce-diff/1`), the `source` (`authoring` or `cxf`),
-the catalog content id the defaults came from, both sequence names and `extends` ids, a `summary`,
-closed-enum `notes`, and the four sections (decision 7). Each section is sorted by subject
-bytewise, then kind in enum order, then detail; nothing is in hash order. Reals are carried as the
-canonical printer's shortest round-trip spelling plus their bit pattern, so no float is parsed back
-from JSON (decision 13). `equal` is true only when every section is empty.
+the catalog content id the defaults came from, both sequence names and `derived_from` ids, a
+`summary`, closed-enum `notes`, and the four sections (decision 7). Each section is sorted by
+subject bytewise, then kind in enum order, then detail; nothing is in hash order. Reals are carried
+as the canonical printer's shortest round-trip spelling plus their bit pattern, so no float is
+parsed back from JSON (decision 13). `equal` is true only when every section is empty.
 
 **Text.** `render_text(&Diff)` is a pure function of the data: one line per entry, grouped by
 section under `#` headers, in the text form's own syntax, with `+` added, `-` removed, `>` renamed,
@@ -152,16 +154,20 @@ a parse refusal of either input, a CXF load refusal, I/O). Exit 1 never means a 
 
 ## Relation to content ids
 
-Today's export content id (PC-018: `cxf:fnv1a128:<32 hex>` over exactly the emitted bytes) "follows
-order-bearing authored `@graph`/`containsBlock` order and is not an order-independent model
-identity". Equal ids mean only **no byte change**, and unequal ids may still be a `reordered`-only
-diff. PC-021 keeps it apart from the authored model id, which a re-emit does not move.
+The canonical content id ([content-id note](content-id.md), GitHub #470) is `oce:canon1:` and the
+SHA-256 of a canonical encoding of the **loaded flat graph**: boundary I/O definitions, blocks by
+authored name with class, class signature hash and bound parameters sorted by name, and connections
+by port index. Authored order, JSON spelling and the instance namespace never enter it; authored
+names do (owner, 2026-11-09), so a rename moves it and this crate's rename pass explains the
+change. It replaces the order-bearing export tag (`cxf:fnv1a128:` over the emitted bytes), and
+PC-021 keeps it apart from the authored model id.
 
-Once M3's canonical id ships, **equal canonical ids are the empty-diff fast path** (decision 8):
-`diff` returns the empty result without matching; unequal ids still need the full diff. **M3 must
-decide whether authored names are inside the canonical id.** The plan's "sorted nodes, normalized
-IRIs" implies they are, so a pure rename changes the id, and a diff whose only entries are `exact`
-renames is the case M3 must explain. This note records that as a dependency, not a decision.
+**Equal canonical ids prove the two loaded graphs are equal** (decision 8, as narrowed by the
+content-id review). So the CXF adapter and the blob comparison may return graph-equal without
+matching, and an authoring diff whose two sides load to equal ids may skip its rename pass. They do
+**not** prove an empty authoring diff: a sequence-parameter rename, a literal against a reference
+with the same ground value, `derived_from`, comments, `SemanticPoint` fields and `reordered` entries
+are all outside the id. Unequal ids still need the full diff.
 
 ## Rust API sketch
 
@@ -180,7 +186,7 @@ pub struct Diff {
     pub schema: String,
     pub source: Source,        // Authoring | Cxf
     pub catalog: String,       // catalog content id
-    pub base: SequenceRef,     // { sequence, extends }
+    pub base: SequenceRef,     // { sequence, derived_from }
     pub head: SequenceRef,
     pub summary: Summary,      // equal, graph_equal, parameters_equal: Option<bool>, ...
     pub notes: Vec<Note>,      // NamesDisjoint | RenamePassSkipped | RenamePassOff | ...
@@ -232,7 +238,7 @@ The dehumidification override of a supply-air temperature reset, reduced to the 
 ```text
 # Dehumidification override, sheet revision A.
 sequence ahu_dehum_override
-extends none
+derived_from none
 
 param phiHigh : Real = 0.6
 param phiLow : Real = 0.55
@@ -254,8 +260,8 @@ and `param phiLow : Real = 0.65`.
   "schema": "oce-diff/1",
   "source": "authoring",
   "catalog": "catalog:1:fnv1a128:<32 hex>",
-  "base": { "sequence": "ahu_dehum_override", "extends": "none" },
-  "head": { "sequence": "ahu_dehum_override", "extends": "none" },
+  "base": { "sequence": "ahu_dehum_override", "derived_from": "none" },
+  "head": { "sequence": "ahu_dehum_override", "derived_from": "none" },
   "summary": { "equal": false, "graph_equal": true, "parameters_equal": false,
                "interface_equal": true, "metadata_equal": false,
                "blocks": { "by_name": 1, "renamed": 0, "base_only": 0, "head_only": 0 } },
@@ -301,7 +307,7 @@ Version 2 as a source diff of version 1 (unchanged lines once):
 -# Zone static-pressure reset request, version 1.
 +# Zone static-pressure reset request, version 2.
  sequence zone_pressure_request
- extends none
+ derived_from none
 
  in uDam : Real @unit 1
  in VDis_flow : Real @unit m3/s
@@ -401,7 +407,7 @@ doubles the delay.
 ```text
 # Chilled-water supply temperature reset, reference.
 sequence chw_plant_reset
-extends none
+derived_from none
 
 in uReq : Boolean
 in uPlaEna : Boolean
@@ -517,17 +523,18 @@ only. Why: a wholesale rename must not read as a rewrite.
 
 **3. Scope of the first version.** Two-way, authoring model to authoring model; CXF through a thin
 adapter over `Topology` keyed by IRI; blobs same-or-different by content id, class table and
-initial-state CRC; three-way against `extends` waits for M3. Rejected: a structural CXF or blob diff
-now (noisy: `BlockId` is loader order, boundary outputs are not in authored order); three-way from
-the start (needs `extends` resolution, a base content id and `oce fetch`). Why: authored names are
-the identity that survives a re-emit.
+initial-state CRC; three-way against `derived_from` waits for M3. Rejected: a structural CXF or blob
+diff now (noisy: `BlockId` is loader order, boundary outputs are not in authored order); three-way
+from the start (needs `derived_from` resolution, a base content id and `oce fetch`). Why: authored
+names are the identity that survives a re-emit.
 
 **4. Identity is the authored block name**, then a class change as removal plus addition, then the
 rename pass. Rejected: a content id as block identity (it identifies a document). Why: authors
 control names; the heuristic only presents leftovers.
 
 **5. A closed `#[non_exhaustive]` graph category enum**, interface and metadata in their own
-sections, `reordered` separate because order moves the content id but not semantics. Rejected: a
+sections, `reordered` separate because order is not semantic (and, since GitHub #470, does not move
+the canonical content id either). Rejected: a
 JSON-Patch-style path list. Why: cards and agents branch on a category.
 
 **6. Site parameters in their own section** with derived `affects`, and the `graph_equal` and
@@ -539,8 +546,12 @@ codes, a text renderer in the text form's syntax, a Markdown table, no LLM. Reje
 change lists like the prototype's "explain the fix" records. Why: prose is rendered from facts,
 never facts scraped from prose.
 
-**8. Equal canonical ids are the fast path once M3 ships**; today's content id says only "no byte
-change". Whether names are inside the canonical id is M3's decision, recorded as a dependency.
+**8. Equal canonical ids are a graph-level fast path**, narrowed by the content-id review (ruling
+11, 2026-11-09): equal ids prove equal loaded graphs, so the CXF and blob comparisons return
+graph-equal and the authoring diff skips its rename pass; they do not prove an empty authoring diff
+(sequence parameters, literal-against-reference, `derived_from`, comments, `SemanticPoint` fields
+and `reordered` are outside the id). M3 decided names are inside the id
+([content-id note](content-id.md), decision 2).
 
 **9. a sibling leverage crate, `crates/leverage/oce-diff`**, on `oce-author` and
 `oce-api`, `#![forbid(unsafe_code)]`, `serde` its only new dependency, linked by `oce-cli`.
@@ -588,10 +599,10 @@ the same way by every subcommand; the authoring note is aligned in the same PR a
   defines it; if M2 changes name rules or how `param` is lowered, identity and the parameters
   section change with it. Implementation starts after `oce-author` lands.
 - **M3 (canonical id, registry, `oce fetch`, three-way).** The canonical id gives the fast path and
-  must settle whether names are inside it. A three-way diff against the `extends` base needs
-  `extends` resolution in the registry, the base's canonical id (so "based on X" is checkable),
+  must settle whether names are inside it. A three-way diff against the `derived_from` base needs
+  `derived_from` resolution in the registry, the base's canonical id (so "based on X" is checkable),
   `oce fetch <id>@<content-id>`, and a rule for what a derived sequence may change. Until then the
-  `extends` view is two two-way diffs: base to derived, and base to its newer revision.
+  `derived_from` view is two two-way diffs: base to derived, and base to its newer revision.
 - **M8 (semantics).** Filled `SemanticPoint` records are diffed field by field as metadata; their
   shape is M8's.
 - **Library bundle cards and agent explanations.** A card's "changes from base" section is
@@ -626,7 +637,7 @@ the same way by every subcommand; the authoring note is aligned in the same PR a
 
 ## Out of scope
 
-- Three-way diff and merge against an `extends` base (M3 and later).
+- Three-way diff and merge against a `derived_from` base (M3 and later).
 - A structural diff of blobs, and any diff across levels (authoring against CXF).
 - Matching blocks by semantic equivalence (commutativity, algebraic rewrites); any evaluation.
 - Prose explanations, and any LLM call, inside the crate.

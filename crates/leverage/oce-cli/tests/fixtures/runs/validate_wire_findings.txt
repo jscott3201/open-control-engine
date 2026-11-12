@@ -1,0 +1,200 @@
+exit: 1
+--- stdout
+{
+  "command": "validate",
+  "errors": [],
+  "findings": [
+    {
+      "code": "invalid-provenance-id",
+      "detail": "`CXF:abc`: a provenance id starts with a lowercase format prefix (`[a-z][a-z0-9]*`) and a colon",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "derived_from"
+    },
+    {
+      "code": "parameter-kind-mismatch",
+      "detail": "sequence parameter `nStage` is declared Integer but its value is Real",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "nStage"
+    },
+    {
+      "code": "unknown-enum-type",
+      "detail": "sequence parameter `eneStd`: `OperationModes` (ASHRAE.G36.Types.OperationModes) is a constant package, never a parameter type; declare the parameter `Integer` and assign `OperationModes.<member>`",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "eneStd"
+    },
+    {
+      "code": "crossed-bounds",
+      "detail": "`TOut` declares `min` 30.0 above `max` -10; no value lies between them",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "TOut"
+    },
+    {
+      "code": "invalid-semantic-point",
+      "detail": "`unit` byte 3 is not printable ASCII without space or `#`",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "TOut"
+    },
+    {
+      "code": "invalid-bound",
+      "detail": "`ecoEna` is a Boolean boundary, which takes no `max`",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "ecoEna"
+    },
+    {
+      "code": "duplicate-name",
+      "detail": "block `sub` repeats the name of an earlier output; names are unique across parameters, inputs, outputs and blocks",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "sub"
+    },
+    {
+      "code": "duplicate-parameter",
+      "detail": "block `hys` assigns `uLow` more than once",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "hys.uLow"
+    },
+    {
+      "code": "unknown-parameter",
+      "detail": "`CDL.Reals.Hysteresis` has no parameter `uMid`; array parameters are assigned per element (`k_1`)",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "hys.uMid"
+    },
+    {
+      "code": "unknown-parameter-reference",
+      "detail": "`pre_y_start` references `dTHysX`, which is not a sequence parameter",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "hys.pre_y_start"
+    },
+    {
+      "code": "unknown-enum-literal",
+      "detail": "`SimpleController.PIX` is not a member of `SimpleController` (CDL.Types.SimpleController); write `SimpleController.<member>` with one of: P, PI, PD, PID",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "con.controllerType"
+    },
+    {
+      "code": "parameter-out-of-range",
+      "detail": "block `con`: parameter `k` on block `CDL.Reals.PID` must be >= 0.0000000000001; got -1",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "con.k"
+    },
+    {
+      "code": "class-not-found",
+      "detail": "block `end` names class `CDL.Reals.Nope`, which the catalog does not register",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "end"
+    },
+    {
+      "code": "invalid-name",
+      "detail": "block name `end`: the name is a Modelica reserved word",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "end"
+    },
+    {
+      "code": "class-not-authorable",
+      "detail": "block `pass` names `urn:oce:lowering#PassThrough.Real`, an engine-reserved lowering identity no author may use",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "pass"
+    },
+    {
+      "code": "parameter-not-settable",
+      "detail": "`urn:oce:lowering#PassThrough.Real` is an engine-reserved lowering identity; no author may assign its parameter `k`",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "pass.k"
+    },
+    {
+      "code": "missing-required-parameter",
+      "detail": "block `limit`: block `CDL.Reals.Limiter` is missing required parameter `uMax`",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "limit"
+    },
+    {
+      "code": "missing-required-parameter",
+      "detail": "block `limit`: block `CDL.Reals.Limiter` is missing required parameter `uMin`",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "limit"
+    },
+    {
+      "code": "malformed-connection",
+      "detail": "`hys.y.z -> ecoEna`: the source port `y.z` is malformed: byte 1 is not an ASCII letter, digit or `_` (dots are not allowed)",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "connection[4]"
+    },
+    {
+      "code": "single-assignment",
+      "detail": "`TOut -> sub.u1`: `sub.u1` is already driven by connection[0]; an input has exactly one driver (CDL single assignment)",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "connection[5]"
+    },
+    {
+      "code": "unknown-source",
+      "detail": "`ecoEna -> hys.u`: the source `ecoEna` is a boundary output, which cannot drive a connection",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "connection[6]"
+    },
+    {
+      "code": "unknown-target",
+      "detail": "`sub.y -> TOut`: the target `TOut` is a boundary input, which cannot be driven",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "connection[7]"
+    },
+    {
+      "code": "unknown-port",
+      "detail": "`TOut -> sub.u9`: block `sub` (`CDL.Reals.Subtract`) has no input port `u9`; its inputs are: u1, u2",
+      "origin": "author",
+      "severity": "error",
+      "span": null,
+      "subject": "connection[8]"
+    }
+  ],
+  "input": "../oce-author/tests/fixtures/wire/defects.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "stages": [
+    "author"
+  ],
+  "tool": "oce"
+}
+--- stderr

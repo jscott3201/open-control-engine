@@ -1,0 +1,32 @@
+{
+  "@context": {"S231": "http://data.ashrae.org/S231#"},
+  "@graph": [
+    {"@id": "urn:verify:twins#top", "@type": "S231:Block",
+     "S231:containsBlock": [{"@id": "urn:verify:twins#top.first"}, {"@id": "urn:verify:twins#top.second"},
+                            {"@id": "urn:verify:twins#top.not"}],
+     "S231:hasInput": [{"@id": "urn:verify:twins#top.b"}],
+     "S231:hasOutput": [{"@id": "urn:verify:twins#top.y"}]},
+    {"@id": "urn:verify:twins#top.first", "@type": "CDL.Utilities.Assert",
+     "S231:hasInput": {"@id": "urn:verify:twins#top.first.u"},
+     "S231:hasParameter": {"@id": "urn:verify:twins#top.first.message"}},
+    {"@id": "urn:verify:twins#top.first.message", "@type": "S231:Parameter",
+     "S231:isOfDataType": {"@id": "S231:String"}, "S231:value": "\"b is false\""},
+    {"@id": "urn:verify:twins#top.first.u", "@type": "S231:BooleanInput", "S231:isOfDataType": {"@id": "S231:Boolean"}},
+    {"@id": "urn:verify:twins#top.second", "@type": "CDL.Utilities.Assert",
+     "S231:hasInput": {"@id": "urn:verify:twins#top.second.u"},
+     "S231:hasParameter": {"@id": "urn:verify:twins#top.second.message"}},
+    {"@id": "urn:verify:twins#top.second.message", "@type": "S231:Parameter",
+     "S231:isOfDataType": {"@id": "S231:String"}, "S231:value": "\"b is false\""},
+    {"@id": "urn:verify:twins#top.second.u", "@type": "S231:BooleanInput", "S231:isOfDataType": {"@id": "S231:Boolean"}},
+    {"@id": "urn:verify:twins#top.not", "@type": "CDL.Logical.Not",
+     "S231:hasInput": {"@id": "urn:verify:twins#top.not.u"},
+     "S231:hasOutput": {"@id": "urn:verify:twins#top.not.y"}},
+    {"@id": "urn:verify:twins#top.not.u", "@type": "S231:BooleanInput", "S231:isOfDataType": {"@id": "S231:Boolean"}},
+    {"@id": "urn:verify:twins#top.not.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": {"@id": "S231:Boolean"},
+     "S231:isConnectedTo": {"@id": "urn:verify:twins#top.y"}},
+    {"@id": "urn:verify:twins#top.b", "@type": "S231:BooleanInput", "S231:isOfDataType": {"@id": "S231:Boolean"},
+     "S231:isConnectedTo": [{"@id": "urn:verify:twins#top.first.u"}, {"@id": "urn:verify:twins#top.second.u"},
+                            {"@id": "urn:verify:twins#top.not.u"}]},
+    {"@id": "urn:verify:twins#top.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": {"@id": "S231:Boolean"}}
+  ]
+}

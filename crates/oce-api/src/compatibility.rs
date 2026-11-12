@@ -3,19 +3,19 @@
 use std::fmt;
 use std::sync::OnceLock;
 
-use crate::{ContentIdError, ContractDomain, ExportReport};
+use crate::{ContentId, ContractDomain};
 
 /// Catalog metadata content tag, never an exported-document or execution identity.
 ///
 /// Obtained from [`CompatibilityDescriptor::catalog_content_id`]. The private field prevents
-/// substituting a string, authored model ID, or [`CompleteExportContentId`]. Its text is the
+/// substituting a string, authored model ID, or [`ContentId`]. Its text is the
 /// unchanged [`crate::catalog_content_id`] result: FNV-1a-128 over `oce:catalog:1\0` followed by
 /// every canonical catalog JSON byte (including the trailing LF). Non-cryptographic; not authority.
 ///
 /// ```compile_fail,E0308
-/// use oce_api::{CatalogContentId, CompleteExportContentId};
-/// fn confuse_export_with_catalog(export: CompleteExportContentId) -> CatalogContentId {
-///     export
+/// use oce_api::{CatalogContentId, ContentId};
+/// fn confuse_content_with_catalog(content: ContentId) -> CatalogContentId {
+///     content
 /// }
 /// ```
 ///
@@ -39,46 +39,10 @@ impl fmt::Display for CatalogContentId {
     }
 }
 
-/// Complete exported-document content tag captured through [`ExportReport::content_id_complete`].
-///
-/// FNV-1a-128 covers exactly the supplied report's bytes, with no domain prefix or length. The
-/// report is mutable host-owned data: completeness means its warning list was empty at capture,
-/// not authenticated producer provenance or revalidated CXF. The captured tag is independently
-/// owned and never changes with that report. It is not source, executable, state or deployment ID.
-/// No public string constructor or conversion from [`CatalogContentId`] exists.
-///
-/// ```compile_fail,E0308
-/// use oce_api::{CatalogContentId, CompleteExportContentId};
-/// fn confuse_catalog_with_export(catalog: CatalogContentId) -> CompleteExportContentId {
-///     catalog
-/// }
-/// ```
-///
-/// ```compile_fail,E0308
-/// let model_id = oce_api::DomainKey::new("authored-model");
-/// let _: oce_api::CompleteExportContentId = model_id;
-/// ```
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CompleteExportContentId(String);
-
-impl CompleteExportContentId {
-    /// Borrow the unchanged `cxf:fnv1a128:<32 lowercase hex digits>` tag. No allocation/panic.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl fmt::Display for CompleteExportContentId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
 /// Closed, owned revision-1 host compatibility facts, independent of any engine lifetime.
 ///
 /// [`Self::current`] captures only public catalog and contract revisions, fixed HostTick v1,
-/// `oce-api`'s Cargo package version, and optionally a checked complete export tag. No executable
+/// `oce-api`'s Cargo package version, and optionally a canonical content id. No executable
 /// fingerprint, input-definition digest, generation, clock, state-wire or host policy is included.
 /// IO revision describes the inventory contract, NOT a loaded model's executable input schema.
 ///
@@ -89,26 +53,30 @@ impl fmt::Display for CompleteExportContentId {
 /// Debug output is not canonical. There is no parser, extension map, or mutable field API.
 ///
 /// ```
-/// let receipt = oce_api::CompatibilityDescriptor::current(None)?;
+/// let receipt = oce_api::CompatibilityDescriptor::current(None);
 /// let bytes = receipt.to_string();
 /// assert!(bytes.starts_with("oce-compatibility:1\ncatalog-schema:1\n"));
-/// assert!(bytes.ends_with("oce-api-version:0.4.0\nexport:none\n"));
+/// assert!(bytes.ends_with("oce-api-version:0.5.0\ncontent:none\n"));
 /// receipt.check_compatible(&receipt)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 ///
 /// The fields are `oce-compatibility`, `catalog-schema`, `catalog`, `io-schema`, `value-schema`,
-/// `parameter-schema`, `execution-profile`, `execution-profile-schema`, `oce-api-version`, `export`.
-/// `execution-profile` is exactly `HostTick-v1`; its separate descriptor revision is currently 2.
+/// `parameter-schema`, `execution-profile`, `execution-profile-schema`, `oce-api-version`, `content`.
+/// `content` is `none` or the `oce:canon1:` id ([`ContentId`]).
+/// `execution-profile` is exactly `HostTick-v1`; its separate descriptor revision is 1.
+/// Every revision here stays 1 until 1.0.0 and a field changes in place, so `oce-api-version` is
+/// the line that tells a descriptor of one layout from another.
 /// `oce-api-version` includes the exact Cargo version, including any pre-release/build suffix.
 /// `oce-api` declares no cargo features, so there is no feature selection to distinguish.
 /// Package version is NOT a source/dependency-lock/compiler/target/codegen/binary identity. Equal
 /// facts, especially on unpublished same-version builds, do not establish execution equivalence,
 /// cross-platform numerics, restore eligibility, release compatibility or authority to actuate.
 ///
-/// FNV tags use offset `0x6c62272e07bb014262b821756295c58d`, XOR each byte then multiply by
-/// `0x0000000001000000000000000000013b` modulo 2^128. They are non-cryptographic and collision-prone
-/// in adversarial use. This descriptor adds no hash/signature. Hosts may hash/sign canonical bytes
+/// The catalog tag is FNV-1a-128: offset `0x6c62272e07bb014262b821756295c58d`, XOR each byte then
+/// multiply by `0x0000000001000000000000000000013b` modulo 2^128; non-cryptographic and
+/// collision-prone in adversarial use. The content id is SHA-256 ([`ContentId`]). This descriptor
+/// adds no hash/signature of its own. Hosts may hash/sign canonical bytes
 /// themselves and own authenticity, freshness and build qualification; OCE is not a signing/PKI
 /// authority. Persisted receipts require exact byte comparison against a newly captured descriptor;
 /// refuse unknown revisions, missing/extra fields, or any byte difference rather than ignoring it.
@@ -123,27 +91,23 @@ pub struct CompatibilityDescriptor {
     execution_profile: &'static str,
     execution_profile_schema: u32,
     oce_api_version: &'static str,
-    export: Option<CompleteExportContentId>,
+    content: Option<ContentId>,
 }
 
 impl CompatibilityDescriptor {
-    /// Capture current public facts and optionally a complete exported-document identity.
+    /// Capture current public facts and optionally a canonical content id.
     ///
-    /// `None` records no export, not an empty or failed export. A supplied report is checked before
-    /// catalog work. Retain this owned value across engine/report mutation; capture again after
-    /// re-export if new content is wanted. No Engine access or state capture occurs. Allocates
-    /// bounded tags; the first success also initializes the cached catalog tag.
-    ///
-    /// # Errors
-    /// Refuses a warning-bearing export with the existing completeness error.
+    /// `None` records no content id, not an empty one. Pass the id [`crate::Engine::content_id`]
+    /// returned to bind the receipt to that loaded model; the descriptor holds its own copy, so a
+    /// later reload or parameter edit does not change it: capture again for new content. No Engine
+    /// access or state capture occurs. Allocates bounded tags; the first call also initializes
+    /// the cached catalog tag.
     ///
     /// # Panics
     /// As with [`crate::catalog()`], an internal registry-constructor defect can panic. Missing a
     /// required entry in the repository-owned closed contract table is an internal defect.
-    pub fn current(export: Option<&ExportReport>) -> Result<Self, ContentIdError> {
-        let export = export
-            .map(|report| report.content_id_complete().map(CompleteExportContentId))
-            .transpose()?;
+    #[must_use]
+    pub fn current(content: Option<&ContentId>) -> Self {
         static CATALOG: OnceLock<CatalogContentId> = OnceLock::new();
         let catalog = CATALOG
             .get_or_init(|| CatalogContentId(crate::catalog_content_id(crate::catalog())))
@@ -155,7 +119,7 @@ impl CompatibilityDescriptor {
                 .expect("closed contract table contains every required domain")
                 .revision
         };
-        Ok(Self {
+        Self {
             revision: 1,
             catalog_schema: revision(ContractDomain::Catalog),
             catalog,
@@ -165,11 +129,11 @@ impl CompatibilityDescriptor {
             execution_profile: "HostTick-v1",
             execution_profile_schema: revision(ContractDomain::ExecutionProfile),
             oce_api_version: env!("CARGO_PKG_VERSION"),
-            export,
-        })
+            content: content.cloned(),
+        }
     }
 
-    /// Canonical descriptor revision, currently 1; independent of every domain/state revision.
+    /// Canonical descriptor revision, 1 until 1.0.0; independent of every domain/state revision.
     #[must_use]
     pub fn revision(&self) -> u32 {
         self.revision
@@ -223,21 +187,21 @@ impl CompatibilityDescriptor {
         self.oce_api_version
     }
 
-    /// Captured complete export tag, or absence when no report was supplied. Never a partial tag.
+    /// Captured canonical content id, or absence when none was supplied.
     #[must_use]
-    pub fn export_content_id(&self) -> Option<&CompleteExportContentId> {
-        self.export.as_ref()
+    pub fn content_id(&self) -> Option<&ContentId> {
+        self.content.as_ref()
     }
 
     /// Require exact agreement of these bounded facts, not executable or restore compatibility.
     ///
-    /// No wildcard/version-range matching: two absent exports agree only about absence; absence
-    /// never matches presence. No allocation, mutation or panic. Hosts requiring content identity
-    /// separately require `export_content_id().is_some()` even when this check succeeds.
+    /// No wildcard/version-range matching: two absent content ids agree only about absence;
+    /// absence never matches presence. No allocation, mutation or panic. Hosts requiring content
+    /// identity separately require `content_id().is_some()` even when this check succeeds.
     ///
     /// # Errors
     /// Returns the first mismatch in canonical field order. Both descriptor revisions must be 1.
-    /// Profile label/revision share `ExecutionProfile`; export presence precedes export content.
+    /// Profile label/revision share `ExecutionProfile`; content presence precedes content id.
     /// No public parsing of persisted/untrusted receipts is implied by this in-memory comparison.
     pub fn check_compatible(&self, other: &Self) -> Result<(), CompatibilityMismatch> {
         use CompatibilityMismatch as M;
@@ -264,10 +228,10 @@ impl CompatibilityDescriptor {
             ),
             (self.oce_api_version == other.oce_api_version, M::Build),
             (
-                self.export.is_some() == other.export.is_some(),
-                M::ExportPresence,
+                self.content.is_some() == other.content.is_some(),
+                M::ContentIdPresence,
             ),
-            (self.export == other.export, M::ExportContent),
+            (self.content == other.content, M::ContentIdMismatch),
         ];
         checks
             .into_iter()
@@ -282,7 +246,7 @@ impl fmt::Display for CompatibilityDescriptor {
             f,
             "oce-compatibility:{}\ncatalog-schema:{}\ncatalog:{}\nio-schema:{}\n\
              value-schema:{}\nparameter-schema:{}\nexecution-profile:{}\n\
-             execution-profile-schema:{}\noce-api-version:{}\nexport:{}\n",
+             execution-profile-schema:{}\noce-api-version:{}\ncontent:{}\n",
             self.revision,
             self.catalog_schema,
             self.catalog,
@@ -292,9 +256,7 @@ impl fmt::Display for CompatibilityDescriptor {
             self.execution_profile,
             self.execution_profile_schema,
             self.oce_api_version,
-            self.export
-                .as_ref()
-                .map_or("none", CompleteExportContentId::as_str),
+            self.content.as_ref().map_or("none", ContentId::as_str),
         )
     }
 }
@@ -321,10 +283,10 @@ pub enum CompatibilityMismatch {
     ExecutionProfile,
     /// Public OCE package versions differ; equality is not unique-build qualification.
     Build,
-    /// Only one descriptor includes complete exported content.
-    ExportPresence,
-    /// Both descriptors include complete exports, but their tags differ.
-    ExportContent,
+    /// Only one descriptor includes a canonical content id.
+    ContentIdPresence,
+    /// Both descriptors include canonical content ids, but they differ.
+    ContentIdMismatch,
 }
 
 impl fmt::Display for CompatibilityMismatch {
@@ -338,8 +300,8 @@ impl fmt::Display for CompatibilityMismatch {
             Self::ParameterSchema => "parameter schema mismatch",
             Self::ExecutionProfile => "execution profile mismatch",
             Self::Build => "OCE package version mismatch",
-            Self::ExportPresence => "complete export presence mismatch",
-            Self::ExportContent => "complete export content mismatch",
+            Self::ContentIdPresence => "canonical content id presence mismatch",
+            Self::ContentIdMismatch => "canonical content id mismatch",
         })
     }
 }

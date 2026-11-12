@@ -24,7 +24,7 @@ from urllib.parse import urlsplit
 DOCUMENT = "docs/product-contract.md"
 PENDING = frozenset((DOCUMENT, "scripts/product_contract/check.py",
                       "scripts/product_contract/test_check.py",
-                       "docs/facade-migration.md", "crates/oce-api/tests/frame_assertions.rs",
+                       "crates/oce-api/tests/frame_assertions.rs",
                        "crates/oce-api/src/admission.rs",
                        "crates/oce-api/src/tests/reload_tests.rs",
                        "crates/oce-api/tests/cxf_admission.rs",
@@ -352,7 +352,7 @@ def validate(repository: Repository) -> str:
 
 def validate_frame_boundary(repository: Repository, revision: str, rows: list[Requirement]) -> None:
     """Bounded contraction sentinels, not a compiler or proof of behavioral test relevance."""
-    require(revision == "22", "frame-only: document revision must be 22")
+    require(revision == "29", "frame-only: document revision must be 29")
     contraction = next((row for row in rows if row.identifier == "PC-035"), None)
     require(contraction is not None and contraction.status == "CURRENT",
             "frame-only: contraction is current")

@@ -1,8 +1,12 @@
 # Per-PR gate for open-control (the Open Control Engine) — runs on GitHub Actions for PRs into
 # `development` (and on manual dispatch). It runs once per change: there is no `push` trigger, so a
 # merge into `development` does not re-run it on the tree the PR already proved. Branch protection
-# requires `CI OK` with the branch up to date with `development`, and release-gate.yml runs daily on
-# the `development` tip as the safety net. check-workflow-gates.sh refuses a `push` trigger here.
+# requires `CI OK` with the branch up to date with `development`. merge-gate.yml runs on that
+# merge instead: the Windows cell, the one job no pull request runs (issue #556).
+# release-gate.yml, the heavy gate, runs nightly on the `development` tip and on release PRs:
+# the determinism matrix and the Windows cell again, the workspace suite and `gate (full)`
+# (issue #545).
+# check-workflow-gates.sh refuses a `push` trigger here.
 #
 # Workflow model: every logical change opens a PR into `development` behind this gate; releases
 # batch `development` -> `main`, where .github/workflows/release-gate.yml runs the heavy gate.
@@ -12,43 +16,54 @@
 # the firmware image's build and size budget), rustdoc, cargo-machete, cargo-deny, gate-script
 # behavior fixtures, the package/feature/publication contract, stale crate-status header lint,
 # golden-gen hygiene and golden freshness, the targeted cross-arch determinism subset for
-# oce-api/oce-blocks/oce-expr, the blob round trip (x86_64, aarch64 and wasm32-wasip1 from one
-# recorded artifact), the macOS arm64 portable-snapshot
-# and Windows std build/nextest platform cells, the x86_64 debug suites of
-# oce-graph/oce-validate/oce-model/oce-cxf, the documentation checks
+# oce-api/oce-blocks/oce-expr in debug and release codegen, the blob round trip (x86_64, aarch64 and
+# wasm32-wasip1 from one recorded artifact), the macOS arm64 portable-snapshot platform cell, the
+# x86_64 debug suites of oce-graph/oce-validate/oce-model/oce-cxf, the documentation checks
 # (staging, mdBook build, links), the scoped strict-bit matrix, the facade contract and Quickstart,
-# the leverage lane, and `bash .agents/gate.sh` executed as a coverage backstop when the gate's own
-# definition changes. It does NOT run the full workspace test suite — the remaining crates and the
-# release-codegen runs of the suites above live in release-gate.yml.
+# and the leverage lane. It does NOT run the full workspace test suite, the Windows cell or
+# `bash .agents/gate.sh`: the Windows std build/nextest cell runs in merge-gate.yml on every
+# merge into `development`, and the remaining crates' suites and the executed gate script in
+# release-gate.yml, nightly (issue #545). The release-codegen determinism cells and their
+# cross-codegen comparisons, which ran after the merge from issue #502, are per-PR again
+# (issue #556), so no change owes a local release-codegen run before it merges.
 #
 # Lanes (issue #393). The `changes` job classifies the PR's changed paths
 # (scripts/ci/classify-changes.sh, fail-closed: a path no allowlist matches counts as engine):
 #   * core — the determinism lane: every compiling job below. Runs for any path that is not
 #     docs-only or under crates/leverage/, including every gate script and workflow change.
 #   * leverage — the `leverage-lane` job. Runs for crates/leverage/** and for every core change.
-#   * gate_scripts — `gate (light)`. Runs only when .agents/gate.sh, .github/scripts/**, scripts/**
-#     (outside scripts/docs/), .github/workflows/** or .config/** change; it implies core.
+#   * readme — the `facade-contract` job (issue #503). Runs when the root README.md changes and for
+#     every core change. The root README.md alone is not a core change: the job runs the two checks
+#     that read it and are not always-on (the Quickstart byte-pin and the executed Quickstart), and
+#     its other readers (docs staging, the documentation checker contracts, the product contract)
+#     are always-on. scripts/ci/test-classify-changes.sh fails when a reader is covered by neither.
+#   * gate_scripts — informational, like docs_only: no job is filtered on it. It is 'true' when
+#     .agents/gate.sh, .github/scripts/**, scripts/** (outside scripts/docs/),
+#     .github/workflows/** or .config/** change, and it implies core, so such a change runs the
+#     whole determinism lane. (`gate (light)` ran on it until issue #502 moved the executed gate
+#     script to release-gate.yml's `gate (full)`.)
 #   * always — changes, fmt, file-size cap, no-secret scan, docs, gate fixtures and the
 #     package/authority/product contract (its checks read the documentation), and CI OK.
 # A lane-filtered job has exactly one job-level `if:`, `needs.changes.outputs.<lane> == 'true'`.
 #
 # Topology:
-#   * The determinism and strict-bit matrices run in four native cells each: x86_64 on
+#   * The determinism matrix and the strict-bit matrix each run in four native cells: x86_64 on
 #     `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm`, in debug and release codegen. Nothing is
-#     emulated. The cross-architecture byte comparisons run in fan-in jobs (determinism-compare,
-#     strict-bit-compare) over artifacts the cells upload. The per-PR native strict-bit matrix is
-#     the standing native evidence; no retained receipt admits or skips any check.
+#     emulated. The cross-architecture and debug-against-release byte comparisons run in fan-in
+#     jobs (determinism-compare, strict-bit-compare) over artifacts the cells upload. The per-PR
+#     native strict-bit matrix is the standing native evidence; no retained receipt admits or
+#     skips any check.
 #   * The blob round trip (issue #403) has three legs and one recorded artifact: every determinism
 #     cell runs the suite natively and records its blobs and expected results, the x86_64 debug
-#     cell's recording is the artifact, determinism-compare requires all four recordings equal and
+#     cell's recording is the artifact, determinism-compare requires both recordings equal and
 #     replays the artifact on aarch64, and blob-round-trip-wasm replays it on wasm32-wasip1 under a
 #     checksum-pinned wasmtime.
-#   * Two platform observation cells run with the determinism lane: `portable-snapshot-macos`
+#   * One platform observation cell runs with the determinism lane: `portable-snapshot-macos`
 #     (`macos-15`, arm64, debug) runs the determinism subset, and portable-snapshot-compare checks
 #     that its portable snapshot equals the Linux cells' byte for byte and its target-bound
-#     snapshot differs; `std-build-windows` (`windows-latest`) builds the workspace and runs its
-#     nextest suite without the strict-bit binaries. Neither qualifies its platform: strict bits
-#     stay Linux-only. They are in this file because a job in another workflow cannot feed CI OK.
+#     snapshot differs. It does not qualify its platform: strict bits stay Linux-only. It is in
+#     this file because a job in another workflow cannot feed CI OK. The Windows cell
+#     (`std-build-windows`) is in merge-gate.yml and release-gate.yml.
 #   * No job or step sets `continue-on-error`, and the only step-level `if:` shapes are a static
 #     matrix selector and `${{ !cancelled() }}` on an evidence upload (check-workflow-gates.sh).
 #   * A runner type that is unavailable leaves its cells queued, so `CI OK` never reports and the
@@ -56,9 +71,10 @@
 #   * Every job has `timeout-minutes: 45`, so a stalled download or hung step fails the job instead
 #     of waiting for the platform's six-hour limit. Artifact uploads set `overwrite: true`, so a
 #     re-run of all jobs re-uploads the same names into the same run.
-#   * Jobs with the same build shape in this file and release-gate.yml share a rust-cache
-#     `shared-key`, so the daily release-gate run on the `development` tip seeds the default-branch
-#     cache scope that every PR can read (PR runs save only into their own scope).
+#   * Jobs with the same build shape in this file, merge-gate.yml and release-gate.yml share a
+#     rust-cache `shared-key`, so the nightly release-gate run on the `development` tip (and, for
+#     the Windows cell, the merge-gate run on each merge commit) seeds the default-branch cache
+#     scope that every PR can read (PR runs save only into their own scope).
 #   * Every PR runs this workflow, drafts included. A job is skipped only by its lane filter, and
 #     `CI OK` accepts that skip only when the `changes` output gating it is 'false'
 #     (scripts/ci/ci_ok.py); any other skip reads as a failure. cargo-deny `bans licenses sources`
@@ -117,6 +133,7 @@ jobs:
     outputs:
       core: ${{ steps.classify.outputs.core }}
       leverage: ${{ steps.classify.outputs.leverage }}
+      readme: ${{ steps.classify.outputs.readme }}
       gate_scripts: ${{ steps.classify.outputs.gate_scripts }}
       docs_only: ${{ steps.classify.outputs.docs_only }}
     steps:
@@ -295,6 +312,12 @@ jobs:
         run: bash .github/scripts/test-check-gate-script-coverage.sh
       - name: lane classifier fixtures
         run: bash scripts/ci/test-classify-changes.sh
+      - name: local proof-row fixtures
+        run: bash scripts/ci/test-proof-row.sh
+      - name: gate-mode nesting fixtures
+        run: bash scripts/ci/test-gate-modes.sh
+      - name: wasmtime installer destination fixtures
+        run: bash scripts/ci/test-install-wasmtime.sh
       - name: CI OK result-check controls
         run: python3 scripts/ci/test_ci_ok.py
       - name: leverage dependency-rule fixtures
@@ -316,11 +339,18 @@ jobs:
           tool: cargo-machete
       - run: cargo machete
 
-  # Four native cells: (x86_64 on ubuntu-latest, aarch64 on ubuntu-24.04-arm) x (debug, release).
-  # Each runs the three-crate state-determinism subset under its own architecture and codegen and
-  # emits populated portable and target-bound state vectors; determinism-compare fans the vectors
-  # in. No cell is emulated, and none is skipped: a runner type that is unavailable leaves its cell
-  # queued and `CI OK` unreported, which blocks the merge rather than passing it.
+  # The determinism matrix in all four native cells (issue #556): (x86_64 on ubuntu-latest, aarch64
+  # on ubuntu-24.04-arm) x (debug, release). Each cell runs the three-crate state-determinism subset
+  # under its own architecture and codegen and emits populated portable and target-bound state
+  # vectors; determinism-compare fans the vectors in. No cell is emulated, and none is skipped: a
+  # runner type that is unavailable leaves its cell queued and `CI OK` unreported, which blocks the
+  # merge rather than passing it. The release-codegen cells ran after the merge from issue #502
+  # until issue #556: a release cell was then the per-PR long pole at 11 to 18 minutes, nearly all
+  # of it linking one release test binary per test file, and took 174 s (x86_64) and 181 s
+  # (aarch64) in merge-gate run 42948818576 once GitHub #546, #551, #553 and #554 had cut those
+  # binaries. The steps are release-gate.yml's, which still runs the same four cells nightly;
+  # check-workflow-gates.sh holds both files to `codegen: [debug, release]` and to every
+  # comparison.
   determinism-matrix:
     name: determinism (${{ matrix.arch }}, ${{ matrix.codegen }})
     needs: changes
@@ -346,6 +376,15 @@ jobs:
         with:
           shared-key: nextest
           cache-bin: false
+          # Only the debug cells of this matrix save. A pull-request run saves into its own
+          # scope, which no other PR reads, so nothing here can reach the default-branch entry
+          # PRs warm-start from; but this workflow can also be dispatched on `development`,
+          # where a save does land in that scope, and rust-cache writes a key once, on the first
+          # job to finish. A release determinism cell therefore never writes the key
+          # (issue #556). That narrows the risk without closing it: `crate-tests` and the
+          # strict-bit cells, release ones included, share the key with no `save-if`, so on such
+          # a dispatch whichever of those finishes first can still write it.
+          save-if: ${{ matrix.codegen == 'debug' }}
       - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
         with:
           tool: nextest@0.9.143
@@ -365,8 +404,8 @@ jobs:
       # every output, warning and raw state word after every frame on this cell, then writes the
       # blobs and those expected results to OCE_ROUND_TRIP_OUT. determinism-compare requires the
       # four cells' recordings to be identical and replays the x86_64 debug recording natively on
-      # aarch64; blob-round-trip-wasm replays the same recording on wasm32-wasip1. These run before
-      # the subset, so the JUnit report the cell keeps is the subset's.
+      # aarch64; blob-round-trip-wasm replays the same recording on wasm32-wasip1. These run
+      # before the subset, so the JUnit report the cell keeps is the subset's.
       - name: blob round trip, recorded (debug codegen)
         if: matrix.codegen == 'debug'
         env:
@@ -431,10 +470,12 @@ jobs:
 
   # Fan-in over the four cells' vectors, once per architecture. Both legs compare every byte the
   # cells produced (portable and target-bound bytes equal across codegen within an architecture,
-  # portable bytes equal and target-bound bytes different across architectures, and the
-  # compiled-schedule blobs equal in all four cells); each leg then
-  # parses the OTHER architecture's target-bound snapshot and refuses it through the public restore
-  # path, natively, with the oce-api unit tests its own architecture's debug cell built.
+  # portable bytes equal and target-bound bytes different across architectures, the
+  # compiled-schedule blobs equal in all four cells and 123329 bytes each, and the four round-trip
+  # recordings equal); each leg then replays the x86_64 debug recording through its own archived
+  # blob round trip, and parses the OTHER architecture's target-bound snapshot and refuses it
+  # through the public restore path, natively, with the oce-api unit tests its own architecture's
+  # debug cell built.
   determinism-compare:
     name: determinism cross-cell comparison (${{ matrix.arch }} restores ${{ matrix.foreign }})
     needs: [changes, determinism-matrix]
@@ -507,7 +548,8 @@ jobs:
       # suite, archived by its own cell, decodes the blobs the x86_64 debug cell encoded and
       # requires every output, warning and raw state word after every frame to equal that
       # recording, while still comparing the facade with the entry locally. On aarch64 this is the
-      # round trip's arm64 leg; the wasm32 leg is blob-round-trip-wasm.
+      # round trip's arm64 leg; the wasm32 leg is
+      # blob-round-trip-wasm.
       - name: Compare the blob round-trip recordings across codegen profiles and architectures
         working-directory: target/determinism
         run: |
@@ -545,9 +587,9 @@ jobs:
   # recording, and compares the facade with the entry inside the guest as well. wasm32-unknown-unknown
   # stays a build-only target in no-std-build; a headless-browser run is M4's (the oce-wasm crate).
   # It needs only determinism-matrix, so it runs in parallel with determinism-compare and can start
-  # before the four-way `diff -rq` there has accepted the recording. That is deliberate: CI OK
-  # requires both jobs, and the wasm leg consumes the x86_64 debug recording whose identity across
-  # the four cells the fan-in proves separately.
+  # before the `diff -rq` there has accepted the recording. That is deliberate: CI OK requires both
+  # jobs, and the wasm leg consumes the x86_64 debug recording whose identity across the cells
+  # the fan-in proves separately.
   blob-round-trip-wasm:
     name: blob round trip (wasm32-wasip1 under wasmtime)
     needs: [changes, determinism-matrix]
@@ -596,11 +638,12 @@ jobs:
       - name: Require the nextest JUnit report
         run: test -s target/nextest/ci/junit.xml
 
-  # Platform observation cells (issue #394): macOS arm64 and Windows x86_64. They run with the
-  # determinism lane and CI OK requires them, but neither qualifies its platform: the strict-bit
-  # transcendentals stay Linux-qualified, and macOS and Windows keep the 1e-12 aligned band
-  # (docs/strict-bit-evidence.md). They live in this file, not a separate platforms workflow,
-  # because CI OK is the one required status and a job in another workflow cannot be in its needs.
+  # Platform observation cell (issue #394): macOS arm64. It runs with the determinism lane and CI
+  # OK requires it, but it does not qualify its platform: the strict-bit transcendentals stay
+  # Linux-qualified, and macOS keeps the 1e-12 aligned band (docs/strict-bit-evidence.md). It lives
+  # in this file, not a separate platforms workflow, because CI OK is the one required status and
+  # a job in another workflow cannot be in its needs. The Windows x86_64 cell runs in
+  # merge-gate.yml, on every merge into `development` (issue #502).
   #
   # macOS arm64, debug codegen only: the same three-crate subset as a determinism cell, emitting
   # populated portable and target-bound state vectors that portable-snapshot-compare checks against
@@ -696,47 +739,6 @@ jobs:
           portable_sha="$(sha256sum macos-arm64/portable-state-debug.bin | cut -d' ' -f1)"
           echo "OK: macOS arm64 debug portable snapshot is byte-identical to Linux x86_64 and aarch64 debug ($(wc -c < macos-arm64/portable-state-debug.bin | tr -d ' ') bytes, sha256 $portable_sha); its target-bound snapshot differs from both Linux architectures'"
 
-  # Windows x86_64 (`windows-latest`, Git Bash via the workflow's default shell): a workspace build
-  # and the workspace nextest suite in debug codegen, with no determinism claim. It excludes the
-  # strict-bit binaries scripts/ci/strict-bits-cell.sh runs — `strict_bits` and the four aligned
-  # per-block suites — which are qualified on native Linux only. Everything else in the workspace
-  # runs, so the bit-exact goldens execute on a checkout whose git defaults to CRLF line endings
-  # (.gitattributes `* text=auto eol=lf` keeps them LF).
-  std-build-windows:
-    name: std build and nextest (Windows x86_64, debug)
-    needs: changes
-    if: needs.changes.outputs.core == 'true'
-    runs-on: windows-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-        with:
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          shared-key: workspace-windows
-          cache-bin: false
-      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
-        with:
-          tool: nextest@0.9.143
-      - name: Refuse a runner that is not Windows
-        run: |
-          case "$(uname -s)" in
-            MINGW64_NT-* | MSYS_NT-*) ;;
-            *) echo "not a Windows runner: $(uname -s)" >&2; exit 1 ;;
-          esac
-      - name: Clear the cached nextest report
-        run: rm -f target/nextest/ci/junit.xml
-      - name: cargo build (workspace)
-        run: cargo build --workspace --locked
-      - name: cargo nextest workspace suite without the strict-bit binaries (debug codegen)
-        run: >-
-          cargo nextest run --workspace --locked --profile ci --no-tests=fail
-          -E 'not (binary_id(oce-conformance::strict_bits) | binary_id(oce-conformance::per_block_reals_transcendental) | binary_id(oce-conformance::per_block_reals_sources_transcendental) | binary_id(oce-conformance::per_block_psychrometrics) | binary_id(oce-conformance::per_block_utilities))'
-      - name: Require the nextest JUnit report
-        run: test -s target/nextest/ci/junit.xml
-
   # The scheduler, validator, model, CXF resolver and storage-port suites, x86_64 debug
   # only. They are not state-determinism tests, so they stay out of the determinism matrix and run
   # beside it instead of lengthening its cells. Their release-codegen runs stay in release-gate.yml (oce-cxf's release build
@@ -812,7 +814,8 @@ jobs:
           target/docs-book/book
           --site-prefix /open-control-engine/
 
-  # Four native cells, the same (runner, codegen) matrix as determinism-matrix. Each takes two
+  # Four native cells: (x86_64 on ubuntu-latest, aarch64 on ubuntu-24.04-arm) x (debug, release),
+  # all four on every PR (issue #502 moved only the determinism matrix's release cells). Each takes two
   # independent capture processes, compares them byte for byte, and runs the exact signal wiring,
   # corpus firewall and mutation controls (scripts/ci/strict-bits-cell.sh, which refuses a host of
   # the wrong architecture). strict-bit-compare fans the eight captures in. This per-PR matrix is
@@ -1059,13 +1062,19 @@ jobs:
           tool: cargo-deny
       - run: cargo deny check bans licenses sources
 
-  # The facade compiler contract and the published Quickstart, executed. These were the three steps
-  # `gate (light)` ran beyond `bash .agents/gate.sh`; they compile the facade, so they run with the
-  # determinism lane.
+  # The facade compiler contract, and the published Quickstart: byte-pinned to the README, then
+  # executed. This job is the README lane (issue #503): it runs for every engine change (core
+  # implies readme) and when the root README.md changes, and it holds every check that reads the
+  # root README and is not in an always-on job. The byte-pin is the one that can fail on a README
+  # edit: `readme_quickstart` compares the README's first Rust block with
+  # crates/oce-api/examples/quickstart.rs, the copy that compiles, and the last step runs that
+  # example. The determinism cells run the same test as part of the oce-api suite; it is named here
+  # so a README change that skips those cells still runs it. The facade checks do not read the
+  # README; they ride along because they build the same facade, which keeps this one job.
   facade-contract:
     name: facade contract and Quickstart
     needs: changes
-    if: needs.changes.outputs.core == 'true'
+    if: needs.changes.outputs.readme == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -1077,14 +1086,23 @@ jobs:
         with:
           shared-key: facade-contract
           cache-bin: false
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: nextest@0.9.143
       - name: Supported facade compiler contract
         run: python3 scripts/facade_contract/check.py
       - name: Facade compiler diagnostic controls
         run: python3 scripts/facade_contract/test_check.py
+      - name: Clear the cached nextest report
+        run: rm -f target/nextest/ci/junit.xml
+      - name: README Quickstart is byte-identical to the compiled example
+        run: cargo nextest run -p oce-api --test readme_quickstart --locked --profile ci --no-tests=fail
+      - name: Require the nextest JUnit report
+        run: test -s target/nextest/ci/junit.xml
       - name: Quickstart executes successfully
         run: bash .github/scripts/check-quickstart-runs.sh
 
-  # The leverage lane: crates/leverage/* (none yet). Layout and dependency rule (oce-api only), then
+  # The leverage lane: crates/leverage/* (oce-replay first). Layout and dependency rule (oce-api, plus oce-bless as dev), then
   # fmt, clippy -D warnings, rustdoc -D warnings, nextest and cargo-machete for each member, all in
   # scripts/ci/leverage-members.sh so `bash .agents/gate.sh leverage` runs the same commands. It runs
   # for a change under crates/leverage/ and for every engine change (core implies leverage), and it
@@ -1112,42 +1130,10 @@ jobs:
       - name: Leverage lane (layout, dependency rule, then each member)
         run: bash scripts/ci/leverage-members.sh lane
 
-  # The gate script, EXECUTED rather than parsed: a coverage backstop, not a parity check. It runs
-  # only when the gate's own definition changes — .agents/gate.sh, a CI or repository script, a
-  # workflow or tool config — because those are the edits that can make a job above diverge from the
-  # script, and otherwise it re-runs what the other jobs already ran (17m28s measured 2026-11-08).
-  # release-gate.yml runs `gate (full)` daily on the `development` tip regardless. Nothing verifies
-  # mechanically that .agents/gate.sh and this file list the same commands; see the `gate` job in
-  # the frozen .github/workflows/ci.yml.
-  gate:
-    name: gate (light)
-    needs: changes
-    if: needs.changes.outputs.gate_scripts == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-        with:
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
-        with:
-          components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          shared-key: gate
-          cache-bin: false
-      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
-        with:
-          tool: nextest@0.9.143,cargo-deny,cargo-machete
-      # The gate script installs nothing; its bare-metal cell steps need these targets.
-      - name: Install the no_std targets
-        run: rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf wasm32-unknown-unknown
-      # No `--` arguments: `light` is the default mode and the one this job exists to cover.
-      - run: bash .agents/gate.sh
-
   # The single required status for branch protection on `development`. It reports on every run
   # (`always()`), needs every other job, and runs scripts/ci/ci_ok.py: a job passes on `success`, or
-  # on `skipped` only when it is listed in JOB_LANES and its lane output from `changes` is 'false'.
+  # on `skipped` only when it is listed in JOB_LANES (lane core, leverage or readme) and its lane
+  # output from `changes` is 'false'.
   # A skip while its lane ran, a skip of an unfiltered job, any failure or cancellation, and a
   # failed or inconsistent `changes` job all fail. check-workflow-gates.sh asserts that `needs:`
   # lists every other job, that JOB_LANES equals the lane-filtered jobs' `if:` lines, and that this
@@ -1171,7 +1157,6 @@ jobs:
       - blob-round-trip-wasm
       - portable-snapshot-macos
       - portable-snapshot-compare
-      - std-build-windows
       - crate-tests
       - docs
       - strict-bit-matrix
@@ -1183,7 +1168,6 @@ jobs:
       - deny
       - facade-contract
       - leverage-lane
-      - gate
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -1203,7 +1187,6 @@ jobs:
             blob-round-trip-wasm=core
             portable-snapshot-macos=core
             portable-snapshot-compare=core
-            std-build-windows=core
             crate-tests=core
             strict-bit-matrix=core
             strict-bit-compare=core
@@ -1212,7 +1195,6 @@ jobs:
             no-std-build=core
             rustdoc=core
             deny=core
-            facade-contract=core
+            facade-contract=readme
             leverage-lane=leverage
-            gate=gate_scripts
         run: python3 scripts/ci/ci_ok.py

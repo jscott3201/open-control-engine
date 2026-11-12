@@ -8,7 +8,7 @@
 //! `interval=0` on-change sentinel, quantity/unit, and description. Raw `__cdl(...)`/`__CDL(...)`
 //! vendor annotation parsing and higher-overrides-lower propagation are deferred until those
 //! annotation blobs are carried through ingest. The resolved metadata is **non-computational** data
-//! (CDL §7.17): it is never read on the tick. The crate is **Group A** (no store, no database).
+//! (OBC §7.17): it is never read on the tick. The crate is **Group A** (no store, no database).
 //!
 //! The metadata enums and error seam are reserved; the annotation resolver is deferred to the
 //! semantic projection layer.

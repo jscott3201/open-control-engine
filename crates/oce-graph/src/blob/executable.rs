@@ -353,7 +353,9 @@ impl<'a> Executable<'a> {
         crate::frame::target_bound(&self.decoded.blocks)
     }
 
-    /// The blob's content-id field verbatim, or `None` when the blob carries none.
+    /// The blob's content-id field verbatim: the 32 SHA-256 digest bytes of the facade's
+    /// `oce:canon1:` canonical content id, or `None` when the blob carries none. Never interpreted
+    /// or checked here.
     #[must_use]
     pub fn content_id(&self) -> Option<[u8; 32]> {
         self.decoded.content_id

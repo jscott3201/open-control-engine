@@ -14,7 +14,7 @@ use serde_json::{Value, json};
 /// A minimal valid single-composite model: `c1 = Constant(k=1.0)` whose output drives
 /// `c2 = MultiplyByParameter(k=2.0)`'s input. No boundary ports. Resolves with zero diagnostics.
 const BASE: &str = r#"{
-  "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+  "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
   "@graph": [
     { "@id": "http://example.org#M", "@type": "S231:Block",
       "S231:containsBlock": [ { "@id": "http://example.org#M.c1" }, { "@id": "http://example.org#M.c2" } ] },
@@ -57,8 +57,11 @@ fn node_mut<'a>(doc: &'a mut Value, suffix: &str) -> &'a mut Value {
         .unwrap_or_else(|| panic!("no @graph node ending in {suffix:?}"))
 }
 
-/// Add a composite boundary input that drives `M.c2.u`.
+/// Add a composite boundary input that drives `M.c2.u`, removing the BASE output-to-input edge so
+/// the boundary input is `M.c2.u`'s only driver (both drivers at once is the mixed double-driver
+/// refusal, issue #472, not the property any caller here tests).
 fn add_boundary_input(doc: &mut Value, datatype: &str) {
+    remove_internal_input_drive(doc);
     node_mut(doc, "#M")["S231:hasInput"] = json!({ "@id": "http://example.org#M.boundaryInput" });
     doc["@graph"].as_array_mut().unwrap().push(json!({
         "@id": "http://example.org#M.boundaryInput",
@@ -247,7 +250,6 @@ fn type_mismatched_connection_is_rejected() {
 #[test]
 fn real_boundary_input_driving_boolean_child_input_is_rejected() {
     let mut doc = base();
-    remove_internal_input_drive(&mut doc);
     let child = node_mut(&mut doc, "M.c2.u");
     child["@type"] = json!("S231:BooleanInput");
     child["S231:isOfDataType"] = json!({ "@id": "S231:Boolean" });
@@ -302,7 +304,6 @@ fn real_child_output_driving_integer_boundary_output_is_rejected() {
 #[test]
 fn enum_boundary_input_driving_integer_child_input_is_rejected() {
     let mut doc = base();
-    remove_internal_input_drive(&mut doc);
     let child = node_mut(&mut doc, "M.c2.u");
     child["@type"] = json!("S231:IntegerInput");
     child["S231:isOfDataType"] = json!({ "@id": "S231:Integer" });
@@ -324,7 +325,6 @@ fn enum_boundary_input_driving_integer_child_input_is_rejected() {
 #[test]
 fn different_enum_classes_across_boundary_elision_are_rejected() {
     let mut doc = base();
-    remove_internal_input_drive(&mut doc);
     let child = node_mut(&mut doc, "M.c2.u");
     child["@type"] = json!("S231:Input");
     child["S231:isOfDataType"] =
@@ -454,7 +454,7 @@ fn garbage_double_literal_is_grounding_failure() {
 
 #[test]
 fn empty_graph_is_malformed_document() {
-    let doc = json!({ "@context": { "S231": "http://data.ashrae.org/S231P#" }, "@graph": [] });
+    let doc = json!({ "@context": { "S231": "http://data.ashrae.org/S231#" }, "@graph": [] });
     assert_error_code(&doc, DiagCode::MalformedDocument);
 }
 
@@ -650,7 +650,7 @@ fn structural_diagnostics_sort_by_ascending_connector_id() {
             "S231:isOfDataType": { "@id": "S231:Real" }
         }));
     }
-    let doc = json!({ "@context": { "S231": "http://data.ashrae.org/S231P#" }, "@graph": graph });
+    let doc = json!({ "@context": { "S231": "http://data.ashrae.org/S231#" }, "@graph": graph });
     let CxfError::Validation(diags) = import(&doc).unwrap_err() else {
         panic!("expected Validation");
     };
@@ -723,7 +723,7 @@ fn attribute_on_non_numeric_connector_is_malformed_not_silent_drop() {
 #[test]
 fn malformed_unit_shape_is_targeted_diagnostic_not_a_document_sink() {
     // A unit/quantity/displayUnit in a non-string/non-IRI shape (here a bare number) is
-    // malformed per S231P, but must NOT sink the WHOLE document with a coarse CxfError::Json — it
+    // malformed against the vocabulary's range, but must NOT sink the WHOLE document with a coarse CxfError::Json — it
     // deserializes into TermAttr::Other and the resolver surfaces a TARGETED MalformedDocument
     // carrying the connector IRI. Reaching `Validation` (not `Json`) is the proof it did not sink.
     let mut doc = base();
@@ -825,7 +825,7 @@ fn modelica_key_ban_matches_bare_and_iri_prefixed_forms() {
     assert_error_code(&doc, DiagCode::NonSubsetConstruct);
 
     let mut doc = base();
-    node_mut(&mut doc, ".c1")["http://data.ashrae.org/S231P#redeclare"] = json!({});
+    node_mut(&mut doc, ".c1")["http://data.ashrae.org/S231#redeclare"] = json!({});
     assert_error_code(&doc, DiagCode::NonSubsetConstruct);
 }
 

@@ -1,8 +1,8 @@
 //! Hand-assembled canonical receipts from public facts, not executable identity or numeric oracles.
 
 use oce_api::{
-    CatalogContentId, CompatibilityDescriptor, CompatibilityMismatch, CompleteExportContentId,
-    ContentIdError, ContractDomain, Engine, Value, contract_descriptors,
+    CatalogContentId, CompatibilityDescriptor, CompatibilityMismatch, ContentId, ContractDomain,
+    Engine, Value, contract_descriptors,
 };
 
 const MINIMAL: &[u8] = include_bytes!("../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
@@ -16,26 +16,20 @@ fn canonical_public_facts_match_the_hand_assembled_golden_and_repeat() {
     // checked catalog golden; revisions and package version are public source facts.
     let expected = include_str!("fixtures/compatibility.txt");
     for _ in 0..3 {
-        assert_eq!(
-            CompatibilityDescriptor::current(None).unwrap().to_string(),
-            expected
-        );
+        assert_eq!(CompatibilityDescriptor::current(None).to_string(), expected);
     }
 }
 
 #[test]
-fn partial_exports_refuse_instead_of_becoming_absent_or_complete_content() {
+fn a_partial_export_does_not_withhold_the_content_line() {
+    // The id names the loaded model, so a model whose export is partial still binds a receipt.
     let mut engine = Engine::new();
     engine.load_cxf(DEFERRED).unwrap();
-    let mut report = engine.export_cxf().unwrap();
-    assert_eq!(report.warnings.len(), 2);
-    for count in [2, 1] {
-        report.warnings.truncate(count);
-        assert!(matches!(
-            CompatibilityDescriptor::current(Some(&report)),
-            Err(ContentIdError::Incomplete { warning_count, .. }) if warning_count == count
-        ));
-    }
+    assert!(engine.export_cxf().unwrap().complete().is_err());
+    let id = engine.content_id().unwrap();
+    let descriptor = CompatibilityDescriptor::current(Some(&id));
+    assert_eq!(descriptor.content_id(), Some(&id));
+    assert!(descriptor.to_string().ends_with(&format!("content:{id}\n")));
 }
 
 #[test]
@@ -43,8 +37,8 @@ fn typed_fields_project_only_the_existing_public_contract_facts() {
     fn owned_thread_safe<T: Clone + Send + Sync + 'static>() {}
     owned_thread_safe::<CompatibilityDescriptor>();
     owned_thread_safe::<CatalogContentId>();
-    owned_thread_safe::<CompleteExportContentId>();
-    let descriptor = CompatibilityDescriptor::current(None).unwrap();
+    owned_thread_safe::<ContentId>();
+    let descriptor = CompatibilityDescriptor::current(None);
     let revision = |domain| {
         contract_descriptors()
             .iter()
@@ -83,7 +77,7 @@ fn typed_fields_project_only_the_existing_public_contract_facts() {
         descriptor.catalog_content_id().to_string(),
         descriptor.catalog_content_id().as_str()
     );
-    assert_eq!(descriptor.export_content_id(), None);
+    assert_eq!(descriptor.content_id(), None);
     assert_eq!(
         contract_descriptors().len(),
         7,
@@ -92,17 +86,17 @@ fn typed_fields_project_only_the_existing_public_contract_facts() {
 }
 
 #[test]
-fn complete_export_receipts_match_the_existing_content_golden_and_repeat() {
-    // Export ID is the unchanged independently verified minimal-loop golden in export_cxf.rs.
+fn content_receipts_match_the_hand_assembled_golden_and_repeat() {
+    // The content id is the minimal-loop canonical id pinned in export_cxf.rs.
     let expected = include_str!("fixtures/compatibility_export.txt");
     for _ in 0..3 {
         let mut engine = Engine::new();
         engine.load_cxf(MINIMAL).unwrap();
-        let report = engine.export_cxf().unwrap();
-        let descriptor = CompatibilityDescriptor::current(Some(&report)).unwrap();
+        let minted = engine.content_id().unwrap();
+        let descriptor = CompatibilityDescriptor::current(Some(&minted));
         assert_eq!(descriptor.to_string(), expected);
-        let id: &CompleteExportContentId = descriptor.export_content_id().unwrap();
-        assert_eq!(id.as_str(), report.content_id_complete().unwrap());
+        let id: &ContentId = descriptor.content_id().unwrap();
+        assert_eq!(id, &minted);
         assert_eq!(id.to_string(), id.as_str());
         assert_eq!(descriptor.check_compatible(&descriptor.clone()), Ok(()));
         assert_eq!(expected.lines().count(), 10);
@@ -117,17 +111,16 @@ fn complete_export_receipts_match_the_existing_content_golden_and_repeat() {
 }
 
 #[test]
-fn absent_present_and_changed_exports_have_distinct_typed_outcomes() {
-    use CompatibilityMismatch::{ExportContent, ExportPresence};
-    let absent = CompatibilityDescriptor::current(None).unwrap();
+fn absent_present_and_changed_content_ids_have_distinct_typed_outcomes() {
+    use CompatibilityMismatch::{ContentIdMismatch, ContentIdPresence};
+    let absent = CompatibilityDescriptor::current(None);
     let mut engine = Engine::new();
     let (load, _) = engine.load_cxf(MINIMAL).unwrap();
-    let report = engine.export_cxf().unwrap();
-    let before = CompatibilityDescriptor::current(Some(&report)).unwrap();
-    assert_eq!(absent.check_compatible(&before), Err(ExportPresence));
-    assert_eq!(before.check_compatible(&absent), Err(ExportPresence));
+    let before = CompatibilityDescriptor::current(Some(&engine.content_id().unwrap()));
+    assert_eq!(absent.check_compatible(&before), Err(ContentIdPresence));
+    assert_eq!(before.check_compatible(&absent), Err(ContentIdPresence));
     assert_eq!(
-        absent.check_compatible(&CompatibilityDescriptor::current(None).unwrap()),
+        absent.check_compatible(&CompatibilityDescriptor::current(None)),
         Ok(())
     );
     engine.halt().unwrap();
@@ -135,21 +128,21 @@ fn absent_present_and_changed_exports_have_distinct_typed_outcomes() {
         .set_param("http://example.org#MinLoop.con.k", Value::Real(3.0))
         .unwrap();
     engine.resume().unwrap();
-    let after = CompatibilityDescriptor::current(Some(&engine.export_cxf().unwrap())).unwrap();
-    assert_eq!(before.check_compatible(&after), Err(ExportContent));
-    assert_eq!(after.check_compatible(&before), Err(ExportContent));
+    let after = CompatibilityDescriptor::current(Some(&engine.content_id().unwrap()));
+    assert_eq!(before.check_compatible(&after), Err(ContentIdMismatch));
+    assert_eq!(after.check_compatible(&before), Err(ContentIdMismatch));
     assert_ne!(before.to_string(), after.to_string());
     assert_eq!(before.catalog_content_id(), after.catalog_content_id());
     assert_eq!(load.model_id.as_str(), "http://example.org#MinLoop");
 }
 
 #[test]
-fn descriptor_capture_preserves_state_and_survives_report_and_engine_lifetimes() {
+fn descriptor_capture_preserves_state_and_survives_id_and_engine_lifetimes() {
     let mut engine = Engine::new();
     engine.load_cxf(MINIMAL).unwrap();
     let snapshot = engine.state_snapshot().unwrap();
-    let mut report = engine.export_cxf().unwrap();
-    let captured = CompatibilityDescriptor::current(Some(&report)).unwrap();
+    let id = engine.content_id().unwrap();
+    let captured = CompatibilityDescriptor::current(Some(&id));
     let canonical = captured.to_string();
     assert_eq!(
         engine.state_snapshot().unwrap().into_bytes(),
@@ -162,61 +155,44 @@ fn descriptor_capture_preserves_state_and_survives_report_and_engine_lifetimes()
         )
         .unwrap();
     engine.execute_frame(plan).unwrap();
-    let after_frame =
-        CompatibilityDescriptor::current(Some(&engine.export_cxf().unwrap())).unwrap();
+    let after_frame = CompatibilityDescriptor::current(Some(&engine.content_id().unwrap()));
     assert_eq!(
         captured.check_compatible(&after_frame),
         Ok(()),
         "state and sequence are excluded"
     );
     engine.load_cxf(MINIMAL).unwrap();
-    let after_reload =
-        CompatibilityDescriptor::current(Some(&engine.export_cxf().unwrap())).unwrap();
+    let after_reload = CompatibilityDescriptor::current(Some(&engine.content_id().unwrap()));
     assert_eq!(
         captured.check_compatible(&after_reload),
         Ok(()),
         "incarnation is excluded"
     );
-    report.bytes.clear();
-    drop(report);
+    drop(id);
     drop(engine);
     assert_eq!(captured.to_string(), canonical);
     assert_eq!(captured.check_compatible(&captured.clone()), Ok(()));
 }
 
 #[test]
-fn report_bytes_are_hashed_exactly_without_claiming_validation_or_provenance() {
+fn a_stored_content_line_parses_back_to_the_same_receipt() {
     let mut engine = Engine::new();
     engine.load_cxf(MINIMAL).unwrap();
-    let mut report = engine.export_cxf().unwrap();
-    // Standard FNV-1a-128 offset (empty input) and independently documented abc vector.
-    // A host can edit ExportReport; the new descriptor deliberately inherits that boundary.
-    for (bytes, expected) in [
-        (
-            b"".as_slice(),
-            "cxf:fnv1a128:6c62272e07bb014262b821756295c58d",
-        ),
-        (
-            b"abc".as_slice(),
-            "cxf:fnv1a128:a68d622cec8b5822836dbc7977af7f3b",
-        ),
-    ] {
-        report.bytes = bytes.to_vec();
-        let descriptor = CompatibilityDescriptor::current(Some(&report)).unwrap();
-        assert_eq!(descriptor.export_content_id().unwrap().as_str(), expected);
-        assert!(
-            descriptor
-                .to_string()
-                .ends_with(&format!("export:{expected}\n"))
-        );
-    }
-    let reference = CompatibilityDescriptor::current(Some(&report)).unwrap();
-    for bytes in [b"abc\n".as_slice(), b"\0abc", b"abd", b"abc\xff", b"ab"] {
-        report.bytes = bytes.to_vec();
-        let changed = CompatibilityDescriptor::current(Some(&report)).unwrap();
-        assert_eq!(
-            reference.check_compatible(&changed),
-            Err(CompatibilityMismatch::ExportContent)
-        );
-    }
+    let reference = CompatibilityDescriptor::current(Some(&engine.content_id().unwrap()));
+    let text = reference.to_string();
+    let line = text.lines().last().unwrap();
+    let stored = line.strip_prefix("content:").unwrap();
+    let parsed = ContentId::parse(stored).unwrap();
+    let rebuilt = CompatibilityDescriptor::current(Some(&parsed));
+    assert_eq!(rebuilt.to_string(), text);
+    assert_eq!(reference.check_compatible(&rebuilt), Ok(()));
+    // One flipped digit is another id, and the receipts refuse each other.
+    let mut flipped = stored.as_bytes().to_vec();
+    let last = flipped.len() - 1;
+    flipped[last] = if flipped[last] == b'0' { b'1' } else { b'0' };
+    let other = ContentId::parse(std::str::from_utf8(&flipped).unwrap()).unwrap();
+    assert_eq!(
+        reference.check_compatible(&CompatibilityDescriptor::current(Some(&other))),
+        Err(CompatibilityMismatch::ContentIdMismatch)
+    );
 }

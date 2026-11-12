@@ -1,0 +1,218 @@
+exit: 0
+--- stdout
+keywords:
+  sequence derived_from none param in out block true false Real Integer Boolean
+
+types:
+  Real Integer Boolean
+
+tags:
+  @unit @quantity @displayUnit @brick @s223 @qudt @haystack @name @label @provisional
+
+base units:
+  m kg s A K mol cd rad sr Hz N Pa J W C V F Ohm S Wb T H lm lx Bq Gy Sv kat
+
+scale factors (time only; one symbol is exactly this many base units; alone as a unit suffix on a parameter declared in the base unit, it scales the number, rounding once):
+  min  60 s
+  h    3600 s
+  d    86400 s
+
+parse codes (text form, exit 2):
+  not-utf8              the input is not UTF-8
+  byte-order-mark       the input starts with a byte-order mark
+  control-character     a tab, carriage return, other control character or bidirectional override
+  input-too-large       the input is larger than 4 MiB
+  too-many-lines        the input has more than 100,000 lines
+  line-too-long         a line is longer than 8,192 bytes
+  token-too-long        a name, number, suffix, atom or provenance id is longer than 256 bytes
+  string-too-long       a string is longer than 4,096 bytes as written
+  comment-too-long      a comment is longer than 8,189 bytes after its #
+  nesting-too-deep      lists nest deeper than 2
+  too-many-statements   more than 65,536 statements of one kind or assignments in one block
+  unterminated-string   a string has no closing quote on its line
+  bad-escape            a backslash escape other than \", \\ or \n
+  malformed-number      a number with a leading + or zero, a bare dot, an empty exponent or glued letters
+  integer-out-of-range  an integer outside the 64-bit signed range
+  non-finite-number     NaN, inf or Infinity as a value, or a real that overflows binary64
+  malformed-suffix      a unit suffix that is not a unit expression
+  unit-not-base         a unit suffix that is neither built from base SI units nor one of the scaled symbols min, h and d alone
+  malformed-atom        a tag atom or provenance id with a byte outside printable ASCII
+  stray-token           a token where the grammar allows none, or a missing one
+  unknown-keyword       a line that starts with no statement keyword and is not a connection
+  unknown-tag           a boundary tag the grammar does not name
+  duplicate-tag         a boundary tag other than @haystack written twice on one statement
+  unknown-type          a type other than Real, Integer or Boolean
+  missing-sequence      the file does not start with a sequence statement
+  missing-derived-from  the sequence statement is not followed by a derived_from statement
+  misplaced-statement   a second sequence or derived_from statement
+  misplaced-value       a reference or a list as a sequence parameter's value
+  malformed-list        an empty, ragged or mixed list
+  unclosed-bracket      a ( or [ that is never closed
+  comment-before-close  a comment after the last item of a (...) or [...]
+
+finding codes, stage 1 (exit 1):
+  empty-sequence               the sequence has no blocks
+  invalid-name                 a declared name is not an identifier, or is a reserved word or keyword
+  duplicate-name               a name is declared twice across parameters, inputs, outputs and blocks
+  class-not-found              a block's class path is not a registered class
+  class-not-authorable         a block's class is an engine-reserved lowering identity
+  unknown-parameter            an assignment names no parameter of the block's class
+  parameter-not-settable       an assignment names a parameter no author may set
+  duplicate-parameter          a block assigns one parameter twice
+  missing-required-parameter   a required parameter is not assigned
+  parameter-kind-mismatch      a value's kind does not fit the parameter
+  parameter-out-of-range       a value breaks a catalog rule, widths included
+  non-finite-parameter         a Real value is NaN or infinite
+  unit-suffix-mismatch         a unit suffix that is not the parameter's declared unit, a scaled one where none is declared, or one that disagrees with its value
+  unknown-enum-literal         an enumeration member is not a member of the parameter's type
+  unknown-enum-type            a sequence parameter's type names no enumeration, or names a constant package
+  unknown-parameter-reference  a reference names no sequence parameter
+  malformed-connection         a connection endpoint is not name or block.port
+  unknown-source               a connection source is neither a boundary input nor a block output
+  unknown-target               a connection target is neither a boundary output nor a block input
+  unknown-port                 a connection names a port the configured block does not have on that side
+  invalid-semantic-point       a semantic, quantity or displayUnit field is malformed
+  invalid-bound                a boundary bound the boundary's type cannot take
+  non-finite-bound             a boundary bound is NaN or infinite
+  crossed-bounds               a boundary's min exceeds its max
+  invalid-provenance-id        the derived_from provenance id is malformed
+  single-assignment            two connections drive one block input or boundary output
+
+finding codes, stage 2 (exit 1; engine codes pass through as well):
+  document-too-large  the emitted document is larger than the engine loads
+  load-failed         the throwaway engine refused the emitted document
+
+wire codes (exit 2):
+  not-utf8              the bytes are not UTF-8
+  byte-order-mark       the document starts with a byte-order mark
+  input-too-large       the document is larger than 4 MiB
+  nesting-too-deep      objects and arrays nest deeper than 8 levels
+  list-too-long         a list has more than 65,536 entries
+  string-too-long       a string is longer than 4,096 bytes
+  duplicate-key         an object repeats a key
+  non-finite-number     NaN or Infinity as a number, or a real that overflows binary64
+  integer-out-of-range  an integer token outside the 64-bit signed range
+  control-character     a string carries a control character
+  unknown-key           an object carries a key its schema does not define
+  missing-key           an object lacks a required key
+  wrong-type            a value has the wrong JSON type or an unknown enumerator
+  json-syntax           the document is not JSON
+  bound-list-too-long   a boundary's min or max list has more than one number
+  malformed-connection  a connection is not `source -> target` with exactly one ->
+  wire-refused          a wire refusal this version of oce does not name
+
+error codes (exit 2):
+  missing-from              stdin (-) was given without --from text|wire
+  unknown-form              the extension is neither .oce nor .json and --from was not given
+  not-found                 the input path does not exist
+  not-a-file                the input path is a directory or another non-file
+  read-failed               the input could not be read
+  input-too-large           the input is over its limit (4 MiB a sequence or vector file, 8 MiB CXF); refused before it is read
+  invalid-namespace         --namespace is empty, too long, not printable ASCII or does not end in #, / or :
+  unspellable               the model cannot be written as text
+  write-failed              the output could not be written or renamed into place
+  write-needs-file          --write or -o cannot rewrite stdin
+  write-needs-text          fmt --write rewrites text files only; redirect a wire file's text instead
+  malformed-param           a --param is not NAME=VALUE
+  unknown-param             a --param names no parameter of the class
+  duplicate-param           a --param names one parameter twice
+  malformed-value           a --param value is not of the parameter's type
+  ports-unresolvable        the facade could not name the ports of an accepted table
+  emit-refused              the emitter refused for a reason this tool does not know
+  unknown-subject-form      a verify subject is not .jsonld, .cxf.json, .oce or .json and --subject-form was not given
+  mutant-outside-directory  a mutant path resolves, through a link or a drive prefix, outside the vector file's directory
+
+vector file codes (verify, exit 2):
+  not-utf8                   the vector file is not UTF-8
+  byte-order-mark            the vector file starts with a byte-order mark
+  json-syntax                the vector file is not one JSON document
+  input-too-large            the vector file is larger than 4 MiB; refused before it is read
+  nesting-too-deep           objects and arrays nest deeper than 8 levels
+  list-too-long              a list has more than 65,536 entries, a step list included
+  string-too-long            a string is longer than 4,096 bytes as written
+  duplicate-key              an object writes one key twice
+  unknown-key                an object carries a key the format does not define (within, when: not yet)
+  missing-key                an object lacks a required key
+  wrong-type                 a value has the wrong JSON type for its position
+  non-finite-number          NaN or Infinity as a number, or a real that overflows binary64
+  integer-out-of-range       an integer outside 64 bits, or a time outside the integers a binary64 holds
+  control-character          a string carries a control character, raw or escaped
+  unknown-schema             schema is not oce/vectors/v1
+  invalid-clock              step_s is not finite and positive, or horizon_s is not finite or is negative
+  horizon-off-cadence        no whole number of steps reaches horizon_s
+  too-many-ticks             the clock has more than 16,777,216 ticks
+  too-many-scenarios         more than 4,096 scenarios
+  too-many-expectations      a scenario has more than 4,096 expectations
+  too-many-mutants           more than 256 mutants
+  too-many-parameters        a params map has more than 256 entries
+  duplicate-scenario         two scenarios share a name
+  empty-name                 an empty scenario, input, parameter, output or diagnostic block name
+  step-list-empty            a step list has no step
+  step-list-not-from-zero    a step list does not start at t = 0
+  step-times-not-increasing  a step's t is not after the step before it
+  step-after-horizon         a step's t is after horizon_s
+  invalid-window             a window's from_s is after its to_s
+  window-outside-clock       a window starts before 0 or ends after horizon_s
+  window-uncovered           a window holds no tick of the clock
+  ambiguous-expectation      an expectation is not exactly one of the window and instant forms
+  instant-off-cadence        a diagnostic at_s is not a tick of the clock
+  mutant-path-invalid        a mutant path is absolute, has an empty, . or .. segment, or holds a backslash
+  duplicate-mutant           two mutants share a path
+
+bind and run codes (verify, exit 2):
+  subject-load-failed      the engine refused the subject, or a text or wire subject has an error finding
+  unknown-input            an input name matches no boundary input
+  ambiguous-input          an input suffix matches several boundary inputs (candidates)
+  duplicate-input          two input names of one scenario resolve to one boundary input
+  input-not-supplied       a scenario supplies no value for a boundary input
+  unknown-output           an output name matches no boundary output
+  ambiguous-output         an output suffix matches several boundary outputs (candidates)
+  param-path-unknown       a parameter key matches no parameter
+  param-path-ambiguous     a parameter suffix matches several parameters (candidates)
+  param-path-duplicate     two keys of one params map name one parameter
+  param-refused            the engine refuses an edit in every pass (cause: param-range, param-type, param-structural)
+  value-type-mismatch      a value its port's or parameter's type does not take
+  value-not-representable  a number no binary64 holds exactly where a Real is read
+  enum-port-unsupported    the subject has an Enum boundary input or output
+  unsupported-port-type    the subject has a String boundary input or output
+  too-many-frames          the run would execute more than 16,777,216 frames, or one scenario more than replay allows
+  too-many-instants        the run would compare more than 268,435,456 instants
+  too-many-load-bytes      the run would load more than 1 GiB of subject and mutant bytes
+  too-many-frame-bytes     the run's frames weighted by document bytes would pass 2^40
+  mutant-missing           a listed mutant was given no bytes
+  mutant-unlisted          mutant bytes were given for a path the set does not list
+  duplicate-mutant         one mutant given twice, or two listings that resolve to one file
+  too-many-mutant-bytes    the mutants are larger than 64 MiB together; refused before any is read
+  mutant-load-failed       the engine refused a mutant
+  mutant-boundary-differs  a mutant's input or output paths or types are not the subject's (path)
+  mutant-identical         a mutant has the subject's content id
+  mutant-param-refused     a mutant refuses an edit the subject admits (cause)
+  run-refused              the engine refused a frame for a reason about the run, not the frame
+  replay-failed            the replay stopped with an error (cause: trace-too-large, engine-setup, ...)
+  window-uncovered         a window held no executed tick after a run with no refused frame
+
+exit codes:
+  0  yes: clean, canonical, resolved, every scenario passed
+  1  no: an error finding, a non-canonical file, ports that do not resolve, a failed or no_data verdict
+  2  error: a usage, read, parse, size or I/O failure, or a run with no verdict; the question was not answered
+
+enumerations (Type.Member values; a constant package's members are Integers):
+  CDL.Types.SimpleController (enumeration): P=1 PI=2 PD=3 PID=4
+  CDL.Types.Smoothness (enumeration): LinearSegments=1 ConstantSegments=2
+  CDL.Types.Extrapolation (enumeration): HoldLastPoint=1 LastTwoPoints=2 Periodic=3
+  CDL.Types.ZeroTime (enumeration): UnixTimeStamp=1 UnixTimeStampGMT=2 Custom=3 NY2010=4 NY2011=5 NY2012=6 NY2013=7 NY2014=8 NY2015=9 NY2016=10 NY2017=11 NY2018=12 NY2019=13 NY2020=14 NY2021=15 NY2022=16 NY2023=17 NY2024=18 NY2025=19 NY2026=20 NY2027=21 NY2028=22 NY2029=23 NY2030=24 NY2031=25 NY2032=26 NY2033=27 NY2034=28 NY2035=29 NY2036=30 NY2037=31 NY2038=32 NY2039=33 NY2040=34 NY2041=35 NY2042=36 NY2043=37 NY2044=38 NY2045=39 NY2046=40 NY2047=41 NY2048=42 NY2049=43 NY2050=44
+  ASHRAE.G36.Types.ASHRAEClimateZone (enumeration): Not_Specified=1 Zone_1A=2 Zone_1B=3 Zone_2A=4 Zone_2B=5 Zone_3A=6 Zone_3B=7 Zone_3C=8 Zone_4A=9 Zone_4B=10 Zone_4C=11 Zone_5A=12 Zone_5B=13 Zone_5C=14 Zone_6A=15 Zone_6B=16 Zone_7=17 Zone_8=18
+  ASHRAE.G36.Types.ControlEconomizer (enumeration): FixedDryBulb=1 DifferentialDryBulb=2 FixedDryBulbWithDifferentialDryBulb=3 FixedEnthalpyWithFixedDryBulb=4 DifferentialEnthalpyWithFixedDryBulb=5
+  ASHRAE.G36.Types.CoolingCoil (enumeration): None=1 WaterBased=2 DXCoil=3
+  ASHRAE.G36.Types.EnergyStandard (enumeration): ASHRAE90_1=1 California_Title_24=2
+  ASHRAE.G36.Types.FreezeStat (enumeration): No_freeze_stat=1 Hardwired_to_equipment=2 Hardwired_to_BAS=3
+  ASHRAE.G36.Types.HeatingCoil (enumeration): None=1 WaterBased=2 Electric=3
+  ASHRAE.G36.Types.OutdoorAirSection (enumeration): DedicatedDampersAirflow=1 DedicatedDampersPressure=2 SingleDamper=3
+  ASHRAE.G36.Types.PressureControl (enumeration): BarometricRelief=1 ReliefDamper=2 ReliefFan=3 ReturnFanMeasuredAir=4 ReturnFanDp=5
+  ASHRAE.G36.Types.Title24ClimateZone (enumeration): Not_Specified=1 Zone_1=2 Zone_2=3 Zone_3=4 Zone_4=5 Zone_5=6 Zone_6=7 Zone_7=8 Zone_8=9 Zone_9=10 Zone_10=11 Zone_11=12 Zone_12=13 Zone_13=14 Zone_14=15 Zone_15=16 Zone_16=17
+  ASHRAE.G36.Types.VentilationStandard (enumeration): ASHRAE62_1=1 California_Title_24=2
+  ASHRAE.G36.Types.DemandLimitLevels (constant-package): cooling0=0 cooling1=1 cooling2=2 cooling3=3 heating0=0 heating1=1 heating2=2 heating3=3
+  ASHRAE.G36.Types.FreezeProtectionStages (constant-package): stage0=0 stage1=1 stage2=2 stage3=3
+  ASHRAE.G36.Types.OperationModes (constant-package): occupied=1 coolDown=2 setUp=3 warmUp=4 setBack=5 freezeProtection=6 unoccupied=7
+  ASHRAE.G36.Types.ZoneStates (constant-package): heating=1 deadband=2 cooling=3
+--- stderr

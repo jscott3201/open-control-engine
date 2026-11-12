@@ -49,7 +49,7 @@ fn document(declarations: &[(&str, &str)]) -> Json {
         })
     }));
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph
     })
 }
@@ -82,7 +82,7 @@ fn unterminated_self_named_literal_reaches_the_expression_diagnostic() {
 #[test]
 fn malformed_literal_in_a_specialize_only_pruned_chain_is_silent() {
     let doc = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
               "S231:hasParameter": { "@id": "http://example.org#M.flag" },

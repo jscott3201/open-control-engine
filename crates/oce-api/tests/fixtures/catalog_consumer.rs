@@ -171,10 +171,12 @@ pub fn receipts(bytes: &[u8]) -> Result<(), oce_api::OperationFailure> {
     Ok(())
 }
 
-pub fn compatibility_receipt(report: &oce_api::ExportReport) -> Result<String, Box<dyn std::error::Error>> {
-    let descriptor = oce_api::CompatibilityDescriptor::current(Some(report))?;
+pub fn compatibility_receipt(engine: &oce_api::Engine) -> Result<String, Box<dyn std::error::Error>> {
+    let id: oce_api::ContentId = engine.content_id()?;
+    let _: Result<(), oce_api::ExportIncomplete> = engine.export_cxf()?.complete();
+    let descriptor = oce_api::CompatibilityDescriptor::current(Some(&id));
     let _: &oce_api::CatalogContentId = descriptor.catalog_content_id();
-    let _: Option<&oce_api::CompleteExportContentId> = descriptor.export_content_id();
+    let _: Option<&oce_api::ContentId> = descriptor.content_id();
     descriptor.check_compatible(&descriptor.clone())?;
     Ok(descriptor.to_string())
 }

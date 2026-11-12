@@ -41,20 +41,20 @@ scan_case() {
   fi
   [ "$got" = "$want" ] || fail "scan case '$name': want $want, got $got"
 }
-clean=$'oce-graph v0.4.0 (crates/oce-graph) [alloc]\noce-model v0.4.0 (crates/oce-model) [alloc]\nlibm v0.2.16 []'
+clean=$'oce-graph v0.5.0 (crates/oce-graph) [alloc]\noce-model v0.5.0 (crates/oce-model) [alloc]\nlibm v0.2.16 []'
 scan_case clean pass "$clean"
 scan_case std-alone fail "$clean"$'\nthiserror v2.0.18 [std]'
 scan_case std-first fail "$clean"$'\nserde v1.0.228 [std,alloc,derive]'
 scan_case std-middle fail "$clean"$'\nserde v1.0.228 [alloc,std,derive]'
 scan_case std-last fail "$clean"$'\nserde_core v1.0.228 [alloc,result,std]'
-scan_case std-on-a-member fail $'oce-graph v0.4.0 (crates/oce-graph) [alloc,default,std]'
+scan_case std-on-a-member fail $'oce-graph v0.5.0 (crates/oce-graph) [alloc,default,std]'
 scan_case host-only-json fail "$clean"$'\nserde_json v1.0.140 [alloc]'
-scan_case host-only-facade fail "$clean"$'\noce-api v0.4.0 (crates/oce-api) []'
+scan_case host-only-facade fail "$clean"$'\noce-api v0.5.0 (crates/oce-api) []'
 scan_case std-prefixed-feature pass "$clean"$'\nsemihosting v0.1.25 [stdio]'
 scan_case std-suffixed-feature pass "$clean"$'\nportable-atomic v1.15.0 [require-cas,nostd]'
 scan_case host-only-prefixed-crate pass "$clean"$'\nserde_json_path v0.7.0 []'
 scan_case empty-graph fail ''
-scan_case another-crates-graph fail $'oce-model v0.4.0 (crates/oce-model) [alloc]\nlibm v0.2.16 []'
+scan_case another-crates-graph fail $'oce-model v0.5.0 (crates/oce-model) [alloc]\nlibm v0.2.16 []'
 if bash "$CHECK" scan oce-graph </dev/null >/dev/null 2>&1; then
   fail "scan without a label must be a usage error"
 fi

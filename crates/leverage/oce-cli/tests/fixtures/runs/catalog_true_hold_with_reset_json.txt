@@ -1,0 +1,61 @@
+exit: 0
+--- stdout
+{
+  "class": {
+    "class_path": "CDL.Logical.TrueHoldWithReset",
+    "description": "Hold a true output for at least a duration; the engine-local clr input resets the hold",
+    "inputs": [
+      {
+        "description": "Input signal: a true value turns the output true and starts the hold",
+        "kind": "Boolean",
+        "name": "u",
+        "quantity": "",
+        "unit": ""
+      },
+      {
+        "description": "Clear input: while true the output is false and the hold is cancelled",
+        "kind": "Boolean",
+        "name": "clr",
+        "quantity": "",
+        "unit": ""
+      }
+    ],
+    "links": null,
+    "notes": [],
+    "outputs": [
+      {
+        "description": "True while u is true and until duration has elapsed since the output turned true; false while clr is true",
+        "kind": "Boolean",
+        "name": "y",
+        "quantity": "",
+        "unit": ""
+      }
+    ],
+    "parameters": [
+      {
+        "default": {
+          "kind": "real",
+          "value": 0.0
+        },
+        "description": "Minimum time, in seconds, that the output stays true once it turns true, unless clr clears it",
+        "enumeration": null,
+        "name": "duration",
+        "quantity": "",
+        "range": [],
+        "settable": true,
+        "type": "Real",
+        "unit": ""
+      }
+    ],
+    "reserved": false
+  },
+  "command": "catalog",
+  "errors": [],
+  "findings": [],
+  "input": null,
+  "ok": true,
+  "params": [],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

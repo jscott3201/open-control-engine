@@ -198,7 +198,6 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 - [Compiled-schedule blob](docs/compiled-schedule-blob.md)
 - [Canonical replay record](docs/replay-record.md)
 - [Authority claims and supersession](docs/authority-claims.md)
-- [Facade migration](docs/facade-migration.md)
 - [Versioned facade contracts](docs/facade-contracts.md)
 - [Architecture](docs/architecture.md)
 - [Execution profile](docs/execution-profile.md)
@@ -216,8 +215,13 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 - [Compiled-schedule blob (OCEB)](docs/design/compiled-schedule-blob.md)
 - [Authoring layer (M2)](docs/design/authoring-layer.md)
 - [Historical replay API](docs/design/replay.md)
-- [Commissioning verifier (CDL §12)](docs/design/commissioning.md)
+- [Commissioning verifier (OBC §12)](docs/design/commissioning.md)
 - [Structural diff (oce-diff)](docs/design/diff.md)
+- [Canonical content id](docs/design/content-id.md)
+- [Importer (oce-author)](docs/design/importer.md)
+- [Vocabulary v1](docs/design/vocabulary.md)
+- [Vectors, the verify replayer and receipts](docs/design/vectors.md)
+- [Bounding a vector run's work](docs/design/vector-work-budget.md)
 """
     (source / "SUMMARY.md").write_text(summary, encoding="utf-8")
 

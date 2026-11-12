@@ -9,7 +9,11 @@ Closes #
 ## Gate
 
 ```text
-<!-- Paste the TAIL of `bash .agents/gate.sh full`, run first-hand. Not a summary. -->
+<!-- Paste the TAIL of the local proof for this PR's row, run first-hand on the final head. Not a
+     summary. docs only: `bash .agents/gate.sh docs`. crates/leverage/**, docs, root README.md:
+     `bash .agents/gate.sh leverage`. Anything else: `bash .agents/gate.sh`. A pin advance or
+     .agents/gate.sh: `bash .agents/gate.sh full`. The tail names the row the checkout needs. A change to release-gate.yml also links a
+     green dispatched run of it on this branch. -->
 ```
 
 Goldens: `git status --porcelain -- tools/golden-gen/goldens` → <!-- "prints nothing", or which goldens changed and why this PR exists to change them -->

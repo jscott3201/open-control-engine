@@ -9,7 +9,7 @@
 //!
 //! This crate is **Group A**: it has zero dependency on any store or database
 //! (D-OWNER-1), and it carries only the *computational* payload of a CDL model. The
-//! non-computational metadata seam (CDL §7.17) lives in `oce-semantics`, never here on the hot
+//! non-computational metadata seam (OBC §7.17) lives in `oce-semantics`, never here on the hot
 //! path. [`resolved_model`] holds the plain-data DTOs of the load-time projection, shared by the
 //! engine facade (which returns them) and the storage port (which persists them) so that neither
 //! depends on the other; the execution core never reads them.
@@ -32,6 +32,7 @@ compile_error!(
 use alloc::{sync::Arc, vec::Vec};
 
 pub mod determinism;
+pub mod enumerations;
 pub mod resolved_model;
 pub mod types;
 
@@ -51,6 +52,10 @@ impl EnumClassId {
     pub const ZERO_TIME: Self = Self(4);
 }
 
+pub use enumerations::{
+    EnumerationClass, EnumerationKind, MemberValue, OBC_PACKAGE, enumeration_class,
+    enumeration_class_by_id, enumeration_class_path, enumeration_classes, enumeration_member_value,
+};
 pub use types::{
     EnumDescriptor, SimpleController, ZeroTime, enum_class_id, enum_descriptor,
     enum_descriptor_by_path, enum_member_ordinal, g36_enum_class_id, g36_enum_literals,
@@ -59,7 +64,7 @@ pub use types::{
 };
 
 /// A scalar CDL value (CDL §7.4.1). The payload **only** — attributes live in [`Attrs`] and
-/// never travel on the hot path (CDL §7.17).
+/// never travel on the hot path (OBC §7.17).
 ///
 /// Exactly five variants per `02-type-system-and-values.md` §2.3:
 /// `Real` = IEEE-754 `f64`; `Integer` = `i64` (honors the required ±2_147_483_647 i32 range
@@ -302,7 +307,7 @@ impl IntAttrs {
 pub struct NoAttrs;
 
 /// The attribute set carried alongside a connector, tagged to **match** the connector's
-/// [`ValueType`] (R5). Metadata only — `step()` never branches on it (CDL §7.17 / R1). Build the
+/// [`ValueType`] (R5). Metadata only — `step()` never branches on it (OBC §7.17 / R1). Build the
 /// empty default for a type with [`Attrs::default_for`].
 #[derive(Clone, Debug, PartialEq)]
 pub enum Attrs {

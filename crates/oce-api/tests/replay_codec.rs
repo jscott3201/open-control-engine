@@ -1,6 +1,6 @@
 //! Independent wire corpus and deterministic allocation-free rejection of hostile records.
 
-mod replay_oracle;
+use crate::replay_oracle; // Shared helper, declared once in the binary root.
 
 use allocation_counter::measure;
 use oce_api::{
@@ -219,10 +219,29 @@ fn malformed_descriptor_fields_refuse_instead_of_becoming_ignored_extensions() {
         DESCRIPTOR.replace("io-schema:1", "io-schema:4294967296"),
         DESCRIPTOR.replace("96724061", "9672406A"),
         DESCRIPTOR.replace("HostTick-v1", "arbitrary"),
-        DESCRIPTOR.replace("0.4.0", "04.4.0"),
-        DESCRIPTOR.replace("0.4.0", "0.4.0-01"),
-        DESCRIPTOR.replace("0.4.0", "0.4.0+"),
-        DESCRIPTOR.replace("export:none", "export:"),
+        DESCRIPTOR.replace("0.5.0", "05.5.0"),
+        DESCRIPTOR.replace("0.5.0", "0.5.0-01"),
+        DESCRIPTOR.replace("0.5.0", "0.5.0+"),
+        DESCRIPTOR.replace("content:none", "content:"),
+        // The descriptor release 0.4.0 wrote under this same revision number (its last three
+        // lines differ): the `export` line is refused by the grammar, never read as content.
+        DESCRIPTOR.replace(
+            "execution-profile-schema:1\noce-api-version:0.5.0\ncontent:none",
+            "execution-profile-schema:2\noce-api-version:0.4.0\nexport:none",
+        ),
+        DESCRIPTOR.replace("content:none", "export:none"),
+        DESCRIPTOR.replace(
+            "content:none",
+            "content:cxf:fnv1a128:00000000000000000000000000000000",
+        ),
+        DESCRIPTOR.replace(
+            "content:none",
+            &format!("content:oce:canon1:{}", "0".repeat(63)),
+        ),
+        DESCRIPTOR.replace(
+            "content:none",
+            &format!("content:oce:canon1:{}", "A".repeat(64)),
+        ),
         DESCRIPTOR.replace("value-schema:1\n", ""),
         DESCRIPTOR.replace("\n", "\r\n"),
         format!("{DESCRIPTOR}extra:1\n"),
@@ -239,9 +258,14 @@ fn malformed_descriptor_fields_refuse_instead_of_becoming_ignored_extensions() {
 
 #[test]
 fn every_public_fact_has_an_ordered_typed_eligibility_refusal() {
-    let expected = CompatibilityDescriptor::current(None).unwrap();
+    let expected = CompatibilityDescriptor::current(None);
     let payload = hex(include_str!("fixtures/replay_add.hex"));
     for (from, to, cause) in [
+        (
+            "compatibility:1",
+            "compatibility:3",
+            CompatibilityMismatch::DescriptorRevision,
+        ),
         (
             "compatibility:1",
             "compatibility:2",
@@ -278,19 +302,19 @@ fn every_public_fact_has_an_ordered_typed_eligibility_refusal() {
             CompatibilityMismatch::ExecutionProfile,
         ),
         (
+            "execution-profile-schema:1",
             "execution-profile-schema:2",
-            "execution-profile-schema:3",
             CompatibilityMismatch::ExecutionProfile,
         ),
         (
-            "0.4.0",
-            "0.4.0-next.1+build.01",
+            "0.5.0",
+            "0.5.0-next.1+build.01",
             CompatibilityMismatch::Build,
         ),
         (
-            "export:none",
-            "export:cxf:fnv1a128:00000000000000000000000000000000",
-            CompatibilityMismatch::ExportPresence,
+            "content:none",
+            "content:oce:canon1:0000000000000000000000000000000000000000000000000000000000000000",
+            CompatibilityMismatch::ContentIdPresence,
         ),
     ] {
         // Simultaneous foreign target proves descriptor precedence over placement.
@@ -307,15 +331,14 @@ fn every_public_fact_has_an_ordered_typed_eligibility_refusal() {
             );
         }
     }
-    // A present expected export is compared as content, never treated as a wildcard.
+    // A present expected content id is compared exactly, never treated as a wildcard.
     let mut engine = oce_api::Engine::new();
     engine
         .load_cxf(include_bytes!("fixtures/legacy_frame_add.jsonld"))
         .unwrap();
-    let export = engine.export_cxf().unwrap();
-    let descriptor = CompatibilityDescriptor::current(Some(&export)).unwrap();
+    let descriptor = CompatibilityDescriptor::current(Some(&engine.content_id().unwrap()));
     let text = descriptor.to_string();
-    let at = text.find("export:cxf:fnv1a128:").unwrap() + "export:cxf:fnv1a128:".len();
+    let at = text.find("content:oce:canon1:").unwrap() + "content:oce:canon1:".len();
     let mut changed = text.into_bytes();
     changed[at] = if changed[at] == b'0' { b'1' } else { b'0' };
     let record = ReplayRecord::from_bytes(&assemble(
@@ -327,7 +350,7 @@ fn every_public_fact_has_an_ordered_typed_eligibility_refusal() {
     assert_eq!(
         record.check_compatible(&descriptor),
         Err(ReplayError::DescriptorMismatch(
-            CompatibilityMismatch::ExportContent
+            CompatibilityMismatch::ContentIdMismatch
         ))
     );
 }
@@ -335,7 +358,7 @@ fn every_public_fact_has_an_ordered_typed_eligibility_refusal() {
 #[test]
 fn target_labels_are_canonical_and_foreign_components_refuse_independently() {
     let payload = hex(include_str!("fixtures/replay_add.hex"));
-    let expected = CompatibilityDescriptor::current(None).unwrap();
+    let expected = CompatibilityDescriptor::current(None);
     for target in [
         ("foreign", std::env::consts::OS),
         (std::env::consts::ARCH, "foreign"),

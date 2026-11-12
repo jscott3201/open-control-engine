@@ -1,0 +1,16 @@
+{
+  "schema": "oce/vectors/v1",
+  "clock": { "step_s": 60, "horizon_s": 600 },
+  "scenarios": [
+    {
+      "name": "warm_outside_air",
+      "inputs": { "TOut": 300.0, "TOutCut": 295.0 },
+      "expect": [{ "output": "ecoEna", "from_s": 0, "to_s": 600, "equals": false }]
+    },
+    {
+      "name": "cool_outside_air",
+      "inputs": { "TOut": 290.0, "TOutCut": 295.0 },
+      "expect": [{ "output": "ecoEna", "from_s": 0, "to_s": 600, "equals": true }]
+    }
+  ]
+}

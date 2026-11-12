@@ -104,7 +104,7 @@ fn reset_pid_trigger(member: &str, feedback: bool) -> Vec<u8> {
         ));
     }
     serde_json::to_vec(&json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph,
     }))
     .expect("serialize document")

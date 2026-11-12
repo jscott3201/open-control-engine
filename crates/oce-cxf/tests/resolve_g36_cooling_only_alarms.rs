@@ -4,7 +4,7 @@
 //! `floHys` and `damPosHys`. The fixture pre-grounds both expressions to `0.005` from the
 //! canonical Validation bindings while retaining references for every direct parameter binding.
 
-mod bless;
+use crate::bless;
 
 use std::fmt::Write as _;
 use std::path::PathBuf;

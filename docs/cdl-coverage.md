@@ -4,6 +4,97 @@ For anyone asking "does this run *my* sequence?" This page states which CDL clas
 implements, what the 46 conformance fixtures actually are, and — the part that matters most —
 what the word "supported" is doing in each of those sentences.
 
+## The standard this page measures against
+
+CDL is published as **ANSI/ASHRAE Standard 231-2026**, *A Control Description Language for
+Building Environmental Control Sequences*. This project claims no conformance to the standard.
+This page measures coverage of two public things: the
+[OpenBuildingControl (OBC) specification](https://obc.lbl.gov/specification/index.html), which is
+the informal text of the same language, and the CDL classes of the Modelica Buildings Library
+vendored under `third_party/modelica-buildings-cdl/`.
+
+This project has read the standard's published table of contents, not its text. A clause number
+of the standard cited in this documentation comes from that table: metadata is §5.13, the Control
+Exchange Format (CXF) is §6 and the elementary blocks are §7. The OBC specification numbers its
+sections differently: metadata is OBC §7.17 and CXF is OBC §8. An OBC section number cited here is
+the public specification's as it was numbered on 2026-11-09. A page that cites the metadata rule
+names both (OBC §7.17; ANSI/ASHRAE 231-2026 §5.13).
+
+The standard's table of contents lists no verification, conformance or code-generation clause.
+Checking a real controller against a sequence is OBC §12 (Verification), and the
+[commissioning verifier](design/commissioning.md) follows that section.
+
+**Elementary blocks.** The standard's public page says: "The normative definitions of elementary
+blocks in Standard 231 are based on the LBNL Modelica Buildings Library version 12.1.0"
+([data.ashrae.org/standard231](https://data.ashrae.org/standard231/), read 2026-11-09). The
+registry and the vendored sources are pinned at Buildings commit `a131864`
+(`third_party/modelica-buildings-cdl/README.md`). No CDL block is added or removed between the two:
+the file list under `Buildings/Controls/OBC/CDL` is the same at tag `v12.1.0` and at the pin, 343
+files of which 318 are `.mo` (checked 2026-11-09). The two trees are not byte-identical, and the
+contents of the files were not compared.
+
+**CXF namespace.** On the public evidence the namespace of the standard's CXF vocabulary is
+`http://data.ashrae.org/S231#`: OBC §11.3 and modelica-json's `CXF-Core.jsonld` (vendored at
+`third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld`) both bind it. This project has not
+read the standard's CXF clause (§6), so that rests on those two sources and not on the standard's
+text. The engine's exporter (`oce-cxf`) and the authoring emitter (`oce-author`) both bind that
+namespace, and both importers read the vocabulary in no other (GitHub #527). The spellings the
+importer accepts and refuses are listed under
+[host responsibilities](host-responsibilities.md#cxf-point-identities-are-the-authored-ids).
+
+## What the engine does not execute
+
+CDL has three kinds of block. The engine executes two: **elementary blocks**, the registered
+classes in the next section, and **composite blocks**, which the CXF resolver lowers to elementary
+blocks at load ([CXF composite subset](cxf-composite-subset.md)). It does not execute an
+**extension block**. An extension block is implemented by a Functional Mockup Unit (OBC §7.13;
+ANSI/ASHRAE 231-2026 §5.9) that its CXF form names with `S231:hasFmuPath` (OBC §8.7; ANSI/ASHRAE
+231-2026 §6.7), and the engine has no FMI import: FMI is out of scope before 1.0 (owner ruling,
+2026-11-09, GitHub issue #510). Every count on this page, and every use of "supported", is a claim
+about elementary and composite blocks. Extension blocks are outside it.
+
+A document that contains an extension block is refused at load with its own code,
+`extension-block-unsupported` (GitHub #582, issue #537). A node is an extension block when one
+of its `@type` values, at any position of the list, is the S231 class `ExtensionBlock`, when it
+carries `S231:hasFmuPath`, whose domain is `ExtensionBlock` (OBC §8.7), or when its `@type`
+names such a node of the same document. The class is read the way a modeled property key is
+read ([host responsibilities](host-responsibilities.md#cxf-point-identities-are-the-authored-ids)):
+its `@type` must expand to `http://data.ashrae.org/S231#ExtensionBlock`, written as that IRI, as
+`S231:ExtensionBlock` (under the published binding or, in a document that binds no `S231`, under
+none), through another prefix bound to that namespace, or as a `@context` term that expands to
+it. A bare `ExtensionBlock` is the S231 class only when a `@context` term expands it there. A class
+named `ExtensionBlock` in any other namespace (`http://example.org#ExtensionBlock`, `x:ExtensionBlock`
+with `x` bound elsewhere, an unexpanded bare `ExtensionBlock`) is an ordinary class and behaves as a
+class of any other name does: unknown as a leaf (`class-not-found`), lowered as a composite when it
+lists children, and ignored after a registered class in a type list. The class written in the
+`https:` spelling of either S231 namespace is refused as `vocabulary-namespace-mismatch`, as a
+modeled key in them is; the namespace the engine wrote through release 0.4.0 is refused that way
+for any type, and both refusals come first.
+
+The refusal covers every active node wherever it sits: the root, a child at any depth, an
+extension block that lists children of its own, and a node no `containsBlock` edge reaches. One
+error per extension block, subject the block's `@id`. It comes before composite lowering and ends
+the resolve, so nothing else that lowering or a later stage would find is reported for the
+document, about that block or any other node; findings of the earlier `@context` and
+specialization passes still are. A node pruned by a false conditional guard is not part of the
+schedule and is not refused ([active nodes](cxf-composite-subset.md#active-nodes)). Only a node's
+own activity counts: when the document carries an extension-block class's definition, the
+document is refused at that definition even if every instance of the class is pruned. An instance
+of an extension-block class whose definition the document does not carry cannot be told from any
+other unknown class and is still refused with `class-not-found`
+([acceptance preconditions](cxf-composite-subset.md#acceptance-preconditions)).
+
+Before the code, a leaf extension block was refused as `class-not-found` and an extension-block
+root with no children as `composite/root-count`, and four shapes loaded. An extension block that
+listed children, as the root or nested, was lowered as a composite, so those children ran in place
+of its FMU; an extension block that no `containsBlock` edge reached was ignored; a node typed
+`[<registered class>, S231:ExtensionBlock]` ran the registered class; and `S231:hasFmuPath` on a
+registered class was never read. The two fixtures are
+`crates/oce-cxf/tests/fixtures/invalid/extension_block_with_fmu_path.jsonld` and
+`extension_block_without_fmu_path.jsonld` beside it, and
+`crates/oce-cxf/tests/resolve_extension_blocks.rs` pins each position. The advisory code
+`missing-fmu-path`, which nothing ever emitted, is removed.
+
 ## The elementary-block registry
 
 The engine registers **136 block classes**: 133 CDL elementary classes plus 3 reserved internal
@@ -71,6 +162,92 @@ binary64 bits, including signed zero.
 `oce_blocks::catalog()` remains a supported companion API with its own `CatalogEntry` and
 `DefaultSource` types. A host that wants the facade metadata, the JSON form, or the content tag
 should use the `oce-api` catalog.
+
+## Port names are an engine contract
+
+`oce_api::class_ports(class_path, params)` names every port of a class as the author configured it,
+in port index order (GitHub #440). The catalog above names ports for the 108 fixed-arity classes at
+default parameters only; the 25 width-driven classes and the three `TimeTable` sources expose their
+ports only once their parameters are bound, so an authoring tool must ask the engine rather than
+derive the names itself. The names are part of the engine's contract:
+
+- A scalar connector keeps its CDL name (`u`, `index`, `u_s`).
+- A vector connector `u[n]` is `u1`, `u2`, …, `un`: the base name and the 1-based index with no
+  separator. This is the spelling the G36 corpus already uses (`mulSum.u1`, `booRep.y4`), and the
+  CXF import binds those ports by position in exactly this order.
+- A matrix connector `y[r, c]` is `y1_1`, `y1_2`, …, `yr_c`, row-major with the last index
+  fastest — the order every matrix block lowers its ports in (`CDL.Reals.MatrixMax` inputs,
+  `CDL.Routing.*VectorReplicator` outputs).
+- `CDL.Routing.*Extractor` lists `index` before `u1`…`un`, and `CDL.Reals.Sort` lists `y1`…`yn`
+  before `yIdx1`…`yIdxn`, as upstream declares them. A `TimeTable` source has one output per value
+  column of its table: a `rows x (n + 1)` table gives `y1`…`yn`.
+
+The names are synthesized over the block the registry constructor builds from the parameters
+(`oce_blocks::resolved_ports`), so they cannot disagree with the ports a load of the same block
+would have. `class_ports` first checks the parameters with the load gate's own parameter rules
+(`oce_validate::validate_block_parameters`) and refuses a table a load would refuse with
+`ClassPortsError::InvalidParameters`, so a width past the cap is refused rather than named at the
+clamped width; an unknown class is `ClassPortsError::UnknownClass`. Neither panics.
+
+Array **parameters** keep the older import spelling, with an underscore before every index: the
+catalog lists `k_<i>` and `K_<row>_<col>` once, and `oce_api::param_element_name` expands them to the
+`k_1`, `K_2_1` names the CXF import mints for a preserved array.
+
+`oce_api::class_metadata()` adds, for every class in catalog order, a one-sentence `description`
+(the upstream Modelica class description string where a vendored source exists, held to it by a
+test; engine-written for `CDL.Logical.TrueHoldWithReset` and the three reserved identities) and the
+class's parameters, each with its `value_type` (the element type for an array template), its
+`default` (a literal, `Derived` with its formula, or `Required`) and a `settable` flag. `settable`
+means "an author may assign this parameter": it is false only for the parameters of the three
+reserved identities. A derived default such as `MatrixGain.K` or `PIDWithReset.y_reset` is
+settable — upstream CDL declares every one as a plain, overridable `parameter`, and the G36 corpus
+assigns three of them ([#440 amendment](https://github.com/jscott3201/open-control-engine/issues/440#issuecomment-6730952664)).
+None of this enters the revision-1 catalog: `CATALOG_JSON`, `catalog_content_id` and every class
+signature hash are unchanged. The names at widths 1, 2 and the maximum, every description, and
+every parameter's type, default and settable flag are pinned by
+`crates/oce-blocks/tests/fixtures/class_ports.golden.txt`. The metadata is host-side: in
+`oce-blocks` it is compiled only with the `std` feature, so no bare-metal image carries it.
+
+## Enumerations and constant packages
+
+`oce_api::enumerations()` lists every named type the engine knows, from the one table every enum
+lookup in the engine reads (issue #468): the four CDL enumerations (`CDL.Types.SimpleController`,
+`Smoothness`, `Extrapolation`, `ZeroTime`), the ten source-pinned G36 enumerations
+(`ASHRAE.G36.Types.ASHRAEClimateZone`, `ControlEconomizer`, `CoolingCoil`, `EnergyStandard`,
+`FreezeStat`, `HeatingCoil`, `OutdoorAirSection`, `PressureControl`, `Title24ClimateZone`,
+`VentilationStandard`) and the four G36 Integer constant packages (`DemandLimitLevels`,
+`FreezeProtectionStages`, `OperationModes`, `ZoneStates`).
+
+- Every row's `class_path` is relative to `Buildings.Controls.OBC.`, the form the catalog uses for
+  block classes; `qualified_path` is the full Modelica name.
+- An **enumeration** row is a parameter and connector type: it carries the `EnumClassId` a
+  `ValueType::Enum` names, and its members, in source order, are one-based ordinals.
+- A **constant package** row is never a parameter type. Its members are named Integer constants
+  (`OperationModes.occupied` is `1`, `DemandLimitLevels.heating2` is `2`); the CXF import grounds a
+  full constant path to its Integer before any expression is evaluated, and a connector typed by
+  the package is an Integer connector.
+- Last segments are unique across the table, so an authored `Type.Member` names one row.
+
+The table has 18 rows, and their provenance differs. The ten G36 enumerations are checked against
+the vendored `.mo` sources, member by member and in order. The four CDL enumerations are not
+vendored (`CDL/Types` is outside the vendored subset); they are held to the registry's own
+`EnumMembers` rule lists and the typed `SimpleController` / `ZeroTime` parsers. The four constant
+packages are not vendored either: they carry exactly the members and values the resolver always
+used, pinned by a differential test against the hand-written `match` arms the table replaced, and
+nothing upstream checks them. `DemandLimitLevels` lists `cooling0`…`cooling3` then
+`heating0`…`heating3`; that order is a choice, not an upstream order — only the name-to-value map of
+a constant package carries meaning.
+
+`enumeration(class_path)`, `enumeration_by_id(id)`, `enumeration_class_path(id)`,
+`enumeration_member_value(class_path, member)` and `enumeration_types()` (the enumeration rows only)
+look rows up without allocating. `enumeration_class_path` returns the **authoring** form above; it
+is not the durable spelling. None of it enters the revision-1 catalog: `CATALOG_JSON`, `catalog_content_id` and the
+class signature hashes are unchanged. The durable class identity recorded in state snapshots,
+compiled-schedule blobs, the replay wire and class signature hashes is
+`oce_model::EnumDescriptor::class_path` (from `oce_model::enum_descriptor`), which predates the
+table and stays frozen: relative for CDL, **fully qualified** for G36
+(`Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil`). A record that must agree with those
+writes the durable form, never `enumeration_class_path`.
 
 ## What "supported" means for a G36 sequence
 
@@ -170,8 +347,8 @@ every block that drives an input it reads at that call. An algebraic block reads
 when it fires. A stateful block reads every input that feeds through to any of its outputs. The
 refusal happens when a path leaves one output of a block and comes back into an input that the
 block reads when it fires, but that the output does not depend on under CDL. The connector graph
-then has no cycle, so CDL §7.16 is satisfied, but there is no single point at which the block can
-fire all its outputs.
+then has no cycle, so CDL's model of computation (OBC §7.16; ANSI/ASHRAE 231-2026 §5.12) is
+satisfied, but there is no single point at which the block can fire all its outputs.
 
 The reproduction is `CDL.Routing.RealExtractSignal` with `nin = nout = 2`, so `y1 = u1` and
 `y2 = u2`, where `y1` reaches the block's own `u2` through a gain:

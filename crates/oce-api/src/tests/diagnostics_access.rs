@@ -17,7 +17,7 @@ use std::fmt::Write as _;
 
 /// A document whose `containsBlock` names a node that is not in the graph.
 const UNRESOLVED_REFERENCE: &[u8] = br#"{
-  "@context": {"S231": "http://data.ashrae.org/standard231/1.0/Model/"},
+  "@context": {"S231": "http://data.ashrae.org/S231#"},
   "@graph": [
     {"@id": "urn:probe#model", "@type": "S231:Block",
      "S231:containsBlock": [{"@id": "urn:probe#absent"}]}
@@ -26,7 +26,7 @@ const UNRESOLVED_REFERENCE: &[u8] = br#"{
 
 /// A document declaring the same subject IRI twice.
 const DUPLICATE_ID: &[u8] = br#"{
-  "@context": {"S231": "http://data.ashrae.org/standard231/1.0/Model/"},
+  "@context": {"S231": "http://data.ashrae.org/S231#"},
   "@graph": [
     {"@id": "urn:probe#twice", "@type": "S231:Block"},
     {"@id": "urn:probe#twice", "@type": "S231:Block"}

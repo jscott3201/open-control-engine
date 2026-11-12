@@ -406,10 +406,14 @@ Yes, and it does so in the place where it is hardest to ignore — the end of ev
 `.agents/gate.sh` finishes by printing a literal block headed `NOT COVERED BY THIS SCRIPT — a green
 run here does not prove these pass`, listing:
 
-- **The cross-architecture determinism matrix**: four native cells, x86_64 on `ubuntu-latest` and
-  aarch64 on `ubuntu-24.04-arm`, debug and release, with a fan-in comparison. One machine cannot
-  reproduce it; CI is the only place it runs.
-- **The strict-bit raw-output matrix** over the same four native cells, two captures each, and its
+- **The cross-architecture determinism matrix**: per PR, and again nightly, four native cells,
+  x86_64 on `ubuntu-latest` and aarch64 on `ubuntu-24.04-arm`, each in debug and release codegen,
+  with a fan-in that compares across architectures and debug against release. One machine cannot
+  reproduce it; CI is the only place it runs. In its `determinism` and `full` modes the script
+  does run the subset under release codegen on the local host: one cell of the four, and no
+  comparison.
+- **The strict-bit raw-output matrix** over four native cells on every PR (both architectures,
+  debug and release), two captures each, and its
   eight-capture comparison. Local synthetic controls and macOS observations are not native Linux
   evidence.
 - **`cargo deny check advisories`.** It needs network access and a writable advisory database, so it
@@ -418,33 +422,46 @@ run here does not prove these pass`, listing:
   made and withdrawn; the dormant `.github/workflows/ci.yml:293-321` records why — every design either compared
   argv strings, which `RUSTFLAGS=--cap-lints=allow` leaves byte-identical while neutering clippy, or
   reimplemented enough of `if:` / `needs:` / matrix semantics to become its own untested gate. CI
-  does *execute* the script (`gate (light)`, on every PR that changes a gate script, workflow or
-  tool config), so every command in it gates any PR that could make a workflow job diverge from it;
-  the script says outright that this is coverage, not parity.
+  does *execute* the script, but only after a merge: `gate (full)` in the release gate, nightly on
+  the `development` tip and on release PRs. No per-PR job runs it, so before a merge the author's
+  own run is the only one; the script says outright that the CI run is coverage, not parity.
 
-A `light` run adds a fifth line: it did not run the workspace test suite or the doctests, because
-the per-PR gate does not run them either.
+Every run but a `full` one adds further lines: it did not run the workspace test suite or the
+doctests, because the per-PR gate does not run them either, and a `docs`, `leverage` or `light`
+run ran nothing under release codegen. The report also names which row of the
+[lane-matched local proof](ci-and-the-gate.md#the-local-proof) the run was.
 
 ### The CI split, read in the dangerous direction
 
 CI is dev-light and release-heavy. The per-PR gate into `development` runs the state-determinism
 subset for **`oce-api`, `oce-blocks`, and `oce-expr`** — the `determinism-matrix` job
 and the corresponding steps inside the gate script, in four native cells (x86_64 on
-`ubuntu-latest`, aarch64 on `ubuntu-24.04-arm`) in debug and release codegen. The cells emit
+`ubuntu-latest`, aarch64 on `ubuntu-24.04-arm`, each in debug and release codegen). The cells emit
 populated portable and target-bound engine-state vectors. The `determinism-compare` fan-in requires
-both to match across codegen profiles, the portable bytes to match across architectures, and the
-target-bound bytes to differ. Each architecture then parses the other's target-bound snapshot and
+the portable bytes to match across architectures and the
+target-bound bytes to differ, and both to match across debug and release codegen within an
+architecture. Each architecture then parses the other's target-bound snapshot and
 requires `restore_state` to return the target-domain refusal.
 
+The release-codegen cells of that matrix and the debug-against-release comparisons are per-PR
+evidence again (issue #556). From issue #502 they ran only after the merge, because a release
+cell took 11 to 18 minutes; once the integration tests of `oce-api`, `oce-author`, `oce-cxf` and
+`oce-conformance` were built as a few binaries each (GitHub #546, #551, #553, #554) a release
+cell took about three minutes and they came back. The nightly release gate runs the same four
+cells again. The strict-bit matrix is separate and has run under release codegen on every pull
+request throughout, in two of its four cells.
+
 Separately, the scoped **`oce-conformance` strict-bit subset runs per-PR**: `strict_bits` and the
-four affected per-block suite binaries, in the same four native Linux cells, two independent
+four affected per-block suite binaries, in four native Linux cells (x86_64 and aarch64, debug and
+release), two independent
 process captures per cell and a fail-closed eight-capture comparison. That [per-PR native matrix](strict-bit-evidence.md)
 covers the 21 formerly banded Real cases; Linux exact comparison is not a macOS qualification.
 
 The remainder of `oce-conformance` still follows release/full-gate coverage. The complete set of
 420 reference comparisons — 399 existing exact plus 21 exact on qualified Linux, unchanged 1e-12
-aligned elsewhere — runs in the full local gate and release workflow (release PRs, daily cron
-against `development`, and manual dispatch). Two `oce-cxf` input-hygiene audits also run per-PR:
+aligned elsewhere — runs in the full local gate and release workflow (nightly against
+`development`, release PRs, pushes to `main`, and manual dispatch; not on each merge since
+issue #545). Two `oce-cxf` input-hygiene audits also run per-PR:
 fixture port order and the structural oracle, including the vendored-tree and Tier-2 digest guards.
 **A change outside these named subsets can show every check green without running its own tests.**
 A green PR is not evidence that the rest of a changed crate passed.
@@ -486,7 +503,8 @@ Which classes exist and what "supported" means for sequences is in
 
 If you are evaluating this engine, the defensible summary is:
 
-- Determinism is **tested**, on two architectures, per PR, against committed goldens.
+- Determinism is **tested**, on two architectures, per PR, against committed goldens, in debug
+  and release codegen, with debug compared against release.
 - Agreement with CDL / Buildings **source semantics** is bounded by 398 oracle comparisons: 377
   existing exact plus 21 exact on qualified Linux and at the unchanged 1e-12 aligned band on
   unqualified targets. The [retained strict-bit evidence](strict-bit-evidence.md) applies only to

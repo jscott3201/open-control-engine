@@ -5,6 +5,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use oce_blocks::BlockKind;
+use oce_graph::blob::{ENGINE_VERSION, EngineVersion};
 use oce_model::{ConnectorId, ValueType, enum_descriptor};
 
 use crate::engine::Engine;
@@ -280,7 +281,11 @@ pub(crate) fn build_manifest(
         input_definitions: crate::state_io::build_inputs(&engine.io.frame_definitions)?,
     };
     let manifest_bytes = crate::state_manifest_codec::encode_manifest(&manifest, !durable)?;
-    let fingerprint = fingerprint(crate::state::EXECUTION_ABI_REVISION, &manifest_bytes);
+    let fingerprint = fingerprint(
+        crate::state::EXECUTION_ABI_REVISION,
+        ENGINE_VERSION,
+        &manifest_bytes,
+    );
     Ok(BuiltManifest {
         manifest,
         fingerprint,
@@ -464,9 +469,20 @@ pub(crate) fn block_subject(engine: &Engine, block_index: usize) -> String {
         })
 }
 
-pub(crate) fn fingerprint(execution_revision: u32, manifest_bytes: &[u8]) -> u128 {
+/// The execution fingerprint: FNV-1a-128 over the little-endian execution-state ABI revision, the
+/// engine version as the snapshot header writes it (major, minor, patch, each a little-endian
+/// `u16`) and the canonical manifest bytes. Covering the version means a header edited to claim
+/// another engine version no longer matches the fingerprint its body carries.
+pub(crate) fn fingerprint(
+    execution_revision: u32,
+    engine_version: EngineVersion,
+    manifest_bytes: &[u8],
+) -> u128 {
     let mut hash = StableHash::new();
     hash.write_u32(execution_revision);
+    hash.write_u16(engine_version.major);
+    hash.write_u16(engine_version.minor);
+    hash.write_u16(engine_version.patch);
     hash.write_bytes(manifest_bytes);
     hash.finish()
 }

@@ -4,7 +4,7 @@
 //! pre-grounds that expression to `0.125` from the source-default `dTHys=0.25` binding while
 //! retaining references for every direct parameter binding.
 
-mod bless;
+use crate::bless;
 
 use std::collections::BTreeSet;
 use std::fmt::Write as _;

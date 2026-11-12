@@ -48,7 +48,7 @@ frame driver ([executing a blob](#executing-a-blob)).
 | Boundary inputs | Path, exact type, the effective inclusive acceptance domain, and every fan-out target connector |
 | Boundary outputs | The executable boundary identity and its source output connector |
 | `SemanticPoint` payloads | One opaque, length-bounded payload per input and output, empty in v1 |
-| Content id | The facade's `cxf:fnv1a128` content id at encode time, or "none" for a partial export |
+| Content id | The 32 SHA-256 digest bytes of the loaded model's [canonical content id](design/content-id.md) (`Engine::content_id`, `oce:canon1:`) at encode time, for every loaded document, partial export or not; 32 zero bytes ("none") only for a hand-built model with no id. Carried verbatim, never interpreted by the decoder |
 | Engine version | The encoder's `major.minor.patch` |
 
 Block and connector ids are the host's own, so the decoded `RunState` compares with the host's word
@@ -62,8 +62,8 @@ never by the run-local class id. Reals travel as their IEEE-754 bits.
   a target is not supported in v1.
 - **Authored identities beyond the I/O paths.** Instance and connector IRIs, units, quantities,
   display units, point-list, trend and semantic metadata stay on the host; they are
-  non-computational (CDL §7.17). The `SemanticPoint` payload slots exist for them and the decoder
-  never reads them.
+  non-computational (§7.17 of the OpenBuildingControl (OBC) specification; ANSI/ASHRAE 231-2026
+  §5.13). The `SemanticPoint` payload slots exist for them and the decoder never reads them.
 - **The CXF document and its parameter expressions.** Bindings are already evaluated.
 - **Host policy.** The non-finite input policy, diagnostics handling, cadence and every
   [host responsibility](host-responsibilities.md) stay with the host.
@@ -121,8 +121,17 @@ A decoder accepts exactly one format version (1), one execution profile (HostTic
 engine version; anything else, older or newer, is a typed refusal. Between release tags every
 `development` build shares one version string, so a blob and the target that runs it must come
 from the same build — the same current/current rule as state snapshots. The reserved header flags
-must be zero. Any change to the layout, a tag table, the class signature record, the CRC or the
-content-id meaning bumps the format version; v1 has no optional or skippable sections.
+must be zero. The format has no optional or skippable sections.
+
+The format version stays 1 until the engine's 1.0.0 (issue #509). A change to the layout, a tag
+table, the class signature record, the CRC or the content-id meaning is made in place and the
+goldens are re-blessed; there is no importer and no decoder that reads two layouts. The engine
+version in the header is therefore what tells a blob of one layout from another, so the first
+change of that kind after a release tag also moves the workspace version. A blob encoded by
+release 0.4.0 shows why: it carries this same format number, valid sections, class hashes and
+CRC, and the retired `cxf:fnv1a128:` export tag where today's layout carries the canonical content
+id's digest. It is refused with `EngineVersionMismatch` and never becomes an executable
+(`tests/blob_old_layout.rs`).
 
 Each class carries an FNV-1a-64 **class signature hash** over a canonical record of the class: the
 default instance's kind, state length and state-contract revision, its port kinds and names, the
@@ -155,17 +164,55 @@ transfer or storage; it is not tamper evidence, because anyone can recompute it.
 
 ## Refusals
 
-The decoder checks, in order, and returns the first failure: the 64 MiB size limit; header shape,
-magic and total length; format version; the CRC; profile, engine version and flags; structure
+The decoder checks, in order, and returns the first failure: the 64 MiB size limit; a header and
+trailer's worth of bytes and the magic; format version, then engine version; total length, then
+the CRC; profile and flags; structure
 (section order and lengths, bounded counts, port lists no longer than any class resolves, UTF-8,
 tags, canonical list order, no trailing bytes);
-classes (registered, same hash, each used) and instances (class index, unique parameter names,
-finite Reals, known enum classes and in-range ordinals, the constructed block's kind, state length
-and arity, every connector exactly once); boundary inputs (not Enum-typed, typed targets used once,
+each class (registered, same hash), then each instance in turn (class index, unique parameter
+names, finite Reals, known enum classes and in-range ordinals, the constructed block's kind, state
+length and arity, connectors in range and not already claimed), then every class used and every
+connector claimed; boundary inputs (not Enum-typed, typed targets used once,
 typed, finite and uncrossed bounds), connections (output to input, equal kinds, distinct blocks, never into a boundary
 input, one driver per input), undriven inputs and boundary outputs (output sources, unique paths);
 the schedule (a permutation that respects emit-before under the target's own feedthrough); the state
 budget (`MAX_STATE_WORDS`) and each initial-state CRC.
+
+### Which refusal wins
+
+One rule decides which refusal a blob or a [state snapshot](state-compatibility.md) reports when it
+is wrong in more than one way (issue #535): **nothing that another engine version may lay out
+differently is checked before the engine version.** Each decoder checks, in this order, the size
+limit, that a header and a trailer fit, the magic, the format revision, the engine version, and
+only then the total or body length, the integrity trailer and the rest. Every format stays at
+revision 1 until 1.0.0 and changes in place, so a later field of another version's artefact (its
+length, its trailer algorithm, its body) cannot be read until the version is known to match.
+
+| Step | Blob (`BlobError`) | Snapshot (`EngineStateError`) |
+| --- | --- | --- |
+| Size limit, 64 MiB inclusive | `TooLarge` | `SnapshotTooLarge` |
+| Shorter than a header and a trailer | `Malformed`, `Truncated` | `MalformedSnapshot` at offset 0 |
+| Magic | `Malformed`, `BadMagic` | `MalformedSnapshot` at offset 0 |
+| Format revision | `UnsupportedFormat` | `UnsupportedFormat` |
+| Engine version | `EngineVersionMismatch` | `EngineVersionMismatch` |
+| Total or body length | `Malformed`, `LengthMismatch` | `MalformedSnapshot` at offset 22 |
+| Integrity trailer | `IntegrityMismatch` (CRC-32C) | `IntegrityMismatch` (FNV-1a-128) |
+| Then | profile, flags, structure, classes, … | body, fingerprint, flags, … |
+
+So an artefact another engine version wrote reports `EngineVersionMismatch` however else it is
+damaged, unless it is over the size limit, too short to hold a header, not of its kind or of
+another format revision. That holds while its magic, format and version fields sit where this
+layout puts them. A layout that put them elsewhere is still refused with a typed error, though
+not necessarily this one: the [state contract](state-compatibility.md#wire-revision-and-integrity)
+shows this for snapshots written before the version field existed. Because the version comes
+first, a corrupted version field reports the version it now spells,
+not an integrity failure; the trailer still covers the field, so a version field rewritten to
+this build's fails the trailer. The fields between the format and the version (the blob's
+execution profile, the snapshot's execution-state ABI revision) are read on the way and checked
+later: the profile after the CRC, the ABI revision at restore. Under another engine version
+either is a version refusal. No byte of either format changed with this rule.
+`tests/blob_refusal_precedence.rs` and `src/tests/state_codec_tests.rs` in `oce-api` pin it with
+every pair of defects for each artefact; the earlier check wins in every pair.
 
 ## Cost
 
@@ -210,7 +257,7 @@ natively, and a separate job replays it on `wasm32-wasip1` under a checksum-pinn
 ([CI and the gate](ci-and-the-gate.md#the-blob-round-trip)). `bash .agents/gate.sh roundtrip`
 records on the local host and replays here and on `wasm32-wasip1`.
 
-**The recorded artifact, format version 1.** One directory holding exactly two files per fixture;
+**The recorded artifact, recording format 1.** One directory holding exactly two files per fixture;
 the reader refuses any other name. `<fixture>.oceb` is the blob the recording target encoded.
 `<fixture>.trace.tsv` is UTF-8 text, one record per line, fields separated by one tab, every line
 ending in a newline:
@@ -251,14 +298,16 @@ without a panic, and a missing, foreign, swapped or oversized file.
 | Claim | Evidence |
 | --- | --- |
 | One canonical byte sequence per executable | 46 goldens in `crates/oce-api/tests/fixtures/blob/`, re-encoded byte for byte, and decoded then re-encoded byte for byte (`blob_goldens.rs`); an independent test-side writer reproduces every golden (`blob_hostile_bytes.rs`) |
-| Identical on x86_64 and aarch64, debug and release | Every cell of the per-PR determinism matrix compares its encoding with the goldens, and the `determinism-compare` fan-in requires the four cells' bytes identical ([CI and the gate](ci-and-the-gate.md#dev-light-release-heavy)); the macOS and Windows platform cells run the same golden test |
+| Identical on x86_64 and aarch64, debug and release | Every determinism cell compares its encoding with the goldens, and the `determinism-compare` fan-in requires the cells' bytes identical: all four cells (x86_64 and aarch64, debug and release codegen) per PR ([CI and the gate](ci-and-the-gate.md#dev-light-release-heavy)); the macOS (per PR) and Windows (merge gate) platform cells run the same golden test |
 | Same outputs, refusals and state as the host, through one frame driver | `src/tests/blob_dual_path_tests.rs`: for every fixture, the facade, the core frame driver on a second load and the blob entry take 160 frames spanning about 3.3 hours (steps from 0.75 s to 300 s) plus the same bad frames (NaN time, time going backwards, a wrong type, a non-finite Real under `Refuse`, a value above a declared maximum), and every boundary output, refusal, clock, sequence and the whole `RunState` match bit for bit after load and after every frame and refusal; every stateful fixture's state words change, each fixture moves at least a recorded number of outputs, and a perturbed input on the blob side fails the comparison. The facade's run must reproduce `crates/oce-graph/tests/fixtures/blob_frame_digests.tsv`, which `oce-graph`'s `blob_execution` test checks against the entry built `no_std + alloc` |
 | No second frame driver in the facade | `crates/oce-api/tests/frame_driver_ownership.rs`: the facade re-exports the core's `MAX_FRAME_TIME_MAGNITUDE` and `NonFiniteInputPolicy`, and no facade source defines them, evaluates the schedule or re-implements a time or sequence rule |
 | Executing frames allocates nothing; the target closure is clean | `crates/oce-graph/tests/blob_execution.rs` (zero allocations over every golden's frames, run against the `no_std + alloc` build in `no-std-build`) and `scripts/ci/check-no-std-entry-closure.sh` (no `oce-cxf`, `oce-api`, `serde_json` or `std` in the closure, with controls) |
 | The same run on bare metal | `firmware/link/tests/run_tests.rs` (every golden reaches its digest through the image's run code) and `schedule_tests.rs` (the image's schedule equals the test schedule bit for bit), per PR; `qemu.yml` (nightly): the image on `netduinoplus2` and riscv32 `virt` prints the host's run digest after each of 160 frames |
-| Encoded on one machine, the same run on x86_64, aarch64 and wasm32 | `crates/oce-conformance/tests/blob_round_trip.rs` ([above](#the-blob-round-trip)): every output, warning and raw state word after every frame of all 46 fixtures, recorded in all four determinism cells (required identical) and replayed from the x86_64 debug recording on aarch64 and on `wasm32-wasip1` under wasmtime, per PR; its controls flip one recorded bit and require the report to name it |
+| Encoded on one machine, the same run on x86_64, aarch64 and wasm32 | `crates/oce-conformance/tests/blob_round_trip.rs` ([above](#the-blob-round-trip)): every output, warning and raw state word after every frame of all 46 fixtures, recorded in all four per-PR determinism cells (required identical, release codegen included) and replayed from the x86_64 debug recording on aarch64 and on `wasm32-wasip1` under wasmtime, per PR; its controls flip one recorded bit and require the report to name it |
 | Raw state words restore all or nothing | `crates/oce-graph/tests/blob_state_words.rs` |
 | Typed refusal, never a panic | `blob_hostile_bytes.rs` and `blob_hostile_model.rs` (one test per refusal), `blob_fuzz.rs` (10,000 seeded random mutations, re-checksummed) and `oce-blocks` `tests/hostile_parameters.rs` |
+| A blob of an earlier layout under the same format number is refused | `blob_old_layout.rs`: the release-0.4.0 encoding of one fixture, kept unblessed, is refused with `EngineVersionMismatch` by `decode` and by `Executable::from_blob` |
+| Which refusal wins is one rule for the blob and the snapshot | `blob_refusal_precedence.rs` and `oce-api`'s `src/tests/state_codec_tests.rs`: every pair of defects in each artefact reports the earlier check, every truncation of another version's blob below a header is `Truncated` and above it `EngineVersionMismatch`, and every flipped version bit is a version refusal; `blob_old_layout.rs`: the release-0.4.0 blob stays a version refusal with its length, trailer, profile or body damaged |
 | `SemanticPoint` payloads are non-computational | `blob_semantic_seam.rs` fills and mutates every payload byte and requires an identical executable and identical outputs |
 
 On a bare-metal target the blob runs in the firmware image (`firmware/link`, GitHub #449, issue

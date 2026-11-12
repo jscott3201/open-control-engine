@@ -1,0 +1,8 @@
+{
+  "schema": "oce/vectors/v1",
+  "clock": { "step_s": 60, "horizon_s": 600 },
+  "mutants": [{ "path": "../identical_mutant/copy.cxf.json" }],
+  "scenarios": [
+    { "name": "low", "inputs": { "u": 0.0 }, "expect": [] }
+  ]
+}

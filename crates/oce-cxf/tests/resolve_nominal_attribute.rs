@@ -136,7 +136,7 @@ fn an_ungroundable_or_non_numeric_nominal_is_a_typed_resolver_refusal() {
 /// A one-block document whose source port is `port_type` (`Integer` or `Boolean`), with a nominal.
 fn non_real_document(class: &str, port_type: &str, k: Json) -> Vec<u8> {
     serde_json::to_vec(&json!({
-        "@context": {"S231": "http://data.ashrae.org/S231P#"},
+        "@context": {"S231": "http://data.ashrae.org/S231#"},
         "@graph": [
             {"@id": "http://example.org#N", "@type": "S231:Block",
              "S231:containsBlock": {"@id": "http://example.org#N.con"}},

@@ -59,6 +59,7 @@ use crate::scope_chain::{IndexedEntries, ScopeFrame};
 
 use super::composite_rules::{ARRAY_PARAMETER, DECLARATION_CYCLE, DUPLICATE_DECLARATION};
 use super::local_name;
+use super::parameter_attrs::CheckedParameters;
 use super::specialize::{Specialization, validate_g36_parameter_value};
 
 /// Which import pass is invoking the shared own-declaration evaluation.
@@ -80,6 +81,9 @@ pub(super) enum Pass<'a> {
         specialization: &'a Specialization,
         /// The import's shared diagnostic vector; every finding of this pass emits into it.
         diags: &'a mut Vec<Diagnostic>,
+        /// The parameter nodes whose descriptive attributes this resolve already checked, shared
+        /// with leaf grounding so a node read twice is reported once (issue #559).
+        checked: &'a mut CheckedParameters,
     },
     /// The conditional-guard specialization pass (`complete_scope`).
     Specialize {
@@ -393,6 +397,9 @@ fn evaluate_one(
         );
         return;
     };
+    if let Pass::Lowering { diags, checked, .. } = pass {
+        checked.refuse_malformed(pnode, declaration.iri, diags);
+    }
     if matches!(pass, Pass::Lowering { .. }) && pnode.is_array == Some(true) {
         emit_generic(
             pass,

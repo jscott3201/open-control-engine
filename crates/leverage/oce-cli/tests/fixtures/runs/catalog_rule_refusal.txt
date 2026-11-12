@@ -1,0 +1,69 @@
+exit: 1
+--- stdout
+{
+  "class": {
+    "class_path": "CDL.Reals.MultiSum",
+    "description": "Sum of Reals, y = k[1]*u[1] + k[2]*u[2] + ... + k[n]*u[n]",
+    "inputs": null,
+    "links": {
+      "latest_help": "https://simulationresearch.lbl.gov/modelica/releases/latest/help/Buildings_Controls_OBC_CDL_Reals.html#Buildings.Controls.OBC.CDL.Reals.MultiSum",
+      "pinned_source": "https://github.com/lbl-srg/modelica-buildings/blob/a131864e4c4df22ebcd52bb8da439de0087ac365/Buildings/Controls/OBC/CDL/Reals/MultiSum.mo"
+    },
+    "notes": [],
+    "outputs": null,
+    "parameters": [
+      {
+        "default": {
+          "kind": "integer",
+          "value": 0
+        },
+        "description": "Number of input signals",
+        "enumeration": null,
+        "name": "nin",
+        "quantity": "",
+        "range": [
+          "nin >= 0",
+          "nin <= 1048576"
+        ],
+        "settable": true,
+        "type": "Integer",
+        "unit": ""
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 1.0
+        },
+        "description": "Input gains",
+        "enumeration": null,
+        "name": "k_<i>",
+        "quantity": "",
+        "range": [],
+        "settable": true,
+        "type": "Real",
+        "unit": ""
+      }
+    ],
+    "reserved": false
+  },
+  "command": "catalog",
+  "errors": [],
+  "findings": [
+    {
+      "code": "parameter-out-of-range",
+      "detail": "parameter `nin` on block `CDL.Reals.MultiSum` must be >= 0; got -1",
+      "origin": "engine",
+      "severity": "error",
+      "span": null,
+      "subject": "CDL.Reals.MultiSum"
+    }
+  ],
+  "input": null,
+  "ok": false,
+  "params": [
+    "nin=-1"
+  ],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

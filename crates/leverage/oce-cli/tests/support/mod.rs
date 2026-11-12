@@ -1,0 +1,227 @@
+//! Shared test support: run the built `oce` binary and compare its runs with goldens.
+//!
+//! Every run starts in the crate directory, so inputs are named by relative paths (the fixtures
+//! of `oce-author` are referenced in place, `../oce-author/tests/fixtures/...`) and no absolute
+//! path can reach an output. Goldens regenerate only with `OCE_BLESS_CLI=1` (the repository's one
+//! truthiness policy, `oce-bless`).
+
+#![allow(dead_code)]
+
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+
+use oce_api::{CatalogDefault, ClassMetadata, ValueType};
+
+/// The golden switch.
+pub const BLESS_VAR: &str = "OCE_BLESS_CLI";
+
+/// One finished run of the binary.
+#[derive(Debug)]
+pub struct Run {
+    /// The exit status.
+    pub code: i32,
+    /// Everything written to stdout.
+    pub stdout: Vec<u8>,
+    /// Everything written to stderr.
+    pub stderr: Vec<u8>,
+}
+
+impl Run {
+    /// stdout as UTF-8 (panics in the test on anything else).
+    pub fn stdout_text(&self) -> &str {
+        std::str::from_utf8(&self.stdout).expect("stdout is UTF-8")
+    }
+
+    /// stdout parsed as one JSON report.
+    pub fn report(&self) -> serde_json::Value {
+        serde_json::from_slice(&self.stdout).expect("stdout is one JSON document")
+    }
+
+    /// The run as the golden spells it: the exit status, then stdout, then stderr.
+    pub fn transcript(&self) -> String {
+        format!(
+            "exit: {}\n--- stdout\n{}--- stderr\n{}",
+            self.code,
+            String::from_utf8_lossy(&self.stdout),
+            String::from_utf8_lossy(&self.stderr)
+        )
+    }
+}
+
+/// The crate directory every run starts in.
+pub fn crate_dir() -> &'static Path {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+}
+
+/// Run `oce` with `args` in `dir`, feeding `stdin`.
+pub fn oce_in(dir: &Path, args: &[&str], stdin: &[u8]) -> Run {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_oce"))
+        .args(args)
+        .current_dir(dir)
+        .env_remove(BLESS_VAR)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("the oce binary starts");
+    let mut pipe = child.stdin.take().expect("stdin is piped");
+    // The binary may stop reading early (a refused over-size stdin); a broken pipe is expected.
+    let _ = pipe.write_all(stdin);
+    drop(pipe);
+    let output = child.wait_with_output().expect("the oce binary finishes");
+    Run {
+        code: output
+            .status
+            .code()
+            .expect("the binary exits with a status"),
+        stdout: output.stdout,
+        stderr: output.stderr,
+    }
+}
+
+/// Run `oce` with `args` in `dir`, killing it if it has not finished after `guard`. The guard
+/// catches a run that would never return (a regression that blocks on a named pipe, say) so the
+/// test fails instead of hanging; it is a hang guard, never an assertion on speed, and is meant to
+/// be far longer than any run takes.
+pub fn oce_in_guarded(dir: &Path, args: &[&str], guard: std::time::Duration) -> Run {
+    use std::io::Read;
+    let mut child = Command::new(env!("CARGO_BIN_EXE_oce"))
+        .args(args)
+        .current_dir(dir)
+        .env_remove(BLESS_VAR)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("the oce binary starts");
+    // Drained on their own threads, so a full pipe never looks like a hang.
+    let drain = |mut pipe: Box<dyn Read + Send>| {
+        std::thread::spawn(move || {
+            let mut bytes = Vec::new();
+            let _ = pipe.read_to_end(&mut bytes);
+            bytes
+        })
+    };
+    let stdout = drain(Box::new(child.stdout.take().expect("stdout is piped")));
+    let stderr = drain(Box::new(child.stderr.take().expect("stderr is piped")));
+    let started = std::time::Instant::now();
+    let status = loop {
+        if let Some(status) = child.try_wait().expect("the child can be polled") {
+            break status;
+        }
+        if started.elapsed() > guard {
+            let _ = child.kill();
+            let _ = child.wait();
+            panic!("oce {args:?} did not finish: it hung");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    };
+    Run {
+        code: status.code().expect("the binary exits with a status"),
+        stdout: stdout.join().expect("stdout drained"),
+        stderr: stderr.join().expect("stderr drained"),
+    }
+}
+
+/// Run `oce` with `args` in the crate directory.
+pub fn oce(args: &[&str], stdin: &[u8]) -> Run {
+    oce_in(crate_dir(), args, stdin)
+}
+
+/// A fixture of `oce-author`, referenced in place, as a path relative to the crate directory.
+pub fn author_fixture(relative: &str) -> String {
+    format!("../oce-author/tests/fixtures/{relative}")
+}
+
+/// This crate's own input fixture, relative to the crate directory.
+pub fn input(name: &str) -> String {
+    format!("tests/fixtures/inputs/{name}")
+}
+
+/// Compare `actual` with the golden at `tests/fixtures/<relative>`, or write it when blessing.
+pub fn compare_or_bless(relative: &str, actual: &str) {
+    let path = crate_dir().join("tests/fixtures").join(relative);
+    if oce_bless::enabled(BLESS_VAR) {
+        std::fs::create_dir_all(path.parent().expect("a fixture directory")).expect("mkdir");
+        std::fs::write(&path, actual).expect("write golden");
+        return;
+    }
+    let expected = std::fs::read_to_string(&path)
+        .unwrap_or_else(|_| panic!("missing golden {relative}; bless with {BLESS_VAR}=1"));
+    assert_eq!(
+        actual, expected,
+        "golden {relative} differs; bless with {BLESS_VAR}=1"
+    );
+}
+
+/// Run one golden case in the crate directory: check its exit status, then compare its
+/// transcript with `tests/fixtures/runs/<name>.txt` (or write it when blessing).
+pub fn case(name: &str, expected_exit: i32, args: &[&str], stdin: &[u8]) {
+    let run = oce(args, stdin);
+    assert_eq!(
+        run.code,
+        expected_exit,
+        "{name}: exit status\n{}",
+        run.transcript()
+    );
+    compare_or_bless(&format!("runs/{name}.txt"), &run.transcript());
+}
+
+/// Run one golden case in `dir` (a scratch directory with its inputs copied in, named by relative
+/// paths): check its exit status, then compare its transcript with
+/// `tests/fixtures/runs/<name>.txt` (or write it when blessing).
+pub fn case_in(dir: &Path, name: &str, expected_exit: i32, args: &[&str]) {
+    let run = oce_in(dir, args, b"");
+    assert_eq!(
+        run.code,
+        expected_exit,
+        "{name}: exit status\n{}",
+        run.transcript()
+    );
+    compare_or_bless(&format!("runs/{name}.txt"), &run.transcript());
+}
+
+/// `--param` arguments that give every required scalar parameter of the class a value of its
+/// type (1, `true`, a one-letter string, an enumeration's first member), so that the class
+/// resolves wherever such a table satisfies its rules. A required array (the `TimeTable`
+/// sources' `table_<row>_<col>`) is left out, and such a class does not resolve.
+pub fn required_params(meta: &ClassMetadata) -> Vec<String> {
+    meta.parameters
+        .iter()
+        .filter(|parameter| parameter.default == CatalogDefault::Required)
+        .filter(|parameter| !parameter.name.contains('<'))
+        .filter_map(|parameter| {
+            let value = match parameter.value_type {
+                ValueType::Real | ValueType::Integer => "1",
+                ValueType::Boolean => "true",
+                ValueType::String => "x",
+                ValueType::Enum(id) => oce_api::enumeration_by_id(id)?.members.first()?,
+            };
+            Some(format!("{}={value}", parameter.name))
+        })
+        .collect()
+}
+
+/// `oce catalog CLASS` at [`required_params`], as text or as JSON.
+pub fn describe(meta: &ClassMetadata, json: bool) -> Run {
+    let params = required_params(meta);
+    let mut args = vec!["catalog", meta.class_path];
+    for param in &params {
+        args.extend(["--param", param.as_str()]);
+    }
+    if json {
+        args.push("--json");
+    }
+    oce(&args, b"")
+}
+
+/// A fresh scratch directory for one test, under cargo's per-crate temporary directory.
+pub fn scratch(name: &str) -> PathBuf {
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join("oce-cli")
+        .join(name);
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("create the scratch directory");
+    dir
+}

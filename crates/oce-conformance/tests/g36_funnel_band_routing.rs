@@ -8,10 +8,10 @@
 
 use oce_conformance::ValueKind;
 
-#[path = "g36_funnel_band/policy.rs"]
-mod funnel_band_policy;
-#[path = "g36_funnel_band/sequences.rs"]
-mod sequences;
+// Shared helper `g36_funnel_band/policy.rs`, declared once in the root `conformance.rs`.
+use crate::funnel_band_policy;
+// Shared helper `g36_funnel_band/sequences.rs`, declared once in the root `conformance.rs`.
+use crate::sequences;
 
 use sequences::{PointSpec, SEQUENCES, kind_name, reference_path};
 

@@ -1,0 +1,17 @@
+# Economizer enable on outdoor-air temperature with a deadband.
+sequence econ_enable
+derived_from none
+
+param dTHys : Real = 1 K
+
+in TOut : Real @unit K @quantity ThermodynamicTemperature @displayUnit degC
+in TOutCut : Real @unit K @provisional
+out ecoEna : Boolean @brick Enable_Command
+
+block sub = CDL.Reals.Subtract
+block hys = CDL.Reals.Hysteresis(uLow = 0.0 K, uHigh = dTHys)
+
+TOutCut -> sub.u1
+TOut -> sub.u2
+sub.y -> hys.u
+hys.y -> ecoEna

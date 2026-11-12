@@ -5,10 +5,14 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_model::ModelGraph;
 use serde_json::{Value, json};
 
-mod bless;
+use crate::bless;
 #[path = "resolve_composite_orientation/diagnostics.rs"]
 mod diagnostics;
-mod render;
+#[path = "resolve_composite_orientation/fanout_cpu.rs"]
+mod fanout_cpu;
+#[path = "resolve_composite_orientation/lowering_cpu.rs"]
+mod lowering_cpu;
+use crate::render;
 
 #[path = "resolve_composite_orientation/multiplicity.rs"]
 mod multiplicity;
@@ -310,7 +314,7 @@ fn boundary_ring(entry: bool) -> Value {
         ]);
     }
     let mut document = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph
     });
     let ring_node = |document: &mut Value, suffix: &str, target: &str| {
@@ -492,7 +496,7 @@ fn sibling_document() -> Value {
     graph.extend(gain_composite(model, "subA"));
     graph.extend(gain_composite(model, "subB"));
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph
     })
 }
@@ -580,7 +584,7 @@ fn unwired_sibling_boundary_cannot_fabricate_a_leaf_connection() {
     graph.extend(constant_composite(model, "subC", false));
     graph.extend(gain_composite(model, "subD"));
     let mut document = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph
     });
     set_absolute_targets(
@@ -607,7 +611,7 @@ fn unwired_sibling_boundary_cannot_fabricate_a_leaf_connection() {
 fn duplicated_top_level_edge_still_rejects_when_a_nested_composite_is_present() {
     let model = "http://example.org#duplicate";
     let document = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             { "@id": model, "@type": "S231:Block",
               "S231:containsBlock": [

@@ -341,6 +341,18 @@ pub(super) fn same_reference_inventory(expected: &Corpus, actual: &Corpus) -> Re
     Ok(())
 }
 
+// A retained archive is history. Its harness documents were built with the namespace IRI the
+// engine bound when the run was captured, so its `cxf_sha256` values are kept verbatim and are no
+// longer compared with the corpus (GitHub #527), as its source map has not been since GitHub #392.
+// Every other inventory field (reference, provenance, rule, times, oracle) still has to match.
+pub(super) fn same_archived_inventory(expected: &Corpus, archived: &Corpus) -> Result<(), String> {
+    let mut normalized = archived.clone();
+    for (a, e) in normalized.signals.iter_mut().zip(&expected.signals) {
+        a.cxf_sha256.clone_from(&e.cxf_sha256);
+    }
+    same_reference_inventory(expected, &normalized)
+}
+
 // Compare metadata and every oracle/time cell separately from observations. This prevents a
 // missing output, sample, changed input or re-blessed oracle from masquerading as equality.
 pub(super) fn same_contract(expected: &Corpus, actual: &Corpus) -> Result<(), String> {

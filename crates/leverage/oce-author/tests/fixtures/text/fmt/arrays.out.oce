@@ -1,0 +1,29 @@
+sequence arrays
+derived_from none
+block sum3 = CDL.Reals.MultiSum(nin = 3, k = [1, 2, 3])
+block sum4 = CDL.Reals.MultiSum(k_1 = 1, k_3 = 3)
+block sum5 = CDL.Reals.MultiSum(k = [1 K, 2 K, 3 K])
+block gain = CDL.Reals.MatrixGain(K = [[0.5, 0.5], [1.5, -1.5]])
+block gain2 = CDL.Reals.MatrixGain(K = [[1.0, 0.0], [0.0, 1.0]])
+block gain3 = CDL.Reals.MatrixGain(K_2_1 = 1.0, K_1_1 = 2.0)
+block tab = CDL.Reals.Sources.TimeTable(
+  table = [[0.0, 1.0], [3600.0, 2.0]],
+  smoothness = Smoothness.ConstantSegments
+)
+block odd = CDL.Reals.Nope(x_1 = 1, x_2 = 2)
+block sum6 = CDL.Reals.MultiSum(
+  k_1 = 1,
+  nin = 2,
+  k_2 = 2
+)
+block gain4 = CDL.Reals.MatrixGain(
+  K_1_1 = 1.0,
+  K_1_2 = 2.0,
+  K_2_1 = 3.0
+)
+block sum7 = CDL.Reals.MultiSum(
+  k_1 = 1,
+  # on the second element
+  k_2 = 2,
+  k_3 = 3
+)

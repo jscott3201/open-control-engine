@@ -75,9 +75,29 @@ pub enum DiagCode {
     /// An `@id` referenced by an edge / `hasInstance` / `containsBlock` / `isConnectedTo` /
     /// `isOfDataType` is absent from both the document and the libraries (§9.1.2).
     UnresolvedReference,
-    /// An instance's class IRI did not resolve to a registered block class, and it is not an
-    /// `ExtensionBlock` (§9.1.3).
+    /// An instance's class IRI did not resolve to a registered block class (§9.1.3): a class the
+    /// engine does not implement, such as `CDL.Reals.PID`, or one it cannot tell from the
+    /// document. An instance of an extension-block class whose definition the document does not
+    /// carry is such a class. A node the document itself marks as an extension block never
+    /// reaches the class lookup: it is refused first, with
+    /// [`DiagCode::ExtensionBlockUnsupported`].
     ClassNotFound,
+    /// The document contains a CDL extension block (OBC §7.13 and §8.7), whose behaviour is a
+    /// Functional Mockup Unit; the engine does not execute FMUs, and FMI is out of scope before
+    /// 1.0. Raised by the `oce-cxf` resolver, before composite lowering, for every active node
+    /// that is typed `S231:ExtensionBlock` (at any position of its `@type` list; the class in the
+    /// S231 namespace only, `http://data.ashrae.org/S231#`, in any spelling that expands to it or
+    /// as the compact `S231:` form of a document that binds no `S231`), carries
+    /// `S231:hasFmuPath` (whose domain is `ExtensionBlock`), or whose `@type` names such a node of
+    /// the same document, wherever it sits: the root, a child at any depth, or a node no
+    /// `containsBlock` edge reaches. A class named `ExtensionBlock` in another namespace is an
+    /// ordinary class. Subject = the node's `@id`. The resolve ends with this refusal, so it
+    /// replaces the follow-on diagnostics lowering would raise for the same node
+    /// (`class-not-found` for a leaf, `composite/root-count` for an extension-block root), and
+    /// nothing lowering or a later stage would find is reported for the document beside it. A
+    /// node pruned by a false conditional guard is not refused; a class definition the document
+    /// carries is, even when every instance of it is pruned.
+    ExtensionBlockUnsupported,
     /// An overlay node's trailing `.member` did not match a member of the owning instance (§9.1.4).
     OverlayTargetNotFound,
     /// A flattened array name (e.g. `A_1`) collided with an existing instance name (§9.1.7).
@@ -139,6 +159,18 @@ pub enum DiagCode {
     /// tokens (`@type`, `isOfDataType`) are never refused with this code: their no-match paths
     /// ([`DiagCode::ClassNotFound`], [`DiagCode::UnresolvedReference`]) own junk there.
     RelativeIri,
+    /// The document spells the S231 vocabulary in a namespace other than the one this engine
+    /// reads, `http://data.ashrae.org/S231#`: its `@context` binds the `S231` prefix to another
+    /// IRI, binds any prefix to the namespace this engine wrote before release 0.5.0, a node keys
+    /// a modeled property by its full IRI in that namespace or in the `https:` spelling of either,
+    /// a node's `@type` or `isOfDataType` is a full IRI in that earlier namespace (a type is
+    /// otherwise read by its trailing term, so it would be read through the namespace), or a
+    /// node's `@type` names the class `ExtensionBlock` in the `https:` spelling of either (that
+    /// class is read only in the S231 namespace, so it would be read as an ordinary class). The
+    /// message names the IRI found and the IRI expected (subject = the `@context` term, or the
+    /// node carrying the key or the type). Refused at load: nothing reads a document in another
+    /// namespace.
+    VocabularyNamespaceMismatch,
 
     // --- Validate-time `shall`-errors (oce-validate, the deep gate) ---
     /// An input's in-degree was not exactly 1 and it is not an external boundary input
@@ -174,6 +206,12 @@ pub enum DiagCode {
     ParameterKindMismatch,
     /// One block instance carries the same raw parameter name more than once.
     DuplicateParameter,
+    /// A bound parameter spells an element of one of its class's array or matrix parameters
+    /// (`k_<i>`, `table_<row>_<col>`) with an index in any form other than the canonical one-based
+    /// decimal the CXF import writes: a sign (`table_+1_2`) or a leading zero (`k_01`). Two
+    /// spellings of one element would otherwise both reach a block that parses indices as
+    /// integers, and the later one in table order would win (GitHub #470).
+    NonCanonicalElementName,
     /// A block parameter violates a class-level range or ordering rule.
     ParameterOutOfRange,
     /// A parameter holds, or its binding expression produced, a non-finite Real value (`NaN`,
@@ -216,12 +254,10 @@ pub enum DiagCode {
 
     // --- Advisory `should`-warnings (doc 04 §9) ---
     /// Connected cluster members declared divergent `displayUnit`s — non-computational, warning only
-    /// (§7.17).
+    /// (OBC §7.17).
     DisplayUnitDivergence,
     /// An `S231:Analog*` connector was coerced to `Real` (§8.2 coercion policy) — advisory.
     AnalogCoercedToReal,
-    /// An `ExtensionBlock` carried no `hasFmuPath` (§3.7, R-6) — advisory.
-    MissingFmuPath,
     /// An unknown `S231:` property key was preserved for forward-compatibility (§9) — advisory.
     UnknownProperty,
     /// A root-declared boundary output's node exists but no internal connector or boundary
@@ -256,6 +292,7 @@ impl DiagCode {
             DiagCode::MissingConnectorId => "missing-connector-id",
             DiagCode::UnresolvedReference => "unresolved-reference",
             DiagCode::ClassNotFound => "class-not-found",
+            DiagCode::ExtensionBlockUnsupported => "extension-block-unsupported",
             DiagCode::OverlayTargetNotFound => "overlay-target-not-found",
             DiagCode::ArrayFlattenCollision => "array-flatten-collision",
             DiagCode::GroundingFailed => "grounding-failed",
@@ -272,6 +309,7 @@ impl DiagCode {
             DiagCode::ConflictingInterfaceDeclaration => "conflicting-interface-declaration",
             DiagCode::BoundaryOutputShadowsConnector => "boundary-output-shadows-connector",
             DiagCode::RelativeIri => "relative-iri",
+            DiagCode::VocabularyNamespaceMismatch => "vocabulary-namespace-mismatch",
             DiagCode::SingleAssignment => "single-assignment",
             DiagCode::DirectionMismatch => "direction-mismatch",
             DiagCode::TypeMismatch => "type-mismatch",
@@ -284,6 +322,7 @@ impl DiagCode {
             DiagCode::MissingRequiredParameter => "missing-required-parameter",
             DiagCode::ParameterKindMismatch => "parameter-kind-mismatch",
             DiagCode::DuplicateParameter => "duplicate-parameter",
+            DiagCode::NonCanonicalElementName => "non-canonical-element-name",
             DiagCode::ParameterOutOfRange => "parameter-out-of-range",
             DiagCode::NonFiniteParameter => "non-finite-parameter",
             DiagCode::AlgebraicLoop => "algebraic-loop",
@@ -292,7 +331,6 @@ impl DiagCode {
             DiagCode::SharedInstance => "shared-instance",
             DiagCode::DisplayUnitDivergence => "display-unit-divergence",
             DiagCode::AnalogCoercedToReal => "analog-coerced-to-real",
-            DiagCode::MissingFmuPath => "missing-fmu-path",
             DiagCode::UnknownProperty => "unknown-property",
             DiagCode::UndrivenBoundaryOutput => "undriven-boundary-output",
             DiagCode::UnusedBoundaryInput => "unused-boundary-input",
@@ -421,6 +459,7 @@ mod tests {
         MissingConnectorId => "missing-connector-id",
         UnresolvedReference => "unresolved-reference",
         ClassNotFound => "class-not-found",
+        ExtensionBlockUnsupported => "extension-block-unsupported",
         OverlayTargetNotFound => "overlay-target-not-found",
         ArrayFlattenCollision => "array-flatten-collision",
         GroundingFailed => "grounding-failed",
@@ -438,6 +477,7 @@ mod tests {
         ConflictingInterfaceDeclaration => "conflicting-interface-declaration",
         BoundaryOutputShadowsConnector => "boundary-output-shadows-connector",
         RelativeIri => "relative-iri",
+        VocabularyNamespaceMismatch => "vocabulary-namespace-mismatch",
         SingleAssignment => "single-assignment",
         DirectionMismatch => "direction-mismatch",
         TypeMismatch => "type-mismatch",
@@ -449,6 +489,7 @@ mod tests {
         MissingRequiredParameter => "missing-required-parameter",
         ParameterKindMismatch => "parameter-kind-mismatch",
         DuplicateParameter => "duplicate-parameter",
+        NonCanonicalElementName => "non-canonical-element-name",
         ParameterOutOfRange => "parameter-out-of-range",
         NonFiniteParameter => "non-finite-parameter",
         AlgebraicLoop => "algebraic-loop",
@@ -457,7 +498,6 @@ mod tests {
         SharedInstance => "shared-instance",
         DisplayUnitDivergence => "display-unit-divergence",
         AnalogCoercedToReal => "analog-coerced-to-real",
-        MissingFmuPath => "missing-fmu-path",
         UnknownProperty => "unknown-property",
         UndrivenBoundaryOutput => "undriven-boundary-output",
         UnusedBoundaryInput => "unused-boundary-input",

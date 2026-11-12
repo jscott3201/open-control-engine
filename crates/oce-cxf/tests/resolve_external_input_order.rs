@@ -47,7 +47,7 @@ fn document(targets_reversed: bool) -> Value {
         targets.reverse();
     }
     json!({
-      "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+      "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
       "@graph": [
         { "@id": M, "@type": "S231:Block",
           "S231:containsBlock": [ { "@id": iri("sum") } ],

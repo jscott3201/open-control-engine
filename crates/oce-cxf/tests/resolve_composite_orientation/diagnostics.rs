@@ -176,8 +176,12 @@ fn reached_conflicted_input_keeps_deferred_direction_error() {
 }
 
 /// A nonmatching fanout arm cannot hide a later refusal owned by flat validation.
+///
+/// The reversed arm lowers to `subB.out.y → subA.gain.u`, an input the root boundary `u` already
+/// drives, so the double driver is refused beside the flat `In → In` direction error (issue #472):
+/// the direction error's subject is `u` because the elision tags `subA.gain.u` with it.
 #[test]
-fn mixed_polarity_target_fanout_has_only_flat_direction_error() {
+fn mixed_polarity_target_fanout_refuses_the_flat_edge_and_the_double_driver() {
     let mut document = sibling_document();
     let model = "http://example.org#siblings";
     node_mut(&mut document, "#siblings")
@@ -216,6 +220,11 @@ fn mixed_polarity_target_fanout_has_only_flat_direction_error() {
         ],
     );
     let expected = vec![
+        Diagnostic::error(
+            DiagCode::SingleAssignment,
+            "input is driven by a block output and a boundary input",
+        )
+        .with_subject(format!("{model}.subA.gain.u")),
         Diagnostic::error(
             DiagCode::DirectionMismatch,
             "connection is not output→input",

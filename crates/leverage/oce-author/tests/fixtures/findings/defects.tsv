@@ -1,0 +1,23 @@
+invalid-provenance-id	derived_from	`CXF:abc`: a provenance id starts with a lowercase format prefix (`[a-z][a-z0-9]*`) and a colon
+parameter-kind-mismatch	nStage	sequence parameter `nStage` is declared Integer but its value is Real
+unknown-enum-type	eneStd	sequence parameter `eneStd`: `OperationModes` (ASHRAE.G36.Types.OperationModes) is a constant package, never a parameter type; declare the parameter `Integer` and assign `OperationModes.<member>`
+crossed-bounds	TOut	`TOut` declares `min` 30.0 above `max` -10; no value lies between them
+invalid-semantic-point	TOut	`unit` byte 3 is not printable ASCII without space or `#`
+invalid-bound	ecoEna	`ecoEna` is a Boolean boundary, which takes no `max`
+duplicate-name	sub	block `sub` repeats the name of an earlier output; names are unique across parameters, inputs, outputs and blocks
+duplicate-parameter	hys.uLow	block `hys` assigns `uLow` more than once
+unknown-parameter	hys.uMid	`CDL.Reals.Hysteresis` has no parameter `uMid`; array parameters are assigned per element (`k_1`)
+unknown-parameter-reference	hys.pre_y_start	`pre_y_start` references `dTHysX`, which is not a sequence parameter
+unknown-enum-literal	con.controllerType	`SimpleController.PIX` is not a member of `SimpleController` (CDL.Types.SimpleController); write `SimpleController.<member>` with one of: P, PI, PD, PID
+parameter-out-of-range	con.k	block `con`: parameter `k` on block `CDL.Reals.PID` must be >= 0.0000000000001; got -1
+class-not-found	end	block `end` names class `CDL.Reals.Nope`, which the catalog does not register
+invalid-name	end	block name `end`: the name is a Modelica reserved word
+class-not-authorable	pass	block `pass` names `urn:oce:lowering#PassThrough.Real`, an engine-reserved lowering identity no author may use
+parameter-not-settable	pass.k	`urn:oce:lowering#PassThrough.Real` is an engine-reserved lowering identity; no author may assign its parameter `k`
+missing-required-parameter	limit	block `limit`: block `CDL.Reals.Limiter` is missing required parameter `uMax`
+missing-required-parameter	limit	block `limit`: block `CDL.Reals.Limiter` is missing required parameter `uMin`
+malformed-connection	connection[4]	`hys.y.z -> ecoEna`: the source port `y.z` is malformed: byte 1 is not an ASCII letter, digit or `_` (dots are not allowed)
+single-assignment	connection[5]	`TOut -> sub.u1`: `sub.u1` is already driven by connection[0]; an input has exactly one driver (CDL single assignment)
+unknown-source	connection[6]	`ecoEna -> hys.u`: the source `ecoEna` is a boundary output, which cannot drive a connection
+unknown-target	connection[7]	`sub.y -> TOut`: the target `TOut` is a boundary input, which cannot be driven
+unknown-port	connection[8]	`TOut -> sub.u9`: block `sub` (`CDL.Reals.Subtract`) has no input port `u9`; its inputs are: u1, u2

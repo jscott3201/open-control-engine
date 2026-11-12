@@ -14,8 +14,10 @@
 //! the block struct. The split between [`Block::emit_from_state`] (emit from **prior** state) and
 //! [`Block::update_state`] (advance state after) is what lets `oce-graph` evaluate a tick in
 //! topological order and cut algebraic loops at non-feedthrough stateful blocks. This crate is
-//! **Group A**: no store, no database (D-OWNER-1); it carries behavior only — never per-tick state
-//! in the struct, never non-computational metadata (CDL §7.17).
+//! **Group A**: no store, no database (D-OWNER-1); a block carries behavior only — never per-tick
+//! state in the struct, never non-computational metadata (OBC §7.17). The host-facing metadata the
+//! registry publishes beside the blocks (the catalog, contract port names, class descriptions and
+//! settable flags; GitHub #440) lives in static tables no block reads.
 //!
 //! The arena trait, per-tick context seam, scalar Reals, Logical/Conversions/Integers algebraic
 //! blocks, Reals dynamic blocks, PID controllers, logical timing/latch blocks, integer edge/count
@@ -40,6 +42,11 @@ use oce_model::{ParamTable, Value, ValueType, determinism::canonicalize_real};
 
 mod catalog;
 mod catalog_rules;
+// Host-facing authoring metadata (GitHub #440): `std` only, so no bare-metal image carries it.
+#[cfg(feature = "std")]
+mod class_descriptions;
+#[cfg(feature = "std")]
+mod class_metadata;
 mod class_signature;
 pub use catalog_rules::ParamRuleProjection;
 pub use class_signature::{class_is_target_bound, class_signature_hash};
@@ -57,6 +64,8 @@ mod logical_timing;
 mod logical_variable_pulse;
 mod lowering;
 mod math;
+#[cfg(feature = "std")]
+mod param_templates;
 mod pid;
 pub mod port_names;
 mod psychrometrics;
@@ -71,11 +80,23 @@ mod reals_sources;
 mod reals_transcendental;
 mod reals_vector_reductions;
 mod registry;
+#[cfg(feature = "std")]
+mod resolved_ports;
 
 #[cfg(feature = "std")]
 pub use catalog::catalog;
 pub use catalog::{
     CatalogEntry, DefaultLiteral, DefaultSource, ParamDefault, PortInfo, PortNaming,
+};
+#[cfg(feature = "std")]
+pub use class_metadata::{ClassParameter, class_description, class_parameters};
+#[cfg(feature = "std")]
+pub use param_templates::{
+    PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER, ParamNameTemplate,
+};
+#[cfg(feature = "std")]
+pub use resolved_ports::{
+    PortSide, ResolvedPort, ResolvedPorts, ResolvedPortsError, resolved_ports,
 };
 mod routing;
 mod routing_boolean;
@@ -166,7 +187,7 @@ pub enum PortKind {
 /// Static interface descriptor for an elementary block class. Fixed-width blocks use this directly
 /// for their BUILD-time port contract. Parameter-width blocks publish their default-width class
 /// descriptor here and override [`Block::resolved_signature`] for the authoritative instance
-/// signature. Carries no non-computational metadata (§7.17).
+/// signature. Carries no non-computational metadata (OBC §7.17).
 #[derive(Clone, Copy, Debug)]
 pub struct BlockSignature {
     /// Canonical class path, e.g. `"CDL.Reals.PID"`.
@@ -755,6 +776,9 @@ mod catalog_tests;
 
 #[cfg(test)]
 mod class_signature_tests;
+
+#[cfg(all(test, feature = "std"))]
+mod class_metadata_tests;
 
 #[cfg(test)]
 mod authority_claims_tests;

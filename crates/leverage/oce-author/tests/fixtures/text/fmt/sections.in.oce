@@ -1,0 +1,18 @@
+sequence   reordered
+derived_from    cxf:fnv1a128:00ff
+sub.y->hys.u
+TOut->sub.u1
+block hys=CDL.Reals.Hysteresis(uLow=1.50,uHigh=dTHys)
+param   n:Integer=-0
+in TOut:Real@displayUnit degC   @unit K @quantity ThermodynamicTemperature
+out ecoEna:Boolean@provisional @brick Enable_Command
+block sub = CDL.Reals.Subtract(
+)
+param dTHys:Real=1E5 s
+param big:Real=12345678901234567890.0
+param tiny:Real=0.000001000
+in TSet:Real@haystack sp @name "Set point" @haystack temp @label "Label \"q\" \\ x"
+block con = CDL.Reals.Sources.Constant(k = 1.0e0, k2 = 2, k3 = 3)
+block pid = CDL.Reals.PID(controllerType = SimpleController.PI, Ti = 300 s)
+block assMes = CDL.Utilities.Assert(message = "a message that is long enough to push this block past one hundred columns")
+TSet->con.u

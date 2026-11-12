@@ -1,6 +1,6 @@
 //! Exact conformance for typed `CDL.*.Sources.TimeTable` blocks through the frozen facade.
 
-mod block_harness;
+use crate::block_harness; // Shared helper, declared once in the root `conformance.rs`.
 
 use block_harness::{
     B, BlockCase, I, Param, ParamValue, Port, R, assert_cases_match_exact_oracle, case,

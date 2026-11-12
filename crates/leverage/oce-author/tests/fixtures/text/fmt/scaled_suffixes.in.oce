@@ -1,0 +1,17 @@
+# Times written in the units an engineer uses; fmt keeps each scaled suffix as written.
+sequence   delays
+derived_from none
+in u:Boolean
+out y:Boolean
+param offset:Real=-1 K
+block del=CDL.Logical.TrueDelay(delayTime=1.50 h, delayOnInit=true)
+block hol = CDL.Logical.TrueFalseHold(
+  trueHoldDuration = 30 min, # half an hour
+  falseHoldDuration = 2 d
+)
+block pul = CDL.Logical.Sources.Pulse(period=1.1 h,shift=-0.0 h)
+block sam = CDL.Discrete.Sampler(samplePeriod = 900 s)
+block far = CDL.Logical.TrueDelay(delayTime = 9007199254740993 min)
+u->del.u
+del.y->hol.u
+hol.y->y

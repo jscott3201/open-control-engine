@@ -1,0 +1,22 @@
+exit: 2
+--- stdout
+{
+  "command": "validate",
+  "errors": [
+    {
+      "code": "duplicate-key",
+      "detail": "duplicate key `sequence` at line 3 column 3",
+      "span": {
+        "column": 3,
+        "line": 3
+      }
+    }
+  ],
+  "findings": [],
+  "input": "tests/fixtures/inputs/malformed.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "stages": [],
+  "tool": "oce"
+}
+--- stderr

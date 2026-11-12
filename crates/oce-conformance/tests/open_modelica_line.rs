@@ -1,8 +1,8 @@
 //! Scoped finite OpenModelica differential for `CDL.Reals.Line`.
 
-mod block_harness;
-#[path = "open_modelica_line/support.rs"]
-mod scoped;
+// The scoped helper reaches `crate::block_harness`, which the binary root declares.
+// Shared helper `open_modelica_line/support.rs`, declared once in the root `conformance.rs`.
+use crate::scoped_open_modelica_line as scoped;
 
 use oce_conformance::{ComparisonResult, DriveMode};
 

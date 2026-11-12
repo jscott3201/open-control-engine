@@ -1,0 +1,8 @@
+{
+  "schema": "oce/vectors/v1",
+  "clock": { "step_s": 60, "horizon_s": 600 },
+  "mutants": [{ "path": "copy.cxf.json", "description": "A byte-for-byte copy of the subject: identical, so invalid." }],
+  "scenarios": [
+    { "name": "low", "inputs": { "u": 0.0 }, "expect": [{ "output": "y", "from_s": 0, "to_s": 600, "equals": false }] }
+  ]
+}

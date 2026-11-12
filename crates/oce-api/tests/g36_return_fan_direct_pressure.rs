@@ -1,8 +1,8 @@
 //! Source-verified ASHRAE G36 ReturnFanDirectPressure through the frozen facade.
 
 use oce_api::{Engine, PointDirection, Value};
-#[path = "support/frame_trace.rs"]
-mod frame_trace;
+// Shared helper, declared once for this binary in its root `facade.rs`.
+use crate::frame_trace;
 use frame_trace::FrameRun;
 
 const RETURN_FAN_DIRECT_PRESSURE: &str = include_str!(

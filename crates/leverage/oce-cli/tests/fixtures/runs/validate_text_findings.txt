@@ -1,0 +1,60 @@
+exit: 1
+--- stdout
+{
+  "command": "validate",
+  "errors": [],
+  "findings": [
+    {
+      "code": "missing-required-parameter",
+      "detail": "block `lim`: block `CDL.Reals.Limiter` is missing required parameter `uMax`",
+      "origin": "author",
+      "severity": "error",
+      "span": {
+        "column": 7,
+        "line": 8
+      },
+      "subject": "lim"
+    },
+    {
+      "code": "class-not-found",
+      "detail": "block `lim` names class `CDL.Reals.Nope`, which the catalog does not register",
+      "origin": "author",
+      "severity": "error",
+      "span": {
+        "column": 7,
+        "line": 8
+      },
+      "subject": "lim"
+    },
+    {
+      "code": "duplicate-name",
+      "detail": "block `lim` repeats the name of an earlier block; names are unique across parameters, inputs, outputs and blocks",
+      "origin": "author",
+      "severity": "error",
+      "span": {
+        "column": 7,
+        "line": 9
+      },
+      "subject": "lim"
+    },
+    {
+      "code": "single-assignment",
+      "detail": "`lim.x -> y`: `y` is already driven by connection[1]; an input has exactly one driver (CDL single assignment)",
+      "origin": "author",
+      "severity": "error",
+      "span": {
+        "column": 1,
+        "line": 13
+      },
+      "subject": "connection[2]"
+    }
+  ],
+  "input": "tests/fixtures/inputs/stage_one.oce",
+  "ok": false,
+  "schema": "oce-report/1",
+  "stages": [
+    "author"
+  ],
+  "tool": "oce"
+}
+--- stderr

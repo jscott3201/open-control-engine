@@ -1,0 +1,12 @@
+{
+  "schema": "oce/vectors/v1",
+  "clock": { "step_s": 60, "horizon_s": 1800 },
+  "scenarios": [
+    {
+      "name": "both_open_unchecked",
+      "description": "AHU-0016's both_open inputs with nothing expected: the run checks no instant",
+      "inputs": { "htg_vlv_cmd": 20.0, "clg_vlv_cmd": 30.0 },
+      "expect": []
+    }
+  ]
+}

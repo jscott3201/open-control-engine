@@ -33,7 +33,8 @@ It is **not** a second engine. It never evaluates an expression, never schedules
 single assignment or an algebraic loop, and never opens a network listener. The only path from an
 authored sequence to the engine is CXF bytes imported by `oce-cxf` through `Engine::load_cxf`. The
 engine judges the result; the authoring layer reports that judgement in the author's terms. Nothing
-here changes [the §7.17 seam](../architecture.md#the-organising-idea-the-cdl-717-non-computational-seam)
+here changes [the metadata seam](../architecture.md#the-organising-idea-the-non-computational-metadata-seam)
+(§7.17 of the OpenBuildingControl (OBC) specification; ANSI/ASHRAE 231-2026 §5.13)
 or anything the engine will never do; the binary carve-out is in decision 9.
 
 ## The authoring model
@@ -45,11 +46,11 @@ in its simplest accepted form and the dialect the library already uses. Nested c
 
 | Element | Content |
 | --- | --- |
-| Sequence | `name` (identifier), `extends` (opaque provenance id or none, decision 5) |
-| Parameter | sequence-level `name`, `type` (Real, Integer, Boolean), literal `value`; lowered onto the root block (decision 3) |
-| Input / output | boundary `name`, `type` (Real, Integer, Boolean), optional `quantity` and `display_unit` (decision 21), and a `SemanticPoint` slot (decision 2) |
+| Sequence | `name` (identifier), `derived_from` (opaque provenance id or none, decision 5; named `extends` until issue #529) |
+| Parameter | sequence-level `name`, `type` (Real, Integer, Boolean, or an enumeration type name; amended 2026-11-09, issue #492), literal `value`; lowered onto the root block (decision 3) |
+| Input / output | boundary `name`, `type` (Real, Integer, Boolean), optional `quantity` and `display_unit` (decision 21), optional `min` and `max` number bounds (amended 2026-11-09, issue #492), and a `SemanticPoint` slot (decision 2) |
 | Block | instance `name`, catalog `class_path`, ordered parameter assignments |
-| Assignment | parameter `name` and a value: a literal, an enum member, a string, or a reference to a sequence parameter |
+| Assignment | parameter `name` and a value: a literal, a member of an enumeration or library constant package, a string, or a reference to a sequence parameter |
 | Connection | `source -> target`; an endpoint is a boundary name or `block.port` |
 
 Every list is an ordered vector, kept in authored order. Names are identifiers
@@ -59,9 +60,22 @@ IRI under the root. Port names are never authored; they come from the catalog (#
 
 `SemanticPoint` is a closed struct of optional fields: `name`, `label`, `unit`, `brick`, `s223`,
 `qudt`, `haystack` (a list of tags) and `provisional`. Literals are tagged: `Integer(i64)` when the
-token has no fraction or exponent, `Real(f64)` otherwise, `Boolean`, `Text`, `EnumMember` (the
-member's type and name). A Real parameter accepts an Integer literal, as CDL parameter validation
-widens it; an Integer parameter refuses a Real literal.
+token has no fraction or exponent, `Real(f64)` otherwise, `Boolean`, `Text`, `EnumMember` (now
+`Member`; the member's type and name). A Real parameter accepts an Integer literal, as CDL
+parameter validation widens it; an Integer parameter refuses a Real literal.
+
+*Amended 2026-11-09 (issue #492, from the [importer note](importer.md#model-changes)):* three model
+changes. A sequence parameter's type is a `ParameterType`: `Real`, `Integer`, `Boolean` or
+`Enum(type_name)`, the enumeration's last segment (`SimpleController`, `EnergyStandard`), resolved
+through `oce_api::enumeration_types()`; a constant package is never a parameter type. Its value is a
+member of that type, and a block parameter of `ValueType::Enum(c)` may reference it only when the
+type resolves to class `c`. `EnumMember` became `Literal::Member(MemberRef { type_name, member })`,
+a member of a named type: an enumeration member, or an Integer constant of a library constant
+package (`OperationModes.occupied`), which fits an Integer parameter; the type name decides which,
+through `oce_api::enumerations()`, never the parameter's kind. A boundary carries optional `min`
+and `max`, each a `Bound`: an Integer or Real number literal, never a reference. A Real boundary
+takes either kind (an Integer widened, exactly up to 2^53), an Integer boundary an Integer, a
+Boolean boundary none. `nominal` and `unbounded` are not carried.
 
 ## Text form
 
@@ -70,23 +84,27 @@ parser (decision 1). One statement per line except a block's parameter list, whi
 
 | Production | Grammar |
 | --- | --- |
-| file | `sequence-stmt extends-stmt { param-stmt } { in-stmt } { out-stmt } { block-stmt } { connection }` |
+| file | `sequence-stmt derived-from-stmt { param-stmt } { in-stmt } { out-stmt } { block-stmt } { connection }` |
 | sequence-stmt | `"sequence" name` |
-| extends-stmt | `"extends" ( "none" \| provenance-id )` |
-| param-stmt | `"param" name ":" type "=" literal` |
+| derived-from-stmt | `"derived_from" ( "none" \| provenance-id )` |
+| param-stmt | `"param" name ":" ( type \| name ) "=" literal` (a `name`: an enumeration type; amended 2026-11-09) |
 | in-stmt / out-stmt | `("in" \| "out") name ":" type { tag }` |
 | block-stmt | `"block" name "=" class-path [ "(" [ assign { "," assign } ] ")" ]` |
 | assign | `name "=" ( literal \| name \| enum-member \| list )` |
 | connection | `endpoint "->" endpoint`, endpoint = `name [ "." name ]` |
-| tag | `"@unit" atom \| "@quantity" atom \| "@displayUnit" atom \| "@brick" atom \| "@s223" atom \| "@qudt" atom \| "@haystack" atom \| "@name" string \| "@label" string \| "@provisional"` |
+| tag | `"@unit" atom \| "@quantity" atom \| "@displayUnit" atom \| "@min" number \| "@max" number \| "@brick" atom \| "@s223" atom \| "@qudt" atom \| "@haystack" atom \| "@name" string \| "@label" string \| "@provisional"` |
 | literal | `number [ unit-suffix ] \| "true" \| "false" \| string` |
 | list | `"[" [ item { "," item } ] "]"`, items literals or lists (vectors and matrices) |
 | comment | `#` to end of line, anywhere |
 | name / atom | an identifier as above; an atom is printable ASCII with no space or `#`. `@haystack` may repeat |
 
-The `file` production is the canonical order; after `extends` the parser accepts the other
+The `file` production is the canonical order; after `derived_from` the parser accepts the other
 statements in any order and `fmt` regroups them (decision 12). `type` is `Real`, `Integer` or
-`Boolean`. `class-path` is the catalog `class_path` verbatim
+`Boolean`. *Amended 2026-11-09 (issue #492):* a sequence parameter's type may also be any other
+word, an enumeration type name the validator resolves (the parser stays catalog-free); a boundary's
+type stays one of the three. `@min` and `@max` take one number token with no unit suffix and print
+right after `@displayUnit`. A `Type.Member` on the right of `=` is a member of an enumeration or of
+a library constant package (`OperationModes.occupied`). `class-path` is the catalog `class_path` verbatim
 (`CDL.Reals.Hysteresis`). An `enum-member` is `Type.Member` with `Type` the last segment of the
 enum class (`SimpleController.PI`); the catalog resolves it to the full member path. A bare `name`
 on the right of `=` is a reference to a sequence parameter. A string is double-quoted with `\"`,
@@ -95,7 +113,21 @@ on the right of `=` is a reference to a sequence parameter. A string is double-q
 **Unit-literal sugar.** `86400 s` is text-only: the suffix never reaches the wire form, the
 emitter or the engine, and the value is the number as written (decision 3, refined by decision 13).
 Comments are text-only in the same way: the model keeps them so `fmt` loses nothing, and the wire
-form and the emitter drop them.
+form and the emitter drop them. *Amended 2026-11-09 (issue #482):* statement annotations alone could
+not hold a comment above `sequence` (this note's own worked example opens with one) or after the last
+statement, so the model gained two fields, `Sequence::annotations` (the header comments; a comment
+between `sequence` and `derived_from` folds in and prints above `sequence`) and
+`Sequence::trailing_comments`, which the wire form, the schema and the emitter ignore. A comment
+after the last item of a block's `(...)` precedes nothing and is refused (`comment-before-close`).
+An end-of-line comment moves to its own line above its statement.
+
+*Amended 2026-11-11 (issue #501; [vocabulary note](vocabulary.md), "Units" and decision 14):* a
+suffix that is exactly one of the vocabulary's scaled time units, `min`, `h` or `d`, scales the
+number exactly to seconds with one rounding (decision 13's amendment), so the value is no longer
+always the number as written. The model carries the base-unit Real (`3600.0` for `1 h`), which is
+all the wire form, the emitter and the engine see, and keeps the suffix and the written number
+(`Assignment::scaled_from`) so `fmt` prints `1 h` again. A base-unit suffix still leaves the
+number as written.
 
 **Canonical printer.** `fmt` is parse then print. The printer emits statements in the section
 order of the `file` production, keeps authored order inside every section, puts one space around
@@ -109,11 +141,67 @@ it never reorders anything (decision 6; decision 12 states what `fmt` changes be
 input above 4 MiB, more than 100,000 lines, a line above 4,096 bytes, a token above 256 bytes, list
 nesting deeper than 2, more than 65,536 statements of one kind, and non-UTF-8, control characters or
 a byte-order mark. Each limit is pinned at its boundary: accepted at the limit, refused one past.
+*Amended 2026-11-09 (issue #482):* the error is `ParseError { code, location, detail }` with one
+exact code per malformed construct; a line may be 8,192 bytes, because a string the wire form
+carries may be 4,096 bytes as written and must fit on one line with its assignment; a string is
+bounded at those 4,096 bytes rather than by the 256-byte token bound, which keeps governing names,
+numbers, suffixes, atoms and provenance ids.
 
 **Round-trip properties.** For every canonical text `t`, `print(parse(t)) == t` byte for byte; for
 every model `m`, `parse(print(m)) == m`; and `fmt` is idempotent. Tests enumerate models
 deterministically (no RNG, per [TESTING.md](../../TESTING.md#conventions)) and run over every
 corpus bundle.
+
+*Amended 2026-11-09 (issue #482 and its review):*
+
+- **The property, exactly.** `print_text` returns `Result<String, PrintError>` and is total or
+  refusing. It never emits text that parses to a different model. A name, class path, atom,
+  suffix, string, value or `derived_from` id that the lexer would not read back as the same value
+  is refused with `PrintError::Unspellable { subject, detail }`. Its only normalizations are the
+  parser's own: a comment with a line feed prints as several comment lines, trailing spaces in a
+  comment are dropped, and the header's meaningless `blank_line_before` is not printed.
+- **Which models round-trip.** `print` refuses, never emits, a statement whose printed line would
+  pass the line bound and a document that would pass 4 MiB, 100,000 lines or 65,536 statements of
+  one kind, so whatever it emits `parse` reads back equal within every bound. It succeeds for every
+  model `parse` returns and every model stage 1 accepts whose comments are spellable (amended
+  2026-11-11, issue #501: stage 1 refuses an unspellable suffix as `unit-suffix-mismatch`),
+  except a document that would print past 4 MiB or 100,000 lines (comments alone, or re-spacing
+  one already at a bound). `fmt(fmt(t)) == fmt(t)` for every text whose `fmt` succeeds.
+- **Stage 1 additions** that make every clean model printable within the line bound:
+  - `nan`, `inf` and `infinity`, in any case, are refused as declared names (`invalid-name`);
+  - a boundary carries at most 16 `@haystack` tags (`invalid-semantic-point`);
+  - a String value, `@name` or `@label` with a bidirectional override or isolate is refused.
+- **Parser rules stricter than drafted:**
+  - An atom is 1 to 256 bytes of printable ASCII without `#` (`malformed-atom`). A provenance id
+    may contain `#`, as decision 5's grammar allows.
+  - Bidirectional overrides and isolates (U+202A to U+202E, U+2066 to U+2069) are refused anywhere
+    (`control-character`).
+  - A dotted name has no space around its dots.
+  - A comment is at most 8,189 bytes after its `#`: the line bound less the `#` and the two-space
+    indent the printer may give it.
+  - The empty list `[]` is refused (`malformed-list`); the `list` production above allowed it.
+  - Inside a list, an end-of-line comment belongs to the element before it.
+- **Numbers.** `-0` reads as the Integer `0`, as on the wire. A leading `+` or a leading zero is
+  refused (`malformed-number`) rather than normalized. That is stricter than decision 12's
+  "Integer literals keep their spelling": a spelling the model cannot keep is refused, never
+  silently changed.
+- **The unit-suffix production** is a subset of Modelica's unit syntax:
+  `suffix = ( "1" "/" factors ) | factors [ "/" factors ]`,
+  `factors = factor { "." factor }`, `factor = symbol [ [ "-" ] digits ]`.
+  - The exponent is an integer other than zero (`K0` and `m-0` are refused).
+  - `.` forms products, and there are no parentheses.
+  - There is at most one `/`, and its right-hand side is the whole denominator. So `kg/m.s2`
+    reads as kg/(m·s²), a deliberate deviation from Modelica's left-to-right reading.
+  - *Amended 2026-11-11 (issue #501):* every symbol is a base unit, or the whole suffix is one
+    scaled time unit (`min`, `h`, `d`). A scaled symbol inside a compound (`m3/h`, `1/h`, `h2`)
+    is `unit-not-base`, because its factor would not be an integer multiple of one base unit.
+- **Array regrouping, made precise.** The printer regroups a run of array elements into `[..]` only
+  when that run is every element of the template that the block assigns:
+  - consecutive, starting at index 1, in row-major order;
+  - at least two elements, and a matrix only as a whole rectangle;
+  - no comment or blank line before any element but the first.
+
+  Everything else prints flattened.
 
 ### Worked example
 
@@ -123,7 +211,7 @@ cut-off.
 ```text
 # Economizer enable on outdoor-air temperature with a deadband.
 sequence econ_enable
-extends none
+derived_from none
 
 param dTHys : Real = 1 K
 
@@ -144,7 +232,7 @@ With the default namespace the emitter writes these `@graph` nodes, in this orde
 
 | # | `@id` (after `urn:oce:author:econ_enable`) | Node |
 | --- | --- | --- |
-| 1 | (root) | `S231:Block`: `hasParameter [dTHys]`, `hasInput [TOut, TOutCut]`, `hasOutput [ecoEna]`, `containsBlock [sub, hys]` |
+| 1 | (root) | `S231:Block`: `hasParameter [dTHys]`, `hasInput [TOut, TOutCut]`, `hasOutput [ecoEna]`, `containsBlock [sub, hys]`, then `translationSoftware` and `translationSoftwareVersion` |
 | 2 | `.dTHys` | `S231:Parameter`, `S231:value` typed `xsd:double` `1.0` |
 | 3 | `.sub` | `http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract`, `hasInput [u1, u2]`, `hasOutput [y]` |
 | 4–6 | `.sub.u1`, `.sub.u2`, `.sub.y` | port nodes in catalog order; `.sub.y` `isConnectedTo [hys.u]` |
@@ -174,10 +262,10 @@ tagged objects are closed, and the schema lists the five shapes under `anyOf`. C
 ```json
 {
   "sequence": "econ_enable",
-  "extends": "",
+  "derived_from": "",
   "params": [{ "name": "dTHys", "type": "Real", "value": 1 }],
   "inputs": [{ "name": "TOut", "type": "Real", "quantity": "ThermodynamicTemperature",
-               "display_unit": "degC",
+               "display_unit": "degC", "min": [], "max": [],
                "semantic": { "name": "", "label": "", "unit": "K", "brick": "", "s223": "",
                              "qudt": "", "haystack": [], "provisional": false } }],
   "outputs": [],
@@ -192,6 +280,28 @@ tagged objects are closed, and the schema lists the five shapes under `anyOf`. C
 is always text and never depends on the catalog: a reference or an enum member is written as its
 tagged object, so any parameter kind, String included, may take a reference (decision 11). An enum
 member uses the text form's `Type.Member` spelling, e.g. `{"member": "SimpleController.PI"}`.
+
+*Amended 2026-11-09 (issue #492):* a sequence parameter's `type` is `"Real"`, `"Integer"`,
+`"Boolean"` or an enumeration type name; the schema lists them in a `type` enum generated like the
+`class` enum (the three scalars and every enumeration row of `oce_api::enumeration_types()`, never a
+constant package, 17 values today), and the reader accepts any string for the validator to judge.
+The `{"member": …}` tag covers a library constant too (`{"member": "OperationModes.occupied"}`).
+Every boundary carries `"min"` and `"max"`, each `[]` (none) or a list of exactly one number; the
+strict profile cannot say "at most one item" (no `maxItems`), so the schema's description says it
+and the reader refuses a second item with `WireError::BoundListTooLong`. The worked example above
+gained `"min": [], "max": []` with this amendment.
+
+*Amended 2026-11-10 (GitHub #544):* an object is closed in shape as well as in keys. It is read
+only from a JSON object: the list of its values (which a `serde`-derived struct would otherwise
+read positionally as its fields), a string, a number, a boolean or `null` in its place is refused
+with `wrong-type` (`WireError::WrongType`), which carries the path of the offending value
+(`inputs[0].semantic`, `blocks[1].params[0]`; `document` for the root). A boundary's `type` is
+read only from one of its three strings, so `{"Real": null}` is refused the same way. Because every
+property is required and an absent value is `""`, `[]` or `false`, the form has no nullable
+value: `null` is refused wherever it stands and is never read as an absent value. The reader holds
+this at the deserializer, not field by field, so a struct added to the form is closed without a
+change to the reader. The format stays at revision 1: no document the canonical writer produces
+changes.
 
 The JSON Schema is derived from the wire DTOs with `schemars`, a dependency of `oce-author` only,
 never of an engine crate. The `class` enum is generated from the non-reserved class paths of
@@ -210,7 +320,9 @@ It runs in two stages (decision 4):
 
 1. **Author-side**, from the model and the catalog alone: names, the sequence shape, edge syntax and
    endpoints, class lookup, parameter lookup, kinds and catalog rules, references, arity and port
-   names from the ports #440 synthesizes, duplicates, `SemanticPoint` and `extends` syntax.
+   names from the ports #440 synthesizes, duplicates, `SemanticPoint` and `derived_from` syntax,
+   and (amended 2026-11-11, issue #501) each text-form unit suffix against the declared unit of
+   the parameter it is written on.
 2. **Engine-side**, only when stage 1 found no error: emit, load the bytes in a throwaway
    `Engine::new()`, and map every diagnostic back to the model. Subjects are IRIs of the form
    `{namespace}{sequence}.{local}`, so stripping the root prefix yields the model path; a
@@ -234,32 +346,70 @@ pre-empt where one exists. The table is a test fixture: gate item 3 is a table-d
 | `duplicate-name` | author-only | `duplicate-name` | 1 | `duplicate-id` |
 | `class-not-found` | engine | `unknown-class` | 1 | — |
 | `class-not-authorable` | author-only | `class-not-authorable` | 1 | — (reserved classes) |
-| `unknown-parameter` | author-only | `unknown-param` | 1 | pinned by the parity test |
-| `parameter-not-settable` | author-only | `unsupported-param` | 1 | — (#440's settable flag) |
-| `duplicate-parameter` | engine | `duplicate-param` | 1 | — |
+| `unknown-parameter` | author-only | `unknown-param` | 1 | none: the engine ignores an unknown name (#467; amended 2026-11-09) |
+| `parameter-not-settable` | author-only | `unsupported-param` | 1 | — (reserved classes only; #440's settable flag) |
+| `duplicate-parameter` | author-only (amended 2026-11-09) | `duplicate-param` | 1 | `duplicate-id` (the repeated parameter node) |
 | `missing-required-parameter` | engine | `missing-required-param` | 1 | — |
 | `parameter-kind-mismatch` | engine | `param-type-mismatch` | 1 | — |
 | `parameter-out-of-range` | engine | `invalid-width` | 1 | — (catalog rules, widths included) |
 | `non-finite-parameter` | engine | — | 1 | — |
-| `unknown-enum-literal` | engine | — | 1 | — |
+| `unit-suffix-mismatch` | author-only (added 2026-11-11, issue #501) | — | 1 | none: a suffix is text-only and never reaches the engine (vocabulary note decision 14, ruling 6). A suffix that does not reduce to the block parameter's declared unit (`delayTime = 5 K`), a scaled one on a parameter that declares no unit or on a sequence parameter, or, in a model built in code, a suffix, written number and value that disagree or a suffix longer than the 256-byte token bound |
+| `unknown-enum-literal` | author-only (amended 2026-11-09) | — | 1 | `grounding-failed` |
+| `unknown-enum-type` | engine (added 2026-11-09, issue #492) | — | 1 | — (an unknown type name; a constant package as a type is refused by stage 1 alone, since the engine reads a package-typed parameter as Integer) |
 | `unknown-parameter-reference` | author-only | — | 1 | `grounding-failed` |
 | `malformed-connection` | author-only | `malformed-edge` | 1 | — |
 | `unknown-source` | author-only | `unknown-source` | 1 | `unresolved-reference` |
 | `unknown-target` | author-only | `unknown-destination` | 1 | `unresolved-reference` |
-| `unknown-port` | author-only | — | 1 | `port-name-mismatch` |
+| `unknown-port` | author-only | — | 1 | `unresolved-reference` (no such port node; amended 2026-11-09) |
 | `invalid-semantic-point` | author-only | — | 1 | — |
+| `invalid-bound` | author-only (added 2026-11-09, issue #492) | — | 1 | `malformed-document` (a bound on a Boolean boundary, a Real on an Integer boundary; also an Integer above 2^53 on a Real boundary). *Amended 2026-11-09, #493:* also an Integer bound on an Integer boundary outside `i32::MIN..=i32::MAX`, because the engine narrows it to `i32` without a warning (no engine code to pre-empt; a parity test pins the narrowing) |
+| `non-finite-bound` | engine (added 2026-11-09, issue #492) | — | 1 | — (the builder refuses it too) |
+| `crossed-bounds` | engine (added 2026-11-09, issue #492) | — | 1 | — (`min > max`) |
 | `invalid-provenance-id` | author-only | — | 1 | — |
 | `type-mismatch` | engine | `type-mismatch` | 2 | — |
-| `single-assignment` | engine | `multiply-driven`, `undriven` | 2 | — |
+| `single-assignment` | author and engine (amended 2026-11-09: author for a target the connection list repeats, engine for the rest) | `multiply-driven`, `undriven` | 1 and 2 | `single-assignment` (stage 1 pre-empts the engine's own code for a repeated target) |
 | `algebraic-loop` | engine | — | 2 | — (one finding per member) |
 | `unused-boundary-input` | engine (warning → error) | `unused-input` | 2 | — |
 | `undriven-boundary-output` | engine (warning → error) | — | 2 | — |
+| `document-too-large` | author-only (added 2026-11-09) | — | 2 | — (the emitted document exceeds `MAX_CXF_BYTES`) |
+| `load-failed` | engine (added 2026-11-09) | — | 2 | — (a refusal that carries no coded diagnostic) |
 | any other `DiagCode` | engine | — | 2 | passed through verbatim |
+
+`parameter-out-of-range` also covers, author-side only, a String value the wire form cannot carry
+(a control character other than line feed, or more than 4,096 bytes as written), so every
+validate-clean model reads back from its own wire bytes (GitHub #466).
+
+`parameter-not-settable` fires only for a parameter of a reserved lowering identity: #440's
+`settable` flag means "an author may assign this parameter", so every parameter of an authorable
+class is settable, derived defaults included ([#440 amendment](https://github.com/jscott3201/open-control-engine/issues/440#issuecomment-6730952664)).
+It stays a code distinct from `class-not-authorable`, which the same block also earns: that finding's
+subject is the block (`hys`), this one's is the parameter (`hys.uHigh`), so an agent is told both
+that the class cannot be authored and which assignment to remove.
 
 A stage-1 finding that carries an engine code must agree with the engine. The parity test emits
 each defect with stage 1 bypassed (a test-only path) and asserts that the engine reports the same
 code at the same subject. An author-only code that pre-empts an engine code is checked the same way
 against the code in the last column.
+
+**Amended 2026-11-09 by the parity test (issue #464, GitHub #473).** Four rows changed when the
+parity test first ran against the emitter: `duplicate-parameter` and `unknown-enum-literal` were marked engine codes, but
+the flat emitter writes a repeated assignment as a second node with the same `@id` (`duplicate-id`)
+and the engine refuses an unknown member while grounding it (`grounding-failed`, recorded on #455),
+so both are author-only codes that pre-empt those engine codes; `unknown-parameter` pre-empts
+nothing, because the load gate ignores a parameter name it does not read (#467); and `unknown-port`
+pre-empts `unresolved-reference`, because the emitter writes every port the catalog resolves, so a
+wrong port name is a dangling target rather than a port-name mismatch. Stage 2 also has two codes of
+its own: `document-too-large` (the emitter's size refusal after a clean stage 1) and `load-failed`.
+In every row but one the engine reports at the same model subject: stage 2 maps a block-level
+message that names an assignment in backticks to that assignment, as stage 1 does. The exception
+is `single-assignment`, which is same-code only: stage 1 reports the repeating connection
+(`connection[N]`), the engine the input it names, which stage 2 maps to the first connection
+driving it. The same review added two stage-1
+rules: a target the connection list repeats is `single-assignment` at stage 1 (when this was
+written the engine loaded a block output beside a boundary input without a refusal, GitHub #472;
+it refuses it since GitHub #477, and stage 1 still reports the repeat first), and an Integer literal of magnitude above 2^53 on a Real
+parameter is `parameter-out-of-range` (it has no exact Real, so the engine would load a value the
+author never wrote).
 
 ## Emitter
 
@@ -276,9 +426,15 @@ hangs on the source node, with targets in authored connection order. Nothing is 
 
 **Identity.** Instance IRIs are `{namespace}{sequence}.{local}`. The namespace defaults to
 `urn:oce:author:` and `EmitOptions` overrides it for library round trips; it is never derived from
-a host path or a UUID-shaped value. Block `@type` is the exporter's class base
+a host path or a UUID-shaped value, and must end in `#`, `/` or `:` so the canonical content id's
+last-delimiter rule (GitHub #471) strips exactly the namespace. Block `@type` is the exporter's class base
 `http://example.org#Buildings.Controls.OBC.` followed by the catalog class path (decision 10). The
-context is `{"S231": "http://data.ashrae.org/S231P#"}`.
+context is `{"S231": "http://data.ashrae.org/S231#"}`, the namespace the engine's exporter binds
+and the only one either importer reads (GitHub #527). The root node ends with the
+translation-software label the OpenBuildingControl (OBC) specification allows (OBC §8.4):
+`S231:translationSoftware` `"open-control-engine"` and `S231:translationSoftwareVersion`, the
+workspace version, as two JSON strings. The exporter writes the same two values; no importer reads
+them back, so they are in no content id.
 
 **Values.** A Real is a typed literal (`{"@value": "<shortest round-trip>", "@type": xsd:double}`),
 an Integer a bare JSON integer, a Boolean a JSON boolean, an enum member its full member path with
@@ -288,8 +444,8 @@ reference the bare parameter name. Array parameters use the `isArray` / `numberD
 author assigned and never fills a default (decision 16).
 
 **Semantics.** Boundary nodes carry `S231:unit` (from `SemanticPoint.unit`), `S231:quantity` and
-`S231:displayUnit` where authored, and nothing else, until M8 fixes the CDL §7.17.2 record shape.
-No Brick, 223P, QUDT or Haystack record is written.
+`S231:displayUnit` where authored, and nothing else, until M8 fixes the record shape of OBC
+§7.17.2. No Brick, 223P, QUDT or Haystack record is written.
 
 **Writer.** The emitter owns a canonical writer: objects are ordered vectors with a fixed key order
 per node kind, two-space indentation, one trailing newline, ASCII-only output with `\uXXXX`
@@ -299,10 +455,11 @@ escapes, the shortest round-trip number spelling, and relation lists always writ
 
 **Determinism tests.** Emitting one model twice yields identical bytes. Each permutation class of
 the model (block order, port-target order, boundary order, sequence parameter order) is applied in
-turn and the load → export content id is compared with what the ordering contract says for that
-surface: block and boundary order move it; direct target permutations move export bytes but leave
-executable compatibility unchanged; sequence-parameter order is normalized by Rule 5, so the loaded
-model is identical. The [emitter test drivers](../cxf-composite-subset.md#testing-your-emitter)
+turn and checked against what the ordering contract says for that surface: no permutation moves
+the canonical content id (`Engine::content_id`, GitHub #470), which names the loaded graph by name;
+block and boundary order still move export bytes and dense ids; direct target permutations move
+export bytes but leave executable compatibility unchanged; sequence-parameter order is normalized
+by Rule 5, so the loaded model is identical. The [emitter test drivers](../cxf-composite-subset.md#testing-your-emitter)
 (resolver-layer and full-pipeline composite-contract drivers) run over emitter output, every emitted
 golden must load warning-free, and the emitted goldens are checked in and compared bit for bit.
 
@@ -310,20 +467,33 @@ golden must load warning-free, and the emitted goldens are checked in and compar
 
 `oce` lives in its own leverage crate, links `oce-author` and `oce-api`, and parses its arguments
 with `clap` (derive) for consistent `--help`, suggestions and shell completions (decision 20).
+*Amended 2026-11-09 (#500):* it also links the leverage crate `oce-vocab`, whose block vocabulary
+`oce catalog` serves and whose unit scale-factor table `oce vocab` prints
+([vocabulary note](vocabulary.md), decisions 10 and 12).
 
 | Command | Does |
 | --- | --- |
-| `oce fmt <file> [--check] [--to text\|wire]` | Parse, then print canonically. `--check` prints nothing and fails if the file is not canonical. `--to` converts between the forms. |
-| `oce validate <file> [--author-only]` | Both validator stages; `--author-only` skips the engine load. |
+| `oce fmt <file> [--check \| --write]` (amended 2026-11-09, #489: no `--to`) | Parse, then print the canonical text; wire input is printed as text (amended 2026-11-09, #489). `--check` prints the JSON report and exits 1 when the file is not canonical in its own form (amended 2026-11-09, #489). `--write` replaces a text file atomically and needs text input (amended 2026-11-09, #489). |
+| `oce validate <file> [--author-side]` (amended 2026-11-09, #489) | Both validator stages; `--author-side` skips the engine load. |
 | `oce emit <file> [-o <out>] [--namespace <iri>]` | Full validation, then the CXF bytes; refuses to write anything on an error finding. |
-| `oce check <file>` | `validate`, then the throwaway load's report: input definitions, outputs, block count and the export content id. |
+| `oce check <file>` (amended 2026-11-09, #489: deferred, not dropped) | `validate`, then the throwaway load's report: input definitions, outputs, block count and the canonical content id (`Engine::content_id`). |
 
 `.oce` files are text, `.json` files are wire; `--from text|wire` overrides and is required on
-stdin (`-`). Every command takes `--format human|json`. The JSON report is one closed object
+stdin (`-`). Every command takes `--render auto|always|never` (amended 2026-11-09, #489, replacing
+`--format human|json`): the human rendering goes to stderr when **stderr** is a terminal (`auto`) or
+always, and stdout (the command's document or its JSON report) is the same bytes whatever
+`--render` says. The JSON report is one closed object
 (`tool`, `schema`, `command`, `ok`, `findings`, plus the command's result), deterministic and
 documented, so an agent can branch on `code` and quote `detail`. Exit codes follow the one `oce`
 rule: **0** yes (clean); **1** no (error findings, or `--check` found a non-canonical file); **2**
 error (a usage error, input that cannot be parsed or loaded, an I/O failure).
+
+*Amended 2026-11-09 (#489):* `oce check` is deferred, not dropped: it returns when the M3 receipts
+work defines the load report it would print, so M2 ships `emit`, `validate`, `fmt`, `catalog` and
+`vocab`. *(Amended 2026-11-11, GitHub #573, issue #522:)* M3 adds `verify` ([vectors
+note](vectors.md), "CLI"). `oce check` stays deferred (vectors note decision 36): the receipt
+defines no load report. What binding needs (inputs with types and bounds, outputs, parameters) is
+what `oce check` should print, so it is cut as its own follow-up, #574.
 
 **Binaries above the facade.** The architecture page says the engine is library-only, with no binary
 target in `crates/`. The PR that adds this note narrows that sentence to the engine crates: leverage
@@ -355,8 +525,8 @@ discipline are easier to own than to inherit.
 (`name`, `label`, `unit`, `brick`, `s223`, `qudt`, `haystack`, `provisional`) in the model and both
 forms; the validator checks syntax only; the emitter writes today's `unit`, `quantity` and
 `displayUnit` attributes and no semantic records; `provisional` marks an unfilled slot. Rejected:
-inventing a `semantic` JSON-LD shape now; leaving the slot out. Why: the §7.17.2 shape belongs to
-M8, and the engine must round-trip it. The library CXF has no records, so "required" means "the
+inventing a `semantic` JSON-LD shape now; leaving the slot out. Why: the OBC §7.17.2 shape belongs
+to M8, and the engine must round-trip it. The library CXF has no records, so "required" means "the
 slot exists, and is validated if present".
 
 **3. Parameter values: a literal or a named reference, never evaluated.** A reference names a
@@ -371,13 +541,19 @@ Single assignment, algebraic loops and unused inputs come from emitting and load
 Rejected: a full duplicate validator (drift); a validate-only facade API first (clean, but needs a
 facade issue before M2; it may still be proposed later). Why: the same rule as decision 3.
 
-**5. `extends` before M3: an opaque provenance id.** Stored, round-tripped and syntax-checked;
-never merged and never emitted into CXF; `extends none` is explicit in text. The id grammar is
+**5. `derived_from` before M3: an opaque provenance id.** Stored, round-tripped and syntax-checked;
+never merged and never emitted into CXF; `derived_from none` is explicit in text. The id grammar is
 permissive: a lowercase format prefix, a colon, then printable non-space ASCII, at most 256 bytes
 (`cxf:fnv1a128:<hex>` fits); M3 owns the meaning of the prefixes it defines. Rejected: a local
 bundle-directory resolver (pre-empts M3); leaving it out (both forms change later). Why: the content
 id hashes emitted bytes, so an unemitted id cannot move it; resolution and diff are M3's
-(`oce-diff`).
+(`oce-diff`). *Amended 2026-11-11 (issue #529, owner ruling of 2026-11-09):* the statement, the
+model field and the wire key were named `extends` until this rename. `extends` is reserved for its
+CDL meaning, inheritance of a composite block with modifications (OBC specification §7.15), which
+M7's composite instantiation needs. The format stays at revision 1: it changed in place, with no
+reader for the earlier word, so a text file that says `extends` is refused (`missing-derived-from`
+in the header, `unknown-keyword` after it) and so is a wire document with an `extends` key
+(`WireError::UnknownKey`).
 
 **6. Emission order and IRIs: authored order, never sorted.** `fmt` normalises whitespace, section
 grouping and canonical Real spelling; authored order is kept inside each section, and integers and
@@ -385,8 +561,11 @@ unit suffixes keep their spelling (decision 12); the emitter never sorts; connec
 authored order; IRIs are `{namespace}{sequence}.{local}` with default `urn:oce:author:` and an
 override; the emitter owns a canonical writer and does not mimic another generator's indentation.
 Rejected: a canonical sort in `fmt` or the emitter (loses intent, and every reorder becomes a
-`BlockId` and schedule tie-break change); a namespace derived from kind and name. Why: the content
-id is order-bearing, and a namespace must never derive from a host path or a UUID.
+`BlockId` and schedule tie-break change); a namespace derived from kind and name. Why: authored
+order still assigns `BlockId` and schedule tie-breaks, and a namespace must never derive from a host
+path or a UUID. *Amended 2026-11-09 (GitHub #470):* the original rationale also said "the content
+id is order-bearing"; the canonical content id ([content-id note](content-id.md)) ignores order and
+namespace, so that reason is superseded. The decision stands on the `BlockId` reason.
 
 **7. Catalog gaps: a separate pre-M2 engine issue (#440).** Port-name synthesis as a pure function
 over a constructed block, descriptions and a settable-versus-derived flag, exposed through the
@@ -437,7 +616,24 @@ editing); storing lexical spellings in the model (two equal models with differen
 vocabulary v1, so there is no conversion table. A suffix is kept on the model literal as a
 text-only annotation, so `fmt` is lossless, and the number is the base-unit value as written.
 `1 h` is refused with a typed error until the vocabulary supplies scale factors. Text → wire → text
-drops suffixes; wire → text → wire, the gate's direction, is unaffected.
+drops suffixes; wire → text → wire, the gate's direction, is unaffected. *Amended 2026-11-11 (issue
+#501; vocabulary note decision 14 and rulings 5 and 6):* the vocabulary supplies them, time only.
+`min`, `h` and `d` alone scale the number and round once (`1.1 h` is `3960.0` s, where
+multiplying the parsed `f64` would give `3960.0000000000005`): an Integer by its exact product, a
+Real from the binary64 it parses to, through its shortest round-trip decimal (the spelling `fmt`
+prints), not from the digits as typed, so formatting never moves a value. So a Real typed with
+more digits than binary64 holds can scale to about an ulp (more for a subnormal) from the exact
+product of its typed digits, and an Integer and a Real spelling past 2^53 scale differently (`9007199254740993 min` is
+`540431955284459584.0` s, `9007199254740993.0 min` is `540431955284459520.0` s); a scaled
+Integer past 2^53 is accepted, unlike the same Integer unscaled on a Real parameter. The model keeps the suffix and the written number beside the base value, so `fmt` still
+prints `1 h`. Stage 1 refuses a suffix that does not reduce to the block parameter's declared
+unit, spelled alike (`delayTime = 5 K`, `delayTime = 1 Hz`), and a scaled suffix on a parameter
+that declares no unit or on a sequence parameter, with the author-only code
+`unit-suffix-mismatch`; a base-unit suffix where no unit is declared stays an annotation. Stage 1
+also reports, with the same code, a model built in code whose suffix, written number and value
+disagree, or whose suffix is longer than the 256-byte token bound (the printer's own check, shared),
+so no suffix stops a model it accepts from printing.
+`degC`/`degF`, `%`, prefixed SI units and scaled symbols in compounds stay `unit-not-base`.
 
 **14. Every engine warning is an error finding.** Accepted means warning-free, so a
 warning is a defect in the authored sequence, not advice. This covers `unused-boundary-input`,
@@ -448,7 +644,10 @@ warning is a defect in the authored sequence, not advice. This covers `unused-bo
 lists one `{name, value}` per element under the catalog's `<i>`, `<row>`, `<col>` template names,
 keeping decision 8's scalar profile; the emitter writes the CXF array form. Leaf array parameters
 are accepted (Rule 5 refuses arrays on composites only). #440 must expose the template expansion,
-and the amended issue does.
+and the amended issue does. *Amended 2026-11-09 (issue #464):* when the author assigns only some
+elements, the array form would need the rest, which the emitter never fills (decision 16), so each
+assigned element is written as its own parameter node under its flattened name (`k_2`), the name
+the engine's class rules read; the class default supplies the others.
 
 **16. The emitter never fills a default.** It emits exactly the assignments the author
 wrote, and the engine supplies defaults. A library convention (the library sets
@@ -458,7 +657,7 @@ notes an agent reads, not in a silent emitter default.
 **17. Relation lists are always arrays.** `hasInput`, `hasOutput`, `hasParameter`,
 `containsBlock` and `isConnectedTo` are written as arrays even with one entry. The singleton
 spelling is normalized on import, and one shape keeps the writer small. Byte equality with
-committed library CXF is not a goal; the gate compares content ids after load and export.
+committed library CXF is not a goal; the gate compares canonical content ids after load.
 
 **18. The #440 surface reaches `oce-author` through `oce-api`.** A leverage crate cannot
 call `oce_blocks`, so the facade exposes resolved ports for a class and an `oce_api::ParamTable`,
@@ -500,13 +699,15 @@ without moving them.
   architecture amendment taking effect; (5) the importer (library CXF and the prototype's v0 JSON
   into the model) and vocabulary v1, each with its own note. Adding a leverage crate changes
   `Cargo.lock`, so those PRs run the determinism lane as well.
-- **M2 runs in parallel with M3.** M3 owns the content id, the registry and `oce-diff`. If M3
-  replaces today's order-bearing `content_id_complete()`, gate item 1's comparison moves with it;
-  because the emitter's order is a function of the model, the gate holds under either definition.
-  M3 also gives `extends` its resolution and diff. Four library rules are known to differ in node
-  order from the emitter's layout; library bundle v2 regenerates them with the emitter, or the gate
-  compares loaded models for them.
-- **M8 (semantics)** fixes the §7.17.2 record shape. The emitter then writes `SemanticPoint`
+- **M2 runs in parallel with M3.** M3 owns the content id, the registry and `oce-diff`. M3 replaced
+  the order-bearing `content_id_complete()` with `Engine::content_id` (GitHub #470), so gate item
+  1 compares canonical ids: the canonical id of the emitter's output equals the committed CXF's.
+  The namespace is free (the default `urn:oce:author:` matches the library's `http://example.org#`);
+  the sequence name must match, because it is inside every name.
+  M3 also gives `derived_from` its resolution and diff. Four library rules are known to differ in
+  node order from the emitter's layout; library bundle v2 regenerates them with the emitter, or the
+  gate compares loaded models for them.
+- **M8 (semantics)** fixes the OBC §7.17.2 record shape. The emitter then writes `SemanticPoint`
   records with no change to the model, either form or the schema.
 - **Vocabulary v1** (from `modelica-json -o doc` over `third_party/`) supplies units, descriptions
   and agent notes; the plan's type and unit checks wait for it.
@@ -518,11 +719,13 @@ without moving them.
 
 - **Text form.** Round-trip properties over enumerated models and every corpus bundle; `fmt`
   idempotence; each parse bound at its boundary; one typed refusal per malformed construct
-  (unterminated string, bad escape, bad suffix, stray token, missing `extends`, out-of-range
+  (unterminated string, bad escape, bad suffix, stray token, missing `derived_from`, out-of-range
   integer, `NaN` or `inf` spelled as a number); comment and blank-line preservation goldens.
 - **Wire form.** wire → text → wire byte equality for every bundle (gate item 2); closed-object
-  refusals (unknown key, missing key, wrong type) as typed errors; the schema regeneration and
-  profile-keyword tests.
+  refusals (unknown key, missing key, wrong type) as typed errors; the closed-shape sweeps (each
+  object replaced by the list of its values, each value by every JSON type its position does not
+  take, `null` everywhere; `wrong-type` at the value's path, GitHub #544); the schema regeneration
+  and profile-keyword tests.
 - **Validator.** One test per finding code with the exact code and subject; the parity test
   (stage 1 bypassed, engine code equal); the gate item 3 table test over the library refusal
   corpus; finding-order determinism over permuted inputs; numeric boundaries for parameters (`-0.0`,
@@ -531,18 +734,28 @@ without moving them.
   the permutation-class tests; every emitted golden loads warning-free; the composite-contract
   drivers over emitter output; the default namespace and an override both load; a document at
   `MAX_CXF_BYTES` is accepted and one byte over is refused before load.
-- **Library round trip (gate item 1).** Every library rule imports into the model, emits, and its
-  load → export content id equals that of its committed CXF.
+- **Library round trip (gate item 1).** Every library rule imports into the model, emits, and the
+  canonical content id of the emitter's output equals that of its committed CXF.
+  *Coverage, 2026-11-09 (GitHub #473):* not yet met. The minimal importer reads 4 of the 40
+  in-subset G36 fixtures (4 nested and 2 conditional fixtures are out of the M2 subset), and all 4
+  round-trip; the other 36 wait on model decisions — enumeration-typed sequence parameters,
+  connector `min`/`max`, library enumerations — tracked in GitHub #475.
+  *Coverage, 2026-11-09 (GitHub #498, issue #496):* met. The M2 subset is 34 fixtures (the
+  [importer note](importer.md)'s corrected count: 4 nested, 7 conditional and 1 expression-valued
+  fixture are outside it); 31 import, emit, load warning-free and match the committed fixture's
+  canonical content id, and the 3 with block-port bounds are refused (`port-attribute`, importer
+  note decision 8).
 - **CLI.** Golden JSON reports for each command and exit-code tests for each outcome class.
-- **§7.17 seam.** Filling and mutating every `SemanticPoint` field leaves emitted bytes unchanged
+- **Metadata seam.** Filling and mutating every `SemanticPoint` field leaves emitted bytes unchanged
   except `unit`, and leaves the loaded executable identical.
 
 ## Out of scope for M2
 
 - Nested composites, `hasInstance` members, conditional components and array connectors.
 - Expression parameter values beyond a bare reference, and any evaluation in `oce-author`.
-- Emitting semantic records (M8); resolving or diffing `extends` (M3).
-- Unit conversion beyond base units, and unit checks (vocabulary v1).
+- Emitting semantic records (M8); resolving or diffing `derived_from` (M3).
+- Unit conversion beyond base units and the time scale factors, and any unit check beyond a
+  suffix against its parameter's declared unit (amended 2026-11-11, issue #501).
 - A validate-only facade API (may be proposed later; decision 4).
 - The TUI, `bind`, `points` and `doc` commands.
 - Byte equality with committed library CXF or with any other generator's formatting.
@@ -569,5 +782,43 @@ The architect pass on the draft (owner consulted on 11, 12 and 20) ruled:
 - Gate item 3 reading accepted as written; the parity test is the proof.
 - Gate item 4: accepted; the benchmark-data follow-up issue is filed when the M2 tracking issue is
   cut.
+- 2026-11-09 (issue #464, GitHub #473): the parity test amended four rows of the finding-code
+  table (`duplicate-parameter` and `unknown-enum-literal` became author-only codes pre-empting
+  `duplicate-id` and `grounding-failed`; `unknown-parameter` pre-empts nothing, #467;
+  `unknown-port` pre-empts `unresolved-reference`), added two stage-2 rows (`document-too-large`,
+  `load-failed`), made `single-assignment` a stage-1 code for a repeated target as well as an
+  engine code, refused Integer literals above 2^53 on Real parameters, and added decision 15's
+  partial-array sentence.
+- 2026-11-09 (issue #482): the text form added the model's two header and trailing comment fields
+  (the one model change it needed), the `ParseError { code, location, detail }` shape, the
+  8,192-byte line bound, and the printer conventions the crate README documents: end-of-line
+  comments move above their statement; array elements regroup into `[..]` through the catalog
+  only as the "Round-trip properties" amendment defines, and anything else prints flattened; an
+  integer never becomes a Real, and a leading `+` or zero is refused.
+- 2026-11-09 (issue #482 review): `print_text` is total or refusing (`PrintError::Unspellable`);
+  every stage-1-clean model prints within the line bound and parses back equal, which stage 1 now
+  backs with the non-finite-word names, the 16-tag `@haystack` cap and the bidirectional-override
+  refusal; atoms are checked as printable ASCII at parse; comments reserve the printer's indent;
+  the empty list, `-0`, the `+1` / `01` refusal and the unit-suffix production are recorded; array
+  regrouping is made precise (every element of the template in the block, at least two, a whole
+  rectangle). Each is stated under "Round-trip properties".
+- 2026-11-09 (issue #492, from the importer note's decisions 1 to 6 and 10 and its rulings): the
+  model gained `ParameterType::Enum`, `Literal::Member` (enumeration members and library
+  constants, renamed from `EnumMember`) and boundary `min`/`max`; the wire form a sequence
+  parameter `type` enum and `"min"`/`"max"` lists of at most one number; the text form an
+  enumeration type name in `param` and the `@min`/`@max` tags; the finding-code table four stage-1
+  rows (`unknown-enum-type`, `invalid-bound`, `non-finite-bound`, `crossed-bounds`), each pinned
+  by the parity test. The emitter writes an enumeration parameter's class IRI and a constant's
+  package IRI as `isOfDataType` (importer note, ruling 9), and bounds as `S231:min`/`S231:max`
+  after `S231:displayUnit`. Constant members land here rather than in the importer PR (issue #492
+  as cut moved them; the importer note's ruling 10 had them in the importer PR).
 - 2026-11-08: the CLI exit-code rule was aligned with the diff and commissioning passes: 0 yes, 1
   no, 2 error, with a parse refusal and an I/O failure both 2 and no exit 3.
+- 2026-11-09 (owner ruling, issue #529): "Rename to `derived_from` now." The provenance statement,
+  `Sequence::derived_from` and the wire key `derived_from` replace `extends` in place (decision 5's
+  amendment), and `derived_from` joins the text-form keywords, so it is no declared name.
+- 2026-11-11 (issue #501, from the vocabulary note's decision 14 and its rulings 5 and 6):
+  decision 13 amended. The text form scales `min`, `h` and `d` exactly from
+  `oce_vocab::SCALE_FACTORS`, the model gained `Assignment::scaled_from` and
+  `SequenceParameter::scaled_from` (text-only, like the suffix), and stage 1 gained
+  `unit-suffix-mismatch`, author-only, which the parity test pins as silent in the engine.

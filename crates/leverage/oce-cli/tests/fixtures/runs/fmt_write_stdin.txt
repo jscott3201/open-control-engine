@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "fmt",
+  "errors": [
+    {
+      "code": "write-needs-file",
+      "detail": "--write rewrites a file in place and cannot rewrite stdin",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "form": null,
+  "input": "-",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

@@ -1,0 +1,16 @@
+exit: 0
+--- stdout
+List the block classes, or describe one: its ports, parameters, units, ranges and notes
+
+Usage: oce catalog [OPTIONS] [CLASS]
+
+Arguments:
+  [CLASS]  A class path (`CDL.Reals.Hysteresis`); every class when absent
+
+Options:
+      --json                Print the JSON report instead of text
+      --render <RENDER>     When to write a human-readable rendering of the report to stderr [default: auto] [possible values: auto, always, never]
+      --param <NAME=VALUE>  A parameter value for port resolution (`nin=3`, `k_2=1.5`); repeatable
+  -h, --help                Print help
+  -V, --version             Print version
+--- stderr

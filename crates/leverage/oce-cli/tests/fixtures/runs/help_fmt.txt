@@ -1,0 +1,36 @@
+exit: 0
+--- stdout
+Print the canonical text form of a sequence.
+
+Wire input is converted to text. --check answers whether the file is already canonical in its own form; --write replaces a text file atomically.
+
+Usage: oce fmt [OPTIONS] <FILE>
+
+Arguments:
+  <FILE>
+          The input file (`.oce` text, `.json` wire), or `-` for stdin
+
+Options:
+      --from <FROM>
+          The input form; overrides the extension, and is required for stdin
+          
+          [possible values: text, wire]
+
+      --render <RENDER>
+          When to write a human-readable rendering of the report to stderr
+          
+          [default: auto]
+          [possible values: auto, always, never]
+
+      --check
+          Print a report instead of the text; exit 1 when the input is not canonical
+
+      --write
+          Rewrite the text file (a temporary file, then a rename; a hard link keeps the old bytes)
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+--- stderr

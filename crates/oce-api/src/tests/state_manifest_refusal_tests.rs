@@ -291,7 +291,11 @@ fn every_manifest_field_refuses_deterministically_without_mutating_the_engine() 
         mutate(&mut image);
         let manifest =
             crate::state_manifest_codec::encode_manifest(&image.manifest, false).unwrap();
-        image.fingerprint = crate::state_manifest::fingerprint(image.execution_revision, &manifest);
+        image.fingerprint = crate::state_manifest::fingerprint(
+            image.execution_revision,
+            oce_graph::blob::ENGINE_VERSION,
+            &manifest,
+        );
         let bytes = crate::state_codec::encode_snapshot(&image, false).unwrap();
         let mut prior_error = None;
         for _ in 0..2 {

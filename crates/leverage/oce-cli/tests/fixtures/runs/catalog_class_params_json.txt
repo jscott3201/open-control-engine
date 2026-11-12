@@ -1,0 +1,91 @@
+exit: 0
+--- stdout
+{
+  "class": {
+    "class_path": "CDL.Reals.MultiSum",
+    "description": "Sum of Reals, y = k[1]*u[1] + k[2]*u[2] + ... + k[n]*u[n]",
+    "inputs": [
+      {
+        "description": "Input to multiplied by gain and then added",
+        "kind": "Real",
+        "name": "u1",
+        "quantity": "",
+        "unit": ""
+      },
+      {
+        "description": "Input to multiplied by gain and then added",
+        "kind": "Real",
+        "name": "u2",
+        "quantity": "",
+        "unit": ""
+      },
+      {
+        "description": "Input to multiplied by gain and then added",
+        "kind": "Real",
+        "name": "u3",
+        "quantity": "",
+        "unit": ""
+      }
+    ],
+    "links": {
+      "latest_help": "https://simulationresearch.lbl.gov/modelica/releases/latest/help/Buildings_Controls_OBC_CDL_Reals.html#Buildings.Controls.OBC.CDL.Reals.MultiSum",
+      "pinned_source": "https://github.com/lbl-srg/modelica-buildings/blob/a131864e4c4df22ebcd52bb8da439de0087ac365/Buildings/Controls/OBC/CDL/Reals/MultiSum.mo"
+    },
+    "notes": [],
+    "outputs": [
+      {
+        "description": "Sum of inputs times gains",
+        "kind": "Real",
+        "name": "y",
+        "quantity": "",
+        "unit": ""
+      }
+    ],
+    "parameters": [
+      {
+        "default": {
+          "kind": "integer",
+          "value": 0
+        },
+        "description": "Number of input signals",
+        "enumeration": null,
+        "name": "nin",
+        "quantity": "",
+        "range": [
+          "nin >= 0",
+          "nin <= 1048576"
+        ],
+        "settable": true,
+        "type": "Integer",
+        "unit": ""
+      },
+      {
+        "default": {
+          "kind": "real",
+          "value": 1.0
+        },
+        "description": "Input gains",
+        "enumeration": null,
+        "name": "k_<i>",
+        "quantity": "",
+        "range": [],
+        "settable": true,
+        "type": "Real",
+        "unit": ""
+      }
+    ],
+    "reserved": false
+  },
+  "command": "catalog",
+  "errors": [],
+  "findings": [],
+  "input": null,
+  "ok": true,
+  "params": [
+    "nin=3",
+    "k_2=0.5"
+  ],
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

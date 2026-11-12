@@ -54,6 +54,21 @@ fn _assert_complete_frame_shapes() {
     let _: fn(&crate::CompletedFrame) -> f64 = crate::CompletedFrame::time;
     let _: fn(&crate::CompletedFrame) -> &[(String, Value)] = crate::CompletedFrame::outputs;
     let _: fn(&crate::CompletedFrame) -> &[AssertEvent] = crate::CompletedFrame::diagnostics;
+    // The slot entry (issue #444): the map is owned, cloneable and thread-safe; the frame borrows
+    // the engine, so it is a Rust-host shape, not one the Python binding returns.
+    needs_send_sync::<crate::FrameSlots>();
+    needs_clone::<crate::FrameSlots>();
+    let _: fn(&Engine) -> Result<crate::FrameSlots, OcError> = Engine::frame_slots;
+    let _: for<'a> fn(
+        &'a mut Engine,
+        &crate::FrameSlots,
+        f64,
+        &[Value],
+    ) -> Result<crate::SlotFrame<'a>, OcError> = Engine::execute_slots;
+    let _: fn(&crate::FrameSlots) -> &[crate::InputDefinition] = crate::FrameSlots::inputs;
+    let _: fn(&crate::FrameSlots) -> &[String] = crate::FrameSlots::outputs;
+    // Output types in slot order, known before the first frame (issue #460): a borrowed slice.
+    let _: fn(&crate::FrameSlots) -> &[ValueType] = crate::FrameSlots::output_types;
 }
 
 // ---- R-API-PY-1 — no generic `#[pyclass]`: the binding wraps the concrete `Engine` ----
@@ -187,14 +202,9 @@ fn _assert_frozen_signatures() {
 /// failure mode — a return-type or arity drift stops coercing and the build fails.
 ///
 /// These are pinned here because nothing else enumerates the public surface before 1.0. This module
-/// is a non-test module, so the per-PR `cargo build` catches a drift as soon as it lands.
-///
-/// `ExportReport::content_id` is **deliberately not pinned**, and its absence is a decision rather
-/// than an oversight. It is `#[deprecated]`, and this is a non-test module compiled under the gate's
-/// `-D warnings`, so naming it here is a hard error (`-D deprecated`). Suppressing that with an
-/// `#[allow]` would be worse than the gap: the only change anyone should now make to a deprecated
-/// method is deleting it, and a deletion is a reviewed public-surface removal. A per-PR pin would
-/// make this gate fight that removal.
+/// is a non-test module, so the per-PR `cargo build` catches a drift as soon as it lands. The
+/// canonical content id (GitHub #470) is minted only by `Engine::content_id`, and `ExportReport`
+/// keeps only its completeness check; both are pinned here.
 fn _assert_accessor_signatures() {
     let _: fn(&Engine) -> &oce_graph::Schedule = Engine::schedule;
     let _: fn(&IoInventory, usize) -> Option<&PointInfo> = IoInventory::get;
@@ -202,8 +212,10 @@ fn _assert_accessor_signatures() {
     let _: fn(&IoInventory) -> bool = IoInventory::is_empty;
     let _: fn(&ParamTable) -> usize = ParamTable::len;
     let _: fn(&ParamTable) -> bool = ParamTable::is_empty;
-    let _: fn(&crate::ExportReport) -> Result<String, crate::ContentIdError> =
-        crate::ExportReport::content_id_complete;
+    let _: fn(&Engine) -> Result<crate::ContentId, OcError> = Engine::content_id;
+    let _: fn(&Engine) -> Result<Vec<u8>, OcError> = Engine::canonical_content_bytes;
+    let _: fn(&crate::ExportReport) -> Result<(), crate::ExportIncomplete> =
+        crate::ExportReport::complete;
 }
 
 // ---- R-API-PY-7 — `OcError` is `Error + Send + Sync + 'static` (mappable to a PyErr) ----

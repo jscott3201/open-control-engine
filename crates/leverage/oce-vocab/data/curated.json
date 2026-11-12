@@ -1,0 +1,191 @@
+{
+  "classes": [
+    {
+      "class": "CDL.Reals.Subtract",
+      "descriptions": [],
+      "notes": [
+        {
+          "evidence": "prototype authoring rule 5 (port order); upstream descriptions of u1 and u2; checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "kind": "port-order",
+          "subject": "",
+          "text": "y = u1 - u2: u1 is the minuend and u2 is subtracted from it."
+        }
+      ]
+    },
+    {
+      "class": "CDL.Reals.Divide",
+      "descriptions": [],
+      "notes": [
+        {
+          "evidence": "prototype authoring rule 5 (port order); upstream descriptions of u1 and u2; checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "kind": "port-order",
+          "subject": "",
+          "text": "y = u1 / u2: u1 is the dividend and u2 the divisor."
+        }
+      ]
+    },
+    {
+      "class": "CDL.Reals.MatrixGain",
+      "descriptions": [
+        {
+          "evidence": "vendored Buildings/Controls/OBC/CDL/Reals/MatrixGain.mo (protected nin = size(K, 2), nout = size(K, 1)); catalog rule RealMatrixElements (rows nout, cols nin)",
+          "subject": "nout",
+          "text": "Number of outputs: the number of rows of K"
+        },
+        {
+          "evidence": "vendored Buildings/Controls/OBC/CDL/Reals/MatrixGain.mo (protected nin = size(K, 2), nout = size(K, 1)); catalog rule RealMatrixElements (rows nout, cols nin)",
+          "subject": "nin",
+          "text": "Number of inputs: the number of columns of K"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "class": "CDL.Reals.Greater",
+      "descriptions": [],
+      "notes": [
+        {
+          "evidence": "prototype authoring rule 5 (port order); upstream descriptions of u1 and u2; checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "kind": "port-order",
+          "subject": "",
+          "text": "Compares u1 against u2: y is true when u1 is greater than u2."
+        }
+      ]
+    },
+    {
+      "class": "CDL.Reals.Less",
+      "descriptions": [],
+      "notes": [
+        {
+          "evidence": "prototype authoring rule 5 (port order); upstream descriptions of u1 and u2; checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "kind": "port-order",
+          "subject": "",
+          "text": "Compares u1 against u2: y is true when u1 is less than u2."
+        }
+      ]
+    },
+    {
+      "class": "CDL.Logical.Pre",
+      "descriptions": [],
+      "notes": [
+        {
+          "evidence": "prototype authoring rule 9 (feedback); docs/execution-profile.md (HostTick v1); checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "kind": "loop",
+          "subject": "",
+          "text": "Outputs the value its input had on the previous frame, so it breaks an algebraic loop. Put a Logical.Pre in every Boolean feedback path."
+        }
+      ]
+    },
+    {
+      "class": "CDL.Logical.Latch",
+      "descriptions": [],
+      "notes": [
+        {
+          "evidence": "prototype authoring rule 9 (feedback); checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "kind": "loop",
+          "subject": "",
+          "text": "Passes the current input through: a feedback loop through Latch alone is an algebraic loop and the engine refuses it. Break the loop with Logical.Pre."
+        }
+      ]
+    },
+    {
+      "class": "CDL.Logical.TrueDelay",
+      "descriptions": [],
+      "notes": [
+        {
+          "evidence": "prototype authoring rule 7; authoring note decision 16; checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "kind": "convention",
+          "subject": "delayOnInit",
+          "text": "The open-control-library sets delayOnInit = true on every TrueDelay, against the CDL default false, so a condition that is already true at start-up must still persist for the full delay. The emitter never fills a default: write it."
+        },
+        {
+          "evidence": "prototype authoring rule 9 (feedback); checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "kind": "loop",
+          "subject": "",
+          "text": "Passes the current input through: a feedback loop through TrueDelay alone is an algebraic loop and the engine refuses it. Break the loop with Logical.Pre."
+        }
+      ]
+    },
+    {
+      "class": "CDL.Logical.TrueFalseHold",
+      "descriptions": [],
+      "notes": [
+        {
+          "evidence": "prototype authoring rule 9 (feedback); checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "kind": "loop",
+          "subject": "",
+          "text": "Passes the current input through: a feedback loop through TrueFalseHold alone is an algebraic loop and the engine refuses it. Break the loop with Logical.Pre."
+        }
+      ]
+    },
+    {
+      "class": "CDL.Logical.TrueHoldWithReset",
+      "descriptions": [
+        {
+          "evidence": "crates/oce-blocks/src/logical_timing.rs (TrueHoldWithReset) and its unit tests in logical_timing_tests.rs; checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "subject": "u",
+          "text": "Input signal: a true value turns the output true and starts the hold"
+        },
+        {
+          "evidence": "crates/oce-blocks/src/logical_timing.rs (TrueHoldWithReset) and its unit tests in logical_timing_tests.rs; checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "subject": "clr",
+          "text": "Clear input: while true the output is false and the hold is cancelled"
+        },
+        {
+          "evidence": "crates/oce-blocks/src/logical_timing.rs (TrueHoldWithReset) and its unit tests in logical_timing_tests.rs; checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "subject": "y",
+          "text": "True while u is true and until duration has elapsed since the output turned true; false while clr is true"
+        },
+        {
+          "evidence": "crates/oce-blocks/src/logical_timing.rs (TrueHoldWithReset) and its unit tests in logical_timing_tests.rs; checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "subject": "duration",
+          "text": "Minimum time, in seconds, that the output stays true once it turns true, unless clr clears it"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "class": "CDL.Discrete.Sampler",
+      "descriptions": [],
+      "notes": [
+        {
+          "evidence": "crates/oce-blocks/src/discrete_tests.rs (sampler_uses_start_time_t0_and_holds_between_sample_instants); checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "kind": "pitfall",
+          "subject": "",
+          "text": "Sampler is not a delay. On the first frame and on each frame at or past the next sample instant it outputs the current input; on the frames in between it holds the last sampled value. It never outputs the previous sample: use Discrete.UnitDelay for that."
+        },
+        {
+          "evidence": "prototype authoring rule 9 (feedback); checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "kind": "loop",
+          "subject": "",
+          "text": "Passes the current input through on the first frame and at every sample instant: a feedback loop through Sampler alone is an algebraic loop and the engine refuses it. Break the loop with Discrete.UnitDelay."
+        }
+      ]
+    },
+    {
+      "class": "CDL.Discrete.UnitDelay",
+      "descriptions": [],
+      "notes": [
+        {
+          "evidence": "prototype authoring rule 9 (feedback); checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "kind": "loop",
+          "subject": "",
+          "text": "Outputs an earlier sample of its input, never the current value, so it breaks an algebraic loop. Put a Discrete.UnitDelay in every Real feedback path."
+        }
+      ]
+    },
+    {
+      "class": "CDL.Discrete.ZeroOrderHold",
+      "descriptions": [],
+      "notes": [
+        {
+          "evidence": "prototype authoring rule 9 (feedback); checked against a loaded engine by oce-vocab's engine_agreement tests",
+          "kind": "loop",
+          "subject": "",
+          "text": "Passes the current input through on the first frame: a feedback loop through ZeroOrderHold alone is an algebraic loop and the engine refuses it. Break the loop with Discrete.UnitDelay."
+        }
+      ]
+    }
+  ],
+  "format": 1
+}

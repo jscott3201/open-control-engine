@@ -62,7 +62,8 @@ Enumerate the input domain and hit every boundary and degenerate case:
 
 ### 2. Golden tests — checked-in expected outputs, compared bit-exactly
 
-The engine's core contract is **bit-identical determinism** (CDL §7.16). A golden test turns that
+The engine's core contract is **bit-identical determinism** (CDL's model of computation, §7.16 of
+the OpenBuildingControl (OBC) specification). A golden test turns that
 contract into an executable tripwire: a checked-in fixture, a checked-in expected output, and a
 comparison that fails if even one bit differs.
 
@@ -100,7 +101,8 @@ Worked examples of the bar, and where each stands:
   `array2d.modelgraph.txt` and `array_expression.modelgraph.txt`.
 - **Compiled-schedule blobs** — one `OCEB` blob per G36 catalog fixture, re-encoded and
   decode-then-re-encoded byte for byte, plus the per-class signature-hash table; the determinism
-  matrix requires the bytes identical across architectures and codegen. **Landed**:
+  matrix requires the bytes identical across architectures and across debug and release
+  codegen, per PR. **Landed**:
   `crates/oce-api/tests/fixtures/blob/` (46 `.oceb` files and `class_signatures.tsv`; GitHub #400,
   [compiled-schedule blob](docs/compiled-schedule-blob.md)). Its hostile-input suites follow the
   bar above: one typed refusal per defect with mutations re-checksummed to reach the check under
@@ -225,8 +227,8 @@ executes:
   `no_std` execution entry and runs the shared 160-frame schedule through both, comparing every
   boundary output by raw bits, every warning in order and the raw state words after load and
   after every frame. Per PR it runs on x86_64, aarch64 and `wasm32-wasip1` from one recorded
-  artifact: every determinism cell records the blobs and expected results, the four recordings
-  must be identical, and the x86_64 debug recording is decoded and replayed natively on aarch64
+  artifact: every determinism cell records the blobs and expected results, the four cells'
+  recordings must be identical (both architectures, debug and release codegen), and the x86_64 debug recording is decoded and replayed natively on aarch64
   and under wasmtime on `wasm32-wasip1`
   ([the blob round trip](docs/compiled-schedule-blob.md#the-blob-round-trip)). Its controls flip
   one bit of a recording and require the report to name the fixture, frame, slot and both bit
@@ -256,7 +258,26 @@ case" is itself a finding to resolve, not a pass.
 ## Conventions
 
 - **Test location:** inline `#[cfg(test)] mod tests;` for unit tests; `crates/<crate>/tests/` for
-  integration tests; `crates/<crate>/tests/fixtures/` for input + golden files.
+  integration tests; `crates/<crate>/tests/fixtures/` for input + golden files. `oce-author`
+  builds `tests/*.rs` as one binary (`autotests = false`, GitHub #548): register a new test file
+  there as `mod <file>;` in `tests/authoring.rs` (with `use crate::support;` for the shared
+  helpers), or give it its own `[[test]]` in `Cargo.toml`, with the reason, when something selects
+  it by name; a layout test fails on a file compiled into no binary or into two. `oce-cxf` builds
+  them as `exchange` plus the eleven binaries something selects by name (GitHub #549): register a
+  new test file as `mod <file>;` in `tests/exchange.rs` (with `use crate::bless;` or
+  `use crate::render;` for the shared helpers), or as its own `[[test]]`, with the reason, when
+  something selects it by name; its layout test also refuses a declaration it cannot place.
+  `oce-api` does the same (GitHub #546): a new file under `crates/oce-api/tests/` is registered
+  as a `mod` line in `tests/facade.rs`, or in `tests/facade_allocation_census.rs` if it names
+  `allocation_counter`. Select one file's tests with
+  `cargo nextest run -p oce-api --test facade -E 'test(/^<file>::/)'`. The layout test in
+  `facade.rs` (`every_test_file_is_compiled_into_exactly_one_binary`) fails on a file that is in
+  no binary or in two.
+  `oce-conformance` builds them as `conformance` plus the seven binaries something selects by name,
+  the strict-bit evidence tests among them (GitHub #550): register a new test file as
+  `mod <file>;` in `tests/conformance.rs` (with `use crate::<helper>;` for a helper that root
+  declares, such as `block_harness`), or as its own `[[test]]`, with the reason, when something
+  selects it by name.
 - **Float comparison:** `Value::bit_eq` (or `f64::to_bits`) — **never** `==` or `(a-b).abs() < ε`
   in an engine assertion. Sole exception: the 21 transcendental, psychrometric, and solar Real
   signal goldens, whose libm-dependent outputs retain the existing aligned-tolerance band on
@@ -296,18 +317,22 @@ CI is **dev-light / release-heavy** (keep per-change PRs fast; save the heavy su
 
 | Gate | Trigger | Runs tests? |
 | --- | --- | --- |
-| `.github/workflows/pr-gate.yml` (light) | PRs into `development`, manual dispatch (no post-merge run: the PR run is the only one) | On an engine change, the `determinism-matrix` job runs **`oce-api`, `oce-blocks`, and `oce-expr`** in four native cells — x86_64 on `ubuntu-latest`, aarch64 on `ubuntu-24.04-arm`, debug/release — and its `determinism-compare` fan-in checks that portable snapshots match across architectures, portable and target-bound snapshots match across codegen, target-bound snapshots differ across architectures, each architecture refuses the other's target-bound snapshot on restore, and the 46 compiled-schedule blobs are byte-identical in all four cells. Separately, scoped **`oce-conformance::strict_bits` controls and the four aligned suite binaries** run in the same four native cells, with repeat captures and a fail-closed eight-capture comparison in the `strict-bit-compare` fan-in; that per-PR matrix is the native strict-bit evidence. This is not the full conformance suite. The `crate-tests` job runs the `oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and `oce-store` suites in x86_64 debug only (their release-codegen runs stay in the heavy gate). Two [platform cells](docs/ci-and-the-gate.md#platform-cells-macos-and-windows) observe other operating systems in debug codegen: macOS arm64 (`macos-15`) runs the three-crate subset and its fan-in requires the portable snapshot to equal Linux's byte for byte and the target-bound snapshot to differ, and Windows (`windows-latest`) builds the workspace and runs its whole nextest suite except the five strict-bit binaries (two `oce-cxf` OpenModelica reference test groups are `#[cfg(unix)]` and do not compile there: the symlink-rejection test needs unix symlinks, and the line-reference `manifest_contract_tests` claim temporary directories by unix device and inode); neither qualifies its platform or observes a strict-bit result. The bare-metal cell (`no-std-build`) builds and lints `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` `no_std + alloc` on `thumbv7em-none-eabihf`, `riscv32imac-unknown-none-elf` and `wasm32-unknown-unknown` and fails on any `std` feature or host-only crate in their dependency graphs (with controls that must trip), checks the `no_std` `oce-graph` closure holds no `oce-cxf`, `oce-api`, `serde_json` or `std`, runs `oce-graph`'s `blob_execution` (allocation census and run digests) and `blob_state_words` suites against the `no_std + alloc` build, runs the `oce-expr` unit suite without the `std` feature, builds the `oce-firmware-link` image for both bare-metal targets within its size budget, and runs that crate's host tests (every golden's run digest through the image's code) ([the bare-metal cell](docs/ci-and-the-gate.md#the-bare-metal-cell)); it compiles the rest of the four's tests nowhere, so their other suites still run only in the default `std` build, and it executes the image nowhere: the nightly `qemu.yml` does. Alongside them: clippy `-D warnings`, build, rustdoc, workspace-wide default-no-db, cargo-machete, cargo-deny bans/licenses/sources, golden-gen firewall and the facade contract and Quickstart. All of that is the **determinism lane**, which runs only when the PR changes something outside the documentation and `crates/leverage/` (fail-closed path rules, [lanes](docs/ci-and-the-gate.md#lanes-what-a-pr-runs)). The **leverage lane** — fmt, clippy, rustdoc, nextest and the `oce-api`-only dependency rule for each `crates/leverage/*` crate — runs for a leverage change and for every engine change. Every PR runs fmt, file-size, no-secret, the docs build, the gate fixtures and the package/feature/publication, authority and product-contract checks. `gate (light)` executes `.agents/gate.sh` only when a gate script, workflow or tool config changes. A docs-only or leverage-only PR therefore runs **no engine test at all**. |
-| `.github/workflows/release-gate.yml` (heavy) | **Any** PR targeting `main` (it filters on the base branch only — there is no `head_ref == development` condition), pushes to `main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
+| `.github/workflows/pr-gate.yml` (light) | PRs into `development`, manual dispatch (it has no post-merge run of its own; the merge starts the merge gate below) | On an engine change, the `determinism-matrix` job runs **`oce-api`, `oce-blocks`, and `oce-expr`** in four native cells — x86_64 on `ubuntu-latest`, aarch64 on `ubuntu-24.04-arm`, each in debug and release codegen — and its `determinism-compare` fan-in checks that portable snapshots match across architectures, target-bound snapshots differ across architectures, both match across debug and release codegen, each architecture refuses the other's target-bound snapshot on restore, and the 46 compiled-schedule blobs and the round-trip recordings are byte-identical in all four cells. (The release-codegen cells and the debug-against-release comparison ran only after the merge from issue #502 until issue #556; `bash .agents/gate.sh determinism` reproduces the subset under release codegen locally, and no PR owes it.) Separately, scoped **`oce-conformance::strict_bits` controls and the four aligned suite binaries** run in four native cells (both architectures, debug and release), with repeat captures and a fail-closed eight-capture comparison in the `strict-bit-compare` fan-in; that per-PR matrix is the native strict-bit evidence. This is not the full conformance suite. The `crate-tests` job runs the `oce-graph`, `oce-validate`, `oce-model`, `oce-cxf` and `oce-store` suites in x86_64 debug only (their release-codegen runs stay in the heavy gate). One [platform cell](docs/ci-and-the-gate.md#platform-cells-macos-and-windows) observes another operating system in debug codegen: macOS arm64 (`macos-15`) runs the three-crate subset and its fan-in requires the portable snapshot to equal Linux's byte for byte and the target-bound snapshot to differ; it does not qualify its platform or observe a strict-bit result. (The Windows cell is the merge gate's.) The bare-metal cell (`no-std-build`) builds and lints `oce-model`, `oce-expr`, `oce-blocks` and `oce-graph` `no_std + alloc` on `thumbv7em-none-eabihf`, `riscv32imac-unknown-none-elf` and `wasm32-unknown-unknown` and fails on any `std` feature or host-only crate in their dependency graphs (with controls that must trip), checks the `no_std` `oce-graph` closure holds no `oce-cxf`, `oce-api`, `serde_json` or `std`, runs `oce-graph`'s `blob_execution` (allocation census and run digests) and `blob_state_words` suites against the `no_std + alloc` build, runs the `oce-expr` unit suite without the `std` feature, builds the `oce-firmware-link` image for both bare-metal targets within its size budget, and runs that crate's host tests (every golden's run digest through the image's code) ([the bare-metal cell](docs/ci-and-the-gate.md#the-bare-metal-cell)); it compiles the rest of the four's tests nowhere, so their other suites still run only in the default `std` build, and it executes the image nowhere: the nightly `qemu.yml` does. Alongside them: clippy `-D warnings`, build, rustdoc, workspace-wide default-no-db, cargo-machete, cargo-deny bans/licenses/sources and the golden-gen firewall. All of that is the **determinism lane**, which runs only when the PR changes something outside the documentation, the root `README.md` and `crates/leverage/` (fail-closed path rules, [lanes](docs/ci-and-the-gate.md#lanes-what-a-pr-runs)). The **README lane** — the `facade contract and Quickstart` job: the facade compiler contract, the `readme_quickstart` byte-pin of the README's Quickstart and the executed example — runs when the root `README.md` changes and for every engine change. The **leverage lane** — fmt, clippy, rustdoc, nextest and the `oce-api`-only dependency rule for each `crates/leverage/*` crate — runs for a leverage change and for every engine change. Every PR runs fmt, file-size, no-secret, the docs build, the gate fixtures and the package/feature/publication, authority and product-contract checks. No per-PR job executes `.agents/gate.sh`; a gate script, workflow or tool-config change runs the determinism lane like any engine change. A docs-only or leverage-only PR therefore runs **no engine test at all**, and a README-only PR runs only the Quickstart byte-pin and the Quickstart itself. |
+| `.github/workflows/merge-gate.yml` (after each merge) | **Every push to `development`** (each merged PR, on its merge commit; not a required status, and its aggregate is `Merge gate OK`, not `CI OK`), manual dispatch | **The Windows suite only** (issues #502, #545 and #556; the determinism matrix this workflow ran until issue #556 is per-PR again) — the Windows cell (`windows-latest`: the workspace build and its whole nextest suite except the five strict-bit binaries; two `oce-cxf` OpenModelica reference test groups are `#[cfg(unix)]` and do not compile there: the symlink-rejection test needs unix symlinks, and the line-reference `manifest_contract_tests` claim temporary directories by unix device and inode; an observation, not qualification). A red run on a merge commit is fixed forward or reverted before the next determinism-lane merge. |
+| `.github/workflows/release-gate.yml` (heavy) | **Nightly cron against `development`**, **any** PR targeting `main` (it filters on the base branch only — there is no `head_ref == development` condition), pushes to `main`, manual dispatch. Not a push to `development` (issue #545) | **Yes** — full nextest and doctests (`test-suite`), release-codegen nextest (inside `gate (full)`, the only CI job that executes `.agents/gate.sh`, which then requires that run's report), plus a re-run of the light gates (including stale crate-status header lint), an unconditional cargo-deny with advisories, the determinism matrix in all four cells with its fan-in, and the Windows cell. A determinism-lane merge needs the latest nightly not red, or its failure already being fixed forward. |
 | `.github/workflows/advisories.yml` | Daily cron, manual dispatch | **No** — advisory/yanked scan only (`cargo deny check advisories`, `yanked = "deny"`, `ignore = []`). |
 | `.github/workflows/qemu.yml` (not gating) | Nightly cron, manual dispatch | **The firmware image only** — builds `oce-firmware-link`'s `blob-frames` image for `thumbv7em-none-eabihf` and `riscv32imac-unknown-none-elf`, runs each under QEMU (`netduinoplus2`, riscv32 `virt`) and requires every output line (a run digest per frame for 160 frames, the final digest against `blob_frame_digests.tsv`, the verdict) to equal the host reference runner's ([the nightly emulation run](docs/ci-and-the-gate.md#the-nightly-emulation-run)). Not part of any `CI OK`; `bash .agents/gate.sh qemu` runs it locally. |
 
 Read the first row in the dangerous direction and you will trust a green PR you
 should not. A change outside the listed test subsets can show every check green having run
-none of its own tests. Before claiming tests
-pass on such a change, run the suite yourself:
+none of its own tests, and the heavy gate that runs them is nightly, not on the merge. The
+[local proof](docs/ci-and-the-gate.md#the-local-proof) a PR owes is matched to its lane and does
+not run every crate's suite either. Before claiming tests pass on such a change, run the suites
+of the crates it touches yourself:
 
 ```bash
-bash .agents/gate.sh full
+cargo nextest run -p <crate> --locked --profile ci --no-tests=fail
+cargo test -p <crate> --doc --locked
 ```
 
 **Runner: [`cargo-nextest`](https://nexte.st/)** (pinned `0.9.143`; the repository config rejects an
@@ -324,7 +349,9 @@ cargo test --workspace --doc --locked     # doctests — nextest CANNOT run thes
 The default profile is fail-fast for local feedback. Automated profiles run every selected test and
 retry none. Ordinary tests terminate after 120 seconds. All profiles fail when a child process retains inherited output
 handles for more than two seconds, and bound a whole run to 15 minutes. `ci-release` inherits `ci` so
-runner semantics cannot drift between debug and release codegen. Both write JUnit under
+runner semantics cannot drift between debug and release codegen; `ci-release-workspace` inherits it
+as well and belongs to one command, the gate script's release-codegen run of the whole workspace,
+so that run has a report no other run writes. Each writes JUnit under
 `target/nextest/<profile>/junit.xml`; CI uploads those files for 14 days.
 
 > nextest does **not** run doctests (a stable-Rust limitation). A complete local/CI test pass is
@@ -418,8 +445,9 @@ the `upstream-buildings` bucket spot-check in
 `third_party/modelica-buildings-cdl/README.md` is the upstream-fidelity control.
 
 The git hooks (`pre-commit`, `pre-push`) deliberately **do not** run tests — they stay fast.
-Run the suite on demand when you touch behavior; the release gate and daily development-tip gate are
-the enforcement points.
+Run the suite on demand when you touch behavior; the release gate — nightly on the
+`development` tip and on release PRs — is the enforcement point for the whole workspace, and the
+per-PR gate for the determinism subset in debug and release codegen.
 
 Profiles live in [`.config/nextest.toml`](.config/nextest.toml): `default` for a fast local
 fail-fast loop, `ci` for the gate (no fail-fast, no retries, slow-test guard). The release gate

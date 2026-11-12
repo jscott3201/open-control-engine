@@ -66,12 +66,12 @@ pub fn contract_descriptors() -> &'static [ContractDescriptor] {
         },
         ContractDescriptor {
             domain: ContractDomain::Assertions,
-            revision: 2,
+            revision: 1,
             schema: include_str!("../contracts/assertions.schema.json"),
         },
         ContractDescriptor {
             domain: ContractDomain::ExecutionProfile,
-            revision: 2,
+            revision: 1,
             schema: include_str!("../contracts/execution-profile.schema.json"),
         },
     ];

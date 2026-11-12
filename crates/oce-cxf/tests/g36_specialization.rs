@@ -120,7 +120,7 @@ fn doc_with_children(
         graph.extend(constant_block(name, guard.as_deref()));
     }
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph
     })
 }
@@ -159,7 +159,7 @@ fn single_constant_with_extra_param(extra_type: &str, extra_value: JsonValue) ->
         }),
     ]);
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph
     })
 }
@@ -396,7 +396,7 @@ fn conditional_guard_matrix_covers_representative_g36_controller_enums() {
     }
 
     let graph = import_doc(json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph
     }))
     .expect("representative G36 guard matrix should import");

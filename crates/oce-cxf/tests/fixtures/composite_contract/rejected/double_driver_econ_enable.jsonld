@@ -1,0 +1,62 @@
+{
+  "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
+  "@graph": [
+    { "@id": "http://example.org#econ_enable", "@type": "S231:Block",
+      "S231:containsBlock": [
+        { "@id": "http://example.org#econ_enable.sub" },
+        { "@id": "http://example.org#econ_enable.hys" }
+      ],
+      "S231:hasParameter": { "@id": "http://example.org#econ_enable.dTHys" },
+      "S231:hasInput": [
+        { "@id": "http://example.org#econ_enable.TOut" },
+        { "@id": "http://example.org#econ_enable.TOutCut" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#econ_enable.ecoEna" } },
+    { "@id": "http://example.org#econ_enable.dTHys", "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#econ_enable.TOut", "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#econ_enable.sub.u2" },
+        { "@id": "http://example.org#econ_enable.hys.u" }
+      ] },
+    { "@id": "http://example.org#econ_enable.TOutCut", "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#econ_enable.sub.u1" } },
+    { "@id": "http://example.org#econ_enable.ecoEna", "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" } },
+
+    { "@id": "http://example.org#econ_enable.sub",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:hasInput": [
+        { "@id": "http://example.org#econ_enable.sub.u1" },
+        { "@id": "http://example.org#econ_enable.sub.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#econ_enable.sub.y" } },
+    { "@id": "http://example.org#econ_enable.sub.u1", "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#econ_enable.sub.u2", "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#econ_enable.sub.y", "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#econ_enable.hys.u" } },
+
+    { "@id": "http://example.org#econ_enable.hys",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#econ_enable.hys.uLow" },
+        { "@id": "http://example.org#econ_enable.hys.uHigh" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#econ_enable.hys.u" },
+      "S231:hasOutput": { "@id": "http://example.org#econ_enable.hys.y" } },
+    { "@id": "http://example.org#econ_enable.hys.uLow",
+      "S231:value": { "@value": "0.0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#econ_enable.hys.uHigh", "S231:value": "dTHys" },
+    { "@id": "http://example.org#econ_enable.hys.u", "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#econ_enable.hys.y", "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#econ_enable.ecoEna" } }
+  ]
+}

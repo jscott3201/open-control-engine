@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "validate",
+  "errors": [
+    {
+      "code": "missing-from",
+      "detail": "reading stdin needs --from text or --from wire",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "-",
+  "ok": false,
+  "schema": "oce-report/1",
+  "stages": [],
+  "tool": "oce"
+}
+--- stderr

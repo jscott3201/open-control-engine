@@ -64,7 +64,7 @@ fn inactive_chain(length: usize) -> Value {
         graph.push(node);
     }
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph
     })
 }
@@ -104,7 +104,7 @@ fn active_composite_chain(length: usize) -> Value {
         }),
     ]);
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph
     })
 }
@@ -226,7 +226,7 @@ fn boundary_chain(
         };
     }
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": graph
     })
 }
@@ -282,7 +282,7 @@ fn render_boundary_graph(graph: &ModelGraph) -> String {
 
 fn constant_document(value: String) -> Value {
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
         "@graph": [
             {
                 "@id": ROOT,

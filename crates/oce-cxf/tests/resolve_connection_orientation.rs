@@ -137,7 +137,7 @@ fn document(reversed: [bool; 3]) -> Value {
         n
     };
     json!({
-      "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+      "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
       "@graph": [
         { "@id": M, "@type": "S231:Block",
           "S231:containsBlock": [ { "@id": iri("src") }, { "@id": iri("sum") } ],
@@ -337,7 +337,7 @@ fn two_driver_document(reversed: bool) -> Value {
                 "S231:isConnectedTo": [ { "@id": iri("sum.u1") } ] })
     };
     json!({
-      "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+      "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
       "@graph": [
         { "@id": M, "@type": "S231:Block",
           "S231:containsBlock": [ { "@id": iri("src") }, { "@id": iri("other") }, { "@id": iri("sum") } ],

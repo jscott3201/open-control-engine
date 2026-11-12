@@ -1,0 +1,14 @@
+{
+  "sequence": "econ_enable",
+  "derived_from": "",
+  "params": [{ "name": "dTHys", "type": "Real", "value": 1 }],
+  "inputs": [{ "name": "TOut", "type": "Real", "quantity": "ThermodynamicTemperature",
+               "display_unit": "degC", "min": [], "max": [],
+               "semantic": { "name": "", "label": "", "unit": "K", "brick": "", "s223": "",
+                             "qudt": "", "haystack": [], "provisional": false } }],
+  "outputs": [],
+  "blocks": [{ "name": "hys", "class": "CDL.Reals.Hysteresis",
+               "params": [{ "name": "uLow", "value": 0.0 },
+                          { "name": "uHigh", "value": { "ref": "dTHys" } }] }],
+  "connections": ["sub.y -> hys.u"]
+}

@@ -1,0 +1,25 @@
+exit: 0
+--- stdout
+CDL.Logical.TrueHoldWithReset
+  Hold a true output for at least a duration; the engine-local clr input resets the hold
+
+parameters:
+  duration : Real = 0.0
+      Minimum time, in seconds, that the output stays true once it turns true, unless clr clears it
+
+inputs:
+  u : Boolean
+      Input signal: a true value turns the output true and starts the hold
+  clr : Boolean
+      Clear input: while true the output is false and the hold is cancelled
+
+outputs:
+  y : Boolean
+      True while u is true and until duration has elapsed since the output turned true; false while clr is true
+
+notes:
+  (none)
+
+links:
+  (none)
+--- stderr

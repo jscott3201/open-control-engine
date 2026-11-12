@@ -1,0 +1,26 @@
+# report
+dropped mat description: "Mixed air temperature"
+dropped mat unit: "degC"
+dropped sat description: "Supply air temperature"
+dropped sat unit: "degC"
+dropped yFault description: "Supply air stays well below mixed air for too long"
+# text
+# imported from v0 graph JSON
+sequence ahu_0005
+derived_from none
+# Mixed air temperature
+# unit: degC
+in mat : Real
+# Supply air temperature
+# unit: degC
+in sat : Real
+# Supply air stays well below mixed air for too long
+out yFault : Boolean
+block gap = CDL.Reals.Subtract
+block gapBig = CDL.Reals.GreaterThreshold(t = 3.0)
+block persist = CDL.Logical.TrueDelay(delayTime = 1800.0, delayOnInit = true)
+mat -> gap.u1
+sat -> gap.u2
+gap.y -> gapBig.u
+gapBig.y -> persist.u
+persist.y -> yFault

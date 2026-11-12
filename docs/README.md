@@ -9,7 +9,7 @@ front door; these pages are the detail behind it.
 | --- | --- |
 | [Product contract](product-contract.md) | Versioned executable-CXF/HostTick requirements, domain-owner delegations, limitations, evidence and explicitly future outcomes |
 | [Authority claims and supersession](authority-claims.md) | The generated cross-domain summary, checked versus review-only boundaries, source-owner update procedure, and non-exhaustive supersession map, from the [index](authority-claims.json) |
-| [Architecture](architecture.md) | How the engine is layered, where the CDL §7.17 seam sits, what each of the 12 engine crates and the firmware image owns, and the platform and MSRV policy |
+| [Architecture](architecture.md) | How the engine is layered, where the metadata seam (§7.17 of the OpenBuildingControl (OBC) specification; ANSI/ASHRAE 231-2026 §5.13) sits, what each of the 12 engine crates, the firmware image and the leverage crates (the `oce` CLI, the block vocabulary and the vector format included) owns, and the platform and MSRV policy |
 | [Compiled-schedule blob](compiled-schedule-blob.md) | What an `OCEB` blob carries from a `std` host to a `no_std` target, what it leaves behind, how it is versioned, and what the decoder trusts and refuses |
 | [Execution profile](execution-profile.md) | Why each host tick is one state transition, and where `CDL.Logical.Pre` differs from Modelica same-time event iteration |
 | [Canonical replay record](replay-record.md) | Bounded per-accepted-frame exact bytes, typed refusals and host-owned ordered replay with separate snapshot sidecars |
@@ -20,7 +20,6 @@ front door; these pages are the detail behind it.
 | [Host responsibilities](host-responsibilities.md) | What safety behavior you must implement yourself, before wiring the engine to equipment |
 | [CI and the gate](ci-and-the-gate.md) | What runs when, and what a green check does and does not prove |
 | [Benchmarks](benchmarks.md) | Current complete-frame allocation/latency harness and historical throughput, qualified by the commit and host that produced it |
-| [Facade migration](facade-migration.md) | Frame-only execution migration, removed pre-release names, Warning-only diagnostics and preserved host boundaries |
 
 ## Design notes
 
@@ -33,8 +32,13 @@ questions its reviewer ruled on; the contracts above remain the authority for sh
 | [Compiled-schedule blob (OCEB)](design/compiled-schedule-blob.md) | The byte format a `std` host emits after load and a `no_std` target decodes and executes: layout, class signature hash, integrity, versioning and size budget |
 | [Authoring layer (M2)](design/authoring-layer.md) | How a person or an agent writes a sequence without JSON-LD: the typed model, its text and wire forms, the validator and its finding codes, the deterministic CXF emitter and the `oce` CLI |
 | [Historical replay API](design/replay.md) | How recorded or scripted inputs drive the engine frame by frame: slot-indexed frame sources, the missing-sample policy, the columnar trace and its size per frame, and the resumable cursor behind Python and the browser worker |
-| [Commissioning verifier (CDL §12)](design/commissioning.md) | How `oce-verify`'s tolerance mode checks a real controller's trends against the engine per CDL §12: the test-spec and point-mapping files, unit conversion, the funnel envelope port, indicators, the report and the receipt, with a worked Building 33 example |
+| [Commissioning verifier (OBC §12)](design/commissioning.md) | How `oce-verify`'s tolerance mode checks a real controller's trends against the engine per OBC §12 (Verification; the table of contents of ANSI/ASHRAE 231-2026 lists no verification clause): the test-spec and point-mapping files, unit conversion, the funnel envelope port, indicators, the report and the receipt, with a worked Building 33 example |
 | [Structural diff (`oce-diff`)](design/diff.md) | How two revisions of a sequence are compared: authored names as block identity with a bounded rename pass, the closed change categories, site parameters apart from the graph, the serde `Diff` and its text and Markdown renderings, and the CXF and blob adapters, with three worked examples |
+| [Canonical content id](design/content-id.md) | What one canonical content id covers: the loaded flat graph with names inside and namespaces stripped, its `OCECANON` byte encoding, SHA-256 and the `oce:canon1:` format, the surfaces it replaces on `ExportReport`, the blob header and the compatibility descriptor, and the mapping table for the library re-stamp, with a worked byte dump |
+| [Importer (`oce-author`)](design/importer.md) | How library CXF and the frozen prototype's v0 graph JSON enter the authoring model: sequence parameters of an enumeration type, bounds on boundary declarations, library constants as member values, what stays refused with a closed `ImportError`, names and the library re-stamp, and the corrected gate-item-1 coverage |
+| [Vectors, the verify replayer and receipts](design/vectors.md) | The one vector format (`oce/vectors/v1`, changed in place until 1.0.0): the set clock, constant and step inputs, exact `equals` windows and diagnostics at an instant; how `oce-verify` binds a set to a loaded sequence and replays it on `oce-replay`; the vector receipt under the shared header; mutant mode and its score; the error-code table; the `oce verify` verb; and the in-repo fixtures that are rewritten, with the owner's eleven rulings recorded |
+| [Bounding a vector run's work](design/vector-work-budget.md) | Issue #561, ruled by the owner on 2026-11-11: four budgets on one `run_vectors` call (frames, compared instants, bytes loaded, and frames weighted by document bytes), each checked at bind before any load but the subject's first, with the measured costs, the worst cases today and at the defaults, the corpus arithmetic behind the defaults, the rejected alternatives and the ten rulings |
+| [Vocabulary v1](design/vocabulary.md) | Where the block vocabulary comes from (modelica-json's `CXF-Core.jsonld`, vendored at the recorded pins, not `-o doc`), the generated and curated data files in the `oce-vocab` leverage crate, how `oce catalog` and `oce vocab` serve it, declared units and the time-only scale-factor table for unit suffixes, coverage of the 133 classes, and how the agent-usable gate row is measured |
 
 ## Elsewhere in the repository
 
@@ -44,6 +48,9 @@ questions its reviewer ruled on; the contracts above remain the authority for sh
 | [`TESTING.md`](../TESTING.md) | The testing standard every change is held to. Read before writing a test |
 | [`CONTRIBUTING.md`](../CONTRIBUTING.md) | How to work on the repository |
 | [`SECURITY.md`](../SECURITY.md) | Reporting, threat model, and the known hardening limit |
+| [`oce` CLI](../crates/leverage/oce-cli/README.md) | The `oce` command-line tool: its commands, the exit codes and the JSON report contract an agent can branch on |
+| [`oce-vocab`](../crates/leverage/oce-vocab/README.md) | The block vocabulary: the generated and curated data files, the note kinds, the joined view and how to regenerate and curate |
+| [`oce-verify`](../crates/leverage/oce-verify/README.md) | The vector format `oce/vectors/v1` and the run as built: what a load checks and in what order, the bounds, the canonical form and `spec_id`, how a set is bound to a subject and each scenario replayed and compared, mutant mode and its score, the receipt and its `receipt_id`, the error codes and the pinned JSON Schema |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Notable changes |
 
 ## Two pages worth reading even if you are only evaluating

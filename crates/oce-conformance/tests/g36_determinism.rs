@@ -6,8 +6,8 @@ use oce_conformance::drive_trace_with_options;
 
 #[path = "g36_determinism/sequence_inputs.rs"]
 mod sequence_inputs;
-#[path = "g36_determinism/support.rs"]
-mod support;
+// Shared helper `g36_determinism/support.rs`, declared once in the root `conformance.rs`.
+use crate::support;
 
 use sequence_inputs::{
     economizer_inputs, outdoor_airflow_inputs, plant_requests_inputs, relief_damper_inputs,

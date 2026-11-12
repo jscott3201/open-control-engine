@@ -11,6 +11,9 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
+# The integration tests are grouped into a few binaries instead of one per file; the `[[test]]`
+# targets at the end of this file list them (GitHub #504).
+autotests = false
 
 [lints]
 workspace = true
@@ -31,7 +34,61 @@ oce-validate = { workspace = true }
 oce-semantics = { workspace = true }
 thiserror = { workspace = true, features = ["std"] }
 serde_json = { workspace = true }
+# SHA-256 for the canonical content id (GitHub #470, `docs/design/content-id.md` decision 12). Only
+# here: the `no_std` core four never compute an id (the blob decoder carries the field verbatim).
+sha2 = { version = "0.10.9", default-features = false }
 
 [dev-dependencies]
 allocation-counter = "0.8.1"
 oce-bless = { workspace = true }
+
+# Integration-test binaries. Cargo's default builds every file under `tests/` as its own binary,
+# and under the release profile (`lto = "thin"`, `codegen-units = 1`) each one links the whole
+# dependency graph again. Every file not named below is a module of `facade` or of
+# `facade_allocation_census`, and `tests/facade.rs` fails when a file is in no binary or in two.
+
+# The files that measure no allocation.
+[[test]]
+name = "facade"
+path = "tests/facade.rs"
+
+# The files that call `allocation_counter::measure`. Naming that crate links its counting global
+# allocator into the binary, so they share one apart from `facade`, and every test runs under the
+# allocator it ran under as its own binary.
+[[test]]
+name = "facade_allocation_census"
+path = "tests/facade_allocation_census.rs"
+
+# The binaries below are selected by name and stay their own.
+
+# `.agents/gate.sh` runs `binary(blob_goldens)` with `OCE_BLOB_OUT` set, and
+# `.agents/project-facts.md` gives its bless command.
+[[test]]
+name = "blob_goldens"
+path = "tests/blob_goldens.rs"
+
+# `pr-gate.yml`, `.agents/gate.sh` and `scripts/ci/classify-changes.sh` run
+# `--test readme_quickstart`.
+[[test]]
+name = "readme_quickstart"
+path = "tests/readme_quickstart.rs"
+
+# `docs/cxf-composite-subset.md` gives `--test conformance composite_contract`, and `oce-cxf`'s
+# `composite_contract_doc` test pins that command.
+[[test]]
+name = "conformance"
+path = "tests/conformance.rs"
+
+# `.agents/project-facts.md` gives the bless command of each of these two by binary name.
+[[test]]
+name = "content_id_pin"
+path = "tests/content_id_pin.rs"
+
+[[test]]
+name = "export_content_oracle"
+path = "tests/export_content_oracle.rs"
+
+# `docs/benchmarks.md` names the `frame_observations` binary as the one to run for timings.
+[[test]]
+name = "frame_observations"
+path = "tests/frame_observations.rs"

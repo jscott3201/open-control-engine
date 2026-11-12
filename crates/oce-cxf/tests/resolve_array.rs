@@ -153,7 +153,7 @@ fn array_doc(size: &str, n_dims: Json, value: Json) -> Json {
 /// multi-dimensional fixture reads honestly even though the expansion base comes from the `@id`.
 fn array_doc_nd(label: &str, size: &str, n_dims: Json, value: Json) -> Json {
     json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": [
             { "@id": "http://example.org#A", "@type": "S231:Block", "S231:label": "A",
               "S231:containsBlock": [ { "@id": "http://example.org#A.con" } ],
@@ -328,7 +328,7 @@ fn array_expression_value_grounds_through_the_evaluator() {
 fn symbolic_dimension_resolves_against_earlier_param() {
     // sizeOfDimensions "(nin)" with `nin` a ground EARLIER Integer parameter (declaration order).
     let doc = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": [
             { "@id": "http://example.org#A", "@type": "S231:Block", "S231:label": "A",
               "S231:containsBlock": [ { "@id": "http://example.org#A.con" } ],
@@ -459,7 +459,7 @@ fn array2d_single_value_broadcasts_to_all_elements() {
 fn array_missing_size_of_dimensions_is_malformed_document() {
     // isArray=true but NO sizeOfDimensions → structural fail-fast (cannot determine element count).
     let doc = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
         "@graph": [
             { "@id": "http://example.org#A", "@type": "S231:Block", "S231:label": "A",
               "S231:containsBlock": [ { "@id": "http://example.org#A.con" } ],

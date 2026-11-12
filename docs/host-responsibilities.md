@@ -22,7 +22,8 @@ The [complete-frame contract](complete-frame-contract.md) supplies current typed
 preparation and an engine-local load/rebuild fence (PC-032). `execute_frame` consumes a prepared
 submission and returns one immutable `CompletedFrame` after one atomic HostTick transition (PC-033).
 PC-034 retains the shared private evaluation core. PC-035 removes the weaker legacy profiles;
-preparation followed by consuming execution is the only public state-advancing execution surface.
+preparation followed by consuming execution, and its slot-indexed twin over the same core driver
+(`execute_slots`, issue #444), are the only public state-advancing execution surfaces.
 
 Completeness means every executable boundary input exactly once, except omission explicitly
 defined by the executable schema. It does not establish sensor coherence, quality, freshness or
@@ -237,17 +238,30 @@ your policy. Nothing you persist is read back by a frame.
 not write them anywhere. `Engine::checkpoint`, `state_snapshot`, `restore_checkpoint`, and
 `restore_state` call no storage port. The [state contract](state-compatibility.md) defines the
 same-loaded-executable guarantee, typed refusals and portability limits. The host owns durable
-storage and an authenticated sealed envelope binding **exact snapshot bytes** to its approved
-compiled-build/deployment qualifier, freshness and generation. Verify that envelope **before**
-`EngineStateSnapshot::from_bytes`, then pass only the OCE bytes. OCE emits, accepts, stores and
-enforces no build token; equal ABI/manifest, package or catalog facts do not authenticate a build.
+storage and an authenticated sealed envelope binding **exact snapshot bytes** to its model, its
+approved compiled-build/deployment qualifier, freshness and generation. Verify that envelope
+**before** `EngineStateSnapshot::from_bytes`, then pass only the OCE bytes. The engine refuses a
+snapshot another engine version wrote (`EngineStateError::EngineVersionMismatch`, at
+`from_bytes`); that is all it checks about the bytes' origin. OCE emits, accepts, stores and
+enforces no build token: an equal engine version, ABI/manifest, package or catalog fact does not
+authenticate a build.
 
 Capture only after a model has loaded successfully and while no parameter edits are pending. A
 durable capture also requires authored stable identities and registered state contracts for every
 stateful block. The decoder enforces a 64 MiB limit, validates canonical ordering and manifest
 self-consistency, and checks an integrity trailer. Capture runs this same bounded decoder before
-returning a successful artifact. Format and execution ABI are now revision 2; revision-1 bytes
-refuse without migration because their manifest omitted executable input-domain/unit facts.
+returning a successful artifact. Format and execution ABI are revision 1 and stay 1 until 1.0.0;
+the header also names the engine version that wrote the snapshot, and only that version restores
+it, so plan a version upgrade as a cold start or a restart on the prior qualified build. To key
+stored snapshots and compiled-schedule blobs by that version, record the `major`, `minor` and
+`patch` fields of `oce_api::ENGINE_VERSION` in the envelope beside each one. `EngineVersion` has
+no `Display`, `Hash`, `Ord` or serde implementation, so the host spells out the three numbers
+itself. They are the value both headers carry and the `expected` of an `EngineVersionMismatch`, so
+before decoding the host can tell which stored bytes this build will refuse by version. A
+matching version predicts only that check: the trailer, the fingerprint and the restore checks
+can still refuse the bytes. Two builds of one version are not told apart: the sealed envelope is
+still what binds bytes to the model, the build and the deployment that wrote them
+([wire revision](state-compatibility.md#wire-revision-and-integrity)).
 Class-specific block-state invariants are checked during restore, when a target engine is available.
 The trailer detects accidental corruption; it is not an authenticity or freshness proof. Protect
 snapshot bytes according to the trust boundary of the host that consumes them.
@@ -259,8 +273,10 @@ Durable continuation has a narrow restore window:
    partial writes; authenticate the exact payload and build/deployment qualifier, freshness,
    rollback/replay policy and deployment generation before decoding. Package version or an FNV tag
    is insufficient. Refuse a mismatched build/deployment here, outside OCE.
-3. Parse only approved OCE bytes with `EngineStateSnapshot::from_bytes`. Inspect `portability()`
-   for placement, without treating it as build or numerical qualification.
+3. Parse only approved OCE bytes with `EngineStateSnapshot::from_bytes`. `EngineVersionMismatch`
+   means another engine version wrote them: do not edit the header; restore on that version or
+   cold start. Inspect `portability()` for placement, without treating it as build or numerical
+   qualification.
 4. Load the exact compatible executable/parameters into a fresh target. Load has no external
    effects; anything your host persisted around a load is yours to reconcile.
 5. Call `restore_state` before any accepted frame, dirty-parameter resume or either earlier restore.
@@ -378,7 +394,6 @@ Hosts prepare supported CXF outside the engine. Likewise, hosts decode CSV/table
 facade and provide complete `prepare_frame` observations. `AssertLevel` contains only `Warning`,
 which is now also its default; assertion reports neither escalate nor stop equipment. The collector
 preserves the block's diagnostic source (currently the Assert class path, not an instance identity).
-See [facade migration](facade-migration.md) for the intentional pre-release source/default break.
 
 `point_list(None)` still returns the engine's own effective inventory. Its existing argument remains,
 but device filtering is outside support: every `Some` returns `OcError::Load` directly, without
@@ -410,13 +425,53 @@ for every document that loads at all.
 Property keys are expanded against the same `@context` (issue #383). A modeled property — `min`,
 `max`, `nominal`, `unit`, `quantity`, `displayUnit`, `value`, the structural edges, and the rest
 of the `S231:` terms the importer reads — is the same property whether it is keyed compactly
-(`S231:min`), by its full IRI in the document's own S231 namespace, by another prefix bound to
-that namespace, or by a declared term. The own namespace is the document's `S231` binding; a
-document that binds no `S231` is read in the S231P namespace (`http://data.ashrae.org/S231P#`), the
-one the exporter binds. A modeled term spelled in any other known S231 namespace — S231P, the
-`http://data.ashrae.org/S231#` namespace upstream modelica-json emits, or the `https:` spelling of
-either — is refused as `non-subset-construct`, in both directions, and the message names the
-namespace the document reads modeled keys in. A node that writes one property in two spellings
+(`S231:min`), by its full IRI in the S231 namespace, by another prefix bound to that namespace, or
+by a declared term.
+
+A parameter's `min`, `max`, `unit`, `quantity` and `displayUnit` are never used for control, but
+their shape is checked where the parameter is read (GitHub #594, issue #559): a bound is one
+number, typed literal or expression string (modelica-json writes a bound over other parameters as
+an expression, `"yMin"`), and a term is a string, typed literal or IRI node, the shapes a
+connector's term takes. No string among them may be empty or whitespace-only: not the attribute
+itself, a typed literal's `@value` or an IRI node's `@id`. JSON `null` reads as absent. A
+malformed attribute is refused in one of two ways:
+
+- **`malformed-document`, subject the parameter**, once per malformed attribute however often the
+  parameter is read: a bound that is a list, a boolean or a blank string, or a typed literal with
+  a blank `@value`; and every malformed term (a number, a boolean, a list, an object that is no
+  typed literal or IRI node, or a blank string, `@value` or `@id`). Only a parameter that is read
+  gets it; one pruned by a false conditional guard, or listed by no node, is not checked.
+- **A parse failure of the whole document** (`CxfError::Json`; no code and no subject): a bound
+  that is an object but no typed literal with a string `@value` and `@type` (`{}`, `{"@id": …}`,
+  `{"@value": "30"}`, `{"@value": [1], …}`, `{"@list": …}`), or a list holding one. Such a bound
+  matches no shape the document reader knows, so the document fails to parse wherever the
+  parameter is, read, pruned or listed by no node, as a malformed `S231:value` does.
+
+The value of a well-shaped attribute is still not read.
+
+The importer reads the S231 vocabulary in one namespace, `http://data.ashrae.org/S231#`: the one
+the exporter binds, the OpenBuildingControl (OBC) specification lists (OBC §11.3) and
+modelica-json emits (GitHub #527; the evidence is on the
+[CDL coverage page](cdl-coverage.md#the-standard-this-page-measures-against)). A document either
+binds `S231` to exactly that IRI or binds no `S231` at all, in which case its compact keys are
+read in the same namespace. Every other spelling is refused with `vocabulary-namespace-mismatch`,
+and the message names the IRI found and the IRI expected:
+
+- `S231` bound to any other IRI. An IRI is compared as a string, so the `https:` spelling of the
+  same host and path is another IRI and is refused too.
+- Any prefix bound to `http://data.ashrae.org/S231P#`. The engine wrote that IRI through release
+  0.4.0. No importer, alias or second spelling reads a document of that layout: export it again
+  with a current engine or tool.
+- A modeled term keyed by its full IRI in that namespace or in the `https:` spelling of either
+  namespace, and a `@type` or `isOfDataType` value in the retired namespace.
+- A `@type` naming the class `ExtensionBlock` in the `https:` spelling of either namespace
+  (GitHub #582). That class is read only in the published namespace, so this spelling would
+  otherwise be read as an ordinary class (see
+  [what the engine does not execute](cdl-coverage.md#what-the-engine-does-not-execute)).
+
+In a list of context maps only the binding in force is judged (a later map replaces an earlier
+one). Another prefix bound to the published IRI is the same namespace under another name and is
+accepted. A node that writes one property in two spellings
 (an explicit `null` or `[]` compact key counts) and a key that names a modeled property only after
 trimming surrounding whitespace are refused as `malformed-document`, as is any key — modeled or
 not — written more than once on one `@graph` node, since JSON parsing would silently keep only one
@@ -521,6 +576,7 @@ The structural ingest paths above are bounded and return typed diagnostics rathe
 `../TESTING.md` requires new ingest code to assert the specific `DiagCode` or error variant rather
 than "an error occurred."
 
-The tests cited on this page live in `oce-api` and run per PR on x86_64 and arm64 under debug and
-release codegen. The full workspace and doctests still wait for the release gate. See
+The tests cited on this page live in `oce-api` and run per PR on x86_64 and arm64 in debug and
+release codegen (`bash .agents/gate.sh determinism` reproduces both on one host). The full workspace and doctests still wait for the
+nightly release gate. See
 [`ci-and-the-gate.md`](ci-and-the-gate.md) for the exact split.

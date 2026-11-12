@@ -94,9 +94,11 @@ pub use wire::crc32c;
 /// The four magic bytes every blob starts with: ASCII `OCEB`.
 pub const MAGIC: [u8; 4] = *b"OCEB";
 
-/// The one format version this build encodes and decodes. Any change to the layout, a tag table,
-/// the class signature record, the CRC or the content-id meaning bumps it; a decoder accepts
-/// exactly its own version ([`BlobError::UnsupportedFormat`]).
+/// The one format version this build encodes and decodes. It stays 1 until the engine's 1.0.0: a
+/// change to the layout, a tag table, the class signature record, the CRC or the content-id
+/// meaning is made in place, and the engine version in the header ([`ENGINE_VERSION`]) is what
+/// tells a blob of one layout from another. A decoder accepts exactly this number
+/// ([`BlobError::UnsupportedFormat`]).
 pub const FORMAT_VERSION: u16 = 1;
 
 /// The execution profile the blob is encoded for: `1` is HostTick v1 (`docs/execution-profile.md`).
@@ -128,7 +130,8 @@ pub struct EngineVersion {
     pub patch: u16,
 }
 
-/// This build's engine version, from the crate's own package version.
+/// This build's engine version, read at compile time from the workspace package version
+/// (`workspace.package.version`) that the core crates and `oce-api` share.
 pub const ENGINE_VERSION: EngineVersion = EngineVersion {
     major: parse_u16(env!("CARGO_PKG_VERSION_MAJOR")),
     minor: parse_u16(env!("CARGO_PKG_VERSION_MINOR")),
@@ -151,17 +154,15 @@ const fn parse_u16(text: &str) -> u16 {
     value as u16
 }
 
-/// The 32-byte content-id field for a facade content id: the 16 hash bytes as a `u128`
-/// little-endian, then 16 zero bytes. `None` (a partial export, which has no complete content id)
-/// is 32 zero bytes. The field's meaning is "the facade's content id at encode time"; changing it
-/// bumps [`FORMAT_VERSION`].
+/// The 32-byte content-id field for a canonical content id: the 32 SHA-256 digest bytes of the
+/// facade's `oce:canon1:` id in digest output order, with no padding
+/// (`docs/design/content-id.md`). `None` (a hand-built model, which has no id) is 32 zero bytes.
+/// The decoder carries the field verbatim and never interprets it, so no hash is linked on a
+/// `no_std` target. The field's meaning is "the facade's canonical content id at encode time";
+/// a change to that meaning is a format change, made in place with the next engine version.
 #[must_use]
-pub fn content_id_field(content_id: Option<u128>) -> [u8; 32] {
-    let mut field = [0u8; 32];
-    if let Some(id) = content_id {
-        field[..16].copy_from_slice(&id.to_le_bytes());
-    }
-    field
+pub fn content_id_field(digest: Option<[u8; 32]>) -> [u8; 32] {
+    digest.unwrap_or([0u8; 32])
 }
 
 /// One executable boundary input: the record the encoder writes and the decoder returns.
@@ -181,7 +182,7 @@ pub struct BlobInput<'a> {
     /// Fan-out target input connectors, at least one. The decoder returns them strictly
     /// increasing; the encoder sorts them.
     pub targets: Vec<ConnectorId>,
-    /// The non-computational `SemanticPoint` payload (CDL §7.17), opaque: the decoder bounds it by
+    /// The non-computational `SemanticPoint` payload (OBC §7.17), opaque: the decoder bounds it by
     /// its length and never interprets it. The v1 facade encoder writes it empty.
     pub semantic_point: &'a [u8],
 }

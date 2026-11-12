@@ -18,6 +18,13 @@ nesting is limited to 64. Boundary lowering is iterative and permits at most 64 
 hops per path, 65,536 target examinations, and 8 MiB of aggregate target-IRI bytes across boundary
 walks in the document. Exceeding a boundary limit returns `MalformedDocument` without constructing
 a partial flat graph. Ordinary direct leaf wiring does not consume the boundary-work budgets.
+Connection collection after lowering interns each distinct endpoint IRI once, so a long re-anchored
+source shared by a whole fan-out (including a derivation-skipped synthesized source, whose bytes no
+budget charges) costs time linear in the edge list rather than fan-out × IRI length (issue #479).
+Lowering itself does the same: it interns each distinct endpoint IRI once per document and shares
+one allocation per lowered IRI, so a long *authored* source wired to many targets also costs time
+and memory linear in the document (under 0.1 s of release CPU at 1 MiB × 65,535, where it took more
+than three minutes before; issue #480).
 Every composite and leaf is lowered at most once (`shared-instance` refuses a second reach), each
 composite's grounded declarations are shared by reference with its children rather than copied
 per leaf, and all preserved array parameters of one document share a 1,048,576-element budget
@@ -85,7 +92,7 @@ and look the remainder up in the native block registry (published as
 `http://example.org#Buildings.Controls.OBC.CDL.Reals.Add` — or the compact
 `ex:Buildings.Controls.OBC.CDL.Reals.Add` under `"ex": "http://example.org#"` — resolves to the
 registered class `CDL.Reals.Add` and is a leaf; `S231:Block` (expanded,
-`http://data.ashrae.org/S231P#Block`) or a vendor class path resolves to nothing and — with
+`http://data.ashrae.org/S231#Block`) or a vendor class path resolves to nothing and — with
 children — is a composite. Note the contrast with rule 7: **identities and typing tokens
 expand; property KEYS match by suffix** — the banned-key and array-marker matching below stays
 on the term after the last `:`, `#`, or `/`, whatever the spelling.
@@ -101,6 +108,14 @@ is a runtime composite, while
 ```
 stays a leaf: it imports as a normal `CDL.Reals.Sources.Constant` block and the protected child
 is elided (corpus fixture `accepted/registered_leaf_carveout.jsonld`).
+
+An extension block is never classified. A document with an active one is refused before this
+rule runs, with `extension-block-unsupported` (see
+[acceptance preconditions](#acceptance-preconditions)), so an `S231:ExtensionBlock` that lists
+`S231:containsBlock` children is not lowered as a composite and its children never run in place
+of its FMU. Only the S231 class is one: a vendor class that happens to be named `ExtensionBlock`
+in another namespace (`http://example.org#ExtensionBlock`) is classified by this rule like any
+other unregistered type.
 
 ## Rule 2 — Single top root (rejects: `composite/root-count`)
 
@@ -137,9 +152,9 @@ lowers `…#M.sub`'s leaves (depth-first) before `…#M.post`.
 ### Ordering and identity contract
 
 This table is the OCE executable profile, not a general JSON-LD ordering guarantee.
-[OBC CXF §8.2](https://obc.lbl.gov/specification/cxf.html#classes-and-properties) defines
+The [OpenBuildingControl (OBC) specification, OBC §8.2](https://obc.lbl.gov/specification/cxf.html#classes-and-properties), defines
 `containsBlock` as a relation between blocks; it does not define the executable array-order
-semantics below. The [OBC code-generation example (§11.3)](https://obc.lbl.gov/specification/codeGeneration.html#translation-of-a-control-sequence-using-a-intermediate-cxf-json-ld-format)
+semantics below. The [OBC code-generation example (OBC §11.3)](https://obc.lbl.gov/specification/codeGeneration.html#translation-of-a-control-sequence-using-a-intermediate-cxf-json-ld-format)
 shows authored arrays and describes modelica-json recursively flattening composites to elementary
 blocks. Neither that example nor its displayed order establishes a general producer-order guarantee.
 
@@ -163,8 +178,8 @@ an expanded IRI/name maintained by the producer and used by the host, not an arr
 | `hasInstance` member array | Normalized | Array order is load-bearing for nothing: derived ports use names/class signature, classified parameters append in class-signature order, and synthesized connectors append after authored connectors ordered by `(owner @graph position, class-signature position)`. This does not make owner node order or authored connector node order inert. |
 | Inactive conditionals | Pruned | Inactive children and entire subtrees contribute no leaf or connector positions. Moving an inactive child among active siblings does not move the active order. Active connections referencing inactive nodes still refuse; pruning is not permission to leave dangling wiring. See Active nodes for declaration/guard exceptions. |
 | Resolver diagnostics | Deterministically finalized | Sort by numeric connector dense ID first (including recognized `connector#N` subjects), then subject, code string and message. Non-connector subjects use the final ID bucket: no subject before named subjects, then lexical subject/code/message order. Early failures with no connector index use that non-connector handling. Severity is not a sort key. Export warnings retain their separate block/cascade order, not this resolver sort. |
-| Export | Derived from `ModelGraph` vectors | Emit the synthetic root, surviving blocks and their parameters, surviving connectors, then boundary nodes in their vector-derived order. Deferral filters the survivor cone without lexically sorting it. Export is flat, not source recovery; a partial export tag is not whole-model identity. See the [round-trip contract](cxf-round-trip.md#the-deferral-trap). |
-| Dense IDs versus authored identity | Derived storage versus stable authored identity | `BlockId`, `ConnectorId`, `decl_order`, schedule/vector positions and synthetic positional port names are **never stable external identities**. Hosts key by authored expanded IRI/name, preserving that identity across producer revisions deliberately. Authored identity does not imply executable compatibility: unchanged names can accompany incompatible storage/order. Export content identity, state compatibility and replay identity remain distinct. |
+| Export | Derived from `ModelGraph` vectors | Emit the synthetic root, surviving blocks and their parameters, surviving connectors, then boundary nodes in their vector-derived order. Deferral filters the survivor cone without lexically sorting it. Export is flat, not source recovery; a partial export is not the whole model (`ExportReport::complete` says which). See the [round-trip contract](cxf-round-trip.md#the-deferral-trap). |
+| Dense IDs versus authored identity | Derived storage versus stable authored identity | `BlockId`, `ConnectorId`, `decl_order`, schedule/vector positions and synthetic positional port names are **never stable external identities**. Hosts key by authored expanded IRI/name, preserving that identity across producer revisions deliberately. Authored identity does not imply executable compatibility: unchanged names can accompany incompatible storage/order. The [canonical content id](design/content-id.md) (`Engine::content_id`) names the loaded graph by authored names and port indices, so none of these orders reach it; it remains distinct from state compatibility and replay identity. |
 
 #### Emitter guidance and qualification limits
 
@@ -320,7 +335,7 @@ leaf parameter `"S231:value": "kInner"` grounds the chain's end — the
 > endpoints or missing boundary nodes (`UnresolvedReference`), and boundary datatype declarations
 > that cannot be derived (`MalformedDocument`).
 
-CXF §8.2 permits either endpoint of a connection to carry `S231:isConnectedTo`; subject position
+OBC §8.2 permits either endpoint of a connection to carry `S231:isConnectedTo`; subject position
 does not encode signal direction. Before boundary elision, the importer therefore derives each
 endpoint's source/sink role from its owning block, its port direction, and the peer's location
 inside or outside that owning composite, then re-anchors reverse-spelled edges on their canonical
@@ -370,7 +385,7 @@ imports as one external input feeding `…#M.sub.gain.u` directly; `…#M.sub.u`
 > Six Modelica construct keys are banned on any active node: `redeclare`, `constrainedby`,
 > `extends`, `extendsFrom`, `moSource`, `modelicaSource`. Matching is on the term after the last
 > `:`, `#`, or `/` in the key, so the bare (`extends`), prefixed (`S231:extends`), and
-> absolute-IRI (`http://data.ashrae.org/S231P#extends`) spellings all reject. A banned key
+> absolute-IRI (`http://data.ashrae.org/S231#extends`) spellings all reject. A banned key
 > rejects with `composite/banned-modelica-key` (DiagCode `non-subset-construct`); the subject is
 > the owning node and the message names the key exactly as authored.
 >
@@ -494,6 +509,25 @@ in the import pipeline. Match them by DiagCode, not by message. The conditional-
 rejection `inactive-conditional-node` (see [Active nodes](#active-nodes)) is generic machinery
 in the same sense — untagged, no catalog entry.
 
+### Single assignment: the double-driver shapes
+
+OBC §7.10 gives every block input exactly one driver: a block output (a connection) or a root
+boundary input (elided into the frame contract). A second driver of either kind refuses the
+document with the untagged `single-assignment` code, subject the driven input's authored IRI,
+one refusal per input:
+
+| Drivers of one input | Message |
+| --- | --- |
+| Two or more block outputs | `input is multiply driven (in-degree N)` |
+| Two or more distinct root boundary inputs | `input is driven by distinct boundary inputs` |
+| At least one block output and at least one root boundary input | `input is driven by a block output and a boundary input` |
+
+The mixed shape takes precedence and carries no count, so two block outputs plus a boundary input
+read the same as one of each. It loaded warning-free before issue #472, when the wire won at run
+time and the staged boundary value was discarded. Edge spelling does not matter: a reversed
+`isConnectedTo`, or a route through a nested composite's pass-through, lowers to the same drivers.
+The rejected corpus pins each shape (`rejected/double_driver_*.jsonld`).
+
 ## Acceptance preconditions
 
 A document that satisfies rules 1–7 must also meet the general import preconditions before it
@@ -508,6 +542,19 @@ loads warning-free:
 3. Every leaf `@type` resolves to a registered block class (else `class-not-found`).
 4. Accepted means **warning-free**: the corpus drivers assert an empty diagnostic report, not
    merely a non-error one.
+5. The S231 vocabulary is spelled in `http://data.ashrae.org/S231#`. A document binds the `S231`
+   prefix to exactly that IRI, or binds no `S231` at all; any other binding is refused with
+   `vocabulary-namespace-mismatch` before a node is read (see
+   [host responsibilities](host-responsibilities.md#cxf-point-identities-are-the-authored-ids)).
+6. No active node is an extension block (OBC §7.13): one typed `S231:ExtensionBlock` (the class
+   in the S231 namespace only, in any spelling that expands to it, or compact in a document that
+   binds no `S231`), carrying `S231:hasFmuPath`, or whose `@type` names such a node of the same
+   document, wherever it sits. Each is refused with `extension-block-unsupported`, subject the
+   node, before rules 1–7 run, and the resolve ends there: nothing those rules or a later stage
+   would find is reported for the document. FMI is out of scope before 1.0 (see
+   [what the engine does not execute](cdl-coverage.md#what-the-engine-does-not-execute), which
+   also lists the spellings that are not the class). An instance of an extension-block class the
+   document does not define falls under precondition 3.
 
 ## Testing your emitter
 
@@ -533,9 +580,10 @@ the same files and drivers.
   survivor orders, object-key reversal, declaration/member permutations, and exact ordered
   diagnostic vectors. These are OCE profile expectations, not an external numerical oracle.
 - Public identity: [`composition_identity.rs`](../crates/oce-api/tests/composition_identity.rs)
-  checks complete export content tags and public state-restore compatibility. It distinguishes
-  normalized permutations, incompatible containment/connector/positional-port changes, and direct
-  fanout permutations that change content but preserve executable compatibility. It neither exposes
+  checks the canonical content id and public state-restore compatibility. Normalized permutations,
+  containment, `@graph` and positional-port transpositions and direct fanout permutations keep the
+  content id; the transpositions still move dense ids and so refuse a snapshot, while the fanout
+  permutation preserves executable compatibility. It neither exposes
   private fingerprints nor changes format revisions.
 - Complementary contract evidence: `resolve_external_input_order`, `resolve_declaration_scope`,
   `resolve_param_precedence`, and `resolve_composite_orientation` retain boundary, leaf-scope and
@@ -578,3 +626,9 @@ member connector bounds ground for the first time on class-translation documents
 `inactive-conditional-node` rising 11 → 44 because pruning now reaches a conditional instance's
 listed members as well as its `@graph` nodes (32 members still carrying active connections, 12
 connection targets).
+The mixed double-driver refusal (issue #472) then raised `single-assignment` 57 → 68: eleven
+inputs driven by both a block output and a root boundary input — one in
+`Limits/SeparateWithDP`, one in `SetPoints/FreezeProtection`, nine in
+`Generic/AirEconomizerHighLimits` — all in documents already refused for unresolvable
+conditional guards, whose unpruned alternative branches carry both drivers. No document changed
+outcome.

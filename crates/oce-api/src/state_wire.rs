@@ -77,6 +77,10 @@ impl Writer {
         self.extend(&[value]);
     }
 
+    pub(crate) fn u16(&mut self, value: u16) {
+        self.extend(&value.to_le_bytes());
+    }
+
     pub(crate) fn u32(&mut self, value: u32) {
         self.extend(&value.to_le_bytes());
     }
@@ -171,6 +175,11 @@ impl<'a> Reader<'a> {
 
     pub(crate) fn u8(&mut self) -> Result<u8, EngineStateError> {
         Ok(self.take(1)?[0])
+    }
+
+    pub(crate) fn u16(&mut self) -> Result<u16, EngineStateError> {
+        let bytes: [u8; 2] = self.take(2)?.try_into().expect("fixed-size slice");
+        Ok(u16::from_le_bytes(bytes))
     }
 
     pub(crate) fn u32(&mut self) -> Result<u32, EngineStateError> {

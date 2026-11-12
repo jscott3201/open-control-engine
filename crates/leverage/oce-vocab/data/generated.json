@@ -1,0 +1,4737 @@
+{
+  "classes": [
+    {
+      "class": "CDL.Reals.Sources.Constant",
+      "connectors": [
+        {
+          "description": "Constant output signal",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Constant output value",
+          "name": "k",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Sources.CivilTime",
+      "connectors": [
+        {
+          "description": "Civil time",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": "s"
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Sources.Pulse",
+      "connectors": [
+        {
+          "description": "Pulse output signal",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Amplitude of pulse",
+          "name": "amplitude",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Width of pulse in fraction of period",
+          "name": "width",
+          "quantity": "",
+          "unit": "1"
+        },
+        {
+          "description": "Time for one period",
+          "name": "period",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Shift time for output",
+          "name": "shift",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Offset of output signals",
+          "name": "offset",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Sources.Ramp",
+      "connectors": [
+        {
+          "description": "Ramp output signal",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Height of ramps",
+          "name": "height",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Duration of ramp (= 0.0 gives a Step)",
+          "name": "duration",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Offset of output signal",
+          "name": "offset",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Output = offset for time < startTime",
+          "name": "startTime",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Sources.Sin",
+      "connectors": [
+        {
+          "description": "Sine output signal",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Amplitude of sine wave",
+          "name": "amplitude",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Frequency of sine wave",
+          "name": "freqHz",
+          "quantity": "Frequency",
+          "unit": "Hz"
+        },
+        {
+          "description": "Phase of sine wave",
+          "name": "phase",
+          "quantity": "Angle",
+          "unit": "rad"
+        },
+        {
+          "description": "Offset of output signal",
+          "name": "offset",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Output = offset for time < startTime",
+          "name": "startTime",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Sources.CalendarTime",
+      "connectors": [
+        {
+          "description": "Year",
+          "dims": 0,
+          "name": "year",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        },
+        {
+          "description": "Month of the year",
+          "dims": 0,
+          "name": "month",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        },
+        {
+          "description": "Day of the month",
+          "dims": 0,
+          "name": "day",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        },
+        {
+          "description": "Hour of the day",
+          "dims": 0,
+          "name": "hour",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        },
+        {
+          "description": "Minute of the hour",
+          "dims": 0,
+          "name": "minute",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        },
+        {
+          "description": "Integer output representing week day (monday = 1, sunday = 7)",
+          "dims": 0,
+          "name": "weekDay",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Enumeration for choosing how reference time (time = 0) should be defined",
+          "name": "zerTim",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Year when time = 0, used if zerTim=Custom",
+          "name": "yearRef",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Offset that is added to 'time', may be used for computing time in different time zone",
+          "name": "offset",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Sources.TimeTable",
+      "connectors": [
+        {
+          "description": "Output with tabulated values",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Smoothness of table interpolation",
+          "name": "smoothness",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Extrapolation of data outside the definition range",
+          "name": "extrapolation",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Offsets of output signals as a vector with length equal to number of table matrix columns less one",
+          "name": "offset",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Time scale of first table column. Set to 3600 if time in table is in hours",
+          "name": "timeScale",
+          "quantity": "",
+          "unit": "1"
+        },
+        {
+          "description": "Table matrix (time = first column is time in seconds, unless timeScale <> 1)",
+          "name": "table",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Add",
+      "connectors": [
+        {
+          "description": "Input to be added",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input to be added",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Sum of the inputs",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Subtract",
+      "connectors": [
+        {
+          "description": "Input with minuend",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input with subtrahend",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with difference",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Multiply",
+      "connectors": [
+        {
+          "description": "Input to be multiplied",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input to be multiplied",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Product of the inputs",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Divide",
+      "connectors": [
+        {
+          "description": "Input for dividend",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input for divisor",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with the quotient",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Sqrt",
+      "connectors": [
+        {
+          "description": "Input to square root function",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with square root of the input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Sin",
+      "connectors": [
+        {
+          "description": "Input for the sine function",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": "rad"
+        },
+        {
+          "description": "Sine of input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Cos",
+      "connectors": [
+        {
+          "description": "Input for the cosine function",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": "rad"
+        },
+        {
+          "description": "Cosine of the input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Tan",
+      "connectors": [
+        {
+          "description": "Input for the tangent function",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": "rad"
+        },
+        {
+          "description": "Tangent of the input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Asin",
+      "connectors": [
+        {
+          "description": "Input for the arc sine function",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Arc sin of the input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": "rad"
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Acos",
+      "connectors": [
+        {
+          "description": "Input for arc cosine function",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Arc cosine of the input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": "rad"
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Atan",
+      "connectors": [
+        {
+          "description": "Input for the arc tangent function",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Arc tangent of the input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": "rad"
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Atan2",
+      "connectors": [
+        {
+          "description": "Input u1 for the atan2(u1/u2) function",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input u2 for the atan2(u1/u2) function",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with atan2(u1/u2)",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": "rad"
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Exp",
+      "connectors": [
+        {
+          "description": "Input for the base e exponential function",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Base e exponential value of the input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Log",
+      "connectors": [
+        {
+          "description": "Input for base e logarithm",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Base e logarithm of the input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Log10",
+      "connectors": [
+        {
+          "description": "Input for base 10 logarithm",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Base 10 logarithm of the input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Average",
+      "connectors": [
+        {
+          "description": "Input for average function",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input for average function",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with the average of the two inputs",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Modulo",
+      "connectors": [
+        {
+          "description": "Dividend of the modulus function",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Divisor of the modulus function",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Modulus u1 mod u2",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Round",
+      "connectors": [
+        {
+          "description": "Input to be rounded",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with rounded input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of digits to be round to",
+          "name": "n",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.AddParameter",
+      "connectors": [
+        {
+          "description": "Input to be added to the parameter",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Sum of the parameter and the input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Parameter to be added to the input",
+          "name": "p",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.MultiplyByParameter",
+      "connectors": [
+        {
+          "description": "Input to be multiplied with gain",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Product of the parameter times the input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Factor to be multiplied with input signal",
+          "name": "k",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Abs",
+      "connectors": [
+        {
+          "description": "Input for absolute function",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Absolute value of the input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Min",
+      "connectors": [
+        {
+          "description": "Input to the min function",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input to the min function",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Minimum of the inputs",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Max",
+      "connectors": [
+        {
+          "description": "Input to the max function",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input to the max function",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Maximum of the inputs",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.MultiMax",
+      "connectors": [
+        {
+          "description": "Input to max function",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Largest element of the input vector",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of input signals",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.MultiMin",
+      "connectors": [
+        {
+          "description": "Input to the min function",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Smallest element of the input vector",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of input signals",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.MultiSum",
+      "connectors": [
+        {
+          "description": "Input to multiplied by gain and then added",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Sum of inputs times gains",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of input signals",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Input gains",
+          "name": "k",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.MatrixGain",
+      "connectors": [
+        {
+          "description": "Input to be multiplied with the gain matrix",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Product of gain matrix times the input",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "",
+          "name": "nout",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Gain matrix which is multiplied with the input",
+          "name": "K",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.MatrixMax",
+      "connectors": [
+        {
+          "description": "Input for the matrix max function",
+          "dims": 2,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with vector of row- or colum-wise maximum of the input matrix",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of rows in input matrix",
+          "name": "nRow",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Number of columns in input matrix",
+          "name": "nCol",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "If true, outputs row-wise maximum, otherwise column-wise",
+          "name": "rowMax",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.MatrixMin",
+      "connectors": [
+        {
+          "description": "Input for the matrix min function",
+          "dims": 2,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with vector of row- or colum-wise minimum of the input matrix",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of rows in input matrix",
+          "name": "nRow",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Number of columns in input matrix",
+          "name": "nCol",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "If true, outputs row-wise minimum, otherwise column-wise",
+          "name": "rowMin",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Sort",
+      "connectors": [
+        {
+          "description": "Input to be sorted",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with sorted input",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        },
+        {
+          "description": "Indices of the sorted vector with respect to the original vector",
+          "dims": 1,
+          "name": "yIdx",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of input signals",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Set to true if ascending order, otherwise order is descending",
+          "name": "ascending",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Limiter",
+      "connectors": [
+        {
+          "description": "Input to be limited",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Limited value of input signal",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Lower limit of input signal",
+          "name": "uMin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Upper limit of input signal",
+          "name": "uMax",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Line",
+      "connectors": [
+        {
+          "description": "Input for support point x1, with x1 < x2",
+          "dims": 0,
+          "name": "x1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input for support point f(x1)",
+          "dims": 0,
+          "name": "f1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input for support point x2, with x2 > x1",
+          "dims": 0,
+          "name": "x2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input for support point f(x2)",
+          "dims": 0,
+          "name": "f2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input for independent variable",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with f(x) along the line specified by (x1, f1) and (x2, f2)",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "If true, limit input u to be no smaller than x1",
+          "name": "limitBelow",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "If true, limit input u to be no larger than x2",
+          "name": "limitAbove",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Greater",
+      "connectors": [
+        {
+          "description": "First input u1",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Second input u2",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output true if u1 is greater than u2 with hysteresis",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Hysteresis",
+          "name": "h",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Value of pre(y) at initial time",
+          "name": "pre_y_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.GreaterThreshold",
+      "connectors": [
+        {
+          "description": "Input to be compared against the threshold",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Outputs true if u is greater than the threshold with hysteresis",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Threshold for comparison",
+          "name": "t",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Hysteresis",
+          "name": "h",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Value of pre(y) at initial time",
+          "name": "pre_y_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Hysteresis",
+      "connectors": [
+        {
+          "description": "Input to be compared against hysteresis values",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output value of comparison",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "if y=true and u<uLow, switch to y=false",
+          "name": "uLow",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "if y=false and u>uHigh, switch to y=true",
+          "name": "uHigh",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Value of pre(y) at initial time",
+          "name": "pre_y_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Less",
+      "connectors": [
+        {
+          "description": "First input u1",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Second input u2",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Outputs true if u1 is less than u2",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Hysteresis",
+          "name": "h",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Value of pre(y) at initial time",
+          "name": "pre_y_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.LessThreshold",
+      "connectors": [
+        {
+          "description": "Input to be compared against the threshold",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Outputs true if u is less than the threshold with hysteresis",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Threshold for comparison",
+          "name": "t",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Hysteresis",
+          "name": "h",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Value of pre(y) at initial time",
+          "name": "pre_y_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Switch",
+      "connectors": [
+        {
+          "description": "Input u1",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Boolean switch input signal, if true, y=u1, else y=u3",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input u3",
+          "dims": 0,
+          "name": "u3",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with u1 if u2 is true, else u3",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.IntegratorWithReset",
+      "connectors": [
+        {
+          "description": "Input to be integrated",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input signal for state to which integrator is reset",
+          "dims": 0,
+          "name": "y_reset_in",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input that resets the integrator output when it becomes true",
+          "dims": 0,
+          "name": "trigger",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Value of the integrator",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Integrator gain",
+          "name": "k",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Initial or guess value of output (= state)",
+          "name": "y_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Derivative",
+      "connectors": [
+        {
+          "description": "Input for the gain",
+          "dims": 0,
+          "name": "k",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input for the time constant (T>0 required; T=0 is ideal derivative block)",
+          "dims": 0,
+          "name": "T",
+          "quantity": "Time",
+          "side": "input",
+          "unit": "s"
+        },
+        {
+          "description": "Input to be differentiated",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Approximation of derivative du/dt",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Initial value of output (= state)",
+          "name": "y_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.LimitSlewRate",
+      "connectors": [
+        {
+          "description": "Input signal to be rate of change limited",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Rate of change limited output signal",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Speed with which to increase the output",
+          "name": "raisingSlewRate",
+          "quantity": "",
+          "unit": "1/s"
+        },
+        {
+          "description": "Speed with which to decrease the output",
+          "name": "fallingSlewRate",
+          "quantity": "",
+          "unit": "1/s"
+        },
+        {
+          "description": "Derivative time constant",
+          "name": "Td",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Set to false to disable rate limiter",
+          "name": "enable",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.MovingAverage",
+      "connectors": [
+        {
+          "description": "Input to be averaged",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Moving average of the input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Time horizon over which the input is averaged",
+          "name": "delta",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.Ramp",
+      "connectors": [
+        {
+          "description": "Input that is being rate limited",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Set to true to enable rate limiter",
+          "dims": 0,
+          "name": "active",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Rate limited output if active is true, else output is equal to input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Maximum speed with which to increase the output",
+          "name": "raisingSlewRate",
+          "quantity": "",
+          "unit": "1/s"
+        },
+        {
+          "description": "Maximum speed with which to decrease the output",
+          "name": "fallingSlewRate",
+          "quantity": "",
+          "unit": "1/s"
+        },
+        {
+          "description": "Derivative time constant",
+          "name": "Td",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.PID",
+      "connectors": [
+        {
+          "description": "Setpoint input signal",
+          "dims": 0,
+          "name": "u_s",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Measurement input signal",
+          "dims": 0,
+          "name": "u_m",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Actuator output signal",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Type of controller",
+          "name": "controllerType",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Gain of controller",
+          "name": "k",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Time constant of integrator block",
+          "name": "Ti",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Time constant of derivative block",
+          "name": "Td",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Typical range of control error, used for scaling the control error",
+          "name": "r",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Upper limit of output",
+          "name": "yMax",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Lower limit of output",
+          "name": "yMin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Ni*Ti is time constant of anti-windup compensation",
+          "name": "Ni",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "The higher Nd, the more ideal the derivative block",
+          "name": "Nd",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Initial value of integrator state",
+          "name": "xi_start",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Initial value of derivative output",
+          "name": "yd_start",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Set to true for reverse acting, or false for direct acting control action",
+          "name": "reverseActing",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Reals.PIDWithReset",
+      "connectors": [
+        {
+          "description": "Connector of setpoint input signal",
+          "dims": 0,
+          "name": "u_s",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Connector of measurement input signal",
+          "dims": 0,
+          "name": "u_m",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Resets the controller output when trigger becomes true",
+          "dims": 0,
+          "name": "trigger",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Connector of actuator output signal",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Type of controller",
+          "name": "controllerType",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Gain of controller",
+          "name": "k",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Time constant of integrator block",
+          "name": "Ti",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Time constant of derivative block",
+          "name": "Td",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Typical range of control error, used for scaling the control error",
+          "name": "r",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Upper limit of output",
+          "name": "yMax",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Lower limit of output",
+          "name": "yMin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Ni*Ti is time constant of anti-windup compensation",
+          "name": "Ni",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "The higher Nd, the more ideal the derivative block",
+          "name": "Nd",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Initial value of integrator state",
+          "name": "xi_start",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Initial value of derivative output",
+          "name": "yd_start",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Set to true for reverse acting, or false for direct acting control action",
+          "name": "reverseActing",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Value to which the controller output is reset if the boolean trigger has a rising edge",
+          "name": "y_reset",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Psychrometrics.DewPoint_TDryBulPhi",
+      "connectors": [
+        {
+          "description": "Dry bulb temperature",
+          "dims": 0,
+          "name": "TDryBul",
+          "quantity": "ThermodynamicTemperature",
+          "side": "input",
+          "unit": "K"
+        },
+        {
+          "description": "Relative air humidity",
+          "dims": 0,
+          "name": "phi",
+          "quantity": "",
+          "side": "input",
+          "unit": "1"
+        },
+        {
+          "description": "Dew point temperature",
+          "dims": 0,
+          "name": "TDewPoi",
+          "quantity": "ThermodynamicTemperature",
+          "side": "output",
+          "unit": "K"
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi",
+      "connectors": [
+        {
+          "description": "Dry bulb temperature",
+          "dims": 0,
+          "name": "TDryBul",
+          "quantity": "ThermodynamicTemperature",
+          "side": "input",
+          "unit": "K"
+        },
+        {
+          "description": "Relative air humidity",
+          "dims": 0,
+          "name": "phi",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Specific enthalpy",
+          "dims": 0,
+          "name": "h",
+          "quantity": "SpecificEnergy",
+          "side": "output",
+          "unit": "J/kg"
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Atmospheric pressure",
+          "name": "pAtm",
+          "quantity": "Pressure",
+          "unit": "Pa"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Psychrometrics.WetBulb_TDryBulPhi",
+      "connectors": [
+        {
+          "description": "Dry bulb temperature",
+          "dims": 0,
+          "name": "TDryBul",
+          "quantity": "ThermodynamicTemperature",
+          "side": "input",
+          "unit": "K"
+        },
+        {
+          "description": "Relative air humidity",
+          "dims": 0,
+          "name": "phi",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Wet bulb temperature",
+          "dims": 0,
+          "name": "TWetBul",
+          "quantity": "ThermodynamicTemperature",
+          "side": "output",
+          "unit": "K"
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Sources.Constant",
+      "connectors": [
+        {
+          "description": "Output with constant value",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Constant output value",
+          "name": "k",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Sources.Pulse",
+      "connectors": [
+        {
+          "description": "Output with pulse value",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Width of pulse in fraction of period",
+          "name": "width",
+          "quantity": "",
+          "unit": "1"
+        },
+        {
+          "description": "Time for one period",
+          "name": "period",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Shift time for output",
+          "name": "shift",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Sources.TimeTable",
+      "connectors": [
+        {
+          "description": "Output with tabulated values",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Time scale of first table column. Set to 3600 if time in table is in hours",
+          "name": "timeScale",
+          "quantity": "",
+          "unit": "1"
+        },
+        {
+          "description": "Periodicity of table",
+          "name": "period",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Table matrix with time as a first column (in seconds, unless timeScale is not 1) and 0 for False or 1 for True in all other columns",
+          "name": "table",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.And",
+      "connectors": [
+        {
+          "description": "Input signal for logical 'and'",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input signal for logical 'and'",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Outputs true if u1 and u2 are both true",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Or",
+      "connectors": [
+        {
+          "description": "Input for logical 'or'",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input for logical 'or'",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with true if at least one of the inputs is true",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.MultiAnd",
+      "connectors": [
+        {
+          "description": "Input signals",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with true if all input signals are true",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of input connections",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.MultiOr",
+      "connectors": [
+        {
+          "description": "Input signals",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with true if at least one input is true",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of input connections",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Not",
+      "connectors": [
+        {
+          "description": "Input to be negated",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with negated input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Nand",
+      "connectors": [
+        {
+          "description": "Input signal for 'nand'",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input signal for 'nand'",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with false if both inputs are true",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Nor",
+      "connectors": [
+        {
+          "description": "Input signal for 'nor'",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input signal for 'nor'",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with false if at least one of the inputs is true",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Xor",
+      "connectors": [
+        {
+          "description": "Input for logical 'xor'",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input for logical 'xor'",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with u1 xor u2",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Switch",
+      "connectors": [
+        {
+          "description": "Input u1",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Boolean switch input signal, if true, y=u1, else y=u3",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input u3",
+          "dims": 0,
+          "name": "u3",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with u1 if u2 is true, else u3",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Pre",
+      "connectors": [
+        {
+          "description": "Input to be delayed by one event iteration",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input delayed by one event iteration",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Start value of pre(u) at initial time",
+          "name": "pre_u_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Edge",
+      "connectors": [
+        {
+          "description": "Input to be monitored",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Outputs true when the input switches to true",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Start value of pre(u) at initial time",
+          "name": "pre_u_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Sources.SampleTrigger",
+      "connectors": [
+        {
+          "description": "Output with trigger value",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Sample period",
+          "name": "period",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Shift time for output",
+          "name": "shift",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Proof",
+      "connectors": [
+        {
+          "description": "Commanded status setpoint",
+          "dims": 0,
+          "name": "u_s",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Measured status",
+          "dims": 0,
+          "name": "u_m",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with true if the measured input is locked to false even after the setpoint has changed to true",
+          "dims": 0,
+          "name": "yLocFal",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        },
+        {
+          "description": "Output with true if the measured input is locked to true even after the setpoint has changed to false",
+          "dims": 0,
+          "name": "yLocTru",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Time during which input must remain unchanged for signal to considered valid and used in checks",
+          "name": "debounce",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Delay after which the two inputs are checked for equality once they become valid",
+          "name": "feedbackDelay",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.VariablePulse",
+      "connectors": [
+        {
+          "description": "Ratio of the period that the output should be true",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": "1"
+        },
+        {
+          "description": "Boolean pulse when the input is greater than zero",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Time for one pulse period",
+          "name": "period",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Increment of u that triggers recomputation of output",
+          "name": "deltaU",
+          "quantity": "",
+          "unit": "1"
+        },
+        {
+          "description": "Minimum time to hold true or false",
+          "name": "minTruFalHol",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.FallingEdge",
+      "connectors": [
+        {
+          "description": "Input to be monitored",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Outputs true when the input switches to false",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Start value of pre(u) at initial time",
+          "name": "pre_u_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Change",
+      "connectors": [
+        {
+          "description": "Input to be monitored for a change",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with true when the input changes",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Start value of pre(u) at initial time",
+          "name": "pre_u_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Latch",
+      "connectors": [
+        {
+          "description": "Latch input",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Clear input",
+          "dims": 0,
+          "name": "clr",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with latched signal",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Toggle",
+      "connectors": [
+        {
+          "description": "Toggle input",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Clear input",
+          "dims": 0,
+          "name": "clr",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with toggled signal",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.Timer",
+      "connectors": [
+        {
+          "description": "Input that switches timer on if true, and off if false",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Elapsed time",
+          "dims": 0,
+          "name": "y",
+          "quantity": "Time",
+          "side": "output",
+          "unit": "s"
+        },
+        {
+          "description": "Output with true if the elapsed time is greater than threshold",
+          "dims": 0,
+          "name": "passed",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Threshold time for comparison",
+          "name": "t",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.TimerAccumulating",
+      "connectors": [
+        {
+          "description": "Input that switches timer on if true, and off if false",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Connector for signal that sets timer to zero if it switches to true",
+          "dims": 0,
+          "name": "reset",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Elapsed time",
+          "dims": 0,
+          "name": "y",
+          "quantity": "Time",
+          "side": "output",
+          "unit": "s"
+        },
+        {
+          "description": "Output with true if the elapsed time is greater than threshold",
+          "dims": 0,
+          "name": "passed",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Threshold time for comparison",
+          "name": "t",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.TrueDelay",
+      "connectors": [
+        {
+          "description": "Input signal to be delayed when it switches to true",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with delayed input signal after it switched to true",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Delay time",
+          "name": "delayTime",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Set to true to delay initial true input",
+          "name": "delayOnInit",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.TrueFalseHold",
+      "connectors": [
+        {
+          "description": "Input signal that is to be delayed",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with delayed input signal",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Duration of true hold",
+          "name": "trueHoldDuration",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Duration of false hold",
+          "name": "falseHoldDuration",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Logical.TrueHoldWithReset",
+      "connectors": [
+        {
+          "description": "",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "",
+          "dims": 0,
+          "name": "clr",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "",
+          "name": "duration",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": false
+    },
+    {
+      "class": "CDL.Conversions.BooleanToInteger",
+      "connectors": [
+        {
+          "description": "Boolean signal to be converted to an Integer signal",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Converted input signal as an Integer",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Output signal for true Boolean input",
+          "name": "integerTrue",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Output signal for false Boolean input",
+          "name": "integerFalse",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Conversions.BooleanToReal",
+      "connectors": [
+        {
+          "description": "Boolean signal to be converted to a Real signal",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Converted input signal as a Real",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Output signal for true Boolean input",
+          "name": "realTrue",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Output signal for false Boolean input",
+          "name": "realFalse",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Conversions.IntegerToReal",
+      "connectors": [
+        {
+          "description": "Integer signal to be converted to a Real signal",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Converted input signal as a Real",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Conversions.RealToInteger",
+      "connectors": [
+        {
+          "description": "Real signal to be converted to an Integer signal",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Converted input signal as an Integer",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.Sources.Constant",
+      "connectors": [
+        {
+          "description": "Output with constant value",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Constant output value",
+          "name": "k",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.Sources.Pulse",
+      "connectors": [
+        {
+          "description": "Output connector with pulse value",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Amplitude of pulse",
+          "name": "amplitude",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Width of pulse in fraction of period",
+          "name": "width",
+          "quantity": "",
+          "unit": "1"
+        },
+        {
+          "description": "Time for one period",
+          "name": "period",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Shift time for output",
+          "name": "shift",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Offset of output signals",
+          "name": "offset",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.Sources.TimeTable",
+      "connectors": [
+        {
+          "description": "Output with tabulated values",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Time scale of first table column. Set to 3600 if time in table is in hours",
+          "name": "timeScale",
+          "quantity": "",
+          "unit": "1"
+        },
+        {
+          "description": "Periodicity of table",
+          "name": "period",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Table matrix with time as a first table column (in seconds, unless timeScale is not 1) and Integers in all other columns",
+          "name": "table",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.Abs",
+      "connectors": [
+        {
+          "description": "Input for absolute function",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Absolute value of the input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.Add",
+      "connectors": [
+        {
+          "description": "Input to be added",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input to be added",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Sum of the two inputs",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.Subtract",
+      "connectors": [
+        {
+          "description": "Input u1 for the minuend",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input u2 for the subtrahend",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with the difference u1-u2",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.Multiply",
+      "connectors": [
+        {
+          "description": "Input for multiplication",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input for multiplication",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Product of the inputs",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.AddParameter",
+      "connectors": [
+        {
+          "description": "Input to be added to the parameter",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Sum of the parameter and the input",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Parameter to be added to the input",
+          "name": "p",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.Max",
+      "connectors": [
+        {
+          "description": "Input to the max function",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input to the max function",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Maximum of the inputs",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.Min",
+      "connectors": [
+        {
+          "description": "Input to the min function",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input to the max function",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Minimum of the inputs",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.MultiSum",
+      "connectors": [
+        {
+          "description": "Inputs to be multipled with gain and added",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Sum of inputs multiplied by the gain",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of input connections",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Input gains",
+          "name": "k",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.Switch",
+      "connectors": [
+        {
+          "description": "Input u1",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Boolean switch input signal, if true, y=u1, else y=u3",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input u3",
+          "dims": 0,
+          "name": "u3",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with u1 if u2 is true, else u3",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.Equal",
+      "connectors": [
+        {
+          "description": "Input to be checked for equality with other input",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input to be checked for equality with other input",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Outputs that is true if the two inputs are equal, and false otherwise",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.Greater",
+      "connectors": [
+        {
+          "description": "First input u1",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Second input u2",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Outputs true if u1 is greater than u2",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.GreaterThreshold",
+      "connectors": [
+        {
+          "description": "Input to be compared against the threshold",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Outputs true if u is greater than the threshold",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Threshold against which the input is compared to",
+          "name": "t",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.GreaterEqual",
+      "connectors": [
+        {
+          "description": "First input u1",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Second input u2",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Outputs true if u1 is greater or equal than u2",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.GreaterEqualThreshold",
+      "connectors": [
+        {
+          "description": "Input to be compared against the threshold",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Outputs true if u is greater or equal than the threshold",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Threshold against which the input is compared to",
+          "name": "t",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.Less",
+      "connectors": [
+        {
+          "description": "First input u1",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Second input u2",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Outputs true if u1 is less than u2",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.LessThreshold",
+      "connectors": [
+        {
+          "description": "Input to be compared against the threshold",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Outputs true if u is less than the threshold",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Threshold for comparison",
+          "name": "t",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.LessEqual",
+      "connectors": [
+        {
+          "description": "First input",
+          "dims": 0,
+          "name": "u1",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Second input",
+          "dims": 0,
+          "name": "u2",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Outputs true if u1 is less or equal than u2",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.LessEqualThreshold",
+      "connectors": [
+        {
+          "description": "Input to be compared",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Outputs true if u is less or equal than the threshold",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Threshold for comparison",
+          "name": "t",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.OnCounter",
+      "connectors": [
+        {
+          "description": "Trigger, when set to true, the counter increases",
+          "dims": 0,
+          "name": "trigger",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Reset, when true, the counter is set to y_start",
+          "dims": 0,
+          "name": "reset",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Counter value",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Initial and reset value of y if input reset switches to true",
+          "name": "y_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.Change",
+      "connectors": [
+        {
+          "description": "Integer to be monitored for a change in value",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output that is true when the input changes its value",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        },
+        {
+          "description": "Output that is true when the input increased its value",
+          "dims": 0,
+          "name": "up",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        },
+        {
+          "description": "Output that is true when the input decreased its value",
+          "dims": 0,
+          "name": "down",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Start value of pre(u) at initial time",
+          "name": "pre_u_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Integers.Stage",
+      "connectors": [
+        {
+          "description": "Input between 0 and 1 for specifying stages",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Total number of stages that should be enabled",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of stages that could be enabled",
+          "name": "n",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Minimum time that the output needs to be held constant. Set to 0 to disable hold time",
+          "name": "holdDuration",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Hysteresis for comparing input with threshold",
+          "name": "h",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Value of pre(y) at initial time",
+          "name": "pre_y_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Routing.BooleanExtractSignal",
+      "connectors": [
+        {
+          "description": "Boolean input signals",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Boolean signals extracted from the input vector with the extraction scheme specified by the integer vector",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of inputs",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Number of outputs",
+          "name": "nout",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Extracting vector",
+          "name": "extract",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Routing.BooleanExtractor",
+      "connectors": [
+        {
+          "description": "Index of input vector element to be extracted out",
+          "dims": 0,
+          "name": "index",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Boolean input signals",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Boolean signal extracted from input vector, u[index]",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of inputs",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Routing.BooleanScalarReplicator",
+      "connectors": [
+        {
+          "description": "Input signal to be replicated",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with replicated input signal",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of outputs",
+          "name": "nout",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Routing.BooleanVectorFilter",
+      "connectors": [
+        {
+          "description": "Input signals from which values are extracted",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with extracted input signals",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Size of input vector",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Size of output vector",
+          "name": "nout",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Array mask",
+          "name": "msk",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Routing.BooleanVectorReplicator",
+      "connectors": [
+        {
+          "description": "Input signal to be replicated",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with replicated input signal",
+          "dims": 2,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Size of input vector",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Number of row in output",
+          "name": "nout",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Routing.IntegerExtractSignal",
+      "connectors": [
+        {
+          "description": "Integer input signals",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Integer signals extracted from the input vector with the extraction scheme specified by the integer vector",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of inputs",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Number of outputs",
+          "name": "nout",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Extracting vector",
+          "name": "extract",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Routing.IntegerExtractor",
+      "connectors": [
+        {
+          "description": "Index of input vector element to be extracted out",
+          "dims": 0,
+          "name": "index",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Integer input signals",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Integer signal extracted from input vector, u[index]",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of inputs",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Routing.IntegerScalarReplicator",
+      "connectors": [
+        {
+          "description": "Input signal to be replicated",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with replicated input signal",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of outputs",
+          "name": "nout",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Routing.IntegerVectorFilter",
+      "connectors": [
+        {
+          "description": "Input signals from which values are extracted",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with extracted input signals",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Size of input vector",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Size of output vector",
+          "name": "nout",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Array mask",
+          "name": "msk",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Routing.IntegerVectorReplicator",
+      "connectors": [
+        {
+          "description": "Input signal to be replicated",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with replicated input signal",
+          "dims": 2,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Size of input vector",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Number of row in output",
+          "name": "nout",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Routing.RealExtractSignal",
+      "connectors": [
+        {
+          "description": "Real input signals",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Real signals extracted from the input vector with the extraction scheme specified by the integer vector",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of inputs",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Number of outputs",
+          "name": "nout",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Extracting vector",
+          "name": "extract",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Routing.RealExtractor",
+      "connectors": [
+        {
+          "description": "Index of input vector element to be extracted out",
+          "dims": 0,
+          "name": "index",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Real input signals",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Real signal extracted from input vector, u[index]",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of inputs",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Routing.RealScalarReplicator",
+      "connectors": [
+        {
+          "description": "Input signal to be replicated",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with replicated input signal",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of outputs",
+          "name": "nout",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Routing.RealVectorFilter",
+      "connectors": [
+        {
+          "description": "Input signals from which values are extracted",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with extracted input signals",
+          "dims": 1,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Size of input vector",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Size of output vector",
+          "name": "nout",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Array mask",
+          "name": "msk",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Routing.RealVectorReplicator",
+      "connectors": [
+        {
+          "description": "Input signal to be replicated",
+          "dims": 1,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Output with replicated input signal",
+          "dims": 2,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Size of input vector",
+          "name": "nin",
+          "quantity": "",
+          "unit": ""
+        },
+        {
+          "description": "Number of row in output",
+          "name": "nout",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Discrete.FirstOrderHold",
+      "connectors": [
+        {
+          "description": "Input signal to be sampled",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "First order hold of input signal",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Sample period of component",
+          "name": "samplePeriod",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Discrete.Sampler",
+      "connectors": [
+        {
+          "description": "Input signal to be sampled",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Sampled input signal",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Sample period of component",
+          "name": "samplePeriod",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Discrete.TriggeredMax",
+      "connectors": [
+        {
+          "description": "Input signal to be sampled",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input for trigger that causes u to be sampled",
+          "dims": 0,
+          "name": "trigger",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Maximum of input signal over all trigger instants",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Discrete.TriggeredMovingMean",
+      "connectors": [
+        {
+          "description": "Input signal to be sampled",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input for trigger that causes u to be sampled",
+          "dims": 0,
+          "name": "trigger",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Moving mean of input signal over all trigger instants",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Number of samples over which the input is averaged",
+          "name": "n",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Discrete.TriggeredSampler",
+      "connectors": [
+        {
+          "description": "Input signal to be sampled",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input for trigger that causes u to be sampled",
+          "dims": 0,
+          "name": "trigger",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input signal at the last trigger instant",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Initial value of output signal",
+          "name": "y_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Discrete.UnitDelay",
+      "connectors": [
+        {
+          "description": "Input signal to be sampled",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Input signal at the previous sample instant",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Sample period of component",
+          "name": "samplePeriod",
+          "quantity": "Time",
+          "unit": "s"
+        },
+        {
+          "description": "Initial value of output signal",
+          "name": "y_start",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Discrete.ZeroOrderHold",
+      "connectors": [
+        {
+          "description": "Input signal to be sampled",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        },
+        {
+          "description": "Zero order hold of the input signal",
+          "dims": 0,
+          "name": "y",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Sample period of component",
+          "name": "samplePeriod",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Utilities.Assert",
+      "connectors": [
+        {
+          "description": "Boolean input that triggers assert when it becomes false",
+          "dims": 0,
+          "name": "u",
+          "quantity": "",
+          "side": "input",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Message written when u becomes false",
+          "name": "message",
+          "quantity": "",
+          "unit": ""
+        }
+      ],
+      "upstream": true
+    },
+    {
+      "class": "CDL.Utilities.SunRiseSet",
+      "connectors": [
+        {
+          "description": "Time of next sunrise",
+          "dims": 0,
+          "name": "nextSunRise",
+          "quantity": "Time",
+          "side": "output",
+          "unit": "s"
+        },
+        {
+          "description": "Time of next sunset",
+          "dims": 0,
+          "name": "nextSunSet",
+          "quantity": "Time",
+          "side": "output",
+          "unit": "s"
+        },
+        {
+          "description": "Output with true if the sun is up",
+          "dims": 0,
+          "name": "sunUp",
+          "quantity": "",
+          "side": "output",
+          "unit": ""
+        }
+      ],
+      "parameters": [
+        {
+          "description": "Latitude",
+          "name": "lat",
+          "quantity": "Angle",
+          "unit": "rad"
+        },
+        {
+          "description": "Longitude",
+          "name": "lon",
+          "quantity": "Angle",
+          "unit": "rad"
+        },
+        {
+          "description": "Time zone",
+          "name": "timZon",
+          "quantity": "Time",
+          "unit": "s"
+        }
+      ],
+      "upstream": true
+    }
+  ],
+  "format": 1,
+  "source": {
+    "buildings_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+    "document": "third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld",
+    "modelica_json_commit": "85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb",
+    "sha256": "bb2bf4a7f868af884df4b2f05258a754625e10920716739527b46631a4383314"
+  }
+}

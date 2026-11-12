@@ -25,11 +25,30 @@ the [product contract](product-contract.md) and pre-1.0 change control still app
 - **Host build identity** remains consumer-owned and includes the host's source/build/features
   qualifications; catalog metadata alone cannot establish it. The compatibility descriptor's OCE
   package version is only a public build fact, not a unique build identity.
-- **Complete export content identity** is captured as `CompleteExportContentId`, distinct from
-  `CatalogContentId` and authored `DomainKey`. Existing string APIs retain their bytes and algorithms.
-  It identifies the emitted document, which follows authored `@graph` and `containsBlock` order, so
-  sources differing only in [that order](cxf-composite-subset.md#ordering-and-identity-contract)
-  can receive different ids. No order-independent model identity is provided.
+- **Engine version** is `oce_api::ENGINE_VERSION`, an `EngineVersion` holding the major, minor and
+  patch of the workspace version; a pre-release or build suffix is dropped (issue #536). Every
+  compiled-schedule blob and state snapshot this build writes carries it in its header. Each
+  decoder accepts only this value, and `EngineVersionMismatch` names it as `expected`
+  ([state contract](state-compatibility.md#wire-revision-and-integrity),
+  [blob refusals](compiled-schedule-blob.md#which-refusal-wins)). Recorded beside stored bytes, it
+  tells which of them this build will refuse by version. A match predicts only that check: the
+  integrity, fingerprint and restore checks still apply. `EngineVersion` has no `Display`, `Hash`,
+  `Ord` or serde, so a host keys by its three fields. It is a release version, not a host build
+  identity. It is also not the
+  descriptor's `oce-api-version`, which keeps the suffix. The facade-contract check compiles a
+  host-side use of it from `oce-api` alone.
+- **Canonical content identity** is `ContentId` (`oce:canon1:` and a SHA-256 digest), minted only
+  by `Engine::content_id` over the loaded flat graph (GitHub #470, [design
+  note](design/content-id.md)). It is distinct from `CatalogContentId`, authored `DomainKey`,
+  executable compatibility, export bytes and build identity. It is independent of authored
+  [order](cxf-composite-subset.md#ordering-and-identity-contract), JSON spelling and instance
+  namespace, and moves with any parameter bit, name, wiring, class or boundary I/O definition.
+  `ExportReport::complete` separately says whether an export is partial; the report carries no id.
+  `Engine::canonical_content_bytes` returns the `OCECANON` bytes the id hashes, versioned with the
+  id text (`canon1`) and intended for recomputing the SHA-256 or diagnostics; no decoder is provided
+  or promised. A minting failure is `OcError::ContentId` with a `ContentIdError` (`UnnamedBlock`,
+  `UnregisteredClass`, `UnknownEnumClass`, `MalformedModel`, `TooLarge`), reachable only from a
+  hand-built model.
 - **Compatibility descriptor** versions the closed public-fact receipt itself. Equality does not
   establish executable identity, model-specific IO equality, generation, state compatibility or trust.
 
@@ -92,8 +111,9 @@ diagnostics; terminal stage and error context still explain failure. No engine c
 An algebraic-loop refusal records one `Error` per member of one concrete cycle at stage `Schedule`:
 `algebraic-loop` for a connector-level feedthrough cycle (subjects are member connector identities)
 and `block-algebraic-loop` for a block-granularity cycle that atomic firing cannot order (subjects
-are member block identities). A `block-algebraic-loop` refusal does not mean the model breaks CDL
-§7.16. No connector-level cycle exists, so the model may be CDL-legal, and the refusal is a
+are member block identities). A `block-algebraic-loop` refusal does not mean the model breaks CDL's
+model of computation (§7.16 of the OpenBuildingControl (OBC) specification). No connector-level
+cycle exists, so the model may be CDL-legal, and the refusal is a
 fail-closed engine coverage limit. The message says so and suggests splitting the block. The block
 shapes that can trigger it and the remedies are listed under
 [Atomic block firing refuses some CDL-legal feedback](cdl-coverage.md#atomic-block-firing-refuses-some-cdl-legal-feedback),
@@ -111,7 +131,7 @@ error carries no such records.
 An unloaded export retains its existing `export-unsupported` diagnostic. A partial export still
 succeeds with warnings; use the legacy report's completeness check for emitted-document identity.
 
-Producer stages are explicit boundary labels, not inferred from codes. Revision-3 ranks are:
+Producer stages are explicit boundary labels, not inferred from codes. The ranks are:
 
 | Rank | Stage |
 | --- | --- |
@@ -124,10 +144,8 @@ Producer stages are explicit boundary labels, not inferred from codes. Revision-
 | 6 | Projection: the plain-data resolved-model projection returned in `LoadedModel` |
 | 7 | Export |
 
-Revision 2 removed the revision-1 `Flatten` stage (rank 1), an identity pass that never produced
-evidence. Revision 3 removed the `StoreRecovery`, `StoreSave` and `StoreInputs` stages (ranks 7 to
-9), because load no longer calls a storage port (GitHub #390). The relative order of every
-remaining stage is unchanged.
+The diagnostics schema is revision 1, like every other contract descriptor here, and stays 1
+until 1.0.0: a change to the stages or the ordering is made in place (issue #509).
 
 The ordering is stage rank, subject category/presence and exact UTF-8 subject text, code string,
 then severity rank (`Error=0`, `Warning=1`, `Info=2`). `Absent` sorts before `Opaque`; an empty
@@ -152,13 +170,14 @@ they do not promise new JSON wire codecs or schema-driven runtime validation.
 | [Values](../crates/oce-api/contracts/values.schema.json) | Existing `Value`, `ValueType` and `ConnectorId` aliases remain. Real values use bit-preserving binary64; enums retain class and ordinal. Constructor representability does not establish operation-specific validity. Connector IDs are model-local indices. |
 | [IO](../crates/oce-api/contracts/io.schema.json) | Existing point fields and declared static attributes; enums project to `Int`, strings are omitted. Current inventory classification/defaults are explicit. |
 | [Parameters](../crates/oce-api/contracts/parameters.schema.json) | Existing tune-at-rest rows and available static bounds. Absent bounds do not establish freedom from cross-parameter rules. Unit/quantity provenance is currently absent. |
-| [Assertions](../crates/oce-api/contracts/assertions.schema.json) | Revision 2: `CompletedFrame::diagnostics` retains all block warnings, including Assert and other classes. Sources are currently class-level, not guaranteed instances. Repeated false Assert inputs warn each evaluation; true is silent. |
-| [Execution profile](../crates/oce-api/contracts/execution-profile.schema.json) | Descriptor revision 2, still fixed HostTick v1: one advance per accepted complete frame, including equal timestamps; no Modelica same-time event iteration. Descriptive, not a runtime selector or snapshot revision. |
+| [Assertions](../crates/oce-api/contracts/assertions.schema.json) | `CompletedFrame::diagnostics` retains all block warnings, including Assert and other classes. Sources are currently class-level, not guaranteed instances. Repeated false Assert inputs warn each evaluation; true is silent. |
+| [Execution profile](../crates/oce-api/contracts/execution-profile.schema.json) | Fixed HostTick v1: one advance per accepted complete frame, including equal timestamps; no Modelica same-time event iteration. Descriptive, not a runtime selector or snapshot revision. |
 
 Every completed frame retains warnings. There is no public no-op-sink execution profile or engine
 write-back route. Load has no external side effect and commit ordering is unchanged. These descriptors add no rollback,
 warn-once, escalation, scheduler, equipment policy or safety guarantee. The separately documented
-[serialized admission and replacement policy](facade-migration.md#bounded-serialized-load-adoption)
+serialized [admission](host-responsibilities.md#ingest-resource-bounds) and
+[replacement](host-responsibilities.md#load-replacement-leaves-no-external-effect) policy
 uses `Import` for byte refusals without adding/reordering stages or changing descriptor bytes.
 
 ## Consumer migration boundary
@@ -169,24 +188,26 @@ catalog policy, diagnostic truncation and authored-target mapping. These are sep
 facade catalog content tag. No future OCE commit is embedded in the artifact, and this change
 advances no downstream source or pin. Coordinated companion removal remains later work.
 
-The [migration record](facade-migration.md#additive-contract-adoption) distinguishes this additive
-contract from the earlier facade contraction. Full local tests, exact public baselines and external
+This additive contract is separate from the earlier facade contraction, which the product contract
+records under [Fulfilled facade contraction](product-contract.md#fulfilled-facade-contraction).
+Full local tests, exact public baselines and external
 compiler fixtures establish bounded implementation evidence; hosted cross-architecture checks and
 actual downstream qualification remain separate evidence.
 
 ## Closed host compatibility descriptor
 
 `CompatibilityDescriptor::current(None)` captures public facade facts without an engine. Passing
-`Some(&export_report)` additionally captures the existing complete exported-document tag, calling
-`content_id_complete()` first. Any warnings return its unchanged `ContentIdError::Incomplete`;
-partial export never silently becomes absent or complete content. No export is performed implicitly.
-This additive artifact does not add an eighth `ContractDomain` or change the seven existing artifacts.
+`Some(&content_id)` additionally records the canonical content id `Engine::content_id` minted. A
+model whose export is partial still has an id, so partial export never withholds the line. No load
+or export is performed implicitly. This additive artifact does not add an eighth `ContractDomain`
+or change the seven existing artifacts.
 
-`CatalogContentId` and `CompleteExportContentId` are distinct read-only types. Hosts can borrow their
-unchanged tag strings with `as_str()` or print them. Neither accepts an authored `DomainKey`, an
-arbitrary string, or the other category. No speculative executable, generation or state-wire type
-is exposed. The owned descriptor survives report mutation and engine reload/drop; capture again
-after re-export to describe changed exported content. Capture neither observes nor changes run state.
+`CatalogContentId` and `ContentId` are distinct read-only types. Hosts can borrow their tag strings
+with `as_str()` or print them; `ContentId::parse` is a checked parser of the exact `oce:canon1:`
+text, for a host comparing a stored id. Neither converts from an authored `DomainKey`, an arbitrary
+string, or the other category. No speculative executable, generation or state-wire type is
+exposed. The owned descriptor survives engine reload/drop; capture again for changed content.
+Capture neither observes nor changes run state.
 
 ### Canonical bytes and comparison
 
@@ -203,24 +224,28 @@ LF after every line, including the last:
 | `value-schema` | Public value contract revision, not a new value codec. |
 | `parameter-schema` | Public parameter metadata contract revision, not instance parameter values. |
 | `execution-profile` | Exactly `HostTick-v1`, the canonical label for fixed HostTick v1. |
-| `execution-profile-schema` | Public execution-profile descriptor revision (currently 2). |
+| `execution-profile-schema` | Public execution-profile descriptor revision (1). |
 | `oce-api-version` | Exact Cargo package version, including any pre-release/build suffix. |
-| `export` | Verbatim complete CXF content tag, or exactly `none` if no report was supplied. |
+| `content` | Verbatim `oce:canon1:` canonical content id, or exactly `none` if none was supplied. |
 
-The [absent-export golden](../crates/oce-api/tests/fixtures/compatibility.txt) and
-[complete-export golden](../crates/oce-api/tests/fixtures/compatibility_export.txt) are hand-assembled
-from those fields, public revisions/version and the existing independently checked tag goldens.
-No source normalization is claimed. Catalog FNV-1a-128 covers ASCII `oce:catalog:1`, NUL, then all
-`catalog_to_json(catalog())` bytes including LF. Export FNV-1a-128 covers exactly `ExportReport.bytes`,
-without prefix or length. Both start at `0x6c62272e07bb014262b821756295c58d`; each byte is XORed,
-then multiplied by `0x0000000001000000000000000000013b` modulo 2^128. Existing tag prefixes and
-32-lowercase-hex formatting stay unchanged. The new artifact adds no hash of its own.
+Every revision above stays 1 until 1.0.0 and a line changes in place (issue #509), so
+`oce-api-version` is the line that tells a receipt of one layout from another: a receipt from
+another package version never compares equal. The `export` line release 0.4.0 wrote in place of
+`content` is outside the grammar and is refused where a persisted descriptor is parsed.
+The [absent-content golden](../crates/oce-api/tests/fixtures/compatibility.txt) and
+[content golden](../crates/oce-api/tests/fixtures/compatibility_export.txt) are hand-assembled
+from those fields, public revisions/version and the independently checked tag goldens (the content
+line is the minimal-loop id pinned in `export_cxf.rs`). No source normalization is claimed. Catalog
+FNV-1a-128 covers ASCII `oce:catalog:1`, NUL, then all `catalog_to_json(catalog())` bytes including
+LF; it starts at `0x6c62272e07bb014262b821756295c58d`, and each byte is XORed, then multiplied by
+`0x0000000001000000000000000000013b` modulo 2^128. The content id is SHA-256 over the `OCECANON`
+encoding of the loaded graph. The descriptor adds no hash of its own.
 
 `check_compatible` requires exact field equality and returns the first `CompatibilityMismatch` in
 canonical order: DescriptorRevision, CatalogSchema, CatalogContent, IoSchema, ValueSchema,
 ParameterSchema, ExecutionProfile (label or descriptor revision), Build (package version),
-ExportPresence, ExportContent. Either unsupported descriptor revision refuses, even if equal.
-There is no SemVer range, wildcard, fallback or coercion. Two absent exports agree only on absence;
+ContentIdPresence, ContentIdMismatch. Either unsupported descriptor revision refuses, even if equal.
+There is no SemVer range, wildcard, fallback or coercion. Two absent content ids agree only on absence;
 hosts needing content identity separately require presence. Persisted receipts are canonical bytes,
 not parsed OCE objects: compare exactly against a newly captured descriptor, refusing unknown
 revisions, changed/missing/extra fields and all byte differences. OCE supplies no receipt parser.
@@ -236,9 +261,8 @@ release-to-release compatibility. `io()` inventory is not `input_definitions()`;
 do not identify either model's actual IO. LoadReport.model_id remains diagnostic authored/synthetic
 identity, never a compatibility key.
 
-FNV is non-cryptographic; collision resistance, authenticity and authorization are not supplied.
-ExportReport is mutable: an empty warning list at capture is not authenticated producer provenance
-or CXF revalidation. Hosts may hash/sign canonical bytes themselves and own freshness, trust,
+The catalog's FNV is non-cryptographic. The content id's SHA-256 is collision resistant, but neither
+supplies authenticity or authorization: an id is not a signature. Hosts may hash/sign canonical bytes themselves and own freshness, trust,
 generation fencing and equipment policy. OCE is not a signing/PKI authority. State/manifest bytes,
 executable fingerprints, generation tokens and native frame sequence are absent and remain private
 where currently private. Snapshots, restore, frames and admission limits retain their existing rules.
@@ -269,7 +293,7 @@ The [public tests](../crates/oce-api/tests/prepare_frame.rs),
 [stateful preservation matrix](../crates/oce-api/tests/prepare_frame_preservation.rs), and
 [private plan/lifecycle census](../crates/oce-api/src/frame_tests.rs) establish the bounded current
 preparation evidence. Execution, shared-core and frame-only contraction evidence make PC-033 through
-PC-035 current. The assertion and execution descriptors are now revision 2; other descriptors,
+PC-035 current. Descriptors,
 catalog identity, state formats, HostTick v1, stable-release status and downstream pins are unchanged.
 
 ## Complete-frame execution adoption
@@ -295,3 +319,22 @@ The single frame path retains the private HostTick evaluation/refresh implementa
 submit complete frames and own cadence and trace capture. `get_output` and `watch` are latest-state,
 non-receipt views, including internal points. There is no raw output view or storage write helper.
 Parity evidence is limited to equivalent complete schedules, not arbitrary legacy workflows.
+
+## Slot-indexed execution adoption
+
+A host loop or replay that submits many frames resolves names once: `engine.frame_slots()?`
+returns a `FrameSlots` map whose input slots follow `input_definitions()` and whose output slots
+follow `CompletedFrame::outputs()`, both the compiled blob's I/O order. Build the host's own
+column→slot table from `FrameSlots::input_slot` and `output_slot`, then call
+`engine.execute_slots(&slots, t, &values)` per frame with one value per input slot. Both sides are
+typed at load: an input slot by `FrameSlots::inputs()[i].value_type`, an output slot by
+`FrameSlots::output_types()[j]` (parallel to `outputs()`, an Enum with its class identity), and
+the `j`-th output of every frame accepted in the load the map was built from has that type, so
+expected values and a second executable's boundary are checked before the first frame, not after
+it (issue #460). The returned
+`SlotFrame` borrows outputs in output-slot order and the frame's warnings; copy out what you keep.
+Rebuild the map after every successful load or dirty resume: a superseded map is refused with
+`StalePreparedFrame`, never rebound. Refusals, their order and their atomicity are the named
+path's; a vector longer than the slot count is `FrameExtraInputs`. Once the map exists a slot frame
+allocates nothing beyond reused warning records. See the
+[slot-indexed execution contract](complete-frame-contract.md#current-slot-indexed-execution-api).

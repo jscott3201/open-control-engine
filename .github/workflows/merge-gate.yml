@@ -1,0 +1,146 @@
+# Merge gate for open-control (the Open Control Engine): what no pull request runs and a merge
+# should not wait a night for. It runs on GitHub Actions on every push to `development` (each
+# merged PR, on its merge commit) and on manual dispatch.
+#
+# WHAT IT RUNS. One job since issue #556 (owner decision of 2026-11-10): the Windows std build
+# and nextest cell. Nothing else is merge-only. From issue #545 until then it also ran the
+# determinism matrix in all four cells and its fan-in; those are per-PR jobs again, in
+# pr-gate.yml, because the release cells that were the per-PR long pole at 11 to 18 minutes took
+# 174 s and 181 s in this workflow's run 42948818576, once GitHub #546, #551, #553 and #554 had
+# cut the release test binaries. Everything else release-gate.yml runs (the workspace suite in
+# debug and release codegen, the doctests, the executed gate script, cargo-deny with advisories,
+# the light gates re-run, and the determinism matrix and this Windows cell again) is the HEAVY
+# set: nightly on the `development` tip, on dispatch, on release PRs and on pushes to `main`.
+# The workflow is kept, with one job, rather than folded away: the Windows cell still has to run
+# somewhere after each merge, and whether it too belongs in the per-PR gate is a separate decision.
+#
+# THE WINDOWS JOB DEFINITION IS release-gate.yml's, byte for byte, comments included:
+# check-workflow-gates.sh compares them and fails on any difference, so the cell cannot be
+# weakened here while the release gate keeps it, or the reverse. Change both files in one edit.
+#
+# NOT A REQUIRED STATUS, AND NOT NAMED `CI OK`. The commit has already landed, so nothing can
+# block on this run: after merging a change that runs the determinism lane, watch it, and a red
+# run is fixed forward or reverted before the next determinism-lane merge (AGENTS.md, "Merge").
+# Its aggregate is `Merge gate OK`. It must not be called `CI OK`: branch protection on `main`
+# requires a status of that name, a release PR's head is the `development` tip this workflow has
+# already reported on, and a same-named check from this short run could stand in for
+# release-gate.yml's. check-workflow-gates.sh refuses that name here and a `pull_request` trigger.
+#
+# WHAT EACH RUN CHECKS OUT. The commit the event names (`github.sha`): the pushed merge commit,
+# or the head of the ref a dispatch names.
+#
+# CONCURRENCY. Runs are grouped by event and ref and never cancelled in progress. For pushes to
+# `development` a run in progress always finishes, one run waits behind it, and a newer push
+# replaces the waiting run (GitHub keeps one pending run per group and cancels the older pending
+# one). Several merges in an hour therefore cannot starve the gate: the newest waiting run tests a
+# commit that contains every merge before it. A replaced waiting run shows as cancelled on its
+# merge commit; the run that replaced it is the evidence.
+#
+# No job carries a job-level `if:`, no job or step sets `continue-on-error`, and no step carries
+# an `if:` (check-workflow-gates.sh). These runs execute on `development` (the default branch),
+# so the Windows cell's rust-cache entry is the one a later run restores.
+#
+# Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
+
+name: merge-gate
+
+on:
+  push:
+    # Every merged PR, on its merge commit. `main` is release-gate.yml's.
+    branches: [development]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # One group per event and ref, never cancelled: a run in progress finishes and the newest
+  # waiting run is the one kept; see CONCURRENCY in the header. check-workflow-gates.sh pins both
+  # lines.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: short
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+  # Build-cost trims for hosted runners (disk and time); neither changes generated code.
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+  # The commit the event names: the pushed merge commit, or the head of the dispatched ref.
+  CHECKOUT_REF: ${{ github.sha }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # Platform observation cell (issue #394), moved out of pr-gate.yml by issue #502.
+  # Windows x86_64 (`windows-latest`, Git Bash via the workflow's default shell): a workspace build
+  # and the workspace nextest suite in debug codegen, with no determinism claim. It excludes the
+  # strict-bit binaries scripts/ci/strict-bits-cell.sh runs — `strict_bits` and the four aligned
+  # per-block suites — which are qualified on native Linux only. Everything else in the workspace
+  # runs, so the bit-exact goldens execute on a checkout whose git defaults to CRLF line endings
+  # (.gitattributes `* text=auto eol=lf` keeps them LF). It does not qualify its platform: Windows
+  # keeps the 1e-12 aligned band (docs/strict-bit-evidence.md).
+  std-build-windows:
+    name: std build and nextest (Windows x86_64, debug)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@9ca9f0b320e19763058bc9531663c225d20db487 # 1.97.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: workspace-windows
+          cache-bin: false
+      - uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: nextest@0.9.143
+      - name: Refuse a runner that is not Windows
+        run: |
+          case "$(uname -s)" in
+            MINGW64_NT-* | MSYS_NT-*) ;;
+            *) echo "not a Windows runner: $(uname -s)" >&2; exit 1 ;;
+          esac
+      - name: Clear the cached nextest report
+        run: rm -f target/nextest/ci/junit.xml
+      - name: cargo build (workspace)
+        run: cargo build --workspace --locked
+      - name: cargo nextest workspace suite without the strict-bit binaries (debug codegen)
+        run: >-
+          cargo nextest run --workspace --locked --profile ci --no-tests=fail
+          -E 'not (binary_id(oce-conformance::strict_bits) | binary_id(oce-conformance::per_block_reals_transcendental) | binary_id(oce-conformance::per_block_reals_sources_transcendental) | binary_id(oce-conformance::per_block_psychrometrics) | binary_id(oce-conformance::per_block_utilities))'
+      - name: Require the nextest JUnit report
+        run: test -s target/nextest/ci/junit.xml
+
+  # The aggregate. It reports on every run (`always()`) and fails unless every job succeeded. No
+  # job has an `if:`, so a skipped job is never legitimate. check-workflow-gates.sh asserts that `needs:` lists every other
+  # job in this file and that the name is not `CI OK` (see the header).
+  merge-gate-ok:
+    name: Merge gate OK
+    if: always()
+    needs:
+      - std-build-windows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every job to succeed
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          needs = json.loads(os.environ["NEEDS_JSON"])
+          for job, data in sorted(needs.items()):
+              print(f"{job}: {data.get('result')}")
+          bad = {job: data.get("result") for job, data in needs.items()
+                 if data.get("result") != "success"}
+          if not needs:
+              sys.exit("no job results reported")
+          if bad:
+              sys.exit(f"jobs not green: {bad}")
+          PY
