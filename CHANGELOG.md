@@ -98,6 +98,35 @@ and a gate that accepted any text would restore exactly the false assurance desc
   the 10,979 `@type` values and 6,988 `isOfDataType` references in 257 tracked documents, and the
   4,657 and 3,372 in the library's 140, found none, and `fixture_corpus_import.txt` is
   byte-identical.
+- **A malformed `unit`, `quantity` or `displayUnit` term is refused on every role, in both readers**
+  (GitHub #623, issue #602; owner ruling of 2026-11-12). A term on a connector, a boundary or a
+  parameter is a string, a typed literal holding exactly `@value` and `@type`, or an IRI node
+  holding exactly `@id`, and is not empty or whitespace-only (`str::trim`).
+  - **Before**, a connector or boundary took a blank term (`""`, `" "`, `{"@id": ""}`) as a
+    declared unit. The §7.10 gate compares exactly, so a blank unit against a `K` peer was refused
+    as `unit-quantity-mismatch`, where an absent one would have taken the `K`; alone, it propagated
+    to every peer declaring none and reached the host's point list as a unit.
+  - An object carrying both `@id` and `@value` was read as the `@value` when `@type` was present
+    and as the `@id` when not.
+  - Any other key on a term object (`@language`, `@index`, `qudt:symbol`) was dropped. The
+    importer note said it was kept for lossless round-trip, but only `parse_document` and
+    `write_document` keep it: export writes every term as a bare string.
+  - A parameter already refused a blank term (#594) but took the rest.
+  - **Now** the engine refuses each as `malformed-document`, subject the node, one refusal per
+    term, on an Integer connector too (which reads no term). A Boolean connector's term is still
+    refused for being there at all. The authoring importer refuses a blank boundary term as
+    `wrong-shape` naming the key, at import rather than only at `validate`; it already refused every
+    other shape on both its roles.
+  - Two message fixes ride along. The refusals that quote a key or a token (#614's reference keys,
+    #619's near-miss types, and these) quote at most 64 bytes of it, cut on a character boundary
+    and marked `…`; a canonical `@id` is never cut. #619's check no longer treats a token whose
+    trimmed form still holds whitespace (`" S231: Block"`) as a near miss, since its suggestion
+    was still broken (GitHub #620).
+  - **Breaking, in place:** such a document loaded before. No tracked or library document carries
+    one. Of the 744 terms in 257 tracked documents (457 `unit`, 241 `quantity`, 42 `displayUnit`
+    strings, one typed literal, two IRI nodes and one integer in a refusal fixture), none is
+    blank, carries both `@id` and `@value` or another key. The library's 140 carry no term at
+    all, and each is refused before any term is read. `fixture_corpus_import.txt` is byte-identical.
 
 ### Leverage
 
