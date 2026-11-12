@@ -228,7 +228,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Verification
 
 - **The workflow-gate fixture suite runs its cases concurrently, so `gate behavior fixtures` is no
-  longer the per-PR gate's longest job** (GitHub #PRNUM, issue #627).
+  longer the per-PR gate's longest job** (GitHub #630, issue #627).
   `test-workflow-gates.sh` ran its 348 cases one after another: its step took 323–335 s of a
   379–393 s job on recent PRs, and 432 s with GitHub #624's 37 more, against 3.2–4.5 min for the
   next-longest job. `run_case` now registers a case, and a bounded pool runs them:
