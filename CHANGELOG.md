@@ -59,6 +59,24 @@ and a gate that accepted any text would restore exactly the false assurance desc
   defines one: a probe over the 257 tracked documents with a `@context` (the vendored translations
   and `CXF-Core.jsonld` included) and the library's 144 found no term name of this shape, and
   `fixture_corpus_import.txt` is byte-identical.
+- **A reference object that carries a key beside its `@id` is refused** (GitHub #614, issue #588).
+  The engine reads each value of a structural edge (`hasInput`, `hasOutput`, `hasParameter`,
+  `hasConstant`, `containsBlock`, `hasInstance`, `isConnectedTo`) and of `isOfDataType` as its
+  `@id` alone. Any other key was kept for round-trip and dropped without a word:
+  `"S231:hasParameter": {"@id": k, "S231:value": 99}` loaded with `k` at its own 1.0, and a
+  `containsBlock` entry carrying `"@type": "S231:ExtensionBlock"` and `S231:hasFmuPath` loaded its
+  leaf as an ordinary block. The resolver now refuses such a reference as `non-subset-construct`,
+  subject the node that holds it, at the `@id` index and before anything reads the graph. The
+  message names up to four of the keys and counts the rest. In JSON-LD such an object is an
+  embedded node object; flattened CXF states those keys on the node's own `@graph` entry. A
+  `@context` in a reference is still refused first, by the expansion pass, as a scoped context.
+  `parse_document` and `write_document` still round-trip the keys. The authoring importer
+  (`oce_author::import_cxf`) already refused such a reference as `wrong-shape`, naming the
+  property, and refuses `hasConstant` and `hasInstance` outright (`constant-member`,
+  `instance-member`); new tests pin both. **Breaking, in place:** such a document loaded before.
+  No tracked or library document carries one: a probe over the 25,873 references in 257 tracked
+  documents and the 10,598 in the library's 140 found none, and `fixture_corpus_import.txt` is
+  byte-identical.
 
 ### Leverage
 
