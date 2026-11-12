@@ -224,7 +224,7 @@ for a member path) and at validation (`unknown-enum-type`, `unknown-enum-literal
 | --- | --- |
 | root `@id` `{namespace}{sequence}` | `Sequence.name` = the trailing identifier; the namespace is not kept |
 | root `hasParameter` | sequence parameters in order; `isOfDataType` names the type (scalar or enumeration); value a literal or a member |
-| root `hasInput` / `hasOutput` | boundaries in order; `@type` and `isOfDataType` must agree; `unit` to `SemanticPoint.unit`; `quantity`, `displayUnit`, `min`, `max` to their fields. A term (`unit`, `quantity`, `displayUnit`) is a string that is not empty or whitespace-only; anything else is `wrong-shape` naming the key (GitHub #602) |
+| root `hasInput` / `hasOutput` | boundaries in order; `@type` and `isOfDataType` must agree; `unit` to `SemanticPoint.unit`; `quantity`, `displayUnit`, `min`, `max` to their fields. A term (`unit`, `quantity`, `displayUnit`) is a string that is not empty or whitespace-only (GitHub #602) and carries no Unicode format or control character (GitHub #646, issue #629); anything else is `wrong-shape` naming the key |
 | root `containsBlock` | blocks in order; class path from the `@type` fragment after `Buildings.Controls.OBC.` |
 | block `hasParameter` | assignments in order; arrays row-major under the catalog's template names |
 | `isConnectedTo` | connections by source node in `@graph` order, each source's targets in array order |
@@ -239,7 +239,11 @@ the engine never enforces (decision 9). Both readers do check their shape before
 or a string (an expression, as modelica-json writes `"yMin"`), a term is a string, a typed literal
 holding exactly `@value` and `@type` or an IRI node holding exactly `@id` (never an object carrying
 both `@id` and `@value`), and no string among them (the attribute, a typed literal's `@value`, an
-IRI node's `@id`) is empty or whitespace-only. Anything else is refused: `wrong-shape` naming the
+IRI node's `@id`) is empty or whitespace-only. A term's string also carries no Unicode format
+(`Cf`) or control (`Cc`) character, a tab or line feed beside a visible term included (GitHub
+#646, issue #629; owner ruling of 2026-11-12). The two readers decide that class with one table,
+the engine's, which the importer reads through the facade as `oce_api::is_format_or_control`, so
+they cannot disagree on a character. Anything else is refused: `wrong-shape` naming the
 key here, `malformed-document` subject the parameter in the engine. The engine holds a
 connector's and a boundary's terms to the same shape (GitHub #602, owner ruling of 2026-11-12). In the in-subset corpus, root
 parameters carry `unit` in 16 fixtures, `quantity` in 13 and `min`/`max` in 3. The report also

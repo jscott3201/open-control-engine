@@ -483,3 +483,8 @@ conditions.
 its CXF-Core document verbatim, under their own license — see
 [`third_party/modelica-buildings-cdl/README.md`](third_party/modelica-buildings-cdl/README.md). That
 tree sits outside every crate root, so `cargo package` never ships it.
+
+`crates/oce-cxf/tests/fixtures/unicode/` holds a verbatim excerpt of the Unicode Character
+Database (`DerivedGeneralCategory.txt` 17.0.0), test data read by one `oce-cxf` unit test, under
+the Unicode License v3. Its full text is the [`LICENSE`](crates/oce-cxf/tests/fixtures/unicode/LICENSE)
+beside it, so the notice ships with the excerpt wherever the crate does.

@@ -14,9 +14,10 @@
 //!   not used. A list and a boolean are refused: no bound is either.
 //! - a **term** (`unit`, `quantity`, `displayUnit`) is held to the shape every term is, on a
 //!   connector and a boundary too ([`super::term_shape`], GitHub #602): a string, a typed literal
-//!   holding exactly `@value` and `@type`, or an IRI node holding exactly `@id`. Anything else (a
-//!   number, a boolean, a list, an object carrying both `@id` and `@value` or another key) is
-//!   refused.
+//!   holding exactly `@value` and `@type`, or an IRI node holding exactly `@id`, carrying no
+//!   Unicode format or control character (issue #629). Anything else (a number, a boolean, a list,
+//!   an object carrying both `@id` and `@value` or another key, a zero-width space or a tab in the
+//!   term) is refused.
 //! - **No string may be empty or whitespace-only** (owner ruling): not a bound or term written as
 //!   a string, not a typed literal's `@value`, and not an IRI node's `@id` (the term's lexical
 //!   form, [`crate::dto::TermAttr::as_term`]). Whitespace is Unicode `White_Space`, as
