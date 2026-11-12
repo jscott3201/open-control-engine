@@ -26,7 +26,16 @@
 # runs the oce-cxf or the workspace suite without first prefetching the tool workspaces its tests
 # build offline (issue #610), in any spelling of the command, the prefetch missing, late, masked,
 # commented out or in another job, and a gate script without it, fail; a Windows job, an archived
-# run, another workspace and doctests need no prefetch.
+# run, another workspace and doctests need no prefetch. Issue #566:
+# - a step selector that picks no cell of its job's matrix fails, as do a selector on a job with
+#   no matrix and a matrix with an `exclude`;
+# - build or shell environment set below the workflow level fails: a job or step `env:` key, an
+#   inline assignment, a write to `$GITHUB_ENV`, or a `$GITHUB_PATH` other than wasmtime's;
+# - so do a workflow-level env other than the pinned one, and any key change to the nextest
+#   config;
+# - in a step script, a bare or zero `exit`, a `&&` before the last command and a background `&`
+#   fail.
+# Each has its positive twin.
 #
 # The cases run concurrently (issue #627); run serially they made `gate behavior fixtures` the
 # per-PR gate's longest job. Each case builds and edits a scratch tree of its own under
@@ -34,9 +43,12 @@
 # files. `run_case` only registers a case. run_registered_cases runs them, at most
 # `OCE_FIXTURE_JOBS` at a time, or as many as the machine has CPUs. Each case writes its output to
 # a file of its own, so no two interleave. Then everything is printed in registration order, and
-# the script exits 1 if any case failed, naming every failure, not only the first. The pool is
+# the script exits 1 if any case failed, naming every failure, not only the first. A case that
+# ends with status 0 without finishing (an `exit 0` in its body or its mutation) fails too, since
+# the pool requires a sentinel after each run. `OCE_FIXTURE_JOBS` must be a positive number (`0`
+# and `00` are refused), and the pool runs no more at once than there are cases. The pool is
 # itself checked first, on synthetic cases that finish out of order with a failure planted at the
-# first, the middle and the last position.
+# first, the middle and the last position, and with an early `exit 0`.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -53,6 +65,13 @@ write_positive() {
   crates_dir="$4"
   mkdir -p "$dir"
   cat > "$dir/pr-gate.yml" <<'EOF'
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: short
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
 on:
   pull_request:
     branches: [development]
@@ -382,6 +401,12 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 env:
   CHECKOUT_REF: ${{ github.event_name == 'schedule' && 'development' || (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.sha || github.ref }}
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: short
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
 jobs:
   test-suite:
     steps:
@@ -608,6 +633,12 @@ concurrency:
   cancel-in-progress: false
 env:
   CHECKOUT_REF: ${{ github.sha }}
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: short
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
 jobs:
 EOF
     awk '/^  std-build-windows:$/ { copy = 1 } /^  ci-ok:$/ { copy = 0 } copy' "$dir/release-gate.yml"
@@ -648,11 +679,32 @@ if [ "$MODE" = full ]; then
 fi
 EOF
   cat > "$(dirname "$dir")/nextest.toml" <<'EOF'
+# The real file's keys, which the checker pins line for line (issue #566); comments and blank
+# lines may differ.
+nextest-version = { required = "0.9.143", recommended = "0.9.143" }
+
+[profile.default]
+fail-fast = true
+retries = 0
+flaky-result = "fail"
+slow-timeout = { period = "60s", terminate-after = 2, on-timeout = "fail" }
+leak-timeout = { period = "2s", result = "fail" }
+global-timeout = "15m"
+
 [profile.ci]
 fail-fast = false
+failure-output = "immediate-final"
+success-output = "never"
+status-level = "fail"
+final-status-level = "slow"
 
 [profile.ci.junit]
 path = "junit.xml"
+report-name = "open-control-ci"
+store-success-output = false
+store-failure-output = true
+report-skipped = "ignored"
+flaky-fail-status = "failure"
 
 [profile.ci-release]
 inherits = "ci"
@@ -832,17 +884,24 @@ run_case() {
   case_message[$cases]="${4:-}"
 }
 
-# `run_pool RUNNER COUNT DIR JOBS` runs `RUNNER i` for i = 1..COUNT, at most JOBS at a time, each in
-# a subshell of its own with its stdout and stderr in DIR/i.out, and sets pool_status[i] to its
-# exit status. It waits in the order it started the runs, so a slow run holds back the next start,
-# never a result. Bash 3.2 has no `wait -n`; a background subshell does not run the EXIT trap.
+# `run_pool RUNNER COUNT DIR JOBS` runs `RUNNER i` for i = 1..COUNT, at most JOBS at a time (and
+# never more than COUNT), each in a subshell of its own with its stdout and stderr in DIR/i.out, and
+# sets pool_status[i] to its exit status. It waits in the order it started the runs, so a slow run
+# holds back the next start, never a result. Bash 3.2 has no `wait -n`; a background subshell does
+# not run the EXIT trap. A run that returns normally gets a sentinel line after its output, which
+# the pool then removes. A run that ends with status 0 but without the sentinel left through an
+# `exit 0` somewhere in its body before its checks finished, and its status is set to 125, so it
+# fails like any other.
+pool_sentinel='-- workflow fixture run finished --'
 run_pool() {
-  local runner="$1" count="$2" out="$3" jobs="$4" i=1 waited=0
-  mkdir -p "$out"
+  local runner="$1" count="$2" jobs="$4" i=1 waited=0
+  pool_out="$3"
+  [ "$jobs" -le "$count" ] || jobs="$count"
+  mkdir -p "$pool_out"
   pool_pid=()
   pool_status=()
   while [ "$i" -le "$count" ]; do
-    ( "$runner" "$i" ) > "$out/$i.out" 2>&1 < /dev/null &
+    ( "$runner" "$i"; printf '%s\n' "$pool_sentinel" ) > "$pool_out/$i.out" 2>&1 < /dev/null &
     pool_pid[$i]=$!
     if [ $((i - waited)) -ge "$jobs" ]; then
       waited=$((waited + 1))
@@ -856,14 +915,22 @@ run_pool() {
   done
 }
 pool_wait() {
+  local file="$pool_out/$1.out"
   if wait "${pool_pid[$1]}"; then pool_status[$1]=0; else pool_status[$1]=$?; fi
+  if [ "$(tail -n 1 "$file")" = "$pool_sentinel" ]; then
+    sed '$d' "$file" > "$file.tmp"
+    mv "$file.tmp" "$file"
+  elif [ "${pool_status[$1]}" = 0 ]; then
+    pool_status[$1]=125
+  fi
 }
 
 # The pool's own control: six synthetic runs, each finishing before the one started ahead of it,
-# two at a time. With a failure planted at the first, the middle, the last or no position, the
-# statuses must be exactly that failure and the outputs whole and in start order. Each run also
-# counts the runs alive as it starts, which the bound keeps at two or fewer: the pool leaves at most
-# two runs unwaited, and a run that is alive has not been waited for.
+# two at a time. With a failure planted at the first, the middle, the last or no position, or one
+# run leaving through `exit 0` before it finishes, the statuses must be exactly that (7 for the
+# failure, 125 for the early exit) and the outputs whole and in start order. Each run also counts
+# the runs alive as it starts, which the bound keeps at two or fewer: the pool leaves at most two
+# runs unwaited, and a run that is alive has not been waited for.
 synthetic_run() {
   touch "$pool_marks/alive.$1"
   ls "$pool_marks" | grep -c '^alive\.' > "$pool_marks/seen.$1"
@@ -874,14 +941,23 @@ synthetic_run() {
     echo "synthetic run $1 failed"
     exit 7
   fi
+  if [ "$1" = "$early" ]; then
+    exit 0
+  fi
   echo "synthetic run $1 passed"
 }
 pool_self_check() {
-  local planted want got statuses i most
-  for planted in 1 3 6 none; do
-    pool_marks="$tmp/pool-check-$planted-marks"
+  local scenario planted early want got statuses i most
+  for scenario in failure-1 failure-3 failure-6 none early-4; do
+    planted=none
+    early=none
+    case "$scenario" in
+      failure-*) planted="${scenario#failure-}" ;;
+      early-*) early="${scenario#early-}" ;;
+    esac
+    pool_marks="$tmp/pool-check-$scenario-marks"
     mkdir -p "$pool_marks"
-    run_pool synthetic_run 6 "$tmp/pool-check-$planted" 2
+    run_pool synthetic_run 6 "$tmp/pool-check-$scenario" 2
     most="$(cat "$pool_marks"/seen.* | sort -n | tail -n 1)"
     if [ "$most" -gt 2 ]; then
       echo "FAIL: the case runner ran $most synthetic runs at once with a bound of two"
@@ -894,18 +970,21 @@ pool_self_check() {
       if [ "$i" = "$planted" ]; then
         want="$want|synthetic run $i started|synthetic run $i failed"
         statuses="$statuses 7"
+      elif [ "$i" = "$early" ]; then
+        want="$want|synthetic run $i started"
+        statuses="$statuses 125"
       else
         want="$want|synthetic run $i started|synthetic run $i passed"
         statuses="$statuses 0"
       fi
-      if [ -f "$tmp/pool-check-$planted/$i.out" ]; then
-        got="$got|$(tr '\n' '|' < "$tmp/pool-check-$planted/$i.out" | sed 's/|$//')"
+      if [ -f "$tmp/pool-check-$scenario/$i.out" ]; then
+        got="$got|$(tr '\n' '|' < "$tmp/pool-check-$scenario/$i.out" | sed 's/|$//')"
       else
         got="$got|(run $i wrote no output file)"
       fi
     done
     if [ "$got" != "$want" ] || [ " ${pool_status[*]}" != "$statuses" ]; then
-      echo "FAIL: the case runner's control with a failure planted at $planted:"
+      echo "FAIL: the case runner's control ($scenario):"
       echo "  outputs  $got"
       echo "  expected $want"
       echo "  statuses ${pool_status[*]} (expected$statuses)"
@@ -914,19 +993,27 @@ pool_self_check() {
   done
 }
 
-# How many cases run at once: OCE_FIXTURE_JOBS when set, else the CPU count, else 2.
+# How many cases run at once: OCE_FIXTURE_JOBS when set, else the CPU count, else 2. A value is
+# read as a decimal number, so `007` is 7, and anything that is not a positive number (`0`, `00`,
+# `-1`, `x`) is refused. run_pool caps it at the number of cases.
 fixture_jobs() {
   local jobs="${OCE_FIXTURE_JOBS:-}"
   if [ -n "$jobs" ]; then
     case "$jobs" in
-      '' | *[!0-9]* | 0)
-        echo "BUG: OCE_FIXTURE_JOBS must be a positive integer, not '$jobs'" >&2
-        return 1
-        ;;
+      *[!0-9]*) jobs=0 ;;
+      *) jobs=$((10#$jobs)) ;;
     esac
+    if [ "$jobs" -lt 1 ]; then
+      echo "BUG: OCE_FIXTURE_JOBS must be a positive integer, not '$OCE_FIXTURE_JOBS'" >&2
+      return 1
+    fi
   else
     jobs="$(getconf _NPROCESSORS_ONLN 2>/dev/null || true)"
-    case "$jobs" in '' | *[!0-9]* | 0) jobs=2 ;; esac
+    case "$jobs" in
+      '' | *[!0-9]*) jobs=2 ;;
+      *) jobs=$((10#$jobs)) ;;
+    esac
+    [ "$jobs" -ge 1 ] || jobs=2
   fi
   echo "$jobs"
 }
@@ -944,13 +1031,17 @@ run_registered_cases() {
     exit 1
   fi
   jobs="$(fixture_jobs)" || exit 1
+  [ "$jobs" -le "$cases" ] || jobs="$cases"
   run_pool run_registered_case "$cases" "$tmp/results" "$jobs"
   i=1
   while [ "$i" -le "$cases" ]; do
     cat "$tmp/results/$i.out"
+    if [ "${pool_status[$i]}" = 125 ]; then
+      echo "FAIL: workflow fixture '${case_name[$i]}' ended with status 0 before its checks finished (an exit 0 in the case or its mutation)"
+    fi
     if [ "${pool_status[$i]}" != 0 ]; then
       failed=$((failed + 1))
-      if [ ! -s "$tmp/results/$i.out" ]; then
+      if [ "${pool_status[$i]}" != 125 ] && [ ! -s "$tmp/results/$i.out" ]; then
         echo "FAIL: workflow fixture '${case_name[$i]}' exited ${pool_status[$i]} and printed nothing"
       fi
     fi
@@ -1357,6 +1448,214 @@ release_gate_no_secret_fixtures_masked() {
 
 no_secret_fixtures_from_another_directory() {
   edit_pr_gate "$1" "s/$no_secret_fixture_line/      - run: bash scripts\/ci\/test-check-no-secrets.sh/"
+}
+
+# The checker gaps of issue #566. `add_step FILE JOB TEXT` inserts TEXT (lines joined by \n) as
+# the first step of JOB in the fixture's FILE; `add_both_steps` does it in pr-gate.yml and
+# release-gate.yml alike, for the jobs the two must run identically.
+add_step() {
+  awk -v job="  $2:" -v text="$3" '
+    $0 == job { inside = 1 }
+    inside && /^    steps:$/ { print; print text; inside = 0; next }
+    { print }
+  ' "$1" > "$1.tmp"
+  mv "$1.tmp" "$1"
+}
+add_both_steps() {
+  add_step "$1/pr-gate.yml" "$2" "$3"
+  add_step "$1/release-gate.yml" "$2" "$3"
+}
+
+# 1. A step selector must pick a cell of its job's matrix.
+selector_naming_no_value() {
+  for workflow in "$1/pr-gate.yml" "$1/release-gate.yml"; do
+    awk '!done && $0 == "      - if: matrix.codegen == \047release\047" { print "      - if: matrix.codegen == \047relese\047"; done = 1; next } { print }' \
+      "$workflow" > "$workflow.tmp"
+    mv "$workflow.tmp" "$workflow"
+  done
+}
+selector_naming_no_key() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix "      - if: matrix.platform == 'linux'\n        run: echo selected"
+}
+selector_on_a_job_without_a_matrix() {
+  edit_pr_gate "$1" "s/$no_secret_fixture_line/      - if: matrix.os == 'never'\n        run: bash .github\/scripts\/test-check-no-secrets.sh/"
+}
+selector_combination_no_cell_has() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix \
+    "      - if: matrix.arch == 'x86_64' && matrix.runner == 'ubuntu-24.04-arm'\n        run: echo selected"
+}
+selector_naming_no_include_entry() {
+  add_both_steps "$1" determinism-compare "      - if: matrix.foreign == 'riscv64'\n        run: echo selected"
+}
+selector_on_a_matrix_with_an_exclude() {
+  edit_pr_gate "$1" '/^  strict-bit-matrix:$/,/^  strict-bit-compare:$/ s/^        include:$/        exclude:\n          - runner: ubuntu-latest\n            codegen: release\n&/'
+  add_step "$1/pr-gate.yml" strict-bit-matrix "      - if: matrix.codegen == 'debug'\n        run: echo selected"
+}
+# Live selectors: an include-only key, and a key the includes add beside one of the cross product.
+selectors_that_pick_a_cell() {
+  add_both_steps "$1" determinism-compare \
+    "      - if: matrix.arch == 'aarch64' && matrix.foreign == 'x86_64'\n        run: echo selected"
+  add_step "$1/pr-gate.yml" strict-bit-matrix \
+    "      - if: matrix.arch == 'x86_64' && matrix.codegen == 'debug'\n        run: echo selected"
+}
+
+# 2. Nothing below the workflow level changes what is built or how bash runs.
+job_env_on_a_job_only_pr_gate_runs() {
+  edit_pr_gate "$1" 's/^  strict-bit-matrix:$/&\n    env:\n      RUSTFLAGS: --cap-lints=allow/'
+}
+step_env_cargo_profile_override() {
+  edit_pr_gate "$1" 's/^          CELL_CODEGEN: \${{ matrix.codegen }}$/&\n          CARGO_PROFILE_RELEASE_OPT_LEVEL: "0"/'
+}
+step_env_nextest_retries() {
+  edit_pr_gate "$1" 's/^          OCE_ROUND_TRIP_EXPECT: target\/round-trip-recorded\/round-trip$/&\n          NEXTEST_RETRIES: "3"/'
+}
+step_env_bash_env() {
+  edit_pr_gate "$1" '/^  portable-snapshot-macos:$/,/^  [^ ]/ s/^          OCE_PORTABLE_STATE_OUT: target\/portable-state-debug.bin$/&\n          BASH_ENV: .github\/exit-zero.sh/'
+}
+step_env_path() {
+  edit_pr_gate "$1" 's/^          OCE_ROUND_TRIP_EXPECT: target\/round-trip-recorded\/round-trip$/&\n          PATH: fake-tools/'
+}
+rustdoc_flags_weakened() {
+  edit_pr_gate "$1" 's/^      - run: cargo doc --no-deps --workspace --lib --document-private-items --locked$/      - env:\n          RUSTDOCFLAGS: --cap-lints=allow\n        run: cargo doc --no-deps --workspace --lib --document-private-items --locked/'
+}
+rustdoc_flags_deny_warnings() {
+  edit_pr_gate "$1" 's/^      - run: cargo doc --no-deps --workspace --lib --document-private-items --locked$/      - env:\n          RUSTDOCFLAGS: "-D warnings"\n        run: cargo doc --no-deps --workspace --lib --document-private-items --locked/'
+}
+github_env_write() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix '      - run: echo "OCE_SKIP=1" >> "$GITHUB_ENV"'
+}
+github_env_bash_env_write() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix '      - run: echo "BASH_ENV=$RUNNER_TEMP/exit-zero.sh" >> "$GITHUB_ENV"'
+}
+github_path_write() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix '      - run: echo "$RUNNER_TEMP/fake-tools" >> "$GITHUB_PATH"'
+}
+github_path_wasmtime_directory() {
+  add_step "$1/pr-gate.yml" blob-round-trip-wasm '      - run: echo "$PWD/target/wasmtime-bin" >> "$GITHUB_PATH"'
+}
+inline_build_assignment() {
+  edit_pr_gate "$1" 's/^          wasmtime --version$/          export NEXTEST_PROFILE=default\n&/'
+}
+flow_style_step_env() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix '      - env: { OCE_FLOW: "1" }\n        run: echo flow'
+}
+workflow_env_in_all_three_files() {
+  for workflow in pr-gate merge-gate release-gate; do
+    sed 's/^  CARGO_TERM_COLOR: always$/&\n  RUSTFLAGS: --cap-lints=allow/' "$1/$workflow.yml" > "$1/$workflow.yml.tmp"
+    mv "$1/$workflow.yml.tmp" "$1/$workflow.yml"
+  done
+}
+
+# 3. The nextest profiles every gate command runs under are pinned to the line.
+nextest_edit() {
+  config="$(dirname "$1")/nextest.toml"
+  shift
+  sed "$@" "$config" > "$config.tmp"
+  mv "$config.tmp" "$config"
+}
+ci_profile_default_filter() { nextest_edit "$1" 's/^\[profile\.ci\]$/&\ndefault-filter = "package(oce-diag)"/'; }
+ci_release_profile_default_filter() {
+  nextest_edit "$1" 's/^\[profile\.ci-release\]$/&\ndefault-filter = "package(oce-diag)"/'
+}
+default_profile_retries() { nextest_edit "$1" 's/^retries = 0$/retries = 2/'; }
+ci_profile_override_table() {
+  config="$(dirname "$1")/nextest.toml"
+  printf '%s\n' '[[profile.ci.overrides]]' 'filter = "all()"' 'retries = 3' >> "$config"
+}
+setup_script_table() {
+  config="$(dirname "$1")/nextest.toml"
+  printf '%s\n' '[scripts.setup.prime]' 'command = "true"' >> "$config"
+}
+nextest_comments_and_blank_lines() {
+  nextest_edit "$1" -e 's/^\[profile\.ci\]$/\n# The per-PR profile.\n&/' -e 's/^retries = 0$/# A flaky pass is a failure.\n&\n/'
+}
+
+# 4. What a step's script returns, read whole.
+exit_zero_ahead_of_the_command() {
+  edit_pr_gate "$1" 's/^          cmp linux-x86_64\/portable-state-debug.bin macos-arm64\/portable-state-debug.bin$/          exit 0\n&/'
+}
+bare_exit_ahead_of_the_command() {
+  edit_pr_gate "$1" 's/^          cmp linux-x86_64\/portable-state-debug.bin macos-arm64\/portable-state-debug.bin$/          exit\n&/'
+}
+exit_zero_in_a_case_arm() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix \
+    '      - run: |\n          case "$RUNNER_OS" in\n            Linux) exit 0 ;;\n          esac\n          echo checked'
+}
+and_true_before_the_last_command() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix \
+    '      - run: |\n          cmp target/a.bin target/b.bin && true\n          echo compared'
+}
+and_colon_before_the_last_command() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix \
+    '      - run: |\n          cmp target/a.bin target/b.bin && :\n          echo compared'
+}
+and_list_before_the_last_command() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix \
+    '      - run: |\n          cmp target/a.bin target/b.bin && echo same\n          echo compared'
+}
+folded_and_list_then_another_command() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix \
+    '      - run: >-\n          cmp target/a.bin target/b.bin &&\n          cmp target/c.bin target/d.bin; echo compared'
+}
+background_then_wait() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix '      - run: cmp target/a.bin target/b.bin & wait'
+}
+background_in_a_subshell() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix '      - run: (cmp target/a.bin target/b.bin &)'
+}
+# What the rule must leave alone: a && in an if condition, a && list that is the last command of
+# its step (inside an if body, or over a continuation), an exit with a nonzero or a variable
+# status, redirections, a heredoc body and quoted text.
+step_scripts_that_mask_nothing() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix \
+    '      - run: |\n          if [ -n "$CELL_ARCH" ] && [ -n "$CELL_CODEGEN" ]; then\n            echo both >&2\n          fi\n          status=0\n          cat <<'"'"'EOF'"'"' 2>&1\n          exit 0\n          cmd && true\n          EOF\n          echo "cmd && true; exit 0 &" &> /dev/null\n          if [ "$status" != 0 ]; then\n            exit "$status"\n          fi\n          if true; then\n            cmp a b &&\n              echo same\n          fi'
+}
+
+# The fix round of GitHub #624 (its review's findings 2 to 5).
+exit_zero_quoted() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix '      - run: |\n          exit "0"\n          echo checked'
+}
+trap_exit_zero_on_exit() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix \
+    '      - run: |\n          trap '"'"'exit 0'"'"' EXIT\n          echo checked'
+}
+trap_exit_zero_on_err() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix \
+    '      - run: |\n          trap "exit" ERR\n          echo checked'
+}
+exec_before_the_last_command() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix '      - run: |\n          exec true\n          echo checked'
+}
+# A cleanup trap, a trap that exits nonzero, an exec of redirections only and an exec as the last
+# command mask nothing.
+traps_and_execs_that_mask_nothing() {
+  add_step "$1/pr-gate.yml" strict-bit-matrix \
+    '      - run: |\n          trap '"'"'rm -f target/scratch'"'"' EXIT\n          trap '"'"'exit 1'"'"' ERR\n          exec 2>&1\n          exec echo checked'
+}
+inline_path_assignment() {
+  edit_pr_gate "$1" 's/^          wasmtime --version$/          export PATH="$PWD\/fake-tools:$PATH"\n&/'
+}
+inline_env_assignment() {
+  edit_pr_gate "$1" 's/^          wasmtime --version$/          export ENV=.github\/exit-zero.sh\n&/'
+}
+step_env_git_index_file() {
+  edit_pr_gate "$1" 's/^          OCE_ROUND_TRIP_EXPECT: target\/round-trip-recorded\/round-trip$/&\n          GIT_INDEX_FILE: .git\/empty-index/'
+}
+step_env_git_dir() {
+  edit_pr_gate "$1" '/^  portable-snapshot-macos:$/,/^  [^ ]/ s/^          OCE_PORTABLE_STATE_OUT: target\/portable-state-debug.bin$/&\n          GIT_DIR: empty.git/'
+}
+job_env_git_work_tree() {
+  edit_pr_gate "$1" 's/^  strict-bit-matrix:$/&\n    env:\n      GIT_WORK_TREE: empty/'
+}
+# GitHub compares an unquoted YAML boolean with a quoted selector as numbers, so `true` never
+# equals `'true'`; the same letters quoted in the matrix are a string, and equal.
+boolean_matrix_value_against_a_quoted_selector() {
+  edit_pr_gate "$1" '/^  strict-bit-matrix:$/,/^  strict-bit-compare:$/ s/^        codegen: \[debug, release\]$/&\n        cached: [true, false]/'
+  add_step "$1/pr-gate.yml" strict-bit-matrix "      - if: matrix.cached == 'true'\n        run: echo cached"
+}
+quoted_boolean_matrix_value() {
+  edit_pr_gate "$1" '/^  strict-bit-matrix:$/,/^  strict-bit-compare:$/ s/^        codegen: \[debug, release\]$/&\n        cached: ["true", "false"]/'
+  add_step "$1/pr-gate.yml" strict-bit-matrix "      - if: matrix.cached == 'true'\n        run: echo cached"
 }
 
 # An event filter beside `branches:` lets the event skip commits the branch list says it runs on,
@@ -3035,6 +3334,75 @@ run_case release-gate-no-secret-fixtures-in-another-job fail release_gate_no_sec
   "release-gate.yml job gate-fixtures is missing required gate pattern: release gate runs the no-secret scan fixtures"
 run_case release-gate-no-secret-fixtures-masked fail release_gate_no_secret_fixtures_masked \
   "release-gate.yml job gate-fixtures is missing required gate pattern: release gate runs the no-secret scan fixtures"
+# Issue #566.
+selector_message="has a step selector that picks no cell of its job's matrix, so the step never runs"
+run_case selector-naming-no-value fail selector_naming_no_value "$selector_message"
+run_case selector-naming-no-key fail selector_naming_no_key "$selector_message"
+run_case selector-on-a-job-without-a-matrix fail selector_on_a_job_without_a_matrix "(the job has no matrix)"
+run_case selector-combination-no-cell-has fail selector_combination_no_cell_has "(no cell of the job matrix has it)"
+run_case selector-naming-no-include-entry fail selector_naming_no_include_entry "(no cell of the job matrix has it)"
+run_case selector-on-a-matrix-with-an-exclude fail selector_on_a_matrix_with_an_exclude \
+  "(the job matrix is not one this check can read)"
+run_case selectors-that-pick-a-cell pass selectors_that_pick_a_cell
+env_message="sets build or shell environment below the workflow level"
+run_case job-env-on-a-job-only-pr-gate-runs fail job_env_on_a_job_only_pr_gate_runs "$env_message"
+run_case step-env-cargo-profile-override fail step_env_cargo_profile_override "$env_message"
+run_case step-env-nextest-retries fail step_env_nextest_retries "$env_message"
+run_case step-env-bash-env fail step_env_bash_env "$env_message"
+run_case step-env-path fail step_env_path "$env_message"
+run_case rustdoc-flags-weakened fail rustdoc_flags_weakened "$env_message"
+run_case rustdoc-flags-deny-warnings pass rustdoc_flags_deny_warnings
+run_case github-env-write fail github_env_write "(a write to GITHUB_ENV)"
+run_case github-env-bash-env-write fail github_env_bash_env_write "(a write to GITHUB_ENV)"
+run_case github-path-write fail github_path_write "(a write to GITHUB_PATH other than the wasmtime directory)"
+run_case github-path-wasmtime-directory pass github_path_wasmtime_directory
+run_case inline-build-assignment fail inline_build_assignment "(an inline assignment that changes what is built or how bash runs)"
+run_case flow-style-step-env fail flow_style_step_env "(a flow-style env this check cannot read)"
+run_case workflow-env-in-all-three-files fail workflow_env_in_all_three_files \
+  "pr-gate.yml workflow-level env is not exactly its pinned lines"
+nextest_message="nextest.toml is not exactly its pinned lines"
+run_case ci-profile-default-filter fail ci_profile_default_filter "$nextest_message"
+run_case ci-release-profile-default-filter fail ci_release_profile_default_filter "$nextest_message"
+run_case default-profile-retries fail default_profile_retries "$nextest_message"
+run_case ci-profile-override-table fail ci_profile_override_table "$nextest_message"
+run_case setup-script-table fail setup_script_table "$nextest_message"
+run_case nextest-comments-and-blank-lines pass nextest_comments_and_blank_lines
+mask_message="contains a refused gate pattern: a masked step status"
+run_case exit-zero-ahead-of-the-command fail exit_zero_ahead_of_the_command "(exit with no status or a zero status)"
+run_case bare-exit-ahead-of-the-command fail bare_exit_ahead_of_the_command "(exit with no status or a zero status)"
+run_case exit-zero-in-a-case-arm fail exit_zero_in_a_case_arm "(exit with no status or a zero status)"
+run_case and-true-before-the-last-command fail and_true_before_the_last_command "$mask_message"
+run_case and-colon-before-the-last-command fail and_colon_before_the_last_command "$mask_message"
+run_case and-list-before-the-last-command fail and_list_before_the_last_command "$mask_message"
+run_case folded-and-list-then-another-command fail folded_and_list_then_another_command "$mask_message"
+run_case background-then-wait fail background_then_wait "(a background &)"
+run_case background-in-a-subshell fail background_in_a_subshell "(a background &)"
+run_case step-scripts-that-mask-nothing pass step_scripts_that_mask_nothing
+# The fix round of GitHub #624.
+run_case exit-zero-quoted fail exit_zero_quoted "(exit with no status or a zero status)"
+run_case trap-exit-zero-on-exit fail trap_exit_zero_on_exit "(a trap that exits with no status or a zero status)"
+run_case trap-exit-zero-on-err fail trap_exit_zero_on_err "(a trap that exits with no status or a zero status)"
+run_case exec-before-the-last-command fail exec_before_the_last_command "(an exec before the step last command"
+run_case traps-and-execs-that-mask-nothing pass traps_and_execs_that_mask_nothing
+run_case inline-path-assignment fail inline_path_assignment "(an inline assignment that changes what is built or how bash runs)"
+run_case inline-env-assignment fail inline_env_assignment "(an inline assignment that changes what is built or how bash runs)"
+run_case step-env-git-index-file fail step_env_git_index_file "$env_message"
+run_case step-env-git-dir fail step_env_git_dir "$env_message"
+run_case job-env-git-work-tree fail job_env_git_work_tree "$env_message"
+run_case boolean-matrix-value-against-a-quoted-selector fail boolean_matrix_value_against_a_quoted_selector \
+  "(the matrix value is a YAML boolean, which GitHub never finds equal to a quoted selector; quote it in the matrix)"
+run_case quoted-boolean-matrix-value pass quoted_boolean_matrix_value
+# Each message says which rule in which file holds the pin, and what edit resolves it.
+run_case selector-message-names-its-rule fail selector_naming_no_value \
+  "The rule is require_live_matrix_selectors in .github/scripts/check-workflow-gates.sh. Give the selector a key and value"
+run_case env-message-names-its-rule fail step_env_cargo_profile_override \
+  "The rule is require_build_env_untouched in .github/scripts/check-workflow-gates.sh. Set such a variable in the workflow-level env:"
+run_case workflow-env-message-names-its-pin fail workflow_env_in_all_three_files \
+  "(pinned_workflow_env in .github/scripts/check-workflow-gates.sh: change the pin and the env: of all three gating workflows together)"
+run_case nextest-message-names-its-pin fail ci_profile_default_filter \
+  "The pin is pinned_nextest_config in .github/scripts/check-workflow-gates.sh; change it in the same PR as the file."
+run_case masked-status-message-names-its-rule fail and_true_before_the_last_command \
+  "The rule is refuse_masked_step_status in .github/scripts/check-workflow-gates.sh. Make a && chain the step's last command"
 run_case merge-gate-push-with-a-paths-filter fail merge_gate_push_with_a_paths_filter \
   "merge-gate.yml push trigger carries a filter other than branches: (got: branches paths )"
 run_case merge-gate-push-with-paths-ignore fail merge_gate_push_with_paths_ignore \
