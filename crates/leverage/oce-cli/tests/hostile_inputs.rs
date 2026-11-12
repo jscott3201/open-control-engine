@@ -187,19 +187,33 @@ fn a_document_in_the_earlier_extends_spelling_is_refused_by_every_reading_comman
     assert_ne!(earlier, wire);
     std::fs::write(dir.join("current.json"), &wire).expect("write");
     std::fs::write(dir.join("earlier.json"), earlier).expect("write");
-    for command in ["validate", "emit", "fmt"] {
+    // `verify` reads its subject in either authored form too: a set the current spelling passes.
+    std::fs::write(
+        dir.join("abs.vectors.json"),
+        r#"{"schema": "oce/vectors/v1", "clock": {"step_s": 60, "horizon_s": 120}, "scenarios": [{"name": "negative", "inputs": {"u": -2.0}, "expect": [{"output": "y", "from_s": 0, "to_s": 120, "equals": 2.0}]}]}"#,
+    )
+    .expect("write");
+    let commands: [&[&str]; 4] = [
+        &["validate"],
+        &["emit"],
+        &["fmt"],
+        &["verify", "abs.vectors.json", "--subject"],
+    ];
+    for command in commands {
+        let run = |document: &str| oce_in(&dir, &[command, &[document]].concat(), b"");
         for current in ["current.oce", "current.json"] {
-            let run = oce_in(&dir, &[command, current], b"");
-            assert_eq!(run.code, 0, "{}", run.transcript());
+            let passed = run(current);
+            assert_eq!(passed.code, 0, "{}", passed.transcript());
         }
+        // The text form stops at the statement where `derived_from` must stand, line 2.
+        let text = run("earlier.oce");
+        assert_eq!(refusal(&text), "missing-derived-from", "{command:?}");
         assert_eq!(
-            refusal(&oce_in(&dir, &[command, "earlier.oce"], b"")),
-            "missing-derived-from"
+            text.report()["errors"][0]["span"],
+            serde_json::json!({ "line": 2, "column": 1 }),
+            "{command:?}"
         );
-        assert_eq!(
-            refusal(&oce_in(&dir, &[command, "earlier.json"], b"")),
-            "unknown-key"
-        );
+        assert_eq!(refusal(&run("earlier.json")), "unknown-key", "{command:?}");
     }
 }
 

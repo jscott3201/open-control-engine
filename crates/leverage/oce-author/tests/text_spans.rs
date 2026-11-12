@@ -24,6 +24,19 @@ fn find<'a>(findings: &'a [Finding], code: &str, subject: &str) -> &'a Finding {
         .unwrap_or_else(|| panic!("no {code} at {subject}: {findings:#?}"))
 }
 
+/// Every finding as `(code, subject, line, column)`, in the list's order.
+fn placed(findings: &[Finding]) -> Vec<(&str, &str, u32, u32)> {
+    findings
+        .iter()
+        .map(|f| {
+            let at = f
+                .span
+                .unwrap_or_else(|| panic!("{} at {} is placed", f.code, f.subject));
+            (f.code, f.subject.as_str(), at.line, at.column)
+        })
+        .collect()
+}
+
 #[test]
 fn a_finding_on_an_assignment_points_at_the_assignment() {
     // The worked example with `uHigh` referencing a parameter that does not exist.
@@ -106,6 +119,131 @@ x.y -> x
     assert_eq!(dups, [at(5, 5), at(3, 7)]);
     let param = find(&findings, DUPLICATE_PARAMETER, "x.uLow");
     assert_eq!(param.span, at(3, 57));
+}
+
+#[test]
+fn every_finding_about_a_repeat_is_placed_on_the_repeat() {
+    // GitHub #585: only `duplicate-name` and `duplicate-parameter` went to the repeat; any other
+    // finding about a repeated name or assignment, here the second block's reference to nothing
+    // and the third block's unknown class, was placed on the first block (3:46 and 3:7).
+    let text = "\
+sequence s
+derived_from none
+block lim = CDL.Reals.Hysteresis(uLow = 0.0, uHigh = 1.0)
+block lim = CDL.Reals.Hysteresis(uLow = 0.0, uHigh = q)
+block lim = CDL.Reals.Nope
+";
+    let findings = validate_text_author_side(text).expect("parses");
+    assert_eq!(
+        placed(&findings),
+        [
+            ("duplicate-name", "lim", 4, 7),
+            ("unknown-parameter-reference", "lim.uHigh", 4, 46),
+            ("class-not-found", "lim", 5, 7),
+            ("duplicate-name", "lim", 5, 7),
+        ]
+    );
+}
+
+#[test]
+fn a_declaration_named_sequence_is_placed_on_its_declaration_not_on_the_header() {
+    // GitHub #585: the header subject `sequence` was indexed before the declarations and the
+    // first location taken, so every finding about a declaration named `sequence` landed on the
+    // sequence name (1:10). One declaration of each kind under the header word, beside a header
+    // finding of the same code and subject; each later one also repeats the name.
+    let text = "\
+sequence end
+derived_from none
+param sequence : Integer = 2.5
+in sequence : Real @min 2 @max 1
+out sequence : Real
+block sequence = CDL.Reals.Nope
+";
+    let findings = validate_text_author_side(text).expect("parses");
+    assert_eq!(
+        placed(&findings),
+        [
+            ("invalid-name", "sequence", 1, 10),
+            ("invalid-name", "sequence", 3, 7),
+            ("parameter-kind-mismatch", "sequence", 3, 7),
+            ("crossed-bounds", "sequence", 4, 4),
+            ("duplicate-name", "sequence", 4, 4),
+            ("invalid-name", "sequence", 4, 4),
+            ("duplicate-name", "sequence", 5, 5),
+            ("invalid-name", "sequence", 5, 5),
+            ("class-not-found", "sequence", 6, 7),
+            ("duplicate-name", "sequence", 6, 7),
+            ("invalid-name", "sequence", 6, 7),
+        ]
+    );
+    // The first is the header's own: the sequence name `end`, a reserved word.
+    assert!(
+        findings[0].detail.starts_with("sequence name `end`"),
+        "{}",
+        findings[0].detail
+    );
+    assert!(
+        findings[1].detail.starts_with("parameter name `sequence`"),
+        "{}",
+        findings[1].detail
+    );
+
+    // A header finding no declaration can earn stays on the header beside one.
+    let text = "sequence s\nderived_from none\nin sequence : Real\n";
+    let findings = validate_text_author_side(text).expect("parses");
+    assert_eq!(
+        placed(&findings),
+        [
+            ("empty-sequence", "sequence", 1, 10),
+            ("invalid-name", "sequence", 3, 4),
+        ]
+    );
+}
+
+#[test]
+fn a_declaration_named_derived_from_is_placed_on_its_declaration_not_on_the_header() {
+    // GitHub #585: `in derived_from : Real @min 2 @max 1` on line 4 had its `invalid-name` and
+    // `crossed-bounds` placed on the `derived_from` operand (2:14). One declaration of each
+    // kind under the header word, beside the header's own `invalid-provenance-id`.
+    let text = "\
+sequence s
+derived_from CXF:abc
+param derived_from : Integer = 2.5
+in derived_from : Real @min 2 @max 1
+out derived_from : Real
+block derived_from = CDL.Reals.Nope
+";
+    let findings = validate_text_author_side(text).expect("parses");
+    assert_eq!(
+        placed(&findings),
+        [
+            ("invalid-provenance-id", "derived_from", 2, 14),
+            ("invalid-name", "derived_from", 3, 7),
+            ("parameter-kind-mismatch", "derived_from", 3, 7),
+            ("crossed-bounds", "derived_from", 4, 4),
+            ("duplicate-name", "derived_from", 4, 4),
+            ("invalid-name", "derived_from", 4, 4),
+            ("duplicate-name", "derived_from", 5, 5),
+            ("invalid-name", "derived_from", 5, 5),
+            ("class-not-found", "derived_from", 6, 7),
+            ("duplicate-name", "derived_from", 6, 7),
+            ("invalid-name", "derived_from", 6, 7),
+        ]
+    );
+
+    // The map lists every element the word can mean, the header first, in model order.
+    let (model, spans) = parse_text_with_spans(text).expect("parses");
+    assert_eq!(
+        spans.locations(&model, "derived_from"),
+        [(2, 14), (3, 7), (4, 4), (5, 5), (6, 7)].map(|(line, column)| Location { line, column })
+    );
+
+    // `apply` places by the element a finding is about, so a finding whose subject a caller
+    // rewrote to name other elements falls back to that subject's first location.
+    let mut rewritten = findings[findings.len() - 1].clone();
+    rewritten.subject = "sequence".to_owned();
+    spans.apply(&model, std::slice::from_mut(&mut rewritten));
+    assert_eq!(rewritten.span, at(1, 10));
 }
 
 #[test]

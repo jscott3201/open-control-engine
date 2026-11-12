@@ -83,6 +83,29 @@ and a gate that accepted any text would restore exactly the false assurance desc
   one buffer sized up front. A `serde_json` feature turned on anywhere in the workspace
   (`preserve_order`, `arbitrary_precision`) would also move the counts, and the test says so. No
   `oce-author` test reads the clock any more.
+- **A finding is placed on the statement it is about, even when its subject names several**
+  (GitHub #PRNUM, issue #585). `SourceMap::apply` resolved a finding's subject to every statement
+  it names and took the first, with the fixed header subjects `sequence` and `derived_from` ahead
+  of the declarations; only `duplicate-name` and `duplicate-parameter` were sent on to the
+  repeat. So `in derived_from : Real @min 2 @max 1` on line 4 had its `invalid-name` and
+  `crossed-bounds` placed at 2:14, the `none` operand, and `in sequence : Real` its
+  `invalid-name` at the sequence name. With a repeated name, every other finding about a repeat
+  was placed on the first declaration, and a repeat of a header word one declaration early.
+  `oce validate`, `oce emit` and `oce verify --subject` place through the same map. Every
+  `Finding` now carries, in a crate-private field, the position in the model the validator
+  reported it at, and the map is keyed by subject and position. A finding whose subject a caller
+  rewrote falls back to that subject's first location, and one the text does not name still
+  keeps `None`. `Finding`'s `Debug` output shows the field, and two findings at different
+  positions are no longer equal. Three CLI transcripts move, one span each: the second
+  `block lim` of `stage_one.oce` is the one whose class is not found, so `validate_text_findings`,
+  `validate_render_always` and `emit_stage_one_refusal` now place that `class-not-found` at 9:7,
+  not 8:7. Placing the findings costs n·log n comparisons for a name repeated n times, each
+  repeat now its own key: 193,195 and 4,039,343 at 4,096 and 65,536 blocks, against 24,570 and
+  393,210 before, and within the bound `counted_tests.rs` holds. Every other count there is
+  unchanged. Two tests from the same review are tightened. `oce verify --subject` joins
+  `validate`, `emit` and `fmt` in the earlier-spelling refusal loop of `hostile_inputs.rs`, and
+  each command's text refusal is pinned at 2:1. The `extends` test in `wire_refusals.rs` now
+  pins where each of its three refusals stops.
 
 ### Verification
 

@@ -318,11 +318,14 @@ refused before a token is read. Nothing in the parser panics or recurses past th
 `validate_text` (and `validate_text_author_side`) fills `Finding::span` from a `SourceMap` built
 while parsing: `sequence` is the sequence name, `derived_from` its operand, a declared name its
 declaration's name, `block.param` the assignment's name (an array element's value), and
-`connection[N]` the connection's source. A `duplicate-name` or `duplicate-parameter` finding is
-placed on the later declaration in model section order (parameters, inputs, outputs, blocks), as
-the validator reports it. A subject no statement names (an engine `connector#N` stage 2 could not
-map) keeps `None`, as do wire-form findings. The subject index is built once per document, so
-placing the findings of a document at the statement cap costs about what validating it does.
+`connection[N]` the connection's source. A subject can name several statements, so a finding is
+placed on the one the validator reported it on, not on the first its subject names: a
+declaration named like a header word (`in sequence : Real`, `param derived_from : …`, refused
+as `invalid-name`) keeps its findings on its own line, the header's stay on the header, and a
+`duplicate-name` or `duplicate-parameter` finding is placed on the repeat it reports (issue
+#585). A subject no statement names (an engine `connector#N` stage 2 could not map) keeps
+`None`, as do wire-form findings. The index is built once per document, so placing the findings
+of a document at the statement cap costs about what validating it does.
 
 The bundle texts (`tests/fixtures/text/*.oce`) and the `fmt` goldens
 (`tests/fixtures/text/fmt/*.out.oce`) regenerate with `OCE_BLESS_AUTHOR=1`, like the other goldens.

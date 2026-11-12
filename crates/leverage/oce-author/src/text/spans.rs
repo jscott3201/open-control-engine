@@ -2,11 +2,12 @@
 //! the text (the [`crate::Finding::span`] contract of GitHub #466).
 //!
 //! A finding names its subject by model path: `sequence`, `derived_from`, a declared name,
-//! `block.param` or `connection[N]`. The map resolves the path to the model elements it can mean,
-//! in authored model order (parameters, inputs, outputs, blocks), and takes the first. A duplicate
-//! is the one case where a path means several elements: the validator reports the k-th
-//! `duplicate-name` or `duplicate-parameter` of a subject at its (k+1)-th declaration in model
-//! section order, so the map does the same. The subject index is a `BTreeMap` built once per
+//! `block.param` or `connection[N]`. A path can mean several elements: a declaration may be named
+//! like a header word (`in sequence : Real`, refused as `invalid-name` but still a declaration
+//! with findings of its own, GitHub #585), and a name or an assignment may be repeated. So the
+//! map does not choose by the path alone: each element is indexed by its subject and its
+//! position in the authored model (the validator's `Anchor`, which every finding carries), and a
+//! finding is placed on the element both name. The index is a `BTreeMap` built once per
 //! [`SourceMap::apply`], keyed by [`Counted`] so the tests of `crate::counted` pin the comparisons
 //! a placement makes.
 
@@ -16,7 +17,7 @@ use std::collections::BTreeMap;
 use crate::counted::Counted;
 use crate::location::Location;
 use crate::model::Sequence;
-use crate::validate::{DUPLICATE_NAME, DUPLICATE_PARAMETER, Finding};
+use crate::validate::{Anchor, Finding};
 
 /// The text location of every statement, assignment and connection of one parsed document, in
 /// model order. Built by [`crate::parse_text_with_spans`].
@@ -47,81 +48,100 @@ impl SourceMap {
     }
 
     /// Every location `subject` can mean in `sequence`, in model order: the `sequence` keyword's
-    /// name, the `derived_from` operand, a declaration's name, an assignment's name (an array
-    /// element's value) or a connection's source. Empty when the subject names nothing in the map.
-    /// Builds the subject index each call; [`SourceMap::apply`] builds it once for a whole finding
-    /// list.
+    /// name, the `derived_from` operand, a declaration's name (parameters, inputs, outputs,
+    /// blocks), an assignment's name (an array element's value) or a connection's source. Empty
+    /// when the subject names nothing in the map. Builds the index each call;
+    /// [`SourceMap::apply`] builds it once for a whole finding list.
     #[must_use]
     pub fn locations(&self, sequence: &Sequence, subject: &str) -> Vec<Location> {
-        Index::new(self, sequence).lookup(subject).to_vec()
+        Index::new(self, sequence).all(subject).collect()
     }
 
     /// Set [`Finding::span`] on each finding of `sequence` (the model this map was parsed with):
-    /// the first location of its subject, or, for the k-th `duplicate-name` /
-    /// `duplicate-parameter` finding of a subject, its (k+1)-th declaration in model section
-    /// order (parameters, inputs, outputs, blocks) — the later declaration, as the validator
-    /// reports it. A subject the map cannot place (an engine subject no statement names) keeps
-    /// `None`. The subject index is built once, so the cost is linear in the findings and the
-    /// declarations.
+    /// the location of the element the validator reported it on, which its subject names. So a
+    /// finding about a declaration named `sequence` or `derived_from` is placed on that
+    /// declaration and a finding about the header on the header, and a `duplicate-name` or
+    /// `duplicate-parameter` finding on the repeat it reports, never on the first declaration. A
+    /// finding whose subject names other elements than that one (a caller rewrote the subject)
+    /// is placed on the subject's first location in model order; a subject the map cannot place
+    /// (an engine subject no statement names) keeps `None`. The index is built once, so the cost
+    /// is linear in the findings and the declarations, with one logarithmic lookup each.
     pub fn apply(&self, sequence: &Sequence, findings: &mut [Finding]) {
         let index = Index::new(self, sequence);
-        let mut repeats: BTreeMap<Counted<(&'static str, String)>, usize> = BTreeMap::new();
         for finding in findings.iter_mut() {
-            let at = index.lookup(&finding.subject);
-            let position = if finding.code == DUPLICATE_NAME || finding.code == DUPLICATE_PARAMETER
-            {
-                let seen = repeats
-                    .entry(Counted((finding.code, finding.subject.clone())))
-                    .or_insert(0);
-                *seen += 1;
-                (*seen).min(at.len().saturating_sub(1))
-            } else {
-                0
-            };
-            finding.span = at.get(position).copied();
+            finding.span = index.place(&finding.subject, finding.anchor);
         }
     }
 }
 
-/// Subject → locations, in model order, built once per lookup batch: the fixed subjects
-/// (`sequence`, `derived_from`, `connection[N]`) first, then declarations, then `block.param`.
+/// The first anchor in model order, and the last: every key of one subject lies between them.
+const FIRST: Anchor = Anchor::Sequence;
+const LAST: Anchor = Anchor::Connection(usize::MAX);
+
+/// (subject, anchor) → location, built once per lookup batch. One subject's entries are adjacent
+/// and in anchor order, which is model order: the header (`sequence`, `derived_from`),
+/// parameters, inputs, outputs, each block before its assignments, then connections.
 struct Index<'a> {
-    subjects: BTreeMap<Counted<Cow<'a, str>>, Vec<Location>>,
+    elements: BTreeMap<Counted<(Cow<'a, str>, Anchor)>, Location>,
 }
 
 impl<'a> Index<'a> {
     fn new(map: &SourceMap, sequence: &'a Sequence) -> Self {
-        let mut subjects: BTreeMap<Counted<Cow<'a, str>>, Vec<Location>> = BTreeMap::new();
-        let mut add = |subject: Cow<'a, str>, at: Location| {
-            subjects.entry(Counted(subject)).or_default().push(at);
+        let mut elements: BTreeMap<Counted<(Cow<'a, str>, Anchor)>, Location> = BTreeMap::new();
+        let mut add = |subject: Cow<'a, str>, anchor: Anchor, at: Location| {
+            elements.insert(Counted((subject, anchor)), at);
         };
-        add(Cow::Borrowed("sequence"), map.sequence);
-        add(Cow::Borrowed("derived_from"), map.derived_from);
+        add(Cow::Borrowed("sequence"), Anchor::Sequence, map.sequence);
+        add(
+            Cow::Borrowed("derived_from"),
+            Anchor::DerivedFrom,
+            map.derived_from,
+        );
         for (i, at) in map.connections.iter().enumerate() {
-            add(Cow::Owned(format!("connection[{i}]")), *at);
+            add(
+                Cow::Owned(format!("connection[{i}]")),
+                Anchor::Connection(i),
+                *at,
+            );
         }
-        let declared = sequence
-            .params
-            .iter()
-            .map(|p| &p.name)
-            .zip(&map.params)
-            .chain(sequence.inputs.iter().map(|b| &b.name).zip(&map.inputs))
-            .chain(sequence.outputs.iter().map(|b| &b.name).zip(&map.outputs))
-            .chain(sequence.blocks.iter().map(|b| &b.name).zip(&map.blocks));
-        for (name, at) in declared {
-            add(Cow::Borrowed(name.as_str()), *at);
+        let params = sequence.params.iter().map(|p| &p.name).zip(&map.params);
+        let inputs = sequence.inputs.iter().map(|b| &b.name).zip(&map.inputs);
+        let outputs = sequence.outputs.iter().map(|b| &b.name).zip(&map.outputs);
+        let blocks = sequence.blocks.iter().map(|b| &b.name).zip(&map.blocks);
+        let declared = params
+            .enumerate()
+            .map(|(i, d)| (Anchor::Param(i), d))
+            .chain(inputs.enumerate().map(|(i, d)| (Anchor::Input(i), d)))
+            .chain(outputs.enumerate().map(|(i, d)| (Anchor::Output(i), d)))
+            .chain(blocks.enumerate().map(|(i, d)| (Anchor::Block(i, None), d)));
+        for (anchor, (name, at)) in declared {
+            add(Cow::Borrowed(name.as_str()), anchor, *at);
         }
-        for (block, spans) in sequence.blocks.iter().zip(&map.assignments) {
-            for (a, at) in block.assignments.iter().zip(spans) {
-                add(Cow::Owned(format!("{}.{}", block.name, a.name)), *at);
+        for (i, (block, spans)) in sequence.blocks.iter().zip(&map.assignments).enumerate() {
+            for (j, (a, at)) in block.assignments.iter().zip(spans).enumerate() {
+                add(
+                    Cow::Owned(format!("{}.{}", block.name, a.name)),
+                    Anchor::Block(i, Some(j)),
+                    *at,
+                );
             }
         }
-        Self { subjects }
+        Self { elements }
     }
 
-    fn lookup<'s>(&'s self, subject: &'s str) -> &'s [Location] {
-        self.subjects
-            .get(&Counted(Cow::Borrowed(subject)))
-            .map_or(&[], Vec::as_slice)
+    /// Every location of `subject`, in model order.
+    fn all<'s>(&'s self, subject: &'s str) -> impl Iterator<Item = Location> + 's {
+        let key = |anchor| Counted((Cow::Borrowed(subject), anchor));
+        self.elements
+            .range(key(FIRST)..=key(LAST))
+            .map(|(_, at)| *at)
+    }
+
+    /// The location of the element `subject` and `anchor` both name, else the subject's first.
+    fn place(&self, subject: &str, anchor: Anchor) -> Option<Location> {
+        self.elements
+            .get(&Counted((Cow::Borrowed(subject), anchor)))
+            .copied()
+            .or_else(|| self.all(subject).next())
     }
 }
