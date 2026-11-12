@@ -247,8 +247,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   - **Planted real failures:** flipping one real case at position 1, 174 or 348 exits 1 and names
     only that case.
 
-  On the per-PR gate (run 43167472832, four CPUs) the step took 119 s against 323–335 s, and the job
-  166 s against 379–393 s; the x86_64 release determinism cell (265 s) is the longest job again.
+  On the per-PR gate (runs 43167472832 and 43169110914, four CPUs) the step took 119 s and 178 s
+  against 323–335 s, and the job 166 s and 240 s against 379–393 s; the x86_64 release determinism
+  cell (265 s and 253 s) is the longest job again.
   The timing rows in `docs/ci-and-the-gate.md` are updated.
 
 - **Every job that runs the oce-cxf or workspace suite prefetches the tool workspaces its tests
