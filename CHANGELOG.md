@@ -351,6 +351,33 @@ and a gate that accepted any text would restore exactly the false assurance desc
     form dropped, and the private-key label words made required or limited to one. Each must
     fail a named check.
 
+### Documentation
+
+- **Design note for the upstream unit spellings** (GitHub #628, issue #622), ruled by the owner on
+  2026-11-12, with no code. `docs/design/unit-spellings.md` decides how the engine reads the unit
+  spellings modelica-json writes. Today the OBC §7.10 unit gate reads only `S231:unit`,
+  `S231:quantity` and `S231:displayUnit`, so the 484 `qudt:hasUnit` and 75 `S231:hasDisplayUnit`
+  in the vendored translations and CXF-Core pass through unread.
+  - **Spellings:** `qudt:hasUnit` and `S231:hasUnit` are read as `unit`, and
+    `S231:hasDisplayUnit` as `displayUnit`. Two spellings on one node are refused, even when they
+    agree.
+  - **Mapping:** a unit IRI goes through a closed static table in `oce-cxf`: modelica-json's
+    inverted, less the two entries that give `cfm` and `inH2O` another unit's IRI, plus the S231
+    fallback. The host sees Modelica strings, and an unmapped IRI is refused as outside the
+    subset.
+  - **Quantity kinds are not read.** modelica-json writes `PressureDifference` as `q:Pressure`,
+    and all 19 such uses in the translations mean it.
+  - **Export is unchanged**, and there is no 0.6.0 bump.
+  - **Measured** through the engine over 537 tracked and library documents: no real document
+    changes load outcome. One synthetic fixture newly fails. 19 point rows and 7 content ids move,
+    because those documents now carry units they always declared.
+  - **The work:** #631 reads the spellings in both readers and closes #622. #632, blocked by it,
+    unifies a root input's declared unit with the ports it drives: today 125 of 127 declared
+    in-repo root-input units never reach the host's point list. Closing that limit fails no
+    document, and gives 188 ports a unit across 40 documents. #633 corrects a stale test header
+    found while measuring.
+  - **Registration:** the note is listed in `docs/README.md` and the book.
+
 ## 0.5.0
 
 Prepared 2026-11-11 on `development`; the release date is the date the `v0.5.0` tag is cut from
