@@ -113,19 +113,22 @@ and a gate that accepted any text would restore exactly the false assurance desc
     `write_document` keep it: export writes every term as a bare string.
   - A parameter already refused a blank term (#594) but took the rest.
   - **Now** the engine refuses each as `malformed-document`, subject the node, one refusal per
-    term, on an Integer connector too (which reads no term). A Boolean connector's term is still
-    refused for being there at all. The authoring importer refuses a blank boundary term as
+    term, where the node is read (a pruned block's or an orphan node's term is not checked, as a
+    parameter's was not). An Integer connector's term is refused whatever its shape, as a Boolean
+    connector's is (owner ruling of 2026-11-12: CDL §7.4.1.2 gives an Integer only `min` and
+    `max`); before, a well-shaped one was dropped without a word. The authoring importer refuses a blank boundary term as
     `wrong-shape` naming the key, at import rather than only at `validate`; it already refused every
     other shape on both its roles.
   - Two message fixes ride along. The refusals that quote a key or a token (#614's reference keys,
     #619's near-miss types, and these) quote at most 64 bytes of it, cut on a character boundary
-    and marked `…`; a canonical `@id` is never cut. #619's check no longer treats a token whose
-    trimmed form still holds whitespace (`" S231: Block"`) as a near miss, since its suggestion
-    was still broken (GitHub #620).
+    and marked `…`; a canonical `@id` is never cut. #619's check still refuses a token whose
+    trimmed form holds whitespace too (`" S231: ExtensionBlock"`), but no longer suggests a
+    spelling for it, since every one it suggested was still broken (GitHub #620).
   - **Breaking, in place:** such a document loaded before. No tracked or library document carries
     one. Of the 742 terms in 257 tracked documents (457 `unit`, 240 `quantity` and 41
     `displayUnit` strings, one typed literal, two IRI nodes and one integer in a refusal fixture),
-    none is blank, carries both `@id` and `@value` or another key. The library's 140 carry no term at
+    none is blank, carries both `@id` and `@value` or another key, and none of their 794
+    Integer-typed nodes carries a term in any spelling. The library's 140 carry no term at
     all, and each is refused before any term is read. `fixture_corpus_import.txt` is byte-identical.
 
 ### Leverage

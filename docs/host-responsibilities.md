@@ -469,8 +469,12 @@ subject the node: another JSON shape, an object carrying both `@id` and `@value`
 `@type`), an object carrying any other key (`@language`, `@index`, `qudt:symbol`), and a blank term.
 On a connector a blank term would otherwise be a declared unit to the §7.10 gate: unequal to any
 other, so a cluster an absent unit lets load is refused as a mismatch, and alone, propagated to
-the peers that declare none and reported in the point list as a unit. A Boolean connector permits
-no term, whatever its shape, and is refused for carrying one.
+the peers that declare none and reported in the point list as a unit. An Integer or Boolean
+connector permits no term, whatever its shape, and is refused for carrying one: CDL §7.4.1.2 gives
+an Integer only `min` and `max` (owner ruling of 2026-11-12; before, a well-shaped term on an
+Integer connector was dropped without a word). The check runs where the node is read, as a
+parameter's does: a connector or parameter of a block pruned by a false conditional guard, or a
+node no other node lists, is not checked.
 
 The importer reads the S231 vocabulary in one namespace, `http://data.ashrae.org/S231#`: the one
 the exporter binds, the OpenBuildingControl (OBC) specification lists (OBC §11.3) and

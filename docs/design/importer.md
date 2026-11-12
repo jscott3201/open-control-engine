@@ -246,13 +246,15 @@ parameters carry `unit` in 16 fixtures, `quantity` in 13 and `min`/`max` in 3. T
 lists one **normalisation**: a boundary typed by a constant package becomes an Integer boundary
 (decision 21).
 
-Where the two readers differ on these attributes, each follows a convention it already had. The
-review of GitHub #594 probed for an attribute the importer accepts and the engine refuses and found
-none: in every difference the engine is the more lenient, or both refuse with different codes.
+Where the two readers differ on these attributes, and on a boundary's terms, each follows a
+convention it already had. The review of GitHub #594 probed for an attribute the importer accepts
+and the engine refuses and found none, and so did the review of GitHub #623: in every difference
+the engine is the more lenient, or both refuse with different codes.
 
 | Input | Engine | Importer |
 | --- | --- | --- |
 | `null` bound or term | absent, as on a connector | `wrong-shape`, as on a boundary |
+| a boundary term written as a typed literal or IRI node | accepted, read as the term | `wrong-shape`: a boundary's term is a string |
 | object bound that is no typed literal (`{}`, `{"@id": …}`, `{"@value": "30"}`) | the whole document fails to parse (`CxfError::Json`, no code or subject) | `wrong-shape` naming the key |
 | a well-shaped attribute under its full-IRI key | normalised, then checked | `unknown-key`: compact keys only |
 | typed literal carrying `@context` | `non-subset-construct` | `wrong-shape` |

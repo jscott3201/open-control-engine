@@ -311,14 +311,11 @@ fn a_near_miss_is_read_through_the_document_s_own_bindings() {
 
 #[test]
 fn tokens_that_name_no_s231_term_once_trimmed_are_left_to_the_readers() {
-    // Inner whitespace is not a near miss, with surrounding whitespace too (no spelling without the
-    // surrounding whitespace names a term, so the old suggestion `S231: Block` was still broken;
-    // GitHub #620), and neither is a token that names nothing in the S231 namespace once trimmed: a
-    // root reads no type, so these load as before.
+    // Inner whitespace alone is not a near miss (GitHub #620 covers it), and neither is a token that
+    // names nothing in the S231 namespace once trimmed: a root reads no type, so these load as
+    // before.
     for token in [
         "S231: ExtensionBlock",
-        " S231: Block",
-        "S231:Extension Block\t",
         "S231:",
         " S231: ",
         " ",
@@ -332,6 +329,39 @@ fn tokens_that_name_no_s231_term_once_trimmed_are_left_to_the_readers() {
     let diags = refusal(&with(base(), CON, "@type", json!(token)));
     assert_eq!(diags.len(), 1, "{diags:?}");
     assert_eq!(diags[0].code, DiagCode::ClassNotFound, "{diags:?}");
+}
+
+#[test]
+fn a_near_miss_with_whitespace_inside_too_is_refused_without_a_suggestion() {
+    // Surrounding whitespace and whitespace inside: refused, as #619 refused it, but no spelling
+    // without the surrounding whitespace names a term, so the message offers none (#619's offered
+    // `S231: ExtensionBlock`, still broken). Before this fix round the PR left these to the
+    // readers, and the root loaded and ran its child.
+    for (token, namespace) in [
+        (" S231: ExtensionBlock", S231_NS),
+        ("S231:Extension Block\t", S231_NS),
+        (
+            " https://data.ashrae.org/S231#Extension Block",
+            "https://data.ashrae.org/S231#",
+        ),
+    ] {
+        let doc = with(base(), ROOT, "@type", json!(token));
+        assert_eq!(
+            refusal(&doc),
+            vec![
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!(
+                        "@type {token:?} on node `{ROOT}` carries surrounding whitespace, and \
+                         whitespace inside it too, so it names no term in `{namespace}` as \
+                         written; write the S231 term with no whitespace"
+                    ),
+                )
+                .with_subject(ROOT)
+            ],
+            "{token:?}"
+        );
+    }
 }
 
 #[test]

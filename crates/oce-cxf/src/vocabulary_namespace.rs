@@ -130,9 +130,10 @@ pub(super) fn check_typing(token: &str, slot: &str, owner: &str, diags: &mut Vec
 /// surrounding whitespace is trimmed (GitHub #587). Returns whether it refused, in which case the
 /// caller skips [`check_typing`] for the token. `owner` is the node's expanded `@id`.
 ///
-/// Whitespace is what [`str::trim`] removes. A token with whitespace inside (`"S231: Real"`, and
-/// `" S231: Real"` once trimmed) is not a near miss and is left to the readers, as a key is in
-/// [`super::property_keys`]: no spelling of it without the surrounding whitespace names a term.
+/// Whitespace is what [`str::trim`] removes. A token with whitespace inside only (`"S231: Real"`)
+/// is not a near miss and is left to the readers, as a key is in [`super::property_keys`]. One
+/// with surrounding whitespace and whitespace inside (`" S231: Real"`) is refused, but its message
+/// offers no spelling, since none without the surrounding whitespace names a term (GitHub #602).
 /// The message quotes the token and the term as excerpts ([`crate::excerpt`]).
 pub(super) fn check_typing_whitespace(
     token: &str,
@@ -155,22 +156,26 @@ pub(super) fn check_typing_whitespace(
             .chain(FOREIGN_NAMESPACES)
             .find_map(|namespace| Some((namespace, iri.strip_prefix(namespace)?))),
     };
-    let Some((namespace, term)) =
-        named.filter(|(_, term)| !term.is_empty() && !term.contains(char::is_whitespace))
-    else {
+    let Some((namespace, term)) = named.filter(|(_, term)| !term.is_empty()) else {
         return false;
     };
     let subject = if owner.is_empty() { token } else { owner };
-    let (quoted, term) = (excerpt(token), excerpt(term));
-    diags.push(
-        Diagnostic::error(
-            DiagCode::MalformedDocument,
-            format!(
-                "{slot} {quoted:?} on node `{owner}` carries surrounding whitespace; without it, \
-                 it names `{term}` in `{namespace}`; write it as `S231:{term}`"
-            ),
+    let (quoted, named) = (excerpt(token), excerpt(term));
+    let message = if term.contains(char::is_whitespace) {
+        // No spelling of it without the surrounding whitespace names a term, so none is offered.
+        format!(
+            "{slot} {quoted:?} on node `{owner}` carries surrounding whitespace, and whitespace \
+             inside it too, so it names no term in `{namespace}` as written; write the S231 term \
+             with no whitespace"
         )
-        .with_subject(subject.to_owned()),
+    } else {
+        format!(
+            "{slot} {quoted:?} on node `{owner}` carries surrounding whitespace; without it, it \
+             names `{named}` in `{namespace}`; write it as `S231:{named}`"
+        )
+    };
+    diags.push(
+        Diagnostic::error(DiagCode::MalformedDocument, message).with_subject(subject.to_owned()),
     );
     true
 }

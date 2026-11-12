@@ -6,7 +6,10 @@
 //!
 //! Before #602 a connector or boundary took a blank term as a declared unit, an object carrying
 //! both `@id` and `@value` as one of the two by whether `@type` was present, and any other key
-//! without a word; a parameter refused the blank term but took the rest.
+//! without a word; a parameter refused the blank term but took the rest. An Integer connector
+//! permits no term at all (CDL §7.4.1.2 gives it only `min` and `max`): one is refused whatever
+//! its shape, as on a Boolean connector (owner ruling of 2026-11-12), where before a well-shaped
+//! one was dropped without a word.
 //!
 //! Every refusal is pinned as the complete diagnostic list, stated by hand.
 
@@ -17,17 +20,24 @@ use serde_json::{Value as Json, json};
 const XSD_STRING: &str = "http://www.w3.org/2001/XMLSchema#string";
 const TERMS: [&str; 3] = ["unit", "quantity", "displayUnit"];
 
-/// Every role a term has, by the node that carries it: a Real block port, an Integer block port,
-/// a boundary input, a boundary output and a parameter.
+/// Every role a term has, by the node that carries it: a Real block port, a boundary input, a
+/// boundary output and a parameter.
 const PORT: &str = "http://example.org#U.add.u1";
-const INTEGER_PORT: &str = "http://example.org#U.icon.y";
 const BOUNDARY_INPUT: &str = "http://example.org#U.uIn";
 const BOUNDARY_OUTPUT: &str = "http://example.org#U.yOut";
 const PARAMETER: &str = "http://example.org#U.con.k";
-const CONNECTOR_ROLES: [&str; 4] = [PORT, INTEGER_PORT, BOUNDARY_INPUT, BOUNDARY_OUTPUT];
 
-/// A root with a boundary input and output, a Real `Constant` and `Add`, and an Integer
-/// `Constant`, carrying no term.
+/// The connectors that permit no term: an Integer output and the Integer input it drives, and a
+/// Boolean output.
+const INTEGER_OUTPUT: &str = "http://example.org#U.icon.y";
+const INTEGER_INPUT: &str = "http://example.org#U.i2r.u";
+const BOOLEAN_OUTPUT: &str = "http://example.org#U.bcon.y";
+
+/// The blocks of [`base`].
+const BLOCKS: usize = 5;
+
+/// A root with a boundary input and output, a Real `Constant` and `Add`, an Integer `Constant`
+/// driving an `IntegerToReal`, and a Boolean `Constant`, carrying no term.
 fn base() -> Json {
     let real = |id: &str, kind: &str, to: Option<&str>| {
         let mut node = json!({
@@ -49,7 +59,9 @@ fn base() -> Json {
                 "S231:containsBlock": [
                     { "@id": "http://example.org#U.con" },
                     { "@id": "http://example.org#U.add" },
-                    { "@id": "http://example.org#U.icon" }
+                    { "@id": "http://example.org#U.icon" },
+                    { "@id": "http://example.org#U.i2r" },
+                    { "@id": "http://example.org#U.bcon" }
                 ],
                 "S231:hasInput": { "@id": BOUNDARY_INPUT },
                 "S231:hasOutput": { "@id": BOUNDARY_OUTPUT }
@@ -80,13 +92,38 @@ fn base() -> Json {
                 "@id": "http://example.org#U.icon",
                 "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
                 "S231:hasParameter": { "@id": "http://example.org#U.icon.k" },
-                "S231:hasOutput": { "@id": INTEGER_PORT }
+                "S231:hasOutput": { "@id": INTEGER_OUTPUT }
             },
             { "@id": "http://example.org#U.icon.k", "S231:value": 1 },
             {
-                "@id": INTEGER_PORT,
+                "@id": INTEGER_OUTPUT,
                 "@type": "S231:IntegerOutput",
+                "S231:isOfDataType": { "@id": "S231:Integer" },
+                "S231:isConnectedTo": { "@id": INTEGER_INPUT }
+            },
+            {
+                "@id": "http://example.org#U.i2r",
+                "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.IntegerToReal",
+                "S231:hasInput": { "@id": INTEGER_INPUT },
+                "S231:hasOutput": { "@id": "http://example.org#U.i2r.y" }
+            },
+            {
+                "@id": INTEGER_INPUT,
+                "@type": "S231:IntegerInput",
                 "S231:isOfDataType": { "@id": "S231:Integer" }
+            },
+            real("i2r.y", "Output", None),
+            {
+                "@id": "http://example.org#U.bcon",
+                "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+                "S231:hasParameter": { "@id": "http://example.org#U.bcon.k" },
+                "S231:hasOutput": { "@id": BOOLEAN_OUTPUT }
+            },
+            { "@id": "http://example.org#U.bcon.k", "S231:value": true },
+            {
+                "@id": BOOLEAN_OUTPUT,
+                "@type": "S231:BooleanOutput",
+                "S231:isOfDataType": { "@id": "S231:Boolean" }
             }
         ]
     })
@@ -134,21 +171,24 @@ fn refused(node: &str, term: &str, found: &str) -> Diagnostic {
     .with_subject(node)
 }
 
-/// Every role that carries `term`: all five for `unit`, and the Integer port, which carries no
-/// term, is still held to the shape.
-fn roles() -> [&'static str; 5] {
-    [
-        PORT,
-        INTEGER_PORT,
-        BOUNDARY_INPUT,
-        BOUNDARY_OUTPUT,
-        PARAMETER,
-    ]
+/// Every role that carries a term and is held to its shape.
+fn roles() -> [&'static str; 4] {
+    [PORT, BOUNDARY_INPUT, BOUNDARY_OUTPUT, PARAMETER]
+}
+
+/// The refusal of a term on an Integer connector.
+fn on_integer(node: &str) -> Diagnostic {
+    Diagnostic::error(
+        DiagCode::MalformedDocument,
+        "§7.4.1 term (unit/quantity/displayUnit) declared on an Integer connector, which permits \
+         only min and max",
+    )
+    .with_subject(node)
 }
 
 #[test]
 fn the_three_shapes_load_on_every_role() {
-    assert_eq!(loads(&base()), 3);
+    assert_eq!(loads(&base()), BLOCKS);
     for term in TERMS {
         for value in [
             json!("K"),
@@ -159,7 +199,7 @@ fn the_three_shapes_load_on_every_role() {
             for node in roles() {
                 assert_eq!(
                     loads(&with(base(), node, term, value.clone())),
-                    3,
+                    BLOCKS,
                     "{node} {term} {value}"
                 );
             }
@@ -306,43 +346,69 @@ fn the_earlier_refusals_still_come_first() {
     assert!(diags[0].message.contains("scoped `@context`"), "{diags:?}");
     // A Boolean connector permits no term at all: that refusal is the only one, whatever the
     // term's shape.
-    let mut doc = base();
-    let graph = doc["@graph"].as_array_mut().expect("@graph");
-    let node = graph
-        .iter_mut()
-        .find(|node| node["@id"] == INTEGER_PORT)
-        .expect("port");
-    node["@type"] = json!("S231:BooleanOutput");
-    node["S231:isOfDataType"] = json!({ "@id": "S231:Boolean" });
-    graph
-        .iter_mut()
-        .find(|node| node["@id"] == "http://example.org#U.icon")
-        .expect("icon")["@type"] =
-        json!("http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant");
-    graph
-        .iter_mut()
-        .find(|node| node["@id"] == "http://example.org#U.icon.k")
-        .expect("k")["S231:value"] = json!(true);
-    assert_eq!(loads(&doc), 3, "the Boolean control loads");
-    let doc = with(doc, INTEGER_PORT, "unit", json!(""));
-    assert_eq!(
-        refusal(&doc),
-        vec![
-            Diagnostic::error(
-                DiagCode::MalformedDocument,
-                "§7.4.1 attribute (unit/quantity/displayUnit/min/max) declared on a Boolean \
-                 connector, which permits none",
-            )
-            .with_subject(INTEGER_PORT)
-        ]
-    );
+    for value in [json!("K"), json!("")] {
+        assert_eq!(
+            refusal(&with(base(), BOOLEAN_OUTPUT, "unit", value.clone())),
+            vec![
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    "§7.4.1 attribute (unit/quantity/displayUnit/min/max) declared on a Boolean \
+                     connector, which permits none",
+                )
+                .with_subject(BOOLEAN_OUTPUT)
+            ],
+            "{value}"
+        );
+    }
+}
+
+#[test]
+fn a_term_on_an_integer_connector_is_refused_whatever_its_shape() {
+    // CDL §7.4.1.2 gives an Integer only `min` and `max`. Before: a well-shaped term loaded and was
+    // dropped without a word; this PR's first head refused only a malformed one.
+    for node in [INTEGER_OUTPUT, INTEGER_INPUT] {
+        for term in TERMS {
+            for value in [
+                json!("1"),
+                json!({ "@value": "1", "@type": XSD_STRING }),
+                json!({ "@id": "unit:UNITLESS" }),
+                json!(""),
+                json!({ "@id": "unit:K", "@value": "K" }),
+                json!(5),
+            ] {
+                assert_eq!(
+                    refusal(&with(base(), node, term, value.clone())),
+                    vec![on_integer(node)],
+                    "{node} {term} {value}"
+                );
+            }
+        }
+        // All three terms on one connector are one refusal; its bounds stay legal.
+        let mut doc = base();
+        for term in TERMS {
+            doc = with(doc, node, term, json!("1"));
+        }
+        doc = with(doc, node, "min", json!(0));
+        assert_eq!(refusal(&doc), vec![on_integer(node)], "{node}");
+        assert_eq!(
+            loads(&with(base(), node, "max", json!(10))),
+            BLOCKS,
+            "{node}"
+        );
+    }
 }
 
 #[test]
 fn every_term_refusal_in_a_document_is_reported_in_a_stable_order() {
     let mut doc = base();
-    for (index, node) in CONNECTOR_ROLES.into_iter().chain([PARAMETER]).enumerate() {
-        doc = with(doc, node, TERMS[index % 3], json!(" "));
+    for (node, term) in [
+        (PORT, "unit"),
+        (BOUNDARY_INPUT, "displayUnit"),
+        (BOUNDARY_OUTPUT, "unit"),
+        (PARAMETER, "quantity"),
+        (INTEGER_OUTPUT, "quantity"),
+    ] {
+        doc = with(doc, node, term, json!(" "));
     }
     doc = with(
         doc,
@@ -351,33 +417,21 @@ fn every_term_refusal_in_a_document_is_reported_in_a_stable_order() {
         json!({ "@id": "q:T", "@value": "T" }),
     );
     let first = refusal(&doc);
+    let blank = "an empty or whitespace-only string";
     let mut expected = vec![
-        refused(PORT, "unit", "an empty or whitespace-only string"),
+        refused(PORT, "unit", blank),
         refused(PORT, "quantity", "an object carrying both @id and @value"),
-        refused(
-            INTEGER_PORT,
-            "quantity",
-            "an empty or whitespace-only string",
-        ),
-        refused(
-            BOUNDARY_INPUT,
-            "displayUnit",
-            "an empty or whitespace-only string",
-        ),
-        refused(
-            BOUNDARY_OUTPUT,
-            "unit",
-            "an empty or whitespace-only string",
-        ),
-        refused(PARAMETER, "quantity", "an empty or whitespace-only string"),
+        refused(BOUNDARY_INPUT, "displayUnit", blank),
+        refused(BOUNDARY_OUTPUT, "unit", blank),
+        refused(PARAMETER, "quantity", blank),
+        on_integer(INTEGER_OUTPUT),
     ];
-    expected.sort_by(|a, b| {
+    let by_subject = |a: &Diagnostic, b: &Diagnostic| {
         (a.subject.as_deref(), &a.message).cmp(&(b.subject.as_deref(), &b.message))
-    });
+    };
+    expected.sort_by(by_subject);
     let mut sorted = first.clone();
-    sorted.sort_by(|a, b| {
-        (a.subject.as_deref(), &a.message).cmp(&(b.subject.as_deref(), &b.message))
-    });
+    sorted.sort_by(by_subject);
     assert_eq!(sorted, expected, "the same set");
     for _ in 0..8 {
         assert_eq!(refusal(&doc), first, "the same order every time");
