@@ -601,17 +601,23 @@ read it as an option, exited 129, and the scan took that for a clean tree. Each 
 after `-e`, and only `git grep`'s "no match" (exit 1) counts as clean: an error fails the scan
 with exit 2, naming the pattern and git's status, with git's own message left on stderr (so the
 scan also fails outside a repository, where `grep.fallbackToNoIndex`, forced off, would otherwise
-let git search the directory). The private-key pattern covers RSA, EC and OpenSSH headers only;
-issue #607 tracks PKCS#8, DSA, encrypted and OpenPGP keys. `.github/scripts/test-check-no-secrets.sh`
-plants matches for every pattern in a scratch repository (every alternative, at the shortest
-length each pattern accepts, with both ends of every range of each class) and requires each to
-fail under its own label, keeps a near miss one character short of every quantifier in the clean
-tree, holds both lists of labels equal to the scan's, and puts a defect back in 37 copies of the
-scan (among them every pattern with a class narrowed, an end anchor added, or a quantifier
-tightened or loosened), each of which must fail a named check. Its values are assembled at run
-time from fragments, so the fixture file itself holds no match; build any new one the same way.
-A new pattern needs planted values and a near miss there, or the fixture fails, and a change to a
-pattern's meaning moves the values, near misses and weakened copies that pin it.
+let git search the directory). Since issue #607 the private-key pattern matches every PEM
+private-key header (`PRIVATE KEY`, `ENCRYPTED PRIVATE KEY`, `RSA`, `DSA`, `EC`, `OPENSSH` and any
+other label of upper-case words before `PRIVATE KEY`) and the armored OpenPGP key's
+`PRIVATE KEY BLOCK`, and no public-key or certificate header. `.github/scripts/test-check-no-secrets.sh`
+plants matches for every pattern in a scratch repository and requires each to be reported under
+its own label. Between them a pattern's values hold every member of each character class where
+the pattern reads it, each value as short as the pattern accepts and with text after it, one at
+the start of its line and one after a word character. It keeps near misses in the clean tree (one
+character short of every quantifier, each pattern in the wrong case, the public-key and
+certificate headers), holds both lists of labels equal to the scan's, and puts a defect back in
+72 copies of the scan, each of which must fail a named check: among them `-i`, and every pattern
+with a class narrowed at an end and with a hole in the middle, a start anchor, a required
+non-word character before it, an end anchor, and a quantifier tightened or loosened. Its values
+are assembled at run time from fragments, so the fixture file itself holds no match; build any
+new one the same way, and keep `sk-` out of case names (a name such as `…-sk-after-a-word-…` is
+itself a match). A new pattern needs planted values and near misses there, or the fixture fails,
+and a change to a pattern's meaning moves the values, near misses and weakened copies that pin it.
 
 ## Working directories are gitignored
 

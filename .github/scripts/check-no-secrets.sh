@@ -44,7 +44,10 @@ scan() {
 }
 
 scan 'AKIA[0-9A-Z]{16}' 'AWS access key id'
-scan '-----BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY-----' 'private key block'
+# Every PEM private-key header (issue #607): PKCS#8's `PRIVATE KEY` and `ENCRYPTED PRIVATE KEY`
+# (RFC 7468), the legacy `RSA`, `DSA` and `EC` forms, OpenSSH's, any other label of upper-case
+# words before `PRIVATE KEY`, and the armored OpenPGP key, whose header ends `PRIVATE KEY BLOCK`.
+scan '-----BEGIN ([A-Z0-9]+ )*PRIVATE KEY( BLOCK)?-----' 'private key block'
 scan 'xox[abpr]-[A-Za-z0-9-]{10,}' 'Slack token'
 scan 'gh[pousr]_[A-Za-z0-9]{36,}' 'GitHub token'
 scan 'sk-[A-Za-z0-9_-]{20,}' 'API token (sk- prefix)'
