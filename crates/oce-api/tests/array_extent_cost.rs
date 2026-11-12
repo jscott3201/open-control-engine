@@ -117,14 +117,17 @@ fn refusing_many_elements_past_the_length_costs_linearly_in_the_elements() {
     }
 }
 
-/// The four rules with elements past a small length: class, base, the fixed parameters, and an
+/// One rule's table of elements past a small length: class, base, the fixed parameters, and an
 /// element value.
-fn many() -> Vec<(
+type Many = (
     &'static str,
     &'static str,
     Vec<(&'static str, Value)>,
     Value,
-)> {
+);
+
+/// The four rules with elements past a small length.
+fn many() -> Vec<Many> {
     vec![
         (
             "CDL.Reals.MultiSum",
