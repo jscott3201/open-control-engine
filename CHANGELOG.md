@@ -148,7 +148,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   each command's text refusal is pinned at 2:1. The `extends` test in `wire_refusals.rs` now
   pins where each of its three refusals stops.
 - **A receipt's `engine_version` is the engine version its build's blobs and snapshots record**
-  (GitHub #PRNUM, issue #593). `oce-verify` filled the field from
+  (GitHub #621, issue #593). `oce-verify` filled the field from
   `CompatibilityDescriptor::oce_api_version()`, the facade's Cargo version, which keeps a
   pre-release suffix. A compiled-schedule blob and a state snapshot carry
   `oce_api::ENGINE_VERSION`, its major, minor and patch only. So a `0.6.0-rc.1` build would
