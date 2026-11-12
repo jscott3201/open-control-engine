@@ -40,7 +40,7 @@ EXPECTED_PRIVATE = {
 }
 
 
-# Independent raw-byte golden from release.yml as re-pinned for issue #519, not read from the
+# Independent raw-byte golden from release.yml as re-pinned for issue #610, not read from the
 # candidate or checker.
 # Non-ASCII bytes are escaped explicitly; line endings and the final LF are pinned.
 APPROVED_WORKFLOW = b"""# release \xe2\x80\x94 the crates.io publish gate.
@@ -114,6 +114,12 @@ jobs:
 
       - name: clippy (-D warnings)
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      # oce-cxf's OpenModelica evidence checks build tool workspaces with `cargo --offline`, and
+      # this job has no cache: without this step the tests cannot find the tools' crates. It failed
+      # the verify of tag v0.5.0 (issue #610); check-workflow-gates.sh requires it.
+      - name: prefetch the tool workspaces the tests build offline
+        run: bash scripts/ci/prefetch-offline-tools.sh
 
       - name: tests
         run: cargo test --workspace --locked

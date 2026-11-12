@@ -1123,15 +1123,164 @@ require_mdbook_cache() {
   fi
 }
 
+# The tool workspaces some oce-cxf tests build with `cargo --offline` (issue #610). Those tests (the
+# OpenModelica evidence checks of `fixture_structural_oracle`) need the tools' crates, which no
+# build of the root workspace downloads and no cache keyed on the root lockfile need hold: the
+# verify job of tag v0.5.0, with no cache, failed 15 of them. So every job that runs the oce-cxf
+# suite, or the whole workspace's, must run the prefetch script, as a step of its own, before it.
+#
+# A job runs those tests when one of its `run:` commands (inline, a literal block with its
+# backslash continuations joined, or a folded block joined whole) is `cargo test`, `cargo t`,
+# `cargo nextest run`/`r` or `cargo-nextest`, a `+toolchain` included, that selects oce-cxf
+# (`-p`/`--package`, spaced, joined or with `=`), the workspace (`--workspace`, `--all`), or nothing
+# at all from the repository root, where a bare command runs every member. Not counted: `--doc`
+# (doctests build no tool), `--archive-file` (the archive's packages were chosen where it was
+# built; no archive holds oce-cxf today), another selection, a bare command under a
+# `working-directory:` (another workspace, golden-gen's), and a job whose `runs-on:` is a literal
+# `windows-*` label (the tests are `#[cfg(unix)]`; an expression counts). The prefetch must be the
+# whole command of a step with no `if:` and no `continue-on-error:`, on an earlier step.
+OFFLINE_TOOL_PREFETCH='bash scripts/ci/prefetch-offline-tools.sh'
+
+require_offline_tool_prefetch() {
+  path="$1"
+  local bad
+  bad="$(awk -v prefetch="$OFFLINE_TOOL_PREFETCH" '
+    function trim(s) { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); return s }
+    function unquote(s,   q, first, last) {
+      q = sprintf("%c", 39)
+      first = substr(s, 1, 1); last = substr(s, length(s), 1)
+      if (length(s) >= 2 && first == last && (first == "\"" || first == q)) s = substr(s, 2, length(s) - 2)
+      return s
+    }
+    function indent(s) { match(s, /^ */); return RLENGTH }
+    function runs_suite(c, wd) {
+      if (c !~ /(^|[^[:alnum:]_.\/-])(cargo([[:space:]]+\+[^[:space:]]+)?[[:space:]]+(test|t|nextest[[:space:]]+(run|r))|cargo-nextest([[:space:]]+nextest)?[[:space:]]+(run|r))([[:space:]]|$)/) return 0
+      if (c ~ /(^|[[:space:]])--doc([[:space:]]|$)/) return 0
+      if (c ~ /--archive-file/) return 0
+      if (c ~ /(^|[[:space:]])(-p|--package)([[:space:]]+|=)?oce-cxf([^[:alnum:]_-]|$)/) return 1
+      if (c ~ /(^|[[:space:]])(--workspace|--all)([[:space:]=]|$)/) return 1
+      if (c ~ /(^|[[:space:]])(-p|--package|--manifest-path)([[:space:]=]|[[:alnum:]])/) return 0
+      return wd == "" || wd == "." || wd == "./"
+    }
+    function command(c) {
+      c = trim(c)
+      if (c == "") return
+      if (c == prefetch && !step_masked) { prefetched = 1; return }
+      if (first_test == "" && !windows && runs_suite(c, step_wd != "" ? step_wd : job_wd)) {
+        first_test = c
+        if (!prefetched) print job ": `" c "` runs before any unmasked `" prefetch "` step"
+      }
+    }
+    function end_block(   n, k, part, joined) {
+      if (!in_block) return
+      in_block = 0
+      if (block_folded) { command(block); block = ""; return }
+      n = split(block, parts, "\n")
+      joined = ""
+      for (k = 1; k <= n; k++) {
+        part = parts[k]
+        if (part ~ /\\[[:space:]]*$/) { sub(/\\[[:space:]]*$/, " ", part); joined = joined part; continue }
+        command(joined part)
+        joined = ""
+      }
+      if (joined != "") command(joined)
+      block = ""
+    }
+    function end_step(   k) {
+      end_block()
+      for (k = 1; k <= ncmd; k++) command(cmd[k])
+      ncmd = 0; step_masked = 0; step_wd = ""; in_step = 0
+    }
+    function end_job() {
+      end_step()
+      job = ""; job_wd = ""; windows = 0; prefetched = 0; first_test = ""; in_steps = 0
+    }
+    /^jobs:[[:space:]]*$/ { in_jobs = 1; next }
+    in_jobs && /^[^[:space:]#]/ { end_job(); in_jobs = 0 }
+    !in_jobs { next }
+    /^[[:space:]]*#/ { next }
+    /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { end_job(); job = $0; sub(/^  /, "", job); sub(/:.*/, "", job); next }
+    job == "" { next }
+    in_block {
+      if ($0 ~ /^[[:space:]]*$/ || indent($0) > block_indent) {
+        block = block (block == "" ? "" : (block_folded ? " " : "\n")) trim($0)
+        next
+      }
+      end_block()
+    }
+    /^    runs-on:/ {
+      value = $0; sub(/^    runs-on:[[:space:]]*/, "", value)
+      windows = (unquote(trim(value)) ~ /^windows-/)
+      next
+    }
+    /^    steps:/ { in_steps = 1; next }
+    /^    [^ ]/ { end_step(); in_steps = 0 }
+    !in_steps && /^        working-directory:/ {
+      value = $0; sub(/^[^:]*:[[:space:]]*/, "", value); job_wd = unquote(trim(value)); next
+    }
+    !in_steps { next }
+    { line = $0 }
+    /^      - / { end_step(); in_step = 1; sub(/^      - /, "        ", line) }
+    in_step && line ~ /^        (if|continue-on-error):/ { step_masked = 1 }
+    in_step && line ~ /^        working-directory:/ {
+      value = line; sub(/^[^:]*:[[:space:]]*/, "", value); step_wd = unquote(trim(value))
+    }
+    in_step && line ~ /^        run:/ {
+      value = line; sub(/^        run:[[:space:]]*/, "", value); value = trim(value)
+      if (value ~ /^[|>][-+]?$/) { in_block = 1; block = ""; block_indent = 8; block_folded = (value ~ /^>/) }
+      else cmd[++ncmd] = unquote(value)
+    }
+    END { end_job() }
+  ' "$path")"
+  if [ -n "$bad" ]; then
+    echo "FAIL: $path runs the oce-cxf or workspace suite, whose OpenModelica checks build tool workspaces offline, without running \`$OFFLINE_TOOL_PREFETCH\` first (issue #610):"
+    printf '%s\n' "$bad" | sed 's/^/  /'
+    exit 1
+  fi
+}
+
+# The gate script runs the same tests (its structural-oracle step and `full`'s workspace suite), so
+# it must run the prefetch, as a whole step line, before the first of its oce-cxf or workspace test
+# commands, backslash continuations joined. Comment lines never count.
+require_gate_script_prefetch() {
+  local step_line="step 'prefetch the offline tool workspaces' $OFFLINE_TOOL_PREFETCH"
+  local order prefetch_at test_at
+  order="$(awk -v wanted="$step_line" '
+    function trim(s) { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); return s }
+    /^[[:space:]]*#/ { next }
+    {
+      line = $0
+      if (line ~ /\\[[:space:]]*$/) {
+        sub(/\\[[:space:]]*$/, " ", line); held = held line; if (start == 0) start = NR; next
+      }
+      logical = trim(held line); first = (start == 0 ? NR : start); held = ""; start = 0
+      if (logical == wanted && prefetch == 0) prefetch = first
+      if (test == 0 && logical ~ /cargo[[:space:]]+(nextest[[:space:]]+run|test)([[:space:]]|$)/ &&
+          logical !~ /--doc/ &&
+          (logical ~ /(-p|--package)([[:space:]]+|=)?oce-cxf([^[:alnum:]_-]|$)/ ||
+           logical ~ /--workspace([[:space:]=]|$)/)) test = first
+    }
+    END { print prefetch + 0, test + 0 }
+  ' "$GATE_SCRIPT")"
+  prefetch_at="${order% *}"
+  test_at="${order#* }"
+  if [ "$prefetch_at" -eq 0 ] || { [ "$test_at" -ne 0 ] && [ "$prefetch_at" -ge "$test_at" ]; }; then
+    echo "FAIL: $GATE_SCRIPT must run \`$step_line\`, the whole line, before its first oce-cxf or workspace test step (issue #610)"
+    exit 1
+  fi
+}
+
 ci="$WORKFLOW_DIR/pr-gate.yml"
 merge="$WORKFLOW_DIR/merge-gate.yml"
 release="$WORKFLOW_DIR/release-gate.yml"
 advisories="$WORKFLOW_DIR/advisories.yml"
+publish="$WORKFLOW_DIR/release.yml"
 
 require_file "$ci"
 require_file "$merge"
 require_file "$release"
 require_file "$advisories"
+require_file "$publish"
 require_file "$DENY_TOML"
 require_file "$GATE_SCRIPT"
 require_unsafe_forbid_layers
@@ -1579,5 +1728,13 @@ require_pattern "$DENY_TOML" '^[[:space:]]*\{[[:space:]]*name[[:space:]]*=[[:spa
   'cargo-deny bans include representative SQL/ORM crate sqlx'
 require_pattern "$DENY_TOML" '^[[:space:]]*\{[[:space:]]*name[[:space:]]*=[[:space:]]*"sled"[[:space:]]*\}' \
   'cargo-deny bans include representative embedded-KV crate sled'
+
+# The offline tool workspaces (issue #610), last, so each job-specific rule above reports first:
+# every workflow but the frozen ci.yml, so a job added anywhere is held to it, and the gate script.
+for workflow in "$WORKFLOW_DIR"/*.yml; do
+  [ "$(basename "$workflow")" = ci.yml ] && continue
+  require_offline_tool_prefetch "$workflow"
+done
+require_gate_script_prefetch
 
 echo "OK: workflow gate smoke passed."

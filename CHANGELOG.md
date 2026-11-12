@@ -37,7 +37,31 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
-Nothing yet.
+### Verification
+
+- **Every job that runs the oce-cxf or workspace suite prefetches the tool workspaces its tests
+  build offline** (GitHub #611, issue #610). The `release.yml` verify of tag `v0.5.0` (run
+  43129183575) failed 15 oce-cxf tests of the `fixture_structural_oracle` binary, all
+  `open_modelica_line_reference::*` and `open_modelica_reliefs_reference::*`. Those tests build a
+  tool workspace (`tools/openmodelica-line-reference`, `-reliefs-reference`, and the dependency-free
+  `-toggle-reference`) with `cargo run --offline --locked`. Each tool has a `Cargo.lock` of its own,
+  and two pin `rustix 1.1.4` while the root moved to 1.1.6 (GitHub #605), so a cargo home that has
+  built only the root workspace lacks it. `release.yml` keeps no cache. pr-gate and release-gate
+  stayed green only by restoring, through rust-cache's restore-key fallback, an entry saved before
+  #605: their key hashes only the root lockfile and the members' manifests, and a save prunes the
+  registry to the root's crates (pr-gate run 43132109525 of a PR that changed `Cargo.lock` then
+  failed the same way). The new `scripts/ci/prefetch-offline-tools.sh` runs
+  `cargo fetch --locked --manifest-path <tool>/Cargo.toml` for the three tools. pr-gate's
+  `crate-tests`, release-gate's `test-suite`, `release.yml`'s verify and `.agents/gate.sh` (before
+  its first oce-cxf step) run it before the tests. The Windows cells need none: the tests are
+  `#[cfg(unix)]`. `check-workflow-gates.sh` now reads `release.yml` too, and refuses any job in any
+  workflow but `ci.yml` that runs the oce-cxf suite, the workspace's or a bare `cargo test` from the
+  root without the prefetch as an earlier, unmasked step of its own, in every spelling its fixtures
+  try, and a gate script without the step before its first such test. Reproduced first: with a
+  `CARGO_HOME` holding only the root workspace's crates, the same 15 tests fail with the same error,
+  and after the prefetch all 94 tests of the three modules pass. No tool lockfile or evidence
+  manifest moves: the tools' rustix bump and the evidence regeneration it needs stay issue #604
+  (owner rulings of 2026-11-12: keep the `v0.5.0` tag and fix forward; prefetch now, bump later).
 
 ## 0.5.0
 

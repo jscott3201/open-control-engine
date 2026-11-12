@@ -304,6 +304,37 @@ exact-key miss, so under a shared key the first job to finish writes the entry, 
 dependency set is what that key holds until `Cargo.lock`, the toolchain or the environment changes. `golden-gen-hygiene` keeps its own
 per-job key (it builds the separate `tools/golden-gen` workspace).
 
+**Offline tool workspaces.** No cache may be relied on for a crate the root workspace does not use
+(issue #610). Some oce-cxf tests build a tool workspace with `cargo run --offline --locked`: the
+OpenModelica evidence checks of `fixture_structural_oracle`, which build
+`tools/openmodelica-line-reference`, `tools/openmodelica-reliefs-reference` and
+`tools/openmodelica-toggle-reference`, directly or through the tools' `assemble.sh` and
+`verify_evidence.py`. Each tool has a `Cargo.lock` of its own, and a rust-cache entry holds only
+what the root workspace uses. Its key hashes the root `Cargo.lock` and the members' manifests,
+never a tool's, and its save prunes the registry to the root workspace's crates
+(`cache-all-crates: false`).
+
+After GitHub #605 moved the root to `rustix 1.1.6`, the two tools that pin 1.1.4 kept building only
+while a run restored, through the restore-key fallback, an entry saved before that change. The
+`release.yml` verify of tag `v0.5.0` (run 43129183575) uses no cache and failed 15 of these tests.
+So did pr-gate run 43132109525 of a PR whose own `Cargo.lock` change meant a new key.
+
+`scripts/ci/prefetch-offline-tools.sh` holds the list and runs `cargo fetch --locked --manifest-path`
+for each tool. These run it as a step of their own, before the tests:
+- pr-gate's `crate-tests`;
+- release-gate's `test-suite`;
+- `release.yml`'s verify;
+- `.agents/gate.sh`, before its first oce-cxf step, which covers `gate (full)`.
+
+The Windows cells run none of these tests, which are all `#[cfg(unix)]`, and need no prefetch.
+
+`check-workflow-gates.sh` refuses a job in any workflow but `ci.yml` that runs the oce-cxf suite,
+the workspace's, or a bare `cargo test` from the root without the prefetch before it (its fixtures
+try the spellings and the masks). It also refuses a gate script without it. A new test that builds
+another tool workspace offline adds the tool to the script's list. Without it, the test passes on a
+warm cache and fails on a cold one, as these did. The two tools' lockfiles stay on rustix 1.1.4
+until issue #604 moves them with the OpenModelica evidence their digests are bound into.
+
 **mdBook.** The `docs` job and `docs-pages.yml` get mdBook only from `scripts/docs/install-mdbook.sh`,
 which downloads the pinned upstream release archive, checks its SHA-256 against
 `site/mdbook-checksums.txt`, extracts it, and checks the extracted `mdbook` executable against a second
@@ -858,7 +889,9 @@ registry release.
 
 `release.yml` publishes with the crates.io token held in its `release` GitHub Environment. It is
 decoupled from both gates and from each other's triggers. Pushing a `v*` tag runs verify only —
-tag/version match, fmt, clippy, a workspace `cargo test`, the package validator and a full
+tag/version match, fmt, clippy, the offline tool prefetch (it has no cache; see
+[offline tool workspaces](#what-runs-after-the-merge)), a workspace `cargo test`, the package
+validator and a full
 `cargo publish --workspace --locked --dry-run` — with no token and no publish, so a tag can be
 re-cut safely (see [release.yml](../.github/workflows/release.yml), `verify` job). Publishing is a
 separate manual `workflow_dispatch` into the `release` GitHub Environment. Cargo's workspace

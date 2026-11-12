@@ -556,6 +556,27 @@ release once and afterwards only re-verifies it; `cargo clean` removes it, and t
 downloads it again). That job runs the documentation checks `docs-pages.yml` also runs; that
 workflow is path-filtered and not required, and still builds and publishes the site from `main`.
 
+## Tests that build a tool workspace offline need the prefetch
+
+Some oce-cxf tests (the OpenModelica evidence checks of `fixture_structural_oracle`) build
+`tools/openmodelica-line-reference`, `tools/openmodelica-reliefs-reference` and
+`tools/openmodelica-toggle-reference` with `cargo run --offline --locked`. Each tool has a
+`Cargo.lock` of its own, which no build of the root workspace fetches. A rust-cache entry is keyed
+on the root lockfile and pruned to the root's crates, so it need not hold the tools' crates either.
+After GitHub #605 moved the root to rustix 1.1.6, the tag verify of `v0.5.0` (no cache) failed 15 of
+these tests on the tools' rustix 1.1.4 (issue #610).
+
+`bash scripts/ci/prefetch-offline-tools.sh` fetches the tools' crates. pr-gate's `crate-tests`,
+release-gate's `test-suite`, `release.yml`'s verify and `.agents/gate.sh` run it before the tests.
+`check-workflow-gates.sh` refuses a non-Windows job that runs the oce-cxf or workspace suite
+without it, and a gate script without it. To run these suites by hand on a fresh cargo home, run
+the script first.
+
+A new test that builds another tool workspace offline adds the tool to the script's list. Changing
+either tool lockfile is issue #604: their digests are bound into recorded OpenModelica evidence.
+`release.yml` is byte-pinned by `scripts/package_policy/release_workflow.py` (digest) and
+`test_validate.py` (golden), so a change to it updates both in the same PR.
+
 ## Clippy lints the default feature set
 
 `cargo clippy --workspace --all-targets --locked -- -D warnings`, matching CI.
