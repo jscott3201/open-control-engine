@@ -1,8 +1,10 @@
-use alloc::{boxed::Box, format, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
 use oce_model::ParamTable;
 
 use super::reals_defaults::*;
-use super::{bool_param, int_param, real_or, real_param, vector_elements, zero_time_param};
+use super::{
+    bool_param, int_param, matrix_elements, real_or, real_param, vector_elements, zero_time_param,
+};
 use crate::reals_sources::{MIN_SOURCE_RAMP_DURATION, ZERO_TIME_MEMBERS};
 use crate::source_timetable::{EXTRAPOLATION_MEMBERS, SMOOTHNESS_MEMBERS};
 use crate::{
@@ -655,15 +657,12 @@ fn make_matrix_gain(p: &ParamTable) -> Box<dyn Block> {
     if product > MAX_RESOLVED_PORT_WIDTH {
         return Box::new(MatrixGain::new(0, 0, Vec::new()));
     }
-    let gains = (1..=nout)
-        .flat_map(|row| (1..=nin).map(move |col| (row, col)))
-        .map(|(row, col)| {
-            real_param(
-                p,
-                &format!("K_{row}_{col}"),
-                if row == col { 1.0 } else { 0.0 },
-            )
-        })
+    // Row-major, each cell read once (GitHub #643); a cell left out is the identity's.
+    let diagonal = (1..=nout).flat_map(|row| (1..=nin).map(move |col| row == col));
+    let gains = matrix_elements(p, "K", nout, nin)
+        .into_iter()
+        .zip(diagonal)
+        .map(|(value, diagonal)| real_or(value, if diagonal { 1.0 } else { 0.0 }))
         .collect();
     Box::new(MatrixGain::new(nin, nout, gains))
 }
