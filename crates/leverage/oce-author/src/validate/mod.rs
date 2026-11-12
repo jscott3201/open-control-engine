@@ -172,6 +172,11 @@ pub enum Origin {
 }
 
 /// One validation finding.
+///
+/// Equality compares every field, including one callers cannot read: the position in the
+/// authored model the validator reported the finding at (the element [`crate::SourceMap::apply`]
+/// places it on). So two findings that print and serialise alike, about two declarations of one
+/// name, are not equal.
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Finding {

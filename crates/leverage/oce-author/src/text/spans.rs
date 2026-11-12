@@ -62,10 +62,12 @@ impl SourceMap {
     /// finding about a declaration named `sequence` or `derived_from` is placed on that
     /// declaration and a finding about the header on the header, and a `duplicate-name` or
     /// `duplicate-parameter` finding on the repeat it reports, never on the first declaration. A
-    /// finding whose subject names other elements than that one (a caller rewrote the subject)
-    /// is placed on the subject's first location in model order; a subject the map cannot place
-    /// (an engine subject no statement names) keeps `None`. The index is built once, so the cost
-    /// is linear in the findings and the declarations, with one logarithmic lookup each.
+    /// finding whose subject does not name that element (a caller rewrote the subject) is
+    /// placed on the subject's location only when the subject names exactly one element; when
+    /// it names several, the finding keeps `None` rather than a guess among them. A subject the
+    /// map cannot place (an engine subject no statement names) keeps `None` too. The index is
+    /// built once, so the cost is linear in the findings and the declarations, with one
+    /// logarithmic lookup each.
     pub fn apply(&self, sequence: &Sequence, findings: &mut [Finding]) {
         let index = Index::new(self, sequence);
         for finding in findings.iter_mut() {
@@ -137,11 +139,20 @@ impl<'a> Index<'a> {
             .map(|(_, at)| *at)
     }
 
-    /// The location of the element `subject` and `anchor` both name, else the subject's first.
+    /// The location of the element `subject` and `anchor` both name; else the subject's
+    /// location when it names exactly one element, and `None` when it names several, because
+    /// choosing one of them would guess.
     fn place(&self, subject: &str, anchor: Anchor) -> Option<Location> {
-        self.elements
+        if let Some(at) = self
+            .elements
             .get(&Counted((Cow::Borrowed(subject), anchor)))
-            .copied()
-            .or_else(|| self.all(subject).next())
+        {
+            return Some(*at);
+        }
+        let mut named = self.all(subject);
+        match (named.next(), named.next()) {
+            (Some(only), None) => Some(only),
+            _ => None,
+        }
     }
 }

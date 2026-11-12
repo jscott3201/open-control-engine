@@ -323,7 +323,9 @@ placed on the one the validator reported it on, not on the first its subject nam
 declaration named like a header word (`in sequence : Real`, `param derived_from : …`, refused
 as `invalid-name`) keeps its findings on its own line, the header's stay on the header, and a
 `duplicate-name` or `duplicate-parameter` finding is placed on the repeat it reports (issue
-#585). A subject no statement names (an engine `connector#N` stage 2 could not map) keeps
+#585). A finding whose subject a caller rewrote is placed on the subject's statement only when
+the subject names exactly one; when it names several, the finding keeps `None` rather than a guess
+among them. A subject no statement names (an engine `connector#N` stage 2 could not map) keeps
 `None`, as do wire-form findings. The index is built once per document, so placing the findings
 of a document at the statement cap costs about what validating it does.
 

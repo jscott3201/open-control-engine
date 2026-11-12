@@ -125,12 +125,11 @@ fn the_cdl_word_extends_is_an_unknown_key() {
             column: u32::try_from(start - line_start + "\"extends\"".len()).expect("fits"),
         }
     };
-    let last_at = key_end(&last);
-    assert_eq!(
-        usize::try_from(last_at.line).expect("fits"),
-        last.lines().count() - 1,
-        "the line before the root closes"
-    );
+    // The last key stands on the line before the root closes, indented like the others.
+    let last_at = Location {
+        line: u32::try_from(last.lines().count() - 1).expect("fits"),
+        column: 11,
+    };
     for (case, text, at) in [
         (
             "renamed",

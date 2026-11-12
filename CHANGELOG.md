@@ -94,12 +94,14 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `oce validate`, `oce emit` and `oce verify --subject` place through the same map. Every
   `Finding` now carries, in a crate-private field, the position in the model the validator
   reported it at, and the map is keyed by subject and position. A finding whose subject a caller
-  rewrote falls back to that subject's first location, and one the text does not name still
-  keeps `None`. `Finding`'s `Debug` output shows the field, and two findings at different
-  positions are no longer equal. Three CLI transcripts move, one span each: the second
-  `block lim` of `stage_one.oce` is the one whose class is not found, so `validate_text_findings`,
-  `validate_render_always` and `emit_stage_one_refusal` now place that `class-not-found` at 9:7,
-  not 8:7. Placing the findings costs n·log n comparisons for a name repeated n times, each
+  rewrote is placed on that subject's statement only when the subject names exactly one; when it
+  names several it keeps `None` rather than a guess among them, and one the text does not name
+  still keeps `None`. `Finding`'s `Debug` output shows the field, and two findings at different
+  positions are no longer equal, though they print and serialise alike (its rustdoc says so).
+  Three CLI transcripts move, one span each: the second `block lim` of `stage_one.oce` is the
+  one whose class is not found, so `validate_text_findings`, `validate_render_always` and
+  `emit_stage_one_refusal` now place that `class-not-found` at 9:7, not 8:7. Placing the
+  findings costs n·log n comparisons for a name repeated n times, each
   repeat now its own key: 193,195 and 4,039,343 at 4,096 and 65,536 blocks, against 24,570 and
   393,210 before, and within the bound `counted_tests.rs` holds. Every other count there is
   unchanged. Two tests from the same review are tightened. `oce verify --subject` joins

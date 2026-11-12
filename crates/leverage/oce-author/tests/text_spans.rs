@@ -237,13 +237,47 @@ block derived_from = CDL.Reals.Nope
         spans.locations(&model, "derived_from"),
         [(2, 14), (3, 7), (4, 4), (5, 5), (6, 7)].map(|(line, column)| Location { line, column })
     );
+}
 
-    // `apply` places by the element a finding is about, so a finding whose subject a caller
-    // rewrote to name other elements falls back to that subject's first location.
-    let mut rewritten = findings[findings.len() - 1].clone();
-    rewritten.subject = "sequence".to_owned();
-    spans.apply(&model, std::slice::from_mut(&mut rewritten));
-    assert_eq!(rewritten.span, at(1, 10));
+#[test]
+fn a_rewritten_subject_is_placed_only_where_it_names_one_statement() {
+    // `apply` places a finding on the element its subject and its position both name. A caller
+    // that rewrites the subject breaks the pair: the finding is then placed on the subject's
+    // statement only when the subject names exactly one, and keeps `None` when it names several,
+    // rather than taking the first of them (GitHub #585's misplacement; review of GitHub #616).
+    let text = "\
+sequence s
+derived_from none
+in sequence : Real
+block b = CDL.Reals.Nope
+";
+    let (model, spans) = parse_text_with_spans(text).expect("parses");
+    assert_eq!(
+        spans.locations(&model, "sequence"),
+        [at(1, 10), at(3, 4)].map(Option::unwrap)
+    );
+    let findings = validate_text_author_side(text).expect("parses");
+    assert_eq!(
+        placed(&findings),
+        [
+            ("invalid-name", "sequence", 3, 4),
+            ("class-not-found", "b", 4, 7)
+        ]
+    );
+    let place = |subject: &str| {
+        let mut rewritten = findings[1].clone();
+        rewritten.subject = subject.to_owned();
+        spans.apply(&model, std::slice::from_mut(&mut rewritten));
+        rewritten.span
+    };
+    // The subject it was reported with: the block.
+    assert_eq!(place("b"), at(4, 7));
+    // A subject that names one statement, not the block: that statement.
+    assert_eq!(place("derived_from"), at(2, 14));
+    // A subject that names two, neither of them the block: no span, not the header.
+    assert_eq!(place("sequence"), None);
+    // A subject that names nothing (there is no connection): no span.
+    assert_eq!(place("connection[0]"), None);
 }
 
 #[test]
