@@ -37,6 +37,29 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
+### CXF import and export
+
+- **A `@context` term spelled as an IRI must bind its own expansion** (GitHub #613, issue #591).
+  A whole-token term match wins over every other reading of a token, and the expansion pass took
+  any term name, so a document could redirect a standard spelling wherever it appeared. With
+  `{"S231": <the S231 namespace>, "S231:ExtensionBlock": "http://example.org#Foo"}`, a root typed
+  `S231:ExtensionBlock` loaded and ran its child; a term named by the full IRI redirected a root
+  typed by that IRI. The same held for an identity (`@id` and structural references), a data type
+  (`isOfDataType`) and a full-IRI property key, each of which loaded without a word. A term name
+  with a `:` anywhere but first or last, or a `/` anywhere, must now bind what its own spelling
+  expands to, or the context is refused as `malformed-document`, subject the term: JSON-LD 1.1
+  calls this an invalid IRI mapping (Create Term Definition, step 14.2.4). It must still do so
+  once every map of a list context is merged, or it is refused as `non-subset-construct`.
+  JSON-LD keeps a term's mapping when a later map rebinds its prefix, so
+  `[{"S231": <hostile>, "S231:ExtensionBlock": <hostile>ExtensionBlock}, {"S231": <the S231
+  namespace>}]` passed both the new rule and the namespace check and still read that root as a
+  hostile class. A name with `@` is still a keyword, refused or skipped as before, never a term.
+  The authoring importer (`oce_author::import_cxf`) already refused every `@context` term but
+  `S231` and `base`. **Breaking, in place:** such a context loaded before. No tracked document
+  defines one: a probe over the 257 tracked documents with a `@context` (the vendored translations
+  and `CXF-Core.jsonld` included) and the library's 144 found no term name of this shape, and
+  `fixture_corpus_import.txt` is byte-identical.
+
 ### Leverage
 
 - **The importer's refusal of a giant list is pinned in allocations, not in elapsed time** (GitHub

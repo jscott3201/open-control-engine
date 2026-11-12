@@ -61,6 +61,7 @@ mod resolve_connector_identity_errors;
 mod resolve_context_expansion;
 mod resolve_context_import;
 mod resolve_context_scope;
+mod resolve_context_term_names;
 mod resolve_declaration_scope;
 mod resolve_declaration_scope_emission;
 mod resolve_declaration_strings;

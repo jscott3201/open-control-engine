@@ -51,7 +51,15 @@
 //! a prefix bound to a relative value would smuggle relative identities past the per-token
 //! guard. A value that is a compact IRI through another active prefix is also refused: recursive
 //! context-term expansion is outside the subset, and retaining the compact spelling would split
-//! canonical identity. Any other value shape is refused as `MalformedDocument`. A **remote
+//! canonical identity. Any other value shape is refused as `MalformedDocument`. A term **spelled
+//! as an IRI or a compact IRI** (a `:` anywhere but first or last, or a `/` anywhere) must bind its
+//! own expansion, or it is refused as `MalformedDocument`: a whole-token term match wins over
+//! every other reading, so `"S231:ExtensionBlock": "http://example.org#Foo"` would redirect that
+//! type everywhere in the document, which JSON-LD 1.1 refuses as an invalid IRI mapping (GitHub
+//! issue #591; see [`iri_shaped_term_refusal`]). Such a term must still bind its own expansion
+//! once the whole context is merged, or it is refused as `NonSubsetConstruct`: a later map of a
+//! list may bind the prefix it was read through anew, which JSON-LD allows (see
+//! [`rebound_term_refusals`]). A **remote
 //! context** — the whole `@context` a string IRI, or a string element inside the list — is refused
 //! as `NonSubsetConstruct`: a deterministic embedded engine dereferences nothing at load.
 //! A direct `@context` on any `@graph` node, followed identity/typing reference, or modeled
@@ -132,8 +140,8 @@ pub(crate) fn expand_document(
 
 /// Build the prefix/term table from the document `@context`: a single inline map, or a list of
 /// inline maps merged in order (later bindings win). Remote references, `@base`, `@import`,
-/// `@vocab`, and malformed term values are refused — see the module docs for why each is a
-/// refusal rather than a skip.
+/// `@vocab`, malformed term values, and a term spelled as an IRI that does not bind its own
+/// expansion are refused — see the module docs for why each is a refusal rather than a skip.
 fn prefix_table(context: &Context, diags: &mut Vec<Diagnostic>) -> PrefixTable {
     let mut table = PrefixTable::new();
     match context {
@@ -156,6 +164,7 @@ fn prefix_table(context: &Context, diags: &mut Vec<Diagnostic>) -> PrefixTable {
         }
         Context::Iri(reference) => diags.push(remote_context_refusal(reference)),
     }
+    rebound_term_refusals(&table, diags);
     table
 }
 
@@ -220,7 +229,12 @@ fn merge_context_entries<'a>(
                         .with_subject(term.clone()),
                     );
                 } else if is_absolute_iri(iri) {
-                    table.insert(term.clone(), iri.clone());
+                    match iri_shaped_term_refusal(term, iri, table) {
+                        Some(refusal) => diags.push(refusal),
+                        None => {
+                            table.insert(term.clone(), iri.clone());
+                        }
+                    }
                 } else {
                     // A prefix bound to a non-absolute value would concatenate every CURIE under
                     // it into a RELATIVE identity that the per-token guard cannot see (the joined
@@ -250,6 +264,113 @@ fn merge_context_entries<'a>(
                 .with_subject(term.clone()),
             ),
         }
+    }
+}
+
+/// Whether a term name has the form of an IRI or a compact IRI in JSON-LD 1.1's sense: it
+/// contains a colon anywhere but as its first or last character, or a slash anywhere (JSON-LD 1.1
+/// Processing Algorithms, Create Term Definition, step 14.2.4).
+fn is_iri_shaped_term(term: &str) -> bool {
+    term.contains('/')
+        || term
+            .char_indices()
+            .any(|(at, c)| c == ':' && at > 0 && at + 1 < term.len())
+}
+
+/// The refusal for a term spelled as an IRI or compact IRI that binds anything but its own
+/// expansion where it is defined (GitHub issue #591).
+///
+/// A whole-token term match wins over every other reading of a token ([`expand_token`]), so a
+/// context entry `"S231:ExtensionBlock": "http://example.org#Foo"` (or one keyed by the full IRI)
+/// would make every `S231:ExtensionBlock` in the document mean `Foo`: an identity, a `@type`, an
+/// `isOfDataType` or a full-IRI property key redirected by the document itself. JSON-LD 1.1
+/// forbids exactly this. Create Term Definition, step 14.2.4, reads: "If the term contains a
+/// colon (`:`) anywhere but as the first or last character of term, or if it contains a slash
+/// (`/`) anywhere: ... If the result of IRI expanding term using local context, and defined, is
+/// not the same as the IRI mapping of definition, an invalid IRI mapping error has been detected
+/// and processing is aborted."
+///
+/// The term's own expansion is [`own_expansion`] against the terms in force. Both `@context`
+/// shapes reach [`merge_context_entries`] as sorted maps, and a prefix is a proper prefix of its
+/// term's name, so the prefix a term reads through is merged before the term, as JSON-LD's
+/// dependency resolution on the local context would have it. A term that binds its own expansion
+/// changes nothing and is accepted (an absolute IRI bound to itself among them, which JSON-LD's
+/// step 14 skips). A term with no expansion of its own (`a/b`, a relative reference) can bind
+/// nothing. A name with `@` never reaches here: it is a keyword or has a keyword's form, and is
+/// refused (`@base`, `@import`, `@vocab`) or never made a term, which is what JSON-LD's step 5
+/// does with a keyword-form name. [`rebound_term_refusals`] then judges the accepted terms
+/// against the whole context.
+fn iri_shaped_term_refusal(term: &str, iri: &str, table: &PrefixTable) -> Option<Diagnostic> {
+    if !is_iri_shaped_term(term) {
+        return None;
+    }
+    let own = own_expansion(term, table);
+    if own.as_deref() == Some(iri) {
+        return None;
+    }
+    let reading = match &own {
+        Some(own) => format!("its own expansion is `{own}`"),
+        None => "it has no expansion of its own".to_owned(),
+    };
+    Some(
+        Diagnostic::error(
+            DiagCode::MalformedDocument,
+            format!(
+                "@context term `{term}` is spelled as an IRI but binds `{iri}`, and {reading}; \
+                 JSON-LD 1.1 refuses this as an invalid IRI mapping (Create Term Definition, step \
+                 14.2.4), because the document could then redirect that spelling wherever it \
+                 appears"
+            ),
+        )
+        .with_subject(term.to_owned()),
+    )
+}
+
+/// Refuse every term of the finished `table` spelled as an IRI whose own expansion under the whole
+/// context is no longer its mapping (GitHub issue #591), in term order.
+///
+/// A later map of a list context may bind or rebind the prefix a term was read through, and
+/// JSON-LD keeps the term's mapping when it does. The spelling would then read one way as a whole token and
+/// another everywhere else: `[{"S231": <hostile>, "S231:ExtensionBlock": <hostile>ExtensionBlock},
+/// {"S231": <S231 namespace>}]` passes the definition check and the namespace check, and would
+/// read a root typed `S231:ExtensionBlock` as a class of the hostile namespace. JSON-LD accepts
+/// such a context; this engine refuses it as `NonSubsetConstruct`, as it refuses a nested compact
+/// IRI, because a whole-token term match must never change what a token means. Only a list context
+/// can trip this, since one map binds each term once and merges a prefix before its terms.
+fn rebound_term_refusals(table: &PrefixTable, diags: &mut Vec<Diagnostic>) {
+    for (term, iri) in table {
+        if !is_iri_shaped_term(term) {
+            continue;
+        }
+        let now = own_expansion(term, table);
+        if now.as_deref() == Some(iri.as_str()) {
+            continue;
+        }
+        let now = now.map_or_else(|| "nothing".to_owned(), |now| format!("`{now}`"));
+        diags.push(
+            Diagnostic::error(
+                DiagCode::NonSubsetConstruct,
+                format!(
+                    "@context term `{term}` is spelled as an IRI and binds `{iri}`, its own \
+                     expansion where it is defined, but a later context map binds its prefix, so \
+                     the same spelling now expands to {now}; a term spelled as an IRI must bind \
+                     its own expansion under the whole context, or the document could redirect \
+                     that spelling wherever it appears"
+                ),
+            )
+            .with_subject(term.clone()),
+        );
+    }
+}
+
+/// A term's own expansion: its spelling read as [`expand_token`] reads a token, without the
+/// whole-token match of the term itself (a compact IRI through its prefix, an absolute IRI as
+/// written), or `None` when it has no absolute reading.
+fn own_expansion(term: &str, table: &PrefixTable) -> Option<String> {
+    match expand_curie(term, table) {
+        Expansion::Expanded(own) => Some(own),
+        Expansion::Verbatim => Some(term.to_owned()),
+        Expansion::Relative => None,
     }
 }
 
@@ -331,6 +452,14 @@ fn expand_token(token: &str, table: &PrefixTable) -> Expansion {
     if let Some(iri) = table.get(token) {
         return Expansion::Expanded(iri.clone());
     }
+    expand_curie(token, table)
+}
+
+/// [`expand_token`] without its whole-token term match: a token read as a compact IRI through its
+/// prefix, or kept as an absolute IRI. The prefix it looks up is everything before the first `:`,
+/// so it is never the token itself; [`own_expansion`] reads a term's own expansion this way,
+/// without copying the table.
+fn expand_curie(token: &str, table: &PrefixTable) -> Expansion {
     match token.split_once(':') {
         // A value whose suffix begins with `//` is interpreted as an IRI, not
         // CURIE-expanded (JSON-LD 1.1 §4.1.5, Compact IRIs), so this token is
