@@ -5,7 +5,8 @@
 //! length left out (the class default applies, or the `Required` rule refuses its absence), the
 //! length bound to a sequence parameter, and an in-length control that loads and runs with every
 //! value it was given. Until this, each of the refusals below loaded with no warning and the
-//! value was dropped: `MultiSum(nin = 2)` with gains `[1, 2, 3]` ran as `[1, 2]`.
+//! value was dropped: `MultiSum(nin = 2)` with gains `[1, 2, 3]` ran as `[1, 2]`. A gap inside the
+//! length is not a refusal: the class default fills it, as before.
 
 use oce_api::{Engine, Value};
 
@@ -431,18 +432,19 @@ fn a_required_length_left_out_is_refused_as_missing_and_judges_no_element() {
     }
 }
 
-/// Load `document`, run one frame with the inputs `u1`, `u2` at `values`, and return the
+/// Load `document`, run one frame with the inputs `u1`, `u2`, … at `values`, and return the
 /// boundary outputs by local name.
-fn run(document: &str, values: [Value; 2]) -> Vec<(String, Value)> {
+fn run(document: &str, values: &[Value]) -> Vec<(String, Value)> {
     let mut engine = Engine::new();
     let (report, _) = engine
         .load_cxf(document.as_bytes())
         .unwrap_or_else(|error| panic!("refused: {error}\n{document}"));
     assert_eq!(report.warnings.len(), 0, "{:?}", report.warnings);
-    let entries = [
-        (format!("{BASE}.u1"), values[0].clone()),
-        (format!("{BASE}.u2"), values[1].clone()),
-    ];
+    let entries: Vec<(String, Value)> = values
+        .iter()
+        .enumerate()
+        .map(|(i, value)| (format!("{BASE}.u{}", i + 1), value.clone()))
+        .collect();
     let entries: Vec<(&str, Value)> = entries
         .iter()
         .map(|(p, v)| (p.as_str(), v.clone()))
@@ -496,7 +498,7 @@ fn an_in_length_control_loads_and_uses_every_value_it_was_given() {
             &["y"],
             2,
         );
-        one_output(&run(&doc, inputs), "y", &sum, family);
+        one_output(&run(&doc, &inputs), "y", &sum, family);
     }
     // `extract = [2]` selects the second input; the mask `[false, true]` keeps only it.
     for (signal, inputs) in [
@@ -517,7 +519,7 @@ fn an_in_length_control_loads_and_uses_every_value_it_was_given() {
             &["y1"],
             2,
         );
-        one_output(&run(&extract, inputs.clone()), "y1", &second, signal);
+        one_output(&run(&extract, &inputs), "y1", &second, signal);
         let filter = document(
             &format!("CDL.Routing.{signal}VectorFilter"),
             &[
@@ -530,6 +532,53 @@ fn an_in_length_control_loads_and_uses_every_value_it_was_given() {
             &["y1"],
             2,
         );
-        one_output(&run(&filter, inputs), "y1", &second, signal);
+        one_output(&run(&filter, &inputs), "y1", &second, signal);
+    }
+}
+
+#[test]
+fn an_element_left_out_inside_the_length_takes_the_class_default() {
+    // CDL has no spelling for a partial array; the engine fills a gap with the class default.
+    // `MultiSum.k` defaults to 1: gains `[10, 1, 30]` on inputs 1, 2, 3 give 10 + 2 + 90 = 102.
+    let sum = document(
+        "CDL.Reals.MultiSum",
+        &[
+            scalar("nin", Lit::Integer(3)),
+            scalar("k_1", Lit::Real(10.0)),
+            scalar("k_3", Lit::Real(30.0)),
+        ],
+        "Real",
+        3,
+        &["y"],
+        2,
+    );
+    one_output(
+        &run(
+            &sum,
+            &[Value::Real(1.0), Value::Real(2.0), Value::Real(3.0)],
+        ),
+        "y",
+        &Value::Real(102.0),
+        "MultiSum with k_2 left out",
+    );
+    // An omitted selector `extract_i` defaults to `i`: with only `extract_2 = 1`, both outputs
+    // select input 1.
+    let extract = document(
+        "CDL.Routing.RealExtractSignal",
+        &[
+            scalar("nin", Lit::Integer(2)),
+            scalar("nout", Lit::Integer(2)),
+            scalar("extract_2", Lit::Integer(1)),
+        ],
+        "Real",
+        2,
+        &["y1", "y2"],
+        2,
+    );
+    let found = run(&extract, &[Value::Real(1.0), Value::Real(2.0)]);
+    assert_eq!(found.len(), 2, "{found:?}");
+    for (output, (name, value)) in ["y1", "y2"].iter().zip(&found) {
+        assert_eq!(name, output);
+        assert!(value.bit_eq(&Value::Real(1.0)), "{found:?}");
     }
 }

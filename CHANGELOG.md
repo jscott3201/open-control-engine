@@ -70,9 +70,19 @@ and a gate that accepted any text would restore exactly the false assurance desc
     - the 34 authoring and CLI inputs, of which no clean one is now refused. Four `fmt`
       fixtures that were already refused now show their gains: their `MultiSum` omits `nin`,
       and they had `unknown-port` or `class-not-found` before.
-  - **Cost.** The rules build no string per index any more: a refusal at the 2^20 width takes
-    16 to 19 allocations where it took 1,097,169 and 2,097,170, pinned in
-    `array_extent_cost.rs`.
+  - **Cost of the rules.** The four rules build no string per index any more. A refusal at the
+    2^20 width takes 16 to 21 allocations where it took 1,097,169 to 2,097,170. Each rule is
+    pinned there and at 4,096 and 65,536 elements in `array_extent_cost.rs`. This is true of
+    the rules, not of a load end to end: the block constructors (`make_multi_sum`,
+    `make_integer_multi_sum`, `extract_param_vector`, `vector_filter_params`) and the
+    `VectorFilter` true-count rule still build a name and scan the parameters per index, so a
+    hostile width stays quadratic at construction. That is tracked in #634.
+  - **Compiled-schedule blobs** are not judged again. A blob decodes and runs without
+    re-running the parameter rules, so a 0.5.0 blob compiled from a document with an
+    out-of-extent element still decodes and runs with the element dropped. Compiling it again
+    from the CXF now refuses the document.
+  - **A gap inside the length** is still filled by the class default, as CDL has no spelling
+    for a partial array: `MultiSum(nin = 3, k_1 = 10, k_3 = 30)` runs with `[10, 1, 30]`.
   - **No version bump.** A load refusal is not a format change (owner ruling of 2026-11-12). No
     golden, class signature or catalog byte moves.
 

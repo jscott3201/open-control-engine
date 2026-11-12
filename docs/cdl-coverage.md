@@ -193,23 +193,43 @@ Array **parameters** keep the older import spelling, with an underscore before e
 catalog lists `k_<i>` and `K_<row>_<col>` once, and `oce_api::param_element_name` expands them to the
 `k_1`, `K_2_1` names the CXF import mints for a preserved array.
 
-Every element must lie inside its array's resolved extent, or the load is refused with
-`parameter-out-of-range`, so a value an author wrote is never dropped without a word. A matrix
-cell must lie inside `nout` × `nin` (`MatrixGain.K`) and a `TimeTable` offset inside the table's
-outputs. Since GitHub #626, a vector element must lie inside its length too, its index from 1 to
-`n`:
+An array element must lie inside its array's resolved extent, or the load is refused with
+`parameter-out-of-range`. So no value is dropped for lying outside its extent. A matrix cell must
+lie inside `nout` × `nin` (`MatrixGain.K`), and a `TimeTable` offset inside the table's outputs.
+Since GitHub #626, a vector element must lie inside its length too, its index from 1 to `n`:
 
 - `k` on both `MultiSum` classes, against `nin`;
 - `extract` on the three `ExtractSignal` classes, against `nout`;
 - `msk` on the three `VectorFilter` classes, against `nin`.
 
-The length is the block's parameter, a reference to a sequence parameter folded to its value,
-or, when the block omits it, the class's literal default. `MultiSum.nin` defaults to 0, so its
-gains then lie past the length. `VectorFilter.nin` has no default, so leaving it out is
-`missing-required-parameter` and no member is judged. Before #626, `MultiSum(nin = 2)` with gains
-`[1, 2, 3]` loaded warning-free and ran as `[1, 2]`. A name that is not an element spelling of the
-class at all (`k_x`, `k_1_2` on a vector) is still not refused at load: GitHub #467 keeps that
-half open.
+The length comes from one of three places:
+- the block's parameter;
+- a reference to a sequence parameter, folded to its value;
+- when the block omits it, the class's literal default. `MultiSum.nin` defaults to 0, so its gains
+  then lie past the length. `VectorFilter.nin` has no default, so leaving it out is
+  `missing-required-parameter` and no member is judged.
+
+Before #626, `MultiSum(nin = 2)` with gains `[1, 2, 3]` loaded warning-free and ran as `[1, 2]`.
+
+An element inside the length that the document leaves out takes the class's default for it.
+CDL has no spelling for a partial array, so this is an engine extension. For example,
+`MultiSum(nin = 3, k_1 = 10, k_3 = 30)` runs with the gains `[10, 1, 30]`, and an
+`ExtractSignal(nout = 2)` that sets only `extract_2` selects input 1 for its first output.
+
+What the load gate still ignores is a name that is not a canonical element spelling of a declared
+array, or that the class does not declare at all. Each such name loads with no warning, and its
+value is never read:
+- a wrong case (`K_1` on `MultiSum`);
+- a scalar `k` where the class declares the vector `k_<i>`;
+- a non-decimal or non-ASCII index (`k_x`, `k_1e0`, `k_1.0`, the full-width `k_１`);
+- a matrix spelling on a vector (`k_1_2`);
+- a malformed separator (`k_`, `k__1`, `k_1_`);
+- an element on a class with no such array (`k_1` on `Reals.Add`, `k_3` on `MultiMax`).
+
+GitHub #467 keeps that half open. The authoring validator refuses each of these names at stage 1
+as `unknown-parameter`, so only CXF from another producer reaches the load with one. A signed or
+zero-padded index (`k_01`, `k_+1`) is refused at load as `non-canonical-element-name` (GitHub
+#470).
 
 `oce_api::class_metadata()` adds, for every class in catalog order, a one-sentence `description`
 (the upstream Modelica class description string where a vendored source exists, held to it by a

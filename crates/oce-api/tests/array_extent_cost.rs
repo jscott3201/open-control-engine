@@ -5,9 +5,15 @@
 //! for it, so a 2^20 width cost a million allocations before any element was judged.
 //!
 //! Measured through `class_ports`, which runs exactly the load gate's parameter rules for one
-//! block and, on a refusal, returns before it names any port, so the count is the rules'. Each
-//! table here is refused by the old rules too (a wrong-kind element inside the length), which is
-//! what makes the old counts in the brackets comparable.
+//! block and, on a refusal, returns before it names any port, so the count is the rules'. Each of
+//! the four rules is measured: `RealArrayElements` (`Reals.MultiSum`), `IntegerArrayElements`
+//! (`Integers.MultiSum`), `IntegerArrayElementsInRange` (`ExtractSignal`) and
+//! `BooleanArrayElements` (`VectorFilter`). The tables at the widest length with a wrong-kind
+//! element inside it are refused by the old rules too, which makes the old counts in the
+//! brackets comparable. A `VectorFilter` table here keeps the mask's true-count rule out of the
+//! count, which still builds a name per index (GitHub #634): its wrong-kind member stops that
+//! rule at index 1, and its table past the length leaves `nout` out (refused as missing), so the
+//! rule has no count to check.
 
 use allocation_counter::{AllocationInfo, measure};
 use oce_api::{ClassPortsError, Value, class_ports};
@@ -25,61 +31,124 @@ fn refused(class: &str, params: &[(&str, Value)]) -> AllocationInfo {
     info
 }
 
+/// The four rules at the widest length: a table with a wrong-kind element inside the length,
+/// then one with an element one past it.
+fn widest() -> Vec<(&'static str, Vec<(String, Value)>)> {
+    let width = |name: &str| (name.to_owned(), Value::Integer(WIDTH));
+    let past = |base: &str| format!("{base}_{}", WIDTH + 1);
+    vec![
+        (
+            "CDL.Reals.MultiSum",
+            vec![width("nin"), ("k_1".to_owned(), Value::Boolean(true))],
+        ),
+        (
+            "CDL.Integers.MultiSum",
+            vec![width("nin"), ("k_1".to_owned(), Value::Real(1.5))],
+        ),
+        (
+            "CDL.Routing.RealExtractSignal",
+            vec![
+                width("nin"),
+                width("nout"),
+                ("extract_1".to_owned(), Value::Real(1.5)),
+            ],
+        ),
+        (
+            "CDL.Routing.RealVectorFilter",
+            vec![
+                width("nin"),
+                ("nout".to_owned(), Value::Integer(1)),
+                ("msk_1".to_owned(), Value::Real(1.5)),
+            ],
+        ),
+        (
+            "CDL.Reals.MultiSum",
+            vec![width("nin"), (past("k"), Value::Real(1.0))],
+        ),
+        (
+            "CDL.Integers.MultiSum",
+            vec![width("nin"), (past("k"), Value::Integer(1))],
+        ),
+        (
+            "CDL.Routing.RealExtractSignal",
+            vec![
+                width("nin"),
+                width("nout"),
+                (past("extract"), Value::Integer(1)),
+            ],
+        ),
+        (
+            "CDL.Routing.RealVectorFilter",
+            vec![width("nin"), (past("msk"), Value::Boolean(true))],
+        ),
+    ]
+}
+
 #[test]
 fn judging_a_vector_at_the_widest_length_allocates_nothing_per_index() {
-    // A wrong-kind element inside the length [measured: 17 and 19 allocations; the per-index
-    // rules made 1,097,169 and 2,097,170], then an element one past it [16 and 18].
-    let past_gain = format!("k_{}", WIDTH + 1);
-    let past_selector = format!("extract_{}", WIDTH + 1);
-    let cases: [(&str, Vec<(&str, Value)>); 4] = [
-        (
-            "CDL.Reals.MultiSum",
-            vec![
-                ("nin", Value::Integer(WIDTH)),
-                ("k_1", Value::Boolean(true)),
-            ],
-        ),
-        (
-            "CDL.Routing.RealExtractSignal",
-            vec![
-                ("nin", Value::Integer(WIDTH)),
-                ("nout", Value::Integer(WIDTH)),
-                ("extract_1", Value::Real(1.5)),
-            ],
-        ),
-        (
-            "CDL.Reals.MultiSum",
-            vec![
-                ("nin", Value::Integer(WIDTH)),
-                (past_gain.as_str(), Value::Real(1.0)),
-            ],
-        ),
-        (
-            "CDL.Routing.RealExtractSignal",
-            vec![
-                ("nin", Value::Integer(WIDTH)),
-                ("nout", Value::Integer(WIDTH)),
-                (past_selector.as_str(), Value::Integer(1)),
-            ],
-        ),
-    ];
-    for (class, params) in &cases {
-        let info = refused(class, params);
-        assert!(info.count_total <= 64, "{class}: {info:?}");
+    // The wrong-kind tables [measured: 17, 17, 19 and 21 allocations for the four rules; the
+    // per-index rules made 1,097,169, 1,097,169, 2,097,170 and 2,087,173], then one past the
+    // length [16, 16, 18 and 21].
+    for (class, params) in widest() {
+        let params: Vec<(&str, Value)> = params
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.clone()))
+            .collect();
+        let info = refused(class, &params);
+        assert!(info.count_total <= 64, "{class} {params:?}: {info:?}");
     }
 }
 
 #[test]
 fn refusing_many_elements_past_the_length_costs_linearly_in_the_elements() {
-    // `n` gains past `nin = 2`, each refused once: at most six allocations and 400 bytes of
-    // peak per element [measured: 20,502 and 327,706 allocations, 1,393,232 and 22,282,832
-    // bytes; 5.0 and 340 per element at both sizes].
-    for n in [4_096_u64, 65_536] {
-        let names: Vec<String> = (3..n + 3).map(|i| format!("k_{i}")).collect();
-        let mut params = vec![("nin", Value::Integer(2))];
-        params.extend(names.iter().map(|name| (name.as_str(), Value::Real(1.0))));
-        let info = refused("CDL.Reals.MultiSum", &params);
-        assert!(info.count_total <= 6 * n + 64, "{n}: {info:?}");
-        assert!(info.bytes_max <= 400 * n, "{n}: {info:?}");
+    // `n` elements past a length of 2, each refused once: at most six allocations and 400 bytes
+    // of peak per element, for each rule [measured: 20,502 to 20,507 and 327,706 to 327,711
+    // allocations, 5.0 per element; 340 to 348 bytes per element, at both sizes].
+    for (class, base, fixed, value) in many() {
+        for n in [4_096_u64, 65_536] {
+            let names: Vec<String> = (3..n + 3).map(|i| format!("{base}_{i}")).collect();
+            let mut params: Vec<(&str, Value)> =
+                fixed.iter().map(|(name, v)| (*name, v.clone())).collect();
+            params.extend(names.iter().map(|name| (name.as_str(), value.clone())));
+            let info = refused(class, &params);
+            assert!(info.count_total <= 6 * n + 64, "{class} {n}: {info:?}");
+            assert!(info.bytes_max <= 400 * n, "{class} {n}: {info:?}");
+        }
     }
+}
+
+/// The four rules with elements past a small length: class, base, the fixed parameters, and an
+/// element value.
+fn many() -> Vec<(
+    &'static str,
+    &'static str,
+    Vec<(&'static str, Value)>,
+    Value,
+)> {
+    vec![
+        (
+            "CDL.Reals.MultiSum",
+            "k",
+            vec![("nin", Value::Integer(2))],
+            Value::Real(1.0),
+        ),
+        (
+            "CDL.Integers.MultiSum",
+            "k",
+            vec![("nin", Value::Integer(2))],
+            Value::Integer(1),
+        ),
+        (
+            "CDL.Routing.RealExtractSignal",
+            "extract",
+            vec![("nin", Value::Integer(2)), ("nout", Value::Integer(2))],
+            Value::Integer(1),
+        ),
+        (
+            "CDL.Routing.RealVectorFilter",
+            "msk",
+            vec![("nin", Value::Integer(2)), ("nout", Value::Integer(2))],
+            Value::Boolean(true),
+        ),
+    ]
 }
