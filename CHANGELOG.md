@@ -123,9 +123,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
     trimmed form still holds whitespace (`" S231: Block"`) as a near miss, since its suggestion
     was still broken (GitHub #620).
   - **Breaking, in place:** such a document loaded before. No tracked or library document carries
-    one. Of the 744 terms in 257 tracked documents (457 `unit`, 241 `quantity`, 42 `displayUnit`
-    strings, one typed literal, two IRI nodes and one integer in a refusal fixture), none is
-    blank, carries both `@id` and `@value` or another key. The library's 140 carry no term at
+    one. Of the 742 terms in 257 tracked documents (457 `unit`, 240 `quantity` and 41
+    `displayUnit` strings, one typed literal, two IRI nodes and one integer in a refusal fixture),
+    none is blank, carries both `@id` and `@value` or another key. The library's 140 carry no term at
     all, and each is refused before any term is read. `fixture_corpus_import.txt` is byte-identical.
 
 ### Leverage
