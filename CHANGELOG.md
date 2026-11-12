@@ -171,6 +171,27 @@ and a gate that accepted any text would restore exactly the false assurance desc
     the two apart only on a pre-release build.
   - The header test checks the Cargo version's major, minor and patch instead of the
     descriptor's string.
+- **An engine finding about an array is placed on the array's first authored element** (GitHub
+  #PRNUM, issue #617). The emitter writes an array's elements as one node named by the
+  template's base (`m.k` for `k = [1.5, 2.5]`). Stage 2 maps an engine subject that names the
+  node to the array's first authored element and keeps `m.k` as the subject. The text
+  placement indexed only `m.k_1` and `m.k_2`, so such a finding kept no span.
+  - The placement now indexes each array's base at that same element: a list's first value,
+    or the first element assignment as written, whatever its index (`k_2 = …` before
+    `k_1 = …`). A matrix's base is indexed too (`g.K` at `K_1_1`). When the block has an
+    assignment named the base itself, stage 2 takes that one, and the base is not indexed at
+    an element.
+  - Stage 2 and the placement read the base through one helper, `element_base` in
+    `validate::catalog`, which replaces the inline template match in `validate::engine`.
+  - `SourceMap::locations("m.k")` now returns that element's location, where it returned
+    nothing. No other subject's locations change, and no golden or CLI transcript moves.
+  - No engine diagnostic reaches an array node after a clean stage 1 today, so the stage-2
+    test drives stage 2's own subject mapping with the node's IRI as the emitter writes it.
+    Both new tests fail against the previous index.
+  - Placing the findings of one block of 65,535 array elements costs 10,559,655 counted
+    comparisons, 1,048,571 more than before (one index lookup per element). The case is
+    pinned in `counted_tests.rs` at two sizes, within the bound the other shapes keep. Every
+    other count there is unchanged.
 
 ### Verification
 

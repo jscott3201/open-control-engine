@@ -10,14 +10,16 @@
 //! connection, the engine the input, which stage 2 maps to the first connection driving it.
 
 use crate::emit::{EmitOptions, emit_unchecked};
+use crate::emit::{Scheme, emit};
 use crate::identifier::Identifier;
+use crate::location::Location;
 use crate::model::{
     Assignment, Block, Bound, Boundary, Connection, Endpoint, Literal, MemberRef, ParamValue,
     ParameterType, Sequence, SequenceParameter, SignalType,
 };
-use crate::validate::{Finding, validate_author_side};
+use crate::validate::{Anchor, Finding, validate_author_side};
 
-use super::judge;
+use super::{engine_finding, judge, map_subject};
 
 fn id(name: &str) -> Identifier {
     Identifier::unchecked(name)
@@ -577,4 +579,53 @@ fn an_integer_bound_outside_i32_preempts_a_silent_narrowing() {
             && matches!(stage.max, Some(oce_api::Value::Integer(v)) if v == i64::from(i32::MAX)),
         "the engine narrows to i32: {stage:?}"
     );
+}
+
+#[test]
+fn an_engine_finding_on_an_array_node_is_placed_on_the_arrays_first_authored_element() {
+    // GitHub #617: the emitter writes an array's elements as one node named by the template's
+    // base, and stage 2 maps an engine subject that names the node to the array's first
+    // authored element, keeping the base as the subject. No engine diagnostic reaches an array
+    // node after a clean stage 1 today (stage 1 pre-empts each one, and with it bypassed the
+    // engine refuses the block's fallback interface first), so the engine's subject here is the
+    // node's IRI as the emitter writes it, mapped by stage 2's own code.
+    let text = "\
+sequence s
+derived_from none
+in u1 : Real
+in u2 : Real
+out y : Real
+block m = CDL.Reals.MultiSum(
+  nin = 2,
+  k_2 = 2.0,
+  k_1 = 1.0
+)
+u1 -> m.u1
+u2 -> m.u2
+m.y -> y
+";
+    let (sequence, spans) = crate::text::parse_text_with_spans(text).expect("parses");
+    assert!(validate_author_side(&sequence).is_empty());
+    let options = EmitOptions::default();
+    let scheme = Scheme::new(&options.namespace, sequence.name.as_str());
+    let emitted = String::from_utf8(emit(&sequence, &options).expect("emits")).expect("UTF-8");
+    let node = scheme.member("m", "k");
+    assert!(emitted.contains(&format!("\"{node}\"")), "{emitted}");
+    for element in ["k_1", "k_2"] {
+        assert!(!emitted.contains(&scheme.member("m", element)), "{element}");
+    }
+    let (anchor, subject, detail) = map_subject(&sequence, &scheme, Some(&node), "m".to_owned());
+    assert_eq!(
+        (anchor, subject.as_str()),
+        (Anchor::Block(0, Some(1)), "m.k")
+    );
+    let mut findings = [engine_finding(
+        anchor,
+        "parameter-out-of-range",
+        subject,
+        detail,
+    )];
+    spans.apply(&sequence, &mut findings);
+    // `k_2 = 2.0`, the first element as written, on line 8; not `k_1` on line 9.
+    assert_eq!(findings[0].span, Some(Location::new(8, 3)));
 }

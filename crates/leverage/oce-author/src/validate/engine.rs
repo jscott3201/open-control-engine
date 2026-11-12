@@ -32,7 +32,7 @@ use oce_api::{ClassPorts, DiagnosticRecord, DiagnosticSeverity, DiagnosticSubjec
 use crate::emit::{EmitOptions, Scheme, write};
 use crate::identifier::Identifier;
 use crate::model::{Endpoint, Sequence};
-use crate::validate::catalog::{lookup_class, lookup_parameter, match_template};
+use crate::validate::catalog::{element_base, lookup_class};
 
 use super::{Anchor, Finding, Findings, Origin, Severity};
 
@@ -278,14 +278,10 @@ fn assignment_of(block: &crate::model::Block, member: &str) -> Option<usize> {
         return Some(j);
     }
     let class = lookup_class(&block.class_path)?;
-    block.assignments.iter().position(|a| {
-        lookup_parameter(class.metadata, a.name.as_str()).is_some_and(|p| {
-            p.name
-                .split_once("_<")
-                .is_some_and(|(base, _)| base == member)
-                && match_template(p.name, a.name.as_str()).is_some()
-        })
-    })
+    block
+        .assignments
+        .iter()
+        .position(|a| element_base(class.metadata, a.name.as_str()) == Some(member))
 }
 
 #[cfg(test)]

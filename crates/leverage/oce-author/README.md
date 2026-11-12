@@ -317,8 +317,10 @@ refused before a token is read. Nothing in the parser panics or recurses past th
 
 `validate_text` (and `validate_text_author_side`) fills `Finding::span` from a `SourceMap` built
 while parsing: `sequence` is the sequence name, `derived_from` its operand, a declared name its
-declaration's name, `block.param` the assignment's name (an array element's value), and
-`connection[N]` the connection's source. A subject can name several statements, so a finding is
+declaration's name, `block.param` the assignment's name (an array element's value), an array's
+base (`m.k`, the one node the emitter writes for the array) its first authored element, where
+stage 2 places an engine finding about the array (issue #617), and `connection[N]` the
+connection's source. A subject can name several statements, so a finding is
 placed on the one the validator reported it on, not on the first its subject names: a
 declaration named like a header word (`in sequence : Real`, `param derived_from : …`, refused
 as `invalid-name`) keeps its findings on its own line, the header's stay on the header, and a
