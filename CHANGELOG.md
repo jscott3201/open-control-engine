@@ -37,6 +37,55 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
+### Execution core
+
+- **The load gate refuses a vector parameter element past its resolved length** (GitHub #635,
+  issue #626). **Breaking, in place:** a document with such an element loaded before and is
+  refused now.
+  - **What was wrong.** The four vector rules judged elements 1 to `n` only and never saw one
+    past them. They cover `k` on both `MultiSum` classes, `extract` on the three
+    `ExtractSignal` classes and `msk` on the three `VectorFilter` classes. So
+    `MultiSum(nin = 2)` with gains `[1, 2, 3]` loaded warning-free and ran as `[1, 2]`, and a
+    lone `k_3` was ignored. The matrix (`MatrixGain.K`) and `TimeTable` offset rules already
+    refused a cell outside their shape.
+  - **The new rule.** Each vector rule reads the block's elements in one pass over its
+    parameters. It refuses an element whose index is 0, past `n`, or too large for `usize` as
+    `parameter-out-of-range` ("outside resolved array length N").
+  - **An omitted length.** It now takes the class's literal default where the rule used to skip
+    the check. `MultiSum.nin` defaults to 0, so its gains then lie past it. `VectorFilter.nin`
+    has no default, so leaving it out stays `missing-required-parameter` and no member is
+    judged.
+  - **Names this rule does not judge.** A signed or zero-padded index stays the spelling
+    check's `non-canonical-element-name`. A name that is no element spelling at all (`k_x`,
+    `k_1_2` on a vector) is not refused; that is the unknown-name half of #467, which stays
+    open.
+  - **The authoring validator** inherits the refusal through `oce_api::class_ports`, placed on
+    the element (`parameter-out-of-range` at `m.k_3`). Stage 2 reports the same code at the
+    same subject.
+  - **Measured before the change.** No document changes its load outcome or diagnostic codes:
+    - the 257 CXF documents the workspace tracks (the G36 fixtures, the vendored translations
+      and CXF-Core among them);
+    - the 142 of `open-control-library` at `fe7060a`, read as written and again with their
+      earlier namespace rebound;
+    - the 34 authoring and CLI inputs, of which no clean one is now refused. Four `fmt`
+      fixtures that were already refused now show their gains: their `MultiSum` omits `nin`,
+      and they had `unknown-port` or `class-not-found` before.
+  - **Cost of the rules.** The four rules build no string per index any more. A refusal at the
+    2^20 width takes 16 to 21 allocations where it took 1,097,169 to 2,097,170. Each rule is
+    pinned there and at 4,096 and 65,536 elements in `array_extent_cost.rs`. This is true of
+    the rules, not of a load end to end: the block constructors (`make_multi_sum`,
+    `make_integer_multi_sum`, `extract_param_vector`, `vector_filter_params`) and the
+    `VectorFilter` true-count rule still build a name and scan the parameters per index, so a
+    hostile width stays quadratic at construction. That is tracked in #634.
+  - **Compiled-schedule blobs** are not judged again. A blob decodes and runs without
+    re-running the parameter rules, so a 0.5.0 blob compiled from a document with an
+    out-of-extent element still decodes and runs with the element dropped. Compiling it again
+    from the CXF now refuses the document.
+  - **A gap inside the length** is still filled by the class default, as CDL has no spelling
+    for a partial array: `MultiSum(nin = 3, k_1 = 10, k_3 = 30)` runs with `[10, 1, 30]`.
+  - **No version bump.** A load refusal is not a format change (owner ruling of 2026-11-12). No
+    golden, class signature or catalog byte moves.
+
 ### CXF import and export
 
 - **A `@context` term spelled as an IRI must bind its own expansion** (GitHub #613, issue #591).

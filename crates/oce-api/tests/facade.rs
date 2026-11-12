@@ -30,6 +30,7 @@ mod content_id_corpus;
 #[path = "support/frame_trace.rs"]
 mod frame_trace;
 
+mod array_extent;
 mod authored_point_identity;
 mod blob_fuzz;
 mod blob_hostile_bytes;
