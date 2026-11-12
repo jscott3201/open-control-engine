@@ -130,6 +130,51 @@ and a gate that accepted any text would restore exactly the false assurance desc
     none is blank, carries both `@id` and `@value` or another key, and none of their 794
     Integer-typed nodes carries a term in any spelling. The library's 140 carry no term at
     all, and each is refused before any term is read. `fixture_corpus_import.txt` is byte-identical.
+- **An S231 typing token that names no term of the vocabulary the engine reads is refused**
+  (GitHub #641, issue #620; owner rulings of 2026-11-12). A `@type` value or an `isOfDataType`
+  reference in the S231 namespace, on any node, must name a term of the vocabulary; anything else
+  is refused as `malformed-document` in the expansion pass, subject the node, the token and term
+  quoted as excerpts.
+  - **Before**, the resolver read a node's `@type` only where it looked up a leaf's class or a
+    connector's data type, so a misspelt S231 type on a composite (`S231:ExtensonBlock`, `S231:Block`
+    with a zero-width space or BOM, `S231: ExtensionBlock`), a parameter, a connector declaring
+    `isOfDataType`, or any other node loaded without a word. An S231 `isOfDataType` naming a CDL
+    enumeration was matched by its last dotted segment, so `S231:ZeroTime` or a typo in the
+    package loaded.
+  - **The vocabulary** is one table in `crates/oce-cxf/src/vocabulary_terms.rs`, each term with its
+    provenance: the 23 classes the vendored `CXF-Core.jsonld` declares, the 8 terms it uses
+    without declaring them (`BooleanInput`, `BooleanOutput`, `Datatype`, `EnumerationType`,
+    `Real`, `Integer`, `Boolean`, `String`), and the 2 the engine writes that CXF-Core lacks
+    (`StringInput`, `StringOutput`). It is joined with the registry's 133 CDL block classes, written
+    `Buildings.Controls.OBC.CDL.…` (its three internal `urn:oce:lowering#PassThrough.*` identities
+    are never S231 terms), and the 18 CDL and G36 enumeration and constant-package types by their
+    full path, into one set built once, one lookup per token. A test pins the table against the
+    vendored CXF-Core and the registry, so a term a newer CXF-Core adds is refused until the table
+    holds it, and the test says so.
+  - **Every `https:`-spelled S231 typing token** is refused as `vocabulary-namespace-mismatch`,
+    whatever its term; before, only `ExtensionBlock` was, and any other was read by its trailing
+    term. #619's whitespace near-miss check still runs first and keeps its messages.
+  - **One fixture token fixed (owner ruling: option A).**
+    `g36/multizone_vav_relief_fan_group.jsonld` typed `conP.controllerType` as
+    `S231:http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController`, a compact prefix
+    glued to a full IRI that loaded only through the last-segment match. It is now
+    `http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController`, the spelling of the
+    corpus's other 27 uses and of the authoring emitter. CXF-Core's compact spelling was not used:
+    the authoring importer reads a named type only as an IRI with a `#` fragment, so 19
+    `oce-author` tests that import this fixture would fail (#639). Nothing pinned moves:
+    golden-gen regenerates nothing, and the oce-cxf, oce-api, oce-conformance, oce-graph and
+    oce-author suites pass with the fixture's census line, model-graph, content-id, blob and trace
+    goldens unchanged.
+  - **Census:** two rejected fixtures move, as intended. `member_unrecognized_type` (`@type
+    S231:Frobnicator`) was `connector lacks a recognized data type` and
+    `member_isofdatatype_unresolved` (`isOfDataType S231:Bogus`) was `unresolved-reference`,
+    subject the IRI; both are now this refusal, subject the member node.
+  - **Breaking, in place:** such a document loaded before. No tracked or library document but the
+    fixed fixture names a term outside the vocabulary (measured over every `@type` and
+    `isOfDataType` in 257 tracked and 140 library documents), and none uses an `https:` spelling.
+    Follow-ups: composites typed in another namespace (#636), CDL enumeration IRIs in another
+    namespace matched by last segment (#637), role-aware checking (#638), the authoring importer's
+    reading of the compact spelling (#639).
 
 ### Leverage
 
