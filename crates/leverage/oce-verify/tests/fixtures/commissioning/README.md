@@ -12,6 +12,14 @@ What the commissioning readers are tested against (design note `docs/design/comm
 | `every_field.json` | A hand-written spec that uses every key of the format in an awkward spelling: members out of order, a tab, comments, `\u` escapes in keys and strings, raw characters outside ASCII and an astral one, comment markers inside a string, numbers at the canonical form's thresholds (`1e-4`, `0.00001`, `1e16`), `-0` and `-0.0`, an inline mapping, a `csv` and a `combiTimeTable` source, every list present and empty, override keys that are not in sorted order, and Scenario 1 fields holding `null`, nested lists and an integer past 2^53. | nobody: edit it by hand |
 | `canonical/<name>.json` | The canonical form of each file above. `canonical/listing_12_1_commented.json` is byte-identical to `canonical/listing_12_1.json`, which a test requires. | `derive_canonical.py`, by hand |
 | `derive_canonical.py` | The independent derivation of the canonical goldens and their ids. | nobody: it is the reference |
+| `trends/spec.json`, `trends/points.json` | The trend sources' fixture (issue #660): a spec of three input sources against the `signals` subject's inputs, with a `-07:00` origin, and its mapping (`degF` and `degC` to `K`, `percent` to `1`, a `float` read as an `int`, a `bool`). | nobody: edit by hand |
+| `trends/ahu.mos` | A `combiTimeTable` of two matrices, a decoy and `ahu`, with commas, semicolons, tabs, comments and a row broken over two lines, and two rows at `t = 10`. | nobody: edit by hand |
+| `trends/status.csv` | A `csv` of seconds with CRLF line ends (kept by `trends/.gitattributes`), a missing cell and `true`/`1`/`false`/`0`. | nobody: edit by hand |
+| `trends/limits.csv` | A `csv` of RFC 3339 instants in three offsets, one before the origin, two equal, an `NA` cell and an unmapped column. | nobody: edit by hand |
+| `trends/controller_output.csv` | A `controllerOutput` in OBC §12.7.3's shape: the first header the time, the others device points. | nobody: edit by hand |
+| `trends/merged.golden.txt`, `trends/controller_output.golden.txt` | The merged inputs and records, and the `controllerOutput` series, as `tests/commissioning/trend_fixture.rs` and `trend_controller_output.rs` write them. | `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify` |
+| `trends/trends_oracle.txt` | The digests, the merged cells and what replay feeds the engine at each frame, derived independently. | `python3 -I derive_trends.py trends_oracle.txt` in `trends/`, by hand; never blessed |
+| `trends/derive_trends.py` | The independent derivation: its own parsing of the three files, its own union and holds, FNV-1a-128 over Python integers. | nobody: it is the reference |
 
 ## Where the two listings come from
 

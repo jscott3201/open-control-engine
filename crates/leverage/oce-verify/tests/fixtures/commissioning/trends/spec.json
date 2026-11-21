@@ -1,0 +1,19 @@
+{
+  "schema": "oce/commissioning-spec/v1",
+  "time": { "origin": "2018-06-07T00:00:00-07:00" },
+  "references": [
+    {
+      "model": "Signals",
+      "sequence": "sig",
+      "pointNameMapping": "points.json",
+      "inputs": [
+        { "path": "ahu.mos", "format": "combiTimeTable", "table": "ahu", "timeColumn": 1,
+          "columns": { "2": "AHU Temp", "3": "Zone Temp" }, "hold": { "maxAge": 10 } },
+        { "path": "status.csv", "format": "csv", "timeColumn": "time",
+          "columns": { "Count": "Count", "Enable": "Enable" }, "hold": { "maxAge": 30 } },
+        { "path": "limits.csv", "format": "csv", "timeColumn": "stamp",
+          "columns": { "Limit": "Limit" } }
+      ]
+    }
+  ]
+}

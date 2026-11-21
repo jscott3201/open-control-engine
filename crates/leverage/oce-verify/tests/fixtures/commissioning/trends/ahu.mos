@@ -1,0 +1,13 @@
+#1
+# Two matrices: a decoy first, then the trend the source names.
+double other(2,2)
+0 1
+1 2
+double ahu(6, 3)   # time in seconds, AHU temperature in degF, zone temperature in degC
+0, 68.0, 20.0
+5, 68.5, 20.5
+10, 69.0, 21.0
+10; 69.5; 21.0
+20	70.25	21.25 # tabs
+40 -40
+   22.5

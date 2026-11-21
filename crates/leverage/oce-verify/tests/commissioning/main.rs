@@ -1,5 +1,6 @@
 //! The commissioning spec and point-mapping readers (design note `docs/design/commissioning.md`,
-//! "Test-spec file" and "Point mapping"; issue #658), as one test binary.
+//! "Test-spec file" and "Point mapping"; issue #658) and the trend sources (issue #660), as one
+//! test binary.
 //!
 //! Each file of this directory is one topic and is compiled here as a module; the last test
 //! below fails on a file that is not, so a test file cannot sit in the tree uncompiled. Select
@@ -18,8 +19,19 @@ mod listings;
 mod load_cost;
 mod point_mapping;
 mod spec_fields;
+mod trend_bounds;
+mod trend_controller_output;
+mod trend_cost;
+mod trend_files;
+mod trend_fixture;
+mod trend_formats;
+mod trend_holds;
+mod trend_hostile;
 
-use oce_verify::{CommissioningSpec, Location, PointMapping, SpecError, SpecLimits};
+use oce_verify::{
+    CommissioningSpec, Location, PointMapping, SourceError, SpecError, SpecInputs, SpecLimits,
+    TrendLimits, TrendSources,
+};
 
 /// The text of a fixture under `tests/fixtures/commissioning/`.
 fn fixture_text(name: &str) -> String {
@@ -70,6 +82,101 @@ fn one_reference(members: &str) -> String {
 fn top_level(members: &str) -> String {
     let separator = if members.is_empty() { "" } else { ", " };
     format!("{{\"references\": []{separator}{members}}}")
+}
+
+/// The bytes of a file of the three-file trend fixture, `tests/fixtures/commissioning/trends/`.
+fn trend_file(name: &str) -> Vec<u8> {
+    support::fixture_bytes(&format!("commissioning/trends/{name}"))
+}
+
+/// The files the fixture's spec names, in the order given.
+const TREND_FILES: [&str; 4] = ["points.json", "ahu.mos", "status.csv", "limits.csv"];
+
+/// The fixture's spec.
+fn trend_spec() -> CommissioningSpec {
+    loaded(&String::from_utf8(trend_file("spec.json")).expect("UTF-8"))
+}
+
+/// The fixture's files, handed in under their paths in the order `names` gives.
+fn trend_inputs(names: &[&str]) -> SpecInputs {
+    SpecInputs {
+        cxf: Vec::new(),
+        files: names
+            .iter()
+            .map(|name| ((*name).to_owned(), trend_file(name)))
+            .collect(),
+    }
+}
+
+/// A spec of one reference (sequence `s`) with the time origin `origin`, a point mapping inline
+/// and the reference's other `members`, written as the inside of a JSON object.
+fn trend_spec_with(origin: Option<&str>, mapping: &str, members: &str) -> CommissioningSpec {
+    let time = origin.map_or(String::new(), |origin| {
+        format!(r#""time": {{"origin": "{origin}"}}, "#)
+    });
+    loaded(&format!(
+        r#"{{{time}"references": [{{"model": "M", "sequence": "s",
+            "pointNameMapping": {mapping}, {members}}}]}}"#
+    ))
+}
+
+/// One mapped point, as a mapping list entry: `cdl` and `device` as `(name, unit, type)`.
+fn point(cdl: (&str, Option<&str>, &str), device: (&str, Option<&str>, &str)) -> String {
+    let side = |(name, unit, kind): (&str, Option<&str>, &str)| {
+        let unit = unit.map_or(String::new(), |unit| format!(r#", "unit": "{unit}""#));
+        format!(r#"{{"name": "{name}", "type": "{kind}"{unit}}}"#)
+    };
+    format!(r#"{{"cdl": {}, "device": {}}}"#, side(cdl), side(device))
+}
+
+/// Replay `inputs` against the `signals` subject as a commissioning run sets replay up: the
+/// recorded times, equal times allowed, the sources' holds, a refused frame recorded and the run
+/// continued, the inputs retained in the trace.
+fn replay_signals(inputs: oce_verify::TrendInputs) -> oce_replay::Trace {
+    use oce_replay::{InputMap, OnRefusal, Replay, ReplayLimits, ReplayOptions, TraceOptions};
+    let mut engine = oce_api::Engine::new();
+    engine
+        .load_cxf(&support::subject("signals"))
+        .expect("the signals subject loads");
+    let definitions = engine.input_definitions().expect("the inputs");
+    let map = InputMap::resolve(
+        &definitions,
+        &inputs.column_specs(),
+        &inputs.column_map(),
+        &inputs.missing_policy(),
+        &inputs.overrides(),
+    )
+    .expect("the merged columns map onto the subject's inputs");
+    let mut options = ReplayOptions::new(inputs.time_base());
+    options.duplicate_time = inputs.duplicate_time();
+    options.on_refusal = OnRefusal::RecordAndContinue;
+    options.trace = TraceOptions {
+        inputs: true,
+        ..TraceOptions::default()
+    };
+    let source = inputs
+        .into_source(&map, &ReplayLimits::default())
+        .expect("the merged source binds");
+    let (_, trace) = Replay::new(engine, map, source, options)
+        .expect("the replay starts")
+        .run()
+        .expect("the replay runs");
+    trace
+}
+
+/// Read reference 0 of `spec` from `files` (path, bytes) under the default limits.
+fn read_trends(
+    spec: &CommissioningSpec,
+    files: &[(&str, &[u8])],
+) -> Result<TrendSources, SourceError> {
+    let inputs = SpecInputs {
+        cxf: Vec::new(),
+        files: files
+            .iter()
+            .map(|(path, bytes)| ((*path).to_owned(), bytes.to_vec()))
+            .collect(),
+    };
+    TrendSources::read(spec, 0, &inputs, &TrendLimits::default())
 }
 
 #[test]

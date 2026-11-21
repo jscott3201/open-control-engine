@@ -978,6 +978,30 @@ so far, and no tag is cut by the bump.
     on each side, and every truncation and bit flip of one blob, held to the facade's own
     refusal; three golden comparisons; the mirror over every pair. `oce-api` and the blob format
     are untouched, and no blob golden moves.
+- **The commissioning verifier's trend sources: the `combiTimeTable` reader and frames at the
+  union of times** (GitHub #729, issue #660; commissioning note, "Sources, sampling and time",
+  decisions 15, 19, 25, 27, 28 and 42, and the owner's rulings of 2026-11-21). `oce-verify`
+  gains `TrendSources::read(spec, reference, &SpecInputs, &TrendLimits)`, which turns the bytes
+  of a reference's trend files into the merged inputs (`TrendInputs`, handed to replay as a
+  `ColumnarSource` with the spec's origin, `TimeBase::Recorded`, `DuplicateTime::Allow`, the
+  run-level `Refuse` and one `HoldLast { max_age }` override per column of a source with
+  `hold.maxAge`), the expected and indicator series (`TrendSeries`, finite samples in CDL units
+  and types, an indicator keeping its mapped name) and the receipt's `sources`, `mapping` and
+  `units.columns` records. `csv` is read by replay's `CsvSource`; `combiTimeTable` by a new
+  reader of OBC §12.5.1's `#1` text (C decimal numbers rounded correctly, `#` comments, several
+  matrices with `table`), not a `.mo` parser. Input sources merge on the union of their times,
+  the `i`-th row of a source at an instant filling the `i`-th frame there, independent of the
+  order of files and declarations. A `controllerOutput` with no `expected` is read as OBC
+  §12.7.3's csv. Every cell goes through its type rule and the unit table once; an infinity, a
+  decreasing time, a `0.5` in a Boolean column, an unknown or one-sided unit pair (before any row
+  is read) and two columns naming one device point in a role are typed `SourceError`s
+  (`SOURCE_ERROR_CODES`, 39 codes) with file, row and column. Bounded by `TrendLimits`: 256
+  sources, 1 GiB of a reference's files together (`too-many-total-bytes`, checked from the
+  lengths before any parse), and replay's caps on each file and on the merge, whose columns
+  cost frames times columns and are checked against the byte cap before they are allocated.
+  OBC §12.7.3's padded example csv files are refused until replay trims cells (#733), and a
+  `csv` Boolean reads `true`, `false`, `1` and `0` only until replay hands a text cell over
+  (#728).
 
 - **The commissioning verifier's unit table, `units/v1`, and the discrete type rules of point
   mapping** (GitHub #716, issue #659, closes #714; commissioning note, "Point mapping", decisions
