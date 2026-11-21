@@ -425,7 +425,7 @@ outputs under the same code, so the comparison's `too-many-points` is never reac
 
 ### As landed: the trend sources
 
-*(GitHub #PRNUM, issue #660.)* `TrendSources::read(spec, reference, inputs, limits)` in
+*(GitHub #729, issue #660.)* `TrendSources::read(spec, reference, inputs, limits)` in
 `crates/leverage/oce-verify` (`src/commissioning/`: `combi_time_table.rs`, `trend_*.rs`,
 `source_error.rs`) turns the bytes of a reference's files (`SpecInputs`, decision 25) into the
 merged inputs (`TrendInputs`, which becomes a `ColumnarSource` bound to the run's `InputMap`),

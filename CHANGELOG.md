@@ -853,7 +853,7 @@ so far, and no tag is cut by the bump.
     refusal; three golden comparisons; the mirror over every pair. `oce-api` and the blob format
     are untouched, and no blob golden moves.
 - **The commissioning verifier's trend sources: the `combiTimeTable` reader and frames at the
-  union of times** (GitHub #PRNUM, issue #660; commissioning note, "Sources, sampling and time",
+  union of times** (GitHub #729, issue #660; commissioning note, "Sources, sampling and time",
   decisions 15, 19, 25, 27, 28 and 42, and the owner's rulings of 2026-11-21). `oce-verify`
   gains `TrendSources::read(spec, reference, &SpecInputs, &TrendLimits)`, which turns the bytes
   of a reference's trend files into the merged inputs (`TrendInputs`, handed to replay as a
