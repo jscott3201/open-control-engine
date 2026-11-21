@@ -1,0 +1,25 @@
+# Zone static-pressure reset request, version 1.
+sequence zone_pressure_request
+derived_from none
+
+in uDam : Real @unit 1
+in VDis_flow : Real @unit m3/s
+in VSet_flow : Real @unit m3/s
+out yReq : Boolean
+
+block damOpen = CDL.Reals.GreaterThreshold(t = 0.95, h = 0.1)
+block openLong = CDL.Logical.TrueDelay(delayTime = 60, delayOnInit = true)
+block seventySet = CDL.Reals.MultiplyByParameter(k = 0.7)
+block short = CDL.Reals.Subtract
+block starved = CDL.Reals.GreaterThreshold(t = 0.0, h = 0.01)
+block want = CDL.Logical.And
+
+uDam -> damOpen.u
+damOpen.y -> openLong.u
+VSet_flow -> seventySet.u
+seventySet.y -> short.u1
+VDis_flow -> short.u2
+short.y -> starved.u
+openLong.y -> want.u1
+starved.y -> want.u2
+want.y -> yReq

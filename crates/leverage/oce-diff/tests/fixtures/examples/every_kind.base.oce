@@ -1,0 +1,35 @@
+# Every kind of change, base.
+sequence every_kind_base
+derived_from none
+
+param gone : Real = 1.5
+param tuned : Real = 20
+param retyped : Integer = 3
+param first : Real = 1.0
+param second : Real = 2.0
+
+in uGone : Real @unit K
+in uType : Real
+in uUnit : Real @unit K @quantity ThermodynamicTemperature @displayUnit degC @min 0 @max 10
+in uTags : Real @brick Zone_Air_Temperature_Sensor
+in uFirst : Boolean
+in uSecond : Boolean
+out yOne : Real
+out yTwo : Boolean
+
+# The gain, before.
+block gain = CDL.Reals.MultiplyByParameter(k = tuned)
+block limit = CDL.Reals.Limiter(uMax = 10.0, uMin = 0.0)
+block delay = CDL.Logical.TrueDelay(delayTime = 60, delayOnInit = false)
+block oldName = CDL.Reals.Abs
+block dropped = CDL.Reals.Sources.Constant(k = gone)
+block both = CDL.Logical.And
+
+uUnit -> gain.u
+gain.y -> limit.u
+uType -> oldName.u
+oldName.y -> yOne
+uFirst -> delay.u
+delay.y -> both.u1
+uSecond -> both.u2
+both.y -> yTwo

@@ -1,0 +1,14 @@
+# oce diff zone_pressure_request -> zone_pressure_request
+# graph differs; parameters equal; interface equal; metadata differs
+# blocks: 4 by name, 1 renamed, 1 removed, 1 added
+# graph
+~ damOpen.t = 0.85   # was 0.95
+- block openLong = CDL.Logical.TrueDelay(delayTime = 60, delayOnInit = true)
+- damOpen.y -> openLong.u
+> block setFrac = CDL.Reals.MultiplyByParameter(k = 0.7)   # was seventySet; renamed, exact
++ block starvedLong = CDL.Logical.TrueDelay(delayTime = 120, delayOnInit = true)
++ starved.y -> starvedLong.u
+~ damOpen.y -> want.u1   # was openLong.y
+~ starvedLong.y -> want.u2   # was starved.y
+# metadata
+~ # comment on sequence changed

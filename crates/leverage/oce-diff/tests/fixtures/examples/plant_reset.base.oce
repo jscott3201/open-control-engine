@@ -1,0 +1,21 @@
+# Chilled-water supply temperature reset, reference.
+sequence chw_plant_reset
+derived_from none
+
+in uReq : Boolean
+in uPlaEna : Boolean
+out TChiWatSupSet : Real @unit K
+
+block ena = CDL.Logical.And
+block hold = CDL.Logical.TrueDelay(delayTime = 300, delayOnInit = true)
+block TLow = CDL.Reals.Sources.Constant(k = 279.15)
+block THigh = CDL.Reals.Sources.Constant(k = 285.15)
+block sel = CDL.Reals.Switch
+
+uPlaEna -> ena.u1
+uReq -> ena.u2
+ena.y -> hold.u
+TLow.y -> sel.u1
+hold.y -> sel.u2
+THigh.y -> sel.u3
+sel.y -> TChiWatSupSet

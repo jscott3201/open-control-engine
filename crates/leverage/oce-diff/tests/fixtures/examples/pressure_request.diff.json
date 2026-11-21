@@ -1,0 +1,129 @@
+{
+  "base": {
+    "derived_from": null,
+    "sequence": "zone_pressure_request"
+  },
+  "catalog": "catalog:1:fnv1a128:96724061ffda5d6a7cb9d4019c440892",
+  "graph": [
+    {
+      "kind": "reparameterized",
+      "new": {
+        "bits": "0x3feb333333333333",
+        "real": "0.85"
+      },
+      "old": {
+        "bits": "0x3fee666666666666",
+        "real": "0.95"
+      },
+      "subject": "damOpen.t"
+    },
+    {
+      "class": "CDL.Logical.TrueDelay",
+      "inputs": [
+        {
+          "port": "u",
+          "source": "damOpen.y"
+        }
+      ],
+      "kind": "removed",
+      "params": [
+        {
+          "name": "delayTime",
+          "value": {
+            "integer": 60
+          }
+        },
+        {
+          "name": "delayOnInit",
+          "value": {
+            "boolean": true
+          }
+        }
+      ],
+      "subject": "openLong"
+    },
+    {
+      "class": "CDL.Reals.MultiplyByParameter",
+      "confidence": "exact",
+      "from": "seventySet",
+      "kind": "renamed",
+      "params": [
+        {
+          "name": "k",
+          "value": {
+            "bits": "0x3fe6666666666666",
+            "real": "0.7"
+          }
+        }
+      ],
+      "subject": "setFrac"
+    },
+    {
+      "class": "CDL.Logical.TrueDelay",
+      "inputs": [
+        {
+          "port": "u",
+          "source": "starved.y"
+        }
+      ],
+      "kind": "added",
+      "params": [
+        {
+          "name": "delayTime",
+          "value": {
+            "integer": 120
+          }
+        },
+        {
+          "name": "delayOnInit",
+          "value": {
+            "boolean": true
+          }
+        }
+      ],
+      "subject": "starvedLong"
+    },
+    {
+      "kind": "rewired",
+      "new": "damOpen.y",
+      "old": "openLong.y",
+      "subject": "want.u1"
+    },
+    {
+      "kind": "rewired",
+      "new": "starvedLong.y",
+      "old": "starved.y",
+      "subject": "want.u2"
+    }
+  ],
+  "head": {
+    "derived_from": null,
+    "sequence": "zone_pressure_request"
+  },
+  "interface": [],
+  "metadata": [
+    {
+      "kind": "comment-changed",
+      "new": " Zone static-pressure reset request, version 2.",
+      "old": " Zone static-pressure reset request, version 1.",
+      "subject": "sequence"
+    }
+  ],
+  "notes": [],
+  "parameters": [],
+  "schema": "oce-diff/1",
+  "source": "authoring",
+  "summary": {
+    "blocks": {
+      "base_only": 1,
+      "by_name": 4,
+      "head_only": 1,
+      "renamed": 1
+    },
+    "equal": false,
+    "graph_equal": false,
+    "interface_equal": true,
+    "metadata_equal": false,
+    "parameters_equal": true
+  }
+}

@@ -1,0 +1,21 @@
+# agent draft
+sequence chw_plant_reset
+derived_from none
+
+in uReq : Boolean
+in uPlaEna : Boolean
+out TChiWatSupSet : Real @unit K
+
+block plaOn = CDL.Logical.And
+block onDelay = CDL.Logical.TrueDelay(delayTime = 600, delayOnInit = true)
+block TMin = CDL.Reals.Sources.Constant(k = 279.15)
+block TMax = CDL.Reals.Sources.Constant(k = 285.15)
+block sw = CDL.Reals.Switch
+
+uReq -> plaOn.u1
+uPlaEna -> plaOn.u2
+plaOn.y -> onDelay.u
+TMin.y -> sw.u1
+onDelay.y -> sw.u2
+TMax.y -> sw.u3
+sw.y -> TChiWatSupSet

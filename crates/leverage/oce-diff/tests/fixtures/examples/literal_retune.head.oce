@@ -1,0 +1,11 @@
+# Dehumidification override, sheet revision B.
+sequence ahu_dehum_override
+derived_from none
+
+in phiRet : Real @unit 1
+out dehumOn : Boolean
+
+block dehum = CDL.Reals.Hysteresis(uLow = 0.65, uHigh = 0.7)
+
+phiRet -> dehum.u
+dehum.y -> dehumOn

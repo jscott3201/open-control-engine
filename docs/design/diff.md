@@ -8,6 +8,12 @@ reopened. Decisions 9 to 16 were made while drafting and accepted by the archite
 [Review rulings](#review-rulings)). The model it diffs is the one in the
 [authoring layer note](authoring-layer.md).
 
+**As landed.** The authoring diff, the rename pass and the two renderers are built as
+`crates/leverage/oce-diff` (issue #665, GitHub #692,
+[crate README](../../crates/leverage/oce-diff/README.md));
+the CXF adapter, the blob comparison and the `oce diff` verb are #666 to #668. What building it
+showed is written back where it belongs and listed under [As landed](#as-landed).
+
 The owner's work plan names the M3 deliverable as "a structural diff of two authoring models or CXF
 documents, used in receipts and bundle cards", with `oce diff` in the CLI. Its consumers are M3
 receipts (plain data with machine-stable codes), library bundle cards (a "what changed from the
@@ -57,7 +63,10 @@ The rename pass (decision 11) is deterministic and bounded:
   **anchor** when it is a boundary present on both sides or an already-matched block. A port
   **agrees** when both endpoints map to the same anchor, **disagrees** when at least one is an
   anchor and they differ, and is **unknown** when both are unmatched blocks. An output port
-  compares its set of targets the same way.
+  compares its set of targets the same way. Three cases this leaves open are read as
+  disagreement, because no later round can make them agree: a port linked on one side only, a
+  different number of endpoints, and an endpoint that is neither an anchor nor an unmatched block
+  (a boundary declared on one side only, a block no statement declares).
 - **Rounds.** A round collects the pairs with no disagreement and at least one agreement, and
   accepts a pair only when each side has exactly one such candidate. Accepted pairs are anchors
   for the next round. The pass stops when a round accepts nothing, or after 8 rounds. Mutual
@@ -67,7 +76,9 @@ The rename pass (decision 11) is deterministic and bounded:
   `added`.
 - **Bounds.** At most 2,048 unmatched blocks per side and 65,536 gated pairs. Past either cap the
   pass does not run, the diff carries the note `rename-pass-skipped`, and every unmatched block is
-  removed or added. `--no-renames` turns the pass off (note `rename-pass-off`).
+  removed or added. A cap is only passed when both sides have unmatched blocks: with nothing left
+  on one side there is nothing to pair and no note. `--no-renames` turns the pass off (note
+  `rename-pass-off`).
 - **Boundaries are never renamed by the heuristic.** A renamed input or output breaks every binding
   to it, so it reads as removed plus added in the interface section.
 
@@ -84,10 +95,10 @@ serialized as stable kebab-case `kind` strings:
 | --- | --- | --- |
 | `added` | head block | Present only in head; carries its class, assignments and input drivers |
 | `removed` | base block | Present only in base; carries the same |
-| `renamed` | head block | Matched by the rename pass; carries `from`, class and `confidence` |
+| `renamed` | head block | Matched by the rename pass; carries `from`, class, the head block's assignments and `confidence` |
 | `reparameterized` | `block.param` | A value differs, or an assignment exists on one side only (that side `null`) and is not the catalog default |
 | `rewired` | `block.port` or boundary output | The driver of a target changed (`old`, `new`; `null` when undriven) |
-| `reordered` | list name or block | Same elements, different authored order; no semantic claim |
+| `reordered` | list name or block | Same elements, different authored order; no semantic claim. Carries `list` (`blocks`, `connections`, `assignments`), so a block named `blocks` is told from the block list |
 | `parameter-defaulted` | `block.param` | An assignment exists on one side only and equals the catalog's literal default |
 
 Every connection change is reported **once, at its target**, because an input has one driver
@@ -105,7 +116,7 @@ assignments).
 
 **Parameters** (sequence-level `param`): `added`, `removed`, `changed`, `type-changed`, `reordered`.
 **Interface** (boundary inputs and outputs): `added`, `removed`, `type-changed`, `unit-changed`,
-`quantity-changed`, `display-unit-changed`, `reordered`. **Metadata**: `sequence-renamed`,
+`quantity-changed`, `display-unit-changed`, `min-changed`, `max-changed`, `reordered`. **Metadata**: `sequence-renamed`,
 `derived-from-changed`, `semantic-changed` (subject such as `TOut.brick`), `comment-changed` and
 `literal-respelled` (an Integer literal on a Real parameter, or a unit suffix, changed with the
 value unchanged). `unit` is interface because the emitter writes it as `S231:unit`; the other
@@ -133,9 +144,9 @@ comparison says only "different" (decision 15).
 ## Output
 
 **Data.** A serde `Diff`: a `schema` string (`oce-diff/1`), the `source` (`authoring` or `cxf`),
-the catalog content id the defaults came from, both sequence names and `derived_from` ids, a
-`summary`, closed-enum `notes`, and the four sections (decision 7). Each section is sorted by
-subject bytewise, then kind in enum order, then detail; nothing is in hash order. Reals are carried
+the catalog content id the defaults came from, both sequence names and `derived_from` ids (`null`
+for none), a `summary`, closed-enum `notes`, and the four sections (decision 7). Each section is
+sorted by subject bytewise, then kind in enum order, then detail; nothing is in hash order. Reals are carried
 as the canonical printer's shortest round-trip spelling plus their bit pattern, so no float is
 parsed back from JSON (decision 13). `equal` is true only when every section is empty.
 
@@ -201,10 +212,11 @@ pub struct Diff {
 pub enum GraphChange {
     Added { subject: String, class: String, params: Vec<Assignment>, inputs: Vec<Driver> },
     Removed { subject: String, class: String, params: Vec<Assignment>, inputs: Vec<Driver> },
-    Renamed { subject: String, from: String, class: String, confidence: Confidence },
+    Renamed { subject: String, from: String, class: String, params: Vec<Assignment>,
+              confidence: Confidence },
     Reparameterized { subject: String, old: Option<Literal>, new: Option<Literal> },
     Rewired { subject: String, old: Option<String>, new: Option<String> },
-    Reordered { subject: String },
+    Reordered { subject: String, list: GraphList },
     ParameterDefaulted { subject: String, value: Literal, side: Side },
 }
 
@@ -216,7 +228,9 @@ pub enum Confidence { Exact, High }
 (the last two `Option<bool>`, `None` from the CXF adapter) and the block counts (`by_name`,
 `renamed`, `base_only`, `head_only`). `Literal` mirrors the model's tagged literal (`{"real",
 "bits"}`, `{"integer"}`, `{"boolean"}`, `{"text"}`, `{"ref"}`, `{"member"}`); `Driver` is
-`{port, source}`; `DiffOptions` holds `renames`; the three rename caps are public constants.
+`{port, source}`; `DiffOptions` holds `renames` and `canonical_ids_equal` (the caller's statement
+behind decision 8's fast path, a hint that never changes the result); the three rename caps are
+public constants.
 `BlobComparison` holds `same_bytes`, a `content_id` comparison (`same`, `different`, or `unknown`
 when a blob records none), class-table changes by class path (`added`, `removed`,
 `signature-changed`) and an `initial_state` comparison (`unknown` unless the block lists align by
@@ -260,25 +274,25 @@ and `param phiLow : Real = 0.65`.
   "schema": "oce-diff/1",
   "source": "authoring",
   "catalog": "catalog:1:fnv1a128:<32 hex>",
-  "base": { "sequence": "ahu_dehum_override", "derived_from": "none" },
-  "head": { "sequence": "ahu_dehum_override", "derived_from": "none" },
+  "base": { "sequence": "ahu_dehum_override", "derived_from": null },
+  "head": { "sequence": "ahu_dehum_override", "derived_from": null },
   "summary": { "equal": false, "graph_equal": true, "parameters_equal": false,
                "interface_equal": true, "metadata_equal": false,
                "blocks": { "by_name": 1, "renamed": 0, "base_only": 0, "head_only": 0 } },
   "notes": [],
   "parameters": [
-    { "kind": "changed", "subject": "phiHigh", "affects": ["dehum.uHigh"],
+    { "kind": "changed", "subject": "phiHigh", "type": "Real", "affects": ["dehum.uHigh"],
       "old": { "real": "0.6", "bits": "0x3fe3333333333333" },
       "new": { "real": "0.7", "bits": "0x3fe6666666666666" } },
-    { "kind": "changed", "subject": "phiLow", "affects": ["dehum.uLow"],
+    { "kind": "changed", "subject": "phiLow", "type": "Real", "affects": ["dehum.uLow"],
       "old": { "real": "0.55", "bits": "0x3fe199999999999a" },
       "new": { "real": "0.65", "bits": "0x3fe4cccccccccccd" } }
   ],
   "interface": [],
   "graph": [],
   "metadata": [ { "kind": "comment-changed", "subject": "sequence",
-                  "old": "Dehumidification override, sheet revision A.",
-                  "new": "Dehumidification override, sheet revision B." } ]
+                  "old": " Dehumidification override, sheet revision A.",
+                  "new": " Dehumidification override, sheet revision B." } ]
 }
 ```
 
@@ -360,7 +374,10 @@ they are no candidate pair. `seventySet` and `setFrac` pass both gates; `u` is d
                   { "name": "delayOnInit", "value": { "boolean": true } } ],
       "inputs": [ { "port": "u", "source": "damOpen.y" } ] },
     { "kind": "renamed", "subject": "setFrac", "from": "seventySet",
-      "class": "CDL.Reals.MultiplyByParameter", "confidence": "exact" },
+      "class": "CDL.Reals.MultiplyByParameter",
+      "params": [ { "name": "k",
+                    "value": { "real": "0.7", "bits": "0x3fe6666666666666" } } ],
+      "confidence": "exact" },
     { "kind": "added", "subject": "starvedLong", "class": "CDL.Logical.TrueDelay",
       "params": [ { "name": "delayTime", "value": { "integer": 120 } },
                   { "name": "delayOnInit", "value": { "boolean": true } } ],
@@ -456,9 +473,15 @@ candidates, because `delayTime` differs.
 {
   "graph": [
     { "kind": "renamed", "subject": "TMax", "from": "THigh",
-      "class": "CDL.Reals.Sources.Constant", "confidence": "exact" },
+      "class": "CDL.Reals.Sources.Constant",
+      "params": [ { "name": "k",
+                    "value": { "real": "285.15", "bits": "0x4071d26666666666" } } ],
+      "confidence": "exact" },
     { "kind": "renamed", "subject": "TMin", "from": "TLow",
-      "class": "CDL.Reals.Sources.Constant", "confidence": "exact" },
+      "class": "CDL.Reals.Sources.Constant",
+      "params": [ { "name": "k",
+                    "value": { "real": "279.15", "bits": "0x4071726666666666" } } ],
+      "confidence": "exact" },
     { "kind": "removed", "subject": "ena", "class": "CDL.Logical.And", "params": [],
       "inputs": [ { "port": "u1", "source": "uPlaEna" }, { "port": "u2", "source": "uReq" } ] },
     { "kind": "removed", "subject": "hold", "class": "CDL.Logical.TrueDelay",
@@ -472,7 +495,7 @@ candidates, because `delayTime` differs.
     { "kind": "added", "subject": "plaOn", "class": "CDL.Logical.And", "params": [],
       "inputs": [ { "port": "u1", "source": "uReq" }, { "port": "u2", "source": "uPlaEna" } ] },
     { "kind": "renamed", "subject": "sw", "from": "sel",
-      "class": "CDL.Reals.Switch", "confidence": "high" },
+      "class": "CDL.Reals.Switch", "params": [], "confidence": "high" },
     { "kind": "rewired", "subject": "sw.u2", "old": "hold.y", "new": "onDelay.y" }
   ]
 }
@@ -481,7 +504,7 @@ candidates, because `delayTime` differs.
 ```text
 # oce diff chw_plant_reset -> chw_plant_reset
 # graph differs; parameters equal; interface equal; metadata differs
-# names disjoint: no block kept its name; 3 of 5 matched by the rename pass, 2 not matched
+# names disjoint: no block kept its name and class; 3 of 5 base blocks matched by the rename pass, 2 removed, 2 added
 # graph
 > block TMax = CDL.Reals.Sources.Constant(k = 285.15)   # was THigh; renamed, exact
 > block TMin = CDL.Reals.Sources.Constant(k = 279.15)   # was TLow; renamed, exact
@@ -645,6 +668,67 @@ the same way by every subcommand; the authoring note is aligned in the same PR a
 - Matching blocks by semantic equivalence (commutativity, algebraic rewrites); any evaluation.
 - Prose explanations, and any LLM call, inside the crate.
 - Nested composites, which the M2 model does not author.
+
+## As landed
+
+What building the authoring diff (issue #665, GitHub #692) showed, each also written into the
+section it belongs to. None of these is a new decision: each follows from a decision above once
+it meets the model as it stands, and each was accepted in the review of GitHub #692. The worked
+examples above are the crate's oracle: their JSON, text and table rows are typed by hand into
+`crates/leverage/oce-diff/tests/note_examples.rs`, so the two are kept equal by hand, and a
+difference is resolved here or in the code.
+
+- **`min-changed` and `max-changed`.** The interface kinds were written before a boundary had
+  bounds (importer note, decision 4). A bound on an input is inside the canonical content id, so
+  a changed bound is an interface entry of its own kind.
+- **`renamed` carries the block's assignments, and a parameter `changed` its type.** The text
+  rendering is a pure function of the data (decision 7) and writes whole statements
+  (`> block setFrac = CDL.Reals.MultiplyByParameter(k = 0.7)`, `~ param phiHigh : Real = 0.7`),
+  so the data holds what those lines need. The examples' JSON gained `params` and `type`.
+- **`reordered` names its list** in the graph section, where the subject of a block's assignment
+  order is the block and `blocks` is a legal block name.
+- **`derived_from` is `null` for none**, not the word `none`: a wire document can carry the id
+  `none` unchecked, and the diff never validates (decision 10).
+- **A comment is carried as the model holds it**: the text after `#`, its leading space
+  included, lines joined by a line feed. Example (a)'s `old` and `new` gained the space.
+- **A section flag of the summary ignores `reordered`; `equal` does not.** Order is not semantic
+  (decision 5), and decision 16 has a `reordered`-only diff exit 1 while scripts that want "same
+  structure" read `summary.graph_equal`. So a section flag is "no entry other than `reordered`",
+  `equal` is "every section is empty", and `equal` is not the four flags together. It is also
+  what keeps the levels in step: the CXF adapter reports graph-equal from equal canonical ids
+  (decision 8), which ignore authored order.
+- **One value in two spellings needs a Real to be expected.** An Integer literal against the
+  equal Real is `literal-respelled` on a `Real` sequence parameter, on a block parameter the
+  catalog types Real and on a bound of a boundary both sides type `Real`, exactly up to 2^53, and
+  a change of value anywhere else. So the diff reads a parameter's type from the catalog as well
+  as its literal default. The engine is to normalise that spelling at load (owner ruling on
+  #683), which makes the loaded graph agree with this level.
+- **A value and its unit suffix that both change are both reported**: the value in its section,
+  the two spellings as `literal-respelled`. A scaled suffix kept across a change (`1 h` to `2 h`)
+  is not a respelling.
+- **The rename pass's open cases**: a port linked on one side only, a different number of
+  endpoints, and an endpoint that is neither an anchor nor an unmatched block all disagree; a cap
+  is passed only when both sides have unmatched blocks. A pair accepted on its agreeing ports
+  never comes to disagree later, so `high` means exactly "some port is still unknown".
+- **The fast path needs no switch.** With equal canonical ids every block matches by name and
+  class, so nothing is left for the rename pass, and `diff` takes that path whenever a side has
+  nothing left, whoever says so. `DiffOptions::canonical_ids_equal` is kept as the caller's
+  statement and is a hint only: it never changes the result, so a wrong one costs nothing.
+- **The names-disjoint line** of the text reads "no block kept its name and class" and counts the
+  removed and the added blocks: a name kept under another class is not a kept block.
+- **An array element is never `parameter-defaulted`**: an element is part of the array's shape.
+- **What an invalid model means** is fixed case by case in the
+  [crate README](../../crates/leverage/oce-diff/README.md#what-an-invalid-model-means): a
+  repeated name is matched occurrence by occurrence, a target with several drivers as a
+  multiset, and a link end is compared as what it is (a boundary, or a block and a port), never
+  as its spelling.
+- **Reading a diff back is strict**: closed objects, every key required (`null` for a value that
+  may be absent), `schema` exactly `oce-diff/1`, a Real's spelling the spelling of its bits, and
+  the summary's flags what the sections give.
+- **A round of the rename pass groups blocks instead of visiting pairs.** Whether a pair
+  disagrees depends only on what each block sees, so the blocks with equal views are the
+  candidates of one another and the work is the links at the unmatched blocks. The pair cap is
+  still counted and enforced.
 
 ## Review rulings
 

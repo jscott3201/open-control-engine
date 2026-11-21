@@ -1,0 +1,35 @@
+# Structural diff above the facade (design note docs/design/diff.md, issue #665): a two-way
+# comparison of two authoring models that returns sorted, schema-tagged data, the bounded rename
+# pass, and the text and Markdown renderers. Among `oce-*` packages it depends on `oce-api` and the
+# leverage crate `oce-author` only (crates/leverage/README.md; diff note decision 9), with
+# `oce-bless` as a dev-dependency for the golden switch (authoring note decision 19).
+[package]
+name = "oce-diff"
+description = "Structural diff for Open Control Engine sequences: a two-way comparison of two authoring models as sorted, schema-tagged data, a bounded rename pass, and text and Markdown renderers."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+# Nothing above the facade is published yet (authoring note decision 20).
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+# The facade: the catalog's literal defaults and parameter types, and the catalog content id a
+# diff records (diff note decision 10). Nothing is loaded, grounded or run.
+oce-api = { workspace = true }
+# The authoring model the diff compares (`Sequence`); a leverage crate, used as it is.
+oce-author = { path = "../oce-author" }
+# The diff is serde data (diff note decision 7). The workspace entries pin serde without default
+# features for the `no_std` core, so this crate names `std` itself.
+serde = { workspace = true, features = ["std"] }
+# Writes the data as JSON (`Diff::to_json`).
+serde_json = { workspace = true }
+
+[dev-dependencies]
+oce-bless = { workspace = true }
