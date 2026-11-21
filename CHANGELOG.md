@@ -710,7 +710,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   link is not recognised there. An output that does not exist, a dangling link included, is no
   file. `tests/output_guards.rs` covers both verbs; `oce vocab` lists the code.
 - **`oce emit -o` refuses a `.oce` or `.json` output name, and both `-o` guards check stdin**
-  (GitHub #PRNUM, issue #697). `oce emit e.oce -o y.oce` exited 0 and wrote CXF into `y.oce`,
+  (GitHub #712, issue #697). `oce emit e.oce -o y.oce` exited 0 and wrote CXF into `y.oce`,
   which `oce validate y.oce` then failed to read. `emit -o` now refuses, before anything is
   read, a name `id::form_by_name` reads as text or wire, under the existing
   `output-form-mismatch` (exit 2, nothing written); `.jsonld`, `.cxf.json` and a name with no
