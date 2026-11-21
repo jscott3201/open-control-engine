@@ -240,6 +240,7 @@ fn vocab_tags_are_exactly_the_tags_the_text_form_reads() {
             .collect()
     };
     assert_eq!(codes("parse_codes"), oce_author::PARSE_CODES);
+    assert_eq!(codes("wire_codes"), oce_author::WIRE_CODES);
     let findings = codes("finding_codes");
     assert_eq!(
         &findings[..oce_author::STAGE_ONE_CODES.len()],

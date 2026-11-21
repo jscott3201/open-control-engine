@@ -9,7 +9,7 @@ and loads only throwaway engines of its own (validation stage 2), never one a ho
 | --- | --- |
 | `Sequence` and its statements | The typed model: one flat sequence of parameters (typed `ParameterType`: `Real`, `Integer`, `Boolean` or an enumeration type name), boundary inputs and outputs (with `quantity`, `display_unit`, optional `min` and `max` bounds (`Bound`) and a closed `SemanticPoint`), leaf blocks with ordered assignments and typed connections, in authored order. Each statement carries text-form `Annotations` (comments, a blank line before it), the sequence its header comments (`annotations`) and `trailing_comments`, and assignments and parameters a text-only unit suffix; the wire form and the emitter ignore them. The model types are `#[non_exhaustive]`: build through the constructors or `SequenceBuilder`. |
 | `SequenceBuilder` | A checked builder; refuses with a typed `BuildError` what it can see without the catalog. |
-| `from_wire_str`, `from_wire_bytes`, `to_wire_string` | The strict-JSON wire form: closed objects, every key required, absent values `""`/`[]`/`false` (never `null`), an object read from a JSON object only (never from the list of its values; any other type is `WireError::WrongType` with the path of the value, GitHub #544), connections as `"a.y -> b.u"`, boundary bounds as a list of at most one number (`"min": []` or `[0]`; a second item is `WireError::BoundListTooLong`). Reads are bounded (4 MiB, depth 8, 65,536 entries per list, 4,096-byte strings) and refuse hostile input with a typed `WireError`; writes are canonical and byte-stable. |
+| `from_wire_str`, `from_wire_bytes`, `to_wire_string` | The strict-JSON wire form: closed objects, every key required, absent values `""`/`[]`/`false` (never `null`), an object read from a JSON object only (never from the list of its values; any other type is `WireError::WrongType` with the path of the value, GitHub #544), connections as `"a.y -> b.u"`, boundary bounds as a list of at most one number (`"min": []` or `[0]`; a second item is `WireError::BoundListTooLong`). Reads are bounded (4 MiB, depth 8, 65,536 entries per list, 4,096-byte strings) and refuse hostile input with a typed `WireError`, which names itself with a stable `code()` (`WIRE_CODES`, sixteen codes, pinned in order) and gives its `location()`; see [below](#wire-refusal-codes). Writes are canonical and byte-stable. |
 | `WIRE_SCHEMA`, `wire_schema()` | The JSON Schema (draft 2020-12) derived from the wire DTOs with `schemars`, published at [`schema/sequence.schema.json`](schema/sequence.schema.json) and pinned byte for byte; the `class` enum is the catalog's authorable class paths and a sequence parameter's `type` enum is `parameter_type_names()` (`Real`, `Integer`, `Boolean` and every enumeration of `oce_api::enumeration_types()`, never a constant package). Strict profile: closed objects, all required, `anyOf` only over the value shapes. |
 | `validate`, `validate_author_side`, `Finding` | The two-stage validator. Stage 1 (`validate_author_side`): twenty-six finding codes (`STAGE_ONE_CODES`) from the model and the catalog, a repeated connection target (`single-assignment`), a unit suffix against the parameter's declared unit and against its value (`unit-suffix-mismatch`, through `oce-vocab`), an Integer above 2^53 on a Real parameter, enumeration types and members (`unknown-enum-type`, `unknown-enum-literal`) and boundary bounds (`invalid-bound`, `non-finite-bound`, `crossed-bounds`) included. Stage 2, only when stage 1 is clean: emit, load in a throwaway `Engine::new()` and map every engine diagnostic back through the IRI scheme — every warning is an error finding with the engine's code (decision 14), `origin = engine`; a subject the scheme cannot name is attached to `sequence` with the raw subject in `detail`. Findings are sorted by authored position, code and detail. |
 | `emit`, `EmitOptions`, `EmitError` | The emitter to flat CXF: authored order, never sorted; IRIs `{namespace}{sequence}.{local}` (default `urn:oce:author:`, an override must end in `#`, `/` or `:`); block `@type` under the fixed class base `http://example.org#Buildings.Controls.OBC.`; only the assignments the author wrote; arrays in the CXF array form (element by element under the flattened names when the author left a gap); an enumeration-typed sequence parameter with its class IRI as `isOfDataType` and the full member path as value, and a library constant with its package IRI as `isOfDataType`, as the corpus writes them; boundary `unit`, `quantity`, `displayUnit`, `min` and `max` and no semantic record; a canonical writer (fixed key order, two-space indentation, ASCII, shortest round-trip reals); the `S231` context bound to `http://data.ashrae.org/S231#`, and on the root node the translation-software label `S231:translationSoftware` (`open-control-engine`) and `S231:translationSoftwareVersion` (the workspace version; OBC §8.4), which no importer reads back and which changes every emitted document when the workspace version does; refuses stage-1 errors (`EmitError::Invalid`), a malformed namespace (`EmitError::InvalidNamespace`) and anything above `oce_api::MAX_CXF_BYTES` (`EmitError::TooLarge`). |
@@ -93,6 +93,47 @@ A block parameter `value` takes one of five shapes on the wire:
 | member | `{"member": "SimpleController.PI"}`, `{"member": "OperationModes.occupied"}` | `Literal::Member` (`MemberRef`): an enumeration member or a library constant |
 
 A sequence parameter's value takes the same shapes except the reference.
+
+## Wire refusal codes
+
+Every refusal of the wire reader is a `WireError`, never a panic. The enum is `#[non_exhaustive]`,
+so a match on its variants outside this crate needs a wildcard arm; branch on `code()` instead
+(issue #495). `WireError::code(&self) -> &'static str` is one of the sixteen stable kebab-case
+codes in `WIRE_CODES`, one per variant in declaration order. The code depends on the variant
+alone, and a code is never renamed or reused; a new variant brings a new code. An in-crate test
+(`src/wire/codes_tests.rs`) pins the list against a match with no wildcard arm, so a variant
+cannot be added without a code, and `tests/wire_codes.rs` produces each code from a document.
+
+| Code | Variant | Refused |
+| --- | --- | --- |
+| `not-utf8` | `NotUtf8` | bytes that are not UTF-8 (`from_wire_bytes` only) |
+| `byte-order-mark` | `ByteOrderMark` | a document that starts with a byte-order mark |
+| `input-too-large` | `TooLarge` | a document larger than `MAX_WIRE_BYTES` (4 MiB) |
+| `nesting-too-deep` | `TooDeep` | objects and arrays nested deeper than `MAX_WIRE_DEPTH` (8) |
+| `list-too-long` | `ListTooLong` | a list longer than `MAX_WIRE_LIST_LEN` (65,536) |
+| `string-too-long` | `StringTooLong` | a string longer than `MAX_WIRE_STRING_BYTES` (4,096) as written |
+| `duplicate-key` | `DuplicateKey` | an object that repeats a key |
+| `non-finite-number` | `NonFiniteNumber` | `NaN` or `Infinity` as a number, or a real that overflows binary64 |
+| `integer-out-of-range` | `IntegerOutOfRange` | an integer token outside the `i64` range |
+| `control-character` | `ControlCharacter` | a control character in a string, raw or escaped |
+| `unknown-key` | `UnknownKey` | a key the object's schema does not define |
+| `missing-key` | `MissingKey` | an object without a required key |
+| `wrong-type` | `WrongType` | a value of the wrong JSON type, or an unknown enumerator |
+| `json-syntax` | `Syntax` | a document that is not JSON |
+| `bound-list-too-long` | `BoundListTooLong` | a boundary's `min` or `max` list with a second item |
+| `malformed-connection` | `MalformedConnection` | a connection string without exactly one `->` |
+
+`WireError::location(&self) -> Option<Location>` is the 1-based line and byte column the refusal
+carries. Four refusals have none: `not-utf8` (it carries a byte offset), `byte-order-mark` and
+`input-too-large` (the whole document) and `malformed-connection` (it carries the connection's
+index).
+
+The list is a contract of its own, beside `PARSE_CODES`, `STAGE_ONE_CODES` and
+`IMPORT_ERROR_CODES`: a code is unique within its list, not across them. Eight wire codes are
+spelled as the text form's code for the same defect (`not-utf8`, `byte-order-mark`,
+`input-too-large`, `nesting-too-deep`, `string-too-long`, `non-finite-number`,
+`integer-out-of-range`, `control-character`), `malformed-connection` is also a stage-1 finding
+code, and `unknown-key`, `missing-key` and `malformed-connection` are also import codes.
 
 ## Enumeration types, members and bounds (issue #492)
 

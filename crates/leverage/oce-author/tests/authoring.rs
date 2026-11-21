@@ -69,6 +69,7 @@ mod text_spans;
 mod unit_suffixes;
 mod validate_cost;
 mod wire_closed_shapes;
+mod wire_codes;
 mod wire_refusals;
 mod wire_round_trip;
 mod wire_totality;

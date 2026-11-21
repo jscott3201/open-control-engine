@@ -8,7 +8,8 @@
 //!   parameters, boundary connectors, leaf blocks and connections, in authored order;
 //! - a typed **builder** ([`SequenceBuilder`]) that refuses what it can see without the catalog;
 //! - the strict-JSON **wire form** ([`from_wire_str`], [`to_wire_string`]) with closed objects,
-//!   bounded reads and one canonical spelling, and its JSON **schema** ([`wire_schema`],
+//!   bounded reads, one canonical spelling and a typed [`WireError`] with a stable code
+//!   ([`WireError::code`], [`WIRE_CODES`]), and its JSON **schema** ([`wire_schema`],
 //!   [`WIRE_SCHEMA`]) derived from the wire DTOs and pinned byte for byte;
 //! - the two-stage **validator** ([`validate()`], [`Finding`]): stage 1 judges the model against
 //!   the catalog `oce-api` publishes ([`validate_author_side`]); stage 2 emits, loads the bytes in
@@ -85,6 +86,6 @@ pub use validate::{
     validate_author_side,
 };
 pub use wire::{
-    MAX_WIRE_BYTES, MAX_WIRE_DEPTH, MAX_WIRE_LIST_LEN, MAX_WIRE_STRING_BYTES, WireError,
-    from_wire_bytes, from_wire_str, to_wire_string,
+    MAX_WIRE_BYTES, MAX_WIRE_DEPTH, MAX_WIRE_LIST_LEN, MAX_WIRE_STRING_BYTES, WIRE_CODES,
+    WireError, from_wire_bytes, from_wire_str, to_wire_string,
 };

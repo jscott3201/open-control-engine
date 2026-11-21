@@ -13,8 +13,8 @@ use std::io::{ErrorKind, Read};
 use std::path::Path;
 
 use oce_author::{
-    Location, MAX_TEXT_BYTES, MAX_WIRE_BYTES, NOT_UTF8, Sequence, SourceMap, WireError,
-    from_wire_bytes, parse_text_bytes, parse_text_with_spans,
+    MAX_TEXT_BYTES, MAX_WIRE_BYTES, NOT_UTF8, Sequence, SourceMap, WireError, from_wire_bytes,
+    parse_text_bytes, parse_text_with_spans,
 };
 
 use crate::codes;
@@ -206,108 +206,50 @@ pub(crate) fn decode_text<'b>(bytes: &'b [u8], report: &mut Report) -> Option<&'
     }
 }
 
-/// Record a wire refusal under its code and location.
+/// Record a wire refusal under the code and location the refusal itself reports
+/// (`oce_author::WireError::code` and `location`): the tool matches no variant, so a variant
+/// `oce-author` adds is reported under its own code.
 pub(crate) fn wire_error(error: &WireError, report: &mut Report) {
-    let (code, at) = wire_code(error);
-    report.error(code, error.to_string(), at);
-}
-
-/// The code and location of a wire refusal.
-pub(crate) fn wire_code(error: &WireError) -> (&'static str, Option<Location>) {
-    match error {
-        WireError::NotUtf8 { .. } => (codes::WIRE_NOT_UTF8, None),
-        WireError::ByteOrderMark => (codes::WIRE_BYTE_ORDER_MARK, None),
-        WireError::TooLarge { .. } => (codes::INPUT_TOO_LARGE, None),
-        WireError::TooDeep { at, .. } => (codes::WIRE_TOO_DEEP, Some(*at)),
-        WireError::ListTooLong { at, .. } => (codes::WIRE_LIST_TOO_LONG, Some(*at)),
-        WireError::StringTooLong { at, .. } => (codes::WIRE_STRING_TOO_LONG, Some(*at)),
-        WireError::DuplicateKey { at, .. } => (codes::WIRE_DUPLICATE_KEY, Some(*at)),
-        WireError::NonFiniteNumber { at } => (codes::WIRE_NON_FINITE_NUMBER, Some(*at)),
-        WireError::IntegerOutOfRange { at } => (codes::WIRE_INTEGER_OUT_OF_RANGE, Some(*at)),
-        WireError::ControlCharacter { at } => (codes::WIRE_CONTROL_CHARACTER, Some(*at)),
-        WireError::UnknownKey { at, .. } => (codes::WIRE_UNKNOWN_KEY, Some(*at)),
-        WireError::MissingKey { at, .. } => (codes::WIRE_MISSING_KEY, Some(*at)),
-        WireError::WrongType { at, .. } => (codes::WIRE_WRONG_TYPE, Some(*at)),
-        WireError::Syntax { at, .. } => (codes::WIRE_SYNTAX, Some(*at)),
-        WireError::BoundListTooLong { at } => (codes::WIRE_BOUND_LIST_TOO_LONG, Some(*at)),
-        WireError::MalformedConnection { .. } => (codes::WIRE_MALFORMED_CONNECTION, None),
-        _ => (codes::WIRE_REFUSED, None),
-    }
+    report.error(error.code(), error.to_string(), error.location());
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::codes::WIRE_CODES;
 
     #[test]
-    fn every_wire_refusal_has_a_listed_code_and_its_location() {
-        let at = Location::new(3, 7);
-        let cases = [
-            (WireError::NotUtf8 { offset: 4 }, None),
-            (WireError::ByteOrderMark, None),
-            (WireError::TooLarge { bytes: 9, limit: 8 }, None),
-            (WireError::TooDeep { at, limit: 8 }, Some(at)),
-            (WireError::ListTooLong { at, limit: 8 }, Some(at)),
-            (WireError::StringTooLong { at, limit: 8 }, Some(at)),
+    fn a_wire_refusal_is_recorded_under_its_own_code_message_and_location() {
+        let refusals: [(&[u8], &str, bool); 4] = [
+            (b"\xFF", "not-utf8", false),
+            (b"{", "json-syntax", true),
+            (b"[]", "wrong-type", true),
             (
-                WireError::DuplicateKey {
-                    key: "k".into(),
-                    at,
-                },
-                Some(at),
-            ),
-            (WireError::NonFiniteNumber { at }, Some(at)),
-            (WireError::IntegerOutOfRange { at }, Some(at)),
-            (WireError::ControlCharacter { at }, Some(at)),
-            (
-                WireError::UnknownKey {
-                    key: "k".into(),
-                    at,
-                },
-                Some(at),
-            ),
-            (
-                WireError::MissingKey {
-                    key: "k".into(),
-                    at,
-                },
-                Some(at),
-            ),
-            (
-                WireError::WrongType {
-                    detail: "d".into(),
-                    path: "inputs[0].semantic".into(),
-                    at,
-                },
-                Some(at),
-            ),
-            (
-                WireError::Syntax {
-                    detail: "d".into(),
-                    at,
-                },
-                Some(at),
-            ),
-            (WireError::BoundListTooLong { at }, Some(at)),
-            (
-                WireError::MalformedConnection {
-                    index: 0,
-                    text: "t".into(),
-                },
-                None,
+                br#"{"sequence":"s","derived_from":"","params":[],"inputs":[],"outputs":[],"blocks":[],"connections":["a b"]}"#,
+                "malformed-connection",
+                false,
             ),
         ];
-        let listed: Vec<&str> = WIRE_CODES.iter().map(|(code, _)| *code).collect();
-        let mut seen = Vec::new();
-        for (error, location) in &cases {
-            let (code, got) = wire_code(error);
-            assert!(listed.contains(&code), "{code} is not listed");
-            assert_eq!(got, *location, "{code}");
-            seen.push(code);
+        for (bytes, code, located) in refusals {
+            let error = oce_author::from_wire_bytes(bytes).expect_err("refused");
+            let mut report = Report::new("validate", None);
+            wire_error(&error, &mut report);
+            let json: serde_json::Value =
+                serde_json::from_str(&report.to_json(false)).expect("the report is JSON");
+            let recorded = &json["errors"][0];
+            assert_eq!(recorded["code"], code);
+            assert_eq!(recorded["detail"], error.to_string());
+            assert_eq!(recorded["span"].is_null(), !located, "{code}");
+            if let Some(at) = error.location() {
+                assert_eq!(recorded["span"]["line"], at.line);
+                assert_eq!(recorded["span"]["column"], at.column);
+            }
+            assert!(
+                crate::codes::WIRE_MEANINGS
+                    .iter()
+                    .any(|(listed, _)| *listed == code),
+                "{code} has no meaning for vocab"
+            );
         }
-        seen.push(codes::WIRE_REFUSED);
-        assert_eq!(seen, listed, "the table follows WireError order");
     }
 
     #[test]

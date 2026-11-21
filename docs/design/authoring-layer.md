@@ -303,6 +303,14 @@ this at the deserializer, not field by field, so a struct added to the form is c
 change to the reader. The format stays at revision 1: no document the canonical writer produces
 changes.
 
+*Amended 2026-11-20 (issue #495):* every wire refusal names itself. `WireError::code()` returns one
+of the sixteen stable kebab-case codes in `WIRE_CODES` (one per variant, in declaration order,
+pinned in the crate against a match with no wildcard arm) and `WireError::location()` the line and
+column it carries, if any. A host branches on the code and matches no variant: `WireError` is
+`#[non_exhaustive]`, so a match outside the crate needs a wildcard arm, and that arm is how the
+CLI came to hold a `wire-refused` fallback for a refusal it did not know. The codes are the
+strings the CLI already reported; the crate README lists them.
+
 The JSON Schema is derived from the wire DTOs with `schemars`, a dependency of `oce-author` only,
 never of an engine crate. The `class` enum is generated from the non-reserved class paths of
 `oce_api::catalog()` (133 today, well under the 1,000-value cap of common decoders). A test
@@ -827,3 +835,6 @@ The architect pass on the draft (owner consulted on 11, 12 and 20) ruled:
   `oce_vocab::SCALE_FACTORS`, the model gained `Assignment::scaled_from` and
   `SequenceParameter::scaled_from` (text-only, like the suffix), and stage 1 gained
   `unit-suffix-mismatch`, author-only, which the parity test pins as silent in the engine.
+- 2026-11-20 (issue #495): `WireError::code()` and `WireError::location()`, with the pinned
+  `WIRE_CODES` list, so the CLI reports the reader's own code and keeps no table or fallback of
+  its own ("Wire form" above).

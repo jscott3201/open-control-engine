@@ -99,7 +99,6 @@ wire codes (exit 2):
   json-syntax           the document is not JSON
   bound-list-too-long   a boundary's min or max list has more than one number
   malformed-connection  a connection is not `source -> target` with exactly one ->
-  wire-refused          a wire refusal this version of oce does not name
 
 error codes (exit 2):
   missing-from              stdin (-) was given without --from text|wire
