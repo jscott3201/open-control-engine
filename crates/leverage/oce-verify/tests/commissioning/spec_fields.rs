@@ -218,6 +218,42 @@ fn a_tolerance_is_a_number_that_is_not_negative() {
     );
     assert_eq!(code_of(&top_level("\"tolerances\": {}")), "loaded");
     assert_eq!(code_of(&top_level("\"tolerances\": []")), "wrong-type");
+    // Whatever tolerance a spec loads, neither envelope refuses it as a tolerance: the edges of
+    // what the reader accepts are inside what the comparison requires.
+    for value in [
+        "0",
+        "-0.0",
+        "5e-324",
+        "0.002",
+        "10",
+        "1.7976931348623157e308",
+    ] {
+        let members: Vec<String> = oce_verify::TOLERANCE_NAMES
+            .iter()
+            .map(|name| format!("\"{name}\": {value}"))
+            .collect();
+        let spec = loaded(&top_level(&format!(
+            "\"tolerances\": {{{}}}",
+            members.join(", ")
+        )));
+        let tolerances = spec.tolerances().expect("present").resolved();
+        let series = oce_verify::Series::new(&[0.0, 1.0], &[0.0, 1.0]);
+        for envelope in oce_verify::Envelope::ALL {
+            let compared = envelope.compare(
+                series,
+                series,
+                &tolerances,
+                &oce_verify::CompareLimits::default(),
+            );
+            assert!(
+                !matches!(
+                    compared,
+                    Err(oce_verify::CompareError::InvalidTolerance { .. })
+                ),
+                "{value} under {envelope}: {compared:?}"
+            );
+        }
+    }
     // Absent is not zero: an empty object and an explicit zero are different documents.
     let empty = loaded(&top_level("\"tolerances\": {}"));
     let zero = loaded(&top_level("\"tolerances\": {\"atoly\": 0}"));

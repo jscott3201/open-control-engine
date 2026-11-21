@@ -59,6 +59,27 @@
 //!   [`FunnelResult`] or a typed [`CompareError`] (stable codes in [`COMPARE_ERROR_CODES`]), read
 //!   no file and no clock, and give the same bits on every target.
 //!
+//! and the first part of the **commissioning verifier** (OBC §12; design note
+//! `docs/design/commissioning.md`, issue #658), the readers of the two files a commissioning run
+//! reads:
+//!
+//! - **The test spec** ([`CommissioningSpec`]), `oce/commissioning-spec/v1`
+//!   ([`COMMISSIONING_SPEC_SCHEMA`]): a strict-JSON superset of OBC §12.7 Listing 12.1. `//` and
+//!   `/* */` comments outside strings are removed, then the text is read by the strict cursor the
+//!   vector reader uses, under the same profile and the lowerable [`SpecLimits`]. It keeps the
+//!   LBL fields as written, reports the ones the verifier does not act on as findings
+//!   ([`Finding`]), writes a canonical form and names it with a `spec_id`.
+//! - **The point mapping** ([`PointMapping`]): Listing 12.2's shape, from a file of its own or
+//!   inline in a spec.
+//! - **Keys** ([`OverrideKey`], [`glob_matches`], [`KeySelection`]): which outputs an `outputs`
+//!   or `indicators` key selects, exactly or as a glob, and the tolerances
+//!   ([`PartialTolerances`]) and indicators that follow in declaration order.
+//! - **Typed refusals** ([`SpecError`], [`SpecErrorKind`], [`SPEC_ERROR_CODES`]), each with the
+//!   line and column of the text as written, comments included.
+//!
+//! Nothing runs a commissioning spec yet: binding one to a sequence, its trend sources, the unit
+//! table and its receipt are the later parts.
+//!
 //! ```
 //! use oce_verify::{Expectation, Literal, VectorSet, VerifyLimits};
 //!
@@ -134,6 +155,38 @@
 //! assert!(run.receipt.header.receipt_id.starts_with("receipt:fnv1a128:"));
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
+//!
+//! A commissioning spec, with a comment and no `schema` key, as an LBL file is written:
+//!
+//! ```
+//! use oce_verify::{CommissioningSpec, SpecLimits};
+//!
+//! let text = r#"{
+//!   // one test of one sequence
+//!   "references": [
+//!     { "model": "Supply_u", "sequence": "setPoiVAV1", "runController": true,
+//!       "outputs": { "setPoiVAV1.TSup*": { "atoly": 0.5 } },
+//!       "indicators": { "setPoiVAV1.TSup*": [ "fanSta.y" ] } }
+//!   ],
+//!   "tolerances": { "rtolx": 0.002, "rtoly": 0.002, "atolx": 10, "atoly": 0 }
+//! }"#;
+//! let spec = CommissioningSpec::from_json_str(text, &SpecLimits::default())?;
+//! let reference = &spec.references()[0];
+//! assert_eq!(spec.findings()[0].at(), "references[0].runController");
+//!
+//! // Which outputs the glob selects is decided against a sequence's output names.
+//! let names = ["setPoiVAV1.TSupHeaEco", "setPoiVAV1.y"];
+//! let selection = reference.select_output_keys(&names, &SpecLimits::default())?;
+//! assert_eq!(spec.tolerances_for(reference, &selection, 0).resolved().atoly, 0.5);
+//! assert_eq!(spec.tolerances_for(reference, &selection, 1).resolved().atoly, 0.0);
+//! assert!(spec.spec_id().starts_with("spec:fnv1a128:"));
+//!
+//! // A trailing comma is still refused, at its place in the text as written.
+//! let trailing = "{\n  \"references\": [], // none\n}";
+//! let refused = CommissioningSpec::from_json_str(trailing, &SpecLimits::default()).unwrap_err();
+//! assert_eq!((refused.code(), refused.subject()), ("json-syntax", "line 3 column 1"));
+//! # Ok::<(), oce_verify::SpecError>(())
+//! ```
 
 mod aligned_grid;
 mod bind;
@@ -173,11 +226,11 @@ mod verify_error;
 pub use aligned_grid::{ALIGNED_GRID_VERSION, aligned_grid};
 pub use clock::Clock;
 pub use commissioning::{
-    COMMISSIONING_SPEC_SCHEMA, CommissioningSpec, ComparisonWindow, Finding,
-    FunnelReference, IndicatorRule, KeySelection, LBL_FIELD_IGNORED, MAX_SPEC_DETAIL_BYTES,
-    OutputOverride, OverrideKey, PartialTolerances, PointMapping, PointNameMapping, PointPair,
-    PointSide, PointType, SPEC_ERROR_CODES, SPEC_FINDING_CODES, SourceColumn, SourceTimeColumn,
-    SpecError, SpecErrorKind, SpecLimits, SpecReference, TOLERANCE_NAMES, TrendFormat, TrendSource,
+    COMMISSIONING_SPEC_SCHEMA, CommissioningSpec, ComparisonWindow, Finding, FunnelReference,
+    IndicatorRule, KeySelection, LBL_FIELD_IGNORED, MAX_SPEC_DETAIL_BYTES, OutputOverride,
+    OverrideKey, PartialTolerances, PointMapping, PointNameMapping, PointPair, PointSide,
+    PointType, SPEC_ERROR_CODES, SPEC_FINDING_CODES, SourceColumn, SourceTimeColumn, SpecError,
+    SpecErrorKind, SpecLimits, SpecReference, TOLERANCE_NAMES, TrendFormat, TrendSource,
     glob_matches, unmatched_key,
 };
 pub use compare_error::{Axis, COMPARE_ERROR_CODES, CompareError, SeriesEnd, SeriesRole};

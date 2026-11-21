@@ -16,7 +16,7 @@
 
 use oce_replay::TimeOrigin;
 
-use super::choices::{Envelope, FunnelReference};
+use super::choices::FunnelReference;
 use super::decode_sources::{sources, window};
 use super::error::{SpecErrorKind, shown};
 use super::fields::{
@@ -31,6 +31,7 @@ use super::model::{
 use super::spec::CommissioningSpec;
 use super::tolerances::{PartialTolerances, TOLERANCE_NAMES};
 use crate::canonical::Json;
+use crate::envelope::Envelope;
 use crate::error::Location;
 use crate::model::Parameter;
 use crate::number::Number;

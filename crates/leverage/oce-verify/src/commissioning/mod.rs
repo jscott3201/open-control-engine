@@ -11,8 +11,8 @@
 //!   one strict cursor, under the vector reader's profile and byte bound ([`SpecLimits`]). The
 //!   LBL fields load unchanged; the fields of Scenario 1 the verifier does not act on are
 //!   reported as findings ([`Finding`], [`LBL_FIELD_IGNORED`]); the added fields are the CXF
-//!   path, parameters, trend sources ([`TrendSource`]), the window, the envelope and the time
-//!   origin.
+//!   path, parameters, trend sources ([`TrendSource`]), the window, the envelope
+//!   ([`crate::Envelope`], the comparison's own type) and the time origin.
 //! - **The point mapping** ([`PointMapping`]): Listing 12.2's shape, unchanged, from a file of
 //!   its own or inline in a spec.
 //! - **Keys** ([`OverrideKey`], [`glob_matches`], [`KeySelection`]): which outputs an `outputs`
@@ -37,7 +37,7 @@ mod model;
 mod spec;
 mod tolerances;
 
-pub use choices::{Envelope, FunnelReference, PointType, TrendFormat};
+pub use choices::{FunnelReference, PointType, TrendFormat};
 pub use error::{MAX_SPEC_DETAIL_BYTES, SPEC_ERROR_CODES, SpecError, SpecErrorKind};
 pub use keys::{KeySelection, OverrideKey, glob_matches, unmatched_key};
 pub use limits::SpecLimits;

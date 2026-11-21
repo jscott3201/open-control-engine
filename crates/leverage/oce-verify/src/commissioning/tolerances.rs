@@ -8,6 +8,7 @@
 //! an absent name is not zero until every object that applies to an output has been laid over
 //! the one before it.
 
+use crate::envelope::Tolerances;
 use crate::number::Number;
 
 /// The six tolerance names, in the order this crate lists them everywhere: sorted by their
@@ -96,6 +97,22 @@ impl PartialTolerances {
         Self { written }
     }
 
+    /// The six tolerances a comparison takes ([`Tolerances`]), a name nothing gave read as
+    /// `0.0`. Every field is finite and at least zero, which is what a comparison requires of
+    /// them, so a tolerance a spec loads is never one an envelope refuses.
+    #[must_use]
+    pub fn resolved(&self) -> Tolerances {
+        let [atolx, atoly, ltolx, ltoly, rtolx, rtoly] = self.or_zero();
+        Tolerances {
+            atolx,
+            atoly,
+            rtolx,
+            rtoly,
+            ltolx,
+            ltoly,
+        }
+    }
+
     /// The six values in the order of [`TOLERANCE_NAMES`], a name nothing gave read as `0.0`
     /// (commissioning note, "Report and receipt": "a tolerance name that no tolerance object of
     /// the spec gives is written `0`"). Every value is finite and at least zero.
@@ -152,6 +169,40 @@ mod tests {
         assert_eq!(all.get("atol"), None);
         assert_eq!(all.get(""), None);
         assert_eq!(all.or_zero(), [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
+
+    #[test]
+    fn the_resolved_tolerances_carry_each_name_to_the_field_of_that_name() {
+        // Six different values: a slot that landed in another field would show.
+        let all = of(&[
+            ("atolx", 1.0),
+            ("atoly", 2.0),
+            ("ltolx", 3.0),
+            ("ltoly", 4.0),
+            ("rtolx", 5.0),
+            ("rtoly", 6.0),
+        ]);
+        assert_eq!(
+            all.resolved(),
+            Tolerances {
+                atolx: 1.0,
+                atoly: 2.0,
+                rtolx: 5.0,
+                rtoly: 6.0,
+                ltolx: 3.0,
+                ltoly: 4.0,
+            }
+        );
+        // What nothing gave is zero, the comparison's own "every tolerance zero".
+        assert_eq!(PartialTolerances::EMPTY.resolved(), Tolerances::ZERO);
+        let one = of(&[("rtoly", 0.01)]).resolved();
+        assert_eq!(
+            one,
+            Tolerances {
+                rtoly: 0.01,
+                ..Tolerances::ZERO
+            }
+        );
     }
 
     #[test]

@@ -1,53 +1,13 @@
 //! The closed choices a commissioning spec and a point mapping spell as strings (commissioning
-//! note, "Test-spec file" and "Point mapping"): the envelope, the funnel's reference series, a
-//! trend source's format and a point's type.
+//! note, "Test-spec file" and "Point mapping"): the funnel's reference series, a trend source's
+//! format and a point's type. The fourth, the envelope, is [`crate::Envelope`], the type the
+//! comparison itself takes, read here by its own spelling ([`crate::Envelope::from_name`]).
 //!
-//! Each is a closed enum with one spelling per variant, compared byte for byte: `Funnel` is no
-//! envelope and `CSV` no format. A string outside the list is `unknown-value` at load, never a
+//! Each is a closed enum with one spelling per variant, compared byte for byte: `Trend` is no
+//! reference and `CSV` no format. A string outside the list is `unknown-value` at load, never a
 //! default.
 
 use std::fmt;
-
-/// Which envelope a reference asks for (commissioning note, decisions 1 and 12).
-///
-/// A reference that writes no `envelope` asks for [`Envelope::Funnel`], the envelope OBC §12
-/// cites.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum Envelope {
-    /// LBNL funnel's tube: the tolerance terms of an axis combine by maximum. Spelled `funnel`.
-    Funnel,
-    /// The conformance harness's grid envelope: the tolerance terms of an axis add. Wider than
-    /// funnel's. Spelled `aligned-grid`.
-    AlignedGrid,
-}
-
-impl Envelope {
-    /// Both envelopes, in declaration order.
-    pub const ALL: [Self; 2] = [Self::Funnel, Self::AlignedGrid];
-
-    /// The envelope's spelling in a spec and a receipt: `funnel` or `aligned-grid`.
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Funnel => "funnel",
-            Self::AlignedGrid => "aligned-grid",
-        }
-    }
-
-    /// The envelope spelled `name`, exactly; `None` for any other string.
-    #[must_use]
-    pub fn from_name(name: &str) -> Option<Self> {
-        Self::ALL
-            .into_iter()
-            .find(|envelope| envelope.as_str() == name)
-    }
-}
-
-impl fmt::Display for Envelope {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
 
 /// Which series a funnel is built around (commissioning note, decision 11). The envelope is not
 /// symmetric, so the choice is part of the comparison and a receipt records it.
@@ -195,11 +155,12 @@ mod tests {
 
     #[test]
     fn each_choice_has_one_spelling_compared_byte_for_byte() {
+        // The envelope is the comparison's own type; a spec spells it the same way.
         spellings_round_trip(
-            &Envelope::ALL,
+            &crate::Envelope::ALL,
             &["funnel", "aligned-grid"],
-            Envelope::as_str,
-            Envelope::from_name,
+            crate::Envelope::as_str,
+            crate::Envelope::from_name,
         );
         spellings_round_trip(
             &FunnelReference::ALL,
@@ -225,8 +186,8 @@ mod tests {
     fn the_spellings_other_tools_use_are_not_accepted() {
         // The underscore form of the grid envelope, a capitalised format and the long type
         // names are each one edit from a spelling this format has.
-        assert_eq!(Envelope::from_name("aligned_grid"), None);
-        assert_eq!(Envelope::from_name("alignedGrid"), None);
+        assert_eq!(crate::Envelope::from_name("aligned_grid"), None);
+        assert_eq!(crate::Envelope::from_name("alignedGrid"), None);
         assert_eq!(TrendFormat::from_name("CombiTimeTable"), None);
         assert_eq!(TrendFormat::from_name("combitimetable"), None);
         assert_eq!(PointType::from_name("boolean"), None);

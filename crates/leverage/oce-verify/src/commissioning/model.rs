@@ -13,10 +13,11 @@
 //! canonical form writes. The source lists (`inputs`, `expected`, `indicatorSources`) and the
 //! references keep file order.
 
-use super::choices::{Envelope, FunnelReference, TrendFormat};
+use super::choices::{FunnelReference, TrendFormat};
 use super::mapping::PointMapping;
 use super::tolerances::PartialTolerances;
 use crate::canonical::Json;
+use crate::envelope::Envelope;
 use crate::model::Parameter;
 use crate::number::Number;
 
