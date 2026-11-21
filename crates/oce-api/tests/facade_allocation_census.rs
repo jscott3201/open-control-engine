@@ -25,6 +25,7 @@ mod blob_allocations;
 mod blob_peak_allocation;
 mod blob_summary_allocations;
 mod cxf_admission;
+mod cxf_pass_through_key_cost;
 mod hostile_load_bounds;
 mod prepare_frame;
 mod replay;

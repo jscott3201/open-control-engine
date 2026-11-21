@@ -667,35 +667,12 @@ fn qudt_has_quantity_kind_is_an_unknown_key_everywhere() {
 }
 
 #[test]
-fn the_qudt_key_without_a_qudt_binding_is_an_unknown_key_on_every_node() {
-    // Unbound, `qudt:hasUnit` is not the QUDT property: no unit here, and on a port no port
-    // attribute. The engine leaves the key unread and loads the document without the unit.
-    let context = json!({ "S231": S231, "unit": UNIT_HASH });
-    for node in BOUNDARIES.into_iter().chain(PARAMETERS).chain([PORT]) {
-        let doc = with(
-            document(context.clone()),
-            node,
-            "qudt:hasUnit",
-            json!({ "@id": "unit:K" }),
-        );
-        assert_eq!(refusal(&doc), unknown_key(node, "qudt:hasUnit"), "{node}");
-        assert_eq!(
-            identity(&engine(&doc).expect("the engine loads it")),
-            identity(&engine(&document(context.clone())).expect("the engine loads it")),
-            "{node}"
-        );
-    }
-}
-
-#[test]
 fn a_qudt_or_unit_prefix_bound_to_another_iri_is_refused_with_the_document() {
     for (term, iri) in [
         ("unit", "http://example.org/unit#"),
         ("unit", "https://qudt.org/vocab/unit#"),
         ("unit", QUDT_HASH),
         ("qudt", "http://example.org/qudt#"),
-        ("qudt", "http://qudt.org/schema/qudt"),
-        ("qudt", UNIT_HASH),
     ] {
         let mut context = upstream_context();
         context[term] = json!(iri);
@@ -707,8 +684,10 @@ fn a_qudt_or_unit_prefix_bound_to_another_iri_is_refused_with_the_document() {
         );
         assert_eq!(refusal(&doc), unknown_key("document", term), "{term} {iri}");
         // The engine does not read the binding as QUDT either: bound elsewhere, the `unit:`
-        // identifier is unmapped and refused, and the `qudt:` key is some other property, left
-        // unread.
+        // identifier is unmapped and refused, and `qudt:hasUnit` under a namespace that is no
+        // QUDT one and no near miss of one is that vocabulary's property, left unread: a
+        // standing difference. (No `qudt` binding, and a near miss of a QUDT namespace, are
+        // refused by both readers: `import_unread_qudt_has_unit.rs`.)
         match term {
             "unit" => assert_eq!(
                 engine_refusal(&doc),
