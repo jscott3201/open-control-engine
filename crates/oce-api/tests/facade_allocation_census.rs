@@ -35,6 +35,7 @@ mod blob_hostile_parameter_models;
 mod blob_peak_allocation;
 mod blob_summary_allocations;
 mod cxf_admission;
+mod cxf_array_element_names_cost;
 mod cxf_constructed_budget;
 mod cxf_diagnostic_list_cost;
 mod cxf_pass_through_key_cost;
