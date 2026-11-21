@@ -112,7 +112,7 @@ const BOTH: &str = "an object carrying both @id and @value";
 /// expandable `@id` by its expanded IRI ([`crate::unit_iri`]), so any IRI node still here is
 /// unmapped. The IRI is quoted as an [`excerpt`]: a megabyte-long one costs the message 64 bytes.
 /// Never call this for `quantity`, which is not read through the table.
-pub(super) fn unmapped_unit(term: &TermAttr) -> Option<String> {
+pub(crate) fn unmapped_unit(term: &TermAttr) -> Option<String> {
     let TermAttr::Iri { id, .. } = term else {
         return None;
     };
